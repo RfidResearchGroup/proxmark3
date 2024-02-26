@@ -1,11 +1,22 @@
 #   Benjamin DELPY `gentilkiwi`
 #   https://blog.gentilkiwi.com / 
 #   benjamin@gentilkiwi.com
-#   Licence : https://creativecommons.org/licenses/by/4.0/
 #
 #   Basic script to try to interpret Intertic data on ST25TB / SRT512 in french transports
 #   For Proxmark3 with love <3
 #
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+# 
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   See LICENSE.txt for the text of the license.
+
 import sys, os
 from datetime import datetime, timedelta
 from bitarray import bitarray
