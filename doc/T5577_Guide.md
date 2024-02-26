@@ -610,37 +610,37 @@ password set (if not, review and get you card back to this state).
     [+] Done
     ```
     
-2)  Check this has work.
+2)  Check this has worked.
     ```
     [usb] pm3 --> lf search
     ```
     result:
     ```                                                             
-    [=] NOTE: some demods output possible binary                         
-    [=] if it finds something that looks like a tag                      
-    [=] False Positives ARE possible                                     
-    [=]                                                                  
-    [=] Checking for known tags...                                       
-    [=]                                                                  
-    [+] EM 410x ID 0F0368568B                                            
-    [+] EM410x ( RF/64 )                                                 
-    [=] -------- Possible de-scramble patterns ---------                 
-    [+] Unique TAG ID      : F0C0166AD1                                  
-    [=] HoneyWell IdentKey                                               
-    [+]     DEZ 8          : 06837899                                    
-    [+]     DEZ 10         : 0057169547                                  
-    [+]     DEZ 5.5        : 00872.22155                                 
-    [+]     DEZ 3.5A       : 015.22155                                   
-    [+]     DEZ 3.5B       : 003.22155                                   
-    [+]     DEZ 3.5C       : 104.22155                                   
-    [+]     DEZ 14/IK2     : 00064481678987                              
-    [+]     DEZ 15/IK3     : 001034014845649                             
-    [+]     DEZ 20/ZK      : 15001200010606101301                        
-    [=]                                                                  
-    [+] Other              : 22155_104_06837899                          
-    [+] Pattern Paxton     : 259822731 [0xF7C948B]                       
-    [+] Pattern 1          : 9750181 [0x94C6A5]                          
-    [+] Pattern Sebury     : 22155 104 6837899  [0x568B 0x68 0x68568B]   
+    [=] Note: False Positives ARE possible
+    [=] 
+    [=] Checking for known tags...
+    [=] 
+    [!] ⚠️  Specify one authentication mode
+    [+] EM 410x ID 1122334455
+    [+] EM410x ( RF/64 )
+    [=] -------- Possible de-scramble patterns ---------
+    [+] Unique TAG ID      : 8844CC22AA
+    [=] HoneyWell IdentKey
+    [+]     DEZ 8          : 03359829
+    [+]     DEZ 10         : 0573785173
+    [+]     DEZ 5.5        : 08755.17493
+    [+]     DEZ 3.5A       : 017.17493
+    [+]     DEZ 3.5B       : 034.17493
+    [+]     DEZ 3.5C       : 051.17493
+    [+]     DEZ 14/IK2     : 00073588229205
+    [+]     DEZ 15/IK3     : 000585269781162
+    [+]     DEZ 20/ZK      : 08080404121202021010
+    [=] 
+    [+] Other              : 17493_051_03359829
+    [+] Pattern Paxton     : 289899093 [0x11478255]
+    [+] Pattern 1          : 5931804 [0x5A831C]
+    [+] Pattern Sebury     : 17493 51 3359829  [0x4455 0x33 0x334455]
+    [+] VD / ID            : 017 / 0573785173
     [=] ------------------------------------------------                 
                                                                      
     [+] Valid EM410x ID found!                                           
