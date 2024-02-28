@@ -38,7 +38,7 @@
 - Android phone
 - [F-Droid](https://f-droid.org/)
 - [Termux](https://f-droid.org/en/packages/com.termux/)
-- [Proxmark3 RDV4](https://www.proxmark.com/proxmark-3-hardware/proxmark-3-rdv4)
+- [Proxmark3](https://www.proxmark.com/proxmark-3-hardware/proxmark-3-rdv4)
 - [Blueshark Standalone Module](https://www.proxmark.com/proxmark-news/proxmark3-blueshark-bluetooth-released) **(ONLY if using Bluetooth)**
 - [Proxmark with BTADDON compiled Firmware](https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md#platform_extras) **(ONLY if using Bluetooth)**
 
@@ -65,11 +65,6 @@ It is recommended to use the F-Droid version of Termux as it will be the latest.
 Run the following commands:
 ```
 pkg install proxmark3
-```
-### Optional: Install Proxmark3 package which offers a more up to date version from git `master` branch
-Run the following commands:
-```
-pkg install proxmark3-git
 ```
 ### Optional: Building Proxmark3 client from source
 ```
