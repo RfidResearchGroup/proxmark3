@@ -1224,6 +1224,8 @@ static int CmdHF14AMfDump(const char *Cmd) {
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0(NULL, "ns", "no save to file"),
+        arg_lit0(NULL, "np", "no print dump to screen"),
+        arg_lit0("v", "verbose", "decode value blocks"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1241,6 +1243,8 @@ static int CmdHF14AMfDump(const char *Cmd) {
     bool m2 = arg_get_lit(ctx, 5);
     bool m4 = arg_get_lit(ctx, 6);
     bool nosave = arg_get_lit(ctx, 7);
+    bool noprint = arg_get_lit(ctx, 8);
+    bool verbose = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
 
     uint64_t t1 = msclock();
@@ -1287,6 +1291,14 @@ static int CmdHF14AMfDump(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds\n", (msclock() - t1) / 1000);
+
+    // Skip printing dump to screen
+    if (noprint) {
+        PrintAndLogEx(INFO, "Called with no print option");
+    } else {
+        PrintAndLogEx(INFO, "Verbose %d", verbose);
+        mf_print_blocks(bytes/MFBLOCK_SIZE, mem, verbose);
+    }
 
     // Skip saving card data to file
     if (nosave) {
