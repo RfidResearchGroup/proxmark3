@@ -4411,9 +4411,11 @@
                 "--1k MIFARE Classic 1k / S50 (def)",
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
-                "--ns no save to file"
+                "--ns no save to file",
+                "--np no print dump to screen",
+                "-v, --verbose decode value blocks"
             ],
-            "usage": "hf mf dump [-h] [-f <fn>] [-k <fn>] [--mini] [--1k] [--2k] [--4k] [--ns]"
+            "usage": "hf mf dump [-hv] [-f <fn>] [-k <fn>] [--mini] [--1k] [--2k] [--4k] [--ns] [--np]"
         },
         "hf mf ecfill": {
             "command": "hf mf ecfill",
