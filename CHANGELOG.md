@@ -3,11 +3,15 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf mf dump --np` - now prints dump by default and supports noprint flag (@francesco-scar)
  - Fixed `hf 14a info` - magic detection works again and better hint detection (@iceman1001)
+ - Changed `14b wrbl` - now uses SRIX 4k as default tag (@Sonic803)
+ - Changed `14b reader` - now shows data plot (@Sonic803)
  - Added `hf 14b restore` - new command to restore dump files to a SR512/4k card (@Sonic803)
  - Changed led show / leds detection for PM3 Easy devices (@francesco-scar)
 
 ## [DEFCON is Cancelled.4.18218][2024-02-18]
+ - Fixed `hf mf autopwn` - now correctly attempts static nested attack (@Sonic803 and @francesco-scar)
  - Changed `hf fudan dump --ns` - now supports nosave flag (@iceman1001)
  - Added `lf em 410x --electra` - adds two extra blocks. Thanks jareckib (@iceman1001)
  - Changed `hf mfu info` - now identifies UL-AES correct (@iceman1001)
