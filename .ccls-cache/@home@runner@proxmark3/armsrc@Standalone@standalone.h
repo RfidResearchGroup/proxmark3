@@ -13,10 +13,13 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-#include "standalone.h" // standalone definitions
+// StandAlone Mod header file
+//-----------------------------------------------------------------------------
 
-#include "dbprint.h"
+#ifndef __STANDALONE_H
+#define __STANDALONE_H
 
-void ModInfo(void) { DbpString("  No standalone mode present"); }
+void RunMod(void);
+void ModInfo(void);
 
-void RunMod(void) {}
+#endif /* __STANDALONE_H */
