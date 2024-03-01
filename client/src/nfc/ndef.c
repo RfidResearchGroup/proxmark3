@@ -43,6 +43,7 @@
 #define NDEF_BLUEAPPL_SECURE_LE "application/vnd.bluetooth.secure.le.oob"
 
 #define NDEF_ANDROID_PROVISION   "application/com.android.managedprovisioning"
+#define NDEF_IMAGE               "image/"
 
 
 static const char *TypeNameFormat_s[] = {
@@ -955,6 +956,20 @@ static int ndefDecodeMime_android_provision(NDEFHeader_t *ndef) {
     return PM3_SUCCESS;
 }
 
+static int ndefDecodeMime_image(NDEFHeader_t *ndef) {
+    if (ndef->PayloadLen == 0) {
+        PrintAndLogEx(INFO, "no payload");
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(INFO, _CYAN_("IMAGE details"));
+    PrintAndLogEx(INFO, "Type............ " _YELLOW_("%.*s"), (int)ndef->TypeLen, ndef->Type);
+    PrintAndLogEx(INFO, "Size............ " _YELLOW_("%zu"), ndef->PayloadLen);
+    PrintAndLogEx(INFO, "");
+    ShowPictureWindow(ndef->Payload, (int)ndef->PayloadLen);
+    return PM3_SUCCESS;
+}
+
 // https://raw.githubusercontent.com/haldean/ndef/master/docs/NFCForum-TS-RTD_1.0.pdf
 static int ndefDecodeExternal_record(NDEFHeader_t *ndef) {
 
@@ -991,14 +1006,15 @@ static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose) {
 
     PrintAndLogEx(INFO, "");
     switch (ndef->TypeNameFormat) {
-        case tnfEmptyRecord:
+        case tnfEmptyRecord: {
             PrintAndLogEx(INFO, "Empty Record");
             if (ndef->TypeLen != 0 || ndef->IDLen != 0 || ndef->PayloadLen != 0) {
                 PrintAndLogEx(FAILED, "unexpected data in empty record");
                 break;
             }
             break;
-        case tnfWellKnownRecord:
+        }
+        case tnfWellKnownRecord: {
 
             if (!strncmp((char *)ndef->Type, "T", ndef->TypeLen)) {
                 PrintAndLogEx(INFO, _CYAN_("Text"));
@@ -1055,6 +1071,7 @@ static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose) {
                 PrintAndLogEx(INFO, "- decoder to be impl -");
             }
             break;
+        }
         case tnfMIMEMediaRecord: {
             PrintAndLogEx(INFO, "MIME Media Record");
             if (ndef->TypeLen == 0)  {
@@ -1095,39 +1112,49 @@ static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose) {
                 ndefDecodeMime_android_provision(ndef);
             }
 
+            if (str_startswith(begin, NDEF_IMAGE)) {
+                ndefDecodeMime_image(ndef);
+            }
+
             free(begin);
             begin = NULL;
             break;
         }
-        case tnfAbsoluteURIRecord:
+        case tnfAbsoluteURIRecord: {
             PrintAndLogEx(INFO, "Absolute URI Record");
             PrintAndLogEx(INFO, "    payload : " _YELLOW_("%.*s"), (int)ndef->PayloadLen, ndef->Payload);
             break;
-        case tnfExternalRecord:
+        }
+        case tnfExternalRecord: {
             PrintAndLogEx(INFO, "External Record");
             ndefDecodeExternal_record(ndef);
             break;
-        case tnfUnknownRecord:
+        }
+        case tnfUnknownRecord: {
             PrintAndLogEx(INFO, "Unknown Record");
             if (ndef->TypeLen != 0) {
                 PrintAndLogEx(FAILED, "unexpected type field");
                 break;
             }
             break;
-        case tnfUnchangedRecord:
+        }
+        case tnfUnchangedRecord: {
             PrintAndLogEx(INFO, "Unchanged Record");
             PrintAndLogEx(INFO, "- decoder to be impl -");
             break;
-        case tnfReservedRecord:
+        }
+        case tnfReservedRecord: {
             PrintAndLogEx(INFO, "Reserved Record");
             if (ndef->TypeLen != 0) {
                 PrintAndLogEx(FAILED, "unexpected type field");
                 break;
             }
             break;
-        default:
+        }
+        default: {
             PrintAndLogEx(FAILED, "unexpected tnf value... 0x%02x", ndef->TypeNameFormat);
             break;
+        }
     }
     PrintAndLogEx(INFO, "");
     return PM3_SUCCESS;
