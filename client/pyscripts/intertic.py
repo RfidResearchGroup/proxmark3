@@ -1,5 +1,5 @@
 #   Benjamin DELPY `gentilkiwi`
-#   https://blog.gentilkiwi.com / 
+#   https://blog.gentilkiwi.com/
 #   benjamin@gentilkiwi.com
 #
 #   Basic script to try to interpret Intertic data on ST25TB / SRT512 in french transports
@@ -53,18 +53,46 @@ ISO_Countries = {
 }
 
 
-FRA_OrganizationalAuthority = {
-    0x000: 'Lille (Ilévia / Keolis) - Angoulême (Tadao / Transdev)',
-    0x006: 'Amiens (Ametis / Keolis)',
-    0x008: 'Angoulême (STGA)',
-    0x021: 'Bordeaux (TBM / Keolis)',
-    0x072: 'Tours (filbleu / Keolis)',
-    0x078: 'Reims (Citura / Transdev)',
-    0x907: 'Dijon (Divia / Keolis)',
-    0x908: 'Rennes (STAR / Keolis)',
-    0x912: 'Cherbourg-en-Cotentin (Cap Cotentin / Transdev)',
-    0x913: 'Nîmes (Tango / Transdev)',
-    0x917: 'Saint-Nazaire (Stran) / Angers (Irigo / RATP)',
+FRA_OrganizationalAuthority_Contract_Provider = {
+    0x000: {
+        5: 'Lille (Ilévia / Keolis)',
+        7: 'Lens-Béthune (Tadao / Transdev)',
+    },
+    0x006: {
+        1: 'Amiens (Ametis / Keolis)',
+    },
+    0x008: {
+        15: 'Angoulême (STGA)',
+    },
+    0x021: {
+        1: 'Bordeaux (TBM / Keolis)',
+    },
+    0x072: {
+        1: 'Tours (filbleu / Keolis)',
+    },
+    0x078: {
+        4: 'Reims (Citura / Transdev)',
+    },
+    0x091: {
+        1: 'Strasbourg (CTS)',
+    },
+    0x907: {
+        1: 'Dijon (Divia / Keolis)',
+    },
+    0x908: {
+        1: 'Rennes (STAR / Keolis)',
+    },
+    0x912: {
+        3: 'Le Havre (Lia / Transdev)',
+        35: 'Cherbourg-en-Cotentin (Cap Cotentin / Transdev)',
+    },
+    0x913: {
+        3: 'Nîmes (Tango / Transdev)',
+    },
+    0x917: {
+        4: 'Angers (Irigo / RATP)',
+        7: 'Saint-Nazaire (Stran)',
+    },
 }
 
 
@@ -176,7 +204,7 @@ def main():
             Distribution_Cer.addBits(data.nom_bits(32))
             # No USAGE for 0x0a
             
-        case 0x0b: # Not in draft :(
+        case 0x0b: # Not in the draft :(
             Distribution_Data.addBits(data.nom_bits(4 * 32))
             C1.addBits(data.nom_bits(32))
             C2.addBits(data.nom_bits(32))
@@ -222,9 +250,15 @@ def main():
         print()
         print('DISTRIBUTION')
         print('  CountryCode                     : {:03x} - {}'.format(CountryCode, ISO_Countries.get(CountryCode, '?')));
-        print('  OrganizationalAuthority         : {:03x} - {}'.format(OrganizationalAuthority, FRA_OrganizationalAuthority.get(OrganizationalAuthority, '?') if(CountryCode == 0x250) else 'not FR'));
+        print('  OrganizationalAuthority         : {:03x}'.format(OrganizationalAuthority));
         print('  ContractApplicationVersionNumber:', ContractApplicationVersionNumber);
         print('  ContractProvider                :', ContractProvider);
+        if (CountryCode == 0x250):
+            oa = FRA_OrganizationalAuthority_Contract_Provider.get(OrganizationalAuthority)
+            if (oa is not None):
+                s = oa.get(ContractProvider)
+                if (s is not None):
+                    print('      ~ Authority & Provider ~    :', s)
         print('  ContractTariff                  :', ContractTariff);
         print('  ContractMediumEndDate           : {} ({})'.format(ContractMediumEndDate, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate)).strftime('%Y-%m-%d')));
         print('  left...                         :', Distribution_left);
