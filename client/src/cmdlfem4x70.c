@@ -79,7 +79,8 @@ static void print_info_result(const uint8_t *data) {
 
 }
 
-int em4x70_info(void) {
+// Note: arm source has a function with same name ... different signature.
+static int em4x70_info(void) {
 
     em4x70_data_t edata = {
         .parity = false // TODO: try both? or default to true
