@@ -71,6 +71,12 @@ HARDNESTEDLIBINC = -I$(HARDNESTEDLIBPATH)
 HARDNESTEDLIB = $(HARDNESTEDLIBPATH)/libhardnested.a
 HARDNESTEDLIBLD =
 
+## ID48
+ID48LIBPATH = ./deps/id48
+ID48LIBINC = -I$(ID48LIBPATH)
+ID48LIB = $(ID48LIBPATH)/libid48.a
+ID48LIBLD =
+
 ## Jansson
 JANSSONLIBPATH = ./deps/jansson
 JANSSONLIBINC = -I$(JANSSONLIBPATH)
@@ -156,6 +162,12 @@ PM3INCLUDES += $(CLIPARSERLIBINC)
 STATICLIBS += $(HARDNESTEDLIB)
 LDLIBS +=$(HARDNESTEDLIBLD)
 PM3INCLUDES += $(HARDNESTEDLIBINC)
+
+## ID48
+# not distributed as system library
+STATICLIBS += $(ID48LIB)
+LDLIBS += $(ID48LIBLD)
+PM3INCLUDES += $(ID48LIBINC)
 
 ## Linenoise
 # wait to see if Readline is available
@@ -850,6 +862,7 @@ clean:
 	$(Q)$(MAKE) --no-print-directory -C $(AMIIBOLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(CLIPARSERLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(HARDNESTEDLIBPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(ID48LIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(JANSSONLIBPATH) clean
 ifeq ($(LINENOISE_LOCAL_FOUND), 1)
 	$(Q)$(MAKE) --no-print-directory -C $(LINENOISELIBPATH) clean
@@ -901,6 +914,10 @@ $(CLIPARSERLIB): .FORCE
 $(HARDNESTEDLIB): .FORCE
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(HARDNESTEDLIBPATH) all
+
+$(ID48LIB): .FORCE
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C $(ID48LIBPATH) all
 
 $(JANSSONLIB): .FORCE
 ifneq ($(JANSSON_FOUND),1)

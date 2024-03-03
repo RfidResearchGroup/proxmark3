@@ -13,7 +13,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// Low frequency EM4x70 commands
+// Low frequency EM4x70 commands -- ARM source only (not client)
 //-----------------------------------------------------------------------------
 
 #ifndef EM4x70_H

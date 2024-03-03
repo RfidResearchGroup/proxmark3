@@ -23,6 +23,8 @@
 #include "fileutils.h"
 #include "commonutil.h"
 #include "em4x70.h"
+#include "id48.h"
+#include "time.h"
 
 #define LOCKBIT_0 BITMASK(6)
 #define LOCKBIT_1 BITMASK(7)
@@ -30,6 +32,15 @@
 #define INDEX_TO_BLOCK(x) (((32-x)/2)-1)
 
 static int CmdHelp(const char *Cmd);
+
+static void fill_buffer_prng_bytes(void* buffer, size_t byte_count) {
+    if (byte_count <= 0) return;
+    srand((unsigned) time(NULL));
+    for (size_t i = 0; i < byte_count; i++) {
+        ((uint8_t*)buffer)[i] = (uint8_t)rand();
+    }
+}
+
 
 static void print_info_result(const uint8_t *data) {
 
@@ -52,7 +63,7 @@ static void print_info_result(const uint8_t *data) {
     }
     PrintAndLogEx(INFO, "------+----------+-----------------------------");
 
-    // Print Crypt Key (will never have data)
+    // Print Key (will never have data)
     for (int i = 12; i < 24; i += 2) {
         PrintAndLogEx(INFO, " %2d   |   -- --  |  KEY write-only", INDEX_TO_BLOCK(i));
     }
@@ -79,7 +90,8 @@ static void print_info_result(const uint8_t *data) {
 
 }
 
-int em4x70_info(void) {
+// Note: arm source has a function with same name ... different signature.
+static int em4x70_info(void) {
 
     em4x70_data_t edata = {
         .parity = false // TODO: try both? or default to true
@@ -107,6 +119,13 @@ bool detect_4x70_block(void) {
 
     return em4x70_info() == PM3_SUCCESS;
 }
+
+// TODO: split the below functions, so can use them as building blocks for more complex interactions
+//       without generating fake `const char *Cmd` strings.  First targets:
+//           Auth
+//           Write
+//           WriteKey
+//       Together, they will allow writekey to verify the key was written correctly.
 
 int CmdEM4x70Info(const char *Cmd) {
 
@@ -387,8 +406,10 @@ int CmdEM4x70Auth(const char *Cmd) {
 
     CLIParserInit(&ctx, "lf em 4x70 auth",
                   "Authenticate against an EM4x70 by sending random number (RN) and F(RN)\n"
-                  "  If F(RN) is incorrect based on the tag crypt key, the tag will not respond",
-                  "lf em 4x70 auth --rnd 45F54ADA252AAC --frn 4866BB70 --> Test authentication, tag will respond if successful\n"
+                  "  If F(RN) is incorrect based on the tag key, the tag will not respond\n"
+                  "  If F(RN) is correct based on the tag key, the tag will give a 20-bit response\n",
+                  "lf em 4x70 auth --rnd 45F54ADA252AAC --frn 4866BB70     --> (using pm3 test key)\n"
+                  "lf em 4x70 auth --rnd 3FFE1FB6CC513F --frn F355F1A0     --> (using research paper key)\n"
                  );
 
     void *argtable[] = {
@@ -498,20 +519,21 @@ int CmdEM4x70WritePIN(const char *Cmd) {
 
 int CmdEM4x70WriteKey(const char *Cmd) {
 
-    // Write new crypt key to tag
+    // Write new key to tag
     em4x70_data_t etd = {0};
 
     CLIParserContext *ctx;
 
     CLIParserInit(&ctx, "lf em 4x70 writekey",
                   "Write new 96-bit key to tag\n",
-                  "lf em 4x70 writekey -k F32AA98CF5BE4ADFA6D3480B\n"
+                  "lf em 4x70 writekey -k F32AA98CF5BE4ADFA6D3480B   (pm3 test key)\n"
+                  "lf em 4x70 writekey -k A090A0A02080000000000000   (research paper key)\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0(NULL, "par", "Add parity bit when sending commands"),
-        arg_str1("k",  "key", "<hex>", "Crypt Key as 12 hex bytes"),
+        arg_str1("k",  "key", "<hex>", "Key as 12 hex bytes"),
         arg_param_end
     };
 
@@ -525,7 +547,7 @@ int CmdEM4x70WriteKey(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (key_len != 12) {
-        PrintAndLogEx(FAILED, "Crypt key length must be 12 bytes instead of %d", key_len);
+        PrintAndLogEx(FAILED, "Key length must be 12 bytes instead of %d", key_len);
         return PM3_EINVARG;
     }
 
@@ -539,23 +561,234 @@ int CmdEM4x70WriteKey(const char *Cmd) {
     }
 
     if (resp.status) {
-        PrintAndLogEx(INFO, "Writing new crypt key: " _GREEN_("ok"));
+        PrintAndLogEx(INFO, "Writing new key: " _GREEN_("ok"));
+
+        // TODO: use prng to generate a new nonce, calculate frn/grn, and authenticate with tag
+
         return PM3_SUCCESS;
     }
 
-    PrintAndLogEx(FAILED, "Writing new crypt key: " _RED_("failed"));
+    PrintAndLogEx(FAILED, "Writing new key: " _RED_("failed"));
     return PM3_ESOFT;
+}
+
+// largest seen "in the wild" was 6
+#define MAXIMUM_ID48_RECOVERED_KEY_COUNT 10
+typedef struct _em4x70_recovery_data_t {
+    ID48LIB_KEY   key;
+    ID48LIB_NONCE nonce;
+    ID48LIB_FRN   frn;
+    ID48LIB_GRN   grn;
+    bool verify; // if true, tag must be present
+    bool parity; // if true, add parity bit to commands sent to tag
+
+    uint8_t       keys_found_count;
+    uint8_t       keys_validated_count;
+    ID48LIB_KEY   potential_keys[MAXIMUM_ID48_RECOVERED_KEY_COUNT];
+    ID48LIB_NONCE alt_nonce;
+    ID48LIB_FRN   alt_frn[MAXIMUM_ID48_RECOVERED_KEY_COUNT];
+    ID48LIB_GRN   alt_grn[MAXIMUM_ID48_RECOVERED_KEY_COUNT];
+    bool          potential_keys_validated[MAXIMUM_ID48_RECOVERED_KEY_COUNT];
+} em4x70_recovery_data_t;
+
+static int ValidateArgsForRecover(const char *Cmd, em4x70_recovery_data_t* out_results) {
+    memset(out_results, 0, sizeof(em4x70_recovery_data_t));
+
+    int result = PM3_SUCCESS;
+    
+    CLIParserContext *ctx;
+    CLIParserInit(
+        &ctx,
+        "lf em 4x70 recover",
+        "After obtaining key bits 95..48 (such as via 'lf em 4x70 brute'), this command will recover\n"
+        "key bits 47..00.  By default, this process does NOT require a tag to be present.\n"
+        "\n"
+        "By default, the potential keys are shown (typically 1-6) along with a corresponding\n"
+        "'lf em 4x70 auth' command that will authenticate, if that potential key is correct.\n"
+        "The user can copy/paste these commands when the tag is present to manually check\n"
+        "which of the potential keys is correct.\n"
+        //   "\n"
+        //   "If the `--verify` option is provided, the tag must be present.  The rnd/frn parameters will\n"
+        //   "be used to authenticate against the tag, and then any potential keys will be automatically\n"
+        //   "be checked for correctness against the tag, reducing manual steps.\n"
+        ,
+        "lf em 4x70 recover --key F32AA98CF5BE --rnd 45F54ADA252AAC --frn 4866BB70 --grn 9BD180   (pm3 test key)\n"
+        "lf em 4x70 recover --key A090A0A02080 --rnd 3FFE1FB6CC513F --frn F355F1A0 --grn 609D60   (research paper key)\n"
+        );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "par",    "Add parity bit when sending commands"),
+        arg_str1("k",  "key",    "<hex>", "Key as 6 hex bytes"),
+        arg_str1(NULL, "rnd",    "<hex>", "Random 56-bit"),
+        arg_str1(NULL, "frn",    "<hex>", "F(RN) 28-bit as 4 hex bytes"),
+        arg_str1(NULL, "grn",    "<hex>", "G(RN) 20-bit as 3 hex bytes"),
+        //arg_lit0(NULL, "verify", "automatically use tag for validation"),
+        arg_param_end
+    };
+
+    // do the command line arguments even parse?
+    if (CLIParserParseString(ctx, Cmd, argtable, arg_getsize(argtable), true)) {
+        result = PM3_ESOFT;
+    }
+    int key_len  = 0; // must be 6 bytes hex data
+    int rnd_len  = 0; // must be 7 bytes hex data
+    int frn_len = 0; // must be 4 bytes hex data
+    int grn_len = 0; // must be 3 bytes hex data
+
+    // if all OK so far, convert to internal data structure
+    if (PM3_SUCCESS == result) {
+        // magic number == index in argtable above.  Fragile technique!
+        out_results->parity = arg_get_lit(ctx, 1);
+        if (CLIParamHexToBuf(arg_get_str(ctx, 2), &(out_results->key.k[0]), 12, &key_len)) {
+            result = PM3_ESOFT;
+        }
+        if (CLIParamHexToBuf(arg_get_str(ctx, 3), &(out_results->nonce.rn[0]), 7, &rnd_len)) {
+            result = PM3_ESOFT;
+        }
+        if (CLIParamHexToBuf(arg_get_str(ctx, 4), &(out_results->frn.frn[0]), 4, &frn_len)) {
+            result = PM3_ESOFT;
+        }
+        if (CLIParamHexToBuf(arg_get_str(ctx, 5), &(out_results->grn.grn[0]), 3, &grn_len)) {
+            result = PM3_ESOFT;
+        }
+        //out_results->verify = arg_get_lit(ctx, 6); 
+    }
+    // if all OK so far, do additional parameter validation
+    if (PM3_SUCCESS == result) {
+        // Validate number of bytes read for hex data
+        if (key_len != 6) {
+            PrintAndLogEx(FAILED, "Key length must be 6 bytes instead of %d", key_len);
+            result = PM3_EINVARG;
+        }
+        if (rnd_len != 7) {
+            PrintAndLogEx(FAILED, "Random number length must be 7 bytes instead of %d", rnd_len);
+            result = PM3_EINVARG;
+        }
+        if (frn_len != 4) {
+            PrintAndLogEx(FAILED, "F(RN) length must be 4 bytes instead of %d", frn_len);
+            result = PM3_EINVARG;
+        }
+        if (grn_len != 3) {
+            PrintAndLogEx(FAILED, "G(RN) length must be 3 bytes instead of %d", grn_len);
+            result = PM3_EINVARG;
+        }
+    }
+
+    if (PM3_SUCCESS == result) {
+        fill_buffer_prng_bytes(&out_results->alt_nonce, sizeof(ID48LIB_NONCE));
+    }
+
+    // single exit point
+    CLIParserFree(ctx);
+    return result;
+}
+int CmdEM4x70Recover(const char *Cmd) {
+    // From paper "Dismantling Megamos Crypto", Roel Verdult, Flavio D. Garcia and Barıs¸ Ege.
+    // Partial Key-Update Attack -- final 48 bits (after optimized version gets k95..k48)
+    em4x70_recovery_data_t recover_ctx = {0};
+    int result = PM3_SUCCESS;
+    
+    result = ValidateArgsForRecover(Cmd, &recover_ctx);
+    // recover the potential keys -- no more than a few seconds
+    if (PM3_SUCCESS == result) {
+        // The library is stateful.  First must initialize its internal context.
+        id48lib_key_recovery_init(&recover_ctx.key, &recover_ctx.nonce, &recover_ctx.frn, &recover_ctx.grn);
+
+        // repeatedly call id48lib_key_recovery_next() to get the next potential key
+        ID48LIB_KEY q;
+        while ((PM3_SUCCESS == result) && id48lib_key_recovery_next(&q)) {
+            if (recover_ctx.keys_found_count >= MAXIMUM_ID48_RECOVERED_KEY_COUNT) {
+                PrintAndLogEx(ERR, "Found more than %d potential keys. This is unexpected and likely a code failure.", MAXIMUM_ID48_RECOVERED_KEY_COUNT);
+                result = PM3_EFAILED;
+            } else {
+                recover_ctx.potential_keys[recover_ctx.keys_found_count] = q;
+                ++recover_ctx.keys_found_count;
+            }
+        }
+        if (recover_ctx.keys_found_count == 0) {
+            PrintAndLogEx(ERR, "No potential keys recovered.  This is unexpected and likely a code failure.");
+            result = PM3_EFAILED;
+        }
+    }
+    // generate alternate authentication for each potential key -- sub-second execution, no error paths
+    if (PM3_SUCCESS == result) {
+        for (uint8_t i = 0; i < recover_ctx.keys_found_count; ++i) {
+            // generate the alternate frn/grn for the alternate nonce
+            id48lib_generator(&recover_ctx.potential_keys[i], &recover_ctx.alt_nonce, &recover_ctx.alt_frn[i], &recover_ctx.alt_grn[i]);
+        }
+    }
+    // display alternate authentication for each potential key -- no error paths
+    if (PM3_SUCCESS == result) {
+        PrintAndLogEx(INFO, "Recovered %d potential keys:", recover_ctx.keys_found_count);
+        for (uint8_t i = 0; i < recover_ctx.keys_found_count; ++i) {
+            // generate an alternative authentication based on the potential key
+            // and the alternate nonce.
+            ID48LIB_KEY q = recover_ctx.potential_keys[i];
+            ID48LIB_FRN alt_frn = recover_ctx.alt_frn[i];
+            ID48LIB_GRN alt_grn = recover_ctx.alt_grn[i];
+
+            // dump the results to screen, to enable the user to manually check validity
+            PrintAndLogEx(INFO,
+                "Potential Key #%d: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
+                " -->  " _YELLOW_("lf em 4x70 auth --rnd %02X%02X%02X%02X%02X%02X%02X --frn %02X%02X%02X%02X")
+                " --> %02X%02X%02X",
+                i,
+                q.k[ 0], q.k[ 1], q.k[ 2], q.k[ 3], q.k[ 4], q.k[ 5],
+                q.k[ 6], q.k[ 7], q.k[ 8], q.k[ 9], q.k[10], q.k[11],
+                recover_ctx.alt_nonce.rn[0],
+                recover_ctx.alt_nonce.rn[1],
+                recover_ctx.alt_nonce.rn[2],
+                recover_ctx.alt_nonce.rn[3],
+                recover_ctx.alt_nonce.rn[4],
+                recover_ctx.alt_nonce.rn[5],
+                recover_ctx.alt_nonce.rn[6],
+                alt_frn.frn[0],
+                alt_frn.frn[1],
+                alt_frn.frn[2],
+                alt_frn.frn[3],
+                alt_grn.grn[0],
+                alt_grn.grn[1],
+                alt_grn.grn[2]
+                );
+        }
+        printf("\n");
+    }
+    if (PM3_SUCCESS == result && recover_ctx.verify) {
+        // TODO: automatic verification against a present tag.
+        // Updates ctx.potential_keys_validated[10] and ctx.keys_validated_count
+        PrintAndLogEx(WARNING, "Automatic verification against tag is not yet implemented.");
+        // 0. verify a tag is present
+        // 1. verify the parameters provided authenticate against the tag
+        //    if not, print "Authentication failed.  Verify the current tag matches parameters provided."
+        //    print the authentication command used (allows user to easily copy/paste)
+        //    SET ERROR
+        // 2. for each potential key:
+        //    a. Attempt to authentic against the tag using alt_nonce and alt_frn[i]
+        //    b. verify tag's response is alt_grn[i]
+        //    c. if successful, set ctx.potential_keys_validated[i] = true and increment ctx.keys_validated_count
+        //
+        // All validation done... now just interpret the results....
+        //
+        // 3. if ctx.keys_validated_count == 0, print "No keys recovered.  Check tag for good coupling (position, etc)?"
+        // 4. if ctx.keys_validated_count >= 2, print "Multiple keys recovered.  Run command again (will use different alt nonce)?"
+        // 5. if ctx.keys_validated_count == 1, print "Found key: " ...
+    }
+
+
+    return result;
 }
 
 static command_t CommandTable[] = {
     {"help",     CmdHelp,           AlwaysAvailable, "This help"},
-    {"brute",    CmdEM4x70Brute,    IfPm3EM4x70,     "Bruteforce EM4X70 to find partial Crypt Key"},
+    {"brute",    CmdEM4x70Brute,    IfPm3EM4x70,     "Bruteforce EM4X70 to find partial key"},
     {"info",     CmdEM4x70Info,     IfPm3EM4x70,     "Tag information EM4x70"},
     {"write",    CmdEM4x70Write,    IfPm3EM4x70,     "Write EM4x70"},
     {"unlock",   CmdEM4x70Unlock,   IfPm3EM4x70,     "Unlock EM4x70 for writing"},
     {"auth",     CmdEM4x70Auth,     IfPm3EM4x70,     "Authenticate EM4x70"},
     {"writepin", CmdEM4x70WritePIN, IfPm3EM4x70,     "Write PIN"},
-    {"writekey", CmdEM4x70WriteKey, IfPm3EM4x70,     "Write Crypt Key"},
+    {"writekey", CmdEM4x70WriteKey, IfPm3EM4x70,     "Write key"},
+    {"recover",  CmdEM4x70Recover,  IfPm3EM4x70,     "Recover remaining key from partial key"},
     {NULL, NULL, NULL, NULL}
 };
 
