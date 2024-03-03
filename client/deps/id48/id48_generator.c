@@ -615,6 +615,7 @@ static inline void calculate_temporaries(ID48LIBX_STATE_REGISTERS* ssr) {
         );
 
     const uint64_t backup = ssr->Raw & bits_must_remain_same_mask;
+    (void)backup; // to avoid warning about unused variable
 #pragma endregion // to be removed after all is validated
     
     // Only bits that change value: H00, a, b, c, j
@@ -644,6 +645,7 @@ static inline void calculate_temporaries(ID48LIBX_STATE_REGISTERS* ssr) {
 
 #pragma region    // to be removed after all is validated
     const uint64_t chk = ssr->Raw & bits_must_remain_same_mask;
+    (void)chk; // to avoid warning about unused variable
     ASSERT(chk == backup);
 #pragma endregion // to be removed after all is validated
 
@@ -768,6 +770,7 @@ static inline INPUT_BITS2 get_key_input_bits(const ID48LIB_KEY* k) {
     }
 
     static const uint64_t INPUT_MASK = (1ull << 40) - 1u;
+    (void)INPUT_MASK; // to avoid warning about unused variable
     ASSERT((result.Raw & (~INPUT_MASK)) == 0ull);
     return result;
 }

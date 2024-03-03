@@ -23,13 +23,6 @@
  *
  */
 
-#include <inttypes.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h> // memset()
-#include <assert.h>
-
 #include "id48_internals.h"
 
 #ifndef nullptr
@@ -188,16 +181,16 @@ static EXPECTED_OUTPUT_BITS create_expected_output_bits(const ID48LIB_FRN* input
 /// <param name="recovery_state">A value in the range [0,55]</param>
 /// <returns>Zero or non-zero (boolean) corresponding to the expected output.</returns>
 static bool get_expected_output_bit(const RECOVERY_STATE* recovery_state, uint8_t current_state_index) {
-    assert(recovery_state != nullptr);
-    assert(current_state_index >= 7);
-    assert(current_state_index <= 55);
+    ASSERT(recovery_state != nullptr);
+    ASSERT(current_state_index >= 7);
+    ASSERT(current_state_index <= 55);
     uint64_t shifted = recovery_state->expected_output_bits.Raw >> (current_state_index - 7u);
     return !!(shifted & 0x1u); // return the single bit result
 }
 
 static void restart_and_calculate_s00(RECOVERY_STATE* s, const KEY_BITS_K47_TO_K00* k_low) {
-    assert(s != nullptr);
-    assert(k_low != nullptr);
+    ASSERT(s != nullptr);
+    ASSERT(k_low != nullptr);
     memset(&(s->states[0]), 0xAA, sizeof(ID48LIBX_STATE_REGISTERS) * MAXIMUM_STATE_HISTORY);
     uint8_t k47_to_k40 = (uint8_t)(k_low->Raw >> 40);
     const ID48LIB_KEY start_56b_key = create_partial_key56(&(s->known_k95_to_k48), k47_to_k40);
@@ -315,14 +308,14 @@ static bool get_next_potential_key(
     while (1) {
         // Currently, at loop start, ready to test the current bit vs. expected value
 
-        assert(current_key_bit_shift < 48);
+        ASSERT(current_key_bit_shift < 48);
         // Anytime bit shift is 40+, changes would affect s00 ...
         if (current_key_bit_shift > 39) {
             restart_and_calculate_s00(&g_S, &k_low);
             current_key_bit_shift = 39; // k47..k40 used to get to s00
         }
 
-        assert(current_key_bit_shift < 40);
+        ASSERT(current_key_bit_shift < 40);
         // Anytime bit shift is 33+, unconditionally calculate through s07,
         // because the output bits are not exposed, and thus cannot be validated.
         while (current_key_bit_shift > 32) { // k39..k33 used to move from s00-->s07
@@ -334,8 +327,8 @@ static bool get_next_potential_key(
         }
 
 
-        assert(current_key_bit_shift <= 32); // K₃₂ is used with s₀₇ to generate first output bit O₀₀
-        assert(current_key_bit_shift >=  0); // K₀₀ is a special case ... so negative is unexpected
+        ASSERT(current_key_bit_shift <= 32); // K₃₂ is used with s₀₇ to generate first output bit O₀₀
+        ASSERT(current_key_bit_shift >=  0); // K₀₀ is a special case ... so negative is unexpected
 
         // Check if the current state + current key bit (as stored) gives expected result.
         const uint8_t src_idx = 39 - current_key_bit_shift;
@@ -351,7 +344,7 @@ static bool get_next_potential_key(
             // that was the last bit to be checked in this potential key
             // but, must also test 15x additional zero bit inputs before
             // reporting that this may be a potential key
-            assert(src_idx == 39);
+            ASSERT(src_idx == 39);
             matched = validate_output_from_additional_fifteen_zero_bits(&g_S);
         }
 
