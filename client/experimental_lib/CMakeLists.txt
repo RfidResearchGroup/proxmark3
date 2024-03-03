@@ -759,6 +759,7 @@ target_link_libraries(pm3rrg_rdv4 PRIVATE
         pm3rrg_rdv4_amiibo
         pm3rrg_rdv4_reveng
         pm3rrg_rdv4_hardnested
+        pm3rrg_rdv4_id48
         ${ADDITIONAL_LNK})
 
 if (NOT SKIPPTHREAD EQUAL 1)
