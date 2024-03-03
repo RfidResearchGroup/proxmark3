@@ -31,7 +31,7 @@ int CmdEM4x70Unlock(const char *Cmd);
 int CmdEM4x70Auth(const char *Cmd);
 int CmdEM4x70WritePIN(const char *Cmd);
 int CmdEM4x70WriteKey(const char *Cmd);
-//int CmdEM4x70Recover(const char *Cmd);
+int CmdEM4x70Recover(const char *Cmd);
 
 // for `lf search`:
 bool detect_4x70_block(void);
