@@ -300,7 +300,7 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
  * @param filename
  * @return
  */
-DumpFileType_t getfiletype(const char *filename);
+DumpFileType_t get_filetype(const char *filename);
 
 
 /**
