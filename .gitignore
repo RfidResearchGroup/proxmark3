@@ -37,6 +37,9 @@ originalitysig.csv
 
 # new build file for add-ons.
 Makefile.platform
+Makefile.platform.*
+!Makefile.platform.sample
+
 # Cache for detecting platform def changes
 .Makefile.options.cache
 
