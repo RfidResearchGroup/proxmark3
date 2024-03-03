@@ -676,8 +676,7 @@ static int ValidateArgsForRecover(const char *Cmd, em4x70_recovery_data_t* out_r
     }
 
     if (PM3_SUCCESS == result) {
-        ID48LIB_NONCE alt_n;
-        fill_buffer_prng_bytes(&alt_n, sizeof(ID48LIB_NONCE));
+        fill_buffer_prng_bytes(&out_results->alt_nonce, sizeof(ID48LIB_NONCE));
     }
 
     // single exit point
@@ -734,7 +733,7 @@ int CmdEM4x70Recover(const char *Cmd) {
             PrintAndLogEx(NORMAL,
                 "Potential Key #%d: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
                 " -->  " _YELLOW_("lf em 4x70 auth --rnd %02X%02X%02X%02X%02X%02X%02X --frn %02X%02X%02X%02X")
-                " --> %02X%02X%02X\n",
+                " --> %02X%02X%02X",
                 i,
                 q.k[ 0], q.k[ 1], q.k[ 2], q.k[ 3], q.k[ 4], q.k[ 5],
                 q.k[ 6], q.k[ 7], q.k[ 8], q.k[ 9], q.k[10], q.k[11],
