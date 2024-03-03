@@ -618,7 +618,7 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
             fflush(stdout);
 
             if (kbd_enter_pressed()) {
-                PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
+                PrintAndLogEx(WARNING, "\nAborted via keyboard!\n");
                 free(fptr);
                 free(keyA);
                 free(keyB);
@@ -643,16 +643,16 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
                     rights[sectorNo][3] = ((data[7] & 0x80) >> 5) | ((data[8] & 0x8) >> 2) | ((data[8] & 0x80) >> 7); // C1C2C3 for sector trailer
                     break;
                 } else if (tries == (MIFARE_SECTOR_RETRY / 2)) { // after half unsuccessful tries, give key B a go
-                    PrintAndLogEx(WARNING, "\ntrying with key B instead...");
+                    PrintAndLogEx(WARNING, "\nTrying with " _YELLOW_("key B") " instead...");
                     current_key = MF_KEY_B;
                     PrintAndLogEx(INFO, "." NOLF);
                 } else if (tries == (MIFARE_SECTOR_RETRY - 1)) { // on last try set defaults
-                    PrintAndLogEx(FAILED, "\ncould not get access rights for sector %2d. Trying with defaults...", sectorNo);
+                    PrintAndLogEx(FAILED, "\nFailed to read access rights for sector %2d  ( fallback to default )", sectorNo);
                     rights[sectorNo][0] = rights[sectorNo][1] = rights[sectorNo][2] = 0x00;
                     rights[sectorNo][3] = 0x01;
                 }
             } else {
-                PrintAndLogEx(FAILED, "\ncommand execute timeout when trying to read access rights for sector %2d. Trying with defaults...", sectorNo);
+                PrintAndLogEx(FAILED, "\nTimeout reading access rights for sector... %2d  ( fallback to default )", sectorNo);
                 rights[sectorNo][0] = rights[sectorNo][1] = rights[sectorNo][2] = 0x00;
                 rights[sectorNo][3] = 0x01;
             }
@@ -669,7 +669,7 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
             current_key = MF_KEY_A;
             uint8_t data_area = (sectorNo < 32) ? blockNo : blockNo / 5;
             if (rights[sectorNo][data_area] == 0x07) {                                     // no key would work
-                PrintAndLogEx(WARNING, "access rights do not allow reading of sector " _YELLOW_("%2d") " block " _YELLOW_("%3d") ", skipping", sectorNo, blockNo);
+                PrintAndLogEx(WARNING, "Access rights prevent reading sector... " _YELLOW_("%2d") " block... " _YELLOW_("%3d") " ( skip )", sectorNo, blockNo);
                 continue;
             }
 
@@ -736,12 +736,12 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
                     }
 
                     memcpy(carddata + (MFBLOCK_SIZE * (mfFirstBlockOfSector(sectorNo) + blockNo)), data, MFBLOCK_SIZE);
-                    PrintAndLogEx(INPLACE, "successfully read block " _YELLOW_("%2d") " of sector " _YELLOW_("%2d"), blockNo, sectorNo);
+                    PrintAndLogEx(INPLACE, "Sector... " _YELLOW_("%2d") " block..." _YELLOW_("%2d") " ( " _GREEN_("ok") " )", sectorNo, blockNo);
                 } else {
-                    PrintAndLogEx(FAILED, "\ncould not read block %2d of sector %2d", blockNo, sectorNo);
+                    PrintAndLogEx(FAILED, "\nSector... %2d Block... %2d ( " _RED_("fail") " )" , sectorNo, blockNo);
                 }
             } else {
-                PrintAndLogEx(WARNING, "command execute timeout when trying to read block %2d of sector %2d.", blockNo, sectorNo);
+                PrintAndLogEx(WARNING, "Timeout reading sector... %2d  block... %2d", sectorNo, blockNo);
             }
         }
     }
@@ -749,7 +749,6 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
     free(fptr);
     free(keyA);
     free(keyB);
-
     PrintAndLogEx(SUCCESS, "\nSucceeded in dumping all blocks");
     return PM3_SUCCESS ;
 }
@@ -1224,6 +1223,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0(NULL, "ns", "no save to file"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1241,6 +1241,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
     bool m2 = arg_get_lit(ctx, 5);
     bool m4 = arg_get_lit(ctx, 6);
     bool nosave = arg_get_lit(ctx, 7);
+    bool verbose = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
     uint64_t t1 = msclock();
@@ -1255,19 +1256,24 @@ static int CmdHF14AMfDump(const char *Cmd) {
 
     uint8_t numSectors = MIFARE_1K_MAXSECTOR;
     uint16_t bytes = MIFARE_1K_MAX_BYTES;
+    uint16_t block_cnt = MIFARE_1K_MAXBLOCK;
 
     if (m0) {
         numSectors = MIFARE_MINI_MAXSECTOR;
         bytes = MIFARE_MINI_MAX_BYTES;
+        block_cnt = MIFARE_MINI_MAXBLOCK;
     } else if (m1) {
         numSectors = MIFARE_1K_MAXSECTOR;
         bytes = MIFARE_1K_MAX_BYTES;
+        block_cnt = MIFARE_1K_MAXBLOCK;
     } else if (m2) {
         numSectors = MIFARE_2K_MAXSECTOR;
         bytes = MIFARE_2K_MAX_BYTES;
+        block_cnt = MIFARE_2K_MAXBLOCK;
     } else if (m4) {
         numSectors = MIFARE_4K_MAXSECTOR;
         bytes = MIFARE_4K_MAX_BYTES;
+        block_cnt = MIFARE_4K_MAXBLOCK;
     } else {
         PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
         return PM3_EINVARG;
@@ -1287,6 +1293,13 @@ static int CmdHF14AMfDump(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds\n", (msclock() - t1) / 1000);
+
+    mf_print_blocks(block_cnt, mem, verbose);
+
+    if (verbose) {
+        mf_print_keys(block_cnt, mem);
+        mf_analyse_acl(block_cnt, mem);
+    }
 
     // Skip saving card data to file
     if (nosave) {

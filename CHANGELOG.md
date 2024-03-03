@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Change `hf mf dump` - it now also prints the dumped memory (@iceman1001)
+ - Changed NDEF parsing to show mime images (@iceman1001)
+ - Fixed `hf mf ndefformat` - now correctly handles MADv2 when formatting (@iceman1001)
  - Fixed `hf 14a info` - magic detection works again and better hint detection (@iceman1001)
  - Added `hf 14b restore` - new command to restore dump files to a SR512/4k card (@Sonic803)
  - Changed led show / leds detection for PM3 Easy devices (@francesco-scar)
