@@ -347,7 +347,9 @@ static void mf_print_blocks(uint16_t n, uint8_t *d, bool verbose) {
         mf_print_block(i, d + (i * MFBLOCK_SIZE), verbose);
     }
     PrintAndLogEx(INFO, "-----+-----+-------------------------------------------------+-----------------");
-    PrintAndLogEx(HINT, _CYAN_("cyan") " = value block with decoded value");
+    if (verbose) {
+        PrintAndLogEx(HINT, _CYAN_("cyan") " = value block with decoded value");
+    }
 
     // MAD detection
     if (HasMADKey(d)) {
