@@ -55,6 +55,61 @@
 static const uint8_t KENC_type[4] = {0x00, 0x00, 0x00, 0x01};
 static const uint8_t KMAC_type[4] = {0x00, 0x00, 0x00, 0x02};
 
+/*
+* BAC = Basic Access Control
+* PA = Passive Authentication
+* AA = Active Authentication
+* EAC = Extended Access Control
+* SAC = Suppliment Access Control
+
+File structures
+---------------- 
+ Mastefile MF
+  -- EF.ATR/INFO (01)
+  -- EF.DIR (1E)
+  -- EF.CardSecurity (1D)
+  -- EF.CardAccess (1C)
+  Data Files DF
+    -- eMRTD Application DF (AID: )
+    -- Travel Records Application DF (AID: A0 00 00 02 47 20 01)
+      - EF.Certificates (1A)
+      - EF.EntryRecords (01)
+      - EF.ExitRecords (02)
+    -- Visa Records Application DF (AID: A0 00 00 02 47 20 02)
+      - EF.Certificates (1A)
+      - EF.ExitRecords (03)
+    -- Additional Biometrics Application DF (AID: ‘A0 00 00 02 47 20 03)
+      - EF.Certificates (011A)
+      - EF.Biometrics1  (0201)
+      - EF.Biometrics2  (0202)
+      - EF.Biometrics64 (0240)
+
+eMRTD Application DF
+-----------------------
+File names and what they contain
+  EG.COM = Common data
+  EG.DG1 = MRZ data
+  EG.DG2 = Biometric template, Photo
+  EG.DG3 = Biometric template, Fingerprint (EAC / AA)
+  EG.DG4 = Biometric template, Iris (EAC / AA) 
+  EG.DG5 = Image template
+  EG.DG6 = Image template
+  EG.DG7 = Image template (Signature?)
+  EG.DG8 = Data Feature
+  EG.DG9 = Structure Feature
+  EG.DG10 = Substance Feature
+  EG.DG11 = Additional personal details
+  EG.DG12 = Additional Document Detail
+  EG.DG13 = Optional Details
+  EG.DG14 = Security Options
+  EG.DG15 = AA public key
+  EG.DG16 = Persons to notify
+  EG.SOD = Security, signatures of all data files
+
+
+*/
+const char *pad = ".....................................";
+
 static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length, const char *path);
 static int emrtd_dump_ef_dg5(uint8_t *file_contents, size_t file_length, const char *path);
 static int emrtd_dump_ef_dg7(uint8_t *file_contents, size_t file_length, const char *path);
@@ -63,6 +118,7 @@ static int emrtd_print_ef_com_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg2_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg5_info(uint8_t *data, size_t datalen);
+static int emrtd_print_ef_dg7_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen);
 static int emrtd_print_ef_cardaccess_info(uint8_t *data, size_t datalen);
@@ -99,7 +155,7 @@ static emrtd_dg_t dg_table[] = {
     {0x76, 4,  0x0104, "EF_DG4",          "Encoded Eye(s)",                                     false, true,  false, false, NULL,                           NULL},
     {0x65, 5,  0x0105, "EF_DG5",          "Displayed Portrait",                                 false, false, false, false, emrtd_print_ef_dg5_info,        emrtd_dump_ef_dg5},
     {0x66, 6,  0x0106, "EF_DG6",          "Reserved for Future Use",                            false, false, false, false, NULL,                           NULL},
-    {0x67, 7,  0x0107, "EF_DG7",          "Displayed Signature or Usual Mark",                  false, false, false, false, NULL,                           emrtd_dump_ef_dg7},
+    {0x67, 7,  0x0107, "EF_DG7",          "Displayed Signature or Usual Mark",                  false, false, false, false, emrtd_print_ef_dg7_info,        emrtd_dump_ef_dg7},
     {0x68, 8,  0x0108, "EF_DG8",          "Data Feature(s)",                                    false, false, false, true,  NULL,                           NULL},
     {0x69, 9,  0x0109, "EF_DG9",          "Structure Feature(s)",                               false, false, false, true,  NULL,                           NULL},
     {0x6a, 10, 0x010A, "EF_DG10",         "Substance Feature(s)",                               false, false, false, true,  NULL,                           NULL},
@@ -843,12 +899,12 @@ static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, uint
     strncat(filepath, PATHSEP, 2);
     strcat(filepath, name);
 
-    PrintAndLogEx(INFO, "Read " _YELLOW_("%s") " , len %zu", name, resplen);
+    PrintAndLogEx(INFO, "Read " _YELLOW_("%s") ", len %zu", name, resplen);
     PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars)");
     PrintAndLogEx(DEBUG, "------------------------------------------");
     PrintAndLogEx(DEBUG, "%s", sprint_hex_inrow(response, resplen));
     PrintAndLogEx(DEBUG, "------------------------------------------");
-    saveFile(filepath, ".BIN", response, resplen);
+    saveFile(filepath, ".bin", response, resplen);
 
     emrtd_dg_t *dg = emrtd_fileid_to_dg(file);
     if ((dg != NULL) && (dg->dumper != NULL)) {
@@ -935,7 +991,7 @@ static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t 
         PrintAndLogEx(ERR, "Couldn't do external authentication. Did you supply the correct MRZ info?");
         return false;
     }
-    PrintAndLogEx(INFO, "External authentication with BAC successful.");
+    PrintAndLogEx(INFO, "External authentication with BAC successful");
 
     uint8_t dec_output[32] = { 0x00 };
     des3_decrypt_cbc(iv, kenc, response, 32, dec_output);
@@ -987,7 +1043,7 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
     if (emrtd_select_file_by_ef(dg_table[EF_COM].fileid) == false) {
         *BAC = true;
         PrintAndLogEx(INFO, "Authentication is enforced");
-        PrintAndLogEx(INFO, "Switching to external authentication...");
+        PrintAndLogEx(INFO, "Switching to external authentication");
     } else {
         *BAC = false;
         // Select EF_DG1
@@ -998,7 +1054,7 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
         if (emrtd_read_file(response, &resplen, NULL, NULL, NULL, false) == false) {
             *BAC = true;
             PrintAndLogEx(INFO, "Authentication is enforced");
-            PrintAndLogEx(INFO, "Switching to external authentication...");
+            PrintAndLogEx(INFO, "Switching to external authentication");
         } else {
             *BAC = false;
         }
@@ -1063,9 +1119,9 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     strncat(filepath, PATHSEP, 2);
     strcat(filepath, dg_table[EF_COM].filename);
 
-    PrintAndLogEx(INFO, "Read EF_COM, len: %zu", resplen);
-    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars): %s", sprint_hex_inrow(response, resplen));
-    saveFile(filepath, ".BIN", response, resplen);
+    PrintAndLogEx(INFO, "Read EF_COM, len %zu", resplen);
+    PrintAndLogEx(DEBUG, "Contents (may be incomplete over 2k chars)... %s", sprint_hex_inrow(response, resplen));
+    saveFile(filepath, ".bin", response, resplen);
 
     free(filepath);
 
@@ -1078,17 +1134,17 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(DEBUG, "File List: %s", sprint_hex_inrow(filelist, filelistlen));
+    PrintAndLogEx(DEBUG, "File List... %s", sprint_hex_inrow(filelist, filelistlen));
     // Add EF_SOD to the list
     filelist[filelistlen++] = 0x77;
     // Dump all files in the file list
     for (int i = 0; i < filelistlen; i++) {
         emrtd_dg_t *dg = emrtd_tag_to_dg(filelist[i]);
         if (dg == NULL) {
-            PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
+            PrintAndLogEx(INFO, "File tag not found, skipping... %02X", filelist[i]);
             continue;
         }
-        PrintAndLogEx(DEBUG, "Current file: %s", dg->filename);
+        PrintAndLogEx(DEBUG, "Current file... %s", dg->filename);
         if (!dg->pace && !dg->eac) {
             emrtd_dump_file(ks_enc, ks_mac, ssc, dg->fileid, dg->filename, BAC, path);
         }
@@ -1129,7 +1185,7 @@ static void emrtd_print_legal_sex(char *legal_sex) {
             strncpy(sex, "Unspecified", 12);
             break;
     }
-    PrintAndLogEx(SUCCESS, "Legal Sex Marker......: " _YELLOW_("%s"), sex);
+    PrintAndLogEx(SUCCESS, "Legal Sex Marker......... " _YELLOW_("%s"), sex);
 }
 
 static int emrtd_mrz_determine_length(const char *mrz, int offset, int max_length) {
@@ -1168,7 +1224,7 @@ static void emrtd_print_optional_elements(char *mrz, int offset, int length, boo
         return;
     }
 
-    PrintAndLogEx(SUCCESS, "Optional elements.....: " _YELLOW_("%.*s"), i, mrz + offset);
+    PrintAndLogEx(SUCCESS, "Optional elements........ " _YELLOW_("%.*s"), i, mrz + offset);
 
     if (verify_check_digit && !emrtd_mrz_verify_check_digit(mrz, offset, length)) {
         PrintAndLogEx(SUCCESS, _RED_("Optional element check digit is invalid."));
@@ -1181,7 +1237,7 @@ static void emrtd_print_document_number(char *mrz, int offset) {
         return;
     }
 
-    PrintAndLogEx(SUCCESS, "Document Number.......: " _YELLOW_("%.*s"), i, mrz + offset);
+    PrintAndLogEx(SUCCESS, "Document Number.......... " _YELLOW_("%.*s"), i, mrz + offset);
 
     if (!emrtd_mrz_verify_check_digit(mrz, offset, 9)) {
         PrintAndLogEx(SUCCESS, _RED_("Document number check digit is invalid."));
@@ -1211,9 +1267,9 @@ static void emrtd_print_name(char *mrz, int offset, int max_length, bool localiz
     emrtd_mrz_replace_pad(final_name, namelen, ' ');
 
     if (localized) {
-        PrintAndLogEx(SUCCESS, "Legal Name (Localized): " _YELLOW_("%s"), final_name);
+        PrintAndLogEx(SUCCESS, "Legal Name (Localized)... " _YELLOW_("%s"), final_name);
     } else {
-        PrintAndLogEx(SUCCESS, "Legal Name............: " _YELLOW_("%s"), final_name);
+        PrintAndLogEx(SUCCESS, "Legal Name............... " _YELLOW_("%s"), final_name);
     }
 }
 
@@ -1260,7 +1316,7 @@ static void emrtd_print_dob(char *mrz, int offset, bool full, bool ascii) {
     char final_date[12] = { 0x00 };
     emrtd_mrz_convert_date(mrz, offset, final_date, false, full, ascii);
 
-    PrintAndLogEx(SUCCESS, "Date of birth.........: " _YELLOW_("%s"), final_date);
+    PrintAndLogEx(SUCCESS, "Date of birth............ " _YELLOW_("%s"), final_date);
 
     if (!full && !emrtd_mrz_verify_check_digit(mrz, offset, 6)) {
         PrintAndLogEx(SUCCESS, _RED_("Date of Birth check digit is invalid."));
@@ -1271,7 +1327,7 @@ static void emrtd_print_expiry(char *mrz, int offset) {
     char final_date[12] = { 0x00 };
     emrtd_mrz_convert_date(mrz, offset, final_date, true, false, true);
 
-    PrintAndLogEx(SUCCESS, "Date of expiry........: " _YELLOW_("%s"), final_date);
+    PrintAndLogEx(SUCCESS, "Date of expiry........... " _YELLOW_("%s"), final_date);
 
     if (!emrtd_mrz_verify_check_digit(mrz, offset, 6)) {
         PrintAndLogEx(SUCCESS, _RED_("Date of expiry check digit is invalid."));
@@ -1282,7 +1338,7 @@ static void emrtd_print_issuance(char *data, bool ascii) {
     char final_date[12] = { 0x00 };
     emrtd_mrz_convert_date(data, 0, final_date, true, true, ascii);
 
-    PrintAndLogEx(SUCCESS, "Date of issue.........: " _YELLOW_("%s"), final_date);
+    PrintAndLogEx(SUCCESS, "Date of issue............ " _YELLOW_("%s"), final_date);
 }
 
 static void emrtd_print_personalization_timestamp(uint8_t *data, size_t datalen) {
@@ -1303,7 +1359,7 @@ static void emrtd_print_personalization_timestamp(uint8_t *data, size_t datalen)
              , str_date + 12
             );
 
-    PrintAndLogEx(SUCCESS, "Personalization at....: " _YELLOW_("%s"), final_date);
+    PrintAndLogEx(SUCCESS, "Personalization at....... " _YELLOW_("%s"), final_date);
 }
 
 static void emrtd_print_unknown_timestamp_5f85(uint8_t *data, size_t datalen) {
@@ -1320,7 +1376,7 @@ static void emrtd_print_unknown_timestamp_5f85(uint8_t *data, size_t datalen) {
              , data + 12
             );
 
-    PrintAndLogEx(SUCCESS, "Unknown timestamp 5F85: " _YELLOW_("%s"), final_date);
+    PrintAndLogEx(SUCCESS, "Unknown timestamp 5F85... " _YELLOW_("%s"), final_date);
     PrintAndLogEx(HINT, "This is very likely the personalization timestamp, but it is using an undocumented tag.");
 }
 
@@ -1335,14 +1391,15 @@ static int emrtd_print_ef_com_info(uint8_t *data, size_t datalen) {
 
     // List files in the file list
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_COM") " --------------------");
+    PrintAndLogEx(INFO, "------------------------ " _CYAN_("EF_COM") " ------------------------");
     for (int i = 0; i < filelistlen; i++) {
         emrtd_dg_t *dg = emrtd_tag_to_dg(filelist[i]);
         if (dg == NULL) {
             PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
             continue;
         }
-        PrintAndLogEx(SUCCESS, "%-7s...............: " _YELLOW_("%s"), dg->filename, dg->desc);
+        int n = 25 - strlen(dg->filename);
+        PrintAndLogEx(SUCCESS, "%s%*.*s " _YELLOW_("%s"), dg->filename, n, n, pad, dg->desc);
     }
     return PM3_SUCCESS;
 }
@@ -1351,7 +1408,7 @@ static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen) {
     int td_variant = 0;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_DG1") " --------------------");
+    PrintAndLogEx(INFO, "------------------------ " _CYAN_("EF_DG1") " ------------------------");
 
     // MRZ on TD1 is 90 characters, 30 on each row.
     // MRZ on TD3 is 88 characters, 44 on each row.
@@ -1365,15 +1422,15 @@ static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen) {
 
     // Determine and print the document type
     if (mrz[0] == 'I' && mrz[1] == 'P') {
-        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Passport Card"));
+        PrintAndLogEx(SUCCESS, "Document Type............ " _YELLOW_("Passport Card"));
     } else if (mrz[0] == 'I') {
-        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("ID Card"));
+        PrintAndLogEx(SUCCESS, "Document Type............ " _YELLOW_("ID Card"));
     } else if (mrz[0] == 'P') {
-        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Passport"));
+        PrintAndLogEx(SUCCESS, "Document Type............ " _YELLOW_("Passport"));
     } else if (mrz[0] == 'A') {
-        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Residency Permit"));
+        PrintAndLogEx(SUCCESS, "Document Type............ " _YELLOW_("Residency Permit"));
     } else {
-        PrintAndLogEx(SUCCESS, "Document Type.........: " _YELLOW_("Unknown"));
+        PrintAndLogEx(SUCCESS, "Document Type............ " _YELLOW_("Unknown"));
     }
 
     if (mrzlen == 90) {
@@ -1385,23 +1442,23 @@ static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Document Form Factor..: " _YELLOW_("TD%i"), td_variant);
+    PrintAndLogEx(SUCCESS, "Document Form Factor..... " _YELLOW_("TD%i"), td_variant);
 
     // Print the MRZ
     if (td_variant == 1) {
-        PrintAndLogEx(DEBUG, "MRZ Row 1: " _YELLOW_("%.30s"), mrz);
-        PrintAndLogEx(DEBUG, "MRZ Row 2: " _YELLOW_("%.30s"), mrz + 30);
-        PrintAndLogEx(DEBUG, "MRZ Row 3: " _YELLOW_("%.30s"), mrz + 60);
+        PrintAndLogEx(DEBUG, "MRZ Row 1... " _YELLOW_("%.30s"), mrz);
+        PrintAndLogEx(DEBUG, "MRZ Row 2... " _YELLOW_("%.30s"), mrz + 30);
+        PrintAndLogEx(DEBUG, "MRZ Row 3... " _YELLOW_("%.30s"), mrz + 60);
     } else if (td_variant == 3) {
-        PrintAndLogEx(DEBUG, "MRZ Row 1: " _YELLOW_("%.44s"), mrz);
-        PrintAndLogEx(DEBUG, "MRZ Row 2: " _YELLOW_("%.44s"), mrz + 44);
+        PrintAndLogEx(DEBUG, "MRZ Row 1... " _YELLOW_("%.44s"), mrz);
+        PrintAndLogEx(DEBUG, "MRZ Row 2... " _YELLOW_("%.44s"), mrz + 44);
     }
 
-    PrintAndLogEx(SUCCESS, "Issuing state.........: " _YELLOW_("%.3s"), mrz + 2);
+    PrintAndLogEx(SUCCESS, "Issuing state............ " _YELLOW_("%.3s"), mrz + 2);
 
     if (td_variant == 3) {
         // Passport form factor
-        PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 44 + 10);
+        PrintAndLogEx(SUCCESS, "Nationality.............. " _YELLOW_("%.3s"), mrz + 44 + 10);
         emrtd_print_name(mrz, 5, 38, false);
         emrtd_print_document_number(mrz, 44);
         emrtd_print_dob(mrz, 44 + 13, false, true);
@@ -1415,12 +1472,12 @@ static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen) {
         memcpy(composite_check_data + 10, mrz + 44 + 13, 7);
         memcpy(composite_check_data + 17, mrz + 44 + 21, 23);
 
-        if (!emrtd_compare_check_digit(composite_check_data, 39, mrz[87])) {
+        if (emrtd_compare_check_digit(composite_check_data, 39, mrz[87]) == false) {
             PrintAndLogEx(SUCCESS, _RED_("Composite check digit is invalid."));
         }
     } else if (td_variant == 1) {
         // ID form factor
-        PrintAndLogEx(SUCCESS, "Nationality...........: " _YELLOW_("%.3s"), mrz + 30 + 15);
+        PrintAndLogEx(SUCCESS, "Nationality.............. " _YELLOW_("%.3s"), mrz + 30 + 15);
         emrtd_print_name(mrz, 60, 30, false);
         emrtd_print_document_number(mrz, 5);
         emrtd_print_dob(mrz, 30, false, true);
@@ -1430,7 +1487,7 @@ static int emrtd_print_ef_dg1_info(uint8_t *data, size_t datalen) {
         emrtd_print_optional_elements(mrz, 30 + 18, 11, false);
 
         // Calculate and verify composite check digit
-        if (!emrtd_compare_check_digit(mrz, 59, mrz[59])) {
+        if (emrtd_compare_check_digit(mrz, 59, mrz[59]) == false) {
             PrintAndLogEx(SUCCESS, _RED_("Composite check digit is invalid."));
         }
     }
@@ -1488,6 +1545,31 @@ static int emrtd_print_ef_dg5_info(uint8_t *data, size_t datalen) {
     return PM3_SUCCESS;
 }
 
+static int emrtd_print_ef_dg7_info(uint8_t *data, size_t datalen) {
+
+    int offset = 0;
+
+    // This is a hacky impl that just looks for the image header. I'll improve it eventually.
+    // based on mrpkey.py
+    // Note: Doing datalen - 6 to account for the longest data we're checking.
+    // Checks first byte before the rest to reduce overhead
+    for (offset = 0; offset < datalen - 6; offset++) {
+        if ((data[offset] == 0xFF && memcmp(jpeg_header, data + offset, 4) == 0) ||
+                (data[offset] == 0x00 && memcmp(jpeg2k_header, data + offset, 6) == 0)) {
+            datalen = datalen - offset;
+            break;
+        }
+    }
+
+    // If we didn't get any data, return false.
+    if (datalen == 0) {
+        return PM3_ESOFT;
+    }
+
+    ShowPictureWindow(data + offset, datalen);
+    return PM3_SUCCESS;
+}
+
 static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen) {
     uint8_t taglist[100] = { 0x00 };
     size_t taglistlen = 0;
@@ -1495,7 +1577,7 @@ static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen) {
     size_t tagdatalen = 0;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_DG11") " -------------------");
+    PrintAndLogEx(INFO, "------------------------ " _CYAN_("EF_DG11") " -----------------------");
 
     if (emrtd_lds_get_data_by_tag(data, datalen, taglist, &taglistlen, 0x5c, 0x00, false, true, 0) == false) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_DG11.");
@@ -1519,50 +1601,50 @@ static int emrtd_print_ef_dg11_info(uint8_t *data, size_t datalen) {
                     emrtd_print_name((char *) tagdata, 0, tagdatalen, false);
                     break;
                 case 0x10:
-                    PrintAndLogEx(SUCCESS, "Personal Number.......: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Personal Number.......... " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x11:
                     // TODO: acc for < separation
-                    PrintAndLogEx(SUCCESS, "Place of Birth........: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Place of Birth........... " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x42:
                     // TODO: acc for < separation
-                    PrintAndLogEx(SUCCESS, "Permanent Address.....: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Permanent Address........ " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x12:
-                    PrintAndLogEx(SUCCESS, "Telephone.............: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Telephone................ " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x13:
-                    PrintAndLogEx(SUCCESS, "Profession............: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Profession............... " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x14:
-                    PrintAndLogEx(SUCCESS, "Title.................: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Title.................... " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x15:
-                    PrintAndLogEx(SUCCESS, "Personal Summary......: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Personal Summary......... " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x16:
                     saveFile("ProofOfCitizenship", tagdata[0] == 0xFF ? ".jpg" : ".jp2", tagdata, tagdatalen);
                     break;
                 case 0x17:
                     // TODO: acc for < separation
-                    PrintAndLogEx(SUCCESS, "Other valid TDs nums..: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Other valid TDs nums..... " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x18:
-                    PrintAndLogEx(SUCCESS, "Custody Information...: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Custody Information...... " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x2b:
                     emrtd_print_dob((char *) tagdata, 0, true, tagdatalen != 4);
                     break;
                 default:
-                    PrintAndLogEx(SUCCESS, "Unknown Field %02X%02X....: %s", taglist[i], taglist[i + 1], sprint_hex_inrow(tagdata, tagdatalen));
+                    PrintAndLogEx(SUCCESS, "Unknown Field %02X%02X....... %s", taglist[i], taglist[i + 1], sprint_hex_inrow(tagdata, tagdatalen));
                     break;
             }
 
             i += 1;
         } else {
             // TODO: Account for A0
-            PrintAndLogEx(SUCCESS, "Unknown Field %02X......: %s", taglist[i], sprint_hex_inrow(tagdata, tagdatalen));
+            PrintAndLogEx(SUCCESS, "Unknown Field %02X......... %s", taglist[i], sprint_hex_inrow(tagdata, tagdatalen));
         }
     }
     return PM3_SUCCESS;
@@ -1575,7 +1657,7 @@ static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen) {
     size_t tagdatalen = 0;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_DG12") " -------------------");
+    PrintAndLogEx(INFO, "------------------------ " _CYAN_("EF_DG12") " -----------------------");
 
     if (emrtd_lds_get_data_by_tag(data, datalen, taglist, &taglistlen, 0x5c, 0x00, false, true, 0) == false) {
         PrintAndLogEx(ERR, "Failed to read file list from EF_DG12.");
@@ -1595,16 +1677,16 @@ static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen) {
             // ...and I doubt many states are using them.
             switch (taglist[i + 1]) {
                 case 0x19:
-                    PrintAndLogEx(SUCCESS, "Issuing Authority.....: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Issuing Authority........ " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x26:
                     emrtd_print_issuance((char *) tagdata, tagdatalen != 4);
                     break;
                 case 0x1b:
-                    PrintAndLogEx(SUCCESS, "Endorsements & Observations: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Endorsements & Observations... " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x1c:
-                    PrintAndLogEx(SUCCESS, "Tax/Exit Requirements.: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Tax/Exit Requirements.... " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x1d:
                     saveFile("FrontOfDocument", tagdata[0] == 0xFF ? ".jpg" : ".jp2", tagdata, tagdatalen);
@@ -1616,20 +1698,20 @@ static int emrtd_print_ef_dg12_info(uint8_t *data, size_t datalen) {
                     emrtd_print_personalization_timestamp(tagdata, tagdatalen);
                     break;
                 case 0x56:
-                    PrintAndLogEx(SUCCESS, "Serial of Personalization System: " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
+                    PrintAndLogEx(SUCCESS, "Serial of Personalization System... " _YELLOW_("%.*s"), (int)tagdatalen, tagdata);
                     break;
                 case 0x85:
                     emrtd_print_unknown_timestamp_5f85(tagdata, tagdatalen);
                     break;
                 default:
-                    PrintAndLogEx(SUCCESS, "Unknown Field %02X%02X....: %s", taglist[i], taglist[i + 1], sprint_hex_inrow(tagdata, tagdatalen));
+                    PrintAndLogEx(SUCCESS, "Unknown Field %02X%02X....... %s", taglist[i], taglist[i + 1], sprint_hex_inrow(tagdata, tagdatalen));
                     break;
             }
 
             i += 1;
         } else {
             // TODO: Account for A0
-            PrintAndLogEx(SUCCESS, "Unknown Field %02X......: %s", taglist[i], sprint_hex_inrow(tagdata, tagdatalen));
+            PrintAndLogEx(SUCCESS, "Unknown Field %02X......... %s", taglist[i], sprint_hex_inrow(tagdata, tagdatalen));
         }
     }
     return PM3_SUCCESS;
@@ -1737,16 +1819,16 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
         return false;
     }
 
-    PrintAndLogEx(DEBUG, "hash data: %s", sprint_hex_inrow(emrtdsig, emrtdsiglen));
+    PrintAndLogEx(DEBUG, "hash data... %s", sprint_hex_inrow(emrtdsig, emrtdsiglen));
 
     emrtd_parse_ef_sod_hash_algo(emrtdsig, emrtdsiglen, hashalgo);
 
     if (emrtd_lds_get_data_by_tag(emrtdsig, emrtdsiglen, hashlist, &hashlistlen, 0x30, 0x00, false, true, 1) == false) {
-        PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD.");
+        PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD");
         return false;
     }
 
-    PrintAndLogEx(DEBUG, "hash list: %s", sprint_hex_inrow(hashlist, hashlistlen));
+    PrintAndLogEx(DEBUG, "hash list... %s", sprint_hex_inrow(hashlist, hashlistlen));
 
     while (offset < hashlistlen) {
         // Get the length of the element
@@ -1779,33 +1861,47 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
 
 static int emrtd_print_ef_sod_info(uint8_t *dg_hashes_calc, uint8_t *dg_hashes_sod, int hash_algo, bool fastdump) {
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-------------------- " _CYAN_("EF_SOD") " --------------------");
+    PrintAndLogEx(INFO, "------------------------ " _CYAN_("EF_SOD") " ------------------------");
+    PrintAndLogEx(INFO, "Document Security Object, ");
+    PrintAndLogEx(INFO, "contains the digital signatures of the passport data");
+    PrintAndLogEx(INFO, "");
 
     if (hash_algo == -1) {
-        PrintAndLogEx(SUCCESS, "Hash algorithm: " _YELLOW_("Unknown"));
+        PrintAndLogEx(SUCCESS, "Hash algorithm... " _YELLOW_("Unknown"));
     } else {
-        PrintAndLogEx(SUCCESS, "Hash algorithm: " _YELLOW_("%s"), hashalg_table[hash_algo].name);
+
+        PrintAndLogEx(SUCCESS, "Hash algorithm... " _YELLOW_("%s"), hashalg_table[hash_algo].name);
 
         uint8_t all_zeroes[64] = { 0x00 };
+
         for (int i = 1; i <= 16; i++) {
+
             bool calc_all_zero = (memcmp(dg_hashes_calc + (i * 64), all_zeroes, hashalg_table[hash_algo].hashlen) == 0);
             bool sod_all_zero = (memcmp(dg_hashes_sod + (i * 64), all_zeroes, hashalg_table[hash_algo].hashlen) == 0);
             bool hash_matches = (memcmp(dg_hashes_sod + (i * 64), dg_hashes_calc + (i * 64), hashalg_table[hash_algo].hashlen) == 0);
+
             // Ignore files we don't haven't read and lack hashes to
             if (calc_all_zero == true && sod_all_zero == true) {
                 continue;
-            } else if (calc_all_zero == true) {
+            }
+            
+            // silly padding thingy
+            int n = 40 - strlen(dg_table[i].desc);
+
+            if (calc_all_zero == true) {
+
                 if (fastdump && !dg_table[i].fastdump && !dg_table[i].pace && !dg_table[i].eac) {
-                    PrintAndLogEx(SUCCESS, "EF_DG%i: " _YELLOW_("File was skipped, but is in EF_SOD."), i);
+                    PrintAndLogEx(SUCCESS, "EF_DG%2i %s %*.*s File was skipped, but is in EF_SOD", i, dg_table[i].desc, n, n, pad);
                 } else {
-                    PrintAndLogEx(SUCCESS, "EF_DG%i: " _YELLOW_("File couldn't be read, but is in EF_SOD."), i);
+                    PrintAndLogEx(SUCCESS, "EF_DG%2i %s %*.*s File couldn't be read, but is in EF_SOD", i, dg_table[i].desc, n, n, pad);
                 }
+
             } else if (sod_all_zero == true) {
-                PrintAndLogEx(SUCCESS, "EF_DG%i: " _YELLOW_("File is not in EF_SOD."), i);
+                PrintAndLogEx(SUCCESS, "EF_DG%2i %s %*.*s " _RED_("File is not in EF_SOD"), i, dg_table[i].desc, n, n, pad);
             } else if (hash_matches == false) {
-                PrintAndLogEx(SUCCESS, "EF_DG%i: " _RED_("Invalid"), i);
+                PrintAndLogEx(SUCCESS, "EF_DG%2i %s %*.*s " _RED_("Invalid"), i, dg_table[i].desc, n, n, pad);
             } else {
-                PrintAndLogEx(SUCCESS, "EF_DG%i: " _GREEN_("Valid"), i);
+                PrintAndLogEx(SUCCESS, "EF_DG%2i %s %*.*s " _GREEN_("Valid"), i, dg_table[i].desc, n, n, pad);
             }
         }
     }
@@ -1821,7 +1917,7 @@ static int emrtd_print_ef_cardaccess_info(uint8_t *data, size_t datalen) {
     uint8_t parsednum = 0;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "----------------- " _CYAN_("EF_CardAccess") " ----------------");
+    PrintAndLogEx(INFO, "--------------------- " _CYAN_("EF_CardAccess") " --------------------");
 
     if (emrtd_lds_get_data_by_tag(data, datalen, dataset, &datasetlen, 0x30, 0x00, false, true, 0) == false) {
         PrintAndLogEx(ERR, "Failed to read set from EF_CardAccess.");
@@ -1835,7 +1931,7 @@ static int emrtd_print_ef_cardaccess_info(uint8_t *data, size_t datalen) {
     }
     // TODO: hack!!!
     memcpy(&parsednum, datafromtag, datafromtaglen);
-    PrintAndLogEx(SUCCESS, "PACE version..........: " _YELLOW_("%i"), parsednum);
+    PrintAndLogEx(SUCCESS, "PACE version............. " _YELLOW_("%i"), parsednum);
 
     // Get PACE algorithm
     if (emrtd_lds_get_data_by_tag(dataset, datasetlen, datafromtag, &datafromtaglen, 0x06, 0x00, false, false, 0) == false) {
@@ -1847,7 +1943,7 @@ static int emrtd_print_ef_cardaccess_info(uint8_t *data, size_t datalen) {
         PrintAndLogEx(DEBUG, "Trying: %s", pacealg_table[pacei].name);
 
         if (memcmp(pacealg_table[pacei].descriptor, datafromtag, datafromtaglen) == 0) {
-            PrintAndLogEx(SUCCESS, "PACE algorithm........: " _YELLOW_("%s"), pacealg_table[pacei].name);
+            PrintAndLogEx(SUCCESS, "PACE algorithm........... " _YELLOW_("%s"), pacealg_table[pacei].name);
         }
     }
 
@@ -1863,7 +1959,7 @@ static int emrtd_print_ef_cardaccess_info(uint8_t *data, size_t datalen) {
         PrintAndLogEx(DEBUG, "Trying: %s", pacesdp_table[pacepari].name);
 
         if (pacesdp_table[pacepari].id == parsednum) {
-            PrintAndLogEx(SUCCESS, "PACE parameter........: " _YELLOW_("%s"), pacesdp_table[pacepari].name);
+            PrintAndLogEx(SUCCESS, "PACE parameter........... " _YELLOW_("%s"), pacesdp_table[pacepari].name);
         }
         // TODO: account for RFU
     }
@@ -1897,24 +1993,24 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     bool auth_result = emrtd_do_auth(documentnumber, dob, expiry, BAC_available, &BAC, ssc, ks_enc, ks_mac);
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "------------------ " _CYAN_("Basic Info") " ------------------");
-    PrintAndLogEx(SUCCESS, "Communication standard: %s", use14b ? _YELLOW_("ISO/IEC 14443(B)") : _YELLOW_("ISO/IEC 14443(A)"));
-    PrintAndLogEx(SUCCESS, "Authentication........: %s", BAC ? _GREEN_("Enforced") : _RED_("Not enforced"));
-    PrintAndLogEx(SUCCESS, "PACE..................: %s", PACE_available ? _GREEN_("Available") : _YELLOW_("Not available"));
-    PrintAndLogEx(SUCCESS, "Authentication result.: %s", auth_result ? _GREEN_("Successful") : _RED_("Failed"));
+    PrintAndLogEx(INFO, "---------------------- " _CYAN_("Basic Info") " ----------------------");
+    PrintAndLogEx(SUCCESS, "Communication standard... %s", use14b ? _YELLOW_("ISO/IEC 14443(B)") : _YELLOW_("ISO/IEC 14443(A)"));
+    PrintAndLogEx(SUCCESS, "Authentication........... %s", BAC ? _GREEN_("Enforced") : _RED_("Not enforced"));
+    PrintAndLogEx(SUCCESS, "PACE..................... %s", PACE_available ? _GREEN_("Available") : _YELLOW_("Not available"));
+    PrintAndLogEx(SUCCESS, "Authentication result.... %s", auth_result ? _GREEN_("Successful") : _RED_("Failed"));
 
     if (PACE_available) {
         emrtd_print_ef_cardaccess_info(response, resplen);
     }
 
-    if (!auth_result) {
+    if (auth_result == false) {
         DropField();
         return PM3_ESOFT;
     }
 
     // Read EF_COM to get file list
-    if (!emrtd_select_and_read(response, &resplen, dg_table[EF_COM].fileid, ks_enc, ks_mac, ssc, BAC)) {
-        PrintAndLogEx(ERR, "Failed to read EF_COM.");
+    if (emrtd_select_and_read(response, &resplen, dg_table[EF_COM].fileid, ks_enc, ks_mac, ssc, BAC) == false) {
+        PrintAndLogEx(ERR, "Failed to read EF_COM");
         DropField();
         return PM3_ESOFT;
     }
@@ -1947,27 +2043,29 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
 
     res = emrtd_parse_ef_sod_hashes(response, resplen, *dg_hashes_sod, &hash_algo);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD. Hash checks will fail.");
+        PrintAndLogEx(ERR, "Failed to read hash list from EF_SOD. Hash checks will fail");
     }
 
     // Dump all files in the file list
     for (int i = 0; i < filelistlen; i++) {
+
         emrtd_dg_t *dg = emrtd_tag_to_dg(filelist[i]);
         if (dg == NULL) {
-            PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
+            PrintAndLogEx(INFO, "File tag not found, skipping... %02X", filelist[i]);
             continue;
         }
+
         if (((dg->fastdump && only_fast) || !only_fast) && !dg->pace && !dg->eac) {
             if (emrtd_select_and_read(response, &resplen, dg->fileid, ks_enc, ks_mac, ssc, BAC)) {
                 if (dg->parser != NULL)
                     dg->parser(response, resplen);
 
-                PrintAndLogEx(DEBUG, "EF_DG%i hash algo: %i", dg->dgnum, hash_algo);
+                PrintAndLogEx(DEBUG, "EF_DG%i hash algo... %i", dg->dgnum, hash_algo);
                 // Check file hash
                 if (hash_algo != -1) {
-                    PrintAndLogEx(DEBUG, "EF_DG%i hash on EF_SOD: %s", dg->dgnum, sprint_hex_inrow(dg_hashes_sod[dg->dgnum], hashalg_table[hash_algo].hashlen));
+                    PrintAndLogEx(DEBUG, "EF_DG%i hash on EF_SOD... %s", dg->dgnum, sprint_hex_inrow(dg_hashes_sod[dg->dgnum], hashalg_table[hash_algo].hashlen));
                     hashalg_table[hash_algo].hasher(response, resplen, dg_hashes_calc[dg->dgnum]);
-                    PrintAndLogEx(DEBUG, "EF_DG%i hash calc: %s", dg->dgnum, sprint_hex_inrow(dg_hashes_calc[dg->dgnum], hashalg_table[hash_algo].hashlen));
+                    PrintAndLogEx(DEBUG, "EF_DG%i hash calc........ %s", dg->dgnum, sprint_hex_inrow(dg_hashes_calc[dg->dgnum], hashalg_table[hash_algo].hashlen));
                 }
             }
         }
@@ -2008,7 +2106,7 @@ int infoHF_EMRTD_offline(const char *path) {
     size_t filelistlen = 0;
     res = emrtd_lds_get_data_by_tag(data, datalen, filelist, &filelistlen, 0x5c, 0x00, false, true, 0);
     if (res == false) {
-        PrintAndLogEx(ERR, "Failed to read file list from EF_COM.");
+        PrintAndLogEx(ERR, "Failed to read file list from EF_COM");
         free(data);
         free(filepath);
         return PM3_ESOFT;
@@ -2059,7 +2157,7 @@ int infoHF_EMRTD_offline(const char *path) {
     for (int i = 0; i < filelistlen; i++) {
         emrtd_dg_t *dg = emrtd_tag_to_dg(filelist[i]);
         if (dg == NULL) {
-            PrintAndLogEx(INFO, "File tag not found, skipping: %02X", filelist[i]);
+            PrintAndLogEx(INFO, "File tag not found, skipping... %02X", filelist[i]);
             continue;
         }
         if (!dg->pace && !dg->eac) {
@@ -2073,12 +2171,12 @@ int infoHF_EMRTD_offline(const char *path) {
                     dg->parser(data, datalen);
                 }
 
-                PrintAndLogEx(DEBUG, "EF_DG%i hash algo: %i", dg->dgnum, hash_algo);
+                PrintAndLogEx(DEBUG, "EF_DG%i hash algo... %i", dg->dgnum, hash_algo);
                 // Check file hash
                 if (hash_algo != -1) {
-                    PrintAndLogEx(DEBUG, "EF_DG%i hash on EF_SOD: %s", dg->dgnum, sprint_hex_inrow(dg_hashes_sod[dg->dgnum], hashalg_table[hash_algo].hashlen));
+                    PrintAndLogEx(DEBUG, "EF_DG%i hash on EF_SOD... %s", dg->dgnum, sprint_hex_inrow(dg_hashes_sod[dg->dgnum], hashalg_table[hash_algo].hashlen));
                     hashalg_table[hash_algo].hasher(data, datalen, dg_hashes_calc[dg->dgnum]);
-                    PrintAndLogEx(DEBUG, "EF_DG%i hash calc: %s", dg->dgnum, sprint_hex_inrow(dg_hashes_calc[dg->dgnum], hashalg_table[hash_algo].hashlen));
+                    PrintAndLogEx(DEBUG, "EF_DG%i hash calc........ %s", dg->dgnum, sprint_hex_inrow(dg_hashes_calc[dg->dgnum], hashalg_table[hash_algo].hashlen));
                 }
                 free(data);
             }
@@ -2202,7 +2300,13 @@ static int CmdHFeMRTDDump(const char *Cmd) {
     if (g_debugMode >= 2) {
         SetAPDULogging(true);
     }
+
+    uint64_t t1 = msclock();
+
     int res = dumpHF_EMRTD((char *)docnum, (char *)dob, (char *)expiry, BAC, (const char *)path);
+
+    PrintAndLogEx(SUCCESS, "time: %" PRIu64 " seconds\n", (msclock() - t1) / 1000);
+
     SetAPDULogging(restore_apdu_logging);
     return res;
 }
@@ -2293,13 +2397,16 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
     bool is_offline = CLIParamStrToBuf(arg_get_str(ctx, 5), path, sizeof(path), &slen) == 0 && slen > 0;
     bool show_images = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
+
     if ((IfPm3Iso14443() == false) && (is_offline == false)) {
         PrintAndLogEx(WARNING, "Only offline mode is available");
         error = true;
     }
+
     if (error) {
         return PM3_ESOFT;
     }
+
     if (is_offline) {
         return infoHF_EMRTD_offline((const char *)path);
     } else {

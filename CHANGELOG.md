@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
  - Added `lf em 4x70 recover` - recovery the second half of an id48 key (@henrygab)
+ - Changed `hf emrtd info` - Added EG_DG7 viewing (@iceman1001)
  - Changed `hf mf dump` - it now also prints the dumped memory (@franscesco-scar)
  - Changed NDEF parsing to show mime images (@iceman1001)
  - Fixed `hf mf ndefformat` - now correctly handles MADv2 when formatting (@iceman1001)
