@@ -62,7 +62,7 @@ struct wave_info_t {
  * @param filename
  * @return o
  */
-DumpFileType_t getfiletype(const char *filename) {
+DumpFileType_t get_filetype(const char *filename) {
     // assume unknown file is BINARY
     DumpFileType_t o = BIN;
     if (filename == NULL) {
@@ -280,7 +280,7 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
     fwrite(data, 1, datalen, f);
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") " bytes to binary file `" _YELLOW_("%s") "`", datalen, fileName);
+    PrintAndLogEx(SUCCESS, "Saved " _YELLOW_("%zu") " bytes to binary file `" _YELLOW_("%s") "`", datalen, fileName);
     free(fileName);
     return PM3_SUCCESS;
 }
@@ -736,7 +736,7 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
     }
 
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "saved to json file `" _YELLOW_("%s") "`", fn);
+        PrintAndLogEx(SUCCESS, "Saved to json file `" _YELLOW_("%s") "`", fn);
     }
     free(fn);
 
@@ -764,7 +764,7 @@ int saveFileJSONrootEx(const char *preferredName, void *root, size_t flags, bool
 
     if (res == 0) {
         if (verbose) {
-            PrintAndLogEx(SUCCESS, "saved to json file " _YELLOW_("%s"), filename);
+            PrintAndLogEx(SUCCESS, "Saved to json file " _YELLOW_("%s"), filename);
         }
         free(filename);
         return PM3_SUCCESS;
@@ -821,7 +821,7 @@ int saveFileWAVE(const char *preferredName, const int *data, size_t datalen) {
 
     fclose(wave_file);
 
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") " bytes to wave file `" _YELLOW_("%s") "`", 2 * datalen, fileName);
+    PrintAndLogEx(SUCCESS, "Saved " _YELLOW_("%zu") " bytes to wave file `" _YELLOW_("%s") "`", 2 * datalen, fileName);
 
 out:
     free(fileName);
@@ -855,7 +855,7 @@ int saveFilePM3(const char *preferredName, int *data, size_t datalen) {
 
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "saved " _YELLOW_("%zu") " bytes to PM3 file `" _YELLOW_("%s") "`", datalen, fileName);
+    PrintAndLogEx(SUCCESS, "Saved " _YELLOW_("%zu") " bytes to PM3 file `" _YELLOW_("%s") "`", datalen, fileName);
 
 out:
     free(fileName);
@@ -876,7 +876,7 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_
         free(fileName);
         return PM3_EFILE;
     }
-    PrintAndLogEx(SUCCESS, "generating binary key file");
+    PrintAndLogEx(SUCCESS, "Generating binary key file");
 
     uint8_t empty[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     uint8_t tmp[6] = {0, 0, 0, 0, 0, 0};
@@ -899,7 +899,7 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_
 
     fflush(f);
     fclose(f);
-    PrintAndLogEx(SUCCESS, "found keys have been dumped to `" _YELLOW_("%s") "`", fileName);
+    PrintAndLogEx(SUCCESS, "Found keys have been dumped to `" _YELLOW_("%s") "`", fileName);
     PrintAndLogEx(INFO, "--[ " _YELLOW_("FFFFFFFFFFFF") " ]-- has been inserted for unknown keys where " _YELLOW_("res") " is " _RED_("0"));
     free(fileName);
     return PM3_SUCCESS;
@@ -956,7 +956,7 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
     *datalen = bytes_read;
 
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from binary file `" _YELLOW_("%s") "`", bytes_read, preferredName);
+        PrintAndLogEx(SUCCESS, "Loaded " _YELLOW_("%zu") " bytes from binary file `" _YELLOW_("%s") "`", bytes_read, preferredName);
     }
     return PM3_SUCCESS;
 }
@@ -1030,7 +1030,7 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
         }
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from text file `" _YELLOW_("%s") "`", counter, preferredName);
+    PrintAndLogEx(SUCCESS, "Loaded " _YELLOW_("%zu") " bytes from text file `" _YELLOW_("%s") "`", counter, preferredName);
 
 
     uint8_t *newdump = realloc(*pdata, counter);
@@ -1276,7 +1276,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
     }
 
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from NFC file `" _YELLOW_("%s") "`", *datalen, preferredName);
+    PrintAndLogEx(SUCCESS, "Loaded " _YELLOW_("%zu") " bytes from NFC file `" _YELLOW_("%s") "`", *datalen, preferredName);
     return retval;
 }
 
@@ -1350,7 +1350,7 @@ int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen) {
         }
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " bytes from MCT file `" _YELLOW_("%s") "`", counter, preferredName);
+    PrintAndLogEx(SUCCESS, "Loaded " _YELLOW_("%zu") " bytes from MCT file `" _YELLOW_("%s") "`", counter, preferredName);
 
 
     uint8_t *newdump = realloc(*pdata, counter);
@@ -2120,7 +2120,7 @@ int loadFileJSONroot(const char *preferredName, void **proot, bool verbose) {
     json_error_t error;
     json_t *root = json_load_file(path, 0, &error);
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%s"), path);
+        PrintAndLogEx(SUCCESS, "Loaded " _YELLOW_("%s"), path);
     }
 
     free(path);
@@ -2237,7 +2237,7 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
     }
     fclose(f);
     if (verbose)
-        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys from dictionary file `" _YELLOW_("%s") "`", vkeycnt, path);
+        PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%2d") " keys from dictionary file `" _YELLOW_("%s") "`", vkeycnt, path);
 
     if (datalen)
         *datalen = counter;
@@ -2330,7 +2330,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
         memset(line, 0, sizeof(line));
     }
     fclose(f);
-    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " keys from dictionary file `" _YELLOW_("%s") "`", *keycnt, path);
+    PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%2d") " keys from dictionary file `" _YELLOW_("%s") "`", *keycnt, path);
 
 out:
     free(path);
@@ -2389,7 +2389,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
     *blen = fread(*keyb, 1, fsize, f);
     fclose(f);
 
-    PrintAndLogEx(SUCCESS, "loaded binary key file `" _YELLOW_("%s") "`", path);
+    PrintAndLogEx(SUCCESS, "Loaded binary key file `" _YELLOW_("%s") "`", path);
     free(path);
     return PM3_SUCCESS;
 }
@@ -2437,16 +2437,16 @@ mfu_df_e detect_mfu_dump_format(uint8_t **dump, bool verbose) {
     if (verbose) {
         switch (retval) {
             case MFU_DF_NEWBIN:
-                PrintAndLogEx(INFO, "detected " _GREEN_("new") " mfu dump format");
+                PrintAndLogEx(INFO, "Detected " _GREEN_("new") " mfu dump format");
                 break;
             case MFU_DF_OLDBIN:
-                PrintAndLogEx(INFO, "detected " _GREEN_("old") " mfu dump format");
+                PrintAndLogEx(INFO, "Detected " _GREEN_("old") " mfu dump format");
                 break;
             case MFU_DF_PLAINBIN:
-                PrintAndLogEx(INFO, "detected " _GREEN_("plain") " mfu dump format");
+                PrintAndLogEx(INFO, "Detected " _GREEN_("plain") " mfu dump format");
                 break;
             case MFU_DF_UNKNOWN:
-                PrintAndLogEx(WARNING, "failed to detected mfu dump format");
+                PrintAndLogEx(WARNING, "Failed to detected mfu dump format");
                 break;
         }
     }
@@ -2526,28 +2526,28 @@ nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose) {
     if (verbose) {
         switch (retval) {
             case NFC_DF_MFU:
-                PrintAndLogEx(INFO, "detected MIFARE Ultralight / NTAG based dump format");
+                PrintAndLogEx(INFO, "Detected MIFARE Ultralight / NTAG based dump format");
                 break;
             case NFC_DF_MFC:
-                PrintAndLogEx(INFO, "detected MIFARE Classic based dump format");
+                PrintAndLogEx(INFO, "Detected MIFARE Classic based dump format");
                 break;
             case NFC_DF_MFDES:
-                PrintAndLogEx(INFO, "detected MIFARE DESFire based dump format");
+                PrintAndLogEx(INFO, "Detected MIFARE DESFire based dump format");
                 break;
             case NFC_DF_14_3A:
-                PrintAndLogEx(INFO, "detected ISO14443-3A based dump format. No data available");
+                PrintAndLogEx(INFO, "Detected ISO14443-3A based dump format. No data available");
                 break;
             case NFC_DF_14_3B:
-                PrintAndLogEx(INFO, "detected ISO14443-3B based dump format. No data available");
+                PrintAndLogEx(INFO, "Detected ISO14443-3B based dump format. No data available");
                 break;
             case NFC_DF_14_4A:
-                PrintAndLogEx(INFO, "detected ISO14443-4A based dump format. No data available");
+                PrintAndLogEx(INFO, "Detected ISO14443-4A based dump format. No data available");
                 break;
             case NFC_DF_PICOPASS:
-                PrintAndLogEx(INFO, "detected PICOPASS based dump format");
+                PrintAndLogEx(INFO, "Detected PICOPASS based dump format");
                 break;
             case NFC_DF_UNKNOWN:
-                PrintAndLogEx(WARNING, "failed to detected dump format");
+                PrintAndLogEx(WARNING, "Failed to detected dump format");
                 break;
         }
     }
@@ -2566,7 +2566,7 @@ static int convert_plain_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose)
     mfu->pages = *dumplen / 4 - 1;
 
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "plain mfu dump format was converted to " _GREEN_("%d") " blocks", mfu->pages + 1);
+        PrintAndLogEx(SUCCESS, "Plain mfu dump format was converted to " _GREEN_("%d") " blocks", mfu->pages + 1);
     }
 
     *dump = (uint8_t *)mfu;
@@ -2615,7 +2615,7 @@ static int convert_old_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose) {
     memcpy(mfu_dump->data + (mfu_dump->pages * 4 + MFU_DUMP_PREFIX_LENGTH), old_mfu_dump->pack, 2);
 
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "old mfu dump format was converted to " _GREEN_("%d") " blocks", mfu_dump->pages + 1);
+        PrintAndLogEx(SUCCESS, "Old mfu dump format was converted to " _GREEN_("%d") " blocks", mfu_dump->pages + 1);
     }
 
     free(*dump);
@@ -2957,8 +2957,8 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
 int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumplen) {
 
     int res = PM3_SUCCESS;
-    DumpFileType_t dftype = getfiletype(fn);
-    switch (dftype) {
+    DumpFileType_t dt = get_filetype(fn);
+    switch (dt) {
         case BIN: {
             res = loadFile_safe(fn, ".bin", pdump, dumplen);
             break;
@@ -2983,12 +2983,12 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
             if (res == PM3_ESOFT) {
                 PrintAndLogEx(WARNING, "JSON objects failed to load");
             } else if (res == PM3_EMALLOC) {
-                PrintAndLogEx(WARNING, "wrong size of allocated memory. Check your parameters");
+                PrintAndLogEx(WARNING, "Wrong size of allocated memory. Check your parameters");
             }
             break;
         }
         case DICTIONARY: {
-            PrintAndLogEx(ERR, "only <BIN|EML|JSON|MCT|NFC formats allowed");
+            PrintAndLogEx(ERR, "Only <BIN|EML|JSON|MCT|NFC formats allowed");
             return PM3_EINVARG;
         }
         case MCT: {
@@ -3001,7 +3001,7 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
 
                 *pdump = calloc(maxdumplen, sizeof(uint8_t));
                 if (*pdump == NULL) {
-                    PrintAndLogEx(WARNING, "fail, cannot allocate memory");
+                    PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
                     return PM3_EMALLOC;
                 }
                 res = loadFileNFC_safe(fn, *pdump, maxdumplen, dumplen, foo);
@@ -3028,7 +3028,7 @@ int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
         return PM3_EINVARG;
     }
     if (d == NULL || n == 0) {
-        PrintAndLogEx(INFO, "no data to save, skipping...");
+        PrintAndLogEx(INFO, "No data to save, skipping...");
         return PM3_EINVARG;
     }
     saveFile(fn, ".bin", d, n);
@@ -3039,7 +3039,7 @@ int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
 int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
 
     if (fn == NULL || d == NULL || n == 0) {
-        PrintAndLogEx(INFO, "no data to save, skipping...");
+        PrintAndLogEx(INFO, "No data to save, skipping...");
         return PM3_EINVARG;
     }
     saveFile(fn, ".bin", d, n);
@@ -3061,7 +3061,7 @@ int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
         jd.card_info.sak = d[7];
         memcpy(jd.card_info.atqa, &d[8], sizeof(jd.card_info.atqa));
     } else {
-        PrintAndLogEx(WARNING, "invalid dump. UID/SAK/ATQA not found");
+        PrintAndLogEx(WARNING, "Invalid dump. UID/SAK/ATQA not found");
     }
     jd.dump = d;
     jd.dumplen = n;
