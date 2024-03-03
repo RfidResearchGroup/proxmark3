@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf emrtd info` - Added EG_DG7 viewing (@iceman1001)
  - Changed `hf mf dump` - it now also prints the dumped memory (@franscesco-scar)
  - Changed NDEF parsing to show mime images (@iceman1001)
  - Fixed `hf mf ndefformat` - now correctly handles MADv2 when formatting (@iceman1001)
