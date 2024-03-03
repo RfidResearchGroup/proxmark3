@@ -92,12 +92,11 @@ static int reply_ng_internal(uint16_t cmd, int16_t status, const uint8_t *data, 
 
     // Add the (optional) content to the frame, with a maximum size of PM3_CMD_DATA_SIZE
     if (data && len) {
-        for (size_t i = 0; i < len; i++) {
-            txBufferNG.data[i] = data[i];
-        }
+        memcpy(txBufferNG.data, data, len);
     }
 
     PacketResponseNGPostamble *tx_post = (PacketResponseNGPostamble *)((uint8_t *)&txBufferNG + sizeof(PacketResponseNGPreamble) + len);
+
     // Note: if we send to both FPC & USB, we'll set CRC for both if any of them require CRC
     if ((g_reply_via_fpc && g_reply_with_crc_on_fpc) || ((g_reply_via_usb) && g_reply_with_crc_on_usb)) {
         uint8_t first, second;
@@ -125,9 +124,14 @@ static int reply_ng_internal(uint16_t cmd, int16_t status, const uint8_t *data, 
 #endif
     }
     // we got two results, let's prioritize the faulty one and USB over FPC.
-    if (g_reply_via_usb && (resultusb != PM3_SUCCESS)) return resultusb;
+    if (g_reply_via_usb && (resultusb != PM3_SUCCESS)) {
+        return resultusb;
+    }
+
 #ifdef WITH_FPC_USART_HOST
-    if (g_reply_via_fpc && (resultfpc != PM3_SUCCESS)) return resultfpc;
+    if (g_reply_via_fpc && (resultfpc != PM3_SUCCESS)) {
+        return resultfpc;
+    }
 #endif
     return PM3_SUCCESS;
 }
@@ -145,36 +149,42 @@ int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const v
     }
     uint8_t cmddata[PM3_CMD_DATA_SIZE];
     memcpy(cmddata, arg, sizeof(arg));
-    if (len && data)
+    if (len && data) {
         memcpy(cmddata + sizeof(arg), data, (int)len);
+    }
 
-    int res = reply_ng_internal((cmd & 0xFFFF), status, cmddata, len + sizeof(arg), false);
-    return res;
+    return reply_ng_internal((cmd & 0xFFFF), status, cmddata, len + sizeof(arg), false);
 }
 
 static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *data, size_t len), bool usb, bool fpc) {
+
     PacketCommandNGRaw rx_raw;
     size_t bytes = read_ng((uint8_t *)&rx_raw.pre, sizeof(PacketCommandNGPreamble));
 
-    if (bytes == 0)
+    if (bytes == 0) {
         return PM3_ENODATA;
+    }
 
-    if (bytes != sizeof(PacketCommandNGPreamble))
+    if (bytes != sizeof(PacketCommandNGPreamble)) {
         return PM3_EIO;
+    }
 
     rx->magic = rx_raw.pre.magic;
     rx->ng = rx_raw.pre.ng;
-    uint16_t length = rx_raw.pre.length;
     rx->cmd = rx_raw.pre.cmd;
 
+    uint16_t length = rx_raw.pre.length;
+
     if (rx->magic == COMMANDNG_PREAMBLE_MAGIC) { // New style NG command
-        if (length > PM3_CMD_DATA_SIZE)
+        if (length > PM3_CMD_DATA_SIZE) {
             return PM3_EOVFLOW;
+        }
 
         // Get the core and variable length payload
         bytes = read_ng((uint8_t *)&rx_raw.data, length);
-        if (bytes != length)
+        if (bytes != length) {
             return PM3_EIO;
+        }
 
         if (rx->ng) {
             memcpy(rx->data.asBytes, rx_raw.data, length);
@@ -192,27 +202,33 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
             memcpy(rx->data.asBytes, rx_raw.data + sizeof(arg), length - sizeof(arg));
             rx->length = length - sizeof(arg);
         }
+
         // Get the postamble
         bytes = read_ng((uint8_t *)&rx_raw.foopost, sizeof(PacketCommandNGPostamble));
-        if (bytes != sizeof(PacketCommandNGPostamble))
+        if (bytes != sizeof(PacketCommandNGPostamble)) {
             return PM3_EIO;
+        }
 
         // Check CRC, accept MAGIC as placeholder
         rx->crc = rx_raw.foopost.crc;
         if (rx->crc != COMMANDNG_POSTAMBLE_MAGIC) {
             uint8_t first, second;
             compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(PacketCommandNGPreamble) + length, &first, &second);
-            if ((first << 8) + second != rx->crc)
+            if ((first << 8) + second != rx->crc) {
                 return PM3_EIO;
+            }
         }
+
         g_reply_via_usb = usb;
         g_reply_via_fpc = fpc;
+
     } else {                               // Old style command
         PacketCommandOLD rx_old;
         memcpy(&rx_old, &rx_raw.pre, sizeof(PacketCommandNGPreamble));
         bytes = read_ng(((uint8_t *)&rx_old) + sizeof(PacketCommandNGPreamble), sizeof(PacketCommandOLD) - sizeof(PacketCommandNGPreamble));
-        if (bytes != sizeof(PacketCommandOLD) - sizeof(PacketCommandNGPreamble))
+        if (bytes != sizeof(PacketCommandOLD) - sizeof(PacketCommandNGPreamble)) {
             return PM3_EIO;
+        }
 
         g_reply_via_usb = usb;
         g_reply_via_fpc = fpc;
@@ -232,8 +248,9 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
 int receive_ng(PacketCommandNG *rx) {
 
     // Check if there is a packet available
-    if (usb_poll_validate_length())
+    if (usb_poll_validate_length()) {
         return receive_ng_internal(rx, usb_read_ng, true, false);
+    }
 
 #ifdef WITH_FPC_USART_HOST
     // Check if there is a FPC packet available
