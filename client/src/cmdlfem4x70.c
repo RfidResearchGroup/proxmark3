@@ -699,7 +699,7 @@ int CmdEM4x70Recover(const char *Cmd) {
         ID48LIB_KEY q;
         while ((PM3_SUCCESS == result) && id48lib_key_recovery_next(&q)) {
             if (recover_ctx.keys_found_count >= MAXIMUM_ID48_RECOVERED_KEY_COUNT) {
-                PrintAndLogEx(ERR, "ERROR: too many potential keys found. This is unexpected and likely a code failure.");
+                PrintAndLogEx(ERR, "Found more than %d potential keys. This is unexpected and likely a code failure.", MAXIMUM_ID48_RECOVERED_KEY_COUNT);
                 result = PM3_EFAILED;
             } else {
                 recover_ctx.potential_keys[recover_ctx.keys_found_count] = q;
@@ -720,7 +720,7 @@ int CmdEM4x70Recover(const char *Cmd) {
     }
     // display alternate authentication for each potential key -- no error paths
     if (PM3_SUCCESS == result) {
-        PrintAndLogEx(NORMAL, "Recovered %d potential keys:", recover_ctx.keys_found_count);
+        PrintAndLogEx(INFO, "Recovered %d potential keys:", recover_ctx.keys_found_count);
         for (uint8_t i = 0; i < recover_ctx.keys_found_count; ++i) {
             // generate an alternative authentication based on the potential key
             // and the alternate nonce.
@@ -729,8 +729,7 @@ int CmdEM4x70Recover(const char *Cmd) {
             ID48LIB_GRN alt_grn = recover_ctx.alt_grn[i];
 
             // dump the results to screen, to enable the user to manually check validity
-            // PrintAndLogEx() automatically adds newline, forcing this large parameter count
-            PrintAndLogEx(NORMAL,
+            PrintAndLogEx(INFO,
                 "Potential Key #%d: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
                 " -->  " _YELLOW_("lf em 4x70 auth --rnd %02X%02X%02X%02X%02X%02X%02X --frn %02X%02X%02X%02X")
                 " --> %02X%02X%02X",
