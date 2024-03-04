@@ -1150,7 +1150,13 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                 if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
 
                     for (uint8_t i = 0; i < ATTACK_KEY_COUNT; i++) {
-                        if (ar_nr_collected[i + mM] == 0 || ((cardAUTHSC == ar_nr_resp[i + mM].sector) && (cardAUTHKEY == ar_nr_resp[i + mM].keytype) && (ar_nr_collected[i + mM] > 0))) {
+                        if (ar_nr_collected[i + mM] == 0 || 
+                                (
+                                    (cardAUTHSC == ar_nr_resp[i + mM].sector) && 
+                                    (cardAUTHKEY == ar_nr_resp[i + mM].keytype) && 
+                                    (ar_nr_collected[i + mM] > 0)
+                                )
+                            ) {
                             // if first auth for sector, or matches sector and keytype of previous auth
                             if (ar_nr_collected[i + mM] < 2) {
                                 // if we haven't already collected 2 nonces for this sector
@@ -1354,7 +1360,10 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
     if (((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) && (g_dbglevel >= DBG_INFO)) {
         for (uint8_t i = 0; i < ATTACK_KEY_COUNT; i++) {
             if (ar_nr_collected[i] == 2) {
-                Dbprintf("Collected two pairs of AR/NR which can be used to extract %s from reader for sector %d:", (i < ATTACK_KEY_COUNT / 2) ? "keyA" : "keyB", ar_nr_resp[i].sector);
+                Dbprintf("Collected two pairs of AR/NR which can be used to extract sector %d " _YELLOW_("%s")
+                    , ar_nr_resp[i].sector
+                    , (ar_nr_resp[i].keytype == AUTHKEYA) ? "key A" : "key B"
+                );
                 Dbprintf("../tools/mfkey/mfkey32 %08x %08x %08x %08x %08x %08x",
                          ar_nr_resp[i].cuid,  //UID
                          ar_nr_resp[i].nonce, //NT
@@ -1370,7 +1379,10 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
     // mfkey32 v2
     for (uint8_t i = ATTACK_KEY_COUNT; i < ATTACK_KEY_COUNT * 2; i++) {
         if (ar_nr_collected[i] == 2) {
-            Dbprintf("Collected two pairs of AR/NR which can be used to extract %s from reader for sector %d:", (i < ATTACK_KEY_COUNT / 2) ? "keyA" : "keyB", ar_nr_resp[i].sector);
+            Dbprintf("Collected two pairs of AR/NR which can be used to extract sector %d " _YELLOW_("%s")
+                , ar_nr_resp[i].sector
+                , (ar_nr_resp[i].keytype == AUTHKEYB) ? "key A" : "key B"
+            );
             Dbprintf("../tools/mfkey/mfkey32v2 %08x %08x %08x %08x %08x %08x %08x",
                      ar_nr_resp[i].cuid,  //UID
                      ar_nr_resp[i].nonce, //NT
