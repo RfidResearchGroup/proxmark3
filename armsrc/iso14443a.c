@@ -711,8 +711,22 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     uint32_t rx_samples = 0;
 
     // loop and listen
-    while (BUTTON_PRESS() == false) {
+	uint16_t checkbtn_cnt = 0;
+	bool button_pushed = BUTTON_PRESS();
+    while (button_pushed == false) {
         WDT_HIT();
+        // Test if the action was cancelled
+        if (checkbtn_cnt == 1000) {
+            button_pushed = BUTTON_PRESS() || data_available();
+            if (button_pushed) {
+                if (g_dbglevel >= DBG_EXTENDED)
+                    Dbprintf("----------- " _GREEN_("BREAKING") " ----------");
+                break;
+            }
+            checkbtn_cnt = 0;
+        }
+        ++checkbtn_cnt;
+
         LED_A_ON();
 
         register int readBufDataP = data - dma->buf;
