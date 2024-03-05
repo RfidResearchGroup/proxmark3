@@ -39,6 +39,7 @@ typedef struct {
 
     // Used for writing address
     uint8_t address;
+    // ISSUE: Presumes target is little-endian
     uint16_t word;
 
     // PIN to unlock
@@ -53,6 +54,7 @@ typedef struct {
     uint8_t crypt_key[12];
 
     // used for bruteforce the partial key
+    // ISSUE: Presumes target is little-endian
     uint16_t start_key;
 
 } em4x70_data_t;

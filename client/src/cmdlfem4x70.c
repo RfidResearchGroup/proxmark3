@@ -29,7 +29,65 @@
 #define LOCKBIT_0 BITMASK(6)
 #define LOCKBIT_1 BITMASK(7)
 
-#define INDEX_TO_BLOCK(x) (((32-x)/2)-1)
+#define BYTE_ARRAY_INDEX_TO_BLOCK(x) ((31-(x))/2)
+
+// result from CMD_LF_EM4X70_INFO
+typedef struct _em4x70_tag_info {
+    /// <summary>
+    /// The full data on an em4x70 the tag.
+    /// [31] == Block 15 MSB == UM2₆₃..UM2₅₆
+    /// [30] == Block 15 LSB == UM2₅₅..UM2₄₈
+    /// [29] == Block 14 MSB == UM2₄₇..UM2₄₀
+    /// [28] == Block 14 LSB == UM2₃₉..UM2₃₂
+    /// [27] == Block 13 MSB == UM2₃₁..UM2₂₄
+    /// [26] == Block 13 LSB == UM2₂₃..UM2₁₆
+    /// [25] == Block 12 MSB == UM2₁₅..UM2₀₈
+    /// [24] == Block 12 LSB == UM2₀₇..UM2₀₀
+    /// [23] == Block 11 MSB == Pin₃₁..Pin₂₄
+    /// [22] == Block 11 LSB == Pin₂₃..Pin₁₆
+    /// [21] == Block 10 MSB == Pin₁₅..Pin₀₈
+    /// [20] == Block 10 LSB == Pin₀₇..Pin₀₀
+    /// [19] == Block  9 MSB == Key₉₅..Key₈₈
+    /// [18] == Block  9 LSB == Key₈₇..Key₈₀
+    /// [17] == Block  8 MSB == Key₇₉..Key₇₂
+    /// [16] == Block  8 LSB == Key₇₁..Key₆₄
+    /// [15] == Block  7 MSB == Key₆₃..Key₅₆
+    /// [14] == Block  7 LSB == Key₅₅..Key₄₈
+    /// [13] == Block  6 MSB == Key₄₇..Key₄₀
+    /// [12] == Block  6 LSB == Key₃₉..Key₃₂
+    /// [11] == Block  5 MSB == Key₃₁..Key₂₄
+    /// [10] == Block  5 LSB == Key₂₃..Key₁₆
+    /// [ 9] == Block  4 MSB == Key₁₅..Key₀₈
+    /// [ 8] == Block  4 LSB == Key₀₇..Key₀₀
+    /// [ 7] == Block  3 MSB == ID₃₁..ID₂₄
+    /// [ 6] == Block  3 LSB == ID₂₃..ID₁₆
+    /// [ 5] == Block  2 MSB == ID₁₅..ID₀₈
+    /// [ 4] == Block  2 LSB == ID₀₇..ID₀₀
+    /// [ 3] == Block  1 MSB == L₁ L₀ UM1₂₉..UM1₂₄
+    /// [ 2] == Block  1 LSB == UM1₂₃..UM1₁₆
+    /// [ 1] == Block  0 MSB == UM1₁₅..UM1₀₈
+    /// [ 0] == Block  0 LSB == UM1₀₇..UM1₀₀
+    /// </summary>
+    /// <remarks>
+    /// When moving to C++, strongly consider adding
+    /// const helper functions to extract a given
+    /// block of data into native uint16_t.
+    /// See also the print_info_result() function
+    /// for visual presentation of the data.
+    /// </remarks>
+    uint8_t Raw[32];
+} em4x70_tag_info;
+
+// result from CMD_LF_EM4X70_AUTH is defined in ID48LIB (id48.h) as ID48LIB_GRN 
+
+typedef struct _em4x70_cmd_helper_options {
+    // variables named based on default value (zero-init) being false
+    uint32_t use_parity : 1;             // default is false ... no parity
+    uint32_t disable_error_output : 1;   // default is false ... errors/warnings are output using PrintAndLogEx()
+    uint32_t disable_all_output   : 1;   // default is false ... success often his output using PrintAndLogEx()
+    uint32_t : 29; // padding
+} em4x70_cmd_helper_options;
+
 
 static int CmdHelp(const char *Cmd);
 
@@ -40,100 +98,194 @@ static void fill_buffer_prng_bytes(void* buffer, size_t byte_count) {
         ((uint8_t*)buffer)[i] = (uint8_t)rand();
     }
 }
-
-
-static void print_info_result(const uint8_t *data) {
-
+static void print_info_result(const em4x70_tag_info *data) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(INFO, "Block |   data   | info");
     PrintAndLogEx(INFO, "------+----------+-----------------------------");
-
-    // Print out each section as memory map in datasheet
-
-    // Start with UM2
-    for (int i = 0; i < 8; i += 2) {
-        PrintAndLogEx(INFO, " %2d   |   %02X %02X  |  UM2", INDEX_TO_BLOCK(i), data[31 - i], data[31 - i - 1]);
-    }
+    PrintAndLogEx(INFO, " %2d   |   %02X %02X  |  %s", 15, data->Raw[31], data->Raw[30], "UM2");
+    PrintAndLogEx(INFO, " %2d   |   %02X %02X  |  %s", 14, data->Raw[29], data->Raw[28], "UM2");
+    PrintAndLogEx(INFO, " %2d   |   %02X %02X  |  %s", 13, data->Raw[27], data->Raw[26], "UM2");
+    PrintAndLogEx(INFO, " %2d   |   %02X %02X  |  %s", 12, data->Raw[25], data->Raw[24], "UM2");
     PrintAndLogEx(INFO, "------+----------+-----------------------------");
-
-    // Print PIN  (will never have data)
-    for (int i = 8; i < 12; i += 2) {
-        PrintAndLogEx(INFO, " %2d   |   -- --  |  PIN write only", INDEX_TO_BLOCK(i));
-    }
+    PrintAndLogEx(INFO, " %2d   |   -- --  |  %s",     11,                               "PIN write only");
+    PrintAndLogEx(INFO, " %2d   |   -- --  |  %s",     10,                               "PIN write only");
     PrintAndLogEx(INFO, "------+----------+-----------------------------");
-
-    // Print Key (will never have data)
-    for (int i = 12; i < 24; i += 2) {
-        PrintAndLogEx(INFO, " %2d   |   -- --  |  KEY write-only", INDEX_TO_BLOCK(i));
-    }
+    PrintAndLogEx(INFO, " %2d   |   -- --  |  %s",      9,                               "KEY write only");
+    PrintAndLogEx(INFO, " %2d   |   -- --  |  %s",      8,                               "KEY write only");
+    PrintAndLogEx(INFO, " %2d   |   -- --  |  %s",      7,                               "KEY write only");
+    PrintAndLogEx(INFO, " %2d   |   -- --  |  %s",      6,                               "KEY write only");
+    PrintAndLogEx(INFO, " %2d   |   -- --  |  %s",      5,                               "KEY write only");
+    PrintAndLogEx(INFO, " %2d   |   -- --  |  %s",      4,                               "KEY write only");
     PrintAndLogEx(INFO, "------+----------+-----------------------------");
-
-    // Print ID
-    for (int i = 24; i < 28; i += 2) {
-        PrintAndLogEx(INFO, " %2d   |   %02X %02X  |  ID", INDEX_TO_BLOCK(i), data[31 - i], data[31 - i - 1]);
-    }
+    PrintAndLogEx(INFO, " %2d   |   %02X %02X  |  %s",  3, data->Raw[ 7], data->Raw[ 6], "ID");
+    PrintAndLogEx(INFO, " %2d   |   %02X %02X  |  %s",  2, data->Raw[ 5], data->Raw[ 4], "ID");
     PrintAndLogEx(INFO, "------+----------+-----------------------------");
-
-    // Print UM1
-    for (int i = 28; i < 32; i += 2) {
-        PrintAndLogEx(INFO, " %2d   |   %02X %02X  |  UM1", INDEX_TO_BLOCK(i), data[31 - i], data[31 - i - 1]);
-    }
+    PrintAndLogEx(INFO, " %2d   |   %02X %02X  |  %s",  1, data->Raw[ 3], data->Raw[ 2], "UM1");
+    PrintAndLogEx(INFO, " %2d   |   %02X %02X  |  %s",  0, data->Raw[ 1], data->Raw[ 0], "UM1");
     PrintAndLogEx(INFO, "------+----------+-----------------------------");
-
     PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, "Tag ID:    %02X %02X %02X %02X", data[7], data[6], data[5], data[4]);
-    PrintAndLogEx(INFO, "Lockbit 0: %d", (data[3] & LOCKBIT_0) ? 1 : 0);
-    PrintAndLogEx(INFO, "Lockbit 1: %d", (data[3] & LOCKBIT_1) ? 1 : 0);
-    PrintAndLogEx(INFO, "Tag is %s.", (data[3] & LOCKBIT_0) ? _RED_("LOCKED") : _GREEN_("UNLOCKED"));
-    PrintAndLogEx(NORMAL, "");
 
+    PrintAndLogEx(INFO, "Tag ID:    %02X %02X %02X %02X", data->Raw[7], data->Raw[6], data->Raw[5], data->Raw[4]);
+    PrintAndLogEx(INFO, "Lockbit 0: %d", (data->Raw[3] & LOCKBIT_0) ? 1 : 0);
+    PrintAndLogEx(INFO, "Lockbit 1: %d", (data->Raw[3] & LOCKBIT_1) ? 1 : 0);
+    PrintAndLogEx(INFO, "Tag is %s.", (data->Raw[3] & LOCKBIT_0) ? _RED_("LOCKED") : _GREEN_("UNLOCKED"));
+    PrintAndLogEx(INFO, "");
+
+    PrintAndLogEx(NORMAL, "");
 }
 
-// Note: arm source has a function with same name ... different signature.
-static int em4x70_info(void) {
+// Helper functions to simplify building more complex interactions.
+// (without creating fake `const char * Cmd` arrays.)
+// These functions use 100% explicit arguments.
+// If a parameter is an output parameter, the name ends with `_out`.
 
-    em4x70_data_t edata = {
-        .parity = false // TODO: try both? or default to true
-    };
+static int get_em4x70_info(em4x70_cmd_helper_options opts, em4x70_tag_info * data_out) {
 
+    memset(data_out, 0, sizeof(em4x70_tag_info));
+
+    em4x70_data_t edata = { .parity = opts.use_parity };
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X70_INFO, (uint8_t *)&edata, sizeof(edata));
+    SendCommandNG(CMD_LF_EM4X70_INFO, (uint8_t *)&edata, sizeof(em4x70_data_t));
 
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_LF_EM4X70_INFO, &resp, TIMEOUT)) {
-        PrintAndLogEx(WARNING, "(em4x70) Timeout while waiting for reply.");
+        if (!opts.disable_error_output) {
+            PrintAndLogEx(WARNING, "(em4x70) Timeout while waiting for reply.");
+        }
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status) {
+        memcpy(data_out, resp.data.asBytes, sizeof(em4x70_tag_info));
+        return PM3_SUCCESS;
+    }
+    return PM3_ESOFT;
+}
+static int write_em4x70_block(em4x70_cmd_helper_options opts, em4x70_tag_info* data_out, int block, uint16_t value) {
+
+    memset(data_out, 0, sizeof(em4x70_tag_info));
+
+    em4x70_data_t etd = {0};
+    etd.address = (uint8_t) block;
+    etd.word = value; // ISSUE: Presumes client and target are both little-endian
+    etd.parity = opts.use_parity;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X70_WRITE, (uint8_t *)&etd, sizeof(etd));
+
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_LF_EM4X70_WRITE, &resp, TIMEOUT)) {
+        if (!opts.disable_error_output) {
+            PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+        }
         return PM3_ETIMEOUT;
     }
 
     if (resp.status) {
-        print_info_result(resp.data.asBytes);
+        memcpy(data_out, resp.data.asBytes, sizeof(em4x70_tag_info));
         return PM3_SUCCESS;
     }
-
+    if (!opts.disable_error_output) {
+        PrintAndLogEx(FAILED, "Writing " _RED_("Failed"));
+    }
     return PM3_ESOFT;
+}
+static int auth_em4x70(em4x70_cmd_helper_options opts, ID48LIB_GRN* data_out, const ID48LIB_NONCE* rn, const ID48LIB_FRN* frn) {
+    memset(data_out, 0, sizeof(ID48LIB_GRN));
+
+    em4x70_data_t etd = {0};
+    etd.parity = opts.use_parity;
+    memcpy(&etd.rnd[0],  &rn->rn[0],   7);
+    memcpy(&etd.frnd[0], &frn->frn[0], 4);
+    
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X70_AUTH, (uint8_t *)&etd, sizeof(etd));
+
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_LF_EM4X70_AUTH, &resp, TIMEOUT)) {
+        if (!opts.disable_error_output) {
+            PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+        }
+        return PM3_ETIMEOUT;
+    }
+    if (resp.status) {
+        // Response is 20-bit from tag
+
+        // HACKHACK -- It appears the byte order differs from what is expected?
+        data_out->grn[0] = resp.data.asBytes[2];
+        data_out->grn[1] = resp.data.asBytes[1];
+        data_out->grn[2] = resp.data.asBytes[0];
+        //memcpy(data_out, &resp.data.asBytes[0], sizeof(ID48LIB_GRN));
+        return PM3_SUCCESS;
+    }
+    if (!opts.disable_error_output) {
+        PrintAndLogEx(FAILED, "TAG Authentication " _RED_("Failed"));
+    }
+    return PM3_ESOFT;
+}
+static int writekey_em4x70(em4x70_cmd_helper_options opts, ID48LIB_KEY* key) {
+
+    em4x70_data_t etd = {0};
+    etd.parity = opts.use_parity;
+    memcpy(&etd.crypt_key[0], &key->k[0], 12);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_EM4X70_WRITEKEY, (uint8_t *)&etd, sizeof(etd));
+
+    PacketResponseNG resp;
+    if (!WaitForResponseTimeout(CMD_LF_EM4X70_WRITEKEY, &resp, TIMEOUT)) {
+        if (!opts.disable_error_output) {
+            PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+        }
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status) {
+        return PM3_SUCCESS;
+    }
+    if (!opts.disable_error_output) {
+        PrintAndLogEx(FAILED, "Writing new key: " _RED_("failed"));
+    }
+    return PM3_ESOFT;
+
+}
+
+// Note: arm source has a function with same name ... different signature.
+static int em4x70_info(em4x70_cmd_helper_options opts) {
+    em4x70_tag_info info;
+    int result = get_em4x70_info(opts, &info);
+    if (result == PM3_SUCCESS) {
+        print_info_result(&info);
+    }
+    return result;
 }
 
 //quick test for EM4x70 tag
 bool detect_4x70_block(void) {
-
-    return em4x70_info() == PM3_SUCCESS;
+    em4x70_tag_info info;
+    em4x70_cmd_helper_options opts = {
+        .use_parity = false,
+        .disable_error_output = true,
+        // .disable_all_output = false, // legacy version did not do this, so information on the tag gets dumped
+    };
+    return get_em4x70_info(opts, &info) == PM3_SUCCESS;
 }
 
-// TODO: split the below functions, so can use them as building blocks for more complex interactions
-//       without generating fake `const char *Cmd` strings.  First targets:
-//           Auth
-//           Write
-//           WriteKey
-//       Together, they will allow writekey to verify the key was written correctly.
+// TODO: Create unique set of structures to replace em4x70_data_t, one structure defined per command.
+//       This will make it much clearer what fields are used for each command.
+// TODO: Optional: use those unique structures in a union, call it em4x70_data_t, but add a first
+//       common header field that includes the command itself (to improve debugging / validation).
+// TODO: split the below functions between parameter validation vs. actual client/firmware comms,
+//       so can use the client/firmware comms helper functions as building blocks for more complex
+//       interactions without generating fake `const char *Cmd` strings.
+//       Helper functions should take all relevant parameters explicitly as inputs.
+//       Don't hide what's happening behind global state changes ... be explicit.
+//       SPECIFICALLY: Modify writekey to ***VERIFY*** the key was written to the tag.
 
 int CmdEM4x70Info(const char *Cmd) {
 
     // envoke reading of a EM4x70 tag which has to be on the antenna because
     // decoding is done by the device (not on client side)
-
-    em4x70_data_t etd = {0};
-
     CLIParserContext *ctx;
 
     CLIParserInit(&ctx, "lf em 4x70 info",
@@ -152,32 +304,18 @@ int CmdEM4x70Info(const char *Cmd) {
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    etd.parity = arg_get_lit(ctx, 0);
+    em4x70_cmd_helper_options opts = {
+        .use_parity = arg_get_lit(ctx, 0),
+    };
     CLIParserFree(ctx);
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X70_INFO, (uint8_t *)&etd, sizeof(etd));
-
-    PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_LF_EM4X70_INFO, &resp, TIMEOUT)) {
-        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
-        return PM3_ETIMEOUT;
-    }
-
-    if (resp.status) {
-        print_info_result(resp.data.asBytes);
-        return PM3_SUCCESS;
-    }
-
-    PrintAndLogEx(FAILED, "Reading " _RED_("Failed"));
-    return PM3_ESOFT;
+    // Client command line parsing and validation complete ... now use the helper function
+    return em4x70_info(opts);
 }
 
 int CmdEM4x70Write(const char *Cmd) {
 
     // write one block/word (16 bits) to the tag at given block address (0-15)
-    em4x70_data_t etd = {0};
-
     CLIParserContext *ctx;
 
     CLIParserInit(&ctx, "lf em 4x70 write",
@@ -196,47 +334,39 @@ int CmdEM4x70Write(const char *Cmd) {
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    etd.parity = arg_get_lit(ctx, 1);
+
+    em4x70_tag_info info;
+    em4x70_cmd_helper_options opts = {
+        .use_parity = arg_get_lit(ctx, 1),
+    };
 
     int addr = arg_get_int_def(ctx, 2, 1);
-
-    int word_len = 0;
-    uint8_t word[2] = {0x0};
-    CLIGetHexWithReturn(ctx, 3, word, &word_len);
-
+    uint8_t data[2] = {0x0};
+    int data_len = 0;
+    CLIGetHexWithReturn(ctx, 3, data, &data_len);
     CLIParserFree(ctx);
+
 
     if (addr < 0 || addr >= EM4X70_NUM_BLOCKS) {
         PrintAndLogEx(FAILED, "block has to be within range [0, 15] got: %d", addr);
         return PM3_EINVARG;
     }
-
-    if (word_len != 2) {
-        PrintAndLogEx(FAILED, "word/data length must be 2 bytes. got: %d", word_len);
+    if (data_len != 2) {
+        PrintAndLogEx(FAILED, "word/data length must be 2 bytes. got: %d", data_len);
         return PM3_EINVARG;
     }
 
-    etd.address = (uint8_t) addr;
-    etd.word = BYTES2UINT16(word);
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X70_WRITE, (uint8_t *)&etd, sizeof(etd));
-
-    PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_LF_EM4X70_WRITE, &resp, TIMEOUT)) {
-        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
-        return PM3_ETIMEOUT;
+    // Client command line parsing and validation complete ... now use the helper function
+    uint16_t value = BYTES2UINT16(data);
+    int result = write_em4x70_block(opts, &info, addr, value);
+    if (result == PM3_SUCCESS) {
+        print_info_result(&info);
     }
-
-    if (resp.status) {
-        print_info_result(resp.data.asBytes);
-        return PM3_SUCCESS;
-    }
-
-    PrintAndLogEx(FAILED, "Writing " _RED_("Failed"));
-    return PM3_ESOFT;
+    return result;
 }
-
+ 
+// not yet updated to use helper functions
 int CmdEM4x70Brute(const char *Cmd) {
 
     // From paper "Dismantling Megamos Crypto", Roel Verdult, Flavio D. Garcia and Barıs¸ Ege.
@@ -336,6 +466,7 @@ int CmdEM4x70Brute(const char *Cmd) {
     return PM3_ESOFT;
 }
 
+// not yet updated to use helper functions
 int CmdEM4x70Unlock(const char *Cmd) {
 
     // send pin code to device, unlocking it for writing
@@ -387,7 +518,8 @@ int CmdEM4x70Unlock(const char *Cmd) {
     }
 
     if (resp.status) {
-        print_info_result(resp.data.asBytes);
+        em4x70_tag_info* q = (em4x70_tag_info*)resp.data.asBytes;
+        print_info_result(q);
         return PM3_SUCCESS;
     }
 
@@ -400,8 +532,6 @@ int CmdEM4x70Auth(const char *Cmd) {
     // Authenticate transponder
     // Send 56-bit random number + pre-computed f(rnd, k) to transponder.
     // Transponder will respond with a response
-    em4x70_data_t etd = {0};
-
     CLIParserContext *ctx;
 
     CLIParserInit(&ctx, "lf em 4x70 auth",
@@ -422,45 +552,38 @@ int CmdEM4x70Auth(const char *Cmd) {
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    etd.parity = arg_get_lit(ctx, 1);
+    em4x70_cmd_helper_options opts = {
+        .use_parity = arg_get_lit(ctx, 1),
+    };
+    ID48LIB_NONCE rn;
+    ID48LIB_FRN frn;
 
-    int rnd_len = 7;
-    CLIGetHexWithReturn(ctx, 2, etd.rnd, &rnd_len);
+    int rn_len = 7;
+    CLIGetHexWithReturn(ctx, 2, &rn.rn[0], &rn_len);
 
-    int frnd_len = 4;
-    CLIGetHexWithReturn(ctx, 3, etd.frnd, &frnd_len);
-
+    int frn_len = 4;
+    CLIGetHexWithReturn(ctx, 3, &frn.frn[0], &frn_len);
     CLIParserFree(ctx);
-
-    if (rnd_len != 7) {
-        PrintAndLogEx(FAILED, "Random number length must be 7 bytes instead of %d", rnd_len);
+    if (rn_len != 7) {
+        PrintAndLogEx(FAILED, "Random number length must be 7 bytes instead of %d", rn_len);
+        return PM3_EINVARG;
+    }
+    if (frn_len != 4) {
+        PrintAndLogEx(FAILED, "F(RN) length must be 4 bytes instead of %d", frn_len);
         return PM3_EINVARG;
     }
 
-    if (frnd_len != 4) {
-        PrintAndLogEx(FAILED, "F(RN) length must be 4 bytes instead of %d", frnd_len);
-        return PM3_EINVARG;
+    // Client command line parsing and validation complete ... now use the helper function
+    ID48LIB_GRN grn;
+    int result = auth_em4x70(opts, &grn, &rn, &frn);
+    if (PM3_SUCCESS == result) {
+        PrintAndLogEx(INFO, "Tag Auth Response: %02X %02X %02X", grn.grn[0], grn.grn[1], grn.grn[2]);
     }
+    return result;
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X70_AUTH, (uint8_t *)&etd, sizeof(etd));
-
-    PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_LF_EM4X70_AUTH, &resp, TIMEOUT)) {
-        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
-        return PM3_ETIMEOUT;
-    }
-
-    if (resp.status) {
-        // Response is 20-bit from tag
-        PrintAndLogEx(INFO, "Tag Auth Response: %02X %02X %02X", resp.data.asBytes[2], resp.data.asBytes[1], resp.data.asBytes[0]);
-        return PM3_SUCCESS;
-    }
-
-    PrintAndLogEx(FAILED, "TAG Authentication " _RED_("Failed"));
-    return PM3_ESOFT;
 }
 
+// not yet updated to use helper functions
 int CmdEM4x70WritePIN(const char *Cmd) {
 
     em4x70_data_t etd = {0};
@@ -508,7 +631,8 @@ int CmdEM4x70WritePIN(const char *Cmd) {
     }
 
     if (resp.status) {
-        print_info_result(resp.data.asBytes);
+        em4x70_tag_info* q = (em4x70_tag_info*)resp.data.asBytes;
+        print_info_result(q);
         PrintAndLogEx(INFO, "Writing new PIN: " _GREEN_("ok"));
         return PM3_SUCCESS;
     }
@@ -518,12 +642,7 @@ int CmdEM4x70WritePIN(const char *Cmd) {
 }
 
 int CmdEM4x70WriteKey(const char *Cmd) {
-
-    // Write new key to tag
-    em4x70_data_t etd = {0};
-
     CLIParserContext *ctx;
-
     CLIParserInit(&ctx, "lf em 4x70 writekey",
                   "Write new 96-bit key to tag\n",
                   "lf em 4x70 writekey -k F32AA98CF5BE4ADFA6D3480B   (pm3 test key)\n"
@@ -539,37 +658,66 @@ int CmdEM4x70WriteKey(const char *Cmd) {
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    etd.parity = arg_get_lit(ctx, 1);
-
+    em4x70_cmd_helper_options opts = {
+        .use_parity = arg_get_lit(ctx, 1),
+    };
+    ID48LIB_KEY key;
     int key_len = 12;
-    CLIGetHexWithReturn(ctx, 2, etd.crypt_key, &key_len);
-
+    if (CLIParamHexToBuf(arg_get_str(ctx, 2), &key.k[0], sizeof(ID48LIB_KEY), &key_len)) {
+        CLIParserFree((ctx));
+        return PM3_ESOFT;
+    }
     CLIParserFree(ctx);
-
     if (key_len != 12) {
         PrintAndLogEx(FAILED, "Key length must be 12 bytes instead of %d", key_len);
         return PM3_EINVARG;
     }
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X70_WRITEKEY, (uint8_t *)&etd, sizeof(etd));
-
-    PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_LF_EM4X70_WRITEKEY, &resp, TIMEOUT)) {
-        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
-        return PM3_ETIMEOUT;
-    }
-
-    if (resp.status) {
+    // Client command line parsing and validation complete ... now use the helper function
+    int result = writekey_em4x70(opts, &key);
+    if (PM3_SUCCESS == result) {
         PrintAndLogEx(INFO, "Writing new key: " _GREEN_("ok"));
 
-        // TODO: use prng to generate a new nonce, calculate frn/grn, and authenticate with tag
+        // TODO: authenticate using this new key to ensure it was correctly written
+        ID48LIB_NONCE rn;
+        fill_buffer_prng_bytes(&rn.rn[0], 7);
+        ID48LIB_FRN frn;
+        ID48LIB_GRN grn;
+        ID48LIB_GRN tag_grn;
+        id48lib_generator(&key, &rn, &frn, &grn);
 
-        return PM3_SUCCESS;
+        // dump the auth command to the screen, to enable the user to manually check validity
+        PrintAndLogEx(INFO,
+            "Verifying auth for new key: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
+            " -->  " _YELLOW_("lf em 4x70 auth --rnd %02X%02X%02X%02X%02X%02X%02X --frn %02X%02X%02X%02X")
+            " --> %02X%02X%02X",
+            key.k[ 0], key.k[ 1], key.k[ 2], key.k[ 3], key.k[ 4], key.k[ 5],
+            key.k[ 6], key.k[ 7], key.k[ 8], key.k[ 9], key.k[10], key.k[11],
+            rn.rn[0],
+            rn.rn[1],
+            rn.rn[2],
+            rn.rn[3],
+            rn.rn[4],
+            rn.rn[5],
+            rn.rn[6],
+            frn.frn[0],
+            frn.frn[1],
+            frn.frn[2],
+            frn.frn[3],
+            grn.grn[0],
+            grn.grn[1],
+            grn.grn[2]
+            );
+        result = auth_em4x70(opts, &tag_grn, &rn, &frn);
+        if (PM3_SUCCESS != result) {
+            PrintAndLogEx(FAILED, "Authenticating with new key: " _RED_("failed"));
+        } else if (memcmp(&grn, &tag_grn, sizeof(ID48LIB_GRN)) != 0) {
+            PrintAndLogEx(FAILED, "Authenticating with new key returned : " _RED_("failed"));
+        } else {
+            PrintAndLogEx(INFO, "Authenticating with new key: " _GREEN_("ok"));
+        }
     }
-
-    PrintAndLogEx(FAILED, "Writing new key: " _RED_("failed"));
-    return PM3_ESOFT;
+    return result;
 }
 
 // largest seen "in the wild" was 6
@@ -591,7 +739,7 @@ typedef struct _em4x70_recovery_data_t {
     bool          potential_keys_validated[MAXIMUM_ID48_RECOVERED_KEY_COUNT];
 } em4x70_recovery_data_t;
 
-static int ValidateArgsForRecover(const char *Cmd, em4x70_recovery_data_t* out_results) {
+static int CmdEM4x70Recover_ParseArgs(const char *Cmd, em4x70_recovery_data_t* out_results) {
     memset(out_results, 0, sizeof(em4x70_recovery_data_t));
 
     int result = PM3_SUCCESS;
@@ -689,7 +837,7 @@ int CmdEM4x70Recover(const char *Cmd) {
     em4x70_recovery_data_t recover_ctx = {0};
     int result = PM3_SUCCESS;
     
-    result = ValidateArgsForRecover(Cmd, &recover_ctx);
+    result = CmdEM4x70Recover_ParseArgs(Cmd, &recover_ctx);
     // recover the potential keys -- no more than a few seconds
     if (PM3_SUCCESS == result) {
         // The library is stateful.  First must initialize its internal context.

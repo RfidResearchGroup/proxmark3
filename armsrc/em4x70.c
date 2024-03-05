@@ -581,6 +581,11 @@ static bool send_command_and_read(uint8_t command, uint8_t *bytes, size_t length
                 Dbprintf("Invalid data received length: %d, expected %d", len, out_length_bits);
                 return false;
             }
+            // TODO: Figure out why getting an extra bit (quite often) here
+            // e.g., write block and info commands both reach here and output:
+            // [#] Should have a multiple of 8 bits, was sent 33
+            // [#] Should have a multiple of 8 bits, was sent 65
+            // Extra bits are currently just dropped, with no ill effect noticed.
             bits2bytes(bits, len, bytes);
             return true;
         }
@@ -903,10 +908,12 @@ void em4x70_write_key(const em4x70_data_t *etd, bool ledcontrol) {
                     break;
                 }
             }
-            // TODO: Ideally here we would perform a test authentication
-            //       to ensure the new key was written correctly. This is
-            //       what the datasheet suggests. We can't do that until
-            //       we have the crypto algorithm implemented.
+            // The client now has support for test authentication after
+            // writing a new key, thus allowing to verify that the new
+            // key was written correctly.  This is what the datasheet
+            // suggests.   Not currently implemented in the firmware,
+            // although ID48LIB has no dependencies that would prevent
+            // use within the firmware layer.
         }
     }
 
