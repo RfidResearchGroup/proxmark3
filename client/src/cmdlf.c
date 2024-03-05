@@ -373,19 +373,21 @@ int CmdLFCommandRead(const char *Cmd) {
     }
 
     PrintAndLogEx(DEBUG, _CYAN_("Cmd read - settings"));
-    PrintAndLogEx(DEBUG, "-------------------");
-    PrintAndLogEx(DEBUG, "delay... " _YELLOW_("%u")" zero... " _YELLOW_("%u") " one... " _YELLOW_("%u")" samples... %u", payload.delay, payload.period_0,  payload.period_1, payload.samples);
+    PrintAndLogEx(DEBUG, "--------------------");
+    PrintAndLogEx(DEBUG, "Delay..... " _YELLOW_("%u"), payload.delay);
+    PrintAndLogEx(DEBUG, "Zero...... " _YELLOW_("%u"), payload.period_0);
+    PrintAndLogEx(DEBUG, "One....... " _YELLOW_("%u"), payload.period_1);
+    PrintAndLogEx(DEBUG, "Samples... " _YELLOW_("%u"), payload.samples);
     PrintAndLogEx(DEBUG, "");
     PrintAndLogEx(DEBUG, _CYAN_("Extra symbols"));
-    PrintAndLogEx(DEBUG, "-------------");
     for (i = 0; i < LF_CMDREAD_MAX_EXTRA_SYMBOLS; i++) {
         if (payload.symbol_extra[i] == 0x00)
             continue;
 
-        PrintAndLogEx(DEBUG, "  %c ... " _YELLOW_("%u"), payload.symbol_extra[i], payload.period_extra[i]);
+        PrintAndLogEx(DEBUG, "%c......... " _YELLOW_("%u"), payload.symbol_extra[i], payload.period_extra[i]);
     }
     PrintAndLogEx(DEBUG, "");
-    PrintAndLogEx(DEBUG, "data... " _YELLOW_("%s"), payload.data);
+    PrintAndLogEx(DEBUG, "Cmd....... " _YELLOW_("%s"), payload.data);
     PrintAndLogEx(DEBUG, "");
 
     if (cm) {
