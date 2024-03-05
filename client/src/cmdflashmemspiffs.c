@@ -427,8 +427,9 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
             return PM3_EMALLOC;
         }
         PrintAndLogEx(HINT, "Use 'trace list -1 -t ...' to view, 'trace save -f ...' to save");
-    } else {
+    }
 
+    if (dlen) {
         // save to file
         char fn[FILE_PATH_SIZE] = {0};
         if (dlen) {

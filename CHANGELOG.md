@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `mem spiffs dump` - now if `-t` and `-d` it will also save to file (@iceman1001)
  - Fixed `hf mf sim` - key type identification (@iceman1001)
  - Added `lf em 4x70 recover` - recovery the second half of an id48 key (@henrygab)
  - Changed `hf emrtd info` - Added EG_DG7 viewing (@iceman1001)
