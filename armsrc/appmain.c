@@ -2822,8 +2822,22 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_STANDALONE: {
+
+            struct p {
+                uint8_t arg;
+                uint8_t mlen;
+                uint8_t mode[10];
+            } PACKED;
+
+            struct p *payload = (struct p *) packet->data.asBytes;
+
             uint8_t *bb = BigBuf_get_EM_addr();
-            bb[0] = packet->data.asBytes[0];
+            if (payload->mlen == 0) {
+                bb[0] = payload->arg;
+            } else {
+                memcpy(bb, payload->mode, payload->mlen);
+            }
+
             RunMod();
             break;
         }

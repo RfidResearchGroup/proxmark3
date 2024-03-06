@@ -17,7 +17,7 @@
 //-----------------------------------------------------------------------------
 
 /*
- * 'hf_unisniff' integrates existing sniffer functionality for 14a/14b/15a into
+ * 'hf_unisniff' integrates existing sniffer functionality for 14a/14b/15/iclass into
  * one standalone module.  It can sniff to the RAM trace buffer, or if you have
  * a PM3 with Flash it will (optionally) save traces to SPIFFS.
  *
@@ -30,12 +30,12 @@
  *   Once the module is launched, it will begin sniffing immediately.
  *
  * If configured for runtime selection:
- *   Flashing LED(s) indicate selected sniffer protocol: A=14a, B=14b, A+B=15
+ *   Flashing LED(s) indicate selected sniffer protocol: A=14a, B=14b, A+B=15, xxxx=iclass
  *   Short press cycles through options.  Long press begins sniffing.
  *
  * Short-pressing the button again will stop sniffing, with the sniffed data in
  * the trace buffer.  If you have Flash, and have not set the 'save=none'
- * option in the config file, trace data will be saved to SPIFFS.  The default
+ * option in the config file, trace data will be saved to SPIFFS. The default
  * is to create a new file for each sniffing session, but you may configure it
  * to append instead.
  *
@@ -58,8 +58,12 @@
  *
  *   protocol = [14a|14b|15|user]
  *     which protocol to sniff.  If you choose a protocol it will go directly
- *     to work.  If you choose 'user' you may select the protocol at the start
+ *     to work. If you choose 'user' you may select the protocol at the start
  *     of each session.
+ * 
+ *  hf_unisniff.conf sample file: 
+ *  save=new
+ *  protocol=14a
  *
  * To retrieve trace data from flash:
  *
@@ -76,6 +80,7 @@
  *
  * This module emits debug strings during normal operation -- so try it out in
  * the lab connected to PM3 client before taking it into the field.
+ * Use  `hw dbg -3`  for debug messages.
  *
  * To delete the trace data from flash:
  *    mem spiffs remove -f [filename]
@@ -83,8 +88,7 @@
  * Caveats / notes:
  * - Trace buffer will be cleared on starting stand-alone mode. Data in flash
  *   will remain unless explicitly deleted.
- * - This module will terminate if the trace buffer is full (and save data to
- *   flash).
+ * - This module will terminate if the trace buffer is full (and save data to flash).
  * - Like normal sniffing mode, timestamps overflow after 5 min 16 sec.
  *   However, the trace buffer is sequential, so will be in the correct order.
  *
@@ -113,62 +117,82 @@
 #include "BigBuf.h"
 #include "string.h"
 
-#undef HF_UNISNIFF_VERBOSE_DEBUG
-#define HF_UNISNIFF_PROTOCOL "14a"
-#define HF_UNISNIFF_LOGFILE "hf_unisniff"
-#define HF_UNISNIFF_LOGEXT ".trace"
-#define HF_UNISNIFF_CONFIG "hf_unisniff.conf"
-#define HF_UNISNIFF_CONFIG_SIZE 128
+#define HF_UNISNIFF_PROTOCOL            "14a"
+#define HF_UNISNIFF_LOGFILE             "hf_unisniff"
+#define HF_UNISNIFF_LOGEXT              ".trace"
+#define HF_UNISNIFF_CONFIG              "hf_unisniff.conf"
+#define HF_UNISNIFF_CONFIG_SIZE         128
 
-#define HF_UNISNIFF_PROTOCOLS {"14a","14b","15", "user"}     // The logic requires USER be last.
-#define HF_UNISNIFF_NUM_PROTOCOLS 4
-#define HF_UNISNIFF_PROTO_14a 0
-#define HF_UNISNIFF_PROTO_14b 1
-#define HF_UNISNIFF_PROTO_15 2
-#define HF_UNISNIFF_PROTO_USER HF_UNISNIFF_NUM_PROTOCOLS-1
+// The logic requires USER be last.
+#define HF_UNISNIFF_PROTO_14A           0
+#define HF_UNISNIFF_PROTO_14B           1
+#define HF_UNISNIFF_PROTO_15            2
+#define HF_UNISNIFF_PROTO_ICLASS        3
+#define HF_UNISNIFF_PROTO_USER          4
 
-#define HF_UNISNIFF_SAVE_MODE HF_UNISNIFF_SAVE_MODE_NEW     // Default, override in .conf
-#define HF_UNISNIFF_SAVE_MODE_NEW 0
-#define HF_UNISNIFF_SAVE_MODE_APPEND 1
-#define HF_UNISNIFF_SAVE_MODE_NONE 2
+// Default, override in .conf
+#define HF_UNISNIFF_SAVE_MODE           HF_UNISNIFF_SAVE_MODE_NEW
+#define HF_UNISNIFF_SAVE_MODE_NEW       0
+#define HF_UNISNIFF_SAVE_MODE_APPEND    1
+#define HF_UNISNIFF_SAVE_MODE_NONE      2
 
 #ifdef WITH_FLASH
-static void UniSniff_DownloadTraceInstructions(char *filename) {
+static void UniSniff_DownloadTraceInstructions(char *fn, const char *proto) {
     Dbprintf("");
     Dbprintf("To get the trace from flash and display it:");
-    Dbprintf("1. mem spiffs dump -s %s -d hf_unisniff.trace", filename);
-    Dbprintf("2. trace load -f hf_unisniff.trace");
-    Dbprintf("3. trace list -t [protocol] -1");
+    Dbprintf(" 1.  mem spiffs dump -s %s -d hf_unisniff.trace", fn);
+    Dbprintf(" 2.  trace load -f hf_unisniff.trace");
+    Dbprintf(" 3.  trace list -t %s -1", proto);
 }
 #endif
 
 void ModInfo(void) {
-    DbpString("  HF UNISNIFF, multimode HF sniffer with optional flashmem & runtime select (hazardousvoltage)");
-    Dbprintf("  Compile-time default protocol: %s", HF_UNISNIFF_PROTOCOL);
+    DbpString("  HF UNISNIFF - multimode HF sniffer (hazardousvoltage)");
+    Dbprintf("  Compile-time default protocol... %s", HF_UNISNIFF_PROTOCOL);
+
 #ifdef WITH_FLASH
-    DbpString("  WITH_FLASH support.");
+    DbpString("  WITH_FLASH support");
 #endif
+
 }
 
 void RunMod(void) {
-    char *protocols[] = HF_UNISNIFF_PROTOCOLS;
-    uint8_t sniff_protocol, default_sniff_protocol;
+
     StandAloneMode();
 
     Dbprintf(_YELLOW_("HF UNISNIFF started"));
-    for (sniff_protocol = 0; sniff_protocol < HF_UNISNIFF_NUM_PROTOCOLS; sniff_protocol++) {
-        if (!strcmp(protocols[sniff_protocol], HF_UNISNIFF_PROTOCOL)) break;
+
+    const char *protocols[] = {"14a", "14b", "15", "iclass","user"};
+
+    // some magic to allow for `hw standalone` command to trigger a particular sniff from inside the pm3 client
+    const char *bb = (const char*)BigBuf_get_EM_addr();
+    uint8_t sniff_protocol;
+    if (strlen(bb) > 0 ) {
+        for (sniff_protocol = 0; sniff_protocol < ARRAYLEN(protocols); sniff_protocol++) {
+            if (strcmp(protocols[sniff_protocol], bb) == 0) {
+                break;
+            }
+        }       
+    } else {
+        for (sniff_protocol = 0; sniff_protocol < ARRAYLEN(protocols); sniff_protocol++) {
+            if (strcmp(protocols[sniff_protocol], HF_UNISNIFF_PROTOCOL) == 0) {
+                break;
+            }
+        }
     }
-    default_sniff_protocol = sniff_protocol;
-#ifdef HF_UNISNIFF_VERBOSE_DEBUG
-    Dbprintf("Compile-time configured protocol: %d", sniff_protocol);
-#endif
+
+    uint8_t default_sniff_protocol = sniff_protocol;
+
+    if (g_dbglevel >= DBG_DEBUG) {
+        Dbprintf("Compile-time configured protocol... %u", sniff_protocol);
+    }
+
 #ifdef WITH_FLASH
     uint8_t save_mode = HF_UNISNIFF_SAVE_MODE;
     rdv40_spiffs_lazy_mount();
     // Allocate memory now for buffer for filename to save to.  Who knows what'll be
     // available after filling the trace buffer.
-    char *filename = (char *)BigBuf_malloc(64);
+    char *filename = (char *)BigBuf_calloc(64);
     if (filename == NULL) {
         Dbprintf("failed to allocate memory");
         return;
@@ -176,84 +200,120 @@ void RunMod(void) {
     // Read the config file.  Size is limited to defined value so as not to consume
     // stupid amounts of stack
     if (exists_in_spiffs(HF_UNISNIFF_CONFIG)) {
-        char config_buffer_array[HF_UNISNIFF_CONFIG_SIZE];
-        char *config_buffer = &config_buffer_array[0];
-        uint32_t config_size = size_in_spiffs(HF_UNISNIFF_CONFIG);
-        if (config_size > HF_UNISNIFF_CONFIG_SIZE) config_size = HF_UNISNIFF_CONFIG_SIZE;
-        rdv40_spiffs_read_as_filetype(HF_UNISNIFF_CONFIG, (uint8_t *)config_buffer,
-                                      config_size, RDV40_SPIFFS_SAFETY_SAFE);
+
+        uint32_t fsize = size_in_spiffs(HF_UNISNIFF_CONFIG);
+        if (fsize > HF_UNISNIFF_CONFIG_SIZE) {
+            fsize = HF_UNISNIFF_CONFIG_SIZE;
+        }
+
+        char config_buffer[HF_UNISNIFF_CONFIG_SIZE];
+        char *d = &config_buffer[0];
+
+        rdv40_spiffs_read_as_filetype(HF_UNISNIFF_CONFIG
+                , (uint8_t *)d
+                , fsize
+                , RDV40_SPIFFS_SAFETY_SAFE
+            );
+
         // This parser is terrible but I think fairly memory efficient?  Maybe better to use JSON?
-        char *x = config_buffer;
+        char *x = d;
         char *y = x;
+
         // strip out all the whitespace and Windows line-endings
         do {
+
             while (*y == 0x20 || *y == 0x09 || *y == 0x0D) {
                 ++y;
             }
         } while ((*x++ = c_tolower(*y++)));
-        char *token  = strchr(config_buffer, '\n');
+
+        char *token  = strchr(d, '\n');
+
         while (token != NULL) {
             *token++ = '\0';
-            char *tag = strtok(config_buffer, "=");
+            char *tag = strtok(d, "=");
             char *value = strtok(NULL, "\n");
+
             if (tag != NULL && value != NULL) {
-                if (!strcmp(tag, "protocol")) {
+
+                if (strcmp(tag, "protocol") == 0) {
                     // If we got a selection here, override compile-time selection
-                    uint8_t conf_protocol;
-                    for (conf_protocol = 0; conf_protocol < HF_UNISNIFF_NUM_PROTOCOLS; conf_protocol++) {
-                        if (!strcmp(protocols[conf_protocol], value)) {
-                            sniff_protocol = conf_protocol;
+                    for (uint8_t i = 0; i < ARRAYLEN(protocols); i++) {
+                        if (strcmp(protocols[i], value) == 0) {
+                            sniff_protocol = i;
                             break;
                         }
                     }
-#ifdef HF_UNISNIFF_VERBOSE_DEBUG
-                    Dbprintf("Run-time configured protocol: %d", conf_protocol);
-#endif
-                } else if (!strcmp(tag, "save")) {
-                    if (!strcmp(value, "append")) save_mode = HF_UNISNIFF_SAVE_MODE_APPEND;
-                    else if (!strcmp(value, "none")) save_mode = HF_UNISNIFF_SAVE_MODE_NONE;
-                    else save_mode = HF_UNISNIFF_SAVE_MODE_NEW;
-#ifdef HF_UNISNIFF_VERBOSE_DEBUG
-                    Dbprintf("Run-time configured save_mode: %d", save_mode);
-#endif
+
+                } else if (strcmp(tag, "save") == 0) {
+
+                    // Assume NEW
+                    save_mode = HF_UNISNIFF_SAVE_MODE_NEW;
+
+                    if (strcmp(value, "append") == 0) {
+                        save_mode = HF_UNISNIFF_SAVE_MODE_APPEND;
+                    }
+
+                    if (strcmp(value, "none") == 0) {
+                        save_mode = HF_UNISNIFF_SAVE_MODE_NONE;
+                    }
                 }
             }
-            config_buffer = token;
-            token = strchr(config_buffer, '\n');
+            d = token;
+            token = strchr(d, '\n');
+        }
+
+        if (g_dbglevel >= DBG_DEBUG) {
+            Dbprintf("Run-time configured protocol.... %u", sniff_protocol);
+            Dbprintf("Run-time configured save_mode... %u", save_mode);        
         }
 
     }
 #endif
 
     if (sniff_protocol >= HF_UNISNIFF_PROTO_USER) {
-        Dbprintf("[!] Protocol undefined, going to prompt loop");
+
+        Dbprintf("Protocol undefined, going to prompt loop");
         sniff_protocol = default_sniff_protocol;      // Default to compile-time setting.
+
         for (;;) {
+
             WDT_HIT();
             if (data_available()) {
                 BigBuf_free();
                 return;
             }
-            if (GetTickCount() & 0x80)
+
+            if (GetTickCount() & 0x80) {
                 LED(sniff_protocol + 1, 0);
-            else
+            } else {
                 LEDsoff();
+            }
 
             // Was our button held down or pressed?
             int button_pressed = BUTTON_HELD(1000);
+
             if (button_pressed == BUTTON_SINGLE_CLICK) {
+
                 sniff_protocol++;
-                if (sniff_protocol >= HF_UNISNIFF_PROTO_USER) sniff_protocol = 0;
+                if (sniff_protocol >= HF_UNISNIFF_PROTO_USER) {
+                    sniff_protocol = HF_UNISNIFF_PROTO_14A;
+                }
+
                 SpinDelay(100);
-                Dbprintf("Selected protocol: '%s'", protocols[sniff_protocol]);
-            } else if (button_pressed == BUTTON_HOLD) {
-                Dbprintf("Executing protocol %s", protocols[sniff_protocol]);
+                Dbprintf("Selected protocol.... " _YELLOW_("%s"), protocols[sniff_protocol]);
+            } 
+
+            if (button_pressed == BUTTON_HOLD) {
+                Dbprintf("Executing protocol... " _YELLOW_("%s"), protocols[sniff_protocol]);
+
                 for (uint8_t i = 0; i < 4; i++) {
                     LED(15, 0);
                     SpinDelay(100);
                     LEDsoff();
                     SpinDelay(100);
                 }
+
                 WAIT_BUTTON_RELEASED();
                 SpinDelay(300);
                 LEDsoff();
@@ -263,17 +323,20 @@ void RunMod(void) {
     }
 
     switch (sniff_protocol) {
-        case HF_UNISNIFF_PROTO_14a:
+        case HF_UNISNIFF_PROTO_14A:
             SniffIso14443a(0);
             break;
-        case HF_UNISNIFF_PROTO_14b:
+        case HF_UNISNIFF_PROTO_14B:
             SniffIso14443b();
             break;
         case HF_UNISNIFF_PROTO_15:
             SniffIso15693(0, NULL, false);
             break;
+        case HF_UNISNIFF_PROTO_ICLASS:
+            SniffIso15693(0, NULL, true);
+            break;
         default:
-            Dbprintf("No protocol selected, exiting.");
+            Dbprintf("No protocol selected, exiting...");
             BigBuf_free();
             LEDsoff();
             return;
@@ -283,45 +346,62 @@ void RunMod(void) {
     SpinDelay(200);
 
     uint32_t trace_len = BigBuf_get_traceLen();
+
 #ifndef WITH_FLASH
     // Keep stuff in BigBuf for USB/BT dumping
-    if (trace_len > 0)
-        Dbprintf("[!] Trace length (bytes) = %u", trace_len);
+    if (trace_len > 0) {
+        Dbprintf("Trace length... %u bytes", trace_len);
+    }
+
 #else
     // Write stuff to spiffs logfile
     if (trace_len == 0) {
-        Dbprintf("[!] Trace buffer is empty, nothing to write!");
+        Dbprintf("Trace buffer is empty, nothing to write!");
     } else if (save_mode == HF_UNISNIFF_SAVE_MODE_NONE) {
-        Dbprintf("[!] Trace save to flash disabled in config!");
+        Dbprintf("Trace save to flash disabled in config!");
     } else {
-        Dbprintf("[!] Trace length (bytes) = %u", trace_len);
+        Dbprintf("Trace length... %u bytes", trace_len);
 
         uint8_t *trace_buffer = BigBuf_get_addr();
 
         sprintf(filename, "%s_%s%s", HF_UNISNIFF_LOGFILE, protocols[sniff_protocol], HF_UNISNIFF_LOGEXT);
+
         if (save_mode == HF_UNISNIFF_SAVE_MODE_NEW) {
+
             uint16_t file_index = 0;
             while (exists_in_spiffs(filename)) {
-                if (file_index++ == 1000) break;
-                sprintf(filename, "%s_%s-%03d%s", HF_UNISNIFF_LOGFILE, protocols[sniff_protocol],
-                        file_index, HF_UNISNIFF_LOGEXT);
+
+                if (file_index++ == 1000) {
+                    break;
+                }
+
+                sprintf(filename, "%s_%s-%03d%s"
+                    , HF_UNISNIFF_LOGFILE
+                    , protocols[sniff_protocol]
+                    , file_index
+                    , HF_UNISNIFF_LOGEXT
+                );
             }
+
             if (file_index > 999) {
-                Dbprintf("[!] Too many files!  Trace not saved.  Clean up your SPIFFS.");
+                Dbprintf("Too many files! Trace not saved. Try clean up your SPIFFS");
             } else {
                 rdv40_spiffs_write(filename, trace_buffer, trace_len, RDV40_SPIFFS_SAFETY_SAFE);
-                Dbprintf("[!] Wrote trace to %s", filename);
+                Dbprintf("Wrote trace to " _YELLOW_("%s"), filename);
             }
-        } else if (save_mode == HF_UNISNIFF_SAVE_MODE_APPEND) {
-            if (!exists_in_spiffs(filename)) {
+        } 
+
+        if (save_mode == HF_UNISNIFF_SAVE_MODE_APPEND) {
+
+            if (exists_in_spiffs(filename) == false) {
                 rdv40_spiffs_write(filename, trace_buffer, trace_len, RDV40_SPIFFS_SAFETY_SAFE);
-                Dbprintf("[!] Wrote trace to %s", filename);
+                Dbprintf("Wrote trace to " _YELLOW_("%s"), filename);
             } else {
                 rdv40_spiffs_append(filename, trace_buffer, trace_len, RDV40_SPIFFS_SAFETY_SAFE);
-                Dbprintf("[!] Appended trace to %s", filename);
+                Dbprintf("Appended trace to " _YELLOW_("%s"), filename);
             }
         }
-        UniSniff_DownloadTraceInstructions(filename);
+        UniSniff_DownloadTraceInstructions(filename, protocols[sniff_protocol]);
     }
 
     LED_D_ON();
@@ -335,6 +415,4 @@ void RunMod(void) {
 
     Dbprintf("-=[ exit ]=-");
     LEDsoff();
-
-    return;
 }

@@ -861,13 +861,26 @@ static int CmdStandalone(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0("a", "arg", "<dec>", "argument byte"),
+        arg_str0("b", NULL, "<str>", "UniSniff arg: 14a, 14b, 15, iclass"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    uint8_t arg = arg_get_u32_def(ctx, 1, 1);
+
+    struct p {
+        uint8_t arg;
+        uint8_t mlen;
+        uint8_t mode[10];
+    } PACKED packet;
+
+    packet.arg = arg_get_u32_def(ctx, 1, 1);
+    int mlen = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 2), packet.mode, sizeof(packet.mode), &mlen);
+    if (mlen) {
+        packet.mlen = mlen;
+    }
     CLIParserFree(ctx);
     clearCommandBuffer();
-    SendCommandNG(CMD_STANDALONE, (uint8_t *)&arg, sizeof(arg));
+    SendCommandNG(CMD_STANDALONE, (uint8_t *)&packet, sizeof(struct p));    
     return PM3_SUCCESS;
 }
 
