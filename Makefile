@@ -218,8 +218,12 @@ help:
 	@echo "+ udev            - Sets udev rules on *nix"
 	@echo "+ accessrights    - Ensure user belongs to correct group on *nix"
 	@echo
-	@echo "Possible platforms: try \"make PLATFORM=\" for more info, default is PM3RDV4"
-	@echo "To activate verbose mode, use make V=1"
+	@echo "To see possible platforms. default is PM3RDV4"
+	@echo "   make PLATFORM="
+	@echo
+	@echo "For verbose mode"
+	@echo "   make V=1"
+	@echo
 
 client: client/all
 
