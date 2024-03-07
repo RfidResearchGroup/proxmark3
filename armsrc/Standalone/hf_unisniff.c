@@ -149,11 +149,9 @@ static void UniSniff_DownloadTraceInstructions(char *fn, const char *proto) {
 void ModInfo(void) {
     DbpString("  HF UNISNIFF - multimode HF sniffer (hazardousvoltage)");
     Dbprintf("  Compile-time default protocol... %s", HF_UNISNIFF_PROTOCOL);
-
 #ifdef WITH_FLASH
-    DbpString("  WITH_FLASH support");
+   DbpString("  FLASH support................... yes");
 #endif
-
 }
 
 void RunMod(void) {
@@ -184,7 +182,7 @@ void RunMod(void) {
     uint8_t default_sniff_protocol = sniff_protocol;
 
     if (g_dbglevel >= DBG_DEBUG) {
-        Dbprintf("Compile-time configured protocol... %u", sniff_protocol);
+        Dbprintf("Compile-time configured protocol... %s ( %u )", protocols[sniff_protocol], sniff_protocol);
     }
 
 #ifdef WITH_FLASH
@@ -264,8 +262,9 @@ void RunMod(void) {
         }
 
         if (g_dbglevel >= DBG_DEBUG) {
-            Dbprintf("Run-time configured protocol.... %u", sniff_protocol);
-            Dbprintf("Run-time configured save_mode... %u", save_mode);        
+            const char *save_modes[] = {"new", "append", "none"};
+            Dbprintf("Run-time configured protocol.... %s ( %u )", protocols[sniff_protocol], sniff_protocol);
+            Dbprintf("Run-time configured save_mode... %s ( %u )", save_modes[save_mode], sniff_protocol);
         }
 
     }
