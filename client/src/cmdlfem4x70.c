@@ -716,6 +716,7 @@ int CmdEM4x70WriteKey(const char *Cmd) {
                 tag_grn.grn[0], tag_grn.grn[1], tag_grn.grn[2],
                 grn.grn[0], grn.grn[1], grn.grn[2]
                 );
+            result = PM3_EWRONGANSWER;
         } else {
             PrintAndLogEx(INFO, "Authenticating with new key: " _GREEN_("ok"));
         }
