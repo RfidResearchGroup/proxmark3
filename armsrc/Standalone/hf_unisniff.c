@@ -13,7 +13,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// HF_UNISNIFF: Integrated 14a/14b/15 sniffer
+// HF_UNISNIFF: Integrated 14a/14b/15/picopass sniffer
 //-----------------------------------------------------------------------------
 
 /*
@@ -30,7 +30,7 @@
  *   Once the module is launched, it will begin sniffing immediately.
  *
  * If configured for runtime selection:
- *   Flashing LED(s) indicate selected sniffer protocol: A=14a, B=14b, A+B=15, xxxx=iclass
+ *   Flashing LED(s) indicate selected sniffer protocol: A=14a, B=14b, A+B=15, C=iclass
  *   Short press cycles through options.  Long press begins sniffing.
  *
  * Short-pressing the button again will stop sniffing, with the sniffed data in
@@ -56,7 +56,7 @@
  *     append = append to existing file, create if not existing.
  *     none   = do not save to SPIFFS, leave in trace buffer only.
  *
- *   protocol = [14a|14b|15|user]
+ *   protocol = [14a|14b|15|iclass|user]
  *     which protocol to sniff.  If you choose a protocol it will go directly
  *     to work. If you choose 'user' you may select the protocol at the start
  *     of each session.
@@ -64,6 +64,15 @@
  *  hf_unisniff.conf sample file: 
  *  save=new
  *  protocol=14a
+ *
+ *  Upload it to the Proxmark3 spiffs.
+ *  mem spiffs upload -s hf_unisniff.conf -d hf_unisniff.conf
+ * 
+ *  To use the mode:
+ *  Start mode by pressing the Proxmark3 button for 3 seconds.  See ledshow as indicator its in standalone mode.
+ *  present proxmark3 and card to the reader.
+ *  press proxmark3 button to exit the standalone mode.
+ *
  *
  * To retrieve trace data from flash:
  *
@@ -73,8 +82,8 @@
  * 2. trace load -f hf_unisniff.trace
  *    Loads trace data from a file into PC-side buffers.
  *
- * 3. For ISO14a: trace list -t [protocol] -1
- *    For MIFARE Classic: trace list -t mf -1
+ * 3. For ISO14443a........ trace list -1 -t 14a
+ *    For MIFARE Classic... trace list -1 -t mf
  *
  *    Lists trace data from buffer without requesting it from PM3.
  *
