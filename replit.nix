@@ -1,5 +1,8 @@
 { pkgs }: {
 	deps = [
+   pkgs.run
+   pkgs.pwdsafety
+   pkgs.rcs
    pkgs.proxmark3
 		pkgs.clang_12
 		pkgs.ccls

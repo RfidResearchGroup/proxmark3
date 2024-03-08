@@ -14,7 +14,8 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// Timers, Clocks functions used in LF or Legic where you would need detailed time.
+// Timers, Clocks functions used in LF or Legic where you would need detailed
+// time.
 //-----------------------------------------------------------------------------
 
 #ifndef __TICKS_H
@@ -35,14 +36,13 @@ void StartCountUS(void);
 uint32_t RAMFUNC GetCountUS(void);
 void StopTicks(void);
 
-
 #ifndef AS_BOOTROM //////////////////////////////////////////////////////////////
 // Bootrom does not require these functions.
 // Wrap in #ifndef to avoid accidental bloat of bootrom
 
 void SpinDelay(int ms);
 void SpinDelayUs(int us);
-void SpinDelayUsPrecision(int us);  // precision 0.6us , running for 43ms before
+void SpinDelayUsPrecision(int us); // precision 0.6us , running for 43ms before
 
 void StartTickCount(void);
 uint32_t RAMFUNC GetTickCount(void);
@@ -59,7 +59,5 @@ uint32_t RAMFUNC GetCountSspClkDelta(uint32_t start);
 void WaitMS(uint32_t ms);
 
 #endif // #ifndef AS_BOOTROM
-
-
 
 #endif
