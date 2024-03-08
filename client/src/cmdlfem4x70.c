@@ -712,7 +712,10 @@ int CmdEM4x70WriteKey(const char *Cmd) {
         if (PM3_SUCCESS != result) {
             PrintAndLogEx(FAILED, "Authenticating with new key: " _RED_("failed"));
         } else if (memcmp(&grn, &tag_grn, sizeof(ID48LIB_GRN)) != 0) {
-            PrintAndLogEx(FAILED, "Authenticating with new key returned : " _RED_("failed"));
+            PrintAndLogEx(FAILED, "Authenticating with new key returned %02x %02x %02x, expected %02x %02x %02x (torn write): " _RED_("failed"),
+                tag_grn.grn[0], tag_grn.grn[1], tag_grn.grn[2],
+                grn.grn[0], grn.grn[1], grn.grn[2]
+                );
         } else {
             PrintAndLogEx(INFO, "Authenticating with new key: " _GREEN_("ok"));
         }
