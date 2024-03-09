@@ -125,5 +125,5 @@ Here below is a sample output of a RDV4 device.
 
 To make a backup of the signature to file:
 
-`mem dump p f flash_signature_dump o 262015 l 128`
+`mem dump -f flash_signature_dump -o 262015 -l 128`
 
