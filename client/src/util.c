@@ -526,8 +526,8 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
     size_t pos = (max_len * 3) + 2;
 
     while (i < max_len) {
-        char c = data[i];
-        tmp[pos + i]  = ((c < 32) || (c == 127)) ? '.' : c;
+        unsigned char c = (unsigned char)data[i];
+        tmp[pos + i]  = isprint(c) ? c : '.';
         ++i;
     }
 out:
@@ -543,15 +543,15 @@ char *sprint_ascii_ex(const uint8_t *data, const size_t len, const size_t min_st
     size_t i = 0;
 
     while (i < max_len) {
-        char c = data[i];
-        tmp[i] = ((c < 32) || (c == 127)) ? '.' : c;
+        unsigned char c = (unsigned char)data[i];
+        tmp[i]  = isprint(c) ? c : '.';
         ++i;
     }
 
     size_t m = min_str_len > i ? min_str_len : 0;
-    for (; i < m; ++i)
+    for (; i < m; ++i) {
         tmp[i] = ' ';
-
+    }
     return buf;
 }
 char *sprint_ascii(const uint8_t *data, const size_t len) {
@@ -649,9 +649,10 @@ int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValue
         indx++;
     }
 
-    if (strlen(buf) > 0)
+    if (strlen(buf) > 0) {
         //error when not completed hex bytes
         return -3;
+    }
 
     return bytesValueLen;
 }
