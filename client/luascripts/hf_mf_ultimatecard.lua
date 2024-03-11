@@ -995,6 +995,9 @@ local function wipe(wtype)
         --set pack
         err, msg = write_pack('0000')
         if err == nil then return err, msg end
+        --set signature
+        err, msg = write_signature('8B76052EE42F5567BEB53238B3E3F9950707C0DCC956B5C5EFCFDB709B2D82B3')
+        if err == nil then return err, msg end
         lib14a.disconnect()
         return true, 'Ok'
     else oops('Use 0 for Mifare wipe or 1 for Ultralight wipe')
