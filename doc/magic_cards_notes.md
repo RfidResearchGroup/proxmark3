@@ -432,7 +432,7 @@ hf mf cwipe
 hf mf csetblk
 hf mf cgetblk
 hf mf cgetsc
-hf mf cload 
+hf mf cload
 hf mf csave
 hf mf cview
 ```
@@ -870,7 +870,7 @@ Possible tag wakeup mechanisms are:
   * Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
   * Read configuration: `E000+crc`
   * Write configuration: `E100+crc`
-  
+
 * **DANGER**
   * Set main memory and config to 00 `F000+crc`
   * Set main memory and config to FF `F100+crc`
@@ -933,7 +933,7 @@ Sector 0
 ^^ ^^ ^^ ^^                                     - UID0
             ^^                                  - BCC0
                ^^                               - SAK0
-                  ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ - Unused 
+                  ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ ^^ - Unused
 Block 2: unused
 Block 3: ignored (custom keys, acl; broken acl ignored - anticollision will still work)
 Sector 1
@@ -1657,7 +1657,7 @@ hf mfu setuid -h
 Equivalent: don't use `hf mfu wrbl` as you need to write three blocks in a row, but do, with proper BCCx:
 
 ```
-hf 14a raw -s -c -k a2 00 041122bf 
+hf 14a raw -s -c -k a2 00 041122bf
 hf 14a raw    -c -k a2 01 33445566
 hf 14a raw    -c    a2 02 44480000
 ```
@@ -2088,7 +2088,7 @@ The same effect (with better ATQA!) can be obtained with a MFC Gen1A that uses S
 ```
 hf mf csetblk --blk 0 -d 1122334444204403A1A2A3A4A5A6A7A8
 hf 14a info
-[+]  UID: 11 22 33 44 
+[+]  UID: 11 22 33 44
 [+] ATQA: 03 44
 [+]  SAK: 20 [1]
 [+] Possible types:
@@ -2157,7 +2157,7 @@ hf 15 csetuid E011223344556677
 or (ignore errors):
 
 ```
-script run hf_15_magic -u E004013344556677  
+script run hf_15_magic -u E004013344556677
 ```
 
 <a id="g4top"></a>
@@ -2241,20 +2241,20 @@ Arguments
     -c      read magic configuration
     -u      UID (8-20 hexsymbols), set UID on tag
     -t      tag type to impersonate
-                 1 = Mifare Mini S20 4-byte 
+                 1 = Mifare Mini S20 4-byte
                  2 = Mifare Mini S20 7-byte 15 = NTAG 210
                  3 = Mifare Mini S20 10-byte 16 = NTAG 212
                  4 = Mifare 1k S50 4-byte   17 = NTAG 213
                  5 = Mifare 1k S50 7-byte   18 = NTAG 215
-                 6 = Mifare 1k S50 10-byte  19 = NTAG 216 
+                 6 = Mifare 1k S50 10-byte  19 = NTAG 216
                  7 = Mifare 4k S70 4-byte   20 = NTAG I2C 1K
                  8 = Mifare 4k S70 7-byte   21 = NTAG I2C 2K
                  9 = Mifare 4k S70 10-byte  22 = NTAG I2C 1K PLUS
             ***  10 = UL -   NOT WORKING FULLY   23 = NTAG I2C 2K PLUS
             ***  11 = UL-C - NOT WORKING FULLY   24 = NTAG 213F
                  12 = UL EV1 48b                25 = NTAG 216F
-                 13 = UL EV1 128b        
-            ***  14 = UL Plus - NOT WORKING YET  
+                 13 = UL EV1 128b
+            ***  14 = UL Plus - NOT WORKING YET
 
     -p      NTAG password (8 hexsymbols),  set NTAG password on tag.
     -a      NTAG pack ( 4 hexsymbols), set NTAG pack on tag.
@@ -2330,11 +2330,11 @@ Default `<passwd>`: `00000000`
 # view contents of tag memory:
 hf mf gview
 # Read a specific block via backdoor command:
-hf mf ggetblk 
+hf mf ggetblk
 # Write a specific block via backdoor command:
-hf mf gsetblk 
+hf mf gsetblk
 # Load dump to tag:
-hf mf gload 
+hf mf gload
 # Save dump from tag:
 hf mf gsave
 ```
@@ -2435,13 +2435,13 @@ hf 14a raw -s -c -t 1000 CF00000000CD01101112131415161718191A1B1C1D1E1F
 hf 14a reader
 ```
 
-MFC mode 4b UID  
+MFC mode 4b UID
 
 => UID `00010203`
 
 `script run hf_mf_ultimatecard -t 4 -u 00010203`
 
-MFC mode 7b UID  
+MFC mode 7b UID
 
 => UID `00010203040506`
 
@@ -2457,9 +2457,9 @@ Ultralight mode, 4b UID
 
 => UID `00010203`
 
-Ultralight mode, 7b UID  
+Ultralight mode, 7b UID
 
-=> UID `00010210111213`  
+=> UID `00010210111213`
 
 👉 the UID is composed of first two blocks as in regular Ultralights
 
@@ -2468,8 +2468,8 @@ Ultralight mode, 7b UID
   * UL EV1 128b = `script run hf_mf_ultimatecard -t 13 -u 00010203040506`
   * NTAG 215 = `script run hf_mf_ultimatecard -t 18 -u 00010203040506`
 
-Ultralight mode, 10b UID  
-=> UID `00010203040506070809`  
+Ultralight mode, 10b UID
+=> UID `00010203040506070809`
 👉 the UID is composed only from block0
 
 ### Set 14443B UID and ATQB
@@ -2487,7 +2487,7 @@ hf 14a raw -s -c -t 1000 CF00000000CD00000102030405060708090A0B0C0D0E0F
 hf 14b reader
 ```
 
-=> UID 00010203  
+=> UID 00010203
 => ATQB 0405060708090A
 
 ### (De)Activate Ultralight mode
@@ -2812,7 +2812,7 @@ hf 14a raw -s -c -t 1000 CF00000000F001010000000003000978009102DABC1910101112131
 
 ^[Top](#top) ^^[Gen4](#g4top)
 
-Don`t forget configure maximum read/write blocks. It`s can be adjusted directly in config (see *Dump configuration*) or by command 6B:
+Don't forget configure maximum read/write blocks. It's can be adjusted directly in config (see *Dump configuration*) or by command 6B:
 
 ```
 hf 14a raw -s -c -t 1000 CF000000006BFB

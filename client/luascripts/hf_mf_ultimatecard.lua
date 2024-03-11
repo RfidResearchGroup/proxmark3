@@ -21,7 +21,7 @@ example = [[
     ]]..ansicolors.yellow..[[script run hf_mf_ultimatecard -c  ]]..ansicolors.reset..[[
 
     -- set uid
-    ]]..ansicolors.yellow..[[script run hf_mf_ultimatecard -u 04112233445566 ]]..ansicolors.reset..[[
+    ]]..ansicolors.yellow..[[script run hf_mf_ultimatecard -u 04E10CDA993C80 ]]..ansicolors.reset..[[
 
     -- set NTAG pwd / pack
     ]]..ansicolors.yellow..[[script run hf_mf_ultimatecard -p 11223344 -a 8080 ]]..ansicolors.reset..[[
@@ -39,7 +39,7 @@ example = [[
     ]]..ansicolors.yellow..[[script run hf_mf_ultimatecard -k ffffffff -w 1]]..ansicolors.reset..[[
 
     -- Wipe tag, turn into NTAG215, set sig, version, NTAG pwd/pak, and OTP.
-    ]]..ansicolors.yellow..[[script run hf_mf_ultimatecard -w 1 -t 18 -u 04112233445566 -s 112233445566778899001122334455667788990011223344556677 -p FFFFFFFF -a 8080 -o 11111111]]..ansicolors.reset..[[
+    ]]..ansicolors.yellow..[[script run hf_mf_ultimatecard -w 1 -t 18 -u 04E10CDA993C80 -s 8B76052EE42F5567BEB53238B3E3F9950707C0DCC956B5C5EFCFDB709B2D82B3 -p FFFFFFFF -a 8080 -o 11111111]]..ansicolors.reset..[[
 
 ]]
 usage = [[
@@ -485,6 +485,8 @@ local function write_version(data)
     local info = connect()
     if not info then return false, "Can't select card" end
     local resp
+    -- set maximum read/write blocks to 251; version is stored in blocks 250-251
+    send("CF".._key.."6B".."FB")
     resp = send('A2FA'..b1)
     resp = send('A2FB'..b2)
     lib14a.disconnect()
@@ -524,6 +526,10 @@ local function write_signature(data)
         local b,c
         local cmd = 'A2F%d%s'
         local j = 2
+        -- set maximum read/write blocks to 251; signature is stored in blocks 242-249
+        send("CF".._key.."6B".."FB")
+        lib14a.disconnect()
+        connect() -- not 100% sure why it's needed, but without this blocks aren't actually written
         for i = 1, #data, 8 do
             b = data:sub(i,i+7)
             c = cmd:format(j,b)
@@ -762,7 +768,7 @@ local function set_type(tagtype)
         send('a210000000FF')
         send('a21100050000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040101000b03')   -- NTAG210 00 04 04 01 01 00 0b 03
     elseif tagtype == 16 then
         print('Setting: Ultimate Magic card to NTAG 212')
@@ -776,7 +782,7 @@ local function set_type(tagtype)
         send('a225000000FF')
         send('a22600050000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040101000E03')   -- NTAG212 00 04 04 01 01 00 0E 03
     elseif tagtype == 17 then
         print('Setting: Ultimate Magic card to NTAG 213')
@@ -790,7 +796,7 @@ local function set_type(tagtype)
         send('a229000000ff')
         send('a22a00050000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040201000F03')       -- NTAG213 00 04 04 02 01 00 0f 03
     elseif tagtype == 18 then
         print('Setting: Ultimate Magic card to NTAG 215')
@@ -804,7 +810,7 @@ local function set_type(tagtype)
         send('a283000000ff')
         send('a28400050000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040201001103')       -- NTAG215 00 04 04 02 01 00 11 03
     elseif tagtype == 19 then
         print('Setting: Ultimate Magic card to NTAG 216')
@@ -818,7 +824,7 @@ local function set_type(tagtype)
         send('a2e3000000ff')
         send('a2e400050000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040201001303')       -- NTAG216 00 04 04 02 01 00 13 03
     elseif tagtype == 20 then
         print('Setting: Ultimate Magic card to NTAG I2C 1K')
@@ -829,7 +835,7 @@ local function set_type(tagtype)
         send('a2040300fe00')
         send('a20500000000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040502011303')       -- NTAG_I2C_1K 00 04 04 05 02 01 13 03
     elseif tagtype == 21 then
         print('Setting: Ultimate Magic card to NTAG I2C 2K')
@@ -840,7 +846,7 @@ local function set_type(tagtype)
         send('a2040300fe00')
         send('a20500000000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040502011503')       -- NTAG_I2C_2K 00 04 04 05 02 01 15 03
     elseif tagtype == 22 then
         print('Setting: Ultimate Magic card to NTAG I2C plus 1K')
@@ -851,7 +857,7 @@ local function set_type(tagtype)
         send('a2040300fe00')
         send('a20500000000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040502021303')       -- NTAG_I2C_1K 00 04 04 05 02 02 13 03
     elseif tagtype == 23 then
         print('Setting: Ultimate Magic card to NTAG I2C plus 2K')
@@ -861,7 +867,7 @@ local function set_type(tagtype)
         send('a203e1106D00')
         send('a2040300fe00')
         send('a20500000000')
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040502021503')       -- NTAG_I2C_2K 00 04 04 05 02 02 15 03
     elseif tagtype == 24 then
         print('Setting: Ultimate Magic card to  NTAG 213F')
@@ -875,7 +881,7 @@ local function set_type(tagtype)
         send('a229000000ff')
         send('a22a00050000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040401000F03')       -- NTAG213F 00 04 04 04 01 00 0f 03
     elseif tagtype == 25 then
         print('Setting: Ultimate Magic card to  NTAG 216F')
@@ -889,7 +895,7 @@ local function set_type(tagtype)
         send('a2e3000000ff')
         send('a2e400050000')
     lib14a.disconnect()
-    write_uid('04112233445566')
+    write_uid('04E10CDA993C80')
         write_version('0004040401001303')       -- NTAG216F 00 04 04 04 01 00 13 03
     else
     oops('No matching tag types')
@@ -958,7 +964,7 @@ local function wipe(wtype)
         print('Wiping tag')
         local info = connect()
         if not info then return false, "Can't select card" end
-        send("CF".._key.."F001010000000003000978009102DABC19101011121314151644000001")
+        send("CF".._key.."F001010000000003000978009102DABC19101011121314151644000001FB")
         for b = 3, 0xFB do
             --configuration block 0
             if b == 0x29 or b == 0x83 or b == 0xe3 then
@@ -982,18 +988,21 @@ local function wipe(wtype)
         io.write('\r\n')
         lib14a.disconnect()
         print('\n')
-        if err then return nil, "Tag locked down, "..err_lock end
+        if err then return nil, "Tag locked down or misconfigured maximum read/write blocks, "..err_lock end
         -- set NTAG213 default values
         err, msg = set_type(17)
         if err == nil then return err, msg end
         --set UID
-        err, msg = write_uid('04112233445566')
+        err, msg = write_uid('04E10CDA993C80')
         if err == nil then return err, msg end
         --set NTAG pwd
         err, msg = write_ntagpwd('FFFFFFFF')
         if err == nil then return err, msg end
         --set pack
         err, msg = write_pack('0000')
+        if err == nil then return err, msg end
+        --set signature
+        err, msg = write_signature('8B76052EE42F5567BEB53238B3E3F9950707C0DCC956B5C5EFCFDB709B2D82B3')
         if err == nil then return err, msg end
         lib14a.disconnect()
         return true, 'Ok'
