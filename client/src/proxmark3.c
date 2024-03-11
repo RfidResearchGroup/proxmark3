@@ -36,6 +36,7 @@
 #include "fileutils.h"
 #include "flash.h"
 #include "preferences.h"
+#include "commonutil.h"
 
 static int mainret = PM3_ESOFT;
 
@@ -116,10 +117,38 @@ static void showBanner(void) {
 #else
     showBanner_logo(ASCII);
 #endif
-//    PrintAndLogEx(NORMAL, "\nSupport iceman on patreon - https://www.patreon.com/iceman1001/");
-//    PrintAndLogEx(NORMAL, "                 on paypal - https://www.paypal.me/iceman1001");
-//    PrintAndLogEx(NORMAL, "\nMonero: 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
-//    PrintAndLogEx(NORMAL, "");
+
+    const char *quotes[] = {
+        "Fund creativity, empower dreams",
+        "Invest in open innovation",
+        "Donate, empower, grow, sustain",
+        "Back global innovation today",
+        "Fuel open source revolution",
+        "Contribute funds, drive progress",
+        "Sponsor innovation, build tomorrow",
+        "Consider supporting: fund innovation",
+        "Your donation fuels progress",
+        "Empower dreams with your support",
+        "Join us: finance creative freedom",
+        "Make an impact: donate today",
+        "Help us drive open innovation",
+        "Your support, our future",
+        "Invest in a better tomorrow",
+        "Every contribution powers change",
+        "Support us, shape the future",
+        "Ignite change: support open-source creativity",
+        "Together, we can innovate without limits",
+    };
+    srand((uint32_t)time(NULL));
+    int r = rand() % ARRAYLEN(quotes);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "%s!", quotes[r]);
+    PrintAndLogEx(NORMAL, "   Patreon - https://www.patreon.com/iceman1001/");
+    PrintAndLogEx(NORMAL, "   Paypal  - https://www.paypal.me/iceman1001");
+    PrintAndLogEx(NORMAL, "");
+//    PrintAndLogEx(NORMAL, "   Monero");
+//    PrintAndLogEx(NORMAL, " 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
+    PrintAndLogEx(NORMAL, "");
     fflush(stdout);
     g_printAndLog = old_printAndLog;
 }
