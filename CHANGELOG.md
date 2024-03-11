@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Set max write blocks to 251 in hf_mf_ultimatecard before writing version/signature in NTAG 21X (@antgamdia)
  - Changed HF_UNISNIFF standalone mode, output and also sniffs iclass too (@iceman1001)
  - Changed `hw standalone` - added `-b` param to control HF_UNISNIFF from client (@iceman1001)
  - Changed `mem spiffs dump` - now if `-t` and `-d` it will also save to file (@iceman1001)
@@ -91,7 +92,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Changed `hf waveshare` - image is automatically scaled and cropped to match panel size (@socram8888)
  - Changed `hf waveshare` - image loading and processing is now done using [GDlib](https://github.com/libgd/libgd) (@socram8888)
  - Added trace of sniffed SEOS traffic between reader and card (@iceman1001)
- - Change `hf seos list` - print crc and annotate better (@iceman1001) 
+ - Change `hf seos list` - print crc and annotate better (@iceman1001)
  - Added troubleshooting entry - ARM architecture error (@francis2054)
  - Fixed `lf pyramid sim` - wrong parameter handling (@iceman1001)
  - Fixed bootloader - Ignore jitters when pressing the button (@wh201906)
