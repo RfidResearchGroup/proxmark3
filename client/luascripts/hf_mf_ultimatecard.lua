@@ -485,6 +485,8 @@ local function write_version(data)
     local info = connect()
     if not info then return false, "Can't select card" end
     local resp
+    -- set maximum read/write blocks to 251; version is stored in blocks 250-251
+    send("CF".._key.."6B".."FB")
     resp = send('A2FA'..b1)
     resp = send('A2FB'..b2)
     lib14a.disconnect()
@@ -524,6 +526,10 @@ local function write_signature(data)
         local b,c
         local cmd = 'A2F%d%s'
         local j = 2
+        -- set maximum read/write blocks to 251; signature is stored in blocks 242-249
+        send("CF".._key.."6B".."FB")
+        lib14a.disconnect()
+        connect() -- not 100% sure why it's needed, but without this blocks aren't actually written
         for i = 1, #data, 8 do
             b = data:sub(i,i+7)
             c = cmd:format(j,b)
@@ -958,7 +964,7 @@ local function wipe(wtype)
         print('Wiping tag')
         local info = connect()
         if not info then return false, "Can't select card" end
-        send("CF".._key.."F001010000000003000978009102DABC19101011121314151644000001")
+        send("CF".._key.."F001010000000003000978009102DABC19101011121314151644000001FB")
         for b = 3, 0xFB do
             --configuration block 0
             if b == 0x29 or b == 0x83 or b == 0xe3 then
@@ -982,7 +988,7 @@ local function wipe(wtype)
         io.write('\r\n')
         lib14a.disconnect()
         print('\n')
-        if err then return nil, "Tag locked down, "..err_lock end
+        if err then return nil, "Tag locked down or misconfigured maximum read/write blocks, "..err_lock end
         -- set NTAG213 default values
         err, msg = set_type(17)
         if err == nil then return err, msg end
