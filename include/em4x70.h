@@ -30,7 +30,7 @@
 
 typedef struct {
     // ISSUE: `bool` type does not have a standard-defined size.
-    //        therefore, compatibility between architectures / 
+    //        therefore, compatibility between architectures /
     //        compilers is not guaranteed.
     // ISSUE: C99 has no _Static_assert() ... was added in C11
     // TODO: add _Static_assert(sizeof(bool)==1);
@@ -39,6 +39,7 @@ typedef struct {
 
     // Used for writing address
     uint8_t address;
+    // ISSUE: Presumes target is little-endian
     uint16_t word;
 
     // PIN to unlock
@@ -53,6 +54,7 @@ typedef struct {
     uint8_t crypt_key[12];
 
     // used for bruteforce the partial key
+    // ISSUE: Presumes target is little-endian
     uint16_t start_key;
 
 } em4x70_data_t;

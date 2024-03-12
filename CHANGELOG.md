@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Added `lf em 4x70 autorecover` - writable ID48 tags now have automatic key recovery (@henrygab)
  - Set max write blocks to 251 in hf_mf_ultimatecard before writing version/signature in NTAG 21X (@antgamdia)
  - Changed HF_UNISNIFF standalone mode, output and also sniffs iclass too (@iceman1001)
  - Changed `hw standalone` - added `-b` param to control HF_UNISNIFF from client (@iceman1001)
