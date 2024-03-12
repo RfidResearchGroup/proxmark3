@@ -1236,7 +1236,7 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
                 PrintAndLogEx(HINT, "Block %d data was overwritten.  Manually restart at step %d.", block, step);
                 return result;
             } else if (PM3_SUCCESS != result) {
-                PrintAndLogEx(FAILED, "Writing block %d: " _RED_("failed") ".");
+                PrintAndLogEx(FAILED, "Writing block %d: " _RED_("failed") ".", block);
                 PrintAndLogEx(HINT, "Block %d data was overwritten.  Manually restart at step %d.", block, step);
                 return result;
             } else {
