@@ -3061,7 +3061,7 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service } waveshare { Waveshare NFC ePaper... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf list --frame -> show frame delay times",
                 "hf list -1 -> use trace buffer"
@@ -7721,6 +7721,28 @@
                 "-v, --verbose Verbose output"
             ],
             "usage": "hf vas reader [-h@v] [--pid <str>] [-f <fn>] [--url <str>]"
+        },
+        "hf waveshare help": {
+            "command": "hf waveshare help",
+            "description": "help This help load Load image file to Waveshare NFC ePaper --------------------------------------------------------------------------------------- hf waveshare load available offline: yes Load image file to Waveshare NFC ePaper",
+            "notes": [
+                "hf waveshare load -f myfile -m 0 -> 2.13 inch e-paper ( 122, 250 )",
+                "hf waveshare load -f myfile -m 1 -> 2.9 inch e-paper ( 296, 128 )",
+                "hf waveshare load -f myfile -m 2 -> 4.2 inch e-paper ( 400, 300 )",
+                "hf waveshare load -f myfile -m 3 -> 7.5 inch e-paper ( 800, 480 )",
+                "hf waveshare load -f myfile -m 4 -> 2.7 inch e-paper ( 176, 276 )",
+                "hf waveshare load -f myfile -m 5 -> 2.13 inch e-paper B (with red) ( 104, 212 )",
+                "hf waveshare load -f myfile -m 6 -> 1.54 inch e-paper B (with red) ( 200, 200 )",
+                "hf waveshare load -f myfile -m 7 -> 7.5 inch e-paper HD ( 880, 528 )"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-m <nr> model number [0 - 7] of your tag",
+                "-f, --file <fn> specify image to upload to tag",
+                "-s, --save <fn> save paletized version in file"
+            ],
+            "usage": "hf waveshare load [-h] -m <nr> -f <fn> [-s <fn>]"
         },
         "hf xerox dump": {
             "command": "hf xerox dump",
@@ -12529,8 +12551,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 723,
-        "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-03-12T00:21:47"
+        "commands_extracted": 724,
+        "extracted_by": "PM3Help2JSON v1.00 w/manual edit",
+        "extracted_on": "2024-03-12T17:58:37"
     }
 }

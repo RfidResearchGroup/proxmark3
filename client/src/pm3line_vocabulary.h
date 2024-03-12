@@ -512,6 +512,8 @@ const static vocabulary_t vocabulary[] = {
     { 1, "hf vas help" },
     { 0, "hf vas reader" },
     { 1, "hf vas decrypt" },
+    { 1, "hf waveshare help" },
+    { 1, "hf waveshare load" },
     { 1, "hf xerox help" },
     { 1, "hf xerox list" },
     { 0, "hf xerox info" },

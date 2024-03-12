@@ -773,6 +773,16 @@ Check column "offline" for their availability.
 |`hf vas decrypt         `|Y       |`Decrypt a previously captured VAS cryptogram`
 
 
+### hf waveshare
+
+ { Waveshare NFC ePaper...             }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf waveshare help      `|Y       |`This help`
+|`hf waveshare load      `|Y       |`Load image file to Waveshare NFC ePaper`
+
+
 ### hf xerox
 
  { Fuji/Xerox cartridge RFIDs...       }
