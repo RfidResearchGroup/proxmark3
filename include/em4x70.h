@@ -30,7 +30,7 @@
 
 typedef struct {
     // ISSUE: `bool` type does not have a standard-defined size.
-    //        therefore, compatibility between architectures / 
+    //        therefore, compatibility between architectures /
     //        compilers is not guaranteed.
     // ISSUE: C99 has no _Static_assert() ... was added in C11
     // TODO: add _Static_assert(sizeof(bool)==1);

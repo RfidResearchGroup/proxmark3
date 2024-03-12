@@ -161,11 +161,11 @@ typedef struct _em4x70_cmd_input_verify_auth_t {
 
 static int CmdHelp(const char *Cmd);
 
-static void fill_buffer_prng_bytes(void* buffer, size_t byte_count) {
+static void fill_buffer_prng_bytes(void *buffer, size_t byte_count) {
     if (byte_count <= 0) return;
     srand((unsigned) time(NULL));
     for (size_t i = 0; i < byte_count; i++) {
-        ((uint8_t*)buffer)[i] = (uint8_t)rand();
+        ((uint8_t *)buffer)[i] = (uint8_t)rand();
     }
 }
 static void print_info_result(const em4x70_tag_info_t *data) {
@@ -205,7 +205,7 @@ static void print_info_result(const em4x70_tag_info_t *data) {
     PrintAndLogEx(NORMAL, "");
 }
 
-static int get_em4x70_info(const em4x70_cmd_input_info_t* opts, em4x70_tag_info_t * data_out) {
+static int get_em4x70_info(const em4x70_cmd_input_info_t *opts, em4x70_tag_info_t *data_out) {
 
     memset(data_out, 0, sizeof(em4x70_tag_info_t));
 
@@ -224,7 +224,7 @@ static int get_em4x70_info(const em4x70_cmd_input_info_t* opts, em4x70_tag_info_
     }
     return PM3_ESOFT;
 }
-static int writeblock_em4x70(const em4x70_cmd_input_writeblock_t* opts, em4x70_tag_info_t* data_out) {
+static int writeblock_em4x70(const em4x70_cmd_input_writeblock_t *opts, em4x70_tag_info_t *data_out) {
 
     memset(data_out, 0, sizeof(em4x70_tag_info_t));
 
@@ -248,7 +248,7 @@ static int writeblock_em4x70(const em4x70_cmd_input_writeblock_t* opts, em4x70_t
     }
     return PM3_ESOFT;
 }
-static int auth_em4x70(const em4x70_cmd_input_auth_t* opts, em4x70_cmd_output_auth_t* data_out) {
+static int auth_em4x70(const em4x70_cmd_input_auth_t *opts, em4x70_cmd_output_auth_t *data_out) {
     memset(data_out, 0, sizeof(ID48LIB_GRN));
 
     // TODO: change firmware to use per-cmd structures
@@ -256,7 +256,7 @@ static int auth_em4x70(const em4x70_cmd_input_auth_t* opts, em4x70_cmd_output_au
     etd.parity = opts->use_parity;
     memcpy(&etd.rnd[0],  &opts->rn.rn[0],   7);
     memcpy(&etd.frnd[0], &opts->frn.frn[0], 4);
-    
+
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X70_AUTH, (uint8_t *)&etd, sizeof(etd));
 
@@ -276,7 +276,7 @@ static int auth_em4x70(const em4x70_cmd_input_auth_t* opts, em4x70_cmd_output_au
     }
     return PM3_ESOFT;
 }
-static int writekey_em4x70(const em4x70_cmd_input_writekey_t* opts) {
+static int writekey_em4x70(const em4x70_cmd_input_writekey_t *opts) {
 
     // TODO: change firmware to use per-cmd structures
     em4x70_data_t etd = {0};
@@ -295,7 +295,7 @@ static int writekey_em4x70(const em4x70_cmd_input_writekey_t* opts) {
     }
     return PM3_ESOFT;
 }
-static int brute_em4x70(const em4x70_cmd_input_brute_t* opts, em4x70_cmd_output_brute_t* data_out) {
+static int brute_em4x70(const em4x70_cmd_input_brute_t *opts, em4x70_cmd_output_brute_t *data_out) {
     memset(data_out, 0, sizeof(em4x70_cmd_output_brute_t));
 
     // TODO: change firmware to use per-cmd structures
@@ -346,7 +346,7 @@ static int brute_em4x70(const em4x70_cmd_input_brute_t* opts, em4x70_cmd_output_
         timeout++;
     }
 }
-static int unlock_em4x70(const em4x70_cmd_input_unlock_t* opts, em4x70_tag_info_t* data_out) {
+static int unlock_em4x70(const em4x70_cmd_input_unlock_t *opts, em4x70_tag_info_t *data_out) {
     memset(data_out, 0, sizeof(em4x70_tag_info_t));
 
     // TODO: change firmware to use per-cmd structures
@@ -369,7 +369,7 @@ static int unlock_em4x70(const em4x70_cmd_input_unlock_t* opts, em4x70_tag_info_
     return PM3_ESOFT;
 
 }
-static int writepin_em4x70(const em4x70_cmd_input_writepin_t* opts, em4x70_tag_info_t* data_out) {
+static int writepin_em4x70(const em4x70_cmd_input_writepin_t *opts, em4x70_tag_info_t *data_out) {
     memset(data_out, 0, sizeof(em4x70_tag_info_t));
 
     // TODO: change firmware to use per-cmd structures
@@ -390,7 +390,7 @@ static int writepin_em4x70(const em4x70_cmd_input_writepin_t* opts, em4x70_tag_i
     }
     return PM3_ESOFT;
 }
-static int recover_em4x70(const em4x70_cmd_input_recover_t* opts, em4x70_cmd_output_recover_t* data_out) {
+static int recover_em4x70(const em4x70_cmd_input_recover_t *opts, em4x70_cmd_output_recover_t *data_out) {
     memset(data_out, 0, sizeof(em4x70_cmd_output_recover_t));
 
     // The library is stateful.  First must initialize its internal context.
@@ -412,7 +412,7 @@ static int recover_em4x70(const em4x70_cmd_input_recover_t* opts, em4x70_cmd_out
     }
     return result;
 }
-static int verify_auth_em4x70(const em4x70_cmd_input_verify_auth_t* opts) {
+static int verify_auth_em4x70(const em4x70_cmd_input_verify_auth_t *opts) {
     em4x70_cmd_input_auth_t opts_auth = {
         .use_parity = opts->use_parity,
         .rn = opts->rn,
@@ -534,7 +534,7 @@ int CmdEM4x70Write(const char *Cmd) {
     }
     return result;
 }
- 
+
 int CmdEM4x70Brute(const char *Cmd) {
 
     // From paper "Dismantling Megamos Crypto", Roel Verdult, Flavio D. Garcia and Barıs¸ Ege.
@@ -820,26 +820,26 @@ int CmdEM4x70WriteKey(const char *Cmd) {
 
     // dump the auth command to the screen, to enable the user to manually check validity
     PrintAndLogEx(INFO,
-        "Verifying auth for new key: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
-        " -->  " _YELLOW_("lf em 4x70 auth --rnd %02X%02X%02X%02X%02X%02X%02X --frn %02X%02X%02X%02X")
-        " --> %02X%02X%02X",
-        opts.key.k[ 0], opts.key.k[ 1], opts.key.k[ 2], opts.key.k[ 3], opts.key.k[ 4], opts.key.k[ 5],
-        opts.key.k[ 6], opts.key.k[ 7], opts.key.k[ 8], opts.key.k[ 9], opts.key.k[10], opts.key.k[11],
-        opts_v.rn.rn[0],
-        opts_v.rn.rn[1],
-        opts_v.rn.rn[2],
-        opts_v.rn.rn[3],
-        opts_v.rn.rn[4],
-        opts_v.rn.rn[5],
-        opts_v.rn.rn[6],
-        opts_v.frn.frn[0],
-        opts_v.frn.frn[1],
-        opts_v.frn.frn[2],
-        opts_v.frn.frn[3],
-        opts_v.grn.grn[0],
-        opts_v.grn.grn[1],
-        opts_v.grn.grn[2]
-        );
+                  "Verifying auth for new key: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
+                  " -->  " _YELLOW_("lf em 4x70 auth --rnd %02X%02X%02X%02X%02X%02X%02X --frn %02X%02X%02X%02X")
+                  " --> %02X%02X%02X",
+                  opts.key.k[ 0], opts.key.k[ 1], opts.key.k[ 2], opts.key.k[ 3], opts.key.k[ 4], opts.key.k[ 5],
+                  opts.key.k[ 6], opts.key.k[ 7], opts.key.k[ 8], opts.key.k[ 9], opts.key.k[10], opts.key.k[11],
+                  opts_v.rn.rn[0],
+                  opts_v.rn.rn[1],
+                  opts_v.rn.rn[2],
+                  opts_v.rn.rn[3],
+                  opts_v.rn.rn[4],
+                  opts_v.rn.rn[5],
+                  opts_v.rn.rn[6],
+                  opts_v.frn.frn[0],
+                  opts_v.frn.frn[1],
+                  opts_v.frn.frn[2],
+                  opts_v.frn.frn[3],
+                  opts_v.grn.grn[0],
+                  opts_v.grn.grn[1],
+                  opts_v.grn.grn[2]
+                 );
     result = verify_auth_em4x70(&opts_v);
     if (PM3_ETIMEOUT == result) {
         PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
@@ -865,11 +865,11 @@ typedef struct _em4x70_recovery_data_t {
     bool          potential_keys_validated[MAXIMUM_ID48_RECOVERED_KEY_COUNT];
 } em4x70_recovery_data_t;
 
-static int CmdEM4x70Recover_ParseArgs(const char *Cmd, em4x70_cmd_input_recover_t* out_results) {
+static int CmdEM4x70Recover_ParseArgs(const char *Cmd, em4x70_cmd_input_recover_t *out_results) {
     memset(out_results, 0, sizeof(em4x70_recovery_data_t));
 
     int result = PM3_SUCCESS;
-    
+
     CLIParserContext *ctx;
     CLIParserInit(
         &ctx,
@@ -888,7 +888,7 @@ static int CmdEM4x70Recover_ParseArgs(const char *Cmd, em4x70_cmd_input_recover_
         ,
         "lf em 4x70 recover --key F32AA98CF5BE --rnd 45F54ADA252AAC --frn 4866BB70 --grn 9BD180   (pm3 test key)\n"
         "lf em 4x70 recover --key A090A0A02080 --rnd 3FFE1FB6CC513F --frn F355F1A0 --grn 609D60   (research paper key)\n"
-        );
+    );
 
     void *argtable[] = {
         arg_param_begin,
@@ -926,7 +926,7 @@ static int CmdEM4x70Recover_ParseArgs(const char *Cmd, em4x70_cmd_input_recover_
         if (CLIParamHexToBuf(arg_get_str(ctx, 5), &(out_results->grn.grn[0]), 3, &grn_len)) {
             result = PM3_ESOFT;
         }
-        //out_results->verify = arg_get_lit(ctx, 6); 
+        //out_results->verify = arg_get_lit(ctx, 6);
     }
     // if all OK so far, do additional parameter validation
     if (PM3_SUCCESS == result) {
@@ -961,7 +961,7 @@ int CmdEM4x70Recover(const char *Cmd) {
     // Partial Key-Update Attack -- final 48 bits (after optimized version gets k95..k48)
     em4x70_recovery_data_t recover_ctx = {0};
     int result = PM3_SUCCESS;
-    
+
     result = CmdEM4x70Recover_ParseArgs(Cmd, &recover_ctx.opts);
     // recover the potential keys -- no more than a few seconds
     if (PM3_SUCCESS == result) {
@@ -992,27 +992,27 @@ int CmdEM4x70Recover(const char *Cmd) {
 
             // dump the results to screen, to enable the user to manually check validity
             PrintAndLogEx(INFO,
-                "Potential Key #%d: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
-                " -->  " _YELLOW_("lf em 4x70 auth --rnd %02X%02X%02X%02X%02X%02X%02X --frn %02X%02X%02X%02X")
-                " --> %02X%02X%02X",
-                i,
-                q.k[ 0], q.k[ 1], q.k[ 2], q.k[ 3], q.k[ 4], q.k[ 5],
-                q.k[ 6], q.k[ 7], q.k[ 8], q.k[ 9], q.k[10], q.k[11],
-                recover_ctx.alt_nonce.rn[0],
-                recover_ctx.alt_nonce.rn[1],
-                recover_ctx.alt_nonce.rn[2],
-                recover_ctx.alt_nonce.rn[3],
-                recover_ctx.alt_nonce.rn[4],
-                recover_ctx.alt_nonce.rn[5],
-                recover_ctx.alt_nonce.rn[6],
-                alt_frn.frn[0],
-                alt_frn.frn[1],
-                alt_frn.frn[2],
-                alt_frn.frn[3],
-                alt_grn.grn[0],
-                alt_grn.grn[1],
-                alt_grn.grn[2]
-                );
+                          "Potential Key #%d: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
+                          " -->  " _YELLOW_("lf em 4x70 auth --rnd %02X%02X%02X%02X%02X%02X%02X --frn %02X%02X%02X%02X")
+                          " --> %02X%02X%02X",
+                          i,
+                          q.k[ 0], q.k[ 1], q.k[ 2], q.k[ 3], q.k[ 4], q.k[ 5],
+                          q.k[ 6], q.k[ 7], q.k[ 8], q.k[ 9], q.k[10], q.k[11],
+                          recover_ctx.alt_nonce.rn[0],
+                          recover_ctx.alt_nonce.rn[1],
+                          recover_ctx.alt_nonce.rn[2],
+                          recover_ctx.alt_nonce.rn[3],
+                          recover_ctx.alt_nonce.rn[4],
+                          recover_ctx.alt_nonce.rn[5],
+                          recover_ctx.alt_nonce.rn[6],
+                          alt_frn.frn[0],
+                          alt_frn.frn[1],
+                          alt_frn.frn[2],
+                          alt_frn.frn[3],
+                          alt_grn.grn[0],
+                          alt_grn.grn[1],
+                          alt_grn.grn[2]
+                         );
         }
         printf("\n");
     }
@@ -1040,7 +1040,7 @@ int CmdEM4x70Recover(const char *Cmd) {
     return result;
 }
 
-static int CmdEM4x70AutoRecover_ParseArgs(const char *Cmd, em4x70_cmd_input_recover_t* out_results) {
+static int CmdEM4x70AutoRecover_ParseArgs(const char *Cmd, em4x70_cmd_input_recover_t *out_results) {
     memset(out_results, 0, sizeof(em4x70_cmd_input_recover_t));
 
     int result = PM3_SUCCESS;
@@ -1085,7 +1085,7 @@ static int CmdEM4x70AutoRecover_ParseArgs(const char *Cmd, em4x70_cmd_input_reco
         ,
         "lf em 4x70 autorecover --rnd 45F54ADA252AAC --frn 4866BB70 --grn 9BD180   (pm3 test key)\n"
         "lf em 4x70 autorecover --rnd 3FFE1FB6CC513F --frn F355F1A0 --grn 609D60   (research paper key)\n"
-        );
+    );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1096,7 +1096,7 @@ static int CmdEM4x70AutoRecover_ParseArgs(const char *Cmd, em4x70_cmd_input_reco
         //arg_lit0(NULL, "verify", "automatically use tag for validation"),
         arg_param_end
     };
-    
+
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int rnd_len = 0; // must be 7 bytes hex data
@@ -1138,7 +1138,7 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
     // of summarizing the failure (and providing options for recovery in case of failures)
     // at a single point at the end of the function.  It will also undoubtedly reduce
     // code coverage numbers, when those are tracked.
-    // 
+    //
     // As to clarity, if failures occurred in steps 2-4, it was expected that the cleanup
     // code would, in a single location, verify if the original authentication worked.
     // If so, then the tag was left in a good state (even if an error occurred).
@@ -1150,9 +1150,9 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
     //       perform that additional cleanup?   Not a great solution.  Pity, as the
     //       cleanup code was much more helpful than the below print statements.
     int last_successful_step = 0;
-    char rnd_string[14+1] = {0};
-    char frn_string[8+1] = {0};
-    char grn_string[6+1] = {0};
+    char rnd_string[14 + 1] = {0};
+    char frn_string[ 8 + 1] = {0};
+    char grn_string[ 6 + 1] = {0};
     // These strings will be re-used often, are safe to pre-allocate, and make later PrintAndLogEx() calls cleaner.
     snprintf(rnd_string, 15, "%02X%02X%02X%02X%02X%02X%02X", opts.nonce.rn[0], opts.nonce.rn[1], opts.nonce.rn[2], opts.nonce.rn[3], opts.nonce.rn[4], opts.nonce.rn[5], opts.nonce.rn[6]);
     snprintf(frn_string, 9, "%02X%02X%02X%02X", opts.frn.frn[0], opts.frn.frn[1], opts.frn.frn[2], opts.frn.frn[3]);
@@ -1178,9 +1178,9 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
             return result;
         } else if (memcmp(&opts.grn, &tag_grn, sizeof(ID48LIB_GRN)) != 0) {
             PrintAndLogEx(FAILED, "Authenticating with new key returned %02x %02x %02x, expected %s (maybe 5 lsb of key wrong?): " _RED_("failed"),
-                tag_grn.grn.grn[0], tag_grn.grn.grn[1], tag_grn.grn.grn[2],
-                grn_string
-                );
+                          tag_grn.grn.grn[0], tag_grn.grn.grn[1], tag_grn.grn.grn[2],
+                          grn_string
+                         );
             result = PM3_EWRONGANSWER;
             return result;
         }
@@ -1279,7 +1279,7 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
     }
     // The good news is that, if the above succeeded, then from this point forward, the tag remains in a known-good state.
 
-    char key_string[24+1] = {0}; // holds partial key initially, full key later
+    char key_string[24 + 1] = {0}; // holds partial key initially, full key later
     snprintf(key_string, 25, "%02X%02X%02X%02X%02X%02X", opts.key.k[0], opts.key.k[1], opts.key.k[2], opts.key.k[3], opts.key.k[4], opts.key.k[5]);
 
     // 5. Recover potential values of the lower 48 bits of the key
@@ -1299,10 +1299,10 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
             for (uint8_t idx = 0; idx < data.potential_key_count; ++idx) {
                 ID48LIB_KEY q = data.potential_keys[idx];
                 PrintAndLogEx(DEBUG, "        Potential Key %d: %s %02X%02X%02X%02X%02X%02X",
-                    idx,
-                    key_string,
-                    q.k[ 6], q.k[ 7], q.k[ 8], q.k[ 9], q.k[10], q.k[11]
-                    );
+                              idx,
+                              key_string,
+                              q.k[ 6], q.k[ 7], q.k[ 8], q.k[ 9], q.k[10], q.k[11]
+                             );
             }
             last_successful_step = 5;
         }
@@ -1325,7 +1325,7 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
         bool found_more_than_one_key = false;
         uint8_t first_validated_key_idx = 0xFF;
 
-        for (uint8_t attempt = 0; continue_loop && (attempt  < 10); ++attempt ) {
+        for (uint8_t attempt = 0; continue_loop && (attempt  < 10); ++attempt) {
             continue_loop = false;
             found_one_key = false;
             found_more_than_one_key = false;
@@ -1364,9 +1364,9 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
             // print the validated key to the string buffer (for step 7)
             ID48LIB_KEY q = data.potential_keys[first_validated_key_idx];
             snprintf(key_string, 25, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
-                q.k[ 0], q.k[ 1], q.k[ 2], q.k[ 3], q.k[ 4], q.k[ 5],
-                q.k[ 6], q.k[ 7], q.k[ 8], q.k[ 9], q.k[10], q.k[11]
-                );
+                     q.k[ 0], q.k[ 1], q.k[ 2], q.k[ 3], q.k[ 4], q.k[ 5],
+                     q.k[ 6], q.k[ 7], q.k[ 8], q.k[ 9], q.k[10], q.k[11]
+                    );
         }
     }
     // 7. Print the validated key

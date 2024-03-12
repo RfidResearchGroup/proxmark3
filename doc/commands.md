@@ -601,20 +601,20 @@ Check column "offline" for their availability.
 |`hf mfu keygen          `|Y       |`Generate DES/3DES/AES MIFARE diversified keys`
 |`hf mfu pwdgen          `|Y       |`Generate pwd from known algos`
 |`hf mfu otptear         `|N       |`Tear-off test on OTP bits`
-|`hf mfu cauth           `|N       |`Authentication - Ultralight-C`
+|`hf mfu cauth           `|N       |`Ultralight-C - Authentication`
+|`hf mfu setpwd          `|N       |`Ultralight-C - Set 3DES key`
 |`hf mfu dump            `|N       |`Dump MIFARE Ultralight family tag to binary file`
 |`hf mfu info            `|N       |`Tag information`
 |`hf mfu ndefread        `|N       |`Prints NDEF records from card`
 |`hf mfu rdbl            `|N       |`Read block`
-|`hf mfu restore         `|N       |`Restore a dump onto a MFU MAGIC tag`
+|`hf mfu restore         `|N       |`Restore a dump file onto a tag`
+|`hf mfu tamper          `|N       |`NTAG 213TT - Configure the tamper feature`
 |`hf mfu view            `|Y       |`Display content from tag dump file`
 |`hf mfu wrbl            `|N       |`Write block`
-|`hf mfu tamper          `|N       |`Configure the tamper feature on an NTAG 213TT`
 |`hf mfu eload           `|N       |`Upload file into emulator memory`
 |`hf mfu esave           `|N       |`Save emulator memory to file`
 |`hf mfu eview           `|N       |`View emulator memory`
 |`hf mfu sim             `|N       |`Simulate MIFARE Ultralight from emulator memory`
-|`hf mfu setpwd          `|N       |`Set 3DES key - Ultralight-C`
 |`hf mfu setuid          `|N       |`Set UID - MAGIC tags only`
 |`hf mfu amiibo          `|N       |`Amiibo tag operations`
 
@@ -771,16 +771,6 @@ Check column "offline" for their availability.
 |`hf vas help            `|Y       |`This help`
 |`hf vas reader          `|N       |`Read and decrypt VAS message`
 |`hf vas decrypt         `|Y       |`Decrypt a previously captured VAS cryptogram`
-
-
-### hf waveshare
-
- { Waveshare NFC ePaper...             }
-
-|command                  |offline |description
-|-------                  |------- |-----------
-|`hf waveshare help      `|Y       |`This help`
-|`hf waveshare load      `|Y       |`Load image file to Waveshare NFC ePaper`
 
 
 ### hf xerox
@@ -965,13 +955,15 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf em 4x70 help        `|Y       |`This help`
-|`lf em 4x70 brute       `|N       |`Bruteforce EM4X70 to find partial Crypt Key`
+|`lf em 4x70 brute       `|N       |`Bruteforce EM4X70 to find partial key`
 |`lf em 4x70 info        `|N       |`Tag information EM4x70`
 |`lf em 4x70 write       `|N       |`Write EM4x70`
 |`lf em 4x70 unlock      `|N       |`Unlock EM4x70 for writing`
 |`lf em 4x70 auth        `|N       |`Authenticate EM4x70`
 |`lf em 4x70 writepin    `|N       |`Write PIN`
-|`lf em 4x70 writekey    `|N       |`Write Crypt Key`
+|`lf em 4x70 writekey    `|N       |`Write key`
+|`lf em 4x70 recover     `|N       |`Recover remaining key from partial key`
+|`lf em 4x70 autorecover `|N       |`Recover entire key from writable tag`
 
 
 ### lf fdxb
