@@ -879,7 +879,7 @@ void em4x70_write_pin(const em4x70_data_t *etd, bool ledcontrol) {
 
     StopTicks();
     lf_finalize(ledcontrol);
-    reply_ng(CMD_LF_EM4X70_WRITEPIN, status, tag.data, sizeof(tag.data));
+    reply_ng(CMD_LF_EM4X70_SETPIN, status, tag.data, sizeof(tag.data));
 }
 
 void em4x70_write_key(const em4x70_data_t *etd, bool ledcontrol) {
@@ -919,5 +919,5 @@ void em4x70_write_key(const em4x70_data_t *etd, bool ledcontrol) {
 
     StopTicks();
     lf_finalize(ledcontrol);
-    reply_ng(CMD_LF_EM4X70_WRITEKEY, status, tag.data, sizeof(tag.data));
+    reply_ng(CMD_LF_EM4X70_SETKEY, status, tag.data, sizeof(tag.data));
 }
