@@ -8982,12 +8982,12 @@
             ],
             "usage": "lf em 4x70 writekey [-h] [--par] -k <hex>"
         },
-        "lf em 4x70 writepin": {
-            "command": "lf em 4x70 writepin",
+        "lf em 4x70 setpin": {
+            "command": "lf em 4x70 setpin",
             "description": "Write PIN",
             "notes": [
-                "lf em 4x70 writepin -p 11223344 -> Write PIN",
-                "lf em 4x70 writepin -p 11223344 --par -> Write PIN using parity commands"
+                "lf em 4x70 setpin -p 11223344 -> Write new PIN",
+                "lf em 4x70 setpin -p 11223344 --par -> Write new PIN using parity commands"
             ],
             "offline": false,
             "options": [
@@ -8995,7 +8995,7 @@
                 "--par Add parity bit when sending commands",
                 "-p, --pin <hex> pin, 4 bytes"
             ],
-            "usage": "lf em 4x70 writepin [-h] [--par] -p <hex>"
+            "usage": "lf em 4x70 setpin [-h] [--par] -p <hex>"
         },
         "lf em help": {
             "command": "lf em help",

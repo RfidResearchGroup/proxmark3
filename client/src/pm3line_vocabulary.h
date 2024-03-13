@@ -613,7 +613,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "lf em 4x70 write" },
     { 0, "lf em 4x70 unlock" },
     { 0, "lf em 4x70 auth" },
-    { 0, "lf em 4x70 writepin" },
+    { 0, "lf em 4x70 setpin" },
     { 0, "lf em 4x70 writekey" },
     { 0, "lf em 4x70 recover" },
     { 0, "lf em 4x70 autorecover" },

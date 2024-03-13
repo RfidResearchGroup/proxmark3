@@ -126,10 +126,10 @@ typedef struct _em4x70_cmd_output_auth_t {
     ID48LIB_GRN grn;
 } em4x70_cmd_output_auth_t;
 
-typedef struct _em4x70_cmd_input_writepin_t {
+typedef struct _em4x70_cmd_input_setpin_t {
     uint8_t use_parity;
     uint8_t pin[4];
-} em4x70_cmd_input_writepin_t;
+} em4x70_cmd_input_setpin_t;
 
 typedef struct _em4x70_cmd_input_writekey_t {
     uint8_t use_parity;
@@ -369,7 +369,7 @@ static int unlock_em4x70(const em4x70_cmd_input_unlock_t *opts, em4x70_tag_info_
     return PM3_ESOFT;
 
 }
-static int writepin_em4x70(const em4x70_cmd_input_writepin_t *opts, em4x70_tag_info_t *data_out) {
+static int setpin_em4x70(const em4x70_cmd_input_setpin_t *opts, em4x70_tag_info_t *data_out) {
     memset(data_out, 0, sizeof(em4x70_tag_info_t));
 
     // TODO: change firmware to use per-cmd structures
@@ -378,10 +378,10 @@ static int writepin_em4x70(const em4x70_cmd_input_writepin_t *opts, em4x70_tag_i
     etd.pin = BYTES2UINT32(opts->pin);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X70_WRITEPIN, (uint8_t *)&etd, sizeof(etd));
+    SendCommandNG(CMD_LF_EM4X70_SETPIN, (uint8_t *)&etd, sizeof(etd));
 
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_LF_EM4X70_WRITEPIN, &resp, TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_LF_EM4X70_SETPIN, &resp, TIMEOUT)) {
         return PM3_ETIMEOUT;
     }
     if (resp.status) {
@@ -724,12 +724,12 @@ int CmdEM4x70Auth(const char *Cmd) {
     return result;
 }
 
-int CmdEM4x70WritePIN(const char *Cmd) {
+int CmdEM4x70SetPIN(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x70 writepin",
-                  "Write PIN\n",
-                  "lf em 4x70 writepin -p 11223344 -> Write PIN\n"
-                  "lf em 4x70 writepin -p 11223344 --par -> Write PIN using parity commands\n"
+    CLIParserInit(&ctx, "lf em 4x70 setpin",
+                  "Write new PIN\n",
+                  "lf em 4x70 setpin -p 11223344 -> Write new PIN\n"
+                  "lf em 4x70 setpin -p 11223344 --par -> Write new PIN using parity commands\n"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -739,7 +739,7 @@ int CmdEM4x70WritePIN(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    em4x70_cmd_input_writepin_t opts = {
+    em4x70_cmd_input_setpin_t opts = {
         .use_parity = arg_get_lit(ctx, 1),
         .pin = {0}, // hex value macro exits function, so cannot be initialized here
     };
@@ -755,7 +755,7 @@ int CmdEM4x70WritePIN(const char *Cmd) {
 
     // Client command line parsing and validation complete ... now use the helper function
     em4x70_tag_info_t info;
-    int result = writepin_em4x70(&opts, &info);
+    int result = setpin_em4x70(&opts, &info);
     if (result == PM3_ETIMEOUT) {
         PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
     } else if (result == PM3_SUCCESS) {
@@ -1392,9 +1392,9 @@ static command_t CommandTable[] = {
     {"write",       CmdEM4x70Write,        IfPm3EM4x70,     "Write EM4x70"},
     {"unlock",      CmdEM4x70Unlock,       IfPm3EM4x70,     "Unlock EM4x70 for writing"},
     {"auth",        CmdEM4x70Auth,         IfPm3EM4x70,     "Authenticate EM4x70"},
-    {"writepin",    CmdEM4x70WritePIN,     IfPm3EM4x70,     "Write PIN"},
+    {"setpin",      CmdEM4x70SetPIN,       IfPm3EM4x70,     "Write PIN"},
     {"writekey",    CmdEM4x70WriteKey,     IfPm3EM4x70,     "Write key"},
-    {"recover",     CmdEM4x70Recover,      IfPm3EM4x70,     "Recover remaining key from partial key"},
+    {"recover",     CmdEM4x70Recover,      AlwaysAvailable, "Recover remaining key from partial key"},
     {"autorecover", CmdEM4x70AutoRecover,  IfPm3EM4x70,     "Recover entire key from writable tag"},
     {NULL, NULL, NULL, NULL}
 };

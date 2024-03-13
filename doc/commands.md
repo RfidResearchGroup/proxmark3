@@ -960,8 +960,8 @@ Check column "offline" for their availability.
 |`lf em 4x70 write       `|N       |`Write EM4x70`
 |`lf em 4x70 unlock      `|N       |`Unlock EM4x70 for writing`
 |`lf em 4x70 auth        `|N       |`Authenticate EM4x70`
-|`lf em 4x70 writepin    `|N       |`Write PIN`
-|`lf em 4x70 writekey    `|N       |`Write key`
+|`lf em 4x70 setpin      `|N       |`Write new PIN`
+|`lf em 4x70 writekey    `|N       |`Write new key`
 |`lf em 4x70 recover     `|N       |`Recover remaining key from partial key`
 |`lf em 4x70 autorecover `|N       |`Recover entire key from writable tag`
 
