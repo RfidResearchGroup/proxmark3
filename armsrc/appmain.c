@@ -1253,7 +1253,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             em4x70_write_pin((em4x70_data_t *)packet->data.asBytes, true);
             break;
         }
-        case CMD_LF_EM4X70_WRITEKEY: {
+        case CMD_LF_EM4X70_SETKEY: {
             em4x70_write_key((em4x70_data_t *)packet->data.asBytes, true);
             break;
         }

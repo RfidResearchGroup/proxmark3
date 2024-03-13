@@ -131,10 +131,10 @@ typedef struct _em4x70_cmd_input_setpin_t {
     uint8_t pin[4];
 } em4x70_cmd_input_setpin_t;
 
-typedef struct _em4x70_cmd_input_writekey_t {
+typedef struct _em4x70_cmd_input_setkey_t {
     uint8_t use_parity;
     ID48LIB_KEY key;
-} em4x70_cmd_input_writekey_t;
+} em4x70_cmd_input_setkey_t;
 // There is no output data when writing a new key
 typedef struct _em4x70_cmd_input_recover_t {
     ID48LIB_KEY   key;  // only the first 6 bytes (48 bits) are considered valid
@@ -276,7 +276,7 @@ static int auth_em4x70(const em4x70_cmd_input_auth_t *opts, em4x70_cmd_output_au
     }
     return PM3_ESOFT;
 }
-static int writekey_em4x70(const em4x70_cmd_input_writekey_t *opts) {
+static int setkey_em4x70(const em4x70_cmd_input_setkey_t *opts) {
 
     // TODO: change firmware to use per-cmd structures
     em4x70_data_t etd = {0};
@@ -284,10 +284,10 @@ static int writekey_em4x70(const em4x70_cmd_input_writekey_t *opts) {
     memcpy(&etd.crypt_key[0], &opts->key.k[0], 12);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM4X70_WRITEKEY, (uint8_t *)&etd, sizeof(etd));
+    SendCommandNG(CMD_LF_EM4X70_SETKEY, (uint8_t *)&etd, sizeof(etd));
 
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_LF_EM4X70_WRITEKEY, &resp, TIMEOUT)) {
+    if (!WaitForResponseTimeout(CMD_LF_EM4X70_SETKEY, &resp, TIMEOUT)) {
         return PM3_ETIMEOUT;
     }
     if (resp.status) {
@@ -767,12 +767,12 @@ int CmdEM4x70SetPIN(const char *Cmd) {
     return result;
 }
 
-int CmdEM4x70WriteKey(const char *Cmd) {
+int CmdEM4x70SetKey(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf em 4x70 writekey",
+    CLIParserInit(&ctx, "lf em 4x70 setkey",
                   "Write new 96-bit key to tag\n",
-                  "lf em 4x70 writekey -k F32AA98CF5BE4ADFA6D3480B   (pm3 test key)\n"
-                  "lf em 4x70 writekey -k A090A0A02080000000000000   (research paper key)\n"
+                  "lf em 4x70 setkey -k F32AA98CF5BE4ADFA6D3480B   (pm3 test key)\n"
+                  "lf em 4x70 setkey -k A090A0A02080000000000000   (research paper key)\n"
                  );
 
     void *argtable[] = {
@@ -784,7 +784,7 @@ int CmdEM4x70WriteKey(const char *Cmd) {
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    em4x70_cmd_input_writekey_t opts = {
+    em4x70_cmd_input_setkey_t opts = {
         .use_parity = arg_get_lit(ctx, 1),
         .key = {{0}}, // hex value macro exits function, so cannot be initialized here
     };
@@ -797,7 +797,7 @@ int CmdEM4x70WriteKey(const char *Cmd) {
     }
 
     // Client command line parsing and validation complete ... now use the helper function
-    int result = writekey_em4x70(&opts);
+    int result = setkey_em4x70(&opts);
     if (PM3_ETIMEOUT == result) {
         PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
         return PM3_ETIMEOUT;
@@ -1046,7 +1046,7 @@ static int CmdEM4x70AutoRecover_ParseArgs(const char *Cmd, em4x70_cmd_input_reco
     int result = PM3_SUCCESS;
     //  The following key is found quickly, and has multiple potential keys.
     //  Useful for quicker testing, as this function could take over 2 hours.
-    //      lf em 4x70 writekey -k 001200340055BAADCAFEF00D
+    //      lf em 4x70 setkey -k 001200340055BAADCAFEF00D
     //      lf em 4x70 autorecover --rnd 1782779E7E3BC8 --frn 00357080 --grn F3C480
     CLIParserContext *ctx;
     CLIParserInit(
@@ -1393,7 +1393,7 @@ static command_t CommandTable[] = {
     {"unlock",      CmdEM4x70Unlock,       IfPm3EM4x70,     "Unlock EM4x70 for writing"},
     {"auth",        CmdEM4x70Auth,         IfPm3EM4x70,     "Authenticate EM4x70"},
     {"setpin",      CmdEM4x70SetPIN,       IfPm3EM4x70,     "Write PIN"},
-    {"writekey",    CmdEM4x70WriteKey,     IfPm3EM4x70,     "Write key"},
+    {"setkey",      CmdEM4x70SetKey,       IfPm3EM4x70,     "Write key"},
     {"recover",     CmdEM4x70Recover,      AlwaysAvailable, "Recover remaining key from partial key"},
     {"autorecover", CmdEM4x70AutoRecover,  IfPm3EM4x70,     "Recover entire key from writable tag"},
     {NULL, NULL, NULL, NULL}
