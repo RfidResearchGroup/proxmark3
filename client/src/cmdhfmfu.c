@@ -1868,6 +1868,45 @@ out:
     return res;
 }
 
+static int mfu_write_block(uint8_t *data, uint8_t datalen, bool has_auth_key,  bool has_pwd, uint8_t *auth_key_ptr, uint8_t blockno) {
+
+    // 4 or 16.
+    uint8_t cmd[32];
+    memcpy(cmd, data, datalen);
+
+    // 0 - no pwd/key, no authentication
+    // 1 - 3des key (16 bytes)
+    // 2 - pwd  (4 bytes)
+    uint8_t keytype = 0;
+    size_t cmdlen = datalen;
+    if (has_auth_key) {
+        keytype = 1;
+        memcpy(cmd + datalen, auth_key_ptr, 16);
+        cmdlen += 16;
+    } else if (has_pwd) {
+        keytype = 2;
+        memcpy(cmd + datalen, auth_key_ptr, 4);
+        cmdlen += 4;
+    }
+
+    clearCommandBuffer();
+    if (datalen == 16) {
+        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL_COMPAT, blockno, keytype, 0, cmd, cmdlen);
+    } else {
+        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, blockno, keytype, 0, cmd, cmdlen);
+    }
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        return PM3_ETIMEOUT;
+    }
+
+    uint8_t isOK  = resp.oldarg[0] & 0xFF;
+    if (isOK) {
+        return PM3_SUCCESS;
+    }
+    return PM3_ESOFT;
+}
+
 uint64_t GetHF14AMfU_Type(void) {
 
     uint64_t tagtype = MFU_TT_UNKNOWN;
@@ -2470,7 +2509,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t *authKeyPtr = authenticationkey;
+    uint8_t *auth_key_ptr = authenticationkey;
 
     // starting with getting tagtype
     uint64_t tagtype = GetHF14AMfU_Type();
@@ -2492,10 +2531,10 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
     // Swap endianness
     if (swap_endian) {
         if (has_auth_key)
-            authKeyPtr = SwapEndian64(authenticationkey, 16, 8);
+            auth_key_ptr = SwapEndian64(authenticationkey, 16, 8);
 
         if (has_pwd)
-            authKeyPtr = SwapEndian64(authenticationkey, 4, 4);
+            auth_key_ptr = SwapEndian64(authenticationkey, 4, 4);
     }
 
     if (blockno <= 3)
@@ -2507,42 +2546,27 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
         PrintAndLogEx(INFO, "Using %s " _GREEN_("%s"), (ak_len == 16) ? "3des" : "pwd", sprint_hex(authenticationkey, ak_len));
     }
 
-    //Send write Block
-
-    // 4 or 16.
-    uint8_t cmddata[32];
-    memcpy(cmddata, data, datalen);
-
-    // 0 - no pwd/key, no authentication
-    // 1 - 3des key (16 bytes)
-    // 2 - pwd  (4 bytes)
-    uint8_t keytype = 0;
-    size_t cmdlen = datalen;
-    if (has_auth_key) {
-        keytype = 1;
-        memcpy(cmddata + datalen, authKeyPtr, 16);
-        cmdlen += 16;
-    } else if (has_pwd) {
-        keytype = 2;
-        memcpy(cmddata + datalen, authKeyPtr, 4);
-        cmdlen += 4;
+    // Send write Block
+    int res = mfu_write_block(data, datalen, has_auth_key, has_pwd, auth_key_ptr, blockno);
+    switch (res) {
+        case PM3_SUCCESS: {
+            PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
+            PrintAndLogEx(HINT, "Try `" _YELLOW_("hf mfu rdbl -b %u") "` to verify ", blockno);
+            break;
+        }
+        case PM3_ESOFT: {
+            PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
+            PrintAndLogEx(HINT, "Check password / key!");
+            break;
+        }
+        case PM3_ETIMEOUT:
+        default: {
+            PrintAndLogEx(WARNING, "Command execute timeout");
+            break;
+        }
     }
-
-    clearCommandBuffer();
-    if (datalen == 16) {
-        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL_COMPAT, blockno, keytype, 0, cmddata, cmdlen);
-    } else {
-        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, blockno, keytype, 0, cmddata, cmdlen);
-    }
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK  = resp.oldarg[0] & 0xff;
-        PrintAndLogEx(SUCCESS, "isOk:%02x", isOK);
-    } else {
-        PrintAndLogEx(WARNING, "Command execute timeout");
-    }
-
-    return PM3_SUCCESS;
+    
+    return res;
 }
 //
 //  Read Single Block
@@ -5256,6 +5280,174 @@ static int CmdHF14AAmiibo(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AMfuWipe(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu wipe",
+                  "Wipe card to zeros. It will ignore block0,1,2,3\n"
+                  "you will need to call it with password in order to wipe the config and sett default pwd/pack\n"
+                  "Abort by pressing a key\n"
+                  "New password... FFFFFFFF\n",
+                  "hf mfu wipe\n"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("k", "key", "<hex>", "Key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)"),
+        arg_lit0("l", NULL, "Swap entered key's endianness"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int ak_len = 0;
+    uint8_t authenticationkey[16] = {0x00};
+    uint8_t *auth_key_ptr = authenticationkey;
+    CLIGetHexWithReturn(ctx, 1, authenticationkey, &ak_len);
+    bool swap_endian = arg_get_lit(ctx, 2);
+
+    CLIParserFree(ctx);
+
+    bool has_auth_key = false;
+    bool has_pwd = false;
+    if (ak_len == 16) {
+        has_auth_key = true;
+    } else if (ak_len == 4) {
+        has_pwd = true;
+    } else if (ak_len != 0) {
+        PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
+        return PM3_EINVARG;
+    }
+
+    uint8_t card_mem_size = 0;
+
+    // Swap endianness
+    if (swap_endian) {
+        if (has_auth_key) {
+            auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 8);
+        }
+
+        if (has_pwd) {
+            auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 4);
+        }
+    }
+
+    uint64_t tagtype = GetHF14AMfU_Type();
+    if (tagtype == MFU_TT_UL_ERROR) {
+        return PM3_ESOFT;
+    }
+
+    // number of pages to WRITE
+    for (uint8_t idx = 1; idx < ARRAYLEN(UL_TYPES_ARRAY); idx++) {
+        if ((tagtype & UL_TYPES_ARRAY[idx]) == UL_TYPES_ARRAY[idx]) {
+            //add one as maxblks starts at 0
+            card_mem_size = UL_MEMORY_ARRAY[idx] + 1;
+            break;
+        }
+    }
+
+    ul_print_type(tagtype, 0);
+
+    PrintAndLogEx(INFO, "Start wiping...");
+    PrintAndLogEx(INFO, "-----+-----------------------------");
+    // time to wipe card
+    // We skip the first four blocks. 
+    //  block 0,1  - UID
+    //  block 2    - lock 
+    //  block 3    - OTP 
+    for (uint8_t i = 4; i < card_mem_size; i++) {
+
+        if (kbd_enter_pressed()) {
+            PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
+            goto out;
+        }
+
+        uint8_t data[MFU_BLOCK_SIZE];
+        memset(data, 0x00, sizeof(data));
+        
+        // UL_C specific
+        if ((tagtype & MFU_TT_UL_C)) {
+            // Set DES key..  Skipping for now.
+        }
+
+        // UL_AES specific
+        if ((tagtype & MFU_TT_UL_AES)) {  
+            // Set AES key..  Skipping for now since no access to such card.
+        }
+
+        // UL / NTAG with PWD/PACK
+        if ((tagtype & (MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1 | MFU_TT_UL_NANO_40 |
+                    MFU_TT_NTAG_210u | MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C |
+                    MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216 | MFU_TT_NTAG_216_F |
+                    MFU_TT_NTAG_I2C_1K | MFU_TT_NTAG_I2C_2K | MFU_TT_NTAG_I2C_1K_PLUS | MFU_TT_NTAG_I2C_2K_PLUS
+                    ))) {
+
+
+            // cfg 1
+            if (i == card_mem_size - 4) {
+                // strong modulation mode disabled
+                // pages don't need authentication
+                uint8_t cfg1[MFU_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0xFF};
+                memcpy(data, cfg1, sizeof(cfg1));
+            }
+
+            // cfg 2
+            if (i == card_mem_size - 3) {
+                // Unlimited password attempts
+                // NFC counter disabled
+                // NFC counter not protected
+                // user configuration writeable
+                // write access is protected with password
+                // 05, Virtual Card Type Identifier is default
+                uint8_t cfg2[MFU_BLOCK_SIZE] = {0x00, 0x05, 0x00, 0x00};
+                memcpy(data, cfg2, sizeof(cfg2));
+            }
+
+            // Set PWD blocks  0xFF FF FF FF
+            if (i == card_mem_size - 2) {
+                memset(data, 0xFF, sizeof(data));
+            }
+
+            // Since we changed PWD before, we need to use new PWD to set PACK            
+            // Pack will be all zeros,  
+            if (i == card_mem_size - 1) {
+                memset(auth_key_ptr, 0xFF, ak_len);
+            }
+        }
+
+        /*
+        int res = PM3_SUCCESS;
+        if (res == PM3_ESOFT) {
+            res = mfu_write_block(data, MFU_BLOCK_SIZE, has_auth_key, has_pwd, auth_key_ptr, i);
+        }
+        */
+        int res = mfu_write_block(data, MFU_BLOCK_SIZE, has_auth_key, has_pwd, auth_key_ptr, i);
+
+        PrintAndLogEx(INFO, " %3d | %s" NOLF, i, sprint_hex(data, MFU_BLOCK_SIZE));
+        switch (res) {
+            case PM3_SUCCESS: {
+                PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
+                break;
+            }
+            case PM3_ESOFT: {
+                PrintAndLogEx(NORMAL, "( " _RED_("fail") " )");
+                break;
+            }
+            case PM3_ETIMEOUT:
+            default: {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(WARNING, "Command execute timeout");
+                goto out;
+            }
+        }
+    }
+
+    PrintAndLogEx(INFO, "-----+-----------------------------");
+    PrintAndLogEx(HINT, "try `" _YELLOW_("hf mfu dump --ns") "` to verify");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Done!");
+
+out:
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",     CmdHelp,                   AlwaysAvailable, "This help"},
     {"list",     CmdHF14AMfuList,           AlwaysAvailable, "List MIFARE Ultralight / NTAG history"},
@@ -5274,6 +5466,7 @@ static command_t CommandTable[] = {
     {"restore",  CmdHF14AMfURestore,        IfPm3Iso14443a,  "Restore a dump file onto a tag"},
     {"tamper",   CmdHF14MfUTamper,          IfPm3Iso14443a,  "NTAG 213TT - Configure the tamper feature"},
     {"view",     CmdHF14AMfuView,           AlwaysAvailable, "Display content from tag dump file"},
+    {"wipe",     CmdHF14AMfuWipe,           IfPm3Iso14443a,  "Wipe card to zeros and default key"},
     {"wrbl",     CmdHF14AMfUWrBl,           IfPm3Iso14443a,  "Write block"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("simulation") " -----------------------"},
     {"eload",    CmdHF14AMfUeLoad,          IfPm3Iso14443a,  "Upload file into emulator memory"},
