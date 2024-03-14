@@ -687,11 +687,15 @@ static int em4x70_receive(uint8_t *bits, size_t length) {
             // pulse length 1.5 -> 2 bits + flip edge detection
             if (edge == FALLING_EDGE) {
                 bits[bit_pos++] = 0;
-                bits[bit_pos++] = 0;
+                if (bit_pos < length) {
+                    bits[bit_pos++] = 0;
+                }
                 edge = RISING_EDGE;
             } else {
                 bits[bit_pos++] = 1;
-                bits[bit_pos++] = 1;
+                if (bit_pos < length) {
+                    bits[bit_pos++] = 1;
+                }
                 edge = FALLING_EDGE;
             }
 
@@ -700,10 +704,14 @@ static int em4x70_receive(uint8_t *bits, size_t length) {
             // pulse length of 2 -> two bits
             if (edge == FALLING_EDGE) {
                 bits[bit_pos++] = 0;
-                bits[bit_pos++] = 1;
+                if (bit_pos < length) {
+                    bits[bit_pos++] = 1;
+                }
             } else {
                 bits[bit_pos++] = 1;
-                bits[bit_pos++] = 0;
+                if (bit_pos < length) {
+                    bits[bit_pos++] = 0;
+                }
             }
 
         } else {
