@@ -233,9 +233,9 @@ static void showBanner(void) {
 #endif
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "%s!", get_quote());
-    PrintAndLogEx(NORMAL, "   Patreon - https://www.patreon.com/iceman1001/");
-    PrintAndLogEx(NORMAL, "   Paypal  - https://www.paypal.me/iceman1001");
+    PrintAndLogEx(NORMAL, "  [ " _YELLOW_("%s!")" ]", get_quote());
+    PrintAndLogEx(NORMAL, "     Patreon - https://www.patreon.com/iceman1001/");
+    PrintAndLogEx(NORMAL, "     Paypal  - https://www.paypal.me/iceman1001/");
     PrintAndLogEx(NORMAL, "");
 //    PrintAndLogEx(NORMAL, "   Monero");
 //    PrintAndLogEx(NORMAL, " 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
