@@ -740,7 +740,7 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
                     memcpy(carddata + (MFBLOCK_SIZE * (mfFirstBlockOfSector(sectorNo) + blockNo)), data, MFBLOCK_SIZE);
                     PrintAndLogEx(INPLACE, "Sector... " _YELLOW_("%2d") " block..." _YELLOW_("%2d") " ( " _GREEN_("ok") " )", sectorNo, blockNo);
                 } else {
-                    PrintAndLogEx(FAILED, "\nSector... %2d Block... %2d ( " _RED_("fail") " )" , sectorNo, blockNo);
+                    PrintAndLogEx(FAILED, "\nSector... %2d Block... %2d ( " _RED_("fail") " )", sectorNo, blockNo);
                 }
             } else {
                 PrintAndLogEx(WARNING, "Timeout reading sector... %2d  block... %2d", sectorNo, blockNo);
@@ -8464,11 +8464,11 @@ static void parse_gdm_cfg(const uint8_t *d) {
     PrintAndLogEx(SUCCESS, "------------------- " _CYAN_("GDM Configuration") " -----------------------------------------");
     PrintAndLogEx(SUCCESS,  _YELLOW_("%s"), sprint_hex_inrow(d, MFBLOCK_SIZE));
     PrintAndLogEx(SUCCESS,  _YELLOW_("%02X%02X") "............................ %s %s"
-        , d[0]
-        , d[1]
-        , (d[0] == 0x85 && d[1] == 0x00) ? "Magic wakeup disabled" : _GREEN_("Magic wakeup enabled")
-        , (d[0] == 0x85 && d[1] == 0x00) ? "" : ((d[0] == 0x7A && d[1] == 0xFF) ? _GREEN_("with GDM cfg block access") : _RED_(", no GDM cfg block access"))
-    );
+                  , d[0]
+                  , d[1]
+                  , (d[0] == 0x85 && d[1] == 0x00) ? "Magic wakeup disabled" : _GREEN_("Magic wakeup enabled")
+                  , (d[0] == 0x85 && d[1] == 0x00) ? "" : ((d[0] == 0x7A && d[1] == 0xFF) ? _GREEN_("with GDM cfg block access") : _RED_(", no GDM cfg block access"))
+                 );
     PrintAndLogEx(SUCCESS, "...." _YELLOW_("%02X") ".......................... Magic wakeup style %s", d[2], ((d[2] == 0x85) ? "GDM 20(7)/23" : "Gen1a 40(7)/43"));
     PrintAndLogEx(SUCCESS, "......" _YELLOW_("%02X%02X%02X") ".................... n/a", d[3], d[4], d[5]);
     PrintAndLogEx(SUCCESS, "............" _YELLOW_("%02X") ".................. %s", d[6], (d[6] == 0x5A) ? "Key B use blocked when readable by ACL" : "Key B use allowed when readable by ACL");

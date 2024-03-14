@@ -3061,7 +3061,7 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service } waveshare { Waveshare NFC ePaper... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf list --frame -> show frame delay times",
                 "hf list -1 -> use trace buffer"
@@ -7084,6 +7084,20 @@
             ],
             "usage": "hf mfu view [-hvz] -f <fn>"
         },
+        "hf mfu wipe": {
+            "command": "hf mfu wipe",
+            "description": "Wipe card to zeros. It will ignore block0,1,2,3 you will need to call it with password in order to wipe the config and sett default pwd/pack Abort by pressing a key New password... FFFFFFFF",
+            "notes": [
+                "hf mfu wipe"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --key <hex> Key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)",
+                "-l Swap entered key's endianness"
+            ],
+            "usage": "hf mfu wipe [-hl] [-k <hex>]"
+        },
         "hf mfu wrbl": {
             "command": "hf mfu wrbl",
             "description": "Write a block. It autodetects card type.",
@@ -7722,6 +7736,28 @@
             ],
             "usage": "hf vas reader [-h@v] [--pid <str>] [-f <fn>] [--url <str>]"
         },
+        "hf waveshare help": {
+            "command": "hf waveshare help",
+            "description": "help This help load Load image file to Waveshare NFC ePaper --------------------------------------------------------------------------------------- hf waveshare load available offline: yes Load image file to Waveshare NFC ePaper",
+            "notes": [
+                "hf waveshare load -f myfile -m 0 -> 2.13 inch e-paper ( 122, 250 )",
+                "hf waveshare load -f myfile -m 1 -> 2.9 inch e-paper ( 296, 128 )",
+                "hf waveshare load -f myfile -m 2 -> 4.2 inch e-paper ( 400, 300 )",
+                "hf waveshare load -f myfile -m 3 -> 7.5 inch e-paper ( 800, 480 )",
+                "hf waveshare load -f myfile -m 4 -> 2.7 inch e-paper ( 176, 276 )",
+                "hf waveshare load -f myfile -m 5 -> 2.13 inch e-paper B (with red) ( 104, 212 )",
+                "hf waveshare load -f myfile -m 6 -> 1.54 inch e-paper B (with red) ( 200, 200 )",
+                "hf waveshare load -f myfile -m 7 -> 7.5 inch e-paper HD ( 880, 528 )"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-m <nr> model number [0 - 7] of your tag",
+                "-f, --file <fn> specify image to upload to tag",
+                "-s, --save <fn> save paletized version in file"
+            ],
+            "usage": "hf waveshare load [-h] -m <nr> -f <fn> [-s <fn>]"
+        },
         "hf xerox dump": {
             "command": "hf xerox dump",
             "description": "Dump all memory from a Fuji/Xerox tag ISO/IEC 14443 type B based communications",
@@ -8039,9 +8075,10 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-a, --arg <dec> argument byte"
+                "-a, --arg <dec> argument byte",
+                "-b <str> UniSniff arg: 14a, 14b, 15, iclass"
             ],
-            "usage": "hw standalone [-h] [-a <dec>]"
+            "usage": "hw standalone [-h] [-a <dec>] [-b <str>]"
         },
         "hw status": {
             "command": "hw status",
@@ -8889,7 +8926,7 @@
         },
         "lf em 4x70 help": {
             "command": "lf em 4x70 help",
-            "description": "help This help --------------------------------------------------------------------------------------- lf em 4x70 brute available offline: no Optimized partial key-update attack of 16-bit key block 7, 8 or 9 of an EM4x70 This attack does NOT write anything to the tag. Before starting this attack, 0000 must be written to the 16-bit key block: 'lf em 4x70 write -b 9 -d 0000'. After success, the 16-bit key block have to be restored with the key found: 'lf em 4x70 write -b 9 -d c0de'",
+            "description": "help This help recover Recover remaining key from partial key --------------------------------------------------------------------------------------- lf em 4x70 brute available offline: no Optimized partial key-update attack of 16-bit key block 7, 8 or 9 of an EM4x70 This attack does NOT write anything to the tag. Before starting this attack, 0000 must be written to the 16-bit key block: 'lf em 4x70 write -b 9 -d 0000'. After success, the 16-bit key block have to be restored with the key found: 'lf em 4x70 write -b 9 -d c0de'",
             "notes": [
                 "lf em 4x70 brute -b 9 --rnd 45F54ADA252AAC --frn 4866BB70 -> bruteforcing key bits k95...k80"
             ],
@@ -8925,7 +8962,7 @@
                 "lf em 4x70 recover --key F32AA98CF5BE --rnd 45F54ADA252AAC --frn 4866BB70 --grn 9BD180 (pm3 test key)",
                 "lf em 4x70 recover --key A090A0A02080 --rnd 3FFE1FB6CC513F --frn F355F1A0 --grn 609D60 (research paper key)"
             ],
-            "offline": false,
+            "offline": true,
             "options": [
                 "-h, --help This help",
                 "--par Add parity bit when sending commands",
@@ -8935,6 +8972,36 @@
                 "--grn <hex> G(RN) 20-bit as 3 hex bytes"
             ],
             "usage": "lf em 4x70 recover [-h] [--par] -k <hex> --rnd <hex> --frn <hex> --grn <hex>"
+        },
+        "lf em 4x70 setkey": {
+            "command": "lf em 4x70 setkey",
+            "description": "Write new 96-bit key to tag",
+            "notes": [
+                "lf em 4x70 setkey -k F32AA98CF5BE4ADFA6D3480B (pm3 test key)",
+                "lf em 4x70 setkey -k A090A0A02080000000000000 (research paper key)"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--par Add parity bit when sending commands",
+                "-k, --key <hex> Key as 12 hex bytes"
+            ],
+            "usage": "lf em 4x70 setkey [-h] [--par] -k <hex>"
+        },
+        "lf em 4x70 setpin": {
+            "command": "lf em 4x70 setpin",
+            "description": "Write new PIN",
+            "notes": [
+                "lf em 4x70 setpin -p 11223344 -> Write new PIN",
+                "lf em 4x70 setpin -p 11223344 --par -> Write new PIN using parity commands"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--par Add parity bit when sending commands",
+                "-p, --pin <hex> pin, 4 bytes"
+            ],
+            "usage": "lf em 4x70 setpin [-h] [--par] -p <hex>"
         },
         "lf em 4x70 unlock": {
             "command": "lf em 4x70 unlock",
@@ -8966,36 +9033,6 @@
                 "-d, --data <hex> data, 2 bytes"
             ],
             "usage": "lf em 4x70 write [-h] [--par] -b <dec> -d <hex>"
-        },
-        "lf em 4x70 setkey": {
-            "command": "lf em 4x70 setkey",
-            "description": "Write new 96-bit key to tag",
-            "notes": [
-                "lf em 4x70 setkey -k F32AA98CF5BE4ADFA6D3480B (pm3 test key)",
-                "lf em 4x70 setkey -k A090A0A02080000000000000 (research paper key)"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "--par Add parity bit when sending commands",
-                "-k, --key <hex> Key as 12 hex bytes"
-            ],
-            "usage": "lf em 4x70 setkey [-h] [--par] -k <hex>"
-        },
-        "lf em 4x70 setpin": {
-            "command": "lf em 4x70 setpin",
-            "description": "Write PIN",
-            "notes": [
-                "lf em 4x70 setpin -p 11223344 -> Write new PIN",
-                "lf em 4x70 setpin -p 11223344 --par -> Write new PIN using parity commands"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "--par Add parity bit when sending commands",
-                "-p, --pin <hex> pin, 4 bytes"
-            ],
-            "usage": "lf em 4x70 setpin [-h] [--par] -p <hex>"
         },
         "lf em help": {
             "command": "lf em help",
@@ -12529,8 +12566,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 723,
+        "commands_extracted": 725,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-03-12T00:21:47"
+        "extracted_on": "2024-03-14T10:14:29"
     }
 }

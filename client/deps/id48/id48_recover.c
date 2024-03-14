@@ -116,8 +116,8 @@ typedef struct _RECOVERY_STATE {
 } RECOVERY_STATE;
 
 // Need equivalent of the following two function pointers:
-typedef ID48LIBX_SUCCESSOR_RESULT    (*ID48LIB_SUCCESSOR_FN)(const ID48LIBX_STATE_REGISTERS* initial_state, uint8_t input_bit);
-typedef ID48LIBX_STATE_REGISTERS(*ID48LIB_INIT_FN     )(const ID48LIB_KEY* key, const ID48LIB_NONCE* nonce);
+typedef ID48LIBX_SUCCESSOR_RESULT(*ID48LIB_SUCCESSOR_FN)(const ID48LIBX_STATE_REGISTERS *initial_state, uint8_t input_bit);
+typedef ID48LIBX_STATE_REGISTERS(*ID48LIB_INIT_FN)(const ID48LIB_KEY *key, const ID48LIB_NONCE *nonce);
 
 static const ID48LIB_INIT_FN      init_fn      = id48libx_retro003_init;
 static const ID48LIB_SUCCESSOR_FN successor_fn = id48libx_retro003_successor;
@@ -129,7 +129,7 @@ static const ID48LIB_SUCCESSOR_FN successor_fn = id48libx_retro003_successor;
 /// <param name="input_partial_key">Key with K₉₅..K₄₈, in PM3 compatible layout</param>
 /// <param name="more_bits">0 K₃₃..K₄₇ (to support simple incrementing input)</param>
 /// <returns>PM3-formatted key:  K₉₅..K₃₃ 0³³</returns>
-static ID48LIB_KEY create_partial_key56(const ID48LIB_KEY * input_partial_key, uint8_t k47_to_k40) {
+static ID48LIB_KEY create_partial_key56(const ID48LIB_KEY *input_partial_key, uint8_t k47_to_k40) {
     ID48LIB_KEY result;
     result.k[ 0] = input_partial_key->k[0];   // k[ 0] :== K₉₅..K₈₈
     result.k[ 1] = input_partial_key->k[1];   // k[ 1] :== K₈₇..K₈₀
@@ -153,7 +153,7 @@ static ID48LIB_KEY create_partial_key56(const ID48LIB_KEY * input_partial_key, u
 /// <param name="input_frn">PM3 compatible input for frn</param>
 /// <param name="input_grn">PM3 compatible input for grn</param>
 /// <returns></returns>
-static EXPECTED_OUTPUT_BITS create_expected_output_bits(const ID48LIB_FRN* input_frn, const ID48LIB_GRN* input_grn) {
+static EXPECTED_OUTPUT_BITS create_expected_output_bits(const ID48LIB_FRN *input_frn, const ID48LIB_GRN *input_grn) {
     // inputs:
     // frn[ 0] :== O₀₀..O₀₇
     // frn[ 1] :== O₀₈..O₁₅
@@ -162,15 +162,23 @@ static EXPECTED_OUTPUT_BITS create_expected_output_bits(const ID48LIB_FRN* input
     // grn[ 0] :== O₂₈  ..  O₃₅
     // grn[ 1] :== O₃₆  ..  O₄₃
     // grn[ 2] :== O₄₄..O₄₇ 0000
-    EXPECTED_OUTPUT_BITS result; result.Raw = 0u;
-    result.Raw <<= 4; result.Raw |= reverse_bits_08(input_grn->grn[2] & 0xF0u); // adds grn₁₉..grn₁₆ aka O₄₇..O₄₄
-    result.Raw <<= 8; result.Raw |= reverse_bits_08(input_grn->grn[1] & 0xFFu); // adds grn₁₅..grn₀₈ aka O₄₃..O₃₆
-    result.Raw <<= 8; result.Raw |= reverse_bits_08(input_grn->grn[0] & 0xFFu); // adds grn₀₇..grn₀₀ aka O₃₅..O₂₈
+    EXPECTED_OUTPUT_BITS result;
+    result.Raw = 0u;
+    result.Raw <<= 4;
+    result.Raw |= reverse_bits_08(input_grn->grn[2] & 0xF0u); // adds grn₁₉..grn₁₆ aka O₄₇..O₄₄
+    result.Raw <<= 8;
+    result.Raw |= reverse_bits_08(input_grn->grn[1] & 0xFFu); // adds grn₁₅..grn₀₈ aka O₄₃..O₃₆
+    result.Raw <<= 8;
+    result.Raw |= reverse_bits_08(input_grn->grn[0] & 0xFFu); // adds grn₀₇..grn₀₀ aka O₃₅..O₂₈
 
-    result.Raw <<= 4; result.Raw |= reverse_bits_08(input_frn->frn[3] & 0xF0u); // adds frn₂₇..frn₂₄ aka O₂₇..O₂₄
-    result.Raw <<= 8; result.Raw |= reverse_bits_08(input_frn->frn[2] & 0xFFu); // adds frn₂₃..frn₁₆ aka O₂₃..O₁₆
-    result.Raw <<= 8; result.Raw |= reverse_bits_08(input_frn->frn[1] & 0xFFu); // adds frn₁₅..frn₀₈ aka O₁₅..O₀₈
-    result.Raw <<= 8; result.Raw |= reverse_bits_08(input_frn->frn[0] & 0xFFu); // adds frn₀₇..frn₀₀ aka O₀₇..O₀₀
+    result.Raw <<= 4;
+    result.Raw |= reverse_bits_08(input_frn->frn[3] & 0xF0u); // adds frn₂₇..frn₂₄ aka O₂₇..O₂₄
+    result.Raw <<= 8;
+    result.Raw |= reverse_bits_08(input_frn->frn[2] & 0xFFu); // adds frn₂₃..frn₁₆ aka O₂₃..O₁₆
+    result.Raw <<= 8;
+    result.Raw |= reverse_bits_08(input_frn->frn[1] & 0xFFu); // adds frn₁₅..frn₀₈ aka O₁₅..O₀₈
+    result.Raw <<= 8;
+    result.Raw |= reverse_bits_08(input_frn->frn[0] & 0xFFu); // adds frn₀₇..frn₀₀ aka O₀₇..O₀₀
     return result;
 }
 /// <summary>
@@ -180,7 +188,7 @@ static EXPECTED_OUTPUT_BITS create_expected_output_bits(const ID48LIB_FRN* input
 /// </summary>
 /// <param name="recovery_state">A value in the range [0,55]</param>
 /// <returns>Zero or non-zero (boolean) corresponding to the expected output.</returns>
-static bool get_expected_output_bit(const RECOVERY_STATE* recovery_state, uint8_t current_state_index) {
+static bool get_expected_output_bit(const RECOVERY_STATE *recovery_state, uint8_t current_state_index) {
     ASSERT(recovery_state != nullptr);
     ASSERT(current_state_index >= 7);
     ASSERT(current_state_index <= 55);
@@ -188,7 +196,7 @@ static bool get_expected_output_bit(const RECOVERY_STATE* recovery_state, uint8_
     return !!(shifted & 0x1u); // return the single bit result
 }
 
-static void restart_and_calculate_s00(RECOVERY_STATE* s, const KEY_BITS_K47_TO_K00* k_low) {
+static void restart_and_calculate_s00(RECOVERY_STATE *s, const KEY_BITS_K47_TO_K00 *k_low) {
     ASSERT(s != nullptr);
     ASSERT(k_low != nullptr);
     memset(&(s->states[0]), 0xAA, sizeof(ID48LIBX_STATE_REGISTERS) * MAXIMUM_STATE_HISTORY);
@@ -197,11 +205,11 @@ static void restart_and_calculate_s00(RECOVERY_STATE* s, const KEY_BITS_K47_TO_K
     s->states[0] = init_fn(&start_56b_key, &(s->known_nonce));
 }
 
-static bool validate_output_from_additional_fifteen_zero_bits(RECOVERY_STATE* s) {
+static bool validate_output_from_additional_fifteen_zero_bits(RECOVERY_STATE *s) {
     bool all_still_match = true;
     for (uint8_t i = 0; all_still_match && i < 15; i++) {
         const uint8_t src_idx = 40 + i;
-        const ID48LIBX_STATE_REGISTERS* state = &(s->states[src_idx]);
+        const ID48LIBX_STATE_REGISTERS *state = &(s->states[src_idx]);
         ID48LIBX_SUCCESSOR_RESULT r = successor_fn(state, 0);
         bool expected_result = get_expected_output_bit(s, src_idx);
         if (expected_result != (!!r.output)) {
@@ -220,12 +228,11 @@ static bool validate_output_from_additional_fifteen_zero_bits(RECOVERY_STATE* s)
 RECOVERY_STATE g_S = { 0 };
 
 static void init(
-    const ID48LIB_KEY   * input_partial_key,
-    const ID48LIB_NONCE * input_nonce,
-    const ID48LIB_FRN   * input_frn,
-    const ID48LIB_GRN   * input_grn
-    )
-{
+    const ID48LIB_KEY    *input_partial_key,
+    const ID48LIB_NONCE *input_nonce,
+    const ID48LIB_FRN    *input_frn,
+    const ID48LIB_GRN    *input_grn
+) {
     memset(&g_S, 0, sizeof(RECOVERY_STATE));
     memset(&(g_S.states[0]), 0xAA, sizeof(ID48LIBX_STATE_REGISTERS) * MAXIMUM_STATE_HISTORY);
     g_S.known_k95_to_k48.k[0] = input_partial_key->k[0];
@@ -240,7 +247,7 @@ static void init(
     g_S.is_fresh_initialization = true;
 }
 static bool get_next_potential_key(
-    ID48LIB_KEY* potential_key_output
+    ID48LIB_KEY *potential_key_output
 ) {
     memset(potential_key_output, 0, sizeof(ID48LIB_KEY));
 
@@ -271,8 +278,7 @@ static bool get_next_potential_key(
         g_S.is_fresh_initialization = false;
         k_low.Raw = 0ull;
         current_key_bit_shift = 47;
-    }
-    else {
+    } else {
         // by definition, a returned potential key had all the bits defined
         current_key_bit_shift = 0;
         k_low = g_S.last_returned_potential_key;
@@ -417,16 +423,15 @@ static bool get_next_potential_key(
 
 
 void id48lib_key_recovery_init(
-    const ID48LIB_KEY   * input_partial_key,
-    const ID48LIB_NONCE * input_nonce,
-    const ID48LIB_FRN   * input_frn,
-    const ID48LIB_GRN   * input_grn
-    )
-{
+    const ID48LIB_KEY    *input_partial_key,
+    const ID48LIB_NONCE *input_nonce,
+    const ID48LIB_FRN    *input_frn,
+    const ID48LIB_GRN    *input_grn
+) {
     init(input_partial_key, input_nonce, input_frn, input_grn);
 }
 bool id48lib_key_recovery_next(
-    ID48LIB_KEY* potential_key_output
+    ID48LIB_KEY *potential_key_output
 ) {
     return get_next_potential_key(potential_key_output);
 }

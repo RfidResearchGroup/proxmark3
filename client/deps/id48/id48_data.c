@@ -50,7 +50,7 @@ static const uint8_t small_lut_group4[4] = { // aka 32 bits
     0x8f, 0x34, 0x52, 0xe9,
 };
 
-static inline bool get_bit(const uint8_t* table_start, uint32_t bit_idx) {
+static inline bool get_bit(const uint8_t *table_start, uint32_t bit_idx) {
     const uint32_t byte = bit_idx / 8u;
     const uint8_t  mask = 1u << (bit_idx % 8u);
     return (table_start[byte] & mask) != 0;
@@ -72,7 +72,7 @@ static inline bool get_bit(const uint8_t* table_start, uint32_t bit_idx) {
 //       so long as the lookup tables are adjusted accordingly.
 //
 // Which bits are used for which small lookup table indixes?
-// 
+//
 // Bit:  ₆₃  ₆₂  ₆₁  ₆₀  ₅₉  ₅₈  ₅₇  ₅₆  ₅₅  ₅₄  ₅₃  ₅₂  ₅₁  ₅₀  ₄₉  ₄₈  ₄₇  ₄₆  ₄₅  ₄₄  ₄₃  ₄₂  ₄₁  ₄₀  ₃₉  ₃₈  ₃₇  ₃₆  ₃₅  ₃₄  ₃₃  ₃₂
 // Reg:  i   j  r₀₆ r₀₅ r₀₄ r₀₃ r₀₂ r₀₁ r₀₀ m₀₆ m₀₅ m₀₄ m₀₃ m₀₂ m₀₁ m₀₀ l₀₆ l₀₅ l₀₄ l₀₃ l₀₂ l₀₁ l₀₀ g₂₂ g₂₁ g₂₀ g₁₉ g₁₈ g₁₇ g₁₆ g₁₅ g₁₄
 //                  i_v     i_v         i_v             i_v     i_v     i_v     i_v             i_v
@@ -80,8 +80,8 @@ static inline bool get_bit(const uint8_t* table_start, uint32_t bit_idx) {
 //                                                              BBB BBB     BBB BBB
 //                          CCC     CCC         CCC     CCC
 //              DDD DDD DDD     DDD     DDD
-// 
-// Bit:  ₃₁  ₃₀  ₂₉  ₂₈  ₂₇  ₂₆  ₂₅  ₂₄  ₂₃  ₂₂  ₂₁  ₂₀  ₁₉  ₁₈  ₁₇  ₁₆  ₁₅  ₁₄  ₁₃  ₁₂  ₁₁  ₁₀  ₀₉  ₀₈  ₀₇  ₀₆  ₀₅  ₀₄  ₀₃  ₀₂  ₀₁  ₀₀ 
+//
+// Bit:  ₃₁  ₃₀  ₂₉  ₂₈  ₂₇  ₂₆  ₂₅  ₂₄  ₂₃  ₂₂  ₂₁  ₂₀  ₁₉  ₁₈  ₁₇  ₁₆  ₁₅  ₁₄  ₁₃  ₁₂  ₁₁  ₁₀  ₀₉  ₀₈  ₀₇  ₀₆  ₀₅  ₀₄  ₀₃  ₀₂  ₀₁  ₀₀
 // Reg:  g₁₃ g₁₂ g₁₁ g₁₀ g₀₉ g₀₈ g₀₇ g₀₆ g₀₅ g₀₄ g₀₃ g₀₂ g₀₁ g₀₀ h₁₂ h₁₁ h₁₀ h₀₉ h₀₈ h₀₇ h₀₆ h₀₅ h₀₄ h₀₃ h₀₂ h₀₁ h₀₀  _   a   b   c   0
 //                                                                                                                      AAA BBB CCC
 //
@@ -105,7 +105,7 @@ static inline bool get_bit(const uint8_t* table_start, uint32_t bit_idx) {
 
 static bool output_lookup_small_lut(uint32_t output_index) {
     if (output_index >= COUNT_OF_POTENTIAL_INPUTS) { return false; }
-    //     1 1 1 1  1  1  1  1  1  1                                
+    //     1 1 1 1  1  1  1  1  1  1
     //     9 8 7 6  5  4  3  2  1  0  9  8  7  6  5  4  3  2  1  0
     // Fₒ( a b c l₀ l₂ l₃ l₄ l₅ l₆ m₀ m₁ m₃ m₅ r₀ r₁ r₂ r₃ r₄ r₅ r₆ )
 

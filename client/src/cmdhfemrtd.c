@@ -63,7 +63,7 @@ static const uint8_t KMAC_type[4] = {0x00, 0x00, 0x00, 0x02};
 * SAC = Suppliment Access Control
 
 File structures
----------------- 
+----------------
  Mastefile MF
   -- EF.ATR/INFO (01)
   -- EF.DIR (1E)
@@ -91,7 +91,7 @@ File names and what they contain
   EG.DG1 = MRZ data
   EG.DG2 = Biometric template, Photo
   EG.DG3 = Biometric template, Fingerprint (EAC / AA)
-  EG.DG4 = Biometric template, Iris (EAC / AA) 
+  EG.DG4 = Biometric template, Iris (EAC / AA)
   EG.DG5 = Image template
   EG.DG6 = Image template
   EG.DG7 = Image template (Signature?)
@@ -1884,7 +1884,7 @@ static int emrtd_print_ef_sod_info(uint8_t *dg_hashes_calc, uint8_t *dg_hashes_s
             if (calc_all_zero == true && sod_all_zero == true) {
                 continue;
             }
-            
+
             // silly padding thingy
             int n = 40 - strlen(dg_table[i].desc);
 

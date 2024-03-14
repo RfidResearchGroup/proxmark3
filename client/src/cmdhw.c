@@ -880,7 +880,7 @@ static int CmdStandalone(const char *Cmd) {
     }
     CLIParserFree(ctx);
     clearCommandBuffer();
-    SendCommandNG(CMD_STANDALONE, (uint8_t *)&packet, sizeof(struct p));    
+    SendCommandNG(CMD_STANDALONE, (uint8_t *)&packet, sizeof(struct p));
     return PM3_SUCCESS;
 }
 

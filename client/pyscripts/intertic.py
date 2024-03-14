@@ -9,7 +9,7 @@
 #   it under the terms of the GNU General Public License as published by
 #   the Free Software Foundation, either version 3 of the License, or
 #   (at your option) any later version.
-# 
+#
 #   This program is distributed in the hope that it will be useful,
 #   but WITHOUT ANY WARRANTY; without even the implied warranty of
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -32,7 +32,7 @@ class BitMe:
 
     def addBytes(self, bytes):
         self.data.frombytes(bytes)
-        
+
     def nom_bits(self, cb):
         ret = self.data[self.idx:self.idx + cb]
         self.idx += cb
@@ -40,10 +40,10 @@ class BitMe:
 
     def nom(self, cb):
         return ba2int(self.nom_bits(cb))
-        
+
     def nom_bits_left(self):
         return self.data[self.idx:None]
-        
+
     def isEmpty(self):
         return (len(self.data) == 0)
 
@@ -103,11 +103,11 @@ def main():
 
     print('Basic script to try to interpret Intertic data on ST25TB / SRT512 in french transports')
     print('--------------------------------------------------------------------------------------\n')
-    
+
     if(len(sys.argv) != 2):
         print('\tUsage  : {0} <dumpfile.bin>\n\tExample: {0} hf-14b-D00233787DFBB4D5-dump.bin\n'.format(sys.argv[0]))
         return 1
-    
+
     binaryDumpFileName = sys.argv[1]
 
     data = BitMe()
@@ -122,7 +122,7 @@ def main():
     if (size != 68):
         print('\'{}\' file size is not 68 bytes'.format(binaryDumpFileName))
         return 2
-    
+
     while True:
         chunk = file.read(4)
         if not chunk:
@@ -154,7 +154,7 @@ def main():
     print('KeyId        :', hex(KeyId));
 
     match PID:
-        
+
         case 0x02:
             Distribution_Data.addBits(data.nom_bits(3 * 32))
             Usage_Data_End = data.nom_bits(30)
@@ -167,7 +167,7 @@ def main():
             Usage_Sta_E.addBits(data.nom_bits(2))
             Usage_Cer.addBits(data.nom_bits(16))
             Distribution_Cer.addBits(data.nom_bits(32))
-            
+
         case 0x06:
             Distribution_Data.addBits(data.nom_bits(4 * 32))
             C1.addBits(data.nom_bits(32))
@@ -182,7 +182,7 @@ def main():
             Usage_Sta_E.addBits(data.nom_bits(2))
             Usage_Cer.addBits(data.nom_bits(16))
             Distribution_Cer.addBits(data.nom_bits(32))
-            
+
         case 0x07:
             Distribution_Data.addBits(data.nom_bits(4 * 32))
             C1.addBits(data.nom_bits(32))
@@ -197,7 +197,7 @@ def main():
             Usage_Sta_E.addBits(data.nom_bits(2))
             Usage_Cer.addBits(data.nom_bits(16))
             Distribution_Cer.addBits(data.nom_bits(32))
-            
+
         case 0x0a:
             Distribution_Data.addBits(data.nom_bits(4 * 32))
             C1.addBits(data.nom_bits(32))
@@ -206,7 +206,7 @@ def main():
             Distribution_Data.addBits(Distribution_Data_End)
             Distribution_Cer.addBits(data.nom_bits(32))
             # No USAGE for 0x0a
-            
+
         case 0x0b: # Not in the draft :(
             Distribution_Data.addBits(data.nom_bits(4 * 32))
             C1.addBits(data.nom_bits(32))
@@ -214,7 +214,7 @@ def main():
             Distribution_Data.addBits(data.nom_bits(8 * 32))
             Distribution_Data.addBits(Distribution_Data_End)
             Distribution_Cer.addBits(data.nom_bits(32))
-            
+
         case _:
             print('PID not (yet?) supported')
             return 3
@@ -278,8 +278,8 @@ def main():
 
         print('  left...                         :', Usage_left);
         print('  [CER] Usage                     : {:04x}'.format(Usage_Cer.nom(16)))
-        
-    return 0    
+
+    return 0
 
 
 if __name__ == '__main__':

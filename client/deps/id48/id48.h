@@ -31,13 +31,13 @@
 #include <string.h>
 #include <stdbool.h>
 #if defined(NDEBUG)
-    #define ASSERT(x) ((void)0)
+#define ASSERT(x) ((void)0)
 #elif defined(ID48_NO_STDIO)
-    #define ASSERT(x) ((void)0)
+#define ASSERT(x) ((void)0)
 #else // neither NDEBUG nor ID48_NO_STDIO defined
-    #include <stdio.h>
-    #include <assert.h>
-    #define ASSERT(x) assert((x))
+#include <stdio.h>
+#include <assert.h>
+#define ASSERT(x) assert((x))
 #endif
 
 
@@ -108,7 +108,7 @@ typedef struct _ID48LIB_FRN {
 /// Native format if viewed linearly from frn[0..6].
 /// Mapping to the indices used in the research paper,
 /// where ( O₂₈ .. O₅₅ ) :== output( s₃₅, k₀₄..k₀₀ (15x 0) ) == grn
-/// 
+///
 /// then:
 ///     rn[ 0] :== O₂₈  ..  O₃₅
 ///     rn[ 1] :== O₃₆  ..  O₄₃
@@ -128,15 +128,15 @@ typedef struct _ID48LIB_GRN {
 /// Note: In C++, each parameter would be a reference (not pointer).
 /// </remarks>
 void id48lib_generator(
-    const ID48LIB_KEY* key_96bit,
-    const ID48LIB_NONCE* nonce_56bit,
-    ID48LIB_FRN* frn28_out,
-    ID48LIB_GRN* grn20_out
-    );
+    const ID48LIB_KEY *key_96bit,
+    const ID48LIB_NONCE *nonce_56bit,
+    ID48LIB_FRN *frn28_out,
+    ID48LIB_GRN *grn20_out
+);
 
 /// <summary>
 /// Initializes to allow iterative recovery
-/// of multiple potential keys.  After calling 
+/// of multiple potential keys.  After calling
 /// this init() function, can repeatedly call
 /// the next() function until it returns false
 /// to obtain all potential keys.
@@ -165,10 +165,10 @@ void id48lib_generator(
 /// Note: In C++, each parameter would be a reference (not pointer).
 /// </remarks>
 void id48lib_key_recovery_init(
-    const ID48LIB_KEY* input_partial_key,
-    const ID48LIB_NONCE* input_nonce,
-    const ID48LIB_FRN* input_frn,
-    const ID48LIB_GRN* input_grn
+    const ID48LIB_KEY *input_partial_key,
+    const ID48LIB_NONCE *input_nonce,
+    const ID48LIB_FRN *input_frn,
+    const ID48LIB_GRN *input_grn
 );
 /// <summary>
 /// This can be repeated called (after calling init())
@@ -184,7 +184,7 @@ void id48lib_key_recovery_init(
 /// <param name="potential_key_output">
 /// When the function returns true, this caller-provided
 /// value will be filled with the 96-bit key that, when
-/// programmed to the tag, should authenticate against 
+/// programmed to the tag, should authenticate against
 /// the nonce+frn values, with tag returning the grn value.
 /// </param>
 /// <returns>
@@ -195,7 +195,7 @@ void id48lib_key_recovery_init(
 /// Note: In C++, each parameter would be a reference (not pointer).
 /// </remarks>
 bool id48lib_key_recovery_next(
-    ID48LIB_KEY* potential_key_output
+    ID48LIB_KEY *potential_key_output
 );
 
 #if defined(__cplusplus)

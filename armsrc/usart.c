@@ -209,8 +209,8 @@ uint32_t usart_read_ng(uint8_t *data, size_t len) {
 
         if (try++ == maxtry) {
 //            Dbprintf_usb("Dbg USART TIMEOUT");
-            break;
-        }
+                break;
+            }
     }
 //    highest_observed_try = MAX(highest_observed_try, try);
 //    Dbprintf_usb("Dbg USART max observed try %i", highest_observed_try);

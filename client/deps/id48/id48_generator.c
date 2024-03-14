@@ -91,8 +91,8 @@ static inline uint64_t reverse_bits_64(uint64_t n) {
 #pragma region    // id48lib state register
 // Bit:  ₆₃  ₆₂  ₆₁  ₆₀  ₅₉  ₅₈  ₅₇  ₅₆  ₅₅  ₅₄  ₅₃  ₅₂  ₅₁  ₅₀  ₄₉  ₄₈  ₄₇  ₄₆  ₄₅  ₄₄  ₄₃  ₄₂  ₄₁  ₄₀  ₃₉  ₃₈  ₃₇  ₃₆  ₃₅  ₃₄  ₃₃  ₃₂
 // Reg:  x   x   x  r₀₆ r₀₅ r₀₄ r₀₃ r₀₂ r₀₁ r₀₀ m₀₆ m₀₅ m₀₄ m₀₃ m₀₂ m₀₁ m₀₀ l₀₆ l₀₅ l₀₄ l₀₃ l₀₂ l₀₁ l₀₀ g₂₂ g₂₁ g₂₀ g₁₉ g₁₈ g₁₇ g₁₆ g₁₅
-// 
-// Bit:  ₃₁  ₃₀  ₂₉  ₂₈  ₂₇  ₂₆  ₂₅  ₂₄  ₂₃  ₂₂  ₂₁  ₂₀  ₁₉  ₁₈  ₁₇  ₁₆  ₁₅  ₁₄  ₁₃  ₁₂  ₁₁  ₁₀  ₀₉  ₀₈  ₀₇  ₀₆  ₀₅  ₀₄  ₀₃  ₀₂  ₀₁  ₀₀ 
+//
+// Bit:  ₃₁  ₃₀  ₂₉  ₂₈  ₂₇  ₂₆  ₂₅  ₂₄  ₂₃  ₂₂  ₂₁  ₂₀  ₁₉  ₁₈  ₁₇  ₁₆  ₁₅  ₁₄  ₁₃  ₁₂  ₁₁  ₁₀  ₀₉  ₀₈  ₀₇  ₀₆  ₀₅  ₀₄  ₀₃  ₀₂  ₀₁  ₀₀
 // Reg: g₁₄ g₁₃ g₁₂ g₁₁ g₁₀ g₀₉ g₀₈ g₀₇ g₀₆ g₀₅ g₀₄ g₀₃ g₀₂ g₀₁ g₀₀ h₁₂ h₁₁ h₁₀ h₀₉ h₀₈ h₀₇ h₀₆ h₀₅ h₀₄ h₀₃ h₀₂ h₀₁ h₀₀  x   x   x   1
 #pragma endregion // id48lib state register
 #pragma region    // bit definitions for the (stable) id48lib state register
@@ -164,8 +164,8 @@ static inline uint64_t reverse_bits_64(uint64_t n) {
 #pragma region    // Unstable (during calculations) id48lib state register
 // Bit:  ₆₃  ₆₂  ₆₁  ₆₀  ₅₉  ₅₈  ₅₇  ₅₆  ₅₅  ₅₄  ₅₃  ₅₂  ₅₁  ₅₀  ₄₉  ₄₈  ₄₇  ₄₆  ₄₅  ₄₄  ₄₃  ₄₂  ₄₁  ₄₀  ₃₉  ₃₈  ₃₇  ₃₆  ₃₅  ₃₄  ₃₃  ₃₂
 // Reg:  i   j  r₀₆ r₀₅ r₀₄ r₀₃ r₀₂ r₀₁ r₀₀ m₀₆ m₀₅ m₀₄ m₀₃ m₀₂ m₀₁ m₀₀ l₀₆ l₀₅ l₀₄ l₀₃ l₀₂ l₀₁ l₀₀ g₂₂ g₂₁ g₂₀ g₁₉ g₁₈ g₁₇ g₁₆ g₁₅ g₁₄
-// 
-// Bit:  ₃₁  ₃₀  ₂₉  ₂₈  ₂₇  ₂₆  ₂₅  ₂₄  ₂₃  ₂₂  ₂₁  ₂₀  ₁₉  ₁₈  ₁₇  ₁₆  ₁₅  ₁₄  ₁₃  ₁₂  ₁₁  ₁₀  ₀₉  ₀₈  ₀₇  ₀₆  ₀₅  ₀₄  ₀₃  ₀₂  ₀₁  ₀₀ 
+//
+// Bit:  ₃₁  ₃₀  ₂₉  ₂₈  ₂₇  ₂₆  ₂₅  ₂₄  ₂₃  ₂₂  ₂₁  ₂₀  ₁₉  ₁₈  ₁₇  ₁₆  ₁₅  ₁₄  ₁₃  ₁₂  ₁₁  ₁₀  ₀₉  ₀₈  ₀₇  ₀₆  ₀₅  ₀₄  ₀₃  ₀₂  ₀₁  ₀₀
 // Reg:  g₁₃ g₁₂ g₁₁ g₁₀ g₀₉ g₀₈ g₀₇ g₀₆ g₀₅ g₀₄ g₀₃ g₀₂ g₀₁ g₀₀ h₁₂ h₁₁ h₁₀ h₀₉ h₀₈ h₀₇ h₀₆ h₀₅ h₀₄ h₀₃ h₀₂ h₀₁ h₀₀  _   a   b   c   0
 #pragma endregion // Unstable (during calculations) id48lib state register
 //
@@ -242,34 +242,33 @@ static inline uint64_t reverse_bits_64(uint64_t n) {
 //                                    0 // == 0 value defines as unstable state
 #pragma endregion // bit definitions for the (stable) id48lib state register
 #pragma region    // single bit test/set/clear/flip/assign
-static inline bool is_ssr_state_stable   (const ID48LIBX_STATE_REGISTERS* ssr)                   { ASSERT(ssr != nullptr); return ((ssr->Raw & 1u) == 1u); }
-static inline bool test_single_ssr_bit   (const ID48LIBX_STATE_REGISTERS* ssr, size_t bit_index) { ASSERT(ssr != nullptr); ASSERT(bit_index < (sizeof(uint64_t) * 8)); return ((ssr->Raw) >> bit_index) & 1;         }
-static inline void set_single_ssr_bit    (      ID48LIBX_STATE_REGISTERS* ssr, size_t bit_index) { ASSERT(ssr != nullptr); ASSERT(bit_index < (sizeof(uint64_t) * 8)); ssr->Raw |=  ((uint64_t)(1ull << bit_index)); }
-static inline void clear_single_ssr_bit  (      ID48LIBX_STATE_REGISTERS* ssr, size_t bit_index) { ASSERT(ssr != nullptr); ASSERT(bit_index < (sizeof(uint64_t) * 8)); ssr->Raw &= ~((uint64_t)(1ull << bit_index)); }
-static inline void flip_single_ssr_bit   (      ID48LIBX_STATE_REGISTERS* ssr, size_t bit_index) { ASSERT(ssr != nullptr); ASSERT(bit_index < (sizeof(uint64_t) * 8)); ssr->Raw ^=  ((uint64_t)(1ull << bit_index)); }
-static inline void assign_single_ssr_bit (      ID48LIBX_STATE_REGISTERS* ssr, size_t bit_index, bool value) {
+static inline bool is_ssr_state_stable(const ID48LIBX_STATE_REGISTERS *ssr)                   { ASSERT(ssr != nullptr); return ((ssr->Raw & 1u) == 1u); }
+static inline bool test_single_ssr_bit(const ID48LIBX_STATE_REGISTERS *ssr, size_t bit_index) { ASSERT(ssr != nullptr); ASSERT(bit_index < (sizeof(uint64_t) * 8)); return ((ssr->Raw) >> bit_index) & 1;         }
+static inline void set_single_ssr_bit(ID48LIBX_STATE_REGISTERS *ssr, size_t bit_index) { ASSERT(ssr != nullptr); ASSERT(bit_index < (sizeof(uint64_t) * 8)); ssr->Raw |= ((uint64_t)(1ull << bit_index)); }
+static inline void clear_single_ssr_bit(ID48LIBX_STATE_REGISTERS *ssr, size_t bit_index) { ASSERT(ssr != nullptr); ASSERT(bit_index < (sizeof(uint64_t) * 8)); ssr->Raw &= ~((uint64_t)(1ull << bit_index)); }
+static inline void flip_single_ssr_bit(ID48LIBX_STATE_REGISTERS *ssr, size_t bit_index) { ASSERT(ssr != nullptr); ASSERT(bit_index < (sizeof(uint64_t) * 8)); ssr->Raw ^= ((uint64_t)(1ull << bit_index)); }
+static inline void assign_single_ssr_bit(ID48LIBX_STATE_REGISTERS *ssr, size_t bit_index, bool value) {
     ASSERT(ssr != nullptr);
     ASSERT(bit_index < (sizeof(uint64_t) * 8));
     if (value) {
         set_single_ssr_bit(ssr, bit_index);
-    }
-    else {
+    } else {
         clear_single_ssr_bit(ssr, bit_index);
     }
 }
 #pragma endregion // single bit test/set/clear/flip/assign
 #pragma region    // test/assign of temporaries a/b/c/i/j
-static inline void test_temporary_a(ID48LIBX_STATE_REGISTERS* ssr) { ASSERT(!is_ssr_state_stable(ssr)); test_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_a); }
-static inline void test_temporary_b(ID48LIBX_STATE_REGISTERS* ssr) { ASSERT(!is_ssr_state_stable(ssr)); test_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_b); }
-static inline void test_temporary_c(ID48LIBX_STATE_REGISTERS* ssr) { ASSERT(!is_ssr_state_stable(ssr)); test_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_c); }
-static inline void test_temporary_i(ID48LIBX_STATE_REGISTERS* ssr) { ASSERT(!is_ssr_state_stable(ssr)); test_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_i); }
-static inline void test_temporary_j(ID48LIBX_STATE_REGISTERS* ssr) { ASSERT(!is_ssr_state_stable(ssr)); test_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_j); }
+static inline void test_temporary_a(ID48LIBX_STATE_REGISTERS *ssr) { ASSERT(!is_ssr_state_stable(ssr)); test_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_a); }
+static inline void test_temporary_b(ID48LIBX_STATE_REGISTERS *ssr) { ASSERT(!is_ssr_state_stable(ssr)); test_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_b); }
+static inline void test_temporary_c(ID48LIBX_STATE_REGISTERS *ssr) { ASSERT(!is_ssr_state_stable(ssr)); test_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_c); }
+static inline void test_temporary_i(ID48LIBX_STATE_REGISTERS *ssr) { ASSERT(!is_ssr_state_stable(ssr)); test_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_i); }
+static inline void test_temporary_j(ID48LIBX_STATE_REGISTERS *ssr) { ASSERT(!is_ssr_state_stable(ssr)); test_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_j); }
 
-static inline void assign_temporary_a(ID48LIBX_STATE_REGISTERS* ssr, bool v) { ASSERT(!is_ssr_state_stable(ssr)); assign_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_a, v); }
-static inline void assign_temporary_b(ID48LIBX_STATE_REGISTERS* ssr, bool v) { ASSERT(!is_ssr_state_stable(ssr)); assign_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_b, v); }
-static inline void assign_temporary_c(ID48LIBX_STATE_REGISTERS* ssr, bool v) { ASSERT(!is_ssr_state_stable(ssr)); assign_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_c, v); }
-static inline void assign_temporary_i(ID48LIBX_STATE_REGISTERS* ssr, bool v) { ASSERT(!is_ssr_state_stable(ssr)); assign_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_i, v); }
-static inline void assign_temporary_j(ID48LIBX_STATE_REGISTERS* ssr, bool v) { ASSERT(!is_ssr_state_stable(ssr)); assign_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_j, v); }
+static inline void assign_temporary_a(ID48LIBX_STATE_REGISTERS *ssr, bool v) { ASSERT(!is_ssr_state_stable(ssr)); assign_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_a, v); }
+static inline void assign_temporary_b(ID48LIBX_STATE_REGISTERS *ssr, bool v) { ASSERT(!is_ssr_state_stable(ssr)); assign_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_b, v); }
+static inline void assign_temporary_c(ID48LIBX_STATE_REGISTERS *ssr, bool v) { ASSERT(!is_ssr_state_stable(ssr)); assign_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_c, v); }
+static inline void assign_temporary_i(ID48LIBX_STATE_REGISTERS *ssr, bool v) { ASSERT(!is_ssr_state_stable(ssr)); assign_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_i, v); }
+static inline void assign_temporary_j(ID48LIBX_STATE_REGISTERS *ssr, bool v) { ASSERT(!is_ssr_state_stable(ssr)); assign_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_j, v); }
 #pragma endregion // test/assign of temporaries a/b/c/i/j
 
 #pragma region    // Mask & Macro to get registers (in minimal bit form)
@@ -301,17 +300,17 @@ static inline void assign_temporary_j(ID48LIBX_STATE_REGISTERS* ssr, bool v) { A
 #define SSR_VALUE_MASK_REG_M          (0x00007Fu) //  7 bits
 #define SSR_VALUE_MASK_REG_R          (0x00007Fu) //  7 bits
 
-static inline uint16_t get_register_h(const ID48LIBX_STATE_REGISTERS* ssr) { return ((uint16_t)(ssr->Raw >> SSR_SHIFT_COUNT_REG_H)) & (SSR_VALUE_MASK_REG_H); }
-static inline uint32_t get_register_g(const ID48LIBX_STATE_REGISTERS* ssr) { return ((uint32_t)(ssr->Raw >> SSR_SHIFT_COUNT_REG_G)) & (SSR_VALUE_MASK_REG_G); }
-static inline uint8_t  get_register_l(const ID48LIBX_STATE_REGISTERS* ssr) { return ((uint8_t )(ssr->Raw >> SSR_SHIFT_COUNT_REG_L)) & (SSR_VALUE_MASK_REG_L); }
-static inline uint8_t  get_register_m(const ID48LIBX_STATE_REGISTERS* ssr) { return ((uint8_t )(ssr->Raw >> SSR_SHIFT_COUNT_REG_M)) & (SSR_VALUE_MASK_REG_M); }
-static inline uint8_t  get_register_r(const ID48LIBX_STATE_REGISTERS* ssr) { return ((uint8_t )(ssr->Raw >> SSR_SHIFT_COUNT_REG_R)) & (SSR_VALUE_MASK_REG_R); }
+static inline uint16_t get_register_h(const ID48LIBX_STATE_REGISTERS *ssr) { return ((uint16_t)(ssr->Raw >> SSR_SHIFT_COUNT_REG_H)) & (SSR_VALUE_MASK_REG_H); }
+static inline uint32_t get_register_g(const ID48LIBX_STATE_REGISTERS *ssr) { return ((uint32_t)(ssr->Raw >> SSR_SHIFT_COUNT_REG_G)) & (SSR_VALUE_MASK_REG_G); }
+static inline uint8_t  get_register_l(const ID48LIBX_STATE_REGISTERS *ssr) { return ((uint8_t)(ssr->Raw >> SSR_SHIFT_COUNT_REG_L)) & (SSR_VALUE_MASK_REG_L); }
+static inline uint8_t  get_register_m(const ID48LIBX_STATE_REGISTERS *ssr) { return ((uint8_t)(ssr->Raw >> SSR_SHIFT_COUNT_REG_M)) & (SSR_VALUE_MASK_REG_M); }
+static inline uint8_t  get_register_r(const ID48LIBX_STATE_REGISTERS *ssr) { return ((uint8_t)(ssr->Raw >> SSR_SHIFT_COUNT_REG_R)) & (SSR_VALUE_MASK_REG_R); }
 
-static inline void set_register_h(ID48LIBX_STATE_REGISTERS* ssr, uint16_t v) { ASSERT((v & SSR_VALUE_MASK_REG_H) == v); ssr->Raw = (ssr->Raw & SSR_BITMASK_WITHOUT_REG_H) | (((uint64_t)(v & SSR_VALUE_MASK_REG_H)) << SSR_SHIFT_COUNT_REG_H); }
-static inline void set_register_g(ID48LIBX_STATE_REGISTERS* ssr, uint32_t v) { ASSERT((v & SSR_VALUE_MASK_REG_G) == v); ssr->Raw = (ssr->Raw & SSR_BITMASK_WITHOUT_REG_G) | (((uint64_t)(v & SSR_VALUE_MASK_REG_G)) << SSR_SHIFT_COUNT_REG_G); }
-static inline void set_register_l(ID48LIBX_STATE_REGISTERS* ssr, uint8_t  v) { ASSERT((v & SSR_VALUE_MASK_REG_L) == v); ssr->Raw = (ssr->Raw & SSR_BITMASK_WITHOUT_REG_L) | (((uint64_t)(v & SSR_VALUE_MASK_REG_L)) << SSR_SHIFT_COUNT_REG_L); }
-static inline void set_register_m(ID48LIBX_STATE_REGISTERS* ssr, uint8_t  v) { ASSERT((v & SSR_VALUE_MASK_REG_M) == v); ssr->Raw = (ssr->Raw & SSR_BITMASK_WITHOUT_REG_M) | (((uint64_t)(v & SSR_VALUE_MASK_REG_M)) << SSR_SHIFT_COUNT_REG_M); }
-static inline void set_register_r(ID48LIBX_STATE_REGISTERS* ssr, uint8_t  v) { ASSERT((v & SSR_VALUE_MASK_REG_R) == v); ssr->Raw = (ssr->Raw & SSR_BITMASK_WITHOUT_REG_R) | (((uint64_t)(v & SSR_VALUE_MASK_REG_R)) << SSR_SHIFT_COUNT_REG_R); }
+static inline void set_register_h(ID48LIBX_STATE_REGISTERS *ssr, uint16_t v) { ASSERT((v & SSR_VALUE_MASK_REG_H) == v); ssr->Raw = (ssr->Raw & SSR_BITMASK_WITHOUT_REG_H) | (((uint64_t)(v & SSR_VALUE_MASK_REG_H)) << SSR_SHIFT_COUNT_REG_H); }
+static inline void set_register_g(ID48LIBX_STATE_REGISTERS *ssr, uint32_t v) { ASSERT((v & SSR_VALUE_MASK_REG_G) == v); ssr->Raw = (ssr->Raw & SSR_BITMASK_WITHOUT_REG_G) | (((uint64_t)(v & SSR_VALUE_MASK_REG_G)) << SSR_SHIFT_COUNT_REG_G); }
+static inline void set_register_l(ID48LIBX_STATE_REGISTERS *ssr, uint8_t  v) { ASSERT((v & SSR_VALUE_MASK_REG_L) == v); ssr->Raw = (ssr->Raw & SSR_BITMASK_WITHOUT_REG_L) | (((uint64_t)(v & SSR_VALUE_MASK_REG_L)) << SSR_SHIFT_COUNT_REG_L); }
+static inline void set_register_m(ID48LIBX_STATE_REGISTERS *ssr, uint8_t  v) { ASSERT((v & SSR_VALUE_MASK_REG_M) == v); ssr->Raw = (ssr->Raw & SSR_BITMASK_WITHOUT_REG_M) | (((uint64_t)(v & SSR_VALUE_MASK_REG_M)) << SSR_SHIFT_COUNT_REG_M); }
+static inline void set_register_r(ID48LIBX_STATE_REGISTERS *ssr, uint8_t  v) { ASSERT((v & SSR_VALUE_MASK_REG_R) == v); ssr->Raw = (ssr->Raw & SSR_BITMASK_WITHOUT_REG_R) | (((uint64_t)(v & SSR_VALUE_MASK_REG_R)) << SSR_SHIFT_COUNT_REG_R); }
 #pragma endregion // Mask & Macro to get registers (in minimal bit form)
 
 /// <summary>
@@ -322,7 +321,7 @@ static inline void set_register_r(ID48LIBX_STATE_REGISTERS* ssr, uint8_t  v) { A
 /// <param name="k96">key in pm3 order</param>
 /// <param name="n56">nonce in pm3 order</param>
 /// <returns>56-bit value p₅₅..p₀₀</returns>
-static inline uint64_t calculate__p55_p00(const ID48LIB_KEY* k96, const ID48LIB_NONCE* n56) {
+static inline uint64_t calculate__p55_p00(const ID48LIB_KEY *k96, const ID48LIB_NONCE *n56) {
     // messy ... have to reverse the bits AND shift them into position,
     // perform the addition, and then reverse bits again to return to
     // native bit order (subscript is same as bit position).
@@ -334,7 +333,7 @@ static inline uint64_t calculate__p55_p00(const ID48LIB_KEY* k96, const ID48LIB_
     ASSERT(n56 != nullptr);
     uint64_t k40_k95 = 0;
     uint64_t n00_n55 = 0;
-    // 
+    //
     //     k [ 6] :== K₄₇..K₄₀
     //     ...
     //     k [ 0] :== K₉₅..K₈₈
@@ -367,7 +366,7 @@ static inline uint64_t calculate__p55_p00(const ID48LIB_KEY* k96, const ID48LIB_
 /// </summary>
 /// <param name="p55_p00">56 bit value: p₅₅..p₀₀</param>
 /// <returns>44-bit value: q₄₃..q₀₀</returns>
-static inline uint64_t calculate__q43_q00(const uint64_t* p55_p00) {
+static inline uint64_t calculate__q43_q00(const uint64_t *p55_p00) {
     ASSERT(p55_p00 != nullptr);
     static const uint64_t C_BITMASK44 = (1ull << 44) - 1u;
     uint64_t result = (*p55_p00 >>  2);
@@ -382,7 +381,7 @@ static inline uint64_t calculate__q43_q00(const uint64_t* p55_p00) {
 /// Relies on old g22 bit (now in L00).
 /// May modify G00, G03, G04, G05, G06, G13, G16
 /// </summary>
-static inline void g_successor(ID48LIBX_STATE_REGISTERS* ssr) {
+static inline void g_successor(ID48LIBX_STATE_REGISTERS *ssr) {
     ASSERT(ssr != nullptr);
     ASSERT(!is_ssr_state_stable(ssr));
     assign_single_ssr_bit(ssr, SSR_BIT_G00, test_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_j));
@@ -403,25 +402,26 @@ static inline void g_successor(ID48LIBX_STATE_REGISTERS* ssr) {
     }
 }
 
-static inline ID48LIBX_STATE_REGISTERS init_id48libx_state_register(const ID48LIB_KEY* k96, const ID48LIB_NONCE* n56) {
+static inline ID48LIBX_STATE_REGISTERS init_id48libx_state_register(const ID48LIB_KEY *k96, const ID48LIB_NONCE *n56) {
     ASSERT(k96 != nullptr);
     ASSERT(n56 != nullptr);
-    ID48LIBX_STATE_REGISTERS result; result.Raw = 0;
-    ID48LIBX_STATE_REGISTERS* const ssr = &result; // the pointer is constant ... not the value it points to
+    ID48LIBX_STATE_REGISTERS result;
+    result.Raw = 0;
+    ID48LIBX_STATE_REGISTERS *const ssr = &result; // the pointer is constant ... not the value it points to
 
     const uint64_t p55_p00 = calculate__p55_p00(k96, n56);
     // p55_p00 is used to set initial value of register l
     if (true) {
         static const uint8_t C_BITMASK7 = ((1u << 7) - 1u);
         const uint8_t l = (
-            ((uint8_t)(p55_p00 >> 55)) ^ //    0   0   0   0   0   0 p55
-            ((uint8_t)(p55_p00 >> 51)) ^ //    0   0 p55 p54 p53 p52 p51
-            ((uint8_t)(p55_p00 >> 45))   //  p51 p50 p49 p48 p47 p46 p45
-            ) & C_BITMASK7;
+                              ((uint8_t)(p55_p00 >> 55)) ^ //    0   0   0   0   0   0 p55
+                              ((uint8_t)(p55_p00 >> 51)) ^ //    0   0 p55 p54 p53 p52 p51
+                              ((uint8_t)(p55_p00 >> 45))   //  p51 p50 p49 p48 p47 p46 p45
+                          ) & C_BITMASK7;
         set_register_l(ssr, l);
         ASSERT(l == get_register_l(ssr));
     }
-    
+
     // p is used to calculate q
     const uint64_t q43_q00 = calculate__q43_q00(&p55_p00);
 
@@ -429,7 +429,7 @@ static inline ID48LIBX_STATE_REGISTERS init_id48libx_state_register(const ID48LI
     // ===> G(q₂₀..q₄₂, 0, q₀₀..q₁₉)
     // ===> g₀₀..g₂₂ :=== q₂₀..q₄₂
     //  and j₀₀..j₁₉ :=== q₀₀..q₁₉
-    // 
+    //
     // But, since I'm storing the register with g₀₀ as lsb:
     // ===> g₂₂..g₀₀ :=== q₄₂..q₂₀
     if (true) {
@@ -442,13 +442,12 @@ static inline ID48LIBX_STATE_REGISTERS init_id48libx_state_register(const ID48LI
     // input bits for `j` during init are q00..q19, with q19 used first
     // For ease of use, I'll generate this as q00..q19, so the loop
     // can test the lsb (and then shift it right one bit)
-    uint32_t q00_q19 = reverse_bits_32(  ((uint32_t)q43_q00) << 12  );
+    uint32_t q00_q19 = reverse_bits_32(((uint32_t)q43_q00) << 12);
     uint32_t q_lsb_next = q00_q19;
     ssr->Raw |= 1u;
 
     // G(g,0,j) twenty times, using q19, q18, ... q00 for `j`
-    for (uint8_t ix = 0; ix < 20; ++ix)
-    {
+    for (uint8_t ix = 0; ix < 20; ++ix) {
         ASSERT(is_ssr_state_stable(ssr));
         ssr->Raw <<= 1; // starts the process ... it's now an unstable value
         ASSERT(!is_ssr_state_stable(ssr));
@@ -478,27 +477,27 @@ static inline ID48LIBX_STATE_REGISTERS init_id48libx_state_register(const ID48LI
 
 /// <summary>
 /// H(h) matches the research paper, definition 3.3
-/// 
+///
 /// Reads bits H01, H08, H09, H11, H12.
 /// </summary>
 /// <remarks>
 /// If ssr is in unstable state, caller is responsible for ensuring
 /// the values have not changed.
 /// </remarks>
-static inline bool calculate_feedback_h(const ID48LIBX_STATE_REGISTERS* ssr) {
+static inline bool calculate_feedback_h(const ID48LIBX_STATE_REGISTERS *ssr) {
     ASSERT(ssr != nullptr);
     // ( h₀₁ && h₀₈ ) || ( h₀₉ && h₁₁ ) || (!h₁₂        )
     // \____ a1 ____/    \____ a2 ____/    \____ a3 ____/
     // result == xor(a1,a2,a3)
     bool a1 = is_ssr_state_stable(ssr) ?
-        test_single_ssr_bit(ssr, SSR_BIT_H01)              && test_single_ssr_bit(ssr, SSR_BIT_H08) :
-        test_single_ssr_bit(ssr, SSR_UNSTABLE_OLD_BIT_H01) && test_single_ssr_bit(ssr, SSR_UNSTABLE_OLD_BIT_H08);
+              test_single_ssr_bit(ssr, SSR_BIT_H01)              && test_single_ssr_bit(ssr, SSR_BIT_H08) :
+              test_single_ssr_bit(ssr, SSR_UNSTABLE_OLD_BIT_H01) && test_single_ssr_bit(ssr, SSR_UNSTABLE_OLD_BIT_H08);
     bool a2 = is_ssr_state_stable(ssr) ?
-        test_single_ssr_bit(ssr, SSR_BIT_H09)              && test_single_ssr_bit(ssr, SSR_BIT_H11) :
-        test_single_ssr_bit(ssr, SSR_UNSTABLE_OLD_BIT_H09) && test_single_ssr_bit(ssr, SSR_UNSTABLE_OLD_BIT_H11);
+              test_single_ssr_bit(ssr, SSR_BIT_H09)              && test_single_ssr_bit(ssr, SSR_BIT_H11) :
+              test_single_ssr_bit(ssr, SSR_UNSTABLE_OLD_BIT_H09) && test_single_ssr_bit(ssr, SSR_UNSTABLE_OLD_BIT_H11);
     bool a3 = is_ssr_state_stable(ssr) ?
-        !test_single_ssr_bit(ssr, SSR_BIT_H12) :
-        !test_single_ssr_bit(ssr, SSR_UNSTABLE_OLD_BIT_H12);
+              !test_single_ssr_bit(ssr, SSR_BIT_H12) :
+              !test_single_ssr_bit(ssr, SSR_UNSTABLE_OLD_BIT_H12);
     bool result = false;
     if (a1) result = !result;
     if (a2) result = !result;
@@ -510,7 +509,7 @@ static inline bool calculate_feedback_h(const ID48LIBX_STATE_REGISTERS* ssr) {
 /// fₗ(...) matches the research paper, definition 3.4
 /// hard-coded to use bits for calculation of 'a'
 /// </summary>
-static inline bool calculate_feedback_l(const ID48LIBX_STATE_REGISTERS* ssr) {
+static inline bool calculate_feedback_l(const ID48LIBX_STATE_REGISTERS *ssr) {
     ASSERT(ssr != nullptr);
     // a = fₗ( g00  g04  g06  g13  g18  h03  ) ⊕  g22  ⊕  r02  ⊕  r06
     //     fₗ(  x₀   x₁   x₂   x₃   x₄   x₅ )
@@ -534,7 +533,7 @@ static inline bool calculate_feedback_l(const ID48LIBX_STATE_REGISTERS* ssr) {
 /// fₘ(...) matches the research paper, definition 3.5
 /// hard-coded to use bits for calculation of 'b'
 /// </summary>
-static inline bool calculate_feedback_m(const ID48LIBX_STATE_REGISTERS* ssr) {
+static inline bool calculate_feedback_m(const ID48LIBX_STATE_REGISTERS *ssr) {
     ASSERT(ssr != nullptr);
     // b = fₘ( g01  g05  g10  g15  h00  h07 ) ⊕  l00  ⊕  l03  ⊕  l06
     //     fₘ( x₀   x₁   x₂   x₃   x₄   x₅ )
@@ -558,7 +557,7 @@ static inline bool calculate_feedback_m(const ID48LIBX_STATE_REGISTERS* ssr) {
 /// fᵣ(...) matches the research paper, definition 3.6
 /// hard-coded to use bits for calculation of 'c'
 /// </summary>
-static inline bool calculate_feedback_r(const ID48LIBX_STATE_REGISTERS* ssr) {
+static inline bool calculate_feedback_r(const ID48LIBX_STATE_REGISTERS *ssr) {
     ASSERT(ssr != nullptr);
     ASSERT(!is_ssr_state_stable(ssr));
     // c = fᵣ( g02  g03⊕i  g09  g14  g16  h01 ) ⊕  m00  ⊕  m03  ⊕  m06
@@ -583,7 +582,7 @@ static inline bool calculate_feedback_r(const ID48LIBX_STATE_REGISTERS* ssr) {
 /// Matches the research paper, definition 3.7
 /// See also Definition 3.2, defining that parameter as `j`.
 /// </summary>
-static inline bool calculate_j(const ID48LIBX_STATE_REGISTERS* ssr) {
+static inline bool calculate_j(const ID48LIBX_STATE_REGISTERS *ssr) {
     ASSERT(ssr != nullptr);
     // g′  := G(g, i, l₀₁ ⊕ m₀₆ ⊕ h₀₂ ⊕ h₀₈ ⊕ h₁₂)
     //                ^^^^^^^^^^^^^^^^^^^^^^^^^^^------ calculates `j`
@@ -602,22 +601,22 @@ static inline bool calculate_j(const ID48LIBX_STATE_REGISTERS* ssr) {
 /// Calculates a, b, c, j and new value for H₀₀.
 /// These are the only bits changed by this function.
 /// </summary>
-static inline void calculate_temporaries(ID48LIBX_STATE_REGISTERS* ssr) {
+static inline void calculate_temporaries(ID48LIBX_STATE_REGISTERS *ssr) {
     ASSERT(ssr != nullptr);
-#pragma region    // to be removed after all is validated
+    #pragma region    // to be removed after all is validated
     static const uint64_t bits_must_remain_same_mask =
-    ~(
-        (1ull << SSR_UNSTABLE_BIT_a) |
-        (1ull << SSR_UNSTABLE_BIT_b) |
-        (1ull << SSR_UNSTABLE_BIT_c) |
-        (1ull << SSR_UNSTABLE_BIT_j) |
-        (1ull << SSR_UNSTABLE_NEW_BIT_H00)
+        ~(
+            (1ull << SSR_UNSTABLE_BIT_a) |
+            (1ull << SSR_UNSTABLE_BIT_b) |
+            (1ull << SSR_UNSTABLE_BIT_c) |
+            (1ull << SSR_UNSTABLE_BIT_j) |
+            (1ull << SSR_UNSTABLE_NEW_BIT_H00)
         );
 
     const uint64_t backup = ssr->Raw & bits_must_remain_same_mask;
     (void)backup; // to avoid warning about unused variable
-#pragma endregion // to be removed after all is validated
-    
+    #pragma endregion // to be removed after all is validated
+
     // Only bits that change value: H00, a, b, c, j
 
     ASSERT(!is_ssr_state_stable(ssr)); // assigning temp values directly in ssr, so...
@@ -643,29 +642,30 @@ static inline void calculate_temporaries(ID48LIBX_STATE_REGISTERS* ssr) {
     if (test_single_ssr_bit(ssr, SSR_UNSTABLE_OLD_BIT_M03)) flip_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_c);
     if (test_single_ssr_bit(ssr, SSR_UNSTABLE_OLD_BIT_M06)) flip_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_c);
 
-#pragma region    // to be removed after all is validated
+    #pragma region    // to be removed after all is validated
     const uint64_t chk = ssr->Raw & bits_must_remain_same_mask;
     (void)chk; // to avoid warning about unused variable
     ASSERT(chk == backup);
-#pragma endregion // to be removed after all is validated
+    #pragma endregion // to be removed after all is validated
 
     return;
 }
 
 
-static inline OUTPUT_INDEX2 calculate_output_index(const ID48LIBX_STATE_REGISTERS* ssr) {
+static inline OUTPUT_INDEX2 calculate_output_index(const ID48LIBX_STATE_REGISTERS *ssr) {
     //           Fₒ( abc l₀l₂l₃l₄l₅l₆ m₀m₁m₃m₅ r₀r₁r₂r₃r₄r₅r₆ )
     //     msb 19 ---^                           lsb 00 ---^^
     ASSERT(ssr != nullptr);
     ASSERT(!is_ssr_state_stable(ssr));
-    OUTPUT_INDEX2 result; result.Raw = 0;
-    if (test_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_a      )) result.Raw |= (1u << 19);
-    if (test_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_b      )) result.Raw |= (1u << 18);
-    if (test_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_c      )) result.Raw |= (1u << 17);
+    OUTPUT_INDEX2 result;
+    result.Raw = 0;
+    if (test_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_a)) result.Raw |= (1u << 19);
+    if (test_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_b)) result.Raw |= (1u << 18);
+    if (test_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_c)) result.Raw |= (1u << 17);
     //bool bit17 = test_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_c);
     //if (test_single_ssr_bit(ssr, SSR_UNSTABLE_BIT_i)      ) bit17 = !bit17;
     //if (bit17                                              ) result.Raw |= (1u << 17);
-    if (test_single_ssr_bit(ssr, SSR_UNSTABLE_OLD_BIT_L00)) result.Raw |= (1u << 16); 
+    if (test_single_ssr_bit(ssr, SSR_UNSTABLE_OLD_BIT_L00)) result.Raw |= (1u << 16);
     if (test_single_ssr_bit(ssr, SSR_UNSTABLE_OLD_BIT_L02)) result.Raw |= (1u << 15);
     if (test_single_ssr_bit(ssr, SSR_UNSTABLE_OLD_BIT_L03)) result.Raw |= (1u << 14);
     if (test_single_ssr_bit(ssr, SSR_UNSTABLE_OLD_BIT_L04)) result.Raw |= (1u << 13);
@@ -686,7 +686,7 @@ static inline OUTPUT_INDEX2 calculate_output_index(const ID48LIBX_STATE_REGISTER
 }
 
 // returns a single bit corresponding to the output bit for this transition
-static inline bool calculate_successor_state(ID48LIBX_STATE_REGISTERS* ssr, bool i) {
+static inline bool calculate_successor_state(ID48LIBX_STATE_REGISTERS *ssr, bool i) {
     ASSERT(ssr != nullptr);
     ASSERT(is_ssr_state_stable(ssr));
 
@@ -718,7 +718,7 @@ static inline bool calculate_successor_state(ID48LIBX_STATE_REGISTERS* ssr, bool
     // 4. calculate and save output index
     OUTPUT_INDEX2 output_index = calculate_output_index(ssr); // note: does *NOT* rely on new H00 value
     bool output_result = id48libx_output_lookup(output_index.Raw);
-    
+
     // 5. g --> g', aka G(g, i, j)
     g_successor(ssr);
 
@@ -735,7 +735,7 @@ static inline bool calculate_successor_state(ID48LIBX_STATE_REGISTERS* ssr, bool
 
     // Keep only the registers (no temporaries)
     ssr->Raw &= SSR_BITMASK_REG_ALL;
-    
+
     // Mark as stable view of the SSR
     ssr->Raw |= 1u;
 
@@ -748,14 +748,15 @@ static inline bool calculate_successor_state(ID48LIBX_STATE_REGISTERS* ssr, bool
 /// by one bit each iteration (allowing least significant bit
 /// to always be the input bit).
 /// </summary>
-static inline INPUT_BITS2 get_key_input_bits(const ID48LIB_KEY* k) {
+static inline INPUT_BITS2 get_key_input_bits(const ID48LIB_KEY *k) {
     ASSERT(k != nullptr);
 
     // Per research paper, key bit 39 is used first.
     // So, what should end up in result is: 0²⁴ k₀₀..K₃₉
     // This allows simply shifting the lsb out each cycle....
 
-    INPUT_BITS2 result; result.Raw = 0;
+    INPUT_BITS2 result;
+    result.Raw = 0;
 
     //     k[ 0] :== K₉₅..K₈₈
     //     ...
@@ -775,19 +776,19 @@ static inline INPUT_BITS2 get_key_input_bits(const ID48LIB_KEY* k) {
     return result;
 }
 
-static inline bool shift_out_next_input_bit(INPUT_BITS2* inputs) {
+static inline bool shift_out_next_input_bit(INPUT_BITS2 *inputs) {
     ASSERT(inputs != nullptr);
     bool result = inputs->Raw & 1ull;
     inputs->Raw >>= 1;
     return result;
 }
-static inline void shift_in_next_output_bit(OUTPUT_BITS2* outputs, bool v) {
+static inline void shift_in_next_output_bit(OUTPUT_BITS2 *outputs, bool v) {
     ASSERT(outputs != nullptr);
     outputs->Raw <<= 1;
     if (v) outputs->Raw |= 1ull;
 }
 
-static inline void extract_frn(const OUTPUT_BITS2* outputs, ID48LIB_FRN* frn28_out) {
+static inline void extract_frn(const OUTPUT_BITS2 *outputs, ID48LIB_FRN *frn28_out) {
     ASSERT(outputs   != nullptr);
     ASSERT(frn28_out != nullptr);
 
@@ -802,7 +803,7 @@ static inline void extract_frn(const OUTPUT_BITS2* outputs, ID48LIB_FRN* frn28_o
     frn28_out->frn[2] = (uint8_t)((tmp >> (8 * 1)) & 0xFFu);
     frn28_out->frn[3] = (uint8_t)((tmp >> (8 * 0)) & 0xFFu);
 }
-static inline void extract_grn(const OUTPUT_BITS2* outputs, ID48LIB_GRN* grn20_out) {
+static inline void extract_grn(const OUTPUT_BITS2 *outputs, ID48LIB_GRN *grn20_out) {
     ASSERT(outputs   != nullptr);
     ASSERT(grn20_out != nullptr);
     memset(grn20_out, 0, sizeof(ID48LIB_GRN));
@@ -817,12 +818,11 @@ static inline void extract_grn(const OUTPUT_BITS2* outputs, ID48LIB_GRN* grn20_o
 }
 
 static void retro_generator_impl(
-    const ID48LIB_KEY* k,
-    const ID48LIB_NONCE* n,
-    ID48LIB_FRN* frn28_out,
-    ID48LIB_GRN* grn20_out
-    )
-{
+    const ID48LIB_KEY *k,
+    const ID48LIB_NONCE *n,
+    ID48LIB_FRN *frn28_out,
+    ID48LIB_GRN *grn20_out
+) {
     ASSERT(k         != nullptr);
     ASSERT(n         != nullptr);
     ASSERT(frn28_out != nullptr);
@@ -834,7 +834,8 @@ static void retro_generator_impl(
 
     // get 55-bit successor state input
     INPUT_BITS2 inputs  = get_key_input_bits(k);
-    OUTPUT_BITS2 outputs;  outputs.Raw = 0ull;
+    OUTPUT_BITS2 outputs;
+    outputs.Raw = 0ull;
     for (uint8_t ix = 0; ix < 55; ix++) {
         ASSERT(is_ssr_state_stable(&ssr));
 
@@ -865,9 +866,10 @@ static void retro_generator_impl(
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // internal function
-ID48LIBX_SUCCESSOR_RESULT id48libx_retro003_successor(const ID48LIBX_STATE_REGISTERS* initial_state, uint8_t input_bit) {
+ID48LIBX_SUCCESSOR_RESULT id48libx_retro003_successor(const ID48LIBX_STATE_REGISTERS *initial_state, uint8_t input_bit) {
     ASSERT(initial_state != nullptr);
-    ID48LIBX_SUCCESSOR_RESULT r; memset(&r, 0, sizeof(ID48LIBX_SUCCESSOR_RESULT));
+    ID48LIBX_SUCCESSOR_RESULT r;
+    memset(&r, 0, sizeof(ID48LIBX_SUCCESSOR_RESULT));
     ID48LIBX_STATE_REGISTERS s = *initial_state;
     bool output_bit = calculate_successor_state(&s, !!input_bit);
     r.state.Raw = s.Raw;
@@ -875,23 +877,23 @@ ID48LIBX_SUCCESSOR_RESULT id48libx_retro003_successor(const ID48LIBX_STATE_REGIS
     return r;
 }
 // internal function
-ID48LIBX_STATE_REGISTERS  id48libx_retro003_init(const ID48LIB_KEY* key, const ID48LIB_NONCE* nonce) {
+ID48LIBX_STATE_REGISTERS  id48libx_retro003_init(const ID48LIB_KEY *key, const ID48LIB_NONCE *nonce) {
     ASSERT(key != nullptr);
     ASSERT(nonce != nullptr);
 
     ID48LIBX_STATE_REGISTERS ssr = init_id48libx_state_register(key, nonce);
-    ID48LIBX_STATE_REGISTERS result; memset(&result, 0, sizeof(ID48LIBX_STATE_REGISTERS));
+    ID48LIBX_STATE_REGISTERS result;
+    memset(&result, 0, sizeof(ID48LIBX_STATE_REGISTERS));
     result.Raw = ssr.Raw;
     return result;
 }
 
 // public API
 void id48lib_generator(
-    const ID48LIB_KEY* k,
-    const ID48LIB_NONCE* n,
-    ID48LIB_FRN* frn28_out,
-    ID48LIB_GRN* grn20_out
-)
-{
+    const ID48LIB_KEY *k,
+    const ID48LIB_NONCE *n,
+    ID48LIB_FRN *frn28_out,
+    ID48LIB_GRN *grn20_out
+) {
     retro_generator_impl(k, n, frn28_out, grn20_out);
 }

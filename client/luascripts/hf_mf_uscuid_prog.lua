@@ -105,7 +105,7 @@ end
 local function wupc()
 	return{
 	[0] = 'hf 14a raw -akb 7 40',
-	[1] = 'hf 14a raw -k 43', 
+	[1] = 'hf 14a raw -k 43',
 	}
 end
 
@@ -152,7 +152,7 @@ local function BlockParser(data, block)
     		print("["..ansicolors.yellow.."="..ansicolors.reset.."]    "..string.format("%02d", block).." | "..ansicolors.red..string.sub(data,1,2).." "..string.sub(data,3,4).." "..string.sub(data,5,6).." "..string.sub(data,7,8).." "..string.sub(data,9,10).." "..string.sub(data,11,12).." "..string.sub(data,13,14).." "..string.sub(data,15,16).." "..string.sub(data,17,18).." "..string.sub(data,19,20).." "..string.sub(data,21,22).." "..string.sub(data,23,24).." "..string.sub(data,25,26).." "..string.sub(data,27,28).." "..string.sub(data,29,30).." "..string.sub(data,31,32)..ansicolors.reset)
     	elseif (block+1)%4 == 0 then -- for ST
     		print("["..ansicolors.yellow.."="..ansicolors.reset.."]    "..string.format("%02d", block).." | "..ansicolors.yellow..string.sub(data,1,2).." "..string.sub(data,3,4).." "..string.sub(data,5,6).." "..string.sub(data,7,8).." "..string.sub(data,9,10).." "..string.sub(data,11,12).." "..ansicolors.magenta..string.sub(data,13,14).." "..string.sub(data,15,16).." "..string.sub(data,17,18).." "..ansicolors.reset..string.sub(data,19,20).." "..ansicolors.yellow..string.sub(data,21,22).." "..string.sub(data,23,24).." "..string.sub(data,25,26).." "..string.sub(data,27,28).." "..string.sub(data,29,30).." "..string.sub(data,31,32)..ansicolors.reset)
-    	else 
+    	else
     		print("["..ansicolors.yellow.."="..ansicolors.reset.."]    "..string.format("%02d", block).." | "..string.sub(data,1,2).." "..string.sub(data,3,4).." "..string.sub(data,5,6).." "..string.sub(data,7,8).." "..string.sub(data,9,10).." "..string.sub(data,11,12).." "..string.sub(data,13,14).." "..string.sub(data,15,16).." "..string.sub(data,17,18).." "..string.sub(data,19,20).." "..string.sub(data,21,22).." "..string.sub(data,23,24).." "..string.sub(data,25,26).." "..string.sub(data,27,28).." "..string.sub(data,29,30).." "..string.sub(data,31,32)) end
 end
 local function sendRaw(rawdata, keep)
@@ -177,7 +177,7 @@ end
 -- Functions to work with configuration data (E000, E100 cmds)
 local function readconf()
 	configbuffer = sendRaw("E000", true)
-	if string.len(configbuffer) ~= 36 then 
+	if string.len(configbuffer) ~= 36 then
     		oops("Tag sent wrong length of config!")
     		lib14a.disconnect()
     	return 1 end
@@ -186,9 +186,9 @@ end
 local function writeconf(configbuffer)
 	configbuffer=utils.ConvertBytesToHex(configbuffer)
 	print(ansicolors.yellow.."[|]".. ansicolors.reset .." The new config is: "..configbuffer)
-	if sendRaw("E100", true) == "0A" then 
-		if sendRaw(configbuffer, true) == "0A" then 
-			print(ansicolors.yellow.."[/]".. ansicolors.reset .." Config updated successfully") 
+	if sendRaw("E100", true) == "0A" then
+		if sendRaw(configbuffer, true) == "0A" then
+			print(ansicolors.yellow.."[/]".. ansicolors.reset .." Config updated successfully")
 		else
 			oops("Tag did not ACK config update!")
 			lib14a.disconnect()
@@ -211,7 +211,7 @@ function main(args)
     local f3perso = false
     local signature = nil
     local wipe = false
-    
+
     local targetblk = nil
     local targetbblk = nil
     local targetbsec = nil
@@ -226,7 +226,7 @@ function main(args)
     local magicauth = nil
     local statenc = nil
     local sigsec = nil
-    
+
     local configwrite = nil
     -- End of ConfigStar
     -- Parse arguments
@@ -255,7 +255,7 @@ function main(args)
 	if o == 'r' then if a == "1" then sigsec = true elseif a == "0" then sigsec= false end end
     end
     if gen1 ~= nil or gen1com~= nil or keyblock~= nil or cuid~= nil or cl2mode~= nil or shadowmode~= nil or magicauth~= nil or statenc~= nil or sigsec~= nil then configwrite = true end
-    
+
     if targetbblk then if tonumber(targetbblk)>63 then oops("Block is above 63") return 1 end end
     if targetblk then if tonumber(targetblk)>63 then oops("Block is above 63") return 1 end end
     if targetsec then if tonumber(targetsec)>15 then oops("Sector is above 15") return 1 end end
@@ -336,7 +336,7 @@ function main(args)
     	-- Now, let's write! 1. We wake up the tag in magic mode.
     	-- 2. We will deal with the "easier" 7 byte UID stuff
     	if uid then
-    	if string.len(uid) == 14 then 
+    	if string.len(uid) == 14 then
     		wakeupmagic(writetype)
     		if f3perso == true then print("[?] WARNING: F3 perso write is set, but 7 byte UID is passed. Ignoring -3 argument") end
     		local configdata = readconf()
@@ -347,20 +347,20 @@ function main(args)
     			configdata[10]=0x5A
     			writeconf(configdata)
     		end
-    		if sendRaw("A800", true) ~= "0A" then 
-    			oops("Tag did not ACK `A800` command!") 
+    		if sendRaw("A800", true) ~= "0A" then
+    			oops("Tag did not ACK `A800` command!")
      			lib14a.disconnect()
      		return 1 end
      		print("[?] WARNING: nUID should be updated with this value:")
 		print(makenuid(uid))
 		print(ansicolors.yellow.."[/]".. ansicolors.reset .." Use `--f3d` to update nUID for Perso F3 only.")
-		if sendRaw(payload, true) ~= "0A" then 
-			oops("Tag did not ACK data to write!") 
+		if sendRaw(payload, true) ~= "0A" then
+			oops("Tag did not ACK data to write!")
 			lib14a.disconnect()
 		return 1 end
 		print(ansicolors.yellow.."[-]".. ansicolors.reset .." Updating real block 0")
-		if sendRaw("A000", true) ~= "0A" then 
-			oops("Tag did not ACK `A000` command!") 
+		if sendRaw("A000", true) ~= "0A" then
+			oops("Tag did not ACK `A000` command!")
 			lib14a.disconnect()
 		return 1 end
 		if sendRaw(cltwo_block0(uid), false) ~="0A" then oops("Tag did not ACK data to write!") end
@@ -370,8 +370,8 @@ function main(args)
 		local configdata = readconf()
 		if configdata[10] == 0x69 or f3perso == true then -- If we have Perso: F3, then write backdoor blk 1
 			if f3perso == true then print ("[?] WARNING: F3 flag enabled. Updating UID used for F3 perso") end
-			if sendRaw("A801", true) ~= "0A" then 
-    				oops("Tag did not ACK `A801` command!") 
+			if sendRaw("A801", true) ~= "0A" then
+    				oops("Tag did not ACK `A801` command!")
      				lib14a.disconnect()
      			return 1 end
      		else -- Otherwise write real block 0.
@@ -382,8 +382,8 @@ function main(args)
     				configdata[10]=0x00
     				writeconf(configdata)
     			end
-     			if sendRaw("A000", true) ~= "0A" then 
-    				oops("Tag did not ACK `A000` command!") 
+     			if sendRaw("A000", true) ~= "0A" then
+    				oops("Tag did not ACK `A000` command!")
      				lib14a.disconnect()
      				return 1 end
      		end
@@ -400,20 +400,20 @@ function main(args)
     		configdata[14] = 0x5A
     		writeconf(configdata)
     	end
-    	if sendRaw("A805", true) ~= "0A" then 
-    		oops("Tag did not ACK `A805` command!") 
+    	if sendRaw("A805", true) ~= "0A" then
+    		oops("Tag did not ACK `A805` command!")
      		lib14a.disconnect()
      	return 1 end
-     	if sendRaw(string.sub(signature,1,32), true) ~= "0A" then 
-    		oops("Tag did not ACK data 1 to write!") 
+     	if sendRaw(string.sub(signature,1,32), true) ~= "0A" then
+    		oops("Tag did not ACK data 1 to write!")
      		lib14a.disconnect()
      	return 1 end
-     	if sendRaw("A806", true) ~= "0A" then 
-    		oops("Tag did not ACK `A806` command!") 
+     	if sendRaw("A806", true) ~= "0A" then
+    		oops("Tag did not ACK `A806` command!")
      		lib14a.disconnect()
      	return 1 end
      	if sendRaw(string.sub(signature,33,64), false) ~= "0A" then
-     	    	oops("Tag did not ACK data 2 to write!") 
+     	    	oops("Tag did not ACK data 2 to write!")
      		lib14a.disconnect()
      	return 1 end
     end
@@ -422,7 +422,7 @@ function main(args)
     	wakeupmagic(writetype)
     	config=readconf()
     	if (gen1 == false and magicauth == false) or ((config[1]==0x85 and config[2] == 0x00) and magicauth==false) or ((config[12]==0x00) and gen1 == false) then
-    		oops("What you are about to do is potentially dangerous. \n    If you really want to continue (potentially leaving your tag in an unusable state), enter this line as given, without quotation marks:\n    \"Yes, do as I say!\"") 
+    		oops("What you are about to do is potentially dangerous. \n    If you really want to continue (potentially leaving your tag in an unusable state), enter this line as given, without quotation marks:\n    \"Yes, do as I say!\"")
     		local ans=io.read()
     		if ans ~="Yes, do as I say!" then
     			lib14a.disconnect()

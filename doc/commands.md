@@ -610,6 +610,7 @@ Check column "offline" for their availability.
 |`hf mfu restore         `|N       |`Restore a dump file onto a tag`
 |`hf mfu tamper          `|N       |`NTAG 213TT - Configure the tamper feature`
 |`hf mfu view            `|Y       |`Display content from tag dump file`
+|`hf mfu wipe            `|N       |`Wipe card to zeros and default key`
 |`hf mfu wrbl            `|N       |`Write block`
 |`hf mfu eload           `|N       |`Upload file into emulator memory`
 |`hf mfu esave           `|N       |`Save emulator memory to file`
@@ -771,6 +772,16 @@ Check column "offline" for their availability.
 |`hf vas help            `|Y       |`This help`
 |`hf vas reader          `|N       |`Read and decrypt VAS message`
 |`hf vas decrypt         `|Y       |`Decrypt a previously captured VAS cryptogram`
+
+
+### hf waveshare
+
+ { Waveshare NFC ePaper...             }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf waveshare help      `|Y       |`This help`
+|`hf waveshare load      `|Y       |`Load image file to Waveshare NFC ePaper`
 
 
 ### hf xerox
@@ -960,8 +971,8 @@ Check column "offline" for their availability.
 |`lf em 4x70 write       `|N       |`Write EM4x70`
 |`lf em 4x70 unlock      `|N       |`Unlock EM4x70 for writing`
 |`lf em 4x70 auth        `|N       |`Authenticate EM4x70`
-|`lf em 4x70 setpin      `|N       |`Write new PIN`
-|`lf em 4x70 setkey      `|N       |`Write new key`
+|`lf em 4x70 setpin      `|N       |`Write PIN`
+|`lf em 4x70 setkey      `|N       |`Write key`
 |`lf em 4x70 recover     `|Y       |`Recover remaining key from partial key`
 |`lf em 4x70 autorecover `|N       |`Recover entire key from writable tag`
 

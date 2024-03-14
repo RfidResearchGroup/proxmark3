@@ -2565,7 +2565,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
             break;
         }
     }
-    
+
     return res;
 }
 //
@@ -5348,10 +5348,10 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
     PrintAndLogEx(INFO, "Start wiping...");
     PrintAndLogEx(INFO, "-----+-----------------------------");
     // time to wipe card
-    // We skip the first four blocks. 
+    // We skip the first four blocks.
     //  block 0,1  - UID
-    //  block 2    - lock 
-    //  block 3    - OTP 
+    //  block 2    - lock
+    //  block 3    - OTP
     for (uint8_t i = 4; i < card_mem_size; i++) {
 
         if (kbd_enter_pressed()) {
@@ -5361,23 +5361,23 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
 
         uint8_t data[MFU_BLOCK_SIZE];
         memset(data, 0x00, sizeof(data));
-        
+
         // UL_C specific
         if ((tagtype & MFU_TT_UL_C)) {
             // Set DES key..  Skipping for now.
         }
 
         // UL_AES specific
-        if ((tagtype & MFU_TT_UL_AES)) {  
+        if ((tagtype & MFU_TT_UL_AES)) {
             // Set AES key..  Skipping for now since no access to such card.
         }
 
         // UL / NTAG with PWD/PACK
         if ((tagtype & (MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1 | MFU_TT_UL_NANO_40 |
-                    MFU_TT_NTAG_210u | MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C |
-                    MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216 | MFU_TT_NTAG_216_F |
-                    MFU_TT_NTAG_I2C_1K | MFU_TT_NTAG_I2C_2K | MFU_TT_NTAG_I2C_1K_PLUS | MFU_TT_NTAG_I2C_2K_PLUS
-                    ))) {
+                        MFU_TT_NTAG_210u | MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C |
+                        MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216 | MFU_TT_NTAG_216_F |
+                        MFU_TT_NTAG_I2C_1K | MFU_TT_NTAG_I2C_2K | MFU_TT_NTAG_I2C_1K_PLUS | MFU_TT_NTAG_I2C_2K_PLUS
+                       ))) {
 
 
             // cfg 1
@@ -5405,8 +5405,8 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
                 memset(data, 0xFF, sizeof(data));
             }
 
-            // Since we changed PWD before, we need to use new PWD to set PACK            
-            // Pack will be all zeros,  
+            // Since we changed PWD before, we need to use new PWD to set PACK
+            // Pack will be all zeros,
             if (i == card_mem_size - 1) {
                 memset(auth_key_ptr, 0xFF, ak_len);
             }

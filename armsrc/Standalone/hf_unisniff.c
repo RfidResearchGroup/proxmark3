@@ -60,14 +60,14 @@
  *     which protocol to sniff.  If you choose a protocol it will go directly
  *     to work. If you choose 'user' you may select the protocol at the start
  *     of each session.
- * 
- *  hf_unisniff.conf sample file: 
+ *
+ *  hf_unisniff.conf sample file:
  *  save=new
  *  protocol=14a
  *
  *  Upload it to the Proxmark3 spiffs.
  *  mem spiffs upload -s hf_unisniff.conf -d hf_unisniff.conf
- * 
+ *
  *  To use the mode:
  *  Start mode by pressing the Proxmark3 button for 3 seconds.  See ledshow as indicator its in standalone mode.
  *  present proxmark3 and card to the reader.
@@ -159,7 +159,7 @@ void ModInfo(void) {
     DbpString("  HF UNISNIFF - multimode HF sniffer (hazardousvoltage)");
     Dbprintf("  Compile-time default protocol... %s", HF_UNISNIFF_PROTOCOL);
 #ifdef WITH_FLASH
-   DbpString("  FLASH support................... yes");
+    DbpString("  FLASH support................... yes");
 #endif
 }
 
@@ -169,17 +169,17 @@ void RunMod(void) {
 
     Dbprintf(_YELLOW_("HF UNISNIFF started"));
 
-    const char *protocols[] = {"14a", "14b", "15", "iclass","user"};
+    const char *protocols[] = {"14a", "14b", "15", "iclass", "user"};
 
     // some magic to allow for `hw standalone` command to trigger a particular sniff from inside the pm3 client
-    const char *bb = (const char*)BigBuf_get_EM_addr();
+    const char *bb = (const char *)BigBuf_get_EM_addr();
     uint8_t sniff_protocol;
-    if (strlen(bb) > 0 ) {
+    if (strlen(bb) > 0) {
         for (sniff_protocol = 0; sniff_protocol < ARRAYLEN(protocols); sniff_protocol++) {
             if (strcmp(protocols[sniff_protocol], bb) == 0) {
                 break;
             }
-        }       
+        }
     } else {
         for (sniff_protocol = 0; sniff_protocol < ARRAYLEN(protocols); sniff_protocol++) {
             if (strcmp(protocols[sniff_protocol], HF_UNISNIFF_PROTOCOL) == 0) {
@@ -217,10 +217,10 @@ void RunMod(void) {
         char *d = &config_buffer[0];
 
         rdv40_spiffs_read_as_filetype(HF_UNISNIFF_CONFIG
-                , (uint8_t *)d
-                , fsize
-                , RDV40_SPIFFS_SAFETY_SAFE
-            );
+                                      , (uint8_t *)d
+                                      , fsize
+                                      , RDV40_SPIFFS_SAFETY_SAFE
+                                     );
 
         // This parser is terrible but I think fairly memory efficient?  Maybe better to use JSON?
         char *x = d;
@@ -310,7 +310,7 @@ void RunMod(void) {
 
                 SpinDelay(100);
                 Dbprintf("Selected protocol.... " _YELLOW_("%s"), protocols[sniff_protocol]);
-            } 
+            }
 
             if (button_pressed == BUTTON_HOLD) {
                 Dbprintf("Executing protocol... " _YELLOW_("%s"), protocols[sniff_protocol]);
@@ -384,11 +384,11 @@ void RunMod(void) {
                 }
 
                 sprintf(filename, "%s_%s-%03d%s"
-                    , HF_UNISNIFF_LOGFILE
-                    , protocols[sniff_protocol]
-                    , file_index
-                    , HF_UNISNIFF_LOGEXT
-                );
+                        , HF_UNISNIFF_LOGFILE
+                        , protocols[sniff_protocol]
+                        , file_index
+                        , HF_UNISNIFF_LOGEXT
+                       );
             }
 
             if (file_index > 999) {
@@ -397,7 +397,7 @@ void RunMod(void) {
                 rdv40_spiffs_write(filename, trace_buffer, trace_len, RDV40_SPIFFS_SAFETY_SAFE);
                 Dbprintf("Wrote trace to " _YELLOW_("%s"), filename);
             }
-        } 
+        }
 
         if (save_mode == HF_UNISNIFF_SAVE_MODE_APPEND) {
 

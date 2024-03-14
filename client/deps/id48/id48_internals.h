@@ -45,8 +45,8 @@ typedef struct _ID48LIBX_SUCCESSOR_RESULT {
 } ID48LIBX_SUCCESSOR_RESULT;
 
 // the following are used in key recovery but implemented in id48.c
-ID48LIBX_SUCCESSOR_RESULT id48libx_retro003_successor(const ID48LIBX_STATE_REGISTERS* initial_state, uint8_t input_bit);
-ID48LIBX_STATE_REGISTERS  id48libx_retro003_init     (const ID48LIB_KEY* key, const ID48LIB_NONCE* nonce);
+ID48LIBX_SUCCESSOR_RESULT id48libx_retro003_successor(const ID48LIBX_STATE_REGISTERS *initial_state, uint8_t input_bit);
+ID48LIBX_STATE_REGISTERS  id48libx_retro003_init(const ID48LIB_KEY *key, const ID48LIB_NONCE *nonce);
 
 bool id48libx_output_lookup(uint32_t output_index);
 
