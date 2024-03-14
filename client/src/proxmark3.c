@@ -38,6 +38,13 @@
 #include "preferences.h"
 #include "commonutil.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <locale.h>
+#endif
+
+
 static int mainret = PM3_ESOFT;
 
 #ifndef LIBPM3
@@ -100,25 +107,35 @@ static void showBanner_logo(LogoMode mode) {
     PrintAndLogEx(NORMAL, BANNERMSG3);
 }
 
-static void showBanner(void) {
-    uint8_t old_printAndLog = g_printAndLog;
-    g_printAndLog &= PRINTANDLOG_PRINT;
-    PrintAndLogEx(NORMAL, "\n");
+static uint8_t detect_current_lang(void) {
+    #ifdef _WIN32
+        const char* lang[LOCALE_NAME_MAX_LENGTH];
+        if (GetUserDefaultLocaleName(lang, LOCALE_NAME_MAX_LENGTH) > 0) {
+            if (memcmp(lang, "fr", 2) == 0) {
+                return 2;
+            }
+            if (memcmp(lang, "es", 2) == 0) {
+                return 3;
+            }
+        }
+    #else
+        const char* lang = setlocale(LC_ALL, "");
+        if (lang == NULL) {
+            return 1;
+        }
+        if (memcmp(lang, "fr", 2) == 0) {
+            return 2;
+        }
+        if (memcmp(lang, "es", 2) == 0) {
+            return 3;
+        }
+    #endif
+    return 1;
+}
 
-#if defined(_WIN32)
-    if (GetConsoleCP() == 65001) {
-        // If on Windows and using UTF-8 then we need utf-8 ascii art for banner.
-        showBanner_logo(UTF8);
-    } else {
-        showBanner_logo(ANSI);
-    }
-#elif defined(__linux__) || defined(__APPLE__)
-    showBanner_logo(ANSI);
-#else
-    showBanner_logo(ASCII);
-#endif
+static const char* get_quote(void) {
 
-    const char *quotes[] = {
+    const char *quotes_en[] = {
         "Fund creativity, empower dreams",
         "Invest in open innovation",
         "Donate, empower, grow, sustain",
@@ -139,10 +156,84 @@ static void showBanner(void) {
         "Ignite change: support open-source creativity",
         "Together, we can innovate without limits",
     };
+
+    const char *quotes_fr[] = {
+        "Financez la créativité, donnez pouvoir aux rêves",
+        "Investissez dans l'innovation ouverte",
+        "Donnez, habilitez, croissez, soutenez",
+        "Soutenez l'innovation mondiale aujourd'hui",
+        "Alimentez la révolution open source",
+        "Contribuez financièrement, poussez le progrès",
+        "Parrainez l'innovation, construisez demain",
+        "Envisagez de soutenir : financez l'innovation",
+        "Votre don alimente le progrès",
+        "Donnez pouvoir aux rêves avec votre soutien",
+        "Rejoignez-nous : financez la liberté créative",
+        "Faites une différence : donnez aujourd'hui",
+        "Aidez-nous à stimuler l'innovation ouverte",
+        "Votre soutien, notre avenir",
+        "Investissez dans un meilleur demain",
+        "Chaque contribution favorise le changement",
+        "Soutenez-nous, façonnez l'avenir",
+        "Allumez le changement : soutenez la créativité open-source",
+        "Ensemble, nous pouvons innover sans limites",
+    };
+
+    const char *quotes_es[] = {
+        "Financia la creatividad, empodera sueños",
+        "Invierte en innovación abierta",
+        "Dona, empodera, crece, sostén",
+        "Apoya la innovación global hoy",
+        "Impulsa la revolución de código abierto",
+        "Contribuye fondos, impulsa el progreso",
+        "Patrocina la innovación, construye el mañana",
+        "Considera apoyar: financia la innovación",
+        "Tu donación impulsa el progreso",
+        "Empodera sueños con tu apoyo",
+        "Únete a nosotros: financia la libertad creativa",
+        "Haz un impacto: dona hoy",
+        "Ayúdanos a impulsar la innovación abierta",
+        "Tu apoyo, nuestro futuro",
+        "Invierte en un mejor mañana",
+        "Cada contribución impulsa el cambio",
+        "Apóyanos, forma el futuro",
+        "Enciende el cambio: apoya la creatividad de código abierto",
+        "Juntos, podemos innovar sin límites",
+    };
+
     srand((uint32_t)time(NULL));
-    int r = rand() % ARRAYLEN(quotes);
+    int r = rand() % ARRAYLEN(quotes_en);
+
+    uint8_t lang = detect_current_lang();
+    switch(lang) {
+        case 2: return quotes_fr[r];
+        case 3: return quotes_es[r];
+        case 1:
+        default:
+            return quotes_en[r];
+    }
+}
+
+static void showBanner(void) {
+    uint8_t old_printAndLog = g_printAndLog;
+    g_printAndLog &= PRINTANDLOG_PRINT;
+    PrintAndLogEx(NORMAL, "\n");
+
+#if defined(_WIN32)
+    if (GetConsoleCP() == 65001) {
+        // If on Windows and using UTF-8 then we need utf-8 ascii art for banner.
+        showBanner_logo(UTF8);
+    } else {
+        showBanner_logo(ANSI);
+    }
+#elif defined(__linux__) || defined(__APPLE__)
+    showBanner_logo(ANSI);
+#else
+    showBanner_logo(ASCII);
+#endif
+
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "%s!", quotes[r]);
+    PrintAndLogEx(NORMAL, "%s!", get_quote());
     PrintAndLogEx(NORMAL, "   Patreon - https://www.patreon.com/iceman1001/");
     PrintAndLogEx(NORMAL, "   Paypal  - https://www.paypal.me/iceman1001");
     PrintAndLogEx(NORMAL, "");
