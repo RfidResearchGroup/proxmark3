@@ -38,9 +38,7 @@
 #include "preferences.h"
 #include "commonutil.h"
 
-#ifdef _WIN32
-#include <windows.h>
-#else
+#ifndef _WIN32
 #include <locale.h>
 #endif
 
@@ -108,17 +106,7 @@ static void showBanner_logo(LogoMode mode) {
 }
 
 static uint8_t detect_current_lang(void) {
-    #ifdef _WIN32
-        const char* lang[LOCALE_NAME_MAX_LENGTH];
-        if (GetUserDefaultLocaleName(lang, LOCALE_NAME_MAX_LENGTH) > 0) {
-            if (memcmp(lang, "fr", 2) == 0) {
-                return 2;
-            }
-            if (memcmp(lang, "es", 2) == 0) {
-                return 3;
-            }
-        }
-    #else
+    #ifndef _WIN32
         const char* lang = setlocale(LC_ALL, "");
         if (lang == NULL) {
             return 1;
