@@ -85,6 +85,9 @@ FRA_OrganizationalAuthority_Contract_Provider = {
     0x908: {
         1: 'Rennes (STAR / Keolis)',
     },
+    0x911: {
+        5: 'Besançon (Ginko / Keolis)',
+    },
     0x912: {
         3: 'Le Havre (Lia / Transdev)',
         35: 'Cherbourg-en-Cotentin (Cap Cotentin / Transdev)',
