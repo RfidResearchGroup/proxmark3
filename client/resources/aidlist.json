@@ -2422,5 +2422,13 @@
         "Name": "SEOS Mobile",
         "Description": "Declared by some SEOS-compatible applications for HCE",
         "Type": "access"
+    },
+    {
+        "AID": "A000000341000101",
+        "Vendor": "TransitLink Pte Ltd",
+        "Country": "Singapore",
+        "Name": "CEPAS",
+        "Description": "Transit and e-money card used in Singapore",
+        "Type": "transport"
     }
 ]
