@@ -2608,14 +2608,14 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Add KDF keys...
     uint16_t key1_offset = in_keys_len;
     uint64_t key1 = 0;
-   
+
     // iceman: todo, need to add all generated keys
     mfc_algo_mizip_one(card.uid, 0, MF_KEY_A, &key1);
     num_to_bytes(key1, MIFARE_KEY_SIZE, in_keys + key1_offset + (0 * MIFARE_KEY_SIZE));
-    
+
     mfc_algo_di_one(card.uid, 0, MF_KEY_A, &key1);
     num_to_bytes(key1, MIFARE_KEY_SIZE, in_keys + key1_offset + (1 * MIFARE_KEY_SIZE));
-    
+
     mfc_algo_sky_one(card.uid, 15, MF_KEY_A, &key1);
     num_to_bytes(key1, MIFARE_KEY_SIZE, in_keys + key1_offset + (2 * MIFARE_KEY_SIZE));
 

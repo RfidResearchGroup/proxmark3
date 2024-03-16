@@ -170,7 +170,7 @@ static void fill_buffer_prng_bytes(void *buffer, size_t byte_count) {
     if (byte_count <= 0) {
         return;
     }
- 
+
     srand((unsigned) time(NULL));
     for (size_t i = 0; i < byte_count; i++) {
         ((uint8_t *)buffer)[i] = (uint8_t)rand();
@@ -1237,10 +1237,10 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
             return result;
         } else if (memcmp(&opts.grn, &tag_grn, sizeof(ID48LIB_GRN)) != 0) {
             PrintAndLogEx(FAILED, "Authenticating with new key returned %02x %02x %02x"
-                , tag_grn.grn.grn[0]
-                , tag_grn.grn.grn[1]
-                , tag_grn.grn.grn[2]
-            );
+                          , tag_grn.grn.grn[0]
+                          , tag_grn.grn.grn[1]
+                          , tag_grn.grn.grn[2]
+                         );
             PrintAndLogEx(FAILED, "Expected %s [maybe 5 lsb of key wrong?] ( " _RED_("fail") " )", grn_string);
             result = PM3_EWRONGANSWER;
             return result;
@@ -1308,10 +1308,10 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
                 return result;
             } else {
                 PrintAndLogEx(INFO, "        Found: Partial key in block %d is " _GREEN_("%02X%02X")
-                    , block
-                    , brute.partial_key[0]
-                    , brute.partial_key[1]
-                );
+                              , block
+                              , brute.partial_key[0]
+                              , brute.partial_key[1]
+                             );
                 // Save the partial key...
                 if (block == 9) {
                     opts.key.k[0] = brute.partial_key[0];
@@ -1376,15 +1376,15 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
             for (uint8_t idx = 0; idx < data.potential_key_count; ++idx) {
                 ID48LIB_KEY q = data.potential_keys[idx];
                 PrintAndLogEx(DEBUG, "        Potential Key %d: %s %02X%02X%02X%02X%02X%02X"
-                    , idx
-                    , key_string
-                    , q.k[ 6]
-                    , q.k[ 7]
-                    , q.k[ 8]
-                    , q.k[ 9]
-                    , q.k[10]
-                    , q.k[11]
-                );
+                              , idx
+                              , key_string
+                              , q.k[ 6]
+                              , q.k[ 7]
+                              , q.k[ 8]
+                              , q.k[ 9]
+                              , q.k[10]
+                              , q.k[11]
+                             );
             }
             last_successful_step = 5;
         }
