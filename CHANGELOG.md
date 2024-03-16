@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+ - Changed `hf mf info` - some detections (@iceman1001)
+ - Changed `hf mf autopwn` - minor fix (@iceman1001)
+ - Fixed `lf em 4x70 recover` - no more compiler warning (@iceman1001)
+ - Added `hf mfu wipe` - filles card memory with zeros (@iceman1001)
  - Added `lf em 4x70 autorecover` - writable ID48 tags now have automatic key recovery (@henrygab)
  - Set max write blocks to 251 in hf_mf_ultimatecard before writing version/signature in NTAG 21X (@antgamdia)
  - Changed HF_UNISNIFF standalone mode, output and also sniffs iclass too (@iceman1001)

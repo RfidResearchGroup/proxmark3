@@ -43,6 +43,7 @@
 #include "proxendian.h"
 #include "preferences.h"
 #include "mifare/gen4.h"
+#include "generator.h"              // keygens.
 
 static int CmdHelp(const char *Cmd);
 
@@ -775,10 +776,10 @@ static int mf_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey
         memcpy(*pkeyBlock, userkey, numKeys * MIFARE_KEY_SIZE);
 
         for (int i = 0; i < numKeys; i++) {
-            PrintAndLogEx(INFO, "[" _YELLOW_("%d") "] key %s", i, sprint_hex(*pkeyBlock + i * MIFARE_KEY_SIZE, MIFARE_KEY_SIZE));
+            PrintAndLogEx(DEBUG, _YELLOW_("%2d") " - %s", i, sprint_hex(*pkeyBlock + i * MIFARE_KEY_SIZE, MIFARE_KEY_SIZE));
         }
         *pkeycnt += numKeys;
-        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%d") " keys supplied by user ", numKeys);
+        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%d") " dynamic keys", numKeys);
     }
 
     // Handle default keys
@@ -792,7 +793,7 @@ static int mf_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey
     // Copy default keys to list
     for (int i = 0; i < ARRAYLEN(g_mifare_default_keys); i++) {
         num_to_bytes(g_mifare_default_keys[i], MIFARE_KEY_SIZE, (uint8_t *)(*pkeyBlock + (*pkeycnt + i) * MIFARE_KEY_SIZE));
-        PrintAndLogEx(DEBUG, "[" _YELLOW_("%d") "] key %s", *pkeycnt + i, sprint_hex(*pkeyBlock + (*pkeycnt + i) * MIFARE_KEY_SIZE, MIFARE_KEY_SIZE));
+        PrintAndLogEx(DEBUG, _YELLOW_("%2d") " - %s", *pkeycnt + i, sprint_hex(*pkeyBlock + (*pkeycnt + i) * MIFARE_KEY_SIZE, MIFARE_KEY_SIZE));
     }
     *pkeycnt += ARRAYLEN(g_mifare_default_keys);
     PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%zu") " keys from hardcoded default array", ARRAYLEN(g_mifare_default_keys));
@@ -2544,8 +2545,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         SetSIMDInstr(SIMD_NEON);
 #endif
 
-    if (in)
+    if (in) {
         SetSIMDInstr(SIMD_NONE);
+    }
 
     // Nested and Hardnested parameter
     uint64_t key64 = 0;
@@ -2602,6 +2604,29 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     if (known_key) {
         memcpy(key, in_keys, sizeof(key));
     }
+
+    // Add KDF keys...
+    uint16_t key1_offset = in_keys_len;
+    uint64_t key1 = 0;
+   
+    // iceman: todo, need to add all generated keys
+    mfc_algo_mizip_one(card.uid, 0, MF_KEY_A, &key1);
+    num_to_bytes(key1, MIFARE_KEY_SIZE, in_keys + key1_offset + (0 * MIFARE_KEY_SIZE));
+    
+    mfc_algo_di_one(card.uid, 0, MF_KEY_A, &key1);
+    num_to_bytes(key1, MIFARE_KEY_SIZE, in_keys + key1_offset + (1 * MIFARE_KEY_SIZE));
+    
+    mfc_algo_sky_one(card.uid, 15, MF_KEY_A, &key1);
+    num_to_bytes(key1, MIFARE_KEY_SIZE, in_keys + key1_offset + (2 * MIFARE_KEY_SIZE));
+
+    // one key
+    mfc_algo_saflok_one(card.uid, 0, MF_KEY_A, &key1);
+    num_to_bytes(key1, MIFARE_KEY_SIZE, in_keys + key1_offset + (3 * MIFARE_KEY_SIZE));
+
+    mfc_algo_touch_one(card.uid, 0, MF_KEY_A, &key1);
+    num_to_bytes(key1, MIFARE_KEY_SIZE, in_keys + key1_offset + (4 * MIFARE_KEY_SIZE));
+
+    in_keys_len += (MIFARE_KEY_SIZE * 5);
 
     // detect MFC EV1 Signature
     bool is_ev1 = detect_mfc_ev1_signature();
@@ -6696,15 +6721,25 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
     // read MAD Sector 0, block1,2
     uint8_t sector0[MFBLOCK_SIZE * 4] = {0};
     if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, g_mifare_mad_key, sector0)) {
-        PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or doesn't have MAD on default keys");
+        PrintAndLogEx(ERR, "error, reading sector 0. Card doesn't have MAD or doesn't have MAD on default keys");
         PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
         return PM3_ESOFT;
+    }
+
+    // read MAD Sector 10, block1,2
+    uint8_t sector10[MFBLOCK_SIZE * 4] = {0};
+    if (m4) {
+        if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, g_mifare_mad_key, sector10)) {
+            PrintAndLogEx(ERR, "error, reading sector 10. Card doesn't have MAD or doesn't have MAD on default keys");
+            PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
+            return PM3_ESOFT;
+        }
     }
 
     // decode MAD v1
     uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
     size_t madlen = 0;
-    res = MADDecode(sector0, NULL, mad, &madlen, false);
+    res = MADDecode(sector0, sector10, mad, &madlen, false);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "can't decode MAD");
         return res;
@@ -9216,7 +9251,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     }
 
     int keylen = 0;
-    uint8_t key[MIFARE_KEY_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    uint8_t key[10 * MIFARE_KEY_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     CLIGetHexWithReturn(ctx, 4, key, &keylen);
 
     bool do_nack_test = arg_get_lit(ctx, 5);
@@ -9304,10 +9339,14 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     uint8_t fkey[MIFARE_KEY_SIZE] = {0};
     uint8_t fKeyType = 0xff;
 
+    uint64_t tmpkey = 0;
+    mfc_algo_saflok_one(card.uid, 0, MF_KEY_A, &tmpkey);
+    num_to_bytes(tmpkey, MIFARE_KEY_SIZE, key + MIFARE_KEY_SIZE);
+
     int sectorsCnt = 2;
     uint8_t *keyBlock = NULL;
     uint32_t keycnt = 0;
-    res = mf_load_keys(&keyBlock, &keycnt, key, MIFARE_KEY_SIZE, NULL, 0);
+    res = mf_load_keys(&keyBlock, &keycnt, key, MIFARE_KEY_SIZE * 2, NULL, 0);
     if (res != PM3_SUCCESS) {
         return res;
     }
