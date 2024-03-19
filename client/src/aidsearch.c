@@ -45,9 +45,9 @@ static int openAIDFile(json_t **root, bool verbose) {
     }
 
     PrintAndLogEx(DEBUG, "Loaded file " _YELLOW_("%s") " " _GREEN_("%zu") " records ( " _GREEN_("ok") " )"
-        , path
-        , json_array_size(*root)
-        );
+                  , path
+                  , json_array_size(*root)
+                 );
 out:
     free(path);
     return retval;

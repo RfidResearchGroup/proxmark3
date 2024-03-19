@@ -469,7 +469,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (res) {
-        return PM3_EINVARG;        
+        return PM3_EINVARG;
     }
 
     if (dlen > 0 && dlen < sizeof(id)) {
