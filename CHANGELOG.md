@@ -4,7 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 
-## [Zenith][2024-03-20]
+## [Zenith.4.18340][2024-03-20]
  - Changed `hf mf info` - some detections (@iceman1001)
  - Changed `hf mf autopwn` - minor fix (@iceman1001)
  - Fixed `lf em 4x70 recover` - no more compiler warning (@iceman1001)
