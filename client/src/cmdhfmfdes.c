@@ -2661,7 +2661,7 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
         arg_str0("c",  "ccset",   "<native|niso|iso>", "Communicaton command set"),
         arg_str0(NULL, "schann",  "<d40|ev1|ev2|lrp>", "Secure channel"),
-        arg_str0(NULL, "aid",     "<hex>", "Application ID of delegated application (3 hex bytes, big endian)"),
+        arg_str0(NULL, "aid",     "<hex>", "Application ID to delete (3 hex bytes, big endian)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2686,7 +2686,7 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    res = DesfireSelectAndAuthenticate(&dctx, securechann, appid, verbose);
+    res = DesfireSelectAndAuthenticate(&dctx, securechann, 0x000000, verbose);
     if (res != PM3_SUCCESS) {
         DropField();
         return res;
