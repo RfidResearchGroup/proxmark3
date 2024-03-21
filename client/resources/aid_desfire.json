@@ -362,10 +362,10 @@
     },
     {
         "AID": "554E49",
-        "Vendor": "University of Ljubljana",
+        "Vendor": "Slovenian Universities",
         "Country": "SI",
-        "Name": "University of Ljubljana Student ID",
-        "Description": "",
+        "Name": "Slovenian University Student ID",
+        "Description": "Issued by University of Ljubljana, Maribor and Primorska",
         "Type": "student"
     },
     {
@@ -558,6 +558,14 @@
         "Country": "ES",
         "Name": "SALTO Access credential",
         "Description": "",
+        "Type": "pacs"
+    },
+    {
+        "AID": "4791DA",
+        "Vendor": "Prima Systems",
+        "Country": "SI",
+        "Name": "Prima FlexAir Access Control",
+        "Description": "FIDs: 00 - DRM, 01 - Access Event Log, 04 - Access Permissions",
         "Type": "pacs"
     }
 ]
