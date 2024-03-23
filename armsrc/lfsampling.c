@@ -628,7 +628,9 @@ void doT55x7Acquisition(size_t sample_size, bool ledcontrol) {
                     startFound = true;
                 }
                 // collect samples
-                dest[i++] = sample;
+                if (i < bufsize) {
+                    dest[i++] = sample;
+                }
             }
         }
     }
@@ -698,13 +700,15 @@ void doCotagAcquisition(void) {
                 firstlow = true;
             }
 
-            ++i;
             if (sample > COTAG_ONE_THRESHOLD) {
                 dest[i] = 255;
+                ++i;
             } else if (sample < COTAG_ZERO_THRESHOLD) {
                 dest[i] = 0;
-            } else {
+                ++i;
+            } else if (i != 0) {
                 dest[i] = dest[i - 1];
+                ++i;
             }
         }
     }
