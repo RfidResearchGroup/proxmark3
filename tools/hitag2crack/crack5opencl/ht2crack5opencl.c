@@ -1215,7 +1215,7 @@ int main(int argc, char **argv) {
                 printf("[%zu] ", y);
             }
 
-            printf("\nKey found @ slice %zu/%zu [  \x1b[32m"
+            printf("\nKey found @ slice %zu/%zu [ \x1b[32m"
                 , t_arg[y].slice
                 , t_arg[y].max_slices
             );
@@ -1250,7 +1250,7 @@ int main(int argc, char **argv) {
     printf("\nAttack 5 - opencl - end");
 
     if (show_overall_time) {
-        printf(" in  " _YELLOW_("%ld.%2ld") " second(s).\n\n", (long int)cpu_t_result.tv_sec, (long int)cpu_t_result.tv_usec);
+        printf(" in " _YELLOW_("%ld.%2ld") " second(s).\n\n", (long int)cpu_t_result.tv_sec, (long int)cpu_t_result.tv_usec);
     } else {
         printf("\n");
     }
