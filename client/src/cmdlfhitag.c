@@ -17,15 +17,19 @@
 //-----------------------------------------------------------------------------
 #include "cmdlfhitag.h"
 #include <ctype.h>
-#include "cmdparser.h"   // command_t
+#include "cmdparser.h"  // command_t
 #include "comms.h"
 #include "cmdtrace.h"
 #include "commonutil.h"
 #include "hitag.h"
-#include "fileutils.h"   // savefile
-#include "protocols.h"   // defines
+#include "fileutils.h"  // savefile
+#include "protocols.h"  // defines
 #include "cliparser.h"
 #include "crc.h"
+#include "graph.h"      // MAX_GRAPH_TRACE_LEN
+#include "lfdemod.h"
+#include "cmddata.h"    // setDemodBuff
+#include "pm3_cmd.h"    // return codes
 
 static int CmdHelp(const char *Cmd);
 
@@ -375,54 +379,119 @@ static void print_hitag2_blocks(uint8_t *d, uint16_t n) {
 void annotateHitag1(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 }
 
-void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
-
-    // iceman: live decrypt of trace?
-    if (is_response) {
 
 
-        uint8_t cmdbits = (cmd[0] & 0xC0) >> 6;
+static struct {
+    enum {
+        STATE_HALT,
+        STATE_START_AUTH,
+        STATE_AUTH,
+        STATE_ENCRYPTED,
+    } state;
+} _ht2state;
 
+
+void annotateHitag2_init(void) {
+    _ht2state.state = STATE_HALT;
+}
+
+void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, uint8_t bits, bool is_response) {
+
+    // I think its better to handle this log bytes as a long array of bits instead.
+    // 1100 0
+    // 1100 0001 1100 0000 00
+    if (cmdsize == 0) {
+        return;
+    }
+
+    char *binstr = (char *)calloc((cmdsize * 8) + 1, sizeof(uint8_t));
+    if (binstr == NULL) {
+        return;
+    }
+
+    bytes_2_binstr(binstr, cmd, cmdsize);
+
+    size_t bn = strlen(binstr);
+    if (bits) {
         if (cmdsize == 1) {
-            if (cmdbits == HITAG2_START_AUTH) {
-                snprintf(exp, size, "START AUTH");
-                return;
-            }
-            if (cmdbits == HITAG2_HALT) {
-                snprintf(exp, size, "HALT");
-                return;
-            }
-        }
-
-        if (cmdsize == 3) {
-            if (cmdbits == HITAG2_START_AUTH) {
-                // C     1     C   0
-                // 1100 0 00 1 1100 000
-                uint8_t page = (cmd[0] & 0x38) >> 3;
-                uint8_t inv_page = ((cmd[0] & 0x1) << 2) | ((cmd[1] & 0xC0) >> 6);
-                snprintf(exp, size, "READ page(%x) %x", page, inv_page);
-                return;
-            }
-            if (cmdbits == HITAG2_WRITE_PAGE) {
-                uint8_t page = (cmd[0] & 0x38) >> 3;
-                uint8_t inv_page = ((cmd[0] & 0x1) << 2) | ((cmd[1] & 0xC0) >> 6);
-                snprintf(exp, size, "WRITE page(%x) %x", page, inv_page);
-                return;
-            }
-        }
-
-        if (cmdsize == 9)  {
-            snprintf(exp, size, "Nr Ar Is response");
-            return;
-        }
-    } else {
-
-        if (cmdsize == 9)  {
-            snprintf(exp, size, "Nr Ar");
-            return;
+            bn = bits;
+        } else if (cmdsize > 1) {
+             bn = ((cmdsize - 1) * 8) + bits;
         }
     }
 
+    // 11000  AUTH  only one with 5 bits.  cmdsize 1
+    switch(bn) {
+        case 5: {
+            _ht2state.state = STATE_HALT;
+            if(memcmp(binstr, HITAG2_START_AUTH, 5) == 0) {
+                snprintf(exp, size, "START AUTH");
+                _ht2state.state = STATE_START_AUTH;
+            } else {
+                snprintf(exp, size, "?");
+            }
+            break;
+        }
+        case 10: {
+
+            if (_ht2state.state == STATE_ENCRYPTED) {
+                snprintf(exp, size, "ENC CMD");
+                break;
+            }
+
+            if(memcmp(binstr, HITAG2_HALT, 2) == 0) {
+                snprintf(exp, size, "HALT");
+                _ht2state.state = STATE_HALT;
+                break;
+            }
+            if(memcmp(binstr, HITAG2_READ_PAGE, 2) == 0) {
+                snprintf(exp, size, "READ_PAGE (%u)", 0);
+                break;
+            }
+
+            if(memcmp(binstr, HITAG2_READ_PAGE_INVERTED, 2) == 0) {
+                snprintf(exp, size, "READ_PAGE_INVERTED (%u)", 0);
+                break;
+            }
+
+            if(memcmp(binstr, HITAG2_WRITE_PAGE, 2) == 0) {
+                snprintf(exp, size, "WRITE_PAGE ()");
+                break;
+            }
+            break;
+        }
+
+        case 32: {       // password or data
+            if (_ht2state.state == STATE_START_AUTH) {
+                if (is_response) {
+                    snprintf(exp, size, "UID");
+                } else  {
+                    snprintf(exp, size, "PWD: " _GREEN_("0x%02X%02X%02X%02X"), cmd[0], cmd[1], cmd[2], cmd[3]);
+                    _ht2state.state = STATE_AUTH;
+                }
+                break;
+            }
+
+            if (_ht2state.state == STATE_AUTH) {
+                snprintf(exp, size, "DATA");
+            } else{
+                snprintf(exp, size, "?");
+            }
+            break;
+        }
+
+        case 64: {       // crypto handshake
+            snprintf(exp, size, "AUTH: Nr Ar");
+            _ht2state.state = STATE_ENCRYPTED;
+            break;
+        }
+        default: {
+            snprintf(exp, size, "?");
+            break;
+        }
+    }
+
+    free(binstr);
 }
 
 void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {

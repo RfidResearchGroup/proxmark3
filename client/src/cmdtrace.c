@@ -605,7 +605,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         }
     }
 
-    uint8_t partialbytebuff = 0;
+//    uint8_t partialbytebuff = 0;
     uint8_t offset = 0;
     for (int j = 0; j < data_len && (j / TRACE_MAX_HEX_BYTES) < TRACE_MAX_HEX_BYTES; j++) {
         uint8_t parityBits = parityBytes[j >> 3];
@@ -639,18 +639,35 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x! ", frame[j]);
             }
 
-        } else if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAG2) || (protocol == PROTO_HITAGS)) && (parityBytes[0] > 0)) {
-            // handle partial bytes
+        } else if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAG2) || (protocol == PROTO_HITAGS))) {
+
+            // handle partial bytes.  The parity array[0] is used to store number of left over bits from NBYTES
+            // This part prints the number of bits in the trace entry for hitag.
             uint8_t nbits = parityBytes[0];
             if (j == 0) {
-                partialbytebuff = frame[0] << nbits;
-                snprintf(line[0], 120, "%02x(%i) ", frame[0] >> (8 - nbits), nbits);
-                offset = 2;
+
+                // only apply this to lesser than one byte 
+                if (data_len == 1) {
+                    
+                    if (nbits == 5) {
+                        snprintf(line[0], 120, "%2u: %02x  ", nbits, frame[0] >> (8 - nbits));
+                    } else {
+                        snprintf(line[0], 120, "%2u: %02x  ", nbits, frame[0] >> (8 - nbits));
+                    }
+
+                } else {
+                    if (nbits == 0) {
+                        snprintf(line[0], 120, "%2u: %02x  ", (data_len * 8), frame[0]);
+                    } else {
+                        snprintf(line[0], 120, "%2u: %02x  ", ((data_len - 1) * 8) + nbits, frame[0]);
+                    }
+                }
+                offset = 4;
+
             } else {
-                uint8_t byte = partialbytebuff | (frame[j] >> (8 - nbits));
-                partialbytebuff = frame[j] << nbits;
-                snprintf(line[j / 18] + ((j % 18) * 4) + offset, 120, "%02x  ", byte);
+                snprintf(line[j / 18] + ((j % 18) * 4) + offset, 120, "%02x  ", frame[j]);
             }
+            
         } else {
             snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x  ", frame[j]);
         }
@@ -776,7 +793,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             annotateHitag1(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
             break;
         case PROTO_HITAG2:
-            annotateHitag2(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+            annotateHitag2(explanation, sizeof(explanation), frame, data_len, parityBytes[0], hdr->isResponse);
             break;
         case PROTO_HITAGS:
             annotateHitagS(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
@@ -1379,8 +1396,9 @@ int CmdTraceList(const char *Cmd) {
         if (protocol == ISO_7816_4)
             PrintAndLogEx(INFO, _YELLOW_("ISO7816-4 / Smartcard") " - Timings N/A");
 
-        if (protocol == PROTO_HITAG1 || protocol == PROTO_HITAG2 || protocol == PROTO_HITAGS)
+        if (protocol == PROTO_HITAG1 || protocol == PROTO_HITAG2 || protocol == PROTO_HITAGS) {
             PrintAndLogEx(INFO, _YELLOW_("Hitag1 / Hitag2 / HitagS") " - Timings in ETU (8us)");
+        }
 
         if (protocol == FELICA) {
             if (use_us)
@@ -1427,8 +1445,14 @@ int CmdTraceList(const char *Cmd) {
         PrintAndLogEx(NORMAL, "------------+------------+-----+-------------------------------------------------------------------------+-----+--------------------");
 
         // clean authentication data used with the mifare classic decrypt fct
-        if (protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == PROTO_MFPLUS)
+        if (protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == PROTO_MFPLUS) {
             ClearAuthData();
+        }
+
+        // reset hitag state  machine
+        if (protocol == PROTO_HITAG1 || protocol == PROTO_HITAG2 || protocol == PROTO_HITAGS) {
+            annotateHitag2_init();
+        }
 
         uint32_t previous_EOT = 0;
         uint32_t *prev_EOT = NULL;

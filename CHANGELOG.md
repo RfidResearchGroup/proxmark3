@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf hitag list` - improved HITAG2 protocol annotation (@iceman1001)
 
 ## [Zenith.4.18340][2024-03-20]
  - Changed `hf mf info` - some detections (@iceman1001)
