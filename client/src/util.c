@@ -1145,6 +1145,12 @@ void binstr_2_bytes(uint8_t *target, size_t *targetlen, const char *src) {
     }
 }
 
+void hex_xor(uint8_t *d, uint8_t *x, int n) {
+    while(n--) {
+        d[n] ^= x[n];
+    }
+}
+
 // return parity bit required to match type
 uint8_t GetParity(const uint8_t *bits, uint8_t type, int length) {
     int x;
@@ -1473,4 +1479,23 @@ void sb_append_char(smartbuf *sb, unsigned char c) {
     }
     sb->ptr[sb->idx] = c;
     sb->idx++;
+}
+
+uint8_t get_highest_frequency(const uint8_t *d, uint8_t n) {
+
+    uint8_t frequency[256] = {0};
+    uint8_t highest = 0;
+    uint8_t v = 0;
+
+    // Count the frequency of each byte
+    for(uint8_t i = 0; i < n; i++) {
+        frequency[d[i]]++;
+
+        if (frequency[d[i]] > highest) {
+            highest = frequency[d[i]];
+            v = d[i];
+        }
+    }
+    PrintAndLogEx(DEBUG, "highest occurance... %u  xor byte... 0x%02X", highest, v);
+    return v;
 }
