@@ -19,6 +19,7 @@
 #ifndef __COMMONUTIL_H
 #define __COMMONUTIL_H
 
+#include "array_size2.h" // safer compile-time array size determination
 #include "common.h"
 
 // endian change for 16bit
@@ -42,7 +43,7 @@
 # define BITMASK(X) (1 << (X))
 #endif
 #ifndef ARRAYLEN
-# define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
+# define ARRAYLEN(x) ARRAY_SIZE2(x) // use safer version of compile-time array size ... rejects pointers, must be array
 #endif
 
 #ifndef NTIME

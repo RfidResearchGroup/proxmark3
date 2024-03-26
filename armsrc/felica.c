@@ -847,6 +847,9 @@ void felica_dump_lite_s(void) {
             // for (c=0; c < 8; c++)
             // ndef[c] = FelicaFrame.framebytes[c+4];
 
+            // This is an unwritten assumption.  Seems safe for now, but when moving to C11,
+            // should add the static_assert() to validate at compilation this hidden assumption.
+            // static_assert(BigBuf_get_size() >= 560); // 20 bytes written per loop, and liteblks has 28 elements
             for (blknum = 0; blknum < ARRAYLEN(liteblks);) {
                 // block to read.
                 BuildFliteRdblk(ndef, 1, &liteblks[blknum]);

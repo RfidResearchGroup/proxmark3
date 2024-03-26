@@ -896,10 +896,11 @@ void SimulateHitagSTag(bool tag_mem_supplied, const uint8_t *data, bool ledcontr
     DbpString("Sim Stopped");
 }
 
-static void hitagS_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint32_t *resptime, bool ledcontrol) {
+static void hitagS_receive_frame(uint8_t *rx, size_t rx_byte_count, size_t *rxlen, uint32_t *resptime, bool ledcontrol) {
 
     // Reset values for receiving frames
-    memset(rx, 0x00, sizeofrx);
+    memset(rx, 0x00, rx_byte_count);
+    size_t rx_bit_count = rx_byte_count * 8;
     *rxlen = 0;
     int lastbit = 1;
     bool bSkip = true;
@@ -922,8 +923,11 @@ static void hitagS_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, ui
         }
         prevcv = tmpcv;
 
-        // Check if falling edge in tag modulation is detected
-        if (AT91C_BASE_TC1->TC_SR & AT91C_TC_LDRAS) {
+        // If still have space in buffer, check if falling edge in tag modulation is detected
+        if (*rxlen >= rx_bit_count) {
+            // do not bother trying to read more data...
+        }
+        else if (AT91C_BASE_TC1->TC_SR & AT91C_TC_LDRAS) {
             // Retrieve the new timing values
             uint32_t ra = (AT91C_BASE_TC1->TC_RA + (overcount << 16)) / T0;
             // Reset timer every frame, we have to capture the last edge for timing
@@ -948,14 +952,16 @@ static void hitagS_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, ui
                 // Manchester coding example |-_|_-|-_| (101)
                 rx[(*rxlen) / 8] |= 0 << (7 - ((*rxlen) % 8));
                 (*rxlen)++;
-                rx[(*rxlen) / 8] |= 1 << (7 - ((*rxlen) % 8));
-                (*rxlen)++;
+                if ((*rxlen) < rx_bit_count) {
+                    rx[(*rxlen) / 8] |= 1 << (7 - ((*rxlen) % 8));
+                    (*rxlen)++;
+                }
             } else if (ra >= HITAG_T_TAG_CAPTURE_THREE_HALF) {
                 // Manchester coding example |_-|...|_-|-_| (0...01)
                 rx[(*rxlen) / 8] |= 0 << (7 - ((*rxlen) % 8));
                 (*rxlen)++;
                 // We have to skip this half period at start and add the 'one' the second time
-                if (!bSkip) {
+                if (!bSkip && ((*rxlen) < rx_bit_count)) {
                     rx[(*rxlen) / 8] |= 1 << (7 - ((*rxlen) % 8));
                     (*rxlen)++;
                 }

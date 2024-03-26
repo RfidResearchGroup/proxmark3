@@ -118,6 +118,7 @@ static void hitag2_init(void) {
 #endif
 
 #define HITAG_FRAME_LEN  20
+#define HITAG_FRAME_BIT_COUNT   (8*HITAG_FRAME_LEN)
 #define HITAG_T_STOP     36 /* T_EOF should be > 36 */
 #define HITAG_T_LOW      8  /* T_LOW should be 4..10 */
 #define HITAG_T_0_MIN    15 /* T[0] should be 18..22 */
@@ -1028,7 +1029,9 @@ void SniffHitag2(bool ledcontrol) {
                     // Detected two sequential equal bits and a modulation switch
                     // NRZ modulation: (11 => --|) or (11 __|)
                     rx[rxlen++] = mod_state;
-                    rx[rxlen++] = mod_state;
+                    if (rxlen < sizeof(rx)) {
+                        rx[rxlen++] = mod_state;
+                    }
                     // toggle tag modulation state
                     mod_state ^= 1;
                 } else if (periods > 0 && periods < 24) {
@@ -1148,7 +1151,7 @@ void SniffHitag2(bool ledcontrol) {
 
     int frame_count = 0, response = 0, overflow = 0, lastbit = 1, tag_sof = 4;
     bool rising_edge, reader_frame = false, bSkip = true;
-    uint8_t rx[HITAG_FRAME_LEN];
+    uint8_t rx[HITAG_FRAME_LEN+1]; // HACK -- add one byte to avoid rewriting manchester decoder for edge case
     size_t rxlen = 0;
 
     auth_table_len = 0;
@@ -1164,6 +1167,7 @@ void SniffHitag2(bool ledcontrol) {
 
         WDT_HIT();
         memset(rx, 0x00, sizeof(rx));
+        bool exit_due_to_overflow = false;
 
         // Receive frame, watch for at most T0 * EOF periods
         while (AT91C_BASE_TC1->TC_CV < (HITAG_T0 * HITAG_T_EOF)) {
@@ -1193,7 +1197,16 @@ void SniffHitag2(bool ledcontrol) {
                 ra += overflow;
                 overflow = 0;
 
-                if (reader_frame) {
+                // if reader_frame, adds maximum of one bit
+                // else (tag_frame), typically adds TWO bits at a time.
+                // hack above gives eight extra bits to rx buffer...
+                // allow writing up to HITAG_FRAME_BIT_COUNT+1,
+                // but exit if TWO bits extra are ever written.
+                if (rxlen >= HITAG_FRAME_BIT_COUNT+2) {
+                    // Track error condition?
+                    exit_due_to_overflow = true;
+                    break; // end of the while() loop
+                } else if (reader_frame) {
                     if (ledcontrol) LED_B_ON();
                     // Capture reader frame
                     if (ra >= HITAG_T_STOP) {
@@ -1261,6 +1274,11 @@ void SniffHitag2(bool ledcontrol) {
         if (rxlen) {
             frame_count++;
             LogTraceBits(rx, rxlen, response, 0, reader_frame);
+
+            if (exit_due_to_overflow) {
+                // BUGBUG -- what to do if exited due to overflow condition?
+                DbpString("Overflow condition detected");
+            }
 
             // Check if we recognize a valid authentication attempt
             if (nbytes(rxlen) == 8) {
@@ -1431,7 +1449,9 @@ void SimulateHitag2(bool ledcontrol) {
                 // Detected two sequential equal bits and a modulation switch
                 // NRZ modulation: (11 => --|) or (11 __|)
                 nrz_samples[nrzs++] = reader_modulation;
-                nrz_samples[nrzs++] = reader_modulation;
+                if (nrzs < max_nrzs) {
+                    nrz_samples[nrzs++] = reader_modulation;
+                }
                 // Invert tag modulation state
                 reader_modulation ^= 1;
             } else if (periods > 0 && periods <= 24) {
@@ -1462,6 +1482,10 @@ void SimulateHitag2(bool ledcontrol) {
         // The last modulation change of a zero is not detected, but we should take
         // the half period in account, otherwise the demodulator will fail.
         if ((nrzs % 2) != 0) {
+            if (nrzs >= max_nrzs) {
+                Dbprintf("max_nrzs (%d) is odd?  Must be even!", max_nrzs); // should be a static assert above
+                continue;
+            }
             nrz_samples[nrzs++] = reader_modulation;
         }
 
@@ -1826,7 +1850,9 @@ void ReaderHitag(hitag_function htf, const hitag_data *htd, bool ledcontrol) {
                 // Detected two sequential equal bits and a modulation switch
                 // NRZ modulation: (11 => --|) or (11 __|)
                 nrz_samples[nrzs++] = tag_modulation;
-                nrz_samples[nrzs++] = tag_modulation;
+                if (nrzs < max_nrzs) {
+                    nrz_samples[nrzs++] = tag_modulation;
+                }
                 response_duration += periods;
                 // Invert tag modulation state
                 tag_modulation ^= 1;
@@ -1865,6 +1891,10 @@ void ReaderHitag(hitag_function htf, const hitag_data *htd, bool ledcontrol) {
         // The last modulation change of a zero is not detected, but we should take
         // the half period in account, otherwise the demodulator will fail.
         if ((nrzs % 2) != 0) {
+            if (nrzs >= max_nrzs) {
+                Dbprintf("max_nrzs (%d) is odd?  Must be even!", max_nrzs); // should never occur ... static_assert(max_nrzs % 2) != 0 above...
+                continue;
+            }
             nrz_samples[nrzs++] = tag_modulation;
         }
 
@@ -2151,7 +2181,9 @@ void WriterHitag(hitag_function htf, const hitag_data *htd, int page, bool ledco
                 // Detected two sequential equal bits and a modulation switch
                 // NRZ modulation: (11 => --|) or (11 __|)
                 nrz_samples[nrzs++] = tag_modulation;
-                nrz_samples[nrzs++] = tag_modulation;
+                if (nrzs < max_nrzs) {
+                    nrz_samples[nrzs++] = tag_modulation;
+                }
                 response_duration += periods;
                 // Invert tag modulation state
                 tag_modulation ^= 1;
@@ -2193,6 +2225,10 @@ void WriterHitag(hitag_function htf, const hitag_data *htd, int page, bool ledco
         // The last modulation change of a zero is not detected, but we should take
         // the half period in account, otherwise the demodulator will fail.
         if ((nrzs % 2) != 0) {
+            if (nrzs >= max_nrzs) {
+                Dbprintf("max_nrzs (%d) is odd?  Must be even!", max_nrzs); // should be a static assert above
+                continue;
+            }
             nrz_samples[nrzs++] = tag_modulation;
         }
 
