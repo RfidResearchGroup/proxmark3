@@ -3649,6 +3649,51 @@ static int CmdBinaryMap(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdXor(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data xor",
+                  "takes input string and xor string. Perform xor on it.\n"
+                  "If no xor string, try the most reoccuring value to xor against",
+                  "data xor -d 99aabbcc8888888888\n"
+                  "data xor -d 99aabbcc --xor 88888888\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("d", "data", "<hex>", "input hex string"),
+        arg_str0("x", "xor", "<str>", "input xor string"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int hlen = 128;
+    uint8_t hex[128 + 1];
+    CLIGetHexWithReturn(ctx, 1, hex, &hlen);
+
+    int xlen = 128;
+    uint8_t xor[128 + 1];
+    CLIGetHexWithReturn(ctx, 2, xor, &xlen);
+    CLIParserFree(ctx);
+
+    // find xor value
+    if (xlen == 0) {
+        uint8_t x = get_highest_frequency(hex, hlen);
+        xlen = hlen;
+        memset(xor, x, xlen);
+    }
+
+    if (hlen != xlen) {
+        PrintAndLogEx(FAILED, "Length mismatch, got %i != %i", hlen, xlen);
+        return PM3_EINVARG;
+    }
+    
+    PrintAndLogEx(SUCCESS, "input... %s", sprint_hex_inrow(hex, hlen));
+    PrintAndLogEx(SUCCESS, "xor..... %s", sprint_hex_inrow(xor, xlen));
+    hex_xor(hex, xor, hlen);
+    PrintAndLogEx(SUCCESS, "plain... " _YELLOW_("%s"), sprint_hex_inrow(hex, hlen));
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"-----------",     CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("General") "-------------------------"},
     {"help",            CmdHelp,                 AlwaysAvailable,  "This help"},
@@ -3700,9 +3745,10 @@ static command_t CommandTable[] = {
     {"load",            CmdLoad,                 AlwaysAvailable,  "Load contents of file into graph window"},
     {"num",             CmdNumCon,               AlwaysAvailable,  "Converts dec/hex/bin"},
     {"print",           CmdPrintDemodBuff,       AlwaysAvailable,  "Print the data in the DemodBuffer"},
-    {"samples",         CmdSamples,              IfPm3Present,     "Get raw samples for graph window (GraphBuffer)"},
-    {"save",            CmdSave,                 AlwaysAvailable,  "Save signal trace data  (from graph window)"},
+    {"samples",         CmdSamples,              IfPm3Present,     "Get raw samples for graph window ( GraphBuffer )"},
+    {"save",            CmdSave,                 AlwaysAvailable,  "Save signal trace data ( GraphBuffer )"},
     {"setdebugmode",    CmdSetDebugMode,         AlwaysAvailable,  "Set Debugging Level on client side"},
+    {"xor",             CmdXor,                  AlwaysAvailable,  "Xor a input string"},    
     {NULL, NULL, NULL, NULL}
 };
 

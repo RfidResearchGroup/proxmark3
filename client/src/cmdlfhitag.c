@@ -366,17 +366,15 @@ static void print_hitag2_blocks(uint8_t *d, uint16_t n) {
                       , annotation[i]
                      );
     }
-    PrintAndLogEx(INFO, "---------+-------------+-------+-----+---------");
-    PrintAndLogEx(INFO, " L = Locked, "_GREEN_("RW") " = Read Write, R = Read Only");
+    PrintAndLogEx(INFO, "--------+-------------+-------+-----+---------");
+    PrintAndLogEx(INFO, " "_RED_("L") " = Locked, "_GREEN_("RW") " = Read Write, R = Read Only");
     PrintAndLogEx(INFO, " FI = Fixed / Irreversible");
-    PrintAndLogEx(INFO, "-----------------------------------------------");
+    PrintAndLogEx(INFO, "----------------------------------------------");
 }
 
 // Annotate HITAG protocol
 void annotateHitag1(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 }
-
-
 
 static struct {
     enum {
@@ -387,16 +385,12 @@ static struct {
     } state;
 } _ht2state;
 
-
 void annotateHitag2_init(void) {
     _ht2state.state = STATE_HALT;
 }
 
 void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, uint8_t bits, bool is_response) {
 
-    // I think its better to handle this log bytes as a long array of bits instead.
-    // 1100 0
-    // 1100 0001 1100 0000 00
     if (cmdsize == 0) {
         return;
     }

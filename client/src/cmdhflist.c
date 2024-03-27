@@ -365,7 +365,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 break;
             case MIFARE_ULEV1_AUTH:
                 if (cmdsize == 7)
-                    snprintf(exp, size, "PWD-AUTH KEY: " _GREEN_("0x%02X%02X%02X%02X"), cmd[1], cmd[2], cmd[3], cmd[4]);
+                    snprintf(exp, size, "PWD-AUTH: " _GREEN_("0x%02X%02X%02X%02X"), cmd[1], cmd[2], cmd[3], cmd[4]);
                 else
                     snprintf(exp, size, "PWD-AUTH");
                 break;
@@ -2103,9 +2103,9 @@ void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize,
             break;
     }
 
-    if ((MifareAuthState == masNone) || (MifareAuthState == masError))
+    if ((MifareAuthState == masNone) || (MifareAuthState == masError)) {
         annotateIso14443a(exp, size, cmd, cmdsize, isResponse);
-
+    }
 }
 
 static void mf_get_paritybinstr(char *s, uint32_t val, uint8_t par) {

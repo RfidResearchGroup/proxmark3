@@ -450,7 +450,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
             Dbprintf("Challenge for UID: %X", temp_uid);
             temp2++;
             *txlen = 32;
-            state = _hitag2_init(REV64(tag.key),
+            state = ht2_hitag2_init(REV64(tag.key),
                                  REV32((tag.pages[0][3] << 24) + (tag.pages[0][2] << 16) + (tag.pages[0][1] << 8) + tag.pages[0][0]),
                                  REV32((rx[3] << 24) + (rx[2] << 16) + (rx[1] << 8) + rx[0])
                                 );
@@ -462,14 +462,14 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
             hitagS_set_frame_modulation();
 
             for (int i = 0; i < 4; i++) {
-                _hitag2_byte(&state);
+                ht2_hitag2_byte(&state);
             }
 
             //send con2, pwdh0, pwdl0, pwdl1 encrypted as a response
-            tx[0] = _hitag2_byte(&state) ^ tag.pages[1][2];
-            tx[1] = _hitag2_byte(&state) ^ tag.pwdh0;
-            tx[2] = _hitag2_byte(&state) ^ tag.pwdl0;
-            tx[3] = _hitag2_byte(&state) ^ tag.pwdl1;
+            tx[0] = ht2_hitag2_byte(&state) ^ tag.pages[1][2];
+            tx[1] = ht2_hitag2_byte(&state) ^ tag.pwdh0;
+            tx[2] = ht2_hitag2_byte(&state) ^ tag.pwdl0;
+            tx[3] = ht2_hitag2_byte(&state) ^ tag.pwdl1;
 
             if (tag.mode != HT_STANDARD) {
                 //add crc8
@@ -479,7 +479,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 calc_crc(&crc, tag.pwdh0, 8);
                 calc_crc(&crc, tag.pwdl0, 8);
                 calc_crc(&crc, tag.pwdl1, 8);
-                tx[4] = (crc ^ _hitag2_byte(&state));
+                tx[4] = (crc ^ ht2_hitag2_byte(&state));
             }
             /*
              * some readers do not allow to authenticate multiple times in a row with the same tag.
@@ -1183,10 +1183,10 @@ static int selectHitagS(hitag_function htf, const hitag_data *htd, uint8_t *tx, 
                   ((uint64_t)htd->crypto.key[4]) << 32 |
                   ((uint64_t)htd->crypto.key[5]) << 40
                   ;
-            uint64_t state = _hitag2_init(REV64(key), REV32(tag.uid), REV32(rnd));
+            uint64_t state = ht2_hitag2_init(REV64(key), REV32(tag.uid), REV32(rnd));
             uint8_t auth_ks[4];
             for (int i = 0; i < 4; i++) {
-                auth_ks[i] = _hitag2_byte(&state) ^ 0xff;
+                auth_ks[i] = ht2_hitag2_byte(&state) ^ 0xff;
             }
 
             txlen = 0;
@@ -1239,14 +1239,14 @@ static int selectHitagS(hitag_function htf, const hitag_data *htd, uint8_t *tx, 
         pwdl0 = 0;
         pwdl1 = 0;
         if (htf == RHTSF_KEY || htf == WHTSF_KEY) {
-            uint64_t state = _hitag2_init(REV64(key), REV32(tag.uid), REV32(rnd));
+            uint64_t state = ht2_hitag2_init(REV64(key), REV32(tag.uid), REV32(rnd));
             for (int i = 0; i < 4; i++) {
-                _hitag2_byte(&state);
+                ht2_hitag2_byte(&state);
             }
-            uint8_t con2 = rx[0] ^ _hitag2_byte(&state);
-            pwdh0 = rx[1] ^ _hitag2_byte(&state);
-            pwdl0 = rx[2] ^ _hitag2_byte(&state);
-            pwdl1 = rx[3] ^ _hitag2_byte(&state);
+            uint8_t con2 = rx[0] ^ ht2_hitag2_byte(&state);
+            pwdh0 = rx[1] ^ ht2_hitag2_byte(&state);
+            pwdl0 = rx[2] ^ ht2_hitag2_byte(&state);
+            pwdl1 = rx[3] ^ ht2_hitag2_byte(&state);
 
             if (g_dbglevel >= DBG_EXTENDED)
                 Dbprintf("con2 %02X pwdh0 %02X pwdl0 %02X pwdl1 %02X", con2, pwdh0, pwdl0, pwdl1);

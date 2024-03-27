@@ -314,19 +314,26 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
                 //PrintAndLogEx(NORMAL, "[" _MAGENTA_("pm3") "] ["_BLUE_("#")"] " "%s", s);
                 PrintAndLogEx(NORMAL, "[" _BLUE_("#") "] %s", s);
             } else {
-                if (flag & FLAG_INPLACE)
+                if (flag & FLAG_INPLACE) {
                     PrintAndLogEx(NORMAL, "\r" NOLF);
+                }
 
                 PrintAndLogEx(NORMAL, "%s" NOLF, s);
 
-                if (flag & FLAG_NEWLINE)
+                if (flag & FLAG_NEWLINE) {
                     PrintAndLogEx(NORMAL, "");
+                }
             }
             break;
         }
         case CMD_DEBUG_PRINT_INTEGERS: {
-            if (packet->ng == false)
-                PrintAndLogEx(NORMAL, "[" _MAGENTA_("pm3") "] ["_BLUE_("#")"] " "%" PRIx64 ", %" PRIx64 ", %" PRIx64 "", packet->oldarg[0], packet->oldarg[1], packet->oldarg[2]);
+            if (packet->ng == false) {
+                PrintAndLogEx(NORMAL, "[" _MAGENTA_("pm3") "] ["_BLUE_("#")"] " "%" PRIx64 ", %" PRIx64 ", %" PRIx64 ""
+                    , packet->oldarg[0]
+                    , packet->oldarg[1]
+                    , packet->oldarg[2]
+                );
+            }
             break;
         }
         // iceman:  hw status - down the path on device, runs printusbspeed which starts sending a lot of

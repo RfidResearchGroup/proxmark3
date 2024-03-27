@@ -26,7 +26,9 @@
 #define HITAG_PASSWORD_SIZE     4
 #define HITAG_UID_SIZE          4
 #define HITAG_BLOCK_SIZE        4
-#define HITAG2_MAX_BYTE_SIZE    (12 * HITAG_BLOCK_SIZE)
+#define HITAG2_MAX_BLOCKS       8
+#define HITAG2_MAX_BYTE_SIZE    (HITAG2_MAX_BLOCKS * HITAG_BLOCK_SIZE)
+
 // need to see which limits these cards has
 #define HITAG1_MAX_BYTE_SIZE    64
 #define HITAGS_MAX_BYTE_SIZE    64

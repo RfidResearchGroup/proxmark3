@@ -771,6 +771,7 @@ SRCS += bucketsort.c \
 		crc32.c \
 		crc64.c \
 		commonutil.c \
+		hitag2/hitag2_crypto.c \
 		iso15693tools.c \
 		legic_prng.c \
 		lfdemod.c \

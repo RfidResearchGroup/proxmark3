@@ -49,6 +49,23 @@
 # define NTIME(n) for (int _index = 0; _index < n; _index++)
 #endif
 
+#ifndef REV8
+#define REV8(x) ((((x)>>7)&1)+((((x)>>6)&1)<<1)+((((x)>>5)&1)<<2)+((((x)>>4)&1)<<3)+((((x)>>3)&1)<<4)+((((x)>>2)&1)<<5)+((((x)>>1)&1)<<6)+(((x)&1)<<7))
+#endif
+
+#ifndef REV16
+#define REV16(x)        (REV8(x) + (REV8 ((x) >> 8) << 8))
+#endif
+
+#ifndef REV32
+#define REV32(x)        (REV16(x) + (REV16((x) >> 16) << 16))
+#endif
+
+#ifndef REV64
+#define REV64(x)        (REV32(x) + ((uint64_t)(REV32((x) >> 32) << 32)))
+#endif
+
+
 extern struct version_information_t g_version_information;
 void FormatVersionInformation(char *dst, int len, const char *prefix, const void *version_info);
 void format_version_information_short(char *dst, int len, const void *version_info);

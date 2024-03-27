@@ -72,6 +72,7 @@ endif
 
 ifneq (,$(findstring WITH_HITAG,$(APP_CFLAGS)))
     SRC_HITAG = hitag2_crypto.c hitag2.c hitagS.c
+    APP_CFLAGS += -I../common/hitag2
 else
     SRC_HITAG =
 endif

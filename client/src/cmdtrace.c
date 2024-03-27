@@ -650,26 +650,26 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 if (data_len == 1) {
                     
                     if (nbits == 5) {
-                        snprintf(line[0], 120, "%2u: %02x  ", nbits, frame[0] >> (8 - nbits));
+                        snprintf(line[0], 120, "%2u: %02X  ", nbits, frame[0] >> (8 - nbits));
                     } else {
-                        snprintf(line[0], 120, "%2u: %02x  ", nbits, frame[0] >> (8 - nbits));
+                        snprintf(line[0], 120, "%2u: %02X  ", nbits, frame[0] >> (8 - nbits));
                     }
 
                 } else {
                     if (nbits == 0) {
-                        snprintf(line[0], 120, "%2u: %02x  ", (data_len * 8), frame[0]);
+                        snprintf(line[0], 120, "%2u: %02X  ", (data_len * 8), frame[0]);
                     } else {
-                        snprintf(line[0], 120, "%2u: %02x  ", ((data_len - 1) * 8) + nbits, frame[0]);
+                        snprintf(line[0], 120, "%2u: %02X  ", ((data_len - 1) * 8) + nbits, frame[0]);
                     }
                 }
                 offset = 4;
 
             } else {
-                snprintf(line[j / 18] + ((j % 18) * 4) + offset, 120, "%02x  ", frame[j]);
+                snprintf(line[j / 18] + ((j % 18) * 4) + offset, 120, "%02X  ", frame[j]);
             }
             
         } else {
-            snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x  ", frame[j]);
+            snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02X  ", frame[j]);
         }
 
     }

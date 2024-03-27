@@ -914,7 +914,6 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define HITAG2_WRITE_PAGE           "10"            // write page after auth
 #define HITAG2_HALT                 "00"            // silence currently authenticated tag
 
-
 // HITAG S commands
 #define HITAGS_QUIET                    0x70
 //inverted in bit 0 and following 2 bits

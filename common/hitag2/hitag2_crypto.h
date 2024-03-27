@@ -18,7 +18,7 @@
 
 #include "common.h"
 
-struct hitag2_tag {
+typedef struct {
     uint32_t uid;
     enum {
         TAG_STATE_RESET      = 0x01,       // Just powered up, awaiting GetSnr
@@ -30,14 +30,13 @@ struct hitag2_tag {
     uint8_t crypto_active;
     uint64_t cs;
     uint8_t sectors[12][4];
-};
+} hitag2_t;
 
-uint32_t _f20(const uint64_t x);
-uint64_t _hitag2_init(const uint64_t key, const uint32_t serial, const uint32_t IV);
-uint64_t _hitag2_round(uint64_t *state);
-uint32_t _hitag2_byte(uint64_t *x);
-void hitag2_cipher_reset(struct hitag2_tag *tag, const uint8_t *iv);
-int hitag2_cipher_authenticate(uint64_t *cs, const uint8_t *authenticator_is);
-int hitag2_cipher_transcrypt(uint64_t *cs, uint8_t *data, uint16_t bytes, uint16_t bits) ;
+uint64_t ht2_hitag2_init(const uint64_t key, const uint32_t serial, const uint32_t IV);
+uint64_t ht2_hitag2_round(uint64_t *state);
+uint32_t ht2_hitag2_byte(uint64_t *x);
+void ht2_hitag2_cipher_reset(hitag2_t *tag, const uint8_t *iv);
+int ht2_hitag2_cipher_authenticate(uint64_t *cs, const uint8_t *authenticator_is);
+int ht2_hitag2_cipher_transcrypt(uint64_t *cs, uint8_t *data, uint16_t bytes, uint16_t bits) ;
 
 #endif

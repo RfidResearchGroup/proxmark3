@@ -19,6 +19,7 @@
 
 #include "util.h"
 #include "string.h"
+#include "commonutil.h"
 
 /* Following is a modified version of cryptolib.com/ciphers/hitag2/ */
 // Software optimized 48-bit Philips/NXP Mifare Hitag2 PCF7936/46/47/52 stream cipher algorithm by I.C. Wiener 2006-2007.
@@ -35,7 +36,7 @@ static const uint32_t ht2_f4a = 0x2C79;     // 0010 1100 0111 1001
 static const uint32_t ht2_f4b = 0x6671;     // 0110 0110 0111 0001
 static const uint32_t ht2_f5c = 0x7907287B; // 0111 1001 0000 0111 0010 1000 0111 1011
 
-uint32_t _f20(const uint64_t x) {
+static uint32_t ht2_f20(const uint64_t x) {
     uint32_t i5;
 
     i5 = ((ht2_f4a >> i4(x, 1, 2, 4, 5)) & 1) * 1
@@ -47,18 +48,18 @@ uint32_t _f20(const uint64_t x) {
     return (ht2_f5c >> i5) & 1;
 }
 
-uint64_t _hitag2_init(const uint64_t key, const uint32_t serial, const uint32_t IV) {
+uint64_t ht2_hitag2_init(const uint64_t key, const uint32_t serial, const uint32_t IV) {
     uint32_t i;
     uint64_t x = ((key & 0xFFFF) << 32) + serial;
 
     for (i = 0; i < 32; i++) {
         x >>= 1;
-        x += (uint64_t)(_f20(x) ^ (((IV >> i) ^ (key >> (i + 16))) & 1)) << 47;
+        x += (uint64_t)(ht2_f20(x) ^ (((IV >> i) ^ (key >> (i + 16))) & 1)) << 47;
     }
     return x;
 }
 
-uint64_t _hitag2_round(uint64_t *state) {
+uint64_t ht2_hitag2_round(uint64_t *state) {
     uint64_t x = *state;
 
     x = (x >>  1) +
@@ -68,7 +69,7 @@ uint64_t _hitag2_round(uint64_t *state) {
            ^ (x >> 42) ^ (x >> 43) ^ (x >> 46) ^ (x >> 47)) & 1) << 47);
 
     *state = x;
-    return _f20(x);
+    return ht2_f20(x);
 }
 
 // "MIKRON"             =  O  N  M  I  K  R
@@ -81,15 +82,15 @@ uint64_t _hitag2_round(uint64_t *state) {
 // The inverse of the first 4 bytes is sent to the tag to authenticate.
 // The rest is encrypted by XORing it with the subsequent keystream.
 
-uint32_t _hitag2_byte(uint64_t *x) {
+uint32_t ht2_hitag2_byte(uint64_t *x) {
     uint32_t i, c;
     for (i = 0, c = 0; i < 8; i++) {
-        c += (uint32_t) _hitag2_round(x) << (i ^ 7);
+        c += (uint32_t) ht2_hitag2_round(x) << (i ^ 7);
     }
     return c;
 }
 
-void hitag2_cipher_reset(struct hitag2_tag *tag, const uint8_t *iv) {
+void ht2_hitag2_cipher_reset(hitag2_t *tag, const uint8_t *iv) {
     uint64_t key = ((uint64_t)tag->sectors[2][2]) |
                    ((uint64_t)tag->sectors[2][3] <<  8) |
                    ((uint64_t)tag->sectors[1][0] << 16) |
@@ -104,22 +105,22 @@ void hitag2_cipher_reset(struct hitag2_tag *tag, const uint8_t *iv) {
                    (((uint32_t)(iv[1])) <<  8) |
                    (((uint32_t)(iv[2])) << 16) |
                    (((uint32_t)(iv[3])) << 24);
-    tag->cs = _hitag2_init(REV64(key), REV32(uid), REV32(iv_));
+    tag->cs = ht2_hitag2_init(REV64(key), REV32(uid), REV32(iv_));
 }
 
-int hitag2_cipher_authenticate(uint64_t *cs, const uint8_t *authenticator_is) {
+int ht2_hitag2_cipher_authenticate(uint64_t *cs, const uint8_t *authenticator_is) {
     uint8_t authenticator_should[4];
-    authenticator_should[0] = ~_hitag2_byte(cs);
-    authenticator_should[1] = ~_hitag2_byte(cs);
-    authenticator_should[2] = ~_hitag2_byte(cs);
-    authenticator_should[3] = ~_hitag2_byte(cs);
+    authenticator_should[0] = ~ht2_hitag2_byte(cs);
+    authenticator_should[1] = ~ht2_hitag2_byte(cs);
+    authenticator_should[2] = ~ht2_hitag2_byte(cs);
+    authenticator_should[3] = ~ht2_hitag2_byte(cs);
     return (memcmp(authenticator_should, authenticator_is, 4) == 0);
 }
 
-int hitag2_cipher_transcrypt(uint64_t *cs, uint8_t *data, uint16_t bytes, uint16_t bits) {
+int ht2_hitag2_cipher_transcrypt(uint64_t *cs, uint8_t *data, uint16_t bytes, uint16_t bits) {
     int i;
-    for (i = 0; i < bytes; i++) data[i] ^= _hitag2_byte(cs);
-    for (i = 0; i < bits; i++) data[bytes] ^= _hitag2_round(cs) << (7 - i);
+    for (i = 0; i < bytes; i++) data[i] ^= ht2_hitag2_byte(cs);
+    for (i = 0; i < bits; i++) data[bytes] ^= ht2_hitag2_round(cs) << (7 - i);
     return 0;
 }
 
