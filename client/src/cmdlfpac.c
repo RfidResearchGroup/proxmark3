@@ -391,7 +391,7 @@ static command_t CommandTable[] = {
     {"help",  CmdHelp,        AlwaysAvailable, "This help"},
     {"demod", CmdPacDemod,    AlwaysAvailable, "demodulate a PAC tag from the GraphBuffer"},
     {"reader",  CmdPacReader, IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone", CmdPacClone,    IfPm3Lf,         "clone PAC tag to T55x7"},
+    {"clone", CmdPacClone,    IfPm3Lf,         "clone PAC tag to T55x7, Q5/T5555 or EM4305/4469"},
     {"sim",   CmdPacSim,      IfPm3Lf,         "simulate PAC tag"},
     {NULL, NULL, NULL, NULL}
 };

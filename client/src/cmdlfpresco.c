@@ -357,7 +357,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "This help"},
     {"demod",   CmdPrescoDemod, AlwaysAvailable, "demodulate Presco tag from the GraphBuffer"},
     {"reader",  CmdPrescoReader, IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",   CmdPrescoClone,  IfPm3Lf,         "clone presco tag to T55x7 or Q5/T5555"},
+    {"clone",   CmdPrescoClone,  IfPm3Lf,         "clone presco tag to T55x7, Q5/T5555 or EM4305/4469"},
     {"sim",     CmdPrescoSim,    IfPm3Lf,         "simulate presco tag"},
     {NULL, NULL, NULL, NULL}
 };

@@ -745,7 +745,7 @@ static command_t CommandTable[] = {
     {"brute",  CmdEM410xBrute,    IfPm3Lf,         "reader bruteforce attack by simulating EM410x tags"},
     {"watch",  CmdEM410xWatch,    IfPm3Lf,         "watches for EM410x 125/134 kHz tags"},
     {"spoof",  CmdEM410xSpoof,    IfPm3Lf,         "watches for EM410x 125/134 kHz tags, and replays them" },
-    {"clone",  CmdEM410xClone,    IfPm3Lf,         "write EM410x Tag ID to T55x7 or Q5/T5555 tag"},
+    {"clone",  CmdEM410xClone,    IfPm3Lf,         "clone EM410x Tag ID to T55x7, Q5/T5555 or EM4305/4469"},
     {NULL, NULL, NULL, NULL}
 };
 

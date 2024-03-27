@@ -444,7 +444,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,          AlwaysAvailable, "this help"},
     {"demod",   CmdPyramidDemod,  AlwaysAvailable, "demodulate a Pyramid FSK tag from the GraphBuffer"},
     {"reader",  CmdPyramidReader, IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",   CmdPyramidClone,  IfPm3Lf,         "clone pyramid tag to T55x7 or Q5/T5555"},
+    {"clone",   CmdPyramidClone,  IfPm3Lf,         "clone pyramid tag to T55x7, Q5/T5555 or EM4305/4469"},
     {"sim",     CmdPyramidSim,    IfPm3Lf,         "simulate pyramid tag"},
     {NULL, NULL, NULL, NULL}
 };

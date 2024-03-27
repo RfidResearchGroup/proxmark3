@@ -294,7 +294,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,            AlwaysAvailable, "This help"},
     {"demod",   CmdSecurakeyDemod,  AlwaysAvailable, "demodulate an Securakey tag from the GraphBuffer"},
     {"reader",  CmdSecurakeyReader, IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",   CmdSecurakeyClone,  IfPm3Lf,         "clone Securakey tag to T55x7"},
+    {"clone",   CmdSecurakeyClone,  IfPm3Lf,         "clone Securakey tag to T55x7, Q5/T5555 or EM4305/4469"},
     {"sim",     CmdSecurakeySim,    IfPm3Lf,         "simulate Securakey tag"},
     {NULL, NULL, NULL, NULL}
 };

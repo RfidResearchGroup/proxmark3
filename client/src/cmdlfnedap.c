@@ -563,7 +563,7 @@ static command_t CommandTable[] = {
     {"help",   CmdHelp,          AlwaysAvailable, "This help"},
     {"demod",  CmdLFNedapDemod,  AlwaysAvailable, "demodulate Nedap tag from the GraphBuffer"},
     {"reader", CmdLFNedapReader, IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",  CmdLFNedapClone,  IfPm3Lf,         "clone Nedap tag to T55x7 or Q5/T5555"},
+    {"clone",  CmdLFNedapClone,  IfPm3Lf,         "clone Nedap tag to T55x7, Q5/T5555 or EM4305/4469"},
     {"sim",    CmdLFNedapSim,    IfPm3Lf,         "simulate Nedap tag"},
     {NULL, NULL, NULL, NULL}
 };

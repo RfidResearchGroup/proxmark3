@@ -889,7 +889,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,      AlwaysAvailable, "this help"},
     {"demod",   CmdFdxBDemod,  AlwaysAvailable, "demodulate a FDX-B ISO11784/85 tag from the GraphBuffer"},
     {"reader",  CmdFdxBReader, IfPm3Lf,         "attempt to read at 134kHz and extract tag data"},
-    {"clone",   CmdFdxBClone,  IfPm3Lf,         "clone animal ID tag to T55x7 or Q5/T5555"},
+    {"clone",   CmdFdxBClone,  IfPm3Lf,         "clone animal ID tag to T55x7, Q5/T5555 or EM4305/4469"},
     {"sim",     CmdFdxBSim,    IfPm3Lf,         "simulate Animal ID tag"},
     {NULL, NULL, NULL, NULL}
 };

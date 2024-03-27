@@ -369,7 +369,7 @@ static command_t CommandTable[] = {
     {"help",   CmdHelp,       AlwaysAvailable, "This help"},
     {"demod",  CmdKeriDemod,  AlwaysAvailable, "demodulate an KERI tag from the GraphBuffer"},
     {"reader", CmdKeriReader, IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",  CmdKeriClone,  IfPm3Lf,         "clone KERI tag to T55x7 or Q5/T5555"},
+    {"clone",  CmdKeriClone,  IfPm3Lf,         "clone KERI tag to T55x7, Q5/T5555 or EM4305/4469"},
     {"sim",    CmdKeriSim,    IfPm3Lf,         "simulate KERI tag"},
     {NULL, NULL, NULL, NULL}
 };
