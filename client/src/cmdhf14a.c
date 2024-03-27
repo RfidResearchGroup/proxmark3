@@ -888,10 +888,10 @@ int CmdHF14ASim(const char *Cmd) {
 int CmdHF14ASniff(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a sniff",
-                  "Collect data from the field and save into command buffer.\n"
-                  "Buffer accessible from command `hf 14a list`\n",
-                  " hf 14a sniff -c -r");
-
+                  "Sniff the communication between Hitag reader and tag.\n"
+                  "Use `hf 14a list` to view collected data.",
+                  " hf 14a sniff -c -r"
+                );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("c", "card", "triggered by first data from card"),
@@ -918,10 +918,13 @@ int CmdHF14ASniff(const char *Cmd) {
     SendCommandNG(CMD_HF_ISO14443A_SNIFF, (uint8_t *)&param, sizeof(uint8_t));
 
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort sniffing");
+
     if (interactive) {
         PacketResponseNG resp;
         WaitForResponse(CMD_HF_ISO14443A_SNIFF, &resp);
         PrintAndLogEx(INFO, "Done!");
+        PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 14a list")"` to view captured tracelog");
+        PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
     }
     return PM3_SUCCESS;
 }

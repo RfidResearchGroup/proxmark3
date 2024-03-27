@@ -238,8 +238,8 @@ static void print_hitag2_configuration(uint32_t uid, uint8_t config) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
-    PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%08X"), uid);
-    PrintAndLogEx(SUCCESS, "TYPE... " _GREEN_("%s"), getHitagTypeStr(uid));
+    PrintAndLogEx(SUCCESS, "UID...... " _GREEN_("%08X"), uid);
+    PrintAndLogEx(SUCCESS, "TYPE..... " _GREEN_("%s"), getHitagTypeStr(uid));
 
     char msg[100];
     memset(msg, 0, sizeof(msg));
@@ -249,11 +249,9 @@ static void print_hitag2_configuration(uint32_t uid, uint8_t config) {
     const char *bs = sprint_bytebits_bin(bits, 8);
 
     //configuration byte
-    PrintAndLogEx(SUCCESS, "");
-    PrintAndLogEx(SUCCESS, "Config byte... 0x%02X", config);
+//    PrintAndLogEx(SUCCESS, "");
+    PrintAndLogEx(SUCCESS, "Config... " _YELLOW_("0x%02X"), config);
     PrintAndLogEx(SUCCESS, "  %s", bs);
-
-
     PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 0, 4, "RFU"));
 
     if (config & 0x8) {
@@ -285,7 +283,6 @@ static void print_hitag2_configuration(uint32_t uid, uint8_t config) {
     } else {
         PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 7, 1, "Manchester"));
     }
-
 }
 
 const char *annotation[] = {
@@ -297,9 +294,9 @@ const char *annotation[] = {
 static void print_hitag2_blocks(uint8_t *d, uint16_t n) {
 
     PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, "-----------------------------------------------");
-    PrintAndLogEx(INFO, "block#   | data        | ascii | lck | Info");
-    PrintAndLogEx(INFO, "---------+-------------+-------+-----+---------");
+    PrintAndLogEx(INFO, "----------------------------------------------");
+    PrintAndLogEx(INFO, " #      | data        | ascii | lck | Info");
+    PrintAndLogEx(INFO, "--------+-------------+-------+-----+---------");
 
     uint8_t config = d[HITAG2_CONFIG_OFFSET];
     uint8_t blocks = (n / HITAG_BLOCK_SIZE);
@@ -360,7 +357,7 @@ static void print_hitag2_blocks(uint8_t *d, uint16_t n) {
                 break;
         }
 
-        PrintAndLogEx(INFO, "%3d/0x%02X | %s| %s  | %s  | %s"
+        PrintAndLogEx(INFO, "%2d/0x%02X | %s| %s  | %s  | %s"
                       , i
                       , i
                       , sprint_hex(d + (i * HITAG_BLOCK_SIZE), HITAG_BLOCK_SIZE)
@@ -724,8 +721,13 @@ static int CmdLFHitagReader(const char *Cmd) {
     uint8_t *data = resp.data.asBytes;
     uint32_t uid = bytes_to_num(data, HITAG_UID_SIZE);
     print_hitag2_configuration(uid, data[HITAG_BLOCK_SIZE * 3]);
-    print_hex_break(data, HITAG2_MAX_BYTE_SIZE, HITAG_BLOCK_SIZE);
-    print_hitag2_paxton(data);
+
+    if (use_ht2) {
+        print_hitag2_blocks(data, HITAG2_MAX_BYTE_SIZE);
+        print_hitag2_paxton(data);
+    } else {
+        print_hex_break(data, HITAG2_MAX_BYTE_SIZE, HITAG_BLOCK_SIZE);
+    }
     return PM3_SUCCESS;
 }
 
@@ -1131,9 +1133,13 @@ static int CmdLFHitag2Dump(const char *Cmd) {
 
     // block3, 1 byte
     uint32_t uid = bytes_to_num(data, HITAG_UID_SIZE);
-    print_hitag2_configuration(uid, data[HITAG_BLOCK_SIZE * 3]);
-    print_hitag2_blocks(data, HITAG2_MAX_BYTE_SIZE);
-    print_hitag2_paxton(data);
+    if (use_ht2) {
+        print_hitag2_configuration(uid, data[HITAG_BLOCK_SIZE * 3]);
+        print_hitag2_blocks(data, HITAG2_MAX_BYTE_SIZE);
+        print_hitag2_paxton(data);
+    } else {
+        PrintAndLogEx(INFO, "No memory printing available");
+    }
 
     if (nosave) {
         PrintAndLogEx(NORMAL, "");
@@ -1360,9 +1366,9 @@ static int CmdLFHitagSim(const char *Cmd) {
 static int CmdLFHitagSniff(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag sniff",
-                  "Sniff traffic between Hitag reader and tag.\n"
-                  "Use " _YELLOW_("`lf hitag list`")" to view collected data.",
-                  "lf hitag sniff"
+                  "Sniff the communication between reader and tag.\n"
+                  "Use `lf hitag list` to view collected data.",
+                  " lf hitag sniff"
                  );
 
     void *argtable[] = {
@@ -1372,9 +1378,15 @@ static int CmdLFHitagSniff(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort sniffing");
+
+    PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HITAG_SNIFF, NULL, 0);
-    PrintAndLogEx(HINT, "HINT: Try " _YELLOW_("`lf hitag list`")" to view collected data");
+    WaitForResponse(CMD_LF_HITAG_SNIFF, &resp);
+    PrintAndLogEx(INFO, "Done!");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("lf hitag list")"` to view captured tracelog");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
     return PM3_SUCCESS;
 }
 

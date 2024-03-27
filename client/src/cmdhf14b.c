@@ -868,7 +868,8 @@ static int CmdHF14BSniff(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b sniff",
-                  "Sniff the communication reader and tag",
+                  "Sniff the communication between reader and tag.\n"
+                  "Use `hf 14b list` to view collected data.",
                   "hf 14b sniff"
                  );
 
@@ -879,12 +880,12 @@ static int CmdHF14BSniff(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort sniffing");
+
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443B_SNIFF, NULL, 0);
-
     WaitForResponse(CMD_HF_ISO14443B_SNIFF, &resp);
-
     PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 14b list") "` to view captured tracelog");
     PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
     return PM3_SUCCESS;
