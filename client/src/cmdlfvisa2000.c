@@ -295,7 +295,7 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,         AlwaysAvailable, "This help"},
     {"demod",   CmdVisa2kDemod,  AlwaysAvailable, "demodulate an VISA2000 tag from the GraphBuffer"},
     {"reader",  CmdVisa2kReader, IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",   CmdVisa2kClone,  IfPm3Lf,         "clone Visa2000 tag to T55x7 or Q5/T5555"},
+    {"clone",   CmdVisa2kClone,  IfPm3Lf,         "clone Visa2000 tag to T55x7, Q5/T5555 or EM4305/4469"},
     {"sim",     CmdVisa2kSim,    IfPm3Lf,         "simulate Visa2000 tag"},
     {NULL, NULL, NULL, NULL}
 };

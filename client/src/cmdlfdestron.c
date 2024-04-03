@@ -238,7 +238,7 @@ static command_t CommandTable[] = {
     {"help",   CmdHelp,          AlwaysAvailable, "This help"},
     {"demod",  CmdDestronDemod,  AlwaysAvailable, "demodulate an Destron tag from the GraphBuffer"},
     {"reader", CmdDestronReader, IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",  CmdDestronClone,  IfPm3Lf,         "clone Destron tag to T55x7"},
+    {"clone",  CmdDestronClone,  IfPm3Lf,         "clone Destron tag to T55x7, Q5/T5555 or EM4305/4469"},
     {"sim",    CmdDestronSim,    IfPm3Lf,         "simulate Destron tag"},
     {NULL, NULL, NULL, NULL}
 };
