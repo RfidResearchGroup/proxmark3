@@ -621,7 +621,7 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
             fflush(stdout);
 
             if (kbd_enter_pressed()) {
-                PrintAndLogEx(WARNING, "\nAborted via keyboard!\n");
+                PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
                 free(fptr);
                 free(keyA);
                 free(keyB);
@@ -779,7 +779,7 @@ static int mf_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey
             PrintAndLogEx(DEBUG, _YELLOW_("%2d") " - %s", i, sprint_hex(*pkeyBlock + i * MIFARE_KEY_SIZE, MIFARE_KEY_SIZE));
         }
         *pkeycnt += numKeys;
-        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%d") " dynamic keys", numKeys);
+        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " user keys", numKeys);
     }
 
     // Handle default keys
@@ -797,7 +797,6 @@ static int mf_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey
     }
     *pkeycnt += ARRAYLEN(g_mifare_default_keys);
     PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%zu") " keys from hardcoded default array", ARRAYLEN(g_mifare_default_keys));
-
 
     // Handle user supplied dictionary file
     if (fnlen > 0) {
@@ -4711,7 +4710,7 @@ static int CmdHF14AMfEView(const char *Cmd) {
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0("v", "verbose", "verbose output"),
-        arg_lit0(NULL, "sk", "Save extracted keys to file"),
+        arg_lit0(NULL, "sk", "Save extracted keys to binary file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -6803,9 +6802,9 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
 
         // find next available block
         block_no++;
+
         if (mfIsSectorTrailer(block_no)) {
             block_no++;
-
             // skip sectors which isn't ndef formatted
             while (freemem[mfSectorNum(block_no)] == 0) {
                 block_no++;
@@ -7149,8 +7148,9 @@ static int CmdHf14AMfSuperCard(const char *Cmd) {
 
     CLIParserFree(ctx);
 
+    // sanity checks
     if (res || (!res && uidlen && uidlen != sizeof(uid))) {
-        PrintAndLogEx(ERR, "UID must include 8 HEX symbols");
+        PrintAndLogEx(ERR, "UID must include 4 hex bytes");
         return PM3_EINVARG;
     }
 
@@ -7555,7 +7555,7 @@ static int CmdHF14AMfView(const char *Cmd) {
         arg_param_begin,
         arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0("v", "verbose", "verbose output"),
-        arg_lit0(NULL, "sk", "Save extracted keys to file"),
+        arg_lit0(NULL, "sk", "Save extracted keys to binary file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -9298,7 +9298,6 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         if (verbose) {
             PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card.atqa[1], card.atqa[0]);
         }
-
         return select_status;
     }
 
@@ -9398,7 +9397,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             (blockdata[8] == 0x04 && blockdata[15] == 0x90) ||
             (memcmp(blockdata + 8, "\x62\x63\x64\x65\x66\x67\x68\x69", 8) == 0)
         ) {
-            PrintAndLogEx(SUCCESS, "FUDAN detected");
+            PrintAndLogEx(SUCCESS, "FUDAN based card");
         }
 
         if (e_sector[1].foundKey[MF_KEY_A] && (e_sector[1].Key[MF_KEY_A] == 0x2A2C13CC242A)) {
