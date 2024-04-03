@@ -455,6 +455,8 @@ if (APPLE)
       set(ADDITIONAL_LNK "-framework Foundation" "-framework AppKit")
     endif()
 
+    set_property(TARGET proxmark3 PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
+
 endif (APPLE)
 
 if ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
