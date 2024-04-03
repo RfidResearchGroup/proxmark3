@@ -733,7 +733,7 @@ if (NOT APPLE)
     set(ADDITIONAL_LNK ${ADDITIONAL_LNK} -Wl,--as-needed -latomic -Wl,--no-as-needed)
 else (NOT APPLE)
     #set_property(TARGET proxmark3 PROPERTY LINK_FLAGS "-Wl,-undefined dynamic_lookup")
-    set(ADDITIONAL_LNK ${ADDITIONAL_LNK} -Wl,-undefined dynamic_lookup)
+    set(ADDITIONAL_LNK ${ADDITIONAL_LNK} -Wl,-undefined,dynamic_lookup)
 endif (NOT APPLE)
 
 if (NOT JANSSON_FOUND)
