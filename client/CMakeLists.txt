@@ -455,7 +455,7 @@ if (APPLE)
       set(ADDITIONAL_LNK "-framework Foundation" "-framework AppKit")
     endif()
 
-    set_property(TARGET proxmark3 PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
+    set_property(TARGET proxmark3 PROPERTY LINK_FLAGS "-Wl,-undefined dynamic_lookup")
 
 endif (APPLE)
 
