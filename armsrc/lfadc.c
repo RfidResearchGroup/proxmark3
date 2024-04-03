@@ -230,10 +230,7 @@ void lf_init(bool reader, bool simulate, bool ledcontrol) {
 
     // When in reader mode, give the field a bit of time to settle.
     // 313T0 = 313 * 8us = 2504us = 2.5ms  Hitag2 tags needs to be fully powered.
-//    if (reader) {
-    // 10 ms
     SpinDelay(10);
-//    }
 
     // Steal this pin from the SSP (SPI communication channel with fpga) and use it to control the modulation
     AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
