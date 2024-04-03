@@ -734,11 +734,10 @@ target_include_directories(proxmark3 PRIVATE
 if (NOT APPLE)
     # required for Raspberry Pi, but breaks with clang (OSX). Need to be at the end of the linker line.
     set(ADDITIONAL_LNK ${ADDITIONAL_LNK} -Wl,--as-needed -latomic -Wl,--no-as-needed)
+else (NOT APPLE)
+    #set_property(TARGET proxmark3 PROPERTY LINK_FLAGS "-Wl,-undefined dynamic_lookup")
+    set(ADDITIONAL_LNK ${ADDITIONAL_LNK} -Wl,-undefined dynamic_lookup)
 endif (NOT APPLE)
-
-if (APPLE)
-    set_property(TARGET proxmark3 PROPERTY LINK_FLAGS "-Wl,-undefined dynamic_lookup")
-endif (APPLE)
 
 if (NOT JANSSON_FOUND)
     set(ADDITIONAL_LNK pm3rrg_rdv4_jansson ${ADDITIONAL_LNK})
