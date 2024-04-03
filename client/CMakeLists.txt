@@ -454,9 +454,6 @@ if (APPLE)
       message(STATUS "AppKit.framework found! ${APPKIT_LIBRARY}")
       set(ADDITIONAL_LNK "-framework Foundation" "-framework AppKit")
     endif()
-
-    set_property(TARGET proxmark3 PROPERTY LINK_FLAGS "-Wl,-undefined dynamic_lookup")
-
 endif (APPLE)
 
 if ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
