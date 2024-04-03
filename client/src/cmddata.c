@@ -21,6 +21,7 @@
 #include <limits.h>              // for CmdNorm INT_MIN && INT_MAX
 #include <math.h>                // pow
 #include <ctype.h>               // tolower
+#include <locale.h>              // number formatter..
 #include "commonutil.h"          // ARRAYLEN
 #include "cmdparser.h"           // for command_t
 #include "ui.h"                  // for show graph controls
@@ -41,12 +42,54 @@
 #include "atrs.h"                // ATR lookup
 #include "crypto/libpcrypto.h"   // Cryptography
 
+
 uint8_t g_DemodBuffer[MAX_DEMOD_BUF_LEN] = { 0x00 };
 size_t g_DemodBufferLen = 0;
 int32_t g_DemodStartIdx = 0;
 int g_DemodClock = 0;
 
 static int CmdHelp(const char *Cmd);
+
+
+// https://www.eskimo.com/~scs/c-faq.com/stdio/commaprint.html
+static char *commaprint(size_t n) {
+
+    static int comma = '\0';
+    static char retbuf[30];
+
+    char *p = &retbuf[sizeof(retbuf)-1];
+    int i = 0;
+
+    if (comma == '\0') {
+
+        struct lconv *lcp = localeconv();
+        if (lcp != NULL) {
+
+            if(lcp->thousands_sep != NULL && *lcp->thousands_sep != '\0') {
+                comma = *lcp->thousands_sep;
+            } else {
+                comma = ',';
+            }
+        }
+    }
+
+    *p = '\0';
+
+    do {
+        if ( i % 3 == 0 && i != 0 ) {
+            *--p = comma;
+        }
+
+        *--p = '0' + n % 10;
+
+        n /= 10;
+
+        i++;
+
+    } while (n != 0);
+
+    return p;
+}
 
 // set the g_DemodBuffer with given array ofq binary (one bit per byte)
 void setDemodBuff(const uint8_t *buff, size_t size, size_t start_idx) {
@@ -244,12 +287,15 @@ int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_h
     if (strip_leading) {
         p = (buf + offset);
 
-        if (len > (g_DemodBufferLen - offset))
+        if (len > (g_DemodBufferLen - offset)) {
             len = (g_DemodBufferLen - offset);
+        }
 
         size_t i;
         for (i = 0; i < len; i++) {
-            if (p[i] == 1) break;
+            if (p[i] == 1) {
+                break;
+            }
         }
         offset += i;
     }
@@ -263,26 +309,31 @@ int printDemodBuff(uint8_t offset, bool strip_leading, bool invert, bool print_h
     }
 
     if (invert) {
+
         p = (buf + offset);
+
         for (size_t i = 0; i < len; i++) {
-            if (p[i] == 1)
+            if (p[i] == 1) {
                 p[i] = 0;
-            else {
-                if (p[i] == 0)
+            } else {
+                if (p[i] == 0) {
                     p[i] = 1;
+                }
             }
         }
     }
 
     if (print_hex) {
         p = (buf + offset);
-        char hex[MAX_DEMODULATION_BITS + 1] = {0x00};
+        char hex[MAX_DEMODULATION_BITS + 1] = { 0x00 };
         int num_bits = binarray_2_hex(hex, sizeof(hex), (char *)p, len);
+
         if (num_bits == 0) {
             p = NULL;
             free(buf);
             return PM3_ESOFT;
         }
+
         PrintAndLogEx(SUCCESS, "DemodBuffer:\n%s", hex);
     } else {
         PrintAndLogEx(SUCCESS, "DemodBuffer:\n%s", sprint_bytebits_bin_break(buf + offset, len, 32));
@@ -1979,7 +2030,7 @@ static int CmdLoad(const char *Cmd) {
     }
     fclose(f);
 
-    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%zu") " samples", g_GraphTraceLen);
+    PrintAndLogEx(SUCCESS, "loaded " _YELLOW_("%s") " samples", commaprint(g_GraphTraceLen));
 
     if (nofix == false) {
         uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
@@ -2006,11 +2057,11 @@ int CmdLtrim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data ltrim",
                   "Trim samples from left of trace",
-                  "data ltrim -i 300   --> keep 300 - end"
+                  "data ltrim -i 300   --> remove from start 0 to index 300"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_1("i", "idx", "<dec>", "from index to beginning trace"),
+        arg_u64_1("i", "idx", "<dec>", "index in graph buffer"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2023,9 +2074,9 @@ int CmdLtrim(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    for (uint32_t i = ds; i < g_GraphTraceLen; ++i)
+    for (size_t i = ds; i < g_GraphTraceLen; ++i) {
         g_GraphBuffer[i - ds] = g_GraphBuffer[i];
-
+    }
     g_GraphTraceLen -= ds;
     g_DemodStartIdx -= ds;
     RepaintGraphWindow();
@@ -2038,11 +2089,11 @@ static int CmdRtrim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data rtrim",
                   "Trim samples from right of trace",
-                  "data rtrim -i 4000    --> keep 0 - 4000"
+                  "data rtrim -i 4000    --> remove from index 4000 to end of graph buffer"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_1("i", "idx", "<dec>", "from index to end trace"),
+        arg_u64_1("i", "idx", "<dec>", "index in graph buffer"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2065,8 +2116,11 @@ static int CmdMtrim(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data mtrim",
-                  "Trim out samples from the specified start to the specified end point",
-                  "data mtrim -s 1000 -e 2000  -->  keep between 1000 and 2000"
+                  "Trim out samples from\n"
+                  "  start 0 to `-s index`\n"
+                  "AND\n"
+                  "  from `-e index` to end of graph buffer",
+                  "data mtrim -s 1000 -e 2000  -->  keep all between index 1000 and 2000"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -2092,6 +2146,8 @@ static int CmdMtrim(const char *Cmd) {
         g_GraphBuffer[i] = g_GraphBuffer[start + i];
     }
 
+    g_DemodStartIdx = 0;
+    RepaintGraphWindow();
     return PM3_SUCCESS;
 }
 
@@ -3185,7 +3241,7 @@ static int CmdNumCon(const char *Cmd) {
             return PM3_EINVARG;
         }
         MBEDTLS_MPI_CHK(mbedtls_mpi_read_string(&N, 16, hex));
-        PrintAndLogEx(INFO, "Input hex len... %d", hlen);
+        PrintAndLogEx(INFO, "#....... %d", hlen);
     }
 
     // decimal
@@ -3198,7 +3254,7 @@ static int CmdNumCon(const char *Cmd) {
     if (blen > 0) {
         // should have bianry string check here too
         MBEDTLS_MPI_CHK(mbedtls_mpi_read_string(&N, 2, bin));
-        PrintAndLogEx(INFO, "Input bin len... %d", blen);
+        PrintAndLogEx(INFO, "#bits... %d", blen);
     }
 
     mbedtls_mpi base;
@@ -3212,9 +3268,9 @@ static int CmdNumCon(const char *Cmd) {
     } radix_t;
 
     radix_t radix[] = {
-        {"dec... ", 10},
-        {"hex... ", 16},
-        {"bin... ", 2}
+        {"dec..... ", 10},
+        {"hex..... ", 16},
+        {"bin..... ", 2}
     };
 
     char s[600] = {0};
@@ -3224,6 +3280,18 @@ static int CmdNumCon(const char *Cmd) {
         MBEDTLS_MPI_CHK(mbedtls_mpi_write_string(&N, radix[i].radix, s, sizeof(s), &slen));
         if (slen) {
             PrintAndLogEx(SUCCESS, "%s%s", radix[i].desc, s);
+        }
+    }
+
+    // ascii
+    MBEDTLS_MPI_CHK(mbedtls_mpi_write_string(&N, 16, s, sizeof(s), &slen));
+    if (slen) {
+        size_t n = (slen >> 1);
+        uint8_t *d = calloc(n, sizeof(uint8_t));
+        if (d != NULL ) {
+            hexstr_to_byte_array(s, d, &n);
+            PrintAndLogEx(SUCCESS, "ascii... " _YELLOW_("%s"), sprint_ascii((const uint8_t*)d, n));
+            free(d);
         }
     }
 
@@ -3237,6 +3305,19 @@ static int CmdNumCon(const char *Cmd) {
 
             if (slen) {
                 PrintAndLogEx(SUCCESS, "%s%s", radix[i].desc, s);
+            }
+        }
+
+        // ascii
+        MBEDTLS_MPI_CHK(mbedtls_mpi_write_string(&N, 16, s, sizeof(s), &slen));
+        if (slen) {
+            str_reverse(s, strlen(s));
+            size_t n = (slen >> 1);
+            uint8_t *d = calloc(n, sizeof(uint8_t));
+            if (d != NULL ) {
+                hexstr_to_byte_array(s, d, &n);
+                PrintAndLogEx(SUCCESS, "ascii... " _YELLOW_("%s"), sprint_ascii((const uint8_t*)d, n));
+                free(d);
             }
         }
     }
@@ -3264,6 +3345,18 @@ static int CmdNumCon(const char *Cmd) {
                     break;
                 default:
                     break;
+            }
+        }
+        // ascii
+        MBEDTLS_MPI_CHK(mbedtls_mpi_write_string(&N, 16, s, sizeof(s), &slen));
+        if (slen) {
+            str_inverse_hex(s, strlen(s));
+            size_t n = (slen >> 1);
+            uint8_t *d = calloc(n, sizeof(uint8_t));
+            if (d != NULL ) {
+                hexstr_to_byte_array(s, d, &n);
+                PrintAndLogEx(SUCCESS, "ascii... " _YELLOW_("%s"), sprint_ascii((const uint8_t*)d, n));
+                free(d);
             }
         }
     }
