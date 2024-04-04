@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf mf *` - printing of keys if MFC EV1 added extra explaination (@iceman1001)
+- Changed `hf mf ginfo - now supports decoding of user supplied configuration block (@iceman1001)
 - Changed `data load` - now shows loaded number as comma printed. (@iceman1001)
 - Updated `/tools/hitag2crack/common/OpenCL-Headers/CL` with latest from KhronosGroup github page (@iceman1001)
 - Fixed `lf hitag list` - improved HITAG2 protocol annotation (@iceman1001)

@@ -7667,11 +7667,13 @@ static int CmdHF14AGen4Info(const char *cmd) {
                   "Read info about magic gen4 GTU card.",
                   "hf mf ginfo                  --> get info with default password 00000000\n"
                   "hf mf ginfo --pwd 01020304   --> get info with password\n"
+                  "hf mf ginfo -d 00000000000002090978009102BDAC19131011121314151604001800FF0002FD -v --> decode config block"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v", "verbose", "verbose output"),
-        arg_str0("p", "pwd", "<hex>", "password 4bytes"),
+        arg_str0("p", "pwd", "<hex>", "password 4 bytes"),
+        arg_str0("d", "data", "<hex>", "config bytes 32 bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, cmd, argtable, true);
@@ -7680,6 +7682,10 @@ static int CmdHF14AGen4Info(const char *cmd) {
     int pwd_len = 0;
     uint8_t pwd[4] = {0};
     CLIGetHexWithReturn(ctx, 2, pwd, &pwd_len);
+
+    int dlen = 0;
+    uint8_t data[32] = {0};
+    CLIGetHexWithReturn(ctx, 3, data, &dlen);
     CLIParserFree(ctx);
 
     if (pwd_len != 0 && pwd_len != 4) {
@@ -7689,149 +7695,179 @@ static int CmdHF14AGen4Info(const char *cmd) {
 
     uint8_t resp[40] = {0};
     size_t resplen = 0;
-    int res = mfG4GetConfig(pwd, resp, &resplen, verbose);
-    if (res != PM3_SUCCESS || resplen == 0) {
-        if (res == PM3_ETIMEOUT)
-            PrintAndLogEx(ERR, "No card in the field or card command timeout.");
-        else
-            PrintAndLogEx(ERR, "Error get config. Maybe not a Gen4 card?. error=%d rlen=%zu", res, resplen);
-        return PM3_ESOFT;
+    int res = 0;
+    
+    if (dlen != 32) {
+        res = mfG4GetConfig(pwd, resp, &resplen, verbose);
+        if (res != PM3_SUCCESS || resplen == 0) {
+            if (res == PM3_ETIMEOUT)
+                PrintAndLogEx(ERR, "No card in the field or card command timeout.");
+            else
+                PrintAndLogEx(ERR, "Error get config. Maybe not a Gen4 card?. error=%d rlen=%zu", res, resplen);
+            return PM3_ESOFT;
+        }
+    } else {
+        memcpy(resp, data, dlen);
+        resplen = 32;
     }
 
-    PrintAndLogEx(INFO, "---------- Gen4 configuration ----------");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "---------- " _CYAN_("GTU Gen4 configuration") " -------------------------------------");
     if (resplen != 30 && resplen != 32) {
-        PrintAndLogEx(INFO, "Raw config [%02zu] %s", resplen, sprint_hex_inrow(resp, resplen));
+        PrintAndLogEx(INFO, "Raw ( %zub )... %s", resplen, sprint_hex_inrow(resp, resplen));
         PrintAndLogEx(WARNING, "Unknown config format");
         return PM3_SUCCESS;
     }
-    if (verbose)
-        PrintAndLogEx(INFO, "Raw config [%02zu]..... %s", resplen, sprint_hex_inrow(resp, resplen));
 
-    PrintAndLogEx(INFO, "UL protocol......... %02x" NOLF, resp[0]);
+    PrintAndLogEx(INFO, "Raw... "  _YELLOW_("%s"), sprint_hex_inrow(resp, resplen));
+    PrintAndLogEx(INFO, "Len... %u", resplen);
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, _CYAN_("Config 1 - UID & modes"));
+    PrintAndLogEx(INFO, "%s", sprint_hex_inrow(resp, 8));
+    PrintAndLogEx(INFO, "%02X.............. " NOLF, resp[0]);
+    bool is_ul_enabled = ( resp[0] == 1 );
     switch (resp[0]) {
         case 0x00:
-            PrintAndLogEx(NORMAL, " (MIFARE Classic mode)");
+            PrintAndLogEx(NORMAL, "MIFARE Classic mode");
             break;
         case 0x01:
-            PrintAndLogEx(NORMAL, " (MIFARE Ultralight/NTAG mode)");
+            PrintAndLogEx(NORMAL, "MIFARE Ultralight/NTAG mode");
             break;
         default:
-            PrintAndLogEx(NORMAL, " (unknown %02x)", resp[0]);
+            PrintAndLogEx(NORMAL, _RED_("unknown"));
             break;
     }
 
+    PrintAndLogEx(INFO, "..%02X............ UID " NOLF, resp[1]);
     uint8_t uid_len = resp[1];
-    PrintAndLogEx(INFO, "UID length.......... %02x" NOLF, resp[1]);
     switch (resp[1]) {
         case 0x00:
-            PrintAndLogEx(NORMAL, " (4 byte)");
+            PrintAndLogEx(NORMAL, _GREEN_("4") " byte");
             break;
         case 0x01:
-            PrintAndLogEx(NORMAL, " (7 byte)");
+            PrintAndLogEx(NORMAL, _GREEN_("7") " byte");
             break;
         case 0x02:
-            PrintAndLogEx(NORMAL, " (10 byte)");
+            PrintAndLogEx(NORMAL, _GREEN_("10") " byte");
             break;
         default:
-            PrintAndLogEx(NORMAL, " (unknown %02x)", resp[1]);
+            PrintAndLogEx(NORMAL, _RED_("unknown"));
             break;
     }
+    PrintAndLogEx(INFO, "...." _YELLOW_("%s") ".... " _YELLOW_("Password"), sprint_hex_inrow(&resp[2], 4));
 
-    PrintAndLogEx(INFO, "Password............ %s", sprint_hex_inrow(&resp[2], 4));
-
-    PrintAndLogEx(INFO, "GTU mode............ %02x" NOLF, resp[6]);
+    PrintAndLogEx(INFO, "............%02X.. GTU mode " NOLF, resp[6]);
     switch (resp[6]) {
         case 0x00:
-            PrintAndLogEx(NORMAL, " (pre-write, shadow data can be written)");
+            PrintAndLogEx(NORMAL, _GREEN_("pre-write") " - shadow data can be written");
             break;
         case 0x01:
-            PrintAndLogEx(NORMAL, " (restore mode)");
+            PrintAndLogEx(NORMAL, _GREEN_("restore mode"));
             break;
         case 0x02:
-            PrintAndLogEx(NORMAL, " (disabled)");
+            PrintAndLogEx(NORMAL, "disabled");
             break;
         case 0x03:
-            PrintAndLogEx(NORMAL, " (disabled, high speed R/W mode for Ultralight?)");
+            PrintAndLogEx(NORMAL, "disabled, high speed R/W mode for Ultralight ?");
             break;
         default:
-            PrintAndLogEx(NORMAL, " (unknown %02x)", resp[6]);
+            PrintAndLogEx(NORMAL, _RED_("unknown"));
             break;
     }
 
-    PrintAndLogEx(INFO, "ATS [%02d]............ %s", resp[7], sprint_hex_inrow(&resp[8], resp[7]));
-    PrintAndLogEx(INFO, "ATQA................ %02x%02x", resp[25], resp[24]);
-    PrintAndLogEx(INFO, "SAK................. %02x", resp[26]);
+    PrintAndLogEx(INFO, "..............%02X unknown", resp[7]);
+    PrintAndLogEx(INFO, "");
 
-    PrintAndLogEx(INFO, "UL mode............. %02x" NOLF, resp[27]);
+    // ATS seems to have 16 bytes reserved
+    PrintAndLogEx(INFO, _CYAN_("Config 2 - ATS"));
+    PrintAndLogEx(INFO, "%s", sprint_hex_inrow(resp + 8, 16));
+    PrintAndLogEx(INFO, "%s.............. ATS ( %db )", sprint_hex_inrow(&resp[8], resp[7]), resp[7]);
+    PrintAndLogEx(INFO, "..................%s Reserved for ATS", sprint_hex_inrow(resp + 8 + resp[7], 16 - resp[7]));
+
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, _CYAN_("Config 3 - Limits"));
+    PrintAndLogEx(INFO, "%s", sprint_hex_inrow(resp + 24, (resplen - 24)));
+    PrintAndLogEx(INFO, "%02X%02X............ ATQA", resp[24], resp[25]);
+    PrintAndLogEx(INFO, "....%02X.......... SAK", resp[26]);
+    PrintAndLogEx(INFO, "......%02X........ " NOLF, resp[27]);
     switch (resp[27]) {
         case 0x00:
-            PrintAndLogEx(NORMAL, " (UL EV1)");
+            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("Ultralight EV1")  : "Ultralight Ev1" );
             break;
         case 0x01:
-            PrintAndLogEx(NORMAL, " (NTAG)");
+            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("NTAG")  : "NTAG" );
             break;
         case 0x02:
-            PrintAndLogEx(NORMAL, " (UL-C)");
+            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("Ultralight C")  : "Ultralight C" );
             break;
         case 0x03:
-            PrintAndLogEx(NORMAL, " (UL)");
+            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("Ultralight")  : "Ultralight" );
             break;
         default:
-            PrintAndLogEx(NORMAL, " (unknown %02x)", resp[27]);
+            PrintAndLogEx(NORMAL, _RED_("unknown"));
             break;
     }
 
-    PrintAndLogEx(INFO, "max rd/wr sectors... %02x", resp[28]);
-    PrintAndLogEx(INFO, "block0 direct wr.... %02x" NOLF, resp[29]);
+    PrintAndLogEx(INFO, "........%02X...... Max R/W sectors", resp[28]);
+    PrintAndLogEx(INFO, "..........%02X.... " NOLF, resp[29]);
     switch (resp[29]) {
         case 0x00:
-            PrintAndLogEx(NORMAL, " (Activate direct write to block 0 (Same behaviour of Gen2 cards. Some readers may identify the card as magic))");
+            PrintAndLogEx(NORMAL, _GREEN_("CUID enabled"));
             break;
         case 0x01:
-            PrintAndLogEx(NORMAL, " (Deactivate direct write to block 0 (Same behaviour of vanilla cards))");
+            PrintAndLogEx(NORMAL, "CUID disabled");
             break;
         case 0x02:
-            PrintAndLogEx(NORMAL, " (Default value. Same behaviour as 00?");
+            PrintAndLogEx(NORMAL, "Default value. Same behaviour as 00?");
             break;
         default:
-            PrintAndLogEx(NORMAL, " (unknown %02x)", resp[29]);
+            PrintAndLogEx(NORMAL, _RED_("unknown"));
             break;
     }
+    PrintAndLogEx(INFO, "............%s unknown", sprint_hex_inrow(resp + 30, resplen - 30));
+    PrintAndLogEx(INFO, "");
 
     res = mfG4GetFactoryTest(pwd, resp, &resplen, false);
     if (res == PM3_SUCCESS && resplen > 2) {
+        PrintAndLogEx(INFO, "");
+        PrintAndLogEx(INFO, _CYAN_("Factory test"));
         if (verbose) {
-            PrintAndLogEx(INFO, "");
-            PrintAndLogEx(INFO, "Raw test [%02zu]....... %s", resplen, sprint_hex_inrow(resp, resplen));
+            PrintAndLogEx(INFO, "Raw......... %s", sprint_hex_inrow(resp, resplen));
         }
 
-        if (resp[resplen - 2] == 0x66 && resp[resplen - 1] == 0x66)
-            PrintAndLogEx(INFO, "Card type........... generic");
-        else if (resp[resplen - 2] == 0x02 && resp[resplen - 1] == 0xaa)
-            PrintAndLogEx(INFO, "Card type........... limited functionality");
-        else if (resp[resplen - 2] == 0x03 && resp[resplen - 1] == 0xa0)
-            PrintAndLogEx(INFO, "Card type........... old card version");
-        else if (resp[resplen - 2] == 0x06 && resp[resplen - 1] == 0xa0)
-            PrintAndLogEx(INFO, "Card type........... new card version");
-        else
-            PrintAndLogEx(INFO, "Card type........... unknown %02x%02x", resp[resplen - 2], resp[resplen - 1]);
+        if (memcmp(resp + resplen - 2, "\x66\x66", 2) == 0) {
+            PrintAndLogEx(INFO, "Card type... Generic");
+
+        } else if (memcmp(resp + resplen - 2, "\x02\xAA", 2) == 0) {
+            PrintAndLogEx(INFO, "Card type... " _RED_("Limited functionality"));
+
+        } else if (memcmp(resp + resplen - 2, "\x03\xA0", 2) == 0) {
+            PrintAndLogEx(INFO, "Card type... Old card version");
+
+        } else if (memcmp(resp + resplen - 2, "\x06\xA0", 2) == 0) {
+            PrintAndLogEx(INFO, "Card type... " _GREEN_("New card version"));
+
+        } else {
+            PrintAndLogEx(INFO, "Card type... " _RED_("unknown %02X%02X"), resp[resplen - 2], resp[resplen - 1]);
+        }
     }
 
     // read block 0
     res = mfG4GetBlock(pwd, 0, resp, MAGIC_INIT | MAGIC_OFF);
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(INFO, "");
-        PrintAndLogEx(INFO, "Block 0............. %s", sprint_hex_inrow(resp, 16));
+        PrintAndLogEx(INFO, _CYAN_("Block 0 test"));
+        PrintAndLogEx(INFO, "Block 0..... %s", sprint_hex_inrow(resp, 16));
 
         switch (uid_len) {
             case 0x00:
-                PrintAndLogEx(INFO, "UID [4]............. %s", sprint_hex(resp, 4));
+                PrintAndLogEx(INFO, "UID [4]..... %s", sprint_hex_inrow(resp, 4));
                 break;
             case 0x01:
-                PrintAndLogEx(INFO, "UID [7]............. %s", sprint_hex(resp, 7));
+                PrintAndLogEx(INFO, "UID [7]..... %s", sprint_hex_inrow(resp, 7));
                 break;
             case 0x02:
-                PrintAndLogEx(INFO, "UID [10]............ %s", sprint_hex(resp, 10));
+                PrintAndLogEx(INFO, "UID [10..... %s", sprint_hex_inrow(resp, 10));
                 break;
             default:
                 break;
@@ -7839,6 +7875,7 @@ static int CmdHF14AGen4Info(const char *cmd) {
     }
 
 
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
