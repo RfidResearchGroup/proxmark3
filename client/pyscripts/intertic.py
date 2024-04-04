@@ -67,6 +67,9 @@ FRA_OrganizationalAuthority_Contract_Provider = {
     0x021: {
         1: 'Bordeaux (TBM / Keolis)',
     },
+    0x057: {
+        1: 'Lyon (TCL / Keolis)',
+    },
     0x072: {
         1: 'Tours (filbleu / Keolis)',
     },
