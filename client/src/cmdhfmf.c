@@ -4244,12 +4244,18 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
             s = i;
         }
 
-        PrintAndLogEx(SUCCESS, " " _YELLOW_("%03d") " | %03d | %s | %s | %s | %s"
-                      , s
-                      , mfSectorTrailerOfSector(s)
-                      , strA, resA
-                      , strB, resB
-                     );
+        char extra[24] = {0x00};
+        if (sectorscnt == 18 && i > 15) {
+            strcat(extra, "( " _MAGENTA_("*") " )");
+        }
+
+        PrintAndLogEx(SUCCESS, " " _YELLOW_("%03d") " | %03d | %s | %s | %s | %s %s"
+                    , s
+                    , mfSectorTrailerOfSector(s)
+                    , strA, resA
+                    , strB, resB
+                    , extra
+                );
 
     }
 
@@ -4267,6 +4273,10 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
                       _YELLOW_("A") ":keyA "
                       " )"
                      );
+        if (sectorscnt == 18) {
+            PrintAndLogEx(INFO, "( " _MAGENTA_("*") " ) These sectors used for signature. Lays outside of user memory");
+        }
+
     } else {
         PrintAndLogEx(SUCCESS, "( " _RED_("0") ":Failed / " _GREEN_("1") ":Success )");
     }
