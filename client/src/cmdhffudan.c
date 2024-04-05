@@ -48,19 +48,23 @@
 // iceman:  these types are quite unsure.
 typedef enum {
     FM11RF005M,
-    FM11RF008M,
+    FM11RF005U,
     FM11RF005SH,
+    FM11RF008M,
     FM11RF08SH,
+    FM11RF32M,
+    FM11RF32N,
     FUDAN_NONE,
 } fudan_type_t;
 
-static void fudan_print_blocks(uint16_t n, uint8_t *d) {
+static void fudan_print_blocks(uint8_t sector, uint8_t num_blocks, uint8_t block_size, uint8_t *carddata) {
     PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Sector %i", sector);
     PrintAndLogEx(INFO, "----+-------------+-----------------");
     PrintAndLogEx(INFO, "blk | data        | ascii");
     PrintAndLogEx(INFO, "----+-------------+-----------------");
-    for (uint16_t b = 0; b < n; b++) {
-        PrintAndLogEx(INFO, "%3d | %s ", b, sprint_hex_ascii(d + (b * MAX_FUDAN_BLOCK_SIZE), MAX_FUDAN_BLOCK_SIZE));
+    for (uint16_t b = 0; b < num_blocks; b++) {
+        PrintAndLogEx(INFO, "%3d | %s ", b, sprint_hex_ascii(carddata + (b * block_size), block_size));
     }
     PrintAndLogEx(INFO, "----+-------------+-----------------");
     PrintAndLogEx(NORMAL, "");
@@ -76,27 +80,43 @@ static char *GenerateFilename(iso14a_card_select_t *card, const char *prefix, co
     return fptr;
 }
 
-static fudan_type_t fudan_detected(iso14a_card_select_t *card) {
+static fudan_type_t fudan_detected(iso14a_card_select_t *card, bool verbose) {
 
     if ((card->sak & 0x0A) == 0x0A) {
 
         uint8_t atqa = MemLeToUint2byte(card->atqa);
         if ((atqa & 0x0003) == 0x0003) {
             // Uses Shanghai algo
+            if(verbose) {
+                PrintAndLogEx(INFO, "FM11RF005SH (FUDAN Shanghai Metro) detected");
+            }
             // printTag("FM11RF005SH (FUDAN Shanghai Metro)");
             return FM11RF005SH;
         } else if ((atqa & 0x0005) == 0x0005) {
+            if(verbose) {
+                PrintAndLogEx(INFO, "FM11RF005M (FUDAN MIFARE Classic clone) detected");
+            }
             // printTag("FM11RF005M (FUDAN MIFARE Classic clone)");
             return FM11RF005M;
         } else if ((atqa & 0x0008) == 0x0008) {
+            if(verbose) {
+                PrintAndLogEx(INFO, "FM11RF008M (FUDAN MIFARE Classic clone) detected");
+            }
             // printTag("FM11RF008M (FUDAN MIFARE Classic clone)");
             return FM11RF008M;
         }
 
     } else if ((card->sak & 0x53) == 0x53) {
         // printTag("FM11RF08SH (FUDAN)");
+        if(verbose) {
+             PrintAndLogEx(INFO, "FM11RF08SH (FUDAN) detected");
+        }
         return FM11RF08SH;
     }
+    if(verbose) {
+        PrintAndLogEx(INFO, "Unknown or no Fudan chip detected");
+        PrintAndLogEx(INFO, "SAK = %s", card->sak);
+     }
     return FUDAN_NONE;
 }
 
@@ -243,6 +263,7 @@ static int CmdHFFudanDump(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
+        arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "ns", "no save to file"),
         arg_param_end
     };
@@ -251,13 +272,14 @@ static int CmdHFFudanDump(const char *Cmd) {
     int datafnlen = 0;
     char dataFilename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)dataFilename, FILE_PATH_SIZE, &datafnlen);
-    bool nosave = arg_get_lit(ctx, 2);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool nosave = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     // Select card to get UID/UIDLEN/ATQA/SAK information
     // leaves the field on
     iso14a_card_select_t card;
-    int res = fudan_get_type(&card, false);
+    int res = fudan_get_type(&card, verbose);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "failed to select a fudan card. Exiting...");
         DropField();
@@ -265,7 +287,7 @@ static int CmdHFFudanDump(const char *Cmd) {
     }
 
     // validations
-    fudan_type_t t = fudan_detected(&card);
+    fudan_type_t t = fudan_detected(&card, verbose);
     if (t == FUDAN_NONE) {
         PrintAndLogEx(FAILED, "failed to detect a fudan card. Exiting...");
         DropField();
@@ -273,27 +295,53 @@ static int CmdHFFudanDump(const char *Cmd) {
     }
 
     // detect card size
-    // 512b, 8kbits
-    uint8_t num_blocks = MAX_FUDAN_05_BLOCKS;
+    // default to 512 bit settings
+    uint8_t num_blocks  = 16;
+    uint8_t block_size  = 4;
+    uint8_t num_sectors = 1;
     switch (t) {
-        case FM11RF008M:
+        case FM11RF008M: // ?
             num_blocks = MAX_FUDAN_08_BLOCKS;
             break;
-        case FM11RF005SH:
-        case FM11RF005M:
-        case FM11RF08SH:
+        case FM11RF08SH:  // 8K bits
+            num_blocks  = 4;
+            num_sectors = 16;
+            block_size  = 16;
+            break;
+        case FM11RF32M:   // 32K bits
+            num_blocks  = 4;
+            num_sectors = 64;
+            block_size  = 16;
+            break;
+        case FM11RF32N:   // 32K bits
+            // The FM11RF32N has a dual sector setup:
+            // - Sectors 0-31 are 4 blocks per sector
+            // - Sectors 32-39 are 16 blocks per sector
+            // Each block is 16 bytes long
+            //TODO Figure out how to implement this cluster of a block layout
+        case FM11RF005M:  // 512 bits
+        case FM11RF005SH: // 512 bits
+        case FM11RF005U:  // 512 bits
         case FUDAN_NONE:
         default:
             break;
     }
 
-    uint8_t carddata[num_blocks * MAX_FUDAN_BLOCK_SIZE];
+    if(verbose) {
+        PrintAndLogEx(INFO, "Number of Sectors: %i", num_sectors);
+        PrintAndLogEx(INFO, "Number of Blocks: %i", num_blocks);
+        PrintAndLogEx(INFO, "Block size: %i bytes", block_size);
+    }
+
+    //uint8_t carddata[num_blocks * MAX_FUDAN_BLOCK_SIZE];
+    uint8_t carddata[num_blocks * block_size];
 
     //
     uint16_t flags = (ISO14A_NO_SELECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS | ISO14A_RAW);
     uint32_t argtimeout = 0;
     uint32_t numbits = 0;
 
+    //TODO: Implement a sector loop to dump all blocks in all sectors
     PrintAndLogEx(SUCCESS, "." NOLF);
     // dump memory
     for (uint8_t b = 0; b < num_blocks; b++) {
@@ -311,7 +359,8 @@ static int CmdHFFudanDump(const char *Cmd) {
             if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
                 if (resp.status == PM3_SUCCESS) {
                     uint8_t *data  = resp.data.asBytes;
-                    memcpy(carddata + (b * MAX_FUDAN_BLOCK_SIZE), data, MAX_FUDAN_BLOCK_SIZE);
+                    //memcpy(carddata + (b * MAX_FUDAN_BLOCK_SIZE), data, MAX_FUDAN_BLOCK_SIZE);
+                    memcpy(carddata + (b * block_size), data, block_size);
                     PrintAndLogEx(NORMAL, "." NOLF);
                     break;
                 } else {
@@ -329,7 +378,8 @@ static int CmdHFFudanDump(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "\nSucceeded in dumping all blocks");
 
-    fudan_print_blocks(num_blocks, carddata);
+    //TODO Implement 
+    fudan_print_blocks(0, num_blocks, block_size, carddata);
 
     if (nosave) {
         PrintAndLogEx(INFO, "Called with no save option");
@@ -478,9 +528,13 @@ static int CmdHFFudanView(const char *Cmd) {
         return res;
     }
 
-    uint16_t block_cnt = MIN(MAX_FUDAN_05_BLOCKS, (bytes_read / MAX_FUDAN_BLOCK_SIZE));
+    //uint16_t block_cnt = MIN(MAX_FUDAN_05_BLOCKS, (bytes_read / MAX_FUDAN_BLOCK_SIZE));
 
-    fudan_print_blocks(block_cnt, dump);
+    PrintAndLogEx(WARNING, "The view command is currently disabled because of refactoring of the dump command.");
+    PrintAndLogEx(WARNING, "Any old dumps will not work with the new version of the view command, so please back them up");
+
+    //TODO Reimplement this to take into account block sizes and number of sectors
+    //fudan_print_blocks(block_cnt, dump);
 
     free(dump);
     return PM3_SUCCESS;
