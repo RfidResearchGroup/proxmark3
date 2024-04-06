@@ -123,10 +123,20 @@ static bool WINAPI terminate_handler(DWORD t) {
 #  else
 static struct sigaction gs_old_sigint_action;
 static void sigint_handler(int signum) {
-    sigaction(SIGINT, &gs_old_sigint_action, NULL);
-    pm3line_flush_history();
-    kill(0, SIGINT);
+
+    switch(signum) {
+        case SIGINT: {
+            sigaction(SIGINT, &gs_old_sigint_action, NULL);
+            pm3line_flush_history();
+            kill(0, SIGINT);
+            break;
+        }
+        default: {
+            break;
+        }
+    }
 }
+
 #endif
 
 void pm3line_install_signals(void) {
@@ -138,6 +148,7 @@ void pm3line_install_signals(void) {
     action.sa_handler = &sigint_handler;
     sigaction(SIGINT, &action, &gs_old_sigint_action);
 #  endif
+
 #if defined(HAVE_READLINE)
     rl_catch_signals = 1;
     rl_set_signals();
@@ -150,6 +161,8 @@ void pm3line_init(void) {
     using_history();
     rl_readline_name = "PM3";
     rl_attempted_completion_function = rl_command_completion;
+    rl_getc_function = getc;
+    pm3line_install_signals();
 
 #ifdef RL_STATE_READCMD
     rl_extend_line_buffer(1024);
