@@ -48,9 +48,11 @@ static int mfG4ExCommand(uint8_t cmd, uint8_t *pwd, uint8_t *data, size_t datale
 
     payload.cmdheader = 0xCF;
     payload.command = cmd;
+
     if (pwd != NULL) {
         memcpy(payload.pwd, pwd, sizeof(payload.pwd));
     }
+
     if (data != NULL && datalen > 0) {
         memcpy(payload.data, data, datalen);
     }
@@ -118,11 +120,13 @@ int mfG4GetConfig(uint8_t *pwd, uint8_t *data, size_t *datalen, bool verbose) {
         return res;
     }
 
-    if (data != NULL)
+    if (data != NULL) {
         memcpy(data, resp, resplen);
+    }
 
-    if (datalen != NULL)
+    if (datalen != NULL) {
         *datalen = resplen;
+    }
 
     return PM3_SUCCESS;
 }
@@ -136,11 +140,13 @@ int mfG4GetFactoryTest(uint8_t *pwd, uint8_t *data, size_t *datalen, bool verbos
         return res;
     }
 
-    if (data != NULL)
+    if (data != NULL) {
         memcpy(data, resp, resplen);
+    }
 
-    if (datalen != NULL)
+    if (datalen != NULL) {
         *datalen = resplen;
+    }
 
     return PM3_SUCCESS;
 }
@@ -154,8 +160,9 @@ int mfG4ChangePassword(uint8_t *pwd, uint8_t *newpwd, bool verbose) {
         return res;
     }
 
-    if (resplen != 2 || resp[0] != 0x90 || resp[1] != 0x00)
+    if (resplen != 2 || resp[0] != 0x90 || resp[1] != 0x00) {
         return PM3_EAPDU_FAIL;
+    }
 
     return PM3_SUCCESS;
 }
@@ -173,15 +180,16 @@ int mfG4GetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_G4_RDBL, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_G4_RDBL, &resp, 1500)) {
-        if (resp.status != PM3_SUCCESS) {
-            return PM3_EUNDEF;
-        }
-        memcpy(data, resp.data.asBytes, MFBLOCK_SIZE);
-    } else {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_G4_RDBL, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "command execute timeout");
         return PM3_ETIMEOUT;
     }
+
+    if (resp.status != PM3_SUCCESS) {
+        return PM3_EUNDEF;
+    }
+
+    memcpy(data, resp.data.asBytes, MFBLOCK_SIZE);
     return PM3_SUCCESS;
 }
 
@@ -200,13 +208,14 @@ int mfG4SetBlock(uint8_t *pwd, uint8_t blockno, uint8_t *data, uint8_t workFlags
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_G4_WRBL, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_G4_WRBL, &resp, 1500)) {
-        if (resp.status != PM3_SUCCESS) {
-            return PM3_EUNDEF;
-        }
-    } else {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_G4_WRBL, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "command execute timeout");
         return PM3_ETIMEOUT;
     }
+
+    if (resp.status != PM3_SUCCESS) {
+        return PM3_EUNDEF;
+    }
+
     return PM3_SUCCESS;
 }

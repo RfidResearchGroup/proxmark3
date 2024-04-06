@@ -243,8 +243,13 @@ static int open_aiddf_file(json_t **root, bool verbose) {
         goto out;
     }
 
-    if (verbose)
-        PrintAndLogEx(SUCCESS, "Loaded file " _YELLOW_("`%s`") " (%s) %zu records.", path,  _GREEN_("ok"), json_array_size(*root));
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Loaded file `" _YELLOW_("%s") "` " _GREEN_("%zu") " records ( " _GREEN_("ok") " )"
+            , path
+            , json_array_size(*root)
+        );
+    }
+
 out:
     free(path);
     return retval;

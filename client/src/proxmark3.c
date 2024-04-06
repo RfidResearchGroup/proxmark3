@@ -1458,8 +1458,11 @@ int main(int argc, char *argv[]) {
         CloseProxmark(g_session.current_device);
     }
 
-    if (g_session.window_changed) // Plot/Overlay moved or resized
+    // Plot/Overlay moved or resized
+    if (g_session.window_changed) { 
         preferences_save();
+    }
+
     return mainret;
 }
 #endif //LIBPM3
