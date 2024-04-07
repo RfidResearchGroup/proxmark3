@@ -4250,13 +4250,12 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
         }
 
         PrintAndLogEx(SUCCESS, " " _YELLOW_("%03d") " | %03d | %s | %s | %s | %s %s"
-                    , s
-                    , mfSectorTrailerOfSector(s)
-                    , strA, resA
-                    , strB, resB
-                    , extra
-                );
-
+            , s
+            , mfSectorTrailerOfSector(s)
+            , strA, resA
+            , strB, resB
+            , extra
+        );
     }
 
     PrintAndLogEx(SUCCESS, "-----+-----+--------------+---+--------------+----");
@@ -7660,6 +7659,127 @@ static int CmdHF14AMfView(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int parse_gtu_cfg(uint8_t *d, size_t n) {
+    
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "---------- " _CYAN_("GTU Gen4 Configuration") " -------------------------------------");
+    if (n != 30 && n != 32) {
+        PrintAndLogEx(INFO, "%s", sprint_hex_inrow(d, n));
+        PrintAndLogEx(INFO, "%zu bytes", n);
+        PrintAndLogEx(WARNING, "Unknown config format");
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(INFO, _YELLOW_("%s"), sprint_hex_inrow(d, n));
+    PrintAndLogEx(INFO, "%zu bytes", n);
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, _CYAN_("Config 1 - UID & modes"));
+    PrintAndLogEx(INFO, "%s", sprint_hex_inrow(d, 8));
+    PrintAndLogEx(INFO, "%02X.............. " NOLF, d[0]);
+    bool is_ul_enabled = ( d[0] == 1 );
+    switch (d[0]) {
+        case 0x00:
+            PrintAndLogEx(NORMAL, "MIFARE Classic mode");
+            break;
+        case 0x01:
+            PrintAndLogEx(NORMAL, "MIFARE Ultralight/NTAG mode");
+            break;
+        default:
+            PrintAndLogEx(NORMAL, _RED_("unknown"));
+            break;
+    }
+
+    PrintAndLogEx(INFO, "..%02X............ UID " NOLF, d[1]);
+
+    switch (d[1]) {
+        case 0x00:
+            PrintAndLogEx(NORMAL, _GREEN_("4") " byte");
+            break;
+        case 0x01:
+            PrintAndLogEx(NORMAL, _GREEN_("7") " byte");
+            break;
+        case 0x02:
+            PrintAndLogEx(NORMAL, _GREEN_("10") " byte");
+            break;
+        default:
+            PrintAndLogEx(NORMAL, _RED_("unknown"));
+            break;
+    }
+
+    PrintAndLogEx(INFO, "...." _YELLOW_("%s") ".... " _YELLOW_("Password"), sprint_hex_inrow(&d[2], 4));
+    PrintAndLogEx(INFO, "............%02X.. GTU mode " NOLF, d[6]);
+    switch (d[6]) {
+        case 0x00:
+            PrintAndLogEx(NORMAL, _GREEN_("pre-write") " - shadow data can be written");
+            break;
+        case 0x01:
+            PrintAndLogEx(NORMAL, _GREEN_("restore mode"));
+            break;
+        case 0x02:
+            PrintAndLogEx(NORMAL, "disabled");
+            break;
+        case 0x03:
+            PrintAndLogEx(NORMAL, "disabled, high speed R/W mode for Ultralight ?");
+            break;
+        default:
+            PrintAndLogEx(NORMAL, _RED_("unknown"));
+            break;
+    }
+
+    PrintAndLogEx(INFO, "..............%02X unknown", d[7]);
+    PrintAndLogEx(INFO, "");
+
+    // ATS seems to have 16 bytes reserved
+    PrintAndLogEx(INFO, _CYAN_("Config 2 - ATS"));
+    PrintAndLogEx(INFO, "%s", sprint_hex_inrow(d + 8, 16));
+    PrintAndLogEx(INFO, "%s.............. ATS ( %d bytes )", sprint_hex_inrow(&d[8], d[7]), d[7]);
+    PrintAndLogEx(INFO, "..................%s Reserved for ATS", sprint_hex_inrow(d + 8 + d[7], 16 - d[7]));
+
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(INFO, _CYAN_("Config 3 - Limits"));
+    PrintAndLogEx(INFO, "%s", sprint_hex_inrow(d + 24, (n - 24)));
+    PrintAndLogEx(INFO, "%02X%02X............ ATQA", d[24], d[25]);
+    PrintAndLogEx(INFO, "....%02X.......... SAK", d[26]);
+    PrintAndLogEx(INFO, "......%02X........ " NOLF, d[27]);
+    switch (d[27]) {
+        case 0x00:
+            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("Ultralight EV1")  : "Ultralight Ev1" );
+            break;
+        case 0x01:
+            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("NTAG")  : "NTAG" );
+            break;
+        case 0x02:
+            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("Ultralight C")  : "Ultralight C" );
+            break;
+        case 0x03:
+            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("Ultralight")  : "Ultralight" );
+            break;
+        default:
+            PrintAndLogEx(NORMAL, _RED_("unknown"));
+            break;
+    }
+
+    PrintAndLogEx(INFO, "........%02X...... Max R/W sectors", d[28]);
+    PrintAndLogEx(INFO, "..........%02X.... " NOLF, d[29]);
+    switch (d[29]) {
+        case 0x00:
+            PrintAndLogEx(NORMAL, _GREEN_("CUID enabled"));
+            break;
+        case 0x01:
+            PrintAndLogEx(NORMAL, "CUID disabled");
+            break;
+        case 0x02:
+            PrintAndLogEx(NORMAL, "Default value. Same behaviour as 00?");
+            break;
+        default:
+            PrintAndLogEx(NORMAL, _RED_("unknown"));
+            break;
+    }
+    PrintAndLogEx(INFO, "............%s unknown", sprint_hex_inrow(d + 30, n - 30));
+    PrintAndLogEx(INFO, "");
+    return PM3_SUCCESS;
+}
+
 // info about Gen4 GTU card
 static int CmdHF14AGen4Info(const char *cmd) {
     CLIParserContext *ctx;
@@ -7711,121 +7831,9 @@ static int CmdHF14AGen4Info(const char *cmd) {
         resplen = 32;
     }
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "---------- " _CYAN_("GTU Gen4 configuration") " -------------------------------------");
-    if (resplen != 30 && resplen != 32) {
-        PrintAndLogEx(INFO, "Raw ( %zub )... %s", resplen, sprint_hex_inrow(resp, resplen));
-        PrintAndLogEx(WARNING, "Unknown config format");
-        return PM3_SUCCESS;
-    }
+    parse_gtu_cfg(resp, resplen);
 
-    PrintAndLogEx(INFO, "Raw... "  _YELLOW_("%s"), sprint_hex_inrow(resp, resplen));
-    PrintAndLogEx(INFO, "Len... %u", resplen);
-    PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, _CYAN_("Config 1 - UID & modes"));
-    PrintAndLogEx(INFO, "%s", sprint_hex_inrow(resp, 8));
-    PrintAndLogEx(INFO, "%02X.............. " NOLF, resp[0]);
-    bool is_ul_enabled = ( resp[0] == 1 );
-    switch (resp[0]) {
-        case 0x00:
-            PrintAndLogEx(NORMAL, "MIFARE Classic mode");
-            break;
-        case 0x01:
-            PrintAndLogEx(NORMAL, "MIFARE Ultralight/NTAG mode");
-            break;
-        default:
-            PrintAndLogEx(NORMAL, _RED_("unknown"));
-            break;
-    }
-
-    PrintAndLogEx(INFO, "..%02X............ UID " NOLF, resp[1]);
     uint8_t uid_len = resp[1];
-    switch (resp[1]) {
-        case 0x00:
-            PrintAndLogEx(NORMAL, _GREEN_("4") " byte");
-            break;
-        case 0x01:
-            PrintAndLogEx(NORMAL, _GREEN_("7") " byte");
-            break;
-        case 0x02:
-            PrintAndLogEx(NORMAL, _GREEN_("10") " byte");
-            break;
-        default:
-            PrintAndLogEx(NORMAL, _RED_("unknown"));
-            break;
-    }
-    PrintAndLogEx(INFO, "...." _YELLOW_("%s") ".... " _YELLOW_("Password"), sprint_hex_inrow(&resp[2], 4));
-
-    PrintAndLogEx(INFO, "............%02X.. GTU mode " NOLF, resp[6]);
-    switch (resp[6]) {
-        case 0x00:
-            PrintAndLogEx(NORMAL, _GREEN_("pre-write") " - shadow data can be written");
-            break;
-        case 0x01:
-            PrintAndLogEx(NORMAL, _GREEN_("restore mode"));
-            break;
-        case 0x02:
-            PrintAndLogEx(NORMAL, "disabled");
-            break;
-        case 0x03:
-            PrintAndLogEx(NORMAL, "disabled, high speed R/W mode for Ultralight ?");
-            break;
-        default:
-            PrintAndLogEx(NORMAL, _RED_("unknown"));
-            break;
-    }
-
-    PrintAndLogEx(INFO, "..............%02X unknown", resp[7]);
-    PrintAndLogEx(INFO, "");
-
-    // ATS seems to have 16 bytes reserved
-    PrintAndLogEx(INFO, _CYAN_("Config 2 - ATS"));
-    PrintAndLogEx(INFO, "%s", sprint_hex_inrow(resp + 8, 16));
-    PrintAndLogEx(INFO, "%s.............. ATS ( %db )", sprint_hex_inrow(&resp[8], resp[7]), resp[7]);
-    PrintAndLogEx(INFO, "..................%s Reserved for ATS", sprint_hex_inrow(resp + 8 + resp[7], 16 - resp[7]));
-
-    PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, _CYAN_("Config 3 - Limits"));
-    PrintAndLogEx(INFO, "%s", sprint_hex_inrow(resp + 24, (resplen - 24)));
-    PrintAndLogEx(INFO, "%02X%02X............ ATQA", resp[24], resp[25]);
-    PrintAndLogEx(INFO, "....%02X.......... SAK", resp[26]);
-    PrintAndLogEx(INFO, "......%02X........ " NOLF, resp[27]);
-    switch (resp[27]) {
-        case 0x00:
-            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("Ultralight EV1")  : "Ultralight Ev1" );
-            break;
-        case 0x01:
-            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("NTAG")  : "NTAG" );
-            break;
-        case 0x02:
-            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("Ultralight C")  : "Ultralight C" );
-            break;
-        case 0x03:
-            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("Ultralight")  : "Ultralight" );
-            break;
-        default:
-            PrintAndLogEx(NORMAL, _RED_("unknown"));
-            break;
-    }
-
-    PrintAndLogEx(INFO, "........%02X...... Max R/W sectors", resp[28]);
-    PrintAndLogEx(INFO, "..........%02X.... " NOLF, resp[29]);
-    switch (resp[29]) {
-        case 0x00:
-            PrintAndLogEx(NORMAL, _GREEN_("CUID enabled"));
-            break;
-        case 0x01:
-            PrintAndLogEx(NORMAL, "CUID disabled");
-            break;
-        case 0x02:
-            PrintAndLogEx(NORMAL, "Default value. Same behaviour as 00?");
-            break;
-        default:
-            PrintAndLogEx(NORMAL, _RED_("unknown"));
-            break;
-    }
-    PrintAndLogEx(INFO, "............%s unknown", sprint_hex_inrow(resp + 30, resplen - 30));
-    PrintAndLogEx(INFO, "");
 
     res = mfG4GetFactoryTest(pwd, resp, &resplen, false);
     if (res == PM3_SUCCESS && resplen > 2) {
@@ -7873,7 +7881,6 @@ static int CmdHF14AGen4Info(const char *cmd) {
                 break;
         }
     }
-
 
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
@@ -8543,7 +8550,8 @@ static int CmdHF14AGen4ChangePwd(const char *Cmd) {
 }
 
 static void parse_gdm_cfg(const uint8_t *d) {
-    PrintAndLogEx(SUCCESS, "------------------- " _CYAN_("GDM Configuration") " -----------------------------------------");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "------------------- " _CYAN_("GDM Gen4 Configuration") " -----------------------------------------");
     PrintAndLogEx(SUCCESS,  _YELLOW_("%s"), sprint_hex_inrow(d, MFBLOCK_SIZE));
     PrintAndLogEx(SUCCESS,  _YELLOW_("%02X%02X") "............................ %s %s"
                   , d[0]
@@ -8551,10 +8559,10 @@ static void parse_gdm_cfg(const uint8_t *d) {
                   , (d[0] == 0x85 && d[1] == 0x00) ? "Magic wakeup disabled" : _GREEN_("Magic wakeup enabled")
                   , (d[0] == 0x85 && d[1] == 0x00) ? "" : ((d[0] == 0x7A && d[1] == 0xFF) ? _GREEN_("with GDM cfg block access") : _RED_(", no GDM cfg block access"))
                  );
-    PrintAndLogEx(SUCCESS, "...." _YELLOW_("%02X") ".......................... Magic wakeup style %s", d[2], ((d[2] == 0x85) ? "GDM 20(7)/23" : "Gen1a 40(7)/43"));
-    PrintAndLogEx(SUCCESS, "......" _YELLOW_("%02X%02X%02X") ".................... n/a", d[3], d[4], d[5]);
+    PrintAndLogEx(SUCCESS, "...." _YELLOW_("%02X") ".......................... Magic wakeup style " _YELLOW_("%s"), d[2], ((d[2] == 0x85) ? "GDM 20(7)/23" : "Gen1a 40(7)/43"));
+    PrintAndLogEx(SUCCESS, "......" _YELLOW_("%02X%02X%02X") ".................... unknown", d[3], d[4], d[5]);
     PrintAndLogEx(SUCCESS, "............" _YELLOW_("%02X") ".................. %s", d[6], (d[6] == 0x5A) ? "Key B use blocked when readable by ACL" : "Key B use allowed when readable by ACL");
-    PrintAndLogEx(SUCCESS, ".............." _YELLOW_("%02X") "................ %s", d[7], (d[7] == 0x5A) ? _GREEN_("CUID - Block 0 Direct Write Enabled") : "CUID - Block 0 Direct Write Disabled");
+    PrintAndLogEx(SUCCESS, ".............." _YELLOW_("%02X") "................ %s", d[7], (d[7] == 0x5A) ? _GREEN_("CUID enabled") : "CUID Disabled");
     PrintAndLogEx(SUCCESS, "................" _YELLOW_("%02X") ".............. n/a", d[8]);
 
     const char *pers;
@@ -8578,13 +8586,14 @@ static void parse_gdm_cfg(const uint8_t *d) {
             pers = "4B UID from Block 0";
             break;
     }
-    PrintAndLogEx(SUCCESS, ".................." _YELLOW_("%02X") "............ MFC EV1 perso... " _YELLOW_("%s"), d[9], pers);
+    PrintAndLogEx(SUCCESS, ".................." _YELLOW_("%02X") "............ MFC EV1 perso. " _YELLOW_("%s"), d[9], pers);
     PrintAndLogEx(SUCCESS, "...................." _YELLOW_("%02X") ".......... %s", d[10], (d[10] == 0x5A) ? _GREEN_("Shadow mode enabled") : "Shadow mode disabled");
     PrintAndLogEx(SUCCESS, "......................" _YELLOW_("%02X") "........ %s", d[11], (d[11] == 0x5A) ? _GREEN_("Magic auth enabled") : "Magic auth disabled");
     PrintAndLogEx(SUCCESS, "........................" _YELLOW_("%02X") "...... %s", d[12], (d[12] == 0x5A) ? _GREEN_("Static encrypted nonce enabled") : "Static encrypted nonce disabled");
     PrintAndLogEx(SUCCESS, ".........................." _YELLOW_("%02X") ".... %s", d[13], (d[13] == 0x5A) ? _GREEN_("MFC EV1 signature enabled") : "MFC EV1 signature disabled");
     PrintAndLogEx(SUCCESS, "............................" _YELLOW_("%02X") ".. n/a", d[14]);
     PrintAndLogEx(SUCCESS, ".............................." _YELLOW_("%02X") " SAK", d[15]);
+    PrintAndLogEx(NORMAL, "");
 }
 
 static int CmdHF14AGen4_GDM_ParseCfg(const char *Cmd) {
