@@ -1038,21 +1038,29 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
     // Wait until the command is received
     while (true) {
 
+        // if device gets disconnected or resets,  break out of this loop
+        if (IsCommunicationThreadDead()) {
+            break;
+        }
+
         while (getReply(response)) {
             if (cmd == CMD_UNKNOWN || response->cmd == cmd) {
                 return true;
             }
+
             if (response->cmd == CMD_WTX && response->length == sizeof(uint16_t)) {
                 uint16_t wtx = response->data.asDwords[0] & 0xFFFF;
                 PrintAndLogEx(DEBUG, "Got Waiting Time eXtension request %i ms", wtx);
-                if (ms_timeout != (size_t) - 1)
+                if (ms_timeout != (size_t) - 1) {
                     ms_timeout += wtx;
+                }
             }
         }
 
         uint64_t tmp_clk = __atomic_load_n(&timeout_start_time, __ATOMIC_SEQ_CST);
-        if ((ms_timeout != (size_t) - 1) && (msclock() - tmp_clk > ms_timeout))
+        if ((ms_timeout != (size_t) - 1) && (msclock() - tmp_clk > ms_timeout)) {
             break;
+        }
 
         if (msclock() - tmp_clk > 3000 && show_warning) {
             // 3 seconds elapsed (but this doesn't mean the timeout was exceeded)

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed waiting for device loops. More stable experience (@iceman1001)
 - Changed client now handles CTRL-C and saves history if using READLINE (@iceman1001)
 - Changed `hf mf *` - printing of keys if MFC EV1 added extra explaination (@iceman1001)
 - Changed `hf mf ginfo - now supports decoding of user supplied configuration block (@iceman1001)
