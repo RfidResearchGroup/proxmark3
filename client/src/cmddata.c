@@ -57,7 +57,7 @@ static char *commaprint(size_t n) {
     static int comma = '\0';
     static char retbuf[30];
 
-    char *p = &retbuf[sizeof(retbuf)-1];
+    char *p = &retbuf[sizeof(retbuf) - 1];
     int i = 0;
 
     if (comma == '\0') {
@@ -65,7 +65,7 @@ static char *commaprint(size_t n) {
         struct lconv *lcp = localeconv();
         if (lcp != NULL) {
 
-            if(lcp->thousands_sep != NULL && *lcp->thousands_sep != '\0') {
+            if (lcp->thousands_sep != NULL && *lcp->thousands_sep != '\0') {
                 comma = *lcp->thousands_sep;
             } else {
                 comma = ',';
@@ -76,7 +76,7 @@ static char *commaprint(size_t n) {
     *p = '\0';
 
     do {
-        if ( i % 3 == 0 && i != 0 ) {
+        if (i % 3 == 0 && i != 0) {
             *--p = comma;
         }
 
@@ -3288,9 +3288,9 @@ static int CmdNumCon(const char *Cmd) {
     if (slen) {
         size_t n = (slen >> 1);
         uint8_t *d = calloc(n, sizeof(uint8_t));
-        if (d != NULL ) {
+        if (d != NULL) {
             hexstr_to_byte_array(s, d, &n);
-            PrintAndLogEx(SUCCESS, "ascii... " _YELLOW_("%s"), sprint_ascii((const uint8_t*)d, n));
+            PrintAndLogEx(SUCCESS, "ascii... " _YELLOW_("%s"), sprint_ascii((const uint8_t *)d, n));
             free(d);
         }
     }
@@ -3314,9 +3314,9 @@ static int CmdNumCon(const char *Cmd) {
             str_reverse(s, strlen(s));
             size_t n = (slen >> 1);
             uint8_t *d = calloc(n, sizeof(uint8_t));
-            if (d != NULL ) {
+            if (d != NULL) {
                 hexstr_to_byte_array(s, d, &n);
-                PrintAndLogEx(SUCCESS, "ascii... " _YELLOW_("%s"), sprint_ascii((const uint8_t*)d, n));
+                PrintAndLogEx(SUCCESS, "ascii... " _YELLOW_("%s"), sprint_ascii((const uint8_t *)d, n));
                 free(d);
             }
         }
@@ -3353,9 +3353,9 @@ static int CmdNumCon(const char *Cmd) {
             str_inverse_hex(s, strlen(s));
             size_t n = (slen >> 1);
             uint8_t *d = calloc(n, sizeof(uint8_t));
-            if (d != NULL ) {
+            if (d != NULL) {
                 hexstr_to_byte_array(s, d, &n);
-                PrintAndLogEx(SUCCESS, "ascii... " _YELLOW_("%s"), sprint_ascii((const uint8_t*)d, n));
+                PrintAndLogEx(SUCCESS, "ascii... " _YELLOW_("%s"), sprint_ascii((const uint8_t *)d, n));
                 free(d);
             }
         }
@@ -3779,7 +3779,7 @@ static int CmdXor(const char *Cmd) {
         PrintAndLogEx(FAILED, "Length mismatch, got %i != %i", hlen, xlen);
         return PM3_EINVARG;
     }
-    
+
     PrintAndLogEx(SUCCESS, "input... %s", sprint_hex_inrow(hex, hlen));
     PrintAndLogEx(SUCCESS, "xor..... %s", sprint_hex_inrow(xor, xlen));
     hex_xor(hex, xor, hlen);
@@ -3841,7 +3841,7 @@ static command_t CommandTable[] = {
     {"samples",         CmdSamples,              IfPm3Present,     "Get raw samples for graph window ( GraphBuffer )"},
     {"save",            CmdSave,                 AlwaysAvailable,  "Save signal trace data ( GraphBuffer )"},
     {"setdebugmode",    CmdSetDebugMode,         AlwaysAvailable,  "Set Debugging Level on client side"},
-    {"xor",             CmdXor,                  AlwaysAvailable,  "Xor a input string"},    
+    {"xor",             CmdXor,                  AlwaysAvailable,  "Xor a input string"},
     {NULL, NULL, NULL, NULL}
 };
 

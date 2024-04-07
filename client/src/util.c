@@ -1146,7 +1146,7 @@ void binstr_2_bytes(uint8_t *target, size_t *targetlen, const char *src) {
 }
 
 void hex_xor(uint8_t *d, uint8_t *x, int n) {
-    while(n--) {
+    while (n--) {
         d[n] ^= x[n];
     }
 }
@@ -1488,7 +1488,7 @@ uint8_t get_highest_frequency(const uint8_t *d, uint8_t n) {
     uint8_t v = 0;
 
     // Count the frequency of each byte
-    for(uint8_t i = 0; i < n; i++) {
+    for (uint8_t i = 0; i < n; i++) {
         frequency[d[i]]++;
 
         if (frequency[d[i]] > highest) {

@@ -1459,7 +1459,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Plot/Overlay moved or resized
-    if (g_session.window_changed) { 
+    if (g_session.window_changed) {
         preferences_save();
     }
 

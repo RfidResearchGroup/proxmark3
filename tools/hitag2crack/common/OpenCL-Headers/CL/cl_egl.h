@@ -61,10 +61,10 @@ extern "C" {
 #define CL_EGL_RESOURCE_NOT_ACQUIRED_KHR                    -1092
 
 /* CLeglImageKHR is an opaque handle to an EGLImage */
-typedef void*               CLeglImageKHR;
+typedef void               *CLeglImageKHR;
 
 /* CLeglDisplayKHR is an opaque handle to an EGLDisplay */
-typedef void*               CLeglDisplayKHR;
+typedef void               *CLeglDisplayKHR;
 
 /* properties passed to clCreateFromEGLImageKHR */
 typedef intptr_t            cl_egl_image_properties_khr;
@@ -76,8 +76,8 @@ clCreateFromEGLImageKHR_t(
     CLeglDisplayKHR egldisplay,
     CLeglImageKHR eglimage,
     cl_mem_flags flags,
-    const cl_egl_image_properties_khr* properties,
-    cl_int* errcode_ret);
+    const cl_egl_image_properties_khr *properties,
+    cl_int *errcode_ret);
 
 typedef clCreateFromEGLImageKHR_t *
 clCreateFromEGLImageKHR_fn CL_API_SUFFIX__VERSION_1_0;
@@ -86,10 +86,10 @@ typedef cl_int CL_API_CALL
 clEnqueueAcquireEGLObjectsKHR_t(
     cl_command_queue command_queue,
     cl_uint num_objects,
-    const cl_mem* mem_objects,
+    const cl_mem *mem_objects,
     cl_uint num_events_in_wait_list,
-    const cl_event* event_wait_list,
-    cl_event* event);
+    const cl_event *event_wait_list,
+    cl_event *event);
 
 typedef clEnqueueAcquireEGLObjectsKHR_t *
 clEnqueueAcquireEGLObjectsKHR_fn CL_API_SUFFIX__VERSION_1_0;
@@ -98,10 +98,10 @@ typedef cl_int CL_API_CALL
 clEnqueueReleaseEGLObjectsKHR_t(
     cl_command_queue command_queue,
     cl_uint num_objects,
-    const cl_mem* mem_objects,
+    const cl_mem *mem_objects,
     cl_uint num_events_in_wait_list,
-    const cl_event* event_wait_list,
-    cl_event* event);
+    const cl_event *event_wait_list,
+    cl_event *event);
 
 typedef clEnqueueReleaseEGLObjectsKHR_t *
 clEnqueueReleaseEGLObjectsKHR_fn CL_API_SUFFIX__VERSION_1_0;
@@ -114,26 +114,26 @@ clCreateFromEGLImageKHR(
     CLeglDisplayKHR egldisplay,
     CLeglImageKHR eglimage,
     cl_mem_flags flags,
-    const cl_egl_image_properties_khr* properties,
-    cl_int* errcode_ret) CL_API_SUFFIX__VERSION_1_0;
+    const cl_egl_image_properties_khr *properties,
+    cl_int *errcode_ret) CL_API_SUFFIX__VERSION_1_0;
 
 extern CL_API_ENTRY cl_int CL_API_CALL
 clEnqueueAcquireEGLObjectsKHR(
     cl_command_queue command_queue,
     cl_uint num_objects,
-    const cl_mem* mem_objects,
+    const cl_mem *mem_objects,
     cl_uint num_events_in_wait_list,
-    const cl_event* event_wait_list,
-    cl_event* event) CL_API_SUFFIX__VERSION_1_0;
+    const cl_event *event_wait_list,
+    cl_event *event) CL_API_SUFFIX__VERSION_1_0;
 
 extern CL_API_ENTRY cl_int CL_API_CALL
 clEnqueueReleaseEGLObjectsKHR(
     cl_command_queue command_queue,
     cl_uint num_objects,
-    const cl_mem* mem_objects,
+    const cl_mem *mem_objects,
     cl_uint num_events_in_wait_list,
-    const cl_event* event_wait_list,
-    cl_event* event) CL_API_SUFFIX__VERSION_1_0;
+    const cl_event *event_wait_list,
+    cl_event *event) CL_API_SUFFIX__VERSION_1_0;
 
 #endif /* !defined(CL_NO_ICD_DISPATCH_EXTENSION_PROTOTYPES) */
 
@@ -148,7 +148,7 @@ clEnqueueReleaseEGLObjectsKHR(
 /* type CLeglDisplayKHR */
 
 /* CLeglSyncKHR is an opaque handle to an EGLSync object */
-typedef void*               CLeglSyncKHR;
+typedef void               *CLeglSyncKHR;
 
 
 typedef cl_event CL_API_CALL
@@ -156,7 +156,7 @@ clCreateEventFromEGLSyncKHR_t(
     cl_context context,
     CLeglSyncKHR sync,
     CLeglDisplayKHR display,
-    cl_int* errcode_ret);
+    cl_int *errcode_ret);
 
 typedef clCreateEventFromEGLSyncKHR_t *
 clCreateEventFromEGLSyncKHR_fn CL_API_SUFFIX__VERSION_1_0;
@@ -168,7 +168,7 @@ clCreateEventFromEGLSyncKHR(
     cl_context context,
     CLeglSyncKHR sync,
     CLeglDisplayKHR display,
-    cl_int* errcode_ret) CL_API_SUFFIX__VERSION_1_0;
+    cl_int *errcode_ret) CL_API_SUFFIX__VERSION_1_0;
 
 #endif /* !defined(CL_NO_ICD_DISPATCH_EXTENSION_PROTOTYPES) */
 

@@ -630,9 +630,9 @@ static bool hitag2_write_page(uint8_t *rx, const size_t rxlen, uint8_t *tx, size
                 writestate = WRITE_STATE_PROG;
             } else {
                 Dbprintf("hitag2_write_page: Page number was not received correctly: rxlen %d rx %02x%02x%02x%02x"
-                    , rxlen
-                    , rx[0], rx[1], rx[2], rx[3]
-                );
+                         , rxlen
+                         , rx[0], rx[1], rx[2], rx[3]
+                        );
                 bSuccessful = false;
                 return false;
             }
@@ -651,7 +651,7 @@ static bool hitag2_write_page(uint8_t *rx, const size_t rxlen, uint8_t *tx, size
             Dbprintf("hitag2_write_page: Unknown state " _RED_("%d"), writestate);
             bSuccessful = false;
             return false;
-    }
+        }
     }
     return true;
 }
@@ -792,10 +792,10 @@ static bool hitag2_crypto(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *
 
                     uint32_t ui32uid = rx[0] | ((uint32_t)rx[1]) << 8 | ((uint32_t)rx[2]) << 16 | ((uint32_t)rx[3]) << 24;
                     DBG Dbprintf("hitag2_crypto: key=0x%x%x uid=0x%x"
-                        , (uint32_t)((REV64(ui64key)) >> 32)
-                        , (uint32_t)((REV64(ui64key)) & 0xffffffff)
-                        , REV32(ui32uid)
-                    );
+                                 , (uint32_t)((REV64(ui64key)) >> 32)
+                                 , (uint32_t)((REV64(ui64key)) & 0xffffffff)
+                                 , REV32(ui32uid)
+                                );
 
                     cipher_state = ht2_hitag2_init(REV64(ui64key), REV32(ui32uid), 0);
 
@@ -1024,7 +1024,7 @@ void SniffHitag2(bool ledcontrol) {
         lf_init(false, false, ledcontrol);
 
         // no logging of the raw signal
-//    g_logging = lf_get_reader_modulation();
+    //    g_logging = lf_get_reader_modulation();
     g_logging = false;
         uint32_t total_count = 0;
 
@@ -1456,7 +1456,7 @@ void SimulateHitag2(bool ledcontrol) {
                 // NRZ modulation: (11 => --|) or (11 __|)
                 nrz_samples[nrzs++] = reader_modulation;
                 if (nrzs < max_nrzs) {
-                nrz_samples[nrzs++] = reader_modulation;
+                    nrz_samples[nrzs++] = reader_modulation;
                 }
                 // Invert tag modulation state
                 reader_modulation ^= 1;
@@ -1875,7 +1875,7 @@ void ReaderHitag(hitag_function htf, const hitag_data *htd, bool ledcontrol) {
         // Store the TX frame, we do this now at this point, to avoid delay in processing
         // and to be able to overwrite the first samples with the trace (since they currently
         // still use the same memory space)
-            LogTraceBits(tx, txlen, command_start, command_start + command_duration, true);
+        LogTraceBits(tx, txlen, command_start, command_start + command_duration, true);
 
         // Reset values for receiving frames
         memset(rx, 0x00, sizeof(rx));
@@ -1941,7 +1941,7 @@ void ReaderHitag(hitag_function htf, const hitag_data *htd, bool ledcontrol) {
         }
 
         // Check if frame was captured and store it
-            LogTraceBits(rx, rxlen, response_start, response_start + response_duration, false);
+        LogTraceBits(rx, rxlen, response_start, response_start + response_duration, false);
 
 // TODO when using cumulative time for command_start, pm3 doesn't reply anymore, e.g. on lf hitag reader --23 -k 4F4E4D494B52
 // Use delta time?
@@ -2217,7 +2217,7 @@ void WriterHitag(hitag_function htf, const hitag_data *htd, int page, bool ledco
         // Store the TX frame, we do this now at this point, to avoid delay in processing
         // and to be able to overwrite the first samples with the trace (since they currently
         // still use the same memory space)
-            LogTraceBits(tx, txlen, command_start, command_start + command_duration, true);
+        LogTraceBits(tx, txlen, command_start, command_start + command_duration, true);
 
         // Reset values for receiving frames
         memset(rx, 0x00, sizeof(rx));
@@ -2248,7 +2248,7 @@ void WriterHitag(hitag_function htf, const hitag_data *htd, int page, bool ledco
 
         // Verify if the header consists of five consecutive ones
         if (nrzs < 5) {
-            DBG Dbprintf("Detected unexpected number of manchester decoded samples [%zu]", nrzs);            
+            DBG Dbprintf("Detected unexpected number of manchester decoded samples [%zu]", nrzs);
             break;
         } else {
 
@@ -2287,8 +2287,8 @@ void WriterHitag(hitag_function htf, const hitag_data *htd, int page, bool ledco
         }
 
         // Check if frame was captured and store it
-            LogTraceBits(rx, rxlen, response_start, response_start + response_duration, false);
-            command_start = 0;
+        LogTraceBits(rx, rxlen, response_start, response_start + response_duration, false);
+        command_start = 0;
         nrzs = 0;
     }
 

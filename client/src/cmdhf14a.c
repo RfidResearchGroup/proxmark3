@@ -891,7 +891,7 @@ int CmdHF14ASniff(const char *Cmd) {
                   "Sniff the communication between Hitag reader and tag.\n"
                   "Use `hf 14a list` to view collected data.",
                   " hf 14a sniff -c -r"
-                );
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("c", "card", "triggered by first data from card"),

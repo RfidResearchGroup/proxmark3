@@ -4250,12 +4250,12 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
         }
 
         PrintAndLogEx(SUCCESS, " " _YELLOW_("%03d") " | %03d | %s | %s | %s | %s %s"
-            , s
-            , mfSectorTrailerOfSector(s)
-            , strA, resA
-            , strB, resB
-            , extra
-        );
+                      , s
+                      , mfSectorTrailerOfSector(s)
+                      , strA, resA
+                      , strB, resB
+                      , extra
+                     );
     }
 
     PrintAndLogEx(SUCCESS, "-----+-----+--------------+---+--------------+----");
@@ -7660,7 +7660,7 @@ static int CmdHF14AMfView(const char *Cmd) {
 }
 
 static int parse_gtu_cfg(uint8_t *d, size_t n) {
-    
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "---------- " _CYAN_("GTU Gen4 Configuration") " -------------------------------------");
     if (n != 30 && n != 32) {
@@ -7676,7 +7676,7 @@ static int parse_gtu_cfg(uint8_t *d, size_t n) {
     PrintAndLogEx(INFO, _CYAN_("Config 1 - UID & modes"));
     PrintAndLogEx(INFO, "%s", sprint_hex_inrow(d, 8));
     PrintAndLogEx(INFO, "%02X.............. " NOLF, d[0]);
-    bool is_ul_enabled = ( d[0] == 1 );
+    bool is_ul_enabled = (d[0] == 1);
     switch (d[0]) {
         case 0x00:
             PrintAndLogEx(NORMAL, "MIFARE Classic mode");
@@ -7743,16 +7743,16 @@ static int parse_gtu_cfg(uint8_t *d, size_t n) {
     PrintAndLogEx(INFO, "......%02X........ " NOLF, d[27]);
     switch (d[27]) {
         case 0x00:
-            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("Ultralight EV1")  : "Ultralight Ev1" );
+            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("Ultralight EV1")  : "Ultralight Ev1");
             break;
         case 0x01:
-            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("NTAG")  : "NTAG" );
+            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("NTAG")  : "NTAG");
             break;
         case 0x02:
-            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("Ultralight C")  : "Ultralight C" );
+            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("Ultralight C")  : "Ultralight C");
             break;
         case 0x03:
-            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("Ultralight")  : "Ultralight" );
+            PrintAndLogEx(NORMAL, "%s", (is_ul_enabled) ? _GREEN_("Ultralight")  : "Ultralight");
             break;
         default:
             PrintAndLogEx(NORMAL, _RED_("unknown"));
@@ -7816,7 +7816,7 @@ static int CmdHF14AGen4Info(const char *cmd) {
     uint8_t resp[40] = {0};
     size_t resplen = 0;
     int res = 0;
-    
+
     if (dlen != 32) {
         res = mfG4GetConfig(pwd, resp, &resplen, verbose);
         if (res != PM3_SUCCESS || resplen == 0) {

@@ -342,13 +342,15 @@ int main(int argc, char **argv) {
             switch (e) {
                 case 0: // UID
                     if (!strncmp(argv[optind], "0x", 2) || !strncmp(argv[optind], "0X", 2)) {
-                        if (strlen(argv[optind]) != 2 + 8) { 
-                            printf("Error: invalid UID length\n"); usage(argv[0]); 
+                        if (strlen(argv[optind]) != 2 + 8) {
+                            printf("Error: invalid UID length\n");
+                            usage(argv[0]);
                         }
                         uid = (uint32_t) rev32(hexreversetoulong(argv[optind] + 2));
                     } else {
                         if (strlen(argv[optind]) != 8) {
-                            printf("Error: invalid UID length\n"); usage(argv[0]); 
+                            printf("Error: invalid UID length\n");
+                            usage(argv[0]);
                         }
                         uid = (uint32_t) rev32(hexreversetoulong(argv[optind]));
                     }
@@ -357,12 +359,14 @@ int main(int argc, char **argv) {
                 case 1: // nR1
                     if (!strncmp(argv[optind], "0x", 2) || !strncmp(argv[optind], "0X", 2)) {
                         if (strlen(argv[optind]) != 2 + 8) {
-                            printf("Error: invalid nR1 length\n"); usage(argv[0]); 
+                            printf("Error: invalid nR1 length\n");
+                            usage(argv[0]);
                         }
                         nR1 = (uint32_t) rev32(hexreversetoulong(argv[optind] + 2));
                     } else {
                         if (strlen(argv[optind]) != 8) {
-                            printf("Error: invalid nR1 length\n"); usage(argv[0]); 
+                            printf("Error: invalid nR1 length\n");
+                            usage(argv[0]);
                         }
                         nR1 = (uint32_t) rev32(hexreversetoulong(argv[optind]));
                     }
@@ -370,7 +374,8 @@ int main(int argc, char **argv) {
 
                 case 2: // aR1
                     if (strlen(argv[optind]) != 8) {
-                        printf("Error: invalid aR1 length\n"); usage(argv[0]);
+                        printf("Error: invalid aR1 length\n");
+                        usage(argv[0]);
                     }
                     aR1 = (uint32_t) strtoul(argv[optind], NULL, 16);
                     break;
@@ -378,12 +383,14 @@ int main(int argc, char **argv) {
                 case 3: // nR2
                     if (!strncmp(argv[optind], "0x", 2) || !strncmp(argv[optind], "0X", 2)) {
                         if (strlen(argv[optind]) != 2 + 8) {
-                            printf("Error: invalid nR2 length\n"); usage(argv[0]); 
+                            printf("Error: invalid nR2 length\n");
+                            usage(argv[0]);
                         }
                         nR2 = (uint32_t) rev32(hexreversetoulong(argv[optind] + 2));
                     } else {
                         if (strlen(argv[optind]) != 8) {
-                            printf("Error: invalid nR2 length\n"); usage(argv[0]); 
+                            printf("Error: invalid nR2 length\n");
+                            usage(argv[0]);
                         }
                         nR2 = (uint32_t) rev32(hexreversetoulong(argv[optind]));
                     }
@@ -391,7 +398,8 @@ int main(int argc, char **argv) {
 
                 case 4: // aR2
                     if (strlen(argv[optind]) != 8) {
-                        printf("Error: invalid aR2 length\n"); usage(argv[0]); 
+                        printf("Error: invalid aR2 length\n");
+                        usage(argv[0]);
                     }
                     aR2 = (uint32_t) strtoul(argv[optind], NULL, 16);
                     break;
@@ -1182,10 +1190,10 @@ int main(int argc, char **argv) {
         printf(")\n\n");
     } else {
         printf(", Profile %u, Async Threads %s, HiTag2 key verify on device %s)\n\n"
-            , profile
-            , (ctx.thread_sched_type == THREAD_TYPE_ASYNC) ? "yes" : "no"
-            , (force_hitag2_opencl) ? "yes" : "no"
-        );
+               , profile
+               , (ctx.thread_sched_type == THREAD_TYPE_ASYNC) ? "yes" : "no"
+               , (force_hitag2_opencl) ? "yes" : "no"
+              );
     }
 
     if (gettimeofday(&cpu_t_start, NULL) == -1) {
@@ -1216,9 +1224,9 @@ int main(int argc, char **argv) {
             }
 
             printf("\nKey found @ slice %zu/%zu [ \x1b[32m"
-                , t_arg[y].slice
-                , t_arg[y].max_slices
-            );
+                   , t_arg[y].slice
+                   , t_arg[y].max_slices
+                  );
 
             for (int i = 0; i < 6; i++) {
                 printf("%02X", (uint8_t)(t_arg[y].key & 0xff));

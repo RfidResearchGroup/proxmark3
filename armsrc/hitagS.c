@@ -451,9 +451,9 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
             temp2++;
             *txlen = 32;
             state = ht2_hitag2_init(REV64(tag.key),
-                                 REV32((tag.pages[0][3] << 24) + (tag.pages[0][2] << 16) + (tag.pages[0][1] << 8) + tag.pages[0][0]),
-                                 REV32((rx[3] << 24) + (rx[2] << 16) + (rx[1] << 8) + rx[0])
-                                );
+                                    REV32((tag.pages[0][3] << 24) + (tag.pages[0][2] << 16) + (tag.pages[0][1] << 8) + tag.pages[0][0]),
+                                    REV32((rx[3] << 24) + (rx[2] << 16) + (rx[1] << 8) + rx[0])
+                                   );
             Dbprintf(",{0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X}",
                      rx[0], rx[1], rx[2], rx[3],
                      rx[4], rx[5], rx[6], rx[7]

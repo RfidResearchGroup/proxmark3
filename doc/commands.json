@@ -444,7 +444,7 @@
         },
         "data help": {
             "command": "data help",
-            "description": "----------- ------------------------- General------------------------- help This help ----------- ------------------------- Modulation------------------------- biphaserawdecode Biphase decode bin stream in DemodBuffer detectclock Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer fsktonrz Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk) manrawdecode Manchester decode binary stream in DemodBuffer modulation Identify LF signal for clock and modulation rawdemod Demodulate the data in the GraphBuffer and output binary ----------- ------------------------- Graph------------------------- askedgedetect Adjust Graph for manual ASK demod autocorr Autocorrelation over window dirthreshold Max rising higher up-thres/ Min falling lower down-thres decimate Decimate samples envelope Generate square envelope of samples undecimate Un-decimate samples hide Hide graph window hpf Remove DC offset from trace iir Apply IIR buttersworth filter on plot data grid overlay grid on graph window ltrim Trim samples from left of trace mtrim Trim out samples from the specified start to the specified stop norm Normalize max/min to +/-128 plot Show graph window cthreshold Average out all values between rtrim Trim samples from right of trace setgraphmarkers Set blue and orange marker in graph window shiftgraphzero Shift 0 for Graphed wave + or - shift value timescale Set cursor display timescale zerocrossings Count time between zero-crossings convertbitstream Convert GraphBuffer's 0/1 values to 127 / -127 getbitstream Convert GraphBuffer's >=1 values to 1 and <1 to 0 ----------- ------------------------- Operations------------------------- asn1 ASN1 decoder atr ATR lookup bin2hex Converts binary to hexadecimal bmap Convert hex value according a binary template clear Clears bigbuf on deviceside and graph window crypto Encrypt and decrypt data diff Diff of input files hex2bin Converts hexadecimal to binary load Load contents of file into graph window num Converts dec/hex/bin print Print the data in the DemodBuffer save Save signal trace data (from graph window) setdebugmode Set Debugging Level on client side --------------------------------------------------------------------------------------- data biphaserawdecode available offline: yes Biphase decode binary stream in DemodBuffer Converts 10 or 01 -> 1 and 11 or 00 -> 0 - must have binary sequence in DemodBuffer (run `data rawdemod --ar` before) - invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester",
+            "description": "----------- ------------------------- General------------------------- help This help ----------- ------------------------- Modulation------------------------- biphaserawdecode Biphase decode bin stream in DemodBuffer detectclock Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer fsktonrz Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk) manrawdecode Manchester decode binary stream in DemodBuffer modulation Identify LF signal for clock and modulation rawdemod Demodulate the data in the GraphBuffer and output binary ----------- ------------------------- Graph------------------------- askedgedetect Adjust Graph for manual ASK demod autocorr Autocorrelation over window dirthreshold Max rising higher up-thres/ Min falling lower down-thres decimate Decimate samples envelope Generate square envelope of samples undecimate Un-decimate samples hide Hide graph window hpf Remove DC offset from trace iir Apply IIR buttersworth filter on plot data grid overlay grid on graph window ltrim Trim samples from left of trace mtrim Trim out samples from the specified start to the specified stop norm Normalize max/min to +/-128 plot Show graph window cthreshold Average out all values between rtrim Trim samples from right of trace setgraphmarkers Set blue and orange marker in graph window shiftgraphzero Shift 0 for Graphed wave + or - shift value timescale Set cursor display timescale zerocrossings Count time between zero-crossings convertbitstream Convert GraphBuffer's 0/1 values to 127 / -127 getbitstream Convert GraphBuffer's >=1 values to 1 and <1 to 0 ----------- ------------------------- Operations------------------------- asn1 ASN1 decoder atr ATR lookup bin2hex Converts binary to hexadecimal bmap Convert hex value according a binary template clear Clears bigbuf on deviceside and graph window crypto Encrypt and decrypt data diff Diff of input files hex2bin Converts hexadecimal to binary load Load contents of file into graph window num Converts dec/hex/bin print Print the data in the DemodBuffer save Save signal trace data ( GraphBuffer ) setdebugmode Set Debugging Level on client side xor Xor a input string --------------------------------------------------------------------------------------- data biphaserawdecode available offline: yes Biphase decode binary stream in DemodBuffer Converts 10 or 01 -> 1 and 11 or 00 -> 0 - must have binary sequence in DemodBuffer (run `data rawdemod --ar` before) - invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester",
             "notes": [
                 "data biphaserawdecode -> decode biphase bitstream from the DemodBuffer",
                 "data biphaserawdecode -oi -> decode biphase bitstream from the DemodBuffer, adjust offset, and invert output"
@@ -542,12 +542,12 @@
             "command": "data ltrim",
             "description": "Trim samples from left of trace",
             "notes": [
-                "data ltrim -i 300 -> keep 300 - end"
+                "data ltrim -i 300 -> remove from start 0 to index 300"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-i, --idx <dec> from index to beginning trace"
+                "-i, --idx <dec> index in graph buffer"
             ],
             "usage": "data ltrim [-h] -i <dec>"
         },
@@ -579,9 +579,9 @@
         },
         "data mtrim": {
             "command": "data mtrim",
-            "description": "Trim out samples from the specified start to the specified end point",
+            "description": "Trim out samples from start 0 to `-s index` AND from `-e index` to end of graph buffer",
             "notes": [
-                "data mtrim -s 1000 -e 2000 -> keep between 1000 and 2000"
+                "data mtrim -s 1000 -e 2000 -> keep all between index 1000 and 2000"
             ],
             "offline": true,
             "options": [
@@ -679,12 +679,12 @@
             "command": "data rtrim",
             "description": "Trim samples from right of trace",
             "notes": [
-                "data rtrim -i 4000 -> keep 0 - 4000"
+                "data rtrim -i 4000 -> remove from index 4000 to end of graph buffer"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-i, --idx <dec> from index to end trace"
+                "-i, --idx <dec> index in graph buffer"
             ],
             "usage": "data rtrim [-h] -i <dec>"
         },
@@ -791,6 +791,21 @@
                 "-n <dec> factor to repeat each sample (default 2)"
             ],
             "usage": "data undecimate [-h] [-n <dec>]"
+        },
+        "data xor": {
+            "command": "data xor",
+            "description": "takes input string and xor string. Perform xor on it. If no xor string, try the most reoccuring value to xor against",
+            "notes": [
+                "data xor -d 99aabbcc8888888888",
+                "data xor -d 99aabbcc --xor 88888888"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-d, --data <hex> input hex string",
+                "-x, --xor <str> input xor string"
+            ],
+            "usage": "data xor [-h] -d <hex> [-x <str>]"
         },
         "data zerocrossings": {
             "command": "data zerocrossings",
@@ -1355,7 +1370,7 @@
         },
         "hf 14a sniff": {
             "command": "hf 14a sniff",
-            "description": "Collect data from the field and save into command buffer. Buffer accessible from command `hf 14a list`",
+            "description": "Sniff the communication between Hitag reader and tag. Use `hf 14a list` to view collected data.",
             "notes": [
                 "hf 14a sniff -c -r"
             ],
@@ -1544,7 +1559,7 @@
         },
         "hf 14b sniff": {
             "command": "hf 14b sniff",
-            "description": "Sniff the communication reader and tag",
+            "description": "Sniff the communication between reader and tag. Use `hf 14b list` to view collected data.",
             "notes": [
                 "hf 14b sniff"
             ],
@@ -4582,7 +4597,7 @@
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
                 "-v, --verbose verbose output",
-                "--sk Save extracted keys to file"
+                "--sk Save extracted keys to binary file"
             ],
             "usage": "hf mf eview [-hv] [--mini] [--1k] [--2k] [--4k] [--sk]"
         },
@@ -4753,15 +4768,17 @@
             "description": "Read info about magic gen4 GTU card.",
             "notes": [
                 "hf mf ginfo -> get info with default password 00000000",
-                "hf mf ginfo --pwd 01020304 -> get info with password"
+                "hf mf ginfo --pwd 01020304 -> get info with password",
+                "hf mf ginfo -d 00000000000002090978009102BDAC19131011121314151604001800FF0002FD -v -> decode config block"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-v, --verbose verbose output",
-                "-p, --pwd <hex> password 4bytes"
+                "-p, --pwd <hex> password 4 bytes",
+                "-d, --data <hex> config bytes 32 bytes"
             ],
-            "usage": "hf mf ginfo [-hv] [-p <hex>]"
+            "usage": "hf mf ginfo [-hv] [-p <hex>] [-d <hex>]"
         },
         "hf mf gload": {
             "command": "hf mf gload",
@@ -5263,7 +5280,7 @@
                 "-h, --help This help",
                 "-f, --file <fn> Specify a filename for dump file",
                 "-v, --verbose verbose output",
-                "--sk Save extracted keys to file"
+                "--sk Save extracted keys to binary file"
             ],
             "usage": "hf mf view [-hv] -f <fn> [--sk]"
         },
@@ -5763,7 +5780,7 @@
                 "-m, --cmode <plain|mac|encrypt> Communicaton mode",
                 "-c, --ccset <native|niso|iso> Communicaton command set",
                 "--schann <d40|ev1|ev2|lrp> Secure channel",
-                "--aid <hex> Application ID of delegated application (3 hex bytes, big endian)"
+                "--aid <hex> Application ID to delete (3 hex bytes, big endian)"
             ],
             "usage": "hf mfdes deleteapp [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--aid <hex>]"
         },
@@ -8466,6 +8483,22 @@
             ],
             "usage": "lf em 410x watch [-h]"
         },
+        "lf em 4x05 brute": {
+            "command": "lf em 4x05 brute",
+            "description": "This command tries to bruteforce the password of a EM4205/4305/4469/4569 The loop is running on device side, press Proxmark3 button to abort",
+            "notes": [
+                "Note: if you get many false positives, change position on the antennalf em 4x05 brute",
+                "lf em 4x05 brute -n 1 -> stop after first candidate found",
+                "lf em 4x05 brute -s 000022AA -> start at 000022AA"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-s, --start <hex> Start bruteforce enumeration from this password value",
+                "-n <dec> Stop after having found n candidates. Default: 0 (infinite)"
+            ],
+            "usage": "lf em 4x05 brute [-h] [-s <hex>] [-n <dec>]"
+        },
         "lf em 4x05 chk": {
             "command": "lf em 4x05 chk",
             "description": "This command uses a dictionary attack against EM4205/4305/4469/4569",
@@ -8492,7 +8525,7 @@
             "options": [
                 "-h, --help This help"
             ],
-            "usage": "lf em ex05 config [-h]"
+            "usage": "lf em 4x05 config [-h]"
         },
         "lf em 4x05 demod": {
             "command": "lf em 4x05 demod",
@@ -8525,19 +8558,15 @@
         },
         "lf em 4x05 help": {
             "command": "lf em 4x05 help",
-            "description": "----------- ----------------------- General ----------------------- help This help ----------- ----------------------- Operations ----------------------- config Create common configuration words demod Demodulate a EM4x05/EM4x69 tag from the GraphBuffer sniff Attempt to recover em4x05 commands from sample buffer view Display content from tag dump file --------------------------------------------------------------------------------------- lf em 4x05 brute available offline: no This command tries to bruteforce the password of a EM4205/4305/4469/4569 The loop is running on device side, press Proxmark3 button to abort",
+            "description": "----------- ----------------------- General ----------------------- help This help ----------- ----------------------- Operations ----------------------- config Create common configuration words demod Demodulate a EM4x05/EM4x69 tag from the GraphBuffer sniff Attempt to recover em4x05 commands from sample buffer view Display content from tag dump file --------------------------------------------------------------------------------------- lf em 4x05 clonehelp available offline: no Display a list of available commands for cloning specific techs on EM4305/4469 tags",
             "notes": [
-                "Note: if you get many false positives, change position on the antennalf em 4x05 brute",
-                "lf em 4x05 brute -n 1 -> stop after first candidate found",
-                "lf em 4x05 brute -s 000022AA -> start at 000022AA"
+                "lf em 4x05 clonehelp"
             ],
             "offline": true,
             "options": [
-                "-h, --help This help",
-                "-s, --start <hex> Start bruteforce enumeration from this password value",
-                "-n <dec> Stop after having found n candidates. Default: 0 (infinite)"
+                "-h, --help This help"
             ],
-            "usage": "lf em 4x05 brute [-h] [-s <hex>] [-n <dec>]"
+            "usage": "lf em 4x05 clonehelp [-h]"
         },
         "lf em 4x05 info": {
             "command": "lf em 4x05 info",
@@ -8616,7 +8645,7 @@
                 "-f, --file <fn> Specify a filename for dump file",
                 "-v, --verbose Verbose output"
             ],
-            "usage": "lf em ex05 view [-hv] -f <fn>"
+            "usage": "lf em 4x05 view [-hv] -f <fn>"
         },
         "lf em 4x05 wipe": {
             "command": "lf em 4x05 wipe",
@@ -9540,7 +9569,7 @@
         },
         "lf hitag sniff": {
             "command": "lf hitag sniff",
-            "description": "Sniff traffic between Hitag reader and tag. Use `lf hitag list` to view collected data.",
+            "description": "Sniff the communication between reader and tag. Use `lf hitag list` to view collected data.",
             "notes": [
                 "lf hitag sniff"
             ],
@@ -12566,8 +12595,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 725,
+        "commands_extracted": 727,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-03-19T10:15:48"
+        "extracted_on": "2024-04-07T09:37:51"
     }
 }

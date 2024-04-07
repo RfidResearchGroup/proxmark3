@@ -124,7 +124,7 @@ static bool WINAPI terminate_handler(DWORD t) {
 static struct sigaction gs_old_sigint_action;
 static void sigint_handler(int signum) {
 
-    switch(signum) {
+    switch (signum) {
         case SIGINT: {
             sigaction(SIGINT, &gs_old_sigint_action, NULL);
             pm3line_flush_history();

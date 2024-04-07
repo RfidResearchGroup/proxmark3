@@ -407,15 +407,15 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
         if (cmdsize == 1) {
             bn = bits;
         } else if (cmdsize > 1) {
-             bn = ((cmdsize - 1) * 8) + bits;
+            bn = ((cmdsize - 1) * 8) + bits;
         }
     }
 
     // 11000  AUTH  only one with 5 bits.  cmdsize 1
-    switch(bn) {
+    switch (bn) {
         case 5: {
             _ht2state.state = STATE_HALT;
-            if(memcmp(binstr, HITAG2_START_AUTH, 5) == 0) {
+            if (memcmp(binstr, HITAG2_START_AUTH, 5) == 0) {
                 snprintf(exp, size, "START AUTH");
                 _ht2state.state = STATE_START_AUTH;
             } else {
@@ -430,22 +430,22 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
                 break;
             }
 
-            if(memcmp(binstr, HITAG2_HALT, 2) == 0) {
+            if (memcmp(binstr, HITAG2_HALT, 2) == 0) {
                 snprintf(exp, size, "HALT");
                 _ht2state.state = STATE_HALT;
                 break;
             }
-            if(memcmp(binstr, HITAG2_READ_PAGE, 2) == 0) {
+            if (memcmp(binstr, HITAG2_READ_PAGE, 2) == 0) {
                 snprintf(exp, size, "READ_PAGE (%u)", 0);
                 break;
             }
 
-            if(memcmp(binstr, HITAG2_READ_PAGE_INVERTED, 2) == 0) {
+            if (memcmp(binstr, HITAG2_READ_PAGE_INVERTED, 2) == 0) {
                 snprintf(exp, size, "READ_PAGE_INVERTED (%u)", 0);
                 break;
             }
 
-            if(memcmp(binstr, HITAG2_WRITE_PAGE, 2) == 0) {
+            if (memcmp(binstr, HITAG2_WRITE_PAGE, 2) == 0) {
                 snprintf(exp, size, "WRITE_PAGE ()");
                 break;
             }
@@ -465,7 +465,7 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
 
             if (_ht2state.state == STATE_AUTH) {
                 snprintf(exp, size, "DATA");
-            } else{
+            } else {
                 snprintf(exp, size, "?");
             }
             break;
