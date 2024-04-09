@@ -161,7 +161,13 @@ void pm3line_init(void) {
     using_history();
     rl_readline_name = "PM3";
     rl_attempted_completion_function = rl_command_completion;
+
+// don't hook signal in MINGW
+#if defined(__MINGW32__) || defined(__MINGW64__)
+#else
     rl_getc_function = getc;
+#endif
+
     pm3line_install_signals();
 
 #ifdef RL_STATE_READCMD
