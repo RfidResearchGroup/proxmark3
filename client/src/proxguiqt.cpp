@@ -1118,10 +1118,15 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             PrintAndLogEx(NORMAL, "\n" _GREEN_("Grid and demod:"));
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("g"), "Toggle grid and demodulation plot display");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("l"), "Toggle lock grid relative to samples");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("<") "/" _RED_(">"), "Move demodulation left/right relative to samples");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("< ") "/" _RED_(" >"), "Move demodulation left/right relative to samples");
             PrintAndLogEx(NORMAL, "\n" _GREEN_("Misc:"));
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _YELLOW_("Left mouse click"), "Set yellow cursor");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _YELLOW_("Right mouse click"), "Set purple cursor");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("[ ") "/" _RED_(" ]"), "Move yellow cursor left/right by 1 sample");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("{ ") "/" _RED_(" }"), "Move purple cursor left/right by 1 sample");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Ctrl"), "... by 5 samples");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 +9, _RED_("= ") "/" _RED_(" -"), "Add/Subtract to the plot point over the yellow cursor by 1");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Ctrl"), "... by 5");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("h"), "Show this help");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("q"), "Close plot window");
             g_printAndLog = old_printAndLog;
@@ -1163,6 +1168,82 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             g_GraphStart += PageWidth;
             if (g_GraphStart > startMax)
                 g_GraphStart = startMax;
+            break;
+        
+        case Qt::Key_Equal:
+            if(event->modifiers() & Qt::ControlModifier) {
+                g_GraphBuffer[CursorAPos] += 5;
+            } else {
+                g_GraphBuffer[CursorAPos] += 1;
+            }
+
+            RepaintGraphWindow();
+            break;
+        
+        case Qt::Key_Minus:
+            if(event->modifiers() & Qt::ControlModifier) {
+                g_GraphBuffer[CursorAPos] -= 5;
+            } else {
+                g_GraphBuffer[CursorAPos] -= 1;
+            }
+
+            RepaintGraphWindow();
+            break;
+
+        case Qt::Key_BracketLeft:
+            if(event->modifiers() & Qt::ControlModifier) {
+                CursorAPos -= 5;
+            } else {
+                CursorAPos -= 1;
+            }
+
+            if(CursorAPos < g_GraphStart) {
+                CursorAPos = g_GraphStart;
+            }
+
+            RepaintGraphWindow();
+            break;
+        
+        case Qt::Key_BracketRight:
+            if(event->modifiers() & Qt::ControlModifier) {
+                CursorAPos += 5;
+            } else {
+                CursorAPos += 1;
+            }
+
+            if(CursorAPos >= g_GraphTraceLen) {
+                CursorAPos = g_GraphTraceLen;
+            }
+
+            RepaintGraphWindow();
+            break;
+        
+        case Qt::Key_BraceLeft:
+            if(event->modifiers() & Qt::ControlModifier) {
+                CursorBPos -= 5;
+            } else {
+                CursorBPos -= 1;
+            }
+
+            if(CursorBPos < g_GraphStart) {
+                CursorBPos = g_GraphStart;
+            }
+            
+            RepaintGraphWindow();
+            break;
+        
+        case Qt::Key_BraceRight:
+            if(event->modifiers() & Qt::ControlModifier) {
+                CursorBPos += 5;
+            } else {
+                CursorBPos += 1;
+            }
+
+            if(CursorBPos >= g_GraphTraceLen) {
+                CursorBPos = g_GraphTraceLen;
+            }
+
+            RepaintGraphWindow();
             break;
 
         default:
