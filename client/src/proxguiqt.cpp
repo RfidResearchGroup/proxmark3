@@ -1260,11 +1260,21 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             RepaintGraphWindow();
             break;
 
-        case Qt::Key_BracketLeft:
+        case Qt::Key_BracketLeft: {
             if(event->modifiers() & Qt::ControlModifier) {
                 CursorAPos -= 5;
             } else {
                 CursorAPos -= 1;
+            }
+
+            if((CursorAPos >= g_GraphStop) || (CursorAPos <= g_GraphStart)) {
+                uint32_t halfway = PageWidth / 2;
+
+                if((CursorAPos - halfway) > g_GraphTraceLen) {
+                    g_GraphStart = 0;
+                }  else {
+                    g_GraphStart = CursorAPos - halfway;
+                }
             }
 
             if(CursorAPos < g_GraphStart) {
@@ -1273,12 +1283,23 @@ void Plot::keyPressEvent(QKeyEvent *event) {
 
             RepaintGraphWindow();
             break;
+        }
         
-        case Qt::Key_BracketRight:
+        case Qt::Key_BracketRight: {
             if(event->modifiers() & Qt::ControlModifier) {
                 CursorAPos += 5;
             } else {
                 CursorAPos += 1;
+            }
+
+            if((CursorAPos >= g_GraphStop) || (CursorAPos <= g_GraphStart)) {
+                uint32_t halfway = PageWidth / 2;
+
+                if((CursorAPos + halfway) >= g_GraphTraceLen) {
+                    g_GraphStart = g_GraphTraceLen - halfway;
+                } else {
+                    g_GraphStart = CursorAPos - halfway;
+                }
             }
 
             if(CursorAPos >= g_GraphTraceLen) {
@@ -1287,6 +1308,7 @@ void Plot::keyPressEvent(QKeyEvent *event) {
 
             RepaintGraphWindow();
             break;
+        }
         
         case Qt::Key_BraceLeft:
             if(event->modifiers() & Qt::ControlModifier) {
