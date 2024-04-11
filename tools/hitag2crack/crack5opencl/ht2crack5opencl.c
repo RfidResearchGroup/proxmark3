@@ -830,9 +830,13 @@ int main(int argc, char **argv) {
                     continue;
                 }
 
-                if (len == 0) continue;
+                if (len == 0) {
+                    continue;
+                }
 
-                if (len > 0xdeadbe) len = 0xdeadbe; // limit build_log size
+                if (len > 0xdeadbe) {
+                    len = 0xdeadbe; // limit build_log size
+                }
 
                 char *buffer = (char *) calloc(len, sizeof(char));
                 if (!buffer) {
@@ -908,27 +912,40 @@ int main(int argc, char **argv) {
     z = 0;
 
     for (w = 0; w < ocl_platform_cnt; w++) {
-        if (!cd_ctx[w].selected) continue;
+
+        if (!cd_ctx[w].selected) {
+            continue;
+        }
 
         for (q = 0; q < cd_ctx[w].device_cnt; q++) {
-            if (!cd_ctx[w].device[q].selected) continue;
+
+            if (!cd_ctx[w].device[q].selected) {
+                continue;
+            }
 
             ctx.global_ws[z] = (1 << profiles[profile][1]);
 
             // the following happens with cpu devices or Apple GPU
             if (ctx.local_ws[z] > 256) {
-                if (cd_ctx[w].is_apple) ctx.local_ws[z] = 256;
-                else if (!cd_ctx[w].device[q].is_gpu) ctx.local_ws[z] = 256;
+
+                if (cd_ctx[w].is_apple) {
+                    ctx.local_ws[z] = 256;
+                } else if (!cd_ctx[w].device[q].is_gpu) {
+                    ctx.local_ws[z] = 256;
+                }
             }
 
             // dow't allow gws < lws
-            if (ctx.global_ws[z] < ctx.local_ws[z]) ctx.local_ws[z] = ctx.global_ws[z];
+            if (ctx.global_ws[z] < ctx.local_ws[z]) {
+                ctx.local_ws[z] = ctx.global_ws[z];
+            }
 
             if (opencl_profiling) {
                 printf("[%zu] global_ws %zu, local_ws %zu\n", g, ctx.global_ws[z], ctx.local_ws[z]);
             }
 
             if (!ctx.force_hitag2_opencl) {
+
                 if (!(matches[z] = (uint64_t *) calloc((uint32_t)(ctx.global_ws[z] * WGS_MATCHES_FACTOR), sizeof(uint64_t)))) {
                     printf("[%zu] Error: calloc (matches) failed (%d): %s\n", g, errno, strerror(errno));
                     MEMORY_FREE_OPENCL(ctx, z)
@@ -937,7 +954,9 @@ int main(int argc, char **argv) {
                     MEMORY_FREE_ALL
                     exit(2);
                 }
+
             } else { // one
+
                 if (!(matches[z] = (uint64_t *) calloc(1, sizeof(uint64_t)))) {
                     printf("[%zu] Error: calloc (matches) failed (%d): %s\n", z, errno, strerror(errno));
                     MEMORY_FREE_OPENCL(ctx, z)
@@ -1093,7 +1112,9 @@ int main(int argc, char **argv) {
     printf("[queue] Fill queue with pre-calculated offset using profile (%d): ", profile);
 #endif
 
-    for (size_t step = 0; step < max_step; step++) wu_queue_push(&ctx.queue_ctx, step, step << chunk, max_step);
+    for (size_t step = 0; step < max_step; step++) {
+        wu_queue_push(&ctx.queue_ctx, step, step << chunk, max_step);
+    }
 
 #if DEBUGME > 0
     printf("done\n");

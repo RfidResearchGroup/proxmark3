@@ -29,13 +29,18 @@ bool plat_dev_enabled(unsigned int id, const unsigned int *sel,
                       unsigned int cnt, unsigned int cur_type, unsigned int allow_type) {
     // usefulonly with devices
     if (allow_type != CL_DEVICE_TYPE_ALL) {
-        if (cur_type != allow_type) return false;
+        if (cur_type != allow_type) {
+            return false;
+        }
     }
 
-    if (sel[0] == 0xff) return true; // all
-    else {
+    if (sel[0] == 0xff) {
+        return true; // all
+    } else {
         for (unsigned int i = 0; i < cnt; i++) {
-            if (sel[i] == (id + 1)) return true;
+            if (sel[i] == (id + 1)) {
+                return true;
+            }
         }
     }
 
@@ -43,15 +48,18 @@ bool plat_dev_enabled(unsigned int id, const unsigned int *sel,
 }
 
 unsigned int get_smallest_profile(compute_platform_ctx_t *cd_ctx, size_t ocl_platform_cnt) {
-    unsigned int profile = 0xff;
 
-    size_t x = 0, y = 0;
+    unsigned int profile = 0xFF;
 
-    for (x = 0; x < ocl_platform_cnt; x++) {
-        if (!cd_ctx[x].selected) continue;
+    for (int x = 0; x < ocl_platform_cnt; x++) {
+        if (!cd_ctx[x].selected) {
+            continue;
+        }
 
-        for (y = 0; y < cd_ctx[x].device_cnt; y++) {
-            if (!cd_ctx[x].device[y].selected) continue;
+        for (int y = 0; y < cd_ctx[x].device_cnt; y++) {
+            if (!cd_ctx[x].device[y].selected) {
+                continue;
+            }
 
 #if DEBUGME > 1
             printf("[debug] Initial profile for device %zu: %d\n", y, cd_ctx[x].device[y].profile);
@@ -59,12 +67,16 @@ unsigned int get_smallest_profile(compute_platform_ctx_t *cd_ctx, size_t ocl_pla
 
             // with same devices will be selected the best
             // but for different devices in the same platform we need the worst for now (todo)
-            if (cd_ctx[x].device[y].profile < profile) profile = cd_ctx[x].device[y].profile;
+            if (cd_ctx[x].device[y].profile < profile) {
+                profile = cd_ctx[x].device[y].profile;
+            }
         }
     }
 
     // at worst, set profile to 0
-    if (profile > 10) profile = 0;
+    if (profile > 10) {
+        profile = 0;
+    }
 
     return profile;
 }
@@ -118,17 +130,26 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
 
     unsigned int global_device_id = 0;
 
-    if (verbose) printf("- Found %u OpenCL Platform(s)\n", ocl_platform_cnt);
+    if (verbose) {
+        printf("- Found %u OpenCL Platform(s)\n", ocl_platform_cnt);
+    }
 
     for (cl_uint platform_idx = 0; platform_idx < ocl_platform_cnt; platform_idx++) {
+
         (*cd_ctx)[platform_idx].platform_id = ocl_platforms[platform_idx];
+
         (*cd_ctx)[platform_idx].selected = plat_dev_enabled(platform_idx, plat_sel, plat_cnt, 0, 0);
 
-        if ((*cd_ctx)[platform_idx].selected)(*selected_platforms_cnt)++;
+        if ((*cd_ctx)[platform_idx].selected) {
+            (*selected_platforms_cnt)++;
+        }
 
-        if (verbose) printf("\n-- Platform ID: %u\n", platform_idx + 1);
+        if (verbose) {
+            printf("\n-- Platform ID: %u\n", platform_idx + 1);
+        }
 
         for (info_idx = 0; info_idx < ocl_platforms_info_cnt; info_idx++) {
+
             cl_platform_info ocl_info = ocl_platforms_info[info_idx];
 
             err = clGetPlatformInfo((*cd_ctx)[platform_idx].platform_id, ocl_info, 0, NULL, &tmp_len);
@@ -169,7 +190,6 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
 
             if (verbose) {
                 const char *tmp_info_desc = (info_idx == 0) ? "Name" : (info_idx == 1) ? "Vendor" : "Version";
-
                 printf("%14s: %s\n", tmp_info_desc, tmp_buf);
             }
 
@@ -186,18 +206,31 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
             }
 
             if (info_idx == 1) {
-                if (!strncmp(tmp_buf, "NVIDIA", 6))(*cd_ctx)[platform_idx].is_nv = true;
-                else if (!strncmp(tmp_buf, "Apple", 5)) { (*cd_ctx)[platform_idx].is_apple = true; (*cd_ctx)[platform_idx].warning = true; }
-                else if (!strncmp(tmp_buf, "Intel", 5))(*cd_ctx)[platform_idx].is_intel = true;
-                else if (!strncmp(tmp_buf, "The pocl project", 16))(*cd_ctx)[platform_idx].is_pocl = true;
-            }
 
+                if (!strncmp(tmp_buf, "NVIDIA", 6)) {
+                    (*cd_ctx)[platform_idx].is_nv = true;
+
+                } else if (!strncmp(tmp_buf, "Apple", 5)) {
+                    (*cd_ctx)[platform_idx].is_apple = true;
+                    (*cd_ctx)[platform_idx].warning = true;
+
+                } else if (!strncmp(tmp_buf, "Intel", 5)) {
+                    (*cd_ctx)[platform_idx].is_intel = true;
+
+                } else if (!strncmp(tmp_buf, "The pocl project", 16)) {
+                    (*cd_ctx)[platform_idx].is_pocl = true;
+                }
+            }
             free(tmp_buf);
         }
 
         if (!show && verbose) {
+
             printf("%14s: %s\n", "Selected", ((*cd_ctx)[platform_idx].selected) ? "yes" : "no");
-            if ((*cd_ctx)[platform_idx].warning) printf("\n%14s: performance will not be optimal using this platform\n\n", "=====> Warning");
+
+            if ((*cd_ctx)[platform_idx].warning) {
+                printf("\n%14s: performance will not be optimal using this platform\n\n", "=====> Warning");
+            }
         }
 
         // enum devices with this platform
@@ -214,7 +247,9 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
 
         err = clGetDeviceIDs((*cd_ctx)[platform_idx].platform_id, CL_DEVICE_TYPE_ALL, ocl_device_max, ocl_devices, &ocl_device_cnt);
         if (ocl_device_cnt == 0) {
-            if (device_types_selected == CL_DEVICE_TYPE_ALL) printf("No device(s) available with platform id %u\n", platform_idx);
+            if (device_types_selected == CL_DEVICE_TYPE_ALL) {
+                printf("No device(s) available with platform id %u\n", platform_idx);
+            }
             (*cd_ctx)[platform_idx].device_cnt = 0;
             continue;
         }
@@ -227,16 +262,23 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
             return -9;
         }
 
-        if (verbose) printf("%14s: %u\n", "Device(s)", ocl_device_cnt);
+        if (verbose) {
+            printf("%14s: %u\n", "Device(s)", ocl_device_cnt);
+        }
 
         (*cd_ctx)[platform_idx].device_cnt = ocl_device_cnt;
 
         for (unsigned int device_idx = 0; device_idx < ocl_device_cnt; device_idx++) {
+
             memset(&(*cd_ctx)[platform_idx].device[device_idx], 0, sizeof(compute_device_ctx_t));
+
             cl_device_id ocl_device = ocl_devices[device_idx];
+
             (*cd_ctx)[platform_idx].device[device_idx].platform_id = (*cd_ctx)[platform_idx].platform_id;
 
-            if (verbose) printf("---- * ID: %u\n", global_device_id + 1);
+            if (verbose) {
+                printf("---- * ID: %u\n", global_device_id + 1);
+            }
 
             for (info_idx = 0; info_idx < ocl_devices_info_cnt; info_idx++) {
                 cl_device_info ocl_dev_info = ocl_devices_info[info_idx];
@@ -253,19 +295,31 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                         return -10;
                     }
 
-                    if (device_type & CL_DEVICE_TYPE_GPU)(*cd_ctx)[platform_idx].device[device_idx].is_gpu = 1;
-                    else if ((device_type & CL_DEVICE_TYPE_CPU) && (*cd_ctx)[platform_idx].is_pocl) {
+                    if (device_type & CL_DEVICE_TYPE_GPU) {
+                        (*cd_ctx)[platform_idx].device[device_idx].is_gpu = 1;
+                    } else if ((device_type & CL_DEVICE_TYPE_CPU) && (*cd_ctx)[platform_idx].is_pocl) {
                         (*cd_ctx)[platform_idx].device[device_idx].profile = (profile_selected > 1) ? 0 : profile_selected;
                     }
 
-                    if (verbose) printf("%14s: %s\n", "Device Type", (device_type & CL_DEVICE_TYPE_GPU) ? "GPU" : (device_type & CL_DEVICE_TYPE_CPU) ? "CPU" : "Other");
+                    if (verbose) {
+                        printf("%14s: %s\n", "Device Type", (device_type & CL_DEVICE_TYPE_GPU) ? "GPU" : (device_type & CL_DEVICE_TYPE_CPU) ? "CPU" : "Other");
+                    }
 
-                    if ((*cd_ctx)[platform_idx].selected == false)(*cd_ctx)[platform_idx].device[device_idx].selected = false;
-                    else (*cd_ctx)[platform_idx].device[device_idx].selected = plat_dev_enabled(global_device_id, dev_sel, dev_cnt, (unsigned int) device_type, device_types_selected);
+                    if ((*cd_ctx)[platform_idx].selected == false) {
+                        (*cd_ctx)[platform_idx].device[device_idx].selected = false;
+                    } else {
+                        (*cd_ctx)[platform_idx].device[device_idx].selected = plat_dev_enabled(global_device_id, dev_sel, dev_cnt, (unsigned int) device_type, device_types_selected);
+                    }
+                    
                     global_device_id++;
-                    if ((*cd_ctx)[platform_idx].device[device_idx].selected)(*selected_devices_cnt)++;
+                    
+                    if ((*cd_ctx)[platform_idx].device[device_idx].selected) {
+                        (*selected_devices_cnt)++;
+                    }
+                    
                     continue;
                 } else if (info_idx == 5) {
+
                     cl_device_local_mem_type local_mem_type;
 
                     err = clGetDeviceInfo(ocl_device, ocl_dev_info, sizeof(cl_device_local_mem_type), &local_mem_type, 0);
@@ -278,29 +332,47 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                     }
 
                     if (local_mem_type == CL_LOCAL || local_mem_type == CL_GLOBAL) {
-                        if (verbose) printf("%14s: %s\n", "Local Mem Type", (local_mem_type == CL_LOCAL) ? "Local" : "Global");
+
+                        if (verbose) {
+                            printf("%14s: %s\n", "Local Mem Type", (local_mem_type == CL_LOCAL) ? "Local" : "Global");
+                        }
+
                         if ((*cd_ctx)[platform_idx].is_apple) {
+                            
                             if (strncmp((*cd_ctx)[platform_idx].device[device_idx].vendor, "Intel", 5) != 0) {
+
                                 (*cd_ctx)[platform_idx].device[device_idx].have_local_memory = true;
 
                                 if ((*cd_ctx)[platform_idx].device[device_idx].is_gpu) {
-                                    if (profile_selected > 2)(*cd_ctx)[platform_idx].device[device_idx].profile = PROFILE_DEFAULT;  // Apple-Intel GPU's
+                                    if (profile_selected > 2) {
+                                        (*cd_ctx)[platform_idx].device[device_idx].profile = PROFILE_DEFAULT;  // Apple-Intel GPU's
+                                    }
                                 } else {
-                                    if (profile_selected > 3)(*cd_ctx)[platform_idx].device[device_idx].profile = PROFILE_DEFAULT;  // Apple-Intel CPU's
+                                    if (profile_selected > 3) {
+                                        (*cd_ctx)[platform_idx].device[device_idx].profile = PROFILE_DEFAULT;  // Apple-Intel CPU's
+                                    }
                                 }
                             }
+
                         } else if ((*cd_ctx)[platform_idx].is_nv) {
                             (*cd_ctx)[platform_idx].device[device_idx].have_local_memory = true;
                         }
+
                     } else {
-                        if (verbose) printf("%14s: None\n", "Local Mem Type");
+                        if (verbose) {
+                            printf("%14s: None\n", "Local Mem Type");
+                        }
                     }
 
-                    if (verbose) printf("%14s: %s\n", "Local Mem Opt", ((*cd_ctx)[platform_idx].device[device_idx].have_local_memory) ? "yes" : "no");
+                    if (verbose) {
+                        printf("%14s: %s\n", "Local Mem Opt", ((*cd_ctx)[platform_idx].device[device_idx].have_local_memory) ? "yes" : "no");
+                    }
 
                     continue;
                 } else if (info_idx == 6) {
+
                     size_t wis[3] = { 0 };
+
                     err = clGetDeviceInfo(ocl_device, ocl_dev_info, sizeof(size_t) * 3, wis, 0);
                     if (err != CL_SUCCESS) {
                         printf("Error: clGetDeviceInfo(work_items_size) failed (%d)\n", err);
@@ -310,7 +382,9 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                         return -10;
                     }
 
-                    if (verbose) printf("%14s: (%zu,%zu,%zu)\n", "Max Work-Items", wis[0], wis[1], wis[2]);
+                    if (verbose) {
+                        printf("%14s: (%zu,%zu,%zu)\n", "Max Work-Items", wis[0], wis[1], wis[2]);
+                    }
 
 #if APPLE_GPU_BROKEN == 1
                     if (wis[1] < GLOBAL_WS_1 && (*cd_ctx)[platform_idx].device[device_idx].is_apple_gpu) {
@@ -318,8 +392,11 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                     }
 #endif
                     continue;
+
                 } else if (info_idx == 7) {
+
                     cl_uint cores = 0;
+
                     err = clGetDeviceInfo(ocl_device, ocl_dev_info, sizeof(cl_uint), &cores, 0);
                     if (err != CL_SUCCESS) {
                         printf("Error: clGetDeviceInfo(compute_units) failed (%d)\n", err);
@@ -329,7 +406,9 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                         return -10;
                     }
 
-                    if (verbose) printf("%14s: %u\n", "Compute Units", cores);
+                    if (verbose) {
+                        printf("%14s: %u\n", "Compute Units", cores);
+                    }
 
                     (*cd_ctx)[platform_idx].device[device_idx].compute_units = cores;
                     continue;
@@ -404,8 +483,11 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                     if (strstr(tmp_buf, "Tegra") && (*cd_ctx)[platform_idx].is_pocl) {
                         (*cd_ctx)[platform_idx].device[device_idx].profile = (profile_selected > 1) ? 0 : profile_selected;
                     }
+
                 } else if (info_idx == 4) {
+
                     if (!strncmp(tmp_buf, "Intel", 5)) {
+
                         if ((*cd_ctx)[platform_idx].is_apple) {
                             (*cd_ctx)[platform_idx].device[device_idx].is_apple_gpu = (*cd_ctx)[platform_idx].device[device_idx].is_gpu;
                         }
@@ -438,7 +520,9 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                         (*cd_ctx)[platform_idx].device[device_idx].sm_maj = sm_maj;
                         (*cd_ctx)[platform_idx].device[device_idx].sm_min = sm_min;
 
-                        if (verbose) printf("%14s: %u%u\n", "SM", sm_maj, sm_min);
+                        if (verbose) {
+                            printf("%14s: %u%u\n", "SM", sm_maj, sm_min);
+                        }
 
                         if (sm_maj >= 5) { // >= Maxwell
                             // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#logic-and-shift-instructions-lop3
@@ -464,7 +548,9 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                 free(tmp_buf);
             }
 
-            if (!show && verbose) printf("%14s: %s\n", "Selected", ((*cd_ctx)[platform_idx].device[device_idx].selected) ? "yes" : "no");
+            if (!show && verbose) {
+                printf("%14s: %s\n", "Selected", ((*cd_ctx)[platform_idx].device[device_idx].selected) ? "yes" : "no");
+            }
 
             if ((*cd_ctx)[platform_idx].device[device_idx].unsupported) {
                 printf("\n%14s: this device was not supported, because of missing resources\n\n", "=====> Warning");
@@ -472,7 +558,9 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
             }
 
             if ((*cd_ctx)[platform_idx].device[device_idx].warning) {
-                if (!show && verbose) printf("\n%14s: performance will not be optimal using this device\n\n", "=====> Warning");
+                if (!show && verbose) {
+                    printf("\n%14s: performance will not be optimal using this device\n\n", "=====> Warning");
+                }
             }
 
             (*cd_ctx)[platform_idx].device[device_idx].device_id = ocl_device;
@@ -486,7 +574,9 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
 
     *platform_detected_cnt = ocl_platform_cnt;
 
-    if (show) free(*cd_ctx);
+    if (show) {
+        free(*cd_ctx);
+    }
 
     return 0;
 }
@@ -582,7 +672,7 @@ int runKernel(opencl_ctx_t *ctx, uint32_t cand_base, uint64_t *matches, uint32_t
         if (ctx->force_hitag2_opencl) {
             if (matches_found[0] != 1) printf("[%zu] BUG: if match the counter must be 1. Here %u are founds\n", id, matches_found[0]);
         } else {
-            if (matches_found[0] > (uint32_t)(ctx->global_ws[id]*WGS_MATCHES_FACTOR)) {
+            if (matches_found[0] > (uint32_t)(ctx->global_ws[id] * WGS_MATCHES_FACTOR)) {
                 printf("[%zu] BUG: the next clEnqueueReadBuffer will crash. 'matches' buffer (%u) is lower than requested (%u)\n", id, (uint32_t)(ctx->global_ws[id]*WGS_MATCHES_FACTOR), matches_found[0]);
             }
         }
