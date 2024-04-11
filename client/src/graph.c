@@ -26,6 +26,7 @@
 
 
 int g_GraphBuffer[MAX_GRAPH_TRACE_LEN];
+int g_OperationBuffer[MAX_GRAPH_TRACE_LEN];
 size_t g_GraphTraceLen;
 
 /* write a manchester bit to the graph
@@ -68,6 +69,7 @@ void AppendGraph(bool redraw, uint16_t clock, int bit) {
 size_t ClearGraph(bool redraw) {
     size_t gtl = g_GraphTraceLen;
     memset(g_GraphBuffer, 0x00, g_GraphTraceLen);
+    memset(g_OperationBuffer, 0x00, g_GraphTraceLen);
     g_GraphTraceLen = 0;
     g_GraphStart = 0;
     g_GraphStop = 0;
@@ -78,6 +80,7 @@ size_t ClearGraph(bool redraw) {
 
     return gtl;
 }
+
 // option '1' to save g_GraphBuffer any other to restore
 void save_restoreGB(uint8_t saveOpt) {
     static int SavedGB[MAX_GRAPH_TRACE_LEN];

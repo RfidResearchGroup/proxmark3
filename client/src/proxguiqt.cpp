@@ -778,6 +778,44 @@ void Plot::plotGridLines(QPainter *painter, QRect r) {
     }
 }
 
+void Plot::plotOperations(int *buffer, size_t len, QPainter *painter, QRect plotRect) {
+    if(len == 0) {
+        return;
+    }
+
+    QPainterPath penPath;
+    int32_t x = xCoordOf(g_GraphStart, plotRect), prevX = 0;
+    int32_t y = yCoordOf(buffer[g_GraphStart], plotRect, gs_absVMax), prevY = 0;
+    int32_t past = 0, current = 0;
+
+    for (uint32_t pos = g_GraphStart; pos < len && xCoordOf(pos, plotRect) < plotRect.right(); pos++) {
+        if(pos == 0) continue; //Skip the first value of the buffer to prevent underflows
+
+        //Store the previous x and y values to move the pen to if we need to draw a line
+        prevX = x;
+        prevY = y;
+
+        x = xCoordOf(pos, plotRect);
+        current = buffer[pos];
+        past = buffer[pos - 1]; //Get the previous value for checking
+        y = yCoordOf(current, plotRect, gs_absVMax);
+
+        //We don't want to graph a line over the zero line, only operations stored in the buffer
+        if(current == 0 && past == 0) continue;
+
+        penPath.moveTo(prevX, prevY); //Move the pen
+        penPath.lineTo(x, y); //Draw the line from the previous coords to the new ones
+
+        if (g_GraphPixelsPerPoint > 10) {
+            QRect point(QPoint(x - 3, y - 3), QPoint(x + 3, y + 3));
+            painter->fillRect(point, WHITE);
+        }
+    }
+
+    painter->setPen(CITRON);
+    painter->drawPath(penPath);
+}
+
 #define HEIGHT_INFO 60
 #define WIDTH_AXES 80
 
@@ -824,6 +862,12 @@ void Plot::paintEvent(QPaintEvent *event) {
     if (g_DemodBufferLen > 8) {
         PlotDemod(g_DemodBuffer, g_DemodBufferLen, plotRect, infoRect, &painter, 2, g_DemodStartIdx);
     }
+
+    //Plot the Operation Overlay
+    //setMaxAndStart(g_OperationBuffer, g_GraphTraceLen, plotRect);
+    plotOperations(g_OperationBuffer, g_GraphTraceLen, &painter, plotRect);
+
+    //Plot the Overlay
     if (gs_useOverlays) {
         //init graph variables
         setMaxAndStart(s_OverlayBuff, g_GraphTraceLen, plotRect);

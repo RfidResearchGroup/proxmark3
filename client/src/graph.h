@@ -48,6 +48,7 @@ bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge);
 #define GRAPH_RESTORE 0
 
 extern int g_GraphBuffer[MAX_GRAPH_TRACE_LEN];
+extern int g_OperationBuffer[MAX_GRAPH_TRACE_LEN];
 extern size_t g_GraphTraceLen;
 
 #ifdef __cplusplus
