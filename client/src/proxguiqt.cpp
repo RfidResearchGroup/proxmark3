@@ -45,7 +45,7 @@
 
 extern "C" int preferences_save(void);
 
-static int s_Buff[MAX_GRAPH_TRACE_LEN];
+static int s_OverlayBuff[MAX_GRAPH_TRACE_LEN];
 static bool gs_useOverlays = false;
 static int gs_absVMax = 0;
 static uint32_t startMax; // Maximum offset in the graph (right side of graph)
@@ -340,7 +340,7 @@ void SliderWidget::moveEvent(QMoveEvent *event) {
 void ProxWidget::applyOperation() {
     //printf("ApplyOperation()");
     save_restoreGB(GRAPH_SAVE);
-    memcpy(g_GraphBuffer, s_Buff, sizeof(int) * g_GraphTraceLen);
+    memcpy(g_GraphBuffer, s_OverlayBuff, sizeof(int) * g_GraphTraceLen);
     RepaintGraphWindow();
 }
 void ProxWidget::stickOperation() {
@@ -348,21 +348,21 @@ void ProxWidget::stickOperation() {
     //printf("stickOperation()");
 }
 void ProxWidget::vchange_autocorr(int v) {
-    int ans = AutoCorrelate(g_GraphBuffer, s_Buff, g_GraphTraceLen, v, true, false);
+    int ans = AutoCorrelate(g_GraphBuffer, s_OverlayBuff, g_GraphTraceLen, v, true, false);
     if (g_debugMode) printf("vchange_autocorr(w:%d): %d\n", v, ans);
     gs_useOverlays = true;
     RepaintGraphWindow();
 }
 void ProxWidget::vchange_askedge(int v) {
     //extern int AskEdgeDetect(const int *in, int *out, int len, int threshold);
-    int ans = AskEdgeDetect(g_GraphBuffer, s_Buff, g_GraphTraceLen, v);
+    int ans = AskEdgeDetect(g_GraphBuffer, s_OverlayBuff, g_GraphTraceLen, v);
     if (g_debugMode) printf("vchange_askedge(w:%d)%d\n", v, ans);
     gs_useOverlays = true;
     RepaintGraphWindow();
 }
 void ProxWidget::vchange_dthr_up(int v) {
     int down = opsController->horizontalSlider_dirthr_down->value();
-    directionalThreshold(g_GraphBuffer, s_Buff, g_GraphTraceLen, v, down);
+    directionalThreshold(g_GraphBuffer, s_OverlayBuff, g_GraphTraceLen, v, down);
     //printf("vchange_dthr_up(%d)", v);
     gs_useOverlays = true;
     RepaintGraphWindow();
@@ -370,7 +370,7 @@ void ProxWidget::vchange_dthr_up(int v) {
 void ProxWidget::vchange_dthr_down(int v) {
     //printf("vchange_dthr_down(%d)", v);
     int up = opsController->horizontalSlider_dirthr_up->value();
-    directionalThreshold(g_GraphBuffer, s_Buff, g_GraphTraceLen, v, up);
+    directionalThreshold(g_GraphBuffer, s_OverlayBuff, g_GraphTraceLen, v, up);
     gs_useOverlays = true;
     RepaintGraphWindow();
 }
@@ -566,7 +566,7 @@ void Plot::setMaxAndStart(int *buffer, size_t len, QRect plotRect) {
         uint32_t t = (plotRect.right() - plotRect.left() - 40) / g_GraphPixelsPerPoint;
         if (len >= t) {
             startMax = len - t;
-    }
+        }
     }
 
     if (g_GraphStart > startMax) {
@@ -826,8 +826,8 @@ void Plot::paintEvent(QPaintEvent *event) {
     }
     if (gs_useOverlays) {
         //init graph variables
-        setMaxAndStart(s_Buff, g_GraphTraceLen, plotRect);
-        PlotGraph(s_Buff, g_GraphTraceLen, plotRect, infoRect, &painter, 1);
+        setMaxAndStart(s_OverlayBuff, g_GraphTraceLen, plotRect);
+        PlotGraph(s_OverlayBuff, g_GraphTraceLen, plotRect, infoRect, &painter, 1);
     }
     // End graph drawing
 
