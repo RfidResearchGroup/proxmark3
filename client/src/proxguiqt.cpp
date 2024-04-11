@@ -863,7 +863,7 @@ void Plot::paintEvent(QPaintEvent *event) {
             snprintf(scalestr, sizeof(scalestr), "[%2.2f %s] ", ((int32_t)(CursorBPos - CursorAPos)) / g_CursorScaleFactor, g_CursorScaleFactorUnit);
         }
     }
-    snprintf(str, sizeof(str), "@%u..%u  dt=%zi %szoom=%2.3f  CursorAPos=%zu  CursorBPos=%zu  GridX=%lf  GridY=%lf (%s) GridXoffset=%lf",
+    snprintf(str, sizeof(str), "@%u..%u  dt=%i %szoom=%2.3f  CursorAPos=%u  CursorBPos=%u  GridX=%lf  GridY=%lf (%s) GridXoffset=%lf",
              g_GraphStart,
              g_GraphStop,
              CursorBPos - CursorAPos,
