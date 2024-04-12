@@ -538,6 +538,7 @@ static const QColor GREEN     = QColor(100, 255, 100);
 static const QColor RED       = QColor(255, 100, 100);
 static const QColor BLUE      = QColor(100, 100, 255);
 static const QColor YELLOW    = QColor(255, 255, 0);
+static const QColor CITRON    = QColor(215, 197, 46);
 static const QColor PINK      = QColor(255, 0, 255);
 static const QColor ORANGE    = QColor(255, 153, 0);
 static const QColor LIGHTBLUE = QColor(100, 209, 246);
@@ -786,22 +787,19 @@ void Plot::plotOperations(int *buffer, size_t len, QPainter *painter, QRect plot
     QPainterPath penPath;
     int32_t x = xCoordOf(g_GraphStart, plotRect), prevX = 0;
     int32_t y = yCoordOf(buffer[g_GraphStart], plotRect, gs_absVMax), prevY = 0;
-    int32_t past = 0, current = 0;
+    int32_t current = 0;
 
     for (uint32_t pos = g_GraphStart; pos < len && xCoordOf(pos, plotRect) < plotRect.right(); pos++) {
-        if(pos == 0) continue; //Skip the first value of the buffer to prevent underflows
-
         //Store the previous x and y values to move the pen to if we need to draw a line
         prevX = x;
         prevY = y;
 
         x = xCoordOf(pos, plotRect);
         current = buffer[pos];
-        past = buffer[pos - 1]; //Get the previous value for checking
         y = yCoordOf(current, plotRect, gs_absVMax);
 
-        //We don't want to graph a line over the zero line, only operations stored in the buffer
-        if(current == 0 && past == 0) continue;
+        //We only want to graph changes between the Graph Buffer and the Operation Buffer
+        if(current == g_GraphBuffer[pos]) continue;
 
         penPath.moveTo(prevX, prevY); //Move the pen
         penPath.lineTo(x, y); //Draw the line from the previous coords to the new ones
