@@ -95,6 +95,7 @@ void save_restoreGB(uint8_t saveOpt) {
         Savedg_GridOffsetAdj = g_GridOffset;
     } else if (GB_Saved) { //restore
         memcpy(g_GraphBuffer, SavedGB, sizeof(g_GraphBuffer));
+        memcpy(g_OperationBuffer, SavedGB, sizeof(g_OperationBuffer));
         g_GraphTraceLen = SavedGBlen;
         g_GridOffset = Savedg_GridOffsetAdj;
         RepaintGraphWindow();
@@ -106,11 +107,14 @@ void setGraphBuf(const uint8_t *src, size_t size) {
 
     ClearGraph(false);
 
-    if (size > MAX_GRAPH_TRACE_LEN)
+    if (size > MAX_GRAPH_TRACE_LEN) {
         size = MAX_GRAPH_TRACE_LEN;
+    }
 
-    for (size_t i = 0; i < size; ++i)
+    for (size_t i = 0; i < size; ++i) {
         g_GraphBuffer[i] = src[i] - 128;
+        g_OperationBuffer[i] = src[i] - 128;
+    }
 
     g_GraphTraceLen = size;
     RepaintGraphWindow();
