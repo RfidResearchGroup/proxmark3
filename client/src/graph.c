@@ -26,6 +26,7 @@
 
 
 int g_GraphBuffer[MAX_GRAPH_TRACE_LEN];
+int g_OperationBuffer[MAX_GRAPH_TRACE_LEN];
 size_t g_GraphTraceLen;
 
 /* write a manchester bit to the graph
@@ -68,6 +69,7 @@ void AppendGraph(bool redraw, uint16_t clock, int bit) {
 size_t ClearGraph(bool redraw) {
     size_t gtl = g_GraphTraceLen;
     memset(g_GraphBuffer, 0x00, g_GraphTraceLen);
+    memset(g_OperationBuffer, 0x00, g_GraphTraceLen);
     g_GraphTraceLen = 0;
     g_GraphStart = 0;
     g_GraphStop = 0;
@@ -78,6 +80,7 @@ size_t ClearGraph(bool redraw) {
 
     return gtl;
 }
+
 // option '1' to save g_GraphBuffer any other to restore
 void save_restoreGB(uint8_t saveOpt) {
     static int SavedGB[MAX_GRAPH_TRACE_LEN];
@@ -92,6 +95,7 @@ void save_restoreGB(uint8_t saveOpt) {
         Savedg_GridOffsetAdj = g_GridOffset;
     } else if (GB_Saved) { //restore
         memcpy(g_GraphBuffer, SavedGB, sizeof(g_GraphBuffer));
+        memcpy(g_OperationBuffer, SavedGB, sizeof(g_OperationBuffer));
         g_GraphTraceLen = SavedGBlen;
         g_GridOffset = Savedg_GridOffsetAdj;
         RepaintGraphWindow();
@@ -103,11 +107,14 @@ void setGraphBuf(const uint8_t *src, size_t size) {
 
     ClearGraph(false);
 
-    if (size > MAX_GRAPH_TRACE_LEN)
+    if (size > MAX_GRAPH_TRACE_LEN) {
         size = MAX_GRAPH_TRACE_LEN;
+    }
 
-    for (size_t i = 0; i < size; ++i)
+    for (size_t i = 0; i < size; ++i) {
         g_GraphBuffer[i] = src[i] - 128;
+        g_OperationBuffer[i] = src[i] - 128;
+    }
 
     g_GraphTraceLen = size;
     RepaintGraphWindow();

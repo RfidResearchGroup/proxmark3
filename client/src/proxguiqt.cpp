@@ -45,7 +45,7 @@
 
 extern "C" int preferences_save(void);
 
-static int s_Buff[MAX_GRAPH_TRACE_LEN];
+static int s_OverlayBuff[MAX_GRAPH_TRACE_LEN];
 static bool gs_useOverlays = false;
 static int gs_absVMax = 0;
 static uint32_t startMax; // Maximum offset in the graph (right side of graph)
@@ -340,7 +340,7 @@ void SliderWidget::moveEvent(QMoveEvent *event) {
 void ProxWidget::applyOperation() {
     //printf("ApplyOperation()");
     save_restoreGB(GRAPH_SAVE);
-    memcpy(g_GraphBuffer, s_Buff, sizeof(int) * g_GraphTraceLen);
+    memcpy(g_GraphBuffer, s_OverlayBuff, sizeof(int) * g_GraphTraceLen);
     RepaintGraphWindow();
 }
 void ProxWidget::stickOperation() {
@@ -348,21 +348,21 @@ void ProxWidget::stickOperation() {
     //printf("stickOperation()");
 }
 void ProxWidget::vchange_autocorr(int v) {
-    int ans = AutoCorrelate(g_GraphBuffer, s_Buff, g_GraphTraceLen, v, true, false);
+    int ans = AutoCorrelate(g_GraphBuffer, s_OverlayBuff, g_GraphTraceLen, v, true, false);
     if (g_debugMode) printf("vchange_autocorr(w:%d): %d\n", v, ans);
     gs_useOverlays = true;
     RepaintGraphWindow();
 }
 void ProxWidget::vchange_askedge(int v) {
     //extern int AskEdgeDetect(const int *in, int *out, int len, int threshold);
-    int ans = AskEdgeDetect(g_GraphBuffer, s_Buff, g_GraphTraceLen, v);
+    int ans = AskEdgeDetect(g_GraphBuffer, s_OverlayBuff, g_GraphTraceLen, v);
     if (g_debugMode) printf("vchange_askedge(w:%d)%d\n", v, ans);
     gs_useOverlays = true;
     RepaintGraphWindow();
 }
 void ProxWidget::vchange_dthr_up(int v) {
     int down = opsController->horizontalSlider_dirthr_down->value();
-    directionalThreshold(g_GraphBuffer, s_Buff, g_GraphTraceLen, v, down);
+    directionalThreshold(g_GraphBuffer, s_OverlayBuff, g_GraphTraceLen, v, down);
     //printf("vchange_dthr_up(%d)", v);
     gs_useOverlays = true;
     RepaintGraphWindow();
@@ -370,7 +370,7 @@ void ProxWidget::vchange_dthr_up(int v) {
 void ProxWidget::vchange_dthr_down(int v) {
     //printf("vchange_dthr_down(%d)", v);
     int up = opsController->horizontalSlider_dirthr_up->value();
-    directionalThreshold(g_GraphBuffer, s_Buff, g_GraphTraceLen, v, up);
+    directionalThreshold(g_GraphBuffer, s_OverlayBuff, g_GraphTraceLen, v, up);
     gs_useOverlays = true;
     RepaintGraphWindow();
 }
@@ -538,6 +538,7 @@ static const QColor GREEN     = QColor(100, 255, 100);
 static const QColor RED       = QColor(255, 100, 100);
 static const QColor BLUE      = QColor(100, 100, 255);
 static const QColor YELLOW    = QColor(255, 255, 0);
+static const QColor CITRON    = QColor(215, 197, 46);
 static const QColor PINK      = QColor(255, 0, 255);
 static const QColor ORANGE    = QColor(255, 153, 0);
 static const QColor LIGHTBLUE = QColor(100, 209, 246);
@@ -566,7 +567,7 @@ void Plot::setMaxAndStart(int *buffer, size_t len, QRect plotRect) {
         uint32_t t = (plotRect.right() - plotRect.left() - 40) / g_GraphPixelsPerPoint;
         if (len >= t) {
             startMax = len - t;
-    }
+        }
     }
 
     if (g_GraphStart > startMax) {
@@ -778,6 +779,41 @@ void Plot::plotGridLines(QPainter *painter, QRect r) {
     }
 }
 
+void Plot::plotOperations(int *buffer, size_t len, QPainter *painter, QRect plotRect) {
+    if(len == 0) {
+        return;
+    }
+
+    QPainterPath penPath;
+    int32_t x = xCoordOf(g_GraphStart, plotRect), prevX = 0;
+    int32_t y = yCoordOf(buffer[g_GraphStart], plotRect, gs_absVMax), prevY = 0;
+    int32_t current = 0;
+
+    for (uint32_t pos = g_GraphStart; pos < len && xCoordOf(pos, plotRect) < plotRect.right(); pos++) {
+        //Store the previous x and y values to move the pen to if we need to draw a line
+        prevX = x;
+        prevY = y;
+
+        x = xCoordOf(pos, plotRect);
+        current = buffer[pos];
+        y = yCoordOf(current, plotRect, gs_absVMax);
+
+        //We only want to graph changes between the Graph Buffer and the Operation Buffer
+        if(current == g_GraphBuffer[pos]) continue;
+
+        penPath.moveTo(prevX, prevY); //Move the pen
+        penPath.lineTo(x, y); //Draw the line from the previous coords to the new ones
+
+        if (g_GraphPixelsPerPoint > 10) {
+            QRect point(QPoint(x - 3, y - 3), QPoint(x + 3, y + 3));
+            painter->fillRect(point, WHITE);
+        }
+    }
+
+    painter->setPen(CITRON);
+    painter->drawPath(penPath);
+}
+
 #define HEIGHT_INFO 60
 #define WIDTH_AXES 80
 
@@ -824,10 +860,16 @@ void Plot::paintEvent(QPaintEvent *event) {
     if (g_DemodBufferLen > 8) {
         PlotDemod(g_DemodBuffer, g_DemodBufferLen, plotRect, infoRect, &painter, 2, g_DemodStartIdx);
     }
+
+    //Plot the Operation Overlay
+    //setMaxAndStart(g_OperationBuffer, g_GraphTraceLen, plotRect);
+    plotOperations(g_OperationBuffer, g_GraphTraceLen, &painter, plotRect);
+
+    //Plot the Overlay
     if (gs_useOverlays) {
         //init graph variables
-        setMaxAndStart(s_Buff, g_GraphTraceLen, plotRect);
-        PlotGraph(s_Buff, g_GraphTraceLen, plotRect, infoRect, &painter, 1);
+        setMaxAndStart(s_OverlayBuff, g_GraphTraceLen, plotRect);
+        PlotGraph(s_OverlayBuff, g_GraphTraceLen, plotRect, infoRect, &painter, 1);
     }
     // End graph drawing
 
@@ -1260,11 +1302,21 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             RepaintGraphWindow();
             break;
 
-        case Qt::Key_BracketLeft:
+        case Qt::Key_BracketLeft: {
             if(event->modifiers() & Qt::ControlModifier) {
                 CursorAPos -= 5;
             } else {
                 CursorAPos -= 1;
+            }
+
+            if((CursorAPos >= g_GraphStop) || (CursorAPos <= g_GraphStart)) {
+                uint32_t halfway = PageWidth / 2;
+
+                if((CursorAPos - halfway) > g_GraphTraceLen) {
+                    g_GraphStart = 0;
+                }  else {
+                    g_GraphStart = CursorAPos - halfway;
+                }
             }
 
             if(CursorAPos < g_GraphStart) {
@@ -1273,12 +1325,23 @@ void Plot::keyPressEvent(QKeyEvent *event) {
 
             RepaintGraphWindow();
             break;
+        }
         
-        case Qt::Key_BracketRight:
+        case Qt::Key_BracketRight: {
             if(event->modifiers() & Qt::ControlModifier) {
                 CursorAPos += 5;
             } else {
                 CursorAPos += 1;
+            }
+
+            if((CursorAPos >= g_GraphStop) || (CursorAPos <= g_GraphStart)) {
+                uint32_t halfway = PageWidth / 2;
+
+                if((CursorAPos + halfway) >= g_GraphTraceLen) {
+                    g_GraphStart = g_GraphTraceLen - halfway;
+                } else {
+                    g_GraphStart = CursorAPos - halfway;
+                }
             }
 
             if(CursorAPos >= g_GraphTraceLen) {
@@ -1287,6 +1350,7 @@ void Plot::keyPressEvent(QKeyEvent *event) {
 
             RepaintGraphWindow();
             break;
+        }
         
         case Qt::Key_BraceLeft:
             if(event->modifiers() & Qt::ControlModifier) {
