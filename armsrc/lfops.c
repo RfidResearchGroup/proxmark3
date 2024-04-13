@@ -2227,13 +2227,27 @@ void T55xxWakeUp(uint32_t pwd, uint8_t flags, bool ledcontrol) {
 
 /*-------------- Cloning routines -----------*/
 static void WriteT55xx(const uint32_t *blockdata, uint8_t startblock, uint8_t numblocks, bool ledcontrol) {
-    t55xx_write_block_t cmd;
-    cmd.pwd = 0;
-    cmd.flags = 0;
 
-    for (uint8_t i = numblocks + startblock; i > startblock; i--) {
-        cmd.data = blockdata[i - 1];
-        cmd.blockno = i - 1;
+    // Sanity checks
+    if (blockdata == NULL || numblocks == 0) {
+        reply_ng(CMD_LF_T55XX_WRITEBL, PM3_EINVARG, NULL, 0);
+        return;
+    }
+
+    t55xx_write_block_t cmd = {
+        .pwd = 0,
+        .flags = 0
+    };
+
+    // write in reverse order since we don't want to set
+    // a password enabled configuration first....
+    while (numblocks--) {
+
+        // zero based index
+        cmd.data = blockdata[numblocks];
+        cmd.blockno = startblock + numblocks;
+
+        // since this fct sends a NG packet every time,  this loop will send I number of NG
         T55xxWriteBlock((uint8_t *)&cmd, ledcontrol);
     }
 }
@@ -2435,6 +2449,7 @@ int copy_em410x_to_t55xx(uint8_t card, uint8_t clock, uint32_t id_hi, uint32_t i
     } else { // T5555 (Q5)
         data[0] = T5555_SET_BITRATE(clock) | T5555_MODULATION_MANCHESTER | (blocks << T5555_MAXBLOCK_SHIFT);
     }
+
     if (card == 2) {
         WriteEM4x05(data, 4, 3, ledcontrol);
         if (add_electra) {
