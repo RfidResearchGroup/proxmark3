@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Removed `data bin2hex` - replaced by `data num`  (@iceman1001)
+- Removed `data hex2bin` - replaced by `data num`  (@iceman1001)
 - Fixed `lf em 410x clone --electra` - now writes properly (@iceman1001)
 - Changed waiting for device loops. More stable experience (@iceman1001)
 - Changed client now handles CTRL-C and saves history if using READLINE (@iceman1001)

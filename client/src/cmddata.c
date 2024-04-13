@@ -1027,8 +1027,8 @@ static int CmdBitsamples(const char *Cmd) {
 static int CmdBuffClear(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data clear",
-                  "This function clears the bigbuff on deviceside\n"
-                  "and graph window",
+                  "This function clears the BigBuf on device side\n"
+                  "and graph window ( graphbuffer )",
                   "data clear"
                  );
     void *argtable[] = {
@@ -1040,6 +1040,7 @@ static int CmdBuffClear(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_BUFF_CLEAR, NULL, 0);
     ClearGraph(true);
+    // iceman:  should clear all other new buffers getting introduced
     return PM3_SUCCESS;
 }
 
@@ -2405,109 +2406,6 @@ static bool data_verify_hex(uint8_t *d, size_t n) {
     return true;
 }
 
-/**
- * @brief Utility for conversion via cmdline.
- * @param Cmd
- * @return
- */
-static int Cmdbin2hex(const char *Cmd) {
-
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "data bin2hex",
-                  "This function converts binary to hexadecimal. It will ignore all\n"
-                  "characters not 1 or 0 but stop reading on whitespace",
-                  "data bin2hex -d 0101111001010"
-                 );
-    void *argtable[] = {
-        arg_param_begin,
-        arg_str1("d", "data", "<bin>", "binary string to convert"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int blen = 0;
-    uint8_t binarr[400] = {0x00};
-    int res = CLIParamBinToBuf(arg_get_str(ctx, 1), binarr, sizeof(binarr), &blen);
-    CLIParserFree(ctx);
-
-    if (res) {
-        PrintAndLogEx(FAILED, "Error parsing binary string");
-        return PM3_EINVARG;
-    }
-
-    // Number of digits supplied as argument
-    size_t bytelen = (blen + 7) / 8;
-    uint8_t *arr = (uint8_t *) calloc(bytelen, sizeof(uint8_t));
-    memset(arr, 0, bytelen);
-    BitstreamOut_t bout = { arr, 0, 0 };
-
-    for (int i = 0; i < blen; i++) {
-        uint8_t c = binarr[i];
-        if (c == 1)
-            pushBit(&bout, 1);
-        else if (c == 0)
-            pushBit(&bout, 0);
-        else
-            PrintAndLogEx(INFO, "Ignoring '%d' at pos %d", c, i);
-    }
-
-    if (bout.numbits % 8 != 0)
-        PrintAndLogEx(INFO, "[right padded with %d zeroes]", 8 - (bout.numbits % 8));
-
-    PrintAndLogEx(SUCCESS, _YELLOW_("%s"), sprint_hex(arr, bytelen));
-    free(arr);
-    return PM3_SUCCESS;
-}
-
-static int Cmdhex2bin(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "data hex2bin",
-                  "This function converts hexadecimal to binary. It will ignore all\n"
-                  "non-hexadecimal characters but stop reading on whitespace",
-                  "data hex2bin -d 01020304"
-                 );
-    void *argtable[] = {
-        arg_param_begin,
-        arg_str0("d", "data", "<hex>", "bytes to convert"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int dlen = 0;
-    char data[200] = {0x00};
-    int res = CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)data, sizeof(data), &dlen);
-    CLIParserFree(ctx);
-
-    if (res) {
-        PrintAndLogEx(FAILED, "Error parsing bytes");
-        return PM3_EINVARG;
-    }
-
-    if (data_verify_hex((uint8_t *)data, dlen) == false) {
-        return PM3_EINVARG;
-    }
-
-    PrintAndLogEx(SUCCESS, "" NOLF);
-    for (int i = 0; i < dlen; i++) {
-        char x = data[i];
-
-        // capitalize
-        if (x >= 'a' && x <= 'f')
-            x -= 32;
-        // convert to numeric value
-        if (x >= '0' && x <= '9')
-            x -= '0';
-        else if (x >= 'A' && x <= 'F')
-            x -= 'A' - 10;
-        else
-            continue;
-
-        for (int j = 0 ; j < 4 ; ++j) {
-            PrintAndLogEx(NORMAL, "%d" NOLF, (x >> (3 - j)) & 1);
-        }
-    }
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
-}
-
 /* // example of FSK2 RF/50 Tones
 static const int LowTone[]  = {
 1,  1,  1,  1,  1, -1, -1, -1, -1, -1,
@@ -3182,6 +3080,11 @@ static int CmdDiff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+/**
+ * @brief Utility for number conversion via cmdline.
+ * @param Cmd
+ * @return
+ */
 static int CmdNumCon(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data num",
@@ -3788,17 +3691,21 @@ static int CmdXor(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"-----------",      CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("General") "-------------------------"},
     {"help",             CmdHelp,                 AlwaysAvailable,  "This help"},
+    {"-----------",      CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("General") "-------------------------"},
     {"clear",            CmdBuffClear,            AlwaysAvailable,  "Clears various buffers used by the graph window"},
     {"hide",             CmdHide,                 AlwaysAvailable,  "Hide the graph window"},
-    {"plot",             CmdPlot,                 AlwaysAvailable,  "Show the graph window"},
     {"load",             CmdLoad,                 AlwaysAvailable,  "Load contents of file into graph window"},
+    {"num",              CmdNumCon,               AlwaysAvailable,  "Converts dec/hex/bin"},
+    {"plot",             CmdPlot,                 AlwaysAvailable,  "Show the graph window"},
+    {"print",            CmdPrintDemodBuff,       AlwaysAvailable,  "Print the data in the DemodBuffer"},
     {"save",             CmdSave,                 AlwaysAvailable,  "Save signal trace data"},
-
+    {"setdebugmode",     CmdSetDebugMode,         AlwaysAvailable,  "Set Debugging Level on client side"},
+    {"xor",              CmdXor,                  AlwaysAvailable,  "Xor a input string"},
+    
     {"-----------",      CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("Modulation") "-------------------------"},
-    {"detectclock",      CmdDetectClockRate,      AlwaysAvailable,  "Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer"},
     {"biphaserawdecode", CmdBiphaseDecodeRaw,     AlwaysAvailable,  "Biphase decode bin stream in DemodBuffer"},
+    {"detectclock",      CmdDetectClockRate,      AlwaysAvailable,  "Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer"},
     {"fsktonrz",         CmdFSKToNRZ,             AlwaysAvailable,  "Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk)"},
     {"manrawdecode",     Cmdmandecoderaw,         AlwaysAvailable,  "Manchester decode binary stream in DemodBuffer"},
     {"modulation",       CmdDataModulationSearch, AlwaysAvailable,  "Identify LF signal for clock and modulation"},
@@ -3807,40 +3714,34 @@ static command_t CommandTable[] = {
     {"-----------",      CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("Graph") "-------------------------"},
     {"askedgedetect",    CmdAskEdgeDetect,        AlwaysAvailable,  "Adjust Graph for manual ASK demod"},
     {"autocorr",         CmdAutoCorr,             AlwaysAvailable,  "Autocorrelation over window"},
+    {"convertbitstream", CmdConvertBitStream,     AlwaysAvailable,  "Convert GraphBuffer's 0/1 values to 127 / -127"},
     {"cthreshold",       CmdCenterThreshold,      AlwaysAvailable,  "Average out all values between"},
     {"dirthreshold",     CmdDirectionalThreshold, AlwaysAvailable,  "Max rising higher up-thres/ Min falling lower down-thres"},
     {"decimate",         CmdDecimate,             AlwaysAvailable,  "Decimate samples"},
-    {"undecimate",       CmdUndecimate,           AlwaysAvailable,  "Un-decimate samples"},
     {"envelope",         CmdEnvelope,             AlwaysAvailable,  "Generate square envelope of samples"},
     {"grid",             CmdGrid,                 AlwaysAvailable,  "overlay grid on graph window"},
+    {"getbitstream",     CmdGetBitStream,         AlwaysAvailable,  "Convert GraphBuffer's >=1 values to 1 and <1 to 0"},
     {"hpf",              CmdHpf,                  AlwaysAvailable,  "Remove DC offset from trace"},
     {"iir",              CmdDataIIR,              AlwaysAvailable,  "Apply IIR buttersworth filter on plot data"},
     {"ltrim",            CmdLtrim,                AlwaysAvailable,  "Trim samples from left of trace"},
     {"mtrim",            CmdMtrim,                AlwaysAvailable,  "Trim out samples from the specified start to the specified stop"},
-    {"rtrim",            CmdRtrim,                AlwaysAvailable,  "Trim samples from right of trace"},
     {"norm",             CmdNorm,                 AlwaysAvailable,  "Normalize max/min to +/-128"},
+    {"rtrim",            CmdRtrim,                AlwaysAvailable,  "Trim samples from right of trace"},
     {"setgraphmarkers",  CmdSetGraphMarkers,      AlwaysAvailable,  "Set blue and orange marker in graph window"},
     {"shiftgraphzero",   CmdGraphShiftZero,       AlwaysAvailable,  "Shift 0 for Graphed wave + or - shift value"},
     {"timescale",        CmdTimeScale,            AlwaysAvailable,  "Set cursor display timescale"},
-    {"convertbitstream", CmdConvertBitStream,     AlwaysAvailable,  "Convert GraphBuffer's 0/1 values to 127 / -127"},
-    {"getbitstream",     CmdGetBitStream,         AlwaysAvailable,  "Convert GraphBuffer's >=1 values to 1 and <1 to 0"},
+    {"undecimate",       CmdUndecimate,           AlwaysAvailable,  "Un-decimate samples"},
     {"zerocrossings",    CmdZerocrossings,        AlwaysAvailable,  "Count time between zero-crossings"},
 
     {"-----------",      CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("Operations") "-------------------------"},
     {"asn1",             CmdAsn1Decoder,          AlwaysAvailable,  "ASN1 decoder"},
     {"atr",              CmdAtrLookup,            AlwaysAvailable,  "ATR lookup"},
-    {"bin2hex",          Cmdbin2hex,              AlwaysAvailable,  "Converts binary to hexadecimal"},
     {"bitsamples",       CmdBitsamples,           IfPm3Present,     "Get raw samples as bitstring"},
     {"bmap",             CmdBinaryMap,            AlwaysAvailable,  "Convert hex value according a binary template"},
     {"crypto",           CmdCryptography,         AlwaysAvailable,  "Encrypt and decrypt data"},
     {"diff",             CmdDiff,                 AlwaysAvailable,  "Diff of input files"},
     {"hexsamples",       CmdHexsamples,           IfPm3Present,     "Dump big buffer as hex bytes"},
-    {"hex2bin",          Cmdhex2bin,              AlwaysAvailable,  "Converts hexadecimal to binary"},
-    {"num",              CmdNumCon,               AlwaysAvailable,  "Converts dec/hex/bin"},
-    {"print",            CmdPrintDemodBuff,       AlwaysAvailable,  "Print the data in the DemodBuffer"},
     {"samples",          CmdSamples,              IfPm3Present,     "Get raw samples for graph window ( GraphBuffer )"},
-    {"setdebugmode",     CmdSetDebugMode,         AlwaysAvailable,  "Set Debugging Level on client side"},
-    {"xor",              CmdXor,                  AlwaysAvailable,  "Xor a input string"},
     {NULL, NULL, NULL, NULL}
 };
 
