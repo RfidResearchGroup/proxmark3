@@ -676,7 +676,6 @@ void Plot::PlotDemod(uint8_t *buffer, size_t len, QRect plotRect, QRect annotati
         clk = grid_delta_x;
     }
 
-    // Graph annotations
     painter->drawPath(penPath);
 }
 
@@ -774,9 +773,9 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
 
     if (g_CursorScaleFactor != 1) {
         if (g_CursorScaleFactorUnit[0] == '\x00') {
-            snprintf(scalestr, sizeof(scalestr), "[%2.2f] ", ((int32_t)(CursorBPos - CursorAPos)) / g_CursorScaleFactor);
+            snprintf(scalestr, sizeof(scalestr), "[%2.2f] ", ((int32_t)(g_MarkerBPos - g_MarkerAPos)) / g_CursorScaleFactor);
         } else {
-            snprintf(scalestr, sizeof(scalestr), "[%2.2f %s] ", ((int32_t)(CursorBPos - CursorAPos)) / g_CursorScaleFactor, g_CursorScaleFactorUnit);
+            snprintf(scalestr, sizeof(scalestr), "[%2.2f %s] ", ((int32_t)(g_MarkerBPos - g_MarkerAPos)) / g_CursorScaleFactor, g_CursorScaleFactorUnit);
         }
     }
 
@@ -790,7 +789,7 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
     snprintf(annotation, length, graphText,
         g_GraphStart,
         g_GraphStop,
-        CursorBPos - CursorAPos,
+        g_MarkerBPos - g_MarkerAPos,
         scalestr,
         g_GraphPixelsPerPoint
     );
@@ -808,8 +807,8 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
         memset(annotation, 0x00, length);
 
         snprintf(annotation, length, gridText,
-            g_PlotGridXdefault,
-            g_PlotGridYdefault,
+            g_DefaultGridX,
+            g_DefaultGridY,
             gridLocked,
             g_GridOffset
         );
@@ -818,14 +817,14 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
         painter->drawText(800, annotationRect.bottom() - 62, annotation);
     }
 
-    //Print the Cursor Information
-    char cursorText[] = "Cursor%s={Pos=%u Val=%d}";
+    //Print the Marker Information
+    char markerText[] = "Marker%s={Pos=%u Val=%d}";
     uint32_t pos = 0, loc = 375;
     painter->setPen(WHITE);
 
-    if(CursorAPos > 0) {
-        length = (sizeof(cursorText) + (sizeof(uint32_t)*3) + sizeof(" ") + 1);
-        pos = CursorAPos;
+    if(g_MarkerAPos > 0) {
+        length = (sizeof(markerText) + (sizeof(uint32_t)*3) + sizeof(" ") + 1);
+        pos = g_MarkerAPos;
         bool flag = false;
         size_t value;
 
@@ -835,7 +834,7 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
         memset(annotation, 0x00, length);
         memset(textA, 0x00, length);
 
-        strcat(textA, cursorText);
+        strcat(textA, markerText);
         strcat(textA, " (%s%u)");
 
         if(g_GraphBuffer[pos] <= g_OperationBuffer[pos]) {
@@ -856,14 +855,14 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
         painter->drawText(loc, annotationRect.bottom() - 48, annotation);
     }
 
-    if(CursorBPos > 0) {
-        length = ((sizeof(cursorText))+(sizeof(uint32_t)*2)+1);
-        pos = CursorBPos;
+    if(g_MarkerBPos > 0) {
+        length = ((sizeof(markerText))+(sizeof(uint32_t)*2)+1);
+        pos = g_MarkerBPos;
 
         annotation = (char*)malloc(length);
         memset(annotation, 0x00, length);
 
-        snprintf(annotation, length, cursorText,
+        snprintf(annotation, length, markerText,
             "B",
             pos,
             g_GraphBuffer[pos]
@@ -872,14 +871,14 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
         painter->drawText(loc, annotationRect.bottom() - 36, annotation);
     }
 
-    if(g_CursorCPos > 0) {
-        length = ((sizeof(cursorText))+(sizeof(uint32_t)*2)+1);
-        pos = g_CursorCPos;
+    if(g_MarkerCPos > 0) {
+        length = ((sizeof(markerText))+(sizeof(uint32_t)*2)+1);
+        pos = g_MarkerCPos;
 
         annotation = (char*)malloc(length);
         memset(annotation, 0x00, length);
 
-        snprintf(annotation, length, cursorText,
+        snprintf(annotation, length, markerText,
             "C",
             pos,
             g_GraphBuffer[pos]
@@ -888,14 +887,14 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
         painter->drawText(loc, annotationRect.bottom() - 24, annotation);
     }
 
-    if(g_CursorDPos > 0) {
-        length = ((sizeof(cursorText))+(sizeof(uint32_t)*2)+1);
-        pos = g_CursorDPos;
+    if(g_MarkerDPos > 0) {
+        length = ((sizeof(markerText))+(sizeof(uint32_t)*2)+1);
+        pos = g_MarkerDPos;
 
         annotation = (char*)malloc(length);
         memset(annotation, 0x00, length);
 
-        snprintf(annotation, length, cursorText,
+        snprintf(annotation, length, markerText,
             "D",
             pos,
             g_GraphBuffer[pos]
@@ -1003,18 +1002,6 @@ void Plot::paintEvent(QPaintEvent *event) {
 
     painter.setFont(QFont("Courier New", 10));
 
-    if (CursorAPos > g_GraphTraceLen)
-        CursorAPos = 0;
-
-    if (CursorBPos > g_GraphTraceLen)
-        CursorBPos = 0;
-
-    if (g_CursorCPos > g_GraphTraceLen)
-        g_CursorCPos = 0;
-
-    if (g_CursorDPos > g_GraphTraceLen)
-        g_CursorDPos = 0;
-
     QRect plotRect(WIDTH_AXES, 0, width() - WIDTH_AXES, height() - HEIGHT_INFO);
     QRect infoRect(0, height() - HEIGHT_INFO, width(), HEIGHT_INFO);
     PageWidth = plotRect.width() / g_GraphPixelsPerPoint;
@@ -1052,26 +1039,11 @@ void Plot::paintEvent(QPaintEvent *event) {
     }
     // End graph drawing
 
-    //Draw the cursors
-    if (CursorAPos > g_GraphStart && xCoordOf(CursorAPos, plotRect) < plotRect.right()) {
-        painter.setPen(YELLOW);
-        painter.drawLine(xCoordOf(CursorAPos, plotRect), plotRect.top(), xCoordOf(CursorAPos, plotRect), plotRect.bottom());
-    }
-
-    if (CursorBPos > g_GraphStart && xCoordOf(CursorBPos, plotRect) < plotRect.right()) {
-        painter.setPen(PINK);
-        painter.drawLine(xCoordOf(CursorBPos, plotRect), plotRect.top(), xCoordOf(CursorBPos, plotRect), plotRect.bottom());
-    }
-
-    if (g_CursorCPos > g_GraphStart && xCoordOf(g_CursorCPos, plotRect) < plotRect.right()) {
-        painter.setPen(ORANGE);
-        painter.drawLine(xCoordOf(g_CursorCPos, plotRect), plotRect.top(), xCoordOf(g_CursorCPos, plotRect), plotRect.bottom());
-    }
-
-    if (g_CursorDPos > g_GraphStart && xCoordOf(g_CursorDPos, plotRect) < plotRect.right()) {
-        painter.setPen(LIGHTBLUE);
-        painter.drawLine(xCoordOf(g_CursorDPos, plotRect), plotRect.top(), xCoordOf(g_CursorDPos, plotRect), plotRect.bottom());
-    }
+    //Draw the markers
+    draw_marker(g_MarkerAPos, plotRect, YELLOW, &painter);
+    draw_marker(g_MarkerBPos, plotRect, PINK, &painter);
+    draw_marker(g_MarkerCPos, plotRect, ORANGE, &painter);
+    draw_marker(g_MarkerDPos, plotRect, LIGHTBLUE, &painter);
 
     //Draw annotations
     drawAnnotations(infoRect, &painter);
@@ -1087,6 +1059,19 @@ void Plot::paintEvent(QPaintEvent *event) {
     g_GraphStart_old = g_GraphStart;
 }
 
+void Plot::draw_marker(uint32_t marker, QRect plotRect, QColor color, QPainter *painter) {
+    //If the marker is outside the buffer length, reset
+    if(marker > g_GraphTraceLen) {
+        marker = 0;
+    }
+
+    //Make sure the marker is inside the current plot view to render
+    if(marker > g_GraphStart && xCoordOf(marker, plotRect) < plotRect.right()) {
+        painter->setPen(color);
+        painter->drawLine(xCoordOf(marker, plotRect), plotRect.top(), xCoordOf(marker, plotRect), plotRect.bottom());
+    }
+}
+
 Plot::Plot(QWidget *parent) : QWidget(parent), g_GraphPixelsPerPoint(1) {
     //Need to set this, otherwise we don't receive keypress events
     setFocusPolicy(Qt::StrongFocus);
@@ -1099,8 +1084,8 @@ Plot::Plot(QWidget *parent) : QWidget(parent), g_GraphPixelsPerPoint(1) {
     setPalette(palette);
     setAutoFillBackground(true);
 
-    CursorAPos = 0;
-    CursorBPos = 0;
+    g_MarkerAPos = 0;
+    g_MarkerBPos = 0;
     g_GraphStart = 0;
     g_GraphStop = 0;
 
@@ -1191,23 +1176,23 @@ void Plot::Move(int offset) {
 
 void Plot::Trim(void) {
     uint32_t lref, rref;
-    if ((CursorAPos == 0) || (CursorBPos == 0)) { // if we don't have both cursors set
+    if ((g_MarkerAPos == 0) || (g_MarkerBPos == 0)) { // if we don't have both cursors set
         lref = g_GraphStart;
         rref = g_GraphStop;
-        if (CursorAPos >= lref) {
-            CursorAPos -= lref;
+        if (g_MarkerAPos >= lref) {
+            g_MarkerAPos -= lref;
         } else {
-            CursorAPos = 0;
+            g_MarkerAPos = 0;
         }
-        if (CursorBPos >= lref) {
-            CursorBPos -= lref;
+        if (g_MarkerBPos >= lref) {
+            g_MarkerBPos -= lref;
         } else {
-            CursorBPos = 0;
+            g_MarkerBPos = 0;
         }
     } else {
 
-        lref = CursorAPos < CursorBPos ? CursorAPos : CursorBPos;
-        rref = CursorAPos < CursorBPos ? CursorBPos : CursorAPos;
+        lref = g_MarkerAPos < g_MarkerBPos ? g_MarkerAPos : g_MarkerBPos;
+        rref = g_MarkerAPos < g_MarkerBPos ? g_MarkerBPos : g_MarkerAPos;
 
         // g_GraphPixelsPerPoint must remain a power of ZOOM_STEP
         double GPPPtarget = g_GraphPixelsPerPoint * (g_GraphStop - g_GraphStart) / (rref - lref);
@@ -1217,8 +1202,8 @@ void Plot::Trim(void) {
         }
 
         g_GraphPixelsPerPoint /= ZOOM_STEP;
-        CursorAPos -= lref;
-        CursorBPos -= lref;
+        g_MarkerAPos -= lref;
+        g_MarkerBPos -= lref;
     }
     g_DemodStartIdx -= lref;
 
@@ -1270,9 +1255,9 @@ void Plot::mouseMoveEvent(QMouseEvent *event) {
     x += g_GraphStart;
 
     if ((event->buttons() & Qt::LeftButton)) {
-        CursorAPos = x;
+        g_MarkerAPos = x;
     } else if (event->buttons() & Qt::RightButton) {
-        CursorBPos = x;
+        g_MarkerBPos = x;
     }
 
     this->update();
@@ -1299,15 +1284,15 @@ void Plot::keyPressEvent(QKeyEvent *event) {
         case Qt::Key_Down:
             if (event->modifiers() & Qt::ShiftModifier) {
                 if (event->modifiers() & Qt::ControlModifier) {
-                    Zoom(ZOOM_STEP, CursorBPos);
+                    Zoom(ZOOM_STEP, g_MarkerBPos);
                 } else {
-                    Zoom(ZOOM_STEP * 2, CursorBPos);
+                    Zoom(ZOOM_STEP * 2, g_MarkerBPos);
                 }
             } else {
                 if (event->modifiers() & Qt::ControlModifier) {
-                    Zoom(ZOOM_STEP, CursorAPos);
+                    Zoom(ZOOM_STEP, g_MarkerAPos);
                 } else {
-                    Zoom(ZOOM_STEP * 2, CursorAPos);
+                    Zoom(ZOOM_STEP * 2, g_MarkerAPos);
                 }
             }
             break;
@@ -1315,15 +1300,15 @@ void Plot::keyPressEvent(QKeyEvent *event) {
         case Qt::Key_Up:
             if (event->modifiers() & Qt::ShiftModifier) {
                 if (event->modifiers() & Qt::ControlModifier) {
-                    Zoom(1.0 / ZOOM_STEP, CursorBPos);
+                    Zoom(1.0 / ZOOM_STEP, g_MarkerBPos);
                 } else {
-                    Zoom(1.0 / (ZOOM_STEP * 2), CursorBPos);
+                    Zoom(1.0 / (ZOOM_STEP * 2), g_MarkerBPos);
                 }
             } else {
                 if (event->modifiers() & Qt::ControlModifier) {
-                    Zoom(1.0 / ZOOM_STEP, CursorAPos);
+                    Zoom(1.0 / ZOOM_STEP, g_MarkerAPos);
                 } else {
-                    Zoom(1.0 / (ZOOM_STEP * 2), CursorAPos);
+                    Zoom(1.0 / (ZOOM_STEP * 2), g_MarkerAPos);
                 }
             }
             break;
@@ -1349,16 +1334,16 @@ void Plot::keyPressEvent(QKeyEvent *event) {
                 g_PlotGridX = 0;
                 g_PlotGridY = 0;
             } else {
-                if (g_PlotGridXdefault < 0) {
-                    g_PlotGridXdefault = 64;
+                if (g_DefaultGridX < 0) {
+                    g_DefaultGridX = 64;
                 }
 
-                if (g_PlotGridYdefault < 0) {
-                    g_PlotGridYdefault = 0;
+                if (g_DefaultGridY < 0) {
+                    g_DefaultGridY = 0;
                 }
 
-                g_PlotGridX = g_PlotGridXdefault;
-                g_PlotGridY = g_PlotGridYdefault;
+                g_PlotGridX = g_DefaultGridX;
+                g_PlotGridY = g_DefaultGridY;
             }
             break;
 
@@ -1375,22 +1360,24 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("PgUp") "/" _RED_("PgDown"), "Move left/right by 1 window");
             PrintAndLogEx(NORMAL, "\n" _GREEN_("Zoom:"));
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("Shift") " + " _YELLOW_("Mouse wheel"), "Zoom in/out around mouse cursor");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("Down") "/" _RED_("Up"), "Zoom in/out around yellow cursor");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("Down") "/" _RED_("Up"), "Zoom in/out around yellow marker");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Ctrl"), "... with smaller increment");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Shift"), "... around purple cursor");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Shift"), "... around pink marker");
             PrintAndLogEx(NORMAL, "\n" _GREEN_("Trim:"));
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("t"), "Trim data on window or on cursors if defined");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("t"), "Trim data on window or on markers (if defined)");
             PrintAndLogEx(NORMAL, "\n" _GREEN_("Grid and demod:"));
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("g"), "Toggle grid and demodulation plot display");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("l"), "Toggle lock grid relative to samples");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("< ") "/" _RED_(" >"), "Move demodulation left/right relative to samples");
             PrintAndLogEx(NORMAL, "\n" _GREEN_("Misc:"));
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _YELLOW_("Left mouse click"), "Set yellow cursor");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _YELLOW_("Right mouse click"), "Set purple cursor");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("[ ") "/" _RED_(" ]"), "Move yellow cursor left/right by 1 sample");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("{ ") "/" _RED_(" }"), "Move purple cursor left/right by 1 sample");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _YELLOW_("Left mouse click"), "Set yellow marker");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _YELLOW_("Right mouse click"), "Set pink marker");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("[ ") "/" _RED_(" ]"), "Move yellow marker left/right by 1 sample");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("{ ") "/" _RED_(" }"), "Move pink marker left/right by 1 sample");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Ctrl"), "... by 5 samples");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 +9, _RED_("= ") "/" _RED_(" -"), "Add/Subtract to the plot point over the yellow cursor by 1");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 +9, _RED_("= ") "/" _RED_(" -"), "Add/Subtract to the plot point (Operation Buffer) over the yellow marker by 1");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Ctrl"), "... by 5");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 +9, _RED_("+ ") "/" _RED_(" _"), "Add/Subtract to the plot point (Graph Buffer) over the yellow marker by 1");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Ctrl"), "... by 5");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("h"), "Show this help");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("q"), "Close plot window");
@@ -1439,9 +1426,9 @@ void Plot::keyPressEvent(QKeyEvent *event) {
         
         case Qt::Key_Equal:
             if(event->modifiers() & Qt::ControlModifier) {
-                g_OperationBuffer[CursorAPos] += 5;
+                g_OperationBuffer[g_MarkerAPos] += 5;
             } else {
-                g_OperationBuffer[CursorAPos] += 1;
+                g_OperationBuffer[g_MarkerAPos] += 1;
             }
 
             RepaintGraphWindow();
@@ -1449,9 +1436,9 @@ void Plot::keyPressEvent(QKeyEvent *event) {
         
         case Qt::Key_Minus:
             if(event->modifiers() & Qt::ControlModifier) {
-                g_OperationBuffer[CursorAPos] -= 5;
+                g_OperationBuffer[g_MarkerAPos] -= 5;
             } else {
-                g_OperationBuffer[CursorAPos] -= 1;
+                g_OperationBuffer[g_MarkerAPos] -= 1;
             }
 
             RepaintGraphWindow();
@@ -1459,9 +1446,9 @@ void Plot::keyPressEvent(QKeyEvent *event) {
 
         case Qt::Key_Plus:
             if(event->modifiers() & Qt::ControlModifier) {
-                g_GraphBuffer[CursorAPos] += 5;
+                g_GraphBuffer[g_MarkerAPos] += 5;
             } else {
-                g_GraphBuffer[CursorAPos] += 1;
+                g_GraphBuffer[g_MarkerAPos] += 1;
             }
 
             RepaintGraphWindow();
@@ -1469,9 +1456,9 @@ void Plot::keyPressEvent(QKeyEvent *event) {
         
         case Qt::Key_Underscore:
             if(event->modifiers() & Qt::ControlModifier) {
-                g_GraphBuffer[CursorAPos] -= 5;
+                g_GraphBuffer[g_MarkerAPos] -= 5;
             } else {
-                g_GraphBuffer[CursorAPos] -= 1;
+                g_GraphBuffer[g_MarkerAPos] -= 1;
             }
 
             RepaintGraphWindow();
@@ -1479,23 +1466,23 @@ void Plot::keyPressEvent(QKeyEvent *event) {
 
         case Qt::Key_BracketLeft: {
             if(event->modifiers() & Qt::ControlModifier) {
-                CursorAPos -= 5;
+                g_MarkerAPos -= 5;
             } else {
-                CursorAPos -= 1;
+                g_MarkerAPos -= 1;
             }
 
-            if((CursorAPos >= g_GraphStop) || (CursorAPos <= g_GraphStart)) {
+            if((g_MarkerAPos >= g_GraphStop) || (g_MarkerAPos <= g_GraphStart)) {
                 uint32_t halfway = PageWidth / 2;
 
-                if((CursorAPos - halfway) > g_GraphTraceLen) {
+                if((g_MarkerAPos - halfway) > g_GraphTraceLen) {
                     g_GraphStart = 0;
                 }  else {
-                    g_GraphStart = CursorAPos - halfway;
+                    g_GraphStart = g_MarkerAPos - halfway;
                 }
             }
 
-            if(CursorAPos < g_GraphStart) {
-                CursorAPos = g_GraphStart;
+            if(g_MarkerAPos < g_GraphStart) {
+                g_MarkerAPos = g_GraphStart;
             }
 
             RepaintGraphWindow();
@@ -1504,23 +1491,23 @@ void Plot::keyPressEvent(QKeyEvent *event) {
         
         case Qt::Key_BracketRight: {
             if(event->modifiers() & Qt::ControlModifier) {
-                CursorAPos += 5;
+                g_MarkerAPos += 5;
             } else {
-                CursorAPos += 1;
+                g_MarkerAPos += 1;
             }
 
-            if((CursorAPos >= g_GraphStop) || (CursorAPos <= g_GraphStart)) {
+            if((g_MarkerAPos >= g_GraphStop) || (g_MarkerAPos <= g_GraphStart)) {
                 uint32_t halfway = PageWidth / 2;
 
-                if((CursorAPos + halfway) >= g_GraphTraceLen) {
+                if((g_MarkerAPos + halfway) >= g_GraphTraceLen) {
                     g_GraphStart = g_GraphTraceLen - halfway;
                 } else {
-                    g_GraphStart = CursorAPos - halfway;
+                    g_GraphStart = g_MarkerAPos - halfway;
                 }
             }
 
-            if(CursorAPos >= g_GraphTraceLen) {
-                CursorAPos = g_GraphTraceLen;
+            if(g_MarkerAPos >= g_GraphTraceLen) {
+                g_MarkerAPos = g_GraphTraceLen;
             }
 
             RepaintGraphWindow();
@@ -1529,13 +1516,13 @@ void Plot::keyPressEvent(QKeyEvent *event) {
         
         case Qt::Key_BraceLeft:
             if(event->modifiers() & Qt::ControlModifier) {
-                CursorBPos -= 5;
+                g_MarkerBPos -= 5;
             } else {
-                CursorBPos -= 1;
+                g_MarkerBPos -= 1;
             }
 
-            if(CursorBPos < g_GraphStart) {
-                CursorBPos = g_GraphStart;
+            if(g_MarkerBPos < g_GraphStart) {
+                g_MarkerBPos = g_GraphStart;
             }
             
             RepaintGraphWindow();
@@ -1543,13 +1530,13 @@ void Plot::keyPressEvent(QKeyEvent *event) {
         
         case Qt::Key_BraceRight:
             if(event->modifiers() & Qt::ControlModifier) {
-                CursorBPos += 5;
+                g_MarkerBPos += 5;
             } else {
-                CursorBPos += 1;
+                g_MarkerBPos += 1;
             }
 
-            if(CursorBPos >= g_GraphTraceLen) {
-                CursorBPos = g_GraphTraceLen;
+            if(g_MarkerBPos >= g_GraphTraceLen) {
+                g_MarkerBPos = g_GraphTraceLen;
             }
 
             RepaintGraphWindow();

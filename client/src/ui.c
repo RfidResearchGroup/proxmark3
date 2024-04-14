@@ -49,9 +49,11 @@ session_arg_t g_session;
 
 double g_CursorScaleFactor = 1;
 char g_CursorScaleFactorUnit[11] = {0};
-double g_PlotGridX = 0, g_PlotGridY = 0, g_PlotGridXdefault = 64, g_PlotGridYdefault = 64;
-uint32_t g_CursorCPos = 0, g_CursorDPos = 0, g_GraphStop = 0;
+double g_PlotGridX = 0, g_PlotGridY = 0;
+double g_DefaultGridX = 64, g_DefaultGridY = 64;
+uint32_t g_MarkerAPos = 0, g_MarkerBPos = 0, g_MarkerCPos = 0, g_MarkerDPos = 0;
 uint32_t g_GraphStart = 0; // Starting point/offset for the left side of the graph
+uint32_t g_GraphStop = 0;
 uint32_t g_GraphStart_old = 0;
 double g_GraphPixelsPerPoint = 1.f; // How many visual pixels are between each sample point (x axis)
 static bool flushAfterWrite = false;
