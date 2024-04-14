@@ -2900,7 +2900,7 @@ static int CmdResetRead(const char *Cmd) {
             free(got);
             return PM3_ETIMEOUT;
         }
-        setGraphBuf(got, gotsize);
+        setGraphBuffer(got, gotsize);
         free(got);
     }
 

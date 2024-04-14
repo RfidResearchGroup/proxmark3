@@ -45,8 +45,6 @@
 
 extern "C" int preferences_save(void);
 
-static int s_OverlayBuff[MAX_GRAPH_TRACE_LEN];
-static bool gs_useOverlays = false;
 static int gs_absVMax = 0;
 static uint32_t startMax; // Maximum offset in the graph (right side of graph)
 static uint32_t startMaxOld;
@@ -340,7 +338,7 @@ void SliderWidget::moveEvent(QMoveEvent *event) {
 void ProxWidget::applyOperation() {
     //printf("ApplyOperation()");
     save_restoreGB(GRAPH_SAVE);
-    memcpy(g_GraphBuffer, s_OverlayBuff, sizeof(int) * g_GraphTraceLen);
+    memcpy(g_GraphBuffer, g_OverlayBuffer, sizeof(int) * g_GraphTraceLen);
     RepaintGraphWindow();
 }
 void ProxWidget::stickOperation() {
@@ -348,30 +346,30 @@ void ProxWidget::stickOperation() {
     //printf("stickOperation()");
 }
 void ProxWidget::vchange_autocorr(int v) {
-    int ans = AutoCorrelate(g_GraphBuffer, s_OverlayBuff, g_GraphTraceLen, v, true, false);
+    int ans = AutoCorrelate(g_GraphBuffer, g_OverlayBuffer, g_GraphTraceLen, v, true, false);
     if (g_debugMode) printf("vchange_autocorr(w:%d): %d\n", v, ans);
-    gs_useOverlays = true;
+    g_useOverlays = true;
     RepaintGraphWindow();
 }
 void ProxWidget::vchange_askedge(int v) {
     //extern int AskEdgeDetect(const int *in, int *out, int len, int threshold);
-    int ans = AskEdgeDetect(g_GraphBuffer, s_OverlayBuff, g_GraphTraceLen, v);
+    int ans = AskEdgeDetect(g_GraphBuffer, g_OverlayBuffer, g_GraphTraceLen, v);
     if (g_debugMode) printf("vchange_askedge(w:%d)%d\n", v, ans);
-    gs_useOverlays = true;
+    g_useOverlays = true;
     RepaintGraphWindow();
 }
 void ProxWidget::vchange_dthr_up(int v) {
     int down = opsController->horizontalSlider_dirthr_down->value();
-    directionalThreshold(g_GraphBuffer, s_OverlayBuff, g_GraphTraceLen, v, down);
+    directionalThreshold(g_GraphBuffer, g_OverlayBuffer, g_GraphTraceLen, v, down);
     //printf("vchange_dthr_up(%d)", v);
-    gs_useOverlays = true;
+    g_useOverlays = true;
     RepaintGraphWindow();
 }
 void ProxWidget::vchange_dthr_down(int v) {
     //printf("vchange_dthr_down(%d)", v);
     int up = opsController->horizontalSlider_dirthr_up->value();
-    directionalThreshold(g_GraphBuffer, s_OverlayBuff, g_GraphTraceLen, v, up);
-    gs_useOverlays = true;
+    directionalThreshold(g_GraphBuffer, g_OverlayBuffer, g_GraphTraceLen, v, up);
+    g_useOverlays = true;
     RepaintGraphWindow();
 }
 
@@ -485,7 +483,7 @@ ProxWidget::~ProxWidget(void) {
 void ProxWidget::closeEvent(QCloseEvent *event) {
     event->ignore();
     this->hide();
-    gs_useOverlays = false;
+    g_useOverlays = false;
 }
 void ProxWidget::hideEvent(QHideEvent *event) {
     controlWidget->hide();
@@ -588,6 +586,32 @@ void Plot::setMaxAndStart(int *buffer, size_t len, QRect plotRect) {
     }
 
     gs_absVMax = 0;
+    if (fabs((double) vMin) > gs_absVMax) {
+        gs_absVMax = (int)fabs((double) vMin);
+    }
+
+    if (fabs((double) vMax) > gs_absVMax) {
+        gs_absVMax = (int)fabs((double) vMax);
+    }
+
+    gs_absVMax = (int)(gs_absVMax * 1.25 + 1);
+}
+
+void Plot::appendMax(int *buffer, size_t len, QRect plotRect) {
+    if(len == 0) {
+        return;
+    }
+
+    int vMin = INT_MAX, vMax = INT_MIN;
+    uint32_t sample_index = g_GraphStart ;
+
+    for (; sample_index < len && xCoordOf(sample_index, plotRect) < plotRect.right() ; sample_index++) {
+
+        int v = buffer[sample_index];
+        if (v < vMin) vMin = v;
+        if (v > vMax) vMax = v;
+    }
+
     if (fabs((double) vMin) > gs_absVMax) {
         gs_absVMax = (int)fabs((double) vMin);
     }
@@ -726,17 +750,160 @@ void Plot::PlotGraph(int *buffer, size_t len, QRect plotRect, QRect annotationRe
     //Graph annotations
     painter->drawPath(penPath);
     char str[200];
-    snprintf(str, sizeof(str), "max=%d  min=%d  mean=%" PRId64 "  n=%u/%zu  CursorAVal=[%d]  CursorBVal=[%d]"
-            , vMax
-            , vMin
-            , vMean
-            , g_GraphStop - g_GraphStart
-            , len
-            , buffer[CursorAPos]
-            , buffer[CursorBPos]
+    snprintf(str, sizeof(str), "max=%d  min=%d  mean=%" PRId64 "  n=%u/%zu",
+        vMax,
+        vMin,
+        vMean,
+        g_GraphStop - g_GraphStart,
+        len
+    );
+
+    painter->drawText(20, annotationRect.bottom() - (48 - (12 * graphNum)), str);
+}
+
+void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
+    char *annotation;
+    uint32_t length = 0;
+
+    // Make a tiny black box at the bottom of the plot window
+    QRect f(QPoint(80, annotationRect.bottom() - 59), QPoint(annotationRect.right(), annotationRect.bottom() - 74));
+    painter->fillRect(f, BLACK);
+
+    //Setup the scale string
+    char scalestr[20] = {0};
+
+    if (g_CursorScaleFactor != 1) {
+        if (g_CursorScaleFactorUnit[0] == '\x00') {
+            snprintf(scalestr, sizeof(scalestr), "[%2.2f] ", ((int32_t)(CursorBPos - CursorAPos)) / g_CursorScaleFactor);
+        } else {
+            snprintf(scalestr, sizeof(scalestr), "[%2.2f %s] ", ((int32_t)(CursorBPos - CursorAPos)) / g_CursorScaleFactor, g_CursorScaleFactorUnit);
+        }
+    }
+
+    //Print the Graph Information
+    char graphText[] = "@%u..%u  dt=%i %s zoom=%2.3f";
+    length = ((sizeof(graphText))+(sizeof(uint32_t)*3)+sizeof(scalestr)+sizeof(float_t));
+
+    annotation = (char*)malloc(length);
+    memset(annotation, 0x00, length);
+
+    snprintf(annotation, length, graphText,
+        g_GraphStart,
+        g_GraphStop,
+        CursorBPos - CursorAPos,
+        scalestr,
+        g_GraphPixelsPerPoint
+    );
+
+    painter->setPen(GREEN);
+    painter->drawText(82, annotationRect.bottom() - 62, annotation);
+
+    //Print Grid Information if the grid is enabled
+    if(g_PlotGridX > 0) {
+        const char *gridLocked = (g_GridLocked ? "Locked" : "Unlocked");
+        char gridText[] = "GridX=%lf  GridY=%lf (%s) GridXoffset=%lf";
+        length = (sizeof(gridText) + (sizeof(double)*3) + sizeof(gridLocked));
+
+        annotation = (char*)malloc(length);
+        memset(annotation, 0x00, length);
+
+        snprintf(annotation, length, gridText,
+            g_PlotGridXdefault,
+            g_PlotGridYdefault,
+            gridLocked,
+            g_GridOffset
         );
 
-    painter->drawText(20, annotationRect.bottom() - 23 - 20 * graphNum, str);
+        painter->setPen(WHITE);
+        painter->drawText(800, annotationRect.bottom() - 62, annotation);
+    }
+
+    //Print the Cursor Information
+    char cursorText[] = "Cursor%s={Pos=%u Val=%d}";
+    uint32_t pos = 0, loc = 375;
+    painter->setPen(WHITE);
+
+    if(CursorAPos > 0) {
+        length = (sizeof(cursorText) + (sizeof(uint32_t)*3) + sizeof(" ") + 1);
+        pos = CursorAPos;
+        bool flag = false;
+        size_t value;
+
+        annotation = (char*)malloc(length);
+        char *textA = (char*)malloc(length);
+
+        memset(annotation, 0x00, length);
+        memset(textA, 0x00, length);
+
+        strcat(textA, cursorText);
+        strcat(textA, " (%s%u)");
+
+        if(g_GraphBuffer[pos] <= g_OperationBuffer[pos]) {
+            flag = true;
+            value = (g_OperationBuffer[pos] - g_GraphBuffer[pos]);
+        } else {
+            value = (g_GraphBuffer[pos] - g_OperationBuffer[pos]);
+        }
+
+        snprintf(annotation, length, textA,
+            "A",
+            pos,
+            g_GraphBuffer[pos],
+            flag ? "+" : "-",
+            value
+        );
+
+        painter->drawText(loc, annotationRect.bottom() - 48, annotation);
+    }
+
+    if(CursorBPos > 0) {
+        length = ((sizeof(cursorText))+(sizeof(uint32_t)*2)+1);
+        pos = CursorBPos;
+
+        annotation = (char*)malloc(length);
+        memset(annotation, 0x00, length);
+
+        snprintf(annotation, length, cursorText,
+            "B",
+            pos,
+            g_GraphBuffer[pos]
+        );
+
+        painter->drawText(loc, annotationRect.bottom() - 36, annotation);
+    }
+
+    if(g_CursorCPos > 0) {
+        length = ((sizeof(cursorText))+(sizeof(uint32_t)*2)+1);
+        pos = g_CursorCPos;
+
+        annotation = (char*)malloc(length);
+        memset(annotation, 0x00, length);
+
+        snprintf(annotation, length, cursorText,
+            "C",
+            pos,
+            g_GraphBuffer[pos]
+        );
+
+        painter->drawText(loc, annotationRect.bottom() - 24, annotation);
+    }
+
+    if(g_CursorDPos > 0) {
+        length = ((sizeof(cursorText))+(sizeof(uint32_t)*2)+1);
+        pos = g_CursorDPos;
+
+        annotation = (char*)malloc(length);
+        memset(annotation, 0x00, length);
+
+        snprintf(annotation, length, cursorText,
+            "D",
+            pos,
+            g_GraphBuffer[pos]
+        );
+
+        painter->drawText(loc, annotationRect.bottom() - 12, annotation);
+    }
+    
 }
 
 void Plot::plotGridLines(QPainter *painter, QRect r) {
@@ -787,24 +954,36 @@ void Plot::plotOperations(int *buffer, size_t len, QPainter *painter, QRect plot
     QPainterPath penPath;
     int32_t x = xCoordOf(g_GraphStart, plotRect), prevX = 0;
     int32_t y = yCoordOf(buffer[g_GraphStart], plotRect, gs_absVMax), prevY = 0;
-    int32_t current = 0;
+    int32_t current = 0, prev = 0;
+    bool changed = false;
 
     for (uint32_t pos = g_GraphStart; pos < len && xCoordOf(pos, plotRect) < plotRect.right(); pos++) {
         //Store the previous x and y values to move the pen to if we need to draw a line
         prevX = x;
         prevY = y;
 
+        changed = false;
         x = xCoordOf(pos, plotRect);
+        prev = current;
         current = buffer[pos];
         y = yCoordOf(current, plotRect, gs_absVMax);
 
         //We only want to graph changes between the Graph Buffer and the Operation Buffer
-        if(current == g_GraphBuffer[pos]) continue;
+        if(current == g_GraphBuffer[pos]) {
+            //If this point is the same, but the last point is different, we want to plot that line
+            //as well
+            if((pos == 0) || (prev == g_GraphBuffer[pos - 1])) {
+                continue;
+            }
+        } else {
+            changed = true;
+        }
 
         penPath.moveTo(prevX, prevY); //Move the pen
         penPath.lineTo(x, y); //Draw the line from the previous coords to the new ones
 
-        if (g_GraphPixelsPerPoint > 10) {
+        //Only draw a white square if the point is different
+        if (g_GraphPixelsPerPoint > 10 && changed) {
             QRect point(QPoint(x - 3, y - 3), QPoint(x + 3, y + 3));
             painter->fillRect(point, WHITE);
         }
@@ -847,6 +1026,7 @@ void Plot::paintEvent(QPaintEvent *event) {
 
     //init graph variables
     setMaxAndStart(g_GraphBuffer, g_GraphTraceLen, plotRect);
+    appendMax(g_OperationBuffer, g_GraphTraceLen, plotRect);
 
     // center line
     int zeroHeight = plotRect.top() + (plotRect.bottom() - plotRect.top()) / 2;
@@ -862,14 +1042,13 @@ void Plot::paintEvent(QPaintEvent *event) {
     }
 
     //Plot the Operation Overlay
-    //setMaxAndStart(g_OperationBuffer, g_GraphTraceLen, plotRect);
     plotOperations(g_OperationBuffer, g_GraphTraceLen, &painter, plotRect);
 
     //Plot the Overlay
-    if (gs_useOverlays) {
+    if (g_useOverlays) {
         //init graph variables
-        setMaxAndStart(s_OverlayBuff, g_GraphTraceLen, plotRect);
-        PlotGraph(s_OverlayBuff, g_GraphTraceLen, plotRect, infoRect, &painter, 1);
+        setMaxAndStart(g_OverlayBuffer, g_GraphTraceLen, plotRect);
+        PlotGraph(g_OverlayBuffer, g_GraphTraceLen, plotRect, infoRect, &painter, 1);
     }
     // End graph drawing
 
@@ -895,31 +1074,7 @@ void Plot::paintEvent(QPaintEvent *event) {
     }
 
     //Draw annotations
-    char str[200];
-    char scalestr[30] = {0};
-
-    if (g_CursorScaleFactor != 1) {
-        if (g_CursorScaleFactorUnit[0] == '\x00') {
-            snprintf(scalestr, sizeof(scalestr), "[%2.2f] ", ((int32_t)(CursorBPos - CursorAPos)) / g_CursorScaleFactor);
-        } else {
-            snprintf(scalestr, sizeof(scalestr), "[%2.2f %s] ", ((int32_t)(CursorBPos - CursorAPos)) / g_CursorScaleFactor, g_CursorScaleFactorUnit);
-        }
-    }
-    snprintf(str, sizeof(str), "@%u..%u  dt=%i %szoom=%2.3f  CursorAPos=%u  CursorBPos=%u  GridX=%lf  GridY=%lf (%s) GridXoffset=%lf",
-             g_GraphStart,
-             g_GraphStop,
-             CursorBPos - CursorAPos,
-             scalestr,
-             g_GraphPixelsPerPoint,
-             CursorAPos,
-             CursorBPos,
-             g_PlotGridXdefault,
-             g_PlotGridYdefault,
-             g_GridLocked ? "Locked" : "Unlocked",
-             g_GridOffset
-            );
-    painter.setPen(WHITE);
-    painter.drawText(20, infoRect.bottom() - 3, str);
+    drawAnnotations(infoRect, &painter);
 
     if (startMaxOld != startMax) {
         emit startMaxChanged(startMax);
@@ -956,7 +1111,7 @@ Plot::Plot(QWidget *parent) : QWidget(parent), g_GraphPixelsPerPoint(1) {
 void Plot::closeEvent(QCloseEvent *event) {
     event->ignore();
     this->hide();
-    gs_useOverlays = false;
+    g_useOverlays = false;
 }
 
 // every 4 steps the zoom doubles (or halves)
@@ -1284,6 +1439,26 @@ void Plot::keyPressEvent(QKeyEvent *event) {
         
         case Qt::Key_Equal:
             if(event->modifiers() & Qt::ControlModifier) {
+                g_OperationBuffer[CursorAPos] += 5;
+            } else {
+                g_OperationBuffer[CursorAPos] += 1;
+            }
+
+            RepaintGraphWindow();
+            break;
+        
+        case Qt::Key_Minus:
+            if(event->modifiers() & Qt::ControlModifier) {
+                g_OperationBuffer[CursorAPos] -= 5;
+            } else {
+                g_OperationBuffer[CursorAPos] -= 1;
+            }
+
+            RepaintGraphWindow();
+            break;
+
+        case Qt::Key_Plus:
+            if(event->modifiers() & Qt::ControlModifier) {
                 g_GraphBuffer[CursorAPos] += 5;
             } else {
                 g_GraphBuffer[CursorAPos] += 1;
@@ -1292,7 +1467,7 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             RepaintGraphWindow();
             break;
         
-        case Qt::Key_Minus:
+        case Qt::Key_Underscore:
             if(event->modifiers() & Qt::ControlModifier) {
                 g_GraphBuffer[CursorAPos] -= 5;
             } else {

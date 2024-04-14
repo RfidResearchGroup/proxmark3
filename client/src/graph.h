@@ -28,10 +28,11 @@ extern "C" {
 void AppendGraph(bool redraw, uint16_t clock, int bit);
 size_t ClearGraph(bool redraw);
 bool HasGraphData(void);
-void setGraphBuf(const uint8_t *src, size_t size);
+void setGraphBuffer(const uint8_t *src, size_t size);
 void save_restoreGB(uint8_t saveOpt);
-size_t getFromGraphBuf(uint8_t *dest);
-size_t getFromGraphBufEx(uint8_t *dest, size_t maxLen);
+size_t getFromGraphBuffer(uint8_t *dest);
+size_t getFromGraphBufferEx(uint8_t *dest, size_t maxLen);
+size_t getGraphBufferChunk(uint8_t *dest, size_t start, size_t end);
 void convertGraphFromBitstream(void);
 void convertGraphFromBitstreamEx(int hi, int low);
 bool isGraphBitstream(void);
@@ -47,8 +48,10 @@ bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge);
 #define GRAPH_SAVE 1
 #define GRAPH_RESTORE 0
 
-extern int g_GraphBuffer[MAX_GRAPH_TRACE_LEN];
-extern int g_OperationBuffer[MAX_GRAPH_TRACE_LEN];
+extern int32_t g_GraphBuffer[MAX_GRAPH_TRACE_LEN];
+extern int32_t g_OperationBuffer[MAX_GRAPH_TRACE_LEN];
+extern int32_t g_OverlayBuffer[MAX_GRAPH_TRACE_LEN];
+extern bool    g_useOverlays;
 extern size_t g_GraphTraceLen;
 
 #ifdef __cplusplus

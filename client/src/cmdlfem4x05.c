@@ -175,7 +175,7 @@ static bool em4x05_download_samples(void) {
         return false;
     }
 
-    setGraphBuf(got, sizeof(got));
+    setGraphBuffer(got, sizeof(got));
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(got, sizeof(got));
     RepaintGraphWindow();

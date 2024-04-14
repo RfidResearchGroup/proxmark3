@@ -71,7 +71,7 @@ int demodIOProx(bool verbose) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
     }
-    size_t size = getFromGraphBuf(bits);
+    size_t size = getFromGraphBuffer(bits);
     if (size < 65) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - IO prox not enough samples in GraphBuffer");
         free(bits);
