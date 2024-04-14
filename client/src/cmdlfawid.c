@@ -149,7 +149,7 @@ int demodAWID(bool verbose) {
         return PM3_EMALLOC;
     }
 
-    size_t size = getFromGraphBuf(bits);
+    size_t size = getFromGraphBuffer(bits);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - AWID not enough samples");
         free(bits);

@@ -25,9 +25,11 @@
 #include "cmddata.h" //for g_debugmode
 
 
-int g_GraphBuffer[MAX_GRAPH_TRACE_LEN];
-int g_OperationBuffer[MAX_GRAPH_TRACE_LEN];
-size_t g_GraphTraceLen;
+int32_t g_GraphBuffer[MAX_GRAPH_TRACE_LEN];
+int32_t g_OperationBuffer[MAX_GRAPH_TRACE_LEN];
+int32_t g_OverlayBuffer[MAX_GRAPH_TRACE_LEN];
+bool    g_useOverlays = false;
+size_t  g_GraphTraceLen;
 
 /* write a manchester bit to the graph
 */
@@ -65,44 +67,49 @@ void AppendGraph(bool redraw, uint16_t clock, int bit) {
     }
 }
 
-// clear out our graph window
+// clear out our graph window and all the buffers associated with it
 size_t ClearGraph(bool redraw) {
     size_t gtl = g_GraphTraceLen;
+
     memset(g_GraphBuffer, 0x00, g_GraphTraceLen);
     memset(g_OperationBuffer, 0x00, g_GraphTraceLen);
+    memset(g_OverlayBuffer, 0x00, g_GraphTraceLen);
+
     g_GraphTraceLen = 0;
     g_GraphStart = 0;
     g_GraphStop = 0;
-
     g_DemodBufferLen = 0;
-    if (redraw)
+    g_useOverlays = false;
+
+    if (redraw) {
         RepaintGraphWindow();
+    }
 
     return gtl;
 }
 
 // option '1' to save g_GraphBuffer any other to restore
 void save_restoreGB(uint8_t saveOpt) {
-    static int SavedGB[MAX_GRAPH_TRACE_LEN];
-    static size_t SavedGBlen = 0;
-    static bool GB_Saved = false;
-    static int Savedg_GridOffsetAdj = 0;
+    static int savedBuffer[MAX_GRAPH_TRACE_LEN];
+    static size_t savedBufferLen = 0;
+    static bool bufferSaved = false;
+    static int savedOffset = 0;
 
     if (saveOpt == GRAPH_SAVE) { //save
-        memcpy(SavedGB, g_GraphBuffer, sizeof(g_GraphBuffer));
-        SavedGBlen = g_GraphTraceLen;
-        GB_Saved = true;
-        Savedg_GridOffsetAdj = g_GridOffset;
-    } else if (GB_Saved) { //restore
-        memcpy(g_GraphBuffer, SavedGB, sizeof(g_GraphBuffer));
-        memcpy(g_OperationBuffer, SavedGB, sizeof(g_OperationBuffer));
-        g_GraphTraceLen = SavedGBlen;
-        g_GridOffset = Savedg_GridOffsetAdj;
+        memcpy(savedBuffer, g_GraphBuffer, sizeof(g_GraphBuffer));
+        savedBufferLen = g_GraphTraceLen;
+        bufferSaved = true;
+        savedOffset = g_GridOffset;
+    } else if (bufferSaved) { //restore
+        memcpy(g_GraphBuffer, savedBuffer, sizeof(g_GraphBuffer));
+        memcpy(g_OperationBuffer, savedBuffer, sizeof(g_OperationBuffer));
+        g_GraphTraceLen = savedBufferLen;
+        g_GridOffset = savedOffset;
         RepaintGraphWindow();
     }
 }
 
-void setGraphBuf(const uint8_t *src, size_t size) {
+void setGraphBuffer(const uint8_t *src, size_t size) {
     if (src == NULL) return;
 
     ClearGraph(false);
@@ -121,12 +128,12 @@ void setGraphBuf(const uint8_t *src, size_t size) {
 }
 
 // This function assumes that the length of dest array >= g_GraphTraceLen.
-// If the length of dest array is less than g_GraphTraceLen, use getFromGraphBufEx(dest, maxLen) instead.
-size_t getFromGraphBuf(uint8_t *dest) {
-    return getFromGraphBufEx(dest, g_GraphTraceLen);
+// If the length of dest array is less than g_GraphTraceLen, use getFromGraphBufferEx(dest, maxLen) instead.
+size_t getFromGraphBuffer(uint8_t *dest) {
+    return getFromGraphBufferEx(dest, g_GraphTraceLen);
 }
 
-size_t getFromGraphBufEx(uint8_t *dest, size_t maxLen) {
+size_t getFromGraphBufferEx(uint8_t *dest, size_t maxLen) {
     if (dest == NULL) return 0;
     if (g_GraphTraceLen == 0) return 0;
 
@@ -141,12 +148,38 @@ size_t getFromGraphBufEx(uint8_t *dest, size_t maxLen) {
     return i;
 }
 
-// A simple test to see if there is any data inside Graphbuffer.
+//TODO: In progress function to get chunks of data from the GB w/o modifying the GB
+//Currently seems like it doesn't work correctly? 
+size_t getGraphBufferChunk(uint8_t *dest, size_t start, size_t end) {
+    if (dest == NULL) return 0;
+    if (g_GraphTraceLen == 0) return 0;
+    if (start >= end) return 0;
+
+    size_t i, value;
+    end = (end < g_GraphTraceLen) ? end : g_GraphTraceLen;
+    for (i = 0; i < (end - start); i++) {
+        value = g_GraphBuffer[start + i];
+
+        //Trim the data to fit into an uint8_t
+        if (value > 127) {
+            value = 127;
+        } else if (value < -127) {
+            value = -127;
+        }
+
+        dest[i] = ((uint8_t)(value + 128));
+    }
+
+    return i;
+}
+
+// A simple test to see if there is any data inside the Graph Buffer.
 bool HasGraphData(void) {
     if (g_GraphTraceLen == 0) {
         PrintAndLogEx(NORMAL, "No data available, try reading something first");
         return false;
     }
+
     return true;
 }
 
@@ -180,7 +213,7 @@ void convertGraphFromBitstreamEx(int hi, int low) {
         return;
     }
 
-    size_t size = getFromGraphBuf(bits);
+    size_t size = getFromGraphBuffer(bits);
     if (size == 0) {
         PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
         free(bits);
@@ -210,7 +243,7 @@ int GetAskClock(const char *str, bool verbose) {
         return -1;
     }
 
-    size_t size = getFromGraphBuf(bits);
+    size_t size = getFromGraphBuffer(bits);
     if (size == 0) {
         PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
         free(bits);
@@ -245,7 +278,7 @@ int GetPskCarrier(bool verbose) {
         return -1;
     }
 
-    size_t size = getFromGraphBuf(bits);
+    size_t size = getFromGraphBuffer(bits);
     if (size == 0) {
         PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
         free(bits);
@@ -281,7 +314,7 @@ int GetPskClock(const char *str, bool verbose) {
         return -1;
     }
 
-    size_t size = getFromGraphBuf(bits);
+    size_t size = getFromGraphBuffer(bits);
     if (size == 0) {
         PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
         free(bits);
@@ -319,7 +352,7 @@ int GetNrzClock(const char *str, bool verbose) {
         return -1;
     }
 
-    size_t size = getFromGraphBuf(bits);
+    size_t size = getFromGraphBuffer(bits);
     if (size == 0) {
         PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
         free(bits);
@@ -375,7 +408,7 @@ bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
         return false;
     }
 
-    size_t size = getFromGraphBuf(bits);
+    size_t size = getFromGraphBuffer(bits);
     if (size == 0) {
         PrintAndLogEx(WARNING, "Failed to copy from graphbuffer");
         free(bits);

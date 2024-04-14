@@ -408,7 +408,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
     }
-    size_t datasize = getFromGraphBuf(data);
+    size_t datasize = getFromGraphBuffer(data);
 
     uint8_t rawbits[4096] = {0};
     int rawbit = 0;
