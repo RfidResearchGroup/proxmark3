@@ -478,8 +478,8 @@ int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxlen, bool amplify, b
 
     if (st) {
         *stCheck = st;
-        g_CursorCPos = ststart;
-        g_CursorDPos = stend;
+        g_MarkerCPos = ststart;
+        g_MarkerDPos = stend;
         if (verbose)
             PrintAndLogEx(DEBUG, "Found Sequence Terminator - First one is shown by orange / blue graph markers");
     }
@@ -1682,13 +1682,13 @@ void setClockGrid(uint32_t clk, int offset) {
         g_GridLocked = false;
         g_GridOffset = 0;
         g_PlotGridX = 0;
-        g_PlotGridXdefault = 0;
+        g_DefaultGridX = 0;
         RepaintGraphWindow();
     } else {
         g_GridLocked = true;
         g_GridOffset = offset;
         g_PlotGridX = clk;
-        g_PlotGridXdefault = clk;
+        g_DefaultGridX = clk;
         RepaintGraphWindow();
     }
 }
@@ -1713,8 +1713,8 @@ int CmdGrid(const char *Cmd) {
     CLIParserFree(ctx);
 
     PrintAndLogEx(DEBUG, "Setting X %.0f  Y %.0f", g_PlotGridX, g_PlotGridY);
-    g_PlotGridXdefault = g_PlotGridX;
-    g_PlotGridYdefault = g_PlotGridY;
+    g_DefaultGridX = g_PlotGridX;
+    g_DefaultGridY = g_PlotGridY;
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
@@ -1722,21 +1722,33 @@ int CmdGrid(const char *Cmd) {
 static int CmdSetGraphMarkers(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data setgraphmarkers",
-                  "Set blue and orange marker in graph window",
-                  "data setgraphmarkers               --> turn off\n"
-                  "data setgraphmarkers -a 64 -b 50"
+                  "Set the locations of the markers in the graph window",
+                  "data setgraphmarkers               --> reset the markers\n"
+                  "data setgraphmarkers -a 64         --> set A, reset the rest\n"
+                  "data setgraphmarkers -d --keep     --> set D, keep the rest"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_u64_0("a", NULL, "<dec>", "orange marker"),
-        arg_u64_0("b", NULL, "<dec>", "blue marker"),
+        arg_lit0(NULL, "keep", "keep the current values of the markers"),
+        arg_u64_0("a", NULL, "<dec>", "yellow marker"),
+        arg_u64_0("b", NULL, "<dec>", "pink marker"),
+        arg_u64_0("c", NULL, "<dec>", "orange marker"),
+        arg_u64_0("d", NULL, "<dec>", "blue marker"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    g_CursorCPos = arg_get_u32_def(ctx, 1, 0);
-    g_CursorDPos = arg_get_u32_def(ctx, 2, 0);
+    bool keep    = arg_get_lit(ctx, 1);
+    g_MarkerAPos = arg_get_u32_def(ctx, 2, (keep ? g_MarkerAPos : 0));
+    g_MarkerBPos = arg_get_u32_def(ctx, 3, (keep ? g_MarkerBPos : 0));
+    g_MarkerCPos = arg_get_u32_def(ctx, 4, (keep ? g_MarkerCPos : 0));
+    g_MarkerDPos = arg_get_u32_def(ctx, 5, (keep ? g_MarkerDPos : 0));
     CLIParserFree(ctx);
-    PrintAndLogEx(INFO, "Setting orange %u blue %u", g_CursorCPos, g_CursorDPos);
+    PrintAndLogEx(INFO, "Setting markers " _BRIGHT_YELLOW_("A") "=%u, "_BRIGHT_MAGENTA_("B") "=%u, "_RED_("C") "=%u, "_BLUE_("D") "=%u", 
+        g_MarkerAPos,
+        g_MarkerBPos,
+        g_MarkerCPos,
+        g_MarkerDPos
+    );
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
@@ -3727,7 +3739,7 @@ static command_t CommandTable[] = {
     {"mtrim",            CmdMtrim,                AlwaysAvailable,  "Trim out samples from the specified start to the specified stop"},
     {"norm",             CmdNorm,                 AlwaysAvailable,  "Normalize max/min to +/-128"},
     {"rtrim",            CmdRtrim,                AlwaysAvailable,  "Trim samples from right of trace"},
-    {"setgraphmarkers",  CmdSetGraphMarkers,      AlwaysAvailable,  "Set blue and orange marker in graph window"},
+    {"setgraphmarkers",  CmdSetGraphMarkers,      AlwaysAvailable,  "Set the markers in the graph window"},
     {"shiftgraphzero",   CmdGraphShiftZero,       AlwaysAvailable,  "Shift 0 for Graphed wave + or - shift value"},
     {"timescale",        CmdTimeScale,            AlwaysAvailable,  "Set cursor display timescale"},
     {"undecimate",       CmdUndecimate,           AlwaysAvailable,  "Un-decimate samples"},
