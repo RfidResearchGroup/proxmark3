@@ -37,7 +37,7 @@ OBJDIR = obj
 ifeq ($(USE_BREW),1)
 	INCLUDES += -I$(BREW_PREFIX)/include
 	LDLIBS += -L$(BREW_PREFIX)/lib
-	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/lib/pkgconfig:$(BREW_PREFIX)/opt/qt/lib/pkgconfig:$(BREW_PREFIX)/opt/qt5/lib/pkgconfig
+	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/lib/pkgconfig:$(BREW_PREFIX)/opt/qt@5/lib/pkgconfig:$(BREW_PREFIX)/opt/qt@5/lib/pkgconfig
 endif
 
 ifeq ($(USE_MACPORTS),1)
