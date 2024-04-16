@@ -44,9 +44,14 @@ Makefile.platform.*
 .Makefile.options.cache
 
 # cmake
+CMakeFiles/
+deps/
+client/CMakeFiles/
+client/deps/
 client/build/
 client/android/build/
-client/deps/bzip2/
+CMakeCache.txt
+*.cmake
 
 # Coverity
 cov-int/
