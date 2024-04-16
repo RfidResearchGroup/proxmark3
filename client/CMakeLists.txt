@@ -55,15 +55,15 @@ if (NOT SKIPQT EQUAL 1)
         # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
         list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /usr/local/opt/qt5)
     endif(APPLE AND EXISTS /usr/local/opt/qt5)
-    if(APPLE AND EXISTS /opt/homebrew/opt/qt5)
+    if(APPLE AND EXISTS /opt/homebrew/opt/qt@5)
         # Homebrew on Apple Silicon installs Qt5 in
-        # /opt/homebrew/opt/qt5. Ensure that it can be found by CMake
+        # /opt/homebrew/opt/qt@5. Ensure that it can be found by CMake
         # since it is not in the default /usr/local prefix.
         # Add it to PATHS so that it doesn't override the
         # CMAKE_PREFIX_PATH environment variable.
         # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
         # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
-        list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /opt/homebrew/opt/qt5)
+        list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /opt/homebrew/opt/qt@5)
     endif(APPLE AND EXISTS /opt/homebrew/opt/qt5)
     set(QT_PACKAGELIST
         Qt5Core
