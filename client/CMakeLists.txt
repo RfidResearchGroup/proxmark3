@@ -64,7 +64,7 @@ if (NOT SKIPQT EQUAL 1)
         # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
         # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
         list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /opt/homebrew/opt/qt@5)
-    endif(APPLE AND EXISTS /opt/homebrew/opt/qt5)
+    endif(APPLE AND EXISTS /opt/homebrew/opt/qt@5)
     set(QT_PACKAGELIST
         Qt5Core
         Qt5Widgets
