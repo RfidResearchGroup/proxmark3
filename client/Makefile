@@ -281,16 +281,16 @@ endif
 
 ## Python3 (optional)
 ifneq ($(SKIPPYTHON),1)
-    PYTHONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags python3 2>/dev/null)
-    PYTHONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs python3 2>/dev/null)
+# since python3.8, applications willing to embed python must use -embed:
+    PYTHONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags python3-embed 2>/dev/null)
+    PYTHONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs python3-embed 2>/dev/null)
     ifneq ($(PYTHONLDLIBS),)
         PYTHONLIBLD = $(PYTHONLDLIBS)
         PYTHONLIBINC = $(subst -I,-isystem ,$(PYTHONINCLUDES))
         PYTHON_FOUND = 1
     else
-        # since python3.8, applications willing to embed python must use -embed:
-        PYTHONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags python3-embed 2>/dev/null)
-        PYTHONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs python3-embed 2>/dev/null)
+        PYTHONINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags python3 2>/dev/null)
+        PYTHONLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs python3 2>/dev/null)
         ifneq ($(PYTHONLDLIBS),)
             PYTHONLIBLD = $(PYTHONLDLIBS)
             PYTHONLIBINC = $(subst -I,-isystem ,$(PYTHONINCLUDES))
