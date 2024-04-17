@@ -108,12 +108,10 @@ int demodTI(bool verbose) {
         highSum = 0;
 
         for (j = 0; j < lowLen; j++) {
-            lowSum += LowTone[j] * get_graph_value_at(i + j, true);
-            //lowSum += LowTone[j] * g_GraphBuffer[i + j];
+            lowSum += LowTone[j] * g_GraphBuffer[i + j];
         }
         for (j = 0; j < highLen; j++) {
-            highSum += HighTone[j] * get_graph_value_at(i + j, true);
-            //highSum += HighTone[j] * g_GraphBuffer[i + j];
+            highSum += HighTone[j] * g_GraphBuffer[i + j];
         }
 
         lowSum = abs((100 * lowSum) / lowLen);
@@ -131,12 +129,10 @@ int demodTI(bool verbose) {
         highTot = 0;
         // 16 and 15 are f_s divided by f_l and f_h, rounded
         for (j = 0; j < 16; j++) {
-            lowTot += (get_graph_value_at(i + j, false) & 0xffff);
-            //lowTot += (g_GraphBuffer[i + j] & 0xffff);
+            lowTot += (g_OperationBuffer[i + j] & 0xffff);
         }
         for (j = 0; j < 15; j++) {
-            highTot += (get_graph_value_at(i + j, false) >> 16);
-            //highTot += (g_GraphBuffer[i + j] >> 16);
+            highTot += (g_OperationBuffer[i + j] >> 16);
         }
 
         //g_GraphBuffer[i] = lowTot - highTot;
@@ -165,14 +161,12 @@ int demodTI(bool verbose) {
         int dec = 0;
         // searching 17 consecutive lows
         for (j = 0; j < 17 * lowLen; j++) {
-            //dec -= g_GraphBuffer[i + j];
-            dec -= get_graph_value_at(i + j, false);
+            dec -= g_OperationBuffer[i + j];
         }
 
         // searching 7 consecutive highs
         for (; j < 17 * lowLen + 6 * highLen; j++) {
-            //dec += g_GraphBuffer[i + j];
-            dec += get_graph_value_at(i + j, false);
+            dec += g_OperationBuffer[i + j];
         }
 
         if (dec > max) {
@@ -208,12 +202,10 @@ int demodTI(bool verbose) {
     for (i = 0; i < ARRAYLEN(bits) - 1; i++) {
         int high = 0, low = 0;
         for (j = 0; j < lowLen; j++) {
-            //low -= g_GraphBuffer[maxPos + j];
-            low -= get_graph_value_at(maxPos + j, false);
+            low -= g_OperationBuffer[maxPos + j];
         }
         for (j = 0; j < highLen; j++) {
-            //high += g_GraphBuffer[maxPos + j];
-            high += get_graph_value_at(maxPos + j, false);
+            high += g_OperationBuffer[maxPos + j];
         }
 
         if (high > low) {

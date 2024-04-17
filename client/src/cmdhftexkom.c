@@ -15,6 +15,7 @@
 //-----------------------------------------------------------------------------
 // High frequency proximity cards from TEXCOM commands
 //-----------------------------------------------------------------------------
+//TODO Maybe refactor this file?
 
 #include "cmdhftexkom.h"
 
@@ -32,7 +33,8 @@
 #define TEXKOM_NOISE_THRESHOLD (10)
 
 static inline uint32_t GetGraphBuffer(uint32_t indx) {
-    int32_t value = get_graph_value_at(indx, true);
+    int32_t value = g_GraphBuffer[indx];
+
     if (value < -128)
         return 0;
     else

@@ -981,6 +981,7 @@ static void lf_chk_bitstream(void) {
 }
 
 // Uploads g_GraphBuffer to device, in order to be used for LF SIM.
+//TODO Modify to be able to upload either the Graph Buffer (default) or Operation Buffer
 int lfsim_upload_gb(void) {
     PrintAndLogEx(DEBUG, "DEBUG: Uploading %zu bytes", g_GraphTraceLen);
 
@@ -1009,8 +1010,7 @@ int lfsim_upload_gb(void) {
         payload_up.offset = i;
 
         for (size_t j = 0; j < len; j++) {
-            //payload_up.data[j] = g_GraphBuffer[i + j];
-            payload_up.data[j] = get_graph_value_at(i + j, true);
+            payload_up.data[j] = g_GraphBuffer[i + j];
         }
 
         SendCommandNG(CMD_LF_UPLOAD_SIM_SAMPLES, (uint8_t *)&payload_up, sizeof(struct pupload));

@@ -109,20 +109,6 @@ void save_restoreGB(uint8_t saveOpt) {
     }
 }
 
-// Returns a copied value of what's in the Buffer at the index supplied
-// Gets from the Operation Buffer if useGraphBuffer is false
-int32_t get_graph_value_at(size_t index, bool useGraphBuffer) {
-    int32_t copiedValue;
-
-    if(useGraphBuffer) {
-        copiedValue = g_GraphBuffer[index];
-    } else {
-        copiedValue = g_OperationBuffer[index];
-    }
-
-    return copiedValue;
-}
-
 void setGraphBuffer(const uint8_t *src, size_t size) {
     if (src == NULL) return;
 
@@ -170,9 +156,16 @@ size_t get_buffer_chunk(uint8_t *dest, size_t start, size_t end, bool useGraphBu
 
     size_t i, value;
     end = (end < g_GraphTraceLen) ? end : g_GraphTraceLen;
+
+    int32_t buffer[MAX_GRAPH_TRACE_LEN];
+    if(useGraphBuffer) {
+        memcpy(buffer, g_GraphBuffer, g_GraphTraceLen);
+    } else {
+        memcpy(buffer, g_OperationBuffer, g_GraphTraceLen);
+    }
     
     for (i = start; i < end; i++) {
-        value = get_graph_value_at(i, useGraphBuffer);
+        value = buffer[i];
 
         //Trim the data to fit into an uint8_t
         if (value > 127) {

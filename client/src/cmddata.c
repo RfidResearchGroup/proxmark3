@@ -449,7 +449,8 @@ int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxlen, bool amplify, b
         return PM3_EMALLOC;
     }
 
-    size_t bitlen = getFromGraphBuffer(bits);
+    //size_t bitlen = getFromGraphBuffer(bits);
+    size_t bitlen = get_buffer_chunk(bits, 0, g_GraphTraceLen, true);
 
     PrintAndLogEx(DEBUG, "DEBUG: (ASKDemod_ext) #samples from graphbuff: %zu", bitlen);
 
@@ -762,7 +763,8 @@ int ASKbiphaseDemod(int offset, int clk, int invert, int maxErr, bool verbose) {
         return PM3_EMALLOC;
     }
 
-    size_t size = getFromGraphBufferEx(bs, MAX_DEMOD_BUF_LEN);
+    //size_t size = getFromGraphBufferEx(bs, MAX_DEMOD_BUF_LEN);
+    size_t size = get_buffer_chunk(bs, 0, MAX_DEMOD_BUF_LEN, true);
     if (size == 0) {
         PrintAndLogEx(DEBUG, "DEBUG: no data in graphbuf");
         free(bs);
@@ -1057,7 +1059,8 @@ static int CmdDecimate(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data decimate",
-                  "Performs decimation, by reducing samples N times in the grapbuf. Good for PSK\n",
+                  "Performs decimation, by reducing samples N times in the Graph Buffer. Good for PSK\n"
+                  _YELLOW_("This resets any operations stored in the Operation Buffer!"),
                   "data decimate\n"
                   "data decimate -n 4"
                  );
@@ -1077,6 +1080,8 @@ static int CmdDecimate(const char *Cmd) {
     }
 
     g_GraphTraceLen /= n;
+
+    //Because the Graph Buffer changed, we got to reset the Operaton Buffer
     reset_operation_buffer();
 
     PrintAndLogEx(SUCCESS, "Decimated by " _GREEN_("%u"), n);
@@ -1093,7 +1098,8 @@ static int CmdDecimate(const char *Cmd) {
 static int CmdUndecimate(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data undecimate",
-                  "Performs un-decimation, by repeating each sample N times in the graphbuf",
+                  "Performs un-decimation, by repeating each sample N times in the graphbuf\n"
+                  _YELLOW_("This resets any operations stored in the Operation Buffer!"),
                   "data undecimate\n"
                   "data undecimate -n 4\n"
                  );
@@ -1142,7 +1148,8 @@ static int CmdGraphShiftZero(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data shiftgraphzero",
-                  "Shift 0 for Graphed wave + or - shift value",
+                  "Shift 0 for Graphed wave + or - shift value\n"
+                  "This reads from and writes to the Operation Buffer",
                   "data shiftgraphzero -n 10   --> shift 10 points\n"
                   "data shiftgraphzero -n -22  --> shift negative 22 points"
                  );
@@ -1157,7 +1164,7 @@ static int CmdGraphShiftZero(const char *Cmd) {
 
     for (size_t i = 0; i < g_GraphTraceLen; i++) {
         //int shiftedVal = g_GraphBuffer[i] + shift;
-        int shiftedVal = get_graph_value_at(i, false) + shift;
+        int shiftedVal = g_OperationBuffer[i] + shift;
 
         if (shiftedVal > 127)
             shiftedVal = 127;
@@ -1192,7 +1199,7 @@ static int CmdAskEdgeDetect(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data askedgedetect",
                   "Adjust Graph for manual ASK demod using the length of sample differences\n"
-                  "to detect the edge of a wave",
+                  "to detect the edge of a wave. This reads from and writes to the Operation Buffer.",
                   "data askedgedetect -t 20"
                  );
     void *argtable[] = {
@@ -1206,7 +1213,7 @@ static int CmdAskEdgeDetect(const char *Cmd) {
 
     PrintAndLogEx(INFO, "using threshold " _YELLOW_("%i"), threshold);
     //int res = AskEdgeDetect(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, threshold);
-    int res = AskEdgeDetect(g_GraphBuffer, g_OperationBuffer, g_GraphTraceLen, threshold);
+    int res = AskEdgeDetect(g_OperationBuffer, g_OperationBuffer, g_GraphTraceLen, threshold);
     RepaintGraphWindow();
     return res;
 }
@@ -2096,7 +2103,8 @@ static int CmdLoad(const char *Cmd) {
 int CmdLtrim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data ltrim",
-                  "Trim samples from left of trace",
+                  "Trim samples from left of trace\n"
+                  _YELLOW_("This resets any operations stored in the Operation Buffer!"),
                   "data ltrim -i 300   --> remove from start 0 to index 300"
                  );
     void *argtable[] = {
@@ -2130,7 +2138,8 @@ static int CmdRtrim(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data rtrim",
-                  "Trim samples from right of trace",
+                  "Trim samples from right of trace\n"
+                  _YELLOW_("This resets any operations stored in the Operation Buffer!"),
                   "data rtrim -i 4000    --> remove from index 4000 to end of graph buffer"
                  );
     void *argtable[] = {
@@ -2162,7 +2171,8 @@ static int CmdMtrim(const char *Cmd) {
                   "Trim out samples from\n"
                   "  start 0 to `-s index`\n"
                   "AND\n"
-                  "  from `-e index` to end of graph buffer",
+                  "  from `-e index` to end of graph buffer\n"
+                  _YELLOW_("This resets any operations stored in the Operation Buffer!"),
                   "data mtrim -s 1000 -e 2000  -->  keep all between index 1000 and 2000"
                  );
     void *argtable[] = {
@@ -2199,7 +2209,8 @@ int CmdNorm(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data norm",
-                  "Normalize max/min to +/-128",
+                  "Normalize max/min to +/-128\n"
+                  "This reads from and writes to the Operation Buffer",
                   "data norm"
                  );
     void *argtable[] = {
@@ -2213,8 +2224,7 @@ int CmdNorm(const char *Cmd) {
 
     // Find local min, max
     for (uint32_t i = 10; i < g_GraphTraceLen; ++i) {
-        //Get a copy of what's in the Graph Buffer at the index
-        value = get_graph_value_at(i, true);
+        value = g_OperationBuffer[i];
 
         if (value > max) max = value;
         if (value < min) min = value;
@@ -2223,7 +2233,7 @@ int CmdNorm(const char *Cmd) {
     if ((g_GraphTraceLen > 10) && (max != min)) {
         for (uint32_t i = 0; i < g_GraphTraceLen; ++i) {
             //g_GraphBuffer[i] = ((long)(g_GraphBuffer[i] - ((max + min) / 2)) * 256) / (max - min);
-            modify_graph(i, ((long)(g_GraphBuffer[i] - ((max + min) / 2)) * 256) / (max - min), false);
+            modify_graph(i, ((long)(g_OperationBuffer[i] - ((max + min) / 2)) * 256) / (max - min), false);
             //marshmelow: adjusted *1000 to *256 to make +/- 128 so demod commands still work
         }
     }
@@ -2233,7 +2243,8 @@ int CmdNorm(const char *Cmd) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
     }
-    size_t size = getFromGraphBuffer(bits);
+    //size_t size = getFromGraphBuffer(bits);
+    size_t size = get_buffer_chunk(bits, 0, g_GraphTraceLen, false);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
 
@@ -2360,7 +2371,8 @@ int directionalThreshold(const int *in, int *out, size_t len, int8_t up, int8_t 
 static int CmdDirectionalThreshold(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data dirthreshold",
-                  "Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev.",
+                  "Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev.\n"
+                  "This reads from and writes to the Operation Buffer.",
                   "data dirthreshold -u 10 -d -10"
                  );
     void *argtable[] = {
@@ -2371,12 +2383,13 @@ static int CmdDirectionalThreshold(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int8_t down = arg_get_int(ctx, 1);
-    int8_t up = arg_get_int(ctx, 2);
+    int8_t up   = arg_get_int(ctx, 2);
     CLIParserFree(ctx);
 
     PrintAndLogEx(INFO, "Applying up threshold: " _YELLOW_("%i") ", down threshold: " _YELLOW_("%i") "\n", up, down);
 
-    directionalThreshold(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, up, down);
+    directionalThreshold(g_OperationBuffer, g_OperationBuffer, g_GraphTraceLen, up, down);
+    
 
     // set signal properties low/high/mean/amplitude and isnoice detection
     uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
@@ -2397,7 +2410,8 @@ static int CmdDirectionalThreshold(const char *Cmd) {
 static int CmdZerocrossings(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data zerocrossings",
-                  "Count time between zero-crossings",
+                  "Count time between zero-crossings.\n"
+                  "This reads from and writes to the Operation Buffer",
                   "data zerocrossings"
                  );
     void *argtable[] = {
@@ -2412,8 +2426,12 @@ static int CmdZerocrossings(const char *Cmd) {
 
     int sign = 1, zc = 0, lastZc = 0;
 
+    //create a copy of the Operation Buffer
+    int32_t buffer[MAX_GRAPH_TRACE_LEN];
+    memcpy(buffer, g_OperationBuffer, g_GraphTraceLen);
+
     for (uint32_t i = 0; i < g_GraphTraceLen; ++i) {
-        if (get_graph_value_at(i, true) * sign >= 0) {
+        if (buffer[i] * sign >= 0) {
             // No change in sign, reproduce the previous sample count.
             zc++;
             //g_GraphBuffer[i] = lastZc;
@@ -2602,7 +2620,7 @@ static int CmdFSKToNRZ(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data fsktonrz",
                   "Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk)\n"
-                  "Omitted values are autodetect instead",
+                  "Omitted values are autodetect instead. This reads from and writes to the Operation Buffer.",
                   "data fsktonrz\n"
                   "data fsktonrz -c 32 --low 8 --hi 10");
 
@@ -2622,7 +2640,7 @@ static int CmdFSKToNRZ(const char *Cmd) {
 
     setClockGrid(0, 0);
     g_DemodBufferLen = 0;
-    int ans = FSKToNRZ(g_GraphBuffer, &g_GraphTraceLen, clk, fc_low, fc_high);
+    int ans = FSKToNRZ(g_OperationBuffer, &g_GraphTraceLen, clk, fc_low, fc_high);
     CmdNorm("");
     RepaintGraphWindow();
     return ans;
@@ -2632,7 +2650,8 @@ static int CmdDataIIR(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data iir",
-                  "Apply IIR buttersworth filter on plot data",
+                  "Apply IIR buttersworth filter on plot data\n"
+                  "This reads from and writes to the Operation Buffer",
                   "data iir -n 2"
                  );
     void *argtable[] = {
@@ -2644,17 +2663,17 @@ static int CmdDataIIR(const char *Cmd) {
     uint8_t k = (arg_get_u32_def(ctx, 1, 0) & 0xFF);
     CLIParserFree(ctx);
 
-    iceSimple_Filter(g_GraphBuffer, g_GraphTraceLen, k);
+    iceSimple_Filter(g_OperationBuffer, g_GraphTraceLen, k);
 
     uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
     if (bits == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
     }
-    size_t size = getFromGraphBuffer(bits);
+    //size_t size = getFromGraphBuffer(bits);
+    size_t size = get_buffer_chunk(bits, 0, g_GraphTraceLen, false);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
-    reset_operation_buffer();
     RepaintGraphWindow();
     free(bits);
     return PM3_SUCCESS;
@@ -3364,7 +3383,8 @@ int centerThreshold(const int *in, int *out, size_t len, int8_t up, int8_t down)
 static int CmdCenterThreshold(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data cthreshold",
-                  "Inverse of dirty threshold command,  all values between up and down will be average out",
+                  "Inverse of dirty threshold command,  all values between up and down will be average out\n"
+                  "This reads from and writes to the Operation Buffer",
                   "data cthreshold -u 10 -d -10"
                  );
     void *argtable[] = {
@@ -3380,7 +3400,7 @@ static int CmdCenterThreshold(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Applying up threshold: " _YELLOW_("%i") ", down threshold: " _YELLOW_("%i") "\n", up, down);
 
-    centerThreshold(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, up, down);
+    centerThreshold(g_OperationBuffer, g_OperationBuffer, g_GraphTraceLen, up, down);
 
     // set signal properties low/high/mean/amplitude and isnoice detection
     uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
@@ -3388,10 +3408,11 @@ static int CmdCenterThreshold(const char *Cmd) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
     }
-    size_t size = getFromGraphBuffer(bits);
+
+    //size_t size = getFromGraphBuffer(bits);
+    size_t size = get_buffer_chunk(bits, 0, g_GraphTraceLen, false);
     // set signal properties low/high/mean/amplitude and is_noice detection
     computeSignalProperties(bits, size);
-    reset_operation_buffer();
     RepaintGraphWindow();
     free(bits);
     return PM3_SUCCESS;
@@ -3422,7 +3443,8 @@ static int envelope_square(const int *in, int *out, size_t len) {
 static int CmdEnvelope(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data envelop",
-                  "Create an square envelop of the samples",
+                  "Create an square envelop of the samples\n"
+                  "This reads from and writes to the Operation Buffer",
                   "data envelop"
                  );
     void *argtable[] = {
@@ -3432,14 +3454,15 @@ static int CmdEnvelope(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
-    envelope_square(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen);
+    envelope_square(g_OperationBuffer, g_OperationBuffer, g_GraphTraceLen);
 
     uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
     if (bits == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
     }
-    size_t size = getFromGraphBuffer(bits);
+    //size_t size = getFromGraphBuffer(bits);
+    size_t size = get_buffer_chunk(bits, 0, g_GraphTraceLen, false);
     // set signal properties low/high/mean/amplitude and is_noice detection
     computeSignalProperties(bits, size);
     reset_operation_buffer();

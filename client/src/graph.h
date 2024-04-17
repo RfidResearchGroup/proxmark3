@@ -30,7 +30,6 @@ size_t ClearGraph(bool redraw);
 bool HasGraphData(void);
 void setGraphBuffer(const uint8_t *src, size_t size);
 void save_restoreGB(uint8_t saveOpt);
-int32_t get_graph_value_at(size_t index, bool useGraphBuffer);
 size_t getFromGraphBuffer(uint8_t *dest);
 size_t getFromGraphBufferEx(uint8_t *dest, size_t maxLen);
 size_t get_buffer_chunk(uint8_t *dest, size_t start, size_t end, bool useGraphBuffer);
