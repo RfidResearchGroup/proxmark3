@@ -45,6 +45,7 @@ endif()
 find_package(PkgConfig)
 
 if (NOT SKIPQT EQUAL 1)
+
     if(APPLE AND EXISTS /usr/local/opt/qt5)
         # Homebrew installs Qt5 (up to at least 5.11.0) in
         # /usr/local/opt/qt5. Ensure that it can be found by CMake
@@ -55,6 +56,7 @@ if (NOT SKIPQT EQUAL 1)
         # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
         list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /usr/local/opt/qt5)
     endif(APPLE AND EXISTS /usr/local/opt/qt5)
+
     if(APPLE AND EXISTS /opt/homebrew/opt/qt@5)
         # Homebrew on Apple Silicon installs Qt5 in
         # /opt/homebrew/opt/qt@5. Ensure that it can be found by CMake
@@ -64,7 +66,7 @@ if (NOT SKIPQT EQUAL 1)
         # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
         # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
         list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /opt/homebrew/opt/qt@5)
-    endif(APPLE AND EXISTS /opt/homebrew/opt/qt5)
+    endif(APPLE AND EXISTS /opt/homebrew/opt/qt@5)
     set(QT_PACKAGELIST
         Qt5Core
         Qt5Widgets
