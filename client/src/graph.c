@@ -241,7 +241,7 @@ void apply_operations_between(size_t start, size_t end) {
         }
     }
 
-    PrintAndLogEx(DEBUG, "Applied %i operations to Graph Buffer!");
+    PrintAndLogEx(DEBUG, "Applied %lu operations to Graph Buffer!", ops);
 }
 
 void apply_all_operations(void) {

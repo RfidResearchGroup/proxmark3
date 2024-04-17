@@ -3756,7 +3756,7 @@ static int CmdApply(const char *Cmd) {
         arg_param_begin,
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
     apply_all_operations();
     PrintAndLogEx(INFO, "Applied operations to the Graph Buffer");
