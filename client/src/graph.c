@@ -109,6 +109,20 @@ void save_restoreGB(uint8_t saveOpt) {
     }
 }
 
+// Returns a copied value of what's in the Buffer at the index supplied
+// Gets from the Operation Buffer if useGraphBuffer is false
+int32_t get_graph_value_at(size_t index, bool useGraphBuffer) {
+    int32_t copiedValue;
+
+    if(useGraphBuffer) {
+        copiedValue = g_GraphBuffer[index];
+    } else {
+        copiedValue = g_OperationBuffer[index];
+    }
+
+    return copiedValue;
+}
+
 void setGraphBuffer(const uint8_t *src, size_t size) {
     if (src == NULL) return;
 
@@ -149,16 +163,16 @@ size_t getFromGraphBufferEx(uint8_t *dest, size_t maxLen) {
 }
 
 //TODO: In progress function to get chunks of data from the GB w/o modifying the GB
-//Currently seems like it doesn't work correctly? 
-size_t getGraphBufferChunk(uint8_t *dest, size_t start, size_t end) {
+size_t get_buffer_chunk(uint8_t *dest, size_t start, size_t end, bool useGraphBuffer) {
     if (dest == NULL) return 0;
     if (g_GraphTraceLen == 0) return 0;
     if (start >= end) return 0;
 
     size_t i, value;
     end = (end < g_GraphTraceLen) ? end : g_GraphTraceLen;
-    for (i = 0; i < (end - start); i++) {
-        value = g_GraphBuffer[start + i];
+    
+    for (i = start; i < end; i++) {
+        value = get_graph_value_at(i, useGraphBuffer);
 
         //Trim the data to fit into an uint8_t
         if (value > 127) {
@@ -167,10 +181,10 @@ size_t getGraphBufferChunk(uint8_t *dest, size_t start, size_t end) {
             value = -127;
         }
 
-        dest[i] = ((uint8_t)(value + 128));
+        dest[i - start] = ((uint8_t)(value + 128));
     }
 
-    return i;
+    return i - start;
 }
 
 // A simple test to see if there is any data inside the Graph Buffer.
@@ -191,6 +205,52 @@ bool isGraphBitstream(void) {
         }
     }
     return true;
+}
+
+// Sets the data at the index supplied in the Operation Buffer
+// If apply is true, it'll apply it to the Graph Buffer as well
+void modify_graph(uint32_t index, uint32_t data, const bool apply) {
+    g_OperationBuffer[index] = data;
+
+    if(apply) {
+        g_GraphBuffer[index] = g_OperationBuffer[index];
+    }
+}
+
+// Applies the array of data to the Operation Buffer starting at the start index.
+// If it'll go past g_GraphTraceLen, it'll stop early.
+// Set apply to true to apply it to the Graph Buffer as well
+void modify_graphEX(const uint32_t *data, size_t start, size_t size, const bool apply) {
+    for(int i = start; i < (size + start); i++) {
+        if(i > g_GraphTraceLen) break;
+
+        modify_graph(i, data[i - start], false);
+    }
+    
+    if(apply) {
+        apply_operations_between(start, (size + start));
+    }
+}
+
+void apply_operations_between(size_t start, size_t end) {
+    size_t ops = 0;
+    for(int i = start; i < end; i++) {
+        if(g_OperationBuffer[i] != g_GraphBuffer[i]) {
+            g_GraphBuffer[i] = g_OperationBuffer[i];
+            ops++;
+        }
+    }
+
+    PrintAndLogEx(DEBUG, "Applied %i operations to Graph Buffer!");
+}
+
+void apply_all_operations(void) {
+    apply_operations_between(0, g_GraphTraceLen);
+}
+
+void reset_operation_buffer(void) {
+    memset(g_OperationBuffer, 0x00, g_GraphTraceLen); //Zero out the block of memory we have
+    memcpy(g_OperationBuffer, g_GraphBuffer, g_GraphTraceLen);
 }
 
 void convertGraphFromBitstream(void) {

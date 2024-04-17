@@ -1069,7 +1069,8 @@ static int CmdTune(const char *Cmd) {
     // even here, these values has 3% error.
     uint16_t test1 = 0;
     for (int i = 0; i < 256; i++) {
-        g_GraphBuffer[i] = package->results[i] - 128;
+        //g_GraphBuffer[i] = package->results[i] - 128;
+        modify_graph(i, package->results[i] - 128, true);
         test1 += package->results[i];
     }
 

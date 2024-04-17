@@ -32,10 +32,11 @@
 #define TEXKOM_NOISE_THRESHOLD (10)
 
 static inline uint32_t GetGraphBuffer(uint32_t indx) {
-    if (g_GraphBuffer[indx] < -128)
+    int32_t value = get_graph_value_at(indx, true);
+    if (value < -128)
         return 0;
     else
-        return g_GraphBuffer[indx] + 128;
+        return value + 128;
 }
 
 static uint32_t TexkomAVGField(void) {

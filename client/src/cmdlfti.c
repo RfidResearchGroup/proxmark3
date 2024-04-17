@@ -101,35 +101,46 @@ int demodTI(bool verbose) {
     if (g_GraphTraceLen < convLen) {
         return retval;
     }
+
+    //Write the values to the Operation Buffer for storage, to not destroy the Graph Buffer
     for (i = 0; i < g_GraphTraceLen - convLen; i++) {
         lowSum = 0;
         highSum = 0;
 
         for (j = 0; j < lowLen; j++) {
-            lowSum += LowTone[j] * g_GraphBuffer[i + j];
+            lowSum += LowTone[j] * get_graph_value_at(i + j, true);
+            //lowSum += LowTone[j] * g_GraphBuffer[i + j];
         }
         for (j = 0; j < highLen; j++) {
-            highSum += HighTone[j] * g_GraphBuffer[i + j];
+            highSum += HighTone[j] * get_graph_value_at(i + j, true);
+            //highSum += HighTone[j] * g_GraphBuffer[i + j];
         }
+
         lowSum = abs((100 * lowSum) / lowLen);
         highSum = abs((100 * highSum) / highLen);
         lowSum = (lowSum < 0) ? -lowSum : lowSum;
         highSum = (highSum < 0) ? -highSum : highSum;
 
-        g_GraphBuffer[i] = (highSum << 16) | lowSum;
+        //g_GraphBuffer[i] = (highSum << 16) | lowSum;
+        modify_graph(i, (highSum << 16) | lowSum, false);
     }
 
+    //TODO Write to the Demod Buffer from the Operation Buffer and reset the Operation Buffer
     for (i = 0; i < g_GraphTraceLen - convLen - 16; i++) {
         lowTot = 0;
         highTot = 0;
         // 16 and 15 are f_s divided by f_l and f_h, rounded
         for (j = 0; j < 16; j++) {
-            lowTot += (g_GraphBuffer[i + j] & 0xffff);
+            lowTot += (get_graph_value_at(i + j, false) & 0xffff);
+            //lowTot += (g_GraphBuffer[i + j] & 0xffff);
         }
         for (j = 0; j < 15; j++) {
-            highTot += (g_GraphBuffer[i + j] >> 16);
+            highTot += (get_graph_value_at(i + j, false) >> 16);
+            //highTot += (g_GraphBuffer[i + j] >> 16);
         }
-        g_GraphBuffer[i] = lowTot - highTot;
+
+        //g_GraphBuffer[i] = lowTot - highTot;
+        modify_graph(i, lowTot - highTot, false);
     }
 
     g_GraphTraceLen -= (convLen + 16);
@@ -154,12 +165,16 @@ int demodTI(bool verbose) {
         int dec = 0;
         // searching 17 consecutive lows
         for (j = 0; j < 17 * lowLen; j++) {
-            dec -= g_GraphBuffer[i + j];
+            //dec -= g_GraphBuffer[i + j];
+            dec -= get_graph_value_at(i + j, false);
         }
+
         // searching 7 consecutive highs
         for (; j < 17 * lowLen + 6 * highLen; j++) {
-            dec += g_GraphBuffer[i + j];
+            //dec += g_GraphBuffer[i + j];
+            dec += get_graph_value_at(i + j, false);
         }
+
         if (dec > max) {
             max = dec;
             maxPos = i;
@@ -168,8 +183,9 @@ int demodTI(bool verbose) {
 
     // place a marker in the buffer to visually aid location
     // of the start of sync
-    g_GraphBuffer[maxPos] = 800;
-    g_GraphBuffer[maxPos + 1] = -800;
+    g_MarkerCPos = maxPos;
+    //g_GraphBuffer[maxPos] = 800;
+    //g_GraphBuffer[maxPos + 1] = -800;
 
     // advance pointer to start of actual data stream (after 16 pre and 8 start bits)
     maxPos += 17 * lowLen;
@@ -177,8 +193,9 @@ int demodTI(bool verbose) {
 
     // place a marker in the buffer to visually aid location
     // of the end of sync
-    g_GraphBuffer[maxPos] = 800;
-    g_GraphBuffer[maxPos + 1] = -800;
+    g_MarkerDPos = maxPos;
+    //g_GraphBuffer[maxPos] = 800;
+    //g_GraphBuffer[maxPos + 1] = -800;
 
     PrintAndLogEx(DEBUG, "actual data bits start at sample %d", maxPos);
     PrintAndLogEx(DEBUG, "length %d/%d", highLen, lowLen);
@@ -191,10 +208,12 @@ int demodTI(bool verbose) {
     for (i = 0; i < ARRAYLEN(bits) - 1; i++) {
         int high = 0, low = 0;
         for (j = 0; j < lowLen; j++) {
-            low -= g_GraphBuffer[maxPos + j];
+            //low -= g_GraphBuffer[maxPos + j];
+            low -= get_graph_value_at(maxPos + j, false);
         }
         for (j = 0; j < highLen; j++) {
-            high += g_GraphBuffer[maxPos + j];
+            //high += g_GraphBuffer[maxPos + j];
+            high += get_graph_value_at(maxPos + j, false);
         }
 
         if (high > low) {
@@ -214,8 +233,11 @@ int demodTI(bool verbose) {
         shift3 >>= 1;
 
         // place a marker in the buffer between bits to visually aid location
-        g_GraphBuffer[maxPos] = 800;
-        g_GraphBuffer[maxPos + 1] = -800;
+        //TODO Maybe use the Demod Buffer for this instead? Maybe temporary Markers?
+        modify_graph(maxPos, 800, false);
+        //g_GraphBuffer[maxPos] = 800;
+        modify_graph(maxPos + 1, -800, false);
+        //g_GraphBuffer[maxPos + 1] = -800;
     }
 
     RepaintGraphWindow();

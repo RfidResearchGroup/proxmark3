@@ -391,8 +391,10 @@ int CmdGetBitStream(const char *Cmd) {
 
     CmdHpf("");
     for (uint32_t i = 0; i < g_GraphTraceLen; i++) {
-        g_GraphBuffer[i] = (g_GraphBuffer[i] >= 1) ? 1 : 0;
+        //g_GraphBuffer[i] = (g_GraphBuffer[i] >= 1) ? 1 : 0;
+        modify_graph(i, (g_GraphBuffer[i] >= 1) ? 1 : 0, false);
     }
+
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
@@ -1013,12 +1015,16 @@ static int CmdBitsamples(const char *Cmd) {
 
     for (size_t j = 0; j < ARRAYLEN(got); j++) {
         for (uint8_t k = 0; k < 8; k++) {
-            if (got[j] & (1 << (7 - k)))
-                g_GraphBuffer[cnt++] = 1;
-            else
-                g_GraphBuffer[cnt++] = 0;
+            if (got[j] & (1 << (7 - k))) {
+                //g_GraphBuffer[cnt++] = 1;
+                modify_graph(cnt++, 1, true);
+            } else {
+                //g_GraphBuffer[cnt++] = 0;
+                modify_graph(cnt++, 0, true);
+            }
         }
     }
+
     g_GraphTraceLen = cnt;
     RepaintGraphWindow();
     return PM3_SUCCESS;
@@ -1028,7 +1034,7 @@ static int CmdBuffClear(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data clear",
                   "This function clears the BigBuf on device side\n"
-                  "and graph window ( graphbuffer )",
+                  "and graph window data buffers",
                   "data clear"
                  );
     void *argtable[] = {
@@ -1037,10 +1043,13 @@ static int CmdBuffClear(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
+
     clearCommandBuffer();
     SendCommandNG(CMD_BUFF_CLEAR, NULL, 0);
+
     ClearGraph(true);
-    // iceman:  should clear all other new buffers getting introduced
+    reset_operation_buffer();
+
     return PM3_SUCCESS;
 }
 
@@ -1062,11 +1071,15 @@ static int CmdDecimate(const char *Cmd) {
     int n = arg_get_int_def(ctx, 1, 2);
     CLIParserFree(ctx);
 
-    for (size_t i = 0; i < (g_GraphTraceLen / n); ++i)
-        g_GraphBuffer[i] = g_GraphBuffer[i * n];
+    for (size_t i = 0; i < (g_GraphTraceLen / n); ++i) {
+        //g_GraphBuffer[i] = g_GraphBuffer[i * n];
+        modify_graph(i, g_GraphBuffer[i * n], true);
+    }
 
     g_GraphTraceLen /= n;
-    PrintAndLogEx(SUCCESS, "decimated by " _GREEN_("%u"), n);
+    reset_operation_buffer();
+
+    PrintAndLogEx(SUCCESS, "Decimated by " _GREEN_("%u"), n);
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
@@ -1100,21 +1113,25 @@ static int CmdUndecimate(const char *Cmd) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
     }
+
     uint32_t g_index = 0, s_index = 0;
     while (g_index < g_GraphTraceLen && s_index + factor < MAX_GRAPH_TRACE_LEN) {
         int count = 0;
+
         for (count = 0; count < factor && s_index + count < MAX_GRAPH_TRACE_LEN; count++) {
-            swap[s_index + count] = (
-                                        (double)(factor - count) / (factor - 1)) * g_GraphBuffer[g_index] +
-                                    ((double)count / factor) * g_GraphBuffer[g_index + 1]
-                                    ;
+            swap[s_index + count] = ((double)(factor - count) / (factor - 1)) *
+             g_GraphBuffer[g_index] + ((double)count / factor) * g_GraphBuffer[g_index + 1];
         }
+
         s_index += count;
         g_index++;
     }
 
     memcpy(g_GraphBuffer, swap, s_index * sizeof(int));
+    memcpy(g_OperationBuffer, swap, s_index * sizeof(int));
     g_GraphTraceLen = s_index;
+    reset_operation_buffer(); //Gotta make sure
+
     RepaintGraphWindow();
     free(swap);
     return PM3_SUCCESS;
@@ -1139,14 +1156,18 @@ static int CmdGraphShiftZero(const char *Cmd) {
     CLIParserFree(ctx);
 
     for (size_t i = 0; i < g_GraphTraceLen; i++) {
-        int shiftedVal = g_GraphBuffer[i] + shift;
+        //int shiftedVal = g_GraphBuffer[i] + shift;
+        int shiftedVal = get_graph_value_at(i, false) + shift;
 
         if (shiftedVal > 127)
             shiftedVal = 127;
         else if (shiftedVal < -127)
             shiftedVal = -127;
-        g_GraphBuffer[i] = shiftedVal;
+        
+        //g_GraphBuffer[i] = shiftedVal;
+        modify_graph(i, shiftedVal, false);
     }
+
     CmdNorm("");
     return PM3_SUCCESS;
 }
@@ -1184,7 +1205,8 @@ static int CmdAskEdgeDetect(const char *Cmd) {
     CLIParserFree(ctx);
 
     PrintAndLogEx(INFO, "using threshold " _YELLOW_("%i"), threshold);
-    int res = AskEdgeDetect(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, threshold);
+    //int res = AskEdgeDetect(g_GraphBuffer, g_GraphBuffer, g_GraphTraceLen, threshold);
+    int res = AskEdgeDetect(g_GraphBuffer, g_OperationBuffer, g_GraphTraceLen, threshold);
     RepaintGraphWindow();
     return res;
 }
@@ -1923,15 +1945,18 @@ int getSamplesFromBufEx(uint8_t *data, size_t sample_num, uint8_t bits_per_sampl
         size_t j = 0;
         for (j = 0; j < max_num; j++) {
             uint8_t sample = getByte(bits_per_sample, &bout);
-            g_GraphBuffer[j] = ((int) sample) - 127;
+            //g_GraphBuffer[j] = ((int) sample) - 127;
+            modify_graph(j, ((int) sample) - 127, true);
         }
         g_GraphTraceLen = j;
 
+        apply_all_operations();
         if (verbose) PrintAndLogEx(INFO, "Unpacked %zu samples", j);
 
     } else {
         for (size_t j = 0; j < max_num; j++) {
-            g_GraphBuffer[j] = ((int)data[j]) - 127;
+            //g_GraphBuffer[j] = ((int)data[j]) - 127;
+            modify_graph(j, ((int)data[j]) - 127, true);
         }
         g_GraphTraceLen = max_num;
     }
@@ -2025,7 +2050,8 @@ static int CmdLoad(const char *Cmd) {
     if (is_bin) {
         uint8_t val[2];
         while (fread(val, 1, 1, f)) {
-            g_GraphBuffer[g_GraphTraceLen] = val[0] - 127;
+            //g_GraphBuffer[g_GraphTraceLen] = val[0] - 127;
+            modify_graph(g_GraphTraceLen, val[0] - 127, true);
             g_GraphTraceLen++;
 
             if (g_GraphTraceLen >= MAX_GRAPH_TRACE_LEN)
@@ -2034,7 +2060,8 @@ static int CmdLoad(const char *Cmd) {
     } else {
         char line[80];
         while (fgets(line, sizeof(line), f)) {
-            g_GraphBuffer[g_GraphTraceLen] = atoi(line);
+            //g_GraphBuffer[g_GraphTraceLen] = atoi(line);
+            modify_graph(g_GraphTraceLen, atoi(line), true);
             g_GraphTraceLen++;
 
             if (g_GraphTraceLen >= MAX_GRAPH_TRACE_LEN)
@@ -2092,6 +2119,8 @@ int CmdLtrim(const char *Cmd) {
     }
     g_GraphTraceLen -= ds;
     g_DemodStartIdx -= ds;
+    reset_operation_buffer();
+
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
@@ -2120,6 +2149,7 @@ static int CmdRtrim(const char *Cmd) {
     }
 
     g_GraphTraceLen = ds;
+    reset_operation_buffer(); //Hh2 - This might not be needed, but just in case...
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
@@ -2160,6 +2190,7 @@ static int CmdMtrim(const char *Cmd) {
     }
 
     g_DemodStartIdx = 0;
+    reset_operation_buffer();
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
@@ -2178,17 +2209,21 @@ int CmdNorm(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
-    int max = INT_MIN, min = INT_MAX;
+    int max = INT_MIN, min = INT_MAX, value = 0;
 
     // Find local min, max
     for (uint32_t i = 10; i < g_GraphTraceLen; ++i) {
-        if (g_GraphBuffer[i] > max) max = g_GraphBuffer[i];
-        if (g_GraphBuffer[i] < min) min = g_GraphBuffer[i];
+        //Get a copy of what's in the Graph Buffer at the index
+        value = get_graph_value_at(i, true);
+
+        if (value > max) max = value;
+        if (value < min) min = value;
     }
 
     if ((g_GraphTraceLen > 10) && (max != min)) {
         for (uint32_t i = 0; i < g_GraphTraceLen; ++i) {
-            g_GraphBuffer[i] = ((long)(g_GraphBuffer[i] - ((max + min) / 2)) * 256) / (max - min);
+            //g_GraphBuffer[i] = ((long)(g_GraphBuffer[i] - ((max + min) / 2)) * 256) / (max - min);
+            modify_graph(i, ((long)(g_GraphBuffer[i] - ((max + min) / 2)) * 256) / (max - min), false);
             //marshmelow: adjusted *1000 to *256 to make +/- 128 so demod commands still work
         }
     }
@@ -2349,7 +2384,8 @@ static int CmdDirectionalThreshold(const char *Cmd) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
     }
-    size_t size = getFromGraphBuffer(bits);
+    //size_t size = getFromGraphBuffer(bits);
+    size_t size = get_buffer_chunk(bits, 0, g_GraphTraceLen, false);
     // set signal properties low/high/mean/amplitude and is_noice detection
     computeSignalProperties(bits, size);
 
@@ -2377,14 +2413,16 @@ static int CmdZerocrossings(const char *Cmd) {
     int sign = 1, zc = 0, lastZc = 0;
 
     for (uint32_t i = 0; i < g_GraphTraceLen; ++i) {
-        if (g_GraphBuffer[i] * sign >= 0) {
+        if (get_graph_value_at(i, true) * sign >= 0) {
             // No change in sign, reproduce the previous sample count.
             zc++;
-            g_GraphBuffer[i] = lastZc;
+            //g_GraphBuffer[i] = lastZc;
+            modify_graph(i, lastZc, false);
         } else {
             // Change in sign, reset the sample count.
             sign = -sign;
-            g_GraphBuffer[i] = lastZc;
+            //g_GraphBuffer[i] = lastZc;
+            modify_graph(i, lastZc, false);
             if (sign > 0) {
                 lastZc = zc;
                 zc = 0;
@@ -2397,7 +2435,8 @@ static int CmdZerocrossings(const char *Cmd) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
         return PM3_EMALLOC;
     }
-    size_t size = getFromGraphBuffer(bits);
+    //size_t size = getFromGraphBuffer(bits);
+    size_t size = get_buffer_chunk(bits, 0, g_GraphTraceLen, false);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
     RepaintGraphWindow();
@@ -2615,6 +2654,7 @@ static int CmdDataIIR(const char *Cmd) {
     size_t size = getFromGraphBuffer(bits);
     // set signal properties low/high/mean/amplitude and is_noise detection
     computeSignalProperties(bits, size);
+    reset_operation_buffer();
     RepaintGraphWindow();
     free(bits);
     return PM3_SUCCESS;
@@ -3351,6 +3391,7 @@ static int CmdCenterThreshold(const char *Cmd) {
     size_t size = getFromGraphBuffer(bits);
     // set signal properties low/high/mean/amplitude and is_noice detection
     computeSignalProperties(bits, size);
+    reset_operation_buffer();
     RepaintGraphWindow();
     free(bits);
     return PM3_SUCCESS;
@@ -3401,6 +3442,7 @@ static int CmdEnvelope(const char *Cmd) {
     size_t size = getFromGraphBuffer(bits);
     // set signal properties low/high/mean/amplitude and is_noice detection
     computeSignalProperties(bits, size);
+    reset_operation_buffer();
     RepaintGraphWindow();
     free(bits);
     return PM3_SUCCESS;
@@ -3702,9 +3744,29 @@ static int CmdXor(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+//TODO: Extend this out to take markers and x values. This is just to get it working
+static int CmdApply(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data apply",
+                  "applies operations stored to the graph",
+                  "data apply"
+                 );
+    
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIParserFree(ctx);
+    apply_all_operations();
+    PrintAndLogEx(INFO, "Applied operations to the Graph Buffer");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",             CmdHelp,                 AlwaysAvailable,  "This help"},
     {"-----------",      CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("General") "-------------------------"},
+    {"apply",            CmdApply,                AlwaysAvailable,  "Applies any stored operations to the graph window"},
     {"clear",            CmdBuffClear,            AlwaysAvailable,  "Clears various buffers used by the graph window"},
     {"hide",             CmdHide,                 AlwaysAvailable,  "Hide the graph window"},
     {"load",             CmdLoad,                 AlwaysAvailable,  "Load contents of file into graph window"},

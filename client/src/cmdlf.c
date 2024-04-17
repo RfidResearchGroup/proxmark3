@@ -510,8 +510,7 @@ int CmdFlexdemod(const char *Cmd) {
 
     }
 
-    // iceman,  use g_DemodBuffer?  blue line?
-    // HACK writing back to graphbuffer.
+    //TODO Write this to DemodBuffer instead to the Operation Buffer once Demod graphing is fixed
     g_GraphTraceLen = 32 * 64;
     i = 0;
     for (bit = 0; bit < 64; bit++) {
@@ -519,10 +518,12 @@ int CmdFlexdemod(const char *Cmd) {
         int phase = (bits[bit] == 0) ? 0 : 1;
 
         for (j = 0; j < 32; j++) {
-            g_GraphBuffer[i++] = phase;
+            //g_GraphBuffer[i++] = phase;
+            modify_graph(i++, phase, false); //This is a temporary thing
             phase = !phase;
         }
     }
+    
     RepaintGraphWindow();
     free(data);
     return PM3_SUCCESS;
@@ -1007,8 +1008,10 @@ int lfsim_upload_gb(void) {
         clearCommandBuffer();
         payload_up.offset = i;
 
-        for (size_t j = 0; j < len; j++)
-            payload_up.data[j] = g_GraphBuffer[i + j];
+        for (size_t j = 0; j < len; j++) {
+            //payload_up.data[j] = g_GraphBuffer[i + j];
+            payload_up.data[j] = get_graph_value_at(i + j, true);
+        }
 
         SendCommandNG(CMD_LF_UPLOAD_SIM_SAMPLES, (uint8_t *)&payload_up, sizeof(struct pupload));
         WaitForResponse(CMD_LF_UPLOAD_SIM_SAMPLES, &resp);

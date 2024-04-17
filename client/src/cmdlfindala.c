@@ -579,6 +579,7 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
     // Remodulating for tag cloning
     // HACK: 2015-01-04 this will have an impact on our new way of seening lf commands (demod)
     // since this changes graphbuffer data.
+    //TODO Write this to DemodBuffer instead to the Operation Buffer once Demod graphing is fixed
     g_GraphTraceLen = 32 * uidlen;
     i = 0;
     int phase;
@@ -589,7 +590,8 @@ static int CmdIndalaDemodAlt(const char *Cmd) {
             phase = 1;
         }
         for (j = 0; j < 32; j++) {
-            g_GraphBuffer[i++] = phase;
+            //g_GraphBuffer[i++] = phase;
+            modify_graph(i++, phase, false);
             phase = !phase;
         }
     }

@@ -574,6 +574,7 @@ static int CmdHF15Demod(const char *Cmd) {
     for (i = 0; i < 1000; i++) {
         int corr = 0;
         for (j = 0; j < ARRAYLEN(FrameSOF); j += skip) {
+            //TODO Do I really need to use get_graph_value_at()?
             corr += FrameSOF[j] * g_GraphBuffer[i + (j / skip)];
         }
         if (corr > max) {

@@ -1049,7 +1049,8 @@ static int CmdAnalyseFoo(const char *Cmd) {
         if (i & 0x0E00) o |= 0x20;    // corr_i_accum[12] | corr_i_accum[11] | corr_i_accum[9],
         o |= (i & 0x1F0) >> 4;        // corr_i_accum[8:4]
 
-        g_GraphBuffer[i] = o;
+        //g_GraphBuffer[i] = o;
+        modify_graph(i, o, true);
     }
 
     for (int i = 0; i < 4095; i++) {
@@ -1066,12 +1067,16 @@ static int CmdAnalyseFoo(const char *Cmd) {
                 o |= 0x7f;     //  corr_i_out <= 8'b01111111;
             }
         }
-        g_GraphBuffer[i + 5000] = o;
+
+        //g_GraphBuffer[i + 5000] = o;
+        modify_graph(i + 5000, o, true);
     }
 
     for (int i = 0; i < 4095; i++) {
         int o = i >> 5;
-        g_GraphBuffer[i + 10000] = o;
+
+        //g_GraphBuffer[i + 10000] = o;
+        modify_graph(i + 10000, o, true);
     }
 
     RepaintGraphWindow();
