@@ -22,6 +22,7 @@
  */
 
 #include <stdio.h>
+#include <time.h>
 #include <string.h>
 #include <inttypes.h>
 #include <iostream>
