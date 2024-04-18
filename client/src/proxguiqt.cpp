@@ -1013,7 +1013,7 @@ void Plot::paintEvent(QPaintEvent *event) {
 
     //init graph variables
     setMaxAndStart(g_GraphBuffer, g_GraphTraceLen, plotRect);
-    appendMax(g_OperationBuffer, g_GraphTraceLen, plotRect);
+    //appendMax(g_OperationBuffer, g_GraphTraceLen, plotRect);
 
     // center line
     int zeroHeight = plotRect.top() + (plotRect.bottom() - plotRect.top()) / 2;
@@ -1029,7 +1029,7 @@ void Plot::paintEvent(QPaintEvent *event) {
     }
 
     //Plot the Operation Overlay
-    plotOperations(g_OperationBuffer, g_GraphTraceLen, &painter, plotRect);
+    //plotOperations(g_OperationBuffer, g_GraphTraceLen, &painter, plotRect);
 
     //Plot the Overlay
     if (g_useOverlays) {
