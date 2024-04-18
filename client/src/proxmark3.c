@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <libgen.h>        // basename
+#include <time.h>
 
 #include "pm3line.h"
 #include "usart_defs.h"
