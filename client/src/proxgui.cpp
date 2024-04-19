@@ -139,7 +139,7 @@ extern "C" void InitGraphics(int argc, char **argv, char *script_cmds_file, char
 
 void add_temporary_marker(uint32_t position, const char *label) {
     if(g_TempMarkerSize == 0) { //Initialize the marker array
-        g_TempMarkers = (marker_t*)malloc(sizeof(marker_t));
+        g_TempMarkers = (marker_t*)calloc(1, sizeof(marker_t));
     } else { //add more space to the marker array using realloc()
         marker_t *temp = (marker_t*)realloc(g_TempMarkers, ((g_TempMarkerSize + 1) * sizeof(marker_t)));
 
@@ -155,12 +155,12 @@ void add_temporary_marker(uint32_t position, const char *label) {
 
     g_TempMarkers[g_TempMarkerSize].pos = position;
 
-    char *markerLabel = (char*)malloc(strlen(label));
+    char *markerLabel = (char*)calloc(1, strlen(label) + 1);
     strcpy(markerLabel, label);
 
-    if(strlen(markerLabel) > 29) {
+    if(strlen(markerLabel) > 30) {
         PrintAndLogEx(WARNING, "Label for temporary marker too long! Trunicating...");
-        markerLabel[29] = '\0';
+        markerLabel[30] = '\0';
     }
 
     strncpy(g_TempMarkers[g_TempMarkerSize].label, markerLabel, 30);

@@ -783,8 +783,7 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
     char graphText[] = "@%u..%u  dt=%i %s zoom=%2.3f";
     length = ((sizeof(graphText))+(sizeof(uint32_t)*3)+sizeof(scalestr)+sizeof(float_t));
 
-    annotation = (char*)malloc(length);
-    memset(annotation, 0x00, length);
+    annotation = (char*)calloc(1, length);
 
     snprintf(annotation, length, graphText,
         g_GraphStart,
@@ -805,8 +804,7 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
         char gridText[] = "GridX=%lf  GridY=%lf (%s) GridXoffset=%lf";
         length = (sizeof(gridText) + (sizeof(double)*3) + sizeof(gridLocked));
 
-        annotation = (char*)malloc(length);
-        memset(annotation, 0x00, length);
+        annotation = (char*)calloc(1, length);
 
         snprintf(annotation, length, gridText,
             g_DefaultGridX,
@@ -832,11 +830,8 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
         bool flag = false;
         size_t value;
 
-        annotation = (char*)malloc(length);
-        char *textA = (char*)malloc(length);
-
-        memset(annotation, 0x00, length);
-        memset(textA, 0x00, length);
+        annotation = (char*)calloc(1, length);
+        char *textA = (char*)calloc(1, length);
 
         strcat(textA, markerText);
         strcat(textA, " (%s%u)");
@@ -867,8 +862,7 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
         length = ((sizeof(markerText))+(sizeof(uint32_t)*2)+1);
         pos = g_MarkerB.pos;
 
-        annotation = (char*)malloc(length);
-        memset(annotation, 0x00, length);
+        annotation = (char*)calloc(1, length);
 
         snprintf(annotation, length, markerText,
             "B",
@@ -885,8 +879,7 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
         length = ((sizeof(markerText))+(sizeof(uint32_t)*2)+1);
         pos = g_MarkerC.pos;
 
-        annotation = (char*)malloc(length);
-        memset(annotation, 0x00, length);
+        annotation = (char*)calloc(1, length);
 
         snprintf(annotation, length, markerText,
             "C",
@@ -903,8 +896,7 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
         length = ((sizeof(markerText))+(sizeof(uint32_t)*2)+1);
         pos = g_MarkerD.pos;
 
-        annotation = (char*)malloc(length);
-        memset(annotation, 0x00, length);
+        annotation = (char*)calloc(1, length);
 
         snprintf(annotation, length, markerText,
             "D",
