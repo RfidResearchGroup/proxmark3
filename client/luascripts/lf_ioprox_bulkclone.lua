@@ -3,7 +3,7 @@ local cmds = require('commands')
 
 
 copyright = ''
-author = "TheChamop669"
+author = "TheChamp669"
 version = 'v1.0.0'
 desc = [[
 Perform bulk enrollment of 26 bit IO Prox / Kantech style RFID Tags
