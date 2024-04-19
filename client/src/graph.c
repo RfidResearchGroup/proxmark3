@@ -81,6 +81,12 @@ size_t ClearGraph(bool redraw) {
     g_DemodBufferLen = 0;
     g_useOverlays = false;
 
+    remove_temporary_markers();
+    g_MarkerA.pos = 0;
+    g_MarkerB.pos = 0;
+    g_MarkerC.pos = 0;
+    g_MarkerD.pos = 0;
+
     if (redraw) {
         RepaintGraphWindow();
     }
@@ -123,6 +129,7 @@ void setGraphBuffer(const uint8_t *src, size_t size) {
         g_OperationBuffer[i] = src[i] - 128;
     }
 
+    remove_temporary_markers();
     g_GraphTraceLen = size;
     RepaintGraphWindow();
 }

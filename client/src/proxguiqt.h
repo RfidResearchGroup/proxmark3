@@ -29,6 +29,7 @@
 #include <QPainter>
 #include <QtGui>
 
+#include "proxgui.h"
 #include "ui/ui_overlays.h"
 #include "ui/ui_image.h"
 
@@ -48,7 +49,7 @@ class Plot: public QWidget {
     void plotGridLines(QPainter *painter, QRect r);
     void plotOperations(int *buffer, size_t len, QPainter *painter, QRect rect);
     void drawAnnotations(QRect annotationRect, QPainter *painter);
-    void draw_marker(uint32_t cursor, QRect plotRect, QColor color, QPainter *painter);
+    void draw_marker(marker_t marker, QRect plotRect, QColor color, QPainter *painter);
     int xCoordOf(int i, QRect r);
     int yCoordOf(int v, QRect r, int maxVal);
     int valueOf_yCoord(int y, QRect r, int maxVal);

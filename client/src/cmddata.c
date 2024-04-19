@@ -478,8 +478,8 @@ int ASKDemod_ext(int clk, int invert, int maxErr, size_t maxlen, bool amplify, b
 
     if (st) {
         *stCheck = st;
-        g_MarkerCPos = ststart;
-        g_MarkerDPos = stend;
+        g_MarkerC.pos = ststart;
+        g_MarkerD.pos = stend;
         if (verbose)
             PrintAndLogEx(DEBUG, "Found Sequence Terminator - First one is shown by orange / blue graph markers");
     }
@@ -1738,16 +1738,16 @@ static int CmdSetGraphMarkers(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool keep    = arg_get_lit(ctx, 1);
-    g_MarkerAPos = arg_get_u32_def(ctx, 2, (keep ? g_MarkerAPos : 0));
-    g_MarkerBPos = arg_get_u32_def(ctx, 3, (keep ? g_MarkerBPos : 0));
-    g_MarkerCPos = arg_get_u32_def(ctx, 4, (keep ? g_MarkerCPos : 0));
-    g_MarkerDPos = arg_get_u32_def(ctx, 5, (keep ? g_MarkerDPos : 0));
+    g_MarkerA.pos = arg_get_u32_def(ctx, 2, (keep ? g_MarkerA.pos : 0));
+    g_MarkerB.pos = arg_get_u32_def(ctx, 3, (keep ? g_MarkerB.pos : 0));
+    g_MarkerC.pos = arg_get_u32_def(ctx, 4, (keep ? g_MarkerC.pos : 0));
+    g_MarkerD.pos = arg_get_u32_def(ctx, 5, (keep ? g_MarkerD.pos : 0));
     CLIParserFree(ctx);
     PrintAndLogEx(INFO, "Setting markers " _BRIGHT_YELLOW_("A") "=%u, "_BRIGHT_MAGENTA_("B") "=%u, "_RED_("C") "=%u, "_BLUE_("D") "=%u", 
-        g_MarkerAPos,
-        g_MarkerBPos,
-        g_MarkerCPos,
-        g_MarkerDPos
+        g_MarkerA.pos,
+        g_MarkerB.pos,
+        g_MarkerC.pos,
+        g_MarkerD.pos
     );
     RepaintGraphWindow();
     return PM3_SUCCESS;
