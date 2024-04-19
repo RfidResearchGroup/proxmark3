@@ -19,6 +19,7 @@
 #include "cmdlfti.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>       // strncpy
 #include <inttypes.h>
 #include "cmdparser.h"    // command_t
 #include "commonutil.h"
@@ -168,8 +169,8 @@ int demodTI(bool verbose) {
 
     // place a marker in the buffer to visually aid location
     // of the start of sync
-    g_GraphBuffer[maxPos] = 800;
-    g_GraphBuffer[maxPos + 1] = -800;
+    g_MarkerC.pos = maxPos;
+    strcpy(g_MarkerC.label, "Sync Start");
 
     // advance pointer to start of actual data stream (after 16 pre and 8 start bits)
     maxPos += 17 * lowLen;
@@ -177,8 +178,8 @@ int demodTI(bool verbose) {
 
     // place a marker in the buffer to visually aid location
     // of the end of sync
-    g_GraphBuffer[maxPos] = 800;
-    g_GraphBuffer[maxPos + 1] = -800;
+    g_MarkerD.pos = maxPos;
+    strcpy(g_MarkerD.label, "Sync End");
 
     PrintAndLogEx(DEBUG, "actual data bits start at sample %d", maxPos);
     PrintAndLogEx(DEBUG, "length %d/%d", highLen, lowLen);
@@ -214,8 +215,7 @@ int demodTI(bool verbose) {
         shift3 >>= 1;
 
         // place a marker in the buffer between bits to visually aid location
-        g_GraphBuffer[maxPos] = 800;
-        g_GraphBuffer[maxPos + 1] = -800;
+        add_temporary_marker(maxPos, "");
     }
 
     RepaintGraphWindow();

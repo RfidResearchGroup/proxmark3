@@ -1085,8 +1085,8 @@ static int CmdTune(const char *Cmd) {
                       , LF_DIV2FREQ(LF_DIVISOR_134)
                      );
         g_GraphTraceLen = 256;
-        g_MarkerCPos = LF_DIVISOR_125;
-        g_MarkerDPos = LF_DIVISOR_134;
+        g_MarkerC.pos = LF_DIVISOR_125;
+        g_MarkerD.pos = LF_DIVISOR_134;
         ShowGraphWindow();
         RepaintGraphWindow();
     } else {
