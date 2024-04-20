@@ -28,6 +28,7 @@ typedef enum {
     DESFIRE_EV3,
     DESFIRE_LIGHT,
     PLUS_EV1,
+    PLUS_EV2,
 } nxp_cardtype_t;
 
 typedef struct mfp_key_item {

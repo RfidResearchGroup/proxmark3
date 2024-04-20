@@ -155,6 +155,9 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
     if (major == 0x11 &&  minor == 0x00)
         return PLUS_EV1;
 
+    if (major == 0x22 &&  minor == 0x00)
+        return PLUS_EV2;
+
     return MFP_UNKNOWN;
 }
 
@@ -343,11 +346,11 @@ static int CmdHFMFPInfo(const char *Cmd) {
         uint16_t ATQA = card.atqa[0] + (card.atqa[1] << 8);
 
         if (ATQA & 0x0004) {
-            PrintAndLogEx(INFO, " Size...... " _GREEN_("2K") " (%s UID)", (ATQA & 0x0040) ? "7" : "4");
+            PrintAndLogEx(INFO, " Size....... " _GREEN_("2K") " (%s UID)", (ATQA & 0x0040) ? "7" : "4");
             isPlus = true;
         }
         if (ATQA & 0x0002) {
-            PrintAndLogEx(INFO, "  Size...... " _GREEN_("4K") " (%s UID)", (ATQA & 0x0040) ? "7" : "4");
+            PrintAndLogEx(INFO, "  Size....... " _GREEN_("4K") " (%s UID)", (ATQA & 0x0040) ? "7" : "4");
             isPlus = true;
         }
 

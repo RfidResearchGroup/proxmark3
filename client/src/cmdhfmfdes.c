@@ -144,6 +144,7 @@ typedef enum {
     DESFIRE_EV3,
     DESFIRE_LIGHT,
     PLUS_EV1,
+    PLUS_EV2,
     NTAG413DNA,
 } nxp_cardtype_t;
 
@@ -300,6 +301,8 @@ static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
         return DESFIRE_LIGHT;
     if (major == 0x11 && minor == 0x00)
         return PLUS_EV1;
+    if (major == 0x22 && minor == 0x00)
+        return PLUS_EV2;
     if (major == 0x10 && minor == 0x00)
         return NTAG413DNA;
     return DESFIRE_UNKNOWN;
@@ -663,6 +666,12 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         DropField();
         return PM3_SUCCESS;
     }
+    if (cardtype == PLUS_EV2) {
+        PrintAndLogEx(INFO, "Card seems to be MIFARE Plus EV2.  Try " _YELLOW_("`hf mfp info`"));
+        DropField();
+        return PM3_SUCCESS;
+    }
+
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "---------------------------------- " _CYAN_("Tag Information") " ----------------------------------");
