@@ -30,7 +30,8 @@ typedef enum {
     DESFIRE_LIGHT,
     PLUS_EV1,
     PLUS_EV2,
-    NTAG413DNA
+    NTAG413DNA,
+    NTAG424
 } nxp_cardtype_t;
 
 typedef struct mfp_key_item {
