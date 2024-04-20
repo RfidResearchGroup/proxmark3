@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Removed `save_restoreDB` - replaced by `buffer_savestate_t` implementation (@HACKhalo2)
+- Removed `save_restoreGB` - replaced by `buffer_savestate_t` implementation (@HACKhalo2)
 - Changed `hf mfp info` to identify Ev2 (@iceman1001)
 - Updated Graph Markers implementation to include temporary markers and marker labels (@HACKhalo2)
 - Updated to SWIG 4.2.1 (@iceman1001)
@@ -12,7 +14,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Changed waiting for device loops. More stable experience (@iceman1001)
 - Changed client now handles CTRL-C and saves history if using READLINE (@iceman1001)
 - Changed `hf mf *` - printing of keys if MFC EV1 added extra explaination (@iceman1001)
-- Changed `hf mf ginfo - now supports decoding of user supplied configuration block (@iceman1001)
+- Changed `hf mf ginfo` - now supports decoding of user supplied configuration block (@iceman1001)
 - Changed `data load` - now shows loaded number as comma printed. (@iceman1001)
 - Updated `/tools/hitag2crack/common/OpenCL-Headers/CL` with latest from KhronosGroup github page (@iceman1001)
 - Fixed `lf hitag list` - improved HITAG2 protocol annotation (@iceman1001)

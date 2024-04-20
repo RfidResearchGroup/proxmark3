@@ -193,30 +193,6 @@ static double compute_autoc(const int *data, size_t n, int lag) {
 }
 */
 
-// option '1' to save g_DemodBuffer any other to restore
-void save_restoreDB(uint8_t saveOpt) {
-    static uint8_t SavedDB[MAX_DEMOD_BUF_LEN];
-    static size_t SavedDBlen;
-    static bool DB_Saved = false;
-    static size_t savedDemodStartIdx = 0;
-    static int savedDemodClock = 0;
-
-    if (saveOpt == GRAPH_SAVE) { //save
-
-        memcpy(SavedDB, g_DemodBuffer, sizeof(g_DemodBuffer));
-        SavedDBlen = g_DemodBufferLen;
-        DB_Saved = true;
-        savedDemodStartIdx = g_DemodStartIdx;
-        savedDemodClock = g_DemodClock;
-    } else if (DB_Saved) { //restore
-
-        memcpy(g_DemodBuffer, SavedDB, sizeof(g_DemodBuffer));
-        g_DemodBufferLen = SavedDBlen;
-        g_DemodClock = savedDemodClock;
-        g_DemodStartIdx = savedDemodStartIdx;
-    }
-}
-
 static int CmdSetDebugMode(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data setdebugmode",
@@ -2734,7 +2710,7 @@ static int try_detect_modulation(void) {
         clk = GetPskClock("", false);
         if (clk > 0) {
             // allow undo
-            save_restoreGB(GRAPH_SAVE);
+            buffer_savestate_t saveState = save_bufferS32(g_GraphBuffer, g_GraphTraceLen);
             // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
             CmdLtrim("-i 160");
             if ((PSKDemod(0, 0, 6, false) == PM3_SUCCESS)) {
@@ -2746,7 +2722,7 @@ static int try_detect_modulation(void) {
                 tests[hits].carrier = GetPskCarrier(false);
             }
             //undo trim samples
-            save_restoreGB(GRAPH_RESTORE);
+            restore_bufferS32(saveState, g_GraphBuffer);
         }
     }
 
@@ -3702,6 +3678,174 @@ static int CmdXor(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdTestSaveState8(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data test_ss8",
+                 "Tests the implementation of Buffer Save States (8-bit buffer)",
+                 "data test_ss8");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    srand(time(NULL));
+
+    size_t length = 64;
+    uint8_t *srcBuffer = (uint8_t*)calloc(length, sizeof(uint8_t));
+
+    //Set up the source buffer with random data
+    for(int i = 0; i < length; i++) {
+        srcBuffer[i] = (rand() % 256);
+    }
+
+    buffer_savestate_t test8 = save_buffer8(srcBuffer, length);
+    PrintAndLogEx(DEBUG, "Save State created, length=%llu, type=%i", test8.bufferSize, test8.type);
+
+    test8.clock = rand();
+    test8.offset = rand();
+    PrintAndLogEx(DEBUG, "Save State clock=%u, offset=%u", test8.clock, test8.offset);
+
+    uint8_t *destBuffer = (uint8_t*)calloc(length, sizeof(uint8_t));
+    size_t returnedLength = restore_buffer8(test8, destBuffer);
+
+    if(returnedLength != length) {
+        PrintAndLogEx(FAILED, "Return Length != Buffer Length! Expected '%llu', got '%llu", g_DemodBufferLen, returnedLength);
+        free(srcBuffer);
+        free(destBuffer);
+        return PM3_EFAILED;
+    }
+    PrintAndLogEx(DEBUG, _GREEN_("Lengths match!") "\n");
+
+    for(size_t i = 0; i < length; i++) {
+        if(srcBuffer[i] != destBuffer[i]) {
+            PrintAndLogEx(FAILED, "Buffers don't match at index %lu!, Expected %i, got %i", i, srcBuffer[i], destBuffer[i]);
+            free(srcBuffer);
+            free(destBuffer);
+            return PM3_EFAILED;
+        }
+        PrintAndLogEx(DEBUG, "Index %lu matches: %u", i, destBuffer[i]);
+    }
+    PrintAndLogEx(SUCCESS, _GREEN_("Save State (8-bit) test success!") "\n");
+
+    free(srcBuffer);
+    free(destBuffer);
+    return PM3_SUCCESS;
+}
+
+static int CmdTestSaveState32(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data test_ss32",
+                 "Tests the implementation of Buffer Save States (32-bit buffer)",
+                 "data test_ss32");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    srand(time(NULL));
+
+    size_t length = 64;
+    uint32_t *srcBuffer = (uint32_t*)calloc(length, sizeof(uint32_t));
+
+    //Set up the source buffer with random data
+    for(size_t i = 0; i < length; i++) {
+        srcBuffer[i] = (rand());
+    }
+
+    buffer_savestate_t test32 = save_buffer32(srcBuffer, length);
+    PrintAndLogEx(DEBUG, "Save State created, length=%llu, type=%i", test32.bufferSize, test32.type);
+
+    test32.clock = rand();
+    test32.offset = rand();
+    PrintAndLogEx(DEBUG, "Save State clock=%u, offset=%u", test32.clock, test32.offset);
+
+    uint32_t *destBuffer = (uint32_t*)calloc(length, sizeof(uint32_t));
+    size_t returnedLength = restore_buffer32(test32, destBuffer);
+
+    if(returnedLength != length) {
+        PrintAndLogEx(FAILED, "Return Length != Buffer Length! Expected '%llu', got '%llu", g_DemodBufferLen, returnedLength);
+        free(srcBuffer);
+        free(destBuffer);
+        return PM3_EFAILED;
+    }
+    PrintAndLogEx(DEBUG, _GREEN_("Lengths match!") "\n");
+
+    for(size_t i = 0; i < length; i++) {
+        if(srcBuffer[i] != destBuffer[i]) {
+            PrintAndLogEx(FAILED, "Buffers don't match at index %lu!, Expected %i, got %i", i, srcBuffer[i], destBuffer[i]);
+            free(srcBuffer);
+            free(destBuffer);
+            return PM3_EFAILED;
+        }
+        PrintAndLogEx(DEBUG, "Index %lu matches: %i", i, destBuffer[i]);
+    }
+    PrintAndLogEx(SUCCESS, _GREEN_("Save State (32-bit) test success!") "\n");
+
+    free(srcBuffer);
+    free(destBuffer);
+    return PM3_SUCCESS;
+}
+
+static int CmdTestSaveState32S(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data test_ss32s",
+                 "Tests the implementation of Buffer Save States (32-bit signed buffer)",
+                 "data test_ss32s");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    srand(time(NULL));
+
+    size_t length = 64;
+    int32_t *srcBuffer = (int32_t*)calloc(length, sizeof(int32_t));
+
+    //Set up the source buffer with random data
+    for(int i = 0; i < length; i++) {
+        srcBuffer[i] = (rand() - 4294967296);
+    }
+
+    buffer_savestate_t test32 = save_bufferS32(srcBuffer, length);
+    PrintAndLogEx(DEBUG, "Save State created, length=%llu, type=%i", test32.bufferSize, test32.type);
+
+    test32.clock = rand();
+    test32.offset = rand();
+    PrintAndLogEx(DEBUG, "Save State clock=%u, offset=%u", test32.clock, test32.offset);
+
+    int32_t *destBuffer = (int32_t*)calloc(length, sizeof(int32_t));
+    size_t returnedLength = restore_bufferS32(test32, destBuffer);
+
+    if(returnedLength != length) {
+        PrintAndLogEx(FAILED, "Return Length != Buffer Length! Expected '%llu', got '%llu", g_DemodBufferLen, returnedLength);
+        free(srcBuffer);
+        free(destBuffer);
+        return PM3_EFAILED;
+    }
+    PrintAndLogEx(DEBUG, _GREEN_("Lengths match!") "\n");
+
+    for(int i = 0; i < length; i++) {
+        if(srcBuffer[i] != destBuffer[i]) {
+            PrintAndLogEx(FAILED, "Buffers don't match at index %i!, Expected %i, got %i", i, srcBuffer[i], destBuffer[i]);
+            free(srcBuffer);
+            free(destBuffer);
+            return PM3_EFAILED;
+        }
+        PrintAndLogEx(DEBUG, "Index %i matches: %i", i, destBuffer[i]);
+    }
+    PrintAndLogEx(SUCCESS, _GREEN_("Save State (signed 32-bit) test success!") "\n");
+
+    free(srcBuffer);
+    free(destBuffer);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",             CmdHelp,                 AlwaysAvailable,  "This help"},
     {"-----------",      CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("General") "-------------------------"},
@@ -3754,6 +3898,12 @@ static command_t CommandTable[] = {
     {"diff",             CmdDiff,                 AlwaysAvailable,  "Diff of input files"},
     {"hexsamples",       CmdHexsamples,           IfPm3Present,     "Dump big buffer as hex bytes"},
     {"samples",          CmdSamples,              IfPm3Present,     "Get raw samples for graph window ( GraphBuffer )"},
+
+    {"-----------",      CmdHelp,                 IfClientDebugEnabled, "------------------------- " _CYAN_("Debug") "-------------------------"},
+    {"test_ss8",         CmdTestSaveState8,       IfClientDebugEnabled, "Test the implementation of Buffer Save States (8-bit buffer)"},
+    {"test_ss32",        CmdTestSaveState32,      IfClientDebugEnabled, "Test the implementation of Buffer Save States (32-bit buffer)"},
+    {"test_ss32s",       CmdTestSaveState32S,     IfClientDebugEnabled, "Test the implementation of Buffer Save States (32-bit signed buffer)"},
+
     {NULL, NULL, NULL, NULL}
 };
 

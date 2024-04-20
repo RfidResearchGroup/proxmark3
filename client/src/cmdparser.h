@@ -31,6 +31,7 @@ typedef struct command_s {
 
 // helpers for command_t IsAvailable
 bool AlwaysAvailable(void);
+bool IfClientDebugEnabled(void);
 bool IfPm3Present(void);
 bool IfPm3Rdv4Fw(void);
 bool IfPm3Flash(void);

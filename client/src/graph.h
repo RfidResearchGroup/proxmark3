@@ -25,11 +25,18 @@
 extern "C" {
 #endif
 
+typedef struct {
+    const uint8_t type; //Used for sanity checks
+    const uint32_t *buffer;
+    const size_t   bufferSize;
+    uint32_t offset;
+    uint32_t clock;     //Not used by all buffers
+} buffer_savestate_t;
+
 void AppendGraph(bool redraw, uint16_t clock, int bit);
 size_t ClearGraph(bool redraw);
 bool HasGraphData(void);
 void setGraphBuffer(const uint8_t *src, size_t size);
-void save_restoreGB(uint8_t saveOpt);
 size_t getFromGraphBuffer(uint8_t *dest);
 size_t getFromGraphBufferEx(uint8_t *dest, size_t maxLen);
 size_t getGraphBufferChunk(uint8_t *dest, size_t start, size_t end);
@@ -44,6 +51,13 @@ int GetNrzClock(const char *str, bool verbose);
 int GetFskClock(const char *str, bool verbose);
 bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge);
 
+buffer_savestate_t save_buffer32(uint32_t *src, size_t length);
+buffer_savestate_t save_bufferS32(int32_t *src, size_t length);
+buffer_savestate_t save_buffer8(uint8_t *src, size_t length);
+size_t restore_buffer32(buffer_savestate_t saveState, uint32_t *dest);
+size_t restore_bufferS32(buffer_savestate_t saveState, int32_t *dest);
+size_t restore_buffer8(buffer_savestate_t saveState, uint8_t *dest);
+
 #define MAX_GRAPH_TRACE_LEN (40000 * 32)
 #define GRAPH_SAVE 1
 #define GRAPH_RESTORE 0
@@ -52,7 +66,9 @@ extern int32_t g_GraphBuffer[MAX_GRAPH_TRACE_LEN];
 extern int32_t g_OperationBuffer[MAX_GRAPH_TRACE_LEN];
 extern int32_t g_OverlayBuffer[MAX_GRAPH_TRACE_LEN];
 extern bool    g_useOverlays;
-extern size_t g_GraphTraceLen;
+extern size_t  g_GraphTraceLen;
+
+extern buffer_savestate_t g_saveState_gb;
 
 #ifdef __cplusplus
 }

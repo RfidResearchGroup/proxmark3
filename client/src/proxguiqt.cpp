@@ -337,12 +337,12 @@ void SliderWidget::moveEvent(QMoveEvent *event) {
 //--------------------
 void ProxWidget::applyOperation() {
     //printf("ApplyOperation()");
-    save_restoreGB(GRAPH_SAVE);
+    //g_saveState_gb = save_bufferS32(g_GraphBuffer, g_GraphTraceLen);
     memcpy(g_GraphBuffer, g_OverlayBuffer, sizeof(int) * g_GraphTraceLen);
     RepaintGraphWindow();
 }
 void ProxWidget::stickOperation() {
-    save_restoreGB(GRAPH_RESTORE);
+    //restore_bufferS32(g_saveState_gb, g_GraphBuffer);
     //printf("stickOperation()");
 }
 void ProxWidget::vchange_autocorr(int v) {
