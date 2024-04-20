@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf mfp info` to identify Ev2 (@iceman1001)
 - Updated Graph Markers implementation to include temporary markers and marker labels (@HACKhalo2)
 - Updated to SWIG 4.2.1 (@iceman1001)
 - Removed `data bin2hex` - replaced by `data num`  (@iceman1001)

@@ -25,10 +25,12 @@ typedef enum {
     DESFIRE_MF3ICD40,
     DESFIRE_EV1,
     DESFIRE_EV2,
+    DESFIRE_EV2_XL,
     DESFIRE_EV3,
     DESFIRE_LIGHT,
     PLUS_EV1,
     PLUS_EV2,
+    NTAG413DNA
 } nxp_cardtype_t;
 
 typedef struct mfp_key_item {

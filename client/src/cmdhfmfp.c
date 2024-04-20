@@ -83,23 +83,31 @@ static char *getProtocolStr(uint8_t id, bool hw) {
     return buf;
 }
 
-static char *getVersionStr(uint8_t major, uint8_t minor) {
+static char *getVersionStr(uint8_t type, uint8_t major, uint8_t minor) {
 
     static char buf[40] = {0x00};
     char *retStr = buf;
 
     if (major == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire MF3ICD40") " )", major, minor);
-    else if (major == 0x01 && minor == 0x00)
+    else if (major == 0x10 && minor == 0x00)
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("NTAG413DNA") " )", major, minor);
+    else if (type == 0x01 && major == 0x01 && minor == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV1") " )", major, minor);
-    else if (major == 0x12 && minor == 0x00)
+    else if (type == 0x01 && major == 0x12 && minor == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2") " )", major, minor);
-    else if (major == 0x33 && minor == 0x00)
+    else if (type == 0x01 && major == 0x22 && minor == 0x00)
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2 XL") " )", major, minor);
+    else if (type == 0x01 && major == 0x42 && minor == 0x00)
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2") " )", major, minor);
+    else if (type == 0x01 && major == 0x33 && minor == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV3") " )", major, minor);
-    else if (major == 0x30 && minor == 0x00)
+    else if (type == 0x01 && major == 0x30 && minor == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire Light") " )", major, minor);
-    else if (major == 0x11 && minor == 0x00)
+    else if (type == 0x02 && major == 0x11 && minor == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("Plus EV1") " )", major, minor);
+    else if (type == 0x02 && major == 0x22 && minor == 0x00)
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("Plus EV2") " )", major, minor);
     else
         snprintf(retStr, sizeof(buf), "%x.%x ( " _YELLOW_("Unknown") " )", major, minor);
     return buf;
@@ -129,34 +137,45 @@ static char *getTypeStr(uint8_t type) {
     return buf;
 }
 
-static nxp_cardtype_t getCardType(uint8_t major, uint8_t minor) {
+static nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
 
     // DESFire MF3ICD40
     if (major == 0x00 &&  minor == 0x00)
         return DESFIRE_MF3ICD40;
 
     // DESFire EV1
-    if (major == 0x01 &&  minor == 0x00)
+    if (type == 0x01 && major == 0x01 && minor == 0x00)
         return DESFIRE_EV1;
 
     // DESFire EV2
-    if (major == 0x12 &&  minor == 0x00)
+    if (type == 0x01 && major == 0x12 && minor == 0x00)
+        return DESFIRE_EV2;
+
+    if (type == 0x01 && major == 0x22 && minor == 0x00)
+        return DESFIRE_EV2_XL;
+
+    if (type == 0x01 && major == 0x42 && minor == 0x00)
         return DESFIRE_EV2;
 
     // DESFire EV3
-    if (major == 0x33 &&  minor == 0x00)
+    if (type == 0x01 && major == 0x33 && minor == 0x00)
         return DESFIRE_EV3;
 
     // DESFire Light
-    if (major == 0x30 &&  minor == 0x00)
+    if (type == 0x01 && major == 0x30 && minor == 0x00)
         return DESFIRE_LIGHT;
 
     // Plus EV1
-    if (major == 0x11 &&  minor == 0x00)
+    if (type == 0x02 && major == 0x11 && minor == 0x00)
         return PLUS_EV1;
 
-    if (major == 0x22 &&  minor == 0x00)
+    // Plus Ev2
+    if (type == 0x02 && major == 0x22 && minor == 0x00)
         return PLUS_EV2;
+
+    // NTAG 413 DNA
+    if (major == 0x10 && minor == 0x00)
+        return NTAG413DNA;
 
     return MFP_UNKNOWN;
 }
@@ -244,7 +263,7 @@ static int plus_print_version(uint8_t *version) {
     PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(version[0]));
     PrintAndLogEx(INFO, "          Type: %s", getTypeStr(version[1]));
     PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), version[2]);
-    PrintAndLogEx(INFO, "       Version: %s", getVersionStr(version[3], version[4]));
+    PrintAndLogEx(INFO, "       Version: %s", getVersionStr(version[1], version[3], version[4]));
     PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(version[5]));
     PrintAndLogEx(INFO, "      Protocol: %s", getProtocolStr(version[6], true));
     PrintAndLogEx(NORMAL, "");
@@ -327,17 +346,41 @@ static int CmdHFMFPInfo(const char *Cmd) {
 
         if (supportVersion) {
 
-            int cardtype = getCardType(version[3], version[4]);
-
-            if (cardtype == 6) {
-                if (supportSignature) {
-                    PrintAndLogEx(INFO, "  Tech...... " _GREEN_("MIFARE Plus EV1"));
-                } else {
-                    PrintAndLogEx(INFO, "  Tech...... " _YELLOW_("MIFARE Plus SE/X"));
+            int cardtype = getCardType(version[1], version[3], version[4]);
+            switch(cardtype) {
+                case PLUS_EV1: {
+                    if (supportSignature) {
+                        PrintAndLogEx(INFO, "  Tech...... " _GREEN_("MIFARE Plus EV1"));
+                    } else {
+                        PrintAndLogEx(INFO, "  Tech...... " _YELLOW_("MIFARE Plus SE/X"));
+                    }
+                    isPlus = true;
+                    break;
                 }
-                isPlus = true;
-            } else {
-                PrintAndLogEx(INFO, "  Tech...... Unknown ( " _YELLOW_("%u") " )", cardtype);
+                case PLUS_EV2: {
+                    if (supportSignature) {
+                        PrintAndLogEx(INFO, "  Tech...... " _GREEN_("MIFARE Plus EV2"));
+                    } else {
+                        PrintAndLogEx(INFO, "  Tech...... " _YELLOW_("MIFARE Plus EV2 ???"));
+                    }
+                    isPlus = true;
+                    break;
+                }
+                case DESFIRE_MF3ICD40:
+                case DESFIRE_EV1:
+                case DESFIRE_EV2:
+                case DESFIRE_EV2_XL:
+                case DESFIRE_EV3:
+                case DESFIRE_LIGHT: {
+                    PrintAndLogEx(HINT, "Card seems to be MIFARE DESFire.  Try " _YELLOW_("`hf mfdes info`"));
+                    PrintAndLogEx(NORMAL, "");
+                    DropField();
+                    return PM3_SUCCESS;
+                }
+                default: {
+                    PrintAndLogEx(INFO, "  Tech...... Unknown ( " _YELLOW_("%u") " )", cardtype);
+                    break;
+                }
             }
         }
 
