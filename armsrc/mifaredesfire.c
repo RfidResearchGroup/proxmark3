@@ -158,7 +158,9 @@ void MifareDesfireGetInformation(void) {
 
     // card select - information
     if (!iso14443a_select_card(NULL, &card, NULL, true, 0, false)) {
-        if (g_dbglevel >= DBG_ERROR) DbpString("Can't select card");
+        if (g_dbglevel >= DBG_ERROR) {
+            DbpString("Can't select card");
+        }
         payload.isOK = 1;  // 2 == can not select
         reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
         switch_off();
@@ -183,18 +185,22 @@ void MifareDesfireGetInformation(void) {
     }
 
     if (len < sizeof(payload.versionHW) + 1) {
-        Dbprintf("Tag answer to MFDES_GET_VERSION was too short: data in Hardware Information is probably invalid.");
-        print_result("Answer", resp, len);
-        memset(resp + len, 0xFF, sizeof(payload.versionHW) + 1 - len); // clear remaining bytes
+        payload.isOK = 3;  // 3 == DOESN'T ANSWER TO GET_VERSION
+        reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
+        switch_off();
+        if (g_dbglevel >= DBG_ERROR) {
+            Dbprintf("Tag answer to MFDES_GET_VERSION was too short: data in Hardware Information is probably invalid.");
+            print_result("Answer", resp, len);
+        }
+        return;
     }
 
     memcpy(payload.versionHW, resp + 1, sizeof(payload.versionHW));
 
     // ADDITION_FRAME 1
     cmd[1] = MFDES_ADDITIONAL_FRAME;
-    len =  DesfireAPDU(cmd, cmd_len, resp);
+    len = DesfireAPDU(cmd, cmd_len, resp);
     if (!len) {
-        print_result("ERROR <--: ", resp, len);
         payload.isOK = 3;  // 3 == DOESN'T ANSWER TO GET_VERSION
         reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
         switch_off();
@@ -202,9 +208,14 @@ void MifareDesfireGetInformation(void) {
     }
 
     if (len < sizeof(payload.versionSW) + 1) {
-        Dbprintf("Tag answer to MFDES_ADDITIONAL_FRAME 1 was too short: data in Software Information is probably invalid.");
-        print_result("Answer", resp, len);
-        memset(resp + len, 0xFF, sizeof(payload.versionSW) + 1 - len); // clear remaining bytes
+        payload.isOK = 3;  // 3 == DOESN'T ANSWER TO GET_VERSION
+        reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
+        switch_off();
+        if (g_dbglevel >= DBG_ERROR) {
+            Dbprintf("Tag answer to MFDES_ADDITIONAL_FRAME 1 was too short: data in Software Information is probably invalid.");
+            print_result("Answer", resp, len);
+        }
+        return;
     }
 
     memcpy(payload.versionSW, resp + 1,  sizeof(payload.versionSW));
@@ -212,7 +223,6 @@ void MifareDesfireGetInformation(void) {
     // ADDITION_FRAME 2
     len =  DesfireAPDU(cmd, cmd_len, resp);
     if (!len) {
-        print_result("ERROR <--: ", resp, len);
         payload.isOK = 3;  // 3 == DOESN'T ANSWER TO GET_VERSION
         reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
         switch_off();
@@ -220,16 +230,19 @@ void MifareDesfireGetInformation(void) {
     }
 
     if (len < sizeof(payload.details) + 1) {
-        Dbprintf("Tag answer to MFDES_ADDITIONAL_FRAME 2 was too short: data in Batch number and Production date is probably invalid");
-        print_result("Answer", resp, len);
-        memset(resp + len, 0xFF, sizeof(payload.details) + 1 - len); // clear remaining bytes
+        payload.isOK = 3;  // 3 == DOESN'T ANSWER TO GET_VERSION
+        reply_ng(CMD_HF_DESFIRE_INFO, PM3_ESOFT, (uint8_t *)&payload, sizeof(payload));
+        switch_off();
+        if (g_dbglevel >= DBG_ERROR) {
+            Dbprintf("Tag answer to MFDES_ADDITIONAL_FRAME 2 was too short: data in Batch number and Production date is probably invalid");
+            print_result("Answer", resp, len);
+        }
+        return;
     }
 
     memcpy(payload.details, resp + 1,  sizeof(payload.details));
 
-    LED_B_ON();
     reply_ng(CMD_HF_DESFIRE_INFO, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
-    LED_B_OFF();
 
     // reset the pcb_blocknum,
     pcb_blocknum = 0;

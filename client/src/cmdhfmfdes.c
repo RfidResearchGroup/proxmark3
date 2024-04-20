@@ -146,6 +146,7 @@ typedef enum {
     PLUS_EV1,
     PLUS_EV2,
     NTAG413DNA,
+    NTAG424,
 } nxp_cardtype_t;
 
 typedef enum {
@@ -250,7 +251,7 @@ static char *getVersionStr(uint8_t type, uint8_t major, uint8_t minor) {
     static char buf[40] = {0x00};
     char *retStr = buf;
 
-    if (major == 0x00)
+    if (type == 0x01 && major == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire MF3ICD40") " )", major, minor);
     else if (major == 0x10 && minor == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("NTAG413DNA") " )", major, minor);
@@ -283,17 +284,20 @@ static char *getTypeStr(uint8_t type) {
     char *retStr = buf;
 
     switch (type) {
-        case 1:
+        case 0x01:
             snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("DESFire") " )", type);
             break;
-        case 2:
+        case 0x02:
             snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("Plus") " )", type);
             break;
-        case 3:
+        case 0x03:
             snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("Ultralight") " )", type);
             break;
-        case 4:
+        case 0x04:
             snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("NTAG") " )", type);
+            break;
+        case 0x81:
+            snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("Smartcard") " )", type);
             break;
         default:
             break;
@@ -315,7 +319,7 @@ static const char *getAidCommentStr(uint8_t *aid) {
 static nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
 
     // DESFire MF3ICD40
-    if (major == 0x00 &&  minor == 0x00)
+    if (type == 0x01 && major == 0x00 && minor == 0x02)
         return DESFIRE_MF3ICD40;
 
     // DESFire EV1
@@ -329,16 +333,17 @@ static nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
     if (type == 0x01 && major == 0x22 && minor == 0x00)
         return DESFIRE_EV2_XL;
 
-    if (type == 0x01 && major == 0x42 && minor == 0x00)
-        return DESFIRE_EV2;
-
     // DESFire EV3
     if (type == 0x01 && major == 0x33 && minor == 0x00)
         return DESFIRE_EV3;
 
     // DESFire Light
-    if (type == 0x01 && major == 0x30 && minor == 0x00)
+    if (type == 0x08 && major == 0x30 && minor == 0x00)
         return DESFIRE_LIGHT;
+
+    // combo card DESFire / EMV
+    if (type == 0x81 && major == 0x42 && minor == 0x00)
+        return DESFIRE_EV2;
 
     // Plus EV1
     if (type == 0x02 && major == 0x11 && minor == 0x00)
@@ -351,6 +356,10 @@ static nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
     // NTAG 413 DNA
     if (major == 0x10 && minor == 0x00)
         return NTAG413DNA;
+
+    // NTAG 424
+    if (type == 0x04 && major == 0x30 && minor == 0x00)
+        return NTAG424;
 
     return DESFIRE_UNKNOWN;
 }
@@ -391,9 +400,9 @@ static const char *getProductTypeStr(const uint8_t *versionhw) {
 }
 
 static int mfdes_get_info(mfdes_info_res_t *info) {
-    SendCommandNG(CMD_HF_DESFIRE_INFO, NULL, 0);
-    PacketResponseNG resp;
 
+    PacketResponseNG resp;
+    SendCommandNG(CMD_HF_DESFIRE_INFO, NULL, 0);
     if (WaitForResponseTimeout(CMD_HF_DESFIRE_INFO, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         DropField();
@@ -403,6 +412,7 @@ static int mfdes_get_info(mfdes_info_res_t *info) {
     memcpy(info, resp.data.asBytes, sizeof(mfdes_info_res_t));
 
     if (resp.status != PM3_SUCCESS) {
+
         switch (info->isOK) {
             case 1:
                 PrintAndLogEx(WARNING, "Can't select card");
@@ -713,11 +723,19 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         DropField();
         return PM3_SUCCESS;
     }
+
     if (cardtype == PLUS_EV2) {
         PrintAndLogEx(INFO, "Card seems to be MIFARE Plus EV2.  Try " _YELLOW_("`hf mfp info`"));
         DropField();
         return PM3_SUCCESS;
     }
+
+    if (cardtype == NTAG424) {
+        PrintAndLogEx(INFO, "Card seems to be NTAG 424.  Try " _YELLOW_("`hf ntag424 info`"));
+        DropField();
+        return PM3_SUCCESS;
+    }
+
     if (cardtype == DESFIRE_UNKNOWN) {
         PrintAndLogEx(INFO, "HW Version.. %s", sprint_hex_inrow(info.versionHW, sizeof(info.versionHW)));
         PrintAndLogEx(INFO, "SW Version.. %s", sprint_hex_inrow(info.versionSW, sizeof(info.versionSW)));

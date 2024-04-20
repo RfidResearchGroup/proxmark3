@@ -88,7 +88,7 @@ static char *getVersionStr(uint8_t type, uint8_t major, uint8_t minor) {
     static char buf[40] = {0x00};
     char *retStr = buf;
 
-    if (major == 0x00)
+    if (type == 0x01 && major == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire MF3ICD40") " )", major, minor);
     else if (major == 0x10 && minor == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("NTAG413DNA") " )", major, minor);
@@ -119,17 +119,20 @@ static char *getTypeStr(uint8_t type) {
     char *retStr = buf;
 
     switch (type) {
-        case 1:
+        case 0x01:
             snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("DESFire") " )", type);
             break;
-        case 2:
+        case 0x02:
             snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("Plus") " )", type);
             break;
-        case 3:
+        case 0x03:
             snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("Ultralight") " )", type);
             break;
-        case 4:
+        case 0x04:
             snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("NTAG") " )", type);
+            break;
+        case 0x81:
+            snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("Smartcard") " )", type);
             break;
         default:
             break;
@@ -140,7 +143,7 @@ static char *getTypeStr(uint8_t type) {
 static nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
 
     // DESFire MF3ICD40
-    if (major == 0x00 &&  minor == 0x00)
+    if (type == 0x01 && major == 0x00 && minor == 0x02)
         return DESFIRE_MF3ICD40;
 
     // DESFire EV1
@@ -154,16 +157,17 @@ static nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
     if (type == 0x01 && major == 0x22 && minor == 0x00)
         return DESFIRE_EV2_XL;
 
-    if (type == 0x01 && major == 0x42 && minor == 0x00)
-        return DESFIRE_EV2;
-
     // DESFire EV3
     if (type == 0x01 && major == 0x33 && minor == 0x00)
         return DESFIRE_EV3;
 
     // DESFire Light
-    if (type == 0x01 && major == 0x30 && minor == 0x00)
+    if (type == 0x08 && major == 0x30 && minor == 0x00)
         return DESFIRE_LIGHT;
+
+    // combo card DESFire / EMV
+    if (type == 0x81 && major == 0x42 && minor == 0x00)
+        return DESFIRE_EV2;
 
     // Plus EV1
     if (type == 0x02 && major == 0x11 && minor == 0x00)
@@ -174,8 +178,12 @@ static nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
         return PLUS_EV2;
 
     // NTAG 413 DNA
-    if (major == 0x10 && minor == 0x00)
+    if (type == 0x04 && major == 0x10 && minor == 0x00)
         return NTAG413DNA;
+
+    // NTAG 424
+    if (type == 0x04 && major == 0x30 && minor == 0x00)
+        return NTAG424;
 
     return MFP_UNKNOWN;
 }
@@ -350,18 +358,18 @@ static int CmdHFMFPInfo(const char *Cmd) {
             switch(cardtype) {
                 case PLUS_EV1: {
                     if (supportSignature) {
-                        PrintAndLogEx(INFO, "  Tech...... " _GREEN_("MIFARE Plus EV1"));
+                        PrintAndLogEx(INFO, "Tech..... " _GREEN_("MIFARE Plus EV1"));
                     } else {
-                        PrintAndLogEx(INFO, "  Tech...... " _YELLOW_("MIFARE Plus SE/X"));
+                        PrintAndLogEx(INFO, "Tech..... " _YELLOW_("MIFARE Plus SE/X"));
                     }
                     isPlus = true;
                     break;
                 }
                 case PLUS_EV2: {
                     if (supportSignature) {
-                        PrintAndLogEx(INFO, "  Tech...... " _GREEN_("MIFARE Plus EV2"));
+                        PrintAndLogEx(INFO, "Tech..... " _GREEN_("MIFARE Plus EV2"));
                     } else {
-                        PrintAndLogEx(INFO, "  Tech...... " _YELLOW_("MIFARE Plus EV2 ???"));
+                        PrintAndLogEx(INFO, "Tech..... " _YELLOW_("MIFARE Plus EV2 ???"));
                     }
                     isPlus = true;
                     break;
@@ -378,7 +386,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
                     return PM3_SUCCESS;
                 }
                 default: {
-                    PrintAndLogEx(INFO, "  Tech...... Unknown ( " _YELLOW_("%u") " )", cardtype);
+                    PrintAndLogEx(INFO, "Tech..... Unknown ( " _YELLOW_("%u") " )", cardtype);
                     break;
                 }
             }
@@ -389,37 +397,37 @@ static int CmdHFMFPInfo(const char *Cmd) {
         uint16_t ATQA = card.atqa[0] + (card.atqa[1] << 8);
 
         if (ATQA & 0x0004) {
-            PrintAndLogEx(INFO, " Size....... " _GREEN_("2K") " (%s UID)", (ATQA & 0x0040) ? "7" : "4");
+            PrintAndLogEx(INFO, "Size..... " _GREEN_("2K") " (%s UID)", (ATQA & 0x0040) ? "7" : "4");
             isPlus = true;
         }
         if (ATQA & 0x0002) {
-            PrintAndLogEx(INFO, "  Size....... " _GREEN_("4K") " (%s UID)", (ATQA & 0x0040) ? "7" : "4");
+            PrintAndLogEx(INFO, "Size..... " _GREEN_("4K") " (%s UID)", (ATQA & 0x0040) ? "7" : "4");
             isPlus = true;
         }
 
         uint8_t SLmode = 0xFF;
         if (isPlus) {
             if (card.sak == 0x08) {
-                PrintAndLogEx(INFO, "  SAK....... " _GREEN_("2K 7b UID"));
+                PrintAndLogEx(INFO, "SAK...... " _GREEN_("2K 7b UID"));
                 if (select_status == 2) SLmode = 1;
             }
             if (card.sak == 0x18) {
-                PrintAndLogEx(INFO, "  SAK....... " _GREEN_("4K 7b UID"));
+                PrintAndLogEx(INFO, "SAK...... " _GREEN_("4K 7b UID"));
                 if (select_status == 2) SLmode = 1;
             }
             if (card.sak == 0x10) {
-                PrintAndLogEx(INFO, "  SAK....... " _GREEN_("2K"));
+                PrintAndLogEx(INFO, "SAK...... " _GREEN_("2K"));
                 if (select_status == 2) SLmode = 2;
             }
             if (card.sak == 0x11) {
-                PrintAndLogEx(INFO, "  SAK....... " _GREEN_("4K"));
+                PrintAndLogEx(INFO, "SAK...... " _GREEN_("4K"));
                 if (select_status == 2) SLmode = 2;
             }
         }
 
         if (card.sak == 0x20) {
             if (card.ats_len > 0) {
-                PrintAndLogEx(INFO, "  SAK....... " _GREEN_("MIFARE Plus SL0/SL3") " or " _GREEN_("MIFARE DESFire"));
+                PrintAndLogEx(INFO, "SAK...... " _GREEN_("MIFARE Plus SL0/SL3") " or " _GREEN_("MIFARE DESFire"));
                 SLmode = 3;
                 // check SL0
                 uint8_t data[128] = {0};
@@ -428,7 +436,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
                 uint8_t cmd[3 + 16] = {0xa8, 0x90, 0x90, 0x00};
                 int res = ExchangeRAW14a(cmd, sizeof(cmd), true, false, data, sizeof(data), &datalen, false);
                 if (res != PM3_SUCCESS) {
-                    PrintAndLogEx(INFO, "identification failed");
+                    PrintAndLogEx(INFO, "Identification failed");
                     PrintAndLogEx(NORMAL, "");
                     DropField();
                     return PM3_SUCCESS;
@@ -445,14 +453,14 @@ static int CmdHFMFPInfo(const char *Cmd) {
                     data[0] != 0x6E) {
 
                     PrintAndLogEx(INFO, _RED_("Send copy to iceman of this command output!"));
-                    PrintAndLogEx(INFO, "data: %s", sprint_hex(data, datalen));
+                    PrintAndLogEx(INFO, "Data... %s", sprint_hex(data, datalen));
                 }
 
                 if ((memcmp(data, "\x67\x00", 2) == 0) ||   // wrong length
                         (memcmp(data, "\x1C\x83\x0C", 3) == 0)  // desfire answers
                    ) {
-                    PrintAndLogEx(INFO, "  result.... " _RED_("MIFARE DESFire"));
-                    PrintAndLogEx(HINT, "Hint:  Try " _YELLOW_("`hf mfdes info`"));
+                    PrintAndLogEx(INFO, "Result... " _RED_("MIFARE DESFire"));
+                    PrintAndLogEx(NORMAL, "");
                     DropField();
                     return PM3_SUCCESS;
 
@@ -461,11 +469,10 @@ static int CmdHFMFPInfo(const char *Cmd) {
 //                } else if (memcmp(data, "\x6E\x00", 2) == 0) {  // Class not supported
                     isPlus = false;
                 } else {
-                    PrintAndLogEx(INFO, "  result.... " _GREEN_("MIFARE Plus SL0/SL3"));
+                    PrintAndLogEx(INFO, "Result... " _GREEN_("MIFARE Plus SL0/SL3"));
                 }
 
-                if ((datalen > 1) &&
-                        (data[0] == 0x09)) {
+                if ((datalen > 1) && (data[0] == 0x09)) {
                     SLmode = 0;
                 }
             }
@@ -477,29 +484,29 @@ static int CmdHFMFPInfo(const char *Cmd) {
             PrintAndLogEx(INFO, "--- " _CYAN_("Security Level (SL)"));
 
             if (SLmode != 0xFF)
-                PrintAndLogEx(SUCCESS, "  SL mode... " _YELLOW_("SL%d"), SLmode);
+                PrintAndLogEx(SUCCESS, "SL mode... " _YELLOW_("SL%d"), SLmode);
             else
-                PrintAndLogEx(WARNING, "  SL mode... " _YELLOW_("unknown"));
+                PrintAndLogEx(WARNING, "SL mode... " _YELLOW_("unknown"));
 
             switch (SLmode) {
                 case 0:
-                    PrintAndLogEx(INFO, "  SL 0: initial delivery configuration, used for card personalization");
+                    PrintAndLogEx(INFO, "SL 0: initial delivery configuration, used for card personalization");
                     break;
                 case 1:
-                    PrintAndLogEx(INFO, "  SL 1: backwards functional compatibility mode (with MIFARE Classic 1K / 4K) with an optional AES authentication");
+                    PrintAndLogEx(INFO, "SL 1: backwards functional compatibility mode (with MIFARE Classic 1K / 4K) with an optional AES authentication");
                     break;
                 case 2:
-                    PrintAndLogEx(INFO, "  SL 2: 3-Pass Authentication based on AES followed by MIFARE CRYPTO1 authentication, communication secured by MIFARE CRYPTO1");
+                    PrintAndLogEx(INFO, "SL 2: 3-Pass Authentication based on AES followed by MIFARE CRYPTO1 authentication, communication secured by MIFARE CRYPTO1");
                     break;
                 case 3:
-                    PrintAndLogEx(INFO, "  SL 3: 3-Pass authentication based on AES, data manipulation commands secured by AES encryption and an AES based MACing method.");
+                    PrintAndLogEx(INFO, "SL 3: 3-Pass authentication based on AES, data manipulation commands secured by AES encryption and an AES based MACing method.");
                     break;
                 default:
                     break;
             }
         }
     } else {
-        PrintAndLogEx(INFO, "   Mifare Plus info not available");
+        PrintAndLogEx(INFO, "MIFARE Plus info not available");
     }
     PrintAndLogEx(NORMAL, "");
     DropField();
