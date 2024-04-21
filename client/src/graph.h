@@ -68,6 +68,8 @@ extern int32_t g_OverlayBuffer[MAX_GRAPH_TRACE_LEN];
 extern bool    g_useOverlays;
 extern size_t  g_GraphTraceLen;
 
+extern double g_GridOffset;
+
 extern buffer_savestate_t g_saveState_gb;
 
 #ifdef __cplusplus

@@ -90,6 +90,7 @@ int demodTI(bool verbose) {
     };
 
     buffer_savestate_t saveState = save_bufferS32(g_GraphBuffer, g_GraphTraceLen);
+    saveState.offset = g_GridOffset;
 
     int lowLen = ARRAYLEN(LowTone);
     int highLen = ARRAYLEN(HighTone);
@@ -276,8 +277,10 @@ int demodTI(bool verbose) {
     }
 
 out:
-    if (retval != PM3_SUCCESS)
+    if (retval != PM3_SUCCESS) {
         restore_bufferS32(saveState, g_GraphBuffer);
+        g_GridOffset = saveState.offset;
+    }
 
     return retval;
 }

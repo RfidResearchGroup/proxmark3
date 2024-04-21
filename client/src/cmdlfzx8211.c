@@ -42,6 +42,7 @@ static int CmdHelp(const char *Cmd);
 int demodzx(bool verbose) {
     (void) verbose; // unused so far
     buffer_savestate_t saveState = save_bufferS32(g_GraphBuffer, g_GraphTraceLen);
+    saveState.offset = g_GridOffset;
 
     // CmdAskEdgeDetect("");
 
@@ -50,6 +51,7 @@ int demodzx(bool verbose) {
     if (ASKDemod_ext(64, 0, 0, 0, false, false, false, 1, &st) != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - ZX: ASK/Manchester Demod failed");
         restore_bufferS32(saveState, g_GraphBuffer);
+        g_GridOffset = saveState.offset;
         return PM3_ESOFT;
     }
     size_t size = g_DemodBufferLen;
@@ -65,6 +67,7 @@ int demodzx(bool verbose) {
             PrintAndLogEx(DEBUG, "DEBUG: Error - ZX: ans: %d", ans);
 
         restore_bufferS32(saveState, g_GraphBuffer);
+        g_GridOffset = saveState.offset;
         return PM3_ESOFT;
     }
     setDemodBuff(g_DemodBuffer, 96, ans);

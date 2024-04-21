@@ -2711,6 +2711,7 @@ static int try_detect_modulation(void) {
         if (clk > 0) {
             // allow undo
             buffer_savestate_t saveState = save_bufferS32(g_GraphBuffer, g_GraphTraceLen);
+            saveState.offset = g_GridOffset;
             // skip first 160 samples to allow antenna to settle in (psk gets inverted occasionally otherwise)
             CmdLtrim("-i 160");
             if ((PSKDemod(0, 0, 6, false) == PM3_SUCCESS)) {
@@ -2723,6 +2724,7 @@ static int try_detect_modulation(void) {
             }
             //undo trim samples
             restore_bufferS32(saveState, g_GraphBuffer);
+            g_GridOffset = saveState.offset;
         }
     }
 
