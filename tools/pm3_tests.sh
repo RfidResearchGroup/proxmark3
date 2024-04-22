@@ -528,13 +528,13 @@ while true; do
       if ! CheckExecute "hf mf offline text"               "$CLIENTBIN -c 'hf mf'" "content from tag dump file"; then break; fi
       if ! CheckExecute slow retry ignore "hf mf hardnested long test"  "$CLIENTBIN -c 'hf mf hardnested -t --tk 000000000000'" "found:"; then break; fi
       if ! CheckExecute slow "hf iclass loclass long test" "$CLIENTBIN -c 'hf iclass loclass --long'" "verified \( ok \)"; then break; fi
-      if ! CheckExecute slow "emv long test"               "$CLIENTBIN -c 'emv test -l'" "Test\(s\) \[ ok"; then break; fi
+      if ! CheckExecute slow "emv long test"               "$CLIENTBIN -c 'emv test -l'" "Tests \( ok"; then break; fi
       if ! CheckExecute "hf iclass lookup test"            "$CLIENTBIN -c 'hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f $DICPATH/iclass_default_keys.dic'" \
                                                                 "valid key AE A6 84 A6 DA B2 32 78"; then break; fi
       if ! CheckExecute "hf iclass loclass test"         "$CLIENTBIN -c 'hf iclass loclass --test'" "key diversification \( ok \)"; then break; fi
-      if ! CheckExecute "emv test"                       "$CLIENTBIN -c 'emv test'" "Test\(s\) \[ ok"; then break; fi
-      if ! CheckExecute "hf cipurse test"                "$CLIENTBIN -c 'hf cipurse test'" "Tests \[ ok"; then break; fi
-      if ! CheckExecute "hf mfdes test"                  "$CLIENTBIN -c 'hf mfdes test'"   "Tests \[ ok"; then break; fi
+      if ! CheckExecute "emv test"                       "$CLIENTBIN -c 'emv test'" "Tests \( ok"; then break; fi
+      if ! CheckExecute "hf cipurse test"                "$CLIENTBIN -c 'hf cipurse test'" "Tests \( ok"; then break; fi
+      if ! CheckExecute "hf mfdes test"                  "$CLIENTBIN -c 'hf mfdes test'"   "Tests \( ok"; then break; fi
       if ! CheckExecute "hf waveshare load"              "$CLIENTBIN -c 'hf waveshare load -m 6 -f tools/lena.bmp -s dither.bmp' && echo '34ff55fe7257876acf30dae00eb0e439 dither.bmp' | md5sum -c" "dither.bmp: OK"; then break; fi
     fi
   echo -e "\n------------------------------------------------------------"
