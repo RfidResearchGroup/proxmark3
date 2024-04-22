@@ -127,34 +127,38 @@ void des3_decrypt(void *out, const void *in, const void *key, uint8_t keycount) 
 // NIST Special Publication 800-38A — Recommendation for block cipher modes of operation: methods and techniques, 2001.
 int aes_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length) {
     uint8_t iiv[16] = {0};
-    if (iv)
+    if (iv) {
         memcpy(iiv, iv, 16);
+    }
 
     mbedtls_aes_context aes;
     mbedtls_aes_init(&aes);
-    if (mbedtls_aes_setkey_enc(&aes, key, 128))
+    if (mbedtls_aes_setkey_enc(&aes, key, 128)) {
         return 1;
-    if (mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_ENCRYPT, length, iiv, input, output))
+    }
+    if (mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_ENCRYPT, length, iiv, input, output)) {
         return 2;
+    }
     mbedtls_aes_free(&aes);
-
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int aes_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length) {
     uint8_t iiv[16] = {0};
-    if (iv)
+    if (iv) {
         memcpy(iiv, iv, 16);
+    }
 
     mbedtls_aes_context aes;
     mbedtls_aes_init(&aes);
-    if (mbedtls_aes_setkey_dec(&aes, key, 128))
+    if (mbedtls_aes_setkey_dec(&aes, key, 128)) {
         return 1;
-    if (mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_DECRYPT, length, iiv, input, output))
+    }
+    if (mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_DECRYPT, length, iiv, input, output)) {
         return 2;
+    }
     mbedtls_aes_free(&aes);
-
-    return 0;
+    return PM3_SUCCESS;
 }
 
 // NIST Special Publication 800-38B — Recommendation for block cipher modes of operation: The CMAC mode for authentication.
@@ -171,13 +175,14 @@ int aes_cmac8(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *mac, int lengt
     memset(mac, 0x00, 8);
 
     int res = aes_cmac(iv, key, input, cmac_tmp, length);
-    if (res)
+    if (res) {
         return res;
+    }
 
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 8; i++) {
         mac[i] = cmac_tmp[i * 2 + 1];
-
-    return 0;
+    }
+    return PM3_SUCCESS;
 }
 
 static uint8_t fixed_rand_value[250] = {0};
@@ -188,21 +193,23 @@ static int fixed_rand(void *rng_state, unsigned char *output, size_t len) {
         memset(output, 0x00, len);
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int sha1hash(uint8_t *input, int length, uint8_t *hash) {
-    if (!hash || !input)
+    if (!hash || !input) {
         return 1;
+    }
 
     mbedtls_sha1(input, length, hash);
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int sha256hash(uint8_t *input, int length, uint8_t *hash) {
-    if (!hash || !input)
+    if (!hash || !input) {
         return 1;
+    }
 
     mbedtls_sha256_context sctx;
     mbedtls_sha256_init(&sctx);
@@ -211,12 +218,13 @@ int sha256hash(uint8_t *input, int length, uint8_t *hash) {
     mbedtls_sha256_finish(&sctx, hash);
     mbedtls_sha256_free(&sctx);
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int sha512hash(uint8_t *input, int length, uint8_t *hash) {
-    if (!hash || !input)
+    if (!hash || !input) {
         return 1;
+    }
 
     mbedtls_sha512_context sctx;
     mbedtls_sha512_init(&sctx);
@@ -225,33 +233,35 @@ int sha512hash(uint8_t *input, int length, uint8_t *hash) {
     mbedtls_sha512_finish(&sctx, hash);
     mbedtls_sha512_free(&sctx);
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int ecdsa_init_str(mbedtls_ecdsa_context *ctx,  mbedtls_ecp_group_id curveid, const char *key_d, const char *key_x, const char *key_y) {
-    if (!ctx)
+    if (!ctx) {
         return 1;
-
-    int res;
+    }
 
     mbedtls_ecdsa_init(ctx);
-    res = mbedtls_ecp_group_load(&ctx->grp, curveid);
-    if (res)
+    int res = mbedtls_ecp_group_load(&ctx->grp, curveid);
+    if (res) {
         return res;
+    }
 
     if (key_d) {
         res = mbedtls_mpi_read_string(&ctx->d, 16, key_d);
-        if (res)
+        if (res) {
             return res;
+        }
     }
 
     if (key_x && key_y) {
         res = mbedtls_ecp_point_read_string(&ctx->Q, 16, key_x, key_y);
-        if (res)
+        if (res) {
             return res;
+        }
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 static int ecdsa_init(mbedtls_ecdsa_context *ctx, mbedtls_ecp_group_id curveid, uint8_t *key_d, uint8_t *key_xy) {
@@ -278,7 +288,7 @@ static int ecdsa_init(mbedtls_ecdsa_context *ctx, mbedtls_ecp_group_id curveid, 
             return res;
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int ecdsa_key_create(mbedtls_ecp_group_id curveid, uint8_t *key_d, uint8_t *key_xy) {
@@ -519,8 +529,9 @@ int ecdsa_nist_test(bool verbose) {
     size_t siglen = 0;
 
     // NIST ecdsa test
-    if (verbose)
-        PrintAndLogEx(INFO, "  ECDSA NIST test: " NOLF);
+    if (verbose) {
+        PrintAndLogEx(INFO, "ECDSA NIST test " NOLF);
+    }
     // make signature
     res = ecdsa_signature_create_test(curveid, T_PRIVATE_KEY, T_Q_X, T_Q_Y, T_K, input, length, signature, &siglen);
 // PrintAndLogEx(INFO, "res: %x signature[%x]: %s", (res < 0)? -res : res, siglen, sprint_hex(signature, siglen));
@@ -540,15 +551,16 @@ int ecdsa_nist_test(bool verbose) {
     uint8_t sval_s[33] = {0};
     param_gethex_to_eol(T_S, 0, sval_s, sizeof(sval_s), &slen);
     if (strncmp((char *)rval, (char *)rval_s, 32) || strncmp((char *)sval, (char *)sval_s, 32)) {
-        PrintAndLogEx(INFO, "R or S check error");
+        PrintAndLogEx(NORMAL, "( " _RED_("R or S check error") " )");
         res = 100;
         goto exit;
     }
 
     // verify signature
     res = ecdsa_signature_verify_keystr(curveid, T_Q_X, T_Q_Y, input, length, signature, siglen, true);
-    if (res)
+    if (res) {
         goto exit;
+    }
 
     // verify wrong signature
     input[0] ^= 0xFF;
@@ -559,8 +571,8 @@ int ecdsa_nist_test(bool verbose) {
     }
 
     if (verbose) {
-        PrintAndLogEx(NORMAL, _GREEN_("passed"));
-        PrintAndLogEx(INFO, "  ECDSA binary signature create/check test: " NOLF);
+        PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
+        PrintAndLogEx(INFO, "ECDSA binary signature create/check test " NOLF);
     }
 
     // random ecdsa test
@@ -587,12 +599,12 @@ int ecdsa_nist_test(bool verbose) {
         goto exit;
 
     if (verbose)
-        PrintAndLogEx(NORMAL, _GREEN_("passed\n"));
+        PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
 
     return PM3_SUCCESS;
 exit:
     if (verbose)
-        PrintAndLogEx(NORMAL, _RED_("failed\n"));
+        PrintAndLogEx(NORMAL, "( " _RED_("fail") " )");
     return res;
 }
 

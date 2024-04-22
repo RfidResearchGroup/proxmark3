@@ -39,37 +39,28 @@ typedef enum {
     RHT2F_UID_ONLY            = 26,
     WHT2F_PASSWORD            = 27,
     HT2_LAST_CMD              = WHT2F_PASSWORD,
-} hitag_function;
+} PACKED hitag_function;
 
 typedef struct {
-    uint8_t password[4];
-} PACKED rht2d_password;
-
-typedef struct {
+    hitag_function cmd;
+    int16_t page;
+    uint8_t data[4];
     uint8_t NrAr[8];
-    uint8_t data[4];
-} PACKED rht2d_authenticate;
-
-typedef struct {
     uint8_t key[6];
-    uint8_t data[4];
-} PACKED rht2d_crypto;
+    uint8_t pwd[4];
 
-typedef struct {
+    // Hitag 1 section.
+    // will reuse pwd or key field.
     uint8_t key_no;
     uint8_t logdata_0[4];
     uint8_t logdata_1[4];
     uint8_t nonce[4];
-    uint8_t key[4];
-} PACKED rht1d_authenticate;
+} PACKED lf_hitag_data_t;
 
-typedef union {
-    rht2d_password     pwd;
-    rht1d_authenticate ht1auth;
-    rht2d_authenticate auth;
-    rht2d_crypto       crypto;
-} hitag_data;
-
+typedef struct {
+    int status;
+    uint8_t data[48];
+} PACKED lf_hitag_crack_response_t;
 
 //---------------------------------------------------------
 // Hitag S

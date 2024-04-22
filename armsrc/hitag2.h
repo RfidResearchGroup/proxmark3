@@ -23,8 +23,12 @@
 #include "hitag.h"
 
 void SniffHitag2(bool ledcontrol);
+void hitag_sniff(void);
 void SimulateHitag2(bool ledcontrol);
-void ReaderHitag(hitag_function htf, const hitag_data *htd, bool ledcontrol);
-void WriterHitag(hitag_function htf, const hitag_data *htd, int page, bool ledcontrol);
-void EloadHitag(const uint8_t *data, uint16_t len);
+void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol);
+void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol);
+
+bool ht2_packbits(uint8_t *nrz_samples, size_t nrzs, uint8_t *rx, size_t *rxlen);
+int ht2_read_uid(uint8_t *uid, bool ledcontrol, bool send_answer, bool keep_field_up);
+int ht2_tx_rx(uint8_t *tx, size_t txlen, uint8_t *rx, size_t *rxlen, bool ledcontrol, bool keep_field_up);
 #endif

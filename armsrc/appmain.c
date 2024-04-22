@@ -40,6 +40,7 @@
 #include "thinfilm.h"
 #include "felica.h"
 #include "hitag2.h"
+#include "hitag2_crack.h"
 #include "hitagS.h"
 #include "em4x50.h"
 #include "em4x70.h"
@@ -1131,16 +1132,32 @@ static void PacketReceived(PacketCommandNG *packet) {
 #ifdef WITH_HITAG
         case CMD_LF_HITAG_SNIFF: { // Eavesdrop Hitag tag, args = type
             SniffHitag2(true);
-//            SniffHitag2(packet->oldarg[0]);
+            //hitag_sniff();
             reply_ng(CMD_LF_HITAG_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }
         case CMD_LF_HITAG_SIMULATE: { // Simulate Hitag tag, args = memory content
             SimulateHitag2(true);
+            break;        
+        }
+        case CMD_LF_HITAG2_CRACK: {
+            lf_hitag_data_t *payload = (lf_hitag_data_t *) packet->data.asBytes;
+            ht2_crack(payload->NrAr);
             break;
         }
         case CMD_LF_HITAG_READER: { // Reader for Hitag tags, args = type and function
-            ReaderHitag((hitag_function)packet->oldarg[0], (hitag_data *)packet->data.asBytes, true);
+            lf_hitag_data_t *payload = (lf_hitag_data_t *) packet->data.asBytes;
+
+            switch (payload->cmd) {
+                case RHT2F_UID_ONLY: {
+                    ht2_read_uid(NULL, true, true, false);
+                    break;
+                }
+                default: {
+                    ReaderHitag(payload, true);
+                    break;
+                }
+            }
             break;
         }
         case CMD_LF_HITAGS_SIMULATE: { // Simulate Hitag s tag, args = memory content
@@ -1148,25 +1165,28 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_HITAGS_TEST_TRACES: { // Tests every challenge within the given file
-            Hitag_check_challenges(packet->data.asBytes, packet->oldarg[0], true);
+            Hitag_check_challenges(packet->data.asBytes, packet->length, true);
             break;
         }
-        case CMD_LF_HITAGS_READ: { //Reader for only Hitag S tags, args = key or challenge
-            ReadHitagS((hitag_function)packet->oldarg[0], (hitag_data *)packet->data.asBytes, true);
+        case CMD_LF_HITAGS_READ: { // Reader for only Hitag S tags, args = key or challenge
+            lf_hitag_data_t *payload = (lf_hitag_data_t *) packet->data.asBytes;
+            ReadHitagS(payload, true);
             break;
         }
-        case CMD_LF_HITAGS_WRITE: { //writer for Hitag tags args=data to write,page and key or challenge
-            if ((hitag_function)packet->oldarg[0] < 10) {
-                WritePageHitagS((hitag_function)packet->oldarg[0], (hitag_data *)packet->data.asBytes, packet->oldarg[2], true);
-            } else {
-                WriterHitag((hitag_function)packet->oldarg[0], (hitag_data *)packet->data.asBytes, packet->oldarg[2], true);
-            }
+        case CMD_LF_HITAGS_WRITE: {
+            lf_hitag_data_t *payload = (lf_hitag_data_t *) packet->data.asBytes;
+            WritePageHitagS(payload, true);
+            break;
+        }
+        case CMD_LF_HITAG2_WRITE: {
+            lf_hitag_data_t *payload = (lf_hitag_data_t *) packet->data.asBytes;
+            WriterHitag(payload, true);
             break;
         }
         case CMD_LF_HITAG_ELOAD: {
             lf_hitag_t *payload = (lf_hitag_t *) packet->data.asBytes;
             uint8_t *mem = BigBuf_get_EM_addr();
-            memcpy((uint8_t *)mem, payload->data, payload->len);
+            memcpy(mem, payload->data, payload->len);
             break;
         }
 #endif

@@ -22,6 +22,7 @@
 #include "common.h"
 
 
+#define HITAG_NRAR_SIZE         8
 #define HITAG_CRYPTOKEY_SIZE    6
 #define HITAG_PASSWORD_SIZE     4
 #define HITAG_UID_SIZE          4
@@ -37,16 +38,18 @@
 
 #define HITAG2_CONFIG_BLOCK     3
 #define HITAG2_CONFIG_OFFSET    (HITAG_BLOCK_SIZE * HITAG2_CONFIG_BLOCK)
+#define HITAG_DICTIONARY        "ht2_default"
 
 int CmdLFHitag(const char *Cmd);
 
 int readHitagUid(void);
 void annotateHitag1(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response);
-void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, uint8_t bits, bool is_response);
+void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, uint8_t bits, bool is_response, const uint64_t *keys, uint32_t keycount, bool isdecrypted);
 void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response);
 
 void annotateHitag2_init(void);
-
+bool hitag2_get_plain(uint8_t *plain,  uint8_t *plen);
+void hitag2_annotate_plain(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, uint8_t bits);
 
 uint8_t hitag1_CRC_check(uint8_t *d, uint32_t nbit);
 #endif

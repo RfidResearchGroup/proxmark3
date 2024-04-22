@@ -127,6 +127,17 @@ extern bool g_tearoff_enabled;
 #endif
 #endif
 
+// endian change for 48bit
+#ifndef BSWAP_48
+#define BSWAP_48(x) \
+     (((uint64_t)(x) << 40) & 0x0000ff0000000000ULL) | \
+     (((uint64_t)(x) << 24) & 0x000000ff00000000ULL) | \
+     (((uint64_t)(x) << 8)  & 0x00000000ff000000ULL) | \
+     (((uint64_t)(x) >> 8)  & 0x000000000ff0000ULL) | \
+     (((uint64_t)(x) >> 24) & 0x00000000000ff00ULL) | \
+     (((uint64_t)(x) >> 40) & 0x0000000000000ffULL)
+#endif
+
 // endian change for 32bit
 #ifdef __GNUC__
 #ifndef BSWAP_32
