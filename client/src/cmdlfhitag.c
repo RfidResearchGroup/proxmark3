@@ -776,7 +776,7 @@ static bool getHitag2Uid(uint32_t *uid) {
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HITAG_READER, (uint8_t *) &packet, sizeof(packet));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_LF_HITAG_READER, &resp, 2500) == false) {
+    if (WaitForResponseTimeout(CMD_LF_HITAG_READER, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return false;
     }
@@ -817,7 +817,7 @@ static int CmdLFHitagInfo(const char *Cmd) {
     // read block3,  get configuration byte.
 
     // common configurations.
-    // print_hitag2_configuration(uid, 0x06);   // pwd mode enabled / AM
+    print_hitag2_configuration(uid, 0x06);   // pwd mode enabled / AM
     // print_hitag2_configuration(uid,  0x0E);  // crypto mode enabled / AM
     // print_hitag2_configuration(uid,  0x02);
     // print_hitag2_configuration(uid,  0x00);
