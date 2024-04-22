@@ -3,8 +3,14 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+
 - Removed `save_restoreDB` - replaced by `buffer_savestate_t` implementation (@HACKhalo2)
 - Removed `save_restoreGB` - replaced by `buffer_savestate_t` implementation (@HACKhalo2)
+- Updated windows workflow to use latest setup-wsl script (@iceman1001)
+- Added a micro second clock in the client (@iceman1001)
+- Fix `hf mfdes read` - buffer overflow when reading large files (@iceman1001)
+- Changed `hf 15 csetuid` - now supports gen2 command. Thanks @whywilson! (@iceman1001)
+- Changed `hf mfp info` - to identify Ev2 (@iceman1001)
 - Updated Graph Markers implementation to include temporary markers and marker labels (@HACKhalo2)
 - Updated to SWIG 4.2.1 (@iceman1001)
 - Removed `data bin2hex` - replaced by `data num`  (@iceman1001)
