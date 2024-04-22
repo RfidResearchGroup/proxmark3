@@ -309,17 +309,20 @@ static uint hitag2_nstep2 (ulong state, ulong lfsr)
 	return result;
 }
 
-inline static int bitn(ulong x, int bit)
-{
+inline static int bitn(ulong x, int bit) {
 	const ulong bitmask = 1UL << bit;
 	return (x & bitmask) ? 1 : 0;
 }
 
-static int fnR (ulong x)
-{
-	return (bitn(x, 1) ^ bitn(x, 2) ^ bitn(x, 5) ^ bitn(x, 6) ^ bitn(x, 7) ^
-		bitn(x, 15) ^ bitn(x, 21) ^ bitn(x, 22) ^ bitn(x, 25) ^ bitn(x, 29) ^ bitn(x, 40) ^
-		bitn(x, 41) ^ bitn(x, 42) ^ bitn(x, 45) ^ bitn(x, 46) ^ bitn(x, 47));
+static int fnR (ulong x) {
+	return (
+		bitn(x, 1) ^ bitn(x, 2) ^ bitn(x, 5) ^ 
+		bitn(x, 6) ^ bitn(x, 7) ^ bitn(x, 15) ^ 
+		bitn(x, 21) ^ bitn(x, 22) ^ bitn(x, 25) ^ 
+		bitn(x, 29) ^ bitn(x, 40) ^	bitn(x, 41) ^ 
+		bitn(x, 42) ^ bitn(x, 45) ^ bitn(x, 46) ^
+		bitn(x, 47)
+	);
 }
 
 inline static int fa(unsigned int i) {
@@ -330,8 +333,7 @@ inline static int fb(unsigned int i) {
     return bitn(0x6671, i);
 }
 
-static int fnf (ulong s)
-{
+static int fnf (ulong s) {
 	const uint x1 = (bitn(s,  2) << 0) | lut3_0x96( (bitn(s,  3) << 1), (bitn(s,  5) << 2), (bitn(s,  6) << 3));
 	const uint x2 = (bitn(s,  8) << 0) | lut3_0x96( (bitn(s, 12) << 1), (bitn(s, 14) << 2), (bitn(s, 15) << 3));
 	const uint x3 = (bitn(s, 17) << 0) | lut3_0x96( (bitn(s, 21) << 1), (bitn(s, 23) << 2), (bitn(s, 26) << 3));
@@ -362,16 +364,21 @@ void find_state(const uint candidate_index_base,
 {
 	const size_t gid[2] = { get_global_id(0), get_global_id(1) };
 
-	// if (gid[0] == 0) printf("work-item 1,%u\n", gid[1]);
-
 	#ifdef HAVE_LOCAL_MEMORY
+
 	const size_t lid = get_local_id(0);
 	const size_t lsize = get_local_size(0);
+
 	#endif // HAVE_LOCAL_MEMORY
 
-	const uint index = 3 * (candidate_index_base + gid[0]); // dimension 0 should at least keep the execution units saturated - 8k is fine
+	// dimension 0 should at least keep the execution units saturated - 8k is fine
+	const uint index = 3 * (candidate_index_base + gid[0]); 
 
-	const ulong3 c = { candidates[index], candidates[index + 1], candidates[index + 2] };
+	const ulong3 c = { 
+		candidates[index],
+		candidates[index + 1],
+		candidates[index + 2]
+	};
 
 	const ulong candidate = ( c.x << 32 | c.y << 16 | c.z );
 
@@ -379,13 +386,17 @@ void find_state(const uint candidate_index_base,
 	// store keystream in local memory
 	__local bitslice_t keystream[32];
 
-	for (size_t i = lid; i < 32; i+= lsize) keystream[i] = _keystream[i];
+	for (size_t i = lid; i < 32; i+= lsize) {
+		keystream[i] = _keystream[i];
+	}
 
 	#ifdef WITH_HITAG2_FULL
 	// store uid, aR2, nR1, nR2 in local memory
 	__local uint checks[4];
 
-	for (uint i = lid; i < 4; i+= lsize) checks[i] = _checks[i];
+	for (uint i = lid; i < 4; i+= lsize) {
+		checks[i] = _checks[i];
+	}
 	#endif
 
 	// threads synchronization
@@ -437,6 +448,7 @@ void find_state(const uint candidate_index_base,
 	const bitslice_t filter1 = f_c_bs(filter1_0, filter1_1, filter1_2, filter1_3, filter1_4);
 
 	const bitslice_t results1 = filter1 ^ keystream[1];
+
 	if (!results1) return;
 
 	const bitslice_t filter2_0 = f_a_bs(state[-2 + 4], state[-2 + 5], state[-2 + 7], state[-2 + 8]);

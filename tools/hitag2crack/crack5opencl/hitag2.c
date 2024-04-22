@@ -135,12 +135,16 @@ void hitag2_init(Hitag_State *pstate, uint64_t sharedkey, uint32_t serialnum, ui
 
     int i;
 
-    for (i = 0; i < 16; i++) cur_state = (cur_state >> 1) ^ (uint64_t) hitag2_crypt(cur_state) << 46;
+    for (i = 0; i < 16; i++) {
+        cur_state = (cur_state >> 1) ^ (uint64_t) hitag2_crypt(cur_state) << 46;
+    }
 
     // highest 16 bits of IV XOR Shared Key
     cur_state |= (uint64_t) initvector << 47;
 
-    for (i = 0; i < 15; i++) cur_state = (cur_state >> 1) ^ (uint64_t) hitag2_crypt(cur_state) << 46;
+    for (i = 0; i < 15; i++) {
+        cur_state = (cur_state >> 1) ^ (uint64_t) hitag2_crypt(cur_state) << 46;
+    }
 
     cur_state ^= (uint64_t) hitag2_crypt(cur_state) << 47;
 
