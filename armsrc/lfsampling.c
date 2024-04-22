@@ -246,12 +246,13 @@ void logSample(uint8_t sample, uint8_t decimation, uint8_t bits_per_sample, bool
 **/
 void LFSetupFPGAForADC(int divisor, bool reader_field) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-    if ((divisor == 1) || (divisor < 0) || (divisor > 255))
+    if ((divisor == 1) || (divisor < 0) || (divisor > 255)) {
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_134); //~134kHz
-    else if (divisor == 0)
+    } else if (divisor == 0) {
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125); //125kHz
-    else
+    } else {
         FpgaSendCommand(FPGA_CMD_SET_DIVISOR, divisor);
+    }
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_READER | (reader_field ? FPGA_LF_ADC_READER_FIELD : 0));
 
@@ -623,12 +624,14 @@ void doT55x7Acquisition(size_t sample_size, bool ledcontrol) {
             // skip until first high samples begin to change
             if (startFound || sample > T55xx_READ_LOWER_THRESHOLD + T55xx_READ_TOL) {
                 // if just found start - recover last sample
-                if (!startFound) {
+                if (startFound == false) {
                     dest[i++] = lastSample;
                     startFound = true;
                 }
                 // collect samples
-                dest[i++] = sample;
+                if (i < bufsize) {
+                    dest[i++] = sample;
+                }
             }
         }
     }
@@ -698,13 +701,15 @@ void doCotagAcquisition(void) {
                 firstlow = true;
             }
 
-            ++i;
             if (sample > COTAG_ONE_THRESHOLD) {
                 dest[i] = 255;
+                ++i;
             } else if (sample < COTAG_ZERO_THRESHOLD) {
                 dest[i] = 0;
+                ++i;
             } else {
                 dest[i] = dest[i - 1];
+                ++i;
             }
         }
     }

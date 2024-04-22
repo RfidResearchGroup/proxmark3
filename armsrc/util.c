@@ -31,66 +31,109 @@ size_t nbytes(size_t nbits) {
 }
 
 //convert hex digit to integer
-uint8_t hex2int(char hexchar) {
-    switch (hexchar) {
+uint8_t hex2int(char x) {
+    switch (x) {
         case '0':
             return 0;
-            break;
         case '1':
             return 1;
-            break;
         case '2':
             return 2;
-            break;
         case '3':
             return 3;
-            break;
         case '4':
             return 4;
-            break;
         case '5':
             return 5;
-            break;
         case '6':
             return 6;
-            break;
         case '7':
             return 7;
-            break;
         case '8':
             return 8;
-            break;
         case '9':
             return 9;
-            break;
         case 'a':
         case 'A':
             return 10;
-            break;
         case 'b':
         case 'B':
             return 11;
-            break;
         case 'c':
         case 'C':
             return 12;
-            break;
         case 'd':
         case 'D':
             return 13;
-            break;
         case 'e':
         case 'E':
             return 14;
-            break;
         case 'f':
         case 'F':
             return 15;
-            break;
         default:
             return 0;
     }
 }
+
+/*
+The following methods comes from Rfidler sourcecode.
+https://github.com/ApertureLabsLtd/RFIDler/blob/master/firmware/Pic32/RFIDler.X/src/
+*/
+// convert hex to sequence of 0/1 bit values
+// returns number of bits converted
+int hex2binarray(char *target, char *source) {
+    return hex2binarray_n(target, source, strlen(source));
+}
+
+int hex2binarray_n(char *target, char *source, int sourcelen) {
+    int count = 0;
+
+    // process 4 bits (1 hex digit) at a time
+    while (sourcelen--) {
+     
+        char x = *(source++);
+
+        *(target++) = (x >> 7) & 1;
+        *(target++) = (x >> 6) & 1;
+        *(target++) = (x >> 5) & 1;
+        *(target++) = (x >> 4) & 1;
+        *(target++) = (x >> 3) & 1;
+        *(target++) = (x >> 2) & 1;
+        *(target++) = (x >> 1) & 1;
+        *(target++) = (x & 1);
+        
+        count += 8;
+    }
+    return count;
+}
+
+int binarray2hex(const uint8_t *bs, int bs_len, uint8_t *hex) {
+
+    int count = 0;
+    int byte_index = 0;
+
+    // Clear output buffer
+    memset(hex, 0, bs_len >> 3);
+
+    for (int i = 0; i < bs_len; i++) {
+
+        // Set the appropriate bit in hex
+        if (bs[i] == 1) {
+            hex[byte_index] |= (1 << (7 - (count % 8)));
+        }
+        
+        count++;
+        
+        // Move to the next byte if 8 bits have been filled
+        if (count % 8 == 0) {
+            byte_index++;
+        }
+    }
+
+    return count;
+}
+
 
 void LEDsoff(void) {
     LED_A_OFF();

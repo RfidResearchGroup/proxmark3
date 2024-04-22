@@ -118,7 +118,9 @@ static size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
 
             volatile uint8_t adc_val = AT91C_BASE_SSC->SSC_RHR;
 
-            if (g_logging) logSampleSimple(adc_val);
+            if (g_logging) {
+                logSampleSimple(adc_val);
+            }
 
             // Only test field changes if state of adc values matter
             if (wait == false) {
@@ -157,7 +159,10 @@ static size_t lf_count_edge_periods_ex(size_t max, bool wait, bool detect_gap) {
         }
     }
 
-    if (g_logging) logSampleSimple(0xFF);
+    if (g_logging) {
+        logSampleSimple(0xFF);
+    }
+
     return 0;
 }
 
@@ -210,16 +215,18 @@ void lf_init(bool reader, bool simulate, bool ledcontrol) {
     sc->averaging = 0;
 
     FpgaSendCommand(FPGA_CMD_SET_DIVISOR, sc->divisor);
+
     if (reader) {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC | FPGA_LF_ADC_READER_FIELD);
     } else {
-        if (simulate)
-            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
-        else
-            // Sniff
-            //FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
-            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT  | FPGA_LF_EDGE_DETECT_TOGGLE_MODE);
 
+        if (simulate) {
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
+        } else {
+            // Sniff
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_ADC);
+            // FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT  | FPGA_LF_EDGE_DETECT_TOGGLE_MODE);
+        }
     }
 
     // Connect the A/D to the peak-detected low-frequency path.
@@ -261,7 +268,9 @@ void lf_init(bool reader, bool simulate, bool ledcontrol) {
     uint32_t bufsize = 10000;
 
     // use malloc
-    if (g_logging) initSampleBufferEx(&bufsize, true);
+    if (g_logging) {
+        initSampleBufferEx(&bufsize, true);
+    }
 
     lf_sample_mean();
 }
