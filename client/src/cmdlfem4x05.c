@@ -1750,9 +1750,9 @@ int CmdEM4x05Chk(const char *Cmd) {
         res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock, 4, &keycount);
         if (res != PM3_SUCCESS || keycount == 0 || keyBlock == NULL) {
             PrintAndLogEx(WARNING, "no keys found in file");
-            if (keyBlock != NULL)
+            if (keyBlock != NULL) {
                 free(keyBlock);
-
+            }
             return PM3_ESOFT;
         }
 
@@ -2634,7 +2634,7 @@ static command_t CommandTable[] = {
     {"-----------", CmdHelp,            AlwaysAvailable, "----------------------- " _CYAN_("Operations") " -----------------------"},
     {"clonehelp",   CmdEM4x05CloneHelp, IfPm3Lf,         "Shows the available clone commands"},
     {"brute",       CmdEM4x05Brute,     IfPm3Lf,         "Bruteforce password"},
-    {"chk",         CmdEM4x05Chk,       IfPm3Lf,         "Check passwords from dictionary"},
+    {"chk",         CmdEM4x05Chk,       IfPm3Lf,         "Check passwords"},
     {"config",      CmdEM4x05Config,    AlwaysAvailable, "Create common configuration words"},
     {"demod",       CmdEM4x05Demod,     AlwaysAvailable, "Demodulate a EM4x05/EM4x69 tag from the GraphBuffer"},
     {"dump",        CmdEM4x05Dump,      IfPm3Lf,         "Dump EM4x05/EM4x69 tag"},
