@@ -2737,7 +2737,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
                   "Set UID for magic Chinese card (only works with such cards)\n",
                   "hf 15 csetuid -u E011223344556677       -> use gen1 command\n"
                   "hf 15 csetuid -u E011223344556677 --v2  -> use gen2 command"
-                  );
+                 );
 
     void *argtable[] = {
         arg_param_begin,

@@ -626,13 +626,13 @@ static void DesfireSecureChannelDecodeEV1(DesfireContext_t *ctx, uint8_t *srcdat
             PrintAndLogEx(INFO, "  calculated MAC: %s", sprint_hex(cmac, DesfireGetMACLength(ctx)));
 
         } else {
-            
+
             if (GetAPDULogging()) {
                 PrintAndLogEx(INFO, "Received MAC OK");
             }
         }
 
-    } else if (ctx->commMode == DCMEncrypted || ctx->commMode == DCMEncryptedWithPadding) {     
+    } else if (ctx->commMode == DCMEncrypted || ctx->commMode == DCMEncryptedWithPadding) {
 
         if (srcdatalen < desfire_get_key_block_length(ctx->keyType)) {
             memcpy(dstdata, srcdata, srcdatalen);

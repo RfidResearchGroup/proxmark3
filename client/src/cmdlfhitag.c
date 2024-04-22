@@ -474,7 +474,7 @@ static bool ht2_check_cryptokeys(const uint64_t *keys, const uint32_t keycount, 
 }
 
 static int ht2_check_dictionary(uint32_t key_count, uint8_t *keys,  uint8_t keylen, uint32_t *found_idx) {
-    
+
     lf_hitag_data_t packet;
     memset(&packet, 0, sizeof(packet));
 
@@ -735,10 +735,10 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
                 if (ht2_check_cryptokeys(keys, keycount, cmd)) {
 
                     _ht2state.cipher_state = ht2_hitag2_init(
-                                                _ht2state.key,
-                                                _ht2state.uid,
-                                                REV32((cmd[3] << 24) + (cmd[2] << 16) + (cmd[1] << 8) + cmd[0])
-                                            );
+                                                 _ht2state.key,
+                                                 _ht2state.uid,
+                                                 REV32((cmd[3] << 24) + (cmd[2] << 16) + (cmd[1] << 8) + cmd[0])
+                                             );
                     ht2_hitag2_cipher_transcrypt(&_ht2state.cipher_state, _ht2state.plain + 4, 4, 0);
 
                     uint64_t key = REV64(_ht2state.key);
@@ -1001,7 +1001,7 @@ static int CmdLFHitagReader(const char *Cmd) {
     }
 
     if (use_nrar) {
-        return PM3_SUCCESS;    
+        return PM3_SUCCESS;
     }
 
     uint8_t *data = resp.data.asBytes;
@@ -1312,15 +1312,15 @@ static int CmdLFHitag2Dump(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag dump",
-        "Read all Hitag 2 card memory and save to file\n"
-        "Crypto mode key format: ISK high + ISK low,  4F4E4D494B52 (ONMIKR)\n"
-        "Password mode, default key 4D494B52 (MIKR)\n",                 
-        "lf hitag dump --pwd                -> use def pwd\n"
-        "lf hitag dump -k 4D494B52          -> pwd mode\n"
-        "lf hitag dump --crypto             -> use def crypto\n"
-        "lf hitag dump -k 4F4E4D494B52      -> crypto mode\n"
-        "lf hitag dump --nrar 0102030411223344\n"
-    );
+                  "Read all Hitag 2 card memory and save to file\n"
+                  "Crypto mode key format: ISK high + ISK low,  4F4E4D494B52 (ONMIKR)\n"
+                  "Password mode, default key 4D494B52 (MIKR)\n",
+                  "lf hitag dump --pwd                -> use def pwd\n"
+                  "lf hitag dump -k 4D494B52          -> pwd mode\n"
+                  "lf hitag dump --crypto             -> use def crypto\n"
+                  "lf hitag dump -k 4F4E4D494B52      -> crypto mode\n"
+                  "lf hitag dump --nrar 0102030411223344\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1376,10 +1376,10 @@ static int CmdLFHitag2Dump(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (keylen != 0 && 
-        keylen != HITAG_PASSWORD_SIZE && 
-        keylen != HITAG_CRYPTOKEY_SIZE &&
-        keylen != HITAG_NRAR_SIZE) {
+    if (keylen != 0 &&
+            keylen != HITAG_PASSWORD_SIZE &&
+            keylen != HITAG_CRYPTOKEY_SIZE &&
+            keylen != HITAG_NRAR_SIZE) {
         PrintAndLogEx(WARNING, "Wrong KEY len expected (0,4,6,8) got %d", keylen);
         return PM3_EINVARG;
     }
@@ -1450,9 +1450,9 @@ static int CmdLFHitag2Dump(const char *Cmd) {
 
     } else if (use_ht2 && use_nrar) {
 
-        
+
         memcpy(packet.NrAr, nrar, sizeof(packet.NrAr));
-        
+
         PrintAndLogEx(INFO, _YELLOW_("Hitag 2") " - Challenge mode (NrAR)");
 
         uint64_t t1 = msclock();
@@ -1464,7 +1464,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
         uint8_t attempt = 30;
         do {
 
-            PrintAndLogEx(INPLACE, "Attack 1 running..." );
+            PrintAndLogEx(INPLACE, "Attack 1 running...");
             fflush(stdout);
 
             if (WaitForResponseTimeout(CMD_LF_HITAG2_CRACK, &resp, 1000) == false) {
@@ -1472,7 +1472,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
                 continue;
             }
 
-            lf_hitag_crack_response_t *payload = (lf_hitag_crack_response_t*)resp.data.asBytes;
+            lf_hitag_crack_response_t *payload = (lf_hitag_crack_response_t *)resp.data.asBytes;
 
             if (resp.status == PM3_SUCCESS) {
                 PrintAndLogEx(NORMAL, " ( %s )", _GREEN_("ok"));
@@ -1498,7 +1498,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
                 case -3: {
                     PrintAndLogEx(NORMAL, "");
                     PrintAndLogEx(FAILED, "Cannot find encrypted 'read page0' command!");
-                    return PM3_ESOFT;   
+                    return PM3_ESOFT;
                 }
                 case -4: {
                     PrintAndLogEx(NORMAL, "");
@@ -1508,7 +1508,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
             }
 
         } while (attempt);
-   
+
         if (attempt == 0) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
@@ -1539,12 +1539,12 @@ static int CmdLFHitag2Dump(const char *Cmd) {
 
     data = resp.data.asBytes;
 
- out:
+out:
 
 
     // block3, 1 byte
     uid = bytes_to_num(data, HITAG_UID_SIZE);
-    
+
     if (use_ht2) {
         print_hitag2_configuration(uid, data[HITAG_BLOCK_SIZE * 3]);
         print_hitag2_blocks(data, HITAG2_MAX_BYTE_SIZE);
@@ -1915,7 +1915,7 @@ static int CmdLFHitag2Chk(const char *Cmd) {
 
     uint64_t t1 = msclock();
 
-    // just loop twice at max. Starting with 4 or 6. 
+    // just loop twice at max. Starting with 4 or 6.
     for (; keylen < 7; keylen += 2) {
         // load keys
         uint8_t *keys = NULL;
@@ -1934,7 +1934,7 @@ static int CmdLFHitag2Chk(const char *Cmd) {
         int status = ht2_check_dictionary(key_count, keys, keylen, &found_idx);
 
         if (status == PM3_SUCCESS) {
-            
+
             PrintAndLogEx(NORMAL, "");
             if (keylen == 6) {
                 PrintAndLogEx(SUCCESS, "found valid key [ " _GREEN_("%s") " ]", sprint_hex_inrow(keys + (found_idx * keylen), keylen));
@@ -2037,17 +2037,17 @@ static int CmdLFHitag2Lookup(const char *Cmd) {
     //  - crypto stream generated is in BE/MSB order  in Pm3 code.
     //  - crypto state is in ?
     //  - lfsr state is in ?
-    // 
+    //
     //  Different implementations handles internally the state either in MSB or LSB.
     //  Something to keep an eye for when looking at code.
-    // 
+    //
     // Termology:
     //  cs / hstate.shiftregister / crypto state   = same
     //  lsfr  = some implementations mixes cs and lsfr into one and only use the state.  Some differentiate between them.
     //          usually the key recovery functions under /tools/hitag2crack
-    //  IV / Nonce Reader 1 / Nr1  = same  (clear text),   always 00 00 00 00 in PM3 code when acting as reader.  
-    //  Answer Reader 1 / Ar1  = encrypted and BE/MSB,  +32, the clear text is always FF FF FF FF.       
-    //  Answer Tag 1  / At1    = encrypted and BE/MSB,  +32, 
+    //  IV / Nonce Reader 1 / Nr1  = same  (clear text),   always 00 00 00 00 in PM3 code when acting as reader.
+    //  Answer Reader 1 / Ar1  = encrypted and BE/MSB,  +32, the clear text is always FF FF FF FF.
+    //  Answer Tag 1  / At1    = encrypted and BE/MSB,  +32,
 
     /*
     When initializer the crypto engine

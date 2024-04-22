@@ -850,7 +850,7 @@ static bool hitag2_crypto(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *
                         }
 
                     } else { // stage 2+, got data block
-                        
+
                         // Store the received block
                         memcpy(tag.sectors[blocknr], rx, 4);
                         blocknr++;
@@ -901,7 +901,7 @@ static bool hitag2_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, si
                 if (bAuthenticating) {
                     DBG DbpString("Authentication - failed!");
                     return false;
-                } 
+                }
 
                 DBG DbpString("Authenticating - send 0xC0");
                 *txlen = 5;
@@ -933,7 +933,7 @@ static bool hitag2_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, si
                     }
 
                 } else { // stage 2+, got data block
-                    
+
                     // Store the received block
                     memcpy(tag.sectors[blocknr], rx, 4);
                     blocknr++;
@@ -2405,9 +2405,9 @@ out:
 
 
 static void ht2_send(bool turn_on, uint32_t *cmd_start
-                    , uint32_t *cmd_duration, uint32_t *resp_start
-                    , uint8_t *tx, size_t txlen, bool send_bits) {
-    
+                     , uint32_t *cmd_duration, uint32_t *resp_start
+                     , uint8_t *tx, size_t txlen, bool send_bits) {
+
     // Tag specific configuration settings (sof, timings, etc.)  HITAG2 Settings
 #define T_WAIT_1_GUARD  8
 
@@ -2419,7 +2419,7 @@ static void ht2_send(bool turn_on, uint32_t *cmd_start
         // Wait with field on to be in "Wait for START_AUTH" timeframe
         lf_wait_periods(HITAG_T_WAIT_POWERUP + HITAG_T_WAIT_START_AUTH_MAX / 4);
         *cmd_start += HITAG_T_WAIT_POWERUP + HITAG_T_WAIT_START_AUTH_MAX / 4;
-    
+
     } else {
         // Wait for t_wait_2 carrier periods after the last tag bit before transmitting,
         lf_wait_periods(HITAG_T_WAIT_2_MIN + HITAG_T_WAIT_2_MIN);
@@ -2611,13 +2611,13 @@ int ht2_read_uid(uint8_t *uid, bool ledcontrol, bool send_answer, bool keep_fiel
 
     while (attempt_count && BUTTON_PRESS() == false) {
 
-        attempt_count--; 
+        attempt_count--;
 
         WDT_HIT();
 
         uint32_t command_start = 0, command_duration = 0;
         uint32_t response_start = 0, response_duration = 0;
-        
+
         // start AUTH command
         size_t txlen = 5;
         uint8_t tx[1] = {0xC0};
@@ -2647,7 +2647,7 @@ int ht2_read_uid(uint8_t *uid, bool ledcontrol, bool send_answer, bool keep_fiel
         if (ht2_packbits(nrz_samples, nrzs, rx, &rxlen) == false) {
             continue;
         }
-        
+
         // log Receive data
         LogTraceBits(rx, rxlen, response_start, response_start + response_duration, false);
 
@@ -2661,7 +2661,7 @@ int ht2_read_uid(uint8_t *uid, bool ledcontrol, bool send_answer, bool keep_fiel
             memcpy(uid, rx, 4);
         }
         res = PM3_SUCCESS;
-        break;    
+        break;
     }
 
     if (keep_field_up == false) {
@@ -2704,7 +2704,7 @@ int ht2_tx_rx(uint8_t *tx, size_t txlen, uint8_t *rx, size_t *rxlen, bool ledcon
     }
 
     // decode raw samples from Manchester Encoded to bits
-    if ( manrawdecode(samples, &nrzs, true, 0) ) {
+    if (manrawdecode(samples, &nrzs, true, 0)) {
         goto out;
     }
 
@@ -2712,7 +2712,7 @@ int ht2_tx_rx(uint8_t *tx, size_t txlen, uint8_t *rx, size_t *rxlen, bool ledcon
     if (ht2_packbits(samples, nrzs, rx, rxlen) == false) {
         goto out;
     }
-    
+
     // log Receive data
     LogTraceBits(rx, *rxlen, response_start, response_start + response_duration, false);
 

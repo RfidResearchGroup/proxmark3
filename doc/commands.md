@@ -94,6 +94,15 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`data help              `|Y       |`This help`
+|`data clear             `|Y       |`Clears various buffers used by the graph window`
+|`data hide              `|Y       |`Hide the graph window`
+|`data load              `|Y       |`Load contents of file into graph window`
+|`data num               `|Y       |`Converts dec/hex/bin`
+|`data plot              `|Y       |`Show the graph window`
+|`data print             `|Y       |`Print the data in the DemodBuffer`
+|`data save              `|Y       |`Save signal trace data`
+|`data setdebugmode      `|Y       |`Set Debugging Level on client side`
+|`data xor               `|Y       |`Xor a input string`
 |`data biphaserawdecode  `|Y       |`Biphase decode bin stream in DemodBuffer`
 |`data detectclock       `|Y       |`Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer`
 |`data fsktonrz          `|Y       |`Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk)`
@@ -102,43 +111,32 @@ Check column "offline" for their availability.
 |`data rawdemod          `|Y       |`Demodulate the data in the GraphBuffer and output binary`
 |`data askedgedetect     `|Y       |`Adjust Graph for manual ASK demod`
 |`data autocorr          `|Y       |`Autocorrelation over window`
+|`data convertbitstream  `|Y       |`Convert GraphBuffer's 0/1 values to 127 / -127`
+|`data cthreshold        `|Y       |`Average out all values between`
 |`data dirthreshold      `|Y       |`Max rising higher up-thres/ Min falling lower down-thres`
 |`data decimate          `|Y       |`Decimate samples`
 |`data envelope          `|Y       |`Generate square envelope of samples`
-|`data undecimate        `|Y       |`Un-decimate samples`
-|`data hide              `|Y       |`Hide graph window`
+|`data grid              `|Y       |`overlay grid on graph window`
+|`data getbitstream      `|Y       |`Convert GraphBuffer's >=1 values to 1 and <1 to 0`
 |`data hpf               `|Y       |`Remove DC offset from trace`
 |`data iir               `|Y       |`Apply IIR buttersworth filter on plot data`
-|`data grid              `|Y       |`overlay grid on graph window`
 |`data ltrim             `|Y       |`Trim samples from left of trace`
 |`data mtrim             `|Y       |`Trim out samples from the specified start to the specified stop`
 |`data norm              `|Y       |`Normalize max/min to +/-128`
-|`data plot              `|Y       |`Show graph window`
-|`data cthreshold        `|Y       |`Average out all values between`
 |`data rtrim             `|Y       |`Trim samples from right of trace`
-|`data setgraphmarkers   `|Y       |`Set blue and orange marker in graph window`
+|`data setgraphmarkers   `|Y       |`Set the markers in the graph window`
 |`data shiftgraphzero    `|Y       |`Shift 0 for Graphed wave + or - shift value`
 |`data timescale         `|Y       |`Set cursor display timescale`
+|`data undecimate        `|Y       |`Un-decimate samples`
 |`data zerocrossings     `|Y       |`Count time between zero-crossings`
-|`data convertbitstream  `|Y       |`Convert GraphBuffer's 0/1 values to 127 / -127`
-|`data getbitstream      `|Y       |`Convert GraphBuffer's >=1 values to 1 and <1 to 0`
 |`data asn1              `|Y       |`ASN1 decoder`
 |`data atr               `|Y       |`ATR lookup`
-|`data bin2hex           `|Y       |`Converts binary to hexadecimal`
 |`data bitsamples        `|N       |`Get raw samples as bitstring`
 |`data bmap              `|Y       |`Convert hex value according a binary template`
-|`data clear             `|Y       |`Clears bigbuf on deviceside and graph window`
 |`data crypto            `|Y       |`Encrypt and decrypt data`
 |`data diff              `|Y       |`Diff of input files`
 |`data hexsamples        `|N       |`Dump big buffer as hex bytes`
-|`data hex2bin           `|Y       |`Converts hexadecimal to binary`
-|`data load              `|Y       |`Load contents of file into graph window`
-|`data num               `|Y       |`Converts dec/hex/bin`
-|`data print             `|Y       |`Print the data in the DemodBuffer`
 |`data samples           `|N       |`Get raw samples for graph window ( GraphBuffer )`
-|`data save              `|Y       |`Save signal trace data ( GraphBuffer )`
-|`data setdebugmode      `|Y       |`Set Debugging Level on client side`
-|`data xor               `|Y       |`Xor a input string`
 
 
 ### emv
@@ -857,9 +855,10 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf awid help           `|Y       |`this help`
+|`lf awid brute          `|N       |`bruteforce card number against reader`
+|`lf awid clone          `|N       |`clone AWID tag to T55x7, Q5/T5555 or EM4305/4469`
 |`lf awid demod          `|Y       |`demodulate an AWID FSK tag from the GraphBuffer`
 |`lf awid reader         `|N       |`attempt to read and extract tag data`
-|`lf awid clone          `|N       |`clone AWID tag to T55x7, Q5/T5555 or EM4305/4469`
 |`lf awid sim            `|N       |`simulate AWID tag`
 |`lf awid brute          `|N       |`bruteforce card number against reader`
 |`lf awid watch          `|N       |`continuously watch for cards.  Reader mode`
@@ -923,7 +922,7 @@ Check column "offline" for their availability.
 |`lf em 4x05 help        `|Y       |`This help`
 |`lf em 4x05 clonehelp   `|N       |`Shows the available clone commands`
 |`lf em 4x05 brute       `|N       |`Bruteforce password`
-|`lf em 4x05 chk         `|N       |`Check passwords from dictionary`
+|`lf em 4x05 chk         `|N       |`Check passwords`
 |`lf em 4x05 config      `|Y       |`Create common configuration words`
 |`lf em 4x05 demod       `|Y       |`Demodulate a EM4x05/EM4x69 tag from the GraphBuffer`
 |`lf em 4x05 dump        `|N       |`Dump EM4x05/EM4x69 tag`
@@ -944,7 +943,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf em 4x50 help        `|Y       |`This help`
 |`lf em 4x50 brute       `|N       |`Bruteforce attack to find password`
-|`lf em 4x50 chk         `|N       |`Check passwords from dictionary`
+|`lf em 4x50 chk         `|N       |`Check passwords`
 |`lf em 4x50 dump        `|N       |`Dump EM4x50 tag`
 |`lf em 4x50 info        `|N       |`Tag information`
 |`lf em 4x50 login       `|N       |`Login into EM4x50 tag`
@@ -1042,16 +1041,19 @@ Check column "offline" for their availability.
 |`lf hitag help          `|Y       |`This help`
 |`lf hitag list          `|Y       |`List Hitag trace history`
 |`lf hitag info          `|N       |`Hitag 2 tag information`
+|`lf hitag selftest      `|Y       |`Perform self test`
 |`lf hitag dump          `|N       |`Dump Hitag 2 tag`
 |`lf hitag read          `|N       |`Read Hitag memory`
+|`lf hitag sniff         `|N       |`Eavesdrop Hitag communication`
 |`lf hitag view          `|Y       |`Display content from tag dump file`
 |`lf hitag wrbl          `|N       |`Write a block (page) in Hitag memory`
-|`lf hitag sniff         `|N       |`Eavesdrop Hitag communication`
-|`lf hitag cc            `|N       |`Hitag S: test all provided challenges`
-|`lf hitag ta            `|N       |`Hitag 2: test all recorded authentications`
 |`lf hitag eload         `|N       |`Upload file into emulator memory`
 |`lf hitag eview         `|N       |`View emulator memory`
 |`lf hitag sim           `|N       |`Simulate Hitag transponder`
+|`lf hitag cc            `|N       |`Hitag S: test all provided challenges`
+|`lf hitag chk           `|N       |`Check keys`
+|`lf hitag lookup        `|Y       |`Uses authentication trace to check for key in dictionary file`
+|`lf hitag ta            `|N       |`Hitag 2: test all recorded authentications`
 
 
 ### lf idteck
@@ -1285,7 +1287,7 @@ Check column "offline" for their availability.
 |`lf t55xx wakeup        `|N       |`Send AOR wakeup command`
 |`lf t55xx write         `|N       |`Write T55xx block data`
 |`lf t55xx bruteforce    `|N       |`Simple bruteforce attack to find password`
-|`lf t55xx chk           `|N       |`Check passwords from dictionary/flash`
+|`lf t55xx chk           `|N       |`Check passwords`
 |`lf t55xx protect       `|N       |`Password protect tag`
 |`lf t55xx recoverpw     `|N       |`Try to recover from bad password write from a cloner`
 |`lf t55xx sniff         `|Y       |`Attempt to recover T55xx commands from sample buffer`

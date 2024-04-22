@@ -1138,7 +1138,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_LF_HITAG_SIMULATE: { // Simulate Hitag tag, args = memory content
             SimulateHitag2(true);
-            break;        
+            break;
         }
         case CMD_LF_HITAG2_CRACK: {
             lf_hitag_data_t *payload = (lf_hitag_data_t *) packet->data.asBytes;
@@ -1391,7 +1391,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             struct p *payload = (struct p *) packet->data.asBytes;
             SetTag15693Uid_v2(payload->uid);
             break;
-        }        
+        }
         case CMD_HF_ISO15693_SLIX_DISABLE_EAS: {
             struct p {
                 uint8_t pwd[4];

@@ -736,9 +736,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     // mark short bytes (less than 8 Bit + Parity)
     if (protocol == ISO_14443A ||
-        protocol == PROTO_MIFARE ||
-        protocol == PROTO_MFPLUS ||
-        protocol == THINFILM) {
+            protocol == PROTO_MIFARE ||
+            protocol == PROTO_MFPLUS ||
+            protocol == THINFILM) {
 
         // approximated with 128 * (9 * data_len);
         uint16_t bitime = 1056 + 32;
@@ -978,14 +978,14 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         }
     }
 
-     if (protocol == PROTO_HITAG2) {
+    if (protocol == PROTO_HITAG2) {
 
         uint8_t ht2plain[9] = {0};
         uint8_t n = 0;
         if (hitag2_get_plain(ht2plain, &n)) {
 
             memset(explanation, 0x00, sizeof(explanation));
-           
+
             // handle partial bytes.  The parity array[0] is used to store number of left over bits from NBYTES
             // This part prints the number of bits in the trace entry for hitag.
             uint8_t nbits = parityBytes[0];
@@ -1019,7 +1019,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
                 } else {
                     snprintf(line[j / 18] + ((j % 18) * 4) + offset, 120, "%02X  ", ht2plain[j]);
-                }                
+                }
             }
 
             num_lines = MIN((n - 1) / TRACE_MAX_HEX_BYTES + 1, TRACE_MAX_HEX_BYTES);
@@ -1041,7 +1041,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
             }
         }
-     }
+    }
 
     if (is_last_record(tracepos, traceLen)) {
         return traceLen;
@@ -1480,7 +1480,7 @@ int CmdTraceList(const char *Cmd) {
             if (diclen > 0) {
                 uint8_t *keyBlock = NULL;
                 int res = loadFileDICTIONARY_safe(dictionary, (void **) &keyBlock, 6, &dicKeysCount);
-                if (res != PM3_SUCCESS || dicKeysCount == 0 || keyBlock == NULL) {                    
+                if (res != PM3_SUCCESS || dicKeysCount == 0 || keyBlock == NULL) {
                     PrintAndLogEx(FAILED, "An error occurred while loading the dictionary! (we will use the default keys now)");
                 } else {
                     dicKeys = calloc(dicKeysCount, sizeof(uint64_t));
@@ -1500,8 +1500,8 @@ int CmdTraceList(const char *Cmd) {
             }
         }
 
-        if ( protocol == PROTO_HITAG2) {
-            
+        if (protocol == PROTO_HITAG2) {
+
             if (strlen(dictionary) == 0) {
                 snprintf(dictionary, sizeof(dictionary), HITAG_DICTIONARY);
             }

@@ -156,7 +156,7 @@ size_t getFromGraphBufferEx(uint8_t *dest, size_t maxLen) {
 }
 
 //TODO: In progress function to get chunks of data from the GB w/o modifying the GB
-//Currently seems like it doesn't work correctly? 
+//Currently seems like it doesn't work correctly?
 size_t getGraphBufferChunk(uint8_t *dest, size_t start, size_t end) {
     if (dest == NULL) return 0;
     if (g_GraphTraceLen == 0) return 0;

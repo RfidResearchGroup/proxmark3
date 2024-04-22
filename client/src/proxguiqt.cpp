@@ -598,7 +598,7 @@ void Plot::setMaxAndStart(int *buffer, size_t len, QRect plotRect) {
 }
 
 void Plot::appendMax(int *buffer, size_t len, QRect plotRect) {
-    if(len == 0) {
+    if (len == 0) {
         return;
     }
 
@@ -750,12 +750,12 @@ void Plot::PlotGraph(int *buffer, size_t len, QRect plotRect, QRect annotationRe
     painter->drawPath(penPath);
     char str[200];
     snprintf(str, sizeof(str), "max=%d  min=%d  mean=%" PRId64 "  n=%u/%zu",
-        vMax,
-        vMin,
-        vMean,
-        g_GraphStop - g_GraphStart,
-        len
-    );
+             vMax,
+             vMin,
+             vMean,
+             g_GraphStop - g_GraphStart,
+             len
+            );
 
     painter->drawText(20, annotationRect.bottom() - (48 - (12 * graphNum)), str);
 }
@@ -781,37 +781,37 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
 
     //Print the Graph Information
     char graphText[] = "@%u..%u  dt=%i %s zoom=%2.3f";
-    length = ((sizeof(graphText))+(sizeof(uint32_t)*3)+sizeof(scalestr)+sizeof(float_t));
+    length = ((sizeof(graphText)) + (sizeof(uint32_t) * 3) + sizeof(scalestr) + sizeof(float_t));
 
-    annotation = (char*)calloc(1, length);
+    annotation = (char *)calloc(1, length);
 
     snprintf(annotation, length, graphText,
-        g_GraphStart,
-        g_GraphStop,
-        g_MarkerB.pos - g_MarkerA.pos,
-        scalestr,
-        g_GraphPixelsPerPoint
-    );
+             g_GraphStart,
+             g_GraphStop,
+             g_MarkerB.pos - g_MarkerA.pos,
+             scalestr,
+             g_GraphPixelsPerPoint
+            );
 
     painter->setPen(GREEN);
     painter->drawText(82, annotationRect.bottom() - 62, annotation);
 
     //Print Grid Information if the grid is enabled
-    if(g_PlotGridX > 0) {
+    if (g_PlotGridX > 0) {
         free(annotation);
 
         const char *gridLocked = (g_GridLocked ? "Locked" : "Unlocked");
         char gridText[] = "GridX=%lf  GridY=%lf (%s) GridXoffset=%lf";
-        length = (sizeof(gridText) + (sizeof(double)*3) + sizeof(gridLocked));
+        length = (sizeof(gridText) + (sizeof(double) * 3) + sizeof(gridLocked));
 
-        annotation = (char*)calloc(1, length);
+        annotation = (char *)calloc(1, length);
 
         snprintf(annotation, length, gridText,
-            g_DefaultGridX,
-            g_DefaultGridY,
-            gridLocked,
-            g_GridOffset
-        );
+                 g_DefaultGridX,
+                 g_DefaultGridY,
+                 gridLocked,
+                 g_GridOffset
+                );
 
         painter->setPen(WHITE);
         painter->drawText(800, annotationRect.bottom() - 62, annotation);
@@ -822,21 +822,21 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
     uint32_t pos = 0, loc = 375;
     painter->setPen(WHITE);
 
-    if(g_MarkerA.pos > 0) {
+    if (g_MarkerA.pos > 0) {
         free(annotation);
 
-        length = (sizeof(markerText) + (sizeof(uint32_t)*3) + sizeof(" ") + 1);
+        length = (sizeof(markerText) + (sizeof(uint32_t) * 3) + sizeof(" ") + 1);
         pos = g_MarkerA.pos;
         bool flag = false;
         size_t value;
 
-        annotation = (char*)calloc(1, length);
-        char *textA = (char*)calloc(1, length);
+        annotation = (char *)calloc(1, length);
+        char *textA = (char *)calloc(1, length);
 
         strcat(textA, markerText);
         strcat(textA, " (%s%u)");
 
-        if(g_GraphBuffer[pos] <= g_OperationBuffer[pos]) {
+        if (g_GraphBuffer[pos] <= g_OperationBuffer[pos]) {
             flag = true;
             value = (g_OperationBuffer[pos] - g_GraphBuffer[pos]);
         } else {
@@ -844,65 +844,65 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
         }
 
         snprintf(annotation, length, textA,
-            "A",
-            pos,
-            g_GraphBuffer[pos],
-            flag ? "+" : "-",
-            value
-        );
+                 "A",
+                 pos,
+                 g_GraphBuffer[pos],
+                 flag ? "+" : "-",
+                 value
+                );
 
         painter->drawText(loc, annotationRect.bottom() - 48, annotation);
 
         free(textA);
     }
 
-    if(g_MarkerB.pos > 0) {
+    if (g_MarkerB.pos > 0) {
         free(annotation);
 
-        length = ((sizeof(markerText))+(sizeof(uint32_t)*2)+1);
+        length = ((sizeof(markerText)) + (sizeof(uint32_t) * 2) + 1);
         pos = g_MarkerB.pos;
 
-        annotation = (char*)calloc(1, length);
+        annotation = (char *)calloc(1, length);
 
         snprintf(annotation, length, markerText,
-            "B",
-            pos,
-            g_GraphBuffer[pos]
-        );
+                 "B",
+                 pos,
+                 g_GraphBuffer[pos]
+                );
 
         painter->drawText(loc, annotationRect.bottom() - 36, annotation);
     }
 
-    if(g_MarkerC.pos > 0) {
+    if (g_MarkerC.pos > 0) {
         free(annotation);
 
-        length = ((sizeof(markerText))+(sizeof(uint32_t)*2)+1);
+        length = ((sizeof(markerText)) + (sizeof(uint32_t) * 2) + 1);
         pos = g_MarkerC.pos;
 
-        annotation = (char*)calloc(1, length);
+        annotation = (char *)calloc(1, length);
 
         snprintf(annotation, length, markerText,
-            "C",
-            pos,
-            g_GraphBuffer[pos]
-        );
+                 "C",
+                 pos,
+                 g_GraphBuffer[pos]
+                );
 
         painter->drawText(loc, annotationRect.bottom() - 24, annotation);
     }
 
-    if(g_MarkerD.pos > 0) {
+    if (g_MarkerD.pos > 0) {
         free(annotation);
 
-        length = ((sizeof(markerText))+(sizeof(uint32_t)*2)+1);
+        length = ((sizeof(markerText)) + (sizeof(uint32_t) * 2) + 1);
         pos = g_MarkerD.pos;
 
-        annotation = (char*)calloc(1, length);
+        annotation = (char *)calloc(1, length);
 
         snprintf(annotation, length, markerText,
-            "D",
-            pos,
-            g_GraphBuffer[pos]
-        );
+                 "D",
+                 pos,
+                 g_GraphBuffer[pos]
+                );
 
         painter->drawText(loc, annotationRect.bottom() - 12, annotation);
     }
@@ -951,7 +951,7 @@ void Plot::plotGridLines(QPainter *painter, QRect r) {
 }
 
 void Plot::plotOperations(int *buffer, size_t len, QPainter *painter, QRect plotRect) {
-    if(len == 0) {
+    if (len == 0) {
         return;
     }
 
@@ -973,10 +973,10 @@ void Plot::plotOperations(int *buffer, size_t len, QPainter *painter, QRect plot
         y = yCoordOf(current, plotRect, gs_absVMax);
 
         //We only want to graph changes between the Graph Buffer and the Operation Buffer
-        if(current == g_GraphBuffer[pos]) {
+        if (current == g_GraphBuffer[pos]) {
             //If this point is the same, but the last point is different, we want to plot that line
             //as well
-            if((pos == 0) || (prev == g_GraphBuffer[pos - 1])) {
+            if ((pos == 0) || (prev == g_GraphBuffer[pos - 1])) {
                 continue;
             }
         } else {
@@ -1045,8 +1045,8 @@ void Plot::paintEvent(QPaintEvent *event) {
     // End graph drawing
 
     //Draw the markers
-    if(g_TempMarkerSize > 0) {
-        for(int i = 0; i < g_TempMarkerSize; i++) {
+    if (g_TempMarkerSize > 0) {
+        for (int i = 0; i < g_TempMarkerSize; i++) {
             draw_marker(g_TempMarkers[i], plotRect, GRAY100, &painter);
         }
     }
@@ -1074,15 +1074,15 @@ void Plot::draw_marker(marker_t marker, QRect plotRect, QColor color, QPainter *
     painter->setPen(color);
 
     //If the marker is outside the buffer length, reset
-    if(marker.pos > g_GraphTraceLen) {
+    if (marker.pos > g_GraphTraceLen) {
         marker.pos = 0;
     }
 
     //Make sure the marker is inside the current plot view to render
-    if(marker.pos > g_GraphStart && xCoordOf(marker.pos, plotRect) < plotRect.right()) {
+    if (marker.pos > g_GraphStart && xCoordOf(marker.pos, plotRect) < plotRect.right()) {
         painter->drawLine(xCoordOf(marker.pos, plotRect), plotRect.top(), xCoordOf(marker.pos, plotRect), plotRect.bottom());
 
-        if(strlen(marker.label) > 0) {
+        if (strlen(marker.label) > 0) {
             painter->drawText(xCoordOf(marker.pos, plotRect) + 1, plotRect.top() + 12, marker.label);
         }
     }
@@ -1295,7 +1295,7 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             offset = 1;
         } else {
             offset = int(ZOOM_LIMIT / g_GraphPixelsPerPoint);
-    }
+        }
     }
 
     switch (event->key()) {
@@ -1393,9 +1393,9 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("[ ") "/" _RED_(" ]"), "Move yellow marker left/right by 1 sample");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("{ ") "/" _RED_(" }"), "Move pink marker left/right by 1 sample");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Ctrl"), "... by 5 samples");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 +9, _RED_("= ") "/" _RED_(" -"), "Add/Subtract to the plot point (Operation Buffer) over the yellow marker by 1");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("= ") "/" _RED_(" -"), "Add/Subtract to the plot point (Operation Buffer) over the yellow marker by 1");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Ctrl"), "... by 5");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 +9, _RED_("+ ") "/" _RED_(" _"), "Add/Subtract to the plot point (Graph Buffer) over the yellow marker by 1");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("+ ") "/" _RED_(" _"), "Add/Subtract to the plot point (Graph Buffer) over the yellow marker by 1");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Ctrl"), "... by 5");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("h"), "Show this help");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("q"), "Close plot window");
@@ -1441,9 +1441,9 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             if (g_GraphStart > startMax)
                 g_GraphStart = startMax;
             break;
-        
+
         case Qt::Key_Equal:
-            if(event->modifiers() & Qt::ControlModifier) {
+            if (event->modifiers() & Qt::ControlModifier) {
                 g_OperationBuffer[g_MarkerA.pos] += 5;
             } else {
                 g_OperationBuffer[g_MarkerA.pos] += 1;
@@ -1451,9 +1451,9 @@ void Plot::keyPressEvent(QKeyEvent *event) {
 
             RepaintGraphWindow();
             break;
-        
+
         case Qt::Key_Minus:
-            if(event->modifiers() & Qt::ControlModifier) {
+            if (event->modifiers() & Qt::ControlModifier) {
                 g_OperationBuffer[g_MarkerA.pos] -= 5;
             } else {
                 g_OperationBuffer[g_MarkerA.pos] -= 1;
@@ -1463,7 +1463,7 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             break;
 
         case Qt::Key_Plus:
-            if(event->modifiers() & Qt::ControlModifier) {
+            if (event->modifiers() & Qt::ControlModifier) {
                 g_GraphBuffer[g_MarkerA.pos] += 5;
             } else {
                 g_GraphBuffer[g_MarkerA.pos] += 1;
@@ -1471,9 +1471,9 @@ void Plot::keyPressEvent(QKeyEvent *event) {
 
             RepaintGraphWindow();
             break;
-        
+
         case Qt::Key_Underscore:
-            if(event->modifiers() & Qt::ControlModifier) {
+            if (event->modifiers() & Qt::ControlModifier) {
                 g_GraphBuffer[g_MarkerA.pos] -= 5;
             } else {
                 g_GraphBuffer[g_MarkerA.pos] -= 1;
@@ -1483,77 +1483,77 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             break;
 
         case Qt::Key_BracketLeft: {
-            if(event->modifiers() & Qt::ControlModifier) {
+            if (event->modifiers() & Qt::ControlModifier) {
                 g_MarkerA.pos -= 5;
             } else {
                 g_MarkerA.pos -= 1;
             }
 
-            if((g_MarkerA.pos >= g_GraphStop) || (g_MarkerA.pos <= g_GraphStart)) {
+            if ((g_MarkerA.pos >= g_GraphStop) || (g_MarkerA.pos <= g_GraphStart)) {
                 uint32_t halfway = PageWidth / 2;
 
-                if((g_MarkerA.pos - halfway) > g_GraphTraceLen) {
+                if ((g_MarkerA.pos - halfway) > g_GraphTraceLen) {
                     g_GraphStart = 0;
                 }  else {
                     g_GraphStart = g_MarkerA.pos - halfway;
                 }
             }
 
-            if(g_MarkerA.pos < g_GraphStart) {
+            if (g_MarkerA.pos < g_GraphStart) {
                 g_MarkerA.pos = g_GraphStart;
             }
 
             RepaintGraphWindow();
             break;
         }
-        
+
         case Qt::Key_BracketRight: {
-            if(event->modifiers() & Qt::ControlModifier) {
+            if (event->modifiers() & Qt::ControlModifier) {
                 g_MarkerA.pos += 5;
             } else {
                 g_MarkerA.pos += 1;
             }
 
-            if((g_MarkerA.pos >= g_GraphStop) || (g_MarkerA.pos <= g_GraphStart)) {
+            if ((g_MarkerA.pos >= g_GraphStop) || (g_MarkerA.pos <= g_GraphStart)) {
                 uint32_t halfway = PageWidth / 2;
 
-                if((g_MarkerA.pos + halfway) >= g_GraphTraceLen) {
+                if ((g_MarkerA.pos + halfway) >= g_GraphTraceLen) {
                     g_GraphStart = g_GraphTraceLen - halfway;
                 } else {
                     g_GraphStart = g_MarkerA.pos - halfway;
                 }
             }
 
-            if(g_MarkerA.pos >= g_GraphTraceLen) {
+            if (g_MarkerA.pos >= g_GraphTraceLen) {
                 g_MarkerA.pos = g_GraphTraceLen;
             }
 
             RepaintGraphWindow();
             break;
         }
-        
+
         case Qt::Key_BraceLeft:
-            if(event->modifiers() & Qt::ControlModifier) {
+            if (event->modifiers() & Qt::ControlModifier) {
                 g_MarkerB.pos -= 5;
             } else {
                 g_MarkerB.pos -= 1;
             }
 
-            if(g_MarkerB.pos < g_GraphStart) {
+            if (g_MarkerB.pos < g_GraphStart) {
                 g_MarkerB.pos = g_GraphStart;
             }
-            
+
             RepaintGraphWindow();
             break;
-        
+
         case Qt::Key_BraceRight:
-            if(event->modifiers() & Qt::ControlModifier) {
+            if (event->modifiers() & Qt::ControlModifier) {
                 g_MarkerB.pos += 5;
             } else {
                 g_MarkerB.pos += 1;
             }
 
-            if(g_MarkerB.pos >= g_GraphTraceLen) {
+            if (g_MarkerB.pos >= g_GraphTraceLen) {
                 g_MarkerB.pos = g_GraphTraceLen;
             }
 

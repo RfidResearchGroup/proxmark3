@@ -1743,12 +1743,12 @@ static int CmdSetGraphMarkers(const char *Cmd) {
     g_MarkerC.pos = arg_get_u32_def(ctx, 4, (keep ? g_MarkerC.pos : 0));
     g_MarkerD.pos = arg_get_u32_def(ctx, 5, (keep ? g_MarkerD.pos : 0));
     CLIParserFree(ctx);
-    PrintAndLogEx(INFO, "Setting markers " _BRIGHT_YELLOW_("A") "=%u, "_BRIGHT_MAGENTA_("B") "=%u, "_RED_("C") "=%u, "_BLUE_("D") "=%u", 
-        g_MarkerA.pos,
-        g_MarkerB.pos,
-        g_MarkerC.pos,
-        g_MarkerD.pos
-    );
+    PrintAndLogEx(INFO, "Setting markers " _BRIGHT_YELLOW_("A") "=%u, "_BRIGHT_MAGENTA_("B") "=%u, "_RED_("C") "=%u, "_BLUE_("D") "=%u",
+                  g_MarkerA.pos,
+                  g_MarkerB.pos,
+                  g_MarkerC.pos,
+                  g_MarkerD.pos
+                 );
     RepaintGraphWindow();
     return PM3_SUCCESS;
 }
@@ -3701,7 +3701,7 @@ static command_t CommandTable[] = {
     {"save",             CmdSave,                 AlwaysAvailable,  "Save signal trace data"},
     {"setdebugmode",     CmdSetDebugMode,         AlwaysAvailable,  "Set Debugging Level on client side"},
     {"xor",              CmdXor,                  AlwaysAvailable,  "Xor a input string"},
-    
+
     {"-----------",      CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("Modulation") "-------------------------"},
     {"biphaserawdecode", CmdBiphaseDecodeRaw,     AlwaysAvailable,  "Biphase decode bin stream in DemodBuffer"},
     {"detectclock",      CmdDetectClockRate,      AlwaysAvailable,  "Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer"},
