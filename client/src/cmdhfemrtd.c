@@ -32,7 +32,7 @@
 #include "crapto1/crapto1.h"        // prng_successor
 #include "commonutil.h"             // num_to_bytes
 #include "util_posix.h"             // msclock
-#include "ui.h"                     // searchhomedirectory
+#include "ui.h"                     // search home directory
 #include "proxgui.h"                // Picture Window
 
 // Max file size in bytes. Used in several places.

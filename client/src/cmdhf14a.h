@@ -36,12 +36,29 @@ typedef struct {
     const char *hint;
 } hintAIDList_t;
 
+typedef enum {
+    MTNONE = 0,
+    MTCLASSIC = 1,
+    MTMINI = 2,
+    MTDESFIRE = 4,
+    MTPLUS = 8,
+    MTULTRALIGHT = 16,
+    HID_SEOS = 32,
+    MTOTHER = 64,
+    MTEMV = 128,
+    MTFUDAN = 256,
+    MTISO18092 = 512,
+    MT424 = 1024,
+} nxp_mifare_type_t;
+
 int CmdHF14A(const char *Cmd);
 int CmdHF14ASniff(const char *Cmd);         // used by hf topaz sniff
 int CmdHF14ASim(const char *Cmd);           // used by hf mfu sim
 int CmdHF14ANdefRead(const char *Cmd);      // used by cmdnfc.c
 int CmdHF14ANdefFormat(const char *Cmd);    // used by cmdnfc.c
 int CmdHF14ANdefWrite(const char *Cmd);     // used by cmdnfc.c
+
+int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status);
 
 int hf14a_getconfig(hf14a_config *config);
 int hf14a_setconfig(hf14a_config *config, bool verbose);

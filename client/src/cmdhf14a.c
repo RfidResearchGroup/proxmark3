@@ -991,7 +991,7 @@ int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leav
         // CRC Check
         if (iLen == -1) {
             if (silentMode == false) {
-                PrintAndLogEx(ERR, "ISO 14443A CRC error.");
+                PrintAndLogEx(ERR, "ISO 14443A CRC error");
             }
             return PM3_ECRC;
         }
@@ -1665,23 +1665,85 @@ static void printTag(const char *tag) {
     PrintAndLogEx(SUCCESS, "   " _YELLOW_("%s"), tag);
 }
 
-typedef enum {
-    MTNONE = 0,
-    MTCLASSIC = 1,
-    MTMINI = 2,
-    MTDESFIRE = 4,
-    MTPLUS = 8,
-    MTULTRALIGHT = 16,
-    HID_SEOS = 32,
-    MTOTHER = 64,
-    MTEMV = 128,
-    MTFUDAN = 256,
-    MTISO18092 = 512,
-    MT424 = 1024,
-} nxp_mifare_type_t;
+int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
+
+    int type = MTNONE;
+
+    if ((sak & 0x02) != 0x02) {
+        if ((sak & 0x19) == 0x19) {
+            type |= MTCLASSIC;
+        } else if ((sak & 0x40) == 0x40) {
+            type |= MTISO18092;
+        } else if ((sak & 0x38) == 0x38) {
+            type |= MTCLASSIC;
+        } else if ((sak & 0x18) == 0x18) {
+            if (select_status == 1) {
+                type |= MTPLUS;
+            } else {
+                type |= MTCLASSIC;
+            }
+        } else if ((sak & 0x09) == 0x09) {
+            type |= MTMINI;
+        } else if ((sak & 0x28) == 0x28) {
+            type |= MTCLASSIC;
+        } else if ((sak & 0x08) == 0x08) {
+            if (select_status == 1) {
+                type |= MTPLUS;
+            } else {
+                type |= MTCLASSIC;
+            }
+        } else if ((sak & 0x11) == 0x11) {
+            type |= MTPLUS;
+        } else if ((sak & 0x10) == 0x10) {
+            type |= MTPLUS;
+        } else if ((sak & 0x01) == 0x01) {
+            type |= MTCLASSIC;
+        } else if ((sak & 0x24) == 0x24) {
+            type |= MTDESFIRE;
+        } else if ((sak & 0x20) == 0x20) {
+            if (select_status == 1) {
+                if ((atqa & 0x0040) == 0x0040) {
+                    if ((atqa & 0x0300) == 0x0300) {
+                        type |= MTDESFIRE;
+                    } else {
+                        type |= MTPLUS;
+                    }
+                } else {
+
+                    if ((atqa & 0x0001) == 0x0001) {
+                        type |= HID_SEOS;
+                    } else {
+                        type |= MTPLUS;
+                    }
+
+                    if ((atqa & 0x0004) == 0x0004) {
+                        type |= MTEMV;
+                    }
+                }
+                type |= (MTDESFIRE | MT424);
+            }
+        } else if ((sak & 0x04) == 0x04) {
+            type |= MTDESFIRE;
+        } else {
+            type |= MTULTRALIGHT;
+        }
+    } else if ((sak & 0x0A) == 0x0A) {
+
+        if ((atqa & 0x0003) == 0x0003) {
+            type |= MTFUDAN;
+        } else if ((atqa & 0x0005) == 0x0005) {
+            type |= MTFUDAN;
+        }
+    } else if ((sak & 0x53) == 0x53) {
+        type |= MTFUDAN;
+    }
+
+    return type;
+}
+
 
 // Based on NXP AN10833 Rev 3.6 and NXP AN10834 Rev 4.1
-static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
+static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_status) {
     int type = MTNONE;
 
     PrintAndLogEx(SUCCESS, "Possible types:");
@@ -1829,7 +1891,7 @@ static int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
             printTag("FM11RF005SH (FUDAN Shanghai Metro)");
             type |= MTFUDAN;
         } else if ((atqa & 0x0005) == 0x0005) {
-            printTag("FM11RF005M (FUDAN MIFARE Classic clone)");
+            printTag("FM11RF005M (FUDAN ISO14443A w Crypto-1 algo)");
             type |= MTFUDAN;
         }
     } else if ((sak & 0x53) == 0x53) {
@@ -2007,6 +2069,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
     PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
 
+    bool isMifareMini = false;
     bool isMifareClassic = true;
     bool isMifareDESFire = false;
     bool isMifarePlus = false;
@@ -2020,8 +2083,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     int nxptype = MTNONE;
 
     if (card.uidlen <= 4) {
-        nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]), select_status);
+        nxptype = detect_nxp_card_print(card.sak, ((card.atqa[1] << 8) + card.atqa[0]), select_status);
 
+        isMifareMini = ((nxptype & MTMINI) == MTMINI);
         isMifareClassic = ((nxptype & MTCLASSIC) == MTCLASSIC);
         isMifareDESFire = ((nxptype & MTDESFIRE) == MTDESFIRE);
         isMifarePlus = ((nxptype & MTPLUS) == MTPLUS);
@@ -2046,8 +2110,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 isMifareClassic = false;
                 break;
             case 0x04: // NXP
-                nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]), select_status);
+                nxptype = detect_nxp_card_print(card.sak, ((card.atqa[1] << 8) + card.atqa[0]), select_status);
 
+                isMifareMini = ((nxptype & MTMINI) == MTMINI);
                 isMifareClassic = ((nxptype & MTCLASSIC) == MTCLASSIC);
                 isMifareDESFire = ((nxptype & MTDESFIRE) == MTDESFIRE);
                 isMifarePlus = ((nxptype & MTPLUS) == MTPLUS);
@@ -2136,7 +2201,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
                         } else if (card.atqa[0] == 0x05) {
                             // Uses MIFARE Crypto-1 algo
-                            printTag("FM11RF005M (FUDAN MIFARE Classic clone)");
+                            printTag("FM11RF005M (FUDAN ISO14443A w Crypto-1 algo)");
                         }
                         break;
                     }
@@ -2383,10 +2448,13 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             } else {
 
                 if (card.ats[pos] == 0x80 || card.ats[pos] == 0x00) {
-                    PrintAndLogEx(SUCCESS, "  %s  (compact TLV data object)", sprint_hex_inrow(&card.ats[pos], calen));
+                    PrintAndLogEx(SUCCESS, "%s  (compact TLV data object)", sprint_hex_inrow(&card.ats[pos], calen));
                     get_compact_tlv(card.ats + pos, calen);
                 } else {
-                    PrintAndLogEx(SUCCESS, "  %s", sprint_hex_inrow(card.ats + pos, calen));
+                    PrintAndLogEx(SUCCESS, "%s - %s"
+                        , sprint_hex_inrow(card.ats + pos, calen)
+                        , sprint_ascii(card.ats + pos, calen)
+                    );
                 }
 
                 PrintAndLogEx(NORMAL, "");
@@ -2495,7 +2563,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     uint16_t isMagic = 0;
 
-    if (isMifareClassic) {
+    if (isMifareClassic || isMifareMini) {
         isMagic = detect_mf_magic(true, MF_KEY_B, 0xFFFFFFFFFFFF);
     }
 
@@ -2503,7 +2571,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         isMagic = detect_mf_magic(false, MF_KEY_A, 0);
     }
 
-    if (isMifareClassic) {
+    if (isMifareClassic || isMifareMini) {
         int res = detect_classic_static_nonce();
         if (res == NONCE_STATIC) {
             PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
@@ -2594,7 +2662,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf ntag424 info") "`");
     }
 
-    if (isMifareClassic) {
+    if (isMifareClassic || isMifareMini) {
         if (((isMagic & MAGIC_FLAG_GEN_1A) == MAGIC_FLAG_GEN_1A) || ((isMagic & MAGIC_FLAG_GEN_1B) == MAGIC_FLAG_GEN_1B)) {
             PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf c*") "` magic commands");
 

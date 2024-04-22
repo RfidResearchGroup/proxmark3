@@ -829,8 +829,16 @@ static int CmdHFTopazSniff(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint8_t param = 0;
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort sniffing");
+
     SendCommandNG(CMD_HF_ISO14443A_SNIFF, (uint8_t *)&param, sizeof(uint8_t));
 
+    PacketResponseNG resp;
+    WaitForResponse(CMD_HF_ISO14443A_SNIFF, &resp);
+    PrintAndLogEx(INFO, "Done!");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf topaz list")"` to view captured tracelog");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
     return PM3_SUCCESS;
 }
 
