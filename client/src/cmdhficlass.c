@@ -2147,8 +2147,9 @@ static int CmdHFiClassDump(const char *Cmd) {
 
 write_dump:
 
-    if (have_credit_key && pagemap != 0x01 && aa2_success == false)
+    if (have_credit_key && pagemap != 0x01 && aa2_success == false) {
         PrintAndLogEx(INFO, "Reading AA2 failed. dumping AA1 data to file");
+    }
 
     // print the dump
     printIclassDumpContents(tag_data, 1, (bytes_got / 8), bytes_got, dense_output);
@@ -2852,8 +2853,8 @@ static int CmdHFiClass_loclass(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "filename with nr/mac data from `hf iclass sim -t 2` "),
-        arg_lit0(NULL, "test",        "Perform self-test"),
-        arg_lit0(NULL, "long",        "Perform self-test, including long ones"),
+        arg_lit0(NULL, "test",        "Perform self test"),
+        arg_lit0(NULL, "long",        "Perform self test, including long ones"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3776,9 +3777,10 @@ out:
 static int CmdHFiClassLookUp(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass lookup",
-                  "Lookup keys takes some sniffed trace data and tries to verify what key was used against a dictionary file",
+                  "This command take sniffed trace data and try to recovery a iCLASS Standard or iCLASS Elite key.",
                   "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic\n"
-                  "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic --elite");
+                  "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic --elite"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -4628,9 +4630,9 @@ static int CmdHFiClassSAM(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-    {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"help",        CmdHelp,                    AlwaysAvailable, "This help"},
     {"list",        CmdHFiClassList,            AlwaysAvailable, "List iclass history"},
+//    {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("General") " ---------------------"},
     {"-----------", CmdHelp,                    IfPm3Iclass,     "------------------- " _CYAN_("Operations") " -------------------"},
 //    {"clone",       CmdHFiClassClone,           IfPm3Iclass,     "Create a HID credential to Picopass / iCLASS tag"},
     {"dump",        CmdHFiClassDump,            IfPm3Iclass,     "Dump Picopass / iCLASS tag to file"},

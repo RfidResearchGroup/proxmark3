@@ -238,7 +238,7 @@ static void jooki_print(uint8_t *b64, uint8_t *result, bool verbose) {
 
 static int jooki_selftest(void) {
 
-    PrintAndLogEx(INFO, "======== " _CYAN_("selftest") " ===========================================");
+    PrintAndLogEx(INFO, "======== " _CYAN_("self test") " ===========================================");
     for (int i = 0; i < ARRAYLEN(jooks); i++) {
         if (strlen(jooks[i].b64) == 0)
             continue;
@@ -296,7 +296,7 @@ static int CmdHF14AJookiEncode(const char *Cmd) {
         arg_param_begin,
         arg_str0("u", "uid",  "<hex>", "uid bytes"),
         arg_lit0("r", NULL, "read uid from tag instead"),
-        arg_lit0("t", NULL, "selftest"),
+        arg_lit0("t", NULL, "self test"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "dragon", "figurine type"),
         arg_lit0(NULL, "fox", "figurine type"),
