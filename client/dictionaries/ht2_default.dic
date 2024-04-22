@@ -1,13 +1,25 @@
 #
+# Mifare Default Keys
+#   -- Iceman version --
+#   -- contribute to this list, sharing is caring --
+#
+#  Lets see how long it takes before other project takes this file
+#  and claim they created it.
+#  
 # factory HT2 pwd
 4D494B52
+# factory HT2 crypto key
+4F4E4D494B52
+#
+# Gone in 360 seconds
+FFFF814632FF
+#
+# Paxton HT2
+BDF5E846
+#
 #
 # GE HT2 reader
-#
 # TSPL
 5453504C
 05040202
 25293C2F
-#
-# Paxton HT2
-BDF5E846

@@ -91,7 +91,7 @@ int hex2binarray_n(char *target, char *source, int sourcelen) {
 
     // process 4 bits (1 hex digit) at a time
     while (sourcelen--) {
-     
+
         char x = *(source++);
 
         *(target++) = (x >> 7) & 1;
@@ -102,7 +102,7 @@ int hex2binarray_n(char *target, char *source, int sourcelen) {
         *(target++) = (x >> 2) & 1;
         *(target++) = (x >> 1) & 1;
         *(target++) = (x & 1);
-        
+
         count += 8;
     }
     return count;
@@ -122,9 +122,9 @@ int binarray2hex(const uint8_t *bs, int bs_len, uint8_t *hex) {
         if (bs[i] == 1) {
             hex[byte_index] |= (1 << (7 - (count % 8)));
         }
-        
+
         count++;
-        
+
         // Move to the next byte if 8 bits have been filled
         if (count % 8 == 0) {
             byte_index++;

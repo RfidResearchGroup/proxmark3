@@ -14,7 +14,7 @@
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 
-// This coode has been converted from RFIDler source code to work with Proxmark3. 
+// This coode has been converted from RFIDler source code to work with Proxmark3.
 // https://github.com/AdamLaurie/RFIDler/blob/master/firmware/Pic32/RFIDler.X/src/hitag2crack.c
 
 
@@ -32,7 +32,7 @@
 const static uint8_t ERROR_RESPONSE[] = { 0xF4, 0x02, 0x88, 0x9C };
 
 // #define READP0CMD "1100000111"
-const static uint8_t read_p0_cmd[] = {1,1,0,0,0,0,0,1,1,1};
+const static uint8_t read_p0_cmd[] = {1, 1, 0, 0, 0, 0, 0, 1, 1, 1};
 
 // hitag2crack_xor XORs the source with the pad to produce the target.
 // source, target and pad are binarrays of length len.
@@ -121,7 +121,7 @@ static bool hitag2crack_read_page(uint8_t *resp, uint8_t pagenum, uint8_t *nrar,
             uint8_t response[32];
 
             // convert to binarray
-            hex2binarray((char*)e_response, (char*)e_resp);
+            hex2binarray((char *)e_response, (char *)e_resp);
             // decrypt response
             hitag2crack_xor(response, e_response, keybits + 10, 32);
 
@@ -129,7 +129,7 @@ static bool hitag2crack_read_page(uint8_t *resp, uint8_t pagenum, uint8_t *nrar,
             binarray2hex(response, 32, resp);
 
             return true;
-        } 
+        }
     }
 
     return false;
@@ -200,7 +200,7 @@ static bool hitag2crack_find_e_page0_cmd(uint8_t *keybits, uint8_t *e_firstcmd, 
                     // representing the inverted bit and the 3 page bits
                     // in both the non-inverted and inverted parts of the
                     // encrypted command.
-                    uint8_t guess[10];                    
+                    uint8_t guess[10];
                     memcpy(guess, e_firstcmd, 10);
                     if (a) {
                         guess[5] = !guess[5];
@@ -231,7 +231,7 @@ static bool hitag2crack_find_e_page0_cmd(uint8_t *keybits, uint8_t *e_firstcmd, 
 
                             // convert response to binarray
                             uint8_t e_uid[32];
-                            hex2binarray((char*)e_uid, (char*)resp);
+                            hex2binarray((char *)e_uid, (char *)resp);
 
                             // test if the guess was 'read page 0' command
                             if (hitag2crack_test_e_p0cmd(keybits, nrar, guess, uid, e_uid)) {
@@ -299,13 +299,13 @@ static bool hitag2crack_find_valid_e_cmd(uint8_t *e_cmd, uint8_t *nrar) {
 // hitag2_crack implements the first crack algorithm described in the paper,
 // Gone In 360 Seconds by Verdult, Garcia and Balasch.
 // response is a multi-line text response containing the 8 pages of the cracked tag
-// nrarhex is a string containing hex representations of the 32 bit nR and aR values 
+// nrarhex is a string containing hex representations of the 32 bit nR and aR values
 void ht2_crack(uint8_t *nrar_hex) {
 
     clear_trace();
 
     lf_hitag_crack_response_t packet;
-    memset((uint8_t*)&packet, 0x00, sizeof(lf_hitag_crack_response_t));
+    memset((uint8_t *)&packet, 0x00, sizeof(lf_hitag_crack_response_t));
 
     int res = PM3_SUCCESS;
 
@@ -319,7 +319,7 @@ void ht2_crack(uint8_t *nrar_hex) {
 
     // convert to binarray
     uint8_t nrar[64] = {0};
-    hex2binarray_n((char*)nrar, (char*)nrar_hex, 8);
+    hex2binarray_n((char *)nrar, (char *)nrar_hex, 8);
 
     // find a valid encrypted command
     uint8_t e_firstcmd[10];
@@ -331,7 +331,7 @@ void ht2_crack(uint8_t *nrar_hex) {
 
     // now we got a first encrypted command inside  e_firstcmd
     uint8_t uid[32];
-    hex2binarray_n((char*)uid, (char*)uid_hex, 4);
+    hex2binarray_n((char *)uid, (char *)uid_hex, 4);
 
     // find the 'read page 0' command and recover key stream
     uint8_t keybits[42];
@@ -352,5 +352,5 @@ void ht2_crack(uint8_t *nrar_hex) {
     packet.status = 1;
 
 out:
-    reply_ng(CMD_LF_HITAG2_CRACK, res, (uint8_t*)&packet, sizeof(lf_hitag_crack_response_t));
+    reply_ng(CMD_LF_HITAG2_CRACK, res, (uint8_t *)&packet, sizeof(lf_hitag_crack_response_t));
 }

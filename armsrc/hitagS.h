@@ -22,11 +22,10 @@
 #define _HITAGS_H_
 
 #include "common.h"
-
 #include "hitag.h"
 
 void SimulateHitagSTag(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol);
-void ReadHitagS(hitag_function htf, const hitag_data *htd, bool ledcontrol);
-void WritePageHitagS(hitag_function htf, const hitag_data *htd, int page, bool ledcontrol);
+void ReadHitagS(const lf_hitag_data_t *payload, bool ledcontrol);
+void WritePageHitagS(const lf_hitag_data_t *payload, bool ledcontrol);
 void Hitag_check_challenges(const uint8_t *data, uint32_t datalen, bool ledcontrol);
 #endif

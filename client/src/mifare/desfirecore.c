@@ -742,7 +742,7 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
     pos += buflen;
     if (enable_chaining == false) {
         if (sw == DESFIRE_GET_ISO_STATUS(MFDES_S_OPERATION_OK) ||
-            sw == DESFIRE_GET_ISO_STATUS(MFDES_ADDITIONAL_FRAME)) {
+                sw == DESFIRE_GET_ISO_STATUS(MFDES_ADDITIONAL_FRAME)) {
 
             if (resplen) {
                 *resplen = pos;

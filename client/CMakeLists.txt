@@ -263,6 +263,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/common/cardhelper.c
         ${PM3_ROOT}/common/generator.c
         ${PM3_ROOT}/common/bruteforce.c
+        ${PM3_ROOT}/common/hitag2/hitag2_crypto.c
         ${PM3_ROOT}/client/src/crypto/asn1dump.c
         ${PM3_ROOT}/client/src/crypto/asn1utils.c
         ${PM3_ROOT}/client/src/crypto/libpcrypto.c

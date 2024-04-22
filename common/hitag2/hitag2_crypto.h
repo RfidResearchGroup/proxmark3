@@ -17,6 +17,12 @@
 #define __HITAG2_CRYPTO_H
 
 #include "common.h"
+#include <stdbool.h>
+
+#ifndef LFSR_INV
+#define LFSR_INV(state) (((state) << 1) | (__builtin_parityll((state) & ((0xce0044c101cd >> 1) | (1ull << 47)))))
+#endif
+
 
 typedef struct {
     uint32_t uid;
@@ -32,11 +38,27 @@ typedef struct {
     uint8_t sectors[12][4];
 } hitag2_t;
 
-uint64_t ht2_hitag2_init(const uint64_t key, const uint32_t serial, const uint32_t IV);
-uint64_t ht2_hitag2_round(uint64_t *state);
-uint32_t ht2_hitag2_byte(uint64_t *x);
-void ht2_hitag2_cipher_reset(hitag2_t *tag, const uint8_t *iv);
-int ht2_hitag2_cipher_authenticate(uint64_t *cs, const uint8_t *authenticator_is);
-int ht2_hitag2_cipher_transcrypt(uint64_t *cs, uint8_t *data, uint16_t bytes, uint16_t bits) ;
+typedef struct {
+    uint64_t shiftreg; // naive shift register, required for nonlinear fn input
+    uint64_t lfsr;     // fast lfsr, used to make software faster
+} hitag_state_t;
 
+void ht2_hitag2_init_ex(hitag_state_t *hstate, uint64_t sharedkey, uint32_t serialnum, const uint32_t iv);
+void ht2_rollback(hitag_state_t *hstate, uint32_t steps);
+uint64_t ht2_recoverkey(hitag_state_t *hstate, uint32_t uid, uint32_t nRenc);
+uint32_t ht2_hitag2_nstep(hitag_state_t *hstate, uint32_t steps);
+uint32_t ht2_hitag_acid(hitag_state_t *hstate, uint32_t steps);
+
+int ht2_try_state(uint64_t s, uint32_t uid, uint32_t aR2, uint32_t nR1, uint32_t nR2, uint64_t *key);
+
+uint32_t ht2_hitag2_word(uint64_t *state, uint32_t steps);
+uint64_t ht2_hitag2_init(const uint64_t key, const uint32_t serial, const uint32_t iv);
+uint64_t ht2_hitag2_bit(uint64_t *state);
+uint32_t ht2_hitag2_byte(uint64_t *state);
+void ht2_hitag2_cipher_reset(hitag2_t *tag, const uint8_t *iv);
+int ht2_hitag2_cipher_authenticate(uint64_t *state, const uint8_t *authenticator_is);
+void ht2_hitag2_cipher_transcrypt(uint64_t *state, uint8_t *data, uint16_t bytes, uint16_t bits) ;
+
+int ht2_fnf(uint64_t state);
+int ht2_fnR(uint64_t state);
 #endif

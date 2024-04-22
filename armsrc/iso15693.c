@@ -2941,13 +2941,10 @@ void SetTag15693Uid_v2(const uint8_t *uid) {
         { ISO15_REQ_DATARATE_HIGH, ISO15693_MAGIC_WRITE, 0x09, 0x47, 0x3f, 0x03, 0x8b, 0x00,  0x00, 0x00 },
         { ISO15_REQ_DATARATE_HIGH, ISO15693_MAGIC_WRITE, 0x09, 0x52, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00 },
         // hf 15 raw -wac -d 02 e0 09 41 + uid first four bytes
-        {ISO15_REQ_DATARATE_HIGH, ISO15693_MAGIC_WRITE, 0x09, 0x41, uid[7], uid[6], uid[5], uid[4], 0x00, 0x00},
+        {ISO15_REQ_DATARATE_HIGH, ISO15693_MAGIC_WRITE, 0x09, 0x40, uid[7], uid[6], uid[5], uid[4], 0x00, 0x00},
         // hf 15 raw -wac -d 02 e0 09 40 + uid last four bytes
-        {ISO15_REQ_DATARATE_HIGH, ISO15693_MAGIC_WRITE, 0x09, 0x40, uid[3], uid[2], uid[1], uid[0], 0x00, 0x00}
+        {ISO15_REQ_DATARATE_HIGH, ISO15693_MAGIC_WRITE, 0x09, 0x41, uid[3], uid[2], uid[1], uid[0], 0x00, 0x00}
     };
-
-    AddCrc15(cmd[0], 8);
-    AddCrc15(cmd[1], 8);
 
     uint8_t buf[ISO15693_MAX_RESPONSE_LENGTH] = {0x00};
 
@@ -2958,6 +2955,8 @@ void SetTag15693Uid_v2(const uint8_t *uid) {
     int res = PM3_SUCCESS;
 
     for (int i = 0; i < 4; i++) {
+
+        AddCrc15(cmd[i], 8);
         res = SendDataTag(
                   cmd[i],
                   sizeof(cmd[i]),

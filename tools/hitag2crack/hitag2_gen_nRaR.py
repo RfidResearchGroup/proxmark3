@@ -67,9 +67,9 @@ def hitag2_init(key, uid, nonce):
     #print '%012x' % state
     #print '%012x' % (int("{0:048b}".format(state)[::-1],2))
     for i in range(0, 32):
-        nonce_bit = (f20(state) ^ ((nonce >> (31-i)) & 1))
+        nonce_bit = (f20(state) ^ ((nonce >> (31 - i)) & 1))
         #print nonce_bit
-        state = (state >> 1) | (((nonce_bit ^ (key >> (31-i))) & 1) << 47)
+        state = (state >> 1) | (((nonce_bit ^ (key >> (31 - i))) & 1) << 47)
     #print '%012x' % state
     #print '%012x' % (int("{0:048b}".format(state)[::-1],2))
     return state
@@ -81,6 +81,7 @@ def lfsr_feedback(state):
             ^ (state >> 26) ^ (state >> 30) ^ (state >> 41)
             ^ (state >> 42) ^ (state >> 43) ^ (state >> 46)
             ^ (state >> 47)) & 1)
+
 def lfsr(state):
     return (state >>  1) + (lfsr_feedback(state) << 47)
 
@@ -93,15 +94,17 @@ def lfsr_feedback_inv(state):
             ^ (state >> 46)) & 1)
 
 def lfsr_inv(state):
-    return ((state <<  1) + (lfsr_feedback_inv(state))) & ((1<<48)-1)
+    return ((state <<  1) + (lfsr_feedback_inv(state))) & ((1 << 48) - 1)
 
 def hitag2(state, length=48):
     c = 0
     for i in range(0, length):
         c = (c << 1) | f20(state)
-        #print '%012x' % state
-        #print '%012x' % (int("{0:048b}".format(state)[::-1],2))
+        #print ('%012x' % state)
         state = lfsr(state)
+        #print ('%012x' % (int("{0:048b}".format(state)[::-1],2)))
+        #print('%08X %08X' % (c, state))
+    #print('final: %08X %08X' % (c, state))
     return c
 
 if __name__ == "__main__":
@@ -111,8 +114,15 @@ if __name__ == "__main__":
         uid = int(sys.argv[2], 16)
         n = int(sys.argv[3])
         for i in range(n):
-            nonce = random.randrange(2**32)
-            state = hitag2_init(key, uid, nonce)
-            print('%08X %08X' % (nonce, hitag2(state, 32)^0xffffffff))
+            nonceA = random.randrange(2**32)
+            stateA = hitag2_init(key, uid, nonceA)
+            csA = hitag2(stateA, 32) ^ 0xffffffff
+            # print('%08X %08X' % (nonceA, csA))
+
+            nonceB = random.randrange(2**32)
+            stateB = hitag2_init(key, uid, nonceB)
+            csB = hitag2(stateB, 32) ^ 0xffffffff
+            print('./ht2crack5opencl %08X %08X %08X %08X %08X' % (uid, nonceA, csA, nonceB, csB))
+            print('lf hitag lookup --uid %08X --nr %08X --ar %08X --key %012X' % (uid, nonceA, csA, key))
     else:
         print("Usage: python %s <key> <uid> <nr of nRaR to generate>" % sys.argv[0])

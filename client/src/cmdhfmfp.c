@@ -355,7 +355,7 @@ static int CmdHFMFPInfo(const char *Cmd) {
         if (supportVersion) {
 
             int cardtype = getCardType(version[1], version[3], version[4]);
-            switch(cardtype) {
+            switch (cardtype) {
                 case PLUS_EV1: {
                     if (supportSignature) {
                         PrintAndLogEx(INFO, "Tech..... " _GREEN_("MIFARE Plus EV1"));

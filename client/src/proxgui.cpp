@@ -138,12 +138,12 @@ extern "C" void InitGraphics(int argc, char **argv, char *script_cmds_file, char
 }
 
 void add_temporary_marker(uint32_t position, const char *label) {
-    if(g_TempMarkerSize == 0) { //Initialize the marker array
-        g_TempMarkers = (marker_t*)calloc(1, sizeof(marker_t));
+    if (g_TempMarkerSize == 0) { //Initialize the marker array
+        g_TempMarkers = (marker_t *)calloc(1, sizeof(marker_t));
     } else { //add more space to the marker array using realloc()
-        marker_t *temp = (marker_t*)realloc(g_TempMarkers, ((g_TempMarkerSize + 1) * sizeof(marker_t)));
+        marker_t *temp = (marker_t *)realloc(g_TempMarkers, ((g_TempMarkerSize + 1) * sizeof(marker_t)));
 
-        if(temp == NULL) { //Unable to reallocate memory for a new marker
+        if (temp == NULL) { //Unable to reallocate memory for a new marker
             PrintAndLogEx(FAILED, "Unable to allocate memory for a new temporary marker!");
             free(temp);
             return;
@@ -155,10 +155,10 @@ void add_temporary_marker(uint32_t position, const char *label) {
 
     g_TempMarkers[g_TempMarkerSize].pos = position;
 
-    char *markerLabel = (char*)calloc(1, strlen(label) + 1);
+    char *markerLabel = (char *)calloc(1, strlen(label) + 1);
     strcpy(markerLabel, label);
 
-    if(strlen(markerLabel) > 30) {
+    if (strlen(markerLabel) > 30) {
         PrintAndLogEx(WARNING, "Label for temporary marker too long! Trunicating...");
         markerLabel[30] = '\0';
     }
@@ -171,7 +171,7 @@ void add_temporary_marker(uint32_t position, const char *label) {
 }
 
 void remove_temporary_markers(void) {
-    if(g_TempMarkerSize == 0) return;
+    if (g_TempMarkerSize == 0) return;
 
     memset(g_TempMarkers, 0x00, (g_TempMarkerSize * sizeof(marker_t)));
     free(g_TempMarkers);

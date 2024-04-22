@@ -189,7 +189,7 @@
             "options": [
                 "-h, --help This help",
                 "-d <hex> ASN1 encoded byte array",
-                "-t, --test perform selftest"
+                "-t, --test perform self test"
             ],
             "usage": "data asn1 [-ht] [-d <hex>]"
         },
@@ -221,18 +221,21 @@
             ],
             "usage": "data autocorr [-hg] [-w <dec>]"
         },
-        "data bin2hex": {
-            "command": "data bin2hex",
-            "description": "This function converts binary to hexadecimal. It will ignore all characters not 1 or 0 but stop reading on whitespace",
+        "data biphaserawdecode": {
+            "command": "data biphaserawdecode",
+            "description": "Biphase decode binary stream in DemodBuffer Converts 10 or 01 -> 1 and 11 or 00 -> 0 - must have binary sequence in DemodBuffer (run `data rawdemod --ar` before) - invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester",
             "notes": [
-                "data bin2hex -d 0101111001010"
+                "data biphaserawdecode -> decode biphase bitstream from the DemodBuffer",
+                "data biphaserawdecode -oi -> decode biphase bitstream from the DemodBuffer, adjust offset, and invert output"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-d, --data <bin> binary string to convert"
+                "-o, --offset set to adjust decode start position",
+                "-i, --inv invert output",
+                "--err <dec> set max errors tolerated (def 20)"
             ],
-            "usage": "data bin2hex [-h] -d <bin>"
+            "usage": "data biphaserawdecode [-hoi] [--err <dec>]"
         },
         "data bitsamples": {
             "command": "data bitsamples",
@@ -260,18 +263,6 @@
                 "-m <str> binary template"
             ],
             "usage": "data bmap [-h] [-d <hex>] [-m <str>]"
-        },
-        "data clear": {
-            "command": "data clear",
-            "description": "This function clears the bigbuff on deviceside and graph window",
-            "notes": [
-                "data clear"
-            ],
-            "offline": true,
-            "options": [
-                "-h, --help This help"
-            ],
-            "usage": "data clear [-h]"
         },
         "data convertbitstream": {
             "command": "data convertbitstream",
@@ -444,32 +435,15 @@
         },
         "data help": {
             "command": "data help",
-            "description": "----------- ------------------------- General------------------------- help This help ----------- ------------------------- Modulation------------------------- biphaserawdecode Biphase decode bin stream in DemodBuffer detectclock Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer fsktonrz Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk) manrawdecode Manchester decode binary stream in DemodBuffer modulation Identify LF signal for clock and modulation rawdemod Demodulate the data in the GraphBuffer and output binary ----------- ------------------------- Graph------------------------- askedgedetect Adjust Graph for manual ASK demod autocorr Autocorrelation over window dirthreshold Max rising higher up-thres/ Min falling lower down-thres decimate Decimate samples envelope Generate square envelope of samples undecimate Un-decimate samples hide Hide graph window hpf Remove DC offset from trace iir Apply IIR buttersworth filter on plot data grid overlay grid on graph window ltrim Trim samples from left of trace mtrim Trim out samples from the specified start to the specified stop norm Normalize max/min to +/-128 plot Show graph window cthreshold Average out all values between rtrim Trim samples from right of trace setgraphmarkers Set blue and orange marker in graph window shiftgraphzero Shift 0 for Graphed wave + or - shift value timescale Set cursor display timescale zerocrossings Count time between zero-crossings convertbitstream Convert GraphBuffer's 0/1 values to 127 / -127 getbitstream Convert GraphBuffer's >=1 values to 1 and <1 to 0 ----------- ------------------------- Operations------------------------- asn1 ASN1 decoder atr ATR lookup bin2hex Converts binary to hexadecimal bmap Convert hex value according a binary template clear Clears bigbuf on deviceside and graph window crypto Encrypt and decrypt data diff Diff of input files hex2bin Converts hexadecimal to binary load Load contents of file into graph window num Converts dec/hex/bin print Print the data in the DemodBuffer save Save signal trace data ( GraphBuffer ) setdebugmode Set Debugging Level on client side xor Xor a input string --------------------------------------------------------------------------------------- data biphaserawdecode available offline: yes Biphase decode binary stream in DemodBuffer Converts 10 or 01 -> 1 and 11 or 00 -> 0 - must have binary sequence in DemodBuffer (run `data rawdemod --ar` before) - invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester",
+            "description": "help This help ----------- ------------------------- General------------------------- clear Clears various buffers used by the graph window hide Hide the graph window load Load contents of file into graph window num Converts dec/hex/bin plot Show the graph window print Print the data in the DemodBuffer save Save signal trace data setdebugmode Set Debugging Level on client side xor Xor a input string ----------- ------------------------- Modulation------------------------- biphaserawdecode Biphase decode bin stream in DemodBuffer detectclock Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer fsktonrz Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk) manrawdecode Manchester decode binary stream in DemodBuffer modulation Identify LF signal for clock and modulation rawdemod Demodulate the data in the GraphBuffer and output binary ----------- ------------------------- Graph------------------------- askedgedetect Adjust Graph for manual ASK demod autocorr Autocorrelation over window convertbitstream Convert GraphBuffer's 0/1 values to 127 / -127 cthreshold Average out all values between dirthreshold Max rising higher up-thres/ Min falling lower down-thres decimate Decimate samples envelope Generate square envelope of samples grid overlay grid on graph window getbitstream Convert GraphBuffer's >=1 values to 1 and <1 to 0 hpf Remove DC offset from trace iir Apply IIR buttersworth filter on plot data ltrim Trim samples from left of trace mtrim Trim out samples from the specified start to the specified stop norm Normalize max/min to +/-128 rtrim Trim samples from right of trace setgraphmarkers Set the markers in the graph window shiftgraphzero Shift 0 for Graphed wave + or - shift value timescale Set cursor display timescale undecimate Un-decimate samples zerocrossings Count time between zero-crossings ----------- ------------------------- Operations------------------------- asn1 ASN1 decoder atr ATR lookup bmap Convert hex value according a binary template crypto Encrypt and decrypt data diff Diff of input files --------------------------------------------------------------------------------------- data clear available offline: yes This function clears the BigBuf on device side and graph window ( graphbuffer )",
             "notes": [
-                "data biphaserawdecode -> decode biphase bitstream from the DemodBuffer",
-                "data biphaserawdecode -oi -> decode biphase bitstream from the DemodBuffer, adjust offset, and invert output"
+                "data clear"
             ],
             "offline": true,
             "options": [
-                "-h, --help This help",
-                "-o, --offset set to adjust decode start position",
-                "-i, --inv invert output",
-                "--err <dec> set max errors tolerated (def 20)"
+                "-h, --help This help"
             ],
-            "usage": "data biphaserawdecode [-hoi] [--err <dec>]"
-        },
-        "data hex2bin": {
-            "command": "data hex2bin",
-            "description": "This function converts hexadecimal to binary. It will ignore all non-hexadecimal characters but stop reading on whitespace",
-            "notes": [
-                "data hex2bin -d 01020304"
-            ],
-            "offline": true,
-            "options": [
-                "-h, --help This help",
-                "-d, --data <hex> bytes to convert"
-            ],
-            "usage": "data hex2bin [-h] [-d <hex>]"
+            "usage": "data clear [-h]"
         },
         "data hexsamples": {
             "command": "data hexsamples",
@@ -735,18 +709,22 @@
         },
         "data setgraphmarkers": {
             "command": "data setgraphmarkers",
-            "description": "Set blue and orange marker in graph window",
+            "description": "Set the locations of the markers in the graph window",
             "notes": [
-                "data setgraphmarkers -> turn off",
-                "data setgraphmarkers -a 64 -b 50"
+                "data setgraphmarkers -> reset the markers",
+                "data setgraphmarkers -a 64 -> set A, reset the rest",
+                "data setgraphmarkers -d --keep -> set D, keep the rest"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-a <dec> orange marker",
-                "-b <dec> blue marker"
+                "--keep keep the current values of the markers",
+                "-a <dec> yellow marker",
+                "-b <dec> pink marker",
+                "-c <dec> orange marker",
+                "-d <dec> blue marker"
             ],
-            "usage": "data setgraphmarkers [-h] [-a <dec>] [-b <dec>]"
+            "usage": "data setgraphmarkers [-h] [--keep] [-a <dec>] [-b <dec>] [-c <dec>] [-d <dec>]"
         },
         "data shiftgraphzero": {
             "command": "data shiftgraphzero",
@@ -1621,14 +1599,16 @@
             "command": "hf 15 csetuid",
             "description": "Set UID for magic Chinese card (only works with such cards)",
             "notes": [
-                "hf 15 csetuid -u E011223344556677"
+                "hf 15 csetuid -u E011223344556677 -> use gen1 command",
+                "hf 15 csetuid -u E011223344556677 --v2 -> use gen2 command"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-u, --uid <hex> UID, 8 hex bytes"
+                "-u, --uid <hex> UID, 8 hex bytes",
+                "-2, --v2 Use gen2 magic command"
             ],
-            "usage": "hf 15 csetuid [-h] -u <hex>"
+            "usage": "hf 15 csetuid [-h2] -u <hex>"
         },
         "hf 15 demod": {
             "command": "hf 15 demod",
@@ -3329,7 +3309,7 @@
         },
         "hf iclass help": {
             "command": "hf iclass help",
-            "description": "----------- --------------------- General --------------------- help This help list List iclass history view Display content from tag dump file ----------- --------------------- Recovery -------------------- loclass Use loclass to perform bruteforce reader attack lookup Uses authentication trace to check for key in dictionary file ----------- ---------------------- Utils ---------------------- calcnewkey Calc diversified keys (blocks 3 & 4) to write new keys encode Encode binary wiegand to block 7 encrypt Encrypt given block data decrypt Decrypt given block data or tag dump file managekeys Manage keys to use with iclass commands permutekey Permute function from 'heart of darkness' paper --------------------------------------------------------------------------------------- hf iclass list available offline: yes Alias of `trace list -t iclass -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List iclass history view Display content from tag dump file ----------- --------------------- Recovery -------------------- loclass Use loclass to perform bruteforce reader attack lookup Uses authentication trace to check for key in dictionary file ----------- ---------------------- Utils ---------------------- calcnewkey Calc diversified keys (blocks 3 & 4) to write new keys encode Encode binary wiegand to block 7 encrypt Encrypt given block data decrypt Decrypt given block data or tag dump file managekeys Manage keys to use with iclass commands permutekey Permute function from 'heart of darkness' paper --------------------------------------------------------------------------------------- hf iclass list available offline: yes Alias of `trace list -t iclass -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf iclass list --frame -> show frame delay times",
                 "hf iclass list -1 -> use trace buffer"
@@ -3372,14 +3352,14 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> filename with nr/mac data from `hf iclass sim -t 2`",
-                "--test Perform self-test",
-                "--long Perform self-test, including long ones"
+                "--test Perform self test",
+                "--long Perform self test, including long ones"
             ],
             "usage": "hf iclass loclass [-h] [-f <fn>] [--test] [--long]"
         },
         "hf iclass lookup": {
             "command": "hf iclass lookup",
-            "description": "Lookup keys takes some sniffed trace data and tries to verify what key was used against a dictionary file",
+            "description": "This command take sniffed trace data and try to recovery a iCLASS Standard or iCLASS Elite key.",
             "notes": [
                 "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic",
                 "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic --elite"
@@ -3670,7 +3650,7 @@
                 "-h, --help This help",
                 "-u, --uid <hex> uid bytes",
                 "-r read uid from tag instead",
-                "-t selftest",
+                "-t self test",
                 "-v, --verbose verbose output",
                 "--dragon figurine type",
                 "--fox figurine type",
@@ -8219,17 +8199,37 @@
             ],
             "usage": "lf awid clone [-h] --fmt <dec> --fc <dec> --cn <dec> [--q5] [--em]"
         },
-        "lf awid help": {
-            "command": "lf awid help",
-            "description": "help this help demod demodulate an AWID FSK tag from the GraphBuffer --------------------------------------------------------------------------------------- lf awid demod available offline: yes Try to find AWID Prox preamble, if found decode / descramble data",
+        "lf awid demod": {
+            "command": "lf awid demod",
+            "description": "Try to find AWID Prox preamble, if found decode / descramble data",
             "notes": [
-                "lf awid demod"
+                "lf awid demod",
+                "lf awid demod --raw"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help"
             ],
             "usage": "lf awid demod [-h]"
+        },
+        "lf awid help": {
+            "command": "lf awid help",
+            "description": "help this help demod demodulate an AWID FSK tag from the GraphBuffer --------------------------------------------------------------------------------------- lf awid brute available offline: no Enables bruteforce of AWID reader with specified facility-code. This is a attack against reader. if cardnumber is given, it starts with it and goes up / down one step if cardnumber is not given, it starts with 1 and goes up to 65535",
+            "notes": [
+                "lf awid brute --fmt 26 --fc 224",
+                "lf awid brute --fmt 50 --fc 2001 --delay 2000",
+                "lf awid brute --fmt 50 --fc 2001 --cn 200 --delay 2000 -v"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--fmt <dec> format length 26|50",
+                "--fc <dec> 8|16bit value facility code",
+                "--cn <dec> optional - card number to start with, max 65535",
+                "--delay <dec> optional - delay betweens attempts in ms. Default 1000ms",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "lf awid brute [-hv] --fmt <dec> --fc <dec> [--cn <dec>] [--delay <dec>]"
         },
         "lf awid reader": {
             "command": "lf awid reader",
@@ -9426,20 +9426,32 @@
             ],
             "usage": "lf hitag cc [-h] -f <fn>"
         },
+        "lf hitag chk": {
+            "command": "lf hitag chk",
+            "description": "Run dictionary key or password recovery against Hitag card.",
+            "notes": [
+                "lf hitag chk",
+                "-> checks for both pwd / crypto keyslf hitag chk --crypto -> use def dictionary",
+                "lf hitag chk --pwd -f my.dic -> pwd mode, custom dictionary"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> specify dictionary filename",
+                "--pwd password mode",
+                "--crypto crypto mode"
+            ],
+            "usage": "lf hitag chk [-h] [-f <fn>] [--pwd] [--crypto]"
+        },
         "lf hitag dump": {
             "command": "lf hitag dump",
-            "description": "Read all Hitag 2 card memory and save to file Crypto mode key format: ISK high + ISK low",
+            "description": "Read all Hitag 2 card memory and save to file Crypto mode key format: ISK high + ISK low, 4F4E4D494B52 (ONMIKR) Password mode, default key 4D494B52 (MIKR)",
             "notes": [
-                "Password mode => use default key 4D494B52 (MIKR)",
-                "lf hitag dump --pwd",
-                "Short key = password mode",
-                "lf hitag dump -k 4D494B52",
-                "Challenge mode",
-                "lf hitag dump --nrar 0102030411223344",
-                "Crypto mode => use default key 4F4E4D494B52 (ONMIKR)",
-                "lf hitag dump --crypto",
-                "Long key = crypto mode",
-                "lf hitag dump -k 4F4E4D494B52"
+                "lf hitag dump --pwd -> use def pwd",
+                "lf hitag dump -k 4D494B52 -> pwd mode",
+                "lf hitag dump --crypto -> use def crypto",
+                "lf hitag dump -k 4F4E4D494B52 -> crypto mode",
+                "lf hitag dump --nrar 0102030411223344"
             ],
             "offline": false,
             "options": [
@@ -9485,7 +9497,7 @@
         },
         "lf hitag help": {
             "command": "lf hitag help",
-            "description": "help This help list List Hitag trace history view Display content from tag dump file --------------------------------------------------------------------------------------- lf hitag list available offline: yes Alias of `trace list -t hitag2` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List Hitag trace history selftest Perform self test view Display content from tag dump file lookup Uses authentication trace to check for key in dictionary file --------------------------------------------------------------------------------------- lf hitag list available offline: yes Alias of `trace list -t hitag2` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "lf hitag list --frame -> show frame delay times",
                 "lf hitag list -1 -> use trace buffer"
@@ -9516,29 +9528,41 @@
             ],
             "usage": "lf hitag info [-h]"
         },
+        "lf hitag lookup": {
+            "command": "lf hitag lookup",
+            "description": "This command take sniffed trace data and try to recovery a Hitag2 crypto key. You can either - verify that NR/AR matches a known crypto key - verify if NR/AR matches a known 6 byte crypto key in a dictionary",
+            "notes": [
+                "lf hitag lookup --uid 11223344 --nr 73AA5A62 --ar EAB8529C -k 010203040506 -> check key",
+                "lf hitag lookup --uid 11223344 --nr 73AA5A62 --ar EAB8529C -> use def dictionary",
+                "lf hitag lookup --uid 11223344 --nr 73AA5A62 --ar EAB8529C -f my.dic -> use custom dictionary",
+                "lf hitag lookup --uid 11223344 --nrar 73AA5A62EAB8529C"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> specify dictionary filename",
+                "-k, --key <hex> specify known cryptokey as 6 bytes",
+                "-u, --uid <hex> specify UID as 4 hex bytes",
+                "--nr <hex> specify nonce as 4 hex bytes",
+                "--ar <hex> specify answer as 4 hex bytes",
+                "--nrar <hex> specify nonce / answer as 8 hex bytes"
+            ],
+            "usage": "lf hitag lookup [-h] [-f <fn>] [-k <hex>] -u <hex> [--nr <hex>] [--ar <hex>] [--nrar <hex>]"
+        },
         "lf hitag read": {
             "command": "lf hitag read",
-            "description": "Read Hitag memory Crypto mode key format: ISK high + ISK low",
+            "description": "Read Hitag memory. It support HitagS and Hitag 2 Password mode: - default key 4D494B52 (MIKR) Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR)",
             "notes": [
-                "Hitag S, plain mode",
-                "lf hitag read --hts",
-                "Hitag S, challenge mode",
-                "lf hitag read --hts --nrar 0102030411223344",
-                "Hitag S, crypto mode => use default key 4F4E4D494B52 (ONMIKR)",
-                "lf hitag read --hts --crypto",
-                "Hitag S, long key = crypto mode",
-                "lf hitag read --hts -k 4F4E4D494B52",
+                "lf hitag read --hts -> HitagS, plain mode",
+                "lf hitag read --hts --nrar 0102030411223344 -> HitagS, challenge mode",
+                "lf hitag read --hts --crypto -> HitagS, crypto mode, def key",
+                "lf hitag read --hts -k 4F4E4D494B52 -> HitagS, crypto mode",
                 "",
-                "Hitag 2, password mode => use default key 4D494B52 (MIKR)",
-                "lf hitag read --ht2 --pwd",
-                "Hitag 2, providing a short key = password mode",
-                "lf hitag read --ht2 -k 4D494B52",
-                "Hitag 2, challenge mode",
-                "lf hitag read --ht2 --nrar 0102030411223344",
-                "Hitag 2, crypto mode => use default key 4F4E4D494B52 (ONMIKR)",
-                "lf hitag read --ht2 --crypto",
-                "Hitag 2, providing a long key = crypto mode",
-                "lf hitag read --ht2 -k 4F4E4D494B52"
+                "lf hitag read --ht2 --pwd -> Hitag 2, pwd mode, def key",
+                "lf hitag read --ht2 -k 4D494B52 -> Hitag 2, pwd mode",
+                "lf hitag read --ht2 --nrar 0102030411223344 -> Hitag 2, challenge mode",
+                "lf hitag read --ht2 --crypto -> Hitag 2, crypto mode, def key",
+                "lf hitag read --ht2 -k 4F4E4D494B52 -> Hitag 2, crypto mode"
             ],
             "offline": false,
             "options": [
@@ -9551,6 +9575,18 @@
                 "-k, --key <hex> key, 4 or 6 hex bytes"
             ],
             "usage": "lf hitag read [-hs2] [--pwd] [--nrar <hex>] [--crypto] [-k <hex>]"
+        },
+        "lf hitag selftest": {
+            "command": "lf hitag selftest",
+            "description": "Perform selftest of Hitag crypto engine",
+            "notes": [
+                "lf hitag selftest"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "lf hitag selftest [-h]"
         },
         "lf hitag sim": {
             "command": "lf hitag sim",
@@ -9595,27 +9631,18 @@
         },
         "lf hitag wrbl": {
             "command": "lf hitag wrbl",
-            "description": "Write a page in Hitag memory Crypto mode key format: ISK high + ISK low",
+            "description": "Write a page in Hitag memory. It support HitagS and Hitag 2 Password mode: - default key 4D494B52 (MIKR) Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR)",
             "notes": [
-                "Hitag S, plain mode",
-                "lf hitag wrbl --hts -p 6 -d 01020304",
-                "Hitag S, challenge mode",
-                "lf hitag wrbl --hts --nrar 0102030411223344 -p 6 -d 01020304",
-                "Hitag S, crypto mode => use default key 4F4E4D494B52 (ONMIKR)",
-                "lf hitag wrbl --hts --crypto -p 6 -d 01020304",
-                "Hitag S, long key = crypto mode",
-                "lf hitag wrbl --hts -k 4F4E4D494B52 -p 6 -d 01020304",
+                "lf hitag wrbl --hts -p 6 -d 01020304 -> HitagS, plain mode",
+                "lf hitag wrbl --hts -p 6 -d 01020304 --nrar 0102030411223344 -> HitagS, challenge mode",
+                "lf hitag wrbl --hts -p 6 -d 01020304 --crypto -> HitagS, crypto mode, def key",
+                "lf hitag wrbl --hts -p 6 -d 01020304 -k 4F4E4D494B52 -> HitagS, crypto mode",
                 "",
-                "Hitag 2, password mode => use default key 4D494B52 (MIKR)",
-                "lf hitag wrbl --ht2 --pwd -p 6 -d 01020304",
-                "Hitag 2, providing a short key = password mode",
-                "lf hitag wrbl --ht2 -k 4D494B52 -p 6 -d 01020304",
-                "Hitag 2, challenge mode",
-                "lf hitag wrbl --ht2 --nrar 0102030411223344 -p 6 -d 01020304",
-                "Hitag 2, crypto mode => use default key 4F4E4D494B52 (ONMIKR)",
-                "lf hitag wrbl --ht2 --crypto -p 6 -d 01020304",
-                "Hitag 2, providing a long key = crypto mode",
-                "lf hitag wrbl --ht2 -k 4F4E4D494B52 -p 6 -d 01020304"
+                "lf hitag wrbl --ht2 -p 6 -d 01020304 --pwd -> Hitag 2, pwd mode, def key",
+                "lf hitag wrbl --ht2 -p 6 -d 01020304 -k 4D494B52 -> Hitag 2, pwd mode",
+                "lf hitag wrbl --ht2 -p 6 -d 01020304 --nrar 0102030411223344 -> Hitag 2, challenge mode",
+                "lf hitag wrbl --ht2 -p 6 -d 01020304 --crypto -> Hitag 2, crypto mode, def key",
+                "lf hitag wrbl --ht2 -p 6 -d 01020304 -k 4F4E4D494B52 -> Hitag 2, crypto mode"
             ],
             "offline": false,
             "options": [
@@ -12595,8 +12622,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 727,
+        "commands_extracted": 729,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-04-07T09:37:51"
+        "extracted_on": "2024-04-22T14:35:02"
     }
 }

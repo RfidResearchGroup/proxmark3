@@ -3,9 +3,12 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-
 - Removed `save_restoreDB` - replaced by `buffer_savestate_t` implementation (@HACKhalo2)
 - Removed `save_restoreGB` - replaced by `buffer_savestate_t` implementation (@HACKhalo2)
+- Changed `lf hitag dump --nrar` - now supports attack 1 from "gone in 360 seconds" paper. Thanks @kevsecurity! (@iceman1001)
+- Added `lf hitag selftest` - converted from RFIDLers selftest (@iceman1001)
+- Added `lf hitag chk` - dictionary attack against card (@iceman1001)
+- Added `lf hitag lookup` - verify collected challenges aginst dictionary (@iceman1001)
 - Updated windows workflow to use latest setup-wsl script (@iceman1001)
 - Added a micro second clock in the client (@iceman1001)
 - Fix `hf mfdes read` - buffer overflow when reading large files (@iceman1001)
