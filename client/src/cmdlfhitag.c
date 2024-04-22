@@ -1430,6 +1430,8 @@ static int CmdLFHitag2Dump(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    uint32_t uid = 0;
+
     PacketResponseNG resp;
     uint8_t *data = NULL;
 
@@ -1541,7 +1543,8 @@ static int CmdLFHitag2Dump(const char *Cmd) {
 
 
     // block3, 1 byte
-    uint32_t uid = bytes_to_num(data, HITAG_UID_SIZE);
+    uid = bytes_to_num(data, HITAG_UID_SIZE);
+    
     if (use_ht2) {
         print_hitag2_configuration(uid, data[HITAG_BLOCK_SIZE * 3]);
         print_hitag2_blocks(data, HITAG2_MAX_BYTE_SIZE);
