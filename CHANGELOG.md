@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Addeded a micro second clock in the client (@iceman1001)
+- Fix `hf mfdes read` - buffer overflow when reading large files (@iceman1001)
 - Changed `hf 15 csetuid` - now supports gen2 command (@iceman1001)
 - Changed `hf mfp info` - to identify Ev2 (@iceman1001)
 - Updated Graph Markers implementation to include temporary markers and marker labels (@HACKhalo2)
