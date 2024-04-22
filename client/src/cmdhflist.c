@@ -704,6 +704,9 @@ void annotateIso15693(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             case ISO15693_READ_SIGNATURE:
                 snprintf(exp, size, "READ_SIGNATURE");
                 return;
+            case ISO15693_MAGIC_WRITE:
+                snprintf(exp, size, "MAGIC_WRITEBLOCK");
+                return;
             default:
                 break;
         }
@@ -2223,7 +2226,7 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
                 char sat[5] = {0, 0, 0, 0, 0};
                 mf_get_paritybinstr(sat, AuthData.at_enc, AuthData.at_enc_par);
 
-                PrintAndLogEx(NORMAL, "Nested authentication detected. ");
+                PrintAndLogEx(NORMAL, "Nested authentication detected!");
                 PrintAndLogEx(NORMAL, "tools/mf_nonce_brute/mf_nonce_brute %x %x %s %x %x %s %x %s %s\n"
                               , AuthData.uid
                               , AuthData.nt_enc

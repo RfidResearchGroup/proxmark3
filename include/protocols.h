@@ -369,10 +369,10 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define CRYPTORF_ERR_MEMORY_ACCESS                    0xEE
 #define CRYPTORF_ERR_MEMORY_ACCESS_SEC                0xF9
 
-//First byte is 26
+// First byte is 26
 #define ISO15693_INVENTORY     0x01
 #define ISO15693_STAYQUIET     0x02
-//First byte is 02
+// First byte is 02
 #define ISO15693_READBLOCK                   0x20
 #define ISO15693_WRITEBLOCK                  0x21
 #define ISO15693_LOCKBLOCK                   0x22
@@ -411,6 +411,9 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define ISO15693_64BIT_PASSWORD_PROTECTION   0xBB
 #define ISO15693_STAYQUIET_PERSISTENT        0xBC
 #define ISO15693_READ_SIGNATURE              0xBD
+
+//
+#define ISO15693_MAGIC_WRITE                 0xE0
 
 // Topaz command set:
 #define TOPAZ_REQA                    0x26 // Request

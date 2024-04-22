@@ -2890,21 +2890,14 @@ void SetTag15693Uid(const uint8_t *uid) {
     uint8_t cmd[4][9] = {
         {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x3e, 0x00, 0x00, 0x00, 0x00, 0xE9, 0x8F},
         {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x3f, 0x69, 0x96, 0x00, 0x00, 0x8A, 0xBB},
-        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x38},
-        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x39}
+
+        // Command 3 : 02 21 38 u8u7u6u5 (where uX = uid byte X)
+        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x38, uid[7], uid[6], uid[5], uid[4]},
+
+        // Command 4 : 02 21 39 u4u3u2u1 (where uX = uid byte X)
+        {ISO15_REQ_DATARATE_HIGH, ISO15693_WRITEBLOCK, 0x39, uid[3], uid[2], uid[1], uid[0]}
     };
 
-    // Command 3 : 02 21 38 u8u7u6u5 (where uX = uid byte X)
-    cmd[2][3] = uid[7];
-    cmd[2][4] = uid[6];
-    cmd[2][5] = uid[5];
-    cmd[2][6] = uid[4];
-
-    // Command 4 : 02 21 39 u4u3u2u1 (where uX = uid byte X)
-    cmd[3][3] = uid[3];
-    cmd[3][4] = uid[2];
-    cmd[3][5] = uid[1];
-    cmd[3][6] = uid[0];
 
     AddCrc15(cmd[2], 7);
     AddCrc15(cmd[3], 7);
@@ -2937,6 +2930,54 @@ void SetTag15693Uid(const uint8_t *uid) {
     reply_ng(CMD_HF_ISO15693_CSETUID, res, NULL, 0);
     switch_off();
 }
+
+// Set the UID on Magic ISO15693 tag ( Gen2 ?)
+// E0 00 09   - seem to be command
+// 0x41, 0x40 - seem to be block referens
+void SetTag15693Uid_v2(const uint8_t *uid) {
+
+    LED_A_ON();
+    uint8_t cmd[2][11] = {
+
+        // hf 15 raw -wac -d 02e00941 + uid first four bytes
+        {ISO15_REQ_DATARATE_HIGH, ISO15693_MAGIC_WRITE, 0x00, 0x09, 0x41, uid[7], uid[6], uid[5], uid[4], 0x00, 0x00},
+
+        // hf 15 raw -wac -d 02e00940 + uid last four bytes
+        {ISO15_REQ_DATARATE_HIGH, ISO15693_MAGIC_WRITE, 0x00, 0x09, 0x40, uid[3], uid[2], uid[1], uid[0], 0x00, 0x00}
+    };
+
+    AddCrc15(cmd[0], 9);
+    AddCrc15(cmd[1], 9);
+
+    uint8_t buf[ISO15693_MAX_RESPONSE_LENGTH] = {0x00};
+
+    uint32_t start_time = 0;
+    uint32_t eof_time = 0;
+    uint16_t recvlen = 0;
+
+    int res = PM3_SUCCESS;
+
+    for (int i = 0; i < 2; i++) {
+        res = SendDataTag(
+                  cmd[i],
+                  sizeof(cmd[i]),
+                  (i == 0) ? true : false,
+                  true,
+                  buf,
+                  sizeof(buf),
+                  start_time,
+                  ISO15693_READER_TIMEOUT_WRITE,
+                  &eof_time,
+                  &recvlen
+              );
+
+        start_time = eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+    }
+
+    reply_ng(CMD_HF_ISO15693_CSETUID_V2, res, NULL, 0);
+    switch_off();
+}
+
 
 static void init_password_15693_Slix(uint8_t *buffer, const uint8_t *pwd, const uint8_t *rnd) {
     memcpy(buffer, pwd, 4);
