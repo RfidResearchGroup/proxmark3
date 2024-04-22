@@ -1799,6 +1799,7 @@ static int CmdLFHitagSniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+/*
 static int CmdLFHitag2PWMDemod(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -1865,6 +1866,7 @@ static int CmdLFHitag2PWMDemod(const char *Cmd) {
     free(bits);
     return PM3_SUCCESS;
 }
+*/
 
 static int CmdLFHitag2Chk(const char *Cmd) {
 
@@ -2321,7 +2323,7 @@ static command_t CommandTable[] = {
     {"info",        CmdLFHitagInfo,             IfPm3Hitag,      "Hitag 2 tag information"},
     {"selftest",    CmdLFHitag2Selftest,        AlwaysAvailable, "Perform self test"},
     {"-----------", CmdHelp,                    IfPm3Hitag,      "----------------------- " _CYAN_("Operations") " -----------------------"},
-    {"demod",       CmdLFHitag2PWMDemod,        IfPm3Hitag,      "PWM Hitag 2 reader message demodulation"},
+//    {"demod",       CmdLFHitag2PWMDemod,        IfPm3Hitag,      "PWM Hitag 2 reader message demodulation"},
     {"dump",        CmdLFHitag2Dump,            IfPm3Hitag,      "Dump Hitag 2 tag"},
     {"read",        CmdLFHitagReader,           IfPm3Hitag,      "Read Hitag memory"},
     {"sniff",       CmdLFHitagSniff,            IfPm3Hitag,      "Eavesdrop Hitag communication"},
