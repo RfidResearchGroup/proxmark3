@@ -674,11 +674,11 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
     }
 
     if (respcode) {
-        *respcode = 0xff;
+        *respcode = 0xFF;
     }
 
     uint16_t sw = 0;
-    uint8_t *buf  = calloc(DESFIRE_BUFFER_SIZE, 1);
+    uint8_t *buf = calloc(DESFIRE_BUFFER_SIZE, 1);
     if (buf == NULL) {
         return PM3_EMALLOC;
     }
@@ -698,10 +698,11 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
     // tx chaining
     size_t sentdatalen = 0;
     while (datalen >= sentdatalen) {
-        if (datalen - sentdatalen > DESFIRE_TX_FRAME_MAX_LEN)
+        if (datalen - sentdatalen > DESFIRE_TX_FRAME_MAX_LEN) {
             apdu.Lc = DESFIRE_TX_FRAME_MAX_LEN;
-        else
+        } else {
             apdu.Lc = datalen - sentdatalen;
+        }
 
         apdu.data = &data[sentdatalen];
 
@@ -725,8 +726,8 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
         }
     }
 
-    if (respcode != NULL && ((sw & 0xff00) == 0x9100)) {
-        *respcode = sw & 0xff;
+    if (respcode != NULL && ((sw & 0xFF00) == 0x9100)) {
+        *respcode = sw & 0xFF;
     }
 
     if (resp) {
@@ -741,7 +742,7 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
     pos += buflen;
     if (enable_chaining == false) {
         if (sw == DESFIRE_GET_ISO_STATUS(MFDES_S_OPERATION_OK) ||
-                sw == DESFIRE_GET_ISO_STATUS(MFDES_ADDITIONAL_FRAME)) {
+            sw == DESFIRE_GET_ISO_STATUS(MFDES_ADDITIONAL_FRAME)) {
 
             if (resplen) {
                 *resplen = pos;
@@ -759,6 +760,8 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
         apdu.P2 = 0;
         apdu.data = NULL;
 
+        buflen = 0;
+
         res = DESFIRESendApdu(false, apdu, buf, DESFIRE_BUFFER_SIZE, &buflen, &sw);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(DEBUG, "error DESFIRESendApdu %s", DesfireGetErrorString(res, &sw));
@@ -766,8 +769,8 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
             return res;
         }
 
-        if (respcode != NULL && ((sw & 0xff00) == 0x9100)) {
-            *respcode = sw & 0xff;
+        if (respcode != NULL && ((sw & 0xFF00) == 0x9100)) {
+            *respcode = sw & 0xFF;
         }
 
         if (resp != NULL) {
@@ -776,15 +779,17 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
                 memcpy(&resp[i * splitbysize + 1], buf, buflen);
                 i += 1;
             } else {
-                memcpy(&resp[pos], buf, buflen);
+                memcpy(resp + (pos), buf, buflen);
             }
         }
+
         pos += buflen;
 
         if (sw != DESFIRE_GET_ISO_STATUS(MFDES_ADDITIONAL_FRAME)) {
             break;
         }
     }
+
 
     if (resplen) {
         *resplen = (splitbysize) ? i : pos;
@@ -854,7 +859,7 @@ int DesfireExchangeEx(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, u
         DesfirePrintContext(ctx);
     }
 
-    uint8_t *databuf  = calloc(DESFIRE_BUFFER_SIZE, 1);
+    uint8_t *databuf = calloc(DESFIRE_BUFFER_SIZE, 1);
     if (databuf == NULL) {
         return PM3_EMALLOC;
     }
@@ -866,13 +871,14 @@ int DesfireExchangeEx(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, u
         case DCCNativeISO:
             DesfireSecureChannelEncode(ctx, cmd, data, datalen, databuf, &databuflen);
 
-            if (ctx->cmdSet == DCCNative)
+            if (ctx->cmdSet == DCCNative) {
                 res = DesfireExchangeNative(activate_field, ctx, cmd, databuf, databuflen, respcode, databuf, &databuflen, enable_chaining, splitbysize);
-            else
+            } else {
                 res = DesfireExchangeISONative(activate_field, ctx, cmd, databuf, databuflen, respcode, databuf, &databuflen, enable_chaining, splitbysize);
+            }
 
             if (splitbysize) {
-                uint8_t sdata[250 * 5] = {0};
+                uint8_t sdata[DESFIRE_BUFFER_SIZE] = {0};
                 size_t sdatalen = 0;
                 DesfireJoinBlockToBytes(databuf, databuflen, splitbysize, sdata, &sdatalen);
 
@@ -1924,13 +1930,16 @@ void DesfirePrintAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS 
 }
 
 static int DesfireCommandEx(DesfireContext_t *dctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *resp, size_t *resplen, int checklength, size_t splitbysize) {
-    if (resplen)
+    if (resplen) {
         *resplen = 0;
+    }
 
-    uint8_t respcode = 0xff;
+    uint8_t respcode = 0xFF;
+
     uint8_t *xresp  = calloc(DESFIRE_BUFFER_SIZE, 1);
-    if (xresp == NULL)
+    if (xresp == NULL) {
         return PM3_EMALLOC;
+    }
 
     size_t xresplen = 0;
     int res = DesfireExchangeEx(false, dctx, cmd, data, datalen, &respcode, xresp, &xresplen, true, splitbysize);
@@ -1938,19 +1947,24 @@ static int DesfireCommandEx(DesfireContext_t *dctx, uint8_t cmd, uint8_t *data, 
         free(xresp);
         return res;
     }
+
     if (respcode != MFDES_S_OPERATION_OK) {
         free(xresp);
         return PM3_EAPDU_FAIL;
     }
+
     if (checklength >= 0 && xresplen != checklength) {
         free(xresp);
         return PM3_EAPDU_FAIL;
     }
 
-    if (resplen)
+    if (resplen) {
         *resplen = xresplen;
-    if (resp)
+    }
+
+    if (resp) {
         memcpy(resp, xresp, (splitbysize == 0) ? xresplen : xresplen * splitbysize);
+    }
 
     free(xresp);
     return PM3_SUCCESS;
@@ -1996,13 +2010,16 @@ int DesfireReadSignature(DesfireContext_t *dctx, uint8_t sid, uint8_t *resp, siz
     uint8_t respcode = 0xff;
 
     int res = DesfireExchange(dctx, MFDES_READSIG, &sid, 1, &respcode, xresp, &xresplen);
-    if (res != PM3_SUCCESS)
+    if (res != PM3_SUCCESS) {
         return res;
+    }
 
-    if (respcode != 0x90)
+    if (respcode != 0x90) {
         return PM3_EAPDU_FAIL;
+    }
 
     memcpy(resp, xresp, xresplen);
+
     *resplen = xresplen;
 
     return PM3_SUCCESS;
@@ -2172,7 +2189,6 @@ int DesfireReadFile(DesfireContext_t *dctx, uint8_t fnum, uint32_t offset, uint3
     data[0] = fnum;
     Uint3byteToMemLe(&data[1], offset);
     Uint3byteToMemLe(&data[4], len);
-
     return DesfireCommand(dctx, (dctx->isoChaining) ? MFDES_READ_DATA2 : MFDES_READ_DATA, data, 7, resp, resplen, -1);
 }
 

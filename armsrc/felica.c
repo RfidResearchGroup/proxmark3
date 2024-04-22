@@ -29,7 +29,8 @@
 // FeliCa timings
 // minimum time between the start bits of consecutive transfers from reader to tag: 6800 carrier (13.56MHz) cycles
 #ifndef FELICA_REQUEST_GUARD_TIME
-# define FELICA_REQUEST_GUARD_TIME (6800/16 + 1) // 426
+//# define FELICA_REQUEST_GUARD_TIME (6800 / 16 + 1) // 426
+# define FELICA_REQUEST_GUARD_TIME ((512 + 0 * 256) * 64 / 16 + 1)
 #endif
 // FRAME DELAY TIME 2672 carrier cycles
 #ifndef FELICA_FRAME_DELAY_TIME
@@ -63,6 +64,11 @@ static uint32_t iso18092_get_timeout(void) {
 #ifndef FELICA_MAX_FRAME_SIZE
 #define FELICA_MAX_FRAME_SIZE 260
 #endif
+
+
+
+
+
 
 //structure to hold outgoing NFC frame
 static uint8_t frameSpace[FELICA_MAX_FRAME_SIZE + 4];
@@ -122,38 +128,45 @@ static void shiftInByte(uint8_t bt) {
 }
 
 static void Process18092Byte(uint8_t bt) {
+
     switch (FelicaFrame.state) {
+
         case STATE_UNSYNCD: {
-            //almost any nonzero byte can be start of SYNC. SYNC should be preceded by zeros, but that is not always the case
+            // almost any nonzero byte can be start of SYNC. SYNC should be preceded by zeros, but that is not always the case
             if (bt > 0) {
                 FelicaFrame.shiftReg = reflect8(bt);
                 FelicaFrame.state = STATE_TRYING_SYNC;
             }
             break;
         }
+
         case STATE_TRYING_SYNC: {
+
             if (bt == 0) {
-                //desync
+                // desync
                 FelicaFrame.shiftReg = bt;
                 FelicaFrame.state = STATE_UNSYNCD;
             } else {
+
                 for (uint8_t i = 0; i < 8; i++) {
 
                     if (FelicaFrame.shiftReg == SYNC_16BIT) {
-                        //SYNC done!
+                        // SYNC done!
                         FelicaFrame.state = STATE_GET_LENGTH;
                         FelicaFrame.framebytes[0] = 0xb2;
                         FelicaFrame.framebytes[1] = 0x4d;
                         FelicaFrame.byte_offset = i;
-                        //shift in remaining byte, slowly...
+
+                        // shift in remaining byte, slowly...
                         for (uint8_t j = i; j < 8; j++) {
                             FelicaFrame.framebytes[2] = (FelicaFrame.framebytes[2] << 1) + (bt & 1);
                             bt >>= 1;
                         }
 
                         FelicaFrame.posCnt = 2;
-                        if (i == 0)
+                        if (i == 0) {
                             break;
+                        }
                     }
                     FelicaFrame.shiftReg = (FelicaFrame.shiftReg << 1) + (bt & 1);
                     bt >>= 1;
@@ -351,16 +364,21 @@ static void BuildFliteRdblk(const uint8_t *idm, uint8_t blocknum, const uint16_t
 }
 
 static void TransmitFor18092_AsReader(const uint8_t *frame, uint16_t len, const uint32_t *NYI_timing_NYI, uint8_t power, uint8_t highspeed) {
+
     if (NYI_timing_NYI != NULL) {
         Dbprintf("Error: TransmitFor18092_AsReader does not check or set parameter NYI_timing_NYI");
         return;
     }
 
     uint16_t flags = FPGA_MAJOR_MODE_HF_ISO18092;
-    if (power)
+
+    if (power) {
         flags |= FPGA_HF_ISO18092_FLAG_READER;
-    if (highspeed)
+    }
+
+    if (highspeed) {
         flags |= FPGA_HF_ISO18092_FLAG_424K;
+    }
 
     FpgaWriteConfWord(flags);
 
@@ -419,9 +437,13 @@ static void TransmitFor18092_AsReader(const uint8_t *frame, uint16_t len, const 
 // stop when button is pressed
 // or return TRUE when command is captured
 bool WaitForFelicaReply(uint16_t maxbytes) {
-    if (g_dbglevel >= DBG_DEBUG)
+
+    if (g_dbglevel >= DBG_DEBUG) {
         Dbprintf("WaitForFelicaReply Start");
+    }
+
     uint32_t c = 0;
+
     // power, no modulation
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO18092 | FPGA_HF_ISO18092_FLAG_READER | FPGA_HF_ISO18092_FLAG_NOMOD);
     FelicaFrameReset();
@@ -433,12 +455,19 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
     uint32_t timeout = iso18092_get_timeout();
 
     for (;;) {
+
         WDT_HIT();
+
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
+
             b = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
+
             Process18092Byte(b);
+
             if (FelicaFrame.state == STATE_FULL) {
-                felica_nexttransfertime = MAX(felica_nexttransfertime,
+
+                felica_nexttransfertime = MAX(
+                                              felica_nexttransfertime,
                                               (GetCountSspClk() & 0xfffffff8) - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 16 + FELICA_FRAME_DELAY_TIME);
 
                 LogTrace(
@@ -449,10 +478,15 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
                     NULL,
                     false
                 );
+
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("All bytes received! STATE_FULL");
+
                 return true;
+
             } else if (c++ > timeout && (FelicaFrame.state == STATE_UNSYNCD || FelicaFrame.state == STATE_TRYING_SYNC)) {
+
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Error: Timeout! STATE_UNSYNCD");
+
                 return false;
             }
         }
@@ -478,8 +512,9 @@ static void iso18092_setup(uint8_t fpga_minor_mode) {
     // DemodInit(BigBuf_malloc(MAX_FRAME_SIZE));
     FelicaFrameinit(BigBuf_malloc(FELICA_MAX_FRAME_SIZE));
 
-    felica_nexttransfertime = 2 * DELAY_ARM2AIR_AS_READER;
-    iso18092_set_timeout(2120); // 106 * 20ms  maximum start-up time of card
+    felica_nexttransfertime = 2 * DELAY_ARM2AIR_AS_READER;  // 418
+    // iso18092_set_timeout(2120); // 106 * 20ms  maximum start-up time of card
+    iso18092_set_timeout(1060); // 106 * 10ms  maximum start-up time of card
 
     init_table(CRC_FELICA);
 

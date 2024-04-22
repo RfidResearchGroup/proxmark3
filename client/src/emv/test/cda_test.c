@@ -427,16 +427,16 @@ static int cda_test_pk(bool verbose) {
 int exec_cda_test(bool verbose) {
     int ret = cda_test_raw(verbose);
     if (ret) {
-        PrintAndLogEx(WARNING, "CDA raw test: (%s)", _RED_("failed"));
+        PrintAndLogEx(WARNING, "CDA raw test ( %s )", _RED_("fail"));
         return ret;
     }
-    PrintAndLogEx(INFO, "CDA raw test: (%s)", _GREEN_("passed"));
+    PrintAndLogEx(INFO, "CDA raw test ( %s )", _GREEN_("ok"));
 
     ret = cda_test_pk(verbose);
     if (ret) {
-        PrintAndLogEx(WARNING, "CDA test pk: (%s)", _RED_("failed"));
+        PrintAndLogEx(WARNING, "CDA test pk ( %s )", _RED_("fail"));
         return ret;
     }
-    PrintAndLogEx(INFO, "CDA test pk: (%s)", _GREEN_("passed"));
+    PrintAndLogEx(INFO, "CDA test pk ( %s )", _GREEN_("ok"));
     return 0;
 }

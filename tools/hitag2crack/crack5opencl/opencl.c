@@ -310,13 +310,13 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                     } else {
                         (*cd_ctx)[platform_idx].device[device_idx].selected = plat_dev_enabled(global_device_id, dev_sel, dev_cnt, (unsigned int) device_type, device_types_selected);
                     }
-                    
+
                     global_device_id++;
-                    
+
                     if ((*cd_ctx)[platform_idx].device[device_idx].selected) {
                         (*selected_devices_cnt)++;
                     }
-                    
+
                     continue;
                 } else if (info_idx == 5) {
 
@@ -338,7 +338,7 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                         }
 
                         if ((*cd_ctx)[platform_idx].is_apple) {
-                            
+
                             if (strncmp((*cd_ctx)[platform_idx].device[device_idx].vendor, "Intel", 5) != 0) {
 
                                 (*cd_ctx)[platform_idx].device[device_idx].have_local_memory = true;

@@ -74,6 +74,7 @@ uint32_t reflect(uint32_t v, int b); // used in crc.c ...
 uint8_t reflect8(uint8_t b);         // dedicated 8bit reversal
 uint16_t reflect16(uint16_t b);      // dedicated 16bit reversal
 uint32_t reflect32(uint32_t b);      // dedicated 32bit reversal
+uint64_t reflect64(uint64_t b);      // dedicated 64bit reversal
 
 void num_to_bytes(uint64_t n, size_t len, uint8_t *dest);
 uint64_t bytes_to_num(const uint8_t *src, size_t len);

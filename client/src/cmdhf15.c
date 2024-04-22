@@ -2735,11 +2735,14 @@ static int CmdHF15CSetUID(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 csetuid",
                   "Set UID for magic Chinese card (only works with such cards)\n",
-                  "hf 15 csetuid -u E011223344556677");
+                  "hf 15 csetuid -u E011223344556677       -> use gen1 command\n"
+                  "hf 15 csetuid -u E011223344556677 --v2  -> use gen2 command"
+                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1("u", "uid", "<hex>", "UID, 8 hex bytes"),
+        arg_lit0("2", "v2", "Use gen2 magic command"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2750,6 +2753,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
 
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, payload.uid, &uidlen);
+    bool use_v2 = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
     if (uidlen != HF15_UID_LENGTH) {
@@ -2775,8 +2779,14 @@ static int CmdHF15CSetUID(const char *Cmd) {
     PrintAndLogEx(INFO, "Writing...");
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_ISO15693_CSETUID, (uint8_t *)&payload, sizeof(payload));
-    if (WaitForResponseTimeout(CMD_HF_ISO15693_CSETUID, &resp, 2000) == false) {
+
+    uint16_t cmd = CMD_HF_ISO15693_CSETUID;
+    if (use_v2) {
+        cmd = CMD_HF_ISO15693_CSETUID_V2;
+    }
+
+    SendCommandNG(cmd, (uint8_t *)&payload, sizeof(payload));
+    if (WaitForResponseTimeout(cmd, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         DropField();
         return PM3_ESOFT;

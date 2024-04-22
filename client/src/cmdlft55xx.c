@@ -66,6 +66,265 @@ static t55xx_conf_block_t config = {
 };
 
 static t55xx_memory_item_t cardmem[T55x7_BLOCK_COUNT] = {{0}};
+/*
+#define DC(x)  ((x) + 128)
+
+static bool t55xx_is_valid_block0(uint32_t block, uint8_t rfclk, uint8_t pskcf) {
+
+    if (block == 0x00) {
+        return false;
+    }
+
+    // Master key = 6 or 9
+    if ((((block >> 28)& 0xF) != 0x0) &&
+        (((block >> 28)& 0xF) != 0x6) &&
+        (((block >> 28)& 0xF) != 0x9)) {
+        return false;
+    }
+
+    // X Mode
+    if ( ((block >> 17) & 1) && ((((block >> 28) & 0xf) == 0x6) || (((block >> 28) & 0xf) == 0x9)) ) {
+        // X mode fixed 0 bits
+        if ((block & 0x0F000000) != 0x00) {
+            return false;
+        }
+    } else {
+        // / Basic Mode fixed 0 bits
+        if ((block & 0x0FE00106) != 0x00) {
+            return false;
+        }
+    }
+
+    // Modulation
+    if ( (((block >> 12) & 0x1F) != 0x00) && // Direct
+         (((block >> 12) & 0x1F) != 0x01) && // PSK1
+         (((block >> 12) & 0x1F) != 0x02) && // PSK2
+         (((block >> 12) & 0x1F) != 0x03) && // PSK3
+         (((block >> 12) & 0x1F) != 0x04) && // FSK1
+         (((block >> 12) & 0x1F) != 0x05) && // FSK2
+         (((block >> 12) & 0x1F) != 0x06) && // FSK1a
+         (((block >> 12) & 0x1F) != 0x07) && // FSK2a
+         (((block >> 12) & 0x1F) != 0x08) && // Manchester
+         (((block >> 12) & 0x1F) != 0x10) && // Bi-phase
+         (((block >> 12) & 0x1F) != 0x18) ) { // Reserved
+         return false;
+    }
+
+    PrintAndLogEx(DEBUG, "suggested block... %08x", block);
+
+    // check pskcf
+    if ((pskcf <= 3) && (((block >> 10) & 0x3) != pskcf)) {
+        PrintAndLogEx(DEBUG, "fail 6  -  %u   %u", pskcf,  (block >> 10) & 0x3);
+        return false;
+    }
+
+    uint8_t testSpeed;
+
+    // check rfclk
+    if ((((block >> 17) & 1) == 1) && ((((block >> 28) & 0xf) == 0x6) || (((block >> 28) & 0xf) == 0x9)) ){ // X mode speedBits
+        testSpeed = (((block >> 18) & 0x3F) * 2) + 2;
+    } else {
+        uint8_t basicSpeeds[] = {8,16,32,40,50,64,100,128};
+        testSpeed = basicSpeeds[(block >> 18) & 0x7];
+    }
+
+    if (testSpeed != rfclk) {
+        PrintAndLogEx(DEBUG, "fail 7  - %u  %u ", testSpeed , rfclk);
+        return false;
+    }
+    return true;
+}
+
+static void t55xx_psk1_demod (int *data, uint8_t rfclk, uint8_t pskcf, uint32_t *block) {
+
+    if ((rfclk < 8) || (rfclk > 128)) {
+        return;
+    }
+
+    switch (pskcf) {
+        case 0: {
+            pskcf = 2;
+            break;
+        }
+        case 1: {
+            pskcf = 4;
+            break;
+        }
+        case 2: {
+            pskcf = 8;
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    int startOffset = 1; // where to start reading data samples
+    int sampleCount = 0; // Counter for 1 bit of samples
+    int samples0, samples1;      // Number of High even and odd bits in a sample.
+    int startBitOffset = 1; // which bit to start at e.g. for rf/32 1 33 65 ...
+    int bitCount = 0;
+    uint32_t myblock = 0;
+    int offset;
+    uint8_t drift = 0;
+    uint8_t tuneOffset = 0;
+
+    drift = (rfclk % pskcf);  // 50 2 = 1  50 4 = 2
+
+    // locate first "0" - high transisiton for correct start offset
+    while (DC(data[startOffset]) <= (DC(data[startOffset - 1]) + 5)) {
+    //    sampleToggle ^= 1;
+        startOffset++;
+    }
+
+    // Start sample may be 1 off due to sample alignment with chip modulation
+    // so seach for the first lower value, and adjust as needed
+    if (pskcf == 2) {
+
+        tuneOffset = startOffset + 1;
+
+        while (DC(data[tuneOffset]) >= (DC(data[tuneOffset - 1]) + 5)) {
+            tuneOffset++;
+        }
+
+        if ((tuneOffset - startOffset - 1) % 2) {
+            startOffset++;
+        }
+    }
+
+    uint8_t pskcfidx = 0;
+
+    // Get the offset to the first sample of the data block
+    offset = (rfclk * startBitOffset) + startOffset;
+
+    pskcfidx = (drift / 2);
+    pskcfidx = pskcfidx % pskcf;
+
+    // while data my be in the settle period of sampling
+    // First 18 - 24 bits not usable for reference only
+    while (offset < 20) {
+        offset += (32 * rfclk);
+    }
+
+    // Read 1 block of data
+    for (bitCount = 0; bitCount < 32; bitCount++) {
+
+        samples0 = 0;
+        samples1 = 0;
+
+        // Get 1 bit of data
+        for (sampleCount = 0; sampleCount < rfclk; sampleCount++){
+            // Count number of even and odd high bits at center to edge
+            switch (pskcf) {
+                case 2: {
+
+                    // if current sample is high
+                    if (DC(data[offset]) > DC(data[offset + 1])) {
+                        if (pskcfidx == 0) {
+                            samples0++;
+                        } else {
+                            samples1++;
+                        }
+                    }
+                    break;
+                }
+                case 4: {
+
+                    // only check pskcf 2nd bit x 1 x x
+                    if (pskcfidx == 1) {
+
+                        // if current sample is high
+                        if (DC(data[offset]) > DC(data[offset + 2])) {
+                            samples0++;
+                        } else {
+                            samples1++;
+                        }
+                    }
+                    break;
+                }
+                case 8: {
+
+                    if (pskcfidx == 3) {  // x x x 1 x x x x   // 00041840   : FFFBE7BF
+
+                        // if current sample is high
+                        if (DC(data[offset]) > DC(data[offset + 4])) {
+                            samples0++;
+                        } else {
+                            samples1++;
+                        }
+                    }
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+
+            // If at bit boundary (after first bit) then adjust phase check for drift
+            if ((sampleCount > 0) && (sampleCount % rfclk) == 0) {
+                pskcfidx -= drift;
+            }
+
+            offset++;
+            pskcfidx++;
+            pskcfidx = pskcfidx % pskcf;
+        }
+
+        myblock <<= 1;
+        if (samples1 > samples0) {
+            myblock++;
+        }
+    }
+
+    *block = myblock;
+}
+
+static void t55xx_psk2_demod (int *data, uint8_t rfclk, uint8_t pskcf, uint32_t *block) {
+    // decode PSK
+    t55xx_psk1_demod (data, rfclk, pskcf, block);
+
+    uint32_t new_block = 0;
+    uint8_t prev_phase = 1;
+
+    // Convert to PSK2
+    for (int8_t bit = 31; bit >= 0; bit--) {
+
+        new_block <<= 1;
+
+        if (((*block >> bit) & 1) != prev_phase) {
+            new_block++;
+        }
+
+        prev_phase = ((*block >> bit) & 1);
+    }
+
+    *block = new_block;
+}
+
+static void t55xx_search_config_psk(int *d, int pskV) {
+
+    for (uint8_t pskcf = 0; pskcf < 3; pskcf++) {
+
+        for (uint8_t speedBits = 0; speedBits < 64; speedBits++) {
+
+            uint8_t rfclk = rfclk = (2 * speedBits) + 2;
+            uint32_t block = 0;
+
+            if (pskV == 1) {
+                t55xx_psk1_demod (d, rfclk, pskcf, &block);
+            }
+
+            if (pskV == 2) {
+                t55xx_psk2_demod (d, rfclk, pskcf, &block);
+            }
+
+            if (t55xx_is_valid_block0(block, rfclk, pskcf)) {
+                PrintAndLogEx(SUCCESS, "Valid config block [%08X] - rfclk [%d] - pskcf [%d]", block, rfclk, pskcf);
+            }
+        }
+    }
+}
+*/
 
 t55xx_conf_block_t Get_t55xx_Config(void) {
     return config;
@@ -1203,6 +1462,8 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
             //undo trim samples
             restore_bufferS32(saveState, g_GraphBuffer);
             g_GridOffset = saveState.offset;
+            // t55xx_search_config_psk(g_GraphBuffer, 1);
+            // t55xx_search_config_psk(g_GraphBuffer, 2);
         }
     }
     if (hits == 1) {
@@ -1452,10 +1713,17 @@ static bool testBitRate(uint8_t readRate, uint8_t clk) {
 
 bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5) {
 
-    if (g_DemodBufferLen < 64) return false;
+    if (g_DemodBufferLen < 64) {
+        return false;
+    }
+
     for (uint8_t idx = 28; idx < 64; idx++) {
+
         uint8_t si = idx;
-        if (PackBits(si, 28, g_DemodBuffer) == 0x00) continue;
+
+        if (PackBits(si, 28, g_DemodBuffer) == 0x00) {
+            continue;
+        }
 
         uint8_t safer    = PackBits(si, 4, g_DemodBuffer);
         si += 4;     //master key
@@ -1463,7 +1731,10 @@ bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5)
         si += 4;     //was 7 & +=7+3 //should be only 4 bits if extended mode
         // 2nibble must be zeroed.
         // moved test to here, since this gets most faults first.
-        if (resv > 0x00) continue;
+
+        if (resv > 0x00) {
+            continue;
+        }
 
         int bitRate      = PackBits(si, 6, g_DemodBuffer);
         si += 6;     //bit rate (includes extended mode part of rate)
@@ -1478,20 +1749,33 @@ bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5)
         //if extended mode
         bool extMode = ((safer == 0x6 || safer == 0x9) && extend) ? true : false;
 
-        if (!extMode) {
-            if (bitRate > 7) continue;
-            if (!testBitRate(bitRate, clk)) continue;
-        } else { //extended mode bitrate = same function to calc bitrate as em4x05
-            if (EM4x05_GET_BITRATE(bitRate) != clk) continue;
+        if (extMode == false) {
 
+            if (bitRate > 7) {
+                continue;
+            }
+
+            if (testBitRate(bitRate, clk) == false) {
+                continue;
+            }
+
+        } else { //extended mode bitrate = same function to calc bitrate as em4x05
+            if (EM4x05_GET_BITRATE(bitRate) != clk) {
+                continue;
+            }
         }
+
         //test modulation
-        if (!testModulation(mode, modread)) continue;
+        if (testModulation(mode, modread) == false) {
+            continue;
+        }
+
         *fndBitRate = bitRate;
         *offset = idx;
         *Q5 = false;
         return true;
     }
+
     if (testQ5(mode, offset, fndBitRate, clk)) {
         *Q5 = true;
         return true;
@@ -4409,7 +4693,7 @@ static command_t CommandTable[] = {
     {"write",        CmdT55xxWriteBlock,      IfPm3Lf,         "Write T55xx block data"},
     {"-----------",  CmdHelp,                 AlwaysAvailable, "--------------------- " _CYAN_("recovery") " ---------------------"},
     {"bruteforce",   CmdT55xxBruteForce,      IfPm3Lf,         "Simple bruteforce attack to find password"},
-    {"chk",          CmdT55xxChkPwds,         IfPm3Lf,         "Check passwords from dictionary/flash"},
+    {"chk",          CmdT55xxChkPwds,         IfPm3Lf,         "Check passwords"},
     {"protect",      CmdT55xxProtect,         IfPm3Lf,         "Password protect tag"},
     {"recoverpw",    CmdT55xxRecoverPW,       IfPm3Lf,         "Try to recover from bad password write from a cloner"},
     {"sniff",        CmdT55xxSniff,           AlwaysAvailable, "Attempt to recover T55xx commands from sample buffer"},
@@ -4428,3 +4712,22 @@ int CmdLFT55XX(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
+
+
+/*
+
+one of
+// Leading 0
+lf t55 write -b 3 --pg1 -d 90000800
+
+// 1 of 4
+lf t55 write -b 3 --pg1 -d 90000C00
+
+
+T55xx clone card lock: block 3 page 1 0x00000020                  00000000 00000000 00000000 00100000
+
+(this bit in any combo seems to lock the card)
+
+You can have other data in the block write, but if that single bit is set "1" the entire card locks in its current state; no know way to unlock
+
+*/

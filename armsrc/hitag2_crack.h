@@ -13,22 +13,15 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// utilities requiring Posix library functions
+// Hitag2 crack implementeation
 //-----------------------------------------------------------------------------
 
-#ifndef UTIL_POSIX_H__
-#define UTIL_POSIX_H__
+#ifndef _HITAG2_CRACK__H_
+#define _HITAG2_CRACK__H_
 
+#include <stdbool.h>
 #include "common.h"
 
-#ifdef _WIN32
-# include <windows.h>
-# define sleep(n) Sleep(1000 *(n))
-# define msleep(n) Sleep((n))
-#else
-void msleep(uint32_t n);    // sleep n milliseconds
-#endif // _WIN32
+void ht2_crack(uint8_t *nrar_hex);
 
-uint64_t msclock(void);     // a milliseconds clock
-uint64_t usclock(void);     // a microseconds clock
 #endif

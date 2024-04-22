@@ -373,16 +373,16 @@ static int dda_test_pk(bool verbose) {
 int exec_dda_test(bool verbose) {
     int ret = dda_test_raw(verbose);
     if (ret) {
-        PrintAndLogEx(WARNING, "DDA raw test: %s", _RED_("failed"));
+        PrintAndLogEx(WARNING, "DDA raw test ( %s )", _RED_("fail"));
         return ret;
     }
-    PrintAndLogEx(SUCCESS, "DDA raw test: %s", _GREEN_("passed"));
+    PrintAndLogEx(SUCCESS, "DDA raw test ( %s )", _GREEN_("ok"));
 
     ret = dda_test_pk(verbose);
     if (ret) {
-        PrintAndLogEx(WARNING, "DDA test pk: %s", _RED_("failed"));
+        PrintAndLogEx(WARNING, "DDA test pk ( %s )", _RED_("fail"));
         return ret;
     }
-    PrintAndLogEx(SUCCESS, "DDA test pk: %s", _GREEN_("passed"));
+    PrintAndLogEx(SUCCESS, "DDA test pk ( %s )", _GREEN_("ok"));
     return 0;
 }

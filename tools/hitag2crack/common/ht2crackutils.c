@@ -86,7 +86,7 @@ unsigned char hex2bin(unsigned char c) {
 // return a single bit from a value
 int bitn(uint64_t x, int bit) {
     uint64_t bitmask = 1;
-    bitmask = bitmask << bit;
+    bitmask <<= bit;
 
     if (x & bitmask) {
         return 1;

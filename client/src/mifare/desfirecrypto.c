@@ -26,9 +26,10 @@
 #include "des.h"
 #include <mbedtls/cmac.h>
 #include "crc.h"
-#include "crc16.h"        // crc16 ccitt
+#include "crc16.h"          // crc16 ccitt
 #include "crc32.h"
 #include "commonutil.h"
+#include "desfirecore.h"    // DESFIRE_BUFFER_SIZE
 
 void DesfireClearContext(DesfireContext_t *ctx) {
     ctx->keyNum = 0;
@@ -148,22 +149,29 @@ size_t DesfireSearchCRCPos(uint8_t *data, size_t datalen, uint8_t respcode, uint
         return 0;
     }
 
-    uint8_t crcdata[1024] = {0};
+    uint8_t crcdata[DESFIRE_BUFFER_SIZE] = {0};
     size_t crcposfound = 0;
     // crc may be 00..00 and at the end of file may be padding 0x80. so we search from last zero to crclen + 2 (one for crc=0 and one for padding 0x80)
     for (int i = 0; i < crclen + 2; i++) {
-        if (crcpos - i == 0)
+
+        if (crcpos - i == 0) {
             break;
-        if (crcpos - i + crclen > datalen)
+        }
+
+        if (crcpos - i + crclen > datalen) {
             continue;
+        }
 
         memcpy(crcdata, data, crcpos - i);
         crcdata[crcpos - i] = respcode;
+
         bool res;
-        if (crclen == 4)
+        if (crclen == 4) {
             res = desfire_crc32_check(crcdata, crcpos - i + 1, &data[crcpos - i]);
-        else
+        } else {
             res = iso14443a_crc_check(data, crcpos - i, &data[crcpos - i]);
+        }
+
         if (res) {
             crcposfound = crcpos - i;
         }
@@ -252,7 +260,8 @@ static void DesfireCryptoEncDecSingleBlock(uint8_t *key, DesfireCryptoAlgorithm 
 }
 
 void DesfireCryptoEncDecEx(DesfireContext_t *ctx, DesfireCryptoOpKeyType key_type, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool dir_to_send, bool encode, uint8_t *iv) {
-    uint8_t data[1024] = {0};
+
+    uint8_t data[DESFIRE_BUFFER_SIZE] = {0};
     uint8_t xiv[DESFIRE_MAX_CRYPTO_BLOCK_SIZE] = {0};
 
     if (ctx->secureChannel == DACd40) {
@@ -287,15 +296,17 @@ void DesfireCryptoEncDecEx(DesfireContext_t *ctx, DesfireCryptoOpKeyType key_typ
     else
         memcpy(iv, xiv, block_size);
 
-    if (dstdata)
+    if (dstdata) {
         memcpy(dstdata, data, srcdatalen);
+    }
 }
 
 void DesfireCryptoEncDec(DesfireContext_t *ctx, DesfireCryptoOpKeyType key_type, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, bool encode) {
     bool dir_to_send = encode;
     bool xencode = encode;
-    if (ctx->secureChannel == DACd40)
+    if (ctx->secureChannel == DACd40) {
         xencode = false;
+    }
 
     DesfireCryptoEncDecEx(ctx, key_type, srcdata, srcdatalen, dstdata, dir_to_send, xencode, NULL);
 }
@@ -333,8 +344,9 @@ void DesfireCMACGenerateSubkeys(DesfireContext_t *ctx, DesfireCryptoOpKeyType ke
 
 void DesfireCryptoCMACEx(DesfireContext_t *ctx, DesfireCryptoOpKeyType key_type, uint8_t *data, size_t len, size_t minlen, uint8_t *cmac) {
     int kbs = desfire_get_key_block_length(ctx->keyType);
-    if (kbs == 0)
+    if (kbs == 0) {
         return;
+    }
 
     uint8_t buffer[padded_data_length(MAX(minlen, len) + 1, kbs)];
     memset(buffer, 0, sizeof(buffer));
@@ -357,8 +369,9 @@ void DesfireCryptoCMACEx(DesfireContext_t *ctx, DesfireCryptoOpKeyType key_type,
 
     DesfireCryptoEncDec(ctx, key_type, buffer, len, NULL, true);
 
-    if (cmac != NULL)
+    if (cmac != NULL) {
         memcpy(cmac, ctx->IV, kbs);
+    }
 }
 
 void DesfireCryptoCMAC(DesfireContext_t *ctx, uint8_t *data, size_t len, uint8_t *cmac) {
@@ -371,16 +384,18 @@ void MifareKdfAn10922(DesfireContext_t *ctx, DesfireCryptoOpKeyType key_type, co
         return;
 
     int kbs = desfire_get_key_block_length(ctx->keyType); // 8 or 16
-    if (kbs == 0)
+    if (kbs == 0) {
         return;
+    }
 
     uint8_t cmac[DESFIRE_MAX_CRYPTO_BLOCK_SIZE * 3] = {0};
     uint8_t buffer[DESFIRE_MAX_CRYPTO_BLOCK_SIZE * 3] = {0};
 
     if (ctx->keyType == T_AES) {
         // AES uses 16 byte IV
-        if (kbs < CRYPTO_AES_BLOCK_SIZE)
+        if (kbs < CRYPTO_AES_BLOCK_SIZE) {
             kbs = CRYPTO_AES_BLOCK_SIZE;
+        }
 
         buffer[0] = 0x01;
         memcpy(&buffer[1], data, len);
@@ -429,8 +444,9 @@ void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorithm keytype, uint8
         return;
 
     // clear version
-    for (int n = 0; n < desfire_get_key_length(keytype); n++)
+    for (int n = 0; n < desfire_get_key_length(keytype); n++) {
         key[n] &= 0xFE;
+    }
 
     // set version
     for (int n = 0; n < 8; n++) {
@@ -451,8 +467,9 @@ void DesfireDESKeySetVersion(uint8_t *key, DesfireCryptoAlgorithm keytype, uint8
 
 uint8_t DesfireDESKeyGetVersion(const uint8_t *key) {
     uint8_t version = 0;
-    for (int n = 0; n < 8; n++)
+    for (int n = 0; n < 8; n++) {
         version |= ((key[n] & 1) << (7 - n));
+    }
 
     return version;
 }
@@ -644,14 +661,16 @@ void DesfireEV2FillIV(DesfireContext_t *ctx, bool ivforcommand, uint8_t *iv) {
 }
 
 int DesfireEV2CalcCMAC(DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *mac) {
-    uint8_t mdata[1050] = {0};
+    uint8_t mdata[DESFIRE_BUFFER_SIZE] = {0};
     size_t mdatalen = 0;
 
     mdata[0] = cmd;
     Uint2byteToMemLe(&mdata[1], ctx->cmdCntr);
     memcpy(&mdata[3], ctx->TI, 4);
-    if (data != NULL && datalen > 0)
+    if (data != NULL && datalen > 0) {
         memcpy(&mdata[7], data, datalen);
+    }
+
     mdatalen = 1 + 2 + 4 + datalen;
 
     return aes_cmac8(NULL, ctx->sessionKeyMAC, mdata, mac, mdatalen);
@@ -717,14 +736,18 @@ void DesfireDecodePrevReaderID(DesfireContext_t *ctx, uint8_t *key, uint32_t trC
 }
 
 int DesfireLRPCalcCMAC(DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t datalen, uint8_t *mac) {
-    uint8_t mdata[1050] = {0};
+    uint8_t mdata[DESFIRE_BUFFER_SIZE] = {0};
     size_t mdatalen = 0;
 
     mdata[0] = cmd;
     Uint2byteToMemLe(&mdata[1], ctx->cmdCntr);
+
     memcpy(&mdata[3], ctx->TI, 4);
-    if (data != NULL && datalen > 0)
+
+    if (data != NULL && datalen > 0) {
         memcpy(&mdata[7], data, datalen);
+    }
+
     mdatalen = 1 + 2 + 4 + datalen;
 
     LRPContext_t lctx = {0};

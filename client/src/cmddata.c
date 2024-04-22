@@ -2769,7 +2769,7 @@ static int CmdAsn1Decoder(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("d", NULL, "<hex>", "ASN1 encoded byte array"),
-        arg_lit0("t", "test", "perform selftest"),
+        arg_lit0("t", "test", "perform self test"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2798,17 +2798,14 @@ static int CmdDiff(const char *Cmd) {
                   "data diff -w 4 -a hf-mfu-01020304.bin -b hf-mfu-04030201.bin\n"
                   "data diff -a fileA -b fileB\n"
                   "data diff -a fileA --eb\n"
-//                    "data diff -a fileA --cb\n"
                   "data diff --fa fileA -b fileB\n"
                   "data diff --fa fileA --fb fileB\n"
-//                  "data diff --ea --cb\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("a",  NULL, "<fn>", "input file name A"),
         arg_str0("b",  NULL, "<fn>", "input file name B"),
-//        arg_lit0(NULL, "cb", "magic gen1 <hf mf csave>"),
         arg_lit0(NULL, "eb", "emulator memory <hf mf esave>"),
         arg_str0(NULL, "fa", "<fn>", "input spiffs file A"),
         arg_str0(NULL, "fb", "<fn>", "input spiffs file B"),
@@ -2825,7 +2822,6 @@ static int CmdDiff(const char *Cmd) {
     char filenameB[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filenameB, FILE_PATH_SIZE, &fnlenB);
 
-//    bool use_c = arg_get_lit(ctx, 3);
     bool use_e = arg_get_lit(ctx, 3);
 
     // SPIFFS filename A
@@ -2930,14 +2926,6 @@ static int CmdDiff(const char *Cmd) {
         }
     }
 
-    // dump magic card memory
-    /*
-    if (use_c) {
-        PrintAndLogEx(INFO, " To be implemented, feel free to contribute!");
-        return PM3_ENOTIMPL;
-    }
-    */
-
     size_t biggest = (datalenA > datalenB) ? datalenA : datalenB;
     PrintAndLogEx(DEBUG, "data len:  %zu   A %zu  B %zu", biggest, datalenA, datalenB);
 
@@ -2948,7 +2936,6 @@ static int CmdDiff(const char *Cmd) {
     if (inB == NULL) {
         PrintAndLogEx(INFO, "inB null");
     }
-
 
     char hdr0[400] = {0};
 
@@ -3395,7 +3382,7 @@ static int CmdAtrLookup(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("d", NULL, "<hex>", "ASN1 encoded byte array"),
-//        arg_lit0("t", "test", "perform selftest"),
+//        arg_lit0("t", "test", "perform self test"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

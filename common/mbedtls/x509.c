@@ -968,8 +968,9 @@ int mbedtls_x509_self_test(int verbose) {
     mbedtls_x509_crt cacert;
     mbedtls_x509_crt clicert;
 
-    if (verbose != 0)
-        mbedtls_printf("  X.509 certificate load: ");
+    if (verbose != 0) {
+        mbedtls_printf("  X.509 certificate load ");
+    }
 
     mbedtls_x509_crt_init(&cacert);
     mbedtls_x509_crt_init(&clicert);
@@ -977,8 +978,9 @@ int mbedtls_x509_self_test(int verbose) {
     ret = mbedtls_x509_crt_parse(&clicert, (const unsigned char *) mbedtls_test_cli_crt,
                                  mbedtls_test_cli_crt_len);
     if (ret != 0) {
-        if (verbose != 0)
-            mbedtls_printf("failed\n");
+        if (verbose != 0) {
+            mbedtls_printf("( fail )\n");
+        }
 
         goto cleanup;
     }
@@ -986,25 +988,28 @@ int mbedtls_x509_self_test(int verbose) {
     ret = mbedtls_x509_crt_parse(&cacert, (const unsigned char *) mbedtls_test_ca_crt,
                                  mbedtls_test_ca_crt_len);
     if (ret != 0) {
-        if (verbose != 0)
-            mbedtls_printf("failed\n");
+        if (verbose != 0) {
+            mbedtls_printf("( fail )\n");
+        }
 
         goto cleanup;
     }
 
-    if (verbose != 0)
-        mbedtls_printf("passed\n  X.509 signature verify: ");
+    if (verbose != 0) {
+        mbedtls_printf("( ok )\n  X.509 signature verify ");
+    }
 
     ret = mbedtls_x509_crt_verify(&clicert, &cacert, NULL, NULL, &flags, NULL, NULL);
     if (ret != 0) {
-        if (verbose != 0)
-            mbedtls_printf("failed\n");
-
+        if (verbose != 0) {
+            mbedtls_printf("( fail )\n");
+        }
         goto cleanup;
     }
 
-    if (verbose != 0)
-        mbedtls_printf("passed\n\n");
+    if (verbose != 0) {
+        mbedtls_printf("( ok )\n\n");
+    }
 
 cleanup:
     mbedtls_x509_crt_free(&cacert);

@@ -564,7 +564,6 @@ typedef struct {
 #define CMD_HF_ISO15693_SNIFF                                             0x0312
 #define CMD_HF_ISO15693_COMMAND                                           0x0313
 #define CMD_HF_ISO15693_FINDAFI                                           0x0315
-#define CMD_HF_ISO15693_CSETUID                                           0x0316
 #define CMD_HF_ISO15693_SLIX_ENABLE_PRIVACY                               0x0867
 #define CMD_HF_ISO15693_SLIX_DISABLE_PRIVACY                              0x0317
 #define CMD_HF_ISO15693_SLIX_DISABLE_EAS                                  0x0318
@@ -578,12 +577,17 @@ typedef struct {
 #define CMD_HF_ISO15693_EML_SETMEM                                        0x0331
 #define CMD_HF_ISO15693_EML_GETMEM                                        0x0332
 
+#define CMD_HF_ISO15693_CSETUID                                           0x0316
+#define CMD_HF_ISO15693_CSETUID_V2                                        0x0333
+
 #define CMD_LF_SNIFF_RAW_ADC                                              0x0360
 
 // For Hitag2 transponders
 #define CMD_LF_HITAG_SNIFF                                                0x0370
 #define CMD_LF_HITAG_SIMULATE                                             0x0371
 #define CMD_LF_HITAG_READER                                               0x0372
+#define CMD_LF_HITAG2_WRITE                                               0x0377
+#define CMD_LF_HITAG2_CRACK                                               0x0378
 
 // For HitagS
 #define CMD_LF_HITAGS_TEST_TRACES                                         0x0367

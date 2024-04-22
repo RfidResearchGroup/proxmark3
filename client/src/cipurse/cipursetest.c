@@ -40,11 +40,7 @@ static bool TestKVV(void) {
 
     bool res = memcmp(KeyKvv, kvv, CIPURSE_KVV_LENGTH) == 0;
 
-    if (res)
-        PrintAndLogEx(INFO, "kvv.............. " _GREEN_("passed"));
-    else
-        PrintAndLogEx(ERR, "kvv.............. " _RED_("fail"));
-
+    PrintAndLogEx(SUCCESS, "kvv.............. ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -58,11 +54,7 @@ static bool TestISO9797M2(void) {
 
     res = res && (FindISO9797M2PaddingDataLen(data, ddatalen) == 4);
 
-    if (res)
-        PrintAndLogEx(INFO, "ISO9797M2........ " _GREEN_("passed"));
-    else
-        PrintAndLogEx(ERR, "ISO9797M2........ " _RED_("fail"));
-
+    PrintAndLogEx(SUCCESS, "ISO9797M2........ ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -92,11 +84,7 @@ static bool TestSMI(void) {
     res = res && (CipurseCGetSMI(&ctx, false) == 0x88);
     res = res && (CipurseCGetSMI(&ctx, true) == 0x89);
 
-    if (res)
-        PrintAndLogEx(INFO, "SMI.............. " _GREEN_("passed"));
-    else
-        PrintAndLogEx(ERR, "SMI.............. " _RED_("fail"));
-
+    PrintAndLogEx(SUCCESS, "SMI.............. ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -115,14 +103,9 @@ static bool TestMIC(void) {
 
     res = res && (CipurseCCheckMIC(TestData, 6, mic));
 
-    if (res)
-        PrintAndLogEx(INFO, "MIC.............. " _GREEN_("passed"));
-    else
-        PrintAndLogEx(ERR, "MIC.............. " _RED_("fail"));
-
+    PrintAndLogEx(SUCCESS, "MIC.............. ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
-
 
 static bool TestAuth(void) {
     CipurseContext_t ctx = {0};
@@ -159,11 +142,7 @@ static bool TestAuth(void) {
     uint8_t framekey[] = {0xCF, 0x6F, 0x3A, 0x47, 0xFC, 0xAC, 0x8D, 0x38, 0x25, 0x75, 0x8B, 0xFC, 0x8B, 0x61, 0x68, 0xF3};
     res = res && (memcmp(ctx.frameKey, framekey, sizeof(framekey)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "Auth............. " _GREEN_("passed"));
-    else
-        PrintAndLogEx(ERR, "Auth............. " _RED_("fail"));
-
+    PrintAndLogEx(SUCCESS, "Auth............. ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -211,11 +190,7 @@ static bool TestMAC(void) {
     uint8_t framekey4[] = {0xA0, 0x65, 0x1A, 0x62, 0x56, 0x5D, 0xD7, 0xC9, 0x32, 0xAE, 0x1D, 0xE0, 0xCF, 0x8D, 0xC1, 0xB9};
     res = res && (memcmp(ctx.frameKey, framekey4, sizeof(framekey4)) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "channel MAC...... " _GREEN_("passed"));
-    else
-        PrintAndLogEx(ERR, "channel MAC...... " _RED_("fail"));
-
+    PrintAndLogEx(SUCCESS, "channel MAC...... ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -259,11 +234,7 @@ static bool TestEncDec(void) {
     res = res && (dstdatalen == 16);
     res = res && (memcmp(dstdata, TestData, 16) == 0);
 
-    if (res)
-        PrintAndLogEx(INFO, "channel EncDec... " _GREEN_("passed"));
-    else
-        PrintAndLogEx(ERR, "channel EncDec... " _RED_("fail"));
-
+    PrintAndLogEx(SUCCESS, "channel EncDec... ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -351,11 +322,7 @@ static bool TestAPDU(void) {
     res = res && (memcmp(test6, dstdata, dstdatalen) == 0);
     res = res && (sw == 0xccdd);
 
-    if (res)
-        PrintAndLogEx(INFO, "apdu............. " _GREEN_("passed"));
-    else
-        PrintAndLogEx(ERR, "apdu............. " _RED_("fail"));
-
+    PrintAndLogEx(SUCCESS, "apdu............. ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     return res;
 }
 
@@ -374,11 +341,7 @@ bool CIPURSETest(bool verbose) {
     res = res && TestAPDU();
 
     PrintAndLogEx(INFO, "---------------------------");
-    if (res)
-        PrintAndLogEx(SUCCESS, "    Tests [ %s ]", _GREEN_("ok"));
-    else
-        PrintAndLogEx(FAILED, "    Tests [ %s ]", _RED_("fail"));
-
+    PrintAndLogEx(SUCCESS, "Tests ( %s )", (res) ? _GREEN_("ok") : _RED_("fail"));
     PrintAndLogEx(NORMAL, "");
     return res;
 }

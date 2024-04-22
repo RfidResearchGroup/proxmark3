@@ -68,8 +68,8 @@ typedef cl_int CL_API_CALL
 clGetLayerInfo_t(
     cl_layer_info param_name,
     size_t param_value_size,
-    void* param_value,
-    size_t* param_value_size_ret);
+    void *param_value,
+    size_t *param_value_size_ret);
 
 typedef clGetLayerInfo_t *
 clGetLayerInfo_fn ;
@@ -77,9 +77,9 @@ clGetLayerInfo_fn ;
 typedef cl_int CL_API_CALL
 clInitLayer_t(
     cl_uint num_entries,
-    const cl_icd_dispatch* target_dispatch,
-    cl_uint* num_entries_ret,
-    const cl_icd_dispatch** layer_dispatch_ret);
+    const cl_icd_dispatch *target_dispatch,
+    cl_uint *num_entries_ret,
+    const cl_icd_dispatch **layer_dispatch_ret);
 
 typedef clInitLayer_t *
 clInitLayer_fn ;
@@ -103,15 +103,15 @@ extern CL_API_ENTRY cl_int CL_API_CALL
 clGetLayerInfo(
     cl_layer_info param_name,
     size_t param_value_size,
-    void* param_value,
-    size_t* param_value_size_ret) ;
+    void *param_value,
+    size_t *param_value_size_ret) ;
 
 extern CL_API_ENTRY cl_int CL_API_CALL
 clInitLayer(
     cl_uint num_entries,
-    const cl_icd_dispatch* target_dispatch,
-    cl_uint* num_entries_ret,
-    const cl_icd_dispatch** layer_dispatch_ret) ;
+    const cl_icd_dispatch *target_dispatch,
+    cl_uint *num_entries_ret,
+    const cl_icd_dispatch **layer_dispatch_ret) ;
 
 #endif /* !defined(CL_NO_NON_ICD_DISPATCH_EXTENSION_PROTOTYPES) */
 

@@ -59,6 +59,7 @@ int SendDataTag(uint8_t *send, int sendlen, bool init, bool speed_fast, uint8_t 
 int SendDataTagEOF(uint8_t *recv, uint16_t max_recv_len, uint32_t start_time, uint16_t timeout, uint32_t *eof_time, bool fsk, bool recv_speed, uint16_t *resp_len);
 
 void SetTag15693Uid(const uint8_t *uid);
+void SetTag15693Uid_v2(const uint8_t *uid);
 
 void WritePasswordSlixIso15693(const uint8_t *old_password, const uint8_t *new_password, uint8_t pwd_id);
 void DisablePrivacySlixIso15693(const uint8_t *password);
