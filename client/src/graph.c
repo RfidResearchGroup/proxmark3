@@ -30,6 +30,7 @@ int32_t g_OperationBuffer[MAX_GRAPH_TRACE_LEN];
 int32_t g_OverlayBuffer[MAX_GRAPH_TRACE_LEN];
 bool    g_useOverlays = false;
 size_t  g_GraphTraceLen;
+buffer_savestate_t g_saveState_gb;
 
 /* write a manchester bit to the graph
 */
@@ -92,27 +93,6 @@ size_t ClearGraph(bool redraw) {
     }
 
     return gtl;
-}
-
-// option '1' to save g_GraphBuffer any other to restore
-void save_restoreGB(uint8_t saveOpt) {
-    static int savedBuffer[MAX_GRAPH_TRACE_LEN];
-    static size_t savedBufferLen = 0;
-    static bool bufferSaved = false;
-    static int savedOffset = 0;
-
-    if (saveOpt == GRAPH_SAVE) { //save
-        memcpy(savedBuffer, g_GraphBuffer, sizeof(g_GraphBuffer));
-        savedBufferLen = g_GraphTraceLen;
-        bufferSaved = true;
-        savedOffset = g_GridOffset;
-    } else if (bufferSaved) { //restore
-        memcpy(g_GraphBuffer, savedBuffer, sizeof(g_GraphBuffer));
-        memcpy(g_OperationBuffer, savedBuffer, sizeof(g_OperationBuffer));
-        g_GraphTraceLen = savedBufferLen;
-        g_GridOffset = savedOffset;
-        RepaintGraphWindow();
-    }
 }
 
 void setGraphBuffer(const uint8_t *src, size_t size) {
@@ -440,4 +420,106 @@ bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
         return false;
     }
     return true;
+}
+
+buffer_savestate_t save_buffer32(uint32_t *src, size_t length) {
+    //calloc the memory needed
+    uint32_t* savedBuffer = (uint32_t*)calloc(length, sizeof(uint32_t));
+
+    //Make a copy of the source buffer
+    memcpy(savedBuffer, src, (length * sizeof(uint32_t)));
+
+    buffer_savestate_t tommy = {
+        .type = sizeof(uint32_t),
+        .bufferSize = length,
+        .buffer = savedBuffer
+    };
+
+    return tommy;
+}
+
+buffer_savestate_t save_bufferS32(int32_t *src, size_t length) {
+    //calloc the memory needed
+    uint32_t* savedBuffer = (uint32_t*)calloc(length, (sizeof(uint32_t)));
+
+    //Make a copy of the source buffer
+    memcpy(savedBuffer, src, (length * sizeof(uint32_t)));
+
+    buffer_savestate_t billy = {
+        .type = (sizeof(int32_t) >> 8),
+        .bufferSize = length,
+        .buffer = savedBuffer
+    };
+
+    return billy;
+}
+
+buffer_savestate_t save_buffer8(uint8_t *src, size_t length) {
+    // We are going to be packing the 8-bit source buffer into
+    // the 32-bit backing buffer, so the input length is going to be
+    // 1/4 of the size needed
+    size_t buffSize = (length/4);
+
+    //calloc the memory needed
+    uint32_t* savedBuffer = (uint32_t*)calloc(buffSize, sizeof(uint32_t));
+    size_t index = 0;
+
+    //Pack the source array into the backing array
+    for(size_t i = 0; i < length; i += 4) {
+        savedBuffer[index] = (uint32_t)src[i] | ((uint32_t)src[i+1] << 8) |
+            ((uint32_t)src[i+2] << 16) | ((uint32_t)src[i+3] << 24);
+        index++;
+    }
+    
+    buffer_savestate_t timmy = {
+        .type = sizeof(uint8_t),
+        .bufferSize = buffSize,
+        .buffer = savedBuffer
+    };
+
+    return timmy;
+}
+
+size_t restore_buffer32(buffer_savestate_t saveState, uint32_t *dest) {
+    if(saveState.type != sizeof(uint32_t)) {
+        PrintAndLogEx(WARNING, "Invalid Save State type! Expected uint32_t!");
+        PrintAndLogEx(WARNING, "Buffer not modified!\n");
+        return 0;
+    }
+
+    memcpy(dest, saveState.buffer, (saveState.bufferSize * sizeof(uint32_t)));
+
+    return saveState.bufferSize;
+}
+
+size_t restore_bufferS32(buffer_savestate_t saveState, int32_t *dest) {
+    if(saveState.type != (sizeof(int32_t) >> 8)) {
+        PrintAndLogEx(WARNING, "Invalid Save State type! Expected int32_t");
+        PrintAndLogEx(WARNING, "Buffer not modified!\n");
+        return 0;
+    }
+
+    memcpy(dest, saveState.buffer, (saveState.bufferSize * sizeof(int32_t)));
+
+    return saveState.bufferSize;
+}
+
+size_t restore_buffer8(buffer_savestate_t saveState, uint8_t *dest) {
+    if(saveState.type != sizeof(uint8_t)) {
+        PrintAndLogEx(WARNING, "Invalid Save State type! Expected uint8_t!");
+        PrintAndLogEx(WARNING, "Buffer not modified!\n");
+        return 0;
+    }
+
+    size_t index = 0;
+
+    // Unpack the array
+    for(size_t i = 0; i < saveState.bufferSize; i++) {
+        dest[index++] = (uint8_t)(saveState.buffer[i] & 0xFF);
+        dest[index++] = (uint8_t)((saveState.buffer[i] >> 8) & 0xFF);
+        dest[index++] = (uint8_t)((saveState.buffer[i] >> 16) & 0xFF);
+        dest[index++] = (uint8_t)((saveState.buffer[i] >> 24) & 0xFF);
+    }
+
+    return index;
 }

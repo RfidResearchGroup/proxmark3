@@ -32,6 +32,10 @@ bool AlwaysAvailable(void) {
     return true;
 }
 
+bool IfClientDebugEnabled(void) {
+    return g_debugMode;
+}
+
 bool IfPm3Present(void) {
     if (g_session.help_dump_mode)
         return false;

@@ -1535,8 +1535,12 @@ static bool check_chiptype(bool getDeviceData) {
 
     if (!getDeviceData) return retval;
 
-    save_restoreGB(GRAPH_SAVE);
-    save_restoreDB(GRAPH_SAVE);
+    //Save the state of the Graph and Demod Buffers
+    buffer_savestate_t saveState_gb = save_bufferS32(g_GraphBuffer, g_GraphTraceLen);
+    saveState_gb.offset = g_GridOffset;
+    buffer_savestate_t saveState_db = save_buffer8(g_DemodBuffer, g_DemodBufferLen);
+    saveState_db.clock = g_DemodClock;
+    saveState_db.offset = g_DemodStartIdx;
 
     //check for em4x05/em4x69 chips first
     uint32_t word = 0;
@@ -1575,8 +1579,13 @@ static bool check_chiptype(bool getDeviceData) {
 
     PrintAndLogEx(INFO, "Couldn't identify a chipset");
 out:
-    save_restoreGB(GRAPH_RESTORE);
-    save_restoreDB(GRAPH_RESTORE);
+    restore_buffer8(saveState_db, g_DemodBuffer);
+    g_DemodClock = saveState_db.clock;
+    g_DemodStartIdx = saveState_db.offset;
+
+    restore_bufferS32(saveState_gb, g_GraphBuffer);
+    g_GridOffset = saveState_gb.offset;
+    
     return retval;
 }
 
