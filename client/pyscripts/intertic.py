@@ -87,6 +87,7 @@ FRA_OrganizationalAuthority_Contract_Provider = {
     },
     0x908: {
         1: 'Rennes (STAR / Keolis)',
+        8: 'Saint-Malo (MAT / RATP)',
     },
     0x911: {
         5: 'Besançon (Ginko / Keolis)',
