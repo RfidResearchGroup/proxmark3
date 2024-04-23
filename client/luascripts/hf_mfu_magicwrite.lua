@@ -38,7 +38,7 @@ example = [[
 
 ]]
 usage = [[
-script run hf_mfu_easywrite -h -k <passwd> -c -w -u <uid> -t <type> -p <passwd> -a <pack> -s <signature> -o <otp> -v <version>
+script run hf_mfu_magicwrite -h -k <passwd> -c -w -u <uid> -t <type> -p <passwd> -a <pack> -s <signature> -o <otp> -v <version>
 ]]
 arguments = [[
     -h      this help
