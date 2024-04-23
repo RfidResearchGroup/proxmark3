@@ -32,10 +32,36 @@
 #include "cmdnfc.h"            // print_type4_cc_info
 #include "commonutil.h"        // get_sw
 #include "protocols.h"         // ISO7816 APDU return codes
+#include "crypto/libpcrypto.h" // ecdsa
 
 #define TIMEOUT 2000
 
 static int CmdHelp(const char *Cmd);
+
+static bool st25ta_select(iso14a_card_select_t *card) {
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(DEBUG, "iso14443a card select timeout");
+        DropField();
+        return false;
+    } else {
+
+        uint16_t len = (resp.oldarg[1] & 0xFFFF);
+        if (len == 0) {
+            PrintAndLogEx(DEBUG, "iso14443a card select failed");
+            DropField();
+            return false;
+        }
+
+        if (card) {
+            memcpy(card, resp.data.asBytes, sizeof(iso14a_card_select_t));
+        }
+    }
+    return true;
+}
 
 static void print_st25ta_system_info(uint8_t *d, uint8_t n) {
     if (n < 0x12) {
@@ -119,6 +145,86 @@ static void print_st25ta_system_info(uint8_t *d, uint8_t n) {
     0012
     80000000001302E2007D0E8DCC
     */
+}
+
+static int print_st25ta_signature(uint8_t *uid, uint8_t *signature) {
+
+#define PUBLIC_ECDA_KEYLEN 33
+    // known public keys for the originality check (source: https://github.com/alexbatalov/node-nxp-originality-verifier)
+    // ref: AN11350 NTAG 21x Originality Signature Validation
+    // ref: AN11341 MIFARE Ultralight EV1 Originality Signature Validation
+    const ecdsa_publickey_t nxp_mfu_public_keys[] = {
+        {"NXP MIFARE Classic MFC1C14_x",   "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
+        {"MIFARE Classic / QL88",          "046F70AC557F5461CE5052C8E4A7838C11C7A236797E8A0730A101837C004039C2"},
+        {"NXP ICODE DNA, ICODE SLIX2",     "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0"},
+        {"NXP Public key",                 "04A748B6A632FBEE2C0897702B33BEA1C074998E17B84ACA04FF267E5D2C91F6DC"},
+        {"NXP Ultralight Ev1",             "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
+        {"NXP NTAG21x (2013)",             "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
+        {"MIKRON Public key",              "04F971EDA742A4A80D32DCF6A814A707CC3DC396D35902F72929FDCD698B3468F2"},
+        {"VivoKey Spark1 Public key",      "04D64BB732C0D214E7EC580736ACF847284B502C25C0F7F2FA86AACE1DADA4387A"},
+        {"TruST25 (ST) key 01?",           "041D92163650161A2548D33881C235D0FB2315C2C31A442F23C87ACF14497C0CBA"},
+        {"TruST25 (ST) key 04?",           "04101E188A8B4CDDBC62D5BC3E0E6850F0C2730E744B79765A0E079907FBDB01BC"},
+    };
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
+
+    for (uint8_t i = 0; i < ARRAYLEN(nxp_mfu_public_keys); i++) {
+
+        int dl = 0;
+        uint8_t key[PUBLIC_ECDA_KEYLEN] = {0};
+        param_gethex_to_eol(nxp_mfu_public_keys[i].value, 0, key, PUBLIC_ECDA_KEYLEN, &dl);
+
+        int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 7, signature, 32, true);
+
+        if (res == 0) {
+            PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_mfu_public_keys[i].desc);
+            PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfu_public_keys[i].value);
+            PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
+            PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 32));
+            PrintAndLogEx(SUCCESS, "       Signature verification ( " _GREEN_("successful") " )");
+            return PM3_SUCCESS;
+        }
+    }
+    return PM3_ESOFT;
+}
+
+static int st25ta_get_signature(uint8_t *signature) {
+        /*
+    hf 14a raw -sck 0200A4040007D276000085010100
+    hf 14a raw -ck 0300A4000C020001
+    hf 14a raw -c 02a2b000e020
+*/
+    typedef struct {
+        const char* apdu;
+        uint8_t apdulen;
+    } transport_st25a_apdu_t;
+
+    transport_st25a_apdu_t cmds[] = {
+        { "\x00\xA4\x04\x00\x07\xD2\x76\x00\x00\x85\x01\x01\x00", 13 },
+        { "\x00\xA4\x00\x0C\x02\x00\x01", 7 },
+        { "\xa2\xb0\x00\xe0\x20", 5 },
+    };
+
+    uint8_t resp[40] = {0};
+    int resplen = 0;
+    bool activate_field = true;
+
+    for (uint8_t i = 0; i < ARRAYLEN(cmds); i++) {
+        int res = ExchangeAPDU14a( (uint8_t*)cmds[i].apdu, cmds[i].apdulen, activate_field, true, resp, sizeof(resp), &resplen);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            return res;
+        }
+        activate_field = false;
+    }
+
+    if (signature) {
+        memcpy(signature, resp, 32);
+    }
+
+    DropField();
+    return PM3_SUCCESS;
 }
 
 // ST25TA
@@ -225,13 +331,20 @@ static int infoHFST25TA(void) {
         return PM3_ESOFT;
     }
 
-
-
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(NORMAL, "");
+    iso14a_card_select_t card;
+    if (st25ta_select(&card)) {
+        uint8_t sig[32] = {0};
+        if (st25ta_get_signature(sig) == PM3_SUCCESS) {
+            print_st25ta_signature(card.uid, sig);
+        }
+    }
+
     print_type4_cc_info(st_cc_data, sizeof(st_cc_data));
     print_st25ta_system_info(response, resplen - 2);
+
     return PM3_SUCCESS;
 }
 

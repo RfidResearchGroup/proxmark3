@@ -130,6 +130,15 @@ static const productName_t uidmapping[] = {
     { 0xe002480000000000LL, 24, "ST Microelectronics; ST25TV16K"},
     { 0xe002480000000000LL, 24, "ST Microelectronics; ST25TV64K"},
 
+/*
+ST25TV02K    0xe0 02 23
+ST25TV512    0xe0 02 23
+ST25TV02KC    0xe00208
+ST25TV512C    0xe00208
+ST25TV04K-P    0xe00235
+ST25TV16K    0xe00248
+ST25TV64K    0xe00248
+*/
 
     { 0xE003000000000000LL, 16, "Hitachi, Ltd Japan" },
 
@@ -283,7 +292,7 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
         {"NXP NTAG21x (2013)",             "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
         {"MIKRON Public key",              "04F971EDA742A4A80D32DCF6A814A707CC3DC396D35902F72929FDCD698B3468F2"},
         {"VivoKey Spark1 Public key",      "04D64BB732C0D214E7EC580736ACF847284B502C25C0F7F2FA86AACE1DADA4387A"},
-        {"TruST25 (ST) key 01?",           "041d92163650161a2548d33881c235d0fb2315c2c31a442f23c87acf14497c0cba"},
+        {"TruST25 (ST) key 01?",           "041D92163650161A2548D33881C235D0FB2315C2C31A442F23C87ACF14497C0CBA"},
         {"TruST25 (ST) key 04?",           "04101E188A8B4CDDBC62D5BC3E0E6850F0C2730E744B79765A0E079907FBDB01BC"},
     };
     /*
@@ -363,7 +372,6 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
             reason = 3;
             break;
         }
-
 
         // try with sha256
         res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, revuid, sizeof(revuid), revsign, sizeof(revsign), true);
