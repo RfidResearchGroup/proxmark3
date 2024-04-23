@@ -122,6 +122,14 @@ static const productName_t uidmapping[] = {
     { 0xE002080000000000LL, 24, "ST Microelectronics; LRI2K   [IC id = 08]"},
     { 0xE0020A0000000000LL, 24, "ST Microelectronics; LRIS2K  [IC id = 10]"},
     { 0xE002440000000000LL, 24, "ST Microelectronics; LRIS64K [IC id = 68]"},
+    { 0xe002230000000000LL, 24, "ST Microelectronics; ST25TV02K"},
+    { 0xe002230000000000LL, 24, "ST Microelectronics; ST25TV512"},
+    { 0xe002080000000000LL, 24, "ST Microelectronics; ST25TV02KC"},
+    { 0xe002080000000000LL, 24, "ST Microelectronics; ST25TV512C"},
+    { 0xe002350000000000LL, 24, "ST Microelectronics; ST25TV04K-P"},
+    { 0xe002480000000000LL, 24, "ST Microelectronics; ST25TV16K"},
+    { 0xe002480000000000LL, 24, "ST Microelectronics; ST25TV64K"},
+
 
     { 0xE003000000000000LL, 16, "Hitachi, Ltd Japan" },
 

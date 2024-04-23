@@ -23,6 +23,7 @@
 #define TIMEOUT 2000
 
 // get ST Microelectronics chip model (from UID)
+
 const char *get_st_chip_model(uint8_t pc) {
     switch (pc) {
         case 0x0:
@@ -41,12 +42,18 @@ const char *get_st_chip_model(uint8_t pc) {
             return "SRT512";
         case 0xC4:
             return "ST25TA64K";
+        case 0xC5: 
+            return "ST25TA16K";
         case 0xE2:
             return "ST25??? IKEA Rothult";
         case 0xE3:
             return "ST25TA02KB";
         case 0xE4:
             return "ST25TA512B";
+        case 0xE5:
+            return "ST25TA512";
+        case 0xA2:
+            return "ST25TA02K-P";
         case 0xA3:
             return "ST25TA02KB-P";
         case 0xF3:
@@ -55,6 +62,8 @@ const char *get_st_chip_model(uint8_t pc) {
             return "Unknown";
     }
 }
+
+
 /*
 // print UID info from SRx chips (ST Microelectronics)
 void print_st_general_info(uint8_t *data, uint8_t len) {
