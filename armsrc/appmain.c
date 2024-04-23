@@ -26,7 +26,6 @@
 #include "dbprint.h"
 #include "pmflash.h"
 #include "fpga.h"
-#include "fpga.h"
 #include "fpgaloader.h"
 #include "string.h"
 #include "printf.h"
