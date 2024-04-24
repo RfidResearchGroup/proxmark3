@@ -387,24 +387,34 @@ static bool get_14b_UID(uint8_t *d, iso14b_type_t *found_type) {
  * filename must match '^hf-14b-[0-9A-F]{16}'
  */
 uint8_t *get_uid_from_filename(const char *filename) {
-    static uint8_t uid[8]  ;
-    memset(uid, 0, 8) ;
-    char uidinhex[17] ;
-    if (strlen(filename) < 23 || strncmp(filename, "hf-14b-", 7)) {
+
+    static uint8_t uid[8];
+    memset(uid, 0, 8);
+
+    if (strlen(filename) < 23) {
         PrintAndLogEx(ERR, "can't get uid from filename '%s'. Expected format is hf-14b-<uid>...", filename);
-        return uid ;
+        return uid;
     }
+
+    char *found = strstr(filename, "hf-14b-");
+    if (found == NULL) {
+        PrintAndLogEx(ERR, "can't get uid from filename '%s'. Expected format is hf-14b-<uid>...", filename);
+        return uid;
+    }
+
     // extract uid part from filename
-    strncpy(uidinhex, filename + 7, 16) ;
-    uidinhex[16] = '\0' ;
+    char uidinhex[17] = {0};    
+    strncpy(uidinhex, found + 7, 16);
+
+    uidinhex[16] = '\0';
     int len = hex_to_bytes(uidinhex, uid, 8);
-    if (len == 8)
+    if (len == 8) {
         return SwapEndian64(uid, 8, 8);
-    else {
+    } else {
         PrintAndLogEx(ERR, "get_uid_from_filename failed: hex_to_bytes returned %d", len);
         memset(uid, 0, 8);
     }
-    return uid ;
+    return uid;
 }
 
 // print full atqb info
@@ -2471,11 +2481,20 @@ static int CmdHF14BAPDU(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "<<<< %s", sprint_hex(data, datalen));
-    PrintAndLogEx(SUCCESS, "APDU response: " _YELLOW_("%02x %02x") " - %s"
-                  , data[datalen - 2]
-                  , data[datalen - 1]
-                  , GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])
-                 );
+    uint16_t sw = get_sw(data, datalen);
+    if (sw != ISO7816_OK) {
+        PrintAndLogEx(SUCCESS, "APDU response: " _YELLOW_("%02x %02x") " - %s"
+                , data[datalen - 2]
+                , data[datalen - 1]
+                , GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])
+            );
+    } else {
+        PrintAndLogEx(SUCCESS, "APDU response: " _GREEN_("%02x %02x") " - %s"
+                , data[datalen - 2]
+                , data[datalen - 1]
+                , GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])
+            );
+    }
 
     // TLV decoder
     if (decode_TLV && datalen > 4) {
