@@ -20,9 +20,10 @@
 #include <string.h>
 #include "ui.h"
 #include "proxgui.h"
-#include "util.h"    //param_get32ex
+#include "util.h"           // param_get32ex
 #include "lfdemod.h"
-#include "cmddata.h" //for g_debugmode
+#include "cmddata.h"        // for g_debugmode
+#include "commonutil.h"     // Uint4bytetomemle
 
 
 int32_t g_GraphBuffer[MAX_GRAPH_TRACE_LEN];
@@ -500,16 +501,19 @@ buffer_savestate_t save_buffer8(uint8_t *src, size_t length) {
     // We are going to be packing the 8-bit source buffer into
     // the 32-bit backing buffer, so the input length is going to be
     // 1/4 of the size needed
-    size_t buffSize = (length/4);
+    size_t buffSize = (length / 4);
 
-    //calloc the memory needed
+    if (length % 4) {
+        buffSize++;
+    }
+
+    // calloc the memory needed
     uint32_t* savedBuffer = (uint32_t*)calloc(buffSize, sizeof(uint32_t));
     size_t index = 0;
 
-    //Pack the source array into the backing array
+    // Pack the source array into the backing array
     for(size_t i = 0; i < length; i += 4) {
-        savedBuffer[index] = (uint32_t)src[i] | ((uint32_t)src[i+1] << 8) |
-            ((uint32_t)src[i+2] << 16) | ((uint32_t)src[i+3] << 24);
+        savedBuffer[index] = MemLeToUint4byte(src + i);
         index++;
     }
     
@@ -556,11 +560,11 @@ size_t restore_buffer8(buffer_savestate_t saveState, uint8_t *dest) {
     size_t index = 0;
 
     // Unpack the array
-    for(size_t i = 0; i < saveState.bufferSize; i++) {
-        dest[index++] = (uint8_t)(saveState.buffer[i] & 0xFF);
-        dest[index++] = (uint8_t)((saveState.buffer[i] >> 8) & 0xFF);
-        dest[index++] = (uint8_t)((saveState.buffer[i] >> 16) & 0xFF);
-        dest[index++] = (uint8_t)((saveState.buffer[i] >> 24) & 0xFF);
+    for(size_t i = 0; i < saveState.bufferSize; i++) {        
+        dest[index++] = saveState.buffer[i];
+        dest[index++] = (saveState.buffer[i] >> 8) & 0xFF;
+        dest[index++] = (saveState.buffer[i] >> 16) & 0xFF;
+        dest[index++] = (saveState.buffer[i] >> 24) & 0xFF;
     }
 
     return index;
