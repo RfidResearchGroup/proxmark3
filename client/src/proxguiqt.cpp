@@ -1380,7 +1380,7 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("Shift") " + " _YELLOW_("Mouse wheel"), "Zoom in/out around mouse cursor");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("Down") "/" _RED_("Up"), "Zoom in/out around yellow marker");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Ctrl"), "... with smaller increment");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Shift"), "... around pink marker");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Shift"), "... around purple marker");
             PrintAndLogEx(NORMAL, "\n" _GREEN_("Trim:"));
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _RED_("t"), "Trim data on window or on markers (if defined)");
             PrintAndLogEx(NORMAL, "\n" _GREEN_("Grid and demod:"));
@@ -1389,9 +1389,9 @@ void Plot::keyPressEvent(QKeyEvent *event) {
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("< ") "/" _RED_(" >"), "Move demodulation left/right relative to samples");
             PrintAndLogEx(NORMAL, "\n" _GREEN_("Misc:"));
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _YELLOW_("Left mouse click"), "Set yellow marker");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _YELLOW_("Right mouse click"), "Set pink marker");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, _YELLOW_("Right mouse click"), "Set purple marker");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("[ ") "/" _RED_(" ]"), "Move yellow marker left/right by 1 sample");
-            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("{ ") "/" _RED_(" }"), "Move pink marker left/right by 1 sample");
+            PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("{ ") "/" _RED_(" }"), "Move purple marker left/right by 1 sample");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Ctrl"), "... by 5 samples");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9 + 9, _RED_("= ") "/" _RED_(" -"), "Add/Subtract to the plot point (Operation Buffer) over the yellow marker by 1");
             PrintAndLogEx(NORMAL, "    %-*s%s", 25 + 9, " + " _RED_("Ctrl"), "... by 5");

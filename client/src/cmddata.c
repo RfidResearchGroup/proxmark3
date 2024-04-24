@@ -1707,7 +1707,7 @@ static int CmdSetGraphMarkers(const char *Cmd) {
         arg_param_begin,
         arg_lit0(NULL, "keep", "keep the current values of the markers"),
         arg_u64_0("a", NULL, "<dec>", "yellow marker"),
-        arg_u64_0("b", NULL, "<dec>", "pink marker"),
+        arg_u64_0("b", NULL, "<dec>", "purple marker"),
         arg_u64_0("c", NULL, "<dec>", "orange marker"),
         arg_u64_0("d", NULL, "<dec>", "blue marker"),
         arg_param_end

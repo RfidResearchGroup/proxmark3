@@ -96,7 +96,9 @@ size_t ClearGraph(bool redraw) {
 }
 
 void setGraphBuffer(const uint8_t *src, size_t size) {
-    if (src == NULL) return;
+    if (src == NULL) {
+        return;
+    }
 
     ClearGraph(false);
 
@@ -121,15 +123,25 @@ size_t getFromGraphBuffer(uint8_t *dest) {
 }
 
 size_t getFromGraphBufferEx(uint8_t *dest, size_t maxLen) {
-    if (dest == NULL) return 0;
-    if (g_GraphTraceLen == 0) return 0;
+    if (dest == NULL){
+        return 0;
+    }
+
+    if (g_GraphTraceLen == 0) {
+        return 0;
+    }
 
     size_t i;
     maxLen = (maxLen < g_GraphTraceLen) ? maxLen : g_GraphTraceLen;
     for (i = 0; i < maxLen; ++i) {
         //trim
-        if (g_GraphBuffer[i] > 127) g_GraphBuffer[i] = 127;
-        if (g_GraphBuffer[i] < -127) g_GraphBuffer[i] = -127;
+        if (g_GraphBuffer[i] > 127) {
+            g_GraphBuffer[i] = 127;
+        }
+
+        if (g_GraphBuffer[i] < -127) {
+            g_GraphBuffer[i] = -127;
+        }
         dest[i] = (uint8_t)(g_GraphBuffer[i] + 128);
     }
     return i;
@@ -138,9 +150,17 @@ size_t getFromGraphBufferEx(uint8_t *dest, size_t maxLen) {
 //TODO: In progress function to get chunks of data from the GB w/o modifying the GB
 //Currently seems like it doesn't work correctly?
 size_t getGraphBufferChunk(uint8_t *dest, size_t start, size_t end) {
-    if (dest == NULL) return 0;
-    if (g_GraphTraceLen == 0) return 0;
-    if (start >= end) return 0;
+    if (dest == NULL) {
+        return 0;
+    }
+
+    if (g_GraphTraceLen == 0) {
+        return 0;
+    }
+
+    if (start >= end) {
+        return 0;
+    }
 
     size_t i, value;
     end = (end < g_GraphTraceLen) ? end : g_GraphTraceLen;
@@ -186,6 +206,7 @@ void convertGraphFromBitstream(void) {
 
 void convertGraphFromBitstreamEx(int hi, int low) {
     for (int i = 0; i < g_GraphTraceLen; i++) {
+
         if (g_GraphBuffer[i] == hi)
             g_GraphBuffer[i] = 127;
         else if (g_GraphBuffer[i] == low)
@@ -215,12 +236,14 @@ void convertGraphFromBitstreamEx(int hi, int low) {
 
 // Get or auto-detect ask clock rate
 int GetAskClock(const char *str, bool verbose) {
-    if (getSignalProperties()->isnoise)
+    if (getSignalProperties()->isnoise) {
         return -1;
+    }
 
     int clock1 = param_get32ex(str, 0, 0, 10);
-    if (clock1 > 0)
+    if (clock1 > 0) {
         return clock1;
+    }
 
     // Auto-detect clock
 
@@ -248,16 +271,18 @@ int GetAskClock(const char *str, bool verbose) {
         setClockGrid(clock1, idx);
     }
     // Only print this message if we're not looping something
-    if (verbose || g_debugMode)
+    if (verbose || g_debugMode) {
         PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d, Best Starting Position: %d", clock1, idx);
+    }
 
     free(bits);
     return clock1;
 }
 
 int GetPskCarrier(bool verbose) {
-    if (getSignalProperties()->isnoise)
+    if (getSignalProperties()->isnoise) {
         return -1;
+    }
 
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN,  sizeof(uint8_t));
     if (bits == NULL) {
@@ -276,23 +301,31 @@ int GetPskCarrier(bool verbose) {
     free(bits);
 
     uint8_t carrier = fc & 0xFF;
-    if (carrier != 2 && carrier != 4 && carrier != 8) return 0;
-    if ((fc >> 8) == 10 && carrier == 8) return 0;
+    if (carrier != 2 && carrier != 4 && carrier != 8) {
+        return 0;
+    }
+
+    if ((fc >> 8) == 10 && carrier == 8) {
+        return 0;
+    }
     // Only print this message if we're not looping something
-    if (verbose)
+    if (verbose) {
         PrintAndLogEx(SUCCESS, "Auto-detected PSK carrier rate: %d", carrier);
+    }
 
     return carrier;
 }
 
 int GetPskClock(const char *str, bool verbose) {
 
-    if (getSignalProperties()->isnoise)
+    if (getSignalProperties()->isnoise) {
         return -1;
+    }
 
     int clock1 = param_get32ex(str, 0, 0, 10);
-    if (clock1 != 0)
+    if (clock1 != 0) {
         return clock1;
+    }
 
     // Auto-detect clock
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN,  sizeof(uint8_t));
@@ -312,12 +345,14 @@ int GetPskClock(const char *str, bool verbose) {
     uint8_t curPhase = 0, fc = 0;
     clock1 = DetectPSKClock(bits, size, 0, &firstPhaseShiftLoc, &curPhase, &fc);
 
-    if (clock1 >= 0)
+    if (clock1 >= 0) {
         setClockGrid(clock1, firstPhaseShiftLoc);
+    }
 
     // Only print this message if we're not looping something
-    if (verbose)
+    if (verbose) {
         PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d", clock1);
+    }
 
     free(bits);
     return clock1;
@@ -325,12 +360,14 @@ int GetPskClock(const char *str, bool verbose) {
 
 int GetNrzClock(const char *str, bool verbose) {
 
-    if (getSignalProperties()->isnoise)
+    if (getSignalProperties()->isnoise) {
         return -1;
+    }
 
     int clock1 = param_get32ex(str, 0, 0, 10);
-    if (clock1 != 0)
+    if (clock1 != 0) {
         return clock1;
+    }
 
     // Auto-detect clock
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN,  sizeof(uint8_t));
@@ -350,8 +387,9 @@ int GetNrzClock(const char *str, bool verbose) {
     clock1 = DetectNRZClock(bits, size, 0, &clkStartIdx);
     setClockGrid(clock1, clkStartIdx);
     // Only print this message if we're not looping something
-    if (verbose)
+    if (verbose) {
         PrintAndLogEx(SUCCESS, "Auto-detected clock rate: %d", clock1);
+    }
 
     free(bits);
     return clock1;
@@ -362,18 +400,21 @@ int GetNrzClock(const char *str, bool verbose) {
 int GetFskClock(const char *str, bool verbose) {
 
     int clock1 = param_get32ex(str, 0, 0, 10);
-    if (clock1 != 0)
+    if (clock1 != 0) {
         return clock1;
+    }
 
     uint8_t fc1 = 0, fc2 = 0, rf1 = 0;
     int firstClockEdge = 0;
 
-    if (fskClocks(&fc1, &fc2, &rf1, &firstClockEdge) == false)
+    if (fskClocks(&fc1, &fc2, &rf1, &firstClockEdge) == false) {
         return 0;
+    }
 
     if ((fc1 == 10 && fc2 == 8) || (fc1 == 8 && fc2 == 5)) {
-        if (verbose)
+        if (verbose) {
             PrintAndLogEx(SUCCESS, "Detected Field Clocks: FC/%d, FC/%d - Bit Clock: RF/%d", fc1, fc2, rf1);
+        }
 
         setClockGrid(rf1, firstClockEdge);
         return rf1;
@@ -386,8 +427,9 @@ int GetFskClock(const char *str, bool verbose) {
 
 bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
 
-    if (getSignalProperties()->isnoise)
+    if (getSignalProperties()->isnoise) {
         return false;
+    }
 
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN,  sizeof(uint8_t));
     if (bits == NULL) {
@@ -429,13 +471,13 @@ buffer_savestate_t save_buffer32(uint32_t *src, size_t length) {
     //Make a copy of the source buffer
     memcpy(savedBuffer, src, (length * sizeof(uint32_t)));
 
-    buffer_savestate_t tommy = {
+    buffer_savestate_t bst = {
         .type = sizeof(uint32_t),
         .bufferSize = length,
         .buffer = savedBuffer
     };
 
-    return tommy;
+    return bst;
 }
 
 buffer_savestate_t save_bufferS32(int32_t *src, size_t length) {
@@ -445,13 +487,13 @@ buffer_savestate_t save_bufferS32(int32_t *src, size_t length) {
     //Make a copy of the source buffer
     memcpy(savedBuffer, src, (length * sizeof(uint32_t)));
 
-    buffer_savestate_t billy = {
+    buffer_savestate_t bst = {
         .type = (sizeof(int32_t) >> 8),
         .bufferSize = length,
         .buffer = savedBuffer
     };
 
-    return billy;
+    return bst;
 }
 
 buffer_savestate_t save_buffer8(uint8_t *src, size_t length) {
@@ -471,13 +513,13 @@ buffer_savestate_t save_buffer8(uint8_t *src, size_t length) {
         index++;
     }
     
-    buffer_savestate_t timmy = {
+    buffer_savestate_t bst = {
         .type = sizeof(uint8_t),
         .bufferSize = buffSize,
         .buffer = savedBuffer
     };
 
-    return timmy;
+    return bst;
 }
 
 size_t restore_buffer32(buffer_savestate_t saveState, uint32_t *dest) {
