@@ -33,14 +33,7 @@
 #include "mbedtls/cmac.h"
 #include "mbedtls/cipher.h"
 #include "mbedtls/md.h"
-
-#ifndef ON_DEVICE
-#include "ui.h"
-# define prnt(args...) PrintAndLogEx(DEBUG, ## args );
-#else
-# include "dbprint.h"
-# define prnt Dbprintf
-#endif
+#include "printutil.h"
 
 // Implementation tips:
 // For each implementation of the algos, I recommend adding a self test for easy "simple unit" tests when Travis CI / Appveyor runs.
@@ -552,7 +545,7 @@ uint32_t lf_t55xx_white_pwdgen(uint32_t id) {
 // Gallagher Desfire Key Diversification Input for Cardax Card Data Application
 int mfdes_kdf_input_gallagher(uint8_t *uid, uint8_t uidLen, uint8_t keyNo, uint32_t aid, uint8_t *kdfInputOut, uint8_t *kdfInputLen) {
     if (uid == NULL || (uidLen != 4 && uidLen != 7) || keyNo > 2 || kdfInputOut == NULL || kdfInputLen == NULL) {
-        prnt("Invalid arguments");
+        print_error("Invalid arguments");
         return PM3_EINVARG;
     }
 
