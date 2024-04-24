@@ -172,254 +172,254 @@ uint64_t bytes_to_num(const uint8_t *src, size_t len) {
 
 uint16_t MemLeToUint2byte(const uint8_t *data) {
     return (uint16_t)(
-               (((uint16_t)(data[1])) << (8 * 1)) +
-               (((uint16_t)(data[0])) << (8 * 0))
+               (((uint16_t)(data[1])) << 8) +
+               (((uint16_t)(data[0])) << 0)
            );
 }
 
 uint32_t MemLeToUint3byte(const uint8_t *data) {
     return (uint32_t)(
-               (((uint32_t)(data[2])) << (8 * 2)) +
-               (((uint32_t)(data[1])) << (8 * 1)) +
-               (((uint32_t)(data[0])) << (8 * 0))
+               (((uint32_t)(data[2])) << 16) +
+               (((uint32_t)(data[1])) << 8) +
+               (((uint32_t)(data[0])) << 0)
            );
 }
 
 uint32_t MemLeToUint4byte(const uint8_t *data) {
     return (uint32_t)(
-               (((uint32_t)(data[3])) << (8 * 3)) +
-               (((uint32_t)(data[2])) << (8 * 2)) +
-               (((uint32_t)(data[1])) << (8 * 1)) +
-               (((uint32_t)(data[0])) << (8 * 0))
+               (((uint32_t)(data[3])) << 24) +
+               (((uint32_t)(data[2])) << 16) +
+               (((uint32_t)(data[1])) << 8) +
+               (((uint32_t)(data[0])) << 0)
            );
 }
 
 uint64_t MemLeToUint5byte(const uint8_t *data) {
     return (uint64_t)(
-               (((uint64_t)(data[4])) << (8 * 4)) +
-               (((uint64_t)(data[3])) << (8 * 3)) +
-               (((uint64_t)(data[2])) << (8 * 2)) +
-               (((uint64_t)(data[1])) << (8 * 1)) +
-               (((uint64_t)(data[0])) << (8 * 0))
+               (((uint64_t)(data[4])) << 32) +
+               (((uint64_t)(data[3])) << 24) +
+               (((uint64_t)(data[2])) << 16) +
+               (((uint64_t)(data[1])) << 8) +
+               (((uint64_t)(data[0])) << 0)
            );
 }
 
 uint64_t MemLeToUint6byte(const uint8_t *data) {
     return (uint64_t)(
-               (((uint64_t)(data[5])) << (8 * 5)) +
-               (((uint64_t)(data[4])) << (8 * 4)) +
-               (((uint64_t)(data[3])) << (8 * 3)) +
-               (((uint64_t)(data[2])) << (8 * 2)) +
-               (((uint64_t)(data[1])) << (8 * 1)) +
-               (((uint64_t)(data[0])) << (8 * 0))
+               (((uint64_t)(data[5])) << 40) +
+               (((uint64_t)(data[4])) << 32) +
+               (((uint64_t)(data[3])) << 24) +
+               (((uint64_t)(data[2])) << 16) +
+               (((uint64_t)(data[1])) << 8) +
+               (((uint64_t)(data[0])) << 0)
            );
 }
 
 uint64_t MemLeToUint7byte(const uint8_t *data) {
     return (uint64_t)(
-               (((uint64_t)(data[6])) << (8 * 6)) +
-               (((uint64_t)(data[5])) << (8 * 5)) +
-               (((uint64_t)(data[4])) << (8 * 4)) +
-               (((uint64_t)(data[3])) << (8 * 3)) +
-               (((uint64_t)(data[2])) << (8 * 2)) +
-               (((uint64_t)(data[1])) << (8 * 1)) +
-               (((uint64_t)(data[0])) << (8 * 0))
+               (((uint64_t)(data[6])) << 48) +
+               (((uint64_t)(data[5])) << 40) +
+               (((uint64_t)(data[4])) << 32) +
+               (((uint64_t)(data[3])) << 24) +
+               (((uint64_t)(data[2])) << 16) +
+               (((uint64_t)(data[1])) << 8) +
+               (((uint64_t)(data[0])) << 0)
            );
 }
 
 uint64_t MemLeToUint8byte(const uint8_t *data) {
     return (uint64_t)(
-               (((uint64_t)(data[7])) << (8 * 7)) +
-               (((uint64_t)(data[6])) << (8 * 6)) +
-               (((uint64_t)(data[5])) << (8 * 5)) +
-               (((uint64_t)(data[4])) << (8 * 4)) +
-               (((uint64_t)(data[3])) << (8 * 3)) +
-               (((uint64_t)(data[2])) << (8 * 2)) +
-               (((uint64_t)(data[1])) << (8 * 1)) +
-               (((uint64_t)(data[0])) << (8 * 0))
+               (((uint64_t)(data[7])) << 56) +
+               (((uint64_t)(data[6])) << 48) +
+               (((uint64_t)(data[5])) << 40) +
+               (((uint64_t)(data[4])) << 32) +
+               (((uint64_t)(data[3])) << 24) +
+               (((uint64_t)(data[2])) << 16) +
+               (((uint64_t)(data[1])) << 8) +
+               (((uint64_t)(data[0])) << 0)
            );
 }
 
 uint16_t MemBeToUint2byte(const uint8_t *data) {
     return (uint16_t)(
-               (((uint16_t)(data[0])) << (8 * 1)) +
-               (((uint16_t)(data[1])) << (8 * 0))
+               (((uint16_t)(data[0])) << 8) +
+               (((uint16_t)(data[1])) << 0)
            );
 }
 
 uint32_t MemBeToUint3byte(const uint8_t *data) {
     return (uint32_t)(
-               (((uint32_t)(data[0])) << (8 * 2)) +
-               (((uint32_t)(data[1])) << (8 * 1)) +
-               (((uint32_t)(data[2])) << (8 * 0))
+               (((uint32_t)(data[0])) << 16) +
+               (((uint32_t)(data[1])) << 8) +
+               (((uint32_t)(data[2])) << 0)
            );
 }
 
 uint32_t MemBeToUint4byte(const uint8_t *data) {
     return (uint32_t)(
-               (((uint32_t)(data[0])) << (8 * 3)) +
-               (((uint32_t)(data[1])) << (8 * 2)) +
-               (((uint32_t)(data[2])) << (8 * 1)) +
-               (((uint32_t)(data[3])) << (8 * 0))
+               (((uint32_t)(data[0])) << 24) +
+               (((uint32_t)(data[1])) << 16) +
+               (((uint32_t)(data[2])) << 8) +
+               (((uint32_t)(data[3])) << 0)
            );
 }
 
 uint64_t MemBeToUint5byte(const uint8_t *data) {
     return (uint64_t)(
-               (((uint64_t)(data[0])) << (8 * 4)) +
-               (((uint64_t)(data[1])) << (8 * 3)) +
-               (((uint64_t)(data[2])) << (8 * 2)) +
-               (((uint64_t)(data[3])) << (8 * 1)) +
-               (((uint64_t)(data[4])) << (8 * 0))
+               (((uint64_t)(data[0])) << 32) +
+               (((uint64_t)(data[1])) << 24) +
+               (((uint64_t)(data[2])) << 16) +
+               (((uint64_t)(data[3])) << 8) +
+               (((uint64_t)(data[4])) << 0)
            );
 }
 
 uint64_t MemBeToUint6byte(const uint8_t *data) {
     return (uint64_t)(
-               (((uint64_t)(data[0])) << (8 * 5)) +
-               (((uint64_t)(data[1])) << (8 * 4)) +
-               (((uint64_t)(data[2])) << (8 * 3)) +
-               (((uint64_t)(data[3])) << (8 * 2)) +
-               (((uint64_t)(data[4])) << (8 * 1)) +
-               (((uint64_t)(data[5])) << (8 * 0))
+               (((uint64_t)(data[0])) << 40) +
+               (((uint64_t)(data[1])) << 32) +
+               (((uint64_t)(data[2])) << 24) +
+               (((uint64_t)(data[3])) << 16) +
+               (((uint64_t)(data[4])) << 8) +
+               (((uint64_t)(data[5])) << 0)
            );
 }
 
 uint64_t MemBeToUint7byte(const uint8_t *data) {
     return (uint64_t)(
-               (((uint64_t)(data[0])) << (8 * 6)) +
-               (((uint64_t)(data[1])) << (8 * 5)) +
-               (((uint64_t)(data[2])) << (8 * 4)) +
-               (((uint64_t)(data[3])) << (8 * 3)) +
-               (((uint64_t)(data[4])) << (8 * 2)) +
-               (((uint64_t)(data[5])) << (8 * 1)) +
-               (((uint64_t)(data[6])) << (8 * 0))
+               (((uint64_t)(data[0])) << 48) +
+               (((uint64_t)(data[1])) << 40) +
+               (((uint64_t)(data[2])) << 32) +
+               (((uint64_t)(data[3])) << 24) +
+               (((uint64_t)(data[4])) << 16) +
+               (((uint64_t)(data[5])) << 8) +
+               (((uint64_t)(data[6])) << 0)
            );
 }
 
 uint64_t MemBeToUint8byte(const uint8_t *data) {
     return (uint64_t)(
-               (((uint64_t)(data[0])) << (8 * 7)) +
-               (((uint64_t)(data[1])) << (8 * 6)) +
-               (((uint64_t)(data[2])) << (8 * 5)) +
-               (((uint64_t)(data[3])) << (8 * 4)) +
-               (((uint64_t)(data[4])) << (8 * 3)) +
-               (((uint64_t)(data[5])) << (8 * 2)) +
-               (((uint64_t)(data[6])) << (8 * 1)) +
-               (((uint64_t)(data[7])) << (8 * 0))
+               (((uint64_t)(data[0])) << 56) +
+               (((uint64_t)(data[1])) << 48) +
+               (((uint64_t)(data[2])) << 40) +
+               (((uint64_t)(data[3])) << 32) +
+               (((uint64_t)(data[4])) << 24) +
+               (((uint64_t)(data[5])) << 16) +
+               (((uint64_t)(data[6])) << 8) +
+               (((uint64_t)(data[7])) << 0)
            );
 }
 
 void Uint2byteToMemLe(uint8_t *data, uint16_t value) {
-    data[0] = (uint8_t)((value >> (8 * 0)) & 0xffu);
-    data[1] = (uint8_t)((value >> (8 * 1)) & 0xffu);
+    data[0] = (uint8_t)((value >> 0) & 0xffu);
+    data[1] = (uint8_t)((value >> 8) & 0xffu);
 }
 
 void Uint3byteToMemLe(uint8_t *data, uint32_t value) {
-    data[0] = (uint8_t)((value >> (8 * 0)) & 0xffu);
-    data[1] = (uint8_t)((value >> (8 * 1)) & 0xffu);
-    data[2] = (uint8_t)((value >> (8 * 2)) & 0xffu);
+    data[0] = (uint8_t)((value >> 0) & 0xffu);
+    data[1] = (uint8_t)((value >> 8) & 0xffu);
+    data[2] = (uint8_t)((value >> 16) & 0xffu);
 }
 
 void Uint4byteToMemLe(uint8_t *data, uint32_t value) {
-    data[0] = (uint8_t)((value >> (8 * 0)) & 0xffu);
-    data[1] = (uint8_t)((value >> (8 * 1)) & 0xffu);
-    data[2] = (uint8_t)((value >> (8 * 2)) & 0xffu);
-    data[3] = (uint8_t)((value >> (8 * 3)) & 0xffu);
+    data[0] = (uint8_t)((value >> 0) & 0xffu);
+    data[1] = (uint8_t)((value >> 8) & 0xffu);
+    data[2] = (uint8_t)((value >> 16) & 0xffu);
+    data[3] = (uint8_t)((value >> 24) & 0xffu);
 }
 
 void Uint5byteToMemLe(uint8_t *data, uint64_t value) {
-    data[0] = (uint8_t)((value >> (8 * 0)) & 0xffu);
-    data[1] = (uint8_t)((value >> (8 * 1)) & 0xffu);
-    data[2] = (uint8_t)((value >> (8 * 2)) & 0xffu);
-    data[3] = (uint8_t)((value >> (8 * 3)) & 0xffu);
-    data[4] = (uint8_t)((value >> (8 * 4)) & 0xffu);
+    data[0] = (uint8_t)((value >> 0) & 0xffu);
+    data[1] = (uint8_t)((value >> 8) & 0xffu);
+    data[2] = (uint8_t)((value >> 16) & 0xffu);
+    data[3] = (uint8_t)((value >> 24) & 0xffu);
+    data[4] = (uint8_t)((value >> 32) & 0xffu);
 }
 
 void Uint6byteToMemLe(uint8_t *data, uint64_t value) {
-    data[0] = (uint8_t)((value >> (8 * 0)) & 0xffu);
-    data[1] = (uint8_t)((value >> (8 * 1)) & 0xffu);
-    data[2] = (uint8_t)((value >> (8 * 2)) & 0xffu);
-    data[3] = (uint8_t)((value >> (8 * 3)) & 0xffu);
-    data[4] = (uint8_t)((value >> (8 * 4)) & 0xffu);
-    data[5] = (uint8_t)((value >> (8 * 5)) & 0xffu);
+    data[0] = (uint8_t)((value >> 0) & 0xffu);
+    data[1] = (uint8_t)((value >> 8) & 0xffu);
+    data[2] = (uint8_t)((value >> 16) & 0xffu);
+    data[3] = (uint8_t)((value >> 24) & 0xffu);
+    data[4] = (uint8_t)((value >> 32) & 0xffu);
+    data[5] = (uint8_t)((value >> 40) & 0xffu);
 }
 
 void Uint7byteToMemLe(uint8_t *data, uint64_t value) {
-    data[0] = (uint8_t)((value >> (8 * 0)) & 0xffu);
-    data[1] = (uint8_t)((value >> (8 * 1)) & 0xffu);
-    data[2] = (uint8_t)((value >> (8 * 2)) & 0xffu);
-    data[3] = (uint8_t)((value >> (8 * 3)) & 0xffu);
-    data[4] = (uint8_t)((value >> (8 * 4)) & 0xffu);
-    data[5] = (uint8_t)((value >> (8 * 5)) & 0xffu);
-    data[6] = (uint8_t)((value >> (8 * 6)) & 0xffu);
+    data[0] = (uint8_t)((value >> 0) & 0xffu);
+    data[1] = (uint8_t)((value >> 8) & 0xffu);
+    data[2] = (uint8_t)((value >> 16) & 0xffu);
+    data[3] = (uint8_t)((value >> 24) & 0xffu);
+    data[4] = (uint8_t)((value >> 32) & 0xffu);
+    data[5] = (uint8_t)((value >> 40) & 0xffu);
+    data[6] = (uint8_t)((value >> 48) & 0xffu);
 }
 
 void Uint8byteToMemLe(uint8_t *data, uint64_t value) {
-    data[0] = (uint8_t)((value >> (8 * 0)) & 0xffu);
-    data[1] = (uint8_t)((value >> (8 * 1)) & 0xffu);
-    data[2] = (uint8_t)((value >> (8 * 2)) & 0xffu);
-    data[3] = (uint8_t)((value >> (8 * 3)) & 0xffu);
-    data[4] = (uint8_t)((value >> (8 * 4)) & 0xffu);
-    data[5] = (uint8_t)((value >> (8 * 5)) & 0xffu);
-    data[6] = (uint8_t)((value >> (8 * 6)) & 0xffu);
-    data[7] = (uint8_t)((value >> (8 * 7)) & 0xffu);
+    data[0] = (uint8_t)((value >> 0) & 0xffu);
+    data[1] = (uint8_t)((value >> 8) & 0xffu);
+    data[2] = (uint8_t)((value >> 16) & 0xffu);
+    data[3] = (uint8_t)((value >> 24) & 0xffu);
+    data[4] = (uint8_t)((value >> 32) & 0xffu);
+    data[5] = (uint8_t)((value >> 40) & 0xffu);
+    data[6] = (uint8_t)((value >> 48) & 0xffu);
+    data[7] = (uint8_t)((value >> 56) & 0xffu);
 }
 
 void Uint2byteToMemBe(uint8_t *data, uint16_t value) {
-    data[0] = (uint8_t)((value >> (8 * 1)) & 0xffu);
-    data[1] = (uint8_t)((value >> (8 * 0)) & 0xffu);
+    data[0] = (uint8_t)((value >> 8) & 0xffu);
+    data[1] = (uint8_t)((value >> 0) & 0xffu);
 }
 
 void Uint3byteToMemBe(uint8_t *data, uint32_t value) {
-    data[0] = (uint8_t)((value >> (8 * 2)) & 0xffu);
-    data[1] = (uint8_t)((value >> (8 * 1)) & 0xffu);
-    data[2] = (uint8_t)((value >> (8 * 0)) & 0xffu);
+    data[0] = (uint8_t)((value >> 16) & 0xffu);
+    data[1] = (uint8_t)((value >> 8) & 0xffu);
+    data[2] = (uint8_t)((value >> 0) & 0xffu);
 }
 
 void Uint4byteToMemBe(uint8_t *data, uint32_t value) {
-    data[0] = (uint8_t)((value >> (8 * 3)) & 0xffu);
-    data[1] = (uint8_t)((value >> (8 * 2)) & 0xffu);
-    data[2] = (uint8_t)((value >> (8 * 1)) & 0xffu);
-    data[3] = (uint8_t)((value >> (8 * 0)) & 0xffu);
+    data[0] = (uint8_t)((value >> 24) & 0xffu);
+    data[1] = (uint8_t)((value >> 16) & 0xffu);
+    data[2] = (uint8_t)((value >> 8) & 0xffu);
+    data[3] = (uint8_t)((value >> 0) & 0xffu);
 }
 
 void Uint5byteToMemBe(uint8_t *data, uint64_t value) {
-    data[0] = (uint8_t)((value >> (8 * 4)) & 0xffu);
-    data[1] = (uint8_t)((value >> (8 * 3)) & 0xffu);
-    data[2] = (uint8_t)((value >> (8 * 2)) & 0xffu);
-    data[3] = (uint8_t)((value >> (8 * 1)) & 0xffu);
-    data[4] = (uint8_t)((value >> (8 * 0)) & 0xffu);
+    data[0] = (uint8_t)((value >> 32) & 0xffu);
+    data[1] = (uint8_t)((value >> 24) & 0xffu);
+    data[2] = (uint8_t)((value >> 16) & 0xffu);
+    data[3] = (uint8_t)((value >> 8) & 0xffu);
+    data[4] = (uint8_t)((value >> 0) & 0xffu);
 }
 
 void Uint6byteToMemBe(uint8_t *data, uint64_t value) {
-    data[0] = (uint8_t)((value >> (8 * 5)) & 0xffu);
-    data[1] = (uint8_t)((value >> (8 * 4)) & 0xffu);
-    data[2] = (uint8_t)((value >> (8 * 3)) & 0xffu);
-    data[3] = (uint8_t)((value >> (8 * 2)) & 0xffu);
-    data[4] = (uint8_t)((value >> (8 * 1)) & 0xffu);
-    data[5] = (uint8_t)((value >> (8 * 0)) & 0xffu);
+    data[0] = (uint8_t)((value >> 40) & 0xffu);
+    data[1] = (uint8_t)((value >> 32) & 0xffu);
+    data[2] = (uint8_t)((value >> 24) & 0xffu);
+    data[3] = (uint8_t)((value >> 16) & 0xffu);
+    data[4] = (uint8_t)((value >> 8) & 0xffu);
+    data[5] = (uint8_t)((value >> 0) & 0xffu);
 }
 
 void Uint7byteToMemBe(uint8_t *data, uint64_t value) {
-    data[0] = (uint8_t)((value >> (8 * 6)) & 0xffu);
-    data[1] = (uint8_t)((value >> (8 * 5)) & 0xffu);
-    data[2] = (uint8_t)((value >> (8 * 4)) & 0xffu);
-    data[3] = (uint8_t)((value >> (8 * 3)) & 0xffu);
-    data[4] = (uint8_t)((value >> (8 * 2)) & 0xffu);
-    data[5] = (uint8_t)((value >> (8 * 1)) & 0xffu);
-    data[6] = (uint8_t)((value >> (8 * 0)) & 0xffu);
+    data[0] = (uint8_t)((value >> 48) & 0xffu);
+    data[1] = (uint8_t)((value >> 40) & 0xffu);
+    data[2] = (uint8_t)((value >> 32) & 0xffu);
+    data[3] = (uint8_t)((value >> 24) & 0xffu);
+    data[4] = (uint8_t)((value >> 16) & 0xffu);
+    data[5] = (uint8_t)((value >> 8) & 0xffu);
+    data[6] = (uint8_t)((value >> 0) & 0xffu);
 }
 
 void Uint8byteToMemBe(uint8_t *data, uint64_t value) {
-    data[0] = (uint8_t)((value >> (8 * 7)) & 0xffu);
-    data[1] = (uint8_t)((value >> (8 * 6)) & 0xffu);
-    data[2] = (uint8_t)((value >> (8 * 5)) & 0xffu);
-    data[3] = (uint8_t)((value >> (8 * 4)) & 0xffu);
-    data[4] = (uint8_t)((value >> (8 * 3)) & 0xffu);
-    data[5] = (uint8_t)((value >> (8 * 2)) & 0xffu);
-    data[6] = (uint8_t)((value >> (8 * 1)) & 0xffu);
-    data[7] = (uint8_t)((value >> (8 * 0)) & 0xffu);
+    data[0] = (uint8_t)((value >> 56) & 0xffu);
+    data[1] = (uint8_t)((value >> 48) & 0xffu);
+    data[2] = (uint8_t)((value >> 40) & 0xffu);
+    data[3] = (uint8_t)((value >> 32) & 0xffu);
+    data[4] = (uint8_t)((value >> 24) & 0xffu);
+    data[5] = (uint8_t)((value >> 16) & 0xffu);
+    data[6] = (uint8_t)((value >> 8) & 0xffu);
+    data[7] = (uint8_t)((value >> 0) & 0xffu);
 }
 
 // RotateLeft - Ultralight, Desfire
