@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fix `lf cmdread` - uninitialised memory usage (@iceman1001)
 - Changed `hf st info` - now tries to check signature if available (@iceman1001)
 - Added `hf 14b mobib` - try to read out all data from a MOBIB card (@iceman1001)
 - Added `hf 14b calyso` - try to read out all data from a Calypso card (@iceman1001)
