@@ -30,5 +30,5 @@ int exchange_14b_apdu(uint8_t *datain, int datainlen, bool activate_field, bool 
 int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card);
 
 int infoHF14B(bool verbose, bool do_aid_search);
-int readHF14B(bool loop, bool verbose);
+int readHF14B(bool loop, bool verbose, bool read_plot);
 #endif

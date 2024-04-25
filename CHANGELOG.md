@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf 14b reader --plot` - made the anticollision signal trace download optional (@iceman1001)
 - Added `lf_hitag_crypto.trace` - trace file of a complete read out of a Hitag2 in crypto mode (@iceman1001)
 - Fix `lf cmdread` - uninitialised memory usage (@iceman1001)
 - Changed `hf st info` - now tries to check signature if available (@iceman1001)

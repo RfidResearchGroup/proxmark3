@@ -1503,13 +1503,15 @@ static int CmdHF14BReader(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0(NULL, "plot", "show anticollision signal trace in plot window"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0("@", NULL, "optional - continuous reader mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool verbose = arg_get_lit(ctx, 1);
-    bool cm = arg_get_lit(ctx, 2);
+    bool read_plot = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool cm = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     if (cm) {
@@ -1518,7 +1520,7 @@ static int CmdHF14BReader(const char *Cmd) {
 
     clear_trace_14b();
 
-    return readHF14B(cm, verbose);
+    return readHF14B(cm, verbose, read_plot);
 }
 
 // Read SRI512|SRIX4K block
@@ -2928,7 +2930,7 @@ int infoHF14B(bool verbose, bool do_aid_search) {
 }
 
 // get and print general info about all known 14b chips
-int readHF14B(bool loop, bool verbose) {
+int readHF14B(bool loop, bool verbose, bool read_plot) {
     bool found = false;
     int res = PM3_SUCCESS;
     do {
@@ -2960,9 +2962,11 @@ int readHF14B(bool loop, bool verbose) {
         if (found)
             goto plot;
 plot:
-        res = handle_hf_plot(verbose);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(DEBUG, "plot failed");
+        if (read_plot) {
+            res = handle_hf_plot(verbose);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(DEBUG, "plot failed");
+            }
         }
 
     } while (loop && kbd_enter_pressed() == false);

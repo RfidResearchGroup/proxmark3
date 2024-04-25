@@ -176,7 +176,7 @@ int CmdHFSearch(const char *Cmd) {
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, " Searching for ISO14443-B tag...");
     if (IfPm3Iso14443b()) {
-        if (readHF14B(false, false) == PM3_SUCCESS) {
+        if (readHF14B(false, false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 14443-B tag") " found\n");
             success[ISO_14443B] = true;
             res = PM3_SUCCESS;
