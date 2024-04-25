@@ -3581,7 +3581,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass chk",
                   "Checkkeys loads a dictionary text file with 8byte hex keys to test authenticating against a iClass tag",
                   "hf iclass chk -f iclass_default_keys.dic\n"
-                  "hf iclass chk -f iclass_default_keys.dic --elite");
+                  "hf iclass chk -f iclass_elite_keys.dic --elite");
 
     void *argtable[] = {
         arg_param_begin,
