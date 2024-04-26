@@ -122,3 +122,7 @@ fpga_version_info.c
 
 # docs
 !doc/*.json
+
+# local codeql
+_codeql*
+/codeql

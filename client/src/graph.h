@@ -26,11 +26,12 @@ extern "C" {
 #endif
 
 typedef struct {
-    const uint8_t type; //Used for sanity checks
-    const uint32_t *buffer;
-    const size_t   bufferSize;
-    uint32_t offset;
-    uint32_t clock;     //Not used by all buffers
+    const uint8_t  type;       // Used for sanity checks
+    const uint32_t *buffer;    // The storage buffer for this save state
+    const size_t   bufferSize; // The size of the buffer
+    const uint8_t  padding;    // The amount of padding at the end of the buffer, if needed
+    uint32_t       offset;     // (optional) Any offset the buffer needs after restoring
+    uint32_t       clock;      // (optional) Clock data for the buffer
 } buffer_savestate_t;
 
 void AppendGraph(bool redraw, uint16_t clock, int bit);
