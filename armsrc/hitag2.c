@@ -380,13 +380,17 @@ static uint32_t hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) 
 // frame_len is in number of bits?
 static uint32_t hitag_reader_send_framebits(const uint8_t *frame, size_t frame_len) {
 
+    WDT_HIT();
+
     uint32_t wait = 0;
     // Send the content of the frame
     for (size_t i = 0; i < frame_len; i++) {
         wait += hitag_reader_send_bit(frame[i]);
     }
 
+    // EOF
     // Enable modulation, which means, drop the field
+    // set GPIO_SSC_DOUT to HIGH
     lf_modulation(true);
 
     // Wait for 4-10 times the carrier period
@@ -394,11 +398,14 @@ static uint32_t hitag_reader_send_framebits(const uint8_t *frame, size_t frame_l
     wait += HITAG_T_LOW;
 
     // Disable modulation, just activates the field again
+    // set GPIO_SSC_DOUT to LOW
     lf_modulation(false);
 
     // t_stop, high field for stop condition (> 36)
     lf_wait_periods(HITAG_T_STOP);
     wait += HITAG_T_STOP;
+
+    WDT_HIT();
 
     return wait;
 }
@@ -768,6 +775,8 @@ static bool hitag2_crypto(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *
     }
 
     if (bCrypto && (bAuthenticating == false) && write) {
+
+        SpinDelay(2);
         if (hitag2_write_page(rx, rxlen, tx, txlen) == false) {
             return false;
         }
@@ -2583,8 +2592,7 @@ bool ht2_packbits(uint8_t *nrz_samples, size_t nrzs, uint8_t *rx, size_t *rxlen)
 
 int ht2_read_uid(uint8_t *uid, bool ledcontrol, bool send_answer, bool keep_field_up) {
 
-    // Clean up trace and prepare it for storing frames
-    set_tracing(true);
+    g_logging = false;
 
     // keep field up indicates there are more traffic to be done.
     if (keep_field_up == false) {
@@ -2685,12 +2693,7 @@ int ht2_tx_rx(uint8_t *tx, size_t txlen, uint8_t *rx, size_t *rxlen, bool ledcon
 
     int res = PM3_EFAILED;
     size_t nrzs = 0;
-    uint8_t samples[HT2_MAX_NRSZ];
-
-    // waith between sending commands
-    lf_wait_periods(HITAG_T_WAIT_2_MIN);
-
-    WDT_HIT();
+    uint8_t samples[HT2_MAX_NRSZ] = {0};
 
     uint32_t command_start = 0, command_duration = 0;
     uint32_t response_start = 0, response_duration = 0;
@@ -2709,19 +2712,15 @@ int ht2_tx_rx(uint8_t *tx, size_t txlen, uint8_t *rx, size_t *rxlen, bool ledcon
     }
 
     // pack bits to bytes
-    if (ht2_packbits(samples, nrzs, rx, rxlen) == false) {
+    if (rx && (ht2_packbits(samples, nrzs, rx, rxlen) == false)) {
         goto out;
     }
 
-    // log Receive data
-    LogTraceBits(rx, *rxlen, response_start, response_start + response_duration, false);
-
     res = PM3_SUCCESS;
 
-out:
+out:    
     if (keep_field_up == false) {
         lf_finalize(false);
-        BigBuf_free_keep_EM();
     }
     return res;
 }
