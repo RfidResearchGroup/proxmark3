@@ -313,6 +313,7 @@ typedef struct {
 // ksoffset is a pointer to the current keystream offset (updated by this fn);
 // nrar is the 64 bit binarray of the nR aR pair.
 //static bool ht2crack_consume_keystream(uint8_t *keybits, int kslen, int *ksoffset) {
+/*
 static bool ht2crack_consume_keystream(lf_hitag_crack2_t *c2, int kslen, int *ksoffset) {
 
     // calculate the length of keybits to consume with the extended command.
@@ -351,6 +352,7 @@ static bool ht2crack_consume_keystream(lf_hitag_crack2_t *c2, int kslen, int *ks
 
     return true;
 }
+*/
 
 // hitag2crack_extend_keystream sends an extended command to retrieve more keybits.
 // keybits is the binarray of the keystream bits;
@@ -359,6 +361,7 @@ static bool ht2crack_consume_keystream(lf_hitag_crack2_t *c2, int kslen, int *ks
 // nrar is the 64 bit binarray of the nR aR pair;
 // uid is the 32 bit binarray of the UID.
 //static bool ht2crack_extend_keystream(uint8_t *keybits, int *kslen, int ksoffset, uint8_t *nrar, uint8_t *uid) {
+/*
 static bool ht2crack_extend_keystream(lf_hitag_crack2_t *c2, int *kslen, int ksoffset) {
     
        // calc number of command iterations to send
@@ -399,6 +402,7 @@ static bool ht2crack_extend_keystream(lf_hitag_crack2_t *c2, int *kslen, int kso
     
     return true;
 }
+*/
 
 // hitag2_crack implements the first crack algorithm described in the paper,
 // Gone In 360 Seconds by Verdult, Garcia and Balasch.
@@ -510,9 +514,14 @@ void ht2_crack2(uint8_t *nrar_hex) {
         memcpy(c2->ext_cmd + (i * 10), read_p0_cmd, 10);
     }
 
+    DbpString("enter main keystream rec");
+    Dbhexdump(160, c2->ext_cmd, false);
+
+    DbpString("enter main keystream recover loop");
+
     while (kslen < 2048) {
 
-        int ksoffset = 0;
+        //int ksoffset = 0;
 
         // Get UID
         if (ht2_read_uid(NULL, true, false, true) != PM3_SUCCESS) {
@@ -530,7 +539,8 @@ void ht2_crack2(uint8_t *nrar_hex) {
         // while we have at least 52 bits of keystream, consume it with
         // extended read page 0 commands. 
         // 52 = 10 (min command len) + 32 (response) + 10 (min command len we'll send)
-        while ((kslen - ksoffset) >= 52) {
+        /*
+                while ((kslen - ksoffset) >= 52) {
             // consume the keystream, updating ksoffset as we go
             //if (ht2crack_consume_keystream(c2->keybits, kslen, &ksoffset, c2->nrar) == false) {
             if (ht2crack_consume_keystream(c2, kslen, &ksoffset) == false) {
@@ -539,7 +549,6 @@ void ht2_crack2(uint8_t *nrar_hex) {
                 goto out;
             }
         }
-
         // send an extended command to retrieve more keystream, 
         // updating kslen as we go
         if (ht2crack_extend_keystream(c2, &kslen, ksoffset) == false)  {
@@ -548,14 +557,43 @@ void ht2_crack2(uint8_t *nrar_hex) {
             goto out;
         }
 
+        */
+
+        // xor extended cmd with keybits
+        hitag2crack_xor(c2->e_ext_cmd, c2->ext_cmd, c2->keybits, kslen);
+
+        // send extended encrypted cmd
+        uint8_t resp[4];
+        if (ht2_tx_rx(c2->e_ext_cmd, kslen, resp, &n, true, false) != PM3_SUCCESS) {
+            DbpString("extend_keystream: tx/rx cmd failed");
+            break;
+        }
+
+        // test response
+        if (memcmp(resp, ERROR_RESPONSE, 4) == 0) {
+            break;
+        }
+
+        // convert response to binarray
+        uint8_t e_response[32];
+        hex2binarray((char*)e_response, (char*)resp);
+
+        // recover keystream from encrypted response
+        hitag2crack_xor(c2->keybits + kslen + 40, e_response, c2->uid, 32);
+
+        // update kslen
+        kslen += (40 + 32);
+
         Dbprintf("Recovered " _YELLOW_("%i") " bits of keystream", kslen);
     }
-    
+
+/*    
     uint8_t *keybitshex = BigBuf_calloc(64);
     for (int i = 0; i < 2048; i += 256) {
         binarray2hex(c2->keybits + i, 256, keybitshex);
         Dbhexdump(256, keybitshex, false);
     }
+*/
     BigBuf_free();
 
     // copy UID since we already have it...
