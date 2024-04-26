@@ -41,10 +41,6 @@ void MainGraphics(void);
 void InitGraphics(int argc, char **argv, char *script_cmds_file, char *script_cmd, bool stayInCommandLoop);
 void ExitGraphics(void);
 
-//Temporary Marker Functions
-extern void add_temporary_marker(uint32_t position, const char *label);
-extern void remove_temporary_markers(void);
-
 extern double g_CursorScaleFactor;
 extern char g_CursorScaleFactorUnit[11];
 extern double g_PlotGridX, g_PlotGridY, g_DefaultGridX, g_DefaultGridY;

@@ -468,6 +468,47 @@ bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
     return true;
 }
 
+void add_temporary_marker(uint32_t position, const char *label) {
+    if (g_TempMarkerSize == 0) { //Initialize the marker array
+        g_TempMarkers = (marker_t *)calloc(1, sizeof(marker_t));
+    } else { //add more space to the marker array using realloc()
+        marker_t *temp = (marker_t *)realloc(g_TempMarkers, ((g_TempMarkerSize + 1) * sizeof(marker_t)));
+
+        if (temp == NULL) { //Unable to reallocate memory for a new marker
+            PrintAndLogEx(FAILED, "Unable to allocate memory for a new temporary marker!");
+            free(temp);
+            return;
+        } else {
+            //Set g_TempMarkers to the new pointer
+            g_TempMarkers = temp;
+        }
+    }
+
+    g_TempMarkers[g_TempMarkerSize].pos = position;
+
+    char *markerLabel = (char *)calloc(1, strlen(label) + 1);
+    strcpy(markerLabel, label);
+
+    if (strlen(markerLabel) > 30) {
+        PrintAndLogEx(WARNING, "Label for temporary marker too long! Trunicating...");
+        markerLabel[30] = '\0';
+    }
+
+    strncpy(g_TempMarkers[g_TempMarkerSize].label, markerLabel, 30);
+    g_TempMarkerSize++;
+
+    memset(markerLabel, 0x00, strlen(label));
+    free(markerLabel);
+}
+
+void remove_temporary_markers(void) {
+    if (g_TempMarkerSize == 0) return;
+
+    memset(g_TempMarkers, 0x00, (g_TempMarkerSize * sizeof(marker_t)));
+    free(g_TempMarkers);
+    g_TempMarkerSize = 0;
+}
+
 buffer_savestate_t save_buffer32(uint32_t *src, size_t length) {
     //calloc the memory needed
     uint32_t* savedBuffer = (uint32_t*)calloc(length, sizeof(uint32_t));
