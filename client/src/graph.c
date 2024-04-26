@@ -32,6 +32,9 @@ int32_t g_OverlayBuffer[MAX_GRAPH_TRACE_LEN];
 bool    g_useOverlays = false;
 size_t  g_GraphTraceLen;
 buffer_savestate_t g_saveState_gb;
+marker_t g_MarkerA, g_MarkerB, g_MarkerC, g_MarkerD;
+marker_t *g_TempMarkers;
+uint8_t g_TempMarkerSize = 0;
 
 /* write a manchester bit to the graph
 */

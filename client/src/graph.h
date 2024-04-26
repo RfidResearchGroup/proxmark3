@@ -33,6 +33,11 @@ typedef struct {
     uint32_t clock;     //Not used by all buffers
 } buffer_savestate_t;
 
+typedef struct {
+    uint32_t pos;
+    char label[30];
+} marker_t;
+
 void AppendGraph(bool redraw, uint16_t clock, int bit);
 size_t ClearGraph(bool redraw);
 bool HasGraphData(void);
@@ -67,6 +72,10 @@ extern int32_t g_OperationBuffer[MAX_GRAPH_TRACE_LEN];
 extern int32_t g_OverlayBuffer[MAX_GRAPH_TRACE_LEN];
 extern bool    g_useOverlays;
 extern size_t  g_GraphTraceLen;
+
+extern marker_t g_MarkerA, g_MarkerB, g_MarkerC, g_MarkerD;
+extern marker_t *g_TempMarkers;
+extern uint8_t g_TempMarkerSize;
 
 extern double g_GridOffset;
 

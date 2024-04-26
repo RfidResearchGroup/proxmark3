@@ -24,9 +24,6 @@
 #include "ui.h"  // for prints
 
 static ProxGuiQT *gui = NULL;
-marker_t g_MarkerA, g_MarkerB, g_MarkerC, g_MarkerD;
-marker_t *g_TempMarkers;
-uint8_t g_TempMarkerSize = 0;
 static WorkerThread *main_loop_thread = NULL;
 
 WorkerThread::WorkerThread(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) : script_cmds_file(script_cmds_file), script_cmd(script_cmd), stayInCommandLoop(stayInCommandLoop) {
