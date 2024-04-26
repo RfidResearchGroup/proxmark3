@@ -30,6 +30,7 @@
 #include <QtGui>
 
 #include "proxgui.h"
+#include "graph.h"
 #include "ui/ui_overlays.h"
 #include "ui/ui_image.h"
 
