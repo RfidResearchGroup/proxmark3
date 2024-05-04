@@ -2594,7 +2594,8 @@ void RunMod(void) {
                     } else if (key < 0) {
                         Dbprintf("[" _RED_("!") "] " _RED_("No key %c found for sector %" PRIu8 "!"),
                                  (keyType == 0) ? 'A' : 'B', sec);
-                        SpinErr(LED_D, 250, 3);
+                        SpinErr(LED_D, 50, 3);
+                        LED_C_ON();
                         allKeysFound = false;
                         continue;
                     } else {
@@ -2638,7 +2639,6 @@ void RunMod(void) {
 
             // no room to run nested attack on device (iceman)
             DbpString("[" _RED_("!") "] " _RED_("There's currently no nested attack in MattyRun, sorry!"));
-            SpinDelay(500);
             // allKeysFound = true;
 
             state = STATE_LOAD;
