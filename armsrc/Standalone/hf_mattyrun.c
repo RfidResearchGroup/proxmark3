@@ -42,6 +42,9 @@ on a blank card.
 */
 
 #include "standalone.h" // standalone definitions
+
+#include <inttypes.h>
+
 #include "proxmark3_arm.h"
 #include "appmain.h"
 #include "fpgaloader.h"
@@ -62,11 +65,23 @@ static uint32_t mattyrun_cuid;
 static iso14a_card_select_t mattyrun_card;
 
 // Pseudo-configuration block.
-static bool const mattyrun_printKeys = false;         // Prints keys
-static bool const mattyrun_ecfill = true;             // Fill emulator memory with cards content.
+static bool const MATTYRUN_PRINT_KEYS = false;        // Prints keys
+static bool const MATTYRUN_ECFILL = true;             // Fill emulator memory with cards content.
 
 // Set of keys to be used.
-static uint64_t const mattyrun_mfKeys[] = {
+static uint64_t const MATTYRUN_MFC_KEY_BITS = 0x00FFFFFFFFFFFF;
+static uint64_t const MATTYRUN_MFC_KEY_FLAG_UNUSED = 0x10000000000000;
+static uint64_t const MATTYRUN_MFC_ESSENTIAL_KEYS[] = {
+    0xFFFFFFFFFFFF,  // Default key
+    0x000000000000,  // Blank key
+    0xA0A1A2A3A4A5,  // MAD key
+    0x5C8FF9990DA2,  // Mifare 1k EV1 (S50) hidden blocks, Signature data 16 A
+    0x75CCB59C9BED,  // Mifare 1k EV1 (S50) hidden blocks, Signature data 17 A
+    0xD01AFEEB890A,  // Mifare 1k EV1 (S50) hidden blocks, Signature data 16 B
+    0x4B791BEA7BCC,  // Mifare 1k EV1 (S50) hidden blocks, Signature data 17 B
+    0xD3F7D3F7D3F7,  // AN1305 MIFARE Classic as NFC Type MIFARE Classic Tag Public Key A
+};
+static uint64_t const MATTYRUN_MFC_DEFAULT_KEYS[] = {
     // Default key
     0xFFFFFFFFFFFF,
     // Blank key
@@ -2270,6 +2285,13 @@ static int saMifareChkKeys(uint8_t const blockNo, uint8_t const keyType, bool co
 
     for (uint16_t i = 0; i < keyCount; ++i) {
 
+        uint64_t mfKey = mfKeys[i];
+        if ((mfKey & MATTYRUN_MFC_KEY_FLAG_UNUSED) != 0) {
+            // skip unused dictionary key slot
+            continue;
+        }
+        mfKey &= MATTYRUN_MFC_KEY_BITS;
+
         if (mattyrun_card.uidlen == 0) {
             if (!saMifareDiscover()) {
                 --i; // try same key once again
@@ -2305,7 +2327,7 @@ static int saMifareChkKeys(uint8_t const blockNo, uint8_t const keyType, bool co
 
         selectRetries = 16;
 
-        authres = mifare_classic_auth(pcs, mattyrun_cuid, blockNo, keyType, mfKeys[i], AUTH_FIRST);
+        authres = mifare_classic_auth(pcs, mattyrun_cuid, blockNo, keyType, mfKey, AUTH_FIRST);
         if (authres) {
             uint8_t dummy_answer = 0;
             ReaderTransmit(&dummy_answer, 1, NULL);
@@ -2318,7 +2340,7 @@ static int saMifareChkKeys(uint8_t const blockNo, uint8_t const keyType, bool co
                 continue;
             }
         }
-        *key = mfKeys[i];
+        *key = mfKey;
         retval = i;
         break;
     }
@@ -2350,24 +2372,84 @@ void ModInfo(void) {
 */
 void RunMod(void) {
     StandAloneMode();
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     DbpString(">>  HF Mifare chk/dump/sim  a.k.a MattyRun Started  <<");
 
     // Comment this line below if you want to see debug messages.
     // usb_disable();
 
-    uint16_t const mfKeysCnt = ARRAYLEN(mattyrun_mfKeys);
-	
-    // Pretty print of the keys to be checked.
-    if (mattyrun_printKeys) {
-        DbpString("[+] Printing mf keys");
-        for (uint16_t keycnt = 0; keycnt < mfKeysCnt; ++keycnt) {
-            uint8_t key[6];
-            num_to_bytes(mattyrun_mfKeys[keycnt], 6, &key[0]);
-            Dbprintf("[-] chk mf key[%2d] %02x%02x%02x%02x%02x%02x", keycnt,
-                     key[0], key[1], key[2], key[3], key[4], key[5]);
+    // Allocate dictionary buffer
+    uint64_t * const mfcKeys = (uint64_t *)BigBuf_malloc(
+            sizeof(uint64_t) * (ARRAYLEN(MATTYRUN_MFC_ESSENTIAL_KEYS) +
+                                ARRAYLEN(MATTYRUN_MFC_DEFAULT_KEYS) +
+                                MIFARE_4K_MAXSECTOR * 2));
+    uint16_t mfcKeyCount = 0;
+
+    // Load essential keys to dictionary buffer
+    for (uint16_t i = 0; i < ARRAYLEN(MATTYRUN_MFC_ESSENTIAL_KEYS); ++i) {
+        uint64_t mfKey = MATTYRUN_MFC_ESSENTIAL_KEYS[i];
+        for (uint16_t j = 0; j < mfcKeyCount; ++j) {
+            if (mfKey == mfcKeys[j]) {
+                // skip redundant dictionary key
+                mfKey = MATTYRUN_MFC_KEY_FLAG_UNUSED;
+                break;
+            }
         }
-        DbpString("    --------------------------------------------------------");
+        if ((mfKey & MATTYRUN_MFC_KEY_FLAG_UNUSED) == 0) {
+            mfcKeys[mfcKeyCount] = mfKey;
+            ++mfcKeyCount;
+        }
+    }
+
+    // Load user keys from emulator memory to dictionary buffer
+    for (uint8_t sectorNo = 0; sectorNo < MIFARE_4K_MAXSECTOR; ++sectorNo) {
+        for (uint8_t keyType = 0; keyType < 2; ++keyType) {
+            uint64_t mfKey = emlGetKey(sectorNo, keyType);
+            for (uint16_t j = 0; j < mfcKeyCount; ++j) {
+                if (mfKey == mfcKeys[j]) {
+                    // skip redundant dictionary key
+                    mfKey = MATTYRUN_MFC_KEY_FLAG_UNUSED;
+                    break;
+                }
+            }
+            if ((mfKey & MATTYRUN_MFC_KEY_FLAG_UNUSED) == 0) {
+                mfcKeys[mfcKeyCount] = mfKey;
+                ++mfcKeyCount;
+            }
+        }
+    }
+
+    // Load additional keys to dictionary buffer
+    for (uint16_t i = 0; i < ARRAYLEN(MATTYRUN_MFC_DEFAULT_KEYS); ++i) {
+        uint64_t mfKey = MATTYRUN_MFC_DEFAULT_KEYS[i];
+        for (uint16_t j = 0; j < mfcKeyCount; ++j) {
+            if (mfKey == mfcKeys[j]) {
+                // skip redundant dictionary key
+                mfKey = MATTYRUN_MFC_KEY_FLAG_UNUSED;
+                break;
+            }
+        }
+        if ((mfKey & MATTYRUN_MFC_KEY_FLAG_UNUSED) == 0) {
+            mfcKeys[mfcKeyCount] = mfKey;
+            ++mfcKeyCount;
+        }
+    }
+
+    // Call FpgaDownloadAndGo(FPGA_BITSTREAM_HF) only after extracting keys from
+    // emulator memory as it may destroy the contents of the emulator memory.
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
+    // Pretty print keys to be checked
+    if (MATTYRUN_PRINT_KEYS) {
+        DbpString("[+] Printing mfc key dictionary");
+        for (uint16_t i = 0; i < mfcKeyCount; ++i) {
+            uint64_t mfKey = mfcKeys[i];
+            if ((mfKey & MATTYRUN_MFC_KEY_FLAG_UNUSED) != 0) {
+                // skip unused dictionary key slot
+                continue;
+            }
+            Dbprintf("[-]     key[%5" PRIu16 "] = %012" PRIx64 "", i, mfKey);
+        }
+        DbpString("[+] --------------------------------------------------------");
     }
 
     uint8_t sectorsCnt = MIFARE_4K_MAXSECTOR;
@@ -2451,8 +2533,8 @@ void RunMod(void) {
             for (uint8_t keyType = 0; keyType < 2 && !err; ++keyType) {
                 for (uint8_t sec = 0; sec < sectorsCnt && !err; ++sec) {
                     uint64_t currentKey;
-                    Dbprintf("[=] Testing sector %3d (block %3d) for key %c (with %i keys)", sec, FirstBlockOfSector(sec), (keyType == 0) ? 'A' : 'B', mfKeysCnt);
-                    int key = saMifareChkKeys(FirstBlockOfSector(sec), keyType, true, mfKeysCnt, &mattyrun_mfKeys[0], &currentKey);
+                    Dbprintf("[=] Testing sector %3" PRIu8 " (block %3" PRIu8 ") for key %c", sec, FirstBlockOfSector(sec), (keyType == 0) ? 'A' : 'B');
+                    int key = saMifareChkKeys(FirstBlockOfSector(sec), keyType, true, mfcKeyCount, &mfcKeys[0], &currentKey);
                     if (key == -2) {
                         DbpString("[" _RED_("!") "] " _RED_("Failed to select card!"));
                         SpinErr(LED_D, 50, 2);
@@ -2463,13 +2545,13 @@ void RunMod(void) {
                         if (sec == MIFARE_MINI_MAXSECTOR || sec == MIFARE_1K_MAXSECTOR || sec == MIFARE_2K_MAXSECTOR || sec == MIFARE_4K_MAXSECTOR) {
                         } else if (sec == (MIFARE_MINI_MAXSECTOR + 2) || sec == (MIFARE_1K_MAXSECTOR + 2) || sec == (MIFARE_2K_MAXSECTOR + 2) || sec == (MIFARE_4K_MAXSECTOR + 2)) {
                         } else {
-                            Dbprintf("[" _RED_("!") "] " _RED_("Unexpected number of sectors (%d)!"), sec);
+                            Dbprintf("[" _RED_("!") "] " _RED_("Unexpected number of sectors (%" PRIu8 ")!"), sec);
                             SpinErr(LED_D, 250, 3);
                             allKeysFound = false;
                         }
                         break;
                     } else if (key < 0) {
-                        Dbprintf("[" _RED_("!") "] " _RED_("No key %c found for sector %d!"), (keyType == 0) ? 'A' : 'B', sec);
+                        Dbprintf("[" _RED_("!") "] " _RED_("No key %c found for sector %" PRIu8 "!"), (keyType == 0) ? 'A' : 'B', sec);
                         SpinErr(LED_D, 250, 3);
                         allKeysFound = false;
                         continue;
@@ -2477,9 +2559,7 @@ void RunMod(void) {
                         num_to_bytes(currentKey, 6, foundKey[keyType][sec]);
                         validKey[keyType][sec] = true;
                         keyFound = true;
-                        Dbprintf("[=] Found valid key: %02x%02x%02x%02x%02x%02x",
-                                 foundKey[keyType][sec][0], foundKey[keyType][sec][1], foundKey[keyType][sec][2],
-                                 foundKey[keyType][sec][3], foundKey[keyType][sec][4], foundKey[keyType][sec][5]);
+                        Dbprintf("[=] Found valid key: %012" PRIx64 "", currentKey);
                     }
                 }
             }
@@ -2536,7 +2616,7 @@ void RunMod(void) {
             for (uint8_t sectorNo = 0; sectorNo < sectorsCnt; ++sectorNo) {
                 if (validKey[0][sectorNo] || validKey[1][sectorNo]) {
                     emlGetMem(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1); // data, block num, blocks count (max 4)
-                    for (uint16_t keyType = 0; keyType < 2; ++keyType) {
+                    for (uint8_t keyType = 0; keyType < 2; ++keyType) {
                         if (validKey[keyType][sectorNo]) {
                             memcpy(mblock + keyType * 10, foundKey[keyType][sectorNo], 6);
                         }
@@ -2547,7 +2627,7 @@ void RunMod(void) {
 
             DbpString("[=] Found keys have been transferred to the emulator memory.");
 
-            if (!mattyrun_ecfill) {
+            if (!MATTYRUN_ECFILL) {
                 state = STATE_READ;
                 continue;
             }
@@ -2607,6 +2687,8 @@ void RunMod(void) {
 
         }
     }
+
+    BigBuf_free_keep_EM();
 
     SpinErr((LED_A | LED_B | LED_C | LED_D), 250, 5);
     DbpString("[=] You can take shell back :) ...");
