@@ -1,5 +1,6 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) Matías A. Ré Medina 2016
+// Copyright (C) Michael Roland 2024
 // Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -14,63 +15,91 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// main code for HF aka MattyRun by Matías A. Ré Medina
+// main code for HF MIFARE Classic chk/ecfill/sim aka MattyRun
 //-----------------------------------------------------------------------------
-/*
-### What I did:
-I've personally recoded the image of the ARM in order to automate
-the attack and simulation on Mifare cards. I've moved some of the
-implementation on the client side to the ARM such as *chk*, *mattyrun_ecfill*, *sim*
-and *clone* commands.
-
-### What it does now:
-It will check if the keys from the attacked tag are a subset from
-the hardcoded set of keys inside of the FPGA. If this is the case
-then it will load the keys into the emulator memory and also the
-content of the victim tag, to finally simulate it and make a clone
-on a blank card.
-
-#### TODO:
-- Nested attack in the case not all keys are known.
-- Dump into magic card in case of needed replication.
-
-#### ~ Basically automates commands without user intervention.
-#### ~ No need of interface.
-#### ~ Just a portable battery or an OTG usb cable for power supply.
-
-## Spanish full description of the project [here](http://bit.ly/2c9nZXR).
-*/
-
-#include "standalone.h" // standalone definitions
 
 #include <inttypes.h>
 
-#include "proxmark3_arm.h"
 #include "appmain.h"
-#include "fpgaloader.h"
-#include "util.h"
-#include "dbprint.h"
-#include "ticks.h"
-#include "string.h"
+#include "BigBuf.h"
 #include "commonutil.h"
+#include "crc16.h"
+#include "dbprint.h"
+#include "fpgaloader.h"
 #include "iso14443a.h"
 #include "mifarecmd.h"
-#include "crc16.h"
-#include "BigBuf.h"
 #include "mifaresim.h"  // mifare1ksim
 #include "mifareutil.h"
+#include "proxmark3_arm.h"
+#include "standalone.h" // standalone definitions
+#include "string.h"
+#include "ticks.h"
+#include "util.h"
 
-static uint8_t mattyrun_uid[10];
-static uint32_t mattyrun_cuid;
-static iso14a_card_select_t mattyrun_card;
+/* 
+ * `hf_mattyrun` tries to dump MIFARE Classic cards into emulator memory and emulates them.
+ * 
+ * This standalone mode uses a predefined dictionary (originally taken from
+ * mfc_default_keys.dic) to authenticate to MIFARE Classic cards (cf. `hf mf chk`)
+ * and to dump the card into emulator memory (cf. `hf mf ecfill`). Once a card has
+ * been dumped, the card is emulated (cf. `hf mf sim`). Emulation will start even if
+ * only a partial dump could be retrieved from the card (e.g. due to missing keys).
+ * 
+ * This standalone mode is specifically designed for devices without flash. However,
+ * users can pass data to/from the standalone mode through emulator memory (assuming
+ * continuous (battery) power supply):
+ * 
+ * - Keys can be added to the dictionary by loading them into the emulator before
+ *   starting the standalone mode. You can use `hf mf eload -f dump_file` to load
+ *   any existing card dump. All keys from the key slots in the sector trailers
+ *   are added to the dictionary. Note that you can fill both keys in all sector
+ *   trailers available for a 4K card to store your user dictionary. Sector and key
+ *   type are ignored during chk; all user keys will be tested for all sectors and
+ *   for both key types.
+ * 
+ * - Once a card has been cloned into emulator memory, you can extract the dump by
+ *   ending the standalone mode and retrieving the emulator memory (`hf mf eview`
+ *   or `hf mf esave [--mini|--1k|--2k|--4k] -f dump_file`).
+ * 
+ * This standalone mode will log status information via USB. In addition, the LEDs
+ * display status information:
+ * 
+ * - Waiting for card: LED C is on, LED D blinks.
+ * - Tying to authenticate: LED C and D are on; LED D will blink on errors.
+ * - Nested attack (NOT IMPLEMENTED!): LED B is on.
+ * - Loading card data into emulator memory: LED B and C are on.
+ * - Starting emulation: LED A, B, and C are on. LED D is on if only a partial
+ *   dump is available.
+ * - Emulation started: All LEDS are off.
+ * 
+ * You can use the user button to interact with the standalone mode. During
+ * emulation, (short) pressing the button ends emulation and returns to card
+ * discovery. Long pressing the button ends the standalone mode.
+ * 
+ * Developers can configure the behavior of the standalone mode through the below
+ * constants:
+ * 
+ * - MATTYRUN_PRINT_KEYS: Activate display of actually used key dictionary on startup.
+ * - MATTYRUN_NO_ECFILL: Do not load and emulate card (only discovered keys are stored).
+ * - MATTYRUN_MFC_DEFAULT_KEYS: Compiled-in default dictionary (originally taken from
+ *   mfc_default_keys.dic). You can add your customized dictionaries here.
+ * - MATTYRUN_MFC_ESSENTIAL_KEYS: Compiled-in dictionary of keys that should be tested
+ *   before any user dictionary.
+ * 
+ * This is a major rewrite of the original `hf_mattyrun` by Matías A. Ré Medina.
+ * The original version is described [here](http://bit.ly/2c9nZXR) (in Spanish).
+ */
 
-// Pseudo-configuration block.
-static bool const MATTYRUN_PRINT_KEYS = false;        // Prints keys
-static bool const MATTYRUN_ECFILL = true;             // Fill emulator memory with cards content.
+// Pseudo-configuration block
+static bool const MATTYRUN_PRINT_KEYS = false; // Print assembled key dictionary on startup.
+static bool const MATTYRUN_NO_ECFILL = false;  // Do not load and emulate card.
 
-// Set of keys to be used.
+// Key flags
+// TODO: Do we want to add flags to mark keys to be tested only as key A / key B?
 static uint64_t const MATTYRUN_MFC_KEY_BITS = 0x00FFFFFFFFFFFF;
 static uint64_t const MATTYRUN_MFC_KEY_FLAG_UNUSED = 0x10000000000000;
+
+// Set of priority keys to be used
 static uint64_t const MATTYRUN_MFC_ESSENTIAL_KEYS[] = {
     0xFFFFFFFFFFFF,  // Default key
     0x000000000000,  // Blank key
@@ -81,6 +110,9 @@ static uint64_t const MATTYRUN_MFC_ESSENTIAL_KEYS[] = {
     0x4B791BEA7BCC,  // Mifare 1k EV1 (S50) hidden blocks, Signature data 17 B
     0xD3F7D3F7D3F7,  // AN1305 MIFARE Classic as NFC Type MIFARE Classic Tag Public Key A
 };
+
+// Set of standard keys to be used (originally taken from mfc_default_keys.dic)
+// TODO: How to automate assembling these keys from mfc_default_keys.dic directly at compile-time?
 static uint64_t const MATTYRUN_MFC_DEFAULT_KEYS[] = {
     // Default key
     0xFFFFFFFFFFFF,
@@ -2247,6 +2279,12 @@ static uint64_t const MATTYRUN_MFC_DEFAULT_KEYS[] = {
     0x04256CFE0425,
 };
 
+// Internal state
+static uint8_t mattyrun_uid[10];
+static uint32_t mattyrun_cuid;
+static iso14a_card_select_t mattyrun_card;
+
+// Discover ISO 14443A cards
 static bool saMifareDiscover(void) {
     SpinDelay(500);
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
@@ -2260,13 +2298,13 @@ static bool saMifareDiscover(void) {
     return true;
 }
 
-/* the chk function is a piwi’ed(tm) check that will try all keys for
-a particular sector. also no tracing no dbg */
+// Customized MifareChkKeys that operates on the already detected card in
+// mattyrun_card and tests authentication with our dictionary
 static int saMifareChkKeys(uint8_t const blockNo, uint8_t const keyType, bool const clearTrace,
                            uint16_t const keyCount, uint64_t const * const mfKeys, uint64_t * const key) {
 
     int retval = -1;
-	
+
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
     pcs = &mpcs;
@@ -2296,7 +2334,7 @@ static int saMifareChkKeys(uint8_t const blockNo, uint8_t const keyType, bool co
             if (!saMifareDiscover()) {
                 --i; // try same key once again
                 --selectRetries;
-				if (selectRetries > 0) {
+                if (selectRetries > 0) {
                     continue;
                 } else {
                     retval = -2;
@@ -2312,11 +2350,12 @@ static int saMifareChkKeys(uint8_t const blockNo, uint8_t const keyType, bool co
                     default: break;
                 }
             }
-            // No need for anticollision, since we sucessfully selected the card before, we can directly select the card again
+            // No need for anticollision. Since we sucessfully selected the card before,
+            // we can directly select the card again
             if (iso14443a_fast_select_card(mattyrun_uid, cascade_levels) == 0) {
                 --i; // try same key once again
                 --selectRetries;
-				if (selectRetries > 0) {
+                if (selectRetries > 0) {
                     continue;
                 } else {
                     retval = -2;
@@ -2354,25 +2393,12 @@ static int saMifareChkKeys(uint8_t const blockNo, uint8_t const keyType, bool co
 }
 
 void ModInfo(void) {
-    DbpString("  HF Mifare chk/dump/sim - aka MattyRun (Matías A. Ré Medina)");
+    DbpString("  HF MIFARE Classic chk/ecfill/sim - aka MattyRun");
 }
 
-/*
-    It will check if the keys from the attacked tag are a subset from
-    the hardcoded set of keys inside of the ARM. If this is the case
-    then it will load the keys into the emulator memory and also the
-    content of the victim tag, to finally simulate it.
-
-    Alternatively, it can be dumped into a blank card.
-
-    This source code has been tested only in Mifare 1k.
-
-    If you're using the proxmark connected to a device that has an OS, and you're not using the proxmark3 client to see the debug
-    messages, you MUST uncomment usb_disable().
-*/
 void RunMod(void) {
     StandAloneMode();
-    DbpString(">>  HF Mifare chk/dump/sim  a.k.a MattyRun Started  <<");
+    DbpString(">>  HF MIFARE Classic chk/ecfill/sim - aka MattyRun started  <<");
 
     // Comment this line below if you want to see debug messages.
     // usb_disable();
@@ -2435,7 +2461,7 @@ void RunMod(void) {
     }
 
     // Call FpgaDownloadAndGo(FPGA_BITSTREAM_HF) only after extracting keys from
-    // emulator memory as it may destroy the contents of the emulator memory.
+    // emulator memory as it may destroy the contents of the emulator memory
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
     // Pretty print keys to be checked
@@ -2459,20 +2485,21 @@ void RunMod(void) {
     bool validKey[2][MIFARE_4K_MAXSECTOR];
     uint8_t foundKey[2][MIFARE_4K_MAXSECTOR][6];
 
-#define STATE_READ 0
-#define STATE_ATTACK 1
-#define STATE_LOAD 2
-#define STATE_EMULATE 3
-
-    uint8_t state = STATE_READ;
+    enum {
+        STATE_READ,
+        STATE_ATTACK,
+        STATE_LOAD,
+        STATE_EMULATE,
+    } state = STATE_READ;
 
     for (;;) {
-    
+
         WDT_HIT();
 
-        // exit from MattyRun,   send a usbcommand.
+        // Exit from MattyRun when usbcommand is received
         if (data_available()) break;
 
+        // Exit from MattyRun on long-press of user button
         int button_pressed = BUTTON_HELD(280);
         if (button_pressed == BUTTON_HOLD) {
             WAIT_BUTTON_RELEASED();
@@ -2480,6 +2507,8 @@ void RunMod(void) {
         }
 
         if (state == STATE_READ) {
+            // Wait for card.
+            // If detected, try to authenticate with dictionary keys.
 
             LED_A_OFF();
             LED_B_OFF();
@@ -2513,10 +2542,10 @@ void RunMod(void) {
             }
 
             sectorsCnt = MIFARE_4K_MAXSECTOR;
-			
-            // Initialization of validKeys and foundKeys storages.
-            //  - validKey will store whether the sector has a valid A/B key.
-            //  - foundKey will store the found A/B key for each sector.
+
+            // Initialization of validKeys and foundKeys:
+            // - validKey will store whether the sector has a valid A/B key.
+            // - foundKey will store the found A/B key for each sector.
             for (uint8_t keyType = 0; keyType < 2; ++keyType) {
                 for (uint8_t sectorNo = 0; sectorNo < sectorsCnt; ++sectorNo) {
                     validKey[keyType][sectorNo] = false;
@@ -2526,32 +2555,45 @@ void RunMod(void) {
 
             keyFound = false;
             allKeysFound = true;
-
-            // Iterates through each sector checking if there is a correct key.
             bool err = false;
 
+            // Iterates through each sector, checking if there is a correct key
             for (uint8_t keyType = 0; keyType < 2 && !err; ++keyType) {
                 for (uint8_t sec = 0; sec < sectorsCnt && !err; ++sec) {
                     uint64_t currentKey;
-                    Dbprintf("[=] Testing sector %3" PRIu8 " (block %3" PRIu8 ") for key %c", sec, FirstBlockOfSector(sec), (keyType == 0) ? 'A' : 'B');
-                    int key = saMifareChkKeys(FirstBlockOfSector(sec), keyType, true, mfcKeyCount, &mfcKeys[0], &currentKey);
+                    Dbprintf("[=] Testing sector %3" PRIu8 " (block %3" PRIu8 ") for key %c",
+                             sec, FirstBlockOfSector(sec), (keyType == 0) ? 'A' : 'B');
+                    int key = saMifareChkKeys(FirstBlockOfSector(sec), keyType, true,
+                                              mfcKeyCount, &mfcKeys[0], &currentKey);
                     if (key == -2) {
                         DbpString("[" _RED_("!") "] " _RED_("Failed to select card!"));
                         SpinErr(LED_D, 50, 2);
-                        err = true; // Can't select card.
+                        err = true; // fall back into idle mode since we can't select card anymore
                         break;
                     } else if (key == -3) {
                         sectorsCnt = sec;
-                        if (sec == MIFARE_MINI_MAXSECTOR || sec == MIFARE_1K_MAXSECTOR || sec == MIFARE_2K_MAXSECTOR || sec == MIFARE_4K_MAXSECTOR) {
-                        } else if (sec == (MIFARE_MINI_MAXSECTOR + 2) || sec == (MIFARE_1K_MAXSECTOR + 2) || sec == (MIFARE_2K_MAXSECTOR + 2) || sec == (MIFARE_4K_MAXSECTOR + 2)) {
-                        } else {
-                            Dbprintf("[" _RED_("!") "] " _RED_("Unexpected number of sectors (%" PRIu8 ")!"), sec);
-                            SpinErr(LED_D, 250, 3);
-                            allKeysFound = false;
+                        switch (sec) {
+                            case MIFARE_MINI_MAXSECTOR:
+                            case MIFARE_1K_MAXSECTOR:
+                            case MIFARE_2K_MAXSECTOR:
+                            case MIFARE_4K_MAXSECTOR:
+                                break;
+                            case (MIFARE_MINI_MAXSECTOR + 2):
+                            case (MIFARE_1K_MAXSECTOR + 2):
+                            case (MIFARE_2K_MAXSECTOR + 2):
+                            case (MIFARE_4K_MAXSECTOR + 2):
+                                break;
+                            default:
+                                Dbprintf("[" _RED_("!") "] " _RED_("Unexpected number of sectors (%" PRIu8 ")!"),
+                                         sec);
+                                SpinErr(LED_D, 250, 3);
+                                allKeysFound = false;
+                                break;
                         }
                         break;
                     } else if (key < 0) {
-                        Dbprintf("[" _RED_("!") "] " _RED_("No key %c found for sector %" PRIu8 "!"), (keyType == 0) ? 'A' : 'B', sec);
+                        Dbprintf("[" _RED_("!") "] " _RED_("No key %c found for sector %" PRIu8 "!"),
+                                 (keyType == 0) ? 'A' : 'B', sec);
                         SpinErr(LED_D, 250, 3);
                         allKeysFound = false;
                         continue;
@@ -2587,35 +2629,36 @@ void RunMod(void) {
             }
 
         } else if (state == STATE_ATTACK) {
+            // Do nested attack, set allKeysFound = true
 
             LED_A_OFF();
             LED_B_ON();
             LED_C_OFF();
             LED_D_OFF();
 
+            // no room to run nested attack on device (iceman)
             DbpString("[" _RED_("!") "] " _RED_("There's currently no nested attack in MattyRun, sorry!"));
             SpinDelay(500);
-            // no room to run nested attack on device (iceman)
-            // Do nested attack, set allKeysFound = true;
             // allKeysFound = true;
 
             state = STATE_LOAD;
             continue;
 
         } else if (state == STATE_LOAD) {
+            // Transfer found keys to memory.
+            // If enabled, load full card content into emulator memory.
 
             LED_A_OFF();
             LED_B_ON();
             LED_C_ON();
             LED_D_OFF();
 
-            // If enabled, transfers found keys to memory and loads target content in emulator memory. Then it simulates to be the tag it has basically cloned.
             emlClearMem();
 
             uint8_t mblock[MIFARE_BLOCK_SIZE];
             for (uint8_t sectorNo = 0; sectorNo < sectorsCnt; ++sectorNo) {
                 if (validKey[0][sectorNo] || validKey[1][sectorNo]) {
-                    emlGetMem(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1); // data, block num, blocks count (max 4)
+                    emlGetMem(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1);
                     for (uint8_t keyType = 0; keyType < 2; ++keyType) {
                         if (validKey[keyType][sectorNo]) {
                             memcpy(mblock + keyType * 10, foundKey[keyType][sectorNo], 6);
@@ -2627,7 +2670,7 @@ void RunMod(void) {
 
             DbpString("[=] Found keys have been transferred to the emulator memory.");
 
-            if (!MATTYRUN_ECFILL) {
+            if (MATTYRUN_NO_ECFILL) {
                 state = STATE_READ;
                 continue;
             }
@@ -2655,17 +2698,17 @@ void RunMod(void) {
             continue;
 
         } else if (state == STATE_EMULATE) {
+            // Finally, emulate the cloned card.
 
             LED_A_ON();
             LED_B_ON();
             LED_C_ON();
             LED_D_OFF();
 
-            // This will tell the fpga to emulate using previous keys and current target tag content.
-            DbpString("[=] Started emulation. Press button to abort simulation at anytime.");
+            DbpString("[=] Started emulation. Press button to abort at anytime.");
     
             if (partialEmulation) {
-                LED_D_ON();  // red
+                LED_D_ON();
                 DbpString("[=] Partial memory dump loaded. Trying best effort emulation approach.");
             }
 
@@ -2681,7 +2724,7 @@ void RunMod(void) {
             SpinDelay(1000);
             Mifare1ksim(simflags, 0, mattyrun_uid, atqa, mattyrun_card.sak);
 
-            DbpString("[=] Simulation ended.");
+            DbpString("[=] Emulation ended.");
             state = STATE_READ;
             continue;
 
@@ -2691,6 +2734,10 @@ void RunMod(void) {
     BigBuf_free_keep_EM();
 
     SpinErr((LED_A | LED_B | LED_C | LED_D), 250, 5);
+    DbpString("[=] Standalone mode MattyRun ended.");
+    DbpString("");
+    DbpString("[" _YELLOW_("-") "] " _YELLOW_("Download card clone with `hf mf esave [--mini|--1k|--2k|--4k] -f dump_file`."));
+    DbpString("");
     DbpString("[=] You can take shell back :) ...");
     LEDsoff();
 }
