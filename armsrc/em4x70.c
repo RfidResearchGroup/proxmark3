@@ -744,6 +744,13 @@ void em4x70_write(const em4x70_data_t *etd, bool ledcontrol) {
 
     command_parity = etd->parity;
 
+    // Disable to prevent sending corrupted data to the tag.
+    if (command_parity) {
+        Dbprintf("Use of `--par` option with `lf em 4x70 write` is disabled to prevent corrupting tag data");
+        reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
+        return;
+    }
+
     init_tag();
     em4x70_setup_read();
 
@@ -808,6 +815,13 @@ void em4x70_auth(const em4x70_data_t *etd, bool ledcontrol) {
 
     command_parity = etd->parity;
 
+    // Disable to prevent sending corrupted data to the tag.
+    if (command_parity) {
+        Dbprintf("Use of `--par` option with `lf em 4x70 auth` is disabled to prevent corrupting tag data");
+        reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
+        return;
+    }
+
     init_tag();
     em4x70_setup_read();
 
@@ -829,6 +843,13 @@ void em4x70_brute(const em4x70_data_t *etd, bool ledcontrol) {
 
     command_parity = etd->parity;
 
+    // Disable to prevent sending corrupted data to the tag.
+    if (command_parity) {
+        Dbprintf("Use of `--par` option with `lf em 4x70 brute` is disabled to prevent corrupting tag data");
+        reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
+        return;
+    }
+
     init_tag();
     em4x70_setup_read();
 
@@ -849,6 +870,13 @@ void em4x70_write_pin(const em4x70_data_t *etd, bool ledcontrol) {
     int status = PM3_ESOFT;
 
     command_parity = etd->parity;
+
+    // Disable to prevent sending corrupted data to the tag.
+    if (command_parity) {
+        Dbprintf("Use of `--par` option with `lf em 4x70 setpin` is disabled to prevent corrupting tag data");
+        reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
+        return;
+    }
 
     init_tag();
     em4x70_setup_read();
@@ -891,6 +919,13 @@ void em4x70_write_key(const em4x70_data_t *etd, bool ledcontrol) {
     int status = PM3_ESOFT;
 
     command_parity = etd->parity;
+
+    // Disable to prevent sending corrupted data to the tag.
+    if (command_parity) {
+        Dbprintf("Use of `--par` option with `lf em 4x70 setkey` is disabled to prevent corrupting tag data");
+        reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
+        return;
+    }
 
     init_tag();
     em4x70_setup_read();
