@@ -684,6 +684,7 @@ int CmdEM4x70Auth(const char *Cmd) {
                   "  If F(RN) is correct based on the tag key, the tag will give a 20-bit response\n",
                   "lf em 4x70 auth --rnd 45F54ADA252AAC --frn 4866BB70     --> (using pm3 test key)\n"
                   "lf em 4x70 auth --rnd 3FFE1FB6CC513F --frn F355F1A0     --> (using research paper key)\n"
+                  "lf em 4x70 auth --rnd 7D5167003571F8 --frn 982DBCC0     --> (autorecovery test key)\n"
                  );
 
     void *argtable[] = {
@@ -781,6 +782,7 @@ int CmdEM4x70SetKey(const char *Cmd) {
                   "Write new 96-bit key to tag\n",
                   "lf em 4x70 setkey -k F32AA98CF5BE4ADFA6D3480B   (pm3 test key)\n"
                   "lf em 4x70 setkey -k A090A0A02080000000000000   (research paper key)\n"
+                  "lf em 4x70 setkey -k 022A028C02BE000102030405   (autorecovery test key)\n"
                  );
 
     void *argtable[] = {
@@ -1105,6 +1107,7 @@ static int CmdEM4x70AutoRecover_ParseArgs(const char *Cmd, em4x70_cmd_input_reco
         ,
         "lf em 4x70 autorecover --rnd 45F54ADA252AAC --frn 4866BB70 --grn 9BD180   (pm3 test key)\n"
         "lf em 4x70 autorecover --rnd 3FFE1FB6CC513F --frn F355F1A0 --grn 609D60   (research paper key)\n"
+        "lf em 4x70 autorecover --rnd 7D5167003571F8 --frn 982DBCC0 --grn 36C0E0   (autorecovery test key)\n"        
     );
 
     void *argtable[] = {
