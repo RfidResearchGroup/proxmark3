@@ -22,6 +22,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Update apt repos
         run: sudo apt-get update
 
@@ -29,11 +33,7 @@ jobs:
         run: sudo apt-get install -yqq make autoconf build-essential ca-certificates pkg-config libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev libbz2-dev liblz4-dev libbluetooth-dev libpython3-dev python3 python3-dev libpython3-all-dev liblua5.2-dev liblua5.2-0 lua5.2 sed libssl-dev libgd-dev
 
       - name: Install Python dependencies
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install setuptools
-          python3 -m pip install ansicolors sslcrypto
-          if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
+        run: pip install -r tools/requirements.txt
 
       - name: make clean
         run: make clean
@@ -52,6 +52,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Update apt repos
         run: sudo apt-get update
 
@@ -59,11 +63,7 @@ jobs:
         run: sudo apt-get install -yqq make autoconf build-essential ca-certificates pkg-config libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev libbz2-dev liblz4-dev libbluetooth-dev libpython3-dev python3 python3-dev libpython3-all-dev liblua5.2-dev liblua5.2-0 lua5.2 sed libssl-dev libgd-dev
 
       - name: Install Python dependencies
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install setuptools
-          python3 -m pip install ansicolors sslcrypto
-          if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
+        run: pip install -r tools/requirements.txt
 
       - name: make clean
         run: make clean
@@ -83,6 +83,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Update apt repos
         run: sudo apt-get update
 
@@ -90,11 +94,7 @@ jobs:
         run: sudo apt-get install -yqq make autoconf build-essential ca-certificates pkg-config libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev libbz2-dev liblz4-dev libbluetooth-dev libpython3-dev python3 python3-dev libpython3-all-dev liblua5.2-dev liblua5.2-0 lua5.2 sed libssl-dev libgd-dev
 
       - name: Install Python dependencies
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install setuptools
-          python3 -m pip install ansicolors sslcrypto
-          if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
+        run: pip install -r tools/requirements.txt
 
       - name: Prepare Build Folders
         run: |
