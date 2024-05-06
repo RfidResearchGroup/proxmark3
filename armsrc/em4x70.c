@@ -566,7 +566,7 @@ static uint8_t bits2byte(const uint8_t *bits, int length) {
     return byte;
 }
 
-static bool send_command_and_read(uint8_t command, uint8_t *bytes, size_t length) {
+static bool send_command_and_read(uint8_t command, uint8_t *bytes, size_t expected_byte_count) {
 
     int retries = EM4X70_COMMAND_RETRIES;
     while (retries) {
@@ -574,7 +574,7 @@ static bool send_command_and_read(uint8_t command, uint8_t *bytes, size_t length
 
         if (find_listen_window(true)) {
             uint8_t bits[EM4X70_MAX_RECEIVE_LENGTH] = {0};
-            size_t out_length_bits = length * 8;
+            size_t out_length_bits = expected_byte_count * 8;
             em4x70_send_nibble(command, command_parity);
             int len = em4x70_receive(bits, out_length_bits);
             if (len < out_length_bits) {
@@ -629,7 +629,7 @@ static bool find_em4x70_tag(void) {
     return find_listen_window(false);
 }
 
-static int em4x70_receive(uint8_t *bits, size_t length) {
+static int em4x70_receive(uint8_t *bits, size_t maximum_bits_to_read) {
 
     uint32_t pl;
     int bit_pos = 0;
@@ -667,7 +667,7 @@ static int em4x70_receive(uint8_t *bits, size_t length) {
 
     // identify remaining bits based on pulse lengths
     // between listen windows only pulse lengths of 1, 1.5 and 2 are possible
-    while (bit_pos < length) {
+    while (bit_pos < maximum_bits_to_read) {
 
         pl = get_pulse_length(edge);
 
@@ -681,13 +681,13 @@ static int em4x70_receive(uint8_t *bits, size_t length) {
             // pulse length 1.5 -> 2 bits + flip edge detection
             if (edge == FALLING_EDGE) {
                 bits[bit_pos++] = 0;
-                if (bit_pos < length) {
+                if (bit_pos < maximum_bits_to_read) {
                     bits[bit_pos++] = 0;
                 }
                 edge = RISING_EDGE;
             } else {
                 bits[bit_pos++] = 1;
-                if (bit_pos < length) {
+                if (bit_pos < maximum_bits_to_read) {
                     bits[bit_pos++] = 1;
                 }
                 edge = FALLING_EDGE;
@@ -698,12 +698,12 @@ static int em4x70_receive(uint8_t *bits, size_t length) {
             // pulse length of 2 -> two bits
             if (edge == FALLING_EDGE) {
                 bits[bit_pos++] = 0;
-                if (bit_pos < length) {
+                if (bit_pos < maximum_bits_to_read) {
                     bits[bit_pos++] = 1;
                 }
             } else {
                 bits[bit_pos++] = 1;
-                if (bit_pos < length) {
+                if (bit_pos < maximum_bits_to_read) {
                     bits[bit_pos++] = 0;
                 }
             }
