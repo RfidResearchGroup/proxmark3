@@ -239,7 +239,7 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
 
 
     // We try 10 times, or if answer was received.
-    int len = 50;
+    int len = 25;
     do {
         // end-of-reception response packet data, wait approx. 501μs
         // end-of-transmission command packet data, wait approx. 197μs
@@ -547,13 +547,11 @@ void felica_sendraw(const PacketCommandNG *c) {
     const uint8_t *cmd = c->data.asBytes;
     uint32_t arg0;
 
-    felica_card_select_t card;
-
     if ((param & FELICA_CONNECT) == FELICA_CONNECT) {
         clear_trace();
     }
-
     set_tracing(true);
+
     iso18092_setup(FPGA_HF_ISO18092_FLAG_READER | FPGA_HF_ISO18092_FLAG_NOMOD);
 
     if ((param & FELICA_CONNECT) == FELICA_CONNECT) {
@@ -562,6 +560,7 @@ void felica_sendraw(const PacketCommandNG *c) {
         // if failed selecting, turn off antenna and quite.
         if ((param & FELICA_NO_SELECT) != FELICA_NO_SELECT) {
 
+            felica_card_select_t card;
             arg0 = felica_select_card(&card);
             reply_mix(CMD_ACK, arg0, sizeof(card.uid), 0, &card, sizeof(felica_card_select_t));
             if (arg0) {

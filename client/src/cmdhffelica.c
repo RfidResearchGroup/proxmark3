@@ -312,13 +312,13 @@ static int CmdHFFelicaList(const char *Cmd) {
 
 int read_felica_uid(bool loop, bool verbose) {
 
-    int res = PM3_SUCCESS;
+    int res = PM3_ETIMEOUT;
 
     do {
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_FELICA_COMMAND, FELICA_CONNECT, 0, 0, NULL, 0);
         PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2000)) {
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
 
             uint8_t status = resp.oldarg[0] & 0xFF;
 
@@ -342,7 +342,10 @@ int read_felica_uid(bool loop, bool verbose) {
             }
             PrintAndLogEx(SUCCESS, "IDm: " _GREEN_("%s"), sprint_hex_inrow(card.IDm, sizeof(card.IDm)));
             set_last_known_card(card);
+
+            res = PM3_SUCCESS;
         }
+
     } while (loop && kbd_enter_pressed() == false);
 
     DropField();

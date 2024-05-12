@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf search` - where felica reader now doesnt timeout and give wrong response (@iceman1001)
 - Fixed overflow in deps/jansson library (@iceman1001)
 - Added `lf hitag crack2` -  WIP.  Trying to add the second attack vector against Hitag2 (@iceman1001)
 - Changed `hf 14b reader --plot` - made the anticollision signal trace download optional (@iceman1001)
