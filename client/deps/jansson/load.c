@@ -186,6 +186,7 @@ static int stream_get(stream_t *stream, json_error_t *error) {
             // whatif count == 1 ?!?
 
             assert(count >= 2);
+            assert(count <= 4);
 
             // if count == 4 ,   i will become 5 and overflow.
             for (i = 1; i < count; i++)
