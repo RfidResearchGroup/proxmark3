@@ -32,6 +32,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Changed `data load` - now shows loaded number as comma printed. (@iceman1001)
 - Updated `/tools/hitag2crack/common/OpenCL-Headers/CL` with latest from KhronosGroup github page (@iceman1001)
 - Fixed `lf hitag list` - improved HITAG2 protocol annotation (@iceman1001)
+- Added AIDs `002000` and `FF30FF` from Metrolinx Presto Card (@RunTheBot)
 
 ## [Zenith.4.18340][2024-03-20]
  - Changed `hf mf info` - some detections (@iceman1001)
