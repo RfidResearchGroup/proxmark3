@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed standalone mode HF_MATTYRUN - support more card sizes, user dictionaries, improved emulation (@michaelroland)
+- Added AIDs `002000` and `FF30FF` from Metrolinx Presto Card (@RunTheBot)
 - Added `lf hitag crack2` -  WIP.  Trying to add the second attack vector against Hitag2 (@iceman1001)
 - Changed `hf 14b reader --plot` - made the anticollision signal trace download optional (@iceman1001)
 - Added `lf_hitag_crypto.trace` - trace file of a complete read out of a Hitag2 in crypto mode (@iceman1001)
@@ -32,7 +34,6 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Changed `data load` - now shows loaded number as comma printed. (@iceman1001)
 - Updated `/tools/hitag2crack/common/OpenCL-Headers/CL` with latest from KhronosGroup github page (@iceman1001)
 - Fixed `lf hitag list` - improved HITAG2 protocol annotation (@iceman1001)
-- Changed standalone mode HF_MATTYRUN - support more card sizes, user dictionaries, improved emulation (@michaelroland)
 
 ## [Zenith.4.18340][2024-03-20]
  - Changed `hf mf info` - some detections (@iceman1001)

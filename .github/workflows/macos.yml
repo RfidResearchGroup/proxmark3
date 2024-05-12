@@ -21,6 +21,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Set Git http.postBuffer to something high
         run: git config --global http.postBuffer 524288000
 
@@ -39,10 +43,7 @@ jobs:
         continue-on-error: true
 
       - name: Install Python dependencies
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install setuptools ansicolors sslcrypto
-          if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
+        run: pip install -r tools/requirements.txt
 
       - name: make clean
         run: make clean
@@ -61,6 +62,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Set Git http.postBuffer to something high
         run: git config --global http.postBuffer 524288000
 
@@ -79,10 +84,7 @@ jobs:
         continue-on-error: true
 
       - name: Install Python dependencies
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install setuptools ansicolors sslcrypto
-          if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
+        run: pip install -r tools/requirements.txt
 
       - name: make clean
         run: make clean
@@ -102,6 +104,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Set Git http.postBuffer to something high
         run: git config --global http.postBuffer 524288000
 
@@ -120,10 +126,7 @@ jobs:
         continue-on-error: true
 
       - name: Install Python dependencies
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install setuptools ansicolors sslcrypto
-          if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
+        run: pip install -r tools/requirements.txt
 
       - name: Prepare Build Folders
         run: |
