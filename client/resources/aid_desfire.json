@@ -567,5 +567,21 @@
         "Name": "Prima FlexAir Access Control",
         "Description": "FIDs: 00 - DRM, 01 - Access Event Log, 04 - Access Permissions",
         "Type": "pacs"
+    },
+    {
+        "AID": "FF30FF",
+        "Vendor": "Metrolinx",
+        "Country": "CA",
+        "Name": "Presto Card",
+        "Description": "",
+        "Type": "transport"
+    },
+    {
+        "AID": "002000",
+        "Vendor": "Metrolinx",
+        "Country": "CA",
+        "Name": "Presto Card",
+        "Description": "",
+        "Type": "transport"
     }
 ]
