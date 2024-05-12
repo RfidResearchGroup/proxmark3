@@ -225,14 +225,10 @@ static int get_em4x70_info(const em4x70_cmd_input_info_t *opts, em4x70_tag_info_
     if (WaitForResponseTimeout(CMD_LF_EM4X70_INFO, &resp, TIMEOUT) == false) {
         return PM3_ETIMEOUT;
     }
-
-    //iceman:  prefer to have specific return code check.
-    // like   resp.status != PM3_SUCCESS if looking for failure
-    if (resp.status) {
+    if (resp.status == PM3_SUCCESS) {
         memcpy(data_out, resp.data.asBytes, sizeof(em4x70_tag_info_t));
-        return PM3_SUCCESS;
     }
-    return PM3_ESOFT;
+    return resp.status;
 }
 
 static int writeblock_em4x70(const em4x70_cmd_input_writeblock_t *opts, em4x70_tag_info_t *data_out) {
@@ -251,14 +247,10 @@ static int writeblock_em4x70(const em4x70_cmd_input_writeblock_t *opts, em4x70_t
     if (WaitForResponseTimeout(CMD_LF_EM4X70_WRITE, &resp, TIMEOUT) == false) {
         return PM3_ETIMEOUT;
     }
-
-    //iceman:  prefer to have specific return code check.
-    // like   resp.status != PM3_SUCCESS if looking for failure
-    if (resp.status) {
+    if (resp.status == PM3_SUCCESS) {
         memcpy(data_out, resp.data.asBytes, sizeof(em4x70_tag_info_t));
-        return PM3_SUCCESS;
     }
-    return PM3_ESOFT;
+    return resp.status;
 }
 
 static int auth_em4x70(const em4x70_cmd_input_auth_t *opts, em4x70_cmd_output_auth_t *data_out) {
@@ -276,20 +268,15 @@ static int auth_em4x70(const em4x70_cmd_input_auth_t *opts, em4x70_cmd_output_au
     if (WaitForResponseTimeout(CMD_LF_EM4X70_AUTH, &resp, TIMEOUT) == false) {
         return PM3_ETIMEOUT;
     }
-
-    //iceman:  prefer to have specific return code check.
-    // like   resp.status != PM3_SUCCESS if looking for failure
-    if (resp.status) {
+    if (resp.status == PM3_SUCCESS) {
         // Response is 20-bit from tag
-
         // HACKHACK -- It appears the byte order differs from what is expected?
         data_out->grn.grn[0] = resp.data.asBytes[2];
         data_out->grn.grn[1] = resp.data.asBytes[1];
         data_out->grn.grn[2] = resp.data.asBytes[0];
         //memcpy(data_out, &resp.data.asBytes[0], sizeof(ID48LIB_GRN));
-        return PM3_SUCCESS;
     }
-    return PM3_ESOFT;
+    return resp.status;
 }
 
 static int setkey_em4x70(const em4x70_cmd_input_setkey_t *opts) {
@@ -305,13 +292,7 @@ static int setkey_em4x70(const em4x70_cmd_input_setkey_t *opts) {
     if (WaitForResponseTimeout(CMD_LF_EM4X70_SETKEY, &resp, TIMEOUT) == false) {
         return PM3_ETIMEOUT;
     }
-
-    //iceman:  prefer to have specific return code check.
-    // like   resp.status != PM3_SUCCESS if looking for failure
-    if (resp.status) {
-        return PM3_SUCCESS;
-    }
-    return PM3_ESOFT;
+    return resp.status;
 }
 
 static int brute_em4x70(const em4x70_cmd_input_brute_t *opts, em4x70_cmd_output_brute_t *data_out) {
@@ -346,14 +327,10 @@ static int brute_em4x70(const em4x70_cmd_input_brute_t *opts, em4x70_cmd_output_
         }
 
         if (WaitForResponseTimeout(CMD_LF_EM4X70_BRUTE, &resp, TIMEOUT)) {
-
-            //iceman:  prefer to have specific return code check.
-            // like   resp.status != PM3_SUCCESS if looking for failure
-            if (resp.status) {
+            if (resp.status == PM3_SUCCESS) {
                 memcpy(data_out, resp.data.asBytes, sizeof(em4x70_cmd_output_brute_t));
-                return PM3_SUCCESS;
             }
-            return PM3_ESOFT;
+            return resp.status;
         }
 
         // NOTE: It takes about 11 seconds per 0x0100 authentication attempts.
@@ -383,15 +360,10 @@ static int unlock_em4x70(const em4x70_cmd_input_unlock_t *opts, em4x70_tag_info_
     if (WaitForResponseTimeout(CMD_LF_EM4X70_UNLOCK, &resp, TIMEOUT) == false) {
         return PM3_ETIMEOUT;
     }
-
-    //iceman:  prefer to have specific return code check.
-    // like   resp.status != PM3_SUCCESS if looking for failure
-    if (resp.status) {
+    if (resp.status == PM3_SUCCESS) {
         memcpy(data_out, resp.data.asBytes, sizeof(em4x70_tag_info_t));
-        return PM3_SUCCESS;
     }
-    return PM3_ESOFT;
-
+    return resp.status;
 }
 
 static int setpin_em4x70(const em4x70_cmd_input_setpin_t *opts, em4x70_tag_info_t *data_out) {
@@ -408,14 +380,10 @@ static int setpin_em4x70(const em4x70_cmd_input_setpin_t *opts, em4x70_tag_info_
     if (WaitForResponseTimeout(CMD_LF_EM4X70_SETPIN, &resp, TIMEOUT) == false) {
         return PM3_ETIMEOUT;
     }
-
-    //iceman:  prefer to have specific return code check.
-    // like   resp.status != PM3_SUCCESS if looking for failure
-    if (resp.status) {
+    if (resp.status == PM3_SUCCESS) {
         memcpy(data_out, resp.data.asBytes, sizeof(em4x70_tag_info_t));
-        return PM3_SUCCESS;
     }
-    return PM3_ESOFT;
+    return resp.status;
 }
 
 static int recover_em4x70(const em4x70_cmd_input_recover_t *opts, em4x70_cmd_output_recover_t *data_out) {
@@ -716,6 +684,7 @@ int CmdEM4x70Auth(const char *Cmd) {
                   "  If F(RN) is correct based on the tag key, the tag will give a 20-bit response\n",
                   "lf em 4x70 auth --rnd 45F54ADA252AAC --frn 4866BB70     --> (using pm3 test key)\n"
                   "lf em 4x70 auth --rnd 3FFE1FB6CC513F --frn F355F1A0     --> (using research paper key)\n"
+                  "lf em 4x70 auth --rnd 7D5167003571F8 --frn 982DBCC0     --> (autorecovery test key)\n"
                  );
 
     void *argtable[] = {
@@ -813,6 +782,7 @@ int CmdEM4x70SetKey(const char *Cmd) {
                   "Write new 96-bit key to tag\n",
                   "lf em 4x70 setkey -k F32AA98CF5BE4ADFA6D3480B   (pm3 test key)\n"
                   "lf em 4x70 setkey -k A090A0A02080000000000000   (research paper key)\n"
+                  "lf em 4x70 setkey -k 022A028C02BE000102030405   (autorecovery test key)\n"
                  );
 
     void *argtable[] = {
@@ -1137,6 +1107,7 @@ static int CmdEM4x70AutoRecover_ParseArgs(const char *Cmd, em4x70_cmd_input_reco
         ,
         "lf em 4x70 autorecover --rnd 45F54ADA252AAC --frn 4866BB70 --grn 9BD180   (pm3 test key)\n"
         "lf em 4x70 autorecover --rnd 3FFE1FB6CC513F --frn F355F1A0 --grn 609D60   (research paper key)\n"
+        "lf em 4x70 autorecover --rnd 7D5167003571F8 --frn 982DBCC0 --grn 36C0E0   (autorecovery test key)\n"        
     );
 
     void *argtable[] = {

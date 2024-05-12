@@ -581,11 +581,6 @@ static bool send_command_and_read(uint8_t command, uint8_t *bytes, size_t length
                 Dbprintf("Invalid data received length: %d, expected %d", len, out_length_bits);
                 return false;
             }
-            // TODO: Figure out why getting an extra bit (quite often) here
-            // e.g., write block and info commands both reach here and output:
-            // [#] Should have a multiple of 8 bits, was sent 33
-            // [#] Should have a multiple of 8 bits, was sent 65
-            // Extra bits are currently just dropped, with no ill effect noticed.
             bits2bytes(bits, len, bytes);
             return true;
         }
@@ -616,7 +611,6 @@ static bool em4x70_read_um1(void) {
     return send_command_and_read(EM4X70_COMMAND_UM1, &tag.data[0], 4);
 
 }
-
 
 /**
  *  em4x70_read_um2
@@ -725,7 +719,7 @@ static int em4x70_receive(uint8_t *bits, size_t length) {
 
 void em4x70_info(const em4x70_data_t *etd, bool ledcontrol) {
 
-    uint8_t status = 0;
+    bool success = false;
 
     // Support tags with and without command parity bits
     command_parity = etd->parity;
@@ -736,19 +730,26 @@ void em4x70_info(const em4x70_data_t *etd, bool ledcontrol) {
     // Find the Tag
     if (get_signalproperties() && find_em4x70_tag()) {
         // Read ID, UM1 and UM2
-        status = em4x70_read_id() && em4x70_read_um1() && em4x70_read_um2();
+        success = em4x70_read_id() && em4x70_read_um1() && em4x70_read_um2();
     }
 
     StopTicks();
     lf_finalize(ledcontrol);
+    int status = success ? PM3_SUCCESS : PM3_ESOFT;
     reply_ng(CMD_LF_EM4X70_INFO, status, tag.data, sizeof(tag.data));
 }
 
 void em4x70_write(const em4x70_data_t *etd, bool ledcontrol) {
-
-    uint8_t status = 0;
+    int status = PM3_ESOFT;
 
     command_parity = etd->parity;
+
+    // Disable to prevent sending corrupted data to the tag.
+    if (command_parity) {
+        Dbprintf("Use of `--par` option with `lf em 4x70 write` is disabled to prevent corrupting tag data");
+        reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
+        return;
+    }
 
     init_tag();
     em4x70_setup_read();
@@ -757,16 +758,15 @@ void em4x70_write(const em4x70_data_t *etd, bool ledcontrol) {
     if (get_signalproperties() && find_em4x70_tag()) {
 
         // Write
-        status = write(etd->word, etd->address) == PM3_SUCCESS;
+        status = write(etd->word, etd->address);
 
-        if (status) {
+        if (status == PM3_SUCCESS) {
             // Read Tag after writing
             if (em4x70_read_id()) {
                 em4x70_read_um1();
                 em4x70_read_um2();
             }
         }
-
     }
 
     StopTicks();
@@ -776,7 +776,7 @@ void em4x70_write(const em4x70_data_t *etd, bool ledcontrol) {
 
 void em4x70_unlock(const em4x70_data_t *etd, bool ledcontrol) {
 
-    uint8_t status = 0;
+    int status = PM3_ESOFT;
 
     command_parity = etd->parity;
 
@@ -790,10 +790,10 @@ void em4x70_unlock(const em4x70_data_t *etd, bool ledcontrol) {
         if (em4x70_read_id()) {
 
             // Send PIN
-            status = send_pin(etd->pin) == PM3_SUCCESS;
+            status = send_pin(etd->pin);
 
             // If the write succeeded, read the rest of the tag
-            if (status) {
+            if (status == PM3_SUCCESS) {
                 // Read Tag
                 // ID doesn't change
                 em4x70_read_um1();
@@ -809,10 +809,18 @@ void em4x70_unlock(const em4x70_data_t *etd, bool ledcontrol) {
 
 void em4x70_auth(const em4x70_data_t *etd, bool ledcontrol) {
 
-    uint8_t status = 0;
+    int status = PM3_ESOFT;
+
     uint8_t response[3] = {0};
 
     command_parity = etd->parity;
+
+    // Disable to prevent sending corrupted data to the tag.
+    if (command_parity) {
+        Dbprintf("Use of `--par` option with `lf em 4x70 auth` is disabled to prevent corrupting tag data");
+        reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
+        return;
+    }
 
     init_tag();
     em4x70_setup_read();
@@ -821,7 +829,7 @@ void em4x70_auth(const em4x70_data_t *etd, bool ledcontrol) {
     if (get_signalproperties() && find_em4x70_tag()) {
 
         // Authenticate and get tag response
-        status = authenticate(etd->rnd, etd->frnd, response) == PM3_SUCCESS;
+        status = authenticate(etd->rnd, etd->frnd, response);
     }
 
     StopTicks();
@@ -830,10 +838,17 @@ void em4x70_auth(const em4x70_data_t *etd, bool ledcontrol) {
 }
 
 void em4x70_brute(const em4x70_data_t *etd, bool ledcontrol) {
-    uint8_t status = 0;
+    int status = PM3_ESOFT;
     uint8_t response[2] = {0};
 
     command_parity = etd->parity;
+
+    // Disable to prevent sending corrupted data to the tag.
+    if (command_parity) {
+        Dbprintf("Use of `--par` option with `lf em 4x70 brute` is disabled to prevent corrupting tag data");
+        reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
+        return;
+    }
 
     init_tag();
     em4x70_setup_read();
@@ -842,7 +857,7 @@ void em4x70_brute(const em4x70_data_t *etd, bool ledcontrol) {
     if (get_signalproperties() && find_em4x70_tag()) {
 
         // Bruteforce partial key
-        status = bruteforce(etd->address, etd->rnd, etd->frnd, etd->start_key, response) == PM3_SUCCESS;
+        status = bruteforce(etd->address, etd->rnd, etd->frnd, etd->start_key, response);
     }
 
     StopTicks();
@@ -852,9 +867,16 @@ void em4x70_brute(const em4x70_data_t *etd, bool ledcontrol) {
 
 void em4x70_write_pin(const em4x70_data_t *etd, bool ledcontrol) {
 
-    uint8_t status = 0;
+    int status = PM3_ESOFT;
 
     command_parity = etd->parity;
+
+    // Disable to prevent sending corrupted data to the tag.
+    if (command_parity) {
+        Dbprintf("Use of `--par` option with `lf em 4x70 setpin` is disabled to prevent corrupting tag data");
+        reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
+        return;
+    }
 
     init_tag();
     em4x70_setup_read();
@@ -865,17 +887,19 @@ void em4x70_write_pin(const em4x70_data_t *etd, bool ledcontrol) {
         // Read ID (required for send_pin command)
         if (em4x70_read_id()) {
 
-            // Write new PIN
-            if ((write((etd->pin) & 0xFFFF, EM4X70_PIN_WORD_UPPER) == PM3_SUCCESS) &&
-                    (write((etd->pin >> 16) & 0xFFFF, EM4X70_PIN_WORD_LOWER) == PM3_SUCCESS)) {
-
+            // Write the pin
+            status = write((etd->pin) & 0xFFFF, EM4X70_PIN_WORD_UPPER);
+            if (status == PM3_SUCCESS) {
+                status = write((etd->pin >> 16) & 0xFFFF, EM4X70_PIN_WORD_LOWER);
+            }
+            if (status == PM3_SUCCESS) {
                 // Now Try to authenticate using the new PIN
 
                 // Send PIN
-                status = send_pin(etd->pin) == PM3_SUCCESS;
+                status = send_pin(etd->pin);
 
                 // If the write succeeded, read the rest of the tag
-                if (status) {
+                if (status == PM3_SUCCESS) {
                     // Read Tag
                     // ID doesn't change
                     em4x70_read_um1();
@@ -892,9 +916,16 @@ void em4x70_write_pin(const em4x70_data_t *etd, bool ledcontrol) {
 
 void em4x70_write_key(const em4x70_data_t *etd, bool ledcontrol) {
 
-    uint8_t status = 0;
+    int status = PM3_ESOFT;
 
     command_parity = etd->parity;
+
+    // Disable to prevent sending corrupted data to the tag.
+    if (command_parity) {
+        Dbprintf("Use of `--par` option with `lf em 4x70 setkey` is disabled to prevent corrupting tag data");
+        reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
+        return;
+    }
 
     init_tag();
     em4x70_setup_read();
@@ -904,15 +935,15 @@ void em4x70_write_key(const em4x70_data_t *etd, bool ledcontrol) {
 
         // Read ID to ensure we can write to card
         if (em4x70_read_id()) {
-            status = 1;
+            status = PM3_SUCCESS;
 
             // Write each crypto block
             for (int i = 0; i < 6; i++) {
 
                 uint16_t key_word = (etd->crypt_key[(i * 2) + 1] << 8) + etd->crypt_key[i * 2];
                 // Write each word, abort if any failure occurs
-                if (write(key_word, 9 - i) != PM3_SUCCESS) {
-                    status = 0;
+                status = write(key_word, 9 - i);
+                if (status != PM3_SUCCESS) {
                     break;
                 }
             }
