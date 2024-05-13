@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf 15 dump` memory leaks (@jlitewski)
 - Changed `hf search` - topaz is detect before ISO14443a and commented out WIP ICT code path (@iceman1001)
 - Fixed `hf search` - where felica reader now doesnt timeout and give wrong response (@iceman1001)
 - Fixed overflow in deps/jansson library (@iceman1001)
