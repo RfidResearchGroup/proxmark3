@@ -1582,7 +1582,7 @@ static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t 
 /* Sends an APDU to the tag
  * TODO: check CRC and preamble
  */
-int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void *rxdata, uint16_t rxmaxlen, uint8_t *response_byte, uint16_t *reponselen) {
+int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void *rxdata, uint16_t rxmaxlen, uint8_t *response_byte, uint16_t *responselen) {
 
     uint8_t real_cmd[msg_len + 4];
 
@@ -1693,8 +1693,8 @@ int iso14443b_apdu(uint8_t const *msg, size_t msg_len, bool send_chaining, void 
         }
     }
 
-    if (reponselen) {
-        *reponselen = len;
+    if (responselen) {
+        *responselen = len;
     }
     return PM3_SUCCESS;
 }
