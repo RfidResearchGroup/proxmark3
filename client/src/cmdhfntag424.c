@@ -38,6 +38,7 @@
 
 
 // NTAG424 commands currently implemented
+// icenam: should be able to use 14a / msdes to annotate NTAG424 communications
 #define NTAG424_CMD_GET_FILE_SETTINGS      0xF5
 #define NTAG424_CMD_CHANGE_FILE_SETTINGS   0x5F
 #define NTAG424_CMD_CHANGE_KEY             0xC4

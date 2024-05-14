@@ -1232,13 +1232,14 @@ static int CmdHF15ELoad(const char *Cmd) {
         return res;
     }
 
-    if (bytes_read != sizeof(iso15_tag_t)) {
-        PrintAndLogEx(FAILED, "Memory image is not matching tag structure.");
+    if (bytes_read == 0) {
+        PrintAndLogEx(FAILED, "Memory image empty.");
         free(tag);
         return PM3_EINVARG;
     }
-    if (bytes_read == 0) {
-        PrintAndLogEx(FAILED, "Memory image empty.");
+
+    if (bytes_read != sizeof(iso15_tag_t)) {
+        PrintAndLogEx(FAILED, "Memory image is not matching tag structure.");
         free(tag);
         return PM3_EINVARG;
     }
@@ -2693,13 +2694,14 @@ static int CmdHF15Restore(const char *Cmd) {
         return res;
     }
 
-    if (bytes_read != sizeof(iso15_tag_t)) {
-        PrintAndLogEx(FAILED, "Memory image is not matching tag structure.");
+    if (bytes_read == 0) {
+        PrintAndLogEx(FAILED, "Memory image empty.");
         free(tag);
         return PM3_EINVARG;
     }
-    if (bytes_read == 0) {
-        PrintAndLogEx(FAILED, "Memory image empty.");
+
+    if (bytes_read != sizeof(iso15_tag_t)) {
+        PrintAndLogEx(FAILED, "Memory image is not matching tag structure.");
         free(tag);
         return PM3_EINVARG;
     }
@@ -3357,13 +3359,14 @@ static int CmdHF15View(const char *Cmd) {
         return res;
     }
 
-    if (bytes_read != sizeof(iso15_tag_t)) {
-        PrintAndLogEx(FAILED, "Memory image is not matching tag structure.");
+    if (bytes_read == 0) {
+        PrintAndLogEx(FAILED, "Memory image empty.");
         free(tag);
         return PM3_EINVARG;
     }
-    if (bytes_read == 0) {
-        PrintAndLogEx(FAILED, "Memory image empty.");
+
+    if (bytes_read != sizeof(iso15_tag_t)) {
+        PrintAndLogEx(FAILED, "Memory image is not matching tag structure.");
         free(tag);
         return PM3_EINVARG;
     }
