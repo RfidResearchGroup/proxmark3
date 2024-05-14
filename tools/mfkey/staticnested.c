@@ -166,7 +166,7 @@ static void pm3_staticnested(uint32_t uid, uint32_t nt1, uint32_t ks1,  uint32_t
         for (uint32_t k = 0; k < keycnt; k++) {
             uint64_t key64 = 0;
             crypto1_get_lfsr(statelists[0].head.slhead + k, &key64);
-            printf("[ %d ] " _GREEN_("%012" PRIx64) "\n", k + 1, key64);
+            printf("[ %u ] " _GREEN_("%012" PRIx64) "\n", k + 1, key64);
         }
     }
 }
@@ -222,7 +222,7 @@ int main(int argc, char *const argv[]) {
     if (key_count) {
         printf("Ultra Static nested --> Found " _YELLOW_("%u") " key candidates\n", key_count);
         for (uint32_t k = 0; k < key_count; k++) {
-            printf("[ %d ] " _GREEN_("%012" PRIx64) "\n", k + 1, keys[k]);
+            printf("[ %u ] " _GREEN_("%012" PRIx64) "\n", k + 1, keys[k]);
         }
     }
 

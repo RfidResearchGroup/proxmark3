@@ -863,7 +863,7 @@ int CmdHF14ASim(const char *Cmd) {
         if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK)
             break;
 
-        nonces_t *data = (nonces_t *)resp.data.asBytes;
+        const nonces_t *data = (nonces_t *)resp.data.asBytes;
         readerAttack(k_sector, k_sectors_cnt, data[0], setEmulatorMem, verbose);
 
         keypress = kbd_enter_pressed();
@@ -1099,7 +1099,7 @@ int SelectCard14443A_4(bool disconnect, bool verbose, iso14a_card_select_t *card
     return SelectCard14443A_4_WithParameters(disconnect, verbose, card, NULL);
 }
 
-static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool activateField, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool *chainingout) {
+static int CmdExchangeAPDU(bool chainingin, const uint8_t *datain, int datainlen, bool activateField, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool *chainingout) {
     *chainingout = false;
 
     size_t timeout = 1500;
@@ -1158,7 +1158,7 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
     PacketResponseNG resp;
 
     if (WaitForResponseTimeout(CMD_ACK, &resp, timeout)) {
-        uint8_t *recv = resp.data.asBytes;
+        const uint8_t *recv = resp.data.asBytes;
         int iLen = resp.oldarg[0];
         uint8_t res = resp.oldarg[1];
 
@@ -1216,7 +1216,7 @@ static int CmdExchangeAPDU(bool chainingin, uint8_t *datain, int datainlen, bool
     return PM3_SUCCESS;
 }
 
-int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+int ExchangeAPDU14a(const uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
     *dataoutlen = 0;
     bool chaining = false;
     int res;
@@ -1519,7 +1519,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     }
 
     // TODO: allow to use reader command with both data and polling configuration
-    if (use_ecp | use_magsafe) {
+    if (use_ecp || use_magsafe) {
         PrintAndLogEx(WARNING, "ECP and Magsafe not supported with this command at this moment. Instead use 'hf 14a reader -sk --ecp/--mag'");
         // flags |= ISO14A_USE_MAGSAFE;
         // flags |= ISO14A_USE_ECP;

@@ -17,7 +17,7 @@
 #define DBG  if (g_dbglevel >= DBG_EXTENDED)
 
 #include "hitag2.h"
-#include "hitag2_crypto.h"
+#include "hitag2/hitag2_crypto.h"
 #include "string.h"
 #include "proxmark3_arm.h"
 #include "cmd.h"

@@ -19,7 +19,7 @@
 
 
 #include "hitag2_crack.h"
-#include "hitag2_crypto.h"
+#include "hitag2/hitag2_crypto.h"
 #include "hitag2.h"
 #include "proxmark3_arm.h"
 #include "commonutil.h"
