@@ -22,7 +22,7 @@
 #include "common.h"
 
 int CmdFlashMemSpiFFS(const char *Cmd);
-int flashmem_spiffs_load(char *destfn, uint8_t *data, size_t datalen);
+int flashmem_spiffs_load(const char *destfn, const uint8_t *data, size_t datalen);
 int flashmem_spiffs_download(char *fn, uint8_t fnlen, void **pdest, size_t *destlen);
 
 #endif
