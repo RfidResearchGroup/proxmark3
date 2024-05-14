@@ -86,7 +86,7 @@ int hex2binarray(char *target, char *source) {
     return hex2binarray_n(target, source, strlen(source));
 }
 
-int hex2binarray_n(char *target, char *source, int sourcelen) {
+int hex2binarray_n(char *target, const char *source, int sourcelen) {
     int count = 0;
 
     // process 4 bits (1 hex digit) at a time
