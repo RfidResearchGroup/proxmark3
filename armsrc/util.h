@@ -82,7 +82,7 @@
 #endif
 
 size_t nbytes(size_t nbits);
-uint8_t hex2int(char hexchar);
+uint8_t hex2int(char x);
 
 int hex2binarray(char *target, char *source);
 int hex2binarray_n(char *target, char *source, int sourcelen);
