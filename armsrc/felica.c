@@ -544,7 +544,6 @@ void felica_sendraw(const PacketCommandNG *c) {
 
     felica_command_t param = c->oldarg[0];
     size_t len = c->oldarg[1] & 0xffff;
-    const uint8_t *cmd = c->data.asBytes;
     uint32_t arg0;
 
     if ((param & FELICA_CONNECT) == FELICA_CONNECT) {
@@ -581,7 +580,7 @@ void felica_sendraw(const PacketCommandNG *c) {
         buf[2] = len;
 
         // copy command
-        memcpy(buf + 2, cmd, len);
+        memcpy(buf + 2, c->data.asBytes, len);
 
         if ((param & FELICA_APPEND_CRC) == FELICA_APPEND_CRC) {
             // Don't append crc on empty bytearray...
@@ -630,7 +629,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
     int remFrames = (samplesToSkip) ? samplesToSkip : 0;
     int trigger_cnt = 0;
     uint32_t timeout = iso18092_get_timeout();
-    bool isReaderFrame = true;
+    bool isReaderFrame;
 
     uint8_t flip = 0;
     uint16_t checker = 0;
@@ -733,7 +732,7 @@ void felica_sim_lite(const uint8_t *uid) {
 
     int retval = PM3_SUCCESS;
     int curlen = 0;
-    uint8_t *curresp = NULL;
+    const uint8_t *curresp = NULL;
     bool listenmode = true;
     // uint32_t frtm = GetCountSspClk();
 
@@ -883,7 +882,7 @@ void felica_dump_lite_s(void) {
 
                     dest[cnt++] = liteblks[blknum];
 
-                    uint8_t *fb = FelicaFrame.framebytes;
+                    const uint8_t *fb = FelicaFrame.framebytes;
                     dest[cnt++] = fb[12];
                     dest[cnt++] = fb[13];
 
