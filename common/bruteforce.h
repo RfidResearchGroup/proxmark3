@@ -79,7 +79,7 @@ typedef struct {
 } generator_context_t;
 
 
-void bf_generator_init(generator_context_t *ctx, uint8_t mode, uint8_t key_size);
+void bf_generator_init(generator_context_t *ctx, uint8_t mode, uint8_t key_length);
 void bf_generator_clear(generator_context_t *ctx); // clear flags and counters used by generators
 int bf_generator_set_charset(generator_context_t *ctx, uint8_t charsets);
 int bf_generate(generator_context_t *ctx);
