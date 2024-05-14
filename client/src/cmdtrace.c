@@ -656,7 +656,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                     if (nbits == 0) {
                         snprintf(line[0], 120, "%2u: %02X  ", (uint16_t)(data_len * 8), frame[0]);
                     } else {
-                        snprintf(line[0], 120, "%2u: %02X  ", (uint16_t)((data_len - 1) * 8) + nbits, frame[0]);
+                        snprintf(line[0], 120, "%2u: %02X  ", (uint16_t)(((data_len - 1) * 8) + nbits), frame[0]);
                     }
                 }
                 offset = 4;
@@ -1002,7 +1002,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                         if (nbits == 0) {
                             snprintf(line[0], 120, "%2u: %02X  ", (uint16_t)(n * 8), ht2plain[0]);
                         } else {
-                            snprintf(line[0], 120, "%2u: %02X  ", (uint16_t)((n - 1) * 8) + nbits, ht2plain[0]);
+                            snprintf(line[0], 120, "%2u: %02X  ", (uint16_t)(((n - 1) * 8) + nbits), ht2plain[0]);
                         }
                     }
                     offset = 4;
