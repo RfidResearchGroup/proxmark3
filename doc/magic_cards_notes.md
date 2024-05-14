@@ -51,6 +51,7 @@ Useful docs:
     * [ULtra](#ultra)
     * [UL-5](#ul-5)
     * [UL, other chips](#ul-other-chips)
+  * [MIFARE Ultralight USCUID-UL](#mifare-ultralight-uscuid-ul)
 * [NTAG](#ntag)
   * [NTAG213 DirectWrite](#ntag213-directwrite)
   * [NTAG21x](#ntag21x)
@@ -823,7 +824,7 @@ hf 14a raw -s -c 90FD111100
 ^[Top](#top)
 
 TLDR: These magic cards have a 16 byte long configuration page, which usually starts with 0x85.
-All of the known tags using this, except for Ultralight tags, are listed here.
+All of the known tags are using this, except for Ultralight tags, are listed here.
 
 You cannot turn a Classic tag into an Ultralight and vice-versa!
 
@@ -1142,8 +1143,6 @@ All commands are available before sealing. After the sealing acts as a Mifare Cl
 * Magic wakeup: `40(7)`, `43`
   * Backdoor read main block: `30xx+crc`
   * Backdoor write main block: `A0xx+crc`, `[16 bytes data]+crc`
-  * Read hidden block: `38xx+crc`
-  * Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
   * Read configuration: `E000+crc`
   * Write configuration: `E100+crc`
 * Example of the sealing, performed by Chinese copiers in raw commands:
@@ -1607,7 +1606,7 @@ hf 14a info
 [+] Magic capabilities : Gen 2 / CUID
 ```
 
-It seems so far that all MFUL DW have an ATS.
+It seems so far that all MFUL DW have an ATS response in factory configuration.
 
 ### Magic commands
 
@@ -1637,14 +1636,6 @@ Issue three regular MFU write commands in a row to write first three blocks.
 * BCC: computed
 * ATS: 0A78008102DBA0C119402AB5
 * Anticol shortcut (CL1/3000): fails
-
-#### MIFARE Ultralight DirectWrite flavour 2
-
-^[Top](#top)
-
-* BCC: play blindly the block0 BCC0 and block2 BCC1 bytes, beware!
-* ATS: 850000A00A000AB00000000000000000184D
-* Anticol shortcut (CL1/3000): succeeds
 
 ### Proxmark3 commands
 
@@ -1976,6 +1967,186 @@ The manufacturer confirmed unpersonalized tags could be identified by first 3 by
 **TODO**
 
 UL-X, UL-Z - ?
+
+## MIFARE Ultralight USCUID-UL
+
+^[Top](#top)
+
+TLDR: These magic cards, like the MFC USCUIDs have a 16 byte long configuration page, comprised of 4 blocks of 4 bytes each. This usually starts with 0x85. All of the known tags use the same format config page.
+
+The cards will respond to a RATS with the config page in the factory configuration.
+
+As with the MFC USCUIDs, one cannot turn a Classic tag into an Ultralight and vice-versa!
+
+### Characteristics
+
+^[Top](#top)
+
+* UID: 7 bytes
+* ATQA: always read from hidden block `F6`
+* SAK: always read from hidden block `F6`
+* BCC: read from blocks 0-1 per Ultralight specification
+* ATS: These respond to an ATS request with the config page in factory mode.
+
+### Identify
+
+^[Top](#top)
+
+In factory config state:
+
+```
+hf 14a info
+...
+[=] -------------------------- ATS --------------------------
+[!] ATS may be corrupted. Length of ATS (18 bytes incl. 2 Bytes CRC) doesn't match TL
+[+] ATS: 85 00 85 A0 00 00 0A A5 00 04 04 02 01 00 0F 03 [ 07 00 ]
+```
+
+If config has been modified to not display config block as ATS response:
+
+```
+hf 14a raw -akb 7 40; hf 14a raw -k 43
+
+OR (depending on the magic wakeup method set)
+
+hf 14a raw -akb 7 20; hf 14a raw -k 23
+
+THEN
+
+hf 14a raw -c e100
+[+] 85 00 85 A0 00 00 0A A5 00 04 04 02 01 00 0F 03 [ 07 00 ]
+```
+
+Possible tag wakeup mechanisms are:
+
+* Gen1 Magic Wakeup
+* Alt Magic Wakeup
+
+### Magic commands
+
+^[Top](#top)
+
+* Magic wakeup (A: 00): `40(7)`, `43`
+* Magic wakeup (B: 85): `20(7)`, `23`
+  * Backdoor read main and hidden block: `30xx+crc`
+  * Backdoor write main and hidden block: `A2xx[4 bytes data]+crc`
+  * Read configuration: `E050+crc`
+  * Write configuration: `E2[offset*4, 1b][data, 4b]+crc`
+
+* **DANGER**
+  * Set memory and config to 00 `F000+crc`
+  * Set memory and config to FF `F100+crc`
+  * Set memory and config to 55 (no 0A response) `F600+crc`
+
+### USCUID-UL configuration guide
+
+^[Top](#top)
+
+1. Configuration
+
+```
+0        1        2        3
+850000A0 00000AC3 00040301 01000B03
+           ^^                       >> ??? Mystery ???
+^^^^                                >> Gen1a mode (works with bitflip)
+    ^^                              >> Magic wakeup command (00 for 40-43; 85 for 20-23)
+      ^^                            >> Config available using regular mode (ON: A0)
+         ^^                         >> Do not reply to 1B, making auth impossible
+             ^^                     >> Do not enforce OTP properties (ON: A0)
+               ^^                   >> Maximum memory configuration*
+                  ^^^^^^^^ ^^^^^^^^ >> Version info
+
+* This isn't a customizable value - it's a preset. So far:
+C3 = UL11
+3C = UL21
+00 = UL-C
+A5 = NTAG 213
+5A = NTAG 215
+AA = NTAG 216
+55 = Unknown IC w/ 238 pgs.
+```
+
+* Gen1a mode:                            Allow using custom wakeup commands, like real gen1a chip, to run backdoor commands, as well as some extras.
+* Magic wakeup command:                  Use different wakeup commands for entering Gen1a mode. A) 00 - 40(7), 43; B) 85 - 20(7), 23.
+* Config available using regular mode:   If this option is turned on via A0, the tag will reply to RATS with the config block and the config block can be modified without doing a magic wakeup.
+
+To write config:
+
+You must send config info in E2 packets of 4 bytes each (format: `E2[offset*4, 1b][data, 4b]`), eg for a UL-11 tag:
+
+```
+hf 14a raw -sck E200850000A0; hf 14a raw -ck E20100000AC3; hf 14a raw -ck E20200040301; hf 14a raw -c E20301000B03
+```
+
+2. Hidden blocks
+
+```
+F0: 00000000
+    ^^^^^^^^                        >> Unknown, usually always 00
+
+F1: 00000000
+    ^^^^^^^^       >> Unknown, usually always 00
+
+F2: 000000BD
+    ^^^^^^         >> Unknown, usually always 00
+          ^^       >> Unknown, usually always BD, possible tearing counter value?
+
+F3: 000000BD
+    ^^^^^^         >> Unknown, usually always 00
+          ^^       >> Unknown, usually always BD, possible tearing counter value?
+
+F4: 000000BD
+    ^^^^^^         >> Unknown, usually always 00
+          ^^       >> Unknown, usually always BD, possible tearing counter value?
+
+F5: 00000000
+    ^^^^^^^^       >> Unknown, usually always 00
+
+F6: 44000400
+    ^^^^           >> ATQA in byte reverse order. 4400 = ATQA of 0044
+        ^^         >> Unknown, usually always set to 04. Changing this value also has something to do with the SAK value in the next byte
+          ^^       >> SAK, if previous byte set to 04
+
+F7: 88AF0000
+    ^^             >> First byte of UID BCC calculation, for Ultralight family is always 88 per the datasheet
+      ^^           >> Unknown, usually always AF.
+        ^^^^       >> Unknown, usually always 00
+
+F8 - FF: xxxxxxxx  >> signature
+```
+
+To read / write hidden blocks:
+
+A config block beginning with `7AFF` must be set to enable a `40:43` / `20:23` magic wakeup. From limited testing, the `20:23` magic wakeup is not guaranteed to work, however the `40:43` wakeup works 100% of the time.
+
+You must send config info in A2 packets of 4 bytes each (format: `A2[offset*4, 1b][data, 4b]`), eg for a UL-11 tag:
+
+```
+hf 14a raw -akb 7 40; hf 14a raw -k 43; hf 14a raw -ck A2F2000000BD; hf 14a raw -ck A2F3000000BD; hf 14a raw -ck A2F4000000BD; hf 14a raw -ck A2F644000400; hf 14a raw -c A2F888AF0000
+```
+
+### Proxmark3 commands
+
+^[Top](#top)
+
+No implemented commands at time of writing
+
+### libnfc commands
+
+^[Top](#top)
+
+No implemented commands at time of writing
+
+### Variations
+^[Top](#top)
+| Factory configuration | Name |
+| --- | --- |
+| 850000A0 00000AC3 00040301 01000B03 | UL-11 |
+| 850000A0 00000A3C 00040301 01000E03 | UL-21 |
+| 850000A0 0A000A00 00000000 00000000 | UL-C |
+| 850085A0 00000AA5 00040402 01000F03 | NTAG213 |
+| 850000A0 00000A5A 00040402 01001103 | NTAG215 |
+| 850000A0 00000AAA 00040402 01001303 | NTAG216 |
 
 # DESFire
 
