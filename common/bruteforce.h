@@ -87,8 +87,8 @@ int _bf_generate_mode_range(generator_context_t *ctx);
 int _bf_generate_mode_charset(generator_context_t *ctx);
 int _bf_generate_mode_smart(generator_context_t *ctx);
 int bf_array_increment(uint8_t *data, uint8_t data_len, uint8_t modulo);
-uint32_t bf_get_key32(generator_context_t *ctx);
-uint64_t bf_get_key48(generator_context_t *ctx);
+uint32_t bf_get_key32(const generator_context_t *ctx);
+uint64_t bf_get_key48(const generator_context_t *ctx);
 
 // smart mode
 typedef int (smart_generator_t)(generator_context_t *ctx);
