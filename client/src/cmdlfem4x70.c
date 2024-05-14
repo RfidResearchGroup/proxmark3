@@ -167,7 +167,7 @@ typedef struct _em4x70_cmd_input_verify_auth_t {
 static int CmdHelp(const char *Cmd);
 
 static void fill_buffer_prng_bytes(void *buffer, size_t byte_count) {
-    if (byte_count <= 0) {
+    if (byte_count == 0) {
         return;
     }
 
