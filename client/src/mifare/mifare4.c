@@ -203,7 +203,7 @@ int CalculateMAC(mf4Session_t *mf4session, MACType_t mtype, uint8_t blockNum, ui
     return aes_cmac8(NULL, mf4session->Kmac, macdata, mac, macdatalen);
 }
 
-int MifareAuth4(mf4Session_t *mf4session, uint8_t *keyn, uint8_t *key, bool activateField, bool leaveSignalON, bool dropFieldIfError, bool verbose, bool silentMode) {
+int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, bool activateField, bool leaveSignalON, bool dropFieldIfError, bool verbose, bool silentMode) {
     uint8_t data[257] = {0};
     int datalen = 0;
 
@@ -375,7 +375,7 @@ static int intExchangeRAW14aPlus(uint8_t *datain, int datainlen, bool activateFi
     return res;
 }
 
-int MFPWritePerso(uint8_t *keyNum, uint8_t *key, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
+int MFPWritePerso(const uint8_t *keyNum, const uint8_t *key, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen) {
     uint8_t rcmd[3 + 16] = {0xa8, keyNum[1], keyNum[0], 0x00};
     memmove(&rcmd[3], key, 16);
 
@@ -432,7 +432,7 @@ int MFPReadBlock(mf4Session_t *mf4session, bool plain, bool nomaccmd, bool nomac
     return PM3_SUCCESS;
 }
 
-int MFPWriteBlock(mf4Session_t *mf4session, bool plain, bool nomacres, uint8_t blockNum, uint8_t blockHdr, uint8_t *data, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
+int MFPWriteBlock(mf4Session_t *mf4session, bool plain, bool nomacres, uint8_t blockNum, uint8_t blockHdr, const uint8_t *data, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, uint8_t *mac) {
     int cmdb = 0xA1;
     if (nomacres) {
         cmdb = cmdb ^ 0x01; // If we do not want MAC in reply, remove 0x01
