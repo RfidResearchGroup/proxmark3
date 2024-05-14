@@ -42,12 +42,12 @@ static bool is_last_record(uint16_t tracepos, uint16_t traceLen) {
 }
 
 static bool next_record_is_response(uint16_t tracepos, uint8_t *trace) {
-    tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + tracepos);
+    const tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + tracepos);
     return (hdr->isResponse);
 }
 
 static bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, uint16_t *tracepos, uint16_t traceLen,
-                                      uint8_t *trace, uint8_t *frame, uint8_t *topaz_reader_command, uint16_t *data_len) {
+                                      uint8_t *trace, const uint8_t *frame, uint8_t *topaz_reader_command, uint16_t *data_len) {
 
 #define MAX_TOPAZ_READER_CMD_LEN 16
 
@@ -59,7 +59,7 @@ static bool merge_topaz_reader_frames(uint32_t timestamp, uint32_t *duration, ui
 
     while (!is_last_record(*tracepos, traceLen) && !next_record_is_response(*tracepos, trace)) {
 
-        tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + *tracepos);
+        const tracelog_hdr_t *hdr = (tracelog_hdr_t *)(trace + *tracepos);
 
         *tracepos += TRACELOG_HDR_LEN + hdr->data_len;
 
@@ -93,7 +93,7 @@ static uint8_t calc_pos(const uint8_t *d) {
 
 // Copy an existing buffer into client trace buffer
 // I think this is cleaner than further globalizing gs_trace, and may lend itself to more modularity later?
-bool ImportTraceBuffer(uint8_t *trace_src, uint16_t trace_len) {
+bool ImportTraceBuffer(const uint8_t *trace_src, uint16_t trace_len) {
     if (trace_len == 0 || trace_src == NULL) return (false);
     if (gs_trace) {
         free(gs_trace);
@@ -218,7 +218,7 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
         switch (c) {
             case ICLASS_CMD_SELECT: {
 
-                tracelog_hdr_t *next_hdr = (tracelog_hdr_t *)(trace + tracepos);
+                const tracelog_hdr_t *next_hdr = (tracelog_hdr_t *)(trace + tracepos);
                 tracepos += SKIP_TO_NEXT(next_hdr);
                 if (next_hdr->data_len != 10) {
                     break;
@@ -231,7 +231,7 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
 
                 // get epurse
                 if (frame[1] == 2 && data_len == 2) {
-                    tracelog_hdr_t *next_hdr = (tracelog_hdr_t *)(trace + tracepos);
+                    const tracelog_hdr_t *next_hdr = (tracelog_hdr_t *)(trace + tracepos);
                     tracepos += SKIP_TO_NEXT(next_hdr);
                     if (next_hdr->data_len < 8) {
                         break;
@@ -641,25 +641,22 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
         } else if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAG2) || (protocol == PROTO_HITAGS))) {
 
-            // handle partial bytes.  The parity array[0] is used to store number of left over bits from NBYTES
-            // This part prints the number of bits in the trace entry for hitag.
-            uint8_t nbits = parityBytes[0];
             if (j == 0) {
 
+                // handle partial bytes.  The parity array[0] is used to store number of left over bits from NBYTES
+                // This part prints the number of bits in the trace entry for hitag.
+                uint8_t nbits = parityBytes[0];
+                
                 // only apply this to lesser than one byte
                 if (data_len == 1) {
 
-                    if (nbits == 5) {
-                        snprintf(line[0], 120, "%2u: %02X  ", nbits, frame[0] >> (8 - nbits));
-                    } else {
-                        snprintf(line[0], 120, "%2u: %02X  ", nbits, frame[0] >> (8 - nbits));
-                    }
+                    snprintf(line[0], 120, "%2u: %02X  ", nbits, frame[0] >> (8 - nbits));
 
                 } else {
                     if (nbits == 0) {
-                        snprintf(line[0], 120, "%2u: %02X  ", (data_len * 8), frame[0]);
+                        snprintf(line[0], 120, "%2u: %02X  ", (uint16_t)(data_len * 8), frame[0]);
                     } else {
-                        snprintf(line[0], 120, "%2u: %02X  ", ((data_len - 1) * 8) + nbits, frame[0]);
+                        snprintf(line[0], 120, "%2u: %02X  ", (uint16_t)((data_len - 1) * 8) + nbits, frame[0]);
                     }
                 }
                 offset = 4;
@@ -676,7 +673,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     if (markCRCBytes && data_len > 2) {
         // CRC-command
-        if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAGS)) && (data_len > 1)) {
+        if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAGS))) {
             // Note that UID REQUEST response has no CRC, but we don't know
             // if the response we see is a UID
             char *pos1 = line[(data_len - 1) / 18] + (((data_len - 1) % 18) * 4) + offset - 1;
@@ -989,7 +986,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             // handle partial bytes.  The parity array[0] is used to store number of left over bits from NBYTES
             // This part prints the number of bits in the trace entry for hitag.
             uint8_t nbits = parityBytes[0];
-
             annotateHitag2(explanation, sizeof(explanation), ht2plain, n, nbits, hdr->isResponse, NULL, 0, true);
 
             // iceman: colorise crc bytes here will need a refactor of code from above.
@@ -1000,19 +996,13 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
                     // only apply this to lesser than one byte
                     if (n == 1) {
-
-                        if (nbits == 5) {
-                            snprintf(line[0], 120, "%2u: %02X  ", nbits, ht2plain[0] >> (8 - nbits));
-                        } else {
-                            snprintf(line[0], 120, "%2u: %02X  ", nbits, ht2plain[0] >> (8 - nbits));
-                        }
-
+                        snprintf(line[0], 120, "%2u: %02X  ", nbits, ht2plain[0] >> (8 - nbits));
                     } else {
 
                         if (nbits == 0) {
-                            snprintf(line[0], 120, "%2u: %02X  ", (n * 8), ht2plain[0]);
+                            snprintf(line[0], 120, "%2u: %02X  ", (uint16_t)(n * 8), ht2plain[0]);
                         } else {
-                            snprintf(line[0], 120, "%2u: %02X  ", ((n - 1) * 8) + nbits, ht2plain[0]);
+                            snprintf(line[0], 120, "%2u: %02X  ", (uint16_t)((n - 1) * 8) + nbits, ht2plain[0]);
                         }
                     }
                     offset = 4;
@@ -1049,7 +1039,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
 
     if (showWaitCycles && hdr->isResponse == false && next_record_is_response(tracepos, trace)) {
 
-        tracelog_hdr_t *next_hdr = (tracelog_hdr_t *)(trace + tracepos);
+        const tracelog_hdr_t *next_hdr = (tracelog_hdr_t *)(trace + tracepos);
 
         uint32_t time1 = end_of_transmission_timestamp - first_hdr->timestamp;
         uint32_t time2 = next_hdr->timestamp - first_hdr->timestamp;
