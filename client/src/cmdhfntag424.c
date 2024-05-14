@@ -280,7 +280,7 @@ static void ntag424_calc_receive_iv(ntag424_session_keys_t *session_keys, uint8_
     aes_encode(zero_iv, session_keys->encryption, iv_clear, out_ivc, 16);
 }
 
-static void ntag424_calc_mac(ntag424_session_keys_t *session_keys, uint8_t command, uint8_t *data, uint8_t datalen, uint8_t *out_mac) {
+static void ntag424_calc_mac(const ntag424_session_keys_t *session_keys, uint8_t command, const uint8_t *data, uint8_t datalen, uint8_t *out_mac) {
     uint8_t mac_input_header[] = { command,
                                    (uint8_t)session_keys->command_counter, (uint8_t)(session_keys->command_counter >> 8),
                                    session_keys->ti[0], session_keys->ti[1], session_keys->ti[2], session_keys->ti[3]
@@ -445,7 +445,7 @@ static int ntag424_get_file_settings(uint8_t fileno, ntag424_file_settings_t *se
     return PM3_SUCCESS;
 }
 
-static int ntag424_write_file_settings(uint8_t fileno, ntag424_file_settings_t *settings, ntag424_session_keys_t *session_keys) {
+static int ntag424_write_file_settings(uint8_t fileno, const ntag424_file_settings_t *settings, ntag424_session_keys_t *session_keys) {
 
     // ------- Convert file settings to the format for writing
     file_settings_write_t write_settings = {
@@ -807,7 +807,7 @@ static int ntag424_get_signature(uint8_t *signature_out) {
     return PM3_SUCCESS;
 }
 
-static int ntag424_change_key(uint8_t keyno, uint8_t *new_key, uint8_t *old_key, uint8_t version, ntag424_session_keys_t *session_keys) {
+static int ntag424_change_key(uint8_t keyno, const uint8_t *new_key, const uint8_t *old_key, uint8_t version, ntag424_session_keys_t *session_keys) {
     // -------- Calculate xor and crc
     uint8_t key[16] = {0};
     uint8_t crc[4] = {0};
@@ -965,7 +965,7 @@ static int CmdHF_ntag424_auth(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int keyno;
+    int keyno = 0;
     uint8_t key[16] = {0};
     if (ntag424_cli_get_auth_information(ctx, 1, 2, &keyno, key) != PM3_SUCCESS) {
         CLIParserFree(ctx);
@@ -1019,7 +1019,7 @@ static int CmdHF_ntag424_read(const char *Cmd) {
 
     int fileno = arg_get_int(ctx, 1);
 
-    int keyno;
+    int keyno = 0;
     uint8_t key[16] = {0};
     bool auth = (ntag424_cli_get_auth_information(ctx, 2, 3, &keyno, key) == PM3_SUCCESS);
 
@@ -1248,7 +1248,7 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int fileno = arg_get_int(ctx, 1);
 
-    int keyno;
+    int keyno = 0;
     uint8_t key[16] = {0};
 
     uint8_t has_options = 0;
