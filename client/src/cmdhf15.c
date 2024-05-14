@@ -130,15 +130,15 @@ static const productName_t uidmapping[] = {
     { 0xe002480000000000LL, 24, "ST Microelectronics; ST25TV16K"},
     { 0xe002480000000000LL, 24, "ST Microelectronics; ST25TV64K"},
 
-/*
-ST25TV02K    0xe0 02 23
-ST25TV512    0xe0 02 23
-ST25TV02KC    0xe00208
-ST25TV512C    0xe00208
-ST25TV04K-P    0xe00235
-ST25TV16K    0xe00248
-ST25TV64K    0xe00248
-*/
+    /*
+    ST25TV02K    0xe0 02 23
+    ST25TV512    0xe0 02 23
+    ST25TV02KC    0xe00208
+    ST25TV512C    0xe00208
+    ST25TV04K-P    0xe00235
+    ST25TV16K    0xe00248
+    ST25TV64K    0xe00248
+    */
 
     { 0xE003000000000000LL, 16, "Hitachi, Ltd Japan" },
 
@@ -480,7 +480,7 @@ static int iso15_error_handling_card_response(uint8_t *d, uint16_t n) {
         return PM3_ECRC;
     }
 
-    if ( (d[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR ) {
+    if ((d[0] & ISO15_RES_ERROR) == ISO15_RES_ERROR) {
         if (d[1] == 0x0F || d[1] == 0x10) {
             return PM3_EOUTOFBOUND;
         }
@@ -1911,7 +1911,7 @@ static int CmdHF15Dump(const char *Cmd) {
     uint8_t dCpt = 10;
 
     int res = iso15_error_handling_card_response(d, resp.length);
-    if ( res != PM3_SUCCESS ) {
+    if (res != PM3_SUCCESS) {
         free(tag);
         free(packet);
         return res;

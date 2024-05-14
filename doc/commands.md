@@ -137,6 +137,9 @@ Check column "offline" for their availability.
 |`data diff              `|Y       |`Diff of input files`
 |`data hexsamples        `|N       |`Dump big buffer as hex bytes`
 |`data samples           `|N       |`Get raw samples for graph window ( GraphBuffer )`
+|`data test_ss8          `|N       |`Test the implementation of Buffer Save States (8-bit buffer)`
+|`data test_ss32         `|N       |`Test the implementation of Buffer Save States (32-bit buffer)`
+|`data test_ss32s        `|N       |`Test the implementation of Buffer Save States (32-bit signed buffer)`
 
 
 ### emv
@@ -221,6 +224,8 @@ Check column "offline" for their availability.
 |`hf 14b wrbl            `|N       |`Write data to a SRI512/SRIX4 tag`
 |`hf 14b view            `|Y       |`Display content from tag dump file`
 |`hf 14b valid           `|Y       |`SRIX4 checksum test`
+|`hf 14b calypso         `|N       |`Read contents of a Calypso card`
+|`hf 14b mobib           `|N       |`Read contents of a Mobib card`
 
 
 ### hf 15
@@ -1041,7 +1046,7 @@ Check column "offline" for their availability.
 |`lf hitag help          `|Y       |`This help`
 |`lf hitag list          `|Y       |`List Hitag trace history`
 |`lf hitag info          `|N       |`Hitag 2 tag information`
-|`lf hitag selftest      `|Y       |`Perform self test`
+|`lf hitag test          `|Y       |`Perform self tests`
 |`lf hitag dump          `|N       |`Dump Hitag 2 tag`
 |`lf hitag read          `|N       |`Read Hitag memory`
 |`lf hitag sniff         `|N       |`Eavesdrop Hitag communication`
@@ -1051,6 +1056,7 @@ Check column "offline" for their availability.
 |`lf hitag eview         `|N       |`View emulator memory`
 |`lf hitag sim           `|N       |`Simulate Hitag transponder`
 |`lf hitag cc            `|N       |`Hitag S: test all provided challenges`
+|`lf hitag crack2        `|N       |`Recover 2048bits of crypto stream`
 |`lf hitag chk           `|N       |`Check keys`
 |`lf hitag lookup        `|Y       |`Uses authentication trace to check for key in dictionary file`
 |`lf hitag ta            `|N       |`Hitag 2: test all recorded authentications`

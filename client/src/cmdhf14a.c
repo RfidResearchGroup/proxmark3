@@ -2452,9 +2452,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                     get_compact_tlv(card.ats + pos, calen);
                 } else {
                     PrintAndLogEx(SUCCESS, "%s - %s"
-                        , sprint_hex_inrow(card.ats + pos, calen)
-                        , sprint_ascii(card.ats + pos, calen)
-                    );
+                                  , sprint_hex_inrow(card.ats + pos, calen)
+                                  , sprint_ascii(card.ats + pos, calen)
+                                 );
                 }
 
                 PrintAndLogEx(NORMAL, "");

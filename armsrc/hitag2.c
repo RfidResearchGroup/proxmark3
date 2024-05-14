@@ -2718,7 +2718,7 @@ int ht2_tx_rx(uint8_t *tx, size_t txlen, uint8_t *rx, size_t *rxlen, bool ledcon
 
     res = PM3_SUCCESS;
 
-out:    
+out:
     if (keep_field_up == false) {
         lf_finalize(false);
     }

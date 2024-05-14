@@ -1107,7 +1107,7 @@ static int CmdEM4x70AutoRecover_ParseArgs(const char *Cmd, em4x70_cmd_input_reco
         ,
         "lf em 4x70 autorecover --rnd 45F54ADA252AAC --frn 4866BB70 --grn 9BD180   (pm3 test key)\n"
         "lf em 4x70 autorecover --rnd 3FFE1FB6CC513F --frn F355F1A0 --grn 609D60   (research paper key)\n"
-        "lf em 4x70 autorecover --rnd 7D5167003571F8 --frn 982DBCC0 --grn 36C0E0   (autorecovery test key)\n"        
+        "lf em 4x70 autorecover --rnd 7D5167003571F8 --frn 982DBCC0 --grn 36C0E0   (autorecovery test key)\n"
     );
 
     void *argtable[] = {

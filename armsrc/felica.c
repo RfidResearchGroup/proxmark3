@@ -290,7 +290,7 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
             Dbhexdump(FelicaFrame.len, FelicaFrame.framebytes, 0);
         }
     }
-    // 0. OK   
+    // 0. OK
     return 0;
 }
 
@@ -589,7 +589,7 @@ void felica_sendraw(const PacketCommandNG *c) {
                 AddCrc(buf + 2, len);
             }
         }
-        
+
         if (g_dbglevel >= DBG_DEBUG) {
             Dbprintf("Transmit Frame (no CRC shown):");
             Dbhexdump(len, buf, 0);
