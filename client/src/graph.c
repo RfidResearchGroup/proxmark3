@@ -519,7 +519,8 @@ buffer_savestate_t save_buffer32(uint32_t *src, size_t length) {
     buffer_savestate_t bst = {
         .type = sizeof(uint32_t),
         .bufferSize = length,
-        .buffer = savedBuffer
+        .buffer = savedBuffer,
+        .padding = 0
     };
 
     return bst;
@@ -535,7 +536,8 @@ buffer_savestate_t save_bufferS32(int32_t *src, size_t length) {
     buffer_savestate_t bst = {
         .type = (sizeof(int32_t) >> 8),
         .bufferSize = length,
-        .buffer = savedBuffer
+        .buffer = savedBuffer,
+        .padding = 0
     };
 
     return bst;
@@ -547,8 +549,11 @@ buffer_savestate_t save_buffer8(uint8_t *src, size_t length) {
     // 1/4 of the size needed
     size_t buffSize = (length / 4);
 
+    PrintAndLogEx(DEBUG, "(save_buffer8) buffSize = %llu, length = %llu", buffSize, length);
+
     if (length % 4) {
         buffSize++;
+        PrintAndLogEx(DEBUG, "(save_buffer8) new buffSize = %llu", buffSize);
     }
 
     // calloc the memory needed
@@ -564,7 +569,8 @@ buffer_savestate_t save_buffer8(uint8_t *src, size_t length) {
     buffer_savestate_t bst = {
         .type = sizeof(uint8_t),
         .bufferSize = buffSize,
-        .buffer = savedBuffer
+        .buffer = savedBuffer,
+        .padding = ((buffSize * 4) - length)
     };
 
     return bst;
@@ -602,13 +608,18 @@ size_t restore_buffer8(buffer_savestate_t saveState, uint8_t *dest) {
     }
 
     size_t index = 0;
+    size_t length = ((saveState.bufferSize * 4) - saveState.padding);
 
     // Unpack the array
     for (size_t i = 0; i < saveState.bufferSize; i++) {
         dest[index++] = saveState.buffer[i];
+        if(index == length) break;
         dest[index++] = (saveState.buffer[i] >> 8) & 0xFF;
+        if(index == length) break;
         dest[index++] = (saveState.buffer[i] >> 16) & 0xFF;
+        if(index == length) break;
         dest[index++] = (saveState.buffer[i] >> 24) & 0xFF;
+        if(index == length) break;
     }
 
     return index;
