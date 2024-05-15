@@ -1522,8 +1522,7 @@ static int CmdEM4x70Calc(const char *Cmd) {
             data.grn.grn[0], data.grn.grn[1], data.grn.grn[2]
             );
     }
-
-    PrintAndLogEx(SUCCESS, "KEY: " _GREEN_("%s") "  RND: " _GREEN_("%s") "  FRN: " _GREEN_("%s") "  GRN: " _GREEN_("%s"), key_string, rnd_string, frn_string, grn_string);
+    PrintAndLogEx(SUCCESS, "KEY: %s  RND: %s  FRN: " _GREEN_("%s") "  GRN: " _GREEN_("%s"), key_string, rnd_string, frn_string, grn_string);
     return PM3_SUCCESS;
 }
 
