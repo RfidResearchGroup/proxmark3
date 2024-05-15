@@ -440,7 +440,7 @@ static int verify_auth_em4x70(const em4x70_cmd_input_verify_auth_t *opts) {
 }
 
 
-int CmdEM4x70Info(const char *Cmd) {
+static int CmdEM4x70Info(const char *Cmd) {
 
     // invoke reading of a EM4x70 tag which has to be on the antenna because
     // decoding is done by the device (not on client side)
@@ -480,7 +480,7 @@ int CmdEM4x70Info(const char *Cmd) {
     return result;
 }
 
-int CmdEM4x70Write(const char *Cmd) {
+static int CmdEM4x70Write(const char *Cmd) {
 
     // write one block/word (16 bits) to the tag at given block address (0-15)
     CLIParserContext *ctx;
@@ -532,7 +532,7 @@ int CmdEM4x70Write(const char *Cmd) {
     return result;
 }
 
-int CmdEM4x70Brute(const char *Cmd) {
+static int CmdEM4x70Brute(const char *Cmd) {
 
     // From paper "Dismantling Megamos Crypto", Roel Verdult, Flavio D. Garcia and Barıs¸ Ege.
     // Partial Key-Update Attack (optimized version)
@@ -618,7 +618,7 @@ int CmdEM4x70Brute(const char *Cmd) {
     return result;
 }
 
-int CmdEM4x70Unlock(const char *Cmd) {
+static int CmdEM4x70Unlock(const char *Cmd) {
 
     // send pin code to device, unlocking it for writing
     CLIParserContext *ctx;
@@ -666,7 +666,7 @@ int CmdEM4x70Unlock(const char *Cmd) {
     return result;
 }
 
-int CmdEM4x70Auth(const char *Cmd) {
+static int CmdEM4x70Auth(const char *Cmd) {
 
     // Authenticate transponder
     // Send 56-bit random number + pre-computed f(rnd, k) to transponder.
@@ -726,7 +726,7 @@ int CmdEM4x70Auth(const char *Cmd) {
     return result;
 }
 
-int CmdEM4x70SetPIN(const char *Cmd) {
+static int CmdEM4x70SetPIN(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x70 setpin",
                   "Write new PIN\n",
@@ -771,7 +771,7 @@ int CmdEM4x70SetPIN(const char *Cmd) {
     return result;
 }
 
-int CmdEM4x70SetKey(const char *Cmd) {
+static int CmdEM4x70SetKey(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 4x70 setkey",
                   "Write new 96-bit key to tag\n",
@@ -969,7 +969,7 @@ static int CmdEM4x70Recover_ParseArgs(const char *Cmd, em4x70_cmd_input_recover_
     return result;
 }
 
-int CmdEM4x70Recover(const char *Cmd) {
+static int CmdEM4x70Recover(const char *Cmd) {
     // From paper "Dismantling Megamos Crypto", Roel Verdult, Flavio D. Garcia and Barıs¸ Ege.
     // Partial Key-Update Attack -- final 48 bits (after optimized version gets k95..k48)
     em4x70_recovery_data_t recover_ctx = {0};
@@ -1552,6 +1552,7 @@ static int CmdHelp(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+///////////////////////////////////////////////////////////////////////////////
 // Only two functions need to be non-static:
 // * CmdLFEM4X70()
 // * detect_4x70_block()
