@@ -42,7 +42,7 @@ const char *get_st_chip_model(uint8_t pc) {
             return "SRT512";
         case 0xC4:
             return "ST25TA64K";
-        case 0xC5: 
+        case 0xC5:
             return "ST25TA16K";
         case 0xE2:
             return "ST25??? IKEA Rothult";

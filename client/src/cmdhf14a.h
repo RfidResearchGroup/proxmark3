@@ -66,7 +66,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search);
 int infoHF14A4Applications(bool verbose);
 const char *getTagInfo(uint8_t uid);
 int Hf14443_4aGetCardData(iso14a_card_select_t *card);
-int ExchangeAPDU14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
+int ExchangeAPDU14a(const uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen);
 int ExchangeRAW14a(uint8_t *datain, int datainlen, bool activateField, bool leaveSignalON, uint8_t *dataout, int maxdataoutlen, int *dataoutlen, bool silentMode);
 
 iso14a_polling_parameters_t iso14a_get_polling_parameters(bool use_ecp, bool use_magsafe);

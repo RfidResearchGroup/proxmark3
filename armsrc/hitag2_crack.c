@@ -19,7 +19,7 @@
 
 
 #include "hitag2_crack.h"
-#include "hitag2_crypto.h"
+#include "hitag2/hitag2_crypto.h"
 #include "hitag2.h"
 #include "proxmark3_arm.h"
 #include "commonutil.h"
@@ -168,7 +168,7 @@ static bool hitag2crack_test_e_p0cmd(uint8_t *keybits, uint8_t *nrar, uint8_t *e
     // send extended encrypted cmd
     uint8_t resp[4] = {0};
     if (hitag2crack_send_e_cmd(resp, nrar, e_ext_cmd, 40)) {
-       
+
         // test if it was valid
         if (memcmp(resp, ERROR_RESPONSE, 4)) {
             return true;
@@ -324,10 +324,10 @@ static bool ht2crack_consume_keystream(lf_hitag_crack2_t *c2, int kslen, int *ks
         DbpString("ht2crack_consume_keystream:  conlen < 10");
         return false;
     }
-    
+
     // calculate how many repeated commands to send in this extended command.
     int numcmds = conlen / 10;
-    
+
     // xor extended cmd with keybits
     hitag2crack_xor(c2->e_ext_cmd, c2->ext_cmd, c2->keybits + *ksoffset,  (numcmds * 10));
 
@@ -338,7 +338,7 @@ static bool ht2crack_consume_keystream(lf_hitag_crack2_t *c2, int kslen, int *ks
         Dbprintf("ht2crack_consume_keystream:  tx/rx cmd failed,  got %zu", n);
         return false;
     }
-    
+
     // test response
     if (memcmp(resp, ERROR_RESPONSE, 4) == 0) {
         DbpString("ht2crack_consume_keystream:   got error response from card");
@@ -346,7 +346,7 @@ static bool ht2crack_consume_keystream(lf_hitag_crack2_t *c2, int kslen, int *ks
     }
 
     // dont bother decrypting the response - we already know the keybits
-    
+
     // update ksoffset with command length and response
     *ksoffset += (numcmds * 10) + 32;
 
@@ -363,14 +363,14 @@ static bool ht2crack_consume_keystream(lf_hitag_crack2_t *c2, int kslen, int *ks
 //static bool ht2crack_extend_keystream(uint8_t *keybits, int *kslen, int ksoffset, uint8_t *nrar, uint8_t *uid) {
 /*
 static bool ht2crack_extend_keystream(lf_hitag_crack2_t *c2, int *kslen, int ksoffset) {
-    
+
        // calc number of command iterations to send
     int cmdlen = *kslen - ksoffset;
     if (cmdlen < 10) {
         DbpString("extend_keystream:   cmdlen < 10");
         return false;
     }
-    
+
     int numcmds = cmdlen / 10;
 
     // xor extended cmd with keybits
@@ -388,7 +388,7 @@ static bool ht2crack_extend_keystream(lf_hitag_crack2_t *c2, int *kslen, int kso
     // test response
     if (memcmp(resp, ERROR_RESPONSE, 4) == 0) {
         return false;
-    }    
+    }
 
     // convert response to binarray
     uint8_t e_response[32];
@@ -399,7 +399,7 @@ static bool ht2crack_extend_keystream(lf_hitag_crack2_t *c2, int *kslen, int kso
 
     // update kslen
     *kslen = ksoffset + (numcmds * 10) + 32;
-    
+
     return true;
 }
 */
@@ -469,8 +469,8 @@ out:
 void ht2_crack2(uint8_t *nrar_hex) {
 
 
-    lf_hitag_crack2_t *c2 = (lf_hitag_crack2_t*)BigBuf_calloc(sizeof(lf_hitag_crack2_t));
-    lf_hitag_crack_response_t *packet = (lf_hitag_crack_response_t*)BigBuf_calloc(sizeof(lf_hitag_crack_response_t));
+    lf_hitag_crack2_t *c2 = (lf_hitag_crack2_t *)BigBuf_calloc(sizeof(lf_hitag_crack2_t));
+    lf_hitag_crack_response_t *packet = (lf_hitag_crack_response_t *)BigBuf_calloc(sizeof(lf_hitag_crack_response_t));
 
     g_logging = false;
     LEDsoff();
@@ -537,7 +537,7 @@ void ht2_crack2(uint8_t *nrar_hex) {
         }
 
         // while we have at least 52 bits of keystream, consume it with
-        // extended read page 0 commands. 
+        // extended read page 0 commands.
         // 52 = 10 (min command len) + 32 (response) + 10 (min command len we'll send)
         /*
                 while ((kslen - ksoffset) >= 52) {
@@ -549,7 +549,7 @@ void ht2_crack2(uint8_t *nrar_hex) {
                 goto out;
             }
         }
-        // send an extended command to retrieve more keystream, 
+        // send an extended command to retrieve more keystream,
         // updating kslen as we go
         if (ht2crack_extend_keystream(c2, &kslen, ksoffset) == false)  {
             DbpString("ht2crack_extend_keystream failed");
@@ -576,7 +576,7 @@ void ht2_crack2(uint8_t *nrar_hex) {
 
         // convert response to binarray
         uint8_t e_response[32];
-        hex2binarray((char*)e_response, (char*)resp);
+        hex2binarray((char *)e_response, (char *)resp);
 
         // recover keystream from encrypted response
         hitag2crack_xor(c2->keybits + kslen + 40, e_response, c2->uid, 32);
@@ -587,13 +587,13 @@ void ht2_crack2(uint8_t *nrar_hex) {
         Dbprintf("Recovered " _YELLOW_("%i") " bits of keystream", kslen);
     }
 
-/*    
-    uint8_t *keybitshex = BigBuf_calloc(64);
-    for (int i = 0; i < 2048; i += 256) {
-        binarray2hex(c2->keybits + i, 256, keybitshex);
-        Dbhexdump(256, keybitshex, false);
-    }
-*/
+    /*
+        uint8_t *keybitshex = BigBuf_calloc(64);
+        for (int i = 0; i < 2048; i += 256) {
+            binarray2hex(c2->keybits + i, 256, keybitshex);
+            Dbhexdump(256, keybitshex, false);
+        }
+    */
     BigBuf_free();
 
     // copy UID since we already have it...
@@ -602,14 +602,14 @@ void ht2_crack2(uint8_t *nrar_hex) {
 
 out:
 
-/*
-    DbpString("keybits:");
-    Dbhexdump(2080, c2->keybits, false);
-    DbpString("uid:");
-    Dbhexdump(32, c2->uid, false);
-    DbpString("nrar:");
-    Dbhexdump(64, c2->nrar, false);
-*/
+    /*
+        DbpString("keybits:");
+        Dbhexdump(2080, c2->keybits, false);
+        DbpString("uid:");
+        Dbhexdump(32, c2->uid, false);
+        DbpString("nrar:");
+        Dbhexdump(64, c2->nrar, false);
+    */
 
     reply_ng(CMD_LF_HITAG2_CRACK_2, res, (uint8_t *)packet, sizeof(lf_hitag_crack_response_t));
 }

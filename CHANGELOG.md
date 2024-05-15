@@ -4,7 +4,12 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Changed standalone mode HF_MATTYRUN - support more card sizes, user dictionaries, improved emulation (@michaelroland)
-- Added AIDs `002000` and `FF30FF` from Metrolinx Presto Card (@RunTheBot)
+- Fixed wrong use of free() in desfire crypto on arm src,  thanks @jlitewski! (@iceman1001)
+- Added `lf em 4x70 calc` - calculate `frn`/`grn` for a given `key` + `rnd`
+- Fixed `hf 15 dump` memory leaks (@jlitewski)
+- Changed `hf search` - topaz is detect before ISO14443a and commented out WIP ICT code path (@iceman1001)
+- Fixed `hf search` - where felica reader now doesnt timeout and give wrong response (@iceman1001)
+- Fixed overflow in deps/jansson library (@iceman1001)
 - Added `lf hitag crack2` -  WIP.  Trying to add the second attack vector against Hitag2 (@iceman1001)
 - Changed `hf 14b reader --plot` - made the anticollision signal trace download optional (@iceman1001)
 - Added `lf_hitag_crypto.trace` - trace file of a complete read out of a Hitag2 in crypto mode (@iceman1001)

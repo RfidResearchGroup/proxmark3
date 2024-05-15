@@ -48,7 +48,6 @@ void RunMod(void) {
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
 
     const uint32_t high = 0x20; // LF high value is always 0x20 here
-    uint32_t low = 0;
 
     uint32_t fac = FACILITY_CODE, cardnum = 0;
 
@@ -80,7 +79,7 @@ void RunMod(void) {
         if (BUTTON_HELD(1000) == BUTTON_HOLD) break; // long button press (>=1sec) exit
 
         // calculate the new LF low value including Card number, Facility code and checksum
-        low = (cardnum << 1) | (fac << 17);
+        uint32_t low = (cardnum << 1) | (fac << 17);
         low |= oddparity32((low >> 1) & 0xFFF);
         low |= evenparity32((low >> 13) & 0xFFF) << 25;
 

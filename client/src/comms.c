@@ -87,7 +87,7 @@ void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, vo
     SendCommandOLD(cmd, arg0, arg1, arg2, data, len);
 }
 
-void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
+void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len) {
     PacketCommandOLD c = {CMD_UNKNOWN, {0, 0, 0}, {{0}}};
     c.cmd = cmd;
     c.arg[0] = arg0;
@@ -198,7 +198,7 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
     SendCommandNG_internal(cmd, data, len, true);
 }
 
-void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
+void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len) {
     uint64_t arg[3] = {arg0, arg1, arg2};
     if (len > PM3_CMD_DATA_SIZE_MIX) {
         PrintAndLogEx(WARNING, "Sending %zu bytes of payload is too much for MIX frames, abort", len);
@@ -228,7 +228,7 @@ void clearCommandBuffer(void) {
  * @brief storeCommand stores a USB command in a circular buffer
  * @param UC
  */
-static void storeReply(PacketResponseNG *packet) {
+static void storeReply(const PacketResponseNG *packet) {
     pthread_mutex_lock(&rxBufferMutex);
     if ((cmd_head + 1) % CMD_BUFFER_SIZE == cmd_tail) {
         //If these two are equal, we're about to overwrite in the
@@ -296,7 +296,7 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
                     uint16_t flag;
                     uint8_t buf[PM3_CMD_DATA_SIZE - sizeof(uint16_t)];
                 } PACKED;
-                struct d *data = (struct d *)&packet->data.asBytes;
+                const struct d *data = (struct d *)&packet->data.asBytes;
                 len = packet->length - sizeof(data->flag);
                 flag = data->flag;
                 memcpy(s, data->buf, len);
@@ -350,7 +350,7 @@ static void PacketResponseReceived(PacketResponseNG *packet) {
 // When communication thread is dead,   start up and try to start it again
 void *uart_reconnect(void *targ) {
 
-    communication_arg_t *connection = (communication_arg_t *)targ;
+    const communication_arg_t *connection = (communication_arg_t *)targ;
 
 #if defined(__MACH__) && defined(__APPLE__)
     disableAppNap("Proxmark3 polling UART");
@@ -405,7 +405,7 @@ __attribute__((force_align_arg_pointer))
 #endif
 #endif
 *uart_communication(void *targ) {
-    communication_arg_t *connection = (communication_arg_t *)targ;
+    const communication_arg_t *connection = (communication_arg_t *)targ;
     uint32_t rxlen;
     bool commfailed = false;
     PacketResponseNG rx;
@@ -686,7 +686,7 @@ bool IsCommunicationThreadDead(void) {
 
 bool SetCommunicationReceiveMode(bool isRawMode) {
     if (isRawMode) {
-        uint8_t *buffer = __atomic_load_n(&comm_raw_data, __ATOMIC_SEQ_CST);
+        const uint8_t *buffer = __atomic_load_n(&comm_raw_data, __ATOMIC_SEQ_CST);
         if (buffer == NULL) {
             PrintAndLogEx(ERR, "Buffer for raw data is not set");
             return false;
@@ -850,7 +850,7 @@ int TestProxmark(pm3_device_t *dev) {
         return PM3_EDEVNOTSUPP;
     }
 
-    memcpy(&g_pm3_capabilities, resp.data.asBytes, MIN(sizeof(capabilities_t), resp.length));
+    memcpy(&g_pm3_capabilities, resp.data.asBytes, sizeof(capabilities_t));
     g_conn.send_via_fpc_usart = g_pm3_capabilities.via_fpc;
     g_conn.uart_speed = g_pm3_capabilities.baudrate;
 

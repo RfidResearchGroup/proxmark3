@@ -101,9 +101,9 @@ void Dbhexdump(int len, const uint8_t *d, bool bAsci) {
         d += 16;
     }
 #endif
-}
+}void print_result(const char *name, const uint8_t *d, size_t
 
-void print_result(const char *name, const uint8_t *d, size_t n) {
+ n) {
 
     const uint8_t *p = d;
     uint16_t tmp = n & 0xFFF0;
@@ -129,7 +129,7 @@ void print_result(const char *name, const uint8_t *d, size_t n) {
 }
 
 // Prints message and hexdump
-void print_dbg(char *msg, uint8_t *d, uint16_t n) {
+void print_dbg(const char *msg, const uint8_t *d, uint16_t n) {
     if (g_dbglevel == DBG_DEBUG) {
         print_result(msg, d, n);
     }
