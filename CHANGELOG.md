@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed standalone mode HF_MATTYRUN - support more card sizes, user dictionaries, improved emulation (@michaelroland)
 - Fixed wrong use of free() in desfire crypto on arm src,  thanks @jlitewski! (@iceman1001)
 - Added `lf em 4x70 calc` - calculate `frn`/`grn` for a given `key` + `rnd`
 - Fixed `hf 15 dump` memory leaks (@jlitewski)
