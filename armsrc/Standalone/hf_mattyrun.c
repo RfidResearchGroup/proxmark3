@@ -2676,6 +2676,7 @@ void RunMod(void) {
             }
 
             int filled;
+            partialEmulation = false;
             DbpString("[=] Filling emulator memory using key A");
             filled = MifareECardLoad(sectorsCnt, MF_KEY_A);
             if (filled != PM3_SUCCESS) {
