@@ -27,11 +27,6 @@ extern "C" {
 #include <stddef.h>
 #include <stdbool.h>
 
-typedef struct {
-    uint32_t pos;
-    char label[30];
-} marker_t;
-
 void ShowGraphWindow(void);
 void HideGraphWindow(void);
 void RepaintGraphWindow(void);
@@ -46,16 +41,9 @@ void MainGraphics(void);
 void InitGraphics(int argc, char **argv, char *script_cmds_file, char *script_cmd, bool stayInCommandLoop);
 void ExitGraphics(void);
 
-//Temporary Marker Functions
-extern void add_temporary_marker(uint32_t position, const char *label);
-extern void remove_temporary_markers(void);
-
 extern double g_CursorScaleFactor;
 extern char g_CursorScaleFactorUnit[11];
 extern double g_PlotGridX, g_PlotGridY, g_DefaultGridX, g_DefaultGridY;
-extern marker_t g_MarkerA, g_MarkerB, g_MarkerC, g_MarkerD;
-extern marker_t *g_TempMarkers;
-extern uint8_t g_TempMarkerSize;
 extern uint32_t g_GraphStart, g_GraphStart_old, g_GraphStop;
 extern int CommandFinished;
 extern int offline;

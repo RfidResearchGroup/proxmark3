@@ -3,6 +3,13 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed wrong use of free() in desfire crypto on arm src,  thanks @jlitewski! (@iceman1001)
+- Added `lf em 4x70 calc` - calculate `frn`/`grn` for a given `key` + `rnd`
+- Fixed `hf 15 dump` memory leaks (@jlitewski)
+- Changed `hf search` - topaz is detect before ISO14443a and commented out WIP ICT code path (@iceman1001)
+- Fixed `hf search` - where felica reader now doesnt timeout and give wrong response (@iceman1001)
+- Fixed overflow in deps/jansson library (@iceman1001)
+- Added `lf hitag crack2` -  WIP.  Trying to add the second attack vector against Hitag2 (@iceman1001)
 - Changed `hf 14b reader --plot` - made the anticollision signal trace download optional (@iceman1001)
 - Added `lf_hitag_crypto.trace` - trace file of a complete read out of a Hitag2 in crypto mode (@iceman1001)
 - Fix `lf cmdread` - uninitialised memory usage (@iceman1001)
@@ -31,6 +38,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Changed `data load` - now shows loaded number as comma printed. (@iceman1001)
 - Updated `/tools/hitag2crack/common/OpenCL-Headers/CL` with latest from KhronosGroup github page (@iceman1001)
 - Fixed `lf hitag list` - improved HITAG2 protocol annotation (@iceman1001)
+- Added AIDs `002000` and `FF30FF` from Metrolinx Presto Card (@RunTheBot)
 
 ## [Zenith.4.18340][2024-03-20]
  - Changed `hf mf info` - some detections (@iceman1001)

@@ -34,6 +34,11 @@ typedef struct {
     uint32_t       clock;      // (optional) Clock data for the buffer
 } buffer_savestate_t;
 
+typedef struct {
+    uint32_t pos;
+    char label[30];
+} marker_t;
+
 void AppendGraph(bool redraw, uint16_t clock, int bit);
 size_t ClearGraph(bool redraw);
 bool HasGraphData(void);
@@ -52,6 +57,9 @@ int GetNrzClock(const char *str, bool verbose);
 int GetFskClock(const char *str, bool verbose);
 bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge);
 
+extern void add_temporary_marker(uint32_t position, const char *label);
+extern void remove_temporary_markers(void);
+
 buffer_savestate_t save_buffer32(uint32_t *src, size_t length);
 buffer_savestate_t save_bufferS32(int32_t *src, size_t length);
 buffer_savestate_t save_buffer8(uint8_t *src, size_t length);
@@ -68,6 +76,10 @@ extern int32_t g_OperationBuffer[MAX_GRAPH_TRACE_LEN];
 extern int32_t g_OverlayBuffer[MAX_GRAPH_TRACE_LEN];
 extern bool    g_useOverlays;
 extern size_t  g_GraphTraceLen;
+
+extern marker_t g_MarkerA, g_MarkerB, g_MarkerC, g_MarkerD;
+extern marker_t *g_TempMarkers;
+extern uint8_t g_TempMarkerSize;
 
 extern double g_GridOffset;
 

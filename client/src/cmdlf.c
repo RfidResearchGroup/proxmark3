@@ -1587,7 +1587,7 @@ out:
 
     restore_bufferS32(saveState_gb, g_GraphBuffer);
     g_GridOffset = saveState_gb.offset;
-    
+
     return retval;
 }
 

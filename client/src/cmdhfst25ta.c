@@ -190,13 +190,13 @@ static int print_st25ta_signature(uint8_t *uid, uint8_t *signature) {
 }
 
 static int st25ta_get_signature(uint8_t *signature) {
-        /*
+    /*
     hf 14a raw -sck 0200A4040007D276000085010100
     hf 14a raw -ck 0300A4000C020001
     hf 14a raw -c 02a2b000e020
-*/
+    */
     typedef struct {
-        const char* apdu;
+        const char *apdu;
         uint8_t apdulen;
     } transport_st25a_apdu_t;
 
@@ -211,7 +211,7 @@ static int st25ta_get_signature(uint8_t *signature) {
     bool activate_field = true;
 
     for (uint8_t i = 0; i < ARRAYLEN(cmds); i++) {
-        int res = ExchangeAPDU14a( (uint8_t*)cmds[i].apdu, cmds[i].apdulen, activate_field, true, resp, sizeof(resp), &resplen);
+        int res = ExchangeAPDU14a((uint8_t *)cmds[i].apdu, cmds[i].apdulen, activate_field, true, resp, sizeof(resp), &resplen);
         if (res != PM3_SUCCESS) {
             DropField();
             return res;

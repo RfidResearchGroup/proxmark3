@@ -518,7 +518,7 @@ int ReadLF_realtime(bool reader_field) {
                 // Request USB transmission and change FIFO bank
                 if (async_usb_write_requestWrite() == false) {
                     return_value = PM3_EIO;
-                    break;
+                    goto out;
                 }
 
                 // Reset sample
@@ -535,10 +535,14 @@ int ReadLF_realtime(bool reader_field) {
             }
         }
     }
-    LED_D_OFF();
+
     return_value = async_usb_write_stop();
 
+out:     
+    LED_D_OFF();
+
     // DoAcquisition() end
+
     StopTicks();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     return return_value;

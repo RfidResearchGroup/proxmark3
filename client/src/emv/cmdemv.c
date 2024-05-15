@@ -292,7 +292,7 @@ static int emv_parse_track1(const uint8_t *d, size_t n, bool verbose) {
     // decoder
     char *tmp = str_ndup((const char *)d, n);
     uint8_t i = 0;
-    char delim[2] = "^";
+    const char delim[2] = "^";
     char *token = strtok(tmp, delim);
     while (token != NULL) {
 

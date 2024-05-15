@@ -747,7 +747,7 @@ out:
 int saveFileJSONroot(const char *preferredName, void *root, size_t flags, bool verbose) {
     return saveFileJSONrootEx(preferredName, root, flags, verbose, false);
 }
-int saveFileJSONrootEx(const char *preferredName, void *root, size_t flags, bool verbose, bool overwrite) {
+int saveFileJSONrootEx(const char *preferredName, const void *root, size_t flags, bool verbose, bool overwrite) {
     if (root == NULL)
         return PM3_EINVARG;
 
@@ -863,7 +863,7 @@ out:
 }
 
 // key file dump
-int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_sector) {
+int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, const sector_t *e_sector) {
 
     if (e_sector == NULL) return PM3_EINVARG;
 
@@ -1743,7 +1743,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 goto out;
             }
 
-            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+            snprintf(blocks, sizeof(blocks), "$.blocks.%u", i);
             JsonLoadBufAsHex(root, blocks, &tag->data[sptr], 4, &len);
             if (load_file_sanity(ctype, tag->bytesPerPage, i, len) == false) {
                 break;
@@ -1790,7 +1790,7 @@ int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, siz
                 goto out;
             }
 
-            snprintf(blocks, sizeof(blocks), "$.blocks.%d", i);
+            snprintf(blocks, sizeof(blocks), "$.blocks.%u", i);
             JsonLoadBufAsHex(root, blocks, &tag->data[sptr], 8, &len);
             if (load_file_sanity(ctype, tag->bytesPerPage, i, len) == false) {
                 break;
@@ -2426,7 +2426,7 @@ mfu_df_e detect_mfu_dump_format(uint8_t **dump, bool verbose) {
 
     // detect plain
     if (retval == MFU_DF_UNKNOWN) {
-        uint8_t *plain = *dump;
+        const uint8_t *plain = *dump;
         bcc0 = ct ^ plain[0] ^ plain[1] ^ plain[2];
         bcc1 = plain[4] ^ plain[5] ^ plain[6] ^ plain[7];
         if ((bcc0 == plain[3]) && (bcc1 == plain[8])) {

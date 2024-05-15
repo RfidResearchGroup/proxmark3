@@ -2167,6 +2167,77 @@ static int CmdLFHitag2Lookup(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdLFHitag2Crack2(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hitag lookup",
+                  "This command tries to recover 2048 bits of Hitag2 crypto stream data.\n",
+                  "lf hitag crack2 --nrar 73AA5A62EAB8529C"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "nrar", "<hex>", "specify nonce / answer as 8 hex bytes"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int nalen = 0;
+    uint8_t nrar[8] = {0};
+    CLIGetHexWithReturn(ctx, 1, nrar, &nalen);
+    CLIParserFree(ctx);
+
+    // sanity checks
+    if (nalen && nalen != 8) {
+        PrintAndLogEx(INFO, "NrAr wrong length. expected 8, got %i", nalen);
+        return PM3_EINVARG;
+    }
+
+    lf_hitag_data_t packet;
+    memset(&packet, 0, sizeof(packet));
+    memcpy(packet.NrAr, nrar, sizeof(packet.NrAr));
+
+    PrintAndLogEx(INFO, _YELLOW_("Hitag 2") " - Crack2 (NrAR)");
+
+    uint64_t t1 = msclock();
+
+    PacketResponseNG resp;
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_HITAG2_CRACK_2, (uint8_t *) &packet, sizeof(packet));
+
+    // loop
+    uint8_t attempt = 30;
+    do {
+
+        PrintAndLogEx(INPLACE, "Attack 2 running...");
+        fflush(stdout);
+
+        if (WaitForResponseTimeout(CMD_LF_HITAG2_CRACK_2, &resp, 1000) == false) {
+            attempt--;
+            continue;
+        }
+
+//        lf_hitag_crack_response_t *payload = (lf_hitag_crack_response_t *)resp.data.asBytes;
+        if (resp.status == PM3_SUCCESS) {
+            PrintAndLogEx(NORMAL, " ( %s )", _GREEN_("ok"));
+            break;
+        } else {
+            PrintAndLogEx(NORMAL, " ( %s )", _RED_("fail"));
+            break;
+        }
+
+    } while (attempt);
+
+    if (attempt == 0) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        return PM3_ESOFT;
+    }
+
+    t1 = msclock() - t1;
+    PrintAndLogEx(SUCCESS, "\ntime " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    return PM3_SUCCESS;
+}
+
 /* Test code
 
    Test data and below information about it comes from
@@ -2285,9 +2356,9 @@ static uint64_t hitag2_verify_crypto_test_round(void) {
 
 static int CmdLFHitag2Selftest(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf hitag selftest",
-                  "Perform selftest of Hitag crypto engine",
-                  "lf hitag selftest\n"
+    CLIParserInit(&ctx, "lf hitag test",
+                  "Perform self tests of Hitag crypto engine",
+                  "lf hitag test\n"
                  );
 
     void *argtable[] = {
@@ -2324,7 +2395,7 @@ static command_t CommandTable[] = {
     {"list",        CmdLFHitagList,             AlwaysAvailable, "List Hitag trace history"},
     {"-----------", CmdHelp,                    IfPm3Hitag,      "------------------------ " _CYAN_("General") " ------------------------"},
     {"info",        CmdLFHitagInfo,             IfPm3Hitag,      "Hitag 2 tag information"},
-    {"selftest",    CmdLFHitag2Selftest,        AlwaysAvailable, "Perform self test"},
+    {"test",        CmdLFHitag2Selftest,        AlwaysAvailable, "Perform self tests"},
     {"-----------", CmdHelp,                    IfPm3Hitag,      "----------------------- " _CYAN_("Operations") " -----------------------"},
 //    {"demod",       CmdLFHitag2PWMDemod,        IfPm3Hitag,      "PWM Hitag 2 reader message demodulation"},
     {"dump",        CmdLFHitag2Dump,            IfPm3Hitag,      "Dump Hitag 2 tag"},
@@ -2339,6 +2410,7 @@ static command_t CommandTable[] = {
     {"sim",         CmdLFHitagSim,              IfPm3Hitag,      "Simulate Hitag transponder"},
     {"-----------", CmdHelp,                    IfPm3Hitag,      "----------------------- " _CYAN_("Recovery") " -----------------------"},
     {"cc",          CmdLFHitagSCheckChallenges, IfPm3Hitag,      "Hitag S: test all provided challenges"},
+    {"crack2",      CmdLFHitag2Crack2,          IfPm3Hitag,      "Recover 2048bits of crypto stream"},
     {"chk",         CmdLFHitag2Chk,             IfPm3Hitag,      "Check keys"},
     {"lookup",      CmdLFHitag2Lookup,          AlwaysAvailable, "Uses authentication trace to check for key in dictionary file"},
     {"ta",          CmdLFHitag2CheckChallenges, IfPm3Hitag,      "Hitag 2: test all recorded authentications"},

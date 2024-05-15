@@ -120,7 +120,7 @@ static int derive_app_key(uint8_t *uid, uint8_t *app_key) {
 }
 
 // Might miss payload..
-static int diversify_mifare_key(uint8_t *uid, uint8_t *app_key) {
+static int diversify_mifare_key(const uint8_t *uid, uint8_t *app_key) {
     if (uid == NULL || app_key == NULL) {
         return PM3_EINVARG;
     }
@@ -152,7 +152,7 @@ static int diversify_mifare_key(uint8_t *uid, uint8_t *app_key) {
     return PM3_SUCCESS;
 }
 
-static int decrypt_card_sector(uint8_t *uid, uint8_t *sector_data, uint8_t len, uint8_t *plain) {
+static int decrypt_card_sector(uint8_t *uid, const uint8_t *sector_data, uint8_t len, uint8_t *plain) {
     if (uid == NULL || sector_data == NULL || plain == NULL) {
         return PM3_EINVARG;
     }
@@ -203,7 +203,7 @@ static int derive_mifare_key_b(uint8_t *uid, uint8_t *app_key) {
     return derive_mifare_key(uid, ICT_MIFARE_B_KEY, app_key);
 }
 
-static int decrypt_card_file(uint8_t *card_file, uint8_t len, uint8_t *plain) {
+static int decrypt_card_file(const uint8_t *card_file, uint8_t len, uint8_t *plain) {
     if (card_file == NULL || plain == NULL) {
         return PM3_EINVARG;
     }
@@ -211,7 +211,7 @@ static int decrypt_card_file(uint8_t *card_file, uint8_t len, uint8_t *plain) {
     uint8_t input[ICT_FILE_SIZE];
     memcpy(input, card_file, len);
 
-    uint8_t key[AES_KEY_LEN];
+    uint8_t key[AES_KEY_LEN] = {0};
 //    memcpy(key, ICT_DESFIRE_FILEKEY, AES_KEY_LEN);
 
     uint8_t iv[16] = {0};
@@ -230,7 +230,7 @@ static int decrypt_card_file(uint8_t *card_file, uint8_t len, uint8_t *plain) {
     return PM3_SUCCESS;
 }
 
-static int encrypt_card_file(uint8_t *card_file, uint8_t len, bool padding, uint8_t *enc) {
+static int encrypt_card_file(const uint8_t *card_file, uint8_t len, bool padding, uint8_t *enc) {
 
     if (len > ICT_FILE_SIZE) {
         return PM3_EINVARG;
@@ -243,7 +243,7 @@ static int encrypt_card_file(uint8_t *card_file, uint8_t len, bool padding, uint
         memset(input + len, 0x4C, 128 - len);
     }
 
-    uint8_t key[AES_KEY_LEN];
+    uint8_t key[AES_KEY_LEN] = {0};
 //    memcpy(key, ICT_DESFIRE_FILEKEY, AES_KEY_LEN);
 
     uint8_t iv[16] = {0};
@@ -262,7 +262,7 @@ static int encrypt_card_file(uint8_t *card_file, uint8_t len, bool padding, uint
     return PM3_SUCCESS;
 }
 
-static void itc_decode_card_blob(uint8_t *data, uint8_t card_type) {
+static void itc_decode_card_blob(const uint8_t *data, uint8_t card_type) {
     if (data == NULL) {
         return;
     }

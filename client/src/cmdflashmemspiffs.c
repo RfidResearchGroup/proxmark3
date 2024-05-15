@@ -26,7 +26,7 @@
 
 static int CmdHelp(const char *Cmd);
 
-int flashmem_spiffs_load(char *destfn, uint8_t *data, size_t datalen) {
+int flashmem_spiffs_load(const char *destfn, const uint8_t *data, size_t datalen) {
 
     int ret_val = PM3_SUCCESS;
 
@@ -429,9 +429,14 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
         PrintAndLogEx(HINT, "Use 'trace list -1 -t ...' to view, 'trace save -f ...' to save");
     }
 
-    if (dlen) {
+
+    if (dlen || slen) {
+
         // save to file
         char fn[FILE_PATH_SIZE] = {0};
+
+        // prefer dest name
+        // else source name
         if (dlen) {
             strncpy(fn, dest, dlen);
         } else {
@@ -439,7 +444,7 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
         }
 
         // set file extension
-        char *suffix = strchr(fn, '.');
+        const char *suffix = strchr(fn, '.');
         if (suffix) {
             saveFile(fn, suffix, dump, len);
         } else {

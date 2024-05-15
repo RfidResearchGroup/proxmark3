@@ -158,7 +158,7 @@ Definition 14. Define the rotate key function rk : (F 82 ) 8 × N → (F 82 ) 8 
 rk(x [0] . . . x [7] , 0) = x [0] . . . x [7]
 rk(x [0] . . . x [7] , n + 1) = rk(rl(x [0] ) . . . rl(x [7] ), n)
 **/
-static void rk(uint8_t *key, uint8_t n, uint8_t *outp_key) {
+static void rk(const uint8_t *key, uint8_t n, uint8_t *outp_key) {
     memcpy(outp_key, key, 8);
     while (n-- > 0) {
         outp_key[0] = rl(outp_key[0]);

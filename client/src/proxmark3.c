@@ -385,7 +385,7 @@ void
 __attribute__((force_align_arg_pointer))
 #endif
 #endif
-main_loop(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
+main_loop(const char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) {
 
     char *cmd = NULL;
     bool execCommand = (script_cmd != NULL);
@@ -777,31 +777,29 @@ static void show_help(bool showFullHelp, char *exec_name) {
 }
 
 static int dumpmem_to_file(const char *filename, uint32_t addr, uint32_t len, bool raw, bool in_bootloader) {
-    int res = PM3_EUNDEF;
 
     uint8_t *buffer = calloc(len, sizeof(uint8_t));
-    if (!buffer) {
+    if (buffer == NULL) {
         PrintAndLogEx(ERR, "error, cannot allocate memory ");
-        res = PM3_EMALLOC;
-        goto fail;
+        return PM3_EMALLOC;
     }
 
-    size_t read = 0;
+    int res = PM3_EUNDEF;
+    size_t readlen = 0;
     DeviceMemType_t type = raw ? MCU_MEM : MCU_FLASH;
     if (GetFromDevice(type, buffer, len, addr, NULL, 0, NULL, 1000, true)) {
         res = PM3_SUCCESS;
-        read = len; // GetFromDevice does not report the actual number of bytes received.
+        readlen = len; // GetFromDevice does not report the actual number of bytes received.
     }
 
     if (res == PM3_SUCCESS) {
-        if (saveFile(filename, ".bin", buffer, read) != 0) {
+        res = saveFile(filename, ".bin", buffer, readlen);
+        if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "error writing to file "_YELLOW_("%s"), filename);
-            res = PM3_EFILE;
         }
     }
 
     free(buffer);
-fail:
     return res;
 }
 
@@ -1441,7 +1439,7 @@ int main(int argc, char *argv[]) {
     MainGraphics();
 #  else
     // for *nix distro's,  check environment variable to verify a display
-    char *display = getenv("DISPLAY");
+    const char *display = getenv("DISPLAY");
     if (display && strlen(display) > 1) {
         InitGraphics(argc, argv, script_cmds_file, script_cmd, stayInCommandLoop);
         MainGraphics();

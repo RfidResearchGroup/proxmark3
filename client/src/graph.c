@@ -32,6 +32,9 @@ int32_t g_OverlayBuffer[MAX_GRAPH_TRACE_LEN];
 bool    g_useOverlays = false;
 size_t  g_GraphTraceLen;
 buffer_savestate_t g_saveState_gb;
+marker_t g_MarkerA, g_MarkerB, g_MarkerC, g_MarkerD;
+marker_t *g_TempMarkers;
+uint8_t g_TempMarkerSize = 0;
 
 /* write a manchester bit to the graph
 */
@@ -124,7 +127,7 @@ size_t getFromGraphBuffer(uint8_t *dest) {
 }
 
 size_t getFromGraphBufferEx(uint8_t *dest, size_t maxLen) {
-    if (dest == NULL){
+    if (dest == NULL) {
         return 0;
     }
 
@@ -465,9 +468,50 @@ bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
     return true;
 }
 
+void add_temporary_marker(uint32_t position, const char *label) {
+    if (g_TempMarkerSize == 0) { //Initialize the marker array
+        g_TempMarkers = (marker_t *)calloc(1, sizeof(marker_t));
+    } else { //add more space to the marker array using realloc()
+        marker_t *temp = (marker_t *)realloc(g_TempMarkers, ((g_TempMarkerSize + 1) * sizeof(marker_t)));
+
+        if (temp == NULL) { //Unable to reallocate memory for a new marker
+            PrintAndLogEx(FAILED, "Unable to allocate memory for a new temporary marker!");
+            free(temp);
+            return;
+        } else {
+            //Set g_TempMarkers to the new pointer
+            g_TempMarkers = temp;
+        }
+    }
+
+    g_TempMarkers[g_TempMarkerSize].pos = position;
+
+    char *markerLabel = (char *)calloc(1, strlen(label) + 1);
+    strcpy(markerLabel, label);
+
+    if (strlen(markerLabel) > 30) {
+        PrintAndLogEx(WARNING, "Label for temporary marker too long! Trunicating...");
+        markerLabel[30] = '\0';
+    }
+
+    strncpy(g_TempMarkers[g_TempMarkerSize].label, markerLabel, 30);
+    g_TempMarkerSize++;
+
+    memset(markerLabel, 0x00, strlen(label));
+    free(markerLabel);
+}
+
+void remove_temporary_markers(void) {
+    if (g_TempMarkerSize == 0) return;
+
+    memset(g_TempMarkers, 0x00, (g_TempMarkerSize * sizeof(marker_t)));
+    free(g_TempMarkers);
+    g_TempMarkerSize = 0;
+}
+
 buffer_savestate_t save_buffer32(uint32_t *src, size_t length) {
     //calloc the memory needed
-    uint32_t* savedBuffer = (uint32_t*)calloc(length, sizeof(uint32_t));
+    uint32_t *savedBuffer = (uint32_t *)calloc(length, sizeof(uint32_t));
 
     //Make a copy of the source buffer
     memcpy(savedBuffer, src, (length * sizeof(uint32_t)));
@@ -484,7 +528,7 @@ buffer_savestate_t save_buffer32(uint32_t *src, size_t length) {
 
 buffer_savestate_t save_bufferS32(int32_t *src, size_t length) {
     //calloc the memory needed
-    uint32_t* savedBuffer = (uint32_t*)calloc(length, (sizeof(uint32_t)));
+    uint32_t *savedBuffer = (uint32_t *)calloc(length, (sizeof(uint32_t)));
 
     //Make a copy of the source buffer
     memcpy(savedBuffer, src, (length * sizeof(uint32_t)));
@@ -513,15 +557,15 @@ buffer_savestate_t save_buffer8(uint8_t *src, size_t length) {
     }
 
     // calloc the memory needed
-    uint32_t* savedBuffer = (uint32_t*)calloc(buffSize, sizeof(uint32_t));
+    uint32_t *savedBuffer = (uint32_t *)calloc(buffSize, sizeof(uint32_t));
     size_t index = 0;
 
     // Pack the source array into the backing array
-    for(size_t i = 0; i < length; i += 4) {
+    for (size_t i = 0; i < length; i += 4) {
         savedBuffer[index] = MemLeToUint4byte(src + i);
         index++;
     }
-    
+
     buffer_savestate_t bst = {
         .type = sizeof(uint8_t),
         .bufferSize = buffSize,
@@ -533,7 +577,7 @@ buffer_savestate_t save_buffer8(uint8_t *src, size_t length) {
 }
 
 size_t restore_buffer32(buffer_savestate_t saveState, uint32_t *dest) {
-    if(saveState.type != sizeof(uint32_t)) {
+    if (saveState.type != sizeof(uint32_t)) {
         PrintAndLogEx(WARNING, "Invalid Save State type! Expected uint32_t!");
         PrintAndLogEx(WARNING, "Buffer not modified!\n");
         return 0;
@@ -545,7 +589,7 @@ size_t restore_buffer32(buffer_savestate_t saveState, uint32_t *dest) {
 }
 
 size_t restore_bufferS32(buffer_savestate_t saveState, int32_t *dest) {
-    if(saveState.type != (sizeof(int32_t) >> 8)) {
+    if (saveState.type != (sizeof(int32_t) >> 8)) {
         PrintAndLogEx(WARNING, "Invalid Save State type! Expected int32_t");
         PrintAndLogEx(WARNING, "Buffer not modified!\n");
         return 0;
@@ -557,7 +601,7 @@ size_t restore_bufferS32(buffer_savestate_t saveState, int32_t *dest) {
 }
 
 size_t restore_buffer8(buffer_savestate_t saveState, uint8_t *dest) {
-    if(saveState.type != sizeof(uint8_t)) {
+    if (saveState.type != sizeof(uint8_t)) {
         PrintAndLogEx(WARNING, "Invalid Save State type! Expected uint8_t!");
         PrintAndLogEx(WARNING, "Buffer not modified!\n");
         return 0;
@@ -567,7 +611,7 @@ size_t restore_buffer8(buffer_savestate_t saveState, uint8_t *dest) {
     size_t length = ((saveState.bufferSize * 4) - saveState.padding);
 
     // Unpack the array
-    for(size_t i = 0; i < saveState.bufferSize; i++) {
+    for (size_t i = 0; i < saveState.bufferSize; i++) {
         dest[index++] = saveState.buffer[i];
         if(index == length) break;
         dest[index++] = (saveState.buffer[i] >> 8) & 0xFF;

@@ -113,11 +113,14 @@ kvsprintf(char const *fmt, void *arg, int radix, va_list ap) {
     for (;;) {
         padc = ' ';
         width = 0;
+
         while ((ch = (u_char) * fmt++) != '%' || stop) {
             PCHAR(ch);
-            if (ch == '\0')
+            if (ch == '\0') {
                 return (retval);
+            }
         }
+
         percent = fmt - 1;
         qflag = 0;
         lflag = 0;
@@ -178,36 +181,43 @@ reswitch:
                 for (n = 0;; ++fmt) {
                     n = n * 10 + ch - '0';
                     ch = *fmt;
-                    if (ch < '0' || ch > '9')
+                    if (ch < '0' || ch > '9') {
                         break;
+                    }
                 }
-                if (dot)
+                if (dot) {
                     dwidth = n;
-                else
+                } else {
                     width = n;
+                }
                 goto reswitch;
             case 'b':
                 num = (u_int)va_arg(ap, int);
                 p = va_arg(ap, char *);
-                for (q = ksprintn(nbuf, num, *p++, NULL, 0); *q;)
+                for (q = ksprintn(nbuf, num, *p++, NULL, 0); *q;) {
                     PCHAR(*q--);
+                }
 
-                if (num == 0)
+                if (num == 0) {
                     break;
+                }
 
                 for (tmp = 0; *p;) {
                     n = *p++;
                     if (num & (1 << (n - 1))) {
                         PCHAR(tmp ? ',' : '<');
-                        for (; (n = *p) > ' '; ++p)
+                        for (; (n = *p) > ' '; ++p) {
                             PCHAR(n);
+                        }
                         tmp = 1;
-                    } else
-                        for (; *p > ' '; ++p)
-                            continue;
+                    } else {
+                        for (; *p > ' '; ++p) {};
+                    }
                 }
-                if (tmp)
+
+                if (tmp) {
                     PCHAR('>');
+                }
                 break;
             case 'c':
                 PCHAR(va_arg(ap, int));
@@ -215,15 +225,19 @@ reswitch:
             case 'D':
                 up = va_arg(ap, u_char *);
                 p = va_arg(ap, char *);
-                if (!width)
+                if (!width) {
                     width = 16;
+                }
+
                 while (width--) {
                     PCHAR(hex2ascii(*up >> 4));
                     PCHAR(hex2ascii(*up & 0x0f));
                     up++;
-                    if (width)
-                        for (q = p; *q; q++)
+                    if (width) {
+                        for (q = p; *q; q++) {
                             PCHAR(*q);
+                        }
+                    }
                 }
                 break;
             case 'd':
@@ -235,8 +249,9 @@ reswitch:
                 if (hflag) {
                     hflag = 0;
                     cflag = 1;
-                } else
+                } else {
                     hflag = 1;
+                }
                 goto reswitch;
             case 'j':
                 jflag = 1;
@@ -245,8 +260,9 @@ reswitch:
                 if (lflag) {
                     lflag = 0;
                     qflag = 1;
-                } else
+                } else {
                     lflag = 1;
+                }
                 goto reswitch;
             case 'n':
                 if (jflag)
@@ -278,29 +294,38 @@ reswitch:
                 goto reswitch;
             case 'r':
                 base = radix;
-                if (sign)
+                if (sign) {
                     goto handle_sign;
+                }
                 goto handle_nosign;
             case 's':
                 p = va_arg(ap, char *);
-                if (p == NULL)
+                if (p == NULL) {
                     p = "(null)";
-                if (!dot)
+                }
+
+                if (!dot) {
                     n = strlen(p);
-                else
-                    for (n = 0; n < dwidth && p[n]; n++)
-                        continue;
+                } else {
+                    for (n = 0; n < dwidth && p[n]; n++) {};
+                }
 
                 width -= n;
 
-                if (!ladjust && width > 0)
-                    while (width--)
+                if (!ladjust && width > 0) {
+                    while (width--) {
                         PCHAR(padc);
-                while (n--)
+                    }
+                }
+                while (n--) {
                     PCHAR(*p++);
-                if (ladjust && width > 0)
-                    while (width--)
+                }
+
+                if (ladjust && width > 0) {
+                    while (width--) {
                         PCHAR(padc);
+                    }
+                }
                 break;
             case 't':
                 tflag = 1;
@@ -361,22 +386,31 @@ number:
                     neg = 1;
                     num = -(intmax_t)num;
                 }
-                p = ksprintn(nbuf, num, base, &tmp, upper);
-                if (sharpflag && num != 0) {
-                    if (base == 8)
-                        tmp++;
-                    else if (base == 16)
-                        tmp += 2;
-                }
-                if (neg)
-                    tmp++;
 
-                if (!ladjust && padc != '0' && width
-                        && (width -= tmp) > 0)
-                    while (width--)
+                p = ksprintn(nbuf, num, base, &tmp, upper);
+
+                if (sharpflag && num != 0) {
+                    if (base == 8) {
+                        tmp++;
+                    } else if (base == 16) {
+                        tmp += 2;
+                    }
+                }
+
+                if (neg) {
+                    tmp++;
+                }
+
+                if (!ladjust && padc != '0' && width && (width -= tmp) > 0) {
+                    while (width--) {
                         PCHAR(padc);
-                if (neg)
+                    }
+                }
+
+                if (neg) {
                     PCHAR('-');
+                }
+
                 if (sharpflag && num != 0) {
                     if (base == 8) {
                         PCHAR('0');
@@ -385,21 +419,28 @@ number:
                         PCHAR('x');
                     }
                 }
-                if (!ladjust && width && (width -= tmp) > 0)
-                    while (width--)
-                        PCHAR(padc);
 
-                while (*p)
+                if (!ladjust && width && (width -= tmp) > 0) {
+                    while (width--) {
+                        PCHAR(padc);
+                    }
+                }
+
+                while (*p) {
                     PCHAR(*p--);
+                }
 
-                if (ladjust && width && (width -= tmp) > 0)
-                    while (width--)
+                if (ladjust && width && (width -= tmp) > 0) {
+                    while (width--) {
                         PCHAR(padc);
+                    }
+                }
 
                 break;
             default:
-                while (percent < fmt)
+                while (percent < fmt) {
                     PCHAR(*percent++);
+                }
                 /*
                  * Since we ignore an formatting argument it is no
                  * longer safe to obey the remaining formatting

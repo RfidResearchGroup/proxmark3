@@ -96,6 +96,16 @@ int CmdHFSearch(const char *Cmd) {
     }
 
     PROMPT_CLEARLINE;
+    PrintAndLogEx(INPLACE, " Searching for Topaz tag...");
+    if (IfPm3Iso14443a()) {
+        if (readTopazUid(false, false) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") " found\n");
+            success[TOPAZ] = true;
+            res = PM3_SUCCESS;
+        }
+    }
+
+    PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, " Searching for LTO-CM tag...");
     if (IfPm3Iso14443a()) {
         if (reader_lto(false, false) == PM3_SUCCESS) {
@@ -119,7 +129,8 @@ int CmdHFSearch(const char *Cmd) {
         }
     }
 
-    // ICT
+    /*
+        // ICT
     if (IfPm3Iso14443a()) {
         int sel_state = infoHF14A(false, false, false);
         if (sel_state > 0) {
@@ -131,6 +142,7 @@ int CmdHFSearch(const char *Cmd) {
                 infoHF14A4Applications(verbose);
         }
     }
+    */
 
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, " Searching for LEGIC tag...");
@@ -138,16 +150,6 @@ int CmdHFSearch(const char *Cmd) {
         if (readLegicUid(false, false) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("LEGIC Prime tag") " found\n");
             success[LEGIC] = true;
-            res = PM3_SUCCESS;
-        }
-    }
-
-    PROMPT_CLEARLINE;
-    PrintAndLogEx(INPLACE, " Searching for Topaz tag...");
-    if (IfPm3Iso14443a()) {
-        if (readTopazUid(false, false) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Topaz tag") " found\n");
-            success[TOPAZ] = true;
             res = PM3_SUCCESS;
         }
     }

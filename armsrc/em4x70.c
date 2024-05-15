@@ -30,43 +30,50 @@ static em4x70_tag_t tag = { 0 };
 // EM4170 requires a parity bit on commands, other variants do not.
 static bool command_parity = true;
 
-// Conversion from Ticks to RF periods
-// 1 us = 1.5 ticks
-// 1RF Period = 8us = 12 Ticks
-#define TICKS_PER_FC                        12
 
-// Chip timing from datasheet
-// Converted into Ticks for timing functions
-#define EM4X70_T_TAG_QUARTER_PERIOD          (8 * TICKS_PER_FC)
-#define EM4X70_T_TAG_HALF_PERIOD            (16 * TICKS_PER_FC)
-#define EM4X70_T_TAG_THREE_QUARTER_PERIOD   (24 * TICKS_PER_FC)
-#define EM4X70_T_TAG_FULL_PERIOD            (32 * TICKS_PER_FC) // 1 Bit Period
-#define EM4X70_T_TAG_TWA                   (128 * TICKS_PER_FC) // Write Access Time
-#define EM4X70_T_TAG_DIV                   (224 * TICKS_PER_FC) // Divergency Time
-#define EM4X70_T_TAG_AUTH                 (4224 * TICKS_PER_FC) // Authentication Time
-#define EM4X70_T_TAG_WEE                  (3072 * TICKS_PER_FC) // EEPROM write Time
-#define EM4X70_T_TAG_TWALB                 (672 * TICKS_PER_FC) // Write Access Time of Lock Bits
-#define EM4X70_T_TAG_BITMOD                  (4 * TICKS_PER_FC) // Initial time to stop modulation when sending 0
-#define EM4X70_T_TAG_TOLERANCE               (8 * TICKS_PER_FC) // Tolerance in RF periods for receive/LIW
+#if 1 // Calculation of ticks for timing functions
+    // Conversion from Ticks to RF periods
+    // 1 us = 1.5 ticks
+    // 1RF Period = 8us = 12 Ticks
+    #define TICKS_PER_FC                        12
 
-#define EM4X70_T_TAG_TIMEOUT                 (4 * EM4X70_T_TAG_FULL_PERIOD) // Timeout if we ever get a pulse longer than this
-#define EM4X70_T_WAITING_FOR_LIW             50 // Pulses to wait for listen window
-#define EM4X70_T_READ_HEADER_LEN             16 // Read header length (16 bit periods)
+    // Chip timing from datasheet
+    // Converted into Ticks for timing functions
+    #define EM4X70_T_TAG_QUARTER_PERIOD          (8 * TICKS_PER_FC)
+    #define EM4X70_T_TAG_HALF_PERIOD            (16 * TICKS_PER_FC)
+    #define EM4X70_T_TAG_THREE_QUARTER_PERIOD   (24 * TICKS_PER_FC)
+    #define EM4X70_T_TAG_FULL_PERIOD            (32 * TICKS_PER_FC) // 1 Bit Period
+    #define EM4X70_T_TAG_TWA                   (128 * TICKS_PER_FC) // Write Access Time
+    #define EM4X70_T_TAG_DIV                   (224 * TICKS_PER_FC) // Divergency Time
+    #define EM4X70_T_TAG_AUTH                 (4224 * TICKS_PER_FC) // Authentication Time
+    #define EM4X70_T_TAG_WEE                  (3072 * TICKS_PER_FC) // EEPROM write Time
+    #define EM4X70_T_TAG_TWALB                 (672 * TICKS_PER_FC) // Write Access Time of Lock Bits
+    #define EM4X70_T_TAG_BITMOD                  (4 * TICKS_PER_FC) // Initial time to stop modulation when sending 0
+    #define EM4X70_T_TAG_TOLERANCE               (8 * TICKS_PER_FC) // Tolerance in RF periods for receive/LIW
 
-#define EM4X70_COMMAND_RETRIES               5 // Attempts to send/read command
-#define EM4X70_MAX_RECEIVE_LENGTH           96 // Maximum bits to expect from any command
+    #define EM4X70_T_TAG_TIMEOUT                 (4 * EM4X70_T_TAG_FULL_PERIOD) // Timeout if we ever get a pulse longer than this
+    #define EM4X70_T_WAITING_FOR_LIW             50 // Pulses to wait for listen window
+    #define EM4X70_T_READ_HEADER_LEN             16 // Read header length (16 bit periods)
 
-/**
- * These IDs are from the EM4170 datasheet
- * Some versions of the chip require a
- * (even) parity bit, others do not
- */
-#define EM4X70_COMMAND_ID                   0x01
-#define EM4X70_COMMAND_UM1                  0x02
-#define EM4X70_COMMAND_AUTH                 0x03
-#define EM4X70_COMMAND_PIN                  0x04
-#define EM4X70_COMMAND_WRITE                0x05
-#define EM4X70_COMMAND_UM2                  0x07
+    #define EM4X70_COMMAND_RETRIES               5 // Attempts to send/read command
+    #define EM4X70_MAX_RECEIVE_LENGTH           96 // Maximum bits to expect from any command
+#endif // Calculation of ticks for timing functions
+
+#if 1 // EM4x70 Command IDs
+    /**
+     * These IDs are from the EM4170 datasheet.
+     * Some versions of the chip require a
+     * (even) parity bit, others do not.
+     * The command is thus stored only in the
+     * three least significant bits (mask 0x07).
+     */
+    #define EM4X70_COMMAND_ID                   0x01
+    #define EM4X70_COMMAND_UM1                  0x02
+    #define EM4X70_COMMAND_AUTH                 0x03
+    #define EM4X70_COMMAND_PIN                  0x04
+    #define EM4X70_COMMAND_WRITE                0x05
+    #define EM4X70_COMMAND_UM2                  0x07
+#endif // EM4x70 Command IDs
 
 // Constants used to determine high/low state of signal
 #define EM4X70_NOISE_THRESHOLD  13  // May depend on noise in environment
@@ -80,9 +87,9 @@ static bool command_parity = true;
 #define IS_TIMEOUT(timeout_ticks) (GetTicks() > timeout_ticks)
 #define TICKS_ELAPSED(start_ticks) (GetTicks() - start_ticks)
 
-static uint8_t bits2byte(const uint8_t *bits, int length);
-static void bits2bytes(const uint8_t *bits, int length, uint8_t *out);
-static int em4x70_receive(uint8_t *bits, size_t length);
+static uint8_t encoded_bit_array_to_byte(const uint8_t *bits, int count_of_bits);
+static void encoded_bit_array_to_bytes(const uint8_t *bits, int count_of_bits, uint8_t *out);
+static int em4x70_receive(uint8_t *bits, size_t maximum_bits_to_read);
 static bool find_listen_window(bool command);
 
 static void init_tag(void) {
@@ -207,9 +214,10 @@ static uint32_t get_pulse_length(edge_detection_t edge) {
     return 0;
 }
 
-static bool check_pulse_length(uint32_t pl, uint32_t length) {
-    // check if pulse length <pl> corresponds to given length <length>
-    return ((pl >= (length - EM4X70_T_TAG_TOLERANCE)) && (pl <= (length + EM4X70_T_TAG_TOLERANCE)));
+static bool check_pulse_length(uint32_t pulse_tick_length, uint32_t target_tick_length) {
+    // check if pulse tick length corresponds to target length (+/- tolerance)
+    return ((pulse_tick_length >= (target_tick_length - EM4X70_T_TAG_TOLERANCE)) &&
+            (pulse_tick_length <= (target_tick_length + EM4X70_T_TAG_TOLERANCE)));
 }
 
 static void em4x70_send_bit(bool bit) {
@@ -301,7 +309,7 @@ static bool check_ack(void) {
     // ACK  64 + 64
     // NAK 64 + 48
     if (check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD) &&
-            check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
+        check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
         // ACK
         return true;
     }
@@ -344,7 +352,11 @@ static int authenticate(const uint8_t *rnd, const uint8_t *frnd, uint8_t *respon
             if (g_dbglevel >= DBG_EXTENDED) Dbprintf("Auth failed");
             return PM3_ESOFT;
         }
-        bits2bytes(grnd, 24, response);
+        // although only received 20 bits
+        // ask for 24 bits converted because
+        // this utility function requires
+        // decoding in multiples of 8 bits
+        encoded_bit_array_to_bytes(grnd, 24, response);
         return PM3_SUCCESS;
     }
 
@@ -455,12 +467,12 @@ static int send_pin(const uint32_t pin) {
             WaitTicks(EM4X70_T_TAG_WEE);
             // <-- Receive header + ID
             uint8_t tag_id[EM4X70_MAX_RECEIVE_LENGTH];
-            int num  = em4x70_receive(tag_id, 32);
-            if (num < 32) {
+            int count_of_bits_received  = em4x70_receive(tag_id, 32);
+            if (count_of_bits_received < 32) {
                 Dbprintf("Invalid ID Received");
                 return PM3_ESOFT;
             }
-            bits2bytes(tag_id, num, &tag.data[4]);
+            encoded_bit_array_to_bytes(tag_id, count_of_bits_received, &tag.data[4]);
             return PM3_SUCCESS;
         }
     }
@@ -537,36 +549,38 @@ static bool find_listen_window(bool command) {
     return false;
 }
 
-static void bits2bytes(const uint8_t *bits, int length, uint8_t *out) {
+// *bits == array of bytes, each byte storing a single bit.    
+// *out  == array of bytes, storing converted bits --> bytes.  
+//
+// [in,  bcount(count_of_bits)  ] const uint8_t *bits
+// [out, bcount(count_of_bits/8)] uint8_t *out
+static void encoded_bit_array_to_bytes(const uint8_t *bits, int count_of_bits, uint8_t *out) {
 
-    if (length % 8 != 0) {
-        Dbprintf("Should have a multiple of 8 bits, was sent %d", length);
+    if (count_of_bits % 8 != 0) {
+        Dbprintf("Should have a multiple of 8 bits, was sent %d", count_of_bits);
     }
 
-    int num_bytes = length / 8; // We should have a multiple of 8 here
+    int num_bytes = count_of_bits / 8; // We should have a multiple of 8 here
 
     for (int i = 1; i <= num_bytes; i++) {
-        out[num_bytes - i] = bits2byte(bits, 8);
+        out[num_bytes - i] = encoded_bit_array_to_byte(bits, 8);
         bits += 8;
     }
 }
 
-static uint8_t bits2byte(const uint8_t *bits, int length) {
+static uint8_t encoded_bit_array_to_byte(const uint8_t *bits, int count_of_bits) {
 
-    // converts <length> separate bits into a single "byte"
+    // converts <count_of_bits> separate bits into a single "byte"
     uint8_t byte = 0;
-    for (int i = 0; i < length; i++) {
-
+    for (int i = 0; i < count_of_bits; i++) {
+        byte <<= 1;
         byte |= bits[i];
-
-        if (i != length - 1)
-            byte <<= 1;
     }
 
     return byte;
 }
 
-static bool send_command_and_read(uint8_t command, uint8_t *bytes, size_t length) {
+static bool send_command_and_read(uint8_t command, uint8_t *bytes, size_t expected_byte_count) {
 
     int retries = EM4X70_COMMAND_RETRIES;
     while (retries) {
@@ -574,19 +588,14 @@ static bool send_command_and_read(uint8_t command, uint8_t *bytes, size_t length
 
         if (find_listen_window(true)) {
             uint8_t bits[EM4X70_MAX_RECEIVE_LENGTH] = {0};
-            size_t out_length_bits = length * 8;
+            size_t out_length_bits = expected_byte_count * 8;
             em4x70_send_nibble(command, command_parity);
             int len = em4x70_receive(bits, out_length_bits);
             if (len < out_length_bits) {
                 Dbprintf("Invalid data received length: %d, expected %d", len, out_length_bits);
                 return false;
             }
-            // TODO: Figure out why getting an extra bit (quite often) here
-            // e.g., write block and info commands both reach here and output:
-            // [#] Should have a multiple of 8 bits, was sent 33
-            // [#] Should have a multiple of 8 bits, was sent 65
-            // Extra bits are currently just dropped, with no ill effect noticed.
-            bits2bytes(bits, len, bytes);
+            encoded_bit_array_to_bytes(bits, len, bytes);
             return true;
         }
     }
@@ -617,7 +626,6 @@ static bool em4x70_read_um1(void) {
 
 }
 
-
 /**
  *  em4x70_read_um2
  *
@@ -635,7 +643,7 @@ static bool find_em4x70_tag(void) {
     return find_listen_window(false);
 }
 
-static int em4x70_receive(uint8_t *bits, size_t length) {
+static int em4x70_receive(uint8_t *bits, size_t maximum_bits_to_read) {
 
     uint32_t pl;
     int bit_pos = 0;
@@ -673,7 +681,7 @@ static int em4x70_receive(uint8_t *bits, size_t length) {
 
     // identify remaining bits based on pulse lengths
     // between listen windows only pulse lengths of 1, 1.5 and 2 are possible
-    while (bit_pos < length) {
+    while (bit_pos < maximum_bits_to_read) {
 
         pl = get_pulse_length(edge);
 
@@ -687,13 +695,13 @@ static int em4x70_receive(uint8_t *bits, size_t length) {
             // pulse length 1.5 -> 2 bits + flip edge detection
             if (edge == FALLING_EDGE) {
                 bits[bit_pos++] = 0;
-                if (bit_pos < length) {
+                if (bit_pos < maximum_bits_to_read) {
                     bits[bit_pos++] = 0;
                 }
                 edge = RISING_EDGE;
             } else {
                 bits[bit_pos++] = 1;
-                if (bit_pos < length) {
+                if (bit_pos < maximum_bits_to_read) {
                     bits[bit_pos++] = 1;
                 }
                 edge = FALLING_EDGE;
@@ -704,12 +712,12 @@ static int em4x70_receive(uint8_t *bits, size_t length) {
             // pulse length of 2 -> two bits
             if (edge == FALLING_EDGE) {
                 bits[bit_pos++] = 0;
-                if (bit_pos < length) {
+                if (bit_pos < maximum_bits_to_read) {
                     bits[bit_pos++] = 1;
                 }
             } else {
                 bits[bit_pos++] = 1;
-                if (bit_pos < length) {
+                if (bit_pos < maximum_bits_to_read) {
                     bits[bit_pos++] = 0;
                 }
             }
@@ -725,7 +733,7 @@ static int em4x70_receive(uint8_t *bits, size_t length) {
 
 void em4x70_info(const em4x70_data_t *etd, bool ledcontrol) {
 
-    uint8_t status = 0;
+    bool success = false;
 
     // Support tags with and without command parity bits
     command_parity = etd->parity;
@@ -736,19 +744,26 @@ void em4x70_info(const em4x70_data_t *etd, bool ledcontrol) {
     // Find the Tag
     if (get_signalproperties() && find_em4x70_tag()) {
         // Read ID, UM1 and UM2
-        status = em4x70_read_id() && em4x70_read_um1() && em4x70_read_um2();
+        success = em4x70_read_id() && em4x70_read_um1() && em4x70_read_um2();
     }
 
     StopTicks();
     lf_finalize(ledcontrol);
+    int status = success ? PM3_SUCCESS : PM3_ESOFT;
     reply_ng(CMD_LF_EM4X70_INFO, status, tag.data, sizeof(tag.data));
 }
 
 void em4x70_write(const em4x70_data_t *etd, bool ledcontrol) {
-
-    uint8_t status = 0;
+    int status = PM3_ESOFT;
 
     command_parity = etd->parity;
+
+    // Disable to prevent sending corrupted data to the tag.
+    if (command_parity) {
+        Dbprintf("Use of `--par` option with `lf em 4x70 write` is disabled to prevent corrupting tag data");
+        reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
+        return;
+    }
 
     init_tag();
     em4x70_setup_read();
@@ -757,16 +772,15 @@ void em4x70_write(const em4x70_data_t *etd, bool ledcontrol) {
     if (get_signalproperties() && find_em4x70_tag()) {
 
         // Write
-        status = write(etd->word, etd->address) == PM3_SUCCESS;
+        status = write(etd->word, etd->address);
 
-        if (status) {
+        if (status == PM3_SUCCESS) {
             // Read Tag after writing
             if (em4x70_read_id()) {
                 em4x70_read_um1();
                 em4x70_read_um2();
             }
         }
-
     }
 
     StopTicks();
@@ -776,7 +790,7 @@ void em4x70_write(const em4x70_data_t *etd, bool ledcontrol) {
 
 void em4x70_unlock(const em4x70_data_t *etd, bool ledcontrol) {
 
-    uint8_t status = 0;
+    int status = PM3_ESOFT;
 
     command_parity = etd->parity;
 
@@ -790,10 +804,10 @@ void em4x70_unlock(const em4x70_data_t *etd, bool ledcontrol) {
         if (em4x70_read_id()) {
 
             // Send PIN
-            status = send_pin(etd->pin) == PM3_SUCCESS;
+            status = send_pin(etd->pin);
 
             // If the write succeeded, read the rest of the tag
-            if (status) {
+            if (status == PM3_SUCCESS) {
                 // Read Tag
                 // ID doesn't change
                 em4x70_read_um1();
@@ -809,10 +823,18 @@ void em4x70_unlock(const em4x70_data_t *etd, bool ledcontrol) {
 
 void em4x70_auth(const em4x70_data_t *etd, bool ledcontrol) {
 
-    uint8_t status = 0;
+    int status = PM3_ESOFT;
+
     uint8_t response[3] = {0};
 
     command_parity = etd->parity;
+
+    // Disable to prevent sending corrupted data to the tag.
+    if (command_parity) {
+        Dbprintf("Use of `--par` option with `lf em 4x70 auth` is disabled to prevent corrupting tag data");
+        reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
+        return;
+    }
 
     init_tag();
     em4x70_setup_read();
@@ -821,7 +843,7 @@ void em4x70_auth(const em4x70_data_t *etd, bool ledcontrol) {
     if (get_signalproperties() && find_em4x70_tag()) {
 
         // Authenticate and get tag response
-        status = authenticate(etd->rnd, etd->frnd, response) == PM3_SUCCESS;
+        status = authenticate(etd->rnd, etd->frnd, response);
     }
 
     StopTicks();
@@ -830,10 +852,17 @@ void em4x70_auth(const em4x70_data_t *etd, bool ledcontrol) {
 }
 
 void em4x70_brute(const em4x70_data_t *etd, bool ledcontrol) {
-    uint8_t status = 0;
+    int status = PM3_ESOFT;
     uint8_t response[2] = {0};
 
     command_parity = etd->parity;
+
+    // Disable to prevent sending corrupted data to the tag.
+    if (command_parity) {
+        Dbprintf("Use of `--par` option with `lf em 4x70 brute` is disabled to prevent corrupting tag data");
+        reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
+        return;
+    }
 
     init_tag();
     em4x70_setup_read();
@@ -842,7 +871,7 @@ void em4x70_brute(const em4x70_data_t *etd, bool ledcontrol) {
     if (get_signalproperties() && find_em4x70_tag()) {
 
         // Bruteforce partial key
-        status = bruteforce(etd->address, etd->rnd, etd->frnd, etd->start_key, response) == PM3_SUCCESS;
+        status = bruteforce(etd->address, etd->rnd, etd->frnd, etd->start_key, response);
     }
 
     StopTicks();
@@ -852,9 +881,16 @@ void em4x70_brute(const em4x70_data_t *etd, bool ledcontrol) {
 
 void em4x70_write_pin(const em4x70_data_t *etd, bool ledcontrol) {
 
-    uint8_t status = 0;
+    int status = PM3_ESOFT;
 
     command_parity = etd->parity;
+
+    // Disable to prevent sending corrupted data to the tag.
+    if (command_parity) {
+        Dbprintf("Use of `--par` option with `lf em 4x70 setpin` is disabled to prevent corrupting tag data");
+        reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
+        return;
+    }
 
     init_tag();
     em4x70_setup_read();
@@ -865,17 +901,19 @@ void em4x70_write_pin(const em4x70_data_t *etd, bool ledcontrol) {
         // Read ID (required for send_pin command)
         if (em4x70_read_id()) {
 
-            // Write new PIN
-            if ((write((etd->pin) & 0xFFFF, EM4X70_PIN_WORD_UPPER) == PM3_SUCCESS) &&
-                    (write((etd->pin >> 16) & 0xFFFF, EM4X70_PIN_WORD_LOWER) == PM3_SUCCESS)) {
-
+            // Write the pin
+            status = write((etd->pin) & 0xFFFF, EM4X70_PIN_WORD_UPPER);
+            if (status == PM3_SUCCESS) {
+                status = write((etd->pin >> 16) & 0xFFFF, EM4X70_PIN_WORD_LOWER);
+            }
+            if (status == PM3_SUCCESS) {
                 // Now Try to authenticate using the new PIN
 
                 // Send PIN
-                status = send_pin(etd->pin) == PM3_SUCCESS;
+                status = send_pin(etd->pin);
 
                 // If the write succeeded, read the rest of the tag
-                if (status) {
+                if (status == PM3_SUCCESS) {
                     // Read Tag
                     // ID doesn't change
                     em4x70_read_um1();
@@ -892,9 +930,16 @@ void em4x70_write_pin(const em4x70_data_t *etd, bool ledcontrol) {
 
 void em4x70_write_key(const em4x70_data_t *etd, bool ledcontrol) {
 
-    uint8_t status = 0;
+    int status = PM3_ESOFT;
 
     command_parity = etd->parity;
+
+    // Disable to prevent sending corrupted data to the tag.
+    if (command_parity) {
+        Dbprintf("Use of `--par` option with `lf em 4x70 setkey` is disabled to prevent corrupting tag data");
+        reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
+        return;
+    }
 
     init_tag();
     em4x70_setup_read();
@@ -904,15 +949,15 @@ void em4x70_write_key(const em4x70_data_t *etd, bool ledcontrol) {
 
         // Read ID to ensure we can write to card
         if (em4x70_read_id()) {
-            status = 1;
+            status = PM3_SUCCESS;
 
             // Write each crypto block
             for (int i = 0; i < 6; i++) {
 
                 uint16_t key_word = (etd->crypt_key[(i * 2) + 1] << 8) + etd->crypt_key[i * 2];
                 // Write each word, abort if any failure occurs
-                if (write(key_word, 9 - i) != PM3_SUCCESS) {
-                    status = 0;
+                status = write(key_word, 9 - i);
+                if (status != PM3_SUCCESS) {
                     break;
                 }
             }

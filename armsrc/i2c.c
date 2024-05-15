@@ -764,7 +764,7 @@ bool sc_rx_bytes(uint8_t *dest, uint16_t *destlen, uint32_t wait) {
             break;
         } else if (len == 1) {
             continue;
-        } else if (len <= 0) {
+        } else {
             return false;
         }
     }
@@ -937,7 +937,7 @@ void SmartCardUpgrade(uint64_t arg0) {
 
     bool isOK = true;
     uint16_t length = arg0, pos = 0;
-    uint8_t *fwdata = BigBuf_get_addr();
+    const uint8_t *fwdata = BigBuf_get_addr();
     uint8_t *verfiydata = BigBuf_malloc(I2C_BLOCK_SIZE);
 
     while (length) {

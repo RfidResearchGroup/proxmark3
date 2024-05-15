@@ -414,26 +414,30 @@ while true; do
       if ! CheckExecute "nfc decode test - signature"    "$CLIENTBIN -c 'nfc decode -d 03FF010194113870696C65742E65653A656B616172743A3266195F26063132303832325904202020205F28033233335F2701316E1B5A13333038363439303039303030323636343030355304EBF2CE704103000000AC536967010200803A2448FCA7D354A654A81BD021150D1A152D1DF4D7A55D2B771F12F094EAB6E5E10F2617A2F8DAD4FD38AFF8EA39B71C19BD42618CDA86EE7E144636C8E0E7CFC4096E19C3680E09C78A0CDBC05DA2D698E551D5D709717655E56FE3676880B897D2C70DF5F06ECE07C71435255144F8EE41AF110E7B180DA0E6C22FB8FDEF61800025687474703A2F2F70696C65742E65652F6372742F33303836343930302D303030312E637274FE'" "30864900-0001.crt"; then break; fi
 
       echo -e "\n${C_BLUE}Testing LF:${C_NC}"
-      if ! CheckExecute "lf hitag2 test"        "$CLIENTBIN -c 'lf hitag selftest'" "Tests \( ok"; then break; fi
-      if ! CheckExecute "lf cotag demod test"   "$CLIENTBIN -c 'data load -f traces/lf_cotag_220_8331.pm3; data norm; data cthreshold -u 50 -d -20; data envelope; data raw --ar -c 272; lf cotag demod'" \
+      if ! CheckExecute "lf hitag2 test"             "$CLIENTBIN -c 'lf hitag test'" "Tests \( ok"; then break; fi
+      if ! CheckExecute "lf cotag demod test"        "$CLIENTBIN -c 'data load -f traces/lf_cotag_220_8331.pm3; data norm; data cthreshold -u 50 -d -20; data envelope; data raw --ar -c 272; lf cotag demod'" \
                                                                      "COTAG Found: FC 220, CN: 8331 Raw: FFB841170363FFFE00001E7F00000000"; then break; fi
-      if ! CheckExecute "lf AWID test"          "$CLIENTBIN -c 'data load -f traces/lf_AWID-15-259.pm3;lf search -1'" "AWID ID found"; then break; fi
-      if ! CheckExecute "lf EM410x test"        "$CLIENTBIN -c 'data load -f traces/lf_EM4102-1.pm3;lf search -1'" "EM410x ID found"; then break; fi
-      if ! CheckExecute "lf EM4x05 test"        "$CLIENTBIN -c 'data load -f traces/lf_EM4x05.pm3;lf search -1'" "FDX-B ID found"; then break; fi
-      if ! CheckExecute "lf FDX-A FECAVA test"  "$CLIENTBIN -c 'data load -f traces/lf_EM4305_fdxa_destron.pm3;lf search -1'" "FDX-A FECAVA Destron ID found"; then break; fi
-      if ! CheckExecute "lf FDX-B test"         "$CLIENTBIN -c 'data load -f traces/lf_HomeAgain1600.pm3;lf search -1'" "FDX-B ID found"; then break; fi
-      if ! CheckExecute "lf FDX/BioThermo test" "$CLIENTBIN -c 'data load -f traces/lf_FDXB_Bio-Thermo.pm3; lf fdxb demod'" "95.2 F / 35.1 C"; then break; fi
-      if ! CheckExecute "lf GPROXII test"       "$CLIENTBIN -c 'data load -f traces/lf_GProx_36_30_14489.pm3; lf search -1'" "Guardall G-Prox II ID found"; then break; fi
-      if ! CheckExecute "lf HID Prox test"      "$CLIENTBIN -c 'data load -f traces/lf_HID-proxCardII-05512-11432784-1.pm3;lf search -1'" "HID Prox ID found"; then break; fi
-      if ! CheckExecute "lf IDTECK test"        "$CLIENTBIN -c 'data load -f traces/lf_IDTECK_4944544BAC40E069.pm3; lf search -1'" "Idteck ID found"; then break; fi
-      if ! CheckExecute "lf INDALA test"        "$CLIENTBIN -c 'data load -f traces/lf_Indala-504278295.pm3;lf search -1'" "Indala ID found"; then break; fi
-      if ! CheckExecute "lf KERI test"          "$CLIENTBIN -c 'data load -f traces/lf_Keri.pm3;lf search -1'" "Pyramid ID found"; then break; fi
-      if ! CheckExecute "lf NEXWATCH test"      "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Quadrakey-521512301.pm3;lf search -1 '" "NexWatch ID found"; then break; fi
-      if ! CheckExecute "lf SECURAKEY test"     "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Securakey-64169.pm3;lf search -1 '" "Securakey ID found"; then break; fi
-      if ! CheckExecute "lf PAC test"           "$CLIENTBIN -c 'data load -f traces/lf_PAC-8E4C058E.pm3;lf search -1'" "PAC/Stanley ID found"; then break; fi
-      if ! CheckExecute "lf PARADOX test"       "$CLIENTBIN -c 'data load -f traces/lf_Paradox-96_40426-APJN08.pm3;lf search -1'" "Paradox ID found"; then break; fi
-      if ! CheckExecute "lf VIKING test"        "$CLIENTBIN -c 'data load -f traces/lf_Transit999-best.pm3;lf search -1'" "Viking ID found"; then break; fi
-      if ! CheckExecute "lf VISA2000 test"      "$CLIENTBIN -c 'data load -f traces/lf_VISA2000.pm3;lf search -1'" "Visa2000 ID found"; then break; fi
+      if ! CheckExecute "lf AWID test"               "$CLIENTBIN -c 'data load -f traces/lf_AWID-15-259.pm3;lf search -1'" "AWID ID found"; then break; fi
+      if ! CheckExecute "lf EM410x test"             "$CLIENTBIN -c 'data load -f traces/lf_EM4102-1.pm3;lf search -1'" "EM410x ID found"; then break; fi
+      if ! CheckExecute "lf EM4x05 test"             "$CLIENTBIN -c 'data load -f traces/lf_EM4x05.pm3;lf search -1'" "FDX-B ID found"; then break; fi
+      if ! CheckExecute "lf EM4x70 calc test"        "$CLIENTBIN -c 'lf em 4x70 calc --key F32AA98CF5BE4ADFA6D3480B --rnd 45F54ADA252AAC'" "FRN: 4866BB70  GRN: 9BD180"; then break; fi
+      if ! CheckExecute "lf EM4x70 recover test 1/3" "$CLIENTBIN -c 'lf em 4x70 recover --key 022A028C02BE --rnd 7D5167003571F8 --frn 982DBCC0 --grn 36C0E0'" "022a028c02be000102030405"; then break; fi
+      if ! CheckExecute "lf EM4x70 recover test 2/3" "$CLIENTBIN -c 'lf em 4x70 recover --key 022A028C02BE --rnd 7D5167003571F8 --frn 982DBCC0 --grn 36C0E0'" "022a028c02be366866191b60"; then break; fi
+      if ! CheckExecute "lf EM4x70 recover test 3/3" "$CLIENTBIN -c 'lf em 4x70 recover --key 022A028C02BE --rnd 7D5167003571F8 --frn 982DBCC0 --grn 36C0E0'" "022a028c02bef1e352c2718d"; then break; fi
+      if ! CheckExecute "lf FDX-A FECAVA test"       "$CLIENTBIN -c 'data load -f traces/lf_EM4305_fdxa_destron.pm3;lf search -1'" "FDX-A FECAVA Destron ID found"; then break; fi
+      if ! CheckExecute "lf FDX-B test"              "$CLIENTBIN -c 'data load -f traces/lf_HomeAgain1600.pm3;lf search -1'" "FDX-B ID found"; then break; fi
+      if ! CheckExecute "lf FDX/BioThermo test"      "$CLIENTBIN -c 'data load -f traces/lf_FDXB_Bio-Thermo.pm3; lf fdxb demod'" "95.2 F / 35.1 C"; then break; fi
+      if ! CheckExecute "lf GPROXII test"            "$CLIENTBIN -c 'data load -f traces/lf_GProx_36_30_14489.pm3; lf search -1'" "Guardall G-Prox II ID found"; then break; fi
+      if ! CheckExecute "lf HID Prox test"           "$CLIENTBIN -c 'data load -f traces/lf_HID-proxCardII-05512-11432784-1.pm3;lf search -1'" "HID Prox ID found"; then break; fi
+      if ! CheckExecute "lf IDTECK test"             "$CLIENTBIN -c 'data load -f traces/lf_IDTECK_4944544BAC40E069.pm3; lf search -1'" "Idteck ID found"; then break; fi
+      if ! CheckExecute "lf INDALA test"             "$CLIENTBIN -c 'data load -f traces/lf_Indala-504278295.pm3;lf search -1'" "Indala ID found"; then break; fi
+      if ! CheckExecute "lf KERI test"               "$CLIENTBIN -c 'data load -f traces/lf_Keri.pm3;lf search -1'" "Pyramid ID found"; then break; fi
+      if ! CheckExecute "lf NEXWATCH test"           "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Quadrakey-521512301.pm3;lf search -1 '" "NexWatch ID found"; then break; fi
+      if ! CheckExecute "lf SECURAKEY test"          "$CLIENTBIN -c 'data load -f traces/lf_NEXWATCH_Securakey-64169.pm3;lf search -1 '" "Securakey ID found"; then break; fi
+      if ! CheckExecute "lf PAC test"                "$CLIENTBIN -c 'data load -f traces/lf_PAC-8E4C058E.pm3;lf search -1'" "PAC/Stanley ID found"; then break; fi
+      if ! CheckExecute "lf PARADOX test"            "$CLIENTBIN -c 'data load -f traces/lf_Paradox-96_40426-APJN08.pm3;lf search -1'" "Paradox ID found"; then break; fi
+      if ! CheckExecute "lf VIKING test"             "$CLIENTBIN -c 'data load -f traces/lf_Transit999-best.pm3;lf search -1'" "Viking ID found"; then break; fi
+      if ! CheckExecute "lf VISA2000 test"           "$CLIENTBIN -c 'data load -f traces/lf_VISA2000.pm3;lf search -1'" "Visa2000 ID found"; then break; fi
 
       if ! CheckExecute slow "lf T55 awid 26 test"               "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_awid_26.pm3; lf search -1'" "AWID ID found"; then break; fi
       if ! CheckExecute slow "lf T55 awid 26 test2"              "$CLIENTBIN -c 'data load -f traces/lf_ATA5577_awid_26.pm3; lf awid demod'" \
