@@ -164,7 +164,15 @@ typedef struct _em4x70_cmd_input_verify_auth_t {
     ID48LIB_GRN grn;
 } em4x70_cmd_input_verify_auth_t;
 
-static int CmdHelp(const char *Cmd);
+typedef struct _em4x70_cmd_input_calculate_t {
+    ID48LIB_KEY key;
+    ID48LIB_NONCE rn;
+} em4x70_cmd_input_calculate_t;
+typedef struct _em4x70_cmd_output_calculate_t {
+    ID48LIB_FRN frn;
+    ID48LIB_GRN grn;
+} em4x70_cmd_output_calculate_t;
+
 
 static void fill_buffer_prng_bytes(void *buffer, size_t byte_count) {
     if (byte_count <= 0) {
@@ -431,21 +439,6 @@ static int verify_auth_em4x70(const em4x70_cmd_input_verify_auth_t *opts) {
     return result;
 }
 
-// used by `lf search` and `search`, this is a quick test for EM4x70 tag
-// In alignment with other tags implementations, this also dumps basic information
-// about the tag, if one is found.
-// Use helper function `get_em4x70_info()` if wanting to limit / avoid output.
-bool detect_4x70_block(void) {
-    em4x70_tag_info_t info;
-    em4x70_cmd_input_info_t opts = { 0 };
-
-    int result = get_em4x70_info(&opts, &info);
-
-    if (result == PM3_ETIMEOUT) { // consider removing this output?
-        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
-    }
-    return result == PM3_SUCCESS;
-}
 
 int CmdEM4x70Info(const char *Cmd) {
 
@@ -549,8 +542,10 @@ int CmdEM4x70Brute(const char *Cmd) {
                   "This attack does NOT write anything to the tag.\n"
                   "Before starting this attack, 0000 must be written to the 16-bit key block: 'lf em 4x70 write -b 9 -d 0000'.\n"
                   "After success, the 16-bit key block have to be restored with the key found: 'lf em 4x70 write -b 9 -d c0de'\n",
-                  "lf em 4x70 brute -b 9 --rnd 45F54ADA252AAC --frn 4866BB70    --> bruteforcing key bits k95...k80\n"
-                 );
+                  "lf em 4x70 brute -b 9 --rnd 45F54ADA252AAC --frn 4866BB70    --> bruteforcing key bits k95...k80 (pm3 test key)\n"
+                  "lf em 4x70 brute -b 8 --rnd 3FFE1FB6CC513F --frn F355F1A0    --> bruteforcing key bits k79...k64 (research paper key)\n"
+                  "lf em 4x70 brute -b 7 --rnd 7D5167003571F8 --frn 982DBCC0    --> bruteforcing key bits k63...k48 (autorecovery test key)\n"
+                  );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0(NULL, "par", "Add parity bit when sending commands"),
@@ -902,6 +897,7 @@ static int CmdEM4x70Recover_ParseArgs(const char *Cmd, em4x70_cmd_input_recover_
         ,
         "lf em 4x70 recover --key F32AA98CF5BE --rnd 45F54ADA252AAC --frn 4866BB70 --grn 9BD180   (pm3 test key)\n"
         "lf em 4x70 recover --key A090A0A02080 --rnd 3FFE1FB6CC513F --frn F355F1A0 --grn 609D60   (research paper key)\n"
+        "lf em 4x70 recover --key 022A028C02BE --rnd 7D5167003571F8 --frn 982DBCC0 --grn 36C0E0   (autorecovery test key)\n"
     );
 
     void *argtable[] = {
@@ -1442,6 +1438,98 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
     return result;
 }
 
+static int CmdEM4x70Calc_ParseArgs(const char *Cmd, em4x70_cmd_input_calculate_t *out_results) {
+
+    memset(out_results, 0, sizeof(em4x70_cmd_input_calculate_t));
+
+    int result = PM3_SUCCESS;
+
+    CLIParserContext *ctx;
+    CLIParserInit(
+        &ctx,
+        "lf em 4x70 calc",
+        "Calculates both the reader and tag challenge for a user-provided key and rnd.\n"
+        ,
+        "lf em 4x70 calc --key F32AA98CF5BE4ADFA6D3480B --rnd 45F54ADA252AAC   (pm3 test key)\n"          // --frn 4866BB70 --grn 9BD180
+        "lf em 4x70 calc --key A090A0A02080000000000000 --rnd 3FFE1FB6CC513F   (research paper key)\n"    // --frn F355F1A0 --grn 609D60
+        "lf em 4x70 calc --key 022A028C02BE000102030405 --rnd 7D5167003571F8   (autorecovery test key)\n" // --frn 982DBCC0 --grn 36C0E0
+    );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "key",    "<hex>", "Key 96-bit as 12 hex bytes"),
+        arg_str1(NULL, "rnd",    "<hex>", "56-bit random value sent to tag for authentication"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    int key_len = 0; // must be 12 bytes hex data
+    int rnd_len = 0; // must be 7 bytes hex data
+
+    // These macros hide early function return on error ... including free'ing ctx.
+    CLIGetHexWithReturn(ctx, 1, out_results->key.k,   &key_len);
+    CLIGetHexWithReturn(ctx, 2, out_results->rn.rn,   &rnd_len);
+    CLIParserFree(ctx);
+
+    if (key_len != 12) {
+        PrintAndLogEx(FAILED, "Key length must be 12 bytes, got %d", key_len);
+        result = PM3_EINVARG;
+    }
+
+    if (rnd_len != 7) {
+        PrintAndLogEx(FAILED, "Random number length must be 7 bytes, got %d", rnd_len);
+        result = PM3_EINVARG;
+    }
+    return result;
+}
+
+static int CmdEM4x70Calc(const char *Cmd) {
+    em4x70_cmd_input_calculate_t opts = {0};
+    em4x70_cmd_output_calculate_t data = {0};
+
+    // 0. Parse the command line
+    int result = CmdEM4x70Calc_ParseArgs(Cmd, &opts);
+    if (PM3_SUCCESS != result) {
+        return result;
+    }
+
+    // There are no failure paths.  All inputs are valid, and ID48LIB doesn't add any failure paths.
+    id48lib_generator(&opts.key, &opts.rn, &data.frn, &data.grn);
+
+    char key_string[24 + 1] = {0};
+    char rnd_string[14 + 1] = {0};
+    char frn_string[ 8 + 1] = {0};
+    char grn_string[ 6 + 1] = {0};
+    if (true) {
+        snprintf(
+            key_string, 25,
+            "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+            opts.key.k[ 0], opts.key.k[ 1], opts.key.k[ 2], opts.key.k[ 3],
+            opts.key.k[ 4], opts.key.k[ 5], opts.key.k[ 6], opts.key.k[ 7],
+            opts.key.k[ 8], opts.key.k[ 9], opts.key.k[10], opts.key.k[11]
+            );
+        snprintf(
+            rnd_string, 15,
+            "%02X%02X%02X%02X%02X%02X%02X",
+            opts.rn.rn[0], opts.rn.rn[1], opts.rn.rn[2], opts.rn.rn[3], opts.rn.rn[4], opts.rn.rn[5], opts.rn.rn[6]
+            );
+        snprintf(
+            frn_string, 9,
+            "%02X%02X%02X%02X",
+            data.frn.frn[0], data.frn.frn[1], data.frn.frn[2], data.frn.frn[3]
+            );
+        snprintf(
+            grn_string, 7,
+            "%02X%02X%02X",
+            data.grn.grn[0], data.grn.grn[1], data.grn.grn[2]
+            );
+    }
+
+    PrintAndLogEx(SUCCESS, "KEY: " _GREEN_("%s") "  RND: " _GREEN_("%s") "  FRN: " _GREEN_("%s") "  GRN: " _GREEN_("%s"), key_string, rnd_string, frn_string, grn_string);
+    return PM3_SUCCESS;
+}
+
+// Must be declared to be used in the table,
+// but cannot be defined yet because it uses the table.
+static int CmdHelp(const char *Cmd);
 
 static command_t CommandTable[] = {
     {"help",        CmdHelp,               AlwaysAvailable, "This help"},
@@ -1452,6 +1540,7 @@ static command_t CommandTable[] = {
     {"auth",        CmdEM4x70Auth,         IfPm3EM4x70,     "Authenticate EM4x70"},
     {"setpin",      CmdEM4x70SetPIN,       IfPm3EM4x70,     "Write PIN"},
     {"setkey",      CmdEM4x70SetKey,       IfPm3EM4x70,     "Write key"},
+    {"calc",        CmdEM4x70Calc,         AlwaysAvailable, "Calculate EM4x70 challenge and response"},
     {"recover",     CmdEM4x70Recover,      AlwaysAvailable, "Recover remaining key from partial key"},
     {"autorecover", CmdEM4x70AutoRecover,  IfPm3EM4x70,     "Recover entire key from writable tag"},
     {NULL, NULL, NULL, NULL}
@@ -1463,7 +1552,26 @@ static int CmdHelp(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// Only two functions need to be non-static:
+// * CmdLFEM4X70()
+// * detect_4x70_block()
 int CmdLFEM4X70(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
+}
+
+// used by `lf search` and `search`, this is a quick test for EM4x70 tag
+// In alignment with other tags implementations, this also dumps basic information
+// about the tag, if one is found.
+// Use helper function `get_em4x70_info()` if wanting to limit / avoid output.
+bool detect_4x70_block(void) {
+    em4x70_tag_info_t info;
+    em4x70_cmd_input_info_t opts = { 0 };
+
+    int result = get_em4x70_info(&opts, &info);
+
+    if (result == PM3_ETIMEOUT) { // consider removing this output?
+        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+    }
+    return result == PM3_SUCCESS;
 }
