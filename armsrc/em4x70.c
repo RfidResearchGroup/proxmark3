@@ -80,9 +80,9 @@ static bool command_parity = true;
 #define IS_TIMEOUT(timeout_ticks) (GetTicks() > timeout_ticks)
 #define TICKS_ELAPSED(start_ticks) (GetTicks() - start_ticks)
 
-static uint8_t bits2byte(const uint8_t *bits, int length);
-static void bits2bytes(const uint8_t *bits, int length, uint8_t *out);
-static int em4x70_receive(uint8_t *bits, size_t length);
+static uint8_t encoded_bit_array_to_byte(const uint8_t *bits, int count_of_bits);
+static void encoded_bit_array_to_bytes(const uint8_t *bits, int count_of_bits, uint8_t *out);
+static int em4x70_receive(uint8_t *bits, size_t maximum_bits_to_read);
 static bool find_listen_window(bool command);
 
 static void init_tag(void) {
@@ -207,9 +207,10 @@ static uint32_t get_pulse_length(edge_detection_t edge) {
     return 0;
 }
 
-static bool check_pulse_length(uint32_t pl, uint32_t length) {
-    // check if pulse length <pl> corresponds to given length <length>
-    return ((pl >= (length - EM4X70_T_TAG_TOLERANCE)) && (pl <= (length + EM4X70_T_TAG_TOLERANCE)));
+static bool check_pulse_length(uint32_t pulse_tick_length, uint32_t target_tick_length) {
+    // check if pulse tick length corresponds to target length (+/- tolerance)
+    return ((pulse_tick_length >= (target_tick_length - EM4X70_T_TAG_TOLERANCE)) &&
+            (pulse_tick_length <= (target_tick_length + EM4X70_T_TAG_TOLERANCE)));
 }
 
 static void em4x70_send_bit(bool bit) {
@@ -301,7 +302,7 @@ static bool check_ack(void) {
     // ACK  64 + 64
     // NAK 64 + 48
     if (check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD) &&
-            check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
+        check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
         // ACK
         return true;
     }
@@ -344,7 +345,11 @@ static int authenticate(const uint8_t *rnd, const uint8_t *frnd, uint8_t *respon
             if (g_dbglevel >= DBG_EXTENDED) Dbprintf("Auth failed");
             return PM3_ESOFT;
         }
-        bits2bytes(grnd, 24, response);
+        // although only received 20 bits
+        // ask for 24 bits converted because
+        // this utility function requires
+        // decoding in multiples of 8 bits
+        encoded_bit_array_to_bytes(grnd, 24, response);
         return PM3_SUCCESS;
     }
 
@@ -455,12 +460,12 @@ static int send_pin(const uint32_t pin) {
             WaitTicks(EM4X70_T_TAG_WEE);
             // <-- Receive header + ID
             uint8_t tag_id[EM4X70_MAX_RECEIVE_LENGTH];
-            int num  = em4x70_receive(tag_id, 32);
-            if (num < 32) {
+            int count_of_bits_received  = em4x70_receive(tag_id, 32);
+            if (count_of_bits_received < 32) {
                 Dbprintf("Invalid ID Received");
                 return PM3_ESOFT;
             }
-            bits2bytes(tag_id, num, &tag.data[4]);
+            encoded_bit_array_to_bytes(tag_id, count_of_bits_received, &tag.data[4]);
             return PM3_SUCCESS;
         }
     }
@@ -537,30 +542,32 @@ static bool find_listen_window(bool command) {
     return false;
 }
 
-static void bits2bytes(const uint8_t *bits, int length, uint8_t *out) {
+// *bits == array of bytes, each byte storing a single bit.    
+// *out  == array of bytes, storing converted bits --> bytes.  
+//
+// [in,  bcount(count_of_bits)  ] const uint8_t *bits
+// [out, bcount(count_of_bits/8)] uint8_t *out
+static void encoded_bit_array_to_bytes(const uint8_t *bits, int count_of_bits, uint8_t *out) {
 
-    if (length % 8 != 0) {
-        Dbprintf("Should have a multiple of 8 bits, was sent %d", length);
+    if (count_of_bits % 8 != 0) {
+        Dbprintf("Should have a multiple of 8 bits, was sent %d", count_of_bits);
     }
 
-    int num_bytes = length / 8; // We should have a multiple of 8 here
+    int num_bytes = count_of_bits / 8; // We should have a multiple of 8 here
 
     for (int i = 1; i <= num_bytes; i++) {
-        out[num_bytes - i] = bits2byte(bits, 8);
+        out[num_bytes - i] = encoded_bit_array_to_byte(bits, 8);
         bits += 8;
     }
 }
 
-static uint8_t bits2byte(const uint8_t *bits, int length) {
+static uint8_t encoded_bit_array_to_byte(const uint8_t *bits, int count_of_bits) {
 
-    // converts <length> separate bits into a single "byte"
+    // converts <count_of_bits> separate bits into a single "byte"
     uint8_t byte = 0;
-    for (int i = 0; i < length; i++) {
-
+    for (int i = 0; i < count_of_bits; i++) {
+        byte <<= 1;
         byte |= bits[i];
-
-        if (i != length - 1)
-            byte <<= 1;
     }
 
     return byte;
@@ -581,7 +588,7 @@ static bool send_command_and_read(uint8_t command, uint8_t *bytes, size_t expect
                 Dbprintf("Invalid data received length: %d, expected %d", len, out_length_bits);
                 return false;
             }
-            bits2bytes(bits, len, bytes);
+            encoded_bit_array_to_bytes(bits, len, bytes);
             return true;
         }
     }
