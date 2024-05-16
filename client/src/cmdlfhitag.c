@@ -2169,7 +2169,7 @@ static int CmdLFHitag2Lookup(const char *Cmd) {
 
 static int CmdLFHitag2Crack2(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf hitag lookup",
+    CLIParserInit(&ctx, "lf hitag crack2",
                   "This command tries to recover 2048 bits of Hitag2 crypto stream data.\n",
                   "lf hitag crack2 --nrar 73AA5A62EAB8529C"
                  );
@@ -2196,7 +2196,7 @@ static int CmdLFHitag2Crack2(const char *Cmd) {
     memset(&packet, 0, sizeof(packet));
     memcpy(packet.NrAr, nrar, sizeof(packet.NrAr));
 
-    PrintAndLogEx(INFO, _YELLOW_("Hitag 2") " - Crack2 (NrAR)");
+    PrintAndLogEx(INFO, _YELLOW_("Hitag 2") " - Nonce replay and length extension attack ( Crack2 )");
 
     uint64_t t1 = msclock();
 
@@ -2205,23 +2205,32 @@ static int CmdLFHitag2Crack2(const char *Cmd) {
     SendCommandNG(CMD_LF_HITAG2_CRACK_2, (uint8_t *) &packet, sizeof(packet));
 
     // loop
-    uint8_t attempt = 30;
+    uint8_t attempt = 50;
     do {
 
-        PrintAndLogEx(INPLACE, "Attack 2 running...");
-        fflush(stdout);
+//        PrintAndLogEx(INPLACE, "Attack 2 running...");
+//        fflush(stdout);
 
         if (WaitForResponseTimeout(CMD_LF_HITAG2_CRACK_2, &resp, 1000) == false) {
             attempt--;
             continue;
         }
 
-//        lf_hitag_crack_response_t *payload = (lf_hitag_crack_response_t *)resp.data.asBytes;
         if (resp.status == PM3_SUCCESS) {
-            PrintAndLogEx(NORMAL, " ( %s )", _GREEN_("ok"));
+
+            PrintAndLogEx(SUCCESS, "--------------------- " _CYAN_("Recovered Keystream") " ----------------------");
+            lf_hitag_crack_response_t *payload = (lf_hitag_crack_response_t *)resp.data.asBytes;
+
+            for (int i = 0; i < 256; i += 32) {
+                PrintAndLogEx(SUCCESS, "%s", sprint_hex_inrow(payload->data + i, 32));
+            }
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(SUCCESS, "Nonce replay and length extension attack ( %s )", _GREEN_("ok"));
+            PrintAndLogEx(HINT, "try running `tools/hitag2crack/crack2/ht2crack2search <FILE_with_above_bytes>");
             break;
         } else {
-            PrintAndLogEx(NORMAL, " ( %s )", _RED_("fail"));
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(FAILED, "Nonce replay and length extension attack ( %s )", _RED_("fail"));
             break;
         }
 

@@ -120,7 +120,7 @@ static void hitag2_init(void) {
 #define HITAG_FRAME_LEN  20
 #define HITAG_FRAME_BIT_COUNT   (8 * HITAG_FRAME_LEN)
 #define HITAG_T_STOP     36 /* T_EOF should be > 36 */
-#define HITAG_T_LOW      8  /* T_LOW should be 4..10 */
+#define HITAG_T_LOW      6  /* T_LOW should be 4..10 */
 #define HITAG_T_0_MIN    15 /* T[0] should be 18..22 */
 #define HITAG_T_0        20 /* T[0] should be 18..22 */
 #define HITAG_T_1_MIN    25 /* T[1] should be 26..30 */
@@ -322,8 +322,6 @@ static void hitag2_handle_reader_command(uint8_t *rx, const size_t rxlen, uint8_
 // reader/writer
 // returns how long it took
 static uint32_t hitag_reader_send_bit(int bit) {
-    uint32_t wait = 0;
-
     // Binary pulse length modulation (BPLM) is used to encode the data stream
     // This means that a transmission of a one takes longer than that of a zero
 
@@ -331,8 +329,8 @@ static uint32_t hitag_reader_send_bit(int bit) {
     lf_modulation(true);
 
     // Wait for 4-10 times the carrier period
-    lf_wait_periods(8); // wait for 4-10 times the carrier period
-    wait += 8;
+    lf_wait_periods(HITAG_T_LOW); // wait for 4-10 times the carrier period
+    uint32_t wait = HITAG_T_LOW;
 
     // Disable modulation, just activates the field again
     lf_modulation(false);
@@ -353,6 +351,7 @@ static uint32_t hitag_reader_send_bit(int bit) {
 // reader / writer commands
 // frame_len is in number of bits?
 static uint32_t hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) {
+    WDT_HIT();
 
     uint32_t wait = 0;
     // Send the content of the frame
@@ -360,6 +359,7 @@ static uint32_t hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) 
         wait += hitag_reader_send_bit((frame[i / 8] >> (7 - (i % 8))) & 1);
     }
 
+    // Send EOF
     // Enable modulation, which means, drop the field
     lf_modulation(true);
 
@@ -373,6 +373,7 @@ static uint32_t hitag_reader_send_frame(const uint8_t *frame, size_t frame_len) 
     // t_stop, high field for stop condition (> 36)
     lf_wait_periods(HITAG_T_STOP);
     wait += HITAG_T_STOP;
+    WDT_HIT();
     return wait;
 }
 
@@ -388,7 +389,7 @@ static uint32_t hitag_reader_send_framebits(const uint8_t *frame, size_t frame_l
         wait += hitag_reader_send_bit(frame[i]);
     }
 
-    // EOF
+    // Send EOF
     // Enable modulation, which means, drop the field
     // set GPIO_SSC_DOUT to HIGH
     lf_modulation(true);
@@ -406,7 +407,6 @@ static uint32_t hitag_reader_send_framebits(const uint8_t *frame, size_t frame_l
     wait += HITAG_T_STOP;
 
     WDT_HIT();
-
     return wait;
 }
 
@@ -2418,7 +2418,7 @@ static void ht2_send(bool turn_on, uint32_t *cmd_start
                      , uint8_t *tx, size_t txlen, bool send_bits) {
 
     // Tag specific configuration settings (sof, timings, etc.)  HITAG2 Settings
-#define T_WAIT_1_GUARD  8
+#define T_WAIT_1_GUARD  7
 
     if (turn_on) {
         // Wait 50ms with field off to be sure the transponder gets reset
