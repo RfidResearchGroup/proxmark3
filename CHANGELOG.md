@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Change `lf hitag info` - now tries to identify different key fob emulators (@iceman1001)
+- Added `lf hitag reader` - act as a Hitag2 reader (@iceman1001)
 - Fixed `lf hitag crack2` - now works. (@iceman1001)
 - Fixed wrong use of free() in desfire crypto on arm src,  thanks @jlitewski! (@iceman1001)
 - Added `lf em 4x70 calc` - calculate `frn`/`grn` for a given `key` + `rnd`

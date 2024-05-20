@@ -766,6 +766,26 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
 void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 }
 
+static const char* identify_transponder_hitag2(uint32_t uid) {
+
+    switch (uid) {
+        case 0x53505910:
+            return "IMMO Key emulator";
+            break;
+        case 0x5accc811:
+        case 0x5accc821:
+        case 0x5accc831:
+        case 0x5accc841:
+        case 0x5accc851:
+        case 0x5accc861:
+        case 0x5accc871:
+        case 0x5accc881:
+        case 0x5accc891:
+        case 0x5accc8B1:
+            return "CN3 Tango Key emulator";
+    }
+    return "";
+}
 
 static bool getHitag2Uid(uint32_t *uid) {
 
@@ -822,6 +842,16 @@ static int CmdLFHitagInfo(const char *Cmd) {
     // print_hitag2_configuration(uid,  0x02);
     // print_hitag2_configuration(uid,  0x00);
     // print_hitag2_configuration(uid,  0x04);
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
+    const char *s = identify_transponder_hitag2(uid);
+    if (strlen(s)) {
+        PrintAndLogEx(SUCCESS, "Found... " _GREEN_("%s"), s);
+    } else {
+        PrintAndLogEx(INFO, _RED_("n/a"));
+    }
+
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
