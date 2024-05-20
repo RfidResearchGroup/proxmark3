@@ -826,6 +826,38 @@ static int CmdLFHitagInfo(const char *Cmd) {
 }
 
 static int CmdLFHitagReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hitag reader",
+                "Act as a Hitag2 reader.  Look for Hitag2 tags until Enter or the pm3 button is pressed\n",
+                "lf hitag reader\n"
+                "lf hitag reader -@   -> Continuous mode"
+            );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
+    do {
+        // read UID
+        uint32_t uid = 0;
+        if (getHitag2Uid(&uid)) {
+            PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%08X"), uid);
+        }
+    } while (cm && kbd_enter_pressed() == false);
+
+    return PM3_SUCCESS;
+}
+
+static int CmdLFHitagRd(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag read",
@@ -1453,7 +1485,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
 
         memcpy(packet.NrAr, nrar, sizeof(packet.NrAr));
 
-        PrintAndLogEx(INFO, _YELLOW_("Hitag 2") " - Challenge mode (NrAR)");
+        PrintAndLogEx(INFO, _YELLOW_("Hitag 2") " - Challenge mode (NrAr)");
 
         uint64_t t1 = msclock();
 
@@ -2404,11 +2436,12 @@ static command_t CommandTable[] = {
     {"list",        CmdLFHitagList,             AlwaysAvailable, "List Hitag trace history"},
     {"-----------", CmdHelp,                    IfPm3Hitag,      "------------------------ " _CYAN_("General") " ------------------------"},
     {"info",        CmdLFHitagInfo,             IfPm3Hitag,      "Hitag 2 tag information"},
+    {"reader",      CmdLFHitagReader,           IfPm3Hitag,      "Act line an Hitag 2 reader"},
     {"test",        CmdLFHitag2Selftest,        AlwaysAvailable, "Perform self tests"},
     {"-----------", CmdHelp,                    IfPm3Hitag,      "----------------------- " _CYAN_("Operations") " -----------------------"},
 //    {"demod",       CmdLFHitag2PWMDemod,        IfPm3Hitag,      "PWM Hitag 2 reader message demodulation"},
     {"dump",        CmdLFHitag2Dump,            IfPm3Hitag,      "Dump Hitag 2 tag"},
-    {"read",        CmdLFHitagReader,           IfPm3Hitag,      "Read Hitag memory"},
+    {"read",        CmdLFHitagRd,               IfPm3Hitag,      "Read Hitag memory"},
     {"sniff",       CmdLFHitagSniff,            IfPm3Hitag,      "Eavesdrop Hitag communication"},
     {"view",        CmdLFHitagView,             AlwaysAvailable, "Display content from tag dump file"},
     {"wrbl",        CmdLFHitagWriter,           IfPm3Hitag,      "Write a block (page) in Hitag memory"},
