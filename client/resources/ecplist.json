@@ -55,6 +55,11 @@
         "name": "Transit: Clipper",
         "description": ""
     },
+    {
+        "value": "6a02c8010003095a0000000000",
+        "name": "Transit: Navigo",
+        "description": ""
+    },
 
     {
         "value": "6a02c3020002ffff",
