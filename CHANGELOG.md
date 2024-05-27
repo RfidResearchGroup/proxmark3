@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed the pm3 regressiontests for Hitag2Crack (@iceman1001)
 - Changed `mem spiffs tree` - adapted to bigbuff and show if empty (@iceman1001)
 - Changed `lf hitag info` - now tries to identify different key fob emulators (@iceman1001)
 - Added `lf hitag reader` - act as a Hitag2 reader (@iceman1001)
