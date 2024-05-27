@@ -766,7 +766,7 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
 void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 }
 
-static const char* identify_transponder_hitag2(uint32_t uid) {
+static const char *identify_transponder_hitag2(uint32_t uid) {
 
     switch (uid) {
         case 0x53505910:
@@ -858,10 +858,10 @@ static int CmdLFHitagInfo(const char *Cmd) {
 static int CmdLFHitagReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag reader",
-                "Act as a Hitag2 reader.  Look for Hitag2 tags until Enter or the pm3 button is pressed\n",
-                "lf hitag reader\n"
-                "lf hitag reader -@   -> Continuous mode"
-            );
+                  "Act as a Hitag2 reader.  Look for Hitag2 tags until Enter or the pm3 button is pressed\n",
+                  "lf hitag reader\n"
+                  "lf hitag reader -@   -> Continuous mode"
+                 );
 
     void *argtable[] = {
         arg_param_begin,

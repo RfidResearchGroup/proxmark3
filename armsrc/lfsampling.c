@@ -538,7 +538,7 @@ int ReadLF_realtime(bool reader_field) {
 
     return_value = async_usb_write_stop();
 
-out:     
+out:
     LED_D_OFF();
 
     // DoAcquisition() end

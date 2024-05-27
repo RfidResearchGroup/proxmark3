@@ -380,7 +380,7 @@ void ht2_crack2(uint8_t *nrar_hex) {
 
     // We got 42 bits of keystream in c2->keybits.
     // using the 40 bits of keystream in keybits, sending commands with ever
-    // increasing lengths to acquire 2048 bits of key stream.    
+    // increasing lengths to acquire 2048 bits of key stream.
     int kslen = 40;
     int res = PM3_SUCCESS;
 
@@ -409,17 +409,17 @@ void ht2_crack2(uint8_t *nrar_hex) {
         uint8_t resp[4] = {0};
         res = ht2_tx_rx(c2->e_ext_cmd, kslen, resp, &n, true, false);
         if (res != PM3_SUCCESS) {
-            Dbprintf("tx/rx failed, got %zu (res... %i)", n, res);            
+            Dbprintf("tx/rx failed, got %zu (res... %i)", n, res);
             break;
         }
 
-        // convert response to binarray 
+        // convert response to binarray
         hex2binarray_n((char *)e_response, (char *)resp, 4);
 
         // recover keystream from encrypted response
         hitag2crack_xor(c2->keybits + kslen, e_response, c2->uid, 32);
 
-        // extented with 30 bits or  3 * 10 read_p0_cmds 
+        // extented with 30 bits or  3 * 10 read_p0_cmds
         hitag2crack_xor(c2->e_ext_cmd + kslen, read_p0_cmd, c2->keybits + kslen, 10);
         kslen += 10;
         hitag2crack_xor(c2->e_ext_cmd + kslen, read_p0_cmd, c2->keybits + kslen, 10);
@@ -437,5 +437,5 @@ void ht2_crack2(uint8_t *nrar_hex) {
 
     reply_ng(CMD_LF_HITAG2_CRACK_2, res, (uint8_t *)packet, sizeof(lf_hitag_crack_response_t));
     BigBuf_free();
-    return; 
+    return;
 }

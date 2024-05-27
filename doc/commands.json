@@ -9016,11 +9016,29 @@
             ],
             "usage": "lf em 4x70 autorecover [-h] [--par] --rnd <hex> --frn <hex> --grn <hex>"
         },
+        "lf em 4x70 calc": {
+            "command": "lf em 4x70 calc",
+            "description": "Calculates both the reader and tag challenge for a user-provided key and rnd.",
+            "notes": [
+                "lf em 4x70 calc --key F32AA98CF5BE4ADFA6D3480B --rnd 45F54ADA252AAC (pm3 test key)",
+                "lf em 4x70 calc --key A090A0A02080000000000000 --rnd 3FFE1FB6CC513F (research paper key)",
+                "lf em 4x70 calc --key 022A028C02BE000102030405 --rnd 7D5167003571F8 (autorecovery test key)"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--key <hex> Key 96-bit as 12 hex bytes",
+                "--rnd <hex> 56-bit random value sent to tag for authentication"
+            ],
+            "usage": "lf em 4x70 calc [-h] --key <hex> --rnd <hex>"
+        },
         "lf em 4x70 help": {
             "command": "lf em 4x70 help",
-            "description": "help This help recover Recover remaining key from partial key --------------------------------------------------------------------------------------- lf em 4x70 brute available offline: no Optimized partial key-update attack of 16-bit key block 7, 8 or 9 of an EM4x70 This attack does NOT write anything to the tag. Before starting this attack, 0000 must be written to the 16-bit key block: 'lf em 4x70 write -b 9 -d 0000'. After success, the 16-bit key block have to be restored with the key found: 'lf em 4x70 write -b 9 -d c0de'",
+            "description": "help This help calc Calculate EM4x70 challenge and response recover Recover remaining key from partial key --------------------------------------------------------------------------------------- lf em 4x70 brute available offline: no Optimized partial key-update attack of 16-bit key block 7, 8 or 9 of an EM4x70 This attack does NOT write anything to the tag. Before starting this attack, 0000 must be written to the 16-bit key block: 'lf em 4x70 write -b 9 -d 0000'. After success, the 16-bit key block have to be restored with the key found: 'lf em 4x70 write -b 9 -d c0de'",
             "notes": [
-                "lf em 4x70 brute -b 9 --rnd 45F54ADA252AAC --frn 4866BB70 -> bruteforcing key bits k95...k80"
+                "lf em 4x70 brute -b 9 --rnd 45F54ADA252AAC --frn 4866BB70 -> bruteforcing key bits k95...k80 (pm3 test key)",
+                "lf em 4x70 brute -b 8 --rnd 3FFE1FB6CC513F --frn F355F1A0 -> bruteforcing key bits k79...k64 (research paper key)",
+                "lf em 4x70 brute -b 7 --rnd 7D5167003571F8 --frn 982DBCC0 -> bruteforcing key bits k63...k48 (autorecovery test key)"
             ],
             "offline": true,
             "options": [
@@ -9052,7 +9070,8 @@
             "description": "After obtaining key bits 95..48 (such as via 'lf em 4x70 brute'), this command will recover key bits 47..00. By default, this process does NOT require a tag to be present. By default, the potential keys are shown (typically 1-6) along with a corresponding 'lf em 4x70 auth' command that will authenticate, if that potential key is correct. The user can copy/paste these commands when the tag is present to manually check which of the potential keys is correct.",
             "notes": [
                 "lf em 4x70 recover --key F32AA98CF5BE --rnd 45F54ADA252AAC --frn 4866BB70 --grn 9BD180 (pm3 test key)",
-                "lf em 4x70 recover --key A090A0A02080 --rnd 3FFE1FB6CC513F --frn F355F1A0 --grn 609D60 (research paper key)"
+                "lf em 4x70 recover --key A090A0A02080 --rnd 3FFE1FB6CC513F --frn F355F1A0 --grn 609D60 (research paper key)",
+                "lf em 4x70 recover --key 022A028C02BE --rnd 7D5167003571F8 --frn 982DBCC0 --grn 36C0E0 (autorecovery test key)"
             ],
             "offline": true,
             "options": [
@@ -9518,7 +9537,7 @@
                 "-h, --help This help",
                 "--nrar <hex> specify nonce / answer as 8 hex bytes"
             ],
-            "usage": "lf hitag lookup [-h] [--nrar <hex>]"
+            "usage": "lf hitag crack2 [-h] [--nrar <hex>]"
         },
         "lf hitag dump": {
             "command": "lf hitag dump",
@@ -9652,6 +9671,20 @@
                 "-k, --key <hex> key, 4 or 6 hex bytes"
             ],
             "usage": "lf hitag read [-hs2] [--pwd] [--nrar <hex>] [--crypto] [-k <hex>]"
+        },
+        "lf hitag reader": {
+            "command": "lf hitag reader",
+            "description": "Act as a Hitag2 reader. Look for Hitag2 tags until Enter or the pm3 button is pressed",
+            "notes": [
+                "lf hitag reader",
+                "lf hitag reader -@ -> Continuous mode"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-@ continuous reader mode"
+            ],
+            "usage": "lf hitag reader [-h@]"
         },
         "lf hitag sim": {
             "command": "lf hitag sim",
@@ -12699,8 +12732,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 735,
+        "commands_extracted": 737,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-05-14T08:02:41"
+        "extracted_on": "2024-05-27T13:38:05"
     }
 }

@@ -3683,7 +3683,7 @@ static int CmdTestSaveState8(const char *Cmd) {
 
     size_t length = (rand() % 256);
     PrintAndLogEx(DEBUG, "Testing with length = %llu", length);
-    uint8_t *srcBuffer = (uint8_t*)calloc(length + 1, sizeof(uint8_t));
+    uint8_t *srcBuffer = (uint8_t *)calloc(length + 1, sizeof(uint8_t));
 
     //Set up the source buffer with random data
     for (int i = 0; i < length; i++) {
@@ -3706,7 +3706,7 @@ static int CmdTestSaveState8(const char *Cmd) {
     } else {
         PrintAndLogEx(DEBUG, _GREEN_("Lengths match!") "\n");
     }
-    
+
     for (size_t i = 0; i < returnedLength; i++) {
         if (srcBuffer[i] != destBuffer[i]) {
             PrintAndLogEx(FAILED, "Buffers don't match at index %lu!, Expected %i, got %i", i, srcBuffer[i], destBuffer[i]);

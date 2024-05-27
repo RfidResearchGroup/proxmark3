@@ -545,7 +545,7 @@ static int CmdEM4x70Brute(const char *Cmd) {
                   "lf em 4x70 brute -b 9 --rnd 45F54ADA252AAC --frn 4866BB70    --> bruteforcing key bits k95...k80 (pm3 test key)\n"
                   "lf em 4x70 brute -b 8 --rnd 3FFE1FB6CC513F --frn F355F1A0    --> bruteforcing key bits k79...k64 (research paper key)\n"
                   "lf em 4x70 brute -b 7 --rnd 7D5167003571F8 --frn 982DBCC0    --> bruteforcing key bits k63...k48 (autorecovery test key)\n"
-                  );
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0(NULL, "par", "Add parity bit when sending commands"),
@@ -1505,22 +1505,22 @@ static int CmdEM4x70Calc(const char *Cmd) {
             opts.key.k[ 0], opts.key.k[ 1], opts.key.k[ 2], opts.key.k[ 3],
             opts.key.k[ 4], opts.key.k[ 5], opts.key.k[ 6], opts.key.k[ 7],
             opts.key.k[ 8], opts.key.k[ 9], opts.key.k[10], opts.key.k[11]
-            );
+        );
         snprintf(
             rnd_string, 15,
             "%02X%02X%02X%02X%02X%02X%02X",
             opts.rn.rn[0], opts.rn.rn[1], opts.rn.rn[2], opts.rn.rn[3], opts.rn.rn[4], opts.rn.rn[5], opts.rn.rn[6]
-            );
+        );
         snprintf(
             frn_string, 9,
             "%02X%02X%02X%02X",
             data.frn.frn[0], data.frn.frn[1], data.frn.frn[2], data.frn.frn[3]
-            );
+        );
         snprintf(
             grn_string, 7,
             "%02X%02X%02X",
             data.grn.grn[0], data.grn.grn[1], data.grn.grn[2]
-            );
+        );
     }
     PrintAndLogEx(SUCCESS, "KEY: %s  RND: %s  FRN: " _GREEN_("%s") "  GRN: " _GREEN_("%s"), key_string, rnd_string, frn_string, grn_string);
     return PM3_SUCCESS;

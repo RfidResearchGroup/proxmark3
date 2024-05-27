@@ -646,7 +646,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 // handle partial bytes.  The parity array[0] is used to store number of left over bits from NBYTES
                 // This part prints the number of bits in the trace entry for hitag.
                 uint8_t nbits = parityBytes[0];
-                
+
                 // only apply this to lesser than one byte
                 if (data_len == 1) {
 

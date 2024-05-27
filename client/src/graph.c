@@ -613,13 +613,13 @@ size_t restore_buffer8(buffer_savestate_t saveState, uint8_t *dest) {
     // Unpack the array
     for (size_t i = 0; i < saveState.bufferSize; i++) {
         dest[index++] = saveState.buffer[i];
-        if(index == length) break;
+        if (index == length) break;
         dest[index++] = (saveState.buffer[i] >> 8) & 0xFF;
-        if(index == length) break;
+        if (index == length) break;
         dest[index++] = (saveState.buffer[i] >> 16) & 0xFF;
-        if(index == length) break;
+        if (index == length) break;
         dest[index++] = (saveState.buffer[i] >> 24) & 0xFF;
-        if(index == length) break;
+        if (index == length) break;
     }
 
     return index;
