@@ -59,7 +59,7 @@ typedef struct {
 
 typedef struct {
     int status;
-    uint8_t data[48];
+    uint8_t data[256];
 } PACKED lf_hitag_crack_response_t;
 
 //---------------------------------------------------------
