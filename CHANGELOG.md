@@ -4,7 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 
-## [Aurora][2024-05-28]
+## [Aurora.4.18589][2024-05-28]
 - Fixed the pm3 regressiontests for Hitag2Crack (@iceman1001)
 - Changed `mem spiffs tree` - adapted to bigbuff and show if empty (@iceman1001)
 - Changed `lf hitag info` - now tries to identify different key fob emulators (@iceman1001)
