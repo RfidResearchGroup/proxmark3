@@ -2769,7 +2769,7 @@ static int CmdAsn1Decoder(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("d", NULL, "<hex>", "ASN1 encoded byte array"),
-        arg_lit0("t", "test", "perform self test"),
+        arg_lit0(NULL, "test", "perform self tests"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
