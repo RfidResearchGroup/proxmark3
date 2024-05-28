@@ -360,7 +360,6 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhfthinfilm.c
         ${PM3_ROOT}/client/src/cmdhftopaz.c
         ${PM3_ROOT}/client/src/cmdhfvas.c
-        ${PM3_ROOT}/client/src/cmdhfving.c
         ${PM3_ROOT}/client/src/cmdhfxerox.c
         ${PM3_ROOT}/client/src/cmdhw.c
         ${PM3_ROOT}/client/src/cmdlf.c
