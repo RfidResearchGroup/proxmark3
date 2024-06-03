@@ -76,11 +76,12 @@ FRA_OrganizationalAuthority_Contract_Provider = {
     0x078: {
         4: 'Reims (Citura / Transdev)',
     },
-    0x502: {
-        83: 'Annecy (Sibra)',
-    },
     0x091: {
         1: 'Strasbourg (CTS)',
+    },
+    0x502: {
+        83: 'Annecy (Sibra)',
+        10: 'Clermont-Ferrand (T2C)',
     },
     0x907: {
         1: 'Dijon (Divia / Keolis)',
