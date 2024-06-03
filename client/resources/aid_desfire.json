@@ -33,10 +33,10 @@
     },
     {
         "AID": "4F5931",
-        "Vendor": "Transport of London",
+        "Vendor": "Transport for London [TfL]",
         "Country": "UK",
         "Name": "Oyster Card",
-        "Description": "",
+        "Description": "FIDs: 00-07: Standard Data",
         "Type": "transport"
     },
     {
@@ -121,10 +121,18 @@
     },
     {
         "AID": "F21030",
-        "Vendor": "ORCA (VUX/ERG)",
-        "Country": "",
-        "Name": "ORCA Card",
-        "Description": "(FIDs 02: Trip History; 04: current balance)",
+        "Vendor": "Puget Sound Transit Agencies",
+        "Country": "US",
+        "Name": "ORCA",
+        "Description": "VUX/ERG // One Regional Card For All // FIDs 02: Trip History; 04: current balance)",
+        "Type": "transport"
+    },
+    {
+        "AID": "F213F0",
+        "Vendor": "Puget Sound Transit Agencies",
+        "Country": "US",
+        "Name": "ORCA",
+        "Description": "VUX/ERG // One Regional Card for All // FIDs 00: Standard Data; 01: Backup Data)",
         "Type": "transport"
     },
     {
@@ -397,7 +405,7 @@
         "Vendor": "Public Transport Victoria [PTV] via Conduent",
         "Country": "AU",
         "Name": "myki",
-        "Description": "FIDs: 0F: Standard Data; 00: Backup Data",
+        "Description": "myki App 1 // FIDs: 0F: Standard Data; 00: Backup Data",
         "Type": "transport"
     },
     {
@@ -405,23 +413,39 @@
         "Vendor": "Public Transport Victoria [PTV] via Conduent",
         "Country": "AU",
         "Name": "myki",
-        "Description": "FIDs: 01/02: Cyclic Record; 03: myki money Balance; 00/04/05: Backup Data; 08/09/0A/0B/0C/0F: Standard Data",
+        "Description": "myki App 2 // FIDs: 01/02: Transaction History; 03: myki money Balance; 00/04/05: Backup Data; 08/09/0A/0B/0C/0F: Standard Data",
         "Type": "transport"
     },
     {
         "AID": "F206B0",
-        "Vendor": "ACS",
-        "Country": "AUS",
-        "Name": "Metrocard / ACS",
-        "Description": "",
+        "Vendor": "Adelaide Metro",
+        "Country": "AU",
+        "Name": "metroCARD",
+        "Description": "ACS // Not to be confused with CHC Metrocard",
+        "Type": "transport"
+    },
+    {
+        "AID": "8113F2",
+        "Vendor": "Chicago Transit Authority [CTA]",
+        "Country": "US",
+        "Name": "Ventra Card",
+        "Description": "Multi-Modal Transit #1 // FIDs: 00/01: Standard Data",
+        "Type": "transport"
+    },
+    {
+        "AID": "F21390",
+        "Vendor": "Multiple NZ Transit Agencies via Otago Regional Council",
+        "Country": "NZ",
+        "Name": "Bee Card",
+        "Description": "Multi-Modal Transit #0 // FIDs: 00: Backup Data; 01/02: Trip History; 03: Card Balance",
         "Type": "transport"
     },
     {
         "AID": "F21050",
-        "Vendor": "INIT",
+        "Vendor": "Metro Christchurch",
         "Country": "NZ",
-        "Name": "Metrocard / Christchurch",
-        "Description": "",
+        "Name": "INIT // Metrocard",
+        "Description": "Not to be confused with ADL metroCARD // Multi-Modal Transit #0 // FIDs: 00: Backup Data; 01/02: Trip History; 03: Card Balance",
         "Type": "transport"
     },
     {
@@ -482,26 +506,26 @@
     },
     {
         "AID": "554000",
-        "Vendor": "AT HOP",
-        "Country": "",
-        "Name": "AT HOP",
-        "Description": "",
+        "Vendor": "Auckland Transport",
+        "Country": "NZ",
+        "Name": "AT HOP Card",
+        "Description": "FIDs: 00: Backup Data; 08/09/0A",
         "Type": "transport"
     },
     {
         "AID": "534531",
-        "Vendor": "OPAL",
-        "Country": "AUS",
-        "Name": "OPAL",
+        "Vendor": "Transport for New South Wales [TfNSW]",
+        "Country": "AU",
+        "Name": "Opal Card",
         "Description": "",
         "Type": "transport"
     },
     {
         "AID": "2211AF",
-        "Vendor": "Leap",
-        "Country": "",
-        "Name": "Leap",
-        "Description": "",
+        "Vendor": "National Transport Authority",
+        "Country": "IE",
+        "Name": "TFI Leap Card",
+        "Description": "Transport for Ireland // FIDs: 01/1F: Backup Data; 02/0A/03/04/05/06/07/08/09: Standard Data",
         "Type": "transport"
     },
     {
