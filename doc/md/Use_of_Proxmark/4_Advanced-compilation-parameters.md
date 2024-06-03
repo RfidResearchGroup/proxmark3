@@ -127,7 +127,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | HF_14ASNIFF     | 14a sniff storing to flashmem - Micolous
 | HF_14BSNIFF     | 14b sniff - jacopo-j
 | HF_15SNIFF      | 15693 sniff storing to flashmem - Glaser
-| HF_15SNIFF      | 15693 simulator - lnv42
+| HF_15SIM        | 15693 simulator - lnv42
 | HF_AVEFUL       | MIFARE Ultralight read/simulation - Ave Ozkal
 | HF_BOG          | 14a sniff with ULC/ULEV1/NTAG auth storing in flashmem - Bogito
 | HF_CARDHOPPER   | Long distance (over IP) relay of 14a protocols - Sam Haskins
