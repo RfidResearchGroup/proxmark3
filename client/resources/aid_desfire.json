@@ -441,9 +441,9 @@
     },
     {
         "AID": "F21050",
-        "Vendor": "Metro Christchurch",
+        "Vendor": "Metro Christchurch via INIT",
         "Country": "NZ",
-        "Name": "INIT // Metrocard",
+        "Name": "Metrocard",
         "Description": "Not to be confused with ADL metroCARD // Multi-Modal Transit #0 // FIDs: 00: Backup Data; 01/02: Trip History; 03: Card Balance",
         "Type": "transport"
     },
