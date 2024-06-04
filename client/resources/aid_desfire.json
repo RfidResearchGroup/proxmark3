@@ -159,7 +159,6 @@
         "Description": "",
         "Type": "payment system"
     },
-
     {
         "AID": "F88280",
         "Vendor": "TU Delft",
@@ -216,7 +215,7 @@
         "Description": "",
         "Type": "student"
     },
-        {
+    {
         "AID": "535505",
         "Vendor": "TU Delft",
         "Country": "NL",
@@ -224,7 +223,7 @@
         "Description": "",
         "Type": "student"
     },
-        {
+    {
         "AID": "535506",
         "Vendor": "TU Delft",
         "Country": "NL",
@@ -240,7 +239,7 @@
         "Description": "",
         "Type": "student"
     },
-        {
+    {
         "AID": "535508",
         "Vendor": "TU Delft",
         "Country": "NL",
@@ -256,7 +255,7 @@
         "Description": "",
         "Type": "student"
     },
-        {
+    {
         "AID": "53550A",
         "Vendor": "TU Delft",
         "Country": "NL",
@@ -264,7 +263,7 @@
         "Description": "",
         "Type": "student"
     },
-        {
+    {
         "AID": "53550B",
         "Vendor": "TU Delft",
         "Country": "NL",
@@ -288,7 +287,7 @@
         "Description": "Campus Card",
         "Type": "student"
     },
-     {
+    {
         "AID": "15845F",
         "Vendor": "InterCard GmbH Kartensysteme",
         "Country": "DE",
@@ -296,7 +295,7 @@
         "Description": "Campus Card",
         "Type": "student"
     },
-     {
+    {
         "AID": "25845F",
         "Vendor": "InterCard GmbH Kartensysteme",
         "Country": "DE",
