@@ -76,7 +76,7 @@
         "Vendor": "NORTIC",
         "Country": "",
         "Name": "NORTIC Transport",
-        "Description": "(FIDs 01: Transport Product Retailer; 02: Transport Service Provider; 03: Transport Special Event; 04: Transport Stored Value; 05: Transport General Event Log; 06: Transport SV Reload Log; 0A: Transport Environment; 0C: Transport Card Holder",
+        "Description": "FIDs 01: Transport Product Retailer; 02: Transport Service Provider; 03: Transport Special Event; 04: Transport Stored Value; 05: Transport General Event Log; 06: Transport SV Reload Log; 0A: Transport Environment; 0C: Transport Card Holder",
         "Type": "transport"
     },
     {
@@ -132,7 +132,7 @@
         "Vendor": "Puget Sound Transit Agencies",
         "Country": "US",
         "Name": "ORCA",
-        "Description": "VUX/ERG // One Regional Card for All // FIDs 00: Standard Data; 01: Backup Data)",
+        "Description": "VUX/ERG // One Regional Card for All // FIDs 00: Standard Data; 01: Backup Data",
         "Type": "transport"
     },
     {
@@ -140,7 +140,7 @@
         "Vendor": "Clipper",
         "Country": "US",
         "Name": "Clipper Card/San Francisco Bay Area ",
-        "Description": "(FIDs 02: current balance; 04: Refill History; 08: Card Information; 0E: Trip History)\\nFFFFFF General Issuer Information (FIDs 00: MAD Version; 01: Card Holder; 02: Card Publisher)",
+        "Description": "FIDs 02: current balance; 04: Refill History; 08: Card Information; 0E: Trip History]\\nFFFFFF General Issuer Information // FIDs 00: MAD Version; 01: Card Holder; 02: Card Publisher",
         "Type": "transport"
     },
     {
@@ -348,7 +348,7 @@
         "Vendor": "Gallagher",
         "Country": "NZ",
         "Name": "Access control",
-        "Description": "Card Application Directory (CAD)",
+        "Description": "Card Application Directory [CAD]",
         "Type": "pacs"
     },
     {
@@ -569,7 +569,7 @@
     },
     {
         "AID": "F52310",
-        "Vendor": "Integrated Control Technology Limited (ICT)",
+        "Vendor": "Integrated Control Technology Limited [ICT]",
         "Country": "NZ",
         "Name": "ICT Access credential",
         "Description": "",
