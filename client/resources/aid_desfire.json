@@ -4,7 +4,7 @@
         "Vendor": "NFC Forum",
         "Country": "US",
         "Name": "NFC Forum NDEF Tag",
-        "Description": "(FID 03: Capability Container)",
+        "Description": "FID 03: Capability Container",
         "Type": "ndef"
     },
     {
@@ -35,16 +35,16 @@
         "AID": "4F5931",
         "Vendor": "Transport for London [TfL]",
         "Country": "UK",
-        "Name": "Oyster Card",
+        "Name": "Oyster Card", m
         "Description": "FIDs: 00-07: Standard Data",
         "Type": "transport"
     },
     {
         "AID": "422201",
         "Vendor": "Transport of Istanbul",
-        "Country": "Turkey",
+        "Country": "TR",
         "Name": "Istanbulkart",
-        "Description": "",
+        "Description": "Istanbul Card",
         "Type": "transport"
     },
     {
@@ -60,7 +60,7 @@
         "Vendor": "LEGIC",
         "Country": "DE",
         "Name": "Legic",
-        "Description": "(FID 02: EF-CONF)",
+        "Description": "FID 02: EF-CONF",
         "Type": ""
     },
     {
@@ -68,7 +68,7 @@
         "Vendor": "NORTIC",
         "Country": "",
         "Name": "NORTIC Card Issuer",
-        "Description": "(FID 0C: Card Issuer Header)",
+        "Description": "FID 0C: Card Issuer Header",
         "Type": "transport"
     },
     {
