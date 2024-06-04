@@ -421,7 +421,7 @@
         "Vendor": "Adelaide Metro via Affiliated Computer Services [ACS]",
         "Country": "AU",
         "Name": "metroCARD",
-        "Description": "Not to be confused with CHC Metrocard // FIDs 00,02-07,09-0B,10-17,1B-1C: Backup Data; 01,1D: Linear Record File; 08: ABNote Adelaide; 1E: Standard Data; 0C-0F: Card Balance",
+        "Description": "Bus Rail Fare Collection #0 // Not to be confused with CHC Metrocard // FIDs 00,02-07,09-0B,10-17,1B-1C: Backup Data; 01,1D: Linear Record File; 08: ABNote / HID Adelaide; 1E: Standard Data; 0C-0F: Card Balance",
         "Type": "transport"
     },
     {
