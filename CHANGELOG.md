@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Added `pm3_tears_for_fears.py` - a ISO14443b tear off script by Pierre Granier
+- Added new t55xx password (002BCFCF) sniffed from cheap cloner (@davidbeauchamp)
 
 ## [Aurora.4.18589][2024-05-28]
 - Fixed the pm3 regressiontests for Hitag2Crack (@iceman1001)
