@@ -271,7 +271,7 @@ def main():
                 if (s is not None):
                     print('      ~ Authority & Provider ~    :', s)
         print('  ContractTariff                  :', ContractTariff);
-        print('  ContractMediumEndDate           : {} ({})'.format(ContractMediumEndDate, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate)).strftime('%Y-%m-%d')));
+        print('  ContractMediumEndDate           : {} ({} - may be adjusted...)'.format(ContractMediumEndDate, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate)).strftime('%Y-%m-%d')));
         print('  left...                         :', Distribution_left);
         print('  [CER] Distribution              : {:08x}'.format(Distribution_Cer.nom(32)))
 
@@ -286,6 +286,21 @@ def main():
 
         print('  left...                         :', Usage_left);
         print('  [CER] Usage                     : {:04x}'.format(Usage_Cer.nom(16)))
+
+        if PID == 0x06 and CountryCode == 0x250 and OrganizationalAuthority == 0x078 and ContractProvider == 4: # Only for FRA - Reims here, it seems date adjust is +4
+            DateAdjust = 4
+            print()
+            print('  USAGE Parsing test')
+            
+            print('    unk0...                       :', Usage_Data.nom_bits(54));
+            EventValidityTimeFirstStamp = Usage_Data.nom(11)
+            print('    EventValidityTimeFirstStamp   : {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
+            print('    unk1...                       :', Usage_Data.nom_bits(31));
+            EventDateStamp = Usage_Data.nom(10)
+            print('    EventDateStamp                : {} ({} - may be adjusted...)'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp + DateAdjust)).strftime('%Y-%m-%d')));
+            EventTimeStamp = Usage_Data.nom(11)
+            print('    EventTimeStamp                : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
+            print('    unk2...                       :', Usage_Data.nom_bits(23));
 
     return 0
 
