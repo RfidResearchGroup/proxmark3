@@ -21,10 +21,14 @@ import sys, os
 from datetime import datetime, timedelta
 from bitarray import bitarray
 from bitarray.util import ba2int
+from typing import NamedTuple
 
 class BitMe:
     def __init__(self):
-        self.data = bitarray()
+        self.data = bitarray(endian = 'big')
+        self.idx = 0
+
+    def reset(self):
         self.idx = 0
 
     def addBits(self, bits):
@@ -47,62 +51,130 @@ class BitMe:
     def isEmpty(self):
         return (len(self.data) == 0)
 
+'''
+A generic Describe_Usage function with variable number of bits between stamps will be more optimal
+At this time I want to keep more places/functions to try to parse other fields in 'unk1' and 'left'
+'''
+def Describe_Usage_1(Usage, ContractMediumEndDate, Certificate):
+    EventDateStamp = Usage.nom(10)
+    EventTimeStamp = Usage.nom(11)
+    unk = Usage.nom_bits(65)
+    EventValidityTimeFirstStamp = Usage.nom(11)
+    
+    print('  EventDateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
+    print('  EventTimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
+    print('  unk1...                    :', unk);
+    print('  EventValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
+    print('  left...                    :', Usage.nom_bits_left());
+    print('  [CER] Usage                : {:04x}'.format(Certificate.nom(16)))
+    
+def Describe_Usage_2(Usage, ContractMediumEndDate, Certificate):
+    EventDateStamp = Usage.nom(10)
+    EventTimeStamp = Usage.nom(11)
+    unk = Usage.nom_bits(49)
+    EventValidityTimeFirstStamp = Usage.nom(11)
+    
+    print('  EventDateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
+    print('  EventTimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
+    print('  unk1...                    :', unk);
+    print('  EventValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
+    print('  left...                    :', Usage.nom_bits_left());
+    print('  [CER] Usage                : {:04x}'.format(Certificate.nom(16)))
+    
+def Describe_Usage_3(Usage, ContractMediumEndDate, Certificate):
+    EventDateStamp = Usage.nom(10)
+    EventTimeStamp = Usage.nom(11)
+    unk = Usage.nom_bits(27)
+    EventValidityTimeFirstStamp = Usage.nom(11)
+    
+    print('  EventDateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
+    print('  EventTimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
+    print('  unk1...                    :', unk);
+    print('  EventValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
+    print('  left...                    :', Usage.nom_bits_left());
+    print('  [CER] Usage                : {:04x}'.format(Certificate.nom(16)))
+    
+def Describe_Usage_4(Usage, ContractMediumEndDate, Certificate):
+    EventDateStamp = Usage.nom(10)
+    EventTimeStamp = Usage.nom(11)
+    unk = Usage.nom_bits(63)
+    EventValidityTimeFirstStamp = Usage.nom(11)
+    
+    print('  EventDateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
+    print('  EventTimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
+    print('  unk1...                    :', unk);
+    print('  EventValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
+    print('  left...                    :', Usage.nom_bits_left());
+    print('  [CER] Usage                : {:04x}'.format(Certificate.nom(16)))
+
+def Describe_Usage_Generic(Usage, ContractMediumEndDate, Certificate):
+    print('  !!! GENERIC DUMP - please provide full file dump to benjamin@gentilkiwi.com - especially if NOT empty !!!')
+    print('  left...                    :', Usage.nom_bits_left());
+    print('  [CER] Usage                : {:04x}'.format(Certificate.nom(16)))
+    print('  !!! Trying Usage_1 (the most common) !!!')
+    Usage.reset()
+    Certificate.reset()
+    Describe_Usage_1(Usage, ContractMediumEndDate, Certificate)
+
+class InterticHelper(NamedTuple):
+    OrganizationalAuthority: str
+    ContractProvider: str
+    UsageDescribeFunction: callable = None
 
 ISO_Countries = {
     0x250: 'France',
 }
 
-
 FRA_OrganizationalAuthority_Contract_Provider = {
     0x000: {
-        5: 'Lille (Ilévia / Keolis)',
-        7: 'Lens-Béthune (Tadao / Transdev)',
+        5: InterticHelper('Lille', 'Ilévia / Keolis', Describe_Usage_1),
+        7: InterticHelper('Lens-Béthune', 'Tadao / Transdev', Describe_Usage_1),
     },
     0x006: {
-        1: 'Amiens (Ametis / Keolis)',
+        1: InterticHelper('Amiens', 'Ametis / Keolis'),
     },
     0x008: {
-        15: 'Angoulême (STGA)',
+        15: InterticHelper('Angoulême', 'STGA', Describe_Usage_1),
     },
     0x021: {
-        1: 'Bordeaux (TBM / Keolis)',
+        1: InterticHelper('Bordeaux', 'TBM / Keolis', Describe_Usage_1),
     },
     0x057: {
-        1: 'Lyon (TCL / Keolis)',
+        1: InterticHelper('Lyon', 'TCL / Keolis', Describe_Usage_1),
     },
     0x072: {
-        1: 'Tours (filbleu / Keolis)',
+        1: InterticHelper('Tours', 'filbleu / Keolis', Describe_Usage_1),
     },
     0x078: {
-        4: 'Reims (Citura / Transdev)',
+        4: InterticHelper('Reims', 'Citura / Transdev', Describe_Usage_1),
     },
     0x091: {
-        1: 'Strasbourg (CTS)',
+        1: InterticHelper('Strasbourg', 'CTS', Describe_Usage_4),
     },
     0x502: {
-        83: 'Annecy (Sibra)',
-        10: 'Clermont-Ferrand (T2C)',
+        83: InterticHelper('Annecy', 'Sibra', Describe_Usage_2),
+        10: InterticHelper('Clermont-Ferrand', 'T2C'),
     },
     0x907: {
-        1: 'Dijon (Divia / Keolis)',
+        1: InterticHelper('Dijon', 'Divia / Keolis'),
     },
     0x908: {
-        1: 'Rennes (STAR / Keolis)',
-        8: 'Saint-Malo (MAT / RATP)',
+        1: InterticHelper('Rennes', 'STAR / Keolis', Describe_Usage_2),
+        8: InterticHelper('Saint-Malo', 'MAT / RATP'),
     },
     0x911: {
-        5: 'Besançon (Ginko / Keolis)',
+        5: InterticHelper('Besançon', 'Ginko / Keolis'),
     },
     0x912: {
-        3: 'Le Havre (Lia / Transdev)',
-        35: 'Cherbourg-en-Cotentin (Cap Cotentin / Transdev)',
+        3: InterticHelper('Le Havre', 'Lia / Transdev', Describe_Usage_1),
+        35: InterticHelper('Cherbourg-en-Cotentin', 'Cap Cotentin / Transdev'),
     },
     0x913: {
-        3: 'Nîmes (Tango / Transdev)',
+        3: InterticHelper('Nîmes', 'Tango / Transdev', Describe_Usage_3),
     },
     0x917: {
-        4: 'Angers (Irigo / RATP)',
-        7: 'Saint-Nazaire (Stran)',
+        4: InterticHelper('Angers', 'Irigo / RATP', Describe_Usage_1),
+        7: InterticHelper('Saint-Nazaire', 'Stran'),
     },
 }
 
@@ -136,129 +208,88 @@ def main():
         if not chunk:
             break
         data.addBytes(chunk[::-1])
-
+    
     file.close()
 
-    SystemArea = BitMe()
     Distribution_Data = BitMe()
-    C1 = BitMe()
-    C2 = BitMe()
-    Usage_Sta_B = BitMe()
-    Usage_Sta_E = BitMe()
-    Usage_Data = BitMe()
-    Usage_Cer = BitMe()
+    Block0Left = BitMe()
+    # Usage_DAT = BitMe()
+    # Usage_CER = BitMe()
+    Usage_A_DAT = BitMe()
+    Usage_A_CER = BitMe()
+    Usage_B_DAT = BitMe()
+    Usage_B_CER = BitMe()
     Distribution_Cer = BitMe()
 
+    SWAP = None
+    RELOADING1 = None
+    COUNTER1 = None
+    # RELOADING2 = None
+    # COUNTER2 = None
+    Describe_Usage = None
 
-    Distribution_Data_End = data.nom_bits(24)
-    SystemArea.addBits(data.nom_bits(8))
-
-    PID = SystemArea.nom(5)
-    bIsFlipFlop = PID & 0x10
-    KeyId = SystemArea.nom(3)
-
-    print()
-    print('PID (product): 0x{:02x} (flipflop?: {})'.format(PID, bIsFlipFlop));
-    print('KeyId        :', hex(KeyId));
+    Block0Left.addBits(data.nom_bits(23))
+    KeyId = data.nom(4)
+    PID = data.nom(5)
 
     match PID:
-
-        case 0x02:
-            Distribution_Data.addBits(data.nom_bits(3 * 32))
-            Usage_Data_End = data.nom_bits(30)
-            Usage_Sta_B.addBits(data.nom_bits(2))
-            C1.addBits(data.nom_bits(32))
-            C2.addBits(data.nom_bits(32))
-            Usage_Data.addBits(data.nom_bits(7 * 32))
-            Usage_Data.addBits(Usage_Data_End)
-            Usage_Data.addBits(data.nom_bits(14))
-            Usage_Sta_E.addBits(data.nom_bits(2))
-            Usage_Cer.addBits(data.nom_bits(16))
+    
+        case 0x10:
+            Distribution_Data.addBits(data.nom_bits(2 * 32))
+            Distribution_Data.addBits(Block0Left.nom_bits_left())
+            Usage_A_DAT.addBits(data.nom_bits(2 * 32))
+            RELOADING1 = data.nom(8)
+            COUNTER1 = data.nom(24)
+            SWAP = data.nom(32)
+            Usage_A_DAT.addBits(data.nom_bits(2 * 32))
+            Usage_A_DAT.addBits(data.nom_bits(16))
+            Usage_A_CER.addBits(data.nom_bits(16))
+            Usage_B_DAT.addBits(data.nom_bits(4 * 32))
+            Usage_B_DAT.addBits(data.nom_bits(16))
+            Usage_B_CER.addBits(data.nom_bits(16))
             Distribution_Cer.addBits(data.nom_bits(32))
 
-        case 0x06:
+        case 0x11 | 0x19:
             Distribution_Data.addBits(data.nom_bits(4 * 32))
-            C1.addBits(data.nom_bits(32))
-            C2.addBits(data.nom_bits(32))
-            Distribution_Data.addBits(data.nom_bits(3 * 32))
-            Distribution_Data.addBits(Distribution_Data_End)
-            Usage_Data_End = data.nom_bits(30)
-            Usage_Sta_B.addBits(data.nom_bits(2))
-            Usage_Data.addBits(data.nom_bits(3 * 32))
-            Usage_Data.addBits(Usage_Data_End)
-            Usage_Data.addBits(data.nom_bits(14))
-            Usage_Sta_E.addBits(data.nom_bits(2))
-            Usage_Cer.addBits(data.nom_bits(16))
+            Distribution_Data.addBits(Block0Left.nom_bits_left())
+            RELOADING1 = data.nom(8)
+            COUNTER1 = data.nom(24)
+            SWAP = data.nom(32)
+            Usage_A_DAT.addBits(data.nom_bits(3 * 32))
+            Usage_A_DAT.addBits(data.nom_bits(16))
+            Usage_A_CER.addBits(data.nom_bits(16))
+            Usage_B_DAT.addBits(data.nom_bits(3 * 32))
+            Usage_B_DAT.addBits(data.nom_bits(16))
+            Usage_B_CER.addBits(data.nom_bits(16))
             Distribution_Cer.addBits(data.nom_bits(32))
-
-        case 0x07:
-            Distribution_Data.addBits(data.nom_bits(4 * 32))
-            C1.addBits(data.nom_bits(32))
-            C2.addBits(data.nom_bits(32))
-            Distribution_Data.addBits(data.nom_bits(4 * 32))
-            Distribution_Data.addBits(Distribution_Data_End)
-            Usage_Data_End = data.nom_bits(30)
-            Usage_Sta_B.addBits(data.nom_bits(2))
-            Usage_Data.addBits(data.nom_bits(3 * 32))
-            Usage_Data.addBits(Usage_Data_End)
-            Usage_Data.addBits(data.nom_bits(14))
-            Usage_Sta_E.addBits(data.nom_bits(2))
-            Usage_Cer.addBits(data.nom_bits(16))
-            Distribution_Cer.addBits(data.nom_bits(32))
-
-        case 0x0a:
-            Distribution_Data.addBits(data.nom_bits(4 * 32))
-            C1.addBits(data.nom_bits(32))
-            C2.addBits(data.nom_bits(32))
-            Distribution_Data.addBits(data.nom_bits(8 * 32))
-            Distribution_Data.addBits(Distribution_Data_End)
-            Distribution_Cer.addBits(data.nom_bits(32))
-            # No USAGE for 0x0a
-
-        case 0x0b: # Not in the draft :(
-            Distribution_Data.addBits(data.nom_bits(4 * 32))
-            C1.addBits(data.nom_bits(32))
-            C2.addBits(data.nom_bits(32))
-            Distribution_Data.addBits(data.nom_bits(8 * 32))
-            Distribution_Data.addBits(Distribution_Data_End)
-            Distribution_Cer.addBits(data.nom_bits(32))
-
+            
         case _:
-            print('PID not (yet?) supported')
+            print('PID not (yet?) supported: 0x{:02x}'.format(PID))
             return 3
+
+
+    print('PID (product): 0x{:02x} (flipflop?: {})'.format(PID, (PID & 0x10) != 0));
+    print('KeyId        : 0x{:1x}'.format(KeyId))
+    print()
 
     '''
     DISTRIBUTION
     ------------
     Not very well documented but seems standard for this part
     '''
-
-    ContractNetworkId = Distribution_Data.nom_bits(24)
-    CountryCode = ba2int(ContractNetworkId[0:0+12])
-    OrganizationalAuthority = ba2int(ContractNetworkId[12:12+12])
-
-    ContractApplicationVersionNumber = Distribution_Data.nom(6)
-    ContractProvider = Distribution_Data.nom(8)
-    ContractTariff = Distribution_Data.nom(16)
-    ContractMediumEndDate = Distribution_Data.nom(14)
-
-    Distribution_left = Distribution_Data.nom_bits_left()
-
-    RELOADING1 = C1.nom(8)
-    COUNTER1 = C1.nom(24)
-    RELOADING2 = C2.nom(8)
-    COUNTER2 = C2.nom(24)
-
-    '''
-    USAGE
-    -----
-    No documentation about Usage
-    All is left
-    '''
-    Usage_left = Usage_Data.nom_bits_left()
-
     if not Distribution_Data.isEmpty():
-        print()
+
+        ContractNetworkId = Distribution_Data.nom_bits(24)
+        CountryCode = ba2int(ContractNetworkId[0:0+12])
+        OrganizationalAuthority = ba2int(ContractNetworkId[12:12+12])
+
+        ContractApplicationVersionNumber = Distribution_Data.nom(6)
+        ContractProvider = Distribution_Data.nom(8)
+        ContractTariff = Distribution_Data.nom(16)
+        ContractMediumEndDate = Distribution_Data.nom(14)
+
+        Distribution_left = Distribution_Data.nom_bits_left()
+
         print('DISTRIBUTION')
         print('  CountryCode                     : {:03x} - {}'.format(CountryCode, ISO_Countries.get(CountryCode, '?')));
         print('  OrganizationalAuthority         : {:03x}'.format(OrganizationalAuthority));
@@ -269,38 +300,42 @@ def main():
             if (oa is not None):
                 s = oa.get(ContractProvider)
                 if (s is not None):
-                    print('      ~ Authority & Provider ~    :', s)
+                    print('      ~ Authority & Provider ~    : {} ({})'.format(s.OrganizationalAuthority, s.ContractProvider))
+                    Describe_Usage = s.UsageDescribeFunction
         print('  ContractTariff                  :', ContractTariff);
-        print('  ContractMediumEndDate           : {} ({} - may be adjusted...)'.format(ContractMediumEndDate, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate)).strftime('%Y-%m-%d')));
+        print('  ContractMediumEndDate           : {} ({})'.format(ContractMediumEndDate, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate)).strftime('%Y-%m-%d')));
         print('  left...                         :', Distribution_left);
         print('  [CER] Distribution              : {:08x}'.format(Distribution_Cer.nom(32)))
-
-    print()
-    print('COUNTER')
-    print('  [1] Counter: 0x{:06x} - Reloading available 0x{:02x}'.format(COUNTER1, RELOADING1))
-    print('  [2] Counter: 0x{:06x} - Reloading available 0x{:02x}'.format(COUNTER2, RELOADING2))
-
-    if not Usage_Data.isEmpty():
         print()
-        print('USAGE')
 
-        print('  left...                         :', Usage_left);
-        print('  [CER] Usage                     : {:04x}'.format(Usage_Cer.nom(16)))
+        if(Describe_Usage is None):
+            Describe_Usage = Describe_Usage_Generic
+        
+        if COUNTER1 is not None:
+            print('[1] Counter: 0x{:06x}   - Reloading available: 0x{:02x}'.format(COUNTER1, RELOADING1))
+        # if COUNTER2 is not None:
+        #    print('[2] Counter: 0x{:06x}   - Reloading available: 0x{:02x}'.format(COUNTER2, RELOADING2))
+        if SWAP is not None:
+            print('[S] SWAP   : 0x{:08x} - last usage on USAGE_{}'.format(SWAP, 'B' if SWAP & 0b1 else 'A'))
 
-        if PID == 0x06 and CountryCode == 0x250 and OrganizationalAuthority == 0x078 and ContractProvider == 4: # Only for FRA - Reims here, it seems date adjust is +4
-            DateAdjust = 4
+
+        '''
+        USAGE
+        -----
+        No real documentation about Usage
+        Nearly all is left... - did not seen implementation with 2 counters or 1 Usage
+        '''
+
+        if not Usage_A_DAT.isEmpty():
             print()
-            print('  USAGE Parsing test')
+            print('USAGE_A')
+            Describe_Usage(Usage_A_DAT, ContractMediumEndDate, Usage_A_CER)
             
-            print('    unk0...                       :', Usage_Data.nom_bits(54));
-            EventValidityTimeFirstStamp = Usage_Data.nom(11)
-            print('    EventValidityTimeFirstStamp   : {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
-            print('    unk1...                       :', Usage_Data.nom_bits(31));
-            EventDateStamp = Usage_Data.nom(10)
-            print('    EventDateStamp                : {} ({} - may be adjusted...)'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp + DateAdjust)).strftime('%Y-%m-%d')));
-            EventTimeStamp = Usage_Data.nom(11)
-            print('    EventTimeStamp                : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
-            print('    unk2...                       :', Usage_Data.nom_bits(23));
+        if not Usage_B_DAT.isEmpty():
+            print()
+            print('USAGE_B')
+            Describe_Usage(Usage_B_DAT, ContractMediumEndDate, Usage_B_CER)
+
 
     return 0
 
