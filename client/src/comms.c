@@ -161,8 +161,9 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
     txBufferNG.pre.ng = ng;
     txBufferNG.pre.length = len;
     txBufferNG.pre.cmd = cmd;
-    if (len > 0 && data)
+    if (len > 0 && data) {
         memcpy(&txBufferNG.data, data, len);
+    }
 
     if ((g_conn.send_via_fpc_usart && g_conn.send_with_crc_on_fpc) || ((!g_conn.send_via_fpc_usart) && g_conn.send_with_crc_on_usb)) {
         uint8_t first = 0, second = 0;
@@ -474,12 +475,15 @@ __attribute__((force_align_arg_pointer))
             res = uart_receive(sp, (uint8_t *)&rx_raw.pre, sizeof(PacketResponseNGPreamble), &rxlen);
 
             if ((res == PM3_SUCCESS) && (rxlen == sizeof(PacketResponseNGPreamble))) {
+
                 rx.magic = rx_raw.pre.magic;
                 uint16_t length = rx_raw.pre.length;
                 rx.ng = rx_raw.pre.ng;
                 rx.status = rx_raw.pre.status;
                 rx.cmd = rx_raw.pre.cmd;
+
                 if (rx.magic == RESPONSENG_PREAMBLE_MAGIC) { // New style NG reply
+
                     if (length > PM3_CMD_DATA_SIZE) {
                         PrintAndLogEx(WARNING, "Received packet frame with incompatible length: 0x%04x", length);
                         error = true;
@@ -488,30 +492,38 @@ __attribute__((force_align_arg_pointer))
                     if ((!error) && (length > 0)) { // Get the variable length payload
 
                         res = uart_receive(sp, (uint8_t *)&rx_raw.data, length, &rxlen);
+
                         if ((res != PM3_SUCCESS) || (rxlen != length)) {
+
                             PrintAndLogEx(WARNING, "Received packet frame with variable part too short? %d/%d", rxlen, length);
                             error = true;
+
                         } else {
 
                             if (rx.ng) {      // Received a valid NG frame
+
                                 memcpy(&rx.data, &rx_raw.data, length);
                                 rx.length = length;
                                 if ((rx.cmd == g_conn.last_command) && (rx.status == PM3_SUCCESS)) {
                                     ACK_received = true;
                                 }
+
                             } else {
                                 uint64_t arg[3];
                                 if (length < sizeof(arg)) {
                                     PrintAndLogEx(WARNING, "Received MIX packet frame with incompatible length: 0x%04x", length);
                                     error = true;
                                 }
+
                                 if (!error) { // Received a valid MIX frame
+
                                     memcpy(arg, &rx_raw.data, sizeof(arg));
                                     rx.oldarg[0] = arg[0];
                                     rx.oldarg[1] = arg[1];
                                     rx.oldarg[2] = arg[2];
                                     memcpy(&rx.data, ((uint8_t *)&rx_raw.data) + sizeof(arg), length - sizeof(arg));
                                     rx.length = length - sizeof(arg);
+
                                     if (rx.cmd == CMD_ACK) {
                                         ACK_received = true;
                                     }
@@ -519,12 +531,14 @@ __attribute__((force_align_arg_pointer))
                             }
                         }
                     } else if ((!error) && (length == 0)) { // we received an empty frame
-                        if (rx.ng)
+
+                        if (rx.ng) {
                             rx.length = 0; // set received length to 0
-                        else {  // old frames can't be empty
+                        } else {  // old frames can't be empty
                             PrintAndLogEx(WARNING, "Received empty MIX packet frame (length: 0x00)");
                             error = true;
                         }
+
                     }
 
                     if (!error) {                        // Get the postamble
@@ -537,9 +551,12 @@ __attribute__((force_align_arg_pointer))
 
                     if (!error) {                        // Check CRC, accept MAGIC as placeholder
                         rx.crc = rx_raw.foopost.crc;
+
                         if (rx.crc != RESPONSENG_POSTAMBLE_MAGIC) {
+
                             uint8_t first, second;
                             compute_crc(CRC_14443_A, (uint8_t *)&rx_raw, sizeof(PacketResponseNGPreamble) + length, &first, &second);
+
                             if ((first << 8) + second != rx.crc) {
                                 PrintAndLogEx(WARNING, "Received packet frame with invalid CRC %02X%02X <> %04X", first, second, rx.crc);
                                 error = true;
