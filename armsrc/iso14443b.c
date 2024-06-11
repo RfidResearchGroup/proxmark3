@@ -186,7 +186,7 @@
 #endif
 
 // 4sample
-#define SEND4STUFFBIT(x) tosend_stuffbit(x);tosend_stuffbit(x);tosend_stuffbit(x);tosend_stuffbit(x);
+#define SEND4STUFFBIT(x) tosend_stuffbit(!(x));tosend_stuffbit(!(x));tosend_stuffbit(!(x));tosend_stuffbit(!(x));
 
 static void iso14b_set_timeout(uint32_t timeout_etu);
 static void iso14b_set_maxframesize(uint16_t size);
@@ -702,10 +702,11 @@ static void TransmitFor14443b_AsTag(const uint8_t *response, uint16_t len) {
     // Signal field is off with the appropriate LED
     LED_D_OFF();
 
+    // TR0: min - 1024 cycles = 75.52 us - max 4096 cycles = 302.08 us
+    SpinDelayUs(76);
+
     // Modulate BPSK
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_SIMULATOR | FPGA_HF_SIMULATOR_MODULATE_BPSK);
-    AT91C_BASE_SSC->SSC_THR = 0xFF;
-    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SIMULATOR);
 
     // Transmit the response.
     for (uint16_t i = 0; i < len;) {
@@ -713,6 +714,11 @@ static void TransmitFor14443b_AsTag(const uint8_t *response, uint16_t len) {
         // Put byte into tx holding register as soon as it is ready
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXRDY) {
             AT91C_BASE_SSC->SSC_THR = response[i++];
+
+            // Start-up SSC once first byte is in SSC_THR
+            if (i == 1) {
+                FpgaSetupSsc(FPGA_MAJOR_MODE_HF_SIMULATOR);
+            }
         }
     }
 }
@@ -771,7 +777,7 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
     static const uint8_t respOK[] = {0x00, 0x78, 0xF0};
 
     uint16_t len, cmdsReceived = 0;
-    int cardSTATE = SIM_NOFIELD;
+    int cardSTATE = SIM_POWER_OFF;
     int vHf = 0; // in mV
 
     const tosend_t *ts = get_tosend();
@@ -801,16 +807,18 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
         }
 
         // find reader field
-        if (cardSTATE == SIM_NOFIELD) {
-
-            vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
-            if (vHf > MF_MINFIELDV) {
+        vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
+        if (vHf > MF_MINFIELDV) {
+            if (cardSTATE == SIM_POWER_OFF) {
                 cardSTATE = SIM_IDLE;
                 LED_A_ON();
             }
+        } else {
+            cardSTATE = SIM_POWER_OFF;
+            LED_A_OFF();
         }
 
-        if (cardSTATE == SIM_NOFIELD) {
+        if (cardSTATE == SIM_POWER_OFF) {
             continue;
         }
 
@@ -820,73 +828,85 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
             break;
         }
 
-        // ISO14443-B protocol states:
-        // REQ or WUP request in ANY state
-        // WUP in HALTED state
-        if (len == 5) {
-            if (((receivedCmd[0] == ISO14443B_REQB) && ((receivedCmd[2] & 0x08) == 0x08) && (cardSTATE == SIM_HALTED)) ||
-                    (receivedCmd[0] == ISO14443B_REQB)) {
+        LogTrace(receivedCmd, len, 0, 0, NULL, true);
 
-                LogTrace(receivedCmd, len, 0, 0, NULL, true);
-                cardSTATE = SIM_SELECTING;
-            }
-        }
-
-        /*
-        * How should this flow go?
-        *  REQB or WUPB
-        *   send response  ( waiting for Attrib)
-        *  ATTRIB
-        *   send response  ( waiting for commands 7816)
-        *  HALT
-            send halt response ( waiting for wupb )
-        */
-
-        switch (cardSTATE) {
-            //case SIM_NOFIELD:
-            case SIM_HALTED:
-            case SIM_IDLE: {
-                LogTrace(receivedCmd, len, 0, 0, NULL, true);
-                break;
-            }
-            case SIM_SELECTING: {
-                TransmitFor14443b_AsTag(encodedATQB, encodedATQBLen);
-                LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, false);
-                cardSTATE = SIM_WORK;
-                break;
-            }
-            case SIM_HALTING: {
-                TransmitFor14443b_AsTag(encodedOK, encodedOKLen);
-                LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
-                cardSTATE = SIM_HALTED;
-                break;
-            }
-            case SIM_ACKNOWLEDGE: {
-                TransmitFor14443b_AsTag(encodedOK, encodedOKLen);
-                LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
-                cardSTATE = SIM_IDLE;
-                break;
-            }
-            case SIM_WORK: {
-                if (len == 7 && receivedCmd[0] == ISO14443B_HALT) {
-                    cardSTATE = SIM_HALTED;
-                } else if (len == 11 && receivedCmd[0] == ISO14443B_ATTRIB) {
-                    cardSTATE = SIM_ACKNOWLEDGE;
-                } else {
-                    // Todo:
-                    // - SLOT MARKER
-                    // - ISO7816
-                    // - emulate with a memory dump
-                    if (g_dbglevel >= DBG_DEBUG) {
-                        Dbprintf("new cmd from reader: len=%d, cmdsRecvd=%d", len, cmdsReceived);
-                    }
-
-                    cardSTATE = SIM_IDLE;
+        if ((len == 5) && (receivedCmd[0] == ISO14443B_REQB) && (receivedCmd[2] & 0x08)) {
+            // WUPB
+            switch (cardSTATE) {
+                case SIM_IDLE:
+                case SIM_READY:
+                case SIM_HALT: {
+                    TransmitFor14443b_AsTag(encodedATQB, encodedATQBLen);
+                    LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, false);
+                    cardSTATE = SIM_READY;
+                    break;
                 }
-                break;
+                case SIM_ACTIVE:
+                default: {
+                    TransmitFor14443b_AsTag(encodedATQB, encodedATQBLen);
+                    LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, false);
+                    break;
+                }
             }
-            default: {
-                break;
+        } else if ((len == 5) && (receivedCmd[0] == ISO14443B_REQB) && !(receivedCmd[2] & 0x08)) {
+            // REQB
+            switch (cardSTATE) {
+                case SIM_IDLE:
+                case SIM_READY: {
+                    TransmitFor14443b_AsTag(encodedATQB, encodedATQBLen);
+                    LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, false);
+                    cardSTATE = SIM_READY;
+                    break;
+                }
+                case SIM_ACTIVE: {
+                    TransmitFor14443b_AsTag(encodedATQB, encodedATQBLen);
+                    LogTrace(respATQB, sizeof(respATQB), 0, 0, NULL, false);
+                    break;
+                }
+                case SIM_HALT:
+                default: {
+                    break;
+                }
+            }
+        } else if ((len == 7) && (receivedCmd[0] == ISO14443B_HALT)) {
+            // HLTB
+            switch (cardSTATE) {
+                case SIM_READY: {
+                    TransmitFor14443b_AsTag(encodedOK, encodedOKLen);
+                    LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
+                    cardSTATE = SIM_HALT;
+                    break;
+                }
+                case SIM_IDLE:
+                case SIM_ACTIVE: {
+                    TransmitFor14443b_AsTag(encodedOK, encodedOKLen);
+                    LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
+                    break;
+                }
+                case SIM_HALT:
+                default: {
+                    break;
+                }
+            }
+        } else if (len == 11 && receivedCmd[0] == ISO14443B_ATTRIB) {
+            // ATTRIB
+            switch (cardSTATE) {
+                case SIM_READY: {
+                    TransmitFor14443b_AsTag(encodedOK, encodedOKLen);
+                    LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
+                    cardSTATE = SIM_ACTIVE;
+                    break;
+                }
+                case SIM_IDLE:
+                case SIM_ACTIVE: {
+                    TransmitFor14443b_AsTag(encodedOK, encodedOKLen);
+                    LogTrace(respOK, sizeof(respOK), 0, 0, NULL, false);
+                    break;
+                }
+                case SIM_HALT:
+                default: {
+                    break;
+                }
             }
         }
 
