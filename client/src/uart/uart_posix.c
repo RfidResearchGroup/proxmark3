@@ -411,7 +411,6 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
     sp->tiNew.c_cc[VERASE]   = 0;     /* del */
     sp->tiNew.c_cc[VKILL]    = 0;     /* @ */
     sp->tiNew.c_cc[VEOF]     = 4;     /* Ctrl-d */
-    sp->tiNew.c_cc[VSWTC]    = 0;     /* '\0' */
     sp->tiNew.c_cc[VSTART]   = 0;     /* Ctrl-q */
     sp->tiNew.c_cc[VSTOP]    = 0;     /* Ctrl-s */
     sp->tiNew.c_cc[VSUSP]    = 0;     /* Ctrl-z */
