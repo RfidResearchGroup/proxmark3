@@ -55,6 +55,35 @@ class BitMe:
 A generic Describe_Usage function with variable number of bits between stamps will be more optimal
 At this time I want to keep more places/functions to try to parse other fields in 'unk1' and 'left'
 '''
+
+TYPE_EventCode_Nature = {
+    0x1: 'urban bus',
+    0x2: 'interurban bus',
+    0x3: 'metro',
+    0x4: 'tramway',
+    0x5: 'train',
+    0x8: 'parking',
+}
+
+TYPE_EventCode_Type = {
+    0x1: 'entry validation',
+    0x2: 'exit validation',
+    0x4: 'ticket inspecting',
+    0x6: 'connection entry validation',
+    0x14: 'test validation',
+    0x15: 'connection exit validation',
+    0x16: 'canceled validation',
+    0x17: 'invalidation',
+    0x18: 'distribution',
+}
+
+TYPE_EventGeoRoute_Direction = {
+    0: 'undefined',
+    1: 'outward',
+    2: 'inward',
+    3: 'circular',
+}
+
 def Describe_Usage_1(Usage, ContractMediumEndDate, Certificate):
     EventDateStamp = Usage.nom(10)
     EventTimeStamp = Usage.nom(11)
@@ -67,19 +96,93 @@ def Describe_Usage_1(Usage, ContractMediumEndDate, Certificate):
     print('  EventValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
     print('  left...                    :', Usage.nom_bits_left());
     print('  [CER] Usage                : {:04x}'.format(Certificate.nom(16)))
+
+def Describe_Usage_1_1(Usage, ContractMediumEndDate, Certificate):
+    EventDateStamp = Usage.nom(10)
+    EventTimeStamp = Usage.nom(11)
+    unk0 = Usage.nom_bits(8)
+    EventCode_Nature  = Usage.nom(5)
+    EventCode_Type  = Usage.nom(5)
+    unk1 = Usage.nom_bits(11)
+    EventGeoVehicleId = Usage.nom(16)
+    EventGeoRouteId = Usage.nom(14)
+    EventGeoRoute_Direction = Usage.nom(2)
+    EventCountPassengers_mb = Usage.nom(4)
+    EventValidityTimeFirstStamp = Usage.nom(11)
     
+    print('  DateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
+    print('  TimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
+    print('  unk0...               :', unk0);
+    print('  Code/Nature           : 0x{:x} ({})'.format(EventCode_Nature, TYPE_EventCode_Nature.get(EventCode_Nature, '?')))
+    print('  Code/Type             : 0x{:x} ({})'.format(EventCode_Type, TYPE_EventCode_Type.get(EventCode_Type, '?')))
+    print('  unk1...               :', unk1);
+    print('  GeoVehicleId          : {}'. format(EventGeoVehicleId))
+    print('  GeoRouteId            : {}'. format(EventGeoRouteId))
+    print('  Direction             : {} ({})'. format(EventGeoRoute_Direction, TYPE_EventGeoRoute_Direction.get(EventGeoRoute_Direction, '?')))
+    print('  Passengers(?)         : {}'. format(EventCountPassengers_mb))
+    print('  ValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
+    print('  left...               :', Usage.nom_bits_left());
+    print('  [CER] Usage           : {:04x}'.format(Certificate.nom(16)))
+
+def Describe_Usage_1_2(Usage, ContractMediumEndDate, Certificate):
+    EventDateStamp = Usage.nom(10)
+    EventTimeStamp = Usage.nom(11)
+    EventCount_mb = Usage.nom(6)
+    unk0 = Usage.nom_bits(4)
+    EventCode_Nature_mb  = Usage.nom(4)
+    EventCode_Type_mb  = Usage.nom(4)
+    unk1 = Usage.nom_bits(11)
+    EventGeoVehicleId = Usage.nom(16)
+    EventGeoRouteId = Usage.nom(14)
+    EventGeoRoute_Direction = Usage.nom(2)
+    EventCountPassengers_mb = Usage.nom(4)
+    EventValidityTimeFirstStamp = Usage.nom(11)
+    
+    TYPE_EventCode_Nature_Reims = { # usually it's the opposite, but ... ?
+        0x4: 'urban bus',
+        0x1: 'tramway',
+    }
+    
+    print('  DateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
+    print('  TimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
+    print('  Count(?)              : {}'. format(EventCount_mb))
+    print('  unk0...               :', unk0);
+    print('  Code/Nature(?)        : 0x{:x} ({})'.format(EventCode_Nature_mb, TYPE_EventCode_Nature_Reims.get(EventCode_Nature_mb, '?')))
+    print('  Code/Type(?)          : 0x{:x} ({})'.format(EventCode_Type_mb, TYPE_EventCode_Type.get(EventCode_Type_mb, '?')))
+    print('  unk1...               :', unk1);
+    print('  GeoVehicleId          : {}'. format(EventGeoVehicleId))
+    print('  GeoRouteId            : {}'. format(EventGeoRouteId))
+    print('  Direction             : {} ({})'. format(EventGeoRoute_Direction, TYPE_EventGeoRoute_Direction.get(EventGeoRoute_Direction, '?')))
+    print('  Passengers(?)         : {}'. format(EventCountPassengers_mb))
+    print('  ValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
+    print('  left...               :', Usage.nom_bits_left());
+    print('  [CER] Usage           : {:04x}'.format(Certificate.nom(16)))
+
+
 def Describe_Usage_2(Usage, ContractMediumEndDate, Certificate):
     EventDateStamp = Usage.nom(10)
     EventTimeStamp = Usage.nom(11)
-    unk = Usage.nom_bits(49)
+    unk0 = Usage.nom_bits(8)
+    EventCode_Nature  = Usage.nom(5)
+    EventCode_Type  = Usage.nom(5)
+    unk1 = Usage.nom_bits(11)
+    EventGeoRouteId = Usage.nom(14)
+    EventGeoRoute_Direction = Usage.nom(2)
+    EventCountPassengers_mb = Usage.nom(4)
     EventValidityTimeFirstStamp = Usage.nom(11)
     
-    print('  EventDateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
-    print('  EventTimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
-    print('  unk1...                    :', unk);
-    print('  EventValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
-    print('  left...                    :', Usage.nom_bits_left());
-    print('  [CER] Usage                : {:04x}'.format(Certificate.nom(16)))
+    print('  DateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
+    print('  TimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
+    print('  unk0...               :', unk0);
+    print('  Code/Nature           : 0x{:x} ({})'.format(EventCode_Nature, TYPE_EventCode_Nature.get(EventCode_Nature, '?')))
+    print('  Code/Type             : 0x{:x} ({})'.format(EventCode_Type, TYPE_EventCode_Type.get(EventCode_Type, '?')))
+    print('  unk1...               :', unk1);
+    print('  GeoRouteId            : {}'. format(EventGeoRouteId))
+    print('  Direction             : {} ({})'. format(EventGeoRoute_Direction, TYPE_EventGeoRoute_Direction.get(EventGeoRoute_Direction, '?')))
+    print('  Passengers(?)         : {}'. format(EventCountPassengers_mb))
+    print('  ValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
+    print('  left...               :', Usage.nom_bits_left());
+    print('  [CER] Usage           : {:04x}'.format(Certificate.nom(16)))
     
 def Describe_Usage_3(Usage, ContractMediumEndDate, Certificate):
     EventDateStamp = Usage.nom(10)
@@ -127,29 +230,29 @@ ISO_Countries = {
 
 FRA_OrganizationalAuthority_Contract_Provider = {
     0x000: {
-        5: InterticHelper('Lille', 'Ilévia / Keolis', Describe_Usage_1),
-        7: InterticHelper('Lens-Béthune', 'Tadao / Transdev', Describe_Usage_1),
+        5: InterticHelper('Lille', 'Ilévia / Keolis', Describe_Usage_1_1),
+        7: InterticHelper('Lens-Béthune', 'Tadao / Transdev', Describe_Usage_1_1),
     },
     0x006: {
         1: InterticHelper('Amiens', 'Ametis / Keolis'),
     },
     0x008: {
-        15: InterticHelper('Angoulême', 'STGA', Describe_Usage_1),
+        15: InterticHelper('Angoulême', 'STGA', Describe_Usage_1_1), # May have a problem with date ?
     },
     0x021: {
-        1: InterticHelper('Bordeaux', 'TBM / Keolis', Describe_Usage_1),
+        1: InterticHelper('Bordeaux', 'TBM / Keolis', Describe_Usage_1_1),
     },
     0x057: {
-        1: InterticHelper('Lyon', 'TCL / Keolis', Describe_Usage_1),
+        1: InterticHelper('Lyon', 'TCL / Keolis', Describe_Usage_1), # Strange usage ?, kept on generic 1
     },
     0x072: {
-        1: InterticHelper('Tours', 'filbleu / Keolis', Describe_Usage_1),
+        1: InterticHelper('Tours', 'filbleu / Keolis', Describe_Usage_1_1),
     },
     0x078: {
-        4: InterticHelper('Reims', 'Citura / Transdev', Describe_Usage_1),
+        4: InterticHelper('Reims', 'Citura / Transdev', Describe_Usage_1_2),
     },
     0x091: {
-        1: InterticHelper('Strasbourg', 'CTS', Describe_Usage_4),
+        1: InterticHelper('Strasbourg', 'CTS', Describe_Usage_4), # More dump needed, not only tram !
     },
     0x502: {
         83: InterticHelper('Annecy', 'Sibra', Describe_Usage_2),
@@ -160,20 +263,20 @@ FRA_OrganizationalAuthority_Contract_Provider = {
     },
     0x908: {
         1: InterticHelper('Rennes', 'STAR / Keolis', Describe_Usage_2),
-        8: InterticHelper('Saint-Malo', 'MAT / RATP'),
+        8: InterticHelper('Saint-Malo', 'MAT / RATP', Describe_Usage_1_1),
     },
     0x911: {
         5: InterticHelper('Besançon', 'Ginko / Keolis'),
     },
     0x912: {
-        3: InterticHelper('Le Havre', 'Lia / Transdev', Describe_Usage_1),
+        3: InterticHelper('Le Havre', 'Lia / Transdev', Describe_Usage_1_1),
         35: InterticHelper('Cherbourg-en-Cotentin', 'Cap Cotentin / Transdev'),
     },
     0x913: {
         3: InterticHelper('Nîmes', 'Tango / Transdev', Describe_Usage_3),
     },
     0x917: {
-        4: InterticHelper('Angers', 'Irigo / RATP', Describe_Usage_1),
+        4: InterticHelper('Angers', 'Irigo / RATP', Describe_Usage_1_2),
         7: InterticHelper('Saint-Nazaire', 'Stran'),
     },
 }
