@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed a bad memory erase (@iceman1001)
 - Fixed BT serial comms (@iceman1001)
 - Changed `intertic.py` - updated and code clean up (@gentilkiwi)
 - Added `pm3_tears_for_fears.py` - a ISO14443b tear off script by Pierre Granier

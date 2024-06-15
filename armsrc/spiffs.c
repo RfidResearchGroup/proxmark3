@@ -646,7 +646,7 @@ void rdv40_spiffs_safe_print_tree(void) {
     SPIFFS_opendir(&fs, "/", &d);
     while ((pe = SPIFFS_readdir(&d, pe))) {
 
-        memset(resolvedlink, 0, sizeof(resolvedlink));
+        memset(resolvedlink, 0, 11 + SPIFFS_OBJ_NAME_LEN);
 
         if (rdv40_spiffs_is_symlink((const char *)pe->name)) {
 
