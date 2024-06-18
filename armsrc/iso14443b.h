@@ -49,12 +49,10 @@ void SniffIso14443b(void);
 void SendRawCommand14443B(iso14b_raw_cmd_t *p);
 
 // States for 14B SIM command
-#define SIM_NOFIELD     0
+#define SIM_POWER_OFF   0
 #define SIM_IDLE        1
-#define SIM_HALTED      2
-#define SIM_SELECTING   3
-#define SIM_HALTING     4
-#define SIM_ACKNOWLEDGE 5
-#define SIM_WORK        6
+#define SIM_READY       2
+#define SIM_HALT        3
+#define SIM_ACTIVE      4
 
 #endif /* __ISO14443B_H */
