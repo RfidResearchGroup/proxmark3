@@ -88,6 +88,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "F51BC0",
+        "Vendor": "STid Group",
+        "Country": "FR",
+        "Name": "CCT Card / DTA Tag / PCG Fob",
+        "Description": "STid Easyline / Architect Access Credetials",
+        "Type": "pacs"
+    },
+    {
         "AID": "F52310",
         "Vendor": "Integrated Control Technology Limited [ICT]",
         "Country": "NZ",
@@ -530,7 +538,7 @@
     {
         "AID": "F21150",
         "Vendor": "Prague Public Transit Company via Haguess a.s.",
-		"Country": "CZ",
+        "Country": "CZ",
         "Name": "Lítačka Opencard [PRG]",
         "Description": "PRG Lítačka Opencard",
         "Type": "transport"
