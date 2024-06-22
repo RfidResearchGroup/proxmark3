@@ -88,6 +88,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "F51BC0",
+        "Vendor": "",
+        "Country": "",
+        "Name": "",
+        "Description": "Unknown MF3DH42 [MFDES EV2]",
+        "Type": "pacs"
+    },
+    {
         "AID": "F52310",
         "Vendor": "Integrated Control Technology Limited [ICT]",
         "Country": "NZ",
@@ -530,7 +538,7 @@
     {
         "AID": "F21150",
         "Vendor": "Prague Public Transit Company via Haguess a.s.",
-		"Country": "CZ",
+        "Country": "CZ",
         "Name": "Lítačka Opencard [PRG]",
         "Description": "PRG Lítačka Opencard",
         "Type": "transport"
