@@ -89,10 +89,10 @@
     },
     {
         "AID": "F51BC0",
-        "Vendor": "",
-        "Country": "",
-        "Name": "",
-        "Description": "Unknown MF3DH42 [MFDES EV2]",
+        "Vendor": "STid Group",
+        "Country": "FR",
+        "Name": "CCT Card / DTA Tag / PCG Fob",
+        "Description": "STid Easyline / Architect Access Credetials",
         "Type": "pacs"
     },
     {
