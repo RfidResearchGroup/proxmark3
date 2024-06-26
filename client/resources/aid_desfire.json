@@ -3,7 +3,7 @@
         "AID": "EEEE10",
         "Vendor": "NFC Forum",
         "Country": "US",
-        "Name": "NFC Forum NDEF Tag",
+        "Name": "NDEF Tag — Type 4 Version 1",
         "Description": "FID 03: Capability Container",
         "Type": "ndef"
     },
@@ -400,14 +400,6 @@
         "Type": "student"
     },
     {
-        "AID": "27E178",
-        "Vendor": "Disney",
-        "Country": "US",
-        "Name": "Disney MagicBand",
-        "Description": "",
-        "Type": "payment system"
-    },
-    {
         "AID": "44434C",
         "Vendor": "Disney",
         "Country": "US",
@@ -428,7 +420,7 @@
         "Vendor": "Alfa-Zet",
         "Country": "BE",
         "Name": "ping.ping Tag",
-        "Description": "ping.ping Tag",
+        "Description": "ping.ping App 1",
         "Type": "payment system"
     },
     {
@@ -436,7 +428,7 @@
         "Vendor": "Alfa-Zet",
         "Country": "BE",
         "Name": "ping.ping Tag",
-        "Description": "ping.ping Tag",
+        "Description": "ping.ping App 2",
         "Type": "payment system"
     },
     {
@@ -444,7 +436,7 @@
         "Vendor": "Alfa-Zet",
         "Country": "BE",
         "Name": "ping.ping Tag",
-        "Description": "ping.ping Tag",
+        "Description": "ping.ping App 3",
         "Type": "payment system"
     },
     {
@@ -452,7 +444,7 @@
         "Vendor": "Alfa-Zet",
         "Country": "BE",
         "Name": "ping.ping Tag",
-        "Description": "ping.ping Tag",
+        "Description": "ping.ping App 4",
         "Type": "payment system"
     },
     {
