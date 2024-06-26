@@ -457,10 +457,10 @@
     },
     {
         "AID": "C26001",
-        "Vendor": "CAR2GO",
+        "Vendor": "car2go",
         "Country": "DE",
         "Name": "MemberCard",
-        "Description": "CAR2GO - Member Card",
+        "Description": "car2go - Member Card / Multi Functional Badge / Private Application #1",
         "Type": "carsharing"
     },
     {
