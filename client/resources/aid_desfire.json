@@ -57,7 +57,7 @@
     },
     {
         "AID": "F48120",
-        "Vendor": "Gallagher Group Limited via PEC [New Zealand] Limited",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
         "Description": "Cardax Card Data Application",
@@ -65,7 +65,7 @@
     },
     {
         "AID": "F48121",
-        "Vendor": "Gallagher Group Limited via PEC [New Zealand] Limited",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
         "Description": "Cardax Card Data Application",
@@ -73,7 +73,7 @@
     },
     {
         "AID": "F48122",
-        "Vendor": "Gallagher Group Limited via PEC [New Zealand] Limited",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
         "Description": "Cardax Card Data Application",
@@ -81,7 +81,7 @@
     },
     {
         "AID": "F48123",
-        "Vendor": "Gallagher Group Limited via PEC [New Zealand] Limited",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
         "Description": "Cardax Card Data Application",
@@ -89,7 +89,7 @@
     },
     {
         "AID": "F48124",
-        "Vendor": "Gallagher Group Limited via PEC [New Zealand] Limited",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
         "Description": "Cardax Card Data Application",
@@ -97,7 +97,7 @@
     },
     {
         "AID": "F48125",
-        "Vendor": "Gallagher Group Limited via PEC [New Zealand] Limited",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
         "Description": "Cardax Card Data Application",
@@ -105,7 +105,7 @@
     },
     {
         "AID": "F48126",
-        "Vendor": "Gallagher Group Limited via PEC [New Zealand] Limited",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
         "Description": "Cardax Card Data Application",
@@ -113,7 +113,7 @@
     },
     {
         "AID": "F48127",
-        "Vendor": "Gallagher Group Limited via PEC [New Zealand] Limited",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
         "Description": "Cardax Card Data Application",
@@ -121,7 +121,7 @@
     },
     {
         "AID": "F48128",
-        "Vendor": "Gallagher Group Limited via PEC [New Zealand] Limited",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
         "Description": "Cardax Card Data Application",
@@ -129,7 +129,7 @@
     },
     {
         "AID": "F48129",
-        "Vendor": "Gallagher Group Limited via PEC [New Zealand] Limited",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
         "Description": "Cardax Card Data Application",
@@ -137,7 +137,7 @@
     },
     {
         "AID": "F4812A",
-        "Vendor": "Gallagher Group Limited via PEC [New Zealand] Limited",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
         "Description": "Cardax Card Data Application",
@@ -145,7 +145,7 @@
     },
     {
         "AID": "F4812B",
-        "Vendor": "Gallagher Group Limited via PEC [New Zealand] Limited",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
         "Description": "Cardax Card Data Application",
@@ -153,7 +153,7 @@
     },
     {
         "AID": "F4812C",
-        "Vendor": "Gallagher Group Limited via PEC [New Zealand] Limited",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
         "Description": "Unused Cardax Card Data Application",
@@ -161,7 +161,7 @@
     },
     {
         "AID": "F4812D",
-        "Vendor": "Gallagher Group Limited via PEC [New Zealand] Limited",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
         "Description": "Unused Cardax Card Data Application",
@@ -169,7 +169,7 @@
     },
     {
         "AID": "F4812E",
-        "Vendor": "Gallagher Group Limited via PEC [New Zealand] Limited",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
         "Description": "Unused Cardax Card Data Application",
@@ -177,7 +177,7 @@
     },
     {
         "AID": "F4812F",
-        "Vendor": "Gallagher Group Limited via PEC [New Zealand] Limited",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
         "Description": "Card Application Directory [CAD]",
@@ -460,7 +460,7 @@
         "Vendor": "car2go",
         "Country": "DE",
         "Name": "MemberCard",
-        "Description": "car2go - Member Card / Multi Functional Badge / Private Application #1",
+        "Description": "car2go - Member Card // Multi Functional Badge / Private Application #1",
         "Type": "carsharing"
     },
     {
@@ -475,15 +475,15 @@
         "AID": "002000",
         "Vendor": "Metrolinx",
         "Country": "CA",
-        "Name": "PRESTO Card [YYZ/YHM/YOW]",
+        "Name": "PRESTO Card (YYZ/YHM/YOW)",
         "Description": "FIDs 00,0F: Backup Data; 08-0E,10-14: Standard Data",
         "Type": "transport"
     },
     {
         "AID": "010000",
-        "Vendor": "Consorcio Regional de Transportes Públicos Regulares de Madrid [CRTM]",
+        "Vendor": "Consorcio Regional de Transportes Públicos Regulares de Madrid (CRTM)",
         "Country": "ES",
-        "Name": "Tarjeta Transporte Publico [MAD]",
+        "Name": "Tarjeta Transporte Publico (MAD)",
         "Description": "MAD Public Transport Card",
         "Type": "transport"
     },
@@ -491,15 +491,15 @@
         "AID": "012242",
         "Vendor": "Istanbulkart",
         "Country": "TR",
-        "Name": "Istanbulkart [IST]",
+        "Name": "Istanbulkart (IST)",
         "Description": "IST Istanbul Card",
         "Type": "transport"
     },
     {
         "AID": "015342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company [BEM]",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
         "Country": "TH",
-        "Name": "MRT Stored Value Card [BKK]",
+        "Name": "MRT Stored Value Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
@@ -507,15 +507,15 @@
         "AID": "2211AF",
         "Vendor": "National Transport Authority",
         "Country": "IE",
-        "Name": "TFI Leap Card [DUB]",
+        "Name": "TFI Leap Card (DUB)",
         "Description": "DUB Leap Card // Transport for Ireland // FIDs: 01,1F: Backup Data; 02-0A: Standard Data",
         "Type": "transport"
     },
     {
         "AID": "4F5931",
-        "Vendor": "Transport for London [TfL]",
+        "Vendor": "Transport for London (TfL)",
         "Country": "UK",
-        "Name": "Oyster Card [LHR]",
+        "Name": "Oyster Card (LHR)",
         "Description": "FIDs: 00-07: Standard Data",
         "Type": "transport"
     },
@@ -523,15 +523,15 @@
         "AID": "422201",
         "Vendor": "Transport of Istanbul",
         "Country": "TR",
-        "Name": "İstanbulkart [IST]",
+        "Name": "İstanbulkart (IST)",
         "Description": "IST Istanbul Card",
         "Type": "transport"
     },
     {
         "AID": "534531",
-        "Vendor": "Transport for New South Wales [TfNSW]",
+        "Vendor": "Transport for New South Wales (TfNSW)",
         "Country": "AU",
-        "Name": "Opal Card [SYD]",
+        "Name": "Opal Card (SYD)",
         "Description": "FIDs 00-06: Standard Data; 07: Card Balance/Number and Trip History",
         "Type": "transport"
     },
@@ -539,13 +539,13 @@
         "AID": "554000",
         "Vendor": "Auckland Transport",
         "Country": "NZ",
-        "Name": "AT HOP Card [AKL]",
+        "Name": "AT HOP Card (AKL)",
         "Description": "FIDs: 00: Backup Data; 08/09/0A",
         "Type": "transport"
     },
     {
         "AID": "578000",
-        "Vendor": "Norwegian Public Roads Administration [NPRA]",
+        "Vendor": "Norwegian Public Roads Administration (NPRA)",
         "Country": "NO",
         "Name": "NORTIC Transport",
         "Description": "Norwegian Ticketing Interoperable Concept // FID 0C: Card Issuer Header",
@@ -553,7 +553,7 @@
     },
     {
         "AID": "578001",
-        "Vendor": "Norwegian Public Roads Administration [NPRA]",
+        "Vendor": "Norwegian Public Roads Administration (NPRA)",
         "Country": "NO",
         "Name": "NORTIC Transport",
         "Description": "FIDs 01: Product Retailer; 02: Service Provider; 03: Special Event; 04: Stored Value; 05: General Event Log; 06: SV Reload Log; 0A: Environment; 0C: Card Holder",
@@ -561,9 +561,9 @@
     },
     {
         "AID": "784000",
-        "Vendor": "Roads & Transport Authority [Government of Dubai]",
+        "Vendor": "Roads & Transport Authority (Government of Dubai)",
         "Country": "AE",
-        "Name": "nol Card [DXB]",
+        "Name": "nol Card (DXB)",
         "Description": "DXB nol Card",
         "Type": "transport"
     },
@@ -571,15 +571,15 @@
         "AID": "A00216",
         "Vendor": "ITSO Ltd",
         "Country": "UK",
-        "Name": "ITSO",
-        "Description": "Appears to be used across UK Transit Agencies except LHR Oyster.",
+        "Name": "EMR Smartcard (EMA) / GWR touch (SWI)",
+        "Description": "ITSO Public Transport Application // Provision of Citizen Services #0",
         "Type": "transport"
     },
     {
         "AID": "EF2011",
-        "Vendor": "Helsinki Region Transport [HRT]",
+        "Vendor": "Helsinki Region Transport (HRT)",
         "Country": "FI",
-        "Name": "HSL Card [HEL/TLL/TAY]",
+        "Name": "HSL Card (HEL/TLL/TAY)",
         "Description": "HEL/TLL/TAY HSL Card",
         "Type": "transport"
     },
@@ -587,15 +587,15 @@
         "AID": "F001D0",
         "Vendor": "Arabako Foru Aldundia",
         "Country": "ES",
-        "Name": "BAT Card [VIT]",
+        "Name": "BAT Card (VIT)",
         "Description": "VIT BAT Card",
         "Type": "transport"
     },
     {
         "AID": "F206B0",
-        "Vendor": "Adelaide Metro via Affiliated Computer Services [ACS]",
+        "Vendor": "Adelaide Metro via Affiliated Computer Services (ACS)",
         "Country": "AU",
-        "Name": "metroCARD [ADL]",
+        "Name": "metroCARD (ADL)",
         "Description": "FIDs 00,02-07,09-0B,10-17,1B-1C: Backup Data; 01,1D: Linear Record File; 08: ABNote/HID Adelaide; 1E: Standard Data; 0C-0F: Card Balance",
         "Type": "transport"
     },
@@ -611,7 +611,7 @@
         "AID": "F21050",
         "Vendor": "Metro Christchurch via INIT",
         "Country": "NZ",
-        "Name": "Metrocard [CHC]",
+        "Name": "Metrocard (CHC)",
         "Description": "FIDs: 00: Backup Data; 01/02: Trip History; 03: Card Balance",
         "Type": "transport"
     },
@@ -619,23 +619,23 @@
         "AID": "F210E0",
         "Vendor": "TriMet",
         "Country": "US",
-        "Name": "Hop Fastpass [PDX]",
+        "Name": "Hop Fastpass (PDX)",
         "Description": "PDX Hop Card",
         "Type": "transport"
     },
     {
         "AID": "F210F0",
-        "Vendor": "Public Transport Victoria [PTV] via Conduent [formerly via Keane Australia Pty Ltd]",
+        "Vendor": "Public Transport Victoria (PTV) via Conduent (formerly via Keane Australia Pty Ltd)",
         "Country": "AU",
-        "Name": "myki [MEL]",
+        "Name": "myki (MEL)",
         "Description": "FIDs 01-02: Transaction History; 03: myki money Balance; 00,04-05: Backup Data; 08-0C,0F: Standard Data",
         "Type": "transport"
     },
     {
         "AID": "F21100",
-        "Vendor": "Public Transport Victoria [PTV] via Conduent [formerly via Keane Australia Pty Ltd]",
+        "Vendor": "Public Transport Victoria (PTV) via Conduent (formerly via Keane Australia Pty Ltd)",
         "Country": "AU",
-        "Name": "myki [MEL]",
+        "Name": "myki (MEL)",
         "Description": "FIDs 0F: Standard Data; 00: Backup Data",
         "Type": "transport"
     },
@@ -643,7 +643,7 @@
         "AID": "F21150",
         "Vendor": "Prague Public Transit Company via Haguess a.s.",
         "Country": "CZ",
-        "Name": "Lítačka Opencard [PRG]",
+        "Name": "Lítačka Opencard (PRG)",
         "Description": "PRG Lítačka Opencard",
         "Type": "transport"
     },
@@ -651,7 +651,7 @@
         "AID": "F21190",
         "Vendor": "Metropolitan Transportation Commission via Cubic",
         "Country": "US",
-        "Name": "Clipper Card [SFO]",
+        "Name": "Clipper Card (SFO)",
         "Description": "FIDs 02: Card Balance; 04: Refill History; 08: Card Information; 0E: Trip History",
         "Type": "transport"
     },
@@ -659,15 +659,15 @@
         "AID": "F21360",
         "Vendor": "INIT",
         "Country": "US",
-        "Name": "HOLO Card [HNL]",
+        "Name": "HOLO Card (HNL)",
         "Description": "HNL HOLO Card",
         "Type": "transport"
     },
     {
         "AID": "F21381",
-        "Vendor": "Chicago Transit Authority [CTA] via Cubic",
+        "Vendor": "Chicago Transit Authority (CTA) via Cubic",
         "Country": "US",
-        "Name": "Ventra Card [ORD]",
+        "Name": "Ventra Card (ORD)",
         "Description": "ORD Ventra Card [Gen 2 Blue] // Multi-Modal Transit #1 // FIDs 00-01: Standard Data",
         "Type": "transport"
     },
@@ -675,15 +675,15 @@
         "AID": "F21390",
         "Vendor": "Multiple NZ Transit Agencies via Otago Regional Council",
         "Country": "NZ",
-        "Name": "Bee Card [DUD]",
+        "Name": "Bee Card (DUD)",
         "Description": "Multi-Modal Transit #0 // FIDs 00: Backup Data; 01-02: Trip History; 03: Card Balance",
         "Type": "transport"
     },
     {
         "AID": "F213A0",
-        "Vendor": "Rhode Island Public Transport Authority [RIPTA] via INIT",
+        "Vendor": "Rhode Island Public Transport Authority (RIPTA) via INIT",
         "Country": "US",
-        "Name": "Wave Smart Card [PVD]",
+        "Name": "Wave Smart Card (PVD)",
         "Description": "PVD Wave Smart Card",
         "Type": "transport"
     },
@@ -691,7 +691,7 @@
         "AID": "F213F0",
         "Vendor": "Puget Sound Transit Agencies via Vix Technologies",
         "Country": "US",
-        "Name": "ORCA [SEA]",
+        "Name": "ORCA (SEA)",
         "Description": "One Regional Card for All // FIDs 00: Standard Data; 01: Backup Data",
         "Type": "transport"
     },
@@ -699,7 +699,7 @@
         "AID": "FF30FF",
         "Vendor": "Metrolinx",
         "Country": "CA",
-        "Name": "PRESTO Card [YYZ/YHM/YOW]",
+        "Name": "PRESTO Card (YYZ/YHM/YOW)",
         "Description": "FID 08: Standard Data",
         "Type": "transport"
     },
