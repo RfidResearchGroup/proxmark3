@@ -528,11 +528,67 @@
         "Type": "transport"
     },
     {
+        "AID": "014D44",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro App 1",
+        "Type": "transport"
+    },
+    {
         "AID": "015342",
         "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
         "Country": "TH",
         "Name": "MRT Stored Value Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "024D44",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro App 2",
+        "Type": "transport"
+    },
+    {
+        "AID": "034D44",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro App 3",
+        "Type": "transport"
+    },
+    {
+        "AID": "044D44",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro App 4",
+        "Type": "transport"
+    },
+    {
+        "AID": "054D44",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro App 5",
+        "Type": "transport"
+    },
+    {
+        "AID": "064D44",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro App 6",
+        "Type": "transport"
+    },
+    {
+        "AID": "074D44",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro App 7",
         "Type": "transport"
     },
     {
