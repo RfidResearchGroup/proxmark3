@@ -1246,7 +1246,6 @@ static int CmdHF15ELoad(const char *Cmd) {
 
     if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
             ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
-            (tag->pagesCount == 0) ||
             (tag->bytesPerPage == 0)) {
         PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
                       tag->pagesCount, tag->bytesPerPage);
@@ -2708,7 +2707,6 @@ static int CmdHF15Restore(const char *Cmd) {
 
     if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
             ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
-            (tag->pagesCount == 0) ||
             (tag->bytesPerPage == 0)) {
         PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
                       tag->pagesCount, tag->bytesPerPage);
@@ -3373,7 +3371,6 @@ static int CmdHF15View(const char *Cmd) {
 
     if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
             ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
-            (tag->pagesCount == 0) ||
             (tag->bytesPerPage == 0)) {
         PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
                       tag->pagesCount, tag->bytesPerPage);
