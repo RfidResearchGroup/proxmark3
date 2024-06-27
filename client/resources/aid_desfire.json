@@ -568,11 +568,27 @@
         "Type": "transport"
     },
     {
+        "AID": "052242",
+        "Vendor": "Belbim",
+        "Country": "TR",
+        "Name": "Istanbulkart (IST)",
+        "Description": "IST Istanbul Card (ISPARK App)",
+        "Type": "transport"
+    },
+    {
         "AID": "054D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
         "Name": "Delhi Metro Travel Card (DEL)",
         "Description": "DEL Delhi Metro App 5",
+        "Type": "transport"
+    },
+    {
+        "AID": "062242",
+        "Vendor": "Belbim",
+        "Country": "TR",
+        "Name": "Istanbulkart (IST)",
+        "Description": "IST Istanbul Card (App 6)",
         "Type": "transport"
     },
     {
