@@ -489,10 +489,10 @@
     },
     {
         "AID": "012242",
-        "Vendor": "Istanbulkart",
+        "Vendor": "Belbim",
         "Country": "TR",
         "Name": "Istanbulkart (IST)",
-        "Description": "IST Istanbul Card",
+        "Description": "IST Istanbul Card (eBilet App)",
         "Type": "transport"
     },
     {
@@ -520,14 +520,6 @@
         "Type": "transport"
     },
     {
-        "AID": "422201",
-        "Vendor": "Transport of Istanbul",
-        "Country": "TR",
-        "Name": "İstanbulkart (IST)",
-        "Description": "IST Istanbul Card",
-        "Type": "transport"
-    },
-    {
         "AID": "534531",
         "Vendor": "Transport for New South Wales (TfNSW)",
         "Country": "AU",
@@ -547,7 +539,7 @@
         "AID": "578000",
         "Vendor": "Norwegian Public Roads Administration (NPRA)",
         "Country": "NO",
-        "Name": "NORTIC Transport",
+        "Name": "NORTIC (Norway Public Transport Card)",
         "Description": "Norwegian Ticketing Interoperable Concept // FID 0C: Card Issuer Header",
         "Type": "transport"
     },
@@ -555,7 +547,7 @@
         "AID": "578001",
         "Vendor": "Norwegian Public Roads Administration (NPRA)",
         "Country": "NO",
-        "Name": "NORTIC Transport",
+        "Name": "NORTIC (Norway Public Transport Card)",
         "Description": "FIDs 01: Product Retailer; 02: Service Provider; 03: Special Event; 04: Stored Value; 05: General Event Log; 06: SV Reload Log; 0A: Environment; 0C: Card Holder",
         "Type": "transport"
     },
@@ -588,7 +580,7 @@
         "Vendor": "Arabako Foru Aldundia",
         "Country": "ES",
         "Name": "BAT Card (VIT)",
-        "Description": "VIT BAT Card",
+        "Description": "VIT BAT Card // Used on Euskotren // Interoperable PT Card",
         "Type": "transport"
     },
     {
@@ -693,6 +685,38 @@
         "Country": "US",
         "Name": "ORCA (SEA)",
         "Description": "One Regional Card for All // FIDs 00: Standard Data; 01: Backup Data",
+        "Type": "transport"
+    },
+    {
+        "AID": "F40110",
+        "Vendor": "ITSO Ltd",
+        "Country": "UK",
+        "Name": "EMR Smartcard (EMA) / GWR touch (SWI)",
+        "Description": "UK National Smartcard Project // Provision of Citizen Services #1",
+        "Type": "transport"
+    },
+    {
+        "AID": "F40111",
+        "Vendor": "ITSO Ltd",
+        "Country": "UK",
+        "Name": "EMR Smartcard (EMA) / GWR touch (SWI)",
+        "Description": "UK National Smartcard Project // Provision of Citizen Services #2",
+        "Type": "transport"
+    },
+    {
+        "AID": "F40112",
+        "Vendor": "ITSO Ltd",
+        "Country": "UK",
+        "Name": "EMR Smartcard (EMA) / GWR touch (SWI)",
+        "Description": "UK National Smartcard Project // Provision of Citizen Services #3",
+        "Type": "transport"
+    },
+        {
+        "AID": "F40113",
+        "Vendor": "ITSO Ltd",
+        "Country": "UK",
+        "Name": "EMR Smartcard (EMA) / GWR touch (SWI)",
+        "Description": "UK National Smartcard Project // Provision of Citizen Services #4",
         "Type": "transport"
     },
     {
