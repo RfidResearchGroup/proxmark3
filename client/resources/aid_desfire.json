@@ -16,6 +16,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "1023F5",
+        "Vendor": "Integrated Control Technology Limited [ICT]",
+        "Country": "NZ",
+        "Name": "ICT Access Credential",
+        "Description": "Default Secondary Application",
+        "Type": "pacs"
+    },
+    {
         "AID": "4791DA",
         "Vendor": "Prima Systems",
         "Country": "SI",
@@ -212,7 +220,31 @@
         "Vendor": "Integrated Control Technology Limited [ICT]",
         "Country": "NZ",
         "Name": "ICT Access Credential",
-        "Description": "",
+        "Description": "Default Primary Application",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F52318",
+        "Vendor": "Integrated Control Technology Limited [ICT]",
+        "Country": "NZ",
+        "Name": "ICT Access Credential",
+        "Description": "Default Custom Application",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F5231E",
+        "Vendor": "Integrated Control Technology Limited [ICT]",
+        "Country": "NZ",
+        "Name": "ICT Access Credential",
+        "Description": "Interoperability Application",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F5231F",
+        "Vendor": "Integrated Control Technology Limited [ICT]",
+        "Country": "NZ",
+        "Name": "ICT Access Credential",
+        "Description": "Third-Party Locking Application",
         "Type": "pacs"
     },
     {
