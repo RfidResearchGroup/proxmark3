@@ -2173,7 +2173,6 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
 
     if ((tag->pagesCount > ISO15693_TAG_MAX_PAGES) ||
             ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
-            (tag->pagesCount == 0) ||
             (tag->bytesPerPage == 0)) {
         Dbprintf("Tag size error: pagesCount = %d, bytesPerPage=%d", tag->pagesCount, tag->bytesPerPage);
         reply_ng(CMD_HF_ISO15693_SIMULATE, PM3_EOPABORTED, NULL, 0);
