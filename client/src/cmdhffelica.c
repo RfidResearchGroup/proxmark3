@@ -336,7 +336,13 @@ int read_felica_uid(bool loop, bool verbose) {
             }
 
             felica_card_select_t card;
-            memcpy(&card, (felica_card_select_t *)resp.data.asBytes, sizeof(felica_card_select_t));
+            memcpy(card.IDm, resp.data.asBytes + 4,     8);
+            memcpy(card.PMm, resp.data.asBytes + 4 + 8, 8);
+            // memcpy(card->servicecode, FelicaFrame.framebytes + 4 + 8 + 8, 2);
+            memcpy(card.code,   card.IDm,     2);
+            memcpy(card.uid,    card.IDm + 2, 6);
+            memcpy(card.iccode, card.PMm,     2);
+            memcpy(card.mrt,    card.PMm + 2, 6);
             if (loop == false) {
                 PrintAndLogEx(NORMAL, "");
             }
