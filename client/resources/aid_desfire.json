@@ -667,7 +667,7 @@
         "AID": "A00216",
         "Vendor": "ITSO Ltd",
         "Country": "UK",
-        "Name": "EMR Smartcard (EMA) / GWR touch (SWI)",
+        "Name": "EMR Smartcard (EMA) / GWR touch (BRS)",
         "Description": "ITSO Public Transport Application // Provision of Citizen Services #0",
         "Type": "transport"
     },
@@ -795,7 +795,7 @@
         "AID": "F40110",
         "Vendor": "ITSO Ltd",
         "Country": "UK",
-        "Name": "EMR Smartcard (EMA) / GWR touch (SWI)",
+        "Name": "EMR Smartcard (EMA) / GWR touch (BRS)",
         "Description": "UK National Smartcard Project // Provision of Citizen Services #1",
         "Type": "transport"
     },
@@ -803,7 +803,7 @@
         "AID": "F40111",
         "Vendor": "ITSO Ltd",
         "Country": "UK",
-        "Name": "EMR Smartcard (EMA) / GWR touch (SWI)",
+        "Name": "EMR Smartcard (EMA) / GWR touch (BRS)",
         "Description": "UK National Smartcard Project // Provision of Citizen Services #2",
         "Type": "transport"
     },
@@ -811,7 +811,7 @@
         "AID": "F40112",
         "Vendor": "ITSO Ltd",
         "Country": "UK",
-        "Name": "EMR Smartcard (EMA) / GWR touch (SWI)",
+        "Name": "EMR Smartcard (EMA) / GWR touch (BRS)",
         "Description": "UK National Smartcard Project // Provision of Citizen Services #3",
         "Type": "transport"
     },
@@ -819,7 +819,7 @@
         "AID": "F40113",
         "Vendor": "ITSO Ltd",
         "Country": "UK",
-        "Name": "EMR Smartcard (EMA) / GWR touch (SWI)",
+        "Name": "EMR Smartcard (EMA) / GWR touch (BRS)",
         "Description": "UK National Smartcard Project // Provision of Citizen Services #4",
         "Type": "transport"
     },
