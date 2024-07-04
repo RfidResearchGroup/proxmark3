@@ -766,7 +766,7 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
 void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 }
 
-static const char* identify_transponder_hitag2(uint32_t uid) {
+static const char *identify_transponder_hitag2(uint32_t uid) {
 
     switch (uid) {
         case 0x53505910:
@@ -858,10 +858,10 @@ static int CmdLFHitagInfo(const char *Cmd) {
 static int CmdLFHitagReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag reader",
-                "Act as a Hitag2 reader.  Look for Hitag2 tags until Enter or the pm3 button is pressed\n",
-                "lf hitag reader\n"
-                "lf hitag reader -@   -> Continuous mode"
-            );
+                  "Act as a Hitag2 reader.  Look for Hitag2 tags until Enter or the pm3 button is pressed\n",
+                  "lf hitag reader\n"
+                  "lf hitag reader -@   -> Continuous mode"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -2315,11 +2315,11 @@ static int CmdLFHitag2Crack2(const char *Cmd) {
      http://www.mikrocontroller.net/attachment/102194/hitag2.c
      Written by "I.C. Wiener 2006-2007"
 
-   "MIKRON"	    	=  O  N  M  I  K  R
-    Key		    	= 4F 4E 4D 49 4B 52	- Secret 48-bit key
-    Serial		    = 49 43 57 69		- Serial number of the tag, transmitted in clear
-    Random		    = 65 6E 45 72       - Random IV, transmitted in clear
-    ~28~DC~80~31	= D7 23 7F CE       - Authenticator value = inverted first 4 bytes of the keystream
+   "MIKRON"         =  O  N  M  I  K  R
+    Key             = 4F 4E 4D 49 4B 52 - Secret 48-bit key
+    Serial          = 49 43 57 69       - Serial number of the tag, transmitted in clear
+    Random          = 65 6E 45 72       - Random IV, transmitted in clear
+    ~28~DC~80~31    = D7 23 7F CE       - Authenticator value = inverted first 4 bytes of the keystream
 
    The code below must print out "D7 23 7F CE 8C D0 37 A9 57 49 C1 E6 48 00 8A B6".
    The inverse of the first 4 bytes is sent to the tag to authenticate.

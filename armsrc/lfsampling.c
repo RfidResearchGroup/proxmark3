@@ -134,10 +134,11 @@ void initSampleBuffer(uint32_t *sample_size) {
 }
 
 void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
+
     if (sample_size == NULL) {
-        Dbprintf("initSampleBufferEx, param NULL");
         return;
     }
+
     BigBuf_free_keep_EM();
 
     // We can't erase the buffer now, it would drastically delay the acquisition
@@ -181,14 +182,26 @@ void logSampleSimple(uint8_t sample) {
 
 void logSample(uint8_t sample, uint8_t decimation, uint8_t bits_per_sample, bool avg) {
 
-    if (!data.buffer) return;
+    if (!data.buffer) {
+        return;
+    }
 
     // keep track of total gather samples regardless how many was discarded.
-    if (samples.counter-- == 0) return;
+    if (samples.counter-- == 0) {
+        return;
+    }
 
-    if (bits_per_sample == 0) bits_per_sample = 1;
-    if (bits_per_sample > 8) bits_per_sample = 8;
-    if (decimation == 0) decimation = 1;
+    if (bits_per_sample == 0) {
+        bits_per_sample = 1;
+    }
+
+    if (bits_per_sample > 8) {
+        bits_per_sample = 8;
+    }
+
+    if (decimation == 0) {
+        decimation = 1;
+    }
 
     if (avg) {
         samples.sum += sample;
@@ -198,7 +211,9 @@ void logSample(uint8_t sample, uint8_t decimation, uint8_t bits_per_sample, bool
     if (decimation > 1) {
         samples.dec_counter++;
 
-        if (samples.dec_counter < decimation) return;
+        if (samples.dec_counter < decimation) {
+            return;
+        }
 
         samples.dec_counter = 0;
     }
@@ -538,11 +553,10 @@ int ReadLF_realtime(bool reader_field) {
 
     return_value = async_usb_write_stop();
 
-out:     
+out:
     LED_D_OFF();
 
     // DoAcquisition() end
-
     StopTicks();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     return return_value;

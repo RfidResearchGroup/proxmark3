@@ -3,7 +3,17 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- Change `lf hitag info` - now tries to identify different key fob emulators (@iceman1001)
+- Fixed a bad memory erase (@iceman1001)
+- Fixed BT serial comms (@iceman1001)
+- Changed `intertic.py` - updated and code clean up (@gentilkiwi)
+- Added `pm3_tears_for_fears.py` - a ISO14443b tear off script by Pierre Granier
+- Added new t55xx password (002BCFCF) sniffed from cheap cloner (@davidbeauchamp)
+- Fixed 'hf 14b sim' - now works (@michi-jung)
+
+## [Aurora.4.18589][2024-05-28]
+- Fixed the pm3 regressiontests for Hitag2Crack (@iceman1001)
+- Changed `mem spiffs tree` - adapted to bigbuff and show if empty (@iceman1001)
+- Changed `lf hitag info` - now tries to identify different key fob emulators (@iceman1001)
 - Added `lf hitag reader` - act as a Hitag2 reader (@iceman1001)
 - Fixed `lf hitag crack2` - now works. (@iceman1001)
 - Fixed wrong use of free() in desfire crypto on arm src,  thanks @jlitewski! (@iceman1001)
