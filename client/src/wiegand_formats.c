@@ -154,7 +154,7 @@ static bool Pack_indasc27(wiegand_card_t *card, wiegand_message_t *packed, bool 
     if (card->OEM > 0) return false; // Not used in this format
 
     packed->Length = 27;
-    set_nonlinear_field(packed, card->FacilityCode, 11, (uint8_t[]) {9, 4, 6, 5, 0, 7, 19, 8, 10, 16, 24, 12, 22});
+    set_nonlinear_field(packed, card->FacilityCode, 13, (uint8_t[]) {9, 4, 6, 5, 0, 7, 19, 8, 10, 16, 24, 12, 22});
     set_nonlinear_field(packed, card->CardNumber, 14, (uint8_t[]) {26, 1, 3, 15, 14, 17, 20, 13, 25, 2, 18, 21, 11, 23});
     if (preamble)
         return add_HID_header(packed);
@@ -166,7 +166,7 @@ static bool Unpack_indasc27(wiegand_message_t *packed, wiegand_card_t *card) {
 
     if (packed->Length != 27) return false; // Wrong length? Stop here.
 
-    card->FacilityCode = get_nonlinear_field(packed, 11, (uint8_t[]) {9, 4, 6, 5, 0, 7, 19, 8, 10, 16, 24, 12, 22});
+    card->FacilityCode = get_nonlinear_field(packed, 13, (uint8_t[]) {9, 4, 6, 5, 0, 7, 19, 8, 10, 16, 24, 12, 22});
     card->CardNumber = get_nonlinear_field(packed, 14, (uint8_t[]) {26, 1, 3, 15, 14, 17, 20, 13, 25, 2, 18, 21, 11, 23});
     return true;
 }
@@ -1178,7 +1178,7 @@ static bool Pack_iscs38(wiegand_card_t *card, wiegand_message_t *packed, bool pr
 
     set_linear_field(packed, card->FacilityCode, 5, 10);
     set_linear_field(packed, card->CardNumber, 15, 22);
-    set_linear_field(packed, card->IssueLevel, 1, 4);
+    set_linear_field(packed, card->OEM, 1, 4);
 
     set_bit_by_position(packed,
                         evenparity32(get_linear_field(packed, 1, 18))
@@ -1257,7 +1257,7 @@ static bool Pack_bc40(wiegand_card_t *card, wiegand_message_t *packed, bool prea
     if (card->IssueLevel > 0) return false; // Not used in this format
     if (card->OEM > 0x7F) return false; // Not used in this format
 
-    packed->Length = 39; // Set number of bits
+    packed->Length = 40; // Set number of bits
 
     set_linear_field(packed, card->OEM, 0, 7);
 
@@ -1277,7 +1277,7 @@ static bool Pack_bc40(wiegand_card_t *card, wiegand_message_t *packed, bool prea
 static bool Unpack_bc40(wiegand_message_t *packed, wiegand_card_t *card) {
     memset(card, 0, sizeof(wiegand_card_t));
 
-    if (packed->Length != 39) return false; // Wrong length? Stop here.
+    if (packed->Length != 40) return false; // Wrong length? Stop here.
 
     card->OEM = get_linear_field(packed, 0, 7);
     card->FacilityCode = get_linear_field(packed, 7, 12);
