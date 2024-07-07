@@ -531,7 +531,7 @@
         "AID": "012242",
         "Vendor": "Belbim",
         "Country": "TR",
-        "Name": "Istanbulkart (IST)",
+        "Name": "İstanbulkart (IST)",
         "Description": "IST Istanbul Card (eBilet App)",
         "Type": "transport"
     },
@@ -579,7 +579,7 @@
         "AID": "052242",
         "Vendor": "Belbim",
         "Country": "TR",
-        "Name": "Istanbulkart (IST)",
+        "Name": "İstanbulkart (IST)",
         "Description": "IST Istanbul Card (ISPARK App)",
         "Type": "transport"
     },
@@ -595,7 +595,7 @@
         "AID": "062242",
         "Vendor": "Belbim",
         "Country": "TR",
-        "Name": "Istanbulkart (IST)",
+        "Name": "İstanbulkart (IST)",
         "Description": "IST Istanbul Card (App 6)",
         "Type": "transport"
     },
