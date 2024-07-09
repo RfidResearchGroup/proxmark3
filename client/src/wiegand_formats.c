@@ -1433,12 +1433,12 @@ static const cardformat_t FormatTable[] = {
     {"ind26",   Pack_ind26,   Unpack_ind26,   "Indala 26-bit",              {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"ind27",   Pack_ind27,   Unpack_ind27,   "Indala 27-bit",              {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"indasc27", Pack_indasc27, Unpack_indasc27, "Indala ASC 27-bit",       {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"Tecom27", Pack_Tecom27, Unpack_Tecom27, "Tecom 27-bit",               {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
+    {"Tecom27", Pack_Tecom27, Unpack_Tecom27, "Tecom 27-bit",               {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"2804W",   Pack_2804W,   Unpack_2804W,   "2804 Wiegand 28-bit",        {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"ind29",   Pack_ind29,   Unpack_ind29,   "Indala 29-bit",              {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"ATSW30",  Pack_ATSW30,  Unpack_ATSW30,  "ATS Wiegand 30-bit",         {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"ADT31",   Pack_ADT31,   Unpack_ADT31,   "HID ADT 31-bit",             {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"HCP32",   Pack_hcp32,   Unpack_hcp32,   "HID Check Point 32-bit",     {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"HCP32",   Pack_hcp32,   Unpack_hcp32,   "HID Check Point 32-bit",     {1, 0, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"HPP32",   Pack_hpp32,   Unpack_hpp32,   "HID Hewlett-Packard 32-bit", {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"Kastle",  Pack_Kastle,  Unpack_Kastle,  "Kastle 32-bit",              {1, 1, 1, 0, 1}}, // from @xilni; PR #23 on RfidResearchGroup/proxmark3
     {"Kantech", Pack_Kantech, Unpack_Kantech, "Indala/Kantech KFS 32-bit",  {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
@@ -1462,7 +1462,7 @@ static const cardformat_t FormatTable[] = {
     {"BQT38",   Pack_bqt38,   Unpack_bqt38,   "BQT 38-bit",                    {1, 1, 1, 0, 1}}, // from cardinfo.barkweb.com.au
     {"ISCS",    Pack_iscs38,  Unpack_iscs38,  "ISCS 38-bit",                   {1, 1, 0, 1, 1}}, // from cardinfo.barkweb.com.au
     {"PW39",    Pack_pw39,    Unpack_pw39,    "Pyramid 39-bit wiegand format", {1, 1, 0, 0, 1}},  // from cardinfo.barkweb.com.au
-    {"P10001",  Pack_P10001,  Unpack_P10001,  "HID P10001 Honeywell 40-bit",   {1, 1, 0, 1, 0}}, // from cardinfo.barkweb.com.au
+    {"P10001",  Pack_P10001,  Unpack_P10001,  "HID P10001 Honeywell 40-bit",   {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"Casi40",  Pack_CasiRusco40, Unpack_CasiRusco40, "Casi-Rusco 40-bit",     {1, 0, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"C1k48s",  Pack_C1k48s,  Unpack_C1k48s,  "HID Corporate 1000 48-bit std", {1, 1, 0, 0, 1}}, // imported from old pack/unpack
     {"BC40",    Pack_bc40,    Unpack_bc40,    "Bundy TimeClock 40-bit",     {1, 1, 0, 1, 1}}, // from
