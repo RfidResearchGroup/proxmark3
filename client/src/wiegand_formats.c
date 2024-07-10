@@ -591,7 +591,11 @@ static bool Pack_H10320(wiegand_card_t *card, wiegand_message_t *packed, bool pr
     if (card->IssueLevel > 0) return false; // Not used in this format
     if (card->OEM > 0) return false; // Not used in this format
 
-    packed->Length = 36; // Set number of bits
+    packed->Length = 37; // Set number of bits
+
+    // first bit is ONE.
+    set_bit_by_position(packed, 1, 0);
+
     // This card is BCD-encoded rather than binary. Set the 4-bit groups independently.
     for (uint32_t idx = 0; idx < 8; idx++) {
         set_linear_field(packed, (uint64_t)(card->CardNumber / pow(10, 7 - idx)) % 10, idx * 4, 4);
@@ -616,7 +620,10 @@ static bool Pack_H10320(wiegand_card_t *card, wiegand_message_t *packed, bool pr
 static bool Unpack_H10320(wiegand_message_t *packed, wiegand_card_t *card) {
     memset(card, 0, sizeof(wiegand_card_t));
 
-    if (packed->Length != 36) return false; // Wrong length? Stop here.
+    if (packed->Length != 37) return false; // Wrong length? Stop here.
+    if (get_bit_by_position(packed, 0) != 1) {
+        return false;
+    }
 
     // This card is BCD-encoded rather than binary. Get the 4-bit groups independently.
     for (uint32_t idx = 0; idx < 8; idx++) {
@@ -1453,7 +1460,7 @@ static const cardformat_t FormatTable[] = {
     {"C15001",  Pack_C15001,  Unpack_C15001,  "HID KeyScan 36-bit",         {1, 1, 0, 1, 1}}, // from Proxmark forums
     {"S12906",  Pack_S12906,  Unpack_S12906,  "HID Simplex 36-bit",         {1, 1, 1, 0, 1}}, // from cardinfo.barkweb.com.au
     {"Sie36",   Pack_Sie36,   Unpack_Sie36,   "HID 36-bit Siemens",         {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
-    {"H10320",  Pack_H10320,  Unpack_H10320,  "HID H10320 36-bit BCD",      {1, 0, 0, 0, 1}}, // from Proxmark forums
+    {"H10320",  Pack_H10320,  Unpack_H10320,  "HID H10320 37-bit BCD",      {1, 0, 0, 0, 1}}, // from Proxmark forums
     {"H10302",  Pack_H10302,  Unpack_H10302,  "HID H10302 37-bit huge ID",  {1, 0, 0, 0, 1}}, // from Proxmark forums
     {"H10304",  Pack_H10304,  Unpack_H10304,  "HID H10304 37-bit",          {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"P10004",  Pack_P10004,  Unpack_P10004,  "HID P10004 37-bit PCSC",     {1, 1, 0, 0, 0}}, // from @bthedorff; PR #1559
