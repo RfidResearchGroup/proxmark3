@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `mf_nonce_brute` tool to handle the odd case of multiple key candidates (@iceman1001)
 - Fixed a bad memory erase (@iceman1001)
 - Fixed BT serial comms (@iceman1001)
 - Changed `intertic.py` - updated and code clean up (@gentilkiwi)
