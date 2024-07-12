@@ -10,7 +10,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added `pm3_tears_for_fears.py` - a ISO14443b tear off script by Pierre Granier
 - Added new t55xx password (002BCFCF) sniffed from cheap cloner (@davidbeauchamp)
 - Fixed 'hf 14b sim' - now works (@michi-jung)
-- Added VB6 Rng for iclass elite keys lookup by porting @bettse work in the Flipper Zero Picopass App (@antiklesys)
+- Added VB6 Rng for iclass elite keys `hf iclass lookup` and `hf iclass chk` functions by porting @bettse work in the Flipper Zero Picopass App (@antiklesys)
 
 ## [Aurora.4.18589][2024-05-28]
 - Fixed the pm3 regressiontests for Hitag2Crack (@iceman1001)
