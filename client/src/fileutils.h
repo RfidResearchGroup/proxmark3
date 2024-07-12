@@ -289,7 +289,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
 */
 int convert_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
 mfu_df_e detect_mfu_dump_format(uint8_t **dump, bool verbose);
-nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose);
+int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool verbose);
 
 int searchAndList(const char *pm3dir, const char *ext);
 int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix, bool silent);

@@ -2162,14 +2162,18 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
 int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint32_t *keycnt,
                          size_t startFilePosition, size_t *endFilePosition, bool verbose) {
 
-    if (data == NULL) return PM3_EINVARG;
+    if (data == NULL) {
+        return PM3_EINVARG;
+    }
 
-    if (endFilePosition)
+    if (endFilePosition) {
         *endFilePosition = 0;
+    }
 
     char *path;
-    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false) != PM3_SUCCESS)
+    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false) != PM3_SUCCESS) {
         return PM3_EFILE;
+    }
 
     // double up since its chars
     keylen <<= 1;
@@ -2201,8 +2205,9 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
         long filepos = ftell(f);
 
         if (!fgets(line, sizeof(line), f)) {
-            if (endFilePosition)
+            if (endFilePosition) {
                 *endFilePosition = 0;
+            }
             break;
         }
 
@@ -2210,39 +2215,50 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
         line[keylen] = 0;
 
         // smaller keys than expected is skipped
-        if (strlen(line) < keylen)
+        if (strlen(line) < keylen) {
             continue;
+        }
 
         // The line start with # is comment, skip
-        if (line[0] == '#')
+        if (line[0] == '#') {
             continue;
+        }
 
-        if (!CheckStringIsHEXValue(line))
+        if (!CheckStringIsHEXValue(line)) {
             continue;
+        }
 
         // cant store more data
         if (maxdatalen && (counter + (keylen >> 1) > maxdatalen)) {
             retval = 1;
-            if (endFilePosition)
+            if (endFilePosition) {
                 *endFilePosition = filepos;
+            }
             break;
         }
 
-        if (hex_to_bytes(line, udata + counter, keylen >> 1) != (keylen >> 1))
+        if (hex_to_bytes(line, udata + counter, keylen >> 1) != (keylen >> 1)) {
             continue;
+        }
 
         vkeycnt++;
         memset(line, 0, sizeof(line));
         counter += (keylen >> 1);
     }
-    fclose(f);
-    if (verbose)
-        PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%2d") " keys from dictionary file `" _YELLOW_("%s") "`", vkeycnt, path);
 
-    if (datalen)
+    fclose(f);
+
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%2d") " keys from dictionary file `" _YELLOW_("%s") "`", vkeycnt, path);
+    }
+
+    if (datalen) {
         *datalen = counter;
-    if (keycnt)
+    }
+
+    if (keycnt) {
         *keycnt = vkeycnt;
+    }
 out:
     free(path);
     return retval;
@@ -2253,8 +2269,9 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
     int retval = PM3_SUCCESS;
 
     char *path;
-    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false) != PM3_SUCCESS)
+    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false) != PM3_SUCCESS) {
         return PM3_EFILE;
+    }
 
     // t5577 == 4bytes
     // mifare == 6 bytes
@@ -2311,15 +2328,18 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
         line[keylen] = 0;
 
         // smaller keys than expected is skipped
-        if (strlen(line) < keylen)
+        if (strlen(line) < keylen) {
             continue;
+        }
 
         // The line start with # is comment, skip
-        if (line[0] == '#')
+        if (line[0] == '#') {
             continue;
+        }
 
-        if (!CheckStringIsHEXValue(line))
+        if (!CheckStringIsHEXValue(line)) {
             continue;
+        }
 
         uint64_t key = strtoull(line, NULL, 16);
 
@@ -2330,6 +2350,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
         memset(line, 0, sizeof(line));
     }
     fclose(f);
+
     PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%2d") " keys from dictionary file `" _YELLOW_("%s") "`", *keycnt, path);
 
 out:
@@ -2453,7 +2474,9 @@ mfu_df_e detect_mfu_dump_format(uint8_t **dump, bool verbose) {
     return retval;
 }
 
-nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose) {
+int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool verbose) {
+
+    *dump_type = NFC_DF_UNKNOWN;
 
     char *path;
     int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, "", false);
@@ -2468,8 +2491,6 @@ nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose) {
         return PM3_EFILE;
     }
     free(path);
-
-    nfc_df_e retval = NFC_DF_UNKNOWN;
 
     char line[256];
     memset(line, 0, sizeof(line));
@@ -2492,31 +2513,31 @@ nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose) {
         str_lower(line);
 
         if (str_startswith(line, "device type: ntag")) {
-            retval = NFC_DF_MFU;
+            *dump_type = NFC_DF_MFU;
             break;
         }
         if (str_startswith(line, "device type: mifare classic")) {
-            retval = NFC_DF_MFC;
+            *dump_type = NFC_DF_MFC;
             break;
         }
         if (str_startswith(line, "device type: mifare desfire")) {
-            retval = NFC_DF_MFDES;
+            *dump_type = NFC_DF_MFDES;
             break;
         }
         if (str_startswith(line, "device type: iso14443-3a")) {
-            retval = NFC_DF_14_3A;
+            *dump_type = NFC_DF_14_3A;
             break;
         }
         if (str_startswith(line, "device type: iso14443-3b")) {
-            retval = NFC_DF_14_3B;
+            *dump_type = NFC_DF_14_3B;
             break;
         }
         if (str_startswith(line, "device type: iso14443-4a")) {
-            retval = NFC_DF_14_4A;
+            *dump_type = NFC_DF_14_4A;
             break;
         }
         if (str_startswith(line, "filetype: flipper picopass device")) {
-            retval = NFC_DF_PICOPASS;
+            *dump_type = NFC_DF_PICOPASS;
             break;
         }
 
@@ -2524,7 +2545,7 @@ nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose) {
     fclose(f);
 
     if (verbose) {
-        switch (retval) {
+        switch (*dump_type) {
             case NFC_DF_MFU:
                 PrintAndLogEx(INFO, "Detected MIFARE Ultralight / NTAG based dump format");
                 break;
@@ -2551,7 +2572,7 @@ nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose) {
                 break;
         }
     }
-    return retval;
+    return PM3_SUCCESS;
 }
 
 static int convert_plain_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose) {
@@ -2996,15 +3017,20 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
             break;
         }
         case FLIPPER: {
-            nfc_df_e foo = detect_nfc_dump_format(fn, true);
-            if (foo == NFC_DF_MFC || foo == NFC_DF_MFU || foo == NFC_DF_PICOPASS) {
+            nfc_df_e dumptype;
+            res = detect_nfc_dump_format(fn, &dumptype, true);
+            if (res != SUCCESS) {
+                break;
+            }
+
+            if (dumptype == NFC_DF_MFC || dumptype == NFC_DF_MFU || dumptype == NFC_DF_PICOPASS) {
 
                 *pdump = calloc(maxdumplen, sizeof(uint8_t));
                 if (*pdump == NULL) {
                     PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
                     return PM3_EMALLOC;
                 }
-                res = loadFileNFC_safe(fn, *pdump, maxdumplen, dumplen, foo);
+                res = loadFileNFC_safe(fn, *pdump, maxdumplen, dumplen, dumptype);
                 if (res == PM3_SUCCESS) {
                     return res;
                 }
@@ -3016,6 +3042,9 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
                 } else if (res == PM3_EMALLOC) {
                     PrintAndLogEx(WARNING, "wrong size of allocated memory. Check your parameters");
                 }
+            } else {
+                // unknown dump file type
+                res = PM3_ESOFT;
             }
             break;
         }
