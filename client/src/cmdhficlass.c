@@ -3581,26 +3581,33 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass chk",
                   "Checkkeys loads a dictionary text file with 8byte hex keys to test authenticating against a iClass tag",
                   "hf iclass chk -f iclass_default_keys.dic\n"
-                  "hf iclass chk -f iclass_elite_keys.dic --elite");
+                  "hf iclass chk -f iclass_elite_keys.dic --elite\n"
+                  "hf iclass chk --vb6kdf\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Dictionary file with default iclass keys"),
+        arg_str0("f", "file", "<fn>", "Dictionary file with default iclass keys"),
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "no computations applied to key (raw)"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
+        arg_lit0(NULL, "vb6kdf", "use the VB6 elite KDF instead of a file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-
-    bool use_credit_key = arg_get_lit(ctx, 2);
+    bool use_vb6kdf = arg_get_lit(ctx, 6);
     bool use_elite = arg_get_lit(ctx, 3);
     bool use_raw = arg_get_lit(ctx, 4);
+    if(use_vb6kdf){
+        use_elite = true;
+    }else{
+        CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    }
+
+    bool use_credit_key = arg_get_lit(ctx, 2);
     bool shallow_mod = arg_get_lit(ctx, 5);
 
     CLIParserFree(ctx);
@@ -3613,10 +3620,26 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     // load keys
     uint8_t *keyBlock = NULL;
     uint32_t keycount = 0;
-    int res = loadFileDICTIONARY_safe(filename, (void **)&keyBlock, 8, &keycount);
-    if (res != PM3_SUCCESS || keycount == 0) {
-        free(keyBlock);
-        return res;
+
+    if (!use_vb6kdf) {
+        // Load keys
+        int res = loadFileDICTIONARY_safe(filename, (void **)&keyBlock, 8, &keycount);
+        if (res != PM3_SUCCESS || keycount == 0) {
+            free(keyBlock);
+            return res;
+        }
+    } else {
+        // Generate 5000 keys using VB6 KDF
+        keycount = 5000;
+        keyBlock = malloc(keycount * 8);
+        if (!keyBlock) {
+            return PM3_EMALLOC;
+        }
+
+        picopass_elite_reset();
+        for (uint32_t i = 0; i < keycount; i++) {
+            picopass_elite_nextKey(keyBlock + (i * 8));
+        }
     }
 
     // limit size of keys that can be held in memory
