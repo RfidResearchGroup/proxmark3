@@ -595,13 +595,12 @@ static void *brute_thread(void *arguments) {
 static void *brute_key_thread(void *arguments) {
 
     struct thread_key_args *args = (struct thread_key_args *) arguments;
-    uint64_t key;
     uint8_t local_enc[args->enc_len];
     memcpy(local_enc, args->enc, args->enc_len);
 
     for (uint64_t count = args->idx; count <= 0xFFFF; count += thread_count) {
 
-        key = args->part_key | (count << 32);
+        uint64_t key = args->part_key | (count << 32);
 
         // Init cipher with key
         struct Crypto1State *pcs = crypto1_create(key);
@@ -794,7 +793,7 @@ int main(int argc, const char *argv[]) {
     }
 
     if (enc_len < 4) {
-        printf("Too few next cmd bytes, skipping phase 2\n");
+        printf("Too few next cmd bytes, skipping phase 3\n\n");
         goto out;
     }
 
@@ -830,11 +829,15 @@ int main(int argc, const char *argv[]) {
         pthread_join(threads[i], NULL);
     }
 
+
     if (global_found_candidate > 1) {
-        printf("\nOdd case but we found " _GREEN_("%d") " possible keys", global_found_candidate);
-        printf("\n" _YELLOW_("You need to test all of them manually, start with the one matching the candidate\n\n"));
+        printf("Key recovery ( " _GREEN_("ok") " )\n");
+        printf("Found " _GREEN_("%d") " possible keys\n", global_found_candidate);
+        printf(_YELLOW_("You need to test them manually, start with the one matching the candidate\n\n"));
+    } else if (global_found_candidate == 1) {
+        printf("Key recovery ( " _GREEN_("ok") " )\n\n");
     } else {
-        printf("\nfailed to find a key\n\n");
+        printf("Key recovery ( " _RED_("fail") " )\n\n");
     }
 
 out:
