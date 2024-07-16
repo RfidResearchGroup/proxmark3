@@ -182,7 +182,7 @@ drop iclass-flipper.picopass file here and simulate on Flipper
 ## Using Omnikey Reader 5427CK Gen2 and Proxmark3
 ^[Top](#top)
 
-1. Download latest version of Omnikey workbench [here](https://www3.hidglobal.com/drivers/14994)
+1. Download latest version of Omnikey workbench [here](https://www.hidglobal.com/drivers/37339)
 2. Plug in Omnikey reader
 3. Start Omnikey workbench
 4. Switch reader mode to CCID mode
