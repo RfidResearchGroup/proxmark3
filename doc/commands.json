@@ -720,7 +720,7 @@
                 "-h, --help This help",
                 "--keep keep the current values of the markers",
                 "-a <dec> yellow marker",
-                "-b <dec> pink marker",
+                "-b <dec> purple marker",
                 "-c <dec> orange marker",
                 "-d <dec> blue marker"
             ],
@@ -739,6 +739,42 @@
                 "-n <dec> shift + or -"
             ],
             "usage": "data shiftgraphzero [-h] -n <dec>"
+        },
+        "data test_ss32": {
+            "command": "data test_ss32",
+            "description": "Tests the implementation of Buffer Save States (32-bit buffer)",
+            "notes": [
+                "data test_ss32"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "data test_ss32 [-h]"
+        },
+        "data test_ss32s": {
+            "command": "data test_ss32s",
+            "description": "Tests the implementation of Buffer Save States (32-bit signed buffer)",
+            "notes": [
+                "data test_ss32s"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "data test_ss32s [-h]"
+        },
+        "data test_ss8": {
+            "command": "data test_ss8",
+            "description": "Tests the implementation of Buffer Save States (8-bit buffer)",
+            "notes": [
+                "data test_ss8"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "data test_ss8 [-h]"
         },
         "data timescale": {
             "command": "data timescale",
@@ -1386,6 +1422,18 @@
             ],
             "usage": "hf 14b apdu [-hskte] [--decode] [-m <hex>] [-l <int>] -d <hex> [--timeout <dec>]"
         },
+        "hf 14b calypso": {
+            "command": "hf 14b calypso",
+            "description": "Reads out the contents of a ISO14443B Calypso card",
+            "notes": [
+                "hf 14b calypso"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hf 14b calypso [-h]"
+        },
         "hf 14b dump": {
             "command": "hf 14b dump",
             "description": "This command dumps the contents of a ISO-14443-B tag and save it to file Tries to autodetect cardtype, memory size defaults to SRI4K",
@@ -1404,7 +1452,7 @@
         },
         "hf 14b help": {
             "command": "hf 14b help",
-            "description": "--------- ----------------------- General ----------------------- help This help list List ISO-14443-B history --------- ----------------------- Operations ----------------------- view Display content from tag dump file valid SRIX4 checksum test --------------------------------------------------------------------------------------- hf 14b list available offline: yes Alias of `trace list -t 14b -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "--------- ----------------------- General ----------------------- help This help list List ISO-14443-B history --------- ----------------------- Operations ----------------------- view Display content from tag dump file valid SRIX4 checksum test --------- ------------------ Calypso / Mobib ------------------ --------------------------------------------------------------------------------------- hf 14b list available offline: yes Alias of `trace list -t 14b -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf 14b list --frame -> show frame delay times",
                 "hf 14b list -1 -> use trace buffer"
@@ -1436,6 +1484,18 @@
                 "-v, --verbose verbose output"
             ],
             "usage": "hf 14b info [-hsv]"
+        },
+        "hf 14b mobib": {
+            "command": "hf 14b mobib",
+            "description": "Reads out the contents of a ISO14443B Mobib card",
+            "notes": [
+                "hf 14b mobib"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hf 14b mobib [-h]"
         },
         "hf 14b ndefread": {
             "command": "hf 14b ndefread",
@@ -1501,10 +1561,11 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
+                "--plot show anticollision signal trace in plot window",
                 "-v, --verbose verbose output",
                 "-@ optional - continuous reader mode"
             ],
-            "usage": "hf 14b reader [-hv@]"
+            "usage": "hf 14b reader [-hv@] [--plot]"
         },
         "hf 14b restore": {
             "command": "hf 14b restore",
@@ -3102,7 +3163,7 @@
             "description": "Checkkeys loads a dictionary text file with 8byte hex keys to test authenticating against a iClass tag",
             "notes": [
                 "hf iclass chk -f iclass_default_keys.dic",
-                "hf iclass chk -f iclass_default_keys.dic --elite"
+                "hf iclass chk -f iclass_elite_keys.dic --elite"
             ],
             "offline": false,
             "options": [
@@ -8925,7 +8986,8 @@
             "description": "Authenticate against an EM4x70 by sending random number (RN) and F(RN) If F(RN) is incorrect based on the tag key, the tag will not respond If F(RN) is correct based on the tag key, the tag will give a 20-bit response",
             "notes": [
                 "lf em 4x70 auth --rnd 45F54ADA252AAC --frn 4866BB70 -> (using pm3 test key)",
-                "lf em 4x70 auth --rnd 3FFE1FB6CC513F --frn F355F1A0 -> (using research paper key)"
+                "lf em 4x70 auth --rnd 3FFE1FB6CC513F --frn F355F1A0 -> (using research paper key)",
+                "lf em 4x70 auth --rnd 7D5167003571F8 --frn 982DBCC0 -> (autorecovery test key)"
             ],
             "offline": false,
             "options": [
@@ -8941,7 +9003,8 @@
             "description": "This command will perform automatic recovery of the key from a writable tag. All steps are possible to do manually. The corresponding sequence, if done manually, is as follows: 1. Verify passed parameters authenticate with the tag (safety check) lf em 4x70 auth --rnd <rnd_1> --frn <frn_1> 2. Brute force the key bits in block 9 lf em 4x70 write -b 9 -d 0000 lf em 4x70 recover -b 9 --rnd <rnd_1> --frn <frn_1> lf em 4x70 write -b 9 -d <key_block_9> 3. Brute force the key bits in block 8 lf em 4x70 write -b 8 -d 0000 lf em 4x70 recover -b 8 --rnd <rnd_1> --frn <frn_1> lf em 4x70 write -b 8 -d <key_block_8> 4. Brute force the key bits in block 7 lf em 4x70 write -b 7 -d 0000) lf em 4x70 recover -b 7 --rnd <rnd_1> --frn <frn_1> lf em 4x70 write -b 7 -d <key_block_7> 5. Recover potential values of the lower 48 bits of the key lf em 4x70 recover --key <key_block_9><key_block_8><key_block_7> --rnd <rnd_1> --frn <frn_1> 6. Verify which potential key is actually on the tag (using a different rnd/frn combination) lf em 4x70 auth --rnd <rnd_2> --frn <frn_N> 7. Print the validated key This command simply requires the rnd/frn/grn from a single known-good authentication.",
             "notes": [
                 "lf em 4x70 autorecover --rnd 45F54ADA252AAC --frn 4866BB70 --grn 9BD180 (pm3 test key)",
-                "lf em 4x70 autorecover --rnd 3FFE1FB6CC513F --frn F355F1A0 --grn 609D60 (research paper key)"
+                "lf em 4x70 autorecover --rnd 3FFE1FB6CC513F --frn F355F1A0 --grn 609D60 (research paper key)",
+                "lf em 4x70 autorecover --rnd 7D5167003571F8 --frn 982DBCC0 --grn 36C0E0 (autorecovery test key)"
             ],
             "offline": false,
             "options": [
@@ -8953,11 +9016,29 @@
             ],
             "usage": "lf em 4x70 autorecover [-h] [--par] --rnd <hex> --frn <hex> --grn <hex>"
         },
+        "lf em 4x70 calc": {
+            "command": "lf em 4x70 calc",
+            "description": "Calculates both the reader and tag challenge for a user-provided key and rnd.",
+            "notes": [
+                "lf em 4x70 calc --key F32AA98CF5BE4ADFA6D3480B --rnd 45F54ADA252AAC (pm3 test key)",
+                "lf em 4x70 calc --key A090A0A02080000000000000 --rnd 3FFE1FB6CC513F (research paper key)",
+                "lf em 4x70 calc --key 022A028C02BE000102030405 --rnd 7D5167003571F8 (autorecovery test key)"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--key <hex> Key 96-bit as 12 hex bytes",
+                "--rnd <hex> 56-bit random value sent to tag for authentication"
+            ],
+            "usage": "lf em 4x70 calc [-h] --key <hex> --rnd <hex>"
+        },
         "lf em 4x70 help": {
             "command": "lf em 4x70 help",
-            "description": "help This help recover Recover remaining key from partial key --------------------------------------------------------------------------------------- lf em 4x70 brute available offline: no Optimized partial key-update attack of 16-bit key block 7, 8 or 9 of an EM4x70 This attack does NOT write anything to the tag. Before starting this attack, 0000 must be written to the 16-bit key block: 'lf em 4x70 write -b 9 -d 0000'. After success, the 16-bit key block have to be restored with the key found: 'lf em 4x70 write -b 9 -d c0de'",
+            "description": "help This help calc Calculate EM4x70 challenge and response recover Recover remaining key from partial key --------------------------------------------------------------------------------------- lf em 4x70 brute available offline: no Optimized partial key-update attack of 16-bit key block 7, 8 or 9 of an EM4x70 This attack does NOT write anything to the tag. Before starting this attack, 0000 must be written to the 16-bit key block: 'lf em 4x70 write -b 9 -d 0000'. After success, the 16-bit key block have to be restored with the key found: 'lf em 4x70 write -b 9 -d c0de'",
             "notes": [
-                "lf em 4x70 brute -b 9 --rnd 45F54ADA252AAC --frn 4866BB70 -> bruteforcing key bits k95...k80"
+                "lf em 4x70 brute -b 9 --rnd 45F54ADA252AAC --frn 4866BB70 -> bruteforcing key bits k95...k80 (pm3 test key)",
+                "lf em 4x70 brute -b 8 --rnd 3FFE1FB6CC513F --frn F355F1A0 -> bruteforcing key bits k79...k64 (research paper key)",
+                "lf em 4x70 brute -b 7 --rnd 7D5167003571F8 --frn 982DBCC0 -> bruteforcing key bits k63...k48 (autorecovery test key)"
             ],
             "offline": true,
             "options": [
@@ -8989,7 +9070,8 @@
             "description": "After obtaining key bits 95..48 (such as via 'lf em 4x70 brute'), this command will recover key bits 47..00. By default, this process does NOT require a tag to be present. By default, the potential keys are shown (typically 1-6) along with a corresponding 'lf em 4x70 auth' command that will authenticate, if that potential key is correct. The user can copy/paste these commands when the tag is present to manually check which of the potential keys is correct.",
             "notes": [
                 "lf em 4x70 recover --key F32AA98CF5BE --rnd 45F54ADA252AAC --frn 4866BB70 --grn 9BD180 (pm3 test key)",
-                "lf em 4x70 recover --key A090A0A02080 --rnd 3FFE1FB6CC513F --frn F355F1A0 --grn 609D60 (research paper key)"
+                "lf em 4x70 recover --key A090A0A02080 --rnd 3FFE1FB6CC513F --frn F355F1A0 --grn 609D60 (research paper key)",
+                "lf em 4x70 recover --key 022A028C02BE --rnd 7D5167003571F8 --frn 982DBCC0 --grn 36C0E0 (autorecovery test key)"
             ],
             "offline": true,
             "options": [
@@ -9007,7 +9089,8 @@
             "description": "Write new 96-bit key to tag",
             "notes": [
                 "lf em 4x70 setkey -k F32AA98CF5BE4ADFA6D3480B (pm3 test key)",
-                "lf em 4x70 setkey -k A090A0A02080000000000000 (research paper key)"
+                "lf em 4x70 setkey -k A090A0A02080000000000000 (research paper key)",
+                "lf em 4x70 setkey -k 022A028C02BE000102030405 (autorecovery test key)"
             ],
             "offline": false,
             "options": [
@@ -9443,6 +9526,19 @@
             ],
             "usage": "lf hitag chk [-h] [-f <fn>] [--pwd] [--crypto]"
         },
+        "lf hitag crack2": {
+            "command": "lf hitag crack2",
+            "description": "This command tries to recover 2048 bits of Hitag2 crypto stream data.",
+            "notes": [
+                "lf hitag crack2 --nrar 73AA5A62EAB8529C"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--nrar <hex> specify nonce / answer as 8 hex bytes"
+            ],
+            "usage": "lf hitag crack2 [-h] [--nrar <hex>]"
+        },
         "lf hitag dump": {
             "command": "lf hitag dump",
             "description": "Read all Hitag 2 card memory and save to file Crypto mode key format: ISK high + ISK low, 4F4E4D494B52 (ONMIKR) Password mode, default key 4D494B52 (MIKR)",
@@ -9497,7 +9593,7 @@
         },
         "lf hitag help": {
             "command": "lf hitag help",
-            "description": "help This help list List Hitag trace history selftest Perform self test view Display content from tag dump file lookup Uses authentication trace to check for key in dictionary file --------------------------------------------------------------------------------------- lf hitag list available offline: yes Alias of `trace list -t hitag2` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List Hitag trace history test Perform self tests view Display content from tag dump file lookup Uses authentication trace to check for key in dictionary file --------------------------------------------------------------------------------------- lf hitag list available offline: yes Alias of `trace list -t hitag2` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "lf hitag list --frame -> show frame delay times",
                 "lf hitag list -1 -> use trace buffer"
@@ -9576,17 +9672,19 @@
             ],
             "usage": "lf hitag read [-hs2] [--pwd] [--nrar <hex>] [--crypto] [-k <hex>]"
         },
-        "lf hitag selftest": {
-            "command": "lf hitag selftest",
-            "description": "Perform selftest of Hitag crypto engine",
+        "lf hitag reader": {
+            "command": "lf hitag reader",
+            "description": "Act as a Hitag2 reader. Look for Hitag2 tags until Enter or the pm3 button is pressed",
             "notes": [
-                "lf hitag selftest"
+                "lf hitag reader",
+                "lf hitag reader -@ -> Continuous mode"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-@ continuous reader mode"
             ],
-            "usage": "lf hitag selftest [-h]"
+            "usage": "lf hitag reader [-h@]"
         },
         "lf hitag sim": {
             "command": "lf hitag sim",
@@ -9614,6 +9712,18 @@
                 "-h, --help This help"
             ],
             "usage": "lf hitag sniff [-h]"
+        },
+        "lf hitag test": {
+            "command": "lf hitag test",
+            "description": "Perform self tests of Hitag crypto engine",
+            "notes": [
+                "lf hitag test"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "lf hitag test [-h]"
         },
         "lf hitag view": {
             "command": "lf hitag view",
@@ -12622,8 +12732,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 729,
+        "commands_extracted": 737,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-04-22T14:35:02"
+        "extracted_on": "2024-05-27T13:38:05"
     }
 }

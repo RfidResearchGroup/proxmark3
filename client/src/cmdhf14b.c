@@ -403,7 +403,7 @@ uint8_t *get_uid_from_filename(const char *filename) {
     }
 
     // extract uid part from filename
-    char uidinhex[17] = {0};    
+    char uidinhex[17] = {0};
     strncpy(uidinhex, found + 7, 16);
 
     uidinhex[16] = '\0';
@@ -1503,13 +1503,15 @@ static int CmdHF14BReader(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0(NULL, "plot", "show anticollision signal trace in plot window"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0("@", NULL, "optional - continuous reader mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool verbose = arg_get_lit(ctx, 1);
-    bool cm = arg_get_lit(ctx, 2);
+    bool read_plot = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+    bool cm = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     if (cm) {
@@ -1518,7 +1520,7 @@ static int CmdHF14BReader(const char *Cmd) {
 
     clear_trace_14b();
 
-    return readHF14B(cm, verbose);
+    return readHF14B(cm, verbose, read_plot);
 }
 
 // Read SRI512|SRIX4K block
@@ -2484,16 +2486,16 @@ static int CmdHF14BAPDU(const char *Cmd) {
     uint16_t sw = get_sw(data, datalen);
     if (sw != ISO7816_OK) {
         PrintAndLogEx(SUCCESS, "APDU response: " _YELLOW_("%02x %02x") " - %s"
-                , data[datalen - 2]
-                , data[datalen - 1]
-                , GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])
-            );
+                      , data[datalen - 2]
+                      , data[datalen - 1]
+                      , GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])
+                     );
     } else {
         PrintAndLogEx(SUCCESS, "APDU response: " _GREEN_("%02x %02x") " - %s"
-                , data[datalen - 2]
-                , data[datalen - 1]
-                , GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])
-            );
+                      , data[datalen - 2]
+                      , data[datalen - 1]
+                      , GetAPDUCodeDescription(data[datalen - 2], data[datalen - 1])
+                     );
     }
 
     // TLV decoder
@@ -2706,30 +2708,30 @@ static int CmdHF14BCalypsoRead(const char *Cmd) {
         {"19.SpecEv1",             "\x94\xb2\x01\x04\x1d", 5},
     };
 
-/*
-local CLA = '94'
-local _calypso_cmds = {
+    /*
+    local CLA = '94'
+    local _calypso_cmds = {
 
--- Break down of command bytes:
---  A4 = select
---  Master File  3F00
---  0x3F = master file
---  0x00 = master file id, is constant to 0x00.
+    -- Break down of command bytes:
+    --  A4 = select
+    --  Master File  3F00
+    --  0x3F = master file
+    --  0x00 = master file id, is constant to 0x00.
 
---  DF Dedicated File  38nn
---  can be seen as directories
---  0x38
---  0xNN  id
---  ["01.Select ICC file"] = '0294 a4 080004 3f00 0002',
+    --  DF Dedicated File  38nn
+    --  can be seen as directories
+    --  0x38
+    --  0xNN  id
+    --  ["01.Select ICC file"] = '0294 a4 080004 3f00 0002',
 
---  EF Elementary File
---  EF1 Pin file
---  EF2 Key file
---  Grey Lock file
---  Electronic deposit file
---  Electronic Purse file
---  Electronic Transaction log file
-*/
+    --  EF Elementary File
+    --  EF1 Pin file
+    --  EF2 Key file
+    --  Grey Lock file
+    --  Electronic deposit file
+    --  Electronic Purse file
+    --  Electronic Transaction log file
+    */
     bool activate_field = true;
     bool leave_signal_on = true;
     uint8_t response[PM3_CMD_DATA_SIZE] = { 0x00 };
@@ -2739,15 +2741,15 @@ local _calypso_cmds = {
         int user_timeout = -1;
         int resplen = 0;
         int res = exchange_14b_apdu(
-                        (uint8_t*)cmds[i].apdu,
-                        cmds[i].apdulen,
-                        activate_field,
-                        leave_signal_on,
-                        response,
-                        PM3_CMD_DATA_SIZE,
-                        &resplen,
-                        user_timeout
-                    );
+                      (uint8_t *)cmds[i].apdu,
+                      cmds[i].apdulen,
+                      activate_field,
+                      leave_signal_on,
+                      response,
+                      PM3_CMD_DATA_SIZE,
+                      &resplen,
+                      user_timeout
+                  );
 
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "sending command failed, aborting!");
@@ -2844,15 +2846,15 @@ static int CmdHF14BMobibRead(const char *Cmd) {
         int user_timeout = -1;
         int resplen = 0;
         int res = exchange_14b_apdu(
-                        (uint8_t*)cmds[i].apdu,
-                        cmds[i].apdulen,
-                        activate_field,
-                        leave_signal_on,
-                        response,
-                        PM3_CMD_DATA_SIZE,
-                        &resplen,
-                        user_timeout
-                    );
+                      (uint8_t *)cmds[i].apdu,
+                      cmds[i].apdulen,
+                      activate_field,
+                      leave_signal_on,
+                      response,
+                      PM3_CMD_DATA_SIZE,
+                      &resplen,
+                      user_timeout
+                  );
 
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "sending command failed, aborting!");
@@ -2928,7 +2930,7 @@ int infoHF14B(bool verbose, bool do_aid_search) {
 }
 
 // get and print general info about all known 14b chips
-int readHF14B(bool loop, bool verbose) {
+int readHF14B(bool loop, bool verbose, bool read_plot) {
     bool found = false;
     int res = PM3_SUCCESS;
     do {
@@ -2960,9 +2962,11 @@ int readHF14B(bool loop, bool verbose) {
         if (found)
             goto plot;
 plot:
-        res = handle_hf_plot(verbose);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(DEBUG, "plot failed");
+        if (read_plot) {
+            res = handle_hf_plot(verbose);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(DEBUG, "plot failed");
+            }
         }
 
     } while (loop && kbd_enter_pressed() == false);

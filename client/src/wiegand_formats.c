@@ -154,7 +154,7 @@ static bool Pack_indasc27(wiegand_card_t *card, wiegand_message_t *packed, bool 
     if (card->OEM > 0) return false; // Not used in this format
 
     packed->Length = 27;
-    set_nonlinear_field(packed, card->FacilityCode, 11, (uint8_t[]) {9, 4, 6, 5, 0, 7, 19, 8, 10, 16, 24, 12, 22});
+    set_nonlinear_field(packed, card->FacilityCode, 13, (uint8_t[]) {9, 4, 6, 5, 0, 7, 19, 8, 10, 16, 24, 12, 22});
     set_nonlinear_field(packed, card->CardNumber, 14, (uint8_t[]) {26, 1, 3, 15, 14, 17, 20, 13, 25, 2, 18, 21, 11, 23});
     if (preamble)
         return add_HID_header(packed);
@@ -166,7 +166,7 @@ static bool Unpack_indasc27(wiegand_message_t *packed, wiegand_card_t *card) {
 
     if (packed->Length != 27) return false; // Wrong length? Stop here.
 
-    card->FacilityCode = get_nonlinear_field(packed, 11, (uint8_t[]) {9, 4, 6, 5, 0, 7, 19, 8, 10, 16, 24, 12, 22});
+    card->FacilityCode = get_nonlinear_field(packed, 13, (uint8_t[]) {9, 4, 6, 5, 0, 7, 19, 8, 10, 16, 24, 12, 22});
     card->CardNumber = get_nonlinear_field(packed, 14, (uint8_t[]) {26, 1, 3, 15, 14, 17, 20, 13, 25, 2, 18, 21, 11, 23});
     return true;
 }
@@ -591,7 +591,11 @@ static bool Pack_H10320(wiegand_card_t *card, wiegand_message_t *packed, bool pr
     if (card->IssueLevel > 0) return false; // Not used in this format
     if (card->OEM > 0) return false; // Not used in this format
 
-    packed->Length = 36; // Set number of bits
+    packed->Length = 37; // Set number of bits
+
+    // first bit is ONE.
+    set_bit_by_position(packed, 1, 0);
+
     // This card is BCD-encoded rather than binary. Set the 4-bit groups independently.
     for (uint32_t idx = 0; idx < 8; idx++) {
         set_linear_field(packed, (uint64_t)(card->CardNumber / pow(10, 7 - idx)) % 10, idx * 4, 4);
@@ -616,7 +620,10 @@ static bool Pack_H10320(wiegand_card_t *card, wiegand_message_t *packed, bool pr
 static bool Unpack_H10320(wiegand_message_t *packed, wiegand_card_t *card) {
     memset(card, 0, sizeof(wiegand_card_t));
 
-    if (packed->Length != 36) return false; // Wrong length? Stop here.
+    if (packed->Length != 37) return false; // Wrong length? Stop here.
+    if (get_bit_by_position(packed, 0) != 1) {
+        return false;
+    }
 
     // This card is BCD-encoded rather than binary. Get the 4-bit groups independently.
     for (uint32_t idx = 0; idx < 8; idx++) {
@@ -1178,7 +1185,7 @@ static bool Pack_iscs38(wiegand_card_t *card, wiegand_message_t *packed, bool pr
 
     set_linear_field(packed, card->FacilityCode, 5, 10);
     set_linear_field(packed, card->CardNumber, 15, 22);
-    set_linear_field(packed, card->IssueLevel, 1, 4);
+    set_linear_field(packed, card->OEM, 1, 4);
 
     set_bit_by_position(packed,
                         evenparity32(get_linear_field(packed, 1, 18))
@@ -1257,7 +1264,7 @@ static bool Pack_bc40(wiegand_card_t *card, wiegand_message_t *packed, bool prea
     if (card->IssueLevel > 0) return false; // Not used in this format
     if (card->OEM > 0x7F) return false; // Not used in this format
 
-    packed->Length = 39; // Set number of bits
+    packed->Length = 40; // Set number of bits
 
     set_linear_field(packed, card->OEM, 0, 7);
 
@@ -1277,7 +1284,7 @@ static bool Pack_bc40(wiegand_card_t *card, wiegand_message_t *packed, bool prea
 static bool Unpack_bc40(wiegand_message_t *packed, wiegand_card_t *card) {
     memset(card, 0, sizeof(wiegand_card_t));
 
-    if (packed->Length != 39) return false; // Wrong length? Stop here.
+    if (packed->Length != 40) return false; // Wrong length? Stop here.
 
     card->OEM = get_linear_field(packed, 0, 7);
     card->FacilityCode = get_linear_field(packed, 7, 12);
@@ -1433,12 +1440,12 @@ static const cardformat_t FormatTable[] = {
     {"ind26",   Pack_ind26,   Unpack_ind26,   "Indala 26-bit",              {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"ind27",   Pack_ind27,   Unpack_ind27,   "Indala 27-bit",              {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"indasc27", Pack_indasc27, Unpack_indasc27, "Indala ASC 27-bit",       {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"Tecom27", Pack_Tecom27, Unpack_Tecom27, "Tecom 27-bit",               {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
+    {"Tecom27", Pack_Tecom27, Unpack_Tecom27, "Tecom 27-bit",               {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"2804W",   Pack_2804W,   Unpack_2804W,   "2804 Wiegand 28-bit",        {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"ind29",   Pack_ind29,   Unpack_ind29,   "Indala 29-bit",              {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"ATSW30",  Pack_ATSW30,  Unpack_ATSW30,  "ATS Wiegand 30-bit",         {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"ADT31",   Pack_ADT31,   Unpack_ADT31,   "HID ADT 31-bit",             {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"HCP32",   Pack_hcp32,   Unpack_hcp32,   "HID Check Point 32-bit",     {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"HCP32",   Pack_hcp32,   Unpack_hcp32,   "HID Check Point 32-bit",     {1, 0, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"HPP32",   Pack_hpp32,   Unpack_hpp32,   "HID Hewlett-Packard 32-bit", {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"Kastle",  Pack_Kastle,  Unpack_Kastle,  "Kastle 32-bit",              {1, 1, 1, 0, 1}}, // from @xilni; PR #23 on RfidResearchGroup/proxmark3
     {"Kantech", Pack_Kantech, Unpack_Kantech, "Indala/Kantech KFS 32-bit",  {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
@@ -1453,7 +1460,7 @@ static const cardformat_t FormatTable[] = {
     {"C15001",  Pack_C15001,  Unpack_C15001,  "HID KeyScan 36-bit",         {1, 1, 0, 1, 1}}, // from Proxmark forums
     {"S12906",  Pack_S12906,  Unpack_S12906,  "HID Simplex 36-bit",         {1, 1, 1, 0, 1}}, // from cardinfo.barkweb.com.au
     {"Sie36",   Pack_Sie36,   Unpack_Sie36,   "HID 36-bit Siemens",         {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
-    {"H10320",  Pack_H10320,  Unpack_H10320,  "HID H10320 36-bit BCD",      {1, 0, 0, 0, 1}}, // from Proxmark forums
+    {"H10320",  Pack_H10320,  Unpack_H10320,  "HID H10320 37-bit BCD",      {1, 0, 0, 0, 1}}, // from Proxmark forums
     {"H10302",  Pack_H10302,  Unpack_H10302,  "HID H10302 37-bit huge ID",  {1, 0, 0, 0, 1}}, // from Proxmark forums
     {"H10304",  Pack_H10304,  Unpack_H10304,  "HID H10304 37-bit",          {1, 1, 0, 0, 1}}, // from cardinfo.barkweb.com.au
     {"P10004",  Pack_P10004,  Unpack_P10004,  "HID P10004 37-bit PCSC",     {1, 1, 0, 0, 0}}, // from @bthedorff; PR #1559
@@ -1462,7 +1469,7 @@ static const cardformat_t FormatTable[] = {
     {"BQT38",   Pack_bqt38,   Unpack_bqt38,   "BQT 38-bit",                    {1, 1, 1, 0, 1}}, // from cardinfo.barkweb.com.au
     {"ISCS",    Pack_iscs38,  Unpack_iscs38,  "ISCS 38-bit",                   {1, 1, 0, 1, 1}}, // from cardinfo.barkweb.com.au
     {"PW39",    Pack_pw39,    Unpack_pw39,    "Pyramid 39-bit wiegand format", {1, 1, 0, 0, 1}},  // from cardinfo.barkweb.com.au
-    {"P10001",  Pack_P10001,  Unpack_P10001,  "HID P10001 Honeywell 40-bit",   {1, 1, 0, 1, 0}}, // from cardinfo.barkweb.com.au
+    {"P10001",  Pack_P10001,  Unpack_P10001,  "HID P10001 Honeywell 40-bit",   {1, 1, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"Casi40",  Pack_CasiRusco40, Unpack_CasiRusco40, "Casi-Rusco 40-bit",     {1, 0, 0, 0, 0}}, // from cardinfo.barkweb.com.au
     {"C1k48s",  Pack_C1k48s,  Unpack_C1k48s,  "HID Corporate 1000 48-bit std", {1, 1, 0, 0, 1}}, // imported from old pack/unpack
     {"BC40",    Pack_bc40,    Unpack_bc40,    "Bundy TimeClock 40-bit",     {1, 1, 0, 1, 1}}, // from

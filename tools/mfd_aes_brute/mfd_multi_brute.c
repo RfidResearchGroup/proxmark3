@@ -222,6 +222,8 @@ static void *brute_thread(void *arguments) {
         //make_key_borland_n(i, key, keylen);
 
         uint8_t iv[keylen << 1];
+        memset(iv, 0, sizeof(iv));
+
         uint8_t dec_tag[16] = {0x00};
         uint8_t dec_rdr[32] = {0x00};
 

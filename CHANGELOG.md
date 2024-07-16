@@ -3,6 +3,34 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- fixed breaking of client when trying to load a non-supported .picopass file (@iceman100)  Thanks to Jump for suggested fixes!
+- Changed `mf_nonce_brute` tool to handle the odd case of multiple key candidates (@iceman1001)
+- Fixed a bad memory erase (@iceman1001)
+- Fixed BT serial comms (@iceman1001)
+- Changed `intertic.py` - updated and code clean up (@gentilkiwi)
+- Added `pm3_tears_for_fears.py` - a ISO14443b tear off script by Pierre Granier
+- Added new t55xx password (002BCFCF) sniffed from cheap cloner (@davidbeauchamp)
+- Fixed 'hf 14b sim' - now works (@michi-jung)
+- Added VB6 Rng for iclass elite keys `hf iclass lookup` and `hf iclass chk` functions by porting @bettse work in the Flipper Zero Picopass App (@antiklesys)
+- Added MFC Keys for Laugardalslaug in Iceland (@dandri)
+- Added key for Orkan keyfobs(@dandri)
+
+## [Aurora.4.18589][2024-05-28]
+- Fixed the pm3 regressiontests for Hitag2Crack (@iceman1001)
+- Changed `mem spiffs tree` - adapted to bigbuff and show if empty (@iceman1001)
+- Changed `lf hitag info` - now tries to identify different key fob emulators (@iceman1001)
+- Added `lf hitag reader` - act as a Hitag2 reader (@iceman1001)
+- Fixed `lf hitag crack2` - now works. (@iceman1001)
+- Fixed wrong use of free() in desfire crypto on arm src,  thanks @jlitewski! (@iceman1001)
+- Added `lf em 4x70 calc` - calculate `frn`/`grn` for a given `key` + `rnd`
+- Fixed `hf 15 dump` memory leaks (@jlitewski)
+- Changed `hf search` - topaz is detect before ISO14443a and commented out WIP ICT code path (@iceman1001)
+- Fixed `hf search` - where felica reader now doesnt timeout and give wrong response (@iceman1001)
+- Fixed overflow in deps/jansson library (@iceman1001)
+- Added `lf hitag crack2` -  WIP.  Trying to add the second attack vector against Hitag2 (@iceman1001)
+- Changed `hf 14b reader --plot` - made the anticollision signal trace download optional (@iceman1001)
+- Added `lf_hitag_crypto.trace` - trace file of a complete read out of a Hitag2 in crypto mode (@iceman1001)
+- Fix `lf cmdread` - uninitialised memory usage (@iceman1001)
 - Changed `hf st info` - now tries to check signature if available (@iceman1001)
 - Added `hf 14b mobib` - try to read out all data from a MOBIB card (@iceman1001)
 - Added `hf 14b calyso` - try to read out all data from a Calypso card (@iceman1001)
@@ -28,6 +56,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Changed `data load` - now shows loaded number as comma printed. (@iceman1001)
 - Updated `/tools/hitag2crack/common/OpenCL-Headers/CL` with latest from KhronosGroup github page (@iceman1001)
 - Fixed `lf hitag list` - improved HITAG2 protocol annotation (@iceman1001)
+- Added AIDs `002000` and `FF30FF` from Metrolinx Presto Card (@RunTheBot)
 
 ## [Zenith.4.18340][2024-03-20]
  - Changed `hf mf info` - some detections (@iceman1001)

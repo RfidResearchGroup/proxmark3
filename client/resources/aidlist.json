@@ -2284,7 +2284,7 @@
         "Vendor": "Apple",
         "Country": "",
         "Name": "Apple Home Key Framework",
-        "Description": "Home Key configuration applet. Selected after a first transaction on a newely-invited device (allegedly for mailbox sync/attestation exchange)",
+        "Description": "Home Key configuration applet. Used for attestation exchange",
         "Type": ""
     },
     {
@@ -2292,7 +2292,39 @@
         "Vendor": "Apple",
         "Country": "",
         "Name": "Apple Home Key",
-        "Description": "NFC Home Key for select HomeKit-compatible locks",
+        "Description": "NFC Home Key for select HomeKit-compatible locks based on Apple UnifiedAccess protocol",
+        "Type": "access"
+    },
+    {
+        "AID": "A0000008580202",
+        "Vendor": "Apple",
+        "Country": "",
+        "Name": "Apple Access Key Framework",
+        "Description": "Access Key configuration applet. Used for attestation exchange",
+        "Type": ""
+    },
+    {
+        "AID": "A0000008580201",
+        "Vendor": "Apple",
+        "Country": "",
+        "Name": "Apple Access Key",
+        "Description": "NFC Access Key for commercial properties based on Apple UnifiedAccess protocol",
+        "Type": "access"
+    },
+    {
+        "AID": "A000000909ACCE5502",
+        "Vendor": "Connectivity Standards Alliance (CSA)",
+        "Country": "",
+        "Name": "Aliro Framework",
+        "Description": "Used during key provisioning, configuration, attestation exchange",
+        "Type": ""
+    },
+    {
+        "AID": "A000000909ACCE5501",
+        "Vendor": "Connectivity Standards Alliance (CSA)",
+        "Country": "",
+        "Name": "Aliro",
+        "Description": "",
         "Type": "access"
     },
     {
@@ -2429,6 +2461,14 @@
         "Country": "Singapore",
         "Name": "CEPAS",
         "Description": "Transit and e-money card used in Singapore",
+        "Type": "transport"
+    },
+    {
+        "AID": "A0000004040125",
+        "Vendor": "Ile-de-France Mobilites",
+        "Country": "France",
+        "Name": "Navigo",
+        "Description": "CALYPSO-based transit card",
         "Type": "transport"
     }
 ]

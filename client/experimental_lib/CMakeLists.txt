@@ -46,6 +46,7 @@ endif()
 find_package(PkgConfig)
 
 if (NOT SKIPQT EQUAL 1)
+
     if(APPLE AND EXISTS /usr/local/opt/qt5)
         # Homebrew installs Qt5 (up to at least 5.11.0) in
         # /usr/local/opt/qt5. Ensure that it can be found by CMake
@@ -56,16 +57,17 @@ if (NOT SKIPQT EQUAL 1)
         # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
         list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /usr/local/opt/qt5)
     endif(APPLE AND EXISTS /usr/local/opt/qt5)
-   if(APPLE AND EXISTS /opt/homebrew/opt/qt5)
+
+    if(APPLE AND EXISTS /opt/homebrew/opt/qt@5)
         # Homebrew on Apple Silicon installs Qt5 in
-        # /opt/homebrew/opt/qt5. Ensure that it can be found by CMake
+        # /opt/homebrew/opt/qt@5. Ensure that it can be found by CMake
         # since it is not in the default /usr/local prefix.
         # Add it to PATHS so that it doesn't override the
         # CMAKE_PREFIX_PATH environment variable.
         # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
         # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
-        list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /opt/homebrew/opt/qt5)
-    endif(APPLE AND EXISTS /opt/homebrew/opt/qt5)
+        list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /opt/homebrew/opt/qt@5)
+    endif(APPLE AND EXISTS /opt/homebrew/opt/qt@5)
     set(QT_PACKAGELIST
         Qt5Core
         Qt5Widgets
@@ -262,6 +264,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/common/cardhelper.c
         ${PM3_ROOT}/common/generator.c
         ${PM3_ROOT}/common/bruteforce.c
+        ${PM3_ROOT}/common/hitag2/hitag2_crypto.c
         ${PM3_ROOT}/client/src/crypto/asn1dump.c
         ${PM3_ROOT}/client/src/crypto/asn1utils.c
         ${PM3_ROOT}/client/src/crypto/libpcrypto.c
@@ -455,7 +458,6 @@ if (APPLE)
       message(STATUS "AppKit.framework found! ${APPKIT_LIBRARY}")
       set(ADDITIONAL_LNK "-framework Foundation" "-framework AppKit")
     endif()
-
 endif (APPLE)
 
 if ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
@@ -675,6 +677,8 @@ if (NOT SKIPPYTHON EQUAL 1)
 endif (NOT SKIPPYTHON EQUAL 1)
 message(STATUS "===================================================================")
 
+add_definitions(-DHAVE_SNPRINTF)
+
 add_library(pm3rrg_rdv4 SHARED
         ${PM3_ROOT}/client/src/proxmark3.c
         ${TARGET_SOURCES}
@@ -733,6 +737,9 @@ target_include_directories(pm3rrg_rdv4 PRIVATE
 if (NOT APPLE)
     # required for Raspberry Pi, but breaks with clang (OSX). Need to be at the end of the linker line.
     set(ADDITIONAL_LNK ${ADDITIONAL_LNK} -Wl,--as-needed -latomic -Wl,--no-as-needed)
+else (NOT APPLE)
+    #set_property(TARGET proxmark3 PROPERTY LINK_FLAGS "-Wl,-undefined dynamic_lookup")
+    set(ADDITIONAL_LNK ${ADDITIONAL_LNK} -Wl,-undefined,dynamic_lookup)
 endif (NOT APPLE)
 
 if (NOT JANSSON_FOUND)

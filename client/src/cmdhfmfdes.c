@@ -4858,10 +4858,10 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx,
 
             if (verbose) {
                 PrintAndLogEx(INFO, _CYAN_("File type:") " %s  Option: %s  comm mode: %s",
-                            GetDesfireFileType(fsettings.fileType),
-                            CLIGetOptionListStr(DesfireReadFileTypeOpts, filetype),
-                            CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode)
-                        );
+                              GetDesfireFileType(fsettings.fileType),
+                              CLIGetOptionListStr(DesfireReadFileTypeOpts, filetype),
+                              CLIGetOptionListStr(DesfireCommunicationModeOpts, fsettings.commMode)
+                             );
             }
         } else {
             PrintAndLogEx(WARNING, "GetFileSettings error. Can't get file type.");

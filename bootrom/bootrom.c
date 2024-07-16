@@ -296,9 +296,9 @@ static void UsbPacketReceived(uint8_t *packet) {
 }
 
 // delay_loop(1) = 3.07us
-static volatile uint32_t c;
+static volatile uint32_t ccc;
 static void __attribute__((optimize("O0"))) delay_loop(uint32_t delay) {
-    for (c = delay * 2; c; c--) {};
+    for (ccc = delay * 2; ccc; ccc--) {};
 }
 
 static void flash_mode(void) {

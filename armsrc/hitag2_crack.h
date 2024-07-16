@@ -22,6 +22,6 @@
 #include <stdbool.h>
 #include "common.h"
 
-void ht2_crack(uint8_t *nrar_hex);
-
+void ht2_crack1(uint8_t *nrar_hex);
+void ht2_crack2(uint8_t *nrar_hex);
 #endif

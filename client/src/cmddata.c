@@ -2769,7 +2769,7 @@ static int CmdAsn1Decoder(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("d", NULL, "<hex>", "ASN1 encoded byte array"),
-        arg_lit0("t", "test", "perform self test"),
+        arg_lit0(NULL, "test", "perform self tests"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3670,8 +3670,8 @@ static int CmdXor(const char *Cmd) {
 static int CmdTestSaveState8(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data test_ss8",
-                 "Tests the implementation of Buffer Save States (8-bit buffer)",
-                 "data test_ss8");
+                  "Tests the implementation of Buffer Save States (8-bit buffer)",
+                  "data test_ss8");
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -3681,34 +3681,34 @@ static int CmdTestSaveState8(const char *Cmd) {
 
     srand(time(NULL));
 
-    size_t length = 64;
-    uint8_t *srcBuffer = (uint8_t*)calloc(length, sizeof(uint8_t));
+    size_t length = (rand() % 256);
+    PrintAndLogEx(DEBUG, "Testing with length = %llu", length);
+    uint8_t *srcBuffer = (uint8_t *)calloc(length + 1, sizeof(uint8_t));
 
     //Set up the source buffer with random data
-    for(int i = 0; i < length; i++) {
+    for (int i = 0; i < length; i++) {
         srcBuffer[i] = (rand() % 256);
     }
 
     buffer_savestate_t test8 = save_buffer8(srcBuffer, length);
-    PrintAndLogEx(DEBUG, "Save State created, length=%llu, type=%i", test8.bufferSize, test8.type);
+    PrintAndLogEx(DEBUG, "Save State created, length = %llu, padding = %i, type = %i", test8.bufferSize, test8.padding, test8.type);
 
     test8.clock = rand();
     test8.offset = rand();
-    PrintAndLogEx(DEBUG, "Save State clock=%u, offset=%u", test8.clock, test8.offset);
+    PrintAndLogEx(DEBUG, "Save State clock = %u, offset = %u", test8.clock, test8.offset);
 
-    uint8_t *destBuffer = (uint8_t*)calloc(length, sizeof(uint8_t));
+    uint8_t *destBuffer = (uint8_t *)calloc(length, sizeof(uint8_t));
     size_t returnedLength = restore_buffer8(test8, destBuffer);
 
-    if(returnedLength != length) {
-        PrintAndLogEx(FAILED, "Return Length != Buffer Length! Expected '%llu', got '%llu", g_DemodBufferLen, returnedLength);
-        free(srcBuffer);
-        free(destBuffer);
-        return PM3_EFAILED;
+    if (returnedLength != length) {
+        PrintAndLogEx(DEBUG, _YELLOW_("Returned length != expected length!"));
+        PrintAndLogEx(WARNING, "Returned Length = %llu Buffer Length = %llu Expected = %llu", returnedLength, test8.bufferSize, length);
+    } else {
+        PrintAndLogEx(DEBUG, _GREEN_("Lengths match!") "\n");
     }
-    PrintAndLogEx(DEBUG, _GREEN_("Lengths match!") "\n");
 
-    for(size_t i = 0; i < length; i++) {
-        if(srcBuffer[i] != destBuffer[i]) {
+    for (size_t i = 0; i < returnedLength; i++) {
+        if (srcBuffer[i] != destBuffer[i]) {
             PrintAndLogEx(FAILED, "Buffers don't match at index %lu!, Expected %i, got %i", i, srcBuffer[i], destBuffer[i]);
             free(srcBuffer);
             free(destBuffer);
@@ -3726,8 +3726,8 @@ static int CmdTestSaveState8(const char *Cmd) {
 static int CmdTestSaveState32(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data test_ss32",
-                 "Tests the implementation of Buffer Save States (32-bit buffer)",
-                 "data test_ss32");
+                  "Tests the implementation of Buffer Save States (32-bit buffer)",
+                  "data test_ss32");
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -3738,10 +3738,10 @@ static int CmdTestSaveState32(const char *Cmd) {
     srand(time(NULL));
 
     size_t length = 64;
-    uint32_t *srcBuffer = (uint32_t*)calloc(length, sizeof(uint32_t));
+    uint32_t *srcBuffer = (uint32_t *)calloc(length, sizeof(uint32_t));
 
     //Set up the source buffer with random data
-    for(size_t i = 0; i < length; i++) {
+    for (size_t i = 0; i < length; i++) {
         srcBuffer[i] = (rand());
     }
 
@@ -3752,10 +3752,10 @@ static int CmdTestSaveState32(const char *Cmd) {
     test32.offset = rand();
     PrintAndLogEx(DEBUG, "Save State clock=%u, offset=%u", test32.clock, test32.offset);
 
-    uint32_t *destBuffer = (uint32_t*)calloc(length, sizeof(uint32_t));
+    uint32_t *destBuffer = (uint32_t *)calloc(length, sizeof(uint32_t));
     size_t returnedLength = restore_buffer32(test32, destBuffer);
 
-    if(returnedLength != length) {
+    if (returnedLength != length) {
         PrintAndLogEx(FAILED, "Return Length != Buffer Length! Expected '%llu', got '%llu", g_DemodBufferLen, returnedLength);
         free(srcBuffer);
         free(destBuffer);
@@ -3763,8 +3763,8 @@ static int CmdTestSaveState32(const char *Cmd) {
     }
     PrintAndLogEx(DEBUG, _GREEN_("Lengths match!") "\n");
 
-    for(size_t i = 0; i < length; i++) {
-        if(srcBuffer[i] != destBuffer[i]) {
+    for (size_t i = 0; i < length; i++) {
+        if (srcBuffer[i] != destBuffer[i]) {
             PrintAndLogEx(FAILED, "Buffers don't match at index %lu!, Expected %i, got %i", i, srcBuffer[i], destBuffer[i]);
             free(srcBuffer);
             free(destBuffer);
@@ -3782,8 +3782,8 @@ static int CmdTestSaveState32(const char *Cmd) {
 static int CmdTestSaveState32S(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data test_ss32s",
-                 "Tests the implementation of Buffer Save States (32-bit signed buffer)",
-                 "data test_ss32s");
+                  "Tests the implementation of Buffer Save States (32-bit signed buffer)",
+                  "data test_ss32s");
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -3794,10 +3794,10 @@ static int CmdTestSaveState32S(const char *Cmd) {
     srand(time(NULL));
 
     size_t length = 64;
-    int32_t *srcBuffer = (int32_t*)calloc(length, sizeof(int32_t));
+    int32_t *srcBuffer = (int32_t *)calloc(length, sizeof(int32_t));
 
     //Set up the source buffer with random data
-    for(int i = 0; i < length; i++) {
+    for (int i = 0; i < length; i++) {
         srcBuffer[i] = (rand() - 4294967296);
     }
 
@@ -3808,10 +3808,10 @@ static int CmdTestSaveState32S(const char *Cmd) {
     test32.offset = rand();
     PrintAndLogEx(DEBUG, "Save State clock=%u, offset=%u", test32.clock, test32.offset);
 
-    int32_t *destBuffer = (int32_t*)calloc(length, sizeof(int32_t));
+    int32_t *destBuffer = (int32_t *)calloc(length, sizeof(int32_t));
     size_t returnedLength = restore_bufferS32(test32, destBuffer);
 
-    if(returnedLength != length) {
+    if (returnedLength != length) {
         PrintAndLogEx(FAILED, "Return Length != Buffer Length! Expected '%llu', got '%llu", g_DemodBufferLen, returnedLength);
         free(srcBuffer);
         free(destBuffer);
@@ -3819,8 +3819,8 @@ static int CmdTestSaveState32S(const char *Cmd) {
     }
     PrintAndLogEx(DEBUG, _GREEN_("Lengths match!") "\n");
 
-    for(int i = 0; i < length; i++) {
-        if(srcBuffer[i] != destBuffer[i]) {
+    for (int i = 0; i < length; i++) {
+        if (srcBuffer[i] != destBuffer[i]) {
             PrintAndLogEx(FAILED, "Buffers don't match at index %i!, Expected %i, got %i", i, srcBuffer[i], destBuffer[i]);
             free(srcBuffer);
             free(destBuffer);

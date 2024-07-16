@@ -109,7 +109,17 @@ def hitag2(state, length=48):
 
 if __name__ == "__main__":
     import sys
+
     if len(sys.argv) == 4:
+        key = int(sys.argv[1], 16)
+        uid = int(sys.argv[2], 16)
+        n = int(sys.argv[3])
+        for i in range(n):
+            nonce = random.randrange(2**32)
+            state = hitag2_init(key, uid, nonce)
+            print('%08X %08X' % (nonce, hitag2(state, 32) ^ 0xffffffff))
+
+    elif len(sys.argv) == 5:
         key = int(sys.argv[1], 16)
         uid = int(sys.argv[2], 16)
         n = int(sys.argv[3])

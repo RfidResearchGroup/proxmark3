@@ -1268,14 +1268,22 @@ void Plot::wheelEvent(QWheelEvent *event) {
 
 void Plot::mouseMoveEvent(QMouseEvent *event) {
     int x = event->x();
-    x -= WIDTH_AXES;
-    x = (int)(x / g_GraphPixelsPerPoint);
-    x += g_GraphStart;
 
-    if ((event->buttons() & Qt::LeftButton)) {
-        g_MarkerA.pos = x;
-    } else if (event->buttons() & Qt::RightButton) {
-        g_MarkerB.pos = x;
+    //Only run the marker place code if a mouse button is pressed
+    if ((event->buttons() & Qt::LeftButton) || (event->buttons() & Qt::RightButton)) {
+        x -= WIDTH_AXES;
+        x = (int)(x / g_GraphPixelsPerPoint);
+        x += g_GraphStart;
+
+        if (x > (int)g_GraphTraceLen)   x = 0; // Set to 0 if the number is stupidly big
+        else if (x < (int)g_GraphStart) x = (int)g_GraphStart; // Bounds checking for the start of the Graph Window
+        else if (x > (int)g_GraphStop)  x = (int)g_GraphStop; // Bounds checking for the end of the Graph Window
+
+        if ((event->buttons() & Qt::LeftButton)) { // True for left click, false otherwise
+            g_MarkerA.pos = x;
+        } else {
+            g_MarkerB.pos = x;
+        }
     }
 
     this->update();

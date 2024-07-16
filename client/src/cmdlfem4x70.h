@@ -24,14 +24,6 @@
 #define TIMEOUT                     2000
 
 int CmdLFEM4X70(const char *Cmd);
-int CmdEM4x70Info(const char *Cmd);
-int CmdEM4x70Write(const char *Cmd);
-int CmdEM4x70Brute(const char *Cmd);
-int CmdEM4x70Unlock(const char *Cmd);
-int CmdEM4x70Auth(const char *Cmd);
-int CmdEM4x70SetPIN(const char *Cmd);
-int CmdEM4x70SetKey(const char *Cmd);
-int CmdEM4x70Recover(const char *Cmd);
 
 // for `lf search`:
 bool detect_4x70_block(void);

@@ -766,6 +766,26 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
 void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 }
 
+static const char *identify_transponder_hitag2(uint32_t uid) {
+
+    switch (uid) {
+        case 0x53505910:
+            return "IMMO Key emulator";
+            break;
+        case 0x5accc811:
+        case 0x5accc821:
+        case 0x5accc831:
+        case 0x5accc841:
+        case 0x5accc851:
+        case 0x5accc861:
+        case 0x5accc871:
+        case 0x5accc881:
+        case 0x5accc891:
+        case 0x5accc8B1:
+            return "CN3 Tango Key emulator";
+    }
+    return "";
+}
 
 static bool getHitag2Uid(uint32_t *uid) {
 
@@ -822,10 +842,52 @@ static int CmdLFHitagInfo(const char *Cmd) {
     // print_hitag2_configuration(uid,  0x02);
     // print_hitag2_configuration(uid,  0x00);
     // print_hitag2_configuration(uid,  0x04);
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
+    const char *s = identify_transponder_hitag2(uid);
+    if (strlen(s)) {
+        PrintAndLogEx(SUCCESS, "Found... " _GREEN_("%s"), s);
+    } else {
+        PrintAndLogEx(INFO, _RED_("n/a"));
+    }
+
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
 static int CmdLFHitagReader(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hitag reader",
+                  "Act as a Hitag2 reader.  Look for Hitag2 tags until Enter or the pm3 button is pressed\n",
+                  "lf hitag reader\n"
+                  "lf hitag reader -@   -> Continuous mode"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("@", NULL, "continuous reader mode"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool cm = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    if (cm) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
+    do {
+        // read UID
+        uint32_t uid = 0;
+        if (getHitag2Uid(&uid)) {
+            PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%08X"), uid);
+        }
+    } while (cm && kbd_enter_pressed() == false);
+
+    return PM3_SUCCESS;
+}
+
+static int CmdLFHitagRd(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag read",
@@ -1453,7 +1515,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
 
         memcpy(packet.NrAr, nrar, sizeof(packet.NrAr));
 
-        PrintAndLogEx(INFO, _YELLOW_("Hitag 2") " - Challenge mode (NrAR)");
+        PrintAndLogEx(INFO, _YELLOW_("Hitag 2") " - Challenge mode (NrAr)");
 
         uint64_t t1 = msclock();
 
@@ -2167,17 +2229,97 @@ static int CmdLFHitag2Lookup(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdLFHitag2Crack2(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hitag crack2",
+                  "This command tries to recover 2048 bits of Hitag2 crypto stream data.\n",
+                  "lf hitag crack2 --nrar 73AA5A62EAB8529C"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "nrar", "<hex>", "specify nonce / answer as 8 hex bytes"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int nalen = 0;
+    uint8_t nrar[8] = {0};
+    CLIGetHexWithReturn(ctx, 1, nrar, &nalen);
+    CLIParserFree(ctx);
+
+    // sanity checks
+    if (nalen && nalen != 8) {
+        PrintAndLogEx(INFO, "NrAr wrong length. expected 8, got %i", nalen);
+        return PM3_EINVARG;
+    }
+
+    lf_hitag_data_t packet;
+    memset(&packet, 0, sizeof(packet));
+    memcpy(packet.NrAr, nrar, sizeof(packet.NrAr));
+
+    PrintAndLogEx(INFO, _YELLOW_("Hitag 2") " - Nonce replay and length extension attack ( Crack2 )");
+
+    uint64_t t1 = msclock();
+
+    PacketResponseNG resp;
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_HITAG2_CRACK_2, (uint8_t *) &packet, sizeof(packet));
+
+    // loop
+    uint8_t attempt = 50;
+    do {
+
+//        PrintAndLogEx(INPLACE, "Attack 2 running...");
+//        fflush(stdout);
+
+        if (WaitForResponseTimeout(CMD_LF_HITAG2_CRACK_2, &resp, 1000) == false) {
+            attempt--;
+            continue;
+        }
+
+        if (resp.status == PM3_SUCCESS) {
+
+            PrintAndLogEx(SUCCESS, "--------------------- " _CYAN_("Recovered Keystream") " ----------------------");
+            lf_hitag_crack_response_t *payload = (lf_hitag_crack_response_t *)resp.data.asBytes;
+
+            for (int i = 0; i < 256; i += 32) {
+                PrintAndLogEx(SUCCESS, "%s", sprint_hex_inrow(payload->data + i, 32));
+            }
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(SUCCESS, "Nonce replay and length extension attack ( %s )", _GREEN_("ok"));
+            PrintAndLogEx(HINT, "try running `tools/hitag2crack/crack2/ht2crack2search <FILE_with_above_bytes>");
+            break;
+        } else {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(FAILED, "Nonce replay and length extension attack ( %s )", _RED_("fail"));
+            break;
+        }
+
+    } while (attempt);
+
+    if (attempt == 0) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        return PM3_ESOFT;
+    }
+
+    t1 = msclock() - t1;
+    PrintAndLogEx(SUCCESS, "\ntime " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
+    return PM3_SUCCESS;
+}
+
 /* Test code
 
    Test data and below information about it comes from
      http://www.mikrocontroller.net/attachment/102194/hitag2.c
      Written by "I.C. Wiener 2006-2007"
 
-   "MIKRON"	    	=  O  N  M  I  K  R
-    Key		    	= 4F 4E 4D 49 4B 52	- Secret 48-bit key
-    Serial		    = 49 43 57 69		- Serial number of the tag, transmitted in clear
-    Random		    = 65 6E 45 72       - Random IV, transmitted in clear
-    ~28~DC~80~31	= D7 23 7F CE       - Authenticator value = inverted first 4 bytes of the keystream
+   "MIKRON"         =  O  N  M  I  K  R
+    Key             = 4F 4E 4D 49 4B 52 - Secret 48-bit key
+    Serial          = 49 43 57 69       - Serial number of the tag, transmitted in clear
+    Random          = 65 6E 45 72       - Random IV, transmitted in clear
+    ~28~DC~80~31    = D7 23 7F CE       - Authenticator value = inverted first 4 bytes of the keystream
 
    The code below must print out "D7 23 7F CE 8C D0 37 A9 57 49 C1 E6 48 00 8A B6".
    The inverse of the first 4 bytes is sent to the tag to authenticate.
@@ -2285,9 +2427,9 @@ static uint64_t hitag2_verify_crypto_test_round(void) {
 
 static int CmdLFHitag2Selftest(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf hitag selftest",
-                  "Perform selftest of Hitag crypto engine",
-                  "lf hitag selftest\n"
+    CLIParserInit(&ctx, "lf hitag test",
+                  "Perform self tests of Hitag crypto engine",
+                  "lf hitag test\n"
                  );
 
     void *argtable[] = {
@@ -2324,11 +2466,12 @@ static command_t CommandTable[] = {
     {"list",        CmdLFHitagList,             AlwaysAvailable, "List Hitag trace history"},
     {"-----------", CmdHelp,                    IfPm3Hitag,      "------------------------ " _CYAN_("General") " ------------------------"},
     {"info",        CmdLFHitagInfo,             IfPm3Hitag,      "Hitag 2 tag information"},
-    {"selftest",    CmdLFHitag2Selftest,        AlwaysAvailable, "Perform self test"},
+    {"reader",      CmdLFHitagReader,           IfPm3Hitag,      "Act line an Hitag 2 reader"},
+    {"test",        CmdLFHitag2Selftest,        AlwaysAvailable, "Perform self tests"},
     {"-----------", CmdHelp,                    IfPm3Hitag,      "----------------------- " _CYAN_("Operations") " -----------------------"},
 //    {"demod",       CmdLFHitag2PWMDemod,        IfPm3Hitag,      "PWM Hitag 2 reader message demodulation"},
     {"dump",        CmdLFHitag2Dump,            IfPm3Hitag,      "Dump Hitag 2 tag"},
-    {"read",        CmdLFHitagReader,           IfPm3Hitag,      "Read Hitag memory"},
+    {"read",        CmdLFHitagRd,               IfPm3Hitag,      "Read Hitag memory"},
     {"sniff",       CmdLFHitagSniff,            IfPm3Hitag,      "Eavesdrop Hitag communication"},
     {"view",        CmdLFHitagView,             AlwaysAvailable, "Display content from tag dump file"},
     {"wrbl",        CmdLFHitagWriter,           IfPm3Hitag,      "Write a block (page) in Hitag memory"},
@@ -2339,6 +2482,7 @@ static command_t CommandTable[] = {
     {"sim",         CmdLFHitagSim,              IfPm3Hitag,      "Simulate Hitag transponder"},
     {"-----------", CmdHelp,                    IfPm3Hitag,      "----------------------- " _CYAN_("Recovery") " -----------------------"},
     {"cc",          CmdLFHitagSCheckChallenges, IfPm3Hitag,      "Hitag S: test all provided challenges"},
+    {"crack2",      CmdLFHitag2Crack2,          IfPm3Hitag,      "Recover 2048bits of crypto stream"},
     {"chk",         CmdLFHitag2Chk,             IfPm3Hitag,      "Check keys"},
     {"lookup",      CmdLFHitag2Lookup,          AlwaysAvailable, "Uses authentication trace to check for key in dictionary file"},
     {"ta",          CmdLFHitag2CheckChallenges, IfPm3Hitag,      "Hitag 2: test all recorded authentications"},

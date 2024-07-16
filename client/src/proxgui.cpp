@@ -24,9 +24,6 @@
 #include "ui.h"  // for prints
 
 static ProxGuiQT *gui = NULL;
-marker_t g_MarkerA, g_MarkerB, g_MarkerC, g_MarkerD;
-marker_t *g_TempMarkers;
-uint8_t g_TempMarkerSize = 0;
 static WorkerThread *main_loop_thread = NULL;
 
 WorkerThread::WorkerThread(char *script_cmds_file, char *script_cmd, bool stayInCommandLoop) : script_cmds_file(script_cmds_file), script_cmd(script_cmd), stayInCommandLoop(stayInCommandLoop) {
@@ -135,47 +132,6 @@ extern "C" void InitGraphics(int argc, char **argv, char *script_cmds_file, char
 #endif
     main_loop_thread = new WorkerThread(script_cmds_file, script_cmd, stayInCommandLoop);
     gui = new ProxGuiQT(argc, argv, main_loop_thread);
-}
-
-void add_temporary_marker(uint32_t position, const char *label) {
-    if (g_TempMarkerSize == 0) { //Initialize the marker array
-        g_TempMarkers = (marker_t *)calloc(1, sizeof(marker_t));
-    } else { //add more space to the marker array using realloc()
-        marker_t *temp = (marker_t *)realloc(g_TempMarkers, ((g_TempMarkerSize + 1) * sizeof(marker_t)));
-
-        if (temp == NULL) { //Unable to reallocate memory for a new marker
-            PrintAndLogEx(FAILED, "Unable to allocate memory for a new temporary marker!");
-            free(temp);
-            return;
-        } else {
-            //Set g_TempMarkers to the new pointer
-            g_TempMarkers = temp;
-        }
-    }
-
-    g_TempMarkers[g_TempMarkerSize].pos = position;
-
-    char *markerLabel = (char *)calloc(1, strlen(label) + 1);
-    strcpy(markerLabel, label);
-
-    if (strlen(markerLabel) > 30) {
-        PrintAndLogEx(WARNING, "Label for temporary marker too long! Trunicating...");
-        markerLabel[30] = '\0';
-    }
-
-    strncpy(g_TempMarkers[g_TempMarkerSize].label, markerLabel, 30);
-    g_TempMarkerSize++;
-
-    memset(markerLabel, 0x00, strlen(label));
-    free(markerLabel);
-}
-
-void remove_temporary_markers(void) {
-    if (g_TempMarkerSize == 0) return;
-
-    memset(g_TempMarkers, 0x00, (g_TempMarkerSize * sizeof(marker_t)));
-    free(g_TempMarkers);
-    g_TempMarkerSize = 0;
 }
 
 extern "C" void ExitGraphics(void) {

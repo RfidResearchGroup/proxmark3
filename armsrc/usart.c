@@ -85,7 +85,7 @@ static size_t us_rxfifo_high = 0;
 
 static void usart_fill_rxfifo(void) {
 
-    uint16_t rxfifo_free = 0;
+    uint16_t rxfifo_free;
 
     if (pUS1->US_RNCR == 0) { // One buffer got filled, backup buffer being used
 

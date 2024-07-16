@@ -639,24 +639,32 @@ void rdv40_spiffs_safe_print_tree(void) {
     struct spiffs_dirent e;
     struct spiffs_dirent *pe = &e;
 
+    char *resolvedlink = (char *)BigBuf_calloc(11 + SPIFFS_OBJ_NAME_LEN);
+    char *linkdest = (char *)BigBuf_calloc(SPIFFS_OBJ_NAME_LEN);
+    bool printed = false;
+
     SPIFFS_opendir(&fs, "/", &d);
     while ((pe = SPIFFS_readdir(&d, pe))) {
 
-        char resolvedlink[11 + SPIFFS_OBJ_NAME_LEN];
+        memset(resolvedlink, 0, 11 + SPIFFS_OBJ_NAME_LEN);
+
         if (rdv40_spiffs_is_symlink((const char *)pe->name)) {
-            char linkdest[SPIFFS_OBJ_NAME_LEN];
+
             read_from_spiffs((char *)pe->name, (uint8_t *)linkdest, SPIFFS_OBJ_NAME_LEN);
             sprintf(resolvedlink, "(.lnk) --> %s", linkdest);
             // Kind of stripping the .lnk extension
             strtok((char *)pe->name, ".");
-        } else {
-            memset(resolvedlink, 0, sizeof(resolvedlink));
         }
 
-        Dbprintf("[%04x]\t " _YELLOW_("%i") " B |-- %s%s", pe->obj_id, pe->size, pe->name, resolvedlink);
+        Dbprintf("[%04x] " _YELLOW_("%5i") " B |-- %s%s", pe->obj_id, pe->size, pe->name, resolvedlink);
+        printed = true;
+    }
+    if (printed == false) {
+        DbpString("<empty>");
     }
     SPIFFS_closedir(&d);
     rdv40_spiffs_lazy_mount_rollback(changed);
+    BigBuf_free();
 }
 
 void rdv40_spiffs_safe_wipe(void) {

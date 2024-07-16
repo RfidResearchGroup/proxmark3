@@ -1255,7 +1255,11 @@ static int em4x50_sim_read_bit(void) {
     int cycles = 0;
     int timeout = EM4X50_T_SIMULATION_TIMEOUT_READ;
 
-    while (cycles < EM4X50_T_TAG_FULL_PERIOD) {
+    // wait 16 cycles to make sure there is no field when reading a "0" bit
+    uint32_t waitval = GetTicks();
+    while (GetTicks() - waitval < EM4X50_T_TAG_QUARTER_PERIOD * CYCLES2TICKS);
+
+    while (cycles < EM4X50_T_TAG_THREE_QUARTER_PERIOD) {
 
         // wait until reader field disappears
         while ((timeout--) && !(AT91C_BASE_PIOA->PIO_PDSR & GPIO_SSC_CLK));

@@ -530,7 +530,7 @@ static int CmdLFNedapSim(const char *Cmd) {
     uint8_t data[16];
     NedapGen(sub_type, customer_code, id, is_long, data);
 
-    uint8_t bs[16 * 8];
+    uint8_t bs[16 * 8] = {0};
     for (uint8_t i = 0; i < max; i++) {
         num_to_bytebits(data[i], 8, bs + i * 8);
     }

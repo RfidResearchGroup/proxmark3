@@ -107,8 +107,8 @@ int fileExists(const char *filename);
 bool setDefaultPath(savePaths_t pathIndex, const char *path);
 
 char *newfilenamemcopy(const char *preferredName, const char *suffix);
-char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePaths_t save_path);
-void truncate_filename(char *fn,  uint16_t len);
+char *newfilenamemcopyEx(const char *preferredName, const char *suffix, savePaths_t e_save_path);
+void truncate_filename(char *fn,  uint16_t maxlen);
 
 
 /**
@@ -138,7 +138,7 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
 int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, void (*callback)(json_t *));
 int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *), savePaths_t e_save_path);
 int saveFileJSONroot(const char *preferredName, void *root, size_t flags, bool verbose);
-int saveFileJSONrootEx(const char *preferredName, void *root, size_t flags, bool verbose, bool overwrite);
+int saveFileJSONrootEx(const char *preferredName, const void *root, size_t flags, bool verbose, bool overwrite);
 /** STUB
  * @brief Utility function to save WAVE data to a file. This method takes a preferred name, but if that
  * file already exists, it tries with another name until it finds something suitable.
@@ -171,7 +171,7 @@ int saveFilePM3(const char *preferredName, int *data, size_t datalen);
  * @param e_sector the keys in question
  * @return 0 for ok, 1 for failz
  */
-int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, sector_t *e_sector);
+int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, const sector_t *e_sector);
 
 /**
  * @brief Utility function to load data from a binary file. This method takes a preferred name.
@@ -289,7 +289,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
 */
 int convert_mfu_dump_format(uint8_t **dump, size_t *dumplen, bool verbose);
 mfu_df_e detect_mfu_dump_format(uint8_t **dump, bool verbose);
-nfc_df_e detect_nfc_dump_format(const char *preferredName, bool verbose);
+int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool verbose);
 
 int searchAndList(const char *pm3dir, const char *ext);
 int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix, bool silent);
