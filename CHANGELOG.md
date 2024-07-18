@@ -12,9 +12,9 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added new t55xx password (002BCFCF) sniffed from cheap cloner (@davidbeauchamp)
 - Fixed 'hf 14b sim' - now works (@michi-jung)
 - Added VB6 Rng for iclass elite keys `hf iclass lookup` and `hf iclass chk` functions by porting @bettse work in the Flipper Zero Picopass App (@antiklesys)
-- Added MFC Keys for Laugardalslaug in Iceland (@dandri)
-- Added key for Orkan keyfobs(@dandri)
-
+- Added MFC Key for swimming pool cards in Reykjavík Iceland (@dandri)
+- Added key for Orkan keyfobs (@dandri)
+- Added key for Atlantsolía keyfobs (@dandri)
 ## [Aurora.4.18589][2024-05-28]
 - Fixed the pm3 regressiontests for Hitag2Crack (@iceman1001)
 - Changed `mem spiffs tree` - adapted to bigbuff and show if empty (@iceman1001)
