@@ -2153,7 +2153,7 @@ out:
     }
 }
 
-void generate_single_key_block_inverted(const uint8_t startingKey[PICOPASS_BLOCK_SIZE], uint32_t index, uint8_t keyBlock[PICOPASS_BLOCK_SIZE]) {
+void generate_single_key_block_inverted(const uint8_t *startingKey, uint32_t index, uint8_t *keyBlock) {
     uint32_t carry = index;
     memcpy(keyBlock, startingKey, PICOPASS_BLOCK_SIZE);
 
@@ -2166,35 +2166,6 @@ void generate_single_key_block_inverted(const uint8_t startingKey[PICOPASS_BLOCK
             // If no more carry, break early to avoid unnecessary loops
             break;
         }
-    }
-}
-// Function to convert an unsigned int to binary string
-void intToBinary(unsigned int num, char *binaryStr, int size) {
-    binaryStr[size] = '\0';  // Null-terminate the string
-    for (int i = size - 1; i >= 0; i--) {
-        binaryStr[i] = (num % 2) ? '1' : '0';
-        num /= 2;
-    }
-}
-
-// Function to convert a binary string to hexadecimal
-uint8_t binaryToHex(char *binaryStr) {
-    return (uint8_t)strtoul(binaryStr, NULL, 2);
-}
-
-// Function to convert an unsigned int to an array of hex values
-void convertToHexArray(unsigned int num, uint8_t *partialKey) {
-    char binaryStr[25];  // 24 bits for binary representation + 1 for null terminator
-
-    // Convert the number to binary string
-    intToBinary(num, binaryStr, 24);
-
-    // Split the binary string into groups of 3 and convert to hex
-    for (int i = 0; i < PICOPASS_BLOCK_SIZE; i++) {
-        char group[4];
-        strncpy(group, binaryStr + i * 3, 3);
-        group[3] = '\0';  // Null-terminate the group string
-        partialKey[i] = binaryToHex(group);
     }
 }
 
@@ -2280,7 +2251,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     //Step3 Calculate New Key
     uint8_t GenKeyBlock[PICOPASS_BLOCK_SIZE];
     uint8_t GenKeyBlock_old[PICOPASS_BLOCK_SIZE];
-    uint8_t XorKeyBlock[PICOPASS_BLOCK_SIZE];
+    uint8_t xorkeyblock[PICOPASS_BLOCK_SIZE];
     generate_single_key_block_inverted(zero_key, index, GenKeyBlock);
 
     //NOTE BEFORE UPDATING THE KEY WE NEED TO KEEP IN MIND KEYS ARE XORRED
@@ -2288,10 +2259,10 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     if(index != 0){
         generate_single_key_block_inverted(zero_key, index - 1, GenKeyBlock_old);
         for (int i = 0; i < 8 ; i++) {
-            XorKeyBlock[i] = GenKeyBlock[i] ^ GenKeyBlock_old[i];
+            xorkeyblock[i] = GenKeyBlock[i] ^ GenKeyBlock_old[i];
         }
     }else{
-            memcpy(XorKeyBlock, GenKeyBlock, PICOPASS_BLOCK_SIZE);
+            memcpy(xorkeyblock, GenKeyBlock, PICOPASS_BLOCK_SIZE);
     }
 
     //Step4 Calculate New Mac
@@ -2300,13 +2271,13 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     uint8_t wb[9] = {0};
     blockno = 3;
     wb[0] = blockno;
-    memcpy(wb + 1, XorKeyBlock, 8);
+    memcpy(wb + 1, xorkeyblock, 8);
 
     doMAC_N(wb, sizeof(wb), div_key2, mac2);
 
     //Step5 Perform Write
 
-    if (iclass_writeblock_ext(blockno, XorKeyBlock, mac2, use_mac, shallow_mod)) {
+    if (iclass_writeblock_ext(blockno, xorkeyblock, mac2, use_mac, shallow_mod)) {
         Dbprintf("Write block [%3d/0x%02X] " _GREEN_("successful"), blockno, blockno);
     } else {
         Dbprintf("Write block [%3d/0x%02X] " _RED_("failed"), blockno, blockno);
@@ -2332,15 +2303,15 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
 restore:
     ;//empty statement for compilation
-    uint8_t partialKey[PICOPASS_BLOCK_SIZE];
-    convertToHexArray(bits_found, partialKey);
+    uint8_t partialkey[PICOPASS_BLOCK_SIZE];
+    convertToHexArray(bits_found, partialkey);
 
     for (int i = 0; i < 8; i++){
-        Dbprintf("Raw Key Partial Bytes: " _GREEN_("[%3d -> 0x%02X]"), i, partialKey);
+        Dbprintf("Raw Key Partial Bytes: " _GREEN_("[%3d -> 0x%02X]"), i, partialkey);
     }
 
-    uint8_t resetKey[PICOPASS_BLOCK_SIZE];
-    convertToHexArray(index, resetKey);
+    uint8_t resetkey[PICOPASS_BLOCK_SIZE];
+    convertToHexArray(index, resetkey);
 
     //Calculate reset Mac
 
@@ -2348,10 +2319,10 @@ restore:
     uint8_t wb[9] = {0};
     blockno = 3;
     wb[0] = blockno;
-    memcpy(wb + 1, resetKey, 8);
+    memcpy(wb + 1, resetkey, 8);
 
     doMAC_N(wb, sizeof(wb), div_key2, mac2);
-    if (iclass_writeblock_ext(blockno, resetKey, mac2, use_mac, shallow_mod)) {
+    if (iclass_writeblock_ext(blockno, resetkey, mac2, use_mac, shallow_mod)) {
         Dbprintf("Restore of Original Key [%3d/0x%02X] " _GREEN_("successful"), blockno, blockno);
     } else {
         Dbprintf("Restore of Original Key [%3d/0x%02X] " _RED_("failed"), blockno, blockno);

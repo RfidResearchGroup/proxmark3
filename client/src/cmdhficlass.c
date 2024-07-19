@@ -3845,7 +3845,8 @@ void picopass_elite_nextKey(uint8_t* key) {
 static int CmdHFiClassRecover(uint8_t key[8]) {
 
     uint32_t payload_size = sizeof(iclass_recover_req_t);
-    uint8_t aa2_standard_key[PICOPASS_BLOCK_SIZE] = {0xFD, 0xCB, 0x5A, 0x52, 0xEA, 0x8F, 0x30, 0x90};
+    uint8_t aa2_standard_key[PICOPASS_BLOCK_SIZE] = {0};
+    memcpy(aa2_standard_key, iClass_Key_Table[1], PICOPASS_BLOCK_SIZE);
     iclass_recover_req_t *payload = calloc(1, payload_size);
     payload->req.use_raw = true;
     payload->req.use_elite = false;
@@ -3918,22 +3919,6 @@ void *generate_key_blocks(void *arg) {
     }
 
     return NULL;
-}
-
-void generate_single_key_block_inverted(const uint8_t startingKey[PICOPASS_BLOCK_SIZE], uint32_t index, uint8_t keyBlock[PICOPASS_BLOCK_SIZE]) {
-    uint32_t carry = index;
-    memcpy(keyBlock, startingKey, PICOPASS_BLOCK_SIZE);
-
-    for (int j = PICOPASS_BLOCK_SIZE - 1; j >= 0; j--) {
-        uint8_t increment_value = carry & 0x07;  // Use only the last 3 bits of carry
-        keyBlock[j] = increment_value;  // Set the last 3 bits, assuming first 5 bits are always 0
-
-        carry >>= 3;  // Shift right by 3 bits for the next byte
-        if (carry == 0) {
-            // If no more carry, break early to avoid unnecessary loops
-            break;
-        }
-    }
 }
 
 static int CmdHFiClassLegRecLookUp(const char *Cmd) {

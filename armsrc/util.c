@@ -395,3 +395,33 @@ uint32_t flash_size_from_cidr(uint32_t cidr) {
 uint32_t get_flash_size(void) {
     return flash_size_from_cidr(*AT91C_DBGU_CIDR);
 }
+
+// Function to convert an unsigned int to binary string
+void intToBinary(uint8_t num, char *binaryStr, int size) {
+    binaryStr[size] = '\0';  // Null-terminate the string
+    for (int i = size - 1; i >= 0; i--) {
+        binaryStr[i] = (num % 2) ? '1' : '0';
+        num /= 2;
+    }
+}
+
+// Function to convert a binary string to hexadecimal
+uint8_t binaryToHex(char *binaryStr) {
+    return (uint8_t)strtoul(binaryStr, NULL, 2);
+}
+
+// Function to convert an unsigned int to an array of hex values
+void convertToHexArray(uint8_t num, uint8_t *partialkey) {
+    char binaryStr[25];  // 24 bits for binary representation + 1 for null terminator
+
+    // Convert the number to binary string
+    intToBinary(num, binaryStr, 24);
+
+    // Split the binary string into groups of 3 and convert to hex
+    for (int i = 0; i < PICOPASS_BLOCK_SIZE; i++) {
+        char group[4];
+        strncpy(group, binaryStr + i * 3, 3);
+        group[3] = '\0';  // Null-terminate the group string
+        partialkey[i] = binaryToHex(group);
+    }
+}

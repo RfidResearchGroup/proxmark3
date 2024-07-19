@@ -71,9 +71,6 @@ bool authenticate_iclass_tag(iclass_auth_req_t *payload, picopass_hdr_t *hdr, ui
 uint8_t get_pagemap(const picopass_hdr_t *hdr);
 void iclass_send_as_reader(uint8_t *frame, int len, uint32_t *start_time, uint32_t *end_time, bool shallow_mod);
 
-void generate_single_key_block_inverted(const uint8_t startingKey[PICOPASS_BLOCK_SIZE], uint32_t index, uint8_t keyBlock[PICOPASS_BLOCK_SIZE]);
-void intToBinary(unsigned int num, char *binaryStr, int size);
-uint8_t binaryToHex(char *binaryStr);
-void convertToHexArray(unsigned int num, uint8_t *partialKey);
+void generate_single_key_block_inverted(const uint8_t *startingKey, uint32_t index, uint8_t *keyBlock);
 void iClass_Recover(iclass_recover_req_t *msg);
 #endif
