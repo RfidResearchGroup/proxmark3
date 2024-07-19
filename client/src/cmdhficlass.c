@@ -3871,6 +3871,8 @@ static int CmdHFiClassRecover(uint8_t key[8]) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ICLASS_RECOVER, (uint8_t *)payload, payload_size);
 
+    WaitForResponse(CMD_HF_ICLASS_RECOVER, &resp);
+
     if (resp.status == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "iCLASS Recover " _GREEN_("successful"));
     } else {
