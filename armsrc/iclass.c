@@ -2293,7 +2293,7 @@ Xorring the index of iterations against those decimal numbers allows us to retri
     for (int i = 0; i < 8 ; ++i) {
         //need to craft the authentication payload accordingly
         memcpy(msg->req.key, iclass_mac_table[i], 8);
-        res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1); //the mac here needs to be changed, mac 2 is a compiling placeholder
+        res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1); //mac1 here shouldn't matter
         if (res == true) {
             bits_found = iclass_mac_table_bit_values[i] ^ index;
             Dbprintf("Found Card Bits Index: " _GREEN_("[%3d]"), index);
