@@ -15,6 +15,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added MFC Key for swimming pool cards in Reykjavík Iceland (@dandri)
 - Added key for Orkan keyfobs (@dandri)
 - Added key for Atlantsolía keyfobs (@dandri)
+- Added `hf iclass legbrute` this function allows to bruteforce 40/64 k1 bits of an iclass card to recover the raw key used(@antiklesys).
+- Added `hf iclass legrec` this function allows to recover 24/64 k1 bits of an iclass card (@antiklesys).
 ## [Aurora.4.18589][2024-05-28]
 - Fixed the pm3 regressiontests for Hitag2Crack (@iceman1001)
 - Changed `mem spiffs tree` - adapted to bigbuff and show if empty (@iceman1001)
