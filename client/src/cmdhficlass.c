@@ -4027,7 +4027,7 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
             thread_data[t].keyBlock = calloc(keys_per_thread, PICOPASS_BLOCK_SIZE);
 
             if (thread_data[t].keyBlock == NULL) {
-                PrintAndLogEx(ERROR, "Memory allocation failed for keyBlock in thread %d.", t);
+                PrintAndLogEx(ERR, "Memory allocation failed for keyBlock in thread %d.", t);
                 for (uint32_t i = 0; i < t; i++) {
                     free(thread_data[i].keyBlock);
                 }
@@ -4048,7 +4048,7 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
         }
 
         if (prekey == NULL) {
-            PrintAndLogEx(ERROR, "Memory allocation failed for prekey.");
+            PrintAndLogEx(ERR, "Memory allocation failed for prekey.");
             for (uint32_t t = 0; t < num_threads; t++) {
                 free(thread_data[t].keyBlock);
             }
