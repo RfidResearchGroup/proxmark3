@@ -3871,13 +3871,6 @@ static int CmdHFiClassRecover(uint8_t key[8]) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ICLASS_RECOVER, (uint8_t *)payload, payload_size);
 
-    if (WaitForResponseTimeout(CMD_HF_ICLASS_RECOVER, &resp, 2500) == 0) {
-        PrintAndLogEx(WARNING, "command execute timeout");
-        DropField();
-        free(payload);
-        return PM3_ETIMEOUT;
-    }
-
     if (resp.status == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "iCLASS Recover " _GREEN_("successful"));
     } else {
