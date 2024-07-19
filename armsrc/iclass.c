@@ -2254,20 +2254,20 @@ Xorring the index of iterations against those decimal numbers allows us to retri
     while (bits_found == -1){
 
     //Step3 Calculate New Key
-    uint8_t GenKeyBlock[PICOPASS_BLOCK_SIZE];
-    uint8_t GenKeyBlock_old[PICOPASS_BLOCK_SIZE];
+    uint8_t genkeyblock[PICOPASS_BLOCK_SIZE];
+    uint8_t genkeyblock_old[PICOPASS_BLOCK_SIZE];
     uint8_t xorkeyblock[PICOPASS_BLOCK_SIZE];
-    generate_single_key_block_inverted(zero_key, index, GenKeyBlock);
+    generate_single_key_block_inverted(zero_key, index, genkeyblock);
 
     //NOTE BEFORE UPDATING THE KEY WE NEED TO KEEP IN MIND KEYS ARE XORRED
     //xor the new key against the previously generated key so that we only update the difference
     if(index != 0){
-        generate_single_key_block_inverted(zero_key, index - 1, GenKeyBlock_old);
+        generate_single_key_block_inverted(zero_key, index - 1, genkeyblock_old);
         for (int i = 0; i < 8 ; i++) {
-            xorkeyblock[i] = GenKeyBlock[i] ^ GenKeyBlock_old[i];
+            xorkeyblock[i] = genkeyblock[i] ^ genkeyblock_old[i];
         }
     }else{
-            memcpy(xorkeyblock, GenKeyBlock, PICOPASS_BLOCK_SIZE);
+            memcpy(xorkeyblock, genkeyblock, PICOPASS_BLOCK_SIZE);
     }
 
     //Step4 Calculate New Mac
