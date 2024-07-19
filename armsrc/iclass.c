@@ -2228,7 +2228,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
     res = iclass_send_cmd_with_retries(cmd_read, sizeof(cmd_read), resp, sizeof(resp), 10, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time, shallow_mod);
 
-    static uint8_t iClass_Mac_Table[8][8] = {    //Reference weak macs table
+    static uint8_t iclass_mac_table[8][8] = {    //Reference weak macs table
         { 0x00, 0x00, 0x00, 0x00, 0xBF, 0x5D, 0x67, 0x7F }, //Expected mac when last 3 bits of each byte are: 000
         { 0x00, 0x00, 0x00, 0x00, 0x10, 0xED, 0x6F, 0x11 }, //Expected mac when last 3 bits of each byte are: 001
         { 0x00, 0x00, 0x00, 0x00, 0x53, 0x35, 0x42, 0x0F }, //Expected mac when last 3 bits of each byte are: 010
@@ -2239,7 +2239,12 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         { 0x00, 0x00, 0x00, 0x00, 0xE2, 0xD5, 0x69, 0xE9 }  //Expected mac when last 3 bits of each byte are: 111
     };
     //Viewing the weak macs table card 24 bits (3x8) in the form of a 24 bit decimal number
-    static uint32_t iClass_Mac_Table_Bit_Values[8] = {0, 2396745, 4793490, 7190235, 9586980, 11983725, 14380470, 16777215};
+    static uint32_t iclass_mac_table_bit_values[8] = {0, 2396745, 4793490, 7190235, 9586980, 11983725, 14380470, 16777215};
+
+/*  iclass_mac_table is a series of weak macs, those weak macs correspond to the different combinations of the last 3 bits of each key byte.
+If we concatenate the last three bits of each key byte, we have a 24 bits long binary string.
+If we convert that string to decimal we obtain the decimal numbers in iclass_mac_table_bit_values
+Xorring the index of iterations against those decimal numbers allows us to retrieve the what was the corresponding sequence of bits of the original key in decimal format. */
 
     uint8_t zero_key[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint32_t index = 1;
@@ -2287,12 +2292,12 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
     for (int i = 0; i < 8 ; ++i) {
         //need to craft the authentication payload accordingly
-        memcpy(msg->req.key, iClass_Mac_Table[i], 8);
+        memcpy(msg->req.key, iclass_mac_table[i], 8);
         res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1); //the mac here needs to be changed, mac 2 is a compiling placeholder
         if (res == true) {
-            bits_found = iClass_Mac_Table_Bit_Values[i] ^ index;
+            bits_found = iclass_mac_table_bit_values[i] ^ index;
             Dbprintf("Found Card Bits Index: " _GREEN_("[%3d]"), index);
-            Dbprintf("Mac Table Bit Values: " _GREEN_("[%3d]"), iClass_Mac_Table_Bit_Values[i]);
+            Dbprintf("Mac Table Bit Values: " _GREEN_("[%3d]"), iclass_mac_table_bit_values[i]);
             Dbprintf("Decimal Value of Partial Key: " _GREEN_("[%3d]"), bits_found);
             goto restore;
         }

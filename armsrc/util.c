@@ -410,6 +410,8 @@ uint8_t binaryToHex(char *binaryStr) {
     return (uint8_t)strtoul(binaryStr, NULL, 2);
 }
 
+#define PICOPASS_BLOCK_SIZE 8
+
 // Function to convert an unsigned int to an array of hex values
 void convertToHexArray(uint8_t num, uint8_t *partialkey) {
     char binaryStr[25];  // 24 bits for binary representation + 1 for null terminator
