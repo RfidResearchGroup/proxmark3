@@ -42,4 +42,5 @@ void picopass_elite_reset(void);
 uint32_t picopass_elite_rng(void);
 uint32_t picopass_elite_lcg(void);
 uint8_t picopass_elite_nextByte(void);
+void *generate_key_blocks(void *arg);
 #endif

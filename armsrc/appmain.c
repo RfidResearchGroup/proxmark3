@@ -2061,6 +2061,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             iClass_Restore((iclass_restore_req_t *)packet->data.asBytes);
             break;
         }
+        case CMD_HF_ICLASS_RECOVER: {
+            iClass_Recover((iclass_recover_req_t *)packet->data.asBytes);
+            break;
+        }
         case CMD_HF_ICLASS_CREDIT_EPURSE: {
             iclass_credit_epurse((iclass_credit_epurse_t *)packet->data.asBytes);
             break;

