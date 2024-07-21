@@ -2242,17 +2242,17 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     //Viewing the weak macs table card 24 bits (3x8) in the form of a 24 bit decimal number
     static uint32_t iclass_mac_table_bit_values[8] = {0, 2396745, 4793490, 7190235, 9586980, 11983725, 14380470, 16777215};
 
-/*  iclass_mac_table is a series of weak macs, those weak macs correspond to the different combinations of the last 3 bits of each key byte.
-If we concatenate the last three bits of each key byte, we have a 24 bits long binary string.
-If we convert that string to decimal we obtain the decimal numbers in iclass_mac_table_bit_values
-Xorring the index of iterations against those decimal numbers allows us to retrieve the what was the corresponding sequence of bits of the original key in decimal format. */
+    /*  iclass_mac_table is a series of weak macs, those weak macs correspond to the different combinations of the last 3 bits of each key byte.
+    If we concatenate the last three bits of each key byte, we have a 24 bits long binary string.
+    If we convert that string to decimal we obtain the decimal numbers in iclass_mac_table_bit_values
+    Xorring the index of iterations against those decimal numbers allows us to retrieve the what was the corresponding sequence of bits of the original key in decimal format. */
 
     uint8_t zero_key[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint32_t index = 1;
     int bits_found = -1;
 
     //START LOOP
-    while (bits_found == -1){
+    while (bits_found == -1) {
 
         //Step3 Calculate New Key
         uint8_t genkeyblock[PICOPASS_BLOCK_SIZE];
@@ -2262,12 +2262,12 @@ Xorring the index of iterations against those decimal numbers allows us to retri
 
         //NOTE BEFORE UPDATING THE KEY WE NEED TO KEEP IN MIND KEYS ARE XORRED
         //xor the new key against the previously generated key so that we only update the difference
-        if(index != 0){
+        if (index != 0) {
             generate_single_key_block_inverted(zero_key, index - 1, genkeyblock_old);
             for (int i = 0; i < 8 ; i++) {
                 xorkeyblock[i] = genkeyblock[i] ^ genkeyblock_old[i];
             }
-        }else{
+        } else {
             memcpy(xorkeyblock, genkeyblock, PICOPASS_BLOCK_SIZE);
         }
 
@@ -2289,7 +2289,7 @@ Xorring the index of iterations against those decimal numbers allows us to retri
             Dbprintf("Write block [%3d/0x%02X] " _GREEN_("successful"), blockno, blockno);
         } else {
             Dbprintf("Write block [%3d/0x%02X] " _RED_("failed"), blockno, blockno);
-            if (index > 1){
+            if (index > 1) {
                 Dbprintf(_RED_("Card is likely to be unusable!"));
             }
             goto out;

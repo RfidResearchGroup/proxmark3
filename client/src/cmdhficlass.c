@@ -3601,9 +3601,9 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     bool use_vb6kdf = arg_get_lit(ctx, 6);
     bool use_elite = arg_get_lit(ctx, 3);
     bool use_raw = arg_get_lit(ctx, 4);
-    if(use_vb6kdf){
+    if (use_vb6kdf) {
         use_elite = true;
-    }else{
+    } else {
         CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     }
 
@@ -3827,14 +3827,14 @@ uint8_t picopass_elite_nextByte(void) {
     return (picopass_elite_rng() >> 16) & 0xFF;
 }
 
-void picopass_elite_nextKey(uint8_t* key) {
-    if(prepared) {
-        for(size_t i = 0; i < 7; i++) {
+void picopass_elite_nextKey(uint8_t *key) {
+    if (prepared) {
+        for (size_t i = 0; i < 7; i++) {
             key_state[i] = key_state[i + 1];
         }
         key_state[7] = picopass_elite_nextByte();
     } else {
-        for(size_t i = 0; i < 8; i++) {
+        for (size_t i = 0; i < 8; i++) {
             key_state[i] = picopass_elite_nextByte();
         }
         prepared = true;
@@ -4086,14 +4086,14 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass legrec",
-        "Attempts to recover the diversified key of a specific iClass card. This may take a long time. The Card must remain be on the PM3 antenna during the whole process! This process may brick the card!",
-        "hf iclass legrec --macs 0000000089cb984b"
-        );
+                  "Attempts to recover the diversified key of a specific iClass card. This may take a long time. The Card must remain be on the PM3 antenna during the whole process! This process may brick the card!",
+                  "hf iclass legrec --macs 0000000089cb984b"
+                 );
 
     void *argtable[] = {
-    arg_param_begin,
-    arg_str1(NULL, "macs", "<hex>", "MACs"),
-    arg_param_end
+        arg_param_begin,
+        arg_str1(NULL, "macs", "<hex>", "MACs"),
+        arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
@@ -4148,9 +4148,9 @@ static int CmdHFiClassLookUp(const char *Cmd) {
 
     bool use_elite = arg_get_lit(ctx, 5);
     bool use_raw = arg_get_lit(ctx, 6);
-    if(use_vb6kdf){
+    if (use_vb6kdf) {
         use_elite = true;
-    }else{
+    } else {
         CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     }
 

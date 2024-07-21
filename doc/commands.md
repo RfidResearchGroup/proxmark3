@@ -402,6 +402,8 @@ Check column "offline" for their availability.
 |`hf iclass chk          `|N       |`Check keys`
 |`hf iclass loclass      `|Y       |`Use loclass to perform bruteforce reader attack`
 |`hf iclass lookup       `|Y       |`Uses authentication trace to check for key in dictionary file`
+|`hf iclass legrec       `|N       |`Attempts to recover the standard key of a legacy card`
+|`hf iclass legbrute     `|Y       |`Bruteforces 40 bits of a partial raw key`
 |`hf iclass sim          `|N       |`Simulate iCLASS tag`
 |`hf iclass eload        `|N       |`Upload file into emulator memory`
 |`hf iclass esave        `|N       |`Save emulator memory to file`

@@ -37,7 +37,7 @@ void PrintPreCalc(iclass_prekey_t *list, uint32_t itemcnt);
 uint8_t get_pagemap(const picopass_hdr_t *hdr);
 bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t *rmac, uint8_t *tmac, uint8_t *key);
 
-void picopass_elite_nextKey(uint8_t* key);
+void picopass_elite_nextKey(uint8_t *key);
 void picopass_elite_reset(void);
 uint32_t picopass_elite_rng(void);
 uint32_t picopass_elite_lcg(void);

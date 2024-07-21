@@ -189,9 +189,9 @@
             "options": [
                 "-h, --help This help",
                 "-d <hex> ASN1 encoded byte array",
-                "-t, --test perform self test"
+                "--test perform self tests"
             ],
-            "usage": "data asn1 [-ht] [-d <hex>]"
+            "usage": "data asn1 [-h] [-d <hex>] [--test]"
         },
         "data atr": {
             "command": "data atr",
@@ -3163,7 +3163,8 @@
             "description": "Checkkeys loads a dictionary text file with 8byte hex keys to test authenticating against a iClass tag",
             "notes": [
                 "hf iclass chk -f iclass_default_keys.dic",
-                "hf iclass chk -f iclass_elite_keys.dic --elite"
+                "hf iclass chk -f iclass_elite_keys.dic --elite",
+                "hf iclass chk --vb6kdf"
             ],
             "offline": false,
             "options": [
@@ -3172,9 +3173,10 @@
                 "--credit key is assumed to be the credit key",
                 "--elite elite computations applied to key",
                 "--raw no computations applied to key (raw)",
-                "--shallow use shallow (ASK) reader modulation instead of OOK"
+                "--shallow use shallow (ASK) reader modulation instead of OOK",
+                "--vb6kdf use the VB6 elite KDF instead of a file"
             ],
-            "usage": "hf iclass chk [-h] -f <fn> [--credit] [--elite] [--raw] [--shallow]"
+            "usage": "hf iclass chk [-h] [-f <fn>] [--credit] [--elite] [--raw] [--shallow] [--vb6kdf]"
         },
         "hf iclass configcard": {
             "command": "hf iclass configcard",
@@ -3370,7 +3372,7 @@
         },
         "hf iclass help": {
             "command": "hf iclass help",
-            "description": "help This help list List iclass history view Display content from tag dump file ----------- --------------------- Recovery -------------------- loclass Use loclass to perform bruteforce reader attack lookup Uses authentication trace to check for key in dictionary file ----------- ---------------------- Utils ---------------------- calcnewkey Calc diversified keys (blocks 3 & 4) to write new keys encode Encode binary wiegand to block 7 encrypt Encrypt given block data decrypt Decrypt given block data or tag dump file managekeys Manage keys to use with iclass commands permutekey Permute function from 'heart of darkness' paper --------------------------------------------------------------------------------------- hf iclass list available offline: yes Alias of `trace list -t iclass -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List iclass history view Display content from tag dump file ----------- --------------------- Recovery -------------------- loclass Use loclass to perform bruteforce reader attack lookup Uses authentication trace to check for key in dictionary file legbrute Bruteforces 40 bits of a partial raw key ----------- ---------------------- Utils ---------------------- calcnewkey Calc diversified keys (blocks 3 & 4) to write new keys encode Encode binary wiegand to block 7 encrypt Encrypt given block data decrypt Decrypt given block data or tag dump file managekeys Manage keys to use with iclass commands permutekey Permute function from 'heart of darkness' paper --------------------------------------------------------------------------------------- hf iclass list available offline: yes Alias of `trace list -t iclass -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf iclass list --frame -> show frame delay times",
                 "hf iclass list -1 -> use trace buffer"
@@ -3402,6 +3404,35 @@
             ],
             "usage": "hf iclass info [-h] [--shallow]"
         },
+        "hf iclass legbrute": {
+            "command": "hf iclass legbrute",
+            "description": "This command take sniffed trace data and partial raw key and bruteforces the remaining 40 bits of the raw key.",
+            "notes": [
+                "hf iclass legbrute --csn 8D7BD711FEFF12E0 --epurse feffffffffffffff --macs 00000000BD478F76 --pk B4F12AADC5301225"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--csn <hex> Specify CSN as 8 hex bytes",
+                "--epurse <hex> Specify ePurse as 8 hex bytes",
+                "--macs <hex> MACs",
+                "--pk <hex> Partial Key"
+            ],
+            "usage": "hf iclass legbrute [-h] --csn <hex> --epurse <hex> --macs <hex> --pk <hex>"
+        },
+        "hf iclass legrec": {
+            "command": "hf iclass legrec",
+            "description": "Attempts to recover the diversified key of a specific iClass card. This may take a long time. The Card must remain be on the PM3 antenna during the whole process! This process may brick the card!",
+            "notes": [
+                "hf iclass legrec --macs 0000000089cb984b"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--macs <hex> MACs"
+            ],
+            "usage": "hf iclass legrec [-h] --macs <hex>"
+        },
         "hf iclass loclass": {
             "command": "hf iclass loclass",
             "description": "Execute the offline part of loclass attack An iclass dumpfile is assumed to consist of an arbitrary number of malicious CSNs, and their protocol responses The binary format of the file is expected to be as follows: <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC> <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC> <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC> ... totalling N*24 bytes",
@@ -3423,7 +3454,8 @@
             "description": "This command take sniffed trace data and try to recovery a iCLASS Standard or iCLASS Elite key.",
             "notes": [
                 "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic",
-                "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic --elite"
+                "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic --elite",
+                "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b --vb6rng"
             ],
             "offline": true,
             "options": [
@@ -3433,9 +3465,10 @@
                 "--epurse <hex> Specify ePurse as 8 hex bytes",
                 "--macs <hex> MACs",
                 "--elite Elite computations applied to key",
-                "--raw no computations applied to key"
+                "--raw no computations applied to key",
+                "--vb6rng use the VB6 rng for elite keys instead of a dictionary file"
             ],
-            "usage": "hf iclass lookup [-h] -f <fn> --csn <hex> --epurse <hex> --macs <hex> [--elite] [--raw]"
+            "usage": "hf iclass lookup [-h] [-f <fn>] --csn <hex> --epurse <hex> --macs <hex> [--elite] [--raw] [--vb6rng]"
         },
         "hf iclass managekeys": {
             "command": "hf iclass managekeys",
@@ -12732,8 +12765,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 737,
+        "commands_extracted": 739,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-05-27T13:38:05"
+        "extracted_on": "2024-07-21T14:16:40"
     }
 }

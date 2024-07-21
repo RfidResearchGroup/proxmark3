@@ -279,6 +279,8 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf iclass chk" },
     { 1, "hf iclass loclass" },
     { 1, "hf iclass lookup" },
+    { 0, "hf iclass legrec" },
+    { 1, "hf iclass legbrute" },
     { 0, "hf iclass sim" },
     { 0, "hf iclass eload" },
     { 0, "hf iclass esave" },

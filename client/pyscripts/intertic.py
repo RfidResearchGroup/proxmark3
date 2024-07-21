@@ -89,7 +89,7 @@ def Describe_Usage_1(Usage, ContractMediumEndDate, Certificate):
     EventTimeStamp = Usage.nom(11)
     unk = Usage.nom_bits(65)
     EventValidityTimeFirstStamp = Usage.nom(11)
-    
+
     print('  EventDateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
     print('  EventTimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
     print('  unk1...                    :', unk);
@@ -109,7 +109,7 @@ def Describe_Usage_1_1(Usage, ContractMediumEndDate, Certificate):
     EventGeoRoute_Direction = Usage.nom(2)
     EventCountPassengers_mb = Usage.nom(4)
     EventValidityTimeFirstStamp = Usage.nom(11)
-    
+
     print('  DateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
     print('  TimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
     print('  unk0...               :', unk0);
@@ -137,12 +137,12 @@ def Describe_Usage_1_2(Usage, ContractMediumEndDate, Certificate):
     EventGeoRoute_Direction = Usage.nom(2)
     EventCountPassengers_mb = Usage.nom(4)
     EventValidityTimeFirstStamp = Usage.nom(11)
-    
+
     TYPE_EventCode_Nature_Reims = { # usually it's the opposite, but ... ?
         0x4: 'urban bus',
         0x1: 'tramway',
     }
-    
+
     print('  DateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
     print('  TimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
     print('  Count(?)              : {}'. format(EventCount_mb))
@@ -170,7 +170,7 @@ def Describe_Usage_2(Usage, ContractMediumEndDate, Certificate):
     EventGeoRoute_Direction = Usage.nom(2)
     EventCountPassengers_mb = Usage.nom(4)
     EventValidityTimeFirstStamp = Usage.nom(11)
-    
+
     print('  DateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
     print('  TimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
     print('  unk0...               :', unk0);
@@ -183,26 +183,26 @@ def Describe_Usage_2(Usage, ContractMediumEndDate, Certificate):
     print('  ValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
     print('  left...               :', Usage.nom_bits_left());
     print('  [CER] Usage           : {:04x}'.format(Certificate.nom(16)))
-    
+
 def Describe_Usage_3(Usage, ContractMediumEndDate, Certificate):
     EventDateStamp = Usage.nom(10)
     EventTimeStamp = Usage.nom(11)
     unk = Usage.nom_bits(27)
     EventValidityTimeFirstStamp = Usage.nom(11)
-    
+
     print('  EventDateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
     print('  EventTimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
     print('  unk1...                    :', unk);
     print('  EventValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
     print('  left...                    :', Usage.nom_bits_left());
     print('  [CER] Usage                : {:04x}'.format(Certificate.nom(16)))
-    
+
 def Describe_Usage_4(Usage, ContractMediumEndDate, Certificate):
     EventDateStamp = Usage.nom(10)
     EventTimeStamp = Usage.nom(11)
     unk = Usage.nom_bits(63)
     EventValidityTimeFirstStamp = Usage.nom(11)
-    
+
     print('  EventDateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
     print('  EventTimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
     print('  unk1...                    :', unk);
@@ -311,7 +311,7 @@ def main():
         if not chunk:
             break
         data.addBytes(chunk[::-1])
-    
+
     file.close()
 
     Distribution_Data = BitMe()
@@ -336,7 +336,7 @@ def main():
     PID = data.nom(5)
 
     match PID:
-    
+
         case 0x10:
             Distribution_Data.addBits(data.nom_bits(2 * 32))
             Distribution_Data.addBits(Block0Left.nom_bits_left())
@@ -365,7 +365,7 @@ def main():
             Usage_B_DAT.addBits(data.nom_bits(16))
             Usage_B_CER.addBits(data.nom_bits(16))
             Distribution_Cer.addBits(data.nom_bits(32))
-            
+
         case _:
             print('PID not (yet?) supported: 0x{:02x}'.format(PID))
             return 3
@@ -413,7 +413,7 @@ def main():
 
         if(Describe_Usage is None):
             Describe_Usage = Describe_Usage_Generic
-        
+
         if COUNTER1 is not None:
             print('[1] Counter: 0x{:06x}   - Reloading available: 0x{:02x}'.format(COUNTER1, RELOADING1))
         # if COUNTER2 is not None:
@@ -433,7 +433,7 @@ def main():
             print()
             print('USAGE_A')
             Describe_Usage(Usage_A_DAT, ContractMediumEndDate, Usage_A_CER)
-            
+
         if not Usage_B_DAT.isEmpty():
             print()
             print('USAGE_B')

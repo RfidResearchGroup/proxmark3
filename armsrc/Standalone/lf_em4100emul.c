@@ -119,7 +119,7 @@ void RunMod(void) {
             LEDsoff();
             Dbprintf("[=] >>  LF EM4100 simulator stopped due to button hold  <<");
             return; // RunMod end
-        }  
+        }
         selected = (selected + 1) % em4100emul_slots_count;
     }
 }
