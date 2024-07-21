@@ -39,6 +39,7 @@
 #include "iclass_cmd.h"
 #include "crypto/asn1utils.h"       // ASN1 decoder
 #include "preferences.h"
+#include "generator.h"
 
 
 #define NUM_CSNS               9
@@ -1448,6 +1449,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "d6", "decode as block 6"),
         arg_lit0("z", "dense", "dense dump output style"),
+        arg_lit0(NULL, "ns", "no save to file"),        
         arg_param_end
     };
     CLIExecWithReturn(clictx, Cmd, argtable, false);
@@ -1472,6 +1474,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     bool verbose = arg_get_lit(clictx, 4);
     bool use_decode6 = arg_get_lit(clictx, 5);
     bool dense_output = g_session.dense_output || arg_get_lit(clictx, 6);
+    bool nosave = arg_get_lit(clictx, 7);
     CLIParserFree(clictx);
 
     // sanity checks
@@ -1611,6 +1614,11 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
             }
         }
 
+        if (nosave) {
+            PrintAndLogEx(INFO, "Called with no save option");
+            PrintAndLogEx(NORMAL, "");
+        } else {
+
         // use the first block (CSN) for filename
         char *fptr = calloc(50, sizeof(uint8_t));
         if (fptr == false) {
@@ -1623,6 +1631,8 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         FillFileNameByUID(fptr, hdr->csn, "-dump-decrypted", sizeof(hdr->csn));
 
         pm3_save_dump(fptr, decrypted, decryptedlen, jsfIclass);
+            free(fptr);
+        }
 
         printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen, dense_output);
 
@@ -1634,11 +1644,9 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
         // decode block 6
         bool has_values = (memcmp(decrypted + (8 * 6), empty, 8) != 0) && (memcmp(decrypted + (8 * 6), zeros, 8) != 0);
-        if (has_values) {
-            if (use_sc) {
+        if (has_values && use_sc) {
                 DecodeBlock6(decrypted + (8 * 6));
             }
-        }
 
         // decode block 7-8-9
         iclass_decode_credentials(decrypted);
@@ -1664,7 +1672,6 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
         PrintAndLogEx(INFO, "-----------------------------------------------------------------");
         free(decrypted);
-        free(fptr);
     }
 
     mbedtls_des3_free(&ctx);

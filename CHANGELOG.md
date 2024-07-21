@@ -3,7 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- fixed breaking of client when trying to load a non-supported .picopass file (@iceman100)  Thanks to Jump for suggested fixes!
+- Changed `hf iclass dump --ns` - now supports the nosave flag (@iceman1001)
+- Fixed write check in hitag2crack2 buildtables (@mwalker33)
+- Fixed breaking of client when trying to load a non-supported .picopass file (@iceman100)  Thanks to Jump for suggested fixes!
 - Changed `mf_nonce_brute` tool to handle the odd case of multiple key candidates (@iceman1001)
 - Fixed a bad memory erase (@iceman1001)
 - Fixed BT serial comms (@iceman1001)
