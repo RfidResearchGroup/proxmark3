@@ -3874,9 +3874,9 @@ static int CmdHFiClassRecover(uint8_t key[8]) {
     WaitForResponse(CMD_HF_ICLASS_RECOVER, &resp);
 
     if (resp.status == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "iCLASS Recover " _GREEN_("successful"));
+        PrintAndLogEx(SUCCESS, "iCLASS Key Bits Recovery " _GREEN_("successful"));
     } else {
-        PrintAndLogEx(WARNING, "iCLASS Recover " _RED_("failed"));
+        PrintAndLogEx(WARNING, "iCLASS Key Bits Recovery " _RED_("failed"));
     }
 
     free(payload);
