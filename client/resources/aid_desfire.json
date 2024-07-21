@@ -24,6 +24,134 @@
         "Type": "pacs"
     },
     {
+        "AID": "2081F4",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
+        "Country": "NZ",
+        "Name": "Gallagher Security Credential",
+        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Type": "pacs"
+    },
+    {
+        "AID": "2181F4",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
+        "Country": "NZ",
+        "Name": "Gallagher Security Credential",
+        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Type": "pacs"
+    },
+    {
+        "AID": "2281F4",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
+        "Country": "NZ",
+        "Name": "Gallagher Security Credential",
+        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Type": "pacs"
+    },
+    {
+        "AID": "2381F4",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
+        "Country": "NZ",
+        "Name": "Gallagher Security Credential",
+        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Type": "pacs"
+    },
+    {
+        "AID": "2481F4",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
+        "Country": "NZ",
+        "Name": "Gallagher Security Credential",
+        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Type": "pacs"
+    },
+    {
+        "AID": "2581F4",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
+        "Country": "NZ",
+        "Name": "Gallagher Security Credential",
+        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Type": "pacs"
+    },
+    {
+        "AID": "2681F4",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
+        "Country": "NZ",
+        "Name": "Gallagher Security Credential",
+        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Type": "pacs"
+    },
+    {
+        "AID": "2781F4",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
+        "Country": "NZ",
+        "Name": "Gallagher Security Credential",
+        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Type": "pacs"
+    },
+    {
+        "AID": "2881F4",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
+        "Country": "NZ",
+        "Name": "Gallagher Security Credential",
+        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Type": "pacs"
+    },
+    {
+        "AID": "2981F4",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
+        "Country": "NZ",
+        "Name": "Gallagher Security Credential",
+        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Type": "pacs"
+    },
+    {
+        "AID": "2A81F4",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
+        "Country": "NZ",
+        "Name": "Gallagher Security Credential",
+        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Type": "pacs"
+    },
+    {
+        "AID": "2B81F4",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
+        "Country": "NZ",
+        "Name": "Gallagher Security Credential",
+        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Type": "pacs"
+    },
+    {
+        "AID": "2C81F4",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
+        "Country": "NZ",
+        "Name": "Gallagher Security Credential",
+        "Description": "Unused Cardax Card Data Application (Alternative Endian)",
+        "Type": "pacs"
+    },
+    {
+        "AID": "2D81F4",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
+        "Country": "NZ",
+        "Name": "Gallagher Security Credential",
+        "Description": "Unused Cardax Card Data Application (Alternative Endian)",
+        "Type": "pacs"
+    },
+    {
+        "AID": "2E81F4",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
+        "Country": "NZ",
+        "Name": "Gallagher Security Credential",
+        "Description": "Unused Cardax Card Data Application (Alternative Endian)",
+        "Type": "pacs"
+    },
+    {
+        "AID": "2F81F4",
+        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
+        "Country": "NZ",
+        "Name": "Gallagher Security Credential",
+        "Description": "Card Application Directory (CAD) (Alternative Endian)",
+        "Type": "pacs"
+    },
+    {
         "AID": "4791DA",
         "Vendor": "Prima Systems",
         "Country": "SI",
@@ -188,7 +316,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Card Application Directory [CAD]",
+        "Description": "Card Application Directory (CAD)",
         "Type": "pacs"
     },
     {
@@ -404,6 +532,38 @@
         "Vendor": "InterCard GmbH Kartensysteme",
         "Country": "DE",
         "Name": "InterCard",
+        "Description": "Campus Card",
+        "Type": "student"
+    },
+    {
+        "AID": "BBBBB3",
+        "Vendor": "Transact Campus Inc.",
+        "Country": "US",
+        "Name": "Transact Campus ID",
+        "Description": "Campus Card",
+        "Type": "student"
+    },
+    {
+        "AID": "BBBBBB",
+        "Vendor": "Transact Campus Inc.",
+        "Country": "US",
+        "Name": "Transact Campus ID",
+        "Description": "Campus Card",
+        "Type": "student"
+    },
+    {
+        "AID": "BBBBDA",
+        "Vendor": "Transact Campus Inc.",
+        "Country": "US",
+        "Name": "Transact Campus ID",
+        "Description": "Campus Card",
+        "Type": "student"
+    },
+    {
+        "AID": "BCBCBC",
+        "Vendor": "Transact Campus Inc.",
+        "Country": "US",
+        "Name": "Transact Campus ID",
         "Description": "Campus Card",
         "Type": "student"
     },
