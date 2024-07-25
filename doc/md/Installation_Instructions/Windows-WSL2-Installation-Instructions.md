@@ -471,11 +471,18 @@ You must have Windows Terminal installed to use this script.
 ```batch
 @echo off
 
+REM -- Minimize the initial command prompt window
+if not "%Minimized%"=="" goto :Minimized
+set Minimized=True
+start /min cmd /C "%~dpnx0"
+goto :EOF
+
+:Minimized
 REM  -- Check for permissions
 IF "%PROCESSOR_ARCHITECTURE%" EQU "amd64" (
->nul 2>&1 "%SYSTEMROOT%\SysWOW64\cacls.exe" "%SYSTEMROOT%\SysWOW64\config\system"
+    >nul 2>&1 "%SYSTEMROOT%\SysWOW64\cacls.exe" "%SYSTEMROOT%\SysWOW64\config\system"
 ) ELSE (
->nul 2>&1 "%SYSTEMROOT%\system32\cacls.exe" "%SYSTEMROOT%\system32\config\system"
+    >nul 2>&1 "%SYSTEMROOT%\system32\cacls.exe" "%SYSTEMROOT%\system32\config\system"
 )
 
 REM -- If error flag set, we do not have admin.
@@ -500,7 +507,7 @@ if '%errorlevel%' NEQ '0' (
 REM -- Start Ubuntu in a new Terminal window, change working directory to /home/proxmark3 and run Proxmark3 Client. Adjust your path accordingly.
 start "" wt wsl.exe -d Ubuntu --cd ~/proxmark3 ./pm3
 
-REM -- A trick to make this script sleep for 2 seconds, waiting for the Ubuntu session to initialize.
+REM -- A trick to make this script sleep for 2 seconds, waiting for the Ubuntu session to fully initialize.
 ping 127.0.0.1 -n 3 > nul
 
 REM -- Replace the following hardware IDs with your actual Proxmark3 ID. You can find it by using "usbipd list"
@@ -509,6 +516,8 @@ usbipd attach --auto-attach --hardware-id 9ac4:4b8f --wsl
 
 wsl -u root "service udev restart"
 wsl -u root "udevadm trigger --action=change"
+
+pause & exit
 ```
 
 ## Done!
