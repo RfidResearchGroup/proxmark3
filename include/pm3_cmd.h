@@ -630,6 +630,7 @@ typedef struct {
 #define CMD_HF_ICLASS_CHKKEYS                                             0x039A
 #define CMD_HF_ICLASS_RESTORE                                             0x039B
 #define CMD_HF_ICLASS_CREDIT_EPURSE                                       0x039C
+#define CMD_HF_ICLASS_RECOVER                                             0x039D
 
 
 // For ISO1092 / FeliCa

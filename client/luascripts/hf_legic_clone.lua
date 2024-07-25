@@ -167,12 +167,11 @@ local function help()
     print(ansicolors.cyan..'Example usage'..ansicolors.reset)
     print(example)
 end
--- read LEGIC data
-local function readlegicdata(offset, len, iv)
+-- read LEGIC info
+local function readlegicinfo()
     -- Read data
-    local d0 = ('%04X%04X%02X'):format(offset, len, iv)
-    local c = Command:newNG{cmd = cmds.CMD_HF_LEGIC_READER, data = d0}
-    local result, err = c:sendNG()
+    local c = Command:newNG{cmd = cmds.CMD_HF_LEGIC_INFO, data = nil}
+    local result, err = c:sendNG(false, 2000)
     if not result then return oops(err) end
     -- result is a packed data structure, data starts at offset 33
     return result
@@ -404,15 +403,15 @@ local function writeToTag(plainBytes)
         return
     end
 
-    readbytes = readlegicdata(0, 4, 0x55)
+    readbytes = readlegicinfo()
     -- gather MCD & MSN from new Tag - this must be enterd manually
     print("\nthese are the MCD MSN0 MSN1 MSN2 from the Tag that has being read:")
 
-    -- readbytes is a usbcommandOLD package,  hence 32 bytes offset until data.
-    plainBytes[1] = ('%02x'):format(readbytes:byte(33))
-    plainBytes[2] = ('%02x'):format(readbytes:byte(34))
-    plainBytes[3] = ('%02x'):format(readbytes:byte(35))
-    plainBytes[4] = ('%02x'):format(readbytes:byte(36))
+    -- readbytes is a table with uid data as hex string in Data key
+    plainBytes[1] = readbytes.Data:sub(1,2)
+    plainBytes[2] = readbytes.Data:sub(3,4)
+    plainBytes[3] = readbytes.Data:sub(5,6)
+    plainBytes[4] = readbytes.Data:sub(7,8)
 
     MCD  = plainBytes[1]
     MSN0 = plainBytes[2]

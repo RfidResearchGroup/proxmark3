@@ -105,6 +105,11 @@ typedef struct {
     iclass_restore_item_t blocks[];
 } PACKED iclass_restore_req_t;
 
+typedef struct {
+    iclass_auth_req_t req;
+    iclass_auth_req_t req2;
+} PACKED iclass_recover_req_t;
+
 typedef struct iclass_premac {
     uint8_t mac[4];
 } PACKED iclass_premac_t;

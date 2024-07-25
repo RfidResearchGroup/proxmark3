@@ -130,3 +130,76 @@ Valid Key found: [ffffffffffff]
 
 Time in mf_nonce_brute (Phase 1): 1763 ticks 2.0 seconds
 ```
+
+[2024-07-11]
+There is an odd case where we find multiple valid MIFARE Classic protocol commands with a valid ISO14443-A CRC when decrypting four bytes and are bruteforcing the last upper 16 bit of keyspace in phase 3. 
+
+The command has been updated to give a more informative text in order to help the user understanding and what to do next.
+
+```
+./mf_nonce_brute fcf77b54 1b456bdd 1110 f215b6 f9eb95e9 0011 bf55d0b1 0000 AAD4126B
+```
+
+
+When running you get the following full output
+
+```
+./mf_nonce_brute$ ./mf_nonce_brute fcf77b54 1b456bdd 1110 f215b6 f9eb95e9 0011 bf55d0b1 0000 AAD4126B
+
+Mifare classic nested auth key recovery
+
+----------- information ------------------------
+uid.................. fcf77b54
+nt encrypted......... 1b456bdd
+nt parity err........ 1110
+nr encrypted......... 00f215b6
+ar encrypted......... f9eb95e9
+ar parity err........ 0011
+at encrypted......... bf55d0b1
+at parity err........ 0000
+next encrypted cmd... AAD4126B
+
+Bruteforce using 8 threads
+
+----------- Phase 1 pre-processing ------------------------
+Testing default keys using NESTED authentication...
+
+----------- Phase 2 examine -------------------------------
+Looking for the last bytes of the encrypted tagnonce
+
+Target old MFC...
+CMD enc( aad4126b )
+    dec( 302424cf )    <-- valid cmd
+
+Key candidate [ ....37afcc2b ]
+Key candidate [ a70d37afcc2b ]
+
+execution time 0.47 sec
+
+----------- Phase 3 validating ----------------------------
+uid.................. fcf77b54
+partial key.......... 37afcc2b
+possible key......... a70d37afcc2b
+nt enc............... 1b456bdd
+nr enc............... 00f215b6
+next encrypted cmd... AAD4126B
+
+Looking for the upper 16 bits of the key
+
+enc:  AAD4126B
+dec:  610BFEDC
+
+Valid Key found [ 7c2337afcc2b ]
+
+
+enc:  AAD4126B
+dec:  302424CF
+
+Valid Key found [ a70d37afcc2b ] - matches candidate
+
+
+Odd case but we found 2 possible keys
+You need to test all of them manually, start with the one matching the candidate
+
+```
+

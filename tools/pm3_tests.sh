@@ -256,6 +256,7 @@ while true; do
       if ! CheckFileExist "MFP dictionary exists"          "$DICPATH/mfp_default_keys.dic"; then break; fi
       if ! CheckFileExist "MFULC dictionary exists"        "$DICPATH/mfulc_default_keys.dic"; then break; fi
       if ! CheckFileExist "T55XX dictionary exists"        "$DICPATH/t55xx_default_pwds.dic"; then break; fi
+      if ! CheckFileExist "HITAG2 dictionary exists"        "$DICPATH/ht2_default.dic"; then break; fi
 
       echo -e "\n${C_BLUE}Testing tools:${C_NC}"
       if ! CheckExecute "xorcheck test"                    "tools/xorcheck.py 04 00 80 64 ba" "final LRC XOR byte value: 5A"; then break; fi

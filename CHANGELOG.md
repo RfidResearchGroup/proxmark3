@@ -4,6 +4,28 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Changed standalone mode HF_MATTYRUN - support more card sizes, user dictionaries, improved emulation (@michaelroland)
+- Changed `hf iclass dump --ns` - now supports the nosave flag (@iceman1001)
+- Fixed write check in hitag2crack2 buildtables (@mwalker33)
+- Fixed breaking of client when trying to load a non-supported .picopass file (@iceman100)  Thanks to Jump for suggested fixes!
+- Changed `mf_nonce_brute` tool to handle the odd case of multiple key candidates (@iceman1001)
+- Fixed a bad memory erase (@iceman1001)
+- Fixed BT serial comms (@iceman1001)
+- Changed `intertic.py` - updated and code clean up (@gentilkiwi)
+- Added `pm3_tears_for_fears.py` - a ISO14443b tear off script by Pierre Granier
+- Added new t55xx password (002BCFCF) sniffed from cheap cloner (@davidbeauchamp)
+- Fixed 'hf 14b sim' - now works (@michi-jung)
+- Added VB6 Rng for iclass elite keys `hf iclass lookup` and `hf iclass chk` functions by porting @bettse work in the Flipper Zero Picopass App (@antiklesys)
+- Added MFC Key for swimming pool cards in Reykjavík Iceland (@dandri)
+- Added key for Orkan keyfobs (@dandri)
+- Added key for Atlantsolía keyfobs (@dandri)
+- Added `hf iclass legbrute` this function allows to bruteforce 40/64 k1 bits of an iclass card to recover the raw key used(@antiklesys).
+- Added `hf iclass legrec` this function allows to recover 24/64 k1 bits of an iclass card (@antiklesys).
+## [Aurora.4.18589][2024-05-28]
+- Fixed the pm3 regressiontests for Hitag2Crack (@iceman1001)
+- Changed `mem spiffs tree` - adapted to bigbuff and show if empty (@iceman1001)
+- Changed `lf hitag info` - now tries to identify different key fob emulators (@iceman1001)
+- Added `lf hitag reader` - act as a Hitag2 reader (@iceman1001)
+- Fixed `lf hitag crack2` - now works. (@iceman1001)
 - Fixed wrong use of free() in desfire crypto on arm src,  thanks @jlitewski! (@iceman1001)
 - Added `lf em 4x70 calc` - calculate `frn`/`grn` for a given `key` + `rnd`
 - Fixed `hf 15 dump` memory leaks (@jlitewski)

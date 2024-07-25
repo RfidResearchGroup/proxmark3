@@ -560,9 +560,9 @@ static void *brute_thread(void *arguments) {
                 pthread_mutex_unlock(&print_lock);
                 free(revstate);
                 continue;
-            } else {
-                printf("<-- " _GREEN_("valid cmd") "\n");
             }
+
+            printf("<-- " _GREEN_("valid cmd") "\n");
         }
 
         lfsr_rollback_word(revstate, 0, 0);
@@ -591,20 +591,16 @@ static void *brute_thread(void *arguments) {
     return NULL;
 }
 
+// Bruteforce the upper 16 bits of the key
 static void *brute_key_thread(void *arguments) {
 
     struct thread_key_args *args = (struct thread_key_args *) arguments;
-    uint64_t key;
     uint8_t local_enc[args->enc_len];
     memcpy(local_enc, args->enc, args->enc_len);
 
     for (uint64_t count = args->idx; count <= 0xFFFF; count += thread_count) {
 
-        if (__atomic_load_n(&global_found, __ATOMIC_ACQUIRE) == 1) {
-            break;
-        }
-
-        key = args->part_key | (count << 32);
+        uint64_t key = args->part_key | (count << 32);
 
         // Init cipher with key
         struct Crypto1State *pcs = crypto1_create(key);
@@ -628,15 +624,20 @@ static void *brute_key_thread(void *arguments) {
             continue;
         }
 
-        __sync_fetch_and_add(&global_found, 1);
+        __sync_fetch_and_add(&global_found_candidate, 1);
 
         // lock this section to avoid interlacing prints from different threats
         pthread_mutex_lock(&print_lock);
         printf("\nenc:  %s\n", sprint_hex_inrow_ex(local_enc, args->enc_len, 0));
         printf("dec:  %s\n", sprint_hex_inrow_ex(dec, args->enc_len, 0));
-        printf("\nValid Key found [ " _GREEN_("%012" PRIx64) " ]\n\n", key);
+
+        if (key == global_candidate_key) {
+            printf("\nValid Key found [ " _GREEN_("%012" PRIx64) " ] - " _YELLOW_("matches candidate")  "\n\n", key);
+        } else {
+            printf("\nValid Key found [ " _GREEN_("%012" PRIx64) " ]\n\n", key);
+        }
+
         pthread_mutex_unlock(&print_lock);
-        break;
     }
     free(args);
     return NULL;
@@ -792,17 +793,17 @@ int main(int argc, const char *argv[]) {
     }
 
     if (enc_len < 4) {
-        printf("Too few next cmd bytes, skipping phase 2\n");
+        printf("Too few next cmd bytes, skipping phase 3\n\n");
         goto out;
     }
 
     // reset thread signals
-    global_found = 0;
     global_found_candidate = 0;
 
     printf("\n----------- " _CYAN_("Phase 3 validating") " ----------------------------\n");
     printf("uid.................. %08x\n", uid);
     printf("partial key.......... %08x\n", (uint32_t)(global_candidate_key & 0xFFFFFFFF));
+    printf("possible key......... %012" PRIx64 "\n", global_candidate_key);
     printf("nt enc............... %08x\n", nt_enc);
     printf("nr enc............... %08x\n", nr_enc);
     printf("next encrypted cmd... %s\n", sprint_hex_inrow_ex(enc, enc_len, 0));
@@ -828,8 +829,15 @@ int main(int argc, const char *argv[]) {
         pthread_join(threads[i], NULL);
     }
 
-    if (!global_found && !global_found_candidate) {
-        printf("\nfailed to find a key\n\n");
+
+    if (global_found_candidate > 1) {
+        printf("Key recovery ( " _GREEN_("ok") " )\n");
+        printf("Found " _GREEN_("%d") " possible keys\n", global_found_candidate);
+        printf(_YELLOW_("You need to test them manually, start with the one matching the candidate\n\n"));
+    } else if (global_found_candidate == 1) {
+        printf("Key recovery ( " _GREEN_("ok") " )\n\n");
+    } else {
+        printf("Key recovery ( " _RED_("fail") " )\n\n");
     }
 
 out:

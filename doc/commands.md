@@ -402,6 +402,8 @@ Check column "offline" for their availability.
 |`hf iclass chk          `|N       |`Check keys`
 |`hf iclass loclass      `|Y       |`Use loclass to perform bruteforce reader attack`
 |`hf iclass lookup       `|Y       |`Uses authentication trace to check for key in dictionary file`
+|`hf iclass legrec       `|N       |`Attempts to recover the standard key of a legacy card`
+|`hf iclass legbrute     `|Y       |`Bruteforces 40 bits of a partial raw key`
 |`hf iclass sim          `|N       |`Simulate iCLASS tag`
 |`hf iclass eload        `|N       |`Upload file into emulator memory`
 |`hf iclass esave        `|N       |`Save emulator memory to file`
@@ -979,6 +981,7 @@ Check column "offline" for their availability.
 |`lf em 4x70 auth        `|N       |`Authenticate EM4x70`
 |`lf em 4x70 setpin      `|N       |`Write PIN`
 |`lf em 4x70 setkey      `|N       |`Write key`
+|`lf em 4x70 calc        `|Y       |`Calculate EM4x70 challenge and response`
 |`lf em 4x70 recover     `|Y       |`Recover remaining key from partial key`
 |`lf em 4x70 autorecover `|N       |`Recover entire key from writable tag`
 
@@ -1046,6 +1049,7 @@ Check column "offline" for their availability.
 |`lf hitag help          `|Y       |`This help`
 |`lf hitag list          `|Y       |`List Hitag trace history`
 |`lf hitag info          `|N       |`Hitag 2 tag information`
+|`lf hitag reader        `|N       |`Act line an Hitag 2 reader`
 |`lf hitag test          `|Y       |`Perform self tests`
 |`lf hitag dump          `|N       |`Dump Hitag 2 tag`
 |`lf hitag read          `|N       |`Read Hitag memory`

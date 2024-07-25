@@ -189,9 +189,9 @@
             "options": [
                 "-h, --help This help",
                 "-d <hex> ASN1 encoded byte array",
-                "-t, --test perform self test"
+                "--test perform self tests"
             ],
-            "usage": "data asn1 [-ht] [-d <hex>]"
+            "usage": "data asn1 [-h] [-d <hex>] [--test]"
         },
         "data atr": {
             "command": "data atr",
@@ -3163,7 +3163,8 @@
             "description": "Checkkeys loads a dictionary text file with 8byte hex keys to test authenticating against a iClass tag",
             "notes": [
                 "hf iclass chk -f iclass_default_keys.dic",
-                "hf iclass chk -f iclass_elite_keys.dic --elite"
+                "hf iclass chk -f iclass_elite_keys.dic --elite",
+                "hf iclass chk --vb6kdf"
             ],
             "offline": false,
             "options": [
@@ -3172,9 +3173,10 @@
                 "--credit key is assumed to be the credit key",
                 "--elite elite computations applied to key",
                 "--raw no computations applied to key (raw)",
-                "--shallow use shallow (ASK) reader modulation instead of OOK"
+                "--shallow use shallow (ASK) reader modulation instead of OOK",
+                "--vb6kdf use the VB6 elite KDF instead of a file"
             ],
-            "usage": "hf iclass chk [-h] -f <fn> [--credit] [--elite] [--raw] [--shallow]"
+            "usage": "hf iclass chk [-h] [-f <fn>] [--credit] [--elite] [--raw] [--shallow] [--vb6kdf]"
         },
         "hf iclass configcard": {
             "command": "hf iclass configcard",
@@ -3370,7 +3372,7 @@
         },
         "hf iclass help": {
             "command": "hf iclass help",
-            "description": "help This help list List iclass history view Display content from tag dump file ----------- --------------------- Recovery -------------------- loclass Use loclass to perform bruteforce reader attack lookup Uses authentication trace to check for key in dictionary file ----------- ---------------------- Utils ---------------------- calcnewkey Calc diversified keys (blocks 3 & 4) to write new keys encode Encode binary wiegand to block 7 encrypt Encrypt given block data decrypt Decrypt given block data or tag dump file managekeys Manage keys to use with iclass commands permutekey Permute function from 'heart of darkness' paper --------------------------------------------------------------------------------------- hf iclass list available offline: yes Alias of `trace list -t iclass -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List iclass history view Display content from tag dump file ----------- --------------------- Recovery -------------------- loclass Use loclass to perform bruteforce reader attack lookup Uses authentication trace to check for key in dictionary file legbrute Bruteforces 40 bits of a partial raw key ----------- ---------------------- Utils ---------------------- calcnewkey Calc diversified keys (blocks 3 & 4) to write new keys encode Encode binary wiegand to block 7 encrypt Encrypt given block data decrypt Decrypt given block data or tag dump file managekeys Manage keys to use with iclass commands permutekey Permute function from 'heart of darkness' paper --------------------------------------------------------------------------------------- hf iclass list available offline: yes Alias of `trace list -t iclass -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf iclass list --frame -> show frame delay times",
                 "hf iclass list -1 -> use trace buffer"
@@ -3402,6 +3404,35 @@
             ],
             "usage": "hf iclass info [-h] [--shallow]"
         },
+        "hf iclass legbrute": {
+            "command": "hf iclass legbrute",
+            "description": "This command take sniffed trace data and partial raw key and bruteforces the remaining 40 bits of the raw key.",
+            "notes": [
+                "hf iclass legbrute --csn 8D7BD711FEFF12E0 --epurse feffffffffffffff --macs 00000000BD478F76 --pk B4F12AADC5301225"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--csn <hex> Specify CSN as 8 hex bytes",
+                "--epurse <hex> Specify ePurse as 8 hex bytes",
+                "--macs <hex> MACs",
+                "--pk <hex> Partial Key"
+            ],
+            "usage": "hf iclass legbrute [-h] --csn <hex> --epurse <hex> --macs <hex> --pk <hex>"
+        },
+        "hf iclass legrec": {
+            "command": "hf iclass legrec",
+            "description": "Attempts to recover the diversified key of a specific iClass card. This may take a long time. The Card must remain be on the PM3 antenna during the whole process! This process may brick the card!",
+            "notes": [
+                "hf iclass legrec --macs 0000000089cb984b"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--macs <hex> MACs"
+            ],
+            "usage": "hf iclass legrec [-h] --macs <hex>"
+        },
         "hf iclass loclass": {
             "command": "hf iclass loclass",
             "description": "Execute the offline part of loclass attack An iclass dumpfile is assumed to consist of an arbitrary number of malicious CSNs, and their protocol responses The binary format of the file is expected to be as follows: <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC> <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC> <8 byte CSN><8 byte CC><4 byte NR><4 byte MAC> ... totalling N*24 bytes",
@@ -3423,7 +3454,8 @@
             "description": "This command take sniffed trace data and try to recovery a iCLASS Standard or iCLASS Elite key.",
             "notes": [
                 "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic",
-                "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic --elite"
+                "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b -f iclass_default_keys.dic --elite",
+                "hf iclass lookup --csn 9655a400f8ff12e0 --epurse f0ffffffffffffff --macs 0000000089cb984b --vb6rng"
             ],
             "offline": true,
             "options": [
@@ -3433,9 +3465,10 @@
                 "--epurse <hex> Specify ePurse as 8 hex bytes",
                 "--macs <hex> MACs",
                 "--elite Elite computations applied to key",
-                "--raw no computations applied to key"
+                "--raw no computations applied to key",
+                "--vb6rng use the VB6 rng for elite keys instead of a dictionary file"
             ],
-            "usage": "hf iclass lookup [-h] -f <fn> --csn <hex> --epurse <hex> --macs <hex> [--elite] [--raw]"
+            "usage": "hf iclass lookup [-h] [-f <fn>] --csn <hex> --epurse <hex> --macs <hex> [--elite] [--raw] [--vb6rng]"
         },
         "hf iclass managekeys": {
             "command": "hf iclass managekeys",
@@ -9016,11 +9049,29 @@
             ],
             "usage": "lf em 4x70 autorecover [-h] [--par] --rnd <hex> --frn <hex> --grn <hex>"
         },
+        "lf em 4x70 calc": {
+            "command": "lf em 4x70 calc",
+            "description": "Calculates both the reader and tag challenge for a user-provided key and rnd.",
+            "notes": [
+                "lf em 4x70 calc --key F32AA98CF5BE4ADFA6D3480B --rnd 45F54ADA252AAC (pm3 test key)",
+                "lf em 4x70 calc --key A090A0A02080000000000000 --rnd 3FFE1FB6CC513F (research paper key)",
+                "lf em 4x70 calc --key 022A028C02BE000102030405 --rnd 7D5167003571F8 (autorecovery test key)"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--key <hex> Key 96-bit as 12 hex bytes",
+                "--rnd <hex> 56-bit random value sent to tag for authentication"
+            ],
+            "usage": "lf em 4x70 calc [-h] --key <hex> --rnd <hex>"
+        },
         "lf em 4x70 help": {
             "command": "lf em 4x70 help",
-            "description": "help This help recover Recover remaining key from partial key --------------------------------------------------------------------------------------- lf em 4x70 brute available offline: no Optimized partial key-update attack of 16-bit key block 7, 8 or 9 of an EM4x70 This attack does NOT write anything to the tag. Before starting this attack, 0000 must be written to the 16-bit key block: 'lf em 4x70 write -b 9 -d 0000'. After success, the 16-bit key block have to be restored with the key found: 'lf em 4x70 write -b 9 -d c0de'",
+            "description": "help This help calc Calculate EM4x70 challenge and response recover Recover remaining key from partial key --------------------------------------------------------------------------------------- lf em 4x70 brute available offline: no Optimized partial key-update attack of 16-bit key block 7, 8 or 9 of an EM4x70 This attack does NOT write anything to the tag. Before starting this attack, 0000 must be written to the 16-bit key block: 'lf em 4x70 write -b 9 -d 0000'. After success, the 16-bit key block have to be restored with the key found: 'lf em 4x70 write -b 9 -d c0de'",
             "notes": [
-                "lf em 4x70 brute -b 9 --rnd 45F54ADA252AAC --frn 4866BB70 -> bruteforcing key bits k95...k80"
+                "lf em 4x70 brute -b 9 --rnd 45F54ADA252AAC --frn 4866BB70 -> bruteforcing key bits k95...k80 (pm3 test key)",
+                "lf em 4x70 brute -b 8 --rnd 3FFE1FB6CC513F --frn F355F1A0 -> bruteforcing key bits k79...k64 (research paper key)",
+                "lf em 4x70 brute -b 7 --rnd 7D5167003571F8 --frn 982DBCC0 -> bruteforcing key bits k63...k48 (autorecovery test key)"
             ],
             "offline": true,
             "options": [
@@ -9052,7 +9103,8 @@
             "description": "After obtaining key bits 95..48 (such as via 'lf em 4x70 brute'), this command will recover key bits 47..00. By default, this process does NOT require a tag to be present. By default, the potential keys are shown (typically 1-6) along with a corresponding 'lf em 4x70 auth' command that will authenticate, if that potential key is correct. The user can copy/paste these commands when the tag is present to manually check which of the potential keys is correct.",
             "notes": [
                 "lf em 4x70 recover --key F32AA98CF5BE --rnd 45F54ADA252AAC --frn 4866BB70 --grn 9BD180 (pm3 test key)",
-                "lf em 4x70 recover --key A090A0A02080 --rnd 3FFE1FB6CC513F --frn F355F1A0 --grn 609D60 (research paper key)"
+                "lf em 4x70 recover --key A090A0A02080 --rnd 3FFE1FB6CC513F --frn F355F1A0 --grn 609D60 (research paper key)",
+                "lf em 4x70 recover --key 022A028C02BE --rnd 7D5167003571F8 --frn 982DBCC0 --grn 36C0E0 (autorecovery test key)"
             ],
             "offline": true,
             "options": [
@@ -9518,7 +9570,7 @@
                 "-h, --help This help",
                 "--nrar <hex> specify nonce / answer as 8 hex bytes"
             ],
-            "usage": "lf hitag lookup [-h] [--nrar <hex>]"
+            "usage": "lf hitag crack2 [-h] [--nrar <hex>]"
         },
         "lf hitag dump": {
             "command": "lf hitag dump",
@@ -9652,6 +9704,20 @@
                 "-k, --key <hex> key, 4 or 6 hex bytes"
             ],
             "usage": "lf hitag read [-hs2] [--pwd] [--nrar <hex>] [--crypto] [-k <hex>]"
+        },
+        "lf hitag reader": {
+            "command": "lf hitag reader",
+            "description": "Act as a Hitag2 reader. Look for Hitag2 tags until Enter or the pm3 button is pressed",
+            "notes": [
+                "lf hitag reader",
+                "lf hitag reader -@ -> Continuous mode"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-@ continuous reader mode"
+            ],
+            "usage": "lf hitag reader [-h@]"
         },
         "lf hitag sim": {
             "command": "lf hitag sim",
@@ -12699,8 +12765,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 735,
+        "commands_extracted": 739,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-05-14T08:02:41"
+        "extracted_on": "2024-07-21T14:16:40"
     }
 }

@@ -32,47 +32,47 @@ static bool command_parity = true;
 
 
 #if 1 // Calculation of ticks for timing functions
-    // Conversion from Ticks to RF periods
-    // 1 us = 1.5 ticks
-    // 1RF Period = 8us = 12 Ticks
-    #define TICKS_PER_FC                        12
+// Conversion from Ticks to RF periods
+// 1 us = 1.5 ticks
+// 1RF Period = 8us = 12 Ticks
+#define TICKS_PER_FC                        12
 
-    // Chip timing from datasheet
-    // Converted into Ticks for timing functions
-    #define EM4X70_T_TAG_QUARTER_PERIOD          (8 * TICKS_PER_FC)
-    #define EM4X70_T_TAG_HALF_PERIOD            (16 * TICKS_PER_FC)
-    #define EM4X70_T_TAG_THREE_QUARTER_PERIOD   (24 * TICKS_PER_FC)
-    #define EM4X70_T_TAG_FULL_PERIOD            (32 * TICKS_PER_FC) // 1 Bit Period
-    #define EM4X70_T_TAG_TWA                   (128 * TICKS_PER_FC) // Write Access Time
-    #define EM4X70_T_TAG_DIV                   (224 * TICKS_PER_FC) // Divergency Time
-    #define EM4X70_T_TAG_AUTH                 (4224 * TICKS_PER_FC) // Authentication Time
-    #define EM4X70_T_TAG_WEE                  (3072 * TICKS_PER_FC) // EEPROM write Time
-    #define EM4X70_T_TAG_TWALB                 (672 * TICKS_PER_FC) // Write Access Time of Lock Bits
-    #define EM4X70_T_TAG_BITMOD                  (4 * TICKS_PER_FC) // Initial time to stop modulation when sending 0
-    #define EM4X70_T_TAG_TOLERANCE               (8 * TICKS_PER_FC) // Tolerance in RF periods for receive/LIW
+// Chip timing from datasheet
+// Converted into Ticks for timing functions
+#define EM4X70_T_TAG_QUARTER_PERIOD          (8 * TICKS_PER_FC)
+#define EM4X70_T_TAG_HALF_PERIOD            (16 * TICKS_PER_FC)
+#define EM4X70_T_TAG_THREE_QUARTER_PERIOD   (24 * TICKS_PER_FC)
+#define EM4X70_T_TAG_FULL_PERIOD            (32 * TICKS_PER_FC) // 1 Bit Period
+#define EM4X70_T_TAG_TWA                   (128 * TICKS_PER_FC) // Write Access Time
+#define EM4X70_T_TAG_DIV                   (224 * TICKS_PER_FC) // Divergency Time
+#define EM4X70_T_TAG_AUTH                 (4224 * TICKS_PER_FC) // Authentication Time
+#define EM4X70_T_TAG_WEE                  (3072 * TICKS_PER_FC) // EEPROM write Time
+#define EM4X70_T_TAG_TWALB                 (672 * TICKS_PER_FC) // Write Access Time of Lock Bits
+#define EM4X70_T_TAG_BITMOD                  (4 * TICKS_PER_FC) // Initial time to stop modulation when sending 0
+#define EM4X70_T_TAG_TOLERANCE               (8 * TICKS_PER_FC) // Tolerance in RF periods for receive/LIW
 
-    #define EM4X70_T_TAG_TIMEOUT                 (4 * EM4X70_T_TAG_FULL_PERIOD) // Timeout if we ever get a pulse longer than this
-    #define EM4X70_T_WAITING_FOR_LIW             50 // Pulses to wait for listen window
-    #define EM4X70_T_READ_HEADER_LEN             16 // Read header length (16 bit periods)
+#define EM4X70_T_TAG_TIMEOUT                 (4 * EM4X70_T_TAG_FULL_PERIOD) // Timeout if we ever get a pulse longer than this
+#define EM4X70_T_WAITING_FOR_LIW             50 // Pulses to wait for listen window
+#define EM4X70_T_READ_HEADER_LEN             16 // Read header length (16 bit periods)
 
-    #define EM4X70_COMMAND_RETRIES               5 // Attempts to send/read command
-    #define EM4X70_MAX_RECEIVE_LENGTH           96 // Maximum bits to expect from any command
+#define EM4X70_COMMAND_RETRIES               5 // Attempts to send/read command
+#define EM4X70_MAX_RECEIVE_LENGTH           96 // Maximum bits to expect from any command
 #endif // Calculation of ticks for timing functions
 
 #if 1 // EM4x70 Command IDs
-    /**
-     * These IDs are from the EM4170 datasheet.
-     * Some versions of the chip require a
-     * (even) parity bit, others do not.
-     * The command is thus stored only in the
-     * three least significant bits (mask 0x07).
-     */
-    #define EM4X70_COMMAND_ID                   0x01
-    #define EM4X70_COMMAND_UM1                  0x02
-    #define EM4X70_COMMAND_AUTH                 0x03
-    #define EM4X70_COMMAND_PIN                  0x04
-    #define EM4X70_COMMAND_WRITE                0x05
-    #define EM4X70_COMMAND_UM2                  0x07
+/**
+ * These IDs are from the EM4170 datasheet.
+ * Some versions of the chip require a
+ * (even) parity bit, others do not.
+ * The command is thus stored only in the
+ * three least significant bits (mask 0x07).
+ */
+#define EM4X70_COMMAND_ID                   0x01
+#define EM4X70_COMMAND_UM1                  0x02
+#define EM4X70_COMMAND_AUTH                 0x03
+#define EM4X70_COMMAND_PIN                  0x04
+#define EM4X70_COMMAND_WRITE                0x05
+#define EM4X70_COMMAND_UM2                  0x07
 #endif // EM4x70 Command IDs
 
 // Constants used to determine high/low state of signal
@@ -309,7 +309,7 @@ static bool check_ack(void) {
     // ACK  64 + 64
     // NAK 64 + 48
     if (check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD) &&
-        check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
+            check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
         // ACK
         return true;
     }
@@ -549,8 +549,8 @@ static bool find_listen_window(bool command) {
     return false;
 }
 
-// *bits == array of bytes, each byte storing a single bit.    
-// *out  == array of bytes, storing converted bits --> bytes.  
+// *bits == array of bytes, each byte storing a single bit.
+// *out  == array of bytes, storing converted bits --> bytes.
 //
 // [in,  bcount(count_of_bits)  ] const uint8_t *bits
 // [out, bcount(count_of_bits/8)] uint8_t *out

@@ -101,9 +101,10 @@ void Dbhexdump(int len, const uint8_t *d, bool bAsci) {
         d += 16;
     }
 #endif
-}void print_result(const char *name, const uint8_t *d, size_t
+}
+void print_result(const char *name, const uint8_t *d, size_t
 
- n) {
+                  n) {
 
     const uint8_t *p = d;
     uint16_t tmp = n & 0xFFF0;

@@ -1257,7 +1257,7 @@ static int em4x50_sim_read_bit(void) {
 
     // wait 16 cycles to make sure there is no field when reading a "0" bit
     uint32_t waitval = GetTicks();
-    while(GetTicks() - waitval < EM4X50_T_TAG_QUARTER_PERIOD * CYCLES2TICKS);
+    while (GetTicks() - waitval < EM4X50_T_TAG_QUARTER_PERIOD * CYCLES2TICKS);
 
     while (cycles < EM4X50_T_TAG_THREE_QUARTER_PERIOD) {
 

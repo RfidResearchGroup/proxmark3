@@ -705,21 +705,28 @@ int main(int argc, char **argv) {
     // show buidlog in case of error
     // todo: only for device models
     unsigned int build_errors = 0;
-    unsigned int build_logs = 0;
+    // unsigned int build_logs = 0;
 
     cl_command_queue_properties queue_properties = 0;
 
-    if (opencl_profiling) queue_properties = CL_QUEUE_PROFILING_ENABLE;
+    if (opencl_profiling) {
+        queue_properties = CL_QUEUE_PROFILING_ENABLE;
+    }
 
     // setup, phase 1
 
     z = 0; // dolphin
 
     for (w = 0; w < ocl_platform_cnt; w++) {
-        if (!cd_ctx[w].selected) continue;
+        if (!cd_ctx[w].selected) {
+            continue;
+        }
 
         for (q = 0; q < cd_ctx[w].device_cnt; q++) {
-            if (!cd_ctx[w].device[q].selected) continue;
+
+            if (!cd_ctx[w].device[q].selected) {
+                continue;
+            }
 
             ctx.device_ids[z] = cd_ctx[w].device[q].device_id;
 
@@ -860,7 +867,7 @@ int main(int argc, char **argv) {
 
                 free(buffer);
 
-                build_logs++;
+                // build_logs++;
 #if DEBUGME == 0
                 continue; // todo: evaluate this, one or more can be broken, so continue
 #endif

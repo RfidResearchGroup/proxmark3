@@ -395,3 +395,23 @@ uint32_t flash_size_from_cidr(uint32_t cidr) {
 uint32_t get_flash_size(void) {
     return flash_size_from_cidr(*AT91C_DBGU_CIDR);
 }
+
+// Combined function to convert an unsigned int to an array of hex values corresponding to the last three bits of k1
+void convertToHexArray(uint8_t num, uint8_t *partialkey) {
+    char binaryStr[25];  // 24 bits for binary representation + 1 for null terminator
+    binaryStr[24] = '\0';  // Null-terminate the string
+
+    // Convert the number to binary string
+    for (int i = 23; i >= 0; i--) {
+        binaryStr[i] = (num % 2) ? '1' : '0';
+        num /= 2;
+    }
+
+    // Split the binary string into groups of 3 and convert to hex
+    for (int i = 0; i < 8 ; i++) {
+        char group[4];
+        strncpy(group, binaryStr + i * 3, 3);
+        group[3] = '\0';  // Null-terminate the group string
+        partialkey[i] = (uint8_t)strtoul(group, NULL, 2);
+    }
+}
