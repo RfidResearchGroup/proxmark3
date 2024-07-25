@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed standalone mode HF_MATTYRUN - support more card sizes, user dictionaries, improved emulation (@michaelroland)
 - Changed `hf iclass dump --ns` - now supports the nosave flag (@iceman1001)
 - Fixed write check in hitag2crack2 buildtables (@mwalker33)
 - Fixed breaking of client when trying to load a non-supported .picopass file (@iceman100)  Thanks to Jump for suggested fixes!
