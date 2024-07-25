@@ -456,6 +456,69 @@ make -j
 ./pm3-flash-all
 ```
 
+## Script to automate environment setup
+
+Use this script if you don't want to enter the above commands every single time you reboot. 
+
+You must have Windows Terminal installed to use this script.
+
+1. Save the following script as a batch file (**pm3_quick_startup_wsl2.bat**).
+2. Use `usbipd list` to get your Proxmark3 hardware ID and replace in the script, as using BUSID is not very reliable since it might change between reboots.
+3. Make sure your Proxmark3 is plugged in, and it is detected in the Device Manager as a COM port.
+4. Run **pm3_quick_startup_wsl2.bat** and accept the UAC prompt. The script auto detects and asks for admin privileges, so you don't have to right-click and select Run As Administrator.
+5. It will open up 2 windows. The first one is Command Prompt where initializing commands will run, and you need to keep this window open. The second one is Windows Terminal, where your pm3 client will run.
+
+```batch
+@echo off
+
+REM -- Minimize the initial command prompt window
+if not "%Minimized%"=="" goto :Minimized
+set Minimized=True
+start /min cmd /C "%~dpnx0"
+goto :EOF
+
+:Minimized
+REM  -- Check for permissions
+IF "%PROCESSOR_ARCHITECTURE%" EQU "amd64" (
+    >nul 2>&1 "%SYSTEMROOT%\SysWOW64\cacls.exe" "%SYSTEMROOT%\SysWOW64\config\system"
+) ELSE (
+    >nul 2>&1 "%SYSTEMROOT%\system32\cacls.exe" "%SYSTEMROOT%\system32\config\system"
+)
+
+REM -- If error flag set, we do not have admin.
+if '%errorlevel%' NEQ '0' (
+    echo Requesting administrative privileges...
+    goto UACPrompt
+) else ( goto gotAdmin )
+
+:UACPrompt
+    echo Set UAC = CreateObject^("Shell.Application"^) > "%temp%\getadmin.vbs"
+    set params= %*
+    echo UAC.ShellExecute "cmd.exe", "/c ""%~s0"" %params:"=""%", "", "runas", 1 >> "%temp%\getadmin.vbs"
+
+    "%temp%\getadmin.vbs"
+    del "%temp%\getadmin.vbs"
+    exit /B
+
+:gotAdmin
+    pushd "%CD%"
+    CD /D "%~dp0"
+
+REM -- Start Ubuntu in a new Terminal window, change working directory to /home/proxmark3 and run Proxmark3 Client. Adjust your path accordingly.
+start "" wt wsl.exe -d Ubuntu --cd ~/proxmark3 ./pm3
+
+REM -- A trick to make this script sleep for 2 seconds, waiting for the Ubuntu session to fully initialize.
+ping 127.0.0.1 -n 3 > nul
+
+REM -- Replace the following hardware IDs with your actual Proxmark3 ID. You can find it by using "usbipd list"
+usbipd bind --hardware-id 9ac4:4b8f
+usbipd attach --auto-attach --hardware-id 9ac4:4b8f --wsl
+
+wsl -u root "service udev restart"
+wsl -u root "udevadm trigger --action=change"
+
+pause & exit
+```
 
 ## Done!
 ^[Top](#top)
