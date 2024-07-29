@@ -17,8 +17,6 @@ class OutputGrabber(object):
             self.origstream = sys.stdout
         self.origstreamfd = self.origstream.fileno()
         self.capturedtext = ""
-        # Create a pipe so the stream can be captured:
-        self.pipe_out, self.pipe_in = os.pipe()
 
     def __enter__(self):
         self.start()
@@ -32,6 +30,8 @@ class OutputGrabber(object):
         Start capturing the stream data.
         """
         self.capturedtext = ""
+        # Create a pipe so the stream can be captured:
+        self.pipe_out, self.pipe_in = os.pipe()
         # Save a copy of the stream:
         self.streamfd = os.dup(self.origstreamfd)
         # Replace the original stream with our write pipe:
