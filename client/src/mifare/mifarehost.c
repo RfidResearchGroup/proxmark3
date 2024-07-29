@@ -221,21 +221,24 @@ int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keyc
 // 0 == ok all keys found
 // 1 ==
 // 2 == Time-out, aborting
-int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy,
-                     uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory, bool verbose) {
+int mfCheckKeys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy,
+                        uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory,
+                        bool verbose, bool quiet, uint16_t singleSectorParams) {
 
     uint64_t t2 = msclock();
 
     // send keychunk
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_MIFARE_CHKKEYS_FAST, (sectorsCnt | (firstChunk << 8) | (lastChunk << 12)), ((use_flashmemory << 8) | strategy), size, keyBlock, 6 * size);
+    SendCommandOLD(CMD_HF_MIFARE_CHKKEYS_FAST, (sectorsCnt | (firstChunk << 8) | (lastChunk << 12) | (singleSectorParams << 16)), ((use_flashmemory << 8) | strategy), size, keyBlock, 6 * size);
     PacketResponseNG resp;
 
     uint32_t timeout = 0;
     while (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
 
-        PrintAndLogEx((timeout) ? NORMAL : INFO, "." NOLF);
-        fflush(stdout);
+        if (! quiet) {
+            PrintAndLogEx((timeout) ? NORMAL : INFO, "." NOLF);
+            fflush(stdout);
+        }
 
         timeout++;
 
@@ -249,12 +252,21 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
     }
     t2 = msclock() - t2;
 
-    if (timeout) {
+    if (timeout && ! quiet) {
         PrintAndLogEx(NORMAL, "");
     }
 
     // time to convert the returned data.
     uint8_t curr_keys = resp.oldarg[0];
+
+    if ((singleSectorParams >> 15) & 1) {
+        if (curr_keys) {
+            uint64_t foo = bytes_to_num(resp.data.asBytes, 6);
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(SUCCESS, _GREEN_("Key %s for block %2i found: %012" PRIx64), (singleSectorParams >> 8) & 1 ? "B":"A", singleSectorParams & 0xFF, foo);
+            return PM3_SUCCESS;
+        }
+    }
 
     if (verbose) {
         PrintAndLogEx(INFO, "Chunk %.1fs | found %u/%u keys (%u)", (float)(t2 / 1000.0), curr_keys, (sectorsCnt << 1), size);
@@ -315,6 +327,11 @@ int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, 
         }
     }
     return PM3_ESOFT;
+}
+
+int mfCheckKeys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy,
+                     uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory, bool verbose) {
+    return mfCheckKeys_fast_ex(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock, e_sector, use_flashmemory, verbose, false, 0);
 }
 
 // Trigger device to use a binary file on flash mem as keylist for mfCheckKeys.

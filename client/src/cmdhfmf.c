@@ -3241,6 +3241,9 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
         arg_lit0(NULL, "dump", "Dump found keys to binary file"),
         arg_lit0(NULL, "mem", "Use dictionary from flashmemory"),
         arg_str0("f", "file", "<fn>", "filename of dictionary"),
+        arg_int0(NULL, "blk", "<dec>", "block number (single block recovery mode)"),
+        arg_lit0("a", NULL, "single block recovery key A"),
+        arg_lit0("b", NULL, "single block recovery key B"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3261,6 +3264,16 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 9), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    int blockn = arg_get_int_def(ctx, 10, -1);
+    uint8_t keytype = MF_KEY_A;
+    if (arg_get_lit(ctx, 11) && arg_get_lit(ctx, 12)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Input key type must be A or B");
+        return PM3_EINVARG;
+    } else if (arg_get_lit(ctx, 12)) {
+        keytype = MF_KEY_B;
+    }
 
     CLIParserFree(ctx);
 
@@ -3309,12 +3322,16 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
     // time
     uint64_t t1 = msclock();
 
+    uint16_t singleSectorParams = 0;
+    if (blockn != -1) {
+        singleSectorParams = (blockn & 0xFF)| keytype << 8 | 1 << 15;
+    }
     if (use_flashmemory) {
         PrintAndLogEx(SUCCESS, "Using dictionary in flash memory");
-        mfCheckKeys_fast(sectorsCnt, true, true, 1, 0, keyBlock, e_sector, use_flashmemory, false);
+        mfCheckKeys_fast_ex(sectorsCnt, true, true, 1, 0, keyBlock, e_sector, use_flashmemory, false, false, singleSectorParams);
     } else {
 
-        // strategys. 1= deep first on sector 0 AB,  2= width first on all sectors
+        // strategies. 1= deep first on sector 0 AB,  2= width first on all sectors
         for (uint8_t strategy = 1; strategy < 3; strategy++) {
             PrintAndLogEx(INFO, "Running strategy %u", strategy);
 
@@ -3322,33 +3339,41 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
             for (i = 0; i < keycnt; i += chunksize) {
 
                 if (kbd_enter_pressed()) {
+                    PrintAndLogEx(NORMAL, "");
                     PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
                     goto out;
                 }
-
+                PrintAndLogEx(INPLACE, "Testing %5i/%5i %02.1f%%", i, keycnt, (float)i * 100 / keycnt);
                 uint32_t size = ((keycnt - i)  > chunksize) ? chunksize : keycnt - i;
 
                 // last chunk?
                 if (size == keycnt - i)
                     lastChunk = true;
 
-                int res = mfCheckKeys_fast(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * MIFARE_KEY_SIZE), e_sector, false, false);
-
+                int res = mfCheckKeys_fast_ex(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * MIFARE_KEY_SIZE), e_sector, false, false, true, singleSectorParams);
                 if (firstChunk)
                     firstChunk = false;
 
                 // all keys,  aborted
-                if (res == PM3_SUCCESS || res == 2)
+                if (res == PM3_SUCCESS || res == 2) {
+                    PrintAndLogEx(NORMAL, "");
                     goto out;
-
+                }
             } // end chunks of keys
+            PrintAndLogEx(INPLACE, "Testing %5i/%5i 100.00%%", keycnt, keycnt);
+            PrintAndLogEx(NORMAL, "");
             firstChunk = true;
             lastChunk = false;
+            if (blockn != -1) break;
         } // end strategy
     }
 out:
     t1 = msclock() - t1;
-    PrintAndLogEx(INFO, "time in checkkeys (fast) " _YELLOW_("%.1fs") "\n", (float)(t1 / 1000.0));
+    PrintAndLogEx(INFO, "Time in checkkeys (fast) " _YELLOW_("%.1fs") "\n", (float)(t1 / 1000.0));
+
+    if (blockn != -1) {
+        goto out2;
+    }
 
     // check..
     uint8_t found_keys = 0;
@@ -3413,7 +3438,7 @@ out:
             free(fptr);
         }
     }
-
+out2:
     free(keyBlock);
     free(e_sector);
     PrintAndLogEx(NORMAL, "");

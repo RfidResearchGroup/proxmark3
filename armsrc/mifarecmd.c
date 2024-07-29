@@ -1557,10 +1557,14 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
     uint8_t sectorcnt = arg0 & 0xFF; // 16;
     uint8_t firstchunk = (arg0 >> 8) & 0xF;
     uint8_t lastchunk = (arg0 >> 12) & 0xF;
+    uint16_t singleSectorParams = (arg0 >> 16) & 0xFFFF;
     uint8_t strategy = arg1 & 0xFF;
     uint8_t use_flashmem = (arg1 >> 8) & 0xFF;
     uint16_t keyCount = arg2 & 0xFF;
     uint8_t status = 0;
+    bool singleSectorMode = (singleSectorParams >> 15) & 1;
+    uint8_t keytype = (singleSectorParams >> 8) & 1;
+    uint8_t blockn = singleSectorParams & 0xFF;
 
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
@@ -1660,6 +1664,37 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
     chk_data.cl = cascade_levels;
     chk_data.pcs = pcs;
     chk_data.block = 0;
+
+    if (singleSectorMode) {
+        chk_data.block = blockn;
+        chk_data.keyType = keytype;
+        for (uint16_t i = 0; i < keyCount; ++i) {
+
+            // Allow button press / usb cmd to interrupt device
+            if (BUTTON_PRESS() || data_available()) {
+                goto OUT;
+            }
+
+            WDT_HIT();
+
+            chk_data.key = bytes_to_num(datain + i * 6, 6);
+            if (chkKey(&chk_data) == 0) {
+                reply_old(CMD_ACK, 1, 0, 0, datain + i * 6, 6);
+                goto out;
+            }
+        }
+        reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
+out:
+        LEDsoff();
+        crypto1_deinit(pcs);
+        set_tracing(false);
+        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+        BigBuf_free();
+        BigBuf_Clear_ext(false);
+        g_dbglevel = oldbg;
+        return;
+    }
+
 
     // keychunk loop - depth first one sector.
     if (strategy == 1 || use_flashmem) {
