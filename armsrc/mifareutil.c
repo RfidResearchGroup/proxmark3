@@ -142,10 +142,9 @@ int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo,
     return mifare_classic_authex(pcs, uid, blockNo, keyType, ui64Key, isNested, NULL, NULL);
 }
 int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *timing) {
-    return mifare_classic_authex_cmd(pcs, uid, blockNo, MIFARE_AUTH_KEYA + (keyType & 0xF), ui64Key, isNested, ntptr, NULL, timing);
+    return mifare_classic_authex_cmd(pcs, uid, blockNo, MIFARE_AUTH_KEYA + (keyType & 0xF), ui64Key, isNested, ntptr, NULL, NULL, timing, false, false);
 }
-int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t cmd, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *ntencptr, uint32_t *timing) {
-
+int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t cmd, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *ntencptr, uint8_t *ntparptr, uint32_t *timing, bool corruptnrar, bool corruptnrarparity) {
     // "random" reader nonce:
     uint8_t nr[4];
     num_to_bytes(prng_successor(GetTickCount(), 32), 4, nr);
@@ -161,6 +160,8 @@ int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
     uint32_t nt = bytes_to_num(receivedAnswer, 4);
     if (ntencptr)
         *ntencptr = nt;
+    if (ntparptr)
+        *ntparptr = receivedAnswerPar[0];
 
     //  ----------------------------- crypto1 create
     if (isNested)
@@ -178,9 +179,37 @@ int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
     }
 
     // some statistic
-    if (!ntptr && (g_dbglevel >= DBG_EXTENDED))
-        Dbprintf("auth uid: %08x | nr: %02x%02x%02x%02x | nt: %08x", uid, nr[0], nr[1], nr[2], nr[3], nt);
-
+//    if (!ntptr && (g_dbglevel >= DBG_EXTENDED))
+    uint32_t nr32 = nr[0] << 24 | nr[1] << 16 | nr[2] << 8 | nr[3];
+    if (g_dbglevel >= DBG_EXTENDED) {
+        if (!isNested) {
+            Dbprintf("auth        cmd: %02x %02x | uid: %08x | nr: %08x %s| nt: %08x %s| par: %i%i%i%i %s",
+            cmd, blockNo, uid,
+            nr32, validate_prng_nonce(nr32) ? "@" : " ",
+            nt, validate_prng_nonce(nt) ? "@" : " ",
+            (receivedAnswerPar[0] >> 7) & 1,
+            (receivedAnswerPar[0] >> 6) & 1,
+            (receivedAnswerPar[0] >> 5) & 1,
+            (receivedAnswerPar[0] >> 4) & 1,
+            validate_parity_nonce(nt, receivedAnswerPar[0], nt) ? "ok " : "bad");
+        } else {
+            Dbprintf("auth nested cmd: %02x %02x | uid: %08x | nr: %08x %s| nt: %08x %s| par: %i%i%i%i %s| ntenc: %08x %s| parerr: %i%i%i%i",
+            cmd, blockNo, uid,
+            nr32, validate_prng_nonce(nr32) ? "@" : " ",
+            nt, validate_prng_nonce(nt) ? "@" : " ",
+            (receivedAnswerPar[0] >> 7) & 1,
+            (receivedAnswerPar[0] >> 6) & 1,
+            (receivedAnswerPar[0] >> 5) & 1,
+            (receivedAnswerPar[0] >> 4) & 1,
+            validate_parity_nonce(*ntencptr, receivedAnswerPar[0], nt) ? "ok " : "bad",
+            *ntencptr, validate_prng_nonce(*ntencptr) ? "@" : " ",
+            ((receivedAnswerPar[0] >> 7) & 1) ^ oddparity8((*ntencptr >> 24) & 0xFF),
+            ((receivedAnswerPar[0] >> 6) & 1) ^ oddparity8((*ntencptr >> 16) & 0xFF),
+            ((receivedAnswerPar[0] >> 5) & 1) ^ oddparity8((*ntencptr >> 8) & 0xFF),
+            ((receivedAnswerPar[0] >> 4) & 1) ^ oddparity8((*ntencptr >> 0) & 0xFF)
+            );
+        }
+    }
     // save Nt
     if (ntptr)
         *ntptr = nt;
@@ -193,15 +222,22 @@ int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
         mf_nr_ar[pos] = crypto1_byte(pcs, nr[pos], 0) ^ nr[pos];
         par[0] |= (((filter(pcs->odd) ^ oddparity8(nr[pos])) & 0x01) << (7 - pos));
     }
-
     // Skip 32 bits in pseudo random generator
     nt = prng_successor(nt, 32);
 
     //  ar+parity
+    if (corruptnrar) {
+        Dbprintf("Corrupting nRaR...");
+        nt ^= 1;
+    }
     for (pos = 4; pos < 8; pos++) {
         nt = prng_successor(nt, 8);
         mf_nr_ar[pos] = crypto1_byte(pcs, 0x00, 0) ^ (nt & 0xff);
         par[0] |= (((filter(pcs->odd) ^ oddparity8(nt & 0xff)) & 0x01) << (7 - pos));
+    }
+    if (corruptnrarparity) {
+        Dbprintf("Corrupting nRaR parity...");
+        par[0] ^= 1;
     }
 
     // Transmit reader nonce and reader answer
@@ -889,4 +925,43 @@ int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData) {
         return PM3_SUCCESS;
     }
     return PM3_EFAILED;
+}
+
+bool validate_prng_nonce(uint32_t nonce) {
+    uint16_t x = nonce >> 16;
+    x = (x & 0xff) << 8 | x >> 8;
+    for (uint8_t i = 0; i<16; i++) {
+        x = x >> 1 | (x ^ x >> 2 ^ x >> 3 ^ x >> 5) << 15;
+    }
+    x = (x & 0xff) << 8 | x >> 8;
+    return x == (nonce & 0xFFFF);
+}
+
+bool validate_parity_nonce(uint32_t ntenc, uint8_t ntparenc, uint32_t nt) {
+    uint32_t ks = nt ^ ntenc;
+    ntparenc >>= 4;
+    uint8_t ksp = (((ks >> 16)&1) << 3) | (((ks >> 8)&1) << 2) | (((ks >> 0)&1) << 1);
+    uint8_t ntpar = ntparenc ^ ksp;
+    return (((ntpar >> 3) & 1) == oddparity8((nt>>24) & 0xFF)) &&
+           (((ntpar >> 2) & 1) == oddparity8((nt>>16) & 0xFF)) &&
+           (((ntpar >> 1) & 1) == oddparity8((nt>>8) & 0xFF));
+}
+
+int nonce_distance(uint32_t from, uint32_t to) {
+    if (!validate_prng_nonce(from) || !validate_prng_nonce(to))
+        return -1;
+    if (from == to)
+        return 0;
+    uint16_t x = from;
+    uint16_t y = to;
+    x = (x & 0xff) << 8 | x >> 8;
+    y = (y & 0xff) << 8 | y >> 8;
+    uint16_t i = 1;
+    for(;i;i++) {
+        x = x >> 1 | (x ^ x >> 2 ^ x >> 3 ^ x >> 5) << 15;
+        if (x==y)
+            return i;
+    }
+    // never reached
+    return -1;
 }

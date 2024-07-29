@@ -9618,11 +9618,164 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AMfISEN(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf isen",
+                  "Information and check Static Encrypted Nonce properties in a MIFARE Classic card\n"
+                  "Some cards in order to extract information you need to specify key\n"
+                  "and/or specific keys in the command line",
+                  "hf mf isen\n"
+                  "hf mf isen -k FFFFFFFFFFFF -v\n"
+                  "Default behavior:\n"
+                  "auth(blk)-auth(blk2)-auth(blk2)-...\n"
+                  "Default behavior when wrong key2:\n"
+                  "auth(blk)-auth(blk2) auth(blk)-auth(blk2) ...\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "blk", "<dec>", "block number"),
+        arg_lit0("a", NULL, "input key type is key A (def)"),
+        arg_lit0("b", NULL, "input key type is key B"),
+        arg_int0("c", NULL, "<dec>", "input key type is key A + offset"),
+        arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
+        arg_int0(NULL, "blk2", "<dec>", "nested block number (default=same)"),
+        arg_lit0(NULL, "a2", "nested input key type is key A (default=same)"),
+        arg_lit0(NULL, "b2", "nested input key type is key B (default=same)"),
+        arg_int0(NULL, "c2", "<dec>", "nested input key type is key A + offset"),
+        arg_str0(NULL, "key2", "<hex>", "nested key, 6 hex bytes (default=same)"),
+        arg_int0("n", NULL, "<dec>", "number of nonces (default=2)"),
+        arg_lit0(NULL, "reset", "reset between attempts, even if auth was successful"),
+        arg_lit0(NULL, "addread", "auth(blk)-read(blk)-auth(blk2)"),
+        arg_lit0(NULL, "addauth", "auth(blk)-auth(blk)-auth(blk2)"),
+        arg_lit0(NULL, "incblk2", "auth(blk)-auth(blk2)-auth(blk2+1)-..."),
+        arg_lit0(NULL, "corruptnrar", "corrupt {nR}{aR}, but with correct parity"),
+        arg_lit0(NULL, "corruptnrarparity", "correct {nR}{aR}, but with corrupted parity"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int blockn = arg_get_int_def(ctx, 1, 0);
+
+    uint8_t keytype = MF_KEY_A;
+    if (arg_get_lit(ctx, 2) && arg_get_lit(ctx, 3)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Input key type must be A or B");
+        return PM3_EINVARG;
+    } else if (arg_get_lit(ctx, 3)) {
+        keytype = MF_KEY_B;
+    }
+    // Should warn if conflict with -a/-b and -c but well...
+    keytype = arg_get_int_def(ctx, 4, keytype);
+
+    int keylen = 0;
+    uint8_t key[MIFARE_KEY_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    CLIGetHexWithReturn(ctx, 5, key, &keylen);
+
+    int blockn_nested = arg_get_int_def(ctx, 6, blockn);
+
+    uint8_t keytype_nested = keytype;
+    if (arg_get_lit(ctx, 7) && arg_get_lit(ctx, 8)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Input key type must be A or B");
+        return PM3_EINVARG;
+    } else if (arg_get_lit(ctx, 7)) {
+        keytype_nested = MF_KEY_A;
+    } else if (arg_get_lit(ctx, 8)) {
+        keytype_nested = MF_KEY_B;
+    }
+    // Should warn if conflict with -a/-b and -c but well...
+    keytype_nested = arg_get_int_def(ctx, 9, keytype_nested);
+
+    int keylen_nested = 0;
+    uint8_t key_nested[MIFARE_KEY_SIZE];
+    memcpy(key_nested, key, MIFARE_KEY_SIZE);
+    CLIGetHexWithReturn(ctx, 10, key_nested, &keylen_nested);
+
+    int nr_nested = arg_get_int_def(ctx, 11, 2);
+
+    bool reset = arg_get_lit(ctx, 12);
+    bool addread = arg_get_lit(ctx, 13);
+    bool addauth = arg_get_lit(ctx, 14);
+    bool incblk2 = arg_get_lit(ctx, 15);
+    bool corruptnrar = arg_get_lit(ctx, 16);
+    bool corruptnrarparity = arg_get_lit(ctx, 17);
+    CLIParserFree(ctx);
+
+    uint8_t dbg_curr = DBG_NONE;
+    if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
+        return PM3_EFAILED;
+    }
+
+    if (keylen != 0 && keylen != MIFARE_KEY_SIZE) {
+        PrintAndLogEx(ERR, "Key length must be %u bytes", MIFARE_KEY_SIZE);
+        return PM3_EINVARG;
+    }
+
+    if (keylen_nested != 0 && keylen_nested != MIFARE_KEY_SIZE) {
+        PrintAndLogEx(ERR, "Key length must be %u bytes", MIFARE_KEY_SIZE);
+        return PM3_EINVARG;
+    }
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        PrintAndLogEx(DEBUG, "iso14443a card select timeout");
+        return 0;
+    }
+
+    iso14a_card_select_t card;
+    memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+    /*
+        0: couldn't read
+        1: OK, with ATS
+        2: OK, no ATS
+        3: proprietary Anticollision
+    */
+    uint64_t select_status = resp.oldarg[0];
+
+    if (select_status == 0) {
+        PrintAndLogEx(DEBUG, "iso14443a card select failed");
+        return select_status;
+    }
+
+    if (select_status == 3) {
+        PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("ISO14443-a Information") " ---------------------");
+    PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
+    PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
+    PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
+
+//    if (setDeviceDebugLevel(DBG_DEBUG, false) != PM3_SUCCESS) {
+    if (setDeviceDebugLevel(DBG_EXTENDED, false) != PM3_SUCCESS) {
+        return PM3_EFAILED;
+    }
+
+    int res = detect_classic_static_encrypted_nonce_ex(blockn, keytype, key, blockn_nested, keytype_nested, key_nested, nr_nested, reset, addread, addauth, incblk2, corruptnrar, corruptnrarparity, true);
+    if (res == NONCE_STATIC)
+        PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
+    if (res == NONCE_STATIC_ENC)
+        PrintAndLogEx(SUCCESS, "Static enc nonce..... " _RED_("yes"));
+
+    if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS) {
+        return PM3_EFAILED;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,                AlwaysAvailable, "This help"},
     {"list",        CmdHF14AMfList,         AlwaysAvailable, "List MIFARE history"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("recovery") " -----------------------"},
     {"info",        CmdHF14AMfInfo,         IfPm3Iso14443a,  "mfc card Info"},
+    {"isen",        CmdHF14AMfISEN,         IfPm3Iso14443a,  "mfc card Info Static Encrypted Nonces"},
     {"darkside",    CmdHF14AMfDarkside,     IfPm3Iso14443a,  "Darkside attack"},
     {"nested",      CmdHF14AMfNested,       IfPm3Iso14443a,  "Nested attack"},
     {"hardnested",  CmdHF14AMfNestedHard,   AlwaysAvailable, "Nested attack for hardened MIFARE Classic cards"},

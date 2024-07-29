@@ -1977,10 +1977,20 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t block_no;
                 uint8_t key_type;
                 uint8_t key[6];
+                uint8_t block_no_nested;
+                uint8_t key_type_nested;
+                uint8_t key_nested[6];
+                uint8_t nr_nonces;
+                uint8_t reset;
+                uint8_t addread;
+                uint8_t addauth;
+                uint8_t incblk2;
+                uint8_t corruptnrar;
+                uint8_t corruptnrarparity;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
 
-            MifareHasStaticEncryptedNonce(payload->block_no, payload->key_type, payload->key);
+            MifareHasStaticEncryptedNonce(payload->block_no, payload->key_type, payload->key, payload->block_no_nested, payload->key_type_nested, payload->key_nested, payload->nr_nonces, payload->reset, payload->addread, payload->addauth, payload->incblk2, payload->corruptnrar, payload->corruptnrarparity);
             break;
         }
 #endif

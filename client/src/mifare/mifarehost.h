@@ -106,6 +106,7 @@ int detect_classic_prng(void);
 int detect_classic_nackbug(bool verbose);
 uint16_t detect_mf_magic(bool is_mfc, uint8_t key_type, uint64_t key);
 int detect_classic_static_nonce(void);
+int detect_classic_static_encrypted_nonce_ex(uint8_t block_no, uint8_t key_type, uint8_t *key, uint8_t block_no_nested, uint8_t key_type_nested, uint8_t *key_nested, uint8_t nr_nested, bool reset, bool addread, bool addauth, bool incblk2, bool corruptnrar, bool corruptnrarparity, bool verbose);
 int detect_classic_static_encrypted_nonce(uint8_t block_no, uint8_t key_type, uint8_t *key);
 bool detect_mfc_ev1_signature(void);
 int read_mfc_ev1_signature(uint8_t *signature);

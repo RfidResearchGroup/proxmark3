@@ -42,6 +42,7 @@
 #include "mbedtls/sha1.h"       // SHA1
 #include "cmdhf14a.h"
 #include "gen4.h"
+#include "parity.h"
 
 int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     uint32_t uid = 0;
@@ -1388,12 +1389,22 @@ returns:
 2  = cmd failed
 3  = has encrypted nonce
 */
-int detect_classic_static_encrypted_nonce(uint8_t block_no, uint8_t key_type, uint8_t *key) {
+int detect_classic_static_encrypted_nonce_ex(uint8_t block_no, uint8_t key_type, uint8_t *key, uint8_t block_no_nested, uint8_t key_type_nested, uint8_t *key_nested, uint8_t nr_nested, bool reset, bool addread, bool addauth, bool incblk2, bool corruptnrar, bool corruptnrarparity, bool verbose) {
     clearCommandBuffer();
-    uint8_t cdata[1 + 1 + MIFARE_KEY_SIZE] = { 0 };
+    uint8_t cdata[1 + 1 + MIFARE_KEY_SIZE + 1 + 1 + MIFARE_KEY_SIZE + 1 + 1 + 1 + 1 + 1 + 1 + 1] = { 0 };
     cdata[0] = block_no;
     cdata[1] = key_type;
     memcpy(&cdata[2], key, MIFARE_KEY_SIZE);
+    cdata[8] = block_no_nested;
+    cdata[9] = key_type_nested;
+    memcpy(&cdata[10], key_nested, MIFARE_KEY_SIZE);
+    cdata[16] = nr_nested;
+    cdata[17] = reset;
+    cdata[18] = addread;
+    cdata[19] = addauth;
+    cdata[20] = incblk2;
+    cdata[21] = corruptnrar;
+    cdata[22] = corruptnrarparity;
     SendCommandNG(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, cdata, sizeof(cdata));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, &resp, 1000)) {
@@ -1401,9 +1412,62 @@ int detect_classic_static_encrypted_nonce(uint8_t block_no, uint8_t key_type, ui
         if (resp.status == PM3_ESOFT) {
             return NONCE_FAIL;
         }
+        if (verbose && (resp.data.asBytes[0] == NONCE_STATIC_ENC)) {
+            uint32_t uid = resp.data.asBytes[1] << 24 |
+            resp.data.asBytes[2] << 16 |
+            resp.data.asBytes[3] << 8 |
+            resp.data.asBytes[4];
+            uint32_t nt = resp.data.asBytes[5] << 24 |
+            resp.data.asBytes[6] << 16 |
+            resp.data.asBytes[7] << 8 |
+            resp.data.asBytes[8];
+            uint32_t ntenc = resp.data.asBytes[9] << 24 |
+            resp.data.asBytes[10] << 16 |
+            resp.data.asBytes[11] << 8 |
+            resp.data.asBytes[12];
+            uint8_t ntencparenc = resp.data.asBytes[13];
+
+            // recompute nt on client, just because
+            struct Crypto1State mpcs = {0, 0};
+            struct Crypto1State *pcs;
+            pcs = &mpcs;
+            uint64_t ui64key = bytes_to_num(key_nested, 6);
+            crypto1_init(pcs, ui64key); // key_nested
+            uint32_t ks = crypto1_word(pcs, ntenc ^ uid, 1);
+            uint32_t mynt = ks ^ ntenc;
+            if (mynt != nt) {
+                PrintAndLogEx(ERR, "Client computed nT " _YELLOW_("%08x") " does not match ARM computed nT " _YELLOW_("%08x"), mynt, nt);
+            }
+            ntencparenc >>= 4;
+            // [...] Additionally, the bit of keystream used to encrypt the parity bits is reused to encrypt the next bit of plaintext.
+            // we can decrypt first 3 parity bits, not last one as it's using future keystream
+            uint8_t ksp = (((ks >> 16)&1) << 3) | (((ks >> 8)&1) << 2) | (((ks >> 0)&1) << 1);
+            uint8_t ntencpar = ntencparenc ^ ksp;
+            if (validate_prng_nonce(nt)) {
+                PrintAndLogEx(INFO, "nTenc " _GREEN_("%08x") " par {" _YELLOW_("%i%i%i%i") "}=" _YELLOW_("%i%i%ix") " | ks "  _GREEN_("%08x") " | nT " _GREEN_("%08x") " par " _YELLOW_("%i%i%i%i")" | lfsr16 index " _GREEN_("%i"),
+                ntenc,
+                (ntencparenc >> 3) & 1, (ntencparenc >> 2) & 1, (ntencparenc >> 1) & 1, ntencparenc & 1,
+                (ntencpar >> 3) & 1, (ntencpar >> 2) & 1, (ntencpar >> 1) & 1,
+                ks, nt,
+                oddparity8((nt>>24) & 0xFF), oddparity8((nt>>16) & 0xFF), oddparity8((nt>>8) & 0xFF), oddparity8(nt & 0xFF), 
+                nonce_distance(0x0100, nt));
+            } else {
+                PrintAndLogEx(INFO, "nTenc " _GREEN_("%08x") " par {" _YELLOW_("%i%i%i%i") "}=" _YELLOW_("%i%i%ix") " | ks "  _YELLOW_("%08x") " | nT " _YELLOW_("%08x") " par " _YELLOW_("%i%i%i%i") " | " _RED_("not lfsr16") " (wrong key)",
+                ntenc,
+                (ntencparenc >> 3) & 1, (ntencparenc >> 2) & 1, (ntencparenc >> 1) & 1, ntencparenc & 1,
+                (ntencpar >> 3) & 1, (ntencpar >> 2) & 1, (ntencpar >> 1) & 1,
+                ks, nt,
+                oddparity8((nt>>24) & 0xFF), oddparity8((nt>>16) & 0xFF), oddparity8((nt>>8) & 0xFF), oddparity8(nt & 0xFF)
+                );
+            }
+        }
         return resp.data.asBytes[0];
     }
     return NONCE_FAIL;
+}
+
+int detect_classic_static_encrypted_nonce(uint8_t block_no, uint8_t key_type, uint8_t *key) {
+    return detect_classic_static_encrypted_nonce_ex(block_no, key_type, key, block_no, key_type, key, 3, false, false, false, false, false, false, false);
 }
 
 // try to see if card responses to "Chinese magic backdoor" commands.

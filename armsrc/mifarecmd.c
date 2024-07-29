@@ -128,7 +128,7 @@ static bool mifare_wakeup_auth(struct Crypto1State *pcs, MifareWakeupType wakeup
 
     if (key_auth_cmd != 0) {
         uint64_t ui64key = bytes_to_num(key, 6);
-        if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, NULL, NULL, NULL)) {
+        if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, NULL, NULL, NULL, NULL, false, false)) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
             return false;
         }
@@ -2796,7 +2796,7 @@ OUT:
 // 2B F9 1C 1B D5 08 48 48 03 A4 B1 B1 75 FF 2D 90
 //                         ^^                   ^^
 
-void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *key) {
+void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *key, uint8_t block_no_nested, uint8_t key_type_nested, uint8_t *key_nested, uint8_t nr_nested, bool reset, bool addread, bool addauth, bool incblk2, bool corruptnrar, bool corruptnrarparity) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     LEDsoff();
@@ -2805,8 +2805,7 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
 
     int retval = PM3_SUCCESS;
 
-    uint64_t ui64key = bytes_to_num(key, 6);
-    uint8_t data[1] = { NONCE_FAIL };
+    uint8_t data[14] = { NONCE_FAIL };
 
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
@@ -2814,34 +2813,62 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
-    uint32_t cuid = 0;
-    if (iso14443a_select_card(NULL, NULL, &cuid, true, 0, true) == false) {
-        retval = PM3_ESOFT;
-        goto OUT;
-    }
-
-    uint8_t key_auth_cmd = MIFARE_AUTH_KEYA + (key_type & 1);
-    if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, NULL, NULL, NULL)) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
-        retval = PM3_ESOFT;
-        goto OUT;
-    };
-
-    uint32_t nt = 0;
     uint8_t enc_counter = 0;
-    uint32_t ntenc = 0;
+    uint8_t key_auth_cmd = MIFARE_AUTH_KEYA + key_type;
+    uint8_t key_auth_cmd_nested = MIFARE_AUTH_KEYA + key_type_nested;
+    uint64_t ui64key = bytes_to_num(key, 6);
+    uint64_t ui64key_nested = bytes_to_num(key_nested, 6);
     uint32_t oldntenc = 0;
-    for (uint8_t i = 0; i < 3; i++) {
-        if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_NESTED, &nt, &ntenc, NULL)) {
-            if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
-            retval = PM3_ESOFT;
-            goto OUT;
-        };
+    bool need_first_auth = true;
+    uint32_t cuid;
+    uint32_t nt;
+    uint32_t old_nt;
+    uint32_t ntenc;
+    uint8_t ntencpar;
+    for (uint8_t i = 0; i < nr_nested; i++) {
+        if (need_first_auth) {
+            cuid = 0;
 
-        if (g_dbglevel >= DBG_INFO) {
-            Dbprintf("nt: %x, nt encoded: %x", nt, ntenc);
+            if (g_dbglevel >= DBG_EXTENDED) {
+                Dbprintf("select");
+            }
+            if (iso14443a_select_card(NULL, NULL, &cuid, true, 0, true) == false) {
+                retval = PM3_ESOFT;
+                goto OUT;
+            }
+            if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, &old_nt, NULL, NULL, NULL, corruptnrar, corruptnrarparity)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
+                retval = PM3_ESOFT;
+                goto OUT;
+            };
+            if (!reset) {
+                need_first_auth = false;
+            }
+            if (addread) {
+                uint8_t dataread[16] = {0x00};
+                mifare_classic_readblock(pcs, block_no, dataread);
+            }
+            if (addauth) {
+                if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_NESTED, &nt, NULL, NULL, NULL, false, false)) {
+                    if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
+                    retval = PM3_ESOFT;
+                    goto OUT;
+                } else if (g_dbglevel >= DBG_EXTENDED) {
+                    Dbprintf("Nonce distance: %i", nonce_distance(old_nt, nt));
+                }
+                old_nt = nt;
+            }
         }
 
+        nt = 0;
+        ntenc = 0;
+        if (mifare_classic_authex_cmd(pcs, cuid, incblk2 ? block_no_nested + i : block_no_nested, key_auth_cmd_nested, ui64key_nested, AUTH_NESTED, &nt, &ntenc, &ntencpar, NULL, false, false)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Nested auth error");
+            need_first_auth = true;
+        } else if (g_dbglevel >= DBG_EXTENDED) {
+            Dbprintf("Nonce distance: %i", nonce_distance(old_nt, nt));
+        }
+        old_nt = nt;
         if (oldntenc == 0) {
             oldntenc = ntenc;
         } else if (ntenc == oldntenc) {
@@ -2851,6 +2878,19 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
 
     if (enc_counter) {
         data[0] = NONCE_STATIC_ENC;
+        data[1] = (cuid >> 24) & 0xFF;
+        data[2] = (cuid >> 16) & 0xFF;
+        data[3] = (cuid >> 8) & 0xFF;
+        data[4] = (cuid >> 0) & 0xFF;
+        data[5] = (nt >> 24) & 0xFF;
+        data[6] = (nt >> 16) & 0xFF;
+        data[7] = (nt >> 8) & 0xFF;
+        data[8] = (nt >> 0) & 0xFF;
+        data[9] = (ntenc >> 24) & 0xFF;
+        data[10] = (ntenc >> 16) & 0xFF;
+        data[11] = (ntenc >> 8) & 0xFF;
+        data[12] = (ntenc >> 0) & 0xFF;
+        data[13] = ntencpar;
     } else {
         data[0] = NONCE_NORMAL;
     }
