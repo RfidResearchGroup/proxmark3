@@ -430,6 +430,9 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
             default:
                 if ((cmd[0] & 0xF0) == 0xD0  && (cmdsize == 4 || cmdsize == 5)) {
                     snprintf(exp, size, "PPS - CID=%x", cmd[0] & 0x0F) ;
+                } else if ((cmd[0] & 0xF0) == 0x60  && (cmdsize == 4)) {
+                    MifareAuthState = masNt;
+                    snprintf(exp, size, "AUTH-%02X(" _MAGENTA_("%d") ")", cmd[0], cmd[1]);
                 } else {
                     return PM3_ESOFT;
                 }
