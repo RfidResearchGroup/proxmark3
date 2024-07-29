@@ -244,7 +244,7 @@ void MifareReadSector(uint8_t sector_no, uint8_t key_type, uint8_t *key) {
     uint8_t num_blocks = NumBlocksPerSector(sector_no);
 
     uint8_t outbuf[16 * 16];
-    int16_t retval = mifare_cmd_readblocks(MF_WAKE_WUPA, MIFARE_AUTH_KEYA + (key_type & 1), key, ISO14443A_CMD_READBLOCK, block_no, num_blocks, outbuf);
+    int16_t retval = mifare_cmd_readblocks(MF_WAKE_WUPA, MIFARE_AUTH_KEYA + (key_type & 0xF), key, ISO14443A_CMD_READBLOCK, block_no, num_blocks, outbuf);
 
     reply_old(CMD_ACK, retval == PM3_SUCCESS, 0, 0, outbuf, 16 * num_blocks);
 }
@@ -975,7 +975,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
         }
 
         // nested authentication
-        uint16_t len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par_enc, NULL);
+        uint16_t len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0xF), targetBlockNo, receivedAnswer, par_enc, NULL);
 
         // wait for the card to become ready again
         CHK_TIMEOUT();
@@ -1215,7 +1215,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
             // nested authentication
             auth2_time = auth1_time + delta_time;
 
-            len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, &auth2_time);
+            len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0xF), targetBlockNo, receivedAnswer, par, &auth2_time);
             if (len != 4) {
                 if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Auth2 error len=%d", len);
                 continue;
@@ -1340,7 +1340,7 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
             target_nt[1] = prng_successor(nt1, 320);
         }
 
-        len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, NULL);
+        len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0xF), targetBlockNo, receivedAnswer, par, NULL);
         if (len != 4) {
             continue;
         };
@@ -1365,7 +1365,7 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
             continue;
         };
 
-        len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0x01), targetBlockNo, receivedAnswer, par, NULL);
+        len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0xF), targetBlockNo, receivedAnswer, par, NULL);
         if (len != 4) {
             continue;
         };
