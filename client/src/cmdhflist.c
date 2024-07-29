@@ -2063,14 +2063,19 @@ void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize,
     switch (MifareAuthState) {
         case masNt:
             if (cmdsize == 4 && isResponse) {
-                snprintf(exp, size, "AUTH: nt %s", (AuthData.first_auth) ? "" : "(enc)");
                 MifareAuthState = masNrAr;
                 if (AuthData.first_auth) {
                     AuthData.nt = bytes_to_num(cmd, 4);
                     AuthData.nt_enc_par = 0;
+                    if (validate_prng_nonce(AuthData.nt)) {
+                        snprintf(exp, size, "AUTH: nt (lfsr16 index %i)", nonce_distance(0x0100, AuthData.nt));
+                    } else {
+                        snprintf(exp, size, "AUTH: nt");
+                    }
                 } else {
                     AuthData.nt_enc = bytes_to_num(cmd, 4);
                     AuthData.nt_enc_par = parity[0] & 0xF0;
+                    snprintf(exp, size, "AUTH: nt (enc)");
                 }
                 return;
             } else {
