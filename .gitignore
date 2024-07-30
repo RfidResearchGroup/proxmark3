@@ -82,6 +82,11 @@ tools/cryptorf/cm
 tools/cryptorf/sm
 tools/cryptorf/sma
 tools/cryptorf/sma_multi
+tools/mf_fudan_rf08s/rf08s_nested
+tools/mf_fudan_rf08s/rf08s_nested_known
+tools/mf_fudan_rf08s/rf08s_nested_known_collision
+tools/mf_fudan_rf08s/rf08s_nested_known_match
+tools/mf_fudan_rf08s/keys*
 tools/mf_nonce_brute/mf_nonce_brute
 tools/mf_nonce_brute/mf_trace_brute
 tools/jtag_openocd/openocd_configuration
