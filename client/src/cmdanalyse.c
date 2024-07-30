@@ -1025,8 +1025,8 @@ static int CmdAnalyseFoo(const char *Cmd) {
     uint8_t data[256];
     CLIGetHexWithReturn(ctx, 1, data, &datalen);
 
-    int data3len = 512;
-    uint8_t data3[512];
+    uint8_t data3[512] = {0};
+    int data3len = sizeof(data3) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated;
     CLIGetStrWithReturn(ctx, 1, data3, &data3len);
 
     CLIParserFree(ctx);

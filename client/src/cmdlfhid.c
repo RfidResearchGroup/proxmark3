@@ -375,6 +375,7 @@ static int CmdHIDClone(const char *Cmd) {
     bool q5 = arg_get_lit(ctx, 7);
     bool em = arg_get_lit(ctx, 8);
 
+    // TODO: very confusing sizes... buf of 70, parser len to 63 instead of 70-1, tests for len > 127, loop with 96...
     int bin_len = 63;
     uint8_t bin[70] = {0};
     CLIGetStrWithReturn(ctx, 9, bin, &bin_len);

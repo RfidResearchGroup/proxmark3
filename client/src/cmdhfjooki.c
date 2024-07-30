@@ -442,8 +442,8 @@ static int CmdHF14AJookiDecode(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int dlen = 16;
     uint8_t b64[JOOKI_B64_LEN] = {0x00};
+    int dlen = sizeof(b64) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     memset(b64, 0x0, sizeof(b64));
     CLIGetStrWithReturn(ctx, 1, b64, &dlen);
     bool verbose = arg_get_lit(ctx, 2);
@@ -471,8 +471,8 @@ static int CmdHF14AJookiSim(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    int dlen = 16;
     uint8_t b64[JOOKI_B64_LEN] = {0x00};
+    int dlen = sizeof(b64) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     memset(b64, 0x0, sizeof(b64));
     CLIGetStrWithReturn(ctx, 1, b64, &dlen);
     CLIParserFree(ctx);
@@ -611,8 +611,8 @@ static int CmdHF14AJookiClone(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int blen = 16;
     uint8_t b64[JOOKI_B64_LEN] = {0x00};
+    int blen = sizeof(b64) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     memset(b64, 0x0, sizeof(b64));
     CLIGetStrWithReturn(ctx, 1, b64, &blen);
 

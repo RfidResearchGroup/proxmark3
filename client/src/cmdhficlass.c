@@ -4599,8 +4599,9 @@ static int CmdHFiClassEncode(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int bin_len = 63;
+    // TODO: very confusing sizes... buf of 70, parser len to 63 instead of 70-1, tests for len > 127, loop with 64...
     uint8_t bin[70] = {0};
+    int bin_len = 63;
     CLIGetStrWithReturn(ctx, 1, bin, &bin_len);
 
     int key_nr = arg_get_int_def(ctx, 2, -1);

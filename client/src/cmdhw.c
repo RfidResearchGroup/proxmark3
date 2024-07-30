@@ -1358,8 +1358,8 @@ static int CmdConnect(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    int p_len = FILE_PATH_SIZE;
     char port[FILE_PATH_SIZE] = {0};
+    int p_len = sizeof(port) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated;
     CLIGetStrWithReturn(ctx, 1, (uint8_t *)port, &p_len);
     uint32_t baudrate = arg_get_u32_def(ctx, 2, USART_BAUD_RATE);
     CLIParserFree(ctx);

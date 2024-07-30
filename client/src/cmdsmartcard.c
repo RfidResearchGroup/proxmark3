@@ -1253,14 +1253,14 @@ static int CmdPCSC(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     uint8_t host[100] = {0};
-    int hostLen = sizeof(host);
+    int hostLen = sizeof(host) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 1, host, &hostLen);
     if (hostLen == 0) {
         strcpy((char *) host, "localhost");
     }
 
     uint8_t port[6] = {0};
-    int portLen = sizeof(port);
+    int portLen = sizeof(port) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 2, port, &portLen);
     if (portLen == 0) {
         strcpy((char *) port, "35963");

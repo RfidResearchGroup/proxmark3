@@ -9257,8 +9257,8 @@ static int CmdHFMFHidEncode(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int bin_len = 120;
     uint8_t bin[121] = {0};
+    int bin_len = sizeof(bin) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 1, bin, &bin_len);
 
     wiegand_card_t card;

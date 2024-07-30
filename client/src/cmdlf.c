@@ -272,12 +272,12 @@ int CmdLFCommandRead(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     uint32_t delay = arg_get_u32_def(ctx, 1, 0);
 
-    int cmd_len = 128;
     char cmd[128] = {0};
+    int cmd_len = sizeof(cmd) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 2, (uint8_t *)cmd, &cmd_len);
 
-    int extra_arg_len = 250;
     char extra_arg[250] = {0};
+    int extra_arg_len = sizeof(extra_arg) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 3, (uint8_t *)extra_arg, &extra_arg_len);
 
     uint16_t period_1 = arg_get_u32_def(ctx, 4, 0);

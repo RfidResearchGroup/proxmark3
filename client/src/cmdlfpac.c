@@ -236,8 +236,8 @@ static int CmdPacClone(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t cnstr[9];
-    int cnlen = 9;
+    uint8_t cnstr[9] = {0};
+    int cnlen = sizeof(cnstr) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     memset(cnstr, 0x00, sizeof(cnstr));
     CLIGetStrWithReturn(ctx, 1, cnstr, &cnlen);
 
@@ -329,7 +329,7 @@ static int CmdPacSim(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     uint8_t cnstr[10];
-    int cnlen = 9;
+    int cnlen = sizeof(cnstr) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     memset(cnstr, 0x00, sizeof(cnstr));
     CLIGetStrWithReturn(ctx, 1, cnstr, &cnlen);
 

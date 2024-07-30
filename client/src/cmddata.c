@@ -3386,8 +3386,8 @@ static int CmdAtrLookup(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int dlen = 128;
     uint8_t data[128 + 1];
+    int dlen = sizeof(data) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 1, data, &dlen);
 
 //    bool selftest = arg_get_lit(ctx, 2);
@@ -3574,12 +3574,12 @@ static int CmdBinaryMap(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int hlen = 5;
     uint8_t hex[5 + 1];
+    int hlen = sizeof(hex) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 1, hex, &hlen);
 
-    int tlen = 40;
     uint8_t template[40 + 1];
+    int tlen = sizeof(template) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 2, template, &tlen);
     CLIParserFree(ctx);
 

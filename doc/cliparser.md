@@ -256,8 +256,8 @@ CLIGetHexWithReturn(\<context\>, \<opt index\>, \<store variable\>, \<ptr to sto
 CLIGetStrWithReturn(\<context\>,\<opt index\>, \<uint8_t \*\>, \<int \*\>);
     If failed to retrieve string, it will exit fct
 
-    uint8_t buffer[100];
-    int slen = sizeof(buffer); // <- slen MUST be the maximum number of characters that you want returned. e.g. Buffer Size
+    uint8_t buffer[100] = {0};
+    int slen = sizeof(buffer) - 1; // <- slen MUST be the maximum number of characters that you want returned. e.g. Buffer Size - 1 if you need it to be null-terminated!
     CLIGetStrWithReturn(ctx, 1, buffer, &slen);
 
 **string option**     

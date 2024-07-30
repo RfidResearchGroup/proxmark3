@@ -244,8 +244,8 @@ static int CmdKeriClone(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t keritype[2] = {'i'}; // default to internalid
-    int typeLen = sizeof(keritype);
+    uint8_t keritype[2] = {'i', 0}; // default to internalid
+    int typeLen = sizeof(keritype) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 1, keritype, &typeLen);
 
     uint32_t fc = arg_get_int_def(ctx, 2, 0);

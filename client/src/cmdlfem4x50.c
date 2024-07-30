@@ -377,8 +377,8 @@ static int CmdEM4x50Brute(const char *Cmd) {
     em4x50_data_t etd;
     memset(&etd, 0, sizeof(etd));
 
-    int mode_len = 64;
     char mode[64];
+    int mode_len = sizeof(mode) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 1, (uint8_t *) mode, &mode_len);
     PrintAndLogEx(INFO, "Chosen mode: %s", mode);
 
