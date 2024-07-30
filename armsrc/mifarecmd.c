@@ -2825,6 +2825,19 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
     uint32_t old_nt;
     uint32_t ntenc;
     uint8_t ntencpar;
+    if (nr_nested == 0) {
+        cuid = 0;
+        if (iso14443a_select_card(NULL, NULL, &cuid, true, 0, true) == false) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Select error");
+            retval = PM3_ESOFT;
+            goto OUT;
+        }
+        if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, &old_nt, NULL, NULL, NULL, corruptnrar, corruptnrarparity)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
+            retval = PM3_ESOFT;
+            goto OUT;
+        };
+    }
     for (uint8_t i = 0; i < nr_nested; i++) {
         if (need_first_auth) {
             cuid = 0;
