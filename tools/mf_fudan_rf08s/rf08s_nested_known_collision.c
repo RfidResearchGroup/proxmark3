@@ -1,3 +1,16 @@
+// Faster Backdoored Nested Attack against Fudan FM11RF08S tags
+//
+// Attack conditions:
+// * Backdoor
+// * keyA and keyB are different for the targeted sector
+//
+// Strategy:
+// * Use backdoor on the targeted sector to get the clear static nested nT for keyA and for keyB
+// * Generate 2 lists of key candidates based on clear and encrypted nT
+// * Search couples of keyA/keyB satisfying some obscure relationship
+// * Use the resulting dictionary to bruteforce the keyA (and rf08s_nested_known_match for keyB)
+//
+//  Doegox, 2024
 
 #include <stdio.h>
 #include <stdlib.h>

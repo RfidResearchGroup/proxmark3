@@ -1,3 +1,13 @@
+// Reused Keys Nested Attack against Fudan FM11RF08S tags
+//
+// Attack conditions:
+// * Know a first key, to be able to activate the nested authentication protocol
+// * The card must reuse some keys across several sectors. Or several cards of an infrastructure share the same key
+//
+// Strategy:
+// * Find all possible key candidates for one reference sector, and check on-the-fly if they are compatible with any other sector we want to compare with
+//
+//  Doegox, 2024
 
 #include <stdio.h>
 #include <stdlib.h>

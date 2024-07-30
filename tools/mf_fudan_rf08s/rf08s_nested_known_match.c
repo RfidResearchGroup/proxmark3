@@ -1,3 +1,14 @@
+// Faster Backdoored Nested Attack against Fudan FM11RF08S tags, part 2
+//
+// Attack conditions:
+// * Backdoor
+// * keyA and keyB are different for the targeted sector
+//
+// Strategy:
+// * Use f08s_nested_known_collision to crack keyA
+// * If keyB not readable, find keyB in its dictionary based on the obscure relationship between keyA, keyB and their nT
+//
+//  Doegox, 2024
 
 #include <stdio.h>
 #include <stdlib.h>

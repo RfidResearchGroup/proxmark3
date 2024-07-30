@@ -1,3 +1,14 @@
+// Backdoored Nested Attack against Fudan FM11RF08S tags
+//
+// Attack conditions:
+// * Backdoor
+//
+// Strategy:
+// * Use backdoor on the targeted sector to get the clear static nested nT
+// * Enumerate key candidates based on clear and encrypted nT
+// * Use the resulting dictionary to bruteforce the key
+//
+//  Doegox, 2024
 
 #include <stdio.h>
 #include <stdlib.h>
