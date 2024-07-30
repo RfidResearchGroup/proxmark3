@@ -1450,7 +1450,7 @@ int detect_classic_static_encrypted_nonce_ex(uint8_t block_no, uint8_t key_type,
                 (ntencpar >> 3) & 1, (ntencpar >> 2) & 1, (ntencpar >> 1) & 1,
                 ks, nt,
                 oddparity8((nt>>24) & 0xFF), oddparity8((nt>>16) & 0xFF), oddparity8((nt>>8) & 0xFF), oddparity8(nt & 0xFF), 
-                nonce_distance(0x0100, nt));
+                nonce_distance(0, nt));
             } else {
                 PrintAndLogEx(INFO, "nTenc " _GREEN_("%08x") " par {" _YELLOW_("%i%i%i%i") "}=" _YELLOW_("%i%i%ix") " | ks "  _YELLOW_("%08x") " | nT " _YELLOW_("%08x") " par " _YELLOW_("%i%i%i%i") " | " _RED_("not lfsr16") " (wrong key)",
                 ntenc,

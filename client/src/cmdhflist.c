@@ -2068,7 +2068,7 @@ void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize,
                     AuthData.nt = bytes_to_num(cmd, 4);
                     AuthData.nt_enc_par = 0;
                     if (validate_prng_nonce(AuthData.nt)) {
-                        snprintf(exp, size, "AUTH: nt (lfsr16 index %i)", nonce_distance(0x0100, AuthData.nt));
+                        snprintf(exp, size, "AUTH: nt (lfsr16 index %i)", nonce_distance(0, AuthData.nt));
                     } else {
                         snprintf(exp, size, "AUTH: nt");
                     }

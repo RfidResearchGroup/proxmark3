@@ -183,20 +183,22 @@ int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
     uint32_t nr32 = nr[0] << 24 | nr[1] << 16 | nr[2] << 8 | nr[3];
     if (g_dbglevel >= DBG_EXTENDED) {
         if (!isNested) {
-            Dbprintf("auth        cmd: %02x %02x | uid: %08x | nr: %08x %s| nt: %08x %s| par: %i%i%i%i %s",
+            Dbprintf("auth        cmd: %02x %02x | uid: %08x | nr: %08x %s| nt: %08x %s %5i| par: %i%i%i%i %s",
             cmd, blockNo, uid,
             nr32, validate_prng_nonce(nr32) ? "@" : " ",
-            nt, validate_prng_nonce(nt) ? "@" : " ",
+            nt, validate_prng_nonce(nt) ? "@idx" : " idx",
+            validate_prng_nonce(nt) ? nonce16_index(nt >> 16) : -1,
             (receivedAnswerPar[0] >> 7) & 1,
             (receivedAnswerPar[0] >> 6) & 1,
             (receivedAnswerPar[0] >> 5) & 1,
             (receivedAnswerPar[0] >> 4) & 1,
             validate_parity_nonce(nt, receivedAnswerPar[0], nt) ? "ok " : "bad");
         } else {
-            Dbprintf("auth nested cmd: %02x %02x | uid: %08x | nr: %08x %s| nt: %08x %s| par: %i%i%i%i %s| ntenc: %08x %s| parerr: %i%i%i%i",
+            Dbprintf("auth nested cmd: %02x %02x | uid: %08x | nr: %08x %s| nt: %08x %s %5i| par: %i%i%i%i %s| ntenc: %08x %s| parerr: %i%i%i%i",
             cmd, blockNo, uid,
             nr32, validate_prng_nonce(nr32) ? "@" : " ",
-            nt, validate_prng_nonce(nt) ? "@" : " ",
+            nt, validate_prng_nonce(nt) ? "@idx" : " idx",
+            validate_prng_nonce(nt) ? nonce16_index(nt >> 16) : -1,
             (receivedAnswerPar[0] >> 7) & 1,
             (receivedAnswerPar[0] >> 6) & 1,
             (receivedAnswerPar[0] >> 5) & 1,
@@ -947,13 +949,9 @@ bool validate_parity_nonce(uint32_t ntenc, uint8_t ntparenc, uint32_t nt) {
            (((ntpar >> 1) & 1) == oddparity8((nt>>8) & 0xFF));
 }
 
-int nonce_distance(uint32_t from, uint32_t to) {
-    if (!validate_prng_nonce(from) || !validate_prng_nonce(to))
-        return -1;
-    if (from == to)
+int nonce16_distance(uint16_t x, uint16_t y) {
+    if (x == y)
         return 0;
-    uint16_t x = from;
-    uint16_t y = to;
     x = (x & 0xff) << 8 | x >> 8;
     y = (y & 0xff) << 8 | y >> 8;
     uint16_t i = 1;
@@ -964,4 +962,14 @@ int nonce_distance(uint32_t from, uint32_t to) {
     }
     // never reached
     return -1;
+}
+
+int nonce_distance(uint32_t from, uint32_t to) {
+    if (!validate_prng_nonce(from) || !validate_prng_nonce(to))
+        return -1;
+    return nonce16_distance(from >> 16, to >> 16);
+}
+
+int nonce16_index(uint16_t nt) {
+    return nonce16_distance(0x0100, nt) + 1;
 }

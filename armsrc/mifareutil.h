@@ -125,4 +125,6 @@ bool emlCheckValBl(int blockNum);
 bool validate_prng_nonce(uint32_t nonce);
 bool validate_parity_nonce(uint32_t ntenc, uint8_t ntparenc, uint32_t nt);
 int nonce_distance(uint32_t from, uint32_t to);
+int nonce16_distance(uint16_t x, uint16_t y);
+int nonce16_index(uint16_t nt);
 #endif
