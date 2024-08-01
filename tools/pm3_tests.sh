@@ -299,9 +299,18 @@ while true; do
       if ! CheckExecute "mfkey64 long trace test"          "$MFKEY64BIN 14579f69 ce844261 f8049ccb 0525c84f 9431cc40 7093df99 9972428ce2e8523f456b99c831e769dced09 8ca6827b ab797fd369e8b93a86776b40dae3ef686efd c3c381ba 49e2c9def4868d1777670e584c27230286f4 fbdcd7c1 4abd964b07d3563aa066ed0a2eac7f6312bf 9f9149ea" "Found Key: \[091e639cb715\]"; then break; fi
     fi
     if $TESTALL || $TESTSTATICNESTED; then
-      echo -e "\n${C_BLUE}Testing staticnested:${C_NC} ${STATICNESTED2NTBIN:=./tools/mfc/card_only/staticnested_2nt}"
+      echo -e "\n${C_BLUE}Testing staticnested:${C_NC} ${STATICNESTED0NTBIN:=./tools/mfc/card_only/staticnested_0nt} ${STATICNESTED1NTBIN:=./tools/mfc/card_only/staticnested_1nt} ${STATICNESTED2NTBIN:=./tools/mfc/card_only/staticnested_2nt} ${STATICNESTED2X1NTBIN:=./tools/mfc/card_only/staticnested_2x1nt_rf08s} ${STATICNESTED2X11KNTBIN:=./tools/mfc/card_only/staticnested_2x1nt_rf08s_1key}"
+      if ! CheckFileExist "staticnested_0nt exists"            "$STATICNESTED0NTBIN"; then break; fi
+      if ! CheckFileExist "staticnested_1nt exists"            "$STATICNESTED1NTBIN"; then break; fi
       if ! CheckFileExist "staticnested_2nt exists"            "$STATICNESTED2NTBIN"; then break; fi
+      if ! CheckFileExist "staticnested_2x1nt_rf08s exists"    "$STATICNESTED2X1NTBIN"; then break; fi
+      if ! CheckFileExist "staticnested_2x1nt_rf08s_1key exists" "$STATICNESTED2X11KNTBIN"; then break; fi
+      if ! CheckExecute slow "staticnested_0nt test"                "$STATICNESTED0NTBIN a13e4902 2e9e49fc 1111 . 7bfc7a5b 1110 a17e4902 50f2abc2 1101; rm keys.dic" "Key ffffffffffff found in 3 arrays"; then break; fi
+      if ! CheckExecute "staticnested_1nt 1/2 test"            "$STATICNESTED1NTBIN 5c467f63 0 456ace4e da53428d 1001" "found 19823 keys"; then break; fi
+      if ! CheckExecute "staticnested_1nt 2/2 test"            "$STATICNESTED1NTBIN 5c467f63 0 e56f9fa2 7a9616b6 1110" "found 34531 keys"; then break; fi
       if ! CheckExecute "staticnested_2nt test"                "$STATICNESTED2NTBIN 461dce03 7eef3586 7fa28c7e 322bc14d 7f62b3d6" "\[ 2 \].*ffffffffff40.*"; then break; fi
+      if ! CheckExecute "staticnested_2x1nt_rf08s test"        "$STATICNESTED2X1NTBIN keys_5c467f63_00_456ace4e.dic keys_5c467f63_00_e56f9fa2.dic; rm keys_5c467f63_00_456ace4e.dic keys_5c467f63_00_e56f9fa2.dic; grep ffffffffff keys_5c467f63_00_456ace4e_filtered.dic" "fffffffffff1"; then break; fi
+      if ! CheckExecute "staticnested_2x1nt_rf08s_1key test"        "$STATICNESTED2X11KNTBIN 456ace4e fffffffffff1 keys_5c467f63_00_e56f9fa2_filtered.dic; rm keys_5c467f63_00_456ace4e_filtered.dic keys_5c467f63_00_e56f9fa2_filtered.dic" "MATCH: key2=fffffffffff2"; then break; fi
     fi
     if $TESTALL || $TESTNONCE2KEY; then
       echo -e "\n${C_BLUE}Testing nonce2key:${C_NC} ${NONCE2KEYBIN:=./tools/mfc/card_only/nonce2key}"
