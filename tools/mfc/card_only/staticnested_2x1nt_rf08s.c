@@ -150,7 +150,7 @@ int main(int argc, char *const argv[]) {
         }
 
         keys2 = (uint64_t*)malloc(keycount2 * sizeof(uint64_t));
-        filter_keys2 = (uint8_t*)calloc(keycount1, sizeof(uint8_t));
+        filter_keys2 = (uint8_t*)calloc(keycount2, sizeof(uint8_t));
         if ((keys2 == NULL)||(filter_keys2 == NULL)) {
             perror("Failed to allocate memory");
             fclose(fptr);
