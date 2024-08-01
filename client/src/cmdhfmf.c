@@ -9648,7 +9648,7 @@ static int CmdHF14AMfISEN(const char *Cmd) {
         arg_lit0(NULL, "reset", "reset between attempts, even if auth was successful"),
         arg_lit0(NULL, "addread", "auth(blk)-read(blk)-auth(blk2)"),
         arg_lit0(NULL, "addauth", "auth(blk)-auth(blk)-auth(blk2)"),
-        arg_lit0(NULL, "incblk2", "auth(blk)-auth(blk2)-auth(blk2+1)-..."),
+        arg_lit0(NULL, "incblk2", "auth(blk)-auth(blk2)-auth(blk2+4)-..."),
         arg_lit0(NULL, "corruptnrar", "corrupt {nR}{aR}, but with correct parity"),
         arg_lit0(NULL, "corruptnrarparity", "correct {nR}{aR}, but with corrupted parity"),
         arg_param_end

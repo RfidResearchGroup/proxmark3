@@ -2875,7 +2875,7 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
 
         nt = 0;
         ntenc = 0;
-        if (mifare_classic_authex_cmd(pcs, cuid, incblk2 ? block_no_nested + i : block_no_nested, key_auth_cmd_nested, ui64key_nested, AUTH_NESTED, &nt, &ntenc, &ntencpar, NULL, false, false)) {
+        if (mifare_classic_authex_cmd(pcs, cuid, incblk2 ? block_no_nested + (i * 4) : block_no_nested, key_auth_cmd_nested, ui64key_nested, AUTH_NESTED, &nt, &ntenc, &ntencpar, NULL, false, false)) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Nested auth error");
             need_first_auth = true;
         } else if (g_dbglevel >= DBG_EXTENDED) {
