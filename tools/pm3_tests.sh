@@ -10,6 +10,7 @@ SLOWTESTS=false
 OPENCLTESTS=false
 TESTALL=true
 TESTMFKEY=false
+TESTSTATICNESTED=false
 TESTNONCE2KEY=false
 TESTMFNONCEBRUTE=false
 TESTMFDAESBRUTE=false
@@ -28,7 +29,7 @@ while (( "$#" )); do
   case "$1" in
     -h|--help)
       echo """
-Usage: $0 [--long] [--opencl] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_nonce_brute|mfd_aes_brute|cryptorf|fpga_compress|bootrom|armsrc|client|recovery|common]
+Usage: $0 [--long] [--opencl] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_nonce_brute|staticnested|mfd_aes_brute|cryptorf|fpga_compress|bootrom|armsrc|client|recovery|common]
     --long:          Enable slow tests
     --opencl:        Enable tests requiring OpenCL (preferably a Nvidia GPU)
     --clientbin ...: Specify path to proxmark3 binary to test
@@ -71,6 +72,11 @@ Usage: $0 [--long] [--opencl] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|
     mf_nonce_brute)
       TESTALL=false
       TESTMFNONCEBRUTE=true
+      shift
+      ;;
+    staticnested)
+      TESTALL=false
+      TESTSTATICNESTED=true
       shift
       ;;
     mfd_aes_brute)
@@ -262,7 +268,7 @@ while true; do
       if ! CheckExecute "xorcheck test"                    "tools/xorcheck.py 04 00 80 64 ba" "final LRC XOR byte value: 5A"; then break; fi
       if ! CheckExecute "findbits test"                    "tools/findbits.py 73 0110010101110011" "Match at bit 9: 011001010"; then break; fi
       if ! CheckExecute "findbits_test test"               "tools/findbits_test.py 2>&1" "OK"; then break; fi
-      if ! CheckExecute "pm3_eml_mfd test"                 "tools/pm3_eml_mfd_test.py 2>&1" "OK"; then break; fi
+      if ! CheckExecute "pm3_eml_mfd test"                 "tools/mfc/pm3_eml_mfd_test.py 2>&1" "OK"; then break; fi
       if ! CheckExecute "recover_pk test"                  "tools/recover_pk.py selftests 2>&1" "Tests:.*\(.*ok.*"; then break; fi
       if ! CheckExecute "mkversion create test"            "tools/mkversion.sh --short" 'Iceman/'; then break; fi
     fi
@@ -284,23 +290,26 @@ while true; do
       if ! CheckFileExist "fpgacompress exists"            "$FPGACPMPRESSBIN"; then break; fi
     fi
     if $TESTALL || $TESTMFKEY; then
-      echo -e "\n${C_BLUE}Testing mfkey:${C_NC} ${MFKEY32V2BIN:=./tools/mfkey/mfkey32v2} ${MFKEY64BIN:=./tools/mfkey/mfkey64}  ${STATICNESTEDBIN:=./tools/mfkey/staticnested}"
+      echo -e "\n${C_BLUE}Testing mfkey:${C_NC} ${MFKEY32V2BIN:=./tools/mfc/card_reader/mfkey32v2} ${MFKEY64BIN:=./tools/mfc/card_reader/mfkey64}"
       if ! CheckFileExist "mfkey32v2 exists"               "$MFKEY32V2BIN"; then break; fi
       if ! CheckFileExist "mfkey64 exists"                 "$MFKEY64BIN"; then break; fi
-      if ! CheckFileExist "staticnested exists"            "$STATICNESTEDBIN"; then break; fi
       # Need a decent example for mfkey32...
       if ! CheckExecute "mfkey32v2 test"                   "$MFKEY32V2BIN 12345678 1AD8DF2B 1D316024 620EF048 30D6CB07 C52077E2 837AC61A" "Found Key: \[a0a1a2a3a4a5\]"; then break; fi
       if ! CheckExecute "mfkey64 test"                     "$MFKEY64BIN 9c599b32 82a4166c a1e458ce 6eea41e0 5cadf439" "Found Key: \[ffffffffffff\]"; then break; fi
       if ! CheckExecute "mfkey64 long trace test"          "$MFKEY64BIN 14579f69 ce844261 f8049ccb 0525c84f 9431cc40 7093df99 9972428ce2e8523f456b99c831e769dced09 8ca6827b ab797fd369e8b93a86776b40dae3ef686efd c3c381ba 49e2c9def4868d1777670e584c27230286f4 fbdcd7c1 4abd964b07d3563aa066ed0a2eac7f6312bf 9f9149ea" "Found Key: \[091e639cb715\]"; then break; fi
-      if ! CheckExecute "staticnested test"                "$STATICNESTEDBIN 461dce03 7eef3586 7fa28c7e 322bc14d 7f62b3d6" "\[ 2 \].*ffffffffff40.*"; then break; fi
+    fi
+    if $TESTALL || $TESTSTATICNESTED; then
+      echo -e "\n${C_BLUE}Testing staticnested:${C_NC} ${STATICNESTED2NTBIN:=./tools/mfc/card_only/staticnested_2nt}"
+      if ! CheckFileExist "staticnested_2nt exists"            "$STATICNESTED2NTBIN"; then break; fi
+      if ! CheckExecute "staticnested_2nt test"                "$STATICNESTED2NTBIN 461dce03 7eef3586 7fa28c7e 322bc14d 7f62b3d6" "\[ 2 \].*ffffffffff40.*"; then break; fi
     fi
     if $TESTALL || $TESTNONCE2KEY; then
-      echo -e "\n${C_BLUE}Testing nonce2key:${C_NC} ${NONCE2KEYBIN:=./tools/nonce2key/nonce2key}"
+      echo -e "\n${C_BLUE}Testing nonce2key:${C_NC} ${NONCE2KEYBIN:=./tools/mfc/card_only/nonce2key}"
       if ! CheckFileExist "nonce2key exists"               "$NONCE2KEYBIN"; then break; fi
       if ! CheckExecute "nonce2key test"                   "$NONCE2KEYBIN e9cadd9c a8bf4a12 a020a8285858b090 050f010607060e07 5693be6c00000000" "key recovered: fc00018778f7"; then break; fi
     fi
     if $TESTALL || $TESTMFNONCEBRUTE; then
-      echo -e "\n${C_BLUE}Testing mf_nonce_brute:${C_NC} ${MFNONCEBRUTEBIN:=./tools/mf_nonce_brute/mf_nonce_brute}"
+      echo -e "\n${C_BLUE}Testing mf_nonce_brute:${C_NC} ${MFNONCEBRUTEBIN:=./tools/mfc/card_reader/mf_nonce_brute}"
       if ! CheckFileExist "mf_nonce_brute exists"          "$MFNONCEBRUTEBIN"; then break; fi
       if ! CheckExecute slow "mf_nonce_brute test 1/2"         "$MFNONCEBRUTEBIN 9c599b32 5a920d85 1011 98d76b77 d6c6e870 0000 ca7e0b63 0111 3e709c8a" "Key found \[.*ffffffffffff.*\]"; then break; fi
       if ! CheckExecute slow "mf_nonce_brute test 2/2"         "$MFNONCEBRUTEBIN 96519578 d7e3c6ac 0011 cd311951 9da49e49 0010 2bb22e00 0100 a4f7f398" "Key found \[.*3b7e4fd575ad.*\]"; then break; fi

@@ -29,7 +29,7 @@ ifneq (,$(DESTDIR))
     endif
 endif
 
-all clean install uninstall check: %: client/% bootrom/% armsrc/% recovery/% mfkey/% nonce2key/% mf_nonce_brute/% mfd_aes_brute/% fpga_compress/% cryptorf/%
+all clean install uninstall check: %: client/% bootrom/% armsrc/% recovery/% mfc_card_only/% mfc_card_reader/% mfd_aes_brute/% fpga_compress/% cryptorf/%
 # hitag2crack toolsuite is not yet integrated in "all", it must be called explicitly: "make hitag2crack"
 #all clean install uninstall check: %: hitag2crack/%
 
@@ -112,13 +112,10 @@ endif
 cryptorf/check: FORCE
 	$(info [*] CHECK $(patsubst %/check,%,$@))
 	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
-mfkey/check: FORCE
+mfc_card_only/check: FORCE
 	$(info [*] CHECK $(patsubst %/check,%,$@))
 	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
-nonce2key/check: FORCE
-	$(info [*] CHECK $(patsubst %/check,%,$@))
-	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
-mf_nonce_brute/check: FORCE
+mfc_card_reader/check: FORCE
 	$(info [*] CHECK $(patsubst %/check,%,$@))
 	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
 mfd_aes_brute/check: FORCE
@@ -151,15 +148,12 @@ check: common/check
 cryptorf/%: FORCE
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C tools/cryptorf $(patsubst cryptorf/%,%,$@) DESTDIR=$(MYDESTDIR)
-mfkey/%: FORCE
+mfc_card_only/%: FORCE
 	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C tools/mfkey $(patsubst mfkey/%,%,$@) DESTDIR=$(MYDESTDIR)
-nonce2key/%: FORCE
+	$(Q)$(MAKE) --no-print-directory -C tools/mfc/card_only $(patsubst mfc_card_only/%,%,$@) DESTDIR=$(MYDESTDIR)
+mfc_card_reader/%: FORCE
 	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C tools/nonce2key $(patsubst nonce2key/%,%,$@) DESTDIR=$(MYDESTDIR)
-mf_nonce_brute/%: FORCE
-	$(info [*] MAKE $@)
-	$(Q)$(MAKE) --no-print-directory -C tools/mf_nonce_brute $(patsubst mf_nonce_brute/%,%,$@) DESTDIR=$(MYDESTDIR)
+	$(Q)$(MAKE) --no-print-directory -C tools/mfc/card_reader $(patsubst mfc_card_reader/%,%,$@) DESTDIR=$(MYDESTDIR)
 mfd_aes_brute/%: FORCE
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C tools/mfd_aes_brute $(patsubst mfd_aes_brute/%,%,$@) DESTDIR=$(MYDESTDIR)
@@ -185,7 +179,7 @@ hitag2crack/%: FORCE
 	$(Q)$(MAKE) --no-print-directory -C tools/hitag2crack $(patsubst hitag2crack/%,%,$@) DESTDIR=$(MYDESTDIR)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all clean install uninstall help _test bootrom fullimage recovery client mfkey nonce2key mf_nonce_brute mfd_aes_brute hitag2crack style miscchecks release FORCE udev accessrights cleanifplatformchanged
+.PHONY: all clean install uninstall help _test bootrom fullimage recovery client mfc_card_only mfc_card_reader mfd_aes_brute hitag2crack style miscchecks release FORCE udev accessrights cleanifplatformchanged
 
 help:
 	@echo "Multi-OS Makefile"
@@ -203,9 +197,8 @@ help:
 	@echo
 	@echo "+ client          - Make only the OS-specific host client"
 	@echo "+ cryptorf        - Make tools/cryptorf"
-	@echo "+ mfkey           - Make tools/mfkey"
-	@echo "+ nonce2key       - Make tools/nonce2key"
-	@echo "+ mf_nonce_brute  - Make tools/mf_nonce_brute"
+	@echo "+ mfc_card_only   - Make tools/mfc/card_only"
+	@echo "+ mfc_card_reader - Make tools/mfc/card_reader"
 	@echo "+ mfd_aes_brute   - Make tools/mfd_aes_brute"
 	@echo "+ hitag2crack     - Make tools/hitag2crack"
 	@echo "+ fpga_compress   - Make tools/fpga_compress"
@@ -245,11 +238,9 @@ recovery: recovery/all
 
 cryptorf: cryptorf/all
 
-mfkey: mfkey/all
+mfc_card_only: mfc_card_only/all
 
-nonce2key: nonce2key/all
-
-mf_nonce_brute: mf_nonce_brute/all
+mfc_card_reader: mfc_card_reader/all
 
 mfd_aes_brute: mfd_aes_brute/all
 

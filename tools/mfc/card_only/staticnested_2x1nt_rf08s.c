@@ -8,7 +8,7 @@
 // * Use backdoor on the targeted sector to get the clear static nested nT for keyA and for keyB
 // * Generate 2 lists of key candidates based on clear and encrypted nT
 // * Search couples of keyA/keyB satisfying some obscure relationship
-// * Use the resulting dictionary to bruteforce the keyA (and rf08s_nested_known_match for keyB)
+// * Use the resulting dictionary to bruteforce the keyA (and staticnested_2x1nt_rf08s_1key for keyB)
 //
 //  Doegox, 2024
 
@@ -69,7 +69,7 @@ static uint16_t compute_seednt16_nt32(uint32_t nt32, uint64_t key) {
 int main(int argc, char *const argv[]) {
     if (argc != 3) {
         printf("Usage:\n  %s keys_<uid:08x>_<sector:02>_<nt1:08x>.dic keys_<uid:08x>_<sector:02>_<nt2:08x>.dic\n"
-               "  where both dict files are produced by rf08s_nested_known *for the same UID and same sector*\n",
+               "  where both dict files are produced by staticnested_1nt *for the same UID and same sector*\n",
                argv[0]);
         return 1;
     }

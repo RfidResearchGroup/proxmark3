@@ -1,4 +1,5 @@
-:: TRACE
+## Sample trace
+```
  +  50422:    :     26
  +     64:   0: TAG 04  00
  +    944:    :     93  20
@@ -9,32 +10,38 @@
  +    113:   0: TAG 82  a4  16  6c
  +   1287:    :     a1  e4  58  ce  6e  ea  41  e0
  +     64:   0: TAG 5c  ad  f4  39
+```
+Usage with sample trace:
+`./mfkey64 9C599B32 82A4166C A1E458CE 6EEA41E0 5CADF439`
 
-:: Sample of trace above,
-./mfkey64 9c599b32 82a4166c a1e458ce 6eea41e0 5cadf439
+## Other examples
 
------------------------------------------------------------------------------------------------------
-:: For mfkey32, you want to get two different NR_0/NR_1 values.
+For mfkey32, you want to get two different NR_0/NR_1 values.
 
-::        <uid>    <nt>     <nr_0>   <ar_0>   <nr_1>   <ar_1>
+```
+#         <uid>    <nt>     <nr_0>   <ar_0>   <nr_1>   <ar_1>
 ./mfkey32 52B0F519 5417D1F8 4D545EA7 E15AC8C2 DAC1A7F4 5AE5C37F
+```
 
-:: For mfkey32v2 (moebius), you want to get two different NT/NT1 values. (like in the SIM commands)
-
-::          <uid>    <nt>     <nr_0>   <ar_0>   <nt1>    <nr_1>   <ar_1>
+For mfkey32v2 (moebius), you want to get two different NT/NT1 values. (like in the SIM commands)
+```
+#           <uid>    <nt>     <nr_0>   <ar_0>   <nt1>    <nr_1>   <ar_1>
 ./mfkey32v2 12345678 1AD8DF2B 1D316024 620EF048 30D6CB07 C52077E2 837AC61A
 ./mfkey32v2 52B0F519 5417D1F8 4D545EA7 E15AC8C2 A1BA88C6 DAC1A7F4 5AE5C37F
+```
 
-:: for mfkey64, you want to have the AT response from tag.
-
-::        <uid>    <nt>     <nr>     <ar>     <at>
+For mfkey64, you want to have the AT response from tag.
+```
+#         <uid>    <nt>     <nr>     <ar>     <at>
 ./mfkey64 9C599B32 82A4166C A1E458CE 6EEA41E0 5CADF439
 ./mfkey64 52B0F519 5417D1F8 4D545EA7 E15AC8C2 5056E41B
+```
 
------------------------------------------------------------------------------------------------------
-New functionality from @zhovner,
------------------------------------------------------------------------------------------------------
 ### Communication decryption
+A new functionality from @zhovner
+
+Example: given the following trace
+```
 RDR 26
 TAG 04 00
 RDR 93 20
@@ -54,10 +61,11 @@ TAG 49 e2 c9 de f4 86 8d 17 77 67 0e 58 4c 27 23 02 86 f4
 RDR fb dc d7 c1
 TAG 4a bd 96 4b 07 d3 56 3a a0 66 ed 0a 2e ac 7f 63 12 bf
 RDR 9f 91 49 ea
+```
 
+`./mfkey64 14579f69 ce844261 f8049ccb 0525c84f 9431cc40 7093df99 9972428ce2e8523f456b99c831e769dced09 8ca6827b ab797fd369e8b93a86776b40dae3ef686efd c3c381ba 49e2c9def4868d1777670e584c27230286f4 fbdcd7c1 4abd964b07d3563aa066ed0a2eac7f6312bf 9f9149ea`
 
-./mfkey64 14579f69 ce844261 f8049ccb 0525c84f 9431cc40 7093df99 9972428ce2e8523f456b99c831e769dced09 8ca6827b ab797fd369e8b93a86776b40dae3ef686efd c3c381ba 49e2c9def4868d1777670e584c27230286f4 fbdcd7c1 4abd964b07d3563aa066ed0a2eac7f6312bf 9f9149ea
-
+```
 Recovering key for:
   uid: 14579f69
    nt: ce844261
@@ -94,3 +102,4 @@ Decrypted communication:
 {dec8}: 61148834
 
 Found Key: [091e639cb715]
+```

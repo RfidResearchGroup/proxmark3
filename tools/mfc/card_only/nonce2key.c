@@ -13,7 +13,8 @@ int main(const int argc, const char *argv[]) {
     nr = rr = 0;
 
     if (argc < 5) {
-        printf("\nsyntax: %s <uid> <nt> <par> <ks>\n\n", argv[0]);
+        printf("\nsyntax:  %s <uid> <nt> <par> <ks>\n", argv[0]);
+        printf("example: %s 92c0456b 73294ab7 a3fbfb537343eb7b 070608090e060a02\n\n", argv[0]);
         return 1;
     }
     sscanf(argv[1], "%08x", &uid);

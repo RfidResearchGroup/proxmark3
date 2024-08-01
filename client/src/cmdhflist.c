@@ -2235,7 +2235,7 @@ bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isRes
                 mf_get_paritybinstr(sat, AuthData.at_enc, AuthData.at_enc_par);
 
                 PrintAndLogEx(NORMAL, "Nested authentication detected!");
-                PrintAndLogEx(NORMAL, "tools/mf_nonce_brute/mf_nonce_brute %x %x %s %x %x %s %x %s %s\n"
+                PrintAndLogEx(NORMAL, "tools/mfc/card_reader/mf_nonce_brute %x %x %s %x %x %s %x %s %s\n"
                               , AuthData.uid
                               , AuthData.nt_enc
                               , snt
