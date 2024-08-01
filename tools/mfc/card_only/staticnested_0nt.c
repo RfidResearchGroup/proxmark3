@@ -206,6 +206,7 @@ static void *generate_and_intersect_keys(void *threadarg) {
     }
 
     pthread_exit(NULL);
+    return NULL; // Make some compilers happy
 }
 
 static uint64_t **unpredictable_nested(NtpKs1List *pNKL, uint32_t keyCounts[]) {
