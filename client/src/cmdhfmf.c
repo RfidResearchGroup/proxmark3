@@ -9621,11 +9621,8 @@ static int CmdHF14AMfInfo(const char *Cmd) {
 static int CmdHF14AMfISEN(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf isen",
-                  "Information and check Static Encrypted Nonce properties in a MIFARE Classic card\n"
-                  "Some cards in order to extract information you need to specify key\n"
-                  "and/or specific keys in the command line",
+                  "Information about Static Encrypted Nonce properties in a MIFARE Classic card",
                   "hf mf isen\n"
-                  "hf mf isen -k FFFFFFFFFFFF -v\n"
                   "Default behavior:\n"
                   "auth(blk)-auth(blk2)-auth(blk2)-...\n"
                   "Default behavior when wrong key2:\n"

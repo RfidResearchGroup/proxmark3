@@ -1,7 +1,7 @@
-// Backdoored Nested Attack against Fudan FM11RF08S tags
+// Backdoored Nested Attack
 //
 // Attack conditions:
-// * Backdoor
+// * Backdoor, or a way to know the clear static nested nT
 //
 // Strategy:
 // * Use backdoor on the targeted sector to get the clear static nested nT

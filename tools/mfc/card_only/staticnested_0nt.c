@@ -1,4 +1,4 @@
-// Reused Keys Nested Attack against Fudan FM11RF08S tags
+// Reused Keys Nested Attack
 //
 // Attack conditions:
 // * Know a first key, to be able to activate the nested authentication protocol
