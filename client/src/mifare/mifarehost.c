@@ -603,11 +603,21 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
             free(statelists[1].head.slhead);
             num_to_bytes(key64, 6, resultKey);
 
-            PrintAndLogEx(SUCCESS, "\nTarget block %4u key type %c -- found valid key [ " _GREEN_("%s") " ]",
-                          package->block,
-                          package->keytype ? 'B' : 'A',
-                          sprint_hex_inrow(resultKey, 6)
-                         );
+            if (package->keytype < 2) {
+                PrintAndLogEx(SUCCESS, "\nTarget block %4u key type %c -- found valid key [ " _GREEN_("%s") " ]",
+                            package->block,
+                            package->keytype ? 'B' : 'A',
+                            sprint_hex_inrow(resultKey, 6)
+                            );
+            } else {
+                PrintAndLogEx(SUCCESS, "\nTarget block %4u key type %02x -- found valid key [ " _GREEN_("%s") " ]",
+                            package->block,
+                            MIFARE_AUTH_KEYA + package->keytype,
+                            sprint_hex_inrow(resultKey, 6)
+                            );
+            }
+
+
             return PM3_SUCCESS;
         }
 
@@ -616,11 +626,17 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
     }
 
 out:
-    PrintAndLogEx(SUCCESS, "\nTarget block %4u key type %c",
-                  package->block,
-                  package->keytype ? 'B' : 'A'
-                 );
-
+    if (package->keytype < 2) {
+        PrintAndLogEx(SUCCESS, "\nTarget block %4u key type %c",
+                    package->block,
+                    package->keytype ? 'B' : 'A'
+                    );
+    } else {
+        PrintAndLogEx(SUCCESS, "\nTarget block %4u key type %02x",
+                    package->block,
+                    MIFARE_AUTH_KEYA + package->keytype
+                    );
+    }
     free(statelists[0].head.slhead);
     free(statelists[1].head.slhead);
     return PM3_ESOFT;
