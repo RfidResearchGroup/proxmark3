@@ -1433,6 +1433,7 @@ typedef struct chk_t {
 //  0 = correct key
 static uint8_t chkKey(struct chk_t *c) {
     uint8_t i = 0, res = 2;
+    bool selected = false;
     while (i < 5) {
         // this part is from Piwi's faster nonce collecting part in Hardnested.
         // assume: fast select
@@ -1440,6 +1441,7 @@ static uint8_t chkKey(struct chk_t *c) {
             ++i;
             continue;
         }
+        selected = true;
         res = mifare_classic_authex(c->pcs, c->cuid, c->block, c->keyType, c->key, AUTH_FIRST, NULL, NULL);
 
 //        CHK_TIMEOUT();
@@ -1448,6 +1450,9 @@ static uint8_t chkKey(struct chk_t *c) {
         // if ( !res )
         // mifare_classic_halt(c->pcs);
         break;
+    }
+    if (!selected) {
+        Dbprintf("chkKey: Failed at fast selecting the card!");
     }
     return res;
 }
@@ -1666,6 +1671,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
     chk_data.block = 0;
 
     if (singleSectorMode) {
+        allkeys = 1;
         chk_data.block = blockn;
         chk_data.keyType = keytype;
         for (uint16_t i = 0; i < keyCount; ++i) {
@@ -1679,6 +1685,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 
             chk_data.key = bytes_to_num(datain + i * 6, 6);
             if (chkKey(&chk_data) == 0) {
+                foundkeys++;
                 reply_old(CMD_ACK, 1, 0, 0, datain + i * 6, 6);
                 goto out;
             }
@@ -1687,10 +1694,12 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 out:
         LEDsoff();
         crypto1_deinit(pcs);
-        set_tracing(false);
-        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-        BigBuf_free();
-        BigBuf_Clear_ext(false);
+        if (foundkeys == allkeys || lastchunk) {
+            set_tracing(false);
+            FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+            BigBuf_free();
+            BigBuf_Clear_ext(false);
+        }
         g_dbglevel = oldbg;
         return;
     }
