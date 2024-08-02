@@ -9657,13 +9657,18 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     uint8_t keytype = MF_KEY_A;
     if (arg_get_lit(ctx, 2) && arg_get_lit(ctx, 3)) {
         CLIParserFree(ctx);
-        PrintAndLogEx(WARNING, "Input key type must be A or B");
+        PrintAndLogEx(WARNING, "Choose one single input key type");
         return PM3_EINVARG;
     } else if (arg_get_lit(ctx, 3)) {
         keytype = MF_KEY_B;
     }
-    // Should warn if conflict with -a/-b and -c but well...
+    uint8_t prev_keytype = keytype;
     keytype = arg_get_int_def(ctx, 4, keytype);
+    if ((arg_get_lit(ctx, 2) || arg_get_lit(ctx, 3)) && (keytype != prev_keytype)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Choose one single input key type");
+        return PM3_EINVARG;
+    }
 
     int keylen = 0;
     uint8_t key[MIFARE_KEY_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -9674,15 +9679,20 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     uint8_t keytype_nested = keytype;
     if (arg_get_lit(ctx, 7) && arg_get_lit(ctx, 8)) {
         CLIParserFree(ctx);
-        PrintAndLogEx(WARNING, "Input key type must be A or B");
+        PrintAndLogEx(WARNING, "Choose one single nested input key type");
         return PM3_EINVARG;
     } else if (arg_get_lit(ctx, 7)) {
         keytype_nested = MF_KEY_A;
     } else if (arg_get_lit(ctx, 8)) {
         keytype_nested = MF_KEY_B;
     }
-    // Should warn if conflict with -a/-b and -c but well...
+    uint8_t prev_keytype_nested = keytype_nested;
     keytype_nested = arg_get_int_def(ctx, 9, keytype_nested);
+    if ((arg_get_lit(ctx, 7) || arg_get_lit(ctx, 8)) && (keytype_nested != prev_keytype_nested)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Choose one single nested input key type");
+        return PM3_EINVARG;
+    }
 
     int keylen_nested = 0;
     uint8_t key_nested[MIFARE_KEY_SIZE];
