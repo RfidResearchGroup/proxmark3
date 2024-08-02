@@ -196,7 +196,7 @@ static void *generate_and_intersect_keys(void *threadarg) {
         pthread_mutex_unlock(data->keyCount_mutex[0]);
 
         if ((i != startPos) && ((i - startPos) % ((endPos - startPos) / 20) == 0)) { // every 5%
-            printf("\rThread %3i %3i%%", thread_id, (i - startPos) * 100 / (endPos - startPos));
+            printf("\33[2K\rThread %3i %3i%%", thread_id, (i - startPos) * 100 / (endPos - startPos));
             printf(" keys[%d]:%9i", 0, *data->keyCount[0]);
             for (uint32_t nonce_index = 1; nonce_index < num_nonces; nonce_index++) {
                 printf(" keys[%d]:%5i", nonce_index, *data->keyCount[nonce_index]);
@@ -214,10 +214,12 @@ static uint64_t **unpredictable_nested(NtpKs1List *pNKL, uint32_t keyCounts[]) {
     thread_data_t thread_data[NUM_THREADS];
     pthread_mutex_t keyCount_mutex[MAX_NR_NONCES];
 
-    uint64_t **result_keys = (uint64_t **)malloc(MAX_NR_NONCES * sizeof(uint64_t *));
-    // no result_keys[0] stored, would be too large
-    for (uint32_t i = 1; i < MAX_NR_NONCES; i++) {
-        result_keys[i] = (uint64_t *)malloc(KEY_SPACE_SIZE_STEP2 * sizeof(uint64_t));
+    uint64_t **result_keys = (uint64_t **)calloc(MAX_NR_NONCES, sizeof(uint64_t *));
+    for (uint32_t i = 0; i < MAX_NR_NONCES; i++) {
+        // no result_keys[0] stored, would be too large
+        if (i != 0) {
+            result_keys[i] = (uint64_t *)calloc(KEY_SPACE_SIZE_STEP2, sizeof(uint64_t));
+        }
         keyCounts[i] = 0;
         pthread_mutex_init(&keyCount_mutex[i], NULL);
     }
@@ -355,7 +357,7 @@ int main(int argc, char *const argv[]) {
         NtData *pNtData = &NKL.NtDataList[NKL.nr_nonces];
         // Try to recover the keystream1
         uint32_t nttest = prng_successor(1, 16); // a first valid nonce
-        pNtData->pNK = (NtpKs1 *)malloc(sizeof(NtpKs1) * 8192); // 2**16 filtered with 3 parity bits => 2**13
+        pNtData->pNK = (NtpKs1 *)calloc(8192, sizeof(NtpKs1)); // 2**16 filtered with 3 parity bits => 2**13
         if (pNtData->pNK == NULL) {
             return 1;
         }
