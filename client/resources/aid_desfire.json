@@ -376,6 +376,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "F53280",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "mobile access",
+        "Description": "Digital Keys Sent To The dormakaba mobile access App",
+        "Type": "pacs"
+    },
+    {
         "AID": "F518F0",
         "Vendor": "Telenot Electronic GmbH",
         "Country": "DE",
@@ -672,6 +680,14 @@
         "Type": "transport"
     },
     {
+        "AID": "0000F0",
+        "Vendor": "Metropolitan Transportation Authority",
+        "Country": "US",
+        "Name": "OMNY (One Metro New York) (JFK)",
+        "Description": "JFK OMNY (One Metro New York) Card",
+        "Type": "transport"
+    },
+    {
         "AID": "002000",
         "Vendor": "Metrolinx",
         "Country": "CA",
@@ -821,6 +837,14 @@
         "Country": "NO",
         "Name": "NORTIC (Norway Public Transport Card)",
         "Description": "FIDs 01: Product Retailer; 02: Service Provider; 03: Special Event; 04: Stored Value; 05: General Event Log; 06: SV Reload Log; 0A: Environment; 0C: Card Holder",
+        "Type": "transport"
+    },
+    {
+        "AID": "634000",
+        "Vendor": "Doha Metro and Lusail Tram via Qatar Rail",
+        "Country": "QA",
+        "Name": "Travel Pass (DOH)",
+        "Description": "DOH Standard / goldclub Travel Passes // FIDs 00,04-06: Standard; 01-03,17: Backup; 07-16,18: Value; 19: Cyclic 1A: Linear",
         "Type": "transport"
     },
     {
