@@ -844,7 +844,7 @@
         "Vendor": "Doha Metro and Lusail Tram via Qatar Rail",
         "Country": "QA",
         "Name": "Travel Pass (DOH)",
-        "Description": "DOH Standard / goldclub Travel Passes // FIDs 00,04-06: Standard; 01-03,17: Backup; 07-16,18: Value; 19: Cyclic 1A: Linear",
+        "Description": "DOH Standard / goldclub Travel Passes // FIDs 00,04-06: Standard; 01-03,17: Backup; 07-16,18: Value; 19: Cyclic; 1A: Linear",
         "Type": "transport"
     },
     {
