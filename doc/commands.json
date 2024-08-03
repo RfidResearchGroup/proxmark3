@@ -3234,9 +3234,10 @@
                 "-k, --key <hex> 3DES transport key",
                 "-v, --verbose verbose output",
                 "--d6 decode as block 6",
-                "-z, --dense dense dump output style"
+                "-z, --dense dense dump output style",
+                "--ns no save to file"
             ],
-            "usage": "hf iclass decrypt [-hvz] [-f <fn>] [-d <hex>] [-k <hex>] [--d6]"
+            "usage": "hf iclass decrypt [-hvz] [-f <fn>] [-d <hex>] [-k <hex>] [--d6] [--ns]"
         },
         "hf iclass dump": {
             "command": "hf iclass dump",
@@ -4699,9 +4700,12 @@
                 "--emu Fill simulator keys from found keys",
                 "--dump Dump found keys to binary file",
                 "--mem Use dictionary from flashmemory",
-                "-f, --file <fn> filename of dictionary"
+                "-f, --file <fn> filename of dictionary",
+                "--blk <dec> block number (single block recovery mode)",
+                "-a single block recovery key A",
+                "-b single block recovery key B"
             ],
-            "usage": "hf mf fchk [-h] [-k <hex>]... [--mini] [--1k] [--2k] [--4k] [--emu] [--dump] [--mem] [-f <fn>]"
+            "usage": "hf mf fchk [-hab] [-k <hex>]... [--mini] [--1k] [--2k] [--4k] [--emu] [--dump] [--mem] [-f <fn>] [--blk <dec>]"
         },
         "hf mf gchpwd": {
             "command": "hf mf gchpwd",
@@ -5015,6 +5019,39 @@
             ],
             "usage": "hf mf info [-habnv] [--blk <dec>] [-k <hex>]"
         },
+        "hf mf isen": {
+            "command": "hf mf isen",
+            "description": "Information about Static Encrypted Nonce properties in a MIFARE Classic card",
+            "notes": [
+                "hf mf isen",
+                "Default behavior:",
+                "auth(blk)-auth(blk2)-auth(blk2)-...",
+                "Default behavior when wrong key2:",
+                "auth(blk)-auth(blk2) auth(blk)-auth(blk2) ..."
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--blk <dec> block number",
+                "-a input key type is key A (def)",
+                "-b input key type is key B",
+                "-c <dec> input key type is key A + offset",
+                "-k, --key <hex> key, 6 hex bytes",
+                "--blk2 <dec> nested block number (default=same)",
+                "--a2 nested input key type is key A (default=same)",
+                "--b2 nested input key type is key B (default=same)",
+                "--c2 <dec> nested input key type is key A + offset",
+                "--key2 <hex> nested key, 6 hex bytes (default=same)",
+                "-n <dec> number of nonces (default=2)",
+                "--reset reset between attempts, even if auth was successful",
+                "--addread auth(blk)-read(blk)-auth(blk2)",
+                "--addauth auth(blk)-auth(blk)-auth(blk2)",
+                "--incblk2 auth(blk)-auth(blk2)-auth(blk2+4)-...",
+                "--corruptnrar corrupt {nR}{aR}, but with correct parity",
+                "--corruptnrarparity correct {nR}{aR}, but with corrupted parity"
+            ],
+            "usage": "hf mf isen [-hab] [--blk <dec>] [-c <dec>] [-k <hex>] [--blk2 <dec>] [--a2] [--b2] [--c2 <dec>] [--key2 <hex>] [-n <dec>] [--reset] [--addread] [--addauth] [--incblk2] [--corruptnrar] [--corruptnrarparity]"
+        },
         "hf mf mad": {
             "command": "hf mf mad",
             "description": "Checks and prints MIFARE Application Directory (MAD)",
@@ -5131,14 +5168,17 @@
                 "--blk <dec> Input block number",
                 "-a Input key specified is A key (default)",
                 "-b Input key specified is B key",
+                "-c <dec> input key type is key A + offset",
                 "--tblk <dec> Target block number",
                 "--ta Target A key (default)",
                 "--tb Target B key",
+                "--tc <dec> Nested input key type is key A + offset (you must specify a single block as well!)",
                 "--emu Fill simulator keys from found keys",
                 "--dump Dump found keys to file",
-                "--mem Use dictionary from flashmemory"
+                "--mem Use dictionary from flashmemory",
+                "-i Ignore static encrypted nonces"
             ],
-            "usage": "hf mf nested [-hab] [-k <hex>] [--mini] [--1k] [--2k] [--4k] [--blk <dec>] [--tblk <dec>] [--ta] [--tb] [--emu] [--dump] [--mem]"
+            "usage": "hf mf nested [-habi] [-k <hex>] [--mini] [--1k] [--2k] [--4k] [--blk <dec>] [-c <dec>] [--tblk <dec>] [--ta] [--tb] [--tc <dec>] [--emu] [--dump] [--mem]"
         },
         "hf mf personalize": {
             "command": "hf mf personalize",
@@ -5177,10 +5217,11 @@
                 "--blk <dec> block number",
                 "-a input key type is key A (def)",
                 "-b input key type is key B",
+                "-c <dec> input key type is key A + offset",
                 "-k, --key <hex> key, 6 hex bytes",
                 "-v, --verbose verbose output"
             ],
-            "usage": "hf mf rdbl [-habv] --blk <dec> [-k <hex>]"
+            "usage": "hf mf rdbl [-habv] --blk <dec> [-c <dec>] [-k <hex>]"
         },
         "hf mf rdsc": {
             "command": "hf mf rdsc",
@@ -5194,11 +5235,12 @@
                 "-h, --help This help",
                 "-a input key specified is A key (def)",
                 "-b input key specified is B key",
+                "-c <dec> input key type is key A + offset",
                 "-k, --key <hex> key specified as 6 hex bytes",
                 "-s, --sec <dec> sector number",
                 "-v, --verbose verbose output"
             ],
-            "usage": "hf mf rdsc [-habv] [-k <hex>] -s <dec>"
+            "usage": "hf mf rdsc [-habv] [-c <dec>] [-k <hex>] -s <dec>"
         },
         "hf mf restore": {
             "command": "hf mf restore",
@@ -5387,11 +5429,12 @@
                 "--blk <dec> block number",
                 "-a input key type is key A (def)",
                 "-b input key type is key B",
+                "-c <dec> input key type is key A + offset",
                 "--force override warnings",
                 "-k, --key <hex> key, 6 hex bytes",
                 "-d, --data <hex> bytes to write, 16 hex bytes"
             ],
-            "usage": "hf mf wrbl [-hab] --blk <dec> [--force] [-k <hex>] [-d <hex>]"
+            "usage": "hf mf wrbl [-hab] --blk <dec> [-c <dec>] [--force] [-k <hex>] [-d <hex>]"
         },
         "hf mfdes auth": {
             "command": "hf mfdes auth",
@@ -12765,8 +12808,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 739,
+        "commands_extracted": 740,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-07-21T14:16:40"
+        "extracted_on": "2024-08-03T19:17:38"
     }
 }

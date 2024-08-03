@@ -264,7 +264,7 @@ int mfCheckKeys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChun
         if (curr_keys) {
             uint64_t foo = bytes_to_num(resp.data.asBytes, 6);
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(SUCCESS, _GREEN_("Key %s for block %2i found: %012" PRIx64), (singleSectorParams >> 8) & 1 ? "B":"A", singleSectorParams & 0xFF, foo);
+            PrintAndLogEx(SUCCESS, _GREEN_("Key %s for block %2i found: %012" PRIx64), (singleSectorParams >> 8) & 1 ? "B" : "A", singleSectorParams & 0xFF, foo);
             return PM3_SUCCESS;
         }
     }
@@ -605,16 +605,16 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
 
             if (package->keytype < 2) {
                 PrintAndLogEx(SUCCESS, "\nTarget block %4u key type %c -- found valid key [ " _GREEN_("%s") " ]",
-                            package->block,
-                            package->keytype ? 'B' : 'A',
-                            sprint_hex_inrow(resultKey, 6)
-                            );
+                              package->block,
+                              package->keytype ? 'B' : 'A',
+                              sprint_hex_inrow(resultKey, 6)
+                             );
             } else {
                 PrintAndLogEx(SUCCESS, "\nTarget block %4u key type %02x -- found valid key [ " _GREEN_("%s") " ]",
-                            package->block,
-                            MIFARE_AUTH_KEYA + package->keytype,
-                            sprint_hex_inrow(resultKey, 6)
-                            );
+                              package->block,
+                              MIFARE_AUTH_KEYA + package->keytype,
+                              sprint_hex_inrow(resultKey, 6)
+                             );
             }
 
 
@@ -628,14 +628,14 @@ int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo,
 out:
     if (package->keytype < 2) {
         PrintAndLogEx(SUCCESS, "\nTarget block %4u key type %c",
-                    package->block,
-                    package->keytype ? 'B' : 'A'
-                    );
+                      package->block,
+                      package->keytype ? 'B' : 'A'
+                     );
     } else {
         PrintAndLogEx(SUCCESS, "\nTarget block %4u key type %02x",
-                    package->block,
-                    MIFARE_AUTH_KEYA + package->keytype
-                    );
+                      package->block,
+                      MIFARE_AUTH_KEYA + package->keytype
+                     );
     }
     free(statelists[0].head.slhead);
     free(statelists[1].head.slhead);
@@ -1430,17 +1430,17 @@ int detect_classic_static_encrypted_nonce_ex(uint8_t block_no, uint8_t key_type,
         }
         if (verbose && (resp.data.asBytes[0] == NONCE_STATIC_ENC)) {
             uint32_t uid = resp.data.asBytes[1] << 24 |
-            resp.data.asBytes[2] << 16 |
-            resp.data.asBytes[3] << 8 |
-            resp.data.asBytes[4];
+                           resp.data.asBytes[2] << 16 |
+                           resp.data.asBytes[3] << 8 |
+                           resp.data.asBytes[4];
             uint32_t nt = resp.data.asBytes[5] << 24 |
-            resp.data.asBytes[6] << 16 |
-            resp.data.asBytes[7] << 8 |
-            resp.data.asBytes[8];
+                          resp.data.asBytes[6] << 16 |
+                          resp.data.asBytes[7] << 8 |
+                          resp.data.asBytes[8];
             uint32_t ntenc = resp.data.asBytes[9] << 24 |
-            resp.data.asBytes[10] << 16 |
-            resp.data.asBytes[11] << 8 |
-            resp.data.asBytes[12];
+                             resp.data.asBytes[10] << 16 |
+                             resp.data.asBytes[11] << 8 |
+                             resp.data.asBytes[12];
             uint8_t ntencparenc = resp.data.asBytes[13];
 
             // recompute nt on client, just because
@@ -1457,24 +1457,24 @@ int detect_classic_static_encrypted_nonce_ex(uint8_t block_no, uint8_t key_type,
             ntencparenc >>= 4;
             // [...] Additionally, the bit of keystream used to encrypt the parity bits is reused to encrypt the next bit of plaintext.
             // we can decrypt first 3 parity bits, not last one as it's using future keystream
-            uint8_t ksp = (((ks >> 16)&1) << 3) | (((ks >> 8)&1) << 2) | (((ks >> 0)&1) << 1);
+            uint8_t ksp = (((ks >> 16) & 1) << 3) | (((ks >> 8) & 1) << 2) | (((ks >> 0) & 1) << 1);
             uint8_t ntencpar = ntencparenc ^ ksp;
             if (validate_prng_nonce(nt)) {
                 PrintAndLogEx(INFO, "nTenc " _GREEN_("%08x") " par {" _YELLOW_("%i%i%i%i") "}=" _YELLOW_("%i%i%ix") " | ks "  _GREEN_("%08x") " | nT " _GREEN_("%08x") " par " _YELLOW_("%i%i%i%i")" | lfsr16 index " _GREEN_("%i"),
-                ntenc,
-                (ntencparenc >> 3) & 1, (ntencparenc >> 2) & 1, (ntencparenc >> 1) & 1, ntencparenc & 1,
-                (ntencpar >> 3) & 1, (ntencpar >> 2) & 1, (ntencpar >> 1) & 1,
-                ks, nt,
-                oddparity8((nt>>24) & 0xFF), oddparity8((nt>>16) & 0xFF), oddparity8((nt>>8) & 0xFF), oddparity8(nt & 0xFF), 
-                nonce_distance(0, nt));
+                              ntenc,
+                              (ntencparenc >> 3) & 1, (ntencparenc >> 2) & 1, (ntencparenc >> 1) & 1, ntencparenc & 1,
+                              (ntencpar >> 3) & 1, (ntencpar >> 2) & 1, (ntencpar >> 1) & 1,
+                              ks, nt,
+                              oddparity8((nt >> 24) & 0xFF), oddparity8((nt >> 16) & 0xFF), oddparity8((nt >> 8) & 0xFF), oddparity8(nt & 0xFF),
+                              nonce_distance(0, nt));
             } else {
                 PrintAndLogEx(INFO, "nTenc " _GREEN_("%08x") " par {" _YELLOW_("%i%i%i%i") "}=" _YELLOW_("%i%i%ix") " | ks "  _YELLOW_("%08x") " | nT " _YELLOW_("%08x") " par " _YELLOW_("%i%i%i%i") " | " _RED_("not lfsr16") " (wrong key)",
-                ntenc,
-                (ntencparenc >> 3) & 1, (ntencparenc >> 2) & 1, (ntencparenc >> 1) & 1, ntencparenc & 1,
-                (ntencpar >> 3) & 1, (ntencpar >> 2) & 1, (ntencpar >> 1) & 1,
-                ks, nt,
-                oddparity8((nt>>24) & 0xFF), oddparity8((nt>>16) & 0xFF), oddparity8((nt>>8) & 0xFF), oddparity8(nt & 0xFF)
-                );
+                              ntenc,
+                              (ntencparenc >> 3) & 1, (ntencparenc >> 2) & 1, (ntencparenc >> 1) & 1, ntencparenc & 1,
+                              (ntencpar >> 3) & 1, (ntencpar >> 2) & 1, (ntencpar >> 1) & 1,
+                              ks, nt,
+                              oddparity8((nt >> 24) & 0xFF), oddparity8((nt >> 16) & 0xFF), oddparity8((nt >> 8) & 0xFF), oddparity8(nt & 0xFF)
+                             );
             }
         }
         return resp.data.asBytes[0];

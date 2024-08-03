@@ -119,7 +119,7 @@ int main(int argc, char *const argv[]) {
     }
     uint64_t *keys = NULL;
     uint32_t keyCount = 0;
-    
+
     uint32_t authuid = hex_to_uint32(argv[1]);
     uint32_t sector = hex_to_uint32(argv[2]);
     uint32_t nt = hex_to_uint32(argv[3]);
@@ -129,20 +129,20 @@ int main(int argc, char *const argv[]) {
         return 1;
     }
     uint8_t nt_par_enc = ((nt_par_err_arr[0] ^ oddparity8((nt_enc >> 24) & 0xFF)) << 3) |
-                            ((nt_par_err_arr[1] ^ oddparity8((nt_enc >> 16) & 0xFF)) << 2) |
-                            ((nt_par_err_arr[2] ^ oddparity8((nt_enc >>  8) & 0xFF)) << 1) |
-                            ((nt_par_err_arr[3] ^ oddparity8((nt_enc >>  0) & 0xFF)) << 0);
+                         ((nt_par_err_arr[1] ^ oddparity8((nt_enc >> 16) & 0xFF)) << 2) |
+                         ((nt_par_err_arr[2] ^ oddparity8((nt_enc >>  8) & 0xFF)) << 1) |
+                         ((nt_par_err_arr[3] ^ oddparity8((nt_enc >>  0) & 0xFF)) << 0);
     printf("uid=%08x nt=%08x nt_enc=%08x nt_par_err=%i%i%i%i nt_par_enc=%i%i%i%i ks1=%08x\n", authuid, nt, nt_enc,
-        nt_par_err_arr[0], nt_par_err_arr[1], nt_par_err_arr[2], nt_par_err_arr[3],
-        (nt_par_enc >> 3)&1, (nt_par_enc >> 2)&1, (nt_par_enc >> 1)&1, nt_par_enc&1,
-        nt ^ nt_enc);
+           nt_par_err_arr[0], nt_par_err_arr[1], nt_par_err_arr[2], nt_par_err_arr[3],
+           (nt_par_enc >> 3) & 1, (nt_par_enc >> 2) & 1, (nt_par_enc >> 1) & 1, nt_par_enc & 1,
+           nt ^ nt_enc);
 
 
     printf("Finding key candidates...\n");
     keys = generate_keys(authuid, nt, nt_enc, nt_par_enc, &keyCount);
     printf("Finding phase complete, found %i keys\n", keyCount);
 
-    FILE* fptr;
+    FILE *fptr;
     char filename[30];
     snprintf(filename, sizeof(filename), "keys_%08x_%02i_%08x.dic", authuid, sector, nt);
 

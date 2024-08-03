@@ -25,7 +25,7 @@ uint16_t s_lfsr16[1 << 16] = {0};
 
 static void init_lfsr16_table(void) {
     uint16_t x = 1;
-    for (uint16_t i=1; i; ++i) {
+    for (uint16_t i = 1; i; ++i) {
         i_lfsr16[(x & 0xff) << 8 | x >> 8] = i;
         s_lfsr16[i] = (x & 0xff) << 8 | x >> 8;
         x = x >> 1 | (x ^ x >> 2 ^ x >> 3 ^ x >> 5) << 15;
@@ -37,7 +37,7 @@ static void init_lfsr16_table(void) {
 // }
 
 static uint16_t prev_lfsr16(uint16_t nonce) {
-    return s_lfsr16[(i_lfsr16[nonce]-1) % 65535];
+    return s_lfsr16[(i_lfsr16[nonce] - 1) % 65535];
 }
 
 static uint16_t compute_seednt16_nt32(uint32_t nt32, uint64_t key) {
@@ -45,13 +45,13 @@ static uint16_t compute_seednt16_nt32(uint32_t nt32, uint64_t key) {
     uint8_t b[] = {0, 13, 1, 14, 4, 10, 15, 7, 5, 3, 8, 6, 9, 2, 12, 11};
     uint16_t nt = nt32 >> 16;
     uint8_t prev = 14;
-    for (uint8_t i=0; i<prev; i++) {
+    for (uint8_t i = 0; i < prev; i++) {
         nt = prev_lfsr16(nt);
     }
     uint8_t prevoff = 8;
     bool odd = 1;
 
-    for (uint8_t i=0; i<6*8; i+=8) {
+    for (uint8_t i = 0; i < 6 * 8; i += 8) {
         if (odd) {
             nt ^= (a[(key >> i) & 0xF]);
             nt ^= (b[(key >> i >> 4) & 0xF]) << 4;
@@ -61,7 +61,7 @@ static uint16_t compute_seednt16_nt32(uint32_t nt32, uint64_t key) {
         }
         odd ^= 1;
         prev += prevoff;
-        for (uint8_t j=0; j<prevoff; j++) {
+        for (uint8_t j = 0; j < prevoff; j++) {
             nt = prev_lfsr16(nt);
         }
     }
@@ -82,7 +82,7 @@ int main(int argc, char *const argv[]) {
         return 1;
     }
 
-    char *filename= argv[3];
+    char *filename = argv[3];
     uint32_t uid, sector, nt2;
 
     int result;
@@ -99,16 +99,16 @@ int main(int argc, char *const argv[]) {
     init_lfsr16_table();
 
     uint32_t keycount2 = 0;
-    uint64_t* keys2 = NULL;
+    uint64_t *keys2 = NULL;
 
-    FILE* fptr = fopen(filename, "r");
+    FILE *fptr = fopen(filename, "r");
     if (fptr != NULL) {
         uint64_t buffer;
         while (fscanf(fptr, "%012" PRIx64, &buffer) == 1) {
             keycount2++;
         }
 
-        keys2 = (uint64_t*)malloc(keycount2 * sizeof(uint64_t));
+        keys2 = (uint64_t *)malloc(keycount2 * sizeof(uint64_t));
         if (keys2 == NULL) {
             perror("Failed to allocate memory");
             fclose(fptr);

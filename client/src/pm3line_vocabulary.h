@@ -337,6 +337,7 @@ const static vocabulary_t vocabulary[] = {
     { 1, "hf mf help" },
     { 1, "hf mf list" },
     { 0, "hf mf info" },
+    { 0, "hf mf isen" },
     { 0, "hf mf darkside" },
     { 0, "hf mf nested" },
     { 1, "hf mf hardnested" },

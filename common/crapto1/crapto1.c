@@ -432,7 +432,7 @@ int nonce_distance(uint32_t from, uint32_t to) {
 bool validate_prng_nonce(uint32_t nonce) {
     uint16_t x = nonce >> 16;
     x = (x & 0xff) << 8 | x >> 8;
-    for (uint8_t i = 0; i<16; i++) {
+    for (uint8_t i = 0; i < 16; i++) {
         x = x >> 1 | (x ^ x >> 2 ^ x >> 3 ^ x >> 5) << 15;
     }
     x = (x & 0xff) << 8 | x >> 8;

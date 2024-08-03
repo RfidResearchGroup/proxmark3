@@ -38,19 +38,19 @@
 #include "ticks.h"
 #include "util.h"
 
-/* 
+/*
  * `hf_mattyrun` tries to dump MIFARE Classic cards into emulator memory and emulates them.
- * 
+ *
  * This standalone mode uses a predefined dictionary to authenticate to MIFARE Classic
  * cards (cf. `hf mf chk`) and to dump the card into emulator memory (cf. `hf mf ecfill`).
  * Once a card has been dumped, the card is emulated (cf. `hf mf sim`). Emulation will
  * start even if only a partial dump could be retrieved from the card (e.g. due to missing
  * keys).
- * 
+ *
  * This standalone mode is specifically designed for devices without flash. However,
  * users can pass data to/from the standalone mode through emulator memory (assuming
  * continuous (battery) power supply):
- * 
+ *
  * - Keys can be added to the dictionary by loading them into the emulator before
  *   starting the standalone mode. You can use `hf mf eload -f dump_file` to load
  *   any existing card dump. All keys from the key slots in the sector trailers
@@ -58,14 +58,14 @@
  *   trailers available for a 4K card to store your user dictionary. Sector and key
  *   type are ignored during chk; all user keys will be tested for all sectors and
  *   for both key types.
- * 
+ *
  * - Once a card has been cloned into emulator memory, you can extract the dump by
  *   ending the standalone mode and retrieving the emulator memory (`hf mf eview`
  *   or `hf mf esave [--mini|--1k|--2k|--4k] -f dump_file`).
- * 
+ *
  * This standalone mode will log status information via USB. In addition, the LEDs
  * display status information:
- * 
+ *
  * - Waiting for card: LED C is on, LED D blinks.
  * - Tying to authenticate: LED C and D are on; LED D will blink on errors.
  * - Nested attack (NOT IMPLEMENTED!): LED B is on.
@@ -73,14 +73,14 @@
  * - Starting emulation: LED A, B, and C are on. LED D is on if only a partial
  *   dump is available.
  * - Emulation started: All LEDS are off.
- * 
+ *
  * You can use the user button to interact with the standalone mode. During
  * emulation, (short) pressing the button ends emulation and returns to card
  * discovery. Long pressing the button ends the standalone mode.
- * 
+ *
  * Developers can configure the behavior of the standalone mode through the below
  * constants:
- * 
+ *
  * - MATTYRUN_PRINT_KEYS: Activate display of actually used key dictionary on startup.
  * - MATTYRUN_NO_ECFILL: Do not load and emulate card (only discovered keys are stored).
  * - MATTYRUN_MFC_DEFAULT_KEYS: Compiled-in default dictionary defined in a separate
@@ -88,7 +88,7 @@
  *   dictionaries here.
  * - MATTYRUN_MFC_ESSENTIAL_KEYS: Compiled-in dictionary of keys that should be tested
  *   before any user dictionary.
- * 
+ *
  * This is a major rewrite of the original `hf_mattyrun` by Matías A. Ré Medina.
  * The original version is described [here](http://bit.ly/2c9nZXR) (in Spanish).
  */
@@ -136,7 +136,7 @@ static bool saMifareDiscover(void) {
 // Customized MifareChkKeys that operates on the already detected card in
 // mattyrun_card and tests authentication with our dictionary
 static int saMifareChkKeys(uint8_t const blockNo, uint8_t const keyType, bool const clearTrace,
-                           uint16_t const keyCount, uint64_t const * const mfKeys, uint64_t * const key) {
+                           uint16_t const keyCount, uint64_t const *const mfKeys, uint64_t *const key) {
 
     int retval = -1;
 
@@ -179,10 +179,17 @@ static int saMifareChkKeys(uint8_t const blockNo, uint8_t const keyType, bool co
         } else {
             if (cascade_levels == 0) {
                 switch (mattyrun_card.uidlen) {
-                    case 4:  cascade_levels = 1; break;
-                    case 7:  cascade_levels = 2; break;
-                    case 10: cascade_levels = 3; break;
-                    default: break;
+                    case 4:
+                        cascade_levels = 1;
+                        break;
+                    case 7:
+                        cascade_levels = 2;
+                        break;
+                    case 10:
+                        cascade_levels = 3;
+                        break;
+                    default:
+                        break;
                 }
             }
             // No need for anticollision. Since we sucessfully selected the card before,
@@ -239,10 +246,10 @@ void RunMod(void) {
     // usb_disable();
 
     // Allocate dictionary buffer
-    uint64_t * const mfcKeys = (uint64_t *)BigBuf_malloc(
-            sizeof(uint64_t) * (ARRAYLEN(MATTYRUN_MFC_ESSENTIAL_KEYS) +
-                                ARRAYLEN(MATTYRUN_MFC_DEFAULT_KEYS) +
-                                MIFARE_4K_MAXSECTOR * 2));
+    uint64_t *const mfcKeys = (uint64_t *)BigBuf_malloc(
+                                  sizeof(uint64_t) * (ARRAYLEN(MATTYRUN_MFC_ESSENTIAL_KEYS) +
+                                                      ARRAYLEN(MATTYRUN_MFC_DEFAULT_KEYS) +
+                                                      MIFARE_4K_MAXSECTOR * 2));
     uint16_t mfcKeyCount = 0;
 
     // Load essential keys to dictionary buffer
@@ -542,7 +549,7 @@ void RunMod(void) {
             LED_D_OFF();
 
             DbpString("[=] Started emulation. Press button to abort at anytime.");
-    
+
             if (partialEmulation) {
                 LED_D_ON();
                 DbpString("[=] Partial memory dump loaded. Trying best effort emulation approach.");
@@ -550,10 +557,17 @@ void RunMod(void) {
 
             uint16_t simflags = 0;
             switch (mattyrun_card.uidlen) {
-                case 4:  simflags |= FLAG_4B_UID_IN_DATA;  break;
-                case 7:  simflags |= FLAG_7B_UID_IN_DATA;  break;
-                case 10: simflags |= FLAG_10B_UID_IN_DATA; break;
-                default: break;
+                case 4:
+                    simflags |= FLAG_4B_UID_IN_DATA;
+                    break;
+                case 7:
+                    simflags |= FLAG_7B_UID_IN_DATA;
+                    break;
+                case 10:
+                    simflags |= FLAG_10B_UID_IN_DATA;
+                    break;
+                default:
+                    break;
             }
             uint16_t atqa = (uint16_t)bytes_to_num(mattyrun_card.atqa, 2);
 

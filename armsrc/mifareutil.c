@@ -184,32 +184,32 @@ int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
     if (g_dbglevel >= DBG_EXTENDED) {
         if (!isNested) {
             Dbprintf("auth        cmd: %02x %02x | uid: %08x | nr: %08x %s| nt: %08x %s %5i| par: %i%i%i%i %s",
-            cmd, blockNo, uid,
-            nr32, validate_prng_nonce(nr32) ? "@" : " ",
-            nt, validate_prng_nonce(nt) ? "@idx" : " idx",
-            validate_prng_nonce(nt) ? nonce16_index(nt >> 16) : -1,
-            (receivedAnswerPar[0] >> 7) & 1,
-            (receivedAnswerPar[0] >> 6) & 1,
-            (receivedAnswerPar[0] >> 5) & 1,
-            (receivedAnswerPar[0] >> 4) & 1,
-            validate_parity_nonce(nt, receivedAnswerPar[0], nt) ? "ok " : "bad");
+                     cmd, blockNo, uid,
+                     nr32, validate_prng_nonce(nr32) ? "@" : " ",
+                     nt, validate_prng_nonce(nt) ? "@idx" : " idx",
+                     validate_prng_nonce(nt) ? nonce16_index(nt >> 16) : -1,
+                     (receivedAnswerPar[0] >> 7) & 1,
+                     (receivedAnswerPar[0] >> 6) & 1,
+                     (receivedAnswerPar[0] >> 5) & 1,
+                     (receivedAnswerPar[0] >> 4) & 1,
+                     validate_parity_nonce(nt, receivedAnswerPar[0], nt) ? "ok " : "bad");
         } else {
             Dbprintf("auth nested cmd: %02x %02x | uid: %08x | nr: %08x %s| nt: %08x %s %5i| par: %i%i%i%i %s| ntenc: %08x %s| parerr: %i%i%i%i",
-            cmd, blockNo, uid,
-            nr32, validate_prng_nonce(nr32) ? "@" : " ",
-            nt, validate_prng_nonce(nt) ? "@idx" : " idx",
-            validate_prng_nonce(nt) ? nonce16_index(nt >> 16) : -1,
-            (receivedAnswerPar[0] >> 7) & 1,
-            (receivedAnswerPar[0] >> 6) & 1,
-            (receivedAnswerPar[0] >> 5) & 1,
-            (receivedAnswerPar[0] >> 4) & 1,
-            validate_parity_nonce(*ntencptr, receivedAnswerPar[0], nt) ? "ok " : "bad",
-            *ntencptr, validate_prng_nonce(*ntencptr) ? "@" : " ",
-            ((receivedAnswerPar[0] >> 7) & 1) ^ oddparity8((*ntencptr >> 24) & 0xFF),
-            ((receivedAnswerPar[0] >> 6) & 1) ^ oddparity8((*ntencptr >> 16) & 0xFF),
-            ((receivedAnswerPar[0] >> 5) & 1) ^ oddparity8((*ntencptr >> 8) & 0xFF),
-            ((receivedAnswerPar[0] >> 4) & 1) ^ oddparity8((*ntencptr >> 0) & 0xFF)
-            );
+                     cmd, blockNo, uid,
+                     nr32, validate_prng_nonce(nr32) ? "@" : " ",
+                     nt, validate_prng_nonce(nt) ? "@idx" : " idx",
+                     validate_prng_nonce(nt) ? nonce16_index(nt >> 16) : -1,
+                     (receivedAnswerPar[0] >> 7) & 1,
+                     (receivedAnswerPar[0] >> 6) & 1,
+                     (receivedAnswerPar[0] >> 5) & 1,
+                     (receivedAnswerPar[0] >> 4) & 1,
+                     validate_parity_nonce(*ntencptr, receivedAnswerPar[0], nt) ? "ok " : "bad",
+                     *ntencptr, validate_prng_nonce(*ntencptr) ? "@" : " ",
+                     ((receivedAnswerPar[0] >> 7) & 1) ^ oddparity8((*ntencptr >> 24) & 0xFF),
+                     ((receivedAnswerPar[0] >> 6) & 1) ^ oddparity8((*ntencptr >> 16) & 0xFF),
+                     ((receivedAnswerPar[0] >> 5) & 1) ^ oddparity8((*ntencptr >> 8) & 0xFF),
+                     ((receivedAnswerPar[0] >> 4) & 1) ^ oddparity8((*ntencptr >> 0) & 0xFF)
+                    );
         }
     }
     // save Nt
@@ -932,7 +932,7 @@ int mifare_desfire_des_auth2(uint32_t uid, uint8_t *key, uint8_t *blockData) {
 bool validate_prng_nonce(uint32_t nonce) {
     uint16_t x = nonce >> 16;
     x = (x & 0xff) << 8 | x >> 8;
-    for (uint8_t i = 0; i<16; i++) {
+    for (uint8_t i = 0; i < 16; i++) {
         x = x >> 1 | (x ^ x >> 2 ^ x >> 3 ^ x >> 5) << 15;
     }
     x = (x & 0xff) << 8 | x >> 8;
@@ -942,11 +942,11 @@ bool validate_prng_nonce(uint32_t nonce) {
 bool validate_parity_nonce(uint32_t ntenc, uint8_t ntparenc, uint32_t nt) {
     uint32_t ks = nt ^ ntenc;
     ntparenc >>= 4;
-    uint8_t ksp = (((ks >> 16)&1) << 3) | (((ks >> 8)&1) << 2) | (((ks >> 0)&1) << 1);
+    uint8_t ksp = (((ks >> 16) & 1) << 3) | (((ks >> 8) & 1) << 2) | (((ks >> 0) & 1) << 1);
     uint8_t ntpar = ntparenc ^ ksp;
-    return (((ntpar >> 3) & 1) == oddparity8((nt>>24) & 0xFF)) &&
-           (((ntpar >> 2) & 1) == oddparity8((nt>>16) & 0xFF)) &&
-           (((ntpar >> 1) & 1) == oddparity8((nt>>8) & 0xFF));
+    return (((ntpar >> 3) & 1) == oddparity8((nt >> 24) & 0xFF)) &&
+           (((ntpar >> 2) & 1) == oddparity8((nt >> 16) & 0xFF)) &&
+           (((ntpar >> 1) & 1) == oddparity8((nt >> 8) & 0xFF));
 }
 
 int nonce16_distance(uint16_t x, uint16_t y) {
@@ -955,9 +955,9 @@ int nonce16_distance(uint16_t x, uint16_t y) {
     x = (x & 0xff) << 8 | x >> 8;
     y = (y & 0xff) << 8 | y >> 8;
     uint16_t i = 1;
-    for(;i;i++) {
+    for (; i; i++) {
         x = x >> 1 | (x ^ x >> 2 ^ x >> 3 ^ x >> 5) << 15;
-        if (x==y)
+        if (x == y)
             return i;
     }
     // never reached

@@ -3375,7 +3375,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
 
     uint16_t singleSectorParams = 0;
     if (blockn != -1) {
-        singleSectorParams = (blockn & 0xFF)| keytype << 8 | 1 << 15;
+        singleSectorParams = (blockn & 0xFF) | keytype << 8 | 1 << 15;
     }
     if (use_flashmemory) {
         PrintAndLogEx(SUCCESS, "Using dictionary in flash memory");

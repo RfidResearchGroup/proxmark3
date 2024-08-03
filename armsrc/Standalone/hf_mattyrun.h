@@ -59,11 +59,11 @@ static uint64_t const MATTYRUN_MFC_DEFAULT_KEYS[] = {
     0x0123456789AB,
     0x123456789ABC,
 
-	// You could add more keys from, e.g, mfc_default_keys.dic here.
-	// However, be aware that more keys means longer brute-force times
-	// and too many keys will resuolt in running out of memory.
-	// See https://github.com/RfidResearchGroup/proxmark3/pull/2377#issuecomment-2112658439
-	// for a rough benchmark.
+    // You could add more keys from, e.g, mfc_default_keys.dic here.
+    // However, be aware that more keys means longer brute-force times
+    // and too many keys will resuolt in running out of memory.
+    // See https://github.com/RfidResearchGroup/proxmark3/pull/2377#issuecomment-2112658439
+    // for a rough benchmark.
 };
 
 #endif /* HF_MATTYRUN_H__ */

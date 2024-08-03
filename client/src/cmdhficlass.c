@@ -1449,7 +1449,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "d6", "decode as block 6"),
         arg_lit0("z", "dense", "dense dump output style"),
-        arg_lit0(NULL, "ns", "no save to file"),        
+        arg_lit0(NULL, "ns", "no save to file"),
         arg_param_end
     };
     CLIExecWithReturn(clictx, Cmd, argtable, false);
@@ -1619,18 +1619,18 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
             PrintAndLogEx(NORMAL, "");
         } else {
 
-        // use the first block (CSN) for filename
-        char *fptr = calloc(50, sizeof(uint8_t));
-        if (fptr == false) {
-            PrintAndLogEx(WARNING, "Failed to allocate memory");
-            free(decrypted);
-            return PM3_EMALLOC;
-        }
+            // use the first block (CSN) for filename
+            char *fptr = calloc(50, sizeof(uint8_t));
+            if (fptr == false) {
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
+                free(decrypted);
+                return PM3_EMALLOC;
+            }
 
-        strcat(fptr, "hf-iclass-");
-        FillFileNameByUID(fptr, hdr->csn, "-dump-decrypted", sizeof(hdr->csn));
+            strcat(fptr, "hf-iclass-");
+            FillFileNameByUID(fptr, hdr->csn, "-dump-decrypted", sizeof(hdr->csn));
 
-        pm3_save_dump(fptr, decrypted, decryptedlen, jsfIclass);
+            pm3_save_dump(fptr, decrypted, decryptedlen, jsfIclass);
             free(fptr);
         }
 
@@ -1645,8 +1645,8 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         // decode block 6
         bool has_values = (memcmp(decrypted + (8 * 6), empty, 8) != 0) && (memcmp(decrypted + (8 * 6), zeros, 8) != 0);
         if (has_values && use_sc) {
-                DecodeBlock6(decrypted + (8 * 6));
-            }
+            DecodeBlock6(decrypted + (8 * 6));
+        }
 
         // decode block 7-8-9
         iclass_decode_credentials(decrypted);
