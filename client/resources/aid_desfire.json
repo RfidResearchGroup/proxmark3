@@ -1016,14 +1016,6 @@
         "Type": "transport"
     },
     {
-        "AID": "F53280",
-        "Vendor": "Dorma Kaba",
-        "Country": "CH",
-        "Name": "Mobile wallet",
-        "Description": "Dorma kaba mobile access",
-        "Type": "pacs"
-    },
-    {
         "AID": "FF30FF",
         "Vendor": "Metrolinx",
         "Country": "CA",
