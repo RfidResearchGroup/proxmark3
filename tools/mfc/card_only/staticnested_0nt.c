@@ -18,8 +18,10 @@
 #include "crapto1/crapto1.h"
 #include "parity.h"
 
+// max number of concurrent threads
 #define NUM_THREADS 20
-#define BATCH_SIZE (8192 / NUM_THREADS)
+#define CHUNK_DIVISOR 10
+
 // oversized just in case...
 #define KEY_SPACE_SIZE ((1 << 16) * 4)
 // we expect intersection to be about 250-500 keys. Oversized just in case...
@@ -55,6 +57,10 @@ typedef struct {
     pthread_mutex_t *keyCount_mutex[MAX_NR_NONCES];
     uint32_t num_nonces;
 } thread_data_t;
+
+static bool thread_status[NUM_THREADS];  // To keep track of active threads
+static pthread_mutex_t status_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t status_cond = PTHREAD_COND_INITIALIZER;
 
 static uint32_t hex_to_uint32(const char *hex_str) {
     return (uint32_t)strtoul(hex_str, NULL, 16);
@@ -194,17 +200,12 @@ static void *generate_and_intersect_keys(void *threadarg) {
         (*data->keyCount[0]) += keyCount0;
         keyCount0 = 0;
         pthread_mutex_unlock(data->keyCount_mutex[0]);
-
-        if ((i != startPos) && ((i - startPos) % ((endPos - startPos) / 20) == 0)) { // every 5%
-            printf("\33[2K\rThread %3i %3i%%", thread_id, (i - startPos) * 100 / (endPos - startPos));
-            printf(" keys[%d]:%9i", 0, *data->keyCount[0]);
-            for (uint32_t nonce_index = 1; nonce_index < num_nonces; nonce_index++) {
-                printf(" keys[%d]:%5i", nonce_index, *data->keyCount[nonce_index]);
-            }
-            fflush(stdout);
-        }
     }
 
+    pthread_mutex_lock(&status_mutex);
+    thread_status[thread_id] = false;  // Mark thread as inactive
+    pthread_cond_signal(&status_cond);       // Signal the main thread
+    pthread_mutex_unlock(&status_mutex);
     pthread_exit(NULL);
     return NULL; // Make some compilers happy
 }
@@ -224,32 +225,78 @@ static uint64_t **unpredictable_nested(NtpKs1List *pNKL, uint32_t keyCounts[]) {
         pthread_mutex_init(&keyCount_mutex[i], NULL);
     }
 
-    uint32_t average = pNKL->NtDataList[0].sizeNK / NUM_THREADS;
-    uint32_t modulo = pNKL->NtDataList[0].sizeNK % NUM_THREADS;
-    for (uint32_t t = 0, j = 0; t < NUM_THREADS; t++, j += average) {
-        thread_data[t].pNKL = pNKL;
-        thread_data[t].startPos = j;
-        thread_data[t].endPos = j + average;
-        for (uint32_t i = 0; i < MAX_NR_NONCES; i++) {
-            thread_data[t].result_keys[i] = result_keys[i];
-            thread_data[t].keyCount[i] = &keyCounts[i];
-            thread_data[t].keyCount_mutex[i] = &keyCount_mutex[i];
-        }
-        thread_data[t].thread_id = t;
-        thread_data[t].num_nonces = pNKL->nr_nonces;
-        // last thread can decrypt more pNK
-        if (t == (NUM_THREADS - 1) && modulo > 0) {
-            thread_data[t].endPos += modulo;
-        }
-        pthread_create(&threads[t], NULL, generate_and_intersect_keys, (void *)&thread_data[t]);
-    }
-    printf("All threads spawn...\n");
+    const uint32_t chunk_size = pNKL->NtDataList[0].sizeNK / NUM_THREADS / CHUNK_DIVISOR;
+    uint32_t startPos = 0;
 
-    for (uint32_t t = 0; t < NUM_THREADS; t++) {
-        pthread_join(threads[t], NULL);
+    while (startPos < pNKL->NtDataList[0].sizeNK) {
+        pthread_mutex_lock(&status_mutex);
+        uint32_t activeThreads = 0;
+
+        // Count active threads
+        for (int i = 0; i < NUM_THREADS; i++) {
+            if (thread_status[i]) activeThreads++;
+        }
+        // Spawn new threads if there are available slots
+        for (uint32_t t = 0; activeThreads < NUM_THREADS && startPos < pNKL->NtDataList[0].sizeNK && t < NUM_THREADS; t++) {
+            if (!thread_status[t]) {
+                uint32_t endPos = startPos + chunk_size;
+                if (endPos > pNKL->NtDataList[0].sizeNK) {
+                    endPos = pNKL->NtDataList[0].sizeNK;
+                }
+
+                thread_data[t].pNKL = pNKL;
+                thread_data[t].startPos = startPos;
+                thread_data[t].endPos = endPos;
+                thread_data[t].thread_id = t;
+                thread_data[t].num_nonces = pNKL->nr_nonces;
+                for (uint32_t i = 0; i < MAX_NR_NONCES; i++) {
+                    thread_data[t].result_keys[i] = result_keys[i];
+                    thread_data[t].keyCount[i] = &keyCounts[i];
+                    thread_data[t].keyCount_mutex[i] = &keyCount_mutex[i];
+                }
+
+                thread_status[t] = true;  // Mark thread as active
+                pthread_create(&threads[t], NULL, generate_and_intersect_keys, (void *)&thread_data[t]);
+                activeThreads++;
+                startPos = endPos;
+            }
+        }
+
+        // Wait for any thread to complete
+        while (activeThreads >= NUM_THREADS) {
+            pthread_cond_wait(&status_cond, &status_mutex);
+            activeThreads = 0;
+            for (int i = 0; i < NUM_THREADS; i++) {
+                if (thread_status[i]) activeThreads++;
+            }
+        }
+        
+        pthread_mutex_unlock(&status_mutex);
+                printf("\33[2K\rProgress: %02.1f%%", (double)(startPos+1)*100 /pNKL->NtDataList[0].sizeNK);
+        printf(" keys[%d]:%9i", 0, keyCounts[0]);
+        for (uint32_t nonce_index = 1; nonce_index < pNKL->nr_nonces; nonce_index++) {
+            printf(" keys[%d]:%5i", nonce_index, keyCounts[nonce_index]);
+        }
+        fflush(stdout);
     }
 
-    // no result_keys[0]
+    pthread_mutex_lock(&status_mutex);
+    uint32_t activeThreads = 0;
+
+    // Count active threads
+    for (int i = 0; i < NUM_THREADS; i++) {
+        if (thread_status[i]) activeThreads++;
+    }
+    while (activeThreads) {
+        pthread_cond_wait(&status_cond, &status_mutex);
+        activeThreads = 0;
+        for (int i = 0; i < NUM_THREADS; i++) {
+            if (thread_status[i]) activeThreads++;
+        }
+    }
+
+    pthread_mutex_unlock(&status_mutex);
+
     for (uint32_t i = 1; i < MAX_NR_NONCES; i++) {
         if (keyCounts[i] == 0) {
             free(result_keys[i]);
@@ -259,7 +306,6 @@ static uint64_t **unpredictable_nested(NtpKs1List *pNKL, uint32_t keyCounts[]) {
 
     return result_keys;
 }
-
 // Function to compare keys and keep track of their occurrences
 static void analyze_keys(uint64_t **keys, uint32_t keyCounts[MAX_NR_NONCES], uint32_t nr_nonces) {
     // Assuming the maximum possible keys
