@@ -121,7 +121,7 @@ int main(int argc, char *const argv[]) {
     uint32_t keyCount = 0;
 
     uint32_t authuid = hex_to_uint32(argv[1]);
-    uint32_t sector = hex_to_uint32(argv[2]);
+    uint32_t sector = atoi(argv[2]);
     uint32_t nt = hex_to_uint32(argv[3]);
     uint32_t nt_enc = hex_to_uint32(argv[4]);
     uint8_t nt_par_err_arr[4];
