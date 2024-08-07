@@ -16,7 +16,7 @@ class OutputGrabber(object):
         if self.origstream is None:
             self.origstream = sys.stdout
         self.origstreamfd = self.origstream.fileno()
-        self.capturedtext = ""
+        self.captured_output = ""
 
     def __enter__(self):
         self.start()
@@ -29,7 +29,7 @@ class OutputGrabber(object):
         """
         Start capturing the stream data.
         """
-        self.capturedtext = ""
+        self.captured_output = ""
         # Create a pipe so the stream can be captured:
         self.pipe_out, self.pipe_in = os.pipe()
         # Save a copy of the stream:
@@ -45,7 +45,7 @@ class OutputGrabber(object):
 
     def stop(self):
         """
-        Stop capturing the stream data and save the text in `capturedtext`.
+        Stop capturing the stream data and save the text in `captured_output`.
         """
         # Print the escape character to make the readOutput method stop:
         self.origstream.write(self.escape_char)
@@ -69,10 +69,13 @@ class OutputGrabber(object):
     def readOutput(self):
         """
         Read the stream data (one byte at a time)
-        and save the text in `capturedtext`.
+        and save the text in `captured_output`.
         """
         while True:
             char = os.read(self.pipe_out,1).decode(self.origstream.encoding, errors='replace')
             if not char or self.escape_char in char:
                 break
-            self.capturedtext += char
+            self.captured_output += char
+
+if __name__ == "__main__":
+    print("This is a library, don't use it as a script")

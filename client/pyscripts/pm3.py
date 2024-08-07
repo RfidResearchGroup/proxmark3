@@ -76,5 +76,5 @@ class pm3(object):
 # Register pm3 in _pm3:
 _pm3.pm3_swigregister(pm3)
 
-
-
+if __name__ == "__main__":
+    print("This is a library, don't use it as a script")

@@ -8,6 +8,6 @@ p=pm3.pm3()
 print("Device:", p.name)
 with out:
     p.console("hw status")
-for line in out.capturedtext.split('\n'):
+for line in out.captured_output.split('\n'):
     if "Unique ID" in line:
         print(line)

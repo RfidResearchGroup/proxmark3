@@ -120,3 +120,6 @@ fpga_version_info.c
 # local codeql
 _codeql*
 /codeql
+
+# Pyton venvs
+venv/
