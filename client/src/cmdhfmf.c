@@ -9643,6 +9643,7 @@ static int CmdHF14AMfISEN(const char *Cmd) {
         arg_str0(NULL, "key2", "<hex>", "nested key, 6 hex bytes (default=same)"),
         arg_int0("n", NULL, "<dec>", "number of nonces (default=2)"),
         arg_lit0(NULL, "reset", "reset between attempts, even if auth was successful"),
+        arg_lit0(NULL, "hardreset", "hard reset (RF off/on) between attempts, even if auth was successful"),
         arg_lit0(NULL, "addread", "auth(blk)-read(blk)-auth(blk2)"),
         arg_lit0(NULL, "addauth", "auth(blk)-auth(blk)-auth(blk2)"),
         arg_lit0(NULL, "incblk2", "auth(blk)-auth(blk2)-auth(blk2+4)-..."),
@@ -9702,11 +9703,17 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     int nr_nested = arg_get_int_def(ctx, 11, 2);
 
     bool reset = arg_get_lit(ctx, 12);
-    bool addread = arg_get_lit(ctx, 13);
-    bool addauth = arg_get_lit(ctx, 14);
-    bool incblk2 = arg_get_lit(ctx, 15);
-    bool corruptnrar = arg_get_lit(ctx, 16);
-    bool corruptnrarparity = arg_get_lit(ctx, 17);
+    bool hardreset = arg_get_lit(ctx, 13);
+    if (reset && hardreset) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Choose one single type of reset");
+        return PM3_EINVARG;
+    }
+    bool addread = arg_get_lit(ctx, 14);
+    bool addauth = arg_get_lit(ctx, 15);
+    bool incblk2 = arg_get_lit(ctx, 16);
+    bool corruptnrar = arg_get_lit(ctx, 17);
+    bool corruptnrarparity = arg_get_lit(ctx, 18);
     CLIParserFree(ctx);
 
     uint8_t dbg_curr = DBG_NONE;
@@ -9763,7 +9770,7 @@ static int CmdHF14AMfISEN(const char *Cmd) {
         return PM3_EFAILED;
     }
 
-    int res = detect_classic_static_encrypted_nonce_ex(blockn, keytype, key, blockn_nested, keytype_nested, key_nested, nr_nested, reset, addread, addauth, incblk2, corruptnrar, corruptnrarparity, true);
+    int res = detect_classic_static_encrypted_nonce_ex(blockn, keytype, key, blockn_nested, keytype_nested, key_nested, nr_nested, reset, hardreset, addread, addauth, incblk2, corruptnrar, corruptnrarparity, true);
     if (res == NONCE_STATIC)
         PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
     if (res == NONCE_STATIC_ENC)

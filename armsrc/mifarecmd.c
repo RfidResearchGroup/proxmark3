@@ -2805,7 +2805,7 @@ OUT:
 // 2B F9 1C 1B D5 08 48 48 03 A4 B1 B1 75 FF 2D 90
 //                         ^^                   ^^
 
-void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *key, uint8_t block_no_nested, uint8_t key_type_nested, uint8_t *key_nested, uint8_t nr_nested, bool reset, bool addread, bool addauth, bool incblk2, bool corruptnrar, bool corruptnrarparity) {
+void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *key, uint8_t block_no_nested, uint8_t key_type_nested, uint8_t *key_nested, uint8_t nr_nested, bool reset, bool hardreset, bool addread, bool addauth, bool incblk2, bool corruptnrar, bool corruptnrarparity) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
 
     LEDsoff();
@@ -2851,6 +2851,12 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
         if (need_first_auth) {
             cuid = 0;
 
+            if (hardreset) {
+                if (g_dbglevel >= DBG_EXTENDED) {
+                    Dbprintf("RF reset");
+                }
+                mf_reset_card();
+            }
             if (g_dbglevel >= DBG_EXTENDED) {
                 Dbprintf("select");
             }
@@ -2863,7 +2869,7 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
                 retval = PM3_ESOFT;
                 goto OUT;
             };
-            if (!reset) {
+            if (!reset && !hardreset) {
                 need_first_auth = false;
             }
             if (addread) {

@@ -1405,7 +1405,7 @@ returns:
 2  = cmd failed
 3  = has encrypted nonce
 */
-int detect_classic_static_encrypted_nonce_ex(uint8_t block_no, uint8_t key_type, uint8_t *key, uint8_t block_no_nested, uint8_t key_type_nested, uint8_t *key_nested, uint8_t nr_nested, bool reset, bool addread, bool addauth, bool incblk2, bool corruptnrar, bool corruptnrarparity, bool verbose) {
+int detect_classic_static_encrypted_nonce_ex(uint8_t block_no, uint8_t key_type, uint8_t *key, uint8_t block_no_nested, uint8_t key_type_nested, uint8_t *key_nested, uint8_t nr_nested, bool reset, bool hardreset, bool addread, bool addauth, bool incblk2, bool corruptnrar, bool corruptnrarparity, bool verbose) {
     clearCommandBuffer();
     uint8_t cdata[1 + 1 + MIFARE_KEY_SIZE + 1 + 1 + MIFARE_KEY_SIZE + 1 + 1 + 1 + 1 + 1 + 1 + 1] = { 0 };
     cdata[0] = block_no;
@@ -1415,7 +1415,7 @@ int detect_classic_static_encrypted_nonce_ex(uint8_t block_no, uint8_t key_type,
     cdata[9] = key_type_nested;
     memcpy(&cdata[10], key_nested, MIFARE_KEY_SIZE);
     cdata[16] = nr_nested;
-    cdata[17] = reset;
+    cdata[17] = hardreset << 1 | reset;
     cdata[18] = addread;
     cdata[19] = addauth;
     cdata[20] = incblk2;
@@ -1483,7 +1483,7 @@ int detect_classic_static_encrypted_nonce_ex(uint8_t block_no, uint8_t key_type,
 }
 
 int detect_classic_static_encrypted_nonce(uint8_t block_no, uint8_t key_type, uint8_t *key) {
-    return detect_classic_static_encrypted_nonce_ex(block_no, key_type, key, block_no, key_type, key, 3, false, false, false, false, false, false, false);
+    return detect_classic_static_encrypted_nonce_ex(block_no, key_type, key, block_no, key_type, key, 3, false, false, false, false, false, false, false, false);
 }
 
 // try to see if card responses to "Chinese magic backdoor" commands.
