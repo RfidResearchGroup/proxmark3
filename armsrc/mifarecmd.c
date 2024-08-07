@@ -2855,7 +2855,10 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
                 if (g_dbglevel >= DBG_EXTENDED) {
                     Dbprintf("RF reset");
                 }
-                mf_reset_card();
+                // some cards need longer than mf_reset_card() to see effect on nT
+                FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+                SpinDelay(150);
+                iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
             }
             if (g_dbglevel >= DBG_EXTENDED) {
                 Dbprintf("select");
