@@ -157,7 +157,7 @@ for sec in range(NUM_SECTORS):
             with out:
                 p.console(cmd)
             for line in out.captured_output.split('\n'):
-                if "aborted via keyboard":
+                if "aborted via keyboard" in line:
                     abort = True
                 if "found:" in line:
                     found_keys[sec][key_type] = line[30:]
@@ -182,7 +182,7 @@ for sec in range(NUM_SECTORS):
             with out:
                 p.console(cmd)
             for line in out.captured_output.split('\n'):
-                if "aborted via keyboard":
+                if "aborted via keyboard" in line:
                     abort = True
                 if "found:" in line:
                     found_keys[sec][key_type] = line[30:]
@@ -203,7 +203,7 @@ for sec in range(NUM_SECTORS):
         with out:
             p.console(cmd)
         for line in out.captured_output.split('\n'):
-            if "aborted via keyboard":
+            if "aborted via keyboard" in line:
                 abort = True
             if "found:" in line:
                 found_keys[sec][0] = line[30:]
@@ -245,7 +245,7 @@ for sec in range(NUM_SECTORS):
             with out:
                 p.console(cmd)
             for line in out.captured_output.split('\n'):
-                if "aborted via keyboard":
+                if "aborted via keyboard" in line:
                     abort = True
                 if "found:" in line:
                     found_keys[sec][key_type_target] = line[30:]
