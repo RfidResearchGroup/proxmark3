@@ -3392,6 +3392,13 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
                 if (kbd_enter_pressed()) {
                     PrintAndLogEx(NORMAL, "");
                     PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
+                    // field is still ON if not on last chunk
+                    clearCommandBuffer();
+                    SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);
+                    // TODO: we're missing these cleanups on arm side, not sure if it's important...
+                    // set_tracing(false);
+                    // BigBuf_free();
+                    // BigBuf_Clear_ext(false);
                     goto out;
                 }
                 PrintAndLogEx(INPLACE, "Testing %5i/%5i %02.1f%%", i, keycnt, (float)i * 100 / keycnt);

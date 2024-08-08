@@ -3,13 +3,14 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mf fchk` which was leaving the RF field on when interrupted by keyboard (@doegox)
 - Changed file saving: do not prepend with default path if given path is an absolute path (@doegox)
 - Added few tools to crack static encrypted nonce tags such as FM11RF08S (@doegox)
 - Added `hf mf isen` for analyzing some static encrypted nonce tags (@doegox)
 - Changed `hf mf rdbl/wrbl/rdsc/nested` to support extended authentication commands (@doegox)
 - Changed `hf mf fchk` to allow cracking a single key and show progress info (@doegox)
 - Changed `trace list -t mf` to add support for extended authentication commands (@doegox)
-- Fixed `output_grabber.py` to allow several calls in a script (@doegox)
+- Fixed `output_grabber.py` to allow several calls in a script, make it robust to emoji and make it available to scripts (@doegox)
 - Changed `validate_prng_nonce` for a much faster version (@doegox)
 - Changed standalone mode HF_MATTYRUN - support more card sizes, user dictionaries, improved emulation (@michaelroland)
 - Changed `hf iclass dump --ns` - now supports the nosave flag (@iceman1001)
