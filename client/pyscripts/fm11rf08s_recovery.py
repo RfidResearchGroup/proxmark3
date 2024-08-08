@@ -143,7 +143,8 @@ for sec in range(NUM_SECTORS):
                 for k in keys_filtered[sec][key_type]:
                     f.write(f"{k}\n")
 
-print("Brute-forcing keys...")
+abort = False
+print("Brute-forcing keys... Press any key to interrupt")
 found_keys = [["", ""] for _ in range(NUM_SECTORS)]
 for sec in range(NUM_SECTORS):
     for key_type in [0, 1]:
@@ -156,6 +157,8 @@ for sec in range(NUM_SECTORS):
             with out:
                 p.console(cmd)
             for line in out.captured_output.split('\n'):
+                if "aborted via keyboard":
+                    abort = True
                 if "found:" in line:
                     found_keys[sec][key_type] = line[30:]
                     kt = ['A', 'B'][key_type]
@@ -164,6 +167,10 @@ for sec in range(NUM_SECTORS):
                         found_keys[sec][key_type ^ 1] = found_keys[sec][key_type]
                         kt = ['A', 'B'][key_type ^ 1]
                         print(f"Sector {sec:2} key{kt} = {found_keys[sec][key_type ^ 1]}")
+        if abort:
+            break
+    if abort:
+        break
 
     for key_type in [0, 1]:
         if found_keys[sec][0] == "" and found_keys[sec][1] == "" and nt[sec][0] != nt[sec][1]:
@@ -175,10 +182,16 @@ for sec in range(NUM_SECTORS):
             with out:
                 p.console(cmd)
             for line in out.captured_output.split('\n'):
+                if "aborted via keyboard":
+                    abort = True
                 if "found:" in line:
                     found_keys[sec][key_type] = line[30:]
                     kt = ['A', 'B'][key_type]
                     print(f"Sector {sec:2} key{kt} = {found_keys[sec][key_type]}")
+        if abort:
+            break
+    if abort:
+        break
 
     if found_keys[sec][0] == "" and found_keys[sec][1] == "" and nt[sec][0] == nt[sec][1]:
         key_type = 0
@@ -190,11 +203,15 @@ for sec in range(NUM_SECTORS):
         with out:
             p.console(cmd)
         for line in out.captured_output.split('\n'):
+            if "aborted via keyboard":
+                abort = True
             if "found:" in line:
                 found_keys[sec][0] = line[30:]
                 found_keys[sec][1] = line[30:]
                 print(f"Sector {sec:2} keyA = {found_keys[sec][key_type]}")
                 print(f"Sector {sec:2} keyB = {found_keys[sec][key_type]}")
+    if abort:
+        break
 
     if ((found_keys[sec][0] == "") ^ (found_keys[sec][1] == "")) and nt[sec][0] != nt[sec][1]:
         # use 2x1nt1key
@@ -228,6 +245,8 @@ for sec in range(NUM_SECTORS):
             with out:
                 p.console(cmd)
             for line in out.captured_output.split('\n'):
+                if "aborted via keyboard":
+                    abort = True
                 if "found:" in line:
                     found_keys[sec][key_type_target] = line[30:]
         elif len(keys) == 1:
@@ -235,10 +254,15 @@ for sec in range(NUM_SECTORS):
         if found_keys[sec][key_type_target] != "":
             kt = ['A', 'B'][key_type_target]
             print(f"Sector {sec:2} key{kt} = {found_keys[sec][key_type_target]}")
-
+    if abort:
+        break
 if restore_color:
     with out:
         p.console("prefs set color --ansi")
+
+if abort:
+    print("Brute-forcing phase aborted via keyboard!")
+    FINAL_CHECK = False
 
 if FINAL_CHECK:
     print("Letting fchk do a final dump, just for confirmation and display...")
@@ -265,7 +289,7 @@ else:
                     k = "FFFFFFFFFFFF"
                 f.write(bytes.fromhex(k))
     print(f"Found keys have been dumped to `{keyfile}`")
-    print(" --[ FFFFFFFFFFFF ]-- has been inserted for unknown keys where res is 0")
+    print(" --[ FFFFFFFFFFFF ]-- has been inserted for unknown keys")
 
 elapsed_time = time.time() - start_time
 minutes = int(elapsed_time // 60)
