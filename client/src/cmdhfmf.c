@@ -7624,12 +7624,12 @@ static int CmdHF14AMfWipe(const char *Cmd) {
                 SendCommandMIX(CMD_HF_MIFARE_WRITEBL, mfFirstBlockOfSector(s) + b, kt, 0, data, sizeof(data));
                 PacketResponseNG resp;
                 if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-                    uint8_t isOK  = resp.oldarg[0] & 0xff;
-                    if (isOK == 0) {
-                        PrintAndLogEx(NORMAL, "( " _RED_("fail") " )");
-                    } else {
+                    int isOK  = resp.oldarg[0];
+                    if (isOK > 0) {
                         PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
                         break;
+                    } else {
+                        PrintAndLogEx(NORMAL, "( " _RED_("fail") " )");
                     }
                 } else {
                     PrintAndLogEx(WARNING, "Command execute timeout");
