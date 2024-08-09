@@ -49,7 +49,7 @@ static uint32_t felica_nexttransfertime;
 static uint32_t felica_lasttime_prox2air_start;
 
 static void iso18092_setup(uint8_t fpga_minor_mode);
-static uint8_t felica_select_card(felica_card_select_t *card);
+static uint8_t felica_select_card(void);
 static void TransmitFor18092_AsReader(const uint8_t *frame, uint16_t len, const uint32_t *NYI_timing_NYI, uint8_t power, uint8_t highspeed);
 static bool WaitForFelicaReply(uint16_t maxbytes);
 
@@ -220,7 +220,7 @@ static void Process18092Byte(uint8_t bt) {
  * It expects 0-1 cards in the device's range.
  * return 0 if selection was successful
  */
-static uint8_t felica_select_card(felica_card_select_t *card) {
+static uint8_t felica_select_card(void) {
 
     // POLL command
     // 0xB2 0x4B = sync code
@@ -275,21 +275,6 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
         return 3;
     }
 
-    // copy UID
-    // idm 8
-    if (card) {
-        memcpy(card->IDm, FelicaFrame.framebytes + 4,     8);
-        memcpy(card->PMm, FelicaFrame.framebytes + 4 + 8, 8);
-        // memcpy(card->servicecode, FelicaFrame.framebytes + 4 + 8 + 8, 2);
-        memcpy(card->code,   card->IDm,     2);
-        memcpy(card->uid,    card->IDm + 2, 6);
-        memcpy(card->iccode, card->PMm,     2);
-        memcpy(card->mrt,    card->PMm + 2, 6);
-        if (g_dbglevel >= DBG_DEBUG) {
-            Dbprintf("Received Frame: ");
-            Dbhexdump(FelicaFrame.len, FelicaFrame.framebytes, 0);
-        }
-    }
     // 0. OK
     return 0;
 }
@@ -559,9 +544,8 @@ void felica_sendraw(const PacketCommandNG *c) {
         // if failed selecting, turn off antenna and quite.
         if ((param & FELICA_NO_SELECT) != FELICA_NO_SELECT) {
 
-            felica_card_select_t card;
-            arg0 = felica_select_card(&card);
-            reply_mix(CMD_ACK, arg0, sizeof(card.uid), 0, &card, sizeof(felica_card_select_t));
+            arg0 = felica_select_card();
+            reply_mix(CMD_ACK, arg0, FelicaFrame.len, 0, FelicaFrame.framebytes, FelicaFrame.len);
             if (arg0) {
                 felica_reset_frame_mode();
                 return;
