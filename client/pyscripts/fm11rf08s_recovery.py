@@ -151,7 +151,8 @@ for sec in range(NUM_SECTORS):
         # If we have a duplicates dict
         if found_keys[sec][0] == "" and found_keys[sec][1] == "" and len(keys_filtered[sec][key_type]) > 0:
             kt = ['a', 'b'][key_type]
-            cmd = f"hf mf fchk --blk {sec * 4} -{kt} -f keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}_duplicates.dic"
+            dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}_duplicates.dic"
+            cmd = f"hf mf fchk --blk {sec * 4} -{kt} -f {dic} --no-default"
             if DEBUG:
                 print(cmd)
             with out:
@@ -176,7 +177,8 @@ for sec in range(NUM_SECTORS):
         if found_keys[sec][0] == "" and found_keys[sec][1] == "" and nt[sec][0] != nt[sec][1]:
             # Use filtered dict
             kt = ['a', 'b'][key_type]
-            cmd = f"hf mf fchk --blk {sec * 4} -{kt} -f keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}_filtered.dic"
+            dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}_filtered.dic"
+            cmd = f"hf mf fchk --blk {sec * 4} -{kt} -f {dic} --no-default"
             if DEBUG:
                 print(cmd)
             with out:
@@ -197,7 +199,8 @@ for sec in range(NUM_SECTORS):
         key_type = 0
         # Use regular dict
         kt = ['a', 'b'][key_type]
-        cmd = f"hf mf fchk --blk {sec * 4} -{kt} -f keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}.dic"
+        dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}.dic"
+        cmd = f"hf mf fchk --blk {sec * 4} -{kt} -f {dic} --no-default"
         if DEBUG:
             print(cmd)
         with out:
@@ -237,7 +240,7 @@ for sec in range(NUM_SECTORS):
                 keys.add(line[12:])
         if len(keys) > 1:
             kt = ['a', 'b'][key_type_target]
-            cmd = f"hf mf fchk --blk {sec * 4} -{kt}"
+            cmd = f"hf mf fchk --blk {sec * 4} -{kt} --no-default"
             for k in keys:
                 cmd += f" -k {k}"
             if DEBUG:
@@ -270,7 +273,7 @@ if FINAL_CHECK:
     with (open(f"keys_{uid:08x}.dic", "w")) as f:
         for k in keys_set:
             f.write(f"{k}\n")
-    cmd = f"hf mf fchk -f keys_{uid:08x}.dic --dump"
+    cmd = f"hf mf fchk -f keys_{uid:08x}.dic --no-default --dump"
     if DEBUG:
         print(cmd)
     with out:

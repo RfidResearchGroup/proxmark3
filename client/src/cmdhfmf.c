@@ -764,7 +764,7 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
     return PM3_SUCCESS ;
 }
 
-static int mf_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey, int userkeylen, const char *filename, int fnlen) {
+static int mf_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey, int userkeylen, const char *filename, int fnlen, bool load_default) {
     // Handle Keys
     *pkeycnt = 0;
     *pkeyBlock = NULL;
@@ -790,28 +790,30 @@ static int mf_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey
         PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " user keys", numKeys);
     }
 
-    // Handle default keys
-    p = realloc(*pkeyBlock, (*pkeycnt + ARRAYLEN(g_mifare_default_keys)) * MIFARE_KEY_SIZE);
-    if (!p) {
-        PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
-        free(*pkeyBlock);
-        return PM3_EMALLOC;
+    if (load_default) {
+        // Handle default keys
+        p = realloc(*pkeyBlock, (*pkeycnt + ARRAYLEN(g_mifare_default_keys)) * MIFARE_KEY_SIZE);
+        if (!p) {
+            PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
+            free(*pkeyBlock);
+            return PM3_EMALLOC;
+        }
+        *pkeyBlock = p;
+        // Copy default keys to list
+        for (int i = 0; i < ARRAYLEN(g_mifare_default_keys); i++) {
+            num_to_bytes(g_mifare_default_keys[i], MIFARE_KEY_SIZE, (uint8_t *)(*pkeyBlock + (*pkeycnt + i) * MIFARE_KEY_SIZE));
+            PrintAndLogEx(DEBUG, _YELLOW_("%2d") " - %s", *pkeycnt + i, sprint_hex(*pkeyBlock + (*pkeycnt + i) * MIFARE_KEY_SIZE, MIFARE_KEY_SIZE));
+        }
+        *pkeycnt += ARRAYLEN(g_mifare_default_keys);
+        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%zu") " keys from hardcoded default array", ARRAYLEN(g_mifare_default_keys));
     }
-    *pkeyBlock = p;
-    // Copy default keys to list
-    for (int i = 0; i < ARRAYLEN(g_mifare_default_keys); i++) {
-        num_to_bytes(g_mifare_default_keys[i], MIFARE_KEY_SIZE, (uint8_t *)(*pkeyBlock + (*pkeycnt + i) * MIFARE_KEY_SIZE));
-        PrintAndLogEx(DEBUG, _YELLOW_("%2d") " - %s", *pkeycnt + i, sprint_hex(*pkeyBlock + (*pkeycnt + i) * MIFARE_KEY_SIZE, MIFARE_KEY_SIZE));
-    }
-    *pkeycnt += ARRAYLEN(g_mifare_default_keys);
-    PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%zu") " keys from hardcoded default array", ARRAYLEN(g_mifare_default_keys));
 
     // Handle user supplied dictionary file
     if (fnlen > 0) {
         uint32_t loaded_numKeys = 0;
         uint8_t *keyBlock_tmp = NULL;
         int res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock_tmp, MIFARE_KEY_SIZE, &loaded_numKeys);
-        if (res != PM3_SUCCESS || loaded_numKeys == 0 || *pkeyBlock == NULL) {
+        if (res != PM3_SUCCESS || loaded_numKeys == 0 || keyBlock_tmp == NULL) {
             PrintAndLogEx(FAILED, "An error occurred while loading the dictionary!");
             free(keyBlock_tmp);
             free(*pkeyBlock);
@@ -2761,7 +2763,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Start the timer
     uint64_t t1 = msclock();
 
-    int ret = mf_load_keys(&keyBlock, &key_cnt, in_keys, in_keys_len, filename, fnlen);
+    int ret = mf_load_keys(&keyBlock, &key_cnt, in_keys, in_keys_len, filename, fnlen, true);
     if (ret != PM3_SUCCESS) {
         free(e_sector);
         return ret;
@@ -3295,6 +3297,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
         arg_int0(NULL, "blk", "<dec>", "block number (single block recovery mode)"),
         arg_lit0("a", NULL, "single block recovery key A"),
         arg_lit0("b", NULL, "single block recovery key B"),
+        arg_lit0(NULL, "no-default", "Don't add the bunch of extra default keys"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3325,6 +3328,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
     } else if (arg_get_lit(ctx, 12)) {
         keytype = MF_KEY_B;
     }
+    bool load_default = ! arg_get_lit(ctx, 13);
 
     CLIParserFree(ctx);
 
@@ -3353,7 +3357,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
 
     uint8_t *keyBlock = NULL;
     uint32_t keycnt = 0;
-    int ret = mf_load_keys(&keyBlock, &keycnt, key, keylen, filename, fnlen);
+    int ret = mf_load_keys(&keyBlock, &keycnt, key, keylen, filename, fnlen, load_default);
     if (ret != PM3_SUCCESS) {
         return ret;
     }
@@ -3732,6 +3736,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
         arg_lit0(NULL, "emu", "Fill simulator keys from found keys"),
         arg_lit0(NULL, "dump", "Dump found keys to binary file"),
         arg_str0("f", "file", "<fn>", "Filename of dictionary"),
+        arg_lit0(NULL, "no-default", "Don't add the bunch of extra default keys"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3763,6 +3768,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 12), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    bool load_default = ! arg_get_lit(ctx, 13);
 
     CLIParserFree(ctx);
 
@@ -3822,7 +3828,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
     uint8_t *keyBlock = NULL;
     uint32_t keycnt = 0;
-    int ret = mf_load_keys(&keyBlock, &keycnt, key, keylen, filename, fnlen);
+    int ret = mf_load_keys(&keyBlock, &keycnt, key, keylen, filename, fnlen, load_default);
     if (ret != PM3_SUCCESS) {
         return ret;
     }
@@ -9494,7 +9500,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     int sectorsCnt = 2;
     uint8_t *keyBlock = NULL;
     uint32_t keycnt = 0;
-    res = mf_load_keys(&keyBlock, &keycnt, key, MIFARE_KEY_SIZE * 2, NULL, 0);
+    res = mf_load_keys(&keyBlock, &keycnt, key, MIFARE_KEY_SIZE * 2, NULL, 0, true);
     if (res != PM3_SUCCESS) {
         return res;
     }
