@@ -2466,7 +2466,7 @@ static command_t CommandTable[] = {
     {"list",        CmdLFHitagList,             AlwaysAvailable, "List Hitag trace history"},
     {"-----------", CmdHelp,                    IfPm3Hitag,      "------------------------ " _CYAN_("General") " ------------------------"},
     {"info",        CmdLFHitagInfo,             IfPm3Hitag,      "Hitag 2 tag information"},
-    {"reader",      CmdLFHitagReader,           IfPm3Hitag,      "Act line an Hitag 2 reader"},
+    {"reader",      CmdLFHitagReader,           IfPm3Hitag,      "Act like a Hitag 2 reader"},
     {"test",        CmdLFHitag2Selftest,        AlwaysAvailable, "Perform self tests"},
     {"-----------", CmdHelp,                    IfPm3Hitag,      "----------------------- " _CYAN_("Operations") " -----------------------"},
 //    {"demod",       CmdLFHitag2PWMDemod,        IfPm3Hitag,      "PWM Hitag 2 reader message demodulation"},
