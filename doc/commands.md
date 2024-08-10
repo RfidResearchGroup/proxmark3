@@ -1050,7 +1050,7 @@ Check column "offline" for their availability.
 |`lf hitag help          `|Y       |`This help`
 |`lf hitag list          `|Y       |`List Hitag trace history`
 |`lf hitag info          `|N       |`Hitag 2 tag information`
-|`lf hitag reader        `|N       |`Act line an Hitag 2 reader`
+|`lf hitag reader        `|N       |`Act like a Hitag 2 reader`
 |`lf hitag test          `|Y       |`Perform self tests`
 |`lf hitag dump          `|N       |`Dump Hitag 2 tag`
 |`lf hitag read          `|N       |`Read Hitag memory`
