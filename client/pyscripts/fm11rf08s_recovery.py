@@ -16,10 +16,16 @@
 import time
 import subprocess
 import argparse
-# pip install ansicolors
-from colors import color
 import pm3
 from output_grabber import OutputGrabber
+# optional color support
+try:
+    # pip install ansicolors
+    from colors import color
+except ModuleNotFoundError:
+    def color(s, fg=None):
+        _ = fg
+        return str(s)
 
 BACKDOOR_RF08S = "A396EFA4E24F"
 NUM_SECTORS = 16
