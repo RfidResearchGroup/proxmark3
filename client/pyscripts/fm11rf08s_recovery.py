@@ -13,6 +13,8 @@
 #
 # Doegox, 2024
 
+import os
+import sys
 import time
 import subprocess
 import argparse
@@ -29,10 +31,20 @@ except ModuleNotFoundError:
 
 BACKDOOR_RF08S = "A396EFA4E24F"
 NUM_SECTORS = 16
-TOOLS_PATH = "tools/mfc/card_only"
+if os.path.basename(os.path.dirname(os.path.dirname(sys.argv[0]))) == 'client':
+    # dev setup
+    TOOLS_PATH = f"{os.path.dirname(sys.argv[0])}/../../tools/mfc/card_only"
+else:
+    # assuming installed
+    TOOLS_PATH = f"{os.path.dirname(sys.argv[0])}/../tools"
+
 STATICNESTED_1NT = f"{TOOLS_PATH}/staticnested_1nt"
 STATICNESTED_2X1NT = f"{TOOLS_PATH}/staticnested_2x1nt_rf08s"
 STATICNESTED_2X1NT1KEY = f"{TOOLS_PATH}/staticnested_2x1nt_rf08s_1key"
+for bin in [STATICNESTED_1NT, STATICNESTED_2X1NT, STATICNESTED_2X1NT1KEY]:
+    if not os.path.isfile(bin):
+        print(f"Cannot find {bin}, abort!")
+        exit()
 
 parser = argparse.ArgumentParser(description='A script combining staticnested* tools '
                                  'to recover all keys from a FM11RF08S card.')
