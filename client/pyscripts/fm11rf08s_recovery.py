@@ -33,18 +33,33 @@ BACKDOOR_RF08S = "A396EFA4E24F"
 NUM_SECTORS = 16
 if os.path.basename(os.path.dirname(os.path.dirname(sys.argv[0]))) == 'client':
     # dev setup
-    TOOLS_PATH = f"{os.path.dirname(sys.argv[0])}/../../tools/mfc/card_only"
+    TOOLS_PATH = os.path.normpath(os.path.join(f"{os.path.dirname(sys.argv[0])}",
+                                               "..", "..", "tools", "mfc", "card_only"))
 else:
     # assuming installed
-    TOOLS_PATH = f"{os.path.dirname(sys.argv[0])}/../tools"
+    TOOLS_PATH = os.path.normpath(os.path.join(f"{os.path.dirname(sys.argv[0])}",
+                                               "..", "tools"))
 
-STATICNESTED_1NT = f"{TOOLS_PATH}/staticnested_1nt"
-STATICNESTED_2X1NT = f"{TOOLS_PATH}/staticnested_2x1nt_rf08s"
-STATICNESTED_2X1NT1KEY = f"{TOOLS_PATH}/staticnested_2x1nt_rf08s_1key"
-for bin in [STATICNESTED_1NT, STATICNESTED_2X1NT, STATICNESTED_2X1NT1KEY]:
+tools = {
+    "staticnested_1nt": os.path.join(f"{TOOLS_PATH}", "staticnested_1nt"),
+    "staticnested_2x1nt": os.path.join(f"{TOOLS_PATH}", "staticnested_2x1nt_rf08s"),
+    "staticnested_2x1nt1key": os.path.join(f"{TOOLS_PATH}", "staticnested_2x1nt_rf08s_1key"),
+}
+for tool, bin in tools.items():
     if not os.path.isfile(bin):
-        print(f"Cannot find {bin}, abort!")
-        exit()
+        if os.path.isfile(bin + ".exe"):
+            tools[tool] = bin + ".exe"
+
+            print(f"Native Windows/ProxSpace detected.")
+            print(f"Currently, our Python output grabbing does not work properly on this environment.")
+            print(f"Use WSL or Linux.")
+            # cf https://stackoverflow.com/questions/52373180/python-on-windows-handle-invalid-when-redirecting-stdout-writing-to-file
+            # for ref : https://docs.python.org/3/c-api/init_config.html#c.PyConfig.legacy_windows_stdio
+            exit()
+
+        else:
+            print(f"Cannot find {bin}, abort!")
+            exit()
 
 parser = argparse.ArgumentParser(description='A script combining staticnested* tools '
                                  'to recover all keys from a FM11RF08S card.')
@@ -140,12 +155,12 @@ for sec in range(NUM_SECTORS):
         continue
     if found_keys[sec][0] == "" and found_keys[sec][1] == "" and nt[sec][0] != nt[sec][1]:
         for key_type in [0, 1]:
-            cmd = [STATICNESTED_1NT, f"{uid:08X}", f"{sec}",
+            cmd = [tools["staticnested_1nt"], f"{uid:08X}", f"{sec}",
                    nt[sec][key_type], nt_enc[sec][key_type], par_err[sec][key_type]]
             if args.debug:
                 print(' '.join(cmd))
             subprocess.run(cmd, capture_output=True)
-        cmd = [STATICNESTED_2X1NT,
+        cmd = [tools["staticnested_2x1nt"],
                f"keys_{uid:08x}_{sec:02}_{nt[sec][0]}.dic", f"keys_{uid:08x}_{sec:02}_{nt[sec][1]}.dic"]
         if args.debug:
             print(' '.join(cmd))
@@ -165,7 +180,7 @@ for sec in range(NUM_SECTORS):
             key_type = 0
         else:
             key_type = 1
-        cmd = [STATICNESTED_1NT, f"{uid:08X}", f"{sec}",
+        cmd = [tools["staticnested_1nt"], f"{uid:08X}", f"{sec}",
                nt[sec][key_type], nt_enc[sec][key_type], par_err[sec][key_type]]
         if args.debug:
             print(' '.join(cmd))
@@ -293,7 +308,7 @@ for sec in range(NUM_SECTORS):
             dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type_target]}_filtered.dic"
         else:
             dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type_target]}.dic"
-        cmd = [STATICNESTED_2X1NT1KEY, nt[sec][key_type_source], found_keys[sec][key_type_source], dic]
+        cmd = [tools["staticnested_2x1nt1key"], nt[sec][key_type_source], found_keys[sec][key_type_source], dic]
         if args.debug:
             print(' '.join(cmd))
         result = subprocess.run(cmd, capture_output=True, text=True).stdout
