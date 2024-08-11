@@ -429,7 +429,7 @@ static int CmdScriptRun(const char *Cmd) {
 
         //int argc, char ** argv
         char *argv[128];
-        argv[0] = filename;
+        argv[0] = script_path;
         int argc = split(arguments, &argv[1]);
 #if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 10
         wchar_t *py_args[argc + 1];
