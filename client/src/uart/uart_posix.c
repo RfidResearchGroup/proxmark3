@@ -44,6 +44,7 @@
 
 #include "comms.h"
 #include "ui.h"
+#include "util_posix.h" // msleep
 
 // Taken from https://github.com/unbit/uwsgi/commit/b608eb1772641d525bfde268fe9d6d8d0d5efde7
 #ifndef SOL_TCP
@@ -358,7 +359,13 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
 
     free(prefix);
 
-    sp->fd = open(pcPortName, O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK);
+    // Freshly available port can take a while before getting permission to access it. Up to 600ms on my machine...
+    for (uint8_t i =0; i < 10; i++) {
+        sp->fd = open(pcPortName, O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK);
+        if (sp->fd != -1 || errno != EACCES)
+            break;
+        msleep(100);
+    }
     if (sp->fd == -1) {
         uart_close(sp);
         return INVALID_SERIAL_PORT;
