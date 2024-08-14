@@ -1,9 +1,10 @@
 local getopt = require('getopt')
+local ansicolors  = require('ansicolors')
 local cmds = require('commands')
 
 copyright = ''
 author = "TheChamop669"
-version = 'v1.0.0'
+version = 'v1.0.1'
 desc = [[
 Perform bulk enrollment of 26 bit H10301 style RFID Tags
 For more info, check the comments in the code

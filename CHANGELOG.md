@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed missing require of ansicolors in `lf_hid_bulkclone_v2.lua` script (@whiteneon)
+- Added `lf_t55xx_reset.lua` - a script to aid in quickly resetting t55xx chips (@whiteneon)
 - Changed `hf mf chk/fchk`: added option `--no-default` to skip loading the usual ~61 hardcoded keys (@doegox)
 - Fixed `hf mf wipe` to detect properly write errors (@doegox)
 - Fixed `hf mf fchk` which was leaving the RF field on when interrupted by keyboard (@doegox)
