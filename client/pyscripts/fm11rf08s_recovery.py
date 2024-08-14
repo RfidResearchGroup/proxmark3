@@ -129,6 +129,17 @@ for line in p.grabbed_output.split('\n'):
         nt_enc[sec][key_type] = data
         data = line[128:136]
         par_err[sec][key_type] = data
+for sec in range(NUM_SECTORS):
+    if found_keys[sec][0] == "" or found_keys[sec][1] == "":
+        for key_type in [0, 1]:
+            if (nt[sec][key_type] == "" or
+               nt_enc[sec][key_type] == "" or
+               par_err[sec][key_type] == ""):
+                print("Error, could not collect nonces, abort")
+                if restore_color:
+                    p.console("prefs set color --ansi")
+                    _ = p.grabbed_output
+                exit()
 
 print("Running staticnested_1nt & 2x1nt when doable...")
 keys = [[set(), set()] for _ in range(NUM_SECTORS)]
