@@ -4340,9 +4340,10 @@
                 "--4k MIFARE Classic 4k / S70",
                 "--emu Fill simulator keys from found keys",
                 "--dump Dump found keys to binary file",
-                "-f, --file <fn> Filename of dictionary"
+                "-f, --file <fn> Filename of dictionary",
+                "--no-default Don't add the bunch of extra default keys"
             ],
-            "usage": "hf mf chk [-hab*] [-k <hex>]... [--tblk <dec>] [--mini] [--1k] [--2k] [--4k] [--emu] [--dump] [-f <fn>]"
+            "usage": "hf mf chk [-hab*] [-k <hex>]... [--tblk <dec>] [--mini] [--1k] [--2k] [--4k] [--emu] [--dump] [-f <fn>] [--no-default]"
         },
         "hf mf cload": {
             "command": "hf mf cload",
@@ -4703,9 +4704,10 @@
                 "-f, --file <fn> filename of dictionary",
                 "--blk <dec> block number (single block recovery mode)",
                 "-a single block recovery key A",
-                "-b single block recovery key B"
+                "-b single block recovery key B",
+                "--no-default Don't add the bunch of extra default keys"
             ],
-            "usage": "hf mf fchk [-hab] [-k <hex>]... [--mini] [--1k] [--2k] [--4k] [--emu] [--dump] [--mem] [-f <fn>] [--blk <dec>]"
+            "usage": "hf mf fchk [-hab] [-k <hex>]... [--mini] [--1k] [--2k] [--4k] [--emu] [--dump] [--mem] [-f <fn>] [--blk <dec>] [--no-default]"
         },
         "hf mf gchpwd": {
             "command": "hf mf gchpwd",
@@ -5044,13 +5046,14 @@
                 "--key2 <hex> nested key, 6 hex bytes (default=same)",
                 "-n <dec> number of nonces (default=2)",
                 "--reset reset between attempts, even if auth was successful",
+                "--hardreset hard reset (RF off/on) between attempts, even if auth was successful",
                 "--addread auth(blk)-read(blk)-auth(blk2)",
                 "--addauth auth(blk)-auth(blk)-auth(blk2)",
                 "--incblk2 auth(blk)-auth(blk2)-auth(blk2+4)-...",
                 "--corruptnrar corrupt {nR}{aR}, but with correct parity",
                 "--corruptnrarparity correct {nR}{aR}, but with corrupted parity"
             ],
-            "usage": "hf mf isen [-hab] [--blk <dec>] [-c <dec>] [-k <hex>] [--blk2 <dec>] [--a2] [--b2] [--c2 <dec>] [--key2 <hex>] [-n <dec>] [--reset] [--addread] [--addauth] [--incblk2] [--corruptnrar] [--corruptnrarparity]"
+            "usage": "hf mf isen [-hab] [--blk <dec>] [-c <dec>] [-k <hex>] [--blk2 <dec>] [--a2] [--b2] [--c2 <dec>] [--key2 <hex>] [-n <dec>] [--reset] [--hardreset] [--addread] [--addauth] [--incblk2] [--corruptnrar] [--corruptnrarparity]"
         },
         "hf mf mad": {
             "command": "hf mf mad",
@@ -12810,6 +12813,6 @@
     "metadata": {
         "commands_extracted": 740,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-08-03T19:17:38"
+        "extracted_on": "2024-08-14T08:56:40"
     }
 }

@@ -360,7 +360,7 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
     free(prefix);
 
     // Freshly available port can take a while before getting permission to access it. Up to 600ms on my machine...
-    for (uint8_t i =0; i < 10; i++) {
+    for (uint8_t i = 0; i < 10; i++) {
         sp->fd = open(pcPortName, O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK);
         if (sp->fd != -1 || errno != EACCES)
             break;
