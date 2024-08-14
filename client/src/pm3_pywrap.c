@@ -3270,6 +3270,149 @@ SWIGINTERN void delete_pm3(pm3 *self) {
     }
 }
 
+SWIGINTERN int
+SWIG_AsVal_double(PyObject *obj, double *val) {
+    int res = SWIG_TypeError;
+    if (PyFloat_Check(obj)) {
+        if (val) *val = PyFloat_AsDouble(obj);
+        return SWIG_OK;
+#if PY_VERSION_HEX < 0x03000000
+    } else if (PyInt_Check(obj)) {
+        if (val) *val = (double) PyInt_AsLong(obj);
+        return SWIG_OK;
+#endif
+    } else if (PyLong_Check(obj)) {
+        double v = PyLong_AsDouble(obj);
+        if (!PyErr_Occurred()) {
+            if (val) *val = v;
+            return SWIG_OK;
+        } else {
+            PyErr_Clear();
+        }
+    }
+#ifdef SWIG_PYTHON_CAST_MODE
+    {
+        int dispatch = 0;
+        double d = PyFloat_AsDouble(obj);
+        if (!PyErr_Occurred()) {
+            if (val) *val = d;
+            return SWIG_AddCast(SWIG_OK);
+        } else {
+            PyErr_Clear();
+        }
+        if (!dispatch) {
+            long v = PyLong_AsLong(obj);
+            if (!PyErr_Occurred()) {
+                if (val) *val = v;
+                return SWIG_AddCast(SWIG_AddCast(SWIG_OK));
+            } else {
+                PyErr_Clear();
+            }
+        }
+    }
+#endif
+    return res;
+}
+
+
+#include <float.h>
+
+
+#include <math.h>
+
+
+SWIGINTERNINLINE int
+SWIG_CanCastAsInteger(double *d, double min, double max) {
+    double x = *d;
+    if ((min <= x && x <= max)) {
+        double fx, cx, rd;
+        errno = 0;
+        fx = floor(x);
+        cx = ceil(x);
+        rd = ((x - fx) < 0.5) ? fx : cx;  /* simple rint */
+        if ((errno == EDOM) || (errno == ERANGE)) {
+            errno = 0;
+        } else {
+            double summ, reps, diff;
+            if (rd < x) {
+                diff = x - rd;
+            } else if (rd > x) {
+                diff = rd - x;
+            } else {
+                return 1;
+            }
+            summ = rd + x;
+            reps = diff / summ;
+            if (reps < 8 * DBL_EPSILON) {
+                *d = rd;
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+
+SWIGINTERN int
+SWIG_AsVal_long(PyObject *obj, long *val) {
+#if PY_VERSION_HEX < 0x03000000
+    if (PyInt_Check(obj)) {
+        if (val) *val = PyInt_AsLong(obj);
+        return SWIG_OK;
+    } else
+#endif
+        if (PyLong_Check(obj)) {
+            long v = PyLong_AsLong(obj);
+            if (!PyErr_Occurred()) {
+                if (val) *val = v;
+                return SWIG_OK;
+            } else {
+                PyErr_Clear();
+                return SWIG_OverflowError;
+            }
+        }
+#ifdef SWIG_PYTHON_CAST_MODE
+    {
+        int dispatch = 0;
+        long v = PyInt_AsLong(obj);
+        if (!PyErr_Occurred()) {
+            if (val) *val = v;
+            return SWIG_AddCast(SWIG_OK);
+        } else {
+            PyErr_Clear();
+        }
+        if (!dispatch) {
+            double d;
+            int res = SWIG_AddCast(SWIG_AsVal_double(obj, &d));
+            // Largest double not larger than LONG_MAX (not portably calculated easily)
+            // Note that double(LONG_MAX) is stored in a double rounded up by one (for 64-bit long)
+            // 0x7ffffffffffffc00LL == (int64_t)std::nextafter(double(__uint128_t(LONG_MAX)+1), double(0))
+            const double long_max = sizeof(long) == 8 ? 0x7ffffffffffffc00LL : LONG_MAX;
+            // No equivalent needed for 64-bit double(LONG_MIN) is exactly LONG_MIN
+            if (SWIG_IsOK(res) && SWIG_CanCastAsInteger(&d, LONG_MIN, long_max)) {
+                if (val) *val = (long)(d);
+                return res;
+            }
+        }
+    }
+#endif
+    return SWIG_TypeError;
+}
+
+
+SWIGINTERN int
+SWIG_AsVal_bool(PyObject *obj, bool *val) {
+    int r;
+    if (!PyBool_Check(obj))
+        return SWIG_ERROR;
+    r = PyObject_IsTrue(obj);
+    if (r == -1)
+        return SWIG_ERROR;
+    if (val) *val = r ? true : false;
+    return SWIG_OK;
+}
+
+
 SWIGINTERNINLINE PyObject *
 SWIG_From_int(int value) {
     return PyInt_FromLong((long) value);
@@ -3403,16 +3546,19 @@ SWIGINTERN PyObject *_wrap_pm3_console(PyObject *self, PyObject *args) {
     PyObject *resultobj = 0;
     pm3 *arg1 = (pm3 *) 0 ;
     char *arg2 = (char *) 0 ;
+    bool arg3 = (bool) false ;
     void *argp1 = 0 ;
     int res1 = 0 ;
     int res2 ;
     char *buf2 = 0 ;
     int alloc2 = 0 ;
-    PyObject *swig_obj[2] ;
+    bool val3 ;
+    int ecode3 = 0 ;
+    PyObject *swig_obj[3] ;
     int result;
 
     (void)self;
-    if (!SWIG_Python_UnpackTuple(args, "pm3_console", 2, 2, swig_obj)) SWIG_fail;
+    if (!SWIG_Python_UnpackTuple(args, "pm3_console", 2, 3, swig_obj)) SWIG_fail;
     res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_pm3, 0 |  0);
     if (!SWIG_IsOK(res1)) {
         SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "pm3_console" "', argument " "1"" of type '" "pm3 *""'");
@@ -3423,7 +3569,14 @@ SWIGINTERN PyObject *_wrap_pm3_console(PyObject *self, PyObject *args) {
         SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "pm3_console" "', argument " "2"" of type '" "char *""'");
     }
     arg2 = (char *)(buf2);
-    result = (int)pm3_console(arg1, arg2);
+    if (swig_obj[2]) {
+        ecode3 = SWIG_AsVal_bool(swig_obj[2], &val3);
+        if (!SWIG_IsOK(ecode3)) {
+            SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "pm3_console" "', argument " "3"" of type '" "bool""'");
+        }
+        arg3 = (bool)(val3);
+    }
+    result = (int)pm3_console(arg1, arg2, arg3);
     resultobj = SWIG_From_int((int)(result));
     if (alloc2 == SWIG_NEWOBJ) free((char *)buf2);
     return resultobj;
@@ -3457,6 +3610,30 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_pm3_grabbed_output_get(PyObject *self, PyObject *args) {
+    PyObject *resultobj = 0;
+    pm3 *arg1 = (pm3 *) 0 ;
+    void *argp1 = 0 ;
+    int res1 = 0 ;
+    PyObject *swig_obj[1] ;
+    char *result = 0 ;
+
+    (void)self;
+    if (!args) SWIG_fail;
+    swig_obj[0] = args;
+    res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_pm3, 0 |  0);
+    if (!SWIG_IsOK(res1)) {
+        SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "pm3_grabbed_output_get" "', argument " "1"" of type '" "pm3 *""'");
+    }
+    arg1 = (pm3 *)(argp1);
+    result = (char *)pm3_grabbed_output_get(arg1);
+    resultobj = SWIG_FromCharPtr((const char *)result);
+    return resultobj;
+fail:
+    return NULL;
+}
+
+
 SWIGINTERN PyObject *pm3_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
     PyObject *obj;
     if (!SWIG_Python_UnpackTuple(args, "swigregister", 1, 1, &obj)) return NULL;
@@ -3473,6 +3650,7 @@ static PyMethodDef SwigMethods[] = {
     { "delete_pm3", _wrap_delete_pm3, METH_O, NULL},
     { "pm3_console", _wrap_pm3_console, METH_VARARGS, NULL},
     { "pm3_name_get", _wrap_pm3_name_get, METH_O, NULL},
+    { "pm3_grabbed_output_get", _wrap_pm3_grabbed_output_get, METH_O, NULL},
     { "pm3_swigregister", pm3_swigregister, METH_O, NULL},
     { "pm3_swiginit", pm3_swiginit, METH_VARARGS, NULL},
     { NULL, NULL, 0, NULL }

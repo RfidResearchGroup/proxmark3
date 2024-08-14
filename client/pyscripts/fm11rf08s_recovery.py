@@ -19,7 +19,6 @@ import time
 import subprocess
 import argparse
 import pm3
-from output_grabber import OutputGrabber
 # optional color support
 try:
     # pip install ansicolors
@@ -49,14 +48,6 @@ for tool, bin in tools.items():
     if not os.path.isfile(bin):
         if os.path.isfile(bin + ".exe"):
             tools[tool] = bin + ".exe"
-
-            print(f"Native Windows/ProxSpace detected.")
-            print(f"Currently, our Python output grabbing does not work properly on this environment.")
-            print(f"Use WSL or Linux.")
-            # cf https://stackoverflow.com/questions/52373180/python-on-windows-handle-invalid-when-redirecting-stdout-writing-to-file
-            # for ref : https://docs.python.org/3/c-api/init_config.html#c.PyConfig.legacy_windows_stdio
-            exit()
-
         else:
             print(f"Cannot find {bin}, abort!")
             exit()
@@ -69,27 +60,24 @@ parser.add_argument('-d', '--debug', action='store_true', help='Enable debug mod
 args = parser.parse_args()
 
 start_time = time.time()
-out = OutputGrabber()
 p = pm3.pm3()
 
 restore_color = False
-with out:
-    p.console("prefs get color")
-    p.console("prefs set color --off")
-for line in out.captured_output.split('\n'):
+p.console("prefs get color")
+p.console("prefs set color --off")
+for line in p.grabbed_output.split('\n'):
     if "ansi" in line:
         restore_color = True
-with out:
-    p.console("hf 14a read")
+p.console("hf 14a read")
 uid = None
-for line in out.captured_output.split('\n'):
+for line in p.grabbed_output.split('\n'):
     if "UID:" in line:
         uid = int(line[10:].replace(' ', ''), 16)
 if uid is None:
     print("Card not found")
     if restore_color:
-        with out:
-            p.console("prefs set color --ansi")
+        p.console("prefs set color --ansi")
+        _ = p.grabbed_output
     exit()
 print("UID: " + color(f"{uid:08X}", fg="green"))
 
@@ -102,9 +90,8 @@ def print_key(sec, key_type, key):
 found_keys = [["", ""] for _ in range(NUM_SECTORS)]
 if not args.no_init_check:
     print("Checking default keys...")
-    with out:
-        p.console("hf mf fchk")
-    for line in out.captured_output.split('\n'):
+    p.console("hf mf fchk")
+    for line in p.grabbed_output.split('\n'):
         if "[+]  0" in line:
             res = [x.strip() for x in line.split('|')]
             sec = int(res[0][4:])
@@ -119,18 +106,17 @@ nt = [["", ""] for _ in range(NUM_SECTORS)]
 nt_enc = [["", ""] for _ in range(NUM_SECTORS)]
 par_err = [["", ""] for _ in range(NUM_SECTORS)]
 print("Getting nonces...")
-with out:
-    for sec in range(NUM_SECTORS):
-        blk = sec * 4
-        if found_keys[sec][0] == "" or found_keys[sec][1] == "":
-            # Even if one key already found, we'll need both nt
-            for key_type in [0, 1]:
-                cmd = f"hf mf isen -n1 --blk {blk} -c {key_type+4} --key {BACKDOOR_RF08S}"
-                p.console(cmd)
-                cmd += f" --c2 {key_type}"
-                p.console(cmd)
+for sec in range(NUM_SECTORS):
+    blk = sec * 4
+    if found_keys[sec][0] == "" or found_keys[sec][1] == "":
+        # Even if one key already found, we'll need both nt
+        for key_type in [0, 1]:
+            cmd = f"hf mf isen -n1 --blk {blk} -c {key_type+4} --key {BACKDOOR_RF08S}"
+            p.console(cmd)
+            cmd += f" --c2 {key_type}"
+            p.console(cmd)
 print("Processing traces...")
-for line in out.captured_output.split('\n'):
+for line in p.grabbed_output.split('\n'):
     if "nested cmd: 64" in line or "nested cmd: 65" in line:
         sec = int(line[24:26], 16)//4
         key_type = int(line[21:23], 16) - 0x64
@@ -232,9 +218,8 @@ for sec in range(NUM_SECTORS):
             cmd = f"hf mf fchk --blk {sec * 4} -{kt} -f {dic} --no-default"
             if args.debug:
                 print(cmd)
-            with out:
-                p.console(cmd)
-            for line in out.captured_output.split('\n'):
+            p.console(cmd)
+            for line in p.grabbed_output.split('\n'):
                 if "aborted via keyboard" in line:
                     abort = True
                 if "found:" in line:
@@ -259,9 +244,8 @@ for sec in range(NUM_SECTORS):
             cmd = f"hf mf fchk --blk {sec * 4} -{kt} -f {dic} --no-default"
             if args.debug:
                 print(cmd)
-            with out:
-                p.console(cmd)
-            for line in out.captured_output.split('\n'):
+            p.console(cmd)
+            for line in p.grabbed_output.split('\n'):
                 if "aborted via keyboard" in line:
                     abort = True
                 if "found:" in line:
@@ -281,9 +265,8 @@ for sec in range(NUM_SECTORS):
         cmd = f"hf mf fchk --blk {sec * 4} -{kt} -f {dic} --no-default"
         if args.debug:
             print(cmd)
-        with out:
-            p.console(cmd)
-        for line in out.captured_output.split('\n'):
+        p.console(cmd)
+        for line in p.grabbed_output.split('\n'):
             if "aborted via keyboard" in line:
                 abort = True
             if "found:" in line:
@@ -324,9 +307,8 @@ for sec in range(NUM_SECTORS):
                 cmd += f" -k {k}"
             if args.debug:
                 print(cmd)
-            with out:
-                p.console(cmd)
-            for line in out.captured_output.split('\n'):
+            p.console(cmd)
+            for line in p.grabbed_output.split('\n'):
                 if "aborted via keyboard" in line:
                     abort = True
                 if "found:" in line:
@@ -338,8 +320,8 @@ for sec in range(NUM_SECTORS):
     if abort:
         break
 if restore_color:
-    with out:
-        p.console("prefs set color --ansi")
+    p.console("prefs set color --ansi")
+    _ = p.grabbed_output
 
 if abort:
     print("Brute-forcing phase aborted via keyboard!")
@@ -389,10 +371,7 @@ else:
     cmd = f"hf mf fchk -f keys_{uid:08x}.dic --no-default --dump"
     if args.debug:
         print(cmd)
-    with out:
-        p.console(cmd)
-    for line in out.captured_output.split('\n'):
-        print(line)
+    p.console(cmd, passthru = True)
 
 elapsed_time = time.time() - start_time
 minutes = int(elapsed_time // 60)

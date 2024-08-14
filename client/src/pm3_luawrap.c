@@ -2768,18 +2768,23 @@ static int _wrap_pm3_console(lua_State *L) {
     int SWIG_arg = 0;
     pm3 *arg1 = (pm3 *) 0 ;
     char *arg2 = (char *) 0 ;
+    bool arg3 = (bool) false ;
     int result;
 
-    SWIG_check_num_args("pm3::console", 2, 2)
+    SWIG_check_num_args("pm3::console", 2, 3)
     if (!SWIG_isptrtype(L, 1)) SWIG_fail_arg("pm3::console", 1, "pm3 *");
     if (!SWIG_lua_isnilstring(L, 2)) SWIG_fail_arg("pm3::console", 2, "char *");
+    if (lua_gettop(L) >= 3 && !lua_isboolean(L, 3)) SWIG_fail_arg("pm3::console", 3, "bool");
 
     if (!SWIG_IsOK(SWIG_ConvertPtr(L, 1, (void **)&arg1, SWIGTYPE_p_pm3, 0))) {
         SWIG_fail_ptr("pm3_console", 1, SWIGTYPE_p_pm3);
     }
 
     arg2 = (char *)lua_tostring(L, 2);
-    result = (int)pm3_console(arg1, arg2);
+    if (lua_gettop(L) >= 3) {
+        arg3 = (lua_toboolean(L, 3) != 0);
+    }
+    result = (int)pm3_console(arg1, arg2, arg3);
     lua_pushnumber(L, (lua_Number) result);
     SWIG_arg++;
     return SWIG_arg;
@@ -2815,6 +2820,30 @@ fail:
 }
 
 
+static int _wrap_pm3_grabbed_output_get(lua_State *L) {
+    int SWIG_arg = 0;
+    pm3 *arg1 = (pm3 *) 0 ;
+    char *result = 0 ;
+
+    SWIG_check_num_args("pm3::grabbed_output", 1, 1)
+    if (!SWIG_isptrtype(L, 1)) SWIG_fail_arg("pm3::grabbed_output", 1, "pm3 *");
+
+    if (!SWIG_IsOK(SWIG_ConvertPtr(L, 1, (void **)&arg1, SWIGTYPE_p_pm3, 0))) {
+        SWIG_fail_ptr("pm3_grabbed_output_get", 1, SWIGTYPE_p_pm3);
+    }
+
+    result = (char *)pm3_grabbed_output_get(arg1);
+    lua_pushstring(L, (const char *)result);
+    SWIG_arg++;
+    return SWIG_arg;
+
+fail:
+    SWIGUNUSED;
+    lua_error(L);
+    return 0;
+}
+
+
 static void swig_delete_pm3(void *obj) {
     pm3 *arg1 = (pm3 *) obj;
     delete_pm3(arg1);
@@ -2829,6 +2858,7 @@ static int _proxy__wrap_new_pm3(lua_State *L) {
 }
 static swig_lua_attribute swig_pm3_attributes[] = {
     { "name", _wrap_pm3_name_get, SWIG_Lua_set_immutable },
+    { "grabbed_output", _wrap_pm3_grabbed_output_get, SWIG_Lua_set_immutable },
     {0, 0, 0}
 };
 static swig_lua_method swig_pm3_methods[] = {
