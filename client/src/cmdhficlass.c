@@ -4579,13 +4579,15 @@ static int CmdHFiClassEncode(const char *Cmd) {
                   "Use either --bin or --wiegand/--fc/--cn",
                   "hf iclass encode --bin 10001111100000001010100011 --ki 0            -> FC 31 CN 337 (H10301)\n"
                   "hf iclass encode -w H10301 --fc 31 --cn 337 --ki 0                  -> FC 31 CN 337 (H10301)\n"
-                  "hf iclass encode --bin 10001111100000001010100011 --ki 0 --elite    -> FC 31 CN 337 (H10301), writing w elite key"
+                  "hf iclass encode --bin 10001111100000001010100011 --ki 0 --elite    -> FC 31 CN 337 (H10301), writing w elite key\n"
+                  "hf iclass encode -w H10301 --fc 31 --cn 337 --emu                   -> Writes the ecoded data to emulator memory\n"
+                  "When using emulator you have to first load a credential into emulator memory"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "bin", "<bin>", "Binary string i.e 0001001001"),
-        arg_int1(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
+        arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "no computations applied to key"),
@@ -4607,18 +4609,28 @@ static int CmdHFiClassEncode(const char *Cmd) {
     CLIGetStrWithReturn(ctx, 1, bin, &bin_len);
 
     int key_nr = arg_get_int_def(ctx, 2, -1);
-    bool auth = false;
+    bool use_emulator_memory = arg_get_lit(ctx, 11);
 
+    bool auth = false;
     uint8_t key[8] = {0};
-    if (key_nr >= 0) {
-        if (key_nr < ICLASS_KEYS_MAX) {
-            auth = true;
-            memcpy(key, iClass_Key_Table[key_nr], 8);
-            PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), key_nr, sprint_hex(iClass_Key_Table[key_nr], 8));
-        } else {
-            PrintAndLogEx(ERR, "Key number is invalid");
-            CLIParserFree(ctx);
+
+    // If we use emulator memory skip key requirement
+    if (!use_emulator_memory) {
+        if (key_nr < 0) {
+            PrintAndLogEx(ERR, "Missing required arg for --ki or --emu");
             return PM3_EINVARG;
+        }
+
+        if (key_nr >= 0) {
+            if (key_nr < ICLASS_KEYS_MAX) {
+                auth = true;
+                memcpy(key, iClass_Key_Table[key_nr], 8);
+                PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), key_nr, sprint_hex(iClass_Key_Table[key_nr], 8));
+            } else {
+                PrintAndLogEx(ERR, "Key number is invalid");
+                CLIParserFree(ctx);
+                return PM3_EINVARG;
+            }
         }
     }
 
@@ -4644,7 +4656,6 @@ static int CmdHFiClassEncode(const char *Cmd) {
     
     CLIParamStrToBuf(arg_get_str(ctx, 10), (uint8_t *)format, sizeof(format), &format_len);
 
-    bool use_emulator_memory = arg_get_lit(ctx, 11);
     bool shallow_mod = arg_get_lit(ctx, 12);
     bool verbose = arg_get_lit(ctx, 13);
 
@@ -4674,7 +4685,12 @@ static int CmdHFiClassEncode(const char *Cmd) {
     }
 
     if (have_enc_key == false) {
-        use_sc = IsCardHelperPresent(false);
+        // The IsCardHelperPresent function clears the emulator memory
+        if (use_emulator_memory) {
+            use_sc = false;
+        } else {
+            use_sc = IsCardHelperPresent(false);
+        }
         if (use_sc == false) {
             size_t keylen = 0;
             int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&enckeyptr, &keylen);
@@ -4780,8 +4796,10 @@ static int CmdHFiClassEncode(const char *Cmd) {
     int isok = PM3_SUCCESS;
     // write
     if (use_emulator_memory) {
-        uint16_t bytes_sent = 0;
-        iclass_upload_emul(credential, sizeof(credential), 6 * PICOPASS_BLOCK_SIZE, &bytes_sent);
+        uint16_t byte_sent = 0;
+        iclass_upload_emul(credential, sizeof(credential), 6 * PICOPASS_BLOCK_SIZE, &byte_sent);
+        PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", byte_sent);
+        PrintAndLogEx(HINT, "You are now ready to simulate. See " _YELLOW_("`hf iclass sim -h`"));
     } else {
         for (uint8_t i = 0; i < 4; i++) {
             isok = iclass_write_block(6 + i, credential + (i * 8), NULL, key, use_credit_key, elite, rawkey, false, false, auth, shallow_mod);
