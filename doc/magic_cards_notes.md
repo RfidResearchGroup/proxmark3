@@ -155,7 +155,7 @@ This is the cheapest and most common ID82xx chip available. It is usually sold a
 #### Characteristics
 
 * Chip is likely a Hitag μ (micro)
-* Password protection (4b), usually "1AC4999C"
+* Password protection (4b), usually "00000000"(default) or "9AC4999C"(FURUI)
 * Currently unimplemented in proxmark3 client
 * Other names:
   * ID8210 (CN)
