@@ -4595,6 +4595,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
         arg_str0("w",   "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_lit0("v", NULL, "verbose (print encoded blocks)"),
+        arg_u64_0(NULL, "issue", "<dec>", "issue level"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4635,6 +4636,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
     memset(&card, 0, sizeof(wiegand_card_t));
     card.FacilityCode = arg_get_u32_def(ctx, 7, 0);
     card.CardNumber = arg_get_u32_def(ctx, 8, 0);
+    card.IssueLevel = arg_get_u32_def(ctx, 12, 0);
 
     char format[16] = {0};
     int format_len = 0;
