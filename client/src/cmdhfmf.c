@@ -9557,10 +9557,12 @@ static int CmdHF14AMfInfo(const char *Cmd) {
 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
+
+        // cards with known backdoor
         if (memcmp(blockdata + 8, "\x62\x63\x64\x65\x66\x67\x68\x69", 8) == 0) {
-            PrintAndLogEx(SUCCESS, "FUDAN based card");
-        }
-        if (card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
+            // backdoor might be present, or just a clone reusing Fudan MF data...
+            PrintAndLogEx(SUCCESS, "Fudan based card");
+        } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
         && (blockdata[8] == 0x03 || blockdata[8] == 0x04) && blockdata[15] == 0x90) {
             PrintAndLogEx(SUCCESS, "Fudan FM11RF08S");
         } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x00\x03\x00\x10", 4) == 0
@@ -9575,7 +9577,11 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "NXP MF1ICS5003");
         } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x45", 4) == 0) {
             PrintAndLogEx(SUCCESS, "NXP MF1ICS5004");
-        } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x46", 4) == 0) {
+        } else if (fKeyType == MF_KEY_BD08 || fKeyType == MF_KEY_BD08S) {
+            PrintAndLogEx(SUCCESS, _RED_("Unknown card with backdoor, please report details!"));
+        }
+        // other cards
+        if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x46", 4) == 0) {
             PrintAndLogEx(SUCCESS, "NXP MF1ICS5005");
         } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x47", 4) == 0) {
             PrintAndLogEx(SUCCESS, "NXP MF1ICS5006");
@@ -9585,8 +9591,6 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "NXP MF1ICS5007");
         } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\xc0", 4) == 0) {
             PrintAndLogEx(SUCCESS, "NXP MF1ICS5035");
-        } else if (fKeyType == MF_KEY_BD08 || fKeyType == MF_KEY_BD08S) {
-            PrintAndLogEx(SUCCESS, _RED_("Unknown card with backdoor, please report details!"));
         }
 
         if (e_sector[1].foundKey[MF_KEY_A] && (e_sector[1].Key[MF_KEY_A] == 0x2A2C13CC242A)) {
