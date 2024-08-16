@@ -11,7 +11,7 @@
 # * 16 random keys with keyA==keyB in each sector: ~30 min
 # * 24 random keys, some reused across sectors: <1 min
 #
-# Doegox, 2024
+# Doegox, 2024, cf https://eprint.iacr.org/2024/1275 for more info
 
 import os
 import sys

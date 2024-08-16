@@ -7,7 +7,7 @@
 // Strategy:
 // * Find all possible key candidates for one reference sector, and check on-the-fly if they are compatible with any other sector we want to compare with
 //
-//  Doegox, 2024
+//  Doegox, 2024, cf https://eprint.iacr.org/2024/1275 for more info
 
 #include <stdio.h>
 #include <stdlib.h>

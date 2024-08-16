@@ -10,7 +10,7 @@
 // * Search couples of keyA/keyB satisfying some obscure relationship
 // * Use the resulting dictionary to bruteforce the keyA (and staticnested_2x1nt_rf08s_1key for keyB)
 //
-//  Doegox, 2024
+//  Doegox, 2024, cf https://eprint.iacr.org/2024/1275 for more info
 
 #include <stdio.h>
 #include <stdlib.h>
