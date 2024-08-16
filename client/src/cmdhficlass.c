@@ -4990,7 +4990,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Wiegand decode");
-    wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
+    wiegand_message_t packed = initialize_message_object(top, mid, bot, strlen(binstr));
     HIDTryUnpack(&packed);
 
     PrintAndLogEx(NORMAL, "");
