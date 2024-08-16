@@ -72,7 +72,7 @@ p.console("hf 14a read")
 uid = None
 for line in p.grabbed_output.split('\n'):
     if "UID:" in line:
-        uid = int(line[10:].replace(' ', ''), 16)
+        uid = int(line[10:].replace(' ', '')[-8:], 16)
 if uid is None:
     print("Card not found")
     if restore_color:

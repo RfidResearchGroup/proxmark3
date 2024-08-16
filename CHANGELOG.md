@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed fm11rf08s script for non-4B UID (FM11RF08S-7B) (@Foxushka)
 - Added more fingerprinting in `hf mf info` (@doegox)
 - Added --issue and (--emu)lator support to `hf iclass encode` command (@micsen)
 - Added custom CTF Wiegand format from Defcon32 with comments (@micsen)
