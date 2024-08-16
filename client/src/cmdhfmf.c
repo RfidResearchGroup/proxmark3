@@ -9512,9 +9512,9 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
+    uint8_t blockdata[MFBLOCK_SIZE] = {0};
     res = mfCheckKeys_fast(sectorsCnt, true, true, 1, keycnt, keyBlock, e_sector, false, verbose);
     if (res == PM3_SUCCESS || res == PM3_EPARTIAL) {
-        uint8_t blockdata[MFBLOCK_SIZE] = {0};
 
         if (e_sector[0].foundKey[MF_KEY_A]) {
             PrintAndLogEx(SUCCESS, "Sector 0 key A... " _GREEN_("%012" PRIX64), e_sector[0].Key[MF_KEY_A]);
@@ -9539,25 +9539,26 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         if (e_sector[1].foundKey[MF_KEY_A]) {
             PrintAndLogEx(SUCCESS, "Sector 1 key A... " _GREEN_("%012" PRIX64), e_sector[1].Key[MF_KEY_A]);
         }
+    }
 
-        uint8_t k08s[6] = {0xA3, 0x96, 0xEF, 0xA4, 0xE2, 0x4F};
-        if (mfReadBlock(0, 4, k08s, blockdata) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Backdoor key..... " _RED_("%02X%02X%02X%02X%02X%02X"), k08s[0], k08s[1], k08s[2], k08s[3], k08s[4], k08s[5]);
-            fKeyType = MF_KEY_BD08S;
-        }
-        uint8_t k08[6] = {0xA3, 0x16, 0x67, 0xA8, 0xCE, 0xC1};
-        if (mfReadBlock(0, 4, k08, blockdata) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Backdoor key..... " _RED_("%02X%02X%02X%02X%02X%02X"), k08[0], k08[1], k08[2], k08[3], k08[4], k08[5]);
-            fKeyType = MF_KEY_BD08;
-        }
+    uint8_t k08s[6] = {0xA3, 0x96, 0xEF, 0xA4, 0xE2, 0x4F};
+    if (mfReadBlock(0, 4, k08s, blockdata) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Backdoor key..... " _RED_("%02X%02X%02X%02X%02X%02X"), k08s[0], k08s[1], k08s[2], k08s[3], k08s[4], k08s[5]);
+        fKeyType = MF_KEY_BD08S;
+    }
+    uint8_t k08[6] = {0xA3, 0x16, 0x67, 0xA8, 0xCE, 0xC1};
+    if (mfReadBlock(0, 4, k08, blockdata) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Backdoor key..... " _RED_("%02X%02X%02X%02X%02X%02X"), k08[0], k08[1], k08[2], k08[3], k08[4], k08[5]);
+        fKeyType = MF_KEY_BD08;
+    }
 
-        if (fKeyType != 0xFF) {
-            PrintAndLogEx(SUCCESS, "Block 0.......... %s", sprint_hex(blockdata, MFBLOCK_SIZE));
-        }
+    if (fKeyType != 0xFF) {
+        PrintAndLogEx(SUCCESS, "Block 0.......... %s", sprint_hex(blockdata, MFBLOCK_SIZE));
+    }
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
 
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
-
+    if (fKeyType != 0xFF) {
         // cards with known backdoor
         if (memcmp(blockdata + 8, "\x62\x63\x64\x65\x66\x67\x68\x69", 8) == 0) {
             // backdoor might be present, or just a clone reusing Fudan MF data...
