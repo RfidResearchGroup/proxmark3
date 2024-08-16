@@ -9540,19 +9540,53 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "Sector 1 key A... " _GREEN_("%012" PRIX64), e_sector[1].Key[MF_KEY_A]);
         }
 
+        uint8_t k08s[6] = {0xA3, 0x96, 0xEF, 0xA4, 0xE2, 0x4F};
+        if (mfReadBlock(0, 4, k08s, blockdata) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Backdoor key..... " _RED_("%02X%02X%02X%02X%02X%02X"), k08s[0], k08s[1], k08s[2], k08s[3], k08s[4], k08s[5]);
+            fKeyType = MF_KEY_BD08S;
+        }
+        uint8_t k08[6] = {0xA3, 0x16, 0x67, 0xA8, 0xCE, 0xC1};
+        if (mfReadBlock(0, 4, k08, blockdata) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Backdoor key..... " _RED_("%02X%02X%02X%02X%02X%02X"), k08[0], k08[1], k08[2], k08[3], k08[4], k08[5]);
+            fKeyType = MF_KEY_BD08;
+        }
+
         if (fKeyType != 0xFF) {
             PrintAndLogEx(SUCCESS, "Block 0.......... %s", sprint_hex(blockdata, MFBLOCK_SIZE));
         }
 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
-        if (
-            (blockdata[8] == 0x03 && blockdata[15] == 0x90) ||
-            (blockdata[9] == 0x02 && blockdata[14] == 0x1D) ||
-            (blockdata[8] == 0x04 && blockdata[15] == 0x90) ||
-            (memcmp(blockdata + 8, "\x62\x63\x64\x65\x66\x67\x68\x69", 8) == 0)
-        ) {
+        if (memcmp(blockdata + 8, "\x62\x63\x64\x65\x66\x67\x68\x69", 8) == 0) {
             PrintAndLogEx(SUCCESS, "FUDAN based card");
+        }
+        if (card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
+        && (blockdata[8] == 0x03 || blockdata[8] == 0x04) && blockdata[15] == 0x90) {
+            PrintAndLogEx(SUCCESS, "Fudan FM11RF08S");
+        } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x00\x03\x00\x10", 4) == 0
+        && blockdata[15] == 0x90) {
+            PrintAndLogEx(SUCCESS, "Fudan FM11RF08S-7B");
+        } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
+        && (blockdata[8] >= 0x01 || blockdata[8] <= 0x03) && blockdata[15] == 0x1D) {
+            PrintAndLogEx(SUCCESS, "Fudan FM11RF08");
+        } else if (card.sak == 0x88 && memcmp(blockdata + 5, "\x88\x04\x00\x43", 4) == 0) {
+            PrintAndLogEx(SUCCESS, "Infineon SLE66R35");
+        } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x44", 4) == 0) {
+            PrintAndLogEx(SUCCESS, "NXP MF1ICS5003");
+        } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x45", 4) == 0) {
+            PrintAndLogEx(SUCCESS, "NXP MF1ICS5004");
+        } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x46", 4) == 0) {
+            PrintAndLogEx(SUCCESS, "NXP MF1ICS5005");
+        } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x47", 4) == 0) {
+            PrintAndLogEx(SUCCESS, "NXP MF1ICS5006");
+        } else if (card.sak == 0x09 && memcmp(blockdata + 5, "\x89\x04\x00\x47", 4) == 0) {
+            PrintAndLogEx(SUCCESS, "NXP MF1ICS2006");
+        } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x48", 4) == 0) {
+            PrintAndLogEx(SUCCESS, "NXP MF1ICS5007");
+        } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\xc0", 4) == 0) {
+            PrintAndLogEx(SUCCESS, "NXP MF1ICS5035");
+        } else if (fKeyType == MF_KEY_BD08 || fKeyType == MF_KEY_BD08S) {
+            PrintAndLogEx(SUCCESS, _RED_("Unknown card with backdoor, please report details!"));
         }
 
         if (e_sector[1].foundKey[MF_KEY_A] && (e_sector[1].Key[MF_KEY_A] == 0x2A2C13CC242A)) {
