@@ -647,7 +647,10 @@ int flash_write(flash_file_t *ctx) {
 
     PrintAndLogEx(SUCCESS, "Writing segments for file: %s", ctx->filename);
 
-    bool filter_ansi = !g_session.supports_colors;
+    char ice2[sizeof(ice)] = {0};
+    char ice3[sizeof(ice)] = {0};
+    memcpy_filter_ansi(ice2, ice, sizeof(ice), !g_session.supports_colors);
+    memcpy_filter_emoji(ice3, ice2, sizeof(ice2), g_session.emoji_mode);
 
     for (int i = 0; i < ctx->num_segs; i++) {
         flash_seg_t *seg = &ctx->segments[i];
@@ -676,12 +679,8 @@ int flash_write(flash_file_t *ctx) {
             baddr += block_size;
             length -= block_size;
             block++;
-            if (len < strlen(ice)) {
-                if (filter_ansi && !isalpha(ice[len])) {
-                    len++;
-                } else {
-                    fprintf(stdout, "%c", ice[len++]);
-                }
+            if (len < strlen(ice3)) {
+                fprintf(stdout, "%c", ice3[len++]);
             } else {
                 fprintf(stdout, ".");
             }
