@@ -62,22 +62,14 @@ args = parser.parse_args()
 start_time = time.time()
 p = pm3.pm3()
 
-restore_color = False
-p.console("prefs get color")
-p.console("prefs set color --off")
-for line in p.grabbed_output.split('\n'):
-    if "ansi" in line:
-        restore_color = True
 p.console("hf 14a read")
 uid = None
-for line in p.grabbed_output.split('\n'):
-    if "UID:" in line:
-        uid = int(line[10:].replace(' ', ''), 16)
+if p.grabbed_output is not None:
+    for line in p.grabbed_output.split('\n'):
+        if "UID:" in line:
+            uid = int(line[10:].replace(' ', ''), 16)
 if uid is None:
     print("Card not found")
-    if restore_color:
-        p.console("prefs set color --ansi")
-        _ = p.grabbed_output
     exit()
 print("UID: " + color(f"{uid:08X}", fg="green"))
 
@@ -136,9 +128,6 @@ for sec in range(NUM_SECTORS):
                nt_enc[sec][key_type] == "" or
                par_err[sec][key_type] == ""):
                 print("Error, could not collect nonces, abort")
-                if restore_color:
-                    p.console("prefs set color --ansi")
-                    _ = p.grabbed_output
                 exit()
 
 print("Running staticnested_1nt & 2x1nt when doable...")
@@ -330,9 +319,6 @@ for sec in range(NUM_SECTORS):
             print_key(sec, key_type_target, found_keys[sec][key_type_target])
     if abort:
         break
-if restore_color:
-    p.console("prefs set color --ansi")
-    _ = p.grabbed_output
 
 if abort:
     print("Brute-forcing phase aborted via keyboard!")
