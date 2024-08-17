@@ -1175,7 +1175,7 @@ int getIndalaBits(uint8_t fc, uint16_t cn, uint8_t *bits) {
     bits[38] = 0; // parity for even bits
     uint8_t p1 = 1;
     uint8_t p2 = 1;
-    
+
     for (int i=33; i < 64; i++) {
         if (i%2) 
             p1 ^= bits[i];
