@@ -4579,20 +4579,24 @@ static int CmdHFiClassEncode(const char *Cmd) {
                   "Use either --bin or --wiegand/--fc/--cn",
                   "hf iclass encode --bin 10001111100000001010100011 --ki 0            -> FC 31 CN 337 (H10301)\n"
                   "hf iclass encode -w H10301 --fc 31 --cn 337 --ki 0                  -> FC 31 CN 337 (H10301)\n"
-                  "hf iclass encode --bin 10001111100000001010100011 --ki 0 --elite    -> FC 31 CN 337 (H10301), writing w elite key"
+                  "hf iclass encode --bin 10001111100000001010100011 --ki 0 --elite    -> FC 31 CN 337 (H10301), writing w elite key\n"
+                  "hf iclass encode -w H10301 --fc 31 --cn 337 --emu                   -> Writes the ecoded data to emulator memory\n"
+                  "When using emulator you have to first load a credential into emulator memory"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "bin", "<bin>", "Binary string i.e 0001001001"),
-        arg_int1(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
+        arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "no computations applied to key"),
         arg_str0(NULL, "enckey", "<hex>", "3DES transport key, 16 hex bytes"),
         arg_u64_0(NULL, "fc", "<dec>", "facility code"),
         arg_u64_0(NULL, "cn", "<dec>", "card number"),
+        arg_u64_0(NULL, "issue", "<dec>", "issue level"),
         arg_str0("w",   "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
+        arg_lit0(NULL, "emu", "Write to emulation memory instead of card"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_lit0("v", NULL, "verbose (print encoded blocks)"),
         arg_param_end
@@ -4605,18 +4609,28 @@ static int CmdHFiClassEncode(const char *Cmd) {
     CLIGetStrWithReturn(ctx, 1, bin, &bin_len);
 
     int key_nr = arg_get_int_def(ctx, 2, -1);
-    bool auth = false;
+    bool use_emulator_memory = arg_get_lit(ctx, 11);
 
+    bool auth = false;
     uint8_t key[8] = {0};
-    if (key_nr >= 0) {
-        if (key_nr < ICLASS_KEYS_MAX) {
-            auth = true;
-            memcpy(key, iClass_Key_Table[key_nr], 8);
-            PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), key_nr, sprint_hex(iClass_Key_Table[key_nr], 8));
-        } else {
-            PrintAndLogEx(ERR, "Key number is invalid");
-            CLIParserFree(ctx);
+
+    // If we use emulator memory skip key requirement
+    if (!use_emulator_memory) {
+        if (key_nr < 0) {
+            PrintAndLogEx(ERR, "Missing required arg for --ki or --emu");
             return PM3_EINVARG;
+        }
+
+        if (key_nr >= 0) {
+            if (key_nr < ICLASS_KEYS_MAX) {
+                auth = true;
+                memcpy(key, iClass_Key_Table[key_nr], 8);
+                PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), key_nr, sprint_hex(iClass_Key_Table[key_nr], 8));
+            } else {
+                PrintAndLogEx(ERR, "Key number is invalid");
+                CLIParserFree(ctx);
+                return PM3_EINVARG;
+            }
         }
     }
 
@@ -4635,13 +4649,15 @@ static int CmdHFiClassEncode(const char *Cmd) {
     memset(&card, 0, sizeof(wiegand_card_t));
     card.FacilityCode = arg_get_u32_def(ctx, 7, 0);
     card.CardNumber = arg_get_u32_def(ctx, 8, 0);
+    card.IssueLevel = arg_get_u32_def(ctx, 9, 0);
 
     char format[16] = {0};
     int format_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 9), (uint8_t *)format, sizeof(format), &format_len);
+    
+    CLIParamStrToBuf(arg_get_str(ctx, 10), (uint8_t *)format, sizeof(format), &format_len);
 
-    bool shallow_mod = arg_get_lit(ctx, 10);
-    bool verbose = arg_get_lit(ctx, 11);
+    bool shallow_mod = arg_get_lit(ctx, 12);
+    bool verbose = arg_get_lit(ctx, 13);
 
     CLIParserFree(ctx);
 
@@ -4669,7 +4685,12 @@ static int CmdHFiClassEncode(const char *Cmd) {
     }
 
     if (have_enc_key == false) {
-        use_sc = IsCardHelperPresent(false);
+        // The IsCardHelperPresent function clears the emulator memory
+        if (use_emulator_memory) {
+            use_sc = false;
+        } else {
+            use_sc = IsCardHelperPresent(false);
+        }
         if (use_sc == false) {
             size_t keylen = 0;
             int res = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&enckeyptr, &keylen);
@@ -4774,15 +4795,22 @@ static int CmdHFiClassEncode(const char *Cmd) {
 
     int isok = PM3_SUCCESS;
     // write
-    for (uint8_t i = 0; i < 4; i++) {
-        isok = iclass_write_block(6 + i, credential + (i * 8), NULL, key, use_credit_key, elite, rawkey, false, false, auth, shallow_mod);
-        switch (isok) {
-            case PM3_SUCCESS:
-                PrintAndLogEx(SUCCESS, "Write block %d/0x0%x ( " _GREEN_("ok") " )  --> " _YELLOW_("%s"), 6 + i, 6 + i, sprint_hex_inrow(credential + (i * 8), 8));
-                break;
-            default:
-                PrintAndLogEx(INFO, "Write block %d/0x0%x ( " _RED_("fail") " )", 6 + i, 6 + i);
-                break;
+    if (use_emulator_memory) {
+        uint16_t byte_sent = 0;
+        iclass_upload_emul(credential, sizeof(credential), 6 * PICOPASS_BLOCK_SIZE, &byte_sent);
+        PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", byte_sent);
+        PrintAndLogEx(HINT, "You are now ready to simulate. See " _YELLOW_("`hf iclass sim -h`"));
+    } else {
+        for (uint8_t i = 0; i < 4; i++) {
+            isok = iclass_write_block(6 + i, credential + (i * 8), NULL, key, use_credit_key, elite, rawkey, false, false, auth, shallow_mod);
+            switch (isok) {
+                case PM3_SUCCESS:
+                    PrintAndLogEx(SUCCESS, "Write block %d/0x0%x ( " _GREEN_("ok") " )  --> " _YELLOW_("%s"), 6 + i, 6 + i, sprint_hex_inrow(credential + (i * 8), 8));
+                    break;
+                default:
+                    PrintAndLogEx(INFO, "Write block %d/0x0%x ( " _RED_("fail") " )", 6 + i, 6 + i);
+                    break;
+            }
         }
     }
     return isok;
@@ -4962,7 +4990,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Wiegand decode");
-    wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
+    wiegand_message_t packed = initialize_message_object(top, mid, bot, strlen(binstr));
     HIDTryUnpack(&packed);
 
     PrintAndLogEx(NORMAL, "");

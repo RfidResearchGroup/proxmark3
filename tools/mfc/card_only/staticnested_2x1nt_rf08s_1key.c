@@ -8,7 +8,7 @@
 // * Use f08s_nested_known_collision to crack keyA
 // * If keyB not readable, find keyB in its dictionary based on the obscure relationship between keyA, keyB and their nT
 //
-//  Doegox, 2024
+//  Doegox, 2024, cf https://eprint.iacr.org/2024/1275 for more info
 
 #include <stdio.h>
 #include <stdlib.h>

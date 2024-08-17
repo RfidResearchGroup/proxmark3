@@ -394,7 +394,7 @@ ifeq ($(PYTHON_FOUND),1)
 endif
 
 #######################################################################################################
-# macOS doesn't like this params
+# clang doesn't like this params
 #MYCFLAGS += --param max-completely-peeled-insns=1000 --param max-completely-peel-times=10000
 MYCFLAGS += -O3
 

@@ -20,6 +20,69 @@
 #include "commonutil.h"
 
 
+static bool Pack_Defcon32(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+    memset(packed, 0, sizeof(wiegand_message_t));
+    if (card->FacilityCode > 0x00FFFF) return false; // Can't encode FC.
+    if (card->CardNumber > 0x0fffff) return false; // Can't encode CN.
+    if (card->IssueLevel > 0x00000F) return false; // Can't encode Issue 
+    if (card->OEM > 0) return false; // Not used in this format
+
+    packed->Length = 42;
+    /*
+        By implementing this format I hope to make the CTF easier for people to get into next year
+        //~~The wiegand data consists of 3 32 bit units that we need to split the data between Bottom and Mid since we have a 42 bit format~~
+        We can use the set linear field function instead this seems to be easier.
+        |Mid part|   | Bot part of the packed data  |
+        PFFFFFFFFF   FFFFFFFIIIICCCCCCCCCCCCCCCCCCCCP
+        1111111111   11111111111000000000000000001000
+FC       111111111   1111111 =                         FF FF
+//FC Mid   111111111   0000000 =                         FF 80  These where used to split data between bot/mid
+//FC Bot   000000000   1111111 =                         00 7F
+Issuance                    1111 =                     0F
+Card Number                     11111111111111111111 = 0FFFFF
+
+    */
+
+    // Referenced from MSB
+    set_linear_field(packed, card->CardNumber, 21, 20); // 20 bit
+    set_linear_field(packed, card->IssueLevel, 17, 4); // 4 bit
+    set_linear_field(packed, card->FacilityCode, 1, 16); // 16 bits
+
+    // Parity calc
+    //0123456789|0123456789|0123456789|0123456789|01
+    //E E E E E |E E E E E |EO O O O O| O O O O O| O
+    set_bit_by_position(packed, 
+    evenparity32(
+        get_nonlinear_field(packed, 16, (uint8_t[]) {2, 4, 6, 8, 10, 12, 14, 16, 18, 20}))
+    , 0);
+
+    set_bit_by_position(packed, 
+    oddparity32(
+        get_nonlinear_field(packed, 16, (uint8_t[]) {21, 23, 25, 27, 29, 31, 33, 35, 37, 39}))
+    , 41);
+    if (preamble)
+        return add_HID_header(packed);
+    return true;
+}
+
+static bool Unpack_Defcon32(wiegand_message_t *packed, wiegand_card_t *card) {
+    memset(card, 0, sizeof(wiegand_card_t));
+
+    if (packed->Length != 42) return false; // Wrong length? Stop here.
+
+    card->FacilityCode = get_linear_field(packed, 1, 16);
+    card->IssueLevel = get_linear_field(packed, 17, 4);
+    card->CardNumber = get_linear_field(packed, 21, 20);
+    
+    card->ParityValid = 
+        (get_bit_by_position(packed, 41) == oddparity32(
+        get_nonlinear_field(packed, 16, (uint8_t[]) {21, 23, 25, 27, 29, 31, 33, 35, 37, 39})))&& 
+        (get_bit_by_position(packed, 0) == 
+        evenparity32(get_nonlinear_field(packed, 16, (uint8_t[]) {2, 4, 6, 8, 10, 12, 14, 16, 18, 20})));
+    return true;
+}
+
+
 static bool Pack_H10301(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
@@ -1474,6 +1537,7 @@ static const cardformat_t FormatTable[] = {
     {"C1k48s",  Pack_C1k48s,  Unpack_C1k48s,  "HID Corporate 1000 48-bit std", {1, 1, 0, 0, 1}}, // imported from old pack/unpack
     {"BC40",    Pack_bc40,    Unpack_bc40,    "Bundy TimeClock 40-bit",     {1, 1, 0, 1, 1}}, // from
     {"Avig56", Pack_Avig56, Unpack_Avig56, "Avigilon 56-bit", {1, 1, 0, 0, 1}},
+    {"Defcon32",  Pack_Defcon32,  Unpack_Defcon32,  "Custom Defcon RFCTF 42 BIT format",          {1, 1, 1, 0, 1}}, // Created by (@micsen) for the CTF
     {NULL, NULL, NULL, NULL, {0, 0, 0, 0, 0}} // Must null terminate array
 };
 

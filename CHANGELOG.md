@@ -5,6 +5,10 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Fixed missing require of ansicolors in `lf_hid_bulkclone_v2.lua` script (@whiteneon)
 - Added `lf_t55xx_reset.lua` - a script to aid in quickly resetting t55xx chips (@whiteneon)
+- Added more fingerprinting in `hf mf info` (@doegox)
+- Added --issue and (--emu)lator support to `hf iclass encode` command (@micsen)
+- Added custom CTF Wiegand format from Defcon32 with comments (@micsen)
+- Added native output grabbing for Python and Lua: less hacky than `output_grabber.py`, should work on ProxSpace as well (@doegox)
 - Changed `hf mf chk/fchk`: added option `--no-default` to skip loading the usual ~61 hardcoded keys (@doegox)
 - Fixed `hf mf wipe` to detect properly write errors (@doegox)
 - Fixed `hf mf fchk` which was leaving the RF field on when interrupted by keyboard (@doegox)

@@ -34,8 +34,16 @@ extern uint8_t g_printAndLog;
 extern bool g_pendingPrompt;
 extern int g_numCPUs;
 
+typedef struct {
+    char *ptr;
+    size_t size;
+    size_t idx;
+} grabbed_output;
+extern grabbed_output g_grabbed_output;
+
 #define PRINTANDLOG_PRINT 1
 #define PRINTANDLOG_LOG   2
+#define PRINTANDLOG_GRAB  4
 
 // Return error
 #define PM3_RET_ERR(err, ...)  { \

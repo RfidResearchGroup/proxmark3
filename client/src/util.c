@@ -36,8 +36,10 @@
 #define UTIL_BUFFER_SIZE_SPRINT 8196
 // global client debug variable
 uint8_t g_debugMode = 0;
-// global client disable logging variable
+// global client enable/disable printing/logging/grabbing variable
 uint8_t g_printAndLog = PRINTANDLOG_PRINT | PRINTANDLOG_LOG;
+// global pointer to grabbed output
+grabbed_output g_grabbed_output = {NULL, 0, 0};
 // global client tell if a pending prompt is present
 bool g_pendingPrompt = false;
 // global CPU core count override

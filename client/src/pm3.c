@@ -53,16 +53,30 @@ void pm3_close(pm3_device_t *dev) {
         msleep(100); // Make sure command is sent before killing client
         CloseProxmark(dev);
     }
+    free_grabber();
 }
 
-int pm3_console(pm3_device_t *dev, const char *cmd) {
+int pm3_console(pm3_device_t *dev, const char *cmd, bool passthru) {
     // For now, there is no real device context:
     (void) dev;
-    return CommandReceived(cmd);
+    uint8_t prev_printAndLog = g_printAndLog;
+    if (! passthru) {
+        g_printAndLog |= PRINTANDLOG_GRAB;
+        g_printAndLog &= ~PRINTANDLOG_PRINT;
+    }
+    int ret = CommandReceived(cmd);
+    g_printAndLog = prev_printAndLog;
+    return ret;
 }
 
 const char *pm3_name_get(pm3_device_t *dev) {
     return dev->g_conn->serial_port_name;
+}
+
+const char *pm3_grabbed_output_get(pm3_device_t *dev) {
+    char *tmp = g_grabbed_output.ptr;
+    g_grabbed_output.idx = 0;
+    return tmp;
 }
 
 pm3_device_t *pm3_get_current_dev(void) {

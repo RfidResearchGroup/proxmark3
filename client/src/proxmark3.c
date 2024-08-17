@@ -553,7 +553,7 @@ check_script:
             if (cmd[0] != '\0') {
                 uint8_t old_printAndLog = g_printAndLog;
                 if (!printprompt) {
-                    g_printAndLog &= PRINTANDLOG_LOG;
+                    g_printAndLog &= ~PRINTANDLOG_PRINT;
                 }
                 char prompt[PROXPROMPT_MAX_SIZE] = {0};
                 prompt_compose(prompt, sizeof(prompt), prompt_ctx, prompt_dev, prompt_net, true);
@@ -1461,6 +1461,8 @@ int main(int argc, char *argv[]) {
     if (g_session.window_changed) {
         preferences_save();
     }
+
+    free_grabber();
 
     return mainret;
 }

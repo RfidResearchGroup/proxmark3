@@ -23,6 +23,8 @@
 
 #define MF_KEY_A 0
 #define MF_KEY_B 1
+#define MF_KEY_BD08S 2
+#define MF_KEY_BD08 3
 
 #define MF_MAD1_SECTOR 0x00
 #define MF_MAD2_SECTOR 0x10

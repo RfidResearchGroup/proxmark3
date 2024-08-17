@@ -23,8 +23,8 @@ ifneq (,$(findstring MINGW,$(platform)))
     CFLAGS += -D_ISOC99_SOURCE
 endif
 
-# macOS doesn't like these compiler params
-ifneq ($(platform),Darwin)
+# clang doesn't like these compiler params
+ifneq ($(DETECTED_COMPILER), clang)
     MYCFLAGS += --param max-completely-peeled-insns=1000 --param max-completely-peel-times=10000
 endif
 

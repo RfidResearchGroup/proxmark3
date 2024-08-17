@@ -8,7 +8,7 @@
 // * Enumerate key candidates based on clear and encrypted nT
 // * Use the resulting dictionary to bruteforce the key
 //
-//  Doegox, 2024
+//  Doegox, 2024, cf https://eprint.iacr.org/2024/1275 for more info
 
 #include <stdio.h>
 #include <stdlib.h>
