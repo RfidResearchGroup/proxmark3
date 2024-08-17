@@ -1136,7 +1136,6 @@ int getIndalaBits(uint8_t fc, uint16_t cn, uint8_t *bits) {
     bits[51] = ((cn >> 8) & 1);  // b9  - c
     bits[46] = ((cn >> 7) & 1);  // b8
     bits[33] = ((cn >> 6) & 1);  // b7  - c
-  //  bits[61] = ((cn >> 6) & 1);  // b7  - c
     bits[37] = ((cn >> 5) & 1);  // b6  - c
     bits[54] = ((cn >> 4) & 1);  // b5
     bits[56] = ((cn >> 3) & 1);  // b4
@@ -1182,6 +1181,7 @@ int getIndalaBits(uint8_t fc, uint16_t cn, uint8_t *bits) {
         else
             p2 ^= bits[i];
     }
+
     bits[34] = p1; // parity for odd bits
     bits[38] = p2; // parity for even bits
 
