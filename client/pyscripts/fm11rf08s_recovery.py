@@ -67,7 +67,8 @@ uid = None
 if p.grabbed_output is not None:
     for line in p.grabbed_output.split('\n'):
         if "UID:" in line:
-            uid = int(line[10:].replace(' ', ''), 16)
+            uid_str = line[10:].split('(')[0].replace(' ', '')
+            uid = int(uid_str, 16)
 if uid is None:
     print("Card not found")
     exit()
