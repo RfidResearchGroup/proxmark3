@@ -79,21 +79,26 @@ static uint32_t rnd = 0x74124485;   // random number
 // TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
 // Hitag units (T0) have duration of 8 microseconds (us), which is 1/125000 per second (carrier)
 // T0 = TIMER_CLOCK1 / 125000 = 192
-#ifndef T0
+
 #define T0                             192
-#endif
 
 #define HITAG_FRAME_LEN                20
+
+// TC0 and TC1 will overflow at 341 * T0, so avoid setting these timings above 341 when comparing without considering overflow,
+// as they will never reach that value.
+
 #define HITAG_T_STOP                   36  /* T_EOF should be > 36 */
 #define HITAG_T_LOW                    8   /* T_LOW should be 4..10 */
 #define HITAG_T_0_MIN                  15  /* T[0] should be 18..22 */
 #define HITAG_T_1_MIN                  25  /* T[1] should be 26..30 */
-//#define HITAG_T_EOF   40 /* T_EOF should be > 36 */
+#define HITAG_T_0                      20  /* T[0] should be 18..22 */
+#define HITAG_T_1                      28  /* T[1] should be 26..30 */
+// #define HITAG_T_EOF   40 /* T_EOF should be > 36 */
 #define HITAG_T_EOF                    80   /* T_EOF should be > 36 */
-#define HITAG_T_WAIT_1                 200  /* T_wresp should be 199..206 */
-#define HITAG_T_WAIT_2                 90   /* T_wresp should be 199..206 */
-#define HITAG_T_WAIT_MAX               300  /* bit more than HITAG_T_WAIT_1 + HITAG_T_WAIT_2 */
-#define HITAG_T_PROG_MAX               750
+#define HITAG_T_WAIT_RESP              200  /* T_wresp should be 204..212 */
+#define HITAG_T_WAIT_SC                90   /* T_wsc should be 90..5000 */
+#define HITAG_T_WAIT_FIRST             300  /* T_wfc should be 280..565 (T_ttf) */
+#define HITAG_T_PROG_MAX               750  /* T_prog should be 716..726 */
 
 #define HITAG_T_TAG_ONE_HALF_PERIOD    10
 #define HITAG_T_TAG_TWO_HALF_PERIOD    25
@@ -293,16 +298,16 @@ static void hitag_reader_send_bit(int bit, bool ledcontrol) {
     }
 #else
     // Wait for 4-10 times the carrier period
-    while (AT91C_BASE_TC0->TC_CV < T0 * 6) {};
+    while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_LOW) {};
 
     LOW(GPIO_SSC_DOUT);
 
     if (bit == 0) {
         // Zero bit: |_-|
-        while (AT91C_BASE_TC0->TC_CV < T0 * 22) {};
+        while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_0) {};
     } else {
         // One bit: |_--|
-        while (AT91C_BASE_TC0->TC_CV < T0 * 28) {};
+        while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_1) {};
     }
 #endif
 
@@ -323,7 +328,7 @@ static void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len, bool
     HIGH(GPIO_SSC_DOUT);
 
     // Wait for 4-10 times the carrier period
-    while (AT91C_BASE_TC0->TC_CV < T0 * 6) {};
+    while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_LOW) {};
 
     LOW(GPIO_SSC_DOUT);
 }
@@ -945,12 +950,12 @@ void SimulateHitagSTag(bool tag_mem_supplied, const uint8_t *data, bool ledcontr
             // Process the incoming frame (rx) and prepare the outgoing frame (tx)
             hitagS_handle_reader_command(rx, rxlen, tx, &txlen);
 
-            // Wait for HITAG_T_WAIT_1 carrier periods after the last reader bit,
+            // Wait for HITAG_T_WAIT_RESP carrier periods after the last reader bit,
             // not that since the clock counts since the rising edge, but T_Wait1 is
             // with respect to the falling edge, we need to wait actually (T_Wait1 - T_Low)
             // periods. The gap time T_Low varies (4..10). All timer values are in
             // terms of T0 units
-            while (AT91C_BASE_TC0->TC_CV < T0 * (HITAG_T_WAIT_1 - HITAG_T_LOW)) {};
+            while (AT91C_BASE_TC0->TC_CV < T0 * (HITAG_T_WAIT_RESP - HITAG_T_LOW)) {};
 
             // Send and store the tag answer (if there is any)
             if (txlen > 0) {
@@ -1002,7 +1007,7 @@ static void hitagS_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, ui
     uint32_t prevcv = 0;
     bool bStarted = false;
 
-    // Receive frame, watch for at most T0*EOF periods
+    // Receive frame, watch for at most T0*HITAG_T_PROG_MAX periods
     while (AT91C_BASE_TC0->TC_CV + (overcount << 16) < (T0 * HITAG_T_PROG_MAX)) {
 
         // detect and track counter overflows
@@ -1092,13 +1097,13 @@ static void hitagS_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, ui
 
 static void sendReceiveHitagS(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t sizeofrx, size_t *prxbits, int t_wait, bool ledcontrol, bool ac_seq) {
 
-    LogTraceBits(tx, txlen, HITAG_T_WAIT_2, HITAG_T_WAIT_2, true);
+    LogTraceBits(tx, txlen, HITAG_T_WAIT_SC, HITAG_T_WAIT_SC, true);
 
     // Send and store the reader command
     // Disable timer 1 with external trigger to avoid triggers during our own modulation
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 
-    // Wait for HITAG_T_WAIT_2 carrier periods after the last tag bit before transmitting,
+    // Wait for HITAG_T_WAIT_SC carrier periods after the last tag bit before transmitting,
     // Since the clock counts since the last falling edge, a 'one' means that the
     // falling edge occurred halfway the period. with respect to this falling edge,
     // we need to wait (T_Wait2 + half_tag_period) when the last was a 'one'.
