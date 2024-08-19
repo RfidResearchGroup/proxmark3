@@ -4,6 +4,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Fixed fm11rf08s script for non-4B UID (FM11RF08S-7B) (@Foxushka)
+- Fixed missing require of ansicolors in `lf_hid_bulkclone_v2.lua` script (@whiteneon)
+- Added `lf_t55xx_reset.lua` - a script to aid in quickly resetting t55xx chips (@whiteneon)
 - Added more fingerprinting in `hf mf info` (@doegox)
 - Added --issue and (--emu)lator support to `hf iclass encode` command (@micsen)
 - Added custom CTF Wiegand format from Defcon32 with comments (@micsen)
