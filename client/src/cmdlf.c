@@ -324,6 +324,10 @@ int CmdLFCommandRead(const char *Cmd) {
         uint8_t i;
         for (i = 0; i < cmd_len; i++) {
             if ((cmd[i] != '0') && (cmd[i] != '1')) {
+                // avoid include 'W0S' in crc
+                crc_init_ref(&crc, 8, 0x1d, 0xff, 0, false, false);
+                n = 0;
+                data = 0;
                 continue;
             }
             data <<= 1;
@@ -345,14 +349,14 @@ int CmdLFCommandRead(const char *Cmd) {
         }
     }
 
-    memcpy(payload.data, cmd, cmd_len);
+    memcpy(payload.data, cmd, cmd_len + 1);
 
     // extra symbol definition
     uint8_t index_extra = 0;
     int i = 0;
     for (; i < extra_arg_len;) {
 
-        if (index_extra < LF_CMDREAD_MAX_EXTRA_SYMBOLS - 1) {
+        if (index_extra < LF_CMDREAD_MAX_EXTRA_SYMBOLS) {
             payload.symbol_extra[index_extra] = extra_arg[i];
             int tmp = atoi(extra_arg + (i + 1));
             payload.period_extra[index_extra] = tmp;
@@ -362,14 +366,15 @@ int CmdLFCommandRead(const char *Cmd) {
                 i++;
 
         } else {
-            PrintAndLogEx(WARNING, "Too many extra symbols, please define up to %i symbols", LF_CMDREAD_MAX_EXTRA_SYMBOLS);
+            PrintAndLogEx(ERR, "Too many extra symbols, please define up to %i symbols", LF_CMDREAD_MAX_EXTRA_SYMBOLS);
+            return PM3_EINVARG;
         }
     }
 
     // bitbang mode
     if (payload.delay == 0) {
         if (payload.period_0 < 7 || payload.period_1 < 7) {
-            PrintAndLogEx(WARNING, "periods cannot be less than 7us in bit bang mode");
+            PrintAndLogEx(ERR, "periods cannot be less than 7us in bit bang mode");
             return PM3_EINVARG;
         }
     }
@@ -403,7 +408,7 @@ int CmdLFCommandRead(const char *Cmd) {
     int ret = PM3_SUCCESS;
     do {
         clearCommandBuffer();
-        SendCommandNG(CMD_LF_MOD_THEN_ACQ_RAW_ADC, (uint8_t *)&payload, PAYLOAD_HEADER_SIZE + cmd_len);
+        SendCommandNG(CMD_LF_MOD_THEN_ACQ_RAW_ADC, (uint8_t *)&payload, PAYLOAD_HEADER_SIZE + cmd_len + 1);
 
         PacketResponseNG resp;
         // init to ZERO

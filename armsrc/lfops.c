@@ -426,7 +426,10 @@ void ModThenAcquireRawAdcSamples125k(uint32_t delay_off, uint16_t period_0, uint
     // start timer
     StartTicks();
 
-    WaitMS(100);
+    if (!prev_keep) {
+        WaitMS(100);
+    }
+
     // clear read buffer
     BigBuf_Clear_keep_EM();
 
