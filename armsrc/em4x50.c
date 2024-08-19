@@ -33,9 +33,8 @@
 // TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
 // EM4x50 units (T0) have duration of 8 microseconds (us), which is 1/125000 per second (carrier)
 // T0 = TIMER_CLOCK1 / 125000 = 192
-#ifndef T0
+
 #define T0                                  192
-#endif
 
 // conversions (carrier frequency 125 kHz):
 // 1 us = 1.5 ticks
