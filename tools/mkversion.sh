@@ -92,7 +92,12 @@ sha=$(
     cd "$pm3path" || return
     # did we find the src?
     [ -f armsrc/appmain.c ] || return
-    ls armsrc/*.[ch] common_arm/*.[ch]|grep -E -v "(disabled|version_pm3|fpga_version_info)"|sort|xargs sha256sum -t|sha256sum|cut -c -9
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS
+        ls armsrc/*.[ch] common_arm/*.[ch]|grep -E -v "(disabled|version_pm3|fpga_version_info)"|sort|xargs shasum -a 256 -t|shasum -a 256|cut -c -9
+    else
+        ls armsrc/*.[ch] common_arm/*.[ch]|grep -E -v "(disabled|version_pm3|fpga_version_info)"|sort|xargs sha256sum -t|sha256sum|cut -c -9
+    fi
 )
 if [ "$sha" = "" ]; then
   sha="no sha256"
