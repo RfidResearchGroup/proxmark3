@@ -53,12 +53,12 @@ Card Number                     11111111111111111111 = 0FFFFF
     //E E E E E |E E E E E |EO O O O O| O O O O O| O
     set_bit_by_position(packed, 
     evenparity32(
-        get_nonlinear_field(packed, 16, (uint8_t[]) {2, 4, 6, 8, 10, 12, 14, 16, 18, 20}))
+        get_nonlinear_field(packed, 10, (uint8_t[]) {2, 4, 6, 8, 10, 12, 14, 16, 18, 20}))
     , 0);
 
     set_bit_by_position(packed, 
     oddparity32(
-        get_nonlinear_field(packed, 16, (uint8_t[]) {21, 23, 25, 27, 29, 31, 33, 35, 37, 39}))
+        get_nonlinear_field(packed, 10, (uint8_t[]) {21, 23, 25, 27, 29, 31, 33, 35, 37, 39}))
     , 41);
     if (preamble)
         return add_HID_header(packed);
@@ -76,9 +76,9 @@ static bool Unpack_Defcon32(wiegand_message_t *packed, wiegand_card_t *card) {
     
     card->ParityValid = 
         (get_bit_by_position(packed, 41) == oddparity32(
-        get_nonlinear_field(packed, 16, (uint8_t[]) {21, 23, 25, 27, 29, 31, 33, 35, 37, 39})))&& 
+        get_nonlinear_field(packed, 10, (uint8_t[]) {21, 23, 25, 27, 29, 31, 33, 35, 37, 39})))&& 
         (get_bit_by_position(packed, 0) == 
-        evenparity32(get_nonlinear_field(packed, 16, (uint8_t[]) {2, 4, 6, 8, 10, 12, 14, 16, 18, 20})));
+        evenparity32(get_nonlinear_field(packed, 10, (uint8_t[]) {2, 4, 6, 8, 10, 12, 14, 16, 18, 20})));
     return true;
 }
 
