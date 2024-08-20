@@ -419,6 +419,32 @@ static int CmdHf14AConfig(const char *Cmd) {
     return hf14a_setconfig(&config, verbose);
 }
 
+static void PrintUidType(iso14a_card_select_t *card) {
+    switch (card->uidlen) {
+        case 4:
+            if (card->uid[0] == 0x08) {
+                PrintAndLogEx(SUCCESS, " UID type: " _GREEN_("RID") " (random ID)");
+            } else if ((card->uid[0] & 0xF) == 0xF) {
+                PrintAndLogEx(SUCCESS, " UID type: " _GREEN_("FNUID") " (fixed but non-unique ID)");
+            } else if (card->uid[0] == 0x88) {
+                PrintAndLogEx(WARNING, " UID type: " _YELLOW_("Cascade tag") " (not final UID)");
+            } else if (card->uid[0] == 0xF8) {
+                PrintAndLogEx(WARNING, " UID type: " _YELLOW_("RFU"));
+            } else {
+                PrintAndLogEx(SUCCESS, " UID type: " _GREEN_("ONUID") " (re-used UID)");
+            }
+            break;
+        case 7:
+            PrintAndLogEx(SUCCESS, " UID type: " _GREEN_("Double Size UID"));
+            break;
+        case 10:
+            PrintAndLogEx(SUCCESS, " UID type: " _GREEN_("Triple Size UID"));
+            break;
+        default:
+            PrintAndLogEx(ERR, " UID type: " _RED_("wrong UID length"));
+    }
+}
+
 int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
@@ -449,11 +475,8 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
         return PM3_EFAILED;
     }
 
-    if ((card->uidlen == 4) && (card->uid[0] == 0x08)) {
-        PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s") " ( random )", sprint_hex(card->uid, card->uidlen));
-    } else {
-        PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card->uid, card->uidlen));
-    }
+    PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card->uid, card->uidlen));
+    PrintUidType(card);
     PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card->atqa[1], card->atqa[0]);
     PrintAndLogEx(SUCCESS, " SAK: %02X [%" PRIu64 "]", card->sak, resp.oldarg[0]);
 
@@ -617,13 +640,10 @@ static int CmdHF14AReader(const char *Cmd) {
                 goto plot;
             }
 
-            if ((card.uidlen == 4) && (card.uid[0] == 0x08)) {
-                PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s") " ( random )", sprint_hex(card.uid, card.uidlen));
-            } else {
-                PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
-            }
+            PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
 
             if (!(silent && continuous)) {
+                PrintUidType(&card);
                 PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
                 PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
 
@@ -2061,11 +2081,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(INFO, "--- " _CYAN_("ISO14443-a Information") "---------------------");
     }
 
-    if ((card.uidlen == 4) && (card.uid[0] == 0x08)) {
-        PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s") " ( random )", sprint_hex(card.uid, card.uidlen));
-    } else {
-        PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
-    }
+    PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
+    PrintUidType(&card);
     PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
     PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
 
