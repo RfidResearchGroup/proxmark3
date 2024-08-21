@@ -1293,7 +1293,14 @@ static int CmdLFHitagWriter(const char *Cmd) {
     lf_hitag_data_t packet;
     memset(&packet, 0, sizeof(packet));
 
-    if (use_hts && use_nrar) {
+    if (use_hts && use_plain) {
+        packet.cmd = WHTSF_PLAIN;
+        packet.page = page;
+        memcpy(packet.data, data, sizeof(data));
+
+        PrintAndLogEx(INFO, "Write to " _YELLOW_("Hitag S") " in Plain mode");
+
+    } else if (use_hts && use_nrar) {
         packet.cmd = WHTSF_CHALLENGE;
         memcpy(packet.NrAr, nrar, sizeof(packet.NrAr));
         memcpy(packet.data, data, sizeof(data));

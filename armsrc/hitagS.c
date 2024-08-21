@@ -1271,7 +1271,7 @@ static int selectHitagS(const lf_hitag_data_t *packet, uint8_t *tx, size_t sizeo
 
     //select uid
     txlen = 0;
-    cmd = 0x00;
+    cmd = 0x00; // 00000 SELECT UID
     txlen = concatbits(tx, txlen, &cmd, 8 - 5, 5);
     txlen = concatbits(tx, txlen, rx, 0, 32);
     uint8_t crc = CRC8Hitag1Bits(tx, txlen);
@@ -1450,7 +1450,7 @@ void ReadHitagS(const lf_hitag_data_t *payload, bool ledcontrol) {
 
         //send read request
         size_t txlen = 0;
-        uint8_t cmd = 0x0c;
+        uint8_t cmd = 0x0c; // 1100 READ PAGE
         txlen = concatbits(tx, txlen, &cmd, 8 - 4, 4);
         uint8_t addr = pageNum;
         txlen = concatbits(tx, txlen, &addr, 0, 8);
@@ -1555,7 +1555,7 @@ void WritePageHitagS(const lf_hitag_data_t *payload, bool ledcontrol) {
     //send write page request
     txlen = 0;
 
-    uint8_t cmd = 0x08;
+    uint8_t cmd = 0x08; // 1000 WRITE PAGE
     txlen = concatbits(tx, txlen, &cmd, 8 - 4, 4);
 
     uint8_t addr = payload->page;
@@ -1566,41 +1566,37 @@ void WritePageHitagS(const lf_hitag_data_t *payload, bool ledcontrol) {
 
     sendReceiveHitagS(tx, txlen, rx, ARRAYLEN(rx), &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
-    if ((rxlen != 2) || (rx[0] >> (8 - 2) != 0x1)) {
+    if ((rxlen != 2) || (rx[0] >> (8 - 2) != 0x01)) {
         Dbprintf("no write access on page " _YELLOW_("%d"), payload->page);
         res = PM3_ESOFT;
         goto write_end;
     }
 
-    //ACK received to write the page. send data
-    uint8_t data[4] = {0, 0, 0, 0};
-    switch (payload->cmd) {
-        case WHTSF_CHALLENGE:
-            data[0] = payload->data[3];
-            data[1] = payload->data[2];
-            data[2] = payload->data[1];
-            data[3] = payload->data[0];
-            break;
-        case WHTSF_KEY:
-            data[0] = payload->data[3];
-            data[1] = payload->data[2];
-            data[2] = payload->data[1];
-            data[3] = payload->data[0];
-            break;
-        default: {
-            res = PM3_EINVARG;
-            goto write_end;
-        }
-    }
+    // //ACK received to write the page. send data
+    // uint8_t data[4] = {0, 0, 0, 0};
+    // switch (payload->cmd) {
+    //     case WHTSF_PLAIN:
+    //     case WHTSF_CHALLENGE:
+    //     case WHTSF_KEY:
+    //         data[0] = payload->data[3];
+    //         data[1] = payload->data[2];
+    //         data[2] = payload->data[1];
+    //         data[3] = payload->data[0];
+    //         break;
+    //     default: {
+    //         res = PM3_EINVARG;
+    //         goto write_end;
+    //     }
+    // }
 
     txlen = 0;
-    txlen = concatbits(tx, txlen, data, 0, 32);
+    txlen = concatbits(tx, txlen, payload->data, 0, 32);
     crc = CRC8Hitag1Bits(tx, txlen);
     txlen = concatbits(tx, txlen, &crc, 0, 8);
 
     sendReceiveHitagS(tx, txlen, rx, ARRAYLEN(rx), &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
-    if ((rxlen != 2) || (rx[0] >> (8 - 2) != 0x1)) {
+    if ((rxlen != 2) || (rx[0] >> (8 - 2) != 0x01)) {
         res = PM3_ESOFT; //  write failed
     } else {
         res = PM3_SUCCESS;

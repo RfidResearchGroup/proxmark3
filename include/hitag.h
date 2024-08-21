@@ -23,21 +23,25 @@
 #include "common.h"
 
 typedef enum {
-    RHTSF_CHALLENGE           = 01,
-    RHTSF_KEY                 = 02,
-    WHTSF_CHALLENGE           = 03,
-    WHTSF_KEY                 = 04,
+    RHTSF_PLAIN               = 01,
+    WHTSF_PLAIN,
+    RHTSF_CHALLENGE,
+    WHTSF_CHALLENGE,
+    RHTSF_KEY,
+    WHTSF_KEY,
     HTS_LAST_CMD              = WHTSF_KEY,
+
     RHT1F_PLAIN               = 11,
-    RHT1F_AUTHENTICATE        = 12,
+    RHT1F_AUTHENTICATE,
     HT1_LAST_CMD              = RHT1F_AUTHENTICATE,
+
     RHT2F_PASSWORD            = 21,
-    RHT2F_AUTHENTICATE        = 22,
-    RHT2F_CRYPTO              = 23,
-    WHT2F_CRYPTO              = 24,
-    RHT2F_TEST_AUTH_ATTEMPTS  = 25,
-    RHT2F_UID_ONLY            = 26,
-    WHT2F_PASSWORD            = 27,
+    RHT2F_AUTHENTICATE,
+    RHT2F_CRYPTO,
+    WHT2F_CRYPTO,
+    RHT2F_TEST_AUTH_ATTEMPTS,
+    RHT2F_UID_ONLY,
+    WHT2F_PASSWORD,
     HT2_LAST_CMD              = WHT2F_PASSWORD,
 } PACKED hitag_function;
 
