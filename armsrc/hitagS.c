@@ -75,17 +75,17 @@ static uint32_t rnd = 0x74124485;   // random number
 #define ht2bs_4b(a,b,c,d)   (~(((d|c)&(a^b))^(d|a|b)))
 #define ht2bs_5c(a,b,c,d,e) (~((((((c^e)|d)&a)^b)&(c^b))^(((d^e)|a)&((d^b)|c))))
 
-// Sam7s has several timers, we will use the source TIMER_CLOCK1 (aka AT91C_TC_CLKS_TIMER_DIV1_CLOCK)
-// TIMER_CLOCK1 = MCK/2, MCK is running at 48 MHz, Timer is running at 48/2 = 24 MHz
+// Sam7s has several timers, we will use the source TIMER_CLOCK3 (aka AT91C_TC_CLKS_TIMER_DIV3_CLOCK)
+// TIMER_CLOCK3 = MCK/32, MCK is running at 48 MHz, Timer is running at 48MHz/32 = 1500 KHz
 // Hitag units (T0) have duration of 8 microseconds (us), which is 1/125000 per second (carrier)
-// T0 = TIMER_CLOCK1 / 125000 = 192
+// T0 = TIMER_CLOCK3 / 125000 = 12
 
-#define T0                             192
+#define T0                             12
 
 #define HITAG_FRAME_LEN                20
 
-// TC0 and TC1 will overflow at 341 * T0, so avoid setting these timings above 341 when comparing without considering overflow,
-// as they will never reach that value.
+// TC0 and TC1 are 16-bit counters and will overflow after 5461 * T0
+// Ensure not to set these timings above 5461 (~43ms) when comparing without considering overflow, as they will never reach that value.
 
 #define HITAG_T_STOP                   36  /* T_EOF should be > 36 */
 #define HITAG_T_LOW                    8   /* T_LOW should be 4..10 */
@@ -96,7 +96,7 @@ static uint32_t rnd = 0x74124485;   // random number
 // #define HITAG_T_EOF   40 /* T_EOF should be > 36 */
 #define HITAG_T_EOF                    80   /* T_EOF should be > 36 */
 #define HITAG_T_WAIT_RESP              200  /* T_wresp should be 204..212 */
-#define HITAG_T_WAIT_SC                90   /* T_wsc should be 90..5000 */
+#define HITAG_T_WAIT_SC                200   /* T_wsc should be 90..5000 */
 #define HITAG_T_WAIT_FIRST             300  /* T_wfc should be 280..565 (T_ttf) */
 #define HITAG_T_PROG_MAX               750  /* T_prog should be 716..726 */
 
@@ -277,6 +277,7 @@ static void hitag_reader_send_bit(int bit, bool ledcontrol) {
     if (ledcontrol) LED_A_ON();
     // Reset clock for the next bit
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
+    while (AT91C_BASE_TC0->TC_CV > 0);
 
     // Binary puls length modulation (BPLM) is used to encode the data stream
     // This means that a transmission of a one takes longer than that of a zero
@@ -324,7 +325,7 @@ static void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len, bool
     }
     // send EOF
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-
+    while (AT91C_BASE_TC0->TC_CV > 0);
     HIGH(GPIO_SSC_DOUT);
 
     // Wait for 4-10 times the carrier period
@@ -336,8 +337,8 @@ static void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len, bool
 static void hitagS_init_clock(void) {
 
     // Enable Peripheral Clock for
-    //   TIMER_CLOCK0, used to measure exact timing before answering
-    //   TIMER_CLOCK1, used to capture edges of the tag frames
+    //   Timer Counter 0, used to measure exact timing before answering
+    //   Timer Counter 1, used to capture edges of the tag frames
     AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1);
 
     AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
@@ -346,39 +347,34 @@ static void hitagS_init_clock(void) {
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 
-    // TC0: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), no triggers
-    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
+    // TC0: Capture mode, clock source = MCK/32 (TIMER_CLOCK3), no triggers
+    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
 
-    // TC1: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
-    // external trigger rising edge, load RA on falling edge of TIOA.
+    // TC1: Capture mode, clock source = MCK/32 (TIMER_CLOCK3), TIOA is external trigger,
+    // external trigger falling edge, set RA on falling edge of TIOA.
     AT91C_BASE_TC1->TC_CMR =
-        AT91C_TC_CLKS_TIMER_DIV1_CLOCK |
-        AT91C_TC_ETRGEDG_FALLING |
-        AT91C_TC_ABETRG |
-        AT91C_TC_LDRA_FALLING |
-        AT91C_TC_ACPA_CLEAR | // RA comperator clears TIOA (carry bit)
-        AT91C_TC_ASWTRG_SET;  // SWTriger sets TIOA (carry bit)
+        AT91C_TC_CLKS_TIMER_DIV3_CLOCK |
+        AT91C_TC_ETRGEDG_FALLING | // external trigger on falling edge
+        AT91C_TC_ABETRG |          // TIOA is used as an external trigger.
+        AT91C_TC_LDRA_FALLING |    // load RA on on falling edge
+        AT91C_TC_ACPA_CLEAR |      // RA comperator clears TIOA (carry bit)
+        AT91C_TC_ASWTRG_SET;       // SWTriger sets TIOA (carry bit)
 
-    AT91C_BASE_TC0->TC_RC  = 0; // set TIOA (carry bit) on overflow, return to zero
-    AT91C_BASE_TC0->TC_RA  = 1; // clear carry bit on next clock cycle
     AT91C_BASE_TC1->TC_RA  = 1; // clear carry bit on next clock cycle
 
     // Enable and reset counters
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-    // Typically 2 or 3, indicating that our execution is slow enough to wait for TC0 reset.
-    // If I am calculating correctly, theoretically, for AT91C_TC_CLKS_TIMER_DIV1_CLOCK, 2 instruction statements are sufficient?
-    // Dbprintf("TC_CV:%i", AT91C_BASE_TC0->TC_CV);
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
+    // for (size_t i = 0; i < 10; i++) __asm("");
     // uint16_t cv0 = AT91C_BASE_TC0->TC_CV;
 
     // synchronized startup procedure
-    // Waiting for TC0 to return to 0 takes a considerable amount of time (around 2730us),
-    // and we should be able to tolerate 1 * T0. Or is this even necessary?
-    while (AT91C_BASE_TC0->TC_CV > T0) {}; // wait until TC0 returned to zero
+    // In theory, with MCK/32, we shouldn't be waiting longer than 32 instruction statements, right?
+    while (AT91C_BASE_TC0->TC_CV > 0) {}; // wait until TC0 returned to zero
 //    while (AT91C_BASE_TC0->TC_CV < 2) {}; // and has started (TC_CV > TC_RA, now TC1 is cleared)
 
-    // Dbprintf("TC_CV0:%i TC_CV:%i", cv0, AT91C_BASE_TC0->TC_CV);
+    // Dbprintf("TC0_CV0:%i TC0_CV:%i TC1_CV:%i", cv0, AT91C_BASE_TC0->TC_CV, AT91C_BASE_TC1->TC_CV);
 }
 
 static void hitagS_stop_clock(void) {
@@ -879,8 +875,8 @@ void SimulateHitagSTag(bool tag_mem_supplied, const uint8_t *data, bool ledcontr
     LOW(GPIO_SSC_DOUT);
 
     // Enable Peripheral Clock for
-    //   TIMER_CLOCK0, used to measure exact timing before answering
-    //   TIMER_CLOCK1, used to capture edges of the tag frames
+    //   Timer Counter 0, used to measure exact timing before answering
+    //   Timer Counter 1, used to capture edges of the tag frames
     AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1);
 
     AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
@@ -889,12 +885,12 @@ void SimulateHitagSTag(bool tag_mem_supplied, const uint8_t *data, bool ledcontr
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 
-    // TC0: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), no triggers
-    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK;
+    // TC0: Capture mode, default timer source = MCK/32 (TIMER_CLOCK3), no triggers
+    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
 
-    // TC1: Capture mode, default timer source = MCK/2 (TIMER_CLOCK1), TIOA is external trigger,
+    // TC1: Capture mode, default timer source = MCK/32 (TIMER_CLOCK3), TIOA is external trigger,
     // external trigger rising edge, load RA on rising edge of TIOA.
-    AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV1_CLOCK
+    AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK
                              | AT91C_TC_ETRGEDG_RISING | AT91C_TC_ABETRG | AT91C_TC_LDRA_RISING;
 
     // Enable and reset counter
@@ -1004,11 +1000,6 @@ static void hitagS_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, ui
     bool bSkip = true;
     *resptime = 0;
     uint32_t errorCount = 0;
-    // clk overflow but I failed moving TC0 & TC1 to
-    // slower clock AT91C_TC_CLKS_TIMER_DIV3_CLOCK
-    // so tracking overflow manually...
-    uint32_t overcount = 0;
-    uint32_t prevcv = 0;
     bool bStarted = false;
 
     uint32_t ra_i=0, h2 = 0, h3 = 0, h4 = 0;
@@ -1017,14 +1008,7 @@ static void hitagS_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, ui
     // Dbprintf("TC0_CV:%i TC1_CV:%i TC1_RA:%i", AT91C_BASE_TC0->TC_CV, AT91C_BASE_TC1->TC_CV ,AT91C_BASE_TC1->TC_RA);
 
     // Receive frame, watch for at most T0*HITAG_T_PROG_MAX periods
-    while (AT91C_BASE_TC0->TC_CV + (overcount << 16) < (T0 * HITAG_T_PROG_MAX)) {
-
-        // detect and track counter overflows
-        uint32_t tmpcv = AT91C_BASE_TC0->TC_CV;
-        if (tmpcv < prevcv) {
-            overcount++;
-        }
-        prevcv = tmpcv;
+    while (AT91C_BASE_TC0->TC_CV < (T0 * HITAG_T_PROG_MAX)) {
 
         // Check if falling edge in tag modulation is detected
         if (AT91C_BASE_TC1->TC_SR & AT91C_TC_LDRAS) {
@@ -1035,21 +1019,19 @@ static void hitagS_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, ui
             // Reset timer every frame, we have to capture the last edge for timing
             AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
 
-            prevcv = 0;
-            overcount = 0;
-
             if (ledcontrol) LED_B_ON();
 
             // Capture tag frame (manchester decoding using only falling edges)
 
             if (bStarted == false) {
 
+                // Capture the T0 periods that have passed since last communication or field drop (reset)
+                *resptime = ra - HITAG_T_TAG_HALF_PERIOD;
+
                 if (ra >= HITAG_T_WAIT_RESP) {
                     bStarted = true;
-                    // Capture the T0 periods that have passed since last communication or field drop (reset)
-                    // We always receive a 'one' first, which has the falling edge after a half period |-_|
-                    *resptime = ra - HITAG_T_TAG_HALF_PERIOD;
 
+                    // We always receive a 'one' first, which has the falling edge after a half period |-_|                    
                     rx[0] = 0x80;
                     (*rxlen)++;
                 } else {
@@ -1093,7 +1075,7 @@ static void hitagS_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, ui
         }
 
         // if we saw over 100 weird values break it probably isn't hitag...
-        if (errorCount > 100) {
+        if (errorCount > 100 || (*rxlen) / 8 >= sizeofrx) {
             break;
         }
 
@@ -1108,7 +1090,7 @@ static void hitagS_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, ui
         }
     }
     if (g_dbglevel >= DBG_EXTENDED) {
-        Dbprintf("RX0 %i:%02X.. err:%i resptime:%i h2:%i h3:%i h4:%i edges", *rxlen, rx[0], errorCount, *resptime, h2, h3, h4);
+        Dbprintf("RX0 %i:%02X.. err:%i resptime:%i h2:%i h3:%i h4:%i edges:", *rxlen, rx[0], errorCount, *resptime, h2, h3, h4);
         Dbhexdump(ra_i, edges, false);
     }
 }
