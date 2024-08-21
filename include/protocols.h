@@ -896,7 +896,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define CALYPSO_SAM_SV_DEBIT            0x54
 #define CALYPSO_SAM_SV_RELOAD           0x56
 
-// HITAG1 commands
+// HITAG 1 commands
 #define HITAG1_SET_CCNEW                0xC2    // left 5 bits only
 #define HITAG1_READ_ID                  0x00    // not a real command, consists of 5 bits length, <length> bits partial SN, 8 bits CRC
 #define HITAG1_SELECT                   0x00    // left 5 bits only, followed by 32 bits SN and 8 bits CRC
@@ -910,7 +910,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define HITAG1_RDCBLK                   0xF0    // left 4 bits only, followed by 8 bits block and 8 bits CRC
 #define HITAG1_HALT                     0x70    // left 4 bits only, followed by 8 bits (dummy) page and 8 bits CRC
 
-// HITAG2 commands
+// HITAG 2 commands
 #define HITAG2_START_AUTH           "11000"         // get UID and/or start the authentication process
 #define HITAG2_READ_PAGE            "11"            // read page after auth
 #define HITAG2_READ_PAGE_INVERTED   "01"            // as read page but all bits inverted

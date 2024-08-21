@@ -308,7 +308,7 @@ static void print_hitag2_configuration(uint32_t uid, uint8_t config) {
             PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 5, 2, "Public mode C, Coding: biphase"));
             break;
         case 3:
-            PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 5, 2, "Hitag2"));
+            PrintAndLogEx(SUCCESS, "  %s", sprint_breakdown_bin(C_NONE, bs, 8, 5, 2, "Hitag 2"));
             break;
     }
 
@@ -815,7 +815,7 @@ static bool getHitag2Uid(uint32_t *uid) {
 static int CmdLFHitagInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag info",
-                  "Hitag2 tag information",
+                  "Hitag 2 tag information",
                   "lf hitag info"
                  );
 
@@ -858,7 +858,7 @@ static int CmdLFHitagInfo(const char *Cmd) {
 static int CmdLFHitagReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag reader",
-                  "Act as a Hitag2 reader.  Look for Hitag2 tags until Enter or the pm3 button is pressed\n",
+                  "Act as a Hitag 2 reader.  Look for Hitag 2 tags until Enter or the pm3 button is pressed\n",
                   "lf hitag reader\n"
                   "lf hitag reader -@   -> Continuous mode"
                  );
@@ -891,17 +891,17 @@ static int CmdLFHitagRd(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag read",
-                  "Read Hitag memory. It support HitagS and Hitag 2\n\n"
+                  "Read Hitag memory. It support Hitag S and Hitag 2\n\n"
                   "  Password mode:\n"
                   "    - default key 4D494B52 (MIKR)\n\n"
                   "  Crypto mode: \n"
                   "    - key format ISK high + ISK low\n"
                   "    - default key 4F4E4D494B52 (ONMIKR)\n"
                   ,
-                  "  lf hitag read --hts                         -> HitagS, plain mode\n"
-                  "  lf hitag read --hts --nrar 0102030411223344 -> HitagS, challenge mode\n"
-                  "  lf hitag read --hts --crypto                -> HitagS, crypto mode, def key\n"
-                  "  lf hitag read --hts -k 4F4E4D494B52         -> HitagS, crypto mode\n\n"
+                  "  lf hitag read --hts                         -> Hitag S, plain mode\n"
+                  "  lf hitag read --hts --nrar 0102030411223344 -> Hitag S, challenge mode\n"
+                  "  lf hitag read --hts --crypto                -> Hitag S, crypto mode, def key\n"
+                  "  lf hitag read --hts -k 4F4E4D494B52         -> Hitag S, crypto mode\n\n"
                   "  lf hitag read --ht2 --pwd                   -> Hitag 2, pwd mode, def key\n"
                   "  lf hitag read --ht2 -k 4D494B52             -> Hitag 2, pwd mode\n"
                   "  lf hitag read --ht2 --nrar 0102030411223344 -> Hitag 2, challenge mode\n"
@@ -2018,7 +2018,7 @@ static int CmdLFHitag2Lookup(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag lookup",
-                  "This command take sniffed trace data and try to recovery a Hitag2 crypto key.\n"
+                  "This command take sniffed trace data and try to recovery a Hitag 2 crypto key.\n"
                   " You can either\n"
                   " - verify that NR/AR matches a known crypto key\n"
                   " - verify if NR/AR matches a known 6 byte crypto key in a dictionary",
@@ -2232,7 +2232,7 @@ static int CmdLFHitag2Lookup(const char *Cmd) {
 static int CmdLFHitag2Crack2(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag crack2",
-                  "This command tries to recover 2048 bits of Hitag2 crypto stream data.\n",
+                  "This command tries to recover 2048 bits of Hitag 2 crypto stream data.\n",
                   "lf hitag crack2 --nrar 73AA5A62EAB8529C"
                  );
 
@@ -2439,7 +2439,7 @@ static int CmdLFHitag2Selftest(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(INFO, "======== " _CYAN_("Hitag2 crypto test") " ============================");
+    PrintAndLogEx(INFO, "======== " _CYAN_("Hitag 2 crypto test") " ============================");
     uint64_t test = hitag2_verify_crypto_test();
     PrintAndLogEx(INFO, "Crypto self test ( %s )", test ? _GREEN_("ok") : _RED_("fail"));
 
@@ -2447,13 +2447,13 @@ static int CmdLFHitag2Selftest(const char *Cmd) {
     PrintAndLogEx(INFO, "Crypto self test ROUND ( %s )", test ? _GREEN_("ok") : _RED_("fail"));
 
     test |= hitag2_benchtest(1);
-    PrintAndLogEx(INFO, "Hitag2 crypto, init + gen 32 bits ( us %" PRIu64 " )", test);
+    PrintAndLogEx(INFO, "Hitag 2 crypto, init + gen 32 bits ( us %" PRIu64 " )", test);
 
     test |= hitag2_benchtest_gen32();
-    PrintAndLogEx(INFO, "Hitag2 crypto, gen new 32 bits only ( us: %" PRIu64 " )", test);
+    PrintAndLogEx(INFO, "Hitag 2 crypto, gen new 32 bits only ( us: %" PRIu64 " )", test);
 
     test |= hitag2_benchtest(1000);
-    PrintAndLogEx(INFO, "Hitag2 crypto, init + gen 32 bits, x1000 ( us: %" PRIu64 " )", test);
+    PrintAndLogEx(INFO, "Hitag 2 crypto, init + gen 32 bits, x1000 ( us: %" PRIu64 " )", test);
 
     PrintAndLogEx(INFO, "--------------------------------------------------------");
     PrintAndLogEx(SUCCESS, "Tests ( %s )", (test) ? _GREEN_("ok") : _RED_("fail"));

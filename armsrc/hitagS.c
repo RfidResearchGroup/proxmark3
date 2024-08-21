@@ -15,7 +15,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// HitagS emulation (preliminary test version)
+// Hitag S emulation (preliminary test version)
 //-----------------------------------------------------------------------------
 
 #include "hitagS.h"
@@ -750,7 +750,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, const uint8_t *data, bool ledcontr
     set_tracing(true);
     clear_trace();
 
-    DbpString("Starting HitagS simulation");
+    DbpString("Starting Hitag S simulation");
     if (ledcontrol) LED_D_ON();
 
     tag.pstate = HT_READY;
@@ -765,7 +765,7 @@ void SimulateHitagSTag(bool tag_mem_supplied, const uint8_t *data, bool ledcontr
             }
         }
 
-        DbpString("Loading hitagS memory...");
+        DbpString("Loading hitag S memory...");
         memcpy((uint8_t *)tag.pages, data, 4 * 64);
     } else {
         // use the last read tag

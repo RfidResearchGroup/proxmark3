@@ -582,7 +582,7 @@ typedef struct {
 
 #define CMD_LF_SNIFF_RAW_ADC                                              0x0360
 
-// For Hitag2 transponders
+// For Hitag 2 transponders
 #define CMD_LF_HITAG_SNIFF                                                0x0370
 #define CMD_LF_HITAG_SIMULATE                                             0x0371
 #define CMD_LF_HITAG_READER                                               0x0372
@@ -590,7 +590,7 @@ typedef struct {
 #define CMD_LF_HITAG2_CRACK                                               0x0378
 #define CMD_LF_HITAG2_CRACK_2                                             0x0379
 
-// For HitagS
+// For Hitag S
 #define CMD_LF_HITAGS_TEST_TRACES                                         0x0367
 #define CMD_LF_HITAGS_SIMULATE                                            0x0368
 #define CMD_LF_HITAGS_READ                                                0x0373
