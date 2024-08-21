@@ -452,7 +452,7 @@ static int enter_bootloader(char *serial_port_name, bool wait_appear) {
             SendCommandBL(CMD_HARDWARE_RESET, 0, 0, 0, NULL, 0);
             PrintAndLogEx(SUCCESS, "Press and hold down button NOW if your bootloader requires it.");
         }
-        msleep(200);
+        msleep(500);
         CloseProxmark(g_session.current_device);
         // Let time to OS to make the port disappear
         msleep(1000);
