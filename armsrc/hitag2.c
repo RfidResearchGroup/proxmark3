@@ -70,7 +70,7 @@ static hitag2_t tag = {
         [9]  = { 0x00, 0x00, 0x00, 0x00}, // RSK High
         [10] = { 0x00, 0x00, 0x00, 0x00}, // RCF
         [11] = { 0x00, 0x00, 0x00, 0x00}, // SYNC
-        // up to index 15 reserved for HITAG1/HITAGS public data
+        // up to index 15 reserved for HITAG 1/HITAG S public data
     },
 };
 
@@ -641,7 +641,7 @@ static bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, si
 }
 
 //-----------------------------------------------------------------------------
-// Hitag2 operations
+// Hitag 2 operations
 //-----------------------------------------------------------------------------
 
 static bool hitag2_write_page(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen) {
@@ -1030,7 +1030,7 @@ static bool hitag2_test_auth_attempts(uint8_t *rx, const size_t rxlen, uint8_t *
     return true;
 }
 
-// Hitag2 Sniffing
+// Hitag 2 Sniffing
 void hitag_sniff(void) {
 
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
@@ -1414,7 +1414,7 @@ void SniffHitag2(bool ledcontrol) {
 }
 
 
-// Hitag2 simulation
+// Hitag 2 simulation
 void SimulateHitag2(bool ledcontrol) {
 
     BigBuf_free();
@@ -1438,7 +1438,7 @@ void SimulateHitag2(bool ledcontrol) {
 //    memset(rx, 0x00, sizeof(rx));
 //    memset(tx, 0x00, sizeof(tx));
 
-    DbpString("Starting Hitag2 simulation");
+    DbpString("Starting Hitag 2 simulation");
 
     // hitag2 state machine?
     hitag2_init();
@@ -1757,28 +1757,28 @@ void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
 
     if (ledcontrol) LED_D_ON();
 
-    // hitag2 state machine?
+    // hitag 2 state machine?
     hitag2_init();
 
     // Tag specific configuration settings (sof, timings, etc.)
 // TODO HTS
     /*  if (payload->cmd <= HTS_LAST_CMD) {
-            // hitagS settings
+            // hitag S settings
             t_wait_1 = 204;
             t_wait_2 = 128;
             flipped_bit = 0;
             tag_size = 8;
-            DBG DbpString("Configured for " _YELLOW_("HitagS") " reader");
+            DBG DbpString("Configured for " _YELLOW_("Hitag S") " reader");
         } else */
     if (payload->cmd <= HT1_LAST_CMD) {
-        // hitag1 settings
+        // hitag 1 settings
         t_wait_1 = 204;
         t_wait_2 = 128;
         tag_size = 256;
         flipped_bit = 0;
         DBG DbpString("Configured for " _YELLOW_("Hitag 1") " reader");
     } else if (payload->cmd <= HT2_LAST_CMD) {
-        // hitag2 settings
+        // hitag 2 settings
         t_wait_1 = HITAG_T_WAIT_1_MIN;
         t_wait_2 = HITAG_T_WAIT_2_MIN;
         tag_size = 48;
@@ -2131,24 +2131,24 @@ void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
     // Tag specific configuration settings (sof, timings, etc.)
 // TODO HTS
     /*    if (payload->cmd <= HTS_LAST_CMD) {
-            // hitagS settings
+            // hitag S settings
             t_wait_1 = 204;
             t_wait_2 = 128;
             //tag_size = 256;
             flipped_bit = 0;
             tag_size = 8;
-            DBG DbpString("Configured for " _YELLOW_("HitagS") " writer");
+            DBG DbpString("Configured for " _YELLOW_("Hitag S") " writer");
         } else
     */
     if (payload->cmd <= HT1_LAST_CMD) {
-        // hitag1 settings
+        // hitag 1 settings
         t_wait_1 = 204;
         t_wait_2 = 128;
         tag_size = 256;
         flipped_bit = 0;
         DBG DbpString("Configured for " _YELLOW_("Hitag 1") " writer");
     } else if (payload->cmd <= HT2_LAST_CMD) {
-        // hitag2 settings
+        // hitag 2 settings
         t_wait_1 = HITAG_T_WAIT_1_MIN;
         t_wait_2 = HITAG_T_WAIT_2_MIN;
         tag_size = 48;
@@ -2564,7 +2564,7 @@ bool ht2_packbits(uint8_t *nrz_samples, size_t nrzs, uint8_t *rx, size_t *rxlen)
         return false;
     }
 
-    // detect hitag2 header
+    // detect hitag 2 header
     if (memcmp(nrz_samples, "\x01\x01\x01\x01\x01", 5)) {
         return false;
     }
@@ -2599,7 +2599,7 @@ int ht2_read_uid(uint8_t *uid, bool ledcontrol, bool send_answer, bool keep_fiel
         clear_trace();
     }
 
-    // hitag2 state machine?
+    // hitag 2 state machine?
     hitag2_init();
 
     // init as reader

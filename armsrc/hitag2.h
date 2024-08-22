@@ -13,7 +13,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// Hitag2 type prototyping
+// Hitag 2 type prototyping
 //-----------------------------------------------------------------------------
 
 #ifndef _HITAG2_H_

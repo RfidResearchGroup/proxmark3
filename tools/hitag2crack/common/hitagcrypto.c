@@ -166,9 +166,9 @@
      length coding
    + Modulation transponder -> read/write device: Strong ASK modulation,
      selectable Manchester or Biphase coding
-   + Hitag S, Hitag u; anti-collision procedure
+   + Hitag S, Hitag µ; anti-collision procedure
    + Fast anti-collision protocol
-   + Hitag u; optional Cyclic Redundancy Check (CRC)
+   + Hitag µ; optional Cyclic Redundancy Check (CRC)
    + Reader Talks First mode
    + Hitag 2 & later; Transponder Talks First (TTF) mode
    + Temporary switch from Transponder Talks First into Reader Talks First
@@ -177,7 +177,7 @@
    + Data rates transponder to read/write device: 2 kbit/s, 4 kbit/s, 8 kbit/s
    + 32-bit password feature
    + Hitag 2, S = 32-bit Unique Identifier
-   + Hitag u = 48-bit Unique Identifier
+   + Hitag µ = 48-bit Unique Identifier
    + Selectable password modes for reader / tag mutual authentication
      (Hitag 1 has 2 pairs of keys, later versions have 1 pair)
    + Hitag 2 & Hitag S; Selectable encrypted mode, 48 bit key
@@ -194,10 +194,10 @@
    HITAG S 256        256 bits total memory       Read/Write
    HITAG S 2048       2048 bits total memory      Read/Write
 
-   HITAG u RO64       64 bits total memory        Read Only
-   HITAG u            128 bits total memory       Read/Write
-   HITAG u Advanced   512 bits total memory       Read/Write
-   HITAG u Advanced+  1760 bits total memory      Read/Write
+   HITAG µ RO64       64 bits total memory        Read Only
+   HITAG µ            128 bits total memory       Read/Write
+   HITAG µ Advanced   512 bits total memory       Read/Write
+   HITAG µ Advanced+  1760 bits total memory      Read/Write
 
    Default 48-bit key for Hitag 2, S encryption:
        "MIKRON"       =  O  N  M  I  K  R

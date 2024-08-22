@@ -63,7 +63,7 @@
     000 FPGA_MAJOR_MODE_LF_READER        = Act as LF reader (modulate)
     001 FPGA_MAJOR_MODE_LF_EDGE_DETECT   = Simulate LF
     010 FPGA_MAJOR_MODE_LF_PASSTHRU      = Passthrough mode, CROSS_LO line connected to SSP_DIN. SSP_DOUT logic level controls if we modulate / listening
-    011 FPGA_MAJOR_MODE_LF_ADC           = refactor hitag2, clear ADC sampling
+    011 FPGA_MAJOR_MODE_LF_ADC           = refactor hitag 2, clear ADC sampling
     111 FPGA_MAJOR_MODE_OFF              = turn off sampling.
 
   Each one of this major modes can have options. Currently these two major modes uses options.
