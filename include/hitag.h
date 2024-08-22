@@ -23,7 +23,7 @@
 #include "common.h"
 
 typedef enum {
-    RHTSF_PLAIN               = 01,
+    RHTSF_PLAIN,
     WHTSF_PLAIN,
     RHTSF_CHALLENGE,
     WHTSF_CHALLENGE,
@@ -31,11 +31,11 @@ typedef enum {
     WHTSF_KEY,
     HTS_LAST_CMD              = WHTSF_KEY,
 
-    RHT1F_PLAIN               = 11,
+    RHT1F_PLAIN,
     RHT1F_AUTHENTICATE,
     HT1_LAST_CMD              = RHT1F_AUTHENTICATE,
 
-    RHT2F_PASSWORD            = 21,
+    RHT2F_PASSWORD,
     RHT2F_AUTHENTICATE,
     RHT2F_CRYPTO,
     WHT2F_CRYPTO,
