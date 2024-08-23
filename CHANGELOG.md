@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `lf em 410x clone --hs` clone EM410x ID to Hitag S/8211 (@douniwan5788)
 - Fixed Hitag S read/write in plain mode (@douniwan5788)
 - Fixed fm11rf08s script for non-4B UID (FM11RF08S-7B) (@Foxushka)
 - Fixed missing require of ansicolors in `lf_hid_bulkclone_v2.lua` script (@whiteneon)

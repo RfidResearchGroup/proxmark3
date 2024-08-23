@@ -39,6 +39,7 @@
 #include "generator.h"
 #include "cliparser.h"
 #include "cmdhw.h"
+#include <hitag.h>
 
 static uint64_t gs_em410xid = 0;
 
@@ -656,13 +657,29 @@ static int CmdEM410xSpoof(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static size_t concatbits(uint8_t *dst, size_t dstskip, const uint8_t *src, size_t srcstart, size_t srclen) {
+    // erase dstbuf bits that will be overriden
+    dst[dstskip / 8] &= 0xFF - ((1 << (7 - (dstskip % 8) + 1)) - 1);
+    for (size_t i = (dstskip / 8) + 1; i <= (dstskip + srclen) / 8; i++) {
+        dst[i] = 0;
+    }
+
+    for (size_t i = 0; i < srclen; i++) {
+        // equiv of dstbufbits[dstbufskip + i] = srcbufbits[srcbufstart + i]
+        dst[(dstskip + i) / 8] |= ((src[(srcstart + i) / 8] >> (7 - ((srcstart + i) % 8))) & 1) << (7 - ((dstskip + i) % 8));
+    }
+
+    return dstskip + srclen;
+}
+
 static int CmdEM410xClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 410x clone",
                   "clone a EM410x ID to a T55x7, Q5/T5555 or EM4305/4469 tag.",
                   "lf em 410x clone --id 0F0368568B        -> encode for T55x7 tag\n"
                   "lf em 410x clone --id 0F0368568B --q5   -> encode for Q5/T5555 tag\n"
-                  "lf em 410x clone --id 0F0368568B --em   -> encode for EM4305/4469"
+                  "lf em 410x clone --id 0F0368568B --em   -> encode for EM4305/4469\n"
+                  "lf em 410x clone --id 0F0368568B --hs   -> encode for Hitag S/8211"
                  );
 
     void *argtable[] = {
@@ -671,6 +688,7 @@ static int CmdEM410xClone(const char *Cmd) {
         arg_str1(NULL, "id", "<hex>", "EM Tag ID number (5 hex bytes)"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
+        arg_lit0(NULL, "hs", "optional - specify writing to Hitag S/8211 tag"),
         arg_lit0(NULL, "electra", "optional - add Electra blocks to tag"),
         arg_param_end
     };
@@ -683,13 +701,12 @@ static int CmdEM410xClone(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 2, uid, &uid_len);
     bool q5 = arg_get_lit(ctx, 3);
     bool em = arg_get_lit(ctx, 4);
-    bool add_electra = arg_get_lit(ctx, 5);
+    bool hs = arg_get_lit(ctx, 5);
+    bool add_electra = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
-    uint64_t id = bytes_to_num(uid, uid_len);
-
-    if (q5 && em) {
-        PrintAndLogEx(FAILED, "Can't specify both Q5 and EM4305 at the same time");
+    if (q5 + em + hs > 1) {
+        PrintAndLogEx(FAILED, "Only specify one tag Type");
         return PM3_EINVARG;
     }
 
@@ -699,6 +716,7 @@ static int CmdEM410xClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    uint64_t id = bytes_to_num(uid, uid_len);
     PrintAndLogEx(SUCCESS, "Preparing to clone EM4102 to " _YELLOW_("%s") " tag with EM Tag ID " _GREEN_("%010" PRIX64) " (RF/%d)", q5 ? "Q5/T5555" : (em ? "EM4305/4469" : "T55x7"), id, clk);
 
     struct {
@@ -717,11 +735,54 @@ static int CmdEM410xClone(const char *Cmd) {
     payload.high = (uint32_t)(id >> 32);
     payload.low = (uint32_t)id;
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_LF_EM410X_CLONE, (uint8_t *)&payload, sizeof(payload));
 
+    uint8_t data[8] = {0xFF, 0x80}; // EM410X_HEADER 9 bits of one
+    uint32_t databits = 9;
+    uint8_t c_parity = 0;
+
+    for (int i = 36; i >= 0; i -= 4)
+    {
+        uint8_t r_parity = 0;
+        uint8_t nibble = id >> i & 0xF;
+
+        databits = concatbits(data, databits, &nibble, 4, 4);
+        for (size_t j = 0; j < 4; j++) {
+            r_parity ^= nibble >> j & 1;
+        }
+        databits = concatbits(data, databits, &r_parity, 7, 1);
+        c_parity ^= nibble;
+    }
+    data[7] |= c_parity << 1;
+    // print_hex_noascii_break(data, 8, 10);
+
+    clearCommandBuffer();
     PacketResponseNG resp;
-    WaitForResponse(CMD_LF_EM410X_CLONE, &resp);
+
+    if (hs) {
+        lf_hitag_data_t packet;
+        memset(&packet, 0, sizeof(packet));
+
+        for (size_t page = 4; page <= 5; page++) {
+            packet.cmd = WHTSF_PLAIN;
+            packet.page = page;
+            memcpy(packet.data, &data[(page-4)*4], 4);
+
+            SendCommandNG(CMD_LF_HITAGS_WRITE, (uint8_t *)&packet, sizeof(packet));
+            if (WaitForResponseTimeout(CMD_LF_HITAGS_WRITE, &resp, 4000) == false)
+            {
+                PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+                return PM3_ETIMEOUT;
+            }
+            if (resp.status != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Something went wrong");
+                return resp.status;
+            }
+        }
+    } else {
+        SendCommandNG(CMD_LF_EM410X_CLONE, (uint8_t *)&payload, sizeof(payload));
+        WaitForResponse(CMD_LF_EM410X_CLONE, &resp);
+    }
+
     switch (resp.status) {
         case PM3_SUCCESS: {
             PrintAndLogEx(SUCCESS, "Done");
