@@ -32,6 +32,7 @@
 #include "hitag2/hitag2_crypto.h"
 #include "lfadc.h"
 #include "crc.h"
+#include <protocols.h>
 
 #define CRC_PRESET 0xFF
 #define CRC_POLYNOM 0x1D
@@ -455,7 +456,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
 
             tag.pstate = HT_READY;
             tag.tstate = HT_NO_OP;
-            if ((rx[0] & 0xf0) == 0x30) {
+            if ((rx[0] & 0xf0) == HITAGS_UID_REQ_STD) {
                 if (g_dbglevel >= DBG_EXTENDED)
                     Dbprintf("HT_STANDARD");
 
@@ -463,7 +464,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 sof_bits = 1;
                 m = AC2K;
             }
-            if ((rx[0] & 0xf0) == 0xc0) {
+            if ((rx[0] & 0xf0) == HITAGS_UID_REQ_ADV) {
                 tag.mode = HT_ADVANCED;
                 if (g_dbglevel >= DBG_EXTENDED)
                     Dbprintf("HT_ADVANCED");
@@ -472,7 +473,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 m = AC2K;
             }
 
-            if ((rx[0] & 0xf0) == 0xd0) {
+            if ((rx[0] & 0xf0) == HITAGS_UID_REQ_FADV) {
                 if (g_dbglevel >= DBG_EXTENDED)
                     Dbprintf("HT_FAST_ADVANCED");
 
@@ -493,7 +494,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 DbpString("SELECT");
             }
 
-            if (check_select(rx, tag.uid) == 1) {
+            if ((rx[0] & 0xf8) == HITAGS_SELECT && check_select(rx, tag.uid) == 1) {
                 if (g_dbglevel >= DBG_EXTENDED) {
                     DbpString("SELECT match");
                 }
@@ -581,7 +582,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
         }
         case 40: {
             if (g_dbglevel >= DBG_EXTENDED)
-                Dbprintf("WRITE");
+                Dbprintf("WRITE DATA");
             //data received to be written
             if (tag.tstate == HT_WRITING_PAGE_DATA) {
                 tag.tstate = HT_NO_OP;
@@ -616,7 +617,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
         }
         case 20: {
             //write page, write block, read page or read block command received
-            if ((rx[0] & 0xf0) == 0xc0) { //read page
+            if ((rx[0] & 0xf0) == HITAGS_READ_PAGE) { //read page
                 //send page data
                 uint8_t page = ((rx[0] & 0x0f) * 16) + ((rx[1] & 0xf0) / 16);
                 *txlen = 32;
@@ -647,7 +648,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                     *txlen = 0;
                 }
 
-            } else if ((rx[0] & 0xf0) == 0xd0) { //read block
+            } else if ((rx[0] & 0xf0) == HITAGS_READ_BLOCK) { //read block
 
                 uint8_t page = ((rx[0] & 0x0f) * 16) + ((rx[1] & 0xf0) / 16);
                 *txlen = 32 * 4;
@@ -677,7 +678,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                     *txlen = 0;
                 }
 
-            } else if ((rx[0] & 0xf0) == 0x80) { //write page
+            } else if ((rx[0] & 0xf0) == HITAGS_WRITE_PAGE) { //write page
 
                 uint8_t page = ((rx[0] & 0x0f) * 16) + ((rx[1] & 0xf0) / 16);
 
@@ -693,7 +694,7 @@ static void hitagS_handle_reader_command(uint8_t *rx, const size_t rxlen,
                     tag.tstate = HT_WRITING_PAGE_DATA;
                 }
 
-            } else if ((rx[0] & 0xf0) == 0x90) { //write block
+            } else if ((rx[0] & 0xf0) == HITAGS_WRITE_BLOCK) { //write block
 
                 uint8_t page = ((rx[0] & 0x0f) * 6) + ((rx[1] & 0xf0) / 16);
                 hitagS_set_frame_modulation();
@@ -1236,8 +1237,8 @@ static int selectHitagS(const lf_hitag_data_t *packet, uint8_t *tx, size_t sizeo
     // UID request FAdvanced  11010
     size_t txlen = 0;
     size_t rxlen = 0;
-    uint8_t cmd = 0x18;  // 11000  UID Request Advanced
-    txlen = concatbits(tx, txlen, &cmd, 8 - 5, 5);
+    uint8_t cmd = HITAGS_UID_REQ_ADV;
+    txlen = concatbits(tx, txlen, &cmd, 0, 5);
     sendReceiveHitagS(tx, txlen, rx, sizeofrx, &rxlen, t_wait, ledcontrol, true);
 
     if (rxlen != 32) {
@@ -1253,8 +1254,8 @@ static int selectHitagS(const lf_hitag_data_t *packet, uint8_t *tx, size_t sizeo
 
     //select uid
     txlen = 0;
-    cmd = 0x00; // 00000 SELECT UID
-    txlen = concatbits(tx, txlen, &cmd, 8 - 5, 5);
+    cmd = HITAGS_SELECT;
+    txlen = concatbits(tx, txlen, &cmd, 0, 5);
     txlen = concatbits(tx, txlen, rx, 0, 32);
     uint8_t crc = CRC8Hitag1Bits(tx, txlen);
     txlen = concatbits(tx, txlen, &crc, 0, 8);
@@ -1432,8 +1433,8 @@ void ReadHitagS(const lf_hitag_data_t *payload, bool ledcontrol) {
 
         //send read request
         size_t txlen = 0;
-        uint8_t cmd = 0x0c; // 1100 READ PAGE
-        txlen = concatbits(tx, txlen, &cmd, 8 - 4, 4);
+        uint8_t cmd = HITAGS_READ_PAGE;
+        txlen = concatbits(tx, txlen, &cmd, 0, 4);
         uint8_t addr = pageNum;
         txlen = concatbits(tx, txlen, &addr, 0, 8);
         uint8_t crc = CRC8Hitag1Bits(tx, txlen);
@@ -1537,8 +1538,8 @@ void WritePageHitagS(const lf_hitag_data_t *payload, bool ledcontrol) {
     //send write page request
     txlen = 0;
 
-    uint8_t cmd = 0x08; // 1000 WRITE PAGE
-    txlen = concatbits(tx, txlen, &cmd, 8 - 4, 4);
+    uint8_t cmd = HITAGS_WRITE_PAGE;
+    txlen = concatbits(tx, txlen, &cmd, 0, 4);
 
     uint8_t addr = payload->page;
     txlen = concatbits(tx, txlen, &addr, 0, 8);
