@@ -31,6 +31,7 @@
 #include "lfdemod.h"
 #include "commonutil.h"
 #include "appmain.h"
+#include "protocols.h"
 
 #define test_bit(data, i)  (*(data + (i/8)) >> (7-(i % 8))) & 1
 #define set_bit(data, i)   *(data + (i/8)) |= (1 << (7-(i % 8)))
@@ -210,9 +211,9 @@ static void hitag2_handle_reader_command(uint8_t *rx, const size_t rxlen, uint8_
     // Try to find out which command was send by selecting on length (in bits)
     switch (rxlen) {
         // Received 11000 from the reader, request for UID, send UID
-        case 05: {
+        case 5: {
             // Always send over the air in the clear plaintext mode
-            if (rx_air[0] != 0xC0) {
+            if (rx_air[0] != HITAG2_START_AUTH) {
                 // Unknown frame ?
                 return;
             }
@@ -234,13 +235,13 @@ static void hitag2_handle_reader_command(uint8_t *rx, const size_t rxlen, uint8_
 
             switch (rx[0] & 0xC6) {
                 // Read command: 11xx x00y
-                case 0xC0: {
+                case HITAG2_READ_PAGE: {
                     memcpy(tx, tag.sectors[sector], 4);
                     *txlen = 32;
                     break;
                 }
                 // Inverted Read command: 01xx x10y
-                case 0x44: {
+                case HITAG2_READ_PAGE_INVERTED: {
                     for (size_t i = 0; i < 4; i++) {
                         tx[i] = tag.sectors[sector][i] ^ 0xff;
                     }
@@ -248,7 +249,7 @@ static void hitag2_handle_reader_command(uint8_t *rx, const size_t rxlen, uint8_
                     break;
                 }
                 // Write command: 10xx x01y
-                case 0x82: {
+                case HITAG2_WRITE_PAGE: {
                     // Prepare write, acknowledge by repeating command
                     memcpy(tx, rx, nbytes(rxlen));
                     *txlen = rxlen;
@@ -648,7 +649,7 @@ static bool hitag2_write_page(uint8_t *rx, const size_t rxlen, uint8_t *tx, size
     switch (writestate) {
         case WRITE_STATE_START: {
             *txlen = 10;
-            tx[0] = 0x82 | (blocknr << 3) | ((blocknr ^ 7) >> 2);
+            tx[0] = HITAG2_WRITE_PAGE | (blocknr << 3) | ((blocknr ^ 7) >> 2);
             tx[1] = ((blocknr ^ 7) << 6);
             writestate = WRITE_STATE_PAGENUM_WRITTEN;
             break;
@@ -656,7 +657,7 @@ static bool hitag2_write_page(uint8_t *rx, const size_t rxlen, uint8_t *tx, size
         case WRITE_STATE_PAGENUM_WRITTEN: {
             // Check if page number was received correctly
             if ((rxlen == 10)
-                    && (rx[0] == (0x82 | (blocknr << 3) | ((blocknr ^ 7) >> 2)))
+                    && (rx[0] == (HITAG2_WRITE_PAGE | (blocknr << 3) | ((blocknr ^ 7) >> 2)))
                     && (rx[1] == (((blocknr & 0x3) ^ 0x3) << 6))) {
 
                 *txlen = 32;
@@ -748,7 +749,7 @@ static bool hitag2_password(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
                     }
 
                     *txlen = 10;
-                    tx[0] = 0xC0 | (blocknr << 3) | ((blocknr ^ 7) >> 2);
+                    tx[0] = HITAG2_READ_PAGE | (blocknr << 3) | ((blocknr ^ 7) >> 2);
                     tx[1] = ((blocknr ^ 7) << 6);
                 }
             }
@@ -871,7 +872,7 @@ static bool hitag2_crypto(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *
                         return false;
                     } else {
                         *txlen = 10;
-                        tx[0] = 0xc0 | (blocknr << 3) | ((blocknr ^ 7) >> 2);
+                        tx[0] = HITAG2_READ_PAGE | (blocknr << 3) | ((blocknr ^ 7) >> 2);
                         tx[1] = ((blocknr ^ 7) << 6);
                     }
                 }
@@ -957,7 +958,7 @@ static bool hitag2_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, si
                     DBG Dbprintf("Sending read block %u", blocknr);
 
                     *txlen = 10;
-                    tx[0] = 0xc0 | (blocknr << 3) | ((blocknr ^ 7) >> 2);
+                    tx[0] = HITAG2_READ_PAGE | (blocknr << 3) | ((blocknr ^ 7) >> 2);
                     tx[1] = ((blocknr ^ 7) << 6);
                 }
             }
@@ -2628,7 +2629,7 @@ int ht2_read_uid(uint8_t *uid, bool ledcontrol, bool send_answer, bool keep_fiel
 
         // start AUTH command
         size_t txlen = 5;
-        uint8_t tx[1] = {0xC0};
+        uint8_t tx[0] = {HITAG2_START_AUTH};
 
         // Transmit as reader
         ht2_send(turn_on, &command_start, &command_duration, &response_start, tx, txlen, false);
