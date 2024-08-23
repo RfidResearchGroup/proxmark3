@@ -897,30 +897,39 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define CALYPSO_SAM_SV_RELOAD           0x56
 
 // HITAG 1 commands
-#define HITAG1_SET_CCNEW                0xC2    // left 5 bits only
+#define HITAG1_SET_CC                   0x30    // higher 5 bits only
+#define HITAG1_SET_CCNEW                0xC8    // higher 5 bits only
 #define HITAG1_READ_ID                  0x00    // not a real command, consists of 5 bits length, <length> bits partial SN, 8 bits CRC
-#define HITAG1_SELECT                   0x00    // left 5 bits only, followed by 32 bits SN and 8 bits CRC
-#define HITAG1_WRPPAGE                  0x80    // left 4 bits only, followed by 8 bits page and 8 bits CRC
-#define HITAG1_WRPBLK                   0x90    // left 4 bits only, followed by 8 bits block and 8 bits CRC
-#define HITAG1_WRCPAGE                  0xA0    // left 4 bits only, followed by 8 bits page or key information and 8 bits CRC
-#define HITAG1_WRCBLK                   0xB0    // left 4 bits only, followed by 8 bits block and 8 bits CRC
-#define HITAG1_RDPPAGE                  0xC0    // left 4 bits only, followed by 8 bits page and 8 bits CRC
-#define HITAG1_RDPBLK                   0xD0    // left 4 bits only, followed by 8 bits block and 8 bits CRC
-#define HITAG1_RDCPAGE                  0xE0    // left 4 bits only, followed by 8 bits page and 8 bits CRC
-#define HITAG1_RDCBLK                   0xF0    // left 4 bits only, followed by 8 bits block and 8 bits CRC
-#define HITAG1_HALT                     0x70    // left 4 bits only, followed by 8 bits (dummy) page and 8 bits CRC
+#define HITAG1_SELECT                   0x00    // higher 5 bits only, followed by 32 bits SN and 8 bits CRC
+#define HITAG1_WRPPAGE                  0x80    // higher 4 bits only, followed by 8 bits page and 8 bits CRC
+#define HITAG1_WRPBLK                   0x90    // higher 4 bits only, followed by 8 bits block and 8 bits CRC
+#define HITAG1_WRCPAGE                  0xA0    // higher 4 bits only, followed by 8 bits page or key information and 8 bits CRC
+#define HITAG1_WRCBLK                   0xB0    // higher 4 bits only, followed by 8 bits block and 8 bits CRC
+#define HITAG1_RDPPAGE                  0xC0    // higher 4 bits only, followed by 8 bits page and 8 bits CRC
+#define HITAG1_RDPBLK                   0xD0    // higher 4 bits only, followed by 8 bits block and 8 bits CRC
+#define HITAG1_RDCPAGE                  0xE0    // higher 4 bits only, followed by 8 bits page and 8 bits CRC
+#define HITAG1_RDCBLK                   0xF0    // higher 4 bits only, followed by 8 bits block and 8 bits CRC
+#define HITAG1_HALT                     0x70    // higher 4 bits only, followed by 8 bits (dummy) page and 8 bits CRC
 
 // HITAG 2 commands
-#define HITAG2_START_AUTH           "11000"         // get UID and/or start the authentication process
-#define HITAG2_READ_PAGE            "11"            // read page after auth
-#define HITAG2_READ_PAGE_INVERTED   "01"            // as read page but all bits inverted
-#define HITAG2_WRITE_PAGE           "10"            // write page after auth
-#define HITAG2_HALT                 "00"            // silence currently authenticated tag
+#define HITAG2_START_AUTH               0xC0    // left 5 bits only
+#define HITAG2_READ_PAGE                0xC0    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
+#define HITAG2_READ_PAGE_INVERTED       0x44    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
+#define HITAG2_WRITE_PAGE               0x82    // page number in bits 5 to 3, page number inverted in bit 0 and following 2 bits
+#define HITAG2_HALT                     0x00    // left 5 bits only
+
 
 // HITAG S commands
-#define HITAGS_QUIET                    0x70
-//inverted in bit 0 and following 2 bits
-#define HITAGS_WRITE_BLOCK              0x90
+#define HITAGS_UID_REQ_STD              0x30    // 00110 UID REQUEST Std
+#define HITAGS_UID_REQ_ADV              0xC0    // 11000 UID REQUEST Adv
+#define HITAGS_UID_REQ_ADV2             0xC8    // 11001 UID REQUEST Adv
+#define HITAGS_UID_REQ_FADV             0xD0    // 11010 UID REQUEST FAdv
+#define HITAGS_SELECT                   0x00    // 00000 SELECT (UID)
+#define HITAGS_READ_PAGE                0xC0    // 1100 READ PAGE
+#define HITAGS_READ_BLOCK               0xD0    // 1101 READ BLOCK
+#define HITAGS_WRITE_PAGE               0x80    // 1000 WRITE PAGE
+#define HITAGS_WRITE_BLOCK              0x90    // 1001 WRITE BLOCK
+#define HITAGS_QUIET                    0x70    // 0111 QUIET
 
 // LTO-CM commands
 #define LTO_REQ_STANDARD                0x45

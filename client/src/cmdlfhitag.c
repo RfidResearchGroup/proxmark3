@@ -522,6 +522,13 @@ bool hitag2_get_plain(uint8_t *plain,  uint8_t *plen) {
     return false;
 }
 
+// HITAG 2 commands
+#define HITAG2_BINSTR_START_AUTH           "11000"         // get UID and/or start the authentication process
+#define HITAG2_BINSTR_READ_PAGE            "11"            // read page after auth
+#define HITAG2_BINSTR_READ_PAGE_INVERTED   "01"            // as read page but all bits inverted
+#define HITAG2_BINSTR_WRITE_PAGE           "10"            // write page after auth
+#define HITAG2_BINSTR_HALT                 "00"            // silence currently authenticated tag
+
 static uint8_t hitag2_get_page(const char *bs) {
     if ((memcmp(bs + 2, "000", 3) == 0) && (memcmp(bs + 2 + 3 + 2, "111", 3) == 0)) {
         return 0;
@@ -578,24 +585,24 @@ void hitag2_annotate_plain(char *exp, size_t size, const uint8_t *cmd, uint8_t c
             break;
         }
         case 10: {
-            if (memcmp(binstr, HITAG2_HALT, 2) == 0) {
+            if (memcmp(binstr, HITAG2_BINSTR_HALT, 2) == 0) {
                 snprintf(exp, size, " ");
                 break;
             }
 
             uint8_t page = hitag2_get_page(binstr);
 
-            if (memcmp(binstr, HITAG2_READ_PAGE, 2) == 0) {
+            if (memcmp(binstr, HITAG2_BINSTR_READ_PAGE, 2) == 0) {
                 snprintf(exp, size, "READ PAGE (" _MAGENTA_("%u") ")", page);
                 break;
             }
 
-            if (memcmp(binstr, HITAG2_READ_PAGE_INVERTED, 2) == 0) {
+            if (memcmp(binstr, HITAG2_BINSTR_READ_PAGE_INVERTED, 2) == 0) {
                 snprintf(exp, size, "READ PAGE INV (" _MAGENTA_("%u") ")", page);
                 break;
             }
 
-            if (memcmp(binstr, HITAG2_WRITE_PAGE, 2) == 0) {
+            if (memcmp(binstr, HITAG2_BINSTR_WRITE_PAGE, 2) == 0) {
                 snprintf(exp, size, "WRITE PAGE (" _MAGENTA_("%u") ")", page);
                 break;
             }
@@ -654,7 +661,7 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
         case 5: {
             annotateHitag2_init();
 
-            if (memcmp(binstr, HITAG2_START_AUTH, 5) == 0) {
+            if (memcmp(binstr, HITAG2_BINSTR_START_AUTH, 5) == 0) {
                 snprintf(exp, size, "START AUTH");
                 _ht2state.state = STATE_START_AUTH;
             } else {
@@ -669,7 +676,7 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
                 break;
             }
 
-            if (memcmp(binstr, HITAG2_HALT, 2) == 0) {
+            if (memcmp(binstr, HITAG2_BINSTR_HALT, 2) == 0) {
                 snprintf(exp, size, "HALT");
                 _ht2state.state = STATE_HALT;
                 break;
@@ -677,17 +684,17 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
 
             uint8_t page = hitag2_get_page(binstr);
 
-            if (memcmp(binstr, HITAG2_READ_PAGE, 2) == 0) {
+            if (memcmp(binstr, HITAG2_BINSTR_READ_PAGE, 2) == 0) {
                 snprintf(exp, size, "READ PAGE (" _MAGENTA_("%u") ")", page);
                 break;
             }
 
-            if (memcmp(binstr, HITAG2_READ_PAGE_INVERTED, 2) == 0) {
+            if (memcmp(binstr, HITAG2_BINSTR_READ_PAGE_INVERTED, 2) == 0) {
                 snprintf(exp, size, "READ PAGE INV (" _MAGENTA_("%u") ")", page);
                 break;
             }
 
-            if (memcmp(binstr, HITAG2_WRITE_PAGE, 2) == 0) {
+            if (memcmp(binstr, HITAG2_BINSTR_WRITE_PAGE, 2) == 0) {
                 snprintf(exp, size, "WRITE PAGE (" _MAGENTA_("%u") ")", page);
                 break;
             }
