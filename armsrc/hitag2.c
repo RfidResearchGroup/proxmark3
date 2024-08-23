@@ -448,13 +448,13 @@ void fix_ac_decoding(uint8_t *input, size_t len) {
 // looks at number of received bits.
 // 0 = collision?
 // 32 =  good response
-static bool hitag_plain(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen, bool hitag_s) {
+static bool hitag1_plain(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen, bool hitag_s) {
     *txlen = 0;
     switch (rxlen) {
         case 0: {
             // retry waking up card
             /*tx[0] = 0xb0; // Rev 3.0*/
-            tx[0] = 0x30; // Rev 2.0
+            tx[0] = HITAG1_SET_CC; // Rev 2.0
             *txlen = 5;
             if (!bCollision) blocknr--;
             if (blocknr < 0) {
@@ -472,7 +472,7 @@ static bool hitag_plain(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *tx
             uint8_t crc;
             if (bCollision) {
                 // Select card by serial from response
-                tx[0] = 0x00 | rx[0] >> 5;
+                tx[0] = HITAG1_SELECT | rx[0] >> 5;
                 tx[1] = rx[0] << 3 | rx[1] >> 5;
                 tx[2] = rx[1] << 3 | rx[2] >> 5;
                 tx[3] = rx[2] << 3 | rx[3] >> 5;
@@ -498,7 +498,7 @@ static bool hitag_plain(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *tx
                 }
                 // read next page of card until done
                 Dbprintf("Reading page %02u", blocknr);
-                tx[0] = 0xc0 | blocknr >> 4; // RDPPAGE
+                tx[0] = HITAG1_RDPPAGE | blocknr >> 4; // RDPPAGE
                 tx[1] = blocknr << 4;
                 crc = hitag_crc(tx, 12);
                 tx[1] |= crc >> 4;
@@ -524,7 +524,7 @@ static bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, si
         case 0: {
             // retry waking up card
             /*tx[0] = 0xb0; // Rev 3.0*/
-            tx[0] = 0x30; // Rev 2.0
+            tx[0] = HITAG1_SELECT; // Rev 2.0
             *txlen = 5;
             if (bCrypto && byte_value <= 0xff) {
                 // to retry
@@ -554,7 +554,7 @@ static bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, si
                 // will receive 32 bit encrypted Logdata
             } else if (bCrypto) {
                 // authed, start reading
-                tx[0] = 0xe0 | blocknr >> 4; // RDCPAGE
+                tx[0] = HITAG1_RDCPAGE | blocknr >> 4; // RDCPAGE
                 tx[1] = blocknr << 4;
                 crc = hitag_crc(tx, 12);
                 tx[1] |= crc >> 4;
@@ -567,7 +567,7 @@ static bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, si
         case 32: {
             if (bCollision) {
                 // Select card by serial from response
-                tx[0] = 0x00 | rx[0] >> 5;
+                tx[0] = HITAG1_SELECT | rx[0] >> 5;
                 tx[1] = rx[0] << 3 | rx[1] >> 5;
                 tx[2] = rx[1] << 3 | rx[2] >> 5;
                 tx[3] = rx[2] << 3 | rx[3] >> 5;
@@ -581,7 +581,7 @@ static bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, si
                 // will receive 32-bit configuration page
             } else if (bSelecting) {
                 // Initiate auth
-                tx[0] = 0xa0 | (key_no); // WRCPAGE
+                tx[0] = HITAG1_WRCPAGE | (key_no); // WRCPAGE
                 tx[1] = blocknr << 4;
                 crc = hitag_crc(tx, 12);
                 tx[1] |= crc >> 4;
@@ -621,7 +621,7 @@ static bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, si
                 return false;
                 /*
                                 // read next page of card until done
-                                tx[0] = 0xe0 | blocknr >> 4; // RDCPAGE
+                                tx[0] = HITAG1_RDCPAGE | blocknr >> 4; // RDCPAGE
                                 tx[1] = blocknr << 4;
                                 crc = hitag_crc(tx, 12);
                                 tx[1] |= crc >> 4;
@@ -1820,7 +1820,7 @@ void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
         tx = txbuf;
         switch (payload->cmd) {
             case RHT1F_PLAIN: {
-                bStop = !hitag_plain(rx, rxlen, tx, &txlen, false);
+                bStop = !hitag1_plain(rx, rxlen, tx, &txlen, false);
                 break;
             }
             case RHT1F_AUTHENTICATE: {
@@ -2629,7 +2629,7 @@ int ht2_read_uid(uint8_t *uid, bool ledcontrol, bool send_answer, bool keep_fiel
 
         // start AUTH command
         size_t txlen = 5;
-        uint8_t tx[0] = {HITAG2_START_AUTH};
+        uint8_t tx[] = {HITAG2_START_AUTH};
 
         // Transmit as reader
         ht2_send(turn_on, &command_start, &command_duration, &response_start, tx, txlen, false);
