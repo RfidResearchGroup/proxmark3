@@ -22,6 +22,22 @@
 
 #include "common.h"
 
+#define HITAG_NRAR_SIZE         8
+#define HITAG_CRYPTOKEY_SIZE    6
+#define HITAG_PASSWORD_SIZE     4
+#define HITAG_UID_SIZE          4
+#define HITAG_BLOCK_SIZE        4
+#define HITAG2_MAX_BLOCKS       8
+#define HITAG2_MAX_BYTE_SIZE    (HITAG2_MAX_BLOCKS * HITAG_BLOCK_SIZE)
+
+// need to see which limits these cards has
+#define HITAG1_MAX_BYTE_SIZE    64
+#define HITAGS_MAX_BYTE_SIZE    64
+#define HITAGU_MAX_BYTE_SIZE    64
+#define HITAG_MAX_BYTE_SIZE    (64 * HITAG_BLOCK_SIZE)
+
+#define HITAG2_CONFIG_BLOCK     3
+
 typedef enum {
     RHTSF_PLAIN,
     WHTSF_PLAIN,

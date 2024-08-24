@@ -39,7 +39,7 @@
 #include "generator.h"
 #include "cliparser.h"
 #include "cmdhw.h"
-#include <hitag.h>
+#include "hitag.h"
 
 static uint64_t gs_em410xid = 0;
 
@@ -675,7 +675,7 @@ static size_t concatbits(uint8_t *dst, size_t dstskip, const uint8_t *src, size_
 static int CmdEM410xClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 410x clone",
-                  "clone a EM410x ID to a T55x7, Q5/T5555 or EM4305/4469 tag.",
+                  "clone a EM410x ID to a T55x7, Q5/T5555, EM4305/4469 or Hitag S/8211 tag.",
                   "lf em 410x clone --id 0F0368568B        -> encode for T55x7 tag\n"
                   "lf em 410x clone --id 0F0368568B --q5   -> encode for Q5/T5555 tag\n"
                   "lf em 410x clone --id 0F0368568B --em   -> encode for EM4305/4469\n"
@@ -710,9 +710,15 @@ static int CmdEM410xClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (hs && IfPm3Hitag() == false) {
-        PrintAndLogEx(FAILED, "Device not compiled to support Hitag");
-        return PM3_EINVARG;
+    if (hs) {
+        if (IfPm3Hitag() == false) {
+            PrintAndLogEx(FAILED, "Device not compiled to support Hitag");
+            return PM3_EINVARG;
+        }
+        if (clk == 40) {
+            PrintAndLogEx(FAILED, "supported clock rates for Hitag are " _YELLOW_("16, 32, 64"));
+            return PM3_EINVARG;
+        }
     }
 
     // Allowed clock rates: 16, 32, 40 and 64
@@ -722,31 +728,14 @@ static int CmdEM410xClone(const char *Cmd) {
     }
 
     uint64_t id = bytes_to_num(uid, uid_len);
-    PrintAndLogEx(SUCCESS, "Preparing to clone EM4102 to " _YELLOW_("%s") " tag with EM Tag ID " _GREEN_("%010" PRIX64) " (RF/%d)", q5 ? "Q5/T5555" : (em ? "EM4305/4469" : "T55x7"), id, clk);
+    PrintAndLogEx(SUCCESS, "Preparing to clone EM4102 to " _YELLOW_("%s") " tag with EM Tag ID " _GREEN_("%010" PRIX64) " (RF/%d)",
+                  q5 ? "Q5/T5555" : (em ? "EM4305/4469" : (hs ? "Hitag S/8211" : "T55x7")), id, clk);
 
-    struct {
-        bool Q5;
-        bool EM;
-        bool add_electra;
-        uint8_t clock;
-        uint32_t high;
-        uint32_t low;
-    } PACKED payload;
-
-    payload.Q5 = q5;
-    payload.EM = em;
-    payload.add_electra = add_electra;
-    payload.clock = clk;
-    payload.high = (uint32_t)(id >> 32);
-    payload.low = (uint32_t)id;
-
-
-    uint8_t data[8] = {0xFF, 0x80}; // EM410X_HEADER 9 bits of one
+    uint8_t data[HITAG_BLOCK_SIZE * 2] = {0xFF, 0x80}; // EM410X_HEADER 9 bits of one
     uint32_t databits = 9;
     uint8_t c_parity = 0;
 
-    for (int i = 36; i >= 0; i -= 4)
-    {
+    for (int i = 36; i >= 0; i -= 4) {
         uint8_t r_parity = 0;
         uint8_t nibble = id >> i & 0xF;
 
@@ -758,7 +747,8 @@ static int CmdEM410xClone(const char *Cmd) {
         c_parity ^= nibble;
     }
     data[7] |= c_parity << 1;
-    // print_hex_noascii_break(data, 8, 10);
+
+    PrintAndLogEx(INFO, "Encoded to %s", sprint_hex(data, sizeof(data)));
 
     clearCommandBuffer();
     PacketResponseNG resp;
@@ -767,14 +757,37 @@ static int CmdEM410xClone(const char *Cmd) {
         lf_hitag_data_t packet;
         memset(&packet, 0, sizeof(packet));
 
-        for (size_t page = 4; page <= 5; page++) {
-            packet.cmd = WHTSF_PLAIN;
-            packet.page = page;
-            memcpy(packet.data, &data[(page-4)*4], 4);
+        for (size_t steps = 0; steps < 3; steps++) {
+            switch (steps) {
+                case 0:
+                    packet.data[0] = 0xCA; //compatiable for 82xx, no impact on Hitag S
+                    // clk -> TTFDR1 TTFDR0
+                    // 32  -> 0x00      4 kBit/s
+                    // 16  -> 0x10      8 kBit/s
+                    // 64  -> 0x20      2 kBit/s
+                    packet.data[1] = 0x04;
+                    switch (clk) {
+                        case 32: break;
+                        case 16: packet.data[1] |= 0x10; break;
+                        case 64: packet.data[1] |= 0x20; break;
+                    }
+                    packet.data[2] = 0;
+                    packet.data[3] = 0; //TODO: keep PWDH0?
+                    packet.page = 1;
+                    break;
+                case 1:
+                    memcpy(packet.data, &data[HITAG_BLOCK_SIZE * 0], HITAG_BLOCK_SIZE);
+                    packet.page = 4;
+                    break;
+                case 2:
+                    memcpy(packet.data, &data[HITAG_BLOCK_SIZE * 1], HITAG_BLOCK_SIZE);
+                    packet.page = 5;
+                    break;
+            }
 
+            packet.cmd = WHTSF_PLAIN;
             SendCommandNG(CMD_LF_HITAGS_WRITE, (uint8_t *)&packet, sizeof(packet));
-            if (WaitForResponseTimeout(CMD_LF_HITAGS_WRITE, &resp, 4000) == false)
-            {
+            if (WaitForResponseTimeout(CMD_LF_HITAGS_WRITE, &resp, 4000) == false) {
                 PrintAndLogEx(WARNING, "timeout while waiting for reply.");
                 return PM3_ETIMEOUT;
             }
@@ -784,6 +797,22 @@ static int CmdEM410xClone(const char *Cmd) {
             }
         }
     } else {
+        struct {
+            bool Q5;
+            bool EM;
+            bool add_electra;
+            uint8_t clock;
+            uint32_t high;
+            uint32_t low;
+        } PACKED payload;
+
+        payload.Q5 = q5;
+        payload.EM = em;
+        payload.add_electra = add_electra;
+        payload.clock = clk;
+        payload.high = (uint32_t)(id >> 32);
+        payload.low = (uint32_t)id;
+
         SendCommandNG(CMD_LF_EM410X_CLONE, (uint8_t *)&payload, sizeof(payload));
         WaitForResponse(CMD_LF_EM410X_CLONE, &resp);
     }

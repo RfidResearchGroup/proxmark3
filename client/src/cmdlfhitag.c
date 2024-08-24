@@ -21,7 +21,6 @@
 #include "comms.h"
 #include "cmdtrace.h"
 #include "commonutil.h"
-#include "hitag.h"
 #include "fileutils.h"  // savefile
 #include "protocols.h"  // defines
 #include "cliparser.h"
