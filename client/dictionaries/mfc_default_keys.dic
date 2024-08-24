@@ -2531,3 +2531,106 @@ bd6af9754c18
 722F24F0722F
 # STS Hotel 2A
 535453535453
+# Public transport in Sofia, Bulgaria (SKGT)
+# upgraded to DESFire since January 2024
+# SKGT common
+# Sector 15, key A
+f618b3d7855a
+# Sector 15, key B
+f1afa4da949f
+# SKGT multi-use ticket
+# Sector 0
+67362dace527
+633a010fa3c3
+# Sector 1
+f93c98655b9c
+67ec0a47b0fb
+# Sector 2
+54a028818ac7
+b2e87e53c5a0
+# Sector 3
+3e93cf0644b6
+79e12280e219
+# Sector 4
+2204b9fbf033
+4537fd238c8e
+# Sector 5
+d1b44a9df05f
+cfa526835a1f
+# Sector 6
+21cc007ad81c
+c097d0a85446
+# Sector 7
+d2268262710f
+730bb7b8b3de
+# Sector 8
+9fe7c5be7dff
+61ae2d920c79
+# Sector 9
+78fcd4470c50
+b638caf7357b
+# Sector 10
+0dc1dd7c8ea2
+4c6a6866b934
+# Sector 11
+03de2ceb2ea1
+93e0118b21ed
+# Sector 12
+8fbced387bf4
+f57ca95c6edd
+# Sector 13
+ef24fe3b4cf7
+8b44d303d62f
+# Sector 14
+b1ea40b2caa6
+3abf8431003b
+# Sector 15 - see above
+# SKGT personalised subscription card
+# Sector 0, 2, 16, key A
+a0a1a2a3a4a5
+# Sector 8-14, 17-39, key A
+ffffffffffff
+# Sector 1, key A
+# blue
+f1df0ca8948b
+# yellow
+7747b4912984
+# Sector 3, key A
+# blue
+09d556d57a4b
+# yellow
+3ed158c6934e
+# Sector 4-7, key A
+# blue
+839dedbfec0d
+# yellow
+c694a9ed2f9e
+# Sector 15 - see above
+# Sector 0, 16, key B (blue)
+81d55f4551b9
+# Sector 0, key B (yellow)
+6e9a040c3c91
+# Sector 1, key B
+# blue
+5b72c63fb416
+# yellow
+a3cdced46371
+# Sector 2, key B
+# blue
+87a61433d026
+# yellow
+9cd3a81f11ab
+# Sector 3, key B
+# blue
+7070d331360c
+# yellow
+836c790f6e2c
+# Sector 4-7, key B
+# blue
+7fe057787c4f
+# yellow
+ff59c6d13f88
+# Sector 8-14, 17-39, key B
+536f6669614d
+# Sector 15 - see above
+# End of SKGT
