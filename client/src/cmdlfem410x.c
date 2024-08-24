@@ -710,6 +710,11 @@ static int CmdEM410xClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    if (hs && IfPm3Hitag() == false) {
+        PrintAndLogEx(FAILED, "Device not compiled to support Hitag");
+        return PM3_EINVARG;
+    }
+
     // Allowed clock rates: 16, 32, 40 and 64
     if ((clk != 16) && (clk != 32) && (clk != 64) && (clk != 40)) {
         PrintAndLogEx(FAILED, "supported clock rates are " _YELLOW_("16, 32, 40, 64") "  got " _RED_("%d") "\n", clk);
