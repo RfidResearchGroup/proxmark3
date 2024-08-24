@@ -48,7 +48,6 @@ Note that with the Bluetooth adapter, you *have to* use directly the client, and
 
 * [Bluetooth](/doc/bt_manual_v10.md)
 
-
 ## `pm3-flash*` stops and warns about up-to-date firmware images
 ^[Top](#top)
 
@@ -336,6 +335,7 @@ make clean && make -j
 ```
 
 ## wrong permissions on runtime directory /run/user/1000
+^[Top](#top)
 
 If you get the message 
 
