@@ -941,7 +941,7 @@ static void em4x05_print_blocks(em_tech_type_t cardtype, uint8_t *data, uint8_t 
         return;
     }
 
-    uint32_t *d = (uint32_t *)data;
+    uint32_t *d = (void *)data;
 
     uint8_t i;
     for (i = 0; i < (dlen >> 2); i++) {
