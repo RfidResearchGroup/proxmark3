@@ -1360,8 +1360,11 @@ static int selectHitagS(const lf_hitag_data_t *packet, uint8_t *tx, size_t sizeo
                 tx[i] = ((NrAr >> (56 - (i * 8))) & 0xFF);
             }
 
+        } else if (packet->cmd == RHTSF_PLAIN || packet->cmd == WHTSF_PLAIN) {
+            Dbprintf("Error, " _YELLOW_("AUT=1") " This tag is configured in Authentication Mode");
+            return -1;
         } else {
-            Dbprintf("Error , unknown function: " _RED_("%d"), packet->cmd);
+            Dbprintf("Error, unknown function: " _RED_("%d"), packet->cmd);
             return -1;
         }
 
