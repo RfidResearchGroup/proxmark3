@@ -63,7 +63,9 @@ static uint8_t default_aes_keys[][16] = {
     { 0x49, 0x45, 0x4D, 0x4B, 0x41, 0x45, 0x52, 0x42, 0x21, 0x4E, 0x41, 0x43, 0x55, 0x4F, 0x59, 0x46 }, // NFC-key
     { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01 }, // all ones
     { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }, // all FF
-    { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF } // 11 22 33
+    { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF }, // 11 22 33
+    { 0x47, 0x45, 0x4D, 0x58, 0x50, 0x52, 0x45, 0x53, 0x53, 0x4F, 0x53, 0x41, 0x4D, 0x50, 0x4C, 0x45 }, // gemalto
+    { 0x56, 0x4c, 0x67, 0x56, 0x99, 0x69, 0x64, 0x9f, 0x17, 0xC6, 0xC6, 0x16, 0x01, 0x10, 0x4D, 0xCA }  // Virtual Dorma Kaba
 };
 
 static uint8_t default_3des_keys[][16] = {
@@ -73,7 +75,8 @@ static uint8_t default_3des_keys[][16] = {
     { 0x49, 0x45, 0x4D, 0x4B, 0x41, 0x45, 0x52, 0x42, 0x21, 0x4E, 0x41, 0x43, 0x55, 0x4F, 0x59, 0x46 }, // NFC-key
     { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01 }, // all ones
     { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }, // all FF
-    { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF } // 11 22 33
+    { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF }, // 11 22 33
+    { 0x47, 0x45, 0x4D, 0x58, 0x50, 0x52, 0x45, 0x53, 0x53, 0x4F, 0x53, 0x41, 0x4D, 0x50, 0x4C, 0x45 } // gemalto
 };
 
 static uint8_t default_pwd_pack[][4] = {
@@ -2862,12 +2865,13 @@ void mfu_print_dump(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool de
         PrintAndLogEx(INFO, "Tearing %d... %s", i, sprint_hex(card->counter_tearing[i] + 3, 1));
     }
 
-    PrintAndLogEx(INFO, "Max data page... " _YELLOW_("%d") " ( " _YELLOW_("%d") " bytes )", card->pages - 1, card->pages * 4);
+    // 0-bases index,  to get total bytes, its +1 page.
+    // UL-C,
+    //  Max index page is 47.
+    //  total pages is 48
+    //  total bytes is 192
+    PrintAndLogEx(INFO, "Max data page... " _YELLOW_("%d") " ( " _YELLOW_("%d") " bytes )", card->pages, (card->pages + 1) * MFU_BLOCK_SIZE);
     PrintAndLogEx(INFO, "Header size..... %d bytes", MFU_DUMP_PREFIX_LENGTH);
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "-------------------------------------------------------------");
-    PrintAndLogEx(INFO, "block#   | data        |lck| ascii");
-    PrintAndLogEx(INFO, "---------+-------------+---+------");
 
     uint8_t j = 0;
     bool lckbit = false;
@@ -2893,8 +2897,13 @@ void mfu_print_dump(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool de
         for (j = 0; j < 16; j++) {
             bit_dyn[j] = lockbytes_dyn[j / 8] & (1 << (7 - j % 8));
         }
-        PrintAndLogEx(INFO, "DYNAMIC LOCK: %s", sprint_hex(lockbytes_dyn, 3));
+        PrintAndLogEx(INFO, "Dynamic lock.... %s", sprint_hex(lockbytes_dyn, 3));
     }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------------------------------------------------------------");
+    PrintAndLogEx(INFO, "block#   | data        |lck| ascii");
+    PrintAndLogEx(INFO, "---------+-------------+---+------");
 
     bool in_repeated_block = false;
 
@@ -3006,7 +3015,7 @@ void mfu_print_dump(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool de
         uint8_t *blk = data + (i * MFU_BLOCK_SIZE);
         if (dense_output &&
                 (i > 3) &&
-                (i < (pages - 1)) &&
+                (i < pages) &&
                 (in_repeated_block == false) &&
                 (memcmp(blk, blk - MFU_BLOCK_SIZE, MFU_BLOCK_SIZE) == 0) &&
                 (memcmp(blk, blk + MFU_BLOCK_SIZE, MFU_BLOCK_SIZE) == 0) &&
@@ -5233,7 +5242,7 @@ static int CmdHF14AMfuEView(const char *Cmd) {
     if (override_end) {
         ++end ;
     } else {
-        end = dump->pages ;
+        end = dump->pages + 1;
     }
 
     mfu_print_dump(dump, end, 0, dense_output);
@@ -5496,8 +5505,10 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
                   "Wipe card to zeros. It will ignore block0,1,2,3\n"
                   "you will need to call it with password in order to wipe the config and sett default pwd/pack\n"
                   "Abort by pressing a key\n"
-                  "New password... FFFFFFFF\n",
+                  "New password.... FFFFFFFF\n"
+                  "New 3-DES key... 425245414B4D454946594F5543414E21\n",
                   "hf mfu wipe\n"
+                  "hf mfu wipe -k 425245414B4D454946594F5543414E21\n"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -5573,13 +5584,30 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
         memset(data, 0x00, sizeof(data));
 
         // UL_C specific
-        if ((tagtype & MFU_TT_UL_C)) {
-            // Set DES key..  Skipping for now.
+        if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
+            // default config?
+
+            switch (i) {
+                case 4:
+                    memcpy(data, "\x02\x00\x00\x10", 4);
+                    break;
+                case 5:
+                    memcpy(data, "\x00\x06\x01\x10", 4);
+                    break;
+                case 6:
+                    memcpy(data, "\x11\xFF\x00\x00", 4);
+                    break;
+                case 42:
+                    memcpy(data, "\x30\x00\x00\x00", 4);
+                    break;
+                case 44:
+                    goto ulc;
+            }
         }
 
         // UL_AES specific
         if ((tagtype & MFU_TT_UL_AES)) {
-            // Set AES key..  Skipping for now since no access to such card.
+            // default config?
         }
 
         // UL / NTAG with PWD/PACK
@@ -5650,6 +5678,39 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "-----+-----------------------------");
+
+ulc:
+
+    // UL-C - set 3-DES key
+    if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
+
+        uint8_t key[16] = {
+            0x42, 0x52, 0x45, 0x41, 0x4B, 0x4D, 0x45, 0x49,
+            0x46, 0x59, 0x4F, 0x55, 0x43, 0x41, 0x4E, 0x21
+        };
+
+        clearCommandBuffer();
+        SendCommandMIX(CMD_HF_MIFAREUC_SETPWD, 0, 0, 0, key, sizeof(key));
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
+            if ((resp.oldarg[0] & 0xff) == 1) {
+                PrintAndLogEx(INFO, "Ultralight-C new key... " _GREEN_("%s"), sprint_hex_inrow(key, sizeof(key)));
+            } else {
+                PrintAndLogEx(WARNING, "Failed writing at block %u", (uint8_t)(resp.oldarg[1] & 0xFF));
+                return PM3_ESOFT;
+            }
+        } else {
+            PrintAndLogEx(WARNING, "command execute timeout");
+            return PM3_ETIMEOUT;
+        }
+    }
+
+    // UL_AES specific
+    if ((tagtype & MFU_TT_UL_AES)) {
+        // Set AES key
+    }
+
+
     PrintAndLogEx(HINT, "try `" _YELLOW_("hf mfu dump --ns") "` to verify");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Done!");
