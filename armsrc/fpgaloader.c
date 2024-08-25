@@ -221,14 +221,28 @@ static int get_from_fpga_combined_stream(lz4_streamp_t compressed_fpga_stream, u
     return *fpga_image_ptr++;
 }
 
+static int bitstream_version_to_index(FPGA_config bitstream_version) {
+    static int8_t bitstream_index_map[FPGA_BITSTREAM_MAX] = {-1};
+
+    // Initialize
+    if (bitstream_index_map[0] == -1){
+        for (size_t i = 0; i < g_fpga_bitstream_num; i++) {
+            FPGA_VERSION_INFORMATION info = g_fpga_version_information[i];
+            bitstream_index_map[info.target_config] = i;
+        }
+    }
+
+    return bitstream_index_map[bitstream_version];
+}
+
 //----------------------------------------------------------------------------
 // Undo the interleaving of several FPGA config files. FPGA config files
 // are combined into one big file:
 // 288 bytes from FPGA file 1, followed by 288 bytes from FGPA file 2, etc.
 //----------------------------------------------------------------------------
 static int get_from_fpga_stream(int bitstream_version, lz4_streamp_t compressed_fpga_stream, uint8_t *output_buffer) {
-    while ((uncompressed_bytes_cnt / FPGA_INTERLEAVE_SIZE) % g_fpga_bitstream_num != (bitstream_version - 1)) {
-        // skip undesired data belonging to other bitstream_versions
+    int bitstream_index =  bitstream_version_to_index(bitstream_version);
+    while ((uncompressed_bytes_cnt / FPGA_INTERLEAVE_SIZE) % g_fpga_bitstream_num != bitstream_index) {
         get_from_fpga_combined_stream(compressed_fpga_stream, output_buffer);
     }
 
@@ -603,7 +617,7 @@ void SetAdcMuxFor(uint32_t whichGpio) {
 
 void Fpga_print_status(void) {
     DbpString(_CYAN_("Current FPGA image"));
-    Dbprintf("  mode....................%s", g_fpga_version_information[downloaded_bitstream - 1]);
+    Dbprintf("  mode.................... %s", g_fpga_version_information[downloaded_bitstream - 1]);
 }
 
 int FpgaGetCurrent(void) {

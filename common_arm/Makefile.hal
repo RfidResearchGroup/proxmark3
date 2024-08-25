@@ -97,31 +97,58 @@ PLTNAME = Unknown Platform
 PLATFORM_FPGA = fpga-undefined
 
 ifeq ($(PLATFORM),PM3RDV4)
-    # FPGA bitstream files, the order matters!
-    FPGA_BITSTREAMS = fpga_pm3_lf.bit fpga_pm3_hf.bit fpga_pm3_felica.bit fpga_pm3_hf_15.bit
+    # FPGA bitstream files, the order doesn't matter anymore
+    FPGA_BITSTREAMS = fpga_pm3_hf.bit
+    ifneq ($(SKIP_LF),1)
+        FPGA_BITSTREAMS += fpga_pm3_lf.bit
+    endif
+    ifneq ($(SKIP_FELICA),1)
+        FPGA_BITSTREAMS += fpga_pm3_felica.bit
+    endif
+    ifneq ($(SKIP_ISO15693),1)
+        FPGA_BITSTREAMS += fpga_pm3_hf_15.bit
+    endif
     PLATFORM_DEFS = -DWITH_SMARTCARD -DWITH_FLASH -DRDV4
     PLTNAME = Proxmark3 RDV4
     PLATFORM_FPGA = xc2s30
     RDV4 = yes
 else ifeq ($(PLATFORM),PM3OTHER)
     $(warning PLATFORM=PM3OTHER is deprecated, please use PLATFORM=PM3GENERIC)
-    # FPGA bitstream files, the order matters!
-    FPGA_BITSTREAMS = fpga_pm3_lf.bit fpga_pm3_hf.bit fpga_pm3_felica.bit fpga_pm3_hf_15.bit
+    # FPGA bitstream files, the order doesn't matter anymore
+    FPGA_BITSTREAMS = fpga_pm3_hf.bit
+    ifneq ($(SKIP_LF),1)
+        FPGA_BITSTREAMS += fpga_pm3_lf.bit
+    endif
+    ifneq ($(SKIP_FELICA),1)
+        FPGA_BITSTREAMS += fpga_pm3_felica.bit
+    endif
+    ifneq ($(SKIP_ISO15693),1)
+        FPGA_BITSTREAMS += fpga_pm3_hf_15.bit
+    endif
     PLTNAME = Proxmark3 generic target
     PLATFORM_FPGA = xc2s30
     ifeq ($(LED_ORDER),PM3EASY)
         PLATFORM_DEFS = -DLED_ORDER_PM3EASY
     endif
 else ifeq ($(PLATFORM),PM3GENERIC)
-    # FPGA bitstream files, the order matters!
-    FPGA_BITSTREAMS = fpga_pm3_lf.bit fpga_pm3_hf.bit fpga_pm3_felica.bit fpga_pm3_hf_15.bit
+    # FPGA bitstream files, the order doesn't matter anymore
+    FPGA_BITSTREAMS = fpga_pm3_hf.bit
+    ifneq ($(SKIP_LF),1)
+        FPGA_BITSTREAMS += fpga_pm3_lf.bit
+    endif
+    ifneq ($(SKIP_FELICA),1)
+        FPGA_BITSTREAMS += fpga_pm3_felica.bit
+    endif
+    ifneq ($(SKIP_ISO15693),1)
+        FPGA_BITSTREAMS += fpga_pm3_hf_15.bit
+    endif
     PLTNAME = Proxmark3 generic target
     PLATFORM_FPGA = xc2s30
     ifeq ($(LED_ORDER),PM3EASY)
         PLATFORM_DEFS = -DLED_ORDER_PM3EASY
     endif
 else ifeq ($(PLATFORM),PM3ICOPYX)
-    # FPGA bitstream files, the order matters - only hf has a bitstream, the other 3 files are 0 bytes
+    # FPGA bitstream files, the order doesn't matter anymore - only hf has a bitstream, the other 3 files are 0 bytes
     FPGA_BITSTREAMS = fpga_icopyx_lf.bit fpga_icopyx_hf.bit fpga_icopyx_felica.bit fpga_icopyx_hf_15.bit
     PLATFORM_DEFS = -DWITH_FLASH -DICOPYX -DXC3
     PLTNAME = iCopy-X with XC3S100E

@@ -43,8 +43,14 @@ typedef enum
     FPGA_BITSTREAM_MAX = FPGA_BITSTREAM_HF_15,
 } FPGA_config;
 
+typedef struct
+{
+    const char *const versionString;
+    const FPGA_config target_config;
+} FPGA_VERSION_INFORMATION;
+
 static const uint8_t bitparse_fixed_header[] = {0x00, 0x09, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0xf0, 0x00, 0x00, 0x01};
 extern const int g_fpga_bitstream_num;
-extern const char *const g_fpga_version_information[];
+extern const FPGA_VERSION_INFORMATION g_fpga_version_information[];
 
 #endif
