@@ -4653,7 +4653,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
 
     char format[16] = {0};
     int format_len = 0;
-    
+
     CLIParamStrToBuf(arg_get_str(ctx, 10), (uint8_t *)format, sizeof(format), &format_len);
 
     bool shallow_mod = arg_get_lit(ctx, 12);

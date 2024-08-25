@@ -2344,9 +2344,12 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
             continue;
         }
 
-        uint64_t key = strtoull(line, NULL, 16);
-
-        num_to_bytes(key, keylen >> 1, (uint8_t *)*pdata + (*keycnt * (keylen >> 1)));
+        if (hex_to_bytes(
+                    line,
+                    (uint8_t *)*pdata + (*keycnt * (keylen >> 1)),
+                    keylen >> 1) != (keylen >> 1)) {
+            continue;
+        }
 
         (*keycnt)++;
 

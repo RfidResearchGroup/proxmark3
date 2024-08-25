@@ -767,9 +767,14 @@ static int CmdEM410xClone(const char *Cmd) {
                     // 64  -> 0x20      2 kBit/s
                     packet.data[1] = 0x04;
                     switch (clk) {
-                        case 32: break;
-                        case 16: packet.data[1] |= 0x10; break;
-                        case 64: packet.data[1] |= 0x20; break;
+                        case 32:
+                            break;
+                        case 16:
+                            packet.data[1] |= 0x10;
+                            break;
+                        case 64:
+                            packet.data[1] |= 0x20;
+                            break;
                     }
                     packet.data[2] = 0;
                     packet.data[3] = 0; //TODO: keep PWDH0?

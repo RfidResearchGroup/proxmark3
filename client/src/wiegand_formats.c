@@ -24,7 +24,7 @@ static bool Pack_Defcon32(wiegand_card_t *card, wiegand_message_t *packed, bool 
     memset(packed, 0, sizeof(wiegand_message_t));
     if (card->FacilityCode > 0x00FFFF) return false; // Can't encode FC.
     if (card->CardNumber > 0x0fffff) return false; // Can't encode CN.
-    if (card->IssueLevel > 0x00000F) return false; // Can't encode Issue 
+    if (card->IssueLevel > 0x00000F) return false; // Can't encode Issue
     if (card->OEM > 0) return false; // Not used in this format
 
     packed->Length = 42;
@@ -35,11 +35,11 @@ static bool Pack_Defcon32(wiegand_card_t *card, wiegand_message_t *packed, bool 
         |Mid part|   | Bot part of the packed data  |
         PFFFFFFFFF   FFFFFFFIIIICCCCCCCCCCCCCCCCCCCCP
         1111111111   11111111111000000000000000001000
-FC       111111111   1111111 =                         FF FF
-//FC Mid   111111111   0000000 =                         FF 80  These where used to split data between bot/mid
-//FC Bot   000000000   1111111 =                         00 7F
-Issuance                    1111 =                     0F
-Card Number                     11111111111111111111 = 0FFFFF
+    FC       111111111   1111111 =                         FF FF
+    //FC Mid   111111111   0000000 =                         FF 80  These where used to split data between bot/mid
+    //FC Bot   000000000   1111111 =                         00 7F
+    Issuance                    1111 =                     0F
+    Card Number                     11111111111111111111 = 0FFFFF
 
     */
 
@@ -51,14 +51,14 @@ Card Number                     11111111111111111111 = 0FFFFF
     // Parity calc
     //0123456789|0123456789|0123456789|0123456789|01
     //E E E E E |E E E E E |EO O O O O| O O O O O| O
-    set_bit_by_position(packed, 
-    evenparity32(
-        get_nonlinear_field(packed, 10, (uint8_t[]) {2, 4, 6, 8, 10, 12, 14, 16, 18, 20}))
+    set_bit_by_position(packed,
+                        evenparity32(
+    get_nonlinear_field(packed, 10, (uint8_t[]) {2, 4, 6, 8, 10, 12, 14, 16, 18, 20}))
     , 0);
 
-    set_bit_by_position(packed, 
-    oddparity32(
-        get_nonlinear_field(packed, 10, (uint8_t[]) {21, 23, 25, 27, 29, 31, 33, 35, 37, 39}))
+    set_bit_by_position(packed,
+                        oddparity32(
+    get_nonlinear_field(packed, 10, (uint8_t[]) {21, 23, 25, 27, 29, 31, 33, 35, 37, 39}))
     , 41);
     if (preamble)
         return add_HID_header(packed);
@@ -73,12 +73,12 @@ static bool Unpack_Defcon32(wiegand_message_t *packed, wiegand_card_t *card) {
     card->FacilityCode = get_linear_field(packed, 1, 16);
     card->IssueLevel = get_linear_field(packed, 17, 4);
     card->CardNumber = get_linear_field(packed, 21, 20);
-    
-    card->ParityValid = 
+
+    card->ParityValid =
         (get_bit_by_position(packed, 41) == oddparity32(
-        get_nonlinear_field(packed, 10, (uint8_t[]) {21, 23, 25, 27, 29, 31, 33, 35, 37, 39})))&& 
-        (get_bit_by_position(packed, 0) == 
-        evenparity32(get_nonlinear_field(packed, 10, (uint8_t[]) {2, 4, 6, 8, 10, 12, 14, 16, 18, 20})));
+    get_nonlinear_field(packed, 10, (uint8_t[]) {21, 23, 25, 27, 29, 31, 33, 35, 37, 39}))) &&
+    (get_bit_by_position(packed, 0) ==
+    evenparity32(get_nonlinear_field(packed, 10, (uint8_t[]) {2, 4, 6, 8, 10, 12, 14, 16, 18, 20})));
     return true;
 }
 

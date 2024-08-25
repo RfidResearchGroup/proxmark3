@@ -3289,7 +3289,9 @@
             "notes": [
                 "hf iclass encode --bin 10001111100000001010100011 --ki 0 -> FC 31 CN 337 (H10301)",
                 "hf iclass encode -w H10301 --fc 31 --cn 337 --ki 0 -> FC 31 CN 337 (H10301)",
-                "hf iclass encode --bin 10001111100000001010100011 --ki 0 --elite -> FC 31 CN 337 (H10301), writing w elite key"
+                "hf iclass encode --bin 10001111100000001010100011 --ki 0 --elite -> FC 31 CN 337 (H10301), writing w elite key",
+                "hf iclass encode -w H10301 --fc 31 --cn 337 --emu -> Writes the ecoded data to emulator memory",
+                "When using emulator you have to first load a credential into emulator memory"
             ],
             "offline": true,
             "options": [
@@ -3302,11 +3304,13 @@
                 "--enckey <hex> 3DES transport key, 16 hex bytes",
                 "--fc <dec> facility code",
                 "--cn <dec> card number",
+                "--issue <dec> issue level",
                 "-w, --wiegand <format> see `wiegand list` for available formats",
+                "--emu Write to emulation memory instead of card",
                 "--shallow use shallow (ASK) reader modulation instead of OOK",
                 "-v verbose (print encoded blocks)"
             ],
-            "usage": "hf iclass encode [-hv] [--bin <bin>] --ki <dec> [--credit] [--elite] [--raw] [--enckey <hex>] [--fc <dec>] [--cn <dec>] [-w <format>] [--shallow]"
+            "usage": "hf iclass encode [-hv] [--bin <bin>] [--ki <dec>] [--credit] [--elite] [--raw] [--enckey <hex>] [--fc <dec>] [--cn <dec>] [--issue <dec>] [-w <format>] [--emu] [--shallow]"
         },
         "hf iclass encrypt": {
             "command": "hf iclass encrypt",
@@ -3735,7 +3739,7 @@
             "command": "hf jooki encode",
             "description": "Encode a Jooki token to base64 NDEF URI format",
             "notes": [
-                "hf jooki encode -t -> selftest",
+                "hf jooki encode --test -> self tests",
                 "hf jooki encode -r --dragon -> read uid from tag and use for encoding",
                 "hf jooki encode --uid 04010203040506 --dragon",
                 "hf jooki encode --uid 04010203040506 --tid 1 --fid 1"
@@ -3745,7 +3749,7 @@
                 "-h, --help This help",
                 "-u, --uid <hex> uid bytes",
                 "-r read uid from tag instead",
-                "-t self test",
+                "--test self test",
                 "-v, --verbose verbose output",
                 "--dragon figurine type",
                 "--fox figurine type",
@@ -3763,7 +3767,7 @@
                 "--tid <dec> figurine type id",
                 "--fid <dec> figurine id"
             ],
-            "usage": "hf jooki encode [-hrtv] [-u <hex>] [--dragon] [--fox] [--ghost] [--knight] [--whale] [--blackdragon] [--blackfox] [--blackknight] [--blackwhale] [--whitedragon] [--whitefox] [--whiteknight] [--whitewhale] [--tid <dec>] [--fid <dec>]"
+            "usage": "hf jooki encode [-hrv] [-u <hex>] [--test] [--dragon] [--fox] [--ghost] [--knight] [--whale] [--blackdragon] [--blackfox] [--blackknight] [--blackwhale] [--whitedragon] [--whitefox] [--whiteknight] [--whitewhale] [--tid <dec>] [--fid <dec>]"
         },
         "hf jooki help": {
             "command": "hf jooki help",
@@ -4253,6 +4257,7 @@
                 "--1k MIFARE Classic 1k / S50 (default)",
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
+                "--ns No save",
                 "--in None (use CPU regular instruction set)",
                 "--im MMX",
                 "--is SSE2",
@@ -4260,7 +4265,7 @@
                 "--i2 AVX2",
                 "--i5 AVX512"
             ],
-            "usage": "hf mf autopwn [-hablv] [-k <hex>]... [-s <dec>] [-f <fn>] [--slow] [--mini] [--1k] [--2k] [--4k] [--in] [--im] [--is] [--ia] [--i2] [--i5]"
+            "usage": "hf mf autopwn [-hablv] [-k <hex>]... [-s <dec>] [-f <fn>] [--slow] [--mini] [--1k] [--2k] [--4k] [--ns] [--in] [--im] [--is] [--ia] [--i2] [--i5]"
         },
         "hf mf brute": {
             "command": "hf mf brute",
@@ -7032,7 +7037,7 @@
         },
         "hf mfu keygen": {
             "command": "hf mfu keygen",
-            "description": "Set the DES/3DES/AES key on MIFARE Ultralight-C tag.",
+            "description": "Calculate MFC keys based",
             "notes": [
                 "hf mfu keygen -r",
                 "hf mfu keygen --uid 11223344556677"
@@ -7091,17 +7096,17 @@
             "description": "Generate different passwords from known pwdgen algos",
             "notes": [
                 "hf mfu pwdgen -r",
-                "hf mfu pwdgen -t",
-                "hf mfu pwdgen --uid 11223344556677"
+                "hf mfu pwdgen --uid 11223344556677",
+                "hf mfu pwdgen --test"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "-u, --uid <hex> UID (7 hex bytes)",
                 "-r Read UID from tag",
-                "-t Selftest"
+                "--test self test"
             ],
-            "usage": "hf mfu pwdgen [-hrt] [-u <hex>]"
+            "usage": "hf mfu pwdgen [-hr] [-u <hex>] [--test]"
         },
         "hf mfu rdbl": {
             "command": "hf mfu rdbl",
@@ -7223,9 +7228,10 @@
         },
         "hf mfu wipe": {
             "command": "hf mfu wipe",
-            "description": "Wipe card to zeros. It will ignore block0,1,2,3 you will need to call it with password in order to wipe the config and sett default pwd/pack Abort by pressing a key New password... FFFFFFFF",
+            "description": "Wipe card to zeros. It will ignore block0,1,2,3 you will need to call it with password in order to wipe the config and sett default pwd/pack Abort by pressing a key New password.... FFFFFFFF New 3-DES key... 425245414B4D454946594F5543414E21",
             "notes": [
-                "hf mfu wipe"
+                "hf mfu wipe",
+                "hf mfu wipe -k 425245414B4D454946594F5543414E21"
             ],
             "offline": false,
             "options": [
@@ -8416,10 +8422,11 @@
             "command": "lf cmdread",
             "description": "Modulate LF reader field to send command before read. All periods in microseconds. - use `lf config` to set parameters",
             "notes": [
-                "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00110 -> probing for Hitag1/S",
-                "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000 -> probing for Hitag2",
-                "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000 -s 2000 -@ -> probing for Hitag2, oscilloscope style",
-                "lf cmdread -d 48 -z 112 -o 176 -e W3000 -e S240 -e E336 -c W0S00000010000E -> probing for Hitag (us)"
+                "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00110 -> probing for Hitag 1/S",
+                "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000 -> probing for Hitag 2/S",
+                "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11010 -> probing for Hitag S",
+                "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000 -s 2000 -@ -> probing for Hitag 2/S, oscilloscope style",
+                "lf cmdread -d 48 -z 112 -o 176 -e W3000 -e S240 -e E336 -c W0S00000010000E -> probing for Hitag \u00b5(micro)"
             ],
             "offline": false,
             "options": [
@@ -8540,11 +8547,12 @@
         },
         "lf em 410x clone": {
             "command": "lf em 410x clone",
-            "description": "clone a EM410x ID to a T55x7, Q5/T5555 or EM4305/4469 tag.",
+            "description": "clone a EM410x ID to a T55x7, Q5/T5555, EM4305/4469 or Hitag S/8211 tag.",
             "notes": [
                 "lf em 410x clone --id 0F0368568B -> encode for T55x7 tag",
                 "lf em 410x clone --id 0F0368568B --q5 -> encode for Q5/T5555 tag",
-                "lf em 410x clone --id 0F0368568B --em -> encode for EM4305/4469"
+                "lf em 410x clone --id 0F0368568B --em -> encode for EM4305/4469",
+                "lf em 410x clone --id 0F0368568B --hs -> encode for Hitag S/8211"
             ],
             "offline": false,
             "options": [
@@ -8553,9 +8561,10 @@
                 "--id <hex> EM Tag ID number (5 hex bytes)",
                 "--q5 optional - specify writing to Q5/T5555 tag",
                 "--em optional - specify writing to EM4305/4469 tag",
+                "--hs optional - specify writing to Hitag S/8211 tag",
                 "--electra optional - add Electra blocks to tag"
             ],
-            "usage": "lf em 410x clone [-h] [--clk <dec>] --id <hex> [--q5] [--em] [--electra]"
+            "usage": "lf em 410x clone [-h] [--clk <dec>] --id <hex> [--q5] [--em] [--hs] [--electra]"
         },
         "lf em 410x reader": {
             "command": "lf em 410x reader",
@@ -9607,7 +9616,7 @@
         },
         "lf hitag crack2": {
             "command": "lf hitag crack2",
-            "description": "This command tries to recover 2048 bits of Hitag2 crypto stream data.",
+            "description": "This command tries to recover 2048 bits of Hitag 2 crypto stream data.",
             "notes": [
                 "lf hitag crack2 --nrar 73AA5A62EAB8529C"
             ],
@@ -9693,7 +9702,7 @@
         },
         "lf hitag info": {
             "command": "lf hitag info",
-            "description": "Hitag2 tag information",
+            "description": "Hitag 2 tag information",
             "notes": [
                 "lf hitag info"
             ],
@@ -9705,7 +9714,7 @@
         },
         "lf hitag lookup": {
             "command": "lf hitag lookup",
-            "description": "This command take sniffed trace data and try to recovery a Hitag2 crypto key. You can either - verify that NR/AR matches a known crypto key - verify if NR/AR matches a known 6 byte crypto key in a dictionary",
+            "description": "This command take sniffed trace data and try to recovery a Hitag 2 crypto key. You can either - verify that NR/AR matches a known crypto key - verify if NR/AR matches a known 6 byte crypto key in a dictionary",
             "notes": [
                 "lf hitag lookup --uid 11223344 --nr 73AA5A62 --ar EAB8529C -k 010203040506 -> check key",
                 "lf hitag lookup --uid 11223344 --nr 73AA5A62 --ar EAB8529C -> use def dictionary",
@@ -9726,12 +9735,12 @@
         },
         "lf hitag read": {
             "command": "lf hitag read",
-            "description": "Read Hitag memory. It support HitagS and Hitag 2 Password mode: - default key 4D494B52 (MIKR) Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR)",
+            "description": "Read Hitag memory. It support Hitag S and Hitag 2 Password mode: - default key 4D494B52 (MIKR) Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR)",
             "notes": [
-                "lf hitag read --hts -> HitagS, plain mode",
-                "lf hitag read --hts --nrar 0102030411223344 -> HitagS, challenge mode",
-                "lf hitag read --hts --crypto -> HitagS, crypto mode, def key",
-                "lf hitag read --hts -k 4F4E4D494B52 -> HitagS, crypto mode",
+                "lf hitag read --hts -> Hitag S, plain mode",
+                "lf hitag read --hts --nrar 0102030411223344 -> Hitag S, challenge mode",
+                "lf hitag read --hts --crypto -> Hitag S, crypto mode, def key",
+                "lf hitag read --hts -k 4F4E4D494B52 -> Hitag S, crypto mode",
                 "",
                 "lf hitag read --ht2 --pwd -> Hitag 2, pwd mode, def key",
                 "lf hitag read --ht2 -k 4D494B52 -> Hitag 2, pwd mode",
@@ -9753,7 +9762,7 @@
         },
         "lf hitag reader": {
             "command": "lf hitag reader",
-            "description": "Act as a Hitag2 reader. Look for Hitag2 tags until Enter or the pm3 button is pressed",
+            "description": "Act as a Hitag 2 reader. Look for Hitag 2 tags until Enter or the pm3 button is pressed",
             "notes": [
                 "lf hitag reader",
                 "lf hitag reader -@ -> Continuous mode"
@@ -12813,6 +12822,6 @@
     "metadata": {
         "commands_extracted": 740,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-08-14T11:49:06"
+        "extracted_on": "2024-08-25T12:04:45"
     }
 }
