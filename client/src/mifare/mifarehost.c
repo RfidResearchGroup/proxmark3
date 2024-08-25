@@ -1507,6 +1507,10 @@ uint16_t detect_mf_magic(bool is_mfc, uint8_t key_type, uint64_t key) {
         isMagic = MemLeToUint2byte(resp.data.asBytes);
     }
 
+    if (isMagic) {
+        PrintAndLogEx(NORMAL, "");
+    }
+
     if ((isMagic & MAGIC_FLAG_GEN_1A) == MAGIC_FLAG_GEN_1A) {
         PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 1a"));
     }

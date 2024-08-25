@@ -419,30 +419,38 @@ static int CmdHf14AConfig(const char *Cmd) {
     return hf14a_setconfig(&config, verbose);
 }
 
-static void PrintUidType(iso14a_card_select_t *card) {
+static const char* get_uid_type(iso14a_card_select_t *card) {
+
+    static char s[60] = {0};
+    memset(s, 0, sizeof(s));
+
     switch (card->uidlen) {
-        case 4:
+        case 4: {
             if (card->uid[0] == 0x08) {
-                PrintAndLogEx(SUCCESS, " UID type: " _GREEN_("RID") " (random ID)");
+                sprintf(s, " ( RID - random ID )");
             } else if ((card->uid[0] & 0xF) == 0xF) {
-                PrintAndLogEx(SUCCESS, " UID type: " _GREEN_("FNUID") " (fixed but non-unique ID)");
+                sprintf(s, " ( FNUID, fixed, non-unique ID )");
             } else if (card->uid[0] == 0x88) {
-                PrintAndLogEx(WARNING, " UID type: " _YELLOW_("Cascade tag") " (not final UID)");
+                sprintf(s, " ( Cascade tag - not final )");
             } else if (card->uid[0] == 0xF8) {
-                PrintAndLogEx(WARNING, " UID type: " _YELLOW_("RFU"));
+                sprintf(s, " ( RFU )");
             } else {
-                PrintAndLogEx(SUCCESS, " UID type: " _GREEN_("ONUID") " (re-used UID)");
+                sprintf(s, " ( ONUID, re-used )");
             }
             break;
-        case 7:
-            PrintAndLogEx(SUCCESS, " UID type: " _GREEN_("Double Size UID"));
+        }
+        case 7:  {
+            sprintf(s, " ( double )");
             break;
-        case 10:
-            PrintAndLogEx(SUCCESS, " UID type: " _GREEN_("Triple Size UID"));
+        }
+        case 10: {
+            sprintf(s, " ( triple )");
             break;
+        }
         default:
-            PrintAndLogEx(ERR, " UID type: " _RED_("wrong UID length"));
+            break;
     }
+    return s;
 }
 
 int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
@@ -476,7 +484,6 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
     }
 
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card->uid, card->uidlen));
-    PrintUidType(card);
     PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card->atqa[1], card->atqa[0]);
     PrintAndLogEx(SUCCESS, " SAK: %02X [%" PRIu64 "]", card->sak, resp.oldarg[0]);
 
@@ -643,7 +650,6 @@ static int CmdHF14AReader(const char *Cmd) {
             PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
 
             if (!(silent && continuous)) {
-                PrintUidType(&card);
                 PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
                 PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
 
@@ -2081,8 +2087,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(INFO, "--- " _CYAN_("ISO14443-a Information") "---------------------");
     }
 
-    PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
-    PrintUidType(&card);
+    PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s") " %s", sprint_hex(card.uid, card.uidlen), get_uid_type(&card));
     PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
     PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
 
@@ -2272,211 +2277,217 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             PrintAndLogEx(INFO, "--> SAK incorrectly claims that card doesn't support RATS <--");
         }
 
+        bool bad_ats = false;
         if (card.ats[0] != card.ats_len - 2) {
             PrintAndLogEx(WARNING, _RED_("ATS may be corrupted."));
             PrintAndLogEx(INFO, "Length of ATS (%d bytes incl. 2 Bytes CRC) doesn't match TL", card.ats_len);
+            bad_ats = true;
         }
 
         PrintAndLogEx(SUCCESS, "ATS: " _YELLOW_("%s")"[ %02X %02X ]", sprint_hex(card.ats, card.ats_len - 2), card.ats[card.ats_len - 2], card.ats[card.ats_len - 1]);
         PrintAndLogEx(INFO, "     " _YELLOW_("%02X") "...............  TL    length is " _GREEN_("%d") " bytes", card.ats[0], card.ats[0]);
 
-        if ((card.ats[0] > 1) && (card.ats_len > 3)) { // there is a format byte (T0)
-            ta1 = (card.ats[1] & 0x10) == 0x10;
-            tb1 = (card.ats[1] & 0x20) == 0x20;
-            tc1 = (card.ats[1] & 0x40) == 0x40;
-            int16_t fsci = card.ats[1] & 0x0f;
+        if (bad_ats == false) {
 
-            PrintAndLogEx(INFO, "        " _YELLOW_("%02X") "............  T0    TA1 is%s present, TB1 is%s present, "
-                          "TC1 is%s present, FSCI is %d (FSC = %d)",
-                          card.ats[1],
-                          (ta1 ? "" : _RED_(" NOT")),
-                          (tb1 ? "" : _RED_(" NOT")),
-                          (tc1 ? "" : _RED_(" NOT")),
-                          fsci,
-                          fsci < ARRAYLEN(atsFSC) ? atsFSC[fsci] : -1
-                         );
-        }
-        int pos = 2;
-        if (ta1 && (card.ats_len > pos + 2)) {
-            char dr[16], ds[16];
-            dr[0] = ds[0] = '\0';
-            if (card.ats[pos] & 0x10) strcat(ds, "2, ");
-            if (card.ats[pos] & 0x20) strcat(ds, "4, ");
-            if (card.ats[pos] & 0x40) strcat(ds, "8, ");
-            if (card.ats[pos] & 0x01) strcat(dr, "2, ");
-            if (card.ats[pos] & 0x02) strcat(dr, "4, ");
-            if (card.ats[pos] & 0x04) strcat(dr, "8, ");
-            if (strlen(ds) != 0) ds[strlen(ds) - 2] = '\0';
-            if (strlen(dr) != 0) dr[strlen(dr) - 2] = '\0';
-            PrintAndLogEx(INFO, "           " _YELLOW_("%02X") ".........  TA1   different divisors are%s supported, "
-                          "DR: [%s], DS: [%s]",
-                          card.ats[pos],
-                          ((card.ats[pos] & 0x80) ? _RED_(" NOT") : ""),
-                          dr,
-                          ds
-                         );
+            if ((card.ats[0] > 1) && (card.ats_len > 3)) { // there is a format byte (T0)
+                ta1 = (card.ats[1] & 0x10) == 0x10;
+                tb1 = (card.ats[1] & 0x20) == 0x20;
+                tc1 = (card.ats[1] & 0x40) == 0x40;
+                int16_t fsci = card.ats[1] & 0x0f;
 
-            pos++;
-        }
+                PrintAndLogEx(INFO, "        " _YELLOW_("%02X") "............  T0    TA1 is%s present, TB1 is%s present, "
+                            "TC1 is%s present, FSCI is %d (FSC = %d)",
+                            card.ats[1],
+                            (ta1 ? "" : _RED_(" NOT")),
+                            (tb1 ? "" : _RED_(" NOT")),
+                            (tc1 ? "" : _RED_(" NOT")),
+                            fsci,
+                            fsci < ARRAYLEN(atsFSC) ? atsFSC[fsci] : -1
+                            );
+            }
+            int pos = 2;
+            if (ta1 && (card.ats_len > pos + 2)) {
+                char dr[16], ds[16];
+                dr[0] = ds[0] = '\0';
+                if (card.ats[pos] & 0x10) strcat(ds, "2, ");
+                if (card.ats[pos] & 0x20) strcat(ds, "4, ");
+                if (card.ats[pos] & 0x40) strcat(ds, "8, ");
+                if (card.ats[pos] & 0x01) strcat(dr, "2, ");
+                if (card.ats[pos] & 0x02) strcat(dr, "4, ");
+                if (card.ats[pos] & 0x04) strcat(dr, "8, ");
+                if (strlen(ds) != 0) ds[strlen(ds) - 2] = '\0';
+                if (strlen(dr) != 0) dr[strlen(dr) - 2] = '\0';
+                PrintAndLogEx(INFO, "           " _YELLOW_("%02X") ".........  TA1   different divisors are%s supported, "
+                            "DR: [%s], DS: [%s]",
+                            card.ats[pos],
+                            ((card.ats[pos] & 0x80) ? _RED_(" NOT") : ""),
+                            dr,
+                            ds
+                            );
 
-        if (tb1 && (card.ats_len > pos + 2)) {
-            uint32_t sfgi = card.ats[pos] & 0x0F;
-            uint32_t fwi = card.ats[pos] >> 4;
+                pos++;
+            }
 
-            PrintAndLogEx(INFO, "              " _YELLOW_("%02X") "......  TB1   SFGI = %d (SFGT = %s%d/fc), FWI = " _YELLOW_("%d") " (FWT = %d/fc)",
-                          card.ats[pos],
-                          (sfgi),
-                          sfgi ? "" : "(not needed) ",
-                          sfgi ? (1 << 12) << sfgi : 0,
-                          fwi,
-                          (1 << 12) << fwi
-                         );
-            pos++;
-        }
+            if (tb1 && (card.ats_len > pos + 2)) {
+                uint32_t sfgi = card.ats[pos] & 0x0F;
+                uint32_t fwi = card.ats[pos] >> 4;
 
-        if (tc1 && (card.ats_len > pos + 2)) {
-            PrintAndLogEx(INFO, "                 " _YELLOW_("%02X") "...  TC1   NAD is%s supported, CID is%s supported",
-                          card.ats[pos],
-                          (card.ats[pos] & 0x01) ? "" : _RED_(" NOT"),
-                          (card.ats[pos] & 0x02) ? "" : _RED_(" NOT")
-                         );
-            pos++;
-        }
+                PrintAndLogEx(INFO, "              " _YELLOW_("%02X") "......  TB1   SFGI = %d (SFGT = %s%d/fc), FWI = " _YELLOW_("%d") " (FWT = %d/fc)",
+                            card.ats[pos],
+                            (sfgi),
+                            sfgi ? "" : "(not needed) ",
+                            sfgi ? (1 << 12) << sfgi : 0,
+                            fwi,
+                            (1 << 12) << fwi
+                            );
+                pos++;
+            }
 
-        // ATS - Historial bytes and identify based on it
-        if ((card.ats[0] > pos) && (card.ats_len >= card.ats[0] + 2)) {
-            char tip[60];
-            tip[0] = '\0';
-            if (card.ats[0] - pos >= 7) {
+            if (tc1 && (card.ats_len > pos + 2)) {
+                PrintAndLogEx(INFO, "                 " _YELLOW_("%02X") "...  TC1   NAD is%s supported, CID is%s supported",
+                            card.ats[pos],
+                            (card.ats[pos] & 0x01) ? "" : _RED_(" NOT"),
+                            (card.ats[pos] & 0x02) ? "" : _RED_(" NOT")
+                            );
+                pos++;
+            }
 
-                snprintf(tip, sizeof(tip), "     ");
+            // ATS - Historial bytes and identify based on it
+            if ((card.ats[0] > pos) && (card.ats_len >= card.ats[0] + 2)) {
+                char tip[60];
+                tip[0] = '\0';
+                if (card.ats[0] - pos >= 7) {
 
-                if ((card.sak & 0x70) == 0x40) {  // and no GetVersion()..
+                    snprintf(tip, sizeof(tip), "     ");
 
-                    if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
-                        snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus X 2K/4K (SL3)");
-
-                    } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
-
-                        if ((card.atqa[0] & 0x02) == 0x02) {
-                            snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus S 2K (SL3)");
-                        } else if ((card.atqa[0] & 0x04) == 0x04) {
-                            snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus S 4K (SL3)");
-                        }
-
-                    } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x00\xF6\xD1", 7) == 0) {
-                        snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus SE 1K (17pF)");
-
-                    } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x10\xF6\xD1", 7) == 0) {
-                        snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus SE 1K (70pF)");
-                    }
-
-                } else {  //SAK B4,5,6
-
-                    if ((card.sak & 0x20) == 0x20) {  // and no GetVersion()..
+                    if ((card.sak & 0x70) == 0x40) {  // and no GetVersion()..
 
                         if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
-                            snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus X 2K (SL1)");
+                            snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus X 2K/4K (SL3)");
+
                         } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
-                            snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus S 2K (SL1)");
+
+                            if ((card.atqa[0] & 0x02) == 0x02) {
+                                snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus S 2K (SL3)");
+                            } else if ((card.atqa[0] & 0x04) == 0x04) {
+                                snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus S 4K (SL3)");
+                            }
+
                         } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x00\xF6\xD1", 7) == 0) {
                             snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus SE 1K (17pF)");
+
                         } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x10\xF6\xD1", 7) == 0) {
                             snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus SE 1K (70pF)");
                         }
-                    } else {
-                        if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
-                            snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus X 4K (SL1)");
-                        } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
-                            snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus S 4K (SL1)");
+
+                    } else {  //SAK B4,5,6
+
+                        if ((card.sak & 0x20) == 0x20) {  // and no GetVersion()..
+
+                            if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
+                                snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus X 2K (SL1)");
+                            } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
+                                snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus S 2K (SL1)");
+                            } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x00\xF6\xD1", 7) == 0) {
+                                snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus SE 1K (17pF)");
+                            } else if (memcmp(card.ats + pos, "\xC1\x05\x21\x30\x10\xF6\xD1", 7) == 0) {
+                                snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus SE 1K (70pF)");
+                            }
+                        } else {
+                            if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x01\xBC\xD6", 7) == 0) {
+                                snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus X 4K (SL1)");
+                            } else if (memcmp(card.ats + pos, "\xC1\x05\x2F\x2F\x00\x35\xC7", 7) == 0) {
+                                snprintf(tip + strlen(tip), sizeof(tip) - strlen(tip), _GREEN_("%s"), "MIFARE Plus S 4K (SL1)");
+                            }
                         }
                     }
                 }
-            }
 
-            uint8_t calen = card.ats[0] - pos;
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "-------------------- " _CYAN_("Historical bytes") " --------------------");
-
-            if (card.ats[pos] == 0xC1) {
-                PrintAndLogEx(INFO, "    %s%s", sprint_hex(card.ats + pos, calen), tip);
-                PrintAndLogEx(SUCCESS, "    C1.....................   Mifare or (multiple) virtual cards of various type");
-                PrintAndLogEx(SUCCESS, "       %02X..................   length is " _YELLOW_("%d") " bytes", card.ats[pos + 1], card.ats[pos + 1]);
-                switch (card.ats[pos + 2] & 0xf0) {
-                    case 0x10:
-                        PrintAndLogEx(SUCCESS, "          1x...............   MIFARE DESFire");
-                        isMifareDESFire = true;
-                        isMifareClassic = false;
-                        isMifarePlus = false;
-                        break;
-                    case 0x20:
-                        PrintAndLogEx(SUCCESS, "          2x...............   MIFARE Plus");
-                        isMifarePlus = true;
-                        isMifareDESFire = false;
-                        isMifareClassic = false;
-                        break;
-                }
-                switch (card.ats[pos + 2] & 0x0f) {
-                    case 0x00:
-                        PrintAndLogEx(SUCCESS, "          x0...............   < 1 kByte");
-                        break;
-                    case 0x01:
-                        PrintAndLogEx(SUCCESS, "          x1...............   1 kByte");
-                        break;
-                    case 0x02:
-                        PrintAndLogEx(SUCCESS, "          x2...............   2 kByte");
-                        break;
-                    case 0x03:
-                        PrintAndLogEx(SUCCESS, "          x3...............   4 kByte");
-                        break;
-                    case 0x04:
-                        PrintAndLogEx(SUCCESS, "          x4...............   8 kByte");
-                        break;
-                }
-                switch (card.ats[pos + 3] & 0xf0) {
-                    case 0x00:
-                        PrintAndLogEx(SUCCESS, "             0x............   Engineering sample");
-                        break;
-                    case 0x20:
-                        PrintAndLogEx(SUCCESS, "             2x............   Released");
-                        break;
-                }
-                switch (card.ats[pos + 3] & 0x0f) {
-                    case 0x00:
-                        PrintAndLogEx(SUCCESS, "             x0............   Generation 1");
-                        break;
-                    case 0x01:
-                        PrintAndLogEx(SUCCESS, "             x1............   Generation 2");
-                        break;
-                    case 0x02:
-                        PrintAndLogEx(SUCCESS, "             x2............   Generation 3");
-                        break;
-                }
-                switch (card.ats[pos + 4] & 0x0f) {
-                    case 0x00:
-                        PrintAndLogEx(SUCCESS, "                x0.........   Only VCSL supported");
-                        break;
-                    case 0x01:
-                        PrintAndLogEx(SUCCESS, "                x1.........   VCS, VCSL, and SVC supported");
-                        break;
-                    case 0x0E:
-                        PrintAndLogEx(SUCCESS, "                xE.........   no VCS command supported");
-                        break;
-                }
-            } else {
-
-                if (card.ats[pos] == 0x80 || card.ats[pos] == 0x00) {
-                    PrintAndLogEx(SUCCESS, "%s  (compact TLV data object)", sprint_hex_inrow(&card.ats[pos], calen));
-                    get_compact_tlv(card.ats + pos, calen);
-                } else {
-                    PrintAndLogEx(SUCCESS, "%s - %s"
-                                  , sprint_hex_inrow(card.ats + pos, calen)
-                                  , sprint_ascii(card.ats + pos, calen)
-                                 );
-                }
-
+                uint8_t calen = card.ats[0] - pos;
                 PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(INFO, "-------------------- " _CYAN_("Historical bytes") " --------------------");
+
+                if (card.ats[pos] == 0xC1) {
+                    PrintAndLogEx(INFO, "    %s%s", sprint_hex(card.ats + pos, calen), tip);
+                    PrintAndLogEx(SUCCESS, "    C1.....................   Mifare or (multiple) virtual cards of various type");
+                    PrintAndLogEx(SUCCESS, "       %02X..................   length is " _YELLOW_("%d") " bytes", card.ats[pos + 1], card.ats[pos + 1]);
+                    switch (card.ats[pos + 2] & 0xf0) {
+                        case 0x10:
+                            PrintAndLogEx(SUCCESS, "          1x...............   MIFARE DESFire");
+                            isMifareDESFire = true;
+                            isMifareClassic = false;
+                            isMifarePlus = false;
+                            break;
+                        case 0x20:
+                            PrintAndLogEx(SUCCESS, "          2x...............   MIFARE Plus");
+                            isMifarePlus = true;
+                            isMifareDESFire = false;
+                            isMifareClassic = false;
+                            break;
+                    }
+                    switch (card.ats[pos + 2] & 0x0f) {
+                        case 0x00:
+                            PrintAndLogEx(SUCCESS, "          x0...............   < 1 kByte");
+                            break;
+                        case 0x01:
+                            PrintAndLogEx(SUCCESS, "          x1...............   1 kByte");
+                            break;
+                        case 0x02:
+                            PrintAndLogEx(SUCCESS, "          x2...............   2 kByte");
+                            break;
+                        case 0x03:
+                            PrintAndLogEx(SUCCESS, "          x3...............   4 kByte");
+                            break;
+                        case 0x04:
+                            PrintAndLogEx(SUCCESS, "          x4...............   8 kByte");
+                            break;
+                    }
+                    switch (card.ats[pos + 3] & 0xf0) {
+                        case 0x00:
+                            PrintAndLogEx(SUCCESS, "             0x............   Engineering sample");
+                            break;
+                        case 0x20:
+                            PrintAndLogEx(SUCCESS, "             2x............   Released");
+                            break;
+                    }
+                    switch (card.ats[pos + 3] & 0x0f) {
+                        case 0x00:
+                            PrintAndLogEx(SUCCESS, "             x0............   Generation 1");
+                            break;
+                        case 0x01:
+                            PrintAndLogEx(SUCCESS, "             x1............   Generation 2");
+                            break;
+                        case 0x02:
+                            PrintAndLogEx(SUCCESS, "             x2............   Generation 3");
+                            break;
+                    }
+                    switch (card.ats[pos + 4] & 0x0f) {
+                        case 0x00:
+                            PrintAndLogEx(SUCCESS, "                x0.........   Only VCSL supported");
+                            break;
+                        case 0x01:
+                            PrintAndLogEx(SUCCESS, "                x1.........   VCS, VCSL, and SVC supported");
+                            break;
+                        case 0x0E:
+                            PrintAndLogEx(SUCCESS, "                xE.........   no VCS command supported");
+                            break;
+                    }
+                } else {
+
+                    if (card.ats[pos] == 0x80 || card.ats[pos] == 0x00) {
+                        PrintAndLogEx(SUCCESS, "%s  (compact TLV data object)", sprint_hex_inrow(&card.ats[pos], calen));
+                        get_compact_tlv(card.ats + pos, calen);
+                    } else {
+                        PrintAndLogEx(SUCCESS, "%s - %s"
+                                    , sprint_hex_inrow(card.ats + pos, calen)
+                                    , sprint_ascii(card.ats + pos, calen)
+                                    );
+                    }
+
+                    PrintAndLogEx(NORMAL, "");
+                }
             }
+
         }
 
         if (do_aid_search) {
@@ -2558,6 +2569,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                     PrintAndLogEx(INFO, "----------------------------------------------------");
             }
         }
+
     } else {
 
         if (isISO18092) {
