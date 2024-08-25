@@ -549,3 +549,17 @@ bool hexstr_to_byte_array(const char *hexstr, uint8_t *d, size_t *n) {
     }
     return true;
 }
+
+void reverse_arraybytes(uint8_t *arr, size_t len) {
+    size_t i;
+    for (i = 0; i < len ; i++) {
+        arr[i] = reflect8(arr[i]);
+    }
+}
+
+void reverse_arraybytes_copy(uint8_t *arr, uint8_t *dest, size_t len) {
+    size_t i;
+    for (i = 0; i < len ; i++) {
+        dest[i] = reflect8(arr[i]);
+    }
+}

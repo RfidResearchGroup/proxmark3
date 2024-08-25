@@ -73,6 +73,7 @@ and you can specify which parts to skip in order to reduce the size:
 SKIP_LF=1
 SKIP_HITAG=1
 SKIP_EM4x50=1
+SKIP_EM4x70=1
 SKIP_ISO15693=1
 SKIP_LEGICRF=1
 SKIP_ISO14443b=1

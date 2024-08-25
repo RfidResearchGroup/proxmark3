@@ -377,7 +377,7 @@ static int bruteforce(const uint8_t address, const uint8_t *rnd, const uint8_t *
     uint8_t rev_rnd[7];
     uint8_t temp_rnd[7];
 
-    reverse_arraycopy((uint8_t *)rnd, rev_rnd, sizeof(rev_rnd));
+    reverse_arraybytes_copy((uint8_t *)rnd, rev_rnd, sizeof(rev_rnd));
     memcpy(temp_rnd, rnd, sizeof(temp_rnd));
 
     for (int k = start_key; k <= 0xFFFF; ++k) {
