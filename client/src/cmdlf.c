@@ -34,7 +34,7 @@
 #include "cmdhw.h"          // for setting FPGA image
 #include "cmdlfawid.h"      // for awid menu
 #include "cmdlfem.h"        // for em menu
-#include "cmdlfem410x.h"      // for em4x menu
+#include "cmdlfem410x.h"    // for em4x menu
 #include "cmdlfem4x05.h"    // for em4x05 / 4x69
 #include "cmdlfem4x50.h"    // for em4x50
 #include "cmdlfem4x70.h"    // for em4x70
@@ -67,6 +67,7 @@
 #include "cmdlfzx8211.h"    // for ZX8211 menu
 #include "crc.h"
 #include "pm3_cmd.h"        // for LF_CMDREAD_MAX_EXTRA_SYMBOLS
+#include "fpga.h"           // for set_fpga_mode
 
 static int CmdHelp(const char *Cmd);
 

@@ -44,6 +44,7 @@
 #include "preferences.h"
 #include "mifare/gen4.h"
 #include "generator.h"              // keygens.
+#include "fpga.h"
 
 static int CmdHelp(const char *Cmd);
 
