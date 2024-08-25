@@ -162,7 +162,7 @@ uint16_t SumAdc(uint8_t ch, uint8_t NbSamples) {
         a += ReadAdc(ch);
     return (a + (NbSamples >> 1) - 1);
 }
-
+#ifdef WITH_LF
 static void MeasureAntennaTuning(void) {
 
     uint32_t peak = 0;
@@ -236,7 +236,7 @@ static void MeasureAntennaTuning(void) {
     reply_ng(CMD_MEASURE_ANTENNA_TUNING, PM3_SUCCESS, (uint8_t *)&payload, sizeof(payload));
     LEDsoff();
 }
-
+#endif
 // Measure HF in milliVolt
 static uint16_t MeasureAntennaTuningHfData(void) {
 
@@ -1610,7 +1610,9 @@ static void PacketReceived(PacketCommandNG *packet) {
             struct p *payload = (struct p *) packet->data.asBytes;
             FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
             FpgaSendCommand(FPGA_CMD_SET_EDGE_DETECT_THRESHOLD, (payload->threshold & 0x3f) | ((payload->threshold_high & 0x3f) << 6));
+#ifdef WITH_LEGICRF
             LegicRfSetThreshold((uint32_t)payload->legic_threshold);
+#endif
             break;
         }
         case CMD_HF_ISO14443A_SNIFF: {
@@ -2301,10 +2303,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             BigBuf_free();
             break;
         }
+#ifdef WITH_LF
         case CMD_MEASURE_ANTENNA_TUNING: {
             MeasureAntennaTuning();
             break;
         }
+#endif
         case CMD_MEASURE_ANTENNA_TUNING_HF: {
             if (packet->length != 1)
                 reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_EINVARG, NULL, 0);
@@ -2394,12 +2398,8 @@ static void PacketReceived(PacketCommandNG *packet) {
                     Dbprintf("transfer to client failed ::  | bytes between %d - %d (%d) | result: %d", i, i + len, len, result);
             }
             // Trigger a finish downloading signal with an ACK frame
-            // iceman,  when did sending samplingconfig array got attached here?!?
             // arg0 = status of download transfer
-            // arg1 = RFU
-            // arg2 = tracelen?
-            // asbytes = samplingconfig array
-            reply_mix(CMD_ACK, 1, 0, BigBuf_get_traceLen(), getSamplingConfig(), sizeof(sample_config));
+            reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
             LED_B_OFF();
             break;
         }
@@ -2818,11 +2818,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
 #endif
+#ifdef WITH_LF
         case CMD_LF_SET_DIVISOR: {
             FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
             FpgaSendCommand(FPGA_CMD_SET_DIVISOR, packet->data.asBytes[0]);
             break;
         }
+#endif
         case CMD_SET_ADC_MUX: {
             switch (packet->data.asBytes[0]) {
                 case 0:
