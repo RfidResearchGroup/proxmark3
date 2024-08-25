@@ -114,6 +114,8 @@ void Uint8byteToMemBe(uint8_t *data, uint64_t value);
 
 // rotate left byte array
 void rol(uint8_t *data, const size_t len);
+void ror(uint8_t *data, const size_t len);
+
 void lsl(uint8_t *data, size_t len);
 uint32_t le24toh(const uint8_t data[3]);
 void htole24(uint32_t val, uint8_t data[3]);

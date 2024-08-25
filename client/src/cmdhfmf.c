@@ -114,7 +114,7 @@ int mfc_ev1_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, in
     return PM3_SUCCESS;
 }
 
-static int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
+static int mf_read_uid(uint8_t *uid, int *uidlen, int *nxptype) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
@@ -126,6 +126,12 @@ static int GetHFMF14AUID(uint8_t *uid, int *uidlen) {
 
     iso14a_card_select_t card;
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+    if (nxptype) {
+        uint64_t select_status = resp.oldarg[0];
+        *nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]), select_status);
+    }
+
     memcpy(uid, card.uid, card.uidlen * sizeof(uint8_t));
     *uidlen = card.uidlen;
     return PM3_SUCCESS;
@@ -139,7 +145,7 @@ static char *GenerateFilename(const char *prefix, const char *suffix) {
     int uidlen = 0;
     char *fptr = calloc(sizeof(char) * (strlen(prefix) + strlen(suffix)) + sizeof(uid) * 2 + 1,  sizeof(uint8_t));
 
-    int res = GetHFMF14AUID(uid, &uidlen);
+    int res = mf_read_uid(uid, &uidlen, NULL);
     if (res != PM3_SUCCESS || !uidlen) {
         PrintAndLogEx(WARNING, "No tag found.");
         free(fptr);
@@ -1201,7 +1207,17 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
 }
 
 static int FastDumpWithEcFill(uint8_t numsectors) {
-    PacketResponseNG resp;
+
+    uint8_t dbg_curr = DBG_NONE;
+    if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
+        return PM3_EFAILED;
+    }
+
+    /*
+    if (setDeviceDebugLevel(DBG_NONE, false) != PM3_SUCCESS) {
+        return PM3_EFAILED;
+    }
+    */
 
     mfc_eload_t payload;
     payload.sectorcnt = numsectors;
@@ -1211,6 +1227,7 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
 
+    PacketResponseNG resp;
     bool res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2500);
     if (res == false) {
         PrintAndLogEx(WARNING, "Command execute timeout");
@@ -1228,6 +1245,7 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
         res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2500);
         if (res == false) {
             PrintAndLogEx(WARNING, "Command execute timeout");
+            setDeviceDebugLevel(dbg_curr, false);
             return PM3_ETIMEOUT;
         }
 
@@ -1236,6 +1254,11 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
             PrintAndLogEx(FAILED, "Dump file is " _RED_("PARTIAL") " complete");
         }
     }
+
+    if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS) {
+        return PM3_EFAILED;
+    }
+
     return PM3_SUCCESS;
 }
 
@@ -2493,6 +2516,8 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
 
+        arg_lit0(NULL, "ns", "No save"),
+
         arg_lit0(NULL, "in", "None (use CPU regular instruction set)"),
 #if defined(COMPILER_HAS_SIMD_X86)
         arg_lit0(NULL, "im", "MMX"),
@@ -2538,18 +2563,20 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     bool m2 = arg_get_lit(ctx, 11);
     bool m4 = arg_get_lit(ctx, 12);
 
-    bool in = arg_get_lit(ctx, 13);
+    bool no_save = arg_get_lit(ctx, 13);
+
+    bool in = arg_get_lit(ctx, 14);
 #if defined(COMPILER_HAS_SIMD_X86)
-    bool im = arg_get_lit(ctx, 14);
-    bool is = arg_get_lit(ctx, 15);
-    bool ia = arg_get_lit(ctx, 16);
-    bool i2 = arg_get_lit(ctx, 17);
+    bool im = arg_get_lit(ctx, 15);
+    bool is = arg_get_lit(ctx, 16);
+    bool ia = arg_get_lit(ctx, 17);
+    bool i2 = arg_get_lit(ctx, 18);
 #endif
 #if defined(COMPILER_HAS_SIMD_AVX512)
-    bool i5 = arg_get_lit(ctx, 18);
+    bool i5 = arg_get_lit(ctx, 19);
 #endif
 #if defined(COMPILER_HAS_SIMD_NEON)
-    bool ie = arg_get_lit(ctx, 14);
+    bool ie = arg_get_lit(ctx, 15);
 #endif
 
     CLIParserFree(ctx);
@@ -3199,11 +3226,13 @@ all_found:
 
     printKeyTable(sector_cnt, e_sector);
 
-    // Dump the keys
-    PrintAndLogEx(NORMAL, "");
+    if (no_save == false) {
 
-    if (createMfcKeyDump(fptr, sector_cnt, e_sector) != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "Failed to save keys to file");
+        // Dump the keys
+        PrintAndLogEx(NORMAL, "");
+        if (createMfcKeyDump(fptr, sector_cnt, e_sector) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to save keys to file");
+        }
     }
 
     // clear emulator mem
@@ -3228,6 +3257,12 @@ all_found:
 
     // use ecfill trick
     FastDumpWithEcFill(sector_cnt);
+
+    if (no_save) {
+        PrintAndLogEx(INFO, "Called with no save option");
+        PrintAndLogEx(NORMAL, "");
+        goto out;
+    }
 
     bytes = block_cnt * MFBLOCK_SIZE;
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
@@ -3260,12 +3295,13 @@ all_found:
     free(fptr);
 
     pm3_save_mf_dump(filename, dump, bytes, jsfCardMemory);
+    free(dump);
 
+out:
     // Generate and show statistics
     t1 = msclock() - t1;
     PrintAndLogEx(INFO, "autopwn execution time: " _YELLOW_("%.0f") " seconds", (float)t1 / 1000.0);
 
-    free(dump);
     free(e_sector);
     return PM3_SUCCESS;
 }
@@ -9406,7 +9442,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     }
 
     int keylen = 0;
-    uint8_t key[10 * MIFARE_KEY_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    uint8_t key[100 * MIFARE_KEY_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     CLIGetHexWithReturn(ctx, 4, key, &keylen);
 
     bool do_nack_test = arg_get_lit(ctx, 5);
@@ -9475,21 +9511,6 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Keys Information"));
 
-    /*
-    1. fast check for different KDF here
-    2. mew command "hf mf keygen"
-
-    " Vingcard algo");
-    PrintAndLogEx(INFO, " Saflok algo");
-    PrintAndLogEx(INFO, " SALTO algo");
-    uint64_t key = 0;
-    mfc_algo_saflok_one(uid, 1, 0, &key);
-    PrintAndLogEx(INFO, " Dorma Kaba algo    | %012X" PRIX64, key);
-    PrintAndLogEx(INFO, " STiD algo");
-    PrintAndLogEx(INFO, "-------------------------------------");
-    */
-
-
     uint8_t fkey[MIFARE_KEY_SIZE] = {0};
     uint8_t fKeyType = 0xff;
 
@@ -9555,6 +9576,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     if (fKeyType != 0xFF) {
         PrintAndLogEx(SUCCESS, "Block 0.......... %s", sprint_hex(blockdata, MFBLOCK_SIZE));
     }
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
 
@@ -9564,13 +9586,13 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             // backdoor might be present, or just a clone reusing Fudan MF data...
             PrintAndLogEx(SUCCESS, "Fudan based card");
         } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
-        && (blockdata[8] == 0x03 || blockdata[8] == 0x04) && blockdata[15] == 0x90) {
+                   && (blockdata[8] == 0x03 || blockdata[8] == 0x04) && blockdata[15] == 0x90) {
             PrintAndLogEx(SUCCESS, "Fudan FM11RF08S");
         } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x00\x03\x00\x10", 4) == 0
-        && blockdata[15] == 0x90) {
+                   && blockdata[15] == 0x90) {
             PrintAndLogEx(SUCCESS, "Fudan FM11RF08S-7B");
         } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
-        && (blockdata[8] >= 0x01 && blockdata[8] <= 0x03) && blockdata[15] == 0x1D) {
+                   && (blockdata[8] >= 0x01 && blockdata[8] <= 0x03) && blockdata[15] == 0x1D) {
             PrintAndLogEx(SUCCESS, "Fudan FM11RF08");
         } else if (card.sak == 0x88 && memcmp(blockdata + 5, "\x88\x04\x00\x43", 4) == 0) {
             PrintAndLogEx(SUCCESS, "Infineon SLE66R35");

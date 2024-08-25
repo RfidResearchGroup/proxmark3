@@ -422,7 +422,7 @@ void Uint8byteToMemBe(uint8_t *data, uint64_t value) {
     data[7] = (uint8_t)((value >> 0) & 0xffu);
 }
 
-// RotateLeft - Ultralight, Desfire
+// Rotate Left - Ultralight, Desfire
 void rol(uint8_t *data, const size_t len) {
     uint8_t first = data[0];
     for (size_t i = 0; i < len - 1; i++) {
@@ -430,6 +430,18 @@ void rol(uint8_t *data, const size_t len) {
     }
     data[len - 1] = first;
 }
+
+// Rotate Right - Ultralight, Desfire
+void ror(uint8_t *data, const size_t len) {
+    uint8_t last = data[len - 1];
+
+    for (int i = len - 1; i > 0; i--) {
+        data[i] = data[i - 1];
+    }
+
+    data[0] = last;
+}
+
 
 void lsl(uint8_t *data, size_t len) {
     for (size_t n = 0; n < len - 1; n++) {
