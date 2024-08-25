@@ -1100,7 +1100,7 @@ static int CmdHF15Info(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "    " _YELLOW_("%u") " ( or " _YELLOW_("%u") " ) bytes/blocks x " _YELLOW_("%u") " blocks", size + 1, size, blocks);
         PrintAndLogEx(SUCCESS, "    " _YELLOW_("%u") " total bytes", ((size + 1) * blocks));
     } else {
-        PrintAndLogEx(SUCCESS, "    N/A");
+        PrintAndLogEx(SUCCESS, "    n/a");
     }
 
     // Check if SLIX2 and attempt to get NXP System Information

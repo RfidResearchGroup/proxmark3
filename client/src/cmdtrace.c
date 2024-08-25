@@ -1454,7 +1454,7 @@ int CmdTraceList(const char *Cmd) {
         }
 
         if (protocol == ISO_7816_4)
-            PrintAndLogEx(INFO, _YELLOW_("ISO7816-4 / Smartcard") " - Timings N/A");
+            PrintAndLogEx(INFO, _YELLOW_("ISO7816-4 / Smartcard") " - Timings n/a");
 
         if (protocol == PROTO_HITAG1 || protocol == PROTO_HITAG2 || protocol == PROTO_HITAGS) {
             PrintAndLogEx(INFO, _YELLOW_("Hitag1 / Hitag2 / HitagS") " - Timings in ETU (8us)");

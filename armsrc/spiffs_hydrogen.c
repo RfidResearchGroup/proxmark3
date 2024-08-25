@@ -1455,7 +1455,7 @@ s32_t SPIFFS_vis(spiffs *fs) {
         if (erase_count != (spiffs_obj_id) - 1) {
             spiffs_printf("\tera_cnt: "_SPIPRIi"\n", erase_count);
         } else {
-            spiffs_printf("\tera_cnt: N/A\n");
+            spiffs_printf("\tera_cnt: n/a\n");
         }
 
         bix++;
