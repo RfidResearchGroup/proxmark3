@@ -275,6 +275,9 @@ FRA_OrganizationalAuthority_Contract_Provider = {
     0x913: {
         3: InterticHelper('Nîmes', 'Tango / Transdev', Describe_Usage_3),
     },
+    0x915: {
+        1: InterticHelper('Metz', 'Le Met\' / TAMM'),
+    },
     0x917: {
         4: InterticHelper('Angers', 'Irigo / RATP', Describe_Usage_1_2),
         7: InterticHelper('Saint-Nazaire', 'Stran'),
