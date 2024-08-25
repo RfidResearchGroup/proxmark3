@@ -42,6 +42,12 @@ typedef struct {
     uint8_t data[1024];
 } PACKED old_mfu_dump_t;
 
+typedef struct {
+    const char *name;
+    const char *model;
+    const char *version;
+} ul_family_t;
+
 uint64_t GetHF14AMfU_Type(void);
 int ul_print_type(uint64_t tagtype, uint8_t spaces);
 void mfu_print_dump(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool dense_output);
@@ -81,11 +87,14 @@ int CmdHF14MfUTamper(const char *Cmd);
 #define MFU_TT_UL_NANO_40       0x2000000ULL
 #define MFU_TT_NTAG_213_TT      0x4000000ULL
 #define MFU_TT_NTAG_213_C       0x8000000ULL
-#define MFU_TT_MAGIC_1A         (0x10000000ULL | MFU_TT_MAGIC)
-#define MFU_TT_MAGIC_1B         (0x20000000ULL | MFU_TT_MAGIC)
-#define MFU_TT_MAGIC_NTAG       (0x40000000ULL | MFU_TT_MAGIC)
+#define MFU_TT_MAGIC_1A         0x10000000ULL
+#define MFU_TT_MAGIC_1B         0x20000000ULL
+#define MFU_TT_MAGIC_NTAG       0x40000000ULL
 #define MFU_TT_NTAG_210u        0x80000000ULL
 #define MFU_TT_UL_AES           0x100000000ULL
+#define MFU_TT_MAGIC_2          0x200000000ULL
+#define MFU_TT_MAGIC_4          0x400000000ULL
+#define MFU_TT_MAGIC_NTAG21X    0x800000000ULL
 #define MFU_TT_UL_MAGIC         (MFU_TT_UL | MFU_TT_MAGIC)
 #define MFU_TT_UL_C_MAGIC       (MFU_TT_UL_C | MFU_TT_MAGIC)
 // Don't forget to fill UL_TYPES_ARRAY and UL_MEMORY_ARRAY if new types are added

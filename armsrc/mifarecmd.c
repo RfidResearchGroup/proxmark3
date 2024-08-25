@@ -2554,9 +2554,11 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
     // Generation 1 test
     ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
     if (ReaderReceive(rec, recpar) && (rec[0] == 0x0A)) {
+
         flag = MAGIC_FLAG_GEN_1A;
         ReaderTransmit(wupC2, sizeof(wupC2), NULL);
-        if (ReaderReceive(rec, recpar) && (rec[0] != 0x0A)) {
+        uint16_t tmp = ReaderReceive(rec, recpar);
+        if ((tmp && (rec[0] != 0x0A)) || (tmp == 0)) {
             flag = MAGIC_FLAG_GEN_1B;
         }
 
