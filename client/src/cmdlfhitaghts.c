@@ -16,7 +16,7 @@
 // Low frequency Hitag S support
 //-----------------------------------------------------------------------------
 
-#include "cmdlfhitags.h"
+#include "cmdlfhitaghts.h"
 #include <ctype.h>
 #include "cmdparser.h"  // command_t
 #include "comms.h"
@@ -39,15 +39,15 @@ static int CmdHelp(const char *Cmd);
 
 static int CmdLFHitagSRead(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf hitag s read",
+    CLIParserInit(&ctx, "lf hitag hts read",
                   "Read Hitag S memory.\n\n"
                   "  Crypto mode: \n"
                   "    - key format ISK high + ISK low\n"
                   "    - default key 4F4E4D494B52 (ONMIKR)\n",
                   "  lf hitag s read                         -> Hitag S, plain mode\n"
-                  "  lf hitag s read --nrar 0102030411223344 -> Hitag S, challenge mode\n"
-                  "  lf hitag s read --crypto                -> Hitag S, crypto mode, def key\n"
-                  "  lf hitag s read -k 4F4E4D494B52         -> Hitag S, crypto mode\n\n"
+                  "  lf hitag hts read --nrar 0102030411223344 -> Hitag S, challenge mode\n"
+                  "  lf hitag hts read --crypto                -> Hitag S, crypto mode, def key\n"
+                  "  lf hitag hts read -k 4F4E4D494B52         -> Hitag S, crypto mode\n\n"
     );
 
     void *argtable[] = {
@@ -164,15 +164,15 @@ static int CmdLFHitagSRead(const char *Cmd) {
 
 static int CmdLFHitagSWrite(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf hitag s write",
+    CLIParserInit(&ctx, "lf hitag hts write",
                   "Write a page in Hitag S memory.\n"
                   "  Crypto mode: \n"
                   "    - key format ISK high + ISK low\n"
                   "    - default key 4F4E4D494B52 (ONMIKR)\n",
                   "  lf hitag write -p 6 -d 01020304                         -> Hitag S, plain mode\n"
-                  "  lf hitag write -p 6 -d 01020304 --nrar 0102030411223344 -> Hitag S, challenge mode\n"
-                  "  lf hitag write -p 6 -d 01020304 --crypto                -> Hitag S, crypto mode, def key\n"
-                  "  lf hitag write -p 6 -d 01020304 -k 4F4E4D494B52         -> Hitag S, crypto mode\n\n"
+                  "  lf hitag hts write -p 6 -d 01020304 --nrar 0102030411223344 -> Hitag S, challenge mode\n"
+                  "  lf hitag hts write -p 6 -d 01020304 --crypto                -> Hitag S, crypto mode, def key\n"
+                  "  lf hitag hts write -p 6 -d 01020304 -k 4F4E4D494B52         -> Hitag S, crypto mode\n\n"
     );
 
     void *argtable[] = {
@@ -286,7 +286,7 @@ static int CmdLFHitagSWrite(const char *Cmd) {
 }
 
 static int CmdLFHitagSList(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "lf hitag s", "hitags");
+    return CmdTraceListAlias(Cmd, "lf hitag hts", "hitags");
 }
 
 static command_t CommandTable[] = {
