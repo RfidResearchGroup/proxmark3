@@ -1547,8 +1547,9 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
 
         } else if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) { // Received a REQUEST, but in HALTED, skip
             odd_reply = !odd_reply;
-            if (odd_reply)
+            if (odd_reply) {
                 p_response = &responses[RESP_INDEX_ATQA];
+            }
         } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) { // Received a WAKEUP
             p_response = &responses[RESP_INDEX_ATQA];
         } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {    // Received request for UID (cascade 1)
@@ -3063,95 +3064,125 @@ void ReaderIso14443a(PacketCommandNG *c) {
 
     uint8_t buf[PM3_CMD_DATA_SIZE_MIX] = {0x00};
 
-    if ((param & ISO14A_CONNECT)) {
+    if ((param & ISO14A_CONNECT) == ISO14A_CONNECT) {
         iso14_pcb_blocknum = 0;
         clear_trace();
     }
 
     set_tracing(true);
 
-    if ((param & ISO14A_REQUEST_TRIGGER))
+    if ((param & ISO14A_REQUEST_TRIGGER) == ISO14A_REQUEST_TRIGGER) {
         iso14a_set_trigger(true);
+    }
 
-    if ((param & ISO14A_CONNECT)) {
+    if ((param & ISO14A_CONNECT) == ISO14A_CONNECT) {
         iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
         // notify client selecting status.
         // if failed selecting, turn off antenna and quite.
-        if (!(param & ISO14A_NO_SELECT)) {
+        if ((param & ISO14A_NO_SELECT) != ISO14A_NO_SELECT) {
             iso14a_card_select_t *card = (iso14a_card_select_t *)buf;
 
             arg0 = iso14443a_select_cardEx(
-                       NULL, card, NULL, true, 0, (param & ISO14A_NO_RATS),
-                       (param & ISO14A_USE_CUSTOM_POLLING) ? (iso14a_polling_parameters_t *)cmd : &WUPA_POLLING_PARAMETERS
+                       NULL,
+                       card,
+                       NULL,
+                       true,
+                       0,
+                       ((param & ISO14A_NO_RATS) == ISO14A_NO_RATS),
+                       ((param & ISO14A_USE_CUSTOM_POLLING) == ISO14A_USE_CUSTOM_POLLING) ? (iso14a_polling_parameters_t *)cmd : &WUPA_POLLING_PARAMETERS
                    );
             // TODO: Improve by adding a cmd parser pointer and moving it by struct length to allow combining data with polling params
             FpgaDisableTracing();
 
             reply_mix(CMD_ACK, arg0, card->uidlen, 0, buf, sizeof(iso14a_card_select_t));
-            if (arg0 == 0)
+            if (arg0 == 0) {
                 goto OUT;
+            }
         }
     }
     uint32_t save_iso14a_timeout = 0;
-    if ((param & ISO14A_SET_TIMEOUT)) {
+    if ((param & ISO14A_SET_TIMEOUT) == ISO14A_SET_TIMEOUT) {
         save_iso14a_timeout = iso14a_get_timeout();
         iso14a_set_timeout(timeout);
     }
 
-    if ((param & ISO14A_APDU)) {
+    if ((param & ISO14A_APDU) == ISO14A_APDU) {
         uint8_t res;
-        arg0 = iso14_apdu(cmd, len, (param & ISO14A_SEND_CHAINING), buf, &res);
+        arg0 = iso14_apdu(
+                   cmd,
+                   len,
+                   ((param & ISO14A_SEND_CHAINING) == ISO14A_SEND_CHAINING),
+                   buf,
+                   &res
+               );
         FpgaDisableTracing();
 
         reply_mix(CMD_ACK, arg0, res, 0, buf, sizeof(buf));
     }
 
-    if ((param & ISO14A_RAW)) {
+    if ((param & ISO14A_RAW) == ISO14A_RAW) {
 
-        if ((param & ISO14A_APPEND_CRC)) {
+        if ((param & ISO14A_APPEND_CRC) == ISO14A_APPEND_CRC) {
             // Don't append crc on empty bytearray...
             if (len > 0) {
-                if ((param & ISO14A_TOPAZMODE))
+
+                if ((param & ISO14A_TOPAZMODE) == ISO14A_TOPAZMODE) {
                     AddCrc14B(cmd, len);
-                else
+                } else {
                     AddCrc14A(cmd, len);
+                }
 
                 len += 2;
-                if (lenbits) lenbits += 16;
+
+                if (lenbits) {
+                    lenbits += 16;
+                }
             }
         }
 
-        if (lenbits > 0) {                // want to send a specific number of bits (e.g. short commands)
-            if ((param & ISO14A_TOPAZMODE)) {
+        // want to send a specific number of bits (e.g. short commands)
+        if (lenbits > 0) {
+
+            if ((param & ISO14A_TOPAZMODE) == ISO14A_TOPAZMODE) {
+
                 int bits_to_send = lenbits;
                 uint16_t i = 0;
+
                 ReaderTransmitBitsPar(&cmd[i++], MIN(bits_to_send, 7), NULL, NULL);     // first byte is always short (7bits) and no parity
                 bits_to_send -= 7;
+
                 while (bits_to_send > 0) {
                     ReaderTransmitBitsPar(&cmd[i++], MIN(bits_to_send, 8), NULL, NULL); // following bytes are 8 bit and no parity
                     bits_to_send -= 8;
                 }
+
             } else {
                 GetParity(cmd, lenbits / 8, parity_array);
                 ReaderTransmitBitsPar(cmd, lenbits, parity_array, NULL);               // bytes are 8 bit with odd parity
             }
+
         } else {                    // want to send complete bytes only
-            if ((param & ISO14A_TOPAZMODE)) {
+            if ((param & ISO14A_TOPAZMODE) == ISO14A_TOPAZMODE) {
+
                 size_t i = 0;
                 ReaderTransmitBitsPar(&cmd[i++], 7, NULL, NULL);                        // first byte: 7 bits, no paritiy
+
                 while (i < len) {
                     ReaderTransmitBitsPar(&cmd[i++], 8, NULL, NULL);                    // following bytes: 8 bits, no paritiy
                 }
+
             } else {
                 ReaderTransmit(cmd, len, NULL);                                         // 8 bits, odd parity
             }
         }
 
-        if ((param & ISO14A_TOPAZMODE)) {
+        if ((param & ISO14A_TOPAZMODE) == ISO14A_TOPAZMODE) {
 
             if (cmd[0] == TOPAZ_WRITE_E8 || cmd[0] == TOPAZ_WRITE_NE8) {
-                if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
+
+                // tearoff occurred
+                if (tearoff_hook() == PM3_ETEAROFF) {
                     FpgaDisableTracing();
                     reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
                 } else {
@@ -3159,6 +3190,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
                     FpgaDisableTracing();
                     reply_mix(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
                 }
+
             } else {
                 arg0 = ReaderReceive(buf, parity_array);
                 FpgaDisableTracing();
@@ -3167,7 +3199,8 @@ void ReaderIso14443a(PacketCommandNG *c) {
 
         } else {
 
-            if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
+            // tearoff occurred
+            if (tearoff_hook() == PM3_ETEAROFF) {
                 FpgaDisableTracing();
                 reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
             } else {
@@ -3178,14 +3211,14 @@ void ReaderIso14443a(PacketCommandNG *c) {
         }
     }
 
-    if ((param & ISO14A_REQUEST_TRIGGER))
+    if ((param & ISO14A_REQUEST_TRIGGER) == ISO14A_REQUEST_TRIGGER)
         iso14a_set_trigger(false);
 
-    if ((param & ISO14A_SET_TIMEOUT)) {
+    if ((param & ISO14A_SET_TIMEOUT) == ISO14A_SET_TIMEOUT) {
         iso14a_set_timeout(save_iso14a_timeout);
     }
 
-    if ((param & ISO14A_NO_DISCONNECT)) {
+    if ((param & ISO14A_NO_DISCONNECT) == ISO14A_NO_DISCONNECT) {
         return;
     }
 

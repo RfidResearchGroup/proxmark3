@@ -1003,8 +1003,8 @@ static void hitagS_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, ui
     uint32_t errorCount = 0;
     bool bStarted = false;
 
-    uint32_t ra_i=0, h2 = 0, h3 = 0, h4 = 0;
-    uint8_t edges[160]={0};
+    uint32_t ra_i = 0, h2 = 0, h3 = 0, h4 = 0;
+    uint8_t edges[160] = {0};
 
     // Dbprintf("TC0_CV:%i TC1_CV:%i TC1_RA:%i", AT91C_BASE_TC0->TC_CV, AT91C_BASE_TC1->TC_CV ,AT91C_BASE_TC1->TC_RA);
 
@@ -1032,7 +1032,7 @@ static void hitagS_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, ui
                 if (ra >= HITAG_T_WAIT_RESP) {
                     bStarted = true;
 
-                    // We always receive a 'one' first, which has the falling edge after a half period |-_|                    
+                    // We always receive a 'one' first, which has the falling edge after a half period |-_|
                     rx[0] = 0x80;
                     (*rxlen)++;
                 } else {
@@ -1458,15 +1458,15 @@ void ReadHitagS(const lf_hitag_data_t *payload, bool ledcontrol) {
         if (g_dbglevel >= DBG_EXTENDED) {
             if (tag.auth && tag.LKP && pageNum == 1) {
                 Dbprintf("Page[%2d]: %02X %02X %02X %02X", pageNum, pwdh0,
-                        (tag.pages[pageNum][2]) & 0xff,
-                        (tag.pages[pageNum][1]) & 0xff,
-                        tag.pages[pageNum][0] & 0xff);
+                         (tag.pages[pageNum][2]) & 0xff,
+                         (tag.pages[pageNum][1]) & 0xff,
+                         tag.pages[pageNum][0] & 0xff);
             } else {
                 Dbprintf("Page[%2d]: %02X %02X %02X %02X", pageNum,
-                        (tag.pages[pageNum][3]) & 0xff,
-                        (tag.pages[pageNum][2]) & 0xff,
-                        (tag.pages[pageNum][1]) & 0xff,
-                        tag.pages[pageNum][0] & 0xff);
+                         (tag.pages[pageNum][3]) & 0xff,
+                         (tag.pages[pageNum][2]) & 0xff,
+                         (tag.pages[pageNum][1]) & 0xff,
+                         tag.pages[pageNum][0] & 0xff);
             }
         }
 
