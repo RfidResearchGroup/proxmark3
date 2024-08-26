@@ -125,18 +125,6 @@ uint64_t x_bytes_to_num(uint8_t *src, size_t len) {
     return num;
 }
 
-void reverse_arraybytes(uint8_t *arr, size_t len) {
-    for (size_t i = 0; i < len ; i++) {
-        arr[i] = reflect8(arr[i]);
-    }
-}
-
-void reverse_arraycopy(uint8_t *arr, uint8_t *dest, size_t len) {
-    for (size_t i = 0; i < len ; i++) {
-        dest[i] = reflect8(arr[i]);
-    }
-}
-
 void printarr(const char *name, uint8_t *arr, int len) {
     if (name == NULL || arr == NULL) return;
 

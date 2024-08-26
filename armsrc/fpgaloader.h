@@ -20,6 +20,7 @@
 #define __FPGALOADER_H
 
 #include "common.h"
+#include "fpga.h"
 
 #define FpgaDisableSscDma(void) AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTDIS;
 #define FpgaEnableSscDma(void) AT91C_BASE_PDC_SSC->PDC_PTCR = AT91C_PDC_RXTEN;
@@ -164,8 +165,8 @@ void FpgaSendCommand(uint16_t cmd, uint16_t v);
 void FpgaWriteConfWord(uint16_t v);
 void FpgaEnableTracing(void);
 void FpgaDisableTracing(void);
-void FpgaDownloadAndGo(int bitstream_version);
-// void FpgaGatherVersion(int bitstream_version, char *dst, int len);
+void FpgaDownloadAndGo(int bitstream_target);
+// void FpgaGatherVersion(int bitstream_target, char *dst, int len);
 void FpgaSetupSsc(uint16_t fpga_mode);
 void SetupSpi(int mode);
 bool FpgaSetupSscDma(uint8_t *buf, uint16_t len);

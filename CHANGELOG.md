@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Added ELECTRA pattern decoding in `lf search` (@CiRIP)
+- Firmware size optimization, skipping unused FPGA bitstreams (@douniwan5788)
 - Added pretty Hitag S config parsing (@CiRIP)
 - Moved Hitag S operations into separate submenu: `lf hitag s` (@CiRIP)
 - Added MFC keys for Sofia public transport cards (@user890104)

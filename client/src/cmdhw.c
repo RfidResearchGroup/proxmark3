@@ -1468,12 +1468,12 @@ static command_t CommandTable[] = {
     {"ping",          CmdPing,         IfPm3Present,     "Test if the Proxmark3 is responsive"},
     {"readmem",       CmdReadmem,      IfPm3Present,     "Read from MCU flash"},
     {"reset",         CmdReset,        IfPm3Present,     "Reset the device"},
-    {"setlfdivisor",  CmdSetDivisor,   IfPm3Present,     "Drive LF antenna at 12MHz / (divisor + 1)"},
-    {"sethfthresh",   CmdSetHFThreshold, IfPm3Present,   "Set thresholds in HF/14a mode"},
+    {"setlfdivisor",  CmdSetDivisor,   IfPm3Lf,          "Drive LF antenna at 12MHz / (divisor + 1)"},
+    {"sethfthresh",   CmdSetHFThreshold, IfPm3Iso14443a, "Set thresholds in HF/14a mode"},
     {"setmux",        CmdSetMux,       IfPm3Present,     "Set the ADC mux to a specific value"},
     {"standalone",    CmdStandalone,   IfPm3Present,     "Start installed standalone mode on device"},
     {"tia",           CmdTia,          IfPm3Present,     "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
-    {"tune",          CmdTune,         IfPm3Present,     "Measure tuning of device antenna"},
+    {"tune",          CmdTune,         IfPm3Lf,          "Measure tuning of device antenna"},
     {NULL, NULL, NULL, NULL}
 };
 
