@@ -34,6 +34,7 @@
 
 #include "cipher.h"
 #include "cipherutils.h"
+#include "commonutil.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>

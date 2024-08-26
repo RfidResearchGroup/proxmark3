@@ -34,7 +34,7 @@
 #include "cmdhw.h"          // for setting FPGA image
 #include "cmdlfawid.h"      // for awid menu
 #include "cmdlfem.h"        // for em menu
-#include "cmdlfem410x.h"      // for em4x menu
+#include "cmdlfem410x.h"    // for em4x menu
 #include "cmdlfem4x05.h"    // for em4x05 / 4x69
 #include "cmdlfem4x50.h"    // for em4x50
 #include "cmdlfem4x70.h"    // for em4x70
@@ -67,6 +67,7 @@
 #include "cmdlfzx8211.h"    // for ZX8211 menu
 #include "crc.h"
 #include "pm3_cmd.h"        // for LF_CMDREAD_MAX_EXTRA_SYMBOLS
+#include "fpga.h"           // for set_fpga_mode
 
 static int CmdHelp(const char *Cmd);
 
@@ -1552,7 +1553,7 @@ static bool check_chiptype(bool getDeviceData) {
 
     //check for em4x05/em4x69 chips first
     uint32_t word = 0;
-    if (em4x05_isblock0(&word)) {
+    if (IfPm3EM4x50() && em4x05_isblock0(&word)) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x05 / EM4x69"));
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x05`") " commands");
         retval = true;
@@ -1569,7 +1570,7 @@ static bool check_chiptype(bool getDeviceData) {
 
 #if !defined ICOPYX
     // check for em4x50 chips
-    if (detect_4x50_block()) {
+    if (IfPm3EM4x50() && detect_4x50_block()) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x50"));
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x50`") " commands");
         retval = true;
@@ -1577,7 +1578,7 @@ static bool check_chiptype(bool getDeviceData) {
     }
 
     // check for em4x70 chips
-    if (detect_4x70_block()) {
+    if (IfPm3EM4x70() && detect_4x70_block()) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x70"));
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x70`") " commands");
         retval = true;
