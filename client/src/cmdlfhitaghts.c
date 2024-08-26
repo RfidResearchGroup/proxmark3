@@ -171,7 +171,7 @@ static int CmdLFHitagSWrite(const char *Cmd) {
                   "    - default key 4F4E4D494B52 (ONMIKR)\n",
                   "  lf hitag write -p 6 -d 01020304                         -> Hitag S, plain mode\n"
                   "  lf hitag hts write -p 6 -d 01020304 --nrar 0102030411223344 -> Hitag S, challenge mode\n"
-                  "  lf hitag hts write -p 6 -d 01020304 --crypto                -> Hitag S, crypto mode, def key\n"
+                  "  lf hitag hts write -p 6 -d 01020304 --crypto                -> Hitag S, crypto mode, default key\n"
                   "  lf hitag hts write -p 6 -d 01020304 -k 4F4E4D494B52         -> Hitag S, crypto mode\n\n"
     );
 
@@ -292,7 +292,8 @@ static int CmdLFHitagSList(const char *Cmd) {
 static command_t CommandTable[] = {
         {"help",        CmdHelp,          AlwaysAvailable, "This help"},
         {"list",        CmdLFHitagSList,  AlwaysAvailable, "List Hitag S trace history"},
-        {"-----------", CmdHelp,          IfPm3Hitag,      "----------------------- " _CYAN_("General") " ------------------------"},
+        {"-----------", CmdHelp,          IfPm3Hitag,      "----------------------- " _CYAN_(
+                "General") " ------------------------"},
         {"read",        CmdLFHitagSRead,  IfPm3Hitag,      "Read Hitag S memory"},
         {"write",       CmdLFHitagSWrite, IfPm3Hitag,      "Write Hitag S page"},
         {NULL, NULL,                      0, NULL}
@@ -324,7 +325,8 @@ hitags_config_t hitags_config_unpack(const uint8_t *config_bytes) {
 
 void hitags_config_print(hitags_config_t config) {
     PrintAndLogEx(INFO, " Memory type...... " _GREEN_("%s"),
-                  (const char *[]) {"Hitag S 32", "Hitag S 256", "Hitag S 2048"}[config.memory_type]);
+                  (const char *[]) {"Hitag S 32", "Hitag S 256", "Hitag S 2048",
+                                    "Unknown Hitag S/8211"}[config.memory_type]);
 
     PrintAndLogEx(INFO, " Authenticaion.... %s", config.authentication ? _YELLOW_("Yes") : "No");
 
