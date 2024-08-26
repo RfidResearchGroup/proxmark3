@@ -376,6 +376,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdlfguard.c
         ${PM3_ROOT}/client/src/cmdlfhid.c
         ${PM3_ROOT}/client/src/cmdlfhitag.c
+        ${PM3_ROOT}/client/src/cmdlfhitaghts.c
         ${PM3_ROOT}/client/src/cmdlfidteck.c
         ${PM3_ROOT}/client/src/cmdlfindala.c
         ${PM3_ROOT}/client/src/cmdlfio.c

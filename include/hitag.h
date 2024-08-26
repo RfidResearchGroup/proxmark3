@@ -30,9 +30,16 @@
 #define HITAG2_MAX_BLOCKS       8
 #define HITAG2_MAX_BYTE_SIZE    (HITAG2_MAX_BLOCKS * HITAG_BLOCK_SIZE)
 
+#define HITAGS_NRAR_SIZE         8
+#define HITAGS_CRYPTOKEY_SIZE    6
+#define HITAGS_UID_SIZE          4
+#define HITAGS_PAGE_SIZE         4
+#define HITAGS_BLOCK_SIZE        4
+#define HITAGS_MAX_PAGES         64
+#define HITAGS_MAX_BYTE_SIZE     (HITAGS_MAX_PAGES * HITAGS_PAGE_SIZE)
+
 // need to see which limits these cards has
 #define HITAG1_MAX_BYTE_SIZE    64
-#define HITAGS_MAX_BYTE_SIZE    64
 #define HITAGU_MAX_BYTE_SIZE    64
 #define HITAG_MAX_BYTE_SIZE    (64 * HITAG_BLOCK_SIZE)
 
