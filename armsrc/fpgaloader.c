@@ -226,6 +226,8 @@ static int bitstream_target_to_index(FPGA_config bitstream_target) {
 
     // Initialize
     if (bitstream_index_map[0] == -1){
+        bitstream_index_map[0] = 0;
+
         for (size_t i = 0; i < g_fpga_bitstream_num; i++) {
             FPGA_VERSION_INFORMATION info = g_fpga_version_information[i];
             bitstream_index_map[info.target_config] = i;
@@ -618,7 +620,7 @@ void SetAdcMuxFor(uint32_t whichGpio) {
 
 void Fpga_print_status(void) {
     DbpString(_CYAN_("Current FPGA image"));
-    Dbprintf("  mode.................... %s", g_fpga_version_information[downloaded_bitstream - 1]);
+    Dbprintf("  mode.................... %s", g_fpga_version_information[bitstream_target_to_index(downloaded_bitstream)]);
 }
 
 int FpgaGetCurrent(void) {
