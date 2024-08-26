@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added ELECTRA pattern decoding in `lf search` (@CiRIP)
 - Added pretty Hitag S config parsing (@CiRIP)
 - Moved Hitag S operations into separate submenu: `lf hitag s` (@CiRIP)
 - Added MFC keys for Sofia public transport cards (@user890104)
