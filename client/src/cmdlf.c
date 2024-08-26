@@ -1553,7 +1553,7 @@ static bool check_chiptype(bool getDeviceData) {
 
     //check for em4x05/em4x69 chips first
     uint32_t word = 0;
-    if (em4x05_isblock0(&word)) {
+    if (IfPm3EM4x50() && em4x05_isblock0(&word)) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x05 / EM4x69"));
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x05`") " commands");
         retval = true;
@@ -1570,7 +1570,7 @@ static bool check_chiptype(bool getDeviceData) {
 
 #if !defined ICOPYX
     // check for em4x50 chips
-    if (detect_4x50_block()) {
+    if (IfPm3EM4x50() && detect_4x50_block()) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x50"));
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x50`") " commands");
         retval = true;
@@ -1578,7 +1578,7 @@ static bool check_chiptype(bool getDeviceData) {
     }
 
     // check for em4x70 chips
-    if (detect_4x70_block()) {
+    if (IfPm3EM4x70() && detect_4x70_block()) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x70"));
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x70`") " commands");
         retval = true;
