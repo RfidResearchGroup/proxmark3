@@ -231,6 +231,7 @@ void printEM410x(uint32_t hi, uint64_t id, bool verbose, int type) {
         uint32_t sebury3 = id & 0x7FFFFF;
         PrintAndLogEx(SUCCESS, "Pattern Sebury     : %d %d %d  [0x%X 0x%X 0x%X]", sebury1, sebury2, sebury3, sebury1, sebury2, sebury3);
         PrintAndLogEx(SUCCESS, "VD / ID            : %03" PRIu64 " / %010" PRIu64, (id >> 32LL) & 0xFFFF, (id & 0xFFFFFFFF));
+        PrintAndLogEx(SUCCESS, "Pattern ELECTRA    : %d %d", (id >> 24) & 0xFFFF, id & 0xFFFFFF);
 
         PrintAndLogEx(INFO, "------------------------------------------------");
     }
