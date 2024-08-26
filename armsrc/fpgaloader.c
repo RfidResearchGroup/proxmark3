@@ -39,7 +39,7 @@ typedef struct {
 typedef lz4_stream_t *lz4_streamp_t;
 
 // remember which version of the bitstream we have already downloaded to the FPGA
-static int downloaded_bitstream = 0;
+static int downloaded_bitstream = FPGA_BITSTREAM_UNKNOWN;
 
 // this is where the bitstreams are located in memory:
 extern uint32_t _binary_obj_fpga_all_bit_z_start[], _binary_obj_fpga_all_bit_z_end[];
@@ -464,7 +464,7 @@ static bool FpgaConfCurrentMode(int bitstream_target) {
     // fpga "XC3S100E" image merge
     // If fpga image is no init
     // We need load hf_lf_allinone.bit
-    if (downloaded_bitstream != 0) {
+    if (downloaded_bitstream != FPGA_BITSTREAM_UNKNOWN) {
         // test start
         // PIO controls the following pins
         AT91C_BASE_PIOA->PIO_PER = GPIO_FPGA_SWITCH;

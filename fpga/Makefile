@@ -182,12 +182,6 @@ work:
 	$(Q)$(XILINX_TOOLS_PREFIX)par $(VERBOSITY) -w $< $@
 
 %.bit: %.ncd
-	# Hacky hack, make empty files for icopyx
-	if echo "$@" | grep -qi "icopyx"; then \
-		truncate -s0 ../fpga_icopyx_lf.bit; \
-		truncate -s0 ../fpga_icopyx_hf_15.bit; \
-		truncate -s0 ../fpga_icopyx_felica.bit; \
-	fi
 	$(Q)$(RM) $@ $*.drc $*.rbt
 	$(info [=] BITGEN $@)
 	$(Q)$(XILINX_TOOLS_PREFIX)bitgen $(VERBOSITY) -w $* $@
