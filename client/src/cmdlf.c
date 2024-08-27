@@ -541,7 +541,7 @@ int CmdFlexdemod(const char *Cmd) {
 *  this function will save a copy of the current lf config value, and set config to default values.
 *
 */
-int lf_config_savereset(sample_config *config) {
+int lf_resetconfig(sample_config *config) {
 
     if (config == NULL) {
         return PM3_EINVARG;
@@ -565,7 +565,7 @@ int lf_config_savereset(sample_config *config) {
         .verbose = false,
     };
 
-    res = lf_config(&def_config);
+    res = lf_setconfig(&def_config);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "failed to reset LF configuration to default values");
         return res;
@@ -595,7 +595,7 @@ int lf_getconfig(sample_config *config) {
     return PM3_SUCCESS;
 }
 
-int lf_config(sample_config *config) {
+int lf_setconfig(sample_config *config) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
     clearCommandBuffer();
@@ -656,7 +656,7 @@ int CmdLFConfig(const char *Cmd) {
 
     // if called with no params, just print the device config
     if (strlen(Cmd) == 0) {
-        return lf_config(NULL);
+        return lf_setconfig(NULL);
     }
 
     if (use_125 + use_134 > 1) {
@@ -729,7 +729,7 @@ int CmdLFConfig(const char *Cmd) {
         config.trigger_threshold = 0;
     }
 
-    return lf_config(&config);
+    return lf_setconfig(&config);
 }
 
 static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
