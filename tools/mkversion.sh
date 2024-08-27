@@ -92,7 +92,7 @@ sha=$(
     cd "$pm3path" || return
     # did we find the src?
     [ -f armsrc/appmain.c ] || return
-    if [[ "$OSTYPE" == "darwin"* ]]; then
+    if [ "${OSTYPE#darwin}" != "$OSTYPE" ]; then
         # macOS
         ls armsrc/*.[ch] common_arm/*.[ch]|grep -E -v "(disabled|version_pm3|fpga_version_info)"|sort|xargs shasum -a 256 -t|shasum -a 256|cut -c -9
     else
