@@ -671,14 +671,14 @@ static int CmdFdxBReader(const char *Cmd) {
 
         if (curr_div == LF_DIVISOR_125) {
             config.divisor = LF_DIVISOR_134;
-            res = lf_config(&config);
+            res = lf_setconfig(&config);
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "failed to change to 134 KHz LF configuration");
                 return res;
             }
         } else {
             config.divisor = LF_DIVISOR_125;
-            res = lf_config(&config);
+            res = lf_setconfig(&config);
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "failed to change to 125 KHz LF configuration");
                 return res;
@@ -694,7 +694,7 @@ static int CmdFdxBReader(const char *Cmd) {
 
     if (old_div != curr_div) {
         config.divisor = old_div;
-        res = lf_config(&config);
+        res = lf_setconfig(&config);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "failed to restore LF configuration");
             return res;

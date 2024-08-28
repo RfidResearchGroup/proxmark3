@@ -114,7 +114,7 @@ static int lf_search_plus(const char *Cmd) {
         d = config.divisor = default_divisor[i];
         PrintAndLogEx(INFO, "-->  trying  ( " _GREEN_("%d.%02d kHz")" )", 12000 / (d + 1), ((1200000 + (d + 1) / 2) / (d + 1)) - ((12000 / (d + 1)) * 100));
 
-        retval = lf_config(&config);
+        retval = lf_setconfig(&config);
         if (retval != PM3_SUCCESS)
             break;
 
@@ -125,7 +125,7 @@ static int lf_search_plus(const char *Cmd) {
 
     }
 
-    lf_config(&oldconfig);
+    lf_setconfig(&oldconfig);
     return retval;
 }
 

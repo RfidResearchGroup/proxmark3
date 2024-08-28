@@ -29,6 +29,7 @@
 #include "graph.h"               // for graph data
 #include "comms.h"
 #include "lfdemod.h"             // for demod code
+#include "cmdlf.h"               // for lf_getconfig
 #include "loclass/cipherutils.h" // for decimating samples in getsamples
 #include "cmdlfem410x.h"         // askem410xdecode
 #include "fileutils.h"           // searchFile
@@ -1875,13 +1876,13 @@ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_conf
 
     uint8_t bits_per_sample = 8;
 
-    // Old devices without this feature would send 0 at arg[0]
-    if (resp.oldarg[0] > 0 && (ignore_lf_config == false)) {
-        sample_config *sc = (sample_config *) resp.data.asBytes;
+    if (IfPm3Lf() && ignore_lf_config == false) {
+        sample_config sc;
+        lf_getconfig(&sc);
         if (verbose) {
-            PrintAndLogEx(INFO, "Samples @ " _YELLOW_("%d") " bits/smpl, decimation 1:%d ", sc->bits_per_sample, sc->decimation);
+            PrintAndLogEx(INFO, "Samples @ " _YELLOW_("%d") " bits/smpl, decimation 1:%d ", sc.bits_per_sample, sc.decimation);
         }
-        bits_per_sample = sc->bits_per_sample;
+        bits_per_sample = sc.bits_per_sample;
     }
 
     return getSamplesFromBufEx(got, n, bits_per_sample, verbose);;

@@ -40,7 +40,7 @@ Default LF config is set to:
     verbose = YES
     */
 
-static sample_config def_config = {
+static const sample_config def_config = {
     .decimation = 1,
     .bits_per_sample = 8,
     .averaging = 1,
