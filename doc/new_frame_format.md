@@ -82,11 +82,11 @@ For responses from the Proxmark3:
 * `status`: a field to send back the status of the command execution
 * `cmd`:    as previously, on 16b as it's enough
 * `data`:   variable length payload
-* `crc`:    either an actual CRC (crc14a) or a Magic placeholder (`a3`)
+* `crc`:    either an actual CRC (crc14a) or a Magic placeholder (`b3`)
 
 We used to send an anonymous ACK, now we're replying with the corresponding command name and a status.
-CRC is optional and on reception, the magic `a3` is accepted as placeholder. If it's different then it's checked as a CRC.
-By default CRC is user over USART and is disabled over USB, on both directions.
+CRC is optional and on reception, the magic `a3`/`b3` is accepted as placeholder. If it's different then it's checked as a CRC.
+By default CRC is used over USART and is disabled over USB, on both directions.
 
 Internal structures used to handle these packets are:
 * PacketCommandNGPreamble
