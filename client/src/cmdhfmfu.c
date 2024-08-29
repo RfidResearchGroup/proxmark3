@@ -270,7 +270,7 @@ static int get_ulc_3des_key_magic(uint64_t magic_type, uint8_t *key) {
         reverse_array(d, 8);
         reverse_array(d + 8, 8);
         memcpy(key, d, MFBLOCK_SIZE);
-    } 
+    }
 
     return resp.status;
 }
@@ -2770,10 +2770,10 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
     int res = 0;
     if (datalen == 16) {
         // Comp write may take 16bytes, but only write 4bytes.   See UL-C datasheet
-        for (uint8_t i = 0; i < 4; i++ ) {
+        for (uint8_t i = 0; i < 4; i++) {
 
             res = mfu_write_block(d, 4, has_auth_key, has_pwd, auth_key_ptr, blockno + i);
-            if ( res == PM3_SUCCESS) {
+            if (res == PM3_SUCCESS) {
                 d += 4;
             } else {
                 PrintAndLogEx(INFO, "Write ( %s )", _RED_("fail"));
@@ -2788,23 +2788,23 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
 
     } else {
         res = mfu_write_block(data, datalen, has_auth_key, has_pwd, auth_key_ptr, blockno);
-    switch (res) {
-        case PM3_SUCCESS: {
-            PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
-            PrintAndLogEx(HINT, "Try `" _YELLOW_("hf mfu rdbl -b %u") "` to verify ", blockno);
-            break;
+        switch (res) {
+            case PM3_SUCCESS: {
+                PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
+                PrintAndLogEx(HINT, "Try `" _YELLOW_("hf mfu rdbl -b %u") "` to verify ", blockno);
+                break;
+            }
+            case PM3_ESOFT: {
+                PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
+                PrintAndLogEx(HINT, "Check password / key!");
+                break;
+            }
+            case PM3_ETIMEOUT:
+            default: {
+                PrintAndLogEx(WARNING, "Command execute timeout");
+                break;
+            }
         }
-        case PM3_ESOFT: {
-            PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
-            PrintAndLogEx(HINT, "Check password / key!");
-            break;
-        }
-        case PM3_ETIMEOUT:
-        default: {
-            PrintAndLogEx(WARNING, "Command execute timeout");
-            break;
-        }
-    }
     }
 
     return res;

@@ -419,7 +419,7 @@ static int CmdHf14AConfig(const char *Cmd) {
     return hf14a_setconfig(&config, verbose);
 }
 
-static const char* get_uid_type(iso14a_card_select_t *card) {
+static const char *get_uid_type(iso14a_card_select_t *card) {
 
     static char s[60] = {0};
     memset(s, 0, sizeof(s));
@@ -2296,14 +2296,14 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 int16_t fsci = card.ats[1] & 0x0f;
 
                 PrintAndLogEx(INFO, "        " _YELLOW_("%02X") "............  T0    TA1 is%s present, TB1 is%s present, "
-                            "TC1 is%s present, FSCI is %d (FSC = %d)",
-                            card.ats[1],
-                            (ta1 ? "" : _RED_(" NOT")),
-                            (tb1 ? "" : _RED_(" NOT")),
-                            (tc1 ? "" : _RED_(" NOT")),
-                            fsci,
-                            fsci < ARRAYLEN(atsFSC) ? atsFSC[fsci] : -1
-                            );
+                              "TC1 is%s present, FSCI is %d (FSC = %d)",
+                              card.ats[1],
+                              (ta1 ? "" : _RED_(" NOT")),
+                              (tb1 ? "" : _RED_(" NOT")),
+                              (tc1 ? "" : _RED_(" NOT")),
+                              fsci,
+                              fsci < ARRAYLEN(atsFSC) ? atsFSC[fsci] : -1
+                             );
             }
             int pos = 2;
             if (ta1 && (card.ats_len > pos + 2)) {
@@ -2318,12 +2318,12 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 if (strlen(ds) != 0) ds[strlen(ds) - 2] = '\0';
                 if (strlen(dr) != 0) dr[strlen(dr) - 2] = '\0';
                 PrintAndLogEx(INFO, "           " _YELLOW_("%02X") ".........  TA1   different divisors are%s supported, "
-                            "DR: [%s], DS: [%s]",
-                            card.ats[pos],
-                            ((card.ats[pos] & 0x80) ? _RED_(" NOT") : ""),
-                            dr,
-                            ds
-                            );
+                              "DR: [%s], DS: [%s]",
+                              card.ats[pos],
+                              ((card.ats[pos] & 0x80) ? _RED_(" NOT") : ""),
+                              dr,
+                              ds
+                             );
 
                 pos++;
             }
@@ -2333,22 +2333,22 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 uint32_t fwi = card.ats[pos] >> 4;
 
                 PrintAndLogEx(INFO, "              " _YELLOW_("%02X") "......  TB1   SFGI = %d (SFGT = %s%d/fc), FWI = " _YELLOW_("%d") " (FWT = %d/fc)",
-                            card.ats[pos],
-                            (sfgi),
-                            sfgi ? "" : "(not needed) ",
-                            sfgi ? (1 << 12) << sfgi : 0,
-                            fwi,
-                            (1 << 12) << fwi
-                            );
+                              card.ats[pos],
+                              (sfgi),
+                              sfgi ? "" : "(not needed) ",
+                              sfgi ? (1 << 12) << sfgi : 0,
+                              fwi,
+                              (1 << 12) << fwi
+                             );
                 pos++;
             }
 
             if (tc1 && (card.ats_len > pos + 2)) {
                 PrintAndLogEx(INFO, "                 " _YELLOW_("%02X") "...  TC1   NAD is%s supported, CID is%s supported",
-                            card.ats[pos],
-                            (card.ats[pos] & 0x01) ? "" : _RED_(" NOT"),
-                            (card.ats[pos] & 0x02) ? "" : _RED_(" NOT")
-                            );
+                              card.ats[pos],
+                              (card.ats[pos] & 0x01) ? "" : _RED_(" NOT"),
+                              (card.ats[pos] & 0x02) ? "" : _RED_(" NOT")
+                             );
                 pos++;
             }
 
@@ -2479,9 +2479,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                         get_compact_tlv(card.ats + pos, calen);
                     } else {
                         PrintAndLogEx(SUCCESS, "%s - %s"
-                                    , sprint_hex_inrow(card.ats + pos, calen)
-                                    , sprint_ascii(card.ats + pos, calen)
-                                    );
+                                      , sprint_hex_inrow(card.ats + pos, calen)
+                                      , sprint_ascii(card.ats + pos, calen)
+                                     );
                     }
 
                     PrintAndLogEx(NORMAL, "");

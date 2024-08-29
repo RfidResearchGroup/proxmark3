@@ -4253,11 +4253,11 @@
                 "--slow Slower acquisition (required by some non standard cards)",
                 "-l, --legacy legacy mode (use the slow `hf mf chk`)",
                 "-v, --verbose verbose output",
+                "--ns No save to file",
                 "--mini MIFARE Classic Mini / S20",
                 "--1k MIFARE Classic 1k / S50 (default)",
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
-                "--ns No save",
                 "--in None (use CPU regular instruction set)",
                 "--im MMX",
                 "--is SSE2",
@@ -4265,7 +4265,7 @@
                 "--i2 AVX2",
                 "--i5 AVX512"
             ],
-            "usage": "hf mf autopwn [-hablv] [-k <hex>]... [-s <dec>] [-f <fn>] [--slow] [--mini] [--1k] [--2k] [--4k] [--ns] [--in] [--im] [--is] [--ia] [--i2] [--i5]"
+            "usage": "hf mf autopwn [-hablv] [-k <hex>]... [-s <dec>] [-f <fn>] [--slow] [--ns] [--mini] [--1k] [--2k] [--4k] [--in] [--im] [--is] [--ia] [--i2] [--i5]"
         },
         "hf mf brute": {
             "command": "hf mf brute",
@@ -4346,7 +4346,7 @@
                 "--emu Fill simulator keys from found keys",
                 "--dump Dump found keys to binary file",
                 "-f, --file <fn> Filename of dictionary",
-                "--no-default Don't add the bunch of extra default keys"
+                "--no-default Skip check default keys"
             ],
             "usage": "hf mf chk [-hab*] [-k <hex>]... [--tblk <dec>] [--mini] [--1k] [--2k] [--4k] [--emu] [--dump] [-f <fn>] [--no-default]"
         },
@@ -4710,7 +4710,7 @@
                 "--blk <dec> block number (single block recovery mode)",
                 "-a single block recovery key A",
                 "-b single block recovery key B",
-                "--no-default Don't add the bunch of extra default keys"
+                "--no-default Skip check default keys"
             ],
             "usage": "hf mf fchk [-hab] [-k <hex>]... [--mini] [--1k] [--2k] [--4k] [--emu] [--dump] [--mem] [-f <fn>] [--blk <dec>] [--no-default]"
         },
@@ -7228,10 +7228,10 @@
         },
         "hf mfu wipe": {
             "command": "hf mfu wipe",
-            "description": "Wipe card to zeros. It will ignore block0,1,2,3 you will need to call it with password in order to wipe the config and sett default pwd/pack Abort by pressing a key New password.... FFFFFFFF New 3-DES key... 425245414B4D454946594F5543414E21",
+            "description": "Wipe card to zeros. It will ignore block0,1,2,3 you will need to call it with password in order to wipe the config and sett default pwd/pack Abort by pressing a key New password.... FFFFFFFF New 3-DES key... 49454D4B41455242214E4143554F5946",
             "notes": [
                 "hf mfu wipe",
-                "hf mfu wipe -k 425245414B4D454946594F5543414E21"
+                "hf mfu wipe -k 49454D4B41455242214E4143554F5946"
             ],
             "offline": false,
             "options": [
@@ -9681,7 +9681,7 @@
         },
         "lf hitag help": {
             "command": "lf hitag help",
-            "description": "help This help list List Hitag trace history test Perform self tests view Display content from tag dump file lookup Uses authentication trace to check for key in dictionary file --------------------------------------------------------------------------------------- lf hitag list available offline: yes Alias of `trace list -t hitag2` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List Hitag trace history hts { Hitag S/8211 operations } test Perform self tests view Display content from tag dump file lookup Uses authentication trace to check for key in dictionary file --------------------------------------------------------------------------------------- lf hitag list available offline: yes Alias of `trace list -t hitag2` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "lf hitag list --frame -> show frame delay times",
                 "lf hitag list -1 -> use trace buffer"
@@ -9699,6 +9699,65 @@
                 "-f, --file <fn> filename of dictionary"
             ],
             "usage": "lf hitag list [-h1crux] [--frame] [-f <fn>]"
+        },
+        "lf hitag hts help": {
+            "command": "lf hitag hts help",
+            "description": "help This help list List Hitag S trace history --------------------------------------------------------------------------------------- lf hitag hts list available offline: yes Alias of `trace list -t hitags` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "notes": [
+                "lf hitag hts list --frame -> show frame delay times",
+                "lf hitag hts list -1 -> use trace buffer"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-1, --buffer use data from trace buffer",
+                "--frame show frame delay times",
+                "-c mark CRC bytes",
+                "-r show relative times (gap and duration)",
+                "-u display times in microseconds instead of clock cycles",
+                "-x show hexdump to convert to pcap(ng)",
+                "or to import into Wireshark using encapsulation type \"ISO 14443\"",
+                "-f, --file <fn> filename of dictionary"
+            ],
+            "usage": "lf hitag hts list [-h1crux] [--frame] [-f <fn>]"
+        },
+        "lf hitag hts read": {
+            "command": "lf hitag hts read",
+            "description": "Read Hitag S memory. Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR)",
+            "notes": [
+                "lf hitag s read -> Hitag S, plain mode",
+                "lf hitag hts read --nrar 0102030411223344 -> Hitag S, challenge mode",
+                "lf hitag hts read --crypto -> Hitag S, crypto mode, def key",
+                "lf hitag hts read -k 4F4E4D494B52 -> Hitag S, crypto mode"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--nrar <hex> nonce / answer writer, 8 hex bytes",
+                "--crypto crypto mode",
+                "-k, --key <hex> key, 4 or 6 hex bytes"
+            ],
+            "usage": "lf hitag hts read [-h] [--nrar <hex>] [--crypto] [-k <hex>]"
+        },
+        "lf hitag hts write": {
+            "command": "lf hitag hts write",
+            "description": "Write a page in Hitag S memory. Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR)",
+            "notes": [
+                "lf hitag write -p 6 -d 01020304 -> Hitag S, plain mode",
+                "lf hitag hts write -p 6 -d 01020304 --nrar 0102030411223344 -> Hitag S, challenge mode",
+                "lf hitag hts write -p 6 -d 01020304 --crypto -> Hitag S, crypto mode, default key",
+                "lf hitag hts write -p 6 -d 01020304 -k 4F4E4D494B52 -> Hitag S, crypto mode"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--nrar <hex> nonce / answer writer, 8 hex bytes",
+                "--crypto crypto mode",
+                "-k, --key <hex> key, 6 hex bytes",
+                "-p, --page <dec> page address to write to",
+                "-d, --data <hex> data, 4 hex bytes"
+            ],
+            "usage": "lf hitag hts write [-h] [--nrar <hex>] [--crypto] [-k <hex>] -p <dec> -d <hex>"
         },
         "lf hitag info": {
             "command": "lf hitag info",
@@ -11090,7 +11149,7 @@
                 "-f, --file <fn> filename (default is generated on blk 0)",
                 "-o, --override override, force pwd read despite danger to card",
                 "-p, --pwd <hex> password (4 hex bytes)",
-                "--ns no save",
+                "--ns no save to file",
                 "--r0 downlink - fixed bit length",
                 "--r1 downlink - long leading reference",
                 "--r2 downlink - leading zero",
@@ -12820,8 +12879,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 740,
+        "commands_extracted": 743,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-08-25T12:04:45"
+        "extracted_on": "2024-08-29T10:28:11"
     }
 }

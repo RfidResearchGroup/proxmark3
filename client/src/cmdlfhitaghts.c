@@ -48,14 +48,14 @@ static int CmdLFHitagSRead(const char *Cmd) {
                   "  lf hitag hts read --nrar 0102030411223344 -> Hitag S, challenge mode\n"
                   "  lf hitag hts read --crypto                -> Hitag S, crypto mode, def key\n"
                   "  lf hitag hts read -k 4F4E4D494B52         -> Hitag S, crypto mode\n\n"
-    );
+                 );
 
     void *argtable[] = {
-            arg_param_begin,
-            arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
-            arg_lit0(NULL, "crypto", "crypto mode"),
-            arg_str0("k", "key", "<hex>", "key, 4 or 6 hex bytes"),
-            arg_param_end
+        arg_param_begin,
+        arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
+        arg_lit0(NULL, "crypto", "crypto mode"),
+        arg_str0("k", "key", "<hex>", "key, 4 or 6 hex bytes"),
+        arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
@@ -173,16 +173,16 @@ static int CmdLFHitagSWrite(const char *Cmd) {
                   "  lf hitag hts write -p 6 -d 01020304 --nrar 0102030411223344 -> Hitag S, challenge mode\n"
                   "  lf hitag hts write -p 6 -d 01020304 --crypto                -> Hitag S, crypto mode, default key\n"
                   "  lf hitag hts write -p 6 -d 01020304 -k 4F4E4D494B52         -> Hitag S, crypto mode\n\n"
-    );
+                 );
 
     void *argtable[] = {
-            arg_param_begin,
-            arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
-            arg_lit0(NULL, "crypto", "crypto mode"),
-            arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
-            arg_int1("p", "page", "<dec>", "page address to write to"),
-            arg_str1("d", "data", "<hex>", "data, 4 hex bytes"),
-            arg_param_end
+        arg_param_begin,
+        arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
+        arg_lit0(NULL, "crypto", "crypto mode"),
+        arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
+        arg_int1("p", "page", "<dec>", "page address to write to"),
+        arg_str1("d", "data", "<hex>", "data, 4 hex bytes"),
+        arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
@@ -290,13 +290,15 @@ static int CmdLFHitagSList(const char *Cmd) {
 }
 
 static command_t CommandTable[] = {
-        {"help",        CmdHelp,          AlwaysAvailable, "This help"},
-        {"list",        CmdLFHitagSList,  AlwaysAvailable, "List Hitag S trace history"},
-        {"-----------", CmdHelp,          IfPm3Hitag,      "----------------------- " _CYAN_(
-                "General") " ------------------------"},
-        {"read",        CmdLFHitagSRead,  IfPm3Hitag,      "Read Hitag S memory"},
-        {"write",       CmdLFHitagSWrite, IfPm3Hitag,      "Write Hitag S page"},
-        {NULL, NULL,                      0, NULL}
+    {"help",        CmdHelp,          AlwaysAvailable, "This help"},
+    {"list",        CmdLFHitagSList,  AlwaysAvailable, "List Hitag S trace history"},
+    {
+        "-----------", CmdHelp,          IfPm3Hitag,      "----------------------- " _CYAN_(
+            "General") " ------------------------"
+    },
+    {"read",        CmdLFHitagSRead,  IfPm3Hitag,      "Read Hitag S memory"},
+    {"write",       CmdLFHitagSWrite, IfPm3Hitag,      "Write Hitag S page"},
+    {NULL, NULL,                      0, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {
@@ -312,34 +314,40 @@ int CmdLFHitagS(const char *Cmd) {
 
 hitags_config_t hitags_config_unpack(const uint8_t *config_bytes) {
     hitags_config_t result = {
-            .memory_type    = (config_bytes[0] >> 0) & 0x03,
-            .authentication = (config_bytes[1] >> 7) & 0x01,
-            .ttf_coding     = (config_bytes[1] >> 6) & 0x01,
-            .ttf_data_rate  = (config_bytes[1] >> 4) & 0x03,
-            .ttf_mode       = (config_bytes[1] >> 2) & 0x03,
-            .lock_config    = (config_bytes[1] >> 1) & 0x01,
-            .lock_key       = (config_bytes[1] >> 0) & 0x01
+        .memory_type    = (config_bytes[0] >> 0) & 0x03,
+        .authentication = (config_bytes[1] >> 7) & 0x01,
+        .ttf_coding     = (config_bytes[1] >> 6) & 0x01,
+        .ttf_data_rate  = (config_bytes[1] >> 4) & 0x03,
+        .ttf_mode       = (config_bytes[1] >> 2) & 0x03,
+        .lock_config    = (config_bytes[1] >> 1) & 0x01,
+        .lock_key       = (config_bytes[1] >> 0) & 0x01
     };
     return result;
 }
 
 void hitags_config_print(hitags_config_t config) {
     PrintAndLogEx(INFO, " Memory type...... " _GREEN_("%s"),
-                  (const char *[]) {"Hitag S 32", "Hitag S 256", "Hitag S 2048",
-                                    "Unknown Hitag S/8211"}[config.memory_type]);
+    (const char *[]) {
+        "Hitag S 32", "Hitag S 256", "Hitag S 2048",
+        "Unknown Hitag S/8211"
+    }[config.memory_type]);
 
     PrintAndLogEx(INFO, " Authenticaion.... %s", config.authentication ? _YELLOW_("Yes") : "No");
 
     PrintAndLogEx(INFO, " TTF coding....... %s",
-                  (const char *[]) {"Manchester", "Biphase"}[config.ttf_coding]);
+    (const char *[]) {"Manchester", "Biphase"}[config.ttf_coding]);
 
     PrintAndLogEx(INFO, " TTF data rate.... %s",
-                  (const char *[]) {"4 kBit", "8 kBit", "2 kBit",
-                                    "2 kBit and Pigeon Race Standard"}[config.ttf_data_rate]);
+    (const char *[]) {
+        "4 kBit", "8 kBit", "2 kBit",
+        "2 kBit and Pigeon Race Standard"
+    }[config.ttf_data_rate]);
 
     PrintAndLogEx(INFO, " TTF mode......... %s",
-                  (const char *[]) {"TTF Mode disabled (= RTF Mode)", "Page 4, Page 5",
-                                    "Page 4, Page 5, Page 6, Page 7", "Page 4"}[config.ttf_mode]);
+    (const char *[]) {
+        "TTF Mode disabled (= RTF Mode)", "Page 4, Page 5",
+        "Page 4, Page 5, Page 6, Page 7", "Page 4"
+    }[config.ttf_mode]);
 
     PrintAndLogEx(INFO, " Config locked.... %s", config.lock_config ? _RED_("Yes") : _GREEN_("No"));
     PrintAndLogEx(INFO, " Key/PWD locked... %s", config.lock_key ? _RED_("Yes") : _GREEN_("No"));

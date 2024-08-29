@@ -2519,7 +2519,7 @@ static int CmdT55xxDump(const char *Cmd) {
         arg_str0("f", "file", "<fn>", "filename (default is generated on blk 0)"),
         arg_lit0("o", "override", "override, force pwd read despite danger to card"),
         arg_str0("p", "pwd", "<hex>", "password (4 hex bytes)"),
-        arg_lit0(NULL, "ns", "no save"),
+        arg_lit0(NULL, "ns", "no save to file"),
     };
     uint8_t idx = 5;
     arg_add_t55xx_downloadlink(argtable, &idx, T55XX_DLMODE_SINGLE, T55XX_DLMODE_SINGLE);

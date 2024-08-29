@@ -1067,6 +1067,18 @@ Check column "offline" for their availability.
 |`lf hitag ta            `|N       |`Hitag 2: test all recorded authentications`
 
 
+### lf hitag hts
+
+ { Hitag S/8211 operations }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf hitag hts help      `|Y       |`This help`
+|`lf hitag hts list      `|Y       |`List Hitag S trace history`
+|`lf hitag hts read      `|N       |`Read Hitag S memory`
+|`lf hitag hts write     `|N       |`Write Hitag S page`
+
+
 ### lf idteck
 
  { Idteck RFIDs...            }

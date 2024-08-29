@@ -225,7 +225,7 @@ static int bitstream_target_to_index(FPGA_config bitstream_target) {
     static int8_t bitstream_index_map[FPGA_BITSTREAM_MAX] = {-1};
 
     // Initialize
-    if (bitstream_index_map[0] == -1){
+    if (bitstream_index_map[0] == -1) {
         bitstream_index_map[0] = 0;
 
         for (size_t i = 0; i < g_fpga_bitstream_num; i++) {

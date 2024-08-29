@@ -9565,13 +9565,13 @@ static int CmdHF14AMfInfo(const char *Cmd) {
 
     uint8_t k08s[6] = {0xA3, 0x96, 0xEF, 0xA4, 0xE2, 0x4F};
     if (mfReadBlock(0, 4, k08s, blockdata) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Backdoor key..... " _YELLOW_("%s"), sprint_hex_inrow(k08s, sizeof(k08s)));
+        PrintAndLogEx(SUCCESS, "Backdoor key..... " _YELLOW_("%s"), sprint_hex_inrow(k08s, sizeof(k08s)));
         fKeyType = MF_KEY_BD08S;
     }
 
     uint8_t k08[6] = {0xA3, 0x16, 0x67, 0xA8, 0xCE, 0xC1};
     if (mfReadBlock(0, 4, k08, blockdata) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Backdoor key..... " _YELLOW_("%02X%02X%02X%02X%02X%02X"), k08[0], k08[1], k08[2], k08[3], k08[4], k08[5]);
+        PrintAndLogEx(SUCCESS, "Backdoor key..... " _YELLOW_("%02X%02X%02X%02X%02X%02X"), k08[0], k08[1], k08[2], k08[3], k08[4], k08[5]);
         fKeyType = MF_KEY_BD08;
     }
 
