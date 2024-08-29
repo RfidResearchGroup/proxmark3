@@ -676,7 +676,7 @@
         "Vendor": "Invalid / Reserved",
         "Country": "",
         "Name": "Invalid / Reserved",
-        "Description": "Used by YVR Compass and ATL Breeze",
+        "Description": "Used by ATL Breeze, MAD Public Transport Card, and YVR Compass",
         "Type": "transport"
     },
     {
@@ -699,8 +699,8 @@
         "AID": "010000",
         "Vendor": "Consorcio Regional de Transportes Públicos Regulares de Madrid (CRTM)",
         "Country": "ES",
-        "Name": "Tarjeta Transporte Publico (MAD)",
-        "Description": "MAD Public Transport Card",
+        "Name": "Tarjeta Transporte Publico (MAD) (Alternative Endian)",
+        "Description": "MAD Public Transport Card (Alternative Endian)",
         "Type": "transport"
     },
     {
@@ -864,6 +864,14 @@
         "Type": "transport"
     },
     {
+        "AID": "CA3490",
+        "Vendor": "Urban Mobility Center",
+        "Country": "BG",
+        "Name": "Sofia City Card (SOF)",
+        "Description": "SOF Sofia City Card",
+        "Type": "transport"
+    },
+    {
         "AID": "EF2011",
         "Vendor": "Helsinki Region Transport (HRT)",
         "Country": "FI",
@@ -891,7 +899,7 @@
         "AID": "F21030",
         "Vendor": "Puget Sound Transit Agencies via Vix Technologies",
         "Country": "US",
-        "Name": "ORCA [SEA]",
+        "Name": "ORCA (One Regional Card for All) (SEA)",
         "Description": "One Regional Card For All // FIDs 02: Trip History; 04: current balance",
         "Type": "transport"
     },
@@ -979,7 +987,7 @@
         "AID": "F213F0",
         "Vendor": "Puget Sound Transit Agencies via Vix Technologies",
         "Country": "US",
-        "Name": "ORCA (SEA)",
+        "Name": "ORCA (One Regional Card for All) (SEA)",
         "Description": "One Regional Card for All // FIDs 00: Standard Data; 01: Backup Data",
         "Type": "transport"
     },
