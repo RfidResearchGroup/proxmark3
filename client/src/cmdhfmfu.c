@@ -233,6 +233,47 @@ static int ul_print_nxp_silicon_info(uint8_t *card_uid) {
     return PM3_SUCCESS;
 }
 
+static int get_ulc_3des_key_magic(uint64_t magic_type, uint8_t *key) {
+
+    mf_readblock_ex_t payload = {
+        .read_cmd = ISO14443A_CMD_READBLOCK,
+        .block_no = 0x2C,
+    };
+
+    if ((magic_type & MFU_TT_MAGIC_1A) == MFU_TT_MAGIC_1A) {
+        payload.wakeup = MF_WAKE_GEN1A;
+        payload.auth_cmd = 0;
+    } else if ((magic_type & MFU_TT_MAGIC_1B) == MFU_TT_MAGIC_1B) {
+        payload.wakeup = MF_WAKE_GEN1B;
+        payload.auth_cmd = 0;
+    } else if ((magic_type & MFU_TT_MAGIC_4) == MFU_TT_MAGIC_4) {
+        payload.wakeup = MF_WAKE_GDM_ALT;
+        payload.auth_cmd = 0;
+    } else if ((magic_type & MFU_TT_MAGIC_NTAG21X) == MFU_TT_MAGIC_NTAG21X) {
+        payload.wakeup = MF_WAKE_WUPA;
+        payload.auth_cmd = 0;
+    } else {
+        payload.wakeup = MF_WAKE_WUPA;
+        payload.auth_cmd = MIFARE_MAGIC_GDM_AUTH_KEY;
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_READBL_EX, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_READBL_EX, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "command execute timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status == PM3_SUCCESS && resp.length == MFBLOCK_SIZE) {
+        uint8_t *d = resp.data.asBytes;
+        reverse_array(d, 8);
+        reverse_array(d + 8, 8);
+        memcpy(key, d, MFBLOCK_SIZE);
+    } 
+
+    return resp.status;
+}
 
 /*
   The 7 MSBits (=n) code the storage size itself based on 2^n,
@@ -1958,7 +1999,6 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, 
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, keytype, authkey, ak_len);
-
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "Command execute timeout");
@@ -2352,7 +2392,9 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
 
         mfu_fingerprint(tagtype, has_auth_key, authkeyptr, ak_len);
 
-        if ((tagtype & MFU_TT_MAGIC)) {
+        DropField();
+
+        if ((tagtype & MFU_TT_MAGIC) == MFU_TT_MAGIC) {
             //just read key
             uint8_t ulc_deskey[16] = {0x00};
             status = ul_read(0x2C, ulc_deskey, sizeof(ulc_deskey));
@@ -2361,12 +2403,15 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 PrintAndLogEx(ERR, "Error: tag didn't answer to READ magic");
                 return PM3_ESOFT;
             }
+
             if (status == 16) {
                 ulc_print_3deskey(ulc_deskey);
             }
 
+            PrintAndLogEx(NORMAL, "");
+            return PM3_SUCCESS;
+
         } else {
-            DropField();
             // if we called info with key, just return
             if (has_auth_key) {
                 PrintAndLogEx(NORMAL, "");
@@ -2612,9 +2657,10 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     }
 
 out:
+    DropField();
+
     mfu_fingerprint(tagtype, has_auth_key, authkeyptr, ak_len);
 
-    DropField();
     if (locked) {
         PrintAndLogEx(INFO, "\nTag appears to be locked, try using a key to get more info");
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
@@ -2718,8 +2764,30 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
         PrintAndLogEx(INFO, "Using %s " _GREEN_("%s"), (ak_len == 16) ? "3des" : "pwd", sprint_hex(authenticationkey, ak_len));
     }
 
-    // Send write Block
-    int res = mfu_write_block(data, datalen, has_auth_key, has_pwd, auth_key_ptr, blockno);
+
+    // Send write Block.
+    uint8_t *d = data;
+    int res = 0;
+    if (datalen == 16) {
+        // Comp write may take 16bytes, but only write 4bytes.   See UL-C datasheet
+        for (uint8_t i = 0; i < 4; i++ ) {
+
+            res = mfu_write_block(d, 4, has_auth_key, has_pwd, auth_key_ptr, blockno + i);
+            if ( res == PM3_SUCCESS) {
+                d += 4;
+            } else {
+                PrintAndLogEx(INFO, "Write ( %s )", _RED_("fail"));
+                return PM3_ESOFT;
+            }
+        }
+
+        if (res == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
+            PrintAndLogEx(HINT, "Try `" _YELLOW_("hf mfu rdbl -b %u") "` to verify ", blockno);
+        }
+
+    } else {
+        res = mfu_write_block(data, datalen, has_auth_key, has_pwd, auth_key_ptr, blockno);
     switch (res) {
         case PM3_SUCCESS: {
             PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
@@ -2736,6 +2804,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
             PrintAndLogEx(WARNING, "Command execute timeout");
             break;
         }
+    }
     }
 
     return res;
@@ -3700,7 +3769,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
         PrintAndLogEx(INFO, "Restoring configuration blocks");
 
-        PrintAndLogEx(INFO, "authentication with keytype[%x]  %s\n", (uint8_t)(keytype & 0xff), sprint_hex(p_authkey, 4));
+        PrintAndLogEx(INFO, "Authentication with keytype[%x]  %s\n", (uint8_t)(keytype & 0xff), sprint_hex(p_authkey, 4));
 
 #if defined ICOPYX
         // otp, uid, lock, dynlockbits, cfg0, cfg1, pwd, pack
@@ -3715,7 +3784,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
             clearCommandBuffer();
             SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
             wait4response(b);
-            PrintAndLogEx(INFO, "special block written %u - %s\n", b, sprint_hex(data, 4));
+            PrintAndLogEx(INFO, "special block written " _YELLOW_("%u") " - %s", b, sprint_hex(data, 4));
         }
     }
 
@@ -5506,9 +5575,9 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
                   "you will need to call it with password in order to wipe the config and sett default pwd/pack\n"
                   "Abort by pressing a key\n"
                   "New password.... FFFFFFFF\n"
-                  "New 3-DES key... 425245414B4D454946594F5543414E21\n",
+                  "New 3-DES key... 49454D4B41455242214E4143554F5946\n",
                   "hf mfu wipe\n"
-                  "hf mfu wipe -k 425245414B4D454946594F5543414E21\n"
+                  "hf mfu wipe -k 49454D4B41455242214E4143554F5946\n"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -5565,6 +5634,21 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
     }
 
     ul_print_type(tagtype, 0);
+
+    // GDM / GEN1A / GEN4 / NTAG21x read the key
+    if (ak_len == 0) {
+
+        DropField();
+
+        int res = get_ulc_3des_key_magic(tagtype, auth_key_ptr);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        PrintAndLogEx(SUCCESS, "Using 3DES key... %s", sprint_hex_inrow(auth_key_ptr, 16));
+        has_auth_key = true;
+    }
+
+    DropField();
 
     PrintAndLogEx(INFO, "Start wiping...");
     PrintAndLogEx(INFO, "-----+-----------------------------");
@@ -5656,6 +5740,7 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
             res = mfu_write_block(data, MFU_BLOCK_SIZE, has_auth_key, has_pwd, auth_key_ptr, i);
         }
         */
+
         int res = mfu_write_block(data, MFU_BLOCK_SIZE, has_auth_key, has_pwd, auth_key_ptr, i);
 
         PrintAndLogEx(INFO, " %3d | %s" NOLF, i, sprint_hex(data, MFU_BLOCK_SIZE));
@@ -5685,8 +5770,8 @@ ulc:
     if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
 
         uint8_t key[16] = {
-            0x42, 0x52, 0x45, 0x41, 0x4B, 0x4D, 0x45, 0x49,
-            0x46, 0x59, 0x4F, 0x55, 0x43, 0x41, 0x4E, 0x21
+            0x49, 0x45, 0x4D, 0x4B, 0x41, 0x45, 0x52, 0x42,
+            0x21, 0x4E, 0x41, 0x43, 0x55, 0x4F, 0x59, 0x46
         };
 
         clearCommandBuffer();

@@ -2512,12 +2512,12 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         arg_lit0("l",  "legacy",          "legacy mode (use the slow `hf mf chk`)"),
         arg_lit0("v",  "verbose",         "verbose output"),
 
+        arg_lit0(NULL, "ns", "No save to file"),
+
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
         arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (default)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
-
-        arg_lit0(NULL, "ns", "No save"),
 
         arg_lit0(NULL, "in", "None (use CPU regular instruction set)"),
 #if defined(COMPILER_HAS_SIMD_X86)
@@ -2559,12 +2559,12 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     bool legacy_mfchk = arg_get_lit(ctx, 7);
     bool verbose = arg_get_lit(ctx, 8);
 
-    bool m0 = arg_get_lit(ctx, 9);
-    bool m1 = arg_get_lit(ctx, 10);
-    bool m2 = arg_get_lit(ctx, 11);
-    bool m4 = arg_get_lit(ctx, 12);
+    bool no_save = arg_get_lit(ctx, 9);
 
-    bool no_save = arg_get_lit(ctx, 13);
+    bool m0 = arg_get_lit(ctx, 10);
+    bool m1 = arg_get_lit(ctx, 11);
+    bool m2 = arg_get_lit(ctx, 12);
+    bool m4 = arg_get_lit(ctx, 13);
 
     bool in = arg_get_lit(ctx, 14);
 #if defined(COMPILER_HAS_SIMD_X86)
@@ -3334,7 +3334,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
         arg_int0(NULL, "blk", "<dec>", "block number (single block recovery mode)"),
         arg_lit0("a", NULL, "single block recovery key A"),
         arg_lit0("b", NULL, "single block recovery key B"),
-        arg_lit0(NULL, "no-default", "Don't add the bunch of extra default keys"),
+        arg_lit0(NULL, "no-default", "Skip check default keys"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3773,7 +3773,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
         arg_lit0(NULL, "emu", "Fill simulator keys from found keys"),
         arg_lit0(NULL, "dump", "Dump found keys to binary file"),
         arg_str0("f", "file", "<fn>", "Filename of dictionary"),
-        arg_lit0(NULL, "no-default", "Don't add the bunch of extra default keys"),
+        arg_lit0(NULL, "no-default", "Skip check default keys"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -9565,12 +9565,13 @@ static int CmdHF14AMfInfo(const char *Cmd) {
 
     uint8_t k08s[6] = {0xA3, 0x96, 0xEF, 0xA4, 0xE2, 0x4F};
     if (mfReadBlock(0, 4, k08s, blockdata) == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Backdoor key..... " _RED_("%02X%02X%02X%02X%02X%02X"), k08s[0], k08s[1], k08s[2], k08s[3], k08s[4], k08s[5]);
+            PrintAndLogEx(SUCCESS, "Backdoor key..... " _YELLOW_("%s"), sprint_hex_inrow(k08s, sizeof(k08s)));
         fKeyType = MF_KEY_BD08S;
     }
+
     uint8_t k08[6] = {0xA3, 0x16, 0x67, 0xA8, 0xCE, 0xC1};
     if (mfReadBlock(0, 4, k08, blockdata) == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Backdoor key..... " _RED_("%02X%02X%02X%02X%02X%02X"), k08[0], k08[1], k08[2], k08[3], k08[4], k08[5]);
+            PrintAndLogEx(SUCCESS, "Backdoor key..... " _YELLOW_("%02X%02X%02X%02X%02X%02X"), k08[0], k08[1], k08[2], k08[3], k08[4], k08[5]);
         fKeyType = MF_KEY_BD08;
     }
 

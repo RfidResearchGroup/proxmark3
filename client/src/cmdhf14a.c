@@ -2591,6 +2591,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         return PM3_EFAILED;
     }
 
+    PrintAndLogEx(INFO, "");
+
     uint16_t isMagic = 0;
 
     if (isMifareClassic || isMifareMini) {

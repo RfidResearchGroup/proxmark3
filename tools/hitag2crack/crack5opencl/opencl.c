@@ -185,7 +185,7 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                     return -7;
                 }
 
-                strncpy(tmp_buf, "N/A\0", tmp_len);
+                strncpy(tmp_buf, "n/a\0", tmp_len);
             }
 
             if (verbose) {
@@ -454,7 +454,7 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
                         return -7;
                     }
 
-                    strncpy(tmp_buf, "N/A\0", tmp_len);
+                    strncpy(tmp_buf, "n/a\0", tmp_len);
                 }
 
                 if (verbose) {
