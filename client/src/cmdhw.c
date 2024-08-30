@@ -1432,7 +1432,7 @@ static int CmdBootloader(const char *Cmd) {
 }
 
 int set_fpga_mode(uint8_t mode) {
-    if (mode < FPGA_BITSTREAM_LF || mode > FPGA_BITSTREAM_HF_15) {
+    if (mode < FPGA_BITSTREAM_MIN || mode > FPGA_BITSTREAM_MAX) {
         return PM3_EINVARG;
     }
     uint8_t d[] = {mode};
