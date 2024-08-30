@@ -228,8 +228,8 @@ endif
 ifneq ($(SKIP_HFPLOT),1)
     PLATFORM_DEFS += -DWITH_HFPLOT
 endif
-ifeq ($(SKIP_COMPRESSION),1)
-    PLATFORM_DEFS += -DWITH_NO_COMPRESSION
+ifneq ($(SKIP_COMPRESSION),1)
+    PLATFORM_DEFS += -DWITH_COMPRESSION
 endif
 
 # Standalone mode
