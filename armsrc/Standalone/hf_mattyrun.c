@@ -402,7 +402,7 @@ void RunMod(void) {
             // Iterates through each sector, checking if there is a correct key
             for (uint8_t keyType = 0; keyType < 2 && !err; ++keyType) {
                 for (uint8_t sec = 0; sec < sectorsCnt && !err; ++sec) {
-                    uint64_t currentKey;
+                    uint64_t currentKey = 0;
                     Dbprintf("[=] Testing sector %3" PRIu8 " (block %3" PRIu8 ") for key %c",
                              sec, FirstBlockOfSector(sec), (keyType == 0) ? 'A' : 'B');
                     int key = saMifareChkKeys(FirstBlockOfSector(sec), keyType, true,
