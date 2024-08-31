@@ -65,10 +65,10 @@ p = pm3.pm3()
 p.console("hf 14a read")
 uid = None
 
-if p.grabbed_output is not None:
-    for line in p.grabbed_output.split('\n'):
-        if "UID:" in line:
-            uid = int(line[10:].replace(' ', '')[-8:], 16)
+for line in p.grabbed_output.split('\n'):
+    print(line)
+    if "UID:" in line:
+        uid = int(line[10:].replace(' ', '')[-8:], 16)
 
 if uid is None:
     print("Card not found")
