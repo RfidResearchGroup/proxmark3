@@ -645,11 +645,11 @@ static void *brute_key_thread(void *arguments) {
 
 static int usage(void) {
     printf("\n");
-    printf("syntax:  mf_nonce_brute <uid> <nt> <nt_par_err> <nr> <ar> <ar_par_err> <at> <at_par_err> [<next_command>]\n\n");
+    printf("syntax:  mf_nonce_brute <uid> <{nt}> <nt_par_err> <{nr}> <{ar}> <ar_par_err> <{at}> <at_par_err> [<{next_command}>]\n\n");
     printf("how to convert trace data to needed input:\n");
-    printf("    nt in trace = 8c! 42 e6! 4e!\n");
-    printf("             nt = 8c42e64e\n");
-    printf("     nt_par_err = 1011\n\n");
+    printf("  {nt} in trace = 8c! 42 e6! 4e!\n");
+    printf("  =>       {nt} = 8c42e64e\n");
+    printf("  => nt_par_err = 1011\n\n");
     printf("samples:\n");
     printf("\n");
     printf("  ./mf_nonce_brute fa247164 fb47c594 0000 71909d28 0c254817 1000 0dc7cfbd 1110\n");

@@ -60,14 +60,15 @@ int main(int argc, char *argv[]) {
 
     // Generate lfsr successors of the tag challenge
     printf("\nLFSR successors of the tag challenge:\n");
-    uint32_t p64 = prng_successor(nt, 64);
-    printf("  nt': %08x\n", p64);
-    printf(" nt'': %08x\n", prng_successor(p64, 32));
+    uint32_t ar = prng_successor(nt, 64);
+    uint32_t at = prng_successor(ar, 32);
+    printf("   ar: %08x\n", ar);
+    printf("   at: %08x\n", at);
 
     // Extract the keystream from the messages
-    printf("\nKeystream used to generate {ar} and {at}:\n");
-    ks2 = ar_enc ^ p64;
-    ks3 = at_enc ^ prng_successor(p64, 32);
+    printf("\nKeystreams used to generate {ar} and {at}:\n");
+    ks2 = ar_enc ^ ar;
+    ks3 = at_enc ^ at;
     printf("  ks2: %08x\n", ks2);
     printf("  ks3: %08x\n", ks3);
 

@@ -19,8 +19,8 @@ Usage with sample trace:
 For mfkey32, you want to get two different NR_0/NR_1 values.
 
 ```
-#         <uid>    <nt>     <nr_0>   <ar_0>   <nr_1>   <ar_1>
-./mfkey32 52B0F519 5417D1F8 4D545EA7 E15AC8C2 DAC1A7F4 5AE5C37F
+#         <uid>    <nt>     <{nr_0}> <{ar}_0> <{nr_1}> <{ar}_1>
+./mfkey32 57DA41DA 01200145 7B70C62C 909121F2 F9206A8B 908B8981
 ```
 
 For mfkey32v2 (moebius), you want to get two different NT/NT1 values. (like in the SIM commands)
@@ -83,8 +83,8 @@ Recovering key for:
 {enc8}: 9f9149ea
 
 LFSR successors of the tag challenge:
-  nt': 76d4468d
- nt'': d5f3c476
+   ar: 76d4468d
+   at: d5f3c476
 
 Keystream used to generate {ar} and {at}:
   ks2: 73f18ec2

@@ -243,7 +243,7 @@ static void *brute_thread(void *arguments) {
 }
 
 static int usage(void) {
-    printf(" syntax: mf_trace_brute <uid> <partial key> <nt enc> <nr enc> [<next_command + 18 bytes>]\n\n");
+    printf(" syntax: mf_trace_brute <uid> <partial key> <{nt}> <{nr}> [<{next_command + 18 bytes}>]\n\n");
     return 1;
 }
 

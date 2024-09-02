@@ -16,14 +16,15 @@ int main(int argc, char *argv[]) {
     uint32_t ar0_enc; // first encrypted reader response
     uint32_t nr1_enc; // second encrypted reader challenge
     uint32_t ar1_enc; // second encrypted reader response
-    uint32_t ks2;     // keystream used to encrypt reader response
+    uint32_t ks2_0;   // first keystream used to encrypt reader response
+    uint32_t ks2_1;   // second keystream used to encrypt reader response
 
     printf("MIFARE Classic key recovery - based 32 bits of keystream  VERSION2\n");
     printf("Recover key from two 32-bit reader authentication answers only\n");
     printf("This version implements Moebius two different nonce solution (like the supercard)\n\n");
 
     if (argc < 8) {
-        printf("syntax: %s <uid> <nt> <nr_0> <ar_0> <nt1> <nr_1> <ar_1>\n\n", argv[0]);
+        printf("syntax: %s <uid> <{nt_0}> <{nr_0}> <{ar_0}> <{nt_1}> <{nr_1}> <{ar_1}>\n\n", argv[0]);
         return 1;
     }
 
@@ -45,19 +46,21 @@ int main(int argc, char *argv[]) {
     printf(" {ar_1}: %08x\n", ar1_enc);
 
     // Generate lfsr successors of the tag challenge
-    printf("\nLFSR successors of the tag challenge:\n");
-    uint32_t p64 = prng_successor(nt0, 64);
-    uint32_t p64b = prng_successor(nt1, 64);
+    printf("\nLFSR successors of the tag challenges:\n");
+    uint32_t ar0 = prng_successor(nt0, 64);
+    uint32_t ar1 = prng_successor(nt1, 64);
 
-    printf("  nt': %08x\n", p64);
-    printf(" nt'': %08x\n", prng_successor(p64, 32));
+    printf("   ar_0: %08x\n", ar0);
+    printf("   ar_1: %08x\n", ar1);
 
     // Extract the keystream from the messages
-    printf("\nKeystream used to generate {ar} and {at}:\n");
-    ks2 = ar0_enc ^ p64;
-    printf("  ks2: %08x\n", ks2);
+    printf("\nKeystreams used to generate {ar_0} and {ar_1}:\n");
+    ks2_0 = ar0_enc ^ ar0;
+    printf("  ks2_0: %08x\n", ks2_0);
+    ks2_1 = ar1_enc ^ ar1;
+    printf("  ks2_1: %08x\n", ks2_1);
 
-    s = lfsr_recovery32(ar0_enc ^ p64, 0);
+    s = lfsr_recovery32(ks2_0, 0);
 
     for (t = s; t->odd | t->even; ++t) {
         lfsr_rollback_word(t, 0, 0);
@@ -67,7 +70,7 @@ int main(int argc, char *argv[]) {
 
         crypto1_word(t, uid ^ nt1, 0);
         crypto1_word(t, nr1_enc, 1);
-        if (ar1_enc == (crypto1_word(t, 0, 0) ^ p64b)) {
+        if (ks2_1 == crypto1_word(t, 0, 0)) {
             printf("\nFound Key: [%012" PRIx64 "]\n\n", key);
             break;
         }
