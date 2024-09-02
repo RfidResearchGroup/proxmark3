@@ -524,7 +524,7 @@ static bool GetIso14443aCommandFromReaderInterruptible(uint8_t *received, uint8_
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-            if (MillerDecoding(b, 0)) {
+            if (Uart14aMillerDecoding(b, 0)) {
                 *len = GetUart14a()->len;
                 return true;
             }

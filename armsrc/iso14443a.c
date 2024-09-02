@@ -307,7 +307,7 @@ void Uart14aInit(uint8_t *data, uint8_t *par) {
 }
 
 // use parameter non_real_time to provide a timestamp. Set to 0 if the decoder should measure real time
-RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
+RAMFUNC bool Uart14aMillerDecoding(uint8_t bit, uint32_t non_real_time) {
     Uart.fourBits = (Uart.fourBits << 8) | bit;
 
     if (Uart.state == STATE_14A_UNSYNCD) {                                           // not yet synced
@@ -481,7 +481,7 @@ void Demod14aInit(uint8_t *data, uint8_t *par) {
 }
 
 // use parameter non_real_time to provide a timestamp. Set to 0 if the decoder should measure real time
-RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time) {
+RAMFUNC int Demod14aManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time) {
     Demod.twoBits = (Demod.twoBits << 8) | bit;
 
     if (Demod.state == DEMOD_14A_UNSYNCD) {
@@ -572,7 +572,7 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
 
 
 // Thinfilm, Kovio mangles ISO14443A in the way that they don't use start bit nor parity bits.
-static RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
+static RAMFUNC int Demod14aManchesterDecoding_Thinfilm(uint8_t bit) {
     Demod.twoBits = (Demod.twoBits << 8) | bit;
 
     if (Demod.state == DEMOD_14A_UNSYNCD) {
@@ -751,7 +751,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 
             if (TagIsActive == false) {        // no need to try decoding reader data if the tag is sending
                 uint8_t readerdata = (previous_data & 0xF0) | (*data >> 4);
-                if (MillerDecoding(readerdata, (rx_samples - 1) * 4)) {
+                if (Uart14aMillerDecoding(readerdata, (rx_samples - 1) * 4)) {
                     LED_C_ON();
 
                     // check - if there is a short 7bit request from reader
@@ -778,7 +778,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
             // no need to try decoding tag data if the reader is sending - and we cannot afford the time
             if (ReaderIsActive == false) {
                 uint8_t tagdata = (previous_data << 4) | (*data & 0x0F);
-                if (ManchesterDecoding(tagdata, 0, (rx_samples - 1) * 4)) {
+                if (Demod14aManchesterDecoding(tagdata, 0, (rx_samples - 1) * 4)) {
                     LED_B_ON();
 
                     if (!LogTrace(receivedResp,
@@ -970,7 +970,7 @@ bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *len) {
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-            if (MillerDecoding(b, 0)) {
+            if (Uart14aMillerDecoding(b, 0)) {
                 *len = Uart.len;
                 return true;
             }
@@ -2142,7 +2142,7 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
         // receive and test the miller decoding
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-            if (MillerDecoding(b, 0)) {
+            if (Uart14aMillerDecoding(b, 0)) {
                 *len = Uart.len;
                 return 0;
             }
@@ -2329,7 +2329,7 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse,  uint8_t *rec
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-            if (ManchesterDecoding_Thinfilm(b)) {
+            if (Demod14aManchesterDecoding_Thinfilm(b)) {
                 *received_len = Demod.len;
 
                 LogTrace(receivedResponse, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, NULL, false);
@@ -2380,7 +2380,7 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint8_t *receive
 
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
-            if (ManchesterDecoding(b, offset, 0)) {
+            if (Demod14aManchesterDecoding(b, offset, 0)) {
                 NextTransferTime = MAX(NextTransferTime, Demod.endTime - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 16 + FRAME_DELAY_TIME_PICC_TO_PCD);
                 return true;
             } else if (c++ > timeout && Demod.state == DEMOD_14A_UNSYNCD) {

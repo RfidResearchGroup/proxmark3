@@ -151,7 +151,7 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
 
             if (!TagIsActive) { // no need to try decoding reader data if the tag is sending
                 uint8_t readerdata = (previous_data & 0xF0) | (*data >> 4);
-                if (MillerDecoding(readerdata, (my_rsamples - 1) * 4)) {
+                if (Uart14aMillerDecoding(readerdata, (my_rsamples - 1) * 4)) {
                     LED_C_ON();
 
                     // check - if there is a short 7bit request from reader
@@ -187,7 +187,7 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
             // no need to try decoding tag data if the reader is sending - and we cannot afford the time
             if (!ReaderIsActive) {
                 uint8_t tagdata = (previous_data << 4) | (*data & 0x0F);
-                if (ManchesterDecoding(tagdata, 0, (my_rsamples - 1) * 4)) {
+                if (Demod14aManchesterDecoding(tagdata, 0, (my_rsamples - 1) * 4)) {
                     LED_B_ON();
 
                     if (!LogTrace(receivedResp, demod->len, demod->startTime * 16 - DELAY_TAG_AIR2ARM_AS_SNIFFER,

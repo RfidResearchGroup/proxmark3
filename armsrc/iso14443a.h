@@ -134,8 +134,8 @@ void Demod14aInit(uint8_t *data, uint8_t *par);
 tUart14a *GetUart14a(void);
 void Uart14aReset(void);
 void Uart14aInit(uint8_t *data, uint8_t *par);
-RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time);
-RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time);
+RAMFUNC bool Uart14aMillerDecoding(uint8_t bit, uint32_t non_real_time);
+RAMFUNC int Demod14aManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time);
 
 void RAMFUNC SniffIso14443a(uint8_t param);
 void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t exitAfterNReads);
