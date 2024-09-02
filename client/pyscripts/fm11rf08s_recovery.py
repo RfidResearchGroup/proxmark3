@@ -60,8 +60,8 @@ for tool, bin in tools.items():
 
 parser = argparse.ArgumentParser(description='A script combining staticnested* tools '
                                  'to recover all keys from a FM11RF08S card.')
-parser.add_argument('-x', '--init-check', action='store_true', help='Do not run an initial fchk for default keys')
-parser.add_argument('-y', '--final-check', action='store_true', help='Do not run a final fchk with the found keys')
+parser.add_argument('-x', '--init-check', action='store_true', help='Run an initial fchk for default keys')
+parser.add_argument('-y', '--final-check', action='store_true', help='Run a final fchk with the found keys')
 parser.add_argument('-d', '--debug', action='store_true', help='Enable debug mode')
 args = parser.parse_args()
 
