@@ -1033,6 +1033,140 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 
 
 //-----------------------------------------------------------------------------
+// acquire static encrypted nonces in order to perform the attack described in
+// Philippe Teuwen, "MIFARE Classic: exposing the static encrypted nonce variant"
+//-----------------------------------------------------------------------------
+void MifareAcquireStaticEncryptedNonces(uint8_t *key) {
+
+    struct Crypto1State mpcs = {0, 0};
+    struct Crypto1State *pcs;
+    pcs = &mpcs;
+
+    uint8_t uid[10] = {0x00};
+    uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
+    uint8_t par_enc[1] = {0x00};
+    uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
+
+    uint64_t ui64Key = bytes_to_num(key, 6);
+    uint32_t cuid = 0;
+    int16_t isOK = PM3_SUCCESS;
+    uint16_t num_nonces = 0;
+    uint8_t cascade_levels = 0;
+    bool have_uid = false;
+    uint8_t num_sectors = 16;
+
+    LED_A_ON();
+    LED_C_OFF();
+
+    BigBuf_free();
+    BigBuf_Clear_ext(false);
+    clear_trace();
+    set_tracing(false);
+
+    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+
+    LED_C_ON();
+
+    for (uint16_t sec = 0; sec < num_sectors; sec++) {
+        uint8_t blockNo = sec * 4;
+        for (uint8_t keyType = 0; keyType < 2; keyType++) {
+            // Test if the action was cancelled
+            if (BUTTON_PRESS()) {
+                isOK = PM3_EOPABORTED;
+                break;
+            }
+            if (have_uid == false) { // need a full select cycle to get the uid first
+                iso14a_card_select_t card_info;
+                if (iso14443a_select_card(uid, &card_info, &cuid, true, 0, true) == 0) {
+                    if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Can't select card (ALL)");
+                    continue;
+                }
+                switch (card_info.uidlen) {
+                    case 4 :
+                        cascade_levels = 1;
+                        break;
+                    case 7 :
+                        cascade_levels = 2;
+                        break;
+                    case 10:
+                        cascade_levels = 3;
+                        break;
+                    default:
+                        break;
+                }
+                have_uid = true;
+            } else { // no need for anticollision. We can directly select the card
+                if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
+                    if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Can't select card (UID)");
+                    continue;
+                }
+            }
+
+            uint32_t nt1 = 0;
+            if (mifare_classic_authex_cmd(pcs, cuid, blockNo, MIFARE_AUTH_KEYA + keyType + 4, ui64Key, AUTH_FIRST, &nt1, NULL, NULL, NULL, false, false)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth1 error");
+                isOK = PM3_ESOFT;
+                goto out;
+            };
+            // nested authentication
+            uint16_t len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + keyType + 4, blockNo, receivedAnswer, par_enc, NULL);
+            if (len != 4) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth2 error len=%d", len);
+                isOK = PM3_ESOFT;
+                goto out;
+            }
+            uint32_t nt_enc = bytes_to_num(receivedAnswer, 4);
+            crypto1_init(pcs, ui64Key);
+            uint32_t nt = crypto1_word(pcs, nt_enc ^ cuid, 1) ^ nt_enc;
+            // Dbprintf("Sec %2i key %i nT=%08x", sec, keyType + 4, nt);
+            num_to_bytes(nt, 4, buf + (((sec * 2) + keyType) * 9));
+            // send some crap to fail auth
+            uint8_t nack[] = {0x04};
+            ReaderTransmit(nack, sizeof(nack), NULL);
+
+            if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Can't select card (UID)");
+                continue;
+            }
+            if (mifare_classic_authex_cmd(pcs, cuid, blockNo, MIFARE_AUTH_KEYA + keyType + 4, ui64Key, AUTH_FIRST, &nt1, NULL, NULL, NULL, false, false)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth1 error");
+                isOK = PM3_ESOFT;
+                goto out;
+            };
+
+            // nested authentication on regular keytype
+            len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + keyType, blockNo, receivedAnswer, par_enc, NULL);
+            if (len != 4) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth2 error len=%d", len);
+                isOK = PM3_ESOFT;
+                goto out;
+            }
+            memcpy(buf + (((sec * 2) + keyType) * 9) + 4, receivedAnswer, 4);
+            nt_enc = bytes_to_num(receivedAnswer, 4);
+            uint8_t nt_par_err = ((((par_enc[0] >> 7) & 1) ^ oddparity8((nt_enc >> 24) & 0xFF)) << 3 |
+                                  (((par_enc[0] >> 6) & 1) ^ oddparity8((nt_enc >> 16) & 0xFF)) << 2 |
+                                  (((par_enc[0] >> 5) & 1) ^ oddparity8((nt_enc >> 8) & 0xFF)) << 1 |
+                                  (((par_enc[0] >> 4) & 1) ^ oddparity8((nt_enc >> 0) & 0xFF)));
+            // Dbprintf("Sec %2i key %i {nT}=%02x%02x%02x%02x perr=%x", sec, keyType, receivedAnswer[0], receivedAnswer[1], receivedAnswer[2], receivedAnswer[3], nt_par_err);
+            buf[(((sec * 2) + keyType) * 9) + 8] = nt_par_err;
+            // send some crap to fail auth
+            ReaderTransmit(nack, sizeof(nack), NULL);
+        }
+    }
+out:
+    LED_C_OFF();
+    crypto1_deinit(pcs);
+    LED_B_ON();
+    reply_old(CMD_ACK, isOK, cuid, num_nonces, buf, sizeof(buf));
+    LED_B_OFF();
+
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    LEDsoff();
+    set_tracing(false);
+}
+
+
+//-----------------------------------------------------------------------------
 // MIFARE nested authentication.
 //
 //-----------------------------------------------------------------------------

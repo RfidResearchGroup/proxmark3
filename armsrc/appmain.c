@@ -1750,6 +1750,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareAcquireEncryptedNonces(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
             break;
         }
+        case CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES: {
+            MifareAcquireStaticEncryptedNonces(packet->data.asBytes);
+            break;
+        }
         case CMD_HF_MIFARE_ACQ_NONCES: {
             MifareAcquireNonces(packet->oldarg[0], packet->oldarg[2]);
             break;

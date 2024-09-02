@@ -9727,6 +9727,7 @@ static int CmdHF14AMfISEN(const char *Cmd) {
         arg_lit0(NULL, "incblk2", "auth(blk)-auth(blk2)-auth(blk2+4)-..."),
         arg_lit0(NULL, "corruptnrar", "corrupt {nR}{aR}, but with correct parity"),
         arg_lit0(NULL, "corruptnrarparity", "correct {nR}{aR}, but with corrupted parity"),
+        arg_lit0(NULL, "collect_fm11rf08s", "correct all nT/{nT}/par_err of FM11RF08S in JSON. Option to be used only with -k."),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -9792,6 +9793,7 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     bool incblk2 = arg_get_lit(ctx, 16);
     bool corruptnrar = arg_get_lit(ctx, 17);
     bool corruptnrarparity = arg_get_lit(ctx, 18);
+    bool collect_fm11rf08s = arg_get_lit(ctx, 19);
     CLIParserFree(ctx);
 
     uint8_t dbg_curr = DBG_NONE;
@@ -9835,6 +9837,47 @@ static int CmdHF14AMfISEN(const char *Cmd) {
 
     if (select_status == 3) {
         PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
+    }
+
+    if (collect_fm11rf08s) {
+        SendCommandNG(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, key, sizeof(key));
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, &resp, 1000)) {
+            if (resp.status == PM3_ESOFT) {
+                return NONCE_FAIL;
+            }
+        }
+        uint8_t num_sectors = 16;
+        // TODO: get nonces and display
+        PrintAndLogEx(NORMAL, "[\n  [");
+        for (uint8_t sec = 0; sec < num_sectors; sec++) {
+            PrintAndLogEx(NORMAL, "    [\"%08x\", \"%08x\"]%s",
+                          bytes_to_num(resp.data.asBytes + ((sec * 2) * 9), 4),
+                          bytes_to_num(resp.data.asBytes + (((sec * 2) + 1) * 9), 4),
+                          sec < num_sectors - 1 ? "," : "");
+        }
+        PrintAndLogEx(NORMAL, "  ],\n  [");
+        for (uint8_t sec = 0; sec < num_sectors; sec++) {
+            PrintAndLogEx(NORMAL, "    [\"%08x\", \"%08x\"]%s",
+                          bytes_to_num(resp.data.asBytes + ((sec * 2) * 9) + 4, 4),
+                          bytes_to_num(resp.data.asBytes + (((sec * 2) + 1) * 9) + 4, 4),
+                          sec < num_sectors - 1 ? "," : "");
+        }
+        PrintAndLogEx(NORMAL, "  ],\n  [");
+        for (uint8_t sec = 0; sec < num_sectors; sec++) {
+            uint8_t p0 = resp.data.asBytes[((sec * 2) * 9) + 8];
+            uint8_t p1 = resp.data.asBytes[(((sec * 2) + 1) * 9) + 8];
+            PrintAndLogEx(NORMAL, "    [\"%i%i%i%i\", \"%i%i%i%i\"]%s",
+                          (p0 >> 3) & 1, (p0 >> 2) & 1, (p0 >> 1) & 1, p0 & 1,
+                          (p1 >> 3) & 1, (p1 >> 2) & 1, (p1 >> 1) & 1, p1 & 1,
+                          sec < num_sectors - 1 ? "," : "");
+        }
+        PrintAndLogEx(NORMAL, "  ]\n]");
+
+                // PrintAndLogEx(SUCCESS, "   nT: " _GREEN_("%s"), sprint_hex(resp.data.asBytes + (((sec * 2) + keyType) * 9), 4));
+                // PrintAndLogEx(SUCCESS, " {nT}: " _GREEN_("%s"), sprint_hex(resp.data.asBytes + (((sec * 2) + keyType) * 9) + 4, 4));
+                // // TODO: wrong par:
+                // PrintAndLogEx(SUCCESS, "  par: " _GREEN_("%02x"), resp.data.asBytes[(((sec * 2) + keyType) * 9) + 8]);
+        return PM3_SUCCESS;
     }
 
     PrintAndLogEx(NORMAL, "");

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added support for collecting all fm11rf08s nT/{nT}/par_err at once (@doegox)
 - Fixed `hf mfu wrbl` - compatibility write only writes 4 bytes. Now handled correctly (@iceman1001)
 - Changed `hf mfu info` - better magic tag detection (@iceman1001)
 - Added ELECTRA pattern decoding in `lf search` (@CiRIP)

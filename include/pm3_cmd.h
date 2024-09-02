@@ -677,6 +677,7 @@ typedef struct {
 #define CMD_HF_MIFARE_ACQ_NONCES                                          0x0614
 #define CMD_HF_MIFARE_STATIC_NESTED                                       0x0615
 #define CMD_HF_MIFARE_STATIC_ENC                                          0x0616
+#define CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES                         0x0617
 
 #define CMD_HF_MIFARE_READBL                                              0x0620
 #define CMD_HF_MIFARE_READBL_EX                                           0x0628
