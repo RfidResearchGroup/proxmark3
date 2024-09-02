@@ -2182,9 +2182,14 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
     uint32_t eof_time = 0;
     picopass_hdr_t hdr = {0};
-    bool res = select_iclass_tag(&hdr, true, &eof_time, shallow_mod);
+
+    bool res = select_iclass_tag(&hdr, msg->req2.use_credit_key, &eof_time, shallow_mod);
+    //bool res = select_iclass_tag(&hdr, true, &eof_time, shallow_mod);
     if (res == false) {
+        Dbprintf(_RED_("Unable to select card! Stopping."));
         goto out;
+    }else {
+        DbpString(_GREEN_("Card selected successfully!"));
     }
 
     //Step1 Authenticate with AA2 using K2
@@ -2193,7 +2198,10 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
     res = authenticate_iclass_tag(&msg->req2, &hdr, &start_time, &eof_time, mac2);
     if (res == false) {
+        Dbprintf(_RED_("Unable to authenticate with AA2 using K2! Stopping."));
         goto out;
+    }else{
+        DbpString(_GREEN_("AA2 authentication with K2 successful!"));
     }
 
     uint8_t div_key2[8] = {0};
@@ -2202,6 +2210,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     //cycle reader to reset cypher state and be able to authenticate with k1 trace
     switch_off();
     Iso15693InitReader();
+    DbpString(_YELLOW_("Cycled Reader..."));
 
     //Step0 Card Select Routine
 
@@ -2209,7 +2218,10 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     //hdr = {0};
     res = select_iclass_tag(&hdr, false, &eof_time, shallow_mod);
     if (res == false) {
+        Dbprintf(_RED_("Unable to select card after reader cycle! Stopping."));
         goto out;
+    } else {
+        DbpString(_GREEN_("Card selected successfully!"));
     }
 
     //Step1 Authenticate with AA1 using trace
@@ -2218,7 +2230,10 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
     res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
     if (res == false) {
+        Dbprintf(_RED_("Unable to authenticate on AA1 using macs! Stopping."));
         goto out;
+    }else {
+        DbpString(_GREEN_("Authenticated with AA1 with macs!"));
     }
 
     //Step2 Privilege Escalation: attempt to read AA2 with credentials for AA1
@@ -2226,7 +2241,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     uint8_t cmd_read[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockno, 0x00, 0x00};
     AddCrc(cmd_read + 1, 1);
     uint8_t resp[10];
-
+    DbpString(_YELLOW_("Attempting privilege escalation..."));
     res = iclass_send_cmd_with_retries(cmd_read, sizeof(cmd_read), resp, sizeof(resp), 10, 3, &start_time, ICLASS_READER_TIMEOUT_OTHERS, &eof_time, shallow_mod);
 
     static uint8_t iclass_mac_table[8][8] = {    //Reference weak macs table
