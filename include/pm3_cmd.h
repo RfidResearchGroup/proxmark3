@@ -794,11 +794,7 @@ typedef struct {
 #define FLAG_ANSI        0x08
 
 // Error codes                          Usages:
-
-// Success, regular quit
-#define PM3_SQUIT               2
-// Success, transfer nonces            pm3:        Sending nonces back to client
-#define PM3_SNONCES             1
+// NOTE: Positive values should be reserved for commands in case they need to return multiple statuses and error codes simultaneously.
 // Success (no error)
 #define PM3_SUCCESS             0
 
