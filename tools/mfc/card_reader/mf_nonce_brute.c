@@ -32,6 +32,7 @@ uint32_t nr_enc = 0;  // encrypted reader challenge
 uint32_t ar_enc = 0;  // encrypted reader response
 uint32_t at_enc = 0;  // encrypted tag response
 uint32_t cmd_enc = 0; // next encrypted command to sector
+bool is_nt_encrypted = 1;
 
 uint32_t nt_par_err = 0;
 uint32_t ar_par_err = 0;
@@ -54,6 +55,7 @@ typedef struct thread_key_args {
     uint32_t nr_enc;
     uint16_t enc_len;
     uint8_t enc[ENC_LEN];  // next encrypted command + a full read/write
+    bool is_nt_encrypted;
 } targs_key;
 
 //------------------------------------------------------------------
@@ -452,7 +454,7 @@ static void *check_default_keys(void *arguments) {
         struct Crypto1State *pcs = crypto1_create(key);
 
         // NESTED decrypt nt with help of new key
-        crypto1_word(pcs, args->nt_enc ^ args->uid, 1);
+        crypto1_word(pcs, args->nt_enc ^ args->uid, args->is_nt_encrypted);
         crypto1_word(pcs, args->nr_enc, 1);
         crypto1_word(pcs, 0, 0);
         crypto1_word(pcs, 0, 0);
@@ -606,7 +608,7 @@ static void *brute_key_thread(void *arguments) {
         struct Crypto1State *pcs = crypto1_create(key);
 
         // NESTED decrypt nt with help of new key
-        crypto1_word(pcs, args->nt_enc ^ args->uid, 1);
+        crypto1_word(pcs, args->nt_enc ^ args->uid, args->is_nt_encrypted);
         crypto1_word(pcs, args->nr_enc, 1);
         crypto1_word(pcs, 0, 0);
         crypto1_word(pcs, 0, 0);
@@ -646,6 +648,8 @@ static void *brute_key_thread(void *arguments) {
 static int usage(void) {
     printf("\n");
     printf("syntax:  mf_nonce_brute <uid> <{nt}> <nt_par_err> <{nr}> <{ar}> <ar_par_err> <{at}> <at_par_err> [<{next_command}>]\n\n");
+    printf("alternatively, you can provide a clear nt:\n");
+    printf("syntax:  mf_nonce_brute <uid> <nt> clear <{nr}> <{ar}> <ar_par_err> <{at}> <at_par_err> [<{next_command}>]\n\n");
     printf("how to convert trace data to needed input:\n");
     printf("  {nt} in trace = 8c! 42 e6! 4e!\n");
     printf("  =>       {nt} = 8c42e64e\n");
@@ -673,7 +677,12 @@ int main(int argc, const char *argv[]) {
 
     sscanf(argv[1], "%x", &uid);
     sscanf(argv[2], "%x", &nt_enc);
-    sscanf(argv[3], "%x", &nt_par_err);
+    if (strncmp(argv[3], "clear", 5) == 0) {
+        nt_par_err = 0;
+        is_nt_encrypted = 0;
+    } else {
+        sscanf(argv[3], "%x", &nt_par_err);
+    }
     sscanf(argv[4], "%x", &nr_enc);
     sscanf(argv[5], "%x", &ar_enc);
     sscanf(argv[6], "%x", &ar_par_err);
@@ -734,6 +743,7 @@ int main(int argc, const char *argv[]) {
         def->nt_enc = nt_enc;
         def->nr_enc = nr_enc;
         def->enc_len = enc_len;
+        def->is_nt_encrypted = is_nt_encrypted;
         memcpy(def->enc, enc, enc_len);
         pthread_create(&threads[0], NULL, check_default_keys, (void *)def);
         pthread_join(threads[0], NULL);
@@ -820,6 +830,7 @@ int main(int argc, const char *argv[]) {
         b->nt_enc = nt_enc;
         b->nr_enc = nr_enc;
         b->enc_len = enc_len;
+        b->is_nt_encrypted = is_nt_encrypted;
         memcpy(b->enc, enc, enc_len);
         pthread_create(&threads[i], NULL, brute_key_thread, (void *)b);
     }

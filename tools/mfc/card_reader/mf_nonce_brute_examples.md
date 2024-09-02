@@ -83,18 +83,17 @@ Example with parity (from this trace http://www.proxmark.org/forum/viewtopic.php
  +     64:  4 : TAG bf  dd  01  be!
  + 987853:  4 :     56  98  49  d6!                           !crc
 ```
-=>
+=> Using the plaintext tagnonce `nt`=`82a4166c`
 ```
-./mf_nonce_brute 9c599b32 82a4166c 0000 a1e458ce 6eea41e0 0101 5cadf439 1001 8e0e5db9  
-                 |        |        |    |        |        |    |        |    |
-                 +UID     +nt      |    +{nr}    +{ar}    |    +{at}    |    +{next cmd}
-                                   +nt_par_err            +at_par_err   +at_par_err
+./mf_nonce_brute 9c599b32 82a4166c clear a1e458ce 6eea41e0 0101 5cadf439 1001 8e0e5db9  
+                 |        |        |     |        |        |    |        |    |
+                 +UID     +nt      |     +{nr}    +{ar}    |    +{at}    |    +{next cmd}
+                                   + nt is clear           +ar_par_err   +at_par_err
 ```
 
-These two taken from above use the plaintext tagnonce `nt`=`82a4166c`,  they still find a possible key candidate.
+Without a next command, it still finds a possible key candidate.
 ```
-./mf_nonce_brute 9c599b32 82a4166c 0000 a1e458ce 6eea41e0 0101 5cadf439 1001 
-./mf_nonce_brute 9c599b32 82a4166c 0000 98d76b77 d6c6e870 0000 ca7e0b63 0111
+./mf_nonce_brute 9c599b32 82a4166c clear a1e458ce 6eea41e0 0101 5cadf439 1001
 ```
 
 This one uses the encrypted tagnonce `{nt}`=`5a920d85`, it finds a valid key.
