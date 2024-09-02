@@ -176,6 +176,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "706000",
+        "Vendor": "RBH Access Technologies, Inc.",
+        "Country": "CA",
+        "Name": "Access Control",
+        "Description": "BlueLINE EV1 PACS Credential",
+        "Type": "pacs"
+    },
+    {
         "AID": "D3494F",
         "Vendor": "HID",
         "Country": "US",
