@@ -438,7 +438,7 @@ else:
             if found_keys[sec][key_type] == "":
                 keys[key_type] = [color("------------", fg="red"), color("0", fg="red")]
             else:
-                keys[key_type] = [color(found_keys[sec][0], fg="green"), color("1", fg="green")]
+                keys[key_type] = [color(found_keys[sec][key_type], fg="green"), color("1", fg="green")]
         print(plus + f" {sec:03} | {sec*4+3:03} | {keys[0][0]} | {keys[0][1]} | {keys[1][0]} | {keys[1][1]} ")
     print(plus + "-----+-----+--------------+---+--------------+----")
     print(plus + "( " + color("0", fg="red") + ":Failed / " +
