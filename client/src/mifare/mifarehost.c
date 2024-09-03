@@ -57,6 +57,15 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 
     while (true) {
         clearCommandBuffer();
+
+        //TODO: Not really stopping the command in time.
+        //flush queue
+        while (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(WARNING, "Aborted via keyboard");
+            return PM3_EOPABORTED;
+        }
+
         struct {
             uint8_t first_run;
             uint8_t blockno;
@@ -67,12 +76,6 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
         payload.key_type = key_type;
         SendCommandNG(CMD_HF_MIFARE_READER, (uint8_t *)&payload, sizeof(payload));
 
-        //flush queue
-        while (kbd_enter_pressed()) {
-            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            return PM3_EOPABORTED;
-        }
-
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "Running darkside " NOLF);
 
@@ -80,16 +83,15 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
         while (true) {
             PrintAndLogEx(NORMAL, "." NOLF);
 
+            //TODO: Not really stopping the command in time.
             if (kbd_enter_pressed()) {
                 SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+                PrintAndLogEx(WARNING, "\nAborted via keyboard");
                 return PM3_EOPABORTED;
             }
 
             PacketResponseNG resp;
             if (WaitForResponseTimeout(CMD_HF_MIFARE_READER, &resp, 2000)) {
-                if (resp.status == PM3_EOPABORTED) {
-                    return resp.status;
-                }
 
                 struct p {
                     int32_t isOK;
@@ -101,16 +103,35 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
                     uint8_t ar[4];
                 } PACKED;
 
-                struct p *package = (struct p *) resp.data.asBytes;
+                struct p *package = (struct p *)resp.data.asBytes;
 
-                if (package->isOK == -6) {
-                    *key = 0101;
-                    return 1;
+                if (resp.status != PM3_SUCCESS) {
+                    PrintAndLogEx(NORMAL, "");
+
+                    switch (package->isOK) {
+                        case 2:
+                            PrintAndLogEx(FAILED, "Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).");
+                            break;
+                        case 3:
+                            PrintAndLogEx(FAILED, "Card is not vulnerable to Darkside attack (its random number generator is not predictable).");
+                            break;
+                        case 4:
+                            PrintAndLogEx(FAILED, "Card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
+                            PrintAndLogEx(FAILED, "generating polynomial with 16 effective bits only, but shows unexpected behaviour.");
+                            break;
+                        case 5:
+                            PrintAndLogEx(WARNING, "Button pressed. aborted");
+                            break;
+                        case 6:
+                            *key = 0101;
+                            return PM3_SUCCESS;
+                        default:
+                            PrintAndLogEx(FAILED, "Unknown error. Darkside attack failed.");
+                            break;
+                    }
+
+                    return resp.status;
                 }
-
-                if (package->isOK < 0)
-                    return package->isOK;
-
 
                 uid = (uint32_t)bytes_to_num(package->cuid, sizeof(package->cuid));
                 nt = (uint32_t)bytes_to_num(package->nt, sizeof(package->nr));

@@ -3294,10 +3294,10 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
     uint8_t cascade_levels = 0;
 
     // static variables here, is re-used in the next call
-    static uint32_t nt_attacked = 0;
     static int32_t sync_cycles = 0;
-    static uint8_t par_low = 0;
+    static uint32_t nt_attacked = 0;
     static uint8_t mf_nr_ar3 = 0;
+    static uint8_t par_low = 0;
 
     int return_status = PM3_SUCCESS;
 
@@ -3328,7 +3328,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
         // Test if the action was cancelled
         if (checkbtn_cnt == 1000) {
             if (BUTTON_PRESS() || data_available()) {
-                isOK = -1;
+                isOK = 5;
                 return_status = PM3_EOPABORTED;
                 break;
             }
@@ -3382,7 +3382,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
         ReaderTransmit(mf_auth, sizeof(mf_auth), &sync_time);
 
         // Receive the (4 Byte) "random" TAG nonce
-        if (!ReaderReceive(receivedAnswer, receivedAnswerPar))
+        if (ReaderReceive(receivedAnswer, receivedAnswerPar) != 4)
             continue;
 
         previous_nt = nt;
@@ -3398,7 +3398,8 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
         else if (resp_res == 4) {
             // did we get lucky and got our dummykey to be valid?
             // however we don't feed key w uid it the prng..
-            isOK = -6;
+            isOK = 6;
+            return_status = PM3_ESOFT;
             break;
         }
 
@@ -3416,7 +3417,8 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
                 if (nt_distance == -99999) { // invalid nonce received
                     unexpected_random++;
                     if (unexpected_random > MAX_UNEXPECTED_RANDOM) {
-                        isOK = -3;        // Card has an unpredictable PRNG. Give up
+                        isOK = 3;        // Card has an unpredictable PRNG. Give up
+                        return_status = PM3_ESOFT;
                         break;
                     } else {
                         continue;        // continue trying...
@@ -3424,7 +3426,8 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
                 }
 
                 if (++sync_tries > MAX_SYNC_TRIES) {
-                    isOK = -4;             // Card's PRNG runs at an unexpected frequency or resets unexpectedly
+                    isOK = 4;             // Card's PRNG runs at an unexpected frequency or resets unexpectedly
+                    return_status = PM3_ESOFT;
                     break;
                 }
 
@@ -3495,6 +3498,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
             // Test if the information is complete
             if (nt_diff == 0x07) {
                 isOK = 1;
+                return_status = PM3_SUCCESS;
                 break;
             }
 
@@ -3507,7 +3511,8 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
             if (nt_diff == 0 && first_try) {
                 par[0]++;
                 if (par[0] == 0) {    // tried all 256 possible parities without success. Card doesn't send NACK.
-                    isOK = -2;
+                    isOK = 2;
+                    return_status = PM3_ESOFT;
                     break;
                 }
             } else {

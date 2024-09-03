@@ -915,27 +915,12 @@ static int CmdHF14AMfDarkside(const char *Cmd) {
 
     uint64_t key = 0;
     uint64_t t1 = msclock();
-    int isOK = mfDarkside(blockno, key_type, &key);
+    int ret = mfDarkside(blockno, key_type, &key);
     t1 = msclock() - t1;
 
-    switch (isOK) {
-        case PM3_EOPABORTED:
-            PrintAndLogEx(WARNING, "button pressed or aborted via keyboard. aborted");
-            return PM3_EOPABORTED;
-        case -2 :
-            PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests)");
-            return PM3_ESOFT;
-        case -3 :
-            PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (its random number generator is not predictable)");
-            return PM3_ESOFT;
-        case -4 :
-            PrintAndLogEx(FAILED, "card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
-            PrintAndLogEx(FAILED, "generating polynomial with 16 effective bits only, but shows unexpected behaviour");
-            return PM3_ESOFT;
-        default :
-            PrintAndLogEx(SUCCESS, "found valid key: "_GREEN_("%012" PRIx64), key);
-            break;
-    }
+    if (ret != PM3_SUCCESS) return ret;
+
+    PrintAndLogEx(SUCCESS, "found valid key: " _GREEN_("%012" PRIx64), key);
     PrintAndLogEx(SUCCESS, "time in darkside " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
     return PM3_SUCCESS;
 }
@@ -2907,26 +2892,15 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             if (verbose) {
                 PrintAndLogEx(INFO, "======================= " _YELLOW_("START DARKSIDE ATTACK") " =======================");
             }
+
+            PrintAndLogEx(NORMAL, "");
+
             isOK = mfDarkside(mfFirstBlockOfSector(sectorno), MIFARE_AUTH_KEYA + keytype, &key64);
 
-            switch (isOK) {
-                case PM3_EOPABORTED :
-                    PrintAndLogEx(WARNING, "\nButton pressed or aborted via keyboard");
-                    goto noValidKeyFound;
-                case -2 :
-                    PrintAndLogEx(FAILED, "\nCard is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).");
-                    goto noValidKeyFound;
-                case -3 :
-                    PrintAndLogEx(FAILED, "\nCard is not vulnerable to Darkside attack (its random number generator is not predictable).");
-                    goto noValidKeyFound;
-                case -4 :
-                    PrintAndLogEx(FAILED, "\nCard is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown");
-                    PrintAndLogEx(FAILED, "generating polynomial with 16 effective bits only, but shows unexpected behaviour.");
-                    goto noValidKeyFound;
-                default :
-                    PrintAndLogEx(SUCCESS, "\nFound valid key [ " _GREEN_("%012" PRIx64) " ]\n", key64);
-                    break;
-            }
+            if (isOK != PM3_SUCCESS)
+                goto noValidKeyFound;
+
+            PrintAndLogEx(SUCCESS, "Found valid key [ " _GREEN_("%012" PRIx64) " ]\n", key64);
 
             // Store the keys
             num_to_bytes(key64, MIFARE_KEY_SIZE, key);

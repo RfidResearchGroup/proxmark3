@@ -186,14 +186,7 @@ local function main(args)
                     -- Crack it
                     local cnt
                     err, res = core.mfDarkside()
-                    if     err == -1 then return oops('Button pressed. Aborted.')
-                    elseif err == -2 then return oops([[Card is not vulnerable to Darkside attack (doesn't send NACK on authentication requests).]])
-                    elseif err == -3 then return oops([[Card is not vulnerable to Darkside attack (its random number generator is not predictable).]])
-                    elseif err == -4 then return oops([[
-        Card is not vulnerable to Darkside attack (its random number generator seems to be based on the wellknown
-        generating polynomial with 16 effective bits only, but shows unexpected behaviour.]])
-                    elseif err == -5 then return oops('aborted via keyboard.')
-                    end
+                    if err ~= 0 then return oops('Darkside attack failed.') end
                     -- The key is actually 8 bytes, so a
                     -- 6-byte key is sent as 00XXXXXX
                     -- This means we unpack it as first
