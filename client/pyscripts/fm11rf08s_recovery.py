@@ -113,7 +113,7 @@ except json.decoder.JSONDecodeError:
 
 if os.path.isfile(DICT_DEF_PATH):
     print(f"Loading {DICT_DEF}")
-    with open(DICT_DEF_PATH, 'r') as file:
+    with open(DICT_DEF_PATH, 'r', encoding='utf-8') as file:
         for line in file:
             if line[0] != '#' and len(line) >= 12:
                 DEFAULT_KEYS.add(line[:12])
