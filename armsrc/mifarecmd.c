@@ -1036,7 +1036,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 // acquire static encrypted nonces in order to perform the attack described in
 // Philippe Teuwen, "MIFARE Classic: exposing the static encrypted nonce variant"
 //-----------------------------------------------------------------------------
-void MifareAcquireStaticEncryptedNonces(uint8_t *key) {
+void MifareAcquireStaticEncryptedNonces(uint32_t flags, uint8_t *key) {
 
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
@@ -1048,6 +1048,7 @@ void MifareAcquireStaticEncryptedNonces(uint8_t *key) {
     uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
 
     uint64_t ui64Key = bytes_to_num(key, 6);
+    bool with_data = flags & 1;
     uint32_t cuid = 0;
     int16_t isOK = PM3_SUCCESS;
     uint16_t num_nonces = 0;
@@ -1108,6 +1109,20 @@ void MifareAcquireStaticEncryptedNonces(uint8_t *key) {
                 isOK = PM3_ESOFT;
                 goto out;
             };
+            if (with_data) {
+                uint8_t data[16];
+                for (uint8_t tb = blockNo; tb < blockNo + 4; tb++) {
+                    memset(data, 0x00, sizeof(data));
+                    int res = mifare_classic_readblock(pcs, tb, data);
+                    if (res == 1) {
+                        if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Read error");
+                        isOK = PM3_ESOFT;
+                        goto out;
+                    }
+                    emlSetMem_xt(data, tb, 1, 16);
+                }
+            }
+
             // nested authentication
             uint16_t len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + keyType + 4, blockNo, receivedAnswer, par_enc, NULL);
             if (len != 4) {

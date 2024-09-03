@@ -9727,7 +9727,10 @@ static int CmdHF14AMfISEN(const char *Cmd) {
         arg_lit0(NULL, "incblk2", "auth(blk)-auth(blk2)-auth(blk2+4)-..."),
         arg_lit0(NULL, "corruptnrar", "corrupt {nR}{aR}, but with correct parity"),
         arg_lit0(NULL, "corruptnrarparity", "correct {nR}{aR}, but with corrupted parity"),
-        arg_lit0(NULL, "collect_fm11rf08s", "correct all nT/{nT}/par_err of FM11RF08S in JSON. Option to be used only with -k."),
+        arg_rem("", ""),
+        arg_rem("FM11RF08S specific options:", "Incompatible with above options, except -k; output in JSON"),
+        arg_lit0(NULL, "collect_fm11rf08s", "collect all nT/{nT}/par_err."),
+        arg_lit0(NULL, "collect_fm11rf08s_with_data", "collect all nT/{nT}/par_err and data blocks."),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -9793,7 +9796,11 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     bool incblk2 = arg_get_lit(ctx, 16);
     bool corruptnrar = arg_get_lit(ctx, 17);
     bool corruptnrarparity = arg_get_lit(ctx, 18);
-    bool collect_fm11rf08s = arg_get_lit(ctx, 19);
+    bool collect_fm11rf08s = arg_get_lit(ctx, 21);
+    bool collect_fm11rf08s_with_data = arg_get_lit(ctx, 22);
+    if (collect_fm11rf08s_with_data) {
+        collect_fm11rf08s = 1;
+    }
     CLIParserFree(ctx);
 
     uint8_t dbg_curr = DBG_NONE;
@@ -9840,14 +9847,14 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     }
 
     if (collect_fm11rf08s) {
-        SendCommandNG(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, key, sizeof(key));
+        uint32_t flags = collect_fm11rf08s_with_data;
+        SendCommandMIX(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, flags, 0, 0, key, sizeof(key));
         if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, &resp, 1000)) {
             if (resp.status == PM3_ESOFT) {
                 return NONCE_FAIL;
             }
         }
         uint8_t num_sectors = 16;
-        // TODO: get nonces and display
         PrintAndLogEx(NORMAL, "[\n  [");
         for (uint8_t sec = 0; sec < num_sectors; sec++) {
             PrintAndLogEx(NORMAL, "    [\"%08x\", \"%08x\"]%s",
@@ -9871,12 +9878,30 @@ static int CmdHF14AMfISEN(const char *Cmd) {
                           (p1 >> 3) & 1, (p1 >> 2) & 1, (p1 >> 1) & 1, p1 & 1,
                           sec < num_sectors - 1 ? "," : "");
         }
-        PrintAndLogEx(NORMAL, "  ]\n]");
+        if (collect_fm11rf08s_with_data) {
+            PrintAndLogEx(NORMAL, "  ],\n  [");
+            int bytes = num_sectors * 4 * 16;
 
-                // PrintAndLogEx(SUCCESS, "   nT: " _GREEN_("%s"), sprint_hex(resp.data.asBytes + (((sec * 2) + keyType) * 9), 4));
-                // PrintAndLogEx(SUCCESS, " {nT}: " _GREEN_("%s"), sprint_hex(resp.data.asBytes + (((sec * 2) + keyType) * 9) + 4, 4));
-                // // TODO: wrong par:
-                // PrintAndLogEx(SUCCESS, "  par: " _GREEN_("%02x"), resp.data.asBytes[(((sec * 2) + keyType) * 9) + 8]);
+            uint8_t *dump = calloc(bytes, sizeof(uint8_t));
+            if (dump == NULL) {
+                PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+                return PM3_EFAILED;
+            }
+            if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
+                PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+                free(dump);
+                return PM3_ETIMEOUT;
+            }
+            for (uint8_t sec = 0; sec < num_sectors; sec++) {
+                for (uint8_t b = 0; b < 4; b++) {
+                    PrintAndLogEx(NORMAL, "    \"%s\"%s",
+                                  sprint_hex_inrow(dump + ((sec * 4) + b) * 16, 16),
+                                  (sec == num_sectors - 1) && (b == 3) ? "" : ",");
+                }
+            }
+            free(dump);
+        }
+        PrintAndLogEx(NORMAL, "  ]\n]");
         return PM3_SUCCESS;
     }
 

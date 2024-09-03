@@ -103,13 +103,36 @@ if args.init_check:
                 print_key(sec, 1, found_keys[sec][1])
 
 print("Getting nonces...")
-cmd = f"hf mf isen --collect_fm11rf08s --key {BACKDOOR_RF08S}"
+cmd = f"hf mf isen --collect_fm11rf08s_with_data --key {BACKDOOR_RF08S}"
 p.console(cmd)
 try:
-    nt, nt_enc, par_err = json.loads(p.grabbed_output)
+    nt, nt_enc, par_err, data = json.loads(p.grabbed_output)
 except json.decoder.JSONDecodeError:
     print("Error getting nonces, abort.")
     exit()
+
+print("Generating first dump file")
+dumpfile = f"hf-mf-{uid:08X}-dump.bin"
+with (open(dumpfile, "wb")) as f:
+    for sec in range(NUM_SECTORS):
+        for b in range(4):
+            d = data[(sec * 4) + b]
+            if b == 3:
+                ka = found_keys[sec][0]
+                kb = found_keys[sec][1]
+                if ka == "":
+                    ka = "FFFFFFFFFFFF"
+                if kb == "":
+                    kb = "FFFFFFFFFFFF"
+                d = ka + d[12:20] + kb
+            f.write(bytes.fromhex(d))
+print(f"Data have been dumped to `{dumpfile}`")
+
+elapsed_time1 = time.time() - start_time
+minutes = int(elapsed_time1 // 60)
+seconds = int(elapsed_time1 % 60)
+print("----Step 1: " + color(f"{minutes:2}", fg="yellow") + " minutes " +
+      color(f"{seconds:2}", fg="yellow") + " seconds -----------")
 
 if os.path.isfile(DICT_DEF_PATH):
     print(f"Loading {DICT_DEF}")
@@ -259,11 +282,11 @@ if args.debug:
         print(f" {sec:03} | {sec*4+3:03} | {candidates[sec][0]:6} | {candidates[sec][1]:6}  ")
 total_candidates = sum(candidates[sec][0] + candidates[sec][1] for sec in range(NUM_SECTORS))
 
-elapsed_time = time.time() - start_time
-minutes1 = int(elapsed_time // 60)
-seconds1 = int(elapsed_time % 60)
-print("----Step 1: " + color(f"{minutes1:2}", fg="yellow") + " minutes " +
-      color(f"{seconds1:2}", fg="yellow") + " seconds -----------")
+elapsed_time2 = time.time() - start_time - elapsed_time1
+minutes = int(elapsed_time2 // 60)
+seconds = int(elapsed_time2 % 60)
+print("----Step 2: " + color(f"{minutes:2}", fg="yellow") + " minutes " +
+      color(f"{seconds:2}", fg="yellow") + " seconds -----------")
 
 # fchk: 147 keys/s. Correct key found after 50% of candidates on average
 FCHK_KEYS_S = 147
@@ -272,7 +295,6 @@ minutes = int(foreseen_time // 60)
 seconds = int(foreseen_time % 60)
 print("Still about " + color(f"{minutes:2}", fg="yellow") + " minutes " +
       color(f"{seconds:2}", fg="yellow") + " seconds to run...")
-start_time = time.time()
 
 abort = False
 print("Brute-forcing keys... Press any key to interrupt")
@@ -437,11 +459,31 @@ else:
     if unknown:
         print("[" + color("=", fg="yellow") + "]  --[ " + color("FFFFFFFFFFFF", fg="yellow") +
               " ]-- has been inserted for unknown keys")
+    print(plus + "Generating final dump file")
+    dumpfile = f"hf-mf-{uid:08X}-dump.bin"
+    with (open(dumpfile, "wb")) as f:
+        for sec in range(NUM_SECTORS):
+            for b in range(4):
+                d = data[(sec * 4) + b]
+                if b == 3:
+                    ka = found_keys[sec][0]
+                    kb = found_keys[sec][1]
+                    if ka == "":
+                        ka = "FFFFFFFFFFFF"
+                    if kb == "":
+                        kb = "FFFFFFFFFFFF"
+                    d = ka + d[12:20] + kb
+                f.write(bytes.fromhex(d))
+    print(plus + "Data have been dumped to `" + color(dumpfile, fg="yellow")+"`")
+
+elapsed_time3 = time.time() - start_time - elapsed_time1 - elapsed_time2
+minutes = int(elapsed_time3 // 60)
+seconds = int(elapsed_time3 % 60)
+print("----Step 3: " + color(f"{minutes:2}", fg="yellow") + " minutes " +
+      color(f"{seconds:2}", fg="yellow") + " seconds -----------")
 
 elapsed_time = time.time() - start_time
-minutes2 = int(elapsed_time // 60)
-seconds2 = int(elapsed_time % 60)
-print("----Step 2: " + color(f"{minutes2:2}", fg="yellow") + " minutes " +
-      color(f"{seconds2:2}", fg="yellow") + " seconds -----------")
-print("---- TOTAL: " + color(f"{minutes1+minutes2:2}", fg="yellow") + " minutes " +
-      color(f"{seconds1+seconds2:2}", fg="yellow") + " seconds -----------")
+minutes = int(elapsed_time // 60)
+seconds = int(elapsed_time % 60)
+print("---- TOTAL: " + color(f"{minutes:2}", fg="yellow") + " minutes " +
+      color(f"{seconds:2}", fg="yellow") + " seconds -----------")
