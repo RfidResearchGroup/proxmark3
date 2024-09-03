@@ -9,7 +9,7 @@ ifneq ($(SKIPPTHREAD),1)
 MYLDLIBS += -lpthread
 endif
 
-BINS = mfkey32 mfkey32v2 mfkey64 mf_nonce_brute mf_trace_brute
+BINS = mfkey32 mfkey32v2 mfkey32nested mfkey64 mf_nonce_brute mf_trace_brute
 INSTALLTOOLS = $(BINS)
 
 include $(ROOTPATH)/Makefile.host
@@ -28,6 +28,7 @@ endif
 
 mfkey32 : $(OBJDIR)/mfkey32.o $(MYOBJS)
 mfkey32v2 : $(OBJDIR)/mfkey32v2.o $(MYOBJS)
+mfkey32nested : $(OBJDIR)/mfkey32nested.o $(MYOBJS)
 mfkey64 : $(OBJDIR)/mfkey64.o $(MYOBJS)
 mf_nonce_brute : $(OBJDIR)/mf_nonce_brute.o $(MYOBJS)
 mf_trace_brute : $(OBJDIR)/mf_trace_brute.o $(MYOBJS)

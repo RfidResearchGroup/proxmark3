@@ -103,3 +103,36 @@ Decrypted communication:
 
 Found Key: [091e639cb715]
 ```
+### Recovering partial nested authentication
+A new functionality from @doegox
+
+In some situations, we may replay a {nT} in a nested authentication, of which we know the plain nT but not the key.
+
+Example:
+```
+Tag |ab! b3! 0b! D1                        |     | AUTH: nt (enc)
+Rdr |46  03  39  66  AD  c1! 81  62!       |     | AUTH: nr ar (enc)
+```
+
+```
+./mfkey32v2nested 5C467F63 4bbf8a12 abb30bd1 46033966 adc18162
+MIFARE Classic key recovery - known nT scenario
+Recover key from one reader authentication answer only
+Recovering key for:
+    uid: 5c467f63
+     nt: 4bbf8a12
+   {nt}: abb30bd1
+   {nr}: 46033966
+   {ar}: adc18162
+
+LFSR successor of the tag challenge:
+     ar: 77cc87f8
+
+Keystream used to generate {nt}:
+    ks0: e00c81c3
+
+Keystream used to generate {ar}:
+    ks2: da0d069a
+
+Found Key: [059e2905bfcc]
+```

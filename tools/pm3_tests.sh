@@ -290,11 +290,13 @@ while true; do
       if ! CheckFileExist "fpgacompress exists"            "$FPGACPMPRESSBIN"; then break; fi
     fi
     if $TESTALL || $TESTMFKEY; then
-      echo -e "\n${C_BLUE}Testing mfkey:${C_NC} ${MFKEY32V2BIN:=./tools/mfc/card_reader/mfkey32v2} ${MFKEY64BIN:=./tools/mfc/card_reader/mfkey64}"
+      echo -e "\n${C_BLUE}Testing mfkey:${C_NC} ${MFKEY32V2BIN:=./tools/mfc/card_reader/mfkey32v2} ${MFKEY32NESTEDBIN:=./tools/mfc/card_reader/mfkey32nested} ${MFKEY64BIN:=./tools/mfc/card_reader/mfkey64}"
       if ! CheckFileExist "mfkey32v2 exists"               "$MFKEY32V2BIN"; then break; fi
+      if ! CheckFileExist "mfkey32nested exists"           "$MFKEY32NESTEDBIN"; then break; fi
       if ! CheckFileExist "mfkey64 exists"                 "$MFKEY64BIN"; then break; fi
       # Need a decent example for mfkey32...
       if ! CheckExecute "mfkey32v2 test"                   "$MFKEY32V2BIN 12345678 1AD8DF2B 1D316024 620EF048 30D6CB07 C52077E2 837AC61A" "Found Key: \[a0a1a2a3a4a5\]"; then break; fi
+      if ! CheckExecute "mfkey32nested test"               "$MFKEY32NESTEDBIN 5C467F63 4bbf8a12 abb30bd1 46033966 adc18162" "Found Key: \[059e2905bfcc\]"; then break; fi
       if ! CheckExecute "mfkey64 test"                     "$MFKEY64BIN 9c599b32 82a4166c a1e458ce 6eea41e0 5cadf439" "Found Key: \[ffffffffffff\]"; then break; fi
       if ! CheckExecute "mfkey64 long trace test"          "$MFKEY64BIN 14579f69 ce844261 f8049ccb 0525c84f 9431cc40 7093df99 9972428ce2e8523f456b99c831e769dced09 8ca6827b ab797fd369e8b93a86776b40dae3ef686efd c3c381ba 49e2c9def4868d1777670e584c27230286f4 fbdcd7c1 4abd964b07d3563aa066ed0a2eac7f6312bf 9f9149ea" "Found Key: \[091e639cb715\]"; then break; fi
     fi
