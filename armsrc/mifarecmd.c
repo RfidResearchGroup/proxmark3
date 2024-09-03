@@ -1111,7 +1111,7 @@ void MifareAcquireStaticEncryptedNonces(uint32_t flags, uint8_t *key) {
             };
             if (with_data) {
                 uint8_t data[16];
-                for (uint8_t tb = blockNo; tb < blockNo + 4; tb++) {
+                for (uint16_t tb = blockNo; tb < blockNo + 4; tb++) {
                     memset(data, 0x00, sizeof(data));
                     int res = mifare_classic_readblock(pcs, tb, data);
                     if (res == 1) {

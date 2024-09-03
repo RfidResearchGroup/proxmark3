@@ -9858,15 +9858,15 @@ static int CmdHF14AMfISEN(const char *Cmd) {
         PrintAndLogEx(NORMAL, "[\n  [");
         for (uint8_t sec = 0; sec < num_sectors; sec++) {
             PrintAndLogEx(NORMAL, "    [\"%08x\", \"%08x\"]%s",
-                          bytes_to_num(resp.data.asBytes + ((sec * 2) * 9), 4),
-                          bytes_to_num(resp.data.asBytes + (((sec * 2) + 1) * 9), 4),
+                          (uint32_t) bytes_to_num(resp.data.asBytes + ((sec * 2) * 9), 4),
+                          (uint32_t) bytes_to_num(resp.data.asBytes + (((sec * 2) + 1) * 9), 4),
                           sec < num_sectors - 1 ? "," : "");
         }
         PrintAndLogEx(NORMAL, "  ],\n  [");
         for (uint8_t sec = 0; sec < num_sectors; sec++) {
             PrintAndLogEx(NORMAL, "    [\"%08x\", \"%08x\"]%s",
-                          bytes_to_num(resp.data.asBytes + ((sec * 2) * 9) + 4, 4),
-                          bytes_to_num(resp.data.asBytes + (((sec * 2) + 1) * 9) + 4, 4),
+                          (uint32_t) bytes_to_num(resp.data.asBytes + ((sec * 2) * 9) + 4, 4),
+                          (uint32_t) bytes_to_num(resp.data.asBytes + (((sec * 2) + 1) * 9) + 4, 4),
                           sec < num_sectors - 1 ? "," : "");
         }
         PrintAndLogEx(NORMAL, "  ],\n  [");
