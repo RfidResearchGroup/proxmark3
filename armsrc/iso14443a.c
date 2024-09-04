@@ -1244,7 +1244,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
 
         *cuid = bytes_to_num(data, 4);
     } else if ((flags & FLAG_7B_UID_IN_DATA) == FLAG_7B_UID_IN_DATA) {
-        rUIDc1[0] = 0x88;  // Cascade Tag marker
+        rUIDc1[0] = MIFARE_SELECT_CT;  // Cascade Tag marker
         rUIDc1[1] = data[0];
         rUIDc1[2] = data[1];
         rUIDc1[3] = data[2];
@@ -1267,13 +1267,13 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
         *cuid = bytes_to_num(data + 3, 4);
     } else if ((flags & FLAG_10B_UID_IN_DATA) == FLAG_10B_UID_IN_DATA) {
 
-        rUIDc1[0] = 0x88;  // Cascade Tag marker
+        rUIDc1[0] = MIFARE_SELECT_CT;  // Cascade Tag marker
         rUIDc1[1] = data[0];
         rUIDc1[2] = data[1];
         rUIDc1[3] = data[2];
         rUIDc1[4] = rUIDc1[0] ^ rUIDc1[1] ^ rUIDc1[2] ^ rUIDc1[3];
 
-        rUIDc2[0] = 0x88;  // Cascade Tag marker
+        rUIDc2[0] = MIFARE_SELECT_CT;  // Cascade Tag marker
         rUIDc2[1] = data[3];
         rUIDc2[2] = data[4];
         rUIDc2[3] = data[5];
@@ -2512,7 +2512,7 @@ void iso14443a_antifuzz(uint32_t flags) {
             colpos = 0;
 
             if ((flags & FLAG_7B_UID_IN_DATA) == FLAG_7B_UID_IN_DATA) {
-                resp[0] = 0x88;
+                resp[0] = MIFARE_SELECT_CT;
                 colpos = 8;
             }
 
@@ -2749,7 +2749,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
 
         } else {
             if (cascade_level < num_cascades - 1) {
-                uid_resp[0] = 0x88;
+                uid_resp[0] = MIFARE_SELECT_CT;
                 memcpy(uid_resp + 1, uid_ptr + cascade_level * 3, 3);
             } else {
                 memcpy(uid_resp, uid_ptr + cascade_level * 3, 4);
@@ -2797,7 +2797,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
         sak = resp[0];
 
         // Test if more parts of the uid are coming
-        do_cascade = (((sak & 0x04) /* && uid_resp[0] == 0x88 */) > 0);
+        do_cascade = (((sak & 0x04) /* && uid_resp[0] == MIFARE_SELECT_CT */) > 0);
 
         if (cascade_level == 0) {
 
@@ -2874,12 +2874,11 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
 }
 
 int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades) {
-    uint8_t resp[5] = {0}; // theoretically. A usual RATS will be much smaller
+    uint8_t resp[3] = { 0 };    // theoretically. max 1 Byte SAK, 2 Byte CRC, 3 bytes is enough
     uint8_t resp_par[1] = {0};
-    uint8_t uid_resp[4] = {0};
 
     uint8_t sak = 0x04; // cascade uid
-    int cascade_level = 0;
+    int cascade_level = 1;
 
     if (GetATQA(resp, sizeof(resp), resp_par, &WUPA_POLLING_PARAMETERS) == 0) {
         return 0;
@@ -2889,39 +2888,31 @@ int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades) {
     // which case we need to make a cascade 2 request and select - this is a long UID
     // While the UID is not complete, the 3nd bit (from the right) is set in the SAK.
     for (; sak & 0x04; cascade_level++) {
-        uint8_t sel_uid[]    = { ISO14443A_CMD_ANTICOLL_OR_SELECT, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        // SELECT_* (L1: 0x93, L2: 0x95, L3: 0x97)
-        sel_uid[0] = ISO14443A_CMD_ANTICOLL_OR_SELECT + cascade_level * 2;
-
-        if (cascade_level < num_cascades - 1) {
-            uid_resp[0] = 0x88;
-            memcpy(uid_resp + 1, uid_ptr + cascade_level * 3, 3);
-        } else {
-            memcpy(uid_resp, uid_ptr + cascade_level * 3, 4);
-        }
+        // transmitting a full UID (1 Byte cmd, 1 Byte NVB, 4 Byte UID, 1 Byte BCC, 2 Bytes CRC)
+        uint8_t sel_uid[9] = { ISO14443A_CMD_ANTICOLL_OR_SELECT, 0x70 };
 
         // Construct SELECT UID command
-        //sel_uid[1] = 0x70;                                            // transmitting a full UID (1 Byte cmd, 1 Byte NVB, 4 Byte UID, 1 Byte BCC, 2 Bytes CRC)
-        memcpy(sel_uid + 2, uid_resp, 4);                               // the UID received during anticollision, or the provided UID
-        sel_uid[6] = sel_uid[2] ^ sel_uid[3] ^ sel_uid[4] ^ sel_uid[5]; // calculate and add BCC
-        AddCrc14A(sel_uid, 7);                                          // calculate and add CRC
+        // SELECT_* (L1: 0x93, L2: 0x95, L3: 0x97)
+        sel_uid[0] = ISO14443A_CMD_ANTICOLL_OR_SELECT + (cascade_level - 1) * 2;
+
+        // CT + UID
+        if (cascade_level < num_cascades) {
+            sel_uid[2] = MIFARE_SELECT_CT;
+            memcpy(&sel_uid[3], uid_ptr + (cascade_level - 1) * 3, 3);
+        } else {
+            memcpy(&sel_uid[2], uid_ptr + (cascade_level - 1) * 3, 4);
+        }
+
+        sel_uid[6] = sel_uid[2] ^ sel_uid[3] ^ sel_uid[4] ^ sel_uid[5];    // calculate and add BCC
+        AddCrc14A(sel_uid, 7);                                             // calculate and add CRC
         ReaderTransmit(sel_uid, sizeof(sel_uid), NULL);
 
-        // Receive the SAK
-        if (ReaderReceive(resp, sizeof(resp), resp_par) == 0) {
+        // Receive 1 Byte SAK, 2 Byte CRC
+        if (ReaderReceive(resp, sizeof(resp), resp_par) != 3) {
             return 0;
         }
 
         sak = resp[0];
-
-        // Test if more parts of the uid are coming
-        if ((sak & 0x04) /* && uid_resp[0] == 0x88 */) {
-            // Remove first byte, 0x88 is not an UID byte, it CT, see page 3 of:
-            // http://www.nxp.com/documents/application_note/AN10927.pdf
-            uid_resp[0] = uid_resp[1];
-            uid_resp[1] = uid_resp[2];
-            uid_resp[2] = uid_resp[3];
-        }
     }
     return 1;
 }
