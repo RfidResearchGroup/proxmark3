@@ -9579,7 +9579,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     }
 
     if (fKeyType != 0xFF) {
-        PrintAndLogEx(SUCCESS, "Block 0.......... %s", sprint_hex(blockdata, MFBLOCK_SIZE));
+        PrintAndLogEx(SUCCESS, "Block 0.......... %s", sprint_hex_ascii(blockdata, MFBLOCK_SIZE));
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -9615,7 +9615,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "NXP MF1ICS5004");
         } else if (fKeyType == MF_KEY_BD08 || fKeyType == MF_KEY_BD08S || fKeyType == MF_KEY_BD32) {
             PrintAndLogEx(SUCCESS, _RED_("Unknown card with backdoor, please report details!"));
-        }
+        } else
         // other cards
         if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x46", 4) == 0) {
             PrintAndLogEx(SUCCESS, "NXP MF1ICS5005");
@@ -9627,6 +9627,8 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "NXP MF1ICS5007");
         } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\xc0", 4) == 0) {
             PrintAndLogEx(SUCCESS, "NXP MF1ICS5035");
+        } else {
+            PrintAndLogEx(SUCCESS, "unknown");
         }
 
         if (e_sector[1].foundKey[MF_KEY_A] && (e_sector[1].Key[MF_KEY_A] == 0x2A2C13CC242A)) {
@@ -9656,8 +9658,8 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
     }
 
-    if (res == NONCE_FAIL && verbose) {
-        PrintAndLogEx(SUCCESS, "Static nonce......... " _RED_("read failed"));
+    if (res == NONCE_FAIL) {
+        PrintAndLogEx(SUCCESS, "nonce................ " _RED_("read failed"));
     }
 
     if (res == NONCE_NORMAL) {
