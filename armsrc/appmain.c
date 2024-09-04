@@ -267,7 +267,7 @@ void ReadMem(int addr) {
 /* osimage version information is linked in, cf commonutil.h */
 /* bootrom version information is pointed to from _bootphase1_version_pointer */
 extern uint32_t _bootphase1_version_pointer[], _flash_start[], _flash_end[], __data_src_start__[];
-#ifdef WITH_NO_COMPRESSION
+#ifndef WITH_COMPRESSION
 extern uint32_t _bootrom_end[], _bootrom_start[], __os_size__[];
 #endif
 static void SendVersion(void) {
@@ -311,7 +311,7 @@ static void SendVersion(void) {
             strncat(VersionString, "\n ", sizeof(VersionString) - strlen(VersionString) - 1);
         }
     }
-#ifndef WITH_NO_COMPRESSION
+#ifdef WITH_COMPRESSION
     // Send Chip ID and used flash memory
     uint32_t text_and_rodata_section_size = (uint32_t)__data_src_start__ - (uint32_t)_flash_start;
     uint32_t compressed_data_section_size = g_common_area.arg1;
@@ -326,7 +326,7 @@ static void SendVersion(void) {
 
     struct p payload;
     payload.id = *(AT91C_DBGU_CIDR);
-#ifdef WITH_NO_COMPRESSION
+#ifndef WITH_COMPRESSION
     payload.section_size = (uint32_t)_bootrom_end - (uint32_t)_bootrom_start + (uint32_t)__os_size__;
 #else
     payload.section_size = text_and_rodata_section_size + compressed_data_section_size;

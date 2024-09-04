@@ -224,7 +224,7 @@ else
 endif
 
 $(OBJDIR)/fullimage.elf: $(OBJDIR)/fullimage.stage1.elf $(OBJDIR)/fullimage.data.bin.z
-ifeq (,$(findstring WITH_NO_COMPRESSION,$(APP_CFLAGS)))
+ifneq (,$(findstring WITH_COMPRESSION,$(APP_CFLAGS)))
 	$(info [=] LD $@)
 	$(Q)$(CROSS_OBJCOPY) -O elf32-littlearm -I elf32-littlearm --strip-all --update-section .data=$(OBJDIR)/fullimage.data.bin.z $(OBJDIR)/fullimage.stage1.elf $@
 else
