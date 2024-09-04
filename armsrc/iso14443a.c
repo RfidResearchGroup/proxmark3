@@ -3433,8 +3433,8 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
 
                 sync_cycles = (sync_cycles - nt_distance) / elapsed_prng_sequences;
 
-                // no negative sync_cycles
-                if (sync_cycles <= 0) sync_cycles += PRNG_SEQUENCE_LENGTH;
+                // no negative sync_cycles, and too small sync_cycles will result in continuous misses
+                if (sync_cycles <= 10) sync_cycles += PRNG_SEQUENCE_LENGTH;
 
                 // reset sync_cycles
                 if (sync_cycles > PRNG_SEQUENCE_LENGTH * 2) {
@@ -3445,11 +3445,9 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
                 if (g_dbglevel >= DBG_EXTENDED)
                     Dbprintf("calibrating in cycle %d. nt_distance=%d, elapsed_prng_sequences=%d, new sync_cycles: %d\n", i, nt_distance, elapsed_prng_sequences, sync_cycles);
 
-                LED_B_OFF();
                 continue;
             }
         }
-        LED_B_OFF();
 
         if ((nt != nt_attacked) && nt_attacked) {      // we somehow lost sync. Try to catch up again...
 

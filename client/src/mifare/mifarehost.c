@@ -83,6 +83,8 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
         while (true) {
             PrintAndLogEx(NORMAL, "." NOLF);
 
+            if (IsCommunicationThreadDead()) return PM3_EIO;
+
             //TODO: Not really stopping the command in time.
             if (kbd_enter_pressed()) {
                 SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
