@@ -46,7 +46,7 @@ void ReadThinFilm(void) {
     uint8_t buf[36] = {0x00};
 
     // power on and listen for answer.
-    bool status = GetIso14443aAnswerFromTag_Thinfilm(buf, &len);
+    bool status = GetIso14443aAnswerFromTag_Thinfilm(buf, sizeof(buf), &len);
     reply_ng(CMD_HF_THINFILM_READ, status ? PM3_SUCCESS : PM3_ENODATA, buf, len);
 
     hf_field_off();

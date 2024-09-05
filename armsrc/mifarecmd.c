@@ -95,31 +95,31 @@ static bool mifare_wakeup_auth(struct Crypto1State *pcs, MifareWakeupType wakeup
             break;
         case MF_WAKE_GEN1A:
             ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("wupC1 error");
                 return false;
             }
 
             ReaderTransmit(wupC2, sizeof(wupC2), NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
                 if (g_dbglevel >= DBG_INFO) Dbprintf("Assuming Magic Gen 1B tag. [wupC2 failed]");
             }
             break;
         case MF_WAKE_GEN1B:
             ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("wupC1 error");
                 return false;
             }
             break;
         case MF_WAKE_GDM_ALT:
             ReaderTransmitBitsPar(wupGDM1, 7, NULL, NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("wupGDM1 error");
                 return false;
             }
             ReaderTransmit(wupGDM2, sizeof(wupGDM2), NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
                 if (g_dbglevel >= DBG_INFO) Dbprintf("wupGDM2 error");
                 // maybe this is fine on some tags?
             }
@@ -532,7 +532,7 @@ void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
         }
 
         // send transfer (commit the change)
-        len = mifare_sendcmd_short(pcs, 1, MIFARE_CMD_TRANSFER, (transferBlk != 0) ? transferBlk : blockNo, receivedAnswer, NULL, NULL);
+        len = mifare_sendcmd_short(pcs, 1, MIFARE_CMD_TRANSFER, (transferBlk != 0) ? transferBlk : blockNo, receivedAnswer, sizeof(receivedAnswer), NULL, NULL);
         if (len != 1 && receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error in transfer: %02x", receivedAnswer[0]);
             break;
@@ -852,7 +852,7 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
         uint8_t dcmd[4] = {0x60 + (keyType & 0x01), blockNo, 0x00, 0x00};
         AddCrc14A(dcmd, 2);
         ReaderTransmit(dcmd, sizeof(dcmd), NULL);
-        int len = ReaderReceive(answer, par);
+        int len = ReaderReceive(answer, sizeof(answer), par);
 
         // wait for the card to become ready again
         CHK_TIMEOUT();
@@ -975,7 +975,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
         }
 
         // nested authentication
-        uint16_t len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0xF), targetBlockNo, receivedAnswer, par_enc, NULL);
+        uint16_t len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0xF), targetBlockNo, receivedAnswer, sizeof(receivedAnswer), par_enc, NULL);
 
         // wait for the card to become ready again
         CHK_TIMEOUT();
@@ -1124,7 +1124,7 @@ void MifareAcquireStaticEncryptedNonces(uint32_t flags, uint8_t *key) {
             }
 
             // nested authentication
-            uint16_t len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + keyType + 4, blockNo, receivedAnswer, par_enc, NULL);
+            uint16_t len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + keyType + 4, blockNo, receivedAnswer, sizeof(receivedAnswer), par_enc, NULL);
             if (len != 4) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth2 error len=%d", len);
                 isOK = PM3_ESOFT;
@@ -1150,7 +1150,7 @@ void MifareAcquireStaticEncryptedNonces(uint32_t flags, uint8_t *key) {
             };
 
             // nested authentication on regular keytype
-            len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + keyType, blockNo, receivedAnswer, par_enc, NULL);
+            len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + keyType, blockNo, receivedAnswer, sizeof(receivedAnswer), par_enc, NULL);
             if (len != 4) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth2 error len=%d", len);
                 isOK = PM3_ESOFT;
@@ -1364,7 +1364,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
             // nested authentication
             auth2_time = auth1_time + delta_time;
 
-            len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0xF), targetBlockNo, receivedAnswer, par, &auth2_time);
+            len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0xF), targetBlockNo, receivedAnswer, sizeof(receivedAnswer), par, &auth2_time);
             if (len != 4) {
                 if (g_dbglevel >= DBG_INFO) Dbprintf("Nested: Auth2 error len=%d", len);
                 continue;
@@ -1489,7 +1489,7 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
             target_nt[1] = prng_successor(nt1, 320);
         }
 
-        len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0xF), targetBlockNo, receivedAnswer, par, NULL);
+        len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0xF), targetBlockNo, receivedAnswer, sizeof(receivedAnswer), par, NULL);
         if (len != 4) {
             continue;
         };
@@ -1514,7 +1514,7 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
             continue;
         };
 
-        len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0xF), targetBlockNo, receivedAnswer, par, NULL);
+        len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0xF), targetBlockNo, receivedAnswer, sizeof(receivedAnswer), par, NULL);
         if (len != 4) {
             continue;
         };
@@ -2244,7 +2244,7 @@ void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key) {
 
         uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
         uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
-        int len = mifare_sendcmd_short(pcs, true, MIFARE_EV1_PERSONAL_UID, perso_option, receivedAnswer, receivedAnswerPar, NULL);
+        int len = mifare_sendcmd_short(pcs, true, MIFARE_EV1_PERSONAL_UID, perso_option, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
         if (len != 1 || receivedAnswer[0] != CARD_ACK) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
             break;
@@ -2513,7 +2513,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
         // wipe tag, fill it with zeros
         if (workFlags & MAGIC_WIPE) {
             ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("wupC1 error");
                 errormsg = MAGIC_WIPE;
                 break;
@@ -2526,7 +2526,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
             iso14a_set_timeout(21190);
 
             ReaderTransmit(wipeC, sizeof(wipeC), NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("wipeC error");
                 errormsg = MAGIC_WIPE;
                 break;
@@ -2539,7 +2539,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
         // write block
         if (workFlags & MAGIC_WUPC) {
             ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("wupC1 error");
                 errormsg = MAGIC_WUPC;
                 break;
@@ -2547,7 +2547,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
 
             if (!is1b) {
                 ReaderTransmit(wupC2, sizeof(wupC2), NULL);
-                if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+                if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
                     if (g_dbglevel >= DBG_INFO) Dbprintf("Assuming Magic Gen 1B tag. [wupC2 failed]");
                     is1b = true;
                     continue;
@@ -2555,7 +2555,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
             }
         }
 
-        if ((mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_WRITEBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
+        if ((mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_WRITEBLOCK, blockNo, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("write block send command error");
             errormsg = 4;
             break;
@@ -2565,14 +2565,15 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
         AddCrc14A(data, 16);
 
         ReaderTransmit(data, sizeof(data), NULL);
-        if ((ReaderReceive(receivedAnswer, receivedAnswerPar) != 1) || (receivedAnswer[0] != 0x0a)) {
+        if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) != 1) || (receivedAnswer[0] != 0x0a)) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("write block send data error");
             errormsg = 0;
             break;
         }
 
-        if (workFlags & MAGIC_HALT)
+        if (workFlags & MAGIC_HALT) {
             mifare_classic_halt(NULL);
+        }
 
         isOK = true;
         break;
@@ -2623,15 +2624,15 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
     while (true) {
         if (workFlags & MAGIC_WUPC) {
             ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
-            if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0)  || (receivedAnswer[0] != 0x0a)) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("wupC1 error");
                 errormsg = MAGIC_WUPC;
                 break;
             }
 
-            if (!is1b)  {
+            if (is1b == false)  {
                 ReaderTransmit(wupC2, sizeof(wupC2), NULL);
-                if (!ReaderReceive(receivedAnswer, receivedAnswerPar) || (receivedAnswer[0] != 0x0a)) {
+                if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
                     if (g_dbglevel >= DBG_INFO) Dbprintf("Assuming Magic Gen 1B tag. [wupC2 failed]");
                     is1b = true;
                     continue;
@@ -2640,7 +2641,7 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
         }
 
         // read block
-        if ((mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, receivedAnswerPar, NULL) != MAX_MIFARE_FRAME_SIZE)) {
+        if ((mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL) != MAX_MIFARE_FRAME_SIZE)) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("read block send command error");
             errormsg = 0;
             break;
@@ -2649,25 +2650,29 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
         memcpy(data, receivedAnswer, sizeof(data));
 
         // send HALT
-        if (workFlags & MAGIC_HALT)
+        if (workFlags & MAGIC_HALT) {
             mifare_classic_halt(NULL);
+        }
 
         isOK = true;
         break;
     }
     // if MAGIC_DATAIN, the data stays on device side.
     if (workFlags & MAGIC_DATAIN) {
-        if (isOK)
+        if (isOK) {
             memcpy(datain, data, sizeof(data));
+        }
     } else {
-        if (isOK)
+        if (isOK) {
             reply_old(CMD_ACK, 1, 0, 0, data, sizeof(data));
-        else
+        } else {
             OnErrorMagic(errormsg);
+        }
     }
 
-    if (workFlags & MAGIC_OFF)
+    if (workFlags & MAGIC_OFF) {
         OnSuccessMagic();
+    }
 
     iso14a_set_timeout(timeout);
 }
@@ -2702,18 +2707,18 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
 
     // Generation 1 test
     ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
-    if (ReaderReceive(rec, recpar) && (rec[0] == 0x0A)) {
+    if (ReaderReceive(rec, 1, recpar) && (rec[0] == 0x0A)) {
 
         flag = MAGIC_FLAG_GEN_1A;
         ReaderTransmit(wupC2, sizeof(wupC2), NULL);
-        uint16_t tmp = ReaderReceive(rec, recpar);
+        uint16_t tmp = ReaderReceive(rec, 1, recpar);
         if ((tmp && (rec[0] != 0x0A)) || (tmp == 0)) {
             flag = MAGIC_FLAG_GEN_1B;
         }
 
         // check for GDM config
         ReaderTransmit(gen4gdmGetConf, sizeof(gen4gdmGetConf), NULL);
-        res = ReaderReceive(buf, par);
+        res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
         if (res > 1) {
             flag |= MAGIC_FLAG_GDM_WUP_40;
         }
@@ -2727,7 +2732,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
         // Get config should return 30 or 32 bytes
         AddCrc14A(gen4GetConf, sizeof(gen4GetConf) - 2);
         ReaderTransmit(gen4GetConf, sizeof(gen4GetConf), NULL);
-        res = ReaderReceive(buf, par);
+        res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
         if (res == 32 || res == 34) {
             flag |= MAGIC_FLAG_GEN_4GTU;
         }
@@ -2743,7 +2748,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
         }
 
         ReaderTransmit(rats, sizeof(rats), NULL);
-        res = ReaderReceive(buf, par);
+        res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
 
         if (res) {
             if (memcmp(buf, "\x09\x78\x00\x91\x02\xDA\xBC\x19\x10", 9) == 0) {
@@ -2778,7 +2783,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
 
             // test for super card
             ReaderTransmit(superGen1, sizeof(superGen1), NULL);
-            res = ReaderReceive(buf, par);
+            res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
             if (res == 22) {
                 uint8_t isGen = MAGIC_FLAG_SUPER_GEN1;
 
@@ -2788,7 +2793,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
 
                 iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
                 ReaderTransmit(rdbl00, sizeof(rdbl00), NULL);
-                res = ReaderReceive(buf, par);
+                res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
                 if (res == 18) {
                     isGen = MAGIC_FLAG_SUPER_GEN2;
                 }
@@ -2804,7 +2809,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
             res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
             if (res == 2) {
                 ReaderTransmit(rdblf0, sizeof(rdblf0), NULL);
-                res = ReaderReceive(buf, par);
+                res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
                 if (res == 18) {
                     flag |= MAGIC_FLAG_NTAG21X;
                 }
@@ -2828,7 +2833,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
                     uint64_t tmpkey = bytes_to_num(key, 6);
                     if (mifare_classic_authex(pcs, cuid, 0, keytype, tmpkey, AUTH_FIRST, NULL, NULL) == 0) {
 
-                        if ((mifare_sendcmd_short(pcs, 1, ISO14443A_CMD_WRITEBLOCK, 0, buf, par, NULL) == 1) && (buf[0] == 0x0A)) {
+                        if ((mifare_sendcmd_short(pcs, 1, ISO14443A_CMD_WRITEBLOCK, 0, buf, PM3_CMD_DATA_SIZE, par, NULL) == 1) && (buf[0] == 0x0A)) {
                             flag |= MAGIC_FLAG_GEN_2;
                             // turn off immediately to ensure nothing ever accidentally writes to the block
                             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -2844,7 +2849,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
             res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
             if (res) {
                 ReaderTransmit(rdbl00, sizeof(rdbl00), NULL);
-                res = ReaderReceive(buf, par);
+                res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
                 if (res == 18) {
                     flag |= MAGIC_FLAG_GEN_3;
                 }
@@ -2856,7 +2861,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
             res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
             if (res) {
                 ReaderTransmit(gen4gdmAuth, sizeof(gen4gdmAuth), NULL);
-                res = ReaderReceive(buf, par);
+                res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
                 if (res == 4) {
                     flag |= MAGIC_FLAG_GDM_AUTH;
                 }
@@ -2877,7 +2882,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
 
     // GDM alt magic wakeup (20)
     ReaderTransmitBitsPar(wupGDM1, 7, NULL, NULL);
-    if (ReaderReceive(rec, recpar) && (rec[0] == 0x0a)) {
+    if (ReaderReceive(rec, 1, recpar) && (rec[0] == 0x0a)) {
         flag |= MAGIC_FLAG_GDM_WUP_20;
     }
 
@@ -2916,7 +2921,7 @@ void MifareHasStaticNonce(void) {
         uint8_t rec[4] = {0x00};
         uint8_t recpar[1] = {0x00};
         // Transmit MIFARE_CLASSIC_AUTH 0x60, block 0
-        int len = mifare_sendcmd_short(pcs, false, MIFARE_AUTH_KEYA, 0, rec, recpar, NULL);
+        int len = mifare_sendcmd_short(pcs, false, MIFARE_AUTH_KEYA, 0, rec, sizeof(rec), recpar, NULL);
         if (len != 4) {
             retval = PM3_ESOFT;
             goto OUT;
@@ -3108,7 +3113,7 @@ int DoGen3Cmd(uint8_t *cmd, uint8_t cmd_len) {
     iso14a_set_timeout(13560000 / 1000 / (8 * 16) * 2000); // 2 seconds timeout
 
     ReaderTransmit(cmd, cmd_len, NULL);
-    int res = ReaderReceive(buf, par);
+    int res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
     if (res == 4 && memcmp(buf, "\x90\x00\xfd\x07", 4) == 0) {
         // timeout for card memory reset
         SpinDelay(1000);
@@ -3160,7 +3165,9 @@ void MifareGen3Blk(uint8_t block_len, uint8_t *block) {
 
     int retval = PM3_SUCCESS;
     uint8_t block_cmd[5] = { 0x90, 0xf0, 0xcc, 0xcc, 0x10 };
-    uint8_t *cmd = BigBuf_calloc(sizeof(block_cmd) + MAX_MIFARE_FRAME_SIZE);
+    uint8_t cmdlen = sizeof(block_cmd) + MAX_MIFARE_FRAME_SIZE;
+    uint8_t *cmd = BigBuf_calloc(cmdlen);
+
     iso14a_card_select_t *card_info = (iso14a_card_select_t *) BigBuf_calloc(sizeof(iso14a_card_select_t));
 
     LEDsoff();
@@ -3175,7 +3182,7 @@ void MifareGen3Blk(uint8_t block_len, uint8_t *block) {
 
     bool doReselect = false;
     if (block_len < MIFARE_BLOCK_SIZE) {
-        if ((mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_READBLOCK, 0, &cmd[sizeof(block_cmd)], NULL, NULL) != MAX_MIFARE_FRAME_SIZE)) {
+        if ((mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_READBLOCK, 0, &cmd[sizeof(block_cmd)], MAX_MIFARE_FRAME_SIZE, NULL, NULL) != MAX_MIFARE_FRAME_SIZE)) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Read manufacturer block failed");
             retval = PM3_ESOFT;
             goto OUT;
@@ -3291,7 +3298,7 @@ void MifareG4ReadBlk(uint8_t blockno, uint8_t *pwd, uint8_t workFlags) {
     AddCrc14A(cmd, sizeof(cmd) - 2);
 
     ReaderTransmit(cmd, sizeof(cmd), NULL);
-    res = ReaderReceive(buf, par);
+    res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
 
     if (res != 18) {
         retval = PM3_ESOFT;
@@ -3376,7 +3383,7 @@ void MifareG4WriteBlk(uint8_t blockno, uint8_t *pwd, uint8_t *data, uint8_t work
     AddCrc14A(cmd, sizeof(cmd) - 2);
 
     ReaderTransmit(cmd, sizeof(cmd), NULL);
-    res = ReaderReceive(buf, par);
+    res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
 
     if ((res != 4) || (memcmp(buf, "\x90\x00\xfd\x07", 4) != 0)) {
         retval = PM3_ESOFT;
@@ -3438,7 +3445,7 @@ void MifareSetMod(uint8_t *datain) {
         }
 
         int respLen;
-        if (((respLen = mifare_sendcmd_short(pcs, CRYPT_ALL, MIFARE_EV1_SETMOD, mod, buf, par, NULL)) != 1) || (buf[0] != 0x0a)) {
+        if (((respLen = mifare_sendcmd_short(pcs, CRYPT_ALL, MIFARE_EV1_SETMOD, mod, buf, MAX_MIFARE_FRAME_SIZE, par, NULL)) != 1) || (buf[0] != 0x0a)) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("SetMod error; response[0]: %hhX, len: %d", buf[0], respLen);
             break;
         }

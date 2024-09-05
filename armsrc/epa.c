@@ -145,7 +145,7 @@ static int EPA_APDU(uint8_t *apdu, size_t length, uint8_t *response, uint16_t re
     switch (iso_type) {
         case 'a':
 #ifdef WITH_ISO14443a
-            return iso14_apdu(apdu, (uint16_t) length, false, response, NULL);
+            return iso14_apdu(apdu, (uint16_t) length, false, response, respmaxlen, NULL);
 #else
             (void) apdu;
             (void) length;
@@ -581,7 +581,7 @@ static int EPA_Setup(void) {
             uint8_t pps_response_par[1];
             // send the PPS request
             ReaderTransmit((uint8_t *)pps, sizeof(pps), NULL);
-            return_code = ReaderReceive(pps_response, pps_response_par);
+            return_code = ReaderReceive(pps_response, sizeof(pps_response), pps_response_par);
             if (return_code != 3 || pps_response[0] != 0xD0) {
                 return return_code == 0 ? 2 : return_code;
             }

@@ -2188,7 +2188,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     if (res == false) {
         Dbprintf(_RED_("Unable to select card! Stopping."));
         goto out;
-    }else {
+    } else {
         DbpString(_GREEN_("Card selected successfully!"));
     }
 
@@ -2200,7 +2200,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     if (res == false) {
         Dbprintf(_RED_("Unable to authenticate with AA2 using K2! Stopping."));
         goto out;
-    }else{
+    } else {
         DbpString(_GREEN_("AA2 authentication with K2 successful!"));
     }
 
@@ -2232,7 +2232,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     if (res == false) {
         Dbprintf(_RED_("Unable to authenticate on AA1 using macs! Stopping."));
         goto out;
-    }else {
+    } else {
         DbpString(_GREEN_("Authenticated with AA1 with macs!"));
     }
 

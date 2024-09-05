@@ -162,7 +162,7 @@ static void become_reader(void) {
         AddCrc14A(toCard, rx->len);
         ReaderTransmit(toCard, rx->len + 2, NULL);
 
-        tx->len = ReaderReceive(tx->dat, parity);
+        tx->len = ReaderReceive(tx->dat, sizeof(tx->dat), parity);
         if (tx->len == 0) {
             tx->len = sizeof(magicERR);
             memcpy(tx->dat, magicERR, sizeof(magicERR));

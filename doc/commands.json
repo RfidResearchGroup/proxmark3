@@ -5056,9 +5056,13 @@
                 "--addauth auth(blk)-auth(blk)-auth(blk2)",
                 "--incblk2 auth(blk)-auth(blk2)-auth(blk2+4)-...",
                 "--corruptnrar corrupt {nR}{aR}, but with correct parity",
-                "--corruptnrarparity correct {nR}{aR}, but with corrupted parity"
+                "--corruptnrarparity correct {nR}{aR}, but with corrupted parity",
+                "",
+                "FM11RF08S specific options: Incompatible with above options, except -k; output in JSON",
+                "--collect_fm11rf08s collect all nT/{nT}/par_err.",
+                "--collect_fm11rf08s_with_data collect all nT/{nT}/par_err and data blocks."
             ],
-            "usage": "hf mf isen [-hab] [--blk <dec>] [-c <dec>] [-k <hex>] [--blk2 <dec>] [--a2] [--b2] [--c2 <dec>] [--key2 <hex>] [-n <dec>] [--reset] [--hardreset] [--addread] [--addauth] [--incblk2] [--corruptnrar] [--corruptnrarparity]"
+            "usage": "hf mf isen [-hab] [--blk <dec>] [-c <dec>] [-k <hex>] [--blk2 <dec>] [--a2] [--b2] [--c2 <dec>] [--key2 <hex>] [-n <dec>] [--reset] [--hardreset] [--addread] [--addauth] [--incblk2] [--corruptnrar] [--corruptnrarparity] FM11RF08S specific options: [--collect_fm11rf08s] [--collect_fm11rf08s_with_data]"
         },
         "hf mf mad": {
             "command": "hf mf mad",
@@ -9725,7 +9729,7 @@
             "command": "lf hitag hts read",
             "description": "Read Hitag S memory. Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR)",
             "notes": [
-                "lf hitag s read -> Hitag S, plain mode",
+                "lf hitag hts read -> Hitag S, plain mode",
                 "lf hitag hts read --nrar 0102030411223344 -> Hitag S, challenge mode",
                 "lf hitag hts read --crypto -> Hitag S, crypto mode, def key",
                 "lf hitag hts read -k 4F4E4D494B52 -> Hitag S, crypto mode"
@@ -9743,7 +9747,7 @@
             "command": "lf hitag hts write",
             "description": "Write a page in Hitag S memory. Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR)",
             "notes": [
-                "lf hitag write -p 6 -d 01020304 -> Hitag S, plain mode",
+                "lf hitag hts write -p 6 -d 01020304 -> Hitag S, plain mode",
                 "lf hitag hts write -p 6 -d 01020304 --nrar 0102030411223344 -> Hitag S, challenge mode",
                 "lf hitag hts write -p 6 -d 01020304 --crypto -> Hitag S, crypto mode, default key",
                 "lf hitag hts write -p 6 -d 01020304 -k 4F4E4D494B52 -> Hitag S, crypto mode"
@@ -12881,6 +12885,6 @@
     "metadata": {
         "commands_extracted": 743,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-08-29T10:28:11"
+        "extracted_on": "2024-09-05T15:50:04"
     }
 }
