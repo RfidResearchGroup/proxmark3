@@ -483,6 +483,11 @@ void Demod14aInit(uint8_t *d, uint16_t n, uint8_t *par) {
 
 // use parameter non_real_time to provide a timestamp. Set to 0 if the decoder should measure real time
 RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time) {
+
+    if (Demod.len == Demod.output_len - 1) {
+        return true;
+    }
+
     Demod.twoBits = (Demod.twoBits << 8) | bit;
 
     if (Demod.state == DEMOD_14A_UNSYNCD) {
