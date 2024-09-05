@@ -9538,15 +9538,17 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     }
 
     uint8_t k08s[6] = {0xA3, 0x96, 0xEF, 0xA4, 0xE2, 0x4F};
+    uint8_t k08[6] = {0xA3, 0x16, 0x67, 0xA8, 0xCE, 0xC1};
+    uint8_t k32[6] = {0x51, 0x8B, 0x33, 0x54, 0xE7, 0x60};
     if (mfReadBlock(0, 4, k08s, blockdata) == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Backdoor key..... " _YELLOW_("%s"), sprint_hex_inrow(k08s, sizeof(k08s)));
         fKeyType = MF_KEY_BD08S;
-    }
-
-    uint8_t k08[6] = {0xA3, 0x16, 0x67, 0xA8, 0xCE, 0xC1};
-    if (mfReadBlock(0, 4, k08, blockdata) == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Backdoor key..... " _YELLOW_("%02X%02X%02X%02X%02X%02X"), k08[0], k08[1], k08[2], k08[3], k08[4], k08[5]);
+    } else if (mfReadBlock(0, 4, k08, blockdata) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Backdoor key..... " _YELLOW_("%s"), sprint_hex_inrow(k08, sizeof(k08)));
         fKeyType = MF_KEY_BD08;
+    } else if (mfReadBlock(0, 4, k32, blockdata) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Backdoor key..... " _YELLOW_("%s"), sprint_hex_inrow(k32, sizeof(k32)));
+        fKeyType = MF_KEY_BD32;
     }
 
     if (fKeyType != 0xFF) {
@@ -9558,7 +9560,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
 
     if (fKeyType != 0xFF) {
         // cards with known backdoor
-        if (memcmp(blockdata + 8, "\x62\x63\x64\x65\x66\x67\x68\x69", 8) == 0) {
+        if (card.sak != 0x20  && memcmp(blockdata + 8, "\x62\x63\x64\x65\x66\x67\x68\x69", 8) == 0) {
             // backdoor might be present, or just a clone reusing Fudan MF data...
             PrintAndLogEx(SUCCESS, "Fudan based card");
         } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
@@ -9570,6 +9572,10 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
                    && (blockdata[8] >= 0x01 && blockdata[8] <= 0x03) && blockdata[15] == 0x1D) {
             PrintAndLogEx(SUCCESS, "Fudan FM11RF08");
+        } else if (card.sak == 0x18 && memcmp(blockdata + 5, "\x18\x02\x00\x46\x44\x53\x37\x30\x56\x30\x31", 11) == 0) {
+            PrintAndLogEx(SUCCESS, "Fudan FM11RF32");
+        } else if (card.sak == 0x20 && memcmp(blockdata + 8, "\x62\x63\x64\x65\x66\x67\x68\x69", 8) == 0) {
+            PrintAndLogEx(SUCCESS, "Fudan FM11RF32 (SAK=20)");
         } else if (card.sak == 0x28 && memcmp(blockdata + 5, "\x28\x04\x00\x90\x10\x15\x01\x00\x00\x00\x00", 11) == 0) {
             PrintAndLogEx(SUCCESS, "Fudan FM1208-10");
         } else if (card.sak == 0x88 && memcmp(blockdata + 5, "\x88\x04\x00\x43", 4) == 0) {
@@ -9578,7 +9584,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "NXP MF1ICS5003");
         } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x45", 4) == 0) {
             PrintAndLogEx(SUCCESS, "NXP MF1ICS5004");
-        } else if (fKeyType == MF_KEY_BD08 || fKeyType == MF_KEY_BD08S) {
+        } else if (fKeyType == MF_KEY_BD08 || fKeyType == MF_KEY_BD08S || fKeyType == MF_KEY_BD32) {
             PrintAndLogEx(SUCCESS, _RED_("Unknown card with backdoor, please report details!"));
         }
         // other cards
