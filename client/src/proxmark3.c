@@ -44,7 +44,7 @@
 #endif
 
 
-static int mainret = PM3_ESOFT;
+static int mainret = PM3_SUCCESS;
 
 #ifndef LIBPM3
 #define BANNERMSG1 ""
@@ -574,6 +574,11 @@ check_script:
                 // exit or quit
                 if (mainret == PM3_EFATAL)
                     break;
+                if (mainret == PM3_SQUIT) {
+                    // Normal quit, map to 0
+                    mainret = PM3_SUCCESS;
+                    break;
+                }
             }
             free(cmd);
             cmd = NULL;

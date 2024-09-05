@@ -863,7 +863,8 @@ typedef struct {
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program
 #define PM3_EFATAL            -99
-
+// Regular quit
+#define PM3_SQUIT            -100
 
 // LF
 #define LF_FREQ2DIV(f) ((int)(((12000.0 + (f)/2.0)/(f))-1))
