@@ -307,7 +307,7 @@ void RunMod(void) {
                     // add loop visa
                     // for (int i = 0; i < ARRAYLEN(AIDlist); i ++) {
 //    hexstr_to_byte_array("a0da02631a440a44000000a012ad10a00e800200048108", sam_apdu, &sam_len);
-                    uint8_t apdulen = iso14_apdu(apdus[i], (uint16_t) apduslen[i], false, apdubuffer, NULL);
+                    uint8_t apdulen = iso14_apdu(apdus[i], (uint16_t) apduslen[i], false, apdubuffer, sizeof(apdubuffer), NULL);
 
                     if (apdulen > 0) {
                         DbpString("[ " _YELLOW_("Proxmark command") " ]");
@@ -404,7 +404,7 @@ void RunMod(void) {
             for (;;) {
                 LED_B_OFF();
                 // clean receive command buffer
-                if (GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len) == false) {
+                if (GetIso14443aCommandFromReader(receivedCmd, sizeof(receivedCmd), receivedCmdPar, &len) == false) {
                     DbpString("Emulator stopped");
                     retval = PM3_EOPABORTED;
                     break;

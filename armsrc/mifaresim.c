@@ -579,7 +579,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
 
         FpgaEnableTracing();
         //Now, get data
-        int res = EmGetCmd(receivedCmd, &receivedCmd_len, receivedCmd_par);
+        int res = EmGetCmd(receivedCmd, sizeof(receivedCmd), &receivedCmd_len, receivedCmd_par);
 
         if (res == 2) { //Field is off!
             //FpgaDisableTracing();

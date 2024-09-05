@@ -217,7 +217,7 @@ void RunMod(void) {
             while (!gotkey) {
                 LED_B_OFF();
                 // Clean receive command buffer
-                if (!GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len)) {
+                if (!GetIso14443aCommandFromReader(receivedCmd, sizeof(receivedCmd), receivedCmdPar, &len)) {
                     DbpString(_YELLOW_("!!") "Emulator stopped");
                     retval = PM3_EOPABORTED;
                     break;
@@ -324,7 +324,7 @@ void RunMod(void) {
                 for (uint8_t i = 0; i < 5; i++) {
                     gotndef = false;
                     LED_B_ON();
-                    uint8_t apdulen = iso14_apdu(apdus[i], (uint16_t) apdusLen[i], false, apdubuffer, NULL);
+                    uint8_t apdulen = iso14_apdu(apdus[i], (uint16_t) apdusLen[i], false, apdubuffer, sizeof(apdubuffer), NULL);
 
                     if (apdulen > 2) {
                         DbpString(_YELLOW_("[ ") "Proxmark command" _YELLOW_(" ]"));
@@ -395,7 +395,7 @@ void RunMod(void) {
             for (;;) {
                 LED_B_OFF();
                 // Clean receive command buffer
-                if (!GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len)) {
+                if (!GetIso14443aCommandFromReader(receivedCmd, sizeof(receivedCmd), receivedCmdPar, &len)) {
                     DbpString(_YELLOW_("!!") "Emulator stopped");
                     retval = PM3_EOPABORTED;
                     break;

@@ -80,7 +80,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
     Demod14aInit(receivedResp, receivedRespPar);
 
     // Set up the demodulator for the reader -> tag commands
-    Uart14aInit(receivedCmd, receivedCmdPar);
+    Uart14aInit(receivedCmd, sizeof(receivedCmd), receivedCmdPar);
 
     // Setup and start DMA.
     // set transfer address and number of bytes. Start transfer.

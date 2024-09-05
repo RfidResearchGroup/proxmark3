@@ -71,7 +71,7 @@ static void reply_with_packet(packet_t *);
 static void read_packet(packet_t *);
 static void write_packet(packet_t *);
 
-static bool GetIso14443aCommandFromReaderInterruptible(uint8_t *, uint8_t *, int *);
+static bool GetIso14443aCommandFromReaderInterruptible(uint8_t *, uint16_t, uint8_t *, int *);
 
 
 void RunMod(void) {
@@ -229,7 +229,7 @@ static void become_card(void) {
     while (1) {
         WDT_HIT();
 
-        if (!GetIso14443aCommandFromReaderInterruptible(fromReaderDat, parity, &fromReaderLen)) {
+        if (!GetIso14443aCommandFromReaderInterruptible(fromReaderDat, sizeof(fromReaderDat), parity, &fromReaderLen)) {
             if (cardhopper_data_available()) {
                 read_packet(rx);
                 if (memcmp(magicRSRT, rx->dat, sizeof(magicRSRT)) == 0) {
@@ -496,11 +496,11 @@ static void write_packet(packet_t *packet) {
 }
 
 
-static bool GetIso14443aCommandFromReaderInterruptible(uint8_t *received, uint8_t *par, int *len) {
+static bool GetIso14443aCommandFromReaderInterruptible(uint8_t *received, uint16_t received_max_len, uint8_t *par, int *len) {
     LED_D_OFF();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
-    Uart14aInit(received, par);
+    Uart14aInit(received, received_max_len, par);
 
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
     (void)b;

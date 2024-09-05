@@ -87,12 +87,13 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
     Demod14aInit(receivedResp, MAX_FRAME_SIZE, receivedRespPar);
 
     // Set up the demodulator for the reader -> tag commands
-    Uart14aInit(receivedCmd, receivedCmdPar);
+    Uart14aInit(receivedCmd, MAX_FRAME_SIZE, receivedCmdPar);
 
     // Setup and start DMA.
     if (!FpgaSetupSscDma((uint8_t *)dmaBuf, DMA_BUFFER_SIZE)) {
-        if (g_dbglevel > 1)
+        if (g_dbglevel > 1) {
             Dbprintf("FpgaSetupSscDma failed. Exiting");
+        }
         return;
     }
 

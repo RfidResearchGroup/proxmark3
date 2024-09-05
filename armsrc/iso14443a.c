@@ -300,14 +300,20 @@ void Uart14aReset(void) {
     Uart.syncBit = 9999;
 }
 
-void Uart14aInit(uint8_t *data, uint8_t *par) {
-    Uart.output = data;
+void Uart14aInit(uint8_t *d, uint16_t n, uint8_t *par) {
+    Uart.output_len = n;
+    Uart.output = d;
     Uart.parity = par;
     Uart14aReset();
 }
 
 // use parameter non_real_time to provide a timestamp. Set to 0 if the decoder should measure real time
 RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
+
+    if (Uart.len == Uart.output_len - 1) {
+        return true;
+    }
+
     Uart.fourBits = (Uart.fourBits << 8) | bit;
 
     if (Uart.state == STATE_14A_UNSYNCD) {                                           // not yet synced
@@ -692,7 +698,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     Demod14aInit(receivedResp, MAX_FRAME_SIZE, receivedRespPar);
 
     // Set up the demodulator for the reader -> tag commands
-    Uart14aInit(receivedCmd, receivedCmdPar);
+    Uart14aInit(receivedCmd, MAX_FRAME_SIZE, receivedCmdPar);
 
     if (g_dbglevel >= DBG_INFO) {
         DbpString("Press " _GREEN_("pm3 button") " to abort sniffing");
@@ -800,7 +806,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
                     Demod14aReset();
                     // reset the Miller decoder including its (now outdated) input buffer
                     Uart14aReset();
-                    //Uart14aInit(receivedCmd, receivedCmdPar);
+                    //Uart14aInit(receivedCmd, MAX_FRAME_SIZE, receivedCmdPar);
                     LED_C_OFF();
                 }
                 TagIsActive = (Demod.state != DEMOD_14A_UNSYNCD);
@@ -936,7 +942,7 @@ static void Code4bitAnswerAsTag(uint8_t cmd) {
 // stop when button is pressed or client usb connection resets
 // or return TRUE when command is captured
 //-----------------------------------------------------------------------------
-bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *len) {
+bool GetIso14443aCommandFromReader(uint8_t *received, uint16_t received_max_len, uint8_t *par, int *len) {
     // Set FPGA mode to "simulated ISO 14443 tag", no modulation (listen
     // only, since we are receiving, not transmitting).
     // Signal field is off with the appropriate LED
@@ -944,7 +950,7 @@ bool GetIso14443aCommandFromReader(uint8_t *received, uint8_t *par, int *len) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
     // Now run a `software UART` on the stream of incoming samples.
-    Uart14aInit(received, par);
+    Uart14aInit(received, received_max_len, par);
 
     // clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -1462,7 +1468,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
         tag_response_info_t *p_response = NULL;
 
         // Clean receive command buffer
-        if (GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len) == false) {
+        if (GetIso14443aCommandFromReader(receivedCmd, sizeof(receivedCmd), receivedCmdPar, &len) == false) {
             Dbprintf("Emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
             retval = PM3_EOPABORTED;
             break;
@@ -2070,7 +2076,7 @@ static void CodeIso14443aAsReaderPar(const uint8_t *cmd, uint16_t len, const uin
 // Stop when button is pressed (return 1) or field was gone (return 2)
 // Or return 0 when command is captured
 //-----------------------------------------------------------------------------
-int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
+int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_t *par) {
     *len = 0;
 
     uint32_t timer = 0;
@@ -2096,7 +2102,7 @@ int EmGetCmd(uint8_t *received, uint16_t *len, uint8_t *par) {
     AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
 
     // Now run a 'software UART' on the stream of incoming samples.
-    Uart14aInit(received, par);
+    Uart14aInit(received, received_max_len, par);
 
     // Clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -2474,7 +2480,7 @@ void iso14443a_antifuzz(uint32_t flags) {
         WDT_HIT();
 
         // Clean receive command buffer
-        if (!GetIso14443aCommandFromReader(received, receivedPar, &len)) {
+        if (!GetIso14443aCommandFromReader(received, MAX_FRAME_SIZE, receivedPar, &len)) {
             Dbprintf("Anti-fuzz stopped. Trace length: %d ", BigBuf_get_traceLen());
             break;
         }

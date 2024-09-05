@@ -224,7 +224,7 @@ void RunMod() {
                                 DbpString(_YELLOW_("[ ") "Bluetooth data:" _YELLOW_(" ]"));
                                 Dbhexdump(lenpacket, rpacket, false);
 
-                                apdulen = iso14_apdu(rpacket, (uint16_t) lenpacket, false, apdubuffer, NULL);
+                                apdulen = iso14_apdu(rpacket, lenpacket, false, apdubuffer, sizeof(apdubuffer), NULL);
 
                                 DbpString(_YELLOW_("[ ") "Card response:" _YELLOW_(" ]"));
                                 Dbhexdump(apdulen - 2, apdubuffer, false);
@@ -298,7 +298,7 @@ void RunMod() {
             for (;;) {
                 LED_B_OFF();
                 // Clean receive command buffer
-                if (GetIso14443aCommandFromReader(receivedCmd, receivedCmdPar, &len) == false) {
+                if (GetIso14443aCommandFromReader(receivedCmd, sizeof(receivedCmd), receivedCmdPar, &len) == false) {
                     DbpString("Emulator stopped");
                     retval = PM3_EOPABORTED;
                     break;
