@@ -310,7 +310,7 @@ void Uart14aInit(uint8_t *d, uint16_t n, uint8_t *par) {
 // use parameter non_real_time to provide a timestamp. Set to 0 if the decoder should measure real time
 RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
 
-    if (Uart.len == Uart.output_len - 1) {
+    if (Uart.len == Uart.output_len) {
         return true;
     }
 
@@ -490,7 +490,7 @@ void Demod14aInit(uint8_t *d, uint16_t n, uint8_t *par) {
 // use parameter non_real_time to provide a timestamp. Set to 0 if the decoder should measure real time
 RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time) {
 
-    if (Demod.len == Demod.output_len - 1) {
+    if (Demod.len == Demod.output_len) {
         return true;
     }
 
@@ -585,6 +585,11 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
 
 // Thinfilm, Kovio mangles ISO14443A in the way that they don't use start bit nor parity bits.
 static RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
+
+    if (Demod.len == Demod.output_len) {
+        return true;
+    }
+
     Demod.twoBits = (Demod.twoBits << 8) | bit;
 
     if (Demod.state == DEMOD_14A_UNSYNCD) {
@@ -2365,7 +2370,7 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t resp
 //  If a response is captured return TRUE
 //  If it takes too long return FALSE
 //-----------------------------------------------------------------------------
-static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint16_t resp_len, uint8_t *receivedResponsePar, uint16_t offset) {
+static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint16_t rec_maxlen, uint8_t *receivedResponsePar, uint16_t offset) {
     if (g_hf_field_active == false) {
         Dbprintf("Warning: HF field is off");
         return false;
@@ -2378,7 +2383,7 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint16_t resp_le
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_LISTEN);
 
     // Now get the answer from the card
-    Demod14aInit(receivedResponse, resp_len, receivedResponsePar);
+    Demod14aInit(receivedResponse, rec_maxlen, receivedResponsePar);
 
     // clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -2443,8 +2448,8 @@ static uint16_t ReaderReceiveOffset(uint8_t *receivedAnswer, uint16_t answer_len
     return Demod.len;
 }
 
-uint16_t ReaderReceive(uint8_t *receivedAnswer, uint16_t answer_len, uint8_t *par) {
-    if (GetIso14443aAnswerFromTag(receivedAnswer, answer_len, par, 0) == false) {
+uint16_t ReaderReceive(uint8_t *receivedAnswer, uint16_t answer_maxlen, uint8_t *par) {
+    if (GetIso14443aAnswerFromTag(receivedAnswer, answer_maxlen, par, 0) == false) {
         return 0;
     }
     LogTrace(receivedAnswer, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, par, false);
