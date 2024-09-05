@@ -44,7 +44,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
                   "  Crypto mode: \n"
                   "    - key format ISK high + ISK low\n"
                   "    - default key 4F4E4D494B52 (ONMIKR)\n",
-                  "  lf hitag s read                         -> Hitag S, plain mode\n"
+                  "  lf hitag hts read                         -> Hitag S, plain mode\n"
                   "  lf hitag hts read --nrar 0102030411223344 -> Hitag S, challenge mode\n"
                   "  lf hitag hts read --crypto                -> Hitag S, crypto mode, def key\n"
                   "  lf hitag hts read -k 4F4E4D494B52         -> Hitag S, crypto mode\n\n"
@@ -169,7 +169,7 @@ static int CmdLFHitagSWrite(const char *Cmd) {
                   "  Crypto mode: \n"
                   "    - key format ISK high + ISK low\n"
                   "    - default key 4F4E4D494B52 (ONMIKR)\n",
-                  "  lf hitag write -p 6 -d 01020304                         -> Hitag S, plain mode\n"
+                  "  lf hitag hts write -p 6 -d 01020304                         -> Hitag S, plain mode\n"
                   "  lf hitag hts write -p 6 -d 01020304 --nrar 0102030411223344 -> Hitag S, challenge mode\n"
                   "  lf hitag hts write -p 6 -d 01020304 --crypto                -> Hitag S, crypto mode, default key\n"
                   "  lf hitag hts write -p 6 -d 01020304 -k 4F4E4D494B52         -> Hitag S, crypto mode\n\n"
