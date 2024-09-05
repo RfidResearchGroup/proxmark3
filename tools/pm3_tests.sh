@@ -346,6 +346,7 @@ while true; do
       if ! CheckFileExist "ht2crack2buildtable exists"     "$HT2CRACK2PATH/ht2crack2buildtable"; then break; fi
       if ! CheckFileExist "ht2crack2gentest exists"        "$HT2CRACK2PATH/ht2crack2gentest"; then break; fi
       if ! CheckFileExist "ht2crack2search exists"         "$HT2CRACK2PATH/ht2crack2search"; then break; fi
+      if ! CheckFileExist "ht2crack2search_multi exists"   "$HT2CRACK2PATH/ht2crack2search_multi"; then break; fi
       # 1.5Tb tables are supposed to be absent, so it's just a fast check without real cracking
       if ! CheckExecute "ht2crack2 quick test"             "cd $HT2CRACK2PATH; ./ht2crack2gentest 1 && ./runalltests.sh; rm keystream*" "searching on bit"; then break; fi
 
