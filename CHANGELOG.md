@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added a multi-threaded of ht2crack2search (@iceman1001)
 - Fixed ISO14443a bounds-checking because @doegex found cards not following ISO14443a when fuzzed (@iceman1001)
 - Added `mfkey32nested`: recovering partial nested authentication with known nT (@doegox)
 - Added support for dumping FM11RF08S data at once (@doegox)
