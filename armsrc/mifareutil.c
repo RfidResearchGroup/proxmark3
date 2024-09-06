@@ -145,7 +145,7 @@ int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo,
 int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *timing) {
     return mifare_classic_authex_cmd(pcs, uid, blockNo, MIFARE_AUTH_KEYA + (keyType & 0xF), ui64Key, isNested, ntptr, NULL, NULL, timing, false, false);
 }
-int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t cmd, uint64_t ui64Key, uint8_t isNested, 
+int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t cmd, uint64_t ui64Key, uint8_t isNested,
                               uint32_t *ntptr, uint32_t *ntencptr, uint8_t *ntencparptr, uint32_t *timing, bool corruptnrar, bool corruptnrarparity) {
     // "random" reader nonce:
     uint8_t nr[4];

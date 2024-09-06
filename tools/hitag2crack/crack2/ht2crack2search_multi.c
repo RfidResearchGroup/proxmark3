@@ -2,12 +2,12 @@
  * ht2crack2search.c
  * this searches the sorted tables for the given RNG data, retrieves the matching
  * PRNG state, checks it is correct, and then rolls back the PRNG to recover the key
- * 
+ *
  * Iceman 2024,
  * This is a multi threaded version. After discussions with mwalker33 about how to make this multi threaded
- * version he concluded that the file lookups would be ideal.  So we don't do it inside the individual file searches but 
+ * version he concluded that the file lookups would be ideal.  So we don't do it inside the individual file searches but
  * rather we can put each file to search in each thread instead. Come up with ways to make it faster!
- * 
+ *
  * When testing remember OS cache fiddles with your mind and results. Running same test values will be much faster second run
  */
 
@@ -23,7 +23,7 @@ static int global_found = 0;
 static int thread_count = 2;
 static int g_bitoffset = 0;
 static uint8_t g_rngmatch[6];
-static uint8_t g_rngstate[6]; 
+static uint8_t g_rngstate[6];
 
 typedef struct {
     int len;
@@ -454,7 +454,7 @@ int main(int argc, char *argv[]) {
     pthread_mutex_init(&print_lock, NULL);
 
     // findmatch(&rng, rngmatch, rngstate, &bitoffset)
-    
+
     // threads
     for (int i = 0; i < thread_count; ++i) {
         targs *a = calloc(1, rng.len + sizeof(targs));
@@ -480,8 +480,10 @@ int main(int argc, char *argv[]) {
         printf("\n" _RED_("!!!") " failed to find a key\n\n");
     } else {
         printf("Found match:\n");
-        printf("rngmatch.... ");  print_hex(g_rngmatch, sizeof(g_rngmatch));
-        printf("rngstate.... ");  print_hex(g_rngstate, sizeof(g_rngstate));
+        printf("rngmatch.... ");
+        print_hex(g_rngmatch, sizeof(g_rngmatch));
+        printf("rngstate.... ");
+        print_hex(g_rngstate, sizeof(g_rngstate));
         printf("bitoffset... %d\n", g_bitoffset);
 
         Hitag_State hstate;

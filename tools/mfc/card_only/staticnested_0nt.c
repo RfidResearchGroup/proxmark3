@@ -439,17 +439,17 @@ int main(int argc, char *const argv[]) {
         }
 
         printf("uid=%08x nt_enc=%08x nt_par_err=%i%i%i%i nt_par_enc=%i%i%i%i %u/%i: %u\n"
-                , authuid
-                , nt_enc
-                , nt_par_err_arr[0], nt_par_err_arr[1], nt_par_err_arr[2], nt_par_err_arr[3]
-                , (nt_par_enc >> 3) & 1
-                , (nt_par_enc >> 2) & 1
-                , (nt_par_enc >> 1) & 1
-                , nt_par_enc & 1
-                , NKL.nr_nonces + 1
-                , (argc - 1) / 3
-                , j
-            );
+               , authuid
+               , nt_enc
+               , nt_par_err_arr[0], nt_par_err_arr[1], nt_par_err_arr[2], nt_par_err_arr[3]
+               , (nt_par_enc >> 3) & 1
+               , (nt_par_enc >> 2) & 1
+               , (nt_par_enc >> 1) & 1
+               , nt_par_enc & 1
+               , NKL.nr_nonces + 1
+               , (argc - 1) / 3
+               , j
+              );
 
         pNtData->authuid = authuid;
         pNtData->sizeNK = j;

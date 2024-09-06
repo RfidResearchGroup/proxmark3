@@ -6486,13 +6486,13 @@ int CmdHFMFNDEFRead(const char *Cmd) {
 
     // if given a filename, save it
     if (fnlen) {
-    // get total NDEF length before save. If fails, we save it all
-    size_t n = 0;
+        // get total NDEF length before save. If fails, we save it all
+        size_t n = 0;
         if (NDEFGetTotalLength(data, datalen, &n) != PM3_SUCCESS) {
-        n = datalen;
+            n = datalen;
         }
 
-    pm3_save_dump(filename, data, n, jsfNDEF);
+        pm3_save_dump(filename, data, n, jsfNDEF);
     }
 
     if (verbose == false) {
@@ -7590,7 +7590,7 @@ static int CmdHF14AMfWipe(const char *Cmd) {
             num_sectors = NumOfSectors('1');
             memcpy(mf, "\x11\x22\x33\x44\x44\x08\x04\x00\x62\x63\x64\x65\x66\x67\x68\x69", MFBLOCK_SIZE);
             break;
-        }            
+        }
         case (MIFARE_1K_MAX_KEY_SIZE): {
             PrintAndLogEx(INFO, "Loaded keys matching MIFARE Classic 1K");
             memcpy(keyA, keys, (MIFARE_1K_MAXSECTOR * MIFARE_KEY_SIZE));
@@ -7670,10 +7670,10 @@ static int CmdHF14AMfWipe(const char *Cmd) {
                 if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
                     int8_t isOK = resp.oldarg[0];
                     if (isOK == 1) {
-                        PrintAndLogEx(NORMAL, "- key %c ( " _GREEN_("ok") " )", (kt== MF_KEY_A) ? 'A' : 'B');
+                        PrintAndLogEx(NORMAL, "- key %c ( " _GREEN_("ok") " )", (kt == MF_KEY_A) ? 'A' : 'B');
                         break;
                     } else {
-                        PrintAndLogEx(NORMAL, "- key %c ( " _RED_("fail") " )", (kt== MF_KEY_A) ? 'A' : 'B');
+                        PrintAndLogEx(NORMAL, "- key %c ( " _RED_("fail") " )", (kt == MF_KEY_A) ? 'A' : 'B');
                     }
                 } else {
                     PrintAndLogEx(WARNING, "Command execute timeout");

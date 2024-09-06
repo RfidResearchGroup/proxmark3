@@ -141,19 +141,19 @@ int main(int argc, char *const argv[]) {
                          ((nt_par_err_arr[3] ^ oddparity8((nt_enc >>  0) & 0xFF)) << 0);
 
     printf("uid=%08x nt=%08x nt_enc=%08x nt_par_err=%u%u%u%u nt_par_enc=%u%u%u%u ks1=%08x\n"
-            , authuid
-            , nt
-            , nt_enc
-            , nt_par_err_arr[0]
-            , nt_par_err_arr[1]
-            , nt_par_err_arr[2]
-            , nt_par_err_arr[3]
-            , (nt_par_enc >> 3) & 1
-            , (nt_par_enc >> 2) & 1
-            , (nt_par_enc >> 1) & 1
-            , nt_par_enc & 1
-            , nt ^ nt_enc
-    );
+           , authuid
+           , nt
+           , nt_enc
+           , nt_par_err_arr[0]
+           , nt_par_err_arr[1]
+           , nt_par_err_arr[2]
+           , nt_par_err_arr[3]
+           , (nt_par_enc >> 3) & 1
+           , (nt_par_enc >> 2) & 1
+           , (nt_par_enc >> 1) & 1
+           , nt_par_enc & 1
+           , nt ^ nt_enc
+          );
 
 
     printf("Finding key candidates...\n");

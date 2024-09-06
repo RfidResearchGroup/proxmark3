@@ -4466,9 +4466,10 @@
             "options": [
                 "-h, --help This help",
                 "--blk <dec> Target block",
-                "-b Target key B instead of default key A"
+                "-b Target key B instead of default key A",
+                "-c <dec> Target Auth 6x"
             ],
-            "usage": "hf mf darkside [-hb] [--blk <dec> ]"
+            "usage": "hf mf darkside [-hb] [--blk <dec> ] [-c <dec>]"
         },
         "hf mf decrypt": {
             "command": "hf mf decrypt",
@@ -12885,6 +12886,6 @@
     "metadata": {
         "commands_extracted": 743,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-09-05T16:36:25"
+        "extracted_on": "2024-09-06T20:59:05"
     }
 }
