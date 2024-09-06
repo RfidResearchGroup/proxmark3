@@ -171,7 +171,7 @@ for sec in range(NUM_SECTORS):
             with (open(f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}_filtered.dic")) as f:
                 while line := f.readline().rstrip():
                     keys_set.add(line)
-                keys[sec][key_type] = keys_set
+                keys[sec][key_type] = keys_set.copy()
                 duplicates.update(all_keys.intersection(keys_set))
                 all_keys.update(keys_set)
             # Prioritize default keys
@@ -198,7 +198,7 @@ for sec in range(NUM_SECTORS):
         with (open(f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}.dic")) as f:
             while line := f.readline().rstrip():
                 keys_set.add(line)
-            keys[sec][key_type] = keys_set
+            keys[sec][key_type] = keys_set.copy()
             duplicates.update(all_keys.intersection(keys_set))
             all_keys.update(keys_set)
         # Prioritize default keys
@@ -219,9 +219,6 @@ for dup in duplicates:
         for key_type in [0, 1]:
             if dup in keys[sec][key_type]:
                 keys_filtered[sec][key_type].add(dup)
-                if nt[sec][0] == nt[sec][1] and key_type == 0 and keys[sec][1] == set() and found_keys[sec][1] == "":
-                    keys_filtered[sec][1].add(dup)
-                    continue
 
 # Availability of duplicates dicts
 duplicates_dicts = [[False, False] for _ in range(NUM_SECTORS)]
@@ -233,7 +230,12 @@ for sec in range(NUM_SECTORS):
                 print("Saving duplicates dicts...")
                 first = False
             with (open(f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}_duplicates.dic", "w")) as f:
-                for k in keys_filtered[sec][key_type]:
+                keys_set = keys_filtered[sec][key_type].copy()
+                keys_def_set = DEFAULT_KEYS.intersection(keys_set)
+                keys_set.difference_update(DEFAULT_KEYS)
+                for k in keys_def_set:
+                    f.write(f"{k}\n")
+                for k in keys_set:
                     f.write(f"{k}\n")
             duplicates_dicts[sec][key_type] = True
 
