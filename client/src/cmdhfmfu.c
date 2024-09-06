@@ -167,7 +167,7 @@ static const ul_family_t ul_family[] = {
     {"UL AES", "MF0AES2001DUD", "\x00\x04\x03\x01\x04\x00\x0F\x03"},
 };
 
-static bool compare_ul_family(uint8_t *d, uint8_t n) {
+static bool compare_ul_family(const uint8_t *d, uint8_t n) {
     if (d == NULL) {
         return false;
     }
@@ -201,7 +201,7 @@ static const char *getProductTypeStr(uint8_t id) {
     }
 }
 
-static int ul_print_nxp_silicon_info(uint8_t *card_uid) {
+static int ul_print_nxp_silicon_info(const uint8_t *card_uid) {
 
     if (card_uid[0] != 0x04) {
         return PM3_SUCCESS;
@@ -332,7 +332,7 @@ static void ul_switch_on_field(void) {
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
 }
 
-static int ul_send_cmd_raw(uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint16_t responseLength) {
+static int ul_send_cmd_raw(const uint8_t *cmd, uint8_t cmdlen, uint8_t *response, uint16_t responseLength) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_DISCONNECT | ISO14A_APPEND_CRC | ISO14A_NO_RATS, cmdlen, 0, cmd, cmdlen);
     PacketResponseNG resp;
@@ -422,7 +422,7 @@ static int ul_read(uint8_t page, uint8_t *response, uint16_t responseLength) {
     return ul_send_cmd_raw(cmd, sizeof(cmd), response, responseLength);
 }
 
-static int ul_comp_write(uint8_t page, uint8_t *data, uint8_t datalen) {
+static int ul_comp_write(uint8_t page, const uint8_t *data, uint8_t datalen) {
 
     if (data == NULL) {
         return PM3_EINVARG;
@@ -452,7 +452,7 @@ static int ulc_requestAuthentication(uint8_t *nonce, uint16_t nonceLength) {
     return ul_send_cmd_raw(cmd, sizeof(cmd), nonce, nonceLength);
 }
 
-static int ulev1_requestAuthentication(uint8_t *pwd, uint8_t *pack, uint16_t packLength) {
+static int ulev1_requestAuthentication(const uint8_t *pwd, uint8_t *pack, uint16_t packLength) {
 
     uint8_t cmd[] = {MIFARE_ULEV1_AUTH, pwd[0], pwd[1], pwd[2], pwd[3]};
     int len = ul_send_cmd_raw(cmd, sizeof(cmd), pack, packLength);
@@ -469,7 +469,7 @@ Default AES key is 00-00h. Both the data and UID one.
 Data key is 00, UID is 01. Authenticity is 02h
 Auth is 1A[Key ID][CRC] - AF[RndB] - AF[RndA][RndB'] - 00[RndA']
 */
-static int ulaes_requestAuthentication(uint8_t *key, uint8_t keyno, bool switch_off_field) {
+static int ulaes_requestAuthentication(const uint8_t *key, uint8_t keyno, bool switch_off_field) {
     struct p {
         bool turn_off_field;
         uint8_t keyno;
@@ -492,7 +492,7 @@ static int ulaes_requestAuthentication(uint8_t *key, uint8_t keyno, bool switch_
     return PM3_SUCCESS;
 }
 
-static int ulc_authentication(uint8_t *key, bool switch_off_field) {
+static int ulc_authentication(const uint8_t *key, bool switch_off_field) {
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREUC_AUTH, switch_off_field, 0, 0, key, 16);
@@ -1625,16 +1625,9 @@ static uint64_t ul_magic_test(void) {
     // Direct write alternative cards
     if (card.ats_len == 14) {
 
-        // UL-C Direct write
+        // UL Direct Write ,  UL-C Direct write,  NTAG 213 Direct write
         if (memcmp(card.ats, "\x0A\x78\x00\x81\x02\xDB\xA0\xC1\x19\x40\x2A\xB5", 12) == 0) {
-            return MFU_TT_MAGIC_2 | MFU_TT_UL_C_MAGIC;
-        }
-
-        // NTAG 213 Direct write
-        if (memcmp(card.ats, "\x0A\x78\x00\x81\x02\xDB\xA0\xC1\x19\x40\x2A\xB5", 12) == 0) {
-
-            // iceman: should this be the same as NTAg21x?!?
-            return MFU_TT_MAGIC_2 | MFU_TT_MAGIC_NTAG;
+            return MFU_TT_MAGIC_2;
         }
     }
 
@@ -1899,7 +1892,7 @@ static mfu_identify_t mfu_ident_table[] = {
     {NULL, NULL, 0, 0, NULL, NULL, NULL, NULL}
 };
 
-static mfu_identify_t *mfu_match_fingerprint(uint8_t *version, uint8_t *data) {
+static mfu_identify_t *mfu_match_fingerprint(const uint8_t *version, const uint8_t *data) {
     uint8_t i = 0;
     do {
 
@@ -1955,7 +1948,7 @@ static int mfu_get_version_uid(uint8_t *version, uint8_t *uid) {
     return PM3_SUCCESS;
 }
 
-static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, int ak_len) {
+static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, const uint8_t *authkey, int ak_len) {
 
     uint8_t dbg_curr = DBG_NONE;
     uint8_t *data = NULL;
@@ -2075,7 +2068,7 @@ out:
     return res;
 }
 
-static int mfu_write_block(uint8_t *data, uint8_t datalen, bool has_auth_key,  bool has_pwd, uint8_t *auth_key_ptr, uint8_t blockno) {
+static int mfu_write_block(const uint8_t *data, uint8_t datalen, bool has_auth_key,  bool has_pwd, const uint8_t *auth_key_ptr, uint8_t blockno) {
 
     // 4 or 16.
     uint8_t cmd[32];
@@ -3081,7 +3074,7 @@ void mfu_print_dump(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool de
 
         // suppress repeating blocks, truncate as such that the first and last block with the same data is shown
         // but the blocks in between are replaced with a single line of "......" if dense_output is enabled
-        uint8_t *blk = data + (i * MFU_BLOCK_SIZE);
+        const uint8_t *blk = data + (i * MFU_BLOCK_SIZE);
         if (dense_output &&
                 (i > 3) &&
                 (i < pages) &&
@@ -5517,7 +5510,7 @@ static int CmdHF14AAmiibo(const char *Cmd) {
             return res;
         }
 
-        mfu_dump_t *d = (mfu_dump_t *)dump;
+        const mfu_dump_t *d = (mfu_dump_t *)dump;
         memcpy(original, d->data, sizeof(original));
         free(dump);
     } else {
