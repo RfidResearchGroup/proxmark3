@@ -82,7 +82,7 @@ https://github.com/ApertureLabsLtd/RFIDler/blob/master/firmware/Pic32/RFIDler.X/
 */
 // convert hex to sequence of 0/1 bit values
 // returns number of bits converted
-int hex2binarray(char *target, char *source) {
+int hex2binarray(char *target, const char *source) {
     return hex2binarray_n(target, source, strlen(source));
 }
 

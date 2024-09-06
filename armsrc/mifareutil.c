@@ -145,7 +145,8 @@ int mifare_classic_auth(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo,
 int mifare_classic_authex(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t keyType, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *timing) {
     return mifare_classic_authex_cmd(pcs, uid, blockNo, MIFARE_AUTH_KEYA + (keyType & 0xF), ui64Key, isNested, ntptr, NULL, NULL, timing, false, false);
 }
-int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t cmd, uint64_t ui64Key, uint8_t isNested, uint32_t *ntptr, uint32_t *ntencptr, uint8_t *ntparptr, uint32_t *timing, bool corruptnrar, bool corruptnrarparity) {
+int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t blockNo, uint8_t cmd, uint64_t ui64Key, uint8_t isNested, 
+                              uint32_t *ntptr, uint32_t *ntencptr, uint8_t *ntencparptr, uint32_t *timing, bool corruptnrar, bool corruptnrarparity) {
     // "random" reader nonce:
     uint8_t nr[4];
     num_to_bytes(prng_successor(GetTickCount(), 32), 4, nr);
@@ -159,14 +160,18 @@ int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 
     // Save the tag nonce (nt)
     uint32_t nt = bytes_to_num(receivedAnswer, 4);
-    if (ntencptr)
+    if (ntencptr) {
         *ntencptr = nt;
-    if (ntparptr)
-        *ntparptr = receivedAnswerPar[0];
+    }
+
+    if (ntencparptr) {
+        *ntencparptr = receivedAnswerPar[0];
+    }
 
     //  ----------------------------- crypto1 create
-    if (isNested)
+    if (isNested) {
         crypto1_deinit(pcs);
+    }
 
     // Init cipher with key
     crypto1_init(pcs, ui64Key);
@@ -214,8 +219,9 @@ int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
         }
     }
     // save Nt
-    if (ntptr)
+    if (ntptr) {
         *ntptr = nt;
+    }
 
     // Generate (encrypted) nr+parity by loading it into the cipher (Nr)
     uint32_t pos;
@@ -233,11 +239,13 @@ int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
         Dbprintf("Corrupting nRaR...");
         nt ^= 1;
     }
+
     for (pos = 4; pos < 8; pos++) {
         nt = prng_successor(nt, 8);
         mf_nr_ar[pos] = crypto1_byte(pcs, 0x00, 0) ^ (nt & 0xff);
         par[0] |= (((filter(pcs->odd) ^ oddparity8(nt & 0xff)) & 0x01) << (7 - pos));
     }
+
     if (corruptnrarparity) {
         Dbprintf("Corrupting nRaR parity...");
         par[0] ^= 1;
@@ -250,15 +258,16 @@ int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
     uint32_t save_timeout = iso14a_get_timeout();
 
     // set timeout for authentication response
-    if (save_timeout > 106)
+    if (save_timeout > 106) {
         iso14a_set_timeout(106);
+    }
 
     // Receive 4 byte tag answer
     len = ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar);
 
     iso14a_set_timeout(save_timeout);
 
-    if (!len) {
+    if (len == 0) {
         if (g_dbglevel >= DBG_EXTENDED) Dbprintf("Authentication failed. Card timeout");
         return 2;
     }

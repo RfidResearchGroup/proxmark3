@@ -304,7 +304,7 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, uint16_t atqa, uint8_
         }
 
         // Correct uid size bits in ATQA
-        rATQA[0] = (rATQA[0] & 0x3f) | 0x00; // single size uid
+        rATQA[0] = (rATQA[0] & 0x3f); // single size uid
 
     } else if ((flags & FLAG_7B_UID_IN_DATA) == FLAG_7B_UID_IN_DATA) {
         memcpy(&rUIDBCC1[1], datain, 3);
