@@ -283,7 +283,7 @@ static int CmdQuit(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
-    return PM3_EFATAL;
+    return PM3_SQUIT;
 }
 
 static int CmdRev(const char *Cmd) {
