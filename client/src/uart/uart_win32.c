@@ -62,8 +62,9 @@ uint32_t uart_get_timeouts(void) {
 }
 
 static int uart_reconfigure_timeouts_polling(serial_port sp) {
-    if (newtimeout_pending == false)
+    if (newtimeout_pending == false) {
         return PM3_SUCCESS;
+    }
     newtimeout_pending = false;
 
     serial_port_windows_t *spw = (serial_port_windows_t *)sp;

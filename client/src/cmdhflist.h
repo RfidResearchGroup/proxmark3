@@ -19,6 +19,7 @@
 #define CMDHFLIST_H
 
 #include "common.h"
+#include "mifare/mifaredefault.h"  // mifare consts
 
 typedef struct {
     uint32_t uid;       // UID
@@ -34,6 +35,7 @@ typedef struct {
     bool first_auth;    // is first authentication
     uint32_t ks2;       // ar ^ ar_enc
     uint32_t ks3;       // at ^ at_enc
+    uint8_t mem[MIFARE_4K_MAX_BYTES];
 } AuthData_t;
 
 void ClearAuthData(void);

@@ -221,7 +221,7 @@ int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keyc
     SendCommandNG(CMD_HF_MIFARE_CHKKEYS, data, (5 + 6 * keycnt));
 
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_HF_MIFARE_CHKKEYS, &resp, 2500)) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_CHKKEYS, &resp, 2500) == false) {
         return PM3_ETIMEOUT;
     }
     if (resp.status != PM3_SUCCESS) {
@@ -233,11 +233,13 @@ int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keyc
         bool found;
     } PACKED;
     struct kr *keyresult = (struct kr *)&resp.data.asBytes;
-    if (!keyresult->found) {
+    if (keyresult->found == false) {
         return PM3_ESOFT;
     }
 
-    *key = bytes_to_num(keyresult->key, sizeof(keyresult->key));
+    if (key) {
+        *key = bytes_to_num(keyresult->key, sizeof(keyresult->key));
+    }
     return PM3_SUCCESS;
 }
 

@@ -30,6 +30,7 @@
 #include "crapto1/crapto1.h"
 #include "protocols.h"
 #include "cmdhficlass.h"
+#include "mifare/mifaredefault.h"  // mifare consts
 
 enum MifareAuthSeq {
     masNone,
@@ -382,7 +383,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                     snprintf(exp, size, "WRITEBLOCK(" _MAGENTA_("%d") ")", cmd[1]);
                 else
                     // outside limits, useful for some tags...
-                    snprintf(exp, size, "WRITEBLOCK(" _MAGENTA_("%d") ") (?)", cmd[1]);
+                    snprintf(exp, size, "WRITEBLOCK(" _MAGENTA_("%d") ") (%s)", cmd[1], sprint_hex_inrow(cmd + 2, 4));
                 break;
             }
             case MIFARE_ULEV1_READ_CNT : {

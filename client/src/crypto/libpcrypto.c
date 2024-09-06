@@ -468,14 +468,16 @@ int ecdsa_signature_verify(mbedtls_ecp_group_id curveid, uint8_t *key_xy, uint8_
     uint8_t shahash[32] = {0};
     if (hash) {
         res = sha256hash(input, length, shahash);
-        if (res)
+        if (res) {
             return res;
+        }
     }
 
     mbedtls_ecdsa_context ctx;
     res = ecdsa_init(&ctx, curveid, NULL, key_xy);
-    if (res)
+    if (res) {
         return res;
+    }
 
     res = mbedtls_ecdsa_read_signature(
               &ctx,

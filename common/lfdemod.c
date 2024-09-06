@@ -152,7 +152,9 @@ void computeSignalProperties(const uint8_t *samples, uint32_t size) {
 }
 
 void removeSignalOffset(uint8_t *samples, uint32_t size) {
-    if (samples == NULL || size < SIGNAL_MIN_SAMPLES) return;
+    if (samples == NULL || size < SIGNAL_MIN_SAMPLES) {
+        return;
+    }
 
     int acc_off = 0;
     uint32_t offset_size = size - SIGNAL_IGNORE_FIRST_SAMPLES;
@@ -458,7 +460,14 @@ static size_t findModStart(const uint8_t *src, size_t size, uint8_t expWaveSize)
         } else {
             waveSizeCnt++;
         }
-        if (thresholdCnt > 10) break;
+
+        if (thresholdCnt > 10) {
+            break;
+        }
+    }
+
+    if (g_debugMode == 2) {
+        prnt("DEBUG: threshold Count reached at index %zu, count: %u", i, thresholdCnt);
     }
     return i;
 }

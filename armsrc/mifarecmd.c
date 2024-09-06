@@ -2341,6 +2341,7 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
 
         uint64_t ui64Key = emlGetKey(s, keytype);
 
+        // MIFARE Classic 1K Ev1  ,  MIFARE Classic MINI Ev1
         if (sectorcnt == 18) {
             // MFC 1K EV1, skip sector 16 since its lockdown
             if (s == 16) {
@@ -2355,7 +2356,7 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
             // ICEMAN: ugly hack,  we don't want to trigger the partial load message
             // MFC 1K EV1 sector 17 don't use key A.
             // not mention we don't save signatures in our MFC dump files.
-            if (s == 17 && keytype == 0) {
+            if (s == 17 && keytype == MF_KEY_A) {
                 ui64Key = 0x4B791BEA7BCC;
                 keytype = 1;
             }

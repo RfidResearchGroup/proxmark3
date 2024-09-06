@@ -131,17 +131,18 @@ bool Encrypt(uint8_t *src, uint8_t *dest) {
 
 // Call with block6
 void DecodeBlock6(uint8_t *src) {
-    int resp_len = 0;
-    uint8_t resp[254] = {0};
 
     uint8_t c[] = {0x96, CARD_INS_DECODE, 0x00, 0x00, 0x09, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     memcpy(c + 6, src, 8);
 
+    int resp_len = 0;
+    uint8_t resp[254] = {0};
+
     // first part
     ExchangeAPDUSC(false, c, sizeof(c), false, true, resp, sizeof(resp), &resp_len);
 
-
     if (resp_len < 11) {
+        PrintAndLogEx(DEBUG, "decodeblock6, wrong response len, expected 11 got ( " _RED_("%d") " )", resp_len);
         return;
     }
 
@@ -151,10 +152,11 @@ void DecodeBlock6(uint8_t *src) {
     c[5] = 0x02;
     ExchangeAPDUSC(false, c, sizeof(c), false, false, resp, sizeof(resp), &resp_len);
 
-
     if (resp_len < 11) {
+        PrintAndLogEx(DEBUG, "decodeblock6, wrong response len, expected 11 got ( " _RED_("%d") " )", resp_len);
         return;
     }
+
     PrintAndLogEx(SUCCESS, "%.*s", resp_len - 11, resp + 9);
 }
 
@@ -165,7 +167,6 @@ uint8_t GetNumberBlocksForUserId(uint8_t *src) {
     uint8_t c[] = {0x96, CARD_INS_NUMBLOCKS, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     memcpy(c + 5, src, 8);
     ExchangeAPDUSC(false, c, sizeof(c), false, false, resp, sizeof(resp), &resp_len);
-
 
     if (resp_len < 8) {
         return 0;
@@ -192,8 +193,9 @@ uint8_t GetPinSize(uint8_t *src) {
 }
 
 int GetConfigCardByIdx(uint8_t typ, uint8_t *blocks) {
-    if (blocks == NULL)
+    if (blocks == NULL) {
         return PM3_EINVARG;
+    }
 
     int resp_len = 0;
     uint8_t resp[254] = {0};
@@ -212,8 +214,9 @@ int GetConfigCardByIdx(uint8_t typ, uint8_t *blocks) {
 }
 
 int GetConfigCardStrByIdx(uint8_t typ, uint8_t *out) {
-    if (out == NULL)
+    if (out == NULL) {
         return PM3_EINVARG;
+    }
 
     int resp_len = 0;
     uint8_t resp[254] = {0};
@@ -232,8 +235,9 @@ int GetConfigCardStrByIdx(uint8_t typ, uint8_t *out) {
 }
 
 int VerifyRdv4Signature(uint8_t *memid, uint8_t *signature) {
-    if (memid == NULL || signature == NULL)
+    if (memid == NULL || signature == NULL) {
         return PM3_EINVARG;
+    }
 
     int resp_len = 0;
     uint8_t resp[254] = {0};
