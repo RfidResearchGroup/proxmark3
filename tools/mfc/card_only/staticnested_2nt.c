@@ -107,12 +107,14 @@ static void pm3_staticnested(uint32_t uid, uint32_t nt1, uint32_t ks1,  uint32_t
     pthread_t thread_id[2];
 
     // create and run worker threads
-    for (uint8_t i = 0; i < 2; i++)
+    for (uint8_t i = 0; i < 2; i++) {
         pthread_create(thread_id + i, NULL, nested_worker_thread, &statelists[i]);
+    }
 
     // wait for threads to terminate:
-    for (uint8_t i = 0; i < 2; i++)
+    for (uint8_t i = 0; i < 2; i++) {
         pthread_join(thread_id[i], (void *)&statelists[i].head.slhead);
+    }
 
     // the first 16 Bits of the cryptostate already contain part of our key.
     // Create the intersection of the two lists based on these 16 Bits and
@@ -125,6 +127,7 @@ static void pm3_staticnested(uint32_t uid, uint32_t nt1, uint32_t ks1,  uint32_t
 
             struct Crypto1State savestate;
             savestate = *p1;
+
             while (compare16Bits(p1, &savestate) == 0 && p1 <= statelists[0].tail.sltail) {
                 *p3 = *p1;
                 lfsr_rollback_word(p3, statelists[0].nt_enc ^ statelists[0].uid, 0);
@@ -132,6 +135,7 @@ static void pm3_staticnested(uint32_t uid, uint32_t nt1, uint32_t ks1,  uint32_t
                 p1++;
             }
             savestate = *p2;
+
             while (compare16Bits(p2, &savestate) == 0 && p2 <= statelists[1].tail.sltail) {
                 *p4 = *p2;
                 lfsr_rollback_word(p4, statelists[1].nt_enc ^ statelists[1].uid, 0);
@@ -219,6 +223,7 @@ int main(int argc, char *const argv[]) {
 
     uint32_t key_count = 0;
     uint64_t *keys = nested(pNK, 2, uid, &key_count);
+
     if (key_count) {
         printf("Ultra Static nested --> Found " _YELLOW_("%u") " key candidates\n", key_count);
         for (uint32_t k = 0; k < key_count; k++) {

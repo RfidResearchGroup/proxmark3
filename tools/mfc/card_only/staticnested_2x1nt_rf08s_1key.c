@@ -92,7 +92,7 @@ int main(int argc, char *const argv[]) {
     char *filename = argv[3];
     uint32_t uid, sector, nt2;
 
-    int result = sscanf(filename, "keys_%8x_%2d_%8x.dic", &uid, &sector, &nt2);
+    int result = sscanf(filename, "keys_%8x_%2u_%8x.dic", &uid, &sector, &nt2);
     if (result != 3) {
         fprintf(stderr, "Error: Failed to parse the filename %s.\n", filename);
         return 1;
@@ -116,7 +116,7 @@ int main(int argc, char *const argv[]) {
             keycount2++;
         }
 
-        keys2 = (uint64_t *)malloc(keycount2 * sizeof(uint64_t));
+        keys2 = (uint64_t *)calloc(1, keycount2 * sizeof(uint64_t));
         if (keys2 == NULL) {
             perror("Failed to allocate memory");
             fclose(fptr);

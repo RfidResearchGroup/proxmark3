@@ -78,14 +78,13 @@ int main(int argc, char *const argv[]) {
     uint32_t uid1, sector1, nt1, uid2, sector2, nt2;
     char *filename1 = argv[1], *filename2 = argv[2];
 
-    int result;
-    result = sscanf(filename1, "keys_%8x_%2d_%8x.dic", &uid1, &sector1, &nt1);
+    int result = sscanf(filename1, "keys_%8x_%2u_%8x.dic", &uid1, &sector1, &nt1);
     if (result != 3) {
         fprintf(stderr, "Error: Failed to parse the filename %s.\n", filename1);
         return 1;
     }
 
-    result = sscanf(filename2, "keys_%8x_%2d_%8x.dic", &uid2, &sector2, &nt2);
+    result = sscanf(filename2, "keys_%8x_%2u_%8x.dic", &uid2, &sector2, &nt2);
     if (result != 3) {
         fprintf(stderr, "Error: Failed to parse the filename %s.\n", filename2);
         return 1;

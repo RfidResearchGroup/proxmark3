@@ -96,7 +96,7 @@ static bool search_match(const NtData *pND, const NtData *pND0, uint64_t key) {
     struct Crypto1State *s;
     s = crypto1_create(0);
     if (s == NULL) {
-        fprintf(stderr, "\nMalloc error in search_match!\n");
+        fprintf(stderr, "\nCalloc error in search_match!\n");
         return 0;
     }
     crypto1_init(s, key);
@@ -167,7 +167,7 @@ static void *generate_and_intersect_keys(void *threadarg) {
 
         revstate = lfsr_recovery32(ks1, nt_probe);
         if (revstate == NULL) {
-            fprintf(stderr, "\nMalloc error in generate_and_intersect_keys!\n");
+            fprintf(stderr, "\nCalloc error in generate_and_intersect_keys!\n");
             pthread_exit(NULL);
         }
 
@@ -367,6 +367,7 @@ static void analyze_keys(uint64_t **keys, uint32_t keyCounts[MAX_NR_NONCES], uin
 }
 
 int main(int argc, char *const argv[]) {
+
     if (argc < 2) {
         int cmdlen = strlen(argv[0]);
         printf("Usage:\n  %s <uid1> <nt_enc1> <nt_par_err1> <uid2> <nt_enc2> <nt_par_err2> ...\n", argv[0]);
@@ -379,10 +380,12 @@ int main(int argc, char *const argv[]) {
         printf("  %*s                   +nt_par_err1    +nt_par_err2           +nt_par_err3\n", cmdlen, "");
         return 1;
     }
+
     if (argc < 1 + 2 * 3) {
         fprintf(stderr, "Too few nonces, abort. Need 2 nonces min.\n");
         return 1;
     }
+
     if (argc > 1 + MAX_NR_NONCES * 3) {
         fprintf(stderr, "Too many nonces, abort. Choose max %i nonces.\n", MAX_NR_NONCES);
         return 1;
@@ -393,29 +396,37 @@ int main(int argc, char *const argv[]) {
     uint32_t keyCounts[MAX_NR_NONCES] = {0};
 
     uint32_t authuid = hex_to_uint32(argv[1]);
+
     // process all args.
     printf("Generating nonce candidates...\n");
+
     for (uint32_t i = 1; i < argc; i += 3) {
+
         // uid + ntEnc + parEnc
         if (strcmp(argv[i], ".") != 0) {
             authuid = hex_to_uint32(argv[i]);
         }
+
         uint32_t nt_enc = hex_to_uint32(argv[i + 1]);
         uint8_t nt_par_err_arr[4];
         if (bin_to_uint8_arr(argv[i + 2], nt_par_err_arr, 4)) {
             return 1;
         }
+
         uint8_t nt_par_enc = ((nt_par_err_arr[0] ^ oddparity8((nt_enc >> 24) & 0xFF)) << 3) |
                              ((nt_par_err_arr[1] ^ oddparity8((nt_enc >> 16) & 0xFF)) << 2) |
                              ((nt_par_err_arr[2] ^ oddparity8((nt_enc >>  8) & 0xFF)) << 1) |
                              ((nt_par_err_arr[3] ^ oddparity8((nt_enc >>  0) & 0xFF)) << 0);
+
         NtData *pNtData = &NKL.NtDataList[NKL.nr_nonces];
+
         // Try to recover the keystream1
         uint32_t nttest = prng_successor(1, 16); // a first valid nonce
         pNtData->pNK = (NtpKs1 *)calloc(8192, sizeof(NtpKs1)); // 2**16 filtered with 3 parity bits => 2**13
         if (pNtData->pNK == NULL) {
             return 1;
         }
+
         uint32_t j = 0;
         for (uint16_t m = 1; m; m++) {
             uint32_t ks1 = nt_enc ^ nttest;
@@ -426,6 +437,7 @@ int main(int argc, char *const argv[]) {
             }
             nttest = prng_successor(nttest, 1);
         }
+
         printf("uid=%08x nt_enc=%08x nt_par_err=%i%i%i%i nt_par_enc=%i%i%i%i %u/%i: %u\n"
                 , authuid
                 , nt_enc
@@ -448,12 +460,15 @@ int main(int argc, char *const argv[]) {
 
     printf("Finding key candidates...\n");
     keys = unpredictable_nested(&NKL, keyCounts);
+
     printf("\n\nFinding phase complete.\n");
 
-    for (uint32_t k = 0; k < NKL.nr_nonces; k++)
+    for (uint32_t k = 0; k < NKL.nr_nonces; k++) {
         free(NKL.NtDataList[k].pNK);
+    }
 
     analyze_keys(keys, keyCounts, NKL.nr_nonces);
+
     FILE *fptr;
     // opening the file in read mode
     fptr = fopen("keys.dic", "w");
@@ -469,11 +484,13 @@ int main(int argc, char *const argv[]) {
     } else {
         fprintf(stderr, "Warning: Cannot save keys in keys.dic\n");
     }
+
     for (uint32_t i = 1; i < NKL.nr_nonces; i++) {
         if (keys[i] != NULL) {
             free(keys[i]);
         }
     }
+
     if (keys != NULL) {
         free(keys);
     }
