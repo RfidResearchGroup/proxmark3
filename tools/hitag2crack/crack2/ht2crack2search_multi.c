@@ -49,9 +49,8 @@ static void print_hex(const uint8_t *data, const size_t len) {
 }
 
 static int datacmp(const void *p1, const void *p2) {
-    unsigned char *d1 = (unsigned char *)p1;
-    unsigned char *d2 = (unsigned char *)p2;
-
+    const void *d1 = p1;
+    const void *d2 = p2;
     return memcmp(d1, d2, DATASIZE - 6);
 }
 
@@ -147,7 +146,7 @@ static int makecand(unsigned char *c, rngdata_t *r, int bitoffset) {
 }
 
 // test the candidate against the next or previous rng data
-static int testcand(const unsigned char *f, unsigned char *rt, int fwd) {
+static int testcand(const unsigned char *f, const unsigned char *rt, int fwd) {
     Hitag_State hstate;
     int i;
     uint32_t ks1;
