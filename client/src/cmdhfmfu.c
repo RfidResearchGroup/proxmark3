@@ -402,7 +402,7 @@ static bool ul_select_rats(iso14a_card_select_t *card) {
             SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, sizeof(rats), 0, rats, sizeof(rats));
             if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
                 PrintAndLogEx(WARNING, "Command execute timeout");
-                return PM3_ETIMEOUT;
+                return false;
             }
         }
 
