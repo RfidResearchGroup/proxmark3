@@ -141,11 +141,11 @@ int binstr_2_binarray(uint8_t *target, char *source, int length);
 void bytes_2_binstr(char *target,  const uint8_t *source, size_t sourcelen);
 void binstr_2_bytes(uint8_t *target, size_t *targetlen, const char *src);
 
-void hex_xor(uint8_t *d, uint8_t *x, int n);
+void hex_xor(uint8_t *d, const uint8_t *x, int n);
 
 uint8_t GetParity(const uint8_t *bits, uint8_t type, int length);
-void wiegand_add_parity(uint8_t *target, uint8_t *source, uint8_t length);
-void wiegand_add_parity_swapped(uint8_t *target, uint8_t *source, uint8_t length);
+void wiegand_add_parity(uint8_t *target, const uint8_t *source, uint8_t length);
+void wiegand_add_parity_swapped(uint8_t *target, const uint8_t *source, uint8_t length);
 
 //void xor(unsigned char *dst, unsigned char *src, size_t len);
 
