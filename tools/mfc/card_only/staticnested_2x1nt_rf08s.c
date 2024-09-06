@@ -223,7 +223,7 @@ int main(int argc, char *const argv[]) {
 
     char filter_filename2[40];
     uint32_t filter_keycount2 = 0;
-    snprintf(filter_filename2, sizeof(filter_filename2), "keys_%08x_%02iu_%08x_filtered.dic", uid2, sector2, nt2);
+    snprintf(filter_filename2, sizeof(filter_filename2), "keys_%08x_%02u_%08x_filtered.dic", uid2, sector2, nt2);
 
     fptr = fopen(filter_filename2, "w");
     if (fptr != NULL) {
