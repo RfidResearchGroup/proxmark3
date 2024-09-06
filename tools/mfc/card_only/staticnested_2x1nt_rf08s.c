@@ -67,6 +67,7 @@ static uint16_t compute_seednt16_nt32(uint32_t nt32, uint64_t key) {
 }
 
 int main(int argc, char *const argv[]) {
+
     if (argc != 3) {
         printf("Usage:\n  %s keys_<uid:08x>_<sector:02>_<nt1:08x>.dic keys_<uid:08x>_<sector:02>_<nt2:08x>.dic\n"
                "  where both dict files are produced by staticnested_1nt *for the same UID and same sector*\n",
@@ -83,6 +84,7 @@ int main(int argc, char *const argv[]) {
         fprintf(stderr, "Error: Failed to parse the filename %s.\n", filename1);
         return 1;
     }
+
     result = sscanf(filename2, "keys_%8x_%2d_%8x.dic", &uid2, &sector2, &nt2);
     if (result != 3) {
         fprintf(stderr, "Error: Failed to parse the filename %s.\n", filename2);
@@ -93,10 +95,12 @@ int main(int argc, char *const argv[]) {
         fprintf(stderr, "Error: Files must belong to the same UID.\n");
         return 1;
     }
+
     if (sector1 != sector2) {
         fprintf(stderr, "Error: Files must belong to the same sector.\n");
         return 1;
     }
+
     if (nt1 == nt2) {
         fprintf(stderr, "Error: Files must belong to different nonces.\n");
         return 1;
@@ -115,18 +119,20 @@ int main(int argc, char *const argv[]) {
 
     fptr = fopen(filename1, "r");
     if (fptr != NULL) {
+
         uint64_t buffer;
         while (fscanf(fptr, "%012" PRIx64, &buffer) == 1) {
             keycount1++;
         }
 
-        keys1 = (uint64_t *)malloc(keycount1 * sizeof(uint64_t));
+        keys1 = (uint64_t *)calloc(1, keycount1 * sizeof(uint64_t));
         filter_keys1 = (uint8_t *)calloc(keycount1, sizeof(uint8_t));
         if ((keys1 == NULL) || (filter_keys1 == NULL)) {
             perror("Failed to allocate memory");
             fclose(fptr);
             goto end;
         }
+
         rewind(fptr);
 
         for (uint32_t i = 0; i < keycount1; i++) {
@@ -144,18 +150,20 @@ int main(int argc, char *const argv[]) {
 
     fptr = fopen(filename2, "r");
     if (fptr != NULL) {
+
         uint64_t buffer;
         while (fscanf(fptr, "%012" PRIx64, &buffer) == 1) {
             keycount2++;
         }
 
-        keys2 = (uint64_t *)malloc(keycount2 * sizeof(uint64_t));
+        keys2 = (uint64_t *)calloc(1, keycount2 * sizeof(uint64_t));
         filter_keys2 = (uint8_t *)calloc(keycount2, sizeof(uint8_t));
         if ((keys2 == NULL) || (filter_keys2 == NULL)) {
             perror("Failed to allocate memory");
             fclose(fptr);
             goto end;
         }
+
         rewind(fptr);
 
         for (uint32_t i = 0; i < keycount2; i++) {
@@ -171,17 +179,19 @@ int main(int argc, char *const argv[]) {
         goto end;
     }
 
-    printf("%s: %i keys loaded\n", filename1, keycount1);
-    printf("%s: %i keys loaded\n", filename2, keycount2);
+    printf("%s: %u keys loaded\n", filename1, keycount1);
+    printf("%s: %u keys loaded\n", filename2, keycount2);
 
-    seednt1 = (uint16_t *)malloc(keycount1 * sizeof(uint16_t));
+    seednt1 = (uint16_t *)calloc(1, keycount1 * sizeof(uint16_t));
     if (seednt1 == NULL) {
         perror("Failed to allocate memory");
         goto end;
     }
+
     for (uint32_t i = 0; i < keycount1; i++) {
         seednt1[i] = compute_seednt16_nt32(nt1, keys1[i]);
     }
+
     for (uint32_t j = 0; j < keycount2; j++) {
         uint16_t seednt2 = compute_seednt16_nt32(nt2, keys2[j]);
         for (uint32_t i = 0; i < keycount1; i++) {
@@ -195,9 +205,11 @@ int main(int argc, char *const argv[]) {
 
     char filter_filename1[40];
     uint32_t filter_keycount1 = 0;
-    snprintf(filter_filename1, sizeof(filter_filename1), "keys_%08x_%02i_%08x_filtered.dic", uid1, sector1, nt1);
+    snprintf(filter_filename1, sizeof(filter_filename1), "keys_%08x_%02u_%08x_filtered.dic", uid1, sector1, nt1);
+
     fptr = fopen(filter_filename1, "w");
     if (fptr != NULL) {
+
         for (uint32_t j = 0; j < keycount1; j++) {
             if (filter_keys1[j]) {
                 filter_keycount1++;
@@ -205,15 +217,18 @@ int main(int argc, char *const argv[]) {
             }
         }
         fclose(fptr);
+
     } else {
         fprintf(stderr, "Warning: Cannot save keys in %s\n", filter_filename1);
     }
 
     char filter_filename2[40];
     uint32_t filter_keycount2 = 0;
-    snprintf(filter_filename2, sizeof(filter_filename2), "keys_%08x_%02i_%08x_filtered.dic", uid2, sector2, nt2);
+    snprintf(filter_filename2, sizeof(filter_filename2), "keys_%08x_%02iu_%08x_filtered.dic", uid2, sector2, nt2);
+
     fptr = fopen(filter_filename2, "w");
     if (fptr != NULL) {
+
         for (uint32_t j = 0; j < keycount2; j++) {
             if (filter_keys2[j]) {
                 filter_keycount2++;
@@ -221,23 +236,33 @@ int main(int argc, char *const argv[]) {
             }
         }
         fclose(fptr);
+
     } else {
         fprintf(stderr, "Warning: Cannot save keys in %s\n", filter_filename2);
     }
-    printf("%s: %i keys saved\n", filter_filename1, filter_keycount1);
-    printf("%s: %i keys saved\n", filter_filename2, filter_keycount2);
+    printf("%s: %u keys saved\n", filter_filename1, filter_keycount1);
+    printf("%s: %u keys saved\n", filter_filename2, filter_keycount2);
 
 end:
-    if (keys1 != NULL)
+    if (keys1 != NULL) {
         free(keys1);
-    if (keys2 != NULL)
+    }
+
+    if (keys2 != NULL) {
         free(keys2);
-    if (filter_keys1 != NULL)
+    }
+
+    if (filter_keys1 != NULL) {
         free(filter_keys1);
-    if (filter_keys2 != NULL)
+    }
+
+    if (filter_keys2 != NULL) {
         free(filter_keys2);
-    if (seednt1 != NULL)
+    }
+
+    if (seednt1 != NULL) {
         free(seednt1);
+    }
 
     return 0;
 }
