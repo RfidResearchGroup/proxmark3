@@ -2,6 +2,13 @@
  * ht2crack2search.c
  * this searches the sorted tables for the given RNG data, retrieves the matching
  * PRNG state, checks it is correct, and then rolls back the PRNG to recover the key
+ * 
+ * Iceman 2024,
+ * This is a multi threaded version. After discussions with mwalker33 about how to make this multi threaded
+ * version he concluded that the file lookups would be ideal.  So we don't do it inside the individual file searches but 
+ * rather we can put each file to search in each thread instead. Come up with ways to make it faster!
+ * 
+ * When testing remember OS cache fiddles with your mind and results. Running same test values will be much faster second run
  */
 
 #include "ht2crackutils.h"
