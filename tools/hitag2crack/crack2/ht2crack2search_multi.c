@@ -322,6 +322,7 @@ static void *brute_thread(void *arguments) {
     }
 
     free(r.data);
+    free(args->r.data);
     free(args);
     return NULL;
 }
@@ -459,6 +460,8 @@ int main(int argc, char *argv[]) {
         memcpy(a->r.data, rng.data, rng.len);
 
         pthread_create(&threads[i], NULL, brute_thread, (void *)a);
+
+
     }
 
     // wait for threads to terminate:
