@@ -45,13 +45,16 @@ static uint16_t compute_seednt16_nt32(uint32_t nt32, uint64_t key) {
     uint8_t b[] = {0, 13, 1, 14, 4, 10, 15, 7, 5, 3, 8, 6, 9, 2, 12, 11};
     uint16_t nt = nt32 >> 16;
     uint8_t prev = 14;
+
     for (uint8_t i = 0; i < prev; i++) {
         nt = prev_lfsr16(nt);
     }
+
     uint8_t prevoff = 8;
     bool odd = 1;
 
     for (uint8_t i = 0; i < 6 * 8; i += 8) {
+
         if (odd) {
             nt ^= (a[(key >> i) & 0xF]);
             nt ^= (b[(key >> i >> 4) & 0xF]) << 4;
@@ -59,8 +62,10 @@ static uint16_t compute_seednt16_nt32(uint32_t nt32, uint64_t key) {
             nt ^= (b[(key >> i) & 0xF]);
             nt ^= (a[(key >> i >> 4) & 0xF]) << 4;
         }
+
         odd ^= 1;
         prev += prevoff;
+
         for (uint8_t j = 0; j < prevoff; j++) {
             nt = prev_lfsr16(nt);
         }
@@ -69,12 +74,14 @@ static uint16_t compute_seednt16_nt32(uint32_t nt32, uint64_t key) {
 }
 
 int main(int argc, char *const argv[]) {
+
     if (argc != 4) {
         printf("Usage:\n  %s <nt1:08x> <key1:012x> keys_<uid:08x>_<sector:02>_<nt2:08x>.dic\n"
                "  where dict file is produced by rf08s_nested_known *for the same UID and same sector* as provided nt and key\n",
                argv[0]);
         return 1;
     }
+
     uint32_t nt1 = hex_to_uint32(argv[1]);
     uint64_t key1 = 0;
     if (sscanf(argv[2], "%012" PRIx64, &key1) != 1) {
@@ -85,12 +92,12 @@ int main(int argc, char *const argv[]) {
     char *filename = argv[3];
     uint32_t uid, sector, nt2;
 
-    int result;
-    result = sscanf(filename, "keys_%8x_%2d_%8x.dic", &uid, &sector, &nt2);
+    int result = sscanf(filename, "keys_%8x_%2d_%8x.dic", &uid, &sector, &nt2);
     if (result != 3) {
         fprintf(stderr, "Error: Failed to parse the filename %s.\n", filename);
         return 1;
     }
+
     if (nt1 == nt2) {
         fprintf(stderr, "Error: File must belong to different nonce.\n");
         return 1;
@@ -103,6 +110,7 @@ int main(int argc, char *const argv[]) {
 
     FILE *fptr = fopen(filename, "r");
     if (fptr != NULL) {
+
         uint64_t buffer;
         while (fscanf(fptr, "%012" PRIx64, &buffer) == 1) {
             keycount2++;
@@ -114,6 +122,7 @@ int main(int argc, char *const argv[]) {
             fclose(fptr);
             goto end;
         }
+
         rewind(fptr);
 
         for (uint32_t i = 0; i < keycount2; i++) {
@@ -124,12 +133,13 @@ int main(int argc, char *const argv[]) {
             }
         }
         fclose(fptr);
+
     } else {
         fprintf(stderr, "Warning: Cannot open %s\n", filename);
         goto end;
     }
 
-    printf("%s: %i keys loaded\n", filename, keycount2);
+    printf("%s: %u keys loaded\n", filename, keycount2);
 
     uint32_t found = 0;
     uint16_t seednt1 = compute_seednt16_nt32(nt1, key1);
@@ -139,13 +149,15 @@ int main(int argc, char *const argv[]) {
             found++;
         }
     }
-    if (!found) {
+
+    if (found == 0) {
         printf("No key found :(\n");
     }
 
 end:
-    if (keys2 != NULL)
+    if (keys2 != NULL) {
         free(keys2);
+    }
 
     return 0;
 }
