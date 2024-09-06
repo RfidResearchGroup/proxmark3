@@ -3638,8 +3638,8 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     } else {
         // Generate 5000 keys using VB6 KDF
         keycount = 5000;
-        keyBlock = malloc(keycount * 8);
-        if (!keyBlock) {
+        keyBlock = calloc(1, keycount * 8);
+        if (keyBlock == NULL) {
             return PM3_EMALLOC;
         }
 
@@ -4229,8 +4229,8 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     } else {
         // Generate 5000 keys using VB6 KDF
         keycount = 5000;
-        keyBlock = malloc(keycount * 8);
-        if (!keyBlock) {
+        keyBlock = calloc(1, keycount * 8);
+        if (keyBlock == NULL)  {
             return PM3_EMALLOC;
         }
 
@@ -4250,10 +4250,13 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     PrintAndLogEx(INFO, "Generating diversified keys...");
     GenerateMacKeyFrom(csn, CCNR, use_raw, use_elite, keyBlock, keycount, prekey);
 
-    if (use_elite)
+    if (use_elite) {
         PrintAndLogEx(INFO, "Using " _YELLOW_("elite algo"));
-    if (use_raw)
+    }
+
+    if (use_raw) {
         PrintAndLogEx(INFO, "Using " _YELLOW_("raw mode"));
+    }
 
     PrintAndLogEx(INFO, "Sorting...");
 
