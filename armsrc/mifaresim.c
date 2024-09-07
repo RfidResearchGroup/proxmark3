@@ -1076,7 +1076,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                 }
 
                 // case MFEMUL_WORK => CMD RATS
-                if (receivedCmd_len == 4 && receivedCmd_dec[0] == ISO14443A_CMD_RATS) {
+                if (receivedCmd_len == 4 && receivedCmd_dec[0] == ISO14443A_CMD_RATS && (receivedCmd_dec[1] & 0xF0) <= 0x80 && (receivedCmd_dec[1] & 0x0F) <= 0x0e) {
                     if (rats && rats_len) {
                         if (encrypted_data) {
                             memcpy(response, rats, rats_len);
