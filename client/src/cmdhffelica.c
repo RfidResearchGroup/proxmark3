@@ -262,13 +262,13 @@ static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
  * Checks if receveid bytes have a valid CRC.
  * @param verbose prints out the response received.
  */
-static bool waitCmdFelica(uint8_t iSelect, PacketResponseNG *resp, bool verbose) {
+static bool waitCmdFelica(bool iSelect, PacketResponseNG *resp, bool verbose) {
     if (WaitForResponseTimeout(CMD_ACK, resp, 2000) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return false;
     }
 
-    uint16_t len = iSelect ? (resp->oldarg[1] & 0xffff) : (resp->oldarg[0] & 0xffff);
+    uint16_t len = (iSelect) ? (resp->oldarg[1] & 0xffff) : (resp->oldarg[0] & 0xffff);
 
     if (verbose) {
 
@@ -279,13 +279,15 @@ static bool waitCmdFelica(uint8_t iSelect, PacketResponseNG *resp, bool verbose)
 
         PrintAndLogEx(SUCCESS, "(%u) %s", len, sprint_hex(resp->data.asBytes, len));
 
-        if (check_crc(CRC_FELICA, resp->data.asBytes + 2, len - 2) == false) {
-            PrintAndLogEx(WARNING, "CRC ( " _RED_("fail") " )");
-        }
+        if (iSelect == false) {
+            if (check_crc(CRC_FELICA, resp->data.asBytes + 2, len - 2) == false) {
+                PrintAndLogEx(WARNING, "CRC ( " _RED_("fail") " )");
+            }
 
-        if (resp->data.asBytes[0] != 0xB2 && resp->data.asBytes[1] != 0x4D) {
-            PrintAndLogEx(ERR, "received incorrect frame format!");
-            return false;
+            if (resp->data.asBytes[0] != 0xB2 && resp->data.asBytes[1] != 0x4D) {
+                PrintAndLogEx(ERR, "received incorrect frame format!");
+                return false;
+            }
         }
     }
     return true;
@@ -483,13 +485,16 @@ static void print_rd_plain_response(felica_read_without_encryption_response_t *r
  * Sends a request service frame to the pm3 and prints response.
  */
 int send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose) {
+
     clear_and_send_command(flags, datalen, data, verbose);
-    PacketResponseNG resp;
-    if (datalen > 0) {
-        if (!waitCmdFelica(0, &resp, 1)) {
+    if (datalen) {
+
+        PacketResponseNG resp;
+        if (waitCmdFelica(false, &resp, true) == false) {
             PrintAndLogEx(ERR, "\nGot no response from card");
             return PM3_ERFTRANS;
         }
+
         felica_request_service_response_t r;
         memcpy(&r, (felica_request_service_response_t *)resp.data.asBytes, sizeof(felica_request_service_response_t));
 
@@ -516,7 +521,7 @@ int send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data, bool ve
 int send_rd_plain(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, felica_read_without_encryption_response_t *rd_noCry_resp) {
     clear_and_send_command(flags, datalen, data, verbose);
     PacketResponseNG resp;
-    if (!waitCmdFelica(0, &resp, verbose)) {
+    if (waitCmdFelica(false, &resp, verbose) == false) {
         PrintAndLogEx(ERR, "No response from card");
         return PM3_ERFTRANS;
     } else {
@@ -554,7 +559,7 @@ static bool check_last_idm(uint8_t *data, uint16_t datalen) {
 static int send_wr_plain(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, felica_status_response_t *wr_noCry_resp) {
     clear_and_send_command(flags, datalen, data, verbose);
     PacketResponseNG resp;
-    if (waitCmdFelica(0, &resp, verbose) == false) {
+    if (waitCmdFelica(false, &resp, verbose) == false) {
         PrintAndLogEx(ERR, "no response from card");
         return PM3_ERFTRANS;
     }
@@ -746,7 +751,7 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     clear_and_send_command(flags, datalen, data, 0);
 
     PacketResponseNG resp;
-    if (waitCmdFelica(0, &resp, 1) == false) {
+    if (waitCmdFelica(false, &resp, true) == false) {
         PrintAndLogEx(ERR, "no response from card");
         return PM3_ERFTRANS;
     }
@@ -935,7 +940,7 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
     clear_and_send_command(flags, datalen, data, 0);
 
     PacketResponseNG resp;
-    if (waitCmdFelica(0, &resp, 1) == false) {
+    if (waitCmdFelica(false, &resp, true) == false) {
         PrintAndLogEx(ERR, "no response from card");
         return PM3_ERFTRANS;
     }
@@ -1329,7 +1334,7 @@ static int CmdHFFelicaRequestResponse(const char *Cmd) {
     clear_and_send_command(flags, datalen, data, 0);
 
     PacketResponseNG resp;
-    if (waitCmdFelica(0, &resp, 1) == false) {
+    if (waitCmdFelica(false, &resp, true) == false) {
         PrintAndLogEx(ERR, "Got no response from card");
         return PM3_ERFTRANS;
     }
@@ -1432,7 +1437,7 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
     clear_and_send_command(flags, datalen, data, 0);
 
     PacketResponseNG resp;
-    if (waitCmdFelica(0, &resp, 1) == false) {
+    if (waitCmdFelica(false, &resp, true) == false) {
         PrintAndLogEx(FAILED, "Got no response from card");
         return PM3_ERFTRANS;
     }
@@ -1536,7 +1541,7 @@ static int CmdHFFelicaResetMode(const char *Cmd) {
     clear_and_send_command(flags, datalen, data, 0);
 
     PacketResponseNG resp;
-    if (waitCmdFelica(0, &resp, 1) == false) {
+    if (waitCmdFelica(false, &resp, true) == false) {
         PrintAndLogEx(ERR, "Got no response from card");
         return PM3_ERFTRANS;
     }
@@ -1607,7 +1612,7 @@ static int CmdHFFelicaRequestSystemCode(const char *Cmd) {
     clear_and_send_command(flags, datalen, data, 0);
 
     PacketResponseNG resp;
-    if (waitCmdFelica(0, &resp, true) == false) {
+    if (waitCmdFelica(false, &resp, true) == false) {
         PrintAndLogEx(ERR, "Got no response from card");
         return PM3_ERFTRANS;
     }
@@ -2153,8 +2158,9 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     uint8_t flags = 0;
     if (active || active_select) {
         flags |= FELICA_CONNECT;
-        if (active)
+        if (active) {
             flags |= FELICA_NO_SELECT;
+        }
     }
 
     if (keep_field_on) {
@@ -2174,16 +2180,18 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
 
     if (reply) {
+
         if (active_select) {
             PrintAndLogEx(SUCCESS, "Active select wait for FeliCa.");
             PacketResponseNG resp_IDm;
-            if (waitCmdFelica(1, &resp_IDm, true) == false) {
+            if (waitCmdFelica(true, &resp_IDm, true) == false) {
                 return PM3_ERFTRANS;
             }
         }
-        if (datalen > 0) {
+
+        if (datalen) {
             PacketResponseNG resp_frame;
-            if (waitCmdFelica(0, &resp_frame, true) == false) {
+            if (waitCmdFelica(false, &resp_frame, true) == false) {
                 return PM3_ERFTRANS;
             }
         }
