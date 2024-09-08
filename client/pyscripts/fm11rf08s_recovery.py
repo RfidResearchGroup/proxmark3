@@ -29,6 +29,12 @@ except ModuleNotFoundError:
         _ = fg
         return str(s)
 
+required_version = (3, 8)
+if sys.version_info < required_version:
+    print(f"Python version: {sys.version}")
+    print(f"The script needs at least Python v{required_version[0]}.{required_version[1]}. Abort.")
+    exit()
+
 BACKDOOR_RF08S = "A396EFA4E24F"
 NUM_SECTORS = 16
 NUM_EXTRA_SECTORS = 1
