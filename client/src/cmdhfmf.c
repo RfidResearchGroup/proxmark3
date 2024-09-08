@@ -9604,6 +9604,8 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         } else if (card.sak == 0x20 && memcmp(blockdata + 8, "\x62\x63\x64\x65\x66\x67\x68\x69", 8) == 0) {
             PrintAndLogEx(SUCCESS, "Fudan FM11RF32 (SAK=20)");
         } else if (card.sak == 0x28 && memcmp(blockdata + 5, "\x28\x04\x00\x90\x10\x15\x01\x00\x00\x00\x00", 11) == 0) {
+            // Note: it also has ATS =
+            // 10 78 80 90 02 20 90 00 00 00 00 00 + UID + CRC
             PrintAndLogEx(SUCCESS, "Fudan FM1208-10");
         } else if (card.sak == 0x88 && memcmp(blockdata + 5, "\x88\x04\x00\x43", 4) == 0) {
             PrintAndLogEx(SUCCESS, "Infineon SLE66R35");

@@ -1820,6 +1820,7 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
             type |= MTMINI;
         } else if ((sak & 0x28) == 0x28) {
             printTag("SmartMX with MIFARE Classic 1K");
+            printTag("FM1208-10 with MIFARE Classic 1K");
             type |= MTCLASSIC;
         } else if ((sak & 0x08) == 0x08) {
             if (select_status == 1) {
