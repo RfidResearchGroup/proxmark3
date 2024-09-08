@@ -1045,8 +1045,8 @@ void MifareAcquireStaticEncryptedNonces(uint32_t flags, uint8_t *key) {
     uint8_t uid[10] = {0x00};
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
     uint8_t par_enc[1] = {0x00};
-    uint8_t buf[PM3_CMD_DATA_SIZE] = {0x00};
-
+    // ((MIFARE_1K_MAXSECTOR + 1) * 2) * 9 < PM3_CMD_DATA_SIZE
+    uint8_t buf[((MIFARE_1K_MAXSECTOR + 1) * 2) * 9] = {0x00};
     uint64_t ui64Key = bytes_to_num(key, 6);
     bool with_data = flags & 1;
     uint32_t cuid = 0;
@@ -1054,7 +1054,6 @@ void MifareAcquireStaticEncryptedNonces(uint32_t flags, uint8_t *key) {
     uint16_t num_nonces = 0;
     uint8_t cascade_levels = 0;
     bool have_uid = false;
-    uint8_t num_sectors = 16;
 
     LED_A_ON();
     LED_C_OFF();
@@ -1068,8 +1067,13 @@ void MifareAcquireStaticEncryptedNonces(uint32_t flags, uint8_t *key) {
 
     LED_C_ON();
 
-    for (uint16_t sec = 0; sec < num_sectors; sec++) {
-        uint8_t blockNo = sec * 4;
+    for (uint16_t sec = 0; sec < MIFARE_1K_MAXSECTOR + 1; sec++) {
+        uint16_t sec_gap = sec;
+        if (sec >= MIFARE_1K_MAXSECTOR) {
+            // gap between user blocks and advanced verification method blocks
+            sec_gap += 16;
+        }
+        uint16_t blockNo = sec_gap * 4;
         for (uint8_t keyType = 0; keyType < 2; keyType++) {
             // Test if the action was cancelled
             if (BUTTON_PRESS()) {
@@ -1110,19 +1114,20 @@ void MifareAcquireStaticEncryptedNonces(uint32_t flags, uint8_t *key) {
                 goto out;
             };
             if (with_data) {
-                uint8_t data[16];
-                for (uint16_t tb = blockNo; tb < blockNo + 4; tb++) {
-                    memset(data, 0x00, sizeof(data));
-                    int res = mifare_classic_readblock(pcs, tb, data);
-                    if (res == 1) {
-                        if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Read error");
-                        isOK = PM3_ESOFT;
-                        goto out;
+                if (blockNo < MIFARE_1K_MAXSECTOR * 4) {
+                    uint8_t data[16];
+                    for (uint16_t tb = blockNo; tb < blockNo + 4; tb++) {
+                        memset(data, 0x00, sizeof(data));
+                        int res = mifare_classic_readblock(pcs, tb, data);
+                        if (res == 1) {
+                            if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Read error");
+                            isOK = PM3_ESOFT;
+                            goto out;
+                        }
+                        emlSetMem_xt(data, tb, 1, 16);
                     }
-                    emlSetMem_xt(data, tb, 1, 16);
                 }
             }
-
             // nested authentication
             uint16_t len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + keyType + 4, blockNo, receivedAnswer, sizeof(receivedAnswer), par_enc, NULL);
             if (len != 4) {

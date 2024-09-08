@@ -9863,7 +9863,7 @@ static int CmdHF14AMfISEN(const char *Cmd) {
                 return NONCE_FAIL;
             }
         }
-        uint8_t num_sectors = 16;
+        uint8_t num_sectors = MIFARE_1K_MAXSECTOR + 1;
         PrintAndLogEx(NORMAL, "[\n  [");
         for (uint8_t sec = 0; sec < num_sectors; sec++) {
             PrintAndLogEx(NORMAL, "    [\"%08x\", \"%08x\"]%s",
@@ -9889,7 +9889,7 @@ static int CmdHF14AMfISEN(const char *Cmd) {
         }
         if (collect_fm11rf08s_with_data) {
             PrintAndLogEx(NORMAL, "  ],\n  [");
-            int bytes = num_sectors * 4 * 16;
+            int bytes = MIFARE_1K_MAXSECTOR * 4 * 16;
 
             uint8_t *dump = calloc(bytes, sizeof(uint8_t));
             if (dump == NULL) {
@@ -9901,11 +9901,11 @@ static int CmdHF14AMfISEN(const char *Cmd) {
                 free(dump);
                 return PM3_ETIMEOUT;
             }
-            for (uint8_t sec = 0; sec < num_sectors; sec++) {
+            for (uint8_t sec = 0; sec < MIFARE_1K_MAXSECTOR; sec++) {
                 for (uint8_t b = 0; b < 4; b++) {
                     PrintAndLogEx(NORMAL, "    \"%s\"%s",
                                   sprint_hex_inrow(dump + ((sec * 4) + b) * 16, 16),
-                                  (sec == num_sectors - 1) && (b == 3) ? "" : ",");
+                                  (sec == MIFARE_1K_MAXSECTOR - 1) && (b == 3) ? "" : ",");
                 }
             }
             free(dump);

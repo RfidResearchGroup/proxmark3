@@ -31,6 +31,7 @@ except ModuleNotFoundError:
 
 BACKDOOR_RF08S = "A396EFA4E24F"
 NUM_SECTORS = 16
+NUM_EXTRA_SECTORS = 1
 DICT_DEF = "mfc_default_keys.dic"
 DEFAULT_KEYS = set()
 if os.path.basename(os.path.dirname(os.path.dirname(sys.argv[0]))) == 'client':
@@ -87,7 +88,7 @@ def print_key(sec, key_type, key):
     print(f"Sector {sec:2} key{kt} = " + color(key, fg="green"))
 
 
-found_keys = [["", ""] for _ in range(NUM_SECTORS)]
+found_keys = [["", ""] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
 if args.init_check:
     print("Checking default keys...")
     p.console("hf mf fchk")
@@ -144,31 +145,34 @@ else:
     print(f"Warning, {DICT_DEF} not found.")
 
 print("Running staticnested_1nt & 2x1nt when doable...")
-keys = [[set(), set()] for _ in range(NUM_SECTORS)]
+keys = [[set(), set()] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
 all_keys = set()
 duplicates = set()
 # Availability of filtered dicts
-filtered_dicts = [[False, False] for _ in range(NUM_SECTORS)]
-found_default = [[False, False] for _ in range(NUM_SECTORS)]
-for sec in range(NUM_SECTORS):
+filtered_dicts = [[False, False] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
+found_default = [[False, False] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
+for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
+    real_sec = sec
+    if sec >= NUM_SECTORS:
+        real_sec += 16
     if found_keys[sec][0] != "" and found_keys[sec][1] != "":
         continue
     if found_keys[sec][0] == "" and found_keys[sec][1] == "" and nt[sec][0] != nt[sec][1]:
         for key_type in [0, 1]:
-            cmd = [tools["staticnested_1nt"], f"{uid:08X}", f"{sec}",
+            cmd = [tools["staticnested_1nt"], f"{uid:08X}", f"{real_sec}",
                    nt[sec][key_type], nt_enc[sec][key_type], par_err[sec][key_type]]
             if args.debug:
                 print(' '.join(cmd))
             subprocess.run(cmd, capture_output=True)
         cmd = [tools["staticnested_2x1nt"],
-               f"keys_{uid:08x}_{sec:02}_{nt[sec][0]}.dic", f"keys_{uid:08x}_{sec:02}_{nt[sec][1]}.dic"]
+               f"keys_{uid:08x}_{real_sec:02}_{nt[sec][0]}.dic", f"keys_{uid:08x}_{real_sec:02}_{nt[sec][1]}.dic"]
         if args.debug:
             print(' '.join(cmd))
         subprocess.run(cmd, capture_output=True)
         filtered_dicts[sec][key_type] = True
         for key_type in [0, 1]:
             keys_set = set()
-            with (open(f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}_filtered.dic")) as f:
+            with (open(f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}_filtered.dic")) as f:
                 while line := f.readline().rstrip():
                     keys_set.add(line)
                 keys[sec][key_type] = keys_set.copy()
@@ -177,9 +181,14 @@ for sec in range(NUM_SECTORS):
             # Prioritize default keys
             keys_def_set = DEFAULT_KEYS.intersection(keys_set)
             keys_set.difference_update(DEFAULT_KEYS)
+            # Prioritize sector 32 keyB starting with 0000
+            if real_sec == 32:
+                keyb32cands = set(x for x in keys_set if x.startswith("0000"))
+                keys_def_set.update(keyb32cands)
+                keys_set.difference_update(keyb32cands)
             if len(keys_def_set) > 0:
                 found_default[sec][key_type] = True
-                with (open(f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}_filtered.dic", "w")) as f:
+                with (open(f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}_filtered.dic", "w")) as f:
                     for k in keys_def_set:
                         f.write(f"{k}\n")
                     for k in keys_set:
@@ -189,13 +198,13 @@ for sec in range(NUM_SECTORS):
             key_type = 0
         else:
             key_type = 1
-        cmd = [tools["staticnested_1nt"], f"{uid:08X}", f"{sec}",
+        cmd = [tools["staticnested_1nt"], f"{uid:08X}", f"{real_sec}",
                nt[sec][key_type], nt_enc[sec][key_type], par_err[sec][key_type]]
         if args.debug:
             print(' '.join(cmd))
         subprocess.run(cmd, capture_output=True)
         keys_set = set()
-        with (open(f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}.dic")) as f:
+        with (open(f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}.dic")) as f:
             while line := f.readline().rstrip():
                 keys_set.add(line)
             keys[sec][key_type] = keys_set.copy()
@@ -206,30 +215,33 @@ for sec in range(NUM_SECTORS):
         keys_set.difference_update(DEFAULT_KEYS)
         if len(keys_def_set) > 0:
             found_default[sec][key_type] = True
-            with (open(f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}.dic", "w")) as f:
+            with (open(f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}.dic", "w")) as f:
                 for k in keys_def_set:
                     f.write(f"{k}\n")
                 for k in keys_set:
                     f.write(f"{k}\n")
 
 print("Looking for common keys across sectors...")
-keys_filtered = [[set(), set()] for _ in range(NUM_SECTORS)]
+keys_filtered = [[set(), set()] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
 for dup in duplicates:
-    for sec in range(NUM_SECTORS):
+    for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
         for key_type in [0, 1]:
             if dup in keys[sec][key_type]:
                 keys_filtered[sec][key_type].add(dup)
 
 # Availability of duplicates dicts
-duplicates_dicts = [[False, False] for _ in range(NUM_SECTORS)]
+duplicates_dicts = [[False, False] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
 first = True
-for sec in range(NUM_SECTORS):
+for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
+    real_sec = sec
+    if sec >= NUM_SECTORS:
+        real_sec += 16
     for key_type in [0, 1]:
         if len(keys_filtered[sec][key_type]) > 0:
             if first:
                 print("Saving duplicates dicts...")
                 first = False
-            with (open(f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}_duplicates.dic", "w")) as f:
+            with (open(f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}_duplicates.dic", "w")) as f:
                 keys_set = keys_filtered[sec][key_type].copy()
                 keys_def_set = DEFAULT_KEYS.intersection(keys_set)
                 keys_set.difference_update(DEFAULT_KEYS)
@@ -240,12 +252,15 @@ for sec in range(NUM_SECTORS):
             duplicates_dicts[sec][key_type] = True
 
 print("Computing needed time for attack...")
-candidates = [[0, 0] for _ in range(NUM_SECTORS)]
-for sec in range(NUM_SECTORS):
+candidates = [[0, 0] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
+for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
+    real_sec = sec
+    if sec >= NUM_SECTORS:
+        real_sec += 16
     for key_type in [0, 1]:
         if found_keys[sec][0] == "" and found_keys[sec][1] == "" and duplicates_dicts[sec][key_type]:
             kt = ['a', 'b'][key_type]
-            dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}_duplicates.dic"
+            dic = f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}_duplicates.dic"
             with open(dic, 'r') as file:
                 count = sum(1 for _ in file)
 #            print(f"dic {dic} size {count}")
@@ -259,7 +274,7 @@ for sec in range(NUM_SECTORS):
                 candidates[sec][key_type] = 1
             else:
                 kt = ['a', 'b'][key_type]
-                dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}_filtered.dic"
+                dic = f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}_filtered.dic"
                 with open(dic, 'r') as file:
                     count = sum(1 for _ in file)
 #                print(f"dic {dic} size {count}")
@@ -272,7 +287,7 @@ for sec in range(NUM_SECTORS):
         else:
             key_type = 0
             kt = ['a', 'b'][key_type]
-            dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}.dic"
+            dic = f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}.dic"
             with open(dic, 'r') as file:
                 count = sum(1 for _ in file)
 #            print(f"dic {dic} size {count}")
@@ -280,9 +295,12 @@ for sec in range(NUM_SECTORS):
             candidates[sec][1] = 1
 
 if args.debug:
-    for sec in range(NUM_SECTORS):
-        print(f" {sec:03} | {sec*4+3:03} | {candidates[sec][0]:6} | {candidates[sec][1]:6}  ")
-total_candidates = sum(candidates[sec][0] + candidates[sec][1] for sec in range(NUM_SECTORS))
+    for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
+        real_sec = sec
+        if sec >= NUM_SECTORS:
+            real_sec += 16
+        print(f" {real_sec:03} | {real_sec*4+3:03} | {candidates[sec][0]:6} | {candidates[sec][1]:6}  ")
+total_candidates = sum(candidates[sec][0] + candidates[sec][1] for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS))
 
 elapsed_time2 = time.time() - start_time - elapsed_time1
 minutes = int(elapsed_time2 // 60)
@@ -300,15 +318,18 @@ print("Still about " + color(f"{minutes:2}", fg="yellow") + " minutes " +
 
 abort = False
 print("Brute-forcing keys... Press any key to interrupt")
-for sec in range(NUM_SECTORS):
+for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
+    real_sec = sec
+    if sec >= NUM_SECTORS:
+        real_sec += 16
     for key_type in [0, 1]:
         # If we have a duplicates dict
         # note: we skip if we already know one key
         # as using 2x1nt1key later will be faster
         if found_keys[sec][0] == "" and found_keys[sec][1] == "" and duplicates_dicts[sec][key_type]:
             kt = ['a', 'b'][key_type]
-            dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}_duplicates.dic"
-            cmd = f"hf mf fchk --blk {sec * 4} -{kt} -f {dic} --no-default"
+            dic = f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}_duplicates.dic"
+            cmd = f"hf mf fchk --blk {real_sec * 4} -{kt} -f {dic} --no-default"
             if args.debug:
                 print(cmd)
             p.console(cmd)
@@ -316,11 +337,11 @@ for sec in range(NUM_SECTORS):
                 if "aborted via keyboard" in line:
                     abort = True
                 if "found:" in line:
-                    found_keys[sec][key_type] = line[30:]
-                    print_key(sec, key_type, found_keys[sec][key_type])
+                    found_keys[sec][key_type] = line[30:].strip()
+                    print_key(real_sec, key_type, found_keys[sec][key_type])
                     if nt[sec][0] == nt[sec][1] and found_keys[sec][key_type ^ 1] == "":
                         found_keys[sec][key_type ^ 1] = found_keys[sec][key_type]
-                        print_key(sec, key_type ^ 1, found_keys[sec][key_type ^ 1])
+                        print_key(real_sec, key_type ^ 1, found_keys[sec][key_type ^ 1])
         if abort:
             break
     if abort:
@@ -333,8 +354,8 @@ for sec in range(NUM_SECTORS):
         if found_keys[sec][0] == "" and found_keys[sec][1] == "" and filtered_dicts[sec][key_type]:
             # Use filtered dict
             kt = ['a', 'b'][key_type]
-            dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}_filtered.dic"
-            cmd = f"hf mf fchk --blk {sec * 4} -{kt} -f {dic} --no-default"
+            dic = f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}_filtered.dic"
+            cmd = f"hf mf fchk --blk {real_sec * 4} -{kt} -f {dic} --no-default"
             if args.debug:
                 print(cmd)
             p.console(cmd)
@@ -342,8 +363,8 @@ for sec in range(NUM_SECTORS):
                 if "aborted via keyboard" in line:
                     abort = True
                 if "found:" in line:
-                    found_keys[sec][key_type] = line[30:]
-                    print_key(sec, key_type, found_keys[sec][key_type])
+                    found_keys[sec][key_type] = line[30:].strip()
+                    print_key(real_sec, key_type, found_keys[sec][key_type])
         if abort:
             break
     if abort:
@@ -354,8 +375,8 @@ for sec in range(NUM_SECTORS):
         key_type = 0
         # Use regular dict
         kt = ['a', 'b'][key_type]
-        dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type]}.dic"
-        cmd = f"hf mf fchk --blk {sec * 4} -{kt} -f {dic} --no-default"
+        dic = f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}.dic"
+        cmd = f"hf mf fchk --blk {real_sec * 4} -{kt} -f {dic} --no-default"
         if args.debug:
             print(cmd)
         p.console(cmd)
@@ -363,10 +384,10 @@ for sec in range(NUM_SECTORS):
             if "aborted via keyboard" in line:
                 abort = True
             if "found:" in line:
-                found_keys[sec][0] = line[30:]
-                found_keys[sec][1] = line[30:]
-                print_key(sec, 0, found_keys[sec][key_type])
-                print_key(sec, 1, found_keys[sec][key_type])
+                found_keys[sec][0] = line[30:].strip()
+                found_keys[sec][1] = line[30:].strip()
+                print_key(real_sec, 0, found_keys[sec][key_type])
+                print_key(real_sec, 1, found_keys[sec][key_type])
     if abort:
         break
 
@@ -379,11 +400,11 @@ for sec in range(NUM_SECTORS):
             key_type_source = 0
             key_type_target = 1
         if duplicates_dicts[sec][key_type_target]:
-            dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type_target]}_duplicates.dic"
+            dic = f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type_target]}_duplicates.dic"
         elif filtered_dicts[sec][key_type_target]:
-            dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type_target]}_filtered.dic"
+            dic = f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type_target]}_filtered.dic"
         else:
-            dic = f"keys_{uid:08x}_{sec:02}_{nt[sec][key_type_target]}.dic"
+            dic = f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type_target]}.dic"
         cmd = [tools["staticnested_2x1nt1key"], nt[sec][key_type_source], found_keys[sec][key_type_source], dic]
         if args.debug:
             print(' '.join(cmd))
@@ -394,7 +415,7 @@ for sec in range(NUM_SECTORS):
                 keys.add(line[12:])
         if len(keys) > 1:
             kt = ['a', 'b'][key_type_target]
-            cmd = f"hf mf fchk --blk {sec * 4} -{kt} --no-default"
+            cmd = f"hf mf fchk --blk {real_sec * 4} -{kt} --no-default"
             for k in keys:
                 cmd += f" -k {k}"
             if args.debug:
@@ -404,11 +425,11 @@ for sec in range(NUM_SECTORS):
                 if "aborted via keyboard" in line:
                     abort = True
                 if "found:" in line:
-                    found_keys[sec][key_type_target] = line[30:]
+                    found_keys[sec][key_type_target] = line[30:].strip()
         elif len(keys) == 1:
             found_keys[sec][key_type_target] = keys.pop()
         if found_keys[sec][key_type_target] != "":
-            print_key(sec, key_type_target, found_keys[sec][key_type_target])
+            print_key(real_sec, key_type_target, found_keys[sec][key_type_target])
     if abort:
         break
 
@@ -434,14 +455,17 @@ else:
     print(plus + "-----+-----+--------------+---+--------------+----")
     print(plus + " Sec | Blk | key A        |res| key B        |res")
     print(plus + "-----+-----+--------------+---+--------------+----")
-    for sec in range(NUM_SECTORS):
+    for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
+        real_sec = sec
+        if sec >= NUM_SECTORS:
+            real_sec += 16
         keys = [["", 0], ["", 0]]
         for key_type in [0, 1]:
             if found_keys[sec][key_type] == "":
                 keys[key_type] = [color("------------", fg="red"), color("0", fg="red")]
             else:
                 keys[key_type] = [color(found_keys[sec][key_type], fg="green"), color("1", fg="green")]
-        print(plus + f" {sec:03} | {sec*4+3:03} | {keys[0][0]} | {keys[0][1]} | {keys[1][0]} | {keys[1][1]} ")
+        print(plus + f" {real_sec:03} | {real_sec*4+3:03} | {keys[0][0]} | {keys[0][1]} | {keys[1][0]} | {keys[1][1]} ")
     print(plus + "-----+-----+--------------+---+--------------+----")
     print(plus + "( " + color("0", fg="red") + ":Failed / " +
           color("1", fg="green") + ":Success )")
@@ -451,7 +475,7 @@ else:
     unknown = False
     with (open(keyfile, "wb")) as f:
         for key_type in [0, 1]:
-            for sec in range(NUM_SECTORS):
+            for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
                 k = found_keys[sec][key_type]
                 if k == "":
                     k = "FFFFFFFFFFFF"
