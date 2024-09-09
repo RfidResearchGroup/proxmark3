@@ -5,7 +5,7 @@ RUN pacman -Syu --noconfirm
 RUN pacman-db-upgrade
 # qt5-base skipped
 # bluez skipped, can't be installed in docker
-RUN pacman -S --noconfirm sudo git base-devel cmake libusb readline bzip2 lz4 arm-none-eabi-gcc arm-none-eabi-newlib python --needed
+RUN pacman -S --noconfirm sudo git base-devel cmake libusb readline bzip2 lz4 gd arm-none-eabi-gcc arm-none-eabi-newlib python --needed
 
 RUN pacman -S --noconfirm python-pip
 
