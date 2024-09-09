@@ -4,7 +4,7 @@ ENV LANG=C
 # libqt5-qtbase-devel skipped
 RUN zypper --non-interactive install --no-recommends shadow sudo git patterns-devel-base-devel_basis gcc-c++ readline-devel libbz2-devel liblz4-devel bluez-devel python3-devel libopenssl-devel gd-devel
 
-RUN zypper addrepo https://download.opensuse.org/repositories/home:wkazubski/15.4/home:wkazubski.repo && \
+RUN zypper addrepo https://download.opensuse.org/repositories/home:wkazubski/15.6/home:wkazubski.repo && \
     zypper --gpg-auto-import-keys refresh && \
     zypper --non-interactive install cross-arm-none-eabi-gcc12 cross-arm-none-eabi-newlib
 
