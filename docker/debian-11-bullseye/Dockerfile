@@ -1,7 +1,7 @@
 FROM debian:bullseye-slim
 
-ENV LANG C
-ENV DEBIAN_FRONTEND noninteractive
+ENV LANG=C
+ENV DEBIAN_FRONTEND=noninteractive
 # qtbase5-dev skipped
 RUN apt-get update && \
     apt-get upgrade -y && \

@@ -1,7 +1,7 @@
 FROM ubuntu:18.04
 
-ENV LANG C
-ENV DEBIAN_FRONTEND noninteractive
+ENV LANG=C
+ENV DEBIAN_FRONTEND=noninteractive
 # qtbase5-dev skipped
 # python3 skipped, not yet searchable with pkg-config python3
 RUN apt-get update && \

@@ -1,6 +1,6 @@
 FROM homebrew/brew
 
-ENV LANG C
+ENV LANG=C
 
 USER linuxbrew
 WORKDIR "/home/linuxbrew"
