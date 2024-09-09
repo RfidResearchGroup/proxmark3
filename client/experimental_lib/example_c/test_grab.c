@@ -6,8 +6,7 @@
 
 int main(int argc, char *argv[]) {
 
-    int pipefd[2];
-    char buf[8196 + 1];
+//    char buf[8196 + 1];
     size_t n;
 
     if (argc < 2) {
@@ -15,60 +14,35 @@ int main(int argc, char *argv[]) {
         exit(-1);
     }
 
-    if (pipe(pipefd) == -1) {
-        exit(-1);
-    }
+    pm3 *p;
+    p = pm3_open(argv[1]);
 
-    int pid = fork();
-    if (pid == -1) {
-        perror("fork");
-        exit(-1);
-    }
+    // Execute the command
+    pm3_console(p, "hw status", false);
 
-    // child
-    if (pid == 0) {
-        printf("[INFO] inside child\n");
+    const char *buf = pm3_grabbed_output_get(p);
+    const char *line_start = buf;
+    const char *newline_pos;
+    while ((newline_pos = strchr(line_start, '\n')) != NULL) {
+        // Determine the length of the line
+        size_t line_length = newline_pos - line_start;
 
-        // Redirect stdout to the write end of the pipe
-        dup2(pipefd[1], STDOUT_FILENO);
+        // Create a temporary buffer to hold the line
+        char line[line_length + 1];
+        strncpy(line, line_start, line_length);
+        line[line_length] = '\0'; // Null-terminate the string
 
-        close(pipefd[0]);  // Child: close read end of the pipe
-        close(pipefd[1]);  // Close original write end
-
-        pm3 *p;
-        p = pm3_open(argv[1]);
-
-        // Execute the command
-        pm3_console(p, "hw status");
-        pm3_close(p);
-        _exit(-1);
-    } else {
-
-        printf("[INFO] inside parent\n");
-        // Parent: close write end of the pipe
-        close(pipefd[1]);
-
-        // Read from the pipe
-        while (1) {
-            n = read(pipefd[0], buf, sizeof(buf));
-            if (n == -1) {
-                continue;
-            }
-            if (n == 0) {
-                break;
-            } else {
-                // null termination
-                buf[n] = 0;
-                if (strstr(buf, "ERROR") != NULL) {
-                    printf("%s", buf);
-                }
-                if (strstr(buf, "Unique ID") != NULL) {
-                    printf("%s", buf);
-                }
-            }
+        if (strstr(line, "ERROR") != NULL) {
+            printf("%s", line);
+        }
+        if (strstr(line, "Unique ID") != NULL) {
+            printf("%s", line);
         }
 
-        // Close read end
-        close(pipefd[0]);
+        // Move to the next line
+        line_start = newline_pos + 1;
     }
+
+
+    pm3_close(p);
 }

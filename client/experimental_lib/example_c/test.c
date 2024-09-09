@@ -9,6 +9,6 @@ int main(int argc, char *argv[]) {
     }
     pm3 *p;
     p = pm3_open(argv[1]);
-    pm3_console(p, "hw status");
+    pm3_console(p, "hw status", true);
     pm3_close(p);
 }
