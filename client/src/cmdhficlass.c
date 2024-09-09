@@ -2080,12 +2080,12 @@ static int CmdHFiClassDump(const char *Cmd) {
         if (pagemap != PICOPASS_NON_SECURE_PAGEMODE) {
             // div key KD
             memcpy(tag_data + (PICOPASS_BLOCK_SIZE * 3),
-            tempbuf + (PICOPASS_BLOCK_SIZE * 3), PICOPASS_BLOCK_SIZE);
+                tempbuf + (PICOPASS_BLOCK_SIZE * 3), PICOPASS_BLOCK_SIZE);
         }
         // all memory available
         memcpy(tag_data + (PICOPASS_BLOCK_SIZE * payload.start_block),
-           tempbuf + (PICOPASS_BLOCK_SIZE * payload.start_block),
-           blocks_read * PICOPASS_BLOCK_SIZE);
+            tempbuf + (PICOPASS_BLOCK_SIZE * payload.start_block),
+            blocks_read * PICOPASS_BLOCK_SIZE);
     }
 
     // try AA2 Kc, Credit
