@@ -3,7 +3,6 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- Fixed `hf iclass dump` to dump AA2 when only providing Kc (@antiklesys)
 - Fixed `hf felica raw -s` - dont check crc for select tag response,  thanks @RebornedBrian! (@iceman1001)
 - Added a multi-threaded of ht2crack2search (@iceman1001)
 - Fixed ISO14443a bounds-checking because @doegex found cards not following ISO14443a when fuzzed (@iceman1001)
