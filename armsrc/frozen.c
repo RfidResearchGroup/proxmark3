@@ -57,6 +57,10 @@ typedef unsigned _int64 uint64_t;
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
 #endif
+// problem specific to arm-none-gcc provided by Debian:
+// https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=953844
+// => include <sys/types.h> before <inttypes.h>
+#include <sys/types.h>
 #include <inttypes.h>
 #endif /* _WIN32 */
 
