@@ -2044,46 +2044,46 @@ static int CmdHFiClassDump(const char *Cmd) {
 
     if(key_len > 0 && deb_key_nr >= 0){
 
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_ICLASS_DUMP, (uint8_t *)&payload, sizeof(payload));
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_ICLASS_DUMP, (uint8_t *)&payload, sizeof(payload));
 
-    while (true) {
+        while (true) {
 
-        PrintAndLogEx(NORMAL, "." NOLF);
-        if (kbd_enter_pressed()) {
-            PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
-            DropField();
-            return PM3_EOPABORTED;
+            PrintAndLogEx(NORMAL, "." NOLF);
+            if (kbd_enter_pressed()) {
+                PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
+                DropField();
+                return PM3_EOPABORTED;
+            }
+
+            if (WaitForResponseTimeout(CMD_HF_ICLASS_DUMP, &resp, 2000))
+                break;
         }
 
-        if (WaitForResponseTimeout(CMD_HF_ICLASS_DUMP, &resp, 2000))
-            break;
-    }
+        PrintAndLogEx(NORMAL, "");
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "failed to communicate with card");
+            return resp.status;
+        }
 
-    PrintAndLogEx(NORMAL, "");
-    if (resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "failed to communicate with card");
-        return resp.status;
-    }
+        if (packet->isOK == false) {
+            PrintAndLogEx(WARNING, "read AA1 blocks failed");
+            return PM3_ESOFT;
+        }
 
-    if (packet->isOK == false) {
-        PrintAndLogEx(WARNING, "read AA1 blocks failed");
-        return PM3_ESOFT;
-    }
+        // response ok - now get bigbuf content of the dump
+        if (!GetFromDevice(BIG_BUF, tempbuf, sizeof(tempbuf), startindex, NULL, 0, NULL, 2500, false)) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            return PM3_ETIMEOUT;
+        }
 
-    // response ok - now get bigbuf content of the dump
-    if (!GetFromDevice(BIG_BUF, tempbuf, sizeof(tempbuf), startindex, NULL, 0, NULL, 2500, false)) {
-        PrintAndLogEx(WARNING, "command execution time out");
-        return PM3_ETIMEOUT;
-    }
-
-    if (pagemap != PICOPASS_NON_SECURE_PAGEMODE) {
-        // div key KD
-        memcpy(tag_data + (PICOPASS_BLOCK_SIZE * 3),
-               tempbuf + (PICOPASS_BLOCK_SIZE * 3), PICOPASS_BLOCK_SIZE);
-    }
-    // all memory available
-    memcpy(tag_data + (PICOPASS_BLOCK_SIZE * payload.start_block),
+        if (pagemap != PICOPASS_NON_SECURE_PAGEMODE) {
+            // div key KD
+            memcpy(tag_data + (PICOPASS_BLOCK_SIZE * 3),
+            tempbuf + (PICOPASS_BLOCK_SIZE * 3), PICOPASS_BLOCK_SIZE);
+        }
+        // all memory available
+        memcpy(tag_data + (PICOPASS_BLOCK_SIZE * payload.start_block),
            tempbuf + (PICOPASS_BLOCK_SIZE * payload.start_block),
            blocks_read * PICOPASS_BLOCK_SIZE);
     }
