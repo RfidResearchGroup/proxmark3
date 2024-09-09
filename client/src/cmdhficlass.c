@@ -2029,6 +2029,21 @@ static int CmdHFiClassDump(const char *Cmd) {
         payload.start_block = 5;
     }
 
+    struct p_resp {
+        bool isOK;
+        uint16_t block_cnt;
+        uint32_t bb_offset;
+    } PACKED;
+    struct p_resp *packet = (struct p_resp *)resp.data.asBytes;
+
+    uint32_t startindex = packet->bb_offset;
+    uint32_t blocks_read = packet->block_cnt;
+
+    uint8_t tempbuf[0x100 * 8];
+    uint16_t bytes_got = (app_limit1 + 1) * 8;
+
+    if(key_len > 0 && deb_key_nr >= 0){
+
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ICLASS_DUMP, (uint8_t *)&payload, sizeof(payload));
 
@@ -2051,22 +2066,10 @@ static int CmdHFiClassDump(const char *Cmd) {
         return resp.status;
     }
 
-    struct p_resp {
-        bool isOK;
-        uint16_t block_cnt;
-        uint32_t bb_offset;
-    } PACKED;
-    struct p_resp *packet = (struct p_resp *)resp.data.asBytes;
-
     if (packet->isOK == false) {
         PrintAndLogEx(WARNING, "read AA1 blocks failed");
         return PM3_ESOFT;
     }
-
-    uint32_t startindex = packet->bb_offset;
-    uint32_t blocks_read = packet->block_cnt;
-
-    uint8_t tempbuf[0x100 * 8];
 
     // response ok - now get bigbuf content of the dump
     if (!GetFromDevice(BIG_BUF, tempbuf, sizeof(tempbuf), startindex, NULL, 0, NULL, 2500, false)) {
@@ -2083,8 +2086,7 @@ static int CmdHFiClassDump(const char *Cmd) {
     memcpy(tag_data + (PICOPASS_BLOCK_SIZE * payload.start_block),
            tempbuf + (PICOPASS_BLOCK_SIZE * payload.start_block),
            blocks_read * PICOPASS_BLOCK_SIZE);
-
-    uint16_t bytes_got = (app_limit1 + 1) * 8;
+    }
 
     // try AA2 Kc, Credit
     bool aa2_success = false;
