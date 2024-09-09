@@ -145,7 +145,7 @@ local function readfile()
     local f = io.open(ID_STATUS, "r")
     for line in f:lines() do
         id = line:match"^(%x+)"
-	if id then break end
+        if id then break end
     end
     f:close()
     if not id then
@@ -162,7 +162,7 @@ local function IDsaved()
     local f = io.open(LAST_ID, "r")
     for line in f:lines() do
         id = line:match"^(%x+)"
-	if id then break end
+    if id then break end
     end
     f:close()
     if not id then
@@ -177,7 +177,7 @@ end
 ----------------------------------------write file
 local function writefile(hex_hi, hex_low)
     local f = io.open(ID_STATUS, "w+")
-	local g = io.open(LAST_ID, 'w+')
+    local g = io.open(LAST_ID, 'w+')
     f:write(("%02X%08X\n"):format(hex_hi, hex_low))
     f:close()
     g:write(("%02X%08X\n"):format(hex_hi, hex_low))
@@ -204,7 +204,7 @@ local function main(args)
     local id_original = false
     local emarine = false
     local input_id = ''
-	for o, a in getopt.getopt(args, 'hems:c') do
+    for o, a in getopt.getopt(args, 'hems:c') do
         if o == 'h' then return help() end
         if o == 'e' then id_original = true end
         if o == 'm' then emarine = true end
@@ -228,7 +228,7 @@ local function main(args)
     core.console('clear')
     local hi  = tonumber(input_id:sub(1, 2), 16)
     local low = tonumber(input_id:sub(3, 10), 16)
-	if saved_id then
+    if saved_id then
         hi, low = IDsaved()
         print( string.rep('--',39) )
         print( string.rep('--',39) )
@@ -246,7 +246,7 @@ local function main(args)
         print( string.rep('--',39))
         print(string.rep('--',39))
     end
-	if emarine then
+    if emarine then
         print( string.rep('--',39) )
         print( string.rep('--',39) )
         print('')
@@ -256,7 +256,7 @@ local function main(args)
         print( string.rep('--',39) )
     end
     if emarine or id_original then
-	   io.write('   Press'..ac.yellow..' Enter'..ac.reset..' to continue ... ');io.read()
+       io.write('   Press'..ac.yellow..' Enter'..ac.reset..' to continue ... ');io.read()
        txt_change('   Readed TAG : ')
        core.console(' lf em 410x read')
        print( string.rep('--',39) )
@@ -278,7 +278,7 @@ local function main(args)
        print('')
        print( string.rep('--',39) )
     end
-	if emarine then
+    if emarine then
        d = ('EM4102 ID ')
     else
        d =('ELECTRA ID  ')
