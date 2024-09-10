@@ -1660,6 +1660,7 @@ static uint64_t ul_magic_test(void) {
     if ((is_generation & MAGIC_FLAG_GEN_1B) == MAGIC_FLAG_GEN_1B) {
         return MFU_TT_MAGIC_1B | MFU_TT_MAGIC;
     }
+
     if ((is_generation & MAGIC_FLAG_NTAG21X) == MAGIC_FLAG_NTAG21X) {
         return MFU_TT_MAGIC_NTAG21X | MFU_TT_MAGIC;
     }
