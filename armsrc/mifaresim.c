@@ -763,7 +763,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                 }
 
                 // all commands must have a valid CRC
-                if (!CheckCrc14A(receivedCmd_dec, receivedCmd_len)) {
+                if (CheckCrc14A(receivedCmd_dec, receivedCmd_len) == false) {
                     EmSend4bit(encrypted_data ? mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA) : CARD_NACK_NA);
                     FpgaDisableTracing();
 

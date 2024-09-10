@@ -428,7 +428,8 @@ __attribute__((force_align_arg_pointer))
         // Signal to main thread that communications seems off.
         // main thread will kill and restart this thread.
         if (commfailed) {
-            if (g_conn.last_command != CMD_HARDWARE_RESET) {
+            if (g_conn.last_command != CMD_HARDWARE_RESET &&
+                    g_conn.last_command != CMD_START_FLASH) {
                 PrintAndLogEx(WARNING, "\nCommunicating with Proxmark3 device " _RED_("failed"));
             }
             __atomic_test_and_set(&comm_thread_dead, __ATOMIC_SEQ_CST);

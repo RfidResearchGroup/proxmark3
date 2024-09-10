@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+
+## [Backdoor][2024-09-10]
+- Changed flashing messages to be less scary (@iceman1001)
+- Fixed docker containers and their documentation (@doegox)
+- Fixed `hf ict` - buffer overflow (@doegox)
 - Fixed `hf felica raw -s` - dont check crc for select tag response,  thanks @RebornedBrian! (@iceman1001)
 - Added a multi-threaded of ht2crack2search (@iceman1001)
 - Fixed ISO14443a bounds-checking because @doegex found cards not following ISO14443a when fuzzed (@iceman1001)
