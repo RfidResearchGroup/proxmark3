@@ -2679,7 +2679,7 @@ out:
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
     }
 
-    if (tagtype & (MFU_TT_MAGIC_1A || MFU_TT_MAGIC_1B || MFU_TT_MAGIC_2)) {
+    if (tagtype & (MFU_TT_MAGIC_1A | MFU_TT_MAGIC_1B | MFU_TT_MAGIC_2)) {
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`script run hf_mfu_setuid -h`") " to set UID");
     }
 
