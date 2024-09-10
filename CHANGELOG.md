@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added detection of a magic NTAG 215 (@iceman1001)
 
 ## [Backdoor.4.18994][2024-09-10]
 - Changed flashing messages to be less scary (@iceman1001)
