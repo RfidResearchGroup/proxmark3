@@ -14,7 +14,8 @@
     - [If you don't need...](#if-you-dont-need-1)
   - [On Fedora](#on-fedora)
     - [If you don't need...](#if-you-dont-need-2)
-  - [On openSUSE](#on-opensuse)
+  - [On openSUSE Leap 15.6](#on-opensuse-leap-156)
+  - [On openSUSE Tumbleweed](#on-opensuse-tumbleweed)
     - [If you don't need...](#if-you-dont-need-3)
 - [Clone the repository](#clone-the-repository)
 - [Check ModemManager](#check-modemmanager)
@@ -125,17 +126,29 @@ you can skip the installation of `python3-devel`.
 you can skip the installation of `gd-devel`.
 
 
-## On openSUSE
+## On openSUSE Leap 15.6
 ^[Top](#top)
 
 ```sh
 sudo zypper install git patterns-devel-base-devel_basis gcc-c++ \
-readline-devel libbz2-devel liblz4-devel cross-arm-none-gcc9 \
-cross-arm-none-newlib-devel python3-devel libqt5-qtbase-devel \
-libopenssl-devel gd-devel
+readline-devel libbz2-devel liblz4-devel \
+python3-devel libqt5-qtbase-devel libopenssl-devel gd-devel
+sudo zypper addrepo https://download.opensuse.org/repositories/home:wkazubski/15.6/home:wkazubski.repo && \
+sudo zypper --gpg-auto-import-keys refresh && \
+sudo zypper install cross-arm-none-eabi-gcc13 cross-arm-none-eabi-newlib
 ```
 
 Note that Bluez is not available on openSUSE so the native Bluetooth support won't be available in the client.
+
+## On openSUSE Tumbleweed
+^[Top](#top)
+
+```sh
+sudo zypper install git patterns-devel-base-devel_basis gcc-c++ \
+readline-devel libbz2-devel liblz4-devel bluez-devel \
+python3-devel libqt5-qtbase-devel libopenssl-devel gd-devel \
+cross-arm-none-gcc12 cross-arm-none-newlib-devel
+```
 
 ### If you don't need... 
 👉 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`),  
