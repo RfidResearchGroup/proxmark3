@@ -148,7 +148,7 @@ static int diversify_mifare_key(const uint8_t *uid, uint8_t *app_key) {
         return PM3_ESOFT;
     }
     mbedtls_aes_free(&aes);
-    memcpy(app_key, output, sizeof(output));
+    memcpy(app_key, output, MIFARE_KEY_SIZE);
     return PM3_SUCCESS;
 }
 
