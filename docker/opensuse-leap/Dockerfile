@@ -6,7 +6,7 @@ RUN zypper --non-interactive install --no-recommends shadow sudo git patterns-de
 
 RUN zypper addrepo https://download.opensuse.org/repositories/home:wkazubski/15.6/home:wkazubski.repo && \
     zypper --gpg-auto-import-keys refresh && \
-    zypper --non-interactive install cross-arm-none-eabi-gcc12 cross-arm-none-eabi-newlib
+    zypper --non-interactive install cross-arm-none-eabi-gcc13 cross-arm-none-eabi-newlib
 
 RUN zypper --non-interactive install cmake python3 python3-pip && \
     python3 -m pip install ansicolors sslcrypto
