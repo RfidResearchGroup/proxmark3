@@ -878,7 +878,7 @@ static int ndef_print_CC(uint8_t *data) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("NDEF Message"));
-    PrintAndLogEx(SUCCESS, "Capability Container: %s", sprint_hex(data, 4));
+    PrintAndLogEx(SUCCESS, "Capability Container: " _YELLOW_("%s"), sprint_hex_inrow(data, 4));
     PrintAndLogEx(SUCCESS, "  %02X: NDEF Magic Number", data[0]);
 
 //    PrintAndLogEx(SUCCESS, "  %02X : version %d.%d supported by tag", data[1], (data[1] & 0xF0) >> 4, data[1] & 0x0F);
@@ -1017,7 +1017,7 @@ int ul_print_type(uint64_t tagtype, uint8_t spaces) {
     tagtype &= ~(MFU_TT_MAGIC);
 
     if (ismagic) {
-        snprintf(typestr + strlen(typestr), 4, " (");
+        snprintf(typestr + strlen(typestr), 4, " ( ");
     }
 
     snprintf(typestr + strlen(typestr), sizeof(typestr) - strlen(typestr), "%s", ((tagtype & MFU_TT_MAGIC_1A) == MFU_TT_MAGIC_1A) ? _GREEN_("Gen 1a") : "");
@@ -1093,7 +1093,7 @@ static int ulaes_print_configuration(uint8_t *data, uint8_t start_page) {
     bool cnt_rd_en = (data[4] & 4);
     uint16_t authlim = (data[6]) | ((data[7] & 0x3) << 8);
 
-    PrintAndLogEx(INFO, "  cfg0 [%u/0x%02X]: %s", start_page, start_page, sprint_hex(data, 4));
+    PrintAndLogEx(INFO, "  cfg0 [%u/0x%02X]: " _YELLOW_("%s"), start_page, start_page, sprint_hex_inrow(data, 4));
 
     PrintAndLogEx(INFO, "                    - Random ID is %s", (rid_act) ? "enabled" : "disabled");
     PrintAndLogEx(INFO, "                    - Secure messaging is %s", (sec_msg_act) ? "enabled" : "disabled");
@@ -1102,7 +1102,7 @@ static int ulaes_print_configuration(uint8_t *data, uint8_t start_page) {
     } else {
         PrintAndLogEx(INFO, "                    - pages don't need authentication");
     }
-    PrintAndLogEx(INFO, "  cfg1 [%u/0x%02X]: %s", start_page + 1, start_page + 1,  sprint_hex(data + 4, 4));
+    PrintAndLogEx(INFO, "  cfg1 [%u/0x%02X]: " _YELLOW_("%s"), start_page + 1, start_page + 1,  sprint_hex_inrow(data + 4, 4));
 
     if (authlim == 0) {
         PrintAndLogEx(INFO, "                    - " _GREEN_("Unlimited authentication attempts"));
@@ -1131,7 +1131,7 @@ static int ulev1_print_configuration(uint64_t tagtype, uint8_t *data, uint8_t st
 
     uint8_t vctid = data[5];
 
-    PrintAndLogEx(INFO, "  cfg0 [%u/0x%02X]: %s", startPage, startPage, sprint_hex(data, 4));
+    PrintAndLogEx(INFO, "  cfg0 [%u/0x%02X]: " _YELLOW_("%s"), startPage, startPage, sprint_hex_inrow(data, 4));
 
     //NTAG213TT has different ASCII mirroring options and config bytes interpretation from other ulev1 class tags
     if (tagtype & MFU_TT_NTAG_213_TT) {
@@ -1306,7 +1306,7 @@ static int ulev1_print_configuration(uint64_t tagtype, uint8_t *data, uint8_t st
         }
     }
 
-    PrintAndLogEx(INFO, "  cfg1 [%u/0x%02X]: %s", startPage + 1, startPage + 1,  sprint_hex(data + 4, 4));
+    PrintAndLogEx(INFO, "  cfg1 [%u/0x%02X]: " _YELLOW_("%s"), startPage + 1, startPage + 1,  sprint_hex_inrow(data + 4, 4));
     if (authlim == 0)
         PrintAndLogEx(INFO, "                    - " _GREEN_("Unlimited password attempts"));
     else
@@ -1318,16 +1318,16 @@ static int ulev1_print_configuration(uint64_t tagtype, uint8_t *data, uint8_t st
     PrintAndLogEx(INFO, "                    - user configuration %s", cfglck ? "permanently locked" : "writeable");
     PrintAndLogEx(INFO, "                    - %s access is protected with password", prot ? "read and write" : "write");
     PrintAndLogEx(INFO, "                    - %02X, Virtual Card Type Identifier is %sdefault", vctid, (vctid == 0x05) ? "" : "not ");
-    PrintAndLogEx(INFO, "  PWD  [%u/0x%02X]: %s- ( cannot be read )", startPage + 2, startPage + 2,  sprint_hex(data + 8, 4));
-    PrintAndLogEx(INFO, "  PACK [%u/0x%02X]: %s      - ( cannot be read )", startPage + 3, startPage + 3,  sprint_hex(data + 12, 2));
-    PrintAndLogEx(INFO, "  RFU  [%u/0x%02X]:       %s- ( cannot be read )", startPage + 3, startPage + 3,  sprint_hex(data + 14, 2));
+    PrintAndLogEx(INFO, "  PWD  [%u/0x%02X]: %s ( cannot be read )", startPage + 2, startPage + 2,  sprint_hex_inrow(data + 8, 4));
+    PrintAndLogEx(INFO, "  PACK [%u/0x%02X]: %s     ( cannot be read )", startPage + 3, startPage + 3,  sprint_hex_inrow(data + 12, 2));
+    PrintAndLogEx(INFO, "  RFU  [%u/0x%02X]:     %s ( cannot be read )", startPage + 3, startPage + 3,  sprint_hex_inrow(data + 14, 2));
 
     if (tagtype & MFU_TT_NTAG_213_TT) {
         if (data[1] & 0x06) {
-            PrintAndLogEx(INFO, "TT_MSG [45/0x2D]: %s- (cannot be read)", sprint_hex(tt_message, tt_msg_resp_len));
+            PrintAndLogEx(INFO, "TT_MSG [45/0x2D]: %s (cannot be read)", sprint_hex_inrow(tt_message, tt_msg_resp_len));
             PrintAndLogEx(INFO, "                    - tamper message is masked in memory");
         } else {
-            PrintAndLogEx(INFO, "TT_MSG [45/0x2D]: %s", sprint_hex(tt_message, tt_msg_resp_len));
+            PrintAndLogEx(INFO, "TT_MSG [45/0x2D]: %s", sprint_hex_inrow(tt_message, tt_msg_resp_len));
             PrintAndLogEx(INFO, "                    - tamper message is %s and is readable/writablbe in memory", sprint_hex(tt_message, tt_msg_resp_len));
         }
     }
@@ -1343,7 +1343,7 @@ static int ulev1_print_configuration(uint64_t tagtype, uint8_t *data, uint8_t st
 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Tamper Status"));
-        PrintAndLogEx(INFO, "  READ_TT_STATUS: %s", sprint_hex(tt_status_resp, 5));
+        PrintAndLogEx(INFO, "  READ_TT_STATUS: %s", sprint_hex_inrow(tt_status_resp, 5));
 
         PrintAndLogEx(INFO, "     Tamper status result from this power-up:");
         switch (tt_status_resp[4]) {
@@ -1524,7 +1524,7 @@ static int ulev1_print_signature(uint64_t tagtype, uint8_t *uid, uint8_t *signat
 static int ulev1_print_version(uint8_t *data) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Version"));
-    PrintAndLogEx(INFO, "       Raw bytes: %s", sprint_hex(data, 8));
+    PrintAndLogEx(INFO, "       Raw bytes: " _YELLOW_("%s"), sprint_hex_inrow(data, 8));
     PrintAndLogEx(INFO, "       Vendor ID: %02X, %s", data[1], getTagInfo(data[1]));
     PrintAndLogEx(INFO, "    Product type: %s", getProductTypeStr(data[2]));
     PrintAndLogEx(INFO, " Product subtype: %02X, %s", data[3], (data[3] == 1) ? "17 pF" : "50pF");
