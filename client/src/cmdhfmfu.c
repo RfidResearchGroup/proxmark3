@@ -2216,7 +2216,8 @@ uint64_t GetHF14AMfU_Type(void) {
                 break;
         }
 
-        // UL vs UL-C vs ntag203 test
+        // This is a test from cards that doesn't answer to GET_VERSION command
+        // UL vs UL-C vs NTAG203 vs FUDAN FM11NT021 (which is NTAG213 compatiable)
         if (tagtype & (MFU_TT_UL | MFU_TT_UL_C | MFU_TT_NTAG_203)) {
             if (ul_select(&card) == false) {
                 return MFU_TT_UL_ERROR;
@@ -2235,22 +2236,35 @@ uint64_t GetHF14AMfU_Type(void) {
                 }
 
                 uint8_t data[16] = {0x00};
+
                 // read page 0x26-0x29 (last valid ntag203 page)
+                // if error response, its ULTRALIGHT since doesn't have that memory block
                 status = ul_read(0x26, data, sizeof(data));
                 if (status <= 1) {
                     tagtype = MFU_TT_UL;
                 } else {
-                    // read page 0x30 (should error if it is a ntag203)
-                    status = ul_read(0x30, data, sizeof(data));
+
+                    // read page 44 / 0x2C
+                    // if error response, its NTAG203 since doesn't have that memory block
+                    status = ul_read(0x2C, data, sizeof(data));
                     if (status <= 1) {
                         tagtype = MFU_TT_NTAG_203;
                     } else {
-                        tagtype = MFU_TT_UNKNOWN;
+
+                        // read page 48 / 0x30
+                        // if response, its FUDAN FM11NT021
+                        status = ul_read(0x30, data, sizeof(data));
+                        if (status == sizeof(data)) {
+                            tagtype = MFU_TT_NTAG_213;
+                        } else  {
+                            tagtype = MFU_TT_UNKNOWN;
+                        }
                     }
                 }
                 DropField();
             }
         }
+
         if (tagtype & MFU_TT_UL) {
             tagtype = ul_fudan_check();
             DropField();
