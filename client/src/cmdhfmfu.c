@@ -164,6 +164,7 @@ static const ul_family_t ul_family[] = {
     {"NTAG 210u", "NT2H1001G0DUx", "\x00\x04\x04\x02\x02\x00\x0B\x03"},
     {"UL EV1 128", "Mikron JSC Russia EV1", "\x00\x34\x21\x01\x01\x00\x0E\x03"},
     {"NTAG 213", "Shanghai Feiju NTAG", "\x00\x53\x04\x02\x01\x00\x0F\x03"},
+    {"NTAG 215", "Shanghai Feiju NTAG", "\x00\x05\x34\x02\x01\x00\x11\x03"},
     {"UL AES", "MF0AES2001DUD", "\x00\x04\x03\x01\x04\x00\x0F\x03"},
 };
 
