@@ -140,10 +140,21 @@ C_NC='\033[0m' # No Color
 C_OK='\xe2\x9c\x94\xef\xb8\x8f'
 C_FAIL='\xe2\x9d\x8c'
 
-# title, file name or file wildcard to check
+# [opencl] title, file name or file wildcard to check
 function CheckFileExist() {
+  if [ "$1" == "opencl" ]; then
+    local OPENCLTEST=true
+    shift
+  else
+    local OPENCLTEST=false
+  fi
 
   printf "%-40s" "$1 "
+
+  if $OPENCLTEST && ! $OPENCLTESTS; then
+    echo -e "[ ${C_YELLOW}SKIPPED${C_NC} ] ( opencl )"
+    return 0
+  fi
 
   if [ -f "$2" ]; then
     echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
@@ -386,7 +397,7 @@ while true; do
       if ! CheckExecute slow "ht2crack5 test"              "cd $HT2CRACK5PATH; ./ht2crack5 $HT2CRACK5UID $HT2CRACK5NRAR" "Key: $HT2CRACK5KEY"; then break; fi
 
       echo -e "\n${C_BLUE}Testing ht2crack5opencl:${C_NC} ${HT2CRACK5OPENCLPATH:=./tools/hitag2crack/crack5opencl/}"
-      if ! CheckFileExist "ht2crack5opencl exists"            "$HT2CRACK5OPENCLPATH/ht2crack5opencl"; then break; fi
+      if ! CheckFileExist opencl "ht2crack5opencl exists"            "$HT2CRACK5OPENCLPATH/ht2crack5opencl"; then break; fi
       HT2CRACK5OPENCLUID=12345678
       HT2CRACK5OPENCLKEY=AABBCCDDEEFF
       # The speed depends on the nRaR so we'll use two pairs known to work fast
