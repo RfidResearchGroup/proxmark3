@@ -48,7 +48,7 @@
 #include "iso7816/iso7816core.h"  // ISODEPSTATE
 
 static int returnToLuaWithError(lua_State *L, const char *fmt, ...) {
-    char buffer[200];
+    char buffer[1024];
     va_list args;
     va_start(args, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, args);
@@ -83,7 +83,7 @@ static int l_fast_push_mode(lua_State *L) {
     // Disable fast mode and send a dummy command to make it effective
     if (enable == false) {
         SendCommandNG(CMD_PING, NULL, 0);
-        if (!WaitForResponseTimeout(CMD_PING, NULL, 1000)) {
+        if (WaitForResponseTimeout(CMD_PING, NULL, 1000) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
             return returnToLuaWithError(L, "command execution time out");
         }
@@ -113,8 +113,9 @@ static int l_SendCommandMIX(lua_State *L) {
 
     // check number of arguments
     int n = lua_gettop(L);
-    if (n != 5)
+    if (n != 5) {
         return returnToLuaWithError(L, "You need to supply five parameters");
+    }
 
     // parse input
     cmd = luaL_checknumber(L, 1);
@@ -1441,7 +1442,7 @@ int set_pm3_libraries(lua_State *L) {
     // put the function into the hash table.
     for (int i = 0; libs[i].name; i++) {
         lua_pushcfunction(L, libs[i].func);
-        lua_setfield(L, -2, libs[i].name);//set the name, pop stack
+        lua_setfield(L, -2, libs[i].name); // set the name, pop stack
     }
     // Name of 'core'
     lua_setfield(L, -2, "core");

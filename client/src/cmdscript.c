@@ -55,55 +55,73 @@ extern PyObject *PyInit__pm3(void);
 static int Pm3PyRun_SimpleFileNoExit(FILE *fp, const char *filename) {
     PyObject *m, *d, *v;
     int set_file_name = 0, ret = -1;
+
     m = PyImport_AddModule("__main__");
-    if (m == NULL)
+    if (m == NULL) {
         return -1;
+    }
+
     Py_INCREF(m);
     d = PyModule_GetDict(m);
+
     if (PyDict_GetItemString(d, "__file__") == NULL) {
+
         PyObject *f;
         f = PyUnicode_DecodeFSDefault(filename);
-        if (f == NULL)
+        if (f == NULL) {
             goto done;
+        }
+
         if (PyDict_SetItemString(d, "__file__", f) < 0) {
             Py_DECREF(f);
             goto done;
         }
+
         if (PyDict_SetItemString(d, "__cached__", Py_None) < 0) {
             Py_DECREF(f);
             goto done;
         }
+
         set_file_name = 1;
         Py_DECREF(f);
     }
+
     v = PyRun_FileExFlags(fp, filename, Py_file_input, d, d, 1, NULL);
     if (v == NULL) {
+
         Py_CLEAR(m);
+
         if (PyErr_ExceptionMatches(PyExc_SystemExit)) {
             // PyErr_Print() exists if SystemExit so we've to handle it ourselves
             PyObject *ty = 0, *er = 0, *tr = 0;
             PyErr_Fetch(&ty, &er, &tr);
+
             long err = PyLong_AsLong(er);
             if (err) {
                 PrintAndLogEx(WARNING, "\nScript terminated by " _YELLOW_("SystemExit %li"), err);
             } else {
                 ret = 0;
             }
+
             Py_DECREF(ty);
             Py_DECREF(er);
             Py_DECREF(er);
             PyErr_Clear();
             goto done;
+
         } else {
             PyErr_Print();
         }
         goto done;
     }
+
     Py_DECREF(v);
     ret = 0;
+
 done:
-    if (set_file_name && PyDict_DelItemString(d, "__file__"))
+    if (set_file_name && PyDict_DelItemString(d, "__file__")) {
         PyErr_Clear();
+    }
     Py_XDECREF(m);
     return ret;
 }
@@ -129,16 +147,20 @@ static int split(char *str, char **arr) {
     int word_cnt = 0;
 
     while (1) {
+
         while (isspace(str[begin_index])) {
             ++begin_index;
         }
+
         if (str[begin_index] == '\0') {
             break;
         }
+
         int end_index = begin_index;
         while (str[end_index] && !isspace(str[end_index])) {
             ++end_index;
         }
+
         int len = end_index - begin_index;
         char *tmp = calloc(len + 1, sizeof(char));
         memcpy(tmp, &str[begin_index], len);
@@ -227,13 +249,16 @@ static int CmdScriptList(const char *Cmd) {
     CLIParserFree(ctx);
     PrintAndLogEx(NORMAL, "\n" _YELLOW_("[ Lua scripts ]"));
     int ret = searchAndList(LUA_SCRIPTS_SUBDIR, ".lua");
-    if (ret != PM3_SUCCESS)
+    if (ret != PM3_SUCCESS) {
         return ret;
+    }
 
     PrintAndLogEx(NORMAL, "\n" _YELLOW_("[ Cmd scripts ]"));
     ret = searchAndList(CMD_SCRIPTS_SUBDIR, ".cmd");
-    if (ret != PM3_SUCCESS)
+    if (ret != PM3_SUCCESS) {
         return ret;
+    }
+
 #ifdef HAVE_PYTHON
     PrintAndLogEx(NORMAL, "\n" _YELLOW_("[ Python scripts ]"));
     return searchAndList(PYTHON_SCRIPTS_SUBDIR, ".py");
@@ -265,19 +290,19 @@ static int CmdScriptRun(const char *Cmd) {
     };
 
     int fnlen = 0;
-    char filename[128] = {0};
+    char filename[FILE_PATH_SIZE] = {0};
     int arg_len = 0;
-    char arguments[256] = {0};
+    char arguments[1025] = {0};
 
-    sscanf(Cmd, "%127s%n %255[^\n\r]%n", filename, &fnlen, arguments, &arg_len);
+    sscanf(Cmd, "%999s%n %1024[^\n\r]%n", filename, &fnlen, arguments, &arg_len);
 
     // hack
     // since we don't want to use "-f"  for script filename,
     // and be able to send in parameters into script meanwhile
     // being able to "-h" here too.
     if ((strlen(filename) == 0) ||
-            (strcmp(filename, "-h") == 0) ||
-            (strcmp(filename, "--help") == 0)) {
+        (strcmp(filename, "-h") == 0) ||
+        (strcmp(filename, "--help") == 0)) {
         ctx->argtable = argtable;
         ctx->argtableLen = arg_getsize(argtable);
         CLIParserPrintHelp(ctx);
@@ -428,7 +453,7 @@ static int CmdScriptRun(const char *Cmd) {
 #endif
 
         //int argc, char ** argv
-        char *argv[128];
+        char *argv[FILE_PATH_SIZE];
         argv[0] = script_path;
         int argc = split(arguments, &argv[1]);
 #if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 10
