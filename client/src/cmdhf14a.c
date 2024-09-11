@@ -2588,7 +2588,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         }
     }
 
-    if (setDeviceDebugLevel(verbose ? DBG_INFO : DBG_NONE, false) != PM3_SUCCESS) {
+    if (setDeviceDebugLevel(verbose ? MAX(dbg_curr, DBG_INFO) : DBG_NONE, false) != PM3_SUCCESS) {
         return PM3_EFAILED;
     }
 
@@ -2610,8 +2610,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
         }
 
-        if (res == NONCE_FAIL && verbose) {
-            PrintAndLogEx(SUCCESS, "Static nonce......... " _RED_("read failed"));
+        if (res == NONCE_FAIL) {
+            PrintAndLogEx(SUCCESS, "nonce................ " _RED_("read failed"));
         }
 
         if (res == NONCE_NORMAL) {
