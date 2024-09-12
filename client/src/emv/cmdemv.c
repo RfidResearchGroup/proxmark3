@@ -630,6 +630,70 @@ static int CmdEMVSelect(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdEMVSmartToNFC(const char *Cmd) {
+    //uint8_t data[APDU_AID_LEN] = {0}; // todo: consider removing/cleaning unused vars
+    //int datalen = 0;
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv smart2nfc",
+                  "Executes ISO14443a payment, TX using ISO7816 interface for authentication",
+                  "emv smart2nfc -t     -> test that the attached card is working (must be VISA)\n");
+
+    void *argtable[] = {
+            arg_param_begin,
+            arg_lit0("t",  "test",    "test that the attached card is working (must be VISA)"),
+            //arg_lit0("k",  "keep",    "Keep field for next command"),
+            //arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
+            //arg_lit0("t",  "tlv",     "TLV decode results"),
+            //arg_lit0("w",  "wired",   "Send data via contact (iso7816) interface. (def: Contactless interface)"),
+            //arg_str1(NULL, NULL, "<hex>", "Applet AID"),
+            arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool testMode = arg_get_lit(ctx, 1);
+    bool show_apdu = true;
+
+    if (testMode) {
+        PrintAndLogEx(SUCCESS, "Test mode enabled.");
+    } else {
+        PrintAndLogEx(SUCCESS, "Test mode disabled.");
+    }
+
+    //bool activateField = arg_get_lit(ctx, 1);
+    //bool leaveSignalON = arg_get_lit(ctx, 2);
+    //bool show_apdu = arg_get_lit(ctx, 3);
+    //bool decodeTLV = arg_get_lit(ctx, 4);
+    //Iso7816CommandChannel channel = CC_CONTACTLESS;
+    //if (arg_get_lit(ctx, 5))
+    //    channel = CC_CONTACT;
+    //PrintChannel(channel);
+    //CLIGetHexWithReturn(ctx, 6, data, &datalen);
+    CLIParserFree(ctx);
+
+    SetAPDULogging(show_apdu);
+
+    /*
+    // exec
+    uint8_t buf[APDU_RES_LEN] = {0};
+    size_t len = 0;
+    uint16_t sw = 0;
+    int res = EMVSelect(channel, activateField, leaveSignalON, data, datalen, buf, sizeof(buf), &len, &sw, NULL);
+
+    if (sw)
+        PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+
+    if (res)
+        return res;
+
+    if (decodeTLV)
+        TLVPrintFromBuffer(buf, len);
+    */
+
+    SetAPDULogging(false);
+    return PM3_SUCCESS;
+}
+
 static int CmdEMVSearch(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -2913,8 +2977,9 @@ static command_t CommandTable[] =  {
     {"scan",        CmdEMVScan,                     IfPm3Iso14443,   "Scan EMV card and save it contents to json file for emulator"},
     {"search",      CmdEMVSearch,                   IfPm3Iso14443,   "Try to select all applets from applets list and print installed applets"},
     {"select",      CmdEMVSelect,                   IfPm3Iso14443,   "Select applet"},
-    /*
     {"-----------", CmdHelp,                        IfPm3Iso14443a,  "---------------------- " _CYAN_("simulation") " ---------------------"},
+    {"smart2nfc",   CmdEMVSmartToNFC,               IfPm3Iso14443,   "Complete transaction as a nfc smart card, using the ISO-7816 interface for auth"},
+    /*
     {"getrng",      CmdEMVGetrng,                   IfPm3Iso14443,   "Get random number from terminal"},
     {"eload",       CmdEmvELoad,                    IfPm3Iso14443,   "Load EMV tag into device"},
     {"dump",        CmdEmvDump,                     IfPm3Iso14443,   "Dump EMV tag values"},
