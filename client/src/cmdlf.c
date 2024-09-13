@@ -241,6 +241,8 @@ static int CmdLFTune(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+#define PAYLOAD_HEADER_SIZE (12 + (3 * LF_CMDREAD_MAX_EXTRA_SYMBOLS))
+
 /* send a LF command before reading */
 int CmdLFCommandRead(const char *Cmd) {
     CLIParserContext *ctx;
@@ -274,7 +276,7 @@ int CmdLFCommandRead(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     uint32_t delay = arg_get_u32_def(ctx, 1, 0);
 
-    char cmd[128] = {0};
+    char cmd[PM3_CMD_DATA_SIZE - PAYLOAD_HEADER_SIZE] = {0};
     int cmd_len = sizeof(cmd) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 2, (uint8_t *)cmd, &cmd_len);
 
@@ -295,7 +297,6 @@ int CmdLFCommandRead(const char *Cmd) {
         return PM3_ENOTTY;
     }
 
-#define PAYLOAD_HEADER_SIZE (12 + (3 * LF_CMDREAD_MAX_EXTRA_SYMBOLS))
     struct p {
         uint32_t delay;
         uint16_t period_0;
@@ -316,7 +317,12 @@ int CmdLFCommandRead(const char *Cmd) {
     memset(payload.symbol_extra, 0, sizeof(payload.symbol_extra));
     memset(payload.period_extra, 0, sizeof(payload.period_extra));
 
-    if (add_crc_ht && (cmd_len <= 120)) {
+    if (cmd_len > sizeof(payload.data) - 8 * add_crc_ht - 1) {
+        PrintAndLogEx(ERR, "cmd too long, max length is %zu", sizeof(cmd) - 1);
+        return PM3_EINVARG;
+    }
+
+    if (add_crc_ht) {
         // Hitag 1, Hitag S, ZX8211
         // width=8 poly=0x1d init=0xff refin=false refout=false xorout=0x00 check=0xb4 residue=0x00 name="CRC-8/HITAG"
         crc_t crc;
