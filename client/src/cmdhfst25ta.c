@@ -166,9 +166,6 @@ static int print_st25ta_signature(uint8_t *uid, uint8_t *signature) {
         {"TruST25 (ST) key 04?",           "04101E188A8B4CDDBC62D5BC3E0E6850F0C2730E744B79765A0E079907FBDB01BC"},
     };
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
-
     for (uint8_t i = 0; i < ARRAYLEN(nxp_mfu_public_keys); i++) {
 
         int dl = 0;
@@ -178,6 +175,11 @@ static int print_st25ta_signature(uint8_t *uid, uint8_t *signature) {
         int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 7, signature, 32, true);
 
         if (res == 0) {
+
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
+
+
             PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_mfu_public_keys[i].desc);
             PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfu_public_keys[i].value);
             PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
@@ -186,6 +188,7 @@ static int print_st25ta_signature(uint8_t *uid, uint8_t *signature) {
             return PM3_SUCCESS;
         }
     }
+
     return PM3_ESOFT;
 }
 
