@@ -1432,12 +1432,7 @@ void SimulateHitag2(bool ledcontrol) {
 
     auth_table_len = 0;
     auth_table_pos = 0;
-//    auth_table = BigBuf_malloc(AUTH_TABLE_LENGTH);
-//    memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
-
-    // Reset the received frame, frame count and timing info
-//    memset(rx, 0x00, sizeof(rx));
-//    memset(tx, 0x00, sizeof(tx));
+//    auth_table = BigBuf_calloc(AUTH_TABLE_LENGTH);
 
     DbpString("Starting Hitag 2 simulation");
 
