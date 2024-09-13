@@ -1299,9 +1299,9 @@ int CmdTraceList(const char *Cmd) {
                   "trace list -t cryptorf -> interpret as " _YELLOW_("CryptoRF") "\n\n"
                   "trace list -t des      -> interpret as " _YELLOW_("MIFARE DESFire") "\n"
                   "trace list -t felica   -> interpret as " _YELLOW_("ISO18092 / FeliCa") "\n"
-                  "trace list -t hitag1   -> interpret as " _YELLOW_("Hitag1") "\n"
-                  "trace list -t hitag2   -> interpret as " _YELLOW_("Hitag2") "\n"
-                  "trace list -t hitags   -> interpret as " _YELLOW_("HitagS") "\n"
+                  "trace list -t hitag1   -> interpret as " _YELLOW_("Hitag 1") "\n"
+                  "trace list -t hitag2   -> interpret as " _YELLOW_("Hitag 2") "\n"
+                  "trace list -t hitags   -> interpret as " _YELLOW_("Hitag S") "\n"
                   "trace list -t iclass   -> interpret as " _YELLOW_("iCLASS") "\n"
                   "trace list -t legic    -> interpret as " _YELLOW_("LEGIC") "\n"
                   "trace list -t lto      -> interpret as " _YELLOW_("LTO-CM") "\n"
@@ -1457,7 +1457,7 @@ int CmdTraceList(const char *Cmd) {
             PrintAndLogEx(INFO, _YELLOW_("ISO7816-4 / Smartcard") " - Timings n/a");
 
         if (protocol == PROTO_HITAG1 || protocol == PROTO_HITAG2 || protocol == PROTO_HITAGS) {
-            PrintAndLogEx(INFO, _YELLOW_("Hitag1 / Hitag2 / HitagS") " - Timings in ETU (8us)");
+            PrintAndLogEx(INFO, _YELLOW_("Hitag 1 / Hitag 2 / Hitag S") " - Timings in ETU (8us)");
         }
 
         if (protocol == FELICA) {
