@@ -15,6 +15,7 @@ Useful docs:
   * [EM4x05](#em4x05)
   * [ID82xx series](#id82xx-series)
     * [ID8265](#id8265)
+    * [ID8211](#id8211)
     * [ID-F8268](#id-f8268)
     * [K8678](#k8678)
   * [H series](#h-series)
@@ -144,7 +145,7 @@ It is also used by HID Global (but with a custom chip) for HIDProx credentials.
 
 ^[Top](#top)
 
-These are custom chinese chips designed to clone EM IDs only. Often times, these are redesigned clones of Hitag chips.
+These are custom Chinese chips mainly used to clone EM IDs. Often times, these are redesigned clones of Hitag chips.
 
 ### ID8265
 
@@ -154,8 +155,14 @@ This is the cheapest and most common ID82xx chip available. It is usually sold a
 
 #### Characteristics
 
-* Chip is likely a Hitag μ (micro)
+* Chip is likely a cut down version of Hitag μ (micro) clone
+* UID `00 00 00 00 00 00`
 * Password protection (4b), usually "00000000"(default) or "9AC4999C"(FURUI)
+* CON0
+  * bit 0-1 -> data rate ’00’... 2kbit/s ’01’... 4kbit/s ’10’... 8kbit/s ’11’... 2kbit/s
+  * bit 2 when set, fixed to MC 2kbit/s
+  * bit 3-6 reversed? all blocks always read without password and write with password
+  * bit 7 -> enable TTF
 * Currently unimplemented in proxmark3 client
 * Other names:
   * ID8210 (CN)
@@ -172,6 +179,52 @@ This is the cheapest and most common ID82xx chip available. It is usually sold a
 
 Check the green line of the plot. It must be a straight line at the end with no big waves.
 
+### Commands
+
+*Try NXP Hitag µ datasheet for sending commands to chip*
+
+```
+# login with pass 00000000
+lf cmdread -d 48 -z 112 -o 176 -e W3000 -e S240 -e E336 -s 1024 -c W0S0010100010100000000000000000000000000000000000000000000000000000000000000000000000000000000 -k
+
+# write EM4100 Data (EMID 0000000000) to block0 and block1
+lf cmdread -d 48 -z 112 -o 176 -e W3000 -e S240 -e E336 -s 1024 -c W0S001000010100000000011111111100000000000000000000000 -k
+lf cmdread -d 48 -z 112 -o 176 -e W3000 -e S240 -e E336 -s 1024 -c W0S001000010101000000000000000000000000000000000000000 -k
+
+# write config block 05800000(A0010000 in LSB first)
+lf cmdread -d 48 -z 112 -o 176 -e W3000 -e S240 -e E336 -s 1024 -c W0S001000010101111111100000101100000000000000000000000
+```
+
+### ID8211
+
+^[Top](#top)
+
+This is an "improved" variant of ID82xx chips, bypassing some magic detection in China.
+
+#### Characteristics
+
+* Chip is likely a cut down version of Hitag S2048 clone, Characteristics looks exacly same with [8268](#id-f8268) when set CON1 AUT bit
+* No password protection
+* page 1 default: `CA 24 00 00`
+* page 41 - 43 unknown data, readonly
+  * page 41 fixed `00 00 20 00`
+  * page 42 examples:
+    * `D4 04 22 CA`
+    * `E3 23 22 CA`
+    * `C7 91 22 CA`
+  * page 43 fixed `68 06 39 E0`
+* page 44 - 63 readonly to  `00 00 00 00`
+
+#### Detect
+
+```
+[usb] pm3 --> lf hitag hts read
+```
+
+### Commands
+
+*Try NXP Hitag S datasheet for sending commands to chip*
+
 ### ID-F8268
 
 ^[Top](#top)
@@ -180,9 +233,22 @@ This is an "improved" variant of ID82xx chips, bypassing some magic detection in
 
 #### Characteristics
 
-* Chip is likely a Hitag 1
-* Unsure whether password protection is used
-* Currently unimplemeneted in proxmark3 client
+* Chip is likely a Hitag S2048 clone, Characteristics looks exacly same with [8211](#id8211) when clear CON1 AUT bit
+* Password protection (4b), usually "BBDD3399"(default) or "AAAAAAAA"
+* page 1 default: `DA A4 00 00`
+* page 2 password
+* page 41 - 43 unknown data, readonly
+  * page 41 fixed `00 00 20 00`
+  * page 42 examples:
+    * `9A EF 9A CB`
+    * `45 04 9B CB`
+    * `0E 31 37 CC`
+    * `DF 02 99 CA`
+    * `0E CE D8 CB`
+    * `90 3C CB CB`
+  * page 43 fixed `68 04 39 E0`
+* page 44 - 63 readonly to  `00 00 00 00`
+* auth by write password to page 64 after SELECT
 * Other names:
   * F8278 (CN)
   * F8310 (CN)
@@ -190,11 +256,12 @@ This is an "improved" variant of ID82xx chips, bypassing some magic detection in
 #### Detect
 
 ```
-[usb] pm3 --> lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00110 -s 3000
-[usb] pm3 --> data plot
+[usb] pm3 --> lf hitag hts read --8
 ```
 
-Check the green line of the plot. It must be a straight line at the end with no big waves.
+### Commands
+
+*Try NXP Hitag S datasheet for sending commands to chip*
 
 ### K8678
 
