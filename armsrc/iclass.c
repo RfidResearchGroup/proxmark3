@@ -207,6 +207,10 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_
             do_iclass_simulation(ICLASS_SIM_MODE_FULL, NULL);
         }
 
+        if (send_reply) {
+            reply_mix(CMD_ACK, CMD_HF_ICLASS_SIMULATE, 0, 0, NULL, 0);
+        }
+
     } else if (sim_type == ICLASS_SIM_MODE_CONFIG_CARD) {
 
         // config card
