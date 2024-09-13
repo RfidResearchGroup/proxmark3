@@ -71,7 +71,7 @@ if [ "$commandGIT" != "" ]; then
     fi
 else
     fullgitinfo="${fullgitinfo}/master/release (no_git)"
-    dl_time=$(stat --printf="%y" ../README.md)
+    dl_time=$(stat --printf="%y" README.md)
     # POSIX way...
     ctime=${dl_time%.*}
 fi
