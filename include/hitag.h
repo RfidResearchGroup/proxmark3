@@ -48,6 +48,8 @@
 typedef enum {
     RHTSF_PLAIN,
     WHTSF_PLAIN,
+    RHTSF_82xx,
+    WHTSF_82xx,
     RHTSF_CHALLENGE,
     WHTSF_CHALLENGE,
     RHTSF_KEY,

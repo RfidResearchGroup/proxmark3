@@ -37,7 +37,19 @@
 #define CRC_PRESET 0xFF
 #define CRC_POLYNOM 0x1D
 
-static struct hitagS_tag tag;
+static struct hitagS_tag tag = {
+    .pages =
+        {
+                                               // Plain mode:               | Authentication mode:
+            [0] = {0x88, 0xcd, 0x6d, 0xf3},    // UID                       | UID
+            [1] = {0xca, 0x24, 0x00, 0x00},    // CON0 CON1 CON2 Reserved   | CON0 CON1 CON2 PWDH0
+            [2] = {0xaa, 0xaa, 0xaa, 0xaa},    // Data                      | PWDL0 PWDL1 KEYH0 KEYH1
+            [3] = {0x55, 0x55, 0x55, 0x55},    // Data                      | KEYL0 KEYL1 KEYL2 KEYL3
+            [4] = {0xff, 0x80, 0x00, 0x00},    // Data
+            [5] = {0x00, 0x00, 0x00, 0x00},    // Data
+            // up to index 63 for HITAG S2048 public data
+        },
+};
 static uint8_t page_to_be_written = 0;
 static int block_data_left = 0;
 
@@ -1360,6 +1372,40 @@ static int selectHitagS(const lf_hitag_data_t *packet, uint8_t *tx, size_t sizeo
                 tx[i] = ((NrAr >> (56 - (i * 8))) & 0xFF);
             }
 
+        } else if (packet->cmd == RHTSF_82xx || packet->cmd == WHTSF_82xx) {
+            // 8268/8310 Authentication by writing password to block 64
+
+            //send write page request
+            txlen = 0;
+            cmd = HITAGS_WRITE_PAGE;
+            txlen = concatbits(tx, txlen, &cmd, 0, 4);
+
+            uint8_t addr = 64;
+            txlen = concatbits(tx, txlen, &addr, 0, 8);
+
+            crc = CRC8Hitag1Bits(tx, txlen);
+            txlen = concatbits(tx, txlen, &crc, 0, 8);
+
+            sendReceiveHitagS(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
+
+            if ((rxlen != 2) || (rx[0] >> (8 - 2) != 0x01)) {
+                Dbprintf("no write access on page " _YELLOW_("64") ". not 82xx?");
+                return -1;
+            }
+
+            txlen = 0;
+            txlen = concatbits(tx, txlen, packet->pwd, 0, 32);
+            crc = CRC8Hitag1Bits(tx, txlen);
+            txlen = concatbits(tx, txlen, &crc, 0, 8);
+
+            sendReceiveHitagS(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
+
+            if ((rxlen != 2) || (rx[0] >> (8 - 2) != 0x01)) {
+                Dbprintf("write to page " _YELLOW_("64") " failed! wrong password?");
+                return -1;
+            }
+
+            return 0;
         } else if (packet->cmd == RHTSF_PLAIN || packet->cmd == WHTSF_PLAIN) {
             Dbprintf("Error, " _YELLOW_("AUT=1") " This tag is configured in Authentication Mode");
             return -1;
@@ -1413,19 +1459,15 @@ static int selectHitagS(const lf_hitag_data_t *packet, uint8_t *tx, size_t sizeo
  * Reads every page of a hitag S transpoder.
  */
 void ReadHitagS(const lf_hitag_data_t *payload, bool ledcontrol) {
-
+    int status = PM3_SUCCESS;
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
 
     uint8_t tx[HITAG_FRAME_LEN];
 
     if (selectHitagS(payload, tx, ARRAYLEN(tx), rx, ARRAYLEN(rx), HITAG_T_WAIT_FIRST, ledcontrol) == -1) {
-
-        hitagS_stop_clock();
-        set_tracing(false);
-        lf_finalize(ledcontrol);
-        reply_ng(CMD_LF_HITAGS_READ, PM3_ERFTRANS, NULL, 0);
-        return;
+        status = PM3_ERFTRANS;
+        goto read_end;
     }
 
     int pageNum = 0;
@@ -1445,9 +1487,10 @@ void ReadHitagS(const lf_hitag_data_t *payload, bool ledcontrol) {
 
         sendReceiveHitagS(tx, txlen, rx, ARRAYLEN(rx), &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
-        if (rxlen == 0) {
+        if (rxlen != 40) {
             Dbprintf("Read page failed!");
-            break;
+            status = PM3_ERFTRANS;
+            goto read_end;
         }
 
         //save received data - 40 bits
@@ -1499,10 +1542,11 @@ void ReadHitagS(const lf_hitag_data_t *payload, bool ledcontrol) {
         }
     }
 
+read_end:
     hitagS_stop_clock();
     set_tracing(false);
     lf_finalize(ledcontrol);
-    reply_ng(CMD_LF_HITAGS_READ, PM3_SUCCESS, (uint8_t *)tag.pages, sizeof(tag.pages));
+    reply_ng(CMD_LF_HITAGS_READ, status, (uint8_t *)tag.pages, sizeof(tag.pages));
 }
 
 /*
