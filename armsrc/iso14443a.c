@@ -35,6 +35,7 @@
 #include "crc16.h"
 #include "protocols.h"
 #include "generator.h"
+#include "desfire_crypto.h"  // UL-C authentication helpers
 
 #define MAX_ISO14A_TIMEOUT 524288
 

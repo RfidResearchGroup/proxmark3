@@ -343,10 +343,11 @@ void MifareDES_Auth1(uint8_t *datain) {
 
     uint8_t subcommand = MFDES_AUTHENTICATE;
 
-    if (payload->mode == MFDES_AUTH_AES)
+    if (payload->mode == MFDES_AUTH_AES) {
         subcommand = MFDES_AUTHENTICATE_AES;
-    else if (payload->mode == MFDES_AUTH_ISO)
+    } else if (payload->mode == MFDES_AUTH_ISO) {
         subcommand = MFDES_AUTHENTICATE_ISO;
+    }
 
     if (payload->mode != MFDES_AUTH_PICC) {
         // Let's send our auth command
@@ -364,7 +365,7 @@ void MifareDES_Auth1(uint8_t *datain) {
         len = DesfireAPDU(cmd, 2, resp);
     }
 
-    if (!len) {
+    if (len == 0) {
         if (g_dbglevel >= DBG_ERROR) {
             DbpString("Authentication failed. Card timeout.");
         }
@@ -408,6 +409,7 @@ void MifareDES_Auth1(uint8_t *datain) {
 
     // Part 3
     if (payload->algo == MFDES_ALGO_AES) {
+
         if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
             if (g_dbglevel >= DBG_EXTENDED) {
                 DbpString("mbedtls_aes_setkey_dec failed");
@@ -416,12 +418,14 @@ void MifareDES_Auth1(uint8_t *datain) {
             return;
         }
         mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, 16, IV, encRndB, RndB);
-    } else if (payload->algo == MFDES_ALGO_DES)
+
+    } else if (payload->algo == MFDES_ALGO_DES) {
         des_decrypt(RndB, encRndB, key->data);
-    else if (payload->algo == MFDES_ALGO_3DES)
+    } else if (payload->algo == MFDES_ALGO_3DES) {
         tdes_nxp_receive(encRndB, RndB, rndlen, key->data, IV, 2);
-    else if (payload->algo == MFDES_ALGO_3K3DES)
+    } else if (payload->algo == MFDES_ALGO_3K3DES) {
         tdes_nxp_receive(encRndB, RndB, rndlen, key->data, IV, 3);
+    }
 
     // - Rotate RndB by 8 bits
     memcpy(rotRndB, RndB, rndlen);
@@ -431,6 +435,7 @@ void MifareDES_Auth1(uint8_t *datain) {
 
     // - Encrypt our response
     if (payload->mode == MFDES_AUTH_DES || payload->mode == MFDES_AUTH_PICC) {
+
         des_decrypt(encRndA, RndA, key->data);
         memcpy(both, encRndA, rndlen);
 
@@ -440,7 +445,9 @@ void MifareDES_Auth1(uint8_t *datain) {
 
         des_decrypt(encRndB, rotRndB, key->data);
         memcpy(both + 8, encRndB, rndlen);
+
     } else if (payload->mode == MFDES_AUTH_ISO) {
+
         if (payload->algo == MFDES_ALGO_3DES) {
             uint8_t tmp[16] = {0x00};
             memcpy(tmp, RndA, rndlen);
@@ -452,11 +459,15 @@ void MifareDES_Auth1(uint8_t *datain) {
             memcpy(tmp + rndlen, rotRndB, rndlen);
             tdes_nxp_send(tmp, both, 32, key->data, IV, 3);
         }
+
     } else if (payload->mode == MFDES_AUTH_AES) {
+
         uint8_t tmp[32] = {0x00};
         memcpy(tmp, RndA, rndlen);
         memcpy(tmp + 16, rotRndB, rndlen);
+
         if (payload->algo == MFDES_ALGO_AES) {
+
             if (mbedtls_aes_setkey_enc(&ctx, key->data, 128) != 0) {
                 if (g_dbglevel >= DBG_EXTENDED) {
                     DbpString("mbedtls_aes_setkey_enc failed");
@@ -472,6 +483,7 @@ void MifareDES_Auth1(uint8_t *datain) {
     if (payload->algo == MFDES_ALGO_AES || payload->algo == MFDES_ALGO_3K3DES) {
         bothlen = 32;
     }
+
     if (payload->mode != MFDES_AUTH_PICC) {
         cmd[0] = 0x90;
         cmd[1] = MFDES_ADDITIONAL_FRAME;
@@ -496,25 +508,30 @@ void MifareDES_Auth1(uint8_t *datain) {
     }
 
     if (payload->mode != MFDES_AUTH_PICC) {
+
         if ((resp[len - 4] != 0x91) || (resp[len - 3] != 0x00)) {
             DbpString("Authentication failed.");
             OnErrorNG(CMD_HF_DESFIRE_AUTH1, 6);
             return;
         }
+
     } else {
+
         if (resp[1] != 0x00) {
             DbpString("Authentication failed.");
             OnErrorNG(CMD_HF_DESFIRE_AUTH1, 6);
             return;
         }
+
     }
 
     // Part 4
 
     Desfire_session_key_new(RndA, RndB, key, sessionkey);
 
-    if (g_dbglevel >= DBG_EXTENDED)
+    if (g_dbglevel >= DBG_EXTENDED) {
         print_result("SESSIONKEY : ", sessionkey->data, payload->keylen);
+    }
 
     if (payload->mode != MFDES_AUTH_PICC) {
         memcpy(encRndA, resp + 1, rndlen);
@@ -523,13 +540,17 @@ void MifareDES_Auth1(uint8_t *datain) {
     }
 
     if (payload->mode == MFDES_AUTH_DES || payload->mode == MFDES_AUTH_PICC) {
-        if (payload->algo == MFDES_ALGO_DES)
+
+        if (payload->algo == MFDES_ALGO_DES) {
             des_decrypt(encRndA, encRndA, key->data);
-        else if (payload->algo == MFDES_ALGO_3DES)
+        } else if (payload->algo == MFDES_ALGO_3DES) {
             tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 2);
-        else if (payload->algo == MFDES_ALGO_3K3DES)
+        } else if (payload->algo == MFDES_ALGO_3K3DES) {
             tdes_nxp_receive(encRndA, encRndA, rndlen, key->data, IV, 3);
+        }
+
     } else if (payload->mode == MFDES_AUTH_AES) {
+
         if (mbedtls_aes_setkey_dec(&ctx, key->data, 128) != 0) {
             if (g_dbglevel >= DBG_EXTENDED) {
                 DbpString("mbedtls_aes_setkey_dec failed");
@@ -546,6 +567,7 @@ void MifareDES_Auth1(uint8_t *datain) {
         print_result("RndB: ", RndB, rndlen);
         print_result("encRndA : ", encRndA, rndlen);
     }
+
     for (int x = 0; x < rndlen; x++) {
         if (RndA[x] != encRndA[x]) {
             DbpString("Authentication failed. Cannot verify Session Key.");
@@ -645,10 +667,6 @@ void MifareDES_Auth1(uint8_t *datain) {
     */
 
 
-    //OnSuccess();
-    //reply_old(CMD_ACK, 1, 0, 0, skey->data, payload->keylen);
-    //reply_mix(CMD_ACK, 1, len, 0, resp, len);
-
     LED_B_ON();
     authres_t rpayload;
     rpayload.sessionkeylen = payload->keylen;
@@ -671,8 +689,9 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout) {
 
     wrappedLen = CreateAPDU(cmd, cmd_len, wCmd);
 
-    if (g_dbglevel >= DBG_EXTENDED)
+    if (g_dbglevel >= DBG_EXTENDED) {
         print_result("WCMD <--: ", wCmd, wrappedLen);
+    }
 
     ReaderTransmit(wCmd, wrappedLen, NULL);
 
