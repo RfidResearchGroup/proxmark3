@@ -126,7 +126,7 @@ static bool get_14b_UID(iso14b_card_select_t *card) {
     } // retry
 
     if (retry <= 0) {
-        PrintAndLogEx(FAILED, "command execution timeout");
+        PrintAndLogEx(FAILED, "command execution time out");
     }
 
     return false;
@@ -145,7 +145,7 @@ static int infoHFCryptoRF(bool verbose) {
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_ISO14443B_COMMAND, &resp, TIMEOUT) == false) {
         if (verbose) {
-            PrintAndLogEx(WARNING, "command execution timeout");
+            PrintAndLogEx(WARNING, "command execution time out");
         }
         switch_off_field_cryptorf();
         return false;

@@ -7555,9 +7555,9 @@ static int CmdHF14AMfWipe(const char *Cmd) {
     char *fptr;
     if (keyfnlen == 0) {
         fptr = GenerateFilename("hf-mf-", "-key.bin");
-        if (fptr == NULL)
+        if (fptr == NULL) {
             return PM3_ESOFT;
-
+        }
         strncpy(keyFilename, fptr, sizeof(keyFilename) - 1);
         free(fptr);
     }
@@ -7585,7 +7585,7 @@ static int CmdHF14AMfWipe(const char *Cmd) {
         }
         case (MIFARE_1K_EV1_MAX_KEY_SIZE): {
             PrintAndLogEx(INFO, "Loaded keys matching MIFARE Classic 1K Ev1");
-            memcpy(keyA, keys, MIFARE_1K_EV1_MAXSECTOR * MIFARE_KEY_SIZE);
+            memcpy(keyA, keys, (MIFARE_1K_EV1_MAXSECTOR * MIFARE_KEY_SIZE));
             memcpy(keyB, keys + (MIFARE_1K_EV1_MAXSECTOR * MIFARE_KEY_SIZE), (MIFARE_1K_EV1_MAXSECTOR * MIFARE_KEY_SIZE));
             num_sectors = NumOfSectors('1');
             memcpy(mf, "\x11\x22\x33\x44\x44\x08\x04\x00\x62\x63\x64\x65\x66\x67\x68\x69", MFBLOCK_SIZE);
@@ -7863,14 +7863,27 @@ static int parse_gtu_cfg(uint8_t *d, size_t n) {
             break;
     }
 
-    PrintAndLogEx(INFO, "..............%02X unknown", d[7]);
+    uint8_t atslen = d[7];
+    if (atslen == 0) {
+        PrintAndLogEx(INFO, "..............%02X ATS length %u bytes ( %s )", _YELLOW_("zero"), atslen);
+    } else if (atslen <= 16) {
+        PrintAndLogEx(INFO, "..............%02X ATS length %u bytes ( %s )", _GREEN_("ok"), atslen);
+    } else {
+        PrintAndLogEx(INFO, "..............%02X ATS length %u bytes ( %s )", _RED_("fail"), atslen);
+        atslen = 0;
+    }
+
     PrintAndLogEx(INFO, "");
 
     // ATS seems to have 16 bytes reserved
     PrintAndLogEx(INFO, _CYAN_("Config 2 - ATS"));
     PrintAndLogEx(INFO, "%s", sprint_hex_inrow(d + 8, 16));
+    if (atslen <= 16) {
     PrintAndLogEx(INFO, "%s.............. ATS ( %d bytes )", sprint_hex_inrow(&d[8], d[7]), d[7]);
     PrintAndLogEx(INFO, "..................%s Reserved for ATS", sprint_hex_inrow(d + 8 + d[7], 16 - d[7]));
+    } else {
+        PrintAndLogEx(INFO, "%s.............. %s Reserved for ATS", sprint_hex_inrow(&d[8], 16), 16);
+    }
 
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, _CYAN_("Config 3 - Limits"));
