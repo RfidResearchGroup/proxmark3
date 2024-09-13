@@ -114,10 +114,10 @@ cryptorf/check: FORCE
 	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
 mfc_card_only/check: FORCE
 	$(info [*] CHECK $(patsubst %/check,%,$@))
-	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
+	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) nonce2key staticnested $(patsubst %/check,%,$@)
 mfc_card_reader/check: FORCE
 	$(info [*] CHECK $(patsubst %/check,%,$@))
-	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
+	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) mfkey mf_nonce_brute $(patsubst %/check,%,$@)
 mfd_aes_brute/check: FORCE
 	$(info [*] CHECK $(patsubst %/check,%,$@))
 	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
