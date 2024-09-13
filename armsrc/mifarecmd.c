@@ -1605,7 +1605,7 @@ static uint8_t chkKey(struct chk_t *c) {
         // mifare_classic_halt(c->pcs);
         break;
     }
-    if (!selected) {
+    if (selected == false) {
         Dbprintf("chkKey: Failed at fast selecting the card!");
     }
     return res;
@@ -2396,11 +2396,16 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
 
         // Auth
         if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(s), keytype, ui64Key, AUTH_FIRST)) {
+
+            ui64Key = emlGetKey(s, MF_KEY_B);
+
+            if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(s), MF_KEY_B, ui64Key, AUTH_FIRST)) {
             retval = PM3_EPARTIAL;
             if (g_dbglevel >= DBG_ERROR) {
                 Dbprintf("Sector %2d - Auth error", s);
             }
             continue;
+        }
         }
 
 

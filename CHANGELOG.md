@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed to also try the MFC_B key when extracting memory (@iceman1001)
 - Fix parallel `make -j check`  Thanks @elboulangero  (@iceman1001)
 - Added support for 8268/8310 (@douniwan5788)
 - Changed scripting string params to accept 1024 chars, Thanks @evildaemond! (@iceman1001)
