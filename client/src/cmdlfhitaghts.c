@@ -43,8 +43,11 @@ static int CmdLFHitagSRead(const char *Cmd) {
                   "Read Hitag S memory.\n\n"
                   "  Crypto mode: \n"
                   "    - key format ISK high + ISK low\n"
-                  "    - default key 4F4E4D494B52 (ONMIKR)\n",
-                  "  lf hitag hts read                         -> Hitag S, plain mode\n"
+                  "    - default key 4F4E4D494B52 (ONMIKR)\n\n"
+                  "  8268/8310 password mode: \n"
+                  "    - default password BBDD3399\n",
+                  "  lf hitag hts read                         -> Hitag S/8211, plain mode\n"
+                  "  lf hitag hts read --8 -k BBDD3399         -> 8268/8310, password mode\n"
                   "  lf hitag hts read --nrar 0102030411223344 -> Hitag S, challenge mode\n"
                   "  lf hitag hts read --crypto                -> Hitag S, crypto mode, def key\n"
                   "  lf hitag hts read -k 4F4E4D494B52         -> Hitag S, crypto mode\n\n"
@@ -53,8 +56,9 @@ static int CmdLFHitagSRead(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
+        arg_lit0(NULL, "8", "8268/8310 mode"),
         arg_lit0(NULL, "crypto", "crypto mode"),
-        arg_str0("k", "key", "<hex>", "key, 4 or 6 hex bytes"),
+        arg_str0("k", "key", "<hex>", "pwd or key, 4 or 6 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -71,12 +75,13 @@ static int CmdLFHitagSRead(const char *Cmd) {
     }
 
     bool use_nrar = nrar_len > 0;
-    bool use_crypto = arg_get_lit(ctx, 2);
+    bool use_82xx = arg_get_lit(ctx, 2);
+    bool use_crypto = arg_get_lit(ctx, 3);
 
     uint8_t key[6];
     int key_len = 0;
 
-    res = CLIParamHexToBuf(arg_get_str(ctx, 3), key, sizeof(key), &key_len);
+    res = CLIParamHexToBuf(arg_get_str(ctx, 4), key, sizeof(key), &key_len);
     if (res != 0) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
@@ -84,8 +89,8 @@ static int CmdLFHitagSRead(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    if (key_len && key_len != HITAGS_CRYPTOKEY_SIZE) {
-        PrintAndLogEx(WARNING, "Wrong KEY len expected %d, got %d", HITAGS_CRYPTOKEY_SIZE, key_len);
+    if (key_len != 0 && key_len != 4 && key_len != 6) {
+        PrintAndLogEx(WARNING, "Wrong KEY len expected 0, 4 or 6, got %d", key_len);
         return PM3_EINVARG;
     }
 
@@ -94,13 +99,24 @@ static int CmdLFHitagSRead(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (!key_len && use_crypto) {
+    // complete options
+    if (key_len == 4) {
+        use_82xx = true;
+    }
+    if (key_len == 6) {
+        use_crypto = true;
+    }
+    if ((key_len == 0) && use_82xx) {
+        memcpy(key, (uint8_t[]){0xBB, 0xDD, 0x33, 0x99}, 4);
+        key_len = 4;
+    }
+    if ((key_len == 0) && use_crypto) {
         memcpy(key, "ONMIKR", 6);
         key_len = 6;
     }
 
     // check coherence
-    uint8_t auth_methods = (use_plain + use_nrar + use_crypto);
+    uint8_t auth_methods = (use_plain + use_nrar + use_82xx + use_crypto);
     if (auth_methods > 1) {
         PrintAndLogEx(WARNING, "Specify only one authentication mode");
         return PM3_EINVARG;
@@ -116,6 +132,11 @@ static int CmdLFHitagSRead(const char *Cmd) {
     if (use_nrar) {
         packet.cmd = RHTSF_CHALLENGE;
         memcpy(packet.NrAr, nrar, sizeof(packet.NrAr));
+    }
+
+    if (use_82xx) {
+        packet.cmd = RHTSF_82xx;
+        memcpy(packet.pwd, key, sizeof(packet.pwd));
     }
 
     if (use_crypto) {
@@ -168,8 +189,11 @@ static int CmdLFHitagSWrite(const char *Cmd) {
                   "Write a page in Hitag S memory.\n"
                   "  Crypto mode: \n"
                   "    - key format ISK high + ISK low\n"
-                  "    - default key 4F4E4D494B52 (ONMIKR)\n",
-                  "  lf hitag hts write -p 6 -d 01020304                         -> Hitag S, plain mode\n"
+                  "    - default key 4F4E4D494B52 (ONMIKR)\n\n"
+                  "  8268/8310 password mode: \n"
+                  "    - default password BBDD3399\n",
+                  "  lf hitag hts write -p 6 -d 01020304                         -> Hitag S/8211, plain mode\n"
+                  "  lf hitag hts write -p 6 -d 01020304 --8 -k BBDD3399         -> 8268/8310, password mode\n"
                   "  lf hitag hts write -p 6 -d 01020304 --nrar 0102030411223344 -> Hitag S, challenge mode\n"
                   "  lf hitag hts write -p 6 -d 01020304 --crypto                -> Hitag S, crypto mode, default key\n"
                   "  lf hitag hts write -p 6 -d 01020304 -k 4F4E4D494B52         -> Hitag S, crypto mode\n\n"
@@ -178,8 +202,9 @@ static int CmdLFHitagSWrite(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
+        arg_lit0(NULL, "8", "8268/8310 mode"),
         arg_lit0(NULL, "crypto", "crypto mode"),
-        arg_str0("k", "key", "<hex>", "key, 6 hex bytes"),
+        arg_str0("k", "key", "<hex>", "pwd or key, 4 or 6 hex bytes"),
         arg_int1("p", "page", "<dec>", "page address to write to"),
         arg_str1("d", "data", "<hex>", "data, 4 hex bytes"),
         arg_param_end
@@ -198,23 +223,24 @@ static int CmdLFHitagSWrite(const char *Cmd) {
     }
 
     bool use_nrar = nrar_len > 0;
-    bool use_crypto = arg_get_lit(ctx, 2);
+    bool use_82xx = arg_get_lit(ctx, 2);
+    bool use_crypto = arg_get_lit(ctx, 3);
 
     uint8_t key[6];
     int key_len = 0;
 
-    res = CLIParamHexToBuf(arg_get_str(ctx, 3), key, sizeof(key), &key_len);
+    res = CLIParamHexToBuf(arg_get_str(ctx, 4), key, sizeof(key), &key_len);
     if (res != 0) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    int page = arg_get_int_def(ctx, 4, 0);
+    int page = arg_get_int_def(ctx, 5, 0);
 
     uint8_t data[4];
     int data_len = 0;
 
-    res = CLIParamHexToBuf(arg_get_str(ctx, 5), data, sizeof(data), &data_len);
+    res = CLIParamHexToBuf(arg_get_str(ctx, 6), data, sizeof(data), &data_len);
     if (res != 0) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
@@ -222,8 +248,8 @@ static int CmdLFHitagSWrite(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    if (key_len && key_len != HITAGS_CRYPTOKEY_SIZE) {
-        PrintAndLogEx(WARNING, "Wrong KEY len expected %d, got %d", HITAGS_CRYPTOKEY_SIZE, key_len);
+    if (key_len != 0 && key_len != 4 && key_len != 6) {
+        PrintAndLogEx(WARNING, "Wrong KEY len expected 0, 4 or 6, got %d", key_len);
         return PM3_EINVARG;
     }
 
@@ -232,13 +258,24 @@ static int CmdLFHitagSWrite(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (!key_len && use_crypto) {
+    // complete options
+    if (key_len == 4) {
+        use_82xx = true;
+    }
+    if (key_len == 6) {
+        use_crypto = true;
+    }
+    if ((key_len == 0) && use_82xx) {
+        memcpy(key, (uint8_t[]){0xBB, 0xDD, 0x33, 0x99}, 4);
+        key_len = 4;
+    }
+    if ((key_len == 0) && use_crypto) {
         memcpy(key, "ONMIKR", 6);
         key_len = 6;
     }
 
     // check coherence
-    uint8_t auth_methods = (use_plain + use_nrar + use_crypto);
+    uint8_t auth_methods = (use_plain + use_nrar + use_82xx + use_crypto);
     if (auth_methods > 1) {
         PrintAndLogEx(WARNING, "Specify only one authentication mode");
         return PM3_EINVARG;
@@ -255,6 +292,11 @@ static int CmdLFHitagSWrite(const char *Cmd) {
     if (use_nrar) {
         packet.cmd = WHTSF_CHALLENGE;
         memcpy(packet.NrAr, nrar, sizeof(packet.NrAr));
+    }
+
+    if (use_82xx) {
+        packet.cmd = WHTSF_82xx;
+        memcpy(packet.pwd, key, sizeof(packet.pwd));
     }
 
     if (use_crypto) {
@@ -292,13 +334,10 @@ static int CmdLFHitagSList(const char *Cmd) {
 static command_t CommandTable[] = {
     {"help",        CmdHelp,          AlwaysAvailable, "This help"},
     {"list",        CmdLFHitagSList,  AlwaysAvailable, "List Hitag S trace history"},
-    {
-        "-----------", CmdHelp,          IfPm3Hitag,      "----------------------- " _CYAN_(
-            "General") " ------------------------"
-    },
+    {"-----------", CmdHelp,          IfPm3Hitag,      "----------------------- " _CYAN_("General") " ------------------------"},
     {"read",        CmdLFHitagSRead,  IfPm3Hitag,      "Read Hitag S memory"},
     {"write",       CmdLFHitagSWrite, IfPm3Hitag,      "Write Hitag S page"},
-    {NULL, NULL,                      0, NULL}
+    {NULL,          NULL,             0,               NULL}
 };
 
 static int CmdHelp(const char *Cmd) {
