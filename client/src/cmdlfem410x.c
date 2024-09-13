@@ -676,11 +676,11 @@ static size_t concatbits(uint8_t *dst, size_t dstskip, const uint8_t *src, size_
 static int CmdEM410xClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 410x clone",
-                  "clone a EM410x ID to a T55x7, Q5/T5555, EM4305/4469 or Hitag S/8211 tag.",
+                  "clone a EM410x ID to a T55x7, Q5/T5555, EM4305/4469 or Hitag S/8211/8268/8310 tag.",
                   "lf em 410x clone --id 0F0368568B        -> encode for T55x7 tag\n"
                   "lf em 410x clone --id 0F0368568B --q5   -> encode for Q5/T5555 tag\n"
                   "lf em 410x clone --id 0F0368568B --em   -> encode for EM4305/4469\n"
-                  "lf em 410x clone --id 0F0368568B --hs   -> encode for Hitag S/8211"
+                  "lf em 410x clone --id 0F0368568B --hts   -> encode for Hitag S/8211/8268/8310"
                  );
 
     void *argtable[] = {
@@ -689,7 +689,7 @@ static int CmdEM410xClone(const char *Cmd) {
         arg_str1(NULL, "id", "<hex>", "EM Tag ID number (5 hex bytes)"),
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
-        arg_lit0(NULL, "hs", "optional - specify writing to Hitag S/8211 tag"),
+        arg_lit0(NULL, "hts", "optional - specify writing to Hitag S/8211/8268/8310 tag"),
         arg_lit0(NULL, "electra", "optional - add Electra blocks to tag"),
         arg_param_end
     };
@@ -702,16 +702,16 @@ static int CmdEM410xClone(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 2, uid, &uid_len);
     bool q5 = arg_get_lit(ctx, 3);
     bool em = arg_get_lit(ctx, 4);
-    bool hs = arg_get_lit(ctx, 5);
+    bool hts = arg_get_lit(ctx, 5);
     bool add_electra = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
-    if (q5 + em + hs > 1) {
+    if (q5 + em + hts > 1) {
         PrintAndLogEx(FAILED, "Only specify one tag Type");
         return PM3_EINVARG;
     }
 
-    if (hs) {
+    if (hts) {
         if (IfPm3Hitag() == false) {
             PrintAndLogEx(FAILED, "Device not compiled to support Hitag");
             return PM3_EINVARG;
@@ -730,7 +730,7 @@ static int CmdEM410xClone(const char *Cmd) {
 
     uint64_t id = bytes_to_num(uid, uid_len);
     PrintAndLogEx(SUCCESS, "Preparing to clone EM4102 to " _YELLOW_("%s") " tag with EM Tag ID " _GREEN_("%010" PRIX64) " (RF/%d)",
-                  q5 ? "Q5/T5555" : (em ? "EM4305/4469" : (hs ? "Hitag S/8211" : "T55x7")), id, clk);
+                  q5 ? "Q5/T5555" : (em ? "EM4305/4469" : (hts ? "Hitag S/82xx" : "T55x7")), id, clk);
 
     uint8_t data[HITAG_BLOCK_SIZE * 2] = {0xFF, 0x80}; // EM410X_HEADER 9 bits of one
     uint32_t databits = 9;
@@ -754,7 +754,7 @@ static int CmdEM410xClone(const char *Cmd) {
     clearCommandBuffer();
     PacketResponseNG resp;
 
-    if (hs) {
+    if (hts) {
         lf_hitag_data_t packet;
         memset(&packet, 0, sizeof(packet));
 
@@ -791,7 +791,8 @@ static int CmdEM410xClone(const char *Cmd) {
                     break;
             }
 
-            packet.cmd = WHTSF_PLAIN;
+            packet.cmd = WHTSF_82xx;
+            memcpy(packet.pwd, (uint8_t[]){0xBB, 0xDD, 0x33, 0x99}, 4);
             SendCommandNG(CMD_LF_HITAGS_WRITE, (uint8_t *)&packet, sizeof(packet));
             if (WaitForResponseTimeout(CMD_LF_HITAGS_WRITE, &resp, 4000) == false) {
                 PrintAndLogEx(WARNING, "timeout while waiting for reply.");
