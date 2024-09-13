@@ -434,7 +434,7 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
     if (((g_printAndLog & PRINTANDLOG_LOG) && logging && logfile) ||
             (g_printAndLog & PRINTANDLOG_GRAB)) {
         memcpy_filter_emoji(buffer3, buffer2, sizeof(buffer2), EMO_ALTTEXT);
-        if (!filter_ansi) {
+        if (filter_ansi == false) {
             memcpy_filter_ansi(buffer, buffer3, sizeof(buffer3), true);
         }
     }
