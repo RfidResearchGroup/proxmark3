@@ -24,8 +24,9 @@
 #include "common.h"
 #include "hitag.h"
 
-void SimulateHitagSTag(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol);
-void ReadHitagS(const lf_hitag_data_t *payload, bool ledcontrol);
-void WritePageHitagS(const lf_hitag_data_t *payload, bool ledcontrol);
-void Hitag_check_challenges(const uint8_t *data, uint32_t datalen, bool ledcontrol);
+void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol);
+void hts_read(const lf_hitag_data_t *payload, bool ledcontrol);
+void hts_write_page(const lf_hitag_data_t *payload, bool ledcontrol);
+void hts_check_challenges(const uint8_t *data, uint32_t datalen, bool ledcontrol);
+int hts_read_uid(uint32_t *uid, bool ledcontrol, bool send_answer);
 #endif

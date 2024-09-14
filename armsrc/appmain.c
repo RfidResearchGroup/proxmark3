@@ -1165,21 +1165,25 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_HITAGS_SIMULATE: { // Simulate Hitag s tag, args = memory content
-            SimulateHitagSTag((bool)packet->oldarg[0], packet->data.asBytes, true);
+            hts_simulate((bool)packet->oldarg[0], packet->data.asBytes, true);
             break;
         }
         case CMD_LF_HITAGS_TEST_TRACES: { // Tests every challenge within the given file
-            Hitag_check_challenges(packet->data.asBytes, packet->length, true);
+            hts_check_challenges(packet->data.asBytes, packet->length, true);
             break;
         }
         case CMD_LF_HITAGS_READ: { // Reader for only Hitag S tags, args = key or challenge
             lf_hitag_data_t *payload = (lf_hitag_data_t *) packet->data.asBytes;
-            ReadHitagS(payload, true);
+            hts_read(payload, true);
             break;
         }
         case CMD_LF_HITAGS_WRITE: {
             lf_hitag_data_t *payload = (lf_hitag_data_t *) packet->data.asBytes;
-            WritePageHitagS(payload, true);
+            hts_write_page(payload, true);
+            break;
+        }
+        case CMD_LF_HITAGS_UID: {
+            hts_read_uid(NULL, false, true);
             break;
         }
         case CMD_LF_HITAG2_WRITE: {

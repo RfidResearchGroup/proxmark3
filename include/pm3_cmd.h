@@ -595,6 +595,7 @@ typedef struct {
 #define CMD_LF_HITAGS_SIMULATE                                            0x0368
 #define CMD_LF_HITAGS_READ                                                0x0373
 #define CMD_LF_HITAGS_WRITE                                               0x0375
+#define CMD_LF_HITAGS_UID                                                 0x037A
 
 #define CMD_LF_HITAG_ELOAD                                                0x0376
 

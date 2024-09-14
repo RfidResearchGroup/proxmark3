@@ -865,13 +865,13 @@
                 "-j, --jload Load transaction parameters from `emv_defparams.json` file",
                 "--force Force search AID. Search AID instead of execute PPSE",
                 "By default: Transaction type - MSD",
-                "-v, --qvsdc Transaction type - qVSDC or M/Chip",
+                "--qvsdc Transaction type - qVSDC or M/Chip",
                 "-c, --qvsdccda Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)",
                 "-x, --vsdc Transaction type - VSDC. For test only. Not a standard behavior",
                 "-g, --acgpo VISA. generate AC from GPO",
                 "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
             ],
-            "usage": "emv exec [-hsatjvcxgw] [--force] By default:"
+            "usage": "emv exec [-hsatjcxgw] [--force] By default: [--qvsdc]"
         },
         "emv genac": {
             "command": "emv genac",
@@ -1046,7 +1046,7 @@
                 "-e, --extract Extract TLV elements and fill Application Data",
                 "-j, --jload Load transaction parameters from `emv_defparams.json` file",
                 "By default: Transaction type - MSD",
-                "-v, --qvsdc Transaction type - qVSDC or M/Chip",
+                "--qvsdc Transaction type - qVSDC or M/Chip",
                 "-c, --qvsdccda Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)",
                 "-x, --vsdc Transaction type - VSDC. For test only. Not a standard behavior",
                 "-g, --acgpo VISA. generate AC from GPO",
@@ -1054,7 +1054,7 @@
                 "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)",
                 "<fn> JSON output file name"
             ],
-            "usage": "emv scan [-hatejvcxgmw] By default: <fn>"
+            "usage": "emv scan [-hatejcxgmw] By default: [--qvsdc] <fn>"
         },
         "emv search": {
             "command": "emv search",
@@ -3616,6 +3616,19 @@
                 "-j, --jam Jam (prevent) e-purse updates"
             ],
             "usage": "hf iclass sniff [-hj]"
+        },
+        "hf iclass spoof": {
+            "command": "hf iclass spoof",
+            "description": "Watch 'nd Spoof, activates reader Waits until a Picopass tag gets presented then Proxmark3 tries to dump it and then starts simulating",
+            "notes": [
+                "hf iclass spoof"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose Verbose output"
+            ],
+            "usage": "hf iclass spoof [-hv]"
         },
         "hf iclass view": {
             "command": "hf iclass view",
@@ -8552,12 +8565,12 @@
         },
         "lf em 410x clone": {
             "command": "lf em 410x clone",
-            "description": "clone a EM410x ID to a T55x7, Q5/T5555, EM4305/4469 or Hitag S/8211 tag.",
+            "description": "clone a EM410x ID to a T55x7, Q5/T5555, EM4305/4469 or Hitag S/8211/8268/8310 tag.",
             "notes": [
                 "lf em 410x clone --id 0F0368568B -> encode for T55x7 tag",
                 "lf em 410x clone --id 0F0368568B --q5 -> encode for Q5/T5555 tag",
                 "lf em 410x clone --id 0F0368568B --em -> encode for EM4305/4469",
-                "lf em 410x clone --id 0F0368568B --hs -> encode for Hitag S/8211"
+                "lf em 410x clone --id 0F0368568B --hts -> encode for Hitag S/8211/8268/8310"
             ],
             "offline": false,
             "options": [
@@ -8566,10 +8579,10 @@
                 "--id <hex> EM Tag ID number (5 hex bytes)",
                 "--q5 optional - specify writing to Q5/T5555 tag",
                 "--em optional - specify writing to EM4305/4469 tag",
-                "--hs optional - specify writing to Hitag S/8211 tag",
+                "--hts optional - specify writing to Hitag S/8211/8268/8310 tag",
                 "--electra optional - add Electra blocks to tag"
             ],
-            "usage": "lf em 410x clone [-h] [--clk <dec>] --id <hex> [--q5] [--em] [--hs] [--electra]"
+            "usage": "lf em 410x clone [-h] [--clk <dec>] --id <hex> [--q5] [--em] [--hts] [--electra]"
         },
         "lf em 410x reader": {
             "command": "lf em 410x reader",
@@ -9726,43 +9739,61 @@
             ],
             "usage": "lf hitag hts list [-h1crux] [--frame] [-f <fn>]"
         },
-        "lf hitag hts read": {
-            "command": "lf hitag hts read",
-            "description": "Read Hitag S memory. Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR)",
+        "lf hitag hts rdbl": {
+            "command": "lf hitag hts rdbl",
+            "description": "Read Hitag S memory. Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR) 8268/8310 password mode: - default password BBDD3399",
             "notes": [
-                "lf hitag hts read -> Hitag S, plain mode",
-                "lf hitag hts read --nrar 0102030411223344 -> Hitag S, challenge mode",
-                "lf hitag hts read --crypto -> Hitag S, crypto mode, def key",
-                "lf hitag hts read -k 4F4E4D494B52 -> Hitag S, crypto mode"
+                "lf hitag hts rdbl -> Hitag S/8211, plain mode",
+                "lf hitag hts rdbl --8 -k BBDD3399 -> 8268/8310, password mode",
+                "lf hitag hts rdbl --nrar 0102030411223344 -> Hitag S, challenge mode",
+                "lf hitag hts rdbl --crypto -> Hitag S, crypto mode, def key",
+                "lf hitag hts rdbl -k 4F4E4D494B52 -> Hitag S, crypto mode"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "--nrar <hex> nonce / answer writer, 8 hex bytes",
+                "-8, --82xx 8268/8310 mode",
                 "--crypto crypto mode",
-                "-k, --key <hex> key, 4 or 6 hex bytes"
+                "-k, --key <hex> pwd or key, 4 or 6 hex bytes"
             ],
-            "usage": "lf hitag hts read [-h] [--nrar <hex>] [--crypto] [-k <hex>]"
+            "usage": "lf hitag hts rdbl [-h8] [--nrar <hex>] [--crypto] [-k <hex>]"
         },
-        "lf hitag hts write": {
-            "command": "lf hitag hts write",
-            "description": "Write a page in Hitag S memory. Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR)",
+        "lf hitag hts reader": {
+            "command": "lf hitag hts reader",
+            "description": "Act as a Hitag S reader. Look for Hitag S tags until Enter or the pm3 button is pressed",
             "notes": [
-                "lf hitag hts write -p 6 -d 01020304 -> Hitag S, plain mode",
-                "lf hitag hts write -p 6 -d 01020304 --nrar 0102030411223344 -> Hitag S, challenge mode",
-                "lf hitag hts write -p 6 -d 01020304 --crypto -> Hitag S, crypto mode, default key",
-                "lf hitag hts write -p 6 -d 01020304 -k 4F4E4D494B52 -> Hitag S, crypto mode"
+                "lf hitag hts reader",
+                "lf hitag hts reader -@ -> Continuous mode"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-@ continuous reader mode"
+            ],
+            "usage": "lf hitag hts reader [-h@]"
+        },
+        "lf hitag hts wrbl": {
+            "command": "lf hitag hts wrbl",
+            "description": "Write a page in Hitag S memory. Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR) 8268/8310 password mode: - default password BBDD3399",
+            "notes": [
+                "lf hitag hts wrbl -p 6 -d 01020304 -> Hitag S/8211, plain mode",
+                "lf hitag hts wrbl -p 6 -d 01020304 --8 -k BBDD3399 -> 8268/8310, password mode",
+                "lf hitag hts wrbl -p 6 -d 01020304 --nrar 0102030411223344 -> Hitag S, challenge mode",
+                "lf hitag hts wrbl -p 6 -d 01020304 --crypto -> Hitag S, crypto mode, default key",
+                "lf hitag hts wrbl -p 6 -d 01020304 -k 4F4E4D494B52 -> Hitag S, crypto mode"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "--nrar <hex> nonce / answer writer, 8 hex bytes",
+                "--8 8268/8310 mode",
                 "--crypto crypto mode",
-                "-k, --key <hex> key, 6 hex bytes",
+                "-k, --key <hex> pwd or key, 4 or 6 hex bytes",
                 "-p, --page <dec> page address to write to",
                 "-d, --data <hex> data, 4 hex bytes"
             ],
-            "usage": "lf hitag hts write [-h] [--nrar <hex>] [--crypto] [-k <hex>] -p <dec> -d <hex>"
+            "usage": "lf hitag hts wrbl [-h] [--nrar <hex>] [--8] [--crypto] [-k <hex>] -p <dec> -d <hex>"
         },
         "lf hitag info": {
             "command": "lf hitag info",
@@ -12669,9 +12700,9 @@
                 "",
                 "trace list -t des -> interpret as MIFARE DESFire",
                 "trace list -t felica -> interpret as ISO18092 / FeliCa",
-                "trace list -t hitag1 -> interpret as Hitag1",
-                "trace list -t hitag2 -> interpret as Hitag2",
-                "trace list -t hitags -> interpret as HitagS",
+                "trace list -t hitag1 -> interpret as Hitag 1",
+                "trace list -t hitag2 -> interpret as Hitag 2",
+                "trace list -t hitags -> interpret as Hitag S",
                 "trace list -t iclass -> interpret as iCLASS",
                 "trace list -t legic -> interpret as LEGIC",
                 "trace list -t lto -> interpret as LTO-CM",
@@ -12884,8 +12915,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 743,
+        "commands_extracted": 745,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-09-10T12:26:03"
+        "extracted_on": "2024-09-14T18:53:04"
     }
 }

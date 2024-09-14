@@ -2585,7 +2585,6 @@ bool ht2_packbits(uint8_t *nrz_samples, size_t nrzs, uint8_t *rx, size_t *rxlen)
     }
     return true;
 }
-
 int ht2_read_uid(uint8_t *uid, bool ledcontrol, bool send_answer, bool keep_field_up) {
 
     g_logging = false;
@@ -2594,6 +2593,7 @@ int ht2_read_uid(uint8_t *uid, bool ledcontrol, bool send_answer, bool keep_fiel
     if (keep_field_up == false) {
         clear_trace();
     }
+
 
     // hitag 2 state machine?
     hitag2_init();

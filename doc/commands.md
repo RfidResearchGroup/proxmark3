@@ -396,6 +396,7 @@ Check column "offline" for their availability.
 |`hf iclass reader       `|N       |`Act like a Picopass / iCLASS reader`
 |`hf iclass restore      `|N       |`Restore a dump file onto a Picopass / iCLASS tag`
 |`hf iclass sniff        `|N       |`Eavesdrop Picopass / iCLASS communication`
+|`hf iclass spoof        `|N       |`Watches for Picopass and replays them`
 |`hf iclass view         `|Y       |`Display content from tag dump file`
 |`hf iclass wrbl         `|N       |`Write Picopass / iCLASS block`
 |`hf iclass creditepurse `|N       |`Credit epurse value`
@@ -1075,8 +1076,9 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf hitag hts help      `|Y       |`This help`
 |`lf hitag hts list      `|Y       |`List Hitag S trace history`
-|`lf hitag hts read      `|N       |`Read Hitag S memory`
-|`lf hitag hts write     `|N       |`Write Hitag S page`
+|`lf hitag hts reader    `|N       |`Act like a Hitag S reader`
+|`lf hitag hts rdbl      `|N       |`Read Hitag S memory`
+|`lf hitag hts wrbl      `|N       |`Write Hitag S page`
 
 
 ### lf idteck

@@ -56,10 +56,9 @@ typedef struct {
 
 int CmdLFHitagS(const char *Cmd);
 
+int read_hts_uid(void);
 hitags_config_t hitags_config_unpack(const uint8_t *config_bytes);
-
 void hitags_config_pack(hitags_config_t config, uint8_t *out);
-
 void hitags_config_print(hitags_config_t config);
 
 #endif //CMDLFHITAGS_H__

@@ -210,7 +210,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 
 int mfCheckKeys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t *keyBlock, uint64_t *key) {
     if (key) {
-    *key = -1;
+        *key = -1;
     }
     clearCommandBuffer();
     uint8_t data[PM3_CMD_DATA_SIZE] = {0};

@@ -413,7 +413,7 @@ RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
                         Uart.parityBits <<= (8 - (Uart.len & 0x0007));           // left align parity bits
                         Uart.parity[Uart.parityLen++] = Uart.parityBits;         // and store it
                         return true;
-                    } 
+                    }
 
                     if (Uart.len & 0x0007) {                                     // there are some parity bits to store
                         Uart.parityBits <<= (8 - (Uart.len & 0x0007));           // left align remaining parity bits
@@ -812,12 +812,12 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
                                       Uart.endTime * 16 - DELAY_READER_AIR2ARM_AS_SNIFFER,
                                       Uart.parity,
                                       true)) {
-                                break;
-                            }
+                            break;
+                        }
                     }
                     // ready to receive another command
                     Uart14aReset();
-                    // reset the demod code, which might have been 
+                    // reset the demod code, which might have been
                     // false-triggered by the commands from the reader
                     Demod14aReset();
                     LED_B_OFF();

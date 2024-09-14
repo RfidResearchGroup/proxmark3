@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `lf search` - to identify hitag2/s/82xx in chipset detection to preserve their EM4100 or other outputs (@iceman1001)
+- Added `lf hitag hts reader` - to act as a HitagS / 82xx reader (@iceman1001)
+- Changed `lf hitag hts write` -> ´lf hitag hts wdbl` to fit rest of client command names (@iceman1001)
+- Changed `lf hitag hts read` -> ´lf hitag hts rdbl` to fit rest of client command names (@iceman1001)
 - Changed `hf mf info` - Better handling when printing ATS (@iceman1001)
 - Changed to also try the MFC_B key when extracting memory (@iceman1001)
 - Fix parallel `make -j check`  Thanks @elboulangero  (@iceman1001)

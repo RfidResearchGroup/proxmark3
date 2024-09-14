@@ -794,7 +794,7 @@ static const char *identify_transponder_hitag2(uint32_t uid) {
     return "";
 }
 
-static bool getHitag2Uid(uint32_t *uid) {
+static bool ht2_get_uid(uint32_t *uid) {
 
     lf_hitag_data_t packet;
     memset(&packet, 0, sizeof(packet));
@@ -835,7 +835,7 @@ static int CmdLFHitagInfo(const char *Cmd) {
 
     // read UID
     uint32_t uid = 0;
-    if (getHitag2Uid(&uid) == false) {
+    if (ht2_get_uid(&uid) == false) {
         return PM3_ESOFT;
     }
     // how to determine Hitag types?
@@ -886,7 +886,7 @@ static int CmdLFHitagReader(const char *Cmd) {
     do {
         // read UID
         uint32_t uid = 0;
-        if (getHitag2Uid(&uid)) {
+        if (ht2_get_uid(&uid)) {
             PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%08X"), uid);
         }
     } while (cm && kbd_enter_pressed() == false);
@@ -2475,6 +2475,17 @@ static int CmdLFHitag2Selftest(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+int ht2_read_uid(void) {
+    uint32_t uid = 0;
+    if (ht2_get_uid(&uid) == false) {
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%08X"), uid);
+    PrintAndLogEx(SUCCESS, "TYPE... " _GREEN_("%s"), getHitagTypeStr(uid));
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,                    AlwaysAvailable, "This help"},
     {"list",        CmdLFHitagList,             AlwaysAvailable, "List Hitag trace history"},
@@ -2515,14 +2526,4 @@ int CmdLFHitag(const char *Cmd) {
     return CmdsParse(CommandTable, Cmd);
 }
 
-int readHitagUid(void) {
-    uint32_t uid = 0;
-    if (getHitag2Uid(&uid) == false) {
-        return PM3_ESOFT;
-    }
-
-    PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%08X"), uid);
-    PrintAndLogEx(SUCCESS, "TYPE... " _GREEN_("%s"), getHitagTypeStr(uid));
-    return PM3_SUCCESS;
-}
 

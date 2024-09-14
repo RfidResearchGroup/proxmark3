@@ -40,6 +40,7 @@
 #include "cmdlfem4x70.h"    // for em4x70
 #include "cmdlfhid.h"       // for hid menu
 #include "cmdlfhitag.h"     // for hitag menu
+#include "cmdlfhitaghts.h"  // for hitag S sub commands
 #include "cmdlfidteck.h"    // for idteck menu
 #include "cmdlfio.h"        // for ioprox menu
 #include "cmdlfcotag.h"     // for COTAG menu
@@ -1555,7 +1556,9 @@ static bool check_chiptype(bool getDeviceData) {
 
     bool retval = false;
 
-    if (!getDeviceData) return retval;
+    if (getDeviceData == false) {
+        return retval;
+    }
 
     //Save the state of the Graph and Demod Buffers
     buffer_savestate_t saveState_gb = save_bufferS32(g_GraphBuffer, g_GraphTraceLen);
@@ -1566,7 +1569,7 @@ static bool check_chiptype(bool getDeviceData) {
 
     //check for em4x05/em4x69 chips first
     uint32_t word = 0;
-    if (IfPm3EM4x50() && em4x05_isblock0(&word)) {
+    if (em4x05_isblock0(&word)) {
         PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x05 / EM4x69"));
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x05`") " commands");
         retval = true;
@@ -1580,6 +1583,27 @@ static bool check_chiptype(bool getDeviceData) {
         retval = true;
         goto out;
     }
+
+
+    if (IfPm3Hitag()) {
+
+        // Hitag 2
+        if (ht2_read_uid() == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("Hitag 2"));
+            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf hitag`") " commands");
+            retval = true;
+            goto out;
+        }
+
+        // Hitag S
+        if (read_hts_uid() == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("Hitag S / 82xx"));
+            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf hitag hts`") " commands");
+            retval = true;
+            goto out;
+        }
+    }
+
 
 #if !defined ICOPYX
     // check for em4x50 chips
@@ -1675,8 +1699,9 @@ int CmdLFfind(const char *Cmd) {
     CLIParserFree(ctx);
     int found = 0;
     bool is_online = (g_session.pm3_present && (use_gb == false));
-    if (is_online)
+    if (is_online) {
         lf_read(false, 30000);
+    }
 
     size_t min_length = 2000;
     if (g_GraphTraceLen < min_length) {
@@ -1696,17 +1721,6 @@ int CmdLFfind(const char *Cmd) {
 
     // only run these tests if device is online
     if (is_online) {
-
-        if (IfPm3Hitag()) {
-            if (readHitagUid() == PM3_SUCCESS) {
-                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Hitag") " found!");
-                if (search_cont) {
-                    found++;
-                } else {
-                    return PM3_SUCCESS;
-                }
-            }
-        }
 
 #if !defined ICOPYX
         if (IfPm3EM4x50()) {
