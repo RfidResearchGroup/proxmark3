@@ -72,7 +72,6 @@ static bool hts_get_uid(uint32_t *uid) {
 
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - failed getting UID");
-        PrintAndLogEx(WARNING, "got false");
         return false;
     }
 
@@ -85,7 +84,6 @@ static bool hts_get_uid(uint32_t *uid) {
 int read_hts_uid(void) {
     uint32_t uid = 0;
     if (hts_get_uid(&uid) == false) {
-        PrintAndLogEx(WARNING, "got false");
         return PM3_ESOFT;
     }
 

@@ -32,7 +32,8 @@
 #include "hitag2/hitag2_crypto.h"
 #include "lfadc.h"
 #include "crc.h"
-#include <protocols.h>
+#include "protocols.h"
+#include "hitag.h"
 
 #define CRC_PRESET 0xFF
 #define CRC_POLYNOM 0x1D
@@ -252,9 +253,7 @@ static void hitag_send_bit(int bit, bool ledcontrol) {
 
 static void hitag_send_frame(const uint8_t *frame, size_t frame_len, bool ledcontrol) {
 
-    if (g_dbglevel >= DBG_EXTENDED) {
-        Dbprintf("hitag_send_frame: (%i) %02X %02X %02X %02X", frame_len, frame[0], frame[1], frame[2], frame[3]);
-    }
+    DBG Dbprintf("hitag_send_frame: (%i) %02X %02X %02X %02X", frame_len, frame[0], frame[1], frame[2], frame[3]);
 
     // The beginning of the frame is hidden in some high level; pause until our bits will have an effect
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
@@ -331,9 +330,6 @@ static void hitag_reader_send_bit(int bit, bool ledcontrol) {
 static void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len, bool ledcontrol) {
     // Send the content of the frame
     for (size_t i = 0; i < frame_len; i++) {
-//        if (frame[0] == 0xf8) {
-        //Dbprintf("BIT: %d",(frame[i / 8] >> (7 - (i % 8))) & 1);
-//        }
         hitag_reader_send_bit((frame[i / 8] >> (7 - (i % 8))) & 1, ledcontrol);
     }
     // send EOF
@@ -379,15 +375,10 @@ static void hts_init_clock(void) {
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
-    // for (size_t i = 0; i < 10; i++) __asm("");
-    // uint16_t cv0 = AT91C_BASE_TC0->TC_CV;
-
     // synchronized startup procedure
     // In theory, with MCK/32, we shouldn't be waiting longer than 32 instruction statements, right?
     while (AT91C_BASE_TC0->TC_CV > 0) {}; // wait until TC0 returned to zero
-//    while (AT91C_BASE_TC0->TC_CV < 2) {}; // and has started (TC_CV > TC_RA, now TC1 is cleared)
 
-    // Dbprintf("TC0_CV0:%i TC0_CV:%i TC1_CV:%i", cv0, AT91C_BASE_TC0->TC_CV, AT91C_BASE_TC1->TC_CV);
 }
 
 static void hts_stop_clock(void) {
@@ -463,36 +454,26 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
     switch (rxlen) {
         case 5: {
             //UID request with a selected response protocol mode
-            if (g_dbglevel >= DBG_EXTENDED) {
-                Dbprintf("UID request: length: %i first byte: %02x", rxlen, rx[0]);
-            }
-
+            DBG Dbprintf("UID request: length: %i first byte: %02x", rxlen, rx[0]);
             tag.pstate = HT_READY;
             tag.tstate = HT_NO_OP;
-            if ((rx[0] & 0xf0) == HITAGS_UID_REQ_STD) {
-                if (g_dbglevel >= DBG_EXTENDED) {
-                    Dbprintf("HT_STANDARD");
-                }
 
+            if ((rx[0] & 0xf0) == HITAGS_UID_REQ_STD) {
+                DBG Dbprintf("HT_STANDARD");
                 tag.mode = HT_STANDARD;
                 sof_bits = 1;
                 m = AC2K;
             }
-            if ((rx[0] & 0xf0) == HITAGS_UID_REQ_ADV) {
-                tag.mode = HT_ADVANCED;
-                if (g_dbglevel >= DBG_EXTENDED) {
-                    Dbprintf("HT_ADVANCED");
-                }
 
+            if ((rx[0] & 0xf0) == HITAGS_UID_REQ_ADV) {
+                DBG Dbprintf("HT_ADVANCED");
+                tag.mode = HT_ADVANCED;
                 sof_bits = 3;
                 m = AC2K;
             }
 
             if ((rx[0] & 0xf0) == HITAGS_UID_REQ_FADV) {
-                if (g_dbglevel >= DBG_EXTENDED) {
-                    Dbprintf("HT_FAST_ADVANCED");
-                }
-
+                DBG Dbprintf("HT_FAST_ADVANCED");
                 tag.mode = HT_FAST_ADVANCED;
                 sof_bits = 3;
                 m = AC4K;
@@ -506,14 +487,11 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
         }
         case 45: {
             //select command from reader received
-            if (g_dbglevel >= DBG_EXTENDED) {
-                DbpString("SELECT");
-            }
+            DBG DbpString("SELECT");
 
             if ((rx[0] & 0xf8) == HITAGS_SELECT && check_select(rx, tag.uid) == 1) {
-                if (g_dbglevel >= DBG_EXTENDED) {
-                    DbpString("SELECT match");
-                }
+
+                DBG DbpString("SELECT match");
 
                 //if the right tag was selected
                 *txlen = 32;
@@ -542,7 +520,8 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
         }
         case 64: {
             //challenge message received
-            Dbprintf("Challenge for UID: %X", temp_uid);
+            DBG Dbprintf("Challenge for UID: %X", temp_uid);
+
             temp2++;
             *txlen = 32;
             // init crypt engine
@@ -550,10 +529,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
                                     REV32((tag.pages[0][3] << 24) + (tag.pages[0][2] << 16) + (tag.pages[0][1] << 8) + tag.pages[0][0]),
                                     REV32((rx[3] << 24) + (rx[2] << 16) + (rx[1] << 8) + rx[0])
                                    );
-            Dbprintf(",{0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X}",
-                     rx[0], rx[1], rx[2], rx[3],
-                     rx[4], rx[5], rx[6], rx[7]
-                    );
+            DBG Dbprintf(", {0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X}", rx[0], rx[1], rx[2], rx[3], rx[4], rx[5], rx[6], rx[7]);
 
             hts_set_frame_modulation();
 
@@ -598,9 +574,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
             break;
         }
         case 40: {
-            if (g_dbglevel >= DBG_EXTENDED) {
-                Dbprintf("WRITE DATA");
-            }
+            DBG Dbprintf("WRITE DATA");
 
             //data received to be written
             if (tag.tstate == HT_WRITING_PAGE_DATA) {
@@ -733,9 +707,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
             break;
         }
         default: {
-            if (g_dbglevel >= DBG_EXTENDED) {
-                Dbprintf("unknown rxlen: (%i) %02X %02X %02X %02X ...", rxlen, rx[0], rx[1], rx[2], rx[3]);
-            }
+            DBG Dbprintf("unknown rxlen: (%i) %02X %02X %02X %02X ...", rxlen, rx[0], rx[1], rx[2], rx[3]);
             break;
         }
     }
@@ -809,16 +781,14 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
         tag.max_page = 0;
     }
 
-    if (g_dbglevel >= DBG_EXTENDED) {
-
-        for (int i = 0; i < tag.max_page; i++) {
-            Dbprintf("Page[%2d]: %02X %02X %02X %02X", i,
-                     (tag.pages[i][3]) & 0xFF,
-                     (tag.pages[i][2]) & 0xFF,
-                     (tag.pages[i][1]) & 0xFF,
-                     tag.pages[i][0] & 0xFF
-                    );
-        }
+    for (int i = 0; i < tag.max_page; i++) {
+        DBG Dbprintf("Page[%2d]: %02X %02X %02X %02X",
+                i,
+                (tag.pages[i][3]) & 0xFF,
+                (tag.pages[i][2]) & 0xFF,
+                (tag.pages[i][1]) & 0xFF,
+                tag.pages[i][0] & 0xFF
+        );
     }
 
     //con1
@@ -1007,7 +977,7 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
     // release allocated memory from BigBuff.
     BigBuf_free();
 
-    DbpString("Sim Stopped");
+    DbpString("Sim stopped");
 }
 
 static void hts_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint32_t *resptime, bool ledcontrol) {
@@ -1110,10 +1080,8 @@ static void hts_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint3
         }
     }
 
-    if (g_dbglevel >= DBG_EXTENDED) {
-        Dbprintf("RX0 %i:%02X.. err:%i resptime:%i h2:%i h3:%i h4:%i edges:", *rxlen, rx[0], errorCount, *resptime, h2, h3, h4);
-        Dbhexdump(ra_i, edges, false);
-    }
+    DBG Dbprintf("RX0 %i:%02X.. err:%i resptime:%i h2:%i h3:%i h4:%i edges:", *rxlen, rx[0], errorCount, *resptime, h2, h3, h4);
+    DBG Dbhexdump(ra_i, edges, false);
 }
 
 static void hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t sizeofrx, size_t *prxbits, int t_wait, bool ledcontrol, bool ac_seq) {
@@ -1151,12 +1119,10 @@ static void hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_
             response_bit[i] = (rx[i / 8] >> (7 - (i % 8))) & 1;
         }
 
-        if (g_dbglevel >= DBG_EXTENDED) {
-            Dbprintf("htS: rxlen...... %zu", rxlen);
-            Dbprintf("htS: sizeofrx... %zu", sizeofrx);
-            DbpString("htS: response_bit:");
-            Dbhexdump(rxlen, response_bit, false);
-        }
+        DBG Dbprintf("htS: rxlen...... %zu", rxlen);
+        DBG Dbprintf("htS: sizeofrx... %zu", sizeofrx);
+        DBG DbpString("htS: response_bit:");
+        DBG Dbhexdump(rxlen, response_bit, false);
 
         memset(rx, 0x00, sizeofrx);
 
@@ -1250,8 +1216,6 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
     // Disable modulation at default, which means enable the field
     LOW(GPIO_SSC_DOUT);
 
-    // Dbprintf("TC0_CV:%i TC1_CV:%i TC1_RA:%i", AT91C_BASE_TC0->TC_CV, AT91C_BASE_TC1->TC_CV, AT91C_BASE_TC1->TC_RA);
-
     // UID request standard   00110
     // UID request Advanced   1100x
     // UID request FAdvanced  11010
@@ -1262,15 +1226,13 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
     hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, t_wait, ledcontrol, true);
 
     if (rxlen != 32) {
-        DbpString("UID Request failed!");
+        DBG DbpString("UID Request failed!");
         return -1;
     }
 
     tag.uid = (rx[3] << 24 | rx[2] << 16 | rx[1] << 8 | rx[0]);
 
-    if (g_dbglevel >= DBG_EXTENDED) {
-        Dbprintf("UID: %02X %02X %02X %02X", rx[0], rx[1], rx[2], rx[3]);
-    }
+    DBG Dbprintf("UID... %02X%02X%02X%02X", rx[0], rx[1], rx[2], rx[3]);
 
     // select uid
     txlen = 0;
@@ -1283,7 +1245,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
     hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
     if (rxlen != 40) {
-        Dbprintf("Select UID failed! %i", rxlen);
+        DBG Dbprintf("Select UID failed! %i", rxlen);
         return -1;
     }
 
@@ -1318,9 +1280,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
     tag.LCK1 = (conf_pages[2] >> 1) & 0x1;
     tag.LCK0 = (conf_pages[2] >> 0) & 0x1;
 
-    if (g_dbglevel >= DBG_EXTENDED) {
-        Dbprintf("conf 0: %02X conf 1: %02X conf 2: %02X", conf_pages[0], conf_pages[1], conf_pages[2]);
-    }
+    DBG Dbprintf("conf 0: %02X conf 1: %02X conf 2: %02X", conf_pages[0], conf_pages[1], conf_pages[2]);
 
     if (tag.auth == 1) {
 
@@ -1328,10 +1288,8 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
         // if the tag is in authentication mode try the key or challenge
         if (packet->cmd == RHTSF_KEY || packet->cmd == WHTSF_KEY) {
 
-            if (g_dbglevel >= DBG_EXTENDED) {
-                DbpString("Authenticating using key:");
-                Dbhexdump(6, packet->key, false);
-            }
+            DBG DbpString("Authenticating using key:");
+            DBG Dbhexdump(6, packet->key, false);
 
             key = ((uint64_t)packet->key[0]) <<  0 |
                   ((uint64_t)packet->key[1]) <<  8 |
@@ -1353,19 +1311,12 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
             txlen = concatbits(tx, txlen, revrnd, 0, 32);
             txlen = concatbits(tx, txlen, auth_ks, 0, 32);
 
-            if (g_dbglevel >= DBG_EXTENDED) {
-                Dbprintf("%02X %02X %02X %02X %02X %02X %02X %02X"
-                         , tx[0], tx[1], tx[2], tx[3]
-                         , tx[4], tx[5], tx[6], tx[7]
-                        );
-            }
+            DBG Dbprintf("%02X %02X %02X %02X %02X %02X %02X %02X", tx[0], tx[1], tx[2], tx[3], tx[4], tx[5], tx[6], tx[7]);
 
         } else if (packet->cmd == RHTSF_CHALLENGE || packet->cmd == WHTSF_CHALLENGE) {
 
-            if (g_dbglevel >= DBG_EXTENDED) {
-                DbpString("Authenticating using nr,ar pair:");
-                Dbhexdump(8, packet->NrAr, false);
-            }
+            DBG DbpString("Authenticating using nr,ar pair:");
+            DBG Dbhexdump(8, packet->NrAr, false);
 
             uint64_t NrAr = 0;
             NrAr = ((uint64_t)packet->NrAr[7]) <<  0 |
@@ -1399,7 +1350,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
             hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
             if ((rxlen != 2) || (rx[0] >> (8 - 2) != 0x01)) {
-                Dbprintf("no write access on page " _YELLOW_("64") ". not 82xx?");
+                DBG Dbprintf("no write access on page " _YELLOW_("64") ". not 82xx?");
                 return -1;
             }
 
@@ -1411,31 +1362,29 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
             hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
             if ((rxlen != 2) || (rx[0] >> (8 - 2) != 0x01)) {
-                Dbprintf("write to page " _YELLOW_("64") " failed! wrong password?");
+                DBG Dbprintf("write to page " _YELLOW_("64") " failed! wrong password?");
                 return -1;
             }
 
             return 0;
         } else if (packet->cmd == RHTSF_PLAIN || packet->cmd == WHTSF_PLAIN) {
-            Dbprintf("Error, " _YELLOW_("AUT=1") " This tag is configured in Authentication Mode");
+            DBG Dbprintf("Error, " _YELLOW_("AUT=1") " This tag is configured in Authentication Mode");
             return -1;
         } else {
-            Dbprintf("Error, unknown function: " _RED_("%d"), packet->cmd);
+            DBG Dbprintf("Error, unknown function: " _RED_("%d"), packet->cmd);
             return -1;
         }
 
         hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
         if (rxlen != 40) {
-            Dbprintf("Authenticate failed! " _RED_("%i"), rxlen);
+            DBG Dbprintf("Authenticate failed! " _RED_("%i"), rxlen);
             return -1;
         }
 
         //encrypted con2,password received.
-        if (g_dbglevel >= DBG_EXTENDED) {
-            Dbprintf("UID:::%X", tag.uid);
-            Dbprintf("RND:::%X", rnd);
-        }
+        DBG Dbprintf("UID... %X", tag.uid);
+        DBG Dbprintf("RND... %X", rnd);
 
         //decrypt password
         pwdh0 = 0;
@@ -1453,11 +1402,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
             pwdl0 = rx[2] ^ ht2_hitag2_byte(&state);
             pwdl1 = rx[3] ^ ht2_hitag2_byte(&state);
 
-            if (g_dbglevel >= DBG_EXTENDED) {
-                Dbprintf("con2 %02X pwdh0 %02X pwdl0 %02X pwdl1 %02X", con2, pwdh0, pwdl0, pwdl1);
-            }
-            //Dbprintf("%X %02X", rnd, ((rx[4] & 0x0f) * 16) + ((rx[5] & 0xf0) / 16));
-            //rnd += 1;
+            DBG Dbprintf("con2 %02X pwdh0 %02X pwdl0 %02X pwdl1 %02X", con2, pwdh0, pwdl0, pwdl1);
         }
     }
     return 0;
@@ -1499,7 +1444,7 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
         hts_send_receive(tx, txlen, rx, ARRAYLEN(rx), &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
         if (rxlen != 40) {
-            Dbprintf("Read page failed!");
+            DBG Dbprintf("Read page failed!");
             status = PM3_ERFTRANS;
             goto read_end;
         }
@@ -1511,12 +1456,12 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
 
         if (g_dbglevel >= DBG_EXTENDED) {
             if (tag.auth && tag.LKP && pageNum == 1) {
-                Dbprintf("Page[%2d]: %02X %02X %02X %02X", pageNum, pwdh0,
+                DBG Dbprintf("Page[%2d]: %02X %02X %02X %02X", pageNum, pwdh0,
                          (tag.pages[pageNum][2]) & 0xff,
                          (tag.pages[pageNum][1]) & 0xff,
                          tag.pages[pageNum][0] & 0xff);
             } else {
-                Dbprintf("Page[%2d]: %02X %02X %02X %02X", pageNum,
+                DBG Dbprintf("Page[%2d]: %02X %02X %02X %02X", pageNum,
                          (tag.pages[pageNum][3]) & 0xff,
                          (tag.pages[pageNum][2]) & 0xff,
                          (tag.pages[pageNum][1]) & 0xff,
@@ -1528,13 +1473,13 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
         //display key and password if possible
         if (pageNum == 2 && tag.auth == 1 && tag.LKP) {
             if (payload->cmd == RHTSF_KEY) {
-                Dbprintf("Page[ 2]: %02X %02X %02X %02X",
+                DBG Dbprintf("Page[ 2]: %02X %02X %02X %02X",
                          payload->key[1],
                          payload->key[0],
                          pwdl1,
                          pwdl0
                         );
-                Dbprintf("Page[ 3]: %02X %02X %02X %02X",
+                DBG Dbprintf("Page[ 3]: %02X %02X %02X %02X",
                          payload->key[5],
                          payload->key[4],
                          payload->key[3],
@@ -1542,8 +1487,8 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
                         );
             } else {
                 //if the authentication is done with a challenge the key and password are unknown
-                Dbprintf("Page[ 2]: __ __ __ __");
-                Dbprintf("Page[ 3]: __ __ __ __");
+                DBG Dbprintf("Page[ 2]: __ __ __ __");
+                DBG Dbprintf("Page[ 3]: __ __ __ __");
             }
             // since page 2+3 are not accessible when LKP == 1 and AUT == 1 fastforward to next readable page
             pageNum = 4;
@@ -1569,7 +1514,7 @@ void hts_write_page(const lf_hitag_data_t *payload, bool ledcontrol) {
 
     //check for valid input
     if (payload->page == 0) {
-        Dbprintf("Error, invalid page");
+        DBG Dbprintf("Error, invalid page");
         reply_ng(CMD_LF_HITAGS_WRITE, PM3_EINVARG, NULL, 0);
         return;
     }
@@ -1589,7 +1534,7 @@ void hts_write_page(const lf_hitag_data_t *payload, bool ledcontrol) {
 
     //check if the given page exists
     if (payload->page > tag.max_page) {
-        Dbprintf("Error, page number too large");
+        DBG Dbprintf("Error, page number too large");
         res = PM3_EINVARG;
         goto write_end;
     }
@@ -1609,7 +1554,7 @@ void hts_write_page(const lf_hitag_data_t *payload, bool ledcontrol) {
     hts_send_receive(tx, txlen, rx, ARRAYLEN(rx), &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
     if ((rxlen != 2) || (rx[0] >> (8 - 2) != 0x01)) {
-        Dbprintf("no write access on page " _YELLOW_("%d"), payload->page);
+        DBG Dbprintf("no write access on page " _YELLOW_("%d"), payload->page);
         res = PM3_ESOFT;
         goto write_end;
     }
@@ -1701,7 +1646,7 @@ int hts_read_uid(uint32_t *uid, bool ledcontrol, bool send_answer) {
         }
 
     } else {
-        DbpString("UID Request failed!");
+        DBG DbpString("UID Request failed!");
         status = PM3_ERFTRANS;
     }
 
@@ -1723,7 +1668,7 @@ void hts_check_challenges(const uint8_t *data, uint32_t datalen, bool ledcontrol
 
     //check for valid input
     if (datalen < 8) {
-        Dbprintf("Error, missing challenges");
+        DBG Dbprintf("Error, missing challenges");
         reply_ng(CMD_LF_HITAGS_TEST_TRACES, PM3_EINVARG, NULL, 0);
         return;
     }
@@ -1743,13 +1688,14 @@ void hts_check_challenges(const uint8_t *data, uint32_t datalen, bool ledcontrol
         memcpy(payload.NrAr, data + dataoffset, 8);
 
         int res = hts_select_tag(&payload, tx, ARRAYLEN(tx), rx, ARRAYLEN(rx), HITAG_T_WAIT_FIRST, ledcontrol);
-        Dbprintf("Challenge %s: %02X %02X %02X %02X %02X %02X %02X %02X",
+
+        DBG  Dbprintf("Challenge %s: %02X %02X %02X %02X %02X %02X %02X %02X",
                  res == -1 ? "failed " : "success",
                  payload.NrAr[0], payload.NrAr[1],
                  payload.NrAr[2], payload.NrAr[3],
                  payload.NrAr[4], payload.NrAr[5],
                  payload.NrAr[6], payload.NrAr[7]
-                );
+            );
 
         if (res == -1) {
             // Need to do a dummy UID select that will fail

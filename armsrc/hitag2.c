@@ -14,8 +14,6 @@
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 
-#define DBG  if (g_dbglevel >= DBG_EXTENDED)
-
 #include "hitag2.h"
 #include "hitag2/hitag2_crypto.h"
 #include "string.h"
@@ -2085,7 +2083,7 @@ void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
     // Check configuration
     switch (payload->cmd) {
         case WHT2F_CRYPTO: {
-            DbpString("Authenticating using key:");
+            DBG DbpString("Authenticating using key:");
             memcpy(key, payload->key, 6); //HACK; 4 or 6??  I read both in the code.
             memcpy(writedata, payload->data, 4);
             Dbhexdump(6, key, false);
@@ -2109,7 +2107,7 @@ void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
         }
         break;
         default: {
-            Dbprintf("Error, unknown function: " _RED_("%d"), payload->cmd);
+            DBG Dbprintf("Error, unknown function: " _RED_("%d"), payload->cmd);
             reply_ng(CMD_LF_HITAG2_WRITE, PM3_ESOFT, NULL, 0);
             return;
         }
