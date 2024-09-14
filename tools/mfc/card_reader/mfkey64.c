@@ -73,6 +73,11 @@ int main(int argc, char *argv[]) {
     printf("  ks3: %08x\n", ks3);
 
     revstate = lfsr_recovery64(ks2, ks3);
+    if ((revstate->odd == 0) && (revstate->even == 0)) {
+        printf("\nKey not found :(\n\n");
+        crypto1_destroy(revstate);
+        return -1;
+    }
 
     // Decrypting communication using keystream if presented
     if (argc > 6) {
