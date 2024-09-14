@@ -263,7 +263,7 @@ static int get_ulc_3des_key_magic(uint64_t magic_type, uint8_t *key) {
     SendCommandNG(CMD_HF_MIFARE_READBL_EX, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_READBL_EX, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -403,7 +403,7 @@ static bool ul_select_rats(iso14a_card_select_t *card) {
             uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
             SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, sizeof(rats), 0, rats, sizeof(rats));
             if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-                PrintAndLogEx(WARNING, "Command execute timeout");
+                PrintAndLogEx(WARNING, "command execution time out");
                 return false;
             }
         }
@@ -1712,7 +1712,7 @@ static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len) {
     SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, keytype, key, 4);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         free(*pdata);
         res = PM3_ETIMEOUT;
         goto out;
@@ -1997,7 +1997,7 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, const uint8_t *aut
     SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, keytype, authkey, ak_len);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         res = PM3_ETIMEOUT;
         goto out;
     }
@@ -2819,7 +2819,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
             }
             case PM3_ETIMEOUT:
             default: {
-                PrintAndLogEx(WARNING, "Command execute timeout");
+                PrintAndLogEx(WARNING, "command execution time out");
                 break;
             }
         }
@@ -2932,7 +2932,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
             PrintAndLogEx(WARNING, "Failed reading block: ( %02x )", isOK);
         }
     } else {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
     }
     return PM3_SUCCESS;
 }
@@ -3252,7 +3252,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     SendCommandMIX(CMD_HF_MIFAREU_READCARD, start_page, pages, keytype, authKeyPtr, ak_len);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -3275,7 +3275,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     }
 
     if (GetFromDevice(BIG_BUF, data, buffer_size, startindex, NULL, 0, NULL, 2500, false) == false) {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -3454,7 +3454,7 @@ static void wait4response(uint8_t b) {
             PrintAndLogEx(WARNING, "failed to write block %d", b);
         }
     } else {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
     }
 }
 
@@ -3540,7 +3540,7 @@ int CmdHF14MfUTamper(const char *Cmd) {
             else
                 PrintAndLogEx(SUCCESS, "Tamper message written successfully");
         } else {
-            PrintAndLogEx(WARNING, "Command execute timeout");
+            PrintAndLogEx(WARNING, "command execution time out");
         }
     }
 
@@ -3586,7 +3586,7 @@ int CmdHF14MfUTamper(const char *Cmd) {
             else
                 PrintAndLogEx(SUCCESS, "Tamper configuration written successfully");
         } else {
-            PrintAndLogEx(WARNING, "Command execute timeout");
+            PrintAndLogEx(WARNING, "command execution time out");
         }
     }
 
@@ -4074,7 +4074,7 @@ static int CmdHF14AMfUCSetPwd(const char *Cmd) {
             return PM3_ESOFT;
         }
     } else {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
     return PM3_SUCCESS;
@@ -4116,7 +4116,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_READBL, 2, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -4129,7 +4129,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     hf14a_config config;
     SendCommandNG(CMD_HF_ISO14443A_GET_CONFIG, NULL, 0);
     if (!WaitForResponseTimeout(CMD_HF_ISO14443A_GET_CONFIG, &resp, 2000)) {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out);
         return PM3_ETIMEOUT;
     }
     memcpy(&config, resp.data.asBytes, sizeof(hf14a_config));
@@ -4148,7 +4148,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 0, 0, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -4160,7 +4160,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 1, 0, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -4172,7 +4172,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 2, 0, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -5774,7 +5774,7 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
             case PM3_ETIMEOUT:
             default: {
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(WARNING, "Command execute timeout");
+                PrintAndLogEx(WARNING, "command execution time out");
                 goto out;
             }
         }
@@ -5803,7 +5803,7 @@ ulc:
                 return PM3_ESOFT;
             }
         } else {
-            PrintAndLogEx(WARNING, "command execute timeout");
+            PrintAndLogEx(WARNING, "command execution time out");
             return PM3_ETIMEOUT;
         }
     }

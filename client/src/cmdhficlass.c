@@ -1776,7 +1776,7 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool verbose, bool shallow_
     SendCommandNG(CMD_HF_ICLASS_READER, (uint8_t *)&payload, sizeof(iclass_card_select_t));
 
     if (WaitForResponseTimeout(CMD_HF_ICLASS_READER, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return false;
     }
 
@@ -1942,7 +1942,7 @@ static int CmdHFiClassDump(const char *Cmd) {
     SendCommandNG(CMD_HF_ICLASS_READER, (uint8_t *)&payload_rdr, sizeof(iclass_card_select_t));
 
     if (WaitForResponseTimeout(CMD_HF_ICLASS_READER, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         DropField();
         return PM3_ESOFT;
     }
@@ -2208,7 +2208,7 @@ static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *macdata
     PacketResponseNG resp;
 
     if (WaitForResponseTimeout(CMD_HF_ICLASS_WRITEBL, &resp, 2000) == 0) {
-        if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
+        if (verbose) PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -2434,7 +2434,7 @@ static int CmdHFiClassCreditEpurse(const char *Cmd) {
 
     int isok;
     if (WaitForResponseTimeout(CMD_HF_ICLASS_CREDIT_EPURSE, &resp, 2000) == 0) {
-        if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
+        if (verbose) PrintAndLogEx(WARNING, "command execution time out");
         isok = PM3_ETIMEOUT;
     } else if (resp.status != PM3_SUCCESS) {
         if (verbose) PrintAndLogEx(ERR, "failed to communicate with card");
@@ -2616,7 +2616,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
     SendCommandNG(CMD_HF_ICLASS_RESTORE, (uint8_t *)payload, payload_size);
 
     if (WaitForResponseTimeout(CMD_HF_ICLASS_RESTORE, &resp, 2500) == 0) {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         DropField();
         free(payload);
         return PM3_ETIMEOUT;
@@ -2652,7 +2652,7 @@ static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, boo
     SendCommandNG(CMD_HF_ICLASS_READBL, (uint8_t *)&payload, sizeof(payload));
 
     if (WaitForResponseTimeout(CMD_HF_ICLASS_READBL, &resp, 2000) == false) {
-        if (verbose) PrintAndLogEx(WARNING, "Command execute timeout");
+        if (verbose) PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -3759,7 +3759,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
             timeout++;
             PrintAndLogEx(NORMAL, "." NOLF);
             if (timeout > 10) {
-                PrintAndLogEx(WARNING, "\ncommand execute timeout, aborting...");
+                PrintAndLogEx(WARNING, "\ncommand execution time out, aborting...");
                 goto out;
             }
             looped = true;
@@ -4618,7 +4618,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
     uint8_t key[8] = {0};
 
     // If we use emulator memory skip key requirement
-    if (!use_emulator_memory) {
+    if (use_emulator_memory == false) {
         if (key_nr < 0) {
             PrintAndLogEx(ERR, "Missing required arg for --ki or --emu");
             return PM3_EINVARG;

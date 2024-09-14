@@ -1440,7 +1440,7 @@ int set_fpga_mode(uint8_t mode) {
     SendCommandNG(CMD_SET_FPGAMODE, d, sizeof(d));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_SET_FPGAMODE, &resp, 1000) == false) {
-        PrintAndLogEx(WARNING, "command execution timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
     if (resp.status != PM3_SUCCESS) {

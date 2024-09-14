@@ -964,7 +964,7 @@ int mfReadSector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8_t 
             return PM3_EUNDEF;
         }
     } else {
-        PrintAndLogEx(DEBUG, "Command execute timeout");
+        PrintAndLogEx(DEBUG, "command execution time out");
         return PM3_ETIMEOUT;
     }
     return PM3_SUCCESS;
@@ -988,7 +988,7 @@ int mfReadBlock(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint8_t *d
             return PM3_ESOFT;
         }
     } else {
-        PrintAndLogEx(DEBUG, "Command execute timeout");
+        PrintAndLogEx(DEBUG, "command execution time out");
         return PM3_ETIMEOUT;
     }
     return PM3_SUCCESS;
@@ -1015,7 +1015,7 @@ int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_EML_MEMGET, &resp, 1500) == 0) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -1187,7 +1187,7 @@ int mfCSetBlock(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
             return PM3_EUNDEF;
         }
     } else {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
     return PM3_SUCCESS;
@@ -1204,7 +1204,7 @@ int mfCGetBlock(uint8_t blockNo, uint8_t *data, uint8_t params) {
         }
         memcpy(data, resp.data.asBytes, MFBLOCK_SIZE);
     } else {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
     return PM3_SUCCESS;
@@ -1220,7 +1220,7 @@ int mfGen3UID(uint8_t *uid, uint8_t uidlen, uint8_t *oldUid) {
         }
         return resp.status;
     } else {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 }
@@ -1235,7 +1235,7 @@ int mfGen3Block(uint8_t *block, int blockLen, uint8_t *newBlock) {
         }
         return resp.status;
     } else {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 }
@@ -1247,7 +1247,7 @@ int mfGen3Freeze(void) {
     if (WaitForResponseTimeout(CMD_HF_MIFARE_GEN3FREEZ, &resp, 3500)) {
         return resp.status;
     } else {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 }

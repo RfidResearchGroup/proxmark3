@@ -504,7 +504,7 @@ static bool mf_write_block(const uint8_t *key, uint8_t keytype, uint8_t blockno,
     SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockno, keytype, 0, data, sizeof(data));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-        PrintAndLogEx(FAILED, "Command execute timeout");
+        PrintAndLogEx(FAILED, "command execution time out");
         return false;
     }
 
@@ -1028,7 +1028,7 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-        PrintAndLogEx(FAILED, "Command execute timeout");
+        PrintAndLogEx(FAILED, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -1221,7 +1221,7 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
     PacketResponseNG resp;
     bool res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2500);
     if (res == false) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -1235,7 +1235,7 @@ static int FastDumpWithEcFill(uint8_t numsectors) {
         SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
         res = WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 2500);
         if (res == false) {
-            PrintAndLogEx(WARNING, "Command execute timeout");
+            PrintAndLogEx(WARNING, "command execution time out");
             setDeviceDebugLevel(dbg_curr, false);
             return PM3_ETIMEOUT;
         }
@@ -1595,7 +1595,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                 SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockno, kt, 0, wdata, sizeof(wdata));
                 PacketResponseNG resp;
                 if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-                    PrintAndLogEx(WARNING, "Command execute timeout");
+                    PrintAndLogEx(WARNING, "command execution time out");
                     continue;
                 }
 
@@ -1792,7 +1792,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
         int16_t isOK = mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock, !ignore_static_encrypted);
         switch (isOK) {
             case PM3_ETIMEOUT:
-                PrintAndLogEx(ERR, "Command execute timeout\n");
+                PrintAndLogEx(ERR, "command execution time out\n");
                 break;
             case PM3_EOPABORTED:
                 PrintAndLogEx(WARNING, "Button pressed. Aborted\n");
@@ -1875,7 +1875,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
                     int16_t isOK = mfnested(blockNo, keyType, key, mfFirstBlockOfSector(sectorNo), trgKeyType, keyBlock, calibrate);
                     switch (isOK) {
                         case PM3_ETIMEOUT:
-                            PrintAndLogEx(ERR, "Command execute timeout\n");
+                            PrintAndLogEx(ERR, "command execution time out\n");
                             break;
                         case PM3_EOPABORTED:
                             PrintAndLogEx(WARNING, "button pressed. Aborted\n");
@@ -2135,7 +2135,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
                 int16_t isOK = mfStaticNested(blockNo, keyType, key, mfFirstBlockOfSector(sectorNo), trgKeyType, keyBlock);
                 switch (isOK) {
                     case PM3_ETIMEOUT :
-                        PrintAndLogEx(ERR, "Command execute timeout");
+                        PrintAndLogEx(ERR, "command execution time out");
                         break;
                     case PM3_EOPABORTED :
                         PrintAndLogEx(WARNING, "aborted via keyboard.");
@@ -5896,7 +5896,7 @@ static int CmdHf14AMfSetMod(const char *Cmd) {
     SendCommandNG(CMD_HF_MIFARE_SETMOD, data, sizeof(data));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_SETMOD, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -7678,7 +7678,7 @@ static int CmdHF14AMfWipe(const char *Cmd) {
                         PrintAndLogEx(NORMAL, "- key %c ( " _RED_("fail") " )", (kt == MF_KEY_A) ? 'A' : 'B');
                     }
                 } else {
-                    PrintAndLogEx(WARNING, "Command execute timeout");
+                    PrintAndLogEx(WARNING, "command execution time out");
                 }
             }
         }
@@ -8835,7 +8835,7 @@ static int CmdHF14AGen4_GDM_Cfg(const char *Cmd) {
     SendCommandNG(CMD_HF_MIFARE_READBL_EX, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_READBL_EX, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -8916,7 +8916,7 @@ static int CmdHF14AGen4_GDM_SetCfg(const char *Cmd) {
     SendCommandNG(CMD_HF_MIFARE_WRITEBL_EX, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_WRITEBL_EX, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -8999,7 +8999,7 @@ static int CmdHF14AGen4_GDM_SetBlk(const char *Cmd) {
     SendCommandNG(CMD_HF_MIFARE_G4_GDM_WRBL, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_G4_GDM_WRBL, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -9228,7 +9228,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
 
             PacketResponseNG resp;
             if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-                PrintAndLogEx(FAILED, "Command execute timeout");
+                PrintAndLogEx(FAILED, "command execution time out");
                 return PM3_ETIMEOUT;
             }
             isok = resp.oldarg[0] & 0xff;
@@ -9253,7 +9253,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
 
             PacketResponseNG resp;
             if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-                PrintAndLogEx(FAILED, "Command execute timeout");
+                PrintAndLogEx(FAILED, "command execution time out");
                 return PM3_ETIMEOUT;
             }
 
@@ -9673,40 +9673,40 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
     }
 
-    if (res == NONCE_FAIL) {
-        PrintAndLogEx(SUCCESS, "nonce................ " _RED_("read failed"));
-    }
 
     if (res == NONCE_NORMAL) {
         // not static
         res = detect_classic_prng();
-        if (res == 1)
-            PrintAndLogEx(SUCCESS, "Prng................. " _GREEN_("weak"));
-        else if (res == 0)
-            PrintAndLogEx(SUCCESS, "Prng................. " _YELLOW_("hard"));
-        else
-            PrintAndLogEx(FAILED, "Prng................. " _RED_("fail"));
-
+        if (res == 1) {
+            PrintAndLogEx(SUCCESS, "Prng....... " _GREEN_("weak"));
+        } else if (res == 0) {
+            PrintAndLogEx(SUCCESS, "Prng....... " _YELLOW_("hard"));
+        } else {
+            PrintAndLogEx(FAILED, "Prng........ " _RED_("fail"));
+        }
 
         // detect static encrypted nonce
         if (keylen == MIFARE_KEY_SIZE) {
             res = detect_classic_static_encrypted_nonce(blockn, keytype, key);
             if (res == NONCE_STATIC) {
-                PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
+                PrintAndLogEx(SUCCESS, "Static nonce... " _YELLOW_("yes"));
                 fKeyType = 0xFF; // dont detect twice
             }
             if (res == NONCE_STATIC_ENC) {
-                PrintAndLogEx(SUCCESS, "Static enc nonce..... " _RED_("yes"));
+                PrintAndLogEx(SUCCESS, "Static enc nonce... " _RED_("yes"));
                 fKeyType = 0xFF; // dont detect twice
             }
         }
 
         if (fKeyType != 0xFF) {
             res = detect_classic_static_encrypted_nonce(0, fKeyType, fkey);
-            if (res == NONCE_STATIC)
-                PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
-            if (res == NONCE_STATIC_ENC)
-                PrintAndLogEx(SUCCESS, "Static enc nonce..... " _RED_("yes"));
+            if (res == NONCE_STATIC) {
+                PrintAndLogEx(SUCCESS, "Static nonce... " _YELLOW_("yes"));
+            }
+
+            if (res == NONCE_STATIC_ENC) {
+                PrintAndLogEx(SUCCESS, "Static enc nonce... " _RED_("yes"));
+            }
         }
 
         if (do_nack_test) {

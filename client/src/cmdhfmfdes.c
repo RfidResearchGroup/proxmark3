@@ -404,7 +404,7 @@ static int mfdes_get_info(mfdes_info_res_t *info) {
     PacketResponseNG resp;
     SendCommandNG(CMD_HF_DESFIRE_INFO, NULL, 0);
     if (WaitForResponseTimeout(CMD_HF_DESFIRE_INFO, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         DropField();
         return PM3_ETIMEOUT;
     }
