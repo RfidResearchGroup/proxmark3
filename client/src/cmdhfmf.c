@@ -7882,7 +7882,7 @@ static int parse_gtu_cfg(uint8_t *d, size_t n) {
     PrintAndLogEx(INFO, "%s.............. ATS ( %d bytes )", sprint_hex_inrow(&d[8], d[7]), d[7]);
     PrintAndLogEx(INFO, "..................%s Reserved for ATS", sprint_hex_inrow(d + 8 + d[7], 16 - d[7]));
     } else {
-        PrintAndLogEx(INFO, "%s.............. %s Reserved for ATS", sprint_hex_inrow(&d[8], 16), 16);
+        PrintAndLogEx(INFO, "%s.............. %u Reserved for ATS", sprint_hex_inrow(&d[8], 16), 16);
     }
 
     PrintAndLogEx(INFO, "");
