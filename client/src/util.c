@@ -1153,6 +1153,13 @@ void hex_xor(uint8_t *d, const uint8_t *x, int n) {
     }
 }
 
+void hex_xor_token(uint8_t *d, const uint8_t *x, int dn, int xn) {
+    while (dn--) {
+        d[dn] ^= x[dn % xn];
+    }
+}
+
+
 // return parity bit required to match type
 uint8_t GetParity(const uint8_t *bits, uint8_t type, int length) {
     int x;
