@@ -2610,12 +2610,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
         }
 
-        if (res == NONCE_FAIL) {
-            PrintAndLogEx(SUCCESS, "nonce................ " _RED_("read failed"));
-        }
-
         if (res == NONCE_NORMAL) {
-
             // not static
             res = detect_classic_prng();
             if (res == 1) {
