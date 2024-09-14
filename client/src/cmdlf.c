@@ -323,14 +323,17 @@ int CmdLFCommandRead(const char *Cmd) {
     }
 
     if (add_crc_ht) {
+
         // Hitag 1, Hitag S, ZX8211
         // width=8 poly=0x1d init=0xff refin=false refout=false xorout=0x00 check=0xb4 residue=0x00 name="CRC-8/HITAG"
         crc_t crc;
+        crc_init_ref(&crc, 8, 0x1d, 0xff, 0, false, false);
+
         uint8_t data = 0;
         uint8_t n = 0;
-        crc_init_ref(&crc, 8, 0x1d, 0xff, 0, false, false);
-        uint8_t i;
-        for (i = 0; i < cmd_len; i++) {
+
+        for (int i = 0; i < cmd_len; i++) {
+
             if ((cmd[i] != '0') && (cmd[i] != '1')) {
                 // avoid include 'W0S' in crc
                 crc_init_ref(&crc, 8, 0x1d, 0xff, 0, false, false);
@@ -338,18 +341,22 @@ int CmdLFCommandRead(const char *Cmd) {
                 data = 0;
                 continue;
             }
+
             data <<= 1;
             data += cmd[i] - '0';
-            n += 1;
+            n++;
+
             if (n == 8) {
                 crc_update2(&crc, data, n);
                 n = 0;
                 data = 0;
             }
         }
+
         if (n > 0) {
             crc_update2(&crc, data, n);
         }
+
         uint8_t crc_final = crc_finish(&crc);
         for (int j = 7; j >= 0; j--) {
             cmd[cmd_len] = ((crc_final >> j) & 1) ? '1' : '0';
