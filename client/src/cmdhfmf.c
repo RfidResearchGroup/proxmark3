@@ -3632,6 +3632,7 @@ static int CmdHF14AMfSmartBrute(const char *Cmd) {
                 break;
 
             } else if (ret == BF_GENERATOR_NEXT) {
+
                 generator_key = bf_get_key48(&bctx);
                 num_to_bytes(generator_key, MIFARE_KEY_SIZE, keyBlock + (i * MIFARE_KEY_SIZE));
                 keycnt++;
@@ -3641,10 +3642,11 @@ static int CmdHF14AMfSmartBrute(const char *Cmd) {
                     smart_mode_stage = bctx.smart_mode_stage;
                     PrintAndLogEx(INFO, "Running bruteforce stage %d", smart_mode_stage);
 
-                    if (msclock() - t1 > 0 && keys_checked > 0) {
+                    if (keys_checked) {
 
                         PrintAndLogEx(INFO, "Current cracking speed (keys/s): %lu",
-                                      keys_checked / ((msclock() - t1) / 1000));
+                                      keys_checked / ((msclock() - t1) / 1000)
+                                    );
 
                         t1 = msclock();
                         keys_checked = 0;
