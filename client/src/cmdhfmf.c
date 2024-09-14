@@ -7867,11 +7867,11 @@ static int parse_gtu_cfg(uint8_t *d, size_t n) {
 
     uint8_t atslen = d[7];
     if (atslen == 0) {
-        PrintAndLogEx(INFO, ".............. ATS length %u bytes ( %s )", _YELLOW_("zero"), atslen);
+        PrintAndLogEx(INFO, ".............. ATS length %u bytes ( %s )", atslen, _YELLOW_("zero"));
     } else if (atslen <= 16) {
-        PrintAndLogEx(INFO, ".............. ATS length %u bytes ( %s )", _GREEN_("ok"), atslen);
+        PrintAndLogEx(INFO, ".............. ATS length %u bytes ( %s )", atslen, _GREEN_("ok"));
     } else {
-        PrintAndLogEx(INFO, ".............. ATS length %u bytes ( %s )", _RED_("fail"), atslen);
+        PrintAndLogEx(INFO, ".............. ATS length %u bytes ( %s )", atslen, _RED_("fail"));
         atslen = 0;
     }
 
