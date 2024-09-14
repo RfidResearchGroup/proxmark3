@@ -301,8 +301,8 @@ static int CmdScriptRun(const char *Cmd) {
     // and be able to send in parameters into script meanwhile
     // being able to "-h" here too.
     if ((strlen(filename) == 0) ||
-        (strcmp(filename, "-h") == 0) ||
-        (strcmp(filename, "--help") == 0)) {
+            (strcmp(filename, "-h") == 0) ||
+            (strcmp(filename, "--help") == 0)) {
         ctx->argtable = argtable;
         ctx->argtableLen = arg_getsize(argtable);
         CLIParserPrintHelp(ctx);

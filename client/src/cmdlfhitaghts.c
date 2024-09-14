@@ -107,7 +107,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
         use_crypto = true;
     }
     if ((key_len == 0) && use_82xx) {
-        memcpy(key, (uint8_t[]){0xBB, 0xDD, 0x33, 0x99}, 4);
+        memcpy(key, (uint8_t[]) {0xBB, 0xDD, 0x33, 0x99}, 4);
         key_len = 4;
     }
     if ((key_len == 0) && use_crypto) {
@@ -266,7 +266,7 @@ static int CmdLFHitagSWrite(const char *Cmd) {
         use_crypto = true;
     }
     if ((key_len == 0) && use_82xx) {
-        memcpy(key, (uint8_t[]){0xBB, 0xDD, 0x33, 0x99}, 4);
+        memcpy(key, (uint8_t[]) {0xBB, 0xDD, 0x33, 0x99}, 4);
         key_len = 4;
     }
     if ((key_len == 0) && use_crypto) {

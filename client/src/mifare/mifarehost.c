@@ -52,7 +52,7 @@ int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     bool first_run = true;
 
     // message
-    PrintAndLogEx(INFO, "Expected execution time is about 25seconds on average");
+    PrintAndLogEx(INFO, "Expected execution time is about " _YELLOW_("25") " seconds on average");
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort");
 
     while (true) {

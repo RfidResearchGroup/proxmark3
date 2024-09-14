@@ -2264,7 +2264,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         card.ats_len = resp.oldarg[0]; // note: ats_len includes CRC Bytes
         if (card.ats_len > 3) {
             select_status = 1;
-    }
+        }
     }
 
     if (card.ats_len >= 3) {        // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes

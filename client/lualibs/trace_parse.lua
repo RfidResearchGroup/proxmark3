@@ -1,5 +1,5 @@
---[[ 
-    Simple Trace Parser library 
+--[[
+    Simple Trace Parser library
 
     -- fair warning, this is best to just get trace data values, I didn't see any better implementation for this, so I just made one myself
 

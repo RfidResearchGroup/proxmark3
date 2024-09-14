@@ -2400,12 +2400,12 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
             ui64Key = emlGetKey(s, MF_KEY_B);
 
             if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(s), MF_KEY_B, ui64Key, AUTH_FIRST)) {
-            retval = PM3_EPARTIAL;
-            if (g_dbglevel >= DBG_ERROR) {
-                Dbprintf("Sector %2d - Auth error", s);
+                retval = PM3_EPARTIAL;
+                if (g_dbglevel >= DBG_ERROR) {
+                    Dbprintf("Sector %2d - Auth error", s);
+                }
+                continue;
             }
-            continue;
-        }
         }
 
 

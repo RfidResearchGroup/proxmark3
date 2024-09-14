@@ -39,16 +39,16 @@
 
 static struct hitagS_tag tag = {
     .pages =
-        {
-                                               // Plain mode:               | Authentication mode:
-            [0] = {0x88, 0xcd, 0x6d, 0xf3},    // UID                       | UID
-            [1] = {0xca, 0x24, 0x00, 0x00},    // CON0 CON1 CON2 Reserved   | CON0 CON1 CON2 PWDH0
-            [2] = {0xaa, 0xaa, 0xaa, 0xaa},    // Data                      | PWDL0 PWDL1 KEYH0 KEYH1
-            [3] = {0x55, 0x55, 0x55, 0x55},    // Data                      | KEYL0 KEYL1 KEYL2 KEYL3
-            [4] = {0xff, 0x80, 0x00, 0x00},    // Data
-            [5] = {0x00, 0x00, 0x00, 0x00},    // Data
-            // up to index 63 for HITAG S2048 public data
-        },
+    {
+        // Plain mode:               | Authentication mode:
+        [0] = {0x88, 0xcd, 0x6d, 0xf3},    // UID                       | UID
+        [1] = {0xca, 0x24, 0x00, 0x00},    // CON0 CON1 CON2 Reserved   | CON0 CON1 CON2 PWDH0
+        [2] = {0xaa, 0xaa, 0xaa, 0xaa},    // Data                      | PWDL0 PWDL1 KEYH0 KEYH1
+        [3] = {0x55, 0x55, 0x55, 0x55},    // Data                      | KEYL0 KEYL1 KEYL2 KEYL3
+        [4] = {0xff, 0x80, 0x00, 0x00},    // Data
+        [5] = {0x00, 0x00, 0x00, 0x00},    // Data
+        // up to index 63 for HITAG S2048 public data
+    },
 };
 static uint8_t page_to_be_written = 0;
 static int block_data_left = 0;

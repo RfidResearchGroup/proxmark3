@@ -3646,7 +3646,7 @@ static int CmdHF14AMfSmartBrute(const char *Cmd) {
 
                         PrintAndLogEx(INFO, "Current cracking speed (keys/s): %lu",
                                       keys_checked / ((msclock() - t1) / 1000)
-                                    );
+                                     );
 
                         t1 = msclock();
                         keys_checked = 0;
@@ -7881,8 +7881,8 @@ static int parse_gtu_cfg(uint8_t *d, size_t n) {
     PrintAndLogEx(INFO, _CYAN_("Config 2 - ATS"));
     PrintAndLogEx(INFO, "%s", sprint_hex_inrow(d + 8, 16));
     if (atslen <= 16) {
-    PrintAndLogEx(INFO, "%s.............. ATS ( %d bytes )", sprint_hex_inrow(&d[8], d[7]), d[7]);
-    PrintAndLogEx(INFO, "..................%s Reserved for ATS", sprint_hex_inrow(d + 8 + d[7], 16 - d[7]));
+        PrintAndLogEx(INFO, "%s.............. ATS ( %d bytes )", sprint_hex_inrow(&d[8], d[7]), d[7]);
+        PrintAndLogEx(INFO, "..................%s Reserved for ATS", sprint_hex_inrow(d + 8 + d[7], 16 - d[7]));
     } else {
         PrintAndLogEx(INFO, "%s.............. %u Reserved for ATS", sprint_hex_inrow(&d[8], 16), 16);
     }
@@ -9631,20 +9631,20 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         } else if (fKeyType == MF_KEY_BD08 || fKeyType == MF_KEY_BD08S || fKeyType == MF_KEY_BD32) {
             PrintAndLogEx(SUCCESS, _RED_("Unknown card with backdoor, please report details!"));
         } else
-        // other cards
-        if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x46", 4) == 0) {
-            PrintAndLogEx(SUCCESS, "NXP MF1ICS5005");
-        } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x47", 4) == 0) {
-            PrintAndLogEx(SUCCESS, "NXP MF1ICS5006");
-        } else if (card.sak == 0x09 && memcmp(blockdata + 5, "\x89\x04\x00\x47", 4) == 0) {
-            PrintAndLogEx(SUCCESS, "NXP MF1ICS2006");
-        } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x48", 4) == 0) {
-            PrintAndLogEx(SUCCESS, "NXP MF1ICS5007");
-        } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\xc0", 4) == 0) {
-            PrintAndLogEx(SUCCESS, "NXP MF1ICS5035");
-        } else {
-            PrintAndLogEx(SUCCESS, "unknown");
-        }
+            // other cards
+            if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x46", 4) == 0) {
+                PrintAndLogEx(SUCCESS, "NXP MF1ICS5005");
+            } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x47", 4) == 0) {
+                PrintAndLogEx(SUCCESS, "NXP MF1ICS5006");
+            } else if (card.sak == 0x09 && memcmp(blockdata + 5, "\x89\x04\x00\x47", 4) == 0) {
+                PrintAndLogEx(SUCCESS, "NXP MF1ICS2006");
+            } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x48", 4) == 0) {
+                PrintAndLogEx(SUCCESS, "NXP MF1ICS5007");
+            } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\xc0", 4) == 0) {
+                PrintAndLogEx(SUCCESS, "NXP MF1ICS5035");
+            } else {
+                PrintAndLogEx(SUCCESS, "unknown");
+            }
 
         if (e_sector[1].foundKey[MF_KEY_A] && (e_sector[1].Key[MF_KEY_A] == 0x2A2C13CC242A)) {
             PrintAndLogEx(SUCCESS, "Dorma Kaba SAFLOK detected");
