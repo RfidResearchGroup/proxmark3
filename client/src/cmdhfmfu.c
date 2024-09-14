@@ -4129,7 +4129,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     hf14a_config config;
     SendCommandNG(CMD_HF_ISO14443A_GET_CONFIG, NULL, 0);
     if (!WaitForResponseTimeout(CMD_HF_ISO14443A_GET_CONFIG, &resp, 2000)) {
-        PrintAndLogEx(WARNING, "command execution time out);
+        PrintAndLogEx(WARNING, "command execution time out");
                       return PM3_ETIMEOUT;
     }
     memcpy(&config, resp.data.asBytes, sizeof(hf14a_config));

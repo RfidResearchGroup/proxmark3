@@ -177,8 +177,8 @@ struct desfire_tag {
 typedef struct desfire_tag *desfiretag_t;
 void des_encrypt(void *out, const void *in, const void *key);
 void des_decrypt(void *out, const void *in, const void *key);
-void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode);
-void tdes_nxp_send(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode);
+void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key, uint8_t *iv, int keymode);
+void tdes_nxp_send(const void *in, void *out, size_t length, const void *key, uint8_t *iv, int keymode);
 
 void aes128_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[16]);
 void aes128_nxp_send(const void *in, void *out, size_t length, const void *key, unsigned char iv[16]);
