@@ -1384,7 +1384,7 @@
         },
         "hf 14a sniff": {
             "command": "hf 14a sniff",
-            "description": "Sniff the communication between Hitag reader and tag. Use `hf 14a list` to view collected data.",
+            "description": "Sniff the communication between reader and tag Use `hf 14a list` to view collected data.",
             "notes": [
                 "hf 14a sniff -c -r"
             ],
@@ -1598,7 +1598,7 @@
         },
         "hf 14b sniff": {
             "command": "hf 14b sniff",
-            "description": "Sniff the communication between reader and tag. Use `hf 14b list` to view collected data.",
+            "description": "Sniff the communication between reader and tag Use `hf 14b list` to view collected data.",
             "notes": [
                 "hf 14b sniff"
             ],
@@ -3605,7 +3605,7 @@
         },
         "hf iclass sniff": {
             "command": "hf iclass sniff",
-            "description": "Sniff the communication reader and tag",
+            "description": "Sniff the communication between reader and tag",
             "notes": [
                 "hf iclass sniff",
                 "hf iclass sniff -j -> jam e-purse updates"
@@ -3616,19 +3616,6 @@
                 "-j, --jam Jam (prevent) e-purse updates"
             ],
             "usage": "hf iclass sniff [-hj]"
-        },
-        "hf iclass spoof": {
-            "command": "hf iclass spoof",
-            "description": "Watch 'nd Spoof, activates reader Waits until a Picopass tag gets presented then Proxmark3 tries to dump it and then starts simulating",
-            "notes": [
-                "hf iclass spoof"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-v, --verbose Verbose output"
-            ],
-            "usage": "hf iclass spoof [-hv]"
         },
         "hf iclass view": {
             "command": "hf iclass view",
@@ -9886,7 +9873,7 @@
         },
         "lf hitag sniff": {
             "command": "lf hitag sniff",
-            "description": "Sniff the communication between reader and tag. Use `lf hitag list` to view collected data.",
+            "description": "Sniff the communication between reader and tag Use `lf hitag list` to view collected data.",
             "notes": [
                 "lf hitag sniff"
             ],
@@ -12915,8 +12902,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 745,
+        "commands_extracted": 744,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-09-14T18:53:04"
+        "extracted_on": "2024-09-15T09:53:32"
     }
 }

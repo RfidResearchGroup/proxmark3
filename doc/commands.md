@@ -396,7 +396,6 @@ Check column "offline" for their availability.
 |`hf iclass reader       `|N       |`Act like a Picopass / iCLASS reader`
 |`hf iclass restore      `|N       |`Restore a dump file onto a Picopass / iCLASS tag`
 |`hf iclass sniff        `|N       |`Eavesdrop Picopass / iCLASS communication`
-|`hf iclass spoof        `|N       |`Watches for Picopass and replays them`
 |`hf iclass view         `|Y       |`Display content from tag dump file`
 |`hf iclass wrbl         `|N       |`Write Picopass / iCLASS block`
 |`hf iclass creditepurse `|N       |`Credit epurse value`
