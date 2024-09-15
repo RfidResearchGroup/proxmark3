@@ -1624,6 +1624,7 @@ int hts_read_uid(uint32_t *uid, bool ledcontrol, bool send_answer) {
     int status = PM3_SUCCESS;
     if (rxlen == 32) {
 
+        memcpy(&tag.pages[0], rx, HITAGS_PAGE_SIZE);
         tag.uid = (rx[3] << 24 | rx[2] << 16 | rx[1] << 8 | rx[0]);
         if (uid) {
             *uid = tag.uid;
