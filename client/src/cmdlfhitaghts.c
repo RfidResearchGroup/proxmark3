@@ -102,7 +102,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
                   "  8268/8310 password mode: \n"
                   "    - default password BBDD3399\n",
                   "  lf hitag hts rdbl                         -> Hitag S/8211, plain mode\n"
-                  "  lf hitag hts rdbl --8 -k BBDD3399         -> 8268/8310, password mode\n"
+                  "  lf hitag hts rdbl --82xx -k BBDD3399      -> 8268/8310, password mode\n"
                   "  lf hitag hts rdbl --nrar 0102030411223344 -> Hitag S, challenge mode\n"
                   "  lf hitag hts rdbl --crypto                -> Hitag S, crypto mode, def key\n"
                   "  lf hitag hts rdbl -k 4F4E4D494B52         -> Hitag S, crypto mode\n\n"
@@ -187,8 +187,6 @@ static int CmdLFHitagSRead(const char *Cmd) {
     lf_hitag_data_t packet;
     memset(&packet, 0, sizeof(packet));
 
-    int pm3cmd = CMD_LF_HITAGS_READ;
-
     if (use_nrar) {
         packet.cmd = RHTSF_CHALLENGE;
         memcpy(packet.NrAr, nrar, sizeof(packet.NrAr));
@@ -205,10 +203,10 @@ static int CmdLFHitagSRead(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandNG(pm3cmd, (uint8_t *) &packet, sizeof(packet));
+    SendCommandNG(CMD_LF_HITAGS_READ, (uint8_t *) &packet, sizeof(packet));
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(pm3cmd, &resp, 2000) == false) {
+    if (WaitForResponseTimeout(CMD_LF_HITAGS_READ, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         return PM3_ETIMEOUT;
@@ -226,7 +224,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
 
     uint8_t *data = resp.data.asBytes;
 
-    hitags_config_t config = hitags_config_unpack(data + HITAGS_PAGE_SIZE);
+    hitags_config_t config = hitags_config_unpack(&data[HITAGS_PAGE_SIZE * HITAGS_CONFIG_PADR]);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
@@ -254,7 +252,7 @@ static int CmdLFHitagSWrite(const char *Cmd) {
                   "  8268/8310 password mode: \n"
                   "    - default password BBDD3399\n",
                   "  lf hitag hts wrbl -p 6 -d 01020304                         -> Hitag S/8211, plain mode\n"
-                  "  lf hitag hts wrbl -p 6 -d 01020304 --8 -k BBDD3399         -> 8268/8310, password mode\n"
+                  "  lf hitag hts wrbl -p 6 -d 01020304 --82xx -k BBDD3399      -> 8268/8310, password mode\n"
                   "  lf hitag hts wrbl -p 6 -d 01020304 --nrar 0102030411223344 -> Hitag S, challenge mode\n"
                   "  lf hitag hts wrbl -p 6 -d 01020304 --crypto                -> Hitag S, crypto mode, default key\n"
                   "  lf hitag hts wrbl -p 6 -d 01020304 -k 4F4E4D494B52         -> Hitag S, crypto mode\n\n"
@@ -263,7 +261,7 @@ static int CmdLFHitagSWrite(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
-        arg_lit0(NULL, "8", "8268/8310 mode"),
+        arg_lit0("8", "82xx", "8268/8310 mode"),
         arg_lit0(NULL, "crypto", "crypto mode"),
         arg_str0("k", "key", "<hex>", "pwd or key, 4 or 6 hex bytes"),
         arg_int1("p", "page", "<dec>", "page address to write to"),
@@ -327,7 +325,7 @@ static int CmdLFHitagSWrite(const char *Cmd) {
         use_crypto = true;
     }
     if ((key_len == 0) && use_82xx) {
-        memcpy(key, (uint8_t[]) {0xBB, 0xDD, 0x33, 0x99}, 4);
+        memcpy(key, "\xBB\xDD\x33\x99", 4);
         key_len = 4;
     }
     if ((key_len == 0) && use_crypto) {

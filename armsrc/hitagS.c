@@ -289,7 +289,7 @@ static void hitag_reader_send_bit(int bit, bool ledcontrol) {
     if (ledcontrol) LED_A_ON();
     // Reset clock for the next bit
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    while (AT91C_BASE_TC0->TC_CV > 0);
+    while (AT91C_BASE_TC0->TC_CV != 0);
 
     // Binary puls length modulation (BPLM) is used to encode the data stream
     // This means that a transmission of a one takes longer than that of a zero
@@ -334,7 +334,7 @@ static void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len, bool
     }
     // send EOF
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    while (AT91C_BASE_TC0->TC_CV > 0);
+    while (AT91C_BASE_TC0->TC_CV != 0);
     HIGH(GPIO_SSC_DOUT);
 
     // Wait for 4-10 times the carrier period
@@ -362,14 +362,10 @@ static void hts_init_clock(void) {
     // TC1: Capture mode, clock source = MCK/32 (TIMER_CLOCK3), TIOA is external trigger,
     // external trigger falling edge, set RA on falling edge of TIOA.
     AT91C_BASE_TC1->TC_CMR =
-        AT91C_TC_CLKS_TIMER_DIV3_CLOCK |
-        AT91C_TC_ETRGEDG_FALLING | // external trigger on falling edge
-        AT91C_TC_ABETRG |          // TIOA is used as an external trigger.
-        AT91C_TC_LDRA_FALLING |    // load RA on on falling edge
-        AT91C_TC_ACPA_CLEAR |      // RA comperator clears TIOA (carry bit)
-        AT91C_TC_ASWTRG_SET;       // SWTriger sets TIOA (carry bit)
-
-    AT91C_BASE_TC1->TC_RA  = 1; // clear carry bit on next clock cycle
+        AT91C_TC_CLKS_TIMER_DIV3_CLOCK |    // MCK/32 (TIMER_CLOCK3)
+        AT91C_TC_ETRGEDG_FALLING |          // external trigger on falling edge
+        AT91C_TC_ABETRG |                   // TIOA is used as an external trigger
+        AT91C_TC_LDRA_FALLING;              // load RA on on falling edge
 
     // Enable and reset counters
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
@@ -377,7 +373,7 @@ static void hts_init_clock(void) {
 
     // synchronized startup procedure
     // In theory, with MCK/32, we shouldn't be waiting longer than 32 instruction statements, right?
-    while (AT91C_BASE_TC0->TC_CV > 0) {}; // wait until TC0 returned to zero
+    while (AT91C_BASE_TC0->TC_CV != 0) {}; // wait until TC0 returned to zero
 
 }
 
@@ -440,12 +436,8 @@ static void hts_set_frame_modulation(void) {
  */
 static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
                                       uint8_t *tx, size_t *txlen) {
-    uint8_t rx_air[HITAG_FRAME_LEN];
     uint64_t state;
     unsigned char crc;
-
-    // Copy the (original) received frame how it is send over the air
-    memcpy(rx_air, rx, nbytes(rxlen));
 
     // Reset the transmission frame length
     *txlen = 0;
@@ -458,21 +450,21 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
             tag.pstate = HT_READY;
             tag.tstate = HT_NO_OP;
 
-            if ((rx[0] & 0xf0) == HITAGS_UID_REQ_STD) {
+            if (rx[0] == HITAGS_UID_REQ_STD) {
                 DBG Dbprintf("HT_STANDARD");
                 tag.mode = HT_STANDARD;
                 sof_bits = 1;
                 m = AC2K;
             }
 
-            if ((rx[0] & 0xf0) == HITAGS_UID_REQ_ADV) {
+            if (rx[0] == HITAGS_UID_REQ_ADV) {
                 DBG Dbprintf("HT_ADVANCED");
                 tag.mode = HT_ADVANCED;
                 sof_bits = 3;
                 m = AC2K;
             }
 
-            if ((rx[0] & 0xf0) == HITAGS_UID_REQ_FADV) {
+            if (rx[0] == HITAGS_UID_REQ_FADV) {
                 DBG Dbprintf("HT_FAST_ADVANCED");
                 tag.mode = HT_FAST_ADVANCED;
                 sof_bits = 3;
@@ -612,7 +604,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
             //write page, write block, read page or read block command received
             if ((rx[0] & 0xf0) == HITAGS_READ_PAGE) { //read page
                 //send page data
-                uint8_t page = ((rx[0] & 0x0f) * 16) + ((rx[1] & 0xf0) / 16);
+                uint8_t page = ((rx[0] & 0x0f) << 4) + ((rx[1] & 0xf0) >> 4);
                 *txlen = 32;
                 tx[0] = tag.pages[page][0];
                 tx[1] = tag.pages[page][1];
@@ -643,7 +635,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
 
             } else if ((rx[0] & 0xf0) == HITAGS_READ_BLOCK) { //read block
 
-                uint8_t page = ((rx[0] & 0x0f) * 16) + ((rx[1] & 0xf0) / 16);
+                uint8_t page = ((rx[0] & 0x0f) << 4) + ((rx[1] & 0xf0) >> 4);
                 *txlen = 32 * 4;
 
                 //send page,...,page+3 data
@@ -673,7 +665,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
 
             } else if ((rx[0] & 0xf0) == HITAGS_WRITE_PAGE) { //write page
 
-                uint8_t page = ((rx[0] & 0x0f) * 16) + ((rx[1] & 0xf0) / 16);
+                uint8_t page = ((rx[0] & 0x0f) << 4) + ((rx[1] & 0xf0) >> 4);
 
                 if ((tag.LCON && page == 1)
                         || (tag.LKP && (page == 2 || page == 3))) {
@@ -689,7 +681,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
 
             } else if ((rx[0] & 0xf0) == HITAGS_WRITE_BLOCK) { //write block
 
-                uint8_t page = ((rx[0] & 0x0f) * 6) + ((rx[1] & 0xf0) / 16);
+                uint8_t page = ((rx[0] & 0x0f) << 4) + ((rx[1] & 0xf0) >> 4);
                 hts_set_frame_modulation();
 
                 if (page % 4 != 0 || page == 0) {
@@ -723,8 +715,7 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
     int response = 0, overflow = 0;
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
-    uint8_t txbuf[HITAG_FRAME_LEN];
-    uint8_t *tx = txbuf;
+    uint8_t tx[HITAG_FRAME_LEN];
     size_t txlen = 0;
 
     // Reset the received frame, frame count and timing info
@@ -739,20 +730,12 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
     clear_trace();
 
     DbpString("Starting Hitag S simulation");
-    if (ledcontrol) LED_D_ON();
 
     tag.pstate = HT_READY;
     tag.tstate = HT_NO_OP;
 
     // read tag data into memory
     if (tag_mem_supplied) {
-
-        for (int i = 0; i < 16; i++) {
-            for (int j = 0; j < 4; j++) {
-                tag.pages[i][j] = 0x0;
-            }
-        }
-
         DbpString("Loading hitag S memory...");
         memcpy((uint8_t *)tag.pages, data, 4 * 64);
     } else {
@@ -888,7 +871,9 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
     // synchronized startup procedure
-    while (AT91C_BASE_TC0->TC_CV > 0); // wait until TC0 returned to zero
+    while (AT91C_BASE_TC0->TC_CV != 0); // wait until TC0 returned to zero
+
+    if (ledcontrol) LED_D_ON();
 
     while ((BUTTON_PRESS() == false) && (data_available() == false)) {
 
@@ -997,7 +982,7 @@ static void hts_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint3
 
     // Dbprintf("TC0_CV:%i TC1_CV:%i TC1_RA:%i", AT91C_BASE_TC0->TC_CV, AT91C_BASE_TC1->TC_CV ,AT91C_BASE_TC1->TC_RA);
 
-    // Receive frame, watch for at most T0*HITAG_T_PROG_MAX periods
+    // Receive tag frame, watch for at most T0*HITAG_T_PROG_MAX periods
     while (AT91C_BASE_TC0->TC_CV < (T0 * HITAG_T_PROG_MAX)) {
 
         // Check if falling edge in tag modulation is detected
@@ -1129,7 +1114,7 @@ static void hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_
         if (ac_seq) {
 
             // Tag Response is AC encoded
-            // We used UID Request Advanced,  meaning AC SEQ header is  111.
+            // We used UID Request Advanced,  meaning AC SEQ SOF is  111.
             for (int i = 7; i < rxlen; i += 2) {
 
                 rx[k / 8] |= response_bit[i] << (7 - (k % 8));
@@ -1226,7 +1211,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
     hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, t_wait, ledcontrol, true);
 
     if (rxlen != 32) {
-        DBG DbpString("UID Request failed!");
+        DbpString("UID Request failed!");
         return -1;
     }
 
@@ -1245,7 +1230,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
     hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
     if (rxlen != 40) {
-        DBG Dbprintf("Select UID failed! %i", rxlen);
+        Dbprintf("Select UID failed! %i", rxlen);
         return -1;
     }
 
@@ -1350,7 +1335,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
             hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
             if ((rxlen != 2) || (rx[0] >> (8 - 2) != 0x01)) {
-                DBG Dbprintf("no write access on page " _YELLOW_("64") ". not 82xx?");
+                Dbprintf("no write access on page " _YELLOW_("64") ". not 82xx?");
                 return -1;
             }
 
@@ -1362,23 +1347,23 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
             hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
             if ((rxlen != 2) || (rx[0] >> (8 - 2) != 0x01)) {
-                DBG Dbprintf("write to page " _YELLOW_("64") " failed! wrong password?");
+                Dbprintf("write to page " _YELLOW_("64") " failed! wrong password?");
                 return -1;
             }
 
             return 0;
         } else if (packet->cmd == RHTSF_PLAIN || packet->cmd == WHTSF_PLAIN) {
-            DBG Dbprintf("Error, " _YELLOW_("AUT=1") " This tag is configured in Authentication Mode");
+            Dbprintf("Error, " _YELLOW_("AUT=1") " This tag is configured in Authentication Mode");
             return -1;
         } else {
-            DBG Dbprintf("Error, unknown function: " _RED_("%d"), packet->cmd);
+            Dbprintf("Error, unknown function: " _RED_("%d"), packet->cmd);
             return -1;
         }
 
         hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
         if (rxlen != 40) {
-            DBG Dbprintf("Authenticate failed! " _RED_("%i"), rxlen);
+            Dbprintf("Authenticate failed! " _RED_("%i"), rxlen);
             return -1;
         }
 
@@ -1640,6 +1625,7 @@ int hts_read_uid(uint32_t *uid, bool ledcontrol, bool send_answer) {
     int status = PM3_SUCCESS;
     if (rxlen == 32) {
 
+        memcpy(&tag.pages[0], rx, HITAGS_PAGE_SIZE);
         tag.uid = (rx[3] << 24 | rx[2] << 16 | rx[1] << 8 | rx[0]);
         if (uid) {
             *uid = tag.uid;
