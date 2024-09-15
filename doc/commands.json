@@ -9731,7 +9731,7 @@
             "description": "Read Hitag S memory. Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR) 8268/8310 password mode: - default password BBDD3399",
             "notes": [
                 "lf hitag hts rdbl -> Hitag S/8211, plain mode",
-                "lf hitag hts rdbl --8 -k BBDD3399 -> 8268/8310, password mode",
+                "lf hitag hts rdbl --82xx -k BBDD3399 -> 8268/8310, password mode",
                 "lf hitag hts rdbl --nrar 0102030411223344 -> Hitag S, challenge mode",
                 "lf hitag hts rdbl --crypto -> Hitag S, crypto mode, def key",
                 "lf hitag hts rdbl -k 4F4E4D494B52 -> Hitag S, crypto mode"
@@ -9765,7 +9765,7 @@
             "description": "Write a page in Hitag S memory. Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR) 8268/8310 password mode: - default password BBDD3399",
             "notes": [
                 "lf hitag hts wrbl -p 6 -d 01020304 -> Hitag S/8211, plain mode",
-                "lf hitag hts wrbl -p 6 -d 01020304 --8 -k BBDD3399 -> 8268/8310, password mode",
+                "lf hitag hts wrbl -p 6 -d 01020304 --82xx -k BBDD3399 -> 8268/8310, password mode",
                 "lf hitag hts wrbl -p 6 -d 01020304 --nrar 0102030411223344 -> Hitag S, challenge mode",
                 "lf hitag hts wrbl -p 6 -d 01020304 --crypto -> Hitag S, crypto mode, default key",
                 "lf hitag hts wrbl -p 6 -d 01020304 -k 4F4E4D494B52 -> Hitag S, crypto mode"
@@ -9774,13 +9774,13 @@
             "options": [
                 "-h, --help This help",
                 "--nrar <hex> nonce / answer writer, 8 hex bytes",
-                "--8 8268/8310 mode",
+                "-8, --82xx 8268/8310 mode",
                 "--crypto crypto mode",
                 "-k, --key <hex> pwd or key, 4 or 6 hex bytes",
                 "-p, --page <dec> page address to write to",
                 "-d, --data <hex> data, 4 hex bytes"
             ],
-            "usage": "lf hitag hts wrbl [-h] [--nrar <hex>] [--8] [--crypto] [-k <hex>] -p <dec> -d <hex>"
+            "usage": "lf hitag hts wrbl [-h8] [--nrar <hex>] [--crypto] [-k <hex>] -p <dec> -d <hex>"
         },
         "lf hitag info": {
             "command": "lf hitag info",
@@ -12902,8 +12902,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 744,
+        "commands_extracted": 745,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-09-15T09:53:32"
+        "extracted_on": "2024-09-15T16:16:09"
     }
 }

@@ -35,6 +35,10 @@
 
 static int CmdHelp(const char *Cmd);
 
+static const uint8_t ht2_default_keys[] = {
+    0xBD, 0xF5, 0xE8, 0x46      // PAXTON
+};
+
 static const char *getHitagTypeStr(uint32_t uid) {
     //uid s/n        ********
     uint8_t type = (uid >> 4) & 0xF;
@@ -205,7 +209,7 @@ static int CmdLFHitagList(const char *Cmd) {
     */
 }
 
-static void print_hitag2_paxton(const uint8_t *data) {
+static void print_hitag2_paxton(bool show_header, const uint8_t *data) {
 
     // if the pwd isn't..
     if (memcmp(data + 4, "\xBD\xF5\xE8\x46", 4)) {
@@ -263,10 +267,14 @@ static void print_hitag2_paxton(const uint8_t *data) {
         }
     }
 
-    PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Possible de-scramble patterns") " -------------");
+    if (show_header) {
+        PrintAndLogEx(INFO, "");
+        PrintAndLogEx(INFO, "--- " _CYAN_("Possible de-scramble patterns") " -------------");
+    }
     PrintAndLogEx(SUCCESS, "Paxton id... %" PRIu64 " | 0x%" PRIx64 "  ( %s )", paxton_id, paxton_id, formfactor);
-    PrintAndLogEx(INFO, "");
+    if (show_header) {
+        PrintAndLogEx(INFO, "");
+    }
 }
 
 static void print_hitag2_configuration(uint32_t uid, uint8_t config) {
@@ -1079,7 +1087,7 @@ static int CmdLFHitagRd(const char *Cmd) {
 
     if (use_ht2) {
         print_hitag2_blocks(data, HITAG2_MAX_BYTE_SIZE);
-        print_hitag2_paxton(data);
+        print_hitag2_paxton(true, data);
     } else {
         print_hex_break(data, HITAG_MAX_BYTE_SIZE, HITAG_BLOCK_SIZE);
     }
@@ -1624,7 +1632,7 @@ out:
     if (use_ht2) {
         print_hitag2_configuration(uid, data[HITAG_BLOCK_SIZE * 3]);
         print_hitag2_blocks(data, HITAG2_MAX_BYTE_SIZE);
-        print_hitag2_paxton(data);
+        print_hitag2_paxton(true, data);
     } else {
         PrintAndLogEx(INFO, "No memory printing available");
     }
@@ -1685,7 +1693,7 @@ static int CmdLFHitagView(const char *Cmd) {
         uint8_t config = dump[HITAG2_CONFIG_OFFSET];
         uint32_t uid = bytes_to_num(dump, HITAG_UID_SIZE);
         print_hitag2_configuration(uid, config);
-        print_hitag2_paxton(dump);
+        print_hitag2_paxton(true, dump);
     }
     print_hitag2_blocks(dump, HITAG2_MAX_BYTE_SIZE);
     free(dump);
@@ -1800,7 +1808,7 @@ static int CmdLFHitagEview(const char *Cmd) {
         uint8_t config = dump[HITAG2_CONFIG_OFFSET];
         uint32_t uid = bytes_to_num(dump, HITAG_UID_SIZE);
         print_hitag2_configuration(uid, config);
-        print_hitag2_paxton(dump);
+        print_hitag2_paxton(true, dump);
     }
     print_hitag2_blocks(dump, HITAG2_MAX_BYTE_SIZE);
     free(dump);
@@ -2483,6 +2491,35 @@ int ht2_read_uid(void) {
 
     PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%08X"), uid);
     PrintAndLogEx(SUCCESS, "TYPE... " _GREEN_("%s"), getHitagTypeStr(uid));
+    return PM3_SUCCESS;
+}
+
+int ht2_read_paxton(void) {
+
+// read block 4,5,6,7
+
+    lf_hitag_data_t packet;
+    memset(&packet, 0, sizeof(packet));
+
+    packet.cmd = RHT2F_PASSWORD;
+    memcpy(packet.pwd, ht2_default_keys, sizeof(packet.pwd));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_HITAG_READER, (uint8_t *)&packet, sizeof(packet));
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_LF_HITAG_READER, &resp, 2000) == false) {
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - hitag failed");
+        return PM3_ESOFT;
+    }
+
+    uint8_t *data = resp.data.asBytes;
+    print_hitag2_paxton(false, data);
     return PM3_SUCCESS;
 }
 

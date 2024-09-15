@@ -1719,8 +1719,21 @@ int CmdLFfind(const char *Cmd) {
     PrintAndLogEx(INFO, _CYAN_("Checking for known tags..."));
     PrintAndLogEx(INFO, "");
 
+    int retval = PM3_SUCCESS;
+
     // only run these tests if device is online
     if (is_online) {
+
+        if (IfPm3Hitag()) {
+            if (ht2_read_paxton() == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Paxton ID") " found!");
+                if (search_cont) {
+                    found++;
+                } else {
+                    goto out;
+                }
+            }
+        }
 
 #if !defined ICOPYX
         if (IfPm3EM4x50()) {
@@ -1768,8 +1781,6 @@ int CmdLFfind(const char *Cmd) {
             }
         }
     }
-
-    int retval = PM3_SUCCESS;
 
     // ask / man
     if (demodEM410x(true) == PM3_SUCCESS) {

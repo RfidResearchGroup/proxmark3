@@ -766,12 +766,12 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
 
     for (int i = 0; i < tag.max_page; i++) {
         DBG Dbprintf("Page[%2d]: %02X %02X %02X %02X",
-                i,
-                (tag.pages[i][3]) & 0xFF,
-                (tag.pages[i][2]) & 0xFF,
-                (tag.pages[i][1]) & 0xFF,
-                tag.pages[i][0] & 0xFF
-        );
+                     i,
+                     (tag.pages[i][3]) & 0xFF,
+                     (tag.pages[i][2]) & 0xFF,
+                     (tag.pages[i][1]) & 0xFF,
+                     tag.pages[i][0] & 0xFF
+                    );
     }
 
     //con1
@@ -1442,15 +1442,15 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
         if (g_dbglevel >= DBG_EXTENDED) {
             if (tag.auth && tag.LKP && pageNum == 1) {
                 DBG Dbprintf("Page[%2d]: %02X %02X %02X %02X", pageNum, pwdh0,
-                         (tag.pages[pageNum][2]) & 0xff,
-                         (tag.pages[pageNum][1]) & 0xff,
-                         tag.pages[pageNum][0] & 0xff);
+                             (tag.pages[pageNum][2]) & 0xff,
+                             (tag.pages[pageNum][1]) & 0xff,
+                             tag.pages[pageNum][0] & 0xff);
             } else {
                 DBG Dbprintf("Page[%2d]: %02X %02X %02X %02X", pageNum,
-                         (tag.pages[pageNum][3]) & 0xff,
-                         (tag.pages[pageNum][2]) & 0xff,
-                         (tag.pages[pageNum][1]) & 0xff,
-                         tag.pages[pageNum][0] & 0xff);
+                             (tag.pages[pageNum][3]) & 0xff,
+                             (tag.pages[pageNum][2]) & 0xff,
+                             (tag.pages[pageNum][1]) & 0xff,
+                             tag.pages[pageNum][0] & 0xff);
             }
         }
 
@@ -1459,17 +1459,17 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
         if (pageNum == 2 && tag.auth == 1 && tag.LKP) {
             if (payload->cmd == RHTSF_KEY) {
                 DBG Dbprintf("Page[ 2]: %02X %02X %02X %02X",
-                         payload->key[1],
-                         payload->key[0],
-                         pwdl1,
-                         pwdl0
-                        );
+                             payload->key[1],
+                             payload->key[0],
+                             pwdl1,
+                             pwdl0
+                            );
                 DBG Dbprintf("Page[ 3]: %02X %02X %02X %02X",
-                         payload->key[5],
-                         payload->key[4],
-                         payload->key[3],
-                         payload->key[2]
-                        );
+                             payload->key[5],
+                             payload->key[4],
+                             payload->key[3],
+                             payload->key[2]
+                            );
             } else {
                 //if the authentication is done with a challenge the key and password are unknown
                 DBG Dbprintf("Page[ 2]: __ __ __ __");
@@ -1676,12 +1676,12 @@ void hts_check_challenges(const uint8_t *data, uint32_t datalen, bool ledcontrol
         int res = hts_select_tag(&payload, tx, ARRAYLEN(tx), rx, ARRAYLEN(rx), HITAG_T_WAIT_FIRST, ledcontrol);
 
         DBG  Dbprintf("Challenge %s: %02X %02X %02X %02X %02X %02X %02X %02X",
-                 res == -1 ? "failed " : "success",
-                 payload.NrAr[0], payload.NrAr[1],
-                 payload.NrAr[2], payload.NrAr[3],
-                 payload.NrAr[4], payload.NrAr[5],
-                 payload.NrAr[6], payload.NrAr[7]
-            );
+                      res == -1 ? "failed " : "success",
+                      payload.NrAr[0], payload.NrAr[1],
+                      payload.NrAr[2], payload.NrAr[3],
+                      payload.NrAr[4], payload.NrAr[5],
+                      payload.NrAr[6], payload.NrAr[7]
+                     );
 
         if (res == -1) {
             // Need to do a dummy UID select that will fail
