@@ -785,7 +785,7 @@ static int CmdEM410xClone(const char *Cmd) {
             }
 
             packet.cmd = WHTSF_82xx;
-            memcpy(packet.pwd, (uint8_t[]) {0xBB, 0xDD, 0x33, 0x99}, 4);
+            memcpy(packet.pwd, "\xBB\xDD\x33\x99", 4);
             SendCommandNG(CMD_LF_HITAGS_WRITE, (uint8_t *)&packet, sizeof(packet));
             if (WaitForResponseTimeout(CMD_LF_HITAGS_WRITE, &resp, 4000) == false) {
                 PrintAndLogEx(WARNING, "timeout while waiting for reply.");
