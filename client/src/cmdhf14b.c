@@ -886,7 +886,7 @@ static int CmdHF14BSniff(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b sniff",
-                  "Sniff the communication between reader and tag.\n"
+                  "Sniff the communication between reader and tag\n"
                   "Use `hf 14b list` to view collected data.",
                   "hf 14b sniff"
                  );

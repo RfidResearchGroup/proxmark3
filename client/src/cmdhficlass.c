@@ -711,7 +711,7 @@ static int CmdHFiClassSniff(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass sniff",
-                  "Sniff the communication reader and tag",
+                  "Sniff the communication between reader and tag",
                   "hf iclass sniff\n"
                   "hf iclass sniff -j    --> jam e-purse updates\n"
                  );

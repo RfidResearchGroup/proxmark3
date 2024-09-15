@@ -1854,7 +1854,7 @@ static int CmdLFHitagSim(const char *Cmd) {
 static int CmdLFHitagSniff(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag sniff",
-                  "Sniff the communication between reader and tag.\n"
+                  "Sniff the communication between reader and tag\n"
                   "Use `lf hitag list` to view collected data.",
                   " lf hitag sniff"
                  );

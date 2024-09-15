@@ -914,7 +914,7 @@ int CmdHF14ASim(const char *Cmd) {
 int CmdHF14ASniff(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a sniff",
-                  "Sniff the communication between Hitag reader and tag.\n"
+                  "Sniff the communication between reader and tag\n"
                   "Use `hf 14a list` to view collected data.",
                   " hf 14a sniff -c -r"
                  );

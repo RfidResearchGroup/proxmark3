@@ -80,7 +80,7 @@ static int CmdHFCryptoRFSim(const char *Cmd) {
 static int CmdHFCryptoRFSniff(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf cryptorf sniff",
-                  "Sniff the communication reader and tag",
+                  "Sniff the communication between reader and tag",
                   "hf cryptorf sniff\n"
                  );
 
