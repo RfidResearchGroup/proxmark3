@@ -65,7 +65,15 @@ if [ "$commandGIT" != "" ]; then
     fi
     if [ "$gitbranch" != "" ] && [ "$gitversion" != "" ]; then
         fullgitinfo="${fullgitinfo}/${gitbranch}/${gitversion}"
-        ctime="$(date '+%Y-%m-%d %H:%M:%S')"
+        # if FORCED_DATE present and properly formatted:
+        case "$FORCED_DATE" in
+        [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]" "[0-9][0-9]:[0-9][0-9]:[0-9][0-9])
+            ctime="$FORCED_DATE"
+            ;;
+        *)
+            ctime="$(date '+%Y-%m-%d %H:%M:%S')"
+            ;;
+        esac
     else
         fullgitinfo="${fullgitinfo}/master/release (git)"
     fi
