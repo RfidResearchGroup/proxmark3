@@ -133,4 +133,6 @@ bool hexstr_to_byte_array(const char *hexstr, uint8_t *d, size_t *n);
 
 void reverse_arraybytes(uint8_t *arr, size_t len);
 void reverse_arraybytes_copy(uint8_t *arr, uint8_t *dest, size_t len);
+
+size_t concatbits(uint8_t *dst, size_t dstskip, const uint8_t *src, size_t srcstart, size_t srclen);
 #endif
