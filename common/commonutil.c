@@ -563,3 +563,18 @@ void reverse_arraybytes_copy(uint8_t *arr, uint8_t *dest, size_t len) {
         dest[i] = reflect8(arr[i]);
     }
 }
+
+size_t concatbits(uint8_t *dst, size_t dstskip, const uint8_t *src, size_t srcstart, size_t srclen) {
+    // erase dstbuf bits that will be overriden
+    dst[dstskip / 8] &= 0xFF - ((1 << (7 - (dstskip % 8) + 1)) - 1);
+    for (size_t i = (dstskip / 8) + 1; i <= (dstskip + srclen) / 8; i++) {
+        dst[i] = 0;
+    }
+
+    for (size_t i = 0; i < srclen; i++) {
+        // equiv of dstbufbits[dstbufskip + i] = srcbufbits[srcbufstart + i]
+        dst[(dstskip + i) / 8] |= ((src[(srcstart + i) / 8] >> (7 - ((srcstart + i) % 8))) & 1) << (7 - ((dstskip + i) % 8));
+    }
+
+    return dstskip + srclen;
+}
