@@ -75,26 +75,27 @@ void Dbprintf(const char *fmt, ...) {
 // prints HEX & ASCII
 void Dbhexdump(int len, const uint8_t *d, bool bAsci) {
 #if DEBUG
-    char ascii[17];
-
     while (len > 0) {
 
         int l = (len > 16) ? 16 : len;
 
-        memcpy(ascii, d, l);
-        ascii[l] = 0;
+        if (bAsci) {
+            char ascii[17];
 
-        // filter safe ascii
-        for (int i = 0; i < l; i++) {
-            if (ascii[i] < 32 || ascii[i] > 126) {
-                ascii[i] = '.';
+            memcpy(ascii, d, l);
+            ascii[l] = 0;
+
+            // filter safe ascii
+            for (int i = 0; i < l; i++) {
+                if (ascii[i] < 32 || ascii[i] > 126) {
+                    ascii[i] = '.';
+                }
             }
-        }
 
-        if (bAsci)
             Dbprintf("%-8s %*D", ascii, l, d, " ");
-        else
+        } else {
             Dbprintf("%*D", l, d, " ");
+        }
 
         len -= 16;
         d += 16;
