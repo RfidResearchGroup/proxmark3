@@ -3937,7 +3937,7 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
         arg_str1(NULL, "csn", "<hex>", "Specify CSN as 8 hex bytes"),
         arg_str1(NULL, "epurse", "<hex>", "Specify ePurse as 8 hex bytes"),
         arg_str1(NULL, "macs", "<hex>", "MACs"),
-        arg_str1(NULL, "pk", "<hex>", "Partial Key"),
+        arg_str1(NULL, "pk", "<hex>", "Partial Key from legrec or starting key of keyblock from legbrute"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4009,7 +4009,7 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Starting Key: %s", sprint_hex(startingKey, 8));
 
     uint32_t keycount = 1000000;
-    uint32_t keys_per_thread = 200000;
+    uint32_t keys_per_thread = 250000;
     uint32_t num_threads = keycount / keys_per_thread;
     pthread_t threads[num_threads];
     ThreadData thread_data[num_threads];
@@ -4057,8 +4057,11 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
             return PM3_EINVARG;
         }
 
-        PrintAndLogEx(INFO, "Generating diversified keys...");
+        PrintAndLogEx(INFO, "Generating diversified keys...Index: " _YELLOW_("%d")" of ~1099511",block_index);
         for (uint32_t t = 0; t < num_threads; t++) {
+            if(!t){
+                PrintAndLogEx(SUCCESS, "KeyBlock Starting Key: %s", sprint_hex(thread_data[t].keyBlock[0], 8));
+            }
             GenerateMacKeyFrom(csn, CCNR, true, false, (uint8_t *)thread_data[t].keyBlock, keys_per_thread, prekey + (block_index * keycount) + (t * keys_per_thread));
         }
 
