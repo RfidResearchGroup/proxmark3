@@ -38,6 +38,7 @@
 #define HITAGS_BLOCK_SIZE        16
 #define HITAGS_MAX_PAGES         64
 #define HITAGS_MAX_BYTE_SIZE     (HITAGS_MAX_PAGES * HITAGS_PAGE_SIZE)
+#define HITAGS_UID_PADR          0
 #define HITAGS_CONFIG_PADR       1
 
 // need to see which limits these cards has
@@ -126,31 +127,48 @@ typedef enum SOF_TYPE {
 
 struct hitagS_tag {
     PSTATE   pstate;  // protocol-state
-    TSATE    tstate;  // tag-state
-    uint32_t uid;
-    uint8_t  pages[64][4];
-    uint64_t key;
-    uint8_t  pwdl0, pwdl1, pwdh0;
-    // con0
+    TSATE    tstate;    // tag-state
+
     int      max_page;
     stype    mode;
-    // con1
-    bool     auth;   // 0 = Plain 1 = Auth
-    bool     TTFC;   // Transponder Talks first coding. 0 = Manchester 1 = Biphase
-    int      TTFDR;  // data rate in TTF Mode
-    int      TTFM;   // the number of pages that are sent to the RWD
-    bool     LCON;   // 0 = con1/2 read write  1 =con1 read only and con2 OTP
-    bool     LKP;    // 0 = page2/3 read write 1 =page2/3 read only in Plain mode and no access in authenticate mode
-    // con2
-    // 0 = read write 1 = read only
-    bool     LCK7;   // page4/5
-    bool     LCK6;   // page6/7
-    bool     LCK5;   // page8-11
-    bool     LCK4;   // page12-15
-    bool     LCK3;   // page16-23
-    bool     LCK2;   // page24-31
-    bool     LCK1;   // page32-47
-    bool     LCK0;   // page48-63
-};
+
+    union {
+        uint8_t pages[64][4];
+        struct {
+            // page 0
+            uint32_t uid_le;
+
+            // page 1
+            uint8_t CON0;
+            // con1
+            bool LKP : 1;      // 0 = page2/3 read write 1 =page2/3 read only in Plain mode and no access in authenticate mode
+            bool LCON : 1;     // 0 = con1/2 read write  1 =con1 read only and con2 OTP
+            int  TTFM : 2;     // the number of pages that are sent to the RWD
+            int  TTFDR : 2;    // data rate in TTF Mode
+            bool TTFC : 1;     // Transponder Talks first coding. 0 = Manchester 1 = Biphase
+            bool auth : 1;     // 0 = Plain 1 = Auth
+            // con2
+            // 0 = read write 1 = read only
+            bool LCK0 : 1;    // page48-63
+            bool LCK1 : 1;    // page32-47
+            bool LCK2 : 1;    // page24-31
+            bool LCK3 : 1;    // page16-23
+            bool LCK4 : 1;    // page12-15
+            bool LCK5 : 1;    // page8-11
+            bool LCK6 : 1;    // page6/7
+            bool LCK7 : 1;    // page4/5
+            // reserved/pwdh0
+            uint8_t pwdh0;
+
+            // page 2
+            uint8_t  pwdl0;
+            uint8_t  pwdl1;
+            uint64_t key : 48;
+
+            // page 4
+        } s;
+    } data;
+
+} PACKED;
 
 #endif
