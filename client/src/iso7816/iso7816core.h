@@ -58,4 +58,7 @@ int Iso7816ExchangeEx(Iso7816CommandChannel channel, bool activate_field, bool l
 int Iso7816Select(Iso7816CommandChannel channel, bool activate_field, bool leave_field_on, uint8_t *aid, size_t aid_len,
                   uint8_t *result, size_t max_result_len, size_t *result_len, uint16_t *sw);
 
+// simulate being a contactless smart card using ISO7816 interface
+//int Iso7816SimulateTag(bool activate_field);
+
 #endif

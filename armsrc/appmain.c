@@ -54,6 +54,7 @@
 #include "mifarecmd.h"
 #include "mifaredesfire.h"
 #include "mifaresim.h"
+#include "emvsim.h"
 #include "pcf7931.h"
 #include "Standalone/standalone.h"
 #include "util.h"
@@ -1622,6 +1623,23 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_ISO14443A_READER: {
             ReaderIso14443a(packet);
+            break;
+        }
+        case 0x0386: {
+        //case CMD_HF_ISO14443A_EMV_SIMULATE: {
+            struct p {
+                uint16_t flags;
+                uint8_t exitAfter;
+                uint8_t uid[7];
+                uint16_t atqa;
+                uint8_t sak;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+
+            Dbprintf("We have got hereeee");
+            Dbprintf("Flags: %04x, ExitAfter: %02x, UID: %02x %02x %02x %02x %02x %02x %02x, ATQA: %04x, SAK: %02x",
+                     payload->flags, payload->exitAfter, payload->uid[0], payload->uid[1], payload->uid[2], payload->uid[3], payload->uid[4], payload->uid[5], payload->uid[6], payload->atqa, payload->sak);
+            EMVsim(payload->flags, payload->exitAfter, payload->uid, payload->atqa, payload->sak);
             break;
         }
         case CMD_HF_ISO14443A_SIMULATE: {

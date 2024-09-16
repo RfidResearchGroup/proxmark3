@@ -39,6 +39,7 @@
 #include "crypto/libpcrypto.h"
 #include "iso4217.h"        // currency lookup
 
+//static uint8_t PIV_APPLET[9] = "\xA0\x00\x00\x03\x08\x00\x00\x10\x00";
 
 static int CmdHelp(const char *Cmd);
 
@@ -630,6 +631,7 @@ static int CmdEMVSelect(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// hutton
 static int CmdEMVSmartToNFC(const char *Cmd) {
     //uint8_t data[APDU_AID_LEN] = {0}; // todo: consider removing/cleaning unused vars
     //int datalen = 0;
@@ -646,10 +648,29 @@ static int CmdEMVSmartToNFC(const char *Cmd) {
             //arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
             //arg_lit0("t",  "tlv",     "TLV decode results"),
             //arg_lit0("w",  "wired",   "Send data via contact (iso7816) interface. (def: Contactless interface)"),
-            //arg_str1(NULL, NULL, "<hex>", "Applet AID"),
+            //arg_str1(NULL, NULL, "<hex>", "Choose a UID"),
+            arg_str0("u", "uid", "<hex>", "optional 7 hex bytes UID"),
             arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int uid_len = 0;
+    uint8_t uid[7] = {0};
+    CLIGetHexWithReturn(ctx, 2, uid, &uid_len);
+
+    if (uid_len == 0) {
+        PrintAndLogEx(SUCCESS, "No UID provided, using default.");
+        //memcpy(applet_id, DEFAULT_UID, sizeof(DEFAULT_UID));
+        //aid_len = sizeof(DEFAULT_UID);
+        uint8_t default_uid[7] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
+        memcpy(uid, default_uid, sizeof(default_uid));
+        uid_len = sizeof(default_uid);
+    } else if (uid_len != 7) {
+        PrintAndLogEx(FAILED, "UID must be 7 bytes long.");
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(SUCCESS, "UID length is %d", uid_len);
 
     bool testMode = arg_get_lit(ctx, 1);
     bool show_apdu = true;
@@ -671,24 +692,44 @@ static int CmdEMVSmartToNFC(const char *Cmd) {
     //CLIGetHexWithReturn(ctx, 6, data, &datalen);
     CLIParserFree(ctx);
 
+    // todo: check this is relevant for us.
     SetAPDULogging(show_apdu);
 
-    /*
-    // exec
-    uint8_t buf[APDU_RES_LEN] = {0};
-    size_t len = 0;
-    uint16_t sw = 0;
-    int res = EMVSelect(channel, activateField, leaveSignalON, data, datalen, buf, sizeof(buf), &len, &sw, NULL);
+    //int res = EMVSmartToNFC(testMode);
 
-    if (sw)
-        PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+    //if (!res) {
+    //    PrintAndLogEx(SUCCESS, "EMVSmartToNFC completed successfully.");
+    //} else {
+    //    PrintAndLogEx(FAILED, "EMVSmartToNFC failed.");
+    //}
 
-    if (res)
-        return res;
+    //struct {
+    //    uint8_t tagtype;
+    //    uint16_t flags;
+    //    uint8_t uid[10];
+    //    uint8_t exitAfter;
+    //} PACKED payload;
 
-    if (decodeTLV)
-        TLVPrintFromBuffer(buf, len);
-    */
+    struct {
+        uint16_t flags;
+        uint8_t exitAfter;
+        uint8_t uid[7];
+        uint16_t atqa;
+        uint8_t sak;
+    } PACKED payload;
+
+    //payload.tagtype = 0x1;
+    memcpy(payload.uid, uid, uid_len);
+    payload.flags = 0x0204;
+    payload.exitAfter = 0x1;
+    payload.atqa = 0x3;
+    payload.sak = 0x0;
+
+    clearCommandBuffer();
+    //SendCommandNG(CMD_HF_ISO14443A_EMV_SIMULATE, (uint8_t *)&payload, sizeof(payload));
+    SendCommandNG(0x0386, (uint8_t *)&payload, sizeof(payload));
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
 
     SetAPDULogging(false);
     return PM3_SUCCESS;

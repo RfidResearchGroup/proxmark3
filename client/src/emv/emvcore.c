@@ -607,6 +607,10 @@ int EMVInternalAuthenticate(Iso7816CommandChannel channel, bool LeaveFieldON, ui
     return EMVExchangeEx(channel, false, LeaveFieldON, (sAPDU_t) {0x00, 0x88, 0x00, 0x00, DDOLLen, DDOL}, true, Result, MaxResultLen, ResultLen, sw, tlv);
 }
 
+//int EMVSmartToNFC(bool TestMode) {
+//    return Iso7816SimulateTag(TestMode);
+//}
+
 int MSCComputeCryptoChecksum(Iso7816CommandChannel channel, bool LeaveFieldON, uint8_t *UDOL, uint8_t UDOLlen, uint8_t *Result, size_t MaxResultLen, size_t *ResultLen, uint16_t *sw, struct tlvdb *tlv) {
     int res = EMVExchangeEx(channel, false, LeaveFieldON, (sAPDU_t) {0x80, 0x2a, 0x8e, 0x80, UDOLlen, UDOL}, true, Result, MaxResultLen, ResultLen, sw, tlv);
     if (*sw == 0x6700 || *sw == 0x6f00) {

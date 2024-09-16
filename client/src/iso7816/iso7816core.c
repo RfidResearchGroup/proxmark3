@@ -25,6 +25,7 @@
 #include "ui.h"
 #include "cmdhf14a.h"
 #include "cmdhf14b.h"
+//#include "evmsim.h" // todo: remove
 #include "iso14b.h"      // iso14b_raw_cmd_t
 #include "util_posix.h"
 #include "protocols.h"   // ISO7816 APDU return codes
@@ -216,3 +217,7 @@ int Iso7816Select(Iso7816CommandChannel channel, bool activate_field, bool leave
     , sw
                             );
 }
+
+//int Iso7816SimulateTag(bool testing) {
+//    return Evmsim(testing);
+//}
