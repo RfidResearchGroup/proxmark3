@@ -718,12 +718,11 @@ static int CmdEMVSmartToNFC(const char *Cmd) {
         uint8_t sak;
     } PACKED payload;
 
-    //payload.tagtype = 0x1;
     memcpy(payload.uid, uid, uid_len);
-    payload.flags = 0x0204;
+    payload.flags = 0x1204;
     payload.exitAfter = 0x1;
     payload.atqa = 0x0;
-    payload.sak = 0x0;
+    payload.sak = 0x20;
 
     clearCommandBuffer();
     //SendCommandNG(CMD_HF_ISO14443A_EMV_SIMULATE, (uint8_t *)&payload, sizeof(payload));
