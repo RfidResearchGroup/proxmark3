@@ -20,7 +20,7 @@ Useful docs:
     * [K8678](#k8678)
   * [H series](#h-series)
     * [H1](#h1)
-    * [H5.5 / H7](h55--h7)
+    * [H5.5 / H7](#h55--h7)
     * [i57 / i57v2](#i57--i57v2)
 * [ISO14443A](#iso14443a)
   * [Identifying broken ISO14443A magic](#identifying-broken-iso14443a-magic)
@@ -233,7 +233,7 @@ This is an "improved" variant of ID82xx chips, bypassing some magic detection in
 
 #### Characteristics
 
-* Chip is likely a Hitag S2048 clone, Characteristics looks exacly same with [8211](#id8211) when clear CON1 AUT bit
+* Chip is likely a cut down version of Hitag S2048 clone, Characteristics looks exacly same with [8211](#id8211) when clear CON1 AUT bit
 * Password protection (4b), usually "BBDD3399"(default) or "AAAAAAAA"
 * page 1 default: `DA A4 00 00`
 * page 2 password
