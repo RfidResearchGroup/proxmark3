@@ -722,7 +722,7 @@ static int CmdEMVSmartToNFC(const char *Cmd) {
     memcpy(payload.uid, uid, uid_len);
     payload.flags = 0x0204;
     payload.exitAfter = 0x1;
-    payload.atqa = 0x3;
+    payload.atqa = 0x0;
     payload.sak = 0x0;
 
     clearCommandBuffer();
