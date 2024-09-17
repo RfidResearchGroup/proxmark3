@@ -3929,14 +3929,15 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass legbrute",
                   "This command take sniffed trace data and partial raw key and bruteforces the remaining 40 bits of the raw key.",
-                  "hf iclass legbrute --csn 8D7BD711FEFF12E0 --epurse feffffffffffffff --macs 00000000BD478F76 --pk B4F12AADC5301225"
+                  "hf iclass legbrute --csn 8D7BD711FEFF12E0 --epurse feffffffffffffff --macs1 1306cad9b6c24466 --macs2 f0bf905e35f97923 --pk B4F12AADC5301225"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1(NULL, "csn", "<hex>", "Specify CSN as 8 hex bytes"),
         arg_str1(NULL, "epurse", "<hex>", "Specify ePurse as 8 hex bytes"),
-        arg_str1(NULL, "macs", "<hex>", "MACs"),
+        arg_str1(NULL, "macs1", "<hex>", "MACs captured from the reader"),
+        arg_str1(NULL, "macs2", "<hex>", "MACs captured from the reader, different than the first set (with the same csn and epurse value)"),
         arg_str1(NULL, "pk", "<hex>", "Partial Key from legrec or starting key of keyblock from legbrute"),
         arg_param_end
     };
@@ -3972,7 +3973,19 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
 
     if (macs_len > 0) {
         if (macs_len != 8) {
-            PrintAndLogEx(ERR, "MAC is incorrect length");
+            PrintAndLogEx(ERR, "MAC1 is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    int macs2_len = 0;
+    uint8_t macs2[8] = {0};
+    CLIGetHexWithReturn(ctx, 4, macs2, &macs2_len);
+
+    if (macs2_len > 0) {
+        if (macs2_len != 8) {
+            PrintAndLogEx(ERR, "MAC2 is incorrect length");
             CLIParserFree(ctx);
             return PM3_EINVARG;
         }
@@ -3980,7 +3993,7 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
 
     int startingkey_len = 0;
     uint8_t startingKey[8] = {0};
-    CLIGetHexWithReturn(ctx, 4, startingKey, &startingkey_len);
+    CLIGetHexWithReturn(ctx, 5, startingKey, &startingkey_len);
 
     if (startingkey_len > 0) {
         if (startingkey_len != 8) {
@@ -3995,17 +4008,25 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
 
     uint8_t CCNR[12];
     uint8_t MAC_TAG[4] = {0, 0, 0, 0};
+    uint8_t CCNR2[12];
+    uint8_t MAC_TAG2[4] = {0, 0, 0, 0};
 
     // Copy CCNR and MAC_TAG
     memcpy(CCNR, epurse, 8);
+    memcpy(CCNR2, epurse, 8);
     memcpy(CCNR + 8, macs, 4);
+    memcpy(CCNR2 + 8, macs2, 4);
     memcpy(MAC_TAG, macs + 4, 4);
+    memcpy(MAC_TAG2, macs2 + 4, 4);
 
     PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s"), sprint_hex(csn, 8));
     PrintAndLogEx(SUCCESS, " Epurse: %s", sprint_hex(epurse, 8));
-    PrintAndLogEx(SUCCESS, "   MACS: %s", sprint_hex(macs, 8));
-    PrintAndLogEx(SUCCESS, "   CCNR: " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
-    PrintAndLogEx(SUCCESS, "TAG MAC: %s", sprint_hex(MAC_TAG, sizeof(MAC_TAG)));
+    PrintAndLogEx(SUCCESS, "   MACS1: %s", sprint_hex(macs, 8));
+    PrintAndLogEx(SUCCESS, "   MACS2: %s", sprint_hex(macs2, 8));
+    PrintAndLogEx(SUCCESS, "   CCNR1: " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
+    PrintAndLogEx(SUCCESS, "   CCNR2: " _GREEN_("%s"), sprint_hex(CCNR2, sizeof(CCNR2)));
+    PrintAndLogEx(SUCCESS, "TAG MAC1: %s", sprint_hex(MAC_TAG, sizeof(MAC_TAG)));
+    PrintAndLogEx(SUCCESS, "TAG MAC2: %s", sprint_hex(MAC_TAG2, sizeof(MAC_TAG2)));
     PrintAndLogEx(SUCCESS, "Starting Key: %s", sprint_hex(startingKey, 8));
 
     uint32_t keycount = 1000000;
@@ -4020,8 +4041,9 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
     memcpy(lookup.mac, MAC_TAG, 4);
 
     uint32_t block_index = 0;
+    bool verified = false;
 
-    while (item == NULL) {
+    while (!verified) {
         for (uint32_t t = 0; t < num_threads; t++) {
             thread_data[t].start_index = block_index * keycount + t * keys_per_thread;
             thread_data[t].keycount = keys_per_thread;
@@ -4075,15 +4097,35 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
         // Binary search
         item = (iclass_prekey_t *)bsearch(&lookup, prekey, (block_index + 1) * keycount, sizeof(iclass_prekey_t), cmp_uint32);
 
+        if (item != NULL) {
+            //verify this against macs2
+            PrintAndLogEx(WARNING, _YELLOW_("Found potentially valid RAW key ") _GREEN_("%s")_YELLOW_(" verifying it..."), sprint_hex(item->key, 8));
+            //generate the macs from the key and not the other way around, so we can quickly validate it
+            uint8_t verification_mac[4] = {0, 0, 0, 0};
+            doMAC(CCNR2, item->key, verification_mac);
+            PrintAndLogEx(INFO, "Usr Provided Mac2: " _GREEN_("%s"), sprint_hex(MAC_TAG2, sizeof(MAC_TAG2)));
+            PrintAndLogEx(INFO, "Verification  Mac: " _GREEN_("%s"), sprint_hex(verification_mac, sizeof(verification_mac)));
+            bool check_values = true;
+            for (int i = 0; i < 4; i++) {
+                if (MAC_TAG2[i] != verification_mac[i]) {
+                    check_values = false;
+                }
+            }
+            if(check_values){
+                PrintAndLogEx(SUCCESS, _GREEN_("CONFIRMED VALID RAW key ") _RED_("%s"), sprint_hex(item->key, 8));
+                verified = true;
+            }else{
+                PrintAndLogEx(INFO, _YELLOW_("Found potentially valid RAW key ") _GREEN_("%s")_YELLOW_(" verifying it..."), sprint_hex(item->key, 8));
+                item = NULL;
+            }
+
+        }
+
         for (uint32_t t = 0; t < num_threads; t++) {
             free(thread_data[t].keyBlock);
         }
 
         block_index++;
-    }
-
-    if (item != NULL) {
-        PrintAndLogEx(SUCCESS, "Found valid RAW key " _GREEN_("%s"), sprint_hex(item->key, 8));
     }
 
     free(prekey);
