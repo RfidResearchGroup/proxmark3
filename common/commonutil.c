@@ -146,11 +146,11 @@ uint32_t reflect32(uint32_t b) {
 
 uint64_t reflect64(uint64_t b) {
     // https://graphics.stanford.edu/~seander/bithacks.html#BitReverseTable
-    uint64_t v = b; // 32-bit word to reverse bit order
-    // swap 2-byte long pairs
+    uint64_t v = b; // 64-bit word to reverse bit order
+    // swap 4-byte long pairs
     uint64_t v1 = reflect32(v >> 32);
     uint64_t v2 = reflect32(v);
-    v = (v1 << 32) | (v2 & 0xFFFFFFFF);
+    v = (v2 << 32) | (v1 & 0xFFFFFFFF);
     return v;
 }
 
