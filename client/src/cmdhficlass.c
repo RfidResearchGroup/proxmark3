@@ -3890,32 +3890,6 @@ static int CmdHFiClassRecover(uint8_t key[8]) {
     return resp.status;
 }
 
-typedef struct {
-    uint32_t start_index;
-    uint32_t keycount;
-    const uint8_t *startingKey;
-    uint8_t (*keyBlock)[PICOPASS_BLOCK_SIZE];
-} ThreadData;
-
-void *generate_key_blocks(void *arg) {
-    ThreadData *data = (ThreadData *)arg;
-    uint32_t start_index = data->start_index;
-    uint32_t keycount = data->keycount;
-    const uint8_t *startingKey = data->startingKey;
-    uint8_t (*keyBlock)[PICOPASS_BLOCK_SIZE] = data->keyBlock;
-
-    for (uint32_t i = 0; i < keycount; i++) {
-        uint32_t carry = start_index + i;
-        memcpy(keyBlock[i], startingKey, PICOPASS_BLOCK_SIZE);
-
-        for (int j = PICOPASS_BLOCK_SIZE - 1; j >= 0; j--) {
-            uint8_t increment_value = (carry & 0x1F) << 3;  // Use only the first 5 bits of carry
-            keyBlock[i][j] = (keyBlock[i][j] & 0x07) | increment_value;  // Preserve the last three bits
-
-            carry >>= 5;  // Shift right by 5 bits for the next byte
-            if (carry == 0) {
-                // If no more carry, break early to avoid unnecessary loops
-                break;
             }
         }
     }
@@ -3923,8 +3897,8 @@ void *generate_key_blocks(void *arg) {
     return NULL;
 }
 
-void generate_key_block_inverted(const uint8_t *startingKey, uint32_t index, uint8_t *keyBlock) {
-    uint32_t carry = index;
+void generate_key_block_inverted(const uint8_t *startingKey, uint64_t index, uint8_t *keyBlock) {
+    uint64_t carry = index;
     memcpy(keyBlock, startingKey, PICOPASS_BLOCK_SIZE);
 
     for (int j = PICOPASS_BLOCK_SIZE - 1; j >= 0; j--) {
