@@ -3890,37 +3890,20 @@ static int CmdHFiClassRecover(uint8_t key[8]) {
     return resp.status;
 }
 
-typedef struct {
-    uint32_t start_index;
-    uint32_t keycount;
-    const uint8_t *startingKey;
-    uint8_t (*keyBlock)[PICOPASS_BLOCK_SIZE];
-} ThreadData;
+void generate_key_block_inverted(const uint8_t *startingKey, uint64_t index, uint8_t *keyBlock) {
+    uint64_t carry = index;
+    memcpy(keyBlock, startingKey, PICOPASS_BLOCK_SIZE);
 
-void *generate_key_blocks(void *arg) {
-    ThreadData *data = (ThreadData *)arg;
-    uint32_t start_index = data->start_index;
-    uint32_t keycount = data->keycount;
-    const uint8_t *startingKey = data->startingKey;
-    uint8_t (*keyBlock)[PICOPASS_BLOCK_SIZE] = data->keyBlock;
+    for (int j = PICOPASS_BLOCK_SIZE - 1; j >= 0; j--) {
+        uint8_t increment_value = (carry & 0x1F) << 3;  // Use the first 5 bits of carry and shift left by 3 to occupy the first 5 bits
+        keyBlock[j] = (keyBlock[j] & 0x07) | increment_value;  // Preserve last 3 bits, modify the first 5 bits
 
-    for (uint32_t i = 0; i < keycount; i++) {
-        uint32_t carry = start_index + i;
-        memcpy(keyBlock[i], startingKey, PICOPASS_BLOCK_SIZE);
-
-        for (int j = PICOPASS_BLOCK_SIZE - 1; j >= 0; j--) {
-            uint8_t increment_value = (carry & 0x1F) << 3;  // Use only the first 5 bits of carry
-            keyBlock[i][j] = (keyBlock[i][j] & 0x07) | increment_value;  // Preserve the last three bits
-
-            carry >>= 5;  // Shift right by 5 bits for the next byte
-            if (carry == 0) {
-                // If no more carry, break early to avoid unnecessary loops
-                break;
-            }
+        carry >>= 5;  // Shift right by 5 bits for the next byte
+        if (carry == 0) {
+            // If no more carry, break early to avoid unnecessary loops
+            break;
         }
     }
-
-    return NULL;
 }
 
 static int CmdHFiClassLegRecLookUp(const char *Cmd) {
@@ -3929,15 +3912,17 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass legbrute",
                   "This command take sniffed trace data and partial raw key and bruteforces the remaining 40 bits of the raw key.",
-                  "hf iclass legbrute --csn 8D7BD711FEFF12E0 --epurse feffffffffffffff --macs 00000000BD478F76 --pk B4F12AADC5301225"
+                  "hf iclass legbrute --csn 8D7BD711FEFF12E0 --epurse feffffffffffffff --macs1 1306cad9b6c24466 --macs2 f0bf905e35f97923 --pk B4F12AADC5301225"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str1(NULL, "csn", "<hex>", "Specify CSN as 8 hex bytes"),
         arg_str1(NULL, "epurse", "<hex>", "Specify ePurse as 8 hex bytes"),
-        arg_str1(NULL, "macs", "<hex>", "MACs"),
+        arg_str1(NULL, "macs1", "<hex>", "MACs captured from the reader"),
+        arg_str1(NULL, "macs2", "<hex>", "MACs captured from the reader, different than the first set (with the same csn and epurse value)"),
         arg_str1(NULL, "pk", "<hex>", "Partial Key from legrec or starting key of keyblock from legbrute"),
+        arg_int0(NULL, "index", "<dec>", "Where to start from to retrieve the key, default 0"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3972,7 +3957,19 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
 
     if (macs_len > 0) {
         if (macs_len != 8) {
-            PrintAndLogEx(ERR, "MAC is incorrect length");
+            PrintAndLogEx(ERR, "MAC1 is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    int macs2_len = 0;
+    uint8_t macs2[8] = {0};
+    CLIGetHexWithReturn(ctx, 4, macs2, &macs2_len);
+
+    if (macs2_len > 0) {
+        if (macs2_len != 8) {
+            PrintAndLogEx(ERR, "MAC2 is incorrect length");
             CLIParserFree(ctx);
             return PM3_EINVARG;
         }
@@ -3980,7 +3977,7 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
 
     int startingkey_len = 0;
     uint8_t startingKey[8] = {0};
-    CLIGetHexWithReturn(ctx, 4, startingKey, &startingkey_len);
+    CLIGetHexWithReturn(ctx, 5, startingKey, &startingkey_len);
 
     if (startingkey_len > 0) {
         if (startingkey_len != 8) {
@@ -3990,103 +3987,82 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
         }
     }
 
+    uint64_t index = arg_get_int_def(ctx, 6, 0); //has to be 64 as we're bruteforcing 40 bits
+
     CLIParserFree(ctx);
     //Standalone Command End
 
     uint8_t CCNR[12];
     uint8_t MAC_TAG[4] = {0, 0, 0, 0};
+    uint8_t CCNR2[12];
+    uint8_t MAC_TAG2[4] = {0, 0, 0, 0};
 
     // Copy CCNR and MAC_TAG
     memcpy(CCNR, epurse, 8);
+    memcpy(CCNR2, epurse, 8);
     memcpy(CCNR + 8, macs, 4);
+    memcpy(CCNR2 + 8, macs2, 4);
     memcpy(MAC_TAG, macs + 4, 4);
+    memcpy(MAC_TAG2, macs2 + 4, 4);
 
     PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s"), sprint_hex(csn, 8));
     PrintAndLogEx(SUCCESS, " Epurse: %s", sprint_hex(epurse, 8));
-    PrintAndLogEx(SUCCESS, "   MACS: %s", sprint_hex(macs, 8));
-    PrintAndLogEx(SUCCESS, "   CCNR: " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
-    PrintAndLogEx(SUCCESS, "TAG MAC: %s", sprint_hex(MAC_TAG, sizeof(MAC_TAG)));
+    PrintAndLogEx(SUCCESS, "   MACS1: %s", sprint_hex(macs, 8));
+    PrintAndLogEx(SUCCESS, "   MACS2: %s", sprint_hex(macs2, 8));
+    PrintAndLogEx(SUCCESS, "   CCNR1: " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
+    PrintAndLogEx(SUCCESS, "   CCNR2: " _GREEN_("%s"), sprint_hex(CCNR2, sizeof(CCNR2)));
+    PrintAndLogEx(SUCCESS, "TAG MAC1: %s", sprint_hex(MAC_TAG, sizeof(MAC_TAG)));
+    PrintAndLogEx(SUCCESS, "TAG MAC2: %s", sprint_hex(MAC_TAG2, sizeof(MAC_TAG2)));
     PrintAndLogEx(SUCCESS, "Starting Key: %s", sprint_hex(startingKey, 8));
 
-    uint32_t keycount = 1000000;
-    uint32_t keys_per_thread = 250000;
-    uint32_t num_threads = keycount / keys_per_thread;
-    pthread_t threads[num_threads];
-    ThreadData thread_data[num_threads];
-    iclass_prekey_t *prekey = NULL;
-    iclass_prekey_t lookup;
-    iclass_prekey_t *item = NULL;
+    bool verified = false;
+    uint8_t div_key[PICOPASS_BLOCK_SIZE] = {0};
+    uint8_t generated_mac[4] = {0, 0, 0, 0};
 
-    memcpy(lookup.mac, MAC_TAG, 4);
+    while (!verified) {
 
-    uint32_t block_index = 0;
+        //generate the key block
+        generate_key_block_inverted(startingKey, index, div_key);
 
-    while (item == NULL) {
-        for (uint32_t t = 0; t < num_threads; t++) {
-            thread_data[t].start_index = block_index * keycount + t * keys_per_thread;
-            thread_data[t].keycount = keys_per_thread;
-            thread_data[t].startingKey = startingKey;
-            thread_data[t].keyBlock = calloc(keys_per_thread, PICOPASS_BLOCK_SIZE);
+        //generate the relevant macs
 
-            if (thread_data[t].keyBlock == NULL) {
-                PrintAndLogEx(ERR, "Memory allocation failed for keyBlock in thread %d.", t);
-                for (uint32_t i = 0; i < t; i++) {
-                    free(thread_data[i].keyBlock);
+        doMAC(CCNR, div_key, generated_mac);
+        bool mac_match = true;
+        for (int i = 0; i < 4; i++) {
+            if (MAC_TAG[i] != generated_mac[i]) {
+                mac_match = false;
+            }
+        }
+
+        if (mac_match) {
+            //verify this against macs2
+            PrintAndLogEx(WARNING, _YELLOW_("Found potentially valid RAW key ") _GREEN_("%s")_YELLOW_(" verifying it..."), sprint_hex(div_key, 8));
+            //generate the macs from the key and not the other way around, so we can quickly validate it
+            uint8_t verification_mac[4] = {0, 0, 0, 0};
+            doMAC(CCNR2, div_key, verification_mac);
+            PrintAndLogEx(INFO, "Usr Provided Mac2: " _GREEN_("%s"), sprint_hex(MAC_TAG2, sizeof(MAC_TAG2)));
+            PrintAndLogEx(INFO, "Verification  Mac: " _GREEN_("%s"), sprint_hex(verification_mac, sizeof(verification_mac)));
+            bool check_values = true;
+            for (int i = 0; i < 4; i++) {
+                if (MAC_TAG2[i] != verification_mac[i]) {
+                    check_values = false;
                 }
-                return PM3_EINVARG;
+            }
+            if(check_values){
+                PrintAndLogEx(SUCCESS, _GREEN_("CONFIRMED VALID RAW key ") _RED_("%s"), sprint_hex(div_key, 8));
+                verified = true;
+            }else{
+                PrintAndLogEx(INFO, _YELLOW_("Raw Key Invalid"));
             }
 
-            pthread_create(&threads[t], NULL, generate_key_blocks, (void *)&thread_data[t]);
         }
-
-        for (uint32_t t = 0; t < num_threads; t++) {
-            pthread_join(threads[t], NULL);
+        if(index % 1000000 == 0){
+            PrintAndLogEx(INFO, "Tested: " _YELLOW_("%" PRIu64 )" million keys", index/1000000);
+            PrintAndLogEx(INFO, "Last Generated Key Value: " _YELLOW_("%s"), sprint_hex(div_key, 8));
         }
-
-        if (prekey == NULL) {
-            prekey = calloc(keycount, sizeof(iclass_prekey_t));
-        } else {
-            prekey = realloc(prekey, (block_index + 1) * keycount * sizeof(iclass_prekey_t));
-        }
-
-        if (prekey == NULL) {
-            PrintAndLogEx(ERR, "Memory allocation failed for prekey.");
-            for (uint32_t t = 0; t < num_threads; t++) {
-                free(thread_data[t].keyBlock);
-            }
-            return PM3_EINVARG;
-        }
-
-        PrintAndLogEx(INFO, "Generating diversified keys...Index: " _YELLOW_("%d")" of ~1099511",block_index);
-        for (uint32_t t = 0; t < num_threads; t++) {
-            if(!t){
-                PrintAndLogEx(SUCCESS, "KeyBlock Starting Key: %s", sprint_hex(thread_data[t].keyBlock[0], 8));
-            }
-            GenerateMacKeyFrom(csn, CCNR, true, false, (uint8_t *)thread_data[t].keyBlock, keys_per_thread, prekey + (block_index * keycount) + (t * keys_per_thread));
-        }
-
-        PrintAndLogEx(INFO, "Sorting...");
-
-        // Sort mac list
-        qsort(prekey, (block_index + 1) * keycount, sizeof(iclass_prekey_t), cmp_uint32);
-
-        PrintAndLogEx(SUCCESS, "Searching for " _YELLOW_("%s") " key...", "DEBIT");
-
-        // Binary search
-        item = (iclass_prekey_t *)bsearch(&lookup, prekey, (block_index + 1) * keycount, sizeof(iclass_prekey_t), cmp_uint32);
-
-        for (uint32_t t = 0; t < num_threads; t++) {
-            free(thread_data[t].keyBlock);
-        }
-
-        block_index++;
+        index++;
     }
 
-    if (item != NULL) {
-        PrintAndLogEx(SUCCESS, "Found valid RAW key " _GREEN_("%s"), sprint_hex(item->key, 8));
-    }
-
-    free(prekey);
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
