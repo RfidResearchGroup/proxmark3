@@ -144,6 +144,13 @@ uint32_t reflect32(uint32_t b) {
     return v;
 }
 
+uint64_t reflect48(uint64_t v) {
+    uint64_t vhi = reflect16(v >> 32);
+    uint64_t vlo = reflect32(v);
+    v = (vlo << 32) | (vhi & 0xFFFF);
+    return v;
+}
+
 uint64_t reflect64(uint64_t b) {
     // https://graphics.stanford.edu/~seander/bithacks.html#BitReverseTable
     uint64_t v = b; // 64-bit word to reverse bit order
