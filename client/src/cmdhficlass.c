@@ -4057,7 +4057,7 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
 
         }
         if(index % 1000000 == 0){
-            PrintAndLogEx(INFO, "Tested: " _YELLOW_("%d")" keys", index);
+            PrintAndLogEx(INFO, "Tested: " _YELLOW_("%" PRIu64 )" million keys", index/1000000);
             PrintAndLogEx(INFO, "Last Generated Key Value: " _YELLOW_("%s"), sprint_hex(div_key, 8));
         }
         index++;
