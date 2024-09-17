@@ -3890,13 +3890,6 @@ static int CmdHFiClassRecover(uint8_t key[8]) {
     return resp.status;
 }
 
-            }
-        }
-    }
-
-    return NULL;
-}
-
 void generate_key_block_inverted(const uint8_t *startingKey, uint64_t index, uint8_t *keyBlock) {
     uint64_t carry = index;
     memcpy(keyBlock, startingKey, PICOPASS_BLOCK_SIZE);
@@ -4059,7 +4052,7 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
                 PrintAndLogEx(SUCCESS, _GREEN_("CONFIRMED VALID RAW key ") _RED_("%s"), sprint_hex(div_key, 8));
                 verified = true;
             }else{
-                PrintAndLogEx(INFO, _YELLOW_("Found potentially valid RAW key ") _GREEN_("%s")_YELLOW_(" verifying it..."), sprint_hex(div_key, 8));
+                PrintAndLogEx(INFO, _YELLOW_("Raw Key Invalid"));
             }
 
         }
