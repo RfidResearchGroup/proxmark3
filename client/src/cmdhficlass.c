@@ -3972,6 +3972,7 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 4, startingKey, &startingkey_len);
 
     uint64_t index = arg_get_int_def(ctx, 6, 0); //has to be 64 as we're bruteforcing 40 bits
+    index = index * 1000000;
 
     CLIParserFree(ctx);
 
