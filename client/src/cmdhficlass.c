@@ -3950,7 +3950,7 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
         arg_str1(NULL, "macs1", "<hex>", "MACs captured from the reader"),
         arg_str1(NULL, "macs2", "<hex>", "MACs captured from the reader, different than the first set (with the same csn and epurse value)"),
         arg_str1(NULL, "pk", "<hex>", "Partial Key from legrec or starting key of keyblock from legbrute"),
-        arg_int0(NULL, "index", "<dec>", "Where to start from to retrieve the key, default 0"),
+        arg_int0(NULL, "index", "<dec>", "Where to start from to retrieve the key, default 0 - value in millions e.g. 1 is 1 million"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
