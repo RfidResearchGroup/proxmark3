@@ -42,8 +42,8 @@ static struct hitagS_tag tag = {
     .data.pages = {
                                                // Plain mode:               | Authentication mode:
             [0] = {0x5F, 0xC2, 0x11, 0x84},    // UID                       | UID
-            // HITAG S 256
-            [1] = {0xC9, 0x00, 0x00, 0xAA},    // CON0 CON1 CON2 Reserved   | CON0 CON1 CON2 PWDH0
+            // HITAG S 2048
+            [1] = {0xCA, 0x00, 0x00, 0xAA},    // CON0 CON1 CON2 Reserved   | CON0 CON1 CON2 PWDH0
             [2] = {0x48, 0x54, 0x4F, 0x4E},    // Data                      | PWDL0 PWDL1 KEYH0 KEYH1
             [3] = {0x4D, 0x49, 0x4B, 0x52},    // Data                      | KEYL0 KEYL1 KEYL2 KEYL3
             [4] = {0xFF, 0x80, 0x00, 0x00},    // Data
@@ -1338,9 +1338,7 @@ void hts_write_page(const lf_hitag_data_t *payload, bool ledcontrol) {
 
     //check for valid input
     if (payload->page == 0) {
-        DBG Dbprintf("Error, invalid page");
-        reply_ng(CMD_LF_HITAGS_WRITE, PM3_EINVARG, NULL, 0);
-        return;
+        DBG Dbprintf("Warning, write page 0");
     }
 
     uint8_t rx[HITAG_FRAME_LEN];
@@ -1358,9 +1356,8 @@ void hts_write_page(const lf_hitag_data_t *payload, bool ledcontrol) {
 
     //check if the given page exists
     if (payload->page > tag.max_page) {
-        DBG Dbprintf("Error, page number too large");
-        res = PM3_EINVARG;
-        goto write_end;
+        DBG Dbprintf("Warning, page number too large");
+        // 82xx CON0 is fully modifiable
     }
 
     //send write page request
