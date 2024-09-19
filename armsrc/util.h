@@ -88,7 +88,7 @@ int hex2binarray(char *target, const char *source);
 int hex2binarray_n(char *target, const char *source, int sourcelen);
 int binarray2hex(const uint8_t *bs, int bs_len, uint8_t *hex);
 
-void convertToHexArray(uint32_t num, uint8_t *partialKey);
+void convertToHexArray(uint32_t num, uint8_t *partialkey);
 
 void LED(int led, int ms);
 void LEDsoff(void);
