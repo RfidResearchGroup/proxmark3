@@ -206,6 +206,11 @@ This is an "improved" variant of ID82xx chips, bypassing some magic detection in
 * Chip is likely a cut down version of Hitag S2048 clone, Characteristics looks exacly same with [8268](#id-f8268) when set CON1 AUT bit
 * No password protection
 * page 1 default: `CA 24 00 00`
+  * CON0 RES0 enable some extended TTFM
+    * TTFM 01: page 4, page 5, page 6
+    * TTFM 10: page 4, page 5, page 6, page 7, page 8
+    * TTFM 11: page 4, page 5, page 6, page 7, page 8, page 9, page 10, page 11
+  * CON0 RES3 enable FSK TTF mode  0=RF/10 1=RF/8
 * page 41 - 43 unknown data, readonly
   * page 41 fixed `00 00 20 00`
   * page 42 examples:
@@ -236,6 +241,11 @@ This is an "improved" variant of ID82xx chips, bypassing some magic detection in
 * Chip is likely a cut down version of Hitag S2048 clone, Characteristics looks exacly same with [8211](#id8211) when clear CON1 AUT bit
 * Password protection (4b), usually "BBDD3399"(default) or "AAAAAAAA"
 * page 1 default: `DA A4 00 00`
+  * CON0 RES0 enable some extended TTFM
+    * TTFM 01: page 4, page 5, page 6
+    * TTFM 10: page 4, page 5, page 6, page 7, page 8
+    * TTFM 11: page 4, page 5, page 6, page 7, page 8, page 9, page 10, page 11
+  * CON0 RES3 enable FSK TTF mode  0=RF/10 1=RF/8
 * page 2 password
 * page 41 - 43 unknown data, readonly
   * page 41 fixed `00 00 20 00`
