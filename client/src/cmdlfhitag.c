@@ -1827,22 +1827,20 @@ static int CmdLFHitagSim(const char *Cmd) {
         arg_param_begin,
         arg_lit0("1", "ht1", "simulate Hitag 1"),
         arg_lit0("2", "ht2", "simulate Hitag 2"),
-        arg_lit0("s", "hts", "simulate Hitag S"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool use_ht1 = arg_get_lit(ctx, 1);
     bool use_ht2 = arg_get_lit(ctx, 2);
-    bool use_hts = arg_get_lit(ctx, 3);
     bool use_htm = false; // not implemented yet
     CLIParserFree(ctx);
 
-    if ((use_ht1 + use_ht2 + use_hts + use_htm) > 1) {
+    if ((use_ht1 + use_ht2 + use_htm) > 1) {
         PrintAndLogEx(ERR, "error, specify only one Hitag type");
         return PM3_EINVARG;
     }
-    if ((use_ht1 + use_ht2 + use_hts + use_htm) == 0) {
+    if ((use_ht1 + use_ht2 + use_htm) == 0) {
         PrintAndLogEx(ERR, "error, specify one Hitag type");
         return PM3_EINVARG;
     }
@@ -1850,9 +1848,6 @@ static int CmdLFHitagSim(const char *Cmd) {
     uint16_t cmd = CMD_LF_HITAG_SIMULATE;
 //    if (use_ht1)
 //        cmd = CMD_LF_HITAG1_SIMULATE;
-
-    if (use_hts)
-        cmd = CMD_LF_HITAGS_SIMULATE;
 
     clearCommandBuffer();
     SendCommandMIX(cmd, 0, 0, 0, NULL, 0);

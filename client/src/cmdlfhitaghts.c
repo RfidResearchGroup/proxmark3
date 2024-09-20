@@ -418,6 +418,28 @@ static int CmdLFHitagSReader(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdLFHitagSSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hitag hts sim",
+                  "Simulate Hitag S transponder\n"
+                  "You need to `lf hitag hts eload` first",
+                  "lf hitag hts sim\n"
+                  "lf hitag hts sim --82xx");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("8", "82xx", "simulate 8268/8310"),
+        arg_param_end};
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    // bool use_82xx = arg_get_lit(ctx, 1);    // not implemented yet
+    CLIParserFree(ctx);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_HITAGS_SIMULATE, NULL, 0);
+    return PM3_SUCCESS;
+}
+
 static int CmdLFHitagSList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "lf hitag hts", "hitags");
 }
@@ -470,6 +492,7 @@ static command_t CommandTable[] = {
     {"reader",      CmdLFHitagSReader, IfPm3Hitag,      "Act like a Hitag S reader"},
     {"rdbl",        CmdLFHitagSRead,   IfPm3Hitag,      "Read Hitag S memory"},
     {"wrbl",        CmdLFHitagSWrite,  IfPm3Hitag,      "Write Hitag S page"},
+    {"sim",         CmdLFHitagSSim,    IfPm3Hitag,      "Simulate Hitag transponder"},
     {NULL,          NULL,              0,               NULL}
 };
 
