@@ -3849,45 +3849,74 @@ void picopass_elite_nextKey(uint8_t *key) {
     memcpy(key, key_state, 8);
 }
 
-static int CmdHFiClassRecover(uint8_t key[8]) {
+static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, uint8_t no_first_auth[8], bool debug, bool test, bool allnight) {
 
-    uint32_t payload_size = sizeof(iclass_recover_req_t);
-    uint8_t aa2_standard_key[PICOPASS_BLOCK_SIZE] = {0};
-    memcpy(aa2_standard_key, iClass_Key_Table[1], PICOPASS_BLOCK_SIZE);
-    iclass_recover_req_t *payload = calloc(1, payload_size);
-    payload->req.use_raw = true;
-    payload->req.use_elite = false;
-    payload->req.use_credit_key = false;
-    payload->req.use_replay = true;
-    payload->req.send_reply = true;
-    payload->req.do_auth = true;
-    payload->req.shallow_mod = false;
-    payload->req2.use_raw = false;
-    payload->req2.use_elite = false;
-    payload->req2.use_credit_key = true;
-    payload->req2.use_replay = false;
-    payload->req2.send_reply = true;
-    payload->req2.do_auth = true;
-    payload->req2.shallow_mod = false;
-    memcpy(payload->req.key, key, 8);
-    memcpy(payload->req2.key, aa2_standard_key, 8);
-
-    PrintAndLogEx(INFO, "Recover started...");
-
-    PacketResponseNG resp;
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_ICLASS_RECOVER, (uint8_t *)payload, payload_size);
-
-    WaitForResponse(CMD_HF_ICLASS_RECOVER, &resp);
-
-    if (resp.status == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "iCLASS Key Bits Recovery " _GREEN_("successful"));
-    } else {
-        PrintAndLogEx(WARNING, "iCLASS Key Bits Recovery " _RED_("failed"));
+    int runs = 1;
+    int cycle = 1;
+    bool repeat = true;
+    if(allnight){
+        runs = 10;
     }
 
-    free(payload);
-    return resp.status;
+    while (repeat == true){
+        uint32_t payload_size = sizeof(iclass_recover_req_t);
+        uint8_t aa2_standard_key[PICOPASS_BLOCK_SIZE] = {0};
+        memcpy(aa2_standard_key, iClass_Key_Table[1], PICOPASS_BLOCK_SIZE);
+        iclass_recover_req_t *payload = calloc(1, payload_size);
+        payload->req.use_raw = true;
+        payload->req.use_elite = false;
+        payload->req.use_credit_key = false;
+        payload->req.use_replay = true;
+        payload->req.send_reply = true;
+        payload->req.do_auth = true;
+        payload->req.shallow_mod = false;
+        payload->req2.use_raw = false;
+        payload->req2.use_elite = false;
+        payload->req2.use_credit_key = true;
+        payload->req2.use_replay = false;
+        payload->req2.send_reply = true;
+        payload->req2.do_auth = true;
+        payload->req2.shallow_mod = false;
+        payload->index = index_start;
+        payload->loop = loop;
+        payload->debug = debug;
+        payload->test = test;
+        memcpy(payload->nfa, no_first_auth, PICOPASS_BLOCK_SIZE);
+        memcpy(payload->req.key, key, PICOPASS_BLOCK_SIZE);
+        memcpy(payload->req2.key, aa2_standard_key, PICOPASS_BLOCK_SIZE);
+
+        PrintAndLogEx(INFO, "Recover started...");
+
+        PacketResponseNG resp;
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_ICLASS_RECOVER, (uint8_t *)payload, payload_size);
+
+        WaitForResponse(CMD_HF_ICLASS_RECOVER, &resp);
+
+        if (resp.status == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "iCLASS Key Bits Recovery: " _GREEN_("completed!"));
+            repeat = false;
+        } else if (resp.status == PM3_ESOFT){
+            PrintAndLogEx(WARNING, "iCLASS Key Bits Recovery: " _RED_("failed/errors"));
+            repeat = false;
+        } else if (resp.status == PM3_EINVARG){
+            if(allnight){
+                if(runs <= cycle){
+                    repeat = false;
+                }else{
+                    index_start = index_start+loop;
+                    cycle++;
+                }
+            }else{
+                repeat = false;
+            }
+        }
+        free(payload);
+        if(!repeat){
+            return resp.status;
+        }
+    }
+    return PM3_SUCCESS;
 }
 
 void generate_key_block_inverted(const uint8_t *startingKey, uint64_t index, uint8_t *keyBlock) {
@@ -3912,84 +3941,60 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass legbrute",
                   "This command take sniffed trace data and partial raw key and bruteforces the remaining 40 bits of the raw key.",
-                  "hf iclass legbrute --csn 8D7BD711FEFF12E0 --epurse feffffffffffffff --macs1 1306cad9b6c24466 --macs2 f0bf905e35f97923 --pk B4F12AADC5301225"
+                  "hf iclass legbrute --epurse feffffffffffffff --macs1 1306cad9b6c24466 --macs2 f0bf905e35f97923 --pk B4F12AADC5301225"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1(NULL, "csn", "<hex>", "Specify CSN as 8 hex bytes"),
         arg_str1(NULL, "epurse", "<hex>", "Specify ePurse as 8 hex bytes"),
         arg_str1(NULL, "macs1", "<hex>", "MACs captured from the reader"),
         arg_str1(NULL, "macs2", "<hex>", "MACs captured from the reader, different than the first set (with the same csn and epurse value)"),
         arg_str1(NULL, "pk", "<hex>", "Partial Key from legrec or starting key of keyblock from legbrute"),
-        arg_int0(NULL, "index", "<dec>", "Where to start from to retrieve the key, default 0"),
+        arg_int0(NULL, "index", "<dec>", "Where to start from to retrieve the key, default 0 - value in millions e.g. 1 is 1 million"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int csn_len = 0;
-    uint8_t csn[8] = {0};
-    CLIGetHexWithReturn(ctx, 1, csn, &csn_len);
-
-    if (csn_len > 0) {
-        if (csn_len != 8) {
-            PrintAndLogEx(ERR, "CSN is incorrect length");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
-        }
-    }
-
     int epurse_len = 0;
-    uint8_t epurse[8] = {0};
-    CLIGetHexWithReturn(ctx, 2, epurse, &epurse_len);
-
-    if (epurse_len > 0) {
-        if (epurse_len != 8) {
-            PrintAndLogEx(ERR, "ePurse is incorrect length");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
-        }
-    }
+    uint8_t epurse[PICOPASS_BLOCK_SIZE] = {0};
+    CLIGetHexWithReturn(ctx, 1, epurse, &epurse_len);
 
     int macs_len = 0;
-    uint8_t macs[8] = {0};
-    CLIGetHexWithReturn(ctx, 3, macs, &macs_len);
-
-    if (macs_len > 0) {
-        if (macs_len != 8) {
-            PrintAndLogEx(ERR, "MAC1 is incorrect length");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
-        }
-    }
+    uint8_t macs[PICOPASS_BLOCK_SIZE] = {0};
+    CLIGetHexWithReturn(ctx, 2, macs, &macs_len);
 
     int macs2_len = 0;
-    uint8_t macs2[8] = {0};
-    CLIGetHexWithReturn(ctx, 4, macs2, &macs2_len);
-
-    if (macs2_len > 0) {
-        if (macs2_len != 8) {
-            PrintAndLogEx(ERR, "MAC2 is incorrect length");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
-        }
-    }
+    uint8_t macs2[PICOPASS_BLOCK_SIZE] = {0};
+    CLIGetHexWithReturn(ctx, 3, macs2, &macs2_len);
 
     int startingkey_len = 0;
-    uint8_t startingKey[8] = {0};
-    CLIGetHexWithReturn(ctx, 5, startingKey, &startingkey_len);
-
-    if (startingkey_len > 0) {
-        if (startingkey_len != 8) {
-            PrintAndLogEx(ERR, "Partial Key is incorrect length");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
-        }
-    }
+    uint8_t startingKey[PICOPASS_BLOCK_SIZE] = {0};
+    CLIGetHexWithReturn(ctx, 4, startingKey, &startingkey_len);
 
     uint64_t index = arg_get_int_def(ctx, 6, 0); //has to be 64 as we're bruteforcing 40 bits
+    index = index * 1000000;
 
     CLIParserFree(ctx);
+
+    if (epurse_len && epurse_len != PICOPASS_BLOCK_SIZE) {
+        PrintAndLogEx(ERR, "ePurse is incorrect length");
+        return PM3_EINVARG;
+    }
+
+    if (macs_len && macs_len != PICOPASS_BLOCK_SIZE) {
+        PrintAndLogEx(ERR, "MAC1 is incorrect length");
+        return PM3_EINVARG;
+    }
+
+    if (macs2_len && macs2_len != PICOPASS_BLOCK_SIZE) {
+        PrintAndLogEx(ERR, "MAC2 is incorrect length");
+        return PM3_EINVARG;
+    }
+
+    if (startingkey_len && startingkey_len != PICOPASS_BLOCK_SIZE) {
+        PrintAndLogEx(ERR, "Partial Key is incorrect length");
+        return PM3_EINVARG;
+    }
     //Standalone Command End
 
     uint8_t CCNR[12];
@@ -4005,7 +4010,6 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
     memcpy(MAC_TAG, macs + 4, 4);
     memcpy(MAC_TAG2, macs2 + 4, 4);
 
-    PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s"), sprint_hex(csn, 8));
     PrintAndLogEx(SUCCESS, " Epurse: %s", sprint_hex(epurse, 8));
     PrintAndLogEx(SUCCESS, "   MACS1: %s", sprint_hex(macs, 8));
     PrintAndLogEx(SUCCESS, "   MACS2: %s", sprint_hex(macs2, 8));
@@ -4072,34 +4076,66 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass legrec",
-                  "Attempts to recover the diversified key of a specific iClass card. This may take a long time. The Card must remain be on the PM3 antenna during the whole process! This process may brick the card!",
-                  "hf iclass legrec --macs 0000000089cb984b"
+                    "Attempts to recover the diversified key of a specific iClass card. This may take a long time. The Card must remain be on the PM3 antenna during the whole process! This process may brick the card!",
+                    "hf iclass legrec --macs 0000000089cb984b\n"
+                    "hf iclass legrec --macs 0000000089cb984b --index 0 --loop 100 --notest"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1(NULL, "macs", "<hex>", "MACs"),
+        arg_str1(NULL, "macs", "<hex>", "AA1 Authentication MACs"),
+        arg_int0(NULL, "index", "<dec>", "Where to start from to retrieve the key, default 0"),
+        arg_int0(NULL, "loop", "<dec>", "The number of key retrieval cycles to perform, max 10000, default 100"),
+        arg_lit0(NULL, "debug", "Re-enables tracing for debugging. Limits cycles to 1."),
+        arg_lit0(NULL, "notest", "Perform real writes on the card!"),
+        arg_lit0(NULL, "allnight", "Loops the loop for 10 times, recommended loop value of 5000."),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int macs_len = 0;
-    uint8_t macs[8] = {0};
+    uint8_t macs[PICOPASS_BLOCK_SIZE] = {0};
     CLIGetHexWithReturn(ctx, 1, macs, &macs_len);
+    uint32_t index = arg_get_int_def(ctx, 2, 0);
+    uint32_t loop = arg_get_int_def(ctx, 3, 100);
+    uint8_t no_first_auth[PICOPASS_BLOCK_SIZE] = {0};
+    bool debug = arg_get_lit(ctx, 4);
+    bool test = true;
+    bool no_test = arg_get_lit(ctx, 5);
+    bool allnight = arg_get_lit(ctx, 6);
 
-    if (macs_len > 0) {
-        if (macs_len != 8) {
-            PrintAndLogEx(ERR, "MAC is incorrect length");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
-        }
+    if(no_test){
+        test=false;
     }
+
+    if(loop > 10000){
+        PrintAndLogEx(ERR, "Too many loops, arm prone to crashes. For safety specify a number lower than 10000");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }else if (debug || test){
+        loop = 1;
+    }
+
+    uint8_t csn[PICOPASS_BLOCK_SIZE] = {0};
+    uint8_t new_div_key[PICOPASS_BLOCK_SIZE] = {0};
+    uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    if (select_only(csn, CCNR, true, false) == false) {
+        DropField();
+        return PM3_ESOFT;
+    }
+    HFiClassCalcDivKey(csn, iClass_Key_Table[1], new_div_key, false);
+    memcpy(no_first_auth,new_div_key,PICOPASS_BLOCK_SIZE);
 
     CLIParserFree(ctx);
 
-    CmdHFiClassRecover(macs);
+    if (macs_len && macs_len != PICOPASS_BLOCK_SIZE) {
+        PrintAndLogEx(ERR, "MAC is incorrect length");
+        return PM3_EINVARG;
+    }
 
-    PrintAndLogEx(WARNING, _YELLOW_("If the process completed, you can now run 'hf iclass legrecbrute' with the partial key found."));
+    iclass_recover(macs,index,loop,no_first_auth,debug,test,allnight);
+
+    PrintAndLogEx(WARNING, _YELLOW_("If the process completed successfully, you can now run 'hf iclass legbrute' with the partial key found."));
 
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
