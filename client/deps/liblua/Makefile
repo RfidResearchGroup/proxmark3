@@ -3,11 +3,10 @@ MYINCLUDES = -I.
 # Lua lib requires GNU extensions (implicit declarations of functions): -std=gnu99 or -std=gnu11
 MYCFLAGS = -Wno-cast-align -Wno-bad-function-cast -Wno-switch-enum
 MYDEFS = -DLUA_COMPAT_ALL $(SYSCFLAGS)
-MYSRCS =	lapi.c lcode.c lctype.c ldebug.c ldo.c ldump.c lfunc.c lgc.c llex.c \
-	lmem.c lobject.c lopcodes.c lparser.c lstate.c lstring.c ltable.c \
-	ltm.c lundump.c lvm.c lzio.c \
-	lauxlib.c lbaselib.c lbitlib.c lcorolib.c ldblib.c liolib.c \
-	lmathlib.c loslib.c lstrlib.c ltablib.c loadlib.c linit.c
+MYSRCS = lapi.c lauxlib.c lbaselib.c lcode.c lcorolib.c lctype.c ldblib.c ldebug.c ldo.c ldump.c \
+	 lfunc.c lgc.c linit.c liolib.c llex.c lmathlib.c lmem.c loadlib.c lobject.c lopcodes.c \
+	 loslib.c lparser.c lstate.c lstring.c lstrlib.c ltable.c ltablib.c ltm.c lundump.c \
+	 lutf8lib.c lvm.c lzio.c
 
 SYSCFLAGS=
 
@@ -59,6 +58,6 @@ posix:
 	$(Q)$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_POSIX"
 
 solaris:
-	$(Q)$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN"
+	$(Q)$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN -D_REENTRANT"
 
 .PHONY: all $(PLATS) default clean depend none
