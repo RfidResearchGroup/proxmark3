@@ -175,11 +175,11 @@ PM3INCLUDES += $(ID48LIBINC)
 ## Lua
 ifneq ($(SKIPLUASYSTEM),1)
     ifdef MACPORTS_PREFIX
-        LUAINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags lua-5.2 2>/dev/null)
-        LUALDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs lua-5.2 2>/dev/null)
+        LUAINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags lua-5.4 2>/dev/null)
+        LUALDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs lua-5.4 2>/dev/null)
     else
-        LUAINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags lua5.2 2>/dev/null)
-        LUALDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs lua5.2 2>/dev/null)
+        LUAINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags lua5.4 2>/dev/null)
+        LUALDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs lua5.4 2>/dev/null)
     endif
     ifneq ($(LUALDLIBS),)
         LUALIB =
