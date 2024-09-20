@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Updated LUA to v5.4.7 which adds utf-8 support (@jmichelp)
 - Changed `lf search` - it now tries to read and decode paxton id (@iceman1001)
 - Changed `lf search` - to identify hitag2/s/82xx in chipset detection to preserve their EM4100 or other outputs (@iceman1001)
 - Added `lf hitag hts reader` - to act as a HitagS / 82xx reader (@iceman1001)
