@@ -22,6 +22,7 @@
 #include <errno.h>
 
 #include "lauxlib.h"
+#include "lua_bitlib.h"
 #include "cmdmain.h"
 #include "proxmark3.h"
 #include "comms.h"
@@ -1436,6 +1437,9 @@ int set_pm3_libraries(lua_State *L) {
     };
 
     lua_pushglobaltable(L);
+
+    // bit32 compatibility shim
+    register_bit32_lib(L);
 
     // Core module
     luaL_newlib(L, libs);
