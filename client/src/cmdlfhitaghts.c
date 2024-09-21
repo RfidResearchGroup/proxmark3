@@ -92,85 +92,60 @@ int read_hts_uid(void) {
     return PM3_SUCCESS;
 }
 
-static int CmdLFHitagSRead(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "lf hitag hts rdbl",
-                  "Read Hitag S memory.\n\n"
-                  "  Crypto mode: \n"
-                  "    - key format ISK high + ISK low\n"
-                  "    - default key 4F4E4D494B52 (ONMIKR)\n\n"
-                  "  8268/8310 password mode: \n"
-                  "    - default password BBDD3399\n",
-                  "  lf hitag hts rdbl                         -> Hitag S/8211, plain mode\n"
-                  "  lf hitag hts rdbl --82xx -k BBDD3399      -> 8268/8310, password mode\n"
-                  "  lf hitag hts rdbl --nrar 0102030411223344 -> Hitag S, challenge mode\n"
-                  "  lf hitag hts rdbl --crypto                -> Hitag S, crypto mode, def key\n"
-                  "  lf hitag hts rdbl -k 4F4E4D494B52         -> Hitag S, crypto mode\n\n"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
-        arg_lit0("8", "82xx", "8268/8310 mode"),
-        arg_lit0(NULL, "crypto", "crypto mode"),
-        arg_str0("k", "key", "<hex>", "pwd or key, 4 or 6 hex bytes"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
+static int process_hitags_common_args(CLIParserContext *ctx, lf_hitag_data_t *const packet) {
 
     bool use_plain = false;
+    bool use_82xx  = arg_get_lit(ctx, 1);
 
-    uint8_t nrar[8];
+    bool use_nrar  = false;
+    uint8_t nrar[HITAG_NRAR_SIZE];
     int nrar_len = 0;
 
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), nrar, sizeof(nrar), &nrar_len);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 2), nrar, HITAG_NRAR_SIZE, &nrar_len);
     if (res != 0) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    bool use_nrar = nrar_len > 0;
-    bool use_82xx = arg_get_lit(ctx, 2);
+    use_nrar = nrar_len > 0;
+
     bool use_crypto = arg_get_lit(ctx, 3);
 
-    uint8_t key[6];
+    uint8_t key[HITAG_CRYPTOKEY_SIZE];
     int key_len = 0;
 
-    res = CLIParamHexToBuf(arg_get_str(ctx, 4), key, sizeof(key), &key_len);
+    res = CLIParamHexToBuf(arg_get_str(ctx, 4), key, HITAG_CRYPTOKEY_SIZE, &key_len);
     if (res != 0) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    CLIParserFree(ctx);
-
-    if (key_len != 0 && key_len != 4 && key_len != 6) {
+    if (key_len != 0 && key_len != HITAG_PASSWORD_SIZE && key_len != HITAG_CRYPTOKEY_SIZE) {
         PrintAndLogEx(WARNING, "Wrong KEY len expected 0, 4 or 6, got %d", key_len);
         return PM3_EINVARG;
     }
 
-    if (nrar_len && nrar_len != HITAGS_NRAR_SIZE) {
-        PrintAndLogEx(WARNING, "Wrong NR/AR len expected %d, got %d", HITAGS_NRAR_SIZE, nrar_len);
+    if (nrar_len && nrar_len != HITAG_NRAR_SIZE) {
+        PrintAndLogEx(WARNING, "Wrong NR/AR len expected %d, got %d", HITAG_NRAR_SIZE, nrar_len);
         return PM3_EINVARG;
     }
 
     // complete options
-    if (key_len == 4) {
-        use_82xx = true;
-    }
-
-    if (key_len == 6) {
-        use_crypto = true;
-    }
-
-    if ((key_len == 0) && use_82xx) {
-        memcpy(key, "\xBB\xDD\x33\x99", 4);
-        key_len = 4;
-    }
-
-    if ((key_len == 0) && use_crypto) {
-        memcpy(key, "ONMIKR", 6);
-        key_len = 6;
+    switch (key_len) {
+        case HITAG_PASSWORD_SIZE:
+            use_82xx = true;
+            break;
+        case HITAG_CRYPTOKEY_SIZE:
+            use_crypto = true;
+            break;
+        default:    // key_len == 0
+            if (use_82xx) {
+                memcpy(key, "\xBB\xDD\x33\x99", 4);
+                key_len = 4;
+            } else if (use_crypto) {
+                memcpy(key, "ONMIKR", 6);
+                key_len = 6;
+            }
     }
 
     // check coherence
@@ -184,23 +159,60 @@ static int CmdLFHitagSRead(const char *Cmd) {
         use_plain = true;
     }
 
+    memset(packet, 0, sizeof(*packet));
+
+    if (use_plain) {
+        PrintAndLogEx(INFO, "Access " _YELLOW_("Hitag S") " in Plain mode");
+    } else if (use_nrar) {
+        packet->cmd = HTSF_CHALLENGE;
+        memcpy(packet->NrAr, nrar, sizeof(packet->NrAr));
+        PrintAndLogEx(INFO, "Authenticating to " _YELLOW_("Hitag S") " in Challenge mode");
+    } else if (use_82xx) {
+        packet->cmd = HTSF_82xx;
+        memcpy(packet->pwd, key, sizeof(packet->pwd));
+        PrintAndLogEx(INFO, "Authenticating to " _YELLOW_("Hitag S") " in 82xx mode");
+    } else if (use_crypto) {
+        packet->cmd = HTSF_KEY;
+        memcpy(packet->key, key, sizeof(packet->key));
+        PrintAndLogEx(INFO, "Authenticating to " _YELLOW_("Hitag S") " in Crypto mode");
+    }
+
+    return PM3_SUCCESS;
+}
+static int CmdLFHitagSRead(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hitag hts rdbl",
+                  "Read Hitag S memory.\n\n"
+                  "  Crypto mode: \n"
+                  "    - key format ISK high + ISK low\n"
+                  "    - default key 4F4E4D494B52 (ONMIKR)\n\n"
+                  "  8268/8310 password mode: \n"
+                  "    - default password BBDD3399\n",
+                  "  lf hitag hts rdbl -p 1                         -> Hitag S/8211, plain mode\n"
+                  "  lf hitag hts rdbl -p 1 --82xx -k BBDD3399      -> 8268/8310, password mode\n"
+                  "  lf hitag hts rdbl -p 1 --nrar 0102030411223344 -> Hitag S, challenge mode\n"
+                  "  lf hitag hts rdbl -p 1 --crypto                -> Hitag S, crypto mode, def key\n"
+                  "  lf hitag hts rdbl -p 1 -k 4F4E4D494B52         -> Hitag S, crypto mode\n\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("8", "82xx", "8268/8310 mode"),
+        arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
+        arg_lit0(NULL, "crypto", "crypto mode"),
+        arg_str0("k", "key", "<hex>", "pwd or key, 4 or 6 hex bytes"),
+        arg_int1("p", "page", "<dec>", "page address to read from"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
     lf_hitag_data_t packet;
-    memset(&packet, 0, sizeof(packet));
 
-    if (use_nrar) {
-        packet.cmd = HTSF_CHALLENGE;
-        memcpy(packet.NrAr, nrar, sizeof(packet.NrAr));
-    }
+    if (process_hitags_common_args(ctx, &packet) < 0) return PM3_EINVARG;
 
-    if (use_82xx) {
-        packet.cmd = HTSF_82xx;
-        memcpy(packet.pwd, key, sizeof(packet.pwd));
-    }
+    // int page = arg_get_int_def(ctx, 5, 0);    // not implemented yet
 
-    if (use_crypto) {
-        packet.cmd = HTSF_KEY;
-        memcpy(packet.key, key, sizeof(packet.key));
-    }
+    CLIParserFree(ctx);
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HITAGS_READ, (uint8_t *) &packet, sizeof(packet));
@@ -215,11 +227,6 @@ static int CmdLFHitagSRead(const char *Cmd) {
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - hitag failed");
         return PM3_ESOFT;
-    }
-
-    // ??
-    if (use_nrar) {
-        return PM3_SUCCESS;
     }
 
     uint8_t *data = resp.data.asBytes;
@@ -260,8 +267,8 @@ static int CmdLFHitagSWrite(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
         arg_lit0("8", "82xx", "8268/8310 mode"),
+        arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
         arg_lit0(NULL, "crypto", "crypto mode"),
         arg_str0("k", "key", "<hex>", "pwd or key, 4 or 6 hex bytes"),
         arg_int1("p", "page", "<dec>", "page address to write to"),
@@ -270,36 +277,16 @@ static int CmdLFHitagSWrite(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    bool use_plain = false;
+    lf_hitag_data_t packet;
 
-    uint8_t nrar[8];
-    int nrar_len = 0;
-
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), nrar, sizeof(nrar), &nrar_len);
-    if (res != 0) {
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-
-    bool use_nrar = nrar_len > 0;
-    bool use_82xx = arg_get_lit(ctx, 2);
-    bool use_crypto = arg_get_lit(ctx, 3);
-
-    uint8_t key[6];
-    int key_len = 0;
-
-    res = CLIParamHexToBuf(arg_get_str(ctx, 4), key, sizeof(key), &key_len);
-    if (res != 0) {
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
+    if (process_hitags_common_args(ctx, &packet) < 0) return PM3_EINVARG;
 
     int page = arg_get_int_def(ctx, 5, 0);
 
-    uint8_t data[4];
+    uint8_t data[HITAGS_PAGE_SIZE];
     int data_len = 0;
 
-    res = CLIParamHexToBuf(arg_get_str(ctx, 6), data, sizeof(data), &data_len);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 6), data, HITAGS_PAGE_SIZE, &data_len);
     if (res != 0) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
@@ -307,64 +294,8 @@ static int CmdLFHitagSWrite(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    if (key_len != 0 && key_len != 4 && key_len != 6) {
-        PrintAndLogEx(WARNING, "Wrong KEY len expected 0, 4 or 6, got %d", key_len);
-        return PM3_EINVARG;
-    }
-
-    if (nrar_len && nrar_len != HITAGS_NRAR_SIZE) {
-        PrintAndLogEx(WARNING, "Wrong NR/AR len expected %d, got %d", HITAGS_NRAR_SIZE, nrar_len);
-        return PM3_EINVARG;
-    }
-
-    // complete options
-    if (key_len == 4) {
-        use_82xx = true;
-    }
-    if (key_len == 6) {
-        use_crypto = true;
-    }
-    if ((key_len == 0) && use_82xx) {
-        memcpy(key, "\xBB\xDD\x33\x99", 4);
-        key_len = 4;
-    }
-    if ((key_len == 0) && use_crypto) {
-        memcpy(key, "ONMIKR", 6);
-        key_len = 6;
-    }
-
-    // check coherence
-    uint8_t auth_methods = (use_plain + use_nrar + use_82xx + use_crypto);
-    if (auth_methods > 1) {
-        PrintAndLogEx(WARNING, "Specify only one authentication mode");
-        return PM3_EINVARG;
-    } else if (auth_methods == 0) {
-        use_plain = true;
-        PrintAndLogEx(INFO, "Write to " _YELLOW_("Hitag S") " in Plain mode");
-    }
-
-    lf_hitag_data_t packet;
-    memset(&packet, 0, sizeof(packet));
-
     packet.page = page;
-    memcpy(packet.data, data, sizeof(data));
-
-    if (use_nrar) {
-        packet.cmd = HTSF_CHALLENGE;
-        memcpy(packet.NrAr, nrar, sizeof(packet.NrAr));
-        PrintAndLogEx(INFO, "Authenticating to " _YELLOW_("Hitag S") " in Challenge mode");
-    }
-
-    if (use_82xx) {
-        packet.cmd = HTSF_82xx;
-        memcpy(packet.pwd, key, sizeof(packet.pwd));
-    }
-
-    if (use_crypto) {
-        packet.cmd = HTSF_KEY;
-        memcpy(packet.key, key, sizeof(packet.key));
-        PrintAndLogEx(INFO, "Authenticating to " _YELLOW_("Hitag S") " in Crypto mode");
-    }
+    memcpy(packet.data, data, sizeof(packet.data));
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HITAGS_WRITE, (uint8_t *) &packet, sizeof(packet));
