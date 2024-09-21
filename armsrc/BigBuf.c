@@ -30,7 +30,7 @@ extern uint32_t _stack_start[], __bss_end__[];
 // BigBuf is the large multi-purpose buffer, typically used to hold A/D samples or traces.
 // Also used to hold various smaller buffers and the Mifare Emulator Memory.
 // We know that bss is aligned to 4 bytes.
-static uint8_t *BigBuf = (uint8_t *)__bss_end__;
+static uint8_t *const BigBuf = (uint8_t *)__bss_end__;
 
 /* BigBuf memory layout:
 Pointer to highest available memory: s_bigbuf_hi
