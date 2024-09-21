@@ -1153,7 +1153,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             lf_hitag_data_t *payload = (lf_hitag_data_t *) packet->data.asBytes;
 
             switch (payload->cmd) {
-                case RHT2F_UID_ONLY: {
+                case HT2F_UID_ONLY: {
                     ht2_read_uid(NULL, true, true, false);
                     break;
                 }
