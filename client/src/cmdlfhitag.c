@@ -491,10 +491,10 @@ static int ht2_check_dictionary(uint32_t key_count, uint8_t *keys,  uint8_t keyl
     while (key_count--) {
 
         if (keylen == 4) {
-            packet.cmd = RHT2F_PASSWORD;
+            packet.cmd = HT2F_PASSWORD;
             memcpy(packet.pwd, pkeys, keylen);
         } else {
-            packet.cmd = RHT2F_CRYPTO;
+            packet.cmd = HT2F_CRYPTO;
             memcpy(packet.key, pkeys, keylen);
         }
 
@@ -806,7 +806,7 @@ static bool ht2_get_uid(uint32_t *uid) {
 
     lf_hitag_data_t packet;
     memset(&packet, 0, sizeof(packet));
-    packet.cmd = RHT2F_UID_ONLY;
+    packet.cmd = HT2F_UID_ONLY;
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HITAG_READER, (uint8_t *) &packet, sizeof(packet));
@@ -1017,17 +1017,17 @@ static int CmdLFHitagRd(const char *Cmd) {
     int pm3cmd;
     if (use_ht2 && use_pwd) {
         pm3cmd = CMD_LF_HITAG_READER;
-        packet.cmd = RHT2F_PASSWORD;
+        packet.cmd = HT2F_PASSWORD;
         memcpy(packet.pwd, key, sizeof(packet.pwd));
 
     } else if (use_ht2 && use_nrar) {
         pm3cmd = CMD_LF_HITAG_READER;
-        packet.cmd = RHT2F_AUTHENTICATE;
+        packet.cmd = HT2F_AUTHENTICATE;
         memcpy(packet.NrAr, nrar, sizeof(packet.NrAr));
     } else if (use_ht2 && use_crypto) {
 
         pm3cmd = CMD_LF_HITAG_READER;
-        packet.cmd = RHT2F_CRYPTO;
+        packet.cmd = HT2F_CRYPTO;
         memcpy(packet.key, key, sizeof(packet.key));
     } else {
         PrintAndLogEx(WARNING, "Sorry, not yet implemented");
@@ -1122,7 +1122,7 @@ static int CmdLFHitag2CheckChallenges(const char *Cmd) {
 
     lf_hitag_data_t packet;
     memset(&packet, 0, sizeof(lf_hitag_data_t));
-    packet.cmd = RHT2F_TEST_AUTH_ATTEMPTS;
+    packet.cmd = HT2F_TEST_AUTH_ATTEMPTS;
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HITAG_READER, (uint8_t *)&packet, sizeof(packet));
@@ -1266,14 +1266,14 @@ static int CmdLFHitagWriter(const char *Cmd) {
     memset(&packet, 0, sizeof(packet));
 
     if (use_ht2 && use_pwd) {
-        packet.cmd = WHT2F_PASSWORD;
+        packet.cmd = HT2F_PASSWORD;
         packet.page = page;
         memcpy(packet.pwd, key, sizeof(packet.pwd));
         memcpy(packet.data, data, sizeof(data));
         PrintAndLogEx(INFO, "Authenticating to " _YELLOW_("Hitag 2") " in Password mode");
 
     } else if (use_ht2 && use_crypto) {
-        packet.cmd = WHT2F_CRYPTO;
+        packet.cmd = HT2F_CRYPTO;
         packet.page = page;
         memcpy(packet.key, key, sizeof(packet.key));
         memcpy(packet.data, data, sizeof(data));
@@ -1441,12 +1441,12 @@ static int CmdLFHitag2Dump(const char *Cmd) {
     memset(&packet, 0, sizeof(packet));
 
     if (use_ht2 && use_pwd) {
-        packet.cmd = RHT2F_PASSWORD;
+        packet.cmd = HT2F_PASSWORD;
         memcpy(packet.pwd, key, sizeof(packet.pwd));
         PrintAndLogEx(INFO, "Authenticating to " _YELLOW_("Hitag 2") " in Password mode");
 
     } else if (use_ht2 && use_crypto) {
-        packet.cmd = RHT2F_CRYPTO;
+        packet.cmd = HT2F_CRYPTO;
         memcpy(packet.key, key, sizeof(packet.key));
         PrintAndLogEx(INFO, "Authenticating to " _YELLOW_("Hitag 2") " in Crypto mode");
 
@@ -2414,7 +2414,7 @@ int ht2_read_paxton(void) {
     lf_hitag_data_t packet;
     memset(&packet, 0, sizeof(packet));
 
-    packet.cmd = RHT2F_PASSWORD;
+    packet.cmd = HT2F_PASSWORD;
     memcpy(packet.pwd, ht2_default_keys, sizeof(packet.pwd));
 
     clearCommandBuffer();

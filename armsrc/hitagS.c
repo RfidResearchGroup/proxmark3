@@ -1117,7 +1117,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
 
         uint64_t key_le = 0;
         // if the tag is in authentication mode try the key or challenge
-        if (packet->cmd == RHTSF_KEY || packet->cmd == WHTSF_KEY) {
+        if (packet->cmd == HTSF_KEY) {
 
             DBG DbpString("Authenticating using key:");
             DBG Dbhexdump(6, packet->key, false);
@@ -1137,7 +1137,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
 
             DBG Dbprintf("%02X %02X %02X %02X %02X %02X %02X %02X", tx[0], tx[1], tx[2], tx[3], tx[4], tx[5], tx[6], tx[7]);
 
-        } else if (packet->cmd == RHTSF_CHALLENGE || packet->cmd == WHTSF_CHALLENGE) {
+        } else if (packet->cmd == HTSF_CHALLENGE) {
 
             DBG DbpString("Authenticating using nr,ar pair:");
             DBG Dbhexdump(8, packet->NrAr, false);
@@ -1157,7 +1157,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
                 tx[i] = ((NrAr >> (56 - (i * 8))) & 0xFF);
             }
 
-        } else if (packet->cmd == RHTSF_82xx || packet->cmd == WHTSF_82xx) {
+        } else if (packet->cmd == HTSF_82xx) {
             // 8268/8310 Authentication by writing password to block 64
 
             // send write page request
@@ -1191,7 +1191,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
             }
 
             return 0;
-        } else if (packet->cmd == RHTSF_PLAIN || packet->cmd == WHTSF_PLAIN) {
+        } else if (packet->cmd == HTSF_PLAIN) {
             Dbprintf("Error, " _YELLOW_("AUT=1") " This tag is configured in Authentication Mode");
             return -1;
         } else {
@@ -1214,7 +1214,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
         pwdh0 = 0;
         pwdl0 = 0;
         pwdl1 = 0;
-        if (packet->cmd == RHTSF_KEY || packet->cmd == WHTSF_KEY) {
+        if (packet->cmd == HTSF_KEY) {
 
             uint64_t state = ht2_hitag2_init(reflect48(key_le), reflect32(tag.data.s.uid_le), reflect32(*(uint32_t *)rnd));
             for (int i = 0; i < 4; i++) {
@@ -1296,7 +1296,7 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
         pageNum++;
         //display key and password if possible
         if (pageNum == 2 && tag.data.s.auth == 1 && tag.data.s.LKP) {
-            if (payload->cmd == RHTSF_KEY) {
+            if (payload->cmd == HTSF_KEY) {
                 DBG Dbprintf("Page[ 2]: %02X %02X %02X %02X",
                              payload->key[1],
                              payload->key[0],
@@ -1383,9 +1383,9 @@ void hts_write_page(const lf_hitag_data_t *payload, bool ledcontrol) {
     // //ACK received to write the page. send data
     // uint8_t data[4] = {0, 0, 0, 0};
     // switch (payload->cmd) {
-    //     case WHTSF_PLAIN:
-    //     case WHTSF_CHALLENGE:
-    //     case WHTSF_KEY:
+    //     case HTSF_PLAIN:
+    //     case HTSF_CHALLENGE:
+    //     case HTSF_KEY:
     //         data[0] = payload->data[3];
     //         data[1] = payload->data[2];
     //         data[2] = payload->data[1];
@@ -1505,7 +1505,7 @@ void hts_check_challenges(const uint8_t *data, uint32_t datalen, bool ledcontrol
 
         lf_hitag_data_t payload;
         memset(&payload, 0, sizeof(payload));
-        payload.cmd = RHTSF_CHALLENGE;
+        payload.cmd = HTSF_CHALLENGE;
 
         memcpy(payload.NrAr, data + dataoffset, 8);
 

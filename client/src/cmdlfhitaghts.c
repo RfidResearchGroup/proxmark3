@@ -188,17 +188,17 @@ static int CmdLFHitagSRead(const char *Cmd) {
     memset(&packet, 0, sizeof(packet));
 
     if (use_nrar) {
-        packet.cmd = RHTSF_CHALLENGE;
+        packet.cmd = HTSF_CHALLENGE;
         memcpy(packet.NrAr, nrar, sizeof(packet.NrAr));
     }
 
     if (use_82xx) {
-        packet.cmd = RHTSF_82xx;
+        packet.cmd = HTSF_82xx;
         memcpy(packet.pwd, key, sizeof(packet.pwd));
     }
 
     if (use_crypto) {
-        packet.cmd = RHTSF_KEY;
+        packet.cmd = HTSF_KEY;
         memcpy(packet.key, key, sizeof(packet.key));
     }
 
@@ -350,18 +350,18 @@ static int CmdLFHitagSWrite(const char *Cmd) {
     memcpy(packet.data, data, sizeof(data));
 
     if (use_nrar) {
-        packet.cmd = WHTSF_CHALLENGE;
+        packet.cmd = HTSF_CHALLENGE;
         memcpy(packet.NrAr, nrar, sizeof(packet.NrAr));
         PrintAndLogEx(INFO, "Authenticating to " _YELLOW_("Hitag S") " in Challenge mode");
     }
 
     if (use_82xx) {
-        packet.cmd = WHTSF_82xx;
+        packet.cmd = HTSF_82xx;
         memcpy(packet.pwd, key, sizeof(packet.pwd));
     }
 
     if (use_crypto) {
-        packet.cmd = WHTSF_KEY;
+        packet.cmd = HTSF_KEY;
         memcpy(packet.key, key, sizeof(packet.key));
         PrintAndLogEx(INFO, "Authenticating to " _YELLOW_("Hitag S") " in Crypto mode");
     }
