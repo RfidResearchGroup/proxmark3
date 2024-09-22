@@ -234,7 +234,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Data") " ----------------------------------");
 
-    const int hts_mem_sizes[] = {4, 32, 256, 0};
+    const int hts_mem_sizes[] = {4, 32, 256, 256};
     uint32_t size = hts_mem_sizes[config.memory_type];
 
     print_hex_break(data, size, HITAGS_PAGE_SIZE);
