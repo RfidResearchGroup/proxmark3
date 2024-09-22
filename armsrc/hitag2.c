@@ -1953,9 +1953,10 @@ void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
         memset(rx, 0x00, sizeof(rx));
         rxlen = 0;
 
-        // If there is no response, just repeat the loop
+        // If there is no response
         if (detected_tag_modulation == false) {
-            continue;
+            checked = -1;
+            goto out;
         }
 
         // Make sure we always have an even number of samples. This fixes the problem
