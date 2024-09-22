@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Print LUA and Python versions in `hw version` command (@jmichelp)
+- Updated LUA to v5.4.7 which adds utf-8 support (@jmichelp)
 - Changed `lf search` - it now tries to read and decode paxton id (@iceman1001)
 - Changed `lf search` - to identify hitag2/s/82xx in chipset detection to preserve their EM4100 or other outputs (@iceman1001)
 - Added `lf hitag hts reader` - to act as a HitagS / 82xx reader (@iceman1001)

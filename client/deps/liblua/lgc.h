@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.58 2012/09/11 12:53:08 roberto Exp $
+** $Id: lgc.h $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -12,146 +12,191 @@
 #include "lstate.h"
 
 /*
-** Collectable objects may have one of three colors: white, which
-** means the object is not marked; gray, which means the
-** object is marked, but its references may be not marked; and
-** black, which means that the object and all its references are marked.
-** The main invariant of the garbage collector, while marking objects,
-** is that a black object can never point to a white one. Moreover,
-** any gray object must be in a "gray list" (gray, grayagain, weak,
-** allweak, ephemeron) so that it can be visited again before finishing
-** the collection cycle. These lists have no meaning when the invariant
-** is not being enforced (e.g., sweep phase).
+** Collectable objects may have one of three colors: white, which means
+** the object is not marked; gray, which means the object is marked, but
+** its references may be not marked; and black, which means that the
+** object and all its references are marked.  The main invariant of the
+** garbage collector, while marking objects, is that a black object can
+** never point to a white one. Moreover, any gray object must be in a
+** "gray list" (gray, grayagain, weak, allweak, ephemeron) so that it
+** can be visited again before finishing the collection cycle. (Open
+** upvalues are an exception to this rule.)  These lists have no meaning
+** when the invariant is not being enforced (e.g., sweep phase).
 */
-
-
-
-/* how much to allocate before next GC step */
-#if !defined(GCSTEPSIZE)
-/* ~100 small strings */
-#define GCSTEPSIZE (cast_int(100 * sizeof(TString)))
-#endif
 
 
 /*
 ** Possible states of the Garbage Collector
 */
-#define GCSpropagate   0
-#define GCSatomic      1
-#define GCSsweepstring 2
-#define GCSsweepudata  3
-#define GCSsweep       4
-#define GCSpause       5
+#define GCSpropagate	0
+#define GCSenteratomic	1
+#define GCSatomic	2
+#define GCSswpallgc	3
+#define GCSswpfinobj	4
+#define GCSswptobefnz	5
+#define GCSswpend	6
+#define GCScallfin	7
+#define GCSpause	8
 
 
 #define issweepphase(g)  \
-    (GCSsweepstring <= (g)->gcstate && (g)->gcstate <= GCSsweep)
+	(GCSswpallgc <= (g)->gcstate && (g)->gcstate <= GCSswpend)
 
-#define isgenerational(g) ((g)->gckind == KGC_GEN)
 
 /*
-** macros to tell when main invariant (white objects cannot point to black
-** ones) must be kept. During a non-generational collection, the sweep
+** macro to tell when main invariant (white objects cannot point to black
+** ones) must be kept. During a collection, the sweep
 ** phase may break the invariant, as objects turned white may point to
 ** still-black objects. The invariant is restored when sweep ends and
-** all objects are white again. During a generational collection, the
-** invariant must be kept all times.
+** all objects are white again.
 */
 
-#define keepinvariant(g) (isgenerational(g) || g->gcstate <= GCSatomic)
-
-
-/*
-** Outside the collector, the state in generational mode is kept in
-** 'propagate', so 'keepinvariant' is always true.
-*/
-#define keepinvariantout(g)  \
-    check_exp(g->gcstate == GCSpropagate || !isgenerational(g),  \
-              g->gcstate <= GCSatomic)
+#define keepinvariant(g)	((g)->gcstate <= GCSatomic)
 
 
 /*
 ** some useful bit tricks
 */
-#define resetbits(x,m)  ((x) &= cast(lu_byte, ~(m)))
-#define setbits(x,m)    ((x) |= (m))
-#define testbits(x,m)   ((x) & (m))
-#define bitmask(b)      (1<<(b))
-#define bit2mask(b1,b2) (bitmask(b1) | bitmask(b2))
-#define l_setbit(x,b)   setbits(x, bitmask(b))
-#define resetbit(x,b)   resetbits(x, bitmask(b))
-#define testbit(x,b)    testbits(x, bitmask(b))
+#define resetbits(x,m)		((x) &= cast_byte(~(m)))
+#define setbits(x,m)		((x) |= (m))
+#define testbits(x,m)		((x) & (m))
+#define bitmask(b)		(1<<(b))
+#define bit2mask(b1,b2)		(bitmask(b1) | bitmask(b2))
+#define l_setbit(x,b)		setbits(x, bitmask(b))
+#define resetbit(x,b)		resetbits(x, bitmask(b))
+#define testbit(x,b)		testbits(x, bitmask(b))
 
 
-/* Layout for bit use in `marked' field: */
-#define WHITE0BIT    0  /* object is white (type 0) */
-#define WHITE1BIT    1  /* object is white (type 1) */
-#define BLACKBIT     2  /* object is black */
-#define FINALIZEDBIT 3  /* object has been separated for finalization */
-#define SEPARATED    4  /* object is in 'finobj' list or in 'tobefnz' */
-#define FIXEDBIT     5  /* object is fixed (should not be collected) */
-#define OLDBIT       6  /* object is old (only in generational mode) */
-/* bit 7 is currently used by tests (luaL_checkmemory) */
+/*
+** Layout for bit use in 'marked' field. First three bits are
+** used for object "age" in generational mode. Last bit is used
+** by tests.
+*/
+#define WHITE0BIT	3  /* object is white (type 0) */
+#define WHITE1BIT	4  /* object is white (type 1) */
+#define BLACKBIT	5  /* object is black */
+#define FINALIZEDBIT	6  /* object has been marked for finalization */
 
-#define WHITEBITS bit2mask(WHITE0BIT, WHITE1BIT)
+#define TESTBIT		7
 
 
-#define iswhite(x)      testbits((x)->gch.marked, WHITEBITS)
-#define isblack(x)      testbit((x)->gch.marked, BLACKBIT)
+
+#define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)
+
+
+#define iswhite(x)      testbits((x)->marked, WHITEBITS)
+#define isblack(x)      testbit((x)->marked, BLACKBIT)
 #define isgray(x)  /* neither white nor black */  \
-    (!testbits((x)->gch.marked, WHITEBITS | bitmask(BLACKBIT)))
+	(!testbits((x)->marked, WHITEBITS | bitmask(BLACKBIT)))
 
-#define isold(x) testbit((x)->gch.marked, OLDBIT)
+#define tofinalize(x)	testbit((x)->marked, FINALIZEDBIT)
 
-/* MOVE OLD rule: whenever an object is moved to the beginning of
-   a GC list, its old bit must be cleared */
-#define resetoldbit(o) resetbit((o)->gch.marked, OLDBIT)
+#define otherwhite(g)	((g)->currentwhite ^ WHITEBITS)
+#define isdeadm(ow,m)	((m) & (ow))
+#define isdead(g,v)	isdeadm(otherwhite(g), (v)->marked)
 
-#define otherwhite(g) (g->currentwhite ^ WHITEBITS)
-#define isdeadm(ow,m) (!(((m) ^ WHITEBITS) & (ow)))
-#define isdead(g,v) isdeadm(otherwhite(g), (v)->gch.marked)
+#define changewhite(x)	((x)->marked ^= WHITEBITS)
+#define nw2black(x)  \
+	check_exp(!iswhite(x), l_setbit((x)->marked, BLACKBIT))
 
-#define changewhite(x) ((x)->gch.marked ^= WHITEBITS)
-#define gray2black(x) l_setbit((x)->gch.marked, BLACKBIT)
-
-#define valiswhite(x) (iscollectable(x) && iswhite(gcvalue(x)))
-
-#define luaC_white(g) cast(lu_byte, (g)->currentwhite & WHITEBITS)
+#define luaC_white(g)	cast_byte((g)->currentwhite & WHITEBITS)
 
 
-#define luaC_condGC(L,c) \
-    {if (G(L)->GCdebt > 0) {c;}; condchangemem(L);}
-#define luaC_checkGC(L) luaC_condGC(L, luaC_step(L);)
+/* object age in generational mode */
+#define G_NEW		0	/* created in current cycle */
+#define G_SURVIVAL	1	/* created in previous cycle */
+#define G_OLD0		2	/* marked old by frw. barrier in this cycle */
+#define G_OLD1		3	/* first full cycle as old */
+#define G_OLD		4	/* really old object (not to be visited) */
+#define G_TOUCHED1	5	/* old object touched this cycle */
+#define G_TOUCHED2	6	/* old object touched in previous cycle */
+
+#define AGEBITS		7  /* all age bits (111) */
+
+#define getage(o)	((o)->marked & AGEBITS)
+#define setage(o,a)  ((o)->marked = cast_byte(((o)->marked & (~AGEBITS)) | a))
+#define isold(o)	(getage(o) > G_SURVIVAL)
+
+#define changeage(o,f,t)  \
+	check_exp(getage(o) == (f), (o)->marked ^= ((f)^(t)))
 
 
-#define luaC_barrier(L,p,v) { if (valiswhite(v) && isblack(obj2gco(p)))  \
-            luaC_barrier_(L,obj2gco(p),gcvalue(v)); }
+/* Default Values for GC parameters */
+#define LUAI_GENMAJORMUL         100
+#define LUAI_GENMINORMUL         20
 
-#define luaC_barrierback(L,p,v) { if (valiswhite(v) && isblack(obj2gco(p)))  \
-            luaC_barrierback_(L,p); }
+/* wait memory to double before starting new cycle */
+#define LUAI_GCPAUSE    200
 
-#define luaC_objbarrier(L,p,o)  \
-    { if (iswhite(obj2gco(o)) && isblack(obj2gco(p))) \
-            luaC_barrier_(L,obj2gco(p),obj2gco(o)); }
+/*
+** some gc parameters are stored divided by 4 to allow a maximum value
+** up to 1023 in a 'lu_byte'.
+*/
+#define getgcparam(p)	((p) * 4)
+#define setgcparam(p,v)	((p) = (v) / 4)
 
-#define luaC_objbarrierback(L,p,o)  \
-    { if (iswhite(obj2gco(o)) && isblack(obj2gco(p))) luaC_barrierback_(L,p); }
+#define LUAI_GCMUL      100
 
-#define luaC_barrierproto(L,p,c) \
-    { if (isblack(obj2gco(p))) luaC_barrierproto_(L,p,c); }
+/* how much to allocate before next GC step (log2) */
+#define LUAI_GCSTEPSIZE 13      /* 8 KB */
 
-LUAI_FUNC void luaC_freeallobjects(lua_State *L);
-LUAI_FUNC void luaC_step(lua_State *L);
-LUAI_FUNC void luaC_forcestep(lua_State *L);
-LUAI_FUNC void luaC_runtilstate(lua_State *L, int statesmask);
-LUAI_FUNC void luaC_fullgc(lua_State *L, int isemergency);
-LUAI_FUNC GCObject *luaC_newobj(lua_State *L, int tt, size_t sz,
-                                GCObject **list, int offset);
-LUAI_FUNC void luaC_barrier_(lua_State *L, GCObject *o, GCObject *v);
-LUAI_FUNC void luaC_barrierback_(lua_State *L, GCObject *o);
-LUAI_FUNC void luaC_barrierproto_(lua_State *L, Proto *p, Closure *c);
-LUAI_FUNC void luaC_checkfinalizer(lua_State *L, GCObject *o, Table *mt);
-LUAI_FUNC void luaC_checkupvalcolor(global_State *g, UpVal *uv);
-LUAI_FUNC void luaC_changemode(lua_State *L, int mode);
+
+/*
+** Check whether the declared GC mode is generational. While in
+** generational mode, the collector can go temporarily to incremental
+** mode to improve performance. This is signaled by 'g->lastatomic != 0'.
+*/
+#define isdecGCmodegen(g)	(g->gckind == KGC_GEN || g->lastatomic != 0)
+
+
+/*
+** Control when GC is running:
+*/
+#define GCSTPUSR	1  /* bit true when GC stopped by user */
+#define GCSTPGC		2  /* bit true when GC stopped by itself */
+#define GCSTPCLS	4  /* bit true when closing Lua state */
+#define gcrunning(g)	((g)->gcstp == 0)
+
+
+/*
+** Does one step of collection when debt becomes positive. 'pre'/'pos'
+** allows some adjustments to be done only when needed. macro
+** 'condchangemem' is used only for heavy tests (forcing a full
+** GC cycle on every opportunity)
+*/
+#define luaC_condGC(L,pre,pos) \
+	{ if (G(L)->GCdebt > 0) { pre; luaC_step(L); pos;}; \
+	  condchangemem(L,pre,pos); }
+
+/* more often than not, 'pre'/'pos' are empty */
+#define luaC_checkGC(L)		luaC_condGC(L,(void)0,(void)0)
+
+
+#define luaC_objbarrier(L,p,o) (  \
+	(isblack(p) && iswhite(o)) ? \
+	luaC_barrier_(L,obj2gco(p),obj2gco(o)) : cast_void(0))
+
+#define luaC_barrier(L,p,v) (  \
+	iscollectable(v) ? luaC_objbarrier(L,p,gcvalue(v)) : cast_void(0))
+
+#define luaC_objbarrierback(L,p,o) (  \
+	(isblack(p) && iswhite(o)) ? luaC_barrierback_(L,p) : cast_void(0))
+
+#define luaC_barrierback(L,p,v) (  \
+	iscollectable(v) ? luaC_objbarrierback(L, p, gcvalue(v)) : cast_void(0))
+
+LUAI_FUNC void luaC_fix (lua_State *L, GCObject *o);
+LUAI_FUNC void luaC_freeallobjects (lua_State *L);
+LUAI_FUNC void luaC_step (lua_State *L);
+LUAI_FUNC void luaC_runtilstate (lua_State *L, int statesmask);
+LUAI_FUNC void luaC_fullgc (lua_State *L, int isemergency);
+LUAI_FUNC GCObject *luaC_newobj (lua_State *L, int tt, size_t sz);
+LUAI_FUNC GCObject *luaC_newobjdt (lua_State *L, int tt, size_t sz,
+                                                 size_t offset);
+LUAI_FUNC void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v);
+LUAI_FUNC void luaC_barrierback_ (lua_State *L, GCObject *o);
+LUAI_FUNC void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt);
+LUAI_FUNC void luaC_changemode (lua_State *L, int newmode);
+
 
 #endif

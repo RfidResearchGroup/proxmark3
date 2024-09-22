@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.h,v 1.39 2012/05/08 13:53:33 roberto Exp $
+** $Id: lundump.h $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -7,22 +7,29 @@
 #ifndef lundump_h
 #define lundump_h
 
+#include "llimits.h"
 #include "lobject.h"
 #include "lzio.h"
 
-/* load one chunk; from lundump.c */
-LUAI_FUNC Closure *luaU_undump(lua_State *L, ZIO *Z, Mbuffer *buff, const char *name);
-
-/* make header; from lundump.c */
-LUAI_FUNC void luaU_header(lu_byte *h);
-
-/* dump one chunk; from ldump.c */
-LUAI_FUNC int luaU_dump(lua_State *L, const Proto *f, lua_Writer w, void *data, int strip);
 
 /* data to catch conversion errors */
-#define LUAC_TAIL "\x19\x93\r\n\x1a\n"
+#define LUAC_DATA	"\x19\x93\r\n\x1a\n"
 
-/* size in bytes of header of binary files */
-#define LUAC_HEADERSIZE (sizeof(LUA_SIGNATURE)-sizeof(char)+2+6+sizeof(LUAC_TAIL)-sizeof(char))
+#define LUAC_INT	0x5678
+#define LUAC_NUM	cast_num(370.5)
+
+/*
+** Encode major-minor version in one byte, one nibble for each
+*/
+#define LUAC_VERSION  (((LUA_VERSION_NUM / 100) * 16) + LUA_VERSION_NUM % 100)
+
+#define LUAC_FORMAT	0	/* this is the official format */
+
+/* load one chunk; from lundump.c */
+LUAI_FUNC LClosure* luaU_undump (lua_State* L, ZIO* Z, const char* name);
+
+/* dump one chunk; from ldump.c */
+LUAI_FUNC int luaU_dump (lua_State* L, const Proto* f, lua_Writer w,
+                         void* data, int strip);
 
 #endif
