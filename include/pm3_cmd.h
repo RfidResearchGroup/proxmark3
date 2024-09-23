@@ -776,7 +776,7 @@ typedef struct {
 #define FLAG_FORCED_ATQA        0x800
 #define FLAG_FORCED_SAK         0x1000
 #define FLAG_CVE21_0430         0x2000
-#define RATS_IN_DATA            0x10000
+#define RATS_IN_DATA            0x3000
 
 
 #define MODE_SIM_CSN        0
