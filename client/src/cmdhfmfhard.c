@@ -1565,18 +1565,8 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
     FILE *fnonces = NULL;
 
     // init to ZERO
-    PacketResponseNG resp = {
-        .cmd = 0,
-        .length = 0,
-        .magic = 0,
-        .status = 0,
-        .crc = 0,
-        .ng = false,
-    };
-    resp.oldarg[0] = 0;
-    resp.oldarg[1] = 0;
-    resp.oldarg[2] = 0;
-    memset(resp.data.asBytes, 0, PM3_CMD_DATA_SIZE);
+    PacketResponseNG resp;
+    memset(&resp, 0, sizeof(resp));
 
     uint8_t write_buf[9];
     char progress_text[80];
