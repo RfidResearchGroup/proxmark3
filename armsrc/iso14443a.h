@@ -174,6 +174,7 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
 
 void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype);
 void DetectNACKbug(void);
+void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t *iRATs, uint8_t *aid, uint8_t *resp, uint8_t *apdu, int aid_len, int respond_len, int apdu_len, bool enumerate);
 
 bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t resp_len, uint8_t *received_len);
 
