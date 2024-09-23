@@ -1117,8 +1117,8 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
     hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, t_wait, ledcontrol, true);
 
     if (rxlen != 32) {
-        DbpString("UID Request failed!");
-        return -1;
+        // DbpString("UID Request failed!");
+        return -2;
     }
 
     memcpy(tag.data.pages[HITAGS_UID_PADR], rx, HITAGS_PAGE_SIZE);
@@ -1136,8 +1136,8 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
     hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
     if (rxlen != 40) {
-        Dbprintf("Select UID failed! %i", rxlen);
-        return -1;
+        DBG Dbprintf("Select UID failed! %i", rxlen);
+        return -3;
     }
 
     memcpy(tag.data.pages[HITAGS_CONFIG_PADR], rx, HITAGS_PAGE_SIZE - 1);
@@ -1207,8 +1207,8 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
             hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
             if ((rxlen != 2) || (rx[0] >> (8 - 2) != 0x01)) {
-                Dbprintf("no write access on page " _YELLOW_("64") ". not 82xx?");
-                return -1;
+                // Dbprintf("no write access on page " _YELLOW_("64") ". not 82xx?");
+                return -4;
             }
 
             txlen = 0;
@@ -1219,24 +1219,24 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
             hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
             if ((rxlen != 2) || (rx[0] >> (8 - 2) != 0x01)) {
-                Dbprintf("write to page " _YELLOW_("64") " failed! wrong password?");
-                return -1;
+                // Dbprintf("write to page " _YELLOW_("64") " failed! wrong password?");
+                return -5;
             }
 
             return 0;
         } else if (packet->cmd == HTSF_PLAIN) {
-            Dbprintf("Error, " _YELLOW_("AUT=1") " This tag is configured in Authentication Mode");
-            return -1;
+            // Dbprintf("Error, " _YELLOW_("AUT=1") " This tag is configured in Authentication Mode");
+            return -6;
         } else {
-            Dbprintf("Error, unknown function: " _RED_("%d"), packet->cmd);
-            return -1;
+            DBG Dbprintf("Error, unknown function: " _RED_("%d"), packet->cmd);
+            return -7;
         }
 
         hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
         if (rxlen != 40) {
-            Dbprintf("Authenticate failed! " _RED_("%i"), rxlen);
-            return -1;
+            DBG Dbprintf("Authenticate failed! " _RED_("%i"), rxlen);
+            return -8;
         }
 
         //encrypted con2,password received.
@@ -1275,8 +1275,9 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
     uint8_t rx[HITAG_FRAME_LEN] = { 0x00 };
     uint8_t tx[HITAG_FRAME_LEN] = { 0x00 };
 
-    int status = PM3_SUCCESS;
-    if (hts_select_tag(payload, tx, ARRAYLEN(tx), rx, ARRAYLEN(rx), HITAG_T_WAIT_FIRST, ledcontrol) == -1) {
+    int status = PM3_SUCCESS, reason = -1;
+    reason = hts_select_tag(payload, tx, ARRAYLEN(tx), rx, ARRAYLEN(rx), HITAG_T_WAIT_FIRST, ledcontrol);
+    if (reason != 0) {
         status = PM3_ERFTRANS;
         goto read_end;
     }
@@ -1360,7 +1361,7 @@ read_end:
     hts_stop_clock();
     set_tracing(false);
     lf_finalize(ledcontrol);
-    reply_ng(CMD_LF_HITAGS_READ, status, (uint8_t *)tag.data.pages, sizeof(tag.data.pages));
+    reply_reason(CMD_LF_HITAGS_READ, status, reason,(uint8_t *)tag.data.pages, sizeof(tag.data.pages));
 }
 
 /*
@@ -1380,10 +1381,10 @@ void hts_write_page(const lf_hitag_data_t *payload, bool ledcontrol) {
     uint8_t tx[HITAG_FRAME_LEN];
     size_t txlen = 0;
 
-    int res = PM3_ESOFT;
-
-    if (hts_select_tag(payload, tx, ARRAYLEN(tx), rx, ARRAYLEN(rx), HITAG_T_WAIT_FIRST, ledcontrol) == -1) {
-        res = PM3_ERFTRANS;
+    int status = PM3_ESOFT, reason = -1;
+    reason = hts_select_tag(payload, tx, ARRAYLEN(tx), rx, ARRAYLEN(rx), HITAG_T_WAIT_FIRST, ledcontrol);
+    if (reason != 0) {
+        status = PM3_ERFTRANS;
         goto write_end;
     }
 
@@ -1409,7 +1410,7 @@ void hts_write_page(const lf_hitag_data_t *payload, bool ledcontrol) {
 
     if ((rxlen != 2) || (rx[0] >> (8 - 2) != 0x01)) {
         DBG Dbprintf("no write access on page " _YELLOW_("%d"), payload->page);
-        res = PM3_ESOFT;
+        reason = -9;
         goto write_end;
     }
 
@@ -1438,22 +1439,22 @@ void hts_write_page(const lf_hitag_data_t *payload, bool ledcontrol) {
     enable_page_tearoff = g_tearoff_enabled;
 
     if (hts_send_receive(tx, txlen, rx, ARRAYLEN(rx), &rxlen, HITAG_T_WAIT_SC, ledcontrol, false) == PM3_ETEAROFF) {
-        res = PM3_ETEAROFF;
+        status = PM3_ETEAROFF;
         enable_page_tearoff = false;
         goto write_end;
     }
 
     if ((rxlen != 2) || (rx[0] >> (8 - 2) != 0x01)) {
-        res = PM3_ESOFT; //  write failed
+        reason = -10;  // write failed
     } else {
-        res = PM3_SUCCESS;
+        status = PM3_SUCCESS;
     }
 
 write_end:
     hts_stop_clock();
     set_tracing(false);
     lf_finalize(ledcontrol);
-    reply_ng(CMD_LF_HITAGS_WRITE, res, NULL, 0);
+    reply_reason(CMD_LF_HITAGS_WRITE, status, reason, NULL, 0);
 }
 
 int hts_read_uid(uint32_t *uid, bool ledcontrol, bool send_answer) {
@@ -1548,17 +1549,17 @@ void hts_check_challenges(const uint8_t *data, uint32_t datalen, bool ledcontrol
 
         memcpy(payload.NrAr, data + dataoffset, 8);
 
-        int res = hts_select_tag(&payload, tx, ARRAYLEN(tx), rx, ARRAYLEN(rx), HITAG_T_WAIT_FIRST, ledcontrol);
+        int reason = hts_select_tag(&payload, tx, ARRAYLEN(tx), rx, ARRAYLEN(rx), HITAG_T_WAIT_FIRST, ledcontrol);
 
         DBG  Dbprintf("Challenge %s: %02X %02X %02X %02X %02X %02X %02X %02X",
-                      res == -1 ? "failed " : "success",
+                      reason != 0 ? "failed " : "success",
                       payload.NrAr[0], payload.NrAr[1],
                       payload.NrAr[2], payload.NrAr[3],
                       payload.NrAr[4], payload.NrAr[5],
                       payload.NrAr[6], payload.NrAr[7]
                      );
 
-        if (res == -1) {
+        if (reason != 0) {
             // Need to do a dummy UID select that will fail
             FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
             SpinDelay(2);
