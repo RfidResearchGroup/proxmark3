@@ -424,11 +424,27 @@
         "Type": "student"
     },
     {
+        "AID": "3086F5",
+        "Vendor": "CNOUS/CROUS via MONECARTE",
+        "Country": "FR",
+        "Name": "European Student Card (ESC)",
+        "Description": "Multiservice Student Card",
+        "Type": "student"
+    },
+    {
         "AID": "35845F",
         "Vendor": "InterCard GmbH Kartensysteme",
         "Country": "DE",
         "Name": "InterCard",
         "Description": "Campus Card",
+        "Type": "student"
+    },
+    {
+        "AID": "4085F5",
+        "Vendor": "CNOUS/CROUS via MONECARTE",
+        "Country": "FR",
+        "Name": "European Student Card (ESC)",
+        "Description": "Multiservice Student Card",
         "Type": "student"
     },
     {
@@ -544,11 +560,35 @@
         "Type": "student"
     },
     {
+        "AID": "7086F5",
+        "Vendor": "CNOUS/CROUS via MONECARTE",
+        "Country": "FR",
+        "Name": "European Student Card (ESC)",
+        "Description": "Multiservice Student Card",
+        "Type": "student"
+    },
+    {
         "AID": "75845F",
         "Vendor": "InterCard GmbH Kartensysteme",
         "Country": "DE",
         "Name": "InterCard",
         "Description": "Campus Card",
+        "Type": "student"
+    },
+    {
+        "AID": "9180F3",
+        "Vendor": "CNOUS/CROUS via MONECARTE",
+        "Country": "FR",
+        "Name": "European Student Card (ESC)",
+        "Description": "Multiservice Student Card",
+        "Type": "student"
+    },
+    {
+        "AID": "A086F5",
+        "Vendor": "CNOUS/CROUS via MONECARTE",
+        "Country": "FR",
+        "Name": "European Student Card (ESC)",
+        "Description": "Multiservice Student Card",
         "Type": "student"
     },
     {
@@ -800,6 +840,14 @@
         "Type": "transport"
     },
     {
+        "AID": "087522",
+        "Vendor": "Umo Mobility via Cubic Transportation Systems",
+        "Country": "US",
+        "Name": "Umo Mobility Card",
+        "Description": "Umo Mobility Card",
+        "Type": "transport"
+    },
+    {
         "AID": "2211AF",
         "Vendor": "National Transport Authority",
         "Country": "IE",
@@ -856,6 +904,14 @@
         "Type": "transport"
     },
     {
+        "AID": "677F8E",
+        "Vendor": "Umo Mobility via Cubic Transportation Systems",
+        "Country": "US",
+        "Name": "Umo Mobility Card",
+        "Description": "Umo Mobility Card",
+        "Type": "transport"
+    },
+    {
         "AID": "784000",
         "Vendor": "Roads & Transport Authority (Government of Dubai)",
         "Country": "AE",
@@ -864,11 +920,35 @@
         "Type": "transport"
     },
     {
+        "AID": "992CB5",
+        "Vendor": "Umo Mobility via Cubic Transportation Systems",
+        "Country": "US",
+        "Name": "Umo Mobility Card",
+        "Description": "Umo Mobility Card",
+        "Type": "transport"
+    },
+    {
         "AID": "A00216",
         "Vendor": "ITSO Ltd",
         "Country": "UK",
         "Name": "EMR Smartcard (EMA) / GWR touch (BRS)",
         "Description": "ITSO Public Transport Application // Provision of Citizen Services #0",
+        "Type": "transport"
+    },
+    {
+        "AID": "A4237D",
+        "Vendor": "Umo Mobility via Cubic Transportation Systems",
+        "Country": "US",
+        "Name": "Umo Mobility Card",
+        "Description": "Umo Mobility Card",
+        "Type": "transport"
+    },
+    {
+        "AID": "C65B80",
+        "Vendor": "Umo Mobility via Cubic Transportation Systems",
+        "Country": "US",
+        "Name": "Umo Mobility Card",
+        "Description": "Umo Mobility Card",
         "Type": "transport"
     },
     {
