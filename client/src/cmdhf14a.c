@@ -3628,6 +3628,183 @@ int CmdHF14ANdefWrite(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+/*
+    * Simulate ISO/IEC 14443 type A tag with 4,7 or 10 byte UID, and filter for AID Values
+    * These AID Values can be responded to and include extra APDU commands after verification
+*/
+
+int CmdHF14AAIDSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a simaid",
+                  "Simulate ISO/IEC 14443 type A tag with 4,7 or 10 byte UID, and filter for AID Values\n"
+                  "These AID Values can be responded to and include extra APDU commands on GetData after response\n",
+                  "hf 14a simaid -t 3                                                               -> MIFARE Desfire\n"
+                  "hf 14a simaid -t 4                                                               -> ISO/IEC 14443-4\n"
+                  "hf 14a simaid -t 11                                                              -> Javacard (JCOP)\n"
+                  "hf 14a simaid -t 3 --aid a000000000000000000000 --response 9000 --apdu 9000      -> AID, Response and APDU\n"
+                  "hf 14a simaid -t 3 --rats 05788172220101 --response 01009000 --apdu 86009000     -> Custom RATS Added\n"
+                  "hf 14a simaid -t 3 --rats 05788172220101 -x                                      -> Enumerate AID Values\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("t", "type", "<1-12> ", "Simulation type to use"),
+        arg_str0("u", "uid", "<hex>", "<4|7|10> hex bytes UID"),
+        arg_str0("r", "rats", "<hex>", "<0-20> hex bytes RATS"),
+        arg_str0("a", "aid", "<hex>", "<0-100> hex bytes for AID to respond to (Default: A000000000000000000000)"),
+        arg_str0("e", "response", "<hex>", "<0-100> hex bytes for APDU Response to AID Select (Default: 9000)"),
+        arg_str0("p", "apdu", "<hex>", "<0-100> hex bytes for APDU Response to Get Data request after AID (Default: 9000)"),
+        arg_lit0("x", "enumerate", "Enumerate all AID values via returning Not Found and print them to console "),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int tagtype = arg_get_int_def(ctx, 1, 1);
+
+    bool enumerate = arg_get_lit(ctx, 7);
+
+    int uid_len = 0;
+    int rats_len = 0;
+    int aid_len = 0;
+    int respond_len = 0;
+    int apdu_len = 0;
+
+    uint8_t uid[10] = {0};
+    uint8_t rats[20] = {0};
+    uint8_t aid[30] = {0xA0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t response[100] = {0x90, 0x00};
+    uint8_t apdu[100] = {0x90, 0x00};
+
+    CLIGetHexWithReturn(ctx, 2, uid, &uid_len);
+    CLIGetHexWithReturn(ctx, 3, rats, &rats_len);
+    CLIGetHexWithReturn(ctx, 4, aid, &aid_len);
+    CLIGetHexWithReturn(ctx, 5, response, &respond_len);
+    CLIGetHexWithReturn(ctx, 6, apdu, &apdu_len);
+
+    // default value fill for the AID, response, and apdu
+    if (aid_len == 0) {
+        aid_len = 11;
+    }
+    if (respond_len == 0) {
+        respond_len = 2;
+    }
+    if (apdu_len == 0) {
+        apdu_len = 2;
+    }
+
+    uint16_t flags = 0;
+    bool useUIDfromEML = true;
+
+    if (uid_len > 0) {
+        switch (uid_len) {
+            case 10:
+                flags |= FLAG_10B_UID_IN_DATA;
+                break;
+            case 7:
+                flags |= FLAG_7B_UID_IN_DATA;
+                break;
+            case 4:
+                flags |= FLAG_4B_UID_IN_DATA;
+                break;
+            default:
+                PrintAndLogEx(ERR, "Please specify a 4, 7, or 10 byte UID");
+                CLIParserFree(ctx);
+                return PM3_EINVARG;
+        }
+        PrintAndLogEx(SUCCESS, "Emulating " _YELLOW_("ISO/IEC 14443 type A tag")" with " _GREEN_("%d byte UID (%s)"), uid_len, sprint_hex(uid, uid_len));
+        useUIDfromEML = false;
+    }
+
+    if (rats_len > 0) {
+        flags |= RATS_IN_DATA;
+    }
+
+
+    CLIParserFree(ctx);
+
+    if (tagtype > 12) {
+        PrintAndLogEx(ERR, "Undefined tag %d", tagtype);
+        return PM3_EINVARG;
+    }
+
+    if (useUIDfromEML) {
+        flags |= FLAG_UID_IN_EMUL;
+    }
+
+    struct {
+        uint8_t tagtype;
+        uint16_t flags;
+        uint8_t uid[10];
+        uint8_t rats[20];
+        uint8_t aid[30];
+        uint8_t response[100];
+        uint8_t apdu[100];
+        int aid_len;
+        int respond_len;
+        int apdu_len;
+        bool enumerate;
+    } PACKED payload;
+
+    payload.tagtype = tagtype;
+    payload.flags = flags;
+    payload.enumerate = enumerate;
+
+    // Copy data to payload
+    memcpy(payload.uid, uid, uid_len);
+    memcpy(payload.rats, rats, rats_len);
+    memcpy(payload.aid, aid, aid_len);
+    memcpy(payload.response, response, respond_len);
+    memcpy(payload.apdu, apdu, apdu_len);
+
+    // copy the lengths data to the payload
+    memcpy(&payload.aid_len, &aid_len, sizeof(aid_len));
+    memcpy(&payload.respond_len, &respond_len, sizeof(respond_len));
+    memcpy(&payload.apdu_len, &apdu_len, sizeof(apdu_len));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO14443A_SIM_AID, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp = {0};
+
+    sector_t *k_sector = NULL;
+    size_t k_sectors_cnt = MIFARE_4K_MAXSECTOR;
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
+    bool keypress = kbd_enter_pressed();
+    while (keypress == false) {
+
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0)
+            continue;
+
+        if (resp.status != PM3_SUCCESS)
+            break;
+
+        if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK)
+            break;
+
+        keypress = kbd_enter_pressed();
+    }
+
+    if (keypress) {
+        if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
+            // inform device to break the sim loop since client has exited
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        }
+
+        if (resp.status == PM3_EOPABORTED && ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK)) {
+            //iceman:  readerAttack call frees k_sector , this call is useless.
+            showSectorTable(k_sector, k_sectors_cnt);
+        }
+    }
+
+
+    PrintAndLogEx(INFO, "Done!");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace list -t 14a")"` to view captured tracelog");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
+
+    return PM3_SUCCESS;
+}
+
+
 static command_t CommandTable[] = {
     {"-----------", CmdHelp,              AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
     {"help",        CmdHelp,              AlwaysAvailable, "This help"},
@@ -3638,6 +3815,7 @@ static command_t CommandTable[] = {
     {"cuids",       CmdHF14ACUIDs,        IfPm3Iso14443a,  "Collect n>0 ISO14443-a UIDs in one go"},
     {"info",        CmdHF14AInfo,         IfPm3Iso14443a,  "Tag information"},
     {"sim",         CmdHF14ASim,          IfPm3Iso14443a,  "Simulate ISO 14443-a tag"},
+    {"simaid",      CmdHF14AAIDSim,       IfPm3Iso14443a,  "Simulate ISO 14443-a AID Selection"},
     {"sniff",       CmdHF14ASniff,        IfPm3Iso14443a,  "sniff ISO 14443-a traffic"},
     {"raw",         CmdHF14ACmdRaw,       IfPm3Iso14443a,  "Send raw hex data to tag"},
     {"reader",      CmdHF14AReader,       IfPm3Iso14443a,  "Act like an ISO14443-a reader"},
