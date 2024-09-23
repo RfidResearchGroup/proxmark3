@@ -72,7 +72,7 @@ int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const v
     return PM3_SUCCESS;
 }
 
-static int reply_ng_internal(uint16_t cmd, int16_t status, const uint8_t *data, size_t len, bool ng) {
+static int reply_ng_internal(uint16_t cmd, int8_t status, uint8_t reason, const uint8_t *data, size_t len, bool ng) {
     PacketResponseNGRaw txBufferNG;
     size_t txBufferNGLen;
 
@@ -80,6 +80,7 @@ static int reply_ng_internal(uint16_t cmd, int16_t status, const uint8_t *data, 
     txBufferNG.pre.magic = RESPONSENG_PREAMBLE_MAGIC;
     txBufferNG.pre.cmd = cmd;
     txBufferNG.pre.status = status;
+    txBufferNG.pre.reason = reason;
     txBufferNG.pre.ng = ng;
     if (len > PM3_CMD_DATA_SIZE) {
         len = PM3_CMD_DATA_SIZE;
@@ -136,12 +137,12 @@ static int reply_ng_internal(uint16_t cmd, int16_t status, const uint8_t *data, 
     return PM3_SUCCESS;
 }
 
-int reply_ng(uint16_t cmd, int16_t status, const uint8_t *data, size_t len) {
-    return reply_ng_internal(cmd, status, data, len, true);
+int reply_ng(uint16_t cmd, int8_t status, const uint8_t *data, size_t len) {
+    return reply_ng_internal(cmd, status, -1, data, len, true);
 }
 
 int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len) {
-    int16_t status = PM3_SUCCESS;
+    int8_t status = PM3_SUCCESS;
     uint64_t arg[3] = {arg0, arg1, arg2};
     if (len > PM3_CMD_DATA_SIZE - sizeof(arg)) {
         len = PM3_CMD_DATA_SIZE - sizeof(arg);
@@ -153,7 +154,11 @@ int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const v
         memcpy(cmddata + sizeof(arg), data, (int)len);
     }
 
-    return reply_ng_internal((cmd & 0xFFFF), status, cmddata, len + sizeof(arg), false);
+    return reply_ng_internal((cmd & 0xFFFF), status, -1, cmddata, len + sizeof(arg), false);
+}
+
+int reply_reason(uint16_t cmd, int8_t status, int8_t reason, const uint8_t *data, size_t len) {
+    return reply_ng_internal(cmd, status, reason, data, len, true);
 }
 
 static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *data, size_t len), bool usb, bool fpc) {

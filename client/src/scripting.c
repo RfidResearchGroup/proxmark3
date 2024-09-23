@@ -371,6 +371,9 @@ static int l_WaitForResponseTimeout(lua_State *L) {
     memcpy(foo + n, &resp.status, sizeof(resp.status));
     n += sizeof(resp.status);
 
+    memcpy(foo + n, &resp.reason, sizeof(resp.reason));
+    n += sizeof(resp.reason);
+
     memcpy(foo + n, &resp.crc, sizeof(resp.crc));
     n += sizeof(resp.crc);
 

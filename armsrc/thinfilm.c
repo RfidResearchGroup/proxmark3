@@ -140,7 +140,7 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
 
     uint16_t hf_baseline = ReadReaderField();
 
-    int16_t status = PM3_SUCCESS;
+    int8_t status = PM3_SUCCESS;
     CodeThinfilmAsTag(data, len);
 
     tosend_t *ts = get_tosend();

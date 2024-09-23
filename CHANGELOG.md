@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed split PacketResponseNG status into status and reason(@douniwan5788)
 - Print LUA and Python versions in `hw version` command (@jmichelp)
 - Updated LUA to v5.4.7 which adds utf-8 support (@jmichelp)
 - Changed `lf search` - it now tries to read and decode paxton id (@iceman1001)

@@ -84,8 +84,9 @@ typedef struct {
 typedef struct {
     uint32_t magic;
     uint16_t length : 15;  // length of the variable part, 0 if none.
-    bool ng : 1;
-    int16_t  status;
+    bool     ng : 1;
+    int8_t   status;
+    int8_t   reason;
     uint16_t cmd;
 } PACKED PacketResponseNGPreamble;
 
@@ -101,7 +102,8 @@ typedef struct {
     uint16_t cmd;
     uint16_t length;
     uint32_t magic;      //  NG
-    int16_t  status;     //  NG
+    int8_t   status;     //  NG
+    int8_t   reason;     //  NG
     uint16_t crc;        //  NG
     uint64_t oldarg[3];  //  OLD
     union {
@@ -868,6 +870,9 @@ typedef struct {
 #define PM3_EFATAL            -99
 // Regular quit
 #define PM3_SQUIT            -100
+
+// reserved for future protocol change
+#define PM3_RESERVED         -128
 
 // LF
 #define LF_FREQ2DIV(f) ((int)(((12000.0 + (f)/2.0)/(f))-1))
