@@ -1086,7 +1086,7 @@ bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_
     }
 }
 
-bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_response_info_t **responses,
+bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t *iRATs, tag_response_info_t **responses,
                            uint32_t *cuid, uint32_t counters[3], uint8_t tearings[3], uint8_t *pages) {
     uint8_t sak = 0;
     // The first response contains the ATQA (note: bytes are transmitted in reverse order).
@@ -1248,6 +1248,13 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
             return false;
         }
     }
+        
+    // copy the iRATs if supplied 
+    if ((flags & RATS_IN_DATA) == RATS_IN_DATA) {
+        memcpy(rRATS ,iRATs, sizeof(iRATs));
+        // rats len is dictated by the first char of the string, add 2 crc bytes
+        rRATS_len = (iRATs[0] + 2);
+    }
 
     // if uid not supplied then get from emulator memory
     if ((memcmp(data, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 10) == 0) || ((flags & FLAG_UID_IN_EMUL) == FLAG_UID_IN_EMUL)) {
@@ -1342,6 +1349,8 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
         return false;
     }
 
+
+
     AddCrc14A(rRATS, rRATS_len - 2);
 
     AddCrc14A(rPPS, sizeof(rPPS) - 2);
@@ -1417,7 +1426,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
 // response to send, and send it.
 // 'hf 14a sim'
 //-----------------------------------------------------------------------------
-void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t exitAfterNReads) {
+void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t exitAfterNReads, uint8_t *iRATs) {
 
 #define ATTACK_KEY_COUNT 8 // keep same as define in cmdhfmf.c -> readerAttack()
 
@@ -1459,7 +1468,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
         .modulation_n = 0
     };
 
-    if (SimulateIso14443aInit(tagType, flags, data, &responses, &cuid, counters, tearings, &pages) == false) {
+    if (SimulateIso14443aInit(tagType, flags, data, iRATs, &responses, &cuid, counters, tearings, &pages) == false) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
         return;
@@ -3864,4 +3873,243 @@ void DetectNACKbug(void) {
     BigBuf_free();
     hf_field_off();
     set_tracing(false);
+}
+
+/* ///
+Based upon the SimulateIso14443aTag, this aims to instead take an AID Value you've supplied, and return your selected response.
+It can also continue after the AID has been selected, and respond to other request types. 
+This was forked from the original function to allow for more flexibility in the future, and to increase the processing speed of the original function.
+/// */
+
+void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t *iRATs, uint8_t *aid, uint8_t *resp, uint8_t *apdu, int aidLen, int respondLen, int apduLen, bool enumerate) {
+    tag_response_info_t *responses;
+    uint32_t cuid = 0;
+    uint32_t counters[3] = { 0x00, 0x00, 0x00 };
+    uint8_t tearings[3] = { 0xbd, 0xbd, 0xbd };
+    uint8_t pages = 0;
+
+    // command buffers
+    uint8_t receivedCmd[MAX_FRAME_SIZE] = { 0x00 };
+    uint8_t receivedCmdPar[MAX_PARITY_SIZE] = { 0x00 };
+
+    // free eventually allocated BigBuf memory but keep Emulator Memory
+    BigBuf_free_keep_EM();
+
+    // Increased the buffer size to allow for more complex responses
+    #define DYNAMIC_RESPONSE_BUFFER2_SIZE 512
+    #define DYNAMIC_MODULATION_BUFFER2_SIZE 1536
+
+    uint8_t * dynamic_response_buffer2 = BigBuf_calloc(DYNAMIC_RESPONSE_BUFFER2_SIZE);
+    uint8_t * dynamic_modulation_buffer2 = BigBuf_calloc(DYNAMIC_MODULATION_BUFFER2_SIZE);
+    tag_response_info_t dynamic_response_info = {
+        .response = dynamic_response_buffer2,
+        .response_n = 0,
+        .modulation = dynamic_modulation_buffer2,
+        .modulation_n = 0
+    };
+
+    if (SimulateIso14443aInit(tagType, flags, data, iRATs, &responses, &cuid, counters, tearings, &pages) == false) {
+        BigBuf_free_keep_EM();
+        reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
+        return;
+    }
+
+    // We need to listen to the high-frequency, peak-detected path.
+    iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
+
+    iso14a_set_timeout(201400); // 106 * 19ms default *100?
+
+    int len = 0;
+    int retval = PM3_SUCCESS;
+    int sentCount = 0;
+    bool odd_reply = true;
+
+    clear_trace();
+    set_tracing(true);
+    LED_A_ON();
+
+    // Filters for when this comes through
+    static uint8_t aidFilter[30] = { 0x00 }; // Default AID Value
+    static uint8_t aidResponse[100] = { 0x00 }; // Default AID Response
+    static uint8_t apduCommand [100] = { 0x00 }; // Default APDU GetData Response
+
+    // Copy the AID, AID Response, and the GetData APDU response into our variables
+    if (aid != 0) {
+        memcpy(aidFilter, aid, aidLen);
+    }
+    if (resp != 0) {
+        memcpy(aidResponse, resp, respondLen);
+    }
+    if (apdu != 0) {
+        memcpy(apduCommand, apdu, apduLen);
+    }
+
+
+    // main loop
+    bool finished = false;
+    while (finished == false) {
+        // BUTTON_PRESS check done in GetIso14443aCommandFromReader
+        WDT_HIT();
+
+        tag_response_info_t *p_response = NULL;
+
+        // Clean receive command buffer
+        if (GetIso14443aCommandFromReader(receivedCmd, sizeof(receivedCmd), receivedCmdPar, &len) == false) {
+            Dbprintf("Emulator stopped. Trace length: %d ", BigBuf_get_traceLen());
+            retval = PM3_EOPABORTED;
+            break;
+        }
+
+        if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) { // Received a REQUEST, but in HALTED, skip
+            odd_reply = !odd_reply;
+            if (odd_reply) {
+                p_response = &responses[RESP_INDEX_ATQA];
+            }
+        } else if (receivedCmd[0] == ISO14443A_CMD_WUPA && len == 1) { // Received a WAKEUP
+            p_response = &responses[RESP_INDEX_ATQA];
+        } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {    // Received request for UID (cascade 1)
+            p_response = &responses[RESP_INDEX_UIDC1];
+        } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && len == 2) {  // Received request for UID (cascade 2)
+            p_response = &responses[RESP_INDEX_UIDC2];
+        } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_3 && len == 2) {  // Received request for UID (cascade 3)
+            p_response = &responses[RESP_INDEX_UIDC3];
+        } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 9) {    // Received a SELECT (cascade 1)
+            p_response = &responses[RESP_INDEX_SAKC1];
+        } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && len == 9) {  // Received a SELECT (cascade 2)
+            p_response = &responses[RESP_INDEX_SAKC2];
+        } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_3 && len == 9) {  // Received a SELECT (cascade 3)
+            p_response = &responses[RESP_INDEX_SAKC3];
+        } else if (receivedCmd[0] == ISO14443A_CMD_PPS) {
+            p_response = &responses[RESP_INDEX_PPS];
+        } else if (receivedCmd[0] == ISO14443A_CMD_HALT && len == 4) {    // Received a HALT
+            LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+            p_response = NULL;
+            finished = true;
+        } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {    // Received a RATS request
+                p_response = &responses[RESP_INDEX_RATS];
+        } else {
+            // clear old dynamic responses
+            dynamic_response_info.response_n = 0;
+            dynamic_response_info.modulation_n = 0;
+
+                // Check for ISO 14443A-4 compliant commands, look at left nibble
+                switch (receivedCmd[0]) {
+                    case 0x0B:
+                    case 0x0A: { // IBlock (command CID)
+                        dynamic_response_info.response[0] = receivedCmd[0];
+                        dynamic_response_info.response[1] = 0x00;
+
+                        switch (receivedCmd[3]) { // APDU Class Byte 
+                            // receivedCmd in this case is expecting to structured with a CID, then the APDU command for SelectFile
+                            // | IBlock (CID) | CID | APDU Command | CRC |
+                            
+                            case 0xA4: {  // SELECT FILE
+                                // Select File AID uses the following format for GlobalPlatform
+                                //
+                                // | 00 | A4 | 04 | 00 | xx | AID | 00 |
+                                // xx in this case is len of the AID value in hex
+
+                                // aid len is found as a hex value in receivedCmd[6] (Index Starts at 0)
+                                int aid_len = receivedCmd[6];
+                                uint8_t* recieved_aid = &receivedCmd[7];
+
+                                // aid enumeration flag
+                                if (enumerate == true) {
+                                    Dbprintf("Received AID (%d):", aid_len);
+                                    Dbhexdump(aid_len, recieved_aid, false);
+                                }
+
+                                if (memcmp(aidFilter, recieved_aid, aid_len) == 0) { // Evaluate the AID sent by the Reader to the AID supplied
+                                    // AID Response will be parsed here 
+                                    memcpy(dynamic_response_info.response + 2 , aidResponse, respondLen + 2);
+                                    dynamic_response_info.response_n = respondLen + 2;
+                                } else { // Any other SELECT FILE command will return with a Not Found
+                                    dynamic_response_info.response[2] = 0x6A;
+                                    dynamic_response_info.response[3] = 0x82;
+                                    dynamic_response_info.response_n = 4;
+                                }
+                            }
+                            break;
+
+                            case 0xDA: { // PUT DATA
+                                // Just send them a 90 00 response
+                                dynamic_response_info.response[2] = 0x90;
+                                dynamic_response_info.response[3] = 0x00;
+                                dynamic_response_info.response_n = 4;
+                            }
+                            break;
+
+                            case 0xCA: { // GET DATA
+                                if (sentCount == 0) {
+                                    // APDU Command will just be parsed here 
+                                    memcpy(dynamic_response_info.response + 2 , apduCommand, apduLen + 2);
+                                    dynamic_response_info.response_n = respondLen + 2;
+                                } else {
+                                    finished = true;
+                                    break;
+                                }
+                                sentCount++;
+                            }
+                            break;
+                            default : {
+                                // Any other non-listed command
+                                // Respond Not Found
+                                dynamic_response_info.response[2] = 0x6A;
+                                dynamic_response_info.response[3] = 0x82;
+                                dynamic_response_info.response_n = 4;
+                            }
+                        }
+                    break;
+                    }
+                    break;
+
+                    case 0xCA:
+                    case 0xC2: { // Readers sends deselect command
+                        dynamic_response_info.response[0] = 0xCA;
+                        dynamic_response_info.response[1] = 0x00;
+                        dynamic_response_info.response_n = 2;
+                        finished = true;
+                    }
+                    break;
+
+                    default: {
+                        // Never seen this command before
+                        LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+                        if (g_dbglevel >= DBG_DEBUG) {
+                            Dbprintf("Received unknown command (len=%d):", len);
+                            Dbhexdump(len, receivedCmd, false);
+                        }
+                        // Do not respond
+                        dynamic_response_info.response_n = 0;
+                    }
+                    break;
+                    }
+            if (dynamic_response_info.response_n > 0) {
+
+                // Copy the CID from the reader query
+                dynamic_response_info.response[1] = receivedCmd[1];
+
+                // Add CRC bytes, always used in ISO 14443A-4 compliant cards
+                AddCrc14A(dynamic_response_info.response, dynamic_response_info.response_n);
+                dynamic_response_info.response_n += 2;
+
+                if (prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE) == false) {
+                    if (g_dbglevel >= DBG_DEBUG) DbpString("Error preparing tag response");
+                    LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+                    break;
+                }
+                p_response = &dynamic_response_info;
+            }
+        }
+
+        // Send response
+        EmSendPrecompiledCmd(p_response);
+    }
+
+    switch_off();
+
+    set_tracing(false);
+    BigBuf_free_keep_EM();
+
+    reply_ng(CMD_HF_MIFARE_SIMULATE, retval, NULL, 0);
 }

@@ -54,6 +54,7 @@ typedef enum {
 int CmdHF14A(const char *Cmd);
 int CmdHF14ASniff(const char *Cmd);         // used by hf topaz sniff
 int CmdHF14ASim(const char *Cmd);           // used by hf mfu sim
+int CmdHF14AAIDSim(const char *Cmd);
 int CmdHF14ANdefRead(const char *Cmd);      // used by cmdnfc.c
 int CmdHF14ANdefFormat(const char *Cmd);    // used by cmdnfc.c
 int CmdHF14ANdefWrite(const char *Cmd);     // used by cmdnfc.c

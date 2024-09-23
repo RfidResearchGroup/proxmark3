@@ -18,6 +18,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added detection for FM11NT021 (@iceman1001)
 - Added detection of a magic NTAG 215 (@iceman1001)
 - Fixed hardnested on AVX512F #2410 (@xianglin1998)
+- Added `hf 14a aidsim` - simulates a PICC (like `14a sim`), and allows you to respond to specific AIDs and getData responses (@evildaemond)
 
 ## [Backdoor.4.18994][2024-09-10]
 - Changed flashing messages to be less scary (@iceman1001)
