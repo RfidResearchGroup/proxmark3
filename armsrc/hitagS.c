@@ -34,6 +34,7 @@
 #include "crc.h"
 #include "protocols.h"
 #include "hitag.h"
+#include "appmain.h"    // tearoff_hook()
 
 #define CRC_PRESET 0xFF
 #define CRC_POLYNOM 0x1D
@@ -55,6 +56,7 @@ static struct hitagS_tag tag = {
 };
 static uint8_t page_to_be_written = 0;
 static int block_data_left = 0;
+static bool enable_page_tearoff = false;
 
 typedef enum modulation {
     AC2K = 0,
@@ -957,7 +959,7 @@ static void hts_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint3
     DBG Dbhexdump(ra_i, edges, false);
 }
 
-static void hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t sizeofrx, size_t *prxbits, int t_wait, bool ledcontrol, bool ac_seq) {
+static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t sizeofrx, size_t *prxbits, int t_wait, bool ledcontrol, bool ac_seq) {
 
     LogTraceBits(tx, txlen, HITAG_T_WAIT_SC, HITAG_T_WAIT_SC, true);
 
@@ -974,6 +976,10 @@ static void hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_
 
     // Transmit the reader frame
     hitag_reader_send_frame(tx, txlen, ledcontrol);
+
+    if (enable_page_tearoff && tearoff_hook() == PM3_ETEAROFF) {
+        return PM3_ETEAROFF;
+    }
 
     // Enable and reset external trigger in timer for capturing future frames
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
@@ -1046,6 +1052,8 @@ static void hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_
         LogTraceBits(rx, k, resptime, resptime, false);
     }
     *prxbits = k;
+
+    return PM3_SUCCESS;
 }
 
 static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t sizeoftx, uint8_t *rx, size_t sizeofrx, int t_wait, bool ledcontrol) {
@@ -1402,7 +1410,13 @@ void hts_write_page(const lf_hitag_data_t *payload, bool ledcontrol) {
     crc = CRC8Hitag1Bits(tx, txlen);
     txlen = concatbits(tx, txlen, &crc, 0, 8);
 
-    hts_send_receive(tx, txlen, rx, ARRAYLEN(rx), &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
+    enable_page_tearoff = g_tearoff_enabled;
+
+    if (hts_send_receive(tx, txlen, rx, ARRAYLEN(rx), &rxlen, HITAG_T_WAIT_SC, ledcontrol, false) == PM3_ETEAROFF) {
+        res = PM3_ETEAROFF;
+        enable_page_tearoff = false;
+        goto write_end;
+    }
 
     if ((rxlen != 2) || (rx[0] >> (8 - 2) != 0x01)) {
         res = PM3_ESOFT; //  write failed
