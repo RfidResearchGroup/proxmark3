@@ -1086,7 +1086,7 @@ bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_
     }
 }
 
-bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_response_info_t **responses,
+bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t *iRATs, tag_response_info_t **responses,
                            uint32_t *cuid, uint32_t counters[3], uint8_t tearings[3], uint8_t *pages) {
     uint8_t sak = 0;
     // The first response contains the ATQA (note: bytes are transmitted in reverse order).
@@ -1248,6 +1248,13 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
             return false;
         }
     }
+        
+    // copy the iRATs if supplied 
+    if ((flags & RATS_IN_DATA) == RATS_IN_DATA) {
+        memcpy(rRATS ,iRATs, sizeof(iRATs));
+        // rats len is dictated by the first char of the string, add 2 crc bytes
+        rRATS_len = (iRATs[0] + 2);
+    }
 
     // if uid not supplied then get from emulator memory
     if ((memcmp(data, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 10) == 0) || ((flags & FLAG_UID_IN_EMUL) == FLAG_UID_IN_EMUL)) {
@@ -1341,6 +1348,8 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, tag_r
         if (g_dbglevel >= DBG_ERROR) Dbprintf("[-] ERROR: UID size not defined");
         return false;
     }
+
+
 
     AddCrc14A(rRATS, rRATS_len - 2);
 
