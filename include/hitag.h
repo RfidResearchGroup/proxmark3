@@ -67,7 +67,8 @@ typedef enum {
 
 typedef struct {
     hitag_function cmd;
-    int16_t page;
+    uint8_t page;
+    uint8_t page_count;
     uint8_t data[HITAGS_PAGE_SIZE];
     uint8_t NrAr[HITAG_NRAR_SIZE];
     // unaligned access to key as uint64_t will abort.
@@ -165,4 +166,34 @@ struct hitagS_tag {
 
 } PACKED;
 
+typedef struct {
+    union {
+        uint8_t asBytes[HITAGS_PAGE_SIZE];
+        struct {
+            // page 1
+            uint8_t CON0;
+            // con1
+            bool LKP : 1;    // 0 = page2/3 read write 1 =page2/3 read only in Plain mode and no access in authenticate mode
+            bool LCON : 1;   // 0 = con1/2 read write  1 =con1 read only and con2 OTP
+            int  TTFM : 2;   // the number of pages that are sent to the RWD
+            int  TTFDR : 2;  // data rate in TTF Mode
+            bool TTFC : 1;   // Transponder Talks first coding. 0 = Manchester 1 = Biphase
+            bool auth : 1;   // 0 = Plain 1 = Auth
+            // con2
+            // 0 = read write 1 = read only
+            bool LCK0 : 1;  // page48-63
+            bool LCK1 : 1;  // page32-47
+            bool LCK2 : 1;  // page24-31
+            bool LCK3 : 1;  // page16-23
+            bool LCK4 : 1;  // page12-15
+            bool LCK5 : 1;  // page8-11
+            bool LCK6 : 1;  // page6/7
+            bool LCK7 : 1;  // page4/5
+            // reserved/pwdh0
+            uint8_t pwdh0;
+        }s;
+    } config_page;
+    int8_t  pages_reason[HITAGS_MAX_PAGES];
+    uint8_t pages[HITAGS_MAX_PAGES][HITAGS_PAGE_SIZE];
+} PACKED lf_hts_read_response_t;
 #endif

@@ -236,7 +236,8 @@ static int CmdLFHitagSRead(const char *Cmd) {
         arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
         arg_lit0(NULL, "crypto", "crypto mode"),
         arg_str0("k", "key", "<hex>", "pwd or key, 4 or 6 hex bytes"),
-        arg_int1("p", "page", "<dec>", "page address to read from"),
+        arg_int0("p", "page", "<dec>", "page address to read from"),
+        arg_int0("c", "count", "<dec>", "how many pages to read. '0' reads all pages up to the s page (default: 1)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -245,9 +246,24 @@ static int CmdLFHitagSRead(const char *Cmd) {
 
     if (process_hitags_common_args(ctx, &packet) < 0) return PM3_EINVARG;
 
-    // int page = arg_get_int_def(ctx, 5, 0);    // not implemented yet
+    uint32_t page = arg_get_int_def(ctx, 5, 0);
+
+    if (page > 255) {
+        PrintAndLogEx(WARNING, "Page address Invalid.");
+        return PM3_EINVARG;
+    }
+
+    uint32_t count = arg_get_int_def(ctx, 6, 1);
+
+    if (count > HITAGS_MAX_PAGES) {
+        PrintAndLogEx(WARNING, "No more than 64 pages can be read at once.");
+        return PM3_EINVARG;
+    }
 
     CLIParserFree(ctx);
+
+    packet.page = page;
+    packet.page_count = count;
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HITAGS_READ, (uint8_t *) &packet, sizeof(packet));
@@ -264,9 +280,9 @@ static int CmdLFHitagSRead(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    uint8_t *data = resp.data.asBytes;
+    lf_hts_read_response_t *card = (lf_hts_read_response_t *)resp.data.asBytes;
 
-    hitags_config_t config = hitags_config_unpack(&data[HITAGS_PAGE_SIZE * HITAGS_CONFIG_PADR]);
+    hitags_config_t config = hitags_config_unpack(card->config_page.asBytes);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
@@ -275,11 +291,28 @@ static int CmdLFHitagSRead(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Data") " ----------------------------------");
+    PrintAndLogEx(INFO, "adr| 00 01 02 03 | ascii");
+    PrintAndLogEx(INFO, "---+-------------+-------");
 
-    const int hts_mem_sizes[] = {4, 32, 256, 256};
-    uint32_t size = hts_mem_sizes[config.memory_type];
+    const int hts_mem_sizes[] = {1, 8, 64, 64};
+    
+    if (count == 0) {
+        count = hts_mem_sizes[config.memory_type] - page;
+    }
 
-    print_hex_break(data, size, HITAGS_PAGE_SIZE);
+    // int page_end = page + count;
+    // page_end = MIN(page_end, 255);
+
+    for (int i = 0; i < count; ++i) {
+        int page_addr = page + i;
+        if (page_addr > 255) {
+            break;
+        }
+        if (card->pages_reason[i] >= 0)
+            PrintAndLogEx(SUCCESS, "%02u | %s", page_addr, sprint_hex_ascii(card->pages[i], HITAGS_PAGE_SIZE));
+        else
+            PrintAndLogEx(INFO, "%02u | -- -- -- -- | read failed reason: " _YELLOW_("%d"), page_addr, card->pages_reason[i]);
+    }
 
     return PM3_SUCCESS;
 }

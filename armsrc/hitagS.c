@@ -1282,7 +1282,16 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
         goto read_end;
     }
 
-    int pageNum = 0;
+
+    if (payload->page >= tag.max_page) {
+        DBG Dbprintf("Warning, read page "_YELLOW_("%d") " > max page("_YELLOW_("%d") ") ", payload->page, tag.max_page);
+    }
+
+    int page_addr = payload->page;
+    int page_index = 0;
+    lf_hts_read_response_t card = {0};
+
+    memcpy(card.config_page.asBytes, tag.data.pages[HITAGS_CONFIG_PADR], HITAGS_PAGE_SIZE);
 
     while ((BUTTON_PRESS() == false) && (data_available() == false)) {
 
@@ -1294,7 +1303,7 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
         size_t txlen = 0;
         uint8_t cmd = HITAGS_READ_PAGE;
         txlen = concatbits(tx, txlen, &cmd, 0, 4);
-        uint8_t addr = pageNum;
+        uint8_t addr = page_addr;
         txlen = concatbits(tx, txlen, &addr, 0, 8);
         uint8_t crc = CRC8Hitag1Bits(tx, txlen);
         txlen = concatbits(tx, txlen, &crc, 0, 8);
@@ -1303,33 +1312,37 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
 
         if (rxlen != 40) {
             DBG Dbprintf("Read page failed!");
-            status = PM3_ERFTRANS;
-            goto read_end;
+            card.pages_reason[page_index] = -4;
+            // status = PM3_ERFTRANS;
+            // goto read_end;
+            page_addr++;
+            page_index++;
+            continue;
         }
 
         //save received data - 40 bits
-        for (int i = 0; i < 4 && i < rxlen; i++) {   // set page bytes from received bits
-            tag.data.pages[pageNum][i] = rx[i];
-        }
+        memcpy(card.pages[page_index], rx, HITAGS_PAGE_SIZE);
 
         if (g_dbglevel >= DBG_EXTENDED) {
-            if (tag.data.s.auth && tag.data.s.LKP && pageNum == 1) {
-                DBG Dbprintf("Page[%2d]: %02X %02X %02X %02X", pageNum, pwdh0,
-                             tag.data.pages[pageNum][2],
-                             tag.data.pages[pageNum][1],
-                             tag.data.pages[pageNum][0]);
-            } else {
-                DBG Dbprintf("Page[%2d]: %02X %02X %02X %02X", pageNum,
-                             tag.data.pages[pageNum][3],
-                             tag.data.pages[pageNum][2],
-                             tag.data.pages[pageNum][1],
-                             tag.data.pages[pageNum][0]);
+            if (page_addr == 1 && (payload->cmd == HTSF_KEY || payload->cmd == HTSF_CHALLENGE) && card.config_page.s.auth == 1) {
+                DBG Dbprintf("Page[%2d]: %02X %02X %02X %02X", page_addr,
+                             card.pages[page_index][0],
+                             card.pages[page_index][1],
+                             card.pages[page_index][2],
+                             pwdh0);
+            } else {  // HTSF_PLAIN or HTSF_82xx can read the full page
+                DBG Dbprintf("Page[%2d]: %02X %02X %02X %02X", page_addr,
+                             card.pages[page_index][0],
+                             card.pages[page_index][1],
+                             card.pages[page_index][2],
+                             card.pages[page_index][3]);
             }
         }
 
-        pageNum++;
+        page_addr++;
+        page_index++;
         //display key and password if possible
-        if (pageNum == 2 && tag.data.s.auth == 1 && tag.data.s.LKP) {
+        if (page_addr == 2 && card.config_page.s.auth == 1 && card.config_page.s.LKP) {
             if (payload->cmd == HTSF_KEY) {
                 DBG Dbprintf("Page[ 2]: %02X %02X %02X %02X",
                              payload->key[1],
@@ -1343,16 +1356,22 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
                              payload->key[3],
                              payload->key[2]
                             );
+                card.pages_reason[page_index++] = 1;
+                card.pages_reason[page_index++] = 1;
             } else {
                 //if the authentication is done with a challenge the key and password are unknown
                 DBG Dbprintf("Page[ 2]: __ __ __ __");
                 DBG Dbprintf("Page[ 3]: __ __ __ __");
+                card.pages_reason[page_index++] = -4;
+                card.pages_reason[page_index++] = -4;
             }
             // since page 2+3 are not accessible when LKP == 1 and AUT == 1 fastforward to next readable page
-            pageNum = 4;
+            page_addr = 4;
         }
 
-        if (pageNum >= tag.max_page) {
+        if (payload->page_count == 0) {
+            if (page_addr > tag.max_page) break;
+        } else if (page_addr > 255 || page_addr >= payload->page + payload->page_count) {
             break;
         }
     }
@@ -1361,7 +1380,7 @@ read_end:
     hts_stop_clock();
     set_tracing(false);
     lf_finalize(ledcontrol);
-    reply_reason(CMD_LF_HITAGS_READ, status, reason,(uint8_t *)tag.data.pages, sizeof(tag.data.pages));
+    reply_reason(CMD_LF_HITAGS_READ, status, reason, (uint8_t *)&card, sizeof(card));
 }
 
 /*
