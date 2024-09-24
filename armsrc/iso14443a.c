@@ -803,9 +803,10 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 
                     // check - if there is a short 7bit request from reader
                     if ((!triggered) && (param & 0x02) && (Uart.len == 1) && (Uart.bitCount == 7)) {
-
                         triggered = true;
-
+                    }
+                        
+                    if (triggered) {
                         if (!LogTrace(receivedCmd,
                                       Uart.len,
                                       Uart.startTime * 16 - DELAY_READER_AIR2ARM_AS_SNIFFER,
