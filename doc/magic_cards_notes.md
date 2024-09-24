@@ -205,6 +205,13 @@ This is an "improved" variant of ID82xx chips, bypassing some magic detection in
 
 * Chip is likely a cut down version of Hitag S2048 clone, Characteristics looks exacly same with [8268](#id-f8268) when set CON1 AUT bit
 * No password protection
+* tearoff time
+  * The OTP bits do not appear to be erased first. Write done time is less than 735µs
+  * nochange 0-735µs
+  * bit flip 735-740µs
+  * wiped 740-3250µs
+  * bit flip 3250-3350µs
+  * write done 3350µs+
 * page 1 default: `CA 24 00 00`
   * CON0 RES0 enable some extended TTFM
     * TTFM 01: page 4, page 5, page 6
