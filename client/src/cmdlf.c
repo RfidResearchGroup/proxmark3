@@ -426,18 +426,9 @@ int CmdLFCommandRead(const char *Cmd) {
         clearCommandBuffer();
         SendCommandNG(CMD_LF_MOD_THEN_ACQ_RAW_ADC, (uint8_t *)&payload, PAYLOAD_HEADER_SIZE + cmd_len + 1);
 
-        PacketResponseNG resp;
         // init to ZERO
-        resp.cmd = 0,
-        resp.length = 0,
-        resp.magic = 0,
-        resp.status = 0,
-        resp.crc = 0,
-        resp.ng = false,
-        resp.oldarg[0] = 0;
-        resp.oldarg[1] = 0;
-        resp.oldarg[2] = 0;
-        memset(resp.data.asBytes, 0, PM3_CMD_DATA_SIZE);
+        PacketResponseNG resp;
+        memset(&resp, 0, sizeof(resp));
 
         i = 10;
         // 20sec wait loop
