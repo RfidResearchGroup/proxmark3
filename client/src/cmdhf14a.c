@@ -1059,7 +1059,7 @@ int SelectCard14443A_4_WithParameters(bool disconnect, bool verbose, iso14a_card
     // check result
     if (resp.oldarg[0] == 0) {
         if (verbose) {
-            PrintAndLogEx(WARNING, "No ISO1443-A Card in field");
+            PrintAndLogEx(WARNING, "No ISO14443-A Card in field");
         }
         return PM3_ECARDEXCHANGE;
     }
