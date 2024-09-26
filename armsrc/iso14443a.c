@@ -159,6 +159,11 @@ iso14a_polling_parameters_t REQA_POLLING_PARAMETERS = {
 // parity isn't used much
 static uint8_t parity_array[MAX_PARITY_SIZE] = {0};
 
+// crypto1 stuff
+static uint8_t crypto1_auth_state = AUTH_FIRST;
+static uint32_t crypto1_uid;
+struct Crypto1State crypto1_state = {0, 0};
+
 void printHf14aConfig(void) {
     DbpString(_CYAN_("HF 14a config"));
     Dbprintf("  [a] Anticol override.... %s%s%s",
@@ -3151,14 +3156,14 @@ void ReaderIso14443a(PacketCommandNG *c) {
         iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
         // notify client selecting status.
-        // if failed selecting, turn off antenna and quite.
+        // if failed selecting, turn off antenna and quit.
         if ((param & ISO14A_NO_SELECT) != ISO14A_NO_SELECT) {
             iso14a_card_select_t *card = (iso14a_card_select_t *)buf;
 
             arg0 = iso14443a_select_cardEx(
                        NULL,
                        card,
-                       NULL,
+                       &crypto1_uid,
                        true,
                        0,
                        ((param & ISO14A_NO_RATS) == ISO14A_NO_RATS),
@@ -3166,6 +3171,11 @@ void ReaderIso14443a(PacketCommandNG *c) {
                    );
             // TODO: Improve by adding a cmd parser pointer and moving it by struct length to allow combining data with polling params
             FpgaDisableTracing();
+
+            if ((param & ISO14A_CRYPTO1MODE) == ISO14A_CRYPTO1MODE) {
+                crypto1_auth_state = AUTH_FIRST;
+                crypto1_deinit(&crypto1_state);
+            }
 
             reply_mix(CMD_ACK, arg0, card->uidlen, 0, buf, sizeof(iso14a_card_select_t));
             if (arg0 == 0) {
@@ -3195,7 +3205,20 @@ void ReaderIso14443a(PacketCommandNG *c) {
     }
 
     if ((param & ISO14A_RAW) == ISO14A_RAW) {
-
+        if ((param & ISO14A_CRYPTO1MODE) == ISO14A_CRYPTO1MODE) {
+            // Intercept special Auth command 6xxx<key>CRCA
+            if ((len == 10) && ((cmd[0] & 0xF0) == 0x60)) {
+                uint64_t ui64key = bytes_to_num((uint8_t *)&cmd[2], 6);
+                if (mifare_classic_authex_cmd(&crypto1_state, crypto1_uid, cmd[1], cmd[0], ui64key, crypto1_auth_state, NULL, NULL, NULL, NULL, false, false)) {
+                    if (g_dbglevel >= DBG_INFO)    Dbprintf("Auth error");
+                } else {
+                    crypto1_auth_state = AUTH_NESTED;
+                    if (g_dbglevel >= DBG_INFO)    Dbprintf("Auth succeeded");
+                }
+                reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
+                goto CMD_DONE;
+            }
+        }
         if ((param & ISO14A_APPEND_CRC) == ISO14A_APPEND_CRC) {
             // Don't append crc on empty bytearray...
             if (len > 0) {
@@ -3213,7 +3236,10 @@ void ReaderIso14443a(PacketCommandNG *c) {
                 }
             }
         }
-
+        if ((param & ISO14A_CRYPTO1MODE) == ISO14A_CRYPTO1MODE) {
+            // Force explicit parity
+            lenbits = len * 8;
+        }
         // want to send a specific number of bits (e.g. short commands)
         if (lenbits > 0) {
 
@@ -3232,6 +3258,9 @@ void ReaderIso14443a(PacketCommandNG *c) {
 
             } else {
                 GetParity(cmd, lenbits / 8, parity_array);
+                if ((param & ISO14A_CRYPTO1MODE) == ISO14A_CRYPTO1MODE) {
+                    mf_crypto1_encrypt(&crypto1_state, cmd, len, parity_array);
+                }
                 ReaderTransmitBitsPar(cmd, lenbits, parity_array, NULL);               // bytes are 8 bit with odd parity
             }
 
@@ -3278,12 +3307,16 @@ void ReaderIso14443a(PacketCommandNG *c) {
                 reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
             } else {
                 arg0 = ReaderReceive(buf, sizeof(buf), parity_array);
+
+                if ((param & ISO14A_CRYPTO1MODE) == ISO14A_CRYPTO1MODE) {
+                    mf_crypto1_decrypt(&crypto1_state, buf, arg0);
+                }
                 FpgaDisableTracing();
                 reply_mix(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
             }
         }
     }
-
+CMD_DONE:
     if ((param & ISO14A_REQUEST_TRIGGER) == ISO14A_REQUEST_TRIGGER)
         iso14a_set_trigger(false);
 
@@ -3296,6 +3329,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
     }
 
 OUT:
+    crypto1_auth_state = AUTH_FIRST;
     hf_field_off();
     set_tracing(false);
 }

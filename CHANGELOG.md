@@ -3,16 +3,17 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- Print LUA and Python versions in `hw version` command (@jmichelp)
+- Added crypto1 support to `hf 14a raw` (@doegox)
+- Changed `hw version` command to print LUA and Python versions (@jmichelp)
 - Updated LUA to v5.4.7 which adds utf-8 support (@jmichelp)
 - Changed `lf search` - it now tries to read and decode paxton id (@iceman1001)
 - Changed `lf search` - to identify hitag2/s/82xx in chipset detection to preserve their EM4100 or other outputs (@iceman1001)
 - Added `lf hitag hts reader` - to act as a HitagS / 82xx reader (@iceman1001)
-- Changed `lf hitag hts write` -> ´lf hitag hts wdbl` to fit rest of client command names (@iceman1001)
-- Changed `lf hitag hts read` -> ´lf hitag hts rdbl` to fit rest of client command names (@iceman1001)
+- Changed `lf hitag hts write` -> `lf hitag hts wdbl` to fit rest of client command names (@iceman1001)
+- Changed `lf hitag hts read` -> `lf hitag hts rdbl` to fit rest of client command names (@iceman1001)
 - Changed `hf mf info` - Better handling when printing ATS (@iceman1001)
 - Changed to also try the MFC_B key when extracting memory (@iceman1001)
-- Fix parallel `make -j check`  Thanks @elboulangero  (@iceman1001)
+- Fixed parallel `make -j check`  Thanks @elboulangero  (@iceman1001)
 - Added support for 8268/8310 (@douniwan5788)
 - Changed scripting string params to accept 1024 chars, Thanks @evildaemond! (@iceman1001)
 - Added detection for FM11NT021 (@iceman1001)
