@@ -3209,13 +3209,16 @@ void ReaderIso14443a(PacketCommandNG *c) {
             // Intercept special Auth command 6xxx<key>CRCA
             if ((len == 10) && ((cmd[0] & 0xF0) == 0x60)) {
                 uint64_t ui64key = bytes_to_num((uint8_t *)&cmd[2], 6);
+                uint8_t res = 0x00;
                 if (mifare_classic_authex_cmd(&crypto1_state, crypto1_uid, cmd[1], cmd[0], ui64key, crypto1_auth_state, NULL, NULL, NULL, NULL, false, false)) {
                     if (g_dbglevel >= DBG_INFO)    Dbprintf("Auth error");
+                    res = 0x04;
                 } else {
                     crypto1_auth_state = AUTH_NESTED;
                     if (g_dbglevel >= DBG_INFO)    Dbprintf("Auth succeeded");
+                    res = 0x0a;
                 }
-                reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
+                reply_mix(CMD_ACK, 1, 0, 0, &res, 1);
                 goto CMD_DONE;
             }
         }
