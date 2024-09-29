@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf iclass unhash` command to reverse an iclass diversified key to hash0 pre-images (@antiklesys)
 - Added crypto1 support to `hf 14a raw` (@doegox)
 - Changed `hw version` command to print LUA and Python versions (@jmichelp)
 - Updated LUA to v5.4.7 which adds utf-8 support (@jmichelp)
