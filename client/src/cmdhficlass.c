@@ -4123,7 +4123,7 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
         DropField();
         return PM3_ESOFT;
     }
-    HFiClassCalcDivKey(csn, iClass_Key_Table[1], new_div_key, false);
+    diversifyKey(csn, iClass_Key_Table[1], new_div_key);
     memcpy(no_first_auth,new_div_key,PICOPASS_BLOCK_SIZE);
 
     CLIParserFree(ctx);
@@ -4140,6 +4140,40 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 
+}
+
+static int CmdHFiClassUnhash(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass unhash",
+                    "Reverses the hash0 function used generate iclass diversified keys after DES encryption, returning the DES crypted CSN.",
+                    "hf iclass unhash --divkey B4F12AADC5301A2D"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "divkey", "<hex>", "The card's Diversified Key value"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int dk_len = 0;
+    uint8_t div_key[PICOPASS_BLOCK_SIZE] = {0};
+    CLIGetHexWithReturn(ctx, 1, div_key, &dk_len);
+
+    CLIParserFree(ctx);
+
+    if (dk_len && dk_len != PICOPASS_BLOCK_SIZE) {
+        PrintAndLogEx(ERR, "Diversified Key is incorrect length");
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(INFO, _YELLOW_("Div Key: ")"%s", sprint_hex(div_key, sizeof(div_key)));
+
+    invert_hash0(div_key);
+
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
 }
 
 static int CmdHFiClassLookUp(const char *Cmd) {
@@ -5070,8 +5104,9 @@ static command_t CommandTable[] = {
     {"chk",         CmdHFiClassCheckKeys,       IfPm3Iclass,     "Check keys"},
     {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "Use loclass to perform bruteforce reader attack"},
     {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "Uses authentication trace to check for key in dictionary file"},
-    {"legrec",      CmdHFiClassLegacyRecover,   IfPm3Iclass,     "Attempts to recover the standard key of a legacy card"},
-    {"legbrute",    CmdHFiClassLegRecLookUp,    AlwaysAvailable, "Bruteforces 40 bits of a partial raw key"},
+    {"legrec",      CmdHFiClassLegacyRecover,   IfPm3Iclass,     "Recovers 24 bits of the diversified key of a legacy card provided a valid nr-mac combination"},
+    {"legbrute",    CmdHFiClassLegRecLookUp,    AlwaysAvailable, "Bruteforces 40 bits of a partial diversified key, provided 24 bits of the key and two valid nr-macs"},
+    {"unhash",      CmdHFiClassUnhash,          AlwaysAvailable, "Reverses a diversified key to retrieve hash0 pre-images after DES encryption"},
     {"-----------", CmdHelp,                    IfPm3Iclass,     "-------------------- " _CYAN_("Simulation") " -------------------"},
     {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "Simulate iCLASS tag"},
     {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "Upload file into emulator memory"},

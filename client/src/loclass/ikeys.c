@@ -154,8 +154,7 @@ static uint64_t ck(int i, int j, uint64_t z) {
     if (getSixBitByte(z, i) == getSixBitByte(z, j)) {
         //ck(i, j − 1, z [0] . . . z [i] ← j . . . z [3] )
         uint64_t newz = 0;
-        int c;
-        for (c = 0; c < 4; c++) {
+        for (int c = 0; c < 4; c++) {
             uint8_t val = getSixBitByte(z, c);
             if (c == i)
                 pushbackSixBitByte(&newz, j, c);
@@ -201,22 +200,51 @@ static uint64_t check(uint64_t z) {
     return ck1 | ck2 >> 24;
 }
 
-static void permute(BitstreamIn_t *p_in, uint64_t z, int l, int r, BitstreamOut_t *out) {
-    if (bitsLeft(p_in) == 0)
-        return;
-
-    bool pn = tailBit(p_in);
-    if (pn) {
-        // pn = 1
-        uint8_t zl = getSixBitByte(z, l);
-        push6bits(out, zl + 1);
-        permute(p_in, z, l + 1, r, out);
-    } else {
-        // otherwise
-        uint8_t zr = getSixBitByte(z, r);
-        push6bits(out, zr);
-        permute(p_in, z, l, r + 1, out);
+// Reverse ck (scramble-1)
+static uint64_t reverse_ck(int i, int j, uint64_t z) {
+    if (i == 1 && j == -1) {
+        return z;
+    } else if (j == -1) {
+        return reverse_ck(i - 1, i - 2, z);
     }
+
+    uint64_t newz = 0;
+    if (getSixBitByte(z, i) == j) { // Reverse the swap logic based on condition in scramble^{-1}
+        // Perform reverse swap
+        for (int c = 0; c < 4; c++) {
+            uint8_t val = getSixBitByte(z, c);
+            if (c == i) {
+                pushbackSixBitByte(&newz, getSixBitByte(z, j), c);
+            } else {
+                pushbackSixBitByte(&newz, val, c);
+            }
+        }
+        return reverse_ck(i, j - 1, newz);
+    } else {
+        // Continue recursion
+        return reverse_ck(i, j - 1, z);
+    }
+}
+
+static uint64_t reverse_check(uint64_t z) {
+
+    //retrieve ck1 and ck2 from the hash
+
+    // Step 1: Extract ck2 shifted part from result
+    // Assuming ck2 shifted part is from bits 0-23 of the result
+    uint64_t shifted_ck2_part = z & 0x0000000000FFFFFF; // Mask the lower 24 bits
+
+    // Step 2: Reconstruct ck2
+    uint64_t ck2 = shifted_ck2_part << 24; // Shift back to get original ck2 value
+    // Step 3: Recover ck1
+    uint64_t ck1 = z & ~(ck2 >> 24); // Clear the bits where ck2 affected the result
+    // Now ck1 and ck2 have their original values before (after ck function took place)
+
+    ck1 = reverse_ck(3,2,ck1);
+    ck2 = reverse_ck(3,2,ck2);
+
+    return ck1 | ck2 >> 24; //This is now zP
+
 }
 
 static void printState(const char *desc, uint64_t c) {
@@ -235,6 +263,43 @@ static void printState(const char *desc, uint64_t c) {
         snprintf(s + strlen(s), sizeof(s) - strlen(s), " %02x", getSixBitByte(c, i));
 
     PrintAndLogEx(DEBUG, "%s", s);
+}
+
+static void permute(BitstreamIn_t *p_in, uint64_t z, int l, int r, BitstreamOut_t *out) {
+    if (bitsLeft(p_in) == 0)
+        return;
+    bool pn = tailBit(p_in);
+    if (pn) {
+        // pn = 1
+        uint8_t zl = getSixBitByte(z, l);
+        push6bits(out, zl + 1);
+        permute(p_in, z, l + 1, r, out);
+    } else {
+        // otherwise
+        uint8_t zr = getSixBitByte(z, r);
+        push6bits(out, zr);
+        permute(p_in, z, l, r + 1, out);
+    }
+}
+
+static void reverse_permute(BitstreamIn_t *p_in, uint64_t z, int l, BitstreamOut_t *out1, BitstreamOut_t *out2, bool fix) {
+    if (bitsLeft(p_in) == 0)
+        return;
+    bool pn = tailBit(p_in);
+    if (pn) { //if p == 1 for that six bit position, then sum it
+        // pn = 1
+        uint8_t zl = getSixBitByte(z, l);
+        if(fix){
+            push6bits(out1, zl - 1);
+        }else{
+            push6bits(out1, zl );
+        }
+    } else {
+        // otherwise
+        uint8_t zr = getSixBitByte(z, l);
+        push6bits(out2, zr);
+    }
+    reverse_permute(p_in, z, l + 1, out1, out2, fix);
 }
 
 /**
@@ -339,6 +404,175 @@ void hash0(uint64_t c, uint8_t k[8]) {
         }
     }
 }
+
+static int find_p_in_pi(uint8_t p) {
+    for (int i = 0; i < 35; i++) {
+        if (pi[i] == p) {
+            return i;  // Value found
+        }
+    }
+    return -1;  // Value not found
+}
+
+//Reverse hash0
+void invert_hash0(uint8_t k[8]) {
+
+    uint8_t y = 0;
+    uint64_t zTilde = 0;
+    uint8_t p = 0;
+
+    for (int i = 0; i < 8; i++) {
+        y |= ((k[i] & 0x80) >> (7 - i)); // Recover the bit of y from the leftmost bit of k[i]
+        pushbackSixBitByte(&zTilde, (k[i] & 0x7E) >> 1, i); // Recover the six bits of zTilde from the middle of k[i]
+        if(g_debugMode > 0)printState("z~", zTilde);
+        p |= ((k[i] & 0x01) << i);
+    }
+    if(g_debugMode > 0)PrintAndLogEx(INFO, "        y : %02x", y); //value of y (recovered 1 byte of the pre-image)
+    //check if p is part of the array pi, if not invert it
+    if(g_debugMode > 0)PrintAndLogEx(INFO, "        p : %02x", p); //value of p (at some point in the original hash0)
+    int remainder = find_p_in_pi(p);
+    if (remainder < 0){
+        p = ~p;
+        remainder = find_p_in_pi(p);
+    }
+
+    if(g_debugMode > 0)PrintAndLogEx(INFO, "  p or ~p : %02x", p); //value of p (at some point in the original hash0)
+
+    //find possible values of x that can return the same remainder
+    uint8_t x_count = 0;
+    uint8_t x_array[8];
+    for (int x = 0x00; x <= 0xFF; x++) {
+        if(x % 35 == remainder){
+            x_array[x_count] = x;
+            x_count++;
+        }
+    }
+
+    uint8_t pre_image_base[8] = {0};
+    pre_image_base[1] = y;
+    //calculate pre-images based on the potential values of x (should we use pre-flip p and post flip p just in case?)
+    uint64_t zTil_img[8] = {0}; //8 is the max size it'll have as per max number of X pre-images
+    for(int img = 0; img < x_count; img++){ //for each potential value of x calculate a pre-image
+        zTil_img[img] = zTilde;
+        pre_image_base[0] = x_array[img];
+        uint8_t pc = p; //redefine and reassociate it here or it'll keep changing through the loops
+        if (x_array[img] & 1){ //Check if potential x7 is 1, if it is then invert p
+            pc = ~p;
+        }
+        //calculate zTilde for the x preimage
+        for (int i = 0; i < 8; i++) {
+            uint8_t p_i = (pc >> i) & 0x1; //this is correct!
+            uint8_t zTilde_i = getSixBitByte(zTilde, i) << 1;
+            if (k[i] & 0x80) { //this checks the value of the first bit of the byte (value of y_i)
+                if(p_i){
+                    zTilde_i--;
+                }
+                zTilde_i = ~zTilde_i; //flip the 6 bit string
+            } else {
+                zTilde_i |= p_i & 0x1;
+            }
+
+            pushbackSixBitByte(&zTil_img[img], zTilde_i >> 1, i);
+        }
+
+        if(g_debugMode > 0){
+            PrintAndLogEx(INFO, _YELLOW_("Testing Pre-Image Base: %s"), sprint_hex(pre_image_base, sizeof(pre_image_base)));
+            PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
+            printState("0|0|z~", zTil_img[img]); //we retrieve the values of z~
+            PrintAndLogEx(INFO, "  p or ~p : %02x", pc); //value of p (at some point in the original hash0)
+        }
+        //reverse permute
+        BitstreamIn_t p_in = { &pc, 8, 0 };
+        uint8_t outbuffer_1[] = {0, 0, 0, 0, 0, 0, 0, 0};
+        uint8_t outbuffer_2[] = {0, 0, 0, 0, 0, 0, 0, 0};
+        BitstreamOut_t out_1 = {outbuffer_1, 0, 0};
+        BitstreamOut_t out_2 = {outbuffer_2, 0, 0};
+        reverse_permute(&p_in, zTil_img[img], 0, &out_1, &out_2, false); //sort the bits
+
+        //Shift z-values down onto the lower segment
+        uint64_t zCaret_1 = x_bytes_to_num(outbuffer_1, sizeof(outbuffer_1));
+        zCaret_1 >>= 16;
+        uint64_t zCaret_2 = x_bytes_to_num(outbuffer_2, sizeof(outbuffer_2));
+        zCaret_2 >>= 40;
+        uint64_t zCaret = zCaret_1 | zCaret_2;
+        if (g_debugMode > 0) printState("0|0|z^", zCaret);
+
+        //fix the bits values
+        uint8_t p_fix = 0x0F; //fix bits mask as the bits will be in 11110000 order
+        BitstreamIn_t p_in_f = { &p_fix, 8, 0 };
+        uint8_t outbuffer_f1[] = {0, 0, 0, 0, 0, 0, 0, 0};
+        uint8_t outbuffer_f2[] = {0, 0, 0, 0, 0, 0, 0, 0};
+        BitstreamOut_t out_f1 = {outbuffer_f1, 0, 0};
+        BitstreamOut_t out_f2 = {outbuffer_f2, 0, 0};
+        reverse_permute(&p_in_f, zCaret, 0, &out_f1, &out_f2, true); //fixes the bits accordingly
+
+        //Shift z-values down onto the lower segment
+        uint64_t zCaret_fixed1 = x_bytes_to_num(outbuffer_f1, sizeof(outbuffer_f1));
+        zCaret_fixed1 >>= 16;
+        uint64_t zCaret_fixed2 = x_bytes_to_num(outbuffer_f2, sizeof(outbuffer_f2));
+        zCaret_fixed2 >>= 40;
+
+        uint64_t zCaret_fixed = zCaret_fixed1 | zCaret_fixed2;
+        if (g_debugMode > 0) printState("0|0|z^", zCaret_fixed);
+
+        uint64_t zP = reverse_check(zCaret_fixed);
+        if (g_debugMode > 0) printState("0|0|z'", zP);
+
+        //reverse the modulo transformation in the hash0 function for the six-bit chunks
+
+        uint64_t c = 0;
+
+        //Depending on their positions, values 3c, 3d, 3e, 3f can lead to additional pre-images.
+        //When these values are present we need to generate additional pre-images if they have the same modulo as other values
+
+        for (int n=0; n < 4; n++){
+            uint8_t _zn = getSixBitByte(zP, n); //handles the first 4 six-bit bytes
+            uint8_t _zn4 = getSixBitByte(zP, n + 4); //handles the second 4 six-bit bytes
+
+            uint8_t zn = (_zn + (63 - 2 * n)) % (63 - n);
+            uint8_t zn4 = (_zn4 + (64 - 2 * n)) % (64 - n);
+
+            pushbackSixBitByte(&c, zn, n);
+            pushbackSixBitByte(&c, zn4, n + 4);
+        }
+
+        //restore the two most significant bytes (x and y)
+        c |= ((uint64_t)x_array[img] << 56);
+        c |= ((uint64_t)y << 48);
+        if (g_debugMode > 0){
+            PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
+            printState("origin_r1", c);
+        }
+        //reverse the swapZbalues function to get the original six-bit byte order
+        uint64_t original_z = swapZvalues(c);
+
+        if (g_debugMode > 0){
+            PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
+            printState("origin_r2", original_z);
+            PrintAndLogEx(INFO, "--------------------------");
+        }
+        //run pre-image through hash0
+        uint8_t img_div_key[8] = {0};
+        hash0(original_z, img_div_key); //commented to avoid log spam
+
+        //verify result, if it matches add it to the list as a valid pre-image
+        bool image_match = true;
+        for(int v=0; v<8; v++){
+            if(img_div_key[v] != k[v]){ //compare against input key k
+                image_match = false;
+            }
+        }
+        uint8_t des_pre_image[8] = {0};
+        x_num_to_bytes(original_z,sizeof(original_z),des_pre_image);
+
+        if(image_match){
+            PrintAndLogEx(INFO, _GREEN_("Valid pre-image: ")_YELLOW_("%s"), sprint_hex(des_pre_image, sizeof(des_pre_image)));
+        }else if (!image_match && g_debugMode > 0){
+            PrintAndLogEx(INFO, _RED_("Invalid pre-image: %s"), sprint_hex(des_pre_image, sizeof(des_pre_image)));
+        }
+    }
+}
+
 /**
  * @brief Performs Elite-class key diversification
  * @param csn
