@@ -522,12 +522,9 @@ void invert_hash0(uint8_t k[8]) {
 
         uint64_t c = 0;
 
-        //Depending on their positions, values 3c, 3d, 3e, 3f can lead to additional pre-images.
-        //When these values are present we need to generate additional pre-images if they have the same modulo as other values
-
         for (int n=0; n < 4; n++){
-            uint8_t _zn = getSixBitByte(zP, n); //handles the first 4 six-bit bytes
-            uint8_t _zn4 = getSixBitByte(zP, n + 4); //handles the second 4 six-bit bytes
+            uint8_t _zn = getSixBitByte(zP, n);
+            uint8_t _zn4 = getSixBitByte(zP, n + 4);
 
             uint8_t zn = (_zn + (63 - 2 * n)) % (63 - n);
             uint8_t zn4 = (_zn4 + (64 - 2 * n)) % (64 - n);
@@ -536,40 +533,101 @@ void invert_hash0(uint8_t k[8]) {
             pushbackSixBitByte(&c, zn4, n + 4);
         }
 
-        //restore the two most significant bytes (x and y)
-        c |= ((uint64_t)x_array[img] << 56);
-        c |= ((uint64_t)y << 48);
-        if (g_debugMode > 0){
-            PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
-            printState("origin_r1", c);
-        }
-        //reverse the swapZbalues function to get the original six-bit byte order
-        uint64_t original_z = swapZvalues(c);
+        //The Hydra: depending on their positions, values 0x00, 0x01, 0x02, 0x03, 0x3c, 0x3d, 0x3e, 0x3f can lead to additional pre-images.
+        //When these values are present we need to generate additional pre-images if they have the same modulo as other values
 
-        if (g_debugMode > 0){
-            PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
-            printState("origin_r2", original_z);
-            PrintAndLogEx(INFO, "--------------------------");
-        }
-        //run pre-image through hash0
-        uint8_t img_div_key[8] = {0};
-        hash0(original_z, img_div_key); //commented to avoid log spam
+        // Initialize an array of pointers to uint64_t (start with one value, initialized to 0)
+        uint64_t* hydra_heads = (uint64_t*)malloc(sizeof(uint64_t)); // Start with one uint64_t
+        hydra_heads[0] = 0;  // Initialize first value to 0
+        int heads_count = 1;  // Track number of forks
 
-        //verify result, if it matches add it to the list as a valid pre-image
-        bool image_match = true;
-        for(int v=0; v<8; v++){
-            if(img_div_key[v] != k[v]){ //compare against input key k
-                image_match = false;
+        // Iterate 4 times as per the original loop
+        for (int n=0; n < 8; n++){
+           uint8_t hydra_head = getSixBitByte(c, n);
+            if(hydra_head <= (n % 4) || hydra_head >= 63-(n % 4)){
+                //PrintAndLogEx(INFO, _YELLOW_("Hail Hydra - Hydra Head: %02x"),hydra_head);
+                // Create new forks by duplicating existing uint64_t values
+                int new_head = heads_count * 2;
+                hydra_heads = (uint64_t*)realloc(hydra_heads, new_head * sizeof(uint64_t));
+                // Duplicate all current values and add the value to both original and new ones
+                for (int i = 0; i < heads_count; i++) {
+                    // Duplicate current value
+                    hydra_heads[heads_count + i] = hydra_heads[i];
+                    uint8_t small_hydra_head = 0;
+                    uint8_t big_hydra_head = 0;
+                    uint8_t hydra_lil_spawns[4] = {0x00, 0x01, 0x02, 0x03};
+                    uint8_t hydra_big_spawns[4] = {0x3f, 0x3e, 0x3d, 0x3c};
+                    if(hydra_head <= n % 4){ //check if is in the lower range
+                        //replace with big spawn in one hydra and keep small in another
+                        small_hydra_head = hydra_head;
+                        for(int fh = 0; fh < 4; fh++){
+                            if(hydra_lil_spawns[fh] == hydra_head){
+                                big_hydra_head = hydra_big_spawns[fh];
+                                //PrintAndLogEx(INFO, _YELLOW_("Head Replacement B: %02x"),big_hydra_head);
+                            }
+                        }
+                    }else if(hydra_head >= 63-(n % 4)){ //or the higher range
+                        //replace with small in one hydra and keep big in another
+                        big_hydra_head = hydra_head;
+                        for(int fh = 0; fh < 4; fh++){
+                            if(hydra_big_spawns[fh] == hydra_head){
+                                small_hydra_head = hydra_lil_spawns[fh];
+                                //PrintAndLogEx(INFO, _YELLOW_("Head Replacement S: %02x"),small_hydra_head);
+                            }
+                        }
+                    }
+                    // Add to both original and duplicate values
+                    pushbackSixBitByte(&hydra_heads[i], big_hydra_head, n);
+                    pushbackSixBitByte(&hydra_heads[heads_count + i], small_hydra_head, n);
+                }
+                // Update the count of total values
+                heads_count = new_head;
+            }else{ //no hydra head spawns
+                for (int i = 0; i < heads_count; i++) {
+                    pushbackSixBitByte(&hydra_heads[i], hydra_head, n);;
+                }
             }
         }
-        uint8_t des_pre_image[8] = {0};
-        x_num_to_bytes(original_z,sizeof(original_z),des_pre_image);
 
-        if(image_match){
-            PrintAndLogEx(INFO, _GREEN_("Valid pre-image: ")_YELLOW_("%s"), sprint_hex(des_pre_image, sizeof(des_pre_image)));
-        }else if (!image_match && g_debugMode > 0){
-            PrintAndLogEx(INFO, _RED_("Invalid pre-image: %s"), sprint_hex(des_pre_image, sizeof(des_pre_image)));
+        for(int i=0; i<heads_count; i++){
+            //restore the two most significant bytes (x and y)
+            hydra_heads[i] |= ((uint64_t)x_array[img] << 56);
+            hydra_heads[i] |= ((uint64_t)y << 48);
+            if (g_debugMode > 0){
+                PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
+                printState("origin_r1", hydra_heads[i]);
+            }
+            //reverse the swapZbalues function to get the original six-bit byte order
+            uint64_t original_z = swapZvalues(hydra_heads[i]);
+
+            if (g_debugMode > 0){
+                PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
+                printState("origin_r2", original_z);
+                PrintAndLogEx(INFO, "--------------------------");
+            }
+            //run pre-image through hash0
+            uint8_t img_div_key[8] = {0};
+            hash0(original_z, img_div_key); //commented to avoid log spam
+
+            //verify result, if it matches add it to the list as a valid pre-image
+            bool image_match = true;
+            for(int v=0; v<8; v++){
+                if(img_div_key[v] != k[v]){ //compare against input key k
+                    image_match = false;
+                }
+            }
+            uint8_t des_pre_image[8] = {0};
+            x_num_to_bytes(original_z,sizeof(original_z),des_pre_image);
+
+            if(image_match){
+                PrintAndLogEx(INFO, _GREEN_("Valid pre-image: ")_YELLOW_("%s"), sprint_hex(des_pre_image, sizeof(des_pre_image)));
+            }else if (!image_match && g_debugMode > 0){
+            //}else if (!image_match){ //debug only
+                PrintAndLogEx(INFO, _RED_("Invalid pre-image: %s"), sprint_hex(des_pre_image, sizeof(des_pre_image)));
+            }
+            // Free allocated memory
         }
+        free(hydra_heads);
     }
 }
 
