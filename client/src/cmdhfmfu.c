@@ -4392,7 +4392,7 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
         if (u_len != 7 && u_len != 4) {
             PrintAndLogEx(WARNING, "Key must be 7 hex bytes");
             return PM3_EINVARG;
-        } else {
+        } else if (u_len == 4) {
             // adapt to 7 bytes :)
             memset(uid + 4, 0x00, 3);
             u_len = 7;
