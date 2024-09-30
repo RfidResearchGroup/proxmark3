@@ -185,18 +185,18 @@
 #define luaC_barrierback(L,p,v) (  \
 	iscollectable(v) ? luaC_objbarrierback(L, p, gcvalue(v)) : cast_void(0))
 
-LUAI_FUNC void luaC_fix (lua_State *L, GCObject *o);
-LUAI_FUNC void luaC_freeallobjects (lua_State *L);
-LUAI_FUNC void luaC_step (lua_State *L);
-LUAI_FUNC void luaC_runtilstate (lua_State *L, int statesmask);
-LUAI_FUNC void luaC_fullgc (lua_State *L, int isemergency);
-LUAI_FUNC GCObject *luaC_newobj (lua_State *L, int tt, size_t sz);
-LUAI_FUNC GCObject *luaC_newobjdt (lua_State *L, int tt, size_t sz,
-                                                 size_t offset);
-LUAI_FUNC void luaC_barrier_ (lua_State *L, GCObject *o, GCObject *v);
-LUAI_FUNC void luaC_barrierback_ (lua_State *L, GCObject *o);
-LUAI_FUNC void luaC_checkfinalizer (lua_State *L, GCObject *o, Table *mt);
-LUAI_FUNC void luaC_changemode (lua_State *L, int newmode);
+LUAI_FUNC void luaC_fix(lua_State *L, GCObject *o);
+LUAI_FUNC void luaC_freeallobjects(lua_State *L);
+LUAI_FUNC void luaC_step(lua_State *L);
+LUAI_FUNC void luaC_runtilstate(lua_State *L, int statesmask);
+LUAI_FUNC void luaC_fullgc(lua_State *L, int isemergency);
+LUAI_FUNC GCObject *luaC_newobj(lua_State *L, int tt, size_t sz);
+LUAI_FUNC GCObject *luaC_newobjdt(lua_State *L, int tt, size_t sz,
+                                  size_t offset);
+LUAI_FUNC void luaC_barrier_(lua_State *L, GCObject *o, GCObject *v);
+LUAI_FUNC void luaC_barrierback_(lua_State *L, GCObject *o);
+LUAI_FUNC void luaC_checkfinalizer(lua_State *L, GCObject *o, Table *mt);
+LUAI_FUNC void luaC_changemode(lua_State *L, int newmode);
 
 
 #endif

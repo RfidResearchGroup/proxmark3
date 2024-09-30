@@ -240,8 +240,8 @@ static uint64_t reverse_check(uint64_t z) {
     uint64_t ck1 = z & ~(ck2 >> 24); // Clear the bits where ck2 affected the result
     // Now ck1 and ck2 have their original values before (after ck function took place)
 
-    ck1 = reverse_ck(3,2,ck1);
-    ck2 = reverse_ck(3,2,ck2);
+    ck1 = reverse_ck(3, 2, ck1);
+    ck2 = reverse_ck(3, 2, ck2);
 
     return ck1 | ck2 >> 24; //This is now zP
 
@@ -289,10 +289,10 @@ static void reverse_permute(BitstreamIn_t *p_in, uint64_t z, int l, BitstreamOut
     if (pn) { //if p == 1 for that six bit position, then sum it
         // pn = 1
         uint8_t zl = getSixBitByte(z, l);
-        if(fix){
+        if (fix) {
             push6bits(out1, zl - 1);
-        }else{
-            push6bits(out1, zl );
+        } else {
+            push6bits(out1, zl);
         }
     } else {
         // otherwise
@@ -424,25 +424,25 @@ void invert_hash0(uint8_t k[8]) {
     for (int i = 0; i < 8; i++) {
         y |= ((k[i] & 0x80) >> (7 - i)); // Recover the bit of y from the leftmost bit of k[i]
         pushbackSixBitByte(&zTilde, (k[i] & 0x7E) >> 1, i); // Recover the six bits of zTilde from the middle of k[i]
-        if(g_debugMode > 0)printState("z~", zTilde);
+        if (g_debugMode > 0)printState("z~", zTilde);
         p |= ((k[i] & 0x01) << i);
     }
-    if(g_debugMode > 0)PrintAndLogEx(INFO, "        y : %02x", y); //value of y (recovered 1 byte of the pre-image)
+    if (g_debugMode > 0)PrintAndLogEx(INFO, "        y : %02x", y); //value of y (recovered 1 byte of the pre-image)
     //check if p is part of the array pi, if not invert it
-    if(g_debugMode > 0)PrintAndLogEx(INFO, "        p : %02x", p); //value of p (at some point in the original hash0)
+    if (g_debugMode > 0)PrintAndLogEx(INFO, "        p : %02x", p); //value of p (at some point in the original hash0)
     int remainder = find_p_in_pi(p);
-    if (remainder < 0){
+    if (remainder < 0) {
         p = ~p;
         remainder = find_p_in_pi(p);
     }
 
-    if(g_debugMode > 0)PrintAndLogEx(INFO, "  p or ~p : %02x", p); //value of p (at some point in the original hash0)
+    if (g_debugMode > 0)PrintAndLogEx(INFO, "  p or ~p : %02x", p); //value of p (at some point in the original hash0)
 
     //find possible values of x that can return the same remainder
     uint8_t x_count = 0;
     uint8_t x_array[8];
     for (int x = 0x00; x <= 0xFF; x++) {
-        if(x % 35 == remainder){
+        if (x % 35 == remainder) {
             x_array[x_count] = x;
             x_count++;
         }
@@ -452,11 +452,11 @@ void invert_hash0(uint8_t k[8]) {
     pre_image_base[1] = y;
     //calculate pre-images based on the potential values of x (should we use pre-flip p and post flip p just in case?)
     uint64_t zTil_img[8] = {0}; //8 is the max size it'll have as per max number of X pre-images
-    for(int img = 0; img < x_count; img++){ //for each potential value of x calculate a pre-image
+    for (int img = 0; img < x_count; img++) { //for each potential value of x calculate a pre-image
         zTil_img[img] = zTilde;
         pre_image_base[0] = x_array[img];
         uint8_t pc = p; //redefine and reassociate it here or it'll keep changing through the loops
-        if (x_array[img] & 1){ //Check if potential x7 is 1, if it is then invert p
+        if (x_array[img] & 1) { //Check if potential x7 is 1, if it is then invert p
             pc = ~p;
         }
         //calculate zTilde for the x preimage
@@ -464,7 +464,7 @@ void invert_hash0(uint8_t k[8]) {
             uint8_t p_i = (pc >> i) & 0x1; //this is correct!
             uint8_t zTilde_i = getSixBitByte(zTilde, i) << 1;
             if (k[i] & 0x80) { //this checks the value of the first bit of the byte (value of y_i)
-                if(p_i){
+                if (p_i) {
                     zTilde_i--;
                 }
                 zTilde_i = ~zTilde_i; //flip the 6 bit string
@@ -475,7 +475,7 @@ void invert_hash0(uint8_t k[8]) {
             pushbackSixBitByte(&zTil_img[img], zTilde_i >> 1, i);
         }
 
-        if(g_debugMode > 0){
+        if (g_debugMode > 0) {
             PrintAndLogEx(INFO, _YELLOW_("Testing Pre-Image Base: %s"), sprint_hex(pre_image_base, sizeof(pre_image_base)));
             PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
             printState("0|0|z~", zTil_img[img]); //we retrieve the values of z~
@@ -522,7 +522,7 @@ void invert_hash0(uint8_t k[8]) {
 
         uint64_t c = 0;
 
-        for (int n=0; n < 4; n++){
+        for (int n = 0; n < 4; n++) {
             uint8_t _zn = getSixBitByte(zP, n);
             uint8_t _zn4 = getSixBitByte(zP, n + 4);
 
@@ -537,17 +537,17 @@ void invert_hash0(uint8_t k[8]) {
         //When these values are present we need to generate additional pre-images if they have the same modulo as other values
 
         // Initialize an array of pointers to uint64_t (start with one value, initialized to 0)
-        uint64_t* hydra_heads = (uint64_t*)malloc(sizeof(uint64_t)); // Start with one uint64_t
+        uint64_t *hydra_heads = (uint64_t *)malloc(sizeof(uint64_t)); // Start with one uint64_t
         hydra_heads[0] = 0;  // Initialize first value to 0
         int heads_count = 1;  // Track number of forks
 
         // Iterate 4 times as per the original loop
-        for (int n=0; n < 8; n++){
-           uint8_t hydra_head = getSixBitByte(c, n);
-            if(hydra_head <= (n % 4) || hydra_head >= 63-(n % 4)){
+        for (int n = 0; n < 8; n++) {
+            uint8_t hydra_head = getSixBitByte(c, n);
+            if (hydra_head <= (n % 4) || hydra_head >= 63 - (n % 4)) {
                 // Create new forks by duplicating existing uint64_t values
                 int new_head = heads_count * 2;
-                hydra_heads = (uint64_t*)realloc(hydra_heads, new_head * sizeof(uint64_t));
+                hydra_heads = (uint64_t *)realloc(hydra_heads, new_head * sizeof(uint64_t));
                 // Duplicate all current values and add the value to both original and new ones
                 for (int i = 0; i < heads_count; i++) {
                     // Duplicate current value
@@ -556,19 +556,19 @@ void invert_hash0(uint8_t k[8]) {
                     uint8_t big_hydra_head = 0;
                     uint8_t hydra_lil_spawns[4] = {0x00, 0x01, 0x02, 0x03};
                     uint8_t hydra_big_spawns[4] = {0x3f, 0x3e, 0x3d, 0x3c};
-                    if(hydra_head <= n % 4){ //check if is in the lower range
+                    if (hydra_head <= n % 4) { //check if is in the lower range
                         //replace with big spawn in one hydra and keep small in another
                         small_hydra_head = hydra_head;
-                        for(int fh = 0; fh < 4; fh++){
-                            if(hydra_lil_spawns[fh] == hydra_head){
+                        for (int fh = 0; fh < 4; fh++) {
+                            if (hydra_lil_spawns[fh] == hydra_head) {
                                 big_hydra_head = hydra_big_spawns[fh];
                             }
                         }
-                    }else if(hydra_head >= 63-(n % 4)){ //or the higher range
+                    } else if (hydra_head >= 63 - (n % 4)) { //or the higher range
                         //replace with small in one hydra and keep big in another
                         big_hydra_head = hydra_head;
-                        for(int fh = 0; fh < 4; fh++){
-                            if(hydra_big_spawns[fh] == hydra_head){
+                        for (int fh = 0; fh < 4; fh++) {
+                            if (hydra_big_spawns[fh] == hydra_head) {
                                 small_hydra_head = hydra_lil_spawns[fh];
                             }
                         }
@@ -579,25 +579,25 @@ void invert_hash0(uint8_t k[8]) {
                 }
                 // Update the count of total values
                 heads_count = new_head;
-            }else{ //no hydra head spawns
+            } else { //no hydra head spawns
                 for (int i = 0; i < heads_count; i++) {
                     pushbackSixBitByte(&hydra_heads[i], hydra_head, n);;
                 }
             }
         }
 
-        for(int i=0; i<heads_count; i++){
+        for (int i = 0; i < heads_count; i++) {
             //restore the two most significant bytes (x and y)
             hydra_heads[i] |= ((uint64_t)x_array[img] << 56);
             hydra_heads[i] |= ((uint64_t)y << 48);
-            if (g_debugMode > 0){
+            if (g_debugMode > 0) {
                 PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
                 printState("origin_r1", hydra_heads[i]);
             }
             //reverse the swapZbalues function to get the original six-bit byte order
             uint64_t original_z = swapZvalues(hydra_heads[i]);
 
-            if (g_debugMode > 0){
+            if (g_debugMode > 0) {
                 PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
                 printState("origin_r2", original_z);
                 PrintAndLogEx(INFO, "--------------------------");
@@ -608,17 +608,17 @@ void invert_hash0(uint8_t k[8]) {
 
             //verify result, if it matches add it to the list as a valid pre-image
             bool image_match = true;
-            for(int v=0; v<8; v++){
-                if(img_div_key[v] != k[v]){ //compare against input key k
+            for (int v = 0; v < 8; v++) {
+                if (img_div_key[v] != k[v]) { //compare against input key k
                     image_match = false;
                 }
             }
             uint8_t des_pre_image[8] = {0};
-            x_num_to_bytes(original_z,sizeof(original_z),des_pre_image);
+            x_num_to_bytes(original_z, sizeof(original_z), des_pre_image);
 
-            if(image_match){
+            if (image_match) {
                 PrintAndLogEx(INFO, _GREEN_("Valid pre-image: ")_YELLOW_("%s"), sprint_hex(des_pre_image, sizeof(des_pre_image)));
-            }else if (!image_match && g_debugMode > 0){
+            } else if (!image_match && g_debugMode > 0) {
                 PrintAndLogEx(INFO, _RED_("Invalid pre-image: %s"), sprint_hex(des_pre_image, sizeof(des_pre_image)));
             }
         }

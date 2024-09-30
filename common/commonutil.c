@@ -114,7 +114,7 @@ uint32_t reflect32(uint32_t v) {
     // swap bytes
     v = ((v >> 8) & 0x00FF00FF) | ((v & 0x00FF00FF) << 8);
     // swap 2-byte long pairs
-    v = ( v >> 16             ) | ( v               << 16);
+    v = (v >> 16) | (v               << 16);
     return v;
 }
 

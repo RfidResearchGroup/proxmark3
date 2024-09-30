@@ -41,18 +41,18 @@
 
 static struct hitagS_tag tag = {
     .data.pages = {
-                                               // Plain mode:               | Authentication mode:
-            [0] = {0x5F, 0xC2, 0x11, 0x84},    // UID                       | UID
-            // HITAG S 2048
-            [1] = {0xCA, 0x00, 0x00, 0xAA},    // CON0 CON1 CON2 Reserved   | CON0 CON1 CON2 PWDH0
-            [2] = {0x48, 0x54, 0x4F, 0x4E},    // Data                      | PWDL0 PWDL1 KEYH0 KEYH1
-            [3] = {0x4D, 0x49, 0x4B, 0x52},    // Data                      | KEYL0 KEYL1 KEYL2 KEYL3
-            [4] = {0xFF, 0x80, 0x00, 0x00},    // Data
-            [5] = {0x00, 0x00, 0x00, 0x00},    // Data
-            [6] = {0x00, 0x00, 0x00, 0x00},    // Data
-            [7] = {0x57, 0x5F, 0x4F, 0x48},    // Data
-            // up to index 63 for HITAG S2048 public data
-        },
+        // Plain mode:               | Authentication mode:
+        [0] = {0x5F, 0xC2, 0x11, 0x84},    // UID                       | UID
+        // HITAG S 2048
+        [1] = {0xCA, 0x00, 0x00, 0xAA},    // CON0 CON1 CON2 Reserved   | CON0 CON1 CON2 PWDH0
+        [2] = {0x48, 0x54, 0x4F, 0x4E},    // Data                      | PWDL0 PWDL1 KEYH0 KEYH1
+        [3] = {0x4D, 0x49, 0x4B, 0x52},    // Data                      | KEYL0 KEYL1 KEYL2 KEYL3
+        [4] = {0xFF, 0x80, 0x00, 0x00},    // Data
+        [5] = {0x00, 0x00, 0x00, 0x00},    // Data
+        [6] = {0x00, 0x00, 0x00, 0x00},    // Data
+        [7] = {0x57, 0x5F, 0x4F, 0x48},    // Data
+        // up to index 63 for HITAG S2048 public data
+    },
 };
 static uint8_t page_to_be_written = 0;
 static int block_data_left = 0;
@@ -1157,7 +1157,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
 
             key_le = *(uint64_t *)packet->key;
 
-            uint64_t state = ht2_hitag2_init(reflect48(key_le), reflect32(tag.data.s.uid_le), reflect32(*(uint32_t*)rnd));
+            uint64_t state = ht2_hitag2_init(reflect48(key_le), reflect32(tag.data.s.uid_le), reflect32(*(uint32_t *)rnd));
 
             uint8_t auth_ks[4];
             for (int i = 0; i < 4; i++) {

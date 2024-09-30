@@ -1310,7 +1310,12 @@
             "notes": [
                 "hf 14a raw -sc 3000 -> select, crc, where 3000 == 'read block 00'",
                 "hf 14a raw -ak -b 7 40 -> send 7 bit byte 0x40",
-                "hf 14a raw --ecp -s -> send ECP before select"
+                "hf 14a raw --ecp -s -> send ECP before select",
+                "Crypto1 session example, with special auth shortcut 6xxx<key>:",
+                "hf 14a raw --crypto1 -skc 6000FFFFFFFFFFFF",
+                "hf 14a raw --crypto1 -kc 3000",
+                "hf 14a raw --crypto1 -kc 6007FFFFFFFFFFFF",
+                "hf 14a raw --crypto1 -c 3007"
             ],
             "offline": false,
             "options": [
@@ -1327,9 +1332,10 @@
                 "--ecp Use enhanced contactless polling",
                 "--mag Use Apple magsafe polling",
                 "--topaz Use Topaz protocol to send command",
+                "--crypto1 Use crypto1 session",
                 "<hex> Raw bytes to send"
             ],
-            "usage": "hf 14a raw [-hack3rsv] [-t <ms>] [-b <dec>] [--ecp] [--mag] [--topaz] <hex> [<hex>]..."
+            "usage": "hf 14a raw [-hack3rsv] [-t <ms>] [-b <dec>] [--ecp] [--mag] [--topaz] [--crypto1] <hex> [<hex>]..."
         },
         "hf 14a reader": {
             "command": "hf 14a reader",
@@ -1381,6 +1387,30 @@
                 "-v, --verbose verbose output"
             ],
             "usage": "hf 14a sim [-hxv] -t <1-12> [-u <hex>] [-n <dec>] [--sk]"
+        },
+        "hf 14a simaid": {
+            "command": "hf 14a simaid",
+            "description": "Simulate ISO/IEC 14443 type A tag with 4,7 or 10 byte UID, and filter for AID Values These AID Values can be responded to and include extra APDU commands on GetData after response",
+            "notes": [
+                "hf 14a simaid -t 3 -> MIFARE Desfire",
+                "hf 14a simaid -t 4 -> ISO/IEC 14443-4",
+                "hf 14a simaid -t 11 -> Javacard (JCOP)",
+                "hf 14a simaid -t 3 --aid a000000000000000000000 --response 9000 --apdu 9000 -> AID, Response and APDU",
+                "hf 14a simaid -t 3 --rats 05788172220101 --response 01009000 --apdu 86009000 -> Custom RATS Added",
+                "hf 14a simaid -t 3 --rats 05788172220101 -x -> Enumerate AID Values"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-t, --type <1-12> Simulation type to use",
+                "-u, --uid <hex> <4|7|10> hex bytes UID",
+                "-r, --rats <hex> <0-20> hex bytes RATS",
+                "-a, --aid <hex> <0-100> hex bytes for AID to respond to (Default: A000000000000000000000)",
+                "-e, --response <hex> <0-100> hex bytes for APDU Response to AID Select (Default: 9000)",
+                "-p, --apdu <hex> <0-100> hex bytes for APDU Response to Get Data request after AID (Default: 9000)",
+                "-x, --enumerate Enumerate all AID values via returning Not Found and print them to console"
+            ],
+            "usage": "hf 14a simaid [-hx] -t <1-12> [-u <hex>] [-r <hex>] [-a <hex>] [-e <hex>] [-p <hex>]"
         },
         "hf 14a sniff": {
             "command": "hf 14a sniff",
@@ -3377,7 +3407,7 @@
         },
         "hf iclass help": {
             "command": "hf iclass help",
-            "description": "help This help list List iclass history view Display content from tag dump file ----------- --------------------- Recovery -------------------- loclass Use loclass to perform bruteforce reader attack lookup Uses authentication trace to check for key in dictionary file legbrute Bruteforces 40 bits of a partial raw key ----------- ---------------------- Utils ---------------------- calcnewkey Calc diversified keys (blocks 3 & 4) to write new keys encode Encode binary wiegand to block 7 encrypt Encrypt given block data decrypt Decrypt given block data or tag dump file managekeys Manage keys to use with iclass commands permutekey Permute function from 'heart of darkness' paper --------------------------------------------------------------------------------------- hf iclass list available offline: yes Alias of `trace list -t iclass -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List iclass history view Display content from tag dump file ----------- --------------------- Recovery -------------------- loclass Use loclass to perform bruteforce reader attack lookup Uses authentication trace to check for key in dictionary file legbrute Bruteforces 40 bits of a partial diversified key, provided 24 bits of the key and two valid nr-macs unhash Reverses a diversified key to retrieve hash0 pre-images after DES encryption ----------- ---------------------- Utils ---------------------- calcnewkey Calc diversified keys (blocks 3 & 4) to write new keys encode Encode binary wiegand to block 7 encrypt Encrypt given block data decrypt Decrypt given block data or tag dump file managekeys Manage keys to use with iclass commands permutekey Permute function from 'heart of darkness' paper --------------------------------------------------------------------------------------- hf iclass list available offline: yes Alias of `trace list -t iclass -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf iclass list --frame -> show frame delay times",
                 "hf iclass list -1 -> use trace buffer"
@@ -3413,30 +3443,37 @@
             "command": "hf iclass legbrute",
             "description": "This command take sniffed trace data and partial raw key and bruteforces the remaining 40 bits of the raw key.",
             "notes": [
-                "hf iclass legbrute --csn 8D7BD711FEFF12E0 --epurse feffffffffffffff --macs 00000000BD478F76 --pk B4F12AADC5301225"
+                "hf iclass legbrute --epurse feffffffffffffff --macs1 1306cad9b6c24466 --macs2 f0bf905e35f97923 --pk B4F12AADC5301225"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "--csn <hex> Specify CSN as 8 hex bytes",
                 "--epurse <hex> Specify ePurse as 8 hex bytes",
-                "--macs <hex> MACs",
-                "--pk <hex> Partial Key"
+                "--macs1 <hex> MACs captured from the reader",
+                "--macs2 <hex> MACs captured from the reader, different than the first set (with the same csn and epurse value)",
+                "--pk <hex> Partial Key from legrec or starting key of keyblock from legbrute",
+                "--index <dec> Where to start from to retrieve the key, default 0 - value in millions e.g. 1 is 1 million"
             ],
-            "usage": "hf iclass legbrute [-h] --csn <hex> --epurse <hex> --macs <hex> --pk <hex>"
+            "usage": "hf iclass legbrute [-h] --epurse <hex> --macs1 <hex> --macs2 <hex> --pk <hex> [--index <dec>]"
         },
         "hf iclass legrec": {
             "command": "hf iclass legrec",
             "description": "Attempts to recover the diversified key of a specific iClass card. This may take a long time. The Card must remain be on the PM3 antenna during the whole process! This process may brick the card!",
             "notes": [
-                "hf iclass legrec --macs 0000000089cb984b"
+                "hf iclass legrec --macs 0000000089cb984b",
+                "hf iclass legrec --macs 0000000089cb984b --index 0 --loop 100 --notest"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--macs <hex> MACs"
+                "--macs <hex> AA1 Authentication MACs",
+                "--index <dec> Where to start from to retrieve the key, default 0",
+                "--loop <dec> The number of key retrieval cycles to perform, max 10000, default 100",
+                "--debug Re-enables tracing for debugging. Limits cycles to 1.",
+                "--notest Perform real writes on the card!",
+                "--allnight Loops the loop for 10 times, recommended loop value of 5000."
             ],
-            "usage": "hf iclass legrec [-h] --macs <hex>"
+            "usage": "hf iclass legrec [-h] --macs <hex> [--index <dec>] [--loop <dec>] [--debug] [--notest] [--allnight]"
         },
         "hf iclass loclass": {
             "command": "hf iclass loclass",
@@ -3616,6 +3653,19 @@
                 "-j, --jam Jam (prevent) e-purse updates"
             ],
             "usage": "hf iclass sniff [-hj]"
+        },
+        "hf iclass unhash": {
+            "command": "hf iclass unhash",
+            "description": "Reverses the hash0 function used generate iclass diversified keys after DES encryption, returning the DES crypted CSN.",
+            "notes": [
+                "hf iclass unhash --divkey B4F12AADC5301A2D"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--divkey <hex> The card's Diversified Key value"
+            ],
+            "usage": "hf iclass unhash [-h] --divkey <hex>"
         },
         "hf iclass view": {
             "command": "hf iclass view",
@@ -9730,21 +9780,22 @@
             "command": "lf hitag hts rdbl",
             "description": "Read Hitag S memory. Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR) 8268/8310 password mode: - default password BBDD3399",
             "notes": [
-                "lf hitag hts rdbl -> Hitag S/8211, plain mode",
-                "lf hitag hts rdbl --82xx -k BBDD3399 -> 8268/8310, password mode",
-                "lf hitag hts rdbl --nrar 0102030411223344 -> Hitag S, challenge mode",
-                "lf hitag hts rdbl --crypto -> Hitag S, crypto mode, def key",
-                "lf hitag hts rdbl -k 4F4E4D494B52 -> Hitag S, crypto mode"
+                "lf hitag hts rdbl -p 1 -> Hitag S/8211, plain mode",
+                "lf hitag hts rdbl -p 1 --82xx -k BBDD3399 -> 8268/8310, password mode",
+                "lf hitag hts rdbl -p 1 --nrar 0102030411223344 -> Hitag S, challenge mode",
+                "lf hitag hts rdbl -p 1 --crypto -> Hitag S, crypto mode, def key",
+                "lf hitag hts rdbl -p 1 -k 4F4E4D494B52 -> Hitag S, crypto mode"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--nrar <hex> nonce / answer writer, 8 hex bytes",
                 "-8, --82xx 8268/8310 mode",
+                "--nrar <hex> nonce / answer writer, 8 hex bytes",
                 "--crypto crypto mode",
-                "-k, --key <hex> pwd or key, 4 or 6 hex bytes"
+                "-k, --key <hex> pwd or key, 4 or 6 hex bytes",
+                "-p, --page <dec> page address to read from"
             ],
-            "usage": "lf hitag hts rdbl [-h8] [--nrar <hex>] [--crypto] [-k <hex>]"
+            "usage": "lf hitag hts rdbl [-h8] [--nrar <hex>] [--crypto] [-k <hex>] -p <dec>"
         },
         "lf hitag hts reader": {
             "command": "lf hitag hts reader",
@@ -9760,6 +9811,20 @@
             ],
             "usage": "lf hitag hts reader [-h@]"
         },
+        "lf hitag hts sim": {
+            "command": "lf hitag hts sim",
+            "description": "Simulate Hitag S transponder You need to `lf hitag hts eload` first",
+            "notes": [
+                "lf hitag hts sim",
+                "lf hitag hts sim --82xx"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-8, --82xx simulate 8268/8310"
+            ],
+            "usage": "lf hitag hts sim [-h8]"
+        },
         "lf hitag hts wrbl": {
             "command": "lf hitag hts wrbl",
             "description": "Write a page in Hitag S memory. Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR) 8268/8310 password mode: - default password BBDD3399",
@@ -9773,8 +9838,8 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--nrar <hex> nonce / answer writer, 8 hex bytes",
                 "-8, --82xx 8268/8310 mode",
+                "--nrar <hex> nonce / answer writer, 8 hex bytes",
                 "--crypto crypto mode",
                 "-k, --key <hex> pwd or key, 4 or 6 hex bytes",
                 "-p, --page <dec> page address to write to",
@@ -9817,13 +9882,8 @@
         },
         "lf hitag read": {
             "command": "lf hitag read",
-            "description": "Read Hitag memory. It support Hitag S and Hitag 2 Password mode: - default key 4D494B52 (MIKR) Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR)",
+            "description": "Read Hitag memory. It support Hitag 2 Password mode: - default key 4D494B52 (MIKR) Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR)",
             "notes": [
-                "lf hitag read --hts -> Hitag S, plain mode",
-                "lf hitag read --hts --nrar 0102030411223344 -> Hitag S, challenge mode",
-                "lf hitag read --hts --crypto -> Hitag S, crypto mode, def key",
-                "lf hitag read --hts -k 4F4E4D494B52 -> Hitag S, crypto mode",
-                "",
                 "lf hitag read --ht2 --pwd -> Hitag 2, pwd mode, def key",
                 "lf hitag read --ht2 -k 4D494B52 -> Hitag 2, pwd mode",
                 "lf hitag read --ht2 --nrar 0102030411223344 -> Hitag 2, challenge mode",
@@ -9833,14 +9893,13 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-s, --hts Hitag S",
                 "-2, --ht2 Hitag 2",
                 "--pwd password mode",
                 "--nrar <hex> nonce / answer writer, 8 hex bytes",
                 "--crypto crypto mode",
                 "-k, --key <hex> key, 4 or 6 hex bytes"
             ],
-            "usage": "lf hitag read [-hs2] [--pwd] [--nrar <hex>] [--crypto] [-k <hex>]"
+            "usage": "lf hitag read [-h2] [--pwd] [--nrar <hex>] [--crypto] [-k <hex>]"
         },
         "lf hitag reader": {
             "command": "lf hitag reader",
@@ -9866,10 +9925,9 @@
             "options": [
                 "-h, --help This help",
                 "-1, --ht1 simulate Hitag 1",
-                "-2, --ht2 simulate Hitag 2",
-                "-s, --hts simulate Hitag S"
+                "-2, --ht2 simulate Hitag 2"
             ],
-            "usage": "lf hitag sim [-h12s]"
+            "usage": "lf hitag sim [-h12]"
         },
         "lf hitag sniff": {
             "command": "lf hitag sniff",
@@ -9911,13 +9969,8 @@
         },
         "lf hitag wrbl": {
             "command": "lf hitag wrbl",
-            "description": "Write a page in Hitag memory. It support HitagS and Hitag 2 Password mode: - default key 4D494B52 (MIKR) Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR)",
+            "description": "Write a page in Hitag memory. It support Hitag 2 Password mode: - default key 4D494B52 (MIKR) Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR)",
             "notes": [
-                "lf hitag wrbl --hts -p 6 -d 01020304 -> HitagS, plain mode",
-                "lf hitag wrbl --hts -p 6 -d 01020304 --nrar 0102030411223344 -> HitagS, challenge mode",
-                "lf hitag wrbl --hts -p 6 -d 01020304 --crypto -> HitagS, crypto mode, def key",
-                "lf hitag wrbl --hts -p 6 -d 01020304 -k 4F4E4D494B52 -> HitagS, crypto mode",
-                "",
                 "lf hitag wrbl --ht2 -p 6 -d 01020304 --pwd -> Hitag 2, pwd mode, def key",
                 "lf hitag wrbl --ht2 -p 6 -d 01020304 -k 4D494B52 -> Hitag 2, pwd mode",
                 "lf hitag wrbl --ht2 -p 6 -d 01020304 --nrar 0102030411223344 -> Hitag 2, challenge mode",
@@ -9927,7 +9980,6 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-s, --hts Hitag S",
                 "-2, --ht2 Hitag 2",
                 "--pwd password mode",
                 "--nrar <hex> nonce / answer writer, 8 hex bytes",
@@ -9936,7 +9988,7 @@
                 "-p, --page <dec> page address to write to",
                 "-d, --data <hex> data, 4 hex bytes"
             ],
-            "usage": "lf hitag wrbl [-hs2] [--pwd] [--nrar <hex>] [--crypto] [-k <hex>] -p <dec> -d <hex>"
+            "usage": "lf hitag wrbl [-h2] [--pwd] [--nrar <hex>] [--crypto] [-k <hex>] -p <dec> -d <hex>"
         },
         "lf idteck clone": {
             "command": "lf idteck clone",
@@ -12902,8 +12954,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 745,
+        "commands_extracted": 747,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-09-15T16:16:09"
+        "extracted_on": "2024-09-30T08:35:18"
     }
 }
