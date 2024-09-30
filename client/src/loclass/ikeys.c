@@ -619,11 +619,10 @@ void invert_hash0(uint8_t k[8]) {
             if(image_match){
                 PrintAndLogEx(INFO, _GREEN_("Valid pre-image: ")_YELLOW_("%s"), sprint_hex(des_pre_image, sizeof(des_pre_image)));
             }else if (!image_match && g_debugMode > 0){
-            //}else if (!image_match){ //debug only
                 PrintAndLogEx(INFO, _RED_("Invalid pre-image: %s"), sprint_hex(des_pre_image, sizeof(des_pre_image)));
             }
-            // Free allocated memory
         }
+        // Free allocated memory
         free(hydra_heads);
     }
 }
