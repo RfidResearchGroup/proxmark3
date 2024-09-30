@@ -34,27 +34,29 @@
 #include "crc.h"
 #include "protocols.h"
 #include "hitag.h"
+#include "appmain.h"    // tearoff_hook()
 
 #define CRC_PRESET 0xFF
 #define CRC_POLYNOM 0x1D
 
 static struct hitagS_tag tag = {
     .data.pages = {
-                                               // Plain mode:               | Authentication mode:
-            [0] = {0x5F, 0xC2, 0x11, 0x84},    // UID                       | UID
-            // HITAG S 2048
-            [1] = {0xCA, 0x00, 0x00, 0xAA},    // CON0 CON1 CON2 Reserved   | CON0 CON1 CON2 PWDH0
-            [2] = {0x48, 0x54, 0x4F, 0x4E},    // Data                      | PWDL0 PWDL1 KEYH0 KEYH1
-            [3] = {0x4D, 0x49, 0x4B, 0x52},    // Data                      | KEYL0 KEYL1 KEYL2 KEYL3
-            [4] = {0xFF, 0x80, 0x00, 0x00},    // Data
-            [5] = {0x00, 0x00, 0x00, 0x00},    // Data
-            [6] = {0x00, 0x00, 0x00, 0x00},    // Data
-            [7] = {0x57, 0x5F, 0x4F, 0x48},    // Data
-            // up to index 63 for HITAG S2048 public data
-        },
+        // Plain mode:               | Authentication mode:
+        [0] = {0x5F, 0xC2, 0x11, 0x84},    // UID                       | UID
+        // HITAG S 2048
+        [1] = {0xCA, 0x00, 0x00, 0xAA},    // CON0 CON1 CON2 Reserved   | CON0 CON1 CON2 PWDH0
+        [2] = {0x48, 0x54, 0x4F, 0x4E},    // Data                      | PWDL0 PWDL1 KEYH0 KEYH1
+        [3] = {0x4D, 0x49, 0x4B, 0x52},    // Data                      | KEYL0 KEYL1 KEYL2 KEYL3
+        [4] = {0xFF, 0x80, 0x00, 0x00},    // Data
+        [5] = {0x00, 0x00, 0x00, 0x00},    // Data
+        [6] = {0x00, 0x00, 0x00, 0x00},    // Data
+        [7] = {0x57, 0x5F, 0x4F, 0x48},    // Data
+        // up to index 63 for HITAG S2048 public data
+    },
 };
 static uint8_t page_to_be_written = 0;
 static int block_data_left = 0;
+static bool enable_page_tearoff = false;
 
 typedef enum modulation {
     AC2K = 0,
@@ -69,6 +71,10 @@ static int rotate_uid = 0;
 static int sof_bits;                                // number of start-of-frame bits
 static uint8_t pwdh0, pwdl0, pwdl1;                 // password bytes
 static uint8_t rnd[] = {0x74, 0x12, 0x44, 0x85};    // random number
+static uint16_t timestamp_high = 0;                 // Timer Counter 2 overflow count, ~47min
+
+#define TIMESTAMP (AT91C_BASE_TC2->TC_SR &AT91C_TC_COVFS ? timestamp_high += 1 : 0, ((timestamp_high << 16) + AT91C_BASE_TC2->TC_CV) / T0)
+
 //#define SENDBIT_TEST
 
 /* array index 3 2 1 0 // bytes in sim.bin file are 0 1 2 3
@@ -358,18 +364,24 @@ static void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len, bool
     LOW(GPIO_SSC_DOUT);
 }
 
+static void hts_stop_clock(void) {
+    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
+    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS;
+}
+
 static void hts_init_clock(void) {
 
     // Enable Peripheral Clock for
     //   Timer Counter 0, used to measure exact timing before answering
     //   Timer Counter 1, used to capture edges of the tag frames
-    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1);
+    //   Timer Counter 2, used to log trace time
+    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1) | (1 << AT91C_ID_TC2);
 
     AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
 
     // Disable timer during configuration
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+    hts_stop_clock();
 
     // TC0: Capture mode, clock source = MCK/32 (TIMER_CLOCK3), no triggers
     AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
@@ -382,19 +394,23 @@ static void hts_init_clock(void) {
         AT91C_TC_ABETRG |                   // TIOA is used as an external trigger
         AT91C_TC_LDRA_FALLING;              // load RA on on falling edge
 
+    // TC2: Capture mode, clock source = MCK/32 (TIMER_CLOCK3), no triggers
+    AT91C_BASE_TC2->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
+
     // Enable and reset counters
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+
+    // Assert a sync signal. This sets all timers to 0 on next active clock edge
+    AT91C_BASE_TCB->TCB_BCR = 1;
 
     // synchronized startup procedure
     // In theory, with MCK/32, we shouldn't be waiting longer than 32 instruction statements, right?
     while (AT91C_BASE_TC0->TC_CV != 0) {}; // wait until TC0 returned to zero
 
-}
-
-static void hts_stop_clock(void) {
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+    // reset timestamp
+    timestamp_high = 0;
 }
 
 /*
@@ -677,7 +693,7 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
 
     StopTicks();
 
-    int response = 0, overflow = 0;
+    int overflow = 0;
     uint8_t rx[HITAG_FRAME_LEN];
     size_t rxlen = 0;
     uint8_t tx[HITAG_FRAME_LEN];
@@ -738,13 +754,13 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
     // Enable Peripheral Clock for
     //   Timer Counter 0, used to measure exact timing before answering
     //   Timer Counter 1, used to capture edges of the tag frames
-    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1);
+    //   Timer Counter 2, used to log trace time
+    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1) | (1 << AT91C_ID_TC2);
 
     AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
 
     // Disable timer during configuration
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+    hts_stop_clock();
 
     // TC0: Capture mode, default timer source = MCK/32 (TIMER_CLOCK3), no triggers
     AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
@@ -753,17 +769,27 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
     // external trigger rising edge, load RA on rising edge of TIOA.
     AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK
                              | AT91C_TC_ETRGEDG_RISING | AT91C_TC_ABETRG | AT91C_TC_LDRA_RISING;
+    // TC2: Capture mode, default timer source = MCK/32 (TIMER_CLOCK3), no triggers
+    AT91C_BASE_TC2->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
 
     // Enable and reset counter
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
+
+    // Assert a sync signal. This sets all timers to 0 on next active clock edge
+    AT91C_BASE_TCB->TCB_BCR = 1;
 
     // synchronized startup procedure
     while (AT91C_BASE_TC0->TC_CV != 0); // wait until TC0 returned to zero
 
+    // reset timestamp
+    timestamp_high = 0;
+
     if (ledcontrol) LED_D_ON();
 
     while ((BUTTON_PRESS() == false) && (data_available() == false)) {
+        uint32_t start_time = 0;
 
         WDT_HIT();
 
@@ -781,14 +807,14 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
                 AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
                 if (ledcontrol) LED_B_ON();
+                // Capture reader cmd start timestamp
+                if (start_time == 0) start_time = TIMESTAMP - HITAG_T_LOW;
 
                 // Capture reader frame
                 if (ra >= HITAG_T_STOP) {
                     if (rxlen != 0) {
                         //DbpString("weird0?");
                     }
-                    // Capture the T0 periods that have passed since last communication or field drop (reset)
-                    response = (ra - HITAG_T_LOW);
                 } else if (ra >= HITAG_T_1_MIN) {
                     // '1' bit
                     rx[rxlen / 8] |= 1 << (7 - (rxlen % 8));
@@ -805,7 +831,7 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
 
         // Check if frame was captured
         if (rxlen > 0) {
-            LogTraceBits(rx, rxlen, response, response, true);
+            LogTraceBits(rx, rxlen, start_time, TIMESTAMP, true);
 
             // Disable timer 1 with external trigger to avoid triggers during our own modulation
             AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
@@ -823,8 +849,9 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
             // Send and store the tag answer (if there is any)
             if (txlen > 0) {
                 // Transmit the tag frame
+                start_time = TIMESTAMP;
                 hitag_send_frame(tx, txlen, ledcontrol);
-                LogTraceBits(tx, txlen, 0, 0, false);
+                LogTraceBits(tx, txlen, start_time, TIMESTAMP, false);
             }
 
             // Enable and reset external trigger in timer for capturing future frames
@@ -832,7 +859,6 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
 
             // Reset the received frame and response timing info
             memset(rx, 0x00, sizeof(rx));
-            response = 0;
 
             if (ledcontrol) LED_B_OFF();
         }
@@ -845,6 +871,7 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
 
     }
 
+    hts_stop_clock();
     set_tracing(false);
     lf_finalize(ledcontrol);
     // release allocated memory from BigBuff.
@@ -861,7 +888,6 @@ static void hts_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint3
 
     int lastbit = 1;
     bool bSkip = true;
-    *resptime = 0;
     uint32_t errorCount = 0;
     bool bStarted = false;
 
@@ -884,12 +910,11 @@ static void hts_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint3
 
             if (ledcontrol) LED_B_ON();
 
+            // Capture tag response timestamp
+            if (*rxlen == 0) *resptime = TIMESTAMP;
+
             // Capture tag frame (manchester decoding using only falling edges)
-
             if (bStarted == false) {
-
-                // Capture the T0 periods that have passed since last communication or field drop (reset)
-                *resptime = ra - HITAG_T_TAG_HALF_PERIOD;
 
                 if (ra >= HITAG_T_WAIT_RESP) {
                     bStarted = true;
@@ -957,9 +982,8 @@ static void hts_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint3
     DBG Dbhexdump(ra_i, edges, false);
 }
 
-static void hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t sizeofrx, size_t *prxbits, int t_wait, bool ledcontrol, bool ac_seq) {
-
-    LogTraceBits(tx, txlen, HITAG_T_WAIT_SC, HITAG_T_WAIT_SC, true);
+static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t sizeofrx, size_t *prxbits, int t_wait, bool ledcontrol, bool ac_seq) {
+    uint32_t start_time;
 
     // Send and store the reader command
     // Disable timer 1 with external trigger to avoid triggers during our own modulation
@@ -972,15 +996,22 @@ static void hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_
     // All timer values are in terms of T0 units
     while (AT91C_BASE_TC0->TC_CV < T0 * t_wait) {};
 
+    start_time = TIMESTAMP;
+
     // Transmit the reader frame
     hitag_reader_send_frame(tx, txlen, ledcontrol);
+
+    if (enable_page_tearoff && tearoff_hook() == PM3_ETEAROFF) {
+        return PM3_ETEAROFF;
+    }
+
+    LogTraceBits(tx, txlen, start_time, TIMESTAMP, true);
 
     // Enable and reset external trigger in timer for capturing future frames
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
-    uint32_t resptime = 0;
     size_t rxlen = 0;
-    hts_receive_frame(rx, sizeofrx, &rxlen, &resptime, ledcontrol);
+    hts_receive_frame(rx, sizeofrx, &rxlen, &start_time, ledcontrol);
     int k = 0;
 
     // Check if frame was captured and store it
@@ -1043,9 +1074,11 @@ static void hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_
                 }
             }
         }
-        LogTraceBits(rx, k, resptime, resptime, false);
+        LogTraceBits(rx, k, start_time, TIMESTAMP, false);
     }
     *prxbits = k;
+
+    return PM3_SUCCESS;
 }
 
 static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t sizeoftx, uint8_t *rx, size_t sizeofrx, int t_wait, bool ledcontrol) {
@@ -1124,7 +1157,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
 
             key_le = *(uint64_t *)packet->key;
 
-            uint64_t state = ht2_hitag2_init(reflect48(key_le), reflect32(tag.data.s.uid_le), reflect32(*(uint32_t*)rnd));
+            uint64_t state = ht2_hitag2_init(reflect48(key_le), reflect32(tag.data.s.uid_le), reflect32(*(uint32_t *)rnd));
 
             uint8_t auth_ks[4];
             for (int i = 0; i < 4; i++) {
@@ -1402,7 +1435,13 @@ void hts_write_page(const lf_hitag_data_t *payload, bool ledcontrol) {
     crc = CRC8Hitag1Bits(tx, txlen);
     txlen = concatbits(tx, txlen, &crc, 0, 8);
 
-    hts_send_receive(tx, txlen, rx, ARRAYLEN(rx), &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
+    enable_page_tearoff = g_tearoff_enabled;
+
+    if (hts_send_receive(tx, txlen, rx, ARRAYLEN(rx), &rxlen, HITAG_T_WAIT_SC, ledcontrol, false) == PM3_ETEAROFF) {
+        res = PM3_ETEAROFF;
+        enable_page_tearoff = false;
+        goto write_end;
+    }
 
     if ((rxlen != 2) || (rx[0] >> (8 - 2) != 0x01)) {
         res = PM3_ESOFT; //  write failed

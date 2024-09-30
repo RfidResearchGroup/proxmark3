@@ -1259,18 +1259,9 @@ static int CmdEM4x50Sim(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
 
-    PacketResponseNG resp;
     // init to ZERO
-    resp.cmd = 0,
-    resp.length = 0,
-    resp.magic = 0,
-    resp.status = 0,
-    resp.crc = 0,
-    resp.ng = false,
-    resp.oldarg[0] = 0;
-    resp.oldarg[1] = 0;
-    resp.oldarg[2] = 0;
-    memset(resp.data.asBytes, 0, PM3_CMD_DATA_SIZE);
+    PacketResponseNG resp;
+    memset(&resp, 0, sizeof(resp));
 
     bool keypress;
     do {

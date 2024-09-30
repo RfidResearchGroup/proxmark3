@@ -159,6 +159,11 @@ iso14a_polling_parameters_t REQA_POLLING_PARAMETERS = {
 // parity isn't used much
 static uint8_t parity_array[MAX_PARITY_SIZE] = {0};
 
+// crypto1 stuff
+static uint8_t crypto1_auth_state = AUTH_FIRST;
+static uint32_t crypto1_uid;
+struct Crypto1State crypto1_state = {0, 0};
+
 void printHf14aConfig(void) {
     DbpString(_CYAN_("HF 14a config"));
     Dbprintf("  [a] Anticol override.... %s%s%s",
@@ -803,9 +808,10 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 
                     // check - if there is a short 7bit request from reader
                     if ((!triggered) && (param & 0x02) && (Uart.len == 1) && (Uart.bitCount == 7)) {
-
                         triggered = true;
+                    }
 
+                    if (triggered) {
                         if (!LogTrace(receivedCmd,
                                       Uart.len,
                                       Uart.startTime * 16 - DELAY_READER_AIR2ARM_AS_SNIFFER,
@@ -1248,10 +1254,10 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, uint8
             return false;
         }
     }
-        
-    // copy the iRATs if supplied 
+
+    // copy the iRATs if supplied
     if ((flags & RATS_IN_DATA) == RATS_IN_DATA) {
-        memcpy(rRATS ,iRATs, sizeof(iRATs));
+        memcpy(rRATS, iRATs, sizeof(iRATs));
         // rats len is dictated by the first char of the string, add 2 crc bytes
         rRATS_len = (iRATs[0] + 2);
     }
@@ -3150,14 +3156,14 @@ void ReaderIso14443a(PacketCommandNG *c) {
         iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
         // notify client selecting status.
-        // if failed selecting, turn off antenna and quite.
+        // if failed selecting, turn off antenna and quit.
         if ((param & ISO14A_NO_SELECT) != ISO14A_NO_SELECT) {
             iso14a_card_select_t *card = (iso14a_card_select_t *)buf;
 
             arg0 = iso14443a_select_cardEx(
                        NULL,
                        card,
-                       NULL,
+                       &crypto1_uid,
                        true,
                        0,
                        ((param & ISO14A_NO_RATS) == ISO14A_NO_RATS),
@@ -3165,6 +3171,11 @@ void ReaderIso14443a(PacketCommandNG *c) {
                    );
             // TODO: Improve by adding a cmd parser pointer and moving it by struct length to allow combining data with polling params
             FpgaDisableTracing();
+
+            if ((param & ISO14A_CRYPTO1MODE) == ISO14A_CRYPTO1MODE) {
+                crypto1_auth_state = AUTH_FIRST;
+                crypto1_deinit(&crypto1_state);
+            }
 
             reply_mix(CMD_ACK, arg0, card->uidlen, 0, buf, sizeof(iso14a_card_select_t));
             if (arg0 == 0) {
@@ -3194,7 +3205,23 @@ void ReaderIso14443a(PacketCommandNG *c) {
     }
 
     if ((param & ISO14A_RAW) == ISO14A_RAW) {
-
+        if ((param & ISO14A_CRYPTO1MODE) == ISO14A_CRYPTO1MODE) {
+            // Intercept special Auth command 6xxx<key>CRCA
+            if ((len == 10) && ((cmd[0] & 0xF0) == 0x60)) {
+                uint64_t ui64key = bytes_to_num((uint8_t *)&cmd[2], 6);
+                uint8_t res = 0x00;
+                if (mifare_classic_authex_cmd(&crypto1_state, crypto1_uid, cmd[1], cmd[0], ui64key, crypto1_auth_state, NULL, NULL, NULL, NULL, false, false)) {
+                    if (g_dbglevel >= DBG_INFO)    Dbprintf("Auth error");
+                    res = 0x04;
+                } else {
+                    crypto1_auth_state = AUTH_NESTED;
+                    if (g_dbglevel >= DBG_INFO)    Dbprintf("Auth succeeded");
+                    res = 0x0a;
+                }
+                reply_mix(CMD_ACK, 1, 0, 0, &res, 1);
+                goto CMD_DONE;
+            }
+        }
         if ((param & ISO14A_APPEND_CRC) == ISO14A_APPEND_CRC) {
             // Don't append crc on empty bytearray...
             if (len > 0) {
@@ -3212,7 +3239,10 @@ void ReaderIso14443a(PacketCommandNG *c) {
                 }
             }
         }
-
+        if ((param & ISO14A_CRYPTO1MODE) == ISO14A_CRYPTO1MODE) {
+            // Force explicit parity
+            lenbits = len * 8;
+        }
         // want to send a specific number of bits (e.g. short commands)
         if (lenbits > 0) {
 
@@ -3231,6 +3261,9 @@ void ReaderIso14443a(PacketCommandNG *c) {
 
             } else {
                 GetParity(cmd, lenbits / 8, parity_array);
+                if ((param & ISO14A_CRYPTO1MODE) == ISO14A_CRYPTO1MODE) {
+                    mf_crypto1_encrypt(&crypto1_state, cmd, len, parity_array);
+                }
                 ReaderTransmitBitsPar(cmd, lenbits, parity_array, NULL);               // bytes are 8 bit with odd parity
             }
 
@@ -3277,12 +3310,16 @@ void ReaderIso14443a(PacketCommandNG *c) {
                 reply_mix(CMD_ACK, 0, 0, 0, NULL, 0);
             } else {
                 arg0 = ReaderReceive(buf, sizeof(buf), parity_array);
+
+                if ((param & ISO14A_CRYPTO1MODE) == ISO14A_CRYPTO1MODE) {
+                    mf_crypto1_decrypt(&crypto1_state, buf, arg0);
+                }
                 FpgaDisableTracing();
                 reply_mix(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
             }
         }
     }
-
+CMD_DONE:
     if ((param & ISO14A_REQUEST_TRIGGER) == ISO14A_REQUEST_TRIGGER)
         iso14a_set_trigger(false);
 
@@ -3295,6 +3332,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
     }
 
 OUT:
+    crypto1_auth_state = AUTH_FIRST;
     hf_field_off();
     set_tracing(false);
 }
@@ -3877,7 +3915,7 @@ void DetectNACKbug(void) {
 
 /* ///
 Based upon the SimulateIso14443aTag, this aims to instead take an AID Value you've supplied, and return your selected response.
-It can also continue after the AID has been selected, and respond to other request types. 
+It can also continue after the AID has been selected, and respond to other request types.
 This was forked from the original function to allow for more flexibility in the future, and to increase the processing speed of the original function.
 /// */
 
@@ -3896,11 +3934,11 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data, uin
     BigBuf_free_keep_EM();
 
     // Increased the buffer size to allow for more complex responses
-    #define DYNAMIC_RESPONSE_BUFFER2_SIZE 512
-    #define DYNAMIC_MODULATION_BUFFER2_SIZE 1536
+#define DYNAMIC_RESPONSE_BUFFER2_SIZE 512
+#define DYNAMIC_MODULATION_BUFFER2_SIZE 1536
 
-    uint8_t * dynamic_response_buffer2 = BigBuf_calloc(DYNAMIC_RESPONSE_BUFFER2_SIZE);
-    uint8_t * dynamic_modulation_buffer2 = BigBuf_calloc(DYNAMIC_MODULATION_BUFFER2_SIZE);
+    uint8_t *dynamic_response_buffer2 = BigBuf_calloc(DYNAMIC_RESPONSE_BUFFER2_SIZE);
+    uint8_t *dynamic_modulation_buffer2 = BigBuf_calloc(DYNAMIC_MODULATION_BUFFER2_SIZE);
     tag_response_info_t dynamic_response_info = {
         .response = dynamic_response_buffer2,
         .response_n = 0,
@@ -3986,104 +4024,104 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data, uin
             p_response = NULL;
             finished = true;
         } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {    // Received a RATS request
-                p_response = &responses[RESP_INDEX_RATS];
+            p_response = &responses[RESP_INDEX_RATS];
         } else {
             // clear old dynamic responses
             dynamic_response_info.response_n = 0;
             dynamic_response_info.modulation_n = 0;
 
-                // Check for ISO 14443A-4 compliant commands, look at left nibble
-                switch (receivedCmd[0]) {
-                    case 0x0B:
-                    case 0x0A: { // IBlock (command CID)
-                        dynamic_response_info.response[0] = receivedCmd[0];
-                        dynamic_response_info.response[1] = 0x00;
+            // Check for ISO 14443A-4 compliant commands, look at left nibble
+            switch (receivedCmd[0]) {
+                case 0x0B:
+                case 0x0A: { // IBlock (command CID)
+                    dynamic_response_info.response[0] = receivedCmd[0];
+                    dynamic_response_info.response[1] = 0x00;
 
-                        switch (receivedCmd[3]) { // APDU Class Byte 
-                            // receivedCmd in this case is expecting to structured with a CID, then the APDU command for SelectFile
-                            // | IBlock (CID) | CID | APDU Command | CRC |
-                            
-                            case 0xA4: {  // SELECT FILE
-                                // Select File AID uses the following format for GlobalPlatform
-                                //
-                                // | 00 | A4 | 04 | 00 | xx | AID | 00 |
-                                // xx in this case is len of the AID value in hex
+                    switch (receivedCmd[3]) { // APDU Class Byte
+                        // receivedCmd in this case is expecting to structured with a CID, then the APDU command for SelectFile
+                        // | IBlock (CID) | CID | APDU Command | CRC |
 
-                                // aid len is found as a hex value in receivedCmd[6] (Index Starts at 0)
-                                int aid_len = receivedCmd[6];
-                                uint8_t* recieved_aid = &receivedCmd[7];
+                        case 0xA4: {  // SELECT FILE
+                            // Select File AID uses the following format for GlobalPlatform
+                            //
+                            // | 00 | A4 | 04 | 00 | xx | AID | 00 |
+                            // xx in this case is len of the AID value in hex
 
-                                // aid enumeration flag
-                                if (enumerate == true) {
-                                    Dbprintf("Received AID (%d):", aid_len);
-                                    Dbhexdump(aid_len, recieved_aid, false);
-                                }
+                            // aid len is found as a hex value in receivedCmd[6] (Index Starts at 0)
+                            int aid_len = receivedCmd[6];
+                            uint8_t *recieved_aid = &receivedCmd[7];
 
-                                if (memcmp(aidFilter, recieved_aid, aid_len) == 0) { // Evaluate the AID sent by the Reader to the AID supplied
-                                    // AID Response will be parsed here 
-                                    memcpy(dynamic_response_info.response + 2 , aidResponse, respondLen + 2);
-                                    dynamic_response_info.response_n = respondLen + 2;
-                                } else { // Any other SELECT FILE command will return with a Not Found
-                                    dynamic_response_info.response[2] = 0x6A;
-                                    dynamic_response_info.response[3] = 0x82;
-                                    dynamic_response_info.response_n = 4;
-                                }
+                            // aid enumeration flag
+                            if (enumerate == true) {
+                                Dbprintf("Received AID (%d):", aid_len);
+                                Dbhexdump(aid_len, recieved_aid, false);
                             }
-                            break;
 
-                            case 0xDA: { // PUT DATA
-                                // Just send them a 90 00 response
-                                dynamic_response_info.response[2] = 0x90;
-                                dynamic_response_info.response[3] = 0x00;
-                                dynamic_response_info.response_n = 4;
-                            }
-                            break;
-
-                            case 0xCA: { // GET DATA
-                                if (sentCount == 0) {
-                                    // APDU Command will just be parsed here 
-                                    memcpy(dynamic_response_info.response + 2 , apduCommand, apduLen + 2);
-                                    dynamic_response_info.response_n = respondLen + 2;
-                                } else {
-                                    finished = true;
-                                    break;
-                                }
-                                sentCount++;
-                            }
-                            break;
-                            default : {
-                                // Any other non-listed command
-                                // Respond Not Found
+                            if (memcmp(aidFilter, recieved_aid, aid_len) == 0) { // Evaluate the AID sent by the Reader to the AID supplied
+                                // AID Response will be parsed here
+                                memcpy(dynamic_response_info.response + 2, aidResponse, respondLen + 2);
+                                dynamic_response_info.response_n = respondLen + 2;
+                            } else { // Any other SELECT FILE command will return with a Not Found
                                 dynamic_response_info.response[2] = 0x6A;
                                 dynamic_response_info.response[3] = 0x82;
                                 dynamic_response_info.response_n = 4;
                             }
                         }
-                    break;
-                    }
-                    break;
+                        break;
 
-                    case 0xCA:
-                    case 0xC2: { // Readers sends deselect command
-                        dynamic_response_info.response[0] = 0xCA;
-                        dynamic_response_info.response[1] = 0x00;
-                        dynamic_response_info.response_n = 2;
-                        finished = true;
-                    }
-                    break;
-
-                    default: {
-                        // Never seen this command before
-                        LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
-                        if (g_dbglevel >= DBG_DEBUG) {
-                            Dbprintf("Received unknown command (len=%d):", len);
-                            Dbhexdump(len, receivedCmd, false);
+                        case 0xDA: { // PUT DATA
+                            // Just send them a 90 00 response
+                            dynamic_response_info.response[2] = 0x90;
+                            dynamic_response_info.response[3] = 0x00;
+                            dynamic_response_info.response_n = 4;
                         }
-                        // Do not respond
-                        dynamic_response_info.response_n = 0;
+                        break;
+
+                        case 0xCA: { // GET DATA
+                            if (sentCount == 0) {
+                                // APDU Command will just be parsed here
+                                memcpy(dynamic_response_info.response + 2, apduCommand, apduLen + 2);
+                                dynamic_response_info.response_n = respondLen + 2;
+                            } else {
+                                finished = true;
+                                break;
+                            }
+                            sentCount++;
+                        }
+                        break;
+                        default : {
+                            // Any other non-listed command
+                            // Respond Not Found
+                            dynamic_response_info.response[2] = 0x6A;
+                            dynamic_response_info.response[3] = 0x82;
+                            dynamic_response_info.response_n = 4;
+                        }
                     }
                     break;
+                }
+                break;
+
+                case 0xCA:
+                case 0xC2: { // Readers sends deselect command
+                    dynamic_response_info.response[0] = 0xCA;
+                    dynamic_response_info.response[1] = 0x00;
+                    dynamic_response_info.response_n = 2;
+                    finished = true;
+                }
+                break;
+
+                default: {
+                    // Never seen this command before
+                    LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("Received unknown command (len=%d):", len);
+                        Dbhexdump(len, receivedCmd, false);
                     }
+                    // Do not respond
+                    dynamic_response_info.response_n = 0;
+                }
+                break;
+            }
             if (dynamic_response_info.response_n > 0) {
 
                 // Copy the CID from the reader query

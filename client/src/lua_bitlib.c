@@ -183,23 +183,23 @@ static int b_replace(lua_State *L) {
 
 
 void register_bit32_lib(lua_State *L) {
-  static const luaL_Reg bitlib[] = {
-    {"arshift", b_arshift},
-    {"band", b_and},
-    {"bnot", b_not},
-    {"bor", b_or},
-    {"bxor", b_xor},
-    {"btest", b_test},
-    {"extract", b_extract},
-    {"lrotate", b_lrot},
-    {"lshift", b_lshift},
-    {"replace", b_replace},
-    {"rrotate", b_rrot},
-    {"rshift", b_rshift},
-    {NULL, NULL}
-  };
+    static const luaL_Reg bitlib[] = {
+        {"arshift", b_arshift},
+        {"band", b_and},
+        {"bnot", b_not},
+        {"bor", b_or},
+        {"bxor", b_xor},
+        {"btest", b_test},
+        {"extract", b_extract},
+        {"lrotate", b_lrot},
+        {"lshift", b_lshift},
+        {"replace", b_replace},
+        {"rrotate", b_rrot},
+        {"rshift", b_rshift},
+        {NULL, NULL}
+    };
 
-  luaL_newlib(L, bitlib);
-  lua_setfield(L, -2, "bit32");
+    luaL_newlib(L, bitlib);
+    lua_setfield(L, -2, "bit32");
 }
 

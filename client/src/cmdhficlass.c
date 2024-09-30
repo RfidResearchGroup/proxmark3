@@ -3854,11 +3854,11 @@ static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, u
     int runs = 1;
     int cycle = 1;
     bool repeat = true;
-    if(allnight){
+    if (allnight) {
         runs = 10;
     }
 
-    while (repeat == true){
+    while (repeat == true) {
         uint32_t payload_size = sizeof(iclass_recover_req_t);
         uint8_t aa2_standard_key[PICOPASS_BLOCK_SIZE] = {0};
         memcpy(aa2_standard_key, iClass_Key_Table[1], PICOPASS_BLOCK_SIZE);
@@ -3896,23 +3896,23 @@ static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, u
         if (resp.status == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "iCLASS Key Bits Recovery: " _GREEN_("completed!"));
             repeat = false;
-        } else if (resp.status == PM3_ESOFT){
+        } else if (resp.status == PM3_ESOFT) {
             PrintAndLogEx(WARNING, "iCLASS Key Bits Recovery: " _RED_("failed/errors"));
             repeat = false;
-        } else if (resp.status == PM3_EINVARG){
-            if(allnight){
-                if(runs <= cycle){
+        } else if (resp.status == PM3_EINVARG) {
+            if (allnight) {
+                if (runs <= cycle) {
                     repeat = false;
-                }else{
-                    index_start = index_start+loop;
+                } else {
+                    index_start = index_start + loop;
                     cycle++;
                 }
-            }else{
+            } else {
                 repeat = false;
             }
         }
         free(payload);
-        if(!repeat){
+        if (!repeat) {
             return resp.status;
         }
     }
@@ -4052,16 +4052,16 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
                     check_values = false;
                 }
             }
-            if(check_values){
+            if (check_values) {
                 PrintAndLogEx(SUCCESS, _GREEN_("CONFIRMED VALID RAW key ") _RED_("%s"), sprint_hex(div_key, 8));
                 verified = true;
-            }else{
+            } else {
                 PrintAndLogEx(INFO, _YELLOW_("Raw Key Invalid"));
             }
 
         }
-        if(index % 1000000 == 0){
-            PrintAndLogEx(INFO, "Tested: " _YELLOW_("%" PRIu64 )" million keys", index/1000000);
+        if (index % 1000000 == 0) {
+            PrintAndLogEx(INFO, "Tested: " _YELLOW_("%" PRIu64)" million keys", index / 1000000);
             PrintAndLogEx(INFO, "Last Generated Key Value: " _YELLOW_("%s"), sprint_hex(div_key, 8));
         }
         index++;
@@ -4076,9 +4076,9 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass legrec",
-                    "Attempts to recover the diversified key of a specific iClass card. This may take a long time. The Card must remain be on the PM3 antenna during the whole process! This process may brick the card!",
-                    "hf iclass legrec --macs 0000000089cb984b\n"
-                    "hf iclass legrec --macs 0000000089cb984b --index 0 --loop 100 --notest"
+                  "Attempts to recover the diversified key of a specific iClass card. This may take a long time. The Card must remain be on the PM3 antenna during the whole process! This process may brick the card!",
+                  "hf iclass legrec --macs 0000000089cb984b\n"
+                  "hf iclass legrec --macs 0000000089cb984b --index 0 --loop 100 --notest"
                  );
 
     void *argtable[] = {
@@ -4104,15 +4104,15 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     bool no_test = arg_get_lit(ctx, 5);
     bool allnight = arg_get_lit(ctx, 6);
 
-    if(no_test){
-        test=false;
+    if (no_test) {
+        test = false;
     }
 
-    if(loop > 10000){
+    if (loop > 10000) {
         PrintAndLogEx(ERR, "Too many loops, arm prone to crashes. For safety specify a number lower than 10000");
         CLIParserFree(ctx);
         return PM3_EINVARG;
-    }else if (debug || test){
+    } else if (debug || test) {
         loop = 1;
     }
 
@@ -4123,8 +4123,8 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
         DropField();
         return PM3_ESOFT;
     }
-    HFiClassCalcDivKey(csn, iClass_Key_Table[1], new_div_key, false);
-    memcpy(no_first_auth,new_div_key,PICOPASS_BLOCK_SIZE);
+    diversifyKey(csn, iClass_Key_Table[1], new_div_key);
+    memcpy(no_first_auth, new_div_key, PICOPASS_BLOCK_SIZE);
 
     CLIParserFree(ctx);
 
@@ -4133,13 +4133,47 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    iclass_recover(macs,index,loop,no_first_auth,debug,test,allnight);
+    iclass_recover(macs, index, loop, no_first_auth, debug, test, allnight);
 
     PrintAndLogEx(WARNING, _YELLOW_("If the process completed successfully, you can now run 'hf iclass legbrute' with the partial key found."));
 
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 
+}
+
+static int CmdHFiClassUnhash(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass unhash",
+                  "Reverses the hash0 function used generate iclass diversified keys after DES encryption, returning the DES crypted CSN.",
+                  "hf iclass unhash --divkey B4F12AADC5301A2D"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1(NULL, "divkey", "<hex>", "The card's Diversified Key value"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int dk_len = 0;
+    uint8_t div_key[PICOPASS_BLOCK_SIZE] = {0};
+    CLIGetHexWithReturn(ctx, 1, div_key, &dk_len);
+
+    CLIParserFree(ctx);
+
+    if (dk_len && dk_len != PICOPASS_BLOCK_SIZE) {
+        PrintAndLogEx(ERR, "Diversified Key is incorrect length");
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(INFO, _YELLOW_("Div Key: ")"%s", sprint_hex(div_key, sizeof(div_key)));
+
+    invert_hash0(div_key);
+
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
 }
 
 static int CmdHFiClassLookUp(const char *Cmd) {
@@ -5070,8 +5104,9 @@ static command_t CommandTable[] = {
     {"chk",         CmdHFiClassCheckKeys,       IfPm3Iclass,     "Check keys"},
     {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "Use loclass to perform bruteforce reader attack"},
     {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "Uses authentication trace to check for key in dictionary file"},
-    {"legrec",      CmdHFiClassLegacyRecover,   IfPm3Iclass,     "Attempts to recover the standard key of a legacy card"},
-    {"legbrute",    CmdHFiClassLegRecLookUp,    AlwaysAvailable, "Bruteforces 40 bits of a partial raw key"},
+    {"legrec",      CmdHFiClassLegacyRecover,   IfPm3Iclass,     "Recovers 24 bits of the diversified key of a legacy card provided a valid nr-mac combination"},
+    {"legbrute",    CmdHFiClassLegRecLookUp,    AlwaysAvailable, "Bruteforces 40 bits of a partial diversified key, provided 24 bits of the key and two valid nr-macs"},
+    {"unhash",      CmdHFiClassUnhash,          AlwaysAvailable, "Reverses a diversified key to retrieve hash0 pre-images after DES encryption"},
     {"-----------", CmdHelp,                    IfPm3Iclass,     "-------------------- " _CYAN_("Simulation") " -------------------"},
     {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "Simulate iCLASS tag"},
     {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "Upload file into emulator memory"},

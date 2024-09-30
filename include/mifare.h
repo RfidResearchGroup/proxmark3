@@ -99,7 +99,8 @@ typedef enum ISO14A_COMMAND {
     ISO14A_SEND_CHAINING = (1 << 10),
     ISO14A_USE_ECP = (1 << 11),
     ISO14A_USE_MAGSAFE = (1 << 12),
-    ISO14A_USE_CUSTOM_POLLING = (1 << 13)
+    ISO14A_USE_CUSTOM_POLLING = (1 << 13),
+    ISO14A_CRYPTO1MODE = (1 << 14)
 } iso14a_command_t;
 
 // Defines a frame that will be used in a polling sequence

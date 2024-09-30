@@ -1059,7 +1059,7 @@ int SelectCard14443A_4_WithParameters(bool disconnect, bool verbose, iso14a_card
     // check result
     if (resp.oldarg[0] == 0) {
         if (verbose) {
-            PrintAndLogEx(WARNING, "No ISO1443-A Card in field");
+            PrintAndLogEx(WARNING, "No ISO14443-A Card in field");
         }
         return PM3_ECARDEXCHANGE;
     }
@@ -1449,7 +1449,12 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
                   "Sends raw bytes over ISO14443a. With option to use TOPAZ 14a mode.",
                   "hf 14a raw -sc 3000     -> select, crc, where 3000 == 'read block 00'\n"
                   "hf 14a raw -ak -b 7 40  -> send 7 bit byte 0x40\n"
-                  "hf 14a raw --ecp -s     -> send ECP before select"
+                  "hf 14a raw --ecp -s     -> send ECP before select\n"
+                  "Crypto1 session example, with special auth shortcut 6xxx<key>:\n"
+                  "hf 14a raw --crypto1 -skc 6000FFFFFFFFFFFF\n"
+                  "hf 14a raw --crypto1 -kc 3000\n"
+                  "hf 14a raw --crypto1 -kc 6007FFFFFFFFFFFF\n"
+                  "hf 14a raw --crypto1 -c 3007"
                  );
 
     void *argtable[] = {
@@ -1466,6 +1471,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         arg_lit0(NULL, "ecp",             "Use enhanced contactless polling"),
         arg_lit0(NULL, "mag",             "Use Apple magsafe polling"),
         arg_lit0(NULL, "topaz",           "Use Topaz protocol to send command"),
+        arg_lit0(NULL, "crypto1",         "Use crypto1 session"),
         arg_strx1(NULL, NULL,     "<hex>", "Raw bytes to send"),
         arg_param_end
     };
@@ -1483,10 +1489,11 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     bool use_ecp = arg_get_lit(ctx, 10);
     bool use_magsafe = arg_get_lit(ctx, 11);
     bool topazmode = arg_get_lit(ctx, 12);
+    bool crypto1mode = arg_get_lit(ctx, 13);
 
     int datalen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE_MIX] = {0};
-    CLIGetHexWithReturn(ctx, 13, data, &datalen);
+    CLIGetHexWithReturn(ctx, 14, data, &datalen);
     CLIParserFree(ctx);
 
     bool bTimeout = (timeout) ? true : false;
@@ -1538,6 +1545,14 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
 
     if (topazmode) {
         flags |= ISO14A_TOPAZMODE;
+    }
+
+    if (crypto1mode) {
+        flags |= ISO14A_CRYPTO1MODE;
+        if (numbits > 0 || topazmode || use_ecp || use_magsafe) {
+            PrintAndLogEx(FAILED, "crypto1 mode cannot be used with other modes or partial bytes");
+            return PM3_EINVARG;
+        }
     }
 
     if (no_rats) {

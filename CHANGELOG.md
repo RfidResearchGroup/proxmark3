@@ -4,22 +4,27 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Changed split PacketResponseNG status into status and reason(@douniwan5788)
-- Print LUA and Python versions in `hw version` command (@jmichelp)
+- Added maur keys (@iceman1001)
+- Fixed `hf mfu pwdgen` for the 7 byte UID (@ANTodorov)
+- Added `hf iclass unhash` command to reverse an iclass diversified key to hash0 pre-images (@antiklesys)
+- Added crypto1 support to `hf 14a raw` (@doegox)
+- Changed `hw version` command to print LUA and Python versions (@jmichelp)
 - Updated LUA to v5.4.7 which adds utf-8 support (@jmichelp)
 - Changed `lf search` - it now tries to read and decode paxton id (@iceman1001)
 - Changed `lf search` - to identify hitag2/s/82xx in chipset detection to preserve their EM4100 or other outputs (@iceman1001)
 - Added `lf hitag hts reader` - to act as a HitagS / 82xx reader (@iceman1001)
-- Changed `lf hitag hts write` -> ´lf hitag hts wdbl` to fit rest of client command names (@iceman1001)
-- Changed `lf hitag hts read` -> ´lf hitag hts rdbl` to fit rest of client command names (@iceman1001)
+- Changed `lf hitag hts write` -> `lf hitag hts wdbl` to fit rest of client command names (@iceman1001)
+- Changed `lf hitag hts read` -> `lf hitag hts rdbl` to fit rest of client command names (@iceman1001)
 - Changed `hf mf info` - Better handling when printing ATS (@iceman1001)
 - Changed to also try the MFC_B key when extracting memory (@iceman1001)
-- Fix parallel `make -j check`  Thanks @elboulangero  (@iceman1001)
+- Fixed parallel `make -j check`  Thanks @elboulangero  (@iceman1001)
 - Added support for 8268/8310 (@douniwan5788)
 - Changed scripting string params to accept 1024 chars, Thanks @evildaemond! (@iceman1001)
 - Added detection for FM11NT021 (@iceman1001)
 - Added detection of a magic NTAG 215 (@iceman1001)
 - Fixed hardnested on AVX512F #2410 (@xianglin1998)
 - Added `hf 14a aidsim` - simulates a PICC (like `14a sim`), and allows you to respond to specific AIDs and getData responses (@evildaemond)
+- Fixed incorrect argument count for `SimulateIso14443aTag` in `hf_young.c`.
 
 ## [Backdoor.4.18994][2024-09-10]
 - Changed flashing messages to be less scary (@iceman1001)

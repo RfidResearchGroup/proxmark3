@@ -363,7 +363,8 @@ static int CmdLFHitagSSim(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("8", "82xx", "simulate 8268/8310"),
-        arg_param_end};
+        arg_param_end
+    };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     // bool use_82xx = arg_get_lit(ctx, 1);    // not implemented yet
