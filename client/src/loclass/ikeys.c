@@ -545,7 +545,6 @@ void invert_hash0(uint8_t k[8]) {
         for (int n=0; n < 8; n++){
            uint8_t hydra_head = getSixBitByte(c, n);
             if(hydra_head <= (n % 4) || hydra_head >= 63-(n % 4)){
-                //PrintAndLogEx(INFO, _YELLOW_("Hail Hydra - Hydra Head: %02x"),hydra_head);
                 // Create new forks by duplicating existing uint64_t values
                 int new_head = heads_count * 2;
                 hydra_heads = (uint64_t*)realloc(hydra_heads, new_head * sizeof(uint64_t));
@@ -563,7 +562,6 @@ void invert_hash0(uint8_t k[8]) {
                         for(int fh = 0; fh < 4; fh++){
                             if(hydra_lil_spawns[fh] == hydra_head){
                                 big_hydra_head = hydra_big_spawns[fh];
-                                //PrintAndLogEx(INFO, _YELLOW_("Head Replacement B: %02x"),big_hydra_head);
                             }
                         }
                     }else if(hydra_head >= 63-(n % 4)){ //or the higher range
@@ -572,7 +570,6 @@ void invert_hash0(uint8_t k[8]) {
                         for(int fh = 0; fh < 4; fh++){
                             if(hydra_big_spawns[fh] == hydra_head){
                                 small_hydra_head = hydra_lil_spawns[fh];
-                                //PrintAndLogEx(INFO, _YELLOW_("Head Replacement S: %02x"),small_hydra_head);
                             }
                         }
                     }
