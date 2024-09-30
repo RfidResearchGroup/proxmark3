@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added maur keys (@iceman1001)
 - Fixed `hf mfu pwdgen` for the 7 byte UID (@ANTodorov)
 - Added `hf iclass unhash` command to reverse an iclass diversified key to hash0 pre-images (@antiklesys)
 - Added crypto1 support to `hf 14a raw` (@doegox)
