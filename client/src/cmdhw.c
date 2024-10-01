@@ -1673,7 +1673,7 @@ void pm3_version(bool verbose, bool oneliner) {
     PrintAndLogEx(NORMAL, "  native BT support......... " _YELLOW_("absent"));
 #endif
 #ifdef HAVE_PYTHON
-    PrintAndLogEx(NORMAL, "  Python script support..... " _GREEN_("present") " (" _YELLOW_(PY_VERSION) ")");
+    PrintAndLogEx(NORMAL, "  Python script support..... " _GREEN_("present") " ( " _YELLOW_(PY_VERSION) " )");
 #else
     PrintAndLogEx(NORMAL, "  Python script support..... " _YELLOW_("absent"));
 #endif
@@ -1682,7 +1682,7 @@ void pm3_version(bool verbose, bool oneliner) {
 #else
     PrintAndLogEx(NORMAL, "  Python SWIG support....... " _YELLOW_("absent"));
 #endif
-    PrintAndLogEx(NORMAL, "  Lua script support........ " _GREEN_("present") " (" _YELLOW_("%s.%s.%s") ")", LUA_VERSION_MAJOR, LUA_VERSION_MINOR, LUA_VERSION_RELEASE);
+    PrintAndLogEx(NORMAL, "  Lua script support........ " _GREEN_("present") " ( " _YELLOW_("%s.%s.%s") " )", LUA_VERSION_MAJOR, LUA_VERSION_MINOR, LUA_VERSION_RELEASE);
 #ifdef HAVE_LUA_SWIG
     PrintAndLogEx(NORMAL, "  Lua SWIG support.......... " _GREEN_("present"));
 #else
