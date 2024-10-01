@@ -4184,6 +4184,7 @@ static int CmdHFiClassUnhash(const char *Cmd) {
     invert_hash0(div_key);
 
     PrintAndLogEx(SUCCESS, "You can now retrieve the master key by cracking DES with hashcat!");
+    PrintAndLogEx(SUCCESS, "hashcat.exe -a 3 -m 14000 preimage:csn -1 charsets/DES_full.hcchr --hex-charset ?1?1?1?1?1?1?1?1");
 
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
