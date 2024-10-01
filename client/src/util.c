@@ -529,7 +529,7 @@ char *sprint_hex_ascii(const uint8_t *data, const size_t len) {
 
     while (i < max_len) {
         unsigned char c = (unsigned char)data[i];
-        tmp[pos + i]  = isprint(c) ? c : '.';
+        tmp[pos + i]  = (isprint(c) && c != 0xff) ? c : '.';
         ++i;
     }
 out:
@@ -546,7 +546,7 @@ char *sprint_ascii_ex(const uint8_t *data, const size_t len, const size_t min_st
 
     while (i < max_len) {
         unsigned char c = (unsigned char)data[i];
-        tmp[i]  = isprint(c) ? c : '.';
+        tmp[i]  = (isprint(c) && c != 0xff) ? c : '.';
         ++i;
     }
 
