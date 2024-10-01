@@ -283,7 +283,7 @@ static void iclass_encrypt_block_data(uint8_t *blk_data, uint8_t *key) {
     mbedtls_des3_free(&ctx);
 }
 
-static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *key, bool got_kr) {
+static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *key, bool got_kr, uint8_t *card_key, bool got_krki, bool use_elite) {
     if (check_config_card(o) == false) {
         return PM3_EINVARG;
     }
@@ -294,8 +294,13 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
     memcpy(configcard.csn, "\x41\x87\x66\x00\xFB\xFF\x12\xE0", 8);
     memcpy(&configcard.conf, "\xFF\xFF\xFF\xFF\xF9\xFF\xFF\xBC", 8);
     memcpy(&configcard.epurse, "\xFE\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8);
-    // defaulting to known AA1 key
-    HFiClassCalcDivKey(configcard.csn, iClass_Key_Table[0], configcard.key_d, false);
+
+    if(got_krki){
+        HFiClassCalcDivKey(configcard.csn, card_key, configcard.key_d, use_elite);
+    }else if (!got_krki){
+        // defaulting to AA1 ki 0
+        HFiClassCalcDivKey(configcard.csn, iClass_Key_Table[0], configcard.key_d, use_elite);
+    }
 
     // reference
     picopass_hdr_t *cc = &configcard;
@@ -306,7 +311,12 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
     if (res == PM3_SUCCESS) {
         cc = &iclass_last_known_card;
         // calc diversified key for selected card
-        HFiClassCalcDivKey(cc->csn, iClass_Key_Table[0], cc->key_d, false);
+        if(got_krki){
+            HFiClassCalcDivKey(cc->csn, card_key, cc->key_d, use_elite);
+        }else if (!got_krki){
+            // defaulting to AA1 ki 0
+            HFiClassCalcDivKey(cc->csn, iClass_Key_Table[0], cc->key_d, false);
+        }
     } else {
         PrintAndLogEx(FAILED, "failed to read a card");
         PrintAndLogEx(INFO, "falling back to default config card");
@@ -4916,19 +4926,34 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int ccidx = arg_get_int_def(ctx, 1, -1);
-    int kidx = arg_get_int_def(ctx, 2, -1);
-    bool do_generate = arg_get_lit(ctx, 3);
-    bool do_load = arg_get_lit(ctx, 4);
-    bool do_print = arg_get_lit(ctx, 5);
+    int card_kidx = arg_get_int_def(ctx, 2, -1);
+    int kidx = arg_get_int_def(ctx, 3, -1);
+    bool elite = arg_get_lit(ctx, 4);
+    bool do_generate = arg_get_lit(ctx, 5);
+    bool do_load = arg_get_lit(ctx, 6);
+    bool do_print = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
+    bool got_krki = false;
+    uint8_t card_key[8] = {0};
+    if (card_kidx >= 0) {
+        if (card_kidx < ICLASS_KEYS_MAX) {
+            got_krki = true;
+            memcpy(card_key, iClass_Key_Table[card_kidx], 8);
+            PrintAndLogEx(SUCCESS, "Using card key[%d] " _GREEN_("%s"), card_kidx, sprint_hex(iClass_Key_Table[card_kidx], 8));
+        } else {
+            PrintAndLogEx(ERR, "--krki number is invalid");
+            return PM3_EINVARG;
+        }
+    }
+
     bool got_kr = false;
-    uint8_t key[8] = {0};
+    uint8_t keyroll_key[8] = {0};
     if (kidx >= 0) {
         if (kidx < ICLASS_KEYS_MAX) {
             got_kr = true;
-            memcpy(key, iClass_Key_Table[kidx], 8);
-            PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), kidx, sprint_hex(iClass_Key_Table[kidx], 8));
+            memcpy(keyroll_key, iClass_Key_Table[kidx], 8);
+            PrintAndLogEx(SUCCESS, "Using keyroll key[%d] " _GREEN_("%s"), kidx, sprint_hex(iClass_Key_Table[kidx], 8));
         } else {
             PrintAndLogEx(ERR, "--ki number is invalid");
             return PM3_EINVARG;
@@ -4960,7 +4985,7 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
                 return PM3_EINVARG;
             }
         }
-        generate_config_card(item, key, got_kr);
+        generate_config_card(item, keyroll_key, got_kr, card_key, got_krki, elite);
     }
 
     return PM3_SUCCESS;
