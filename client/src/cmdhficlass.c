@@ -4156,13 +4156,14 @@ static int CmdHFiClassUnhash(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass unhash",
-                  "Reverses the hash0 function used generate iclass diversified keys after DES encryption, returning the DES crypted CSN.",
-                  "hf iclass unhash --divkey B4F12AADC5301A2D"
+                  "Reverses the hash0 function used generate iclass diversified keys after DES encryption,\n"
+                  "Function returns the DES crypted CSN.  Next step bruteforcing.",
+                  "hf iclass unhash -k B4F12AADC5301A2D"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1(NULL, "divkey", "<hex>", "The card's Diversified Key value"),
+        arg_str1("k", "divkey", "<hex>", "Card diversified key"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4174,13 +4175,15 @@ static int CmdHFiClassUnhash(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (dk_len && dk_len != PICOPASS_BLOCK_SIZE) {
-        PrintAndLogEx(ERR, "Diversified Key is incorrect length");
+        PrintAndLogEx(ERR, "Diversified key is incorrect length");
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(INFO, _YELLOW_("Div Key: ")"%s", sprint_hex(div_key, sizeof(div_key)));
+    PrintAndLogEx(INFO, "Diversified key... %s", sprint_hex_inrow(div_key, sizeof(div_key)));
 
     invert_hash0(div_key);
+
+    // iceman:  add hint for next step?
 
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
