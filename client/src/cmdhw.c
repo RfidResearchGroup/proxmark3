@@ -1677,16 +1677,16 @@ void pm3_version(bool verbose, bool oneliner) {
 #else
     PrintAndLogEx(NORMAL, "  Python script support..... " _YELLOW_("absent"));
 #endif
-#ifdef HAVE_LUA_SWIG
-    PrintAndLogEx(NORMAL, "  Lua SWIG support.......... " _GREEN_("present"));
-#else
-    PrintAndLogEx(NORMAL, "  Lua SWIG support.......... " _YELLOW_("absent"));
-#endif
-    PrintAndLogEx(NORMAL, "  Lua runtime version....... " _GREEN_(LUA_RELEASE));
 #ifdef HAVE_PYTHON_SWIG
     PrintAndLogEx(NORMAL, "  Python SWIG support....... " _GREEN_("present"));
 #else
     PrintAndLogEx(NORMAL, "  Python SWIG support....... " _YELLOW_("absent"));
+#endif
+    PrintAndLogEx(NORMAL, "  Lua script support........ " _GREEN_("present") " (" _YELLOW_("%s.%s.%s") ")", LUA_VERSION_MAJOR, LUA_VERSION_MINOR, LUA_VERSION_RELEASE);
+#ifdef HAVE_LUA_SWIG
+    PrintAndLogEx(NORMAL, "  Lua SWIG support.......... " _GREEN_("present"));
+#else
+    PrintAndLogEx(NORMAL, "  Lua SWIG support.......... " _YELLOW_("absent"));
 #endif
 
     if (g_session.pm3_present) {
