@@ -297,7 +297,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
 
     if (got_krki) {
         HFiClassCalcDivKey(configcard.csn, card_key, configcard.key_d, use_elite);
-    } else if (!got_krki) {
+    } else {
         // defaulting to AA1 ki 0
         HFiClassCalcDivKey(configcard.csn, iClass_Key_Table[0], configcard.key_d, use_elite);
     }
@@ -313,9 +313,9 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         // calc diversified key for selected card
         if (got_krki) {
             HFiClassCalcDivKey(cc->csn, card_key, cc->key_d, use_elite);
-        } else if (!got_krki) {
+        } else {
             // defaulting to AA1 ki 0
-            HFiClassCalcDivKey(cc->csn, iClass_Key_Table[0], cc->key_d, false);
+            HFiClassCalcDivKey(cc->csn, iClass_Key_Table[0], cc->key_d, use_elite);
         }
     } else {
         PrintAndLogEx(FAILED, "failed to read a card");
