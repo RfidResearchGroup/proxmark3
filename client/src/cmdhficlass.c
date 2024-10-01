@@ -4183,7 +4183,7 @@ static int CmdHFiClassUnhash(const char *Cmd) {
 
     invert_hash0(div_key);
 
-    // iceman:  add hint for next step?
+    PrintAndLogEx(SUCCESS, "You can now retrieve the master key by cracking DES with hashcat!");
 
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
