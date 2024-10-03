@@ -260,7 +260,7 @@ static void init_bitflip_bitarrays(void) {
 #endif
     uint64_t init_bitflip_bitarrays_starttime = msclock();
 
-    char state_file_name[MAX(strlen(STATE_FILE_TEMPLATE_RAW), MAX(strlen(STATE_FILE_TEMPLATE_LZ4), strlen(STATE_FILE_TEMPLATE_BZ2))) + 1];
+    char state_file_name[MAX(sizeof(STATE_FILE_TEMPLATE_RAW), MAX(sizeof(STATE_FILE_TEMPLATE_LZ4), sizeof(STATE_FILE_TEMPLATE_BZ2)))];
     char state_files_path[strlen(get_my_executable_directory()) + strlen(STATE_FILES_DIRECTORY) + sizeof(state_file_name)];
     uint16_t nraw = 0, nlz4 = 0, nbz2 = 0;
     for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
