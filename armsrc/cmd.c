@@ -138,7 +138,7 @@ static int reply_ng_internal(uint16_t cmd, int8_t status, uint8_t reason, const 
 }
 
 int reply_ng(uint16_t cmd, int8_t status, const uint8_t *data, size_t len) {
-    return reply_ng_internal(cmd, status, -1, data, len, true);
+    return reply_ng_internal(cmd, status, PM3_REASON_UNKNOWN, data, len, true);
 }
 
 int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len) {
@@ -154,7 +154,7 @@ int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const v
         memcpy(cmddata + sizeof(arg), data, (int)len);
     }
 
-    return reply_ng_internal((cmd & 0xFFFF), status, -1, cmddata, len + sizeof(arg), false);
+    return reply_ng_internal((cmd & 0xFFFF), status, PM3_REASON_UNKNOWN, cmddata, len + sizeof(arg), false);
 }
 
 int reply_reason(uint16_t cmd, int8_t status, int8_t reason, const uint8_t *data, size_t len) {

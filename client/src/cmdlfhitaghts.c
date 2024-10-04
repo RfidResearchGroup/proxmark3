@@ -210,7 +210,8 @@ static void print_error(int8_t reason) {
             PrintAndLogEx(FAILED, "Write to page failed!");
             break;
         default:
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Hitag S failed");
+          // PM3_REASON_UNKNOWN
+          PrintAndLogEx(DEBUG, "DEBUG: Error - Hitag S failed");
     }
 }
 
@@ -237,7 +238,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
         arg_lit0(NULL, "crypto", "crypto mode"),
         arg_str0("k", "key", "<hex>", "pwd or key, 4 or 6 hex bytes"),
         arg_int0("p", "page", "<dec>", "page address to read from"),
-        arg_int0("c", "count", "<dec>", "how many pages to read. '0' reads all pages up to the s page (default: 1)"),
+        arg_int0("c", "count", "<dec>", "how many pages to read. '0' reads all pages up to the end page (default: 1)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

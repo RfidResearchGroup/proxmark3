@@ -874,6 +874,8 @@ typedef struct {
 // reserved for future protocol change
 #define PM3_RESERVED         -128
 
+#define PM3_REASON_UNKNOWN     -1
+
 // LF
 #define LF_FREQ2DIV(f) ((int)(((12000.0 + (f)/2.0)/(f))-1))
 #define LF_DIVISOR_125 LF_FREQ2DIV(125)
