@@ -179,6 +179,41 @@ static int process_hitags_common_args(CLIParserContext *ctx, lf_hitag_data_t *co
 
     return PM3_SUCCESS;
 }
+
+static void print_error(int8_t reason) {
+    switch (reason) {
+        case -2:
+            PrintAndLogEx(FAILED, "UID Request failed!");
+            break;
+        case -3:
+            PrintAndLogEx(FAILED, "Select UID failed!");
+            break;
+        case -4:
+            PrintAndLogEx(FAILED, "No write access on page " _YELLOW_("64") ". not 82xx?");
+            break;
+        case -5:
+            PrintAndLogEx(FAILED, "Write to page " _YELLOW_("64") " failed! wrong password?");
+            break;
+        case -6:
+            PrintAndLogEx(FAILED, "Error, " _YELLOW_("AUT=1") " This tag is configured in Authentication Mode");
+            break;
+        case -7:
+            PrintAndLogEx(FAILED, "Error, unknown function");
+            break;
+        case -8:
+            PrintAndLogEx(FAILED, "Authenticate failed!");
+            break;
+        case -9:
+            PrintAndLogEx(FAILED, "No write access on page");
+            break;
+        case -10:
+            PrintAndLogEx(FAILED, "Write to page failed!");
+            break;
+        default:
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Hitag S failed");
+    }
+}
+
 static int CmdLFHitagSRead(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag hts rdbl",
@@ -225,7 +260,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
     }
 
     if (resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - hitag failed");
+        print_error(resp.reason);
         return PM3_ESOFT;
     }
 
@@ -312,7 +347,7 @@ static int CmdLFHitagSWrite(const char *Cmd) {
     }
 
     if (resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
+        print_error(resp.reason);
         return resp.status;
     }
 
@@ -425,9 +460,10 @@ static command_t CommandTable[] = {
     {"list",        CmdLFHitagSList,   AlwaysAvailable, "List Hitag S trace history"},
     {"-----------", CmdHelp,           IfPm3Hitag,      "----------------------- " _CYAN_("General") " ------------------------"},
     {"reader",      CmdLFHitagSReader, IfPm3Hitag,      "Act like a Hitag S reader"},
-    {"rdbl",        CmdLFHitagSRead,   IfPm3Hitag,      "Read Hitag S memory"},
+    {"rdbl",        CmdLFHitagSRead,   IfPm3Hitag,      "Read Hitag S page"},
     {"wrbl",        CmdLFHitagSWrite,  IfPm3Hitag,      "Write Hitag S page"},
-    {"sim",         CmdLFHitagSSim,    IfPm3Hitag,      "Simulate Hitag transponder"},
+    {"-----------", CmdHelp,           IfPm3Hitag,      "----------------------- " _CYAN_("Simulation") " -----------------------"},
+    {"sim",         CmdLFHitagSSim,    IfPm3Hitag,      "Simulate Hitag S transponder"},
     {NULL,          NULL,              0,               NULL}
 };
 

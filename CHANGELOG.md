@@ -14,6 +14,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added crypto1 support to `hf 14a raw` (@doegox)
 - Changed `hw version` command to print LUA and Python versions (@jmichelp)
 - Updated LUA to v5.4.7 which adds utf-8 support (@jmichelp)
+- Moved `lf hitag sim --hts` -> `lf hitag hts sim` (@douniwan5788)
+- Removed `lf hitag read/write --hts` (@douniwan5788)
 - Changed `lf search` - it now tries to read and decode paxton id (@iceman1001)
 - Changed `lf search` - to identify hitag2/s/82xx in chipset detection to preserve their EM4100 or other outputs (@iceman1001)
 - Added `lf hitag hts reader` - to act as a HitagS / 82xx reader (@iceman1001)
