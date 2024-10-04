@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed split PacketResponseNG status into status and reason(@douniwan5788)
 - add a helper script to decode JEDEC data `script run spi_flash_decode` (@ANTodorov)
 - show SPI flash JEDEC Manufacturer ID and Device ID in `hw status` output (@ANTodorov)
 - Improved `hf iclass configcards` to support generating config cards using a different key than the default k0 as the card's key (@antiklesys)

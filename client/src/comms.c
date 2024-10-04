@@ -481,6 +481,7 @@ __attribute__((force_align_arg_pointer))
                 uint16_t length = rx_raw.pre.length;
                 rx.ng = rx_raw.pre.ng;
                 rx.status = rx_raw.pre.status;
+                rx.reason = rx_raw.pre.reason;
                 rx.cmd = rx_raw.pre.cmd;
 
                 if (rx.magic == RESPONSENG_PREAMBLE_MAGIC) { // New style NG reply
