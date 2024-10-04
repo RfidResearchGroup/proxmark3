@@ -1179,7 +1179,9 @@ static void hf15EmlClear(void) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO15693_EML_CLEAR, NULL, 0);
     PacketResponseNG resp;
-    WaitForResponse(CMD_HF_ISO15693_EML_CLEAR, &resp);
+    if (WaitForResponseTimeout(CMD_HF_ISO15693_EML_CLEAR, &resp, 2500) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+    }
 }
 
 static int hf15EmlSetMem(const uint8_t *data, uint16_t count, size_t offset) {

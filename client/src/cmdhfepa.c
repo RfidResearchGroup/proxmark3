@@ -73,7 +73,6 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
         PacketResponseNG resp;
         clearCommandBuffer();
         SendCommandNG(CMD_HF_EPA_COLLECT_NONCE, (uint8_t *)&payload, sizeof(payload));
-
         WaitForResponse(CMD_HF_EPA_COLLECT_NONCE, &resp);
 
         // check if command failed
@@ -241,7 +240,6 @@ static int CmdHFEPAPACESimulate(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_EPA_PACE_SIMULATE, 0, 0, 0, pwd, plen);
-
     PacketResponseNG resp;
     WaitForResponse(CMD_ACK, &resp);
 

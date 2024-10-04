@@ -3900,7 +3900,6 @@ static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, u
         PacketResponseNG resp;
         clearCommandBuffer();
         SendCommandNG(CMD_HF_ICLASS_RECOVER, (uint8_t *)payload, payload_size);
-
         WaitForResponse(CMD_HF_ICLASS_RECOVER, &resp);
 
         if (resp.status == PM3_SUCCESS) {

@@ -244,7 +244,7 @@ static int CmdVisa2kClone(const char *Cmd) {
     } else {
         res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     }
-    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(SUCCESS, "Done!");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf visa2000 reader`") " to verify");
     return res;
 }

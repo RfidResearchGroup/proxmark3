@@ -1677,7 +1677,10 @@ static int CmdHFMFPChk(const char *Cmd) {
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
 
         PacketResponseNG resp;
-        WaitForResponse(CMD_ACK, &resp);
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            return PM3_ETIMEOUT;
+        }
 
         iso14a_card_select_t card;
         memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));

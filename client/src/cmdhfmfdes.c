@@ -1465,9 +1465,11 @@ static int CmdHF14aDesChk(const char *Cmd) {
         DropField();
         // MIFARE DESFire info
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
-
         PacketResponseNG resp;
-        WaitForResponse(CMD_ACK, &resp);
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            return PM3_ETIMEOUT;
+        }
 
         iso14a_card_select_t card;
         memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
@@ -2173,7 +2175,7 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, _GREEN_("Done"));
+    PrintAndLogEx(SUCCESS, _GREEN_("Done!"));
     DropField();
     return PM3_SUCCESS;
 }
@@ -2923,7 +2925,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Desfire format: " _GREEN_("done"));
+    PrintAndLogEx(SUCCESS, "Desfire format: " _GREEN_("done!"));
 
     DropField();
     return PM3_SUCCESS;

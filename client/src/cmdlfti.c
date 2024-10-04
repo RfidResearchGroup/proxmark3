@@ -369,7 +369,7 @@ static int CmdTIWrite(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_TI_WRITE, (uint8_t *)&payload, sizeof(payload));
-    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(SUCCESS, "Done!");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf ti reader`") " to verify");
     return PM3_SUCCESS;
 }

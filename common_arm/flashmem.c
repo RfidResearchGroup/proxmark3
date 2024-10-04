@@ -49,12 +49,12 @@ void FlashmemSetSpiBaudrate(uint32_t baudrate) {
 }
 
 // read ID out
-bool Flash_ReadID(flash_device_type_t *result, bool read_jedec ) {
+bool Flash_ReadID(flash_device_type_t *result, bool read_jedec) {
 
     if (Flash_CheckBusy(BUSY_TIMEOUT)) return false;
 
 
-    if ( read_jedec) {
+    if (read_jedec) {
         // 0x9F JEDEC
         FlashSendByte(JEDECID);
 
@@ -382,10 +382,10 @@ void Flashmem_print_status(void) {
         }
         if (Flash_ReadID(&device_type, true)) {
             Dbprintf("  JEDEC Mfr ID / Dev ID... " _YELLOW_("%02X / %02X%02X"),
-                         device_type.manufacturer_id,
-                         device_type.device_id,
-                         device_type.device_id2
-                        );
+                     device_type.manufacturer_id,
+                     device_type.device_id,
+                     device_type.device_id2
+                    );
         }
     }
 

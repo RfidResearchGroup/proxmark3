@@ -457,23 +457,27 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
-    WaitForResponse(CMD_ACK, &resp);
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        return PM3_ETIMEOUT;
+    }
+
     memcpy(card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
     uint64_t select_status = resp.oldarg[0]; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
 
     if (select_status == 0) {
-        PrintAndLogEx(ERR, "E->iso14443a card select failed");
+        PrintAndLogEx(ERR, "iso14443a card select failed");
         return PM3_EFAILED;
     }
 
     if (select_status == 2) {
-        PrintAndLogEx(ERR, "E->Card doesn't support iso14443-4 mode");
+        PrintAndLogEx(ERR, "Card doesn't support iso14443-4 mode");
         return PM3_EFAILED;
     }
 
     if (select_status == 3) {
-        PrintAndLogEx(INFO, "E->Card doesn't support standard iso14443-3 anticollision");
+        PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
         // identify TOPAZ
         if (card->atqa[1] == 0x0C && card->atqa[0] == 0x00) {
             PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf topaz info`"));
@@ -489,7 +493,7 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 
     // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
     if (card->ats_len < 3) {
-        PrintAndLogEx(INFO, "E-> Error ATS length(%d) : %s", card->ats_len, sprint_hex(card->ats, card->ats_len));
+        PrintAndLogEx(INFO, "Error ATS length(%d) : %s", card->ats_len, sprint_hex(card->ats, card->ats_len));
         return PM3_ECARDEXCHANGE;
     }
 
@@ -754,9 +758,12 @@ static int CmdHF14ACUIDs(const char *Cmd) {
 
         // execute anticollision procedure
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
-
         PacketResponseNG resp;
-        WaitForResponse(CMD_ACK, &resp);
+
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            return PM3_ETIMEOUT;
+        }
 
         iso14a_card_select_t *card = (iso14a_card_select_t *) resp.data.asBytes;
 
@@ -773,7 +780,7 @@ static int CmdHF14ACUIDs(const char *Cmd) {
         }
     }
     PrintAndLogEx(SUCCESS, "end: %" PRIu64 " seconds", (msclock() - t1) / 1000);
-    return 1;
+    return PM3_SUCCESS;
 }
 
 // ## simulate iso14443a tag
@@ -2217,7 +2224,11 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                         // reconnect for further tests
                         clearCommandBuffer();
                         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
-                        WaitForResponse(CMD_ACK, &resp);
+                        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+                            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+                            DropField();
+                            return PM3_ETIMEOUT;
+                        }
 
                         memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
@@ -2273,7 +2284,10 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, sizeof(rats));
-        WaitForResponse(CMD_ACK, &resp);
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            return PM3_ETIMEOUT;
+        }
 
         memcpy(card.ats, resp.data.asBytes, resp.oldarg[0]);
         card.ats_len = resp.oldarg[0]; // note: ats_len includes CRC Bytes

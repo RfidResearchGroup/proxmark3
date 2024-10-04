@@ -340,7 +340,10 @@ static int CmdEM4x50Login(const char *Cmd) {
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandNG(CMD_LF_EM4X50_LOGIN, (uint8_t *)&password, sizeof(password));
-    WaitForResponse(CMD_LF_EM4X50_LOGIN, &resp);
+    if (WaitForResponseTimeout(CMD_LF_EM4X50_LOGIN, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        return PM3_ETIMEOUT;
+    }
 
     // print response
     if (resp.status == PM3_SUCCESS)
