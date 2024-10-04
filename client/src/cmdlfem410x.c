@@ -799,12 +799,15 @@ static int CmdEM410xClone(const char *Cmd) {
         payload.low = (uint32_t)id;
 
         SendCommandNG(CMD_LF_EM410X_CLONE, (uint8_t *)&payload, sizeof(payload));
-        WaitForResponse(CMD_LF_EM410X_CLONE, &resp);
+        if (WaitForResponseTimeout(CMD_LF_EM410X_CLONE, &resp, 2000) == false) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            return PM3_ETIMEOUT;
+        }
     }
 
     switch (resp.status) {
         case PM3_SUCCESS: {
-            PrintAndLogEx(SUCCESS, "Done");
+            PrintAndLogEx(SUCCESS, "Done!");
             PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 410x reader`") " to verify");
             break;
         }

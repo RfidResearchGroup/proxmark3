@@ -49,18 +49,28 @@ void FlashmemSetSpiBaudrate(uint32_t baudrate) {
 }
 
 // read ID out
-bool Flash_ReadID_90(flash_device_type_90_t *result) {
+bool Flash_ReadID(flash_device_type_t *result, bool read_jedec) {
 
     if (Flash_CheckBusy(BUSY_TIMEOUT)) return false;
 
-    // Manufacture ID / device ID
-    FlashSendByte(ID);
-    FlashSendByte(0x00);
-    FlashSendByte(0x00);
-    FlashSendByte(0x00);
 
-    result->manufacturer_id = FlashSendByte(0xFF);
-    result->device_id       = FlashSendLastByte(0xFF);
+    if (read_jedec) {
+        // 0x9F JEDEC
+        FlashSendByte(JEDECID);
+
+        result->manufacturer_id = FlashSendByte(0xFF);
+        result->device_id       = FlashSendByte(0xFF);
+        result->device_id2      = FlashSendLastByte(0xFF);
+    } else {
+        // 0x90 Manufacture ID / device ID
+        FlashSendByte(ID);
+        FlashSendByte(0x00);
+        FlashSendByte(0x00);
+        FlashSendByte(0x00);
+
+        result->manufacturer_id = FlashSendByte(0xFF);
+        result->device_id       = FlashSendLastByte(0xFF);
+    }
 
     return true;
 }
@@ -346,8 +356,8 @@ void Flashmem_print_status(void) {
 
     // NOTE: It would likely be more useful to use JDEC ID command 9F,
     //       as it provides a third byte indicative of capacity.
-    flash_device_type_90_t device_type = {0};
-    if (!Flash_ReadID_90(&device_type)) {
+    flash_device_type_t device_type = {0};
+    if (!Flash_ReadID(&device_type, false)) {
         DbpString("  Device ID............... " _RED_(" -->  Not Found  <--"));
     } else {
         if (device_type.manufacturer_id == WINBOND_MANID) {
@@ -368,6 +378,13 @@ void Flashmem_print_status(void) {
             Dbprintf("  Device ID............... " _YELLOW_("%02X / %02X (unknown)"),
                      device_type.manufacturer_id,
                      device_type.device_id
+                    );
+        }
+        if (Flash_ReadID(&device_type, true)) {
+            Dbprintf("  JEDEC Mfr ID / Dev ID... " _YELLOW_("%02X / %02X%02X"),
+                     device_type.manufacturer_id,
+                     device_type.device_id,
+                     device_type.device_id2
                     );
         }
     }

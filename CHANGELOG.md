@@ -4,6 +4,9 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Changed split PacketResponseNG status into status and reason(@douniwan5788)
+- add a helper script to decode JEDEC data `script run spi_flash_decode` (@ANTodorov)
+- show SPI flash JEDEC Manufacturer ID and Device ID in `hw status` output (@ANTodorov)
+- Improved `hf iclass configcards` to support generating config cards using a different key than the default k0 as the card's key (@antiklesys)
 - Added maur keys (@iceman1001)
 - Fixed `hf mfu pwdgen` for the 7 byte UID (@ANTodorov)
 - Added `hf iclass unhash` command to reverse an iclass diversified key to hash0 pre-images (@antiklesys)

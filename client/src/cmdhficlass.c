@@ -283,7 +283,7 @@ static void iclass_encrypt_block_data(uint8_t *blk_data, uint8_t *key) {
     mbedtls_des3_free(&ctx);
 }
 
-static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *key, bool got_kr) {
+static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *key, bool got_kr, uint8_t *card_key, bool got_krki, bool use_elite) {
     if (check_config_card(o) == false) {
         return PM3_EINVARG;
     }
@@ -294,8 +294,13 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
     memcpy(configcard.csn, "\x41\x87\x66\x00\xFB\xFF\x12\xE0", 8);
     memcpy(&configcard.conf, "\xFF\xFF\xFF\xFF\xF9\xFF\xFF\xBC", 8);
     memcpy(&configcard.epurse, "\xFE\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8);
-    // defaulting to known AA1 key
-    HFiClassCalcDivKey(configcard.csn, iClass_Key_Table[0], configcard.key_d, false);
+
+    if (got_krki) {
+        HFiClassCalcDivKey(configcard.csn, card_key, configcard.key_d, use_elite);
+    } else {
+        // defaulting to AA1 ki 0
+        HFiClassCalcDivKey(configcard.csn, iClass_Key_Table[0], configcard.key_d, use_elite);
+    }
 
     // reference
     picopass_hdr_t *cc = &configcard;
@@ -306,7 +311,12 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
     if (res == PM3_SUCCESS) {
         cc = &iclass_last_known_card;
         // calc diversified key for selected card
-        HFiClassCalcDivKey(cc->csn, iClass_Key_Table[0], cc->key_d, false);
+        if (got_krki) {
+            HFiClassCalcDivKey(cc->csn, card_key, cc->key_d, use_elite);
+        } else {
+            // defaulting to AA1 ki 0
+            HFiClassCalcDivKey(cc->csn, iClass_Key_Table[0], cc->key_d, use_elite);
+        }
     } else {
         PrintAndLogEx(FAILED, "failed to read a card");
         PrintAndLogEx(INFO, "falling back to default config card");
@@ -3890,7 +3900,6 @@ static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, u
         PacketResponseNG resp;
         clearCommandBuffer();
         SendCommandNG(CMD_HF_ICLASS_RECOVER, (uint8_t *)payload, payload_size);
-
         WaitForResponse(CMD_HF_ICLASS_RECOVER, &resp);
 
         if (resp.status == PM3_SUCCESS) {
@@ -4146,13 +4155,14 @@ static int CmdHFiClassUnhash(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass unhash",
-                  "Reverses the hash0 function used generate iclass diversified keys after DES encryption, returning the DES crypted CSN.",
-                  "hf iclass unhash --divkey B4F12AADC5301A2D"
+                  "Reverses the hash0 function used generate iclass diversified keys after DES encryption,\n"
+                  "Function returns the DES crypted CSN.  Next step bruteforcing.",
+                  "hf iclass unhash -k B4F12AADC5301A2D"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1(NULL, "divkey", "<hex>", "The card's Diversified Key value"),
+        arg_str1("k", "divkey", "<hex>", "Card diversified key"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4164,13 +4174,16 @@ static int CmdHFiClassUnhash(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (dk_len && dk_len != PICOPASS_BLOCK_SIZE) {
-        PrintAndLogEx(ERR, "Diversified Key is incorrect length");
+        PrintAndLogEx(ERR, "Diversified key is incorrect length");
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(INFO, _YELLOW_("Div Key: ")"%s", sprint_hex(div_key, sizeof(div_key)));
+    PrintAndLogEx(INFO, "Diversified key... %s", sprint_hex_inrow(div_key, sizeof(div_key)));
 
     invert_hash0(div_key);
+
+    PrintAndLogEx(SUCCESS, "You can now retrieve the master key by cracking DES with hashcat!");
+    PrintAndLogEx(SUCCESS, "hashcat.exe -a 3 -m 14000 preimage:csn -1 charsets/DES_full.hcchr --hex-charset ?1?1?1?1?1?1?1?1");
 
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
@@ -4907,7 +4920,9 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_int0(NULL, "ci", "<dec>", "use config slot at index"),
-        arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
+        arg_int0(NULL, "ki", "<dec>", "Card Key - index to select key from memory 'hf iclass managekeys'"),
+        arg_int0(NULL, "krki", "<dec>", "Elite Keyroll Key - index to select key from memory 'hf iclass managekeys'"),
+        arg_lit0(NULL, "elite", "Use elite key for the the Card Key ki"),
         arg_lit0("g", NULL, "generate card dump file"),
         arg_lit0("l", NULL, "load available cards"),
         arg_lit0("p", NULL, "print available cards"),
@@ -4916,19 +4931,34 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int ccidx = arg_get_int_def(ctx, 1, -1);
-    int kidx = arg_get_int_def(ctx, 2, -1);
-    bool do_generate = arg_get_lit(ctx, 3);
-    bool do_load = arg_get_lit(ctx, 4);
-    bool do_print = arg_get_lit(ctx, 5);
+    int card_kidx = arg_get_int_def(ctx, 2, -1);
+    int kidx = arg_get_int_def(ctx, 3, -1);
+    bool elite = arg_get_lit(ctx, 4);
+    bool do_generate = arg_get_lit(ctx, 5);
+    bool do_load = arg_get_lit(ctx, 6);
+    bool do_print = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
+    bool got_krki = false;
+    uint8_t card_key[8] = {0};
+    if (card_kidx >= 0) {
+        if (card_kidx < ICLASS_KEYS_MAX) {
+            got_krki = true;
+            memcpy(card_key, iClass_Key_Table[card_kidx], 8);
+            PrintAndLogEx(SUCCESS, "Using card key[%d] " _GREEN_("%s"), card_kidx, sprint_hex(iClass_Key_Table[card_kidx], 8));
+        } else {
+            PrintAndLogEx(ERR, "--krki number is invalid");
+            return PM3_EINVARG;
+        }
+    }
+
     bool got_kr = false;
-    uint8_t key[8] = {0};
+    uint8_t keyroll_key[8] = {0};
     if (kidx >= 0) {
         if (kidx < ICLASS_KEYS_MAX) {
             got_kr = true;
-            memcpy(key, iClass_Key_Table[kidx], 8);
-            PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), kidx, sprint_hex(iClass_Key_Table[kidx], 8));
+            memcpy(keyroll_key, iClass_Key_Table[kidx], 8);
+            PrintAndLogEx(SUCCESS, "Using keyroll key[%d] " _GREEN_("%s"), kidx, sprint_hex(iClass_Key_Table[kidx], 8));
         } else {
             PrintAndLogEx(ERR, "--ki number is invalid");
             return PM3_EINVARG;
@@ -4960,7 +4990,7 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
                 return PM3_EINVARG;
             }
         }
-        generate_config_card(item, key, got_kr);
+        generate_config_card(item, keyroll_key, got_kr, card_key, got_krki, elite);
     }
 
     return PM3_SUCCESS;

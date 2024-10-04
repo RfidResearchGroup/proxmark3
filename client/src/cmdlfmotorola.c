@@ -253,7 +253,7 @@ static int CmdMotorolaClone(const char *Cmd) {
     } else {
         res = clone_t55xx_tag(blocks, ARRAYLEN(blocks));
     }
-    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(SUCCESS, "Done!");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf motorola reader`") " to verify");
     return res;
 }

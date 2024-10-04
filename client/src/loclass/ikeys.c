@@ -424,21 +424,25 @@ void invert_hash0(uint8_t k[8]) {
     for (int i = 0; i < 8; i++) {
         y |= ((k[i] & 0x80) >> (7 - i)); // Recover the bit of y from the leftmost bit of k[i]
         pushbackSixBitByte(&zTilde, (k[i] & 0x7E) >> 1, i); // Recover the six bits of zTilde from the middle of k[i]
-        if (g_debugMode > 0)printState("z~", zTilde);
+
+        if (g_debugMode > 0) printState("z~", zTilde);
+
         p |= ((k[i] & 0x01) << i);
     }
-    if (g_debugMode > 0)PrintAndLogEx(INFO, "        y : %02x", y); //value of y (recovered 1 byte of the pre-image)
-    //check if p is part of the array pi, if not invert it
-    if (g_debugMode > 0)PrintAndLogEx(INFO, "        p : %02x", p); //value of p (at some point in the original hash0)
+
+    if (g_debugMode > 0) PrintAndLogEx(INFO, "        y : %02x", y); // value of y (recovered 1 byte of the pre-image)
+    // check if p is part of the array pi, if not invert it
+    if (g_debugMode > 0) PrintAndLogEx(INFO, "        p : %02x", p); // value of p (at some point in the original hash0)
+
     int remainder = find_p_in_pi(p);
     if (remainder < 0) {
         p = ~p;
         remainder = find_p_in_pi(p);
     }
 
-    if (g_debugMode > 0)PrintAndLogEx(INFO, "  p or ~p : %02x", p); //value of p (at some point in the original hash0)
+    if (g_debugMode > 0) PrintAndLogEx(INFO, "  p or ~p : %02x", p); // value of p (at some point in the original hash0)
 
-    //find possible values of x that can return the same remainder
+    // find possible values of x that can return the same remainder
     uint8_t x_count = 0;
     uint8_t x_array[8];
     for (int x = 0x00; x <= 0xFF; x++) {
@@ -450,24 +454,31 @@ void invert_hash0(uint8_t k[8]) {
 
     uint8_t pre_image_base[8] = {0};
     pre_image_base[1] = y;
-    //calculate pre-images based on the potential values of x (should we use pre-flip p and post flip p just in case?)
-    uint64_t zTil_img[8] = {0}; //8 is the max size it'll have as per max number of X pre-images
-    for (int img = 0; img < x_count; img++) { //for each potential value of x calculate a pre-image
+
+    // calculate pre-images based on the potential values of x. Sshould we use pre-flip p and post flip p just in case?
+    uint64_t zTil_img[8] = {0}; // 8 is the max size it'll have as per max number of X pre-images
+
+    for (int img = 0; img < x_count; img++) { // for each potential value of x calculate a pre-image
+
         zTil_img[img] = zTilde;
         pre_image_base[0] = x_array[img];
-        uint8_t pc = p; //redefine and reassociate it here or it'll keep changing through the loops
-        if (x_array[img] & 1) { //Check if potential x7 is 1, if it is then invert p
+
+        uint8_t pc = p; // redefine and reassociate it here or it'll keep changing through the loops
+        if (x_array[img] & 1) { // Check if potential x7 is 1, if it is then invert p
             pc = ~p;
         }
-        //calculate zTilde for the x preimage
+
+        // calculate zTilde for the x preimage
         for (int i = 0; i < 8; i++) {
-            uint8_t p_i = (pc >> i) & 0x1; //this is correct!
+
+            uint8_t p_i = (pc >> i) & 0x1; // this is correct!
             uint8_t zTilde_i = getSixBitByte(zTilde, i) << 1;
-            if (k[i] & 0x80) { //this checks the value of the first bit of the byte (value of y_i)
+
+            if (k[i] & 0x80) { // this checks the value of the first bit of the byte (value of y_i)
                 if (p_i) {
                     zTilde_i--;
                 }
-                zTilde_i = ~zTilde_i; //flip the 6 bit string
+                zTilde_i = ~zTilde_i; // flip the 6 bit string
             } else {
                 zTilde_i |= p_i & 0x1;
             }
@@ -478,18 +489,19 @@ void invert_hash0(uint8_t k[8]) {
         if (g_debugMode > 0) {
             PrintAndLogEx(INFO, _YELLOW_("Testing Pre-Image Base: %s"), sprint_hex(pre_image_base, sizeof(pre_image_base)));
             PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
-            printState("0|0|z~", zTil_img[img]); //we retrieve the values of z~
-            PrintAndLogEx(INFO, "  p or ~p : %02x", pc); //value of p (at some point in the original hash0)
+            printState("0|0|z~", zTil_img[img]); // we retrieve the values of z~
+            PrintAndLogEx(INFO, "  p or ~p : %02x", pc); // value of p (at some point in the original hash0)
         }
-        //reverse permute
+
+        // reverse permute
         BitstreamIn_t p_in = { &pc, 8, 0 };
         uint8_t outbuffer_1[] = {0, 0, 0, 0, 0, 0, 0, 0};
         uint8_t outbuffer_2[] = {0, 0, 0, 0, 0, 0, 0, 0};
         BitstreamOut_t out_1 = {outbuffer_1, 0, 0};
         BitstreamOut_t out_2 = {outbuffer_2, 0, 0};
-        reverse_permute(&p_in, zTil_img[img], 0, &out_1, &out_2, false); //sort the bits
+        reverse_permute(&p_in, zTil_img[img], 0, &out_1, &out_2, false); // sort the bits
 
-        //Shift z-values down onto the lower segment
+        // Shift z-values down onto the lower segment
         uint64_t zCaret_1 = x_bytes_to_num(outbuffer_1, sizeof(outbuffer_1));
         zCaret_1 >>= 16;
         uint64_t zCaret_2 = x_bytes_to_num(outbuffer_2, sizeof(outbuffer_2));
@@ -497,16 +509,16 @@ void invert_hash0(uint8_t k[8]) {
         uint64_t zCaret = zCaret_1 | zCaret_2;
         if (g_debugMode > 0) printState("0|0|z^", zCaret);
 
-        //fix the bits values
-        uint8_t p_fix = 0x0F; //fix bits mask as the bits will be in 11110000 order
+        // fix the bits values
+        uint8_t p_fix = 0x0F; // fix bits mask as the bits will be in 11110000 order
         BitstreamIn_t p_in_f = { &p_fix, 8, 0 };
         uint8_t outbuffer_f1[] = {0, 0, 0, 0, 0, 0, 0, 0};
         uint8_t outbuffer_f2[] = {0, 0, 0, 0, 0, 0, 0, 0};
         BitstreamOut_t out_f1 = {outbuffer_f1, 0, 0};
         BitstreamOut_t out_f2 = {outbuffer_f2, 0, 0};
-        reverse_permute(&p_in_f, zCaret, 0, &out_f1, &out_f2, true); //fixes the bits accordingly
+        reverse_permute(&p_in_f, zCaret, 0, &out_f1, &out_f2, true); // fixes the bits accordingly
 
-        //Shift z-values down onto the lower segment
+        // Shift z-values down onto the lower segment
         uint64_t zCaret_fixed1 = x_bytes_to_num(outbuffer_f1, sizeof(outbuffer_f1));
         zCaret_fixed1 >>= 16;
         uint64_t zCaret_fixed2 = x_bytes_to_num(outbuffer_f2, sizeof(outbuffer_f2));
@@ -518,7 +530,7 @@ void invert_hash0(uint8_t k[8]) {
         uint64_t zP = reverse_check(zCaret_fixed);
         if (g_debugMode > 0) printState("0|0|z'", zP);
 
-        //reverse the modulo transformation in the hash0 function for the six-bit chunks
+        // reverse the modulo transformation in the hash0 function for the six-bit chunks
 
         uint64_t c = 0;
 
@@ -533,39 +545,48 @@ void invert_hash0(uint8_t k[8]) {
             pushbackSixBitByte(&c, zn4, n + 4);
         }
 
-        //The Hydra: depending on their positions, values 0x00, 0x01, 0x02, 0x03, 0x3c, 0x3d, 0x3e, 0x3f can lead to additional pre-images.
-        //When these values are present we need to generate additional pre-images if they have the same modulo as other values
+        // The Hydra: depending on their positions, values 0x00, 0x01, 0x02, 0x03, 0x3c, 0x3d, 0x3e, 0x3f can lead to additional pre-images.
+        // When these values are present we need to generate additional pre-images if they have the same modulo as other values
 
         // Initialize an array of pointers to uint64_t (start with one value, initialized to 0)
-        uint64_t *hydra_heads = (uint64_t *)malloc(sizeof(uint64_t)); // Start with one uint64_t
+        uint64_t *hydra_heads = (uint64_t *)calloc(sizeof(uint64_t), 1); // Start with one uint64_t
         hydra_heads[0] = 0;  // Initialize first value to 0
         int heads_count = 1;  // Track number of forks
 
         // Iterate 4 times as per the original loop
         for (int n = 0; n < 8; n++) {
+
             uint8_t hydra_head = getSixBitByte(c, n);
+
             if (hydra_head <= (n % 4) || hydra_head >= 63 - (n % 4)) {
+
                 // Create new forks by duplicating existing uint64_t values
                 int new_head = heads_count * 2;
                 hydra_heads = (uint64_t *)realloc(hydra_heads, new_head * sizeof(uint64_t));
+
                 // Duplicate all current values and add the value to both original and new ones
                 for (int i = 0; i < heads_count; i++) {
+
                     // Duplicate current value
                     hydra_heads[heads_count + i] = hydra_heads[i];
                     uint8_t small_hydra_head = 0;
                     uint8_t big_hydra_head = 0;
                     uint8_t hydra_lil_spawns[4] = {0x00, 0x01, 0x02, 0x03};
                     uint8_t hydra_big_spawns[4] = {0x3f, 0x3e, 0x3d, 0x3c};
-                    if (hydra_head <= n % 4) { //check if is in the lower range
-                        //replace with big spawn in one hydra and keep small in another
+
+                    if (hydra_head <= n % 4) { // check if is in the lower range
+
+                        // replace with big spawn in one hydra and keep small in another
                         small_hydra_head = hydra_head;
                         for (int fh = 0; fh < 4; fh++) {
                             if (hydra_lil_spawns[fh] == hydra_head) {
                                 big_hydra_head = hydra_big_spawns[fh];
                             }
                         }
-                    } else if (hydra_head >= 63 - (n % 4)) { //or the higher range
-                        //replace with small in one hydra and keep big in another
+
+                    } else if (hydra_head >= 63 - (n % 4)) { // or the higher range
+
+                        // replace with small in one hydra and keep big in another
                         big_hydra_head = hydra_head;
                         for (int fh = 0; fh < 4; fh++) {
                             if (hydra_big_spawns[fh] == hydra_head) {
@@ -579,7 +600,8 @@ void invert_hash0(uint8_t k[8]) {
                 }
                 // Update the count of total values
                 heads_count = new_head;
-            } else { //no hydra head spawns
+            } else {
+                // no hydra head spawns
                 for (int i = 0; i < heads_count; i++) {
                     pushbackSixBitByte(&hydra_heads[i], hydra_head, n);;
                 }
@@ -587,14 +609,16 @@ void invert_hash0(uint8_t k[8]) {
         }
 
         for (int i = 0; i < heads_count; i++) {
-            //restore the two most significant bytes (x and y)
+
+            // restore the two most significant bytes (x and y)
             hydra_heads[i] |= ((uint64_t)x_array[img] << 56);
             hydra_heads[i] |= ((uint64_t)y << 48);
+
             if (g_debugMode > 0) {
                 PrintAndLogEx(DEBUG, "          | x| y|z0|z1|z2|z3|z4|z5|z6|z7|");
                 printState("origin_r1", hydra_heads[i]);
             }
-            //reverse the swapZbalues function to get the original six-bit byte order
+            // reverse the swapZbalues function to get the original six-bit byte order
             uint64_t original_z = swapZvalues(hydra_heads[i]);
 
             if (g_debugMode > 0) {
@@ -602,24 +626,31 @@ void invert_hash0(uint8_t k[8]) {
                 printState("origin_r2", original_z);
                 PrintAndLogEx(INFO, "--------------------------");
             }
-            //run pre-image through hash0
+            // run pre-image through hash0
             uint8_t img_div_key[8] = {0};
-            hash0(original_z, img_div_key); //commented to avoid log spam
+            hash0(original_z, img_div_key); // commented to avoid log spam
 
-            //verify result, if it matches add it to the list as a valid pre-image
+            // verify result, if it matches add it to the list as a valid pre-image
             bool image_match = true;
             for (int v = 0; v < 8; v++) {
-                if (img_div_key[v] != k[v]) { //compare against input key k
+
+                // compare against input key k
+                if (img_div_key[v] != k[v]) {
                     image_match = false;
                 }
+
             }
+
             uint8_t des_pre_image[8] = {0};
             x_num_to_bytes(original_z, sizeof(original_z), des_pre_image);
 
             if (image_match) {
-                PrintAndLogEx(INFO, _GREEN_("Valid pre-image: ")_YELLOW_("%s"), sprint_hex(des_pre_image, sizeof(des_pre_image)));
-            } else if (!image_match && g_debugMode > 0) {
-                PrintAndLogEx(INFO, _RED_("Invalid pre-image: %s"), sprint_hex(des_pre_image, sizeof(des_pre_image)));
+                PrintAndLogEx(INFO, "Pre-image......... " _YELLOW_("%s") " ( "_GREEN_("valid") " )", sprint_hex_inrow(des_pre_image, sizeof(des_pre_image)));
+            } else {
+
+                if (g_debugMode > 0) {
+                    PrintAndLogEx(INFO, "Pre-image......... " _YELLOW_("%s") " ( "_RED_("invalid") " )", sprint_hex_inrow(des_pre_image, sizeof(des_pre_image)));
+                }
             }
         }
         // Free allocated memory

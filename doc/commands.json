@@ -3656,16 +3656,16 @@
         },
         "hf iclass unhash": {
             "command": "hf iclass unhash",
-            "description": "Reverses the hash0 function used generate iclass diversified keys after DES encryption, returning the DES crypted CSN.",
+            "description": "Reverses the hash0 function used generate iclass diversified keys after DES encryption, Function returns the DES crypted CSN. Next step bruteforcing.",
             "notes": [
-                "hf iclass unhash --divkey B4F12AADC5301A2D"
+                "hf iclass unhash -k B4F12AADC5301A2D"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "--divkey <hex> The card's Diversified Key value"
+                "-k, --divkey <hex> Card diversified key"
             ],
-            "usage": "hf iclass unhash [-h] --divkey <hex>"
+            "usage": "hf iclass unhash [-h] -k <hex>"
         },
         "hf iclass view": {
             "command": "hf iclass view",
@@ -12956,6 +12956,6 @@
     "metadata": {
         "commands_extracted": 747,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-09-30T08:35:18"
+        "extracted_on": "2024-10-04T07:43:15"
     }
 }
