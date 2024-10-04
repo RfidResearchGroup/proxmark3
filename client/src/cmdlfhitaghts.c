@@ -283,7 +283,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
 
     lf_hts_read_response_t *card = (lf_hts_read_response_t *)resp.data.asBytes;
 
-    hitags_config_t config = hitags_config_unpack(card->config_page.asBytes);
+    hitags_config_t config = card->config_page.s;
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
@@ -298,7 +298,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
     const int hts_mem_sizes[] = {1, 8, 64, 64};
     
     if (count == 0) {
-        count = hts_mem_sizes[config.memory_type] - page;
+        count = hts_mem_sizes[config.MEMT] - page;
     }
 
     // int page_end = page + count;
@@ -448,45 +448,38 @@ static int CmdLFHitagSList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "lf hitag hts", "hitags");
 }
 
-hitags_config_t hitags_config_unpack(const uint8_t *config_bytes) {
-    hitags_config_t result = {
-        .memory_type    = (config_bytes[0] >> 0) & 0x03,
-        .authentication = (config_bytes[1] >> 7) & 0x01,
-        .ttf_coding     = (config_bytes[1] >> 6) & 0x01,
-        .ttf_data_rate  = (config_bytes[1] >> 4) & 0x03,
-        .ttf_mode       = (config_bytes[1] >> 2) & 0x03,
-        .lock_config    = (config_bytes[1] >> 1) & 0x01,
-        .lock_key       = (config_bytes[1] >> 0) & 0x01
-    };
-    return result;
-}
-
 void hitags_config_print(hitags_config_t config) {
     PrintAndLogEx(INFO, " Memory type...... " _GREEN_("%s"),
     (const char *[]) {
         "Hitag S 32", "Hitag S 256", "Hitag S 2048",
         "Unknown Hitag S/8211"
-    }[config.memory_type]);
+    }[config.MEMT]);
 
-    PrintAndLogEx(INFO, " Authenticaion.... %s", config.authentication ? _YELLOW_("Yes") : "No");
+    PrintAndLogEx(INFO, " Authenticaion.... %s", config.auth ? _YELLOW_("Yes") : "No");
 
     PrintAndLogEx(INFO, " TTF coding....... %s",
-    (const char *[]) {"Manchester", "Biphase"}[config.ttf_coding]);
+                  config.RES3 ? "FSK  0=RF/10 1=RF/8" : (const char *[]){"Manchester", "Biphase"}[config.TTFC]);
 
     PrintAndLogEx(INFO, " TTF data rate.... %s",
     (const char *[]) {
         "4 kBit", "8 kBit", "2 kBit",
         "2 kBit and Pigeon Race Standard"
-    }[config.ttf_data_rate]);
+    }[config.TTFDR]);
 
     PrintAndLogEx(INFO, " TTF mode......... %s",
-    (const char *[]) {
-        "TTF Mode disabled (= RTF Mode)", "Page 4, Page 5",
-        "Page 4, Page 5, Page 6, Page 7", "Page 4"
-    }[config.ttf_mode]);
+                  (const char *[]){
+                      "TTF Mode disabled (= RTF Mode)",
+                      "Page 4, Page 5",
+                      "Page 4, Page 5, Page 6, Page 7",
+                      "Page 4",
+                      "TTF Mode disabled (= RTF Mode)",
+                      "Page 4, Page 5, Page 6",
+                      "Page 4, Page 5, Page 6, Page 7, Page 8",
+                      "Page 4, Page 5, Page 6, Page 7, Page 8, Page 9, Page 10, Page 11",
+                  }[config.RES0 << 2 | config.TTFM]);
 
-    PrintAndLogEx(INFO, " Config locked.... %s", config.lock_config ? _RED_("Yes") : _GREEN_("No"));
-    PrintAndLogEx(INFO, " Key/PWD locked... %s", config.lock_key ? _RED_("Yes") : _GREEN_("No"));
+    PrintAndLogEx(INFO, " Config locked.... %s", config.LCON ? _RED_("Yes") : _GREEN_("No"));
+    PrintAndLogEx(INFO, " Key/PWD locked... %s", config.LKP ? _RED_("Yes") : _GREEN_("No"));
 }
 
 static command_t CommandTable[] = {

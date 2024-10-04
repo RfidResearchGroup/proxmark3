@@ -153,11 +153,11 @@ static void calc_crc(unsigned char *crc, unsigned char data, unsigned char Bitco
 
 static void update_tag_max_page(void) {
     //check which memorysize this tag has
-    if ((tag.data.s.CON0 & 0x3) == 0x00) {
+    if (tag.data.s.config.MEMT == 0x00) {
         tag.max_page = 32 / (HITAGS_PAGE_SIZE * 8) - 1;
-    } else if ((tag.data.s.CON0 & 0x3) == 0x1) {
+    } else if (tag.data.s.config.MEMT == 0x1) {
         tag.max_page = 256 / (HITAGS_PAGE_SIZE * 8) - 1;
-    } else if ((tag.data.s.CON0 & 0x3) == 0x2) {
+    } else if (tag.data.s.config.MEMT == 0x2) {
         tag.max_page = 2048 / (HITAGS_PAGE_SIZE * 8) - 1;
     } else {
         tag.max_page = HITAGS_MAX_PAGES - 1;
@@ -545,7 +545,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
 
             //send con2, pwdh0, pwdl0, pwdl1 encrypted as a response
             tx[0] = ht2_hitag2_byte(&state) ^ tag.data.pages[HITAGS_CONFIG_PADR][2];
-            tx[1] = ht2_hitag2_byte(&state) ^ tag.data.s.pwdh0;
+            tx[1] = ht2_hitag2_byte(&state) ^ tag.data.s.config.pwdh0;
             tx[2] = ht2_hitag2_byte(&state) ^ tag.data.s.pwdl0;
             tx[3] = ht2_hitag2_byte(&state) ^ tag.data.s.pwdl1;
 
@@ -554,7 +554,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 *txlen += 8;
                 crc = CRC_PRESET;
                 calc_crc(&crc, tag.data.pages[HITAGS_CONFIG_PADR][2], 8);
-                calc_crc(&crc, tag.data.s.pwdh0, 8);
+                calc_crc(&crc, tag.data.s.config.pwdh0, 8);
                 calc_crc(&crc, tag.data.s.pwdl0, 8);
                 calc_crc(&crc, tag.data.s.pwdl1, 8);
                 tx[4] = (crc ^ ht2_hitag2_byte(&state));
@@ -612,7 +612,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 *txlen = 32;
                 memcpy(tx, tag.data.pages[page], HITAGS_PAGE_SIZE);
 
-                if (tag.data.s.auth && page == HITAGS_CONFIG_PADR) {
+                if (tag.data.s.config.auth && page == HITAGS_CONFIG_PADR) {
                     tx[3] = 0xFF;
                 }
 
@@ -626,7 +626,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
                     tx[4] = crc;
                 }
 
-                if (tag.data.s.auth && tag.data.s.LKP && (page == 2 || page == 3)) {
+                if (tag.data.s.config.auth && tag.data.s.config.LKP && (page == 2 || page == 3)) {
                     //if reader asks for key or password and the LKP-mark is set do not respond
                     *txlen = 0;
                 }
@@ -650,8 +650,8 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
 
             } else if ((rx[0] & 0xf0) == HITAGS_WRITE_PAGE) { //write page
                 // TODO: handle con2 LCK*
-                if ((tag.data.s.LCON && page == 1)
-                        || (tag.data.s.LKP && (page == 2 || page == 3))) {
+                if ((tag.data.s.config.LCON && page == 1)
+                        || (tag.data.s.config.LKP && (page == 2 || page == 3))) {
                     //deny
                     *txlen = 0;
                 } else {
@@ -664,8 +664,8 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
 
             } else if ((rx[0] & 0xf0) == HITAGS_WRITE_BLOCK) { //write block
                 // TODO: handle LCON con2 LCK*
-                if ((tag.data.s.LCON && page == 1)
-                        || (tag.data.s.LKP && (page == 2 || page == 3))) {
+                if ((tag.data.s.config.LCON && page == 1)
+                        || (tag.data.s.config.LKP && (page == 2 || page == 3))) {
                     //deny
                     *txlen = 0;
                 } else {
@@ -1146,7 +1146,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
 
     DBG Dbprintf("conf 0: %02X conf 1: %02X conf 2: %02X", tag.data.pages[HITAGS_CONFIG_PADR][0], tag.data.pages[HITAGS_CONFIG_PADR][1], tag.data.pages[HITAGS_CONFIG_PADR][2]);
 
-    if (tag.data.s.auth == 1) {
+    if (tag.data.s.config.auth == 1) {
 
         uint64_t key_le = 0;
         // if the tag is in authentication mode try the key or challenge
