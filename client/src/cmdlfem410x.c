@@ -519,74 +519,34 @@ static int CmdEM410xBrute(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint32_t uidcnt = 0;
-    uint8_t stUidBlock = 20;
-    uint8_t *p = NULL;
-    uint8_t uid[5] = {0x00};
-
-    // open file
-    FILE *f = NULL;
-    if ((f = fopen(filename, "r")) == NULL) {
-        PrintAndLogEx(ERR, "Error: Could not open EM Tag IDs file ["_YELLOW_("%s")"]", filename);
-        return PM3_EFILE;
+    // get suffix.
+    char suffix[10] = {0};
+    char *ext = strrchr(filename, '.');
+    if (ext != NULL) {
+        strncpy(suffix, ext, sizeof(suffix) - 1);
     }
 
-    // allocate mem for file contents
-    uint8_t *uidblock = calloc(stUidBlock, 5);
-    if (uidblock == NULL) {
-        fclose(f);
-        PrintAndLogEx(ERR, "Error: can't allocate memory");
-        return PM3_EMALLOC;
+    // load keys
+    uint8_t *uidblock = NULL;
+    uint32_t uidcount = 0;
+    int res = loadFileDICTIONARY_safe_ex(filename, suffix, (void**)&uidblock, 5, &uidcount, false);
+    if (res != PM3_SUCCESS) {
+        free(uidblock);
+        return res;
     }
 
-    // read file into memory
-    char buf[11];
-
-    while (fgets(buf, sizeof(buf), f)) {
-        if (strlen(buf) < 10 || buf[9] == '\n') continue;
-        while (fgetc(f) != '\n' && !feof(f));  //goto next line
-
-        //The line start with # is comment, skip
-        if (buf[0] == '#') continue;
-
-        int uidlen = 0;
-        if (param_gethex_ex(buf, 0, uid, &uidlen) && (uidlen != 10)) {
-            PrintAndLogEx(FAILED, "EM Tag IDs must include 5 hex bytes (10 hex symbols), got ( " _RED_("%d") " )", uidlen);
-            free(uidblock);
-            fclose(f);
-            return PM3_ESOFT;
-        }
-
-        buf[10] = 0;
-
-        if (stUidBlock - uidcnt < 2) {
-            p = realloc(uidblock, 5 * (stUidBlock += 10));
-            if (!p) {
-                PrintAndLogEx(WARNING, "Cannot allocate memory for EM Tag IDs");
-                free(uidblock);
-                fclose(f);
-                return PM3_ESOFT;
-            }
-            uidblock = p;
-        }
-        memset(uidblock + 5 * uidcnt, 0, 5);
-        num_to_bytes(strtoll(buf, NULL, 16), 5, uidblock + 5 * uidcnt);
-        uidcnt++;
-        memset(buf, 0, sizeof(buf));
-    }
-    fclose(f);
-
-    if (uidcnt == 0) {
+    if (uidcount == 0) {
         PrintAndLogEx(FAILED, "No EM Tag IDs found in file");
         free(uidblock);
-        return PM3_ESOFT;
+        return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "Loaded "_YELLOW_("%d")" EM Tag IDs from "_YELLOW_("%s")", pause delay:"_YELLOW_("%d")" ms", uidcnt, filename, delay);
+    PrintAndLogEx(SUCCESS, "Loaded "_GREEN_("%d")" EM Tag IDs from `"_YELLOW_("%s")"`  pause delay:"_YELLOW_("%d")" ms", uidcount, filename, delay);
 
     // loop
     uint8_t testuid[5];
-    for (uint32_t c = 0; c < uidcnt; ++c) {
+    for (uint32_t i = 0; i < uidcount; ++i) {
+
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
             PrintAndLogEx(WARNING, "aborted via keyboard!\n");
@@ -594,10 +554,12 @@ static int CmdEM410xBrute(const char *Cmd) {
             return PM3_EOPABORTED;
         }
 
-        memcpy(testuid, uidblock + 5 * c, 5);
+        memset(testuid, 0, sizeof(testuid));
+        memcpy(testuid, uidblock + (5 * i), sizeof(testuid));
+
         PrintAndLogEx(INFO, "Bruteforce %d / %u: simulating EM Tag ID " _YELLOW_("%s")
-                      , c + 1
-                      , uidcnt
+                      , i + 1
+                      , uidcount
                       , sprint_hex_inrow(testuid, sizeof(testuid))
                      );
 
@@ -614,7 +576,6 @@ static int CmdEM410xBrute(const char *Cmd) {
 
         clearCommandBuffer();
         SendCommandNG(CMD_LF_SIMULATE, (uint8_t *)&payload, sizeof(payload));
-
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_LF_SIMULATE, &resp, delay)) {
             if (resp.status == PM3_EOPABORTED) {

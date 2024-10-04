@@ -2267,12 +2267,17 @@ out:
     return retval;
 }
 
+
 int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t keylen, uint32_t *keycnt) {
+    return loadFileDICTIONARY_safe_ex(preferredName, ".dic", pdata, keylen, keycnt, true);
+}
+
+int loadFileDICTIONARY_safe_ex(const char *preferredName, const char* suffix, void **pdata, uint8_t keylen, uint32_t *keycnt, bool verbose) {
 
     int retval = PM3_SUCCESS;
 
     char *path;
-    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false) != PM3_SUCCESS) {
+    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, suffix, false) != PM3_SUCCESS) {
         return PM3_EFILE;
     }
 
@@ -2282,7 +2287,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
     // mf desfire == 3des3k 24 bytes
     // iclass == 8 bytes
     // default to 6 bytes.
-    if (keylen != 4 && keylen != 6 && keylen != 8 && keylen != 16 && keylen != 24) {
+    if (keylen != 4 && keylen != 5 && keylen != 6 && keylen != 8 && keylen != 16 && keylen != 24) {
         keylen = 6;
     }
 
@@ -2340,7 +2345,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
             continue;
         }
 
-        if (!CheckStringIsHEXValue(line)) {
+        if (CheckStringIsHEXValue(line) == false) {
             continue;
         }
 
@@ -2357,7 +2362,9 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
     }
     fclose(f);
 
-    PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%2d") " keys from dictionary file `" _YELLOW_("%s") "`", *keycnt, path);
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%2d") " keys from dictionary file `" _YELLOW_("%s") "`", *keycnt, path);
+    }
 
 out:
     free(path);
