@@ -4921,7 +4921,9 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_int0(NULL, "ci", "<dec>", "use config slot at index"),
-        arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
+        arg_int0(NULL, "ki", "<dec>", "Card Key - index to select key from memory 'hf iclass managekeys'"),
+        arg_int0(NULL, "krki", "<dec>", "Elite Keyroll Key - index to select key from memory 'hf iclass managekeys'"),
+        arg_lit0(NULL, "elite", "Use elite key for the the Card Key ki"),
         arg_lit0("g", NULL, "generate card dump file"),
         arg_lit0("l", NULL, "load available cards"),
         arg_lit0("p", NULL, "print available cards"),
