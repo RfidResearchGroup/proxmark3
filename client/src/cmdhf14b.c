@@ -479,6 +479,7 @@ static int print_atqb_resp(uint8_t *data, uint8_t cid) {
             } else {
                 PrintAndLogEx(SUCCESS, "Tiananxin TCOS CPU card... " _RED_("n/a"));
             }
+                PrintAndLogEx(SUCCESS, "Magic capabilities........ most likely");
         }
 
     } else {
