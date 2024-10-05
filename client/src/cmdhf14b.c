@@ -465,6 +465,26 @@ static int print_atqb_resp(uint8_t *data, uint8_t cid) {
     PrintAndLogEx(SUCCESS, "Tag :");
     PrintAndLogEx(SUCCESS, "  Max Buf Length: %u (MBLI) %s", cid >> 4, (cid & 0xF0) ? "" : "chained frames not supported");
     PrintAndLogEx(SUCCESS, "  CID : %u", cid & 0x0f);
+    PrintAndLogEx(NORMAL, ""); 
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
+    if (memcmp(data, "\x54\x43\x4F\x53",4) == 0) {
+
+        int outlen = 0;
+        uint8_t out[PM3_CMD_DATA_SIZE] = {0};
+        uint8_t tcos_version[] = {0x90, 0xB2, 0x90, 0x00, 0x00};
+        if (exchange_14b_apdu(tcos_version, sizeof(tcos_version), true, false, out, PM3_CMD_DATA_SIZE, &outlen, -1) == PM3_SUCCESS) {
+            if (outlen > 2) {
+                PrintAndLogEx(SUCCESS, "Tiananxin TCOS CPU card... " _YELLOW_("%s"), sprint_ascii(out, outlen - 2));
+            } else {
+                PrintAndLogEx(SUCCESS, "Tiananxin TCOS CPU card... " _RED_("n/a"));
+            }
+        }
+
+    } else {
+        PrintAndLogEx(INFO, "n/a");
+    }
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -2482,7 +2502,7 @@ static int CmdHF14BAPDU(const char *Cmd) {
         return res;
     }
 
-    PrintAndLogEx(INFO, "<<<< %s", sprint_hex(data, datalen));
+    PrintAndLogEx(INFO, "<<<< %s - %s", sprint_hex_inrow(data, datalen), sprint_ascii(data, datalen));
     uint16_t sw = get_sw(data, datalen);
     if (sw != ISO7816_OK) {
         PrintAndLogEx(SUCCESS, "APDU response: " _YELLOW_("%02x %02x") " - %s"
