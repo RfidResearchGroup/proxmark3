@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf 14b setuid` - set uid on magic 14b tag (@iceman1001)
 - Changed `hf 14b info` - now detect Tiananxin (@iceman1001)
 - Fixed `lf em 410x brute` - better filehandling and memory handling (@iceman1001)
 - Changed split PacketResponseNG status into status and reason(@douniwan5788)
