@@ -9757,6 +9757,7 @@ static int CmdHF14AMfISEN(const char *Cmd) {
         arg_rem("FM11RF08S specific options:", "Incompatible with above options, except -k; output in JSON"),
         arg_lit0(NULL, "collect_fm11rf08s", "collect all nT/{nT}/par_err."),
         arg_lit0(NULL, "collect_fm11rf08s_with_data", "collect all nT/{nT}/par_err and data blocks."),
+        arg_str0("f", "file", "<fn>", "Specify a filename for collected data"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -9827,6 +9828,10 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     if (collect_fm11rf08s_with_data) {
         collect_fm11rf08s = 1;
     }
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 23), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
     CLIParserFree(ctx);
 
     uint8_t dbg_curr = DBG_NONE;
@@ -9881,32 +9886,21 @@ static int CmdHF14AMfISEN(const char *Cmd) {
             }
         }
         uint8_t num_sectors = MIFARE_1K_MAXSECTOR + 1;
-        PrintAndLogEx(NORMAL, "[\n  [");
+        iso14a_fm11rf08s_nonces_with_data_t nonces_dump = {0};
         for (uint8_t sec = 0; sec < num_sectors; sec++) {
-            PrintAndLogEx(NORMAL, "    [\"%08x\", \"%08x\"]%s",
-                          (uint32_t) bytes_to_num(resp.data.asBytes + ((sec * 2) * 9), 4),
-                          (uint32_t) bytes_to_num(resp.data.asBytes + (((sec * 2) + 1) * 9), 4),
-                          sec < num_sectors - 1 ? "," : "");
+            memcpy(nonces_dump.nt[sec][0], resp.data.asBytes + ((sec * 2) * 9), 4);
+            memcpy(nonces_dump.nt[sec][1], resp.data.asBytes + (((sec * 2) + 1) * 9), 4);
         }
-        PrintAndLogEx(NORMAL, "  ],\n  [");
         for (uint8_t sec = 0; sec < num_sectors; sec++) {
-            PrintAndLogEx(NORMAL, "    [\"%08x\", \"%08x\"]%s",
-                          (uint32_t) bytes_to_num(resp.data.asBytes + ((sec * 2) * 9) + 4, 4),
-                          (uint32_t) bytes_to_num(resp.data.asBytes + (((sec * 2) + 1) * 9) + 4, 4),
-                          sec < num_sectors - 1 ? "," : "");
+            memcpy(nonces_dump.nt_enc[sec][0], resp.data.asBytes + ((sec * 2) * 9) + 4, 4);
+            memcpy(nonces_dump.nt_enc[sec][1], resp.data.asBytes + (((sec * 2) + 1) * 9) + 4, 4);
         }
-        PrintAndLogEx(NORMAL, "  ],\n  [");
         for (uint8_t sec = 0; sec < num_sectors; sec++) {
-            uint8_t p0 = resp.data.asBytes[((sec * 2) * 9) + 8];
-            uint8_t p1 = resp.data.asBytes[(((sec * 2) + 1) * 9) + 8];
-            PrintAndLogEx(NORMAL, "    [\"%i%i%i%i\", \"%i%i%i%i\"]%s",
-                          (p0 >> 3) & 1, (p0 >> 2) & 1, (p0 >> 1) & 1, p0 & 1,
-                          (p1 >> 3) & 1, (p1 >> 2) & 1, (p1 >> 1) & 1, p1 & 1,
-                          sec < num_sectors - 1 ? "," : "");
+            nonces_dump.par_err[sec][0] = resp.data.asBytes[((sec * 2) * 9) + 8];
+            nonces_dump.par_err[sec][1] = resp.data.asBytes[(((sec * 2) + 1) * 9) + 8];
         }
         if (collect_fm11rf08s_with_data) {
-            PrintAndLogEx(NORMAL, "  ],\n  [");
-            int bytes = MIFARE_1K_MAXSECTOR * 4 * 16;
+            int bytes = MIFARE_1K_MAXBLOCK * MFBLOCK_SIZE;
 
             uint8_t *dump = calloc(bytes, sizeof(uint8_t));
             if (dump == NULL) {
@@ -9918,16 +9912,17 @@ static int CmdHF14AMfISEN(const char *Cmd) {
                 free(dump);
                 return PM3_ETIMEOUT;
             }
-            for (uint8_t sec = 0; sec < MIFARE_1K_MAXSECTOR; sec++) {
-                for (uint8_t b = 0; b < 4; b++) {
-                    PrintAndLogEx(NORMAL, "    \"%s\"%s",
-                                  sprint_hex_inrow(dump + ((sec * 4) + b) * 16, 16),
-                                  (sec == MIFARE_1K_MAXSECTOR - 1) && (b == 3) ? "" : ",");
-                }
+            for (uint8_t blk = 0; blk < MIFARE_1K_MAXBLOCK; blk++) {
+                memcpy(nonces_dump.blocks[blk], dump + blk * MFBLOCK_SIZE, MFBLOCK_SIZE);
             }
             free(dump);
         }
-        PrintAndLogEx(NORMAL, "  ]\n]");
+        if (fnlen == 0) {
+            snprintf(filename, sizeof(filename), "hf-mf-%s-nonces%s", sprint_hex_inrow(card.uid, card.uidlen), collect_fm11rf08s_with_data ? "_with_data" : "");
+        }
+        if (pm3_save_fm11rf08s_nonces(filename, &nonces_dump, collect_fm11rf08s_with_data) != PM3_SUCCESS) {
+            return PM3_EFAILED;
+        }
         return PM3_SUCCESS;
     }
 

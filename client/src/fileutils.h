@@ -72,6 +72,8 @@ typedef enum {
     jsfLto,
     jsfCryptorf,
     jsfNDEF,
+    jsfFM11RF08SNonces,
+    jsfFM11RF08SNoncesWithData
 } JSONFileType;
 
 typedef enum {
@@ -346,4 +348,15 @@ int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft);
  * @return PM3_SUCCESS if OK
  */
 int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft);
+
+/** STUB
+ * @brief Utility function to save FM11RF08S recovery data.
+ *
+ * @param fn
+ * @param d iso14a_fm11rf08s_nonces_with_data_t structure
+ * @param n the length of the structure
+ * @param with_data does the structure contain data blocks?
+ * @return PM3_SUCCESS if OK
+ */
+int pm3_save_fm11rf08s_nonces(const char *fn, iso14a_fm11rf08s_nonces_with_data_t *d, bool with_data);
 #endif // FILEUTILS_H

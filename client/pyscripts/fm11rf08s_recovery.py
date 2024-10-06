@@ -112,11 +112,41 @@ if args.init_check:
 print("Getting nonces...")
 cmd = f"hf mf isen --collect_fm11rf08s_with_data --key {BACKDOOR_RF08S}"
 p.console(cmd)
-try:
-    nt, nt_enc, par_err, data = json.loads(p.grabbed_output)
-except json.decoder.JSONDecodeError:
+nonces_with_data = ""
+for line in p.grabbed_output.split('\n'):
+    if "Wrong" in line or "error" in line:
+        print("Error getting nonces, abort.")
+        exit()
+    if "Saved" in line:
+        nonces_with_data = line[line.index("`"):].strip("`")
+if (nonces_with_data == ""):
     print("Error getting nonces, abort.")
     exit()
+
+try:
+    with open(nonces_with_data, 'r') as file:
+        # Load and parse the JSON data
+        dict_nwd = json.load(file)
+except json.decoder.JSONDecodeError:
+    print(f"Error parsing {nonces_with_data}, abort.")
+    exit()
+
+nt = [["", ""] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
+nt_enc = [["", ""] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
+par_err = [["", ""] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
+data = ["" for _ in range(NUM_SECTORS * 4)]
+for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
+    real_sec = sec
+    if sec >= NUM_SECTORS:
+        real_sec += 16
+    nt[sec][0] = dict_nwd["nt"][f"{real_sec}"]["a"].lower()
+    nt[sec][1] = dict_nwd["nt"][f"{real_sec}"]["b"].lower()
+    nt_enc[sec][0] = dict_nwd["nt_enc"][f"{real_sec}"]["a"].lower()
+    nt_enc[sec][1] = dict_nwd["nt_enc"][f"{real_sec}"]["b"].lower()
+    par_err[sec][0] = dict_nwd["par_err"][f"{real_sec}"]["a"]
+    par_err[sec][1] = dict_nwd["par_err"][f"{real_sec}"]["b"]
+for blk in range(NUM_SECTORS * 4):
+    data[blk] = dict_nwd["blocks"][f"{blk}"]
 
 print("Generating first dump file")
 dumpfile = f"hf-mf-{uid:08X}-dump.bin"

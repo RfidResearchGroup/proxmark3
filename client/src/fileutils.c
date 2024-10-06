@@ -712,6 +712,52 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             }
             break;
         }
+        case jsfFM11RF08SNonces:
+        case jsfFM11RF08SNoncesWithData: {
+            if (datalen != sizeof(iso14a_fm11rf08s_nonces_with_data_t)) {
+                return PM3_EINVARG;
+            }
+            iso14a_fm11rf08s_nonces_with_data_t * p = (iso14a_fm11rf08s_nonces_with_data_t *)data;
+            if (ftype == jsfFM11RF08SNoncesWithData) {
+                JsonSaveStr(root, "FileType", "fm11rf08s_nonces_with_data");
+            } else {
+                JsonSaveStr(root, "FileType", "fm11rf08s_nonces");
+            }
+            for (uint16_t sec = 0; sec < MIFARE_1K_MAXSECTOR + 1; sec++) {
+                uint8_t par2[2];
+                uint8_t par;
+                uint16_t real_sec = sec;
+                if (sec == MIFARE_1K_MAXSECTOR) {
+                    real_sec = 32; // advanced verification method block
+                }
+                snprintf(path, sizeof(path), "$.nt.%u.a", real_sec);
+                JsonSaveBufAsHexCompact(root, path, p->nt[sec][0], 4);
+                snprintf(path, sizeof(path), "$.nt.%u.b", real_sec);
+                JsonSaveBufAsHexCompact(root, path, p->nt[sec][1], 4);
+                snprintf(path, sizeof(path), "$.nt_enc.%u.a", real_sec);
+                JsonSaveBufAsHexCompact(root, path, p->nt_enc[sec][0], 4);
+                snprintf(path, sizeof(path), "$.nt_enc.%u.b", real_sec);
+                JsonSaveBufAsHexCompact(root, path, p->nt_enc[sec][1], 4);
+
+                snprintf(path, sizeof(path), "$.par_err.%u.a", real_sec);
+                par = p->par_err[sec][0];
+                par2[0] = (((par >> 3) & 1) << 4) | ((par >> 2) & 1);
+                par2[1] = (((par >> 1) & 1) << 4) | ((par >> 0) & 1);
+                JsonSaveBufAsHexCompact(root, path, par2, 2);
+                snprintf(path, sizeof(path), "$.par_err.%u.b", real_sec);
+                par = p->par_err[sec][1];
+                par2[0] = (((par >> 3) & 1) << 4) | ((par >> 2) & 1);
+                par2[1] = (((par >> 1) & 1) << 4) | ((par >> 0) & 1);
+                JsonSaveBufAsHexCompact(root, path, par2, 2);
+            }
+            if (ftype == jsfFM11RF08SNoncesWithData) {
+                for (uint16_t blk = 0; blk < MIFARE_1K_MAXBLOCK; blk++) {
+                    snprintf(path, sizeof(path), "$.blocks.%u", blk);
+                    JsonSaveBufAsHexCompact(root, path, p->blocks[blk], MFBLOCK_SIZE);
+                }
+            }
+            break;
+        }
         // no action
         case jsfFido:
             break;
@@ -737,7 +783,6 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
         free(fn);
         goto out;
     }
-
     if (verbose) {
         PrintAndLogEx(SUCCESS, "Saved to json file `" _YELLOW_("%s") "`", fn);
     }
@@ -3108,6 +3153,21 @@ int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
     jd.dump = d;
     jd.dumplen = n;
     saveFileJSON(fn, jsfMfc_v2, (uint8_t *)&jd, sizeof(jd), NULL);
+    return PM3_SUCCESS;
+}
+
+int pm3_save_fm11rf08s_nonces(const char *fn, iso14a_fm11rf08s_nonces_with_data_t *d, bool with_data) {
+
+    if (fn == NULL || d == NULL) {
+        PrintAndLogEx(INFO, "No data to save, skipping...");
+        return PM3_EINVARG;
+    }
+
+    if (with_data) {
+        saveFileJSON(fn, jsfFM11RF08SNoncesWithData, (uint8_t *)d, sizeof(*d), NULL);
+    } else {
+        saveFileJSON(fn, jsfFM11RF08SNonces, (uint8_t *)d, sizeof(*d), NULL);
+    }
     return PM3_SUCCESS;
 }
 

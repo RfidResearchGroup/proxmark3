@@ -84,6 +84,12 @@ typedef struct {
     uint8_t *dump;
 } iso14a_mf_dump_ev1_t;
 
+typedef struct {
+    uint8_t nt[17][2][4];
+    uint8_t nt_enc[17][2][4];
+    uint8_t par_err[17][2];
+    uint8_t blocks[64][16]; // [MIFARE_1K_MAXSECTOR * 4][MFBLOCK_SIZE]
+} iso14a_fm11rf08s_nonces_with_data_t;
 
 typedef enum ISO14A_COMMAND {
     ISO14A_CONNECT = (1 << 0),
