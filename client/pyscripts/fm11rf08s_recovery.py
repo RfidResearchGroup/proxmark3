@@ -35,7 +35,11 @@ if sys.version_info < required_version:
     print(f"The script needs at least Python v{required_version[0]}.{required_version[1]}. Abort.")
     exit()
 
-BACKDOOR_RF08S = "A396EFA4E24F"
+# First try FM11RF08S key
+# Then FM11RF08 key as some rare *98 cards are using it too
+# Then FM11RF32N key, just in case...
+BACKDOOR_KEYS = ["A396EFA4E24F", "A31667A8CEC1", "518B3354E760"]
+
 NUM_SECTORS = 16
 NUM_EXTRA_SECTORS = 1
 DICT_DEF = "mfc_default_keys.dic"
@@ -110,15 +114,18 @@ if args.init_check:
                 print_key(sec, 1, found_keys[sec][1])
 
 print("Getting nonces...")
-cmd = f"hf mf isen --collect_fm11rf08s_with_data --key {BACKDOOR_RF08S}"
-p.console(cmd)
 nonces_with_data = ""
-for line in p.grabbed_output.split('\n'):
-    if "Wrong" in line or "error" in line:
-        print("Error getting nonces, abort.")
-        exit()
-    if "Saved" in line:
-        nonces_with_data = line[line.index("`"):].strip("`")
+for key in BACKDOOR_KEYS:
+    cmd = f"hf mf isen --collect_fm11rf08s_with_data --key {key}"
+    p.console(cmd)
+    for line in p.grabbed_output.split('\n'):
+        if "Wrong" in line or "error" in line:
+            break
+        if "Saved" in line:
+            nonces_with_data = line[line.index("`"):].strip("`")
+    if nonces_with_data != "":
+        break
+
 if (nonces_with_data == ""):
     print("Error getting nonces, abort.")
     exit()
@@ -482,7 +489,7 @@ if args.final_check:
     cmd = f"hf mf fchk -f keys_{uid:08x}.dic --no-default --dump"
     if args.debug:
         print(cmd)
-    p.console(cmd, passthru = True)
+    p.console(cmd, passthru=True)
 else:
     plus = "[" + color("+", fg="green") + "] "
     print()
