@@ -864,7 +864,10 @@ typedef struct {
 // Got wrong length error               pm3: when received wrong length of data
 #define PM3_ELENGTH           -27
 
-// No data                              pm3:        no data available, no host frame available (not really an error)
+// No key available                     client/pm3: no cryptographic key available.
+#define PM3_ENOKEY            -28
+
+// No data                              client/pm3: no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program
 #define PM3_EFATAL            -99

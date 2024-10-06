@@ -696,9 +696,10 @@ int DesfireAPDU(uint8_t *cmd, size_t cmd_len, uint8_t *dataout) {
     ReaderTransmit(wCmd, wrappedLen, NULL);
 
     len = ReaderReceive(resp, sizeof(resp), par);
-    if (!len) {
+    if (len == 0) {
         if (g_dbglevel >= DBG_EXTENDED) Dbprintf("fukked");
         return false; //DATA LINK ERROR
+
     }
     // if we received an I- or R(ACK)-Block with a block number equal to the
     // current block number, toggle the current block number

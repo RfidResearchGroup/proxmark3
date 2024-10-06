@@ -1355,8 +1355,6 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, uint8
         return false;
     }
 
-
-
     AddCrc14A(rRATS, rRATS_len - 2);
 
     AddCrc14A(rPPS, sizeof(rPPS) - 2);

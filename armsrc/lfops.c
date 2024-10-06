@@ -29,7 +29,6 @@
 #include "dbprint.h"
 #include "util.h"
 #include "commonutil.h"
-
 #include "crc16.h"
 #include "string.h"
 #include "printf.h"
