@@ -163,7 +163,7 @@
         "AID": "53494F",
         "Vendor": "HID",
         "Country": "US",
-        "Name": "SIO EV1 - HID Factory",
+        "Name": "SIO DESFire EV1 - HID Factory",
         "Description": "Access Control",
         "Type": "pacs"
     },
@@ -187,7 +187,7 @@
         "AID": "D3494F",
         "Vendor": "HID",
         "Country": "US",
-        "Name": "SIO EV1 - Field Encoder",
+        "Name": "SIO DESFire EV1 - Field Encoder",
         "Description": "Access Control",
         "Type": "pacs"
     },
@@ -195,7 +195,7 @@
         "AID": "D9494F",
         "Vendor": "HID",
         "Country": "US",
-        "Name": "SIO EV1 - Field Encoder",
+        "Name": "SIO DESFire EV1 - Field Encoder",
         "Description": "Access Control",
         "Type": "pacs"
     },
@@ -331,7 +331,7 @@
         "AID": "F484E3",
         "Vendor": "HID",
         "Country": "US",
-        "Name": "SIO EV3 - Field Encoder",
+        "Name": "SIO DESFire EV3 - Field Encoder",
         "Description": "Access Control",
         "Type": "pacs"
     },
@@ -339,7 +339,7 @@
         "AID": "F484E4",
         "Vendor": "HID",
         "Country": "US",
-        "Name": "SIO EV3 - HID Factory",
+        "Name": "SIO DESFire EV3 - HID Factory",
         "Description": "Access Control",
         "Type": "pacs"
     },
@@ -1119,7 +1119,7 @@
         "Description": "UK National Smartcard Project // Provision of Citizen Services #3",
         "Type": "transport"
     },
-        {
+    {
         "AID": "F40113",
         "Vendor": "ITSO Ltd",
         "Country": "UK",
