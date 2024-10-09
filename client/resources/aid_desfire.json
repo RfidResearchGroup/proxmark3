@@ -163,40 +163,40 @@
         "AID": "53494F",
         "Vendor": "HID",
         "Country": "US",
-        "Name": "Access Control",
-        "Description": "HID Factory",
+        "Name": "SIO DESFire EV1 - HID Factory",
+        "Description": "Access Control",
         "Type": "pacs"
     },
     {
         "AID": "6F706C",
         "Vendor": "Openpath",
         "Country": "US",
-        "Name": "Access control",
-        "Description": "Openpath PACS Application",
+        "Name": "Openpath PACS Application",
+        "Description": "Access Control",
         "Type": "pacs"
     },
     {
         "AID": "706000",
         "Vendor": "RBH Access Technologies, Inc.",
         "Country": "CA",
-        "Name": "Access Control",
-        "Description": "BlueLINE EV1 PACS Credential",
+        "Name": "BlueLINE EV1 PACS Credential",
+        "Description": "Access Control",
         "Type": "pacs"
     },
     {
         "AID": "D3494F",
         "Vendor": "HID",
         "Country": "US",
-        "Name": "SIO DESFire EV1",
-        "Description": "Field Encoder",
+        "Name": "SIO DESFire EV1 - Field Encoder",
+        "Description": "Access Control",
         "Type": "pacs"
     },
     {
         "AID": "D9494F",
         "Vendor": "HID",
         "Country": "US",
-        "Name": "Access control",
-        "Description": "Field Encoder",
+        "Name": "SIO DESFire EV1 - Field Encoder",
+        "Description": "Access Control",
         "Type": "pacs"
     },
     {
@@ -328,11 +328,27 @@
         "Type": "pacs"
     },
     {
+        "AID": "F484E3",
+        "Vendor": "HID",
+        "Country": "US",
+        "Name": "SIO DESFire EV3 - Field Encoder",
+        "Description": "Access Control",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F484E4",
+        "Vendor": "HID",
+        "Country": "US",
+        "Name": "SIO DESFire EV3 - HID Factory",
+        "Description": "Access Control",
+        "Type": "pacs"
+    },
+    {
         "AID": "F48EF1",
         "Vendor": "Salto Systems",
         "Country": "ES",
         "Name": "Salto Systems",
-        "Description": "",
+        "Description": "Access Control",
         "Type": "pacs"
     },
     {
@@ -1003,8 +1019,8 @@
         "AID": "F210E0",
         "Vendor": "TriMet",
         "Country": "US",
-        "Name": "Hop Fastpass (PDX)",
-        "Description": "PDX Hop Card",
+        "Name": "hop fastpass (PDX)",
+        "Description": "PDX hop fastpass Card",
         "Type": "transport"
     },
     {
@@ -1103,7 +1119,7 @@
         "Description": "UK National Smartcard Project // Provision of Citizen Services #3",
         "Type": "transport"
     },
-        {
+    {
         "AID": "F40113",
         "Vendor": "ITSO Ltd",
         "Country": "UK",
