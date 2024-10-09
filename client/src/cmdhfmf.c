@@ -1535,9 +1535,9 @@ static int CmdHF14AMfRestore(const char *Cmd) {
             uint8_t bldata[MFBLOCK_SIZE] = {0x00};
             memcpy(bldata, dump, MFBLOCK_SIZE);
 
+            bool skip = false;
             // if sector trailer
             if (mfIsSectorTrailerBasedOnBlocks(s, b)) {
-
                 // keep the current keys on the card
                 if (use_keyfile_for_auth == false) {
                     // replace KEY A
@@ -1561,7 +1561,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                         // if --force isn't used, skip writing this block
                         if (force == false) {
                             PrintAndLogEx(INFO, "Skipping,  use `" _YELLOW_("--force") "` to override and write this data");
-                            continue;
+                            skip = true;
                         }
                     }
                 }
@@ -1570,6 +1570,9 @@ static int CmdHF14AMfRestore(const char *Cmd) {
             if (bytes_read) {
                 dump += MFBLOCK_SIZE;
                 bytes_read -= MFBLOCK_SIZE;
+            }
+            if (skip) {
+                continue;
             }
 
             uint8_t wdata[26];
@@ -1607,7 +1610,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                 }
                 // write somehow failed.  Lets determine why.
                 if (isOK == PM3_ETEAROFF) {
-                    PrintAndLogEx(INFO, "Tear off triggerd. Recommendation is not to use tear-off with restore command");
+                    PrintAndLogEx(INFO, "Tear off triggered. Recommendation is not to use tear-off with restore command");
                     goto out;
                 }
 
