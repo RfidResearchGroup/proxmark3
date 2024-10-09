@@ -6,6 +6,7 @@
 
 import pm3
 import os
+import sys
 
 TOTAL_SECTORS = 16 #1k chips
 
