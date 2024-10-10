@@ -34,6 +34,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed hardnested on AVX512F #2410 (@xianglin1998)
 - Added `hf 14a aidsim` - simulates a PICC (like `14a sim`), and allows you to respond to specific AIDs and getData responses (@evildaemond)
 - Fixed arguments for `SimulateIso14443aTag` and `SimulateIso14443aInit` in `hf_young.c`, `hf_aveful.c`, `hf_msdsal.c`, `hf_cardhopper.c`, `hf_reblay.c`, `hf_tcprst.c` and `hf_craftbyte.c` (@archi)
+- Added `mf_backdoor_dump.py` script that dumps FM11RF08S and similar (Mifare Classic 1k) tag data that can be directly read by known backdoor keys. (@Aptimex)
 
 ## [Backdoor.4.18994][2024-09-10]
 - Changed flashing messages to be less scary (@iceman1001)
