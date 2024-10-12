@@ -227,6 +227,7 @@ Check column "offline" for their availability.
 |`hf 14b valid           `|Y       |`SRIX4 checksum test`
 |`hf 14b calypso         `|N       |`Read contents of a Calypso card`
 |`hf 14b mobib           `|N       |`Read contents of a Mobib card`
+|`hf 14b setuid          `|N       |`Set UID for magic card`
 
 
 ### hf 15
@@ -1078,9 +1079,9 @@ Check column "offline" for their availability.
 |`lf hitag hts help      `|Y       |`This help`
 |`lf hitag hts list      `|Y       |`List Hitag S trace history`
 |`lf hitag hts reader    `|N       |`Act like a Hitag S reader`
-|`lf hitag hts rdbl      `|N       |`Read Hitag S memory`
+|`lf hitag hts rdbl      `|N       |`Read Hitag S page`
 |`lf hitag hts wrbl      `|N       |`Write Hitag S page`
-|`lf hitag hts sim       `|N       |`Simulate Hitag transponder`
+|`lf hitag hts sim       `|N       |`Simulate Hitag S transponder`
 
 
 ### lf idteck

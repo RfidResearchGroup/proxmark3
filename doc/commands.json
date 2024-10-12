@@ -1613,6 +1613,19 @@
             ],
             "usage": "hf 14b restore [-h] [-f <fn>] [--512] [--4k]"
         },
+        "hf 14b setuid": {
+            "command": "hf 14b setuid",
+            "description": "Set UID for magic card (only works with such cards)",
+            "notes": [
+                "hf 14b setuid -u 11223344"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-u, --uid <hex> UID, 4 hex bytes"
+            ],
+            "usage": "hf 14b setuid [-h] -u <hex>"
+        },
         "hf 14b sim": {
             "command": "hf 14b sim",
             "description": "Simulate a ISO/IEC 14443 type B tag with 4 byte UID / PUPI",
@@ -3221,12 +3234,14 @@
             "options": [
                 "-h, --help This help",
                 "--ci <dec> use config slot at index",
-                "--ki <dec> Key index to select key from memory 'hf iclass managekeys'",
+                "--ki <dec> Card Key - index to select key from memory 'hf iclass managekeys'",
+                "--krki <dec> Elite Keyroll Key - index to select key from memory 'hf iclass managekeys'",
+                "--elite Use elite key for the the Card Key ki",
                 "-g generate card dump file",
                 "-l load available cards",
                 "-p print available cards"
             ],
-            "usage": "hf iclass configcard [-hglp] [--ci <dec>] [--ki <dec>]"
+            "usage": "hf iclass configcard [-hglp] [--ci <dec>] [--ki <dec>] [--krki <dec>] [--elite]"
         },
         "hf iclass creditepurse": {
             "command": "hf iclass creditepurse",
@@ -5111,9 +5126,10 @@
                 "",
                 "FM11RF08S specific options: Incompatible with above options, except -k; output in JSON",
                 "--collect_fm11rf08s collect all nT/{nT}/par_err.",
-                "--collect_fm11rf08s_with_data collect all nT/{nT}/par_err and data blocks."
+                "--collect_fm11rf08s_with_data collect all nT/{nT}/par_err and data blocks.",
+                "-f, --file <fn> Specify a filename for collected data"
             ],
-            "usage": "hf mf isen [-hab] [--blk <dec>] [-c <dec>] [-k <hex>] [--blk2 <dec>] [--a2] [--b2] [--c2 <dec>] [--key2 <hex>] [-n <dec>] [--reset] [--hardreset] [--addread] [--addauth] [--incblk2] [--corruptnrar] [--corruptnrarparity] FM11RF08S specific options: [--collect_fm11rf08s] [--collect_fm11rf08s_with_data]"
+            "usage": "hf mf isen [-hab] [--blk <dec>] [-c <dec>] [-k <hex>] [--blk2 <dec>] [--a2] [--b2] [--c2 <dec>] [--key2 <hex>] [-n <dec>] [--reset] [--hardreset] [--addread] [--addauth] [--incblk2] [--corruptnrar] [--corruptnrarparity] FM11RF08S specific options: [--collect_fm11rf08s] [--collect_fm11rf08s_with_data] [-f <fn>]"
         },
         "hf mf mad": {
             "command": "hf mf mad",
@@ -9793,9 +9809,10 @@
                 "--nrar <hex> nonce / answer writer, 8 hex bytes",
                 "--crypto crypto mode",
                 "-k, --key <hex> pwd or key, 4 or 6 hex bytes",
-                "-p, --page <dec> page address to read from"
+                "-p, --page <dec> page address to read from",
+                "-c, --count <dec> how many pages to read. '0' reads all pages up to the end page (default: 1)"
             ],
-            "usage": "lf hitag hts rdbl [-h8] [--nrar <hex>] [--crypto] [-k <hex>] -p <dec>"
+            "usage": "lf hitag hts rdbl [-h8] [--nrar <hex>] [--crypto] [-k <hex>] [-p <dec>] [-c <dec>]"
         },
         "lf hitag hts reader": {
             "command": "lf hitag hts reader",
@@ -12954,8 +12971,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 747,
+        "commands_extracted": 748,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-10-04T07:43:15"
+        "extracted_on": "2024-10-12T11:55:26"
     }
 }

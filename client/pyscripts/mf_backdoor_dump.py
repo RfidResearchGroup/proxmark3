@@ -24,7 +24,7 @@ p = pm3.pm3()
 for bk in BACKDOOR_KEYS:
     p.console(f"hf mf rdbl -c 4 --blk 0 --key {bk}")
     output = p.grabbed_output.split('\n')
-    
+
     if "auth error" in output[0].lower():
         continue
     elif "can't select card" in output[0].lower():
@@ -37,7 +37,7 @@ for bk in BACKDOOR_KEYS:
     else:
         WORKING_KEY = bk
         break
-    
+
 if not WORKING_KEY:
     print("None of the backdoor keys seem to work with this tag.")
     exit()
@@ -52,7 +52,7 @@ header = False
 # Read every sector
 for i in range(TOTAL_SECTORS):
     p.console(f"hf mf rdsc -c 4 --key {WORKING_KEY} -s {i}")
-    
+
     start = False
     for line in p.grabbed_output.split('\n'):
         if not header:
@@ -60,11 +60,11 @@ for i in range(TOTAL_SECTORS):
         elif start and len(line) > 0:
             print(line)
             continue
-        
+
         if "----------" in line:
             start = True
             header = True
             continue
         else:
             continue
-        
+

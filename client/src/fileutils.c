@@ -717,7 +717,7 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             if (datalen != sizeof(iso14a_fm11rf08s_nonces_with_data_t)) {
                 return PM3_EINVARG;
             }
-            iso14a_fm11rf08s_nonces_with_data_t * p = (iso14a_fm11rf08s_nonces_with_data_t *)data;
+            iso14a_fm11rf08s_nonces_with_data_t *p = (iso14a_fm11rf08s_nonces_with_data_t *)data;
             if (ftype == jsfFM11RF08SNoncesWithData) {
                 JsonSaveStr(root, "FileType", "fm11rf08s_nonces_with_data");
             } else {
@@ -2317,7 +2317,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
     return loadFileDICTIONARY_safe_ex(preferredName, ".dic", pdata, keylen, keycnt, true);
 }
 
-int loadFileDICTIONARY_safe_ex(const char *preferredName, const char* suffix, void **pdata, uint8_t keylen, uint32_t *keycnt, bool verbose) {
+int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, void **pdata, uint8_t keylen, uint32_t *keycnt, bool verbose) {
 
     int retval = PM3_SUCCESS;
 

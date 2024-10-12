@@ -465,10 +465,10 @@ static int print_atqb_resp(uint8_t *data, uint8_t cid) {
     PrintAndLogEx(SUCCESS, "Tag :");
     PrintAndLogEx(SUCCESS, "  Max Buf Length: %u (MBLI) %s", cid >> 4, (cid & 0xF0) ? "" : "chained frames not supported");
     PrintAndLogEx(SUCCESS, "  CID : %u", cid & 0x0f);
-    PrintAndLogEx(NORMAL, ""); 
+    PrintAndLogEx(NORMAL, "");
 
     PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
-    if (memcmp(data, "\x54\x43\x4F\x53",4) == 0) {
+    if (memcmp(data, "\x54\x43\x4F\x53", 4) == 0) {
 
         int outlen = 0;
         uint8_t out[PM3_CMD_DATA_SIZE] = {0};
@@ -479,7 +479,7 @@ static int print_atqb_resp(uint8_t *data, uint8_t cid) {
             } else {
                 PrintAndLogEx(SUCCESS, "Tiananxin TCOS CPU card... " _RED_("n/a"));
             }
-                PrintAndLogEx(SUCCESS, "Magic capabilities........ most likely");
+            PrintAndLogEx(SUCCESS, "Magic capabilities........ most likely");
         }
 
     } else {
@@ -2935,8 +2935,8 @@ static int CmdHF14BSetUID(const char *Cmd) {
         return switch_off_field_14b();
     }
 
-    iso14b_card_select_t *card = (iso14b_card_select_t*)select;
-    if (memcmp(card->atqb, "\x54\x43\x4F\x53", 4) ) {
+    iso14b_card_select_t *card = (iso14b_card_select_t *)select;
+    if (memcmp(card->atqb, "\x54\x43\x4F\x53", 4)) {
         PrintAndLogEx(FAILED, "None supported tag");
         PrintAndLogEx(NORMAL, "");
         return switch_off_field_14b();

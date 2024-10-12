@@ -529,7 +529,7 @@ static int CmdEM410xBrute(const char *Cmd) {
     // load keys
     uint8_t *uidblock = NULL;
     uint32_t uidcount = 0;
-    int res = loadFileDICTIONARY_safe_ex(filename, suffix, (void**)&uidblock, 5, &uidcount, false);
+    int res = loadFileDICTIONARY_safe_ex(filename, suffix, (void **)&uidblock, 5, &uidcount, false);
     if (res != PM3_SUCCESS) {
         free(uidblock);
         return res;

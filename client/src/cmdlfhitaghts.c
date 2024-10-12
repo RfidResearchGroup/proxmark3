@@ -210,8 +210,8 @@ static void print_error(int8_t reason) {
             PrintAndLogEx(FAILED, "Write to page failed!");
             break;
         default:
-          // PM3_REASON_UNKNOWN
-          PrintAndLogEx(DEBUG, "DEBUG: Error - Hitag S failed");
+            // PM3_REASON_UNKNOWN
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Hitag S failed");
     }
 }
 
@@ -296,7 +296,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
     PrintAndLogEx(INFO, "---+-------------+-------");
 
     const int hts_mem_sizes[] = {1, 8, 64, 64};
-    
+
     if (count == 0) {
         count = hts_mem_sizes[config.MEMT] - page;
     }
@@ -458,7 +458,7 @@ void hitags_config_print(hitags_config_t config) {
     PrintAndLogEx(INFO, " Authenticaion.... %s", config.auth ? _YELLOW_("Yes") : "No");
 
     PrintAndLogEx(INFO, " TTF coding....... %s",
-                  config.RES3 ? "FSK  0=RF/10 1=RF/8" : (const char *[]){"Manchester", "Biphase"}[config.TTFC]);
+    config.RES3 ? "FSK  0=RF/10 1=RF/8" : (const char *[]) {"Manchester", "Biphase"}[config.TTFC]);
 
     PrintAndLogEx(INFO, " TTF data rate.... %s",
     (const char *[]) {
@@ -467,16 +467,16 @@ void hitags_config_print(hitags_config_t config) {
     }[config.TTFDR]);
 
     PrintAndLogEx(INFO, " TTF mode......... %s",
-                  (const char *[]){
-                      "TTF Mode disabled (= RTF Mode)",
-                      "Page 4, Page 5",
-                      "Page 4, Page 5, Page 6, Page 7",
-                      "Page 4",
-                      "TTF Mode disabled (= RTF Mode)",
-                      "Page 4, Page 5, Page 6",
-                      "Page 4, Page 5, Page 6, Page 7, Page 8",
-                      "Page 4, Page 5, Page 6, Page 7, Page 8, Page 9, Page 10, Page 11",
-                  }[config.RES0 << 2 | config.TTFM]);
+    (const char *[]) {
+        "TTF Mode disabled (= RTF Mode)",
+        "Page 4, Page 5",
+        "Page 4, Page 5, Page 6, Page 7",
+        "Page 4",
+        "TTF Mode disabled (= RTF Mode)",
+        "Page 4, Page 5, Page 6",
+        "Page 4, Page 5, Page 6, Page 7, Page 8",
+        "Page 4, Page 5, Page 6, Page 7, Page 8, Page 9, Page 10, Page 11",
+    }[config.RES0 << 2 | config.TTFM]);
 
     PrintAndLogEx(INFO, " Config locked.... %s", config.LCON ? _RED_("Yes") : _GREEN_("No"));
     PrintAndLogEx(INFO, " Key/PWD locked... %s", config.LKP ? _RED_("Yes") : _GREEN_("No"));
