@@ -41,6 +41,13 @@ spi = {
                 "sizeB": "512KB",
                 },
             },
+        0x40: {
+            0x16: {
+                "part": "W25Q32BVSSIG",
+                "size": "32mbits",
+                "sizeB": "4MB",
+                },
+            },
         0x70: {
             0x22: {
                 "part": "W25Q02JV-IM",
