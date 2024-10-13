@@ -2377,6 +2377,14 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
         if (have_uid == false) { // need a full select cycle to get the uid first
             iso14a_card_select_t card_info;
             if (iso14443a_select_card(uid, &card_info, &cuid, true, 0, true) == 0) {
+                if (s == 0) {
+                    // first attempt, if no card let's stop directly
+                    retval = PM3_EFAILED;
+                    if (g_dbglevel >= DBG_ERROR) {
+                        Dbprintf("Card not found");
+                    }
+                    goto out;
+                }
                 continue;
             }
 

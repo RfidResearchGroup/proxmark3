@@ -4999,8 +4999,18 @@ static int CmdHF14AMfECFill(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
 
-    // 2021, iceman:  should get a response from device when its done.
-    return PM3_SUCCESS;
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_EML_LOAD, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status == PM3_SUCCESS)
+        PrintAndLogEx(SUCCESS, "Fill ( " _GREEN_("ok") " )");
+    else
+        PrintAndLogEx(FAILED, "Fill ( " _RED_("fail") " )");
+
+    return resp.status;
 }
 
 static int CmdHF14AMfEKeyPrn(const char *Cmd) {
