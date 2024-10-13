@@ -362,6 +362,9 @@ void Flashmem_print_status(void) {
     } else {
         if (device_type.manufacturer_id == WINBOND_MANID) {
             switch (device_type.device_id) {
+                case WINBOND_32MB_DEVID:
+                    DbpString("  Memory size............. " _YELLOW_("32 mbits / 4 MB"));
+                    break;
                 case WINBOND_16MB_DEVID:
                     DbpString("  Memory size............. " _YELLOW_("16 mbits / 2 MB"));
                     break;
