@@ -365,6 +365,12 @@ void Flashmem_print_status(void) {
                 case WINBOND_16MB_DEVID:
                     DbpString("  Memory size............. " _YELLOW_("16 mbits / 2 MB"));
                     break;
+                case WINBOND_8MB_DEVID:
+                    DbpString("  Memory size............. " _YELLOW_("8 mbits / 1 MB"));
+                    break;
+                case WINBOND_4MB_DEVID:
+                    DbpString("  Memory size............. " _YELLOW_("4 mbits / 512 kb"));
+                    break;
                 case WINBOND_2MB_DEVID:
                     DbpString("  Memory size............. " _YELLOW_("2 mbits / 256 kb"));
                     break;
@@ -375,6 +381,10 @@ void Flashmem_print_status(void) {
                     DbpString("  Memory size............. " _YELLOW_("512 kbits / 64 kb"));
                     break;
                 default:
+                    Dbprintf("  Device ID............... " _YELLOW_("%02X / %02X (Winbond)"),
+                            device_type.manufacturer_id,
+                            device_type.device_id
+                            );
                     break;
             }
         } else {
