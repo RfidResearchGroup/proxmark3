@@ -2078,8 +2078,8 @@ OUT:
                 emlSetMem_xt(block, blockno, 1, sizeof(block));
             }
 
-            MifareECardLoad(sectorcnt, MF_KEY_A);
-            MifareECardLoad(sectorcnt, MF_KEY_B);
+            MifareECardLoad(sectorcnt, MF_KEY_A, NULL);
+            MifareECardLoad(sectorcnt, MF_KEY_B, NULL);
         }
     } else {
         // partial/none keys found
@@ -2311,14 +2311,19 @@ void MifareEMemGet(uint8_t blockno, uint8_t blockcnt) {
 // Load a card into the emulator memory
 //
 //-----------------------------------------------------------------------------
-int MifareECardLoadExt(uint8_t sectorcnt, uint8_t keytype) {
-    int retval = MifareECardLoad(sectorcnt, keytype);
+int MifareECardLoadExt(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
+    int retval = MifareECardLoad(sectorcnt, keytype, key);
     reply_ng(CMD_HF_MIFARE_EML_LOAD, retval, NULL, 0);
     return retval;
 }
 
-int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
-
+int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
+    if ((keytype > MF_KEY_B) && (key == NULL)) {
+        if (g_dbglevel >= DBG_ERROR) {
+            Dbprintf("Error, missing key");
+        }
+        return PM3_EINVARG;
+    }
     LED_A_ON();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -2327,6 +2332,7 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
 
     // variables
     bool have_uid = false;
+    bool bd_authenticated = false;
     uint8_t cascade_levels = 0;
     uint32_t cuid = 0;
     uint8_t uid[10] = {0x00};
@@ -2389,13 +2395,27 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
             }
             have_uid = true;
         } else { // no need for anticollision. We can directly select the card
-            if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
-                continue;
+            if (!bd_authenticated) { // no need to select if bd_authenticated with backdoor
+                if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
+                    continue;
+                }
             }
         }
 
         // Auth
-        if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(s), keytype, ui64Key, AUTH_FIRST)) {
+        if (keytype > MF_KEY_B) {
+            if (! bd_authenticated) {
+                ui64Key = bytes_to_num(key, 6);
+                if (mifare_classic_auth(pcs, cuid, 0, keytype, ui64Key, AUTH_FIRST)) {
+                    retval = PM3_EFAILED;
+                    if (g_dbglevel >= DBG_ERROR) {
+                        Dbprintf("Auth error");
+                    }
+                    goto out;
+                }
+                bd_authenticated = true;
+            }
+        } else if (mifare_classic_auth(pcs, cuid, FirstBlockOfSector(s), keytype, ui64Key, AUTH_FIRST)) {
 
             ui64Key = emlGetKey(s, MF_KEY_B);
 
@@ -2455,8 +2475,9 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
             }
         }
     }
-
-    int res = mifare_classic_halt(pcs);
+    int res;
+out:
+    res = mifare_classic_halt(pcs);
     (void)res;
 
     iso14a_set_timeout(timeout);
@@ -2466,6 +2487,7 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype) {
     set_tracing(false);
     return retval;
 }
+
 
 
 //-----------------------------------------------------------------------------

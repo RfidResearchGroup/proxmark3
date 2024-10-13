@@ -4926,6 +4926,8 @@ static int CmdHF14AMfECFill(const char *Cmd) {
         arg_param_begin,
         arg_lit0("a", NULL, "input key type is key A(def)"),
         arg_lit0("b", NULL, "input key type is key B"),
+        arg_int0("c", NULL, "<dec>", "input key type is key A + offset"),
+        arg_str0("k", "key", "<hex>", "key, 6 hex bytes, only for option -c"),
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
         arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
@@ -4941,11 +4943,28 @@ static int CmdHF14AMfECFill(const char *Cmd) {
     } else if (arg_get_lit(ctx, 2)) {
         keytype = MF_KEY_B;
     }
+    uint8_t prev_keytype = keytype;
+    keytype = arg_get_int_def(ctx, 3, keytype);
+    if ((arg_get_lit(ctx, 1) || arg_get_lit(ctx, 2)) && (keytype != prev_keytype)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Choose one single input key type");
+        return PM3_EINVARG;
+    }
+    int keylen = 0;
+    uint8_t key[6] = {0};
+    CLIGetHexWithReturn(ctx, 4, key, &keylen);
+    if ((keytype > MF_KEY_B) && (keylen != 6)) {
+        PrintAndLogEx(WARNING, "Missing key");
+        return PM3_EINVARG;
+    }
+    if ((keytype <= MF_KEY_B) && (keylen > 0)) {
+        PrintAndLogEx(WARNING, "Ignoring provided key");
+    }
 
-    bool m0 = arg_get_lit(ctx, 3);
-    bool m1 = arg_get_lit(ctx, 4);
-    bool m2 = arg_get_lit(ctx, 5);
-    bool m4 = arg_get_lit(ctx, 6);
+    bool m0 = arg_get_lit(ctx, 5);
+    bool m1 = arg_get_lit(ctx, 6);
+    bool m2 = arg_get_lit(ctx, 7);
+    bool m4 = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
     // validations
@@ -4975,6 +4994,7 @@ static int CmdHF14AMfECFill(const char *Cmd) {
         .sectorcnt = sectors_cnt,
         .keytype = keytype
     };
+    memcpy(payload.key, key, sizeof(payload.key));
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));

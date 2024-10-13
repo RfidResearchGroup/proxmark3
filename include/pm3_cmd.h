@@ -323,6 +323,7 @@ typedef struct {
 typedef struct {
     uint8_t sectorcnt;
     uint8_t keytype;
+    uint8_t key[6];
 } PACKED mfc_eload_t;
 
 typedef struct {

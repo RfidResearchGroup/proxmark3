@@ -45,8 +45,8 @@ void MifareChkKeys_file(uint8_t *fn);
 
 void MifareEMemClr(void);
 void MifareEMemGet(uint8_t blockno, uint8_t blockcnt);
-int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype);
-int MifareECardLoadExt(uint8_t sectorcnt, uint8_t keytype);
+int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key);
+int MifareECardLoadExt(uint8_t sectorcnt, uint8_t keytype, uint8_t *key);
 
 // MFC GEN1a /1b
 void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain);  // Work with "magic Chinese" card

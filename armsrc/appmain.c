@@ -1869,7 +1869,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_MIFARE_EML_LOAD: {
             mfc_eload_t *payload = (mfc_eload_t *) packet->data.asBytes;
-            MifareECardLoadExt(payload->sectorcnt, payload->keytype);
+            MifareECardLoadExt(payload->sectorcnt, payload->keytype, payload->key);
             break;
         }
         // Gen1a / 1b - "magic Chinese" card
