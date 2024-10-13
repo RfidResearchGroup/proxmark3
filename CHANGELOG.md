@@ -3,9 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- Changed `hf mf ecfill` to wait for execution and return status (@doegox)
-- Added option to wait for a card to `hf 14a reader` (@doegox)
-- Added support for quick dump via backdoor auth to `hf mf ecfill` (@doegox)
+- Changed `mf_backdoor_dump.py`- use faster ecfill/eview (@doegox)
+- Changed `hf mf ecfill` - wait for execution and return status (@doegox)
+- Changed `hf 14a reader` - added option to wait for a card (@doegox)
+- Changed `hf mf ecfill` - added support for quick dump via backdoor auth (@doegox)
 - Fixed `hf mf restore` - really skip strict ACLs unless --force (@doegox)
 - Added `hf 14b setuid` - set uid on magic 14b tag (@iceman1001)
 - Changed `hf 14b info` - now detect Tiananxin (@iceman1001)
