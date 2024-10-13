@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added option to wait for a card to `hf 14a reader` (@doegox)
 - Added support for quick dump via backdoor auth to `hf mf ecfill` (@doegox)
 - Fixed `hf mf restore` - really skip strict ACLs unless --force (@doegox)
 - Added `hf 14b setuid` - set uid on magic 14b tag (@iceman1001)

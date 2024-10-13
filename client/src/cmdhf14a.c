@@ -558,6 +558,7 @@ static int CmdHF14AReader(const char *Cmd) {
         arg_lit0(NULL, "ecp", "Use enhanced contactless polling"),
         arg_lit0(NULL, "mag", "Use Apple magsafe polling"),
         arg_lit0("@", NULL, "continuous reader mode"),
+        arg_lit0("w", "wait", "wait for card"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -589,8 +590,10 @@ static int CmdHF14AReader(const char *Cmd) {
     }
 
     bool continuous = arg_get_lit(ctx, 7);
+    bool wait = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
+    bool found = false;
     if (disconnectAfter == false) {
         cm |= ISO14A_NO_DISCONNECT;
     }
@@ -627,6 +630,8 @@ static int CmdHF14AReader(const char *Cmd) {
                 3: proprietary Anticollision
             */
             uint64_t select_status = resp.oldarg[0];
+
+            found = (select_status != 0);
 
             if (select_status == 0) {
                 DropField();
@@ -682,7 +687,7 @@ plot:
             break;
         }
 
-    } while (continuous);
+    } while (continuous || (wait && (!found)));
 
     if (disconnectAfter == false) {
         if (silent == false) {
