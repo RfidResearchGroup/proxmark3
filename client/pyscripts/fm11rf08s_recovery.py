@@ -98,11 +98,9 @@ def print_key(sec, key_type, key):
     kt = ['A', 'B'][key_type]
     print(f"Sector {sec:2} key{kt} = " + color(key, fg="green"))
 
-save_path = ""
-p.console("prefs show")
-for line in p.grabbed_output.split('\n'):
-    if "dump save path" in line:
-        save_path = line[33:] + "/"
+p.console("prefs show --json")
+prefs = json.loads(p.grabbed_output)
+save_path = prefs['file.default.dumppath'] + os.path.sep
 
 found_keys = [["", ""] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
 if args.init_check:
