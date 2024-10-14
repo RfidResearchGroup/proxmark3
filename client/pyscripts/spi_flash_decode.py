@@ -47,7 +47,6 @@ spi = {
                 "size": "32mbits",
                 "sizeB": "4MB",
                 },
-            },
             0x13: {
                 "part": "W25Q40BV",
                 "size": "4mbits",
