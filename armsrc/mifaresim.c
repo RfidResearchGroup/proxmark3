@@ -510,13 +510,8 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
     nonces_t ar_nr_resp[ATTACK_KEY_COUNT * 2]; // *2 for 2 separate attack types (nml, moebius) 36 * 7 * 2 bytes = 504 bytes
     memset(ar_nr_resp, 0x00, sizeof(ar_nr_resp));
 
-    uint8_t ar_nr_collected[ATTACK_KEY_COUNT * 2]; // *2 for 2nd attack type (moebius)
+    uint8_t ar_nr_collected[ATTACK_KEY_COUNT ]; // for moebius attack type
     memset(ar_nr_collected, 0x00, sizeof(ar_nr_collected));
-    uint8_t nonce1_count = 0;
-    uint8_t nonce2_count = 0;
-    uint8_t moebius_n_count = 0;
-    bool gettingMoebius = false;
-    uint8_t mM = 0; //moebius_modifier for collection storage
 
     // Authenticate response - nonce
     uint8_t rAUTH_NT[4] = {0, 0, 0, 1};
@@ -1150,61 +1145,37 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                 if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
 
                     for (uint8_t i = 0; i < ATTACK_KEY_COUNT; i++) {
-                        if (ar_nr_collected[i + mM] == 0 ||
+                        if (ar_nr_collected[i] == 0 ||
                                 (
-                                    (cardAUTHSC == ar_nr_resp[i + mM].sector) &&
-                                    (cardAUTHKEY == ar_nr_resp[i + mM].keytype) &&
-                                    (ar_nr_collected[i + mM] > 0)
+                                    (cardAUTHSC == ar_nr_resp[i].sector) &&
+                                    (cardAUTHKEY == ar_nr_resp[i].keytype) &&
+                                    (ar_nr_collected[i] > 0)
                                 )
                            ) {
                             // if first auth for sector, or matches sector and keytype of previous auth
-                            if (ar_nr_collected[i + mM] < 2) {
+                            if (ar_nr_collected[i] < 2) {
                                 // if we haven't already collected 2 nonces for this sector
-                                if (ar_nr_resp[ar_nr_collected[i + mM]].ar != ar) {
+                                if (ar_nr_resp[ar_nr_collected[i]].ar != ar) {
                                     // Avoid duplicates... probably not necessary, ar should vary.
-                                    if (ar_nr_collected[i + mM] == 0) {
+                                    if (ar_nr_collected[i] == 0) {
                                         // first nonce collect
-                                        ar_nr_resp[i + mM].cuid = cuid;
-                                        ar_nr_resp[i + mM].sector = cardAUTHSC;
-                                        ar_nr_resp[i + mM].keytype = cardAUTHKEY;
-                                        ar_nr_resp[i + mM].nonce = nonce;
-                                        ar_nr_resp[i + mM].nr = nr;
-                                        ar_nr_resp[i + mM].ar = ar;
-                                        nonce1_count++;
-                                        // add this nonce to first moebius nonce
-                                        ar_nr_resp[i + ATTACK_KEY_COUNT].cuid = cuid;
-                                        ar_nr_resp[i + ATTACK_KEY_COUNT].sector = cardAUTHSC;
-                                        ar_nr_resp[i + ATTACK_KEY_COUNT].keytype = cardAUTHKEY;
-                                        ar_nr_resp[i + ATTACK_KEY_COUNT].nonce = nonce;
-                                        ar_nr_resp[i + ATTACK_KEY_COUNT].nr = nr;
-                                        ar_nr_resp[i + ATTACK_KEY_COUNT].ar = ar;
-                                        ar_nr_collected[i + ATTACK_KEY_COUNT]++;
-                                    } else { // second nonce collect (std and moebius)
-                                        ar_nr_resp[i + mM].nonce2 = nonce;
-                                        ar_nr_resp[i + mM].nr2 = nr;
-                                        ar_nr_resp[i + mM].ar2 = ar;
-
-                                        if (!gettingMoebius) {
-                                            nonce2_count++;
-                                            // check if this was the last second nonce we need for std attack
-                                            if (nonce2_count == nonce1_count) {
-                                                // done collecting std test switch to moebius
-                                                // first finish incrementing last sample
-                                                ar_nr_collected[i + mM]++;
-                                                // switch to moebius collection
-                                                gettingMoebius = true;
-                                                mM = ATTACK_KEY_COUNT;
-                                                nonce = nonce * 7;
-                                                break;
-                                            }
-                                        } else {
-                                            moebius_n_count++;
-                                            // if we've collected all the nonces we need - finish.
-                                            if (nonce1_count == moebius_n_count)
-                                                finished = true;
+                                        ar_nr_resp[i].cuid = cuid;
+                                        ar_nr_resp[i].sector = cardAUTHSC;
+                                        ar_nr_resp[i].keytype = cardAUTHKEY;
+                                        ar_nr_resp[i].nonce = nonce;
+                                        ar_nr_resp[i].nr = nr;
+                                        ar_nr_resp[i].ar = ar;
+                                        ar_nr_collected[i]++;
+                                    } else { // second nonce collect
+                                        // make sure we have different nonces for moebius attack
+                                        if (ar_nr_resp[i].nonce != nonce) {
+                                            ar_nr_resp[i].nonce2 = nonce;
+                                            ar_nr_resp[i].nr2 = nr;
+                                            ar_nr_resp[i].ar2 = ar;
+                                            ar_nr_collected[i]++;
+                                            finished = true;
                                         }
                                     }
-                                    ar_nr_collected[i + mM]++;
                                 }
                             }
                             // we found right spot for this nonce stop looking
@@ -1356,45 +1327,25 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
     FpgaDisableTracing();
 
     // NR AR ATTACK
-    // mfkey32
     if (((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) && (g_dbglevel >= DBG_INFO)) {
         for (uint8_t i = 0; i < ATTACK_KEY_COUNT; i++) {
             if (ar_nr_collected[i] == 2) {
                 Dbprintf("Collected two pairs of AR/NR which can be used to extract sector %d " _YELLOW_("%s")
-                         , ar_nr_resp[i].sector
-                         , (ar_nr_resp[i].keytype == AUTHKEYA) ? "key A" : "key B"
+                        , ar_nr_resp[i].sector
+                        , (ar_nr_resp[i].keytype == AUTHKEYA) ? "key A" : "key B"
                         );
-                Dbprintf("../tools/mfc/card_reader/mfkey32 %08x %08x %08x %08x %08x %08x",
-                         ar_nr_resp[i].cuid,  //UID
-                         ar_nr_resp[i].nonce, //NT
-                         ar_nr_resp[i].nr,    //NR1
-                         ar_nr_resp[i].ar,    //AR1
-                         ar_nr_resp[i].nr2,   //NR2
-                         ar_nr_resp[i].ar2    //AR2
+                Dbprintf("../tools/mfc/card_reader/mfkey32v2 %08x %08x %08x %08x %08x %08x %08x",
+                        ar_nr_resp[i].cuid,  //UID
+                        ar_nr_resp[i].nonce, //NT
+                        ar_nr_resp[i].nr,    //NR1
+                        ar_nr_resp[i].ar,    //AR1
+                        ar_nr_resp[i].nonce2,//NT2
+                        ar_nr_resp[i].nr2,   //NR2
+                        ar_nr_resp[i].ar2    //AR2
                         );
             }
         }
     }
-
-    // mfkey32 v2
-    for (uint8_t i = ATTACK_KEY_COUNT; i < ATTACK_KEY_COUNT * 2; i++) {
-        if (ar_nr_collected[i] == 2) {
-            Dbprintf("Collected two pairs of AR/NR which can be used to extract sector %d " _YELLOW_("%s")
-                     , ar_nr_resp[i].sector
-                     , (ar_nr_resp[i].keytype == AUTHKEYA) ? "key A" : "key B"
-                    );
-            Dbprintf("../tools/mfc/card_reader/mfkey32v2 %08x %08x %08x %08x %08x %08x %08x",
-                     ar_nr_resp[i].cuid,  //UID
-                     ar_nr_resp[i].nonce, //NT
-                     ar_nr_resp[i].nr,    //NR1
-                     ar_nr_resp[i].ar,    //AR1
-                     ar_nr_resp[i].nonce2,//NT2
-                     ar_nr_resp[i].nr2,   //NR2
-                     ar_nr_resp[i].ar2    //AR2
-                    );
-        }
-    }
-
     if (g_dbglevel >= DBG_ERROR) {
         Dbprintf("Emulator stopped. Tracing: %d  trace length: %d ", get_tracing(), BigBuf_get_traceLen());
     }
