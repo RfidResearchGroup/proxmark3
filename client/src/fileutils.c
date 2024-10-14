@@ -288,22 +288,15 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
     return PM3_SUCCESS;
 }
 
-// dump file (normally,  we also got preference file, etc)
-int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, void (*callback)(json_t *)) {
-    return saveFileJSONex(preferredName, ftype, data, datalen, true, callback, spDump);
-}
-int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *), savePaths_t e_save_path) {
-
+int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *)) {
     if (ftype != jsfCustom) {
         if (data == NULL || datalen == 0) {
             return PM3_EINVARG;
         }
     }
 
-    int retval = PM3_SUCCESS;
     char path[PATH_MAX_LENGTH] = {0};
 
-    json_t *root = json_object();
     JsonSaveStr(root, "Created", "proxmark3");
     switch (ftype) {
         case jsfRaw: {
@@ -771,15 +764,30 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
         default:
             break;
     }
+    return PM3_SUCCESS;
+}
 
+// dump file (normally,  we also got preference file, etc)
+int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, void (*callback)(json_t *)) {
+    return saveFileJSONex(preferredName, ftype, data, datalen, true, callback, spDump);
+}
+int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *), savePaths_t e_save_path) {
+
+    int retval = PM3_SUCCESS;
     char *fn = newfilenamemcopyEx(preferredName, ".json", e_save_path);
     if (fn == NULL) {
         return PM3_EMALLOC;
     }
 
+    json_t *root = json_object();
+    retval = prepareJSON(root, ftype, data, datalen, verbose, callback);
+    if (retval != PM3_SUCCESS) {
+        return retval;
+    }
+
     if (json_dump_file(root, fn, JSON_INDENT(2))) {
         PrintAndLogEx(FAILED, "error, can't save the file `" _YELLOW_("%s") "`", fn);
-        retval = 200;
+        retval = PM3_ESOFT;
         free(fn);
         goto out;
     }
