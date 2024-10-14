@@ -1381,7 +1381,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
         if (ar_nr_collected[i] == 2) {
             Dbprintf("Collected two pairs of AR/NR which can be used to extract sector %d " _YELLOW_("%s")
                      , ar_nr_resp[i].sector
-                     , (ar_nr_resp[i].keytype == AUTHKEYB) ? "key A" : "key B"
+                     , (ar_nr_resp[i].keytype == AUTHKEYA) ? "key A" : "key B"
                     );
             Dbprintf("../tools/mfc/card_reader/mfkey32v2 %08x %08x %08x %08x %08x %08x %08x",
                      ar_nr_resp[i].cuid,  //UID
