@@ -74,6 +74,7 @@ parser = argparse.ArgumentParser(description='A script combining staticnested* t
                                  'to recover all keys from a FM11RF08S card.')
 parser.add_argument('-x', '--init-check', action='store_true', help='Run an initial fchk for default keys')
 parser.add_argument('-y', '--final-check', action='store_true', help='Run a final fchk with the found keys')
+parser.add_argument('-k', '--keep', action='store_true', help='Keep generated dictionaries after processing')
 parser.add_argument('-d', '--debug', action='store_true', help='Enable debug mode')
 args = parser.parse_args()
 
@@ -97,6 +98,11 @@ def print_key(sec, key_type, key):
     kt = ['A', 'B'][key_type]
     print(f"Sector {sec:2} key{kt} = " + color(key, fg="green"))
 
+save_path = ""
+p.console("prefs show")
+for line in p.grabbed_output.split('\n'):
+    if "dump save path" in line:
+        save_path = line[33:] + "/"
 
 found_keys = [["", ""] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
 if args.init_check:
@@ -156,7 +162,7 @@ for blk in range(NUM_SECTORS * 4):
     data[blk] = dict_nwd["blocks"][f"{blk}"]
 
 print("Generating first dump file")
-dumpfile = f"hf-mf-{uid:08X}-dump.bin"
+dumpfile = f"{save_path}hf-mf-{uid:08X}-dump.bin"
 with (open(dumpfile, "wb")) as f:
     for sec in range(NUM_SECTORS):
         for b in range(4):
@@ -170,7 +176,7 @@ with (open(dumpfile, "wb")) as f:
                     kb = "FFFFFFFFFFFF"
                 d = ka + d[12:20] + kb
             f.write(bytes.fromhex(d))
-print(f"Data have been dumped to `{dumpfile}`")
+print(f"Data has been dumped to `{dumpfile}`")
 
 elapsed_time1 = time.time() - start_time
 minutes = int(elapsed_time1 // 60)
@@ -514,7 +520,7 @@ else:
           color("1", fg="green") + ":Success )")
     print()
     print(plus + "Generating binary key file")
-    keyfile = f"hf-mf-{uid:08X}-key.bin"
+    keyfile = f"{save_path}hf-mf-{uid:08X}-key.bin"
     unknown = False
     with (open(keyfile, "wb")) as f:
         for key_type in [0, 1]:
@@ -529,7 +535,7 @@ else:
         print("[" + color("=", fg="yellow") + "]  --[ " + color("FFFFFFFFFFFF", fg="yellow") +
               " ]-- has been inserted for unknown keys")
     print(plus + "Generating final dump file")
-    dumpfile = f"hf-mf-{uid:08X}-dump.bin"
+    dumpfile = f"{save_path}hf-mf-{uid:08X}-dump.bin"
     with (open(dumpfile, "wb")) as f:
         for sec in range(NUM_SECTORS):
             for b in range(4):
@@ -543,7 +549,20 @@ else:
                         kb = "FFFFFFFFFFFF"
                     d = ka + d[12:20] + kb
                 f.write(bytes.fromhex(d))
-    print(plus + "Data have been dumped to `" + color(dumpfile, fg="yellow")+"`")
+    print(plus + "Data has been dumped to `" + color(dumpfile, fg="yellow")+"`")
+
+# Remove generated dictionaries after processing
+if not args.keep:
+    print(plus + "Removing generated dictionaries...")
+    for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
+        real_sec = sec
+        if sec >= NUM_SECTORS:
+            real_sec += 16
+        for key_type in [0, 1]:
+            for append in ["", "_filtered", "_duplicates"]:
+                file_name = f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}{append}.dic"
+                if os.path.isfile(file_name):
+                    os.remove(file_name)
 
 elapsed_time3 = time.time() - start_time - elapsed_time1 - elapsed_time2
 minutes = int(elapsed_time3 // 60)
