@@ -261,12 +261,14 @@ void truncate_filename(char *fn, uint16_t maxlen) {
 
 // --------- SAVE FILES
 int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen) {
-
+    return saveFileEx(preferredName, suffix, data, datalen, spDefault);
+}
+int saveFileEx(const char *preferredName, const char *suffix, const void *data, size_t datalen, savePaths_t e_save_path) {
     if (data == NULL || datalen == 0) {
         return PM3_EINVARG;
     }
 
-    char *fileName = newfilenamemcopy(preferredName, suffix);
+    char *fileName = newfilenamemcopyEx(preferredName, suffix, e_save_path);
     if (fileName == NULL) {
         return PM3_EMALLOC;
     }
@@ -3135,7 +3137,7 @@ int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
         PrintAndLogEx(INFO, "No data to save, skipping...");
         return PM3_EINVARG;
     }
-    saveFile(fn, ".bin", d, n);
+    saveFileEx(fn, ".bin", d, n, spDump);
 
     iso14a_mf_extdump_t jd = {0};
     jd.card_info.ats_len = 0;

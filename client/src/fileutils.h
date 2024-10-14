@@ -125,6 +125,7 @@ void truncate_filename(char *fn,  uint16_t maxlen);
  * @return 0 for ok, 1 for failz
  */
 int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen);
+int saveFileEx(const char *preferredName, const char *suffix, const void *data, size_t datalen, savePaths_t e_save_path);
 
 /** STUB
  * @brief Utility function to save JSON data to a file. This method takes a preferred name, but if that
