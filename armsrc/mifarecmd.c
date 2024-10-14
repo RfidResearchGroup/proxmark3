@@ -1045,13 +1045,19 @@ void MifareAcquireStaticEncryptedNonces(uint32_t flags, uint8_t *key) {
     uint8_t uid[10] = {0x00};
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
     uint8_t par_enc[1] = {0x00};
-    // ((MIFARE_1K_MAXSECTOR + 1) * 2) * 9 < PM3_CMD_DATA_SIZE
-    uint8_t buf[((MIFARE_1K_MAXSECTOR + 1) * 2) * 9] = {0x00};
+    // ((MIFARE_1K_MAXSECTOR + 1) * 2) * 8 < PM3_CMD_DATA_SIZE
+    // we're storing nonces in emulator memory at CARD_MEMORY_RF08S_OFFSET
+    // one sector data in one 16-byte block with for each keytype:
+    // uint16_t nt_first_half (as we can reconstruct the other half)
+    // uint8_t  nt_par_err
+    // uint8_t  flag: if 0xAA and key=000000000000 it means we don't know the key yet
+    // uint32_t nt_enc
+    // buf: working buffer to prepare those "blocks"
+    uint8_t buf[MIFARE_BLOCK_SIZE] = {0x00};
     uint64_t ui64Key = bytes_to_num(key, 6);
     bool with_data = flags & 1;
     uint32_t cuid = 0;
     int16_t isOK = PM3_SUCCESS;
-    uint16_t num_nonces = 0;
     uint8_t cascade_levels = 0;
     bool have_uid = false;
 
@@ -1113,19 +1119,22 @@ void MifareAcquireStaticEncryptedNonces(uint32_t flags, uint8_t *key) {
                 isOK = PM3_ESOFT;
                 goto out;
             };
-            if (with_data) {
-                if (blockNo < MIFARE_1K_MAXSECTOR * 4) {
-                    uint8_t data[16];
-                    for (uint16_t tb = blockNo; tb < blockNo + 4; tb++) {
-                        memset(data, 0x00, sizeof(data));
-                        int res = mifare_classic_readblock(pcs, tb, data);
-                        if (res == 1) {
-                            if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Read error");
-                            isOK = PM3_ESOFT;
-                            goto out;
-                        }
-                        emlSetMem_xt(data, tb, 1, 16);
+            if ((with_data) && (keyType == 0)) {
+                uint8_t data[16];
+                uint8_t blocks = 4;
+                if (blockNo >= MIFARE_1K_MAXSECTOR * 4) {
+                    // special RF08S advanced authentication blocks, let's dump in emulator just in case
+                    blocks = 8;
+                }
+                for (uint16_t tb = blockNo; tb < blockNo + blocks; tb++) {
+                    memset(data, 0x00, sizeof(data));
+                    int res = mifare_classic_readblock(pcs, tb, data);
+                    if (res == 1) {
+                        if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Read error");
+                        isOK = PM3_ESOFT;
+                        goto out;
                     }
+                    emlSetMem_xt(data, tb, 1, 16);
                 }
             }
             // nested authentication
@@ -1139,7 +1148,8 @@ void MifareAcquireStaticEncryptedNonces(uint32_t flags, uint8_t *key) {
             crypto1_init(pcs, ui64Key);
             uint32_t nt = crypto1_word(pcs, nt_enc ^ cuid, 1) ^ nt_enc;
             // Dbprintf("Sec %2i key %i nT=%08x", sec, keyType + 4, nt);
-            num_to_bytes(nt, 4, buf + (((sec * 2) + keyType) * 9));
+            // store nt (first half)
+            num_to_bytes(nt >> 16, 2, buf + (keyType * 8));
             // send some crap to fail auth
             uint8_t nack[] = {0x04};
             ReaderTransmit(nack, sizeof(nack), NULL);
@@ -1161,14 +1171,18 @@ void MifareAcquireStaticEncryptedNonces(uint32_t flags, uint8_t *key) {
                 isOK = PM3_ESOFT;
                 goto out;
             }
-            memcpy(buf + (((sec * 2) + keyType) * 9) + 4, receivedAnswer, 4);
+            // store nt_enc
+            memcpy(buf + (keyType * 8) + 4, receivedAnswer, 4);
             nt_enc = bytes_to_num(receivedAnswer, 4);
             uint8_t nt_par_err = ((((par_enc[0] >> 7) & 1) ^ oddparity8((nt_enc >> 24) & 0xFF)) << 3 |
                                   (((par_enc[0] >> 6) & 1) ^ oddparity8((nt_enc >> 16) & 0xFF)) << 2 |
                                   (((par_enc[0] >> 5) & 1) ^ oddparity8((nt_enc >> 8) & 0xFF)) << 1 |
                                   (((par_enc[0] >> 4) & 1) ^ oddparity8((nt_enc >> 0) & 0xFF)));
             // Dbprintf("Sec %2i key %i {nT}=%02x%02x%02x%02x perr=%x", sec, keyType, receivedAnswer[0], receivedAnswer[1], receivedAnswer[2], receivedAnswer[3], nt_par_err);
-            buf[(((sec * 2) + keyType) * 9) + 8] = nt_par_err;
+            // store nt_par_err
+            buf[(keyType * 8) + 2] = nt_par_err;
+            buf[(keyType * 8) + 3] = 0xAA; // flag to tell we don't know the key yet
+            emlSetMem_xt(buf, (CARD_MEMORY_RF08S_OFFSET / MIFARE_BLOCK_SIZE) + sec, 1, MIFARE_BLOCK_SIZE);
             // send some crap to fail auth
             ReaderTransmit(nack, sizeof(nack), NULL);
         }
@@ -1177,7 +1191,7 @@ out:
     LED_C_OFF();
     crypto1_deinit(pcs);
     LED_B_ON();
-    reply_old(CMD_ACK, isOK, cuid, num_nonces, buf, sizeof(buf));
+    reply_old(CMD_ACK, isOK, cuid, 0, BigBuf_get_EM_addr() + CARD_MEMORY_RF08S_OFFSET, MIFARE_BLOCK_SIZE * (MIFARE_1K_MAXSECTOR + 1));
     LED_B_OFF();
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);

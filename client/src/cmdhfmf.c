@@ -9924,16 +9924,22 @@ static int CmdHF14AMfISEN(const char *Cmd) {
         uint8_t num_sectors = MIFARE_1K_MAXSECTOR + 1;
         iso14a_fm11rf08s_nonces_with_data_t nonces_dump = {0};
         for (uint8_t sec = 0; sec < num_sectors; sec++) {
-            memcpy(nonces_dump.nt[sec][0], resp.data.asBytes + ((sec * 2) * 9), 4);
-            memcpy(nonces_dump.nt[sec][1], resp.data.asBytes + (((sec * 2) + 1) * 9), 4);
+            // reconstruct full nt
+            uint32_t nt;
+            nt = bytes_to_num(resp.data.asBytes + ((sec * 2) * 8), 2);
+            nt = nt << 16 | prng_successor(nt, 16);
+            num_to_bytes(nt, 4, nonces_dump.nt[sec][0]);
+            nt = bytes_to_num(resp.data.asBytes + (((sec * 2) + 1) * 8), 2);
+            nt = nt << 16 | prng_successor(nt, 16);
+            num_to_bytes(nt, 4, nonces_dump.nt[sec][1]);
         }
         for (uint8_t sec = 0; sec < num_sectors; sec++) {
-            memcpy(nonces_dump.nt_enc[sec][0], resp.data.asBytes + ((sec * 2) * 9) + 4, 4);
-            memcpy(nonces_dump.nt_enc[sec][1], resp.data.asBytes + (((sec * 2) + 1) * 9) + 4, 4);
+            memcpy(nonces_dump.nt_enc[sec][0], resp.data.asBytes + ((sec * 2) * 8) + 4, 4);
+            memcpy(nonces_dump.nt_enc[sec][1], resp.data.asBytes + (((sec * 2) + 1) * 8) + 4, 4);
         }
         for (uint8_t sec = 0; sec < num_sectors; sec++) {
-            nonces_dump.par_err[sec][0] = resp.data.asBytes[((sec * 2) * 9) + 8];
-            nonces_dump.par_err[sec][1] = resp.data.asBytes[(((sec * 2) + 1) * 9) + 8];
+            nonces_dump.par_err[sec][0] = resp.data.asBytes[((sec * 2) * 8) + 2];
+            nonces_dump.par_err[sec][1] = resp.data.asBytes[(((sec * 2) + 1) * 8) + 2];
         }
         if (collect_fm11rf08s_with_data) {
             int bytes = MIFARE_1K_MAXBLOCK * MFBLOCK_SIZE;
