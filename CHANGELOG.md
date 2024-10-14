@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `pref show` - add option to dump as JSON (@doegox)
 - Changed `mf_backdoor_dump.py`- use faster ecfill/eview (@doegox)
 - Changed `hf mf ecfill` - wait for execution and return status (@doegox)
 - Changed `hf 14a reader` - added option to wait for a card (@doegox)

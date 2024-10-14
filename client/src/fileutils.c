@@ -818,6 +818,17 @@ int saveFileJSONrootEx(const char *preferredName, const void *root, size_t flags
     return PM3_EFILE;
 }
 
+char *sprintJSON(JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *)) {
+
+    json_t *root = json_object();
+    if (prepareJSON(root, ftype, data, datalen, verbose, callback) != PM3_SUCCESS) {
+        return NULL;
+    }
+    char *s = json_dumps(root, JSON_INDENT(2));
+    json_decref(root);
+    return s;
+}
+
 // wave file of trace,
 int saveFileWAVE(const char *preferredName, const int *data, size_t datalen) {
 

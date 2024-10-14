@@ -168,6 +168,16 @@ int preferences_save(void) {
     return PM3_SUCCESS;
 }
 
+// Dump all settings from memory (struct) to console in JSON
+int preferences_dump(void) {
+    uint8_t dummyData = 0x00;
+    size_t dummyDL = 0x01;
+    char *s = sprintJSON(jsfCustom, &dummyData, dummyDL, true, &preferences_save_callback);
+    PrintAndLogEx(NORMAL, "%s", s);
+    free(s);
+    return PM3_SUCCESS;
+}
+
 void preferences_save_callback(json_t *root) {
 
     JsonSaveStr(root, "FileType", "settings");
@@ -1393,11 +1403,18 @@ static int CmdPrefShow(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("j", "json", "Dump prefs as JSON"),
         arg_param_end
     };
+
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool json_dump = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
+    if (json_dump) {
+        preferences_dump();
+        return PM3_SUCCESS;
+    }
     if (g_session.preferences_loaded) {
         char *fn = prefGetFilename();
         PrintAndLogEx(NORMAL, "");
