@@ -1141,55 +1141,54 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                 nr = bytes_to_num(receivedCmd, 4);
                 ar = bytes_to_num(&receivedCmd[4], 4);
 
-                // Collect AR/NR per keytype & sector
-                if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
-
-                    for (uint8_t i = 0; i < ATTACK_KEY_COUNT; i++) {
-                        if (ar_nr_collected[i] == 0 ||
-                                (
-                                    (cardAUTHSC == ar_nr_resp[i].sector) &&
-                                    (cardAUTHKEY == ar_nr_resp[i].keytype) &&
-                                    (ar_nr_collected[i] > 0)
-                                )
-                           ) {
-                            // if first auth for sector, or matches sector and keytype of previous auth
-                            if (ar_nr_collected[i] < 2) {
-                                // if we haven't already collected 2 nonces for this sector
-                                if (ar_nr_resp[ar_nr_collected[i]].ar != ar) {
-                                    // Avoid duplicates... probably not necessary, ar should vary.
-                                    if (ar_nr_collected[i] == 0) {
-                                        // first nonce collect
-                                        ar_nr_resp[i].cuid = cuid;
-                                        ar_nr_resp[i].sector = cardAUTHSC;
-                                        ar_nr_resp[i].keytype = cardAUTHKEY;
-                                        ar_nr_resp[i].nonce = nonce;
-                                        ar_nr_resp[i].nr = nr;
-                                        ar_nr_resp[i].ar = ar;
-                                        ar_nr_collected[i]++;
-                                    } else { // second nonce collect
-                                        // make sure we have different nonces for moebius attack
-                                        if (ar_nr_resp[i].nonce != nonce) {
-                                            ar_nr_resp[i].nonce2 = nonce;
-                                            ar_nr_resp[i].nr2 = nr;
-                                            ar_nr_resp[i].ar2 = ar;
-                                            ar_nr_collected[i]++;
-                                            finished = true;
-                                        }
-                                    }
-                                }
-                            }
-                            // we found right spot for this nonce stop looking
-                            break;
-                        }
-                    }
-                }
-
                 // --- crypto
                 crypto1_word(pcs, nr, 1);
                 cardRr = ar ^ crypto1_word(pcs, 0, 0);
 
                 // test if auth KO
                 if (cardRr != prng_successor(nonce, 64)) {
+                    // Collect AR/NR per keytype & sector
+                    if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
+
+                        for (uint8_t i = 0; i < ATTACK_KEY_COUNT; i++) {
+                            if (ar_nr_collected[i] == 0 ||
+                                    (
+                                        (cardAUTHSC == ar_nr_resp[i].sector) &&
+                                        (cardAUTHKEY == ar_nr_resp[i].keytype) &&
+                                        (ar_nr_collected[i] > 0)
+                                    )
+                            ) {
+                                // if first auth for sector, or matches sector and keytype of previous auth
+                                if (ar_nr_collected[i] < 2) {
+                                    // if we haven't already collected 2 nonces for this sector
+                                    if (ar_nr_resp[ar_nr_collected[i]].ar != ar) {
+                                        // Avoid duplicates... probably not necessary, ar should vary.
+                                        if (ar_nr_collected[i] == 0) {
+                                            // first nonce collect
+                                            ar_nr_resp[i].cuid = cuid;
+                                            ar_nr_resp[i].sector = cardAUTHSC;
+                                            ar_nr_resp[i].keytype = cardAUTHKEY;
+                                            ar_nr_resp[i].nonce = nonce;
+                                            ar_nr_resp[i].nr = nr;
+                                            ar_nr_resp[i].ar = ar;
+                                            ar_nr_collected[i]++;
+                                        } else { // second nonce collect
+                                            // make sure we have different nonces for moebius attack
+                                            if (ar_nr_resp[i].nonce != nonce) {
+                                                ar_nr_resp[i].nonce2 = nonce;
+                                                ar_nr_resp[i].nr2 = nr;
+                                                ar_nr_resp[i].ar2 = ar;
+                                                ar_nr_collected[i]++;
+                                                finished = true;
+                                            }
+                                        }
+                                    }
+                                }
+                                // we found right spot for this nonce stop looking
+                                break;
+                            }
+                        }
+                    }
                     if (g_dbglevel >= DBG_EXTENDED) {
                         Dbprintf("[MFEMUL_AUTH1] AUTH FAILED for sector %d with key %c. [nr=%08x  cardRr=%08x] [nt=%08x succ=%08x]"
                                  , cardAUTHSC
