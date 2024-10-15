@@ -1036,8 +1036,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 // acquire static encrypted nonces in order to perform the attack described in
 // Philippe Teuwen, "MIFARE Classic: exposing the static encrypted nonce variant"
 //-----------------------------------------------------------------------------
-void MifareAcquireStaticEncryptedNonces(uint32_t flags, uint8_t *key) {
-
+int MifareAcquireStaticEncryptedNonces(uint32_t flags, const uint8_t *key, bool reply) {
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
     pcs = &mpcs;
@@ -1090,7 +1089,8 @@ void MifareAcquireStaticEncryptedNonces(uint32_t flags, uint8_t *key) {
                 iso14a_card_select_t card_info;
                 if (iso14443a_select_card(uid, &card_info, &cuid, true, 0, true) == 0) {
                     if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Can't select card (ALL)");
-                    continue;
+                    isOK = PM3_ERFTRANS;
+                    goto out;
                 }
                 switch (card_info.uidlen) {
                     case 4 :
@@ -1109,7 +1109,8 @@ void MifareAcquireStaticEncryptedNonces(uint32_t flags, uint8_t *key) {
             } else { // no need for anticollision. We can directly select the card
                 if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
                     if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Can't select card (UID)");
-                    continue;
+                    isOK = PM3_ERFTRANS;
+                    goto out;
                 }
             }
 
@@ -1156,7 +1157,8 @@ void MifareAcquireStaticEncryptedNonces(uint32_t flags, uint8_t *key) {
 
             if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Can't select card (UID)");
-                continue;
+                isOK = PM3_ERFTRANS;
+                goto out;
             }
             if (mifare_classic_authex_cmd(pcs, cuid, blockNo, MIFARE_AUTH_KEYA + keyType + 4, ui64Key, AUTH_FIRST, &nt1, NULL, NULL, NULL, false, false)) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth1 error");
@@ -1191,12 +1193,15 @@ out:
     LED_C_OFF();
     crypto1_deinit(pcs);
     LED_B_ON();
-    reply_old(CMD_ACK, isOK, cuid, 0, BigBuf_get_EM_addr() + CARD_MEMORY_RF08S_OFFSET, MIFARE_BLOCK_SIZE * (MIFARE_1K_MAXSECTOR + 1));
+    if (reply) {
+        reply_old(CMD_ACK, isOK, cuid, 0, BigBuf_get_EM_addr() + CARD_MEMORY_RF08S_OFFSET, MIFARE_BLOCK_SIZE * (MIFARE_1K_MAXSECTOR + 1));
+    }
     LED_B_OFF();
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);
+    return isOK;
 }
 
 
