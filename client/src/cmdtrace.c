@@ -648,7 +648,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 uint8_t nbits = parityBytes[0];
 
                 // only apply this to lesser than one byte
-                if (data_len == 1) {
+                if (data_len == 1 && nbits != 0) {
 
                     snprintf(line[0], 120, "%2u: %02X  ", nbits, frame[0] >> (8 - nbits));
 
