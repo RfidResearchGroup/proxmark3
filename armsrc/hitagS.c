@@ -480,7 +480,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 m = AC2K;
             }
 
-            if (rx[0] == HITAGS_UID_REQ_ADV) {
+            if (rx[0] == HITAGS_UID_REQ_ADV1 || rx[0] == HITAGS_UID_REQ_ADV2) {
                 DBG Dbprintf("HT_ADVANCED");
                 tag.mode = HT_ADVANCED;
                 sof_bits = 3;
@@ -1112,7 +1112,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
     // UID request FAdvanced  11010
     size_t txlen = 0;
     size_t rxlen = 0;
-    uint8_t cmd = HITAGS_UID_REQ_ADV;
+    uint8_t cmd = HITAGS_UID_REQ_ADV1;
     txlen = concatbits(tx, txlen, &cmd, 0, 5);
     hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, t_wait, ledcontrol, true);
 
@@ -1505,7 +1505,7 @@ int hts_read_uid(uint32_t *uid, bool ledcontrol, bool send_answer) {
     // UID request standard   00110
     // UID request Advanced   1100x
     // UID request FAdvanced  11010
-    uint8_t cmd = HITAGS_UID_REQ_ADV;
+    uint8_t cmd = HITAGS_UID_REQ_ADV1;
 
     size_t rxlen = 0;
     uint8_t rx[HITAG_FRAME_LEN] = { 0x00 };
