@@ -4059,9 +4059,15 @@ void readerAttack(sector_t *k_sector, size_t k_sectors_cnt, nonces_t data, bool 
 
         //set emulator memory for keys
         if (setEmulatorMem) {
-            uint8_t memBlock[16] = {0, 0, 0, 0, 0, 0, 0xFF, 0x07, 0x80, 0x69, 0, 0, 0, 0, 0, 0};
-            num_to_bytes(k_sector[sector].Key[0], 6, memBlock);
-            num_to_bytes(k_sector[sector].Key[1], 6, memBlock + 10);
+            uint8_t memBlock[16];
+            mfEmlGetMem(memBlock, (sector * 4) + 3, 1);
+            if ((memBlock[6]==0) && (memBlock[7]==0) && (memBlock[8]==0)) {
+                // ACL not yet set?
+                memBlock[6] = 0xFF;
+                memBlock[7] = 0x07;
+                memBlock[8] = 0x80;
+            }
+            num_to_bytes(k_sector[sector].Key[keytype], 6, memBlock + ((keytype == MF_KEY_B) ? 10 : 0));
             //iceman,  guessing this will not work so well for 4K tags.
             PrintAndLogEx(INFO, "Setting Emulator Memory Block %02d: [%s]"
                           , (sector * 4) + 3
