@@ -4251,36 +4251,49 @@ static int CmdHF14AMfSim(const char *Cmd) {
     payload.sak = sak[0];
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFARE_SIMULATE, (uint8_t *)&payload, sizeof(payload));
-    PacketResponseNG resp;
 
     if (flags & FLAG_INTERACTIVE) {
-        PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or send another cmd to abort simulation");
-
-        sector_t *k_sector = NULL;
-
-        while (kbd_enter_pressed() == 0) {
-
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false)
-                continue;
-
-            if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK)
-                break;
-
-            if ((resp.oldarg[0] & 0xffff) != CMD_HF_MIFARE_SIMULATE)
-                break;
-
-            nonces_t data[1];
-            memcpy(data, resp.data.asBytes, sizeof(data));
-            readerAttack(k_sector, k_sectors_cnt, data[0], setEmulatorMem, verbose);
-            break;
-        }
-        //iceman:  readerAttack call frees k_sector.  this call below is useless.
-        showSectorTable(k_sector, k_sectors_cnt);
-
+        PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or a key to abort simulation");
     } else {
-        PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
+        PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or send another cmd to abort simulation");
     }
+    bool cont;
+    do {
+        cont = false;
+        SendCommandNG(CMD_HF_MIFARE_SIMULATE, (uint8_t *)&payload, sizeof(payload));
+        if (flags & FLAG_INTERACTIVE) {
+            PacketResponseNG resp;
+            sector_t *k_sector = NULL;
+
+            bool keypress = kbd_enter_pressed();
+            while (keypress == false) {
+
+                if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0) {
+                    keypress = kbd_enter_pressed();
+                    continue;
+                }
+
+                if (resp.status != PM3_SUCCESS)
+                    break;
+
+                if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK)
+                    break;
+
+                const nonces_t *data = (nonces_t *)resp.data.asBytes;
+                readerAttack(k_sector, k_sectors_cnt, data[0], setEmulatorMem, verbose);
+                cont = true;
+                break;
+            }
+            if (keypress) {
+                if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
+                    // inform device to break the sim loop since client has exited
+                    PrintAndLogEx(INFO, "Key pressed, please wait a few seconds for the pm3 to stop...");
+                    SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+                }
+            }
+        }
+
+    } while (cont);
     return PM3_SUCCESS;
 }
 

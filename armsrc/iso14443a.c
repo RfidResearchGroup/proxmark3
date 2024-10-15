@@ -1432,7 +1432,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, uint8
 //-----------------------------------------------------------------------------
 void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t exitAfterNReads, uint8_t *iRATs) {
 
-#define ATTACK_KEY_COUNT 8 // keep same as define in cmdhfmf.c -> readerAttack()
+#define ATTACK_KEY_COUNT 16
 
     tag_response_info_t *responses;
     uint32_t cuid = 0;

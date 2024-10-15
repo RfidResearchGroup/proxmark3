@@ -912,11 +912,6 @@ int CmdHF14ASim(const char *Cmd) {
             // inform device to break the sim loop since client has exited
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         }
-
-        if (resp.status == PM3_EOPABORTED && ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK)) {
-            //iceman:  readerAttack call frees k_sector , this call is useless.
-            showSectorTable(k_sector, k_sectors_cnt);
-        }
     }
 
     PrintAndLogEx(INFO, "Done!");
@@ -3799,9 +3794,6 @@ int CmdHF14AAIDSim(const char *Cmd) {
     SendCommandNG(CMD_HF_ISO14443A_SIM_AID, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp = {0};
 
-    sector_t *k_sector = NULL;
-    size_t k_sectors_cnt = MIFARE_4K_MAXSECTOR;
-
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
     bool keypress = kbd_enter_pressed();
     while (keypress == false) {
@@ -3822,11 +3814,6 @@ int CmdHF14AAIDSim(const char *Cmd) {
         if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
             // inform device to break the sim loop since client has exited
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-        }
-
-        if (resp.status == PM3_EOPABORTED && ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK)) {
-            //iceman:  readerAttack call frees k_sector , this call is useless.
-            showSectorTable(k_sector, k_sectors_cnt);
         }
     }
 

@@ -496,7 +496,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
     uint8_t rats_len = 0;
 
 
-    // if fct is called with NULL we need to assign some memory since this pointer is passaed around
+    // if fct is called with NULL we need to assign some memory since this pointer is passed around
     uint8_t datain_tmp[10] = {0};
     if (datain == NULL) {
         datain = datain_tmp;
@@ -505,13 +505,10 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
     //Here, we collect UID,sector,keytype,NT,AR,NR,NT2,AR2,NR2
     // This will be used in the reader-only attack.
 
-    //allow collecting up to 7 sets of nonces to allow recovery of up to 7 keys
-#define ATTACK_KEY_COUNT 7 // keep same as define in cmdhfmf.c -> readerAttack() (Cannot be more than 7)
-    nonces_t ar_nr_resp[ATTACK_KEY_COUNT * 2]; // *2 for 2 separate attack types (nml, moebius) 36 * 7 * 2 bytes = 504 bytes
+    //allow collecting up to 16 sets of nonces to allow recovery of up to 16 keys
+#define ATTACK_KEY_COUNT 16
+    nonces_t ar_nr_resp[ATTACK_KEY_COUNT]; // for moebius attack type
     memset(ar_nr_resp, 0x00, sizeof(ar_nr_resp));
-
-    uint8_t ar_nr_collected[ATTACK_KEY_COUNT ]; // for moebius attack type
-    memset(ar_nr_collected, 0x00, sizeof(ar_nr_collected));
 
     // Authenticate response - nonce
     uint8_t rAUTH_NT[4] = {0, 0, 0, 1};
@@ -547,7 +544,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
 
         WDT_HIT();
 
-        if (counter == 3000) {
+        if (counter == 1000) {
             if (data_available()) {
                 Dbprintf("----------- " _GREEN_("BREAKING") " ----------");
                 break;
@@ -1151,36 +1148,33 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                     if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
 
                         for (uint8_t i = 0; i < ATTACK_KEY_COUNT; i++) {
-                            if (ar_nr_collected[i] == 0 ||
+                            if (ar_nr_resp[i].state == EMPTY ||
                                     (
+                                        (ar_nr_resp[i].state != EMPTY) &&
                                         (cardAUTHSC == ar_nr_resp[i].sector) &&
-                                        (cardAUTHKEY == ar_nr_resp[i].keytype) &&
-                                        (ar_nr_collected[i] > 0)
+                                        (cardAUTHKEY == ar_nr_resp[i].keytype)
                                     )
                             ) {
                                 // if first auth for sector, or matches sector and keytype of previous auth
-                                if (ar_nr_collected[i] < 2) {
+                                if (ar_nr_resp[i].state != SECOND) {
                                     // if we haven't already collected 2 nonces for this sector
-                                    if (ar_nr_resp[ar_nr_collected[i]].ar != ar) {
-                                        // Avoid duplicates... probably not necessary, ar should vary.
-                                        if (ar_nr_collected[i] == 0) {
-                                            // first nonce collect
-                                            ar_nr_resp[i].cuid = cuid;
-                                            ar_nr_resp[i].sector = cardAUTHSC;
-                                            ar_nr_resp[i].keytype = cardAUTHKEY;
-                                            ar_nr_resp[i].nonce = nonce;
-                                            ar_nr_resp[i].nr = nr;
-                                            ar_nr_resp[i].ar = ar;
-                                            ar_nr_collected[i]++;
-                                        } else { // second nonce collect
-                                            // make sure we have different nonces for moebius attack
-                                            if (ar_nr_resp[i].nonce != nonce) {
-                                                ar_nr_resp[i].nonce2 = nonce;
-                                                ar_nr_resp[i].nr2 = nr;
-                                                ar_nr_resp[i].ar2 = ar;
-                                                ar_nr_collected[i]++;
-                                                finished = true;
-                                            }
+                                    if (ar_nr_resp[i].state == EMPTY) {
+                                        // first nonce collect
+                                        ar_nr_resp[i].cuid = cuid;
+                                        ar_nr_resp[i].sector = cardAUTHSC;
+                                        ar_nr_resp[i].keytype = cardAUTHKEY;
+                                        ar_nr_resp[i].nonce = nonce;
+                                        ar_nr_resp[i].nr = nr;
+                                        ar_nr_resp[i].ar = ar;
+                                        ar_nr_resp[i].state = FIRST;
+                                    } else { // second nonce collect
+                                        // make sure we have different nonces for moebius attack
+                                        if (ar_nr_resp[i].nonce != nonce) {
+                                            ar_nr_resp[i].nonce2 = nonce;
+                                            ar_nr_resp[i].nr2 = nr;
+                                            ar_nr_resp[i].ar2 = ar;
+                                            ar_nr_resp[i].state = SECOND;
+                                            finished = true;
                                         }
                                     }
                                 }
@@ -1326,22 +1320,26 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
     FpgaDisableTracing();
 
     // NR AR ATTACK
-    if (((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) && (g_dbglevel >= DBG_INFO)) {
+    uint8_t index = 0;
+    if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
         for (uint8_t i = 0; i < ATTACK_KEY_COUNT; i++) {
-            if (ar_nr_collected[i] == 2) {
-                Dbprintf("Collected two pairs of AR/NR which can be used to extract sector %d " _YELLOW_("%s")
-                        , ar_nr_resp[i].sector
-                        , (ar_nr_resp[i].keytype == AUTHKEYA) ? "key A" : "key B"
-                        );
-                Dbprintf("../tools/mfc/card_reader/mfkey32v2 %08x %08x %08x %08x %08x %08x %08x",
-                        ar_nr_resp[i].cuid,  //UID
-                        ar_nr_resp[i].nonce, //NT
-                        ar_nr_resp[i].nr,    //NR1
-                        ar_nr_resp[i].ar,    //AR1
-                        ar_nr_resp[i].nonce2,//NT2
-                        ar_nr_resp[i].nr2,   //NR2
-                        ar_nr_resp[i].ar2    //AR2
-                        );
+            if (ar_nr_resp[i].state == SECOND) {
+                index = i;
+                if (g_dbglevel >= DBG_INFO) {
+                    Dbprintf("Collected two pairs of AR/NR which can be used to extract sector %d " _YELLOW_("%s")
+                            , ar_nr_resp[i].sector
+                            , (ar_nr_resp[i].keytype == AUTHKEYA) ? "key A" : "key B"
+                            );
+                    Dbprintf("../tools/mfc/card_reader/mfkey32v2 %08x %08x %08x %08x %08x %08x %08x",
+                            ar_nr_resp[i].cuid,  //UID
+                            ar_nr_resp[i].nonce, //NT
+                            ar_nr_resp[i].nr,    //NR1
+                            ar_nr_resp[i].ar,    //AR1
+                            ar_nr_resp[i].nonce2,//NT2
+                            ar_nr_resp[i].nr2,   //NR2
+                            ar_nr_resp[i].ar2    //AR2
+                            );
+                }
             }
         }
     }
@@ -1351,7 +1349,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
 
     if ((flags & FLAG_INTERACTIVE) == FLAG_INTERACTIVE) {  // Interactive mode flag, means we need to send ACK
         //Send the collected ar_nr in the response
-        reply_mix(CMD_ACK, CMD_HF_MIFARE_SIMULATE, button_pushed, 0, &ar_nr_resp, sizeof(ar_nr_resp));
+        reply_ng(CMD_HF_MIFARE_SIMULATE, button_pushed ? PM3_EOPABORTED : PM3_SUCCESS, (uint8_t *)&ar_nr_resp[index], sizeof(nonces_t));
     }
 
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
