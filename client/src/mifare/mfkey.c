@@ -151,7 +151,7 @@ bool mfkey32_moebius(nonces_t *data, uint64_t *outputkey) {
         if (data->ar2 == (crypto1_word(t, 0, 0) ^ p641)) {
             outkey = key;
             ++counter;
-            if (counter == 20) break;
+            if (counter == 2) break;
         }
     }
     isSuccess  = (counter == 1);
