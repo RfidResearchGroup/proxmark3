@@ -1256,7 +1256,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, uint8
     }
 
     // copy the iRATs if supplied
-    if ((flags & RATS_IN_DATA) == RATS_IN_DATA) {
+    if ((flags & FLAG_RATS_IN_DATA) == FLAG_RATS_IN_DATA) {
         memcpy(rRATS, iRATs, sizeof(iRATs));
         // rats len is dictated by the first char of the string, add 2 crc bytes
         rRATS_len = (iRATs[0] + 2);

@@ -3745,7 +3745,7 @@ int CmdHF14AAIDSim(const char *Cmd) {
     }
 
     if (rats_len > 0) {
-        flags |= RATS_IN_DATA;
+        flags |= FLAG_RATS_IN_DATA;
     }
 
 
