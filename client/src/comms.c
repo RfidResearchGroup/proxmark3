@@ -93,8 +93,9 @@ void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, c
     c.arg[0] = arg0;
     c.arg[1] = arg1;
     c.arg[2] = arg2;
-    if (len && data)
+    if (len && data) {
         memcpy(&c.d, data, len);
+    }
 
 #ifdef COMMS_DEBUG
     PrintAndLogEx(NORMAL, "Sending %s", "OLD");
@@ -105,7 +106,7 @@ void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, c
     print_hex_break((uint8_t *)&c.d, sizeof(c.d), 32);
 #endif
 
-    if (!g_session.pm3_present) {
+    if (g_session.pm3_present == false) {
         PrintAndLogEx(WARNING, "Sending bytes to Proxmark3 failed ( " _RED_("offline") " )");
         return;
     }
