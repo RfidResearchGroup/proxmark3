@@ -1183,7 +1183,7 @@ int MifareAcquireStaticEncryptedNonces(uint32_t flags, const uint8_t *key, bool 
             // Dbprintf("Sec %2i key %i {nT}=%02x%02x%02x%02x perr=%x", sec, keyType, receivedAnswer[0], receivedAnswer[1], receivedAnswer[2], receivedAnswer[3], nt_par_err);
             // store nt_par_err
             buf[(keyType * 8) + 2] = nt_par_err;
-            buf[(keyType * 8) + 3] = 0xAA; // flag to tell we don't know the key yet
+            buf[(keyType * 8) + 3] = 0xAA; // extra check to tell we have nt/nt_enc/par_err
             emlSetMem_xt(buf, (CARD_MEMORY_RF08S_OFFSET / MIFARE_BLOCK_SIZE) + sec, 1, MIFARE_BLOCK_SIZE);
             // send some crap to fail auth
             ReaderTransmit(nack, sizeof(nack), NULL);

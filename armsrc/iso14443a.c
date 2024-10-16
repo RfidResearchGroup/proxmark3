@@ -1580,7 +1580,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
                     }
                 }
 
-                switch (ar_nr_nonces[index].state) {
+                switch ((nonce_state)ar_nr_nonces[index].state) {
                     case EMPTY: {
                         // first nonce collect
                         ar_nr_nonces[index].cuid = cuid;

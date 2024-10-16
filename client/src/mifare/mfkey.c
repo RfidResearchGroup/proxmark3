@@ -160,6 +160,38 @@ bool mfkey32_moebius(nonces_t *data, uint64_t *outputkey) {
     return isSuccess;
 }
 
+// recover key from 2 reader responses on 2 different tag challenges
+// skip "several found keys".  Only return true if ONE key is found
+bool mfkey32_nested(nonces_t *data, uint64_t *outputkey) {
+    struct Crypto1State *s, *t;
+    uint64_t key     = 0; // recovered key
+    bool isSuccess = false;
+
+    uint32_t uid = data->cuid;
+    uint32_t nt = data->nonce;
+    uint32_t nt_enc = data->nonce2;
+    uint32_t ar = prng_successor(nt, 64);
+    uint32_t nr_enc = data->nr;
+    uint32_t ar_enc = data->ar;
+    uint32_t ks0 = nt_enc ^ nt;
+    uint32_t ks2 = ar_enc ^ ar;
+    s = lfsr_recovery32(ks0, uid ^ nt);
+    for (t = s; t->odd | t->even; ++t) {
+        crypto1_word(t, nr_enc, 1);
+        if (ks2 == crypto1_word(t, 0, 0)) {
+            lfsr_rollback_word(t, 0, 0);
+            lfsr_rollback_word(t, nr_enc, 1);
+            lfsr_rollback_word(t, uid ^ nt, 0);
+            crypto1_get_lfsr(t, &key);
+            isSuccess = true;
+            break;
+        }
+    }
+    *outputkey = (isSuccess) ? key : 0;
+    crypto1_destroy(s);
+    return isSuccess;
+}
+
 // recover key from reader response and tag response of one authentication sequence
 int mfkey64(nonces_t *data, uint64_t *outputkey) {
     uint64_t key = 0;  // recovered key

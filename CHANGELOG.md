@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf mf sim` - support data-first and nested reader attacks (@doegox)
 - Fixed em4x50_read() - `lf search` and `lf em 4x50 rdbl -b <blk>` does not coredump reading EM4450 tag (@ANTodorov)
 - Fixed flashing - client doesnt fail every other flash attempt (@iceman1001)
 - Changed `pref show` - add option to dump as JSON (@doegox)

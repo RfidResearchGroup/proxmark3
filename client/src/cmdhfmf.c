@@ -4044,7 +4044,13 @@ void readerAttack(sector_t *k_sector, size_t k_sectors_cnt, nonces_t data, bool 
     }
 
     uint64_t key = 0;
-    if (mfkey32_moebius(&data, &key)) {
+    bool found = false;
+    if ((nonce_state)data.state == SECOND) {
+        found = mfkey32_moebius(&data, &key);
+    } else if ((nonce_state)data.state == NESTED) {
+        found = mfkey32_nested(&data, &key);
+    }
+    if (found) {
         uint8_t sector = data.sector;
         uint8_t keytype = data.keytype;
 
@@ -4094,6 +4100,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
                   "hf mf sim --1k -u 11223344 -i -x    --> Perform reader attack in interactive mode\n"
                   "hf mf sim --2k                      --> MIFARE 2k\n"
                   "hf mf sim --4k                      --> MIFARE 4k"
+                  "hf mf sim --1k -x -e                --> Keep simulation running and populate with found reader keys\n"
                  );
 
     void *argtable[] = {
@@ -4107,8 +4114,9 @@ static int CmdHF14AMfSim(const char *Cmd) {
         arg_str0(NULL, "sak", "<hex>", "Provide explicit SAK (1 bytes, overrides option t)"),
         arg_int0("n", "num", "<dec> ", "Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite"),
         arg_lit0("i", "interactive", "Console will not be returned until simulation finishes or is aborted"),
-        arg_lit0("x", NULL, "Performs the 'reader attack', nr/ar attack against a reader"),
-        arg_lit0("e", "emukeys", "Fill simulator keys from found keys"),
+        arg_lit0("x", NULL, "Performs the 'reader attack', nr/ar attack against a reader."),
+        arg_lit0("y", NULL, "Performs the nested 'reader attack'. This requires preloading nt & nt_enc in emulator memory. Implies -x."),
+        arg_lit0("e", "emukeys", "Fill simulator keys from found keys. Requires -x or -y. Implies -i. Simulation will restart automatically."),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "cve", "trigger CVE 2021_0430"),
         arg_param_end
@@ -4166,10 +4174,15 @@ static int CmdHF14AMfSim(const char *Cmd) {
         flags |= FLAG_NR_AR_ATTACK;
     }
 
-    bool setEmulatorMem = arg_get_lit(ctx, 11);
-    bool verbose = arg_get_lit(ctx, 12);
+    if (arg_get_lit(ctx, 11)) {
+        flags |= FLAG_NESTED_AUTH_ATTACK;
+    }
 
-    if (arg_get_lit(ctx, 13)) {
+    bool setEmulatorMem = arg_get_lit(ctx, 12);
+
+    bool verbose = arg_get_lit(ctx, 13);
+
+    if (arg_get_lit(ctx, 14)) {
         flags |= FLAG_CVE21_0430;
     }
     CLIParserFree(ctx);
@@ -4223,6 +4236,24 @@ static int CmdHF14AMfSim(const char *Cmd) {
     } else {
         PrintAndLogEx(WARNING, "Please specify a MIFARE Type");
         return PM3_EINVARG;
+    }
+
+    if ((flags & FLAG_NESTED_AUTH_ATTACK) == FLAG_NESTED_AUTH_ATTACK) {
+        if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK) {
+            PrintAndLogEx(INFO, "Note: option -y implies -x");
+            flags |= FLAG_NR_AR_ATTACK;
+        }
+    }
+
+    if (setEmulatorMem) {
+        if ((flags & FLAG_INTERACTIVE) != FLAG_INTERACTIVE) {
+            PrintAndLogEx(INFO, "Note: option -e implies -i");
+            flags |= FLAG_INTERACTIVE;
+        }
+        if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK) {
+            PrintAndLogEx(WARNING, "Option -e requires -x or -y");
+            return PM3_EINVARG;
+        }
     }
 
     PrintAndLogEx(INFO, _YELLOW_("MIFARE %s") " | %s UID  " _YELLOW_("%s") ""
@@ -4281,7 +4312,9 @@ static int CmdHF14AMfSim(const char *Cmd) {
 
                 const nonces_t *data = (nonces_t *)resp.data.asBytes;
                 readerAttack(k_sector, k_sectors_cnt, data[0], setEmulatorMem, verbose);
-                cont = true;
+                if (setEmulatorMem) {
+                    cont = true;
+                }
                 break;
             }
             if (keypress) {

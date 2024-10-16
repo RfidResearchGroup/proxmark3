@@ -780,6 +780,7 @@ typedef struct {
 #define FLAG_FORCED_SAK         0x1000
 #define FLAG_CVE21_0430         0x2000
 #define FLAG_RATS_IN_DATA       0x4000
+#define FLAG_NESTED_AUTH_ATTACK 0x8000
 
 
 #define MODE_SIM_CSN        0

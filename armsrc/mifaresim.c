@@ -45,6 +45,7 @@
 #include "crc16.h"
 #include "dbprint.h"
 #include "ticks.h"
+#include "parity.h"
 
 static bool IsKeyBReadable(uint8_t blockNo) {
     uint8_t sector_trailer[16];
@@ -459,8 +460,9 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, uint16_t atqa, uint8_
 * FLAG_7B_UID_IN_DATA - means that there is a 7-byte UID in the data-section, we're expected to use that
 * FLAG_10B_UID_IN_DATA - use 10-byte UID in the data-section not finished
 * FLAG_NR_AR_ATTACK - means we should collect NR_AR responses for bruteforcing later
+* FLAG_NESTED_AUTH_ATTACK - means that we support nested authentication attack
 *@param exitAfterNReads, exit simulation after n blocks have been read, 0 is infinite ...
-* (unless reader attack mode enabled then it runs util it gets enough nonces to recover all keys attmpted)
+* (unless reader attack mode enabled then it runs util it gets enough nonces to recover all keys attempted)
 */
 void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t atqa, uint8_t sak) {
     tag_response_info_t *responses;
@@ -539,6 +541,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
 
     int counter = 0;
     bool finished = false;
+    bool running_nested_auth_attack = false;
     bool button_pushed = BUTTON_PRESS();
     while ((button_pushed == false) && (finished == false)) {
 
@@ -788,7 +791,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
 
                     // Load key into crypto
                     crypto1_init(pcs, emlGetKey(cardAUTHSC, cardAUTHKEY));
-
+                    running_nested_auth_attack = false;
                     if (!encrypted_data) {
                         // Receive Cmd in clear txt
                         // Update crypto state (UID ^ NONCE)
@@ -812,9 +815,38 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                         ans = nonce ^ crypto1_word(pcs, cuid ^ nonce, 0);
                         num_to_bytes(ans, 4, rAUTH_AT);
                         */
-                        // rAUTH_NT, rAUTH_NT_keystream contains prepared nonce and keystream for nested authentication
-                        // we need calculate parity bits for non-encrypted sequence
-                        mf_crypto1_encryptEx(pcs, rAUTH_NT, rAUTH_NT_keystream, response, 4, response_par);
+
+                        // if key not known and FLAG_NESTED_AUTH_ATTACK and we have nt/nt_enc/parity, send recorded nt_enc and parity
+                        if ((flags & FLAG_NESTED_AUTH_ATTACK) == FLAG_NESTED_AUTH_ATTACK) {
+                            if (emlGetKey(cardAUTHSC, cardAUTHKEY) == 0) {
+                                uint8_t buf[16] = {0};
+                                emlGetMem(buf, (CARD_MEMORY_RF08S_OFFSET / MIFARE_BLOCK_SIZE) + cardAUTHSC, 1);
+                                if (buf[(cardAUTHKEY * 8) + 3] == 0xAA) { // extra check to tell we have nt/nt_enc/par_err
+                                    running_nested_auth_attack = true;
+                                    // nt
+                                    nonce = bytes_to_num(buf + (cardAUTHKEY * 8), 2);
+                                    nonce = nonce << 16 | prng_successor(nonce, 16);
+                                    // nt_enc
+                                    memcpy(response, buf + (cardAUTHKEY * 8) + 4, 4);
+                                    uint8_t nt_par_err = buf[(cardAUTHKEY * 8) + 2];
+                                    uint32_t nt_enc = bytes_to_num(response, 4);
+                                    response_par[0] = ((((nt_par_err >> 3) & 1) ^ oddparity8((nt_enc >> 24) & 0xFF)) << 7 |
+                                                    (((nt_par_err >> 2) & 1) ^ oddparity8((nt_enc >> 16) & 0xFF)) << 6 |
+                                                    (((nt_par_err >> 1) & 1) ^ oddparity8((nt_enc >> 8) & 0xFF)) << 5 |
+                                                    (((nt_par_err >> 0) & 1) ^ oddparity8((nt_enc >> 0) & 0xFF)) << 4);
+                                    ar_nr_resp[0].cuid = cuid;
+                                    ar_nr_resp[0].sector = cardAUTHSC;
+                                    ar_nr_resp[0].keytype = cardAUTHKEY;
+                                    ar_nr_resp[0].nonce = nonce;
+                                    ar_nr_resp[0].nonce2 = nt_enc;
+                                };
+                            }
+                        }
+                        if (running_nested_auth_attack == false) {
+                            // rAUTH_NT, rAUTH_NT_keystream contains prepared nonce and keystream for nested authentication
+                            // we need calculate parity bits for non-encrypted sequence
+                            mf_crypto1_encryptEx(pcs, rAUTH_NT, rAUTH_NT_keystream, response, 4, response_par);
+                        }
                         EmSendCmdPar(response, 4, response_par);
                         FpgaDisableTracing();
 
@@ -1145,6 +1177,12 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                 // test if auth KO
                 if (cardRr != prng_successor(nonce, 64)) {
                     // Collect AR/NR per keytype & sector
+                    if (running_nested_auth_attack) {
+                        ar_nr_resp[0].nr = nr;
+                        ar_nr_resp[0].ar = ar;
+                        ar_nr_resp[0].state = NESTED;
+                        finished = true;
+                    }
                     if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
 
                         for (uint8_t i = 0; i < ATTACK_KEY_COUNT; i++) {
@@ -1319,26 +1357,45 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
 
     FpgaDisableTracing();
 
-    // NR AR ATTACK
     uint8_t index = 0;
-    if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
-        for (uint8_t i = 0; i < ATTACK_KEY_COUNT; i++) {
-            if (ar_nr_resp[i].state == SECOND) {
-                index = i;
-                if (g_dbglevel >= DBG_INFO) {
-                    Dbprintf("Collected two pairs of AR/NR which can be used to extract sector %d " _YELLOW_("%s")
-                            , ar_nr_resp[i].sector
-                            , (ar_nr_resp[i].keytype == AUTHKEYA) ? "key A" : "key B"
-                            );
-                    Dbprintf("../tools/mfc/card_reader/mfkey32v2 %08x %08x %08x %08x %08x %08x %08x",
-                            ar_nr_resp[i].cuid,  //UID
-                            ar_nr_resp[i].nonce, //NT
-                            ar_nr_resp[i].nr,    //NR1
-                            ar_nr_resp[i].ar,    //AR1
-                            ar_nr_resp[i].nonce2,//NT2
-                            ar_nr_resp[i].nr2,   //NR2
-                            ar_nr_resp[i].ar2    //AR2
-                            );
+    if (running_nested_auth_attack) {
+        if ((nonce_state)ar_nr_resp[0].state == NESTED) {
+            running_nested_auth_attack = false;
+            if (g_dbglevel >= DBG_INFO) {
+                Dbprintf("Collected nested AR/NR which can be used to extract sector %d " _YELLOW_("%s")
+                        , ar_nr_resp[0].sector
+                        , (ar_nr_resp[0].keytype == AUTHKEYA) ? "key A" : "key B"
+                        );
+                Dbprintf("../tools/mfc/card_reader/mfkey32nested %08x %08x %08x %08x %08x",
+                        ar_nr_resp[0].cuid,  //UID
+                        ar_nr_resp[0].nonce, //NT
+                        ar_nr_resp[0].nonce2,//NT_ENC
+                        ar_nr_resp[0].nr,    //NR1
+                        ar_nr_resp[0].ar     //AR1
+                        );
+            }
+        }
+    } else {
+        // NR AR ATTACK
+        if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
+            for (uint8_t i = 0; i < ATTACK_KEY_COUNT; i++) {
+                if ((nonce_state)ar_nr_resp[i].state == SECOND) {
+                    index = i;
+                    if (g_dbglevel >= DBG_INFO) {
+                        Dbprintf("Collected two pairs of AR/NR which can be used to extract sector %d " _YELLOW_("%s")
+                                , ar_nr_resp[i].sector
+                                , (ar_nr_resp[i].keytype == AUTHKEYA) ? "key A" : "key B"
+                                );
+                        Dbprintf("../tools/mfc/card_reader/mfkey32v2 %08x %08x %08x %08x %08x %08x %08x",
+                                ar_nr_resp[i].cuid,  //UID
+                                ar_nr_resp[i].nonce, //NT
+                                ar_nr_resp[i].nr,    //NR1
+                                ar_nr_resp[i].ar,    //AR1
+                                ar_nr_resp[i].nonce2,//NT2
+                                ar_nr_resp[i].nr2,   //NR2
+                                ar_nr_resp[i].ar2    //AR2
+                                );
+                    }
                 }
             }
         }

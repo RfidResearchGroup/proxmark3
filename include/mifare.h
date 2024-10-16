@@ -167,6 +167,13 @@ typedef enum {
 //-----------------------------------------------------------------------------
 // "hf 14a sim -x", "hf mf sim -x" attacks
 //-----------------------------------------------------------------------------
+typedef enum {
+    EMPTY,
+    FIRST,
+    SECOND,
+    NESTED
+} nonce_state;
+
 typedef struct {
     uint32_t cuid;
     uint32_t nonce;
@@ -178,11 +185,7 @@ typedef struct {
     uint32_t nr2;
     uint8_t  sector;
     uint8_t  keytype;
-    enum {
-        EMPTY,
-        FIRST,
-        SECOND,
-    } state;
+    uint8_t  state;
 } PACKED nonces_t;
 
 #endif // _MIFARE_H_
