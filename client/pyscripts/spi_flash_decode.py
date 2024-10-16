@@ -42,15 +42,25 @@ spi = {
                 },
             },
         0x40: {
-            0x16: {
-                "part": "W25Q32BV",
-                "size": "32mbits",
-                "sizeB": "4MB",
-                },
             0x13: {
                 "part": "W25Q40BV",
                 "size": "4mbits",
                 "sizeB": "512KB",
+                },
+            0x14: {
+                "part": "W25Q80BV",
+                "size": "8mbits",
+                "sizeB": "1MB",
+                },
+            0x15: {
+                "part": "W25Q16BV",
+                "size": "16mbits",
+                "sizeB": "2MB",
+                },
+            0x16: {
+                "part": "W25Q32BV",
+                "size": "32mbits",
+                "sizeB": "4MB",
                 },
             },
         0x70: {
