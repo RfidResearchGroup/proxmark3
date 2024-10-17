@@ -17,7 +17,6 @@ Useful docs:
     * [ID8265](#id8265)
     * [ID8211](#id8211)
     * [ID-F8268](#id-f8268)
-    * [K8678](#k8678)
   * [H series](#h-series)
     * [H1](#h1)
     * [H5.5 / H7](#h55--h7)
@@ -206,13 +205,13 @@ This is an "improved" variant of ID82xx chips, bypassing some magic detection in
 * Chip is likely a cut down version of Hitag S2048 clone, Characteristics looks exacly same with [8268](#id-f8268) when set CON1 AUT bit
 * No password protection
 * tearoff time
-  * The OTP bits do not appear to be erased first. Write done time is less than 735µs
-  * nochange 0-735µs
+  * The OTP bits appear to be erased to '1'. Write done time is less than 735µs
+  * nochange 735µs-
   * bit flip 735-740µs
   * wiped 740-3250µs
   * bit flip 3250-3350µs
   * write done 3350µs+
-* page 1 default: `CA 24 00 00`
+* page 1 fully changeable. default: `CA 24 00 00`
   * CON0 RES0 enable some extended TTFM
     * TTFM 01: page 4, page 5, page 6
     * TTFM 10: page 4, page 5, page 6, page 7, page 8
@@ -230,7 +229,7 @@ This is an "improved" variant of ID82xx chips, bypassing some magic detection in
 #### Detect
 
 ```
-[usb] pm3 --> lf hitag hts read
+[usb] pm3 --> lf hitag hts rdbl --count 0
 ```
 
 ### Commands
@@ -247,7 +246,7 @@ This is an "improved" variant of ID82xx chips, bypassing some magic detection in
 
 * Chip is likely a cut down version of Hitag S2048 clone, Characteristics looks exacly same with [8211](#id8211) when clear CON1 AUT bit
 * Password protection (4b), usually "BBDD3399"(default) or "AAAAAAAA"
-* page 1 default: `DA A4 00 00`
+* page 1 fully changeable. default: `DA A4 00 00`
   * CON0 RES0 enable some extended TTFM
     * TTFM 01: page 4, page 5, page 6
     * TTFM 10: page 4, page 5, page 6, page 7, page 8
@@ -269,38 +268,17 @@ This is an "improved" variant of ID82xx chips, bypassing some magic detection in
 * Other names:
   * F8278 (CN)
   * F8310 (CN)
+  * K8678 manufactured by Hyctec.
 
 #### Detect
 
 ```
-[usb] pm3 --> lf hitag hts read --8
+[usb] pm3 --> lf hitag hts rdbl --82xx --count 0
 ```
 
 ### Commands
 
 *Try NXP Hitag S datasheet for sending commands to chip*
-
-### K8678
-
-^[Top](#top)
-
-This is an "even better" chip, manufactured by Hyctec.
-
-#### Characteristics
-
-* Chip is likely a Hitag S256
-* Plain mode used, no password protection
-* Currently unimplemented in proxmark3 client
-* Memory access is odd (chip doesnt reply to memory access commands for unknown reason)
-
-#### Detect
-
-```
-[usb] pm3 --> lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00110 -s 3000
-[usb] pm3 --> data plot
-```
-
-Check the green line of the plot. It must be a straight line at the end with no big waves.
 
 ## H series
 
