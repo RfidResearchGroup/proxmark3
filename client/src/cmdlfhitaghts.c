@@ -37,28 +37,45 @@
 static int CmdHelp(const char *Cmd);
 
 static const char *hts_get_type_str(uint32_t uid) {
+    // source 1: https://www.scorpio-lk.com/downloads/Tango/HITAG_Classification.pdf
+    // IDE Mark
+    // Each HITAG chip contains an unique Device Identifier (IDE ) so called a Serial Number.
+    // Bit 7 ot 4 of the IDE serve the function of a chip type identification. Example. IDE is 2A 48 E2 16, the IDE mark is "1".
+
+    // source 2: Hitag S product Specification Revision 3.1
+    // 6.1.1 Product Identifier (PID)
+    // The Product Identifier (PID) for the HITAG S Transponder IC is coded in the UID 3 Byte of the Unique Identifier (UID).
+    // This enables to distinguish between different ICs of the HITAG family
+    //     |      UID 3    |
+    // msb | PID 1 | PID 0 | lsb
+    // Condition for HITAG S: PID 1 = 0x7 – 0xF and PID 0 ≠ 0x5 – 0x6
+
     //uid s/n        ********
-    uint8_t type = (uid >> 4) & 0xF;
-    switch (type) {
-        case 1:
-            return "PCF 7936";
-        case 2:
-            return "PCF 7946";
-        case 3:
-            return "PCF 7947";
-        case 4:
-            return "PCF 7942/44";
-        case 5:
-            return "PCF 7943";
-        case 6:
-            return "PCF 7941";
-        case 7:
-            return "PCF 7952";
-        case 9:
-            return "PCF 7945";
-        default:
-            return "";
-    }
+    uint8_t pid0 = NIBBLE_LOW(uid);
+    uint8_t pid1 = NIBBLE_HIGH(uid);
+    if (pid1 >= 0x7 && pid1 <= 0xF && pid0 != 0x5 && pid0 != 0x6) {
+        switch (pid1) {
+            case 1:
+                return "PCF 7936";
+            case 2:
+                return "PCF 7946";
+            case 3:
+                return "PCF 7947";
+            case 4:
+                return "PCF 7942/44";
+            case 5:
+                return "PCF 7943";
+            case 6:
+                return "PCF 7941";
+            case 7:
+                return "PCF 7952";
+            case 9:
+                return "PCF 7945";
+            default:
+                return "n/a";
+        }
+    } else
+        return "Probably not NXP Hitag S";
 }
 
 static bool hts_get_uid(uint32_t *uid) {
@@ -291,14 +308,14 @@ static int CmdLFHitagSRead(const char *Cmd) {
     hitags_config_print(config);
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Data") " ----------------------------------");
-    PrintAndLogEx(INFO, "adr| 00 01 02 03 | ascii");
-    PrintAndLogEx(INFO, "---+-------------+-------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Data") " ---------------------------");
+    PrintAndLogEx(INFO, "  # | 00 01 02 03 | ascii | perm | info");
+    PrintAndLogEx(INFO, "----+-------------+-------+------+------");
 
     const int hts_mem_sizes[] = {1, 8, 64, 64};
 
     if (count == 0) {
-        count = hts_mem_sizes[config.MEMT] - page;
+        count = hts_mem_sizes[config.MEMT] > page ? hts_mem_sizes[config.MEMT] - page : 64;
     }
 
     // int page_end = page + count;
@@ -309,12 +326,93 @@ static int CmdLFHitagSRead(const char *Cmd) {
         if (page_addr > 255) {
             break;
         }
-        if (card->pages_reason[i] >= 0)
-            PrintAndLogEx(SUCCESS, "%02u | %s", page_addr, sprint_hex_ascii(card->pages[i], HITAGS_PAGE_SIZE));
-        else
+        if (card->pages_reason[i] >= 0) {
+            PrintAndLogEx(SUCCESS, "% 3u | %s  | " NOLF, page_addr, sprint_hex_ascii(card->pages[i], HITAGS_PAGE_SIZE));
+
+            // access right
+            if (page_addr == HITAGS_UID_PADR) {
+                PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
+            } else if (page_addr == HITAGS_CONFIG_PADR) {
+                if (card->config_page.s.LCON)
+                    PrintAndLogEx(NORMAL, _YELLOW_("OTP ")NOLF);
+                else
+                    PrintAndLogEx(NORMAL, _GREEN_("RW  ")NOLF);
+            } else if (2 <= page_addr && page_addr <= 3) {
+                if (card->config_page.s.LKP)
+                    if (card->config_page.s.auth)
+                        PrintAndLogEx(NORMAL, _RED_("NO  ")NOLF);
+                    else
+                        PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
+                else
+                    PrintAndLogEx(NORMAL, _GREEN_("RW  ")NOLF);
+            } else if (4 <= page_addr && page_addr <= 5) {
+                if (card->config_page.s.LCK7)
+                    if (card->config_page.s.TTFDR == 2 && page_addr == 5)
+                        PrintAndLogEx(NORMAL, _YELLOW_("RO/W")NOLF);
+                    else
+                        PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
+                else
+                    PrintAndLogEx(NORMAL, _GREEN_("RW  ")NOLF);
+            } else if (6 <= page_addr && page_addr <= 7) {
+                if (card->config_page.s.LCK6)
+                    PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
+                else
+                    PrintAndLogEx(NORMAL, _GREEN_("RW  ")NOLF);
+            } else if (8 <= page_addr && page_addr <= 11) {
+                if (card->config_page.s.LCK5)
+                    PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
+                else
+                    PrintAndLogEx(NORMAL, _GREEN_("RW  ")NOLF);
+            } else if (12 <= page_addr && page_addr <= 15) {
+                if (card->config_page.s.LCK4)
+                    PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
+                else
+                    PrintAndLogEx(NORMAL, _GREEN_("RW  ")NOLF);
+            } else if (16 <= page_addr && page_addr <= 23) {
+                if (card->config_page.s.LCK3)
+                    PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
+                else
+                    PrintAndLogEx(NORMAL, _GREEN_("RW  ")NOLF);
+            } else if (24 <= page_addr && page_addr <= 32) {
+                if (card->config_page.s.LCK2)
+                    PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
+                else
+                    PrintAndLogEx(NORMAL, _GREEN_("RW  ")NOLF);
+            } else if (32 <= page_addr && page_addr <= 47) {
+                if (card->config_page.s.LCK1)
+                    PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
+                else
+                    PrintAndLogEx(NORMAL, _GREEN_("RW  ")NOLF);
+            } else if (48 <= page_addr && page_addr <= 63) {
+                if (card->config_page.s.LCK0)
+                    PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
+                else
+                    PrintAndLogEx(NORMAL, _GREEN_("RW  ")NOLF);
+            } else
+                PrintAndLogEx(NORMAL, _YELLOW_("UNK ") NOLF);
+
+            PrintAndLogEx(NORMAL, " | " NOLF);
+
+            // info
+            if (page_addr == HITAGS_UID_PADR) {
+                PrintAndLogEx(NORMAL, "UID");
+            } else if (page_addr == HITAGS_CONFIG_PADR) {
+                PrintAndLogEx(NORMAL, "Config");
+            } else if (page_addr == 2 && card->config_page.s.auth) {
+                PrintAndLogEx(NORMAL, "Pwd/Key");
+            } else if (page_addr == 3 && card->config_page.s.auth) {
+                PrintAndLogEx(NORMAL, "Key");
+            } else
+                PrintAndLogEx(NORMAL, "Data");
+        } else
             PrintAndLogEx(INFO, "%02u | -- -- -- -- | read failed reason: " _YELLOW_("%d"), page_addr, card->pages_reason[i]);
     }
 
+    PrintAndLogEx(INFO, "----+-------------+-------+------+------");
+    PrintAndLogEx(INFO, " " _RED_("RO") " = Read Only, " _GREEN_("RW") " = Read Write");
+    PrintAndLogEx(INFO, " " _YELLOW_("OTP") " = One Time Programmable");
+    PrintAndLogEx(INFO, " " _YELLOW_("RO/W") " = Partially Read Write");
+    PrintAndLogEx(INFO, "----------------------------------------");
     return PM3_SUCCESS;
 }
 
@@ -504,5 +602,4 @@ int CmdLFHitagS(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-
 
