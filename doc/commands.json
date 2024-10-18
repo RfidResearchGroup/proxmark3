@@ -1355,9 +1355,10 @@
                 "--skip ISO14443-3 select only (skip RATS)",
                 "--ecp Use enhanced contactless polling",
                 "--mag Use Apple magsafe polling",
-                "-@ continuous reader mode"
+                "-@ continuous reader mode",
+                "-w, --wait wait for card"
             ],
-            "usage": "hf 14a reader [-hks@] [--drop] [--skip] [--ecp] [--mag]"
+            "usage": "hf 14a reader [-hks@w] [--drop] [--skip] [--ecp] [--mag]"
         },
         "hf 14a sim": {
             "command": "hf 14a sim",
@@ -4590,12 +4591,14 @@
                 "-h, --help This help",
                 "-a input key type is key A(def)",
                 "-b input key type is key B",
+                "-c <dec> input key type is key A + offset",
+                "-k, --key <hex> key, 6 hex bytes, only for option -c",
                 "--mini MIFARE Classic Mini / S20",
                 "--1k MIFARE Classic 1k / S50 (def)",
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70"
             ],
-            "usage": "hf mf ecfill [-hab] [--mini] [--1k] [--2k] [--4k]"
+            "usage": "hf mf ecfill [-hab] [-c <dec>] [-k <hex>] [--mini] [--1k] [--2k] [--4k]"
         },
         "hf mf eclr": {
             "command": "hf mf eclr",
@@ -5370,7 +5373,7 @@
                 "hf mf sim --1k -u 11223344556677 -> MIFARE Classic 1k with 7b UID",
                 "hf mf sim --1k -u 11223344 -i -x -> Perform reader attack in interactive mode",
                 "hf mf sim --2k -> MIFARE 2k",
-                "hf mf sim --4k -> MIFARE 4k"
+                "hf mf sim --4k -> MIFARE 4khf mf sim --1k -x -e --> Keep simulation running and populate with found reader keys"
             ],
             "offline": false,
             "options": [
@@ -5384,12 +5387,13 @@
                 "--sak <hex> Provide explicit SAK (1 bytes, overrides option t)",
                 "-n, --num <dec> Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite",
                 "-i, --interactive Console will not be returned until simulation finishes or is aborted",
-                "-x Performs the 'reader attack', nr/ar attack against a reader",
-                "-e, --emukeys Fill simulator keys from found keys",
+                "-x Performs the 'reader attack', nr/ar attack against a reader.",
+                "-y Performs the nested 'reader attack'. This requires preloading nt & nt_enc in emulator memory. Implies -x.",
+                "-e, --emukeys Fill simulator keys from found keys. Requires -x or -y. Implies -i. Simulation will restart automatically.",
                 "-v, --verbose verbose output",
                 "--cve trigger CVE 2021_0430"
             ],
-            "usage": "hf mf sim [-hixev] [-u <hex>] [--mini] [--1k] [--2k] [--4k] [--atqa <hex>] [--sak <hex>] [-n <dec> ] [--cve]"
+            "usage": "hf mf sim [-hixyev] [-u <hex>] [--mini] [--1k] [--2k] [--4k] [--atqa <hex>] [--sak <hex>] [-n <dec> ] [--cve]"
         },
         "hf mf staticnested": {
             "command": "hf mf staticnested",
@@ -12405,9 +12409,10 @@
             ],
             "offline": true,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-j, --json Dump prefs as JSON"
             ],
-            "usage": "prefs show [-h]"
+            "usage": "prefs show [-hj]"
         },
         "prefs set client.debug": {
             "command": "prefs set client.debug",
@@ -12973,6 +12978,6 @@
     "metadata": {
         "commands_extracted": 748,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-10-12T11:55:26"
+        "extracted_on": "2024-10-18T15:36:53"
     }
 }

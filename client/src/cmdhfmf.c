@@ -4067,7 +4067,7 @@ void readerAttack(sector_t *k_sector, size_t k_sectors_cnt, nonces_t data, bool 
         if (setEmulatorMem) {
             uint8_t memBlock[16];
             mfEmlGetMem(memBlock, (sector * 4) + 3, 1);
-            if ((memBlock[6]==0) && (memBlock[7]==0) && (memBlock[8]==0)) {
+            if ((memBlock[6] == 0) && (memBlock[7] == 0) && (memBlock[8] == 0)) {
                 // ACL not yet set?
                 memBlock[6] = 0xFF;
                 memBlock[7] = 0x07;

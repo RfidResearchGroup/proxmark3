@@ -385,8 +385,8 @@ void Flashmem_print_status(void) {
                     break;
                 default:
                     Dbprintf("  Device ID............... " _YELLOW_("%02X / %02X (Winbond)"),
-                            device_type.manufacturer_id,
-                            device_type.device_id
+                             device_type.manufacturer_id,
+                             device_type.device_id
                             );
                     break;
             }

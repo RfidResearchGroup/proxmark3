@@ -831,9 +831,9 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                                     uint8_t nt_par_err = buf[(cardAUTHKEY * 8) + 2];
                                     uint32_t nt_enc = bytes_to_num(response, 4);
                                     response_par[0] = ((((nt_par_err >> 3) & 1) ^ oddparity8((nt_enc >> 24) & 0xFF)) << 7 |
-                                                    (((nt_par_err >> 2) & 1) ^ oddparity8((nt_enc >> 16) & 0xFF)) << 6 |
-                                                    (((nt_par_err >> 1) & 1) ^ oddparity8((nt_enc >> 8) & 0xFF)) << 5 |
-                                                    (((nt_par_err >> 0) & 1) ^ oddparity8((nt_enc >> 0) & 0xFF)) << 4);
+                                                       (((nt_par_err >> 2) & 1) ^ oddparity8((nt_enc >> 16) & 0xFF)) << 6 |
+                                                       (((nt_par_err >> 1) & 1) ^ oddparity8((nt_enc >> 8) & 0xFF)) << 5 |
+                                                       (((nt_par_err >> 0) & 1) ^ oddparity8((nt_enc >> 0) & 0xFF)) << 4);
                                     ar_nr_resp[0].cuid = cuid;
                                     ar_nr_resp[0].sector = cardAUTHSC;
                                     ar_nr_resp[0].keytype = cardAUTHKEY;
@@ -1192,7 +1192,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                                         (cardAUTHSC == ar_nr_resp[i].sector) &&
                                         (cardAUTHKEY == ar_nr_resp[i].keytype)
                                     )
-                            ) {
+                               ) {
                                 // if first auth for sector, or matches sector and keytype of previous auth
                                 if (ar_nr_resp[i].state != SECOND) {
                                     // if we haven't already collected 2 nonces for this sector
@@ -1363,15 +1363,15 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
             running_nested_auth_attack = false;
             if (g_dbglevel >= DBG_INFO) {
                 Dbprintf("Collected nested AR/NR which can be used to extract sector %d " _YELLOW_("%s")
-                        , ar_nr_resp[0].sector
-                        , (ar_nr_resp[0].keytype == AUTHKEYA) ? "key A" : "key B"
+                         , ar_nr_resp[0].sector
+                         , (ar_nr_resp[0].keytype == AUTHKEYA) ? "key A" : "key B"
                         );
                 Dbprintf("../tools/mfc/card_reader/mfkey32nested %08x %08x %08x %08x %08x",
-                        ar_nr_resp[0].cuid,  //UID
-                        ar_nr_resp[0].nonce, //NT
-                        ar_nr_resp[0].nonce2,//NT_ENC
-                        ar_nr_resp[0].nr,    //NR1
-                        ar_nr_resp[0].ar     //AR1
+                         ar_nr_resp[0].cuid,  //UID
+                         ar_nr_resp[0].nonce, //NT
+                         ar_nr_resp[0].nonce2,//NT_ENC
+                         ar_nr_resp[0].nr,    //NR1
+                         ar_nr_resp[0].ar     //AR1
                         );
             }
         }
@@ -1383,17 +1383,17 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint1
                     index = i;
                     if (g_dbglevel >= DBG_INFO) {
                         Dbprintf("Collected two pairs of AR/NR which can be used to extract sector %d " _YELLOW_("%s")
-                                , ar_nr_resp[i].sector
-                                , (ar_nr_resp[i].keytype == AUTHKEYA) ? "key A" : "key B"
+                                 , ar_nr_resp[i].sector
+                                 , (ar_nr_resp[i].keytype == AUTHKEYA) ? "key A" : "key B"
                                 );
                         Dbprintf("../tools/mfc/card_reader/mfkey32v2 %08x %08x %08x %08x %08x %08x %08x",
-                                ar_nr_resp[i].cuid,  //UID
-                                ar_nr_resp[i].nonce, //NT
-                                ar_nr_resp[i].nr,    //NR1
-                                ar_nr_resp[i].ar,    //AR1
-                                ar_nr_resp[i].nonce2,//NT2
-                                ar_nr_resp[i].nr2,   //NR2
-                                ar_nr_resp[i].ar2    //AR2
+                                 ar_nr_resp[i].cuid,  //UID
+                                 ar_nr_resp[i].nonce, //NT
+                                 ar_nr_resp[i].nr,    //NR1
+                                 ar_nr_resp[i].ar,    //AR1
+                                 ar_nr_resp[i].nonce2,//NT2
+                                 ar_nr_resp[i].nr2,   //NR2
+                                 ar_nr_resp[i].ar2    //AR2
                                 );
                     }
                 }
