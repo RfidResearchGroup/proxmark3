@@ -126,6 +126,70 @@ typedef enum {
     TRIPLEDES
 } BLOCK79ENCRYPTION;
 
+// 16 bytes key
+static int iclass_load_transport(uint8_t *key, uint8_t n) {
+    size_t keylen = 0;
+    uint8_t *keyptr = NULL;
+    int res = loadFile_safeEx(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr, &keylen, false);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "Couldn't find any decryption methods");
+        return PM3_EINVARG;
+    }
+
+    if (keylen != 16) {
+        PrintAndLogEx(ERR, "Failed to load transport key from file");
+        free(keyptr);
+        return PM3_EINVARG;
+    }
+
+    if (keylen != n) {
+        PrintAndLogEx(ERR, "Array size mismatch");
+        free(keyptr);
+        return PM3_EINVARG;
+    }
+
+    memcpy(key, keyptr, n);
+    free(keyptr);
+    return PM3_SUCCESS;
+}
+
+static void iclass_decrypt_transport(uint8_t *key, uint8_t limit, uint8_t *enc_data, uint8_t *dec_data,  BLOCK79ENCRYPTION aa1_encryption) {
+
+    // tripledes
+    mbedtls_des3_context ctx;
+    mbedtls_des3_set2key_dec(&ctx, key);
+
+    bool decrypted_block789 = false;
+    for (uint8_t i = 0; i < limit; ++i) {
+
+        uint16_t idx = i * PICOPASS_BLOCK_SIZE;
+
+        switch (aa1_encryption) {
+            // Right now, only 3DES is supported
+            case TRIPLEDES:
+                // Decrypt block 7,8,9 if configured.
+                if (i > 6 && i <= 9 && memcmp(enc_data + idx, empty, PICOPASS_BLOCK_SIZE) != 0) {
+                    mbedtls_des3_crypt_ecb(&ctx, enc_data + idx, dec_data + idx);
+                    decrypted_block789 = true;
+                }
+                break;
+            case DES:
+            case RFU:
+            case None:
+            // Nothing to do for None anyway...
+            default:
+                continue;
+        }
+
+        if (decrypted_block789) {
+            // Set the 2 last bits of block6 to 0 to mark the data as decrypted
+            dec_data[(6 * PICOPASS_BLOCK_SIZE) + 7] &= 0xFC;
+        }
+    }
+
+    mbedtls_des3_free(&ctx);
+}
+
 static inline uint32_t leadingzeros(uint64_t a) {
 #if defined __GNUC__
     return __builtin_clzll(a);
@@ -1471,7 +1535,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(clictx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     int enc_data_len = 0;
-    uint8_t enc_data[8] = {0};
+    uint8_t enc_data[PICOPASS_BLOCK_SIZE] = {0};
     bool have_data = false;
 
     CLIGetHexWithReturn(clictx, 2, enc_data, &enc_data_len);
@@ -1491,7 +1555,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
     // sanity checks
     if (enc_data_len > 0) {
-        if (enc_data_len != 8) {
+        if (enc_data_len != PICOPASS_BLOCK_SIZE) {
             PrintAndLogEx(ERR, "Data must be 8 hex bytes (16 HEX symbols)");
             return PM3_EINVARG;
         }
@@ -1554,7 +1618,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
     // decrypt user supplied data
     if (have_data) {
 
-        uint8_t dec_data[8] = {0};
+        uint8_t dec_data[PICOPASS_BLOCK_SIZE] = {0};
         if (use_sc) {
             Decrypt(enc_data, dec_data);
         } else {
@@ -1564,8 +1628,9 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "encrypted... %s", sprint_hex_inrow(enc_data, sizeof(enc_data)));
         PrintAndLogEx(SUCCESS, "plain....... " _YELLOW_("%s"), sprint_hex_inrow(dec_data, sizeof(dec_data)));
 
-        if (use_sc && use_decode6)
+        if (use_sc && use_decode6) {
             DecodeBlock6(dec_data);
+        }
     }
 
     // decrypt dump file data
@@ -1582,13 +1647,13 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         uint8_t pages = 1;
         getMemConfig(mem, chip, &app_areas, &kb, &books, &pages);
 
-        BLOCK79ENCRYPTION aa1_encryption = (decrypted[(6 * 8) + 7] & 0x03);
+        BLOCK79ENCRYPTION aa1_encryption = (decrypted[(6 * PICOPASS_BLOCK_SIZE) + 7] & 0x03);
 
         uint8_t limit = MIN(applimit, decryptedlen / 8);
 
-        if (decryptedlen / 8 != applimit) {
-            PrintAndLogEx(WARNING, "Actual file len " _YELLOW_("%zu") " vs HID app-limit len " _YELLOW_("%u"), decryptedlen, applimit * 8);
-            PrintAndLogEx(INFO, "Setting limit to " _GREEN_("%u"), limit * 8);
+        if (decryptedlen / PICOPASS_BLOCK_SIZE != applimit) {
+            PrintAndLogEx(WARNING, "Actual file len " _YELLOW_("%zu") " vs HID app-limit len " _YELLOW_("%u"), decryptedlen, applimit * PICOPASS_BLOCK_SIZE);
+            PrintAndLogEx(INFO, "Setting limit to " _GREEN_("%u"), limit * PICOPASS_BLOCK_SIZE);
         }
 
         //uint8_t numblocks4userid = GetNumberBlocksForUserId(decrypted + (6 * 8));
@@ -1596,14 +1661,14 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         bool decrypted_block789 = false;
         for (uint8_t blocknum = 0; blocknum < limit; ++blocknum) {
 
-            uint16_t idx = blocknum * 8;
-            memcpy(enc_data, decrypted + idx, 8);
+            uint16_t idx = blocknum * PICOPASS_BLOCK_SIZE;
+            memcpy(enc_data, decrypted + idx, PICOPASS_BLOCK_SIZE);
 
             switch (aa1_encryption) {
                 // Right now, only 3DES is supported
                 case TRIPLEDES:
                     // Decrypt block 7,8,9 if configured.
-                    if (blocknum > 6 && blocknum <= 9 && memcmp(enc_data, empty, 8) != 0) {
+                    if (blocknum > 6 && blocknum <= 9 && memcmp(enc_data, empty, PICOPASS_BLOCK_SIZE) != 0) {
                         if (use_sc) {
                             Decrypt(enc_data, decrypted + idx);
                         } else {
@@ -1622,7 +1687,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
             if (decrypted_block789) {
                 // Set the 2 last bits of block6 to 0 to mark the data as decrypted
-                decrypted[(6 * 8) + 7] &= 0xFC;
+                decrypted[(6 * PICOPASS_BLOCK_SIZE) + 7] &= 0xFC;
             }
         }
 
@@ -1655,26 +1720,26 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
 
         // decode block 6
-        bool has_values = (memcmp(decrypted + (8 * 6), empty, 8) != 0) && (memcmp(decrypted + (8 * 6), zeros, 8) != 0);
+        bool has_values = (memcmp(decrypted + (PICOPASS_BLOCK_SIZE * 6), empty, 8) != 0) && (memcmp(decrypted + (PICOPASS_BLOCK_SIZE * 6), zeros, PICOPASS_BLOCK_SIZE) != 0);
         if (has_values && use_sc) {
-            DecodeBlock6(decrypted + (8 * 6));
+            DecodeBlock6(decrypted + (PICOPASS_BLOCK_SIZE * 6));
         }
 
         // decode block 7-8-9
         iclass_decode_credentials(decrypted);
 
         // decode block 9
-        has_values = (memcmp(decrypted + (8 * 9), empty, 8) != 0) && (memcmp(decrypted + (8 * 9), zeros, 8) != 0);
+        has_values = (memcmp(decrypted + (PICOPASS_BLOCK_SIZE * 9), empty, PICOPASS_BLOCK_SIZE) != 0) && (memcmp(decrypted + (PICOPASS_BLOCK_SIZE * 9), zeros, PICOPASS_BLOCK_SIZE) != 0);
         if (has_values && use_sc) {
-            uint8_t usr_blk_len = GetNumberBlocksForUserId(decrypted + (8 * 6));
+            uint8_t usr_blk_len = GetNumberBlocksForUserId(decrypted + (PICOPASS_BLOCK_SIZE * 6));
             if (usr_blk_len < 3) {
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(INFO, "Block 9 decoder");
 
-                uint8_t pinsize = GetPinSize(decrypted + (8 * 6));
+                uint8_t pinsize = GetPinSize(decrypted + (PICOPASS_BLOCK_SIZE * 6));
                 if (pinsize > 0) {
 
-                    uint64_t pin = bytes_to_num(decrypted + (8 * 9), 5);
+                    uint64_t pin = bytes_to_num(decrypted + (PICOPASS_BLOCK_SIZE * 9), 5);
                     char tmp[17] = {0};
                     snprintf(tmp, sizeof(tmp), "%."PRIu64, BCD2DEC(pin));
                     PrintAndLogEx(INFO, "PIN........................ " _GREEN_("%.*s"), pinsize, tmp);
@@ -2645,7 +2710,8 @@ static int CmdHFiClassRestore(const char *Cmd) {
     return resp.status;
 }
 
-static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite, bool rawkey, bool replay, bool verbose, bool auth, bool shallow_mod, uint8_t *out) {
+static int iclass_read_block_ex(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite, bool rawkey, bool replay, bool verbose,
+                             bool auth, bool shallow_mod, uint8_t *out, bool print) {
 
     iclass_auth_req_t payload = {
         .use_raw = rawkey,
@@ -2681,14 +2747,22 @@ static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, boo
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, " block %3d/0x%02X : " _GREEN_("%s"), blockno, blockno, sprint_hex(packet->data, sizeof(packet->data)));
-    PrintAndLogEx(NORMAL, "");
+    if (print) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, " block %3d/0x%02X : " _GREEN_("%s"), blockno, blockno, sprint_hex(packet->data, sizeof(packet->data)));
+        PrintAndLogEx(NORMAL, "");
+    }
 
-    if (out)
+    if (out) {
         memcpy(out, packet->data, sizeof(packet->data));
+    }
 
     return PM3_SUCCESS;
+}
+
+static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite, bool rawkey, bool replay, bool verbose,
+                                bool auth, bool shallow_mod, uint8_t *out) {
+    return iclass_read_block_ex(KEY, blockno, keyType, elite, rawkey, replay, verbose, auth, shallow_mod, out, true);
 }
 
 static int CmdHFiClass_ReadBlock(const char *Cmd) {
@@ -5220,6 +5294,7 @@ int info_iclass(bool shallow_mod) {
 
     iclass_card_select_resp_t *r = (iclass_card_select_resp_t *)resp.data.asBytes;
 
+    uint8_t *p_response = (uint8_t*)&r->header.hdr;
     // no tag found or button pressed
     if (r->status == FLAG_ICLASS_NULL || resp.status == PM3_ERFTRANS) {
         return PM3_EOPABORTED;
@@ -5303,6 +5378,43 @@ int info_iclass(bool shallow_mod) {
 
     uint8_t cardtype = get_mem_config(hdr);
     PrintAndLogEx(SUCCESS, "    Card type.... " _GREEN_("%s"), card_types[cardtype]);
+
+    if (legacy) {
+
+        int res = PM3_ESOFT;
+        uint8_t key_type = 0x88; // debit key
+
+        uint8_t dump[PICOPASS_BLOCK_SIZE * 8] = {0};
+        // we take all raw bytes from response
+        memcpy(dump, p_response, sizeof(picopass_hdr_t));
+
+        uint8_t key[8] = {0};
+        for (uint8_t i = 0; i < ARRAYLEN(iClass_Key_Table); i++) {
+
+            memcpy(key, iClass_Key_Table[i], sizeof(key));
+            res = iclass_read_block_ex(key, 6, key_type, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 6), false);
+            if (res == PM3_SUCCESS) {
+                PrintAndLogEx(SUCCESS, "    AA1 Key...... " _GREEN_("%s"), sprint_hex_inrow(key, sizeof(key)));
+                break;
+            }
+        }
+
+        if (res == PM3_SUCCESS) {
+            res = iclass_read_block_ex(key, 7, key_type, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 7), false);
+            if (res == PM3_SUCCESS) {
+
+                BLOCK79ENCRYPTION aa1_encryption = (dump[(6 * PICOPASS_BLOCK_SIZE) + 7] & 0x03);
+
+                uint8_t decrypted[PICOPASS_BLOCK_SIZE * 8] = {0};
+                memcpy(decrypted, dump, 7 * PICOPASS_BLOCK_SIZE);
+
+                uint8_t transport[16] = {0};
+                iclass_load_transport(transport, sizeof(transport));
+                iclass_decrypt_transport(transport, 8, dump, decrypted, aa1_encryption);
+                iclass_decode_credentials(decrypted);
+            }
+        }
+    }
 
     return PM3_SUCCESS;
 }
