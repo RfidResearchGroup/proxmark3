@@ -624,7 +624,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 && (hdr->isResponse || protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == PROTO_MFPLUS || protocol == SEOS)
                 && (oddparity8(frame[j]) != ((parityBits >> (7 - (j & 0x0007))) & 0x01))) {
 
-            snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x! ", frame[j]);
+            snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02X! ", frame[j]);
 
         } else if (protocol == ICLASS  && hdr->isResponse == false) {
 
@@ -634,9 +634,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             }
 
             if (parity == ((frame[0] >> 7) & 1)) {
-                snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x  ", frame[j]);
+                snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02X  ", frame[j]);
             } else {
-                snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x! ", frame[j]);
+                snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02X! ", frame[j]);
             }
 
         } else if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAG2) || (protocol == PROTO_HITAGS))) {
