@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
     printf("This version implements Moebius two different nonce solution (like the supercard)\n\n");
 
     if (argc < 8) {
-        printf("syntax: %s <uid> <{nt_0}> <{nr_0}> <{ar_0}> <{nt_1}> <{nr_1}> <{ar_1}>\n\n", argv[0]);
+        printf("syntax: %s <uid> <nt_0> <{nr_0}> <{ar_0}> <nt_1> <{nr_1}> <{ar_1}>\n\n", argv[0]);
         return 1;
     }
 
