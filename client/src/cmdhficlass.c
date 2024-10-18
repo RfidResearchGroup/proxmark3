@@ -48,6 +48,8 @@
 #define ICLASS_AUTH_RETRY      10
 #define ICLASS_CFG_BLK_SR_BIT  0xA0 // indicates SIO present when set in block6[0] (legacy tags)
 #define ICLASS_DECRYPTION_BIN  "iclass_decryptionkey.bin"
+#define ICLASS_DEFAULT_KEY_DIC        "iclass_default_keys.dic"
+#define ICLASS_DEFAULT_KEY_ELITE_DIC  "iclass_elite_keys.dic"
 
 static void print_picopass_info(const picopass_hdr_t *hdr);
 void print_picopass_header(const picopass_hdr_t *hdr);
@@ -3611,7 +3613,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         arg_lit0(NULL, "vb6kdf", "use the VB6 elite KDF instead of a file"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
@@ -3632,20 +3634,26 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     uint8_t CSN[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
+    // no filename and don't use algorithm for elite
+    // just add the default dictionary
+    if ((strlen(filename) == 0) && (use_vb6kdf == false)) {
+
+        if (use_elite) {
+            PrintAndLogEx(INFO,"Using default elite dictionary");
+            snprintf(filename, sizeof(filename), ICLASS_DEFAULT_KEY_ELITE_DIC);
+        } else {
+            PrintAndLogEx(INFO,"Using default dictionary");
+            snprintf(filename, sizeof(filename), ICLASS_DEFAULT_KEY_DIC);
+        }
+    }
+
     uint64_t t1 = msclock();
 
     // load keys
     uint8_t *keyBlock = NULL;
     uint32_t keycount = 0;
 
-    if (!use_vb6kdf) {
-        // Load keys
-        int res = loadFileDICTIONARY_safe(filename, (void **)&keyBlock, 8, &keycount);
-        if (res != PM3_SUCCESS || keycount == 0) {
-            free(keyBlock);
-            return res;
-        }
-    } else {
+    if (use_vb6kdf) {
         // Generate 5000 keys using VB6 KDF
         keycount = 5000;
         keyBlock = calloc(1, keycount * 8);
@@ -3656,6 +3664,13 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         picopass_elite_reset();
         for (uint32_t i = 0; i < keycount; i++) {
             picopass_elite_nextKey(keyBlock + (i * 8));
+        }
+    } else {
+        // Load keys
+        int res = loadFileDICTIONARY_safe(filename, (void **)&keyBlock, 8, &keycount);
+        if (res != PM3_SUCCESS || keycount == 0) {
+            free(keyBlock);
+            return res;
         }
     }
 
@@ -3696,8 +3711,10 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "   CCNR: " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
 
     PrintAndLogEx(INFO, "Generating diversified keys %s", (use_elite || use_raw) ? NOLF : "");
+
     if (use_elite)
         PrintAndLogEx(NORMAL, "using " _YELLOW_("elite algo"));
+
     if (use_raw)
         PrintAndLogEx(NORMAL, "using " _YELLOW_("raw mode"));
 
@@ -4079,7 +4096,6 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
-
 
 static int CmdHFiClassLegacyRecover(const char *Cmd) {
 
@@ -5268,15 +5284,19 @@ int info_iclass(bool shallow_mod) {
     // if CSN starts with E012FFF (big endian), it's inside HID CSN range.
     bool is_hid_range = (hdr->csn[4] & 0xF0) == 0xF0 && (memcmp(hdr->csn + 5, "\xFF\x12\xE0", 3) == 0);
 
-    if (is_hid_range) {
-        bool legacy = (memcmp(aia, "\xff\xff\xff\xff\xff\xff\xff\xff", 8) == 0);
-        bool se_enabled = (memcmp(aia, "\xff\xff\xff\x00\x06\xff\xff\xff", 8) == 0);
+    bool legacy = (memcmp(aia, "\xff\xff\xff\xff\xff\xff\xff\xff", 8) == 0);
+    bool se_enabled = (memcmp(aia, "\xff\xff\xff\x00\x06\xff\xff\xff", 8) == 0);
 
+    if (is_hid_range) {
         PrintAndLogEx(SUCCESS, "    CSN.......... " _YELLOW_("HID range"));
-        if (legacy)
+
+        if (legacy) {
             PrintAndLogEx(SUCCESS, "    Credential... " _GREEN_("iCLASS legacy"));
-        if (se_enabled)
+        }
+
+        if (se_enabled) {
             PrintAndLogEx(SUCCESS, "    Credential... " _GREEN_("iCLASS SE"));
+        }
     } else {
         PrintAndLogEx(SUCCESS, "    CSN.......... " _YELLOW_("outside HID range"));
     }
