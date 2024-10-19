@@ -70,7 +70,7 @@ static uint32_t reader_selected_uid;
 static int rotate_uid = 0;
 static int sof_bits;                                // number of start-of-frame bits
 static uint8_t pwdh0, pwdl0, pwdl1;                 // password bytes
-static uint8_t rnd[] = {0x74, 0x12, 0x44, 0x85};    // random number
+static uint8_t rnd[] = {0x85, 0x44, 0x12, 0x74};    // random number
 static uint16_t timestamp_high = 0;                 // Timer Counter 2 overflow count, ~47min
 
 #define TIMESTAMP (AT91C_BASE_TC2->TC_SR &AT91C_TC_COVFS ? timestamp_high += 1 : 0, ((timestamp_high << 16) + AT91C_BASE_TC2->TC_CV) / T0)
@@ -536,7 +536,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
             rotate_uid++;
             *txlen = 32;
             // init crypt engine
-            state = ht2_hitag2_init(reflect48(tag.data.s.key), reflect32(tag.data.s.uid_le), reflect32(*(uint32_t *)rx));
+            state = ht2_hitag2_init(REV64(tag.data.s.key), REV32(tag.data.s.uid_le), REV32(*(uint32_t *)rx));
             DBG Dbhexdump(8, tx, false);
 
             for (int i = 0; i < 4; i++) {
@@ -1157,7 +1157,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
 
             key_le = *(uint64_t *)packet->key;
 
-            uint64_t state = ht2_hitag2_init(reflect48(key_le), reflect32(tag.data.s.uid_le), reflect32(*(uint32_t *)rnd));
+            uint64_t state = ht2_hitag2_init(REV64(key_le), REV32(tag.data.s.uid_le), REV32(*(uint32_t *)rnd));
 
             uint8_t auth_ks[4];
             for (int i = 0; i < 4; i++) {
@@ -1249,7 +1249,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
         pwdl1 = 0;
         if (packet->cmd == HTSF_KEY) {
 
-            uint64_t state = ht2_hitag2_init(reflect48(key_le), reflect32(tag.data.s.uid_le), reflect32(*(uint32_t *)rnd));
+            uint64_t state = ht2_hitag2_init(REV64(key_le), REV32(tag.data.s.uid_le), REV32(*(uint32_t *)rnd));
             for (int i = 0; i < 4; i++) {
                 ht2_hitag2_byte(&state);
             }
