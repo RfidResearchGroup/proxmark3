@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `data num` - outputed binary strings are now properly zero padded (@iceman1001)
 - Changed `hf iclass info` - now tries default keys and decode if legacy (@iceman1001)
 - Changed `hf iclass chk` - now loads dictionary file by default (@iceman1001)
 - Added an Makefile variable `DONT_BUILD_NATIVE` in mfd_aes_brute Makefile to easify downstream package
