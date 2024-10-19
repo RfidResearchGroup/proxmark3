@@ -4129,25 +4129,15 @@ static int CmdHF14AMfSim(const char *Cmd) {
     uint8_t uid[10] = {0};
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
 
-    char uidsize[8] = {0};
+    char uidsize[9] = {0};
     if (uidlen > 0) {
-        switch (uidlen) {
-            case 10:
-                flags |= FLAG_10B_UID_IN_DATA;
-                snprintf(uidsize, sizeof(uidsize), "10 byte");
-                break;
-            case 7:
-                flags |= FLAG_7B_UID_IN_DATA;
-                snprintf(uidsize, sizeof(uidsize), "7 byte");
-                break;
-            case 4:
-                flags |= FLAG_4B_UID_IN_DATA;
-                snprintf(uidsize, sizeof(uidsize), "4 byte");
-                break;
-            default:
-                PrintAndLogEx(WARNING, "Invalid parameter for UID");
-                CLIParserFree(ctx);
-                return PM3_EINVARG;
+        FLAG_SET_UID_IN_DATA(flags, uidlen);
+        if (IS_FLAG_UID_IN_EMUL(flags)) {
+            PrintAndLogEx(WARNING, "Invalid parameter for UID");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        } else {
+            snprintf(uidsize, sizeof(uidsize), "%i bytes", uidlen);
         }
     }
 
@@ -4193,7 +4183,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
             PrintAndLogEx(WARNING, "Wrong ATQA length");
             return PM3_EINVARG;
         }
-        flags |= FLAG_FORCED_ATQA;
+        flags |= FLAG_ATQA_IN_DATA;
     }
 
     if (saklen > 0) {
@@ -4201,12 +4191,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
             PrintAndLogEx(WARNING, "Wrong SAK length");
             return PM3_EINVARG;
         }
-        flags |= FLAG_FORCED_SAK;
-    }
-
-    // Use UID, SAK, ATQA from EMUL, if uid not defined
-    if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0) {
-        flags |= FLAG_UID_IN_EMUL;
+        flags |= FLAG_SAK_IN_DATA;
     }
 
     size_t k_sectors_cnt = MIFARE_4K_MAXSECTOR;
@@ -4218,19 +4203,19 @@ static int CmdHF14AMfSim(const char *Cmd) {
     }
 
     if (m0) {
-        flags |= FLAG_MF_MINI;
+        FLAG_SET_MF_SIZE(flags, MIFARE_MINI_MAX_BYTES);
         snprintf(csize, sizeof(csize), "MINI");
         k_sectors_cnt = MIFARE_MINI_MAXSECTOR;
     } else if (m1) {
-        flags |= FLAG_MF_1K;
+        FLAG_SET_MF_SIZE(flags, MIFARE_1K_MAX_BYTES);
         snprintf(csize, sizeof(csize), "1K");
         k_sectors_cnt = MIFARE_1K_MAXSECTOR;
     } else if (m2) {
-        flags |= FLAG_MF_2K;
+        FLAG_SET_MF_SIZE(flags, MIFARE_2K_MAX_BYTES);
         snprintf(csize, sizeof(csize), "2K with RATS");
         k_sectors_cnt = MIFARE_2K_MAXSECTOR;
     } else if (m4) {
-        flags |= FLAG_MF_4K;
+        FLAG_SET_MF_SIZE(flags, MIFARE_4K_MAX_BYTES);
         snprintf(csize, sizeof(csize), "4K");
         k_sectors_cnt = MIFARE_4K_MAXSECTOR;
     } else {
@@ -4262,9 +4247,8 @@ static int CmdHF14AMfSim(const char *Cmd) {
                   , (uidlen == 0) ? "n/a" : sprint_hex(uid, uidlen)
                  );
 
-    PrintAndLogEx(INFO, "Options [ numreads: %d, flags: %d (0x%02x) ]"
+    PrintAndLogEx(INFO, "Options [ numreads: %d, flags: 0x%04x ]"
                   , exitAfterNReads
-                  , flags
                   , flags);
 
     struct {

@@ -110,7 +110,8 @@ void RunMod(void) {
 #define DYNAMIC_RESPONSE_BUFFER_SIZE 64
 #define DYNAMIC_MODULATION_BUFFER_SIZE 512
 
-    uint8_t flags = FLAG_7B_UID_IN_DATA; // ST25TA have 7B UID
+    uint8_t flags = 0;
+    FLAG_SET_UID_IN_DATA(flags, 7); // ST25TA have 7B UID
     uint8_t data[PM3_CMD_DATA_SIZE] = {0x00}; // in case there is a read command received we shouldn't break
 
     // to initialize the emulation

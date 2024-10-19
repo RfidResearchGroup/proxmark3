@@ -830,20 +830,11 @@ int CmdHF14ASim(const char *Cmd) {
     bool useUIDfromEML = true;
 
     if (uid_len > 0) {
-        switch (uid_len) {
-            case 10:
-                flags |= FLAG_10B_UID_IN_DATA;
-                break;
-            case 7:
-                flags |= FLAG_7B_UID_IN_DATA;
-                break;
-            case 4:
-                flags |= FLAG_4B_UID_IN_DATA;
-                break;
-            default:
-                PrintAndLogEx(ERR, "Please specify a 4, 7, or 10 byte UID");
-                CLIParserFree(ctx);
-                return PM3_EINVARG;
+        FLAG_SET_UID_IN_DATA(flags, uid_len);
+        if (IS_FLAG_UID_IN_EMUL(flags)) {
+            PrintAndLogEx(ERR, "Please specify a 4, 7, or 10 byte UID");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
         }
         PrintAndLogEx(SUCCESS, "Emulating " _YELLOW_("ISO/IEC 14443 type A tag")" with " _GREEN_("%d byte UID (%s)"), uid_len, sprint_hex(uid, uid_len));
         useUIDfromEML = false;
@@ -866,7 +857,7 @@ int CmdHF14ASim(const char *Cmd) {
     }
 
     if (useUIDfromEML) {
-        flags |= FLAG_UID_IN_EMUL;
+        FLAG_SET_UID_IN_EMUL(flags);
     }
 
     struct {
@@ -1660,12 +1651,14 @@ static int CmdHF14AAntiFuzz(const char *Cmd) {
     struct {
         uint8_t flag;
     } PACKED param;
-    param.flag = FLAG_4B_UID_IN_DATA;
-
-    if (arg_get_lit(ctx, 2))
-        param.flag = FLAG_7B_UID_IN_DATA;
-    if (arg_get_lit(ctx, 3))
-        param.flag = FLAG_10B_UID_IN_DATA;
+    param.flag = 0;
+    FLAG_SET_UID_IN_DATA(param.flag, 4);
+    if (arg_get_lit(ctx, 2)) {
+        FLAG_SET_UID_IN_DATA(param.flag, 7);
+    }
+    if (arg_get_lit(ctx, 3)) {
+        FLAG_SET_UID_IN_DATA(param.flag, 10);
+    }
 
     CLIParserFree(ctx);
     clearCommandBuffer();
@@ -3725,20 +3718,11 @@ int CmdHF14AAIDSim(const char *Cmd) {
     bool useUIDfromEML = true;
 
     if (uid_len > 0) {
-        switch (uid_len) {
-            case 10:
-                flags |= FLAG_10B_UID_IN_DATA;
-                break;
-            case 7:
-                flags |= FLAG_7B_UID_IN_DATA;
-                break;
-            case 4:
-                flags |= FLAG_4B_UID_IN_DATA;
-                break;
-            default:
-                PrintAndLogEx(ERR, "Please specify a 4, 7, or 10 byte UID");
-                CLIParserFree(ctx);
-                return PM3_EINVARG;
+        FLAG_SET_UID_IN_DATA(flags, uid_len);
+        if (IS_FLAG_UID_IN_EMUL(flags)) {
+            PrintAndLogEx(ERR, "Please specify a 4, 7, or 10 byte UID");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
         }
         PrintAndLogEx(SUCCESS, "Emulating " _YELLOW_("ISO/IEC 14443 type A tag")" with " _GREEN_("%d byte UID (%s)"), uid_len, sprint_hex(uid, uid_len));
         useUIDfromEML = false;
@@ -3757,7 +3741,7 @@ int CmdHF14AAIDSim(const char *Cmd) {
     }
 
     if (useUIDfromEML) {
-        flags |= FLAG_UID_IN_EMUL;
+        FLAG_SET_UID_IN_EMUL(flags);
     }
 
     struct {

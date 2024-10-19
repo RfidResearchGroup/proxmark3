@@ -556,19 +556,7 @@ void RunMod(void) {
             }
 
             uint16_t simflags = 0;
-            switch (mattyrun_card.uidlen) {
-                case 4:
-                    simflags |= FLAG_4B_UID_IN_DATA;
-                    break;
-                case 7:
-                    simflags |= FLAG_7B_UID_IN_DATA;
-                    break;
-                case 10:
-                    simflags |= FLAG_10B_UID_IN_DATA;
-                    break;
-                default:
-                    break;
-            }
+            FLAG_SET_UID_IN_DATA(simflags, mattyrun_card.uidlen);
             uint16_t atqa = (uint16_t)bytes_to_num(mattyrun_card.atqa, 2);
 
             SpinDelay(1000);

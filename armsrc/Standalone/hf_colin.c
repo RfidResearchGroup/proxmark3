@@ -717,33 +717,10 @@ readysim:
     SpinOff(100);
     LED_C_ON();
 
-    /*
     uint16_t flags = 0;
-    switch (colin_p_card.uidlen) {
-        case 10:
-            flags = FLAG_10B_UID_IN_DATA;
-            break;
-        case 7:
-            flags = FLAG_7B_UID_IN_DATA;
-            break;
-        case 4:
-            flags = FLAG_4B_UID_IN_DATA;
-            break;
-        default:
-            flags = FLAG_UID_IN_EMUL;
-            break;
-    }
-    // Use UID, SAK, ATQA from EMUL, if uid not defined
-    if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0) {
-       flags |= FLAG_UID_IN_EMUL;
-    }
-    flags |= FLAG_MF_1K;
-    if ((flags & (FLAG_4B_UID_IN_DATA | FLAG_7B_UID_IN_DATA | FLAG_10B_UID_IN_DATA)) == 0) {
-        flags |= FLAG_UID_IN_EMUL;
-     }
-    flags = 0x10;
-    */
-    uint16_t flags = FLAG_UID_IN_EMUL;
+//    FLAG_SET_UID_IN_DATA(flags, colin_p_card.uidlen);
+    FLAG_SET_UID_IN_EMUL(flags);
+    FLAG_SET_MF_SIZE(flags, MIFARE_1K_MAX_BYTES);
     DbprintfEx(FLAG_NEWLINE, "\n\n\n\n\n\n\n\nn\n\nn\n\n\nflags: %d (0x%02x)", flags, flags);
     cjSetCursLeft();
     SpinOff(1000);

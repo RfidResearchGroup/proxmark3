@@ -565,7 +565,8 @@ static int CmdHF14AJookiSim(const char *Cmd) {
 
     // NTAG,  7 byte UID in eloaded data.
     payload.tagtype = 7;
-    payload.flags = FLAG_UID_IN_EMUL;
+    payload.flags = 0;
+    FLAG_SET_UID_IN_EMUL(payload.flags);
     payload.exitAfter = 0;
     memcpy(payload.uid, uid, sizeof(uid));
 

@@ -766,21 +766,72 @@ typedef struct {
 #define CMD_UNKNOWN                                                       0xFFFF
 
 //Mifare simulation flags
-#define FLAG_INTERACTIVE        0x01
-#define FLAG_4B_UID_IN_DATA     0x02
-#define FLAG_7B_UID_IN_DATA     0x04
-#define FLAG_10B_UID_IN_DATA    0x08
-#define FLAG_UID_IN_EMUL        0x10
-#define FLAG_NR_AR_ATTACK       0x20
-#define FLAG_MF_MINI            0x80
-#define FLAG_MF_1K              0x100
-#define FLAG_MF_2K              0x200
-#define FLAG_MF_4K              0x400
-#define FLAG_FORCED_ATQA        0x800
-#define FLAG_FORCED_SAK         0x1000
-#define FLAG_CVE21_0430         0x2000
-#define FLAG_RATS_IN_DATA       0x4000
-#define FLAG_NESTED_AUTH_ATTACK 0x8000
+// In interactive mode, we are expected to finish the operation with an ACK
+#define FLAG_INTERACTIVE        0x0001
+#define FLAG_ATQA_IN_DATA       0x0002
+#define FLAG_SAK_IN_DATA        0x0004
+#define FLAG_RATS_IN_DATA       0x0008
+
+// internal constants, use the function macros instead
+#define FLAG_MASK_UID           0x0030
+#define FLAG_UID_IN_EMUL        0x0000
+#define FLAG_4B_UID_IN_DATA     0x0010
+#define FLAG_7B_UID_IN_DATA     0x0020
+#define FLAG_10B_UID_IN_DATA    0x0030
+// if there is a UID in the data-section to be used:
+// note: if UIDLEN is wrong, we default to FLAG_UID_IN_EMUL
+#define FLAG_SET_UID_IN_DATA(flags, len) {\
+    flags = (flags & (~FLAG_MASK_UID))|\
+        (len == 4 ? FLAG_4B_UID_IN_DATA : \
+        (len == 7 ? FLAG_7B_UID_IN_DATA : \
+        (len == 10 ? FLAG_10B_UID_IN_DATA : \
+        FLAG_UID_IN_EMUL)));\
+    }
+// else we tell to take UID from block 0:
+#define FLAG_SET_UID_IN_EMUL(flags) {flags = (flags & (~FLAG_MASK_UID))|FLAG_UID_IN_EMUL;}
+#define IS_FLAG_UID_IN_DATA(flags, len) (\
+    (flags & FLAG_MASK_UID) == \
+        (len == 4 ? FLAG_4B_UID_IN_DATA : \
+        (len == 7 ? FLAG_7B_UID_IN_DATA : \
+        (len == 10 ? FLAG_10B_UID_IN_DATA : \
+        FLAG_UID_IN_EMUL)))\
+    )
+#define IS_FLAG_UID_IN_EMUL(flags) ((flags & FLAG_MASK_UID) == FLAG_UID_IN_EMUL)
+
+// internal constants, use the function macros instead
+#define MIFARE_4K_MAX_BYTES     4096
+#define MIFARE_2K_MAX_BYTES     2048
+#define MIFARE_1K_MAX_BYTES     1024
+#define MIFARE_MINI_MAX_BYTES   320
+#define FLAG_MASK_MF_SIZE       0x00C0
+#define FLAG_MF_MINI            0x0000
+#define FLAG_MF_1K              0x0040
+#define FLAG_MF_2K              0x0080
+#define FLAG_MF_4K              0x00C0
+#define FLAG_SET_MF_SIZE(flags, size) {\
+    flags = (flags & (~FLAG_MASK_MF_SIZE))|\
+        (size == MIFARE_MINI_MAX_BYTES ? FLAG_MF_MINI : \
+        (size == MIFARE_1K_MAX_BYTES ? FLAG_MF_1K : \
+        (size == MIFARE_2K_MAX_BYTES ? FLAG_MF_2K : \
+        (size == MIFARE_4K_MAX_BYTES ? FLAG_MF_4K : \
+        0))));\
+    }
+// else we tell to take UID from block 0:
+#define IS_FLAG_MF_SIZE(flags, size) (\
+    (flags & FLAG_MASK_MF_SIZE) == \
+        (size == MIFARE_MINI_MAX_BYTES ? FLAG_MF_MINI : \
+        (size == MIFARE_1K_MAX_BYTES ? FLAG_MF_1K : \
+        (size == MIFARE_2K_MAX_BYTES ? FLAG_MF_2K : \
+        (size == MIFARE_4K_MAX_BYTES ? FLAG_MF_4K : \
+        0))))\
+    )
+
+#define FLAG_MF_USE_READ_KEYB   0x0100
+#define FLAG_CVE21_0430         0x0200
+// collect NR_AR responses for bruteforcing later
+#define FLAG_NR_AR_ATTACK       0x0400
+// support nested authentication attack
+#define FLAG_NESTED_AUTH_ATTACK 0x0800
 
 
 #define MODE_SIM_CSN        0

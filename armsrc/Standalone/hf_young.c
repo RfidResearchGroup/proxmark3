@@ -236,7 +236,8 @@ void RunMod(void) {
                 int button_pressed = BUTTON_HELD(1000);
                 if (button_pressed == BUTTON_NO_CLICK) {  // No button action, proceed with sim
 
-                    uint16_t flags = FLAG_4B_UID_IN_DATA;
+                    uint16_t flags = 0
+                    FLAG_SET_UID_IN_DATA(flags, 4);
                     uint8_t data[PM3_CMD_DATA_SIZE] = {0}; // in case there is a read command received we shouldn't break
 
                     memcpy(data, uids[selected].uid, uids[selected].uidlen);
@@ -244,7 +245,7 @@ void RunMod(void) {
                     uint64_t tmpuid = bytes_to_num(uids[selected].uid, uids[selected].uidlen);
 
                     if (uids[selected].uidlen == 7) {
-                        flags = FLAG_7B_UID_IN_DATA;
+                        FLAG_SET_UID_IN_DATA(flags, 7);
                         Dbprintf("Simulating ISO14443a tag with uid: %014" PRIx64 " [Bank: %d]", tmpuid, selected);
                     } else {
                         Dbprintf("Simulating ISO14443a tag with uid: %08" PRIx64 " [Bank: %d]", tmpuid, selected);

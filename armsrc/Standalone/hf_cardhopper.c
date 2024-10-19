@@ -297,7 +297,7 @@ static void prepare_emulation(uint8_t *tagType, uint16_t *flags, uint8_t *data, 
     }
 
     memcpy(data, uidRx.dat, uidRx.len);
-    *flags = (uidRx.len == 10 ? FLAG_10B_UID_IN_DATA : (uidRx.len == 7 ? FLAG_7B_UID_IN_DATA : FLAG_4B_UID_IN_DATA));
+    FLAG_SET_UID_IN_DATA(*flags, uidRx.len);
     DbpString(_CYAN_("[@]") " UID:");
     Dbhexdump(uidRx.len, data, false);
     Dbprintf(_CYAN_("[@]") " Flags: %hu", *flags);

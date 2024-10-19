@@ -1263,21 +1263,21 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, uint8
     }
 
     // if uid not supplied then get from emulator memory
-    if ((memcmp(data, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 10) == 0) || ((flags & FLAG_UID_IN_EMUL) == FLAG_UID_IN_EMUL)) {
+    if ((memcmp(data, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 10) == 0) || IS_FLAG_UID_IN_EMUL(flags)) {
         if (tagType == 2 || tagType == 7) {
             uint16_t start = MFU_DUMP_PREFIX_LENGTH;
             uint8_t emdata[8];
             emlGet(emdata, start, sizeof(emdata));
             memcpy(data, emdata, 3); // uid bytes 0-2
             memcpy(data + 3, emdata + 4, 4); // uid bytes 3-7
-            flags |= FLAG_7B_UID_IN_DATA;
+            FLAG_SET_UID_IN_DATA(flags, 7);
         } else {
             emlGet(data, 0, 4);
-            flags |= FLAG_4B_UID_IN_DATA;
+            FLAG_SET_UID_IN_DATA(flags, 4);
         }
     }
 
-    if ((flags & FLAG_4B_UID_IN_DATA) == FLAG_4B_UID_IN_DATA) {
+    if (IS_FLAG_UID_IN_DATA(flags, 4)) {
         rUIDc1[0] = data[0];
         rUIDc1[1] = data[1];
         rUIDc1[2] = data[2];
@@ -1296,7 +1296,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, uint8
         AddCrc14A(rSAKc1, sizeof(rSAKc1) - 2);
 
         *cuid = bytes_to_num(data, 4);
-    } else if ((flags & FLAG_7B_UID_IN_DATA) == FLAG_7B_UID_IN_DATA) {
+    } else if (IS_FLAG_UID_IN_DATA(flags, 7)) {
         rUIDc1[0] = MIFARE_SELECT_CT;  // Cascade Tag marker
         rUIDc1[1] = data[0];
         rUIDc1[2] = data[1];
@@ -1319,7 +1319,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, uint8
 
         *cuid = bytes_to_num(data + 3, 4);
 
-    } else if ((flags & FLAG_10B_UID_IN_DATA) == FLAG_10B_UID_IN_DATA) {
+    } else if (IS_FLAG_UID_IN_DATA(flags, 10)) {
 
         rUIDc1[0] = MIFARE_SELECT_CT;  // Cascade Tag marker
         rUIDc1[1] = data[0];
@@ -2560,7 +2560,7 @@ void iso14443a_antifuzz(uint32_t flags) {
             resp[0] = 0x04;
             resp[1] = 0x00;
 
-            if ((flags & FLAG_7B_UID_IN_DATA) == FLAG_7B_UID_IN_DATA) {
+            if (IS_FLAG_UID_IN_DATA(flags, 7)) {
                 resp[0] = 0x44;
             }
 
@@ -2578,7 +2578,7 @@ void iso14443a_antifuzz(uint32_t flags) {
             resp[4] =  resp[0] ^ resp[1] ^ resp[2] ^ resp[3];
             colpos = 0;
 
-            if ((flags & FLAG_7B_UID_IN_DATA) == FLAG_7B_UID_IN_DATA) {
+            if (IS_FLAG_UID_IN_DATA(flags, 7)) {
                 resp[0] = MIFARE_SELECT_CT;
                 colpos = 8;
             }
