@@ -154,12 +154,12 @@ typedef struct {
 
 // iCLASS secure mode memory mapping
 typedef struct {
-    uint8_t csn[8];
+    uint8_t csn[PICOPASS_BLOCK_SIZE];
     picopass_conf_block_t conf;
-    uint8_t epurse[8];
-    uint8_t key_d[8];
-    uint8_t key_c[8];
-    uint8_t app_issuer_area[8];
+    uint8_t epurse[PICOPASS_BLOCK_SIZE];
+    uint8_t key_d[PICOPASS_BLOCK_SIZE];
+    uint8_t key_c[PICOPASS_BLOCK_SIZE];
+    uint8_t app_issuer_area[PICOPASS_BLOCK_SIZE];
 } PACKED picopass_hdr_t;
 
 // iCLASS non-secure mode memory mapping
