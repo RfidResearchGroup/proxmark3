@@ -900,14 +900,16 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
 
                     // Compliance of MIFARE Classic EV1 1K Datasheet footnote of Table 8
                     // If access bits show that key B is Readable, any subsequent memory access will be refused.
+                    // Some cards don't respect it so we can also skip it with FLAG_MF_USE_READ_KEYB
+                    if ((flags & FLAG_MF_USE_READ_KEYB) != FLAG_MF_USE_READ_KEYB) {
+                        if (cardAUTHKEY == AUTHKEYB && IsKeyBReadable(blockNo)) {
+                            EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
+                            FpgaDisableTracing();
 
-                    if (cardAUTHKEY == AUTHKEYB && IsKeyBReadable(blockNo)) {
-                        EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
-                        FpgaDisableTracing();
-
-                        if (g_dbglevel >= DBG_ERROR)
-                            Dbprintf("[MFEMUL_WORK] Access denied: Reader tried to access memory on authentication with key B while key B is readable in sector (0x%02x)", cardAUTHSC);
-                        break;
+                            if (g_dbglevel >= DBG_ERROR)
+                                Dbprintf("[MFEMUL_WORK] Access denied: Reader tried to access memory on authentication with key B while key B is readable in sector (0x%02x)", cardAUTHSC);
+                            break;
+                        }
                     }
                 }
 

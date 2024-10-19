@@ -4117,8 +4117,10 @@ static int CmdHF14AMfSim(const char *Cmd) {
         arg_lit0("x", NULL, "Performs the 'reader attack', nr/ar attack against a reader."),
         arg_lit0("y", NULL, "Performs the nested 'reader attack'. This requires preloading nt & nt_enc in emulator memory. Implies -x."),
         arg_lit0("e", "emukeys", "Fill simulator keys from found keys. Requires -x or -y. Implies -i. Simulation will restart automatically."),
-        arg_lit0("v", "verbose", "verbose output"),
-        arg_lit0(NULL, "cve", "trigger CVE 2021_0430"),
+        // If access bits show that key B is Readable, any subsequent memory access should be refused.
+        arg_lit0(NULL, "allowkeyb", "Allow key B even if readable"),
+        arg_lit0("v", "verbose", "Verbose output"),
+        arg_lit0(NULL, "cve", "Trigger CVE 2021_0430"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4170,9 +4172,13 @@ static int CmdHF14AMfSim(const char *Cmd) {
 
     bool setEmulatorMem = arg_get_lit(ctx, 12);
 
-    bool verbose = arg_get_lit(ctx, 13);
+    if (arg_get_lit(ctx, 13)) {
+        flags |= FLAG_MF_USE_READ_KEYB;
+    }
 
-    if (arg_get_lit(ctx, 14)) {
+    bool verbose = arg_get_lit(ctx, 14);
+
+    if (arg_get_lit(ctx, 15)) {
         flags |= FLAG_CVE21_0430;
     }
     CLIParserFree(ctx);
