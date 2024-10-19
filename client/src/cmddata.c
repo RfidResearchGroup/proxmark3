@@ -3164,9 +3164,11 @@ static int CmdNumCon(const char *Cmd) {
 
             // only pad bin string
             int pn = 0;
-            if (i==2) {
-                if (slen < blen) {
+            if (i == 2) {
+                if (blen && slen < blen) {
                     pn = blen - slen + 1;
+                } else if (hlen && (slen < (hlen * 4))) {
+                    pn = (hlen * 4) - slen + 1;
                 }
             }
             PrintAndLogEx(SUCCESS, "%s%.*s%s",radix[i].desc, pn, pad, s);
@@ -3197,9 +3199,11 @@ static int CmdNumCon(const char *Cmd) {
                 char scpy[600] = {0x30};
                 memset(scpy, 0x30, sizeof(scpy));
                 int pn = 0;
-                if (i==2) {
-                    if (slen < blen) {
+                if (i == 2) {
+                    if (blen && slen < blen) {
                         pn = blen - slen + 1;
+                    } else if (hlen && (slen < (hlen * 4))) {
+                        pn = (hlen * 4) - slen + 1;
                     }
                 }
                 memcpy(scpy + pn, s, slen);
@@ -3246,9 +3250,12 @@ static int CmdNumCon(const char *Cmd) {
                     char scpy[600] = {0x30};
                     memset(scpy, 0x30, sizeof(scpy));
                     int pn = 0;
-                    if (slen < blen) {
+                    if (blen && slen < blen) {
                         pn = blen - slen + 1;
+                    } else if (hlen && (slen < (hlen * 4))) {
+                        pn = (hlen * 4) - slen + 1;
                     }
+
                     memcpy(scpy + pn, s, slen);
                     str_inverse_bin(scpy, strlen(scpy));
                     PrintAndLogEx(SUCCESS, "%s%s", radix[i].desc, scpy);
