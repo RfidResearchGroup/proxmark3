@@ -1411,7 +1411,7 @@ static bool HF14B_ask_ct_reader(bool verbose) {
     return false;
 }
 
-static bool HF14B_picopass_reader(bool verbose) {
+bool HF14B_picopass_reader(bool verbose, bool info) {
 
     iso14b_raw_cmd_t packet = {
         .flags = (ISO14B_CONNECT | ISO14B_SELECT_PICOPASS | ISO14B_DISCONNECT),
@@ -1437,8 +1437,10 @@ static bool HF14B_picopass_reader(bool verbose) {
                 return false;
             }
             memcpy(card, resp.data.asBytes, sizeof(picopass_hdr_t));
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(SUCCESS, "iCLASS / Picopass CSN: " _GREEN_("%s"), sprint_hex(card->csn, sizeof(card->csn)));
+            if(info){
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(SUCCESS, "iCLASS / Picopass CSN: " _GREEN_("%s"), sprint_hex(card->csn, sizeof(card->csn)));
+            }
             free(card);
             return true;
         }
@@ -3034,6 +3036,7 @@ int infoHF14B(bool verbose, bool do_aid_search) {
 // get and print general info about all known 14b chips
 int readHF14B(bool loop, bool verbose, bool read_plot) {
     bool found = false;
+    bool info = true;
     int res = PM3_SUCCESS;
     do {
         found = false;
@@ -3049,7 +3052,7 @@ int readHF14B(bool loop, bool verbose, bool read_plot) {
             goto plot;
 
         // Picopass
-        found |= HF14B_picopass_reader(verbose);
+        found |= HF14B_picopass_reader(verbose, info);
         if (found)
             goto plot;
 
