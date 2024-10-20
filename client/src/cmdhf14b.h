@@ -31,4 +31,6 @@ int select_card_14443b_4(bool disconnect, iso14b_card_select_t *card);
 
 int infoHF14B(bool verbose, bool do_aid_search);
 int readHF14B(bool loop, bool verbose, bool read_plot);
+bool HF14B_picopass_reader(bool verbose, bool info);
+
 #endif
