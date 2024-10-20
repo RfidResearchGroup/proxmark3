@@ -2157,7 +2157,7 @@ out:
     }
 }
 
-void generate_single_key_block_inverted(const uint8_t *startingKey, uint32_t index, uint8_t *keyBlock) {
+static void generate_single_key_block_inverted(const uint8_t *startingKey, uint32_t index, uint8_t *keyBlock) {
     uint32_t carry = index;
     memcpy(keyBlock, startingKey, PICOPASS_BLOCK_SIZE);
 
