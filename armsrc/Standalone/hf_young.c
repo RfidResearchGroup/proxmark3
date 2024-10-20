@@ -236,7 +236,7 @@ void RunMod(void) {
                 int button_pressed = BUTTON_HELD(1000);
                 if (button_pressed == BUTTON_NO_CLICK) {  // No button action, proceed with sim
 
-                    uint16_t flags = 0
+                    uint16_t flags = 0;
                     FLAG_SET_UID_IN_DATA(flags, 4);
                     uint8_t data[PM3_CMD_DATA_SIZE] = {0}; // in case there is a read command received we shouldn't break
 
