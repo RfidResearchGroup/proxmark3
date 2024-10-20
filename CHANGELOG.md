@@ -4,7 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Changed `hf iclass legrec` - updated script implementation to ensure functionality (@antiklesys)
-- Added recovered iclass custom key to dictionary
+- Added recovered iclass custom key to dictionary (@antiklesys)
 - Changed `hf mf sim` - add option to allow key b to be used even if readable (@doegox)
 - Changed `data num` - outputed binary strings are now properly zero padded (@iceman1001)
 - Changed `hf iclass info` - now tries default keys and decode if legacy (@iceman1001)
