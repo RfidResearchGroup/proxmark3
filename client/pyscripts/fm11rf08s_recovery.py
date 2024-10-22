@@ -76,6 +76,10 @@ parser.add_argument('-x', '--init-check', action='store_true', help='Run an init
 parser.add_argument('-y', '--final-check', action='store_true', help='Run a final fchk with the found keys')
 parser.add_argument('-k', '--keep', action='store_true', help='Keep generated dictionaries after processing')
 parser.add_argument('-d', '--debug', action='store_true', help='Enable debug mode')
+parser.add_argument('-s', '--supply-chain', action='store_true', help='Enable supply-chain mode. Look for hf-mf-XXXXXXXX-default_nonces.json')
+# Such json can be produced from the json saved by
+# "hf mf isen --collect_fm11rf08s --key A396EFA4E24F" on a wiped card, then processed with
+# jq '{Created: .Created, FileType: "fm11rf08s_default_nonces", nt: .nt | del(.["32"]) | map_values(.a)}'
 args = parser.parse_args()
 
 start_time = time.time()
@@ -192,23 +196,20 @@ else:
     print(f"Warning, {DICT_DEF} not found.")
 
 dict_dnwd = None
-def_nt = [["", ""] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
-try:
-    default_nonces_with_data = f'{save_path}hf-mf-{uid:04X}-default_nonces_with_data.json'
-    with open(default_nonces_with_data, 'r') as file:
-        # Load and parse the JSON data
-        dict_dnwd = json.load(file)
-        for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
-            real_sec = sec
-            if sec >= NUM_SECTORS:
-                real_sec += 16
-            def_nt[sec][0] = dict_dnwd["nt"][f"{real_sec}"]["a"].lower()
-            def_nt[sec][1] = dict_dnwd["nt"][f"{real_sec}"]["b"].lower()
-        print(f"Loaded default nonces from {default_nonces_with_data}.")
-except FileNotFoundError:
-    pass
-except json.decoder.JSONDecodeError:
-    print(f"Error parsing {default_nonces_with_data}, skipping.")
+def_nt = ["" for _ in range(NUM_SECTORS)]
+if args.supply_chain:
+    try:
+        default_nonces = f'{save_path}hf-mf-{uid:04X}-default_nonces.json'
+        with open(default_nonces, 'r') as file:
+            # Load and parse the JSON data
+            dict_dnwd = json.load(file)
+            for sec in range(NUM_SECTORS):
+                def_nt[sec] = dict_dnwd["nt"][f"{sec}"].lower()
+            print(f"Loaded default nonces from {default_nonces}.")
+    except FileNotFoundError:
+        pass
+    except json.decoder.JSONDecodeError:
+        print(f"Error parsing {default_nonces}, skipping.")
 
 print("Running staticnested_1nt & 2x1nt when doable...")
 keys = [[set(), set()] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
@@ -246,7 +247,7 @@ for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
                 all_keys.update(keys_set)
             if dict_dnwd is not None and sec < NUM_SECTORS:
                 # Prioritize keys from supply-chain attack
-                cmd = [tools["staticnested_2x1nt1key"], def_nt[sec][key_type], "FFFFFFFFFFFF", f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}_filtered.dic"]
+                cmd = [tools["staticnested_2x1nt1key"], def_nt[sec], "FFFFFFFFFFFF", f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}_filtered.dic"]
                 if args.debug:
                     print(' '.join(cmd))
                 result = subprocess.run(cmd, capture_output=True, text=True).stdout
@@ -290,7 +291,7 @@ for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
             all_keys.update(keys_set)
         if dict_dnwd is not None and sec < NUM_SECTORS:
             # Prioritize keys from supply-chain attack
-            cmd = [tools["staticnested_2x1nt1key"], def_nt[sec][key_type], "FFFFFFFFFFFF", f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}.dic"]
+            cmd = [tools["staticnested_2x1nt1key"], def_nt[sec], "FFFFFFFFFFFF", f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}.dic"]
             if args.debug:
                 print(' '.join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True).stdout
