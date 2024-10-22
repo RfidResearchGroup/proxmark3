@@ -191,6 +191,25 @@ if os.path.isfile(DICT_DEF_PATH):
 else:
     print(f"Warning, {DICT_DEF} not found.")
 
+dict_dnwd = None
+def_nt = [["", ""] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
+try:
+    default_nonces_with_data = f'{save_path}hf-mf-{uid:04X}-default_nonces_with_data.json'
+    with open(default_nonces_with_data, 'r') as file:
+        # Load and parse the JSON data
+        dict_dnwd = json.load(file)
+        for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
+            real_sec = sec
+            if sec >= NUM_SECTORS:
+                real_sec += 16
+            def_nt[sec][0] = dict_dnwd["nt"][f"{real_sec}"]["a"].lower()
+            def_nt[sec][1] = dict_dnwd["nt"][f"{real_sec}"]["b"].lower()
+        print(f"Loaded default nonces from {default_nonces_with_data}.")
+except FileNotFoundError:
+    pass
+except json.decoder.JSONDecodeError:
+    print(f"Error parsing {default_nonces_with_data}, skipping.")
+
 print("Running staticnested_1nt & 2x1nt when doable...")
 keys = [[set(), set()] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
 all_keys = set()
@@ -225,9 +244,21 @@ for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
                 keys[sec][key_type] = keys_set.copy()
                 duplicates.update(all_keys.intersection(keys_set))
                 all_keys.update(keys_set)
-            # Prioritize default keys
-            keys_def_set = DEFAULT_KEYS.intersection(keys_set)
-            keys_set.difference_update(DEFAULT_KEYS)
+            if dict_dnwd is not None and sec < NUM_SECTORS:
+                # Prioritize keys from supply-chain attack
+                cmd = [tools["staticnested_2x1nt1key"], def_nt[sec][key_type], "FFFFFFFFFFFF", f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}_filtered.dic"]
+                if args.debug:
+                    print(' '.join(cmd))
+                result = subprocess.run(cmd, capture_output=True, text=True).stdout
+                keys_def_set = set()
+                for line in result.split('\n'):
+                    if "MATCH:" in line:
+                        keys_def_set.add(line[12:])
+                keys_set.difference_update(keys_def_set)
+            else:
+                # Prioritize default keys
+                keys_def_set = DEFAULT_KEYS.intersection(keys_set)
+            keys_set.difference_update(keys_def_set)
             # Prioritize sector 32 keyB starting with 0000
             if real_sec == 32:
                 keyb32cands = set(x for x in keys_set if x.startswith("0000"))
@@ -257,9 +288,21 @@ for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
             keys[sec][key_type] = keys_set.copy()
             duplicates.update(all_keys.intersection(keys_set))
             all_keys.update(keys_set)
-        # Prioritize default keys
-        keys_def_set = DEFAULT_KEYS.intersection(keys_set)
-        keys_set.difference_update(DEFAULT_KEYS)
+        if dict_dnwd is not None and sec < NUM_SECTORS:
+            # Prioritize keys from supply-chain attack
+            cmd = [tools["staticnested_2x1nt1key"], def_nt[sec][key_type], "FFFFFFFFFFFF", f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}.dic"]
+            if args.debug:
+                print(' '.join(cmd))
+            result = subprocess.run(cmd, capture_output=True, text=True).stdout
+            keys_def_set = set()
+            for line in result.split('\n'):
+                if "MATCH:" in line:
+                    keys_def_set.add(line[12:])
+            keys_set.difference_update(keys_def_set)
+        else:
+            # Prioritize default keys
+            keys_def_set = DEFAULT_KEYS.intersection(keys_set)
+        keys_set.difference_update(keys_def_set)
         if len(keys_def_set) > 0:
             found_default[sec][key_type] = True
             with (open(f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}.dic", "w")) as f:
@@ -484,6 +527,7 @@ if abort:
     print("Brute-forcing phase aborted via keyboard!")
     args.final_check = False
 
+plus = "[" + color("+", fg="green") + "] "
 if args.final_check:
     print("Letting fchk do a final dump, just for confirmation and display...")
     keys_set = set([i for sl in found_keys for i in sl if i != ""])
@@ -495,7 +539,6 @@ if args.final_check:
         print(cmd)
     p.console(cmd, passthru=True)
 else:
-    plus = "[" + color("+", fg="green") + "] "
     print()
     print(plus + color("found keys:", fg="green"))
     print()
