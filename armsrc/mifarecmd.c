@@ -1534,7 +1534,7 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
             continue;
         };
 
-        if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_NESTED, NULL, NULL)) {
+        if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_NESTED, &nt2, NULL)) {
             continue;
         };
 
@@ -1544,6 +1544,12 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
         };
 
         nt3 = bytes_to_num(receivedAnswer, 4);
+        // fix for cards with distance 0
+        if (nt1 == nt2) {
+            target_nt[0] = nt1;
+            target_nt[1] = nt1;
+            target_ks[0] = nt3 ^ target_nt[0];
+        }
         target_ks[1] = nt3 ^ target_nt[1];
 
         isOK = PM3_SUCCESS;
