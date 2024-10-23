@@ -65,30 +65,6 @@ typedef enum {
     HT2_LAST_CMD              = HT2F_UID_ONLY,
 } PACKED hitag_function;
 
-typedef struct {
-    hitag_function cmd;
-    uint8_t page;
-    uint8_t page_count;
-    uint8_t data[HITAGS_PAGE_SIZE];
-    uint8_t NrAr[HITAG_NRAR_SIZE];
-    // unaligned access to key as uint64_t will abort.
-    // todo: Why does the compiler without -munaligned-access generate unaligned-access code in the first place?
-    uint8_t key[HITAG_CRYPTOKEY_SIZE] __attribute__((aligned(4)));
-    uint8_t pwd[HITAG_PASSWORD_SIZE];
-
-    // Hitag 1 section.
-    // will reuse pwd or key field.
-    uint8_t key_no;
-    uint8_t logdata_0[4];
-    uint8_t logdata_1[4];
-    uint8_t nonce[4];
-} PACKED lf_hitag_data_t;
-
-typedef struct {
-    int status;
-    uint8_t data[256];
-} PACKED lf_hitag_crack_response_t;
-
 //---------------------------------------------------------
 // Hitag S
 //---------------------------------------------------------
@@ -110,15 +86,6 @@ typedef enum TAG_STATE {
     HT_WRITING_PAGE_DATA,
     HT_WRITING_BLOCK_DATA
 } TSATE;
-
-//number of start-of-frame bits
-typedef enum SOF_TYPE {
-    HT_STANDARD = 0,
-    HT_ADVANCED,
-    HT_FAST_ADVANCED,
-    HT_ONE,
-    HT_NO_BITS
-} stype;
 
 typedef struct {
     // con0
@@ -156,7 +123,6 @@ struct hitagS_tag {
     TSATE    tstate;    // tag-state
 
     int      max_page;
-    stype    mode;
 
     union {
         uint8_t pages[64][4];
@@ -176,6 +142,33 @@ struct hitagS_tag {
     } data;
 
 } PACKED;
+
+typedef struct {
+    hitag_function cmd;
+    uint8_t page;
+    uint8_t page_count;
+    uint8_t data[HITAGS_PAGE_SIZE];
+    uint8_t NrAr[HITAG_NRAR_SIZE];
+    // unaligned access to key as uint64_t will abort.
+    // todo: Why does the compiler without -munaligned-access generate unaligned-access code in the first place?
+    uint8_t key[HITAG_CRYPTOKEY_SIZE] __attribute__((aligned(4)));
+    uint8_t pwd[HITAG_PASSWORD_SIZE];
+
+    // Hitag 1 section.
+    // will reuse pwd or key field.
+    uint8_t key_no;
+    uint8_t logdata_0[4];
+    uint8_t logdata_1[4];
+    uint8_t nonce[4];
+
+    //Hitag s section
+    uint8_t mode;
+} PACKED lf_hitag_data_t;
+
+typedef struct {
+    int status;
+    uint8_t data[256];
+} PACKED lf_hitag_crack_response_t;
 
 typedef struct {
     union {

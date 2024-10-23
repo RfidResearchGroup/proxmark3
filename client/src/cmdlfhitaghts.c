@@ -147,6 +147,13 @@ static int process_hitags_common_args(CLIParserContext *ctx, lf_hitag_data_t *co
         return PM3_EINVARG;
     }
 
+    uint8_t mode = arg_get_int_def(ctx, 5, 3);
+
+    if (mode > 3) {
+        PrintAndLogEx(WARNING, "Wrong response protocol mode, expected 0, 1, 2 or 3, got %d", mode);
+        return PM3_EINVARG;
+    }
+
     // complete options
     switch (key_len) {
         case HITAG_PASSWORD_SIZE:
@@ -192,6 +199,21 @@ static int process_hitags_common_args(CLIParserContext *ctx, lf_hitag_data_t *co
         packet->cmd = HTSF_KEY;
         memcpy(packet->key, key, sizeof(packet->key));
         PrintAndLogEx(INFO, "Authenticating to " _YELLOW_("Hitag S") " in Crypto mode");
+    }
+
+    switch (mode) {
+        case 0:
+            packet->mode = HITAGS_UID_REQ_STD;
+            break;
+        case 1:
+            packet->mode = HITAGS_UID_REQ_ADV1;
+            break;
+        case 2:
+            packet->mode = HITAGS_UID_REQ_ADV2;
+            break;
+        default:
+            packet->mode = HITAGS_UID_REQ_FADV;
+            break;
     }
 
     return PM3_SUCCESS;
@@ -254,8 +276,9 @@ static int CmdLFHitagSRead(const char *Cmd) {
         arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
         arg_lit0(NULL, "crypto", "crypto mode"),
         arg_str0("k", "key", "<hex>", "pwd or key, 4 or 6 hex bytes"),
+        arg_int0("m", "mode", "<dec>", "response protocol mode. 0 (Standard 00110), 1 (Advanced 11000), 2 (Advanced 11001), 3 (Fast Advanced 11010) (def: 3)"),
         arg_int0("p", "page", "<dec>", "page address to read from"),
-        arg_int0("c", "count", "<dec>", "how many pages to read. '0' reads all pages up to the end page (default: 1)"),
+        arg_int0("c", "count", "<dec>", "how many pages to read. '0' reads all pages up to the end page (def: 1)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -264,14 +287,14 @@ static int CmdLFHitagSRead(const char *Cmd) {
 
     if (process_hitags_common_args(ctx, &packet) < 0) return PM3_EINVARG;
 
-    uint32_t page = arg_get_int_def(ctx, 5, 0);
+    uint32_t page = arg_get_int_def(ctx, 6, 0);
 
     if (page > 255) {
         PrintAndLogEx(WARNING, "Page address Invalid.");
         return PM3_EINVARG;
     }
 
-    uint32_t count = arg_get_int_def(ctx, 6, 1);
+    uint32_t count = arg_get_int_def(ctx, 7, 1);
 
     if (count > HITAGS_MAX_PAGES) {
         PrintAndLogEx(WARNING, "No more than 64 pages can be read at once.");
@@ -438,6 +461,7 @@ static int CmdLFHitagSWrite(const char *Cmd) {
         arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
         arg_lit0(NULL, "crypto", "crypto mode"),
         arg_str0("k", "key", "<hex>", "pwd or key, 4 or 6 hex bytes"),
+        arg_int0("m", "mode", "<dec>", "response protocol mode. 0 (Standard 00110), 1 (Advanced 11000), 2 (Advanced 11001), 3 (Fast Advanced 11010) (def: 3)"),
         arg_int1("p", "page", "<dec>", "page address to write to"),
         arg_str1("d", "data", "<hex>", "data, 4 hex bytes"),
         arg_param_end
@@ -448,12 +472,12 @@ static int CmdLFHitagSWrite(const char *Cmd) {
 
     if (process_hitags_common_args(ctx, &packet) < 0) return PM3_EINVARG;
 
-    int page = arg_get_int_def(ctx, 5, 0);
+    int page = arg_get_int_def(ctx, 6, 0);
 
     uint8_t data[HITAGS_PAGE_SIZE];
     int data_len = 0;
 
-    int res = CLIParamHexToBuf(arg_get_str(ctx, 6), data, HITAGS_PAGE_SIZE, &data_len);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 7), data, HITAGS_PAGE_SIZE, &data_len);
     if (res != 0) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
@@ -538,7 +562,7 @@ static int CmdLFHitagSSim(const char *Cmd) {
     CLIParserFree(ctx);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_LF_HITAGS_SIMULATE, NULL, 0);
+    SendCommandMIX(CMD_LF_HITAGS_SIMULATE, false, 0, 0, NULL, 0);
     return PM3_SUCCESS;
 }
 
