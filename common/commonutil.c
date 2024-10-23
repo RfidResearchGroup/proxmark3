@@ -544,6 +544,7 @@ void reverse_arraybytes_copy(uint8_t *arr, uint8_t *dest, size_t len) {
     }
 }
 
+// TODO: consider overlap, Implement _membitmovebb
 size_t concatbits(uint8_t *dst, size_t dstskip, const uint8_t *src, size_t srcstart, size_t srclen) {
     // erase dstbuf bits that will be overriden
     dst[dstskip / 8] &= 0xFF - ((1 << (7 - (dstskip % 8) + 1)) - 1);

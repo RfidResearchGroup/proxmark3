@@ -178,7 +178,7 @@ static void hitag_send_bit(int bit, bool ledcontrol) {
                 while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
 
                 LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 64)  {};
+                while (AT91C_BASE_TC0->TC_CV < T0 * 64) {};
 
             } else {
                 // AC coding -_-_
@@ -310,7 +310,7 @@ static void hitag_reader_send_bit(int bit, bool ledcontrol) {
     if (ledcontrol) LED_A_ON();
     // Reset clock for the next bit
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    while (AT91C_BASE_TC0->TC_CV != 0);
+    while (AT91C_BASE_TC0->TC_CV != 0) {};
 
     // Binary puls length modulation (BPLM) is used to encode the data stream
     // This means that a transmission of a one takes longer than that of a zero
@@ -355,7 +355,8 @@ static void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len, bool
     }
     // send EOF
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    while (AT91C_BASE_TC0->TC_CV != 0);
+    while (AT91C_BASE_TC0->TC_CV != 0) {};
+
     HIGH(GPIO_SSC_DOUT);
 
     // Wait for 4-10 times the carrier period
@@ -371,7 +372,6 @@ static void hts_stop_clock(void) {
 }
 
 static void hts_init_clock(void) {
-
     // Enable Peripheral Clock for
     //   Timer Counter 0, used to measure exact timing before answering
     //   Timer Counter 1, used to capture edges of the tag frames
@@ -407,7 +407,7 @@ static void hts_init_clock(void) {
 
     // synchronized startup procedure
     // In theory, with MCK/32, we shouldn't be waiting longer than 32 instruction statements, right?
-    while (AT91C_BASE_TC0->TC_CV != 0) {}; // wait until TC0 returned to zero
+    while (AT91C_BASE_TC0->TC_CV != 0) {};  // wait until TC0 returned to zero
 
     // reset timestamp
     timestamp_high = 0;
