@@ -226,6 +226,9 @@ static void print_error(int8_t reason) {
         case -10:
             PrintAndLogEx(FAILED, "Write to page failed!");
             break;
+        case -11:
+            PrintAndLogEx(FAILED, "Read page failed!");
+            break;
         default:
             // PM3_REASON_UNKNOWN
             PrintAndLogEx(DEBUG, "DEBUG: Error - Hitag S failed");
@@ -404,8 +407,10 @@ static int CmdLFHitagSRead(const char *Cmd) {
                 PrintAndLogEx(NORMAL, "Key");
             } else
                 PrintAndLogEx(NORMAL, "Data");
-        } else
-            PrintAndLogEx(INFO, "%02u | -- -- -- -- | read failed reason: " _YELLOW_("%d"), page_addr, card->pages_reason[i]);
+        } else {
+            PrintAndLogEx(INFO, "% 3u | -- -- -- -- | ....  | N/A  | " NOLF, page_addr);
+            print_error(card->pages_reason[i]);
+        }
     }
 
     PrintAndLogEx(INFO, "----+-------------+-------+------+------");

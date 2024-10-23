@@ -1295,6 +1295,12 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
 
     while ((BUTTON_PRESS() == false) && (data_available() == false)) {
 
+        if (payload->page_count == 0) {
+            if (page_addr > tag.max_page) break;
+        } else if (page_addr > 255 || page_addr >= payload->page + payload->page_count) {
+            break;
+        }
+
         WDT_HIT();
 
         size_t rxlen = 0;
@@ -1312,7 +1318,7 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
 
         if (rxlen != 40) {
             DBG Dbprintf("Read page failed!");
-            card.pages_reason[page_index] = -4;
+            card.pages_reason[page_index] = -11;
             // status = PM3_ERFTRANS;
             // goto read_end;
             page_addr++;
@@ -1362,17 +1368,11 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
                 //if the authentication is done with a challenge the key and password are unknown
                 DBG Dbprintf("Page[ 2]: __ __ __ __");
                 DBG Dbprintf("Page[ 3]: __ __ __ __");
-                card.pages_reason[page_index++] = -4;
-                card.pages_reason[page_index++] = -4;
+                card.pages_reason[page_index++] = -11;
+                card.pages_reason[page_index++] = -11;
             }
             // since page 2+3 are not accessible when LKP == 1 and AUT == 1 fastforward to next readable page
             page_addr = 4;
-        }
-
-        if (payload->page_count == 0) {
-            if (page_addr > tag.max_page) break;
-        } else if (page_addr > 255 || page_addr >= payload->page + payload->page_count) {
-            break;
         }
     }
 
