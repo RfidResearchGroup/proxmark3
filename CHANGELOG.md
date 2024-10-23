@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Added support for all Hitag S response protocol mode (@douniwan5788)
+- Fixed 'hf_young.c' - flags declaration was missing a semicolon (@jakkpotts)
 - Changed `hf mf sim` - add option to allow key b to be used even if readable (@doegox)
 - Changed `data num` - outputed binary strings are now properly zero padded (@iceman1001)
 - Changed `hf iclass info` - now tries default keys and decode if legacy (@iceman1001)
