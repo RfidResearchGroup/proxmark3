@@ -76,6 +76,10 @@ parser.add_argument('-x', '--init-check', action='store_true', help='Run an init
 parser.add_argument('-y', '--final-check', action='store_true', help='Run a final fchk with the found keys')
 parser.add_argument('-k', '--keep', action='store_true', help='Keep generated dictionaries after processing')
 parser.add_argument('-d', '--debug', action='store_true', help='Enable debug mode')
+parser.add_argument('-s', '--supply-chain', action='store_true', help='Enable supply-chain mode. Look for hf-mf-XXXXXXXX-default_nonces.json')
+# Such json can be produced from the json saved by
+# "hf mf isen --collect_fm11rf08s --key A396EFA4E24F" on a wiped card, then processed with
+# jq '{Created: .Created, FileType: "fm11rf08s_default_nonces", nt: .nt | del(.["32"]) | map_values(.a)}'
 args = parser.parse_args()
 
 start_time = time.time()
@@ -191,6 +195,22 @@ if os.path.isfile(DICT_DEF_PATH):
 else:
     print(f"Warning, {DICT_DEF} not found.")
 
+dict_dnwd = None
+def_nt = ["" for _ in range(NUM_SECTORS)]
+if args.supply_chain:
+    try:
+        default_nonces = f'{save_path}hf-mf-{uid:04X}-default_nonces.json'
+        with open(default_nonces, 'r') as file:
+            # Load and parse the JSON data
+            dict_dnwd = json.load(file)
+            for sec in range(NUM_SECTORS):
+                def_nt[sec] = dict_dnwd["nt"][f"{sec}"].lower()
+            print(f"Loaded default nonces from {default_nonces}.")
+    except FileNotFoundError:
+        pass
+    except json.decoder.JSONDecodeError:
+        print(f"Error parsing {default_nonces}, skipping.")
+
 print("Running staticnested_1nt & 2x1nt when doable...")
 keys = [[set(), set()] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
 all_keys = set()
@@ -225,9 +245,21 @@ for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
                 keys[sec][key_type] = keys_set.copy()
                 duplicates.update(all_keys.intersection(keys_set))
                 all_keys.update(keys_set)
-            # Prioritize default keys
-            keys_def_set = DEFAULT_KEYS.intersection(keys_set)
-            keys_set.difference_update(DEFAULT_KEYS)
+            if dict_dnwd is not None and sec < NUM_SECTORS:
+                # Prioritize keys from supply-chain attack
+                cmd = [tools["staticnested_2x1nt1key"], def_nt[sec], "FFFFFFFFFFFF", f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}_filtered.dic"]
+                if args.debug:
+                    print(' '.join(cmd))
+                result = subprocess.run(cmd, capture_output=True, text=True).stdout
+                keys_def_set = set()
+                for line in result.split('\n'):
+                    if "MATCH:" in line:
+                        keys_def_set.add(line[12:])
+                keys_set.difference_update(keys_def_set)
+            else:
+                # Prioritize default keys
+                keys_def_set = DEFAULT_KEYS.intersection(keys_set)
+            keys_set.difference_update(keys_def_set)
             # Prioritize sector 32 keyB starting with 0000
             if real_sec == 32:
                 keyb32cands = set(x for x in keys_set if x.startswith("0000"))
@@ -257,9 +289,21 @@ for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
             keys[sec][key_type] = keys_set.copy()
             duplicates.update(all_keys.intersection(keys_set))
             all_keys.update(keys_set)
-        # Prioritize default keys
-        keys_def_set = DEFAULT_KEYS.intersection(keys_set)
-        keys_set.difference_update(DEFAULT_KEYS)
+        if dict_dnwd is not None and sec < NUM_SECTORS:
+            # Prioritize keys from supply-chain attack
+            cmd = [tools["staticnested_2x1nt1key"], def_nt[sec], "FFFFFFFFFFFF", f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}.dic"]
+            if args.debug:
+                print(' '.join(cmd))
+            result = subprocess.run(cmd, capture_output=True, text=True).stdout
+            keys_def_set = set()
+            for line in result.split('\n'):
+                if "MATCH:" in line:
+                    keys_def_set.add(line[12:])
+            keys_set.difference_update(keys_def_set)
+        else:
+            # Prioritize default keys
+            keys_def_set = DEFAULT_KEYS.intersection(keys_set)
+        keys_set.difference_update(keys_def_set)
         if len(keys_def_set) > 0:
             found_default[sec][key_type] = True
             with (open(f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}.dic", "w")) as f:
@@ -484,6 +528,7 @@ if abort:
     print("Brute-forcing phase aborted via keyboard!")
     args.final_check = False
 
+plus = "[" + color("+", fg="green") + "] "
 if args.final_check:
     print("Letting fchk do a final dump, just for confirmation and display...")
     keys_set = set([i for sl in found_keys for i in sl if i != ""])
@@ -495,7 +540,6 @@ if args.final_check:
         print(cmd)
     p.console(cmd, passthru=True)
 else:
-    plus = "[" + color("+", fg="green") + "] "
     print()
     print(plus + color("found keys:", fg="green"))
     print()

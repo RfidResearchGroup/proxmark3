@@ -4131,15 +4131,12 @@ static int CmdHF14AMfSim(const char *Cmd) {
     uint8_t uid[10] = {0};
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
 
-    char uidsize[9] = {0};
     if (uidlen > 0) {
         FLAG_SET_UID_IN_DATA(flags, uidlen);
         if (IS_FLAG_UID_IN_EMUL(flags)) {
             PrintAndLogEx(WARNING, "Invalid parameter for UID");
             CLIParserFree(ctx);
             return PM3_EINVARG;
-        } else {
-            snprintf(uidsize, sizeof(uidsize), "%i bytes", uidlen);
         }
     }
 
@@ -4247,9 +4244,9 @@ static int CmdHF14AMfSim(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(INFO, _YELLOW_("MIFARE %s") " | %s UID  " _YELLOW_("%s") ""
+    PrintAndLogEx(INFO, _YELLOW_("MIFARE %s") " | %i bytes UID  " _YELLOW_("%s") ""
                   , csize
-                  , uidsize
+                  , uidlen
                   , (uidlen == 0) ? "n/a" : sprint_hex(uid, uidlen)
                  );
 

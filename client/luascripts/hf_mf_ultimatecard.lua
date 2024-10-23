@@ -191,7 +191,7 @@ local function read_config()
     if magicconfig == nil then lib14a.disconnect(); return nil, "can't read configuration, "..err_lock end
     if #magicconfig ~= 64 and #magicconfig ~= 68 then lib14a.disconnect(); return nil, "partial read of configuration, "..err_lock end
     if gtumode == '00' then gtustr = 'Pre-write/Shadow Mode'
-    elseif gtumode == '01' then gtustr = 'Restore Mode'
+    elseif gtumode == '01' or gtumode == '04' then gtustr = 'Restore Mode'
     elseif gtumode == '02' then gtustr = 'Disabled'
     elseif gtumode == '03' then gtustr = 'Disabled, high speed R/W mode for Ultralight'
     end
@@ -553,7 +553,7 @@ local function write_gtu(gtu)
     if gtu == '00' then
     print('Enabling GTU Pre-Write')
     send('CF'.._key..'32'..gtu)
-    elseif gtu == '01' then
+    elseif gtu == '01' or gtu == '04' then
     print('Enabling GTU Restore Mode')
     send('CF'.._key..'32'..gtu)
     elseif gtu == '02' then
