@@ -40,6 +40,7 @@
 #include "crypto/asn1utils.h"       // ASN1 decoder
 #include "preferences.h"
 #include "generator.h"
+#include "cmdhf14b.h"
 
 
 #define NUM_CSNS               9
@@ -5379,6 +5380,11 @@ int info_iclass(bool shallow_mod) {
     uint8_t cardtype = get_mem_config(hdr);
     PrintAndLogEx(SUCCESS, "    Card type.... " _GREEN_("%s"), card_types[cardtype]);
 
+    if(HF14B_picopass_reader(false, false)){
+        PrintAndLogEx(SUCCESS, "    Card chip.... "_YELLOW_("Old Silicon (14b support)"));
+    }else{
+        PrintAndLogEx(SUCCESS, "    Card chip.... "_YELLOW_("NEW Silicon (No 14b support)"));
+    }
     if (legacy) {
 
         int res = PM3_ESOFT;
