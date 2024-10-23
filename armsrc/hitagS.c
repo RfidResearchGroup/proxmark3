@@ -65,6 +65,7 @@ typedef enum modulation {
     MC8K
 } MOD;
 
+static uint8_t protocol_mode = HITAGS_UID_REQ_ADV1;
 static MOD m = AC2K;                                // used modulation
 static uint32_t reader_selected_uid;
 static int rotate_uid = 0;
@@ -383,18 +384,17 @@ static void hts_init_clock(void) {
     // Disable timer during configuration
     hts_stop_clock();
 
-    // TC0: Capture mode, clock source = MCK/32 (TIMER_CLOCK3), no triggers
+    // TC0: Capture mode, default timer source = MCK/32 (TIMER_CLOCK3), no triggers
     AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
 
-    // TC1: Capture mode, clock source = MCK/32 (TIMER_CLOCK3), TIOA is external trigger,
-    // external trigger falling edge, set RA on falling edge of TIOA.
-    AT91C_BASE_TC1->TC_CMR =
-        AT91C_TC_CLKS_TIMER_DIV3_CLOCK |    // MCK/32 (TIMER_CLOCK3)
-        AT91C_TC_ETRGEDG_FALLING |          // external trigger on falling edge
-        AT91C_TC_ABETRG |                   // TIOA is used as an external trigger
-        AT91C_TC_LDRA_FALLING;              // load RA on on falling edge
+    // TC1: Capture mode, default timer source = MCK/32 (TIMER_CLOCK3), TIOA is external trigger,
+    AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK  // use MCK/32 (TIMER_CLOCK3)
+                             | AT91C_TC_ABETRG               // TIOA is used as an external trigger
+                             | AT91C_TC_ETRGEDG_FALLING      // external trigger on falling edge
+                             | AT91C_TC_LDRA_RISING          // load RA on on rising edge of TIOA
+                             | AT91C_TC_LDRB_FALLING;        // load RB on on falling edge of TIOA
 
-    // TC2: Capture mode, clock source = MCK/32 (TIMER_CLOCK3), no triggers
+    // TC2: Capture mode, default timer source = MCK/32 (TIMER_CLOCK3), no triggers
     AT91C_BASE_TC2->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
 
     // Enable and reset counters
@@ -429,24 +429,35 @@ static int check_select(const uint8_t *rx, uint32_t uid) {
     return 0;
 }
 
-static void hts_set_frame_modulation(void) {
-    switch (tag.mode) {
-        case HT_STANDARD: {
+static void hts_set_frame_modulation(uint8_t mode, bool ac_seq) {
+    switch (mode) {
+        case HITAGS_UID_REQ_STD: {
             sof_bits = 1;
-            m = MC4K;
+            if (ac_seq)
+                m = AC2K;
+            else
+                m = MC4K;
             break;
         }
-        case HT_ADVANCED: {
-            sof_bits = 6;
-            m = MC4K;
+        case HITAGS_UID_REQ_ADV1:
+        case HITAGS_UID_REQ_ADV2: {
+            if (ac_seq) {
+                sof_bits = 3;
+                m = AC2K;
+            } else {
+                sof_bits = 6;
+                m = MC4K;
+            }
             break;
         }
-        case HT_FAST_ADVANCED: {
-            sof_bits = 6;
-            m = MC8K;
-            break;
-        }
-        default: {
+        case HITAGS_UID_REQ_FADV: {
+            if (ac_seq) {
+                sof_bits = 3;
+                m = AC4K;
+            } else {
+                sof_bits = 6;
+                m = MC8K;
+            }
             break;
         }
     }
@@ -463,7 +474,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
     // Reset the transmission frame length
     *txlen = 0;
     // Reset the frame modulation
-    hts_set_frame_modulation();
+    hts_set_frame_modulation(protocol_mode, false);
 
     // Try to find out which command was send by selecting on length (in bits)
     switch (rxlen) {
@@ -475,24 +486,15 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
 
             if (rx[0] == HITAGS_UID_REQ_STD) {
                 DBG Dbprintf("HT_STANDARD");
-                tag.mode = HT_STANDARD;
-                sof_bits = 1;
-                m = AC2K;
-            }
-
-            if (rx[0] == HITAGS_UID_REQ_ADV1 || rx[0] == HITAGS_UID_REQ_ADV2) {
+            } else if (rx[0] == HITAGS_UID_REQ_ADV1 || rx[0] == HITAGS_UID_REQ_ADV2) {
                 DBG Dbprintf("HT_ADVANCED");
-                tag.mode = HT_ADVANCED;
-                sof_bits = 3;
-                m = AC2K;
+            } else if (rx[0] == HITAGS_UID_REQ_FADV) {
+                DBG Dbprintf("HT_FAST_ADVANCED");
             }
 
-            if (rx[0] == HITAGS_UID_REQ_FADV) {
-                DBG Dbprintf("HT_FAST_ADVANCED");
-                tag.mode = HT_FAST_ADVANCED;
-                sof_bits = 3;
-                m = AC4K;
-            }
+            protocol_mode = rx[0];
+            hts_set_frame_modulation(protocol_mode, true);
+
             //send uid as a response
             *txlen = 32;
             memcpy(tx, tag.data.pages[HITAGS_UID_PADR], HITAGS_PAGE_SIZE);
@@ -515,7 +517,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
 
                 tx[3] = 0xff;
 
-                if (tag.mode != HT_STANDARD) {
+                if (protocol_mode != HITAGS_UID_REQ_STD) {
                     //add crc8
                     *txlen += 8;
                     crc = CRC_PRESET;
@@ -549,7 +551,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
             tx[2] = ht2_hitag2_byte(&state) ^ tag.data.s.pwdl0;
             tx[3] = ht2_hitag2_byte(&state) ^ tag.data.s.pwdl1;
 
-            if (tag.mode != HT_STANDARD) {
+            if (protocol_mode != HITAGS_UID_REQ_STD) {
                 //add crc8
                 *txlen += 8;
                 crc = CRC_PRESET;
@@ -616,7 +618,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
                     tx[3] = 0xFF;
                 }
 
-                if (tag.mode != HT_STANDARD) {
+                if (protocol_mode != HITAGS_UID_REQ_STD) {
                     //add crc8
                     *txlen += 8;
                     crc = CRC_PRESET;
@@ -638,7 +640,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 //send page,...,page+3 data
                 memcpy(tx, tag.data.pages[page], *txlen / 8);
 
-                if (tag.mode != HT_STANDARD) {
+                if (protocol_mode != HITAGS_UID_REQ_STD) {
                     //add crc8
                     crc = CRC_PRESET;
                     for (int i = 0; i < *txlen / 8; i++) {
@@ -751,40 +753,7 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
     // Disable modulation at default, which means release resistance
     LOW(GPIO_SSC_DOUT);
 
-    // Enable Peripheral Clock for
-    //   Timer Counter 0, used to measure exact timing before answering
-    //   Timer Counter 1, used to capture edges of the tag frames
-    //   Timer Counter 2, used to log trace time
-    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1) | (1 << AT91C_ID_TC2);
-
-    AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
-
-    // Disable timer during configuration
-    hts_stop_clock();
-
-    // TC0: Capture mode, default timer source = MCK/32 (TIMER_CLOCK3), no triggers
-    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
-
-    // TC1: Capture mode, default timer source = MCK/32 (TIMER_CLOCK3), TIOA is external trigger,
-    // external trigger rising edge, load RA on rising edge of TIOA.
-    AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK
-                             | AT91C_TC_ETRGEDG_RISING | AT91C_TC_ABETRG | AT91C_TC_LDRA_RISING;
-    // TC2: Capture mode, default timer source = MCK/32 (TIMER_CLOCK3), no triggers
-    AT91C_BASE_TC2->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
-
-    // Enable and reset counter
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-
-    // Assert a sync signal. This sets all timers to 0 on next active clock edge
-    AT91C_BASE_TCB->TCB_BCR = 1;
-
-    // synchronized startup procedure
-    while (AT91C_BASE_TC0->TC_CV != 0); // wait until TC0 returned to zero
-
-    // reset timestamp
-    timestamp_high = 0;
+    hts_init_clock();
 
     if (ledcontrol) LED_D_ON();
 
@@ -890,21 +859,29 @@ static void hts_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint3
     bool bSkip = true;
     uint32_t errorCount = 0;
     bool bStarted = false;
+    uint16_t next_edge_event = AT91C_TC_LDRBS;
+    int double_speed = (m == AC4K || m == MC8K) ? 2 : 1;
 
-    uint32_t ra_i = 0, h2 = 0, h3 = 0, h4 = 0;
+    uint32_t rb_i = 0, h2 = 0, h3 = 0, h4 = 0;
     uint8_t edges[160] = {0};
 
-    // Dbprintf("TC0_CV:%i TC1_CV:%i TC1_RA:%i", AT91C_BASE_TC0->TC_CV, AT91C_BASE_TC1->TC_CV ,AT91C_BASE_TC1->TC_RA);
+    // Dbprintf("TC0_CV:%i TC1_CV:%i TC1_RB:%i TIMESTAMP:%u", AT91C_BASE_TC0->TC_CV, AT91C_BASE_TC1->TC_CV,
+    //          AT91C_BASE_TC1->TC_RB, TIMESTAMP);
 
     // Receive tag frame, watch for at most T0*HITAG_T_PROG_MAX periods
     while (AT91C_BASE_TC0->TC_CV < (T0 * HITAG_T_PROG_MAX)) {
 
-        // Check if falling edge in tag modulation is detected
-        if (AT91C_BASE_TC1->TC_SR & AT91C_TC_LDRAS) {
+        // Check if edge in tag modulation is detected
+        if (AT91C_BASE_TC1->TC_SR & next_edge_event) {
+
+            next_edge_event = next_edge_event ^ (AT91C_TC_LDRAS | AT91C_TC_LDRBS);
+
+            // only use AT91C_TC_LDRBS falling edge for now
+            if (next_edge_event == AT91C_TC_LDRBS) continue;
 
             // Retrieve the new timing values
-            uint32_t ra = AT91C_BASE_TC1->TC_RA / T0;
-            edges[ra_i++] = ra;
+            uint32_t rb = AT91C_BASE_TC1->TC_RB / T0;
+            edges[rb_i++] = rb;
             // Reset timer every frame, we have to capture the last edge for timing
             AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
 
@@ -916,7 +893,7 @@ static void hts_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint3
             // Capture tag frame (manchester decoding using only falling edges)
             if (bStarted == false) {
 
-                if (ra >= HITAG_T_WAIT_RESP) {
+                if (rb >= HITAG_T_WAIT_RESP) {
                     bStarted = true;
 
                     // We always receive a 'one' first, which has the falling edge after a half period |-_|
@@ -926,39 +903,69 @@ static void hts_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint3
                     errorCount++;
                 }
 
-            } else if (ra >= HITAG_T_TAG_CAPTURE_FOUR_HALF) {
-
-                // Manchester coding example |-_|_-|-_| (101)
-                rx[(*rxlen) / 8] |= 0 << (7 - ((*rxlen) % 8));
-                (*rxlen)++;
-
-                rx[(*rxlen) / 8] |= 1 << (7 - ((*rxlen) % 8));
-                (*rxlen)++;
-                h4++;
-            } else if (ra >= HITAG_T_TAG_CAPTURE_THREE_HALF) {
-
-                // Manchester coding example |_-|...|_-|-_| (0...01)
-                rx[(*rxlen) / 8] |= 0 << (7 - ((*rxlen) % 8));
-                (*rxlen)++;
-
-                // We have to skip this half period at start and add the 'one' the second time
-                if (bSkip == false) {
-                    rx[(*rxlen) / 8] |= 1 << (7 - ((*rxlen) % 8));
-                    (*rxlen)++;
-                }
-
-                lastbit = !lastbit;
-                bSkip = !bSkip;
-                h3++;
-            } else if (ra >= HITAG_T_TAG_CAPTURE_TWO_HALF) {
-                // Manchester coding example |_-|_-| (00) or |-_|-_| (11)
-                // bit is same as last bit
-                rx[(*rxlen) / 8] |= lastbit << (7 - ((*rxlen) % 8));
-                (*rxlen)++;
-                h2++;
             } else {
-                // Ignore weird value, is to small to mean anything
-                errorCount++;
+                // Anticollision Coding
+                if (m == AC2K || m == AC4K) {
+                    if (rb >= HITAG_T_TAG_CAPTURE_FOUR_HALF / double_speed) {
+                        // Anticollision Coding example |--__|--__| (00)
+                        lastbit = 0;
+                        rx[(*rxlen) / 8] |= lastbit << (7 - ((*rxlen) % 8));
+                        (*rxlen)++;
+                    } else if (rb >= HITAG_T_TAG_CAPTURE_THREE_HALF / double_speed) {
+                        // Anticollision Coding example |-_-_|--__| (10) or |--__|-_-_| (01)
+                        lastbit = !lastbit;
+                        rx[(*rxlen) / 8] |= lastbit << (7 - ((*rxlen) % 8));
+                        (*rxlen)++;
+
+                        bSkip = !!lastbit;
+                    } else if (rb >= HITAG_T_TAG_CAPTURE_TWO_HALF / double_speed) {
+                        // Anticollision Coding example |-_-_| (1)
+                        if (bSkip == false) {
+                            lastbit = 1;
+                            rx[(*rxlen) / 8] |= lastbit << (7 - ((*rxlen) % 8));
+                            (*rxlen)++;
+                        }
+
+                        bSkip = !bSkip;
+                    } else {
+                        // Ignore weird value, is to small to mean anything
+                        errorCount++;
+                    }
+                } else {
+                    // Manchester coding
+                    if (rb >= HITAG_T_TAG_CAPTURE_FOUR_HALF / double_speed) {
+                        // Manchester coding example |-_|_-|-_| (101)
+                        rx[(*rxlen) / 8] |= 0 << (7 - ((*rxlen) % 8));
+                        (*rxlen)++;
+
+                        rx[(*rxlen) / 8] |= 1 << (7 - ((*rxlen) % 8));
+                        (*rxlen)++;
+                        h4++;
+                    } else if (rb >= HITAG_T_TAG_CAPTURE_THREE_HALF / double_speed) {
+                        // Manchester coding example |_-|...|_-|-_| (0...01)
+                        rx[(*rxlen) / 8] |= 0 << (7 - ((*rxlen) % 8));
+                        (*rxlen)++;
+
+                        // We have to skip this half period at start and add the 'one' the second time
+                        if (bSkip == false) {
+                            rx[(*rxlen) / 8] |= 1 << (7 - ((*rxlen) % 8));
+                            (*rxlen)++;
+                        }
+
+                        lastbit = !lastbit;
+                        bSkip = !bSkip;
+                        h3++;
+                    } else if (rb >= HITAG_T_TAG_CAPTURE_TWO_HALF / double_speed) {
+                        // Manchester coding example |_-|_-| (00) or |-_|-_| (11)
+                        // bit is same as last bit
+                        rx[(*rxlen) / 8] |= lastbit << (7 - ((*rxlen) % 8));
+                        (*rxlen)++;
+                        h2++;
+                    } else {
+                        // Ignore weird value, is to small to mean anything
+                        errorCount++;
+                    }
+                }
             }
         }
 
@@ -979,10 +986,10 @@ static void hts_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint3
     }
 
     DBG Dbprintf("RX0 %i:%02X.. err:%i resptime:%i h2:%i h3:%i h4:%i edges:", *rxlen, rx[0], errorCount, *resptime, h2, h3, h4);
-    DBG Dbhexdump(ra_i, edges, false);
+    DBG Dbhexdump(rb_i, edges, false);
 }
 
-static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t sizeofrx, size_t *prxbits, int t_wait, bool ledcontrol, bool ac_seq) {
+static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t sizeofrx, size_t *rxlen, int t_wait, bool ledcontrol, bool ac_seq) {
     uint32_t start_time;
 
     // Send and store the reader command
@@ -1010,73 +1017,41 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
     // Enable and reset external trigger in timer for capturing future frames
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
 
-    size_t rxlen = 0;
-    hts_receive_frame(rx, sizeofrx, &rxlen, &start_time, ledcontrol);
-    int k = 0;
+    hts_set_frame_modulation(protocol_mode, ac_seq);
+
+    hts_receive_frame(rx, sizeofrx, rxlen, &start_time, ledcontrol);
 
     // Check if frame was captured and store it
-    if (rxlen > 0) {
+    if (*rxlen > 0) {
+        DBG {
+            uint8_t response_bit[sizeofrx * 8];
 
-        uint8_t response_bit[sizeofrx * 8];
-
-        for (size_t i = 0; i < rxlen; i++) {
-            response_bit[i] = (rx[i / 8] >> (7 - (i % 8))) & 1;
-        }
-
-        DBG Dbprintf("htS: rxlen...... %zu", rxlen);
-        DBG Dbprintf("htS: sizeofrx... %zu", sizeofrx);
-        DBG DbpString("htS: response_bit:");
-        DBG Dbhexdump(rxlen, response_bit, false);
-
-        memset(rx, 0x00, sizeofrx);
-
-        if (ac_seq) {
-
-            // Tag Response is AC encoded
-            // We used UID Request Advanced,  meaning AC SEQ SOF is  111.
-            for (int i = 7; i < rxlen; i += 2) {
-
-                rx[k / 8] |= response_bit[i] << (7 - (k % 8));
-
-                k++;
-
-                if (k > 8 * sizeofrx) {
-                    break;
-                }
+            for (size_t i = 0; i < *rxlen; i++) {
+                response_bit[i] = (rx[i / 8] >> (7 - (i % 8))) & 1;
             }
 
-            // TODO: It's very confusing to reinterpreter the MC to AC; we should implement a more straightforward approach.
-            // add the lost bit zero, when AC64 last bit is zero
-            if (k % 8 == 7) {
-                k++;
-            }
-
-            if (g_dbglevel >= DBG_EXTENDED) {
-                DbpString("htS: ac sequence compress");
-                Dbhexdump(k / 8, rx, false);
-            }
-
-        } else {
-
-            if (g_dbglevel >= DBG_EXTENDED) {
-                DbpString("htS: skipping 6 bit header");
-            }
-
-            // ignore first 6 bits: SOF (actually 1 or 6 depending on response protocol)
-            // or rather a header.
-            for (size_t i = 6; i < rxlen; i++) {
-
-                rx[k / 8] |= response_bit[i] << (7 - (k % 8));
-                k++;
-
-                if (k > 8 * sizeofrx) {
-                    break;
-                }
+            Dbprintf("htS: rxlen...... %zu", *rxlen);
+            Dbprintf("htS: sizeofrx... %zu", sizeofrx);
+            DbpString("htS: response_bit:");
+            Dbhexdump(*rxlen, response_bit, false);
+            Dbprintf("htS: skipping %d bit SOF", sof_bits);
+            if ((rx[0] >> (8 - sof_bits)) != ((1 << sof_bits) - 1)) {
+                DbpString("htS: Warning, not all bits of SOF are 1");
             }
         }
-        LogTraceBits(rx, k, start_time, TIMESTAMP, false);
+
+        // remove first sof_bits bits SOF
+        for (size_t i = 0; i < (*rxlen + 8) / 8; i++) {
+            rx[i] <<= sof_bits;
+            if (i + 1 < (*rxlen + 8) / 8) {
+                rx[i] |= (rx[i + 1] >> (8 - sof_bits));
+            }
+        }
+
+        *rxlen -= sof_bits;
+
+        LogTraceBits(rx, *rxlen, start_time, TIMESTAMP, false);
     }
-    *prxbits = k;
 
     return PM3_SUCCESS;
 }
@@ -1112,7 +1087,9 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
     // UID request FAdvanced  11010
     size_t txlen = 0;
     size_t rxlen = 0;
-    uint8_t cmd = HITAGS_UID_REQ_ADV1;
+
+    protocol_mode = packet->mode;
+    uint8_t cmd = protocol_mode;
     txlen = concatbits(tx, txlen, &cmd, 0, 5);
     hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, t_wait, ledcontrol, true);
 
@@ -1135,7 +1112,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
 
     hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
-    if (rxlen != 40) {
+    if (rxlen != 32 + (protocol_mode == HITAGS_UID_REQ_STD ? 0 : 8)) {
         DBG Dbprintf("Select UID failed! %i", rxlen);
         return -3;
     }
@@ -1234,7 +1211,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
 
         hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
-        if (rxlen != 40) {
+        if (rxlen != 32 + (protocol_mode == HITAGS_UID_REQ_STD ? 0 : 8)) {
             DBG Dbprintf("Authenticate failed! " _RED_("%i"), rxlen);
             return -8;
         }
@@ -1310,7 +1287,7 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
 
         hts_send_receive(tx, txlen, rx, ARRAYLEN(rx), &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
-        if (rxlen != 40) {
+        if (rxlen != 32 + (protocol_mode == HITAGS_UID_REQ_STD ? 0 : 8)) {
             DBG Dbprintf("Read page failed!");
             card.pages_reason[page_index] = -4;
             // status = PM3_ERFTRANS;
@@ -1505,7 +1482,8 @@ int hts_read_uid(uint32_t *uid, bool ledcontrol, bool send_answer) {
     // UID request standard   00110
     // UID request Advanced   1100x
     // UID request FAdvanced  11010
-    uint8_t cmd = HITAGS_UID_REQ_ADV1;
+    protocol_mode = HITAGS_UID_REQ_ADV1;
+    uint8_t cmd = protocol_mode;
 
     size_t rxlen = 0;
     uint8_t rx[HITAG_FRAME_LEN] = { 0x00 };

@@ -1311,6 +1311,52 @@ static int CmdGallagherDecode(const char *cmd) {
 
     return PM3_SUCCESS;
 }
+static int CmdGallagherEncode (const char *cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf gallagher encode",
+                  "Encode a Gallagher credential block\n"
+                  "Credential block can be specified with or without the bitwise inverse.",
+                  "hf gallagher encode --rc 1 --fc 22153 --cn 1253518 --il 1"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_1("r", "rc",      "<dec>", "Region code. 4 bits max"),
+        arg_u64_1("f", "fc",      "<dec>", "Facility code. 2 bytes max"),
+        arg_u64_1("c", "cn",      "<dec>", "Card number. 3 bytes max"),
+        arg_u64_1("i", "il",      "<dec>", "Issue level. 4 bits max"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, cmd, argtable, false);
+
+    uint64_t region_code = arg_get_u64(ctx, 1); // uint4, input will be validated later
+    uint64_t facility_code = arg_get_u64(ctx, 2); // uint16
+    uint64_t card_number = arg_get_u64(ctx, 3); // uint24
+    uint64_t issue_level = arg_get_u64(ctx, 4); // uint4
+
+    CLIParserFree(ctx);
+    
+    GallagherCredentials_t creds = {
+        .region_code = region_code,
+        .facility_code = facility_code,
+        .card_number = card_number,
+        .issue_level = issue_level,
+    };
+
+
+    uint8_t contents[16] = {0};
+    
+    gallagher_encode_creds(contents, &creds);
+    for (int i = 0; i < 8; i++) {
+        contents[i + 8] = contents[i] ^ 0xFF;
+    }
+
+    PrintAndLogEx(SUCCESS, "Raw: " _YELLOW_("%s"), sprint_hex_inrow(contents, ARRAYLEN(contents)/2));
+    PrintAndLogEx(SUCCESS, "Bitwise: " _YELLOW_("%s"), sprint_hex_inrow(contents, ARRAYLEN(contents)));
+    
+    return PM3_SUCCESS;
+}
+
 
 static command_t CommandTable[] = {
     {"help",         CmdHelp,               AlwaysAvailable, "This help"},
@@ -1319,6 +1365,7 @@ static command_t CommandTable[] = {
     {"delete",       CmdGallagherDelete,    IfPm3Iso14443,   "Delete Gallagher credentials from a DESFire card"},
     {"diversifykey", CmdGallagherDiversify, AlwaysAvailable, "Diversify Gallagher key"},
     {"decode",       CmdGallagherDecode,    AlwaysAvailable, "Decode Gallagher credential block"},
+    {"encode",       CmdGallagherEncode,    AlwaysAvailable, "Encode Gallagher credential block"},
     {NULL, NULL, NULL, NULL}
 };
 
