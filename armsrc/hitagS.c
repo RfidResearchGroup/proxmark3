@@ -1134,7 +1134,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
 
             key_le = *(uint64_t *)packet->key;
 
-            uint64_t state = ht2_hitag2_init(reflect48(key_le), reflect32(tag.data.s.uid_le), reflect32(*(uint32_t *)rnd));
+            uint64_t state = ht2_hitag2_init(BSWAP_64(reflect64(key_le)), BSWAP_32(reflect32(tag.data.s.uid_le)), reflect32(*(uint32_t *)rnd));
 
             uint8_t auth_ks[4];
             for (int i = 0; i < 4; i++) {
@@ -1142,7 +1142,8 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
             }
 
             txlen = 0;
-            txlen = concatbits(tx, txlen, rnd, 0, 32);
+            uint8_t revrnd[4] = {rnd[3], rnd[2], rnd[1], rnd[0]};
+            txlen = concatbits(tx, txlen, revrnd, 0, 32);
             txlen = concatbits(tx, txlen, auth_ks, 0, 32);
 
             DBG Dbprintf("%02X %02X %02X %02X %02X %02X %02X %02X", tx[0], tx[1], tx[2], tx[3], tx[4], tx[5], tx[6], tx[7]);
