@@ -631,4 +631,3 @@ int CmdLFHitagS(const char *Cmd) {
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
-

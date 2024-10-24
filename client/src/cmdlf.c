@@ -1588,7 +1588,7 @@ static bool check_chiptype(bool getDeviceData) {
 
         // Hitag S
         if (read_hts_uid() == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("Hitag S / 82xx"));
+            PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("Hitag 1/S / 82xx"));
             PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf hitag hts`") " commands");
             retval = true;
             goto out;
