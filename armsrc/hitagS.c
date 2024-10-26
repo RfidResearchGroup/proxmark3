@@ -526,6 +526,20 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
 
                     tx[4] = crc;
                 }
+                switch (tag.mode) {
+                    case HT_STANDARD:
+                    case HT_ADVANCED: {
+                        m = MC4K;
+                        break;
+                    }
+                    case HT_FAST_ADVANCED: {
+                        m = MC8K;
+                        break;
+                    }
+                    default: {
+                        break;
+                    }
+                }
             }
             break;
         }
