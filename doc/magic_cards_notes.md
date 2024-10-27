@@ -2114,7 +2114,7 @@ Possible tag wakeup mechanisms are:
     ^^                              >> Magic wakeup command (00 for 40-43; 85 for 20-23)
       ^^                            >> Config available using regular mode (ON: A0)
          ^^                         >> Auth type (00 = PWD mode, 0A = 2TDEA mode for UL-C)
-             ^^                     >> CUID mode, allows writing to blocks 0-3 (ON: A0)
+             ^^                     >> CUID mode, allows writing to blocks 0-3 (ON: 0A)
                ^^                   >> Maximum memory configuration, please see below *
                   ^^^^^^^^ ^^^^^^^^ >> Version info
 
