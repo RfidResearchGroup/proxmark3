@@ -1,4 +1,4 @@
-#!/usr/bin/env lua
+#!/usr/bin/env lua5.4
 
 local pm3 = require("pm3")
 p=pm3.pm3("/dev/ttyACM0")
