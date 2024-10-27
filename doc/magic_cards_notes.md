@@ -2113,9 +2113,9 @@ Possible tag wakeup mechanisms are:
 ^^^^                                >> Gen1a mode (works with bitflip)
     ^^                              >> Magic wakeup command (00 for 40-43; 85 for 20-23)
       ^^                            >> Config available using regular mode (ON: A0)
-         ^^                         >> Do not reply to 1B, making auth impossible
-             ^^                     >> Do not enforce OTP properties (ON: A0)
-               ^^                   >> Maximum memory configuration*
+         ^^                         >> Auth type (00 = PWD mode, 0A = 2TDEA mode for UL-C)
+             ^^                     >> CUID mode, allows writing to blocks 0-3 (ON: A0)
+               ^^                   >> Maximum memory configuration, please see below *
                   ^^^^^^^^ ^^^^^^^^ >> Version info
 
 * This isn't a customizable value - it's a preset. So far:
@@ -2150,24 +2150,24 @@ F1: 00000000
     ^^^^^^^^       >> Unknown, usually always 00
 
 F2: 000000BD
-    ^^^^^^         >> Unknown, usually always 00
-          ^^       >> Unknown, usually always BD, possible tearing counter value?
+    ^^^^^^         >> Counter 0
+          ^^       >> Tearing 0
 
 F3: 000000BD
-    ^^^^^^         >> Unknown, usually always 00
-          ^^       >> Unknown, usually always BD, possible tearing counter value?
+    ^^^^^^         >> Counter 1
+          ^^       >> Tearing 1
 
 F4: 000000BD
-    ^^^^^^         >> Unknown, usually always 00
-          ^^       >> Unknown, usually always BD, possible tearing counter value?
+    ^^^^^^         >> Counter 2
+          ^^       >> Tearing 2
 
 F5: 00000000
     ^^^^^^^^       >> Unknown, usually always 00
 
 F6: 44000400
     ^^^^           >> ATQA in byte reverse order. 4400 = ATQA of 0044
-        ^^         >> Unknown, usually always set to 04. Changing this value also has something to do with the SAK value in the next byte
-          ^^       >> SAK, if previous byte set to 04
+        ^^         >> SAK1, usually set to 04 to call for CL2
+          ^^       >> SAK2, card uses this as SAK
 
 F7: 88AF0000
     ^^             >> First byte of UID BCC calculation, for Ultralight family is always 88 per the datasheet
