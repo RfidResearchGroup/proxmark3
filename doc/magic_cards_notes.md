@@ -1089,19 +1089,19 @@ hf mf info
 ```
 [usb] pm3 --> hf mf gdmcfg --gdm
 [+] Config... 7A FF 85 00 00 00 00 00 00 FF 00 00 00 00 00 08
-[+]           7A FF .......................................... Magic wakeup enabled with GDM config block access
-[+]                 85 ....................................... Magic wakeup style GDM 20(7)/23
-[+]                    00 00 00 .............................. Unknown
-[+]                             00 ........................... Key B use allowed when readable by ACL
-[+]                                00 ........................ Block 0 Direct Write Disabled (CUID)
-[+]                                   00 ..................... Unknown
-[+]                                      FF .................. MFC EV1 personalization: 4B UID from Block 0
-[+]                                         00 ............... Shadow mode disabled
-[+]                                           00 ............. Magic auth disabled
-[+]                                             00 ........... Static encrypted nonce disabled
-[+]                                               00 ......... MFC EV1 signature disabled
-[+]                                                  00 ...... Unknown
-[+]                                                     08 ... SAK
+[+]           7A FF .........................................  Magic wakeup enabled with GDM config block access
+[+]                 85 ......................................  Magic wakeup style GDM 20(7)/23
+[+]                    00 00 00 .............................  Unknown
+[+]                             00 ..........................  Key B use allowed when readable by ACL
+[+]                                00 .......................  Block 0 Direct Write Disabled (CUID)
+[+]                                   00 ....................  Unknown
+[+]                                      FF .................  MFC EV1 personalization: 4B UID from Block 0
+[+]                                         00 ..............  Shadow mode disabled
+[+]                                            00 ...........  Magic auth disabled
+[+]                                               00 ........  Static encrypted nonce disabled
+[+]                                                  00 .....  MFC EV1 signature disabled
+[+]                                                     00 ..  Unknown
+[+]                                                        08  SAK
 ```
 
 ### Commands
@@ -1181,19 +1181,19 @@ Before the sealing could be detected from the config block value.
 ```
 [usb] pm3 --> hf mf gdmcfg --gen1a
 [+] Config... 7A FF 00 00 00 00 00 00 BA FA 00 00 00 00 00 08
-[+]           7A FF .......................................... Magic wakeup enabled with GDM config block access
-[+]                 00 ....................................... Magic wakeup style Gen1a 40(7)/43
-[+]                    00 00 00 .............................. Unknown
-[+]                             00 ........................... Key B use allowed when readable by ACL
-[+]                                00 ........................ Block 0 Direct Write Disabled (CUID)
-[+]                                   BA ..................... Unknown
-[+]                                      FA .................. MFC EV1 personalization: 4B UID from Block 0
-[+]                                         00 ............... Shadow mode disabled
-[+]                                           00 ............. Magic auth disabled
-[+]                                             00 ........... Static encrypted nonce disabled
-[+]                                               00 ......... MFC EV1 signature disabled
-[+]                                                  00 ...... Unknown
-[+]                                                     08 ... SAK
+[+]           7A FF .........................................  Magic wakeup enabled with GDM config block access
+[+]                 00 ......................................  Magic wakeup style Gen1a 40(7)/43
+[+]                    00 00 00 .............................  Unknown
+[+]                             00 ..........................  Key B use allowed when readable by ACL
+[+]                                00 .......................  Block 0 Direct Write Disabled (CUID)
+[+]                                   BA ....................  Unknown
+[+]                                      FA .................  MFC EV1 personalization: 4B UID from Block 0
+[+]                                         00 ..............  Shadow mode disabled
+[+]                                            00 ...........  Magic auth disabled
+[+]                                               00 ........  Static encrypted nonce disabled
+[+]                                                  00 .....  MFC EV1 signature disabled
+[+]                                                     00 ..  Unknown
+[+]                                                        08  SAK
 ```
 
 ### Commands
@@ -1271,19 +1271,19 @@ Could be detected from the config block value.
 ```
 [usb] pm3 --> hf mf gdmcfg --gen1a
 [+] Config... 7A FF 00 00 00 00 00 00 00 00 00 00 00 00 00 08
-[+]           7A FF .......................................... Magic wakeup enabled with GDM config block access
-[+]                 00 ....................................... Magic wakeup style Gen1a 40(7)/43
-[+]                    00 00 00 .............................. Unknown
-[+]                             00 ........................... Key B use allowed when readable by ACL
-[+]                                00 ........................ Block 0 Direct Write Disabled (CUID)
-[+]                                   00 ..................... Unknown
-[+]                                      00 .................. MFC EV1 personalization: 4B UID from Block 0
-[+]                                         00 ............... Shadow mode disabled
-[+]                                           00 ............. Magic auth disabled
-[+]                                             00 ........... Static encrypted nonce disabled
-[+]                                               00 ......... MFC EV1 signature disabled
-[+]                                                  00 ...... Unknown
-[+]                                                     08 ... SAK
+[+]           7A FF .........................................  Magic wakeup enabled with GDM config block access
+[+]                 00 ......................................  Magic wakeup style Gen1a 40(7)/43
+[+]                    00 00 00 .............................  Unknown
+[+]                             00 ..........................  Key B use allowed when readable by ACL
+[+]                                00 .......................  Block 0 Direct Write Disabled (CUID)
+[+]                                   00 ....................  Unknown
+[+]                                      00 .................  MFC EV1 personalization: 4B UID from Block 0
+[+]                                         00 ..............  Shadow mode disabled
+[+]                                            00 ...........  Magic auth disabled
+[+]                                               00 ........  Static encrypted nonce disabled
+[+]                                                  00 .....  MFC EV1 signature disabled
+[+]                                                     00 ..  Unknown
+[+]                                                        08  SAK
 ```
 
 ### Commands
@@ -1351,19 +1351,19 @@ Could be manually validated with the configuration block value.
 ```
 [usb] pm3 --> hf mf gdmcfg
 [+] Config... 85 00 00 00 00 00 00 00 00 00 5A 5A 00 00 00 08
-[+]           85 00 .......................................... Magic wakeup disabled
-[+]                 00 ....................................... Magic wakeup style Gen1a 40(7)/43
-[+]                    00 00 00 .............................. Unknown
-[+]                             00 ........................... Key B use allowed when readable by ACL
-[+]                                00 ........................ Block 0 Direct Write Disabled (CUID)
-[+]                                   00 ..................... Unknown
-[+]                                      00 .................. MFC EV1 personalization: 4B UID from Block 0
-[+]                                         5A ............... Shadow mode enabled
-[+]                                           5A ............. Magic auth enabled
-[+]                                             00 ........... Static encrypted nonce disabled
-[+]                                               00 ......... MFC EV1 signature disabled
-[+]                                                  00 ...... Unknown
-[+]                                                     08 ... SAK
+[+]           85 00 .........................................  Magic wakeup disabled
+[+]                 00 ......................................  Magic wakeup style Gen1a 40(7)/43
+[+]                    00 00 00 .............................  Unknown
+[+]                             00 ..........................  Key B use allowed when readable by ACL
+[+]                                00 .......................  Block 0 Direct Write Disabled (CUID)
+[+]                                   00 ....................  Unknown
+[+]                                      00 .................  MFC EV1 personalization: 4B UID from Block 0
+[+]                                         5A ..............  Shadow mode enabled
+[+]                                            5A ...........  Magic auth enabled
+[+]                                               00 ........  Static encrypted nonce disabled
+[+]                                                  00 .....  MFC EV1 signature disabled
+[+]                                                     00 ..  Unknown
+[+]                                                        08  SAK
 ```
 
 ### Commands
@@ -1420,19 +1420,19 @@ Could be manually validated with the configuration block value.
 ```
 [usb] pm3 --> hf mf gdmcfg
 [+] Config... 85 00 00 00 00 00 00 5A 00 FF 00 5A 00 00 00 08
-[+]           85 00 .......................................... Magic wakeup disabled
-[+]                 00 ....................................... Magic wakeup style Gen1a 40(7)/43
-[+]                    00 00 00 .............................. Unknown
-[+]                             00 ........................... Key B use allowed when readable by ACL
-[+]                                5A ........................ Block 0 Direct Write Enabled (CUID)
-[+]                                   00 ..................... Unknown
-[+]                                      FF .................. MFC EV1 personalization: 4B UID from Block 0
-[+]                                         00 ............... Shadow mode disabled
-[+]                                           5A ............. Magic auth enabled
-[+]                                             00 ........... Static encrypted nonce disabled
-[+]                                               00 ......... MFC EV1 signature disabled
-[+]                                                  00 ...... Unknown
-[+]                                                     08 ... SAK
+[+]           85 00 .........................................  Magic wakeup disabled
+[+]                 00 ......................................  Magic wakeup style Gen1a 40(7)/43
+[+]                    00 00 00 .............................  Unknown
+[+]                             00 ..........................  Key B use allowed when readable by ACL
+[+]                                5A .......................  Block 0 Direct Write Enabled (CUID)
+[+]                                   00 ....................  Unknown
+[+]                                      FF .................  MFC EV1 personalization: 4B UID from Block 0
+[+]                                         00 ..............  Shadow mode disabled
+[+]                                            5A ...........  Magic auth enabled
+[+]                                               00 ........  Static encrypted nonce disabled
+[+]                                                  00 .....  MFC EV1 signature disabled
+[+]                                                     00 ..  Unknown
+[+]                                                        08  SAK
 ```
 
 ### Commands
