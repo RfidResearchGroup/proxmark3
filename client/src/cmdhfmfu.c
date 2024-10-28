@@ -2396,6 +2396,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         status = ul_read(0x28, ulc_conf, sizeof(ulc_conf));
         if (status <= 0) {
             PrintAndLogEx(ERR, "Error: tag didn't answer to READ UL-C");
+            PrintAndLogEx(HINT, "Hint: tag is likely fully read protected");
             DropField();
             return PM3_ESOFT;
         }
