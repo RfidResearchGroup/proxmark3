@@ -36,37 +36,46 @@ Set the first 2 bytes of your config to 7AFF and use -t 4.
 example = [[
     -- Set UID 7 bytes long via 20-23 wakeup
     1. script run hf_mf_uscuid_prog -t 2 -u 04A72B85489F51
+
     -- Set UID 4 bytes long via 40-43 wakeup
     2. script run hf_mf_uscuid_prog -t 4 -u A72B571
 
+    -- Read sector 0
+    3. script run hf_mf_uscuid_prog -S 0 
 ]]
 usage = [[
-script run hf_mf_uscuid_uid_prog [-h] [-u <uid>] [-t] [-3] [-s <signature>] [-w 1] [-R/-B <blk>] [-S/-E <sec>] [-g/-c/-b/-2/-7/-d/-a/-n/-r <0/1>]
+script run hf_mf_uscuid_uid_prog [-h] [-u <uid>] [-t] [-3] [-s <signature>] [-w 1] [-R -B <blk>] [-S -E <sec>] [-g -c -b -2 -7 -d -a -n -r <0/1>]
 ]]
 arguments = [[
     -h      this help
     -t      Magic wakeup type (2 for 0x20, 4 for 0x40)
     -u      New tag UID
     -s      New signature data
+
     -3      Update UID for F3 Perso
     -w 1    Wipe tag (take caution!)
-    -R      Read block
+
     -B      Read backdoor block
-    -S      Read sector
     -E      Read backdoor sector
+    -R      Read block
+    -S      Read sector
 
     [ConfigStar]
-    To enable an option, pass "1". To disable, pass "0". Unmarked data will not be edited.
+    Unmarked data will not be edited. 
+    
+    How to use: 
+       To ENABLE an option, pass "1"
+       To DISABLE an option, pass "0"
 
-    -g      Gen1 mode
-    -c      Gen1 command (1 for 20-23; 0 for 40-43)
-    -b      Block key B if readable by ACL
-    -2      Gen2/CUID mode
-    -7      CL2 mode (1 for F0 unfused; 0 for off)
-    -d      Shadow mode
     -a      Magic auth
+    -b      Block key B if readable by ACL
+    -c      Gen1 command (1 for 20-23; 0 for 40-43)
+    -d      Shadow mode
+    -g      Gen1 mode
     -n      Static encrypted nonces
     -r      Signature sector
+    -2      Gen2/CUID mode
+    -7      CL2 mode (1 for F0 unfused; 0 for off)
 ]]
 
 changelog = [[
@@ -144,7 +153,9 @@ local function calculate_block0(useruid)
     local uidbytes = utils.ConvertHexToBytes(useruid)
     local i = 1
     local bcc = bxor(uidbytes[i], uidbytes[i+1]);
-    local length = #useruid / 2;
+
+    -- floor division
+    local length = #useruid // 2;
 
     -- bcc
     for i = 3, length, 1 do 
@@ -207,11 +218,13 @@ end
 local function readconf()
     configbuffer = sendRaw("E000", true)
     if string.len(configbuffer) ~= 36 then
-            oops("Tag sent wrong length of config!")
-            lib14a.disconnect()
-        return 1 end
-        return utils.ConvertHexToBytes(string.sub(configbuffer,1,32))
+        oops("Tag sent wrong length of config!")
+        lib14a.disconnect()
+        return 1
+    end
+    return utils.ConvertHexToBytes(string.sub(configbuffer, 1, 32))
 end
+
 local function writeconf(configbuffer)
     configbuffer=utils.ConvertBytesToHex(configbuffer)
     print(cl.yellow.."[|]".. cl.reset .." The new config is: "..configbuffer)
@@ -221,10 +234,12 @@ local function writeconf(configbuffer)
         else
             oops("Tag did not ACK config update!")
             lib14a.disconnect()
-        return 1 end
+            return 1
+        end
     else oops("Tag did not ACK `E100` command!")
         lib14a.disconnect()
-    return 1 end
+        return 1 
+    end
 end
 -- End config functions
 
@@ -288,10 +303,10 @@ function main(args)
         configwrite = true 
     end
 
-    if targetbblk then if tonumber(targetbblk)>63 then oops("Block is above 63") return 1 end end
-    if targetblk then if tonumber(targetblk)>63 then oops("Block is above 63") return 1 end end
-    if targetsec then if tonumber(targetsec)>15 then oops("Sector is above 15") return 1 end end
-    if targetbsec then if tonumber(targetbsec)>15 then oops("Sector is above 15") return 1 end end
+    if targetbblk then if tonumber(targetbblk) > 63 then oops("Block is above 63") return 1 end end
+    if targetblk then if tonumber(targetblk) > 63 then oops("Block is above 63") return 1 end end
+    if targetsec then if tonumber(targetsec) > 15 then oops("Sector is above 15") return 1 end end
+    if targetbsec then if tonumber(targetbsec) > 15 then oops("Sector is above 15") return 1 end end
     --
     -- Alright, here's the logic.
     -- 1. Set the write type (0x20, 0x40, 8000 auth, etc...)
@@ -322,7 +337,7 @@ function main(args)
         sendRaw("DE7715B8040804000000000000000000", true)
 
         for i =0, 15 do
-            blk=string.format("%02x", 4*i+3):gsub("0x","")
+            blk=string.format("%02x", 4 * i + 3):gsub("0x","")
             sendRaw("A0"..blk, true)
             sendRaw("FFFFFFFFFFFFFF078069FFFFFFFFFFFF", true)
             sendRaw("A8"..blk, true)
@@ -608,7 +623,6 @@ function main(args)
         print(cl.yellow.."[\\]"..cl.reset.." Completed!")
         lib14a.disconnect()
     end
-
 end
 
 main(args)
