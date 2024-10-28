@@ -769,7 +769,7 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
             if (AT91C_BASE_TC1->TC_SR & AT91C_TC_LDRAS) {
 
                 // Retrieve the new timing values
-                int ra = (AT91C_BASE_TC1->TC_RA / T0) + overflow;
+                int rb = (AT91C_BASE_TC1->TC_RB / T0) + overflow;
                 overflow = 0;
 
                 // Reset timer every frame, we have to capture the last edge for timing
@@ -780,15 +780,15 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
                 if (start_time == 0) start_time = TIMESTAMP - HITAG_T_LOW;
 
                 // Capture reader frame
-                if (ra >= HITAG_T_STOP) {
+                if (rb >= HITAG_T_STOP) {
                     if (rxlen != 0) {
                         //DbpString("weird0?");
                     }
-                } else if (ra >= HITAG_T_1_MIN) {
+                } else if (rb >= HITAG_T_1_MIN) {
                     // '1' bit
                     rx[rxlen / 8] |= 1 << (7 - (rxlen % 8));
                     rxlen++;
-                } else if (ra >= HITAG_T_0_MIN) {
+                } else if (rb >= HITAG_T_0_MIN) {
                     // '0' bit
                     rx[rxlen / 8] |= 0 << (7 - (rxlen % 8));
                     rxlen++;
