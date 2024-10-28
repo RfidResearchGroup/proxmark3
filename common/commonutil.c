@@ -544,18 +544,26 @@ void reverse_arraybytes_copy(uint8_t *arr, uint8_t *dest, size_t len) {
     }
 }
 
-// TODO: consider overlap, Implement _membitmovebb
-size_t concatbits(uint8_t *dst, size_t dstskip, const uint8_t *src, size_t srcstart, size_t srclen) {
-    // erase dstbuf bits that will be overriden
-    dst[dstskip / 8] &= 0xFF - ((1 << (7 - (dstskip % 8) + 1)) - 1);
-    for (size_t i = (dstskip / 8) + 1; i <= (dstskip + srclen) / 8; i++) {
-        dst[i] = 0;
+// TODO: Boost performance by copying in chunks of 1, 2, or 4 bytes when feasible.
+size_t concatbits(uint8_t *dest, int dest_offset, const uint8_t *src, int src_offset, size_t nbits) {
+    int i, end, step;
+
+    // overlap
+    if ((src - dest) * 8 + src_offset - dest_offset > 0) {
+        i = 0;
+        end = nbits;
+        step = 1;
+    } else {
+        i = nbits;
+        end = 0;
+        step = -1;
     }
 
-    for (size_t i = 0; i < srclen; i++) {
-        // equiv of dstbufbits[dstbufskip + i] = srcbufbits[srcbufstart + i]
-        dst[(dstskip + i) / 8] |= ((src[(srcstart + i) / 8] >> (7 - ((srcstart + i) % 8))) & 1) << (7 - ((dstskip + i) % 8));
+    for (; i != end; i += step) {
+        // equiv of dest_bits[dest_offset + i] = src_bits[src_offset + i]
+        CLEAR_BIT(dest, dest_offset + i);
+        if (TEST_BIT(src, src_offset + i)) SET_BIT(dest, dest_offset + i);
     }
 
-    return dstskip + srclen;
+    return dest_offset + nbits;
 }
