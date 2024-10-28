@@ -131,7 +131,7 @@ uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
 
     //Commands to tag
     //Don't include the command byte
-    if (!isResponse) {
+    if (isResponse == false) {
         /**
           These commands should have CRC. Total length leftmost
           4 READ
@@ -167,7 +167,7 @@ uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
     In conclusion, without looking at the command; any response
     of length 10 or 34 should have CRC
       **/
-    if (n != 10 && n != 34) return true;
+    if (n != 10 && n != 34) return 2;
 
     return check_crc(CRC_ICLASS, d, n);
 }

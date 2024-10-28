@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf iclass list` - annotation crc handled better (@iceman1001)
 - Fixed `hf_mf_uscuid_prog.lua` - bad divisions and code style fixes (@iceman1001)
 - Changed `hf iclass info` - now checks for cards silicon version (@antiklesys)
 - Changed `hf iclass legrec` - updated script implementation to ensure functionality (@antiklesys)
