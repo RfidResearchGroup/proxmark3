@@ -13,3 +13,4 @@
   ln -s build/proxmark3 .
 )
 ln -s ../pyscripts/pm3.py
+ln -s ../lualibs/dkjson.lua

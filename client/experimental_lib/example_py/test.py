@@ -11,7 +11,7 @@ for line in p.grabbed_output.split('\n'):
     if "uC:" in line:
         print(line)
 print("Device:", p.name)
-p.console("Rem passthru remark! :coffee:", True)
+p.console("Rem passthru remark! :coffee:", capture=False, quiet=False)
 
 import json
 print("Fetching prefs:")

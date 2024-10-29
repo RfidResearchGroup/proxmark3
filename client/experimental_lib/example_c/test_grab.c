@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
     p = pm3_open(argv[1]);
 
     // Execute the command
-    pm3_console(p, "hw status", false);
+    pm3_console(p, "hw status", true, true);
 
     const char *buf = pm3_grabbed_output_get(p);
     const char *line_start = buf;

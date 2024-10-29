@@ -11,8 +11,11 @@
 
 #ifdef PYWRAP
     #include <Python.h>
-    %typemap(default) bool passthru {
-        $1 = Py_False;
+    %typemap(default) bool capture {
+        $1 = Py_True;
+    }
+    %typemap(default) bool quiet {
+        $1 = Py_True;
     }
 #endif
 typedef struct {
@@ -37,7 +40,7 @@ typedef struct {
                 pm3_close($self);
             }
         }
-        int console(char *cmd, bool passthru = false);
+        int console(char *cmd, bool capture = true, bool quiet = true);
         char const * const name;
         char const * const grabbed_output;
     }

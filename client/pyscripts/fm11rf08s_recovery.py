@@ -538,7 +538,7 @@ if args.final_check:
     cmd = f"hf mf fchk -f keys_{uid:08x}.dic --no-default --dump"
     if args.debug:
         print(cmd)
-    p.console(cmd, passthru=True)
+    p.console(cmd, capture=False, quiet=False)
 else:
     print()
     print(plus + color("found keys:", fg="green"))

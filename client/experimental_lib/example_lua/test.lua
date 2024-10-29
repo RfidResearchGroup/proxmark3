@@ -12,7 +12,7 @@ for line in p.grabbed_output:gmatch("[^\r\n]+") do
 end
 
 print("Device:", p.name)
-p:console("Rem passthru remark! :coffee:", true)
+p:console("Rem passthru remark! :coffee:", false, false)
 
 local json = require("dkjson")
 print("Fetching prefs:")
