@@ -424,7 +424,7 @@
         "Type": "student"
     },
     {
-        "AID": "030020" 
+        "AID": "030020",
         "Vendor": "Algonquin College of Applied Arts and Technology",
         "Country": "CA",
         "Name": "Campus Card",
@@ -432,7 +432,7 @@
         "Type": "student"
     },
     {
-        "AID": "050030" 
+        "AID": "050030",
         "Vendor": "Algonquin College of Applied Arts and Technology",
         "Country": "CA",
         "Name": "Campus Card",
@@ -448,7 +448,7 @@
         "Type": "student"
     },
     {
-        "AID": "070090" 
+        "AID": "070090",
         "Vendor": "Algonquin College of Applied Arts and Technology",
         "Country": "CA",
         "Name": "Campus Card",
@@ -672,7 +672,7 @@
         "Type": "student"
     },
     {
-        "AID": "CA1827"
+        "AID": "CA1827",
         "Vendor": "Transact Campus Inc.",
         "Country": "US",
         "Name": "Transact Campus ID [Custom AID]",
@@ -680,7 +680,7 @@
         "Type": "student"
     },
     {
-        "AID": "EEE010" 
+        "AID": "EEE010",
         "Vendor": "ASSA ABLOY",
         "Country": "GB",
         "Name": "Campus Card",
@@ -688,7 +688,7 @@
         "Type": "student"
     },
     {
-        "AID": "F33480" 
+        "AID": "F33480",
         "Vendor": "Besucherausweis",
         "Country": "DE",
         "Name": "Visitor's Pass",
@@ -696,7 +696,7 @@
         "Type": "student"
     },
     {
-        "AID": "F482D0" 
+        "AID": "F482D0",
         "Vendor": "Besucherausweis",
         "Country": "DE",
         "Name": "Visitor's Pass",
