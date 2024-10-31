@@ -239,6 +239,9 @@ FRA_OrganizationalAuthority_Contract_Provider = {
     0x008: {
         15: InterticHelper('Angoulême', 'STGA', Describe_Usage_1_1), # May have a problem with date ?
     },
+    0x013: {
+        1: InterticHelper('Avignon', 'Orizo'),
+    }
     0x021: {
         1: InterticHelper('Bordeaux', 'TBM / Keolis', Describe_Usage_1_1),
     },
