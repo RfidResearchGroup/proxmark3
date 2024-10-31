@@ -256,6 +256,7 @@ FRA_OrganizationalAuthority_Contract_Provider = {
     },
     0x502: {
         83: InterticHelper('Annecy', 'Sibra', Describe_Usage_2),
+        84: InterticHelper('Bourg-en-Bresse', 'Rubis / Keolis'),
         10: InterticHelper('Clermont-Ferrand', 'T2C'),
     },
     0x907: {
