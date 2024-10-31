@@ -3384,9 +3384,9 @@ static int envelope_square(const int *in, int *out, size_t len) {
 
 static int CmdEnvelope(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "data envelop",
-                  "Create an square envelop of the samples",
-                  "data envelop"
+    CLIParserInit(&ctx, "data envelope",
+                  "Create an square envelope of the samples",
+                  "data envelope"
                  );
     void *argtable[] = {
         arg_param_begin,
