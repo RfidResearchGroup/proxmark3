@@ -3069,7 +3069,7 @@ static int CmdNumCon(const char *Cmd) {
                   "Function takes a decimal or hexdecimal number and print it in decimal/hex/binary\n"
                   "Will print message if number is a prime number\n",
                   "data num --dec 2023\n"
-                  "data num --hex 0x1000\n"
+                  "data num --hex 2A\n"
                  );
 
     void *argtable[] = {
