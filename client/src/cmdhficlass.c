@@ -4759,9 +4759,9 @@ static int CmdHFiClassEncode(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    // TODO: very confusing sizes... buf of 70, parser len to 63 instead of 70-1, tests for len > 127, loop with 64...
-    uint8_t bin[70] = {0};
-    int bin_len = 63;
+    // can only do one block of 8 bytes currently.  There are room for two blocks in the specs.
+    uint8_t bin[65] = {0};
+    int bin_len = sizeof(bin) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 1, bin, &bin_len);
 
     int key_nr = arg_get_int_def(ctx, 2, -1);
@@ -4801,8 +4801,10 @@ static int CmdHFiClassEncode(const char *Cmd) {
     bool use_sc = false;
     CLIGetHexWithReturn(ctx, 6, enc_key, &enc_key_len);
 
+    // FC / CN / Issue Level
     wiegand_card_t card;
     memset(&card, 0, sizeof(wiegand_card_t));
+
     card.FacilityCode = arg_get_u32_def(ctx, 7, 0);
     card.CardNumber = arg_get_u32_def(ctx, 8, 0);
     card.IssueLevel = arg_get_u32_def(ctx, 9, 0);
@@ -4830,8 +4832,8 @@ static int CmdHFiClassEncode(const char *Cmd) {
         have_enc_key = true;
     }
 
-    if (bin_len > 127) {
-        PrintAndLogEx(ERR, "Binary wiegand string must be less than 128 bits");
+    if (bin_len > 64) {
+        PrintAndLogEx(ERR, "Binary wiegand string must be less than 64 bits");
         return PM3_EINVARG;
     }
 
