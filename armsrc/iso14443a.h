@@ -176,7 +176,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype);
 void DetectNACKbug(void);
 void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t *iRATs, uint8_t *aid, uint8_t *resp, uint8_t *apdu, int aid_len, int respond_len, int apdu_len, bool enumerate);
 
-bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t resp_len, uint8_t *received_len);
+bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_maxlen, uint8_t *received_len);
 
 extern iso14a_polling_parameters_t WUPA_POLLING_PARAMETERS;
 extern iso14a_polling_parameters_t REQA_POLLING_PARAMETERS;

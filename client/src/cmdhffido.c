@@ -202,7 +202,7 @@ static int CmdHFFidoRegister(const char *cmd) {
 
     if (cpplain) {
         memset(cdata, 0x00, 32);
-        chlen = sizeof(cdata);
+        chlen = sizeof(cdata) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
         CLIGetStrWithReturn(ctx, 5, cdata, &chlen);
         if (chlen > 16) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", chlen);
@@ -226,7 +226,7 @@ static int CmdHFFidoRegister(const char *cmd) {
 
     if (applain) {
         memset(adata, 0x00, 32);
-        applen = sizeof(adata);
+        applen = sizeof(adata) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
         CLIGetStrWithReturn(ctx, 6, adata, &applen);
         if (applen > 16) {
             PrintAndLogEx(ERR, "ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", applen);
@@ -245,8 +245,9 @@ static int CmdHFFidoRegister(const char *cmd) {
             return PM3_EINVARG;
         }
     }
-    if (applen)
+    if (applen) {
         memmove(&data[32], adata, 32);
+    }
 
     CLIParserFree(ctx);
 
@@ -516,7 +517,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
 
     if (cpplain) {
         memset(hdata, 0x00, 32);
-        hdatalen = sizeof(hdata);
+        hdatalen = sizeof(hdata) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
         CLIGetStrWithReturn(ctx, 9, hdata, &hdatalen);
         if (hdatalen > 16) {
             PrintAndLogEx(ERR, "ERROR: challenge parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);
@@ -542,7 +543,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
 
     if (applain) {
         memset(hdata, 0x00, 32);
-        hdatalen = sizeof(hdata);
+        hdatalen = sizeof(hdata) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
         CLIGetStrWithReturn(ctx, 10, hdata, &hdatalen);
         if (hdatalen > 16) {
             PrintAndLogEx(ERR, "ERROR: application parameter length in ASCII mode must be less than 16 chars instead of: %d", hdatalen);

@@ -554,7 +554,7 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
 
         if (IsManchesterModulationNibble1(Demod.twoBits >> Demod.syncBit)) {      // modulation in first half
             if (IsManchesterModulationNibble2(Demod.twoBits >> Demod.syncBit)) {  // ... and in second half = collision
-                if (!Demod.collisionPos) {
+                if (Demod.collisionPos == 0) {
                     Demod.collisionPos = (Demod.len << 3) + Demod.bitCount;
                 }
             }                                                           // modulation in first half only - Sequence D = 1
@@ -589,6 +589,7 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
                 }
                 Demod.endTime = Demod.startTime + 8 * (9 * Demod.len + Demod.bitCount + 1);
             } else {                                                    // no modulation in both halves - End of communication
+
                 if (Demod.bitCount > 0) {                               // there are some remaining data bits
                     Demod.shiftReg >>= (9 - Demod.bitCount);            // right align the decoded bits
                     Demod.output[Demod.len++] = Demod.shiftReg & 0xff;  // and add them to the output
@@ -600,6 +601,7 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
                     Demod.parityBits <<= (8 - (Demod.len & 0x0007));    // left align remaining parity bits
                     Demod.parity[Demod.parityLen++] = Demod.parityBits; // and store them
                 }
+
                 if (Demod.len) {
                     return true;                                        // we are finished with decoding the raw data sequence
                 } else {                                                // nothing received. Start over
@@ -624,11 +626,13 @@ static RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
     if (Demod.state == DEMOD_14A_UNSYNCD) {
 
         if (Demod.highCnt < 2) {                                            // wait for a stable unmodulated signal
+
             if (Demod.twoBits == 0x0000) {
                 Demod.highCnt++;
             } else {
                 Demod.highCnt = 0;
             }
+
         } else {
             Demod.syncBit = 0xFFFF;            // not set
             if ((Demod.twoBits & 0x7700) == 0x7000) Demod.syncBit = 7;
@@ -639,6 +643,7 @@ static RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
             else if ((Demod.twoBits & 0x03B8) == 0x0380) Demod.syncBit = 2;
             else if ((Demod.twoBits & 0x01DC) == 0x01C0) Demod.syncBit = 1;
             else if ((Demod.twoBits & 0x00EE) == 0x00E0) Demod.syncBit = 0;
+
             if (Demod.syncBit != 0xFFFF) {
                 Demod.startTime = (GetCountSspClk() & 0xfffffff8);
                 Demod.startTime -= Demod.syncBit;
@@ -647,38 +652,49 @@ static RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
                 Demod.state = DEMOD_14A_MANCHESTER_DATA;
             }
         }
+
     } else {
 
         if (IsManchesterModulationNibble1(Demod.twoBits >> Demod.syncBit)) {      // modulation in first half
+
             if (IsManchesterModulationNibble2(Demod.twoBits >> Demod.syncBit)) {  // ... and in second half = collision
-                if (!Demod.collisionPos) {
+                if (Demod.collisionPos == 0) {
                     Demod.collisionPos = (Demod.len << 3) + Demod.bitCount;
                 }
             }                                                           // modulation in first half only - Sequence D = 1
             Demod.bitCount++;
             Demod.shiftReg = (Demod.shiftReg << 1) | 0x1;             // in both cases, add a 1 to the shiftreg
+
             if (Demod.bitCount == 8) {                                  // if we decoded a full byte
-                Demod.output[Demod.len++] = (Demod.shiftReg & 0xff);
+                Demod.output[Demod.len++] = (Demod.shiftReg & 0xFF);
                 Demod.bitCount = 0;
                 Demod.shiftReg = 0;
             }
+
             Demod.endTime = Demod.startTime + 8 * (8 * Demod.len + Demod.bitCount + 1) - 4;
+
         } else {                                                        // no modulation in first half
+
             if (IsManchesterModulationNibble2(Demod.twoBits >> Demod.syncBit)) {    // and modulation in second half = Sequence E = 0
                 Demod.bitCount++;
                 Demod.shiftReg = (Demod.shiftReg << 1);                 // add a 0 to the shiftreg
                 if (Demod.bitCount >= 8) {                              // if we decoded a full byte
-                    Demod.output[Demod.len++] = (Demod.shiftReg & 0xff);
+                    Demod.output[Demod.len++] = (Demod.shiftReg & 0xFF);
                     Demod.bitCount = 0;
                     Demod.shiftReg = 0;
                 }
                 Demod.endTime = Demod.startTime + 8 * (8 * Demod.len + Demod.bitCount + 1);
+
             } else {                                                    // no modulation in both halves - End of communication
-                if (Demod.bitCount > 0) {                               // there are some remaining data bits
+
+                if (Demod.bitCount) {                               // there are some remaining data bits
                     Demod.shiftReg <<= (8 - Demod.bitCount);            // left align the decoded bits
-                    Demod.output[Demod.len++] = Demod.shiftReg & 0xff;  // and add them to the output
+                    Demod.output[Demod.len++] = Demod.shiftReg & 0xFF;  // and add them to the output
+
+                    Dbprintf("A | len... %u - %u == 0x%02x", Demod.len, Demod.bitCount, Demod.output[0]);
                     return true;
                 }
+
                 if (Demod.len) {
                     return true;                                        // we are finished with decoding the raw data sequence
                 } else {                                                // nothing received. Start over
@@ -2237,7 +2253,7 @@ int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_
 int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
     volatile uint8_t b;
     uint16_t i = 0;
-    uint32_t ThisTransferTime;
+    uint32_t ThisTransferTime = 0;
     bool correction_needed;
 
     // Modulate Manchester
@@ -2262,7 +2278,9 @@ int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
     // wait for the FPGA to signal fdt_indicator == 1 (the FPGA is ready to queue new data in its delay line)
     for (uint8_t j = 0; j < 5; j++) {    // allow timeout - better late than never
         while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
-        if (AT91C_BASE_SSC->SSC_RHR) break;
+        if (AT91C_BASE_SSC->SSC_RHR) {
+            break;
+        }
     }
 
     while ((ThisTransferTime = GetCountSspClk()) & 0x00000007);
@@ -2288,7 +2306,7 @@ int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
         }
     }
     LastTimeProxToAirStart = ThisTransferTime + (correction_needed ? 8 : 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int EmSend4bit(uint8_t resp) {
@@ -2385,10 +2403,10 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
 //  If a response is captured return TRUE
 //  If it takes too long return FALSE
 //-----------------------------------------------------------------------------
-bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t resp_len,  uint8_t *received_len) {
+bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_maxlen,  uint8_t *received_len) {
 
     if (g_hf_field_active == false) {
-        Dbprintf("Warning: HF field is off, ignoring GetIso14443aAnswerFromTag_Thinfilm command");
+        Dbprintf("Warning: HF field is off");
         return false;
     }
 
@@ -2399,7 +2417,7 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t resp
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_LISTEN);
 
     // Now get the answer from the card
-    Demod14aInit(receivedResponse, resp_len, NULL);
+    Demod14aInit(receivedResponse, rec_maxlen, NULL);
 
     // clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -2415,18 +2433,17 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t resp
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
             if (ManchesterDecoding_Thinfilm(b)) {
                 *received_len = Demod.len;
-
                 LogTrace(receivedResponse, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, NULL, false);
                 return true;
             }
         }
 
-        if (GetTickCountDelta(receive_timer) > timeout + 100)
+        if (GetTickCountDelta(receive_timer) > timeout + 100) {
             break;
+    }
     }
 
     *received_len = Demod.len;
-
     LogTrace(receivedResponse, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, NULL, false);
     return false;
 }
