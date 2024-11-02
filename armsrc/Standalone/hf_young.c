@@ -55,7 +55,7 @@ void RunMod(void) {
 
     card_clone_t uids[OPTS];
     iso14a_card_select_t card[OPTS];
-    uint8_t params = (MAGIC_SINGLE | MAGIC_DATAIN);
+    uint8_t params = (MAGIC_SINGLE | MAGIC_WUPC | MAGIC_DATAIN);
 
     LED(selected + 1, 0);
 
@@ -184,7 +184,7 @@ void RunMod(void) {
                             // Mifare UID BCC
                             block0[4] = block0[0]^block0[1]^block0[2]^block0[3]; // BCC on byte 5
                             Bytes 5-7 are reserved SAK and ATQA for mifare classic
-                    -Use mfCSetBlock(0, block0, oldUID, wantWipe, MAGIC_SINGLE) to write it
+                    -Use mfCSetBlock(0, block0, oldUID, wantWipe, MAGIC_SINGLE | MAGIC_WUPC) to write it
             */
             uint8_t oldBlock0[16] = {0}, newBlock0[16] = {0};
             // arg0 = Flags, arg1=blockNo

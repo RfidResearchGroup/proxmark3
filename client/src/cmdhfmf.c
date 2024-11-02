@@ -5166,6 +5166,7 @@ static int CmdHF14AMfCSetUID(const char *Cmd) {
         arg_str0("u", "uid",  "<hex>", "UID, 4/7 hex bytes"),
         arg_str0("a", "atqa", "<hex>", "ATQA, 2 hex bytes"),
         arg_str0("s", "sak",  "<hex>", "SAK, 1 hex byte"),
+        arg_lit0(NULL, "gdm", "use gdm alt (20/23) magic wakeup"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -5183,6 +5184,7 @@ static int CmdHF14AMfCSetUID(const char *Cmd) {
     int slen = 0;
     uint8_t sak[1] = {0x00};
     CLIGetHexWithReturn(ctx, 4, sak, &slen);
+    uint8_t gdm = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
     // sanity checks
@@ -5209,7 +5211,8 @@ static int CmdHF14AMfCSetUID(const char *Cmd) {
                   (slen) ? sak : NULL,
                   old_uid,
                   verify_uid,
-                  wipe_card
+                  wipe_card,
+                  gdm
               );
 
     if (res) {
@@ -5240,6 +5243,7 @@ static int CmdHF14AMfCWipe(const char *cmd) {
         arg_str0("u", "uid",  "<hex>", "UID, 4 hex bytes"),
         arg_str0("a", "atqa", "<hex>", "ATQA, 2 hex bytes"),
         arg_str0("s", "sak",  "<hex>", "SAK, 1 hex byte"),
+        arg_lit0(NULL, "gdm", "use gdm alt (20/23) magic wakeup"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, cmd, argtable, true);
@@ -5255,6 +5259,7 @@ static int CmdHF14AMfCWipe(const char *cmd) {
     int slen = 0;
     uint8_t sak[1] = {0x00};
     CLIGetHexWithReturn(ctx, 3, sak, &slen);
+    uint8_t gdm = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
     if (uidlen && uidlen != 4) {
@@ -5270,7 +5275,7 @@ static int CmdHF14AMfCWipe(const char *cmd) {
         return PM3_EINVARG;
     }
 
-    int res = mfCWipe((uidlen) ? uid : NULL, (alen) ? atqa : NULL, (slen) ? sak : NULL);
+    int res = mfCWipe((uidlen) ? uid : NULL, (alen) ? atqa : NULL, (slen) ? sak : NULL, gdm);
     if (res) {
         PrintAndLogEx(ERR, "Can't wipe card. error %d", res);
         return PM3_ESOFT;
@@ -5292,6 +5297,7 @@ static int CmdHF14AMfCSetBlk(const char *Cmd) {
         arg_int1("b", "blk", "<dec>", "block number"),
         arg_str0("d", "data", "<hex>", "bytes to write, 16 hex bytes"),
         arg_lit0("w", "wipe", "wipes card with backdoor cmd before writing"),
+        arg_lit0(NULL, "gdm", "use gdm alt (20/23) magic wakeup"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -5303,6 +5309,7 @@ static int CmdHF14AMfCSetBlk(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 2, data, &datalen);
 
     uint8_t wipe_card = arg_get_lit(ctx, 3);
+    uint8_t gdm = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
     if (b < 0 ||  b >= MIFARE_1K_MAXBLOCK) {
@@ -5316,6 +5323,12 @@ static int CmdHF14AMfCSetBlk(const char *Cmd) {
     }
 
     uint8_t params = MAGIC_SINGLE;
+    if (gdm) {
+        params |= MAGIC_GDM_ALT_WUPC;
+    } else {
+        params |= MAGIC_WUPC;
+    }
+
     if (wipe_card) {
         params |= MAGIC_WIPE;
     }
@@ -5347,6 +5360,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0(NULL, "emu", "from emulator memory"),
+        arg_lit0(NULL, "gdm", "use gdm alt (20/23) magic wakeup"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -5360,6 +5374,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
     bool m2 = arg_get_lit(ctx, 4);
     bool m4 = arg_get_lit(ctx, 5);
     bool fill_from_emulator = arg_get_lit(ctx, 6);
+    bool gdm = arg_get_lit(ctx, 7);
 
     CLIParserFree(ctx);
 
@@ -5393,7 +5408,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 
     if (fill_from_emulator) {
 
-        PrintAndLogEx(INFO, "Start upload to emulator memory");
+        PrintAndLogEx(INFO, "Start upload from emulator memory");
         PrintAndLogEx(INFO, "." NOLF);
 
         for (int b = 0; b < block_cnt; b++) {
@@ -5408,7 +5423,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 
             // switch on field and send magic sequence
             if (b == 0) {
-                flags = MAGIC_INIT + MAGIC_WUPC;
+                flags = MAGIC_INIT | (gdm ? MAGIC_GDM_ALT_WUPC : MAGIC_WUPC);
             }
 
             // just write
@@ -5456,7 +5471,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 
         // switch on field and send magic sequence
         if (blockno == 0) {
-            flags = MAGIC_INIT + MAGIC_WUPC;
+            flags = MAGIC_INIT | (gdm ? MAGIC_GDM_ALT_WUPC : MAGIC_WUPC);
         }
 
         // write
@@ -5511,11 +5526,13 @@ static int CmdHF14AMfCGetBlk(const char *Cmd) {
         arg_param_begin,
         arg_int1("b",  "blk", "<dec>", "block number"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "gdm", "use gdm alt (20/23) magic wakeup"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int b = arg_get_int_def(ctx, 1, 0);
     bool verbose = arg_get_lit(ctx, 2);
+    bool gdm = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     if (b > 255) {
@@ -5524,7 +5541,7 @@ static int CmdHF14AMfCGetBlk(const char *Cmd) {
 
     uint8_t blockno = (uint8_t)b;
     uint8_t data[16] = {0};
-    int res = mfCGetBlock(blockno, data, MAGIC_SINGLE);
+    int res = mfCGetBlock(blockno, data, MAGIC_SINGLE | (gdm ? MAGIC_GDM_ALT_WUPC : MAGIC_WUPC));
     if (res) {
         PrintAndLogEx(ERR, "Can't read block. error=%d", res);
         return PM3_ESOFT;
@@ -5553,11 +5570,13 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
         arg_param_begin,
         arg_int1("s",  "sec", "<dec>", "sector number"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "gdm", "use gdm alt (20/23) magic wakeup"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int s = arg_get_int_def(ctx, 1, 0);
     bool verbose = arg_get_lit(ctx, 2);
+    bool gdm = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     if (s >= MIFARE_4K_MAXSECTOR) {
@@ -5575,7 +5594,7 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
         start = 128 + (sector - 32) * 16;
     }
 
-    int flags = MAGIC_INIT + MAGIC_WUPC;
+    int flags = MAGIC_INIT + (gdm ? MAGIC_GDM_ALT_WUPC : MAGIC_WUPC);
     uint8_t data[16] = {0};
     for (int i = 0; i < blocks; i++) {
         if (i == 1) flags = 0;
@@ -5612,6 +5631,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0(NULL, "emu", "to emulator memory"),
+        arg_lit0(NULL, "gdm", "to emulator memory"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -5625,6 +5645,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
     bool m2 = arg_get_lit(ctx, 4);
     bool m4 = arg_get_lit(ctx, 5);
     bool fill_emulator = arg_get_lit(ctx, 6);
+    bool gdm = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
     // validations
@@ -5692,7 +5713,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
     }
 
     // switch on field and send magic sequence
-    uint8_t flags = MAGIC_INIT + MAGIC_WUPC;
+    uint8_t flags = MAGIC_INIT + (gdm ? MAGIC_GDM_ALT_WUPC : MAGIC_WUPC);
     for (uint16_t i = 0; i < block_cnt; i++) {
 
         // read
@@ -5766,6 +5787,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
         arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
         arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "gdm", "use gdm alt (20/23) magic wakeup"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -5774,6 +5796,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
     bool m2 = arg_get_lit(ctx, 3);
     bool m4 = arg_get_lit(ctx, 4);
     bool verbose = arg_get_lit(ctx, 5);
+    bool gdm = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
     // validations
@@ -5840,7 +5863,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
     }
 
     // switch on field and send magic sequence
-    uint8_t flags = MAGIC_INIT + MAGIC_WUPC;
+    uint8_t flags = MAGIC_INIT + (gdm ? MAGIC_GDM_ALT_WUPC : MAGIC_WUPC);
     for (uint16_t i = 0; i < block_cnt; i++) {
         // read
         if (i == 1) {
