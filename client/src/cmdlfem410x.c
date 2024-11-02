@@ -365,7 +365,7 @@ static int CmdEM410xDemod(const char *Cmd) {
     bool invert = arg_get_lit(ctx, 4);
     bool amplify = arg_get_lit(ctx, 5);
     uint8_t bin[512] = {0};
-    int bin_len = sizeof(bin) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated    
+    int bin_len = sizeof(bin) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 6, bin, &bin_len);
     CLIParserFree(ctx);
 
