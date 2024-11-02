@@ -3171,7 +3171,7 @@ static int CmdNumCon(const char *Cmd) {
                     pn = (hlen * 4) - slen + 1;
                 }
             }
-            PrintAndLogEx(SUCCESS, "%s%.*s%s",radix[i].desc, pn, pad, s);
+            PrintAndLogEx(SUCCESS, "%s%.*s%s", radix[i].desc, pn, pad, s);
         }
     }
 

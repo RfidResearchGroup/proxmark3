@@ -1127,7 +1127,7 @@ int CmdLFfskSim(const char *Cmd) {
     bool separator = arg_get_lit(ctx, 4);
 
     char raw[65] = {0};
-    int raw_len = sizeof(raw) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated    
+    int raw_len = sizeof(raw) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 5, (uint8_t *)raw, &raw_len);
 
     bool verbose = arg_get_lit(ctx, 6);
@@ -1238,7 +1238,7 @@ int CmdLFaskSim(const char *Cmd) {
     bool separator = arg_get_lit(ctx, 6);
 
     char raw[65] = {0};
-    int raw_len = sizeof(raw) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated        
+    int raw_len = sizeof(raw) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 7, (uint8_t *)raw, &raw_len);
 
     bool verbose = arg_get_lit(ctx, 8);
@@ -1352,7 +1352,7 @@ int CmdLFpskSim(const char *Cmd) {
     uint8_t carrier = arg_get_u32_def(ctx, 6, 2);
 
     char raw[65] = {0};
-    int raw_len = sizeof(raw) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated        
+    int raw_len = sizeof(raw) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 7, (uint8_t *)raw, &raw_len);
     bool verbose = arg_get_lit(ctx, 8);
 

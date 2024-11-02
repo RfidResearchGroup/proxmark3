@@ -22,13 +22,13 @@ This script does *NOT* claim full compatibility with the ICs listed below:
 * UFUID
 * PFUID*
 
-Why? 
-Unfortunately, these are cut down versions. 
+Why?
+Unfortunately, these are cut down versions.
 Checks show that they only acknowledge bytes 0-1, 7, 8, and 15 of the configuration.
 
 * WARNING: The config commands are inversed. Nothing will work.
 
-Ready to start? 
+Ready to start?
 
 Set the first 2 bytes of your config to 7AFF and use -t 4.
 
@@ -41,7 +41,7 @@ example = [[
     2. script run hf_mf_uscuid_prog -t 4 -u A72B571
 
     -- Read sector 0
-    3. script run hf_mf_uscuid_prog -S 0 
+    3. script run hf_mf_uscuid_prog -S 0
 ]]
 usage = [[
 script run hf_mf_uscuid_uid_prog [-h] [-u <uid>] [-t] [-3] [-s <signature>] [-w 1] [-R -B <blk>] [-S -E <sec>] [-g -c -b -2 -7 -d -a -n -r <0/1>]
@@ -61,9 +61,9 @@ arguments = [[
     -S      Read sector
 
     [ConfigStar]
-    Unmarked data will not be edited. 
-    
-    How to use: 
+    Unmarked data will not be edited.
+
+    How to use:
        To ENABLE an option, pass "1"
        To DISABLE an option, pass "0"
 
@@ -142,10 +142,10 @@ local function sendCmds(cmds)
 end
 
 local function wakeupmagic(writetype)
-    if writetype == "2" then 
-        sendCmds(wupc2()) 
-    elseif writetype == "4" then 
-        sendCmds(wupc()) 
+    if writetype == "2" then
+        sendCmds(wupc2())
+    elseif writetype == "4" then
+        sendCmds(wupc())
     end
 end
 
@@ -158,13 +158,13 @@ local function calculate_block0(useruid)
     local length = #useruid // 2;
 
     -- bcc
-    for i = 3, length, 1 do 
+    for i = 3, length, 1 do
         bcc = bxor(bcc, uidbytes[i])
     end
 
     -- block0
     local block0 = ""
-    for i = 1, length, 1 do 
+    for i = 1, length, 1 do
         block0 = block0..string.format('%02X', uidbytes[i])
     end
 
@@ -238,7 +238,7 @@ local function writeconf(configbuffer)
         end
     else oops("Tag did not ACK `E100` command!")
         lib14a.disconnect()
-        return 1 
+        return 1
     end
 end
 -- End config functions
@@ -299,8 +299,8 @@ function main(args)
         if o == 'r' then if a == "1" then sigsec = true elseif a == "0" then sigsec= false end end
     end
 
-    if gen1 ~= nil or gen1com~= nil or keyblock~= nil or cuid~= nil or cl2mode~= nil or shadowmode~= nil or magicauth~= nil or statenc~= nil or sigsec~= nil then 
-        configwrite = true 
+    if gen1 ~= nil or gen1com~= nil or keyblock~= nil or cuid~= nil or cl2mode~= nil or shadowmode~= nil or magicauth~= nil or statenc~= nil or sigsec~= nil then
+        configwrite = true
     end
 
     if targetbblk then if tonumber(targetbblk) > 63 then oops("Block is above 63") return 1 end end
@@ -327,7 +327,7 @@ function main(args)
             oops("DANGER! Tag did not ACK wipe command. The field has NOT been reset.")
             print("[ ] If you think the wipe succeeded, immediately do this:")
             print("hf 14a raw -kc E100; hf 14a raw -c 7AFF0000000000000000000000000008")
-            return 1 
+            return 1
         end
 
         writeconf(utils.ConvertHexToBytes("7AFF0000000000000000005A00000008"))
@@ -359,40 +359,40 @@ function main(args)
         print("")
 
         if targetblk or targetsec then
-            if targetblk then 
-                data = sendRaw("30"..string.format("%02x", targetblk), false) 
+            if targetblk then
+                data = sendRaw("30"..string.format("%02x", targetblk), false)
             end
 
-            if targetblk then 
+            if targetblk then
                 -- floor division...
-                SectorHeader(targetblk // 4) 
+                SectorHeader(targetblk // 4)
             else
                 SectorHeader(targetsec)
             end
 
-            if targetblk then 
-                BlockParser(data, targetblk) 
-            else 
-                for i=0, 3 do 
+            if targetblk then
+                BlockParser(data, targetblk)
+            else
+                for i=0, 3 do
                     BlockParser(sendRaw("30"..string.format("%02x", targetsec * 4 + i), true), targetsec * 4 + i)
                 end
             end
 
         elseif targetbblk or targetbsec then
-            if targetbblk then 
-                data = sendRaw("38"..string.format("%02x", targetbblk), false) 
+            if targetbblk then
+                data = sendRaw("38"..string.format("%02x", targetbblk), false)
             end
 
-            if targetbblk then 
+            if targetbblk then
                 -- floor division
                 SectorHeader(targetbblk // 4)
-            else 
-                SectorHeader(targetbsec) 
+            else
+                SectorHeader(targetbsec)
             end
 
-            if targetbblk then 
-                BlockParser(data, targetbblk) 
-            else 
+            if targetbblk then
+                BlockParser(data, targetbblk)
+            else
                 for i =0, 3 do
                     BlockParser(sendRaw("38"..string.format("%02x", targetbsec * 4 + i), true), targetbsec * 4 + i)
                 end
@@ -428,8 +428,8 @@ function main(args)
         if string.len(uid) == 14 then
 
             wakeupmagic(writetype)
-            if f3perso == true then 
-                print("[?] WARNING: F3 perso write is set, but 7 byte UID is passed. Ignoring -3 argument") 
+            if f3perso == true then
+                print("[?] WARNING: F3 perso write is set, but 7 byte UID is passed. Ignoring -3 argument")
             end
 
             local configdata = readconf()
@@ -445,7 +445,7 @@ function main(args)
             if sendRaw("A800", true) ~= "0A" then
                 oops("Tag did not ACK `A800` command!")
                 lib14a.disconnect()
-                return 1 
+                return 1
             end
 
             print("[?] WARNING: nUID should be updated with this value:")
@@ -455,18 +455,18 @@ function main(args)
             if sendRaw(payload, true) ~= "0A" then
                 oops("Tag did not ACK data to write!")
                 lib14a.disconnect()
-                return 1 
+                return 1
             end
 
             print(cl.yellow.."[-]".. cl.reset .." Updating real block 0")
             if sendRaw("A000", true) ~= "0A" then
                 oops("Tag did not ACK `A000` command!")
                 lib14a.disconnect()
-                return 1 
+                return 1
             end
 
-            if sendRaw(cltwo_block0(uid), false) ~="0A" then 
-                oops("Tag did not ACK data to write!") 
+            if sendRaw(cltwo_block0(uid), false) ~="0A" then
+                oops("Tag did not ACK data to write!")
             end
 
         -- Now, let's work with 4 byte UIDs.
@@ -478,7 +478,7 @@ function main(args)
             if configdata[10] == 0x69 or f3perso == true then -- If we have Perso: F3, then write backdoor blk 1
 
                 if f3perso == true then
-                    print ("[?] WARNING: F3 flag enabled. Updating UID used for F3 perso") 
+                    print ("[?] WARNING: F3 flag enabled. Updating UID used for F3 perso")
                 end
 
                 if sendRaw("A801", true) ~= "0A" then
@@ -499,11 +499,11 @@ function main(args)
                 if sendRaw("A000", true) ~= "0A" then
                     oops("Tag did not ACK `A000` command!")
                     lib14a.disconnect()
-                    return 1 
+                    return 1
                 end
             end
 
-            if sendRaw(payload, false) ~= "0A" then 
+            if sendRaw(payload, false) ~= "0A" then
                 oops("Tag did not ACK data to write!")
             end
         end
@@ -522,7 +522,7 @@ function main(args)
         if sendRaw("A805", true) ~= "0A" then
             oops("Tag did not ACK `A805` command!")
             lib14a.disconnect()
-            return 1 
+            return 1
         end
 
         if sendRaw(string.sub(signature,1,32), true) ~= "0A" then
@@ -556,8 +556,8 @@ function main(args)
             if ans ~="yes" then
                 lib14a.disconnect()
                 return 1
-            else 
-                print(cl.red.."[/]"..cl.reset.." Brace yourself.") 
+            else
+                print(cl.red.."[/]"..cl.reset.." Brace yourself.")
             end
 
         end

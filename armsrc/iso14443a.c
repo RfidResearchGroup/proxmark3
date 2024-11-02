@@ -2440,7 +2440,7 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_
 
         if (GetTickCountDelta(receive_timer) > timeout + 100) {
             break;
-    }
+        }
     }
 
     *received_len = Demod.len;

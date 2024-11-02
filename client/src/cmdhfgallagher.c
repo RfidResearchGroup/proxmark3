@@ -1311,7 +1311,7 @@ static int CmdGallagherDecode(const char *cmd) {
 
     return PM3_SUCCESS;
 }
-static int CmdGallagherEncode (const char *cmd) {
+static int CmdGallagherEncode(const char *cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf gallagher encode",
                   "Encode a Gallagher credential block\n"
@@ -1335,7 +1335,7 @@ static int CmdGallagherEncode (const char *cmd) {
     uint64_t issue_level = arg_get_u64(ctx, 4); // uint4
 
     CLIParserFree(ctx);
-    
+
     GallagherCredentials_t creds = {
         .region_code = region_code,
         .facility_code = facility_code,
@@ -1345,15 +1345,15 @@ static int CmdGallagherEncode (const char *cmd) {
 
 
     uint8_t contents[16] = {0};
-    
+
     gallagher_encode_creds(contents, &creds);
     for (int i = 0; i < 8; i++) {
         contents[i + 8] = contents[i] ^ 0xFF;
     }
 
-    PrintAndLogEx(SUCCESS, "Raw: " _YELLOW_("%s"), sprint_hex_inrow(contents, ARRAYLEN(contents)/2));
+    PrintAndLogEx(SUCCESS, "Raw: " _YELLOW_("%s"), sprint_hex_inrow(contents, ARRAYLEN(contents) / 2));
     PrintAndLogEx(SUCCESS, "Bitwise: " _YELLOW_("%s"), sprint_hex_inrow(contents, ARRAYLEN(contents)));
-    
+
     return PM3_SUCCESS;
 }
 

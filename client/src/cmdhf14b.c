@@ -1437,7 +1437,7 @@ bool HF14B_picopass_reader(bool verbose, bool info) {
                 return false;
             }
             memcpy(card, resp.data.asBytes, sizeof(picopass_hdr_t));
-            if(info){
+            if (info) {
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(SUCCESS, "iCLASS / Picopass CSN: " _GREEN_("%s"), sprint_hex(card->csn, sizeof(card->csn)));
             }

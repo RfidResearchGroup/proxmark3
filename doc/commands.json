@@ -8526,7 +8526,7 @@
                 "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000 -> probing for Hitag 2/S",
                 "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11010 -> probing for Hitag S",
                 "lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000 -s 2000 -@ -> probing for Hitag 2/S, oscilloscope style",
-                "lf cmdread -d 48 -z 112 -o 176 -e W3000 -e S240 -e E336 -c W0S00000010000E -> probing for Hitag \u00e6(micro)"
+                "lf cmdread -d 48 -z 112 -o 176 -e W3000 -e S240 -e E336 -c W0S00000010000E -> probing for Hitag \u00b5(micro)"
             ],
             "offline": false,
             "options": [
@@ -9762,7 +9762,7 @@
                 "-1, --ht1 Card type Hitag 1",
                 "-2, --ht2 Card type Hitag 2",
                 "-s, --hts Card type Hitag S",
-                "-m, --htm Card type Hitag \u00ce\u00bc"
+                "-m, --htm Card type Hitag \u03bc"
             ],
             "usage": "lf hitag eload [-h12sm] -f <fn>"
         },
@@ -13005,6 +13005,6 @@
     "metadata": {
         "commands_extracted": 749,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-11-02T12:57:51"
+        "extracted_on": "2024-11-02T14:09:48"
     }
 }

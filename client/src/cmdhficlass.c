@@ -2712,7 +2712,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
 }
 
 static int iclass_read_block_ex(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite, bool rawkey, bool replay, bool verbose,
-                             bool auth, bool shallow_mod, uint8_t *out, bool print) {
+                                bool auth, bool shallow_mod, uint8_t *out, bool print) {
 
     iclass_auth_req_t payload = {
         .use_raw = rawkey,
@@ -2762,7 +2762,7 @@ static int iclass_read_block_ex(uint8_t *KEY, uint8_t blockno, uint8_t keyType, 
 }
 
 static int iclass_read_block(uint8_t *KEY, uint8_t blockno, uint8_t keyType, bool elite, bool rawkey, bool replay, bool verbose,
-                                bool auth, bool shallow_mod, uint8_t *out) {
+                             bool auth, bool shallow_mod, uint8_t *out) {
     return iclass_read_block_ex(KEY, blockno, keyType, elite, rawkey, replay, verbose, auth, shallow_mod, out, true);
 }
 
@@ -3714,10 +3714,10 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     if ((strlen(filename) == 0) && (use_vb6kdf == false)) {
 
         if (use_elite) {
-            PrintAndLogEx(INFO,"Using default elite dictionary");
+            PrintAndLogEx(INFO, "Using default elite dictionary");
             snprintf(filename, sizeof(filename), ICLASS_DEFAULT_KEY_ELITE_DIC);
         } else {
-            PrintAndLogEx(INFO,"Using default dictionary");
+            PrintAndLogEx(INFO, "Using default dictionary");
             snprintf(filename, sizeof(filename), ICLASS_DEFAULT_KEY_DIC);
         }
     }
@@ -5297,7 +5297,7 @@ int info_iclass(bool shallow_mod) {
 
     iclass_card_select_resp_t *r = (iclass_card_select_resp_t *)resp.data.asBytes;
 
-    uint8_t *p_response = (uint8_t*)&r->header.hdr;
+    uint8_t *p_response = (uint8_t *)&r->header.hdr;
     // no tag found or button pressed
     if (r->status == FLAG_ICLASS_NULL || resp.status == PM3_ERFTRANS) {
         return PM3_EOPABORTED;
@@ -5382,9 +5382,9 @@ int info_iclass(bool shallow_mod) {
     uint8_t cardtype = get_mem_config(hdr);
     PrintAndLogEx(SUCCESS, "    Card type.... " _GREEN_("%s"), card_types[cardtype]);
 
-    if(HF14B_picopass_reader(false, false)){
+    if (HF14B_picopass_reader(false, false)) {
         PrintAndLogEx(SUCCESS, "    Card chip.... "_YELLOW_("Old Silicon (14b support)"));
-    }else{
+    } else {
         PrintAndLogEx(SUCCESS, "    Card chip.... "_YELLOW_("NEW Silicon (No 14b support)"));
     }
     if (legacy) {
