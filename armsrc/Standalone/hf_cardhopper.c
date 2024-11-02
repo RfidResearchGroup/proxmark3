@@ -492,7 +492,7 @@ static void read_packet(packet_t *packet) {
 
         if (packet->len == 0x50 && dataReceived >= sizeof(PacketResponseNGPreamble) && packet->dat[0] == 0x4D && packet->dat[1] == 0x33 && packet->dat[2] == 0x61) {
             // PM3 NG packet magic
-            DbpString(_CYAN_("[@]") " PM3 NG packet recieved - ignoring");
+            DbpString(_CYAN_("[@]") " PM3 NG packet received - ignoring");
 
             // clear any remaining buffered data
             while (cardhopper_data_available()) {

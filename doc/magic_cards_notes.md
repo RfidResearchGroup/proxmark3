@@ -374,7 +374,7 @@ UID 4b: (actually NUID as there are no more "unique" IDs on 4b)
 ```
 
 
-Computing BCC on UID 11223344: `analyse lcr -d 11223344` = `44`
+Computing BCC on UID 11223344: `analyse lrc -d 11223344` = `44`
 
 UID 7b:
 
@@ -1607,9 +1607,9 @@ BCC1 Int  LCK0 LCK1
 
 UID is made of SN0..SN6 bytes
 
-Computing BCC0 on UID 04112233445566: `analyse lcr -d 88041122` = `bf`
+Computing BCC0 on UID 04112233445566: `analyse lrc -d 88041122` = `bf`
 
-Computing BCC1 on UID 04112233445566: `analyse lcr -d 33445566` = `44`
+Computing BCC1 on UID 04112233445566: `analyse lrc -d 33445566` = `44`
 
 Int is internal, typically 0x48
 
