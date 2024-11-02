@@ -1058,9 +1058,9 @@ int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidt
 }
 
 // "MAGIC" CARD
-int mfCSetUID(uint8_t *uid, uint8_t uidlen, const uint8_t *atqa, const uint8_t *sak, uint8_t *old_uid, uint8_t *verifed_uid, uint8_t wipecard) {
+int mfCSetUID(uint8_t *uid, uint8_t uidlen, const uint8_t *atqa, const uint8_t *sak, uint8_t *old_uid, uint8_t *verifed_uid, uint8_t wipecard, uint8_t gdm) {
 
-    uint8_t params = MAGIC_SINGLE;
+    uint8_t params = MAGIC_SINGLE | (gdm ? MAGIC_GDM_ALT_WUPC : MAGIC_WUPC);
     uint8_t block0[MFBLOCK_SIZE];
     memset(block0, 0x00, sizeof(block0));
 
@@ -1111,7 +1111,7 @@ int mfCSetUID(uint8_t *uid, uint8_t uidlen, const uint8_t *atqa, const uint8_t *
 
     res = mfCSetBlock(0, block0, NULL, params);
     if (res == PM3_SUCCESS) {
-        params = MAGIC_SINGLE;
+        params = MAGIC_SINGLE | MAGIC_WUPC;
         memset(block0, 0, sizeof(block0));
         res = mfCGetBlock(0, block0, params);
         if (res == 0) {
@@ -1123,13 +1123,13 @@ int mfCSetUID(uint8_t *uid, uint8_t uidlen, const uint8_t *atqa, const uint8_t *
     return res;
 }
 
-int mfCWipe(uint8_t *uid, const uint8_t *atqa, const uint8_t *sak) {
+int mfCWipe(uint8_t *uid, const uint8_t *atqa, const uint8_t *sak, uint8_t gdm) {
     uint8_t block0[MFBLOCK_SIZE] = {0x00, 0x56, 0x78, 0xBB, 0x95, 0x08, 0x04, 0x00, 0x02, 0xB2, 0x1E, 0x24, 0x23, 0x27, 0x1E, 0x1D};
     // uint8_t block0[MFBLOCK_SIZE] = {0x04, 0x03, 0x02, 0x01, 0x04, 0x08, 0x04, 0x00, 0x64, 0xB9, 0x95, 0x11, 0x4D, 0x20, 0x42, 0x09};
     uint8_t blockD[MFBLOCK_SIZE] = {0x00};
     // default transport ACL
     uint8_t blockK[MFBLOCK_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x07, 0x80, 0x69, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    uint8_t params = MAGIC_SINGLE;
+    uint8_t params = MAGIC_SINGLE | (gdm ? MAGIC_GDM_ALT_WUPC : MAGIC_WUPC);
 
     if (uid != NULL) {
         memcpy(block0, uid, 4);

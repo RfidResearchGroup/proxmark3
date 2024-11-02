@@ -2552,6 +2552,7 @@ out:
 // bit 4 - need turn off FPGA
 // bit 5 - need to set datain instead of issuing USB reply (called via ARM for StandAloneMode14a)
 // bit 6 - wipe tag.
+// bit 7 - use USCUID/GDM (20/23) magic wakeup
 //-----------------------------------------------------------------------------
 
 void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
@@ -2618,6 +2619,22 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
             iso14a_set_timeout(old_timeout);
 
             mifare_classic_halt(NULL);
+        }
+
+        if (workFlags & MAGIC_GDM_ALT_WUPC) {
+            ReaderTransmitBitsPar(wupGDM1, 7, NULL, NULL);
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("wupGDM1 error");
+                errormsg = MAGIC_WUPC;
+                break;
+            }
+
+            ReaderTransmit(wupGDM2, sizeof(wupC2), NULL);
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("wupGDM2 error");
+                errormsg = MAGIC_WUPC;
+                break;
+            }
         }
 
         // write block
@@ -2706,6 +2723,22 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
 
     //loop doesn't loop just breaks out if error or done
     while (true) {
+        if (workFlags & MAGIC_GDM_ALT_WUPC) {
+            ReaderTransmitBitsPar(wupGDM1, 7, NULL, NULL);
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("wupGDM1 error");
+                errormsg = MAGIC_WUPC;
+                break;
+            }
+
+            ReaderTransmit(wupGDM2, sizeof(wupC2), NULL);
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("wupGDM2 error");
+                errormsg = MAGIC_WUPC;
+                break;
+            }
+        }
+
         if (workFlags & MAGIC_WUPC) {
             ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
             if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0)  || (receivedAnswer[0] != 0x0a)) {

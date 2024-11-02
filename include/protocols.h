@@ -250,6 +250,8 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 // bit 3 - turn on FPGA
 // bit 4 - turn off FPGA
 // bit 5 - set datain instead of issuing USB reply (called via ARM for StandAloneMode14a)
+// bit 6 - wipe tag.
+// bit 7 - use USCUID/GDM (20/23) magic wakeup
 #define MAGIC_UID                   0x01
 #define MAGIC_WUPC                  0x02
 #define MAGIC_HALT                  0x04
@@ -257,7 +259,8 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MAGIC_OFF                   0x10
 #define MAGIC_DATAIN                0x20
 #define MAGIC_WIPE                  0x40
-#define MAGIC_SINGLE                (MAGIC_WUPC | MAGIC_HALT | MAGIC_INIT | MAGIC_OFF) //0x1E
+#define MAGIC_GDM_ALT_WUPC          0x80
+#define MAGIC_SINGLE                (MAGIC_HALT | MAGIC_INIT | MAGIC_OFF) //0x1E
 
 // by CMD_HF_MIFARE_CIDENT / Flags
 #define MAGIC_FLAG_NONE          0x0000
