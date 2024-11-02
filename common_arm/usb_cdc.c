@@ -718,6 +718,10 @@ static uint8_t usb_read_ng_buffer[64] = {0};
 static uint8_t usb_read_ng_bufoffset = 0;
 static uint8_t usb_read_ng_buflen = 0;
 
+bool usb_read_ng_has_buffered_data(void) {
+    return usb_read_ng_buflen > 0;
+}
+
 uint32_t usb_read_ng(uint8_t *data, size_t len) {
 
     if (len == 0) {
