@@ -40,10 +40,10 @@
 static int CmdHelp(const char *Cmd);
 
 static uint8_t calculateLRC(const uint8_t *d, uint8_t n) {
-    uint8_t lcr = 0;
+    uint8_t lrc = 0;
     for (uint8_t i = 0; i < n; i++)
-        lcr ^= d[i];
-    return lcr;
+        lrc ^= d[i];
+    return lrc;
 }
 /*
 static uint16_t matrixadd ( uint8_t* bytes, uint8_t len){
@@ -242,17 +242,17 @@ static int CmdAnalyseLfsr(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdAnalyseLCR(const char *Cmd) {
+static int CmdAnalyseLRC(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "analyse lcr",
+    CLIParserInit(&ctx, "analyse lrc",
                   "Specifying the bytes of a UID with a known LRC will find the last byte value\n"
                   "needed to generate that LRC with a rolling XOR. All bytes should be specified in HEX.",
-                  "analyse lcr -d 04008064BA     ->  Target (BA) requires final LRC XOR byte value: 5A"
+                  "analyse lrc -d 04008064BA     ->  Target (BA) requires final LRC XOR byte value: 5A"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("d", "data", "<hex>", "bytes to calc missing XOR in a LCR"),
+        arg_str1("d", "data", "<hex>", "bytes to calc missing XOR in a LRC"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1171,7 +1171,7 @@ static int CmdAnalyseUnits(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,            AlwaysAvailable, "This help"},
-    {"lcr",     CmdAnalyseLCR,      AlwaysAvailable, "Generate final byte for XOR LRC"},
+    {"lrc",     CmdAnalyseLRC,      AlwaysAvailable, "Generate final byte for XOR LRC"},
     {"crc",     CmdAnalyseCRC,      AlwaysAvailable, "Stub method for CRC evaluations"},
     {"chksum",  CmdAnalyseCHKSUM,   AlwaysAvailable, "Checksum with adding, masking and one's complement"},
     {"dates",   CmdAnalyseDates,    AlwaysAvailable, "Look for datestamps in a given array of bytes"},

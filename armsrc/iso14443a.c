@@ -4047,15 +4047,15 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data, uin
 
                             // aid len is found as a hex value in receivedCmd[6] (Index Starts at 0)
                             int aid_len = receivedCmd[6];
-                            uint8_t *recieved_aid = &receivedCmd[7];
+                            uint8_t *received_aid = &receivedCmd[7];
 
                             // aid enumeration flag
                             if (enumerate == true) {
                                 Dbprintf("Received AID (%d):", aid_len);
-                                Dbhexdump(aid_len, recieved_aid, false);
+                                Dbhexdump(aid_len, received_aid, false);
                             }
 
-                            if (memcmp(aidFilter, recieved_aid, aid_len) == 0) { // Evaluate the AID sent by the Reader to the AID supplied
+                            if (memcmp(aidFilter, received_aid, aid_len) == 0) { // Evaluate the AID sent by the Reader to the AID supplied
                                 // AID Response will be parsed here
                                 memcpy(dynamic_response_info.response + 2, aidResponse, respondLen + 2);
                                 dynamic_response_info.response_n = respondLen + 2;

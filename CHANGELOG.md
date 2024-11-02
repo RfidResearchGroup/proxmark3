@@ -1728,7 +1728,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
  - Added `lf t55xx recoverpw` - adds a new password recovery using bitflips and partial flips if password write went bad. (@alexgrin)
  - `hf legic` - added improved legic data mapping. (jason)
  - `hf mf mifare` - added possibility to target key A|B (@douniwan5788)
- - Added `analyse lcr` - added a new main command group,  to help analysing bytes & bits & nibbles. (@iceman1001)
+ - Added `analyse lrc` - added a new main command group,  to help analysing bytes & bits & nibbles. (@iceman1001)
  - Added `lf nedap` - added identification of a NEDAP tag. (@iceman1001)
  - `lf viking clone` - fixed a bug. (@iceman1001)
  - Added bitsliced bruteforce solver in `hf mf hardnested` (@Aczid)
