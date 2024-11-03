@@ -19,7 +19,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added an Makefile variable `DONT_BUILD_NATIVE` in mfd_aes_brute Makefile to easify downstream package
 - Auto detect whether compile option `march=native` is supported for mfd_aes_brute Makefile
 - Changed `hf mf sim` - support data-first and nested reader attacks (@doegox)
-- Fixed em4x50_read() - `lf search` and `lf em 4x50 rdbl -b <blk>` does not coredump reading EM4450 tag (@ANTodorov)
+- Fixed `lf search` and `lf em 4x50 rdbl -b <blk>` does not coredump reading EM4450 tag (@ANTodorov)
 - Fixed flashing - client doesnt fail every other flash attempt (@iceman1001)
 - Changed `pref show` - add option to dump as JSON (@doegox)
 - Changed `mf_backdoor_dump.py`- use faster ecfill/eview (@doegox)
@@ -49,7 +49,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Changed `lf hitag hts read` -> `lf hitag hts rdbl` to fit rest of client command names (@iceman1001)
 - Changed `hf mf info` - Better handling when printing ATS (@iceman1001)
 - Changed to also try the MFC_B key when extracting memory (@iceman1001)
-- Fixed parallel `make -j check`  Thanks @elboulangero  (@iceman1001)
+- Fixed `make -j check`  Thanks @elboulangero  (@iceman1001)
 - Added support for 8268/8310 (@douniwan5788)
 - Changed scripting string params to accept 1024 chars, Thanks @evildaemond! (@iceman1001)
 - Added detection for FM11NT021 (@iceman1001)
@@ -58,7 +58,6 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added `hf 14a aidsim` - simulates a PICC (like `14a sim`), and allows you to respond to specific AIDs and getData responses (@evildaemond)
 - Fixed arguments for `SimulateIso14443aTag` and `SimulateIso14443aInit` in `hf_young.c`, `hf_aveful.c`, `hf_msdsal.c`, `hf_cardhopper.c`, `hf_reblay.c`, `hf_tcprst.c` and `hf_craftbyte.c` (@archi)
 - Added `mf_backdoor_dump.py` script that dumps FM11RF08S and similar (Mifare Classic 1k) tag data that can be directly read by known backdoor keys. (@Aptimex)
-- Add JAKCOM R5 Smart Ring default t55x passwords to dictionary (@shellster)
 
 ## [Backdoor.4.18994][2024-09-10]
 - Changed flashing messages to be less scary (@iceman1001)
