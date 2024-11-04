@@ -333,13 +333,28 @@ local function split(str, sep)
 end
 
 ---
+-- join table with a separator
+local function join(list, sep)
+  local sep = sep or ','
+  local len = #list
+  if len == 0 then return "" end
+  local s = list[1]
+  for i = 2, len do
+    s = s .. sep .. list[i]
+  end
+  return s
+end
+
+---
 -- check availability of file
 function file_check(file_name)
   if not file_name then return false, "" end
 
   local arr = split(file_name, ".")
-  local path = core.search_file(arr[1], "."..arr[2])
-  if (path == nil) then return false end
+  local ext = table.remove(arr)
+  local name = join(arr, '.')
+  local path = core.search_file(name, "."..ext)
+  if (path == nil) then return false, "" end
 
   local file_found = io.open(path, "r")
   if file_found == nil then
@@ -380,7 +395,9 @@ function getInputBytes(infile)
     local bytes = {}
 
     local arr = split(infile, ".")
-    local path = core.search_file(arr[1], "."..arr[2])
+    local ext = table.remove(arr)
+    local name = join(arr, '.')
+    local path = core.search_file(name, "."..ext)
     if (path == nil) then oops("failed to read from file ".. infile); return false; end
 
     local fhi,err = io.open(path,"rb")
@@ -443,7 +460,7 @@ function bytesToTag(bytes, tag)
     tag.WRC=("%d"):format(bbit("0x"..bytes[8],4,3))
     tag.RD=("%d"):format(bbit("0x"..bytes[8],7,1))
     if (tag.Type=="SAM" and tag.raw=='9f') then
-    tag.Stamp_len=(tonumber(0xfc,10)-tonumber(bbit("0x"..tag.DCFh,0,8),10))
+    tag.Stamp_len=(0xfc-bbit("0x"..tag.DCFh,0,8))
     elseif (tag.Type=="SAM" and (tag.raw=='08' or tag.raw=='09')) then
       tag.Stamp_len = tonumber(tag.raw,10)
     end
@@ -756,20 +773,16 @@ end
 -- read from pm3 into virtual-tag
 function readFromPM3()
   local tag, bytes, infile
-    --infile="legic.temp"
     infile=getRandomTempName()
     core.console("hf legic dump -f "..infile)
     tag=readFile(infile..".bin")
 
     res, path = file_check(infile..".bin")
-    if not res then return nil end
-    os.remove(path)
+    if res then os.remove(path) end
 
-    res, path = file_check(infile..".eml")
-    os.remove(path)
 
     res, path = file_check(infile..".json")
-    os.remove(path)
+    if res then os.remove(path) end
     return tag
 end
 
@@ -1690,7 +1703,7 @@ function getTokenType(DCFl)
     0x30–0x6f SAM
     0x70–0x7f GAM
   ]]--
-  local tt = tonumber(bbit("0x"..DCFl,0,7),10)
+  local tt = bbit("0x"..DCFl,0,7)
   if (tt >= 0 and tt <= 47) then tt = "IAM"
   elseif (tt == 49) then tt = "SAM63"
   elseif (tt == 48) then tt = "SAM64"
@@ -1744,9 +1757,9 @@ function getSegmentData(bytes, start, index)
       -- wrp (write proteted) = byte 2
       segment.WRP = tonumber(bytes[start+2],16)
       -- wrc (write control) - bit 4-6 of byte 3
-      segment.WRC = tonumber(bbit("0x"..bytes[start+3],4,3),16)
+      segment.WRC = bbit("0x"..bytes[start+3],4,3)
       -- rd (read disabled) - bit 7 of byte 3
-      segment.RD = tonumber(bbit("0x"..bytes[start+3],7,1),16)
+      segment.RD = bbit("0x"..bytes[start+3],7,1)
       -- crc byte 4
       segment.crc = bytes[start+4]
     -- segment-data starts at segment.len - segment.header - segment.crc
