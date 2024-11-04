@@ -149,7 +149,8 @@ void StartCountSspClk(void) {
                              | AT91C_TC_WAVE                // Waveform Mode
                              | AT91C_TC_WAVESEL_UP          // just count
                              | AT91C_TC_ACPA_CLEAR          // Clear TIOA0 on RA Compare
-                             | AT91C_TC_ACPC_SET;           // Set TIOA0 on RC Compare
+                             | AT91C_TC_ACPC_SET            // Set TIOA0 on RC Compare
+                             | AT91C_TC_ASWTRG_SET;         // Set TIOA0 on software trigger to trigger instant reset of TC2
     AT91C_BASE_TC0->TC_RA = 1;                              // RA Compare value = 1; pulse width to TC2
     AT91C_BASE_TC0->TC_RC = 0;                              // RC Compare value = 0; increment TC2 on overflow
 
@@ -191,8 +192,8 @@ void StartCountSspClk(void) {
     // whenever the last three bits of our counter go 0, we can be sure to be in the middle of a frame transfer.
     // (just started with the transfer of the 4th Bit).
 
-    // The high word of the counter (TC2) will not reset until the low word (TC0) overflows.
-    // Therefore need to wait quite some time before we can use the counter.
+    // The high word of the counter (TC2) will not reset until the low word (TC0) clocks to process the external trigger.
+    // Therefore may need to wait a little bit before we can use the counter.
     while (AT91C_BASE_TC2->TC_CV > 0);
 }
 void ResetSspClk(void) {
@@ -336,4 +337,3 @@ void StopTicks(void) {
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 }
-
