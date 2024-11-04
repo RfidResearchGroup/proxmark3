@@ -1225,7 +1225,7 @@ static int CmdHF14Binfo(const char *Cmd) {
 // #define ISO14443B_READ_BLK     0x08
 // #define ISO14443B_WRITE_BLK    0x09
 
-static int read_sr_block(uint8_t blockno, uint8_t *out) {
+static int read_sr_block(uint8_t blockno, uint8_t *out, uint16_t out_len) {
     struct {
         uint8_t blockno;
     } PACKED payload;
@@ -1240,7 +1240,7 @@ static int read_sr_block(uint8_t blockno, uint8_t *out) {
     }
 
     if (resp.status == PM3_SUCCESS && out) {
-        memcpy(out, resp.data.asBytes, resp.length);
+        memcpy(out, resp.data.asBytes, MIN(out_len, resp.length));
     }
     return resp.status;
 }
@@ -1583,8 +1583,8 @@ static int CmdHF14BSriRdBl(const char *Cmd) {
         uint8_t blocks = (cardtype == 1) ? 0x7F : 0x0F;
     */
 
-    uint8_t out[4] = {0};
-    int status = read_sr_block(blockno, out);
+    uint8_t out[ST25TB_SR_BLOCK_SIZE] = {0};
+    int status = read_sr_block(blockno, out, sizeof(out));
     if (status == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "block %02u... " _GREEN_("%s") " | " _GREEN_("%s"), blockno, sprint_hex(out, sizeof(out)), sprint_ascii(out, sizeof(out)));
     }
@@ -1628,7 +1628,7 @@ static int CmdHF14BSriWrbl(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int blockno = arg_get_int_def(ctx, 1, -1);
     int dlen = 0;
-    uint8_t data[4] = {0, 0, 0, 0};
+    uint8_t data[ST25TB_SR_BLOCK_SIZE] = {0, 0, 0, 0};
     int res = CLIParamHexToBuf(arg_get_str(ctx, 2), data, sizeof(data), &dlen);
     if (res) {
         CLIParserFree(ctx);
@@ -1696,8 +1696,8 @@ static int CmdHF14BSriWrbl(const char *Cmd) {
     }
 
     // verify
-    uint8_t out[4] = {0};
-    status = read_sr_block(blockno, out);
+    uint8_t out[ST25TB_SR_BLOCK_SIZE] = {0};
+    status = read_sr_block(blockno, out, sizeof(out));
     if (status == PM3_SUCCESS) {
         if (memcmp(data, out, 4) == 0) {
             PrintAndLogEx(SUCCESS, "SRx write block ( " _GREEN_("ok") " )");
@@ -1974,7 +1974,7 @@ static int CmdHF14BRestore(const char *Cmd) {
 
         // verify
         uint8_t out[ST25TB_SR_BLOCK_SIZE] = {0};
-        status = read_sr_block(blockno, out);
+        status = read_sr_block(blockno, out, sizeof(out));
         if (status == PM3_SUCCESS) {
             if (memcmp(data + blockno * ST25TB_SR_BLOCK_SIZE, out, ST25TB_SR_BLOCK_SIZE) == 0) {
                 printf("\33[2K\r");
