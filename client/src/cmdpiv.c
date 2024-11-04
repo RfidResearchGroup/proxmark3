@@ -897,7 +897,7 @@ static int CmdPIVAuthenticateSign(const char *Cmd) {
         arg_str0(NULL,  "aid", "<hex>", "Applet ID to select. By default A0000003080000100 will be used"),
         arg_str1(NULL,  "nonce", "<hex>", "Nonce to sign."),
         arg_int0(NULL,  "slot", "<dec id>", "Slot number. Default will be 0x9E (card auth cert)."),
-        arg_int0(NULL,  "alg", "<dec>", "Algorithm to use to sign. Example values: 06=RSA-1024, 07=RSA-2048, 11=ECC-P256 (default), 14=ECC-P384"),
+        arg_int0(NULL,  "alg", "<dec>", "Algorithm to use to sign. Example values: 06=RSA-1024, 07=RSA-2048, 17=ECC-P256 (default), 20=ECC-P384"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
