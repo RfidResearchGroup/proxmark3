@@ -3085,7 +3085,7 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
         case FLIPPER: {
             nfc_df_e dumptype;
             res = detect_nfc_dump_format(fn, &dumptype, true);
-            if (res != SUCCESS) {
+            if (res != PM3_SUCCESS) {
                 break;
             }
 
