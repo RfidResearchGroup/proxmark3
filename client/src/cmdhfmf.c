@@ -9803,8 +9803,10 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             if (res == NONCE_STATIC) {
                 PrintAndLogEx(SUCCESS, "Static nonce... " _YELLOW_("yes"));
                 fKeyType = 0xFF; // dont detect twice
-            }
-            if (res == NONCE_STATIC_ENC) {
+            } else if (res == NONCE_SUPERSTATIC) {
+                PrintAndLogEx(SUCCESS, "Static nonce... " _YELLOW_("yes, even when nested"));
+                fKeyType = 0xFF; // dont detect twice
+            } else if (res == NONCE_STATIC_ENC) {
                 PrintAndLogEx(SUCCESS, "Static enc nonce... " _RED_("yes"));
                 fKeyType = 0xFF; // dont detect twice
             }
@@ -9814,9 +9816,9 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             res = detect_classic_static_encrypted_nonce(0, fKeyType, fkey);
             if (res == NONCE_STATIC) {
                 PrintAndLogEx(SUCCESS, "Static nonce... " _YELLOW_("yes"));
-            }
-
-            if (res == NONCE_STATIC_ENC) {
+            } else if (res == NONCE_SUPERSTATIC) {
+                PrintAndLogEx(SUCCESS, "Static nonce... " _YELLOW_("yes, even when nested"));
+            } else if (res == NONCE_STATIC_ENC) {
                 PrintAndLogEx(SUCCESS, "Static enc nonce... " _RED_("yes"));
             }
         }
@@ -10056,11 +10058,13 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     }
 
     int res = detect_classic_static_encrypted_nonce_ex(blockn, keytype, key, blockn_nested, keytype_nested, key_nested, nr_nested, reset, hardreset, addread, addauth, incblk2, corruptnrar, corruptnrarparity, true);
-    if (res == NONCE_STATIC)
+    if (res == NONCE_STATIC) {
         PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
-    if (res == NONCE_STATIC_ENC)
+    } else if (res == NONCE_SUPERSTATIC) {
+        PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes, even when nested"));
+    } else if (res == NONCE_STATIC_ENC) {
         PrintAndLogEx(SUCCESS, "Static enc nonce..... " _RED_("yes"));
-
+    }
     if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS) {
         return PM3_EFAILED;
     }

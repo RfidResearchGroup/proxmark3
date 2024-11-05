@@ -839,10 +839,11 @@ typedef struct {
 #define MODE_FULLSIM        2
 
 // Static Nonce detection
-#define NONCE_FAIL       0x01
-#define NONCE_NORMAL     0x02
-#define NONCE_STATIC     0x03
-#define NONCE_STATIC_ENC 0x04
+#define NONCE_FAIL        0x01
+#define NONCE_NORMAL      0x02
+#define NONCE_STATIC      0x03
+#define NONCE_STATIC_ENC  0x04
+#define NONCE_SUPERSTATIC 0x05
 
 // Dbprintf flags
 #define FLAG_RAWPRINT    0x00
