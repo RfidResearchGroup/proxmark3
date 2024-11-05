@@ -3095,6 +3095,7 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
+    uint8_t counter = 0;
     uint8_t enc_counter = 0;
     uint8_t key_auth_cmd = MIFARE_AUTH_KEYA + key_type;
     uint8_t key_auth_cmd_nested = MIFARE_AUTH_KEYA + key_type_nested;
@@ -3105,6 +3106,7 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
     uint32_t cuid;
     uint32_t nt;
     uint32_t old_nt;
+    uint32_t nt_first;
     uint32_t ntenc;
     uint8_t ntencpar;
     if (nr_nested == 0) {
@@ -3140,7 +3142,7 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
                 retval = PM3_ESOFT;
                 goto OUT;
             }
-            if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, &old_nt, NULL, NULL, NULL, corruptnrar, corruptnrarparity)) {
+            if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, &nt_first, NULL, NULL, NULL, corruptnrar, corruptnrarparity)) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
                 retval = PM3_ESOFT;
                 goto OUT;
@@ -3158,7 +3160,10 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
                     retval = PM3_ESOFT;
                     goto OUT;
                 } else if (g_dbglevel >= DBG_EXTENDED) {
-                    Dbprintf("Nonce distance: %i", nonce_distance(old_nt, nt));
+                    Dbprintf("Nonce distance: %i", nonce_distance(nt_first, nt));
+                }
+                if (nt == nt_first) {
+                    counter++;
                 }
                 old_nt = nt;
             }
@@ -3172,6 +3177,9 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
         } else if (g_dbglevel >= DBG_EXTENDED) {
             Dbprintf("Nonce distance: %i", nonce_distance(old_nt, nt));
         }
+        if (nt == nt_first) {
+            counter++;
+        }
         old_nt = nt;
         if (oldntenc == 0) {
             oldntenc = ntenc;
@@ -3180,7 +3188,9 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
         }
     }
 
-    if (enc_counter) {
+    if (counter) {
+        data[0] = NONCE_STATIC;
+    } else if (enc_counter) {
         data[0] = NONCE_STATIC_ENC;
         data[1] = (cuid >> 24) & 0xFF;
         data[2] = (cuid >> 16) & 0xFF;
