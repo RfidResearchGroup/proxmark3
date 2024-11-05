@@ -5036,6 +5036,7 @@ static int CmdHF14AMfECFill(const char *Cmd) {
     memcpy(payload.key, key, sizeof(payload.key));
 
     clearCommandBuffer();
+    uint64_t t1 = msclock();
     SendCommandNG(CMD_HF_MIFARE_EML_LOAD, (uint8_t *)&payload, sizeof(payload));
 
     PacketResponseNG resp;
@@ -5043,9 +5044,10 @@ static int CmdHF14AMfECFill(const char *Cmd) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
+    t1 = msclock() - t1;
 
     if (resp.status == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "Fill ( " _GREEN_("ok") " )");
+        PrintAndLogEx(SUCCESS, "Fill ( " _GREEN_("ok") " ) in " _YELLOW_("%i") " ms", t1);
     else
         PrintAndLogEx(FAILED, "Fill ( " _RED_("fail") " )");
 
