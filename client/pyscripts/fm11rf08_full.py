@@ -1,28 +1,34 @@
 #!/usr/bin/env python3
 
 #------------------------------------------------------------------------------
-# Revision log:
+# Revision log & Licence
 #------------------------------------------------------------------------------
 '''
-1.1.0 - BC  - Major refactor
-1.0.0 - BC  - Initial release
+1.2.0 - BC  - Proxmark3 Submission
 '''
-script_ver = "1.1.0"
+script_ver = "1.2.0"
 
 '''
-This was originally created for my local defcon chapter to aid teaching NFC.
-We wanted a realistic challenge which could NOT be resolved by typing `autopwn`.
-Enter FM11RF08S tags ... which (currently) don't get autopwn'ed.
+Copyright @csBlueChip
 
-We decided the flag would be: The MD5 of the card data,
-but this had to include all 8 documented Dark blocks AND all 32+2=34 Keys.
-Not rocket surgery if you know what you're doing, but non-trivial for someone
-who is still struggling to spell `autoporn` <-- yes, this happened!
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-Ultimately we needed a tool by which to demo everything.
-This is it; and this is me proffering it to the wider community.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-BlueChip
+See LICENSE.txt for the text of the license.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The original version of this script can be found at:
+https://github.com/csBlueChip/Proxmark_Stuff/tree/main/MiFare_Docs/Fudan_RF08(S)/PM3_Script
+The original version is released with an MIT Licence.
+Or please reach out to me [BlueChip] personally for alternative licenses.
 '''
 
 #------------------------------------------------------------------------------
@@ -85,8 +91,7 @@ def main():
 	parseCli()
 
 	print(f"{prompt} Fudan FM11RF08[S] full card recovery")
-	print(f"{prompt} (C)Copyright BlueChip 2024")
-	print(f"{prompt} Licence: MIT (\"Free as in free.\")")
+	print(f"{prompt} (C)Copyright BlueChip, Nov/2024")
 
 	print(prompt)
 	print(f"{prompt} Dump folder: {dpath}")
