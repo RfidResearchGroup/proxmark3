@@ -2157,19 +2157,41 @@ out:
     }
 }
 
-static void generate_single_key_block_inverted(const uint8_t *startingKey, uint32_t index, uint8_t *keyBlock) {
-    uint32_t carry = index;
+static void generate_single_key_block_inverted_opt(const uint8_t *startingKey, uint32_t index, uint8_t *keyBlock) {
+
+    uint8_t bits_index = index / 16383;
+    uint8_t ending_bits[] = { //all possible 70 combinations of 4x0 and 4x1 as key ending bits
+        0x0F, 0x17, 0x1B, 0x1D, 0x1E, 0x27, 0x2B, 0x2D, 0x2E, 0x33,
+        0x35, 0x36, 0x39, 0x3A, 0x3C, 0x47, 0x4B, 0x4D, 0x4E, 0x53,
+        0x55, 0x56, 0x59, 0x5A, 0x5C, 0x63, 0x65, 0x66, 0x69, 0x6A,
+        0x6C, 0x71, 0x72, 0x74, 0x78, 0x87, 0x8B, 0x8D, 0x8E, 0x93,
+        0x95, 0x96, 0x99, 0x9A, 0x9C, 0xA3, 0xA5, 0xA6, 0xA9, 0xAA,
+        0xAC, 0xB1, 0xB2, 0xB4, 0xB8, 0xC3, 0xC5, 0xC6, 0xC9, 0xCA,
+        0xCC, 0xD1, 0xD2, 0xD4, 0xD8, 0xE1, 0xE2, 0xE4, 0xE8, 0xF0
+        };
+
+    uint8_t binary_endings[8]; // Array to store binary values for each ending bit
+    // Extract each bit from the ending_bits[k] and store it in binary_endings
+    uint8_t ending = ending_bits[bits_index];
+    for (int i = 7; i >= 0; i--) {
+        binary_endings[i] = ending & 1;
+        ending >>= 1;
+    }
+
+    uint8_t binary_mids[8];    // Array to store the 2-bit chunks of index
+    // Iterate over the 16-bit integer and store 2 bits at a time in the result array
+    for (int i = 0; i < 8; i++) {
+        // Shift and mask to get 2 bits and store them as an 8-bit value
+        binary_mids[7 - i] = (index >> (i * 2)) & 0x03; // 0x03 is a mask for 2 bits (binary 11)
+    }
     memcpy(keyBlock, startingKey, PICOPASS_BLOCK_SIZE);
 
-    for (int j = PICOPASS_BLOCK_SIZE - 1; j >= 0; j--) {
-        uint8_t increment_value = carry & 0x07;  // Use only the last 3 bits of carry
-        keyBlock[j] = increment_value;  // Set the last 3 bits, assuming first 5 bits are always 0
-
-        carry >>= 3;  // Shift right by 3 bits for the next byte
-        if (carry == 0) {
-            // If no more carry, break early to avoid unnecessary loops
-            break;
-        }
+    // Start from the second byte, index 1 as we're never gonna touch the first byte
+    for (int i = 1; i < PICOPASS_BLOCK_SIZE; i++) {
+        // Clear the last bit of the current byte (AND with 0xFE)
+        keyBlock[i] &= 0xF8;
+        // Set the last bit to the corresponding value from binary_endings (OR with binary_endings[i])
+        keyBlock[i] |= ((binary_mids[i] & 0x03) << 1) | (binary_endings[i] & 0x01);
     }
 }
 
@@ -2292,8 +2314,9 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             }
         }
 
-        generate_single_key_block_inverted(zero_key, index, genkeyblock);
         if (msg->test) {
+        //Step3 Calculate New Key (Optimised Algo V2)
+        generate_single_key_block_inverted_opt(zero_key, index, genkeyblock);
             memcpy(genkeyblock, zero_key, PICOPASS_BLOCK_SIZE);
         }
 
