@@ -500,10 +500,14 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
             memcpy(data + (0x0D * 8), lkey, sizeof(enckey1));
         }
         // encrypted 0xFF
-        for (uint8_t i = 0x0E; i < 0x14; i++) {
+        for (uint8_t i = 0x0E; i < 0x13; i++) {
             memcpy(data + (i * 8), ffs, sizeof(ffs));
         }
         PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
+
+        //Block 13 (This is needed for Rev.C readers!)
+        uint8_t block_0x13[PICOPASS_BLOCK_SIZE] = {0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x1C};
+        memcpy(data + (0x13 * 8), block_0x13, sizeof(block_0x13));
 
         // encrypted partial keyroll key 14
         PrintAndLogEx(INFO, "Setting encrypted partial key14... " NOLF);
