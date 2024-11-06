@@ -53,7 +53,7 @@ except ModuleNotFoundError:
 # >> "logfile"
 #==============================================================================
 def startlog(uid,  append = False):
-	global logfile
+	global  logfile
 
 	logfile = f"{dpath}hf-mf-{uid:08X}-log.txt"
 	if append == False:
@@ -74,8 +74,8 @@ def lprint(s,  end='\n', flush=False):
 # >> "keyfile"
 #==============================================================================
 def main():
-	global prompt
-	global p
+	global  prompt
+	global  p
 
 	prompt = "[bc]"
 	p      = pm3.pm3()  # console interface
@@ -94,8 +94,10 @@ def main():
 	getDarkKey()
 	decodeBlock0()
 
-	global keyfile
+	global  keyfile
+	global  mad
 
+	mad     = False
 	keyfile = f"{dpath}hf-mf-{uid:08X}-key.bin"
 	keyok   = False
 
@@ -137,7 +139,7 @@ def main():
 # >> "dpath"
 #==============================================================================
 def getPrefs():
-	global dpath
+	global  dpath
 
 	p.console("prefs show --json")
 	prefs = json.loads(p.grabbed_output)
@@ -158,7 +160,7 @@ def checkVer():
 # >> args.
 #==============================================================================
 def parseCli():
-	global args
+	global  args
 
 	parser = argparse.ArgumentParser(description='Full recovery of Fudan FM11RF08* cards.')
 
@@ -183,8 +185,8 @@ def parseCli():
 '''
 #==============================================================================
 def getDarkKey():
-	global dkey
-	global blk0
+	global  dkey
+	global  blk0
 
 	#          FM11RF08S        FM11RF08        FM11RF32
 	dklist = ["A396EFA4E24F", "A31667A8CEC1", "518b3354E760"]
@@ -196,13 +198,12 @@ def getDarkKey():
 	for k in dklist:
 		cmd = f"hf mf rdbl -c 4 --key {k} --blk 0"
 		print(f"{prompt} `{cmd}`", end='', flush=True)
-		res = p.console(f"{cmd}")
+		res = p.console(f"{cmd}", capture=False)
 		if res == 0:
 			print(" - success")
 			dkey = k;
 			break;
 		print(f" - fail [{res}]")
-		_ = p.grabbed_output
 
 	if dkey == "":
 		print(f"{prompt}")
@@ -219,8 +220,8 @@ def getDarkKey():
 # >> "uids"
 #==============================================================================
 def decodeBlock0():
-	global uid
-	global uids
+	global  uid
+	global  uids
 
 	# We do this early so we can name the logfile!
 	uids = blk0[0:11]                            # UID string  : "11 22 33 44"
@@ -230,7 +231,7 @@ def decodeBlock0():
 	lprint(prompt)
 	lprint(f"{prompt}              UID         BCC         ++----- RF08 ID -----++")
 	lprint(f"{prompt}              !           !  SAK      !!                   !!")
-	lprint(f"{prompt}              !           !  !  ATQA  !!     RF08 Hash     !!")
+	lprint(f"{prompt}              !           !  !  ATQA  !!     Fudan Sig     !!")
 	lprint(f"{prompt}              !---------. !. !. !---. VV .---------------. VV")
 	#                              0           12 15 18    24 27                45
 	#                              !           !  !  !     !  !                 !
@@ -333,12 +334,10 @@ def fudanValidate():
 # If keys cannot be loaded AND --recover is specified, then run key recovery
 # >> "keyfile"
 # >> "key[17][2]"
-# >> mad!
 #==============================================================================
 def loadKeys():
-	global keyfile
-	global key
-	global mad
+	global  keyfile
+	global  key
 
 	key = [[0 for _ in range(2)] for _ in range(17)]  # create a fresh array
 
@@ -361,7 +360,7 @@ def loadKeys():
 # >> "keyfile"
 #==============================================================================
 def recoverKeys():
-	global keyfile
+	global  keyfile
 
 	badrk   = 0     # 'bad recovered key' count (ie. not recovered)
 
@@ -402,7 +401,6 @@ def verifyKeys():
 	global  mad
 
 	badk = 0
-	mad  = False
 
 	lprint(f"{prompt} Check keys..")
 
@@ -417,7 +415,7 @@ def verifyKeys():
 			cmd = f"hf mf rdbl -c {ab} --key {key[sec][ab].hex()} --blk {bn}"
 			lprint(f"{prompt}   `{cmd}`", end='', flush=True)
 
-			res = p.console(f"{cmd}")
+			res = p.console(f"{cmd}", capture=False)
 			lprint(" " * (3-len(str(bn))), end="")
 			if res == 0:
 				lprint(" ... PASS", end="")
@@ -433,9 +431,6 @@ def verifyKeys():
 				lprint(" - MAD Key")
 			else:
 				lprint("")
-
-	# We need to flush all the output we just collected <shrug>
-	_ = p.grabbed_output
 
 	if badk > 0:
 		lprint(f"{prompt} ! {badk} bad key", end='')
