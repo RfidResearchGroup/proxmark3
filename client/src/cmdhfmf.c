@@ -5047,7 +5047,7 @@ static int CmdHF14AMfECFill(const char *Cmd) {
     t1 = msclock() - t1;
 
     if (resp.status == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "Fill ( " _GREEN_("ok") " ) in " _YELLOW_("%i") " ms", t1);
+        PrintAndLogEx(SUCCESS, "Fill ( " _GREEN_("ok") " ) in " _YELLOW_("%" PRIu64 ) " ms", t1);
     else
         PrintAndLogEx(FAILED, "Fill ( " _RED_("fail") " )");
 
