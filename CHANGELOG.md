@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added improved algorithm for `hf iclass legrec` leveraging reduced entropy from hash0 constraints (@antiklesys)
 - Fixed `hf iclass configcard` when generating elite or keyroll elite configcards for Rev.C legacy readers (@antiklesys)
 - Changed `hf mf c*` - now accepts a --gdm flag to write using uscuid/gdm 20/23 alt magic wakeup (@nvx)
 - Changed `pm3_console()` - Python/Lua/C: replace `passthru` by `capture` and `quiet` (@doegox)
