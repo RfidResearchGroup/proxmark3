@@ -139,7 +139,7 @@ globals:
     if args.force or (key := loadKeys(keyfile)) is None:
         if args.recover is False:
             s = color("--recover", fg="yellow")
-            lprint(f"Keys not loaded, use {s} to run recovery script [slow]")
+            lprint(f" Keys not loaded, use {s} to run recovery script [slow]", prompt='[!]')
         else:
             # FIXME: recovery() is only for RF08S. TODO for the other ones with a "darknested" attack
             keyfile = recoverKeys()
@@ -150,7 +150,7 @@ globals:
         if ret is False:
             if args.nokeys is False:
                 s = color("--nokeys", fg="yellow")
-                lprint(f"Use {s} to keep going past this point")
+                lprint(f" Use {s} to keep going past this point", prompt='[!]')
                 return
 
     # FIXME: nr of blocks depend on the tag. RF32 is 256, RF08 is 64, RF08S is 64+8
@@ -246,7 +246,7 @@ globals:
         lprint(f" - fail [{res}]", prompt='')
 
     if bdkey == "":
-        lprint("\n! Unknown key, or card not detected.")
+        lprint("\n Unknown key, or card not detected.", prompt='[!]')
         return None, None
     return bdkey, blk0
 
@@ -362,7 +362,8 @@ def fudanValidate(blk0, live=False):
                 desc = ""
             lprint(f"The man from Fudan, he say: {r['code']} - {r['message']}{desc}")
     else:
-        lprint("\n  ...Use --validate to perform Fudan signature check automatically")
+        s = color('--validate', fg="yellow")
+        lprint(f'\n Use {s} to perform Fudan signature check automatically', prompt='[?]')
 
 
 def loadKeys(keyfile):
@@ -372,7 +373,7 @@ If keys cannot be loaded AND --recover is specified, then run key recovery
 """
     key = [[b'' for _ in range(2)] for _ in range(17)]  # create a fresh array
 
-    lprint(f"\n Load keys from file... " + color(f"{keyfile}", fg="yellow"))
+    lprint(f"\nLoad keys from file... " + color(f"{keyfile}", fg="yellow"))
 
     try:
         with (open(keyfile, "rb")) as fh:
@@ -493,9 +494,9 @@ globals:
 - p (R)
 """
     data = []
-    blkn = list(range(0, 63+1)) + list(range(128, 135+1))
+    blkn = list(range(0, 63 + 1)) + list(range(128, 135 + 1))
 
-    lprint("\n Load blocks {0..63, 128..135}[64+8=72] from the card")
+    lprint("\nLoad blocks {0..63, 128..135}[64 + 8 = 72] from the card")
 
     # Try fast dump first
     blkn_todo = blkn
@@ -538,7 +539,8 @@ globals:
             data.append(f"{n:3d} | -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- | ----------------")
             bad += 1
 
-    lprint(" .. OK", log=False)
+    s = color("ok", fg="green")
+    lprint(f'Loading ( {s} )', log=False)
     return data, blkn
 
 
@@ -546,9 +548,9 @@ def patchKeys(data, key):
     """Patch keys in to data
   3 | 00 00 00 00 00 00 87 87 87 69 00 00 00 00 00 00 | .........i......
 """
-    lprint("\nPatch keys in to data")
+    lprint("\nPatching keys in to data")
 
-    for sec in range(0, 16+1):
+    for sec in range(0, 16 + 1):
         blk = (sec * 4) + 3  # find "trailer" for this sector
         if key is not None:
             if key[sec][0] == b'':
@@ -920,19 +922,24 @@ def dumpAcl(data):
 
 def diskDump(data, uid, dpath):
     """Full Dump"""
-    dump18 = color(f"{dpath}hf-mf-{uid.hex().upper()}-dump18.bin", fg="yellow")
+    dump18 = color(f'{dpath}hf-mf-{uid.hex().upper()}-dump18.bin', fg='yellow')
 
-    lprint(f"\nDump Card Data to file... {dump18}")
+    lprint(f'\nDump card data to file... {dump18}')
 
     bad = False
-    with open(dump18, 'wb') as f:
-        for d in data:
-            if "--" in d[6:53]:
-                bad = True
-            b = bytes.fromhex(d[6:53].replace(" ", "").replace("--", "FF"))
-            f.write(b)
-    if bad:
-        lprint("Bad data exists, and has been saved as 0xFF")
+    try:
+        with open(dump18, 'wb') as f:
+            for d in data:
+                if '--' in d[6:53]:
+                    bad = True
+                b = bytes.fromhex(d[6:53].replace(' ', '').replace('--', 'FF'))
+                f.write(b)
+        if bad:
+            lprint('Bad data exists, and has been saved as 0xFF')
+    except:
+        s = color('fail', fg='red')
+        lprint(f'File operations ( {s} )', prompt='[!]')
+
     return dump18
 
 
