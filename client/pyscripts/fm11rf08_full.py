@@ -52,11 +52,13 @@ except ModuleNotFoundError:
         return str(s)
 
 
-# +=============================================================================
-# Print and Log
-# >> "logfile"
-# ==============================================================================
 def initlog():
+    """Print and Log: init globals
+
+globals:
+- logbuffer (W)
+- logfile (W)
+"""
     global logbuffer
     global logfile
     logbuffer = ''
@@ -64,6 +66,12 @@ def initlog():
 
 
 def startlog(uid, dpath, append=False):
+    """Print and Log: set logfile and flush logbuffer
+
+globals:
+- logbuffer (RW)
+- logfile (RW)
+"""
     global logfile
     global logbuffer
 
@@ -78,6 +86,12 @@ def startlog(uid, dpath, append=False):
 
 
 def lprint(s='',  end='\n', flush=False, prompt="[=] ", log=True):
+    """Print and Log
+
+globals:
+- logbuffer (RW)
+- logfile (R)
+"""
 
     s = f"{prompt}" + f"\n{prompt}".join(s.split('\n'))
     print(s, end=end, flush=flush)
@@ -92,11 +106,12 @@ def lprint(s='',  end='\n', flush=False, prompt="[=] ", log=True):
             logbuffer += s + end
 
 
-# ++============================================================================
-# == MAIN ==
-# >> p. [console handle]
-# ==============================================================================
 def main():
+    """== MAIN ==
+
+globals:
+- p (W)
+"""
     global p
     p = pm3.pm3()  # console interface
     initlog()
@@ -164,20 +179,20 @@ def main():
     return
 
 
-# +=============================================================================
-# Get PM3 preferences
-# ==============================================================================
 def getPrefs():
+    """Get PM3 preferences
+
+globals:
+- p (R)
+"""
     p.console("prefs show --json")
     prefs = json.loads(p.grabbed_output)
     dpath = prefs['file.default.dumppath'] + os.path.sep
     return dpath
 
 
-# +=============================================================================
-# Assert python version
-# ==============================================================================
 def checkVer():
+    """Assert python version"""
     required_version = (3, 8)
     if sys.version_info < required_version:
         print(f"Python version: {sys.version}")
@@ -186,11 +201,8 @@ def checkVer():
     return True
 
 
-# +=============================================================================
-# Parse the CLi arguments
-# ==============================================================================
 def parseCli():
-
+    """Parse the CLi arguments"""
     parser = argparse.ArgumentParser(description='Full recovery of Fudan FM11RF08* cards.')
 
     parser.add_argument('-n', '--nokeys',   action='store_true', help='extract data even if keys are missing')
@@ -206,13 +218,15 @@ def parseCli():
     return args
 
 
-# +=============================================================================
-# Find backdoor key
-# [=]   # | sector 00 / 0x00                                | ascii
-# [=] ----+-------------------------------------------------+-----------------
-# [=]   0 | 5C B4 9C A6 D2 08 04 00 04 59 92 25 BF 5F 70 90 | \........Y.%._p.
-# ==============================================================================
 def getBackdoorKey():
+    """Find backdoor key
+[=]   # | sector 00 / 0x00                                | ascii
+[=] ----+-------------------------------------------------+-----------------
+[=]   0 | 5C B4 9C A6 D2 08 04 00 04 59 92 25 BF 5F 70 90 | \........Y.%._p.
+
+globals:
+- p (R)
+"""
 
     #          FM11RF08S        FM11RF08        FM11RF32
     dklist = ["A396EFA4E24F", "A31667A8CEC1", "518b3354E760"]
@@ -239,19 +253,15 @@ def getBackdoorKey():
     return bdkey, blk0
 
 
-# +=============================================================================
-# Extract UID from block 0
-# ==============================================================================
 def getUIDfromBlock0(blk0):
+    """Extract UID from block 0"""
     uids = blk0[0:11]                            # UID string  : "11 22 33 44"
     uid = bytes.fromhex(uids.replace(' ', ''))   # UID (bytes) : 11223344
     return uid
 
 
-# +=============================================================================
-# Extract data from block 0
-# ==============================================================================
 def decodeBlock0(blk0):
+    """Extract data from block 0"""
     lprint()
     lprint("             UID         BCC         ++----- RF08 ID -----++")
     lprint("             !           !  SAK      !!                   !!")
@@ -322,10 +332,8 @@ def decodeBlock0(blk0):
     lprint(f"  Fudan Sig: {hash}")       # show ?Partial HMAC?
 
 
-# +=============================================================================
-# Fudan validation
-# ==============================================================================
 def fudanValidate(blk0, live=False):
+    """Fudan validation"""
     url = "https://rfid.fm-uivs.com/nfcTools/api/M1KeyRest"
     hdr = "Content-Type: application/text; charset=utf-8"
     post = f"{blk0.replace(' ', '')}"
@@ -359,11 +367,11 @@ def fudanValidate(blk0, live=False):
         lprint("\n  ...Use --validate to perform Fudan signature check automatically")
 
 
-# +=============================================================================
-# Load keys from file
-# If keys cannot be loaded AND --recover is specified, then run key recovery
-# ==============================================================================
 def loadKeys(keyfile):
+    """Load keys from file
+
+If keys cannot be loaded AND --recover is specified, then run key recovery
+"""
     key = [[b'' for _ in range(2)] for _ in range(17)]  # create a fresh array
 
     lprint(f"\nLoad Keys from file: |{keyfile}|")
@@ -380,10 +388,8 @@ def loadKeys(keyfile):
     return key
 
 
-# +=============================================================================
-# Run key recovery script
-# ==============================================================================
 def recoverKeys():
+    """Run key recovery script"""
     badrk = 0     # 'bad recovered key' count (ie. not recovered)
 
     lprint("\nRunning recovery script, ETA: Less than 30 minutes")
@@ -417,15 +423,17 @@ def recoverKeys():
     return keyfile
 
 
-# +=============================================================================
-# Verify keys
-# ==============================================================================
 def verifyKeys(key):
+    """Verify keys
+
+globals:
+- p (R)
+"""
 
     badk = 0
     mad = False
 
-    lprint("Check keys..")
+    lprint("Check keys...")
 
     for sec in range(0, 16+1):  # 16 normal, 1 dark
         sn = sec
@@ -472,27 +480,28 @@ def verifyKeys(key):
     return rv
 
 
-# +=============================================================================
-# Read all block data - INCLUDING advanced verification blocks
-#
-# [=]   # | sector 00 / 0x00                                | ascii
-# [=] ----+-------------------------------------------------+-----------------
-# [=]   0 | 5C B4 9C A6 D2 08 04 00 04 59 92 25 BF 5F 70 90 | \........Y.%._p.
-# ==============================================================================
 def readBlocks(bdkey):
+    """
+Read all block data - INCLUDING advanced verification blocks
 
+[=]   # | sector 00 / 0x00                                | ascii
+[=] ----+-------------------------------------------------+-----------------
+[=]   0 | 5C B4 9C A6 D2 08 04 00 04 59 92 25 BF 5F 70 90 | \........Y.%._p.
+
+globals:
+- p (R)
+"""
     data = []
     blkn = list(range(0, 63+1)) + list(range(128, 135+1))
-
-    # The user   uses keyhole #1 (-a)
-    # The vendor uses keyhole #2 (-b)
-    # The thief  uses keyhole #4 (backdoor)
-    #                   |___
 
     lprint("\n Load blocks {0..63, 128..135}[64+8=72] from the card")
 
     # Try fast dump first
     blkn_todo = blkn
+    # The user   uses keyhole #0 (-a)
+    # The vendor uses keyhole #1 (-b)
+    # The thief  uses keyhole #4 (backdoor)
+    #                    |___
     cmd = f"hf mf ecfill -c 4 --key {bdkey}"
     lprint(f"`{cmd}`", flush=True, log=False)
     p.console(cmd)
@@ -532,12 +541,10 @@ def readBlocks(bdkey):
     return data, blkn
 
 
-# +=============================================================================
-# Patch keys in to data
-#
-#   3 | 00 00 00 00 00 00 87 87 87 69 00 00 00 00 00 00 | .........i......
-# ==============================================================================
 def patchKeys(data, key):
+    """Patch keys in to data
+  3 | 00 00 00 00 00 00 87 87 87 69 00 00 00 00 00 00 | .........i......
+"""
     lprint("\nPatch keys in to data")
 
     for sec in range(0, 16+1):
@@ -562,11 +569,8 @@ def patchKeys(data, key):
     return data
 
 
-# +=============================================================================
-# Dump data
-# ==============================================================================
 def dumpData(data, blkn):
-
+    """Dump data"""
     lprint()
     lprint("===========")
     lprint(" Card Data")
@@ -589,10 +593,8 @@ def dumpData(data, blkn):
             lprint()
 
 
-# +=============================================================================
-# Let's try to detect a Bambu card by the date strings...
-# ==============================================================================
 def detectBambu(data):
+    """Let's try to detect a Bambu card by the date strings..."""
     try:
         dl = bytes.fromhex(data[12][6:53]).decode('ascii').rstrip('\x00')
         dls = dl[2:13]
@@ -613,16 +615,15 @@ def detectBambu(data):
         return False
 
 
-# +=============================================================================
-# Dump bambu details
-# https://github.com/Bambu-Research-Group/RFID-Tag-Guide/blob/main/README.md
-#
-#       6           18          30          42         53
-#       |           |           |           |          |
-#   3 | 00 00 00 00 00 00 87 87 87 69 00 00 00 00 00 00 | .........i......
-# +=============================================================================
 def dumpBambu(data):
+    """Dump bambu details
 
+https://github.com/Bambu-Research-Group/RFID-Tag-Guide/blob/main/README.md
+
+       6           18          30          42         53
+       |           |           |           |          |
+   3 | 00 00 00 00 00 00 87 87 87 69 00 00 00 00 00 00 | .........i......
+"""
     try:
         lprint()
         lprint("===========")
@@ -734,11 +735,6 @@ def dumpBambu(data):
 # +=============================================================================
 # Dump ACL
 #
-#       6           18    24 27 30 33       42         53
-#       |           |     |  |  |  |        |          |
-#   3 | 00 00 00 00 00 00 87 87 87 69 00 00 00 00 00 00 | .........i......
-#                         ab cd ef
-#
 #  ,-------------------.
 # (  2.2 : ACCESS BITS  )
 #  `-------------------'
@@ -815,7 +811,13 @@ def dumpBambu(data):
 #         IF YOU PLAN TO CHANGE ACCESS BITS, RTFM, THERE IS MUCH TO CONSIDER !
 # ==============================================================================
 def dumpAcl(data):
+    """Dump ACL
 
+       6           18    24 27 30 33       42         53
+       |           |     |  |  |  |        |          |
+   3 | 00 00 00 00 00 00 87 87 87 69 00 00 00 00 00 00 | .........i......
+                         ab cd ef
+"""
     aclkh = []      # key header
     aclk = [""] * 8  # key lookup
     aclkx = []      # key output
@@ -915,10 +917,8 @@ def dumpAcl(data):
         i += 1
 
 
-# +=============================================================================
-# Full Dump
-# ==============================================================================
 def diskDump(data, uid, dpath):
+    """Full Dump"""
     dump18 = f"{dpath}hf-mf-{uid.hex().upper()}-dump18.bin"
 
     lprint(f"\nDump Card Data to file: {dump18}")
@@ -935,10 +935,12 @@ def diskDump(data, uid, dpath):
     return dump18
 
 
-# +=============================================================================
-# Dump MAD
-# ==============================================================================
 def dumpMad(dump18):
+    """Dump MAD
+
+globals:
+- p (R)
+"""
 
     lprint()
     lprint("====================================")
@@ -959,6 +961,5 @@ def dumpMad(dump18):
     lprint('`-._,-\'"`-._,-"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,')
 
 
-# ++============================================================================
 if __name__ == "__main__":
     main()
