@@ -110,6 +110,9 @@ def main():
     lprint("Fudan FM11RF08[S] full card recovery")
     lprint(f"\nDump folder: {dpath}")
 
+    # FIXME: script is announced as for RF08 and for RF08S but it comprises RF32N key
+    # and if RF08 is supported, all other NXP/Infineon with same backdoor can be treated
+    # by the same script (once properly implemented, see other FIXME)
     bdkey, blk0 = getBackdoorKey()
     if bdkey is None:
         return
@@ -120,10 +123,13 @@ def main():
     mad = False
     keyfile = f"{dpath}hf-mf-{uid.hex().upper()}-key.bin"
 
+    # FIXME: nr of sectors depend on the tag. RF32N is 40, RF32 is 64, RF08 is 16, RF08S is 16+1
+    # Currently loadKeys is hardcoded for RF08S
     if args.force or (key := loadKeys(keyfile)) is None:
         if args.recover is False:
             lprint("* Keys not loaded, use --recover to run recovery script [slow]")
         else:
+            # FIXME: recovery() is only for RF08S. TODO for the other ones with a "darknested" attack
             keyfile = recoverKeys()
             key = loadKeys(keyfile)
 
@@ -134,12 +140,17 @@ def main():
                 lprint("! Use --nokeys to keep going past this point")
                 return
 
+    # FIXME: nr of blocks depend on the tag. RF32 is 256, RF08 is 64, RF08S is 64+8
+    # Currently readBlocks is hardcoded for RF08S
     data, blkn = readBlocks(bdkey)
     data = patchKeys(data, key)
 
     dump18 = diskDump(data, uid, dpath)  # save it before you do anything else
 
     dumpData(data, blkn)
+
+    # FIXME: nr of blocks depend on the tag. RF32 is 256, RF08 is 64, RF08S is 64+8, 
+    # Currently dumpAcl is hardcoded for RF08S
     dumpAcl(data)
 
     if mad is True:
@@ -242,7 +253,7 @@ def getUIDfromBlock0(blk0):
 # Extract data from block 0
 # ==============================================================================
 def decodeBlock0(blk0):
-    lprint("")
+    lprint()
     lprint("             UID         BCC         ++----- RF08 ID -----++")
     lprint("             !           !  SAK      !!                   !!")
     lprint("             !           !  !  ATQA  !!     Fudan Sig     !!")
@@ -403,7 +414,7 @@ def recoverKeys():
                 lprint(f"[{kn}/", end='', prompt='')
                 lprint("A]" if ab == 0 else "B]", end='', prompt='')
     if badrk > 0:
-        lprint("")
+        lprint()
     return keyfile
 
 
@@ -788,15 +799,16 @@ def dumpBambu(data):
 #         IF YOU PLAN TO CHANGE ACCESS BITS, RTFM, THERE IS MUCH TO CONSIDER !
 # ==============================================================================
 def dumpAcl(data):
-    global blkn
 
     aclkh = []      # key header
     aclk = [""] * 8  # key lookup
     aclkx = []      # key output
 
-    lprint("\n=====================")
+    lprint()
+    lprint("=====================")
     lprint(" Access Control List")
     lprint("=====================")
+    lprint()
 
     aclkh.append(" _______________________________________________________ ")
     aclkh.append("|        |                Sector Trailers               |")
