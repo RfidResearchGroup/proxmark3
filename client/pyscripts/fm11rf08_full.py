@@ -80,7 +80,7 @@ globals:
         logbuffer = ''
 
 
-def lprint(s='',  end='\n', flush=False, prompt="[=] ", log=True):
+def lprint(s='',  end='\n', flush=False, prompt="[" + color("=", fg="yellow") + "] ", log=True):
     """Print and Log
 
 globals:
@@ -118,7 +118,7 @@ globals:
 
     # No logfile name yet
     lprint("Fudan FM11RF08[S] full card recovery")
-    lprint(f"\nDump folder... " + color(f"{dpath}", fg="yellow"))
+    lprint("\nDump folder... " + color(f"{dpath}", fg="yellow"))
 
     # FIXME: script is announced as for RF08 and for RF08S but it comprises RF32N key
     # and if RF08 is supported, all other NXP/Infineon with same backdoor can be treated
@@ -139,7 +139,7 @@ globals:
     if args.force or (key := loadKeys(keyfile)) is None:
         if args.recover is False:
             s = color("--recover", fg="yellow")
-            lprint(f" Keys not loaded, use {s} to run recovery script [slow]", prompt='[!]')
+            lprint(f" Keys not loaded, use {s} to run recovery script [slow]", prompt="[" + color("!", fg="red") + "]")
         else:
             # FIXME: recovery() is only for RF08S. TODO for the other ones with a "darknested" attack
             keyfile = recoverKeys()
@@ -150,7 +150,7 @@ globals:
         if ret is False:
             if args.nokeys is False:
                 s = color("--nokeys", fg="yellow")
-                lprint(f" Use {s} to keep going past this point", prompt='[!]')
+                lprint(f" Use {s} to keep going past this point", prompt="[" + color("!", fg="red") + "]")
                 return
 
     # FIXME: nr of blocks depend on the tag. RF32 is 256, RF08 is 64, RF08S is 64+8
@@ -221,7 +221,7 @@ def getBackdoorKey():
     """Find backdoor key
 [=]   # | sector 00 / 0x00                                | ascii
 [=] ----+-------------------------------------------------+-----------------
-[=]   0 | 5C B4 9C A6 D2 08 04 00 04 59 92 25 BF 5F 70 90 | \........Y.%._p.
+[=]   0 | 5C B4 9C A6 D2 08 04 00 04 59 92 25 BF 5F 70 90 | \\........Y.%._p.
 
 globals:
 - p (R)
@@ -249,7 +249,7 @@ globals:
         lprint(f"     ( {s} ) [{res}]", prompt='')
 
     if bdkey == "":
-        lprint("\n Unknown key, or card not detected.", prompt='[!]')
+        lprint("\n Unknown key, or card not detected.", prompt="[" + color("!", fg="red") + "]")
         return None, None
     return bdkey, blk0
 
@@ -348,7 +348,12 @@ def fudanValidate(blk0, live=False):
     if live:
         # Warning, this import causes a "double free or corruption" crash if the script is called twice...
         # So for now we limit the import only when really needed
-        import requests
+        try:
+            import requests
+        except ModuleNotFoundError:
+            s = color("not found", fg="red")
+            lprint(f"Python module 'requests' {s}, please install!", prompt="[" + color("!", fg="red") + "] ")
+            return
         lprint("\nCheck Fudan signature (requires internet)...")
 
         headers = {"Content-Type": "application/text; charset=utf-8"}
@@ -376,7 +381,7 @@ If keys cannot be loaded AND --recover is specified, then run key recovery
 """
     key = [[b'' for _ in range(2)] for _ in range(17)]  # create a fresh array
 
-    lprint(f"\nLoad keys from file... " + color(f"{keyfile}", fg="yellow"))
+    lprint("\nLoad keys from file... " + color(f"{keyfile}", fg="yellow"))
 
     try:
         with (open(keyfile, "rb")) as fh:
@@ -472,7 +477,7 @@ globals:
     if badk > 0:
         s = color(f'{badk}', fg="red")
         e = "s exist" if badk != 1 else " exists"
-        lprint(f" {s} bad key{e}", prompt='[!]')
+        lprint(f" {s} bad key{e}", prompt="[" + color("!", fg="red") + "]")
         rv = False, mad, key
 
     else:
@@ -491,7 +496,7 @@ Read all block data - INCLUDING advanced verification blocks
 
 [=]   # | sector 00 / 0x00                                | ascii
 [=] ----+-------------------------------------------------+-----------------
-[=]   0 | 5C B4 9C A6 D2 08 04 00 04 59 92 25 BF 5F 70 90 | \........Y.%._p.
+[=]   0 | 5C B4 9C A6 D2 08 04 00 04 59 92 25 BF 5F 70 90 | \\........Y.%._p.
 
 globals:
 - p (R)
@@ -952,9 +957,9 @@ def diskDump(data, uid, dpath):
         s = color('ok', fg='green')
         lprint(f' Save file operations ( {s} )', prompt='[+]')
 
-    except:
+    except Exception as e:
         s = color('fail', fg='red')
-        lprint(f' Save file operations ( {s} )', prompt='[!]')
+        lprint(f' Save file operations: {e} ( {s} )', prompt='[!]')
 
     return dump18
 

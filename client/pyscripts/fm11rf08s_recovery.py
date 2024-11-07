@@ -77,9 +77,10 @@ for tool, bin in tools.items():
 
 
 def recovery(init_check=False, final_check=False, keep=False, debug=False, supply_chain=False, quiet=True):
-    def show(*args, **kwargs):
+    def show(s='', prompt="[" + color("=", fg="yellow") + "] ", **kwargs):
         if not quiet:
-            print(*args, **kwargs)
+            s = f"{prompt}" + f"\n{prompt}".join(s.split('\n'))
+            print(s, **kwargs)
 
     start_time = time.time()
     p = pm3.pm3()
@@ -545,11 +546,11 @@ def recovery(init_check=False, final_check=False, keep=False, debug=False, suppl
         p.console(cmd, capture=False, quiet=False)
     else:
         show()
-        show(plus + color("found keys:", fg="green"))
-        show()
-        show(plus + "-----+-----+--------------+---+--------------+----")
-        show(plus + " Sec | Blk | key A        |res| key B        |res")
-        show(plus + "-----+-----+--------------+---+--------------+----")
+        show(color("found keys:", fg="green"), prompt=plus)
+        show(prompt=plus)
+        show("-----+-----+--------------+---+--------------+----", prompt=plus)
+        show(" Sec | Blk | key A        |res| key B        |res", prompt=plus)
+        show("-----+-----+--------------+---+--------------+----", prompt=plus)
         for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
             real_sec = sec
             if sec >= NUM_SECTORS:
@@ -560,13 +561,13 @@ def recovery(init_check=False, final_check=False, keep=False, debug=False, suppl
                     keys[key_type] = [color("------------", fg="red"), color("0", fg="red")]
                 else:
                     keys[key_type] = [color(found_keys[sec][key_type], fg="green"), color("1", fg="green")]
-            show(plus + f" {real_sec:03} | {real_sec*4+3:03} | " +
-                 f"{keys[0][0]} | {keys[0][1]} | {keys[1][0]} | {keys[1][1]} ")
-        show(plus + "-----+-----+--------------+---+--------------+----")
-        show(plus + "( " + color("0", fg="red") + ":Failed / " +
-             color("1", fg="green") + ":Success )")
+            show(f" {real_sec:03} | {real_sec*4+3:03} | " +
+                 f"{keys[0][0]} | {keys[0][1]} | {keys[1][0]} | {keys[1][1]} ", prompt=plus)
+        show("-----+-----+--------------+---+--------------+----", prompt=plus)
+        show("( " + color("0", fg="red") + ":Failed / " +
+             color("1", fg="green") + ":Success )", prompt=plus)
         show()
-        show(plus + "Generating binary key file")
+        show("Generating binary key file", prompt=plus)
         keyfile = f"{save_path}hf-mf-{uid:08X}-key.bin"
         unknown = False
         with (open(keyfile, "wb")) as f:
@@ -577,11 +578,11 @@ def recovery(init_check=False, final_check=False, keep=False, debug=False, suppl
                         k = "FFFFFFFFFFFF"
                         unknown = True
                     f.write(bytes.fromhex(k))
-        show(plus + "Found keys have been dumped to `" + color(keyfile, fg="yellow")+"`")
+        show("Found keys have been dumped to `" + color(keyfile, fg="yellow")+"`", prompt=plus)
         if unknown:
-            show("[" + color("=", fg="yellow") + "]  --[ " + color("FFFFFFFFFFFF", fg="yellow") +
-                 " ]-- has been inserted for unknown keys")
-        show(plus + "Generating final dump file")
+            show("  --[ " + color("FFFFFFFFFFFF", fg="yellow") +
+                 " ]-- has been inserted for unknown keys", prompt="[" + color("=", fg="yellow") + "]")
+        show("Generating final dump file", prompt=plus)
         dumpfile = f"{save_path}hf-mf-{uid:08X}-dump.bin"
         with (open(dumpfile, "wb")) as f:
             for sec in range(NUM_SECTORS):
@@ -596,11 +597,11 @@ def recovery(init_check=False, final_check=False, keep=False, debug=False, suppl
                             kb = "FFFFFFFFFFFF"
                         d = ka + d[12:20] + kb
                     f.write(bytes.fromhex(d))
-        show(plus + "Data has been dumped to `" + color(dumpfile, fg="yellow")+"`")
+        show("Data has been dumped to `" + color(dumpfile, fg="yellow")+"`", prompt=plus)
 
     # Remove generated dictionaries after processing
     if not keep:
-        show(plus + "Removing generated dictionaries...")
+        show("Removing generated dictionaries...", prompt=plus)
         for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
             real_sec = sec
             if sec >= NUM_SECTORS:
