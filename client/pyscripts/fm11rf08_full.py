@@ -241,10 +241,12 @@ globals:
             if " | " in line and "# | s" not in line:
                 blk0 = line[10:56+1]
         if res == 0:
-            lprint(" - success", prompt='')
+            s = color('ok', fg='green')
+            lprint(f"     ( {s} )", prompt='')
             bdkey = k
             break
-        lprint(f" - fail [{res}]", prompt='')
+        s = color('fail', fg='yellow')
+        lprint(f"     ( {s} ) [{res}]", prompt='')
 
     if bdkey == "":
         lprint("\n Unknown key, or card not detected.", prompt='[!]')
@@ -474,7 +476,7 @@ globals:
         rv = False, mad, key
 
     else:
-        lprint("All keys verified OK")
+        lprint("All keys verified")
         rv = True, mad, key
 
     if mad is True:
