@@ -77,9 +77,9 @@ def startlog(uid, dpath, append=False):
         logbuffer = ''
 
 
-def lprint(s='',  end='\n', flush=False, prompt="[=]", log=True):
+def lprint(s='',  end='\n', flush=False, prompt="[=] ", log=True):
 
-    s = f"{prompt} " + f"\n{prompt} ".join(s.split('\n'))
+    s = f"{prompt}" + f"\n{prompt}".join(s.split('\n'))
     print(s, end=end, flush=flush)
 
     if log is True:
