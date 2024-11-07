@@ -492,8 +492,20 @@ def readBlocks(bdkey):
 
     lprint("\n Load blocks {0..63, 128..135}[64+8=72] from the card")
 
+    # Try fast dump first
+    blkn_todo = blkn
+    p.console(f"hf mf ecfill -c 4 --key {bdkey}")
+    for line in p.grabbed_output.split('\n'):
+        if "ok" in line:
+            p.console("hf mf eview")
+            for line in p.grabbed_output.split('\n'):
+                if " | " in line and "sec | blk | data" not in line:
+                    lsub = line[11:83]
+                    data.append(lsub)
+                    blkn_todo = list(range(128, 135+1))
+
     bad = 0
-    for n in blkn:
+    for n in blkn_todo:
         cmd = f"hf mf rdbl -c 4 --key {bdkey} --blk {n}"
         lprint(f"`{cmd}`", flush=True, log=False)
 
