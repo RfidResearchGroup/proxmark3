@@ -56,104 +56,111 @@ except ModuleNotFoundError:
 # Print and Log
 # >> "logfile"
 # ==============================================================================
-def startlog(uid,  append=False):
+def initlog():
+    global logbuffer
     global logfile
+    logbuffer = ''
+    logfile = None
 
-    logfile = f"{dpath}hf-mf-{uid:08X}-log.txt"
+
+def startlog(uid, dpath, append=False):
+    global logfile
+    global logbuffer
+
+    logfile = f"{dpath}hf-mf-{uid.hex().upper()}-log.txt"
     if append is False:
         with open(logfile, 'w'):
             pass
+    if logbuffer != '':
+        with open(logfile, 'a') as f:
+            f.write(logbuffer)
+        logbuffer = ''
 
 
-# +=========================================================
-def lprint(s,  end='\n', flush=False):
+def lprint(s='',  end='\n', flush=False, prompt="[=]", log=True):
+
+    s = f"{prompt} " + f"\n{prompt} ".join(s.split('\n'))
     print(s, end=end, flush=flush)
 
-    if logfile is not None:
-        with open(logfile, 'a') as f:
-            f.write(s + end)
+    if log is True:
+        global logbuffer
+        if logfile is not None:
+            with open(logfile, 'a') as f:
+                f.write(s + end)
+        else:
+            # buffering
+            logbuffer += s + end
 
 
 # ++============================================================================
 # == MAIN ==
-# >> "prompt"
 # >> p. [console handle]
-# >> "keyfile"
 # ==============================================================================
 def main():
-    global prompt
     global p
-
-    prompt = "[=]"
     p = pm3.pm3()  # console interface
+    initlog()
 
-    getPrefs()
     if not checkVer():
         return
-    parseCli()
+    dpath = getPrefs()
+    args = parseCli()
 
-    print(f"{prompt} Fudan FM11RF08[S] full card recovery")
+    # No logfile name yet
+    lprint("Fudan FM11RF08[S] full card recovery")
+    lprint(f"\nDump folder: {dpath}")
 
-    print(prompt)
-    print(f"{prompt} Dump folder: {dpath}")
-
-    if not getDarkKey():
+    bdkey, blk0 = getBackdoorKey()
+    if bdkey is None:
         return
-    decodeBlock0()
-
-    global keyfile
-    global mad
+    uid = getUIDfromBlock0(blk0)
+    startlog(uid, dpath, append=False)
+    decodeBlock0(blk0)
 
     mad = False
-    keyfile = f"{dpath}hf-mf-{uid:08X}-key.bin"
-    keyok = False
+    keyfile = f"{dpath}hf-mf-{uid.hex().upper()}-key.bin"
 
-    if args.force is False and loadKeys() is True:
-        keyok = True
-    else:
+    if args.force or (key := loadKeys(keyfile)) is None:
         if args.recover is False:
-            lprint(f"{prompt} * Keys not loaded, use --recover to run recovery script [slow]")
+            lprint("* Keys not loaded, use --recover to run recovery script [slow]")
         else:
-            recoverKeys()
-            if loadKeys() is True:
-                keyok = True
+            keyfile = recoverKeys()
+            key = loadKeys(keyfile)
 
-    if keyok is True:
-        if verifyKeys() is False:
+    if key is not None:
+        ret, mad, key = verifyKeys(key)
+        if ret is False:
             if args.nokeys is False:
-                lprint(f"{prompt} ! Use --nokeys to keep going past this point")
+                lprint("! Use --nokeys to keep going past this point")
                 return
 
-    readBlocks()
-    patchKeys(keyok)
+    data, blkn = readBlocks(bdkey)
+    data = patchKeys(data, key)
 
-    diskDump()  # save it before you do anything else
+    dump18 = diskDump(data, uid, dpath)  # save it before you do anything else
 
-    dumpData()
-    dumpAcl()
+    dumpData(data, blkn)
+    dumpAcl(data)
 
     if mad is True:
-        dumpMad()
+        dumpMad(dump18)
 
-    if (args.bambu is True) or (detectBambu() is True):
-        dumpBambu()
+    if (args.bambu is True) or (detectBambu(data) is True):
+        dumpBambu(data)
 
-    lprint(prompt)
-    lprint(f"{prompt} Tadah!")
+    lprint("\nTadah!")
 
     return
 
 
 # +=============================================================================
 # Get PM3 preferences
-# >> "dpath"
 # ==============================================================================
 def getPrefs():
-    global dpath
-
     p.console("prefs show --json")
     prefs = json.loads(p.grabbed_output)
     dpath = prefs['file.default.dumppath'] + os.path.sep
+    return dpath
 
 
 # +=============================================================================
@@ -170,10 +177,8 @@ def checkVer():
 
 # +=============================================================================
 # Parse the CLi arguments
-# >> args.
 # ==============================================================================
 def parseCli():
-    global args
 
     parser = argparse.ArgumentParser(description='Full recovery of Fudan FM11RF08* cards.')
 
@@ -187,76 +192,73 @@ def parseCli():
 
     if args.force is True:
         args.recover = True
+    return args
 
 
 # +=============================================================================
 # Find backdoor key
-# >> "dkey"
-# >> "blk0"
 # [=]   # | sector 00 / 0x00                                | ascii
 # [=] ----+-------------------------------------------------+-----------------
 # [=]   0 | 5C B4 9C A6 D2 08 04 00 04 59 92 25 BF 5F 70 90 | \........Y.%._p.
 # ==============================================================================
-def getDarkKey():
-    global dkey
-    global blk0
+def getBackdoorKey():
 
     #          FM11RF08S        FM11RF08        FM11RF32
     dklist = ["A396EFA4E24F", "A31667A8CEC1", "518b3354E760"]
 
-    print(prompt)
-    print(f"{prompt} Trying known backdoor keys...")
+    lprint("\nTrying known backdoor keys...")
 
-    dkey = ""
+    bdkey = ""
     for k in dklist:
         cmd = f"hf mf rdbl -c 4 --key {k} --blk 0"
-        print(f"{prompt} `{cmd}`", end='', flush=True)
+        lprint(f"\n`{cmd}`", end='', flush=True)
         res = p.console(f"{cmd}")
         for line in p.grabbed_output.split('\n'):
             if " | " in line and "# | s" not in line:
                 blk0 = line[10:56+1]
         if res == 0:
-            print(" - success")
-            dkey = k
+            lprint(" - success", prompt='')
+            bdkey = k
             break
-        print(f" - fail [{res}]")
+        lprint(f" - fail [{res}]", prompt='')
 
-    if dkey == "":
-        print(f"{prompt}")
-        print(f"{prompt} ! Unknown key, or card not detected.")
-        return False
-    return True
+    if bdkey == "":
+        lprint("\n! Unknown key, or card not detected.")
+        return None, None
+    lprint(f"  Backdoor Key : {bdkey}")       # show key
+    return bdkey, blk0
+
+
+# +=============================================================================
+# Extract UID from block 0
+# ==============================================================================
+def getUIDfromBlock0(blk0):
+    uids = blk0[0:11]                            # UID string  : "11 22 33 44"
+    uid = bytes.fromhex(uids.replace(' ', ''))   # UID (bytes) : 11223344
+    return uid
+
 
 # +=============================================================================
 # Extract data from block 0
-# >> "uid"
-# >> "uids"
 # ==============================================================================
-def decodeBlock0():
-    global uid
-    global uids
-
-    # We do this early so we can name the logfile!
-    uids = blk0[0:11]                            # UID string  : "11 22 33 44"
-    uid = int(uids.replace(' ', ''), 16)        # UID (value) : 0x11223344
-    startlog(uid, append=False)
-
-    lprint(prompt)
-    lprint(f"{prompt}              UID         BCC         ++----- RF08 ID -----++")
-    lprint(f"{prompt}              !           !  SAK      !!                   !!")
-    lprint(f"{prompt}              !           !  !  ATQA  !!     Fudan Sig     !!")
-    lprint(f"{prompt}              !---------. !. !. !---. VV .---------------. VV")
+def decodeBlock0(blk0):
+    lprint("")
+    lprint("             UID         BCC         ++----- RF08 ID -----++")
+    lprint("             !           !  SAK      !!                   !!")
+    lprint("             !           !  !  ATQA  !!     Fudan Sig     !!")
+    lprint("             !---------. !. !. !---. VV .---------------. VV")
     #                              0           12 15 18    24 27                45
     #                              !           !  !  !     !  !                 !
     #                              00 11 22 33 44 55 66 77 88 99 AA BB CC DD EE FF
-    lprint(f"{prompt}   Block 0  : {blk0}")
+    lprint(f"  Block 0  : {blk0}")
 
     # --- decode block 0 ---
 
+    uid = getUIDfromBlock0(blk0)
     bcc = int(blk0[12:14], 16)                  # BCC
     chk = 0                                     # calculate checksum
-    for h in uids.split():
-        chk ^= int(h, 16)
+    for h in uid:
+        chk ^= h
 
     sak = int(blk0[15:17], 16)                  # SAK
     atqa = int(blk0[18:23].replace(' ', ''), 16)  # 0x7788
@@ -284,93 +286,77 @@ def decodeBlock0():
 
     # --- show results ---
 
-    lprint(prompt)
+    lprint()
 
-    lprint(f"{prompt}   UID/BCC  : {uid:08X}/{bcc:02X} - ", end='')
     if bcc == chk:
-        lprint("verified")
+        desc = "verified"
     else:
-        lprint(f"fail. Expected {chk:02X}")
+        desc = f"fail. Expected {chk:02X}"
+    lprint(f"  UID/BCC  : {uid.hex().upper()}/{bcc:02X} - {desc}")
 
-    lprint(f"{prompt}   SAK      : {sak:02X} - ", end='')
     if sak == 0x01:
-        lprint("NXP MIFARE TNP3xxx 1K")
+        desc = "NXP MIFARE TNP3xxx 1K"
     elif sak == 0x08:
-        lprint("NXP MIFARE CLASSIC 1k | Plus 1k | Ev1 1K")
+        desc = "NXP MIFARE CLASSIC 1k | Plus 1k | Ev1 1K"
     elif sak == 0x09:
-        lprint("NXP MIFARE Mini 0.3k")
+        desc = "NXP MIFARE Mini 0.3k"
     elif sak == 0x10:
-        lprint("NXP MIFARE Plus 2k")
+        desc = "NXP MIFARE Plus 2k"
     elif sak == 0x18:
-        lprint("NXP MIFARE Classic 4k | Plus 4k | Ev1 4k")
+        desc = "NXP MIFARE Classic 4k | Plus 4k | Ev1 4k"
     else:
-        lprint("{unknown}")
-
-    lprint(f"{prompt}   ATQA     : {atqa:04X}")   # show ATQA
-    lprint(f"{prompt}   Fudan ID : {type}")       # show type
-    lprint(f"{prompt}   Fudan Sig: {hash}")       # show ?Partial HMAC?
-    lprint(f"{prompt}   Dark Key : {dkey}")       # show key
+        desc = "{unknown}"
+    lprint(f"  SAK      : {sak:02X} - {desc}")
+    lprint(f"  ATQA     : {atqa:04X}")   # show ATQA
+    lprint(f"  Fudan ID : {type}")       # show type
+    lprint(f"  Fudan Sig: {hash}")       # show ?Partial HMAC?
 
 
 # +=============================================================================
 # Fudan validation
-# >> "blk0"
 # ==============================================================================
-def fudanValidate():
-    # Warning, this import causes a "double free or corruption" crash if the script is called twice...
-    # So for now we limit the import only when really needed
-    import requests
-    global blk0
-
+def fudanValidate(blk0, live=False):
     url = "https://rfid.fm-uivs.com/nfcTools/api/M1KeyRest"
     hdr = "Content-Type: application/text; charset=utf-8"
     post = f"{blk0.replace(' ', '')}"
 
-    lprint(prompt)
-    lprint(f"{prompt}   Validator: `wget -q  -O -"
+    lprint(f"\n  Validator: `wget -q  -O -"
            f"  --header=\"{hdr}\""
            f"  --post-data \"{post}\""
            f"  {url}"
            "  | json_pp`")
 
-    if args.validate:
-        lprint(prompt)
-        lprint(f"{prompt} Check Fudan signature (requires internet)...")
+    if live:
+        # Warning, this import causes a "double free or corruption" crash if the script is called twice...
+        # So for now we limit the import only when really needed
+        import requests
+        lprint("\nCheck Fudan signature (requires internet)...")
 
         headers = {"Content-Type": "application/text; charset=utf-8"}
         resp = requests.post(url, headers=headers, data=post)
 
         if resp.status_code != 200:
-            lprint(f"{prompt} HTTP Error {resp.status_code} - check request not processed")
+            lprint(f"HTTP Error {resp.status_code} - check request not processed")
 
         else:
             r = json.loads(resp.text)
-            lprint(f"{prompt} The man from Fudan, he say: {r['code']} - {r['message']}", end='')
             if r['data'] is not None:
-                lprint(f" {{{r['data']}}}")
+                desc = f" {{{r['data']}}}"
             else:
-                lprint("")
+                desc = ""
+            lprint(f"The man from Fudan, he say: {r['code']} - {r['message']}{desc}")
     else:
-        lprint(prompt)
-        lprint(f"{prompt}   ...Use --validate to perform Fudan signature check automatically")
+        lprint("\n  ...Use --validate to perform Fudan signature check automatically")
 
 
 # +=============================================================================
 # Load keys from file
 # If keys cannot be loaded AND --recover is specified, then run key recovery
-# >> "keyfile"
-# >> "key[17][2]"
 # ==============================================================================
-
-
-def loadKeys():
-    global keyfile
-    global key
-
+def loadKeys(keyfile):
     key = [[b'' for _ in range(2)] for _ in range(17)]  # create a fresh array
 
-    lprint(prompt)
-    lprint(f"{prompt} Load Keys from file: |{keyfile}|")
+    lprint(f"\nLoad Keys from file: |{keyfile}|")
 
     try:
         with (open(keyfile, "rb")) as fh:
@@ -379,25 +365,20 @@ def loadKeys():
                     key[sec][ab] = fh.read(6)
 
     except IOError:
-        return False
+        return None
 
-    return True
+    return key
 
 
 # +=============================================================================
 # Run key recovery script
-# >> "keyfile"
 # ==============================================================================
 def recoverKeys():
-    global keyfile
-
     badrk = 0     # 'bad recovered key' count (ie. not recovered)
 
-    lprint(prompt)
-    lprint(f"{prompt} Running recovery script, ETA: Less than 30 minutes")
+    lprint("\nRunning recovery script, ETA: Less than 30 minutes")
 
-    lprint(prompt)
-    lprint(f'{prompt} `-._,-\'"`-._,-"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,')
+    lprint('\n`-._,-\'"`-._,-"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,')
 
     r = recovery(quiet=False)
     keyfile = r['keyfile']
@@ -405,38 +386,36 @@ def recoverKeys():
     # fdump = r['dumpfile']
     # rdata = r['data']
 
-    lprint(f'{prompt} `-._,-\'"`-._,-"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,')
+    lprint('`-._,-\'"`-._,-"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,')
 
     for k in range(0, 16+1):
         for ab in [0, 1]:
             if rkey[k][ab] == "":
                 if badrk == 0:
-                    lprint(f"{prompt} Some keys were not recovered: ", end='')
+                    lprint("Some keys were not recovered: ", end='')
                 else:
-                    lprint(", ", end='')
+                    lprint(", ", end='', prompt='')
                 badrk += 1
 
                 kn = k
                 if kn > 15:
                     kn += 16
-                lprint(f"[{kn}/", end='')
-                lprint("A]" if ab == 0 else "B]", end='')
+                lprint(f"[{kn}/", end='', prompt='')
+                lprint("A]" if ab == 0 else "B]", end='', prompt='')
     if badrk > 0:
         lprint("")
+    return keyfile
 
 
 # +=============================================================================
 # Verify keys
-# >> "key[][]"
-# >> mad!
 # ==============================================================================
-def verifyKeys():
-    global key
-    global mad
+def verifyKeys(key):
 
     badk = 0
+    mad = False
 
-    lprint(f"{prompt} Check keys..")
+    lprint("Check keys..")
 
     for sec in range(0, 16+1):  # 16 normal, 1 dark
         sn = sec
@@ -449,14 +428,14 @@ def verifyKeys():
                 bn += 64
 
             cmd = f"hf mf rdbl -c {ab} --key {key[sec][ab].hex()} --blk {bn}"
-            lprint(f"{prompt}   `{cmd}`", end='', flush=True)
+            lprint(f"  `{cmd}`", end='', flush=True)
 
             res = p.console(f"{cmd}", capture=False)
-            lprint(" " * (3-len(str(bn))), end="")
+            lprint(" " * (3-len(str(bn))), end="", prompt='')
             if res == 0:
-                lprint(" ... PASS", end="")
+                lprint(" ... PASS", end="", prompt='')
             else:
-                lprint(" ... FAIL", end="")
+                lprint(" ... FAIL", end="", prompt='')
                 badk += 1
                 key[sec][ab] = b''
 
@@ -464,36 +443,33 @@ def verifyKeys():
             if (sec == 0) and (ab == 0) \
                and (key[0][0] == b'\xa0\xa1\xa2\xa3\xa4\xa5'):
                 mad = True
-                lprint(" - MAD Key")
+                lprint(" - MAD Key, prompt=''")
             else:
-                lprint("")
+                lprint("", prompt='')
 
     if badk > 0:
-        lprint(f"{prompt} ! {badk} bad key", end='')
+        lprint(f"! {badk} bad key", end='')
         lprint("s exist" if badk != 1 else " exists")
-        rv = False
+        rv = False, mad, key
 
     else:
-        lprint(f"{prompt} All keys verified OK")
-        rv = True
+        lprint("All keys verified OK")
+        rv = True, mad, key
 
     if mad is True:
-        lprint(f"{prompt} MAD key detected")
+        lprint("MAD key detected")
 
     return rv
 
 
 # +=============================================================================
-# Read all block data - INCLUDING Dark blocks
-# >> blkn
-# >> "data[]"
+# Read all block data - INCLUDING advanced verification blocks
+#
 # [=]   # | sector 00 / 0x00                                | ascii
 # [=] ----+-------------------------------------------------+-----------------
 # [=]   0 | 5C B4 9C A6 D2 08 04 00 04 59 92 25 BF 5F 70 90 | \........Y.%._p.
 # ==============================================================================
-def readBlocks():
-    global data
-    global blkn
+def readBlocks(bdkey):
 
     data = []
     blkn = list(range(0, 63+1)) + list(range(128, 135+1))
@@ -502,15 +478,13 @@ def readBlocks():
     # The vendor uses keyhole #2 (-b)
     # The thief  uses keyhole #4 (backdoor)
     #                   |___
-    rdbl = f"hf mf rdbl -c 4 --key {dkey} --blk"
 
-    lprint(prompt)
-    lprint(prompt + " Load blocks {0..63, 128..135}[64+8=72] from the card")
+    lprint("\n Load blocks {0..63, 128..135}[64+8=72] from the card")
 
     bad = 0
     for n in blkn:
-        cmd = f"{rdbl} {n}"
-        print(f"\r{prompt} `{cmd}`", end='', flush=True)
+        cmd = f"hf mf rdbl -c 4 --key {bdkey} --blk {n}"
+        lprint(f"`{cmd}`", flush=True, log=False)
 
         for retry in range(5):
             p.console(f"{cmd}")
@@ -528,26 +502,21 @@ def readBlocks():
             data.append(f"{n:3d} | -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- | ----------------")
             bad += 1
 
-    print(" .. OK")
+    lprint(" .. OK", log=False)
+    return data, blkn
 
 
 # +=============================================================================
 # Patch keys in to data
-# >> "key[][]"
-# >> "data[]"
-# >> keyok!
+#
 #   3 | 00 00 00 00 00 00 87 87 87 69 00 00 00 00 00 00 | .........i......
 # ==============================================================================
-def patchKeys(keyok):
-    global key
-    global data
-
-    lprint(prompt)
-    lprint(f"{prompt} Patch keys in to data")
+def patchKeys(data, key):
+    lprint("\nPatch keys in to data")
 
     for sec in range(0, 16+1):
         blk = (sec * 4) + 3  # find "trailer" for this sector
-        if keyok:
+        if key is not None:
             if key[sec][0] == b'':
                 keyA = "-- -- -- -- -- -- "
             else:
@@ -564,22 +533,19 @@ def patchKeys(keyok):
 
         else:
             data[blk] = data[blk][:6] + "-- -- -- -- -- -- " + data[blk][24:36] + "-- -- -- -- -- --"
+    return data
 
 
 # +=============================================================================
 # Dump data
-# >> blkn
-# >> "data[]"
 # ==============================================================================
-def dumpData():
-    global blkn
-    global data
+def dumpData(data, blkn):
 
-    lprint(prompt)
-    lprint(f"{prompt} ===========")
-    lprint(f"{prompt}  Card Data")
-    lprint(f"{prompt} ===========")
-    lprint(f"{prompt}")
+    lprint()
+    lprint("===========")
+    lprint(" Card Data")
+    lprint("===========")
+    lprint()
 
     cnt = 0
     for n in blkn:
@@ -588,19 +554,19 @@ def dumpData():
             sec = sec + 16
 
         if (n % 4 == 0):
-            lprint(f"{prompt} {sec:2d}:{data[cnt]}")
+            lprint(f"{sec:2d}:{data[cnt]}")
         else:
-            lprint(f"{prompt}   :{data[cnt]}")
+            lprint(f"  :{data[cnt]}")
 
         cnt += 1
         if (cnt % 4 == 0) and (n != blkn[-1]):  # Space between sectors
-            lprint(prompt)
+            lprint()
 
 
 # +=============================================================================
 # Let's try to detect a Bambu card by the date strings...
 # ==============================================================================
-def detectBambu():
+def detectBambu(data):
     try:
         dl = bytes.fromhex(data[12][6:53]).decode('ascii').rstrip('\x00')
         dls = dl[2:13]
@@ -613,33 +579,31 @@ def detectBambu():
     #       yy y    y     m    m     d    d     h    h     m    m
     exp = r"20[2-3][0-9]_[0-1][0-9]_[0-3][0-9]_[0-2][0-9]_[0-5][0-9]"
 
-    lprint(f"{prompt}")
     if re.search(exp, dl) and (ds == dls):
-        lprint(f"{prompt} Bambu date strings detected.")
+        lprint("\nBambu date strings detected.")
         return True
     else:
-        lprint(f"{prompt} Bambu date strings not detected.")
+        lprint("\nBambu date strings not detected.")
         return False
 
 
 # +=============================================================================
 # Dump bambu details
 # https://github.com/Bambu-Research-Group/RFID-Tag-Guide/blob/main/README.md
-# >> "data[]"
+#
 #       6           18          30          42         53
 #       |           |           |           |          |
 #   3 | 00 00 00 00 00 00 87 87 87 69 00 00 00 00 00 00 | .........i......
 # +=============================================================================
-def dumpBambu():
-    global data
+def dumpBambu(data):
 
     try:
-        lprint(f"{prompt}")
-        lprint(f"{prompt} ===========")
-        lprint(f"{prompt}  Bambu Tag")
-        lprint(f"{prompt} ===========")
-        lprint(f"{prompt}")
-        lprint(f"{prompt} Decompose as Bambu tag .. ", end='')
+        lprint()
+        lprint("===========")
+        lprint(" Bambu Tag")
+        lprint("===========")
+        lprint()
+        lprint("Decompose as Bambu tag .. ", end='')
 
         MaterialVariantIdentifier_s = bytes.fromhex(data[1][6:29]).decode('ascii').rstrip('\x00')
         UniqueMaterialIdentifier_s = bytes.fromhex(data[1][30:53]).decode('ascii').rstrip('\x00')  # [**] 8not16
@@ -693,49 +657,48 @@ def dumpBambu():
             Hash.append(data[b][6:53])
 
         lprint("[offset:length]")
-        lprint(f"{prompt}   Block 1:")
-        lprint(f"{prompt}     [ 0: 8] MaterialVariantIdentifier_s = \"{MaterialVariantIdentifier_s}\"")
-        lprint(f"{prompt}     [ 8: 8] UniqueMaterialIdentifier_s = \"{UniqueMaterialIdentifier_s}\"")
-        lprint(f"{prompt}   Block 2:")
-        lprint(f"{prompt}     [ 0:16] FilamentType_s = \"{FilamentType_s}\"")
-        lprint(f"{prompt}   Block 4:")
-        lprint(f"{prompt}     [ 0:16] DetailedFilamentType_s = \"{DetailedFilamentType_s}\"")
-        lprint(f"{prompt}   Block 5:")
-        lprint(f"{prompt}     [ 0: 4] Colour_rgba = 0x{Colour_rgba:08X}")
-        lprint(f"{prompt}     [ 4: 2] SpoolWeight_g = {SpoolWeight_g}g")
-        lprint(f"{prompt}     [6: 2] Block5_7to8 = {{{Block5_7to8}}}")
-        lprint(f"{prompt}     [ 8: 4] FilamentDiameter_mm = {FilamentDiameter_mm}mm")
-        lprint(f"{prompt}     [12: 4] Block5_12to15 = {{{Block5_12to15}}}")
-        lprint(f"{prompt}   Block 6:")
-        lprint(f"{prompt}     [ 0: 2] DryingTemperature_c = {DryingTemperature_c}^C")
-        lprint(f"{prompt}     [ 2: 2] DryingTime_h = {DryingTime_h}hrs")
-        lprint(f"{prompt}     [ 4: 4] BedTemperatureType_q = {BedTemperatureType_q}")
-        lprint(f"{prompt}     [6: 2] BedTemperature_c = {BedTemperature_c}^C")
-        lprint(f"{prompt}     [ 8: 2] MaxTemperatureForHotend_c = {MaxTemperatureForHotend_c}^C")
-        lprint(f"{prompt}     [10: 2] MinTemperatureForHotend_c = {MinTemperatureForHotend_c}^C")
-        lprint(f"{prompt}     [12: 4] Block6_12to15 = {{{Block6_12to15}}}")
-        lprint(f"{prompt}   Block 8:")
-        lprint(f"{prompt}     [ 0:12] XCamInfo_x = {{{XCamInfo_x}}}")
-        lprint(f"{prompt}     [12: 4] NozzleDiameter_q = {NozzleDiameter_q:.6f}__")
-        lprint(f"{prompt}   Block 9:")
-        # lprint(f"{prompt}     [ 0:16] TrayUID_s = \"{TrayUID_s}\"")
-        lprint(f"{prompt}     [ 0:16] TrayUID_s = {{{TrayUID_s}}}  ; not ASCII")
-        lprint(f"{prompt}   Block 10:")
-        lprint(f"{prompt}     [ 0: 4] Block10_0to3 = {{{Block10_0to3}}}")
-        lprint(f"{prompt}     [ 4: 2] SppolWidth_um = {SppolWidth_um}um")
-        lprint(f"{prompt}     [6:10] Block10_6to15 = {{{Block10_6to15}}}")
-        lprint(f"{prompt}   Block 12:")
-        lprint(f"{prompt}     [ 0:16] ProductionDateTime_s = \"{ProductionDateTime_s}\"")
-        lprint(f"{prompt}   Block 13:")
-        lprint(f"{prompt}     [ 0:16] ShortProductionDateTime_s = \"{ShortProductionDateTime_s}\"")
-        lprint(f"{prompt}   Block 14:")
-        lprint(f"{prompt}     [ 0: 4] Block10_0to3 = {{{Block10_0to3}}}")
-        lprint(f"{prompt}     [ 4: 2] FilamentLength_m = {FilamentLength_m}m")
-        lprint(f"{prompt}     [6:10] Block10_6to15 = {{{Block10_6to15}}}")
-        lprint(f"{prompt}")
-        lprint(f"{prompt}   Blocks {hblk}:")
+        lprint("  Block 1:")
+        lprint(f"    [ 0: 8] MaterialVariantIdentifier_s = \"{MaterialVariantIdentifier_s}\"")
+        lprint(f"    [ 8: 8] UniqueMaterialIdentifier_s = \"{UniqueMaterialIdentifier_s}\"")
+        lprint("  Block 2:")
+        lprint(f"    [ 0:16] FilamentType_s = \"{FilamentType_s}\"")
+        lprint("  Block 4:")
+        lprint(f"    [ 0:16] DetailedFilamentType_s = \"{DetailedFilamentType_s}\"")
+        lprint("  Block 5:")
+        lprint(f"    [ 0: 4] Colour_rgba = 0x{Colour_rgba:08X}")
+        lprint(f"    [ 4: 2] SpoolWeight_g = {SpoolWeight_g}g")
+        lprint(f"    [6: 2] Block5_7to8 = {{{Block5_7to8}}}")
+        lprint(f"    [ 8: 4] FilamentDiameter_mm = {FilamentDiameter_mm}mm")
+        lprint(f"    [12: 4] Block5_12to15 = {{{Block5_12to15}}}")
+        lprint("  Block 6:")
+        lprint(f"    [ 0: 2] DryingTemperature_c = {DryingTemperature_c}^C")
+        lprint(f"    [ 2: 2] DryingTime_h = {DryingTime_h}hrs")
+        lprint(f"    [ 4: 4] BedTemperatureType_q = {BedTemperatureType_q}")
+        lprint(f"    [6: 2] BedTemperature_c = {BedTemperature_c}^C")
+        lprint(f"    [ 8: 2] MaxTemperatureForHotend_c = {MaxTemperatureForHotend_c}^C")
+        lprint(f"    [10: 2] MinTemperatureForHotend_c = {MinTemperatureForHotend_c}^C")
+        lprint(f"    [12: 4] Block6_12to15 = {{{Block6_12to15}}}")
+        lprint("  Block 8:")
+        lprint(f"    [ 0:12] XCamInfo_x = {{{XCamInfo_x}}}")
+        lprint(f"    [12: 4] NozzleDiameter_q = {NozzleDiameter_q:.6f}__")
+        lprint("  Block 9:")
+        # lprint(f"    [ 0:16] TrayUID_s = \"{TrayUID_s}\"")
+        lprint(f"    [ 0:16] TrayUID_s = {{{TrayUID_s}}}  ; not ASCII")
+        lprint("  Block 10:")
+        lprint(f"    [ 0: 4] Block10_0to3 = {{{Block10_0to3}}}")
+        lprint(f"    [ 4: 2] SppolWidth_um = {SppolWidth_um}um")
+        lprint(f"    [6:10] Block10_6to15 = {{{Block10_6to15}}}")
+        lprint("  Block 12:")
+        lprint(f"    [ 0:16] ProductionDateTime_s = \"{ProductionDateTime_s}\"")
+        lprint("  Block 13:")
+        lprint(f"    [ 0:16] ShortProductionDateTime_s = \"{ShortProductionDateTime_s}\"")
+        lprint("  Block 14:")
+        lprint(f"    [ 0: 4] Block10_0to3 = {{{Block10_0to3}}}")
+        lprint(f"    [ 4: 2] FilamentLength_m = {FilamentLength_m}m")
+        lprint(f"    [6:10] Block10_6to15 = {{{Block10_6to15}}}")
+        lprint(f"\n  Blocks {hblk}:")
         for i in range(0, len(hblk)):
-            lprint(f"{prompt}     [ 0:16] HashBlock[{i:2d}] =  {{{Hash[i]}}}   // #{hblk[i]:2d}")
+            lprint(f"    [ 0:16] HashBlock[{i:2d}] =  {{{Hash[i]}}}   // #{hblk[i]:2d}")
 
     except Exception as e:
         lprint(f"Failed: {e}")
@@ -743,7 +706,7 @@ def dumpBambu():
 
 # +=============================================================================
 # Dump ACL
-# >> "data[][]"
+#
 #       6           18    24 27 30 33       42         53
 #       |           |     |  |  |  |        |          |
 #   3 | 00 00 00 00 00 00 87 87 87 69 00 00 00 00 00 00 | .........i......
@@ -824,17 +787,16 @@ def dumpBambu():
 #     WARNING:
 #         IF YOU PLAN TO CHANGE ACCESS BITS, RTFM, THERE IS MUCH TO CONSIDER !
 # ==============================================================================
-def dumpAcl():
+def dumpAcl(data):
     global blkn
 
     aclkh = []      # key header
     aclk = [""] * 8  # key lookup
     aclkx = []      # key output
 
-    lprint(f"{prompt}")
-    lprint(f"{prompt} =====================")
-    lprint(f"{prompt}  Access Control List")
-    lprint(f"{prompt} =====================")
+    lprint("\n=====================")
+    lprint(" Access Control List")
+    lprint("=====================")
 
     aclkh.append(" _______________________________________________________ ")
     aclkh.append("|        |                Sector Trailers               |")
@@ -872,7 +834,7 @@ def dumpAcl():
     acld[6] =            "| A+B  ¦  KeyB || KeyB ¦  A+B | [110]"  # noqa: E222
     acld[7] =            "| --   ¦  --   ||  --  ¦  --  | [111]"  # noqa: E222
 
-    idx = [] * (16+2)
+    idx = [[]] * (16+2)
 
     # --- calculate the ACL indices for each sector:block ---
     for d in data:
@@ -905,39 +867,33 @@ def dumpAcl():
 
     # --- print it all out ---
     for line in aclkh:
-        lprint(f"{prompt}   {line}")
+        lprint(f"  {line}")
     i = 0
     for line in aclkx:
-        lprint(f"{prompt}   {line}")
+        lprint(f"  {line}")
         if (i % 4) == 3:
-            lprint(f"{prompt}   |        |      ¦       ||      ¦       ||      ¦       |")
+            lprint("  |        |      ¦       ||      ¦       ||      ¦       |")
         i += 1
 
-    lprint(f"{prompt}")
+    lprint()
 
     for line in acldh:
-        lprint(f"{prompt}   {line}")
+        lprint(f"  {line}")
     i = 0
     for line in acldx:
-        lprint(f"{prompt}   {line}")
+        lprint(f"  {line}")
         if (i % 3) == 2:
-            lprint(f"{prompt}   |       |      ¦       ||      ¦      |")
+            lprint("  |       |      ¦       ||      ¦      |")
         i += 1
 
 
 # +=============================================================================
 # Full Dump
-# >> "uid"
-# >> "dump18"
 # ==============================================================================
-def diskDump():
-    global uid
-    global dump18
+def diskDump(data, uid, dpath):
+    dump18 = f"{dpath}hf-mf-{uid.hex().upper()}-dump18.bin"
 
-    dump18 = f"{dpath}hf-mf-{uid:08X}-dump18.bin"
-
-    lprint(prompt)
-    lprint(f"{prompt} Dump Card Data to file: {dump18}")
+    lprint(f"\nDump Card Data to file: {dump18}")
 
     bad = False
     with open(dump18, 'wb') as f:
@@ -947,35 +903,32 @@ def diskDump():
             b = bytes.fromhex(d[6:53].replace(" ", "").replace("--", "FF"))
             f.write(b)
     if bad:
-        lprint(f"{prompt} Bad data exists, and has been saved as 0xFF")
+        lprint("Bad data exists, and has been saved as 0xFF")
+    return dump18
 
 
 # +=============================================================================
 # Dump MAD
-# >> "dump18"
 # ==============================================================================
-def dumpMad():
-    global dump18
+def dumpMad(dump18):
 
-    lprint(f"{prompt}")
-    lprint(f"{prompt} ====================================")
-    lprint(f"{prompt}  MiFare Application Directory (MAD)")
-    lprint(f"{prompt} ====================================")
-    lprint(f"{prompt}")
+    lprint()
+    lprint("====================================")
+    lprint(" MiFare Application Directory (MAD)")
+    lprint("====================================")
+    lprint()
 
     cmd = f"hf mf mad --verbose --file {dump18}"
-    print(f"{prompt} `{cmd}`")
+    lprint(f"`{cmd}`", log=False)
 
-    lprint(f"{prompt}")
-    lprint(f'{prompt} `-._,-\'"`-._,-"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,')
+    lprint('\n`-._,-\'"`-._,-"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,\n')
 
-    lprint("")
     p.console(f"{cmd}")
 
     for line in p.grabbed_output.split('\n'):
         lprint(line)
 
-    lprint(f'{prompt} `-._,-\'"`-._,-"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,')
+    lprint('`-._,-\'"`-._,-"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,')
 
 
 # ++============================================================================
