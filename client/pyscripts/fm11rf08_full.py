@@ -10,7 +10,6 @@ import argparse
 import pm3
 import struct
 import json
-import requests
 
 from fm11rf08s_recovery import recovery
 
@@ -85,20 +84,21 @@ def main():
     global prompt
     global p
 
-    prompt = "[bc]"
+    prompt = "[=]"
     p = pm3.pm3()  # console interface
 
     getPrefs()
-    checkVer()
+    if not checkVer():
+        return
     parseCli()
 
     print(f"{prompt} Fudan FM11RF08[S] full card recovery")
-    print(f"{prompt} (C)Copyright BlueChip, Nov/2024")
 
     print(prompt)
     print(f"{prompt} Dump folder: {dpath}")
 
-    getDarkKey()
+    if not getDarkKey():
+        return
     decodeBlock0()
 
     global keyfile
@@ -122,7 +122,7 @@ def main():
         if verifyKeys() is False:
             if args.nokeys is False:
                 lprint(f"{prompt} ! Use --nokeys to keep going past this point")
-                exit(101)
+                return
 
     readBlocks()
     patchKeys(keyok)
@@ -164,7 +164,8 @@ def checkVer():
     if sys.version_info < required_version:
         print(f"Python version: {sys.version}")
         print(f"The script needs at least Python v{required_version[0]}.{required_version[1]}. Abort.")
-        exit()
+        return False
+    return True
 
 
 # +=============================================================================
@@ -210,7 +211,10 @@ def getDarkKey():
     for k in dklist:
         cmd = f"hf mf rdbl -c 4 --key {k} --blk 0"
         print(f"{prompt} `{cmd}`", end='', flush=True)
-        res = p.console(f"{cmd}", capture=False)
+        res = p.console(f"{cmd}")
+        for line in p.grabbed_output.split('\n'):
+            if " | " in line and "# | s" not in line:
+                blk0 = line[10:56+1]
         if res == 0:
             print(" - success")
             dkey = k
@@ -220,12 +224,8 @@ def getDarkKey():
     if dkey == "":
         print(f"{prompt}")
         print(f"{prompt} ! Unknown key, or card not detected.")
-        exit(1)
-
-    for line in p.grabbed_output.split('\n'):
-        if " | " in line and "# | s" not in line:
-            blk0 = line[10:56+1]
-
+        return False
+    return True
 
 # +=============================================================================
 # Extract data from block 0
@@ -317,6 +317,9 @@ def decodeBlock0():
 # >> "blk0"
 # ==============================================================================
 def fudanValidate():
+    # Warning, this import causes a "double free or corruption" crash if the script is called twice...
+    # So for now we limit the import only when really needed
+    import requests
     global blk0
 
     url = "https://rfid.fm-uivs.com/nfcTools/api/M1KeyRest"
