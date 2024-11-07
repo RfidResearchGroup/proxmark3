@@ -5044,7 +5044,7 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
             memcpy(card_key, iClass_Key_Table[card_kidx], 8);
             PrintAndLogEx(SUCCESS, "Using card key[%d] " _GREEN_("%s"), card_kidx, sprint_hex(iClass_Key_Table[card_kidx], 8));
         } else {
-            PrintAndLogEx(ERR, "--krki number is invalid");
+            PrintAndLogEx(ERR, "--ki number is invalid");
             return PM3_EINVARG;
         }
     }
@@ -5057,7 +5057,7 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
             memcpy(keyroll_key, iClass_Key_Table[kidx], 8);
             PrintAndLogEx(SUCCESS, "Using keyroll key[%d] " _GREEN_("%s"), kidx, sprint_hex(iClass_Key_Table[kidx], 8));
         } else {
-            PrintAndLogEx(ERR, "--ki number is invalid");
+            PrintAndLogEx(ERR, "--krki number is invalid");
             return PM3_EINVARG;
         }
     }
