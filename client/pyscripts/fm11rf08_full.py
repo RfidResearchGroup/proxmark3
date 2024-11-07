@@ -158,7 +158,7 @@ globals:
 
     # FIXME: nr of blocks depend on the tag. RF32 is 256, RF08 is 64, RF08S is 64+8
     # Currently readBlocks is hardcoded for RF08S
-    data, blkn = readBlocks(bdkey)
+    data, blkn = readBlocks(bdkey, args.fast)
     data = patchKeys(data, key)
 
     dump18 = diskDump(data, uid, dpath)  # save it before you do anything else
@@ -211,6 +211,7 @@ def parseCli():
     parser.add_argument('-f', '--force',    action='store_true', help='force recovery of keys')
     parser.add_argument('-b', '--bambu',    action='store_true', help='force Bambu tag decode')
     parser.add_argument('-v', '--validate', action='store_true', help='check Fudan signature (requires internet)')
+    parser.add_argument('--fast', action='store_true', help='use ecfill for faster card transactions')
 
     args = parser.parse_args()
 
@@ -481,7 +482,7 @@ globals:
     return rv
 
 
-def readBlocks(bdkey):
+def readBlocks(bdkey, fast=False):
     """
 Read all block data - INCLUDING advanced verification blocks
 
@@ -497,25 +498,26 @@ globals:
 
     lprint("\n Load blocks {0..63, 128..135}[64+8=72] from the card")
 
-    # Try fast dump first
     blkn_todo = blkn
-    # The user   uses keyhole #0 (-a)
-    # The vendor uses keyhole #1 (-b)
-    # The thief  uses keyhole #4 (backdoor)
-    #                    |___
-    cmd = f"hf mf ecfill -c 4 --key {bdkey}"
-    lprint(f"`{cmd}`", flush=True, log=False)
-    p.console(cmd)
-    for line in p.grabbed_output.split('\n'):
-        if "ok" in line:
-            cmd = "hf mf eview"
-            lprint(f"`{cmd}`", flush=True, log=False)
-            p.console(cmd)
-            for line in p.grabbed_output.split('\n'):
-                if " | " in line and "sec | blk | data" not in line:
-                    lsub = line[11:83]
-                    data.append(lsub)
-                    blkn_todo = list(range(128, 135+1))
+    if fast:
+        # Try fast dump first
+        # The user   uses keyhole #0 (-a)
+        # The vendor uses keyhole #1 (-b)
+        # The thief  uses keyhole #4 (backdoor)
+        #                    |___
+        cmd = f"hf mf ecfill -c 4 --key {bdkey}"
+        lprint(f"`{cmd}`", flush=True, log=False)
+        p.console(cmd)
+        for line in p.grabbed_output.split('\n'):
+            if "ok" in line:
+                cmd = "hf mf eview"
+                lprint(f"`{cmd}`", flush=True, log=False)
+                p.console(cmd)
+                for line in p.grabbed_output.split('\n'):
+                    if " | " in line and "sec | blk | data" not in line:
+                        lsub = line[11:83]
+                        data.append(lsub)
+                        blkn_todo = list(range(128, 135+1))
 
     bad = 0
     for n in blkn_todo:
