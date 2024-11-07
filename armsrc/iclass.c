@@ -2314,9 +2314,9 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             }
         }
 
-        if (msg->test) {
         //Step3 Calculate New Key (Optimised Algo V2)
         generate_single_key_block_inverted_opt(zero_key, index, genkeyblock);
+        if (msg->test) {
             memcpy(genkeyblock, zero_key, PICOPASS_BLOCK_SIZE);
         }
 
