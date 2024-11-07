@@ -953,7 +953,7 @@ def dumpMad(dump18):
     p.console(cmd)
 
     for line in p.grabbed_output.split('\n'):
-        lprint(line)
+        lprint(line, prompt='')
 
     lprint('`-._,-\'"`-._,-"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,')
 
