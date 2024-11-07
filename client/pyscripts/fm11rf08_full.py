@@ -644,7 +644,7 @@ def dumpBambu(data):
         FilamentDiameter_mm = struct.unpack('f', bytes.fromhex(data[5][30:41].replace(' ', '')))[0]
         Block5_12to15 = data[5][42:50]
 
-        DryingTemperature_c = int(data[6][9:11] + data[6][6: 8], 16)
+        DryingTemperature_c = int(data[6][9:11] + data[6][6:8], 16)
         DryingTime_h = int(data[6][15:17] + data[6][12:14], 16)
         BedTemperatureType_q = int(data[6][21:23] + data[6][18:20], 16)
         BedTemperature_c = int(data[6][27:29] + data[6][24:26], 16)
@@ -682,7 +682,7 @@ def dumpBambu(data):
         for b in hblk:
             Hash.append(data[b][6:53])
 
-        lprint("[offset:length]")
+        lprint("[offset:length]", prompt='')
         lprint("  Block 1:")
         lprint(f"    [ 0: 8] MaterialVariantIdentifier_s = \"{MaterialVariantIdentifier_s}\"")
         lprint(f"    [ 8: 8] UniqueMaterialIdentifier_s = \"{UniqueMaterialIdentifier_s}\"")
@@ -693,14 +693,14 @@ def dumpBambu(data):
         lprint("  Block 5:")
         lprint(f"    [ 0: 4] Colour_rgba = 0x{Colour_rgba:08X}")
         lprint(f"    [ 4: 2] SpoolWeight_g = {SpoolWeight_g}g")
-        lprint(f"    [6: 2] Block5_7to8 = {{{Block5_7to8}}}")
+        lprint(f"    [ 6: 2] Block5_7to8 = {{{Block5_7to8}}}")
         lprint(f"    [ 8: 4] FilamentDiameter_mm = {FilamentDiameter_mm}mm")
         lprint(f"    [12: 4] Block5_12to15 = {{{Block5_12to15}}}")
         lprint("  Block 6:")
         lprint(f"    [ 0: 2] DryingTemperature_c = {DryingTemperature_c}^C")
         lprint(f"    [ 2: 2] DryingTime_h = {DryingTime_h}hrs")
         lprint(f"    [ 4: 4] BedTemperatureType_q = {BedTemperatureType_q}")
-        lprint(f"    [6: 2] BedTemperature_c = {BedTemperature_c}^C")
+        lprint(f"    [ 6: 2] BedTemperature_c = {BedTemperature_c}^C")
         lprint(f"    [ 8: 2] MaxTemperatureForHotend_c = {MaxTemperatureForHotend_c}^C")
         lprint(f"    [10: 2] MinTemperatureForHotend_c = {MinTemperatureForHotend_c}^C")
         lprint(f"    [12: 4] Block6_12to15 = {{{Block6_12to15}}}")
@@ -721,12 +721,13 @@ def dumpBambu(data):
         lprint("  Block 14:")
         lprint(f"    [ 0: 4] Block10_0to3 = {{{Block10_0to3}}}")
         lprint(f"    [ 4: 2] FilamentLength_m = {FilamentLength_m}m")
-        lprint(f"    [6:10] Block10_6to15 = {{{Block10_6to15}}}")
+        lprint(f"    [ 6:10] Block10_6to15 = {{{Block10_6to15}}}")
         lprint(f"\n  Blocks {hblk}:")
         for i in range(0, len(hblk)):
             lprint(f"    [ 0:16] HashBlock[{i:2d}] =  {{{Hash[i]}}}   // #{hblk[i]:2d}")
 
     except Exception as e:
+        lprint(prompt='')
         lprint(f"Failed: {e}")
 
 
