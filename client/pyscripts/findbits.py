@@ -31,7 +31,7 @@ def invert(data):
 def search(target,data):
     location = data.find(target)
     if location >= 0:
-        print('*** Match at bit {:d}: {}<{}>{}'.format(location, data[:location],target,data[location+len(target):]))
+        print('*** Match at bit {:d}: {}<{}>{}'.format(location, data[:location], target,data[location + len(target):]))
     else:
         print('Not found')
 
