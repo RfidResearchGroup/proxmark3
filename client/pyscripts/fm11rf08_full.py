@@ -223,7 +223,7 @@ def getBackdoorKey():
     for k in dklist:
         cmd = f"hf mf rdbl -c 4 --key {k} --blk 0"
         lprint(f"\n`{cmd}`", end='', flush=True)
-        res = p.console(f"{cmd}")
+        res = p.console(cmd)
         for line in p.grabbed_output.split('\n'):
             if " | " in line and "# | s" not in line:
                 blk0 = line[10:56+1]
@@ -236,7 +236,6 @@ def getBackdoorKey():
     if bdkey == "":
         lprint("\n! Unknown key, or card not detected.")
         return None, None
-    lprint(f"  Backdoor Key : {bdkey}")       # show key
     return bdkey, blk0
 
 
@@ -441,7 +440,7 @@ def verifyKeys(key):
             cmd = f"hf mf rdbl -c {ab} --key {key[sec][ab].hex()} --blk {bn}"
             lprint(f"  `{cmd}`", end='', flush=True)
 
-            res = p.console(f"{cmd}", capture=False)
+            res = p.console(cmd, capture=False)
             lprint(" " * (3-len(str(bn))), end="", prompt='')
             if res == 0:
                 lprint(" ... PASS", end="", prompt='')
@@ -454,7 +453,7 @@ def verifyKeys(key):
             if (sec == 0) and (ab == 0) \
                and (key[0][0] == b'\xa0\xa1\xa2\xa3\xa4\xa5'):
                 mad = True
-                lprint(" - MAD Key, prompt=''")
+                lprint(" - MAD Key", prompt='')
             else:
                 lprint("", prompt='')
 
@@ -494,10 +493,14 @@ def readBlocks(bdkey):
 
     # Try fast dump first
     blkn_todo = blkn
-    p.console(f"hf mf ecfill -c 4 --key {bdkey}")
+    cmd = f"hf mf ecfill -c 4 --key {bdkey}"
+    lprint(f"`{cmd}`", flush=True, log=False)
+    p.console(cmd)
     for line in p.grabbed_output.split('\n'):
         if "ok" in line:
-            p.console("hf mf eview")
+            cmd = "hf mf eview"
+            lprint(f"`{cmd}`", flush=True, log=False)
+            p.console(cmd)
             for line in p.grabbed_output.split('\n'):
                 if " | " in line and "sec | blk | data" not in line:
                     lsub = line[11:83]
@@ -510,7 +513,7 @@ def readBlocks(bdkey):
         lprint(f"`{cmd}`", flush=True, log=False)
 
         for retry in range(5):
-            p.console(f"{cmd}")
+            p.console(cmd)
 
             found = False
             for line in p.grabbed_output.split('\n'):
@@ -947,7 +950,7 @@ def dumpMad(dump18):
 
     lprint('\n`-._,-\'"`-._,-"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,\n')
 
-    p.console(f"{cmd}")
+    p.console(cmd)
 
     for line in p.grabbed_output.split('\n'):
         lprint(line)
