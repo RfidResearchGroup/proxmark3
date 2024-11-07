@@ -13,12 +13,7 @@ import json
 
 from fm11rf08s_recovery import recovery
 
-# ------------------------------------------------------------------------------
-# Revision log & Licence
-# ------------------------------------------------------------------------------
-'''
-1.2.0 - BC  - Proxmark3 Submission
-'''
+author = "@csBlueChip"
 script_ver = "1.2.0"
 
 # Copyright @csBlueChip
@@ -123,7 +118,7 @@ globals:
 
     # No logfile name yet
     lprint("Fudan FM11RF08[S] full card recovery")
-    lprint(f"\nDump folder: {dpath}")
+    lprint(f"\nDump folder... " + color(f"{dpath}", fg="yellow"))
 
     # FIXME: script is announced as for RF08 and for RF08S but it comprises RF32N key
     # and if RF08 is supported, all other NXP/Infineon with same backdoor can be treated
@@ -143,7 +138,8 @@ globals:
     # Currently loadKeys is hardcoded for RF08S
     if args.force or (key := loadKeys(keyfile)) is None:
         if args.recover is False:
-            lprint("* Keys not loaded, use --recover to run recovery script [slow]")
+            s = color("--recover", fg="yellow")
+            lprint(f"Keys not loaded, use {s} to run recovery script [slow]")
         else:
             # FIXME: recovery() is only for RF08S. TODO for the other ones with a "darknested" attack
             keyfile = recoverKeys()
@@ -153,7 +149,8 @@ globals:
         ret, mad, key = verifyKeys(key)
         if ret is False:
             if args.nokeys is False:
-                lprint("! Use --nokeys to keep going past this point")
+                s = color("--nokeys", fg="yellow")
+                lprint(f"Use {s} to keep going past this point")
                 return
 
     # FIXME: nr of blocks depend on the tag. RF32 is 256, RF08 is 64, RF08S is 64+8
@@ -375,7 +372,7 @@ If keys cannot be loaded AND --recover is specified, then run key recovery
 """
     key = [[b'' for _ in range(2)] for _ in range(17)]  # create a fresh array
 
-    lprint(f"\nLoad Keys from file: |{keyfile}|")
+    lprint(f"\n Load keys from file... " + color(f"{keyfile}", fg="yellow"))
 
     try:
         with (open(keyfile, "rb")) as fh:
@@ -434,7 +431,7 @@ globals:
     badk = 0
     mad = False
 
-    lprint("Check keys...")
+    lprint("Checking keys...")
 
     for sec in range(0, 16+1):  # 16 normal, 1 dark
         sn = sec
@@ -450,11 +447,13 @@ globals:
             lprint(f"  `{cmd}`", end='', flush=True)
 
             res = p.console(cmd, capture=False)
-            lprint(" " * (3-len(str(bn))), end="", prompt='')
+            lprint(" " * (3-len(str(bn))), end='', prompt='')
             if res == 0:
-                lprint(" ... PASS", end="", prompt='')
+                s = color("ok", fg="green")
+                lprint(f" ( {s} )", end='', prompt='')
             else:
-                lprint(" ... FAIL", end="", prompt='')
+                s = color("fail", fg="red")
+                lprint(f" ( {s} )", end='', prompt='')
                 badk += 1
                 key[sec][ab] = b''
 
@@ -467,8 +466,9 @@ globals:
                 lprint("", prompt='')
 
     if badk > 0:
-        lprint(f"! {badk} bad key", end='')
-        lprint("s exist" if badk != 1 else " exists")
+        s = color(f'{badk}', fg="red")
+        e = "s exist" if badk != 1 else " exists"
+        lprint(f" {s} bad key{e}", prompt='[!]')
         rv = False, mad, key
 
     else:
@@ -920,9 +920,9 @@ def dumpAcl(data):
 
 def diskDump(data, uid, dpath):
     """Full Dump"""
-    dump18 = f"{dpath}hf-mf-{uid.hex().upper()}-dump18.bin"
+    dump18 = color(f"{dpath}hf-mf-{uid.hex().upper()}-dump18.bin", fg="yellow")
 
-    lprint(f"\nDump Card Data to file: {dump18}")
+    lprint(f"\nDump Card Data to file... {dump18}")
 
     bad = False
     with open(dump18, 'wb') as f:
