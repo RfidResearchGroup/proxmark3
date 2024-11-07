@@ -938,9 +938,13 @@ def diskDump(data, uid, dpath):
                 f.write(b)
         if bad:
             lprint('Bad data exists, and has been saved as 0xFF')
+
+        s = color('ok', fg='green')
+        lprint(f' Save file operations ( {s} )', prompt='[+]')
+
     except:
         s = color('fail', fg='red')
-        lprint(f'File operations ( {s} )', prompt='[!]')
+        lprint(f' Save file operations ( {s} )', prompt='[!]')
 
     return dump18
 
