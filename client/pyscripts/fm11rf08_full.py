@@ -339,11 +339,11 @@ def fudanValidate(blk0, live=False):
     hdr = "Content-Type: application/text; charset=utf-8"
     post = f"{blk0.replace(' ', '')}"
 
-    lprint(f"\n  Validator: `wget -q  -O -"
-           f"  --header=\"{hdr}\""
-           f"  --post-data \"{post}\""
-           f"  {url}"
-           "  | json_pp`")
+    lprint(f"\n  Validator:\n`wget -q -O -"
+           f" --header=\"{hdr}\""
+           f" --post-data \"{post}\""
+           f" {url}"
+           " | json_pp`")
 
     if live:
         # Warning, this import causes a "double free or corruption" crash if the script is called twice...
