@@ -525,7 +525,7 @@ globals:
     bad = 0
     for n in blkn_todo:
         cmd = f"hf mf rdbl -c 4 --key {bdkey} --blk {n}"
-        lprint(f"`{cmd}`", flush=True, log=False)
+        lprint(f"  `{cmd}`", flush=True, log=False, end='')
 
         for retry in range(5):
             p.console(cmd)
@@ -539,11 +539,19 @@ globals:
             if found:
                 break
 
+        s = color("ok", fg="green")
         if not found:
             data.append(f"{n:3d} | -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- | ----------------")
             bad += 1
+            s = color("fail", fg="red")
+
+        lprint(" " * (3 - len(str(n))), flush='', log=False, end='', prompt='')
+        lprint(f' ( {s} )', flush='', log=False, prompt='')
 
     s = color("ok", fg="green")
+    if bad > 0:
+        s = color("fail", fg="red")
+
     lprint(f'Loading ( {s} )', log=False)
     return data, blkn
 
