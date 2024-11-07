@@ -660,7 +660,7 @@ def dumpBambu(data):
         TrayUID_s = data[9][6:53]
 
         Block10_0to3 = data[10][6:17]
-        SppolWidth_um = int(data[10][21:23] + data[14][18:20], 16)
+        SpoolWidth_um = int(data[10][21:23] + data[14][18:20], 16)
         Block10_6to15 = data[10][24:50]
 
         ProductionDateTime_s = bytes.fromhex(data[12][6:53]).decode('ascii').rstrip('\x00')
@@ -712,8 +712,8 @@ def dumpBambu(data):
         lprint(f"    [ 0:16] TrayUID_s = {{{TrayUID_s}}}  ; not ASCII")
         lprint("  Block 10:")
         lprint(f"    [ 0: 4] Block10_0to3 = {{{Block10_0to3}}}")
-        lprint(f"    [ 4: 2] SppolWidth_um = {SppolWidth_um}um")
-        lprint(f"    [6:10] Block10_6to15 = {{{Block10_6to15}}}")
+        lprint(f"    [ 4: 2] SpoolWidth_um = {SpoolWidth_um}um")
+        lprint(f"    [ 6:10] Block10_6to15 = {{{Block10_6to15}}}")
         lprint("  Block 12:")
         lprint(f"    [ 0:16] ProductionDateTime_s = \"{ProductionDateTime_s}\"")
         lprint("  Block 13:")
