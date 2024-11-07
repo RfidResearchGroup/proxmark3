@@ -134,6 +134,7 @@ globals:
     uid = getUIDfromBlock0(blk0)
     startlog(uid, dpath, append=False)
     decodeBlock0(blk0)
+    fudanValidate(blk0, args.validate)
 
     mad = False
     keyfile = f"{dpath}hf-mf-{uid.hex().upper()}-key.bin"
