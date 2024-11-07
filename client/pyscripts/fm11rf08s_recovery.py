@@ -623,7 +623,7 @@ def recovery(init_check=False, final_check=False, keep=False, debug=False, suppl
     show("---- TOTAL: " + color(f"{minutes:2}", fg="yellow") + " minutes " +
          color(f"{seconds:2}", fg="yellow") + " seconds -----------")
 
-    return {'keyfile':keyfile, 'found_keys':found_keys, 'dumpfile':dumpfile, 'data':data}
+    return {'keyfile': keyfile, 'found_keys': found_keys, 'dumpfile': dumpfile, 'data': data}
 
 
 def main():
