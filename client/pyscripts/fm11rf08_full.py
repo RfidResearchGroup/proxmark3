@@ -550,8 +550,8 @@ globals:
             bad += 1
             s = color("fail", fg="red")
 
-        lprint(" " * (3 - len(str(n))), flush='', log=False, end='', prompt='')
-        lprint(f' ( {s} )', flush='', log=False, prompt='')
+        lprint(" " * (3 - len(str(n))), flush=True, log=False, end='', prompt='')
+        lprint(f' ( {s} )', flush=True, log=False, prompt='')
 
     s = color("ok", fg="green")
     if bad > 0:
