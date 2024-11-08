@@ -264,80 +264,62 @@ static uint8_t card_app2_limit[] = {
     0xff,
 };
 
-static iclass_config_card_item_t iclass_config_types[13] =  {
-    {"Audio/Visual #1 - Beep ON, LED Off, Flash GREEN on read", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAC, 0x00, 0xA8, 0x8F, 0xA7, 0x80, 0xA9, 0x01}},
-    {"Audio/Visual #2 - Beep ON, LED RED, Host must flash GREEN", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x87, 0x18, 0xAC, 0x00, 0xA8, 0x1F, 0xA7, 0x80, 0xA9, 0x01}},
-    {"Audio/Visual #3 - Beep ON, LED Off, Host must flash RED and/or GREEN", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAC, 0x00, 0xA8, 0x0F, 0xA9, 0x03, 0xA7, 0x80}},
-    {"Keypad Output #1 - Buffer ONE key (8 bit Dorado)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAE, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
-    {"Keypad Output #2 - Buffer ONE to FIVE keys (standard 26 bit)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAE, 0x0B, 0xAF, 0xFF, 0xAD, 0x15, 0xB3, 0x03}},
-    {"Keypad Output #3 - Local PIN verify", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAD, 0x6D, 0xB3, 0x03, 0x00, 0x00, 0x00, 0x00}},
-    {"Mifare CSN #1 - 32 bit reverse output", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAC, 0x01, 0xA7, 0x80, 0xA8, 0x9F, 0xA9, 0x01}},
-    {"Mifare CSN #2 - 16 bit output", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAC, 0x02, 0xA7, 0x80, 0xA8, 0x9F, 0xA9, 0x01}},
-    {"Mifare CSN #3 - 34 bit output", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAC, 0x03, 0xA7, 0x80, 0xA8, 0x9F, 0xA9, 0x01}},
-    {"Keyroll DISABLE - Set ELITE Key and DISABLE Keyrolling", {0x0C, 0x00, 0x00, 0x01, 0x00, 0x00, 0xBF, 0x18, 0xBF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
-    {"Keyroll ENABLE - Set ELITE Key and ENABLE Keyrolling", {0x0C, 0x00, 0x00, 0x01, 0x00, 0x00, 0xBF, 0x18, 0xBF, 0x03, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
-    {"Reset READER - Reset READER to defaults", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
-    {"Reset ENROLLER - Reset ENROLLER to defaults", {0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1C, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF}}
+static iclass_config_card_item_t iclass_config_options[30] =  {
+    //Byte A8 - LED Operations
+    {"(LED) - Led idle (Off) / Led read (Off)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0x0F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(LED) - Led idle (Red) / Led read (Off)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(LED) - Led idle (Grn) / Led read (Off)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0x2F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(LED) - Led idle (Amber) / Led read (Off)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0x3F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(LED) - Led idle (Off) / Led read (Red)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0x4F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(LED) - Led idle (Red) / Led read (Red)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0x5F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(LED) - Led idle (Grn) / Led read (Red)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0x6F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(LED) - Led idle (Amber) / Led read (Red)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0x7F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(LED) - Led idle (Off) / Led read (Grn)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0x8F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(LED) - Led idle (Red) / Led read (Grn)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0x9F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(LED) - Led idle (Grn) / Led read (Grn)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0xAF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(LED) - Led idle (Amber) / Led read (Red)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0xBF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(LED) - Led idle (Off) / Led read (Amber)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0xCF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(LED) - Led idle (Red) / Led read (Amber)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0xDF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(LED) - Led idle (Grn) / Led read (Amber)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0xEF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(LED) - Led idle (Amber) / Led read (Amber)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA8, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    //Byte A9 - Potentially associated with led blinking / led heartbeat operations?
+    //Byte A6 - Potentially associated with beep pitch?
+    //Byte A7 - BEEP Operations
+    {"(BEEP) - Beep on Read (On)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA7, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(BEEP) - Beep on Read (Off)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xA7, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    //Byte AC - MIFARE CSN Operations
+    {"(MIFARE) - CSN Default Output", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAC, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(MIFARE) - CSN 32 bit Reverse Output", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAC, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(MIFARE) - CSN 16 bit Output", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAC, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(MIFARE) - CSN 34 bit Output", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAC, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    //Bytes AD, AE, AF, B3 - Keypad Operations + not fully mapped
+    {"(KEYPAD Output) - Buffer ONE key (8 bit Dorado)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAE, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(KEYPAD Output) - Buffer ONE to FIVE keys (standard 26 bit)", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAE, 0x0B, 0xAF, 0xFF, 0xAD, 0x15, 0xB3, 0x03}},
+    {"(KEYPAD Output) - Local PIN verify", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBF, 0x18, 0xAD, 0x6D, 0xB3, 0x03, 0x00, 0x00, 0x00, 0x00}},
+    //iClass Elite Key Operations
+    {"(ELITE Key) - Set ELITE Key and Enable Dual key (Elite + Standard)", {0x0C, 0x00, 0x00, 0x01, 0x00, 0x00, 0xBF, 0x18, 0xBF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
+    {"(ELITE Key) - Set ELITE Key and ENABLE Keyrolling", {0x0C, 0x00, 0x00, 0x01, 0x00, 0x00, 0xBF, 0x18, 0xBF, 0x03, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
+    {"(ELITE Key) - Set ELITE Key and DISABLE Standard Key", {0x0C, 0x00, 0x00, 0x01, 0x00, 0x00, 0xBF, 0x18, 0xBF, 0x05, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
+    //Erroneous / incorrect reader behaviors
+    //Reset Operations
+    {"(RESET) - Reset READER to defaults", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+    {"(RESET) - Reset ENROLLER to defaults", {0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1C, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF}}
+    //Reader Master Key Operations
 };
 
-static bool check_config_card(const iclass_config_card_item_t *o) {
-    if (o == NULL || strlen(o->desc) == 0) {
-        PrintAndLogEx(INFO, "No data available");
-        PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass config -l") "` to download from cardhelper");
-        return false;
-    }
-    return true;
-}
-
-static int load_config_cards(void) {
-    PrintAndLogEx(INFO, "detecting cardhelper...");
-    if (IsCardHelperPresent(false) == false) {
-        PrintAndLogEx(FAILED, "failed to detect cardhelper");
-        return PM3_ENODATA;
-    }
-
-    for (int i = 0; i < ARRAYLEN(iclass_config_types); ++i) {
-
-        PrintAndLogEx(INPLACE, "loading setting %i", i);
-        iclass_config_card_item_t *ret = &iclass_config_types[i];
-
-        uint8_t desc[70] = {0};
-        if (GetConfigCardStrByIdx(i, desc) == PM3_SUCCESS) {
-            memcpy(ret->desc, desc, sizeof(desc));
-        }
-
-        uint8_t blocks[16] = {0};
-        if (GetConfigCardByIdx(i, blocks) == PM3_SUCCESS) {
-            memcpy(ret->data, blocks, sizeof(blocks));
-        }
-    }
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass configcard -p") "` to list all");
-    return PM3_SUCCESS;
-}
-
 static const iclass_config_card_item_t *get_config_card_item(int idx) {
-    if (idx > -1 && idx < 14) {
-        return &iclass_config_types[idx];
+    if (idx > -1 && idx < ARRAYLEN(iclass_config_options)) {
+        return &iclass_config_options[idx];
     }
-    return &iclass_config_types[13];
+    return &iclass_config_options[ARRAYLEN(iclass_config_options)];
 }
 
 static void print_config_cards(void) {
-    if (check_config_card(&iclass_config_types[0])) {
-        PrintAndLogEx(INFO, "---- " _CYAN_("Config cards available") " ------------");
-        for (int i = 0; i < ARRAYLEN(iclass_config_types)   ; ++i) {
-            PrintAndLogEx(INFO, "%2d, %s", i, iclass_config_types[i].desc);
-        }
-        PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "---- " _CYAN_("Config cards options") " ------------");
+    for (int i = 0; i < ARRAYLEN(iclass_config_options)   ; ++i) {
+        PrintAndLogEx(INFO, "%2d, %s", i, iclass_config_options[i].desc);
     }
-}
-
-static void print_config_card(const iclass_config_card_item_t *o) {
-    if (check_config_card(o)) {
-        PrintAndLogEx(INFO, "description... " _YELLOW_("%s"), o->desc);
-        PrintAndLogEx(INFO, "data.......... " _YELLOW_("%s"), sprint_hex_inrow(o->data, sizeof(o->data)));
-    }
+    PrintAndLogEx(NORMAL, "");
 }
 
 static void iclass_encrypt_block_data(uint8_t *blk_data, uint8_t *key) {
@@ -350,10 +332,7 @@ static void iclass_encrypt_block_data(uint8_t *blk_data, uint8_t *key) {
     mbedtls_des3_free(&ctx);
 }
 
-static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *key, bool got_kr, uint8_t *card_key, bool got_krki, bool use_elite) {
-    if (check_config_card(o) == false) {
-        return PM3_EINVARG;
-    }
+static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *key, bool got_kr, uint8_t *card_key, bool got_eki, bool use_elite, bool got_mk, uint8_t *master_key) {
 
     // generated config card header
     picopass_hdr_t configcard;
@@ -362,7 +341,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
     memcpy(&configcard.conf, "\xFF\xFF\xFF\xFF\xF9\xFF\xFF\xBC", 8);
     memcpy(&configcard.epurse, "\xFE\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 8);
 
-    if (got_krki) {
+    if (got_eki) {
         HFiClassCalcDivKey(configcard.csn, card_key, configcard.key_d, use_elite);
     } else {
         // defaulting to AA1 ki 0
@@ -378,7 +357,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
     if (res == PM3_SUCCESS) {
         cc = &iclass_last_known_card;
         // calc diversified key for selected card
-        if (got_krki) {
+        if (got_eki) {
             HFiClassCalcDivKey(cc->csn, card_key, cc->key_d, use_elite);
         } else {
             // defaulting to AA1 ki 0
@@ -388,6 +367,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         PrintAndLogEx(FAILED, "failed to read a card");
         PrintAndLogEx(INFO, "falling back to default config card");
     }
+    PrintAndLogEx(INFO, "Generating "_YELLOW_("%s"), o->desc);
 
     // generate dump file
     uint8_t app1_limit = cc->conf.app_limit;
@@ -406,12 +386,31 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
     memcpy(data, cc, sizeof(picopass_hdr_t));
 
     print_picopass_header(cc);
+    // KEYROLL need to encrypt
+    uint8_t key_en[16] = {0};
+    uint8_t *keyptr_en = NULL;
+    size_t keylen = 0;
+    int res_key = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr_en, &keylen);
+    if (res_key != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to find iclass_decryptionkey.bin");
+        free(data);
+        return PM3_EINVARG;
+    }
+
+    if (keylen != 16) {
+        PrintAndLogEx(ERR, "Failed to load transport key from file");
+        free(keyptr_en);
+        free(data);
+        return PM3_EINVARG;
+    }
+    memcpy(key_en, keyptr_en, sizeof(key_en));
+    free(keyptr_en);
 
     // Keyrolling configuration cards are special.
-    if (strstr(o->desc, "Keyroll") != NULL) {
+    if (strstr(o->desc, "ELITE") != NULL) {
 
         if (got_kr == false) {
-            PrintAndLogEx(ERR, "please specify KEYROLL key!");
+            PrintAndLogEx(ERR, "please specify ELITE key!");
             free(data);
             return PM3_EINVARG;
         }
@@ -437,28 +436,6 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
 
         bool old = GetFlushAfterWrite();
         SetFlushAfterWrite(true);
-
-        // KEYROLL need to encrypt
-        uint8_t key_en[16] = {0};
-        uint8_t *keyptr_en = NULL;
-        if (IsCardHelperPresent(false) == false) {
-            size_t keylen = 0;
-            int res_key = loadFile_safe(ICLASS_DECRYPTION_BIN, "", (void **)&keyptr_en, &keylen);
-            if (res_key != PM3_SUCCESS) {
-                PrintAndLogEx(ERR, "Failed to find iclass_decryptionkey.bin");
-                free(data);
-                return PM3_EINVARG;
-            }
-
-            if (keylen != 16) {
-                PrintAndLogEx(ERR, "Failed to load transport key from file");
-                free(keyptr_en);
-                free(data);
-                return PM3_EINVARG;
-            }
-            memcpy(key_en, keyptr_en, sizeof(key_en));
-            free(keyptr_en);
-        }
 
         PrintAndLogEx(INFO, "Setting up encryption... " NOLF);
         uint8_t ffs[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -559,6 +536,15 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
     } else {
         memcpy(data, cc, sizeof(picopass_hdr_t));
         memcpy(data + (6 * 8), o->data, sizeof(o->data));
+        if (strstr(o->desc, "Custom") != NULL){
+            if (got_mk == false) {
+                PrintAndLogEx(ERR, "please specify New Master Key!");
+                free(data);
+                return PM3_EINVARG;
+            }
+            iclass_encrypt_block_data(master_key, key_en);
+            memcpy(data + (0x07 * 8), master_key, PICOPASS_BLOCK_SIZE);
+        }
     }
 
     //Send to device
@@ -5008,20 +4994,17 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
                   "Manage reader configuration card via Cardhelper or internal database,\n"
                   "The generated config card will be uploaded to device emulator memory.\n"
                   "You can start simulating `hf iclass sim -t 3` or use the emul commands",
-                  "hf iclass configcard -l           --> download config card settings from cardhelper\n"
                   "hf iclass configcard -p           --> print all config cards in the database\n"
-                  "hf iclass configcard --ci 1       --> view config card setting in slot 1\n"
-                  "hf iclass configcard -g --ci 0    --> generate config file from slot 0"
+                  "hf iclass configcard --g 0        --> generate config file with option 0"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0(NULL, "ci", "<dec>", "use config slot at index"),
+        arg_int0(NULL, "g", "<dec>", "use config option"),
         arg_int0(NULL, "ki", "<dec>", "Card Key - index to select key from memory 'hf iclass managekeys'"),
-        arg_int0(NULL, "krki", "<dec>", "Elite Keyroll Key - index to select key from memory 'hf iclass managekeys'"),
+        arg_int0(NULL, "eki", "<dec>", "Elite Key - index to select key from memory 'hf iclass managekeys'"),
+        arg_int0(NULL, "mrki", "<dec>", "Standard Master Key - index to select key from memory 'hf iclass managekeys'"),
         arg_lit0(NULL, "elite", "Use elite key for the the Card Key ki"),
-        arg_lit0("g", NULL, "generate card dump file"),
-        arg_lit0("l", NULL, "load available cards"),
         arg_lit0("p", NULL, "print available cards"),
         arg_param_end
     };
@@ -5030,17 +5013,16 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
     int ccidx = arg_get_int_def(ctx, 1, -1);
     int card_kidx = arg_get_int_def(ctx, 2, -1);
     int kidx = arg_get_int_def(ctx, 3, -1);
-    bool elite = arg_get_lit(ctx, 4);
-    bool do_generate = arg_get_lit(ctx, 5);
-    bool do_load = arg_get_lit(ctx, 6);
-    bool do_print = arg_get_lit(ctx, 7);
+    int midx = arg_get_int_def(ctx, 4, -1);
+    bool elite = arg_get_lit(ctx, 5);
+    bool do_print = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
-    bool got_krki = false;
+    bool got_eki = false;
     uint8_t card_key[8] = {0};
     if (card_kidx >= 0) {
         if (card_kidx < ICLASS_KEYS_MAX) {
-            got_krki = true;
+            got_eki = true;
             memcpy(card_key, iClass_Key_Table[card_kidx], 8);
             PrintAndLogEx(SUCCESS, "Using card key[%d] " _GREEN_("%s"), card_kidx, sprint_hex(iClass_Key_Table[card_kidx], 8));
         } else {
@@ -5057,14 +5039,23 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
             memcpy(keyroll_key, iClass_Key_Table[kidx], 8);
             PrintAndLogEx(SUCCESS, "Using keyroll key[%d] " _GREEN_("%s"), kidx, sprint_hex(iClass_Key_Table[kidx], 8));
         } else {
-            PrintAndLogEx(ERR, "--krki number is invalid");
+            PrintAndLogEx(ERR, "--eki number is invalid");
             return PM3_EINVARG;
         }
     }
 
-    if (do_load) {
-        if (load_config_cards() != PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "failed to load, check your cardhelper");
+    bool got_mk = false;
+    uint8_t master_key[8] = {0};
+    if (midx >= 0) {
+        if (midx < ICLASS_KEYS_MAX) {
+            got_mk = true;
+            uint8_t key_iclass_format[8] = {0};
+            permutekey(iClass_Key_Table[midx], key_iclass_format);
+            memcpy(master_key, key_iclass_format, 8);
+            PrintAndLogEx(SUCCESS, "Using key[%d] as new Reader's Master Key" _GREEN_("%s"), midx, sprint_hex(iClass_Key_Table[midx], 8));
+        } else {
+            PrintAndLogEx(ERR, "--mrki number is invalid");
+            return PM3_EINVARG;
         }
     }
 
@@ -5072,22 +5063,21 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
         print_config_cards();
     }
 
-    if (ccidx > -1 && ccidx < ARRAYLEN(iclass_config_types)) {
+    if (ccidx > -1 && ccidx < ARRAYLEN(iclass_config_options)) {
         const iclass_config_card_item_t *item = get_config_card_item(ccidx);
-        print_config_card(item);
-    } else {
-        PrintAndLogEx(ERR, "Please specify a valid configuration number!");
-    }
-
-    if (do_generate && (ccidx > -1 && ccidx < ARRAYLEN(iclass_config_types))) {
-        const iclass_config_card_item_t *item = get_config_card_item(ccidx);
-        if (strstr(item->desc, "Keyroll") != NULL) {
-            if (got_kr == false) {
-                PrintAndLogEx(ERR, "please specify KEYROLL key!");
+        if (strstr(item->desc, "ELITE") != NULL && got_kr == false) {
+                PrintAndLogEx(ERR, "please specify ELITE Key (--eki) !");
                 return PM3_EINVARG;
-            }
         }
-        generate_config_card(item, keyroll_key, got_kr, card_key, got_krki, elite);
+        if (strstr(item->desc, "Custom") != NULL && got_mk == false) {
+                PrintAndLogEx(ERR, "please specify New Standard Master Key (--mrki) !");
+                return PM3_EINVARG;
+        }
+        if (strstr(item->desc, "Restore") != NULL && card_kidx == -1) {
+                PrintAndLogEx(ERR, "please specify the Current Reader's Key (--ki) !");
+                return PM3_EINVARG;
+        }
+        generate_config_card(item, keyroll_key, got_kr, card_key, got_eki, elite, got_mk, master_key);
     }
 
     return PM3_SUCCESS;
@@ -5241,7 +5231,7 @@ static command_t CommandTable[] = {
     {"esetblk",     CmdHFiClassESetBlk,         IfPm3Iclass,     "Set emulator memory block data"},
     {"eview",       CmdHFiClassEView,           IfPm3Iclass,     "View emulator memory"},
     {"-----------", CmdHelp,                    AlwaysAvailable, "---------------------- " _CYAN_("Utils") " ----------------------"},
-    {"configcard",  CmdHFiClassConfigCard,      IfPm3Iclass,     "Reader configuration card"},
+    {"configcard",  CmdHFiClassConfigCard,      IfPm3Iclass,     "Reader configuration card generator"},
     {"calcnewkey",  CmdHFiClassCalcNewKey,      AlwaysAvailable, "Calc diversified keys (blocks 3 & 4) to write new keys"},
     {"encode",      CmdHFiClassEncode,          AlwaysAvailable, "Encode binary wiegand to block 7"},
     {"encrypt",     CmdHFiClassEncryptBlk,      AlwaysAvailable, "Encrypt given block data"},
