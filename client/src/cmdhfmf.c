@@ -9994,6 +9994,7 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     }
 
     if (collect_fm11rf08s) {
+        uint64_t t1 = msclock();
         uint32_t flags = collect_fm11rf08s_with_data;
         SendCommandMIX(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, flags, 0, 0, key, sizeof(key));
         if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, &resp, 1000)) {
@@ -10039,6 +10040,9 @@ static int CmdHF14AMfISEN(const char *Cmd) {
             }
             free(dump);
         }
+        t1 = msclock() - t1;
+        PrintAndLogEx(SUCCESS, "time: " _YELLOW_("%" PRIu64 ) " ms", t1);
+
         if (fnlen == 0) {
             snprintf(filename, sizeof(filename), "hf-mf-%s-nonces%s", sprint_hex_inrow(card.uid, card.uidlen), collect_fm11rf08s_with_data ? "_with_data" : "");
         }
