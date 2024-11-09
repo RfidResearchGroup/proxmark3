@@ -469,8 +469,16 @@ static int CmdScriptRun(const char *Cmd) {
 
         // We disallowed in py_conf environment variables interfering with python interpreter's behavior.
         // Let's manually enable the ones we truly need.
-        // This is required by Proxspace to work with an isolated Python configuration
-        PyConfig_SetBytesString(&py_conf, &py_conf.home, getenv("PYTHONHOME"));
+        const char *virtual_env = getenv("VIRTUAL_ENV");
+        if (virtual_env != NULL) {
+            size_t length = strlen(virtual_env) + strlen("/bin/python3") + 1;
+            char python_executable_path[length];
+            snprintf(python_executable_path, length, "%s/bin/python3", virtual_env);
+            PyConfig_SetBytesString(&py_conf, &py_conf.executable, python_executable_path);
+        } else {
+            // This is required by Proxspace to work with an isolated Python configuration
+            PyConfig_SetBytesString(&py_conf, &py_conf.home, getenv("PYTHONHOME"));
+        }
         // This is required for allowing `import pm3` in python scripts
         PyConfig_SetBytesString(&py_conf, &py_conf.pythonpath_env, getenv("PYTHONPATH"));
 
