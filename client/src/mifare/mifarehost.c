@@ -994,6 +994,23 @@ int mfReadBlock(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint8_t *d
     return PM3_SUCCESS;
 }
 
+int mfWriteBlock(const uint8_t *key, uint8_t keytype, uint8_t blockno, uint8_t *block) {
+
+    uint8_t data[26];
+    memcpy(data, key, MIFARE_KEY_SIZE);
+    memcpy(data + 10, block, MFBLOCK_SIZE);
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockno, keytype, 0, data, sizeof(data));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(FAILED, "mfWriteBlock execution time out");
+        return PM3_ETIMEOUT;
+    }
+
+    return ((resp.oldarg[0] & 0xff) == 1)?PM3_SUCCESS:PM3_EFAILED;
+}
+
 // EMULATOR
 int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount) {
 

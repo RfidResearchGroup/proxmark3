@@ -45,6 +45,7 @@
 #include "mifare/gen4.h"
 #include "generator.h"              // keygens.
 #include "fpga.h"
+#include "mifare/mifarehost.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -494,22 +495,6 @@ void mf_print_sector_hdr(uint8_t sector) {
     PrintAndLogEx(INFO, "----+-------------------------------------------------+-----------------");
 }
 
-static bool mf_write_block(const uint8_t *key, uint8_t keytype, uint8_t blockno, uint8_t *block) {
-
-    uint8_t data[26];
-    memcpy(data, key, MIFARE_KEY_SIZE);
-    memcpy(data + 10, block, MFBLOCK_SIZE);
-
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFARE_WRITEBL, blockno, keytype, 0, data, sizeof(data));
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-        PrintAndLogEx(FAILED, "command execution time out");
-        return false;
-    }
-
-    return ((resp.oldarg[0] & 0xff) == 1);
-}
 
 // assumes n is in number of blocks 0..255
 static void mf_analyse_acl(uint16_t n, uint8_t *d) {
@@ -6784,9 +6769,9 @@ skipfile:
             }
 
             // write to card,  try B key first
-            if (mf_write_block(keyB[i], MF_KEY_B, b, block) == 0) {
+            if (mfWriteBlock(keyB[i], MF_KEY_B, b, block) != PM3_SUCCESS) {
                 // try A key,
-                if (mf_write_block(keyA[i], MF_KEY_A, b, block) == 0) {
+                if (mfWriteBlock(keyA[i], MF_KEY_A, b, block) != PM3_SUCCESS) {
                     return PM3_EFAILED;
                 }
             }
@@ -7027,10 +7012,10 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
         }
 
         // write to card,  try B key first
-        if (mf_write_block(g_mifare_default_key, MF_KEY_B, block_no, block) == 0) {
+        if (mfWriteBlock(g_mifare_default_key, MF_KEY_B, block_no, block) != PM3_SUCCESS) {
 
             // try A key,
-            if (mf_write_block(g_mifare_ndef_key, MF_KEY_A, block_no, block) == 0) {
+            if (mfWriteBlock(g_mifare_ndef_key, MF_KEY_A, block_no, block) != PM3_SUCCESS) {
                 return PM3_EFAILED;
             }
         }
@@ -9507,8 +9492,8 @@ static int CmdHFMFHidEncode(const char *Cmd) {
             PrintAndLogEx(INFO, "Writing %u - %s", (i + 1), sprint_hex_inrow(blocks + (i * MFBLOCK_SIZE), MFBLOCK_SIZE));
         }
 
-        if (mf_write_block(empty, MF_KEY_A, (i + 1), blocks + (i * MFBLOCK_SIZE)) == false) {
-            if (mf_write_block(empty, MF_KEY_B, (i + 1), blocks + (i * MFBLOCK_SIZE)) == false) {
+        if (mfWriteBlock(empty, MF_KEY_A, (i + 1), blocks + (i * MFBLOCK_SIZE)) == PM3_EFAILED) {
+            if (mfWriteBlock(empty, MF_KEY_B, (i + 1), blocks + (i * MFBLOCK_SIZE)) == PM3_EFAILED) {
                 PrintAndLogEx(WARNING, "failed writing block %d using default empty key", (i + 1));
                 res = false;
                 break;
