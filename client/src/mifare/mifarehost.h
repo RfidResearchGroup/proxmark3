@@ -89,6 +89,8 @@ int mfReadSector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8_t 
 int mfReadBlock(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint8_t *data);
 
 int mfWriteBlock(uint8_t blockno, uint8_t keyType, const uint8_t *key, uint8_t *block);
+int mfWriteSector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8_t *sector);
+
 int mfEmlGetMem(uint8_t *data, int blockNum, int blocksCount);
 int mfEmlSetMem(uint8_t *data, int blockNum, int blocksCount);
 int mfEmlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth);
