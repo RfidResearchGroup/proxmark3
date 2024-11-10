@@ -1017,7 +1017,7 @@ int mfWriteBlock(uint8_t blockno, uint8_t keyType, const uint8_t *key, uint8_t *
 int mfWriteSector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8_t *sector){
 
     for (int i = 0; i < 4; i++) {
-        int res = mfWriteBlock((sectorNo*4)+i, keyType, key, sector + ( i * MFBLOCK_SIZE ));
+        int res = mfWriteBlock((sectorNo * 4) + i, keyType, key, sector + ( i * MFBLOCK_SIZE ));
         if (res != PM3_SUCCESS) {
             return (i == 0) ? PM3_EFAILED : PM3_EPARTIAL;
         }
