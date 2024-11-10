@@ -905,7 +905,7 @@ static int CmdHF14AMfDarkside(const char *Cmd) {
 
     uint64_t key = 0;
     uint64_t t1 = msclock();
-    int ret = mfDarkside(blockno, key_type, &key);
+    int ret = mf_dark_side(blockno, key_type, &key);
     t1 = msclock() - t1;
 
     if (ret != PM3_SUCCESS) return ret;
@@ -1086,7 +1086,7 @@ static int CmdHF14AMfRdBl(const char *Cmd) {
     uint8_t blockno = (uint8_t)b;
 
     uint8_t data[16] = {0};
-    int res =  mfReadBlock(blockno, keytype, key, data);
+    int res =  mf_read_block(blockno, keytype, key, data);
     if (res == PM3_SUCCESS) {
 
         uint8_t sector = mfSectorNum(blockno);
@@ -1162,7 +1162,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    int res =  mfReadSector(sector, keytype, key, data);
+    int res =  mf_read_sector(sector, keytype, key, data);
     if (res == PM3_SUCCESS) {
 
         uint8_t blocks = mfNumBlocksPerSector(sector);
@@ -1767,7 +1767,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
     }
 
     // check if we can authenticate to sector
-    if (mfCheckKeys(blockNo, keyType, true, 1, key, &key64) != PM3_SUCCESS) {
+    if (mf_check_keys(blockNo, keyType, true, 1, key, &key64) != PM3_SUCCESS) {
         if (keyType < 2) {
             PrintAndLogEx(WARNING, "Wrong key. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
         } else {
@@ -1777,7 +1777,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
     }
 
     if (singleSector) {
-        int16_t isOK = mfnested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock, !ignore_static_encrypted);
+        int16_t isOK = mf_nested(blockNo, keyType, key, trgBlockNo, trgKeyType, keyBlock, !ignore_static_encrypted);
         switch (isOK) {
             case PM3_ETIMEOUT:
                 PrintAndLogEx(ERR, "command execution time out\n");
@@ -1806,14 +1806,14 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
                     } else {                    // 16 block sector
                         sectortrailer = trgBlockNo | 0x0f;
                     }
-                    mfEmlGetMem(keyBlock, sectortrailer, 1);
+                    mf_eml_get_mem(keyBlock, sectortrailer, 1);
 
                     if (trgKeyType == MF_KEY_A)
                         num_to_bytes(key64, 6, keyBlock);
                     else
                         num_to_bytes(key64, 6, &keyBlock[10]);
 
-                    mfEmlSetMem(keyBlock, sectortrailer, 1);
+                    mf_elm_set_mem(keyBlock, sectortrailer, 1);
                     PrintAndLogEx(SUCCESS, "Key transferred to emulator memory.");
                 }
                 return PM3_SUCCESS;
@@ -1841,7 +1841,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
         }
 
         PrintAndLogEx(SUCCESS, "Testing known keys. Sector count "_YELLOW_("%d"), SectorsCnt);
-        int res = mfCheckKeys_fast(SectorsCnt, true, true, 1, ARRAYLEN(g_mifare_default_keys) + 1, keyBlock, e_sector, use_flashmemory, false);
+        int res = mf_check_keys_fast(SectorsCnt, true, true, 1, ARRAYLEN(g_mifare_default_keys) + 1, keyBlock, e_sector, use_flashmemory, false);
         if (res == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "Fast check found all keys");
             goto jumptoend;
@@ -1860,7 +1860,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
 
                     if (e_sector[sectorNo].foundKey[trgKeyType]) continue;
 
-                    int16_t isOK = mfnested(blockNo, keyType, key, mfFirstBlockOfSector(sectorNo), trgKeyType, keyBlock, calibrate);
+                    int16_t isOK = mf_nested(blockNo, keyType, key, mfFirstBlockOfSector(sectorNo), trgKeyType, keyBlock, calibrate);
                     switch (isOK) {
                         case PM3_ETIMEOUT:
                             PrintAndLogEx(ERR, "command execution time out\n");
@@ -1883,7 +1883,7 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
                             e_sector[sectorNo].foundKey[trgKeyType] = 1;
                             e_sector[sectorNo].Key[trgKeyType] = bytes_to_num(keyBlock, 6);
 
-                            mfCheckKeys_fast(SectorsCnt, true, true, 2, 1, keyBlock, e_sector, false, false);
+                            mf_check_keys_fast(SectorsCnt, true, true, 2, 1, keyBlock, e_sector, false, false);
                             continue;
                         default :
                             PrintAndLogEx(ERR, "Unknown error\n");
@@ -1945,7 +1945,7 @@ jumptoend:
             // fast push mode
             g_conn.block_after_ACK = true;
             for (int i = 0; i < SectorsCnt; i++) {
-                mfEmlGetMem(keyBlock, mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1, 1);
+                mf_eml_get_mem(keyBlock, mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1, 1);
 
                 if (e_sector[i].foundKey[0])
                     num_to_bytes(e_sector[i].Key[0], 6, keyBlock);
@@ -1957,7 +1957,7 @@ jumptoend:
                     // Disable fast mode on last packet
                     g_conn.block_after_ACK = false;
                 }
-                mfEmlSetMem(keyBlock, mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1, 1);
+                mf_elm_set_mem(keyBlock, mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1, 1);
             }
             PrintAndLogEx(SUCCESS, "keys transferred to emulator memory.");
         }
@@ -2069,7 +2069,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
     }
 
     // check if we can authenticate to sector
-    if (mfCheckKeys(blockNo, keyType, true, 1, key, &key64) != PM3_SUCCESS) {
+    if (mf_check_keys(blockNo, keyType, true, 1, key, &key64) != PM3_SUCCESS) {
         if (keyType < 2) {
             PrintAndLogEx(WARNING, "Wrong key. Can't authenticate to block:%3d key type:%c", blockNo, keyType ? 'B' : 'A');
         } else {
@@ -2101,7 +2101,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Testing known keys. Sector count "_YELLOW_("%d"), SectorsCnt);
-    int res = mfCheckKeys_fast(SectorsCnt, true, true, 1, ARRAYLEN(g_mifare_default_keys) + 1, keyBlock, e_sector, false, false);
+    int res = mf_check_keys_fast(SectorsCnt, true, true, 1, ARRAYLEN(g_mifare_default_keys) + 1, keyBlock, e_sector, false, false);
     if (res == PM3_SUCCESS) {
         // all keys found
         PrintAndLogEx(SUCCESS, "Fast check found all keys");
@@ -2120,7 +2120,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
 
                 if (e_sector[sectorNo].foundKey[trgKeyType]) continue;
 
-                int16_t isOK = mfStaticNested(blockNo, keyType, key, mfFirstBlockOfSector(sectorNo), trgKeyType, keyBlock);
+                int16_t isOK = mf_static_nested(blockNo, keyType, key, mfFirstBlockOfSector(sectorNo), trgKeyType, keyBlock);
                 switch (isOK) {
                     case PM3_ETIMEOUT :
                         PrintAndLogEx(ERR, "command execution time out");
@@ -2198,7 +2198,7 @@ jumptoend:
         // fast push mode
         g_conn.block_after_ACK = true;
         for (int i = 0; i < SectorsCnt; i++) {
-            mfEmlGetMem(keyBlock, mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1, 1);
+            mf_eml_get_mem(keyBlock, mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1, 1);
 
             if (e_sector[i].foundKey[0])
                 num_to_bytes(e_sector[i].Key[0], 6, keyBlock);
@@ -2210,7 +2210,7 @@ jumptoend:
                 // Disable fast mode on last packet
                 g_conn.block_after_ACK = false;
             }
-            mfEmlSetMem(keyBlock, mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1, 1);
+            mf_elm_set_mem(keyBlock, mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1, 1);
         }
         PrintAndLogEx(SUCCESS, "keys transferred to emulator memory.");
     }
@@ -2417,7 +2417,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
 
             uint64_t key64 = 0;
             // check if we can authenticate to sector
-            if (mfCheckKeys(blockno, keytype, true, 1, key, &key64) != PM3_SUCCESS) {
+            if (mf_check_keys(blockno, keytype, true, 1, key, &key64) != PM3_SUCCESS) {
                 if (keytype < 2) {
                     PrintAndLogEx(WARNING, "Wrong key. Can't authenticate to block:%3d key type:%c", blockno, keytype ? 'B' : 'A');
                 } else {
@@ -2791,7 +2791,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                         PrintAndLogEx(NORMAL, "." NOLF);
                         fflush(stdout);
 
-                        if (mfCheckKeys(mfFirstBlockOfSector(i), j, true, 1, (keyBlock + (MIFARE_KEY_SIZE * k)), &key64) == PM3_SUCCESS) {
+                        if (mf_check_keys(mfFirstBlockOfSector(i), j, true, 1, (keyBlock + (MIFARE_KEY_SIZE * k)), &key64) == PM3_SUCCESS) {
                             e_sector[i].Key[j] = bytes_to_num((keyBlock + (MIFARE_KEY_SIZE * k)), MIFARE_KEY_SIZE);
                             e_sector[i].foundKey[j] = 'D';
                             break;
@@ -2823,7 +2823,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                     lastChunk = true;
                 }
 
-                res = mfCheckKeys_fast(sector_cnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * MIFARE_KEY_SIZE), e_sector, false, verbose);
+                res = mf_check_keys_fast(sector_cnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * MIFARE_KEY_SIZE), e_sector, false, verbose);
                 if (firstChunk) {
                     firstChunk = false;
                 }
@@ -2888,7 +2888,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
             PrintAndLogEx(NORMAL, "");
 
-            isOK = mfDarkside(mfFirstBlockOfSector(sectorno), MIFARE_AUTH_KEYA + keytype, &key64);
+            isOK = mf_dark_side(mfFirstBlockOfSector(sectorno), MIFARE_AUTH_KEYA + keytype, &key64);
 
             if (isOK != PM3_SUCCESS)
                 goto noValidKeyFound;
@@ -2942,7 +2942,7 @@ noValidKeyFound:
                                 continue;
 
                             // Check if the key works
-                            if (mfCheckKeys(mfFirstBlockOfSector(i), j, true, 1, tmp_key, &key64) == PM3_SUCCESS) {
+                            if (mf_check_keys(mfFirstBlockOfSector(i), j, true, 1, tmp_key, &key64) == PM3_SUCCESS) {
                                 e_sector[i].Key[j] = bytes_to_num(tmp_key, MIFARE_KEY_SIZE);
                                 e_sector[i].foundKey[j] = 'R';
                                 PrintAndLogEx(SUCCESS, "target sector %3u key type %c -- found valid key [ " _GREEN_("%s") " ]",
@@ -3021,7 +3021,7 @@ skipReadBKey:
                                           (current_key_type_i == MF_KEY_B) ? 'B' : 'A');
                         }
 tryNested:
-                        isOK = mfnested(mfFirstBlockOfSector(sectorno), keytype, key, mfFirstBlockOfSector(current_sector_i), current_key_type_i, tmp_key, calibrate);
+                        isOK = mf_nested(mfFirstBlockOfSector(sectorno), keytype, key, mfFirstBlockOfSector(current_sector_i), current_key_type_i, tmp_key, calibrate);
 
                         switch (isOK) {
                             case PM3_ETIMEOUT: {
@@ -3147,7 +3147,7 @@ tryStaticnested:
                                           (current_key_type_i == MF_KEY_B) ? 'B' : 'A');
                         }
 
-                        isOK = mfStaticNested(mfFirstBlockOfSector(sectorno), keytype, key, mfFirstBlockOfSector(current_sector_i), current_key_type_i, tmp_key);
+                        isOK = mf_static_nested(mfFirstBlockOfSector(sectorno), keytype, key, mfFirstBlockOfSector(current_sector_i), current_key_type_i, tmp_key);
                         DropField();
                         switch (isOK) {
                             case PM3_ETIMEOUT: {
@@ -3211,13 +3211,13 @@ all_found:
 
     bool transfer_status = true;
     for (current_sector_i = 0; current_sector_i < sector_cnt; current_sector_i++) {
-        mfEmlGetMem(block, current_sector_i, 1);
+        mf_eml_get_mem(block, current_sector_i, 1);
         if (e_sector[current_sector_i].foundKey[0])
             num_to_bytes(e_sector[current_sector_i].Key[0], MIFARE_KEY_SIZE, block);
         if (e_sector[current_sector_i].foundKey[1])
             num_to_bytes(e_sector[current_sector_i].Key[1], MIFARE_KEY_SIZE, block + 10);
 
-        transfer_status |= mfEmlSetMem(block, mfFirstBlockOfSector(current_sector_i) + mfNumBlocksPerSector(current_sector_i) - 1, 1);
+        transfer_status |= mf_elm_set_mem(block, mfFirstBlockOfSector(current_sector_i) + mfNumBlocksPerSector(current_sector_i) - 1, 1);
     }
     PrintAndLogEx(NORMAL, "( %s )", (transfer_status) ? _GREEN_("ok") : _RED_("fail"));
 
@@ -3387,7 +3387,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
     }
     if (use_flashmemory) {
         PrintAndLogEx(SUCCESS, "Using dictionary in flash memory");
-        mfCheckKeys_fast_ex(sectorsCnt, true, true, 1, 0, keyBlock, e_sector, use_flashmemory, false, false, singleSectorParams);
+        mf_check_keys_fast_ex(sectorsCnt, true, true, 1, 0, keyBlock, e_sector, use_flashmemory, false, false, singleSectorParams);
     } else {
 
         // strategies. 1= deep first on sector 0 AB,  2= width first on all sectors
@@ -3416,7 +3416,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
                 if (size == keycnt - i)
                     lastChunk = true;
 
-                int res = mfCheckKeys_fast_ex(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * MIFARE_KEY_SIZE), e_sector, false, false, true, singleSectorParams);
+                int res = mf_check_keys_fast_ex(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * MIFARE_KEY_SIZE), e_sector, false, false, true, singleSectorParams);
                 if (firstChunk)
                     firstChunk = false;
 
@@ -3474,7 +3474,7 @@ out:
             uint8_t block[MFBLOCK_SIZE] = {0x00};
             for (i = 0; i < sectorsCnt; ++i) {
                 uint8_t b = mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1;
-                mfEmlGetMem(block, b, 1);
+                mf_eml_get_mem(block, b, 1);
 
                 if (e_sector[i].foundKey[0])
                     num_to_bytes(e_sector[i].Key[0], MIFARE_KEY_SIZE, block);
@@ -3486,7 +3486,7 @@ out:
                     // Disable fast mode on last packet
                     g_conn.block_after_ACK = false;
                 }
-                mfEmlSetMem(block, b, 1);
+                mf_elm_set_mem(block, b, 1);
             }
             PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
 
@@ -3644,7 +3644,7 @@ static int CmdHF14AMfSmartBrute(const char *Cmd) {
         }
 
         int strategy = 2; // width first on all sectors
-        ret = mfCheckKeys_fast(sectorsCnt, firstChunk, lastChunk, strategy, keycnt, keyBlock, e_sector, false, false);
+        ret = mf_check_keys_fast(sectorsCnt, firstChunk, lastChunk, strategy, keycnt, keyBlock, e_sector, false, false);
 
         keys_checked += keycnt;
         total_keys_checked += keycnt;
@@ -3688,7 +3688,7 @@ out:
             uint8_t block[MFBLOCK_SIZE] = {0x00};
             for (i = 0; i < sectorsCnt; ++i) {
                 uint8_t b = mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1;
-                mfEmlGetMem(block, b, 1);
+                mf_eml_get_mem(block, b, 1);
 
                 if (e_sector[i].foundKey[0])
                     num_to_bytes(e_sector[i].Key[0], MIFARE_KEY_SIZE, block);
@@ -3700,7 +3700,7 @@ out:
                     // Disable fast mode on last packet
                     g_conn.block_after_ACK = false;
                 }
-                mfEmlSetMem(block, b, 1);
+                mf_elm_set_mem(block, b, 1);
             }
             PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
 
@@ -3895,7 +3895,7 @@ static int CmdHF14AMfChk(const char *Cmd) {
 
                 uint32_t size = keycnt - c > max_keys ? max_keys : keycnt - c;
 
-                if (mfCheckKeys(b, trgKeyType, clearLog, size, &keyBlock[MIFARE_KEY_SIZE * c], &key64) == PM3_SUCCESS) {
+                if (mf_check_keys(b, trgKeyType, clearLog, size, &keyBlock[MIFARE_KEY_SIZE * c], &key64) == PM3_SUCCESS) {
                     e_sector[i].Key[trgKeyType] = key64;
                     e_sector[i].foundKey[trgKeyType] = true;
                     clearLog = false;
@@ -3972,7 +3972,7 @@ out:
         uint8_t block[MFBLOCK_SIZE] = {0x00};
         for (int i = 0; i < sectors_cnt; ++i) {
             uint8_t blockno = mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1;
-            mfEmlGetMem(block, blockno, 1);
+            mf_eml_get_mem(block, blockno, 1);
 
             if (e_sector[i].foundKey[0])
                 num_to_bytes(e_sector[i].Key[0], MIFARE_KEY_SIZE, block);
@@ -3984,7 +3984,7 @@ out:
                 // Disable fast mode on last packet
                 g_conn.block_after_ACK = false;
             }
-            mfEmlSetMem(block, blockno, 1);
+            mf_elm_set_mem(block, blockno, 1);
         }
         PrintAndLogEx(SUCCESS, "Found keys have been transferred to the emulator memory");
     }
@@ -4051,7 +4051,7 @@ void readerAttack(sector_t *k_sector, size_t k_sectors_cnt, nonces_t data, bool 
         //set emulator memory for keys
         if (setEmulatorMem) {
             uint8_t memBlock[16];
-            mfEmlGetMem(memBlock, (sector * 4) + 3, 1);
+            mf_eml_get_mem(memBlock, (sector * 4) + 3, 1);
             if ((memBlock[6] == 0) && (memBlock[7] == 0) && (memBlock[8] == 0)) {
                 // ACL not yet set?
                 memBlock[6] = 0xFF;
@@ -4064,7 +4064,7 @@ void readerAttack(sector_t *k_sector, size_t k_sectors_cnt, nonces_t data, bool 
                           , (sector * 4) + 3
                           , sprint_hex(memBlock, sizeof(memBlock))
                          );
-            mfEmlSetMem(memBlock, (sector * 4) + 3, 1);
+            mf_elm_set_mem(memBlock, (sector * 4) + 3, 1);
         }
     }
 
@@ -4471,7 +4471,7 @@ static int CmdHF14AMfEGetBlk(const char *Cmd) {
     uint8_t blockno = (uint8_t)b;
 
     uint8_t data[16] = {0x00};
-    if (mfEmlGetMem(data, blockno, 1) == PM3_SUCCESS) {
+    if (mf_eml_get_mem(data, blockno, 1) == PM3_SUCCESS) {
 
         uint8_t sector = mfSectorNum(blockno);
         mf_print_sector_hdr(sector);
@@ -4515,7 +4515,7 @@ static int CmdHF14AMfEGetSc(const char *Cmd) {
 
     uint8_t data[16] = {0};
     for (int i = 0; i < blocks; i++) {
-        int res = mfEmlGetMem(data, start + i, 1);
+        int res = mf_eml_get_mem(data, start + i, 1);
         if (res == PM3_SUCCESS) {
             mf_print_block_one(start + i, data, verbose);
         }
@@ -4581,7 +4581,7 @@ static int CmdHF14AMfESet(const char *Cmd) {
     }
 
     //  1 - blocks count
-    return mfEmlSetMem(data, b, 1);
+    return mf_elm_set_mem(data, b, 1);
 }
 
 int CmdHF14AMfELoad(const char *Cmd) {
@@ -4734,7 +4734,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
     size_t offset = 0;
     int cnt = 0;
 
-    // 12 is the size of the struct the fct mfEmlSetMem_xt uses to transfer to device
+    // 12 is the size of the struct the fct mf_eml_set_mem_xt uses to transfer to device
     uint16_t max_avail_blocks = ((PM3_CMD_DATA_SIZE - 12) / block_width) * block_width;
 
     while (bytes_read && cnt < block_cnt) {
@@ -4746,7 +4746,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         uint16_t chunk_size = MIN(max_avail_blocks, bytes_read);
         uint16_t blocks_to_send = chunk_size / block_width;
 
-        if (mfEmlSetMem_xt(data + offset, cnt, blocks_to_send, block_width) != PM3_SUCCESS) {
+        if (mf_eml_set_mem_xt(data + offset, cnt, blocks_to_send, block_width) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Can't set emulator mem at block: %3d", cnt);
             free(data);
             return PM3_ESOFT;
@@ -5096,7 +5096,7 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
 
     // read UID from EMUL
     uint8_t data[16];
-    if (mfEmlGetMem(data, 0, 1) != PM3_SUCCESS) {
+    if (mf_eml_get_mem(data, 0, 1) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "error get block 0");
         free(e_sector);
         return PM3_ESOFT;
@@ -5109,7 +5109,7 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
     // download keys from EMUL
     for (int i = 0; i < sectors_cnt; i++) {
 
-        if (mfEmlGetMem(data, mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1, 1) != PM3_SUCCESS) {
+        if (mf_eml_get_mem(data, mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1, 1) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "error get block %d", mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1);
             e_sector[i].foundKey[0] = false;
             e_sector[i].foundKey[1] = false;
@@ -5191,7 +5191,7 @@ static int CmdHF14AMfCSetUID(const char *Cmd) {
     uint8_t old_uid[7] = {0};
     uint8_t verify_uid[7] = {0};
 
-    int res = mfCSetUID(
+    int res = mf_chinese_set_uid(
                   uid,
                   uidlen,
                   (alen) ? atqa : NULL,
@@ -5262,7 +5262,7 @@ static int CmdHF14AMfCWipe(const char *cmd) {
         return PM3_EINVARG;
     }
 
-    int res = mfCWipe((uidlen) ? uid : NULL, (alen) ? atqa : NULL, (slen) ? sak : NULL, gdm);
+    int res = mf_chinese_wipe((uidlen) ? uid : NULL, (alen) ? atqa : NULL, (slen) ? sak : NULL, gdm);
     if (res) {
         PrintAndLogEx(ERR, "Can't wipe card. error %d", res);
         return PM3_ESOFT;
@@ -5322,7 +5322,7 @@ static int CmdHF14AMfCSetBlk(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Writing block number:%2d data:%s", b, sprint_hex_inrow(data, sizeof(data)));
 
-    int res = mfCSetBlock(b, data, NULL, params);
+    int res = mf_chinese_set_block(b, data, NULL, params);
     if (res) {
         PrintAndLogEx(ERR, "Can't write block. error=%d", res);
         return PM3_ESOFT;
@@ -5403,7 +5403,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
             uint8_t buf8[MFBLOCK_SIZE] = {0x00};
 
             // read from emul memory
-            if (mfEmlGetMem(buf8, b, 1)) {
+            if (mf_eml_get_mem(buf8, b, 1)) {
                 PrintAndLogEx(WARNING, "Can't read from emul block: %d", b);
                 return PM3_ESOFT;
             }
@@ -5424,7 +5424,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
             }
 
             // write to card
-            if (mfCSetBlock(b, buf8, NULL, flags)) {
+            if (mf_chinese_set_block(b, buf8, NULL, flags)) {
                 PrintAndLogEx(WARNING, "Can't set magic card block: %d", b);
                 return PM3_ESOFT;
             }
@@ -5471,7 +5471,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
             flags = MAGIC_HALT + MAGIC_OFF;
         }
 
-        if (mfCSetBlock(blockno, data + (MFBLOCK_SIZE * blockno), NULL, flags)) {
+        if (mf_chinese_set_block(blockno, data + (MFBLOCK_SIZE * blockno), NULL, flags)) {
             PrintAndLogEx(WARNING, "Can't set magic card block: %d", blockno);
             free(data);
             return PM3_ESOFT;
@@ -5528,7 +5528,7 @@ static int CmdHF14AMfCGetBlk(const char *Cmd) {
 
     uint8_t blockno = (uint8_t)b;
     uint8_t data[16] = {0};
-    int res = mfCGetBlock(blockno, data, MAGIC_SINGLE | (gdm ? MAGIC_GDM_ALT_WUPC : MAGIC_WUPC));
+    int res = mf_chinese_get_block(blockno, data, MAGIC_SINGLE | (gdm ? MAGIC_GDM_ALT_WUPC : MAGIC_WUPC));
     if (res) {
         PrintAndLogEx(ERR, "Can't read block. error=%d", res);
         return PM3_ESOFT;
@@ -5587,7 +5587,7 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
         if (i == 1) flags = 0;
         if (i == blocks - 1) flags = MAGIC_HALT + MAGIC_OFF;
 
-        int res = mfCGetBlock(start + i, data, flags);
+        int res = mf_chinese_get_block(start + i, data, flags);
         if (res) {
             PrintAndLogEx(ERR, "Can't read block. %d error=%d", start + i, res);
             return PM3_ESOFT;
@@ -5712,7 +5712,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
             flags = MAGIC_HALT + MAGIC_OFF;
         }
 
-        if (mfCGetBlock(i, dump + (i * MFBLOCK_SIZE), flags)) {
+        if (mf_chinese_get_block(i, dump + (i * MFBLOCK_SIZE), flags)) {
             PrintAndLogEx(WARNING, "Can't get magic card block: %d", i);
             PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
             free(dump);
@@ -5733,7 +5733,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
                 // Disable fast mode on last packet
                 g_conn.block_after_ACK = false;
             }
-            if (mfEmlSetMem(dump + (i * MFBLOCK_SIZE), i, 5) != PM3_SUCCESS) {
+            if (mf_elm_set_mem(dump + (i * MFBLOCK_SIZE), i, 5) != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "Can't set emul block: " _YELLOW_("%d"), i);
             }
             if (i % 64 == 0) {
@@ -5861,7 +5861,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
             flags = MAGIC_HALT + MAGIC_OFF;
         }
 
-        if (mfCGetBlock(i, dump + (i * MFBLOCK_SIZE), flags)) {
+        if (mf_chinese_get_block(i, dump + (i * MFBLOCK_SIZE), flags)) {
             PrintAndLogEx(WARNING, "Can't get magic card block: " _YELLOW_("%u"), i);
             PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
             free(dump);
@@ -5934,7 +5934,7 @@ static int CmdHf14AMfDecryptBytes(const char *Cmd) {
     PrintAndLogEx(INFO, "ar enc... %08X", ar_enc);
     PrintAndLogEx(INFO, "at enc... %08X", at_enc);
 
-    return tryDecryptWord(nt, ar_enc, at_enc, data, datalen);
+    return try_decrypt_word(nt, ar_enc, at_enc, data, datalen);
 }
 
 static int CmdHf14AMfSetMod(const char *Cmd) {
@@ -6301,7 +6301,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     uint8_t sector10[MFBLOCK_SIZE * 4] = {0};
 
     bool got_first = true;
-    if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector0) != PM3_SUCCESS) {
+    if (mf_read_sector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector0) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "error, read sector 0. card doesn't have MAD or doesn't have MAD on default keys");
         got_first = false;
     } else {
@@ -6311,7 +6311,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     // User supplied key
     if (got_first == false && keylen == 6) {
         PrintAndLogEx(INFO, "Trying user specified key...");
-        if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, userkey, sector0) != PM3_SUCCESS) {
+        if (mf_read_sector(MF_MAD1_SECTOR, MF_KEY_A, userkey, sector0) != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or the custom key is wrong");
         } else {
             PrintAndLogEx(INFO, "Authentication ( " _GREEN_("ok") " )");
@@ -6325,7 +6325,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     }
 
     got_first = true;
-    if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector10) != PM3_SUCCESS) {
+    if (mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifare_mad_key, sector10) != PM3_SUCCESS) {
         if (verbose) {
             PrintAndLogEx(ERR, "error, read sector 0x10. card doesn't have MAD 2 or doesn't have MAD 2 on default keys");
         }
@@ -6337,7 +6337,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     // User supplied key
     if (got_first == false && keylen == 6) {
         PrintAndLogEx(INFO, "Trying user specified key...");
-        if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, userkey, sector10) != PM3_SUCCESS) {
+        if (mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, userkey, sector10) != PM3_SUCCESS) {
             if (verbose) {
                 PrintAndLogEx(ERR, "error, read sector 10. card doesn't have MAD 2 or the custom key is wrong");
             }
@@ -6383,7 +6383,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
             for (int i = 0; i < madlen; i++) {
                 if (aaid == mad[i]) {
                     uint8_t vsector[MFBLOCK_SIZE * 4] = {0};
-                    if (mfReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
+                    if (mf_read_sector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
                         PrintAndLogEx(NORMAL, "");
                         PrintAndLogEx(ERR, "error, read sector %d", i + 1);
                         return PM3_ESOFT;
@@ -6407,7 +6407,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
                 if (aaid == mad[i]) {
 
                     uint8_t vsector[MFBLOCK_SIZE * 4] = {0};
-                    if (mfReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
+                    if (mf_read_sector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
                         PrintAndLogEx(NORMAL, "");
                         PrintAndLogEx(ERR, "error, read sector %d", i + 1);
                         return PM3_ESOFT;
@@ -6504,7 +6504,7 @@ int CmdHFMFNDEFRead(const char *Cmd) {
         PrintAndLogEx(INFO, "reading MAD v1 sector");
     }
 
-    if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, g_mifare_mad_key, sector0)) {
+    if (mf_read_sector(MF_MAD1_SECTOR, MF_KEY_A, g_mifare_mad_key, sector0)) {
         PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or doesn't have MAD on default keys");
         PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
         return PM3_ESOFT;
@@ -6514,7 +6514,7 @@ int CmdHFMFNDEFRead(const char *Cmd) {
         PrintAndLogEx(INFO, "reading MAD v2 sector");
     }
 
-    if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, g_mifare_mad_key, sector10)) {
+    if (mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, g_mifare_mad_key, sector10)) {
         if (verbose) {
             PrintAndLogEx(ERR, "error, read sector 0x10. card doesn't have MAD 2 or doesn't have MAD 2 on default keys");
             PrintAndLogEx(INFO, "Skipping MAD 2");
@@ -6540,7 +6540,7 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     for (int i = 0; i < madlen; i++) {
         if (ndef_aid == mad[i]) {
             uint8_t vsector[MFBLOCK_SIZE * 4] = {0};
-            if (mfReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, ndefkey, vsector)) {
+            if (mf_read_sector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, ndefkey, vsector)) {
                 PrintAndLogEx(ERR, "error, reading sector %d ", i + 1);
                 return PM3_ESOFT;
             }
@@ -6689,7 +6689,7 @@ int CmdHFMFNDEFFormat(const char *Cmd) {
     uint64_t key64 = 0;
 
     // check if we can authenticate to sector
-    if (mfCheckKeys(0, MF_KEY_A, true, 1, (uint8_t *)g_mifare_mad_key, &key64) == PM3_SUCCESS) {
+    if (mf_check_keys(0, MF_KEY_A, true, 1, (uint8_t *)g_mifare_mad_key, &key64) == PM3_SUCCESS) {
 
         // if used,  assume KEY A is MAD/NDEF set.
         memcpy(keyA[0], g_mifare_mad_key, sizeof(g_mifare_mad_key));
@@ -6771,9 +6771,9 @@ skipfile:
             }
 
             // write to card,  try B key first
-            if (mfWriteBlock(b, MF_KEY_B, keyB[i], block) != PM3_SUCCESS) {
+            if (mf_write_block(b, MF_KEY_B, keyB[i], block) != PM3_SUCCESS) {
                 // try A key,
-                if (mfWriteBlock(b, MF_KEY_A, keyA[i], block) != PM3_SUCCESS) {
+                if (mf_write_block(b, MF_KEY_A, keyA[i], block) != PM3_SUCCESS) {
                     return PM3_EFAILED;
                 }
             }
@@ -6868,7 +6868,7 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
     uint64_t key64 = 0;
 
     // check if we can authenticate to sector
-    int res = mfCheckKeys(0, MF_KEY_A, true, 1, (uint8_t *)g_mifare_mad_key, &key64);
+    int res = mf_check_keys(0, MF_KEY_A, true, 1, (uint8_t *)g_mifare_mad_key, &key64);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Sector 0 failed to authenticate with MAD default key");
         PrintAndLogEx(HINT, "Verify that the tag NDEF formatted");
@@ -6943,7 +6943,7 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
 
     // read MAD Sector 0, block1,2
     uint8_t sector0[MFBLOCK_SIZE * 4] = {0};
-    if (mfReadSector(MF_MAD1_SECTOR, MF_KEY_A, g_mifare_mad_key, sector0)) {
+    if (mf_read_sector(MF_MAD1_SECTOR, MF_KEY_A, g_mifare_mad_key, sector0)) {
         PrintAndLogEx(ERR, "error, reading sector 0. Card doesn't have MAD or doesn't have MAD on default keys");
         PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
         return PM3_ESOFT;
@@ -6952,7 +6952,7 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
     // read MAD Sector 10, block1,2
     uint8_t sector10[MFBLOCK_SIZE * 4] = {0};
     if (m4) {
-        if (mfReadSector(MF_MAD2_SECTOR, MF_KEY_A, g_mifare_mad_key, sector10)) {
+        if (mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, g_mifare_mad_key, sector10)) {
             PrintAndLogEx(ERR, "error, reading sector 10. Card doesn't have MAD or doesn't have MAD on default keys");
             PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
             return PM3_ESOFT;
@@ -7014,11 +7014,11 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
         }
 
         // write to card,  try B key first
-        if (mfWriteBlock(block_no,  MF_KEY_B, g_mifare_default_key, block) != PM3_SUCCESS) {
+        if (mf_write_block(block_no,  MF_KEY_B, g_mifare_default_key, block) != PM3_SUCCESS) {
 
             // try A key,
     
-            if (mfWriteBlock(block_no, MF_KEY_A, g_mifare_ndef_key, block) != PM3_SUCCESS) {
+            if (mf_write_block(block_no, MF_KEY_A, g_mifare_ndef_key, block) != PM3_SUCCESS) {
                 return PM3_EFAILED;
             }
         }
@@ -7173,7 +7173,7 @@ static int CmdHf14AGen3UID(const char *Cmd) {
 
     uint8_t old_uid[10] = {0};
 
-    int res = mfGen3UID(uid, uidlen, old_uid);
+    int res = mf_chinese_gen_3_uid(uid, uidlen, old_uid);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't set UID");
         PrintAndLogEx(HINT, "Are you sure your card is a Gen3 ?");
@@ -7213,7 +7213,7 @@ static int CmdHf14AGen3Block(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint8_t new_block[MFBLOCK_SIZE] = {0x00};
-    int res = mfGen3Block(data, datalen, new_block);
+    int res = mf_chinese_gen_3_block(data, datalen, new_block);
     if (res) {
         PrintAndLogEx(ERR, "Can't change manufacturer block data. error %d", res);
         return PM3_ESOFT;
@@ -7244,7 +7244,7 @@ static int CmdHf14AGen3Freeze(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
-    int res = mfGen3Freeze();
+    int res = mf_chinese_gen_3_freeze();
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't lock UID changes. error %d", res);
     } else {
@@ -8696,7 +8696,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
         int cnt = 0;
         uint16_t bytes_left = bytes ;
 
-        // 12 is the size of the struct the fct mfEmlSetMem_xt uses to transfer to device
+        // 12 is the size of the struct the fct mf_eml_set_mem_xt uses to transfer to device
         uint16_t max_avail_blocks = ((PM3_CMD_DATA_SIZE - 12) / MFBLOCK_SIZE) * MFBLOCK_SIZE;
 
         while (bytes_left > 0 && cnt < block_cnt) {
@@ -8708,7 +8708,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
             uint16_t chunk_size = MIN(max_avail_blocks, bytes_left);
             uint16_t blocks_to_send = chunk_size / MFBLOCK_SIZE;
 
-            if (mfEmlSetMem_xt(dump + offset, cnt, blocks_to_send, MFBLOCK_SIZE) != PM3_SUCCESS) {
+            if (mf_eml_set_mem_xt(dump + offset, cnt, blocks_to_send, MFBLOCK_SIZE) != PM3_SUCCESS) {
                 PrintAndLogEx(FAILED, "Can't set emulator mem at block: %3d", cnt);
                 free(dump);
                 return PM3_ESOFT;
@@ -9364,12 +9364,12 @@ static int CmdHF14AMfValue(const char *Cmd) {
             // already have data from command line
         } else {
             if (trnval == -1) {
-                res = mfReadBlock(blockno, keytype, key, data);
+                res = mf_read_block(blockno, keytype, key, data);
             } else {
                 if (mfSectorNum(trnval) != mfSectorNum(blockno))
-                    res = mfReadBlock(trnval, transferkeytype, transferkey, data);
+                    res = mf_read_block(trnval, transferkeytype, transferkey, data);
                 else
-                    res = mfReadBlock(trnval, keytype, key, data);
+                    res = mf_read_block(trnval, keytype, key, data);
             }
         }
 
@@ -9495,8 +9495,8 @@ static int CmdHFMFHidEncode(const char *Cmd) {
             PrintAndLogEx(INFO, "Writing %u - %s", (i + 1), sprint_hex_inrow(blocks + (i * MFBLOCK_SIZE), MFBLOCK_SIZE));
         }
 
-        if (mfWriteBlock((i + 1), MF_KEY_A, empty, blocks + (i * MFBLOCK_SIZE)) == PM3_EFAILED) {
-            if (mfWriteBlock((i + 1), MF_KEY_B, empty, blocks + (i * MFBLOCK_SIZE)) == PM3_EFAILED) {
+        if (mf_write_block((i + 1), MF_KEY_A, empty, blocks + (i * MFBLOCK_SIZE)) == PM3_EFAILED) {
+            if (mf_write_block((i + 1), MF_KEY_B, empty, blocks + (i * MFBLOCK_SIZE)) == PM3_EFAILED) {
                 PrintAndLogEx(WARNING, "failed writing block %d using default empty key", (i + 1));
                 res = false;
                 break;
@@ -9636,14 +9636,14 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     }
 
     uint8_t blockdata[MFBLOCK_SIZE] = {0};
-    res = mfCheckKeys_fast(sectorsCnt, true, true, 1, keycnt, keyBlock, e_sector, false, verbose);
+    res = mf_check_keys_fast(sectorsCnt, true, true, 1, keycnt, keyBlock, e_sector, false, verbose);
     if (res == PM3_SUCCESS || res == PM3_EPARTIAL) {
 
         if (e_sector[0].foundKey[MF_KEY_A]) {
             PrintAndLogEx(SUCCESS, "Sector 0 key A... " _GREEN_("%012" PRIX64), e_sector[0].Key[MF_KEY_A]);
 
             num_to_bytes(e_sector[0].Key[MF_KEY_A], MIFARE_KEY_SIZE, fkey);
-            if (mfReadBlock(0, MF_KEY_A, key, blockdata) == PM3_SUCCESS) {
+            if (mf_read_block(0, MF_KEY_A, key, blockdata) == PM3_SUCCESS) {
                 fKeyType = MF_KEY_A;
             }
         }
@@ -9653,7 +9653,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
 
             if (fKeyType == 0xFF) {
                 num_to_bytes(e_sector[0].Key[MF_KEY_B], MIFARE_KEY_SIZE, fkey);
-                if (mfReadBlock(0, MF_KEY_B, key, blockdata) == PM3_SUCCESS) {
+                if (mf_read_block(0, MF_KEY_B, key, blockdata) == PM3_SUCCESS) {
                     fKeyType = MF_KEY_B;
                 }
             }
@@ -9667,16 +9667,16 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     uint8_t k08s[6] = {0xA3, 0x96, 0xEF, 0xA4, 0xE2, 0x4F};
     uint8_t k08[6] = {0xA3, 0x16, 0x67, 0xA8, 0xCE, 0xC1};
     uint8_t k32[6] = {0x51, 0x8B, 0x33, 0x54, 0xE7, 0x60};
-    if (mfReadBlock(0, 4, k08s, blockdata) == PM3_SUCCESS) {
+    if (mf_read_block(0, 4, k08s, blockdata) == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Backdoor key..... " _YELLOW_("%s"), sprint_hex_inrow(k08s, sizeof(k08s)));
         fKeyType = MF_KEY_BD;
         memcpy(fkey, k08s, sizeof(fkey));
 
-    } else if (mfReadBlock(0, 4, k08, blockdata) == PM3_SUCCESS) {
+    } else if (mf_read_block(0, 4, k08, blockdata) == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Backdoor key..... " _YELLOW_("%s"), sprint_hex_inrow(k08, sizeof(k08)));
         fKeyType = MF_KEY_BD;
         memcpy(fkey, k08, sizeof(fkey));
-    } else if (mfReadBlock(0, 4, k32, blockdata) == PM3_SUCCESS) {
+    } else if (mf_read_block(0, 4, k32, blockdata) == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Backdoor key..... " _YELLOW_("%s"), sprint_hex_inrow(k32, sizeof(k32)));
         fKeyType = MF_KEY_BD;
         memcpy(fkey, k32, sizeof(fkey));

@@ -1914,7 +1914,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
                 if (aaid == mad[i]) {
 
                     uint8_t vsector[16 * 4] = {0};
-                    if (mfReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
+                    if (mf_read_sector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, akey, vsector)) {
                         PrintAndLogEx(NORMAL, "");
                         PrintAndLogEx(ERR, "error, read sector %d", i + 1);
                         return PM3_ESOFT;
