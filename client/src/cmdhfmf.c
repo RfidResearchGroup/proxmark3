@@ -6769,9 +6769,9 @@ skipfile:
             }
 
             // write to card,  try B key first
-            if (mfWriteBlock(keyB[i], MF_KEY_B, b, block) != PM3_SUCCESS) {
+            if (mfWriteBlock(b, MF_KEY_B, keyB[i], block) != PM3_SUCCESS) {
                 // try A key,
-                if (mfWriteBlock(keyA[i], MF_KEY_A, b, block) != PM3_SUCCESS) {
+                if (mfWriteBlock(b, MF_KEY_A, keyA[i], block) != PM3_SUCCESS) {
                     return PM3_EFAILED;
                 }
             }
@@ -7012,10 +7012,11 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
         }
 
         // write to card,  try B key first
-        if (mfWriteBlock(g_mifare_default_key, MF_KEY_B, block_no, block) != PM3_SUCCESS) {
+        if (mfWriteBlock(block_no,  MF_KEY_B, g_mifare_default_key, block) != PM3_SUCCESS) {
 
             // try A key,
-            if (mfWriteBlock(g_mifare_ndef_key, MF_KEY_A, block_no, block) != PM3_SUCCESS) {
+    
+            if (mfWriteBlock(block_no, MF_KEY_A, g_mifare_ndef_key, block) != PM3_SUCCESS) {
                 return PM3_EFAILED;
             }
         }
@@ -9492,8 +9493,8 @@ static int CmdHFMFHidEncode(const char *Cmd) {
             PrintAndLogEx(INFO, "Writing %u - %s", (i + 1), sprint_hex_inrow(blocks + (i * MFBLOCK_SIZE), MFBLOCK_SIZE));
         }
 
-        if (mfWriteBlock(empty, MF_KEY_A, (i + 1), blocks + (i * MFBLOCK_SIZE)) == PM3_EFAILED) {
-            if (mfWriteBlock(empty, MF_KEY_B, (i + 1), blocks + (i * MFBLOCK_SIZE)) == PM3_EFAILED) {
+        if (mfWriteBlock((i + 1), MF_KEY_A, empty, blocks + (i * MFBLOCK_SIZE)) == PM3_EFAILED) {
+            if (mfWriteBlock((i + 1), MF_KEY_B, empty, blocks + (i * MFBLOCK_SIZE)) == PM3_EFAILED) {
                 PrintAndLogEx(WARNING, "failed writing block %d using default empty key", (i + 1));
                 res = false;
                 break;

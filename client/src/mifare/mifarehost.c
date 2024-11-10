@@ -994,7 +994,7 @@ int mfReadBlock(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint8_t *d
     return PM3_SUCCESS;
 }
 
-int mfWriteBlock(const uint8_t *key, uint8_t keytype, uint8_t blockno, uint8_t *block) {
+int mfWriteBlock(uint8_t blockno, uint8_t keyType, const uint8_t *key, uint8_t *block) {
 
     uint8_t data[26];
     memcpy(data, key, MIFARE_KEY_SIZE);
@@ -1009,6 +1009,10 @@ int mfWriteBlock(const uint8_t *key, uint8_t keytype, uint8_t blockno, uint8_t *
     }
 
     return ((resp.oldarg[0] & 0xff) == 1)?PM3_SUCCESS:PM3_EFAILED;
+}
+
+int mfWriteSector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8_t *sector){
+    
 }
 
 // EMULATOR
