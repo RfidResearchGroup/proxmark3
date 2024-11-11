@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added key to mfulc_default_keys (@Septimus4)
 - Fixed `intertic.py` - missing comma in array (@iceman1001)
 - Added improved algorithm for `hf iclass legrec` leveraging reduced entropy from hash0 constraints (@antiklesys)
 - Fixed `hf iclass configcard` when generating elite or keyroll elite configcards for Rev.C legacy readers (@antiklesys)
