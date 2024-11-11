@@ -939,9 +939,9 @@ def dumpAcl(data):
 
 def diskDump(data, uid, dpath):
     """Full Dump"""
-    dump18 = color(f'{dpath}hf-mf-{uid.hex().upper()}-dump18.bin', fg='yellow')
+    dump18 = f'{dpath}hf-mf-{uid.hex().upper()}-dump18.bin'
 
-    lprint(f'\nDump card data to file... {dump18}')
+    lprint(f'\nDump card data to file... ' + color(dump18, fg='yellow'))
 
     bad = False
     try:
