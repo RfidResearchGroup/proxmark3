@@ -1043,7 +1043,7 @@ No implemented commands today
 | 7AFF000000000000BAFA000000000008 | UFUID |
 | 7AFF0000000000000000000000000008 | ZUID |
 
-*Not all tags are the same!* UFUID, ZUID and PFUID* are not full implementations of Magic85 - they only acknowledge the first 8 (except wakeup command) and last config byte(s).
+*Not all tags are the same!* UFUID, ZUID and PFUID* are not full implementations of USCUID - they only acknowledge the first 8 (except wakeup command) and last config byte(s).
 
 *Read and write config commands are flipped
 
@@ -1053,9 +1053,9 @@ Well-known variations are described below.
 
 ^[Top](#top)
 
-Known as "write only once", which is only partially true.
+Known as "write only once", which is only partially true. Please note that some newer FUIDs have had ton configration blocks locked down and are truly a write-once tag.
 
-Allows direct write to block 0 only when UID is default `AA55C396`. But always could be rewritten multiple times with backdoors commands.
+Allows direct write to block 0 only when UID is default `AA55C396`. If your tag responds to a gen4 magic wakeup, the UID could always be rewritten multiple times with backdoors commands.
 
 Backdoor commands are available even after the personalization and makes that tag detectable.
 
@@ -1074,10 +1074,21 @@ That's a key difference from [OTP](#mifare-classic-direct-write-otp)/[OTP 2.0](#
 
 ^[Top](#top)
 
+Unlocked tag type:
+
 ```
 hf mf info
 ...
 [+] Magic capabilities... Gen 4 GDM / USCUID ( Alt Magic Wakeup )
+[+] Magic capabilities... Write Once / FUID
+
+```
+
+or locked down tag type:
+
+```
+hf mf info
+...
 [+] Magic capabilities... Write Once / FUID
 
 ```
@@ -1103,6 +1114,7 @@ hf mf info
 [+]                                                     00 ..  Unknown
 [+]                                                        08  SAK
 ```
+**Note: this is only possile on the FUID style that has not been locked down.
 
 ### Commands
 
@@ -1115,7 +1127,7 @@ hf mf info
   * Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
   * Read configuration: `E000+crc`
   * Write configuration: `E100+crc`
-* Example of changing block 0 after the personalization:
+* Example of changing block 0 after the personalization (only possible on tags that have not been locked down):
 
 ```
 [usb] pm3 --> hf 14a raw -k -a -b 7 20
