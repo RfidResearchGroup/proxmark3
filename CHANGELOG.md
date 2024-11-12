@@ -3,7 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- Major changes to `hf iclass configcard` expanding the list of available options and functionalities (@antiklesys)
+- Changed `hf 14a info` `hf mf info` - now detects FM1216-137 CPU cards (@iceman1001)
+- Changed `hf iclass configcard` expanding the list of available options and functionalities (@antiklesys)
 - Fixed `intertic.py` - missing comma in array (@iceman1001)
 - Added improved algorithm for `hf iclass legrec` leveraging reduced entropy from hash0 constraints (@antiklesys)
 - Fixed `hf iclass configcard` when generating elite or keyroll elite configcards for Rev.C legacy readers (@antiklesys)
