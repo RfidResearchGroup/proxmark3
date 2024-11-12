@@ -166,7 +166,7 @@ globals:
     # Currently dumpAcl is hardcoded for RF08S
     dumpAcl(data)
 
-    if mad is True:
+    if (mad is True) or (args.mad is True):
         dumpMad(dump18)
 
     if (args.bambu is True) or (detectBambu(data) is True):
@@ -207,6 +207,7 @@ def parseCli():
     parser.add_argument('-r', '--recover',  action='store_true', help='run key recovery script if required')
     parser.add_argument('-f', '--force',    action='store_true', help='force recovery of keys')
     parser.add_argument('-b', '--bambu',    action='store_true', help='force Bambu tag decode')
+    parser.add_argument('-m', '--mad',      action='store_true', help='force M.A.D. decode')
     parser.add_argument('-v', '--validate', action='store_true', help='check Fudan signature (requires internet)')
     parser.add_argument('--fast', action='store_true', help='use ecfill for faster card transactions')
 
