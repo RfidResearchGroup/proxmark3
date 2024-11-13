@@ -250,8 +250,8 @@ int mf_check_keys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t ke
 // 1 ==
 // 2 == Time-out, aborting
 int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy,
-                        uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory,
-                        bool verbose, bool quiet, uint16_t singleSectorParams) {
+                          uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory,
+                          bool verbose, bool quiet, uint16_t singleSectorParams) {
 
     uint64_t t2 = msclock();
 
@@ -358,7 +358,7 @@ int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastCh
 }
 
 int mf_check_keys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy,
-                     uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory, bool verbose) {
+                       uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory, bool verbose) {
     return mf_check_keys_fast_ex(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock, e_sector, use_flashmemory, verbose, false, 0);
 }
 
@@ -1014,12 +1014,12 @@ int mf_write_block(uint8_t blockno, uint8_t keyType, const uint8_t *key, uint8_t
     return res;
 }
 
-int mf_write_sector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8_t *sector){
+int mf_write_sector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8_t *sector) {
     int res;
-    for (int i=0;i<4; i++){
-        res = mf_write_block((sectorNo*4)+i, keyType, key, sector+(i*MFBLOCK_SIZE));
-        if (res != PM3_SUCCESS){
-            return (i==0)?PM3_EFAILED:PM3_EPARTIAL;
+    for (int i = 0; i < 4; i++) {
+        res = mf_write_block((sectorNo * 4) + i, keyType, key, sector + (i * MFBLOCK_SIZE));
+        if (res != PM3_SUCCESS) {
+            return (i == 0) ? PM3_EFAILED : PM3_EPARTIAL;
         }
     }
     return PM3_SUCCESS;

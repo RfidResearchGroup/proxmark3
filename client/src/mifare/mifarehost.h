@@ -75,11 +75,11 @@ int mf_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo
 int mf_static_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKey);
 int mf_check_keys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t *keyBlock, uint64_t *key);
 int mf_check_keys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk,
-                     uint8_t strategy, uint32_t size, uint8_t *keyBlock, sector_t *e_sector,
-                     bool use_flashmemory, bool verbose);
+                       uint8_t strategy, uint32_t size, uint8_t *keyBlock, sector_t *e_sector,
+                       bool use_flashmemory, bool verbose);
 int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy,
-                        uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory,
-                        bool verbose, bool quiet, uint16_t singleSectorParams);
+                          uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory,
+                          bool verbose, bool quiet, uint16_t singleSectorParams);
 
 int mf_check_keys_file(uint8_t *destfn, uint64_t *key);
 
