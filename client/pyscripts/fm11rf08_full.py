@@ -978,7 +978,7 @@ globals:
     lprint("====================================")
     lprint()
 
-    cmd = f"hf mf mad --verbose --file {dump18}"
+    cmd = f"hf mf mad --force --verbose --file {dump18}"
     lprint(f"`{cmd}`", log=False)
 
     lprint('\n`-._,-\'"`-._,-"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,\n')

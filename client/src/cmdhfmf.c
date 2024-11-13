@@ -6171,7 +6171,8 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         arg_lit0("b",  "keyb",     "use key B for access printing sectors (by default: key A)"),
         arg_lit0(NULL, "be",       "(optional, BigEndian)"),
         arg_lit0(NULL, "dch",      "decode Card Holder information"),
-        arg_str0("f", "file",      "<fn>", "load dump file and decode MAD"),
+        arg_str0("f",  "file",     "<fn>", "load dump file and decode MAD"),
+        arg_lit0(NULL, "force",    "force decode (skip key check)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -6185,6 +6186,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     bool keyB = arg_get_lit(ctx, 4);
     bool swapmad = arg_get_lit(ctx, 5);
     bool decodeholder = arg_get_lit(ctx, 6);
+    bool force = arg_get_lit(ctx, 8);
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
@@ -6214,7 +6216,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         }
 
         // MAD detection
-        if (HasMADKey(dump) == false) {
+        if ((HasMADKey(dump) == false) && (force == false)) {
             PrintAndLogEx(FAILED, "No MAD key was detected in the dump file");
             free(dump);
             return PM3_ESOFT;
