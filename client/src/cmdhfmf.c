@@ -9722,11 +9722,6 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             // 10 78 80 90 02 20 90 00 00 00 00 00 + UID + CRC
             PrintAndLogEx(SUCCESS, "Fudan FM1208-10");
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
-                   && card.sak == 0x28 && memcmp(blockdata + 5, "\x28\x04\x00\x90\x11\x15\x01\x00\x00\x00\x00", 11) == 0) {
-            // Note: it also has ATS =
-            // 10 78 80 90 02 20 90 00 00 00 00 00 + UID + CRC
-            PrintAndLogEx(SUCCESS, "Fudan FM1208-10 ?");
-        } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
                    && card.sak == 0x28 && memcmp(blockdata + 5, "\x28\x04\x00\x90\x53\xB7\x0C\x00\x00\x00\x00", 11) == 0) {
             // Note: it also has ATS =
             // 10 78 80 B0 02 20 90 00 00 00 00 00 + UID + CRC
