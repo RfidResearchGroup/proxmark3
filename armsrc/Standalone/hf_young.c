@@ -177,14 +177,14 @@ void RunMod(void) {
                             MifareCGetBlock(c->arg[0], c->arg[1], c->d.asBytes);
                             break;
 
-                mfCSetUID provides example logic for UID set workflow:
+                mf_chinese_set_uid provides example logic for UID set workflow:
                     -Read block0 from card in field with MifareCGetBlock()
                     -Configure new values without replacing reserved bytes
                             memcpy(block0, uid, 4); // Copy UID bytes from byte array
                             // Mifare UID BCC
                             block0[4] = block0[0]^block0[1]^block0[2]^block0[3]; // BCC on byte 5
                             Bytes 5-7 are reserved SAK and ATQA for mifare classic
-                    -Use mfCSetBlock(0, block0, oldUID, wantWipe, MAGIC_SINGLE | MAGIC_WUPC) to write it
+                    -Use mf_chinese_set_block(0, block0, oldUID, wantWipe, MAGIC_SINGLE | MAGIC_WUPC) to write it
             */
             uint8_t oldBlock0[16] = {0}, newBlock0[16] = {0};
             // arg0 = Flags, arg1=blockNo

@@ -525,7 +525,7 @@ static int CmdHfIctCredential(const char *Cmd) {
         }
 
         // diversified key A?
-        int res = mfReadSector(ICT_MIFARE_SECTOR, MF_KEY_A, ICT_MIFARE_A_KEY, data);
+        int res = mf_read_sector(ICT_MIFARE_SECTOR, MF_KEY_A, ICT_MIFARE_A_KEY, data);
         if (res != PM3_SUCCESS) {
             free(data);
             return res;
