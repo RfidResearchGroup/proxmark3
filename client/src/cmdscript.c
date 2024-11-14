@@ -532,6 +532,7 @@ static int CmdScriptRun(const char *Cmd) {
             return PM3_SUCCESS;
         }
 
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 10
 pyexception:
         PyConfig_Clear(&py_conf);
         if (PyStatus_IsExit(status)) {
@@ -541,6 +542,7 @@ pyexception:
             PrintAndLogEx(WARNING, "\nPython initialization failed with exception: %s", status.err_msg);
         }
         return PM3_ESOFT;
+#endif
     }
 #endif
 
