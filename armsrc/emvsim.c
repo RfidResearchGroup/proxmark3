@@ -1812,7 +1812,7 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
             //    break;
             //}
 
-                // WRITE BL2
+            // WRITE BL2 - this seems to matter for some reason???
             case MFEMUL_WRITEBL2: {
                 if (receivedCmd_len == MAX_MIFARE_FRAME_SIZE) {
                     mf_crypto1_decryptEx(pcs, receivedCmd, receivedCmd_len, receivedCmd_dec);
@@ -1849,60 +1849,60 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
             }
 
               // INC
-            case MFEMUL_INTREG_INC: {
-                if (receivedCmd_len == 6) {
-                    mf_crypto1_decryptEx(pcs, receivedCmd, receivedCmd_len, (uint8_t *)&ans);
-                    if (emlGetValBl(&cardINTREG, &cardINTBLOCK, cardWRBL) != PM3_SUCCESS) {
-                        EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
-                        FpgaDisableTracing();
+            //case MFEMUL_INTREG_INC: {
+            //    if (receivedCmd_len == 6) {
+            //        mf_crypto1_decryptEx(pcs, receivedCmd, receivedCmd_len, (uint8_t *)&ans);
+            //        if (emlGetValBl(&cardINTREG, &cardINTBLOCK, cardWRBL) != PM3_SUCCESS) {
+            //            EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
+            //            FpgaDisableTracing();
 
-                        cardSTATE_TO_IDLE();
-                        break;
-                    }
-                    LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
-                    cardINTREG = cardINTREG + ans;
+            //            cardSTATE_TO_IDLE();
+            //            break;
+            //        }
+            //        LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
+            //        cardINTREG = cardINTREG + ans;
 
-                    cardSTATE = MFEMUL_WORK;
-                    if (999 >= DBG_EXTENDED) Dbprintf("[MFEMUL_INTREG_INC] cardSTATE = MFEMUL_WORK");
-                    break;
-                }
-            }
+            //        cardSTATE = MFEMUL_WORK;
+            //        if (999 >= DBG_EXTENDED) Dbprintf("[MFEMUL_INTREG_INC] cardSTATE = MFEMUL_WORK");
+            //        break;
+            //    }
+            //}
 
-                // DEC
-            case MFEMUL_INTREG_DEC: {
-                if (receivedCmd_len == 6) {  //  Data is encrypted
-                    // Decrypted cmd
-                    mf_crypto1_decryptEx(pcs, receivedCmd, receivedCmd_len, (uint8_t *)&ans);
-                    if (emlGetValBl(&cardINTREG, &cardINTBLOCK, cardWRBL) != PM3_SUCCESS) {
-                        EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
-                        FpgaDisableTracing();
+            //// DEC
+            //case MFEMUL_INTREG_DEC: {
+            //    if (receivedCmd_len == 6) {  //  Data is encrypted
+            //        // Decrypted cmd
+            //        mf_crypto1_decryptEx(pcs, receivedCmd, receivedCmd_len, (uint8_t *)&ans);
+            //        if (emlGetValBl(&cardINTREG, &cardINTBLOCK, cardWRBL) != PM3_SUCCESS) {
+            //            EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
+            //            FpgaDisableTracing();
 
-                        cardSTATE_TO_IDLE();
-                        break;
-                    }
-                }
-                LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
-                cardINTREG = cardINTREG - ans;
-                cardSTATE = MFEMUL_WORK;
-                if (999 >= DBG_EXTENDED) Dbprintf("[MFEMUL_INTREG_DEC] cardSTATE = MFEMUL_WORK");
-                break;
-            }
+            //            cardSTATE_TO_IDLE();
+            //            break;
+            //        }
+            //    }
+            //    LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
+            //    cardINTREG = cardINTREG - ans;
+            //    cardSTATE = MFEMUL_WORK;
+            //    if (999 >= DBG_EXTENDED) Dbprintf("[MFEMUL_INTREG_DEC] cardSTATE = MFEMUL_WORK");
+            //    break;
+            //}
 
-                // REST
-            case MFEMUL_INTREG_REST: {
-                mf_crypto1_decryptEx(pcs, receivedCmd, receivedCmd_len, (uint8_t *)&ans);
-                if (emlGetValBl(&cardINTREG, &cardINTBLOCK, cardWRBL) != PM3_SUCCESS) {
-                    EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
-                    FpgaDisableTracing();
+            //// REST
+            //case MFEMUL_INTREG_REST: {
+            //    mf_crypto1_decryptEx(pcs, receivedCmd, receivedCmd_len, (uint8_t *)&ans);
+            //    if (emlGetValBl(&cardINTREG, &cardINTBLOCK, cardWRBL) != PM3_SUCCESS) {
+            //        EmSend4bit(mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA));
+            //        FpgaDisableTracing();
 
-                    cardSTATE_TO_IDLE();
-                    break;
-                }
-                LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
-                cardSTATE = MFEMUL_WORK;
-                if (999 >= DBG_EXTENDED) Dbprintf("[MFEMUL_INTREG_REST] cardSTATE = MFEMUL_WORK");
-                break;
-            }
+            //        cardSTATE_TO_IDLE();
+            //        break;
+            //    }
+            //    LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
+            //    cardSTATE = MFEMUL_WORK;
+            //    if (999 >= DBG_EXTENDED) Dbprintf("[MFEMUL_INTREG_REST] cardSTATE = MFEMUL_WORK");
+            //    break;
+            //}
 
         }  // End Switch Loop
 
