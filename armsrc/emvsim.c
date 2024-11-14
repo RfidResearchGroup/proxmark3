@@ -825,7 +825,7 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
     uint32_t cuid = 0, authTimer = 0;
     uint32_t nr, ar;
     //uint8_t blockNo;
-    bool encrypted_data;
+    //bool encrypted_data;
 
     uint8_t cardWRBL = 0;
     uint8_t cardAUTHSC = 0;
@@ -1129,15 +1129,16 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
                     break;
                 }
 
-                encrypted_data = (cardAUTHKEY != AUTHKEYNONE);
-                if (encrypted_data) {
-                    Dbprintf("[MFEMUL_WORK] Not expecting encrypted data. Quitting");
-                    break;
-                } else {
-                    // Data in clear
-                    memcpy(receivedCmd_dec, receivedCmd, receivedCmd_len);
-                    // Dbprintf("001 [MFEMUL_WORK] Data in clear(!!)"); // huuton disable comment
-                }
+                //encrypted_data = (cardAUTHKEY != AUTHKEYNONE);
+                //if (encrypted_data) {
+                //    Dbprintf("[MFEMUL_WORK] Not expecting encrypted data. Quitting");
+                //    break;
+                //} else {
+                //    // Data in clear
+                //    memcpy(receivedCmd_dec, receivedCmd, receivedCmd_len);
+                //    // Dbprintf("001 [MFEMUL_WORK] Data in clear(!!)"); // huuton disable comment
+                //}
+                memcpy(receivedCmd_dec, receivedCmd, receivedCmd_len);
 
                 // all commands must have a valid CRC
                 if (!CheckCrc14A(receivedCmd_dec, receivedCmd_len)) {
@@ -1224,7 +1225,8 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
                 // BUT... ACK --> NACK
                 if (receivedCmd_len == 1 && receivedCmd_dec[0] == CARD_ACK) {
                     Dbprintf("[MFEMUL_WORK] ACK --> NACK !!");
-                    EmSend4bit(encrypted_data ? mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA) : CARD_NACK_NA);
+                    //EmSend4bit(encrypted_data ? mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA) : CARD_NACK_NA);
+                    EmSend4bit(CARD_NACK_NA);
                     FpgaDisableTracing();
                     break;
                 }
@@ -1232,7 +1234,8 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
                 // rule 12 of 7.5.3. in ISO 14443-4. R(NAK) --> R(ACK)
                 if (receivedCmd_len == 1 && receivedCmd_dec[0] == CARD_NACK_NA) {
                     Dbprintf("[MFEMUL_WORK] NACK --> NACK !!");
-                    EmSend4bit(encrypted_data ? mf_crypto1_encrypt4bit(pcs, CARD_ACK) : CARD_ACK);
+                    //EmSend4bit(encrypted_data ? mf_crypto1_encrypt4bit(pcs, CARD_ACK) : CARD_ACK);
+                    EmSend4bit(CARD_ACK);
                     FpgaDisableTracing();
                     break;
                 }
@@ -1482,18 +1485,20 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
                 // case MFEMUL_WORK => CMD RATS
                 if (receivedCmd_len == 4 && receivedCmd_dec[0] == ISO14443A_CMD_RATS && receivedCmd_dec[1] == 0x80) {
                     if (rats && rats_len) {
-                        if (encrypted_data) {
-                            memcpy(response, rats, rats_len);
-                            mf_crypto1_encrypt(pcs, response, rats_len, response_par);
-                            EmSendCmdPar(response, rats_len, response_par);
-                        } else {
-                            EmSendCmd(rats, rats_len);
-                        }
+                        //if (encrypted_data) {
+                        //    memcpy(response, rats, rats_len);
+                        //    mf_crypto1_encrypt(pcs, response, rats_len, response_par);
+                        //    EmSendCmdPar(response, rats_len, response_par);
+                        //} else {
+                        //    EmSendCmd(rats, rats_len);
+                        //}
+                        EmSendCmd(rats, rats_len);
                         FpgaDisableTracing();
                         //if (999 >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] RCV RATS => ACK"); // nathan print
                     } else {
                         Dbprintf("Rats and rats len is: %d, %d", rats[0], rats_len);
-                        EmSend4bit(encrypted_data ? mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA) : CARD_NACK_NA);
+                        //EmSend4bit(encrypted_data ? mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA) : CARD_NACK_NA);
+                        EmSend4bit(CARD_NACK_NA);
                         FpgaDisableTracing();
                         cardSTATE_TO_IDLE();
                         if (999 >= DBG_EXTENDED)
@@ -1506,18 +1511,19 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
                 if (receivedCmd_len == 3 && receivedCmd_dec[0] == ISO14443A_CMD_NXP_DESELECT) {
                     if (rats && rats_len) {
                         // response back NXP_DESELECT
-                        if (encrypted_data) {
-                            memcpy(response, receivedCmd_dec, receivedCmd_len);
-                            mf_crypto1_encrypt(pcs, response, receivedCmd_len, response_par);
-                            EmSendCmdPar(response, receivedCmd_len, response_par);
-                        } else
-                            EmSendCmd(receivedCmd_dec, receivedCmd_len);
+                        //if (encrypted_data) {
+                        //    memcpy(response, receivedCmd_dec, receivedCmd_len);
+                        //    mf_crypto1_encrypt(pcs, response, receivedCmd_len, response_par);
+                        //    EmSendCmdPar(response, receivedCmd_len, response_par);
+                        //} else
+                        EmSendCmd(receivedCmd_dec, receivedCmd_len);
 
                         FpgaDisableTracing();
                         if (999 >= DBG_EXTENDED)
                             Dbprintf("[MFEMUL_WORK] RCV NXP DESELECT => ACK");
                     } else {
-                        EmSend4bit(encrypted_data ? mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA) : CARD_NACK_NA);
+                        //EmSend4bit(encrypted_data ? mf_crypto1_encrypt4bit(pcs, CARD_NACK_NA) : CARD_NACK_NA);
+                        EmSend4bit(CARD_NACK_NA);
                         FpgaDisableTracing();
                         cardSTATE_TO_IDLE();
                         if (999 >= DBG_EXTENDED)
