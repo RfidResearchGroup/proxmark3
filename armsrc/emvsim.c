@@ -822,7 +822,7 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
     tag_response_info_t *responses;
     uint8_t cardSTATE = MFEMUL_NOFIELD;
     uint8_t uid_len = 0; // 4, 7, 10
-    uint32_t cuid = 0, selTimer = 0, authTimer = 0;
+    uint32_t cuid = 0, authTimer = 0;
     uint32_t nr, ar;
     uint8_t blockNo;
     bool encrypted_data;
@@ -936,23 +936,8 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
             counter++;
         }
 
-        /*
-                // find reader field
-                if (cardSTATE == MFEMUL_NOFIELD) {
-
-                    vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
-
-                    if (vHf > MF_MINFIELDV) {
-                        cardSTATE_TO_IDLE();
-                        LED_A_ON();
-                    }
-                    button_pushed = BUTTON_PRESS();
-                    continue;
-                }
-                */
-
         FpgaEnableTracing();
-        //Now, get data
+        // Now, get data from the FPGA
         int res = EmGetCmd(receivedCmd, sizeof(receivedCmd), &receivedCmd_len, receivedCmd_par);
         //int res = EmGetCmd(receivedCmd, &receivedCmd_len, receivedCmd_par); // nathan old - seems like bugfix.
 
@@ -979,7 +964,7 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
 
         // WUPA in HALTED state or REQA or WUPA in any other state
         if (receivedCmd_len == 1 && ((receivedCmd[0] == ISO14443A_CMD_REQA && cardSTATE != MFEMUL_HALTED) || receivedCmd[0] == ISO14443A_CMD_WUPA)) {
-            selTimer = GetTickCount();
+            //selTimer = GetTickCount();
             if (999 >= DBG_EXTENDED) {
                 //Dbprintf("EmSendPrecompiledCmd(&responses[ATQA]);");
             }
@@ -987,22 +972,23 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
 
             FpgaDisableTracing();
 
+            /*
             // init crypto block
             crypto1_deinit(pcs);
             cardAUTHKEY = AUTHKEYNONE;
             nonce = prng_successor(selTimer, 32);
             // prepare NT for nested authentication
             num_to_bytes(nonce, 4, rAUTH_NT);
-            num_to_bytes(cuid ^ nonce, 4, rAUTH_NT_keystream);
+            num_to_bytes(cuid ^ nonce, 4, rAUTH_NT_keystream); */ // hutton removed dead code
 
             LED_B_OFF();
             LED_C_OFF();
             cardSTATE = MFEMUL_SELECT;
 
-            if ((flags & FLAG_CVE21_0430) == FLAG_CVE21_0430) {
+            /*if ((flags & FLAG_CVE21_0430) == FLAG_CVE21_0430) {
                 p_em[1] = 0x21;
                 cve_flipper = 0;
-            }
+            } */
             continue;
         }
 
@@ -1036,17 +1022,21 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
                 // 2) Any readers (like ACR122U) uses bit oriented anti-collision frames during selectin,
                 //    same as multiple tags. For details see chapter 6.1.5.3 of ISO/IEC 14443-3
             case MFEMUL_SELECT: {
+                // Dbprintf("MFEMUL_SELECT 001"); // hutton disable comment
                 int uid_index = -1;
                 // Extract cascade level
                 if (receivedCmd_len >= 2) {
                     switch (receivedCmd[0]) {
                         case ISO14443A_CMD_ANTICOLL_OR_SELECT:
+                            // Dbprintf("MFEMUL_SELECT 002"); // hutton disable comment
                             uid_index = UIDBCC1;
                             break;
                         case ISO14443A_CMD_ANTICOLL_OR_SELECT_2:
+                            // Dbprintf("MFEMUL_SELECT 003"); // hutton disable comment
                             uid_index = UIDBCC2;
                             break;
                         case ISO14443A_CMD_ANTICOLL_OR_SELECT_3:
+                            Dbprintf("MFEMUL_SELECT 004");
                             uid_index = UIDBCC3;
                             break;
                     }
@@ -1054,12 +1044,14 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
                 if (uid_index < 0) {
                     LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
                     cardSTATE_TO_IDLE();
+                    // Dbprintf("incorrect cascade level received 001"); // hutton disable comment
                     //if (999 >= DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT] Incorrect cascade level received"); // nathan print
                     break;
                 }
 
                 // Incoming SELECT ALL for any cascade level
                 if (receivedCmd_len == 2 && receivedCmd[1] == 0x20) {
+                    // Dbprintf("incoming select all 001"); // hutton disable comment
                     EmSendPrecompiledCmd(&responses[uid_index]);
                     FpgaDisableTracing();
 
@@ -1069,10 +1061,12 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
 
                 // Incoming SELECT CLx for any cascade level
                 if (receivedCmd_len == 9 && receivedCmd[1] == 0x70) {
+                    // Dbprintf("incoming select clx 001"); // hutton disable comment
                     if (memcmp(&receivedCmd[2], responses[uid_index].response, 4) == 0) {
                         bool cl_finished = (uid_len == 4  && uid_index == UIDBCC1) ||
                                            (uid_len == 7  && uid_index == UIDBCC2) ||
                                            (uid_len == 10 && uid_index == UIDBCC3);
+                        //Dbprintf("send sak command 001"); // hutton disable comment
                         EmSendPrecompiledCmd(&responses[cl_finished ? SAK : SAKuid]);
                         FpgaDisableTracing();
 
@@ -1080,6 +1074,7 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
                         if (cl_finished) {
                             LED_B_ON();
                             cardSTATE = MFEMUL_WORK;
+                            // Dbprintf("MFEMUL_WORK state 001"); // hutton disable comment
                             //if (999 >= DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT] cardSTATE = MFEMUL_WORK"); // nathan print
                         }
                     } else {
@@ -1101,11 +1096,13 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
                         FpgaDisableTracing();
 
                         if (999 >= DBG_EXTENDED) Dbprintf("SELECT ANTICOLLISION - EmSendPrecompiledCmd(%02x)", &responses[uid_index]);
+                        Dbprintf("001 SELECT ANTICOLLISION - EmSendPrecompiledCmd(%02x)", &responses[uid_index]);
                     } else {
                         // IDLE, not our UID or split-byte frame anti-collision (not supports)
                         LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
                         cardSTATE_TO_IDLE();
                         if (999 >= DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT] cardSTATE = MFEMUL_IDLE");
+                        Dbprintf("001 [MFEMUL_SELECT] cardSTATE = MFEMUL_IDLE");
                     }
                     break;
                 }
@@ -1114,6 +1111,7 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
                 LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
                 cardSTATE_TO_IDLE();
                 if (999 >= DBG_EXTENDED) Dbprintf("[MFEMUL_SELECT] Unknown selection procedure");
+                Dbprintf("001 [MFEMUL_SELECT] Unknown selection procedure");
                 break;
             }
 
