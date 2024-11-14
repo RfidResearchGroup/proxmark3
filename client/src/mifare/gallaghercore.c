@@ -16,8 +16,10 @@
 // Common functionality for low/high-frequency GALLAGHER tag encoding & decoding.
 //-----------------------------------------------------------------------------
 #include "gallaghercore.h"
+#include "aes.h"
 #include "common.h"
 #include "ui.h"
+#include <string.h>
 
 static void scramble(uint8_t *arr, uint8_t len) {
     const uint8_t lut[] = {
@@ -69,6 +71,51 @@ static void descramble(uint8_t *arr, uint8_t len) {
     }
 }
 
+int gallagher_diversify_classic_key(uint8_t *site_key, uint8_t *csn, size_t csn_len, uint8_t *key_output) {
+    memcpy(key_output, site_key, 16);
+    for (int i = 0; i < csn_len; i++) {
+        key_output[i] = site_key[i] ^ csn[i];
+    }
+    return PM3_SUCCESS;
+}
+
+int gallagher_construct_credential(GallagherCredentials_t *creds, uint8_t region, uint16_t facility, uint32_t card, uint8_t issue, bool mes, uint8_t *csn, size_t csn_len, uint8_t *site_key) {
+    creds->region_code = region;
+    creds->facility_code = facility;
+    creds->card_number = card;
+    creds->issue_level = issue;
+    creds->mes = mes;
+    memcpy(creds->csn, csn, csn_len);
+    memcpy(creds->site_key, site_key, 16);
+    return PM3_SUCCESS;
+}
+
+int gallagher_read_cad(uint8_t *cad, uint8_t region, uint16_t facility) {
+    // CAD entries are 3.5 bytes each (28 bits: 4-bit RC, 16-bit FC, 8-bit sector).
+    // Packed in pairs of 7 bytes starting at byte 4, up to 6 pairs (12 entries).
+    for (int pair = 0; pair < 6; pair++) {
+        int base = 4 + pair * 7;
+
+        // Even entry (first 3.5 bytes of pair)
+        uint8_t rc = (cad[base] >> 4) & 0x0F;
+        uint16_t fc = ((cad[base] & 0x0F) << 12) | (cad[base + 1] << 4) | ((cad[base + 2] >> 4) & 0x0F);
+        uint8_t sector = ((cad[base + 2] & 0x0F) << 4) | ((cad[base + 3] >> 4) & 0x0F);
+        if (rc == region && fc == facility) {
+            return sector;
+        }
+
+        // Odd entry (last 3.5 bytes of pair)
+        rc = cad[base + 3] & 0x0F;
+        fc = (cad[base + 4] << 8) | cad[base + 5];
+        sector = cad[base + 6];
+        if (rc == region && fc == facility) {
+            return sector;
+        }
+    }
+    return -1;
+}
+
+
 void gallagher_decode_creds(uint8_t *eight_bytes, GallagherCredentials_t *creds) {
     uint8_t *arr = eight_bytes;
 
@@ -107,6 +154,112 @@ void gallagher_encode_creds(uint8_t *eight_bytes, GallagherCredentials_t *creds)
     scramble(eight_bytes, 8);
 }
 
+int gallagher_encode_mes(uint8_t *sixteen_bytes, GallagherCredentials_t *creds) {
+    // unknown parameters from the research these might be for UUID's longer than 4 bytes?
+    uint8_t UB = 0x00;
+    uint8_t UC = 0x00;
+    uint8_t UD = 0x00;
+    uint8_t UE = 0x00;
+    uint8_t PO = 0x00; // Pin offset
+    uint8_t UX = 0x00;
+    uint16_t R = 0x0748;
+
+    uint8_t mes[16];
+    uint8_t diversified_site_key[16];
+
+    if (creds->csn_len > 4) {
+        PrintAndLogEx(ERR, "Credential could not be encoded into a Mifare Enhanced Encryption block. only 4 byte UUID's are supported");
+        return PM3_ENOTIMPL;
+    }
+
+    mes[0] = 0x01;
+    mes[1] = (creds->card_number & 0xFF0000) >> 16;
+    mes[2] = (creds->card_number & 0x00FF00) >> 8;
+    mes[3] = creds->card_number & 0x0000FF;
+    mes[4] = (creds->facility_code & 0xFF00) >> 8;
+    mes[5] = creds->facility_code & 0x00FF;
+    mes[6] = ((creds->region_code & 0x0F) << 4) | (creds->issue_level & 0x0F);
+    mes[7] = (PO & 0x0F) | ((UX & 0x0F) << 4);
+    mes[8] = (UB & 0x0F) | ((UC & 0x0F) << 4);
+    mes[9] = (UD & 0x0F) | ((UE & 0x0F) << 4);
+    mes[10] = creds->csn[0];
+    mes[11] = creds->csn[1];
+    mes[12] = creds->csn[2];
+    mes[13] = creds->csn[3];
+    mes[14] = (R & 0xFF00) >> 8;
+    mes[15] = R & 0x00FF;
+
+    PrintAndLogEx(DEBUG, "MES before encryption %s", sprint_hex_ascii(mes, 16));
+
+    gallagher_diversify_classic_key(creds->site_key, creds->csn, creds->csn_len, diversified_site_key);
+
+    mbedtls_aes_context actx;
+    mbedtls_aes_init(&actx);
+    if (mbedtls_aes_setkey_enc(&actx, diversified_site_key, 128) != 0) return PM3_ENOKEY;
+    if (mbedtls_aes_crypt_ecb(&actx, MBEDTLS_AES_ENCRYPT, mes, sixteen_bytes) != 0) return PM3_ENOKEY;;
+    mbedtls_aes_free(&actx);
+
+    PrintAndLogEx(DEBUG, "MES after encryption %s", sprint_hex_ascii(sixteen_bytes, 16));
+    return PM3_SUCCESS;
+}
+
+int gallagher_decode_mes(uint8_t *block, GallagherCredentials_t *creds) {
+    // unknown parameters from the research these might be for UUID's longer than 4 bytes?
+    // uint8_t UB = 0x00;
+    // uint8_t UC = 0x00;
+    // uint8_t UD = 0x00;
+    // uint8_t UE = 0x00;
+    // uint8_t PO = 0x00;
+    // uint8_t UX = 0x00;
+    uint16_t R = 0x0748;
+    uint8_t mes[16];
+
+    uint8_t diversified_site_key[16];
+    gallagher_diversify_classic_key(creds->site_key, creds->csn, creds->csn_len, diversified_site_key);
+    if (creds->csn_len > 4) {
+        PrintAndLogEx(WARNING, "UUID length is > 4, this may not be a valid gallagher credential?");
+    }
+
+    // AES decrypt 16 bytes
+    mbedtls_aes_context actx;
+    mbedtls_aes_init(&actx);
+    if (mbedtls_aes_setkey_dec(&actx, diversified_site_key, 128) != 0) return PM3_ENOKEY;
+    if (mbedtls_aes_crypt_ecb(&actx, MBEDTLS_AES_DECRYPT, block, mes) != 0) return PM3_ENOKEY;;
+    mbedtls_aes_free(&actx);
+
+    PrintAndLogEx(DEBUG, "MES after decryption %s", sprint_hex_ascii(mes, 16));
+
+    if (mes[0] != 0x01) {
+        PrintAndLogEx(ERR, "MES block is not valid");
+        return PM3_EWRONGANSWER;
+    }
+    creds->card_number = mes[1] << 16 | mes[2] << 8 | mes[3];
+    creds->facility_code = mes[4] << 8 | mes[5];
+    creds->region_code = (mes[6] & 0xF0) >> 4;
+    creds->issue_level = mes[6] & 0x0F;
+    // PO = mes[7] & 0x0F;
+    // UX = (mes[7] & 0xF0) >> 4;
+    // UB = mes[8] & 0x0F;
+    // UC = (mes[8] & 0xF0) >> 4;
+    // UD = mes[9] & 0x0F;
+    // UE = (mes[9] & 0xF0) >> 4;
+    // csn is already verified by key diversification
+    // csn[0] = mes[10];
+    // csn[1] = mes[11];
+    // csn[2] = mes[12];
+    // csn[3] = mes[13];
+    R = mes[14] << 8 | mes[15];
+    if (R != 0x0748) {
+        PrintAndLogEx(WARNING, "R value is different from 0x0748, this hasn't been seen in the wild \n https://github.com/megabug/gallagher-research/blob/master/formats/mes.md");
+    }
+
+    return PM3_SUCCESS;
+}
+
+bool gallagher_is_valid_creds_struct(GallagherCredentials_t *creds) {
+    return gallagher_is_valid_creds(creds->region_code, creds->facility_code, creds->card_number, creds->issue_level);
+}
+
 bool gallagher_is_valid_creds(uint64_t region_code, uint64_t facility_code, uint64_t card_number, uint64_t issue_level) {
     bool is_valid = true;
 
@@ -128,4 +281,22 @@ bool gallagher_is_valid_creds(uint64_t region_code, uint64_t facility_code, uint
         is_valid = false;
     }
     return is_valid;
+}
+
+void print_gallagher_creds(GallagherCredentials_t *creds) {
+
+    if (!gallagher_is_valid_creds_struct(creds)) {
+        PrintAndLogEx(ERR, "Invalid Gallagher credential");
+        return;
+    }
+    PrintAndLogEx(SUCCESS, "Gallagher - region: " _GREEN_("%c") " ( " _GREEN_("%u") " )"
+                           ", facility: " _GREEN_("%u")
+                           ", card number: " _GREEN_("%u")
+                           ", issue level: " _GREEN_("%u"),
+                           'A' + creds->region_code,
+                  creds->region_code,
+                  creds->facility_code,
+                  creds->card_number,
+                  creds->issue_level
+                 );
 }
