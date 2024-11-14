@@ -690,8 +690,6 @@ static RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
                 if (Demod.bitCount) {                               // there are some remaining data bits
                     Demod.shiftReg <<= (8 - Demod.bitCount);            // left align the decoded bits
                     Demod.output[Demod.len++] = Demod.shiftReg & 0xFF;  // and add them to the output
-
-                    Dbprintf("A | len... %u - %u == 0x%02x", Demod.len, Demod.bitCount, Demod.output[0]);
                     return true;
                 }
 
