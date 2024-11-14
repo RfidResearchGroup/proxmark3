@@ -48,6 +48,10 @@
 #include "ticks.h"
 #include "i2c.h"
 
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#pragma GCC diagnostic ignored "-Wunused-function"
+
 //static uint8_t saved_command[100] = {0};
 //static uint8_t saved_command_len = 0;
 
@@ -1683,130 +1687,130 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
             }
 
                 // AUTH1
-            case MFEMUL_AUTH1: {
-                if (999 >= DBG_EXTENDED)
-                    Dbprintf("[MFEMUL_AUTH1] Enter case");
+            //case MFEMUL_AUTH1: {
+            //    if (999 >= DBG_EXTENDED)
+            //        Dbprintf("[MFEMUL_AUTH1] Enter case");
 
-                if (receivedCmd_len != 8) {
-                    cardSTATE_TO_IDLE();
-                    LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
-                    if (999 >= DBG_EXTENDED)
-                        Dbprintf("MFEMUL_AUTH1: receivedCmd_len != 8 (%d) => cardSTATE_TO_IDLE())", receivedCmd_len);
-                    break;
-                }
+            //    if (receivedCmd_len != 8) {
+            //        cardSTATE_TO_IDLE();
+            //        LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
+            //        if (999 >= DBG_EXTENDED)
+            //            Dbprintf("MFEMUL_AUTH1: receivedCmd_len != 8 (%d) => cardSTATE_TO_IDLE())", receivedCmd_len);
+            //        break;
+            //    }
 
-                nr = bytes_to_num(receivedCmd, 4);
-                ar = bytes_to_num(&receivedCmd[4], 4);
+            //    nr = bytes_to_num(receivedCmd, 4);
+            //    ar = bytes_to_num(&receivedCmd[4], 4);
 
-                // Collect AR/NR per keytype & sector
-                if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
+            //    // Collect AR/NR per keytype & sector
+            //    if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
 
-                    for (uint8_t i = 0; i < ATTACK_KEY_COUNT; i++) {
-                        if (ar_nr_collected[i + mM] == 0 ||
-                            (
-                                    (cardAUTHSC == ar_nr_resp[i + mM].sector) &&
-                                    (cardAUTHKEY == ar_nr_resp[i + mM].keytype) &&
-                                    (ar_nr_collected[i + mM] > 0)
-                            )
-                                ) {
+            //        for (uint8_t i = 0; i < ATTACK_KEY_COUNT; i++) {
+            //            if (ar_nr_collected[i + mM] == 0 ||
+            //                (
+            //                        (cardAUTHSC == ar_nr_resp[i + mM].sector) &&
+            //                        (cardAUTHKEY == ar_nr_resp[i + mM].keytype) &&
+            //                        (ar_nr_collected[i + mM] > 0)
+            //                )
+            //                    ) {
 
-                            // if first auth for sector, or matches sector and keytype of previous auth
-                            if (ar_nr_collected[i + mM] < 2) {
-                                // if we haven't already collected 2 nonces for this sector
-                                if (ar_nr_resp[ar_nr_collected[i + mM]].ar != ar) {
-                                    // Avoid duplicates... probably not necessary, ar should vary.
-                                    if (ar_nr_collected[i + mM] == 0) {
-                                        // first nonce collect
-                                        ar_nr_resp[i + mM].cuid = cuid;
-                                        ar_nr_resp[i + mM].sector = cardAUTHSC;
-                                        ar_nr_resp[i + mM].keytype = cardAUTHKEY;
-                                        ar_nr_resp[i + mM].nonce = nonce;
-                                        ar_nr_resp[i + mM].nr = nr;
-                                        ar_nr_resp[i + mM].ar = ar;
-                                        nonce1_count++;
-                                        // add this nonce to first moebius nonce
-                                        ar_nr_resp[i + ATTACK_KEY_COUNT].cuid = cuid;
-                                        ar_nr_resp[i + ATTACK_KEY_COUNT].sector = cardAUTHSC;
-                                        ar_nr_resp[i + ATTACK_KEY_COUNT].keytype = cardAUTHKEY;
-                                        ar_nr_resp[i + ATTACK_KEY_COUNT].nonce = nonce;
-                                        ar_nr_resp[i + ATTACK_KEY_COUNT].nr = nr;
-                                        ar_nr_resp[i + ATTACK_KEY_COUNT].ar = ar;
-                                        ar_nr_collected[i + ATTACK_KEY_COUNT]++;
-                                    } else { // second nonce collect (std and moebius)
-                                        ar_nr_resp[i + mM].nonce2 = nonce;
-                                        ar_nr_resp[i + mM].nr2 = nr;
-                                        ar_nr_resp[i + mM].ar2 = ar;
+            //                // if first auth for sector, or matches sector and keytype of previous auth
+            //                if (ar_nr_collected[i + mM] < 2) {
+            //                    // if we haven't already collected 2 nonces for this sector
+            //                    if (ar_nr_resp[ar_nr_collected[i + mM]].ar != ar) {
+            //                        // Avoid duplicates... probably not necessary, ar should vary.
+            //                        if (ar_nr_collected[i + mM] == 0) {
+            //                            // first nonce collect
+            //                            ar_nr_resp[i + mM].cuid = cuid;
+            //                            ar_nr_resp[i + mM].sector = cardAUTHSC;
+            //                            ar_nr_resp[i + mM].keytype = cardAUTHKEY;
+            //                            ar_nr_resp[i + mM].nonce = nonce;
+            //                            ar_nr_resp[i + mM].nr = nr;
+            //                            ar_nr_resp[i + mM].ar = ar;
+            //                            nonce1_count++;
+            //                            // add this nonce to first moebius nonce
+            //                            ar_nr_resp[i + ATTACK_KEY_COUNT].cuid = cuid;
+            //                            ar_nr_resp[i + ATTACK_KEY_COUNT].sector = cardAUTHSC;
+            //                            ar_nr_resp[i + ATTACK_KEY_COUNT].keytype = cardAUTHKEY;
+            //                            ar_nr_resp[i + ATTACK_KEY_COUNT].nonce = nonce;
+            //                            ar_nr_resp[i + ATTACK_KEY_COUNT].nr = nr;
+            //                            ar_nr_resp[i + ATTACK_KEY_COUNT].ar = ar;
+            //                            ar_nr_collected[i + ATTACK_KEY_COUNT]++;
+            //                        } else { // second nonce collect (std and moebius)
+            //                            ar_nr_resp[i + mM].nonce2 = nonce;
+            //                            ar_nr_resp[i + mM].nr2 = nr;
+            //                            ar_nr_resp[i + mM].ar2 = ar;
 
-                                        if (!gettingMoebius) {
-                                            nonce2_count++;
-                                            // check if this was the last second nonce we need for std attack
-                                            if (nonce2_count == nonce1_count) {
-                                                // done collecting std test switch to moebius
-                                                // first finish incrementing last sample
-                                                ar_nr_collected[i + mM]++;
-                                                // switch to moebius collection
-                                                gettingMoebius = true;
-                                                mM = ATTACK_KEY_COUNT;
-                                                nonce = nonce * 7;
-                                                break;
-                                            }
-                                        } else {
-                                            moebius_n_count++;
-                                            // if we've collected all the nonces we need - finish.
-                                            if (nonce1_count == moebius_n_count)
-                                                finished = true;
-                                        }
-                                    }
-                                    ar_nr_collected[i + mM]++;
-                                }
-                            }
-                            // we found right spot for this nonce stop looking
-                            break;
-                        }
-                    }
-                }
+            //                            if (!gettingMoebius) {
+            //                                nonce2_count++;
+            //                                // check if this was the last second nonce we need for std attack
+            //                                if (nonce2_count == nonce1_count) {
+            //                                    // done collecting std test switch to moebius
+            //                                    // first finish incrementing last sample
+            //                                    ar_nr_collected[i + mM]++;
+            //                                    // switch to moebius collection
+            //                                    gettingMoebius = true;
+            //                                    mM = ATTACK_KEY_COUNT;
+            //                                    nonce = nonce * 7;
+            //                                    break;
+            //                                }
+            //                            } else {
+            //                                moebius_n_count++;
+            //                                // if we've collected all the nonces we need - finish.
+            //                                if (nonce1_count == moebius_n_count)
+            //                                    finished = true;
+            //                            }
+            //                        }
+            //                        ar_nr_collected[i + mM]++;
+            //                    }
+            //                }
+            //                // we found right spot for this nonce stop looking
+            //                break;
+            //            }
+            //        }
+            //    }
 
-                // --- crypto
-                crypto1_word(pcs, nr, 1);
-                cardRr = ar ^ crypto1_word(pcs, 0, 0);
+            //    // --- crypto
+            //    crypto1_word(pcs, nr, 1);
+            //    cardRr = ar ^ crypto1_word(pcs, 0, 0);
 
-                // test if auth KO
-                if (cardRr != prng_successor(nonce, 64)) {
-                    if (999 >= DBG_EXTENDED) {
-                        Dbprintf("[MFEMUL_AUTH1] AUTH FAILED for sector %d with key %c. [nr=%08x  cardRr=%08x] [nt=%08x succ=%08x]"
-                                , cardAUTHSC
-                                , (cardAUTHKEY == 0) ? 'A' : 'B'
-                                , nr
-                                , cardRr
-                                , nonce // nt
-                                , prng_successor(nonce, 64)
-                        );
-                    }
-                    cardAUTHKEY = AUTHKEYNONE; // not authenticated
-                    cardSTATE_TO_IDLE();
-                    // Really tags not respond NACK on invalid authentication
-                    LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
-                    break;
-                }
+            //    // test if auth KO
+            //    if (cardRr != prng_successor(nonce, 64)) {
+            //        if (999 >= DBG_EXTENDED) {
+            //            Dbprintf("[MFEMUL_AUTH1] AUTH FAILED for sector %d with key %c. [nr=%08x  cardRr=%08x] [nt=%08x succ=%08x]"
+            //                    , cardAUTHSC
+            //                    , (cardAUTHKEY == 0) ? 'A' : 'B'
+            //                    , nr
+            //                    , cardRr
+            //                    , nonce // nt
+            //                    , prng_successor(nonce, 64)
+            //            );
+            //        }
+            //        cardAUTHKEY = AUTHKEYNONE; // not authenticated
+            //        cardSTATE_TO_IDLE();
+            //        // Really tags not respond NACK on invalid authentication
+            //        LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
+            //        break;
+            //    }
 
-                ans = prng_successor(nonce, 96);
-                num_to_bytes(ans, 4, response);
-                mf_crypto1_encrypt(pcs, response, 4, response_par);
-                EmSendCmdPar(response, 4, response_par);
-                FpgaDisableTracing();
+            //    ans = prng_successor(nonce, 96);
+            //    num_to_bytes(ans, 4, response);
+            //    mf_crypto1_encrypt(pcs, response, 4, response_par);
+            //    EmSendCmdPar(response, 4, response_par);
+            //    FpgaDisableTracing();
 
-                if (999 >= DBG_EXTENDED) {
-                    Dbprintf("[MFEMUL_AUTH1] AUTH COMPLETED for sector %d with key %c. time=%d",
-                             cardAUTHSC,
-                             cardAUTHKEY == 0 ? 'A' : 'B',
-                             GetTickCountDelta(authTimer)
-                    );
-                }
-                LED_C_ON();
-                cardSTATE = MFEMUL_WORK;
-                if (999 >= DBG_EXTENDED) Dbprintf("[MFEMUL_AUTH1] cardSTATE = MFEMUL_WORK");
-                break;
-            }
+            //    if (999 >= DBG_EXTENDED) {
+            //        Dbprintf("[MFEMUL_AUTH1] AUTH COMPLETED for sector %d with key %c. time=%d",
+            //                 cardAUTHSC,
+            //                 cardAUTHKEY == 0 ? 'A' : 'B',
+            //                 GetTickCountDelta(authTimer)
+            //        );
+            //    }
+            //    LED_C_ON();
+            //    cardSTATE = MFEMUL_WORK;
+            //    if (999 >= DBG_EXTENDED) Dbprintf("[MFEMUL_AUTH1] cardSTATE = MFEMUL_WORK");
+            //    break;
+            //}
 
                 // WRITE BL2
             case MFEMUL_WRITEBL2: {
@@ -1844,7 +1848,7 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
                 break;
             }
 
-                // INC
+              // INC
             case MFEMUL_INTREG_INC: {
                 if (receivedCmd_len == 6) {
                     mf_crypto1_decryptEx(pcs, receivedCmd, receivedCmd_len, (uint8_t *)&ans);
