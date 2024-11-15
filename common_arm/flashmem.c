@@ -58,9 +58,9 @@ bool Flash_ReadID(flash_device_type_t *result, bool read_jedec) {
         // 0x9F JEDEC
         FlashSendByte(JEDECID);
 
-        result->manufacturer_id = FlashSendByte(0xFF);
-        result->device_id       = FlashSendByte(0xFF);
-        result->device_id2      = FlashSendLastByte(0xFF);
+        result->manufacturer_id = (FlashSendByte(0xFF) & 0xFF);
+        result->device_id       = (FlashSendByte(0xFF) & 0xFF);
+        result->device_id2      = (FlashSendLastByte(0xFF) & 0xFF);
     } else {
         // 0x90 Manufacture ID / device ID
         FlashSendByte(ID);
@@ -68,8 +68,8 @@ bool Flash_ReadID(flash_device_type_t *result, bool read_jedec) {
         FlashSendByte(0x00);
         FlashSendByte(0x00);
 
-        result->manufacturer_id = FlashSendByte(0xFF);
-        result->device_id       = FlashSendLastByte(0xFF);
+        result->manufacturer_id = (FlashSendByte(0xFF) & 0xFF);
+        result->device_id       = (FlashSendLastByte(0xFF) & 0xFF);
     }
 
     return true;
@@ -92,10 +92,10 @@ uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len) {
     }
 
     uint16_t i = 0;
-    for (; i < (len - 1); i++)
-        out[i] = FlashSendByte(0xFF);
-
-    out[i] = FlashSendLastByte(0xFF);
+    for (; i < (len - 1); i++) {
+        out[i] = (FlashSendByte(0xFF) & 0xFF);
+    }
+    out[i] = (FlashSendLastByte(0xFF) & 0xFF);
     FlashStop();
     return len;
 }
@@ -122,10 +122,10 @@ uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len) {
     }
 
     uint16_t i = 0;
-    for (; i < (len - 1); i++)
-        out[i] = FlashSendByte(0xFF);
-
-    out[i] = FlashSendLastByte(0xFF);
+    for (; i < (len - 1); i++) {
+        out[i] = ( FlashSendByte(0xFF) & 0xFF);
+    }
+    out[i] = (FlashSendLastByte(0xFF) & 0xFF);
     return len;
 }
 
@@ -486,14 +486,14 @@ void Flash_UniqueID(uint8_t *uid) {
     FlashSendByte(0xFF);
     FlashSendByte(0xFF);
 
-    uid[7] = FlashSendByte(0xFF);
-    uid[6] = FlashSendByte(0xFF);
-    uid[5] = FlashSendByte(0xFF);
-    uid[4] = FlashSendByte(0xFF);
-    uid[3] = FlashSendByte(0xFF);
-    uid[2] = FlashSendByte(0xFF);
-    uid[1] = FlashSendByte(0xFF);
-    uid[0] = FlashSendLastByte(0xFF);
+    uid[7] = (FlashSendByte(0xFF) & 0xFF);
+    uid[6] = (FlashSendByte(0xFF) & 0xFF);
+    uid[5] = (FlashSendByte(0xFF) & 0xFF);
+    uid[4] = (FlashSendByte(0xFF) & 0xFF);
+    uid[3] = (FlashSendByte(0xFF) & 0xFF);
+    uid[2] = (FlashSendByte(0xFF) & 0xFF);
+    uid[1] = (FlashSendByte(0xFF) & 0xFF);
+    uid[0] = (FlashSendLastByte(0xFF) & 0xFF);
 }
 
 void FlashStop(void) {
