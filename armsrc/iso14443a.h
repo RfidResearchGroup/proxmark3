@@ -55,7 +55,8 @@ typedef struct {
     uint16_t shiftReg;
     uint16_t samples;
     uint16_t len;
-    uint32_t startTime, endTime;
+    uint32_t startTime;
+    uint32_t endTime;
     uint16_t output_len;
     uint8_t  *output;
     uint8_t  *parity;
@@ -88,7 +89,8 @@ typedef struct {
     uint8_t  parityBits;
     uint8_t  parityLen;
     uint32_t fourBits;
-    uint32_t startTime, endTime;
+    uint32_t startTime;
+    uint32_t endTime;
     uint16_t output_len;
     uint8_t *output;
     uint8_t *parity;
@@ -140,8 +142,17 @@ RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time);
 RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time);
 
 void RAMFUNC SniffIso14443a(uint8_t param);
-void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t exitAfterNReads, uint8_t *iRATs);
-bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t *iRATs, tag_response_info_t **responses, uint32_t *cuid, uint32_t counters[3], uint8_t tearings[3], uint8_t *pages);
+void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t exitAfterNReads,
+                          uint8_t *iRATs, size_t irats_len);
+
+void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data,
+                             uint8_t *iRATs, size_t irats_len,  uint8_t *aid, uint8_t *resp,
+                             uint8_t *apdu, int aid_len, int respond_len, int apdu_len, bool enumerate);
+
+bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, 
+                           uint8_t *iRATs, size_t irats_len, tag_response_info_t **responses,
+                           uint32_t *cuid, uint32_t counters[3], uint8_t tearings[3], uint8_t *pages);
+
 bool GetIso14443aCommandFromReader(uint8_t *received, uint16_t received_maxlen, uint8_t *par, int *len);
 void iso14443a_antifuzz(uint32_t flags);
 void ReaderIso14443a(PacketCommandNG *c);
@@ -174,7 +185,6 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
 
 void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype);
 void DetectNACKbug(void);
-void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t *iRATs, uint8_t *aid, uint8_t *resp, uint8_t *apdu, int aid_len, int respond_len, int apdu_len, bool enumerate);
 
 bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_maxlen, uint8_t *received_len);
 

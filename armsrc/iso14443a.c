@@ -690,6 +690,8 @@ static RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
                 if (Demod.bitCount) {                               // there are some remaining data bits
                     Demod.shiftReg <<= (8 - Demod.bitCount);            // left align the decoded bits
                     Demod.output[Demod.len++] = Demod.shiftReg & 0xFF;  // and add them to the output
+
+//                    Dbprintf("A | len... %u - %u == 0x%02x", Demod.len, Demod.bitCount, Demod.output[0]);
                     return true;
                 }
 
@@ -1106,7 +1108,8 @@ bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_
     }
 }
 
-bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t *iRATs, tag_response_info_t **responses,
+bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, 
+                           uint8_t *iRATs, size_t irats_len, tag_response_info_t **responses,
                            uint32_t *cuid, uint32_t counters[3], uint8_t tearings[3], uint8_t *pages) {
     uint8_t sak = 0;
     // The first response contains the ATQA (note: bytes are transmitted in reverse order).
@@ -1269,11 +1272,19 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, uint8
         }
     }
 
-    // copy the iRATs if supplied
+    // copy the iRATs if supplied. 
+    // iRATs is a pointer to 20 byte array
+    // rRATS is a 40 byte array
     if ((flags & FLAG_RATS_IN_DATA) == FLAG_RATS_IN_DATA) {
-        memcpy(rRATS, iRATs, sizeof(iRATs));
+        memcpy(rRATS, iRATs, irats_len);
         // rats len is dictated by the first char of the string, add 2 crc bytes
         rRATS_len = (iRATs[0] + 2);
+        // Since its Varible length we can send value > 40 and overflow our array.
+        // Even if RATS protocol defined as max 40 bytes doesn't mean people try stuff
+        if (rRATS_len > sizeof(rRATS)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("[-] ERROR: iRATS overflow. Max %zu, got %zu", sizeof(rRATS), rRATS_len);
+            return false;            
+        }
     }
 
     // if uid not supplied then get from emulator memory
@@ -1444,7 +1455,8 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, uint8
 // response to send, and send it.
 // 'hf 14a sim'
 //-----------------------------------------------------------------------------
-void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t exitAfterNReads, uint8_t *iRATs) {
+void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t exitAfterNReads,
+                          uint8_t *iRATs, size_t irats_len) {
 
 #define ATTACK_KEY_COUNT 16
 
@@ -1486,7 +1498,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
         .modulation_n = 0
     };
 
-    if (SimulateIso14443aInit(tagType, flags, data, iRATs, &responses, &cuid, counters, tearings, &pages) == false) {
+    if (SimulateIso14443aInit(tagType, flags, data, iRATs, irats_len, &responses, &cuid, counters, tearings, &pages) == false) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
         return;
@@ -3932,7 +3944,9 @@ It can also continue after the AID has been selected, and respond to other reque
 This was forked from the original function to allow for more flexibility in the future, and to increase the processing speed of the original function.
 /// */
 
-void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t *iRATs, uint8_t *aid, uint8_t *resp, uint8_t *apdu, int aidLen, int respondLen, int apduLen, bool enumerate) {
+void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data,
+                             uint8_t *iRATs, size_t irats_len, uint8_t *aid, uint8_t *resp,
+                             uint8_t *apdu, int aidLen, int respondLen, int apduLen, bool enumerate) {
     tag_response_info_t *responses;
     uint32_t cuid = 0;
     uint32_t counters[3] = { 0x00, 0x00, 0x00 };
@@ -3959,7 +3973,7 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data, uin
         .modulation_n = 0
     };
 
-    if (SimulateIso14443aInit(tagType, flags, data, iRATs, &responses, &cuid, counters, tearings, &pages) == false) {
+    if (SimulateIso14443aInit(tagType, flags, data, iRATs, irats_len, &responses, &cuid, counters, tearings, &pages) == false) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
         return;
