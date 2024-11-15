@@ -562,7 +562,15 @@ void invert_hash0(uint8_t k[8]) {
 
                 // Create new forks by duplicating existing uint64_t values
                 int new_head = heads_count * 2;
-                hydra_heads = (uint64_t *)realloc(hydra_heads, new_head * sizeof(uint64_t));
+
+                // proper realloc pattern
+                uint64_t *ptmp = (uint64_t *)realloc(hydra_heads, new_head * sizeof(uint64_t));
+                if (ptmp == NULL) {
+                    PrintAndLogEx(FAILED, "failed to allocate memory");
+                    free(hydra_heads);
+                    return;
+                }
+                hydra_heads = ptmp;
 
                 // Duplicate all current values and add the value to both original and new ones
                 for (int i = 0; i < heads_count; i++) {
