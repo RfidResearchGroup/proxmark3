@@ -184,6 +184,20 @@ static bool IsAccessAllowed(uint8_t blockNo, uint8_t keytype, uint8_t action) {
     }
 }
 
+static uint8_t MifareMaxSector(uint16_t flags) {
+    if (IS_FLAG_MF_SIZE(flags, MIFARE_MINI_MAX_BYTES)) {
+        return MIFARE_MINI_MAXSECTOR;
+    } else if (IS_FLAG_MF_SIZE(flags, MIFARE_1K_MAX_BYTES)) {
+        return MIFARE_1K_MAXSECTOR;
+    } else if (IS_FLAG_MF_SIZE(flags, MIFARE_2K_MAX_BYTES)) {
+        return MIFARE_2K_MAXSECTOR;
+    } else if (IS_FLAG_MF_SIZE(flags, MIFARE_4K_MAX_BYTES)) {
+        return MIFARE_4K_MAXSECTOR;
+    } else {
+        return MIFARE_4K_MAXSECTOR;
+    }
+}
+
 static bool MifareSimInit(uint16_t flags, uint8_t *uid, uint16_t atqa, uint8_t sak, tag_response_info_t **responses, uint32_t *cuid, uint8_t *uid_len, uint8_t **rats, uint8_t *rats_len) {
 
     uint8_t uid_tmp[10] = {0};
@@ -768,6 +782,14 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
                     cardAUTHKEY = receivedCmd_dec[0] & 0x01;
 
                     if (g_dbglevel >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] KEY %c: %012" PRIx64, (cardAUTHKEY == 0) ? 'A' : 'B', emlGetKey(cardAUTHSC, cardAUTHKEY));
+
+                    // sector out of range - do not respond
+                    if (cardAUTHSC >= MifareMaxSector(flags)) {
+                        cardAUTHKEY = AUTHKEYNONE; // not authenticated
+                        cardSTATE_TO_IDLE();
+                        if (g_dbglevel >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] Out of range sector %d(0x%02x)", cardAUTHSC, cardAUTHSC);
+                        break;
+                    }
 
                     // first authentication
                     crypto1_deinit(pcs);
