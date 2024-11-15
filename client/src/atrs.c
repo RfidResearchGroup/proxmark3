@@ -24,22 +24,26 @@
 // get a ATR description based on the atr bytes
 // returns description of the best match
 const char *getAtrInfo(const char *atr_str) {
+
     size_t slen = strlen(atr_str);
     int match = -1;
-    // skip last element of AtrTable
-    for (int i = 0; i < ARRAYLEN(AtrTable) - 1; ++i) {
 
-        if (strlen(AtrTable[i].bytes) != slen)
+    // skip last element of AtrTable
+    for (size_t i = 0; i < ARRAYLEN(AtrTable) - 1; ++i) {
+
+        if (strlen(AtrTable[i].bytes) != slen) {
             continue;
+        }
 
         if (strstr(AtrTable[i].bytes, ".") != NULL) {
+
             char *tmp_atr = calloc(slen, sizeof(uint8_t));
             if (tmp_atr == NULL) {
                 PrintAndLogEx(FAILED, "failed to allocate memory");
                 return NULL;
             }
 
-            for (int j = 0; j < slen; j++) {
+            for (size_t j = 0; j < slen; j++) {
                 tmp_atr[j] = (AtrTable[i].bytes[j] == '.') ? '.' : atr_str[j];
             }
 
