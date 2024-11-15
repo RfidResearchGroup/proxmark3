@@ -149,7 +149,7 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data,
                              uint8_t *iRATs, size_t irats_len,  uint8_t *aid, uint8_t *resp,
                              uint8_t *apdu, int aid_len, int respond_len, int apdu_len, bool enumerate);
 
-bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, 
+bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
                            uint8_t *iRATs, size_t irats_len, tag_response_info_t **responses,
                            uint32_t *cuid, uint32_t counters[3], uint8_t tearings[3], uint8_t *pages);
 

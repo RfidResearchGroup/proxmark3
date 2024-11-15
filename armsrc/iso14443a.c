@@ -1108,7 +1108,7 @@ bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_
     }
 }
 
-bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, 
+bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
                            uint8_t *iRATs, size_t irats_len, tag_response_info_t **responses,
                            uint32_t *cuid, uint32_t counters[3], uint8_t tearings[3], uint8_t *pages) {
     uint8_t sak = 0;
@@ -1272,7 +1272,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
         }
     }
 
-    // copy the iRATs if supplied. 
+    // copy the iRATs if supplied.
     // iRATs is a pointer to 20 byte array
     // rRATS is a 40 byte array
     if ((flags & FLAG_RATS_IN_DATA) == FLAG_RATS_IN_DATA) {
@@ -1283,7 +1283,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
         // Even if RATS protocol defined as max 40 bytes doesn't mean people try stuff
         if (rRATS_len > sizeof(rRATS)) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("[-] ERROR: iRATS overflow. Max %zu, got %zu", sizeof(rRATS), rRATS_len);
-            return false;            
+            return false;
         }
     }
 

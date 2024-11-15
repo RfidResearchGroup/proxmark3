@@ -162,7 +162,7 @@ globals:
 
     dumpData(data, blkn)
 
-    # FIXME: nr of blocks depend on the tag. RF32 is 256, RF08 is 64, RF08S is 64+8, 
+    # FIXME: nr of blocks depend on the tag. RF32 is 256, RF08 is 64, RF08S is 64+8,
     # Currently dumpAcl is hardcoded for RF08S
     dumpAcl(data)
 

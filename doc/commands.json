@@ -3242,23 +3242,20 @@
             "command": "hf iclass configcard",
             "description": "Manage reader configuration card via Cardhelper or internal database, The generated config card will be uploaded to device emulator memory. You can start simulating `hf iclass sim -t 3` or use the emul commands",
             "notes": [
-                "hf iclass configcard -l -> download config card settings from cardhelper",
                 "hf iclass configcard -p -> print all config cards in the database",
-                "hf iclass configcard --ci 1 -> view config card setting in slot 1",
-                "hf iclass configcard -g --ci 0 -> generate config file from slot 0"
+                "hf iclass configcard --g 0 -> generate config file with option 0"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--ci <dec> use config slot at index",
+                "--g <dec> use config option",
                 "--ki <dec> Card Key - index to select key from memory 'hf iclass managekeys'",
-                "--krki <dec> Elite Keyroll Key - index to select key from memory 'hf iclass managekeys'",
+                "--eki <dec> Elite Key - index to select key from memory 'hf iclass managekeys'",
+                "--mrki <dec> Standard Master Key - index to select key from memory 'hf iclass managekeys'",
                 "--elite Use elite key for the the Card Key ki",
-                "-g generate card dump file",
-                "-l load available cards",
                 "-p print available cards"
             ],
-            "usage": "hf iclass configcard [-hglp] [--ci <dec>] [--ki <dec>] [--krki <dec>] [--elite]"
+            "usage": "hf iclass configcard [-hp] [--g <dec>] [--ki <dec>] [--eki <dec>] [--mrki <dec>] [--elite]"
         },
         "hf iclass creditepurse": {
             "command": "hf iclass creditepurse",
@@ -5175,9 +5172,10 @@
                 "-b, --keyb use key B for access printing sectors (by default: key A)",
                 "--be (optional, BigEndian)",
                 "--dch decode Card Holder information",
-                "-f, --file <fn> load dump file and decode MAD"
+                "-f, --file <fn> load dump file and decode MAD",
+                "--force force decode (skip key check)"
             ],
-            "usage": "hf mf mad [-hvb] [--aid <hex>] [-k <hex>] [--be] [--dch] [-f <fn>]"
+            "usage": "hf mf mad [-hvb] [--aid <hex>] [-k <hex>] [--be] [--dch] [-f <fn>] [--force]"
         },
         "hf mf nack": {
             "command": "hf mf nack",
@@ -12244,7 +12242,7 @@
                 "--aid <hex> Applet ID to select. By default A0000003080000100 will be used",
                 "--nonce <hex> Nonce to sign.",
                 "--slot <dec id> Slot number. Default will be 0x9E (card auth cert).",
-                "--alg <dec> Algorithm to use to sign. Example values: 06=RSA-1024, 07=RSA-2048, 11=ECC-P256 (default), 14=ECC-P384"
+                "--alg <dec> Algorithm to use to sign. Example values: 06=RSA-1024, 07=RSA-2048, 17=ECC-P256 (default), 20=ECC-P384"
             ],
             "usage": "piv sign [-hskatw] [--aid <hex>] --nonce <hex> [--slot <dec id>] [--alg <dec>]"
         },
@@ -13005,6 +13003,6 @@
     "metadata": {
         "commands_extracted": 749,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-11-02T14:09:48"
+        "extracted_on": "2024-11-15T13:26:34"
     }
 }

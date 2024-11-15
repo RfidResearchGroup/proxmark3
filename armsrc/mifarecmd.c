@@ -3128,82 +3128,82 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
         };
         first_nt_counter++;
     } else for (uint8_t i = 0; i < nr_nested; i++) {
-        if (need_first_auth) {
-            cuid = 0;
+            if (need_first_auth) {
+                cuid = 0;
 
-            if (hardreset) {
-                if (g_dbglevel >= DBG_EXTENDED) {
-                    Dbprintf("RF reset");
+                if (hardreset) {
+                    if (g_dbglevel >= DBG_EXTENDED) {
+                        Dbprintf("RF reset");
+                    }
+                    // some cards need longer than mf_reset_card() to see effect on nT
+                    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+                    SpinDelay(150);
+                    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
                 }
-                // some cards need longer than mf_reset_card() to see effect on nT
-                FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-                SpinDelay(150);
-                iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-            }
-            if (g_dbglevel >= DBG_EXTENDED) {
-                Dbprintf("select");
-            }
-            if (iso14443a_select_card(NULL, NULL, &cuid, true, 0, true) == false) {
-                retval = PM3_ESOFT;
-                goto OUT;
-            }
-            if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, &nt_first, NULL, NULL, NULL, corruptnrar, corruptnrarparity)) {
-                if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
-                retval = PM3_ESOFT;
-                goto OUT;
-            };
-            is_last_auth_first_auth = true;
-            first_nt_counter++;
-            if ((first_nt_counter > 1) && (old_nt_first == nt_first)) {
-                first_nt_repetition_counter++;
-            }
-            old_nt_first = nt_first;
-            if (!reset && !hardreset) {
-                need_first_auth = false;
-            }
-            if (addread) {
-                uint8_t dataread[16] = {0x00};
-                mifare_classic_readblock(pcs, block_no, dataread);
-            }
-            if (addauth) {
-                if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_NESTED, &nt, NULL, NULL, NULL, false, false)) {
+                if (g_dbglevel >= DBG_EXTENDED) {
+                    Dbprintf("select");
+                }
+                if (iso14443a_select_card(NULL, NULL, &cuid, true, 0, true) == false) {
+                    retval = PM3_ESOFT;
+                    goto OUT;
+                }
+                if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, &nt_first, NULL, NULL, NULL, corruptnrar, corruptnrarparity)) {
                     if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
                     retval = PM3_ESOFT;
                     goto OUT;
-                } else if (g_dbglevel >= DBG_EXTENDED) {
-                    Dbprintf("Nonce distance: %5i (first nonce <> nested nonce)", nonce_distance(nt_first, nt));
+                };
+                is_last_auth_first_auth = true;
+                first_nt_counter++;
+                if ((first_nt_counter > 1) && (old_nt_first == nt_first)) {
+                    first_nt_repetition_counter++;
                 }
-                is_last_auth_first_auth = false;
-                if (nt == nt_first) {
-                    first_and_nested_nt_repetition_counter++;
+                old_nt_first = nt_first;
+                if (!reset && !hardreset) {
+                    need_first_auth = false;
                 }
-                old_nt = nt;
+                if (addread) {
+                    uint8_t dataread[16] = {0x00};
+                    mifare_classic_readblock(pcs, block_no, dataread);
+                }
+                if (addauth) {
+                    if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_NESTED, &nt, NULL, NULL, NULL, false, false)) {
+                        if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
+                        retval = PM3_ESOFT;
+                        goto OUT;
+                    } else if (g_dbglevel >= DBG_EXTENDED) {
+                        Dbprintf("Nonce distance: %5i (first nonce <> nested nonce)", nonce_distance(nt_first, nt));
+                    }
+                    is_last_auth_first_auth = false;
+                    if (nt == nt_first) {
+                        first_and_nested_nt_repetition_counter++;
+                    }
+                    old_nt = nt;
+                }
             }
-        }
 
-        nt = 0;
-        ntenc = 0;
-        if (mifare_classic_authex_cmd(pcs, cuid, incblk2 ? block_no_nested + (i * 4) : block_no_nested, key_auth_cmd_nested, ui64key_nested, AUTH_NESTED, &nt, &ntenc, &ntencpar, NULL, false, false)) {
-            if (g_dbglevel >= DBG_ERROR) Dbprintf("Nested auth error");
-            need_first_auth = true;
-        } else if (g_dbglevel >= DBG_EXTENDED) {
-            if (is_last_auth_first_auth) {
-                Dbprintf("Nonce distance: %5i (first nonce <> nested nonce)", nonce_distance(nt_first, nt));
-            } else {
-                Dbprintf("Nonce distance: %5i", nonce_distance(old_nt, nt));
+            nt = 0;
+            ntenc = 0;
+            if (mifare_classic_authex_cmd(pcs, cuid, incblk2 ? block_no_nested + (i * 4) : block_no_nested, key_auth_cmd_nested, ui64key_nested, AUTH_NESTED, &nt, &ntenc, &ntencpar, NULL, false, false)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("Nested auth error");
+                need_first_auth = true;
+            } else if (g_dbglevel >= DBG_EXTENDED) {
+                if (is_last_auth_first_auth) {
+                    Dbprintf("Nonce distance: %5i (first nonce <> nested nonce)", nonce_distance(nt_first, nt));
+                } else {
+                    Dbprintf("Nonce distance: %5i", nonce_distance(old_nt, nt));
+                }
             }
+            nested_nt_session_counter++;
+            is_last_auth_first_auth = false;
+            old_nt = nt;
+            if (nt == nt_first) {
+                first_and_nested_nt_repetition_counter++;
+            }
+            if ((nested_nt_session_counter > 1) && (oldntenc == ntenc)) {
+                nested_nt_repetition_counter++;
+            }
+            oldntenc = ntenc;
         }
-        nested_nt_session_counter++;
-        is_last_auth_first_auth = false;
-        old_nt = nt;
-        if (nt == nt_first) {
-            first_and_nested_nt_repetition_counter++;
-        }
-        if ((nested_nt_session_counter > 1) && (oldntenc == ntenc)) {
-            nested_nt_repetition_counter++;
-        }
-        oldntenc = ntenc;
-    }
 
     data[1] = (cuid >> 24) & 0xFF;
     data[2] = (cuid >> 16) & 0xFF;

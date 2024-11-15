@@ -483,7 +483,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
         PrintAndLogEx(NORMAL, "( " _GREEN_("ok") " )");
 
         //Block 13 (This is needed for Rev.C readers!)
-        uint8_t block_0x13[PICOPASS_BLOCK_SIZE] = {0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x1C};
+        uint8_t block_0x13[PICOPASS_BLOCK_SIZE] = {0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1C};
         memcpy(data + (0x13 * 8), block_0x13, sizeof(block_0x13));
 
         // encrypted partial keyroll key 14
@@ -536,7 +536,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
     } else {
         memcpy(data, cc, sizeof(picopass_hdr_t));
         memcpy(data + (6 * 8), o->data, sizeof(o->data));
-        if (strstr(o->desc, "Custom") != NULL){
+        if (strstr(o->desc, "Custom") != NULL) {
             if (got_mk == false) {
                 PrintAndLogEx(ERR, "please specify New Master Key!");
                 free(data);
@@ -5066,16 +5066,16 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
     if (ccidx > -1 && ccidx < ARRAYLEN(iclass_config_options)) {
         const iclass_config_card_item_t *item = get_config_card_item(ccidx);
         if (strstr(item->desc, "ELITE") != NULL && got_kr == false) {
-                PrintAndLogEx(ERR, "please specify ELITE Key (--eki) !");
-                return PM3_EINVARG;
+            PrintAndLogEx(ERR, "please specify ELITE Key (--eki) !");
+            return PM3_EINVARG;
         }
         if (strstr(item->desc, "Custom") != NULL && got_mk == false) {
-                PrintAndLogEx(ERR, "please specify New Standard Master Key (--mrki) !");
-                return PM3_EINVARG;
+            PrintAndLogEx(ERR, "please specify New Standard Master Key (--mrki) !");
+            return PM3_EINVARG;
         }
         if (strstr(item->desc, "Restore") != NULL && card_kidx == -1) {
-                PrintAndLogEx(ERR, "please specify the Current Reader's Key (--ki) !");
-                return PM3_EINVARG;
+            PrintAndLogEx(ERR, "please specify the Current Reader's Key (--ki) !");
+            return PM3_EINVARG;
         }
         generate_config_card(item, keyroll_key, got_kr, card_key, got_eki, elite, got_mk, master_key);
     }

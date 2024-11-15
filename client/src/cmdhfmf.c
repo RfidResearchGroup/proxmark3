@@ -250,9 +250,9 @@ bool mfc_value(const uint8_t *d, int32_t *val) {
     uint32_t b = MemLeToUint4byte(d + 8);
 
     int val_checks = (
-    (a == b) && (a == ~a_inv) &&
-    (d[12] == (~d[13] & 0xFF)) &&
-    (d[14] == (~d[15] & 0xFF))
+                         (a == b) && (a == ~a_inv) &&
+                         (d[12] == (~d[13] & 0xFF)) &&
+                         (d[14] == (~d[15] & 0xFF))
                      );
 
     if (val) {
@@ -1602,7 +1602,7 @@ static int CmdHF14AMfRestore(const char *Cmd) {
                 PrintAndLogEx(INFO, " %3d | %s| ( " _RED_("fail") " ) key " _YELLOW_("%c"),
                               blockno,
                               sprint_hex(bldata, sizeof(bldata)),
-                (kt == MF_KEY_A) ? 'A' : 'B'
+                              (kt == MF_KEY_A) ? 'A' : 'B'
                              );
             } // end loop key types
         } // end loop B
@@ -2963,7 +2963,7 @@ noValidKeyFound:
                             PrintAndLogEx(INFO, "======================= " _YELLOW_("START READ B KEY ATTACK") " =======================");
                             PrintAndLogEx(INFO, "reading B key of sector %3d with key type %c",
                                           current_sector_i,
-                            (current_key_type_i == MF_KEY_B) ? 'B' : 'A');
+                                          (current_key_type_i == MF_KEY_B) ? 'B' : 'A');
                         }
                         uint8_t sectrail = (mfFirstBlockOfSector(current_sector_i) + mfNumBlocksPerSector(current_sector_i) - 1);
 
@@ -2995,7 +2995,7 @@ noValidKeyFound:
                             if (verbose) {
                                 PrintAndLogEx(WARNING, "unknown  B  key: sector: %3d key type: %c",
                                               current_sector_i,
-                                (current_key_type_i == MF_KEY_B) ? 'B' : 'A'
+                                              (current_key_type_i == MF_KEY_B) ? 'B' : 'A'
                                              );
                                 PrintAndLogEx(INFO, " -- reading the B key was not possible, maybe due to access rights?");
 
@@ -3018,7 +3018,7 @@ skipReadBKey:
                             PrintAndLogEx(INFO, "======================= " _YELLOW_("START NESTED ATTACK") " =======================");
                             PrintAndLogEx(INFO, "sector no %3d, target key type %c",
                                           current_sector_i,
-                            (current_key_type_i == MF_KEY_B) ? 'B' : 'A');
+                                          (current_key_type_i == MF_KEY_B) ? 'B' : 'A');
                         }
 tryNested:
                         isOK = mf_nested(mfFirstBlockOfSector(sectorno), keytype, key, mfFirstBlockOfSector(current_sector_i), current_key_type_i, tmp_key, calibrate);
@@ -3144,7 +3144,7 @@ tryStaticnested:
                             PrintAndLogEx(INFO, "======================= " _YELLOW_("START STATIC NESTED ATTACK") " =======================");
                             PrintAndLogEx(INFO, "sector no %3d, target key type %c",
                                           current_sector_i,
-                            (current_key_type_i == MF_KEY_B) ? 'B' : 'A');
+                                          (current_key_type_i == MF_KEY_B) ? 'B' : 'A');
                         }
 
                         isOK = mf_static_nested(mfFirstBlockOfSector(sectorno), keytype, key, mfFirstBlockOfSector(current_sector_i), current_key_type_i, tmp_key);
@@ -4424,7 +4424,7 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
                       _YELLOW_("H") ":Hardnested / "
                       _YELLOW_("C") ":statiCnested / "
                       _YELLOW_("A") ":keyA "
-                            " )"
+                      " )"
                      );
         if (sectorscnt == 18) {
             PrintAndLogEx(INFO, "( " _MAGENTA_("*") " ) These sectors used for signature. Lays outside of user memory");
@@ -5212,7 +5212,7 @@ static int CmdHF14AMfCSetUID(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Old UID... %s", sprint_hex(old_uid, uidlen));
     PrintAndLogEx(SUCCESS, "New UID... %s ( %s )",
                   sprint_hex(verify_uid, uidlen),
-    (res == 0) ? _GREEN_("verified") : _RED_("fail")
+                  (res == 0) ? _GREEN_("verified") : _RED_("fail")
                  );
     return PM3_SUCCESS;
 }
@@ -6603,10 +6603,10 @@ int CmdHFMFNDEFFormat(const char *Cmd) {
                   "If not, it will try finding a key file based on your UID.  ie, if you ran autopwn before",
                   "hf mf ndefformat\n"
                   // "hf mf ndefformat --mini                        --> MIFARE Mini\n"
-       "hf mf ndefformat --1k                          --> MIFARE Classic 1k\n"
+                  "hf mf ndefformat --1k                          --> MIFARE Classic 1k\n"
                   // "hf mf ndefformat --2k                          --> MIFARE 2k\n"
                   // "hf mf ndefformat --4k                          --> MIFARE 4k\n"
-       "hf mf ndefformat --keys hf-mf-01020304-key.bin --> MIFARE 1k with keys from specified file\n"
+                  "hf mf ndefformat --keys hf-mf-01020304-key.bin --> MIFARE 1k with keys from specified file\n"
                  );
 
     void *argtable[] = {
@@ -9258,7 +9258,7 @@ static int CmdHF14AMfValue(const char *Cmd) {
     // don't want to write value data and break something
     if ((blockno == 0) ||
             (mfIsSectorTrailer(blockno)) ||
-    (trnval == 0) ||
+            (trnval == 0) ||
             (trnval != -1 && mfIsSectorTrailer(trnval))) {
         PrintAndLogEx(WARNING, "invalid block number, should be a data block");
         return PM3_EINVARG;
@@ -9695,47 +9695,47 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             // backdoor might be present, or just a clone reusing Fudan MF data...
             PrintAndLogEx(SUCCESS, "Fudan based card");
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08s, sizeof(fkey)) == 0
-        && card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
-        && (blockdata[8] == 0x03 || blockdata[8] == 0x04) && blockdata[15] == 0x90) {
+                   && card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
+                   && (blockdata[8] == 0x03 || blockdata[8] == 0x04) && blockdata[15] == 0x90) {
             PrintAndLogEx(SUCCESS, "Fudan FM11RF08S");
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08s, sizeof(fkey)) == 0
-        && card.sak == 0x08 && memcmp(blockdata + 5, "\x00\x03\x00\x10", 4) == 0
-        && blockdata[15] == 0x90) {
+                   && card.sak == 0x08 && memcmp(blockdata + 5, "\x00\x03\x00\x10", 4) == 0
+                   && blockdata[15] == 0x90) {
             PrintAndLogEx(SUCCESS, "Fudan FM11RF08S-7B");
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
-        && card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
-        && blockdata[15] == 0x98) {
+                   && card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
+                   && blockdata[15] == 0x98) {
             PrintAndLogEx(SUCCESS, "Fudan FM11RF08S **98");
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
-        && card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
-        && (blockdata[8] >= 0x01 && blockdata[8] <= 0x03) && blockdata[15] == 0x1D) {
+                   && card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
+                   && (blockdata[8] >= 0x01 && blockdata[8] <= 0x03) && blockdata[15] == 0x1D) {
             PrintAndLogEx(SUCCESS, "Fudan FM11RF08");
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k32, sizeof(fkey)) == 0
-        && card.sak == 0x18 && memcmp(blockdata + 5, "\x18\x02\x00\x46\x44\x53\x37\x30\x56\x30\x31", 11) == 0) {
+                   && card.sak == 0x18 && memcmp(blockdata + 5, "\x18\x02\x00\x46\x44\x53\x37\x30\x56\x30\x31", 11) == 0) {
             PrintAndLogEx(SUCCESS, "Fudan FM11RF32");
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
-        && card.sak == 0x20 && memcmp(blockdata + 8, "\x62\x63\x64\x65\x66\x67\x68\x69", 8) == 0) {
+                   && card.sak == 0x20 && memcmp(blockdata + 8, "\x62\x63\x64\x65\x66\x67\x68\x69", 8) == 0) {
             PrintAndLogEx(SUCCESS, "Fudan FM11RF32 (SAK=20)");
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
-                    && card.sak == 0x28 && (
-                    (memcmp(blockdata + 5, "\x28\x04\x00\x90\x10\x15\x01\x00\x00\x00\x00", 11) == 0) ||
-                    (memcmp(blockdata + 5, "\x28\x04\x00\x90\x11\x15\x01\x00\x00\x00\x00", 11) == 0))) {
+                   && card.sak == 0x28 && (
+                       (memcmp(blockdata + 5, "\x28\x04\x00\x90\x10\x15\x01\x00\x00\x00\x00", 11) == 0) ||
+                       (memcmp(blockdata + 5, "\x28\x04\x00\x90\x11\x15\x01\x00\x00\x00\x00", 11) == 0))) {
             // Note: it also has ATS =
             // 10 78 80 90 02 20 90 00 00 00 00 00 + UID + CRC
             PrintAndLogEx(SUCCESS, "Fudan FM1208-10");
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
-        && card.sak == 0x28 && memcmp(blockdata + 5, "\x28\x04\x00\x90\x53\xB7\x0C\x00\x00\x00\x00", 11) == 0) {
+                   && card.sak == 0x28 && memcmp(blockdata + 5, "\x28\x04\x00\x90\x53\xB7\x0C\x00\x00\x00\x00", 11) == 0) {
             // Note: it also has ATS =
             // 10 78 80 B0 02 20 90 00 00 00 00 00 + UID + CRC
             PrintAndLogEx(SUCCESS, "Fudan FM1216-137");
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
-        && card.sak == 0x88 && memcmp(blockdata + 5, "\x88\x04\x00\x43", 4) == 0) {
+                   && card.sak == 0x88 && memcmp(blockdata + 5, "\x88\x04\x00\x43", 4) == 0) {
             PrintAndLogEx(SUCCESS, "Infineon SLE66R35");
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
-        && card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x44", 4) == 0) {
+                   && card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x44", 4) == 0) {
             PrintAndLogEx(SUCCESS, "NXP MF1ICS5003");
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
-        && card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x45", 4) == 0) {
+                   && card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x45", 4) == 0) {
             PrintAndLogEx(SUCCESS, "NXP MF1ICS5004");
         } else if (fKeyType == MF_KEY_BD) {
             PrintAndLogEx(SUCCESS, _RED_("Unknown card with backdoor, please report details!"));

@@ -466,7 +466,7 @@ static void piv_print_fascn(const uint8_t *buf, const size_t len, int level) {
         PrintAndLogEx(NORMAL, "%s" NOLF, encoded[tmp & 0x1f]);
     }
     uint8_t lrc = buf[24] & 0x1f;
-    PrintAndLogEx(NORMAL, " LRC=[" _YELLOW_("%02" PRIx8 ) "]", lrc);
+    PrintAndLogEx(NORMAL, " LRC=[" _YELLOW_("%02" PRIx8) "]", lrc);
 }
 
 static bool piv_tag_dump(const struct tlv *tlv, int level) {

@@ -1656,9 +1656,9 @@ static void PacketReceived(PacketCommandNG *packet) {
                 bool enumerate;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            SimulateIso14443aTagAID(payload->tagtype, payload->flags, payload->uid, 
-                                    payload->rats, sizeof(payload->rats), payload->aid, payload->response, 
-                                    payload->apdu, payload->aid_len, payload->respond_len, 
+            SimulateIso14443aTagAID(payload->tagtype, payload->flags, payload->uid,
+                                    payload->rats, sizeof(payload->rats), payload->aid, payload->response,
+                                    payload->apdu, payload->aid_len, payload->respond_len,
                                     payload->apdu_len, payload->enumerate);  // ## Simulate iso14443a tag - pass tag type, UID, rats, aid, resp, apdu
             break;
         }
