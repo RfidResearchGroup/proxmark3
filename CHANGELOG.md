@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mf sim` not to respond to authentication attempts for sectors out of bound for selected Mifare type (@piotrva)
 - Added option to build against non-default python3 with CMake as well (@doegox)
 - Added option to build against non-default python3 with Makefile (@ANTodorov)
 - Changed `hf 14a info` `hf mf info` - now detects FM1216-137 CPU cards (@iceman1001)
