@@ -1,7 +1,7 @@
 MYSRCPATHS = ../../common ../../common/mbedtls
 MYSRCS = util_posix.c randoms.c
 MYINCLUDES =  -I../../include -I../../common -I../../common/mbedtls
-MYCFLAGS = -Ofast
+MYCFLAGS = -O3 -ffast-math
 MYDEFS =
 MYLDLIBS = -lcrypto
 
@@ -43,7 +43,8 @@ ifeq ($(USE_MACPORTS),1)
     MYLDFLAGS += -L$(MACPORTS_PREFIX)/lib/openssl-3 -L$(MACPORTS_PREFIX)/lib/openssl-1.1
 endif
 
-showinfo: $(info c flags: $(MYCFLAGS))
+showinfo:
+	@echo "C flags: $(MYCFLAGS)"
 
 brute_key : $(OBJDIR)/brute_key.o $(MYOBJS)
 
