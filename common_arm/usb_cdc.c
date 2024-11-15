@@ -737,7 +737,7 @@ uint32_t usb_read_ng(uint8_t *data, size_t len) {
 
         // if local buffer has all data
 
-        for (uint8_t i = 0; i < len; i++) {
+        for (size_t i = 0; i < len; i++) {
             data[nbBytesRcv++] = usb_read_ng_buffer[usb_read_ng_bufoffset + i];
         }
 
@@ -755,7 +755,7 @@ uint32_t usb_read_ng(uint8_t *data, size_t len) {
 
         // take all data from local buffer,  then read from usb
 
-        for (uint8_t i = 0; i < usb_read_ng_buflen; i++) {
+        for (size_t i = 0; i < usb_read_ng_buflen; i++) {
             data[nbBytesRcv++] = usb_read_ng_buffer[usb_read_ng_bufoffset + i];
         }
 
