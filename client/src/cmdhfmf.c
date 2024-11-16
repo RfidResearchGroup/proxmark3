@@ -883,23 +883,28 @@ static int CmdHF14AMfDarkside(const char *Cmd) {
         arg_param_begin,
         arg_int0(NULL, "blk", "<dec> ", "Target block"),
         arg_lit0("b", NULL, "Target key B instead of default key A"),
-        arg_int0("c", NULL, "<dec>", "Target Auth 6x"),
+        arg_int0("c", NULL, "<dec>", "Target key type is key A + offset"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     uint8_t blockno = arg_get_u32_def(ctx, 1, 0) & 0xFF;
-    uint8_t key_type = MIFARE_AUTH_KEYA;
+    uint8_t key_type = MF_KEY_A;
 
     if (arg_get_lit(ctx, 2)) {
         PrintAndLogEx(INFO, "Targeting key B");
-        key_type = MIFARE_AUTH_KEYB;
+        key_type = MF_KEY_B;
     }
 
-    uint8_t ctype = arg_get_u32_def(ctx, 3, 0) & 0xFF;
-    if ((ctype & 0x60) == 0x60) {
-        key_type = ctype;
+    uint8_t prev_keytype = key_type;
+    key_type = arg_get_int_def(ctx, 3, key_type);
+    if (arg_get_lit(ctx, 2) && (key_type != prev_keytype)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Choose one single target key type");
+        return PM3_EINVARG;
     }
+    // mf_dark_side expects the full command byte 0x6x
+    key_type += MIFARE_AUTH_KEYA;
 
     CLIParserFree(ctx);
 
@@ -1002,7 +1007,12 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(INFO, "Writing block no %d, key %c - %s", blockno, (keytype == MF_KEY_B) ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
+    if (keytype < 2) {
+        PrintAndLogEx(INFO, "Writing block no %d, key type:%c - %s", blockno, (keytype == MF_KEY_B) ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
+    } else {
+        PrintAndLogEx(INFO, "Writing block no %d, key type:%02x - %s", blockno, MIFARE_AUTH_KEYA + keytype, sprint_hex_inrow(key, sizeof(key)));
+    }
+
     PrintAndLogEx(INFO, "data: %s", sprint_hex(block, sizeof(block)));
 
     uint8_t data[26];
@@ -9303,7 +9313,11 @@ static int CmdHF14AMfValue(const char *Cmd) {
 
             } else {
                 cmddata[10] = 0;
-                PrintAndLogEx(INFO, "Writing block no %u, key %c - %s", blockno, (keytype == MF_KEY_B) ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
+                if (keytype < 2) {
+                    PrintAndLogEx(INFO, "Writing block no %u, key type:%c - %s", blockno, (keytype == MF_KEY_B) ? 'B' : 'A', sprint_hex_inrow(key, sizeof(key)));
+                } else {
+                    PrintAndLogEx(INFO, "Writing block no %u, key type:%02x - %s", blockno, MIFARE_AUTH_KEYA + keytype, sprint_hex_inrow(key, sizeof(key)));
+                }
             }
 
             memcpy(cmddata + 11, block, sizeof(block));
