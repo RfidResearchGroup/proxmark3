@@ -428,7 +428,7 @@ void Flashmem_print_info(void) {
     uint16_t num;
 
     Flash_CheckBusy(BUSY_TIMEOUT);
-    uint16_t isok = Flash_ReadDataCont(DEFAULT_MF_KEYS_OFFSET, keysum, 2);
+    uint16_t isok = Flash_ReadDataCont(DEFAULT_MF_KEYS_OFFSET_P(spi_flash_p64k), keysum, 2);
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
@@ -436,7 +436,7 @@ void Flashmem_print_info(void) {
     }
 
     Flash_CheckBusy(BUSY_TIMEOUT);
-    isok = Flash_ReadDataCont(DEFAULT_T55XX_KEYS_OFFSET, keysum, 2);
+    isok = Flash_ReadDataCont(DEFAULT_T55XX_KEYS_OFFSET_P(spi_flash_p64k), keysum, 2);
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
@@ -444,7 +444,7 @@ void Flashmem_print_info(void) {
     }
 
     Flash_CheckBusy(BUSY_TIMEOUT);
-    isok = Flash_ReadDataCont(DEFAULT_ICLASS_KEYS_OFFSET, keysum, 2);
+    isok = Flash_ReadDataCont(DEFAULT_ICLASS_KEYS_OFFSET_P(spi_flash_p64k), keysum, 2);
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)

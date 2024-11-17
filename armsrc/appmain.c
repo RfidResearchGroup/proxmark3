@@ -2748,11 +2748,11 @@ static void PacketReceived(PacketCommandNG *packet) {
                 break;
             }
 
-            if (payload->startidx == DEFAULT_T55XX_KEYS_OFFSET) {
+            if (payload->startidx == DEFAULT_T55XX_KEYS_OFFSET_P(spi_flash_p64k)) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
                 Flash_Erase4k(3, 0xC);
-            } else if (payload->startidx ==  DEFAULT_MF_KEYS_OFFSET) {
+            } else if (payload->startidx ==  DEFAULT_MF_KEYS_OFFSET_P(spi_flash_p64k)) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
                 Flash_Erase4k(3, 0x8);
@@ -2762,11 +2762,11 @@ static void PacketReceived(PacketCommandNG *packet) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
                 Flash_Erase4k(3, 0xA);
-            } else if (payload->startidx == DEFAULT_ICLASS_KEYS_OFFSET) {
+            } else if (payload->startidx == DEFAULT_ICLASS_KEYS_OFFSET_P(spi_flash_p64k)) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
                 Flash_Erase4k(3, 0xB);
-            } else if (payload->startidx == FLASH_MEM_SIGNATURE_OFFSET) {
+            } else if (payload->startidx == FLASH_MEM_SIGNATURE_OFFSET_P(spi_flash_p64k)) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
                 Flash_Erase4k(3, 0xF);
