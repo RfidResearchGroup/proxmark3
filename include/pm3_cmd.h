@@ -433,6 +433,7 @@ typedef struct {
 #define CMD_FLASHMEM_DOWNLOADED                                           0x0124
 #define CMD_FLASHMEM_INFO                                                 0x0125
 #define CMD_FLASHMEM_SET_SPIBAUDRATE                                      0x0126
+#define CMD_FLASHMEM_PAGES64K                                             0x0127
 
 // RDV40, High level flashmem SPIFFS Manipulation
 // ALL function will have a lazy or Safe version
