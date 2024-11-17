@@ -460,8 +460,8 @@ static int CmdFlashMemWipe(const char *Cmd) {
         return res;
     }
 
-    if (page < 0 || page > (spi_flash_pages - 1)) {
-        PrintAndLogEx(WARNING, "page must be between 0 and %d", spi_flash_pages - 1);
+    if (page < 0 || page > (spi_flash_pages - 2)) {
+        PrintAndLogEx(WARNING, "page must be between 0 and %d", spi_flash_pages - 2);
         return PM3_EINVARG;
     }
 
