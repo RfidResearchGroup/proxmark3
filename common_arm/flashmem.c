@@ -461,7 +461,7 @@ bool FlashDetect(bool flash_init) {
     if (flash_init) {
         if (!FlashInit()) {
             if (g_dbglevel > 3) Dbprintf("FlashDetect() FlashInit fail");
-            return 0;
+            return false;
         }
     }
 
@@ -483,6 +483,7 @@ bool FlashDetect(bool flash_init) {
     if (flash_init) {
         FlashStop();
     }
+
     return true;
 }
 
@@ -501,8 +502,10 @@ bool FlashInit(void) {
     }
 
 #ifndef AS_BOOTROM
-    if (spi_flash_p64k == 0){
-        if (!FlashDetect(false)) return 0;
+    if (spi_flash_p64k == 0) {
+        if (!FlashDetect(false)) {
+            return false;
+        }
     }
 #endif // #ifndef AS_BOOTROM
 

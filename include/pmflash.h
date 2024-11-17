@@ -38,7 +38,7 @@
 # define FLASH_MEM_MAX_SIZE     0x40000  // (262144)
 #endif
 #ifndef FLASH_MEM_MAX_SIZE_P
-# define FLASH_MEM_MAX_SIZE_P(p64k) (1024 * 64 * p64k)
+# define FLASH_MEM_MAX_SIZE_P(p64k) (1024 * 64 * (p64k))
 #endif
 
 #ifndef FLASH_MEM_MAX_4K_SECTOR
