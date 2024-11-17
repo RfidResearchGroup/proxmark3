@@ -148,7 +148,7 @@ static int rdv4_sign_write(uint8_t *signature, uint8_t slen) {
             return PM3_EFAILED;
         }
     }
-    PrintAndLogEx(SUCCESS, "Writing signature at offset %u ( "_GREEN_("ok") " )", FLASH_MEM_SIGNATURE_OFFSET);
+    PrintAndLogEx(SUCCESS, "Writing signature at offset %u ( "_GREEN_("ok") " )", FLASH_MEM_SIGNATURE_OFFSET_P(spi_flash_pages));
     return PM3_SUCCESS;
 }
 
