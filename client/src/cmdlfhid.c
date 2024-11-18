@@ -58,8 +58,9 @@ static int sendPing(void) {
     SendCommandNG(CMD_PING, NULL, 0);
     clearCommandBuffer();
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_PING, &resp, 1000))
+    if (WaitForResponseTimeout(CMD_PING, &resp, 1000) == false) {
         return PM3_ETIMEOUT;
+    }
     return PM3_SUCCESS;
 }
 static int sendTry(uint8_t format_idx, wiegand_card_t *card, uint32_t delay, bool verbose) {
@@ -470,15 +471,17 @@ static int CmdHIDClone(const char *Cmd) {
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HID_CLONE, (uint8_t *)&payload, sizeof(payload));
-
     PacketResponseNG resp;
-    WaitForResponse(CMD_LF_HID_CLONE, &resp);
+    if (WaitForResponseTimeout(CMD_LF_HID_CLONE, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        return PM3_ETIMEOUT;
+    }
+
     if (resp.status == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Done!");
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf hid reader`") " to verify");
-        PrintAndLogEx(INFO, "Done!");
     } else {
         PrintAndLogEx(FAILED, "cloning ( " _RED_("fail") " )");
-
     }
     return resp.status;
 }

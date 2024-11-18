@@ -261,12 +261,14 @@ void truncate_filename(char *fn, uint16_t maxlen) {
 
 // --------- SAVE FILES
 int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen) {
-
+    return saveFileEx(preferredName, suffix, data, datalen, spDefault);
+}
+int saveFileEx(const char *preferredName, const char *suffix, const void *data, size_t datalen, savePaths_t e_save_path) {
     if (data == NULL || datalen == 0) {
         return PM3_EINVARG;
     }
 
-    char *fileName = newfilenamemcopy(preferredName, suffix);
+    char *fileName = newfilenamemcopyEx(preferredName, suffix, e_save_path);
     if (fileName == NULL) {
         return PM3_EMALLOC;
     }
@@ -288,22 +290,15 @@ int saveFile(const char *preferredName, const char *suffix, const void *data, si
     return PM3_SUCCESS;
 }
 
-// dump file (normally,  we also got preference file, etc)
-int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, void (*callback)(json_t *)) {
-    return saveFileJSONex(preferredName, ftype, data, datalen, true, callback, spDump);
-}
-int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *), savePaths_t e_save_path) {
-
+int prepareJSON(json_t *root, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *)) {
     if (ftype != jsfCustom) {
         if (data == NULL || datalen == 0) {
             return PM3_EINVARG;
         }
     }
 
-    int retval = PM3_SUCCESS;
     char path[PATH_MAX_LENGTH] = {0};
 
-    json_t *root = json_object();
     JsonSaveStr(root, "Created", "proxmark3");
     switch (ftype) {
         case jsfRaw: {
@@ -712,6 +707,52 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
             }
             break;
         }
+        case jsfFM11RF08SNonces:
+        case jsfFM11RF08SNoncesWithData: {
+            if (datalen != sizeof(iso14a_fm11rf08s_nonces_with_data_t)) {
+                return PM3_EINVARG;
+            }
+            iso14a_fm11rf08s_nonces_with_data_t *p = (iso14a_fm11rf08s_nonces_with_data_t *)data;
+            if (ftype == jsfFM11RF08SNoncesWithData) {
+                JsonSaveStr(root, "FileType", "fm11rf08s_nonces_with_data");
+            } else {
+                JsonSaveStr(root, "FileType", "fm11rf08s_nonces");
+            }
+            for (uint16_t sec = 0; sec < MIFARE_1K_MAXSECTOR + 1; sec++) {
+                uint8_t par2[2];
+                uint8_t par;
+                uint16_t real_sec = sec;
+                if (sec == MIFARE_1K_MAXSECTOR) {
+                    real_sec = 32; // advanced verification method block
+                }
+                snprintf(path, sizeof(path), "$.nt.%u.a", real_sec);
+                JsonSaveBufAsHexCompact(root, path, p->nt[sec][0], 4);
+                snprintf(path, sizeof(path), "$.nt.%u.b", real_sec);
+                JsonSaveBufAsHexCompact(root, path, p->nt[sec][1], 4);
+                snprintf(path, sizeof(path), "$.nt_enc.%u.a", real_sec);
+                JsonSaveBufAsHexCompact(root, path, p->nt_enc[sec][0], 4);
+                snprintf(path, sizeof(path), "$.nt_enc.%u.b", real_sec);
+                JsonSaveBufAsHexCompact(root, path, p->nt_enc[sec][1], 4);
+
+                snprintf(path, sizeof(path), "$.par_err.%u.a", real_sec);
+                par = p->par_err[sec][0];
+                par2[0] = (((par >> 3) & 1) << 4) | ((par >> 2) & 1);
+                par2[1] = (((par >> 1) & 1) << 4) | ((par >> 0) & 1);
+                JsonSaveBufAsHexCompact(root, path, par2, 2);
+                snprintf(path, sizeof(path), "$.par_err.%u.b", real_sec);
+                par = p->par_err[sec][1];
+                par2[0] = (((par >> 3) & 1) << 4) | ((par >> 2) & 1);
+                par2[1] = (((par >> 1) & 1) << 4) | ((par >> 0) & 1);
+                JsonSaveBufAsHexCompact(root, path, par2, 2);
+            }
+            if (ftype == jsfFM11RF08SNoncesWithData) {
+                for (uint16_t blk = 0; blk < MIFARE_1K_MAXBLOCK; blk++) {
+                    snprintf(path, sizeof(path), "$.blocks.%u", blk);
+                    JsonSaveBufAsHexCompact(root, path, p->blocks[blk], MFBLOCK_SIZE);
+                }
+            }
+            break;
+        }
         // no action
         case jsfFido:
             break;
@@ -725,32 +766,33 @@ int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data,
         default:
             break;
     }
+    return PM3_SUCCESS;
+}
 
-    char *fn = newfilenamemcopyEx(preferredName, ".json", e_save_path);
-    if (fn == NULL) {
-        return PM3_EMALLOC;
+// dump file (normally,  we also got preference file, etc)
+int saveFileJSON(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, void (*callback)(json_t *)) {
+    return saveFileJSONex(preferredName, ftype, data, datalen, true, callback, spDump);
+}
+
+int saveFileJSONex(const char *preferredName, JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *), savePaths_t e_save_path) {
+
+    int retval = PM3_SUCCESS;
+
+    json_t *root = json_object();
+    retval = prepareJSON(root, ftype, data, datalen, verbose, callback);
+    if (retval != PM3_SUCCESS) {
+        return retval;
     }
-
-    if (json_dump_file(root, fn, JSON_INDENT(2))) {
-        PrintAndLogEx(FAILED, "error, can't save the file `" _YELLOW_("%s") "`", fn);
-        retval = 200;
-        free(fn);
-        goto out;
-    }
-
-    if (verbose) {
-        PrintAndLogEx(SUCCESS, "Saved to json file `" _YELLOW_("%s") "`", fn);
-    }
-    free(fn);
-
-out:
+    retval = saveFileJSONrootEx(preferredName, root, JSON_INDENT(2), verbose, false, e_save_path);
     json_decref(root);
     return retval;
 }
+
 int saveFileJSONroot(const char *preferredName, void *root, size_t flags, bool verbose) {
-    return saveFileJSONrootEx(preferredName, root, flags, verbose, false);
+    return saveFileJSONrootEx(preferredName, root, flags, verbose, false, spDump);
 }
-int saveFileJSONrootEx(const char *preferredName, const void *root, size_t flags, bool verbose, bool overwrite) {
+
+int saveFileJSONrootEx(const char *preferredName, const void *root, size_t flags, bool verbose, bool overwrite, savePaths_t e_save_path) {
     if (root == NULL)
         return PM3_EINVARG;
 
@@ -758,7 +800,7 @@ int saveFileJSONrootEx(const char *preferredName, const void *root, size_t flags
     if (overwrite)
         filename = filenamemcopy(preferredName, ".json");
     else
-        filename = newfilenamemcopyEx(preferredName, ".json", spDump);
+        filename = newfilenamemcopyEx(preferredName, ".json", e_save_path);
 
     if (filename == NULL)
         return PM3_EMALLOC;
@@ -767,7 +809,7 @@ int saveFileJSONrootEx(const char *preferredName, const void *root, size_t flags
 
     if (res == 0) {
         if (verbose) {
-            PrintAndLogEx(SUCCESS, "Saved to json file " _YELLOW_("%s"), filename);
+            PrintAndLogEx(SUCCESS, "Saved to json file `" _YELLOW_("%s") "`", filename);
         }
         free(filename);
         return PM3_SUCCESS;
@@ -776,6 +818,17 @@ int saveFileJSONrootEx(const char *preferredName, const void *root, size_t flags
     }
     free(filename);
     return PM3_EFILE;
+}
+
+char *sprintJSON(JSONFileType ftype, uint8_t *data, size_t datalen, bool verbose, void (*callback)(json_t *)) {
+
+    json_t *root = json_object();
+    if (prepareJSON(root, ftype, data, datalen, verbose, callback) != PM3_SUCCESS) {
+        return NULL;
+    }
+    char *s = json_dumps(root, JSON_INDENT(2));
+    json_decref(root);
+    return s;
 }
 
 // wave file of trace,
@@ -2267,12 +2320,17 @@ out:
     return retval;
 }
 
+
 int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t keylen, uint32_t *keycnt) {
+    return loadFileDICTIONARY_safe_ex(preferredName, ".dic", pdata, keylen, keycnt, true);
+}
+
+int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, void **pdata, uint8_t keylen, uint32_t *keycnt, bool verbose) {
 
     int retval = PM3_SUCCESS;
 
     char *path;
-    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false) != PM3_SUCCESS) {
+    if (searchFile(&path, DICTIONARIES_SUBDIR, preferredName, suffix, false) != PM3_SUCCESS) {
         return PM3_EFILE;
     }
 
@@ -2282,7 +2340,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
     // mf desfire == 3des3k 24 bytes
     // iclass == 8 bytes
     // default to 6 bytes.
-    if (keylen != 4 && keylen != 6 && keylen != 8 && keylen != 16 && keylen != 24) {
+    if (keylen != 4 && keylen != 5 && keylen != 6 && keylen != 8 && keylen != 16 && keylen != 24) {
         keylen = 6;
     }
 
@@ -2340,7 +2398,7 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
             continue;
         }
 
-        if (!CheckStringIsHEXValue(line)) {
+        if (CheckStringIsHEXValue(line) == false) {
             continue;
         }
 
@@ -2357,7 +2415,9 @@ int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t key
     }
     fclose(f);
 
-    PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%2d") " keys from dictionary file `" _YELLOW_("%s") "`", *keycnt, path);
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%2d") " keys from dictionary file `" _YELLOW_("%s") "`", *keycnt, path);
+    }
 
 out:
     free(path);
@@ -3077,7 +3137,7 @@ int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
         PrintAndLogEx(INFO, "No data to save, skipping...");
         return PM3_EINVARG;
     }
-    saveFile(fn, ".bin", d, n);
+    saveFileEx(fn, ".bin", d, n, spDump);
 
     iso14a_mf_extdump_t jd = {0};
     jd.card_info.ats_len = 0;
@@ -3101,6 +3161,21 @@ int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
     jd.dump = d;
     jd.dumplen = n;
     saveFileJSON(fn, jsfMfc_v2, (uint8_t *)&jd, sizeof(jd), NULL);
+    return PM3_SUCCESS;
+}
+
+int pm3_save_fm11rf08s_nonces(const char *fn, iso14a_fm11rf08s_nonces_with_data_t *d, bool with_data) {
+
+    if (fn == NULL || d == NULL) {
+        PrintAndLogEx(INFO, "No data to save, skipping...");
+        return PM3_EINVARG;
+    }
+
+    if (with_data) {
+        saveFileJSON(fn, jsfFM11RF08SNoncesWithData, (uint8_t *)d, sizeof(*d), NULL);
+    } else {
+        saveFileJSON(fn, jsfFM11RF08SNonces, (uint8_t *)d, sizeof(*d), NULL);
+    }
     return PM3_SUCCESS;
 }
 

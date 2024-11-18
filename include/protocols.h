@@ -921,8 +921,8 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 // HITAG S commands
 #define HITAGS_UID_REQ_STD              0x30    // 00110 UID REQUEST Std
-#define HITAGS_UID_REQ_ADV              0xC0    // 11000 UID REQUEST Adv
-#define HITAGS_UID_REQ_ADV2             0xC8    // 11001 UID REQUEST Adv
+#define HITAGS_UID_REQ_ADV2             0xC0    // 11000 UID REQUEST Adv compatible with HITAG2_START_AUTH
+#define HITAGS_UID_REQ_ADV1             0xC8    // 11001 UID REQUEST Adv compatible with HITAG1_SET_CCNEW
 #define HITAGS_UID_REQ_FADV             0xD0    // 11010 UID REQUEST FAdv
 #define HITAGS_SELECT                   0x00    // 00000 SELECT (UID)
 #define HITAGS_READ_PAGE                0xC0    // 1100 READ PAGE

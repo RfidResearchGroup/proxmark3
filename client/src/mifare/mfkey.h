@@ -26,6 +26,7 @@
 uint32_t nonce2key(uint32_t uid, uint32_t nt, uint32_t nr, uint32_t ar, uint64_t par_info, uint64_t ks_info, uint64_t **keys);
 bool mfkey32(nonces_t *data, uint64_t *outputkey);
 bool mfkey32_moebius(nonces_t *data, uint64_t *outputkey);
+bool mfkey32_nested(nonces_t *data, uint64_t *outputkey);
 int mfkey64(nonces_t *data, uint64_t *outputkey);
 
 int compare_uint64(const void *a, const void *b);

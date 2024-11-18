@@ -22,6 +22,10 @@
 #include <string.h>
 #include <ctype.h>
 
+#ifdef HAVE_PYTHON
+#include <Python.h>
+#endif
+
 #include "cmdparser.h"      // command_t
 #include "cliparser.h"
 #include "comms.h"
@@ -40,6 +44,8 @@
 #include "flash.h"          // reboot to bootloader mode
 #include "proxgui.h"
 #include "graph.h"          // for graph data
+
+#include "lua.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -1440,7 +1446,7 @@ int set_fpga_mode(uint8_t mode) {
     SendCommandNG(CMD_SET_FPGAMODE, d, sizeof(d));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_SET_FPGAMODE, &resp, 1000) == false) {
-        PrintAndLogEx(WARNING, "command execution timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
     if (resp.status != PM3_SUCCESS) {
@@ -1667,19 +1673,20 @@ void pm3_version(bool verbose, bool oneliner) {
     PrintAndLogEx(NORMAL, "  native BT support......... " _YELLOW_("absent"));
 #endif
 #ifdef HAVE_PYTHON
-    PrintAndLogEx(NORMAL, "  Python script support..... " _GREEN_("present"));
+    PrintAndLogEx(NORMAL, "  Python script support..... " _GREEN_("present") " ( " _YELLOW_(PY_VERSION) " )");
 #else
     PrintAndLogEx(NORMAL, "  Python script support..... " _YELLOW_("absent"));
-#endif
-#ifdef HAVE_LUA_SWIG
-    PrintAndLogEx(NORMAL, "  Lua SWIG support.......... " _GREEN_("present"));
-#else
-    PrintAndLogEx(NORMAL, "  Lua SWIG support.......... " _YELLOW_("absent"));
 #endif
 #ifdef HAVE_PYTHON_SWIG
     PrintAndLogEx(NORMAL, "  Python SWIG support....... " _GREEN_("present"));
 #else
     PrintAndLogEx(NORMAL, "  Python SWIG support....... " _YELLOW_("absent"));
+#endif
+    PrintAndLogEx(NORMAL, "  Lua script support........ " _GREEN_("present") " ( " _YELLOW_("%s.%s.%s") " )", LUA_VERSION_MAJOR, LUA_VERSION_MINOR, LUA_VERSION_RELEASE);
+#ifdef HAVE_LUA_SWIG
+    PrintAndLogEx(NORMAL, "  Lua SWIG support.......... " _GREEN_("present"));
+#else
+    PrintAndLogEx(NORMAL, "  Lua SWIG support.......... " _YELLOW_("absent"));
 #endif
 
     if (g_session.pm3_present) {

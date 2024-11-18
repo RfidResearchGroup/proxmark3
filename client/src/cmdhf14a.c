@@ -457,23 +457,27 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
-    WaitForResponse(CMD_ACK, &resp);
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        return PM3_ETIMEOUT;
+    }
+
     memcpy(card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
     uint64_t select_status = resp.oldarg[0]; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
 
     if (select_status == 0) {
-        PrintAndLogEx(ERR, "E->iso14443a card select failed");
+        PrintAndLogEx(ERR, "iso14443a card select failed");
         return PM3_EFAILED;
     }
 
     if (select_status == 2) {
-        PrintAndLogEx(ERR, "E->Card doesn't support iso14443-4 mode");
+        PrintAndLogEx(ERR, "Card doesn't support iso14443-4 mode");
         return PM3_EFAILED;
     }
 
     if (select_status == 3) {
-        PrintAndLogEx(INFO, "E->Card doesn't support standard iso14443-3 anticollision");
+        PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
         // identify TOPAZ
         if (card->atqa[1] == 0x0C && card->atqa[0] == 0x00) {
             PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf topaz info`"));
@@ -489,7 +493,7 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
 
     // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
     if (card->ats_len < 3) {
-        PrintAndLogEx(INFO, "E-> Error ATS length(%d) : %s", card->ats_len, sprint_hex(card->ats, card->ats_len));
+        PrintAndLogEx(INFO, "Error ATS length(%d) : %s", card->ats_len, sprint_hex(card->ats, card->ats_len));
         return PM3_ECARDEXCHANGE;
     }
 
@@ -554,6 +558,7 @@ static int CmdHF14AReader(const char *Cmd) {
         arg_lit0(NULL, "ecp", "Use enhanced contactless polling"),
         arg_lit0(NULL, "mag", "Use Apple magsafe polling"),
         arg_lit0("@", NULL, "continuous reader mode"),
+        arg_lit0("w", "wait", "wait for card"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -585,8 +590,10 @@ static int CmdHF14AReader(const char *Cmd) {
     }
 
     bool continuous = arg_get_lit(ctx, 7);
+    bool wait = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
+    bool found = false;
     if (disconnectAfter == false) {
         cm |= ISO14A_NO_DISCONNECT;
     }
@@ -623,6 +630,8 @@ static int CmdHF14AReader(const char *Cmd) {
                 3: proprietary Anticollision
             */
             uint64_t select_status = resp.oldarg[0];
+
+            found = (select_status != 0);
 
             if (select_status == 0) {
                 DropField();
@@ -678,7 +687,7 @@ plot:
             break;
         }
 
-    } while (continuous);
+    } while (continuous || (wait && (!found)));
 
     if (disconnectAfter == false) {
         if (silent == false) {
@@ -754,9 +763,12 @@ static int CmdHF14ACUIDs(const char *Cmd) {
 
         // execute anticollision procedure
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
-
         PacketResponseNG resp;
-        WaitForResponse(CMD_ACK, &resp);
+
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            return PM3_ETIMEOUT;
+        }
 
         iso14a_card_select_t *card = (iso14a_card_select_t *) resp.data.asBytes;
 
@@ -773,7 +785,7 @@ static int CmdHF14ACUIDs(const char *Cmd) {
         }
     }
     PrintAndLogEx(SUCCESS, "end: %" PRIu64 " seconds", (msclock() - t1) / 1000);
-    return 1;
+    return PM3_SUCCESS;
 }
 
 // ## simulate iso14443a tag
@@ -900,11 +912,6 @@ int CmdHF14ASim(const char *Cmd) {
             // inform device to break the sim loop since client has exited
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         }
-
-        if (resp.status == PM3_EOPABORTED && ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK)) {
-            //iceman:  readerAttack call frees k_sector , this call is useless.
-            showSectorTable(k_sector, k_sectors_cnt);
-        }
     }
 
     PrintAndLogEx(INFO, "Done!");
@@ -914,7 +921,7 @@ int CmdHF14ASim(const char *Cmd) {
 int CmdHF14ASniff(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a sniff",
-                  "Sniff the communication between Hitag reader and tag.\n"
+                  "Sniff the communication between reader and tag\n"
                   "Use `hf 14a list` to view collected data.",
                   " hf 14a sniff -c -r"
                  );
@@ -1051,15 +1058,15 @@ int SelectCard14443A_4_WithParameters(bool disconnect, bool verbose, iso14a_card
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
     }
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
     // check result
     if (resp.oldarg[0] == 0) {
         if (verbose) {
-            PrintAndLogEx(WARNING, "No ISO1443-A Card in field");
+            PrintAndLogEx(WARNING, "No ISO14443-A Card in field");
         }
         return PM3_ECARDEXCHANGE;
     }
@@ -1079,7 +1086,7 @@ int SelectCard14443A_4_WithParameters(bool disconnect, bool verbose, iso14a_card
         uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, sizeof(rats), 0, rats, sizeof(rats));
         if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-            PrintAndLogEx(WARNING, "Command execute timeout");
+            PrintAndLogEx(WARNING, "command execution time out");
             return PM3_ETIMEOUT;
         }
 
@@ -1449,7 +1456,12 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
                   "Sends raw bytes over ISO14443a. With option to use TOPAZ 14a mode.",
                   "hf 14a raw -sc 3000     -> select, crc, where 3000 == 'read block 00'\n"
                   "hf 14a raw -ak -b 7 40  -> send 7 bit byte 0x40\n"
-                  "hf 14a raw --ecp -s     -> send ECP before select"
+                  "hf 14a raw --ecp -s     -> send ECP before select\n"
+                  "Crypto1 session example, with special auth shortcut 6xxx<key>:\n"
+                  "hf 14a raw --crypto1 -skc 6000FFFFFFFFFFFF\n"
+                  "hf 14a raw --crypto1 -kc 3000\n"
+                  "hf 14a raw --crypto1 -kc 6007FFFFFFFFFFFF\n"
+                  "hf 14a raw --crypto1 -c 3007"
                  );
 
     void *argtable[] = {
@@ -1466,6 +1478,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         arg_lit0(NULL, "ecp",             "Use enhanced contactless polling"),
         arg_lit0(NULL, "mag",             "Use Apple magsafe polling"),
         arg_lit0(NULL, "topaz",           "Use Topaz protocol to send command"),
+        arg_lit0(NULL, "crypto1",         "Use crypto1 session"),
         arg_strx1(NULL, NULL,     "<hex>", "Raw bytes to send"),
         arg_param_end
     };
@@ -1483,10 +1496,11 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     bool use_ecp = arg_get_lit(ctx, 10);
     bool use_magsafe = arg_get_lit(ctx, 11);
     bool topazmode = arg_get_lit(ctx, 12);
+    bool crypto1mode = arg_get_lit(ctx, 13);
 
     int datalen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE_MIX] = {0};
-    CLIGetHexWithReturn(ctx, 13, data, &datalen);
+    CLIGetHexWithReturn(ctx, 14, data, &datalen);
     CLIParserFree(ctx);
 
     bool bTimeout = (timeout) ? true : false;
@@ -1538,6 +1552,14 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
 
     if (topazmode) {
         flags |= ISO14A_TOPAZMODE;
+    }
+
+    if (crypto1mode) {
+        flags |= ISO14A_CRYPTO1MODE;
+        if (numbits > 0 || topazmode || use_ecp || use_magsafe) {
+            PrintAndLogEx(FAILED, "crypto1 mode cannot be used with other modes or partial bytes");
+            return PM3_EINVARG;
+        }
     }
 
     if (no_rats) {
@@ -2084,13 +2106,10 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         return select_status;
     }
 
-    if (verbose) {
-        PrintAndLogEx(INFO, "--- " _CYAN_("ISO14443-a Information") "---------------------");
-    }
-
+    PrintAndLogEx(INFO, "---------- " _CYAN_("ISO14443-A Information") " ----------");
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s") " %s", sprint_hex(card.uid, card.uidlen), get_uid_type(&card));
     PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
-    PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
+    PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, select_status);
 
     bool isMifareMini = false;
     bool isMifareClassic = true;
@@ -2205,7 +2224,11 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                         // reconnect for further tests
                         clearCommandBuffer();
                         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
-                        WaitForResponse(CMD_ACK, &resp);
+                        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+                            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+                            DropField();
+                            return PM3_ETIMEOUT;
+                        }
 
                         memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
@@ -2261,12 +2284,16 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, sizeof(rats));
-        WaitForResponse(CMD_ACK, &resp);
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            return PM3_ETIMEOUT;
+        }
 
         memcpy(card.ats, resp.data.asBytes, resp.oldarg[0]);
         card.ats_len = resp.oldarg[0]; // note: ats_len includes CRC Bytes
-        if (card.ats_len > 3)
+        if (card.ats_len > 3) {
             select_status = 1;
+        }
     }
 
     if (card.ats_len >= 3) {        // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
@@ -2588,7 +2615,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         }
     }
 
-    if (setDeviceDebugLevel(verbose ? DBG_INFO : DBG_NONE, false) != PM3_SUCCESS) {
+    if (setDeviceDebugLevel(verbose ? MAX(dbg_curr, DBG_INFO) : DBG_NONE, false) != PM3_SUCCESS) {
         return PM3_EFAILED;
     }
 
@@ -2610,12 +2637,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
         }
 
-        if (res == NONCE_FAIL && verbose) {
-            PrintAndLogEx(SUCCESS, "Static nonce......... " _RED_("read failed"));
-        }
-
         if (res == NONCE_NORMAL) {
-
             // not static
             res = detect_classic_prng();
             if (res == 1) {
@@ -3635,6 +3657,175 @@ int CmdHF14ANdefWrite(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+/*
+    * Simulate ISO/IEC 14443 type A tag with 4,7 or 10 byte UID, and filter for AID Values
+    * These AID Values can be responded to and include extra APDU commands after verification
+*/
+
+int CmdHF14AAIDSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14a simaid",
+                  "Simulate ISO/IEC 14443 type A tag with 4,7 or 10 byte UID, and filter for AID Values\n"
+                  "These AID Values can be responded to and include extra APDU commands on GetData after response\n",
+                  "hf 14a simaid -t 3                                                               -> MIFARE Desfire\n"
+                  "hf 14a simaid -t 4                                                               -> ISO/IEC 14443-4\n"
+                  "hf 14a simaid -t 11                                                              -> Javacard (JCOP)\n"
+                  "hf 14a simaid -t 3 --aid a000000000000000000000 --response 9000 --apdu 9000      -> AID, Response and APDU\n"
+                  "hf 14a simaid -t 3 --rats 05788172220101 --response 01009000 --apdu 86009000     -> Custom RATS Added\n"
+                  "hf 14a simaid -t 3 --rats 05788172220101 -x                                      -> Enumerate AID Values\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("t", "type", "<1-12> ", "Simulation type to use"),
+        arg_str0("u", "uid", "<hex>", "<4|7|10> hex bytes UID"),
+        arg_str0("r", "rats", "<hex>", "<0-20> hex bytes RATS"),
+        arg_str0("a", "aid", "<hex>", "<0-100> hex bytes for AID to respond to (Default: A000000000000000000000)"),
+        arg_str0("e", "response", "<hex>", "<0-100> hex bytes for APDU Response to AID Select (Default: 9000)"),
+        arg_str0("p", "apdu", "<hex>", "<0-100> hex bytes for APDU Response to Get Data request after AID (Default: 9000)"),
+        arg_lit0("x", "enumerate", "Enumerate all AID values via returning Not Found and print them to console "),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int tagtype = arg_get_int_def(ctx, 1, 1);
+
+    bool enumerate = arg_get_lit(ctx, 7);
+
+    int uid_len = 0;
+    int rats_len = 0;
+    int aid_len = 0;
+    int respond_len = 0;
+    int apdu_len = 0;
+
+    uint8_t uid[10] = {0};
+    uint8_t rats[20] = {0};
+    uint8_t aid[30] = {0xA0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t response[100] = {0x90, 0x00};
+    uint8_t apdu[100] = {0x90, 0x00};
+
+    CLIGetHexWithReturn(ctx, 2, uid, &uid_len);
+    CLIGetHexWithReturn(ctx, 3, rats, &rats_len);
+    CLIGetHexWithReturn(ctx, 4, aid, &aid_len);
+    CLIGetHexWithReturn(ctx, 5, response, &respond_len);
+    CLIGetHexWithReturn(ctx, 6, apdu, &apdu_len);
+
+    // default value fill for the AID, response, and apdu
+    if (aid_len == 0) {
+        aid_len = 11;
+    }
+    if (respond_len == 0) {
+        respond_len = 2;
+    }
+    if (apdu_len == 0) {
+        apdu_len = 2;
+    }
+
+    uint16_t flags = 0;
+    bool useUIDfromEML = true;
+
+    if (uid_len > 0) {
+        switch (uid_len) {
+            case 10:
+                flags |= FLAG_10B_UID_IN_DATA;
+                break;
+            case 7:
+                flags |= FLAG_7B_UID_IN_DATA;
+                break;
+            case 4:
+                flags |= FLAG_4B_UID_IN_DATA;
+                break;
+            default:
+                PrintAndLogEx(ERR, "Please specify a 4, 7, or 10 byte UID");
+                CLIParserFree(ctx);
+                return PM3_EINVARG;
+        }
+        PrintAndLogEx(SUCCESS, "Emulating " _YELLOW_("ISO/IEC 14443 type A tag")" with " _GREEN_("%d byte UID (%s)"), uid_len, sprint_hex(uid, uid_len));
+        useUIDfromEML = false;
+    }
+
+    if (rats_len > 0) {
+        flags |= FLAG_RATS_IN_DATA;
+    }
+
+
+    CLIParserFree(ctx);
+
+    if (tagtype > 12) {
+        PrintAndLogEx(ERR, "Undefined tag %d", tagtype);
+        return PM3_EINVARG;
+    }
+
+    if (useUIDfromEML) {
+        flags |= FLAG_UID_IN_EMUL;
+    }
+
+    struct {
+        uint8_t tagtype;
+        uint16_t flags;
+        uint8_t uid[10];
+        uint8_t rats[20];
+        uint8_t aid[30];
+        uint8_t response[100];
+        uint8_t apdu[100];
+        int aid_len;
+        int respond_len;
+        int apdu_len;
+        bool enumerate;
+    } PACKED payload;
+
+    payload.tagtype = tagtype;
+    payload.flags = flags;
+    payload.enumerate = enumerate;
+
+    // Copy data to payload
+    memcpy(payload.uid, uid, uid_len);
+    memcpy(payload.rats, rats, rats_len);
+    memcpy(payload.aid, aid, aid_len);
+    memcpy(payload.response, response, respond_len);
+    memcpy(payload.apdu, apdu, apdu_len);
+
+    // copy the lengths data to the payload
+    memcpy(&payload.aid_len, &aid_len, sizeof(aid_len));
+    memcpy(&payload.respond_len, &respond_len, sizeof(respond_len));
+    memcpy(&payload.apdu_len, &apdu_len, sizeof(apdu_len));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO14443A_SIM_AID, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp = {0};
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
+    bool keypress = kbd_enter_pressed();
+    while (keypress == false) {
+
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0)
+            continue;
+
+        if (resp.status != PM3_SUCCESS)
+            break;
+
+        if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK)
+            break;
+
+        keypress = kbd_enter_pressed();
+    }
+
+    if (keypress) {
+        if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
+            // inform device to break the sim loop since client has exited
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+        }
+    }
+
+
+    PrintAndLogEx(INFO, "Done!");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace list -t 14a")"` to view captured tracelog");
+    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
+
+    return PM3_SUCCESS;
+}
+
+
 static command_t CommandTable[] = {
     {"-----------", CmdHelp,              AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
     {"help",        CmdHelp,              AlwaysAvailable, "This help"},
@@ -3645,6 +3836,7 @@ static command_t CommandTable[] = {
     {"cuids",       CmdHF14ACUIDs,        IfPm3Iso14443a,  "Collect n>0 ISO14443-a UIDs in one go"},
     {"info",        CmdHF14AInfo,         IfPm3Iso14443a,  "Tag information"},
     {"sim",         CmdHF14ASim,          IfPm3Iso14443a,  "Simulate ISO 14443-a tag"},
+    {"simaid",      CmdHF14AAIDSim,       IfPm3Iso14443a,  "Simulate ISO 14443-a AID Selection"},
     {"sniff",       CmdHF14ASniff,        IfPm3Iso14443a,  "sniff ISO 14443-a traffic"},
     {"raw",         CmdHF14ACmdRaw,       IfPm3Iso14443a,  "Send raw hex data to tag"},
     {"reader",      CmdHF14AReader,       IfPm3Iso14443a,  "Act like an ISO14443-a reader"},

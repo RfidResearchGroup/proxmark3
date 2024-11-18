@@ -89,8 +89,7 @@ def main():
     PM3_SUBPROC = Popen([args.pm3_path, "-i", "-f"], stdin=PIPE, stdout=PIPE)
     PM3_SUBPROC_QUEUE = Queue()
 
-    thread = Thread(target=enqueue_output,
-                    args=(PM3_SUBPROC.stdout, PM3_SUBPROC_QUEUE))
+    thread = Thread(target=enqueue_output, args=(PM3_SUBPROC.stdout, PM3_SUBPROC_QUEUE))
     thread.start()
 
     if args.target_block != -1:

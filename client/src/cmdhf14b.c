@@ -465,6 +465,27 @@ static int print_atqb_resp(uint8_t *data, uint8_t cid) {
     PrintAndLogEx(SUCCESS, "Tag :");
     PrintAndLogEx(SUCCESS, "  Max Buf Length: %u (MBLI) %s", cid >> 4, (cid & 0xF0) ? "" : "chained frames not supported");
     PrintAndLogEx(SUCCESS, "  CID : %u", cid & 0x0f);
+    PrintAndLogEx(NORMAL, "");
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
+    if (memcmp(data, "\x54\x43\x4F\x53", 4) == 0) {
+
+        int outlen = 0;
+        uint8_t out[PM3_CMD_DATA_SIZE] = {0};
+        uint8_t tcos_version[] = {0x90, 0xB2, 0x90, 0x00, 0x00};
+        if (exchange_14b_apdu(tcos_version, sizeof(tcos_version), true, false, out, PM3_CMD_DATA_SIZE, &outlen, -1) == PM3_SUCCESS) {
+            if (outlen > 2) {
+                PrintAndLogEx(SUCCESS, "Tiananxin TCOS CPU card... " _YELLOW_("%s"), sprint_ascii(out, outlen - 2));
+            } else {
+                PrintAndLogEx(SUCCESS, "Tiananxin TCOS CPU card... " _RED_("n/a"));
+            }
+            PrintAndLogEx(SUCCESS, "Magic capabilities........ most likely");
+        }
+
+    } else {
+        PrintAndLogEx(INFO, "n/a");
+    }
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -886,7 +907,7 @@ static int CmdHF14BSniff(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14b sniff",
-                  "Sniff the communication between reader and tag.\n"
+                  "Sniff the communication between reader and tag\n"
                   "Use `hf 14b list` to view collected data.",
                   "hf 14b sniff"
                  );
@@ -2482,7 +2503,7 @@ static int CmdHF14BAPDU(const char *Cmd) {
         return res;
     }
 
-    PrintAndLogEx(INFO, "<<<< %s", sprint_hex(data, datalen));
+    PrintAndLogEx(INFO, "<<<< %s - %s", sprint_hex_inrow(data, datalen), sprint_ascii(data, datalen));
     uint16_t sw = get_sw(data, datalen);
     if (sw != ISO7816_OK) {
         PrintAndLogEx(SUCCESS, "APDU response: " _YELLOW_("%02x %02x") " - %s"
@@ -2877,6 +2898,85 @@ static int CmdHF14BMobibRead(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14BSetUID(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b setuid",
+                  "Set UID for magic card (only works with such cards)\n",
+                  "hf 14b setuid -u 11223344\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("u", "uid", "<hex>", "UID, 4 hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    uint8_t uid[20] = {0};
+    int uidlen = 20;
+    CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
+    CLIParserFree(ctx);
+
+    if (uidlen != 4) {
+        PrintAndLogEx(WARNING, "UID len must be 4 bytes, got " _RED_("%i"), uidlen);
+        return PM3_EINVARG;
+    }
+
+    uint8_t select[sizeof(iso14b_card_select_t)] = {0};
+    iso14b_type_t select_cardtype = ISO14B_NONE;
+    if (get_14b_UID(select, &select_cardtype) == false) {
+        PrintAndLogEx(WARNING, "no tag found");
+        return PM3_SUCCESS;
+    }
+
+    if (select_cardtype != ISO14B_STANDARD) {
+        PrintAndLogEx(FAILED, "None supported tag");
+        return switch_off_field_14b();
+    }
+
+    iso14b_card_select_t *card = (iso14b_card_select_t *)select;
+    if (memcmp(card->atqb, "\x54\x43\x4F\x53", 4)) {
+        PrintAndLogEx(FAILED, "None supported tag");
+        PrintAndLogEx(NORMAL, "");
+        return switch_off_field_14b();
+    }
+
+    int outlen = 0;
+    uint8_t out[PM3_CMD_DATA_SIZE] = {0};
+    uint8_t tcos_version[] = {0x90, 0xB2, 0x90, 0x00, 0x00};
+    if (exchange_14b_apdu(tcos_version, sizeof(tcos_version), true, false, out, PM3_CMD_DATA_SIZE, &outlen, -1) != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "None supported tag");
+        return PM3_EFAILED;
+    }
+
+    uint8_t cmd[] = { 0x90, 0xF8, 0xEE, 0xEE, 0x0B, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    memcpy(cmd + 6, uid, uidlen);
+    if (exchange_14b_apdu(cmd, sizeof(cmd), true, false, out, PM3_CMD_DATA_SIZE, &outlen, -1) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_EFAILED;
+    }
+
+    PrintAndLogEx(INFO, "Verifying...");
+
+    // verify
+    if (get_14b_UID(select, &select_cardtype) == false) {
+        PrintAndLogEx(WARNING, "no tag found");
+        return PM3_SUCCESS;
+    }
+
+    if (memcmp(card->uid, uid, uidlen) == 0) {
+        PrintAndLogEx(SUCCESS, "Setting new UID ( " _GREEN_("ok") " )");
+        PrintAndLogEx(HINT, "try `" _YELLOW_("hf 14b reader") "` to verify");
+        PrintAndLogEx(NORMAL, "");
+        return PM3_SUCCESS;;
+    }
+
+    PrintAndLogEx(FAILED, "Setting new UID ( " _RED_("fail") " )");
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"---------", CmdHelp,             AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
     {"help",      CmdHelp,             AlwaysAvailable, "This help"},
@@ -2898,6 +2998,8 @@ static command_t CommandTable[] = {
     {"---------", CmdHelp,             AlwaysAvailable, "------------------ " _CYAN_("Calypso / Mobib") " ------------------"},
     {"calypso",   CmdHF14BCalypsoRead, IfPm3Iso14443b,  "Read contents of a Calypso card"},
     {"mobib",     CmdHF14BMobibRead,   IfPm3Iso14443b,  "Read contents of a Mobib card"},
+    {"---------", CmdHelp,             IfPm3Iso14443b,  "------------------------- " _CYAN_("Magic") " -----------------------"},
+    {"setuid",    CmdHF14BSetUID,      IfPm3Iso14443b,   "Set UID for magic card"},
     {NULL, NULL, NULL, NULL}
 };
 

@@ -1088,7 +1088,7 @@ static int CmdGallagherClone(const char *cmd) {
         PM3_RET_IF_ERR_WITH_MSG(res, "Failed creating Gallagher credential file");
     }
 
-    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(SUCCESS, "Done!");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf gallagher reader`") " to verify");
     return PM3_SUCCESS;
 }
@@ -1169,7 +1169,7 @@ static int CmdGallagherDelete(const char *cmd) {
         PM3_RET_IF_ERR_WITH_MSG(res, "Failed deleting Gallagher application");
     }
 
-    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(SUCCESS, "Done!");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf gallagher reader`") " to verify");
     return PM3_SUCCESS;
 }

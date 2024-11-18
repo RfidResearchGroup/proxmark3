@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
     printf("Recover key from two 32-bit reader authentication answers only!\n\n");
 
     if (argc < 7) {
-        printf(" syntax: %s <uid> <nt> <{nr_0}> <{ar}_0> <{nr_1}> <{ar}_0>\n\n", argv[0]);
+        printf(" syntax: %s <uid> <nt> <{nr_0}> <{ar}_0> <{nr_1}> <{ar}_1>\n\n", argv[0]);
         return 1;
     }
 

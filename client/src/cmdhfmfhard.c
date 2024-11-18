@@ -260,7 +260,7 @@ static void init_bitflip_bitarrays(void) {
 #endif
     uint64_t init_bitflip_bitarrays_starttime = msclock();
 
-    char state_file_name[MAX(strlen(STATE_FILE_TEMPLATE_RAW), MAX(strlen(STATE_FILE_TEMPLATE_LZ4), strlen(STATE_FILE_TEMPLATE_BZ2))) + 1];
+    char state_file_name[MAX(sizeof(STATE_FILE_TEMPLATE_RAW), MAX(sizeof(STATE_FILE_TEMPLATE_LZ4), sizeof(STATE_FILE_TEMPLATE_BZ2)))];
     char state_files_path[strlen(get_my_executable_directory()) + strlen(STATE_FILES_DIRECTORY) + sizeof(state_file_name)];
     uint16_t nraw = 0, nlz4 = 0, nbz2 = 0;
     for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
@@ -1565,18 +1565,8 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
     FILE *fnonces = NULL;
 
     // init to ZERO
-    PacketResponseNG resp = {
-        .cmd = 0,
-        .length = 0,
-        .magic = 0,
-        .status = 0,
-        .crc = 0,
-        .ng = false,
-    };
-    resp.oldarg[0] = 0;
-    resp.oldarg[1] = 0;
-    resp.oldarg[2] = 0;
-    memset(resp.data.asBytes, 0, PM3_CMD_DATA_SIZE);
+    PacketResponseNG resp;
+    memset(&resp, 0, sizeof(resp));
 
     uint8_t write_buf[9];
     char progress_text[80];

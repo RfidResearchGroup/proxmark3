@@ -35,7 +35,11 @@ if sys.version_info < required_version:
     print(f"The script needs at least Python v{required_version[0]}.{required_version[1]}. Abort.")
     exit()
 
-BACKDOOR_RF08S = "A396EFA4E24F"
+# First try FM11RF08S key
+# Then FM11RF08 key as some rare *98 cards are using it too
+# Then FM11RF32N key, just in case...
+BACKDOOR_KEYS = ["A396EFA4E24F", "A31667A8CEC1", "518B3354E760"]
+
 NUM_SECTORS = 16
 NUM_EXTRA_SECTORS = 1
 DICT_DEF = "mfc_default_keys.dic"
@@ -70,6 +74,7 @@ parser = argparse.ArgumentParser(description='A script combining staticnested* t
                                  'to recover all keys from a FM11RF08S card.')
 parser.add_argument('-x', '--init-check', action='store_true', help='Run an initial fchk for default keys')
 parser.add_argument('-y', '--final-check', action='store_true', help='Run a final fchk with the found keys')
+parser.add_argument('-k', '--keep', action='store_true', help='Keep generated dictionaries after processing')
 parser.add_argument('-d', '--debug', action='store_true', help='Enable debug mode')
 args = parser.parse_args()
 
@@ -93,6 +98,9 @@ def print_key(sec, key_type, key):
     kt = ['A', 'B'][key_type]
     print(f"Sector {sec:2} key{kt} = " + color(key, fg="green"))
 
+p.console("prefs show --json")
+prefs = json.loads(p.grabbed_output)
+save_path = prefs['file.default.dumppath'] + os.path.sep
 
 found_keys = [["", ""] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
 if args.init_check:
@@ -110,16 +118,49 @@ if args.init_check:
                 print_key(sec, 1, found_keys[sec][1])
 
 print("Getting nonces...")
-cmd = f"hf mf isen --collect_fm11rf08s_with_data --key {BACKDOOR_RF08S}"
-p.console(cmd)
-try:
-    nt, nt_enc, par_err, data = json.loads(p.grabbed_output)
-except json.decoder.JSONDecodeError:
+nonces_with_data = ""
+for key in BACKDOOR_KEYS:
+    cmd = f"hf mf isen --collect_fm11rf08s_with_data --key {key}"
+    p.console(cmd)
+    for line in p.grabbed_output.split('\n'):
+        if "Wrong" in line or "error" in line:
+            break
+        if "Saved" in line:
+            nonces_with_data = line[line.index("`"):].strip("`")
+    if nonces_with_data != "":
+        break
+
+if (nonces_with_data == ""):
     print("Error getting nonces, abort.")
     exit()
 
+try:
+    with open(nonces_with_data, 'r') as file:
+        # Load and parse the JSON data
+        dict_nwd = json.load(file)
+except json.decoder.JSONDecodeError:
+    print(f"Error parsing {nonces_with_data}, abort.")
+    exit()
+
+nt = [["", ""] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
+nt_enc = [["", ""] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
+par_err = [["", ""] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
+data = ["" for _ in range(NUM_SECTORS * 4)]
+for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
+    real_sec = sec
+    if sec >= NUM_SECTORS:
+        real_sec += 16
+    nt[sec][0] = dict_nwd["nt"][f"{real_sec}"]["a"].lower()
+    nt[sec][1] = dict_nwd["nt"][f"{real_sec}"]["b"].lower()
+    nt_enc[sec][0] = dict_nwd["nt_enc"][f"{real_sec}"]["a"].lower()
+    nt_enc[sec][1] = dict_nwd["nt_enc"][f"{real_sec}"]["b"].lower()
+    par_err[sec][0] = dict_nwd["par_err"][f"{real_sec}"]["a"]
+    par_err[sec][1] = dict_nwd["par_err"][f"{real_sec}"]["b"]
+for blk in range(NUM_SECTORS * 4):
+    data[blk] = dict_nwd["blocks"][f"{blk}"]
+
 print("Generating first dump file")
-dumpfile = f"hf-mf-{uid:08X}-dump.bin"
+dumpfile = f"{save_path}hf-mf-{uid:08X}-dump.bin"
 with (open(dumpfile, "wb")) as f:
     for sec in range(NUM_SECTORS):
         for b in range(4):
@@ -133,7 +174,7 @@ with (open(dumpfile, "wb")) as f:
                     kb = "FFFFFFFFFFFF"
                 d = ka + d[12:20] + kb
             f.write(bytes.fromhex(d))
-print(f"Data have been dumped to `{dumpfile}`")
+print(f"Data has been dumped to `{dumpfile}`")
 
 elapsed_time1 = time.time() - start_time
 minutes = int(elapsed_time1 // 60)
@@ -452,7 +493,7 @@ if args.final_check:
     cmd = f"hf mf fchk -f keys_{uid:08x}.dic --no-default --dump"
     if args.debug:
         print(cmd)
-    p.console(cmd, passthru = True)
+    p.console(cmd, passthru=True)
 else:
     plus = "[" + color("+", fg="green") + "] "
     print()
@@ -477,7 +518,7 @@ else:
           color("1", fg="green") + ":Success )")
     print()
     print(plus + "Generating binary key file")
-    keyfile = f"hf-mf-{uid:08X}-key.bin"
+    keyfile = f"{save_path}hf-mf-{uid:08X}-key.bin"
     unknown = False
     with (open(keyfile, "wb")) as f:
         for key_type in [0, 1]:
@@ -492,7 +533,7 @@ else:
         print("[" + color("=", fg="yellow") + "]  --[ " + color("FFFFFFFFFFFF", fg="yellow") +
               " ]-- has been inserted for unknown keys")
     print(plus + "Generating final dump file")
-    dumpfile = f"hf-mf-{uid:08X}-dump.bin"
+    dumpfile = f"{save_path}hf-mf-{uid:08X}-dump.bin"
     with (open(dumpfile, "wb")) as f:
         for sec in range(NUM_SECTORS):
             for b in range(4):
@@ -506,7 +547,20 @@ else:
                         kb = "FFFFFFFFFFFF"
                     d = ka + d[12:20] + kb
                 f.write(bytes.fromhex(d))
-    print(plus + "Data have been dumped to `" + color(dumpfile, fg="yellow")+"`")
+    print(plus + "Data has been dumped to `" + color(dumpfile, fg="yellow")+"`")
+
+# Remove generated dictionaries after processing
+if not args.keep:
+    print(plus + "Removing generated dictionaries...")
+    for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
+        real_sec = sec
+        if sec >= NUM_SECTORS:
+            real_sec += 16
+        for key_type in [0, 1]:
+            for append in ["", "_filtered", "_duplicates"]:
+                file_name = f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}{append}.dic"
+                if os.path.isfile(file_name):
+                    os.remove(file_name)
 
 elapsed_time3 = time.time() - start_time - elapsed_time1 - elapsed_time2
 minutes = int(elapsed_time3 // 60)

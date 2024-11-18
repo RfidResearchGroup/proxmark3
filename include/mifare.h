@@ -84,6 +84,12 @@ typedef struct {
     uint8_t *dump;
 } iso14a_mf_dump_ev1_t;
 
+typedef struct {
+    uint8_t nt[17][2][4];
+    uint8_t nt_enc[17][2][4];
+    uint8_t par_err[17][2];
+    uint8_t blocks[64][16]; // [MIFARE_1K_MAXSECTOR * 4][MFBLOCK_SIZE]
+} iso14a_fm11rf08s_nonces_with_data_t;
 
 typedef enum ISO14A_COMMAND {
     ISO14A_CONNECT = (1 << 0),
@@ -99,7 +105,8 @@ typedef enum ISO14A_COMMAND {
     ISO14A_SEND_CHAINING = (1 << 10),
     ISO14A_USE_ECP = (1 << 11),
     ISO14A_USE_MAGSAFE = (1 << 12),
-    ISO14A_USE_CUSTOM_POLLING = (1 << 13)
+    ISO14A_USE_CUSTOM_POLLING = (1 << 13),
+    ISO14A_CRYPTO1MODE = (1 << 14)
 } iso14a_command_t;
 
 // Defines a frame that will be used in a polling sequence
@@ -160,6 +167,13 @@ typedef enum {
 //-----------------------------------------------------------------------------
 // "hf 14a sim -x", "hf mf sim -x" attacks
 //-----------------------------------------------------------------------------
+typedef enum {
+    EMPTY,
+    FIRST,
+    SECOND,
+    NESTED
+} nonce_state;
+
 typedef struct {
     uint32_t cuid;
     uint32_t nonce;
@@ -171,11 +185,7 @@ typedef struct {
     uint32_t nr2;
     uint8_t  sector;
     uint8_t  keytype;
-    enum {
-        EMPTY,
-        FIRST,
-        SECOND,
-    } state;
+    uint8_t  state;
 } PACKED nonces_t;
 
 #endif // _MIFARE_H_

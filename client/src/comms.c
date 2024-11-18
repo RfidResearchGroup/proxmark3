@@ -93,8 +93,9 @@ void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, c
     c.arg[0] = arg0;
     c.arg[1] = arg1;
     c.arg[2] = arg2;
-    if (len && data)
+    if (len && data) {
         memcpy(&c.d, data, len);
+    }
 
 #ifdef COMMS_DEBUG
     PrintAndLogEx(NORMAL, "Sending %s", "OLD");
@@ -105,7 +106,7 @@ void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, c
     print_hex_break((uint8_t *)&c.d, sizeof(c.d), 32);
 #endif
 
-    if (!g_session.pm3_present) {
+    if (g_session.pm3_present == false) {
         PrintAndLogEx(WARNING, "Sending bytes to Proxmark3 failed ( " _RED_("offline") " )");
         return;
     }
@@ -481,6 +482,7 @@ __attribute__((force_align_arg_pointer))
                 uint16_t length = rx_raw.pre.length;
                 rx.ng = rx_raw.pre.ng;
                 rx.status = rx_raw.pre.status;
+                rx.reason = rx_raw.pre.reason;
                 rx.cmd = rx_raw.pre.cmd;
 
                 if (rx.magic == RESPONSENG_PREAMBLE_MAGIC) { // New style NG reply
@@ -1030,18 +1032,9 @@ size_t WaitForRawDataTimeout(uint8_t *buffer, size_t len, size_t ms_timeout, boo
  */
 bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms_timeout, bool show_warning) {
 
-    PacketResponseNG resp;
     // init to ZERO
-    resp.cmd = 0,
-    resp.length = 0,
-    resp.magic = 0,
-    resp.status = 0,
-    resp.crc = 0,
-    resp.ng = false,
-    resp.oldarg[0] = 0;
-    resp.oldarg[1] = 0;
-    resp.oldarg[2] = 0;
-    memset(resp.data.asBytes, 0, PM3_CMD_DATA_SIZE);
+    PacketResponseNG resp;
+    memset(&resp, 0, sizeof(resp));
 
     if (response == NULL) {
         response = &resp;
@@ -1118,22 +1111,13 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
 
     if (dest == NULL) return false;
 
+    // init to ZERO
     PacketResponseNG resp;
+    memset(&resp, 0, sizeof(resp));
+
     if (response == NULL) {
         response = &resp;
     }
-
-    // init to ZERO
-    resp.cmd = 0,
-    resp.length = 0,
-    resp.magic = 0,
-    resp.status = 0,
-    resp.crc = 0,
-    resp.ng = false,
-    resp.oldarg[0] = 0;
-    resp.oldarg[1] = 0;
-    resp.oldarg[2] = 0;
-    memset(resp.data.asBytes, 0, PM3_CMD_DATA_SIZE);
 
     if (bytes == 0) return true;
 

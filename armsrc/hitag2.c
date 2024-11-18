@@ -14,8 +14,6 @@
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
 
-#define DBG  if (g_dbglevel >= DBG_EXTENDED)
-
 #include "hitag2.h"
 #include "hitag2/hitag2_crypto.h"
 #include "string.h"
@@ -1432,12 +1430,7 @@ void SimulateHitag2(bool ledcontrol) {
 
     auth_table_len = 0;
     auth_table_pos = 0;
-//    auth_table = BigBuf_malloc(AUTH_TABLE_LENGTH);
-//    memset(auth_table, 0x00, AUTH_TABLE_LENGTH);
-
-    // Reset the received frame, frame count and timing info
-//    memset(rx, 0x00, sizeof(rx));
-//    memset(tx, 0x00, sizeof(tx));
+//    auth_table = BigBuf_calloc(AUTH_TABLE_LENGTH);
 
     DbpString("Starting Hitag 2 simulation");
 
@@ -1673,14 +1666,14 @@ void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
 
     // Check configuration
     switch (payload->cmd) {
-        case RHT1F_PLAIN: {
+        case HT1F_PLAIN: {
             DBG Dbprintf("Read public blocks in plain mode");
             // this part will be unreadable
             memset(tag.sectors + 2, 0x0, 30);
             blocknr = 0;
             break;
         }
-        case RHT1F_AUTHENTICATE: {
+        case HT1F_AUTHENTICATE: {
             DBG Dbprintf("Read all blocks in authed mode");
 
             memcpy(nonce, payload->nonce, 4);
@@ -1706,7 +1699,7 @@ void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
             blocknr = 0;
             break;
         }
-        case RHT2F_PASSWORD: {
+        case HT2F_PASSWORD: {
             DBG Dbprintf("List identifier in password mode");
             if (memcmp(payload->pwd, "\x00\x00\x00\x00", 4) == 0) {
                 memcpy(password, tag.sectors[1], sizeof(password));
@@ -1718,7 +1711,7 @@ void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
             bAuthenticating = false;
             break;
         }
-        case RHT2F_AUTHENTICATE: {
+        case HT2F_AUTHENTICATE: {
             DBG DbpString("Authenticating using NrAr pair:");
             memcpy(NrAr, payload->NrAr, 8);
             DBG Dbhexdump(8, NrAr, false);
@@ -1729,7 +1722,7 @@ void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
             bAuthenticating = false;
             break;
         }
-        case RHT2F_CRYPTO: {
+        case HT2F_CRYPTO: {
             DBG DbpString("Authenticating using key:");
             memcpy(key, payload->key, 6);  //HACK; 4 or 6??  I read both in the code.
             DBG Dbhexdump(6, key, false);
@@ -1741,7 +1734,7 @@ void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
             bAuthenticating = false;
             break;
         }
-        case RHT2F_TEST_AUTH_ATTEMPTS: {
+        case HT2F_TEST_AUTH_ATTEMPTS: {
             DBG Dbprintf("Testing " _YELLOW_("%d") " authentication attempts", (auth_table_len / 8));
             auth_table_pos = 0;
             memcpy(NrAr, auth_table, 8);
@@ -1819,27 +1812,27 @@ void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
         // By default reset the transmission buffer
         tx = txbuf;
         switch (payload->cmd) {
-            case RHT1F_PLAIN: {
+            case HT1F_PLAIN: {
                 bStop = !hitag1_plain(rx, rxlen, tx, &txlen, false);
                 break;
             }
-            case RHT1F_AUTHENTICATE: {
+            case HT1F_AUTHENTICATE: {
                 bStop = !hitag1_authenticate(rx, rxlen, tx, &txlen);
                 break;
             }
-            case RHT2F_PASSWORD: {
+            case HT2F_PASSWORD: {
                 bStop = !hitag2_password(rx, rxlen, tx, &txlen, false);
                 break;
             }
-            case RHT2F_AUTHENTICATE: {
+            case HT2F_AUTHENTICATE: {
                 bStop = !hitag2_authenticate(rx, rxlen, tx, &txlen, false);
                 break;
             }
-            case RHT2F_CRYPTO: {
+            case HT2F_CRYPTO: {
                 bStop = !hitag2_crypto(rx, rxlen, tx, &txlen, false);
                 break;
             }
-            case RHT2F_TEST_AUTH_ATTEMPTS: {
+            case HT2F_TEST_AUTH_ATTEMPTS: {
                 bStop = !hitag2_test_auth_attempts(rx, rxlen, tx, &txlen);
                 break;
             }
@@ -1960,9 +1953,10 @@ void ReaderHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
         memset(rx, 0x00, sizeof(rx));
         rxlen = 0;
 
-        // If there is no response, just repeat the loop
+        // If there is no response
         if (detected_tag_modulation == false) {
-            continue;
+            checked = -1;
+            goto out;
         }
 
         // Make sure we always have an even number of samples. This fixes the problem
@@ -2089,8 +2083,8 @@ void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
 
     // Check configuration
     switch (payload->cmd) {
-        case WHT2F_CRYPTO: {
-            DbpString("Authenticating using key:");
+        case HT2F_CRYPTO: {
+            DBG DbpString("Authenticating using key:");
             memcpy(key, payload->key, 6); //HACK; 4 or 6??  I read both in the code.
             memcpy(writedata, payload->data, 4);
             Dbhexdump(6, key, false);
@@ -2099,7 +2093,7 @@ void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
             bAuthenticating = false;
         }
         break;
-        case WHT2F_PASSWORD: {
+        case HT2F_PASSWORD: {
             DBG DbpString("Authenticating using password:");
             if (memcmp(payload->pwd, "\x00\x00\x00\x00", 4) == 0) {
                 memcpy(password, tag.sectors[1], sizeof(password));
@@ -2114,7 +2108,7 @@ void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
         }
         break;
         default: {
-            Dbprintf("Error, unknown function: " _RED_("%d"), payload->cmd);
+            DBG Dbprintf("Error, unknown function: " _RED_("%d"), payload->cmd);
             reply_ng(CMD_LF_HITAG2_WRITE, PM3_ESOFT, NULL, 0);
             return;
         }
@@ -2186,11 +2180,11 @@ void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
         tx = txbuf;
 
         switch (payload->cmd) {
-            case WHT2F_CRYPTO: {
+            case HT2F_CRYPTO: {
                 bStop = !hitag2_crypto(rx, rxlen, tx, &txlen, true);
                 break;
             }
-            case WHT2F_PASSWORD: {
+            case HT2F_PASSWORD: {
                 bStop = !hitag2_password(rx, rxlen, tx, &txlen, true);
                 break;
             }
@@ -2590,7 +2584,6 @@ bool ht2_packbits(uint8_t *nrz_samples, size_t nrzs, uint8_t *rx, size_t *rxlen)
     }
     return true;
 }
-
 int ht2_read_uid(uint8_t *uid, bool ledcontrol, bool send_answer, bool keep_field_up) {
 
     g_logging = false;
@@ -2599,6 +2592,7 @@ int ht2_read_uid(uint8_t *uid, bool ledcontrol, bool send_answer, bool keep_fiel
     if (keep_field_up == false) {
         clear_trace();
     }
+
 
     // hitag 2 state machine?
     hitag2_init();

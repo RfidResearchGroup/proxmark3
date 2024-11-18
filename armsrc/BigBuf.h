@@ -26,6 +26,10 @@
 #define MAX_MIFARE_FRAME_SIZE   18  // biggest Mifare frame is answer to a read (one block = 16 Bytes) + 2 Bytes CRC
 #define MAX_MIFARE_PARITY_SIZE  3   // need 18 parity bits for the 18 Byte above. 3 Bytes are enough to store these
 #define CARD_MEMORY_SIZE        4096
+// For now we're storing FM11RF08S nonces in the upper 1k of CARD_MEMORY_SIZE
+// but we might have to allocate extra space if one day we've to support sth like a FM11RF32S
+#define CARD_MEMORY_RF08S_OFFSET 1024
+
 //#define DMA_BUFFER_SIZE         (512 + 256)
 #define DMA_BUFFER_SIZE         512
 

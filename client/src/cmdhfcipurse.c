@@ -647,6 +647,17 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
         PrintAndLogEx(INFO, "File id " _YELLOW_("%x") " offset " _YELLOW_("%zu") " key id " _YELLOW_("%d") " key " _YELLOW_("%s"), fileId, offset, keyId, sprint_hex(key, CIPURSE_AES_KEY_LENGTH));
     }
 
+    res = CIPURSESelectFile(fileId, buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != ISO7816_OK) {
+        if (verbose == false)
+            PrintAndLogEx(ERR, "File select ( " _RED_("error") " ). Card returns 0x%04x", sw);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (verbose)
+        PrintAndLogEx(INFO, "Select file 0x%x ( %s )", fileId, _GREEN_("ok"));
+
     if (noAuth == false) {
         bool bres = CIPURSEChannelAuthenticate(keyId, key, verbose);
         if (bres == false) {
@@ -659,17 +670,6 @@ static int CmdHFCipurseReadFile(const char *Cmd) {
         // set channel security levels
         CIPURSECSetActChannelSecurityLevels(sreq, sresp);
     }
-
-    res = CIPURSESelectFile(fileId, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != ISO7816_OK) {
-        if (verbose == false)
-            PrintAndLogEx(ERR, "File select ( " _RED_("error") " ). Card returns 0x%04x", sw);
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (verbose)
-        PrintAndLogEx(INFO, "Select file 0x%x ( %s )", fileId, _GREEN_("ok"));
 
     res = CIPURSEReadBinary(offset, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != ISO7816_OK) {
@@ -776,6 +776,17 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
         PrintAndLogEx(INFO, "Data [%d]: %s", hdatalen, sprint_hex(hdata, hdatalen));
     }
 
+    res = CIPURSESelectFile(fileId, buf, sizeof(buf), &len, &sw);
+    if (res != 0 || sw != ISO7816_OK) {
+        if (verbose == false)
+            PrintAndLogEx(ERR, "File select " _RED_("ERROR") ". Card returns 0x%04x", sw);
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    if (verbose)
+        PrintAndLogEx(INFO, "Select file 0x%x ( %s )", fileId, _GREEN_("ok"));
+
     if (noAuth == false) {
         bool bres = CIPURSEChannelAuthenticate(keyId, key, verbose);
         if (bres == false) {
@@ -788,17 +799,6 @@ static int CmdHFCipurseWriteFile(const char *Cmd) {
         // set channel security levels
         CIPURSECSetActChannelSecurityLevels(sreq, sresp);
     }
-
-    res = CIPURSESelectFile(fileId, buf, sizeof(buf), &len, &sw);
-    if (res != 0 || sw != ISO7816_OK) {
-        if (verbose == false)
-            PrintAndLogEx(ERR, "File select " _RED_("ERROR") ". Card returns 0x%04x", sw);
-        DropField();
-        return PM3_ESOFT;
-    }
-
-    if (verbose)
-        PrintAndLogEx(INFO, "Select file 0x%x ( %s )", fileId, _GREEN_("ok"));
 
     res = CIPURSEUpdateBinary(offset, hdata, hdatalen, buf, sizeof(buf), &len, &sw);
     if (res != 0 || sw != ISO7816_OK) {

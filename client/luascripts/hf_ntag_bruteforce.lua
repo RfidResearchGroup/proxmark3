@@ -143,7 +143,7 @@ end
 local function writeOutputBytes(bytes, outfile)
  local fileout,err = io.open(outfile,"wb")
  if err then
-  print("### ERROR - Faild to open output-file "..outfile)
+  print("### ERROR - Failed to open output-file "..outfile)
   return false
  end
  for i = 1, #bytes do

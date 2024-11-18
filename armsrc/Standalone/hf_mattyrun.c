@@ -520,11 +520,11 @@ void RunMod(void) {
             int filled;
             partialEmulation = false;
             DbpString("[=] Filling emulator memory using key A");
-            filled = MifareECardLoad(sectorsCnt, MF_KEY_A);
+            filled = MifareECardLoad(sectorsCnt, MF_KEY_A, NULL);
             if (filled != PM3_SUCCESS) {
                 DbpString("[" _YELLOW_("-") "] " _YELLOW_("Only partially filled using key A, retry with key B!"));
                 DbpString("[=] Filling emulator memory using key B");
-                filled = MifareECardLoad(sectorsCnt, MF_KEY_B);
+                filled = MifareECardLoad(sectorsCnt, MF_KEY_B, NULL);
                 if (filled != PM3_SUCCESS) {
                     DbpString("[" _YELLOW_("-") "] " _YELLOW_("Only partially filled using key B!"));
                 }

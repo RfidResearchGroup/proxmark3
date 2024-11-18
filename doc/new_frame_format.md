@@ -70,8 +70,9 @@ For responses from the Proxmark3:
 
     uint32_t magic;
     uint16_t length : 15;
-    bool ng : 1;
-    int16_t  status;
+    bool     ng : 1;
+    int8_t   status;
+    int8_t   reason;
     uint16_t cmd;
     uint8_t  data[length];
     uint16_t crc;
@@ -80,6 +81,7 @@ For responses from the Proxmark3:
 * `length`: length of the variable payload, 0 if none, max 512 (PM3_CMD_DATA_SIZE) for now.
 * `ng`:     flag to tell if the data is following the new format (ng) or the old one, see transition notes below
 * `status`: a field to send back the status of the command execution
+* `reason`: details about what the status indicates for the specified command
 * `cmd`:    as previously, on 16b as it's enough
 * `data`:   variable length payload
 * `crc`:    either an actual CRC (crc14a) or a Magic placeholder (`b3`)
@@ -130,7 +132,8 @@ After the full transition, we might remove the fields `oldarg` and `ng`.
         uint16_t cmd;
         uint16_t length;
         uint32_t magic;      //  NG
-        int16_t  status;     //  NG
+        int8_t   status;     //  NG
+        int8_t   reason;     //  NG
         uint16_t crc;        //  NG
         uint64_t oldarg[3];  //  OLD
         union {
@@ -177,9 +180,10 @@ Old handlers will still find their stuff in `PacketCommandNG.oldarg` field.
 
 (`common/cmd.c`)
 
-    int16_t reply_ng(uint16_t cmd, int16_t status, uint8_t *data, size_t len)
-    int16_t reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len)
-    int16_t reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len)
+    int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len);
+    int reply_ng(uint16_t cmd, int8_t status, const uint8_t *data, size_t len);
+    int reply_mix(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len);
+    int reply_reason(uint16_t cmd, int8_t status, int8_t reason, const uint8_t *data, size_t len);
 
 So replies should make the transition from `reply_old` to `reply_ng` to benefit from smaller frames (and client reception adjusted accordingly of course).  
 `reply_mix` is a transition fct: it uses the same API as reply_old but benefits somehow from variable length frames. It occupies at least 24b of data for the oldargs and real data is therefore limited to PM3_CMD_DATA_SIZE - 24. Besides the size limitation, the client command doesn't know if this was an OLD frame or a MIX frame, it gets its oldargs and data as usual.

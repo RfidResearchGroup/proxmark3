@@ -23,6 +23,7 @@
 #include "common.h"
 
 #include "util.h"       // FILE_PATH_SIZE
+#include "mifaredefault.h"      // consts
 #include "protocol_vigik.h"
 
 #define MIFARE_SECTOR_RETRY     10
@@ -60,14 +61,14 @@ typedef struct {
 } sector_t;
 
 typedef struct {
-    uint8_t keyA[6];
-    uint8_t keyB[6];
+    uint8_t keyA[MIFARE_KEY_SIZE];
+    uint8_t keyB[MIFARE_KEY_SIZE];
     //uint8_t foundKey[2];
 } icesector_t;
 
-#define KEYS_IN_BLOCK   ((PM3_CMD_DATA_SIZE - 5) / 6)
-#define KEYBLOCK_SIZE   (KEYS_IN_BLOCK * 6)
-#define CANDIDATE_SIZE  (0xFFFF * 6)
+#define KEYS_IN_BLOCK   ((PM3_CMD_DATA_SIZE - 5) / MIFARE_KEY_SIZE)
+#define KEYBLOCK_SIZE   (KEYS_IN_BLOCK * MIFARE_KEY_SIZE)
+#define CANDIDATE_SIZE  (0xFFFF * MIFARE_KEY_SIZE)
 
 int mfDarkside(uint8_t blockno, uint8_t key_type, uint64_t *key);
 int mfnested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKey, bool calibrate);

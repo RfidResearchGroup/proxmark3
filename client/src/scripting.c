@@ -22,6 +22,7 @@
 #include <errno.h>
 
 #include "lauxlib.h"
+#include "lua_bitlib.h"
 #include "cmdmain.h"
 #include "proxmark3.h"
 #include "comms.h"
@@ -41,6 +42,7 @@
 #include "crc16.h"
 #include "protocols.h"
 #include "fileutils.h"    // searchfile
+#include "cmdlf.h"        // lf_config
 #include "generator.h"
 #include "cmdlfem4x05.h"  // read 4305
 #include "cmdlfem4x50.h"  // read 4350
@@ -48,7 +50,7 @@
 #include "iso7816/iso7816core.h"  // ISODEPSTATE
 
 static int returnToLuaWithError(lua_State *L, const char *fmt, ...) {
-    char buffer[200];
+    char buffer[1024];
     va_list args;
     va_start(args, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, args);
@@ -83,7 +85,7 @@ static int l_fast_push_mode(lua_State *L) {
     // Disable fast mode and send a dummy command to make it effective
     if (enable == false) {
         SendCommandNG(CMD_PING, NULL, 0);
-        if (!WaitForResponseTimeout(CMD_PING, NULL, 1000)) {
+        if (WaitForResponseTimeout(CMD_PING, NULL, 1000) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
             return returnToLuaWithError(L, "command execution time out");
         }
@@ -113,8 +115,9 @@ static int l_SendCommandMIX(lua_State *L) {
 
     // check number of arguments
     int n = lua_gettop(L);
-    if (n != 5)
+    if (n != 5) {
         return returnToLuaWithError(L, "You need to supply five parameters");
+    }
 
     // parse input
     cmd = luaL_checknumber(L, 1);
@@ -318,7 +321,7 @@ static int l_GetFromFlashMemSpiffs(lua_State *L) {
     }
 
     lua_pushlstring(L, (const char *)data, len);
-    lua_pushunsigned(L, len);
+    lua_pushinteger(L, len);
     free(data);
     return 2;
 }
@@ -342,11 +345,11 @@ static int l_WaitForResponseTimeout(lua_State *L) {
 
     // extract first param.  cmd byte to look for
     if (n >= 1)
-        cmd = luaL_checkunsigned(L, 1);
+        cmd = (uint32_t)luaL_checkinteger(L, 1);
 
     // extract second param. timeout value
     if (n >= 2)
-        ms_timeout = luaL_checkunsigned(L, 2);
+        ms_timeout = luaL_checkinteger(L, 2);
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(cmd, &resp, ms_timeout) == false) {
@@ -367,6 +370,9 @@ static int l_WaitForResponseTimeout(lua_State *L) {
 
     memcpy(foo + n, &resp.status, sizeof(resp.status));
     n += sizeof(resp.status);
+
+    memcpy(foo + n, &resp.reason, sizeof(resp.reason));
+    n += sizeof(resp.reason);
 
     memcpy(foo + n, &resp.crc, sizeof(resp.crc));
     n += sizeof(resp.crc);
@@ -641,7 +647,7 @@ static int l_crc8legic(lua_State *L) {
     size_t size;
     const char *p_hexstr = luaL_checklstring(L, 1, &size);
     uint16_t retval = CRC8Legic((uint8_t *)p_hexstr, size);
-    lua_pushunsigned(L, retval);
+    lua_pushinteger(L, retval);
     return 1;
 }
 
@@ -657,7 +663,7 @@ static int l_crc16legic(lua_State *L) {
 
     init_table(CRC_LEGIC_16);
     uint16_t retval = crc16_legic((uint8_t *)p_hexstr, hexsize, uidcrc);
-    lua_pushunsigned(L, retval);
+    lua_pushinteger(L, retval);
     return 1;
 }
 
@@ -667,7 +673,7 @@ static int l_crc16(lua_State *L) {
     const char *p_str = luaL_checklstring(L, 1, &size);
 
     uint16_t checksum = Crc16ex(CRC_CCITT, (uint8_t *) p_str, size);
-    lua_pushunsigned(L, checksum);
+    lua_pushinteger(L, checksum);
     return 1;
 }
 
@@ -733,7 +739,7 @@ static int l_reveng_models(lua_State *L) {
 #define NMODELS 106
 
     int count = 0;
-    uint8_t in_width = luaL_checkunsigned(L, 1);
+    uint8_t in_width = (uint8_t)luaL_checkinteger(L, 1);
     if (in_width > 89)
         return returnToLuaWithError(L, "Width cannot exceed 89, got %d", in_width);
 
@@ -914,8 +920,8 @@ static int l_keygen_algoB(lua_State *L) {
     uint32_t pwd = ul_ev1_pwdgenB(uid);
     uint16_t pack = ul_ev1_packgenB(uid);
 
-    lua_pushunsigned(L, pwd);
-    lua_pushunsigned(L, pack);
+    lua_pushinteger(L, pwd);
+    lua_pushinteger(L, pack);
     return 2;
 }
 
@@ -947,8 +953,8 @@ static int l_keygen_algoD(lua_State *L) {
     uint32_t pwd = ul_ev1_pwdgenD(uid);
     uint16_t pack = ul_ev1_packgenD(uid);
 
-    lua_pushunsigned(L, pwd);
-    lua_pushunsigned(L, pack);
+    lua_pushinteger(L, pwd);
+    lua_pushinteger(L, pack);
     return 2;
 }
 
@@ -1035,7 +1041,7 @@ static int l_T55xx_readblock(lua_State *L) {
         return returnToLuaWithError(L, "Failed to get actual data");
     }
 
-    lua_pushunsigned(L, blockData);
+    lua_pushinteger(L, blockData);
     return 1;
 }
 
@@ -1434,16 +1440,12 @@ int set_pm3_libraries(lua_State *L) {
     };
 
     lua_pushglobaltable(L);
-    // Core library is in this table. Contains '
-    // this is 'pm3' table
-    lua_newtable(L);
 
-    // put the function into the hash table.
-    for (int i = 0; libs[i].name; i++) {
-        lua_pushcfunction(L, libs[i].func);
-        lua_setfield(L, -2, libs[i].name);//set the name, pop stack
-    }
-    // Name of 'core'
+    // bit32 compatibility shim
+    register_bit32_lib(L);
+
+    // Core module
+    luaL_newlib(L, libs);
     lua_setfield(L, -2, "core");
 
     // remove the global environment table from the stack

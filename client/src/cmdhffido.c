@@ -398,7 +398,7 @@ static int CmdHFFidoRegister(const char *cmd) {
         JsonSaveBufAsHexCompact(root, "KeyHandle", &buf[67], keyHandleLen);
         JsonSaveBufAsHexCompact(root, "DER", &buf[67 + keyHandleLen], derLen);
 
-        res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true);
+        res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true, spDump);
         (void)res;
     }
     json_decref(root);
@@ -662,7 +662,7 @@ static int CmdHFFidoAuthenticate(const char *cmd) {
         JsonSaveBufAsHexCompact(root, "KeyHandle", &data[65], keyHandleLen);
         JsonSaveInt(root, "Counter", cntr);
 
-        res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true);
+        res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true, spDump);
         (void)res;
     }
     json_decref(root);
@@ -783,7 +783,7 @@ static int CmdHFFido2MakeCredential(const char *cmd) {
     // parse returned cbor
     FIDO2MakeCredentionalParseRes(root, &buf[1], len - 1, verbose, verbose2, showCBOR, showDERTLV);
 
-    res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true);
+    res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true, spDump);
     (void)res;
     json_decref(root);
     return res;
@@ -903,7 +903,7 @@ static int CmdHFFido2GetAssertion(const char *cmd) {
     // parse returned cbor
     FIDO2GetAssertionParseRes(root, &buf[1], len - 1, verbose, verbose2, showCBOR);
 
-    res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true);
+    res = saveFileJSONrootEx(filename, root, JSON_INDENT(2), verbose, true, spDump);
     (void)res;
     json_decref(root);
     return res;

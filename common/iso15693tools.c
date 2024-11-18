@@ -16,9 +16,7 @@
 // ISO15693 other commons
 //-----------------------------------------------------------------------------
 #include "iso15693tools.h"
-
 #include <stdio.h>
-
 
 #define ISO15693_SPRINTUID_BUFLEN (3 * 8 + 1)
 
@@ -28,9 +26,10 @@
 // uid[]     the UID in transmission order
 // return: ptr to string
 char *iso15693_sprintUID(char *dest, uint8_t *uid) {
-    static char tempbuf[ISO15693_SPRINTUID_BUFLEN] = {0};
-    if (dest == NULL)
-        dest = tempbuf;
+    static char tmp[ISO15693_SPRINTUID_BUFLEN] = {0};
+    if (dest == NULL) {
+        dest = tmp;
+    }
 
     if (uid) {
 #ifdef HAVE_SNPRINTF

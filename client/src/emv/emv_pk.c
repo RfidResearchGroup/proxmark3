@@ -448,9 +448,12 @@ static struct emv_pk *emv_pk_get_ca_pk_from_file(const char *fname,
     return NULL;
 }
 
+// not used
+/*
 char *emv_pk_get_ca_pk_file(const char *dirname, const unsigned char *rid, unsigned char idx) {
-    if (!dirname)
+    if (dirname == NULL) {
         dirname = ".";//openemv_config_get_str("capk.dir", NULL);
+    }
 
     char *filename;
     int ret = asprintf(&filename, "%s/%02hhx%02hhx%02hhx%02hhx%02hhx_%02hhx.0",
@@ -462,15 +465,17 @@ char *emv_pk_get_ca_pk_file(const char *dirname, const unsigned char *rid, unsig
                        rid[4],
                        idx);
 
-    if (ret <= 0)
+    if (ret <= 0) {
         return NULL;
+    }
 
     return filename;
 }
 
 char *emv_pk_get_ca_pk_rid_file(const char *dirname, const unsigned char *rid) {
-    if (!dirname)
+    if (dirname == NULL) {
         dirname = "."; //openemv_config_get_str("capk.dir", NULL);
+    }
 
     char *filename;
     int ret = asprintf(&filename, "%s/%02hhx%02hhx%02hhx%02hhx%02hhx.pks",
@@ -481,11 +486,13 @@ char *emv_pk_get_ca_pk_rid_file(const char *dirname, const unsigned char *rid) {
                        rid[3],
                        rid[4]);
 
-    if (ret <= 0)
+    if (ret <= 0) {
         return NULL;
+    }
 
     return filename;
 }
+*/
 
 struct emv_pk *emv_pk_get_ca_pk(const unsigned char *rid, unsigned char idx) {
     struct emv_pk *pk = NULL;

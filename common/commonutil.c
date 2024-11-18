@@ -98,39 +98,13 @@ uint8_t reflect8(uint8_t b) {
     return (b * 0x0202020202ULL & 0x010884422010ULL) % 1023;
 }
 
-
-// Reverse the bits in a byte with 4 operations (64-bit multiply, no division):
-/*
-uint8_t reflect8(uint8_t b) {
-    return ((b * 0x80200802ULL) & 0x0884422110ULL) * 0x0101010101ULL >> 32;
-}
-*/
-
-uint16_t reflect16(uint16_t b) {
-    uint16_t v = 0;
-    v |= (b & 0x8000) >> 15;
-    v |= (b & 0x4000) >> 13;
-    v |= (b & 0x2000) >> 11;
-    v |= (b & 0x1000) >> 9;
-    v |= (b & 0x0800) >> 7;
-    v |= (b & 0x0400) >> 5;
-    v |= (b & 0x0200) >> 3;
-    v |= (b & 0x0100) >> 1;
-
-    v |= (b & 0x0080) << 1;
-    v |= (b & 0x0040) << 3;
-    v |= (b & 0x0020) << 5;
-    v |= (b & 0x0010) << 7;
-    v |= (b & 0x0008) << 9;
-    v |= (b & 0x0004) << 11;
-    v |= (b & 0x0002) << 13;
-    v |= (b & 0x0001) << 15;
+uint16_t reflect16(uint16_t v) {
+    v = (reflect8(v) << 8) | (reflect8(v >> 8) & 0xFF);
     return v;
 }
 
-uint32_t reflect32(uint32_t b) {
+uint32_t reflect32(uint32_t v) {
     // https://graphics.stanford.edu/~seander/bithacks.html#BitReverseTable
-    uint32_t v = b; // 32-bit word to reverse bit order
     // swap odd and even bits
     v = ((v >> 1) & 0x55555555) | ((v & 0x55555555) << 1);
     // swap consecutive pairs
@@ -144,13 +118,19 @@ uint32_t reflect32(uint32_t b) {
     return v;
 }
 
-uint64_t reflect64(uint64_t b) {
+uint64_t reflect48(uint64_t v) {
+    uint64_t vhi = reflect16(v >> 32);
+    uint64_t vlo = reflect32(v);
+    v = (vlo << 32) | (vhi & 0xFFFF);
+    return v;
+}
+
+uint64_t reflect64(uint64_t v) {
     // https://graphics.stanford.edu/~seander/bithacks.html#BitReverseTable
-    uint64_t v = b; // 32-bit word to reverse bit order
-    // swap 2-byte long pairs
+    // swap 4-byte long pairs
     uint64_t v1 = reflect32(v >> 32);
     uint64_t v2 = reflect32(v);
-    v = (v1 << 32) | (v2 & 0xFFFFFFFF);
+    v = (v2 << 32) | (v1 & 0xFFFFFFFF);
     return v;
 }
 
@@ -562,4 +542,19 @@ void reverse_arraybytes_copy(uint8_t *arr, uint8_t *dest, size_t len) {
     for (i = 0; i < len ; i++) {
         dest[i] = reflect8(arr[i]);
     }
+}
+
+size_t concatbits(uint8_t *dst, size_t dstskip, const uint8_t *src, size_t srcstart, size_t srclen) {
+    // erase dstbuf bits that will be overriden
+    dst[dstskip / 8] &= 0xFF - ((1 << (7 - (dstskip % 8) + 1)) - 1);
+    for (size_t i = (dstskip / 8) + 1; i <= (dstskip + srclen) / 8; i++) {
+        dst[i] = 0;
+    }
+
+    for (size_t i = 0; i < srclen; i++) {
+        // equiv of dstbufbits[dstbufskip + i] = srcbufbits[srcbufstart + i]
+        dst[(dstskip + i) / 8] |= ((src[(srcstart + i) / 8] >> (7 - ((srcstart + i) % 8))) & 1) << (7 - ((dstskip + i) % 8));
+    }
+
+    return dstskip + srclen;
 }

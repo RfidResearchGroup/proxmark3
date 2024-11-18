@@ -193,7 +193,7 @@ static int CmdLFPCF7931Write(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_LF_PCF7931_WRITE, block, idx, data[0], buf, sizeof(buf));
 
-    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(SUCCESS, "Done!");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf pcf7931 reader`") " to verify");
     return PM3_SUCCESS;
 }

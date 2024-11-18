@@ -59,9 +59,9 @@ static int reply_old(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, 
 #if DEBUG
 static void DbpString(char *str) {
     uint8_t len = 0;
-    while (str[len] != 0x00)
+    while (str[len] != 0x00) {
         len++;
-
+    }
     reply_old(CMD_DEBUG_PRINT_STRING, len, 0, 0, (uint8_t *)str, len);
 }
 #endif
@@ -131,14 +131,17 @@ static void UsbPacketReceived(uint8_t *packet) {
     switch (c->cmd) {
         case CMD_DEVICE_INFO: {
             ack = false;
+            arg0 = 0;
             arg0 = DEVICE_INFO_FLAG_BOOTROM_PRESENT |
                    DEVICE_INFO_FLAG_CURRENT_MODE_BOOTROM |
                    DEVICE_INFO_FLAG_UNDERSTANDS_START_FLASH |
                    DEVICE_INFO_FLAG_UNDERSTANDS_CHIP_INFO |
                    DEVICE_INFO_FLAG_UNDERSTANDS_VERSION |
                    DEVICE_INFO_FLAG_UNDERSTANDS_READ_MEM;
-            if (g_common_area.flags.osimage_present)
+
+            if (g_common_area.flags.osimage_present) {
                 arg0 |= DEVICE_INFO_FLAG_OSIMAGE_PRESENT;
+            }
 
             reply_old(CMD_DEVICE_INFO, arg0, 1, 2, 0, 0);
         }
@@ -291,8 +294,9 @@ static void UsbPacketReceived(uint8_t *packet) {
         break;
     }
 
-    if (ack)
+    if (ack) {
         reply_old(CMD_ACK, arg0, 0, 0, 0, 0);
+    }
 }
 
 // delay_loop(1) = 3.07us

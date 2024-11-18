@@ -55,6 +55,10 @@
 #define BUSY_TIMEOUT    200000L
 
 #define WINBOND_MANID       0xEF
+#define WINBOND_32MB_DEVID  0x15
+#define WINBOND_16MB_DEVID  0x14
+#define WINBOND_8MB_DEVID   0x13
+#define WINBOND_4MB_DEVID   0x12
 #define WINBOND_2MB_DEVID   0x11
 #define WINBOND_1MB_DEVID   0x10
 #define WINBOND_512KB_DEVID 0x05
@@ -129,8 +133,9 @@ bool Flash_Erase64k(uint8_t block);
 typedef struct {
     uint8_t manufacturer_id;
     uint8_t device_id;
-} flash_device_type_90_t; // to differentiate from JDEC ID via cmd 9F
-bool Flash_ReadID_90(flash_device_type_90_t *result);
+    uint8_t device_id2;
+} flash_device_type_t; // extra device_id used for the JEDEC ID read via cmd 9F
+bool Flash_ReadID(flash_device_type_t *result, bool read_jedec);
 
 uint16_t Flash_ReadData(uint32_t address, uint8_t *out, uint16_t len);
 uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len);

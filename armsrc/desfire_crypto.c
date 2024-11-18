@@ -31,7 +31,7 @@
 #include "crc32.h"
 #include "crc.h"
 #include "crc16.h"        // crc16 ccitt
-#include "printf.h"
+#include "nprintf.h"
 #include "iso14443a.h"
 #include "dbprint.h"
 #include "BigBuf.h"
@@ -65,25 +65,32 @@ void des_decrypt(void *out, const void *in, const void *key) {
     mbedtls_des_crypt_ecb(&ctx, in, out);
 }
 
-void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode) {
-    if (length % 8) return;
-    if (keymode == 2)
-        mbedtls_des3_set2key_dec(&ctx3, key);
-    else
-        mbedtls_des3_set3key_dec(&ctx3, key);
+void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key, uint8_t *iv, int keymode) {
 
-    uint8_t i;
+    // must be even blocks of 8 bytes.
+    if (length % 8) {
+        return;
+    }
+
+    if (keymode == 2) {
+        mbedtls_des3_set2key_dec(&ctx3, key);
+    } else {
+        mbedtls_des3_set3key_dec(&ctx3, key);
+    }
+
     unsigned char temp[8];
     uint8_t *tin = (uint8_t *) in;
     uint8_t *tout = (uint8_t *) out;
 
     while (length > 0) {
+
         memcpy(temp, tin, 8);
 
         mbedtls_des3_crypt_ecb(&ctx3, tin, tout);
 
-        for (i = 0; i < 8; i++)
-            tout[i] = (unsigned char)(tout[i] ^ iv[i]);
+        for (uint8_t i = 0; i < 8; i++) {
+            tout[i] ^= iv[i];
+        }
 
         memcpy(iv, temp, 8);
 
@@ -93,20 +100,26 @@ void tdes_nxp_receive(const void *in, void *out, size_t length, const void *key,
     }
 }
 
-void tdes_nxp_send(const void *in, void *out, size_t length, const void *key, unsigned char iv[8], int keymode) {
-    if (length % 8) return;
-    if (keymode == 2)
-        mbedtls_des3_set2key_enc(&ctx3, key);
-    else
-        mbedtls_des3_set3key_enc(&ctx3, key);
+void tdes_nxp_send(const void *in, void *out, size_t length, const void *key, uint8_t *iv, int keymode) {
 
-    uint8_t i;
+    // must be even blocks of 8 bytes.
+    if (length % 8) {
+        return;
+    }
+
+    if (keymode == 2) {
+        mbedtls_des3_set2key_enc(&ctx3, key);
+    } else {
+        mbedtls_des3_set3key_enc(&ctx3, key);
+    }
+
     uint8_t *tin = (uint8_t *) in;
     uint8_t *tout = (uint8_t *) out;
 
     while (length > 0) {
-        for (i = 0; i < 8; i++) {
-            tin[i] = (unsigned char)(tin[i] ^ iv[i]);
+
+        for (uint8_t i = 0; i < 8; i++) {
+            tin[i] ^= iv[i];
         }
 
         mbedtls_des3_crypt_ecb(&ctx3, tin, tout);

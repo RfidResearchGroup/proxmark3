@@ -129,9 +129,9 @@ static bool extract_parities(uint64_t word, uint32_t *data) {
         }
     }
 
-    if ((row_parities == row_parities_calculated) && (col_parities == col_parities_calculated))
+    if ((row_parities == row_parities_calculated) && (col_parities == col_parities_calculated)) {
         return true;
-
+    }
     return false;
 }
 

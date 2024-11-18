@@ -340,7 +340,10 @@ static int CmdEM4x50Login(const char *Cmd) {
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandNG(CMD_LF_EM4X50_LOGIN, (uint8_t *)&password, sizeof(password));
-    WaitForResponse(CMD_LF_EM4X50_LOGIN, &resp);
+    if (WaitForResponseTimeout(CMD_LF_EM4X50_LOGIN, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        return PM3_ETIMEOUT;
+    }
 
     // print response
     if (resp.status == PM3_SUCCESS)
@@ -636,10 +639,8 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out) {
         return PM3_ESOFT;
     }
 
-    em4x50_read_data_response_t *o = (em4x50_read_data_response_t *)resp.data.asBytes;
-
     em4x50_word_t words[EM4X50_NO_WORDS] = {0};
-    em4x50_prepare_result((uint8_t *)o->words, etd->addresses & 0xFF, (etd->addresses >> 8) & 0xFF, words);
+    em4x50_prepare_result(resp.data.asBytes, etd->addresses & 0xFF, (etd->addresses >> 8) & 0xFF, words);
 
     if (out != NULL) {
         memcpy(out, &words, sizeof(em4x50_word_t) * EM4X50_NO_WORDS);
@@ -1259,18 +1260,9 @@ static int CmdEM4x50Sim(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
 
-    PacketResponseNG resp;
     // init to ZERO
-    resp.cmd = 0,
-    resp.length = 0,
-    resp.magic = 0,
-    resp.status = 0,
-    resp.crc = 0,
-    resp.ng = false,
-    resp.oldarg[0] = 0;
-    resp.oldarg[1] = 0;
-    resp.oldarg[2] = 0;
-    memset(resp.data.asBytes, 0, PM3_CMD_DATA_SIZE);
+    PacketResponseNG resp;
+    memset(&resp, 0, sizeof(resp));
 
     bool keypress;
     do {

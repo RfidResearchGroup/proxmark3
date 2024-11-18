@@ -661,7 +661,7 @@ static int CmdHF14AJookiClone(const char *Cmd) {
             uint8_t isOK  = resp.oldarg[0] & 0xff;
             PrintAndLogEx(SUCCESS, "Write block %d ( %s )", blockno, isOK ? _GREEN_("ok") : _RED_("fail"));
         } else {
-            PrintAndLogEx(WARNING, "Command execute timeout");
+            PrintAndLogEx(WARNING, "command execution time out");
         }
 
         blockno++;

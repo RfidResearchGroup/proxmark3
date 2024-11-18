@@ -397,7 +397,7 @@ uint32_t get_flash_size(void) {
 }
 
 // Combined function to convert an unsigned int to an array of hex values corresponding to the last three bits of k1
-void convertToHexArray(uint8_t num, uint8_t *partialkey) {
+void convertToHexArray(uint32_t num, uint8_t *partialkey) {
     char binaryStr[25];  // 24 bits for binary representation + 1 for null terminator
     binaryStr[24] = '\0';  // Null-terminate the string
 
@@ -409,8 +409,8 @@ void convertToHexArray(uint8_t num, uint8_t *partialkey) {
 
     // Split the binary string into groups of 3 and convert to hex
     for (int i = 0; i < 8 ; i++) {
-        char group[4];
-        strncpy(group, binaryStr + i * 3, 3);
+        char group[4] = {'0', '0', '0', '\0'};  // Ensure group is initialized correctly
+        memcpy(group, binaryStr + i * 3, 3); // Use memcpy to copy exactly 3 characters
         group[3] = '\0';  // Null-terminate the group string
         partialkey[i] = (uint8_t)strtoul(group, NULL, 2);
     }

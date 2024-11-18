@@ -82,6 +82,7 @@ static uint8_t default_3des_keys[][16] = {
 static uint8_t default_pwd_pack[][4] = {
     {0xFF, 0xFF, 0xFF, 0xFF}, // PACK 0x00,0x00 -- factory default
     {0x4E, 0x45, 0x78, 0x54}, // NExT
+    {0xB6, 0xAA, 0x55, 0x8D}, // copykey
 };
 
 static uint64_t UL_TYPES_ARRAY[] = {
@@ -164,6 +165,7 @@ static const ul_family_t ul_family[] = {
     {"NTAG 210u", "NT2H1001G0DUx", "\x00\x04\x04\x02\x02\x00\x0B\x03"},
     {"UL EV1 128", "Mikron JSC Russia EV1", "\x00\x34\x21\x01\x01\x00\x0E\x03"},
     {"NTAG 213", "Shanghai Feiju NTAG", "\x00\x53\x04\x02\x01\x00\x0F\x03"},
+    {"NTAG 215", "Shanghai Feiju NTAG", "\x00\x05\x34\x02\x01\x00\x11\x03"},
     {"UL AES", "MF0AES2001DUD", "\x00\x04\x03\x01\x04\x00\x0F\x03"},
 };
 
@@ -261,7 +263,7 @@ static int get_ulc_3des_key_magic(uint64_t magic_type, uint8_t *key) {
     SendCommandNG(CMD_HF_MIFARE_READBL_EX, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_READBL_EX, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -305,7 +307,10 @@ int ul_read_uid(uint8_t *uid) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
     PacketResponseNG resp;
-    WaitForResponse(CMD_ACK, &resp);
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        return PM3_ETIMEOUT;
+    }
     iso14a_card_select_t card;
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
@@ -354,7 +359,7 @@ static bool ul_select(iso14a_card_select_t *card) {
     ul_switch_on_field();
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
         DropField();
         return false;
@@ -401,7 +406,7 @@ static bool ul_select_rats(iso14a_card_select_t *card) {
             uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
             SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, sizeof(rats), 0, rats, sizeof(rats));
             if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-                PrintAndLogEx(WARNING, "Command execute timeout");
+                PrintAndLogEx(WARNING, "command execution time out");
                 return false;
             }
         }
@@ -877,7 +882,7 @@ static int ndef_print_CC(uint8_t *data) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("NDEF Message"));
-    PrintAndLogEx(SUCCESS, "Capability Container: %s", sprint_hex(data, 4));
+    PrintAndLogEx(SUCCESS, "Capability Container: " _YELLOW_("%s"), sprint_hex_inrow(data, 4));
     PrintAndLogEx(SUCCESS, "  %02X: NDEF Magic Number", data[0]);
 
 //    PrintAndLogEx(SUCCESS, "  %02X : version %d.%d supported by tag", data[1], (data[1] & 0xF0) >> 4, data[1] & 0x0F);
@@ -1016,7 +1021,7 @@ int ul_print_type(uint64_t tagtype, uint8_t spaces) {
     tagtype &= ~(MFU_TT_MAGIC);
 
     if (ismagic) {
-        snprintf(typestr + strlen(typestr), 4, " (");
+        snprintf(typestr + strlen(typestr), 4, " ( ");
     }
 
     snprintf(typestr + strlen(typestr), sizeof(typestr) - strlen(typestr), "%s", ((tagtype & MFU_TT_MAGIC_1A) == MFU_TT_MAGIC_1A) ? _GREEN_("Gen 1a") : "");
@@ -1092,7 +1097,7 @@ static int ulaes_print_configuration(uint8_t *data, uint8_t start_page) {
     bool cnt_rd_en = (data[4] & 4);
     uint16_t authlim = (data[6]) | ((data[7] & 0x3) << 8);
 
-    PrintAndLogEx(INFO, "  cfg0 [%u/0x%02X]: %s", start_page, start_page, sprint_hex(data, 4));
+    PrintAndLogEx(INFO, "  cfg0 [%u/0x%02X]: " _YELLOW_("%s"), start_page, start_page, sprint_hex_inrow(data, 4));
 
     PrintAndLogEx(INFO, "                    - Random ID is %s", (rid_act) ? "enabled" : "disabled");
     PrintAndLogEx(INFO, "                    - Secure messaging is %s", (sec_msg_act) ? "enabled" : "disabled");
@@ -1101,7 +1106,7 @@ static int ulaes_print_configuration(uint8_t *data, uint8_t start_page) {
     } else {
         PrintAndLogEx(INFO, "                    - pages don't need authentication");
     }
-    PrintAndLogEx(INFO, "  cfg1 [%u/0x%02X]: %s", start_page + 1, start_page + 1,  sprint_hex(data + 4, 4));
+    PrintAndLogEx(INFO, "  cfg1 [%u/0x%02X]: " _YELLOW_("%s"), start_page + 1, start_page + 1,  sprint_hex_inrow(data + 4, 4));
 
     if (authlim == 0) {
         PrintAndLogEx(INFO, "                    - " _GREEN_("Unlimited authentication attempts"));
@@ -1130,7 +1135,7 @@ static int ulev1_print_configuration(uint64_t tagtype, uint8_t *data, uint8_t st
 
     uint8_t vctid = data[5];
 
-    PrintAndLogEx(INFO, "  cfg0 [%u/0x%02X]: %s", startPage, startPage, sprint_hex(data, 4));
+    PrintAndLogEx(INFO, "  cfg0 [%u/0x%02X]: " _YELLOW_("%s"), startPage, startPage, sprint_hex_inrow(data, 4));
 
     //NTAG213TT has different ASCII mirroring options and config bytes interpretation from other ulev1 class tags
     if (tagtype & MFU_TT_NTAG_213_TT) {
@@ -1305,7 +1310,7 @@ static int ulev1_print_configuration(uint64_t tagtype, uint8_t *data, uint8_t st
         }
     }
 
-    PrintAndLogEx(INFO, "  cfg1 [%u/0x%02X]: %s", startPage + 1, startPage + 1,  sprint_hex(data + 4, 4));
+    PrintAndLogEx(INFO, "  cfg1 [%u/0x%02X]: " _YELLOW_("%s"), startPage + 1, startPage + 1,  sprint_hex_inrow(data + 4, 4));
     if (authlim == 0)
         PrintAndLogEx(INFO, "                    - " _GREEN_("Unlimited password attempts"));
     else
@@ -1317,16 +1322,16 @@ static int ulev1_print_configuration(uint64_t tagtype, uint8_t *data, uint8_t st
     PrintAndLogEx(INFO, "                    - user configuration %s", cfglck ? "permanently locked" : "writeable");
     PrintAndLogEx(INFO, "                    - %s access is protected with password", prot ? "read and write" : "write");
     PrintAndLogEx(INFO, "                    - %02X, Virtual Card Type Identifier is %sdefault", vctid, (vctid == 0x05) ? "" : "not ");
-    PrintAndLogEx(INFO, "  PWD  [%u/0x%02X]: %s- ( cannot be read )", startPage + 2, startPage + 2,  sprint_hex(data + 8, 4));
-    PrintAndLogEx(INFO, "  PACK [%u/0x%02X]: %s      - ( cannot be read )", startPage + 3, startPage + 3,  sprint_hex(data + 12, 2));
-    PrintAndLogEx(INFO, "  RFU  [%u/0x%02X]:       %s- ( cannot be read )", startPage + 3, startPage + 3,  sprint_hex(data + 14, 2));
+    PrintAndLogEx(INFO, "  PWD  [%u/0x%02X]: %s ( cannot be read )", startPage + 2, startPage + 2,  sprint_hex_inrow(data + 8, 4));
+    PrintAndLogEx(INFO, "  PACK [%u/0x%02X]: %s     ( cannot be read )", startPage + 3, startPage + 3,  sprint_hex_inrow(data + 12, 2));
+    PrintAndLogEx(INFO, "  RFU  [%u/0x%02X]:     %s ( cannot be read )", startPage + 3, startPage + 3,  sprint_hex_inrow(data + 14, 2));
 
     if (tagtype & MFU_TT_NTAG_213_TT) {
         if (data[1] & 0x06) {
-            PrintAndLogEx(INFO, "TT_MSG [45/0x2D]: %s- (cannot be read)", sprint_hex(tt_message, tt_msg_resp_len));
+            PrintAndLogEx(INFO, "TT_MSG [45/0x2D]: %s (cannot be read)", sprint_hex_inrow(tt_message, tt_msg_resp_len));
             PrintAndLogEx(INFO, "                    - tamper message is masked in memory");
         } else {
-            PrintAndLogEx(INFO, "TT_MSG [45/0x2D]: %s", sprint_hex(tt_message, tt_msg_resp_len));
+            PrintAndLogEx(INFO, "TT_MSG [45/0x2D]: %s", sprint_hex_inrow(tt_message, tt_msg_resp_len));
             PrintAndLogEx(INFO, "                    - tamper message is %s and is readable/writablbe in memory", sprint_hex(tt_message, tt_msg_resp_len));
         }
     }
@@ -1342,7 +1347,7 @@ static int ulev1_print_configuration(uint64_t tagtype, uint8_t *data, uint8_t st
 
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Tamper Status"));
-        PrintAndLogEx(INFO, "  READ_TT_STATUS: %s", sprint_hex(tt_status_resp, 5));
+        PrintAndLogEx(INFO, "  READ_TT_STATUS: %s", sprint_hex_inrow(tt_status_resp, 5));
 
         PrintAndLogEx(INFO, "     Tamper status result from this power-up:");
         switch (tt_status_resp[4]) {
@@ -1523,7 +1528,7 @@ static int ulev1_print_signature(uint64_t tagtype, uint8_t *uid, uint8_t *signat
 static int ulev1_print_version(uint8_t *data) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Version"));
-    PrintAndLogEx(INFO, "       Raw bytes: %s", sprint_hex(data, 8));
+    PrintAndLogEx(INFO, "       Raw bytes: " _YELLOW_("%s"), sprint_hex_inrow(data, 8));
     PrintAndLogEx(INFO, "       Vendor ID: %02X, %s", data[1], getTagInfo(data[1]));
     PrintAndLogEx(INFO, "    Product type: %s", getProductTypeStr(data[2]));
     PrintAndLogEx(INFO, " Product subtype: %02X, %s", data[3], (data[3] == 1) ? "17 pF" : "50pF");
@@ -1659,6 +1664,7 @@ static uint64_t ul_magic_test(void) {
     if ((is_generation & MAGIC_FLAG_GEN_1B) == MAGIC_FLAG_GEN_1B) {
         return MFU_TT_MAGIC_1B | MFU_TT_MAGIC;
     }
+
     if ((is_generation & MAGIC_FLAG_NTAG21X) == MAGIC_FLAG_NTAG21X) {
         return MFU_TT_MAGIC_NTAG21X | MFU_TT_MAGIC;
     }
@@ -1709,7 +1715,7 @@ static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len) {
     SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, keytype, key, 4);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         free(*pdata);
         res = PM3_ETIMEOUT;
         goto out;
@@ -1994,7 +2000,7 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, const uint8_t *aut
     SendCommandMIX(CMD_HF_MIFAREU_READCARD, 0, pages, keytype, authkey, ak_len);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         res = PM3_ETIMEOUT;
         goto out;
     }
@@ -2675,6 +2681,11 @@ out:
         PrintAndLogEx(INFO, "\nTag appears to be locked, try using a key to get more info");
         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
     }
+
+    if (tagtype & (MFU_TT_MAGIC_1A | MFU_TT_MAGIC_1B | MFU_TT_MAGIC_2)) {
+        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`script run hf_mfu_setuid -h`") " to set UID");
+    }
+
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -2811,7 +2822,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
             }
             case PM3_ETIMEOUT:
             default: {
-                PrintAndLogEx(WARNING, "Command execute timeout");
+                PrintAndLogEx(WARNING, "command execution time out");
                 break;
             }
         }
@@ -2924,7 +2935,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
             PrintAndLogEx(WARNING, "Failed reading block: ( %02x )", isOK);
         }
     } else {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
     }
     return PM3_SUCCESS;
 }
@@ -3244,7 +3255,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     SendCommandMIX(CMD_HF_MIFAREU_READCARD, start_page, pages, keytype, authKeyPtr, ak_len);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -3267,7 +3278,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     }
 
     if (GetFromDevice(BIG_BUF, data, buffer_size, startindex, NULL, 0, NULL, 2500, false) == false) {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -3446,7 +3457,7 @@ static void wait4response(uint8_t b) {
             PrintAndLogEx(WARNING, "failed to write block %d", b);
         }
     } else {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
     }
 }
 
@@ -3532,7 +3543,7 @@ int CmdHF14MfUTamper(const char *Cmd) {
             else
                 PrintAndLogEx(SUCCESS, "Tamper message written successfully");
         } else {
-            PrintAndLogEx(WARNING, "Command execute timeout");
+            PrintAndLogEx(WARNING, "command execution time out");
         }
     }
 
@@ -3578,7 +3589,7 @@ int CmdHF14MfUTamper(const char *Cmd) {
             else
                 PrintAndLogEx(SUCCESS, "Tamper configuration written successfully");
         } else {
-            PrintAndLogEx(WARNING, "Command execute timeout");
+            PrintAndLogEx(WARNING, "command execution time out");
         }
     }
 
@@ -4066,7 +4077,7 @@ static int CmdHF14AMfUCSetPwd(const char *Cmd) {
             return PM3_ESOFT;
         }
     } else {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
     return PM3_SUCCESS;
@@ -4108,7 +4119,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_READBL, 2, 0, 0, NULL, 0);
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -4121,7 +4132,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     hf14a_config config;
     SendCommandNG(CMD_HF_ISO14443A_GET_CONFIG, NULL, 0);
     if (!WaitForResponseTimeout(CMD_HF_ISO14443A_GET_CONFIG, &resp, 2000)) {
-        PrintAndLogEx(WARNING, "command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
     memcpy(&config, resp.data.asBytes, sizeof(hf14a_config));
@@ -4140,7 +4151,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 0, 0, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -4152,7 +4163,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 1, 0, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -4164,7 +4175,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 2, 0, 0, data, sizeof(data));
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "Command execute timeout");
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
 
@@ -4205,7 +4216,11 @@ static int CmdHF14AMfUKeyGen(const char *Cmd) {
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
         PacketResponseNG resp;
-        WaitForResponse(CMD_ACK, &resp);
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            return PM3_ETIMEOUT;
+        }
+
         iso14a_card_select_t card;
         memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
@@ -4384,7 +4399,7 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
         if (u_len != 7 && u_len != 4) {
             PrintAndLogEx(WARNING, "Key must be 7 hex bytes");
             return PM3_EINVARG;
-        } else {
+        } else if (u_len == 4) {
             // adapt to 7 bytes :)
             memset(uid + 4, 0x00, 3);
             u_len = 7;
@@ -5766,7 +5781,7 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
             case PM3_ETIMEOUT:
             default: {
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(WARNING, "Command execute timeout");
+                PrintAndLogEx(WARNING, "command execution time out");
                 goto out;
             }
         }
@@ -5795,7 +5810,7 @@ ulc:
                 return PM3_ESOFT;
             }
         } else {
-            PrintAndLogEx(WARNING, "command execute timeout");
+            PrintAndLogEx(WARNING, "command execution time out");
             return PM3_ETIMEOUT;
         }
     }

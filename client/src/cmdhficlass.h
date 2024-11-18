@@ -42,5 +42,5 @@ void picopass_elite_reset(void);
 uint32_t picopass_elite_rng(void);
 uint32_t picopass_elite_lcg(void);
 uint8_t picopass_elite_nextByte(void);
-void *generate_key_blocks(void *arg);
+void generate_key_block_inverted(const uint8_t *startingKey, uint64_t index, uint8_t *keyBlock);
 #endif

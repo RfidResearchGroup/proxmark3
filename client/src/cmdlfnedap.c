@@ -472,7 +472,7 @@ static int CmdLFNedapClone(const char *Cmd) {
     } else {
         PrintAndLogEx(NORMAL, "");
     }
-    PrintAndLogEx(SUCCESS, "Done");
+    PrintAndLogEx(SUCCESS, "Done!");
     PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf nedap reader`") " to verify");
     return res;
 }

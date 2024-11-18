@@ -1399,7 +1399,8 @@ static int emrtd_print_ef_com_info(uint8_t *data, size_t datalen) {
             continue;
         }
         int n = 25 - strlen(dg->filename);
-        PrintAndLogEx(SUCCESS, "%s%*.*s " _YELLOW_("%s"), dg->filename, n, n, pad, dg->desc);
+        PrintAndLogEx(SUCCESS, "%s%.*s " _YELLOW_("%s"), dg->filename, n, pad, dg->desc);
+
     }
     return PM3_SUCCESS;
 }
@@ -1862,15 +1863,16 @@ static int emrtd_parse_ef_sod_hashes(uint8_t *data, size_t datalen, uint8_t *has
 static int emrtd_print_ef_sod_info(uint8_t *dg_hashes_calc, uint8_t *dg_hashes_sod, int hash_algo, bool fastdump) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "------------------------ " _CYAN_("EF_SOD") " ------------------------");
-    PrintAndLogEx(INFO, "Document Security Object, ");
+    PrintAndLogEx(INFO, "Document Security Object");
     PrintAndLogEx(INFO, "contains the digital signatures of the passport data");
-    PrintAndLogEx(INFO, "");
 
     if (hash_algo == -1) {
         PrintAndLogEx(SUCCESS, "Hash algorithm... " _YELLOW_("Unknown"));
+        PrintAndLogEx(INFO, "");
     } else {
 
         PrintAndLogEx(SUCCESS, "Hash algorithm... " _YELLOW_("%s"), hashalg_table[hash_algo].name);
+        PrintAndLogEx(INFO, "");
 
         uint8_t all_zeroes[64] = { 0x00 };
 
@@ -1891,17 +1893,17 @@ static int emrtd_print_ef_sod_info(uint8_t *dg_hashes_calc, uint8_t *dg_hashes_s
             if (calc_all_zero == true) {
 
                 if (fastdump && !dg_table[i].fastdump && !dg_table[i].pace && !dg_table[i].eac) {
-                    PrintAndLogEx(SUCCESS, "EF_DG%2i %s %*.*s File was skipped, but is in EF_SOD", i, dg_table[i].desc, n, n, pad);
+                    PrintAndLogEx(SUCCESS, _YELLOW_("EF_DG%-2i") " %s%.*s File was skipped, but is in EF_SOD", i, dg_table[i].desc, n, pad);
                 } else {
-                    PrintAndLogEx(SUCCESS, "EF_DG%2i %s %*.*s File couldn't be read, but is in EF_SOD", i, dg_table[i].desc, n, n, pad);
+                    PrintAndLogEx(SUCCESS, _YELLOW_("EF_DG%-2i") " %s%.*s File couldn't be read, but is in EF_SOD", i, dg_table[i].desc, n, pad);
                 }
 
             } else if (sod_all_zero == true) {
-                PrintAndLogEx(SUCCESS, "EF_DG%2i %s %*.*s " _RED_("File is not in EF_SOD"), i, dg_table[i].desc, n, n, pad);
+                PrintAndLogEx(SUCCESS, _YELLOW_("EF_DG%-2i") " %s%.*s " _RED_("File is not in EF_SOD"), i, dg_table[i].desc, n, pad);
             } else if (hash_matches == false) {
-                PrintAndLogEx(SUCCESS, "EF_DG%2i %s %*.*s " _RED_("Invalid"), i, dg_table[i].desc, n, n, pad);
+                PrintAndLogEx(SUCCESS, _YELLOW_("EF_DG%-2i") " %s%.*s " _RED_("Invalid"), i, dg_table[i].desc, n, pad);
             } else {
-                PrintAndLogEx(SUCCESS, "EF_DG%2i %s %*.*s " _GREEN_("Valid"), i, dg_table[i].desc, n, n, pad);
+                PrintAndLogEx(SUCCESS, _YELLOW_("EF_DG%-2i") " %s%.*s " _GREEN_("Valid"), i, dg_table[i].desc, n, pad);
             }
         }
     }
@@ -2073,7 +2075,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     DropField();
 
     emrtd_print_ef_sod_info(*dg_hashes_calc, *dg_hashes_sod, hash_algo, true);
-
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -2185,7 +2187,7 @@ int infoHF_EMRTD_offline(const char *path) {
     free(filepath);
 
     emrtd_print_ef_sod_info(*dg_hashes_calc, *dg_hashes_sod, hash_algo, false);
-
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 

@@ -25,7 +25,6 @@
 
 int CmdHFMF(const char *Cmd);
 int CmdHF14AMfELoad(const char *Cmd);    // used by "hf mfu eload"
-int CmdHF14AMfDbg(const char *Cmd);      // used by "hf mfu dbg"
 int CmdHFMFNDEFRead(const char *Cmd);    // used by "nfc mf cread"
 int CmdHFMFNDEFFormat(const char *Cmd);  // used by "nfc mf cformat"
 int CmdHFMFNDEFWrite(const char *Cmd);  // used by "nfc mf cwrite"

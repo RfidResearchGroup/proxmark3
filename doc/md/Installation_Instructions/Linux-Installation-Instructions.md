@@ -138,7 +138,7 @@ sudo zypper --gpg-auto-import-keys refresh && \
 sudo zypper install cross-arm-none-eabi-gcc13 cross-arm-none-eabi-newlib
 ```
 
-Note that Bluez is not available on openSUSE so the native Bluetooth support won't be available in the client.
+Note that Bluez is not available on openSUSE Leap so the native Bluetooth support won't be available in the client.
 
 ## On openSUSE Tumbleweed
 ^[Top](#top)

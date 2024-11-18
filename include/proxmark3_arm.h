@@ -126,6 +126,10 @@
 //NVDD goes LOW when USB is attached.
 #define USB_ATTACHED()    !((AT91C_BASE_PIOA->PIO_PDSR & GPIO_NVDD_ON) == GPIO_NVDD_ON)
 
+
+#define DBG  if (g_dbglevel >= DBG_EXTENDED)
+
+
 // VERSION_INFORMATION is now in common.h
 
 #define COMMON_AREA_MAGIC 0x43334d50 // "PM3C"

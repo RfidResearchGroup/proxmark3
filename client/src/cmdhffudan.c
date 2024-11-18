@@ -320,7 +320,7 @@ static int CmdHFFudanDump(const char *Cmd) {
                 }
             } else {
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(WARNING, "command execute timeout when trying to read block %2d", b);
+                PrintAndLogEx(WARNING, "command execution time out when trying to read block %2d", b);
             }
         }
 
@@ -404,7 +404,7 @@ static int CmdHFFudanWrBl(const char *Cmd) {
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-        PrintAndLogEx(FAILED, "Command execute timeout");
+        PrintAndLogEx(FAILED, "command execution time out");
         return PM3_ETIMEOUT;
     }
 

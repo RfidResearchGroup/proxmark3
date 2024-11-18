@@ -624,7 +624,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 && (hdr->isResponse || protocol == ISO_14443A || protocol == PROTO_MIFARE || protocol == PROTO_MFPLUS || protocol == SEOS)
                 && (oddparity8(frame[j]) != ((parityBits >> (7 - (j & 0x0007))) & 0x01))) {
 
-            snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x! ", frame[j]);
+            snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02X! ", frame[j]);
 
         } else if (protocol == ICLASS  && hdr->isResponse == false) {
 
@@ -634,9 +634,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             }
 
             if (parity == ((frame[0] >> 7) & 1)) {
-                snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x  ", frame[j]);
+                snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02X  ", frame[j]);
             } else {
-                snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02x! ", frame[j]);
+                snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02X! ", frame[j]);
             }
 
         } else if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAG2) || (protocol == PROTO_HITAGS))) {
@@ -648,7 +648,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 uint8_t nbits = parityBytes[0];
 
                 // only apply this to lesser than one byte
-                if (data_len == 1) {
+                if (data_len == 1 && nbits != 0) {
 
                     snprintf(line[0], 120, "%2u: %02X  ", nbits, frame[0] >> (8 - nbits));
 
@@ -1299,9 +1299,9 @@ int CmdTraceList(const char *Cmd) {
                   "trace list -t cryptorf -> interpret as " _YELLOW_("CryptoRF") "\n\n"
                   "trace list -t des      -> interpret as " _YELLOW_("MIFARE DESFire") "\n"
                   "trace list -t felica   -> interpret as " _YELLOW_("ISO18092 / FeliCa") "\n"
-                  "trace list -t hitag1   -> interpret as " _YELLOW_("Hitag1") "\n"
-                  "trace list -t hitag2   -> interpret as " _YELLOW_("Hitag2") "\n"
-                  "trace list -t hitags   -> interpret as " _YELLOW_("HitagS") "\n"
+                  "trace list -t hitag1   -> interpret as " _YELLOW_("Hitag 1") "\n"
+                  "trace list -t hitag2   -> interpret as " _YELLOW_("Hitag 2") "\n"
+                  "trace list -t hitags   -> interpret as " _YELLOW_("Hitag S") "\n"
                   "trace list -t iclass   -> interpret as " _YELLOW_("iCLASS") "\n"
                   "trace list -t legic    -> interpret as " _YELLOW_("LEGIC") "\n"
                   "trace list -t lto      -> interpret as " _YELLOW_("LTO-CM") "\n"
@@ -1457,7 +1457,7 @@ int CmdTraceList(const char *Cmd) {
             PrintAndLogEx(INFO, _YELLOW_("ISO7816-4 / Smartcard") " - Timings n/a");
 
         if (protocol == PROTO_HITAG1 || protocol == PROTO_HITAG2 || protocol == PROTO_HITAGS) {
-            PrintAndLogEx(INFO, _YELLOW_("Hitag1 / Hitag2 / HitagS") " - Timings in ETU (8us)");
+            PrintAndLogEx(INFO, _YELLOW_("Hitag 1 / Hitag 2 / Hitag S") " - Timings in ETU (8us)");
         }
 
         if (protocol == FELICA) {
