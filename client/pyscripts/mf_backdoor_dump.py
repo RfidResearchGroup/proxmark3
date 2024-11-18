@@ -26,7 +26,7 @@ for bk, sz in BACKDOOR_KEYS:
         print("Error reading the tag:")
         print("\n".join(output))
         break
-    elif "[-]  Fill ( fail )" in output:
+    elif "[-] Fill ( fail )" in output:
         continue
     elif "[+] Fill ( ok )" not in output:
         print("Unexpected output, exiting:")

@@ -4691,6 +4691,13 @@
         "system_integrator": "Juan Cruz Iriondo"
     },
     {
+        "application": "Access control",
+        "company": "Inner Range",
+        "mad": "0x4730",
+        "service_provider": "Inner Range",
+        "system_integrator": "Inner Range"
+    },
+    {
         "application": "Trade fair card Deutsche Messe AG, Hannover",
         "company": "Systemform GmbH",
         "mad": "0x4801",

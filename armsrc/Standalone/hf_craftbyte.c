@@ -79,13 +79,8 @@ void RunMod(void) {
                 }
             } else if (state == STATE_EMUL) {
                 uint16_t flags = 0;
-                if (card.uidlen == 4) {
-                    flags |= FLAG_4B_UID_IN_DATA;
-                } else if (card.uidlen == 7) {
-                    flags |= FLAG_7B_UID_IN_DATA;
-                } else if (card.uidlen == 10) {
-                    flags |= FLAG_10B_UID_IN_DATA;
-                } else {
+                FLAG_SET_UID_IN_DATA(flags, card.uidlen);
+                if (IS_FLAG_UID_IN_EMUL(flags)) {
                     Dbprintf("Unusual UID length, something is wrong. Try again please.");
                     state = STATE_READ;
                     continue;
@@ -94,22 +89,22 @@ void RunMod(void) {
                 Dbprintf("Starting simulation, press " _GREEN_("pm3 button") " to stop and go back to search state.");
                 if (card.sak == 0x08 && card.atqa[0] == 0x04 && card.atqa[1] == 0) {
                     DbpString("Mifare Classic 1k");
-                    SimulateIso14443aTag(1, flags, card.uid, 0, NULL);
+                    SimulateIso14443aTag(1, flags, card.uid, 0, NULL, 0);
                 } else if (card.sak == 0x08 && card.atqa[0] == 0x44 && card.atqa[1] == 0) {
                     DbpString("Mifare Classic 4k ");
-                    SimulateIso14443aTag(8, flags, card.uid, 0, NULL);
+                    SimulateIso14443aTag(8, flags, card.uid, 0, NULL, 0);
                 } else if (card.sak == 0x00 && card.atqa[0] == 0x44 && card.atqa[1] == 0) {
                     DbpString("Mifare Ultralight");
-                    SimulateIso14443aTag(2, flags, card.uid, 0, NULL);
+                    SimulateIso14443aTag(2, flags, card.uid, 0, NULL, 0);
                 } else if (card.sak == 0x20 && card.atqa[0] == 0x04 && card.atqa[1] == 0x03) {
                     DbpString("Mifare DESFire");
-                    SimulateIso14443aTag(3, flags, card.uid, 0, NULL);
+                    SimulateIso14443aTag(3, flags, card.uid, 0, NULL, 0);
                 } else if (card.sak == 0x20 && card.atqa[0] == 0x44 && card.atqa[1] == 0x03) {
                     DbpString("Mifare DESFire Ev1/Plus/JCOP");
-                    SimulateIso14443aTag(3, flags, card.uid, 0, NULL);
+                    SimulateIso14443aTag(3, flags, card.uid, 0, NULL, 0);
                 } else {
                     Dbprintf("Unrecognized tag type -- defaulting to Mifare Classic emulation");
-                    SimulateIso14443aTag(1, flags, card.uid, 0, NULL);
+                    SimulateIso14443aTag(1, flags, card.uid, 0, NULL, 0);
                 }
 
                 // Go back to search state if user presses pm3-button

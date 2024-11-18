@@ -78,20 +78,27 @@ p = pm3.pm3()
 p.console("hw status")
 
 rex = re.compile("...\\s([0-9a-fA-F]{2})\\s/\\s([0-9a-fA-F]{4})")
+
 for line in p.grabbed_output.split('\n'):
     # [#]   JEDEC Mfr ID / Dev ID... 85 / 6015
     if " JEDEC " not in line:
         continue
+
     match = re.findall(rex, line)
     mid = int(match[0][0], 16)
     did = int(match[0][1], 16)
     did_h = did >> 8
     did_l = did & 0xff
     t = None
+
     if mid in spi:
+
         mfr = spi[mid]['manufacturer']
+
         if did_h in spi[mid]:
+
             if did_l in spi[mid][did_h]:
+
                 t = spi[mid][did_h][did_l]
                 print("\n Manufacturer... " + color(f"{mfr}", fg="green") +
                      "\n Device......... " + color(f"{t['part']}", fg="green") +

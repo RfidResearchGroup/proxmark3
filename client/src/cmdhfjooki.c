@@ -531,7 +531,7 @@ static int CmdHF14AJookiSim(const char *Cmd) {
     g_conn.block_after_ACK = true;
     uint8_t blockwidth = 4, counter = 0, blockno = 0;
 
-    // 12 is the size of the struct the fct mfEmlSetMem_xt uses to transfer to device
+    // 12 is the size of the struct the fct mf_eml_set_mem_xt uses to transfer to device
     uint16_t max_avail_blocks = ((PM3_CMD_DATA_SIZE - 12) / blockwidth) * blockwidth;
 
     while (datalen) {
@@ -542,7 +542,7 @@ static int CmdHF14AJookiSim(const char *Cmd) {
         uint16_t chunk_size = MIN(max_avail_blocks, datalen);
         uint16_t blocks_to_send = chunk_size / blockwidth;
 
-        if (mfEmlSetMem_xt(data + counter, blockno, blocks_to_send, blockwidth) != PM3_SUCCESS) {
+        if (mf_eml_set_mem_xt(data + counter, blockno, blocks_to_send, blockwidth) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Cant set emul block: %3d", blockno);
             free(data);
             return PM3_ESOFT;
@@ -565,7 +565,8 @@ static int CmdHF14AJookiSim(const char *Cmd) {
 
     // NTAG,  7 byte UID in eloaded data.
     payload.tagtype = 7;
-    payload.flags = FLAG_UID_IN_EMUL;
+    payload.flags = 0;
+    FLAG_SET_UID_IN_EMUL(payload.flags);
     payload.exitAfter = 0;
     memcpy(payload.uid, uid, sizeof(uid));
 

@@ -50,6 +50,29 @@ static int CmdHelp(const char *Cmd);
 
 //-------------------------------------------------------------------------------------
 
+int rdv4_get_flash_pages64k(uint8_t *pages64k) {
+    if (pages64k == NULL) {
+        return PM3_EINVARG;
+    }
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_FLASHMEM_PAGES64K, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        PrintAndLogEx(WARNING, "rdv4_get_flash_pages64k() timeout while waiting for reply");
+        return PM3_ETIMEOUT;
+    }
+
+    uint8_t isok = resp.oldarg[0] & 0xFF;
+    if (isok == false) {
+        PrintAndLogEx(FAILED, "fail reading from flash (pages 64k)");
+        return PM3_EFLASH;
+    }
+
+    memcpy(pages64k, (uint8_t *)resp.data.asBytes, sizeof(uint8_t));
+    return PM3_SUCCESS;
+}
+
 int rdv4_get_signature(rdv40_validation_t *out) {
     if (out == NULL) {
         return PM3_EINVARG;
@@ -98,8 +121,16 @@ int rdv4_validate(rdv40_validation_t *mem) {
 }
 
 static int rdv4_sign_write(uint8_t *signature, uint8_t slen) {
+
+    uint8_t spi_flash_pages = 0;
+    int res = rdv4_get_flash_pages64k(&spi_flash_pages);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to get flash pages (%x)", res);
+        return res;
+    }
+
     flashmem_old_write_t payload = {
-        .startidx = FLASH_MEM_SIGNATURE_OFFSET,
+        .startidx = FLASH_MEM_SIGNATURE_OFFSET_P(spi_flash_pages),
         .len = FLASH_MEM_SIGNATURE_LEN,
     };
     memcpy(payload.data, signature, slen);
@@ -117,7 +148,7 @@ static int rdv4_sign_write(uint8_t *signature, uint8_t slen) {
             return PM3_EFAILED;
         }
     }
-    PrintAndLogEx(SUCCESS, "Writing signature at offset %u ( "_GREEN_("ok") " )", FLASH_MEM_SIGNATURE_OFFSET);
+    PrintAndLogEx(SUCCESS, "Writing signature at offset %u ( "_GREEN_("ok") " )", FLASH_MEM_SIGNATURE_OFFSET_P(spi_flash_pages));
     return PM3_SUCCESS;
 }
 
@@ -201,15 +232,21 @@ static int CmdFlashMemLoad(const char *Cmd) {
         PrintAndLogEx(INFO, "treating file as T55xx passwords");
     }
 
+    uint8_t spi_flash_pages = 0;
+    int res = rdv4_get_flash_pages64k(&spi_flash_pages);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to get flash pages count (%x)", res);
+        return res;
+    }
+
     size_t datalen = 0;
     uint32_t keycount = 0;
-    int res = 0;
     uint8_t keylen = 0;
-    uint8_t *data = calloc(FLASH_MEM_MAX_SIZE, sizeof(uint8_t));
+    uint8_t *data = calloc(FLASH_MEM_MAX_SIZE_P(spi_flash_pages), sizeof(uint8_t));
 
     switch (d) {
         case DICTIONARY_MIFARE:
-            offset = DEFAULT_MF_KEYS_OFFSET;
+            offset = DEFAULT_MF_KEYS_OFFSET_P(spi_flash_pages);
             keylen = 6;
             res = loadFileDICTIONARY(filename, data + 2, &datalen, keylen, &keycount);
             if (res || !keycount) {
@@ -227,7 +264,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
             datalen += 2;
             break;
         case DICTIONARY_T55XX:
-            offset = DEFAULT_T55XX_KEYS_OFFSET;
+            offset = DEFAULT_T55XX_KEYS_OFFSET_P(spi_flash_pages);
             keylen = 4;
             res = loadFileDICTIONARY(filename, data + 2, &datalen, keylen, &keycount);
             if (res || !keycount) {
@@ -245,7 +282,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
             datalen += 2;
             break;
         case DICTIONARY_ICLASS:
-            offset = DEFAULT_ICLASS_KEYS_OFFSET;
+            offset = DEFAULT_ICLASS_KEYS_OFFSET_P(spi_flash_pages);
             res = loadFileDICTIONARY(filename, data + 2, &datalen, keylen, &keycount);
             if (res || !keycount) {
                 free(data);
@@ -268,7 +305,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
                 return PM3_EFILE;
             }
 
-            if (datalen > FLASH_MEM_MAX_SIZE) {
+            if (datalen > FLASH_MEM_MAX_SIZE_P(spi_flash_pages)) {
                 PrintAndLogEx(ERR, "error, filesize is larger than available memory");
                 free(data);
                 return PM3_EOVFLOW;
@@ -351,8 +388,15 @@ static int CmdFlashMemDump(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
+    uint8_t spi_flash_pages = 0;
+    int res = rdv4_get_flash_pages64k(&spi_flash_pages);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to get flash pages count (%x)", res);
+        return res;
+    }
+
     int offset = arg_get_int_def(ctx, 1, 0);
-    int len = arg_get_int_def(ctx, 2, FLASH_MEM_MAX_SIZE);
+    int len = arg_get_int_def(ctx, 2, FLASH_MEM_MAX_SIZE_P(spi_flash_pages));
     bool view = arg_get_lit(ctx, 3);
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
@@ -409,15 +453,22 @@ static int CmdFlashMemWipe(const char *Cmd) {
 //    initialwipe = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
-    if (page < 0 || page > 2) {
-        PrintAndLogEx(WARNING, "page must be 0, 1 or 2");
+    uint8_t spi_flash_pages = 0;
+    int res = rdv4_get_flash_pages64k(&spi_flash_pages);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to get flash pages count (%x)", res);
+        return res;
+    }
+
+    if (page < 0 || page > (spi_flash_pages - 2)) {
+        PrintAndLogEx(WARNING, "page must be between 0 and %d", spi_flash_pages - 2);
         return PM3_EINVARG;
     }
 
     clearCommandBuffer();
     SendCommandMIX(CMD_FLASHMEM_WIPE, page, initialwipe, 0, NULL, 0);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 8000)) {
+    if (!WaitForResponseTimeout(CMD_ACK, &resp, 10000)) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply.");
         return PM3_ETIMEOUT;
     }

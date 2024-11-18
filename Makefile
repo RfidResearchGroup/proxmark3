@@ -308,15 +308,15 @@ style:
 	@command -v astyle >/dev/null || ( echo "Please install 'astyle' package first" ; exit 1 )
 	# Remove spaces & tabs at EOL, add LF at EOF if needed on *.c, *.h, *.cpp. *.lua, *.py, *.pl, Makefile, *.v, pm3
 	find . \( -not -path "./cov-int/*" -and -not -path "./fpga*/xst/*" -and \( -name "*.[ch]" -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) -or -name "*.lua" -or -name "*.py" -or -name "*.pl" -or -name "Makefile" -or -name "*.v" -or -name "pm3" \) \) \
-	    -exec perl -pi -e 's/[ \t]+$$//' {} \; \
-	    -exec sh -c "tail -c1 {} | xxd -p | tail -1 | grep -q -v 0a$$" \; \
-	    -exec sh -c "echo >> {}" \;
+		-exec perl -pi -e 's/[ \t]+$$//' {} \; \
+		-exec sh -c "tail -c1 {} | xxd -p | tail -1 | grep -q -v 0a$$" \; \
+		-exec sh -c "echo >> {}" \;
 	# Apply astyle on *.c, *.h, *.cpp
 	find . \( -not -path "./cov-int/*" -and \( \( -name "*.[ch]" -and -not -name "ui_overlays.h" \) -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) \) \) -exec astyle --formatted --mode=c --suffix=none \
-	    --indent=spaces=4 --indent-switches \
-	    --keep-one-line-blocks --max-instatement-indent=60 \
-	    --style=google --pad-oper --unpad-paren --pad-header \
-	    --align-pointer=name {} \;
+		--indent=spaces=4 --indent-switches \
+		--keep-one-line-blocks --max-continuation-indent=60 \
+		--style=google --pad-oper --unpad-paren --pad-header \
+		--align-pointer=name {} \;
 	# Update commands.md
 	[ -x client/proxmark3 ] && client/proxmark3 -m | tr -d '\r' > doc/commands.md
 	# Make sure python3 is installed

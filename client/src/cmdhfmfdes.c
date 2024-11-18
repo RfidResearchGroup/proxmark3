@@ -2005,7 +2005,7 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     }
 
     uint8_t dfname[32] = {0};
-    int dfnamelen = 16;
+    int dfnamelen = 16;  // since max length is 16 chars we don't have to test for 32-1 null termination
     CLIGetStrWithReturn(ctx, 12, dfname, &dfnamelen);
 
     bool selectmf = arg_get_lit(ctx, 13);
@@ -2614,8 +2614,8 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t dfname[250] = {0};
-    int dfnamelen = 16;
+    uint8_t dfname[32] = {0};
+    int dfnamelen = 16;  // since max length is 16 chars we don't have to test for 32-1 null termination
     CLIGetStrWithReturn(ctx, 14, dfname, &dfnamelen);
 
     if (dfnamelen == 0) { // no text DF Name supplied

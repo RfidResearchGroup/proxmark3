@@ -33,7 +33,10 @@
 #ifdef CARDHOPPER_USB
 #define cardhopper_write usb_write
 #define cardhopper_read usb_read_ng
-#define cardhopper_data_available usb_poll_validate_length
+bool cardhopper_data_available(void);
+bool cardhopper_data_available(void) {
+    return usb_read_ng_has_buffered_data() || usb_poll_validate_length();
+}
 #else
 #define cardhopper_write usart_writebuffer_sync
 #define cardhopper_read usart_read_ng
@@ -107,14 +110,22 @@ void RunMod(void) {
             break;
         }
 
-        if (memcmp(magicREAD, modeRx.dat, sizeof(magicREAD)) == 0) {
+        if (modeRx.len == 0) {
+            DbpString(_CYAN_("[@]") " Zero length message");
+            continue;
+        }
+
+        if (modeRx.len == sizeof(magicREAD) && memcmp(magicREAD, modeRx.dat, sizeof(magicREAD)) == 0) {
             DbpString(_CYAN_("[@]") " I am a READER. I talk to a CARD.");
             become_reader();
-        } else if (memcmp(magicCARD, modeRx.dat, sizeof(magicCARD)) == 0) {
+        } else if (modeRx.len == sizeof(magicCARD) && memcmp(magicCARD, modeRx.dat, sizeof(magicCARD)) == 0) {
             DbpString(_CYAN_("[@]") " I am a CARD. I talk to a READER.");
             become_card();
-        } else if (memcmp(magicEND, modeRx.dat, sizeof(magicEND)) == 0) {
+        } else if (modeRx.len == sizeof(magicEND) && memcmp(magicEND, modeRx.dat, sizeof(magicEND)) == 0) {
             break;
+        } else if (modeRx.len == sizeof(magicRSRT) && memcmp(magicRSRT, modeRx.dat, sizeof(magicRSRT)) == 0) {
+            DbpString(_CYAN_("[@]") " Got RESET but already reset.");
+            continue;
         } else {
             DbpString(_YELLOW_("[!]") " unknown mode!");
             Dbhexdump(modeRx.len, modeRx.dat, true);
@@ -142,7 +153,12 @@ static void become_reader(void) {
         WDT_HIT();
 
         read_packet(rx);
-        if (memcmp(magicRSRT, rx->dat, sizeof(magicRSRT)) == 0) break;
+        if (rx->len == sizeof(magicRSRT) && memcmp(magicRSRT, rx->dat, sizeof(magicRSRT)) == 0) break;
+
+        if (BUTTON_PRESS()) {
+            DbpString(_CYAN_("[@]") " Button pressed - Breaking from reader loop");
+            break;
+        }
 
         if (rx->dat[0] == ISO14443A_CMD_RATS && rx->len == 4) {
             // got RATS from reader, reset the card
@@ -206,7 +222,7 @@ static void become_card(void) {
     iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
 
     uint8_t tagType;
-    uint16_t flags;
+    uint16_t flags = 0;
     uint8_t data[PM3_CMD_DATA_SIZE] = { 0 };
     packet_t ats = { 0 };
     prepare_emulation(&tagType, &flags, data, &ats);
@@ -297,7 +313,7 @@ static void prepare_emulation(uint8_t *tagType, uint16_t *flags, uint8_t *data, 
     }
 
     memcpy(data, uidRx.dat, uidRx.len);
-    *flags = (uidRx.len == 10 ? FLAG_10B_UID_IN_DATA : (uidRx.len == 7 ? FLAG_7B_UID_IN_DATA : FLAG_4B_UID_IN_DATA));
+    FLAG_SET_UID_IN_DATA(*flags, uidRx.len);
     DbpString(_CYAN_("[@]") " UID:");
     Dbhexdump(uidRx.len, data, false);
     Dbprintf(_CYAN_("[@]") " Flags: %hu", *flags);
@@ -476,7 +492,7 @@ static void read_packet(packet_t *packet) {
 
         if (packet->len == 0x50 && dataReceived >= sizeof(PacketResponseNGPreamble) && packet->dat[0] == 0x4D && packet->dat[1] == 0x33 && packet->dat[2] == 0x61) {
             // PM3 NG packet magic
-            DbpString(_CYAN_("[@]") " PM3 NG packet recieved - ignoring");
+            DbpString(_CYAN_("[@]") " PM3 NG packet received - ignoring");
 
             // clear any remaining buffered data
             while (cardhopper_data_available()) {

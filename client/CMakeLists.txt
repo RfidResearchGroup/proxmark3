@@ -44,6 +44,9 @@ endif()
 
 find_package(PkgConfig)
 
+# Allow specifying a Python version via cmake option
+set(PYTHON3_PKGCONFIG "python3" CACHE STRING "Python3 package config version suffix")
+
 if (NOT SKIPQT EQUAL 1)
 
     if(APPLE AND EXISTS /usr/local/opt/qt5)
@@ -87,8 +90,8 @@ if (NOT SKIPBT EQUAL 1)
 endif (NOT SKIPBT EQUAL 1)
 
 if (NOT SKIPPYTHON EQUAL 1)
-    pkg_search_module(PYTHON3 QUIET python3)
-    pkg_search_module(PYTHON3EMBED QUIET python3-embed)
+    pkg_search_module(PYTHON3 QUIET ${PYTHON3_PKGCONFIG})
+    pkg_search_module(PYTHON3EMBED QUIET ${PYTHON3_PKGCONFIG}-embed)
 endif (NOT SKIPPYTHON EQUAL 1)
 
 # If cross-compiled, we need to init source and build.
@@ -611,11 +614,11 @@ if (SKIPPYTHON EQUAL 1)
     message(STATUS "Python3 library:   skipped")
 else (SKIPPYTHON EQUAL 1)
     if (PYTHON3EMBED_FOUND)
-        message(STATUS "Python3 library:   Python3 embed found, enabled")
+        message(STATUS "Python3 library:   ${PYTHON3_PKGCONFIG}-embed found, enabled")
     elseif (PYTHON3_FOUND)
-        message(STATUS "Python3 library:   Python3 found, enabled")
+        message(STATUS "Python3 library:   ${PYTHON3_PKGCONFIG} found, enabled")
     else (PYTHON3EMBED_FOUND)
-        message(STATUS "Python3 library:   Python3 not found, disabled")
+        message(STATUS "Python3 library:   ${PYTHON3_PKGCONFIG} not found, disabled")
     endif (PYTHON3EMBED_FOUND)
 endif(SKIPPYTHON EQUAL 1)
 

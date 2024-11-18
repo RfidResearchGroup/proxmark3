@@ -2144,9 +2144,9 @@ static int CmdEMVScan(const char *Cmd) {
 
     uint8_t psenum = (channel == CC_CONTACT) ? 1 : 2;
 
-    uint8_t filename[FILE_PATH_SIZE] = {0};
-    int filenamelen = sizeof(filename) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
-    CLIGetStrWithReturn(ctx, 12, filename, &filenamelen);
+    char filename[FILE_PATH_SIZE] = {0};
+    int fnlen = 0;
+    CLIParamStrToBuf(arg_get_str(ctx, 12), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     CLIParserFree(ctx);
 

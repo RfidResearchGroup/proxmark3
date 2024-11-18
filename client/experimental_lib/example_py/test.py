@@ -11,4 +11,12 @@ for line in p.grabbed_output.split('\n'):
     if "uC:" in line:
         print(line)
 print("Device:", p.name)
-p.console("Rem passthru remark! :coffee:", True)
+p.console("Rem passthru remark! :coffee:", capture=False, quiet=False)
+
+import json
+print("Fetching prefs:")
+p.console("prefs show --json")
+prefs = json.loads(p.grabbed_output)
+print("Save path: ", prefs['file.default.savepath'])
+print("Dump path: ", prefs['file.default.dumppath'])
+print("Trace path:", prefs['file.default.tracepath'])

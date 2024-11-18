@@ -3546,7 +3546,8 @@ SWIGINTERN PyObject *_wrap_pm3_console(PyObject *self, PyObject *args) {
     PyObject *resultobj = 0;
     pm3 *arg1 = (pm3 *) 0 ;
     char *arg2 = (char *) 0 ;
-    bool arg3 = (bool) false ;
+    bool arg3 = (bool) true ;
+    bool arg4 = (bool) true ;
     void *argp1 = 0 ;
     int res1 = 0 ;
     int res2 ;
@@ -3554,11 +3555,13 @@ SWIGINTERN PyObject *_wrap_pm3_console(PyObject *self, PyObject *args) {
     int alloc2 = 0 ;
     bool val3 ;
     int ecode3 = 0 ;
-    PyObject *swig_obj[3] ;
+    bool val4 ;
+    int ecode4 = 0 ;
+    PyObject *swig_obj[4] ;
     int result;
 
     (void)self;
-    if (!SWIG_Python_UnpackTuple(args, "pm3_console", 2, 3, swig_obj)) SWIG_fail;
+    if (!SWIG_Python_UnpackTuple(args, "pm3_console", 2, 4, swig_obj)) SWIG_fail;
     res1 = SWIG_ConvertPtr(swig_obj[0], &argp1, SWIGTYPE_p_pm3, 0 |  0);
     if (!SWIG_IsOK(res1)) {
         SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "pm3_console" "', argument " "1"" of type '" "pm3 *""'");
@@ -3576,7 +3579,14 @@ SWIGINTERN PyObject *_wrap_pm3_console(PyObject *self, PyObject *args) {
         }
         arg3 = (bool)(val3);
     }
-    result = (int)pm3_console(arg1, arg2, arg3);
+    if (swig_obj[3]) {
+        ecode4 = SWIG_AsVal_bool(swig_obj[3], &val4);
+        if (!SWIG_IsOK(ecode4)) {
+            SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "pm3_console" "', argument " "4"" of type '" "bool""'");
+        }
+        arg4 = (bool)(val4);
+    }
+    result = (int)pm3_console(arg1, arg2, arg3, arg4);
     resultobj = SWIG_From_int((int)(result));
     if (alloc2 == SWIG_NEWOBJ) free((char *)buf2);
     return resultobj;

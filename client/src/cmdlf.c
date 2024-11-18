@@ -288,10 +288,12 @@ int CmdLFCommandRead(const char *Cmd) {
     uint16_t period_1 = arg_get_u32_def(ctx, 4, 0);
     uint16_t period_0 = arg_get_u32_def(ctx, 5, 0);
     uint32_t samples = arg_get_u32_def(ctx, 6, 0);
+
     bool verbose = arg_get_lit(ctx, 7);
     bool keep_field_on = arg_get_lit(ctx, 8);
     bool add_crc_ht = arg_get_lit(ctx, 9);
     bool cm = arg_get_lit(ctx, 10);
+
     CLIParserFree(ctx);
 
     if (g_session.pm3_present == false) {
@@ -1124,9 +1126,10 @@ int CmdLFfskSim(const char *Cmd) {
     uint8_t fchigh = arg_get_u32_def(ctx, 3, 0);
     bool separator = arg_get_lit(ctx, 4);
 
-    int raw_len = 64;
-    char raw[64] = {0};
+    char raw[65] = {0};
+    int raw_len = sizeof(raw) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 5, (uint8_t *)raw, &raw_len);
+
     bool verbose = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
@@ -1234,9 +1237,10 @@ int CmdLFaskSim(const char *Cmd) {
     bool use_ar = arg_get_lit(ctx, 5);
     bool separator = arg_get_lit(ctx, 6);
 
-    int raw_len = 64;
-    char raw[64] = {0};
+    char raw[65] = {0};
+    int raw_len = sizeof(raw) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 7, (uint8_t *)raw, &raw_len);
+
     bool verbose = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
@@ -1336,17 +1340,22 @@ int CmdLFpskSim(const char *Cmd) {
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
+
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+
     bool use_psk1 = arg_get_lit(ctx, 1);
     bool use_psk2 = arg_get_lit(ctx, 2);
     bool use_psk3 = arg_get_lit(ctx, 3);
     bool invert = arg_get_lit(ctx, 4);
+
     uint8_t clk = arg_get_u32_def(ctx, 5, 0);
     uint8_t carrier = arg_get_u32_def(ctx, 6, 2);
-    int raw_len = 64;
-    char raw[64] = {0};
+
+    char raw[65] = {0};
+    int raw_len = sizeof(raw) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 7, (uint8_t *)raw, &raw_len);
     bool verbose = arg_get_lit(ctx, 8);
+
     CLIParserFree(ctx);
 
     if ((use_psk1 + use_psk2 + use_psk3) > 1) {
@@ -1588,7 +1597,7 @@ static bool check_chiptype(bool getDeviceData) {
 
         // Hitag S
         if (read_hts_uid() == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("Hitag S / 82xx"));
+            PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("Hitag 1/S / 82xx"));
             PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf hitag hts`") " commands");
             retval = true;
             goto out;

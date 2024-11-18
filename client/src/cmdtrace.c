@@ -1548,6 +1548,7 @@ int CmdTraceList(const char *Cmd) {
             tracepos = printTraceLine(tracepos, gs_traceLen, gs_trace, protocol, show_wait_cycles, mark_crc, prev_EOT, use_us, dicKeys, dicKeysCount);
 
             if (kbd_enter_pressed()) {
+                PrintAndLogEx(INFO, "User interrupted detected. Aborting");
                 break;
             }
         }

@@ -37,9 +37,15 @@
 #ifndef FLASH_MEM_MAX_SIZE
 # define FLASH_MEM_MAX_SIZE     0x40000  // (262144)
 #endif
+#ifndef FLASH_MEM_MAX_SIZE_P
+# define FLASH_MEM_MAX_SIZE_P(p64k) (1024 * 64 * (p64k))
+#endif
 
 #ifndef FLASH_MEM_MAX_4K_SECTOR
 # define FLASH_MEM_MAX_4K_SECTOR   0x3F000
+#endif
+#ifndef FLASH_MEM_MAX_4K_SECTOR_P
+# define FLASH_MEM_MAX_4K_SECTOR_P(p64k)  (FLASH_MEM_MAX_SIZE_P(p64k) - 4096)
 #endif
 
 #ifndef FLASH_MEM_ID_LEN
@@ -54,6 +60,9 @@
 // -1 for historical compatibility with already released Proxmark3 RDV4.0 devices
 # define FLASH_MEM_SIGNATURE_OFFSET (FLASH_MEM_MAX_SIZE - FLASH_MEM_SIGNATURE_LEN - 1)
 #endif
+#ifndef FLASH_MEM_SIGNATURE_OFFSET_P
+# define FLASH_MEM_SIGNATURE_OFFSET_P(p64k) (FLASH_MEM_MAX_SIZE_P(p64k) - FLASH_MEM_SIGNATURE_LEN - 1)
+#endif
 
 #ifndef T55XX_CONFIG_LEN
 # define T55XX_CONFIG_LEN sizeof( t55xx_configurations_t )
@@ -62,12 +71,18 @@
 #ifndef T55XX_CONFIG_OFFSET
 # define T55XX_CONFIG_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x2000)
 #endif
+#ifndef T55XX_CONFIG_OFFSET_P
+# define T55XX_CONFIG_OFFSET_P(p64k) (FLASH_MEM_MAX_4K_SECTOR_P(p64k) - 0x2000)
+#endif
 
 // Reserved space for T55XX PWD = 4 kb
 #ifndef DEFAULT_T55XX_KEYS_OFFSET
 # define DEFAULT_T55XX_KEYS_LEN (0x1000)
 # define DEFAULT_T55XX_KEYS_OFFSET (T55XX_CONFIG_OFFSET - DEFAULT_T55XX_KEYS_LEN)
 # define DEFAULT_T55XX_KEYS_MAX ((DEFAULT_T55XX_KEYS_LEN - 2) / 4)
+#endif
+#ifndef DEFAULT_T55XX_KEYS_OFFSET_P
+# define DEFAULT_T55XX_KEYS_OFFSET_P(p64k) (T55XX_CONFIG_OFFSET_P(p64k) - DEFAULT_T55XX_KEYS_LEN)
 #endif
 
 // Reserved space for iClass keys = 4 kb
@@ -76,12 +91,18 @@
 # define DEFAULT_ICLASS_KEYS_OFFSET (DEFAULT_T55XX_KEYS_OFFSET - DEFAULT_ICLASS_KEYS_LEN)
 # define DEFAULT_ICLASS_KEYS_MAX ((DEFAULT_ICLASS_KEYS_LEN - 2) / 8)
 #endif
+#ifndef DEFAULT_ICLASS_KEYS_OFFSET_P
+# define DEFAULT_ICLASS_KEYS_OFFSET_P(p64k) (DEFAULT_T55XX_KEYS_OFFSET_P(p64k) - DEFAULT_ICLASS_KEYS_LEN)
+#endif
 
 // Reserved space for MIFARE Keys = 12 kb
 #ifndef DEFAULT_MF_KEYS_OFFSET
 # define DEFAULT_MF_KEYS_LEN (0x3000)
 # define DEFAULT_MF_KEYS_OFFSET (DEFAULT_ICLASS_KEYS_OFFSET - DEFAULT_MF_KEYS_LEN)
 # define DEFAULT_MF_KEYS_MAX ((DEFAULT_MF_KEYS_LEN - 2) / 6)
+#endif
+#ifndef DEFAULT_MF_KEYS_OFFSET_P
+# define DEFAULT_MF_KEYS_OFFSET_P(p64k) (DEFAULT_ICLASS_KEYS_OFFSET_P(p64k) - DEFAULT_MF_KEYS_LEN)
 #endif
 
 // RDV40,  validation structure to help identifying that client/firmware is talking with RDV40
@@ -91,9 +112,5 @@ typedef struct {
     uint8_t signature[FLASH_MEM_SIGNATURE_LEN];
 } PACKED rdv40_validation_t;
 
-// SPIFFS current allocates 192KB of the 256KB available.
-#ifndef FLASH_SPIFFS_ALLOCATED_SIZE
-# define FLASH_SPIFFS_ALLOCATED_SIZE (1024 * 192)
-#endif
 
 #endif // __PMFLASH_H

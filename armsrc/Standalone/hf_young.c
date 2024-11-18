@@ -55,7 +55,7 @@ void RunMod(void) {
 
     card_clone_t uids[OPTS];
     iso14a_card_select_t card[OPTS];
-    uint8_t params = (MAGIC_SINGLE | MAGIC_DATAIN);
+    uint8_t params = (MAGIC_SINGLE | MAGIC_WUPC | MAGIC_DATAIN);
 
     LED(selected + 1, 0);
 
@@ -177,14 +177,14 @@ void RunMod(void) {
                             MifareCGetBlock(c->arg[0], c->arg[1], c->d.asBytes);
                             break;
 
-                mfCSetUID provides example logic for UID set workflow:
+                mf_chinese_set_uid provides example logic for UID set workflow:
                     -Read block0 from card in field with MifareCGetBlock()
                     -Configure new values without replacing reserved bytes
                             memcpy(block0, uid, 4); // Copy UID bytes from byte array
                             // Mifare UID BCC
                             block0[4] = block0[0]^block0[1]^block0[2]^block0[3]; // BCC on byte 5
                             Bytes 5-7 are reserved SAK and ATQA for mifare classic
-                    -Use mfCSetBlock(0, block0, oldUID, wantWipe, MAGIC_SINGLE) to write it
+                    -Use mf_chinese_set_block(0, block0, oldUID, wantWipe, MAGIC_SINGLE | MAGIC_WUPC) to write it
             */
             uint8_t oldBlock0[16] = {0}, newBlock0[16] = {0};
             // arg0 = Flags, arg1=blockNo
@@ -236,7 +236,8 @@ void RunMod(void) {
                 int button_pressed = BUTTON_HELD(1000);
                 if (button_pressed == BUTTON_NO_CLICK) {  // No button action, proceed with sim
 
-                    uint16_t flags = FLAG_4B_UID_IN_DATA;
+                    uint16_t flags = 0;
+                    FLAG_SET_UID_IN_DATA(flags, 4);
                     uint8_t data[PM3_CMD_DATA_SIZE] = {0}; // in case there is a read command received we shouldn't break
 
                     memcpy(data, uids[selected].uid, uids[selected].uidlen);
@@ -244,7 +245,7 @@ void RunMod(void) {
                     uint64_t tmpuid = bytes_to_num(uids[selected].uid, uids[selected].uidlen);
 
                     if (uids[selected].uidlen == 7) {
-                        flags = FLAG_7B_UID_IN_DATA;
+                        FLAG_SET_UID_IN_DATA(flags, 7);
                         Dbprintf("Simulating ISO14443a tag with uid: %014" PRIx64 " [Bank: %d]", tmpuid, selected);
                     } else {
                         Dbprintf("Simulating ISO14443a tag with uid: %08" PRIx64 " [Bank: %d]", tmpuid, selected);
@@ -252,25 +253,25 @@ void RunMod(void) {
 
                     if (uids[selected].sak == 0x08 && uids[selected].atqa[0] == 0x04 && uids[selected].atqa[1] == 0) {
                         DbpString("Mifare Classic 1k");
-                        SimulateIso14443aTag(1, flags, data, 0, NULL);
+                        SimulateIso14443aTag(1, flags, data, 0, NULL, 0);
                     } else if (uids[selected].sak == 0x18 && uids[selected].atqa[0] == 0x02 && uids[selected].atqa[1] == 0) {
                         DbpString("Mifare Classic 4k (4b uid)");
-                        SimulateIso14443aTag(8, flags, data, 0, NULL);
+                        SimulateIso14443aTag(8, flags, data, 0, NULL, 0);
                     } else if (uids[selected].sak == 0x08 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0) {
                         DbpString("Mifare Classic 4k (7b uid)");
-                        SimulateIso14443aTag(8, flags, data, 0, NULL);
+                        SimulateIso14443aTag(8, flags, data, 0, NULL, 0);
                     } else if (uids[selected].sak == 0x00 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0) {
                         DbpString("Mifare Ultralight");
-                        SimulateIso14443aTag(2, flags, data, 0, NULL);
+                        SimulateIso14443aTag(2, flags, data, 0, NULL, 0);
                     } else if (uids[selected].sak == 0x20 && uids[selected].atqa[0] == 0x04 && uids[selected].atqa[1] == 0x03) {
                         DbpString("Mifare DESFire");
-                        SimulateIso14443aTag(3, flags, data, 0, NULL);
+                        SimulateIso14443aTag(3, flags, data, 0, NULL, 0);
                     } else if (uids[selected].sak == 0x20 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0x03) {
                         DbpString("Mifare DESFire Ev1/Plus/JCOP");
-                        SimulateIso14443aTag(3, flags, data, 0, NULL);
+                        SimulateIso14443aTag(3, flags, data, 0, NULL, 0);
                     } else {
                         Dbprintf("Unrecognized tag type -- defaulting to Mifare Classic emulation");
-                        SimulateIso14443aTag(1, flags, data, 0, NULL);
+                        SimulateIso14443aTag(1, flags, data, 0, NULL, 0);
                     }
 
                 } else if (button_pressed == BUTTON_SINGLE_CLICK) {

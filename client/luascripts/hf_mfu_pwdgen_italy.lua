@@ -2,7 +2,7 @@ local bin = require('bin')
 local getopt = require('getopt')
 local lib14a = require('read14a')
 local utils =  require('utils')
-local ansicolors  = require('ansicolors')
+local cl  = require('ansicolors')
 
 copyright = ''
 author = "Iceman"
@@ -10,13 +10,15 @@ version = 'v1.0.2'
 desc = [[
 This script calculates mifare Ultralight-EV1 pwd based on uid diversification for an Italian ticketsystem
 Algo not found by me.
-]]
+
+]].. "You can also look at the native pm3 command `" .. cl.yellow .. "hf mfu pwdgen -h" .. cl.reset .. "`\n"
+
 example =[[
      -- if called without, it reads tag uid
-     script run hf_mfu_uidkeycalc_italy
+     script run hf_mfu_pwdgen_italy
 
      --
-     script run hf_mfu_uidkeycalc_italy -u 11223344556677
+     script run hf_mfu_pwdgen_italy -u 11223344556677
 ]]
 usage = [[
 script run hf_mfu_uidkeycalc_italy -h -u <uid> "
@@ -56,11 +58,11 @@ local function help()
     print(author)
     print(version)
     print(desc)
-    print(ansicolors.cyan..'Usage'..ansicolors.reset)
+    print(cl.cyan..'Usage'..cl.reset)
     print(usage)
-    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(cl.cyan..'Arguments'..cl.reset)
     print(arguments)
-    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(cl.cyan..'Example usage'..cl.reset)
     print(example)
 end
 --

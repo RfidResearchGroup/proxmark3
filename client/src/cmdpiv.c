@@ -107,6 +107,7 @@ enum piv_tag_t {
     PIV_TAG_GUID,
     PIV_TAG_CERT,
     PIV_TAG_FASCN,
+    PIV_TAG_INTARRAY,
 };
 
 struct piv_tag {
@@ -145,6 +146,14 @@ static const struct piv_tag_enum PIV_CERT_INFO[] = {
     PIV_ENUM_FINISH,
 };
 
+static const char *PIV_EXTLEN_INFO[] = {
+    "Max command len w/o secure messaging",
+    "Max response len w/o secure messaging",
+    "Max command len w/ secure messaging",
+    "Max response len w/ secure messaging",
+    NULL
+};
+
 static const struct piv_tag piv_tags[] = {
     { 0x00,     "Unknown ???",                                                 PIV_TAG_HEXDUMP,  NULL },
     { 0x01,     "Name",                                                        PIV_TAG_PRINTSTR, NULL },
@@ -179,6 +188,7 @@ static const struct piv_tag piv_tags[] = {
     { 0x79,     "Coexistent tag allocation authority",                         PIV_TAG_HEXDUMP,  NULL },
     { 0x7f21,   "Intermediate CVC",                                            PIV_TAG_HEXDUMP,  NULL },
     { 0x7f60,   "Biometric Information Template",                              PIV_TAG_GENERIC,  NULL },
+    { 0x7f66,   "Extended length buffer information",                          PIV_TAG_INTARRAY, PIV_EXTLEN_INFO },
 
     { 0x80,     "Cryptographic algorithm identifier",                          PIV_TAG_ENUM,     PIV_CRYPTO_ALG },
 
@@ -323,12 +333,12 @@ static void piv_tag_dump_enum(const struct tlv *tlv, const struct piv_tag *tag, 
     const struct piv_tag_enum *values = tag->data;
     for (size_t i = 0; values[i].name != NULL; i++) {
         if (values[i].value == tlv->value[0]) {
-            PrintAndLogEx(NORMAL, " %u - '" _YELLOW_("%s")"'",
+            PrintAndLogEx(NORMAL, " %" PRIu8 " - '" _YELLOW_("%s")"'",
                           tlv->value[0], values[i].name);
             return;
         }
     }
-    PrintAndLogEx(NORMAL, " %u - " _RED_("Unknown??"), tlv->value[0]);
+    PrintAndLogEx(NORMAL, " %" PRIu8 " - " _RED_("Unknown??"), tlv->value[0]);
 }
 
 static void piv_tag_dump_tlv(const struct tlv *tlv, const struct piv_tag *tag, int level) {
@@ -350,6 +360,47 @@ static void piv_tag_dump_tlv(const struct tlv *tlv, const struct piv_tag *tag, i
         left -= sub_tlv.len;
     }
 
+}
+
+static void piv_tag_dump_int_array(const struct tlv *tlv, const struct piv_tag *tag, int level) {
+    int index = 0;
+
+    const char **labels = (const char **) tag->data;
+    const unsigned char *buf =  tlv->value;
+    size_t left = tlv->len;
+    int max_labels = 0;
+
+    while (labels[max_labels]) {
+        max_labels++;
+    }
+
+    while (left) {
+        struct tlv sub_tlv;
+        unsigned long v = 0;
+        if (!tlv_parse_tl(&buf, &left, &sub_tlv)) {
+            PrintAndLogEx(INFO, "%*sInvalid Tag-Len", (level * 4), " ");
+            continue;
+        }
+        sub_tlv.value = buf;
+        if (index < max_labels) {
+            PrintAndLogEx(INFO, "%*s--%2" PRIx32 "[%02z" PRIx32 "] '%s':" NOLF, (level * 4), " ", sub_tlv.tag, sub_tlv.len, labels[index]);
+        } else {
+            PrintAndLogEx(INFO, "%*s--%2" PRIx32 "[%02z" PRIx32 "] 'Unknown item index %" PRId32 "':" NOLF, (level * 4), " ", sub_tlv.tag, sub_tlv.len, index);
+        }
+        if (sub_tlv.len <= sizeof(v)) {
+            // We have enough space to convert to integer
+            for (int i = 0; i < sub_tlv.len; i++) {
+                v = (v << 8) + sub_tlv.value[i];
+            }
+            PrintAndLogEx(NORMAL, _YELLOW_("%" PRIu64) " bytes (" _YELLOW_("%" PRIx64) ")", v, v);
+        } else {
+            // Number is to big. Just print hex value
+            PrintAndLogEx(NORMAL, _YELLOW_("0x%s"), sprint_hex_inrow(sub_tlv.value, sub_tlv.len));
+        }
+        buf += sub_tlv.len;
+        left -= sub_tlv.len;
+        index++;
+    }
 }
 
 static void piv_print_cert(const uint8_t *buf, const size_t len, int level) {
@@ -415,7 +466,7 @@ static void piv_print_fascn(const uint8_t *buf, const size_t len, int level) {
         PrintAndLogEx(NORMAL, "%s" NOLF, encoded[tmp & 0x1f]);
     }
     uint8_t lrc = buf[24] & 0x1f;
-    PrintAndLogEx(NORMAL, " LRC=[" _YELLOW_("%02x") "]", lrc);
+    PrintAndLogEx(NORMAL, " LRC=[" _YELLOW_("%02" PRIx8) "]", lrc);
 }
 
 static bool piv_tag_dump(const struct tlv *tlv, int level) {
@@ -426,7 +477,7 @@ static bool piv_tag_dump(const struct tlv *tlv, int level) {
 
     const struct piv_tag *tag = piv_get_tag(tlv);
 
-    PrintAndLogEx(INFO, "%*s--%2x[%02zx] '%s':" NOLF, (level * 4), " ", tlv->tag, tlv->len, tag->name);
+    PrintAndLogEx(INFO, "%*s--%2" PRIu32 "[%02z" PRIx32 "] '%s':" NOLF, (level * 4), " ", tlv->tag, tlv->len, tag->name);
 
     switch (tag->type) {
         case PIV_TAG_GENERIC:
@@ -440,7 +491,7 @@ static bool piv_tag_dump(const struct tlv *tlv, int level) {
             PrintAndLogEx(NORMAL, " '" _YELLOW_("%s")"'", sprint_hex_inrow(tlv->value, tlv->len));
             break;
         case PIV_TAG_NUMERIC:
-            PrintAndLogEx(NORMAL, " " _YELLOW_("%lu"), piv_value_numeric(tlv, 0, tlv->len * 2));
+            PrintAndLogEx(NORMAL, " " _YELLOW_("%" PRIu64), piv_value_numeric(tlv, 0, tlv->len * 2));
             break;
         case PIV_TAG_YYYYMMDD:
             piv_tag_dump_yyyymmdd(tlv, tag, level);
@@ -454,7 +505,7 @@ static bool piv_tag_dump(const struct tlv *tlv, int level) {
             break;
         case PIV_TAG_PRINTSTR:
             PrintAndLogEx(NORMAL, " '" NOLF);
-            for (size_t i = 0; i < tlv->len; i++) {
+            for (size_t i = 0; i < tlv->len && tlv->value[i]; i++) {
                 PrintAndLogEx(NORMAL, _YELLOW_("%c") NOLF, tlv->value[i]);
             }
             PrintAndLogEx(NORMAL, "'");
@@ -465,9 +516,9 @@ static bool piv_tag_dump(const struct tlv *tlv, int level) {
             } else {
                 struct guid guid = {0};
                 parse_guid(tlv->value, &guid);
-                PrintAndLogEx(NORMAL, " " _YELLOW_("{%08x-%04x-%04x-") NOLF, guid.part1, guid.part2, guid.part3);
+                PrintAndLogEx(NORMAL, " " _YELLOW_("{%08" PRIx32 "-%04" PRIx16 "-%04" PRIx16 "-") NOLF, guid.part1, guid.part2, guid.part3);
                 for (size_t i = 0; i < 8; i++) {
-                    PrintAndLogEx(NORMAL, _YELLOW_("%02x") NOLF, guid.data[i]);
+                    PrintAndLogEx(NORMAL, _YELLOW_("%02" PRIx8) NOLF, guid.data[i]);
                 }
                 PrintAndLogEx(NORMAL, _YELLOW_("}"));
             }
@@ -480,6 +531,9 @@ static bool piv_tag_dump(const struct tlv *tlv, int level) {
             if (tlv->len == 25) {
                 piv_print_fascn(tlv->value, tlv->len, level + 2);
             }
+            break;
+        case PIV_TAG_INTARRAY:
+            piv_tag_dump_int_array(tlv, tag, level + 2);
             break;
     };
 
@@ -627,7 +681,7 @@ static int PivGetDataByCidAndPrint(Iso7816CommandChannel channel, const struct p
                 break;
             default:
                 if (verbose == true) {
-                    PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+                    PrintAndLogEx(INFO, "APDU response status: %04" PRIx16 " - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
                 }
                 break;
         }
@@ -655,7 +709,7 @@ static int PivAuthenticateSign(Iso7816CommandChannel channel, uint8_t alg_id, ui
     const size_t MAX_NONCE_LEN = 0x7a;
     if (nonce_len > MAX_NONCE_LEN) {
         if (verbose == true) {
-            PrintAndLogEx(WARNING, "Nonce cannot exceed %zu bytes. Got %zu bytes.", MAX_NONCE_LEN, nonce_len);
+            PrintAndLogEx(WARNING, "Nonce cannot exceed %" PRIu64 " bytes. Got %" PRIu64 " bytes.", MAX_NONCE_LEN, nonce_len);
         }
         return PM3_EINVARG;
     }
@@ -671,12 +725,12 @@ static int PivAuthenticateSign(Iso7816CommandChannel channel, uint8_t alg_id, ui
     size_t len = 0;
     int res = Iso7816ExchangeEx(channel, false, true, apdu, false, 0, buf, APDU_RES_LEN, &len, &sw);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "Sending APDU failed with code %d", res);
+        PrintAndLogEx(FAILED, "Sending APDU failed with code %" PRId32, res);
         return res;
     }
     if (sw != ISO7816_OK) {
         if (verbose == true) {
-            PrintAndLogEx(INFO, "Unexpected APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+            PrintAndLogEx(INFO, "Unexpected APDU response status: %04" PRIx16 " - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         }
         return PM3_EFAILED;
     }
@@ -697,7 +751,7 @@ static int PivSelect(Iso7816CommandChannel channel, bool activateField, bool lea
 
     int res = Iso7816Select(channel, activateField, leaveFieldOn, applet, appletLen, buf, sizeof(buf), &len, &sw);
     if ((sw != 0) && (silent == false)) {
-        PrintAndLogEx(INFO, "APDU response status: %04x - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        PrintAndLogEx(INFO, "APDU response status: %04" PRIx16 " - %s", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
     }
 
     if (res != PM3_SUCCESS || sw != ISO7816_OK) {
@@ -804,7 +858,7 @@ static int CmdPIVGetData(const char *Cmd) {
     CLIParserFree(ctx);
 
     if ((tag_len < 1) || (tag_len > 3)) {
-        PrintAndLogEx(WARNING, "Tag should be between 1 and 3 bytes. Got %i", tag_len);
+        PrintAndLogEx(WARNING, "Tag should be between 1 and 3 bytes. Got %" PRIi32, tag_len);
         return PM3_EINVARG;
     }
 
@@ -843,7 +897,7 @@ static int CmdPIVAuthenticateSign(const char *Cmd) {
         arg_str0(NULL,  "aid", "<hex>", "Applet ID to select. By default A0000003080000100 will be used"),
         arg_str1(NULL,  "nonce", "<hex>", "Nonce to sign."),
         arg_int0(NULL,  "slot", "<dec id>", "Slot number. Default will be 0x9E (card auth cert)."),
-        arg_int0(NULL,  "alg", "<dec>", "Algorithm to use to sign. Example values: 06=RSA-1024, 07=RSA-2048, 11=ECC-P256 (default), 14=ECC-P384"),
+        arg_int0(NULL,  "alg", "<dec>", "Algorithm to use to sign. Example values: 06=RSA-1024, 07=RSA-2048, 17=ECC-P256 (default), 20=ECC-P384"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

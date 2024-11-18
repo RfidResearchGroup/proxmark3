@@ -74,7 +74,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`analyse help           `|Y       |`This help`
-|`analyse lcr            `|Y       |`Generate final byte for XOR LRC`
+|`analyse lrc            `|Y       |`Generate final byte for XOR LRC`
 |`analyse crc            `|Y       |`Stub method for CRC evaluations`
 |`analyse chksum         `|Y       |`Checksum with adding, masking and one's complement`
 |`analyse dates          `|Y       |`Look for datestamps in a given array of bytes`
@@ -382,6 +382,7 @@ Check column "offline" for their availability.
 |`hf gallagher delete    `|N       |`Delete Gallagher credentials from a DESFire card`
 |`hf gallagher diversifykey`|Y       |`Diversify Gallagher key`
 |`hf gallagher decode    `|Y       |`Decode Gallagher credential block`
+|`hf gallagher encode    `|Y       |`Encode Gallagher credential block`
 
 
 ### hf iclass
@@ -412,7 +413,7 @@ Check column "offline" for their availability.
 |`hf iclass esave        `|N       |`Save emulator memory to file`
 |`hf iclass esetblk      `|N       |`Set emulator memory block data`
 |`hf iclass eview        `|N       |`View emulator memory`
-|`hf iclass configcard   `|N       |`Reader configuration card`
+|`hf iclass configcard   `|N       |`Reader configuration card generator`
 |`hf iclass calcnewkey   `|Y       |`Calc diversified keys (blocks 3 & 4) to write new keys`
 |`hf iclass encode       `|Y       |`Encode binary wiegand to block 7`
 |`hf iclass encrypt      `|Y       |`Encrypt given block data`

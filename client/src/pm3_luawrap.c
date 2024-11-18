@@ -2768,13 +2768,15 @@ static int _wrap_pm3_console(lua_State *L) {
     int SWIG_arg = 0;
     pm3 *arg1 = (pm3 *) 0 ;
     char *arg2 = (char *) 0 ;
-    bool arg3 = (bool) false ;
+    bool arg3 = (bool) true ;
+    bool arg4 = (bool) true ;
     int result;
 
-    SWIG_check_num_args("pm3::console", 2, 3)
+    SWIG_check_num_args("pm3::console", 2, 4)
     if (!SWIG_isptrtype(L, 1)) SWIG_fail_arg("pm3::console", 1, "pm3 *");
     if (!SWIG_lua_isnilstring(L, 2)) SWIG_fail_arg("pm3::console", 2, "char *");
     if (lua_gettop(L) >= 3 && !lua_isboolean(L, 3)) SWIG_fail_arg("pm3::console", 3, "bool");
+    if (lua_gettop(L) >= 4 && !lua_isboolean(L, 4)) SWIG_fail_arg("pm3::console", 4, "bool");
 
     if (!SWIG_IsOK(SWIG_ConvertPtr(L, 1, (void **)&arg1, SWIGTYPE_p_pm3, 0))) {
         SWIG_fail_ptr("pm3_console", 1, SWIGTYPE_p_pm3);
@@ -2784,7 +2786,10 @@ static int _wrap_pm3_console(lua_State *L) {
     if (lua_gettop(L) >= 3) {
         arg3 = (lua_toboolean(L, 3) != 0);
     }
-    result = (int)pm3_console(arg1, arg2, arg3);
+    if (lua_gettop(L) >= 4) {
+        arg4 = (lua_toboolean(L, 4) != 0);
+    }
+    result = (int)pm3_console(arg1, arg2, arg3, arg4);
     lua_pushnumber(L, (lua_Number) result);
     SWIG_arg++;
     return SWIG_arg;

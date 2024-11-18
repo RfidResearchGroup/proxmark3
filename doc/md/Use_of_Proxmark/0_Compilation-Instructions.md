@@ -10,6 +10,7 @@
     - [Compile for generic Proxmark3 platforms](#compile-for-generic-proxmark3-platforms)
   - [Get the latest commits](#get-the-latest-commits)
   - [Clean and compile everything](#clean-and-compile-everything)
+    - [if there are different Python 3 packages installed](#if-there-are-different-python-3-packages-installed)
     - [if you got an error](#if-you-got-an-error)
   - [Install](#install)
   - [Flash the BOOTROM & FULLIMAGE](#flash-the-bootrom--fullimage)
@@ -54,6 +55,15 @@ git pull
 
 ```sh
 make clean && make -j
+```
+
+### if there are different Python 3 packages installed
+^[Top](#top)
+
+It is possible to point to a different Python 3 package. For example, to build against Python 3.11:
+
+```sh
+make clean && make -j PYTHON3_PKGCONFIG=python-3.11
 ```
 
 ### if you got an error

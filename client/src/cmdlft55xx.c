@@ -1952,7 +1952,7 @@ static int CmdT55xxDangerousRaw(const char *Cmd) {
     ng.bitlen = 0;
     memset(ng.data, 0x00, sizeof(ng.data));
 
-    uint8_t bin[128] = {0};
+    uint8_t bin[129] = {0};
     int bin_len = sizeof(bin) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 1, bin, &bin_len);
 

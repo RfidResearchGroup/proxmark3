@@ -97,16 +97,16 @@
         },
         "analyse help": {
             "command": "analyse help",
-            "description": "help This help lcr Generate final byte for XOR LRC crc Stub method for CRC evaluations chksum Checksum with adding, masking and one's complement dates Look for datestamps in a given array of bytes lfsr LFSR tests a num bits test nuid create NUID from 7byte UID demodbuff Load binary string to DemodBuffer freq Calc wave lengths foo muxer units convert ETU <> US <> SSP_CLK (3.39MHz) --------------------------------------------------------------------------------------- analyse lcr available offline: yes Specifying the bytes of a UID with a known LRC will find the last byte value needed to generate that LRC with a rolling XOR. All bytes should be specified in HEX.",
+            "description": "help This help lrc Generate final byte for XOR LRC crc Stub method for CRC evaluations chksum Checksum with adding, masking and one's complement dates Look for datestamps in a given array of bytes lfsr LFSR tests a num bits test nuid create NUID from 7byte UID demodbuff Load binary string to DemodBuffer freq Calc wave lengths foo muxer units convert ETU <> US <> SSP_CLK (3.39MHz) --------------------------------------------------------------------------------------- analyse lrc available offline: yes Specifying the bytes of a UID with a known LRC will find the last byte value needed to generate that LRC with a rolling XOR. All bytes should be specified in HEX.",
             "notes": [
-                "analyse lcr -d 04008064BA -> Target (BA) requires final LRC XOR byte value: 5A"
+                "analyse lrc -d 04008064BA -> Target (BA) requires final LRC XOR byte value: 5A"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-d, --data <hex> bytes to calc missing XOR in a LCR"
+                "-d, --data <hex> bytes to calc missing XOR in a LRC"
             ],
-            "usage": "analyse lcr [-h] -d <hex>"
+            "usage": "analyse lrc [-h] -d <hex>"
         },
         "analyse lfsr": {
             "command": "analyse lfsr",
@@ -380,15 +380,15 @@
         },
         "data envelope": {
             "command": "data envelope",
-            "description": "Create an square envelop of the samples",
+            "description": "Create an square envelope of the samples",
             "notes": [
-                "data envelop"
+                "data envelope"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help"
             ],
-            "usage": "data envelop [-h]"
+            "usage": "data envelope [-h]"
         },
         "data fsktonrz": {
             "command": "data fsktonrz",
@@ -582,7 +582,7 @@
             "description": "Function takes a decimal or hexdecimal number and print it in decimal/hex/binary Will print message if number is a prime number",
             "notes": [
                 "data num --dec 2023",
-                "data num --hex 0x1000"
+                "data num --hex 2A"
             ],
             "offline": true,
             "options": [
@@ -3141,9 +3141,25 @@
             ],
             "usage": "hf gallagher diversify [-h] --aid <hex> [--keynum <dec>] [--uid <hex>] [--sitekey <hex>] [--apdu]"
         },
+        "hf gallagher encode": {
+            "command": "hf gallagher encode",
+            "description": "Encode a Gallagher credential block Credential block can be specified with or without the bitwise inverse.",
+            "notes": [
+                "hf gallagher encode --rc 1 --fc 22153 --cn 1253518 --il 1"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-r, --rc <dec> Region code. 4 bits max",
+                "-f, --fc <dec> Facility code. 2 bytes max",
+                "-c, --cn <dec> Card number. 3 bytes max",
+                "-i, --il <dec> Issue level. 4 bits max"
+            ],
+            "usage": "hf gallagher encode [-h] -r <dec> -f <dec> -c <dec> -i <dec>"
+        },
         "hf gallagher help": {
             "command": "hf gallagher help",
-            "description": "help This help diversifykey Diversify Gallagher key decode Decode Gallagher credential block --------------------------------------------------------------------------------------- hf gallagher reader available offline: no Read a Gallagher DESFire tag from the Card Application Directory, CAD Specify site key is required if using non-default key",
+            "description": "help This help diversifykey Diversify Gallagher key decode Decode Gallagher credential block encode Encode Gallagher credential block --------------------------------------------------------------------------------------- hf gallagher reader available offline: no Read a Gallagher DESFire tag from the Card Application Directory, CAD Specify site key is required if using non-default key",
             "notes": [
                 "hf gallagher reader -@ -> continuous reader mode",
                 "hf gallagher reader --aid 2081f4 --sitekey 00112233445566778899aabbccddeeff -> skip CAD"
@@ -3226,23 +3242,20 @@
             "command": "hf iclass configcard",
             "description": "Manage reader configuration card via Cardhelper or internal database, The generated config card will be uploaded to device emulator memory. You can start simulating `hf iclass sim -t 3` or use the emul commands",
             "notes": [
-                "hf iclass configcard -l -> download config card settings from cardhelper",
                 "hf iclass configcard -p -> print all config cards in the database",
-                "hf iclass configcard --ci 1 -> view config card setting in slot 1",
-                "hf iclass configcard -g --ci 0 -> generate config file from slot 0"
+                "hf iclass configcard --g 0 -> generate config file with option 0"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--ci <dec> use config slot at index",
+                "--g <dec> use config option",
                 "--ki <dec> Card Key - index to select key from memory 'hf iclass managekeys'",
-                "--krki <dec> Elite Keyroll Key - index to select key from memory 'hf iclass managekeys'",
+                "--eki <dec> Elite Key - index to select key from memory 'hf iclass managekeys'",
+                "--mrki <dec> Standard Master Key - index to select key from memory 'hf iclass managekeys'",
                 "--elite Use elite key for the the Card Key ki",
-                "-g generate card dump file",
-                "-l load available cards",
                 "-p print available cards"
             ],
-            "usage": "hf iclass configcard [-hglp] [--ci <dec>] [--ki <dec>] [--krki <dec>] [--elite]"
+            "usage": "hf iclass configcard [-hp] [--g <dec>] [--ki <dec>] [--eki <dec>] [--mrki <dec>] [--elite]"
         },
         "hf iclass creditepurse": {
             "command": "hf iclass creditepurse",
@@ -4367,9 +4380,10 @@
             "options": [
                 "-h, --help This help",
                 "-b, --blk <dec> block number",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "--gdm use gdm alt (20/23) magic wakeup"
             ],
-            "usage": "hf mf cgetblk [-hv] -b <dec>"
+            "usage": "hf mf cgetblk [-hv] -b <dec> [--gdm]"
         },
         "hf mf cgetsc": {
             "command": "hf mf cgetsc",
@@ -4381,9 +4395,10 @@
             "options": [
                 "-h, --help This help",
                 "-s, --sec <dec> sector number",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "--gdm use gdm alt (20/23) magic wakeup"
             ],
-            "usage": "hf mf cgetsc [-hv] -s <dec>"
+            "usage": "hf mf cgetsc [-hv] -s <dec> [--gdm]"
         },
         "hf mf chk": {
             "command": "hf mf chk",
@@ -4431,9 +4446,10 @@
                 "--1k MIFARE Classic 1k / S50 (def)",
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
-                "--emu from emulator memory"
+                "--emu from emulator memory",
+                "--gdm use gdm alt (20/23) magic wakeup"
             ],
-            "usage": "hf mf cload [-h] [-f <fn>] [--mini] [--1k] [--2k] [--4k] [--emu]"
+            "usage": "hf mf cload [-h] [-f <fn>] [--mini] [--1k] [--2k] [--4k] [--emu] [--gdm]"
         },
         "hf mf csave": {
             "command": "hf mf csave",
@@ -4450,9 +4466,10 @@
                 "--1k MIFARE Classic 1k / S50 (def)",
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
-                "--emu to emulator memory"
+                "--emu to emulator memory",
+                "--gdm to emulator memory"
             ],
-            "usage": "hf mf csave [-h] [-f <fn>] [--mini] [--1k] [--2k] [--4k] [--emu]"
+            "usage": "hf mf csave [-h] [-f <fn>] [--mini] [--1k] [--2k] [--4k] [--emu] [--gdm]"
         },
         "hf mf csetblk": {
             "command": "hf mf csetblk",
@@ -4465,9 +4482,10 @@
                 "-h, --help This help",
                 "-b, --blk <dec> block number",
                 "-d, --data <hex> bytes to write, 16 hex bytes",
-                "-w, --wipe wipes card with backdoor cmd before writing"
+                "-w, --wipe wipes card with backdoor cmd before writing",
+                "--gdm use gdm alt (20/23) magic wakeup"
             ],
-            "usage": "hf mf csetblk [-hw] -b <dec> [-d <hex>]"
+            "usage": "hf mf csetblk [-hw] -b <dec> [-d <hex>] [--gdm]"
         },
         "hf mf csetuid": {
             "command": "hf mf csetuid",
@@ -4482,9 +4500,10 @@
                 "-w, --wipe wipes card with backdoor cmd`",
                 "-u, --uid <hex> UID, 4/7 hex bytes",
                 "-a, --atqa <hex> ATQA, 2 hex bytes",
-                "-s, --sak <hex> SAK, 1 hex byte"
+                "-s, --sak <hex> SAK, 1 hex byte",
+                "--gdm use gdm alt (20/23) magic wakeup"
             ],
-            "usage": "hf mf csetuid [-hw] [-u <hex>] [-a <hex>] [-s <hex>]"
+            "usage": "hf mf csetuid [-hw] [-u <hex>] [-a <hex>] [-s <hex>] [--gdm]"
         },
         "hf mf cview": {
             "command": "hf mf cview",
@@ -4500,9 +4519,10 @@
                 "--1k MIFARE Classic 1k / S50 (def)",
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "--gdm use gdm alt (20/23) magic wakeup"
             ],
-            "usage": "hf mf cview [-hv] [--mini] [--1k] [--2k] [--4k]"
+            "usage": "hf mf cview [-hv] [--mini] [--1k] [--2k] [--4k] [--gdm]"
         },
         "hf mf cwipe": {
             "command": "hf mf cwipe",
@@ -4516,9 +4536,10 @@
                 "-h, --help This help",
                 "-u, --uid <hex> UID, 4 hex bytes",
                 "-a, --atqa <hex> ATQA, 2 hex bytes",
-                "-s, --sak <hex> SAK, 1 hex byte"
+                "-s, --sak <hex> SAK, 1 hex byte",
+                "--gdm use gdm alt (20/23) magic wakeup"
             ],
-            "usage": "hf mf cwipe [-h] [-u <hex>] [-a <hex>] [-s <hex>]"
+            "usage": "hf mf cwipe [-h] [-u <hex>] [-a <hex>] [-s <hex>] [--gdm]"
         },
         "hf mf darkside": {
             "command": "hf mf darkside",
@@ -5151,9 +5172,10 @@
                 "-b, --keyb use key B for access printing sectors (by default: key A)",
                 "--be (optional, BigEndian)",
                 "--dch decode Card Holder information",
-                "-f, --file <fn> load dump file and decode MAD"
+                "-f, --file <fn> load dump file and decode MAD",
+                "--force force decode (skip key check)"
             ],
-            "usage": "hf mf mad [-hvb] [--aid <hex>] [-k <hex>] [--be] [--dch] [-f <fn>]"
+            "usage": "hf mf mad [-hvb] [--aid <hex>] [-k <hex>] [--be] [--dch] [-f <fn>] [--force]"
         },
         "hf mf nack": {
             "command": "hf mf nack",
@@ -5383,17 +5405,18 @@
                 "--1k MIFARE Classic 1k / S50",
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
-                "--atqa <hex> Provide explicit ATQA (2 bytes, overrides option t)",
-                "--sak <hex> Provide explicit SAK (1 bytes, overrides option t)",
+                "--atqa <hex> Provide explicit ATQA (2 bytes)",
+                "--sak <hex> Provide explicit SAK (1 bytes)",
                 "-n, --num <dec> Automatically exit simulation after <numreads> blocks have been read by reader. 0 = infinite",
                 "-i, --interactive Console will not be returned until simulation finishes or is aborted",
                 "-x Performs the 'reader attack', nr/ar attack against a reader.",
                 "-y Performs the nested 'reader attack'. This requires preloading nt & nt_enc in emulator memory. Implies -x.",
                 "-e, --emukeys Fill simulator keys from found keys. Requires -x or -y. Implies -i. Simulation will restart automatically.",
-                "-v, --verbose verbose output",
-                "--cve trigger CVE 2021_0430"
+                "--allowkeyb Allow key B even if readable",
+                "-v, --verbose Verbose output",
+                "--cve Trigger CVE 2021_0430"
             ],
-            "usage": "hf mf sim [-hixyev] [-u <hex>] [--mini] [--1k] [--2k] [--4k] [--atqa <hex>] [--sak <hex>] [-n <dec> ] [--cve]"
+            "usage": "hf mf sim [-hixyev] [-u <hex>] [--mini] [--1k] [--2k] [--4k] [--atqa <hex>] [--sak <hex>] [-n <dec> ] [--allowkeyb] [--cve]"
         },
         "hf mf staticnested": {
             "command": "hf mf staticnested",
@@ -9813,10 +9836,11 @@
                 "--nrar <hex> nonce / answer writer, 8 hex bytes",
                 "--crypto crypto mode",
                 "-k, --key <hex> pwd or key, 4 or 6 hex bytes",
+                "-m, --mode <dec> response protocol mode. 0 (Standard 00110), 1 (Advanced 11000), 2 (Advanced 11001), 3 (Fast Advanced 11010) (def: 3)",
                 "-p, --page <dec> page address to read from",
-                "-c, --count <dec> how many pages to read. '0' reads all pages up to the end page (default: 1)"
+                "-c, --count <dec> how many pages to read. '0' reads all pages up to the end page (def: 1)"
             ],
-            "usage": "lf hitag hts rdbl [-h8] [--nrar <hex>] [--crypto] [-k <hex>] [-p <dec>] [-c <dec>]"
+            "usage": "lf hitag hts rdbl [-h8] [--nrar <hex>] [--crypto] [-k <hex>] [-m <dec>] [-p <dec>] [-c <dec>]"
         },
         "lf hitag hts reader": {
             "command": "lf hitag hts reader",
@@ -9863,10 +9887,11 @@
                 "--nrar <hex> nonce / answer writer, 8 hex bytes",
                 "--crypto crypto mode",
                 "-k, --key <hex> pwd or key, 4 or 6 hex bytes",
+                "-m, --mode <dec> response protocol mode. 0 (Standard 00110), 1 (Advanced 11000), 2 (Advanced 11001), 3 (Fast Advanced 11010) (def: 3)",
                 "-p, --page <dec> page address to write to",
                 "-d, --data <hex> data, 4 hex bytes"
             ],
-            "usage": "lf hitag hts wrbl [-h8] [--nrar <hex>] [--crypto] [-k <hex>] -p <dec> -d <hex>"
+            "usage": "lf hitag hts wrbl [-h8] [--nrar <hex>] [--crypto] [-k <hex>] [-m <dec>] -p <dec> -d <hex>"
         },
         "lf hitag info": {
             "command": "lf hitag info",
@@ -12217,7 +12242,7 @@
                 "--aid <hex> Applet ID to select. By default A0000003080000100 will be used",
                 "--nonce <hex> Nonce to sign.",
                 "--slot <dec id> Slot number. Default will be 0x9E (card auth cert).",
-                "--alg <dec> Algorithm to use to sign. Example values: 06=RSA-1024, 07=RSA-2048, 11=ECC-P256 (default), 14=ECC-P384"
+                "--alg <dec> Algorithm to use to sign. Example values: 06=RSA-1024, 07=RSA-2048, 17=ECC-P256 (default), 20=ECC-P384"
             ],
             "usage": "piv sign [-hskatw] [--aid <hex>] --nonce <hex> [--slot <dec id>] [--alg <dec>]"
         },
@@ -12976,8 +13001,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 748,
+        "commands_extracted": 749,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-10-18T15:36:53"
+        "extracted_on": "2024-11-15T13:26:34"
     }
 }

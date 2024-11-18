@@ -1225,7 +1225,7 @@ static int CmdHF14Binfo(const char *Cmd) {
 // #define ISO14443B_READ_BLK     0x08
 // #define ISO14443B_WRITE_BLK    0x09
 
-static int read_sr_block(uint8_t blockno, uint8_t *out) {
+static int read_sr_block(uint8_t blockno, uint8_t *out, uint16_t out_len) {
     struct {
         uint8_t blockno;
     } PACKED payload;
@@ -1240,7 +1240,7 @@ static int read_sr_block(uint8_t blockno, uint8_t *out) {
     }
 
     if (resp.status == PM3_SUCCESS && out) {
-        memcpy(out, resp.data.asBytes, resp.length);
+        memcpy(out, resp.data.asBytes, MIN(out_len, resp.length));
     }
     return resp.status;
 }
@@ -1411,7 +1411,7 @@ static bool HF14B_ask_ct_reader(bool verbose) {
     return false;
 }
 
-static bool HF14B_picopass_reader(bool verbose) {
+bool HF14B_picopass_reader(bool verbose, bool info) {
 
     iso14b_raw_cmd_t packet = {
         .flags = (ISO14B_CONNECT | ISO14B_SELECT_PICOPASS | ISO14B_DISCONNECT),
@@ -1437,8 +1437,10 @@ static bool HF14B_picopass_reader(bool verbose) {
                 return false;
             }
             memcpy(card, resp.data.asBytes, sizeof(picopass_hdr_t));
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(SUCCESS, "iCLASS / Picopass CSN: " _GREEN_("%s"), sprint_hex(card->csn, sizeof(card->csn)));
+            if (info) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(SUCCESS, "iCLASS / Picopass CSN: " _GREEN_("%s"), sprint_hex(card->csn, sizeof(card->csn)));
+            }
             free(card);
             return true;
         }
@@ -1581,8 +1583,8 @@ static int CmdHF14BSriRdBl(const char *Cmd) {
         uint8_t blocks = (cardtype == 1) ? 0x7F : 0x0F;
     */
 
-    uint8_t out[4] = {0};
-    int status = read_sr_block(blockno, out);
+    uint8_t out[ST25TB_SR_BLOCK_SIZE] = {0};
+    int status = read_sr_block(blockno, out, sizeof(out));
     if (status == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "block %02u... " _GREEN_("%s") " | " _GREEN_("%s"), blockno, sprint_hex(out, sizeof(out)), sprint_ascii(out, sizeof(out)));
     }
@@ -1626,7 +1628,7 @@ static int CmdHF14BSriWrbl(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     int blockno = arg_get_int_def(ctx, 1, -1);
     int dlen = 0;
-    uint8_t data[4] = {0, 0, 0, 0};
+    uint8_t data[ST25TB_SR_BLOCK_SIZE] = {0, 0, 0, 0};
     int res = CLIParamHexToBuf(arg_get_str(ctx, 2), data, sizeof(data), &dlen);
     if (res) {
         CLIParserFree(ctx);
@@ -1694,8 +1696,8 @@ static int CmdHF14BSriWrbl(const char *Cmd) {
     }
 
     // verify
-    uint8_t out[4] = {0};
-    status = read_sr_block(blockno, out);
+    uint8_t out[ST25TB_SR_BLOCK_SIZE] = {0};
+    status = read_sr_block(blockno, out, sizeof(out));
     if (status == PM3_SUCCESS) {
         if (memcmp(data, out, 4) == 0) {
             PrintAndLogEx(SUCCESS, "SRx write block ( " _GREEN_("ok") " )");
@@ -1972,7 +1974,7 @@ static int CmdHF14BRestore(const char *Cmd) {
 
         // verify
         uint8_t out[ST25TB_SR_BLOCK_SIZE] = {0};
-        status = read_sr_block(blockno, out);
+        status = read_sr_block(blockno, out, sizeof(out));
         if (status == PM3_SUCCESS) {
             if (memcmp(data + blockno * ST25TB_SR_BLOCK_SIZE, out, ST25TB_SR_BLOCK_SIZE) == 0) {
                 printf("\33[2K\r");
@@ -3034,6 +3036,7 @@ int infoHF14B(bool verbose, bool do_aid_search) {
 // get and print general info about all known 14b chips
 int readHF14B(bool loop, bool verbose, bool read_plot) {
     bool found = false;
+    bool info = true;
     int res = PM3_SUCCESS;
     do {
         found = false;
@@ -3049,7 +3052,7 @@ int readHF14B(bool loop, bool verbose, bool read_plot) {
             goto plot;
 
         // Picopass
-        found |= HF14B_picopass_reader(verbose);
+        found |= HF14B_picopass_reader(verbose, info);
         if (found)
             goto plot;
 

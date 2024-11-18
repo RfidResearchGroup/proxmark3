@@ -145,6 +145,37 @@ uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len);
 void Flashmem_print_status(void);
 void Flashmem_print_info(void);
 
+typedef struct spi_flash_s {
+    const uint32_t identifier;
+    const uint8_t  pages64;
+    const char    *desc;
+} spi_flash_t;
+
+const static spi_flash_t SpiFlashTable[] = {
+    // Manufacturer: Puya
+    { 0x856015, 32, "P25Q16H" },
+    // Manufacturer: Winbond
+    { 0xEF3012,  4, "W25X20BV" },
+    { 0xEF3013,  8, "W25X40BV" },
+
+    { 0xEF4013,  8, "W25Q40BV" },
+    { 0xEF4014, 16, "W25Q80BV" },
+    { 0xEF4015, 32, "W25Q16BV" },
+    { 0xEF4016, 64, "W25Q32BV" },
+
+    { 0xEF7022,  4, "W25Q02JV" },
+    // (default) last record
+    { 0x000000,  4, "Unknown!" }
+};
+
+#ifndef ARRAYLEN
+# define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
+#endif
+
+extern uint8_t spi_flash_p64k;
+
+bool FlashDetect(void);
+
 #endif // #ifndef AS_BOOTROM
 
 

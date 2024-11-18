@@ -248,10 +248,11 @@ void RunMod(void) {
                     state = STATE_SEARCH;
                 }
             } else if (state == STATE_EMUL) {
-                uint16_t flags = FLAG_7B_UID_IN_DATA;
+                uint16_t flags = 0;
+                FLAG_SET_UID_IN_DATA(flags, 7);
 
                 Dbprintf("Starting simulation, press " _GREEN_("pm3 button") " to stop and go back to search state.");
-                SimulateIso14443aTag(7, flags, card.uid, 0, NULL);
+                SimulateIso14443aTag(7, flags, card.uid, 0, NULL, 0);
 
                 // Go back to search state if user presses pm3-button
                 state = STATE_SEARCH;

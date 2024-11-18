@@ -21,7 +21,7 @@
 typedef struct pm3_device pm3;
 
 pm3 *pm3_open(const char *port);
-int pm3_console(pm3 *dev, const char *cmd, bool passthru);
+int pm3_console(pm3 *dev, const char *cmd, bool capture, bool quiet);
 const char *pm3_grabbed_output_get(pm3 *dev);
 const char *pm3_name_get(pm3 *dev);
 void pm3_close(pm3 *dev);

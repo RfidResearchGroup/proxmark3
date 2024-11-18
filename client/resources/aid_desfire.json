@@ -200,6 +200,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "F47300",
+        "Vendor": "Inner Range",
+        "Country": "AU",
+        "Name": "Sifer-P, Sifer-U Credential",
+        "Description": "Inner Range access control",
+        "Type": "pacs"
+    },
+    {
         "AID": "F48120",
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
@@ -416,10 +424,42 @@
         "Type": "alarm system"
     },
     {
+        "AID": "010010",
+        "Vendor": "ASSA ABLOY",
+        "Country": "GB",
+        "Name": "Campus Card",
+        "Description": "Campus Card",
+        "Type": "student"
+    },
+    {
+        "AID": "030020",
+        "Vendor": "Algonquin College of Applied Arts and Technology",
+        "Country": "CA",
+        "Name": "Campus Card",
+        "Description": "Campus Card",
+        "Type": "student"
+    },
+    {
+        "AID": "050030",
+        "Vendor": "Algonquin College of Applied Arts and Technology",
+        "Country": "CA",
+        "Name": "Campus Card",
+        "Description": "Campus Card",
+        "Type": "student"
+    },
+    {
         "AID": "05845F",
         "Vendor": "InterCard GmbH Kartensysteme",
         "Country": "DE",
         "Name": "InterCard",
+        "Description": "Campus Card",
+        "Type": "student"
+    },
+    {
+        "AID": "070090",
+        "Vendor": "Algonquin College of Applied Arts and Technology",
+        "Country": "CA",
+        "Name": "Campus Card",
         "Description": "Campus Card",
         "Type": "student"
     },
@@ -637,6 +677,38 @@
         "Country": "US",
         "Name": "Transact Campus ID",
         "Description": "Campus Card",
+        "Type": "student"
+    },
+    {
+        "AID": "CA1827",
+        "Vendor": "Transact Campus Inc.",
+        "Country": "US",
+        "Name": "Transact Campus ID [Custom AID]",
+        "Description": "Campus Card",
+        "Type": "student"
+    },
+    {
+        "AID": "EEE010",
+        "Vendor": "ASSA ABLOY",
+        "Country": "GB",
+        "Name": "Campus Card",
+        "Description": "Campus Card",
+        "Type": "student"
+    },
+    {
+        "AID": "F33480",
+        "Vendor": "Besucherausweis",
+        "Country": "DE",
+        "Name": "Visitor's Pass",
+        "Description": "Besucherausweis",
+        "Type": "student"
+    },
+    {
+        "AID": "F482D0",
+        "Vendor": "Besucherausweis",
+        "Country": "DE",
+        "Name": "Visitor's Pass",
+        "Description": "Besucherausweis",
         "Type": "student"
     },
     {

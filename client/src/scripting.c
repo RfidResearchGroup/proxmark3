@@ -423,7 +423,7 @@ static int l_mfDarkside(lua_State *L) {
             break;
     }
 
-    int retval = mfDarkside(blockno & 0xFF, keytype & 0xFF, &key);
+    int retval = mf_dark_side(blockno & 0xFF, keytype & 0xFF, &key);
 
     uint8_t dest_key[8];
     num_to_bytes(key, sizeof(dest_key), dest_key);

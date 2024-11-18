@@ -1465,7 +1465,7 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
     LEDsoff();
 
     uint64_t ui64Key = bytes_to_num(key, 6);
-    uint16_t len;
+    uint16_t len, dist1 = 160, dist2 = 320;
     uint8_t uid[10] = { 0x00 };
     uint32_t cuid = 0, nt1 = 0, nt2 = 0, nt3 = 0;
     uint32_t target_nt[2] = {0x00}, target_ks[2] = {0x00};
@@ -1491,6 +1491,30 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
     // Main loop - get crypted nonces for target sector
     for (uint8_t rtr = 0; rtr < 2; rtr++) {
 
+        // distance measurement
+        if (mifare_classic_halt(pcs)) {
+            continue;
+        }
+
+        if (iso14443a_select_card(uid, NULL, &cuid, true, 0, true) == false) {
+            continue;
+        };
+
+        if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_FIRST, &nt1, NULL)) {
+            continue;
+        };
+
+        if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_NESTED, &nt2, NULL)) {
+            continue;
+        };
+
+        if (mifare_classic_authex(pcs, cuid, blockNo, keyType, ui64Key, AUTH_NESTED, &nt3, NULL)) {
+            continue;
+        };
+
+        dist1 = nonce_distance(nt1, nt2);
+        dist2 = nonce_distance(nt1, nt3);
+
         if (mifare_classic_halt(pcs)) {
             continue;
         }
@@ -1509,8 +1533,8 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
             target_nt[0] = prng_successor(nt1, 161);
             target_nt[1] = prng_successor(nt1, 321);
         } else {
-            target_nt[0] = prng_successor(nt1, 160);
-            target_nt[1] = prng_successor(nt1, 320);
+            target_nt[0] = prng_successor(nt1, dist1);
+            target_nt[1] = prng_successor(nt1, dist2);
         }
 
         len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + (targetKeyType & 0xF), targetBlockNo, receivedAnswer, sizeof(receivedAnswer), par, NULL);
@@ -1765,7 +1789,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
         BigBuf_free();
         uint16_t isok = 0;
         uint8_t size[2] = {0x00, 0x00};
-        isok = Flash_ReadData(DEFAULT_MF_KEYS_OFFSET, size, 2);
+        isok = Flash_ReadData(DEFAULT_MF_KEYS_OFFSET_P(spi_flash_p64k), size, 2);
         if (isok != 2)
             goto OUT;
 
@@ -1784,7 +1808,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
         if (datain == NULL)
             goto OUT;
 
-        isok = Flash_ReadData(DEFAULT_MF_KEYS_OFFSET + 2, datain, key_mem_available);
+        isok = Flash_ReadData(DEFAULT_MF_KEYS_OFFSET_P(spi_flash_p64k) + 2, datain, key_mem_available);
         if (isok != key_mem_available)
             goto OUT;
 
@@ -2528,6 +2552,7 @@ out:
 // bit 4 - need turn off FPGA
 // bit 5 - need to set datain instead of issuing USB reply (called via ARM for StandAloneMode14a)
 // bit 6 - wipe tag.
+// bit 7 - use USCUID/GDM (20/23) magic wakeup
 //-----------------------------------------------------------------------------
 
 void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
@@ -2594,6 +2619,22 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
             iso14a_set_timeout(old_timeout);
 
             mifare_classic_halt(NULL);
+        }
+
+        if (workFlags & MAGIC_GDM_ALT_WUPC) {
+            ReaderTransmitBitsPar(wupGDM1, 7, NULL, NULL);
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("wupGDM1 error");
+                errormsg = MAGIC_WUPC;
+                break;
+            }
+
+            ReaderTransmit(wupGDM2, sizeof(wupC2), NULL);
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("wupGDM2 error");
+                errormsg = MAGIC_WUPC;
+                break;
+            }
         }
 
         // write block
@@ -2682,6 +2723,22 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
 
     //loop doesn't loop just breaks out if error or done
     while (true) {
+        if (workFlags & MAGIC_GDM_ALT_WUPC) {
+            ReaderTransmitBitsPar(wupGDM1, 7, NULL, NULL);
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("wupGDM1 error");
+                errormsg = MAGIC_WUPC;
+                break;
+            }
+
+            ReaderTransmit(wupGDM2, sizeof(wupC2), NULL);
+            if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("wupGDM2 error");
+                errormsg = MAGIC_WUPC;
+                break;
+            }
+        }
+
         if (workFlags & MAGIC_WUPC) {
             ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
             if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0)  || (receivedAnswer[0] != 0x0a)) {
@@ -3038,18 +3095,25 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
-    uint8_t enc_counter = 0;
+    uint8_t first_nt_counter = 0;
+    uint8_t first_nt_repetition_counter = 0;
+    uint8_t nested_nt_session_counter = 0;
+    uint8_t nested_nt_repetition_counter = 0;
+    uint8_t first_and_nested_nt_repetition_counter = 0;
     uint8_t key_auth_cmd = MIFARE_AUTH_KEYA + key_type;
     uint8_t key_auth_cmd_nested = MIFARE_AUTH_KEYA + key_type_nested;
     uint64_t ui64key = bytes_to_num(key, 6);
     uint64_t ui64key_nested = bytes_to_num(key_nested, 6);
     uint32_t oldntenc = 0;
     bool need_first_auth = true;
-    uint32_t cuid;
-    uint32_t nt;
-    uint32_t old_nt;
-    uint32_t ntenc;
-    uint8_t ntencpar;
+    uint32_t cuid = 0;
+    uint32_t nt = 0;
+    uint32_t old_nt = 0;
+    uint32_t nt_first = 0;
+    uint32_t old_nt_first = 0;
+    uint32_t ntenc = 0;
+    uint8_t ntencpar = 0;
+    bool is_last_auth_first_auth = true;
     if (nr_nested == 0) {
         cuid = 0;
         if (iso14443a_select_card(NULL, NULL, &cuid, true, 0, true) == false) {
@@ -3057,78 +3121,108 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
             retval = PM3_ESOFT;
             goto OUT;
         }
-        if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, &old_nt, NULL, NULL, NULL, corruptnrar, corruptnrarparity)) {
+        if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, &nt, NULL, NULL, NULL, corruptnrar, corruptnrarparity)) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
             retval = PM3_ESOFT;
             goto OUT;
         };
-    }
-    for (uint8_t i = 0; i < nr_nested; i++) {
-        if (need_first_auth) {
-            cuid = 0;
+        first_nt_counter++;
+    } else for (uint8_t i = 0; i < nr_nested; i++) {
+            if (need_first_auth) {
+                cuid = 0;
 
-            if (hardreset) {
-                if (g_dbglevel >= DBG_EXTENDED) {
-                    Dbprintf("RF reset");
+                if (hardreset) {
+                    if (g_dbglevel >= DBG_EXTENDED) {
+                        Dbprintf("RF reset");
+                    }
+                    // some cards need longer than mf_reset_card() to see effect on nT
+                    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+                    SpinDelay(150);
+                    iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
                 }
-                // some cards need longer than mf_reset_card() to see effect on nT
-                FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-                SpinDelay(150);
-                iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
-            }
-            if (g_dbglevel >= DBG_EXTENDED) {
-                Dbprintf("select");
-            }
-            if (iso14443a_select_card(NULL, NULL, &cuid, true, 0, true) == false) {
-                retval = PM3_ESOFT;
-                goto OUT;
-            }
-            if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, &old_nt, NULL, NULL, NULL, corruptnrar, corruptnrarparity)) {
-                if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
-                retval = PM3_ESOFT;
-                goto OUT;
-            };
-            if (!reset && !hardreset) {
-                need_first_auth = false;
-            }
-            if (addread) {
-                uint8_t dataread[16] = {0x00};
-                mifare_classic_readblock(pcs, block_no, dataread);
-            }
-            if (addauth) {
-                if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_NESTED, &nt, NULL, NULL, NULL, false, false)) {
+                if (g_dbglevel >= DBG_EXTENDED) {
+                    Dbprintf("select");
+                }
+                if (iso14443a_select_card(NULL, NULL, &cuid, true, 0, true) == false) {
+                    retval = PM3_ESOFT;
+                    goto OUT;
+                }
+                if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, &nt_first, NULL, NULL, NULL, corruptnrar, corruptnrarparity)) {
                     if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
                     retval = PM3_ESOFT;
                     goto OUT;
-                } else if (g_dbglevel >= DBG_EXTENDED) {
-                    Dbprintf("Nonce distance: %i", nonce_distance(old_nt, nt));
+                };
+                is_last_auth_first_auth = true;
+                first_nt_counter++;
+                if ((first_nt_counter > 1) && (old_nt_first == nt_first)) {
+                    first_nt_repetition_counter++;
                 }
-                old_nt = nt;
+                old_nt_first = nt_first;
+                if (!reset && !hardreset) {
+                    need_first_auth = false;
+                }
+                if (addread) {
+                    uint8_t dataread[16] = {0x00};
+                    mifare_classic_readblock(pcs, block_no, dataread);
+                }
+                if (addauth) {
+                    if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_NESTED, &nt, NULL, NULL, NULL, false, false)) {
+                        if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
+                        retval = PM3_ESOFT;
+                        goto OUT;
+                    } else if (g_dbglevel >= DBG_EXTENDED) {
+                        Dbprintf("Nonce distance: %5i (first nonce <> nested nonce)", nonce_distance(nt_first, nt));
+                    }
+                    is_last_auth_first_auth = false;
+                    if (nt == nt_first) {
+                        first_and_nested_nt_repetition_counter++;
+                    }
+                    old_nt = nt;
+                }
             }
-        }
 
-        nt = 0;
-        ntenc = 0;
-        if (mifare_classic_authex_cmd(pcs, cuid, incblk2 ? block_no_nested + (i * 4) : block_no_nested, key_auth_cmd_nested, ui64key_nested, AUTH_NESTED, &nt, &ntenc, &ntencpar, NULL, false, false)) {
-            if (g_dbglevel >= DBG_ERROR) Dbprintf("Nested auth error");
-            need_first_auth = true;
-        } else if (g_dbglevel >= DBG_EXTENDED) {
-            Dbprintf("Nonce distance: %i", nonce_distance(old_nt, nt));
-        }
-        old_nt = nt;
-        if (oldntenc == 0) {
+            nt = 0;
+            ntenc = 0;
+            if (mifare_classic_authex_cmd(pcs, cuid, incblk2 ? block_no_nested + (i * 4) : block_no_nested, key_auth_cmd_nested, ui64key_nested, AUTH_NESTED, &nt, &ntenc, &ntencpar, NULL, false, false)) {
+                if (g_dbglevel >= DBG_ERROR) Dbprintf("Nested auth error");
+                need_first_auth = true;
+            } else if (g_dbglevel >= DBG_EXTENDED) {
+                if (is_last_auth_first_auth) {
+                    Dbprintf("Nonce distance: %5i (first nonce <> nested nonce)", nonce_distance(nt_first, nt));
+                } else {
+                    Dbprintf("Nonce distance: %5i", nonce_distance(old_nt, nt));
+                }
+            }
+            nested_nt_session_counter++;
+            is_last_auth_first_auth = false;
+            old_nt = nt;
+            if (nt == nt_first) {
+                first_and_nested_nt_repetition_counter++;
+            }
+            if ((nested_nt_session_counter > 1) && (oldntenc == ntenc)) {
+                nested_nt_repetition_counter++;
+            }
             oldntenc = ntenc;
-        } else if (ntenc == oldntenc) {
-            enc_counter++;
         }
-    }
 
-    if (enc_counter) {
+    data[1] = (cuid >> 24) & 0xFF;
+    data[2] = (cuid >> 16) & 0xFF;
+    data[3] = (cuid >> 8) & 0xFF;
+    data[4] = (cuid >> 0) & 0xFF;
+    if (first_and_nested_nt_repetition_counter) {
+        data[0] = NONCE_SUPERSTATIC;
+        data[5] = (nt >> 24) & 0xFF;
+        data[6] = (nt >> 16) & 0xFF;
+        data[7] = (nt >> 8) & 0xFF;
+        data[8] = (nt >> 0) & 0xFF;
+    } else if (first_nt_repetition_counter) {
+        data[0] = NONCE_STATIC;
+        data[5] = (nt_first >> 24) & 0xFF;
+        data[6] = (nt_first >> 16) & 0xFF;
+        data[7] = (nt_first >> 8) & 0xFF;
+        data[8] = (nt_first >> 0) & 0xFF;
+    } else if (nested_nt_repetition_counter) {
         data[0] = NONCE_STATIC_ENC;
-        data[1] = (cuid >> 24) & 0xFF;
-        data[2] = (cuid >> 16) & 0xFF;
-        data[3] = (cuid >> 8) & 0xFF;
-        data[4] = (cuid >> 0) & 0xFF;
         data[5] = (nt >> 24) & 0xFF;
         data[6] = (nt >> 16) & 0xFF;
         data[7] = (nt >> 8) & 0xFF;
@@ -3140,6 +3234,15 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
         data[13] = ntencpar;
     } else {
         data[0] = NONCE_NORMAL;
+        data[5] = (nt >> 24) & 0xFF;
+        data[6] = (nt >> 16) & 0xFF;
+        data[7] = (nt >> 8) & 0xFF;
+        data[8] = (nt >> 0) & 0xFF;
+        data[9] = (ntenc >> 24) & 0xFF;
+        data[10] = (ntenc >> 16) & 0xFF;
+        data[11] = (ntenc >> 8) & 0xFF;
+        data[12] = (ntenc >> 0) & 0xFF;
+        data[13] = ntencpar;
     }
 
 OUT:

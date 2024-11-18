@@ -90,11 +90,11 @@ def Describe_Usage_1(Usage, ContractMediumEndDate, Certificate):
     unk = Usage.nom_bits(65)
     EventValidityTimeFirstStamp = Usage.nom(11)
 
-    print('  EventDateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
+    print('  EventDateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')))
     print('  EventTimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
-    print('  unk1...                    :', unk);
+    print('  unk1...                    :', unk)
     print('  EventValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
-    print('  left...                    :', Usage.nom_bits_left());
+    print('  left...                    :', Usage.nom_bits_left())
     print('  [CER] Usage                : {:04x}'.format(Certificate.nom(16)))
 
 def Describe_Usage_1_1(Usage, ContractMediumEndDate, Certificate):
@@ -110,18 +110,18 @@ def Describe_Usage_1_1(Usage, ContractMediumEndDate, Certificate):
     EventCountPassengers_mb = Usage.nom(4)
     EventValidityTimeFirstStamp = Usage.nom(11)
 
-    print('  DateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
+    print('  DateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')))
     print('  TimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
-    print('  unk0...               :', unk0);
+    print('  unk0...               :', unk0)
     print('  Code/Nature           : 0x{:x} ({})'.format(EventCode_Nature, TYPE_EventCode_Nature.get(EventCode_Nature, '?')))
     print('  Code/Type             : 0x{:x} ({})'.format(EventCode_Type, TYPE_EventCode_Type.get(EventCode_Type, '?')))
-    print('  unk1...               :', unk1);
+    print('  unk1...               :', unk1)
     print('  GeoVehicleId          : {}'. format(EventGeoVehicleId))
     print('  GeoRouteId            : {}'. format(EventGeoRouteId))
     print('  Direction             : {} ({})'. format(EventGeoRoute_Direction, TYPE_EventGeoRoute_Direction.get(EventGeoRoute_Direction, '?')))
     print('  Passengers(?)         : {}'. format(EventCountPassengers_mb))
     print('  ValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
-    print('  left...               :', Usage.nom_bits_left());
+    print('  left...               :', Usage.nom_bits_left())
     print('  [CER] Usage           : {:04x}'.format(Certificate.nom(16)))
 
 def Describe_Usage_1_2(Usage, ContractMediumEndDate, Certificate):
@@ -143,19 +143,19 @@ def Describe_Usage_1_2(Usage, ContractMediumEndDate, Certificate):
         0x1: 'tramway',
     }
 
-    print('  DateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
+    print('  DateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')))
     print('  TimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
     print('  Count(?)              : {}'. format(EventCount_mb))
-    print('  unk0...               :', unk0);
+    print('  unk0...               :', unk0)
     print('  Code/Nature(?)        : 0x{:x} ({})'.format(EventCode_Nature_mb, TYPE_EventCode_Nature_Reims.get(EventCode_Nature_mb, '?')))
     print('  Code/Type(?)          : 0x{:x} ({})'.format(EventCode_Type_mb, TYPE_EventCode_Type.get(EventCode_Type_mb, '?')))
-    print('  unk1...               :', unk1);
+    print('  unk1...               :', unk1)
     print('  GeoVehicleId          : {}'. format(EventGeoVehicleId))
     print('  GeoRouteId            : {}'. format(EventGeoRouteId))
     print('  Direction             : {} ({})'. format(EventGeoRoute_Direction, TYPE_EventGeoRoute_Direction.get(EventGeoRoute_Direction, '?')))
     print('  Passengers(?)         : {}'. format(EventCountPassengers_mb))
     print('  ValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
-    print('  left...               :', Usage.nom_bits_left());
+    print('  left...               :', Usage.nom_bits_left())
     print('  [CER] Usage           : {:04x}'.format(Certificate.nom(16)))
 
 
@@ -171,17 +171,17 @@ def Describe_Usage_2(Usage, ContractMediumEndDate, Certificate):
     EventCountPassengers_mb = Usage.nom(4)
     EventValidityTimeFirstStamp = Usage.nom(11)
 
-    print('  DateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
+    print('  DateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')))
     print('  TimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
-    print('  unk0...               :', unk0);
+    print('  unk0...               :', unk0)
     print('  Code/Nature           : 0x{:x} ({})'.format(EventCode_Nature, TYPE_EventCode_Nature.get(EventCode_Nature, '?')))
     print('  Code/Type             : 0x{:x} ({})'.format(EventCode_Type, TYPE_EventCode_Type.get(EventCode_Type, '?')))
-    print('  unk1...               :', unk1);
+    print('  unk1...               :', unk1)
     print('  GeoRouteId            : {}'. format(EventGeoRouteId))
     print('  Direction             : {} ({})'. format(EventGeoRoute_Direction, TYPE_EventGeoRoute_Direction.get(EventGeoRoute_Direction, '?')))
     print('  Passengers(?)         : {}'. format(EventCountPassengers_mb))
     print('  ValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
-    print('  left...               :', Usage.nom_bits_left());
+    print('  left...               :', Usage.nom_bits_left())
     print('  [CER] Usage           : {:04x}'.format(Certificate.nom(16)))
 
 def Describe_Usage_3(Usage, ContractMediumEndDate, Certificate):
@@ -190,11 +190,11 @@ def Describe_Usage_3(Usage, ContractMediumEndDate, Certificate):
     unk = Usage.nom_bits(27)
     EventValidityTimeFirstStamp = Usage.nom(11)
 
-    print('  EventDateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
+    print('  EventDateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')))
     print('  EventTimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
-    print('  unk1...                    :', unk);
+    print('  unk1...                    :', unk)
     print('  EventValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
-    print('  left...                    :', Usage.nom_bits_left());
+    print('  left...                    :', Usage.nom_bits_left())
     print('  [CER] Usage                : {:04x}'.format(Certificate.nom(16)))
 
 def Describe_Usage_4(Usage, ContractMediumEndDate, Certificate):
@@ -203,16 +203,16 @@ def Describe_Usage_4(Usage, ContractMediumEndDate, Certificate):
     unk = Usage.nom_bits(63)
     EventValidityTimeFirstStamp = Usage.nom(11)
 
-    print('  EventDateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')));
+    print('  EventDateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')))
     print('  EventTimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
-    print('  unk1...                    :', unk);
+    print('  unk1...                    :', unk)
     print('  EventValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
-    print('  left...                    :', Usage.nom_bits_left());
+    print('  left...                    :', Usage.nom_bits_left())
     print('  [CER] Usage                : {:04x}'.format(Certificate.nom(16)))
 
 def Describe_Usage_Generic(Usage, ContractMediumEndDate, Certificate):
     print('  !!! GENERIC DUMP - please provide full file dump to benjamin@gentilkiwi.com - especially if NOT empty !!!')
-    print('  left...                    :', Usage.nom_bits_left());
+    print('  left...                    :', Usage.nom_bits_left())
     print('  [CER] Usage                : {:04x}'.format(Certificate.nom(16)))
     print('  !!! Trying Usage_1 (the most common) !!!')
     Usage.reset()
@@ -239,6 +239,9 @@ FRA_OrganizationalAuthority_Contract_Provider = {
     0x008: {
         15: InterticHelper('Angoulême', 'STGA', Describe_Usage_1_1), # May have a problem with date ?
     },
+    0x013: {
+        1: InterticHelper('Avignon', 'Orizo'),
+    },
     0x021: {
         1: InterticHelper('Bordeaux', 'TBM / Keolis', Describe_Usage_1_1),
     },
@@ -256,6 +259,7 @@ FRA_OrganizationalAuthority_Contract_Provider = {
     },
     0x502: {
         83: InterticHelper('Annecy', 'Sibra', Describe_Usage_2),
+        84: InterticHelper('Bourg-en-Bresse', 'Rubis / Keolis'),
         10: InterticHelper('Clermont-Ferrand', 'T2C'),
     },
     0x907: {
@@ -374,7 +378,7 @@ def main():
             return 3
 
 
-    print('PID (product): 0x{:02x} (flipflop?: {})'.format(PID, (PID & 0x10) != 0));
+    print('PID (product): 0x{:02x} (flipflop?: {})'.format(PID, (PID & 0x10) != 0))
     print('KeyId        : 0x{:1x}'.format(KeyId))
     print()
 
@@ -397,10 +401,11 @@ def main():
         Distribution_left = Distribution_Data.nom_bits_left()
 
         print('DISTRIBUTION')
-        print('  CountryCode                     : {:03x} - {}'.format(CountryCode, ISO_Countries.get(CountryCode, '?')));
-        print('  OrganizationalAuthority         : {:03x}'.format(OrganizationalAuthority));
-        print('  ContractApplicationVersionNumber:', ContractApplicationVersionNumber);
-        print('  ContractProvider                :', ContractProvider);
+        print('  CountryCode                     : {:03x} - {}'.format(CountryCode, ISO_Countries.get(CountryCode, '?')))
+        print('  OrganizationalAuthority         : {:03x}'.format(OrganizationalAuthority))
+        print('  ContractApplicationVersionNumber:', ContractApplicationVersionNumber)
+        print('  ContractProvider                :', ContractProvider)
+
         if (CountryCode == 0x250):
             oa = FRA_OrganizationalAuthority_Contract_Provider.get(OrganizationalAuthority)
             if (oa is not None):
@@ -408,9 +413,10 @@ def main():
                 if (s is not None):
                     print('      ~ Authority & Provider ~    : {} ({})'.format(s.OrganizationalAuthority, s.ContractProvider))
                     Describe_Usage = s.UsageDescribeFunction
-        print('  ContractTariff                  :', ContractTariff);
-        print('  ContractMediumEndDate           : {} ({})'.format(ContractMediumEndDate, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate)).strftime('%Y-%m-%d')));
-        print('  left...                         :', Distribution_left);
+
+        print('  ContractTariff                  :', ContractTariff)
+        print('  ContractMediumEndDate           : {} ({})'.format(ContractMediumEndDate, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate)).strftime('%Y-%m-%d')))
+        print('  left...                         :', Distribution_left)
         print('  [CER] Distribution              : {:08x}'.format(Distribution_Cer.nom(32)))
         print()
 

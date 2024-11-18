@@ -65,6 +65,7 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | dep mbedtls | in_common | in_common | no sys lib: missing support for CMAC in def conf (btw no .pc available) |
 | dep python3 | opt, sys, < 3.8 & 3.8 | opt, sys, < 3.8 & 3.8 |   |
 | python3 detection | pc | pkg_search_module | |
+| force python3 version | `PYTHON3_PKGCONFIG=python-3.12` | `-DPYTHON3_PKGCONFIG=python-3.12` | |
 | `SKIPPYTHON`  | yes | yes |   |
 | dep pthread | sys | sys |  |
 | pthread detection | **none** | **none** (1) | (1) cf https://stackoverflow.com/questions/1620918/cmake-and-libpthread ? |

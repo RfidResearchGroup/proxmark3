@@ -278,7 +278,7 @@ static void prompt_compose(char *buf, size_t buflen, const char *promptctx, cons
     if (no_newline) {
         snprintf(buf, buflen - 1, PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
     } else {
-        snprintf(buf, buflen - 1, "\r                                         \r" PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
+        snprintf(buf, buflen - 1, "\33[2K\r" PROXPROMPT_COMPOSE, promptdev, promptnet, promptctx);
     }
 }
 

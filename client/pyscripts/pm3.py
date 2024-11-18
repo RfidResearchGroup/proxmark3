@@ -66,8 +66,8 @@ class pm3(object):
         _pm3.pm3_swiginit(self, _pm3.new_pm3(*args))
     __swig_destroy__ = _pm3.delete_pm3
 
-    def console(self, cmd, passthru=False):
-        return _pm3.pm3_console(self, cmd, passthru)
+    def console(self, cmd, capture=True, quiet=True):
+        return _pm3.pm3_console(self, cmd, capture, quiet)
     name = property(_pm3.pm3_name_get)
     grabbed_output = property(_pm3.pm3_grabbed_output_get)
 

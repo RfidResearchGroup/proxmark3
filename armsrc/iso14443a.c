@@ -554,7 +554,7 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
 
         if (IsManchesterModulationNibble1(Demod.twoBits >> Demod.syncBit)) {      // modulation in first half
             if (IsManchesterModulationNibble2(Demod.twoBits >> Demod.syncBit)) {  // ... and in second half = collision
-                if (!Demod.collisionPos) {
+                if (Demod.collisionPos == 0) {
                     Demod.collisionPos = (Demod.len << 3) + Demod.bitCount;
                 }
             }                                                           // modulation in first half only - Sequence D = 1
@@ -589,6 +589,7 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
                 }
                 Demod.endTime = Demod.startTime + 8 * (9 * Demod.len + Demod.bitCount + 1);
             } else {                                                    // no modulation in both halves - End of communication
+
                 if (Demod.bitCount > 0) {                               // there are some remaining data bits
                     Demod.shiftReg >>= (9 - Demod.bitCount);            // right align the decoded bits
                     Demod.output[Demod.len++] = Demod.shiftReg & 0xff;  // and add them to the output
@@ -600,6 +601,7 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
                     Demod.parityBits <<= (8 - (Demod.len & 0x0007));    // left align remaining parity bits
                     Demod.parity[Demod.parityLen++] = Demod.parityBits; // and store them
                 }
+
                 if (Demod.len) {
                     return true;                                        // we are finished with decoding the raw data sequence
                 } else {                                                // nothing received. Start over
@@ -624,11 +626,13 @@ static RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
     if (Demod.state == DEMOD_14A_UNSYNCD) {
 
         if (Demod.highCnt < 2) {                                            // wait for a stable unmodulated signal
+
             if (Demod.twoBits == 0x0000) {
                 Demod.highCnt++;
             } else {
                 Demod.highCnt = 0;
             }
+
         } else {
             Demod.syncBit = 0xFFFF;            // not set
             if ((Demod.twoBits & 0x7700) == 0x7000) Demod.syncBit = 7;
@@ -639,6 +643,7 @@ static RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
             else if ((Demod.twoBits & 0x03B8) == 0x0380) Demod.syncBit = 2;
             else if ((Demod.twoBits & 0x01DC) == 0x01C0) Demod.syncBit = 1;
             else if ((Demod.twoBits & 0x00EE) == 0x00E0) Demod.syncBit = 0;
+
             if (Demod.syncBit != 0xFFFF) {
                 Demod.startTime = (GetCountSspClk() & 0xfffffff8);
                 Demod.startTime -= Demod.syncBit;
@@ -647,38 +652,49 @@ static RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
                 Demod.state = DEMOD_14A_MANCHESTER_DATA;
             }
         }
+
     } else {
 
         if (IsManchesterModulationNibble1(Demod.twoBits >> Demod.syncBit)) {      // modulation in first half
+
             if (IsManchesterModulationNibble2(Demod.twoBits >> Demod.syncBit)) {  // ... and in second half = collision
-                if (!Demod.collisionPos) {
+                if (Demod.collisionPos == 0) {
                     Demod.collisionPos = (Demod.len << 3) + Demod.bitCount;
                 }
             }                                                           // modulation in first half only - Sequence D = 1
             Demod.bitCount++;
             Demod.shiftReg = (Demod.shiftReg << 1) | 0x1;             // in both cases, add a 1 to the shiftreg
+
             if (Demod.bitCount == 8) {                                  // if we decoded a full byte
-                Demod.output[Demod.len++] = (Demod.shiftReg & 0xff);
+                Demod.output[Demod.len++] = (Demod.shiftReg & 0xFF);
                 Demod.bitCount = 0;
                 Demod.shiftReg = 0;
             }
+
             Demod.endTime = Demod.startTime + 8 * (8 * Demod.len + Demod.bitCount + 1) - 4;
+
         } else {                                                        // no modulation in first half
+
             if (IsManchesterModulationNibble2(Demod.twoBits >> Demod.syncBit)) {    // and modulation in second half = Sequence E = 0
                 Demod.bitCount++;
                 Demod.shiftReg = (Demod.shiftReg << 1);                 // add a 0 to the shiftreg
                 if (Demod.bitCount >= 8) {                              // if we decoded a full byte
-                    Demod.output[Demod.len++] = (Demod.shiftReg & 0xff);
+                    Demod.output[Demod.len++] = (Demod.shiftReg & 0xFF);
                     Demod.bitCount = 0;
                     Demod.shiftReg = 0;
                 }
                 Demod.endTime = Demod.startTime + 8 * (8 * Demod.len + Demod.bitCount + 1);
+
             } else {                                                    // no modulation in both halves - End of communication
-                if (Demod.bitCount > 0) {                               // there are some remaining data bits
+
+                if (Demod.bitCount) {                               // there are some remaining data bits
                     Demod.shiftReg <<= (8 - Demod.bitCount);            // left align the decoded bits
-                    Demod.output[Demod.len++] = Demod.shiftReg & 0xff;  // and add them to the output
+                    Demod.output[Demod.len++] = Demod.shiftReg & 0xFF;  // and add them to the output
+
+//                    Dbprintf("A | len... %u - %u == 0x%02x", Demod.len, Demod.bitCount, Demod.output[0]);
                     return true;
                 }
+
                 if (Demod.len) {
                     return true;                                        // we are finished with decoding the raw data sequence
                 } else {                                                // nothing received. Start over
@@ -1092,7 +1108,8 @@ bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_
     }
 }
 
-bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t *iRATs, tag_response_info_t **responses,
+bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
+                           uint8_t *iRATs, size_t irats_len, tag_response_info_t **responses,
                            uint32_t *cuid, uint32_t counters[3], uint8_t tearings[3], uint8_t *pages) {
     uint8_t sak = 0;
     // The first response contains the ATQA (note: bytes are transmitted in reverse order).
@@ -1255,29 +1272,37 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, uint8
         }
     }
 
-    // copy the iRATs if supplied
+    // copy the iRATs if supplied.
+    // iRATs is a pointer to 20 byte array
+    // rRATS is a 40 byte array
     if ((flags & FLAG_RATS_IN_DATA) == FLAG_RATS_IN_DATA) {
-        memcpy(rRATS, iRATs, sizeof(iRATs));
+        memcpy(rRATS, iRATs, irats_len);
         // rats len is dictated by the first char of the string, add 2 crc bytes
         rRATS_len = (iRATs[0] + 2);
+        // Since its Varible length we can send value > 40 and overflow our array.
+        // Even if RATS protocol defined as max 40 bytes doesn't mean people try stuff
+        if (rRATS_len > sizeof(rRATS)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("[-] ERROR: iRATS overflow. Max %zu, got %zu", sizeof(rRATS), rRATS_len);
+            return false;
+        }
     }
 
     // if uid not supplied then get from emulator memory
-    if ((memcmp(data, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 10) == 0) || ((flags & FLAG_UID_IN_EMUL) == FLAG_UID_IN_EMUL)) {
+    if ((memcmp(data, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 10) == 0) || IS_FLAG_UID_IN_EMUL(flags)) {
         if (tagType == 2 || tagType == 7) {
             uint16_t start = MFU_DUMP_PREFIX_LENGTH;
             uint8_t emdata[8];
             emlGet(emdata, start, sizeof(emdata));
             memcpy(data, emdata, 3); // uid bytes 0-2
             memcpy(data + 3, emdata + 4, 4); // uid bytes 3-7
-            flags |= FLAG_7B_UID_IN_DATA;
+            FLAG_SET_UID_IN_DATA(flags, 7);
         } else {
             emlGet(data, 0, 4);
-            flags |= FLAG_4B_UID_IN_DATA;
+            FLAG_SET_UID_IN_DATA(flags, 4);
         }
     }
 
-    if ((flags & FLAG_4B_UID_IN_DATA) == FLAG_4B_UID_IN_DATA) {
+    if (IS_FLAG_UID_IN_DATA(flags, 4)) {
         rUIDc1[0] = data[0];
         rUIDc1[1] = data[1];
         rUIDc1[2] = data[2];
@@ -1296,7 +1321,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, uint8
         AddCrc14A(rSAKc1, sizeof(rSAKc1) - 2);
 
         *cuid = bytes_to_num(data, 4);
-    } else if ((flags & FLAG_7B_UID_IN_DATA) == FLAG_7B_UID_IN_DATA) {
+    } else if (IS_FLAG_UID_IN_DATA(flags, 7)) {
         rUIDc1[0] = MIFARE_SELECT_CT;  // Cascade Tag marker
         rUIDc1[1] = data[0];
         rUIDc1[2] = data[1];
@@ -1319,7 +1344,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, uint8
 
         *cuid = bytes_to_num(data + 3, 4);
 
-    } else if ((flags & FLAG_10B_UID_IN_DATA) == FLAG_10B_UID_IN_DATA) {
+    } else if (IS_FLAG_UID_IN_DATA(flags, 10)) {
 
         rUIDc1[0] = MIFARE_SELECT_CT;  // Cascade Tag marker
         rUIDc1[1] = data[0];
@@ -1430,7 +1455,8 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data, uint8
 // response to send, and send it.
 // 'hf 14a sim'
 //-----------------------------------------------------------------------------
-void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t exitAfterNReads, uint8_t *iRATs) {
+void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t exitAfterNReads,
+                          uint8_t *iRATs, size_t irats_len) {
 
 #define ATTACK_KEY_COUNT 16
 
@@ -1472,7 +1498,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
         .modulation_n = 0
     };
 
-    if (SimulateIso14443aInit(tagType, flags, data, iRATs, &responses, &cuid, counters, tearings, &pages) == false) {
+    if (SimulateIso14443aInit(tagType, flags, data, iRATs, irats_len, &responses, &cuid, counters, tearings, &pages) == false) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
         return;
@@ -2237,7 +2263,7 @@ int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_
 int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
     volatile uint8_t b;
     uint16_t i = 0;
-    uint32_t ThisTransferTime;
+    uint32_t ThisTransferTime = 0;
     bool correction_needed;
 
     // Modulate Manchester
@@ -2262,7 +2288,9 @@ int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
     // wait for the FPGA to signal fdt_indicator == 1 (the FPGA is ready to queue new data in its delay line)
     for (uint8_t j = 0; j < 5; j++) {    // allow timeout - better late than never
         while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
-        if (AT91C_BASE_SSC->SSC_RHR) break;
+        if (AT91C_BASE_SSC->SSC_RHR) {
+            break;
+        }
     }
 
     while ((ThisTransferTime = GetCountSspClk()) & 0x00000007);
@@ -2288,7 +2316,7 @@ int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
         }
     }
     LastTimeProxToAirStart = ThisTransferTime + (correction_needed ? 8 : 0);
-    return 0;
+    return PM3_SUCCESS;
 }
 
 int EmSend4bit(uint8_t resp) {
@@ -2385,10 +2413,10 @@ bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_Start
 //  If a response is captured return TRUE
 //  If it takes too long return FALSE
 //-----------------------------------------------------------------------------
-bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t resp_len,  uint8_t *received_len) {
+bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_maxlen,  uint8_t *received_len) {
 
     if (g_hf_field_active == false) {
-        Dbprintf("Warning: HF field is off, ignoring GetIso14443aAnswerFromTag_Thinfilm command");
+        Dbprintf("Warning: HF field is off");
         return false;
     }
 
@@ -2399,7 +2427,7 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t resp
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_LISTEN);
 
     // Now get the answer from the card
-    Demod14aInit(receivedResponse, resp_len, NULL);
+    Demod14aInit(receivedResponse, rec_maxlen, NULL);
 
     // clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -2415,18 +2443,17 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t resp
             b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
             if (ManchesterDecoding_Thinfilm(b)) {
                 *received_len = Demod.len;
-
                 LogTrace(receivedResponse, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, NULL, false);
                 return true;
             }
         }
 
-        if (GetTickCountDelta(receive_timer) > timeout + 100)
+        if (GetTickCountDelta(receive_timer) > timeout + 100) {
             break;
+        }
     }
 
     *received_len = Demod.len;
-
     LogTrace(receivedResponse, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, NULL, false);
     return false;
 }
@@ -2560,7 +2587,7 @@ void iso14443a_antifuzz(uint32_t flags) {
             resp[0] = 0x04;
             resp[1] = 0x00;
 
-            if ((flags & FLAG_7B_UID_IN_DATA) == FLAG_7B_UID_IN_DATA) {
+            if (IS_FLAG_UID_IN_DATA(flags, 7)) {
                 resp[0] = 0x44;
             }
 
@@ -2578,7 +2605,7 @@ void iso14443a_antifuzz(uint32_t flags) {
             resp[4] =  resp[0] ^ resp[1] ^ resp[2] ^ resp[3];
             colpos = 0;
 
-            if ((flags & FLAG_7B_UID_IN_DATA) == FLAG_7B_UID_IN_DATA) {
+            if (IS_FLAG_UID_IN_DATA(flags, 7)) {
                 resp[0] = MIFARE_SELECT_CT;
                 colpos = 8;
             }
@@ -3917,7 +3944,9 @@ It can also continue after the AID has been selected, and respond to other reque
 This was forked from the original function to allow for more flexibility in the future, and to increase the processing speed of the original function.
 /// */
 
-void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t *iRATs, uint8_t *aid, uint8_t *resp, uint8_t *apdu, int aidLen, int respondLen, int apduLen, bool enumerate) {
+void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data,
+                             uint8_t *iRATs, size_t irats_len, uint8_t *aid, uint8_t *resp,
+                             uint8_t *apdu, int aidLen, int respondLen, int apduLen, bool enumerate) {
     tag_response_info_t *responses;
     uint32_t cuid = 0;
     uint32_t counters[3] = { 0x00, 0x00, 0x00 };
@@ -3944,7 +3973,7 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data, uin
         .modulation_n = 0
     };
 
-    if (SimulateIso14443aInit(tagType, flags, data, iRATs, &responses, &cuid, counters, tearings, &pages) == false) {
+    if (SimulateIso14443aInit(tagType, flags, data, iRATs, irats_len, &responses, &cuid, counters, tearings, &pages) == false) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
         return;
@@ -4047,15 +4076,15 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data, uin
 
                             // aid len is found as a hex value in receivedCmd[6] (Index Starts at 0)
                             int aid_len = receivedCmd[6];
-                            uint8_t *recieved_aid = &receivedCmd[7];
+                            uint8_t *received_aid = &receivedCmd[7];
 
                             // aid enumeration flag
                             if (enumerate == true) {
                                 Dbprintf("Received AID (%d):", aid_len);
-                                Dbhexdump(aid_len, recieved_aid, false);
+                                Dbhexdump(aid_len, received_aid, false);
                             }
 
-                            if (memcmp(aidFilter, recieved_aid, aid_len) == 0) { // Evaluate the AID sent by the Reader to the AID supplied
+                            if (memcmp(aidFilter, received_aid, aid_len) == 0) { // Evaluate the AID sent by the Reader to the AID supplied
                                 // AID Response will be parsed here
                                 memcpy(dynamic_response_info.response + 2, aidResponse, respondLen + 2);
                                 dynamic_response_info.response_n = respondLen + 2;

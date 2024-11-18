@@ -39,8 +39,7 @@ v = 0
 out_freq = min_freq
 
 # Spawn the Proxmark3 client
-pm3_proc = Popen([pm3_client, pm3_reader_dev_file, "-c", pm3_tune_cmd],
-    bufsize=0, env={}, stdin=DEVNULL, stdout=PIPE, stderr=DEVNULL)
+pm3_proc = Popen([pm3_client, pm3_reader_dev_file, "-c", pm3_tune_cmd], bufsize=0, env={}, stdin=DEVNULL, stdout=PIPE, stderr=DEVNULL)
 mv_recbuf = ""
 
 # Read voltages from the Proxmark3, generate the sine wave, output to soundcard

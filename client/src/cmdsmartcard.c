@@ -1259,7 +1259,7 @@ static int CmdPCSC(const char *Cmd) {
         strcpy((char *) host, "localhost");
     }
 
-    uint8_t port[6] = {0};
+    uint8_t port[7] = {0};
     int portLen = sizeof(port) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 2, port, &portLen);
     if (portLen == 0) {

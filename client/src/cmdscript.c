@@ -440,6 +440,7 @@ static int CmdScriptRun(const char *Cmd) {
         Py_Initialize();
 #else
         PyConfig py_conf;
+        PyStatus status;
         // We need to use Python mode instead of isolated to avoid breaking stuff.
         PyConfig_InitPythonConfig(&py_conf);
         // Let's still make things bit safer by being as close as possible to isolated mode.
@@ -465,16 +466,38 @@ static int CmdScriptRun(const char *Cmd) {
         PySys_SetArgv(argc + 1, py_args);
 #else
         // The following line will implicitly pre-initialize Python
-        PyConfig_SetBytesArgv(&py_conf, argc + 1, argv);
-
+        status = PyConfig_SetBytesArgv(&py_conf, argc + 1, argv);
+        if (PyStatus_Exception(status)) {
+            goto pyexception;
+        }
         // We disallowed in py_conf environment variables interfering with python interpreter's behavior.
         // Let's manually enable the ones we truly need.
-        // This is required by Proxspace to work with an isolated Python configuration
-        PyConfig_SetBytesString(&py_conf, &py_conf.home, getenv("PYTHONHOME"));
+        const char *virtual_env = getenv("VIRTUAL_ENV");
+        if (virtual_env != NULL) {
+            size_t length = strlen(virtual_env) + strlen("/bin/python3") + 1;
+            char python_executable_path[length];
+            snprintf(python_executable_path, length, "%s/bin/python3", virtual_env);
+            status = PyConfig_SetBytesString(&py_conf, &py_conf.executable, python_executable_path);
+            if (PyStatus_Exception(status)) {
+                goto pyexception;
+            }
+        } else {
+            // This is required by Proxspace to work with an isolated Python configuration
+            status = PyConfig_SetBytesString(&py_conf, &py_conf.home, getenv("PYTHONHOME"));
+            if (PyStatus_Exception(status)) {
+                goto pyexception;
+            }
+        }
         // This is required for allowing `import pm3` in python scripts
-        PyConfig_SetBytesString(&py_conf, &py_conf.pythonpath_env, getenv("PYTHONPATH"));
+        status = PyConfig_SetBytesString(&py_conf, &py_conf.pythonpath_env, getenv("PYTHONPATH"));
+        if (PyStatus_Exception(status)) {
+            goto pyexception;
+        }
 
-        Py_InitializeFromConfig(&py_conf);
+        status = Py_InitializeFromConfig(&py_conf);
+        if (PyStatus_Exception(status)) {
+            goto pyexception;
+        }
 
         // clean up
         PyConfig_Clear(&py_conf);
@@ -508,6 +531,18 @@ static int CmdScriptRun(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "\nfinished " _YELLOW_("%s"), filename);
             return PM3_SUCCESS;
         }
+
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 10
+pyexception:
+        PyConfig_Clear(&py_conf);
+        if (PyStatus_IsExit(status)) {
+            PrintAndLogEx(WARNING, "\nPython initialization failed with exitcode=%i", status.exitcode);
+        }
+        if (PyStatus_IsError(status)) {
+            PrintAndLogEx(WARNING, "\nPython initialization failed with exception: %s", status.err_msg);
+        }
+        return PM3_ESOFT;
+#endif
     }
 #endif
 
