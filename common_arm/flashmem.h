@@ -54,15 +54,6 @@
 // Flash busy timeout: 20ms is the strict minimum when writing 256kb
 #define BUSY_TIMEOUT    200000L
 
-#define WINBOND_MANID       0xEF
-#define WINBOND_32MB_DEVID  0x15
-#define WINBOND_16MB_DEVID  0x14
-#define WINBOND_8MB_DEVID   0x13
-#define WINBOND_4MB_DEVID   0x12
-#define WINBOND_2MB_DEVID   0x11
-#define WINBOND_1MB_DEVID   0x10
-#define WINBOND_512KB_DEVID 0x05
-
 #define PAGESIZE        0x100
 #define WINBOND_WRITE_DELAY 0x02
 
@@ -131,7 +122,7 @@ bool Flash_Erase4k(uint8_t block, uint8_t sector);
 bool Flash_Erase64k(uint8_t block);
 
 typedef struct {
-    uint8_t manufacturer_id;
+    uint8_t mfr_id;
     uint8_t device_id;
     uint8_t device_id2;
 } flash_device_type_t; // extra device_id used for the JEDEC ID read via cmd 9F
@@ -145,38 +136,24 @@ uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len);
 void Flashmem_print_status(void);
 void Flashmem_print_info(void);
 
-typedef struct spi_flash_s {
-    const uint32_t identifier;
-    const uint8_t  pages64;
-    const char    *desc;
-} spi_flash_t;
+typedef struct {
+    uint8_t  mfr_id;
+    uint8_t  device_id;
+    uint16_t jedec_id;
+    uint8_t  p64k;
+    char    *desc;
+}spi_flash_t;
 
-const static spi_flash_t SpiFlashTable[] = {
-    // Manufacturer: Puya
-    { 0x856015, 32, "P25Q16H" },
-    // Manufacturer: Winbond
-    { 0xEF3012,  4, "W25X20BV" },
-    { 0xEF3013,  8, "W25X40BV" },
+extern const spi_flash_t spiFlashTable[];
+extern const spi_flash_t *spi_flash_p;
+extern spi_flash_t spi_flash_data;
 
-    { 0xEF4013,  8, "W25Q40BV" },
-    { 0xEF4014, 16, "W25Q80BV" },
-    { 0xEF4015, 32, "W25Q16BV" },
-    { 0xEF4016, 64, "W25Q32BV" },
-
-    { 0xEF7022,  4, "W25Q02JV" },
-    // (default) last record
-    { 0x000000,  4, "Unknown!" }
-};
+bool FlashDetect(const spi_flash_t **);
 
 #ifndef ARRAYLEN
 # define ARRAYLEN(x) (sizeof(x)/sizeof((x)[0]))
 #endif
 
-extern uint8_t spi_flash_p64k;
-
-bool FlashDetect(void);
-
 #endif // #ifndef AS_BOOTROM
-
 
 #endif
