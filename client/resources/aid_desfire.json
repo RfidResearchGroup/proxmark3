@@ -200,6 +200,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "F47300",
+        "Vendor": "Inner Range",
+        "Country": "AU",
+        "Name": "Sifer-P, Sifer-U Credential",
+        "Description": "Inner Range access control",
+        "Type": "pacs"
+    },
+    {
         "AID": "F48120",
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",

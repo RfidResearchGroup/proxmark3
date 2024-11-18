@@ -3,7 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- Use all available space from the SPI flash (@ANTodorov)
+- Added Inner range aid and mad entries (@iceman1001)
+- Changed `mem spiffs` - Use all available space in SPI flash (@ANTodorov)
 - Fixed wrong size check in MifareSim (@iceman1001)
 - Fixed `hf mf sim` not to respond to authentication attempts for sectors out of bound for selected Mifare type (@piotrva)
 - Added option to build against non-default python3 with CMake as well (@doegox)
