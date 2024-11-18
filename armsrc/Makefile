@@ -59,7 +59,7 @@ else
 endif
 
 ifneq (,$(findstring WITH_SMARTCARD,$(APP_CFLAGS)))
-    SRC_SMARTCARD = i2c.c
+    SRC_SMARTCARD = i2c.c i2c_direct.c
 else
     SRC_SMARTCARD =
 endif

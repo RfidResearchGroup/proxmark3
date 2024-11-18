@@ -41,13 +41,6 @@
 #define AUTHKEYB                 1
 #define AUTHKEYNONE              0xff
 
-//void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t atqa, uint8_t sak);
-
-//void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t atqa, uint8_t sak) {
-//    Dbprintf("Evm sim init...");
-//
-//}
-
 void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t atqa, uint8_t sak);
 
 #endif
