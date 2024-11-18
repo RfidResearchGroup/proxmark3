@@ -18,7 +18,6 @@
 // SPIFFS api for RDV40 Integration
 //-----------------------------------------------------------------------------
 
-#define SPIFFS_CFG_PHYS_SZ (1024 * 192)
 #define SPIFFS_CFG_PHYS_ERASE_SZ (4 * 1024)
 #define SPIFFS_CFG_PHYS_ADDR (0)
 #define SPIFFS_CFG_LOG_PAGE_SZ (256)

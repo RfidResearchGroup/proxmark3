@@ -2148,7 +2148,7 @@ void T55xx_ChkPwds(uint8_t flags, bool ledcontrol) {
     BigBuf_Clear_EM();
     uint16_t isok = 0;
     uint8_t counter[2] = {0x00, 0x00};
-    isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET, counter, sizeof(counter));
+    isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET_P(spi_flash_p64k), counter, sizeof(counter));
     if (isok != sizeof(counter))
         goto OUT;
 
@@ -2164,7 +2164,7 @@ void T55xx_ChkPwds(uint8_t flags, bool ledcontrol) {
     // adjust available pwd_count
     pwd_count = pwd_size_available / 4;
 
-    isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET + 2, pwds, pwd_size_available);
+    isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET_P(spi_flash_p64k) + 2, pwds, pwd_size_available);
     if (isok != pwd_size_available)
         goto OUT;
 

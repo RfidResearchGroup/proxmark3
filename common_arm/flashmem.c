@@ -43,6 +43,8 @@ static uint32_t FLASHMEM_SPIBAUDRATE = FLASH_BAUD;
 
 #ifndef AS_BOOTROM
 
+uint8_t spi_flash_p64k = 0;
+
 void FlashmemSetSpiBaudrate(uint32_t baudrate) {
     FLASHMEM_SPIBAUDRATE = baudrate;
     Dbprintf("Spi Baudrate : %dMHz", FLASHMEM_SPIBAUDRATE / 1000000);
@@ -144,14 +146,15 @@ uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
         return 0;
     }
 
-    // out-of-range
-    if (((address >> 16) & 0xFF) > MAX_BLOCKS) {
-        Dbprintf("Flash_WriteData,  block out-of-range");
+    if (!FlashInit()) {
+        if (g_dbglevel > 3) Dbprintf("Flash_WriteData init fail");
         return 0;
     }
 
-    if (!FlashInit()) {
-        if (g_dbglevel > 3) Dbprintf("Flash_WriteData init fail");
+    // out-of-range
+    if (((address >> 16) & 0xFF) > spi_flash_p64k) {
+        Dbprintf("Flash_WriteData,  block out-of-range %02x > %02x", (address >> 16) & 0xFF, spi_flash_p64k);
+        FlashStop();
         return 0;
     }
 
@@ -187,8 +190,8 @@ uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len) {
         return 0;
     }
 
-    if (((address >> 16) & 0xFF) > MAX_BLOCKS) {
-        Dbprintf("Flash_WriteDataCont,  block out-of-range");
+    if (((address >> 16) & 0xFF) > spi_flash_p64k) {
+        Dbprintf("Flash_WriteDataCont,  block out-of-range %02x > %02x", (address >> 16) & 0xFF, spi_flash_p64k);
         return 0;
     }
 
@@ -266,18 +269,11 @@ bool Flash_WipeMemory(void) {
 
     // Each block is 64Kb.  Four blocks
     // one block erase takes 1s ( 1000ms )
-    Flash_WriteEnable();
-    Flash_Erase64k(0);
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    Flash_WriteEnable();
-    Flash_Erase64k(1);
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    Flash_WriteEnable();
-    Flash_Erase64k(2);
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    Flash_WriteEnable();
-    Flash_Erase64k(3);
-    Flash_CheckBusy(BUSY_TIMEOUT);
+    for (uint8_t i=0; i < spi_flash_p64k; i++) {
+        Flash_WriteEnable();
+        Flash_Erase64k(i);
+        Flash_CheckBusy(BUSY_TIMEOUT);
+    }
 
     FlashStop();
     return true;
@@ -293,7 +289,7 @@ void Flash_WriteEnable(void) {
 // execution time: 0.8ms / 800us
 bool Flash_Erase4k(uint8_t block, uint8_t sector) {
 
-    if (block > MAX_BLOCKS  || sector > MAX_SECTORS) return false;
+    if (block > spi_flash_p64k || sector > MAX_SECTORS) return false;
 
     FlashSendByte(SECTORERASE);
     FlashSendByte(block);
@@ -328,7 +324,7 @@ bool Flash_Erase32k(uint32_t address) {
 // 0x03 00 00  -- 0x 03 FF FF  == block 3
 bool Flash_Erase64k(uint8_t block) {
 
-    if (block > MAX_BLOCKS) return false;
+    if (block > spi_flash_p64k) return false;
 
     FlashSendByte(BLOCK64ERASE);
     FlashSendByte(block);
@@ -404,6 +400,7 @@ void Flashmem_print_status(void) {
                     );
         }
     }
+    Dbprintf("  Flash pages (64k)....... " _YELLOW_("0x%02x (%u)"), spi_flash_p64k, spi_flash_p64k);
 
     uint8_t uid[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     Flash_UniqueID(uid);
@@ -431,7 +428,7 @@ void Flashmem_print_info(void) {
     uint16_t num;
 
     Flash_CheckBusy(BUSY_TIMEOUT);
-    uint16_t isok = Flash_ReadDataCont(DEFAULT_MF_KEYS_OFFSET, keysum, 2);
+    uint16_t isok = Flash_ReadDataCont(DEFAULT_MF_KEYS_OFFSET_P(spi_flash_p64k), keysum, 2);
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
@@ -439,7 +436,7 @@ void Flashmem_print_info(void) {
     }
 
     Flash_CheckBusy(BUSY_TIMEOUT);
-    isok = Flash_ReadDataCont(DEFAULT_T55XX_KEYS_OFFSET, keysum, 2);
+    isok = Flash_ReadDataCont(DEFAULT_T55XX_KEYS_OFFSET_P(spi_flash_p64k), keysum, 2);
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
@@ -447,7 +444,7 @@ void Flashmem_print_info(void) {
     }
 
     Flash_CheckBusy(BUSY_TIMEOUT);
-    isok = Flash_ReadDataCont(DEFAULT_ICLASS_KEYS_OFFSET, keysum, 2);
+    isok = Flash_ReadDataCont(DEFAULT_ICLASS_KEYS_OFFSET_P(spi_flash_p64k), keysum, 2);
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
@@ -455,6 +452,39 @@ void Flashmem_print_info(void) {
     }
 
     FlashStop();
+}
+
+//read spi flash JEDEC ID and fill the global variable spi_flash_p64k
+bool FlashDetect(bool flash_init) {
+    flash_device_type_t flash_device = {0};
+
+    if (flash_init) {
+        if (!FlashInit()) {
+            if (g_dbglevel > 3) Dbprintf("FlashDetect() FlashInit fail");
+            return false;
+        }
+    }
+
+    if (!Flash_ReadID(&flash_device, true)) {
+        if (g_dbglevel > 3) Dbprintf("Flash_ReadID failed");
+        return false;
+    }
+
+    uint32_t identifier = (flash_device.manufacturer_id <<16) + (flash_device.device_id <<8) +  flash_device.device_id2;
+    int i = 0;
+    for (; i < ARRAYLEN(SpiFlashTable); i++) {
+        if (SpiFlashTable[i].identifier == identifier) {
+            break;
+        }
+    }
+
+    spi_flash_p64k = SpiFlashTable[i].pages64;
+
+    if (flash_init) {
+        FlashStop();
+    }
+
+    return true;
 }
 
 #endif // #ifndef AS_BOOTROM
@@ -470,6 +500,14 @@ bool FlashInit(void) {
         StopTicks();
         return false;
     }
+
+#ifndef AS_BOOTROM
+    if (spi_flash_p64k == 0) {
+        if (!FlashDetect(false)) {
+            return false;
+        }
+    }
+#endif // #ifndef AS_BOOTROM
 
     return true;
 }

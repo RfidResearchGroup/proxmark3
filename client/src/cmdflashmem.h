@@ -32,4 +32,5 @@ typedef enum {
 int CmdFlashMem(const char *Cmd);
 int rdv4_get_signature(rdv40_validation_t *out);
 int rdv4_validate(rdv40_validation_t *mem);
+int rdv4_get_flash_pages64k(uint8_t *pages64k);
 #endif
