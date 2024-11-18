@@ -151,7 +151,6 @@ typedef struct spi_flash_s {
     const char    *desc;
 } spi_flash_t;
 
-// spi_flash_t is expected to be NULL terminated
 const static spi_flash_t SpiFlashTable[] = {
     // Manufacturer: Puya
     { 0x856015, 32, "P25Q16H" },
@@ -165,6 +164,7 @@ const static spi_flash_t SpiFlashTable[] = {
     { 0xEF4016, 64, "W25Q32BV" },
 
     { 0xEF7022,  4, "W25Q02JV" },
+    // (default) last record
     { 0x000000,  4, "Unknown!" }
 };
 
@@ -174,7 +174,7 @@ const static spi_flash_t SpiFlashTable[] = {
 
 extern uint8_t spi_flash_p64k;
 
-bool FlashDetect(bool);
+bool FlashDetect(void);
 
 #endif // #ifndef AS_BOOTROM
 
