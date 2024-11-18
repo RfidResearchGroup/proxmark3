@@ -1,4 +1,4 @@
-[
+n[
     {
         "AID": "EEEE10",
         "Vendor": "NFC Forum",
@@ -201,10 +201,10 @@
     },
     {
         "AID": "F47300",
-        "Vendor": "Inner Range",
+        "Vendor": "Inner Range Pty Ltd",
         "Country": "AU",
-        "Name": "Sifer-P, Sifer-U Credential",
-        "Description": "Inner Range access control",
+        "Name": "SIFER-P / SIFER-U Credential",
+        "Description": "Inner Range Access Control",
         "Type": "pacs"
     },
     {
@@ -699,7 +699,7 @@
         "AID": "F33480",
         "Vendor": "Besucherausweis",
         "Country": "DE",
-        "Name": "Visitor's Pass",
+        "Name": "Visitor Badge",
         "Description": "Besucherausweis",
         "Type": "student"
     },
@@ -944,6 +944,14 @@
         "Type": "transport"
     },
     {
+        "AID": "484000",
+        "Vendor": "Sistema de Tren Elétrico Urbano (SITEUR)",
+        "Country": "MX",
+        "Name": "Mi Movilidad Card (GDL)",
+        "Description": "GDL Mi Movilidad Card",
+        "Type": "transport"
+    },
+    {
         "AID": "4F5931",
         "Vendor": "Transport for London (TfL)",
         "Country": "UK",
@@ -1045,6 +1053,14 @@
         "Country": "BG",
         "Name": "Sofia City Card (SOF)",
         "Description": "SOF Sofia City Card",
+        "Type": "transport"
+    },
+    {
+        "AID": "DD00DD",
+        "Vendor": "Regional Transporation District (RTD) via masabi justride",
+        "Country": "US",
+        "Name": "MyRide Card (DEN)",
+        "Description": "DEN MyRide Card",
         "Type": "transport"
     },
     {
