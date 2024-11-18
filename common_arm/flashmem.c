@@ -455,34 +455,23 @@ void Flashmem_print_info(void) {
 }
 
 //read spi flash JEDEC ID and fill the global variable spi_flash_p64k
-bool FlashDetect(bool flash_init) {
+bool FlashDetect(void) {
     flash_device_type_t flash_device = {0};
-
-    if (flash_init) {
-        if (!FlashInit()) {
-            if (g_dbglevel > 3) Dbprintf("FlashDetect() FlashInit fail");
-            return false;
-        }
-    }
 
     if (!Flash_ReadID(&flash_device, true)) {
         if (g_dbglevel > 3) Dbprintf("Flash_ReadID failed");
         return false;
     }
 
-    uint32_t identifier = (flash_device.manufacturer_id <<16) + (flash_device.device_id <<8) +  flash_device.device_id2;
+    uint32_t identifier = (flash_device.manufacturer_id << 16) + (flash_device.device_id <<8 ) + flash_device.device_id2;
     int i = 0;
-    for (; i < ARRAYLEN(SpiFlashTable); i++) {
+    for (; i < ARRAYLEN(SpiFlashTable)-1; i++) {
         if (SpiFlashTable[i].identifier == identifier) {
             break;
         }
     }
 
     spi_flash_p64k = SpiFlashTable[i].pages64;
-
-    if (flash_init) {
-        FlashStop();
-    }
 
     return true;
 }
@@ -503,7 +492,7 @@ bool FlashInit(void) {
 
 #ifndef AS_BOOTROM
     if (spi_flash_p64k == 0) {
-        if (!FlashDetect(false)) {
+        if (!FlashDetect()) {
             return false;
         }
     }
