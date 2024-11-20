@@ -883,7 +883,7 @@ static int CmdHF14AMfDarkside(const char *Cmd) {
         arg_param_begin,
         arg_int0(NULL, "blk", "<dec> ", "Target block"),
         arg_lit0("b", NULL, "Target key B instead of default key A"),
-        arg_int0("c", NULL, "<dec>", "Target Auth 6x"),
+        arg_int0("c", NULL, "<dec>", "Target key type is key A + offset"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
