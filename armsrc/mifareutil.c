@@ -983,3 +983,12 @@ int nonce_distance(uint32_t from, uint32_t to) {
 int nonce16_index(uint16_t nt) {
     return nonce16_distance(0x0100, nt) + 1;
 }
+
+uint32_t rewind_nonce(uint32_t from, uint16_t dist) {
+    uint16_t x = from >> 16;
+    for (uint16_t i = 0; i < dist; i++) {
+        x = ((x << 1 | x >> 15) & 0xffff) ^ ((x >> 1 ^ x >> 2 ^ x >> 4) & 0x100);
+    }
+    uint32_t nt = x;
+    return nt << 16 | prng_successor(nt, 16);
+}
