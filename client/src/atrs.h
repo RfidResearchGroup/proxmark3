@@ -3196,9 +3196,7 @@ const static atr_t AtrTable[] = {
     { "3B9F96801FC78031E073FE211BB3E20394830F90006D", "GemXplore 3G v2.2" },
     { "3B9F96801FC78031E073FE211BB3E204A5830F90005B", "Tre Italia Gemplus (Telecommunication)" },
     { "3B9F96801FC78031E073FEA117574A33058C33390096", "1NCE SIM card (Telecommunication)\nhttps://1nce.com/en-eu/1nce-os/our-architecture" },
-    {
-        "3B9F96803F87828031E073FE211B67454D753034024B02", "Hologram Global G1
-eUICC SIM(Telecommunication)\nhttps: //www.hologram.io/products/global-iot-sim-card/" },
+    { "3B9F96803F87828031E073FE211B67454D753034024B02", "Hologram Global G1 eUICC SIM(Telecommunication)\nhttps: //www.hologram.io/products/global-iot-sim-card/" },
         { "3B9F96803F87828031E073FE211F574543753130136502", "sysmoEUICC1-Cxx - eUCICC for econsumer eSIM RSP (Telecommunication)\nhttps://sysmocom.de/products/sim/sysmocom-euicc/index.html" },
         { "3B9F96803F87828031E073FE211F574543753130266F3D", "An eSIM physical card, you can write eSIM profiles into it and use it as a general SIM (Telecommunication)\nhttps://www.9esim.com/" },
         { "3B9F96803FC3A08031E073F62113574A4D0E1D31300071", "Telenor SIM card (Norway)" },
