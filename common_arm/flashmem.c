@@ -62,7 +62,7 @@ bool Flash_ReadID(flash_device_type_t *result, bool read_jedec) {
         // 0x9F JEDEC
         FlashSendByte(JEDECID);
 
-        result->manufacturer_id     =  (FlashSendByte(0xFF) & 0xFF);
+        result->manufacturer_id     = (FlashSendByte(0xFF) & 0xFF);
         result->device_id  = (FlashSendByte(0xFF) & 0xFF);
         result->device_id2 = (FlashSendLastByte(0xFF) & 0xFF);
     } else {
@@ -127,7 +127,7 @@ uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len) {
 
     uint16_t i = 0;
     for (; i < (len - 1); i++) {
-        out[i] = ( FlashSendByte(0xFF) & 0xFF);
+        out[i] = (FlashSendByte(0xFF) & 0xFF);
     }
     out[i] = (FlashSendLastByte(0xFF) & 0xFF);
     return len;
@@ -271,7 +271,7 @@ bool Flash_WipeMemory(void) {
 
     // Each block is 64Kb.  Four blocks
     // one block erase takes 1s ( 1000ms )
-    for (uint8_t i=0; i < spi_flash_pages64k; i++) {
+    for (uint8_t i = 0; i < spi_flash_pages64k; i++) {
         Flash_WriteEnable();
         Flash_Erase64k(i);
         Flash_CheckBusy(BUSY_TIMEOUT);
@@ -352,17 +352,17 @@ void Flashmem_print_status(void) {
     }
     DbpString("  Init.................... " _GREEN_("ok"));
 
-    if (spi_flash_data.device_id > 0 ) {
+    if (spi_flash_data.device_id > 0) {
         Dbprintf("  Mfr ID / Dev ID......... " _YELLOW_("%02X / %02X"),
-                    spi_flash_data.manufacturer_id,
-                    spi_flash_data.device_id
+                 spi_flash_data.manufacturer_id,
+                 spi_flash_data.device_id
                 );
     }
 
     if (spi_flash_data.jedec_id > 0) {
         Dbprintf("  JEDEC Mfr ID / Dev ID... " _YELLOW_("%02X / %04X"),
-                    spi_flash_data.manufacturer_id,
-                    spi_flash_data.jedec_id
+                 spi_flash_data.manufacturer_id,
+                 spi_flash_data.jedec_id
                 );
     }
 
@@ -427,9 +427,9 @@ bool FlashDetect(void) {
     // read using 0x9F (JEDEC)
     if (Flash_ReadID(&flash_data, true)) {
         spi_flash_data.manufacturer_id = flash_data.manufacturer_id;
-        spi_flash_data.jedec_id = (flash_data.device_id <<8) +  flash_data.device_id2;
+        spi_flash_data.jedec_id = (flash_data.device_id << 8) +  flash_data.device_id2;
         ret = true;
-    } else{
+    } else {
         if (g_dbglevel > 3) Dbprintf("Flash_ReadID failed reading JEDEC (0x9F)");
     }
     // read using 0x90 (Manufacturer / Device ID)
@@ -446,7 +446,7 @@ bool FlashDetect(void) {
     spi_flash_data.device = SpiFlashTable[0].device;
 
     if (ret) {
-        for (int i=0; i < ARRAYLEN(SpiFlashTable); i++) {
+        for (int i = 0; i < ARRAYLEN(SpiFlashTable); i++) {
             if (SpiFlashTable[i].manufacturer_id == spi_flash_data.manufacturer_id) {
                 if (SpiFlashTable[i].jedec_id == spi_flash_data.jedec_id) {
                     spi_flash_pages64k = SpiFlashTable[i].pages64k;

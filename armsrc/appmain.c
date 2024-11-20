@@ -2789,7 +2789,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 LED_B_OFF();
                 break;
             }
-            if (page < spi_flash_pages64k-1) {
+            if (page < spi_flash_pages64k - 1) {
                 isok = Flash_WipeMemoryPage(page);
                 // let spiffs check and update its info post flash erase
                 rdv40_spiffs_check();

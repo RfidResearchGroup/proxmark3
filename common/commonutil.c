@@ -575,7 +575,7 @@ int char2int(char c) {
     return -1; // Invalid character for hex
 }
 
- // returns the number of bytes written
+// returns the number of bytes written
 int hexstr2ByteArr(const char *hexstr, unsigned char *array, size_t asize) {
     size_t n = 0;
     while (hexstr[n] != '\0') {

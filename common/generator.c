@@ -556,7 +556,7 @@ int mfc_algo_bambu_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *
     const mbedtls_md_info_t *info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
 
     if (keytype == 0) {
-        mbedtls_hkdf(info, bambu_salt, sizeof(bambu_salt), uid, 4, bambu_context_a, sizeof(bambu_context_a), keys, sizeof(keys) );
+        mbedtls_hkdf(info, bambu_salt, sizeof(bambu_salt), uid, 4, bambu_context_a, sizeof(bambu_context_a), keys, sizeof(keys));
     } else {
         mbedtls_hkdf(info, bambu_salt, sizeof(bambu_salt), uid, 4, bambu_context_b, sizeof(bambu_context_b), keys, sizeof(keys));
     }
@@ -571,7 +571,7 @@ int mfc_algo_bambu_all(uint8_t *uid, uint8_t *keys) {
 
     // prepare hmac context
     const mbedtls_md_info_t *info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
-    mbedtls_hkdf(info, bambu_salt, sizeof(bambu_salt), uid, 4, bambu_context_a, sizeof(bambu_context_a), keys, (16 * 6) );
+    mbedtls_hkdf(info, bambu_salt, sizeof(bambu_salt), uid, 4, bambu_context_a, sizeof(bambu_context_a), keys, (16 * 6));
     mbedtls_hkdf(info, bambu_salt, sizeof(bambu_salt), uid, 4, bambu_context_b, sizeof(bambu_context_b), keys + (16 * 6), (16 * 6));
     return PM3_SUCCESS;
 }

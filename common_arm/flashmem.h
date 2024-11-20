@@ -142,7 +142,7 @@ typedef struct {
     uint16_t jedec_id;
     uint8_t  pages64k;
     char    *device;
-}spi_flash_t;
+} spi_flash_t;
 
 static const spi_flash_t SpiFlashTable[] = {
     // first element is the default of 4 * 64kB pages (256kB)

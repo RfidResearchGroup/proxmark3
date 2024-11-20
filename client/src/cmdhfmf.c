@@ -9697,8 +9697,8 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     }
 
     if (fKeyType != 0xFF) {
-            PrintAndLogEx(SUCCESS, "Block 0.... %s | " NOLF, sprint_hex_inrow(blockdata, MFBLOCK_SIZE));
-            PrintAndLogEx(NORMAL, "%s", sprint_ascii(blockdata + 8, 8));
+        PrintAndLogEx(SUCCESS, "Block 0.... %s | " NOLF, sprint_hex_inrow(blockdata, MFBLOCK_SIZE));
+        PrintAndLogEx(NORMAL, "%s", sprint_ascii(blockdata + 8, 8));
     }
 
     PrintAndLogEx(NORMAL, "");
