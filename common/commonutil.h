@@ -65,6 +65,20 @@
 #define REV64(x)        (REV32(x) + ((uint64_t)(REV32((x) >> 32) << 32)))
 #endif
 
+typedef struct {
+    int Year;
+    int Month;
+    int Day;
+    int Hour;
+    int Minute;
+} Date_t;
+
+
+int calculate_hours_between_dates(const Date_t s, Date_t *e);
+void add_hours(Date_t *d, int hours_to_add);
+void add_days(Date_t *d, int days_to_add);
+uint8_t days_in_month(int year, int month);
+
 
 extern struct version_information_t g_version_information;
 void FormatVersionInformation(char *dst, int len, const char *prefix, const void *version_info);
@@ -136,4 +150,6 @@ void reverse_arraybytes(uint8_t *arr, size_t len);
 void reverse_arraybytes_copy(uint8_t *arr, uint8_t *dest, size_t len);
 
 size_t concatbits(uint8_t *dest, int dest_offset, const uint8_t *src, int src_offset, size_t nbits);
+int char2int(char c);
+int hexstr2ByteArr(const char *hexstr, unsigned char *array, size_t asize);
 #endif

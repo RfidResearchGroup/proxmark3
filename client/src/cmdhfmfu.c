@@ -4126,7 +4126,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
 
     // save old block2.
     uint8_t oldblock2[4] = {0x00};
-    memcpy(resp.data.asBytes, oldblock2, 4);
+    memcpy(oldblock2, resp.data.asBytes, 4);
 
     // Enforce bad BCC handling temporarily as BCC will be wrong between
     // block 1 write and block2 write
@@ -4431,6 +4431,9 @@ static int CmdHF14AMfUPwdGen(const char *Cmd) {
     PrintAndLogEx(INFO, " Dorma Kaba algo");
     PrintAndLogEx(INFO, " STiD algo");
     PrintAndLogEx(INFO, "-------------------------------------");
+    key = 0;
+    mfc_algo_bambu_one(uid, 0, MF_KEY_A, &key);
+    PrintAndLogEx(INFO, " Bambu........ %012" PRIX64, key);
     return PM3_SUCCESS;
 }
 
