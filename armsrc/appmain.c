@@ -2748,11 +2748,11 @@ static void PacketReceived(PacketCommandNG *packet) {
                 break;
             }
 
-            if (payload->startidx == DEFAULT_T55XX_KEYS_OFFSET_P(spi_flash_p->p64k)) {
+            if (payload->startidx == DEFAULT_T55XX_KEYS_OFFSET_P(spi_flash_pages64k)) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
                 Flash_Erase4k(3, 0xC);
-            } else if (payload->startidx ==  DEFAULT_MF_KEYS_OFFSET_P(spi_flash_p->p64k)) {
+            } else if (payload->startidx ==  DEFAULT_MF_KEYS_OFFSET_P(spi_flash_pages64k)) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
                 Flash_Erase4k(3, 0x8);
@@ -2762,11 +2762,11 @@ static void PacketReceived(PacketCommandNG *packet) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
                 Flash_Erase4k(3, 0xA);
-            } else if (payload->startidx == DEFAULT_ICLASS_KEYS_OFFSET_P(spi_flash_p->p64k)) {
+            } else if (payload->startidx == DEFAULT_ICLASS_KEYS_OFFSET_P(spi_flash_pages64k)) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
                 Flash_Erase4k(3, 0xB);
-            } else if (payload->startidx == FLASH_MEM_SIGNATURE_OFFSET_P(spi_flash_p->p64k)) {
+            } else if (payload->startidx == FLASH_MEM_SIGNATURE_OFFSET_P(spi_flash_pages64k)) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
                 Flash_Erase4k(3, 0xF);
@@ -2789,7 +2789,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 LED_B_OFF();
                 break;
             }
-            if (page < spi_flash_p->p64k-1) {
+            if (page < spi_flash_pages64k-1) {
                 isok = Flash_WipeMemoryPage(page);
                 // let spiffs check and update its info post flash erase
                 rdv40_spiffs_check();
@@ -2836,7 +2836,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             LED_B_ON();
             rdv40_validation_t *info = (rdv40_validation_t *)BigBuf_malloc(sizeof(rdv40_validation_t));
 
-            bool isok = Flash_ReadData(FLASH_MEM_SIGNATURE_OFFSET_P(spi_flash_p->p64k), info->signature, FLASH_MEM_SIGNATURE_LEN);
+            bool isok = Flash_ReadData(FLASH_MEM_SIGNATURE_OFFSET_P(spi_flash_pages64k), info->signature, FLASH_MEM_SIGNATURE_LEN);
 
             if (FlashInit()) {
                 Flash_UniqueID(info->flashid);
@@ -2856,11 +2856,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             if (FlashInit()) {
                 isok = true;
                 if (g_dbglevel >= DBG_DEBUG) {
-                    Dbprintf("  CMD_FLASHMEM_PAGE64K 0x%02x (%d 64k pages)", spi_flash_p->p64k, spi_flash_p->p64k);
+                    Dbprintf("  CMD_FLASHMEM_PAGE64K 0x%02x (%d 64k pages)", spi_flash_pages64k, spi_flash_pages64k);
                 }
                 FlashStop();
             }
-            reply_mix(CMD_ACK, isok, 0, 0, &spi_flash_p->p64k, sizeof(uint8_t));
+            reply_mix(CMD_ACK, isok, 0, 0, &spi_flash_pages64k, sizeof(uint8_t));
 
             LED_B_OFF();
             break;
