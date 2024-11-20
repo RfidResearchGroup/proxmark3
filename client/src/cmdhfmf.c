@@ -797,7 +797,7 @@ static int mf_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey
             PrintAndLogEx(DEBUG, _YELLOW_("%2d") " - %s", *pkeycnt + i, sprint_hex(*pkeyBlock + (*pkeycnt + i) * MIFARE_KEY_SIZE, MIFARE_KEY_SIZE));
         }
         *pkeycnt += ARRAYLEN(g_mifare_default_keys);
-        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%zu") " keys from hardcoded default array", ARRAYLEN(g_mifare_default_keys));
+        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%zu") " hardcoded keys", ARRAYLEN(g_mifare_default_keys));
     }
 
     // Handle user supplied dictionary file
@@ -883,7 +883,7 @@ static int CmdHF14AMfDarkside(const char *Cmd) {
         arg_param_begin,
         arg_int0(NULL, "blk", "<dec> ", "Target block"),
         arg_lit0("b", NULL, "Target key B instead of default key A"),
-        arg_int0("c", NULL, "<dec>", "Target key type is key A + offset"),
+        arg_int0("c", NULL, "<dec>", "Target Auth 6x"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -9697,7 +9697,8 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     }
 
     if (fKeyType != 0xFF) {
-        PrintAndLogEx(SUCCESS, "Block 0.......... %s", sprint_hex_ascii(blockdata, MFBLOCK_SIZE));
+            PrintAndLogEx(SUCCESS, "Block 0.... %s | " NOLF, sprint_hex_inrow(blockdata, MFBLOCK_SIZE));
+            PrintAndLogEx(NORMAL, "%s", sprint_ascii(blockdata + 8, 8));
     }
 
     PrintAndLogEx(NORMAL, "");
