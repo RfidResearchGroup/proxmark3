@@ -17,7 +17,10 @@ all: $(BINS)
 	    echo "ERROR: Firmware image too large for your platform! $$FWSIZE > $(FWMAXSIZE)"; \
 		echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
 		exit 1; \
-	fi
+	fi; \
+	echo "==================================================================="; \
+	echo "Firmware size: $$FWSIZE bytes ($$((FWSIZE/1024))kb) = $$((FWSIZE*100/$(FWMAXSIZE)))% of $$(($(FWMAXSIZE)/1024))kb"; \
+	echo "==================================================================="
 
 bootrom.bin: ../bootrom/obj/bootrom.elf
 	$(info [=] GEN $@)
