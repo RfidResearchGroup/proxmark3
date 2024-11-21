@@ -651,8 +651,11 @@ void rdv40_spiffs_safe_print_tree(void) {
 
             read_from_spiffs((char *)pe->name, (uint8_t *)linkdest, SPIFFS_OBJ_NAME_LEN);
             sprintf(resolvedlink, "(.lnk) --> %s", linkdest);
-            // Kind of stripping the .lnk extension
-            strtok((char *)pe->name, ".");
+            char *linkname = (char *)pe->name;
+            int len = strlen(linkname);
+            if (len >= 4 && strcmp(&linkname[len - 4], ".lnk") == 0) {
+                linkname[len - 4] = '\0';
+            }
         }
 
         Dbprintf("[%04x] " _YELLOW_("%5i") " B |-- %s%s", pe->obj_id, pe->size, pe->name, resolvedlink);
