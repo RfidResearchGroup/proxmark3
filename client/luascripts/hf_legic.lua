@@ -105,8 +105,8 @@ local ansicolors  = require('ansicolors')
 
 ---
 -- global variables / defines
-local bxor    = bit32.bxor
-local bbit    = bit32.extract
+-- local bxor    = bit32.bxor
+-- local bbit    = bit32.extract
 local input   = utils.input
 local confirm = utils.confirm
 
@@ -296,7 +296,8 @@ end
 -- xor single byte
 function xorme(hex, xor, index)
     if ( index >= 23 ) then
-        return ('%02x'):format(bxor( tonumber(hex,16) , tonumber(xor,16) ))
+                --return ('%02x'):format(bxor( tonumber(hex,16) , tonumber(xor,16) ))
+	return string.format("%x", tonumber(hex,16) ~ tonumber(xor,16))
     else
         return hex
     end
@@ -455,12 +456,17 @@ function bytesToTag(bytes, tag)
     tag.raw =padString(bytes[8]);
     tag.SSC =padString(bytes[9]);
     tag.Type=getTokenType(tag.DCFl);
-    tag.OLE=bbit("0x"..tag.DCFl,7,1)
-    tag.WRP=("%d"):format(bbit("0x"..bytes[8],0,4))
-    tag.WRC=("%d"):format(bbit("0x"..bytes[8],4,3))
-    tag.RD=("%d"):format(bbit("0x"..bytes[8],7,1))
+    --tag.OLE=bbit("0x"..tag.DCFl,7,1)
+    tag.OLE=(tonumber(tag.DCFl, 16) >> 7) & 0x01
+            --tag.WRP=("%d"):format(bbit("0x"..bytes[8],0,4))
+    tag.WRP=string.format("%02d", tonumber(bytes[8], 16) & 0x0F)
+            --tag.WRC=("%d"):format(bbit("0x"..bytes[8],4,3))
+    tag.WRC = string.format("%02d", (tonumber(bytes[8], 16) >> 4) & 0x07)
+    --tag.RD=("%d"):format(bbit("0x"..bytes[8],7,1))
+    tag.RD=string.format("%02d", (tonumber(bytes[8],16) >> 7) & 0x01)
     if (tag.Type=="SAM" and tag.raw=='9f') then
-    tag.Stamp_len=(0xfc-bbit("0x"..tag.DCFh,0,8))
+        tag.Stamp_len=(0xfc - tonumber(tag.DCFh,16) & 0xFF)
+        --tag.Stamp_len=(0xfc-bbit("0x"..tag.DCFh,0,8))
     elseif (tag.Type=="SAM" and (tag.raw=='08' or tag.raw=='09')) then
       tag.Stamp_len = tonumber(tag.raw,10)
     end
@@ -493,7 +499,7 @@ end
 function segmentsToTag(bytes, tag)
   if(#bytes>23) then
     local start=23
-    local i=-1
+    local i=-1   
     if (istable(tag)) then
       repeat
         i=i+1
@@ -1262,7 +1268,8 @@ function mapAllSegments(tag, tagMap)
       -- wrp (write proteted) = byte 2
       WRP = tonumber(bytes[v['start']+2],16)
       -- wrc (write control) - bit 4-6 of byte 3
-      WRC = tonumber(bbit("0x"..bytes[v['start']+3],4,3),16)
+            --WRC = tonumber(bbit("0x"..bytes[v['start']+3],4,3),16)
+      WRC = (tonumber(bytes[v['start']+3],16) >> 4) & 0x07
       --tagMap=mapTokenData(tagMap, 'Segment '..("%02d"):format(v['index']).." HDR", v['start'], v['start']+3)
       tagMap=mapTokenData(tagMap, 'Segment '..("%02d"):format(v['index']).." CRC", v['start']+4, v['start']+4, true)
       table.insert(tagMap.crc8, {name = 'Segment '..("%02d"):format(v['index']).." CRC", pos=v['start']+4, seq={1,4,v['start'],v['start']+3}} )
@@ -1703,7 +1710,8 @@ function getTokenType(DCFl)
     0x30–0x6f SAM
     0x70–0x7f GAM
   ]]--
-  local tt = bbit("0x"..DCFl,0,7)
+        --local tt = bbit("0x"..DCFl,0,7)
+  local tt = tonumber(DCFl, 16) & 0x7F
   if (tt >= 0 and tt <= 47) then tt = "IAM"
   elseif (tt == 49) then tt = "SAM63"
   elseif (tt == 48) then tt = "SAM64"
@@ -1747,24 +1755,29 @@ function getSegmentData(bytes, start, index)
       -- flag = high nibble of byte 1
       segment.flag = string.sub(bytes[start+1],0,1)
       -- valid = bit 6 of byte 1
-      segment.valid = bbit("0x"..bytes[start+1],6,1)
+            --segment.valid = bbit("0x"..bytes[start+1],6,1)
+      segment.valid = (tonumber(bytes[start+1], 16) >> 6) & 0x01
       -- last = bit 7 of byte 1
-      segment.last = bbit("0x"..bytes[start+1],7,1)
+            --segment.last = bbit("0x"..bytes[start+1],7,1)
+      segment.last = (tonumber(bytes[start+1], 16) >> 7) & 0x01
       -- len = (byte 0)+(bit0-3 of byte 1)
-    segment.len = tonumber(bbit("0x"..bytes[start+1],0,4)..bytes[start],16)
+            --segment.len = tonumber(bbit("0x"..bytes[start+1],0,4)..bytes[start],16)
+    segment.len = ((tonumber(bytes[start+1], 16) & 0x0F) << 8) + tonumber(bytes[start], 16)
     -- raw segment header
-    segment.raw = {bytes[start], bytes[start+1], bytes[start+2], bytes[start+3]}
+    segment.raw = {padString(bytes[start]), padString(bytes[start+1]), padString(bytes[start+2]), padString(bytes[start+3])}
       -- wrp (write proteted) = byte 2
       segment.WRP = tonumber(bytes[start+2],16)
       -- wrc (write control) - bit 4-6 of byte 3
-      segment.WRC = bbit("0x"..bytes[start+3],4,3)
+            --segment.WRC = bbit("0x"..bytes[start+3],4,3)      
+      segment.WRC = (tonumber(bytes[start+3], 16) >> 4) & 0x07
       -- rd (read disabled) - bit 7 of byte 3
-      segment.RD = bbit("0x"..bytes[start+3],7,1)
+            --segment.RD = bbit("0x"..bytes[start+3],7,1)
+      segment.RD = (tonumber(bytes[start+3],16) >> 7) & 0x01
       -- crc byte 4
-      segment.crc = bytes[start+4]
+      segment.crc = padString(bytes[start+4])
     -- segment-data starts at segment.len - segment.header - segment.crc
     for i=0, (segment.len-5) do
-      segment.data[i]=bytes[start+5+i]
+      segment.data[i]=padString(bytes[start+5+i])
     end
     return segment
   else return false;
@@ -1781,11 +1794,14 @@ function getSegmentStats(bytes)
   repeat
     local s={}
       -- valid = bit 6 of byte 1
-      sValid = bbit("0x"..bytes[sStart+1],6,1)
+            -- sValid = bbit("0x"..bytes[sStart+1],6,1)
+      sValid = (tonumber(bytes[sStart+1],16) >> 6) & 0x01
       -- last = bit 7 of byte 1
-      sLast = bbit("0x"..bytes[sStart+1],7,1)
+            --sLast = bbit("0x"..bytes[sStart+1],7,1)
+      sLast = (tonumber(bytes[sStart+1],16) >> 7) & 0x01
       -- len = (byte 0)+(bit0-3 of byte 1)
-    sLen = tonumber(bbit("0x"..bytes[sStart+1],0,4)..bytes[sStart],16)
+            --sLen = tonumber(bbit("0x"..bytes[sStart+1],0,4)..bytes[sStart],16)
+    sLen = ((tonumber(bytes[start+1],16) & 0x0F) << 8) + tonumber(bytes[start],16)
     --print("index: "..("%02d"):format(x).." Len: "..sLen.." start:"..sStart.." end: "..(sStart+sLen-1))
     s['index']=x
     s['start']=sStart
@@ -1808,11 +1824,14 @@ function regenSegmentHeader(segment)
   local raw = segment.raw
   local i
   -- len  bit0..7 | len=12bit=low nibble of byte1..byte0
-  raw[1]=("%02x"):format(bbit("0x"..("%03x"):format(seg.len),0,8))
+        --raw[1]=("%02x"):format(bbit("0x"..("%03x"):format(seg.len),0,8))
+  raw[1] = seg.len & 0xFF
   -- high nibble of len  bit6=valid , bit7=last of byte 1 | ?what are bit 5+6 for? maybe kgh?
-  raw[2]=("%02x"):format(bbit("0x"..("%03x"):format(seg.len),8,4)+bbit("0x"..("%02x"):format((seg.valid*64)+(seg.last*128)),0,8))
+        --raw[2]=("%02x"):format(bbit("0x"..("%03x"):format(seg.len),8,4)+bbit("0x"..("%02x"):format((seg.valid*64)+(seg.last*128)),0,8))
+  raW[2] = (seg.len >> 8) & 0xF | (seg.valid >> 6) | (seg.last >> 7)
   -- WRP
-  raw[3]=("%02x"):format(bbit("0x"..("%02x"):format(seg.WRP),0,8))
+        -- raw[3]=("%02x"):format(bbit("0x"..("%02x"):format(seg.WRP),0,8))
+  raw[3] = seg.WRP
   -- WRC + RD
   raw[4]=("%02x"):format(tonumber((seg.WRC*16)+(seg.RD*128),10))
   -- flag
@@ -2141,6 +2160,8 @@ end
 ---
 -- chack for signature of a 'Legic-Cash-Segment'
 function check4LegicCash(data, uid)
+
+print("### #data: " .. #data)
   if(#data==32) then
     local stamp_len=(#data-25)
     local stamp=""
