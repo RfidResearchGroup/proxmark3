@@ -416,6 +416,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "F534F1",
+        "Vendor": "MOBOTIX AG",
+        "Country": "DE",
+        "Name": "MOBOTIX AG Access Credential",
+        "Description": "T26 Outdoor Station and Access Module Credential",
+        "Type": "pacs"
+    },
+    {
         "AID": "F518F0",
         "Vendor": "Telenot Electronic GmbH",
         "Country": "DE",
@@ -817,10 +825,10 @@
     },
     {
         "AID": "0000F0",
-        "Vendor": "Metropolitan Transportation Authority (MTA)",
-        "Country": "US",
-        "Name": "OMNY (One Metro New York) (JFK)",
-        "Description": "JFK OMNY (One Metro New York) Card",
+        "Vendor": "Metropolitan Transportation Authority (MTA) / Bayerische Motoren Werke (BMW) AG",
+        "Country": "US / DE",
+        "Name": "OMNY (One Metro New York) (JFK) / BMW Digital Key",
+        "Description": "JFK OMNY (One Metro New York) Card / BMW Digital Key 5B3611-01",
         "Type": "transport"
     },
     {

@@ -268,7 +268,7 @@ void RunMod() {
             BigBuf_free_keep_EM();
 
             // 4 = ISO/IEC 14443-4 - javacard (JCOP)
-            if (SimulateIso14443aInit(4, flags, data, NULL, &responses, &cuid, NULL, NULL, NULL) == false) {
+            if (SimulateIso14443aInit(4, flags, data, NULL, 0, &responses, &cuid, NULL, NULL, NULL) == false) {
                 BigBuf_free_keep_EM();
                 reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
                 DbpString(_RED_("Error initializing the emulation process!"));

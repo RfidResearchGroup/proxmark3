@@ -567,3 +567,35 @@ size_t concatbits(uint8_t *dest, int dest_offset, const uint8_t *src, int src_of
 
     return dest_offset + nbits;
 }
+
+int char2int(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    return -1; // Invalid character for hex
+}
+
+// returns the number of bytes written
+int hexstr2ByteArr(const char *hexstr, unsigned char *array, size_t asize) {
+    size_t n = 0;
+    while (hexstr[n] != '\0') {
+        n++;
+    }
+
+    // Check if the input is valid and fits in the output array
+    if (n % 2 != 0 || asize < n >> 1) {
+        return -1; // Error: invalid length or insufficient byte array size
+    }
+
+    for (size_t i = 0; i < n; i += 2) {
+        int high = char2int(hexstr[i]);
+        int low = char2int(hexstr[i + 1]);
+
+        if (high == -1 || low == -1) {
+            return -1; // Error: invalid hex character
+        }
+
+        array[i >> 1] = (high << 4) | low;
+    }
+    return n >> 1;
+}

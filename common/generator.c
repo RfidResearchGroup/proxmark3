@@ -25,7 +25,7 @@
 #include <string.h>
 #include "commonutil.h"   //BSWAP_16
 #include "common.h"       //BSWAP_32/64
-#include "util.h"
+
 #include "pm3_cmd.h"
 #include "crc16.h"        // crc16 ccitt
 #include "mbedtls/sha1.h"
@@ -33,9 +33,11 @@
 #include "mbedtls/cmac.h"
 #include "mbedtls/cipher.h"
 #include "mbedtls/md.h"
+#include "mbedtls/hkdf.h"
 
 #ifndef ON_DEVICE
 #include "ui.h"
+#include "util.h"
 # define prnt(args...) PrintAndLogEx(DEBUG, ## args );
 #else
 # include "dbprint.h"
@@ -351,12 +353,11 @@ int mfc_algo_saflok_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t 
             0xda3e3fd649ddULL, 0x58dded078e3eULL, 0x5cd005cfd907ULL, 0x118dd00187d0ULL
         };
 
-        uint8_t h = ((uid[3] >> 4) & 0xF);
-        h += ((uid[2] >> 4) & 0xF);
+        uint8_t h = (NIBBLE_HIGH(uid[3]) & 0xF);
+        h += (NIBBLE_HIGH(uid[2]) & 0xF);
         h += uid[0] & 0xF;
 
         uint64_t m = lut[h & 0xF];
-
         uint64_t id = (bytes_to_num(uid, 4) << 8);
 
         *key = (h + (id + m + ((uint64_t)h << 40ULL))) & 0xFFFFFFFFFFFFULL;
@@ -540,6 +541,41 @@ int mfc_algo_sky_all(uint8_t *uid, uint8_t *keys) {
     return PM3_SUCCESS;
 }
 
+
+static const uint8_t bambu_salt[] = { 0x9a, 0x75, 0x9c, 0xf2, 0xc4, 0xf7, 0xca, 0xff, 0x22, 0x2c, 0xb9, 0x76, 0x9b, 0x41, 0xbc, 0x96 };
+static const uint8_t bambu_context_a[] = "RFID-A";
+static const uint8_t bambu_context_b[] = "RFID-B";
+
+int mfc_algo_bambu_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
+    if (uid == NULL) return PM3_EINVARG;
+    if (key == NULL) return PM3_EINVARG;
+
+    uint8_t keys[16 * 6] = {0};
+
+    // prepare hmac context
+    const mbedtls_md_info_t *info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+
+    if (keytype == 0) {
+        mbedtls_hkdf(info, bambu_salt, sizeof(bambu_salt), uid, 4, bambu_context_a, sizeof(bambu_context_a), keys, sizeof(keys));
+    } else {
+        mbedtls_hkdf(info, bambu_salt, sizeof(bambu_salt), uid, 4, bambu_context_b, sizeof(bambu_context_b), keys, sizeof(keys));
+    }
+
+    *key = bytes_to_num(keys + (sector * 6), 6);
+    return PM3_SUCCESS;
+}
+
+int mfc_algo_bambu_all(uint8_t *uid, uint8_t *keys) {
+    if (uid == NULL) return PM3_EINVARG;
+    if (keys == NULL) return PM3_EINVARG;
+
+    // prepare hmac context
+    const mbedtls_md_info_t *info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+    mbedtls_hkdf(info, bambu_salt, sizeof(bambu_salt), uid, 4, bambu_context_a, sizeof(bambu_context_a), keys, (16 * 6));
+    mbedtls_hkdf(info, bambu_salt, sizeof(bambu_salt), uid, 4, bambu_context_b, sizeof(bambu_context_b), keys + (16 * 6), (16 * 6));
+    return PM3_SUCCESS;
+}
+
 // LF T55x7 White gun cloner algo
 uint32_t lf_t55xx_white_pwdgen(uint32_t id) {
     uint32_t r1 = rotl(id & 0x000000ec, 8);
@@ -617,10 +653,9 @@ int mfc_algo_touch_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *
 
 int generator_selftest(void) {
 #ifndef ON_DEVICE
-#define NUM_OF_TEST     10
+#define NUM_OF_TEST     11
 
-    PrintAndLogEx(INFO, "PWD / KEY generator selftest");
-    PrintAndLogEx(INFO, "----------------------------");
+    PrintAndLogEx(INFO, "------- " _CYAN_("PWD / KEY generator self tests") " --------");
 
     uint8_t testresult = 0;
 
@@ -629,7 +664,6 @@ int generator_selftest(void) {
     bool success = (pwd1 == 0x8432EB17);
     if (success)
         testresult++;
-
     PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s | %08X - %s", sprint_hex(uid1, 7), pwd1, success ?  _GREEN_("ok") : "->8432EB17<-");
 
     uint8_t uid2[] = {0x04, 0x1f, 0x98, 0xea, 0x1e, 0x3e, 0x81};
@@ -687,7 +721,7 @@ int generator_selftest(void) {
     success = (key8 == 0x82c7e64bc565);
     if (success)
         testresult++;
-    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s          | %"PRIx64" - %s", sprint_hex(uid8, 4), key8, success ?  _GREEN_("ok") : "->82C7E64BC565<--");
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s          | %012"PRIx64" - %s", sprint_hex(uid8, 4), key8, success ?  _GREEN_("ok") : "->82C7E64BC565<--");
 
     // MFC SAFLOK
     uint8_t uid9[] = {0x11, 0x22, 0x33, 0x44};
@@ -696,13 +730,22 @@ int generator_selftest(void) {
     success = (key9 == 0xD1E2AA68E39A);
     if (success)
         testresult++;
-    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s          | %"PRIX64" - %s", sprint_hex(uid9, 4), key9, success ? _GREEN_("ok") : _RED_(">> D1E2AA68E39A <<"));
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s          | %012"PRIX64" - %s", sprint_hex(uid9, 4), key9, success ? _GREEN_("ok") : _RED_(">> D1E2AA68E39A <<"));
 
     uint32_t lf_id = lf_t55xx_white_pwdgen(0x00000080);
     success = (lf_id == 0x00018383);
     if (success)
         testresult++;
-    PrintAndLogEx(success ? SUCCESS : WARNING, "ID  | 0x00000080            | %08"PRIx32 " - %s", lf_id, success ?  _GREEN_("ok") : "->00018383<--");
+    PrintAndLogEx(success ? SUCCESS : WARNING, "ID  | 0x00000080            | %08"PRIx32 " - %s", lf_id, success ?  _GREEN_("ok") : ">> 00018383 <<");
+
+    // MFC Bambu
+    uint64_t key13 = 0;
+    mfc_algo_bambu_one(uid9, 0, 0, &key13);
+    success = (key13 == 0x0729F3B2D37A);
+    if (success)
+        testresult++;
+    PrintAndLogEx(success ? SUCCESS : WARNING, "UID | %s          | %012"PRIX64" - %s", sprint_hex(uid9, 4), key13, success ? _GREEN_("ok") : _RED_(">> 0729F3B2D37A <<"));
+
 
     PrintAndLogEx(SUCCESS, "------------------- Selftest %s", (testresult == NUM_OF_TEST) ? _GREEN_("ok") : _RED_("fail"));
 

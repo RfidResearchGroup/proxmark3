@@ -193,7 +193,7 @@ void RunMod(void) {
 
             memcpy(data, stuid, sizeof(stuid));
 
-            if (SimulateIso14443aInit(tagType, flags, data, NULL, &responses, &cuid, counters, tearings, &pages) == false) {
+            if (SimulateIso14443aInit(tagType, flags, data, NULL, 0, &responses, &cuid, counters, tearings, &pages) == false) {
                 BigBuf_free_keep_EM();
                 reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
                 DbpString(_YELLOW_("!!") "Error initializing the simulation process!");
@@ -371,7 +371,7 @@ void RunMod(void) {
 
             memcpy(data, stuid, sizeof(stuid));
 
-            if (SimulateIso14443aInit(tagType, flags, data, NULL, &responses, &cuid, counters, tearings, &pages) == false) {
+            if (SimulateIso14443aInit(tagType, flags, data, NULL, 0, &responses, &cuid, counters, tearings, &pages) == false) {
                 BigBuf_free_keep_EM();
                 reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
                 DbpString(_YELLOW_("!!") "Error initializing the simulation process!");

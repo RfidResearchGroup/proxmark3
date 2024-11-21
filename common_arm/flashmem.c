@@ -43,7 +43,9 @@ static uint32_t FLASHMEM_SPIBAUDRATE = FLASH_BAUD;
 
 #ifndef AS_BOOTROM
 
-uint8_t spi_flash_p64k = 0;
+
+spi_flash_t spi_flash_data = {0};
+uint8_t spi_flash_pages64k = 4;
 
 void FlashmemSetSpiBaudrate(uint32_t baudrate) {
     FLASHMEM_SPIBAUDRATE = baudrate;
@@ -60,9 +62,9 @@ bool Flash_ReadID(flash_device_type_t *result, bool read_jedec) {
         // 0x9F JEDEC
         FlashSendByte(JEDECID);
 
-        result->manufacturer_id = (FlashSendByte(0xFF) & 0xFF);
-        result->device_id       = (FlashSendByte(0xFF) & 0xFF);
-        result->device_id2      = (FlashSendLastByte(0xFF) & 0xFF);
+        result->manufacturer_id     = (FlashSendByte(0xFF) & 0xFF);
+        result->device_id  = (FlashSendByte(0xFF) & 0xFF);
+        result->device_id2 = (FlashSendLastByte(0xFF) & 0xFF);
     } else {
         // 0x90 Manufacture ID / device ID
         FlashSendByte(ID);
@@ -70,8 +72,8 @@ bool Flash_ReadID(flash_device_type_t *result, bool read_jedec) {
         FlashSendByte(0x00);
         FlashSendByte(0x00);
 
-        result->manufacturer_id = (FlashSendByte(0xFF) & 0xFF);
-        result->device_id       = (FlashSendLastByte(0xFF) & 0xFF);
+        result->manufacturer_id    = (FlashSendByte(0xFF) & 0xFF);
+        result->device_id = (FlashSendLastByte(0xFF) & 0xFF);
     }
 
     return true;
@@ -125,7 +127,7 @@ uint16_t Flash_ReadDataCont(uint32_t address, uint8_t *out, uint16_t len) {
 
     uint16_t i = 0;
     for (; i < (len - 1); i++) {
-        out[i] = ( FlashSendByte(0xFF) & 0xFF);
+        out[i] = (FlashSendByte(0xFF) & 0xFF);
     }
     out[i] = (FlashSendLastByte(0xFF) & 0xFF);
     return len;
@@ -152,8 +154,8 @@ uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len) {
     }
 
     // out-of-range
-    if (((address >> 16) & 0xFF) > spi_flash_p64k) {
-        Dbprintf("Flash_WriteData,  block out-of-range %02x > %02x", (address >> 16) & 0xFF, spi_flash_p64k);
+    if (((address >> 16) & 0xFF) > spi_flash_pages64k) {
+        Dbprintf("Flash_WriteData,  block out-of-range %02x > %02x", (address >> 16) & 0xFF, spi_flash_pages64k);
         FlashStop();
         return 0;
     }
@@ -190,8 +192,8 @@ uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len) {
         return 0;
     }
 
-    if (((address >> 16) & 0xFF) > spi_flash_p64k) {
-        Dbprintf("Flash_WriteDataCont,  block out-of-range %02x > %02x", (address >> 16) & 0xFF, spi_flash_p64k);
+    if (((address >> 16) & 0xFF) > spi_flash_pages64k) {
+        Dbprintf("Flash_WriteDataCont,  block out-of-range %02x > %02x", (address >> 16) & 0xFF, spi_flash_pages64k);
         return 0;
     }
 
@@ -269,7 +271,7 @@ bool Flash_WipeMemory(void) {
 
     // Each block is 64Kb.  Four blocks
     // one block erase takes 1s ( 1000ms )
-    for (uint8_t i=0; i < spi_flash_p64k; i++) {
+    for (uint8_t i = 0; i < spi_flash_pages64k; i++) {
         Flash_WriteEnable();
         Flash_Erase64k(i);
         Flash_CheckBusy(BUSY_TIMEOUT);
@@ -289,7 +291,7 @@ void Flash_WriteEnable(void) {
 // execution time: 0.8ms / 800us
 bool Flash_Erase4k(uint8_t block, uint8_t sector) {
 
-    if (block > spi_flash_p64k || sector > MAX_SECTORS) return false;
+    if (block > spi_flash_pages64k || sector > MAX_SECTORS) return false;
 
     FlashSendByte(SECTORERASE);
     FlashSendByte(block);
@@ -324,7 +326,7 @@ bool Flash_Erase32k(uint32_t address) {
 // 0x03 00 00  -- 0x 03 FF FF  == block 3
 bool Flash_Erase64k(uint8_t block) {
 
-    if (block > spi_flash_p64k) return false;
+    if (block > spi_flash_pages64k) return false;
 
     FlashSendByte(BLOCK64ERASE);
     FlashSendByte(block);
@@ -350,57 +352,22 @@ void Flashmem_print_status(void) {
     }
     DbpString("  Init.................... " _GREEN_("ok"));
 
-    // NOTE: It would likely be more useful to use JDEC ID command 9F,
-    //       as it provides a third byte indicative of capacity.
-    flash_device_type_t device_type = {0};
-    if (!Flash_ReadID(&device_type, false)) {
-        DbpString("  Device ID............... " _RED_(" -->  Not Found  <--"));
-    } else {
-        if (device_type.manufacturer_id == WINBOND_MANID) {
-            switch (device_type.device_id) {
-                case WINBOND_32MB_DEVID:
-                    DbpString("  Memory size............. " _YELLOW_("32 mbits / 4 MB"));
-                    break;
-                case WINBOND_16MB_DEVID:
-                    DbpString("  Memory size............. " _YELLOW_("16 mbits / 2 MB"));
-                    break;
-                case WINBOND_8MB_DEVID:
-                    DbpString("  Memory size............. " _YELLOW_("8 mbits / 1 MB"));
-                    break;
-                case WINBOND_4MB_DEVID:
-                    DbpString("  Memory size............. " _YELLOW_("4 mbits / 512 kb"));
-                    break;
-                case WINBOND_2MB_DEVID:
-                    DbpString("  Memory size............. " _YELLOW_("2 mbits / 256 kb"));
-                    break;
-                case WINBOND_1MB_DEVID:
-                    DbpString("  Memory size..... ....... " _YELLOW_("1 mbits / 128 kb"));
-                    break;
-                case WINBOND_512KB_DEVID:
-                    DbpString("  Memory size............. " _YELLOW_("512 kbits / 64 kb"));
-                    break;
-                default:
-                    Dbprintf("  Device ID............... " _YELLOW_("%02X / %02X (Winbond)"),
-                             device_type.manufacturer_id,
-                             device_type.device_id
-                            );
-                    break;
-            }
-        } else {
-            Dbprintf("  Device ID............... " _YELLOW_("%02X / %02X (unknown)"),
-                     device_type.manufacturer_id,
-                     device_type.device_id
-                    );
-        }
-        if (Flash_ReadID(&device_type, true)) {
-            Dbprintf("  JEDEC Mfr ID / Dev ID... " _YELLOW_("%02X / %02X%02X"),
-                     device_type.manufacturer_id,
-                     device_type.device_id,
-                     device_type.device_id2
-                    );
-        }
+    if (spi_flash_data.device_id > 0) {
+        Dbprintf("  Mfr ID / Dev ID......... " _YELLOW_("%02X / %02X"),
+                 spi_flash_data.manufacturer_id,
+                 spi_flash_data.device_id
+                );
     }
-    Dbprintf("  Flash pages (64k)....... " _YELLOW_("0x%02x (%u)"), spi_flash_p64k, spi_flash_p64k);
+
+    if (spi_flash_data.jedec_id > 0) {
+        Dbprintf("  JEDEC Mfr ID / Dev ID... " _YELLOW_("%02X / %04X"),
+                 spi_flash_data.manufacturer_id,
+                 spi_flash_data.jedec_id
+                );
+    }
+
+    Dbprintf("  Device.................. " _YELLOW_("%s"), spi_flash_data.device);
+    Dbprintf("  Memory size............. " _YELLOW_("%d kB (%d pages * 64k)"), spi_flash_pages64k * 64, spi_flash_pages64k);
 
     uint8_t uid[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     Flash_UniqueID(uid);
@@ -428,7 +395,7 @@ void Flashmem_print_info(void) {
     uint16_t num;
 
     Flash_CheckBusy(BUSY_TIMEOUT);
-    uint16_t isok = Flash_ReadDataCont(DEFAULT_MF_KEYS_OFFSET_P(spi_flash_p64k), keysum, 2);
+    uint16_t isok = Flash_ReadDataCont(DEFAULT_MF_KEYS_OFFSET_P(spi_flash_pages64k), keysum, 2);
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
@@ -436,7 +403,7 @@ void Flashmem_print_info(void) {
     }
 
     Flash_CheckBusy(BUSY_TIMEOUT);
-    isok = Flash_ReadDataCont(DEFAULT_T55XX_KEYS_OFFSET_P(spi_flash_p64k), keysum, 2);
+    isok = Flash_ReadDataCont(DEFAULT_T55XX_KEYS_OFFSET_P(spi_flash_pages64k), keysum, 2);
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
@@ -444,7 +411,7 @@ void Flashmem_print_info(void) {
     }
 
     Flash_CheckBusy(BUSY_TIMEOUT);
-    isok = Flash_ReadDataCont(DEFAULT_ICLASS_KEYS_OFFSET_P(spi_flash_p64k), keysum, 2);
+    isok = Flash_ReadDataCont(DEFAULT_ICLASS_KEYS_OFFSET_P(spi_flash_pages64k), keysum, 2);
     if (isok == 2) {
         num = ((keysum[1] << 8) | keysum[0]);
         if (num != 0xFFFF && num != 0x0)
@@ -454,26 +421,47 @@ void Flashmem_print_info(void) {
     FlashStop();
 }
 
-//read spi flash JEDEC ID and fill the global variable spi_flash_p64k
 bool FlashDetect(void) {
-    flash_device_type_t flash_device = {0};
-
-    if (!Flash_ReadID(&flash_device, true)) {
-        if (g_dbglevel > 3) Dbprintf("Flash_ReadID failed");
-        return false;
+    flash_device_type_t flash_data = {0};
+    bool ret = false;
+    // read using 0x9F (JEDEC)
+    if (Flash_ReadID(&flash_data, true)) {
+        spi_flash_data.manufacturer_id = flash_data.manufacturer_id;
+        spi_flash_data.jedec_id = (flash_data.device_id << 8) +  flash_data.device_id2;
+        ret = true;
+    } else {
+        if (g_dbglevel > 3) Dbprintf("Flash_ReadID failed reading JEDEC (0x9F)");
     }
+    // read using 0x90 (Manufacturer / Device ID)
+    if (Flash_ReadID(&flash_data, false)) {
+        if (spi_flash_data.manufacturer_id == 0) {
+            spi_flash_data.manufacturer_id = flash_data.manufacturer_id;
+        }
+        spi_flash_data.device_id = flash_data.device_id;
+        ret = true;
+    } else {
+        if (g_dbglevel > 3) Dbprintf("Flash_ReadID failed reading Mfr/Dev (0x90)");
+    }
+    // default device is 'unknown'
+    spi_flash_data.device = SpiFlashTable[0].device;
 
-    uint32_t identifier = (flash_device.manufacturer_id << 16) + (flash_device.device_id <<8 ) + flash_device.device_id2;
-    int i = 0;
-    for (; i < ARRAYLEN(SpiFlashTable)-1; i++) {
-        if (SpiFlashTable[i].identifier == identifier) {
-            break;
+    if (ret) {
+        for (int i = 0; i < ARRAYLEN(SpiFlashTable); i++) {
+            if (SpiFlashTable[i].manufacturer_id == spi_flash_data.manufacturer_id) {
+                if (SpiFlashTable[i].jedec_id == spi_flash_data.jedec_id) {
+                    spi_flash_pages64k = SpiFlashTable[i].pages64k;
+                    spi_flash_data.device = SpiFlashTable[i].device;
+                    break;
+                }
+                if (SpiFlashTable[i].device_id == spi_flash_data.device_id) {
+                    spi_flash_data.device = SpiFlashTable[i].device;
+                    break;
+                }
+            }
         }
     }
 
-    spi_flash_p64k = SpiFlashTable[i].pages64;
-
-    return true;
+    return ret;
 }
 
 #endif // #ifndef AS_BOOTROM
@@ -491,7 +479,7 @@ bool FlashInit(void) {
     }
 
 #ifndef AS_BOOTROM
-    if (spi_flash_p64k == 0) {
+    if (spi_flash_data.manufacturer_id == 0) {
         if (!FlashDetect()) {
             return false;
         }

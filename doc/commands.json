@@ -4554,7 +4554,7 @@
                 "-h, --help This help",
                 "--blk <dec> Target block",
                 "-b Target key B instead of default key A",
-                "-c <dec> Target Auth 6x"
+                "-c <dec> Target key type is key A + offset"
             ],
             "usage": "hf mf darkside [-hb] [--blk <dec> ] [-c <dec>]"
         },
@@ -13003,6 +13003,6 @@
     "metadata": {
         "commands_extracted": 749,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-11-15T13:26:34"
+        "extracted_on": "2024-11-20T23:37:32"
     }
 }

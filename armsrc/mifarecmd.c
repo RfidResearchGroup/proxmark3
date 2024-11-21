@@ -1789,7 +1789,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
         BigBuf_free();
         uint16_t isok = 0;
         uint8_t size[2] = {0x00, 0x00};
-        isok = Flash_ReadData(DEFAULT_MF_KEYS_OFFSET_P(spi_flash_p64k), size, 2);
+        isok = Flash_ReadData(DEFAULT_MF_KEYS_OFFSET_P(spi_flash_pages64k), size, 2);
         if (isok != 2)
             goto OUT;
 
@@ -1808,7 +1808,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
         if (datain == NULL)
             goto OUT;
 
-        isok = Flash_ReadData(DEFAULT_MF_KEYS_OFFSET_P(spi_flash_p64k) + 2, datain, key_mem_available);
+        isok = Flash_ReadData(DEFAULT_MF_KEYS_OFFSET_P(spi_flash_pages64k) + 2, datain, key_mem_available);
         if (isok != key_mem_available)
             goto OUT;
 
