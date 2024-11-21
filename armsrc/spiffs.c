@@ -683,10 +683,10 @@ void rdv40_spiffs_safe_wipe(void) {
             read_from_spiffs((char *)pe->name, (uint8_t *)linkdest, SPIFFS_OBJ_NAME_LEN);
 
             remove_from_spiffs(linkdest);
-            Dbprintf(".lnk removed %s", pe->name);
+            Dbprintf("removed %s", linkdest);
 
             remove_from_spiffs((char *)pe->name);
-            Dbprintf("removed %s", linkdest);
+            Dbprintf(".lnk removed %s", pe->name);
 
         } else {
             remove_from_spiffs((char *)pe->name);
