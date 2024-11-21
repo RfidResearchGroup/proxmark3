@@ -3,7 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- fix reported file/link names when `mem spiffs wipe` (ANTodorov)
+- Fixed symlink name in `mem spiffs tree` (@ANTodorov)
+- Fixed reported file/link names when `mem spiffs wipe` (ANTodorov)
 - Updated atrs list (@iceman1001)
 - Added support for a new KDF (@iceman1001)
 - Added Inner range aid and mad entries (@iceman1001)
