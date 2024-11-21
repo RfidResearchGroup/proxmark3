@@ -148,10 +148,10 @@ int main(int argc, char *const argv[]) {
            , nt_par_err_arr[1]
            , nt_par_err_arr[2]
            , nt_par_err_arr[3]
-           , (nt_par_enc >> 3) & 1
-           , (nt_par_enc >> 2) & 1
-           , (nt_par_enc >> 1) & 1
-           , nt_par_enc & 1
+           , (uint8_t)((nt_par_enc >> 3) & 1)
+           , (uint8_t)((nt_par_enc >> 2) & 1)
+           , (uint8_t)((nt_par_enc >> 1) & 1)
+           , (uint8_t)(nt_par_enc & 1)
            , nt ^ nt_enc
           );
 
