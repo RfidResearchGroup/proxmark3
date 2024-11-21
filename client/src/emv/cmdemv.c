@@ -39,7 +39,6 @@
 #include "crypto/libpcrypto.h"
 #include "iso4217.h"        // currency lookup
 
-
 static int CmdHelp(const char *Cmd);
 
 #define TLV_ADD(tag, value)( tlvdb_change_or_add_node(tlvRoot, tag, sizeof(value) - 1, (const unsigned char *)value) )
@@ -625,6 +624,73 @@ static int CmdEMVSelect(const char *Cmd) {
 
     if (decodeTLV)
         TLVPrintFromBuffer(buf, len);
+
+    SetAPDULogging(false);
+    return PM3_SUCCESS;
+}
+
+static int CmdEMVSmartToNFC(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "emv smart2nfc",
+                  "Executes ISO14443a payment, TX using ISO7816 interface for authentication",
+                  "emv smart2nfc -t     -> test that the attached card is working (must be VISA)\n");
+
+    void *argtable[] = {
+            arg_param_begin,
+            arg_lit0("t",  "test",    "test that the attached card is working (must be VISA)"),
+            arg_str0("u", "uid", "<hex>", "optional 7 hex bytes UID"),
+            arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int uid_len = 0;
+    uint8_t uid[7] = {0};
+    CLIGetHexWithReturn(ctx, 2, uid, &uid_len);
+
+    if (uid_len == 0) {
+        PrintAndLogEx(SUCCESS, "No UID provided, using default.");
+        uint8_t default_uid[7] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
+        memcpy(uid, default_uid, sizeof(default_uid));
+        uid_len = sizeof(default_uid);
+    } else if (uid_len != 7) {
+        PrintAndLogEx(FAILED, "UID must be 7 bytes long.");
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(SUCCESS, "UID length is %d", uid_len);
+
+    bool testMode = arg_get_lit(ctx, 1);
+    bool show_apdu = true;
+
+    if (testMode) {
+        PrintAndLogEx(SUCCESS, "Test mode enabled.");
+    } else {
+        PrintAndLogEx(SUCCESS, "Test mode disabled.");
+    }
+
+    CLIParserFree(ctx);
+
+    // todo: check this is relevant for us.
+    SetAPDULogging(show_apdu);
+
+    struct {
+        uint16_t flags;
+        uint8_t exitAfter;
+        uint8_t uid[7];
+        uint16_t atqa;
+        uint8_t sak;
+    } PACKED payload;
+
+    memcpy(payload.uid, uid, uid_len);
+    payload.flags = 0x1204;
+    payload.exitAfter = 0x1;
+    payload.atqa = 0x0;
+    payload.sak = 0x20;
+
+    clearCommandBuffer();
+    SendCommandNG(0x0386, (uint8_t *)&payload, sizeof(payload));
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
 
     SetAPDULogging(false);
     return PM3_SUCCESS;
@@ -2913,8 +2979,9 @@ static command_t CommandTable[] =  {
     {"scan",        CmdEMVScan,                     IfPm3Iso14443,   "Scan EMV card and save it contents to json file for emulator"},
     {"search",      CmdEMVSearch,                   IfPm3Iso14443,   "Try to select all applets from applets list and print installed applets"},
     {"select",      CmdEMVSelect,                   IfPm3Iso14443,   "Select applet"},
-    /*
     {"-----------", CmdHelp,                        IfPm3Iso14443a,  "---------------------- " _CYAN_("simulation") " ---------------------"},
+    {"smart2nfc",   CmdEMVSmartToNFC,               IfPm3Iso14443,   "Complete transaction as a nfc smart card, using the ISO-7816 interface for auth"},
+    /*
     {"getrng",      CmdEMVGetrng,                   IfPm3Iso14443,   "Get random number from terminal"},
     {"eload",       CmdEmvELoad,                    IfPm3Iso14443,   "Load EMV tag into device"},
     {"dump",        CmdEmvDump,                     IfPm3Iso14443,   "Dump EMV tag values"},
