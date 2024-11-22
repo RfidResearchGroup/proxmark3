@@ -4162,6 +4162,107 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static void generate_single_key_block_inverted_opt(const uint8_t *startingKey, uint32_t index, uint8_t *keyBlock) {
+
+    uint8_t bits_index = index / 16383;
+    uint8_t ending_bits[] = { //all possible 70 combinations of 4x0 and 4x1 as key ending bits
+        0x0F, 0x17, 0x1B, 0x1D, 0x1E, 0x27, 0x2B, 0x2D, 0x2E, 0x33,
+        0x35, 0x36, 0x39, 0x3A, 0x3C, 0x47, 0x4B, 0x4D, 0x4E, 0x53,
+        0x55, 0x56, 0x59, 0x5A, 0x5C, 0x63, 0x65, 0x66, 0x69, 0x6A,
+        0x6C, 0x71, 0x72, 0x74, 0x78, 0x87, 0x8B, 0x8D, 0x8E, 0x93,
+        0x95, 0x96, 0x99, 0x9A, 0x9C, 0xA3, 0xA5, 0xA6, 0xA9, 0xAA,
+        0xAC, 0xB1, 0xB2, 0xB4, 0xB8, 0xC3, 0xC5, 0xC6, 0xC9, 0xCA,
+        0xCC, 0xD1, 0xD2, 0xD4, 0xD8, 0xE1, 0xE2, 0xE4, 0xE8, 0xF0
+        };
+
+    uint8_t binary_endings[8]; // Array to store binary values for each ending bit
+    // Extract each bit from the ending_bits[k] and store it in binary_endings
+    uint8_t ending = ending_bits[bits_index];
+    for (int i = 7; i >= 0; i--) {
+        binary_endings[i] = ending & 1;
+        ending >>= 1;
+    }
+
+    uint8_t binary_mids[8];    // Array to store the 2-bit chunks of index
+    // Iterate over the 16-bit integer and store 2 bits at a time in the result array
+    for (int i = 0; i < 8; i++) {
+        // Shift and mask to get 2 bits and store them as an 8-bit value
+        binary_mids[7 - i] = (index >> (i * 2)) & 0x03; // 0x03 is a mask for 2 bits (binary 11)
+    }
+
+    memcpy(keyBlock, startingKey, PICOPASS_BLOCK_SIZE);
+
+    // Start from the second byte, index 1 as we're never gonna touch the first byte
+    for (int i = 1; i < PICOPASS_BLOCK_SIZE; i++) {
+        // Clear the last bit of the current byte (AND with 0xFE)
+        keyBlock[i] &= 0xF8;
+        // Set the last bit to the corresponding value from binary_endings (OR with binary_endings[i])
+        keyBlock[i] |= ((binary_mids[i] & 0x03) << 1) | (binary_endings[i] & 0x01);
+    }
+
+}
+
+static int CmdHFiClassLegacyRecSim(void) {
+
+    PrintAndLogEx(INFO, _YELLOW_("This simulation assumes the card is standard keyed."));
+
+    uint8_t key[PICOPASS_BLOCK_SIZE] = {0};
+    uint8_t original_key[PICOPASS_BLOCK_SIZE];
+
+    uint8_t csn[8] = {0};
+    uint8_t new_div_key[8] = {0};
+    uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+    if (select_only(csn, CCNR, true, false) == false) {
+        DropField();
+        return PM3_ESOFT;
+    }
+    HFiClassCalcDivKey(csn, iClass_Key_Table[0], new_div_key, false);
+    memcpy(key,new_div_key,PICOPASS_BLOCK_SIZE);
+    memcpy(original_key, key, PICOPASS_BLOCK_SIZE);
+
+    uint8_t zero_key[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t zero_key_two[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    int bits_found = -1;
+    uint32_t index = 0;
+    #define MAX_UPDATES 16777216
+    while (bits_found == -1 && index < MAX_UPDATES) {
+        uint8_t genkeyblock[PICOPASS_BLOCK_SIZE];
+        uint8_t xorkeyblock[PICOPASS_BLOCK_SIZE] = {0};
+
+            generate_single_key_block_inverted_opt(zero_key, index, genkeyblock);
+            memcpy(xorkeyblock, genkeyblock, PICOPASS_BLOCK_SIZE);
+
+            for (int i = 0; i < 8 ; i++) {
+                key[i] = xorkeyblock[i] ^ original_key[i];
+                memcpy(zero_key_two, xorkeyblock, PICOPASS_BLOCK_SIZE);
+            }
+
+        // Extract the last 3 bits of the first byte
+        uint8_t last_three_bits = key[0] & 0x07; // 0x07 is 00000111 in binary - bitmask
+        bool same_bits = true;
+        // Check if the last 3 bits of all bytes are the same
+        for (int i = 1; i < PICOPASS_BLOCK_SIZE; i++) {
+            if ((key[i] & 0x07) != last_three_bits) {
+                same_bits = false;
+            }
+        }
+        if (same_bits){
+            bits_found = index;
+            PrintAndLogEx(SUCCESS, "Original Key: " _GREEN_("%s"), sprint_hex(original_key, sizeof(original_key)));
+            PrintAndLogEx(SUCCESS, "Weak Key: " _GREEN_("%s"), sprint_hex(key, sizeof(key)));
+            PrintAndLogEx(SUCCESS, "Key Updates Required to Weak Key: " _GREEN_("%d"), index);
+            PrintAndLogEx(SUCCESS, "Estimated Time: ~" _GREEN_("%d")" hours", index/6545);
+        }
+
+    index++;
+    }//end while
+
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+
+}
+
 static int CmdHFiClassLegacyRecover(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -4179,6 +4280,7 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
         arg_lit0(NULL, "debug", "Re-enables tracing for debugging. Limits cycles to 1."),
         arg_lit0(NULL, "notest", "Perform real writes on the card!"),
         arg_lit0(NULL, "allnight", "Loops the loop for 10 times, recommended loop value of 5000."),
+        arg_lit0(NULL, "sim", "Runs a simulation based on the card's CSN assuming standard key."),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4193,6 +4295,12 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     bool test = true;
     bool no_test = arg_get_lit(ctx, 5);
     bool allnight = arg_get_lit(ctx, 6);
+    bool sim = arg_get_lit(ctx, 7);
+
+    if (sim){
+        CmdHFiClassLegacyRecSim();
+        return PM3_SUCCESS;
+    }
 
     if (no_test) {
         test = false;
