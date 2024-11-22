@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Added simulation function to `hf iclass legrec` (@antiklesys)
+- Added keys from Momentum firmware projects. (@onovy)
 
 ## [Orca.4.19552][2024-11-22]
 - Fixed `hf_legic.lua` - removed bit32 commands from the script (@diorch1968)
