@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed hf_legic.lua script: delete bit32 commands from the script (@diorch1968)
 - Fixed symlink name in `mem spiffs tree` (@ANTodorov)
 - Fixed reported file/link names when `mem spiffs wipe` (ANTodorov)
 - Updated atrs list (@iceman1001)
