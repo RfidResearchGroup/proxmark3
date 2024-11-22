@@ -10007,8 +10007,8 @@ static int CmdHF14AMfISEN(const char *Cmd) {
         uint64_t t1 = msclock();
         uint32_t flags = collect_fm11rf08s_with_data;
         SendCommandMIX(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, flags, 0, 0, key, sizeof(key));
-        if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, &resp, 1000)) {
-            if (resp.status == PM3_ESOFT) {
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+            if (resp.oldarg[0] != PM3_SUCCESS) {
                 return NONCE_FAIL;
             }
         }

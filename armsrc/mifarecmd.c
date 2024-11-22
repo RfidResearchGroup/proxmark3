@@ -1194,7 +1194,7 @@ out:
     crypto1_deinit(pcs);
     LED_B_ON();
     if (reply) {
-        reply_old(CMD_ACK, isOK, cuid, 0, BigBuf_get_EM_addr() + CARD_MEMORY_RF08S_OFFSET, MIFARE_BLOCK_SIZE * (MIFARE_1K_MAXSECTOR + 1));
+        reply_mix(CMD_ACK, isOK, cuid, 0, BigBuf_get_EM_addr() + CARD_MEMORY_RF08S_OFFSET, MIFARE_BLOCK_SIZE * (MIFARE_1K_MAXSECTOR + 1));
     }
     LED_B_OFF();
 
