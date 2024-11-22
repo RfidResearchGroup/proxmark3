@@ -499,7 +499,7 @@ end
 function segmentsToTag(bytes, tag)
   if(#bytes>23) then
     local start=23
-    local i=-1   
+    local i=-1
     if (istable(tag)) then
       repeat
         i=i+1
@@ -1768,7 +1768,7 @@ function getSegmentData(bytes, start, index)
       -- wrp (write proteted) = byte 2
       segment.WRP = tonumber(bytes[start+2],16)
       -- wrc (write control) - bit 4-6 of byte 3
-            --segment.WRC = bbit("0x"..bytes[start+3],4,3)      
+            --segment.WRC = bbit("0x"..bytes[start+3],4,3)
       segment.WRC = (tonumber(bytes[start+3], 16) >> 4) & 0x07
       -- rd (read disabled) - bit 7 of byte 3
             --segment.RD = bbit("0x"..bytes[start+3],7,1)
