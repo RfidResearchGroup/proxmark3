@@ -4,7 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 
-## [Orca][2024-11-22]
+## [Orca.4.19552][2024-11-22]
 - Fixed `hf_legic.lua` - removed bit32 commands from the script (@diorch1968)
 - Fixed `mem spiffs tree` - now show correct symlink name (@ANTodorov)
 - Fixed `mem spiffs wipe` - reported file/link names is now correct  (@ANTodorov)
