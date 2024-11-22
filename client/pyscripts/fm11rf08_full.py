@@ -142,7 +142,10 @@ globals:
             lprint(f" Keys not loaded, use {s} to run recovery script [slow]", prompt="[" + color("!", fg="red") + "]")
         else:
             # FIXME: recovery() is only for RF08S. TODO for the other ones with a "darknested" attack
-            keyfile = recoverKeys()
+            keyfile = recoverKeys(uid=uid, kdf=[["Bambu v1", kdfBambu1]])
+            if keyfile == False:
+                lprint("Script failed - aborting")
+                return
             key = loadKeys(keyfile)
 
     if key is not None:
@@ -396,21 +399,33 @@ If keys cannot be loaded AND --recover is specified, then run key recovery
     return key
 
 
-def recoverKeys():
+def recoverKeys(uid, kdf=[[]]):
     """Run key recovery script"""
     badrk = 0     # 'bad recovered key' count (ie. not recovered)
+
+    keys = False
+    lprint(f"\nTrying KDFs:");
+    for fn in kdf:
+        lprint(f"  {fn[0]:s}", end='')
+        keys = fn[1](uid)
+        if keys != False:
+            lprint(" .. Success", prompt='')
+            break
+        lprint(" .. Fail", prompt='')
 
     lprint("\nRunning recovery script, ETA: Less than 30 minutes")
 
     lprint('\n`-._,-\'"`-._,-"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,')
+    r = recovery(quiet=False, keyset=keys)
+    lprint('`-._,-\'"`-._,-"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,')
 
-    r = recovery(quiet=False)
+    if r == False:
+        return False
+
     keyfile = r['keyfile']
     rkey = r['found_keys']
     # fdump = r['dumpfile']
     # rdata = r['data']
-
-    lprint('`-._,-\'"`-._,-"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,')
 
     for k in range(0, 16+1):
         for ab in [0, 1]:
@@ -427,9 +442,57 @@ def recoverKeys():
                 lprint(f"[{kn}/", end='', prompt='')
                 lprint("A]" if ab == 0 else "B]", end='', prompt='')
     if badrk > 0:
-        lprint()
+        lprint("", prompt='')
     return keyfile
 
+def kdfBambu1(uid):
+    from Cryptodome.Protocol.KDF import HKDF
+    from Cryptodome.Hash         import SHA256
+
+    # Generate all keys
+    try:
+        # extracted from Bambu firmware
+        salt = bytes([0x9a,0x75,0x9c,0xf2,0xc4,0xf7,0xca,0xff,0x22,0x2c,0xb9,0x76,0x9b,0x41,0xbc,0x96])
+        keyA = HKDF(uid, 6, salt, SHA256, 16, context=b"RFID-A\0")
+        keyB = HKDF(uid, 6, salt, SHA256, 16, context=b"RFID-B\0")
+    except Exception as e:
+        print(f"{e}")
+        return False
+
+    # --- Grab block 13 (in sector 3) ---
+    cmd = f"hf mf rdbl -c 0 --key {keyA[3].hex()} --blk 12"
+    #lprint(f"  `{cmd}`", flush=True, log=False, end='')
+    for retry in range(5):
+        p.console(cmd)
+
+        found = False
+        for line in p.grabbed_output.split('\n'):
+            if " | " in line and "# | s" not in line:
+                lsub = line[4:76]
+                found = True
+        if found:
+            break
+    if not found:
+        return False
+
+    # --- Try to decode it as a bambu date string ---
+    try:
+        dl = bytes.fromhex(lsub[6:53]).decode('ascii').rstrip('\x00')
+    except Exception:
+        return False
+
+    # dl    2024_03_22_16_29
+    #       yy y    y     m    m     d    d     h    h     m    m
+    exp = r"20[2-3][0-9]_[0-1][0-9]_[0-3][0-9]_[0-2][0-9]_[0-5][0-9]"
+    if not re.search(exp, dl):
+        return False
+
+    # --- valid date string, we are confident this is a bambu card ---
+    keys = []
+    for i in range(0, 15+1):
+        keys.append([keyA[i].hex(), keyB[i].hex()])
+
+    return keys
 
 def verifyKeys(key):
     """Verify keys
