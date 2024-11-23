@@ -83,6 +83,9 @@ tools/mfd_aes_brute/mfd_aes_brute
 tools/mfd_aes_brute/mfd_multi_brute
 tools/mfd_aes_brute/brute_key
 !tools/lena.bmp
+tools/mf_nonce_brute/
+tools/mfkey/
+tools/nonce2key/
 
 fpga/__build*
 
