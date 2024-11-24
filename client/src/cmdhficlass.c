@@ -4280,7 +4280,7 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
         arg_lit0(NULL, "debug", "Re-enables tracing for debugging. Limits cycles to 1."),
         arg_lit0(NULL, "notest", "Perform real writes on the card!"),
         arg_lit0(NULL, "allnight", "Loops the loop for 10 times, recommended loop value of 5000."),
-        arg_lit0(NULL, "sim", "Runs a simulation based on the card's CSN assuming standard key."),
+        arg_lit0(NULL, "est", "Estimates the key updates based on the card's CSN assuming standard key."),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
