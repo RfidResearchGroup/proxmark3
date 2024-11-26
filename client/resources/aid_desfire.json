@@ -1152,6 +1152,22 @@
         "Type": "transport"
     },
     {
+        "AID": "F21201",
+        "Vendor": "Green Bay Metro Transit via Genfare",
+        "Country": "US",
+        "Name": "Tap-N-Go Card (GRB)",
+        "Description": "GRB Tap-N-Go Card",
+        "Type": "transport"
+    },
+    {
+        "AID": "F21202",
+        "Vendor": "Green Bay Metro Transit via Genfare",
+        "Country": "US",
+        "Name": "Tap-N-Go Card (GRB)",
+        "Description": "GRB Tap-N-Go Card",
+        "Type": "transport"
+    },
+    {
         "AID": "F21360",
         "Vendor": "INIT",
         "Country": "US",
