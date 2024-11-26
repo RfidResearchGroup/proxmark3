@@ -12,12 +12,13 @@ from colors import color
 
 debug = False
 
+
 def guess_curvename(signature):
     siglen = (len(signature) // 2) & 0xfe
     if siglen == 32:
         curves = ["secp128r1", "secp128r2"]
     elif siglen == 48:
-        curves = ["secp192k1", "secp192r1"]
+        curves = ["secp192k1", "prime192v1"]
     elif siglen == 56:
         curves = ["secp224k1", "secp224r1"]
     elif siglen == 64:
@@ -30,6 +31,7 @@ def guess_curvename(signature):
         lenstr = color('%i', fg='red') % len(signature)
         raise ValueError("Unsupported signature size %s" % lenstr)
     return curves
+
 
 def recover(data, signature, curvename, alghash=None):
     recovered = set()
@@ -60,6 +62,7 @@ def recover(data, signature, curvename, alghash=None):
                 pass
     return recovered
 
+
 def recover_multiple(uids, sigs, curvename, alghash=None):
     recovered = set()
     assert len(uids) == len(sigs)
@@ -81,6 +84,7 @@ def recover_multiple(uids, sigs, curvename, alghash=None):
         else:
             recovered &= recovered_tmp
     return recovered
+
 
 def selftests():
     tests = [
@@ -158,16 +162,16 @@ def selftests():
         #  'samples': ["aa", "DF0E506DFF8FCFC4B7B979D917644445F1230D2C7CDC342AFA842CA240C210BE7275F62073A9670F2DCEFC602CBEE771C2B4CD4A04F3D1EA11F49ABDF7E8B721"],
         #  'pk': ""},
         {'name': "MIFARE Plus Trojka",
-        # uses secp224r1, None,
-        'samples': ["04B59F6A226F82", "6F577EB7F570D74DB6250477427F68A0088762BD318767537122919A7916597149F9D16D8B135E9BF826FB28AE293F3168661CD4A049FAED",
-                    "04B44A82D80F92", "A0868ECF26733D3C3C838D055968B4559F77693CC3E346E3A4741BC826801F8360FD88857BEC440AAD3A21153D64302DEB6F5ED40B15C3F7"],
-        'pk': "040F732E0EA7DF2B38F791BF89425BF7DCDF3EE4D976669E3831F324FF15751BD52AFF1782F72FF2731EEAD5F63ABE7D126E03C856FFB942AF"},
+         # uses secp224r1, None,
+         'samples': ["04B59F6A226F82", "6F577EB7F570D74DB6250477427F68A0088762BD318767537122919A7916597149F9D16D8B135E9BF826FB28AE293F3168661CD4A049FAED",
+                     "04B44A82D80F92", "A0868ECF26733D3C3C838D055968B4559F77693CC3E346E3A4741BC826801F8360FD88857BEC440AAD3A21153D64302DEB6F5ED40B15C3F7"],
+         'pk': "040F732E0EA7DF2B38F791BF89425BF7DCDF3EE4D976669E3831F324FF15751BD52AFF1782F72FF2731EEAD5F63ABE7D126E03C856FFB942AF"},
 
-#        {'name': "MIFARE Ultralight AES",
-        # uses NID_secp192r1,  OpenSSL doesn't support it.  This is commented out until that day.
-#        'samples': ["045E4CC2451390", "C9BBDA1B99EB6634CDFD8E3251AC5C4742EA5FA507B8A8A8B39B19AB7340D173331589C54C56C49F0CCA6DDBAC1E492A",
-#                    "043F88C2451390", "5C2055A7373F119C3FDD9843020B06AA0E6DE18C16496C425C4AD971A50F05FA1A67B9E39CA60C355EEEEBF8214A84A5"],
-#        'pk': "0453BF8C49B7BD9FE3207A91513B9C1D238ECAB07186B772104AB535F7D3AE63CF7C7F3DD0D169DA3E99E43C6399621A86"},
+        {'name': "MIFARE Ultralight AES",
+         # uses prime192v1, None,
+         'samples': ["045E4CC2451390", "C9BBDA1B99EB6634CDFD8E3251AC5C4742EA5FA507B8A8A8B39B19AB7340D173331589C54C56C49F0CCA6DDBAC1E492A",
+                     "043F88C2451390", "5C2055A7373F119C3FDD9843020B06AA0E6DE18C16496C425C4AD971A50F05FA1A67B9E39CA60C355EEEEBF8214A84A5"],
+         'pk': "0453BF8C49B7BD9FE3207A91513B9C1D238ECAB07186B772104AB535F7D3AE63CF7C7F3DD0D169DA3E99E43C6399621A86"},
 
         {'name': "MIFARE Classic / QL88",
          'samples': ["30933C61", "AEA4DD0B800FAC63D4DE08EE91F4650ED825FD6B4D7DEEE98DBC9BAE10BE003E",
@@ -234,13 +238,15 @@ def selftests():
     print("Tests:                                        ( %s )" % [fail, ok][succeeded])
     print("")
 
+
 if __name__ == "__main__":
     if len(sys.argv) == 2 and sys.argv[1] == "selftests":
         selftests()
         exit(0)
     if len(sys.argv) < 3 or len(sys.argv) % 2 == 0:
         print("Usage:   \n%s UID SIGN [UID SIGN] [...]" % sys.argv[0])
-        print("Example: \n%s 04ee45daa34084 ebb6102bff74b087d18a57a54bc375159a04ea9bc61080b7f4a85afe1587d73b" % sys.argv[0])
+        print("Example: \n%s 04ee45daa34084 ebb6102bff74b087d18a57a54bc375159a04ea9bc61080b7f4a85afe1587d73b"
+              % sys.argv[0])
         exit(1)
     uids, sigs = sys.argv[1:][::2], sys.argv[1:][1::2]
     once = True
