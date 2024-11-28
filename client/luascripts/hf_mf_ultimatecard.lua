@@ -186,6 +186,7 @@ local function read_config()
     end
     -- extract data from CONFIG - based on CONFIG in https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/magic_cards_notes.md#gen-4-gtu
     ulprotocol, uidlength, readpass, gtumode, ats, atqa1, atqa2, sak, ulmode = magicconfig:sub(1,2), magicconfig:sub(3,4), magicconfig:sub(5,12), magicconfig:sub(13,14), magicconfig:sub(15,48), magicconfig:sub(51,52), magicconfig:sub(49,50), magicconfig:sub(53,54), magicconfig:sub(55,56)
+    maxRWblk = magicconfig:sub(57, 58)
     atqaf = atqa1..' '..atqa2
     cardtype, cardprotocol, gtustr, atsstr = 'unknown', 'unknown', 'unknown', 'unknown'
     if magicconfig == nil then lib14a.disconnect(); return nil, "can't read configuration, "..err_lock end
@@ -291,6 +292,7 @@ local function read_config()
         print(' - Version      ', cversion)
         print(' - Signature    ', signature1..signature2)
     end
+    print(' - Max R/W Block  ', maxRWblk)
     end
 lib14a.disconnect()
 return true, 'Ok'
