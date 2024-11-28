@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Add option to set and get maximum read/write block number using `hf_mf_ultimatecard` script (@piotrva)
+- Added JEDEC information for SPI flash W25Q64JV (@ANTodorov)
 - Added special iclass legacy config cards in `hf iclass configcard` (@antiklesys)
 - Added simulation function to `hf iclass legrec` (@antiklesys)
 

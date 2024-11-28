@@ -146,28 +146,33 @@ typedef struct {
 
 static const spi_flash_t SpiFlashTable[] = {
     // first element is the default of 4 * 64kB pages (256kB)
-    { 0x00, 0x00, 0x0000,  4, "unknown" },     //  256k
+    { 0x00, 0x00, 0x0000,   4, "unknown" },     //  256k
     // Manufacturer: Puya
-    { 0x85, 0x00, 0x6015, 32, "P25Q16H" },     // 2048k
-    /// Manufacturer: Renesas
-    { 0x1F, 0x46, 0x0000, 32, "AT25XE161D" },  // 2048k
-    { 0x1F, 0x47, 0x0000, 64, "AT25XE321D" },  // 4096k
+    { 0x85, 0x14, 0x6015,  32, "P25Q16H" },     // 2048k
     // Manufacturer: Winbond
-    { 0xEF, 0x00, 0x3012,  4, "W25X20BV" },    //  256k
-    { 0xEF, 0x00, 0x3013,  8, "W25X40BV" },    //  512k
+    { 0xEF, 0x00, 0x3012,   4, "W25X20BV" },    //  256k
+    { 0xEF, 0x00, 0x3013,   8, "W25X40BV" },    //  512k
 
-    { 0xEF, 0x00, 0x4013,  8, "W25Q40BV" },    //  512k
-    { 0xEF, 0x00, 0x4014, 16, "W25Q80BV" },    // 1024k
-    { 0xEF, 0x14, 0x4015, 32, "W25Q16BV" },    // 2048k
-    { 0xEF, 0x15, 0x4016, 64, "W25Q32BV" },    // 4096k
+    { 0xEF, 0x00, 0x4013,   8, "W25Q40BV" },    //  512k
+    { 0xEF, 0x00, 0x4014,  16, "W25Q80BV" },    // 1024k
+    { 0xEF, 0x14, 0x4015,  32, "W25Q16BV" },    // 2048k
+    { 0xEF, 0x15, 0x4016,  64, "W25Q32BV" },    // 4096k
 
-    { 0xEF, 0x21, 0x7022,  4, "W25Q02JV" },
-    // identified by Manufacturer /Device ID
-//    { 0xEF, 0x05, 0x0000,  1, "Winbond!!!" },
-    { 0xEF, 0x10, 0x0000,  2, "W25*10BV!!!" }, //  128k
-    { 0xEF, 0x11, 0x0000,  4, "W25*20BV" },    //  256k
-    { 0xEF, 0x12, 0x0000,  8, "W25*40BV" },    //  512k
-    { 0xEF, 0x13, 0x0000, 16, "W25*80BV" }     // 1024k
+    { 0xEF, 0x16, 0x7017, 128, "W25Q64JV" },    // 8192k
+    { 0xEF, 0x21, 0x7022,   4, "W25Q02JV" },
+
+    // identified by Manufacturer /Device ID only
+    /// Manufacturer: Renesas
+    { 0x1F, 0x46, 0x0000,  32, "AT25XE161D" },  // 2048k
+    { 0x1F, 0x47, 0x0000,  64, "AT25XE321D" },  // 4096k
+//    { 0xEF, 0x05, 0x0000,  1, "Winbond!!!" },  //  64k (too small !!!)
+    { 0xEF, 0x10, 0x0000,   2, "W25*10BV!" },   //  128k (small !!!)
+    { 0xEF, 0x11, 0x0000,   4, "W25*20BV" },    //  256k
+    { 0xEF, 0x12, 0x0000,   8, "W25*40BV" },    //  512k
+    { 0xEF, 0x13, 0x0000,  16, "W25*80BV" },    // 1024k
+    { 0xEF, 0x14, 0x0000,  32, "W25*16*" },     // 2048k
+    { 0xEF, 0x15, 0x0000,  64, "W25*32*" },     // 4096k
+    { 0xEF, 0x16, 0x0000, 128, "W25*64*" }      // 8192k
 };
 
 extern uint8_t spi_flash_pages64k;
