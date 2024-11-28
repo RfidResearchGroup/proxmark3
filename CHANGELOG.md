@@ -3,7 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- Add option to set and get maximum read/write block number using `hf_mf_ultimatecard` script (@piotrva)
+- Fixed `hf/lf tune` segfault when called from script (@doegox)
+- Added option to set and get maximum read/write block number using `hf_mf_ultimatecard` script (@piotrva)
 - Added JEDEC information for SPI flash W25Q64JV (@ANTodorov)
 - Added special iclass legacy config cards in `hf iclass configcard` (@antiklesys)
 - Added simulation function to `hf iclass legrec` (@antiklesys)
