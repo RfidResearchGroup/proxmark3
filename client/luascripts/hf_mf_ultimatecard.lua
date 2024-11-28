@@ -51,17 +51,17 @@ arguments = [[
     -u      UID (8-20 hexsymbols), set UID on tag
     -t      tag type to impersonate
                  1 = Mifare Mini S20 4-byte
-                 2 = Mifare Mini S20 7-byte 15 = NTAG 210
-                 3 = Mifare Mini S20 10-byte 16 = NTAG 212
-                 4 = Mifare 1k S50 4-byte   17 = NTAG 213
-                 5 = Mifare 1k S50 7-byte   18 = NTAG 215
-                 6 = Mifare 1k S50 10-byte  19 = NTAG 216
-                 7 = Mifare 4k S70 4-byte   20 = NTAG I2C 1K
-                 8 = Mifare 4k S70 7-byte   21 = NTAG I2C 2K
-                 9 = Mifare 4k S70 10-byte  22 = NTAG I2C 1K PLUS
-            ***  10 = UL -   NOT WORKING FULLY   23 = NTAG I2C 2K PLUS
-            ***  11 = UL-C - NOT WORKING FULLY   24 = NTAG 213F
-                 12 = UL EV1 48b                25 = NTAG 216F
+                 2 = Mifare Mini S20 7-byte     |  15 = NTAG 210
+                 3 = Mifare Mini S20 10-byte    |  16 = NTAG 212
+                 4 = Mifare 1k S50 4-byte       |  17 = NTAG 213
+                 5 = Mifare 1k S50 7-byte       |  18 = NTAG 215
+                 6 = Mifare 1k S50 10-byte      |  19 = NTAG 216
+                 7 = Mifare 4k S70 4-byte       |  20 = NTAG I2C 1K
+                 8 = Mifare 4k S70 7-byte       |  21 = NTAG I2C 2K
+                 9 = Mifare 4k S70 10-byte      |  22 = NTAG I2C 1K PLUS
+            ***  10 = UL -   NOT WORKING FULLY  |  23 = NTAG I2C 2K PLUS
+            ***  11 = UL-C - NOT WORKING FULLY  |  24 = NTAG 213F
+                 12 = UL EV1 48b                |  25 = NTAG 216F
                  13 = UL EV1 128b
             ***  14 = UL Plus - NOT WORKING YET
 
