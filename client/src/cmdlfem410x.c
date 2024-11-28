@@ -732,6 +732,7 @@ static int CmdEM410xClone(const char *Cmd) {
 
             packet.cmd = HTSF_82xx;
             memcpy(packet.pwd, "\xBB\xDD\x33\x99", HITAGS_PAGE_SIZE);
+            packet.mode = HITAGS_UID_REQ_FADV;
             SendCommandNG(CMD_LF_HITAGS_WRITE, (uint8_t *)&packet, sizeof(packet));
             if (WaitForResponseTimeout(CMD_LF_HITAGS_WRITE, &resp, 4000) == false) {
                 PrintAndLogEx(WARNING, "timeout while waiting for reply.");
