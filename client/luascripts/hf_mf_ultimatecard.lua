@@ -51,17 +51,17 @@ arguments = [[
     -u      UID (8-20 hexsymbols), set UID on tag
     -t      tag type to impersonate
                  1 = Mifare Mini S20 4-byte
-                 2 = Mifare Mini S20 7-byte 15 = NTAG 210
-                 3 = Mifare Mini S20 10-byte 16 = NTAG 212
-                 4 = Mifare 1k S50 4-byte   17 = NTAG 213
-                 5 = Mifare 1k S50 7-byte   18 = NTAG 215
-                 6 = Mifare 1k S50 10-byte  19 = NTAG 216
-                 7 = Mifare 4k S70 4-byte   20 = NTAG I2C 1K
-                 8 = Mifare 4k S70 7-byte   21 = NTAG I2C 2K
-                 9 = Mifare 4k S70 10-byte  22 = NTAG I2C 1K PLUS
-            ***  10 = UL -   NOT WORKING FULLY   23 = NTAG I2C 2K PLUS
-            ***  11 = UL-C - NOT WORKING FULLY   24 = NTAG 213F
-                 12 = UL EV1 48b                25 = NTAG 216F
+                 2 = Mifare Mini S20 7-byte     |  15 = NTAG 210
+                 3 = Mifare Mini S20 10-byte    |  16 = NTAG 212
+                 4 = Mifare 1k S50 4-byte       |  17 = NTAG 213
+                 5 = Mifare 1k S50 7-byte       |  18 = NTAG 215
+                 6 = Mifare 1k S50 10-byte      |  19 = NTAG 216
+                 7 = Mifare 4k S70 4-byte       |  20 = NTAG I2C 1K
+                 8 = Mifare 4k S70 7-byte       |  21 = NTAG I2C 2K
+                 9 = Mifare 4k S70 10-byte      |  22 = NTAG I2C 1K PLUS
+            ***  10 = UL -   NOT WORKING FULLY  |  23 = NTAG I2C 2K PLUS
+            ***  11 = UL-C - NOT WORKING FULLY  |  24 = NTAG 213F
+                 12 = UL EV1 48b                |  25 = NTAG 216F
                  13 = UL EV1 128b
             ***  14 = UL Plus - NOT WORKING YET
 
@@ -75,7 +75,11 @@ arguments = [[
     -z      ATS (<1b length><0-16 ATS> hexsymbols), Configure ATS. Length set to 00 will disable ATS.
     -w      Wipe tag. 0 for Mifare or 1 for UL. Fills tag with zeros and put default values for type selected.
     -m      Ultralight mode (00 UL EV1, 01 NTAG, 02 UL-C, 03 UL) Set type of UL.
-    -n      Ultralight protocol (00 MFC, 01 UL), switches between UL and MFC mode
+    -n      Ultralight protocol (00 MFC, 01 UL), switches between UL and MFC mode]]
+-- Need to split because reached maximum string length processed by lua
+arguments2 = [[
+    -b      Set maximum read/write blocks (2 hexsymbols)
+            NOTE: Ultralight EV1 and NTAG Version info and Signature are stored respectively in blocks 250-251 and 242-249
     -k      Ultimate Magic Card Key (IF DIFFERENT THAN DEFAULT 00000000)
 ]]
 ---
@@ -110,6 +114,7 @@ local function help()
     print(usage)
     print(ansicolors.cyan..'Arguments'..ansicolors.reset)
     print(arguments)
+    print(arguments2)
     print(ansicolors.cyan..'Example usage'..ansicolors.reset)
     print(example)
 end
@@ -186,6 +191,7 @@ local function read_config()
     end
     -- extract data from CONFIG - based on CONFIG in https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/magic_cards_notes.md#gen-4-gtu
     ulprotocol, uidlength, readpass, gtumode, ats, atqa1, atqa2, sak, ulmode = magicconfig:sub(1,2), magicconfig:sub(3,4), magicconfig:sub(5,12), magicconfig:sub(13,14), magicconfig:sub(15,48), magicconfig:sub(51,52), magicconfig:sub(49,50), magicconfig:sub(53,54), magicconfig:sub(55,56)
+    maxRWblk = magicconfig:sub(57, 58)
     atqaf = atqa1..' '..atqa2
     cardtype, cardprotocol, gtustr, atsstr = 'unknown', 'unknown', 'unknown', 'unknown'
     if magicconfig == nil then lib14a.disconnect(); return nil, "can't read configuration, "..err_lock end
@@ -291,6 +297,7 @@ local function read_config()
         print(' - Version      ', cversion)
         print(' - Signature    ', signature1..signature2)
     end
+    print(' - Max R/W Block  ', maxRWblk)
     end
 lib14a.disconnect()
 return true, 'Ok'
@@ -1010,13 +1017,33 @@ local function wipe(wtype)
     end
 end
 ---
+-- Write maximum read/write block number,
+local function write_maxRWblk(data)
+    -- input number check
+    if data == nil then return nil, 'empty block number' end
+    if #data == 0 then return nil, 'empty block number' end
+    if #data ~= 2 then return nil, 'block number wrong length. Should be 1 hex byte' end
+
+    print('Set max R/W block', data)
+    local info = connect()
+    if not info then return false, "Can't select card" end
+    local resp
+    -- set maximum read/write block
+    resp = send("CF".._key.."6B"..data)
+    lib14a.disconnect()
+    if resp ~= '9000FD07' then return nil, 'Failed to write maximum read/write block'
+    else
+        return true, 'Ok'
+    end
+end
+---
 -- The main entry point
 function main(args)
     print()
     local err, msg
     if #args == 0 then return help() end
     -- Read the parameters
-    for o, a in getopt.getopt(args, 'hck:u:t:p:a:s:o:v:q:g:z:n:m:w:') do
+    for o, a in getopt.getopt(args, 'hck:u:t:p:a:s:o:v:q:g:z:n:m:w:b:') do
         -- help
         if o == "h" then return help() end
         -- set Ultimate Magic Card Key for read write
@@ -1049,6 +1076,8 @@ function main(args)
         if o == "m" then err, msg = write_ulm(a) end
         -- write UL protocol
         if o == "n" then err, msg = write_ulp(a) end
+        -- write max r/w block
+        if o == "b" then err, msg = write_maxRWblk(a) end
         if err == nil then return oops(msg) end
     end
 end
