@@ -75,7 +75,11 @@ arguments = [[
     -z      ATS (<1b length><0-16 ATS> hexsymbols), Configure ATS. Length set to 00 will disable ATS.
     -w      Wipe tag. 0 for Mifare or 1 for UL. Fills tag with zeros and put default values for type selected.
     -m      Ultralight mode (00 UL EV1, 01 NTAG, 02 UL-C, 03 UL) Set type of UL.
-    -n      Ultralight protocol (00 MFC, 01 UL), switches between UL and MFC mode
+    -n      Ultralight protocol (00 MFC, 01 UL), switches between UL and MFC mode]]
+-- Need to split because reached maximum string length processed by lua
+arguments2 = [[
+    -b      Set maximum read/write blocks (2 hexsymbols)
+            NOTE: Ultralight EV1 and NTAG Version info and Signature are stored respectively in blocks 250-251 and 242-249
     -k      Ultimate Magic Card Key (IF DIFFERENT THAN DEFAULT 00000000)
 ]]
 ---
@@ -110,6 +114,7 @@ local function help()
     print(usage)
     print(ansicolors.cyan..'Arguments'..ansicolors.reset)
     print(arguments)
+    print(arguments2)
     print(ansicolors.cyan..'Example usage'..ansicolors.reset)
     print(example)
 end
@@ -1012,13 +1017,33 @@ local function wipe(wtype)
     end
 end
 ---
+-- Write maximum read/write block number,
+local function write_maxRWblk(data)
+    -- input number check
+    if data == nil then return nil, 'empty block number' end
+    if #data == 0 then return nil, 'empty block number' end
+    if #data ~= 2 then return nil, 'block number wrong length. Should be 1 hex byte' end
+
+    print('Set max R/W block', data)
+    local info = connect()
+    if not info then return false, "Can't select card" end
+    local resp
+    -- set maximum read/write block
+    resp = send("CF".._key.."6B"..data)
+    lib14a.disconnect()
+    if resp ~= '9000FD07' then return nil, 'Failed to write maximum read/write block'
+    else
+        return true, 'Ok'
+    end
+end
+---
 -- The main entry point
 function main(args)
     print()
     local err, msg
     if #args == 0 then return help() end
     -- Read the parameters
-    for o, a in getopt.getopt(args, 'hck:u:t:p:a:s:o:v:q:g:z:n:m:w:') do
+    for o, a in getopt.getopt(args, 'hck:u:t:p:a:s:o:v:q:g:z:n:m:w:b:') do
         -- help
         if o == "h" then return help() end
         -- set Ultimate Magic Card Key for read write
@@ -1051,6 +1076,8 @@ function main(args)
         if o == "m" then err, msg = write_ulm(a) end
         -- write UL protocol
         if o == "n" then err, msg = write_ulp(a) end
+        -- write max r/w block
+        if o == "b" then err, msg = write_maxRWblk(a) end
         if err == nil then return oops(msg) end
     end
 end
