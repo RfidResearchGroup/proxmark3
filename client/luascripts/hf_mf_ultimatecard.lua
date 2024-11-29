@@ -644,6 +644,26 @@ local function write_ulm(ulm)
     return true, 'Ok'
 end
 ---
+-- Write maximum read/write block number,
+local function write_maxRWblk(data)
+    -- input number check
+    if data == nil then return nil, 'empty block number' end
+    if #data == 0 then return nil, 'empty block number' end
+    if #data ~= 2 then return nil, 'block number wrong length. Should be 1 hex byte' end
+
+    print('Set max R/W block', data)
+    local info = connect()
+    if not info then return false, "Can't select card" end
+    local resp
+    -- set maximum read/write block
+    resp = send("CF".._key.."6B"..data)
+    lib14a.disconnect()
+    if resp ~= '9000FD07' then return nil, 'Failed to write maximum read/write block'
+    else
+        return true, 'Ok'
+    end
+end
+---
 --  Set type for magic card presets.
 local function set_type(tagtype)
     -- tagtype checks
@@ -656,6 +676,7 @@ local function set_type(tagtype)
     send("CF".._key.."F000000000000002000978009102DABC19101011121314151604000900")
     lib14a.disconnect()
         write_uid('04112233')
+        write_maxRWblk('13')
     -- Setting Mifare mini S20 7-byte
     elseif tagtype == 2 then
         print('Setting: Ultimate Magic card to Mifare mini S20 7-byte')
@@ -663,6 +684,7 @@ local function set_type(tagtype)
     send("CF".._key.."F000010000000002000978009102DABC19101011121314151644000900")
     lib14a.disconnect()
         write_uid('04112233445566')
+        write_maxRWblk('13')
     -- Setting Mifare mini S20 10-byte
     elseif tagtype == 3 then
         print('Setting: Ultimate Magic card to Mifare mini S20 10-byte')
@@ -670,6 +692,7 @@ local function set_type(tagtype)
     send("CF".._key.."F000020000000002000978009102DABC19101011121314151684000900")
     lib14a.disconnect()
         write_uid('04112233445566778899')
+        write_maxRWblk('13')
     -- Setting Mifare 1k S50 4--byte
     elseif tagtype == 4 then
         print('Setting: Ultimate Magic card to Mifare 1k S50 4-byte')
@@ -677,6 +700,7 @@ local function set_type(tagtype)
     send("CF".._key.."F000000000000002000978009102DABC19101011121314151604000800")
     lib14a.disconnect()
         write_uid('04112233')
+        write_maxRWblk('3F')
     -- Setting Mifare 1k S50 7-byte
     elseif tagtype == 5 then
         print('Setting: Ultimate Magic card to Mifare 1k S50 7-byte')
@@ -684,6 +708,7 @@ local function set_type(tagtype)
     send("CF".._key.."F000010000000002000978009102DABC19101011121314151644000800")
     lib14a.disconnect()
         write_uid('04112233445566')
+        write_maxRWblk('3F')
     -- Setting Mifare 1k S50 10-byte
     elseif tagtype == 6 then
         print('Setting: Ultimate Magic card to Mifare 1k S50 10-byte')
@@ -691,6 +716,7 @@ local function set_type(tagtype)
     send("CF".._key.."F000020000000002000978009102DABC19101011121314151684000800")
     lib14a.disconnect()
         write_uid('04112233445566778899')
+        write_maxRWblk('3F')
     -- Setting Mifare 4k S70 4-byte
     elseif tagtype == 7 then
         print('Setting: Ultimate Magic card to Mifare 4k S70 4-byte')
@@ -698,6 +724,7 @@ local function set_type(tagtype)
     send("CF".._key.."F000000000000002000978009102DABC19101011121314151602001800")
     lib14a.disconnect()
         write_uid('04112233')
+        write_maxRWblk('FF')
     -- Setting Mifare 4k S70 7-byte
     elseif tagtype == 8 then
         print('Setting: Ultimate Magic card to Mifare 4k S70 7-byte')
@@ -705,6 +732,7 @@ local function set_type(tagtype)
     send("CF".._key.."F000010000000002000978009102DABC19101011121314151642001800")
     lib14a.disconnect()
         write_uid('04112233445566')
+        write_maxRWblk('FF')
     -- Setting Mifare 4k S70 10-byte
     elseif tagtype == 9 then
         print('Setting: Ultimate Magic card to Mifare 4k S70 10-byte')
@@ -712,6 +740,7 @@ local function set_type(tagtype)
     send("CF".._key.."F000020000000002000978009102DABC19101011121314151682001800")
     lib14a.disconnect()
         write_uid('04112233445566778899')
+        write_maxRWblk('FF')
     -- Setting UL
     elseif tagtype == 10 then
         print('Setting: Ultimate Magic card to UL')
@@ -1014,26 +1043,6 @@ local function wipe(wtype)
         lib14a.disconnect()
         return true, 'Ok'
     else oops('Use 0 for Mifare wipe or 1 for Ultralight wipe')
-    end
-end
----
--- Write maximum read/write block number,
-local function write_maxRWblk(data)
-    -- input number check
-    if data == nil then return nil, 'empty block number' end
-    if #data == 0 then return nil, 'empty block number' end
-    if #data ~= 2 then return nil, 'block number wrong length. Should be 1 hex byte' end
-
-    print('Set max R/W block', data)
-    local info = connect()
-    if not info then return false, "Can't select card" end
-    local resp
-    -- set maximum read/write block
-    resp = send("CF".._key.."6B"..data)
-    lib14a.disconnect()
-    if resp ~= '9000FD07' then return nil, 'Failed to write maximum read/write block'
-    else
-        return true, 'Ok'
     end
 end
 ---
