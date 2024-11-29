@@ -50,20 +50,20 @@ arguments = [[
     -c      read magic configuration
     -u      UID (8-20 hexsymbols), set UID on tag
     -t      tag type to impersonate
-                 1 = Mifare Mini S20 4-byte
-                 2 = Mifare Mini S20 7-byte     |  15 = NTAG 210
-                 3 = Mifare Mini S20 10-byte    |  16 = NTAG 212
-                 4 = Mifare 1k S50 4-byte       |  17 = NTAG 213
-                 5 = Mifare 1k S50 7-byte       |  18 = NTAG 215
-                 6 = Mifare 1k S50 10-byte      |  19 = NTAG 216
-                 7 = Mifare 4k S70 4-byte       |  20 = NTAG I2C 1K
-                 8 = Mifare 4k S70 7-byte       |  21 = NTAG I2C 2K
-                 9 = Mifare 4k S70 10-byte      |  22 = NTAG I2C 1K PLUS
-            ***  10 = UL -   NOT WORKING FULLY  |  23 = NTAG I2C 2K PLUS
-            ***  11 = UL-C - NOT WORKING FULLY  |  24 = NTAG 213F
-                 12 = UL EV1 48b                |  25 = NTAG 216F
-                 13 = UL EV1 128b
-            ***  14 = UL Plus - NOT WORKING YET
+                 1 = Mifare Mini S20 4-byte     |  15 = NTAG 210
+                 2 = Mifare Mini S20 7-byte     |  16 = NTAG 212
+                 3 = Mifare Mini S20 10-byte    |  17 = NTAG 213
+                 4 = Mifare 1k S50 4-byte       |  18 = NTAG 215
+                 5 = Mifare 1k S50 7-byte       |  19 = NTAG 216
+                 6 = Mifare 1k S50 10-byte      |  20 = NTAG I2C 1K
+                 7 = Mifare 4k S70 4-byte       |  21 = NTAG I2C 2K
+                 8 = Mifare 4k S70 7-byte       |  22 = NTAG I2C 1K PLUS
+                 9 = Mifare 4k S70 10-byte      |  23 = NTAG I2C 2K PLUS
+            ***  10 = UL -   NOT WORKING FULLY  |  24 = NTAG 213F
+            ***  11 = UL-C - NOT WORKING FULLY  |  25 = NTAG 216F
+                 12 = UL EV1 48b                |  26 = Mifare 2k S50 4-byte
+                 13 = UL EV1 128b               |  27 = Mifare 2k S50 7-byte
+            ***  14 = UL Plus - NOT WORKING YET |  28 = Mifare 2k S50 10-byte
 
     -p      NTAG password (8 hexsymbols),  set NTAG password on tag.
     -a      NTAG pack ( 4 hexsymbols), set NTAG pack on tag.
@@ -717,6 +717,30 @@ local function set_type(tagtype)
     lib14a.disconnect()
         write_uid('04112233445566778899')
         write_maxRWblk('3F')
+    -- Setting Mifare 2k S50 4-byte
+    elseif tagtype == 26 then
+        print('Setting: Ultimate Magic card to Mifare 2k S50 4-byte')
+        connect()
+    send("CF".._key.."F000000000000002000978009102DABC19101011121314151604000800")
+    lib14a.disconnect()
+        write_uid('04112233')
+        write_maxRWblk('7F')
+    -- Setting Mifare 2k S50 7-byte
+    elseif tagtype == 27 then
+        print('Setting: Ultimate Magic card to Mifare 2k S50 7-byte')
+        connect()
+    send("CF".._key.."F000010000000002000978009102DABC19101011121314151644000800")
+    lib14a.disconnect()
+        write_uid('04112233445566')
+        write_maxRWblk('7F')
+    -- Setting Mifare 2k S50 10-byte
+    elseif tagtype == 28 then
+        print('Setting: Ultimate Magic card to Mifare 2k S50 10-byte')
+        connect()
+    send("CF".._key.."F000020000000002000978009102DABC19101011121314151684000800")
+    lib14a.disconnect()
+        write_uid('04112233445566778899')
+        write_maxRWblk('7F')
     -- Setting Mifare 4k S70 4-byte
     elseif tagtype == 7 then
         print('Setting: Ultimate Magic card to Mifare 4k S70 4-byte')
