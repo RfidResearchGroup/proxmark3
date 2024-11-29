@@ -4152,6 +4152,7 @@ static int CmdHFiClassLegRecLookUp(const char *Cmd) {
             }
             if (check_values) {
                 PrintAndLogEx(SUCCESS, _GREEN_("CONFIRMED VALID RAW key ") _RED_("%s"), sprint_hex(div_key, 8));
+                PrintAndLogEx(INFO, "You can now run ->  "_YELLOW_("hf iclass unhash -k %s")"  <-to find the pre-images.", sprint_hex(div_key, 8));
                 verified = true;
             } else {
                 PrintAndLogEx(INFO, _YELLOW_("Raw Key Invalid"));
