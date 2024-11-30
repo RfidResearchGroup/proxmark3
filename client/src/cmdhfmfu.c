@@ -1540,21 +1540,13 @@ static int ulev1_print_version(uint8_t *data) {
 }
 
 static int ntag_print_counter(void) {
-    // NTAG has one counter/tearing.  At address 0x02.
+    // NTAG has one counter. At address 0x02. With no tearing.
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Counter"));
-    uint8_t tear[1] = {0};
     uint8_t counter[3] = {0, 0, 0};
     uint16_t len;
-    len = ulev1_readTearing(0x02, tear, sizeof(tear));
-    (void)len;
     len = ulev1_readCounter(0x02, counter, sizeof(counter));
-    (void)len;
     PrintAndLogEx(INFO, "       [02]: %s", sprint_hex(counter, 3));
-    PrintAndLogEx(SUCCESS, "            - %02X tearing ( %s )"
-                  , tear[0]
-                  , (tear[0] == 0xBD) ? _GREEN_("ok") : _RED_("fail")
-                 );
     return len;
 }
 
@@ -5833,6 +5825,127 @@ out:
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AMfUIncr(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu incr",
+                        "Increment a MIFARE Ultralight Ev1 counter\n"
+                        "Will read but not increment counter if NTAG is detected",
+                        "hf mfu incr -c 0 -v 1337\n"
+                        "hf mfu incr -c 2 -v 0 -p FFFFFFFF");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("c", "cnt", "<dec>", "Counter index from 0"),
+        arg_int1("v", "val", "<dec>", "Value to increment by (0-16777215)"),
+        arg_str0("p", "pwd", "<hex>", "PWD to authenticate with"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    
+    uint8_t counter = arg_get_int_def(ctx, 1, 3);
+    uint32_t value = arg_get_u32_def(ctx, 2, 16777216);
+    
+    int pwd_len;
+    uint8_t pwd[4] = { 0x00 };
+    CLIGetHexWithReturn(ctx, 3, pwd, &pwd_len);
+    bool has_key = false;
+    if (pwd_len) {
+        has_key = true;
+        if (pwd_len != 4) {
+            PrintAndLogEx(WARNING, "incorrect PWD length");
+            return PM3_EINVARG;
+        }
+    }
+    
+    CLIParserFree(ctx);
+    
+    if (counter > 2) {
+        PrintAndLogEx(WARNING, "Counter index must be in range 0-2");
+        return PM3_EINVARG;
+    }
+    if (value > 16777215) {
+        PrintAndLogEx(WARNING, "Value to increment must be in range 0-16777215");
+        return PM3_EINVARG;
+    }
+    
+    uint8_t increment_cmd[6] = { MIFARE_ULEV1_INCR_CNT, counter, 0x00, 0x00, 0x00, 0x00 };
+    
+    for (uint8_t i = 0; i < 3; i++) {
+        increment_cmd[i + 2] = (value >> (8 * i)) & 0xff;
+    }
+    
+    iso14a_card_select_t card;
+    if (ul_select(&card) == false) {
+        PrintAndLogEx(FAILED, "failed to select card, exiting...");
+        return PM3_ESOFT;
+    }
+    
+    uint64_t tagtype = GetHF14AMfU_Type();
+    uint64_t tags_with_counter_ul = MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1;
+    uint64_t tags_with_counter_ntag = MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C | MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216;
+    if ((tagtype & (tags_with_counter_ul | tags_with_counter_ntag)) == 0) {
+        PrintAndLogEx(WARNING, "tag type does not have counters");
+        DropField();
+        return PM3_ESOFT;
+    }
+    
+    bool is_ntag = (tagtype & tags_with_counter_ntag) != 0;
+    if (is_ntag && (counter != 2)) {
+        PrintAndLogEx(WARNING, "NTAG only has one counter at index 2");
+        DropField();
+        return PM3_EINVARG;
+    }
+    
+    uint8_t pack[4] = { 0, 0, 0, 0 };
+    if (has_key) {
+        if (ulev1_requestAuthentication(pwd, pack, sizeof(pack)) == PM3_EWRONGANSWER) {
+            PrintAndLogEx(FAILED, "authentication failed UL-EV1/NTAG");
+            DropField();
+            return PM3_ESOFT;
+        }
+    }
+    
+    uint8_t current_counter[3] = { 0, 0, 0 };
+    int len = ulev1_readCounter(counter, current_counter, sizeof(current_counter));
+    if (len != sizeof(current_counter)) {
+        PrintAndLogEx(FAILED, "failed to read old counter");
+        if (is_ntag) {
+            PrintAndLogEx(HINT, "NTAG detected, try reading with PWD");
+        }
+        DropField();
+        return PM3_ESOFT;
+    }
+    
+    uint32_t current_counter_num = current_counter[0] | (current_counter[1] << 8) | (current_counter[2] << 16);
+    PrintAndLogEx(INFO, "Current counter... " _GREEN_("%8d") " - " _GREEN_("%s"), current_counter_num, sprint_hex(current_counter, 3));
+
+    if ((tagtype & tags_with_counter_ntag) != 0) {
+        PrintAndLogEx(WARNING, "NTAG detected, unable to manually increment counter");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    uint8_t resp[1] = { 0x00 };
+    if (ul_send_cmd_raw(increment_cmd, sizeof(increment_cmd), resp, sizeof(resp)) < 0) {
+        PrintAndLogEx(FAILED, "failed to increment counter");
+        DropField();
+        return PM3_ESOFT;
+    }
+    
+    uint8_t new_counter[3] = { 0, 0, 0 };
+    int new_len = ulev1_readCounter(counter, new_counter, sizeof(new_counter));
+    if (new_len != sizeof(current_counter)) {
+        PrintAndLogEx(FAILED, "failed to read new counter");
+        DropField();
+        return PM3_ESOFT;
+    }
+    
+    uint32_t new_counter_num = new_counter[0] | (new_counter[1] << 8) | (new_counter[2] << 16);
+    PrintAndLogEx(INFO, "New counter....... " _GREEN_("%8d") " - " _GREEN_("%s"), new_counter_num, sprint_hex(new_counter, 3));
+    
+    DropField();
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",     CmdHelp,                   AlwaysAvailable, "This help"},
     {"list",     CmdHF14AMfuList,           AlwaysAvailable, "List MIFARE Ultralight / NTAG history"},
@@ -5845,6 +5958,7 @@ static command_t CommandTable[] = {
     {"cauth",    CmdHF14AMfUCAuth,          IfPm3Iso14443a,  "Ultralight-C - Authentication"},
     {"setpwd",   CmdHF14AMfUCSetPwd,        IfPm3Iso14443a,  "Ultralight-C - Set 3DES key"},
     {"dump",     CmdHF14AMfUDump,           IfPm3Iso14443a,  "Dump MIFARE Ultralight family tag to binary file"},
+    {"incr",     CmdHF14AMfUIncr,           IfPm3Iso14443a,  "Increments Ev1/NTAG counter"},
     {"info",     CmdHF14AMfUInfo,           IfPm3Iso14443a,  "Tag information"},
     {"ndefread", CmdHF14MfuNDEFRead,        IfPm3Iso14443a,  "Prints NDEF records from card"},
     {"rdbl",     CmdHF14AMfURdBl,           IfPm3Iso14443a,  "Read block"},
