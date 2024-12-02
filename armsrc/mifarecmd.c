@@ -3482,7 +3482,8 @@ void MifareGen3Blk(uint8_t block_len, uint8_t *block) {
             retval = PM3_ESOFT;
             goto OUT;
         }
-        cmd[ofs++] = card_info->sak;
+        cmd[ofs] = block_len < card_info->uidlen ? card_info->sak : cmd[ofs];
+        ofs++;
         cmd[ofs++] = card_info->atqa[0];
         cmd[ofs++] = card_info->atqa[1];
         AddCrc14A(cmd, sizeof(block_cmd) + MIFARE_BLOCK_SIZE);
