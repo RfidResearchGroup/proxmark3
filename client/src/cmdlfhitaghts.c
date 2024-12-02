@@ -444,6 +444,96 @@ static int CmdLFHitagSRead(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdLFHitagSDump(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hitag hts dump",
+                  "Read all Hitag S memory and save to file\n"
+                  " Crypto mode: \n"
+                  "    - key format ISK high + ISK low\n"
+                  "    - default key 4F4E4D494B52 (ONMIKR)\n\n"
+                  "  8268/8310 password mode: \n"
+                  "    - default password BBDD3399\n",
+                  "lf hitag hts dump --82xx -k BBDD3399     -> pwd mode\n"
+                  "lf hitag hts dump --crypto               -> use def crypto\n"
+                  "lf hitag hts dump -k 4F4E4D494B52        -> crypto mode\n"
+                  "lf hitag hts dump --nrar 0102030411223344\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("8", "82xx", "8268/8310 mode"),
+        arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
+        arg_lit0(NULL, "crypto", "crypto mode"),
+        arg_str0("k", "key", "<hex>", "pwd or key, 4 or 6 hex bytes"),
+        arg_int0("m", "mode", "<dec>", "response protocol mode. 0 (Standard 00110), 1 (Advanced 11000), 2 (Advanced 11001), 3 (Fast Advanced 11010) (def: 3)"),
+        arg_str0("f", "file", "<fn>", "specify file name"),
+        arg_lit0(NULL, "ns", "no save to file"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    lf_hitag_data_t packet;
+    memset(&packet, 0, sizeof(packet));
+
+    if (process_hitags_common_args(ctx, &packet) < 0) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    bool nosave = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx);
+
+    // read all pages
+    packet.page = 0;
+    packet.page_count = 0; 
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_HITAGS_READ, (uint8_t *) &packet, sizeof(packet));
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_LF_HITAGS_READ, &resp, 5000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        print_error(resp.reason);
+        return PM3_ESOFT;
+    }
+
+    lf_hts_read_response_t *card = (lf_hts_read_response_t *)resp.data.asBytes;
+
+    const int hts_mem_sizes[] = {1, 8, 64, 64};
+    int mem_size = hts_mem_sizes[card->config_page.s.MEMT] * HITAGS_PAGE_SIZE;
+
+    hitags_config_t config = card->config_page.s;
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
+    hitags_config_print(config);
+
+    if (nosave) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "Called with no save option");
+        PrintAndLogEx(NORMAL, "");
+        return PM3_SUCCESS;
+    }
+
+    if (fnlen < 1) {
+        char *fptr = filename;
+        fptr += snprintf(filename, sizeof(filename), "lf-hitags-");
+        FillFileNameByUID(fptr, card->pages[HITAGS_UID_PADR], "-dump", HITAGS_PAGE_SIZE);
+    }
+
+    pm3_save_dump(filename, (uint8_t *)card->pages, mem_size, jsfHitag);
+
+    return PM3_SUCCESS;
+}
+
 static int CmdLFHitagSWrite(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag hts wrbl",
@@ -615,6 +705,7 @@ static command_t CommandTable[] = {
     {"-----------", CmdHelp,           IfPm3Hitag,      "----------------------- " _CYAN_("General") " ------------------------"},
     {"reader",      CmdLFHitagSReader, IfPm3Hitag,      "Act like a Hitag S reader"},
     {"rdbl",        CmdLFHitagSRead,   IfPm3Hitag,      "Read Hitag S page"},
+    {"dump",        CmdLFHitagSDump,     IfPm3Hitag,      "Dump Hitag S pages to a file"},
     {"wrbl",        CmdLFHitagSWrite,  IfPm3Hitag,      "Write Hitag S page"},
     {"-----------", CmdHelp,           IfPm3Hitag,      "----------------------- " _CYAN_("Simulation") " -----------------------"},
     {"sim",         CmdLFHitagSSim,    IfPm3Hitag,      "Simulate Hitag S transponder"},
