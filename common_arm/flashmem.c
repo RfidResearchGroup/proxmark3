@@ -366,7 +366,6 @@ void Flashmem_print_status(void) {
                 );
     }
 
-    Dbprintf("  Device.................. " _YELLOW_("%s"), spi_flash_data.device);
     Dbprintf("  Memory size............. " _YELLOW_("%d kB (%d pages * 64k)"), spi_flash_pages64k * 64, spi_flash_pages64k);
 
     uint8_t uid[8] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -442,21 +441,13 @@ bool FlashDetect(void) {
     } else {
         if (g_dbglevel > 3) Dbprintf("Flash_ReadID failed reading Mfr/Dev (0x90)");
     }
-    // default device is 'unknown'
-    spi_flash_data.device = SpiFlashTable[0].device;
-
+    // Check JEDEC data is valid, compare the reported device types and then calculate the number of pages
+    // It is covering the most (known) cases of devices but probably there are vendors with different data
+    // They will be handled when there is such cases
     if (ret) {
-        for (int i = 0; i < ARRAYLEN(SpiFlashTable); i++) {
-            if (SpiFlashTable[i].manufacturer_id == spi_flash_data.manufacturer_id) {
-                if (SpiFlashTable[i].jedec_id == spi_flash_data.jedec_id) {
-                    spi_flash_pages64k = SpiFlashTable[i].pages64k;
-                    spi_flash_data.device = SpiFlashTable[i].device;
-                    break;
-                }
-                if (SpiFlashTable[i].device_id == spi_flash_data.device_id) {
-                    spi_flash_data.device = SpiFlashTable[i].device;
-                    break;
-                }
+        if (spi_flash_data.jedec_id > 0 && spi_flash_data.jedec_id < 0xFFFF) {
+            if (((spi_flash_data.device_id + 1) & 0x0F) == (spi_flash_data.jedec_id & 0x000F)) {
+                spi_flash_pages64k = 1 << (spi_flash_data.jedec_id & 0x000F);
             }
         }
     }
