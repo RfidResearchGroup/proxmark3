@@ -1,0 +1,45 @@
+# See the schematic for the pin assignment.
+
+NET "adc_d<0>"    LOC = "P54"  ; 
+NET "adc_d<1>"    LOC = "P57"  ; 
+NET "adc_d<2>"    LOC = "P59"  ; 
+NET "adc_d<3>"    LOC = "P60"  ; 
+NET "adc_d<4>"    LOC = "P62"  ; 
+NET "adc_d<5>"    LOC = "P63"  ; 
+NET "adc_d<6>"    LOC = "P65"  ; 
+NET "adc_d<7>"    LOC = "P67"  ; 
+#NET "cross_hi"   LOC = "P88"  ; 
+#NET "miso"       LOC = "P40"  ; 
+NET "adc_clk"     LOC = "P75"  ; 
+NET "adc_noe"     LOC = "P74"  ; 
+NET "ck_1356meg"  LOC = "P15"  ; 
+NET "ck_1356megb" LOC = "P12"  ; 
+NET "cross_lo"    LOC = "P19"  ; 
+NET "dbg"         LOC = "P112" ; 
+NET "mosi"        LOC = "P80"  ; 
+NET "ncs"         LOC = "P79"  ; 
+NET "pck0"        LOC = "P91"  ; 
+NET "pwr_hi"      LOC = "P31"  ; 
+NET "pwr_lo"      LOC = "P30"  ; 
+NET "pwr_oe1"     LOC = "P28"  ; 
+NET "pwr_oe2"     LOC = "P27"  ; 
+NET "pwr_oe3"     LOC = "P26"  ; 
+NET "pwr_oe4"     LOC = "P21"  ; 
+NET "spck"        LOC = "P88"  ; 
+NET "ssp_clk"     LOC = "P43"  ; 
+NET "ssp_din"     LOC = "P99"  ; 
+NET "ssp_dout"    LOC = "P94"  ; 
+NET "ssp_frame"   LOC = "P100" ; 
+
+# definition of Clock nets:
+NET "ck_1356meg"  TNM_NET = "clk_net_1356" ;
+NET "ck_1356megb" TNM_NET = "clk_net_1356b";
+NET "pck0"        TNM_NET = "clk_net_pck0" ;
+NET "spck"        TNM_NET = "clk_net_spck" ;
+
+# Timing specs of clock nets:
+TIMEGRP "clk_net_1356_all" = "clk_net_1356" "clk_net_1356b" ;
+TIMESPEC "TS_1356MHz" = PERIOD "clk_net_1356_all" 74 ns HIGH  37 ns ;
+TIMESPEC "TS_24MHz"   = PERIOD "clk_net_pck0"     42 ns HIGH  21 ns ;
+TIMESPEC "TS_4MHz"    = PERIOD "clk_net_spck"    250 ns HIGH 125 ns ;
+
