@@ -4,7 +4,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Changed SPI flash detection to calculate the size instead of table lookup, updated spi_flash_decode.py script with more ICs (@ANTodorov)
-- Add option to set and get maximum read/write block number using `hf_mf_ultimatecard` script (@piotrva)
+- Fixed `hf/lf tune` segfault when called from script (@doegox)
+- Added option to set and get maximum read/write block number using `hf_mf_ultimatecard` script (@piotrva)
 - Added JEDEC information for SPI flash W25Q64JV (@ANTodorov)
 - Added special iclass legacy config cards in `hf iclass configcard` (@antiklesys)
 - Added simulation function to `hf iclass legrec` (@antiklesys)
