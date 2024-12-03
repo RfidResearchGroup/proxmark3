@@ -1065,10 +1065,10 @@
     },
     {
         "AID": "DD00DD",
-        "Vendor": "Regional Transporation District (RTD) via masabi justride",
+        "Vendor": "Regional Transporation District (RTD) via Masabi Ltd",
         "Country": "US",
         "Name": "MyRide Card (DEN)",
-        "Description": "DEN MyRide Card",
+        "Description": "DEN MyRide Card; Masabi Justride Tap and Ride DESFire Smartcard",
         "Type": "transport"
     },
     {
