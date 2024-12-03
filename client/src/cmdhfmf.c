@@ -7202,7 +7202,7 @@ static int CmdHf14AGen3Block(const char *Cmd) {
                   " - You can specify part of manufacturer block as\n"
                   "   4/7-bytes for UID change only\n"
                   "\n"
-                  "NOTE: BCC, SAK, ATQA will be calculated automatically"
+                  "NOTE: BCC and ATQA will be calculated automatically"
                   ,
                   "hf mf gen3blk                      --> print current data\n"
                   "hf mf gen3blk -d 01020304          --> set 4 byte uid\n"
