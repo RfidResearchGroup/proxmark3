@@ -313,6 +313,10 @@ static void DesfireSecureChannelEncodeD40(DesfireContext_t *ctx, uint8_t cmd, ui
         size_t srcmaclen = padded_data_length(srcdatalen - hdrlen, desfire_get_key_block_length(ctx->keyType));
 
         uint8_t mac[32] = {0};
+        PrintAndLogEx(DEBUG, "MACing");
+        // Even though original DESFire (MF3ICD40) silicon can only encrypt which means normally
+        // every PCD operation must be decrypt, verifying a MAC involves the same operation on both
+        // sides so this is still encrypt here
         DesfireCryptoEncDecEx(ctx, DCOSessionKeyMac, data, srcmaclen, NULL, true, true, mac);
 
         if (DesfireEV1D40TransmitMAC(ctx, cmd)) {
@@ -889,4 +893,3 @@ bool PrintChannelModeWarning(uint8_t cmd, DesfireSecureChannel secureChannel, De
 
     return found;
 }
-
