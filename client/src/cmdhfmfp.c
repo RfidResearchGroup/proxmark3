@@ -333,10 +333,12 @@ static int CmdHFMFPInfo(const char *Cmd) {
 
     // version check
     uint8_t version[30] = {0};
+    uint8_t uid7b[7] = {0};
     int version_len = sizeof(version);
     if (get_plus_version(version, &version_len) == PM3_SUCCESS) {
         plus_print_version(version);
         supportVersion = true;
+        memcpy(uid7b, version + 14, 7);
     } else {
         // info about 14a part, historical bytes.
         infoHF14A(false, false, false);
@@ -346,7 +348,11 @@ static int CmdHFMFPInfo(const char *Cmd) {
     uint8_t signature[56] = {0};
     int signature_len = sizeof(signature);
     if (get_plus_signature(signature, &signature_len) == PM3_SUCCESS) {
-        plus_print_signature(card.uid, card.uidlen, signature, signature_len);
+        if (supportVersion) {
+            plus_print_signature(uid7b, 7, signature, signature_len);
+        } else {
+            plus_print_signature(card.uid, card.uidlen, signature, signature_len);
+        }
         supportSignature = true;
     }
 
