@@ -1222,14 +1222,17 @@ static int DesfireAuthenticateEV1(DesfireContext_t *dctx, DesfireSecureChannel s
 
     // - Encrypt our response
     if (secureChannel == DACd40) {
+        // Original DESFire (MF3ICD40) silicon can only do encryption operations, so all PCD
+        // side operations must be decrypt, even when encrypting when doing D40 compatible
+        // secure channel operations
         memset(IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
-        DesfireCryptoEncDecEx(dctx, DCOMainKey, RndA, rndlen, encRndA, true, true, IV);
+        DesfireCryptoEncDecEx(dctx, DCOMainKey, RndA, rndlen, encRndA, true, false, IV);
 
         memcpy(both, encRndA, rndlen);
         bin_xor(rotRndB, encRndA, rndlen);
 
         memset(IV, 0, DESFIRE_MAX_CRYPTO_BLOCK_SIZE);
-        DesfireCryptoEncDecEx(dctx, DCOMainKey, rotRndB, rndlen, encRndB, true, true, IV);
+        DesfireCryptoEncDecEx(dctx, DCOMainKey, rotRndB, rndlen, encRndB, true, false, IV);
 
         memcpy(both + rndlen, encRndB, rndlen);
     } else if (secureChannel == DACEV1) {
