@@ -63,8 +63,8 @@ Page 3:
 Page3 is used as follows by the Proxmark3 RDV4 firmware:
 
 * **MF_KEYS**
-  * offset: page 3 sector  9 (0x9) @ 3*0x10000+9*0x1000=0x39000
-  * length: 2 sectors
+  * offset: page 3 sector  5 (0x5) @ 3*0x10000+5*0x1000=0x35000
+  * length: 6 sectors
 
 * **ICLASS_KEYS**
   * offset: page 3 sector 11 (0xB) @ 3*0x10000+11*0x1000=0x3B000
