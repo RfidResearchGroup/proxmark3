@@ -117,6 +117,17 @@ or
 proxmark3 /dev/ttyACM0 --flash --unlock-bootloader --image /tmp/my-bootrom.elf --image /tmp/my-fullimage.elf
 ```
 
+## Updating SPI flash structure and contents (RDV4.x, some PM3 Easy variants)
+^[Top](#top)
+
+For the devices equipped with external SPI flash memory chip in some cases it might be essential to update the memory structure as well as to upload new keys from the dictionaries. To do so execute following command inside the client:
+
+```
+[usb] pm3 --> script run init_rdv4
+```
+
+For more details prease refer to [this doc](./2_Configuration-and-Verification.md).
+
 ### The button trick
 ^[Top](#top)
 
