@@ -14,7 +14,6 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added JEDEC information for SPI flash W25Q64JV (@ANTodorov)
 - Added special iclass legacy config cards in `hf iclass configcard` (@antiklesys)
 - Added simulation function to `hf iclass legrec` (@antiklesys)
-- Added keys from Momentum firmware projects. (@onovy)
 - Added Dutch Statistics Agency default key (@eagle00789)
 
 ## [Orca.4.19552][2024-11-22]
