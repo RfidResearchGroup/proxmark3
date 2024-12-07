@@ -2751,34 +2751,34 @@ static void PacketReceived(PacketCommandNG *packet) {
             if (payload->startidx == DEFAULT_T55XX_KEYS_OFFSET_P(spi_flash_pages64k)) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
-                Flash_Erase4k(3, 0xC);
+                Flash_Erase4k(spi_flash_pages64k - 1, 0xC);
             } else if (payload->startidx ==  DEFAULT_MF_KEYS_OFFSET_P(spi_flash_pages64k)) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
-                Flash_Erase4k(3, 0x5);
+                Flash_Erase4k(spi_flash_pages64k - 1, 0x5);
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
-                Flash_Erase4k(3, 0x6);
+                Flash_Erase4k(spi_flash_pages64k - 1, 0x6);
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
-                Flash_Erase4k(3, 0x7);
+                Flash_Erase4k(spi_flash_pages64k - 1, 0x7);
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
-                Flash_Erase4k(3, 0x8);
+                Flash_Erase4k(spi_flash_pages64k - 1, 0x8);
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
-                Flash_Erase4k(3, 0x9);
+                Flash_Erase4k(spi_flash_pages64k - 1, 0x9);
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
-                Flash_Erase4k(3, 0xA);
+                Flash_Erase4k(spi_flash_pages64k - 1, 0xA);
             } else if (payload->startidx == DEFAULT_ICLASS_KEYS_OFFSET_P(spi_flash_pages64k)) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
-                Flash_Erase4k(3, 0xB);
+                Flash_Erase4k(spi_flash_pages64k - 1, 0xB);
             } else if (payload->startidx == FLASH_MEM_SIGNATURE_OFFSET_P(spi_flash_pages64k)) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
-                Flash_Erase4k(3, 0xF);
+                Flash_Erase4k(spi_flash_pages64k - 1, 0xF);
             }
 
             uint16_t res = Flash_Write(payload->startidx, payload->data, payload->len);
