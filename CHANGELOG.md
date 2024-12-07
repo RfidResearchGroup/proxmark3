@@ -3,8 +3,18 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Extended area for Mifare keys in SPI flash to hold 4095 keys (@piotrva)
+- Fixed DESFire D40 secure channel crypto (@nvx)
+- Fixed `hf mfp info` fix signature check on 4b UID cards (@doegox)
+- Automatically set maximum read/write block when using predefined types in `hf_mf_ultimatecard` script (@piotrva)
+- Changed SPI flash detection to calculate the size instead of table lookup, updated spi_flash_decode.py script with more ICs (@ANTodorov)
+- Fixed `hf/lf tune` segfault when called from script (@doegox)
+- Added option to set and get maximum read/write block number using `hf_mf_ultimatecard` script (@piotrva)
+- Added JEDEC information for SPI flash W25Q64JV (@ANTodorov)
+- Added special iclass legacy config cards in `hf iclass configcard` (@antiklesys)
 - Added simulation function to `hf iclass legrec` (@antiklesys)
 - Added keys from Momentum firmware projects. (@onovy)
+- Added Dutch Statistics Agency default key (@eagle00789)
 
 ## [Orca.4.19552][2024-11-22]
 - Fixed `hf_legic.lua` - removed bit32 commands from the script (@diorch1968)

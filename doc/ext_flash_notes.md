@@ -36,22 +36,22 @@ Therefore a flash address can be interpreted as such:
 
 Page 0:
 * available for user data
-* to dump it: `mem dump f page0_dump o 0 l 65536`
+* to dump it: `mem dump -f page0_dump -o 0 -l 65536`
 * to erase it: `mem wipe p 0`
 
 Page 1:
 * available for user data
-* to dump it: `mem dump f page1_dump o 65536 l 65536`
+* to dump it: `mem dump -f page1_dump -o 65536 -l 65536`
 * to erase it: `mem wipe p 1`
 
 Page 2:
 * available for user data
-* to dump it: `mem dump f page2_dump o 131072 l 65536`
+* to dump it: `mem dump -f page2_dump -o 131072 -l 65536`
 * to erase it: `mem wipe p 2`
 
 Page 3:
 * used by Proxmark3 RDV4 specific functions: flash signature and keys dictionaries, see below for details
-* to dump it: `mem dump f page3_dump o 196608 l 65536`
+* to dump it: `mem dump -f page3_dump -o 196608 -l 65536`
 * to erase it:
   * **Beware** it will erase your flash signature so better to back it up first as you won't be able to regenerate it by yourself!
   * edit the source code to enable Page 3 as a valid input in the `mem wipe` command.
@@ -63,8 +63,8 @@ Page 3:
 Page3 is used as follows by the Proxmark3 RDV4 firmware:
 
 * **MF_KEYS**
-  * offset: page 3 sector  9 (0x9) @ 3*0x10000+9*0x1000=0x39000
-  * length: 2 sectors
+  * offset: page 3 sector  5 (0x5) @ 3*0x10000+5*0x1000=0x35000
+  * length: 6 sectors
 
 * **ICLASS_KEYS**
   * offset: page 3 sector 11 (0xB) @ 3*0x10000+11*0x1000=0x3B000

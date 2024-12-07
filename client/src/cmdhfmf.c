@@ -7202,7 +7202,8 @@ static int CmdHf14AGen3Block(const char *Cmd) {
                   " - You can specify part of manufacturer block as\n"
                   "   4/7-bytes for UID change only\n"
                   "\n"
-                  "NOTE: BCC, SAK, ATQA will be calculated automatically"
+                  "NOTE: BCC and ATQA will be calculated automatically\n"
+                  "SAK will be automatically set to default values if not specified"
                   ,
                   "hf mf gen3blk                      --> print current data\n"
                   "hf mf gen3blk -d 01020304          --> set 4 byte uid\n"
@@ -9883,6 +9884,7 @@ static int CmdHF14AMfISEN(const char *Cmd) {
         arg_rem("FM11RF08S specific options:", "Incompatible with above options, except -k; output in JSON"),
         arg_lit0(NULL, "collect_fm11rf08s", "collect all nT/{nT}/par_err."),
         arg_lit0(NULL, "collect_fm11rf08s_with_data", "collect all nT/{nT}/par_err and data blocks."),
+        arg_lit0(NULL, "collect_fm11rf08s_without_backdoor", "collect all nT/{nT}/par_err without backdoor. Requires first auth keytype and block"),
         arg_str0("f", "file", "<fn>", "Specify a filename for collected data"),
         arg_param_end
     };
@@ -9954,9 +9956,18 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     if (collect_fm11rf08s_with_data) {
         collect_fm11rf08s = 1;
     }
+    bool collect_fm11rf08s_without_backdoor = arg_get_lit(ctx, 23);
+    if (collect_fm11rf08s_without_backdoor) {
+        collect_fm11rf08s = 1;
+    }
+    if (collect_fm11rf08s_with_data && collect_fm11rf08s_without_backdoor) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Don't mix with_data and without_backdoor options");
+        return PM3_EINVARG;
+    }
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 23), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 24), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     CLIParserFree(ctx);
 
@@ -10005,10 +10016,10 @@ static int CmdHF14AMfISEN(const char *Cmd) {
 
     if (collect_fm11rf08s) {
         uint64_t t1 = msclock();
-        uint32_t flags = collect_fm11rf08s_with_data;
-        SendCommandMIX(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, flags, 0, 0, key, sizeof(key));
-        if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, &resp, 1000)) {
-            if (resp.status == PM3_ESOFT) {
+        uint32_t flags = collect_fm11rf08s_with_data | (collect_fm11rf08s_without_backdoor << 1);
+        SendCommandMIX(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, flags, blockn, keytype, key, sizeof(key));
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+            if (resp.oldarg[0] != PM3_SUCCESS) {
                 return NONCE_FAIL;
             }
         }

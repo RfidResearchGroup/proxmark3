@@ -1065,10 +1065,10 @@
     },
     {
         "AID": "DD00DD",
-        "Vendor": "Regional Transporation District (RTD) via masabi justride",
+        "Vendor": "Regional Transporation District (RTD) via Masabi Ltd",
         "Country": "US",
         "Name": "MyRide Card (DEN)",
-        "Description": "DEN MyRide Card",
+        "Description": "DEN MyRide Card; Masabi Justride Tap and Ride DESFire Smartcard",
         "Type": "transport"
     },
     {
@@ -1149,6 +1149,22 @@
         "Country": "US",
         "Name": "Clipper Card (SFO)",
         "Description": "FIDs 02: Card Balance; 04: Refill History; 08: Card Information; 0E: Trip History",
+        "Type": "transport"
+    },
+    {
+        "AID": "F21201",
+        "Vendor": "Green Bay Metro Transit via Genfare",
+        "Country": "US",
+        "Name": "Tap-N-Go Card (GRB)",
+        "Description": "GRB Tap-N-Go Card",
+        "Type": "transport"
+    },
+    {
+        "AID": "F21202",
+        "Vendor": "Green Bay Metro Transit via Genfare",
+        "Country": "US",
+        "Name": "Tap-N-Go Card (GRB)",
+        "Description": "GRB Tap-N-Go Card",
         "Type": "transport"
     },
     {
