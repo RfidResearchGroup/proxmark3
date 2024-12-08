@@ -1064,6 +1064,14 @@
         "Type": "transport"
     },
     {
+        "AID": "CC00CC",
+        "Vendor": "Central Ohio Transit Authority (COTA) via Masabi Ltd",
+        "Country": "US",
+        "Name": "COTA Smartcard (CMH)",
+        "Description": "CMH COTA Smartcard; Masabi Justride Tap and Ride DESFire Smartcard",
+        "Type": "transport"
+    },
+    {
         "AID": "DD00DD",
         "Vendor": "Regional Transporation District (RTD) via Masabi Ltd",
         "Country": "US",
@@ -1165,6 +1173,14 @@
         "Country": "US",
         "Name": "Tap-N-Go Card (GRB)",
         "Description": "GRB Tap-N-Go Card",
+        "Type": "transport"
+    },
+    {
+        "AID": "F212A0",
+        "Vendor": "CTtransit",
+        "Country": "US",
+        "Name": "Go CT Card (BDL)",
+        "Description": "BDL Go CT Card",
         "Type": "transport"
     },
     {
