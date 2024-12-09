@@ -3500,9 +3500,10 @@
                 "--loop <dec> The number of key retrieval cycles to perform, max 10000, default 100",
                 "--debug Re-enables tracing for debugging. Limits cycles to 1.",
                 "--notest Perform real writes on the card!",
-                "--allnight Loops the loop for 10 times, recommended loop value of 5000."
+                "--allnight Loops the loop for 10 times, recommended loop value of 5000.",
+                "--est Estimates the key updates based on the card's CSN assuming standard key."
             ],
-            "usage": "hf iclass legrec [-h] --macs <hex> [--index <dec>] [--loop <dec>] [--debug] [--notest] [--allnight]"
+            "usage": "hf iclass legrec [-h] --macs <hex> [--index <dec>] [--loop <dec>] [--debug] [--notest] [--allnight] [--est]"
         },
         "hf iclass loclass": {
             "command": "hf iclass loclass",
@@ -4881,7 +4882,7 @@
         },
         "hf mf gen3blk": {
             "command": "hf mf gen3blk",
-            "description": "Overwrite full manufacturer block for magic Gen3 card - You can specify part of manufacturer block as 4/7-bytes for UID change only NOTE: BCC, SAK, ATQA will be calculated automatically",
+            "description": "Overwrite full manufacturer block for magic Gen3 card - You can specify part of manufacturer block as 4/7-bytes for UID change only NOTE: BCC and ATQA will be calculated automatically SAK will be automatically set to default values if not specified",
             "notes": [
                 "hf mf gen3blk -> print current data",
                 "hf mf gen3blk -d 01020304 -> set 4 byte uid",
@@ -5151,9 +5152,10 @@
                 "FM11RF08S specific options: Incompatible with above options, except -k; output in JSON",
                 "--collect_fm11rf08s collect all nT/{nT}/par_err.",
                 "--collect_fm11rf08s_with_data collect all nT/{nT}/par_err and data blocks.",
+                "--collect_fm11rf08s_without_backdoor collect all nT/{nT}/par_err without backdoor. Requires first auth keytype and block",
                 "-f, --file <fn> Specify a filename for collected data"
             ],
-            "usage": "hf mf isen [-hab] [--blk <dec>] [-c <dec>] [-k <hex>] [--blk2 <dec>] [--a2] [--b2] [--c2 <dec>] [--key2 <hex>] [-n <dec>] [--reset] [--hardreset] [--addread] [--addauth] [--incblk2] [--corruptnrar] [--corruptnrarparity] FM11RF08S specific options: [--collect_fm11rf08s] [--collect_fm11rf08s_with_data] [-f <fn>]"
+            "usage": "hf mf isen [-hab] [--blk <dec>] [-c <dec>] [-k <hex>] [--blk2 <dec>] [--a2] [--b2] [--c2 <dec>] [--key2 <hex>] [-n <dec>] [--reset] [--hardreset] [--addread] [--addauth] [--incblk2] [--corruptnrar] [--corruptnrarparity] FM11RF08S specific options: [--collect_fm11rf08s] [--collect_fm11rf08s_with_data] [--collect_fm11rf08s_without_backdoor] [-f <fn>]"
         },
         "hf mf mad": {
             "command": "hf mf mad",
@@ -7115,6 +7117,22 @@
                 "-f, --file <fn> filename of dictionary"
             ],
             "usage": "hf 14a list [-h1crux] [--frame] [-f <fn>]"
+        },
+        "hf mfu incr": {
+            "command": "hf mfu incr",
+            "description": "Increment a MIFARE Ultralight Ev1 counter Will read but not increment counter if NTAG is detected",
+            "notes": [
+                "hf mfu incr -c 0 -v 1337",
+                "hf mfu incr -c 2 -v 0 -p FFFFFFFF"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-c, --cnt <dec> Counter index from 0",
+                "-v, --val <dec> Value to increment by (0-16777215)",
+                "-p, --pwd <hex> PWD to authenticate with"
+            ],
+            "usage": "hf mfu incr [-h] -c <dec> -v <dec> [-p <hex>]"
         },
         "hf mfu info": {
             "command": "hf mfu info",
@@ -9797,6 +9815,28 @@
                 "-f, --file <fn> filename of dictionary"
             ],
             "usage": "lf hitag list [-h1crux] [--frame] [-f <fn>]"
+        },
+        "lf hitag hts dump": {
+            "command": "lf hitag hts dump",
+            "description": "Read all Hitag S memory and save to file Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR) 8268/8310 password mode: - default password BBDD3399",
+            "notes": [
+                "lf hitag hts dump --82xx -k BBDD3399 -> pwd mode",
+                "lf hitag hts dump --crypto -> use def crypto",
+                "lf hitag hts dump -k 4F4E4D494B52 -> crypto mode",
+                "lf hitag hts dump --nrar 0102030411223344"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-8, --82xx 8268/8310 mode",
+                "--nrar <hex> nonce / answer writer, 8 hex bytes",
+                "--crypto crypto mode",
+                "-k, --key <hex> pwd or key, 4 or 6 hex bytes",
+                "-m, --mode <dec> response protocol mode. 0 (Standard 00110), 1 (Advanced 11000), 2 (Advanced 11001), 3 (Fast Advanced 11010) (def: 3)",
+                "-f, --file <fn> specify file name",
+                "--ns no save to file"
+            ],
+            "usage": "lf hitag hts dump [-h8] [--nrar <hex>] [--crypto] [-k <hex>] [-m <dec>] [-f <fn>] [--ns]"
         },
         "lf hitag hts help": {
             "command": "lf hitag hts help",
@@ -13001,8 +13041,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 749,
+        "commands_extracted": 751,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-11-22T02:17:04"
+        "extracted_on": "2024-12-09T14:16:07"
     }
 }

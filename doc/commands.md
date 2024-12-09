@@ -615,6 +615,7 @@ Check column "offline" for their availability.
 |`hf mfu cauth           `|N       |`Ultralight-C - Authentication`
 |`hf mfu setpwd          `|N       |`Ultralight-C - Set 3DES key`
 |`hf mfu dump            `|N       |`Dump MIFARE Ultralight family tag to binary file`
+|`hf mfu incr            `|N       |`Increments Ev1/NTAG counter`
 |`hf mfu info            `|N       |`Tag information`
 |`hf mfu ndefread        `|N       |`Prints NDEF records from card`
 |`hf mfu rdbl            `|N       |`Read block`
@@ -1081,6 +1082,7 @@ Check column "offline" for their availability.
 |`lf hitag hts list      `|Y       |`List Hitag S trace history`
 |`lf hitag hts reader    `|N       |`Act like a Hitag S reader`
 |`lf hitag hts rdbl      `|N       |`Read Hitag S page`
+|`lf hitag hts dump      `|N       |`Dump Hitag S pages to a file`
 |`lf hitag hts wrbl      `|N       |`Write Hitag S page`
 |`lf hitag hts sim       `|N       |`Simulate Hitag S transponder`
 

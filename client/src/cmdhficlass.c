@@ -305,7 +305,7 @@ static iclass_config_card_item_t iclass_config_options[33] =  {
     //Sets block 3 of card 0 presented to the reader to 0, sets block 3 of card 1 presented to the reader to the original value of card 0's block 3
     //Continues setting block 3 of presented cards to block 3 of the previous card the reader scanned
     //This renders cards unreadable and hardly recoverable unless the order of the scanned cards is known.
-    {"(ELITE Bugger) - Renders cards unusable." , {0x0C, 0x00, 0x00, 0x01, 0x00, 0x00, 0xBF, 0x18, 0xBF, 0x02, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
+    {"(ELITE Bugger) - Renders cards unusable.", {0x0C, 0x00, 0x00, 0x01, 0x00, 0x00, 0xBF, 0x18, 0xBF, 0x02, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
     //Reset Operations
     {"(RESET) - Reset READER to defaults", {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
     {"(RESET) - Reset ENROLLER to defaults", {0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1C, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0xFF, 0xFF}},
@@ -4181,7 +4181,7 @@ static void generate_single_key_block_inverted_opt(const uint8_t *startingKey, u
         0x95, 0x96, 0x99, 0x9A, 0x9C, 0xA3, 0xA5, 0xA6, 0xA9, 0xAA,
         0xAC, 0xB1, 0xB2, 0xB4, 0xB8, 0xC3, 0xC5, 0xC6, 0xC9, 0xCA,
         0xCC, 0xD1, 0xD2, 0xD4, 0xD8, 0xE1, 0xE2, 0xE4, 0xE8, 0xF0
-        };
+    };
 
     uint8_t binary_endings[8]; // Array to store binary values for each ending bit
     // Extract each bit from the ending_bits[k] and store it in binary_endings
@@ -4226,25 +4226,25 @@ static int CmdHFiClassLegacyRecSim(void) {
         return PM3_ESOFT;
     }
     HFiClassCalcDivKey(csn, iClass_Key_Table[0], new_div_key, false);
-    memcpy(key,new_div_key,PICOPASS_BLOCK_SIZE);
+    memcpy(key, new_div_key, PICOPASS_BLOCK_SIZE);
     memcpy(original_key, key, PICOPASS_BLOCK_SIZE);
 
     uint8_t zero_key[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t zero_key_two[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     int bits_found = -1;
     uint32_t index = 0;
-    #define MAX_UPDATES 16777216
+#define MAX_UPDATES 16777216
     while (bits_found == -1 && index < MAX_UPDATES) {
         uint8_t genkeyblock[PICOPASS_BLOCK_SIZE];
         uint8_t xorkeyblock[PICOPASS_BLOCK_SIZE] = {0};
 
-            generate_single_key_block_inverted_opt(zero_key, index, genkeyblock);
-            memcpy(xorkeyblock, genkeyblock, PICOPASS_BLOCK_SIZE);
+        generate_single_key_block_inverted_opt(zero_key, index, genkeyblock);
+        memcpy(xorkeyblock, genkeyblock, PICOPASS_BLOCK_SIZE);
 
-            for (int i = 0; i < 8 ; i++) {
-                key[i] = xorkeyblock[i] ^ original_key[i];
-                memcpy(zero_key_two, xorkeyblock, PICOPASS_BLOCK_SIZE);
-            }
+        for (int i = 0; i < 8 ; i++) {
+            key[i] = xorkeyblock[i] ^ original_key[i];
+            memcpy(zero_key_two, xorkeyblock, PICOPASS_BLOCK_SIZE);
+        }
 
         // Extract the last 3 bits of the first byte
         uint8_t last_three_bits = key[0] & 0x07; // 0x07 is 00000111 in binary - bitmask
@@ -4255,15 +4255,15 @@ static int CmdHFiClassLegacyRecSim(void) {
                 same_bits = false;
             }
         }
-        if (same_bits){
+        if (same_bits) {
             bits_found = index;
             PrintAndLogEx(SUCCESS, "Original Key: " _GREEN_("%s"), sprint_hex(original_key, sizeof(original_key)));
             PrintAndLogEx(SUCCESS, "Weak Key: " _GREEN_("%s"), sprint_hex(key, sizeof(key)));
             PrintAndLogEx(SUCCESS, "Key Updates Required to Weak Key: " _GREEN_("%d"), index);
-            PrintAndLogEx(SUCCESS, "Estimated Time: ~" _GREEN_("%d")" hours", index/6545);
+            PrintAndLogEx(SUCCESS, "Estimated Time: ~" _GREEN_("%d")" hours", index / 6545);
         }
 
-    index++;
+        index++;
     }//end while
 
     PrintAndLogEx(NORMAL, "");
@@ -4305,7 +4305,7 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     bool allnight = arg_get_lit(ctx, 6);
     bool sim = arg_get_lit(ctx, 7);
 
-    if (sim){
+    if (sim) {
         CmdHFiClassLegacyRecSim();
         return PM3_SUCCESS;
     }

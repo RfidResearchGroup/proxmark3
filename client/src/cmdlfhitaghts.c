@@ -490,7 +490,7 @@ static int CmdLFHitagSDump(const char *Cmd) {
 
     // read all pages
     packet.page = 0;
-    packet.page_count = 0; 
+    packet.page_count = 0;
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HITAGS_READ, (uint8_t *) &packet, sizeof(packet));
