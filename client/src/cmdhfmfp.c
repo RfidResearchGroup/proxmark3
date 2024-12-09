@@ -262,9 +262,15 @@ static int get_plus_signature(uint8_t *signature, int *signature_len) {
 
 // GET VERSION
 static int plus_print_version(uint8_t *version) {
-    PrintAndLogEx(SUCCESS, "UID: " _GREEN_("%s"), sprint_hex(version + 14, 7));
-    PrintAndLogEx(SUCCESS, "Batch number: " _GREEN_("%s"), sprint_hex(version + 21, 5));
-    PrintAndLogEx(SUCCESS, "Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), version[7 + 7 + 7 + 5], version[7 + 7 + 7 + 5 + 1]);
+    if ((version[14] == 0x00) && (version[15] == 0x04)) {
+        PrintAndLogEx(SUCCESS, "UID: " _GREEN_("%s"), sprint_hex(version + 16, 4));
+        PrintAndLogEx(SUCCESS, "Batch number: " _GREEN_("%s"), sprint_hex(version + 20, 5));
+        PrintAndLogEx(SUCCESS, "Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), version[7 + 7 + 6 + 5], version[7 + 7 + 7 + 4 + 1]);
+    } else {
+        PrintAndLogEx(SUCCESS, "UID: " _GREEN_("%s"), sprint_hex(version + 14, 7));
+        PrintAndLogEx(SUCCESS, "Batch number: " _GREEN_("%s"), sprint_hex(version + 21, 5));
+        PrintAndLogEx(SUCCESS, "Production date: week " _GREEN_("%02x") " / " _GREEN_("20%02x"), version[7 + 7 + 7 + 5], version[7 + 7 + 7 + 5 + 1]);
+    }
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Hardware Information"));
     PrintAndLogEx(INFO, "          Raw : %s", sprint_hex(version, 7));
@@ -328,17 +334,24 @@ static int CmdHFMFPInfo(const char *Cmd) {
 
     uint64_t select_status = resp.oldarg[0]; // 0: couldn't read, 1: OK, with ATS, 2: OK, no ATS, 3: proprietary Anticollision
 
+    bool Version4BUID = false;
     bool supportVersion = false;
     bool supportSignature = false;
 
     // version check
     uint8_t version[30] = {0};
+    uint8_t uid4b[4] = {0};
     uint8_t uid7b[7] = {0};
     int version_len = sizeof(version);
     if (get_plus_version(version, &version_len) == PM3_SUCCESS) {
         plus_print_version(version);
         supportVersion = true;
-        memcpy(uid7b, version + 14, 7);
+        if ((version[14] == 0x00) && (version[15] == 0x04)) {
+            Version4BUID = true;
+            memcpy(uid4b, version + 16, 4);
+        } else {
+            memcpy(uid7b, version + 14, 7);
+        }
     } else {
         // info about 14a part, historical bytes.
         infoHF14A(false, false, false);
@@ -349,7 +362,11 @@ static int CmdHFMFPInfo(const char *Cmd) {
     int signature_len = sizeof(signature);
     if (get_plus_signature(signature, &signature_len) == PM3_SUCCESS) {
         if (supportVersion) {
-            plus_print_signature(uid7b, 7, signature, signature_len);
+            if (Version4BUID) {
+                plus_print_signature(uid4b, 4, signature, signature_len);
+            } else {
+                plus_print_signature(uid7b, 7, signature, signature_len);
+            }
         } else {
             plus_print_signature(card.uid, card.uidlen, signature, signature_len);
         }
