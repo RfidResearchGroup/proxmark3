@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `mem load --mfc` not erasing all SPI flash blocks after extending to 4095 keys (@piotrva)
 - Extended area for Mifare keys in SPI flash to hold 4095 keys (@piotrva)
 - Fixed DESFire D40 secure channel crypto (@nvx)
 - Fixed `hf mfp info` fix signature check on 4b UID cards (@doegox)
