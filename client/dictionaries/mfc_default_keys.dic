@@ -2506,8 +2506,6 @@ AA034F342A55
 456776908C48
 
 # BusFacil - Brazilian public transport card for some cities
-7b296f353c6b
-3fa7217ec575
 fae9b14365a9
 c567dd4a6004
 c567dd4a6005
@@ -2598,10 +2596,6 @@ b1ea40b2caa6
 3abf8431003b
 # Sector 15 - see above
 # SKGT personalised subscription card
-# Sector 0, 2, 16, key A
-a0a1a2a3a4a5
-# Sector 8-14, 17-39, key A
-ffffffffffff
 # Sector 1, key A
 # blue
 f1df0ca8948b
