@@ -3012,13 +3012,6 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         }
     }
 
-
-    bool use_credit_key = arg_get_lit(ctx, 6);
-    bool elite = arg_get_lit(ctx, 7);
-    bool rawkey = arg_get_lit(ctx, 8);
-    bool use_replay = arg_get_lit(ctx, 9);
-    bool verbose = arg_get_lit(ctx, 10);
-    bool shallow_mod = arg_get_lit(ctx, 11);
     int tearoff_start = arg_get_int_def(ctx, 12, 100);
     int tearoff_end = arg_get_int_def(ctx, 13, 200);
 
@@ -3031,6 +3024,13 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         PrintAndLogEx(ERR, "Tearoff start/end delays should be bigger than 0.");
         return PM3_EINVARG;
     }
+
+    bool use_credit_key = arg_get_lit(ctx, 6);
+    bool elite = arg_get_lit(ctx, 7);
+    bool rawkey = arg_get_lit(ctx, 8);
+    bool use_replay = arg_get_lit(ctx, 9);
+    bool verbose = arg_get_lit(ctx, 10);
+    bool shallow_mod = arg_get_lit(ctx, 11);
 
     CLIParserFree(ctx);
 
