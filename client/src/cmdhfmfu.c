@@ -1416,9 +1416,11 @@ static int ulev1_print_signature(uint64_t tagtype, uint8_t *uid, uint8_t *signat
         {"TruST25 (ST) key 04?",           "04101E188A8B4CDDBC62D5BC3E0E6850F0C2730E744B79765A0E079907FBDB01BC"},
     };
 
-    // https://www.nxp.com/docs/en/application-note/AN13452.pdf
     const ecdsa_publickey_t nxp_mfu_192_public_keys[] = {
+        // https://www.nxp.com/docs/en/application-note/AN13452.pdf
         {"NXP Ultralight AES", "0453BF8C49B7BD9FE3207A91513B9C1D238ECAB07186B772104AB535F7D3AE63CF7C7F3DD0D169DA3E99E43C6399621A86"},
+        // TagInfo
+        {"NXP Ultralight AES (alt key)", "04DC34DAA903F2726A6225B11C692AF6AB4396575CA12810CBBCE3F781A097B3833B50AB364A70D9C2B641A728A599AE74"},
     };
 
     /*
