@@ -33,7 +33,7 @@ typedef struct {
     const uint8_t keylen;
     const char *desc;
     const char *value;
-} PACKED ecdsa_publickey_ng_t;
+} ecdsa_publickey_ng_t;
 
 int originality_check_verify(uint8_t *data, uint8_t data_len, uint8_t *signature, uint8_t signature_len, pk_type_t type);
 int originality_check_verify_ex(uint8_t *data, uint8_t data_len, uint8_t *signature, uint8_t signature_len, pk_type_t type, bool reverse, bool hash);
