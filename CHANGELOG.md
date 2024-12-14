@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed originality checks handling to refactor code and pk data (@doegox)
 - Changed `uniq.yaml` workflow to be case-insensitive (@iceman1001)
 - Fixed `mem load --mfc` not erasing all SPI flash blocks after extending to 4095 keys (@piotrva)
 - Extended area for Mifare keys in SPI flash to hold 4095 keys (@piotrva)

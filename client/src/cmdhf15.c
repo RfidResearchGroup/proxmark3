@@ -43,6 +43,7 @@
 #include "cliparser.h"
 #include "util_posix.h"         // msleep
 #include "iso15.h"              // typedef structs / enum
+#include "crypto/originality.h"
 
 #define FrameSOF                Iso15693FrameSOF
 #define Logic0                  Iso15693Logic0
@@ -281,121 +282,35 @@ static const productName_t uidmapping[] = {
 static int CmdHF15Help(const char *Cmd);
 
 static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
-
-#define PUBLIC_ECDA_KEYLEN 33
-    const ecdsa_publickey_t nxp_15693_public_keys[] = {
-        {"NXP MIFARE Classic MFC1C14_x",   "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
-        {"MIFARE Classic / QL88",          "046F70AC557F5461CE5052C8E4A7838C11C7A236797E8A0730A101837C004039C2"},
-        {"NXP ICODE DNA, ICODE SLIX2",     "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0"},
-        {"NXP Public key",                 "04A748B6A632FBEE2C0897702B33BEA1C074998E17B84ACA04FF267E5D2C91F6DC"},
-        {"NXP Ultralight Ev1",             "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
-        {"NXP NTAG21x (2013)",             "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
-        {"MIKRON Public key",              "04F971EDA742A4A80D32DCF6A814A707CC3DC396D35902F72929FDCD698B3468F2"},
-        {"VivoKey Spark1 Public key",      "04D64BB732C0D214E7EC580736ACF847284B502C25C0F7F2FA86AACE1DADA4387A"},
-        {"TruST25 (ST) key 01?",           "041D92163650161A2548D33881C235D0FB2315C2C31A442F23C87ACF14497C0CBA"},
-        {"TruST25 (ST) key 04?",           "04101E188A8B4CDDBC62D5BC3E0E6850F0C2730E744B79765A0E079907FBDB01BC"},
-    };
-    /*
-        uint8_t nxp_15693_public_keys[][PUBLIC_ECDA_KEYLEN] = {
-            // ICODE SLIX2 / DNA
-            {
-                0x04, 0x88, 0x78, 0xA2, 0xA2, 0xD3, 0xEE, 0xC3,
-                0x36, 0xB4, 0xF2, 0x61, 0xA0, 0x82, 0xBD, 0x71,
-                0xF9, 0xBE, 0x11, 0xC4, 0xE2, 0xE8, 0x96, 0x64,
-                0x8B, 0x32, 0xEF, 0xA5, 0x9C, 0xEA, 0x6E, 0x59, 0xF0
-            },
-            // unknown. Needs identification
-            {
-                0x04, 0x4F, 0x6D, 0x3F, 0x29, 0x4D, 0xEA, 0x57,
-                0x37, 0xF0, 0xF4, 0x6F, 0xFE, 0xE8, 0x8A, 0x35,
-                0x6E, 0xED, 0x95, 0x69, 0x5D, 0xD7, 0xE0, 0xC2,
-                0x7A, 0x59, 0x1E, 0x6F, 0x6F, 0x65, 0x96, 0x2B, 0xAF
-            },
-            // unknown. Needs identification
-            {
-                0x04, 0xA7, 0x48, 0xB6, 0xA6, 0x32, 0xFB, 0xEE,
-                0x2C, 0x08, 0x97, 0x70, 0x2B, 0x33, 0xBE, 0xA1,
-                0xC0, 0x74, 0x99, 0x8E, 0x17, 0xB8, 0x4A, 0xCA,
-                0x04, 0xFF, 0x26, 0x7E, 0x5D, 0x2C, 0x91, 0xF6, 0xDC
-            },
-            // manufacturer public key
-            {
-                0x04, 0x6F, 0x70, 0xAC, 0x55, 0x7F, 0x54, 0x61,
-                0xCE, 0x50, 0x52, 0xC8, 0xE4, 0xA7, 0x83, 0x8C,
-                0x11, 0xC7, 0xA2, 0x36, 0x79, 0x7E, 0x8A, 0x07,
-                0x30, 0xA1, 0x01, 0x83, 0x7C, 0x00, 0x40, 0x39, 0xC2
-            },
-            // MIKRON public key.
-            {
-                0x04, 0xf9, 0x71, 0xed, 0xa7, 0x42, 0xa4, 0xa8,
-                0x0d, 0x32, 0xdc, 0xf6, 0xa8, 0x14, 0xa7, 0x07,
-                0xcc, 0x3d, 0xc3, 0x96, 0xd3, 0x59, 0x02, 0xf7,
-                0x29, 0x29, 0xfd, 0xcd, 0x69, 0x8b, 0x34, 0x68, 0xf2
-            }
-        };
-    */
-
-    uint8_t revuid[HF15_UID_LENGTH] = {0};
-    reverse_array_copy(uid, sizeof(revuid), revuid);
-
-    uint8_t revsign[32] = {0};
-    reverse_array_copy(signature, sizeof(revsign), revsign);
-
-    uint8_t i;
     int reason = 0;
-    bool is_valid = false;
-    for (i = 0; i < ARRAYLEN(nxp_15693_public_keys); i++) {
-
-        int dl = 0;
-        uint8_t key[PUBLIC_ECDA_KEYLEN];
-        param_gethex_to_eol(nxp_15693_public_keys[i].value, 0, key, PUBLIC_ECDA_KEYLEN, &dl);
-
-        int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 8, signature, 32, false);
-        is_valid = (res == 0);
-        if (is_valid) {
-            reason = 1;
-            break;
-        }
-
+    int index = -1;
+    index = originality_check_verify(uid, 8, signature, 32, PK_MFC);
+    if (index >= 0) {
+        reason = 1;
+    } else {
         // try with sha256
-        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 8, signature, 32, true);
-        is_valid = (res == 0);
-        if (is_valid) {
+        index = originality_check_verify_ex(uid, 8, signature, 32, PK_MFC, false, true);
+        if (index >= 0) {
             reason = 2;
-            break;
-        }
-
-        // try with reversed uid / signature
-        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, revuid, sizeof(revuid), revsign, sizeof(revsign), false);
-        is_valid = (res == 0);
-        if (is_valid) {
-            reason = 3;
-            break;
-        }
-
-        // try with sha256
-        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, revuid, sizeof(revuid), revsign, sizeof(revsign), true);
-        is_valid = (res == 0);
-        if (is_valid) {
-            reason = 4;
-            break;
+        } else {
+            // try with reversed uid / signature
+            index = originality_check_verify_ex(uid, 8, signature, 32, PK_MFC, true, false);
+            if (index >= 0) {
+                reason = 3;
+            } else {
+                // try with sha256 and reversed uid / signature
+                index = originality_check_verify_ex(uid, 8, signature, 32, PK_MFC, true, true);
+                if (index >= 0) {
+                    reason = 3;
+                }
+            }
         }
     }
-
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
-    if (is_valid == false || i == ARRAYLEN(nxp_15693_public_keys)) {
-        PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
-        PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 32));
-        PrintAndLogEx(SUCCESS, "       Signature verification: " _RED_("failed"));
-        return PM3_ESOFT;
+    int ret = originality_check_print(signature, 32, index);
+    if (ret != PM3_SUCCESS) {
+        return ret;
     }
-
-    PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_15693_public_keys[i].desc);
-    PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_15693_public_keys[i].value);
-    PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
-    PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 32));
-    PrintAndLogEx(SUCCESS, "       Signature verification: " _GREEN_("successful"));
     switch (reason) {
         case 1:
             PrintAndLogEx(INFO, "                  Params used: UID and signature, plain");

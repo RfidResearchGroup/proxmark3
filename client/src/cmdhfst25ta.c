@@ -33,6 +33,7 @@
 #include "commonutil.h"        // get_sw
 #include "protocols.h"         // ISO7816 APDU return codes
 #include "crypto/libpcrypto.h" // ecdsa
+#include "crypto/originality.h"
 
 #define TIMEOUT 2000
 
@@ -148,48 +149,9 @@ static void print_st25ta_system_info(uint8_t *d, uint8_t n) {
 }
 
 static int print_st25ta_signature(uint8_t *uid, uint8_t *signature) {
-
-#define PUBLIC_ECDA_KEYLEN 33
-    // known public keys for the originality check (source: https://github.com/alexbatalov/node-nxp-originality-verifier)
-    // ref: AN11350 NTAG 21x Originality Signature Validation
-    // ref: AN11341 MIFARE Ultralight EV1 Originality Signature Validation
-    const ecdsa_publickey_t nxp_mfu_public_keys[] = {
-        {"NXP MIFARE Classic MFC1C14_x",   "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
-        {"MIFARE Classic / QL88",          "046F70AC557F5461CE5052C8E4A7838C11C7A236797E8A0730A101837C004039C2"},
-        {"NXP ICODE DNA, ICODE SLIX2",     "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0"},
-        {"NXP Public key",                 "04A748B6A632FBEE2C0897702B33BEA1C074998E17B84ACA04FF267E5D2C91F6DC"},
-        {"NXP Ultralight Ev1",             "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
-        {"NXP NTAG21x (2013)",             "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
-        {"MIKRON Public key",              "04F971EDA742A4A80D32DCF6A814A707CC3DC396D35902F72929FDCD698B3468F2"},
-        {"VivoKey Spark1 Public key",      "04D64BB732C0D214E7EC580736ACF847284B502C25C0F7F2FA86AACE1DADA4387A"},
-        {"TruST25 (ST) key 01?",           "041D92163650161A2548D33881C235D0FB2315C2C31A442F23C87ACF14497C0CBA"},
-        {"TruST25 (ST) key 04?",           "04101E188A8B4CDDBC62D5BC3E0E6850F0C2730E744B79765A0E079907FBDB01BC"},
-    };
-
-    for (uint8_t i = 0; i < ARRAYLEN(nxp_mfu_public_keys); i++) {
-
-        int dl = 0;
-        uint8_t key[PUBLIC_ECDA_KEYLEN] = {0};
-        param_gethex_to_eol(nxp_mfu_public_keys[i].value, 0, key, PUBLIC_ECDA_KEYLEN, &dl);
-
-        int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 7, signature, 32, true);
-
-        if (res == 0) {
-
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
-
-
-            PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_mfu_public_keys[i].desc);
-            PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfu_public_keys[i].value);
-            PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
-            PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 32));
-            PrintAndLogEx(SUCCESS, "       Signature verification ( " _GREEN_("successful") " )");
-            return PM3_SUCCESS;
-        }
-    }
-
-    return PM3_ESOFT;
+    int index = originality_check_verify_ex(uid, 7, signature, 32, PK_ST25, false, true);
+    PrintAndLogEx(NORMAL, "");
+    return originality_check_print(signature, 32, index);
 }
 
 static int st25ta_get_signature(uint8_t *signature) {

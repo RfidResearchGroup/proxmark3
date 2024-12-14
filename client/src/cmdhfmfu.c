@@ -35,6 +35,7 @@
 #include "fileutils.h"      // saveFile
 #include "cmdtrace.h"       // trace list
 #include "preferences.h"    // setDeviceDebugLevel
+#include "crypto/originality.h"
 
 #define MAX_UL_BLOCKS       0x0F
 #define MAX_ULC_BLOCKS      0x2F
@@ -1397,134 +1398,14 @@ static int ulev1_print_counters(void) {
 }
 
 static int ulev1_print_signature(uint64_t tagtype, uint8_t *uid, uint8_t *signature, size_t signature_len) {
-
-#define PUBLIC_ECDA_KEYLEN 33
-#define PUBLIC_ECDA_192_KEYLEN 49
-    // known public keys for the originality check (source: https://github.com/alexbatalov/node-nxp-originality-verifier)
-    // ref: AN11350 NTAG 21x Originality Signature Validation
-    // ref: AN11341 MIFARE Ultralight EV1 Originality Signature Validation
-    const ecdsa_publickey_t nxp_mfu_public_keys[] = {
-        {"NXP MIFARE Classic MFC1C14_x",   "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
-        {"MIFARE Classic / QL88",          "046F70AC557F5461CE5052C8E4A7838C11C7A236797E8A0730A101837C004039C2"},
-        {"NXP ICODE DNA, ICODE SLIX2",     "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0"},
-        {"NXP Public key",                 "04A748B6A632FBEE2C0897702B33BEA1C074998E17B84ACA04FF267E5D2C91F6DC"},
-        {"NXP Ultralight Ev1",             "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
-        {"NXP NTAG21x (2013)",             "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
-        {"MIKRON Public key",              "04F971EDA742A4A80D32DCF6A814A707CC3DC396D35902F72929FDCD698B3468F2"},
-        {"VivoKey Spark1 Public key",      "04D64BB732C0D214E7EC580736ACF847284B502C25C0F7F2FA86AACE1DADA4387A"},
-        {"TruST25 (ST) key 01?",           "041D92163650161A2548D33881C235D0FB2315C2C31A442F23C87ACF14497C0CBA"},
-        {"TruST25 (ST) key 04?",           "04101E188A8B4CDDBC62D5BC3E0E6850F0C2730E744B79765A0E079907FBDB01BC"},
-    };
-
-    const ecdsa_publickey_t nxp_mfu_192_public_keys[] = {
-        // https://www.nxp.com/docs/en/application-note/AN13452.pdf
-        {"NXP Ultralight AES", "0453BF8C49B7BD9FE3207A91513B9C1D238ECAB07186B772104AB535F7D3AE63CF7C7F3DD0D169DA3E99E43C6399621A86"},
-        // TagInfo
-        {"NXP Ultralight AES (alt key)", "04DC34DAA903F2726A6225B11C692AF6AB4396575CA12810CBBCE3F781A097B3833B50AB364A70D9C2B641A728A599AE74"},
-    };
-
-    /*
-        uint8_t nxp_mfu_public_keys[6][PUBLIC_ECDA_KEYLEN] = {
-            // UL, NTAG21x and NDEF
-            {
-                0x04, 0x49, 0x4e, 0x1a, 0x38, 0x6d, 0x3d, 0x3c,
-                0xfe, 0x3d, 0xc1, 0x0e, 0x5d, 0xe6, 0x8a, 0x49,
-                0x9b, 0x1c, 0x20, 0x2d, 0xb5, 0xb1, 0x32, 0x39,
-                0x3e, 0x89, 0xed, 0x19, 0xfe, 0x5b, 0xe8, 0xbc, 0x61
-            },
-            // UL EV1
-            {
-                0x04, 0x90, 0x93, 0x3b, 0xdc, 0xd6, 0xe9, 0x9b,
-                0x4e, 0x25, 0x5e, 0x3d, 0xa5, 0x53, 0x89, 0xa8,
-                0x27, 0x56, 0x4e, 0x11, 0x71, 0x8e, 0x01, 0x72,
-                0x92, 0xfa, 0xf2, 0x32, 0x26, 0xa9, 0x66, 0x14, 0xb8
-            },
-            // unknown. Needs identification
-            {
-                0x04, 0x4F, 0x6D, 0x3F, 0x29, 0x4D, 0xEA, 0x57,
-                0x37, 0xF0, 0xF4, 0x6F, 0xFE, 0xE8, 0x8A, 0x35,
-                0x6E, 0xED, 0x95, 0x69, 0x5D, 0xD7, 0xE0, 0xC2,
-                0x7A, 0x59, 0x1E, 0x6F, 0x6F, 0x65, 0x96, 0x2B, 0xAF
-            },
-            // unknown. Needs identification
-            {
-                0x04, 0xA7, 0x48, 0xB6, 0xA6, 0x32, 0xFB, 0xEE,
-                0x2C, 0x08, 0x97, 0x70, 0x2B, 0x33, 0xBE, 0xA1,
-                0xC0, 0x74, 0x99, 0x8E, 0x17, 0xB8, 0x4A, 0xCA,
-                0x04, 0xFF, 0x26, 0x7E, 0x5D, 0x2C, 0x91, 0xF6, 0xDC
-            },
-            // manufacturer public key
-            {
-                0x04, 0x6F, 0x70, 0xAC, 0x55, 0x7F, 0x54, 0x61,
-                0xCE, 0x50, 0x52, 0xC8, 0xE4, 0xA7, 0x83, 0x8C,
-                0x11, 0xC7, 0xA2, 0x36, 0x79, 0x7E, 0x8A, 0x07,
-                0x30, 0xA1, 0x01, 0x83, 0x7C, 0x00, 0x40, 0x39, 0xC2
-            },
-            // MIKRON public key.
-            {
-                0x04, 0xf9, 0x71, 0xed, 0xa7, 0x42, 0xa4, 0xa8,
-                0x0d, 0x32, 0xdc, 0xf6, 0xa8, 0x14, 0xa7, 0x07,
-                0xcc, 0x3d, 0xc3, 0x96, 0xd3, 0x59, 0x02, 0xf7,
-                0x29, 0x29, 0xfd, 0xcd, 0x69, 0x8b, 0x34, 0x68, 0xf2
-            }
-        };
-    */
-    uint8_t i;
-    bool is_valid = false;
+    int index = -1;
     if (signature_len == 32) {
-        for (i = 0; i < ARRAYLEN(nxp_mfu_public_keys); i++) {
-
-            int dl = 0;
-            uint8_t key[PUBLIC_ECDA_KEYLEN] = {0};
-            param_gethex_to_eol(nxp_mfu_public_keys[i].value, 0, key, PUBLIC_ECDA_KEYLEN, &dl);
-
-            int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 7, signature, signature_len, false);
-
-            is_valid = (res == 0);
-            if (is_valid)
-                break;
-        }
+        index = originality_check_verify(uid, 7, signature, signature_len, PK_MFUL);
+    } else if (signature_len == 48) {
+        index = originality_check_verify(uid, 7, signature, signature_len, PK_MFULAES);
     }
-
-    bool is_192_valid = false;
-    if (signature_len == 48) {
-        for (i = 0; i < ARRAYLEN(nxp_mfu_192_public_keys); i++) {
-            int dl = 0;
-            uint8_t key[PUBLIC_ECDA_192_KEYLEN] = {0};
-            param_gethex_to_eol(nxp_mfu_192_public_keys[i].value, 0, key, PUBLIC_ECDA_192_KEYLEN, &dl);
-
-            int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP192R1, key, uid, 7, signature, signature_len, false);
-
-            is_192_valid = (res == 0);
-            if (is_192_valid)
-                break;
-        }
-    }
-
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
-    if (is_192_valid) {
-        PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_mfu_192_public_keys[i].desc);
-        PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfu_192_public_keys[i].value);
-        PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp192r1");
-        PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, signature_len));
-        PrintAndLogEx(SUCCESS, "       Signature verification ( " _GREEN_("successful") " )");
-        return PM3_SUCCESS;
-    }
-
-    if (is_valid) {
-        PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_mfu_public_keys[i].desc);
-        PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfu_public_keys[i].value);
-        PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
-        PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, signature_len));
-        PrintAndLogEx(SUCCESS, "       Signature verification ( " _GREEN_("successful") " )");
-        return PM3_SUCCESS;
-    }
-
-    PrintAndLogEx(INFO, "    Elliptic curve parameters: %s", (signature_len == 48) ? "NID_secp192r1" : "NID_secp128r1");
-    PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, signature_len));
-    PrintAndLogEx(SUCCESS, "       Signature verification ( " _RED_("fail") " )");
-    return PM3_ESOFT;
+    return originality_check_print(signature, signature_len, index);
 }
 
 static int ulev1_print_version(uint8_t *data) {
