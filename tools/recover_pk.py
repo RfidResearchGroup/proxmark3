@@ -229,7 +229,8 @@ def selftests():
         elif len(t['samples'])//2 == 1:
             recovereds = [(c, h) for c, h, pk in list(recovered)
                           if t['pk'].lower() == binascii.hexlify(pk).decode('utf8').lower()]
-            if len(recovereds) > 0:
+            if len(recovereds) == 1:
+                c, h = recovereds[0]
                 print("%15s/%-8s ( %s ) partial" % (c, h, color('ok', fg='green')))
             else:
                 succeeded = False
