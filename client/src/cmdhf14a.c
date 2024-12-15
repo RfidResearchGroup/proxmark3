@@ -2680,8 +2680,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf mfdes info") "`");
     }
 
-    if (isST) {
-        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf st info") "`");
+    if ((isST) && (card.ats_len >= 0)) {
+        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf st25ta info") "`");
     }
 
     if (isEMV) {
