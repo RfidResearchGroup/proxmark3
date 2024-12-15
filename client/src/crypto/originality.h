@@ -25,7 +25,7 @@
 #include <mbedtls/pk.h>
 #include <mbedtls/ecp.h>
 
-typedef enum {PK_MFC, PK_MFUL, PK_MFULAES, PK_MFP, PK_MFDES, PK_ST25, PK_15, PK_MIK, PK_ALL} pk_type_t;
+typedef enum {PK_MFC, PK_MFUL, PK_MFULAES, PK_MFP, PK_MFDES, PK_ST25TA, PK_ST25TN, PK_ST25TV, PK_15, PK_MIK, PK_ALL} pk_type_t;
 
 typedef struct {
     const pk_type_t type;

@@ -54,6 +54,8 @@
 #define MAX_MY_D_MOVE_LEAN  0x0F
 #define MAX_UL_NANO_40      0x0A
 #define MAX_UL_AES          0x37
+#define MAX_ST25TN512       0x3F
+#define MAX_ST25TN01K       0x3F
 
 static int CmdHelp(const char *Cmd);
 
@@ -104,7 +106,9 @@ static uint64_t UL_TYPES_ARRAY[] = {
     MFU_TT_MAGIC_1A,          MFU_TT_MAGIC_1B,
     MFU_TT_MAGIC_NTAG,        MFU_TT_NTAG_210u,
     MFU_TT_UL_MAGIC,          MFU_TT_UL_C_MAGIC,
-    MFU_TT_UL_AES
+    MFU_TT_UL_AES,
+    MFU_TT_ST25TN512,         MFU_TT_ST25TN01K,
+
 };
 
 static uint8_t UL_MEMORY_ARRAY[ARRAYLEN(UL_TYPES_ARRAY)] = {
@@ -125,7 +129,9 @@ static uint8_t UL_MEMORY_ARRAY[ARRAYLEN(UL_TYPES_ARRAY)] = {
 //  MAGIC_1A,           MAGIC_1B,           MAGIC_NTAG,
     MAX_UL_BLOCKS,      MAX_UL_BLOCKS,      MAX_NTAG_216,
 //  NTAG_210u,          UL_MAGIC,           UL_C_MAGIC
-    MAX_NTAG_210,       MAX_UL_BLOCKS,      MAX_ULC_BLOCKS,      MAX_UL_AES
+    MAX_NTAG_210,       MAX_UL_BLOCKS,      MAX_ULC_BLOCKS,      MAX_UL_AES,
+//  ST25TN512,          ST25TN01K,
+    MAX_ST25TN512,      MAX_ST25TN01K,
 };
 
 static const ul_family_t ul_family[] = {
@@ -790,7 +796,13 @@ static int ul_print_default(uint8_t *data, uint8_t *real_uid) {
             PrintAndLogEx(SUCCESS, "      BCC1: %02X ( " _GREEN_("ok") " )", data[8]);
         else
             PrintAndLogEx(NORMAL, "      BCC1: %02X, crc should be %02X", data[8], crc1);
-        PrintAndLogEx(SUCCESS, "  Internal: %02X ( %s )", data[9], (data[9] == 0x48) ? _GREEN_("default") : _RED_("not default"));
+        if (uid[0] == 0x04) {
+            PrintAndLogEx(SUCCESS, "  Internal: %02X ( %s )", data[9], (data[9] == 0x48) ? _GREEN_("default") : _RED_("not default"));
+        } else if (uid[0] == 0x02) {
+            PrintAndLogEx(SUCCESS, "  Sysblock: %02X ( %s )", data[9], (data[9] == 0x2C) ? _GREEN_("default") : _RED_("not default"));
+        } else {
+            PrintAndLogEx(SUCCESS, "  Internal: %02X", data[9]);
+        }
     } else {
         PrintAndLogEx(SUCCESS, "Blocks 0-2: %s", sprint_hex(data + 0, 12));
     }
@@ -1012,6 +1024,10 @@ int ul_print_type(uint64_t tagtype, uint8_t spaces) {
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("INFINEON my-d\x99 move lean (SLE 66R01L)"), spaces, "");
     else if (tagtype & MFU_TT_FUDAN_UL)
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("FUDAN Ultralight Compatible (or other compatible)"), spaces, "");
+    else if (tagtype & MFU_TT_ST25TN512)
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("ST ST25TN512 64bytes"), spaces, "");
+    else if (tagtype & MFU_TT_ST25TN01K)
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("ST ST25TN01K 160bytes"), spaces, "");
     else
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("Unknown %06" PRIx64), spaces, "", tagtype);
 
@@ -1998,17 +2014,55 @@ uint64_t GetHF14AMfU_Type(void) {
 
     // Ultralight - ATQA / SAK
     if (card.atqa[1] != 0x00 || card.atqa[0] != 0x44 || card.sak != 0x00) {
-        //PrintAndLogEx(NORMAL, "Tag is not Ultralight | NTAG | MY-D  [ATQA: %02X %02X SAK: %02X]\n", card.atqa[1], card.atqa[0], card.sak);
+        //PrintAndLogEx(NORMAL, "Tag is not Ultralight | NTAG | MY-D |ST25TN [ATQA: %02X %02X SAK: %02X]\n", card.atqa[1], card.atqa[0], card.sak);
         DropField();
         return MFU_TT_UL_ERROR;
     }
-
-    if (card.uid[0] != 0x05) {
+    if (card.uid[0] == 0x02) {
+        // ST25TN
+        // read SYSBLOCK
+        uint8_t data[4] = {0x00};
+        int status = ul_read(0x02, data, sizeof(data));
+        if (status <= 1) {
+            tagtype = MFU_TT_UL;
+        } else {
+            status = ul_read(data[1] + 1, data, sizeof(data));
+            if (status <= 1) {
+                tagtype = MFU_TT_UL;
+            } else {
+                // data[3] == KID == 0x05 Key ID
+                // data[2] == REV == 0x13 Product version
+                if ((data[1]==0x90) && (data[0]==0x90)) {
+                    tagtype = MFU_TT_ST25TN01K;
+                } else if ((data[1]==0x90) && (data[0]==0x91)) {
+                    tagtype = MFU_TT_ST25TN512;
+                }
+            }
+        }
+    } else if (card.uid[0] == 0x05) {
+        // Infineon MY-D tests   Exam high nibble
+        DropField();
+        uint8_t nib = (card.uid[1] & 0xf0) >> 4;
+        switch (nib) {
+            // case 0: tagtype =  SLE66R35E7; break; //or SLE 66R35E7 - mifare compat... should have different sak/atqa for mf 1k
+            case 1:
+                tagtype =  MFU_TT_MY_D;
+                break; // or SLE 66RxxS ... up to 512 pages of 8 user bytes...
+            case 2:
+                tagtype = MFU_TT_MY_D_NFC;
+                break; // or SLE 66RxxP ... up to 512 pages of 8 user bytes... (or in nfc mode FF pages of 4 bytes)
+            case 3:
+                tagtype = (MFU_TT_MY_D_MOVE | MFU_TT_MY_D_MOVE_NFC);
+                break; // or SLE 66R01P // 38 pages of 4 bytes //notice: we can not currently distinguish between these two
+            case 7:
+                tagtype =  MFU_TT_MY_D_MOVE_LEAN;
+                break; // or SLE 66R01L  // 16 pages of 4 bytes
+        }
+    } else {
 
         uint8_t version[10] = {0x00};
         int len  = ulev1_getVersion(version, sizeof(version));
         DropField();
-
         switch (len) {
             case 0x0A: {
                 /*
@@ -2096,7 +2150,6 @@ uint64_t GetHF14AMfU_Type(void) {
                 tagtype = MFU_TT_UNKNOWN;
                 break;
         }
-
         // This is a test from cards that doesn't answer to GET_VERSION command
         // UL vs UL-C vs NTAG203 vs FUDAN FM11NT021 (which is NTAG213 compatiable)
         if (tagtype & (MFU_TT_UL | MFU_TT_UL_C | MFU_TT_NTAG_203)) {
@@ -2149,25 +2202,6 @@ uint64_t GetHF14AMfU_Type(void) {
         if (tagtype & MFU_TT_UL) {
             tagtype = ul_fudan_check();
             DropField();
-        }
-    } else {
-        DropField();
-        // Infinition MY-D tests   Exam high nibble
-        uint8_t nib = (card.uid[1] & 0xf0) >> 4;
-        switch (nib) {
-            // case 0: tagtype =  SLE66R35E7; break; //or SLE 66R35E7 - mifare compat... should have different sak/atqa for mf 1k
-            case 1:
-                tagtype =  MFU_TT_MY_D;
-                break; // or SLE 66RxxS ... up to 512 pages of 8 user bytes...
-            case 2:
-                tagtype = MFU_TT_MY_D_NFC;
-                break; // or SLE 66RxxP ... up to 512 pages of 8 user bytes... (or in nfc mode FF pages of 4 bytes)
-            case 3:
-                tagtype = (MFU_TT_MY_D_MOVE | MFU_TT_MY_D_MOVE_NFC);
-                break; // or SLE 66R01P // 38 pages of 4 bytes //notice: we can not currently distinguish between these two
-            case 7:
-                tagtype =  MFU_TT_MY_D_MOVE_LEAN;
-                break; // or SLE 66R01L  // 16 pages of 4 bytes
         }
     }
 
@@ -2376,6 +2410,39 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 return PM3_ESOFT;
             }
         }
+    }
+
+    // ST25TN info & signature
+    if (tagtype & (MFU_TT_ST25TN512 | MFU_TT_ST25TN01K)) {
+        status = ul_read(0x02, data, sizeof(data));
+        if (status <= 1) {
+            PrintAndLogEx(ERR, "Error: tag didn't answer to READ SYSBLOCK");
+            DropField();
+            return PM3_ESOFT;
+        }
+        status = ul_read(data[1] + 1, data, sizeof(data));
+        if (status <= 1) {
+            PrintAndLogEx(ERR, "Error: tag didn't answer to READ SYSBLOCK");
+            DropField();
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "--- " _CYAN_("Tag System Information"));
+        PrintAndLogEx(INFO, "              Key ID: %02x", data[3]);
+        PrintAndLogEx(INFO, "     Product Version: %02x", data[2]);
+        PrintAndLogEx(INFO, "        Product Code: %02x%02x", data[1], data[0]);
+        uint8_t signature[32] = {0};
+        for (int blkoff=0; blkoff<8; blkoff++) {
+            status = ul_read(0x34 + blkoff, signature + (blkoff * 4), 4);
+            if (status <= 1) {
+                PrintAndLogEx(ERR, "Error: tag didn't answer to READ SYSBLOCK");
+                DropField();
+                return PM3_ESOFT;
+            }
+        }
+        // check signature
+        int index = originality_check_verify_ex(card.uid, 7, signature, sizeof(signature), PK_ST25TN, false, true);
+        PrintAndLogEx(NORMAL, "");
+        originality_check_print(signature, sizeof(signature), index);
     }
 
     // Read signature
