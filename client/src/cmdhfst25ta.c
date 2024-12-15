@@ -183,7 +183,13 @@ static int st25ta_get_signature(uint8_t *signature) {
         }
         activate_field = false;
     }
-
+    if (resplen != 32) {
+        if ((resplen == 2) && (resp[0] == 0x69) && (resp[1] == 0x82)) {
+            PrintAndLogEx(WARNING, "GetSignature: Security status not satisfied");
+        }
+        DropField();
+        return PM3_ESOFT;
+    }
     if (signature) {
         memcpy(signature, resp, 32);
     }
