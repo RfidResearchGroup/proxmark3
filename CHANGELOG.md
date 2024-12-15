@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf 15 info` to show all type matches and check ST25TVxC signature (@doegox)
 - Added initial support for ST25TN and its signature verification (@doegox)
 - Changed originality checks handling to refactor code and pk data (@doegox)
 - Changed `uniq.yaml` workflow to be case-insensitive (@iceman1001)

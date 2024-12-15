@@ -75,10 +75,10 @@ const ecdsa_publickey_ng_t manufacturer_public_keys[] = {
     // ref: AN5660 TruST25 digital signature for ST25TN512 and ST25TN01K devices
     {PK_ST25TN,  MBEDTLS_ECP_DP_SECP128R1, 33, "ST25TN TruST25 (ST) KeyID 05",
     "0440004F974F7C76BC8718E523D85FA7B354A9A992BFA966CB8219242F9D274FD6"},
-// FIXME: need to implement support for ST25TV signature check. hash=sha256 - from block 63, starting with KeyID ?
     // ref: AN5104 TruST25 digital signature for ST25TV512 and ST25TV02K devices ?
+    // ref: AN5149 TruST25 digital signature for ST25DV02K-W1, ST25DV02K-W2 devices ?
     // ref: AN5580 TruST25 digital signature for ST25TV512C and ST25TV02KC devices
-    {PK_ST25TV,  MBEDTLS_ECP_DP_SECP128R1, 33, "ST25TV TruST25 (ST) key 04?",
+    {PK_ST25TV,  MBEDTLS_ECP_DP_SECP128R1, 33, "ST25TV TruST25 (ST) KeyID 04",
     "04101E188A8B4CDDBC62D5BC3E0E6850F0C2730E744B79765A0E079907FBDB01BC"},
 
     {PK_15,      MBEDTLS_ECP_DP_SECP128R1, 33, "NXP ICODE DNA, ICODE SLIX2",

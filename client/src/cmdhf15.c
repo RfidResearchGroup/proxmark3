@@ -331,14 +331,15 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
 // get a product description based on the UID
 // uid[8] tag uid
 // returns description of the best match
-static const char *getTagInfo_15(const uint8_t *uid) {
+static void printTagInfo_15(const uint8_t *uid) {
     if (uid == NULL) {
-        return "";
+        return;
     }
 
     uint64_t myuid, mask;
     int i = 0, best = -1;
     memcpy(&myuid, uid, sizeof(uint64_t));
+    // find first best match
     while (uidmapping[i].mask > 0) {
         if (uidmapping[i].mask > 64) {
             mask = uidmapping[i].mask;
@@ -356,10 +357,23 @@ static const char *getTagInfo_15(const uint8_t *uid) {
         }
         i++;
     }
+    if (best >= 0) {
+        i = 0;
+        while (uidmapping[i].mask > 0) {
+            if (uidmapping[i].mask > 64) {
+                mask = uidmapping[i].mask;
+            } else {
+                mask = (~0ULL) << (64 - uidmapping[i].mask);
+            }
+            if (((myuid & mask) == uidmapping[i].uid) && (uidmapping[i].mask == uidmapping[best].mask)) {
+                PrintAndLogEx(SUCCESS, "TYPE MATCH " _YELLOW_("%s"), uidmapping[i].desc);
+            }
+            i++;
+        }
+    } else {
+        PrintAndLogEx(SUCCESS, "TYPE...... " _YELLOW_("%s"), uidmapping[i].desc);
+    }
 
-    if (best >= 0)
-        return uidmapping[best].desc;
-    return uidmapping[i].desc;
 }
 
 // return a clear-text message to an errorcode
@@ -446,7 +460,7 @@ static int getUID(bool verbose, bool loop, uint8_t *buf) {
                 if (verbose) {
                     PrintAndLogEx(NORMAL, "");
                     PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%s"), iso15693_sprintUID(NULL, buf));
-                    PrintAndLogEx(SUCCESS, "TYPE... " _YELLOW_("%s"), getTagInfo_15(buf));
+                    printTagInfo_15(buf);
                     PrintAndLogEx(NORMAL, "");
                 }
                 res = PM3_SUCCESS;
@@ -878,6 +892,66 @@ static int NxpSysInfo(uint8_t *uid) {
     return PM3_SUCCESS;
 }
 
+static int StCheckSig(uint8_t *uid) {
+    // request to be sent to device/card
+    uint8_t approxlen = 2 + 8 + 1 + 2;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    // ISO15693 Protocol params
+    packet->raw[packet->rawlen++] = arg_get_raw_flag(HF15_UID_LENGTH, false, false, false);
+    packet->raw[packet->rawlen++] = ISO15693_READBLOCK;
+    // add UID (scan, uid)
+    memcpy(packet->raw + packet->rawlen, uid, HF15_UID_LENGTH);
+    packet->rawlen += HF15_UID_LENGTH;
+    packet->flags = (ISO15_CONNECT| ISO15_READ_RESPONSE | ISO15_NO_DISCONNECT);
+    uint16_t blkoff = packet->rawlen;
+    char signature_hex[65] = {0};
+    for (int j=0; j<17; j++) {
+        packet->rawlen = blkoff;
+        // block no
+        packet->raw[packet->rawlen++] = 0x3F + j;
+        // crc
+        AddCrc15(packet->raw,  packet->rawlen);
+        packet->rawlen += 2;
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
+            PrintAndLogEx(DEBUG, "iso15693 timeout");
+            free(packet);
+            DropField();
+            return PM3_ETIMEOUT;
+        }
+        ISO15_ERROR_HANDLING_RESPONSE
+        uint8_t *d = resp.data.asBytes;
+        ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
+        if (j==0) {
+            if (memcmp(d + 1, "K04S", 4) != 0) {
+                // No signature
+                free(packet);
+                return PM3_ESOFT;
+            }
+        } else {
+            memcpy(signature_hex + ((j - 1) * 4), d + 1, 4);
+        }
+        packet->flags = (ISO15_READ_RESPONSE | ISO15_NO_DISCONNECT);
+    }
+    free(packet);
+    DropField();
+    uint8_t signature[16];
+    size_t signature_len;
+    hexstr_to_byte_array(signature_hex, signature, &signature_len);
+    uint8_t uid_swap[HF15_UID_LENGTH];
+    reverse_array_copy(uid, HF15_UID_LENGTH, uid_swap);
+    int index = originality_check_verify_ex(uid_swap, HF15_UID_LENGTH, signature, signature_len, PK_ST25TV, false, true);
+    PrintAndLogEx(NORMAL, "");
+    return originality_check_print(signature, signature_len, index);
+}
+
 /**
  * Commandline handling: HF15 CMD SYSINFO
  * get system information from tag/VICC
@@ -986,7 +1060,7 @@ static int CmdHF15Info(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(SUCCESS, "UID....... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
-    PrintAndLogEx(SUCCESS, "TYPE...... " _YELLOW_("%s"), getTagInfo_15(d + 2));
+    printTagInfo_15(d + 2);
     PrintAndLogEx(SUCCESS, "SYSINFO... %s", sprint_hex(d, resp.length - 2));
 
     // DSFID
@@ -1024,19 +1098,29 @@ static int CmdHF15Info(const char *Cmd) {
     uint8_t nxp_version = d[6] & 0x18;
     PrintAndLogEx(DEBUG, "NXP Version: %02x", nxp_version);
 
-    if (d[8] == 0x04 && d[7] == 0x01 && nxp_version == 0x08) {
-        PrintAndLogEx(DEBUG, "SLIX2 Detected, getting NXP System Info");
-        return NxpSysInfo(uid);
-
-    } else if (d[8] == 0x04 && d[7] == 0x01 && nxp_version == 0x18) { // If it is an NTAG 5
-        PrintAndLogEx(DEBUG, "NTAG 5 Detected, getting NXP System Info");
-        return NxpSysInfo(uid);
-
-    } else if (d[8] == 0x04 && (d[7] == 0x01 || d[7] == 0x02 || d[7] == 0x03)) { // If SLI, SLIX, SLIX-l, or SLIX-S check EAS status
-        PrintAndLogEx(DEBUG, "SLI, SLIX, SLIX-L, or SLIX-S Detected checking EAS status");
-        return NxpTestEAS(uid);
+    if (d[8] == 0x04) {
+        // NXP
+        if (d[7] == 0x01 && nxp_version == 0x08) {
+            PrintAndLogEx(DEBUG, "SLIX2 Detected, getting NXP System Info");
+            return NxpSysInfo(uid);
+        } else if (d[7] == 0x01 && nxp_version == 0x18) { // If it is an NTAG 5
+            PrintAndLogEx(DEBUG, "NTAG 5 Detected, getting NXP System Info");
+            return NxpSysInfo(uid);
+        } else if ((d[7] == 0x01 || d[7] == 0x02 || d[7] == 0x03)) { // If SLI, SLIX, SLIX-l, or SLIX-S check EAS status
+            PrintAndLogEx(DEBUG, "SLI, SLIX, SLIX-L, or SLIX-S Detected checking EAS status");
+            return NxpTestEAS(uid);
+        }
+    } else if (d[8] == 0x02) {
+        // ST, check d[7]:
+        // ST25TV512C/ST25TV02KC  0x08
+        // ST25TV512/ST25TV02K    0x23
+        // ST25TV04K-P            0x35
+        // ST25TV16K/ST25TV64K    0x48
+        if (d[7] == 0x08) {
+            PrintAndLogEx(DEBUG, "ST25TVxC Detected, getting ST Signature");
+            return StCheckSig(uid);
+        }
     }
-
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -1320,7 +1404,7 @@ static void print_tag_15693(iso15_tag_t *tag, bool dense_output, bool verbose) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " --%.*s", (tag->bytesPerPage * 3), dashes);
         PrintAndLogEx(SUCCESS, "UID....... " _GREEN_("%s"), iso15693_sprintUID(NULL, tag->uid));
-        PrintAndLogEx(SUCCESS, "TYPE...... " _YELLOW_("%s"), getTagInfo_15(tag->uid));
+        printTagInfo_15(tag->uid);
         PrintAndLogEx(SUCCESS, "DSFID..... 0x%02X", tag->dsfid);
         PrintAndLogEx(SUCCESS, "AFI....... 0x%02X", tag->afi);
         PrintAndLogEx(SUCCESS, "IC ref.... 0x%02X", tag->ic);
@@ -1849,7 +1933,7 @@ static int CmdHF15Dump(const char *Cmd) {
         tag->pagesCount = d[dCpt++] + 1;
         tag->bytesPerPage = d[dCpt++] + 1;
     } else {
-        // Set tag memory layout values (if can't be readed in SYSINFO)
+        // Set tag memory layout values (if can't be read in SYSINFO)
         tag->bytesPerPage = blocksize;
         tag->pagesCount = 128;
     }
@@ -1858,7 +1942,7 @@ static int CmdHF15Dump(const char *Cmd) {
         tag->ic = d[dCpt++];
     }
 
-    // add lenght for blockno (1)
+    // add length for blockno (1)
     packet->rawlen++;
     packet->raw[0] |= ISO15_REQ_OPTION; // Add option to dump lock status
     packet->raw[1] = ISO15693_READBLOCK;
