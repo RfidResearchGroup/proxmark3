@@ -5,5 +5,8 @@ if [ ! -e docker_conf.inc ]; then
     exit 1
 fi
 . docker_conf.inc
-docker rm $(docker ps -aq --filter ancestor="$DOCKER_IMAGE")
+CONTAINER=$(docker ps -aq --filter ancestor="$DOCKER_IMAGE")
+if [ -n "$CONTAINER" ]; then
+    docker rm $CONTAINER
+fi
 docker image rm "$DOCKER_IMAGE"

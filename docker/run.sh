@@ -11,4 +11,4 @@ if [ -n "$UART_PORT" ]; then
 else
     DEV=""
 fi
-docker run $DEV $DOCKER_PLATFORM --volume="$(pwd)/../..:/home/rrg/proxmark3" -w /home/rrg/proxmark3 -it "$DOCKER_IMAGE"
+docker run $DEV $DOCKER_PLATFORM --volume="$(pwd)/../..:/home/rrg/proxmark3" -w /home/rrg/proxmark3 --net=host --rm -it "$DOCKER_IMAGE"
