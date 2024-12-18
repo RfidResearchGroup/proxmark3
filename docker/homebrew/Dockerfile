@@ -2,6 +2,11 @@ FROM homebrew/brew
 
 ENV LANG=C
 
+ARG UART_GID
+# dialout group may already exist on another numeric ID than on host
+RUN sudo groupadd -g ${UART_GID} mydialout || true
+RUN sudo usermod -aG ${UART_GID} linuxbrew
+
 USER linuxbrew
 WORKDIR "/home/linuxbrew"
 RUN brew install cmake pkg-config bzip2 lz4 && rm -rf ~/.cache/Homebrew

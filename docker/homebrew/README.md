@@ -8,9 +8,10 @@ So only host bins can be built (except tools/hitag2crack/crack5opencl which need
 
 ```sh
 make -j client USE_BREW=1 SKIPREADLINE=1
-make -j mfkey
-make -j nonce2key
-make -j mf_nonce_brute
+make -j cryptorf
+make -j mfc_card_only
+make -j mfc_card_reader
+make -j mfd_aes_brute
 make -j hitag2crack SKIPOPENCL=1
 make -j fpga_compress
 ```

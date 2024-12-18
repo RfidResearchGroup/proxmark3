@@ -16,6 +16,10 @@ RUN zypper --non-interactive install ocl-icd-devel
 # Create rrg user
 RUN useradd -ms /bin/bash rrg
 RUN passwd -d rrg
+ARG UART_GID
+# dialout group may already exist on another numeric ID than on host
+RUN groupadd -g ${UART_GID} mydialout || true
+RUN usermod -aG ${UART_GID} rrg
 RUN printf 'rrg ALL=(ALL) NOPASSWD: ALL\n' | tee -a /etc/sudoers
 
 USER rrg
