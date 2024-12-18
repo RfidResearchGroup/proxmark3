@@ -3337,7 +3337,7 @@ static int CmdHF15View(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 view",
                   "Print a ISO-15693 tag dump file (bin/eml/json)",
-                  "hf 15 view -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
+                  "hf 15 view -f hf-15-1122334455667788-dump.bin\n"
                  );
     void *argtable[] = {
         arg_param_begin,

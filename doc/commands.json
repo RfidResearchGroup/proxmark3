@@ -2081,7 +2081,7 @@
             "command": "hf 15 view",
             "description": "Print a ISO-15693 tag dump file (bin/eml/json)",
             "notes": [
-                "hf 15 view -f hf-iclass-AA162D30F8FF12F1-dump.bin"
+                "hf 15 view -f hf-15-1122334455667788-dump.bin"
             ],
             "offline": true,
             "options": [
