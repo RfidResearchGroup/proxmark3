@@ -19,7 +19,7 @@ RUN if [ -n "${UART_GID}" ]; then \
   fi
 RUN printf 'rrg ALL=(ALL) ALL\n' | tee -a /etc/sudoers
 
-#USER rrg
+USER rrg
 WORKDIR "/home/rrg"
 
 CMD ["/bin/bash"]

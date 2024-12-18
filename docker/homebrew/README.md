@@ -1,5 +1,7 @@
 # Notes on linux homebrew
 
+If needed to install sth, run brew as user linuxbrew
+
 Do not `brew install arm-none-eabi-gcc`, it's a Mach-O executable.
 
 So only host bins can be built (except tools/hitag2crack/crack5opencl which needs OpenCL)
