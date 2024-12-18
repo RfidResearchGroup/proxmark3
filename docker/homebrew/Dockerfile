@@ -4,8 +4,10 @@ ENV LANG=C
 
 ARG UART_GID
 # dialout group may already exist on another numeric ID than on host
-RUN sudo groupadd -g ${UART_GID} mydialout || true
-RUN sudo usermod -aG ${UART_GID} linuxbrew
+RUN if [ -n "${UART_GID}" ]; then \
+    sudo groupadd -g ${UART_GID} mydialout || true; \
+    sudo usermod -aG ${UART_GID} linuxbrew; \
+  fi
 
 USER linuxbrew
 WORKDIR "/home/linuxbrew"

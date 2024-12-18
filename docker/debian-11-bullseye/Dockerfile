@@ -22,8 +22,10 @@ RUN useradd -ms /bin/bash rrg
 RUN passwd -d rrg
 ARG UART_GID
 # dialout group may already exist on another numeric ID than on host
-RUN groupadd -g ${UART_GID} mydialout || true
-RUN usermod -aG ${UART_GID} rrg
+RUN if [ -n "${UART_GID}" ]; then \
+    groupadd -g ${UART_GID} mydialout || true; \
+    usermod -aG ${UART_GID} rrg; \
+  fi
 RUN printf 'rrg ALL=(ALL) ALL\n' | tee -a /etc/sudoers
 
 USER rrg
