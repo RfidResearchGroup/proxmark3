@@ -17,7 +17,8 @@ fi
 # For cross-platform support:
 # cf https://github.com/multiarch/qemu-user-static
 #sudo apt install qemu-user-static
-#docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+# credential=yes needed to get proper sudo support in cross-platform Docker instances
+#docker run --rm --privileged multiarch/qemu-user-static --reset -p yes --credential yes
 #docker buildx create --use
 #docker buildx inspect --bootstrap
 #docker buildx build $DOCKER_PLATFORM $BUILDARG -t "$DOCKER_IMAGE" --load .
