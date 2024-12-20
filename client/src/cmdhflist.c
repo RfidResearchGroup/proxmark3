@@ -2373,3 +2373,167 @@ uint64_t GetCrypto1ProbableKey(AuthData_t *ad) {
     crypto1_destroy(revstate);
     return key;
 }
+
+// FMCOS 2.0
+void annotateFMCOS20(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+
+    if (cmdsize < 2)
+        return;
+
+    int pos = 0;
+    switch (cmd[0]) {
+        case 2:
+        case 3:
+            pos = 2;
+            break;
+        case 0:
+            pos = 1;
+            break;
+        default:
+            pos = 3;
+            break;
+    }
+    switch (cmd[pos]) {
+        case FMCOS20_CMD_EXTERNAL_AUTHENTICATION:
+            snprintf(exp, size, "EXT. AUTH");
+            break;
+        case FMCOS20_CMD_GET_CHALLENGE:
+            snprintf(exp, size, "GET CHALLENGE");
+            break;
+        case FMCOS20_CMD_INTERNAL_AUTHENTICATION:
+            snprintf(exp, size, "INT. AUTH");
+            break;
+        case FMCOS20_CMD_SELECT:
+            snprintf(exp, size, "SELECT");
+            break;
+        case FMCOS20_CMD_VERIFY_PIN:
+            snprintf(exp, size, "VERIFY PIN");
+            break;
+        case FMCOS20_CMD_READ_BINARY:
+            snprintf(exp, size, "READ BINARY");
+            break;
+        case FMCOS20_CMD_READ_RECORD:
+            snprintf(exp, size, "READ RECORD");
+            break;
+        case FMCOS20_CMD_UPDATE_BINARY:
+            snprintf(exp, size, "UPDATE BINARY");
+            break;
+        case FMCOS20_CMD_UPDATE_RECORD:
+            snprintf(exp, size, "UPDATE RECORD");
+            break;
+        case FMCOS20_CMD_APPEND_RECORD:
+            snprintf(exp, size, "APPEND RECORD");
+            break;
+        case FMCOS20_CMD_ERASE_DF:
+            snprintf(exp, size, "ERASE DF");
+            break;
+        case FMCOS20_CMD_WRITE_KEY:
+            snprintf(exp, size, "WRITE KEY");
+            break;
+        case FMCOS20_CMD_CREATE_FILE:
+            snprintf(exp, size, "CREATE FILE");
+            break;
+        case FMCOS20_CMD_CARD_BLOCK:
+            snprintf(exp, size, "CARD BLOCK");
+            break;
+        case FMCOS20_CMD_APP_UNBLOCK:
+            snprintf(exp, size, "APP UNBLOCK");
+            break;
+        case FMCOS20_CMD_APP_BLOCK:
+            if (cmd[pos+1] == 0)
+                snprintf(exp, size, "APP BLOCK (TEMP)");
+            else if(cmd[pos+1] == 1)
+                snprintf(exp, size, "APP BLOCK (PERM)");
+            else
+                snprintf(exp, size, "APP BLOCK");
+            break;
+        case FMCOS20_CMD_PIN_UNBLOCK:
+            snprintf(exp, size, "PIN UNBLOCK");
+            break;
+        case FMCOS20_CMD_CHANGE_PIN:
+            if (cmd[pos+1] == 0)
+                snprintf(exp, size, "RESET PIN");
+            else if (cmd[pos+1] == 1)
+                snprintf(exp, size, "CHANGE PIN");
+            break;
+        case FMCOS20_CMD_INITIALIZE_TRANSACTION:
+            if (cmd[pos+1] == 0)
+                snprintf(exp, size, "INIT. TRANSACTION (CREDIT)");
+            else if (cmd[pos+1] == 1)
+                snprintf(exp, size, "INIT. TRANSACTION (PURCHASE)");
+            else if (cmd[pos+1] == 2)
+                snprintf(exp, size, "INIT. TRANSACTION (CASH WITHDRAW)");
+            else if (cmd[pos+1] == 3)
+                snprintf(exp, size, "INIT. TRANSACTION (CAPP PURCHASE)");
+            else if (cmd[pos+1] == 4)
+                snprintf(exp, size, "INIT. TRANSACTION (OVERDRAFT)");
+            else if (cmd[pos+1] == 5)
+                snprintf(exp, size, "INIT. TRANSACTION (WITHDRAW)");
+            break;
+        case FMCOS20_CMD_CREDIT_LOAD:
+            snprintf(exp, size, "CREDIT LOAD");
+            break;
+        case FMCOS20_CMD_PURCHASE:
+            if(cmd[pos+1] == 0)
+                snprintf(exp, size, "PURCHASE");
+            else if (cmd[pos+1] == 1)
+                snprintf(exp, size, "CAPP PURCHASE / CASH WITHDRAW");
+            else if (cmd[pos+1] == 3)
+                snprintf(exp, size, "WITHDRAW");
+            break;
+        case FMCOS20_CMD_UPDATE_OVERDRAW_LIMIT:
+            snprintf(exp, size, "UPDATE OVERDRAFT");
+            break;
+        case FMCOS20_CMD_GET_TRANSACTION_PROOF:
+            snprintf(exp, size, "TRANSACTION RECORD");
+            break;
+        case FMCOS20_CMD_GET_BALANCE:
+            snprintf(exp, size, "GET BALANCE");
+            break;
+        case FMCOS20_CMD_INITIALIZE_GREY_LOCK_UNLOCK:
+            if (cmd[pos+1] == 8)
+                snprintf(exp, size, "INIT. GRAY LOCK");
+            else if (cmd[pos+1] == 9)
+                snprintf(exp, size, "INIT. GRAY UNLOCK");
+            break;
+        case FMCOS20_CMD_GREY_LOCK_UNLOCK:
+            if (cmd[pos+1] == 8)
+                snprintf(exp, size, "GRAY LOCK");
+            else if (cmd[pos+1] == 9)
+                snprintf(exp, size, "GRAY UNLOCK");
+            break;
+        case FMCOS20_CMD_DEBIT_UNLOCK:
+            snprintf(exp, size, "DEBIT UNLOCK");
+            break;
+        case FMCOS20_CMD_CALCULATE_ROM_CRC:
+            snprintf(exp, size, "CALC. ROM CRC");
+            break;
+        case FMCOS20_CMD_GET_RESPONSE:
+            snprintf(exp, size, "GET RESPONSE");
+            break;
+        case FMCOS20_CMD_UNBLOCK:
+            snprintf(exp, size, "UNBLOCK");
+            break;
+        case FMCOS20_CMD_PULL:
+            snprintf(exp, size, "PULL");
+            break;
+        case FMCOS20_CMD_CHARGE:
+            snprintf(exp, size, "CHARGE");
+            break;
+        case FMCOS20_CMD_WRITE_EEPROM:
+            snprintf(exp, size, "WRITE EEPROM");
+            break;
+        case FMCOS20_CMD_READ_EEPROM:
+            snprintf(exp, size, "READ EEPROM");
+            break;
+        case FMCOS20_CMD_INITIALIZE_EEPROM:
+            snprintf(exp, size, "INIT. EEPROM");
+            break;
+        case FMCOS20_CMD_READ_ROM:
+            snprintf(exp, size, "READ ROM");
+            break;
+        default:
+            //snprintf(exp, size, "?");
+            break;
+    }
+}
