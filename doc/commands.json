@@ -12837,6 +12837,7 @@
                 "trace list -t thinfilm -> interpret as Thinfilm",
                 "trace list -t topaz -> interpret as Topaz",
                 "trace list -t mfp -> interpret as MIFARE Plus",
+                "trace list -t fmcos20 -> interpret as FMCOS 2.0",
                 "",
                 "trace list -t mf -f mfc_default_keys.dic -> use default dictionary file",
                 "trace list -t 14a --frame -> show frame delay times",
