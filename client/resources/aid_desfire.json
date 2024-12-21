@@ -880,6 +880,14 @@
         "Type": "transport"
     },
     {
+        "AID": "025342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
         "AID": "034D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
@@ -888,11 +896,27 @@
         "Type": "transport"
     },
     {
+        "AID": "035342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
         "AID": "044D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
         "Name": "Delhi Metro Travel Card (DEL)",
         "Description": "DEL Delhi Metro App 4",
+        "Type": "transport"
+    },
+    {
+        "AID": "045342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
     {
@@ -912,6 +936,14 @@
         "Type": "transport"
     },
     {
+        "AID": "055342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
         "AID": "062242",
         "Vendor": "Belbim",
         "Country": "TR",
@@ -928,6 +960,14 @@
         "Type": "transport"
     },
     {
+        "AID": "065342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
         "AID": "074D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
@@ -936,11 +976,99 @@
         "Type": "transport"
     },
     {
+        "AID": "075342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "085342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
         "AID": "087522",
         "Vendor": "Umo Mobility via Cubic Transportation Systems",
         "Country": "US",
         "Name": "Umo Mobility Card",
         "Description": "Umo Mobility Card",
+        "Type": "transport"
+    },
+    {
+        "AID": "095342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "0A5342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "0B5342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "0C5342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "0D5342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "0E5342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "0F5342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "105342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "115342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
     {
@@ -1069,6 +1197,14 @@
         "Country": "US",
         "Name": "COTA Smartcard (CMH)",
         "Description": "CMH COTA Smartcard; Masabi Justride Tap and Ride DESFire Smartcard",
+        "Type": "transport"
+    },
+    {
+        "AID": "D000D0",
+        "Vendor": "Greater Dayton Regional Transit Authority (RTA) via Masabi Ltd",
+        "Country": "US",
+        "Name": "RTA Tapp Pay Card (DAY)",
+        "Description": "DAY RTA Tapp Pay Card; Masabi Justride Tap and Ride DESFire Smartcard",
         "Type": "transport"
     },
     {
