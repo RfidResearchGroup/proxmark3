@@ -1,8 +1,8 @@
 # If you want to use it, copy this file as Makefile.platform and adjust it to your needs
 # Run 'make PLATFORM=' to get an exhaustive list of possible parameters for this file.
 
-PLATFORM=PM3RDV4
-#PLATFORM=PM3GENERIC
+#PLATFORM=PM3RDV4
+PLATFORM=PM3GENERIC
 # If you want more than one PLATFORM_EXTRAS option, separate them by spaces:
 #PLATFORM_EXTRAS=BTADDON
 #PLATFORM_EXTRAS=FLASH
