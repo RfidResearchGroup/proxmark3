@@ -38,6 +38,8 @@
 #include "spiffs.h"   // spiffs
 #include "appmain.h"  // print_stack_usage
 
+#define MF_KEYS_FILE "dict_mf.bin"
+
 #ifndef HARDNESTED_AUTHENTICATION_TIMEOUT
 # define HARDNESTED_AUTHENTICATION_TIMEOUT  848     // card times out 1ms after wrong authentication (according to NXP documentation)
 #endif
@@ -1900,13 +1902,12 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 #ifdef WITH_FLASH
     if (use_flashmem) {
         BigBuf_free();
-        uint16_t isok = 0;
-        uint8_t size[2] = {0x00, 0x00};
-        isok = Flash_ReadData(DEFAULT_MF_KEYS_OFFSET_P(spi_flash_pages64k), size, 2);
-        if (isok != 2)
+        uint32_t size = 0;
+        size = size_in_spiffs(MF_KEYS_FILE);
+        if (size <= 0)
             goto OUT;
 
-        keyCount = size[1] << 8 | size[0];
+        keyCount = size / 6;
 
         if (keyCount == 0)
             goto OUT;
@@ -1921,10 +1922,8 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
         if (datain == NULL)
             goto OUT;
 
-        isok = Flash_ReadData(DEFAULT_MF_KEYS_OFFSET_P(spi_flash_pages64k) + 2, datain, key_mem_available);
-        if (isok != key_mem_available)
-            goto OUT;
-
+        rdv40_spiffs_read_as_filetype(MF_KEYS_FILE, datain, keyCount * 6, RDV40_SPIFFS_SAFETY_SAFE);
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Loaded %u keys from spiffs file: %s", keyCount, MF_KEYS_FILE);
     }
 #endif
 
