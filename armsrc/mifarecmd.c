@@ -38,8 +38,6 @@
 #include "spiffs.h"   // spiffs
 #include "appmain.h"  // print_stack_usage
 
-#define MF_KEYS_FILE "dict_mf.bin"
-
 #ifndef HARDNESTED_AUTHENTICATION_TIMEOUT
 # define HARDNESTED_AUTHENTICATION_TIMEOUT  848     // card times out 1ms after wrong authentication (according to NXP documentation)
 #endif

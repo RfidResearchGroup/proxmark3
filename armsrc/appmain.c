@@ -2752,25 +2752,6 @@ static void PacketReceived(PacketCommandNG *packet) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
                 Flash_Erase4k(spi_flash_pages64k - 1, 0xC);
-            } else if (payload->startidx ==  DEFAULT_MF_KEYS_OFFSET_P(spi_flash_pages64k)) {
-                Flash_CheckBusy(BUSY_TIMEOUT);
-                Flash_WriteEnable();
-                Flash_Erase4k(spi_flash_pages64k - 1, 0x5);
-                Flash_CheckBusy(BUSY_TIMEOUT);
-                Flash_WriteEnable();
-                Flash_Erase4k(spi_flash_pages64k - 1, 0x6);
-                Flash_CheckBusy(BUSY_TIMEOUT);
-                Flash_WriteEnable();
-                Flash_Erase4k(spi_flash_pages64k - 1, 0x7);
-                Flash_CheckBusy(BUSY_TIMEOUT);
-                Flash_WriteEnable();
-                Flash_Erase4k(spi_flash_pages64k - 1, 0x8);
-                Flash_CheckBusy(BUSY_TIMEOUT);
-                Flash_WriteEnable();
-                Flash_Erase4k(spi_flash_pages64k - 1, 0x9);
-                Flash_CheckBusy(BUSY_TIMEOUT);
-                Flash_WriteEnable();
-                Flash_Erase4k(spi_flash_pages64k - 1, 0xA);
             } else if (payload->startidx == DEFAULT_ICLASS_KEYS_OFFSET_P(spi_flash_pages64k)) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();

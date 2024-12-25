@@ -96,6 +96,8 @@
 #endif
 
 // Reserved space for MIFARE Keys = 24 kb
+#define MF_KEYS_FILE "dict_mf.bin"
+
 #ifndef DEFAULT_MF_KEYS_OFFSET
 # define DEFAULT_MF_KEYS_LEN (0x6000)
 # define DEFAULT_MF_KEYS_OFFSET (DEFAULT_ICLASS_KEYS_OFFSET - DEFAULT_MF_KEYS_LEN)

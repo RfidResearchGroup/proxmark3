@@ -192,7 +192,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
     CLIParserInit(&ctx, "mem load",
                   "Loads binary file into flash memory on device\n"
                   "Warning: mem area to be written must have been wiped first\n"
-                  "( this is already taken care when loading dictionaries )",
+                  "( dictionaries are serviced as files in spiffs so no wipe is needed )",
                   "mem load -f myfile                 -> upload file myfile values at default offset 0\n"
                   "mem load -f myfile -o 1024         -> upload file myfile values at offset 1024\n"
                   "mem load -f mfc_default_keys -m    -> upload MFC keys\n"
@@ -217,6 +217,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
     bool is_t55xx = arg_get_lit(ctx, 4);
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
+    char spiffsDest[32] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
@@ -246,22 +247,18 @@ static int CmdFlashMemLoad(const char *Cmd) {
 
     switch (d) {
         case DICTIONARY_MIFARE:
-            offset = DEFAULT_MF_KEYS_OFFSET_P(spi_flash_pages);
             keylen = 6;
-            res = loadFileDICTIONARY(filename, data + 2, &datalen, keylen, &keycount);
+            res = loadFileDICTIONARY(filename, data, &datalen, keylen, &keycount);
             if (res || !keycount) {
                 free(data);
                 return PM3_EFILE;
             }
-            // limited space on flash mem
-            if (keycount > DEFAULT_MF_KEYS_MAX) {
-                keycount = DEFAULT_MF_KEYS_MAX;
-                datalen = keycount * keylen;
+            if (datalen > FLASH_MEM_MAX_SIZE_P(spi_flash_pages)) {
+                PrintAndLogEx(ERR, "error, filesize is larger than available memory");
+                free(data);
+                return PM3_EOVFLOW;
             }
-
-            data[0] = (keycount >> 0) & 0xFF;
-            data[1] = (keycount >> 8) & 0xFF;
-            datalen += 2;
+            strcpy_s(spiffsDest, 32, MF_KEYS_FILE);
             break;
         case DICTIONARY_T55XX:
             offset = DEFAULT_T55XX_KEYS_OFFSET_P(spi_flash_pages);
@@ -326,44 +323,55 @@ static int CmdFlashMemLoad(const char *Cmd) {
     uint32_t bytes_sent = 0;
     uint32_t bytes_remaining = datalen;
 
-
-    // fast push mode
-    g_conn.block_after_ACK = true;
-
-    while (bytes_remaining > 0) {
-        uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
-
-        clearCommandBuffer();
-
-        flashmem_old_write_t payload = {
-            .startidx = offset + bytes_sent,
-            .len = bytes_in_packet,
-        };
-        memcpy(payload.data,  data + bytes_sent, bytes_in_packet);
-        SendCommandNG(CMD_FLASHMEM_WRITE, (uint8_t *)&payload, sizeof(payload));
-
-        bytes_remaining -= bytes_in_packet;
-        bytes_sent += bytes_in_packet;
-
-        PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_FLASHMEM_WRITE, &resp, 2000) == false) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
-            g_conn.block_after_ACK = false;
+    // we will treat dictionary files as spiffs files, so we need to handle this here
+    if (d == DICTIONARY_MIFARE) {
+        res = flashmem_spiffs_load(spiffsDest, data, datalen);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Failed writing passwrods to file %s", spiffsDest);
             free(data);
-            return PM3_ETIMEOUT;
+            return res;
+        }
+        PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%u")" passwords to file "_GREEN_("%s"), keycount, spiffsDest);
+    } else {
+        // fast push mode
+        g_conn.block_after_ACK = true;
+
+        while (bytes_remaining > 0) {
+            uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
+
+            clearCommandBuffer();
+
+            flashmem_old_write_t payload = {
+                .startidx = offset + bytes_sent,
+                .len = bytes_in_packet,
+            };
+            memcpy(payload.data,  data + bytes_sent, bytes_in_packet);
+            SendCommandNG(CMD_FLASHMEM_WRITE, (uint8_t *)&payload, sizeof(payload));
+
+            bytes_remaining -= bytes_in_packet;
+            bytes_sent += bytes_in_packet;
+
+            PacketResponseNG resp;
+            if (WaitForResponseTimeout(CMD_FLASHMEM_WRITE, &resp, 2000) == false) {
+                PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+                g_conn.block_after_ACK = false;
+                free(data);
+                return PM3_ETIMEOUT;
+            }
+
+            if (resp.status != PM3_SUCCESS) {
+                g_conn.block_after_ACK = false;
+                PrintAndLogEx(FAILED, "Flash write fail [offset %u]", bytes_sent);
+                free(data);
+                return PM3_EFLASH;
+            }
         }
 
-        if (resp.status != PM3_SUCCESS) {
-            g_conn.block_after_ACK = false;
-            PrintAndLogEx(FAILED, "Flash write fail [offset %u]", bytes_sent);
-            free(data);
-            return PM3_EFLASH;
-        }
+        g_conn.block_after_ACK = false;
+        PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%zu")" bytes to offset "_GREEN_("%u"), datalen, offset);
     }
 
-    g_conn.block_after_ACK = false;
     free(data);
-    PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%zu")" bytes to offset "_GREEN_("%u"), datalen, offset);
     return PM3_SUCCESS;
 }
 
