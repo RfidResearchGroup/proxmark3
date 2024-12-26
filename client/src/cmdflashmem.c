@@ -259,7 +259,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
                 free(data);
                 return PM3_EOVFLOW;
             }
-            strcpy_s(spiffsDest, 32, MF_KEYS_FILE);
+            strcpy(spiffsDest, MF_KEYS_FILE);
             break;
         case DICTIONARY_T55XX:
             keylen = T55XX_KEY_LENGTH;
@@ -273,7 +273,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
                 free(data);
                 return PM3_EOVFLOW;
             }
-            strcpy_s(spiffsDest, 32, T55XX_KEYS_FILE);
+            strcpy(spiffsDest, T55XX_KEYS_FILE);
             break;
         case DICTIONARY_ICLASS:
             keylen = ICLASS_KEY_LENGTH;
@@ -287,7 +287,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
                 free(data);
                 return PM3_EOVFLOW;
             }
-            strcpy_s(spiffsDest, 32, ICLASS_KEYS_FILE);
+            strcpy(spiffsDest, ICLASS_KEYS_FILE);
             break;
         case DICTIONARY_NONE:
             res = loadFile_safe(filename, ".bin", (void **)&data, &datalen);
