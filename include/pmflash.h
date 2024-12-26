@@ -26,9 +26,6 @@
 //
 // 0x3F000 - 1 4kb sector = signature
 // 0x3E000 - 1 4kb sector = settings
-// 0x3D000 - 1 4kb sector = default T55XX keys dictionary
-// 0x3B000 - 1 4kb sector = default ICLASS keys dictionary
-// 0x35000 - 6 4kb sectors = default MFC keys dictionary
 //
 #ifndef FLASH_MEM_BLOCK_SIZE
 # define FLASH_MEM_BLOCK_SIZE   256
@@ -75,44 +72,17 @@
 # define T55XX_CONFIG_OFFSET_P(p64k) (FLASH_MEM_MAX_4K_SECTOR_P(p64k) - 0x2000)
 #endif
 
-// Reserved space for T55XX PWD = 4 kb
+// T55XX PWD stored in spiffs
 #define T55XX_KEYS_FILE "dict_t55xx.bin"
 #define T55XX_KEY_LENGTH 4
 
-#ifndef DEFAULT_T55XX_KEYS_OFFSET
-# define DEFAULT_T55XX_KEYS_LEN (0x1000)
-# define DEFAULT_T55XX_KEYS_OFFSET (T55XX_CONFIG_OFFSET - DEFAULT_T55XX_KEYS_LEN)
-# define DEFAULT_T55XX_KEYS_MAX ((DEFAULT_T55XX_KEYS_LEN - 2) / 4)
-#endif
-#ifndef DEFAULT_T55XX_KEYS_OFFSET_P
-# define DEFAULT_T55XX_KEYS_OFFSET_P(p64k) (T55XX_CONFIG_OFFSET_P(p64k) - DEFAULT_T55XX_KEYS_LEN)
-#endif
-
-// Reserved space for iClass keys = 4 kb
+// iClass keys stored in spiffs
 #define ICLASS_KEYS_FILE "dict_iclass.bin"
 #define ICLASS_KEY_LENGTH 8
 
-#ifndef DEFAULT_ICLASS_KEYS_OFFSET
-# define DEFAULT_ICLASS_KEYS_LEN (0x1000)
-# define DEFAULT_ICLASS_KEYS_OFFSET (DEFAULT_T55XX_KEYS_OFFSET - DEFAULT_ICLASS_KEYS_LEN)
-# define DEFAULT_ICLASS_KEYS_MAX ((DEFAULT_ICLASS_KEYS_LEN - 2) / 8)
-#endif
-#ifndef DEFAULT_ICLASS_KEYS_OFFSET_P
-# define DEFAULT_ICLASS_KEYS_OFFSET_P(p64k) (DEFAULT_T55XX_KEYS_OFFSET_P(p64k) - DEFAULT_ICLASS_KEYS_LEN)
-#endif
-
-// Reserved space for MIFARE Keys = 24 kb
+// Mifare keys stored in spiffs
 #define MF_KEYS_FILE "dict_mf.bin"
 #define MF_KEY_LENGTH 6
-
-#ifndef DEFAULT_MF_KEYS_OFFSET
-# define DEFAULT_MF_KEYS_LEN (0x6000)
-# define DEFAULT_MF_KEYS_OFFSET (DEFAULT_ICLASS_KEYS_OFFSET - DEFAULT_MF_KEYS_LEN)
-# define DEFAULT_MF_KEYS_MAX ((DEFAULT_MF_KEYS_LEN - 2) / 6)
-#endif
-#ifndef DEFAULT_MF_KEYS_OFFSET_P
-# define DEFAULT_MF_KEYS_OFFSET_P(p64k) (DEFAULT_ICLASS_KEYS_OFFSET_P(p64k) - DEFAULT_MF_KEYS_LEN)
-#endif
 
 // RDV40,  validation structure to help identifying that client/firmware is talking with RDV40
 typedef struct {
