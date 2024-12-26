@@ -50,7 +50,7 @@ Page 2:
 * to erase it: `mem wipe p 2`
 
 Page 3:
-* used by Proxmark3 RDV4 specific functions: flash signature and keys dictionaries, see below for details
+* used by Proxmark3 RDV4 specific functions: flash signature and configurations, see below for details
 * to dump it: `mem dump -f page3_dump -o 196608 -l 65536`
 * to erase it:
   * **Beware** it will erase your flash signature so better to back it up first as you won't be able to regenerate it by yourself!
@@ -61,18 +61,6 @@ Page 3:
 ^[Top](#top)
 
 Page3 is used as follows by the Proxmark3 RDV4 firmware:
-
-* **MF_KEYS**
-  * offset: page 3 sector  5 (0x5) @ 3*0x10000+5*0x1000=0x35000
-  * length: 6 sectors
-
-* **ICLASS_KEYS**
-  * offset: page 3 sector 11 (0xB) @ 3*0x10000+11*0x1000=0x3B000
-  * length: 1 sector
-
-* **T55XX_KEYS**
-  * offset: page 3 sector 12 (0xC) @ 3*0x10000+12*0x1000=0x3C000
-  * length: 1 sector
 
 * **T55XX_CONFIG**
   * offset: page 3 sector 13 (0xD) @ 3*0x10000+13*0x1000=0x3D000
