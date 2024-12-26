@@ -48,6 +48,8 @@
 # define FLASH_MEM_MAX_4K_SECTOR_P(p64k)  (FLASH_MEM_MAX_SIZE_P(p64k) - 4096)
 #endif
 
+#define FLASH_RESERVED_TRAILING_4K_SECTORS 10
+
 #ifndef FLASH_MEM_ID_LEN
 # define FLASH_MEM_ID_LEN 8
 #endif
