@@ -2782,15 +2782,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 break;
             }
 
-            if (payload->startidx == DEFAULT_T55XX_KEYS_OFFSET_P(spi_flash_pages64k)) {
-                Flash_CheckBusy(BUSY_TIMEOUT);
-                Flash_WriteEnable();
-                Flash_Erase4k(spi_flash_pages64k - 1, 0xC);
-            } else if (payload->startidx == DEFAULT_ICLASS_KEYS_OFFSET_P(spi_flash_pages64k)) {
-                Flash_CheckBusy(BUSY_TIMEOUT);
-                Flash_WriteEnable();
-                Flash_Erase4k(spi_flash_pages64k - 1, 0xB);
-            } else if (payload->startidx == FLASH_MEM_SIGNATURE_OFFSET_P(spi_flash_pages64k)) {
+            if (payload->startidx == FLASH_MEM_SIGNATURE_OFFSET_P(spi_flash_pages64k)) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
                 Flash_Erase4k(spi_flash_pages64k - 1, 0xF);

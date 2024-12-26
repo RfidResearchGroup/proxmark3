@@ -37,7 +37,8 @@
 #include "protocols.h"
 #include "pmflash.h"
 #include "flashmem.h" // persistence on flash
-#include "appmain.h" // print stack
+#include "spiffs.h"   // spiffs
+#include "appmain.h"  // print stack
 
 /*
 Notes about EM4xxx timings.
@@ -2146,29 +2147,31 @@ void T55xx_ChkPwds(uint8_t flags, bool ledcontrol) {
 #ifdef WITH_FLASH
 
     BigBuf_Clear_EM();
-    uint16_t isok = 0;
-    uint8_t counter[2] = {0x00, 0x00};
-    isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET_P(spi_flash_pages64k), counter, sizeof(counter));
-    if (isok != sizeof(counter))
+    uint32_t size = 0;
+    
+    if (exists_in_spiffs(T55XX_KEYS_FILE)) {
+        size = size_in_spiffs(T55XX_KEYS_FILE);
+    }
+    if (size == 0) {
+        Dbprintf("Spiffs file: %s does not exists or empty.", T55XX_KEYS_FILE);
         goto OUT;
+    }
 
-    pwd_count = (uint16_t)(counter[1] << 8 | counter[0]);
+    pwd_count = size / T55XX_KEY_LENGTH;
     if (pwd_count == 0)
         goto OUT;
 
     // since flash can report way too many pwds, we need to limit it.
     // bigbuff EM size is determined by CARD_MEMORY_SIZE
     // a password is 4bytes.
-    uint16_t pwd_size_available = MIN(CARD_MEMORY_SIZE, pwd_count * 4);
+    uint16_t pwd_size_available = MIN(CARD_MEMORY_SIZE, pwd_count * T55XX_KEY_LENGTH);
 
     // adjust available pwd_count
-    pwd_count = pwd_size_available / 4;
+    pwd_count = pwd_size_available / T55XX_KEY_LENGTH;
 
-    isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET_P(spi_flash_pages64k) + 2, pwds, pwd_size_available);
-    if (isok != pwd_size_available)
-        goto OUT;
+    rdv40_spiffs_read_as_filetype(T55XX_KEYS_FILE, pwds, pwd_size_available, RDV40_SPIFFS_SAFETY_SAFE);
 
-    Dbprintf("Password dictionary count " _YELLOW_("%d"), pwd_count);
+    if (g_dbglevel >= DBG_ERROR) Dbprintf("Loaded %u passwords from spiffs file: %s", pwd_count, T55XX_KEYS_FILE);
 
 #endif
 
