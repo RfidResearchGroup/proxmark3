@@ -1905,22 +1905,22 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
         if (size <= 0)
             goto OUT;
 
-        keyCount = size / 6;
+        keyCount = size / MF_KEY_LENGTH;
 
         if (keyCount == 0)
             goto OUT;
 
         // limit size of available for keys in bigbuff
         // a key is 6bytes
-        uint16_t key_mem_available = MIN(BigBuf_get_size(), keyCount * 6);
+        uint16_t key_mem_available = MIN(BigBuf_get_size(), keyCount * MF_KEY_LENGTH);
 
-        keyCount = key_mem_available / 6;
+        keyCount = key_mem_available / MF_KEY_LENGTH;
 
         datain = BigBuf_malloc(key_mem_available);
         if (datain == NULL)
             goto OUT;
 
-        rdv40_spiffs_read_as_filetype(MF_KEYS_FILE, datain, keyCount * 6, RDV40_SPIFFS_SAFETY_SAFE);
+        rdv40_spiffs_read_as_filetype(MF_KEYS_FILE, datain, keyCount * MF_KEY_LENGTH, RDV40_SPIFFS_SAFETY_SAFE);
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Loaded %u keys from spiffs file: %s", keyCount, MF_KEYS_FILE);
     }
 #endif

@@ -76,6 +76,9 @@
 #endif
 
 // Reserved space for T55XX PWD = 4 kb
+#define T55XX_KEYS_FILE "dict_t55xx.bin"
+#define T55XX_KEY_LENGTH 4
+
 #ifndef DEFAULT_T55XX_KEYS_OFFSET
 # define DEFAULT_T55XX_KEYS_LEN (0x1000)
 # define DEFAULT_T55XX_KEYS_OFFSET (T55XX_CONFIG_OFFSET - DEFAULT_T55XX_KEYS_LEN)
@@ -86,6 +89,9 @@
 #endif
 
 // Reserved space for iClass keys = 4 kb
+#define ICLASS_KEYS_FILE "dict_iclass.bin"
+#define ICLASS_KEY_LENGTH 8
+
 #ifndef DEFAULT_ICLASS_KEYS_OFFSET
 # define DEFAULT_ICLASS_KEYS_LEN (0x1000)
 # define DEFAULT_ICLASS_KEYS_OFFSET (DEFAULT_T55XX_KEYS_OFFSET - DEFAULT_ICLASS_KEYS_LEN)
@@ -97,6 +103,7 @@
 
 // Reserved space for MIFARE Keys = 24 kb
 #define MF_KEYS_FILE "dict_mf.bin"
+#define MF_KEY_LENGTH 6
 
 #ifndef DEFAULT_MF_KEYS_OFFSET
 # define DEFAULT_MF_KEYS_LEN (0x6000)

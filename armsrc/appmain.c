@@ -440,7 +440,28 @@ static void SendStatus(uint32_t wait) {
     ModInfo();
 
 #ifdef WITH_FLASH
-    Flashmem_print_info();
+    DbpString(_CYAN_("Flash memory dictionary loaded"));
+
+    uint32_t num = size_in_spiffs(MF_KEYS_FILE) / MF_KEY_LENGTH;
+    if (num > 0) {
+        Dbprintf("  Mifare.................. "_YELLOW_("%u")" keys (spiffs: "_GREEN_("%s")")", num, MF_KEYS_FILE);
+    } else {
+        Dbprintf("  Mifare.................. "_RED_("%u")" keys (spiffs: "_RED_("%s")")", num, MF_KEYS_FILE);
+    }
+
+    num = size_in_spiffs(T55XX_KEYS_FILE) / T55XX_KEY_LENGTH;
+    if (num > 0) {
+        Dbprintf("  T55xx................... "_YELLOW_("%u")" keys (spiffs: "_GREEN_("%s")")", num, T55XX_KEYS_FILE);
+    } else {
+        Dbprintf("  T55xx................... "_RED_("%u")" keys (spiffs: "_RED_("%s")")", num, T55XX_KEYS_FILE);
+    }
+
+    num = size_in_spiffs(ICLASS_KEYS_FILE) / ICLASS_KEY_LENGTH;
+    if (num > 0) {
+        Dbprintf("  iClass.................. "_YELLOW_("%u")" keys (spiffs: "_GREEN_("%s")")", num, ICLASS_KEYS_FILE);
+    } else {
+        Dbprintf("  iClass.................. "_RED_("%u")" keys (spiffs: "_RED_("%s")")", num, ICLASS_KEYS_FILE);
+    }
 #endif
     DbpString("");
     reply_ng(CMD_STATUS, PM3_SUCCESS, NULL, 0);

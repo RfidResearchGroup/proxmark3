@@ -247,7 +247,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
 
     switch (d) {
         case DICTIONARY_MIFARE:
-            keylen = 6;
+            keylen = MF_KEY_LENGTH;
             res = loadFileDICTIONARY(filename, data, &datalen, keylen, &keycount);
             if (res || !keycount) {
                 free(data);
