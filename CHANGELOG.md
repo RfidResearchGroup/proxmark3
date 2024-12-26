@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `lf em 410x sim` to use default gap value of 0 and extended help (@piotrva)
 - Added `hf iclass trbl` to perform tear-off attacks on iClass (@antiklesys)
 - Added support for connection to host device in all Docker envs (@doegox)
 - Changed `hf 15 info` to show all type matches and check ST25TVxC signature (@doegox)
