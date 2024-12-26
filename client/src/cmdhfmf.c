@@ -9976,10 +9976,13 @@ static int CmdHF14AMfISEN(const char *Cmd) {
         uint64_t t1 = msclock();
         uint32_t flags = collect_fm11rf08s_with_data | (collect_fm11rf08s_without_backdoor << 1);
         SendCommandMIX(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, flags, blockn, keytype, key, sizeof(key));
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
             if (resp.oldarg[0] != PM3_SUCCESS) {
                 return NONCE_FAIL;
             }
+        } else {
+            PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+            return PM3_ETIMEOUT;
         }
         uint8_t num_sectors = MIFARE_1K_MAXSECTOR + 1;
         iso14a_fm11rf08s_nonces_with_data_t nonces_dump = {0};
