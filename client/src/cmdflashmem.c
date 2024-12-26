@@ -261,39 +261,32 @@ static int CmdFlashMemLoad(const char *Cmd) {
             strcpy_s(spiffsDest, 32, MF_KEYS_FILE);
             break;
         case DICTIONARY_T55XX:
-            offset = DEFAULT_T55XX_KEYS_OFFSET_P(spi_flash_pages);
-            keylen = 4;
-            res = loadFileDICTIONARY(filename, data + 2, &datalen, keylen, &keycount);
+            keylen = T55XX_KEY_LENGTH;
+            res = loadFileDICTIONARY(filename, data, &datalen, keylen, &keycount);
             if (res || !keycount) {
                 free(data);
                 return PM3_EFILE;
             }
-            // limited space on flash mem
-            if (keycount > DEFAULT_T55XX_KEYS_MAX) {
-                keycount = DEFAULT_T55XX_KEYS_MAX;
-                datalen = keycount * keylen;
+            if (datalen > FLASH_MEM_MAX_SIZE_P(spi_flash_pages)) {
+                PrintAndLogEx(ERR, "error, filesize is larger than available memory");
+                free(data);
+                return PM3_EOVFLOW;
             }
-
-            data[0] = (keycount >> 0) & 0xFF;
-            data[1] = (keycount >> 8) & 0xFF;
-            datalen += 2;
+            strcpy_s(spiffsDest, 32, T55XX_KEYS_FILE);
             break;
         case DICTIONARY_ICLASS:
-            offset = DEFAULT_ICLASS_KEYS_OFFSET_P(spi_flash_pages);
-            res = loadFileDICTIONARY(filename, data + 2, &datalen, keylen, &keycount);
+            keylen = ICLASS_KEY_LENGTH;
+            res = loadFileDICTIONARY(filename, data, &datalen, keylen, &keycount);
             if (res || !keycount) {
                 free(data);
                 return PM3_EFILE;
             }
-            // limited space on flash mem
-            if (keycount > DEFAULT_ICLASS_KEYS_MAX) {
-                keycount = DEFAULT_ICLASS_KEYS_MAX;
-                datalen = keycount * keylen;
+            if (datalen > FLASH_MEM_MAX_SIZE_P(spi_flash_pages)) {
+                PrintAndLogEx(ERR, "error, filesize is larger than available memory");
+                free(data);
+                return PM3_EOVFLOW;
             }
-
-            data[0] = (keycount >> 0) & 0xFF;
-            data[1] = (keycount >> 8) & 0xFF;
-            datalen += 2;
+            strcpy_s(spiffsDest, 32, ICLASS_KEYS_FILE);
             break;
         case DICTIONARY_NONE:
             res = loadFile_safe(filename, ".bin", (void **)&data, &datalen);
@@ -324,7 +317,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
     uint32_t bytes_remaining = datalen;
 
     // we will treat dictionary files as spiffs files, so we need to handle this here
-    if (d == DICTIONARY_MIFARE) {
+    if (d != DICTIONARY_NONE) {
         res = flashmem_spiffs_load(spiffsDest, data, datalen);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "Failed writing passwrods to file %s", spiffsDest);
@@ -332,6 +325,8 @@ static int CmdFlashMemLoad(const char *Cmd) {
             return res;
         }
         PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%u")" passwords to file "_GREEN_("%s"), keycount, spiffsDest);
+        SendCommandNG(CMD_SPIFFS_UNMOUNT, NULL, 0);
+        SendCommandNG(CMD_SPIFFS_MOUNT, NULL, 0);
     } else {
         // fast push mode
         g_conn.block_after_ACK = true;
