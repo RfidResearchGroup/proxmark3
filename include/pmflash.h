@@ -65,12 +65,7 @@
 # define T55XX_CONFIG_LEN sizeof( t55xx_configurations_t )
 #endif
 
-#ifndef T55XX_CONFIG_OFFSET
-# define T55XX_CONFIG_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x2000)
-#endif
-#ifndef T55XX_CONFIG_OFFSET_P
-# define T55XX_CONFIG_OFFSET_P(p64k) (FLASH_MEM_MAX_4K_SECTOR_P(p64k) - 0x2000)
-#endif
+#define T55XX_CONFIG_FILE "cfg_t55xx.bin"
 
 // T55XX PWD stored in spiffs
 #define T55XX_KEYS_FILE "dict_t55xx.bin"

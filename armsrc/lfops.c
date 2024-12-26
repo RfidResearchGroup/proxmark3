@@ -325,33 +325,9 @@ void setT55xxConfig(uint8_t arg0, const t55xx_configurations_t *c) {
         return;
     }
 
-    if (!FlashInit()) {
-        BigBuf_free();
-        return;
-    }
+    rdv40_spiffs_write(T55XX_CONFIG_FILE, (uint8_t*)&T55xx_Timing, T55XX_CONFIG_LEN, RDV40_SPIFFS_SAFETY_SAFE);
 
-    uint8_t *buf = BigBuf_malloc(T55XX_CONFIG_LEN);
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    uint16_t res = Flash_ReadDataCont(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
-    if (res == 0) {
-        FlashStop();
-        BigBuf_free();
-        return;
-    }
-
-    memcpy(buf, &T55xx_Timing, T55XX_CONFIG_LEN);
-
-    // delete old configuration
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    Flash_WriteEnable();
-    Flash_Erase4k(3, 0xD);
-
-    // write new
-    res = Flash_Write(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
-
-    if (res == T55XX_CONFIG_LEN && g_dbglevel > 1) {
-        DbpString("T55XX Config save " _GREEN_("success"));
-    }
+    DbpString("T55XX Config save " _GREEN_("success"));
 
     BigBuf_free();
 #endif
@@ -364,15 +340,17 @@ t55xx_configurations_t *getT55xxConfig(void) {
 void loadT55xxConfig(void) {
 #ifdef WITH_FLASH
 
-    if (!FlashInit()) {
-        return;
-    }
-
     uint8_t *buf = BigBuf_malloc(T55XX_CONFIG_LEN);
 
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    uint16_t isok = Flash_ReadDataCont(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
-    FlashStop();
+    uint32_t size = 0;
+    if (exists_in_spiffs(T55XX_CONFIG_FILE)) {
+        size = size_in_spiffs(T55XX_CONFIG_FILE);
+    }
+    if (size == 0) {
+        Dbprintf("Spiffs file: %s does not exists or empty.", T55XX_CONFIG_FILE);
+        BigBuf_free();
+        return;
+    }
 
     // verify read mem is actual data.
     uint8_t cntA = T55XX_CONFIG_LEN, cntB = T55XX_CONFIG_LEN;
@@ -381,6 +359,7 @@ void loadT55xxConfig(void) {
         if (buf[i] == 0x00) cntB--;
     }
     if (!cntA || !cntB) {
+        Dbprintf("Spiffs file: %s does not malformed or empty.", T55XX_CONFIG_FILE);
         BigBuf_free();
         return;
     }
@@ -388,7 +367,7 @@ void loadT55xxConfig(void) {
     if (buf[0] != 0xFF) // if not set for clear
         memcpy((uint8_t *)&T55xx_Timing, buf, T55XX_CONFIG_LEN);
 
-    if (isok == T55XX_CONFIG_LEN) {
+    if (size == T55XX_CONFIG_LEN) {
         if (g_dbglevel > 1) DbpString("T55XX Config load success");
     }
 
