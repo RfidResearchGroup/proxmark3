@@ -46,6 +46,7 @@
 #include "generator.h"              // keygens.
 #include "fpga.h"
 #include "mifare/mifarehost.h"
+#include "crypto/originality.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -68,52 +69,9 @@ static int usage_hf14_keybrute(void) {
 */
 
 int mfc_ev1_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
-
-    // ref:  MIFARE Classic EV1 Originality Signature Validation
-#define PUBLIC_MFCEV1_ECDA_KEYLEN 33
-    const ecdsa_publickey_t nxp_mfc_public_keys[] = {
-        {"NXP MIFARE Classic MFC1C14_x",   "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
-        {"MIFARE Classic / QL88",          "046F70AC557F5461CE5052C8E4A7838C11C7A236797E8A0730A101837C004039C2"},
-        {"NXP ICODE DNA, ICODE SLIX2",     "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0"},
-        {"NXP Public key",                 "04A748B6A632FBEE2C0897702B33BEA1C074998E17B84ACA04FF267E5D2C91F6DC"},
-        {"NXP Ultralight Ev1",             "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
-        {"NXP NTAG21x (2013)",             "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
-        {"MIKRON Public key",              "04F971EDA742A4A80D32DCF6A814A707CC3DC396D35902F72929FDCD698B3468F2"},
-        {"VivoKey Spark1 Public key",      "04D64BB732C0D214E7EC580736ACF847284B502C25C0F7F2FA86AACE1DADA4387A"},
-        {"TruST25 (ST) key 01?",           "041D92163650161A2548D33881C235D0FB2315C2C31A442F23C87ACF14497C0CBA"},
-        {"TruST25 (ST) key 04?",           "04101E188A8B4CDDBC62D5BC3E0E6850F0C2730E744B79765A0E079907FBDB01BC"},
-    };
-
-    uint8_t i;
-    bool is_valid = false;
-
-    for (i = 0; i < ARRAYLEN(nxp_mfc_public_keys); i++) {
-
-        int dl = 0;
-        uint8_t key[PUBLIC_MFCEV1_ECDA_KEYLEN];
-        param_gethex_to_eol(nxp_mfc_public_keys[i].value, 0, key, PUBLIC_MFCEV1_ECDA_KEYLEN, &dl);
-
-        int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, uidlen, signature, signature_len, false);
-        is_valid = (res == 0);
-        if (is_valid)
-            break;
-    }
-
-    PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
-    if (is_valid == false || i == ARRAYLEN(nxp_mfc_public_keys)) {
-        PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
-        PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 32));
-        PrintAndLogEx(SUCCESS, "       Signature verification: " _RED_("failed"));
-        return PM3_ESOFT;
-    }
-
-    PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_mfc_public_keys[i].desc);
-    PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfc_public_keys[i].value);
-    PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
-    PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 32));
-    PrintAndLogEx(SUCCESS, "       Signature verification: " _GREEN_("successful"));
-    return PM3_SUCCESS;
+    int index = originality_check_verify(uid, uidlen, signature, signature_len, PK_MFC);
+    PrintAndLogEx(NORMAL, "");
+    return originality_check_print(signature, signature_len, index);
 }
 
 static int mf_read_uid(uint8_t *uid, int *uidlen, int *nxptype) {
@@ -10018,10 +9976,13 @@ static int CmdHF14AMfISEN(const char *Cmd) {
         uint64_t t1 = msclock();
         uint32_t flags = collect_fm11rf08s_with_data | (collect_fm11rf08s_without_backdoor << 1);
         SendCommandMIX(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, flags, blockn, keytype, key, sizeof(key));
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 1000)) {
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
             if (resp.oldarg[0] != PM3_SUCCESS) {
                 return NONCE_FAIL;
             }
+        } else {
+            PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+            return PM3_ETIMEOUT;
         }
         uint8_t num_sectors = MIFARE_1K_MAXSECTOR + 1;
         iso14a_fm11rf08s_nonces_with_data_t nonces_dump = {0};

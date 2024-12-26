@@ -2681,7 +2681,11 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     }
 
     if (isST) {
-        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf st info") "`");
+        if (card.ats_len > 0) {
+            PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf st25ta info") "`");
+        } else {
+            PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf mfu info") "`");
+        }
     }
 
     if (isEMV) {

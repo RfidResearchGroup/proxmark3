@@ -2081,7 +2081,7 @@
             "command": "hf 15 view",
             "description": "Print a ISO-15693 tag dump file (bin/eml/json)",
             "notes": [
-                "hf 15 view -f hf-iclass-AA162D30F8FF12F1-dump.bin"
+                "hf 15 view -f hf-15-1122334455667788-dump.bin"
             ],
             "offline": true,
             "options": [
@@ -12837,6 +12837,7 @@
                 "trace list -t thinfilm -> interpret as Thinfilm",
                 "trace list -t topaz -> interpret as Topaz",
                 "trace list -t mfp -> interpret as MIFARE Plus",
+                "trace list -t fmcos20 -> interpret as FMCOS 2.0",
                 "",
                 "trace list -t mf -f mfc_default_keys.dic -> use default dictionary file",
                 "trace list -t 14a --frame -> show frame delay times",

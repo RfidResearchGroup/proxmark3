@@ -45,6 +45,7 @@
 #include "generator.h"
 #include "mifare/aiddesfire.h"
 #include "util.h"
+#include "crypto/originality.h"
 
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
@@ -442,61 +443,10 @@ int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, si
         PrintAndLogEx(DEBUG, "SIGNATURE=NULL");
         return PM3_EINVARG;
     }
-    // ref:  MIFARE Desfire Originality Signature Validation
-    // See tools/recover_pk.py to recover Pk from UIDs and signatures
-#define PUBLIC_DESFIRE_ECDA_KEYLEN 57
-    const ecdsa_publickey_t nxp_desfire_public_keys[] = {
-        {"NTAG424DNA, DESFire Ev2", "048A9B380AF2EE1B98DC417FECC263F8449C7625CECE82D9B916C992DA209D68422B81EC20B65A66B5102A61596AF3379200599316A00A1410"},
-        {"NTAG413DNA, DESFire Ev1", "04BB5D514F7050025C7D0F397310360EEC91EAF792E96FC7E0F496CB4E669D414F877B7B27901FE67C2E3B33CD39D1C797715189AC951C2ADD"},
-        {"DESFire Ev2",     "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3A"},
-        {"DESFire Ev3",     "041DB46C145D0A36539C6544BD6D9B0AA62FF91EC48CBC6ABAE36E0089A46F0D08C8A715EA40A63313B92E90DDC1730230E0458A33276FB743"},
-        {"NTAG424DNA, NTAG424DNATT, DESFire Light Ev2", "04B304DC4C615F5326FE9383DDEC9AA892DF3A57FA7FFB3276192BC0EAA252ED45A865E3B093A3D0DCE5BE29E92F1392CE7DE321E3E5C52B3B"},
-        {"DESFire Light",   "040E98E117AAA36457F43173DC920A8757267F44CE4EC5ADD3C54075571AEBBF7B942A9774A1D94AD02572427E5AE0A2DD36591B1FB34FCF3D"},
-        {"MIFARE Plus Ev1", "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"},
-        {"MIFARE Plus Ev2", "04BB49AE4447E6B1B6D21C098C1538B594A11A4A1DBF3D5E673DEACDEB3CC512D1C08AFA1A2768CE20A200BACD2DC7804CD7523A0131ABF607"},
-        {"DESFire Ev2 XL",  "04CD5D45E50B1502F0BA4656FF37669597E7E183251150F9574CC8DA56BF01C7ABE019E29FEA48F9CE22C3EA4029A765E1BC95A89543BAD1BC"},
-        {"MIFARE Plus Troika", "040F732E0EA7DF2B38F791BF89425BF7DCDF3EE4D976669E3831F324FF15751BD52AFF1782F72FF2731EEAD5F63ABE7D126E03C856FFB942AF"},
-    };
 
-
-    uint32_t i;
-    bool is_valid = false;
-
-    for (i = 0; i < ARRAYLEN(nxp_desfire_public_keys); i++) {
-
-        int dl = 0;
-        uint8_t key[PUBLIC_DESFIRE_ECDA_KEYLEN];
-        param_gethex_to_eol(nxp_desfire_public_keys[i].value, 0, key, PUBLIC_DESFIRE_ECDA_KEYLEN, &dl);
-
-        int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP224R1, key, uid, uidlen, signature, signature_len, false);
-        is_valid = (res == 0);
-        if (is_valid)
-            break;
-    }
-//    PrintAndLogEx(NORMAL, "");
-//    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
-    if (is_valid == false || i == ARRAYLEN(nxp_desfire_public_keys)) {
-        PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp224r1");
-        PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 16));
-        PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 16, 16));
-        PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 32, 16));
-        PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 48, signature_len - 48));
-        PrintAndLogEx(SUCCESS, "       Signature verification: " _RED_("failed"));
-        return PM3_ESOFT;
-    }
-
-    PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_desfire_public_keys[i].desc);
-    PrintAndLogEx(INFO, "IC signature public key value: %.32s", nxp_desfire_public_keys[i].value);
-    PrintAndLogEx(INFO, "                             : %.32s", nxp_desfire_public_keys[i].value + 32);
-    PrintAndLogEx(INFO, "                             : %.32s", nxp_desfire_public_keys[i].value + 64);
-    PrintAndLogEx(INFO, "                             : %.32s", nxp_desfire_public_keys[i].value + 96);
-    PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp224r1");
-    PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 16));
-    PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 16, 16));
-    PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 32, 16));
-    PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 48, signature_len - 48));
-    PrintAndLogEx(SUCCESS, "       Signature verification: " _GREEN_("successful"));
-    return PM3_SUCCESS;
+    int index = originality_check_verify(uid, uidlen, signature, signature_len, PK_MFDES);
+    PrintAndLogEx(NORMAL, "");
+    return originality_check_print(signature, signature_len, index);
 }
 
 static void swap24(uint8_t *data) {

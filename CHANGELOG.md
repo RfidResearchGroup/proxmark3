@@ -4,9 +4,13 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Added `hf iclass trbl` to perform tear-off attacks on iClass (@antiklesys)
+- Added support for connection to host device in all Docker envs (@doegox)
+- Changed `hf 15 info` to show all type matches and check ST25TVxC signature (@doegox)
+- Added initial support for ST25TN and its signature verification (@doegox)
+- Changed originality checks handling to refactor code and pk data (@doegox)
 - Changed `uniq.yaml` workflow to be case-insensitive (@iceman1001)
 - Fixed `mem load --mfc` not erasing all SPI flash blocks after extending to 4095 keys (@piotrva)
-- Extended area for Mifare keys in SPI flash to hold 4095 keys (@piotrva)
+- Changed extended area for Mifare keys in SPI flash to hold 4095 keys (@piotrva)
 - Fixed DESFire D40 secure channel crypto (@nvx)
 - Fixed `hf mfp info` fix signature check on 4b UID cards (@doegox)
 - Automatically set maximum read/write block when using predefined types in `hf_mf_ultimatecard` script (@piotrva)

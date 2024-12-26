@@ -76,4 +76,6 @@ bool NestedCheckKey(uint64_t key, AuthData_t *ad, uint8_t *cmd, uint8_t cmdsize,
 bool CheckCrypto1Parity(const uint8_t *cmd_enc, uint8_t cmdsize, uint8_t *cmd, const uint8_t *parity_enc);
 uint64_t GetCrypto1ProbableKey(AuthData_t *ad);
 
+void annotateFMCOS20(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+
 #endif // CMDHFLIST

@@ -35,6 +35,7 @@
 #include "crypto/libpcrypto.h"
 #include "cmdhfmf.h"    // printblock, header
 #include "cmdtrace.h"
+#include "crypto/originality.h"
 
 static const uint8_t mfp_default_key[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 static uint16_t mfp_card_adresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0x9006, 0x9007, 0xA000, 0xA001, 0xA080, 0xA081, 0xC000, 0xC001};
@@ -190,55 +191,9 @@ static nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
 
 // --- GET SIGNATURE
 static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
-
-    // ref:  MIFARE Plus EV1 Originality Signature Validation
-#define PUBLIC_PLUS_ECDA_KEYLEN 57
-    const ecdsa_publickey_t nxp_plus_public_keys[] = {
-        {"MIFARE Plus EV1",  "044409ADC42F91A8394066BA83D872FB1D16803734E911170412DDF8BAD1A4DADFD0416291AFE1C748253925DA39A5F39A1C557FFACD34C62E"},
-        {"MIFARE Plus Ev2", "04BB49AE4447E6B1B6D21C098C1538B594A11A4A1DBF3D5E673DEACDEB3CC512D1C08AFA1A2768CE20A200BACD2DC7804CD7523A0131ABF607"},
-        {"MIFARE Plus Troika", "040F732E0EA7DF2B38F791BF89425BF7DCDF3EE4D976669E3831F324FF15751BD52AFF1782F72FF2731EEAD5F63ABE7D126E03C856FFB942AF"}
-    };
-
-    uint8_t i;
-    bool is_valid = false;
-
-    for (i = 0; i < ARRAYLEN(nxp_plus_public_keys); i++) {
-
-        int dl = 0;
-        uint8_t key[PUBLIC_PLUS_ECDA_KEYLEN];
-        param_gethex_to_eol(nxp_plus_public_keys[i].value, 0, key, PUBLIC_PLUS_ECDA_KEYLEN, &dl);
-
-        int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP224R1, key, uid, uidlen, signature, signature_len, false);
-        is_valid = (res == 0);
-        if (is_valid)
-            break;
-    }
-
+    int index = originality_check_verify(uid, uidlen, signature, signature_len, PK_MFP);
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
-
-    if (is_valid == false || i == ARRAYLEN(nxp_plus_public_keys)) {
-        PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp224r1");
-        PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 16));
-        PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 16, 16));
-        PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 32, 16));
-        PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 48, signature_len - 48));
-        PrintAndLogEx(SUCCESS, "       Signature verification: " _RED_("failed"));
-        return PM3_ESOFT;
-    }
-
-    PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_plus_public_keys[i].desc);
-    PrintAndLogEx(INFO, "IC signature public key value: %.32s", nxp_plus_public_keys[i].value);
-    PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 32);
-    PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 64);
-    PrintAndLogEx(INFO, "                             : %.32s", nxp_plus_public_keys[i].value + 96);
-    PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp224r1");
-    PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 16));
-    PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 16, 16));
-    PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 32, 16));
-    PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 48, signature_len - 48));
-    PrintAndLogEx(SUCCESS, "       Signature verification: " _GREEN_("successful"));
-    return PM3_SUCCESS;
+    return originality_check_print(signature, signature_len, index);
 }
 
 static int get_plus_signature(uint8_t *signature, int *signature_len) {

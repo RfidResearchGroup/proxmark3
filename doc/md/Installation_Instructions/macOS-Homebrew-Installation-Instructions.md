@@ -41,7 +41,7 @@ Alternatively, and only if the issue still persists after following the steps ab
 ## Apple Silicon (M1) Notes
 ^[Top](#top)
 
-Ensure Rosetta 2 is installed as it's currently needed to run `arm-none-eabi-gcc` as it's delivered as a precombiled x86_64 binary.
+Ensure Rosetta 2 is installed as it's currently needed to run `arm-none-eabi-gcc` as it's delivered as a precombiled x86_64 binary. **Note: Starting from v4.19552, it is no longer necessary to install Rosetta 2, Apple Silicons are already supported**
 
 If you see an error like:
 
