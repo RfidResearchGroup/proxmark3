@@ -17,6 +17,7 @@
 //-----------------------------------------------------------------------------
 #include "cmdflashmem.h"
 #include <ctype.h>
+#include <string.h>
 #include "cmdparser.h"         // command_t
 #include "cliparser.h"
 #include "pmflash.h"           // rdv40validation_t
