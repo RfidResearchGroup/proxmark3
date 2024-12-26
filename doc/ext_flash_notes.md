@@ -37,20 +37,20 @@ Therefore a flash address can be interpreted as such:
 Page 0:
 * available for user data
 * to dump it: `mem dump -f page0_dump -o 0 -l 65536`
-* to erase it: `mem wipe p 0`
+* to erase it: `mem wipe -p 0`
 
 Page 1:
 * available for user data
 * to dump it: `mem dump -f page1_dump -o 65536 -l 65536`
-* to erase it: `mem wipe p 1`
+* to erase it: `mem wipe -p 1`
 
 Page 2:
 * available for user data
 * to dump it: `mem dump -f page2_dump -o 131072 -l 65536`
-* to erase it: `mem wipe p 2`
+* to erase it: `mem wipe -p 2`
 
 Page 3:
-* used by Proxmark3 RDV4 specific functions: flash signature and configurations, see below for details
+* used by Proxmark3 RDV4 specific functions: flash signature, see below for details
 * to dump it: `mem dump -f page3_dump -o 196608 -l 65536`
 * to erase it:
   * **Beware** it will erase your flash signature so better to back it up first as you won't be able to regenerate it by yourself!
@@ -61,10 +61,6 @@ Page 3:
 ^[Top](#top)
 
 Page3 is used as follows by the Proxmark3 RDV4 firmware:
-
-* **T55XX_CONFIG**
-  * offset: page 3 sector 13 (0xD) @ 3*0x10000+13*0x1000=0x3D000
-  * length: 1 sector (actually only a few bytes are used to store `t55xx_config` structure)
 
 * **RSA SIGNATURE**, see below for details
   * offset: page 3 sector 15 (0xF) offset 0xF7F @ 3*0x10000+15*0x1000+0xF7F=0x3FF7F  (decimal 262015)

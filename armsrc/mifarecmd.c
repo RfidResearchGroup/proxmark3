@@ -1924,9 +1924,12 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
         if (datain == NULL)
             goto OUT;
 
-        rdv40_spiffs_read_as_filetype(MF_KEYS_FILE, datain, keyCount * MF_KEY_LENGTH, RDV40_SPIFFS_SAFETY_SAFE);
-
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Loaded %u keys from spiffs file: %s", keyCount, MF_KEYS_FILE);
+        if (SPIFFS_OK == rdv40_spiffs_read_as_filetype(MF_KEYS_FILE, datain, keyCount * MF_KEY_LENGTH, RDV40_SPIFFS_SAFETY_SAFE)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Loaded %u keys from spiffs file: %s", keyCount, MF_KEYS_FILE);
+        } else {
+            Dbprintf("Spiffs file: %s cannot be read.", MF_KEYS_FILE);
+            goto OUT;
+        }
     }
 #endif
 

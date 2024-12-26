@@ -325,9 +325,9 @@ void setT55xxConfig(uint8_t arg0, const t55xx_configurations_t *c) {
         return;
     }
 
-    rdv40_spiffs_write(T55XX_CONFIG_FILE, (uint8_t*)&T55xx_Timing, T55XX_CONFIG_LEN, RDV40_SPIFFS_SAFETY_SAFE);
-
-    DbpString("T55XX Config save " _GREEN_("success"));
+    if (SPIFFS_OK == rdv40_spiffs_write(T55XX_CONFIG_FILE, (uint8_t*)&T55xx_Timing, T55XX_CONFIG_LEN, RDV40_SPIFFS_SAFETY_SAFE)) {
+        DbpString("T55XX Config save " _GREEN_("success"));
+    }
 
     BigBuf_free();
 #endif
@@ -348,6 +348,12 @@ void loadT55xxConfig(void) {
     }
     if (size == 0) {
         Dbprintf("Spiffs file: %s does not exists or empty.", T55XX_CONFIG_FILE);
+        BigBuf_free();
+        return;
+    }
+
+    if (SPIFFS_OK != rdv40_spiffs_read(T55XX_CONFIG_FILE, buf, T55XX_CONFIG_LEN, RDV40_SPIFFS_SAFETY_SAFE)) {
+        Dbprintf("Spiffs file: %s cannot be read.", T55XX_CONFIG_FILE);
         BigBuf_free();
         return;
     }
@@ -2148,9 +2154,12 @@ void T55xx_ChkPwds(uint8_t flags, bool ledcontrol) {
     // adjust available pwd_count
     pwd_count = pwd_size_available / T55XX_KEY_LENGTH;
 
-    rdv40_spiffs_read_as_filetype(T55XX_KEYS_FILE, pwds, pwd_size_available, RDV40_SPIFFS_SAFETY_SAFE);
-
-    if (g_dbglevel >= DBG_ERROR) Dbprintf("Loaded %u passwords from spiffs file: %s", pwd_count, T55XX_KEYS_FILE);
+    if (SPIFFS_OK == rdv40_spiffs_read_as_filetype(T55XX_KEYS_FILE, pwds, pwd_size_available, RDV40_SPIFFS_SAFETY_SAFE)) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Loaded %u passwords from spiffs file: %s", pwd_count, T55XX_KEYS_FILE);
+    } else {
+        Dbprintf("Spiffs file: %s cannot be read.", T55XX_KEYS_FILE);
+        goto OUT;
+    }
 
 #endif
 
