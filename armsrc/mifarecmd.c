@@ -1901,9 +1901,13 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
     if (use_flashmem) {
         BigBuf_free();
         uint32_t size = 0;
-        size = size_in_spiffs(MF_KEYS_FILE);
-        if (size <= 0)
+        if (exists_in_spiffs(MF_KEYS_FILE)) {
+            size = size_in_spiffs(MF_KEYS_FILE);
+        }
+        if (size == 0) {
+            Dbprintf("Spiffs file: %s does not exists or empty.", MF_KEYS_FILE);
             goto OUT;
+        }
 
         keyCount = size / MF_KEY_LENGTH;
 
