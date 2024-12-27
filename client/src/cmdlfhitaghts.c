@@ -734,7 +734,7 @@ static int CmdLFHitagSRestore(const char *Cmd) {
     if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(ERROR, "Failed to apply config");
+        PrintAndLogEx(FAILED, "Failed to apply config");
         print_error(resp.reason);
         free(dump);
         return PM3_ESOFT;
