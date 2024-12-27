@@ -661,7 +661,7 @@ static int CmdLFHitagSRestore(const char *Cmd) {
         if (resp.status != PM3_SUCCESS) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(ERROR, "Write failed for page %d", page);
+            PrintAndLogEx(FAILED, "Write failed for page %d", page);
             print_error(resp.reason);
             free(dump);
             return PM3_ESOFT;
