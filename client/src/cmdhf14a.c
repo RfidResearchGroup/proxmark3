@@ -1884,6 +1884,7 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                         printTag("MIFARE DESFire EV2 2K/4K/8K/16K/32K");
                         printTag("MIFARE DESFire EV3 2K/4K/8K");
                         printTag("MIFARE DESFire Light 640B");
+                        printTag("MIFARE Duox");
                         type |= MTDESFIRE;
                     } else {
                         printTag("MIFARE Plus EV1 2K/4K CL2 in SL3");
