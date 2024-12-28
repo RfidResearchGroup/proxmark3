@@ -4,6 +4,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Changed flash-stored key dictionaries (Mifare, iClass, T55XX) and T55XX configurations to SPIFFS files (@piotrva)
+- Changed `lf em 410x sim` to use default gap value of 0 and extended help (@piotrva)
+- Changed `hf 14a info` - now identifies MIAFRE Duox (@iceman1001)
 - Added `hf iclass trbl` to perform tear-off attacks on iClass (@antiklesys)
 - Added support for connection to host device in all Docker envs (@doegox)
 - Changed `hf 15 info` to show all type matches and check ST25TVxC signature (@doegox)
