@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed flash-stored key dictionaries (Mifare, iClass, T55XX) and T55XX configurations to SPIFFS files (@piotrva)
 - Changed `lf em 410x sim` to use default gap value of 0 and extended help (@piotrva)
 - Changed `hf 14a info` - now identifies MIAFRE Duox (@iceman1001)
 - Added `hf iclass trbl` to perform tear-off attacks on iClass (@antiklesys)

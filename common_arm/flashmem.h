@@ -134,7 +134,6 @@ uint16_t Flash_Write(uint32_t address, uint8_t *in, uint16_t len);
 uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len);
 uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len);
 void Flashmem_print_status(void);
-void Flashmem_print_info(void);
 
 typedef struct {
     uint8_t  manufacturer_id;

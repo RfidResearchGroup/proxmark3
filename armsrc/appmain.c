@@ -440,7 +440,41 @@ static void SendStatus(uint32_t wait) {
     ModInfo();
 
 #ifdef WITH_FLASH
-    Flashmem_print_info();
+    DbpString(_CYAN_("Flash memory dictionary loaded"));
+    uint32_t num = 0;
+
+    if (exists_in_spiffs(MF_KEYS_FILE)) {
+        num = size_in_spiffs(MF_KEYS_FILE) / MF_KEY_LENGTH;
+    } else {
+        num = 0;
+    }
+    if (num > 0) {
+        Dbprintf("  Mifare.................. "_YELLOW_("%u")" keys (spiffs: "_GREEN_("%s")")", num, MF_KEYS_FILE);
+    } else {
+        Dbprintf("  Mifare.................. "_RED_("%u")" keys (spiffs: "_RED_("%s")")", num, MF_KEYS_FILE);
+    }
+
+    if (exists_in_spiffs(T55XX_KEYS_FILE)) {
+        num = size_in_spiffs(T55XX_KEYS_FILE) / T55XX_KEY_LENGTH;
+    } else {
+        num = 0;
+    }
+    if (num > 0) {
+        Dbprintf("  T55xx................... "_YELLOW_("%u")" keys (spiffs: "_GREEN_("%s")")", num, T55XX_KEYS_FILE);
+    } else {
+        Dbprintf("  T55xx................... "_RED_("%u")" keys (spiffs: "_RED_("%s")")", num, T55XX_KEYS_FILE);
+    }
+
+    if (exists_in_spiffs(ICLASS_KEYS_FILE)) {
+        num = size_in_spiffs(ICLASS_KEYS_FILE) / ICLASS_KEY_LENGTH;
+    } else {
+        num = 0;
+    }
+    if (num > 0) {
+        Dbprintf("  iClass.................. "_YELLOW_("%u")" keys (spiffs: "_GREEN_("%s")")", num, ICLASS_KEYS_FILE);
+    } else {
+        Dbprintf("  iClass.................. "_RED_("%u")" keys (spiffs: "_RED_("%s")")", num, ICLASS_KEYS_FILE);
+    }
 #endif
     DbpString("");
     reply_ng(CMD_STATUS, PM3_SUCCESS, NULL, 0);
@@ -2748,34 +2782,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 break;
             }
 
-            if (payload->startidx == DEFAULT_T55XX_KEYS_OFFSET_P(spi_flash_pages64k)) {
-                Flash_CheckBusy(BUSY_TIMEOUT);
-                Flash_WriteEnable();
-                Flash_Erase4k(spi_flash_pages64k - 1, 0xC);
-            } else if (payload->startidx ==  DEFAULT_MF_KEYS_OFFSET_P(spi_flash_pages64k)) {
-                Flash_CheckBusy(BUSY_TIMEOUT);
-                Flash_WriteEnable();
-                Flash_Erase4k(spi_flash_pages64k - 1, 0x5);
-                Flash_CheckBusy(BUSY_TIMEOUT);
-                Flash_WriteEnable();
-                Flash_Erase4k(spi_flash_pages64k - 1, 0x6);
-                Flash_CheckBusy(BUSY_TIMEOUT);
-                Flash_WriteEnable();
-                Flash_Erase4k(spi_flash_pages64k - 1, 0x7);
-                Flash_CheckBusy(BUSY_TIMEOUT);
-                Flash_WriteEnable();
-                Flash_Erase4k(spi_flash_pages64k - 1, 0x8);
-                Flash_CheckBusy(BUSY_TIMEOUT);
-                Flash_WriteEnable();
-                Flash_Erase4k(spi_flash_pages64k - 1, 0x9);
-                Flash_CheckBusy(BUSY_TIMEOUT);
-                Flash_WriteEnable();
-                Flash_Erase4k(spi_flash_pages64k - 1, 0xA);
-            } else if (payload->startidx == DEFAULT_ICLASS_KEYS_OFFSET_P(spi_flash_pages64k)) {
-                Flash_CheckBusy(BUSY_TIMEOUT);
-                Flash_WriteEnable();
-                Flash_Erase4k(spi_flash_pages64k - 1, 0xB);
-            } else if (payload->startidx == FLASH_MEM_SIGNATURE_OFFSET_P(spi_flash_pages64k)) {
+            if (payload->startidx == FLASH_MEM_SIGNATURE_OFFSET_P(spi_flash_pages64k)) {
                 Flash_CheckBusy(BUSY_TIMEOUT);
                 Flash_WriteEnable();
                 Flash_Erase4k(spi_flash_pages64k - 1, 0xF);

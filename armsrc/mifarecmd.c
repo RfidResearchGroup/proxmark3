@@ -1900,31 +1900,36 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 #ifdef WITH_FLASH
     if (use_flashmem) {
         BigBuf_free();
-        uint16_t isok = 0;
-        uint8_t size[2] = {0x00, 0x00};
-        isok = Flash_ReadData(DEFAULT_MF_KEYS_OFFSET_P(spi_flash_pages64k), size, 2);
-        if (isok != 2)
+        uint32_t size = 0;
+        if (exists_in_spiffs(MF_KEYS_FILE)) {
+            size = size_in_spiffs(MF_KEYS_FILE);
+        }
+        if (size == 0) {
+            Dbprintf("Spiffs file: %s does not exists or empty.", MF_KEYS_FILE);
             goto OUT;
+        }
 
-        keyCount = size[1] << 8 | size[0];
+        keyCount = size / MF_KEY_LENGTH;
 
         if (keyCount == 0)
             goto OUT;
 
         // limit size of available for keys in bigbuff
         // a key is 6bytes
-        uint16_t key_mem_available = MIN(BigBuf_get_size(), keyCount * 6);
+        uint16_t key_mem_available = MIN(BigBuf_get_size(), keyCount * MF_KEY_LENGTH);
 
-        keyCount = key_mem_available / 6;
+        keyCount = key_mem_available / MF_KEY_LENGTH;
 
         datain = BigBuf_malloc(key_mem_available);
         if (datain == NULL)
             goto OUT;
 
-        isok = Flash_ReadData(DEFAULT_MF_KEYS_OFFSET_P(spi_flash_pages64k) + 2, datain, key_mem_available);
-        if (isok != key_mem_available)
+        if (SPIFFS_OK == rdv40_spiffs_read_as_filetype(MF_KEYS_FILE, datain, keyCount * MF_KEY_LENGTH, RDV40_SPIFFS_SAFETY_SAFE)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Loaded %u keys from spiffs file: %s", keyCount, MF_KEYS_FILE);
+        } else {
+            Dbprintf("Spiffs file: %s cannot be read.", MF_KEYS_FILE);
             goto OUT;
-
+        }
     }
 #endif
 
