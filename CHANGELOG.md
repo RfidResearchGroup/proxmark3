@@ -3,13 +3,17 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed flash-stored key dictionaries (Mifare, iClass, T55XX) and T55XX configurations to SPIFFS files (@piotrva)
+- Changed `lf em 410x sim` to use default gap value of 0 and extended help (@piotrva)
+- Changed `hf 14a info` - now identifies MIAFRE Duox (@iceman1001)
+- Added `hf iclass trbl` to perform tear-off attacks on iClass (@antiklesys)
 - Added support for connection to host device in all Docker envs (@doegox)
 - Changed `hf 15 info` to show all type matches and check ST25TVxC signature (@doegox)
 - Added initial support for ST25TN and its signature verification (@doegox)
 - Changed originality checks handling to refactor code and pk data (@doegox)
 - Changed `uniq.yaml` workflow to be case-insensitive (@iceman1001)
 - Fixed `mem load --mfc` not erasing all SPI flash blocks after extending to 4095 keys (@piotrva)
-- Extended area for Mifare keys in SPI flash to hold 4095 keys (@piotrva)
+- Changed extended area for Mifare keys in SPI flash to hold 4095 keys (@piotrva)
 - Fixed DESFire D40 secure channel crypto (@nvx)
 - Fixed `hf mfp info` fix signature check on 4b UID cards (@doegox)
 - Automatically set maximum read/write block when using predefined types in `hf_mf_ultimatecard` script (@piotrva)

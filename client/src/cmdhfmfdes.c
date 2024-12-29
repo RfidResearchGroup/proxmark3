@@ -148,6 +148,7 @@ typedef enum {
     PLUS_EV2,
     NTAG413DNA,
     NTAG424,
+    DUOX,
 } nxp_cardtype_t;
 
 typedef enum {
@@ -272,6 +273,10 @@ static char *getVersionStr(uint8_t type, uint8_t major, uint8_t minor) {
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("Plus EV1") " )", major, minor);
     else if (type == 0x02 && major == 0x22 && minor == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("Plus EV2") " )", major, minor);
+    else if (type == 0x01 && major == 0xA0 && minor == 0x00)
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DUOX") " )", major, minor);
+    else if ((type & 0x08) == 0x08)
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire Light") " )", major, minor);
     else
         snprintf(retStr, sizeof(buf), "%x.%x ( " _YELLOW_("Unknown") " )", major, minor);
     return buf;
@@ -337,6 +342,10 @@ static nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
     // DESFire EV3
     if (type == 0x01 && major == 0x33 && minor == 0x00)
         return DESFIRE_EV3;
+
+    // Duox
+    if (type == 0x01 && major == 0xA0 && minor == 0x00)
+        return DUOX;
 
     // DESFire Light
     if (type == 0x08 && major == 0x30 && minor == 0x00)
@@ -744,6 +753,8 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         PrintAndLogEx(INFO, "\t2.2 - DESFire Ev2 XL, Originality check, proximity check, EAL5");
     if (major == 3 && minor == 0)
         PrintAndLogEx(INFO, "\t3.0 - DESFire Ev3, Originality check, proximity check, badass EAL6 ?");
+    if (major == 0xA0 && minor == 0)
+        PrintAndLogEx(INFO, "\tx.x - DUOX, Originality check, proximity check, EAL6++");
 
     if (major == 0 && minor == 2)
         PrintAndLogEx(INFO, "\t0.2 - DESFire Light, Originality check, ");
@@ -761,7 +772,8 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     if (cardtype == DESFIRE_EV2 ||  cardtype == DESFIRE_EV2_XL ||
             cardtype == DESFIRE_LIGHT ||
             cardtype == DESFIRE_EV3 ||
-            cardtype == NTAG413DNA) {
+            cardtype == NTAG413DNA || 
+            cardtype == DUOX) {
         // Signature originality check
         uint8_t signature[250] = {0}; // must be 56
         size_t signature_len = 0;
