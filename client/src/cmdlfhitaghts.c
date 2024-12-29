@@ -456,7 +456,7 @@ static int CmdLFHitagSDump(const char *Cmd) {
                   "    - default key 4F4E4D494B52 (ONMIKR)\n\n"
                   "  8268/8310 password mode: \n"
                   "    - default password BBDD3399\n",
-                  "lf hitag hts dump --82xx -k              -> use def pwd\n"
+                  "lf hitag hts dump --82xx                 -> use def pwd\n"
                   "lf hitag hts dump --82xx -k BBDD3399     -> pwd mode\n"
                   "lf hitag hts dump --crypto               -> use def crypto\n"
                   "lf hitag hts dump -k 4F4E4D494B52        -> crypto mode\n"
@@ -621,7 +621,7 @@ static int CmdLFHitagSRestore(const char *Cmd) {
 
     if (bytes_read != mem_size) {
         free(dump);
-        PrintAndLogEx(FAILED, "Wrong length of dump file. Expected %zu bytes, got %zu", mem_size, bytes_read);
+        PrintAndLogEx(FAILED, "Wrong length of dump file. Expected %d bytes, got %zu", mem_size, bytes_read);
         return PM3_EFILE;
     }
 
@@ -682,7 +682,7 @@ static int CmdLFHitagSRestore(const char *Cmd) {
                         dump_bytes[offset + 2], dump_bytes[offset + 3]);
      
 
-                    memcpy(packet.pwd, &dump_bytes[offset], HITAGS_PAGE_SIZE);
+                    memcpy(packet.pwd, &dump_bytes[offset], HITAG_PASSWORD_SIZE);
 
 
                     PrintAndLogEx(SUCCESS, "Using new password for subsequent writes");
@@ -691,12 +691,12 @@ static int CmdLFHitagSRestore(const char *Cmd) {
             case 3:  // crypto mode  
                 if (packet.cmd == HTSF_KEY) {
                     
-                    if (memcmp(packet.key, &dump_bytes[offset - HITAGS_PAGE_SIZE], HITAGS_PAGE_SIZE * 2) == 0) {
+                    if (memcmp(packet.key, &dump_bytes[offset - HITAGS_PAGE_SIZE], HITAG_CRYPTOKEY_SIZE) == 0) {
                         break;
                     }
                     auth_changed = true;
 
-                    memcpy(packet.key, &dump_bytes[offset - HITAGS_PAGE_SIZE], HITAGS_PAGE_SIZE * 2);
+                    memcpy(packet.key, &dump_bytes[offset - HITAGS_PAGE_SIZE], HITAG_CRYPTOKEY_SIZE);
 
                     PrintAndLogEx(NORMAL, "");
                     PrintAndLogEx(WARNING, "New key detected: " _BACK_BLUE_("%02X %02X %02X %02X %02X %02X"),
