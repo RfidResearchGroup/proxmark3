@@ -23,24 +23,25 @@
 
 // RDV40 Section
 // 256kb divided into 4k sectors.
+// +--------+-------------+---------+--------------------------+
+// | Sector | 256kb addr* |  Size   | Description              |
+// +--------+-------------+---------+--------------------------+
+// | N      |   0x3F000   | 1 * 4kb | signature                |
+// | N-1    |   0x3E000   | 1 * 4kb | reserved for future use  |
+// +--------+-------------+---------+--------------------------+
 //
-// 0x3F000 - 1 4kb sector = signature
-// 0x3E000 - 1 4kb sector = settings
-//
+// * For different memory size than 256kb the address is not valid.
+//   Please instead refer to Sector number, where N is the last
+//   4kb secotr of the memory in question.
+
 #ifndef FLASH_MEM_BLOCK_SIZE
 # define FLASH_MEM_BLOCK_SIZE   256
 #endif
 
-#ifndef FLASH_MEM_MAX_SIZE
-# define FLASH_MEM_MAX_SIZE     0x40000  // (262144)
-#endif
 #ifndef FLASH_MEM_MAX_SIZE_P
 # define FLASH_MEM_MAX_SIZE_P(p64k) (1024 * 64 * (p64k))
 #endif
 
-#ifndef FLASH_MEM_MAX_4K_SECTOR
-# define FLASH_MEM_MAX_4K_SECTOR   0x3F000
-#endif
 #ifndef FLASH_MEM_MAX_4K_SECTOR_P
 # define FLASH_MEM_MAX_4K_SECTOR_P(p64k)  (FLASH_MEM_MAX_SIZE_P(p64k) - 4096)
 #endif
@@ -55,10 +56,7 @@
 # define FLASH_MEM_SIGNATURE_LEN 128
 #endif
 
-#ifndef FLASH_MEM_SIGNATURE_OFFSET
 // -1 for historical compatibility with already released Proxmark3 RDV4.0 devices
-# define FLASH_MEM_SIGNATURE_OFFSET (FLASH_MEM_MAX_SIZE - FLASH_MEM_SIGNATURE_LEN - 1)
-#endif
 #ifndef FLASH_MEM_SIGNATURE_OFFSET_P
 # define FLASH_MEM_SIGNATURE_OFFSET_P(p64k) (FLASH_MEM_MAX_SIZE_P(p64k) - FLASH_MEM_SIGNATURE_LEN - 1)
 #endif
