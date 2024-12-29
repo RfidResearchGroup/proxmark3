@@ -283,7 +283,7 @@ static int l_GetFromFlashMemSpiffs(lua_State *L) {
         return returnToLuaWithError(L, "No FLASH MEM support");
     }
 
-    uint32_t start_index = 0, len = 0x40000;  // 256kb FLASH_MEM_MAX_SIZE as default value
+    uint32_t start_index = 0, len = 0x40000;  // 256KB FLASH_MEM_MAX_SIZE as default value
     char destfilename[32] = {0};
     size_t size;
 

@@ -22,17 +22,17 @@
 #include "common.h"
 
 // RDV40 Section
-// 256kb divided into 4k sectors.
+// 256KB divided into 4K sectors.
 // +--------+-------------+---------+--------------------------+
-// | Sector | 256kb addr* |  Size   | Description              |
+// | Sector | 256KB addr* |  Size   | Description              |
 // +--------+-------------+---------+--------------------------+
-// | N      |   0x3F000   | 1 * 4kb | signature                |
-// | N-1    |   0x3E000   | 1 * 4kb | reserved for future use  |
+// | N      |   0x3F000   | 1 * 4KB | signature                |
+// | N-1    |   0x3E000   | 1 * 4KB | reserved for future use  |
 // +--------+-------------+---------+--------------------------+
 //
-// * For different memory size than 256kb the address is not valid.
+// * For different memory size than 256KB the address is not valid.
 //   Please instead refer to Sector number, where N is the last
-//   4kb secotr of the memory in question.
+//   4KB secotr of the memory in question.
 
 #ifndef FLASH_MEM_BLOCK_SIZE
 # define FLASH_MEM_BLOCK_SIZE   256
