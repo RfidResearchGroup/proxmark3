@@ -907,10 +907,10 @@ static int StCheckSig(uint8_t *uid) {
     // add UID (scan, uid)
     memcpy(packet->raw + packet->rawlen, uid, HF15_UID_LENGTH);
     packet->rawlen += HF15_UID_LENGTH;
-    packet->flags = (ISO15_CONNECT| ISO15_READ_RESPONSE | ISO15_NO_DISCONNECT);
+    packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_NO_DISCONNECT);
     uint16_t blkoff = packet->rawlen;
     char signature_hex[65] = {0};
-    for (int j=0; j<17; j++) {
+    for (int j = 0; j < 17; j++) {
         packet->rawlen = blkoff;
         // block no
         packet->raw[packet->rawlen++] = 0x3F + j;
@@ -929,7 +929,7 @@ static int StCheckSig(uint8_t *uid) {
         ISO15_ERROR_HANDLING_RESPONSE
         uint8_t *d = resp.data.asBytes;
         ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
-        if (j==0) {
+        if (j == 0) {
             if (memcmp(d + 1, "K04S", 4) != 0) {
                 // No signature
                 free(packet);

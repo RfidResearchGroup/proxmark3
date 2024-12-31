@@ -275,7 +275,7 @@ int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastCh
         // takes about 97s, still some margin before abort
         // timeout = 180 => ~360s @ Mifare Classic 1k @ ~2300 keys in dict
         // ~2300 keys @ Mifare Classic 1k => ~620s
-        if (timeout > 60*12) {
+        if (timeout > 60 * 12) {
             PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
             return PM3_ETIMEOUT;
         }

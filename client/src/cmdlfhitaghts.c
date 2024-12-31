@@ -357,7 +357,8 @@ static int CmdLFHitagSRead(const char *Cmd) {
 
             // access right
             if (page_addr == HITAGS_UID_PADR) {
-                PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);\
+                PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
+                \
             } else if (packet.cmd == HTSF_82xx && page_addr > 40) {  // using an 82xx (pages>40 are RO)
                 PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
             } else if (page_addr == HITAGS_CONFIG_PADR) {
@@ -615,7 +616,7 @@ static int CmdLFHitagSRestore(const char *Cmd) {
 
     lf_hts_read_response_t *config = (lf_hts_read_response_t *)resp.data.asBytes;
     hitags_config_t tag_config = config->config_page.s;
-    
+
     const int hts_mem_sizes[] = {1, 8, 64, 64};
     int mem_size = hts_mem_sizes[tag_config.MEMT] * HITAGS_PAGE_SIZE;
 
@@ -625,30 +626,30 @@ static int CmdLFHitagSRestore(const char *Cmd) {
         return PM3_EFILE;
     }
 
-    uint8_t* dump_bytes = (uint8_t*)dump;
+    uint8_t *dump_bytes = (uint8_t *)dump;
     bool auth_changed = false;
 
     for (int page = packet.page_count + 1; page < hts_mem_sizes[tag_config.MEMT]; page++) { // skip config page
-        
+
         if (packet.cmd == HTSF_82xx && page > 40) {
-            PrintAndLogEx(NORMAL, "");  
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "Using " _YELLOW_("82xx") ", Pages " _YELLOW_("41-63") " will be skipped");
-            PrintAndLogEx(NORMAL, ""); 
-            break;  
+            PrintAndLogEx(NORMAL, "");
+            break;
         }
 
         size_t offset = page * HITAGS_PAGE_SIZE;
-        
+
         packet.page = page;
         memcpy(packet.data, &dump_bytes[offset], HITAGS_PAGE_SIZE);
-        
-        PrintAndLogEx(INPLACE, " Writing page "_YELLOW_("%d")", data: " _GREEN_("%02X %02X %02X %02X"), page,
-            dump_bytes[offset],
-            dump_bytes[offset + 1],
-            dump_bytes[offset + 2],
-            dump_bytes[offset + 3]);
 
-        
+        PrintAndLogEx(INPLACE, " Writing page "_YELLOW_("%d")", data: " _GREEN_("%02X %02X %02X %02X"), page,
+                      dump_bytes[offset],
+                      dump_bytes[offset + 1],
+                      dump_bytes[offset + 2],
+                      dump_bytes[offset + 3]);
+
+
         clearCommandBuffer();
         SendCommandNG(CMD_LF_HITAGS_WRITE, (uint8_t *)&packet, sizeof(packet));
 
@@ -671,26 +672,26 @@ static int CmdLFHitagSRestore(const char *Cmd) {
             case 2: // auth first page
                 if (packet.cmd == HTSF_82xx) {
                     if (memcmp(packet.pwd, &dump_bytes[offset], HITAGS_PAGE_SIZE) == 0) {
-                        break;  
+                        break;
                     }
                     auth_changed = true;
- 
+
                     PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(WARNING, "Password Changed! Old: " _BACK_BLUE_("%02X %02X %02X %02X") ", New: "_BACK_BLUE_("%02X %02X %02X %02X"), 
-                        packet.pwd[0], packet.pwd[1], packet.pwd[2], packet.pwd[3],
-                        dump_bytes[offset], dump_bytes[offset + 1], 
-                        dump_bytes[offset + 2], dump_bytes[offset + 3]);
-     
+                    PrintAndLogEx(WARNING, "Password Changed! Old: " _BACK_BLUE_("%02X %02X %02X %02X") ", New: "_BACK_BLUE_("%02X %02X %02X %02X"),
+                                  packet.pwd[0], packet.pwd[1], packet.pwd[2], packet.pwd[3],
+                                  dump_bytes[offset], dump_bytes[offset + 1],
+                                  dump_bytes[offset + 2], dump_bytes[offset + 3]);
+
 
                     memcpy(packet.pwd, &dump_bytes[offset], HITAG_PASSWORD_SIZE);
 
 
                     PrintAndLogEx(SUCCESS, "Using new password for subsequent writes");
                 }
-            break;
-            case 3:  // crypto mode  
+                break;
+            case 3:  // crypto mode
                 if (packet.cmd == HTSF_KEY) {
-                    
+
                     if (memcmp(packet.key, &dump_bytes[offset - HITAGS_PAGE_SIZE], HITAG_CRYPTOKEY_SIZE) == 0) {
                         break;
                     }
@@ -700,28 +701,28 @@ static int CmdLFHitagSRestore(const char *Cmd) {
 
                     PrintAndLogEx(NORMAL, "");
                     PrintAndLogEx(WARNING, "New key detected: " _BACK_BLUE_("%02X %02X %02X %02X %02X %02X"),
-                        packet.key[0], packet.key[1], packet.key[2], 
-                        packet.key[3], packet.key[4], packet.key[5]);
-                        
+                                  packet.key[0], packet.key[1], packet.key[2],
+                                  packet.key[3], packet.key[4], packet.key[5]);
+
                     PrintAndLogEx(SUCCESS, "Using new key for subsequent writes");
                 }
-            break;
+                break;
         }
     }
-    
+
     // restore config page at end
-    size_t config_offset = HITAGS_PAGE_SIZE * 1; // page 1  
+    size_t config_offset = HITAGS_PAGE_SIZE * 1; // page 1
     packet.page = HITAGS_CONFIG_PADR;
     memcpy(packet.data, &dump_bytes[HITAGS_PAGE_SIZE], HITAGS_PAGE_SIZE);
 
 
     PrintAndLogEx(SUCCESS, "Applying "_YELLOW_("restored config: ")  _GREEN_("%02X %02X %02X %02X"),
-            dump_bytes[config_offset],
-            dump_bytes[config_offset + 1],
-            dump_bytes[config_offset + 2],
-            dump_bytes[config_offset + 3]);
+                  dump_bytes[config_offset],
+                  dump_bytes[config_offset + 1],
+                  dump_bytes[config_offset + 2],
+                  dump_bytes[config_offset + 3]);
 
-        
+
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HITAGS_WRITE, (uint8_t *)&packet, sizeof(packet));
 
@@ -741,15 +742,15 @@ static int CmdLFHitagSRestore(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Write process completed");
-    
+
     if (auth_changed) {
         if (packet.cmd == HTSF_82xx) {
-            PrintAndLogEx(SUCCESS, "New Password: " _BACK_BLUE_("%02X %02X %02X %02X"), 
-                packet.pwd[0], packet.pwd[1], packet.pwd[2], packet.pwd[3]);
+            PrintAndLogEx(SUCCESS, "New Password: " _BACK_BLUE_("%02X %02X %02X %02X"),
+                          packet.pwd[0], packet.pwd[1], packet.pwd[2], packet.pwd[3]);
         } else if (packet.cmd == HTSF_KEY) {
             PrintAndLogEx(SUCCESS, "New Key: " _BACK_BLUE_("%02X %02X %02X %02X %02X %02X"),
-                packet.key[0], packet.key[1], packet.key[2],
-                packet.key[3], packet.key[4], packet.key[5]);
+                          packet.key[0], packet.key[1], packet.key[2],
+                          packet.key[3], packet.key[4], packet.key[5]);
         }
     }
 
@@ -929,7 +930,7 @@ static command_t CommandTable[] = {
     {"reader",      CmdLFHitagSReader, IfPm3Hitag,      "Act like a Hitag S reader"},
     {"rdbl",        CmdLFHitagSRead,   IfPm3Hitag,      "Read Hitag S page"},
     {"dump",        CmdLFHitagSDump,   IfPm3Hitag,      "Dump Hitag S pages to a file"},
-    {"restore",     CmdLFHitagSRestore,IfPm3Hitag,      "Restore Hitag S memory from dump file"},
+    {"restore",     CmdLFHitagSRestore, IfPm3Hitag,      "Restore Hitag S memory from dump file"},
     {"wrbl",        CmdLFHitagSWrite,  IfPm3Hitag,      "Write Hitag S page"},
     {"-----------", CmdHelp,           IfPm3Hitag,      "----------------------- " _CYAN_("Simulation") " -----------------------"},
     {"sim",         CmdLFHitagSSim,    IfPm3Hitag,      "Simulate Hitag S transponder"},

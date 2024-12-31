@@ -325,7 +325,7 @@ void setT55xxConfig(uint8_t arg0, const t55xx_configurations_t *c) {
         return;
     }
 
-    if (SPIFFS_OK == rdv40_spiffs_write(T55XX_CONFIG_FILE, (uint8_t*)&T55xx_Timing, T55XX_CONFIG_LEN, RDV40_SPIFFS_SAFETY_SAFE)) {
+    if (SPIFFS_OK == rdv40_spiffs_write(T55XX_CONFIG_FILE, (uint8_t *)&T55xx_Timing, T55XX_CONFIG_LEN, RDV40_SPIFFS_SAFETY_SAFE)) {
         DbpString("T55XX Config save " _GREEN_("success"));
     }
 
@@ -2133,7 +2133,7 @@ void T55xx_ChkPwds(uint8_t flags, bool ledcontrol) {
 
     BigBuf_Clear_EM();
     uint32_t size = 0;
-    
+
     if (exists_in_spiffs(T55XX_KEYS_FILE)) {
         size = size_in_spiffs(T55XX_KEYS_FILE);
     }

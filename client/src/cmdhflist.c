@@ -2440,9 +2440,9 @@ void annotateFMCOS20(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             snprintf(exp, size, "APP UNBLOCK");
             break;
         case FMCOS20_CMD_APP_BLOCK:
-            if (cmd[pos+1] == 0)
+            if (cmd[pos + 1] == 0)
                 snprintf(exp, size, "APP BLOCK (TEMP)");
-            else if(cmd[pos+1] == 1)
+            else if (cmd[pos + 1] == 1)
                 snprintf(exp, size, "APP BLOCK (PERM)");
             else
                 snprintf(exp, size, "APP BLOCK");
@@ -2451,34 +2451,34 @@ void annotateFMCOS20(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             snprintf(exp, size, "PIN UNBLOCK");
             break;
         case FMCOS20_CMD_CHANGE_PIN:
-            if (cmd[pos+1] == 0)
+            if (cmd[pos + 1] == 0)
                 snprintf(exp, size, "RESET PIN");
-            else if (cmd[pos+1] == 1)
+            else if (cmd[pos + 1] == 1)
                 snprintf(exp, size, "CHANGE PIN");
             break;
         case FMCOS20_CMD_INITIALIZE_TRANSACTION:
-            if (cmd[pos+1] == 0)
+            if (cmd[pos + 1] == 0)
                 snprintf(exp, size, "INIT. TRANSACTION (CREDIT)");
-            else if (cmd[pos+1] == 1)
+            else if (cmd[pos + 1] == 1)
                 snprintf(exp, size, "INIT. TRANSACTION (PURCHASE)");
-            else if (cmd[pos+1] == 2)
+            else if (cmd[pos + 1] == 2)
                 snprintf(exp, size, "INIT. TRANSACTION (CASH WITHDRAW)");
-            else if (cmd[pos+1] == 3)
+            else if (cmd[pos + 1] == 3)
                 snprintf(exp, size, "INIT. TRANSACTION (CAPP PURCHASE)");
-            else if (cmd[pos+1] == 4)
+            else if (cmd[pos + 1] == 4)
                 snprintf(exp, size, "INIT. TRANSACTION (OVERDRAFT)");
-            else if (cmd[pos+1] == 5)
+            else if (cmd[pos + 1] == 5)
                 snprintf(exp, size, "INIT. TRANSACTION (WITHDRAW)");
             break;
         case FMCOS20_CMD_CREDIT_LOAD:
             snprintf(exp, size, "CREDIT LOAD");
             break;
         case FMCOS20_CMD_PURCHASE:
-            if(cmd[pos+1] == 0)
+            if (cmd[pos + 1] == 0)
                 snprintf(exp, size, "PURCHASE");
-            else if (cmd[pos+1] == 1)
+            else if (cmd[pos + 1] == 1)
                 snprintf(exp, size, "CAPP PURCHASE / CASH WITHDRAW");
-            else if (cmd[pos+1] == 3)
+            else if (cmd[pos + 1] == 3)
                 snprintf(exp, size, "WITHDRAW");
             break;
         case FMCOS20_CMD_UPDATE_OVERDRAW_LIMIT:
@@ -2491,15 +2491,15 @@ void annotateFMCOS20(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             snprintf(exp, size, "GET BALANCE");
             break;
         case FMCOS20_CMD_INITIALIZE_GREY_LOCK_UNLOCK:
-            if (cmd[pos+1] == 8)
+            if (cmd[pos + 1] == 8)
                 snprintf(exp, size, "INIT. GRAY LOCK");
-            else if (cmd[pos+1] == 9)
+            else if (cmd[pos + 1] == 9)
                 snprintf(exp, size, "INIT. GRAY UNLOCK");
             break;
         case FMCOS20_CMD_GREY_LOCK_UNLOCK:
-            if (cmd[pos+1] == 8)
+            if (cmd[pos + 1] == 8)
                 snprintf(exp, size, "GRAY LOCK");
-            else if (cmd[pos+1] == 9)
+            else if (cmd[pos + 1] == 9)
                 snprintf(exp, size, "GRAY UNLOCK");
             break;
         case FMCOS20_CMD_DEBIT_UNLOCK:

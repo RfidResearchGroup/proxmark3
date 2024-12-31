@@ -2032,9 +2032,9 @@ uint64_t GetHF14AMfU_Type(void) {
             } else {
                 // data[3] == KID == 0x05 Key ID
                 // data[2] == REV == 0x13 Product version
-                if ((data[1]==0x90) && (data[0]==0x90)) {
+                if ((data[1] == 0x90) && (data[0] == 0x90)) {
                     tagtype = MFU_TT_ST25TN01K;
-                } else if ((data[1]==0x90) && (data[0]==0x91)) {
+                } else if ((data[1] == 0x90) && (data[0] == 0x91)) {
                     tagtype = MFU_TT_ST25TN512;
                 }
             }
@@ -2431,7 +2431,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         PrintAndLogEx(INFO, "     Product Version: %02x", data[2]);
         PrintAndLogEx(INFO, "        Product Code: %02x%02x", data[1], data[0]);
         uint8_t signature[32] = {0};
-        for (int blkoff=0; blkoff<8; blkoff++) {
+        for (int blkoff = 0; blkoff < 8; blkoff++) {
             status = ul_read(0x34 + blkoff, signature + (blkoff * 4), 4);
             if (status <= 1) {
                 PrintAndLogEx(ERR, "Error: tag didn't answer to READ SYSBLOCK");

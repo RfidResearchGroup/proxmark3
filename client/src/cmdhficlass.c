@@ -3015,12 +3015,12 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     int tearoff_start = arg_get_int_def(ctx, 12, 100);
     int tearoff_end = arg_get_int_def(ctx, 13, 200);
 
-    if(tearoff_end <= tearoff_start){
+    if (tearoff_end <= tearoff_start) {
         PrintAndLogEx(ERR, "Tearoff end delay must be bigger than the start delay.");
         return PM3_EINVARG;
     }
 
-    if(tearoff_start < 0 || tearoff_end <= 0){
+    if (tearoff_start < 0 || tearoff_end <= 0) {
         PrintAndLogEx(ERR, "Tearoff start/end delays should be bigger than 0.");
         return PM3_EINVARG;
     }
@@ -3041,22 +3041,22 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     int isok = 0;
     tearoff_params_t params;
     bool read_ok = false;
-    while(tearoff_start < tearoff_end && !read_ok){
+    while (tearoff_start < tearoff_end && !read_ok) {
         //perform read here, repeat if failed or 00s
 
         uint8_t data_read_orig[8] = {0};
         bool first_read = false;
         bool reread = false;
-        while(!first_read){
+        while (!first_read) {
             int res_orig = iclass_read_block_ex(key, blockno, 0x88, elite, rawkey, use_replay, verbose, auth, shallow_mod, data_read_orig, false);
-            if (res_orig == PM3_SUCCESS && !reread){
-                if (memcmp(data_read_orig, zeros, 8) == 0){
+            if (res_orig == PM3_SUCCESS && !reread) {
+                if (memcmp(data_read_orig, zeros, 8) == 0) {
                     reread = true;
-                }else{
+                } else {
                     first_read = true;
                     reread = false;
                 }
-            } else if (res_orig == PM3_SUCCESS && reread){
+            } else if (res_orig == PM3_SUCCESS && reread) {
                 first_read = true;
                 reread = false;
             }
@@ -3082,36 +3082,36 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         first_read = false;
         reread = false;
         bool decrease = false;
-        while(!first_read){
+        while (!first_read) {
             int res = iclass_read_block_ex(key, blockno, 0x88, elite, rawkey, use_replay, verbose, auth, shallow_mod, data_read, false);
-            if (res == PM3_SUCCESS && !reread){
-                if (memcmp(data_read, zeros, 8) == 0){
+            if (res == PM3_SUCCESS && !reread) {
+                if (memcmp(data_read, zeros, 8) == 0) {
                     reread = true;
-                }else{
+                } else {
                     first_read = true;
                     reread = false;
                 }
-            } else if (res == PM3_SUCCESS && reread){
+            } else if (res == PM3_SUCCESS && reread) {
                 first_read = true;
                 reread = false;
-            } else if (res != PM3_SUCCESS){
+            } else if (res != PM3_SUCCESS) {
                 decrease = true;
             }
         }
-        if (decrease && tearoff_start > 0){ //if there was an error reading repeat the tearoff with the same delay
+        if (decrease && tearoff_start > 0) { //if there was an error reading repeat the tearoff with the same delay
             tearoff_start--;
         }
         bool tear_success = true;
-        for (int i=0; i<PICOPASS_BLOCK_SIZE; i++){
-            if(data[i] != data_read[i]){
+        for (int i = 0; i < PICOPASS_BLOCK_SIZE; i++) {
+            if (data[i] != data_read[i]) {
                 tear_success = false;
             }
         }
-        if(tear_success){ //tearoff succeeded
+        if (tear_success) { //tearoff succeeded
             read_ok = true;
             PrintAndLogEx(SUCCESS, _GREEN_("Tear-off Success!"));
             PrintAndLogEx(INFO, "Read: %s", sprint_hex(data_read, sizeof(data_read)));
-        }else{ //tearoff did not succeed
+        } else { //tearoff did not succeed
             PrintAndLogEx(FAILED, _RED_("Tear-off Failed!"));
             tearoff_start++;
         }
