@@ -19,7 +19,7 @@ External 256kbytes flash is a unique feature of the RDV4 edition.
 
 Flash memory is
 
-* 256KB (0x40000= 262144)
+* 256KB (0x40000 = 262144)
 * divided into 4 pages of 64KB (0x10000 = 65536)
 * 4 pages divided into 16 sectors of 4KB (0x1000 = 4096), so last sector is at 0x3F000
 
@@ -30,6 +30,8 @@ Therefore a flash address can be interpreted as such:
    ^ sector           ^ sector 0xF
     ^^^ offset         ^^^ offset 0xF7F
 ```
+
+Please note that for other flash memory sizes than 256KB a "Page 3" will be the last page of the memory, and address offsets would be dependant on the memory size.
 
 ## Layout
 ^[Top](#top)
@@ -49,7 +51,7 @@ Page 2:
 * to dump it: `mem dump -f page2_dump -o 131072 -l 65536`
 * to erase it: `mem wipe -p 2`
 
-Page 3:
+Page 3 (or the last page for memories other than 256KB):
 * used by Proxmark3 RDV4 specific functions: flash signature, see below for details
 * to dump it: `mem dump -f page3_dump -o 196608 -l 65536`
 * to erase it:
@@ -60,12 +62,18 @@ Page 3:
 ## Page3 Layout
 ^[Top](#top)
 
-Page3 is used as follows by the Proxmark3 RDV4 firmware:
+Page3 (or the last page for memories other than 256KB) is used as follows by the Proxmark3 RDV4 firmware:
 
 * **RSA SIGNATURE**, see below for details
   * offset: page 3 sector 15 (0xF) offset 0xF7F @ 3*0x10000+15*0x1000+0xF7F=0x3FF7F  (decimal 262015)
   * length: 128 bytes
   * offset should have been 0x3FF80 but historically it's one byte off and therefore the last byte of the flash is unused
+
+* **Reserved for future use**
+  * offset: page 3 sector 14 (0xE)
+
+* **SPIFFS sectors**
+  * offset: page 3 sectors 13..0 (0xD..0x0)
 
 ## RSA signature
 ^[Top](#top)
