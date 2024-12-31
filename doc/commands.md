@@ -1084,6 +1084,7 @@ Check column "offline" for their availability.
 |`lf hitag hts rdbl      `|N       |`Read Hitag S page`
 |`lf hitag hts dump      `|N       |`Dump Hitag S pages to a file`
 |`lf hitag hts wrbl      `|N       |`Write Hitag S page`
+|`lf hitag hts restore   `|N       |`Restore Hitag S memory from a dump file`
 |`lf hitag hts sim       `|N       |`Simulate Hitag S transponder`
 
 

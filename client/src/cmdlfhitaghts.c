@@ -357,6 +357,8 @@ static int CmdLFHitagSRead(const char *Cmd) {
 
             // access right
             if (page_addr == HITAGS_UID_PADR) {
+                PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);\
+            } else if (packet.cmd == HTSF_82xx && page_addr > 40) {  // using an 82xx (pages>40 are RO)
                 PrintAndLogEx(NORMAL, _RED_("RO  ")NOLF);
             } else if (page_addr == HITAGS_CONFIG_PADR) {
                 if (card->config_page.s.LCON)
@@ -454,6 +456,7 @@ static int CmdLFHitagSDump(const char *Cmd) {
                   "    - default key 4F4E4D494B52 (ONMIKR)\n\n"
                   "  8268/8310 password mode: \n"
                   "    - default password BBDD3399\n",
+                  "lf hitag hts dump --82xx                 -> use def pwd\n"
                   "lf hitag hts dump --82xx -k BBDD3399     -> pwd mode\n"
                   "lf hitag hts dump --crypto               -> use def crypto\n"
                   "lf hitag hts dump -k 4F4E4D494B52        -> crypto mode\n"
@@ -534,6 +537,225 @@ static int CmdLFHitagSDump(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdLFHitagSRestore(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf hitag hts restore",
+                  "Restore a dump file onto Hitag S tag\n"
+                  " Crypto mode: \n"
+                  "    - key format ISK high + ISK low\n"
+                  "    - default key 4F4E4D494B52 (ONMIKR)\n\n"
+                  "  8268/8310 password mode: \n"
+                  "    - default password BBDD3399\n",
+                  "lf hitag hts restore -f myfile --82xx                 -> use def pwd\n"
+                  "lf hitag hts restore -f myfile --82xx -k BBDD3399     -> pwd mode\n"
+                  "lf hitag hts restore -f myfile --crypto               -> use def crypto\n"
+                  "lf hitag hts restore -f myfile -k 4F4E4D494B52        -> crypto mode\n"
+                  "lf hitag hts restore -f myfile --nrar 0102030411223344\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("8", "82xx", "8268/8310 mode"),
+        arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
+        arg_lit0(NULL, "crypto", "crypto mode"),
+        arg_str0("k", "key", "<hex>", "pwd or key, 4 or 6 hex bytes"),
+        arg_int0("m", "mode", "<dec>", "response protocol mode. 0 (Standard 00110), 1 (Advanced 11000), 2 (Advanced 11001), 3 (Fast Advanced 11010) (def: 3)"),
+        arg_str0("f", "file", "<fn>", "specify file name"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    lf_hitag_data_t packet;
+    memset(&packet, 0, sizeof(packet));
+
+    if (process_hitags_common_args(ctx, &packet) < 0) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    if (fnlen == 0) {
+        PrintAndLogEx(ERR, "Must specify a file");
+        return PM3_EINVARG;
+    }
+
+    // read dump file
+    uint32_t *dump = NULL;
+    size_t bytes_read = 0;
+    if (pm3_load_dump(filename, (void **)&dump, &bytes_read, jsfHitag) != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    // read config to determine memory size and other stuff
+    packet.page = HITAGS_CONFIG_PADR;
+    packet.page_count = 1;
+
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_HITAGS_READ, (uint8_t *)&packet, sizeof(packet));
+
+    PacketResponseNG resp;
+
+    if (WaitForResponseTimeout(CMD_LF_HITAGS_READ, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        free(dump);
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        print_error(resp.reason);
+        free(dump);
+        return PM3_ESOFT;
+    }
+
+    lf_hts_read_response_t *config = (lf_hts_read_response_t *)resp.data.asBytes;
+    hitags_config_t tag_config = config->config_page.s;
+    
+    const int hts_mem_sizes[] = {1, 8, 64, 64};
+    int mem_size = hts_mem_sizes[tag_config.MEMT] * HITAGS_PAGE_SIZE;
+
+    if (bytes_read != mem_size) {
+        free(dump);
+        PrintAndLogEx(FAILED, "Wrong length of dump file. Expected %d bytes, got %zu", mem_size, bytes_read);
+        return PM3_EFILE;
+    }
+
+    uint8_t* dump_bytes = (uint8_t*)dump;
+    bool auth_changed = false;
+
+    for (int page = packet.page_count + 1; page < hts_mem_sizes[tag_config.MEMT]; page++) { // skip config page
+        
+        if (packet.cmd == HTSF_82xx && page > 40) {
+            PrintAndLogEx(NORMAL, "");  
+            PrintAndLogEx(WARNING, "Using " _YELLOW_("82xx") ", Pages " _YELLOW_("41-63") " will be skipped");
+            PrintAndLogEx(NORMAL, ""); 
+            break;  
+        }
+
+        size_t offset = page * HITAGS_PAGE_SIZE;
+        
+        packet.page = page;
+        memcpy(packet.data, &dump_bytes[offset], HITAGS_PAGE_SIZE);
+        
+        PrintAndLogEx(INPLACE, " Writing page "_YELLOW_("%d")", data: " _GREEN_("%02X %02X %02X %02X"), page,
+            dump_bytes[offset],
+            dump_bytes[offset + 1],
+            dump_bytes[offset + 2],
+            dump_bytes[offset + 3]);
+
+        
+        clearCommandBuffer();
+        SendCommandNG(CMD_LF_HITAGS_WRITE, (uint8_t *)&packet, sizeof(packet));
+
+        if (WaitForResponseTimeout(CMD_LF_HITAGS_WRITE, &resp, 2000) == false) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            free(dump);
+            return PM3_ETIMEOUT;
+        }
+
+        if (resp.status != PM3_SUCCESS) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(FAILED, "Write failed for page %d", page);
+            print_error(resp.reason);
+            free(dump);
+            return PM3_ESOFT;
+        }
+
+        switch (page) {
+            case 2: // auth first page
+                if (packet.cmd == HTSF_82xx) {
+                    if (memcmp(packet.pwd, &dump_bytes[offset], HITAGS_PAGE_SIZE) == 0) {
+                        break;  
+                    }
+                    auth_changed = true;
+ 
+                    PrintAndLogEx(NORMAL, "");
+                    PrintAndLogEx(WARNING, "Password Changed! Old: " _BACK_BLUE_("%02X %02X %02X %02X") ", New: "_BACK_BLUE_("%02X %02X %02X %02X"), 
+                        packet.pwd[0], packet.pwd[1], packet.pwd[2], packet.pwd[3],
+                        dump_bytes[offset], dump_bytes[offset + 1], 
+                        dump_bytes[offset + 2], dump_bytes[offset + 3]);
+     
+
+                    memcpy(packet.pwd, &dump_bytes[offset], HITAG_PASSWORD_SIZE);
+
+
+                    PrintAndLogEx(SUCCESS, "Using new password for subsequent writes");
+                }
+            break;
+            case 3:  // crypto mode  
+                if (packet.cmd == HTSF_KEY) {
+                    
+                    if (memcmp(packet.key, &dump_bytes[offset - HITAGS_PAGE_SIZE], HITAG_CRYPTOKEY_SIZE) == 0) {
+                        break;
+                    }
+                    auth_changed = true;
+
+                    memcpy(packet.key, &dump_bytes[offset - HITAGS_PAGE_SIZE], HITAG_CRYPTOKEY_SIZE);
+
+                    PrintAndLogEx(NORMAL, "");
+                    PrintAndLogEx(WARNING, "New key detected: " _BACK_BLUE_("%02X %02X %02X %02X %02X %02X"),
+                        packet.key[0], packet.key[1], packet.key[2], 
+                        packet.key[3], packet.key[4], packet.key[5]);
+                        
+                    PrintAndLogEx(SUCCESS, "Using new key for subsequent writes");
+                }
+            break;
+        }
+    }
+    
+    // restore config page at end
+    size_t config_offset = HITAGS_PAGE_SIZE * 1; // page 1  
+    packet.page = HITAGS_CONFIG_PADR;
+    memcpy(packet.data, &dump_bytes[HITAGS_PAGE_SIZE], HITAGS_PAGE_SIZE);
+
+
+    PrintAndLogEx(SUCCESS, "Applying "_YELLOW_("restored config: ")  _GREEN_("%02X %02X %02X %02X"),
+            dump_bytes[config_offset],
+            dump_bytes[config_offset + 1],
+            dump_bytes[config_offset + 2],
+            dump_bytes[config_offset + 3]);
+
+        
+    clearCommandBuffer();
+    SendCommandNG(CMD_LF_HITAGS_WRITE, (uint8_t *)&packet, sizeof(packet));
+
+    if (WaitForResponseTimeout(CMD_LF_HITAGS_WRITE, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        free(dump);
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(FAILED, "Failed to apply config");
+        print_error(resp.reason);
+        free(dump);
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "Write process completed");
+    
+    if (auth_changed) {
+        if (packet.cmd == HTSF_82xx) {
+            PrintAndLogEx(SUCCESS, "New Password: " _BACK_BLUE_("%02X %02X %02X %02X"), 
+                packet.pwd[0], packet.pwd[1], packet.pwd[2], packet.pwd[3]);
+        } else if (packet.cmd == HTSF_KEY) {
+            PrintAndLogEx(SUCCESS, "New Key: " _BACK_BLUE_("%02X %02X %02X %02X %02X %02X"),
+                packet.key[0], packet.key[1], packet.key[2],
+                packet.key[3], packet.key[4], packet.key[5]);
+        }
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int CmdLFHitagSWrite(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag hts wrbl",
@@ -544,6 +766,7 @@ static int CmdLFHitagSWrite(const char *Cmd) {
                   "  8268/8310 password mode: \n"
                   "    - default password BBDD3399\n",
                   "  lf hitag hts wrbl -p 6 -d 01020304                         -> Hitag S/8211, plain mode\n"
+                  "  lf hitag hts wrbl -p 6 -d 01020304 --82xx                  -> use def pwd\n"
                   "  lf hitag hts wrbl -p 6 -d 01020304 --82xx -k BBDD3399      -> 8268/8310, password mode\n"
                   "  lf hitag hts wrbl -p 6 -d 01020304 --nrar 0102030411223344 -> Hitag S, challenge mode\n"
                   "  lf hitag hts wrbl -p 6 -d 01020304 --crypto                -> Hitag S, crypto mode, default key\n"
@@ -705,7 +928,8 @@ static command_t CommandTable[] = {
     {"-----------", CmdHelp,           IfPm3Hitag,      "----------------------- " _CYAN_("General") " ------------------------"},
     {"reader",      CmdLFHitagSReader, IfPm3Hitag,      "Act like a Hitag S reader"},
     {"rdbl",        CmdLFHitagSRead,   IfPm3Hitag,      "Read Hitag S page"},
-    {"dump",        CmdLFHitagSDump,     IfPm3Hitag,      "Dump Hitag S pages to a file"},
+    {"dump",        CmdLFHitagSDump,   IfPm3Hitag,      "Dump Hitag S pages to a file"},
+    {"restore",     CmdLFHitagSRestore,IfPm3Hitag,      "Restore Hitag S memory from dump file"},
     {"wrbl",        CmdLFHitagSWrite,  IfPm3Hitag,      "Write Hitag S page"},
     {"-----------", CmdHelp,           IfPm3Hitag,      "----------------------- " _CYAN_("Simulation") " -----------------------"},
     {"sim",         CmdLFHitagSSim,    IfPm3Hitag,      "Simulate Hitag S transponder"},
