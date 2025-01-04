@@ -18,4 +18,6 @@
 
 #include "common.h"
 
+int sam_seos_get_pacs(void);
+
 #endif
