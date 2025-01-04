@@ -16,6 +16,7 @@
 // Routines to support Picopass <-> SAM communication
 //-----------------------------------------------------------------------------
 #include "sam_picopass.h"
+#include "sam_common.h"
 #include "iclass.h"
 #include "crc16.h"
 #include "proxmark3_arm.h"
@@ -30,66 +31,79 @@
 #include "optimized_cipher.h"
 #include "fpgaloader.h"
 
-static int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen) {
 
-    StartTicks();
+/**
+ * @brief Sets the card detected status for the SAM (Secure Access Module).
+ *
+ * This function informs that a card has been detected by the reader and
+ * initializes SAM communication with the card.
+ *
+ * @param card_select Pointer to the descriptor of the detected card.
+ * @return Status code indicating success or failure of the operation.
+ */
+static int sam_set_card_detected(picopass_hdr_t * card_select){
+    int res = PM3_SUCCESS;
+    if (g_dbglevel >= DBG_DEBUG)
+        DbpString("start sam_set_card_detected");
 
-    bool res = I2C_BufferWrite(data, n, I2C_DEVICE_CMD_SEND_T0, I2C_DEVICE_ADDRESS_MAIN);
-    if (res == false) {
-        DbpString("failed to send to SIM CARD");
+    uint8_t  * response = BigBuf_malloc(ISO7816_MAX_FRAME);
+    uint16_t response_len = ISO7816_MAX_FRAME;
+
+    // a0 12
+    //    ad 10
+    //       a0 0e
+    //          80 02
+    //             00 04 <- Picopass
+    //          81 08
+    //             9b fc a4 00 fb ff 12 e0  <- CSN
+
+    uint8_t payload[] = {
+        0xa0, 18, // <- SAM command
+         0xad, 16, // <- set detected card
+          0xa0, 4+10,
+           0x80, 2, // <- protocol
+            0x00, 0x04, // <- Picopass
+           0x81, 8, // <- CSN
+            card_select->csn[0], card_select->csn[1], card_select->csn[2], card_select->csn[3],
+            card_select->csn[4], card_select->csn[5], card_select->csn[6], card_select->csn[7]
+    };
+    uint16_t payload_len = sizeof(payload);
+
+    sam_send_payload(
+        0x44, 0x0a, 0x44,
+        payload,
+        &payload_len,
+        response,
+        &response_len
+    );
+
+    // resp:
+    // c1 64 00 00 00
+    //    bd 02 <- response
+    //     8a 00 <- empty response (accepted)
+    // 90 00
+    
+    if(response[5] != 0xbd){
+        if (g_dbglevel >= DBG_ERROR)
+            Dbprintf("Invalid SAM response");
+        goto error;
+    }else{
+        // uint8_t * sam_response_an = sam_find_asn1_node(response + 5, 0x8a);
+        // if(sam_response_an == NULL){
+        //     if (g_dbglevel >= DBG_ERROR)
+        //         Dbprintf("Invalid SAM response");
+        //     goto error;
+        // }
         goto out;
     }
+    error:
+    res = PM3_ESOFT;
 
-    *resplen = ISO7816_MAX_FRAME;
+    out:
+    BigBuf_free();
 
-    res = sc_rx_bytes(resp, resplen, SIM_WAIT_DELAY);
-    if (res == false) {
-        DbpString("failed to receive from SIM CARD");
-        goto out;
-    }
-
-    if (*resplen < 2) {
-        DbpString("received too few bytes from SIM CARD");
-        res = false;
-        goto out;
-    }
-
-    uint16_t more_len = 0;
-
-    if (resp[*resplen - 2] == 0x61 || resp[*resplen - 2] == 0x9F) {
-        more_len = resp[*resplen - 1];
-    } else {
-        // we done, return
-        goto out;
-    }
-
-    // Don't discard data we already received except the SW code.
-    // If we only received 1 byte, this is the echo of INS, we discard it.
-    *resplen -= 2;
-    if (*resplen == 1) {
-        *resplen = 0;
-    }
-
-    uint8_t cmd_getresp[] = {0x00, ISO7816_GET_RESPONSE, 0x00, 0x00, more_len};
-
-    res = I2C_BufferWrite(cmd_getresp, sizeof(cmd_getresp), I2C_DEVICE_CMD_SEND_T0, I2C_DEVICE_ADDRESS_MAIN);
-    if (res == false) {
-        DbpString("failed to send to SIM CARD 2");
-        goto out;
-    }
-
-    more_len = 255 - *resplen;
-
-    res = sc_rx_bytes(resp + *resplen, &more_len, SIM_WAIT_DELAY);
-    if (res == false) {
-        DbpString("failed to receive from SIM CARD 2");
-        goto out;
-    }
-
-    *resplen += more_len;
-
-out:
-    StopTicks();
+    if (g_dbglevel >= DBG_DEBUG)
+        DbpString("end sam_set_card_detected");
     return res;
 }
 
@@ -218,23 +232,19 @@ int sam_picopass_get_pacs(void) {
     uint8_t *sam_apdu = BigBuf_calloc(ISO7816_MAX_FRAME);
 
     // -----------------------------------------------------------------------------
-    // first
-    // a0 da 02 63 1a 44 0a 44 00 00 00 a0 12 ad 10 a0 0e 80 02 00 04 81 08 9b fc a4 00 fb ff 12 e0
-    hexstr_to_byte_array("a0da02631a440a44000000a012ad10a00e800200048108", sam_apdu, &sam_len);
-    memcpy(sam_apdu + sam_len, hdr.csn, sizeof(hdr.csn));
-    sam_len += sizeof(hdr.csn);
-
-    if (sam_rxtx(sam_apdu, sam_len, resp, &resp_len) == false) {
-        res = PM3_ECARDEXCHANGE;
-        goto out;
-    }
-    print_dbg("-- 1", resp, resp_len);
+    // first - set detected card (0xAD)
+    switch_clock_to_ticks();
+    sam_set_card_detected(&hdr);
 
     // -----------------------------------------------------------------------------
-    // second
-    // a0 da 02 63 0d 44 0a 44 00 00 00 a0 05 a1 03 80 01 04
-    hexstr_to_byte_array("a0da02630d440a44000000a005a103800104", sam_apdu, &sam_len);
-    if (sam_rxtx(sam_apdu, sam_len, resp, &resp_len) == false) {
+    // second - get PACS (0xA1)
+
+    // a0 05
+    //    a1 03 
+    //       80 01
+    //          04
+    hexstr_to_byte_array("a005a103800104", sam_apdu, &sam_len);
+    if(sam_send_payload(0x44, 0x0a, 0x44, sam_apdu, &sam_len, resp, &resp_len) != PM3_SUCCESS) {
         res = PM3_ECARDEXCHANGE;
         goto out;
     }
@@ -245,7 +255,7 @@ int sam_picopass_get_pacs(void) {
     // Tag|c00a140a000000a110a10e8004 0c05de64 8102 0004 820201f4
 
     // -----------------------------------------------------------------------------
-    // third   AIA block 5
+    // third   AIA block 5 (emulated tag <-> SAM exchange starts here)
     // a0da02631c140a00000000bd14a012a010800a ffffff0006fffffff88e 81020000
     //  picopass  legacy is fixed.  wants AIA and crc. ff ff ff ff ff ff ff ff ea f5
     //  picpoasss SE                                   ff ff ff 00 06 ff ff ff f8 8e
@@ -300,7 +310,7 @@ int sam_picopass_get_pacs(void) {
     }
 
     // start ssp clock again...
-    StartCountSspClk();
+    switch_clock_to_countsspclk();
 
     // NOW we auth against tag
     uint8_t cmd_check[9] = { ICLASS_CMD_CHECK };
@@ -325,6 +335,7 @@ int sam_picopass_get_pacs(void) {
     hexstr_to_byte_array("A0DA026316140A00000000BD0EA00CA00A8004311E32E981020000", sam_apdu, &sam_len);
     memcpy(sam_apdu + 19, mac, sizeof(mac));
 
+    switch_clock_to_ticks();
     if (sam_rxtx(sam_apdu, sam_len, resp, &resp_len) == false) {
         res = PM3_ECARDEXCHANGE;
         goto out;
@@ -355,7 +366,7 @@ int sam_picopass_get_pacs(void) {
     // c1 61 c1 00 00 a1 10 a1 0e 80 04 0c 06 45 56 81 02 00 04 82 02 01 f4 90 00
 
     // read block 6
-    StartCountSspClk();
+    switch_clock_to_countsspclk();
     start_time = GetCountSspClk();
     iclass_send_as_reader(resp + 11, 4, &start_time, &eof_time, shallow_mod);
 
@@ -373,6 +384,7 @@ int sam_picopass_get_pacs(void) {
     hexstr_to_byte_array("A0DA02631C140A00000000BD14A012A010800A030303030003E017432381020000", sam_apdu, &sam_len);
     memcpy(sam_apdu + 19, resp, resp_len);
 
+    switch_clock_to_ticks();
     if (sam_rxtx(sam_apdu, sam_len, resp, &resp_len) == false) {
         res = PM3_ECARDEXCHANGE;
         goto out;
@@ -382,7 +394,7 @@ int sam_picopass_get_pacs(void) {
     // c161c10000a110a10e8004 0606455681020004820201f49000
 
     // read the credential blocks
-    StartCountSspClk();
+    switch_clock_to_countsspclk();
     start_time = GetCountSspClk();
     iclass_send_as_reader(resp + 11, 4, &start_time, &eof_time, shallow_mod);
 
@@ -400,6 +412,7 @@ int sam_picopass_get_pacs(void) {
     hexstr_to_byte_array("A0DA026334140A00000000BD2CA02AA0288022030303030003E017769CB4A198E0DEC82AD4C8211F9968712BE7393CF8E71D7E804C81020000", sam_apdu, &sam_len);
     memcpy(sam_apdu + 19, resp, resp_len);
 
+    switch_clock_to_ticks();
     if (sam_rxtx(sam_apdu, sam_len, resp, &resp_len) == false) {
         res = PM3_ECARDEXCHANGE;
         goto out;
@@ -409,7 +422,13 @@ int sam_picopass_get_pacs(void) {
 
     // -----------------------------------------------------------------------------
     // TEN  ask for PACS data
-    // A0DA02630C440A00000000BD04A0028200
+    // A0 DA 02 63 0C
+    // 44 0A 00 00 00 00
+    // BD 04
+    //    A0 02
+    //       82 00
+
+    // (emulated tag <-> SAM exchange ends here)
     hexstr_to_byte_array("A0DA02630C440A00000000BD04A0028200", sam_apdu, &sam_len);
     memcpy(sam_apdu + 19, resp, resp_len);
 
@@ -424,7 +443,12 @@ int sam_picopass_get_pacs(void) {
         goto out;
     }
 
-    // c164000000bd098a07 030506951f9a00 9000
+    // resp:
+    // c1 64 00 00 00
+    // bd 09
+    //    8a 07
+    //       03 05 06 95 1f 9a 00 <- decoded PACS data
+    // 90 00
     uint8_t *pacs = BigBuf_calloc(resp[8]);
     memcpy(pacs, resp + 9, resp[8]);
 
@@ -439,6 +463,7 @@ out:
 
 off:
     switch_off();
+    StopTicks();
     BigBuf_free();
     return res;
 }
