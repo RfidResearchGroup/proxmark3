@@ -2454,6 +2454,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         arg_lit0("a",   NULL,             "Input key A (def)"),
         arg_lit0("b",   NULL,             "Input key B"),
         arg_str0("f", "file",    "<fn>",  "filename of dictionary"),
+        arg_str0("o", NULL,  "<fn>",  "filename suffix for dump and key files"),
         arg_lit0(NULL,  "slow",            "Slower acquisition (required by some non standard cards)"),
         arg_lit0("l",  "legacy",          "legacy mode (use the slow `hf mf chk`)"),
         arg_lit0("v",  "verbose",         "verbose output"),
@@ -2501,29 +2502,34 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    bool slow = arg_get_lit(ctx, 6);
-    bool legacy_mfchk = arg_get_lit(ctx, 7);
-    bool verbose = arg_get_lit(ctx, 8);
+    int outfnlen = 0;
+    char outfilename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)outfilename, FILE_PATH_SIZE, &outfnlen);
 
-    bool no_save = arg_get_lit(ctx, 9);
 
-    bool m0 = arg_get_lit(ctx, 10);
-    bool m1 = arg_get_lit(ctx, 11);
-    bool m2 = arg_get_lit(ctx, 12);
-    bool m4 = arg_get_lit(ctx, 13);
+    bool slow = arg_get_lit(ctx, 7);
+    bool legacy_mfchk = arg_get_lit(ctx, 8);
+    bool verbose = arg_get_lit(ctx, 9);
 
-    bool in = arg_get_lit(ctx, 14);
+    bool no_save = arg_get_lit(ctx, 10);
+
+    bool m0 = arg_get_lit(ctx, 11);
+    bool m1 = arg_get_lit(ctx, 12);
+    bool m2 = arg_get_lit(ctx, 13);
+    bool m4 = arg_get_lit(ctx, 14);
+
+    bool in = arg_get_lit(ctx, 15);
 #if defined(COMPILER_HAS_SIMD_X86)
-    bool im = arg_get_lit(ctx, 15);
-    bool is = arg_get_lit(ctx, 16);
-    bool ia = arg_get_lit(ctx, 17);
-    bool i2 = arg_get_lit(ctx, 18);
+    bool im = arg_get_lit(ctx, 16);
+    bool is = arg_get_lit(ctx, 17);
+    bool ia = arg_get_lit(ctx, 18);
+    bool i2 = arg_get_lit(ctx, 19);
 #endif
 #if defined(COMPILER_HAS_SIMD_AVX512)
-    bool i5 = arg_get_lit(ctx, 19);
+    bool i5 = arg_get_lit(ctx, 20);
 #endif
 #if defined(COMPILER_HAS_SIMD_NEON)
-    bool ie = arg_get_lit(ctx, 15);
+    bool ie = arg_get_lit(ctx, 16);
 #endif
 
     CLIParserFree(ctx);
@@ -2691,7 +2697,13 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     }
 
     // read uid to generate a filename for the key file
-    char *fptr = GenerateFilename("hf-mf-", "-key.bin");
+    char suffix[FILE_PATH_SIZE];
+    if (outfnlen) {
+        snprintf(suffix, sizeof(suffix), "-key-%s.bin", outfilename);
+    } else {
+        snprintf(suffix, sizeof(suffix), "-key.bin");
+    }
+    char *fptr = GenerateFilename("hf-mf-", suffix);
 
     // check if tag doesn't have static nonce
     int has_staticnonce = detect_classic_static_nonce();
@@ -3219,7 +3231,13 @@ all_found:
     }
 
     free(fptr);
-    fptr = GenerateFilename("hf-mf-", "-dump");
+    
+    if (outfnlen) {
+        snprintf(suffix, sizeof(suffix), "-dump-%s", outfilename);
+    } else {
+        snprintf(suffix, sizeof(suffix), "-dump");
+    }
+    fptr = GenerateFilename("hf-mf-", suffix);
     if (fptr == NULL) {
         free(dump);
         free(e_sector);
