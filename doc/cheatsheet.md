@@ -294,7 +294,7 @@ Options:
 -a                             Input key A (def)                                                                
 -b                             Input key B                                                                      
 -f, --file <fn>                filename of dictionary                                                           
--o, --output <fn>              filename suffix for dump and key files
+-o <fn>                        filename suffix for dump and key files
 -s, --slow                     Slower acquisition (required by some non standard cards)                         
 -l, --legacy                   legacy mode (use the slow `hf mf chk`)                                           
 -v, --verbose                  verbose output (statistics)                                                      
