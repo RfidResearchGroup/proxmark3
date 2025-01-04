@@ -305,7 +305,7 @@ uint32_t GetTicks(void) {
     do {
         hi = AT91C_BASE_TC1->TC_CV;
         lo = AT91C_BASE_TC0->TC_CV;
-    } while (hi != AT91C_BASE_TC1->TC_CV);
+     } while (hi != AT91C_BASE_TC1->TC_CV);
 
     return (hi << 16) | lo;
 }
@@ -336,4 +336,5 @@ void WaitUS(uint32_t us) {
 void StopTicks(void) {
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS;
 }
