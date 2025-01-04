@@ -2454,7 +2454,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         arg_lit0("a",   NULL,             "Input key A (def)"),
         arg_lit0("b",   NULL,             "Input key B"),
         arg_str0("f", "file",    "<fn>",  "filename of dictionary"),
-        arg_str0("o", "output",  "<fn>",  "filename suffix for dump and key files"),
+        arg_str0("o", NULL,  "<fn>",  "filename suffix for dump and key files"),
         arg_lit0(NULL,  "slow",            "Slower acquisition (required by some non standard cards)"),
         arg_lit0("l",  "legacy",          "legacy mode (use the slow `hf mf chk`)"),
         arg_lit0("v",  "verbose",         "verbose output"),
