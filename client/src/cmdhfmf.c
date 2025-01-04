@@ -2698,7 +2698,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     // read uid to generate a filename for the key file
     char suffix[FILE_PATH_SIZE];
-    if (outfilename[0] != '\0') {
+    if (outfnlen) {
         snprintf(suffix, sizeof(suffix), "-key-%s.bin", outfilename);
     } else {
         snprintf(suffix, sizeof(suffix), "-key.bin");
@@ -3232,7 +3232,7 @@ all_found:
 
     free(fptr);
     
-    if (outfilename[0] != '\0') {
+    if (outfnlen) {
         snprintf(suffix, sizeof(suffix), "-dump-%s", outfilename);
     } else {
         snprintf(suffix, sizeof(suffix), "-dump");
