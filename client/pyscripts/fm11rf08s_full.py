@@ -14,7 +14,7 @@ import json
 from fm11rf08s_recovery import recovery
 
 author = "@csBlueChip"
-script_ver = "1.2.0"
+script_ver = "1.4.0"
 
 # Copyright @csBlueChip
 
@@ -33,7 +33,7 @@ script_ver = "1.2.0"
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # The original version of this script can be found at:
-# https://github.com/csBlueChip/Proxmark_Stuff/tree/main/MiFare_Docs/Fudan_RF08(S)/PM3_Script
+# https://github.com/csBlueChip/Proxmark_Stuff/tree/main/MiFare_Docs/Fudan_RF08S/PM3_Script
 # The original version is released with an MIT Licence.
 # Or please reach out to me [BlueChip] personally for alternative licenses.
 
@@ -117,7 +117,7 @@ globals:
     args = parseCli()
 
     # No logfile name yet
-    lprint("Fudan FM11RF08[S] full card recovery")
+    lprint("Fudan FM11RF08S full card recovery")
     lprint("\nDump folder... " + color(f"{dpath}", fg="yellow"))
 
     # FIXME: script is announced as for RF08 and for RF08S but it comprises RF32N key
@@ -204,7 +204,7 @@ def checkVer():
 
 def parseCli():
     """Parse the CLi arguments"""
-    parser = argparse.ArgumentParser(description='Full recovery of Fudan FM11RF08* cards.')
+    parser = argparse.ArgumentParser(description='Full recovery of Fudan FM11RF08S cards.')
 
     parser.add_argument('-n', '--nokeys',   action='store_true', help='extract data even if keys are missing')
     parser.add_argument('-r', '--recover',  action='store_true', help='run key recovery script if required')
@@ -268,7 +268,7 @@ def getUIDfromBlock0(blk0):
 def decodeBlock0(blk0):
     """Extract data from block 0"""
     lprint()
-    lprint("             UID         BCC         ++----- RF08 ID -----++")
+    lprint("             UID         BCC         ++---- RF08* ID -----++")
     lprint("             !           !  SAK      !!                   !!")
     lprint("             !           !  !  ATQA  !!     Fudan Sig     !!")
     lprint("             !---------. !. !. !---. VV .---------------. VV")
@@ -294,10 +294,13 @@ def decodeBlock0(blk0):
 
     hash = blk0[27:44]                           # Fudan hash "99 AA BB CC DD EE"
 
+    is08S = False
+
     type = f"[{fida:02X}:{fidb:02X}]"            # type/name
     if fidb == 0x90:
         if fida == 0x01 or fida == 0x03 or fida == 0x04:
             type += " - Fudan FM11RF08S"
+            is08S = True
 
     elif fidb == 0x1D:
         if fida == 0x01 or fida == 0x02 or fida == 0x03:
@@ -335,6 +338,11 @@ def decodeBlock0(blk0):
     lprint(f"  ATQA     : {atqa:04X}")   # show ATQA
     lprint(f"  Fudan ID : {type}")       # show type
     lprint(f"  Fudan Sig: {hash}")       # show ?Partial HMAC?
+
+    if not is08S:
+        lprint("\n  This script is only for the RF08S cards")
+        lprint("  Other cards can be cracked with `hf mf autopwn`")
+        sys.exit(13)
 
 
 def fudanValidate(blk0, live=False):
