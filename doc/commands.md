@@ -402,6 +402,7 @@ Check column "offline" for their availability.
 |`hf iclass view         `|Y       |`Display content from tag dump file`
 |`hf iclass wrbl         `|N       |`Write Picopass / iCLASS block`
 |`hf iclass creditepurse `|N       |`Credit epurse value`
+|`hf iclass trbl         `|N       |`Performs tearoff attack on iClass block`
 |`hf iclass chk          `|N       |`Check keys`
 |`hf iclass loclass      `|Y       |`Use loclass to perform bruteforce reader attack`
 |`hf iclass lookup       `|Y       |`Uses authentication trace to check for key in dictionary file`
@@ -1083,8 +1084,8 @@ Check column "offline" for their availability.
 |`lf hitag hts reader    `|N       |`Act like a Hitag S reader`
 |`lf hitag hts rdbl      `|N       |`Read Hitag S page`
 |`lf hitag hts dump      `|N       |`Dump Hitag S pages to a file`
+|`lf hitag hts restore   `|N       |`Restore Hitag S memory from dump file`
 |`lf hitag hts wrbl      `|N       |`Write Hitag S page`
-|`lf hitag hts restore   `|N       |`Restore Hitag S memory from a dump file`
 |`lf hitag hts sim       `|N       |`Simulate Hitag S transponder`
 
 

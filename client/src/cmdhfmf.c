@@ -2439,7 +2439,10 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     CLIParserInit(&ctx, "hf mf autopwn",
                   "This command automates the key recovery process on MIFARE Classic cards.\n"
                   "It uses the fchk, chk, darkside, nested, hardnested and staticnested to recover keys.\n"
-                  "If all keys are found, it try dumping card content both to file and emulator memory.",
+                  "If all keys are found, it try dumping card content both to file and emulator memory.\n"
+                  "\n"
+                  "default file name template is `hf-mf-<uid>-<dump|key>.`\n"
+                  "using suffix the template becomes `hf-mf-<uid>-<dump|key>-<suffix>.` \n",
                   "hf mf autopwn\n"
                   "hf mf autopwn -s 0 -a -k FFFFFFFFFFFF     --> target MFC 1K card, Sector 0 with known key A 'FFFFFFFFFFFF'\n"
                   "hf mf autopwn --1k -f mfc_default_keys    --> target MFC 1K card, default dictionary\n"
@@ -2449,15 +2452,15 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("k",  "key",    "<hex>", "Known key, 12 hex bytes"),
-        arg_int0("s",  "sector", "<dec>", "Input sector number"),
-        arg_lit0("a",   NULL,             "Input key A (def)"),
-        arg_lit0("b",   NULL,             "Input key B"),
-        arg_str0("f", "file",    "<fn>",  "filename of dictionary"),
-        arg_str0("o", NULL,  "<fn>",  "filename suffix for dump and key files"),
-        arg_lit0(NULL,  "slow",            "Slower acquisition (required by some non standard cards)"),
-        arg_lit0("l",  "legacy",          "legacy mode (use the slow `hf mf chk`)"),
-        arg_lit0("v",  "verbose",         "verbose output"),
+        arg_strx0("k", "key",    "<hex>",  "Known key, 12 hex bytes"),
+        arg_int0("s",  "sector", "<dec>",  "Input sector number"),
+        arg_lit0("a",   NULL,              "Input key A (def)"),
+        arg_lit0("b",   NULL,              "Input key B"),
+        arg_str0("f",  "file",    "<fn>",  "filename of dictionary"),
+        arg_str0(NULL, "suffix",  "<txt>", "Add this suffix to generated files"),
+        arg_lit0(NULL, "slow",             "Slower acquisition (required by some non standard cards)"),
+        arg_lit0("l",  "legacy",           "legacy mode (use the slow `hf mf chk`)"),
+        arg_lit0("v",  "verbose",          "verbose output"),
 
         arg_lit0(NULL, "ns", "No save to file"),
 
@@ -2503,8 +2506,8 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     int outfnlen = 0;
-    char outfilename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)outfilename, FILE_PATH_SIZE, &outfnlen);
+    char outfilename[127] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)outfilename, 127, &outfnlen);
 
 
     bool slow = arg_get_lit(ctx, 7);
@@ -2699,7 +2702,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // read uid to generate a filename for the key file
     char suffix[FILE_PATH_SIZE];
     if (outfnlen) {
-        snprintf(suffix, sizeof(suffix), "-key-%s.bin", outfilename);
+        snprintf(suffix, sizeof(suffix) - strlen(outfilename), "-key-%s.bin", outfilename);
     } else {
         snprintf(suffix, sizeof(suffix), "-key.bin");
     }
@@ -3231,7 +3234,7 @@ all_found:
     }
 
     free(fptr);
-    
+
     if (outfnlen) {
         snprintf(suffix, sizeof(suffix), "-dump-%s", outfilename);
     } else {

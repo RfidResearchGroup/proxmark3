@@ -772,7 +772,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     if (cardtype == DESFIRE_EV2 ||  cardtype == DESFIRE_EV2_XL ||
             cardtype == DESFIRE_LIGHT ||
             cardtype == DESFIRE_EV3 ||
-            cardtype == NTAG413DNA || 
+            cardtype == NTAG413DNA ||
             cardtype == DUOX) {
         // Signature originality check
         uint8_t signature[250] = {0}; // must be 56

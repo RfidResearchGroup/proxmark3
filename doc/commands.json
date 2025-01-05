@@ -3684,6 +3684,32 @@
             ],
             "usage": "hf iclass sniff [-hj]"
         },
+        "hf iclass trbl": {
+            "command": "hf iclass trbl",
+            "description": "Tear off an iCLASS tag block",
+            "notes": [
+                "hf iclass trbl --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B --tdb 100 --tde 150",
+                "hf iclass trbl --blk 10 -d AAAAAAAAAAAAAAAA --ki 0 --tdb 100 --tde 150"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --key <hex> Access key as 8 hex bytes",
+                "--ki <dec> Key index to select key from memory 'hf iclass managekeys'",
+                "--blk <dec> block number",
+                "-d, --data <hex> data to write as 8 hex bytes",
+                "-m, --mac <hex> replay mac data (4 hex bytes)",
+                "--credit key is assumed to be the credit key",
+                "--elite elite computations applied to key",
+                "--raw no computations applied to key",
+                "--nr replay of NR/MAC",
+                "-v, --verbose verbose output",
+                "--shallow use shallow (ASK) reader modulation instead of OOK",
+                "--tdb <dec> tearoff delay start in ms",
+                "--tde <dec> tearoff delay end in ms"
+            ],
+            "usage": "hf iclass trbl [-hv] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow] --tdb <dec> --tde <dec>"
+        },
         "hf iclass unhash": {
             "command": "hf iclass unhash",
             "description": "Reverses the hash0 function used generate iclass diversified keys after DES encryption, Function returns the DES crypted CSN. Next step bruteforcing.",
@@ -4314,7 +4340,7 @@
         },
         "hf mf autopwn": {
             "command": "hf mf autopwn",
-            "description": "This command automates the key recovery process on MIFARE Classic cards. It uses the fchk, chk, darkside, nested, hardnested and staticnested to recover keys. If all keys are found, it try dumping card content both to file and emulator memory.",
+            "description": "This command automates the key recovery process on MIFARE Classic cards. It uses the fchk, chk, darkside, nested, hardnested and staticnested to recover keys. If all keys are found, it try dumping card content both to file and emulator memory. default file name template is `hf-mf-<uid>-<dump|key>.` using suffix the template becomes `hf-mf-<uid>-<dump|key>-<suffix>.`",
             "notes": [
                 "hf mf autopwn",
                 "hf mf autopwn -s 0 -a -k FFFFFFFFFFFF -> target MFC 1K card, Sector 0 with known key A 'FFFFFFFFFFFF'",
@@ -4330,6 +4356,7 @@
                 "-a Input key A (def)",
                 "-b Input key B",
                 "-f, --file <fn> filename of dictionary",
+                "--suffix <txt> Add this suffix to generated files",
                 "--slow Slower acquisition (required by some non standard cards)",
                 "-l, --legacy legacy mode (use the slow `hf mf chk`)",
                 "-v, --verbose verbose output",
@@ -4345,7 +4372,7 @@
                 "--i2 AVX2",
                 "--i5 AVX512"
             ],
-            "usage": "hf mf autopwn [-hablv] [-k <hex>]... [-s <dec>] [-f <fn>] [--slow] [--ns] [--mini] [--1k] [--2k] [--4k] [--in] [--im] [--is] [--ia] [--i2] [--i5]"
+            "usage": "hf mf autopwn [-hablv] [-k <hex>]... [-s <dec>] [-f <fn>] [--suffix <txt>] [--slow] [--ns] [--mini] [--1k] [--2k] [--4k] [--in] [--im] [--is] [--ia] [--i2] [--i5]"
         },
         "hf mf brute": {
             "command": "hf mf brute",
@@ -8709,18 +8736,18 @@
         },
         "lf em 410x sim": {
             "command": "lf em 410x sim",
-            "description": "Enables simulation of EM 410x card. Simulation runs until the button is pressed or another USB command is issued.",
+            "description": "Enables simulation of EM 410x card. Simulation runs until the button is pressed or another USB command is issued. Most common readers expects the code to be sent in loop without a break (i.e. --gap 0). For other, more advanced readers there might be a need to set a non-zero gap value.",
             "notes": [
                 "lf em 410x sim --id 0F0368568B",
                 "lf em 410x sim --id 0F0368568B --clk 32",
-                "lf em 410x sim --id 0F0368568B --gap 0"
+                "lf em 410x sim --id 0F0368568B --gap 20"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "--clk <dec> <32|64> clock (default 64)",
                 "--id <hex> EM Tag ID number (5 hex bytes)",
-                "--gap <dec> gap (0's) between ID repeats (default 20)"
+                "--gap <dec> gap (0's) between ID repeats (default 0)"
             ],
             "usage": "lf em 410x sim [-h] [--clk <dec>] --id <hex> [--gap <dec>]"
         },
@@ -9820,6 +9847,7 @@
             "command": "lf hitag hts dump",
             "description": "Read all Hitag S memory and save to file Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR) 8268/8310 password mode: - default password BBDD3399",
             "notes": [
+                "lf hitag hts dump --82xx -> use def pwd",
                 "lf hitag hts dump --82xx -k BBDD3399 -> pwd mode",
                 "lf hitag hts dump --crypto -> use def crypto",
                 "lf hitag hts dump -k 4F4E4D494B52 -> crypto mode",
@@ -9837,27 +9865,6 @@
                 "--ns no save to file"
             ],
             "usage": "lf hitag hts dump [-h8] [--nrar <hex>] [--crypto] [-k <hex>] [-m <dec>] [-f <fn>] [--ns]"
-        },
-        "lf hitag hts restore": {
-            "command": "lf hitag hts restore",
-            "description": "Restore a dump file onto Hitag S tag Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR) 8268/8310 password mode: - default password BBDD3399",
-            "notes": [
-                "lf hitag hts restore -f myfile --82xx -k BBDD3399 -> pwd mode",
-                "lf hitag hts restore -f myfile --crypto -> use def crypto",
-                "lf hitag hts restore -f myfile -k 4F4E4D494B52 -> crypto mode",
-                "lf hitag hts restore -f myfile --nrar 0102030411223344"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-8, --82xx 8268/8310 mode",
-                "--nrar <hex> nonce / answer writer, 8 hex bytes",
-                "--crypto crypto mode",
-                "-k, --key <hex> pwd or key, 4 or 6 hex bytes",
-                "-m, --mode <dec> response protocol mode. 0 (Standard 00110), 1 (Advanced 11000), 2 (Advanced 11001), 3 (Fast Advanced 11010) (def: 3)",
-                "-f, --file <fn> specify file name"
-            ],
-            "usage": "lf hitag hts restore [-h8] [--nrar <hex>] [--crypto] [-k <hex>] [-m <dec>] [-f <fn>]"
         },
         "lf hitag hts help": {
             "command": "lf hitag hts help",
@@ -9917,6 +9924,28 @@
             ],
             "usage": "lf hitag hts reader [-h@]"
         },
+        "lf hitag hts restore": {
+            "command": "lf hitag hts restore",
+            "description": "Restore a dump file onto Hitag S tag Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR) 8268/8310 password mode: - default password BBDD3399",
+            "notes": [
+                "lf hitag hts restore -f myfile --82xx -> use def pwd",
+                "lf hitag hts restore -f myfile --82xx -k BBDD3399 -> pwd mode",
+                "lf hitag hts restore -f myfile --crypto -> use def crypto",
+                "lf hitag hts restore -f myfile -k 4F4E4D494B52 -> crypto mode",
+                "lf hitag hts restore -f myfile --nrar 0102030411223344"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-8, --82xx 8268/8310 mode",
+                "--nrar <hex> nonce / answer writer, 8 hex bytes",
+                "--crypto crypto mode",
+                "-k, --key <hex> pwd or key, 4 or 6 hex bytes",
+                "-m, --mode <dec> response protocol mode. 0 (Standard 00110), 1 (Advanced 11000), 2 (Advanced 11001), 3 (Fast Advanced 11010) (def: 3)",
+                "-f, --file <fn> specify file name"
+            ],
+            "usage": "lf hitag hts restore [-h8] [--nrar <hex>] [--crypto] [-k <hex>] [-m <dec>] [-f <fn>]"
+        },
         "lf hitag hts sim": {
             "command": "lf hitag hts sim",
             "description": "Simulate Hitag S transponder You need to `lf hitag hts eload` first",
@@ -9936,6 +9965,7 @@
             "description": "Write a page in Hitag S memory. Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR) 8268/8310 password mode: - default password BBDD3399",
             "notes": [
                 "lf hitag hts wrbl -p 6 -d 01020304 -> Hitag S/8211, plain mode",
+                "lf hitag hts wrbl -p 6 -d 01020304 --82xx -> use def pwd",
                 "lf hitag hts wrbl -p 6 -d 01020304 --82xx -k BBDD3399 -> 8268/8310, password mode",
                 "lf hitag hts wrbl -p 6 -d 01020304 --nrar 0102030411223344 -> Hitag S, challenge mode",
                 "lf hitag hts wrbl -p 6 -d 01020304 --crypto -> Hitag S, crypto mode, default key",
@@ -11819,7 +11849,7 @@
         },
         "mem load": {
             "command": "mem load",
-            "description": "Loads binary file into flash memory on device Warning: mem area to be written must have been wiped first ( this is already taken care when loading dictionaries )",
+            "description": "Loads binary file into flash memory on device Warning: mem area to be written must have been wiped first ( dictionaries are serviced as files in spiffs so no wipe is needed )",
             "notes": [
                 "mem load -f myfile -> upload file myfile values at default offset 0",
                 "mem load -f myfile -o 1024 -> upload file myfile values at offset 1024",
@@ -13063,8 +13093,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 751,
+        "commands_extracted": 753,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2024-12-09T14:16:07"
+        "extracted_on": "2025-01-05T12:10:45"
     }
 }
