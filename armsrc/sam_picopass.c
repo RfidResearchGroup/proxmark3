@@ -244,7 +244,7 @@ int sam_picopass_get_pacs(void) {
     //       80 01
     //          04
     hexstr_to_byte_array("a005a103800104", sam_apdu, &sam_len);
-    if(sam_send_payload(0x44, 0x0a, 0x44, sam_apdu, &sam_len, resp, &resp_len) != PM3_SUCCESS) {
+    if(sam_send_payload(0x44, 0x0a, 0x44, sam_apdu, (uint16_t *) &sam_len, resp, &resp_len) != PM3_SUCCESS) {
         res = PM3_ECARDEXCHANGE;
         goto out;
     }

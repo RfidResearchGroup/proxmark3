@@ -59,7 +59,7 @@ static int sam_set_card_detected(iso14a_card_select_t * card_select){
     uint8_t  * response = BigBuf_malloc(ISO7816_MAX_FRAME);
     uint16_t response_len = ISO7816_MAX_FRAME;
 
-    uint8_t payload[] = {
+    const uint8_t payload[] = {
         0xa0, 8, // <- SAM command
          0xad, 6, // <- set detected card
           0xa0, 4, // <- detected card details

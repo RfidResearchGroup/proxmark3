@@ -18,21 +18,17 @@
 
 
 #include <string.h>
-// #include "sam_picopass.h"
 #include "sam_common.h"
 #include "iclass.h"
-// #include "crc16.h"
 #include "proxmark3_arm.h"
 #include "BigBuf.h"
-// #include "cmd.h"
 #include "commonutil.h"
 #include "ticks.h"
 #include "dbprint.h"
 #include "i2c.h"
 #include "iso15693.h"
 #include "protocols.h"
-// #include "optimized_cipher.h"
-// #include "fpgaloader.h"
+
 
 /**
  * @brief Transmits data to and receives data from a HID®'s iCLASS® SE™ Processor.
@@ -155,12 +151,12 @@ void switch_clock_to_countsspclk(void){
  * @return Status code indicating success or failure of the operation.
  */
 int sam_send_payload(
-    uint8_t addr_src,
-    uint8_t addr_dest,
-    uint8_t addr_reply,
+    const uint8_t addr_src,
+    const uint8_t addr_dest,
+    const uint8_t addr_reply,
 
-    uint8_t *payload,
-    uint16_t *payload_len,
+    const uint8_t * const payload,
+    const uint16_t *payload_len,
 
     uint8_t *response,
     uint16_t *response_len
@@ -314,9 +310,9 @@ int sam_get_version(void){
  * @param type The type of the ASN.1 node to find.
  * @return Pointer to the ASN.1 node of the specified type if found, otherwise NULL.
  */
-uint8_t * sam_find_asn1_node(uint8_t * root, const uint8_t type){
-    const uint8_t * end = root + *(root+1);
-    uint8_t * current = root + 2;
+uint8_t * sam_find_asn1_node(const uint8_t * root, const uint8_t type){
+    const uint8_t * end = (uint8_t *) root + *(root+1);
+    uint8_t * current = (uint8_t *) root + 2;
     while(current < end){
         if(*current == type){
             return current;
@@ -343,14 +339,14 @@ uint8_t * sam_find_asn1_node(uint8_t * root, const uint8_t type){
  * @param data Pointer to the data to be appended.
  * @param len The length of the data to be appended.
  */
-void sam_append_asn1_node(uint8_t * root, uint8_t * node, uint8_t type, uint8_t * data, uint8_t len){
-    uint8_t * end = root + *(root+1) + 2;
+void sam_append_asn1_node(const uint8_t * root, const uint8_t * node, uint8_t type, const uint8_t * const data, uint8_t len){
+    uint8_t * end = (uint8_t *) root + *(root+1) + 2;
 
     *(end) = type;
     *(end+1) = len;
     memcpy(end+2, data, len);
 
-    for(uint8_t * current = root; current <= node; current += 2){
+    for(uint8_t * current = (uint8_t *) root; current <= node; current += 2){
         *(current+1) += 2 + len;
     };
     return;

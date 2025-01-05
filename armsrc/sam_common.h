@@ -28,12 +28,12 @@ void switch_clock_to_ticks(void);
 void switch_clock_to_countsspclk(void);
 
 int sam_send_payload(
-    uint8_t addr_src,
-    uint8_t addr_dest,
-    uint8_t addr_reply,
+    const uint8_t addr_src,
+    const uint8_t addr_dest,
+    const uint8_t addr_reply,
 
-    uint8_t *payload,
-    uint16_t *payload_len,
+    const uint8_t * const payload,
+    const uint16_t *payload_len,
 
     uint8_t *response,
     uint16_t *response_len
@@ -41,8 +41,8 @@ int sam_send_payload(
 
 int sam_get_version(void);
 
-uint8_t * sam_find_asn1_node(uint8_t * root, const uint8_t type);
-void sam_append_asn1_node(uint8_t * root, uint8_t * node, uint8_t type, uint8_t * data, uint8_t len);
+uint8_t * sam_find_asn1_node(const uint8_t * root, const uint8_t type);
+void sam_append_asn1_node(const uint8_t * root, const uint8_t * node, uint8_t type, const uint8_t * const data, uint8_t len);
 
 void sam_send_ack(void);
 
