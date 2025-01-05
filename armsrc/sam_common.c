@@ -327,31 +327,34 @@ uint8_t * sam_find_asn1_node(uint8_t * root, const uint8_t type){
     return NULL;
 }
 
-// /**
-//  * @brief Appends an ASN.1 node to the end of a given node.
-//  *
-//  * This function appends an ASN.1 node of a specified type and length to the end of
-//  * the ASN.1 structure at specified node level.
-//  * It would make the code cleaner, but I can't get it to work - it calculates fields lengths incorrectly.
-//  *
-//  * @param root Pointer to the root node of the ASN.1 structure.
-//  * @param root Pointer to the node to be appended of the ASN.1 structure.
-//  * @param type The type of the ASN.1 node to append.
-//  * @param data Pointer to the data to be appended.
-//  * @param len The length of the data to be appended.
-//  */
-// void sam_append_asn1_node(uint8_t * root, uint8_t * node, uint8_t type, uint8_t * data, uint8_t len){
-//     uint8_t * end = root + *(root+1);
+/**
+ * @brief Appends an ASN.1 node to the end of a given node.
+ *
+ * This function appends an ASN.1 node of a specified type and length to the end of
+ * the ASN.1 structure at specified node level.
+ * 
+ * It is the most naive solution that does not handle the case where the node to append is
+ * not the last node at the same level. It also does not also care about proper
+ * order of the nodes.
+ *
+ * @param root Pointer to the root node of the ASN.1 structure.
+ * @param root Pointer to the node to be appended of the ASN.1 structure.
+ * @param type The type of the ASN.1 node to append.
+ * @param data Pointer to the data to be appended.
+ * @param len The length of the data to be appended.
+ */
+void sam_append_asn1_node(uint8_t * root, uint8_t * node, uint8_t type, uint8_t * data, uint8_t len){
+    uint8_t * end = root + *(root+1) + 2;
 
-//     *(end) = type;
-//     *(end+1) = len;
-//     memcpy(end+2, data, len);
+    *(end) = type;
+    *(end+1) = len;
+    memcpy(end+2, data, len);
 
-//     for(uint8_t * current = root; current < node; current += 2){
-//         *(current+1) += 2 + len;
-//     };
-//     return;
-// }
+    for(uint8_t * current = root; current <= node; current += 2){
+        *(current+1) += 2 + len;
+    };
+    return;
+}
 
 void sam_send_ack(void){
     uint8_t  * response = BigBuf_malloc(ISO7816_MAX_FRAME);

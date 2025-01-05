@@ -42,7 +42,7 @@ int sam_send_payload(
 int sam_get_version(void);
 
 uint8_t * sam_find_asn1_node(uint8_t * root, const uint8_t type);
-//void sam_append_asn1_node(uint8_t * root, uint8_t * node, uint8_t type, uint8_t * data, uint8_t len);
+void sam_append_asn1_node(uint8_t * root, uint8_t * node, uint8_t type, uint8_t * data, uint8_t len);
 
 void sam_send_ack(void);
 
