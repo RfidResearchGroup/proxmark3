@@ -53,31 +53,30 @@ static int sam_set_card_detected(iso14a_card_select_t * card_select){
     if (g_dbglevel >= DBG_DEBUG)
         DbpString("start sam_set_card_detected");
 
-    if(card_select ->uidlen != 4)
-        return PM3_EFAILED;
+    uint8_t  * request = BigBuf_malloc(ISO7816_MAX_FRAME);
+    uint16_t request_len = ISO7816_MAX_FRAME;
 
     uint8_t  * response = BigBuf_malloc(ISO7816_MAX_FRAME);
     uint16_t response_len = ISO7816_MAX_FRAME;
 
     uint8_t payload[] = {
-        0xa0, (2+(2+(4*2 +2+4+2+1))), // <- SAM command
-         0xad, (2+(4*2 +2+4+2+1)), // <- set detected card
-          0xa0, (4*2 +2+4+2+1),
+        0xa0, 8, // <- SAM command
+         0xad, 6, // <- set detected card
+          0xa0, 4, // <- detected card details
            0x80, 2, // <- protocol
-            0x00, 0x02, // <- ISO14443A
-           0x81, card_select->uidlen, // <- CSN
-            card_select->uid[0], card_select->uid[1], card_select->uid[2], card_select->uid[3],
-           0x82, 2, // <- ATQA
-            card_select->atqa[0], card_select->atqa[1],
-           0x83, 1, // <- SAK 
-            card_select->sak
+            0x00, 0x02 // <- ISO14443A
     };
-    uint16_t payload_len = sizeof(payload);
+
+    memcpy(request, payload, sizeof(payload));
+    sam_append_asn1_node(request, request+4, 0x81, card_select->uid, card_select->uidlen);
+    sam_append_asn1_node(request, request+4, 0x82, card_select->atqa, 2);
+    sam_append_asn1_node(request, request+4, 0x83, &card_select->sak, 1);
+    request_len = request[1] + 2;
 
     sam_send_payload(
         0x44, 0x0a, 0x44,
-        payload,
-        &payload_len,
+        request,
+        &request_len,
         response,
         &response_len
     );
