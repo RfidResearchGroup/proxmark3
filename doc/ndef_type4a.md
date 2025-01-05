@@ -50,7 +50,7 @@ Result
 ### Step 2 Create the Compatibility Container file (CC File)
 
 The CC File is a standard file to store the needed NDEF information to find your NDEF records.  This example will contrain the setup for a single NDEF record.
-Note: You can define more then one NDEF data file if needed (not covered in this example)
+Note: You can define more than one NDEF data file if needed (not covered in this example)
 
     Type            : Standard data file
     FID             : 01                        <- File ID can be any uniqure File ID for this AID

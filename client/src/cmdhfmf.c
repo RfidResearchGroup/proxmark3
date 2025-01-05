@@ -1117,7 +1117,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
     }
 
     if (s >= MIFARE_4K_MAXSECTOR) {
-        PrintAndLogEx(WARNING, "Sector number must be less then 40");
+        PrintAndLogEx(WARNING, "Sector number must be less than 40");
         return PM3_EINVARG;
     }
 
@@ -4492,7 +4492,7 @@ static int CmdHF14AMfEGetSc(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (s >= MIFARE_4K_MAXSECTOR) {
-        PrintAndLogEx(WARNING, "Sector number must be less then 40");
+        PrintAndLogEx(WARNING, "Sector number must be less than 40");
         return PM3_EINVARG;
     }
 
@@ -5556,7 +5556,7 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (s >= MIFARE_4K_MAXSECTOR) {
-        PrintAndLogEx(WARNING, "Sector number must be less then 40");
+        PrintAndLogEx(WARNING, "Sector number must be less than 40");
         return PM3_EINVARG;
     }
 

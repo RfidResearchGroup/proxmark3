@@ -146,7 +146,7 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
     uint16_t data_len = hdr->data_len;
     uint8_t *frame = hdr->frame;
 
-    // sanity check tracking position is less then available trace size
+    // sanity check tracking position is less than available trace size
     if (tracepos + TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr) > traceLen) {
         PrintAndLogEx(DEBUG, "trace pos offset %"PRIu64 " larger than reported tracelen %u",
                       tracepos + TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr),
