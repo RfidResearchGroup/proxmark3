@@ -135,26 +135,22 @@ inline static uint16_t sam_seos_copy_payload_nfc2sam(uint8_t *sam_tx, uint8_t * 
     //          81 02
     //             00 00
 
-    sam_tx[0] = 0xBD;
+    const uint8_t payload[] = {
+        0xbd, 4,
+         0xa0, 2,
+          0xa0, 0
+    };
 
-    sam_tx[2] = 0xA0;
+    const uint8_t tag81[] = {
+         0x00, 0x00
+    };
 
-    sam_tx[4] = 0xA0;
+    memcpy(sam_tx, payload, sizeof(payload));
 
-    sam_tx[6] = 0x80;
-    sam_tx[7] = nfc_len;
-    memcpy(sam_tx+8, nfc_rx, nfc_len);
-
-    sam_tx[8+nfc_len] = 0x81;
-    sam_tx[9+nfc_len] = 0x02;
-    sam_tx[10+nfc_len] = 0x00;
-    sam_tx[11+nfc_len] = 0x00;
-
-    // fix lengths
-    sam_tx[5] = 2 + nfc_len + 4;
-    sam_tx[3] = sam_tx[5] + 2;
-    sam_tx[1] = sam_tx[3] + 2;
-    return sam_tx[1] + 2;
+    sam_append_asn1_node(sam_tx, sam_tx+4, 0x80, nfc_rx, nfc_len);
+    sam_append_asn1_node(sam_tx, sam_tx+4, 0x81, tag81, sizeof(tag81));
+    
+    return sam_tx[1] + 2; // length of the ASN1 tree
 }
 
 /**
