@@ -100,6 +100,17 @@ static const known_algo_t known_algorithm_map[] = {
     {9, "AES-128_CBC_MODE"},
 };
 
+static const sioMediaTypeName_t sioMediaTypeMapping[] = {
+    { 0x00, "Unknown"},
+    { 0x01, "DESFire"},
+    { 0x02, "MIFARE"},
+    { 0x03, "iCLASS (PicoPass)"},
+    { 0x04, "ISO14443AL4"},
+    { 0x06, "MIFARE Plus"},
+    { 0x07, "Seos"},
+    { 0xFF, "INVALID VALUE"}
+};
+
 static int create_cmac (uint8_t* key, uint8_t* input, uint8_t* out, int input_len, int encryption_algorithm) {
     uint8_t iv[16] = {0x00};
 
@@ -1707,6 +1718,23 @@ static int dump_PACS_bits(const uint8_t * const data, const uint8_t length, bool
     return PM3_SUCCESS;    
 }
 
+
+// get a SIO media type based on the UID
+//  uid[8] tag uid
+// returns description of the best match
+static const char *getSioMediaTypeInfo(uint8_t uid) {
+
+    for (int i = 0; i < ARRAYLEN(sioMediaTypeMapping); ++i) {
+        if (uid == sioMediaTypeMapping[i].uid) {
+            return sioMediaTypeMapping[i].desc;
+        }
+    }
+
+    //No match, return default
+    return sioMediaTypeMapping[ARRAYLEN(sioMediaTypeMapping) - 1].desc;
+}
+
+
 static int CmdHfSeosSAM(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf seos sam",
@@ -1756,9 +1784,7 @@ static int CmdHfSeosSAM(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    // void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len) {
     SendCommandMIX(CMD_HF_SAM_SEOS, disconnectAfter, skipDetect, datalen, data, datalen);
-    // SendCommandNG(CMD_HF_SAM_SEOS, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_SAM_SEOS, &resp, 4000) == false) {
         PrintAndLogEx(WARNING, "SAM timeout");
@@ -1789,6 +1815,34 @@ static int CmdHfSeosSAM(const char *Cmd) {
         if(res != PM3_SUCCESS){
             return res;
         }
+    // check for standard samCommandGetContentElement2:
+    // bd 1e
+    //    b3 1c
+    //       a0 1a
+    //          80 05
+    //             06 85 80 6d c0
+    //          81 0e
+    //             2b 06 01 04 01 81 e4 38 01 01 02 04 3c ff
+    //          82 01
+    //             07
+    } else if(d[0]==0xbd && d[2]==0xb3 && d[4]==0xa0){
+        const uint8_t * pacs = d + 6;
+        const uint8_t pacs_length = pacs[1];
+        const uint8_t * pacs_data = pacs + 2;
+        int res = dump_PACS_bits(pacs_data, pacs_length, verbose);
+        if(res != PM3_SUCCESS){
+            return res;
+        }
+
+        const uint8_t * oid = pacs + 2 + pacs_length;
+        const uint8_t oid_length = oid[1];
+        const uint8_t * oid_data = oid + 2;
+        PrintAndLogEx(SUCCESS, "SIO OID.......: " _GREEN_("%s"), sprint_hex_inrow(oid_data, oid_length));
+
+        const uint8_t * mediaType = oid + 2 + oid_length;
+        const uint8_t mediaType_data = mediaType[2];
+        PrintAndLogEx(SUCCESS, "SIO Media Type: " _GREEN_("%s"), getSioMediaTypeInfo(mediaType_data));
+
     } else {
         print_hex(d, resp.length);
     }

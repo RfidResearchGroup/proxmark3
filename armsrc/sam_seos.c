@@ -226,7 +226,7 @@ static int sam_send_request_iso14a(const uint8_t * const request, const uint8_t 
         // send get pacs
         static const uint8_t payload[] = {
             0xa0, 19, // <- SAM command
-            0xA1, 17, // <- SamCommandGetContentElement
+            0xBE, 17, // <- samCommandGetContentElement2
             0x80, 1,
             0x04, // <- implicitFormatPhysicalAccessBits
             0x84, 12,
@@ -290,29 +290,43 @@ static int sam_send_request_iso14a(const uint8_t * const request, const uint8_t 
         );
     }
 
-    // resp:
+    // resp for SamCommandGetContentElement:
     // c1 64 00 00 00
     // bd 09
     //    8a 07
     //        03 05 <- include tag for pm3 client
     //           06 85 80 6d c0 <- decoded PACS data
     // 90 00
+
+    // resp for samCommandGetContentElement2:
+    // c1 64 00 00 00
+    // bd 1e
+    //    b3 1c
+    //       a0 1a
+    //          80 05
+    //             06 85 80 6d c0
+    //           81 0e
+    //              2b 06 01 04 01 81 e4 38 01 01 02 04 3c ff
+    //           82 01
+    //              07
+    // 90 00
     if(request_len == 0){
-        if(sam_rx_buf[5] != 0xbd && sam_rx_buf[5+2] != 0x8a && sam_rx_buf[5+4] != 0x03){
+        if(
+            !(sam_rx_buf[5] == 0xbd && sam_rx_buf[5+2] == 0x8a && sam_rx_buf[5+4] == 0x03)
+            &&
+            !(sam_rx_buf[5] == 0xbd && sam_rx_buf[5+2] == 0xb3 && sam_rx_buf[5+4] == 0xa0)
+        ){
             if (g_dbglevel >= DBG_ERROR)
-                Dbprintf("Invalid SAM response");
-            goto err;
+                Dbprintf("No PACS data in SAM response");
+            res=PM3_ESOFT;
         }
     }
 
     *response_len = sam_rx_buf[5+1] +2;
     memcpy(response, sam_rx_buf+5, *response_len);
-    res=PM3_SUCCESS;
 
     goto out;
 
-    err:
-        res=PM3_ESOFT;
     out:
         return res;
 }

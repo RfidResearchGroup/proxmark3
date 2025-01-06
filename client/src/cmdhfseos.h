@@ -21,6 +21,12 @@
 
 #include "common.h"
 
+// structure and database for uid -> tagtype lookups
+typedef struct {
+    uint8_t uid;
+    const char *desc;
+} sioMediaTypeName_t;
+
 int infoSeos(bool verbose);
 int CmdHFSeos(const char *Cmd);
 int seos_kdf(bool encryption, uint8_t* masterKey, uint8_t keyslot,
