@@ -96,12 +96,12 @@ int sam_rxtx(const uint8_t *data, uint16_t n, uint8_t *resp, uint16_t *resplen) 
 
     *resplen += more_len;
 
-    out:
+out:
     return res;
 }
 
 
-static inline void swap_clock_counters(volatile unsigned int * a, unsigned int * b){
+static inline void swap_clock_counters(volatile unsigned int *a, unsigned int *b) {
     unsigned int c = *a;
     *a = *b;
     *b = c;
@@ -113,9 +113,9 @@ static inline void swap_clock_counters(volatile unsigned int * a, unsigned int *
  * AT91SAM7S512 has a single Timer-Counter, that is reused in clocks Ticks
  * and CountSspClk. This function stops the current clock and restores previous
  * values. It is used to switch between different clock sources.
- * It probably makes communication timing off, but at least makes it work. 
+ * It probably makes communication timing off, but at least makes it work.
  */
-static void swap_clocks(void){
+static void swap_clocks(void) {
     static unsigned int tc0, tc1, tc2 = 0;
     StopTicks();
     swap_clock_counters(&(AT91C_BASE_TC0->TC_CV), &tc0);
@@ -123,12 +123,12 @@ static void swap_clocks(void){
     swap_clock_counters(&(AT91C_BASE_TC2->TC_CV), &tc2);
 }
 
-void switch_clock_to_ticks(void){
+void switch_clock_to_ticks(void) {
     swap_clocks();
     StartTicks();
 }
 
-void switch_clock_to_countsspclk(void){
+void switch_clock_to_countsspclk(void) {
     swap_clocks();
     StartCountSspClk();
 }
@@ -155,21 +155,21 @@ int sam_send_payload(
     const uint8_t addr_dest,
     const uint8_t addr_reply,
 
-    const uint8_t * const payload,
+    const uint8_t *const payload,
     const uint16_t *payload_len,
 
     uint8_t *response,
     uint16_t *response_len
-){  
+) {
     int res = PM3_SUCCESS;
 
-    uint8_t * buf = response;
+    uint8_t *buf = response;
 
     buf[0] = 0xA0; // CLA
     buf[1] = 0xDA; // INS (PUT DATA)
     buf[2] = 0x02; // P1 (TLV format?)
     buf[3] = 0x63; // P2
-    buf[4] = SAM_TX_ASN1_PREFIX_LENGTH + (uint8_t) *payload_len; // LEN
+    buf[4] = SAM_TX_ASN1_PREFIX_LENGTH + (uint8_t) * payload_len; // LEN
 
     buf[5] = addr_src;
     buf[6] = addr_dest;
@@ -185,10 +185,10 @@ int sam_send_payload(
         *payload_len
     );
 
-    uint16_t length = SAM_TX_ASN1_PREFIX_LENGTH + SAM_TX_APDU_PREFIX_LENGTH + (uint8_t) *payload_len;
+    uint16_t length = SAM_TX_ASN1_PREFIX_LENGTH + SAM_TX_APDU_PREFIX_LENGTH + (uint8_t) * payload_len;
 
     LogTrace(buf, length, 0, 0, NULL, true);
-    if (g_dbglevel >= DBG_INFO){
+    if (g_dbglevel >= DBG_INFO) {
         DbpString("SAM REQUEST APDU: ");
         Dbhexdump(length, buf, false);
     }
@@ -201,12 +201,12 @@ int sam_send_payload(
     }
 
     LogTrace(response, *response_len, 0, 0, NULL, false);
-    if (g_dbglevel >= DBG_INFO){
+    if (g_dbglevel >= DBG_INFO) {
         DbpString("SAM RESPONSE APDU: ");
         Dbhexdump(*response_len, response, false);
     }
 
-    out:
+out:
     return res;
 }
 
@@ -218,18 +218,18 @@ int sam_send_payload(
  *
  * @return Status code indicating success or failure of the operation.
  */
-int sam_get_version(void){
+int sam_get_version(void) {
     int res = PM3_SUCCESS;
 
     if (g_dbglevel >= DBG_DEBUG)
         DbpString("start sam_get_version");
 
-    uint8_t  * response =  BigBuf_malloc(ISO7816_MAX_FRAME);
+    uint8_t   *response =  BigBuf_malloc(ISO7816_MAX_FRAME);
     uint16_t response_len = ISO7816_MAX_FRAME;
 
     uint8_t payload[] = {
         0xa0, 0x02, // <- SAM command
-         0x82, 0x00 // <- get version
+        0x82, 0x00 // <- get version
     };
     uint16_t payload_len = sizeof(payload);
 
@@ -255,46 +255,46 @@ int sam_get_version(void){
     if (g_dbglevel >= DBG_DEBUG)
         DbpString("end sam_get_version");
 
-    if(response[5] != 0xbd){
+    if (response[5] != 0xbd) {
         Dbprintf("Invalid SAM response");
         goto error;
-    }else{
-        uint8_t * sam_response_an = sam_find_asn1_node(response + 5, 0x8a);
-        if(sam_response_an == NULL){
+    } else {
+        uint8_t *sam_response_an = sam_find_asn1_node(response + 5, 0x8a);
+        if (sam_response_an == NULL) {
             if (g_dbglevel >= DBG_ERROR)
                 DbpString("SAM get response failed");
             goto error;
         }
-        uint8_t * sam_version_an = sam_find_asn1_node(sam_response_an, 0x80);
-        if(sam_version_an == NULL){
+        uint8_t *sam_version_an = sam_find_asn1_node(sam_response_an, 0x80);
+        if (sam_version_an == NULL) {
             if (g_dbglevel >= DBG_ERROR)
                 DbpString("SAM get version failed");
             goto error;
         }
-        uint8_t * sam_build_an = sam_find_asn1_node(sam_response_an, 0x81);
-        if(sam_build_an == NULL){
+        uint8_t *sam_build_an = sam_find_asn1_node(sam_response_an, 0x81);
+        if (sam_build_an == NULL) {
             if (g_dbglevel >= DBG_ERROR)
                 DbpString("SAM get firmware ID failed");
             goto error;
         }
-        if (g_dbglevel >= DBG_INFO){
+        if (g_dbglevel >= DBG_INFO) {
             DbpString("SAM get version successful");
             Dbprintf("Firmware version: %X.%X", sam_version_an[2], sam_version_an[3]);
             Dbprintf("Firmware ID: ");
-            Dbhexdump(sam_build_an[1], sam_build_an+2, false);
+            Dbhexdump(sam_build_an[1], sam_build_an + 2, false);
         }
         goto out;
     }
 
-    error:
+error:
     res = PM3_ESOFT;
 
-    out:
+out:
     BigBuf_free();
 
     if (g_dbglevel >= DBG_DEBUG)
         DbpString("end sam_get_version");
-    
+
     return res;
 }
 
@@ -310,14 +310,14 @@ int sam_get_version(void){
  * @param type The type of the ASN.1 node to find.
  * @return Pointer to the ASN.1 node of the specified type if found, otherwise NULL.
  */
-uint8_t * sam_find_asn1_node(const uint8_t * root, const uint8_t type){
-    const uint8_t * end = (uint8_t *) root + *(root+1);
-    uint8_t * current = (uint8_t *) root + 2;
-    while(current < end){
-        if(*current == type){
+uint8_t *sam_find_asn1_node(const uint8_t *root, const uint8_t type) {
+    const uint8_t *end = (uint8_t *) root + *(root + 1);
+    uint8_t *current = (uint8_t *) root + 2;
+    while (current < end) {
+        if (*current == type) {
             return current;
-        }else{
-            current += 2 + *(current+1);
+        } else {
+            current += 2 + *(current + 1);
         }
     }
     return NULL;
@@ -328,7 +328,7 @@ uint8_t * sam_find_asn1_node(const uint8_t * root, const uint8_t type){
  *
  * This function appends an ASN.1 node of a specified type and length to the end of
  * the ASN.1 structure at specified node level.
- * 
+ *
  * It is the most naive solution that does not handle the case where the node to append is
  * not the last node at the same level. It also does not also care about proper
  * order of the nodes.
@@ -339,21 +339,21 @@ uint8_t * sam_find_asn1_node(const uint8_t * root, const uint8_t type){
  * @param data Pointer to the data to be appended.
  * @param len The length of the data to be appended.
  */
-void sam_append_asn1_node(const uint8_t * root, const uint8_t * node, uint8_t type, const uint8_t * const data, uint8_t len){
-    uint8_t * end = (uint8_t *) root + *(root+1) + 2;
+void sam_append_asn1_node(const uint8_t *root, const uint8_t *node, uint8_t type, const uint8_t *const data, uint8_t len) {
+    uint8_t *end = (uint8_t *) root + *(root + 1) + 2;
 
     *(end) = type;
-    *(end+1) = len;
-    memcpy(end+2, data, len);
+    *(end + 1) = len;
+    memcpy(end + 2, data, len);
 
-    for(uint8_t * current = (uint8_t *) root; current <= node; current += 2){
-        *(current+1) += 2 + len;
+    for (uint8_t *current = (uint8_t *) root; current <= node; current += 2) {
+        *(current + 1) += 2 + len;
     };
     return;
 }
 
-void sam_send_ack(void){
-    uint8_t  * response = BigBuf_malloc(ISO7816_MAX_FRAME);
+void sam_send_ack(void) {
+    uint8_t   *response = BigBuf_malloc(ISO7816_MAX_FRAME);
     uint16_t response_len = ISO7816_MAX_FRAME;
 
     uint8_t payload[] = {

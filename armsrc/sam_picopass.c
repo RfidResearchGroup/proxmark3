@@ -41,12 +41,12 @@
  * @param card_select Pointer to the descriptor of the detected card.
  * @return Status code indicating success or failure of the operation.
  */
-static int sam_set_card_detected(picopass_hdr_t * card_select){
+static int sam_set_card_detected(picopass_hdr_t *card_select) {
     int res = PM3_SUCCESS;
     if (g_dbglevel >= DBG_DEBUG)
         DbpString("start sam_set_card_detected");
 
-    uint8_t  * response = BigBuf_malloc(ISO7816_MAX_FRAME);
+    uint8_t   *response = BigBuf_malloc(ISO7816_MAX_FRAME);
     uint16_t response_len = ISO7816_MAX_FRAME;
 
     // a0 12
@@ -59,13 +59,13 @@ static int sam_set_card_detected(picopass_hdr_t * card_select){
 
     uint8_t payload[] = {
         0xa0, 18, // <- SAM command
-         0xad, 16, // <- set detected card
-          0xa0, 4+10,
-           0x80, 2, // <- protocol
-            0x00, 0x04, // <- Picopass
-           0x81, 8, // <- CSN
-            card_select->csn[0], card_select->csn[1], card_select->csn[2], card_select->csn[3],
-            card_select->csn[4], card_select->csn[5], card_select->csn[6], card_select->csn[7]
+        0xad, 16, // <- set detected card
+        0xa0, 4 + 10,
+        0x80, 2, // <- protocol
+        0x00, 0x04, // <- Picopass
+        0x81, 8, // <- CSN
+        card_select->csn[0], card_select->csn[1], card_select->csn[2], card_select->csn[3],
+        card_select->csn[4], card_select->csn[5], card_select->csn[6], card_select->csn[7]
     };
     uint16_t payload_len = sizeof(payload);
 
@@ -82,12 +82,12 @@ static int sam_set_card_detected(picopass_hdr_t * card_select){
     //    bd 02 <- response
     //     8a 00 <- empty response (accepted)
     // 90 00
-    
-    if(response[5] != 0xbd){
+
+    if (response[5] != 0xbd) {
         if (g_dbglevel >= DBG_ERROR)
             Dbprintf("Invalid SAM response");
         goto error;
-    }else{
+    } else {
         // uint8_t * sam_response_an = sam_find_asn1_node(response + 5, 0x8a);
         // if(sam_response_an == NULL){
         //     if (g_dbglevel >= DBG_ERROR)
@@ -96,10 +96,10 @@ static int sam_set_card_detected(picopass_hdr_t * card_select){
         // }
         goto out;
     }
-    error:
+error:
     res = PM3_ESOFT;
 
-    out:
+out:
     BigBuf_free();
 
     if (g_dbglevel >= DBG_DEBUG)
@@ -240,11 +240,11 @@ int sam_picopass_get_pacs(void) {
     // second - get PACS (0xA1)
 
     // a0 05
-    //    a1 03 
+    //    a1 03
     //       80 01
     //          04
     hexstr_to_byte_array("a005a103800104", sam_apdu, &sam_len);
-    if(sam_send_payload(0x44, 0x0a, 0x44, sam_apdu, (uint16_t *) &sam_len, resp, &resp_len) != PM3_SUCCESS) {
+    if (sam_send_payload(0x44, 0x0a, 0x44, sam_apdu, (uint16_t *) &sam_len, resp, &resp_len) != PM3_SUCCESS) {
         res = PM3_ECARDEXCHANGE;
         goto out;
     }

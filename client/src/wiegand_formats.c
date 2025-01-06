@@ -1664,7 +1664,7 @@ void HIDUnpack(int idx, wiegand_message_t *packed) {
     }
 }
 
-int HIDDumpPACSBits(const uint8_t * const data, const uint8_t length, bool verbose){
+int HIDDumpPACSBits(const uint8_t *const data, const uint8_t length, bool verbose) {
     uint8_t n = length - 1;
     uint8_t pad = data[0];
     char *binstr = (char *)calloc((length * 8) + 1, sizeof(uint8_t));
@@ -1733,5 +1733,5 @@ int HIDDumpPACSBits(const uint8_t * const data, const uint8_t length, bool verbo
         PrintAndLogEx(NORMAL, "");
     }
     free(binstr);
-    return PM3_SUCCESS;    
+    return PM3_SUCCESS;
 }

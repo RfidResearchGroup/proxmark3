@@ -1688,15 +1688,15 @@ static int CmdHfSeosSAM(const char *Cmd) {
         verbose = true;
     }
     bool disconnectAfter = true;
-    if(arg_get_lit(ctx, 2)){
+    if (arg_get_lit(ctx, 2)) {
         disconnectAfter = false;
     }
     bool skipDetect = false;
-    if(arg_get_lit(ctx, 3)){
+    if (arg_get_lit(ctx, 3)) {
         skipDetect = true;
     }
     bool decodeTLV = false;
-    if(arg_get_lit(ctx, 4)){
+    if (arg_get_lit(ctx, 4)) {
         decodeTLV = true;
     }
 
@@ -1728,45 +1728,45 @@ static int CmdHfSeosSAM(const char *Cmd) {
             PrintAndLogEx(WARNING, "SAM select failed");
             return resp.status;
     }
-    
+
     uint8_t *d = resp.data.asBytes;
     // check for standard SamCommandGetContentElement response
     // bd 09
     //    8a 07
     //       03 05 <- tag + length
     //          06 85 80 6d c0 <- decoded PACS data
-    if(d[0] == 0xbd && d[2] == 0x8a && d[4] == 0x03){
+    if (d[0] == 0xbd && d[2] == 0x8a && d[4] == 0x03) {
         uint8_t pacs_length = d[5];
-        uint8_t * pacs_data = d + 6;
+        uint8_t *pacs_data = d + 6;
         int res = HIDDumpPACSBits(pacs_data, pacs_length, verbose);
-        if(res != PM3_SUCCESS){
+        if (res != PM3_SUCCESS) {
             return res;
         }
-    // check for standard samCommandGetContentElement2:
-    // bd 1e
-    //    b3 1c
-    //       a0 1a
-    //          80 05
-    //             06 85 80 6d c0
-    //          81 0e
-    //             2b 06 01 04 01 81 e4 38 01 01 02 04 3c ff
-    //          82 01
-    //             07
-    } else if(d[0]==0xbd && d[2]==0xb3 && d[4]==0xa0){
-        const uint8_t * pacs = d + 6;
+        // check for standard samCommandGetContentElement2:
+        // bd 1e
+        //    b3 1c
+        //       a0 1a
+        //          80 05
+        //             06 85 80 6d c0
+        //          81 0e
+        //             2b 06 01 04 01 81 e4 38 01 01 02 04 3c ff
+        //          82 01
+        //             07
+    } else if (d[0] == 0xbd && d[2] == 0xb3 && d[4] == 0xa0) {
+        const uint8_t *pacs = d + 6;
         const uint8_t pacs_length = pacs[1];
-        const uint8_t * pacs_data = pacs + 2;
+        const uint8_t *pacs_data = pacs + 2;
         int res = HIDDumpPACSBits(pacs_data, pacs_length, verbose);
-        if(res != PM3_SUCCESS){
+        if (res != PM3_SUCCESS) {
             return res;
         }
 
-        const uint8_t * oid = pacs + 2 + pacs_length;
+        const uint8_t *oid = pacs + 2 + pacs_length;
         const uint8_t oid_length = oid[1];
-        const uint8_t * oid_data = oid + 2;
+        const uint8_t *oid_data = oid + 2;
         PrintAndLogEx(SUCCESS, "SIO OID.......: " _GREEN_("%s"), sprint_hex_inrow(oid_data, oid_length));
 
-        const uint8_t * mediaType = oid + 2 + oid_length;
+        const uint8_t *mediaType = oid + 2 + oid_length;
         const uint8_t mediaType_data = mediaType[2];
         PrintAndLogEx(SUCCESS, "SIO Media Type: " _GREEN_("%s"), getSioMediaTypeInfo(mediaType_data));
 

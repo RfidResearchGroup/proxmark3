@@ -5434,15 +5434,15 @@ static int CmdHFiClassSAM(const char *Cmd) {
 
     // CSN, config, epurse, NR/MAC, AIA
     // PACS
-    // 03 05 
+    // 03 05
     //    06 85 80 6d c0
     // first byte skip
     // second byte length
     // third padded
     // fourth ..
     uint8_t *d = resp.data.asBytes;
-    HIDDumpPACSBits(d+2, d[1], verbose);
-    
+    HIDDumpPACSBits(d + 2, d[1], verbose);
+
     return PM3_SUCCESS;
 }
 
