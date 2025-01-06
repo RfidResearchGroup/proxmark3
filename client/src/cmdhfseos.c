@@ -1635,63 +1635,18 @@ static int CmdHfSeosList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf seos", "seos -c");
 }
 
-static int CmdHfSeosSAM(const char *Cmd) {
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf seos sam",
-                  "Extract PACS via a HID SAM\n",
-                  "hf seos sam\n"
-                 );
-
-    void *argtable[] = {
-        arg_param_begin,
-        arg_lit0("v", "verbose", "verbose output"),
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool verbose = arg_get_lit(ctx, 1);
-    CLIParserFree(ctx);
-
-    if (IsHIDSamPresent(verbose) == false) {
-        return PM3_ESOFT;
-    }
-
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_SAM_SEOS, NULL, 0);
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_SAM_SEOS, &resp, 4000) == false) {
-        PrintAndLogEx(WARNING, "SAM timeout");
-        return PM3_ETIMEOUT;
-    }
-
-    switch (resp.status) {
-        case PM3_SUCCESS:
-            break;
-        case PM3_ENOPACS:
-            PrintAndLogEx(SUCCESS, "No PACS data found. Card empty?");
-            return resp.status;
-        default:
-            PrintAndLogEx(WARNING, "SAM select failed");
-            return resp.status;
-    }
-    
-    // CSN, config, epurse, NR/MAC, AIA
-    // PACS
-    // first byte skip
-    // second byte length
-    // third padded
-    // fourth ..
-    uint8_t *d = resp.data.asBytes;
-    uint8_t n = d[1] - 1;  // skip length byte
-    uint8_t pad = d[2];
-    char *binstr = (char *)calloc((n * 8) + 1, sizeof(uint8_t));
+static int dump_PACS_bits(const uint8_t * const data, const uint8_t length, bool verbose){
+    uint8_t n = length - 1;
+    uint8_t pad = data[0];
+    char *binstr = (char *)calloc((length * 8) + 1, sizeof(uint8_t));
     if (binstr == NULL) {
         return PM3_EMALLOC;
     }
 
-    bytes_2_binstr(binstr, d + 3, n);
+    bytes_2_binstr(binstr, data + 1, n);
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "PACS......... " _GREEN_("%s"), sprint_hex_inrow(d + 2, resp.length - 2));
+    PrintAndLogEx(SUCCESS, "PACS......... " _GREEN_("%s"), sprint_hex_inrow(data, length));
     PrintAndLogEx(SUCCESS, "padded bin... " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
 
     binstr[strlen(binstr) - pad] = '\0';
@@ -1749,7 +1704,98 @@ static int CmdHfSeosSAM(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
     }
     free(binstr);
+    return PM3_SUCCESS;    
+}
+
+static int CmdHfSeosSAM(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf seos sam",
+                  "Extract PACS via a HID SAM\n",
+                  "hf seos sam\n"
+                  "hd seos sam -d a005a103800104 -> get PACS data\n"
+                 );
+
+
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0("k", "keep", "keep the field active after command executed"),
+        arg_lit0("n", "nodetect", "skip selecting the card and sending card details to SAM"),
+        arg_lit0("t",  "tlv",      "decode TLV"),
+        arg_strx0("d", "data",     "<hex>", "DER encoded command to send to SAM"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool verbose = false;
+    if (arg_get_lit(ctx, 1)) {
+        verbose = true;
+    }
+    bool disconnectAfter = true;
+    if(arg_get_lit(ctx, 2)){
+        disconnectAfter = false;
+    }
+    bool skipDetect = false;
+    if(arg_get_lit(ctx, 3)){
+        skipDetect = true;
+    }
+    bool decodeTLV = false;
+    if(arg_get_lit(ctx, 4)){
+        decodeTLV = true;
+    }
+
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0};
+    int datalen = 0;
+    CLIGetHexBLessWithReturn(ctx, 5, data, &datalen, 0);
+
+    CLIParserFree(ctx);
+
+    if (IsHIDSamPresent(verbose) == false) {
+        return PM3_ESOFT;
+    }
+
+    clearCommandBuffer();
+    // void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len) {
+    SendCommandMIX(CMD_HF_SAM_SEOS, disconnectAfter, skipDetect, datalen, data, datalen);
+    // SendCommandNG(CMD_HF_SAM_SEOS, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_SAM_SEOS, &resp, 4000) == false) {
+        PrintAndLogEx(WARNING, "SAM timeout");
+        return PM3_ETIMEOUT;
+    }
+
+    switch (resp.status) {
+        case PM3_SUCCESS:
+            break;
+        case PM3_ENOPACS:
+            PrintAndLogEx(SUCCESS, "No PACS data found. Card empty?");
+            return resp.status;
+        default:
+            PrintAndLogEx(WARNING, "SAM select failed");
+            return resp.status;
+    }
     
+    uint8_t *d = resp.data.asBytes;
+    // check for standard SamCommandGetContentElement response
+    // bd 09
+    //    8a 07
+    //       03 05 <- tag + length
+    //          06 85 80 6d c0 <- decoded PACS data
+    if(d[0] == 0xbd && d[2] == 0x8a && d[4] == 0x03){
+        uint8_t pacs_length = d[5];
+        uint8_t * pacs_data = d + 6;
+        int res = dump_PACS_bits(pacs_data, pacs_length, verbose);
+        if(res != PM3_SUCCESS){
+            return res;
+        }
+    } else {
+        print_hex(d, resp.length);
+    }
+    if (decodeTLV) {
+        asn1_print(d, d[1] + 2, " ");
+    }
+
     return PM3_SUCCESS;
 }
 

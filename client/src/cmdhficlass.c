@@ -5434,6 +5434,8 @@ static int CmdHFiClassSAM(const char *Cmd) {
 
     // CSN, config, epurse, NR/MAC, AIA
     // PACS
+    // 03 05 
+    //    06 85 80 6d c0
     // first byte skip
     // second byte length
     // third padded

@@ -17,7 +17,8 @@
 #define __SAM_SEOS_H
 
 #include "common.h"
+#include "pm3_cmd.h"
 
-int sam_seos_get_pacs(void);
+int sam_seos_get_pacs(PacketCommandNG *c);
 
 #endif
