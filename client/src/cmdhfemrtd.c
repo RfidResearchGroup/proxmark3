@@ -39,7 +39,7 @@
 // Average EF_DG2 seems to be around 20-25kB or so, but ICAO doesn't set an upper limit
 // Iris data seems to be suggested to be around 35kB per eye (Presumably bumping up the file size to around 70kB)
 // but as we cannot read that until we implement PACE, 35k seems to be a safe point.
-#define EMRTD_MAX_FILE_SIZE 35000
+#define EMRTD_MAX_FILE_SIZE 70000
 
 // ISO7816 commands
 #define EMRTD_P1_SELECT_BY_EF       0x02
@@ -411,13 +411,13 @@ static void emrtd_deskey(uint8_t *seed, const uint8_t *type, int length, uint8_t
     PrintAndLogEx(DEBUG, "seed.............. %s", sprint_hex_inrow(seed, 16));
 
     // combine seed and type
-    uint8_t data[50];
+    uint8_t data[50] = { 0x00 };
     memcpy(data, seed, length);
     memcpy(data + length, type, 4);
     PrintAndLogEx(DEBUG, "data.............. %s", sprint_hex_inrow(data, length + 4));
 
     // SHA1 the key
-    unsigned char key[64];
+    unsigned char key[64] = { 0x00 };
     sha1hash(data, length + 4, key);
     PrintAndLogEx(DEBUG, "key............... %s", sprint_hex_inrow(key, length + 4));
 
@@ -945,7 +945,7 @@ static bool emrtd_do_bac(char *documentnumber, char *dob, char *expiry, uint8_t 
     char dobcd = emrtd_calculate_check_digit(dob);
     char expirycd = emrtd_calculate_check_digit(expiry);
 
-    char kmrz[25];
+    char kmrz[25] = { 0x00 };
     snprintf(kmrz, sizeof(kmrz), "%s%i%s%i%s%i", documentnumber, documentnumbercd, dob, dobcd, expiry, expirycd);
     PrintAndLogEx(DEBUG, "kmrz.............. " _GREEN_("%s"), kmrz);
 
