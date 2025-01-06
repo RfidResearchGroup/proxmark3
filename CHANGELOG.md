@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf seos sam` - Added support for HID SAM SEOS communications (@jkramarz)
 - Changed (extended) area accessible by spiffs into last page of FLASH (@piotrva)
 - Changed flash-stored key dictionaries (Mifare, iClass, T55XX) and T55XX configurations to SPIFFS files (@piotrva)
 - Changed `lf em 410x sim` to use default gap value of 0 and extended help (@piotrva)
