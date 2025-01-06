@@ -217,11 +217,14 @@ static int sam_request_pacs(uint8_t * pacs, uint8_t * pacs_len){
 
     // send get pacs
     static const uint8_t payload[] = {
-        0xa0, 5, // <- SAM command
-         0xa1, 3, // <- get PACS
+        0xa0, 19, // <- SAM command
+         0xA1, 17, // <- SamCommandGetContentElement
           0x80, 1,
-           0x04
+           0x04, // <- implicitFormatPhysicalAccessBits
+          0x84, 12,
+           0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x04 // <- SoRootOID
     };
+
     sam_tx_len = sizeof(payload);
     memcpy(sam_tx_buf, payload, sam_tx_len);
 
