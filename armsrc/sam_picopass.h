@@ -17,6 +17,7 @@
 #define __SAM_PICOPASS_H
 
 #include "common.h"
+#include "sam_common.h"
 
 int sam_picopass_get_pacs(void);
 

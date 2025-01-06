@@ -2246,7 +2246,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_SAM_SEOS: {
-//            sam_seos_get_pacs();
+            sam_seos_get_pacs(packet);
             break;
         }
 
