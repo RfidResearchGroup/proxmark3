@@ -859,8 +859,8 @@
         "AID": "014D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
-        "Name": "Delhi Metro Travel Card (DEL)",
-        "Description": "DEL Delhi Metro App 1",
+        "Name": "Delhi Metro Travel Card (DEL) (Alternative Endian)",
+        "Description": "DEL Delhi Metro (App 1)",
         "Type": "transport"
     },
     {
@@ -875,8 +875,8 @@
         "AID": "024D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
-        "Name": "Delhi Metro Travel Card (DEL)",
-        "Description": "DEL Delhi Metro App 2",
+        "Name": "Delhi Metro Travel Card (DEL) (Alternative Endian)",
+        "Description": "DEL Delhi Metro (App 2)",
         "Type": "transport"
     },
     {
@@ -891,8 +891,8 @@
         "AID": "034D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
-        "Name": "Delhi Metro Travel Card (DEL)",
-        "Description": "DEL Delhi Metro App 3",
+        "Name": "Delhi Metro Travel Card (DEL) (Alternative Endian)",
+        "Description": "DEL Delhi Metro (App 3)",
         "Type": "transport"
     },
     {
@@ -907,8 +907,8 @@
         "AID": "044D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
-        "Name": "Delhi Metro Travel Card (DEL)",
-        "Description": "DEL Delhi Metro App 4",
+        "Name": "Delhi Metro Travel Card (DEL) (Alternative Endian)",
+        "Description": "DEL Delhi Metro (App 4)",
         "Type": "transport"
     },
     {
@@ -931,8 +931,8 @@
         "AID": "054D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
-        "Name": "Delhi Metro Travel Card (DEL)",
-        "Description": "DEL Delhi Metro App 5",
+        "Name": "Delhi Metro Travel Card (DEL) (Alternative Endian)",
+        "Description": "DEL Delhi Metro (App 5)",
         "Type": "transport"
     },
     {
@@ -955,8 +955,8 @@
         "AID": "064D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
-        "Name": "Delhi Metro Travel Card (DEL)",
-        "Description": "DEL Delhi Metro App 6",
+        "Name": "Delhi Metro Travel Card (DEL) (Alternative Endian)",
+        "Description": "DEL Delhi Metro (App 6)",
         "Type": "transport"
     },
     {
@@ -971,8 +971,8 @@
         "AID": "074D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
-        "Name": "Delhi Metro Travel Card (DEL)",
-        "Description": "DEL Delhi Metro App 7",
+        "Name": "Delhi Metro Travel Card (DEL) (Alternative Endian)",
+        "Description": "DEL Delhi Metro (App 7)",
         "Type": "transport"
     },
     {
@@ -1077,6 +1077,70 @@
         "Country": "IE",
         "Name": "TFI Leap Card (DUB)",
         "Description": "DUB Leap Card // Transport for Ireland // FIDs: 01,1F: Backup Data; 02-0A: Standard Data",
+        "Type": "transport"
+    },
+    {
+        "AID": "444D01",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro (App 1)",
+        "Type": "transport"
+    },
+    {
+        "AID": "444D02",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro (App 2)",
+        "Type": "transport"
+    },
+    {
+        "AID": "444D03",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro (App 3)",
+        "Type": "transport"
+    },
+    {
+        "AID": "444D04",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro (App 4)",
+        "Type": "transport"
+    },
+    {
+        "AID": "444D05",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro (App 5)",
+        "Type": "transport"
+    },
+    {
+        "AID": "444D05",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro (App 5)",
+        "Type": "transport"
+    },
+    {
+        "AID": "444D06",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro (App 6)",
+        "Type": "transport"
+    },
+    {
+        "AID": "444D07",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro (App 7)",
         "Type": "transport"
     },
     {
