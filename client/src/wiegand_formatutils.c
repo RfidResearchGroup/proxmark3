@@ -165,7 +165,7 @@ static uint8_t get_length_from_header(wiegand_message_t *data) {
         len = 0;
     }
 
-    while (hfmt > 1) {
+    while (hfmt > 0) {
         hfmt >>= 1;
         len++;
     }
