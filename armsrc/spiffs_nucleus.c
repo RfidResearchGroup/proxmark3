@@ -364,12 +364,21 @@ static s32_t spiffs_obj_lu_scan_v(
 // Checks magic if enabled
 s32_t spiffs_obj_lu_scan(
     spiffs *fs) {
+
     s32_t res;
     spiffs_block_ix bix;
     int entry;
 #if SPIFFS_USE_MAGIC
     spiffs_block_ix unerased_bix = (spiffs_block_ix) - 1;
 #endif
+
+    // this _should_ never happen, but prefer to see debug message / error
+    // rather than silently entering infinite loop.
+    if (fs->block_count > ((spiffs_block_ix)(-1))) {
+        SPIFFS_DBG("Avoiding infinite loop, block_count "_SPIPRIbl" too large for spiffs_block_ix type\n", fs->block_count);
+        SPIFFS_API_CHECK_RES(fs, SPIFFS_ERR_INTERNAL);
+    }
+
 
     // find out erase count
     // if enabled, check magic

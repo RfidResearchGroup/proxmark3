@@ -3226,13 +3226,22 @@ int CmdHF14ANdefRead(const char *Cmd) {
         return PM3_EOVFLOW;
     }
 
-    for (uint16_t i = offset; i < ndef_size + offset; i += max_rapdu_size) {
-        uint16_t segment_size = max_rapdu_size < ndef_size + offset - i ? max_rapdu_size : ndef_size + offset - i;
+    for (size_t i = offset; i < ndef_size + offset; i += max_rapdu_size) {
+        size_t segment_size = max_rapdu_size < ndef_size + offset - i ? max_rapdu_size : ndef_size + offset - i;
+
         keep_field_on = i < ndef_size + offset - max_rapdu_size;
         aREAD_NDEF_n = 0;
         param_gethex_to_eol("00b00000", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
         aREAD_NDEF[2] = i >> 8;
         aREAD_NDEF[3] = i & 0xFF;
+
+        // BUGBUG -- segment_size is stuffed into a single-byte field below?
+        if (segment_size > 0xFFu) {
+            PrintAndLogEx(ERR, "Segment size too large (0x%zx > 0xFF)", segment_size);
+            DropField();
+            free(ndef_file);
+            return PM3_EOVFLOW;
+        }
         aREAD_NDEF[4] = segment_size;
 
         res = ExchangeAPDU14a(aREAD_NDEF, aREAD_NDEF_n + 1, activate_field, keep_field_on, response, sizeof(response), &resplen);

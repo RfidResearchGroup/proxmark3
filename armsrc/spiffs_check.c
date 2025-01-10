@@ -536,6 +536,13 @@ static s32_t spiffs_page_consistency_check_i(spiffs *fs) {
     s32_t res = SPIFFS_OK;
     spiffs_page_ix pix_offset = 0;
 
+    // this _should_ never happen, but prefer to see debug message / error
+    // rather than silently entering infinite loop.
+    if (fs->block_count > ((spiffs_block_ix)(-1))) {
+        SPIFFS_DBG("Avoiding infinite loop, block_count "_SPIPRIbl" too large for spiffs_block_ix type\n", fs->block_count);
+        SPIFFS_API_CHECK_RES(fs, SPIFFS_ERR_INTERNAL);
+    }
+
     // for each range of pages fitting into work memory
     while (pix_offset < SPIFFS_PAGES_PER_BLOCK(fs) * fs->block_count) {
         // set this flag to abort all checks and rescan the page range

@@ -52,6 +52,13 @@ s32_t SPIFFS_format(spiffs *fs) {
 
     SPIFFS_LOCK(fs);
 
+    // this _should_ never happen, but prefer to see debug message / error
+    // rather than silently entering infinite loop.
+    if (fs->block_count > ((spiffs_block_ix)(-1))) {
+        SPIFFS_DBG("Avoiding infinite loop, block_count "_SPIPRIbl" too large for spiffs_block_ix type\n", fs->block_count);
+        SPIFFS_API_CHECK_RES_UNLOCK(fs, SPIFFS_ERR_INTERNAL);
+    }
+
     spiffs_block_ix bix = 0;
     while (bix < fs->block_count) {
         fs->max_erase_count = 0;
