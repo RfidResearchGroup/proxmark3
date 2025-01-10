@@ -8067,6 +8067,9 @@ static int CmdHF14AGen4Info(const char *cmd) {
     }
 
     parse_gtu_cfg(resp, resplen);
+    if (! IfPm3Iso14443a()) {
+        return PM3_SUCCESS;
+    }
 
     uint8_t uid_len = resp[1];
 
