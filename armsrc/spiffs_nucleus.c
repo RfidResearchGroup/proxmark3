@@ -372,10 +372,11 @@ s32_t spiffs_obj_lu_scan(
     spiffs_block_ix unerased_bix = (spiffs_block_ix) - 1;
 #endif
 
+    uint32_t block_count = fs->block_count;
     // this _should_ never happen, but prefer to see debug message / error
     // rather than silently entering infinite loop.
-    if (fs->block_count > ((spiffs_block_ix)(-1))) {
-        SPIFFS_DBG("Avoiding infinite loop, block_count "_SPIPRIbl" too large for spiffs_block_ix type\n", fs->block_count);
+    if (block_count > ((spiffs_block_ix)(-1))) {
+        SPIFFS_DBG("Avoiding infinite loop, block_count "_SPIPRIbl" too large for spiffs_block_ix type\n", block_count);
         SPIFFS_API_CHECK_RES(fs, SPIFFS_ERR_INTERNAL);
     }
 
@@ -386,7 +387,7 @@ s32_t spiffs_obj_lu_scan(
     spiffs_obj_id erase_count_final;
     spiffs_obj_id erase_count_min = SPIFFS_OBJ_ID_FREE;
     spiffs_obj_id erase_count_max = 0;
-    while (bix < fs->block_count) {
+    while (bix < block_count) {
 #if SPIFFS_USE_MAGIC
         spiffs_obj_id magic;
         res = _spiffs_rd(fs,
