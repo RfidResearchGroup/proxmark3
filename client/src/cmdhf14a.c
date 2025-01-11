@@ -3235,7 +3235,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
         aREAD_NDEF[2] = i >> 8;
         aREAD_NDEF[3] = i & 0xFF;
 
-        // BUGBUG -- segment_size is stuffed into a single-byte field below?
+        // Segment_size is stuffed into a single-byte field below ... so error out if overflows
         if (segment_size > 0xFFu) {
             PrintAndLogEx(ERR, "Segment size too large (0x%zx > 0xFF)", segment_size);
             DropField();
