@@ -117,17 +117,31 @@ static char *GenerateFilename(const char *prefix, const char *suffix) {
     return fptr;
 }
 
+// allocates `items` table entries, storing pointer to `*src`
+// Each entry stores two keys (A and B), initialized to six-byte value 0xFFFFFFFFFFFF
+// Each entry also stores whether the key was "found", defaults to false (0)
 static int initSectorTable(sector_t **src, size_t items) {
 
+
+    // typedef struct {
+    //     uint64_t Key[2];
+    //     uint8_t foundKey[2];
+    // } sector_t;
+
+    // This allocates based on the size of a single item
+    _Static_assert(sizeof(sector_t) >= 18); // if packed, would be 18
+    _Static_assert(sizeof(sector_t) == 24); // not packed, so each entry must be 24 bytes
+
     (*src) = calloc(items, sizeof(sector_t));
-    if (*src == NULL)
+    if (*src == NULL) {
         return PM3_EMALLOC;
+    }
 
     // empty e_sector
     for (size_t i = 0; i < items; i++) {
         for (uint8_t j = 0; j < 2; j++) {
             (*src)[i].Key[j] = 0xffffffffffff;
-            (*src)[i].foundKey[j] = 0;
+            // (*src)[i].foundKey[j] = 0; // calloc zero's these already
         }
     }
     return PM3_SUCCESS;
