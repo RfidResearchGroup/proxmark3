@@ -84,6 +84,7 @@ static const  iso14a_polling_frame_t ECP_FRAME = {
 };
 
 
+// based on ISO/IEC JTC1/SC17 STANDING DOCUMENT 5 (Updated 25 February 2022) Register of IC manufacturers
 static const manufactureName_t manufactureMapping[] = {
     // ID,  "Vendor Country"
     { 0x01, "Motorola UK" },
