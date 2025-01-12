@@ -190,7 +190,7 @@ static const manufactureName_t manufactureMapping[] = {
     { 0x65, "Tendyron Corporation China" },
     { 0x66, "MUTO Smart Co., Ltd. Korea" },
     { 0x67, "ON Semiconductor USA" },
-    { 0x68, "TÜBİTAK BİLGEM Turkey" },
+    { 0x68, "TÜBITAK BILGEM Turkey" }, // Don't use "İ", Proxspace doesn't like it
     { 0x69, "Huada Semiconductor Co., Ltd China" },
     { 0x6A, "SEVENEY France" },
     { 0x6B, "THALES DIS Design Services SAS (previously ISSM) France" },
