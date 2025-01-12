@@ -84,7 +84,7 @@ static const  iso14a_polling_frame_t ECP_FRAME = {
 };
 
 
-// based on ISO/IEC JTC1/SC17 STANDING DOCUMENT 5 (Updated 25 February 2022) Register of IC manufacturers
+// based on ISO/IEC JTC1/SC17 STANDING DOCUMENT 5 (Updated 20 September 2024) Register of IC manufacturers
 static const manufactureName_t manufactureMapping[] = {
     // ID,  "Vendor Country"
     { 0x01, "Motorola UK" },
@@ -150,12 +150,12 @@ static const manufactureName_t manufactureMapping[] = {
     { 0x3D, "HID Global USA" },
     { 0x3E, "Productivity Engineering Gmbh Germany" },
     { 0x3F, "Austriamicrosystems AG (reserved) Austria" },
-    { 0x40, "Gemalto SA France" },
+    { 0x40, "Thales DIS (previously Gemalto SA) France" },
     { 0x41, "Renesas Electronics Corporation Japan" },
     { 0x42, "3Alogics Inc Korea" },
     { 0x43, "Top TroniQ Asia Limited Hong Kong" },
     { 0x44, "Gentag Inc. USA" },
-    { 0x45, "Invengo Information Technology Co.Ltd China" },
+    { 0x45, "Invengo Information Technology Co. Ltd China" },
     { 0x46, "Guangzhou Sysur Microelectronics, Inc China" },
     { 0x47, "CEITEC S.A. Brazil" },
     { 0x48, "Shanghai Quanray Electronics Co. Ltd. China" },
@@ -166,7 +166,7 @@ static const manufactureName_t manufactureMapping[] = {
     { 0x4D, "Balluff GmbH Germany" },
     { 0x4E, "Oberthur Technologies France" },
     { 0x4F, "Silterra Malaysia Sdn. Bhd. Malaysia" },
-    { 0x50, "DELTA Danish Electronics, Light & Acoustics Denmark" },
+    { 0x50, "Presto Engineering Denmark" },
     { 0x51, "Giesecke & Devrient GmbH Germany" },
     { 0x52, "Shenzhen China Vision Microelectronics Co., Ltd. China" },
     { 0x53, "Shanghai Feiju Microelectronics Co. Ltd. China" },
@@ -211,9 +211,32 @@ static const manufactureName_t manufactureMapping[] = {
     { 0x7C, "DB HiTek Co Ltd Korea" },
     { 0x7D, "SATO Vicinity Australia" },
     { 0x7E, "Holtek Taiwan" },
+    // Previously, following entries were listed in the doc as 0x7f, 0x80 etc.
+    // Now, they are listed as 'FF 00', 'FF 01',...
     { 0x7F, "Shenzhen Goodix Technology Co., Ltd. China" },
     { 0x80, "Panthronics AG Austria" },
-    { 0x81, "Beijing Huada Infosec Technology Co., Ltd China"},
+    { 0x81, "Beijing Huada Infosec Technology Co., Ltd China" },
+    { 0x82, "Shanghai Oriental Magnetic Card Engineering Co Ltd. China" },
+    { 0x83, "8ApeX Inc USA" },
+    { 0x84, "Abbott Ireland" },
+    { 0x85, "Proqure Inc USA" },
+    { 0x86, "Schreiner Group GmbH & Co. KG Germany" },
+    { 0x87, "Beijing SmartChip Microelectronics Technology Company Limited China" },
+    { 0x88, "Datang Microelectronics Technology Co., Ltd. China" },
+    { 0x89, "Wise Security Technology (Guangzhou) Co., Ltd. China" },
+    { 0x8A, "CEC Huada Electronic Design Co., Ltd. China" },
+    { 0x8B, "Shanghai Techsun RFID Technology Co., Ltd. China" },
+    { 0x8C, "North China Institute of Computing Technology China" },
+    { 0x8D, "Shanghai Huahong Integrated Circuit Co., Ltd. China" },
+    { 0x8E, "Shanghai MintSilicon Microelectronics Inc., Ltd. China" },
+    { 0x8F, "Xinsheng Technology Co., Ltd. China" },
+    { 0x90, "IDEX Biometrics ASA Norway" },
+    { 0x91, "Novo Nordisk A/S Denmark" },
+    { 0x92, "Shandong Huayi Micro-Electronics Technology Co., Ltd. China" },
+    { 0x93, "Abbott Heart Failure USA" },
+    { 0x94, "P&M Information Technology (Shenzhen) Co., Ltd. China" },
+    { 0x95, "MARS TECHNOLOGY PTE. LTD. Singapore" },
+    { 0x96, "Trovan Limited Isle of Man" },
     { 0x00, "no tag-info available" } // must be the last entry
 };
 
