@@ -1093,6 +1093,20 @@
             ],
             "usage": "emv select [-hskatw] <hex>"
         },
+        "emv smart2nfc": {
+            "command": "emv smart2nfc",
+            "description": "Executes ISO14443a payment, TX using ISO7816 interface for authentication",
+            "notes": [
+                "emv smart2nfc -t -> test that the attached card is working (must be VISA)"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-t, --test test that the attached card is working (must be VISA)",
+                "-u, --uid <hex> optional 7 hex bytes UID"
+            ],
+            "usage": "emv smart2nfc [-ht] [-u <hex>]"
+        },
         "emv test": {
             "command": "emv test",
             "description": "Executes tests",
@@ -4974,7 +4988,7 @@
                 "hf mf ginfo --pwd 01020304 -> get info with password",
                 "hf mf ginfo -d 00000000000002090978009102BDAC19131011121314151604001800FF0002FD -v -> decode config block"
             ],
-            "offline": false,
+            "offline": true,
             "options": [
                 "-h, --help This help",
                 "-v, --verbose verbose output",
@@ -5106,7 +5120,7 @@
         },
         "hf mf help": {
             "command": "hf mf help",
-            "description": "help This help list List MIFARE history hardnested Nested attack for hardened MIFARE Classic cards decrypt Decrypt Crypto1 data from sniff or trace acl Decode and print MIFARE Classic access rights bytes mad Checks and prints MAD value Value blocks view Display content from tag dump file gdmparsecfg Parse config block to card --------------------------------------------------------------------------------------- hf mf list available offline: yes Alias of `trace list -t mf -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List MIFARE history hardnested Nested attack for hardened MIFARE Classic cards decrypt Decrypt Crypto1 data from sniff or trace acl Decode and print MIFARE Classic access rights bytes mad Checks and prints MAD value Value blocks view Display content from tag dump file ginfo Info about configuration of the card gdmparsecfg Parse config block to card --------------------------------------------------------------------------------------- hf mf list available offline: yes Alias of `trace list -t mf -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf mf list --frame -> show frame delay times",
                 "hf mf list -1 -> use trace buffer"
@@ -7566,21 +7580,40 @@
             ],
             "usage": "hf search [-hv]"
         },
-        "hf seos help": {
-            "command": "hf seos help",
-            "description": "help This help list List SEOS history --------------------------------------------------------------------------------------- hf seos info available offline: no Get info from SEOS tags",
+        "hf seos adf": {
+            "command": "hf seos adf",
+            "description": "Make a GET DATA request to an Application Data File (ADF) of a SEOS Tag The ADF is meant to be read by an application You still need the valid authentication keys to read a card By default: - ADF OID : 2B0601040181E438010102011801010202 - Key Index: 0 - Tag List : 5c02ff00",
             "notes": [
-                "hf seos info"
+                "hf seos adf",
+                "hf seos adf -o 2B0601040181E438010102011801010202",
+                "hf seos adf -o 2B0601040181E438010102011801010202 --ki 0",
+                "hf seos adf -o 2B0601040181E438010102011801010202 -c 5c02ff41"
             ],
             "offline": true,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-c, --getdata <hex> <0-100> hex bytes for the tag list to Get Data request (Default: 5c02ff00)",
+                "-o, --oid <hex> <0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)",
+                "--ki <dec> Specify key index to set key in memory"
             ],
-            "usage": "hf seos info [-h]"
+            "usage": "hf seos adf [-h] [-c <hex>] [-o <hex>] [--ki <dec>]"
         },
-        "hf seos list": {
-            "command": "hf seos list",
-            "description": "Alias of `trace list -t seos -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+        "hf seos gdf": {
+            "command": "hf seos gdf",
+            "description": "Get Global Data File (GDF) from SEOS card By default: - Key Index: 0",
+            "notes": [
+                "hf seos gdfhf seos gdf --ki 0"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--ki <dec> Specify key index to set key in memory"
+            ],
+            "usage": "hf seos gdf [-h] [--ki <dec>]"
+        },
+        "hf seos help": {
+            "command": "hf seos help",
+            "description": "----------- ----------------------- General ----------------------- help This help list List SEOS history ----------- ----------------------- Operations ----------------------- pacs Extract PACS Information from card adf Read an ADF from the card gdf Read an GDF from card ----------- ----------------------- Utils ----------------------- managekeys Manage keys to use with SEOS commands --------------------------------------------------------------------------------------- hf seos list available offline: yes Alias of `trace list -t seos -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf seos list --frame -> show frame delay times",
                 "hf seos list -1 -> use trace buffer"
@@ -7598,6 +7631,80 @@
                 "-f, --file <fn> filename of dictionary"
             ],
             "usage": "hf seos list [-h1crux] [--frame] [-f <fn>]"
+        },
+        "hf seos info": {
+            "command": "hf seos info",
+            "description": "Requests the unauthenticated information from the default ADF of a SEOS card - If the card is a SEOS card - Are static RND.ICC keys used (can detect SEOS default keyset) - What encryption and hashing algorithm is use",
+            "notes": [
+                "hf seos info"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hf seos info [-h]"
+        },
+        "hf seos managekeys": {
+            "command": "hf seos managekeys",
+            "description": "Manage SEOS Keys in client memory, keys are required to authenticate with SEOS cards",
+            "notes": [
+                "hf seos managekeys -p",
+                "hf seos managekeys -p -v",
+                "hf seos managekeys --ki 0 --nonce 0102030405060708 -> Set nonce value at key index 0",
+                "hf seos managekeys --load -f mykeys.bin -p -> load from file and prints keys",
+                "hf seos managekeys --save -f mykeys.bin -> saves keys to file"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--ki <dec> Specify key index to set key in memory",
+                "--nonce <hex> Nonce value as 8 hex bytes",
+                "--privenc <hex> Privacy Encryption key as 16 hex bytes",
+                "--privmac <hex> Privacy MAC key as 16 hex bytes",
+                "--read <hex> Undiversified Read key as 16 hex bytes",
+                "--write <hex> Undiversified Write key as 16 hex bytes",
+                "--admin <hex> Undiversified Admin key as 16 hex bytes",
+                "-f, --file <fn> Specify a filename for load / save operations",
+                "--save Save keys in memory to file specified by filename",
+                "--load Load keys to memory from file specified by filename",
+                "-p, --print Print keys loaded into memory",
+                "-v, --verbose verbose (print all key info)"
+            ],
+            "usage": "hf seos managekeys [-hpv] [--ki <dec>] [--nonce <hex>] [--privenc <hex>] [--privmac <hex>] [--read <hex>] [--write <hex>] [--admin <hex>] [-f <fn>] [--save] [--load]"
+        },
+        "hf seos pacs": {
+            "command": "hf seos pacs",
+            "description": "Make a GET DATA request to an ADF of a SEOS card By default: - ADF OID : 2B0601040181E438010102011801010202 - Key Index: 0",
+            "notes": [
+                "hf seos pacs",
+                "hf seos pacs --ki 1",
+                "hf seos pacs -o 2B0601040181E438010102011801010202 --ki 0"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-o, --oid <hex> <0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)",
+                "--ki <dec> Specify key index to set key in memory"
+            ],
+            "usage": "hf seos pacs [-h] [-o <hex>] [--ki <dec>]"
+        },
+        "hf seos sam": {
+            "command": "hf seos sam",
+            "description": "Extract PACS via a HID SAM",
+            "notes": [
+                "hf seos sam",
+                "hd seos sam -d a005a103800104 -> get PACS data"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-v, --verbose verbose output",
+                "-k, --keep keep the field active after command executed",
+                "-n, --nodetect skip selecting the card and sending card details to SAM",
+                "-t, --tlv decode TLV",
+                "-d, --data <hex> DER encoded command to send to SAM"
+            ],
+            "usage": "hf seos sam [-hvknt] [-d <hex>]..."
         },
         "hf sniff": {
             "command": "hf sniff",
@@ -13093,8 +13200,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 753,
+        "commands_extracted": 759,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-01-05T12:10:45"
+        "extracted_on": "2025-01-14T15:42:02"
     }
 }

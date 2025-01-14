@@ -138,7 +138,7 @@ static bool MifareSimInit(uint16_t flags, uint8_t *datain, uint16_t atqa, uint8_
                 rSAK[0] = block0[5];
                 memcpy(rATQA, &block0[6], sizeof(rATQA));
             }
-                // Check for 7 bytes UID: double size uid bits in ATQA
+            // Check for 7 bytes UID: double size uid bits in ATQA
             else if ((block0[8] & 0xc0) == 0x40) {
                 flags |= FLAG_7B_UID_IN_DATA_OLD;
                 memcpy(datain, block0, 7);
@@ -497,17 +497,17 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
                 break;
             }
 
-                // The anti-collision sequence, which is a mandatory part of the card activation sequence.
-                // It auto with 4-byte UID (= Single Size UID),
-                // 7 -byte UID (= Double Size UID) or 10-byte UID (= Triple Size UID).
-                // For details see chapter 2 of AN10927.pdf
-                //
-                // This case is used for all Cascade Levels, because:
-                // 1) Any devices (under Android for example) after full select procedure completed,
-                //    when UID is known, uses "fast-selection" method. In this case reader ignores
-                //    first cascades and tries to select tag by last bytes of UID of last cascade
-                // 2) Any readers (like ACR122U) uses bit oriented anti-collision frames during selectin,
-                //    same as multiple tags. For details see chapter 6.1.5.3 of ISO/IEC 14443-3
+            // The anti-collision sequence, which is a mandatory part of the card activation sequence.
+            // It auto with 4-byte UID (= Single Size UID),
+            // 7 -byte UID (= Double Size UID) or 10-byte UID (= Triple Size UID).
+            // For details see chapter 2 of AN10927.pdf
+            //
+            // This case is used for all Cascade Levels, because:
+            // 1) Any devices (under Android for example) after full select procedure completed,
+            //    when UID is known, uses "fast-selection" method. In this case reader ignores
+            //    first cascades and tries to select tag by last bytes of UID of last cascade
+            // 2) Any readers (like ACR122U) uses bit oriented anti-collision frames during selectin,
+            //    same as multiple tags. For details see chapter 6.1.5.3 of ISO/IEC 14443-3
             case MFEMUL_SELECT: {
 
                 int uid_index = -1;
@@ -591,7 +591,7 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
                 break;
             }
 
-                // WORK
+            // WORK
             case MFEMUL_WORK: {
 
                 if (receivedCmd_len == 0) {
@@ -700,7 +700,7 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
 
                 // We want to modify corrupted request
                 if ((receivedCmd_len > 5 && receivedCmd[0] != 0x03 && receivedCmd[0] != 0x02 && receivedCmd[1] == 0 && receivedCmd[4] == 0) || (receivedCmd[2] == 0xa8)) {
-                //if (receivedCmd[2] == 0xa8) {
+                    //if (receivedCmd[2] == 0xa8) {
                     Dbprintf("We saw signing request... modifying it into a generate ac transaction !!!!");
                     receivedCmd[0] = 0x03;
                     receivedCmd[1] = 0x80;
@@ -752,7 +752,7 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
 
                     // This is minus 3 because we don't include the first byte (prepend), plus we don't want to send the
                     // last two bytes (CRC) to the card
-                    CmdSmartRaw(receivedCmd_copy[0], &(receivedCmd_copy[1]), receivedCmd_len_copy-3, (&responseToReader[0]), &responseToReader_len);
+                    CmdSmartRaw(receivedCmd_copy[0], &(receivedCmd_copy[1]), receivedCmd_len_copy - 3, (&responseToReader[0]), &responseToReader_len);
                     EmSendCmd(responseToReader, responseToReader_len);
 
                     Dbprintf("Sent delayed command to card...");

@@ -41,7 +41,7 @@ static uint8_t fci_template[] = {0x02, 0x6f, 0x5e, 0x84, 0x07, 0xa0, 0x00, 0x00,
 static uint8_t pay1_response[] = { 0x6F, 0x1E, 0x84, 0x0E, 0x31, 0x50, 0x41, 0x59 };
 static uint8_t pay2_response[] = { 0x03, 0x6f, 0x3e, 0x84, 0x0e, 0x32, 0x50, 0x41, 0x59, 0x2e, 0x53, 0x59, 0x53, 0x2e, 0x44, 0x44, 0x46, 0x30, 0x31, 0xa5, 0x2c, 0xbf, 0x0c, 0x29, 0x61, 0x27, 0x4f, 0x07, 0xa0, 0x00, 0x00, 0x00, 0x03, 0x10, 0x10, 0x50, 0x0a, 0x56, 0x69, 0x73, 0x61, 0x20, 0x44, 0x65, 0x62, 0x69, 0x74, 0x9f, 0x0a, 0x08, 0x00, 0x01, 0x05, 0x01, 0x00, 0x00, 0x00, 0x00, 0xbf, 0x63, 0x04, 0xdf, 0x20, 0x01, 0x80, 0x90, 0x00, 0x07, 0x9d};
 
-void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint8_t *output, uint16_t *olen) {
+static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint8_t *output, uint16_t *olen) {
     LED_D_ON();
 
     uint16_t len = 0;
@@ -85,11 +85,11 @@ void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint8_t *ou
         LogTrace(p->data, p->len, 0, 0, NULL, true);
 
         bool res = I2C_BufferWrite(
-                p->data,
-                p->len,
-                (((flags & SC_RAW_T0) == SC_RAW_T0) ? I2C_DEVICE_CMD_SEND_T0 : I2C_DEVICE_CMD_SEND),
-                I2C_DEVICE_ADDRESS_MAIN
-        );
+                       p->data,
+                       p->len,
+                       (((flags & SC_RAW_T0) == SC_RAW_T0) ? I2C_DEVICE_CMD_SEND_T0 : I2C_DEVICE_CMD_SEND),
+                       I2C_DEVICE_ADDRESS_MAIN
+                   );
 
         if (res == false && g_dbglevel > 3) {
             //DbpString(I2C_ERROR);
@@ -126,7 +126,7 @@ void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint8_t *ou
         Dbhexdump(3, &resp[0], false);
         resp[0] = prepend;
         resp[1] = 0x6a;
-        resp[2] =0x82;
+        resp[2] = 0x82;
         AddCrc14A(resp, 3);
 
         //Dbhexdump(5, &resp[0], false); // special print
@@ -139,7 +139,7 @@ void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint8_t *ou
         Dbprintf("***** bad response from card (file not found)...");
         resp[0] = prepend;
         resp[1] = 0x6a;
-        resp[2] =0x82;
+        resp[2] = 0x82;
         AddCrc14A(resp, 3);
 
         //Dbhexdump(5, &resp[0], false); // special print
@@ -198,14 +198,14 @@ void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint8_t *ou
             len = sizeof(template);
             Dbhexdump(len, &template[0], false); // special print
 
-            AddCrc14A(&template[1], len-3);
+            AddCrc14A(&template[1], len - 3);
             Dbprintf("\nafter crc rearranged is: ");
             Dbhexdump(len, &template[0], false); // special print
             Dbprintf("\n");
 
             //EmSendCmd(&template[1], len-1);
-            memcpy(output, &template[1], len-1);
-            *olen = len-1;
+            memcpy(output, &template[1], len - 1);
+            *olen = len - 1;
 
             BigBuf_free();
             return;
@@ -213,7 +213,7 @@ void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint8_t *ou
 
         //Dbhexdump(len, &resp[1], false); // special print
         AddCrc14A(&resp[1], len);
-        Dbhexdump(len+2, &resp[1], false); // special print
+        Dbhexdump(len + 2, &resp[1], false); // special print
 
         // Check we don't want to modify the response (application profile response)
         //uint8_t modifyme[] = {0x03, 0x77, 0x0e, 0x82, 0x02};
@@ -230,8 +230,7 @@ void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint8_t *ou
             //EmSendCmd(&pay2_response[0], sizeof(pay2_response));
             memcpy(output, &pay2_response[0], sizeof(pay2_response));
             *olen = sizeof(pay2_response);
-        }
-        else if (memcmp(&resp[1], &fci_template[0], 2) == 0 && true) {
+        } else if (memcmp(&resp[1], &fci_template[0], 2) == 0 && true) {
             Dbprintf("***** modifying response to have full fci template...!");
             //EmSendCmd(&fci_template[0], sizeof(fci_template));
             memcpy(output, &fci_template[0], sizeof(fci_template));
@@ -254,7 +253,7 @@ void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint8_t *ou
 
     //reply_ng(CMD_SMART_RAW, PM3_SUCCESS, resp, len);
 
-    OUT:
+OUT:
     //BigBuf_free();
     //set_tracing(false);
     LEDsoff();

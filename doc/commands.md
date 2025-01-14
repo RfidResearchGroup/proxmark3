@@ -163,6 +163,7 @@ Check column "offline" for their availability.
 |`emv scan               `|N       |`Scan EMV card and save it contents to json file for emulator`
 |`emv search             `|N       |`Try to select all applets from applets list and print installed applets`
 |`emv select             `|N       |`Select applet`
+|`emv smart2nfc          `|N       |`Complete transaction as a nfc smart card, using the ISO-7816 interface for auth`
 
 
 ### hf
@@ -559,7 +560,7 @@ Check column "offline" for their availability.
 |`hf mf gen3uid          `|N       |`Set UID without changing manufacturer block`
 |`hf mf gen3blk          `|N       |`Overwrite manufacturer block`
 |`hf mf gen3freeze       `|N       |`Perma lock UID changes. irreversible`
-|`hf mf ginfo            `|N       |`Info about configuration of the card`
+|`hf mf ginfo            `|Y       |`Info about configuration of the card`
 |`hf mf ggetblk          `|N       |`Read block from card`
 |`hf mf gload            `|N       |`Load dump to card`
 |`hf mf gsave            `|N       |`Save dump from card into file or emulator`
@@ -704,8 +705,13 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf seos help           `|Y       |`This help`
-|`hf seos info           `|N       |`Tag information`
 |`hf seos list           `|Y       |`List SEOS history`
+|`hf seos sam            `|N       |`SAM tests`
+|`hf seos info           `|N       |`Tag information`
+|`hf seos pacs           `|Y       |`Extract PACS Information from card`
+|`hf seos adf            `|Y       |`Read an ADF from the card`
+|`hf seos gdf            `|Y       |`Read an GDF from card`
+|`hf seos managekeys     `|Y       |`Manage keys to use with SEOS commands`
 
 
 ### hf st25ta

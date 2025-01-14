@@ -2678,7 +2678,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     if (is_ev1) {
         // hidden sectors on MFC EV1
         sector_cnt += 2;
-        
+
         // bandaid fix
         block_cnt += 8;
     }

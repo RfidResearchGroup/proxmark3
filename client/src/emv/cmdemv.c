@@ -636,10 +636,10 @@ static int CmdEMVSmartToNFC(const char *Cmd) {
                   "emv smart2nfc -t     -> test that the attached card is working (must be VISA)\n");
 
     void *argtable[] = {
-            arg_param_begin,
-            arg_lit0("t",  "test",    "test that the attached card is working (must be VISA)"),
-            arg_str0("u", "uid", "<hex>", "optional 7 hex bytes UID"),
-            arg_param_end
+        arg_param_begin,
+        arg_lit0("t",  "test",    "test that the attached card is working (must be VISA)"),
+        arg_str0("u", "uid", "<hex>", "optional 7 hex bytes UID"),
+        arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
