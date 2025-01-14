@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf mfu info` - now properly identify ULEv1 AES 50pF (@iceman1001)
 - Changed `hf mf info` - now differentiates between full USCUID and cut down ZUID chips (@nvx)
 - Changed `lf hitag chk` - added key counter, client side abort and minor delay (@iceman1001) 
 - Added `hf seos sam` - Added support for HID SAM SEOS communications (@jkramarz)
