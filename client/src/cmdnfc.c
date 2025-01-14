@@ -119,6 +119,7 @@ static int CmdNfcDecode(const char *Cmd) {
         if (bytes_read != MIFARE_4K_MAX_BYTES
                 && bytes_read != MIFARE_2K_MAX_BYTES
                 && bytes_read != MIFARE_1K_MAX_BYTES
+                && bytes_read != MIFARE_1K_EV1_MAX_BYTES
                 && bytes_read != MIFARE_MINI_MAX_BYTES) {
 
             uint8_t **pd = &tmp;
