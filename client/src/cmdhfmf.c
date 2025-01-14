@@ -7942,11 +7942,11 @@ static int parse_gtu_cfg(uint8_t *d, size_t n) {
 
     uint8_t atslen = d[7];
     if (atslen == 0) {
-        PrintAndLogEx(INFO, ".............. ATS length %u bytes ( %s )", atslen, _YELLOW_("zero"));
+        PrintAndLogEx(INFO, "..............%02X ATS length %u bytes ( %s )", d[7], atslen, _YELLOW_("zero"));
     } else if (atslen <= 16) {
-        PrintAndLogEx(INFO, ".............. ATS length %u bytes ( %s )", atslen, _GREEN_("ok"));
+        PrintAndLogEx(INFO, "..............%02X ATS length %u bytes ( %s )", d[7], atslen, _GREEN_("ok"));
     } else {
-        PrintAndLogEx(INFO, ".............. ATS length %u bytes ( %s )", atslen, _RED_("fail"));
+        PrintAndLogEx(INFO, "..............%02X ATS length %u bytes ( %s )", d[7], atslen, _RED_("fail"));
         atslen = 0;
     }
 
@@ -7955,7 +7955,7 @@ static int parse_gtu_cfg(uint8_t *d, size_t n) {
     // ATS seems to have 16 bytes reserved
     PrintAndLogEx(INFO, _CYAN_("Config 2 - ATS"));
     PrintAndLogEx(INFO, "%s", sprint_hex_inrow(d + 8, 16));
-    if (atslen <= 16) {
+    if ((atslen > 0) && (atslen <= 16)) {
         PrintAndLogEx(INFO, "%s.............. ATS ( %d bytes )", sprint_hex_inrow(&d[8], d[7]), d[7]);
         PrintAndLogEx(INFO, "..................%s Reserved for ATS", sprint_hex_inrow(d + 8 + d[7], 16 - d[7]));
     } else {
@@ -8044,21 +8044,32 @@ static int CmdHF14AGen4Info(const char *cmd) {
     size_t resplen = 0;
     int res = 0;
 
-    if (dlen != 32) {
-        res = mfG4GetConfig(pwd, resp, &resplen, verbose);
-        if (res != PM3_SUCCESS || resplen == 0) {
-            if (res == PM3_ETIMEOUT)
-                PrintAndLogEx(ERR, "No card in the field or card command timeout.");
-            else
-                PrintAndLogEx(ERR, "Error get config. Maybe not a Gen4 card?. error=%d rlen=%zu", res, resplen);
+    if (dlen == 0) {
+        if (IfPm3Iso14443a()) {
+            res = mfG4GetConfig(pwd, resp, &resplen, verbose);
+            if (res != PM3_SUCCESS || resplen == 0) {
+                if (res == PM3_ETIMEOUT)
+                    PrintAndLogEx(ERR, "No card in the field or card command timeout.");
+                else
+                    PrintAndLogEx(ERR, "Error get config. Maybe not a Gen4 card?. error=%d rlen=%zu", res, resplen);
+                return PM3_ESOFT;
+            }
+        } else {
+            PrintAndLogEx(ERR, "Offline mode, please provide data");
             return PM3_ESOFT;
         }
+    } else if (dlen != 32) {
+        PrintAndLogEx(FAILED, "Data must be 32 bytes length, got " _YELLOW_("%u"), dlen);
+        return PM3_EINVARG;
     } else {
         memcpy(resp, data, dlen);
         resplen = 32;
     }
 
     parse_gtu_cfg(resp, resplen);
+    if (! IfPm3Iso14443a()) {
+        return PM3_SUCCESS;
+    }
 
     uint8_t uid_len = resp[1];
 
@@ -10139,7 +10150,7 @@ static command_t CommandTable[] = {
     {"gen3blk",     CmdHf14AGen3Block,      IfPm3Iso14443a,  "Overwrite manufacturer block"},
     {"gen3freeze",  CmdHf14AGen3Freeze,     IfPm3Iso14443a,  "Perma lock UID changes. irreversible"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "-------------------- " _CYAN_("magic gen4 GTU") " --------------------------"},
-    {"ginfo",       CmdHF14AGen4Info,       IfPm3Iso14443a,  "Info about configuration of the card"},
+    {"ginfo",       CmdHF14AGen4Info,       AlwaysAvailable,  "Info about configuration of the card"},
     {"ggetblk",     CmdHF14AGen4GetBlk,     IfPm3Iso14443a,  "Read block from card"},
     {"gload",       CmdHF14AGen4Load,       IfPm3Iso14443a,  "Load dump to card"},
     {"gsave",       CmdHF14AGen4Save,       IfPm3Iso14443a,  "Save dump from card into file or emulator"},

@@ -263,20 +263,21 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MAGIC_SINGLE                (MAGIC_HALT | MAGIC_INIT | MAGIC_OFF) //0x1E
 
 // by CMD_HF_MIFARE_CIDENT / Flags
-#define MAGIC_FLAG_NONE          0x0000
-#define MAGIC_FLAG_GEN_1A        0x0001
-#define MAGIC_FLAG_GEN_1B        0x0002
-#define MAGIC_FLAG_GEN_2         0x0004
-#define MAGIC_FLAG_GEN_UNFUSED   0x0008
-#define MAGIC_FLAG_SUPER_GEN1    0x0010
-#define MAGIC_FLAG_SUPER_GEN2    0x0020
-#define MAGIC_FLAG_NTAG21X       0x0040
-#define MAGIC_FLAG_GEN_3         0x0080
-#define MAGIC_FLAG_GEN_4GTU      0x0100
-#define MAGIC_FLAG_GDM_AUTH      0x0200
-#define MAGIC_FLAG_QL88          0x0400
-#define MAGIC_FLAG_GDM_WUP_20    0x0800
-#define MAGIC_FLAG_GDM_WUP_40    0x1000
+#define MAGIC_FLAG_NONE            0x0000
+#define MAGIC_FLAG_GEN_1A          0x0001
+#define MAGIC_FLAG_GEN_1B          0x0002
+#define MAGIC_FLAG_GEN_2           0x0004
+#define MAGIC_FLAG_GEN_UNFUSED     0x0008
+#define MAGIC_FLAG_SUPER_GEN1      0x0010
+#define MAGIC_FLAG_SUPER_GEN2      0x0020
+#define MAGIC_FLAG_NTAG21X         0x0040
+#define MAGIC_FLAG_GEN_3           0x0080
+#define MAGIC_FLAG_GEN_4GTU        0x0100
+#define MAGIC_FLAG_GDM_AUTH        0x0200
+#define MAGIC_FLAG_QL88            0x0400
+#define MAGIC_FLAG_GDM_WUP_20      0x0800
+#define MAGIC_FLAG_GDM_WUP_40      0x1000
+#define MAGIC_FLAG_GDM_WUP_40_ZUID 0x2000
 
 
 // Commands for configuration of Gen4 GTU cards.

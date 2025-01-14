@@ -2927,6 +2927,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
     uint8_t rdbl00[4] = {ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa8};
     uint8_t gen4gdmAuth[4] = {MIFARE_MAGIC_GDM_AUTH_KEY, 0x00, 0x6C, 0x92};
     uint8_t gen4gdmGetConf[4] = {MIFARE_MAGIC_GDM_READ_CFG, 0x00, 0x39, 0xF7};
+    uint8_t gen4gdmGetMagicBlock[4] = {MIFARE_MAGIC_GDM_READBLOCK, 0x00, 0xC2, 0x66};
     uint8_t gen4GetConf[8] = {GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_GETCNF, 0, 0};
     uint8_t superGen1[9] = {0x0A, 0x00, 0x00, 0xA6, 0xB0, 0x00, 0x10, 0x14, 0x1D};
     bool isGen2 = false;
@@ -2955,7 +2956,16 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
         ReaderTransmit(gen4gdmGetConf, sizeof(gen4gdmGetConf), NULL);
         res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
         if (res > 1) {
-            flag |= MAGIC_FLAG_GDM_WUP_40;
+            // could be ZUID or full USCUID, the magic blocks don't exist on ZUID so
+            // a failure here indicates a feature limited chip like ZUID
+            // check for GDM hidden block read
+            ReaderTransmit(gen4gdmGetMagicBlock, sizeof(gen4gdmGetMagicBlock), NULL);
+            res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
+            if (res > 1) {
+                flag |= MAGIC_FLAG_GDM_WUP_40;
+            } else {
+                flag |= MAGIC_FLAG_GDM_WUP_40_ZUID;
+            }
         }
     }
 

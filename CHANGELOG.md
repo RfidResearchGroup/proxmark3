@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf mf info` - now differentiates between full USCUID and cut down ZUID chips (@nvx)
+- Changed `lf hitag chk` - added key counter, client side abort and minor delay (@iceman1001) 
 - Added `hf seos sam` - Added support for HID SAM SEOS communications (@jkramarz)
 - Changed (extended) area accessible by spiffs into last page of FLASH (@piotrva)
 - Changed flash-stored key dictionaries (Mifare, iClass, T55XX) and T55XX configurations to SPIFFS files (@piotrva)
@@ -27,8 +29,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added simulation function to `hf iclass legrec` (@antiklesys)
 - Added keys from Momentum firmware projects. (@onovy)
 - Added Dutch Statistics Agency default key (@eagle00789)
-- Changed hf mf autopwn - now allows for custom suffix (@zxkmm)
 - Fixed Wiegand decode with hex input dropping the first bit (@emilyastranova)
+- Changed `hf mf autopwn` - now allows for custom suffix (@zxkmm)
 
 ## [Orca.4.19552][2024-11-22]
 - Fixed `hf_legic.lua` - removed bit32 commands from the script (@diorch1968)

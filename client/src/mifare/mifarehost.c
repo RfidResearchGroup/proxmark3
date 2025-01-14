@@ -1144,7 +1144,7 @@ int mf_chinese_set_uid(uint8_t *uid, uint8_t uidlen, const uint8_t *atqa, const 
 
     res = mf_chinese_set_block(0, block0, NULL, params);
     if (res == PM3_SUCCESS) {
-        params = MAGIC_SINGLE | MAGIC_WUPC;
+        params = MAGIC_SINGLE | (gdm ? MAGIC_GDM_ALT_WUPC : MAGIC_WUPC);
         memset(block0, 0, sizeof(block0));
         res = mf_chinese_get_block(0, block0, params);
         if (res == 0) {
@@ -1612,6 +1612,10 @@ uint16_t detect_mf_magic(bool is_mfc, uint8_t key_type, uint64_t key) {
 
     if ((isMagic & MAGIC_FLAG_GDM_WUP_40) == MAGIC_FLAG_GDM_WUP_40) {
         PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GDM / USCUID") " ( Gen1 Magic Wakeup )");
+    }
+
+    if ((isMagic & MAGIC_FLAG_GDM_WUP_40_ZUID) == MAGIC_FLAG_GDM_WUP_40_ZUID) {
+        PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GDM / USCUID") " ( ZUID Gen1 Magic Wakeup )");
     }
 
     if ((isMagic & MAGIC_FLAG_GEN_UNFUSED) == MAGIC_FLAG_GEN_UNFUSED) {

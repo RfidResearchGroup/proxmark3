@@ -84,6 +84,7 @@ static const  iso14a_polling_frame_t ECP_FRAME = {
 };
 
 
+// based on ISO/IEC JTC1/SC17 STANDING DOCUMENT 5 (Updated 20 September 2024) Register of IC manufacturers
 static const manufactureName_t manufactureMapping[] = {
     // ID,  "Vendor Country"
     { 0x01, "Motorola UK" },
@@ -103,12 +104,12 @@ static const manufactureName_t manufactureMapping[] = {
     { 0x0F, "Hynix / Hyundai, Korea" },
     { 0x10, "LG-Semiconductors Co. Ltd Korea" },
     { 0x11, "Emosyn-EM Microelectronics USA" },
-    { 0x12, "INSIDE Technology France" },
+    { 0x12, "Wisekey Semiconductors (previously INSIDE Technology) France" },
     { 0x13, "ORGA Kartensysteme GmbH Germany" },
     { 0x14, "SHARP Corporation Japan" },
     { 0x15, "ATMEL France" },
     { 0x16, "EM Microelectronic-Marin SA Switzerland" },
-    { 0x17, "KSW Microtec GmbH Germany" },
+    { 0x17, "SMARTRAC TECHNOLOGY GmbH Germany" },
     { 0x18, "ZMD AG Germany" },
     { 0x19, "XICOR, Inc. USA" },
     { 0x1A, "Sony Corporation Japan" },
@@ -124,7 +125,7 @@ static const manufactureName_t manufactureMapping[] = {
     { 0x24, "Masktech Germany Gmbh Germany" },
     { 0x25, "Innovision Research and Technology Plc UK" },
     { 0x26, "Hitachi ULSI Systems Co., Ltd. Japan" },
-    { 0x27, "Cypak AB Sweden" },
+    { 0x27, "Yubico AB Sweden" },
     { 0x28, "Ricoh Japan" },
     { 0x29, "ASK France" },
     { 0x2A, "Unicore Microsystems, LLC Russian Federation" },
@@ -140,7 +141,7 @@ static const manufactureName_t manufactureMapping[] = {
     { 0x34, "Mikron JSC Russia" },
     { 0x35, "Fraunhofer Institute for Photonic Microsystems Germany" },
     { 0x36, "IDS Microchip AG Switzerland" },
-    { 0x37, "Thinfilm - Kovio USA" },
+    { 0x37, "Kovio USA" },
     { 0x38, "HMT Microelectronic Ltd Switzerland" },
     { 0x39, "Silicon Craft Technology Thailand" },
     { 0x3A, "Advanced Film Device Inc. Japan" },
@@ -149,12 +150,12 @@ static const manufactureName_t manufactureMapping[] = {
     { 0x3D, "HID Global USA" },
     { 0x3E, "Productivity Engineering Gmbh Germany" },
     { 0x3F, "Austriamicrosystems AG (reserved) Austria" },
-    { 0x40, "Gemalto SA France" },
+    { 0x40, "Thales DIS (previously Gemalto SA) France" },
     { 0x41, "Renesas Electronics Corporation Japan" },
     { 0x42, "3Alogics Inc Korea" },
     { 0x43, "Top TroniQ Asia Limited Hong Kong" },
     { 0x44, "Gentag Inc. USA" },
-    { 0x45, "Invengo Information Technology Co.Ltd China" },
+    { 0x45, "Invengo Information Technology Co. Ltd China" },
     { 0x46, "Guangzhou Sysur Microelectronics, Inc China" },
     { 0x47, "CEITEC S.A. Brazil" },
     { 0x48, "Shanghai Quanray Electronics Co. Ltd. China" },
@@ -165,7 +166,7 @@ static const manufactureName_t manufactureMapping[] = {
     { 0x4D, "Balluff GmbH Germany" },
     { 0x4E, "Oberthur Technologies France" },
     { 0x4F, "Silterra Malaysia Sdn. Bhd. Malaysia" },
-    { 0x50, "DELTA Danish Electronics, Light & Acoustics Denmark" },
+    { 0x50, "Presto Engineering Denmark" },
     { 0x51, "Giesecke & Devrient GmbH Germany" },
     { 0x52, "Shenzhen China Vision Microelectronics Co., Ltd. China" },
     { 0x53, "Shanghai Feiju Microelectronics Co. Ltd. China" },
@@ -185,18 +186,57 @@ static const manufactureName_t manufactureMapping[] = {
     { 0x61, "Wearlinks Technology Inc. China" },
     { 0x62, "Userstar Information Systems Co., Ltd Taiwan" },
     { 0x63, "Pragmatic Printing Ltd. UK" },
-    { 0x64, "Associacao do Laboratorio de Sistemas Integraveis Tecnologico - LSI-TEC Brazil" },
+    { 0x64, "Associação do Laboratório de Sistemas Integráveis Tecnológico - LSI-TEC Brazil" },
     { 0x65, "Tendyron Corporation China" },
     { 0x66, "MUTO Smart Co., Ltd. Korea" },
     { 0x67, "ON Semiconductor USA" },
-    { 0x68, "TUBITAK BILGEM Turkey" },
+    { 0x68, "TÜBITAK BILGEM Turkey" }, // Don't use "İ", Proxspace doesn't like it
     { 0x69, "Huada Semiconductor Co., Ltd China" },
     { 0x6A, "SEVENEY France" },
-    { 0x6B, "ISSM France" },
+    { 0x6B, "THALES DIS Design Services SAS (previously ISSM) France" },
     { 0x6C, "Wisesec Ltd Israel" },
+    { 0x6D, "LTD \"NM-Teh\" Russia" },
+    { 0x70, "ifm electronic gmbh Germany" },
+    { 0x71, "Sichuan Kiloway Technologies Co., Ltd. China" },
+    { 0x72, "Ford Motor Company US" },
+    { 0x73, "Beijing Tsingteng MicroSystem Co.,Ltd China" },
+    { 0x74, "Huada EverCore Co., Ltd China" },
+    { 0x75, "Smartchip Microelectronics Corporation Taiwan" },
+    { 0x76, "Tongxin Microelectronics Co., Ltd. China" },
+    { 0x77, "Ningbo IOT Microelectronics Co Ltd China" },
+    { 0x78, "AU Optronics Taiwan" },
+    { 0x79, "CUBIC USA" },
+    { 0x7A, "Abbott Diabetes Care USA" },
+    { 0x7B, "Shenzen Nation RFID Technology Co Ltd China" },
     { 0x7C, "DB HiTek Co Ltd Korea" },
     { 0x7D, "SATO Vicinity Australia" },
     { 0x7E, "Holtek Taiwan" },
+    // Previously, following entries were listed in the doc as 0x7f, 0x80 etc.
+    // Now, they are listed as 'FF 00', 'FF 01',...
+    { 0x7F, "Shenzhen Goodix Technology Co., Ltd. China" },
+    { 0x80, "Panthronics AG Austria" },
+    { 0x81, "Beijing Huada Infosec Technology Co., Ltd China" },
+    { 0x82, "Shanghai Oriental Magnetic Card Engineering Co Ltd. China" },
+    { 0x83, "8ApeX Inc USA" },
+    { 0x84, "Abbott Ireland" },
+    { 0x85, "Proqure Inc USA" },
+    { 0x86, "Schreiner Group GmbH & Co. KG Germany" },
+    { 0x87, "Beijing SmartChip Microelectronics Technology Company Limited China" },
+    { 0x88, "Datang Microelectronics Technology Co., Ltd. China" },
+    { 0x89, "Wise Security Technology (Guangzhou) Co., Ltd. China" },
+    { 0x8A, "CEC Huada Electronic Design Co., Ltd. China" },
+    { 0x8B, "Shanghai Techsun RFID Technology Co., Ltd. China" },
+    { 0x8C, "North China Institute of Computing Technology China" },
+    { 0x8D, "Shanghai Huahong Integrated Circuit Co., Ltd. China" },
+    { 0x8E, "Shanghai MintSilicon Microelectronics Inc., Ltd. China" },
+    { 0x8F, "Xinsheng Technology Co., Ltd. China" },
+    { 0x90, "IDEX Biometrics ASA Norway" },
+    { 0x91, "Novo Nordisk A/S Denmark" },
+    { 0x92, "Shandong Huayi Micro-Electronics Technology Co., Ltd. China" },
+    { 0x93, "Abbott Heart Failure USA" },
+    { 0x94, "P&M Information Technology (Shenzhen) Co., Ltd. China" },
+    { 0x95, "MARS TECHNOLOGY PTE. LTD. Singapore" },
+    { 0x96, "Trovan Limited Isle of Man" },
     { 0x00, "no tag-info available" } // must be the last entry
 };
 
@@ -2721,7 +2761,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf c*") "` magic commands");
 
             // if GEN4 GDM in Gen1a more,  hint about it
-            if ((isMagic & MAGIC_FLAG_GDM_WUP_40) == MAGIC_FLAG_GDM_WUP_40) {
+            if (((isMagic & MAGIC_FLAG_GDM_WUP_40) == MAGIC_FLAG_GDM_WUP_40) || ((isMagic & MAGIC_FLAG_GDM_WUP_40_ZUID) == MAGIC_FLAG_GDM_WUP_40_ZUID)) {
                 PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf gdm* --gen1a") "` magic commands");
             }
         }
