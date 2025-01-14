@@ -137,6 +137,7 @@ typedef struct {
 #define CMD_HF_ISO14443A_SNIFF                                            0x0383
 #define CMD_HF_ISO14443A_SIMULATE                                         0x0384
 #define CMD_HF_ISO14443A_READER                                           0x0385
+#define CMD_HF_ISO14443A_EMV_SIMULATE                                     0x0386
 
 #define CMD_HF_LEGIC_SIMULATE                                             0x0387
 #define CMD_HF_LEGIC_READER                                               0x0388
@@ -180,7 +181,7 @@ typedef struct {
 
 #define CMD_HF_MIFARE_READER                                              0x0611
 #define CMD_HF_MIFARE_NESTED                                              0x0612
-#define    CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES                             0x0613
+#define CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES                                0x0613
 
 
 #define CMD_HF_MIFARE_READBL                                              0x0620

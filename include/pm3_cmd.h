@@ -612,6 +612,7 @@ typedef struct {
 #define CMD_HF_ISO14443A_SIM_AID                                          0x1420
 
 #define CMD_HF_ISO14443A_READER                                           0x0385
+#define CMD_HF_ISO14443A_EMV_SIMULATE                                     0x0386
 
 #define CMD_HF_LEGIC_SIMULATE                                             0x0387
 #define CMD_HF_LEGIC_READER                                               0x0388
