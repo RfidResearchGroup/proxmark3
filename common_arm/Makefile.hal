@@ -193,6 +193,9 @@ endif
 ifneq ($(SKIP_EM4x70),1)
     PLATFORM_DEFS += -DWITH_EM4x70
 endif
+ifneq ($(SKIP_EMVSIM),1)
+    PLATFORM_DEFS += -DWITH_EMVSIM
+endif
 ifneq ($(SKIP_ZX8211),1)
     PLATFORM_DEFS += -DWITH_ZX8211
 endif

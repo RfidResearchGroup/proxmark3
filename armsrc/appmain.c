@@ -1664,6 +1664,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ISO14443A_EMV_SIMULATE: {
+#ifdef WITH_EMVSIM
             struct p {
                 uint16_t flags;
                 uint8_t exitAfter;
@@ -1674,6 +1675,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             struct p *payload = (struct p *) packet->data.asBytes;
 
             EMVsim(payload->flags, payload->exitAfter, payload->uid, payload->atqa, payload->sak);
+#endif
             break;
         }
         case CMD_HF_ISO14443A_SIMULATE: {
