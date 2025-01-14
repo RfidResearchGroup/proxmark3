@@ -7814,6 +7814,8 @@ static int CmdHF14AMfView(const char *Cmd) {
     uint16_t block_cnt = MIN(MIFARE_1K_MAXBLOCK, (bytes_read / MFBLOCK_SIZE));
     if (bytes_read == MIFARE_MINI_MAX_BYTES)
         block_cnt = MIFARE_MINI_MAXBLOCK;
+    else if (bytes_read == MIFARE_1K_EV1_MAX_BYTES)
+            block_cnt = MIFARE_1K_EV1_MAXBLOCK;
     else if (bytes_read == MIFARE_2K_MAX_BYTES)
         block_cnt = MIFARE_2K_MAXBLOCK;
     else if (bytes_read == MIFARE_4K_MAX_BYTES)
