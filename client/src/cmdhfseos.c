@@ -55,41 +55,41 @@ typedef struct {
 keyset_t keys[] = {
     {
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },                                         // Nonce
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },        // privEncKey
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },        // privMacKey
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },        // readKey
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },        // writeKey
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 }         // adminKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privEncKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privMacKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // readKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // writeKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } // adminKey
     },
     {
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },                                         // Nonce
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },        // privEncKey
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },        // privMacKey
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },        // readKey
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },        // writeKey
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 }         // adminKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privEncKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privMacKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // readKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // writeKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } // adminKey
     },
     {
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },                                         // Nonce
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },        // privEncKey
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },        // privMacKey
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },        // readKey
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },        // writeKey
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 }         // adminKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privEncKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privMacKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // readKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // writeKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } // adminKey
     },
     {
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },                                         // Nonce
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },        // privEncKey
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },        // privMacKey
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },        // readKey
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },        // writeKey
-        { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 }         // adminKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privEncKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privMacKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // readKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // writeKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } // adminKey
     },
 };
 
 typedef struct {
     const int value;
-    const char* name;
+    const char *name;
 } known_algo_t;
 
 static const known_algo_t known_algorithm_map[] = {
@@ -111,18 +111,17 @@ static const sioMediaTypeName_t sioMediaTypeMapping[] = {
     { 0xFF, "INVALID VALUE"}
 };
 
-static int create_cmac (uint8_t* key, uint8_t* input, uint8_t* out, int input_len, int encryption_algorithm) {
+static int create_cmac(uint8_t *key, uint8_t *input, uint8_t *out, int input_len, int encryption_algorithm) {
     uint8_t iv[16] = {0x00};
 
     if (encryption_algorithm == 0x09) {
         // Working as expected
         aes_cmac(iv, key, input, out, input_len);
-    }
-    else if (encryption_algorithm == 0x02) {
+    } else if (encryption_algorithm == 0x02) {
         // CMAC Requires a 24 byte key, but the 2k3DES uses the 1st part for the 3rd part of the key
         memcpy(&key[16], &key[0], 8);
 
-        const mbedtls_cipher_info_t* ctx;
+        const mbedtls_cipher_info_t *ctx;
         ctx = mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_DES_EDE3_ECB);
         mbedtls_cipher_cmac(ctx, key, 192, input, input_len, out);
     } else {
@@ -132,7 +131,7 @@ static int create_cmac (uint8_t* key, uint8_t* input, uint8_t* out, int input_le
     return PM3_SUCCESS;
 }
 
-static int create_cryptogram (uint8_t* key, uint8_t* input, uint8_t* out, int input_len, int encryption_algorithm) {
+static int create_cryptogram(uint8_t *key, uint8_t *input, uint8_t *out, int input_len, int encryption_algorithm) {
     uint8_t iv[16] = {};
 
     if (encryption_algorithm == 0x09) {
@@ -146,11 +145,11 @@ static int create_cryptogram (uint8_t* key, uint8_t* input, uint8_t* out, int in
         PrintAndLogEx(ERR, _RED_("Unknown Encryption Algorithm"));
         return PM3_ESOFT;
     }
-    
+
     return PM3_SUCCESS;
 }
 
-static int decrypt_cryptogram (uint8_t* key, uint8_t* input, uint8_t* out, int input_len, int encryption_algorithm) {
+static int decrypt_cryptogram(uint8_t *key, uint8_t *input, uint8_t *out, int input_len, int encryption_algorithm) {
     uint8_t iv[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     if (encryption_algorithm == 0x09) {
@@ -164,38 +163,36 @@ static int decrypt_cryptogram (uint8_t* key, uint8_t* input, uint8_t* out, int i
         PrintAndLogEx(ERR, "Unknown Encryption Algorithm");
         return PM3_ESOFT;
     }
-    
+
     return PM3_SUCCESS;
 }
 
-static void increment_command_wrapper(uint8_t* input, int input_len) {
-    input[input_len-1]++; // Increment the last element of the header by 1
+static void increment_command_wrapper(uint8_t *input, int input_len) {
+    input[input_len - 1]++; // Increment the last element of the header by 1
 }
 
-static void padToBlockSize(const uint8_t* input, int inputSize, int blockSize, uint8_t* output) {
+static void padToBlockSize(const uint8_t *input, int inputSize, int blockSize, uint8_t *output) {
     int paddingSize = blockSize - (inputSize % blockSize);
     memcpy(output, input, inputSize);
     memset(output + inputSize, 0x80, 1);
     memset(output + inputSize + 1, 0x00, paddingSize - 1);
 }
 
-static void generate_command_wrapping(uint8_t *command_Header, int command_header_len, uint8_t *unencrypted_Command, int unencrypted_command_len ,uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_enc_key, uint8_t *diversified_mac_key, int encryption_algorithm, uint8_t *command, int *command_len) {
-     int block_size = 0;
-    
+static void generate_command_wrapping(uint8_t *command_Header, int command_header_len, uint8_t *unencrypted_Command, int unencrypted_command_len, uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_enc_key, uint8_t *diversified_mac_key, int encryption_algorithm, uint8_t *command, int *command_len) {
+    int block_size = 0;
+
     if (encryption_algorithm == 0x02) {
         block_size = 8;
-    }
-    else if (encryption_algorithm == 0x09) {
+    } else if (encryption_algorithm == 0x09) {
         block_size = 16;
-    } 
-    else {
+    } else {
         PrintAndLogEx(ERR, _RED_("Unknown Encryption Algorithm"));
         return;
     }
 
     uint8_t rndCounter[block_size];
-    memcpy (rndCounter, rndICC, block_size / 2);
-    memcpy (rndCounter + block_size / 2, rndIFD, block_size/2);
+    memcpy(rndCounter, rndICC, block_size / 2);
+    memcpy(rndCounter + block_size / 2, rndIFD, block_size / 2);
     increment_command_wrapper(rndCounter, block_size);
 
     // Command Header is for the APDU Command to be sent
@@ -205,14 +202,14 @@ static void generate_command_wrapping(uint8_t *command_Header, int command_heade
     // Unencrypted Command is our actual command data
     uint8_t padded_unencrypted_Command[block_size];
     padToBlockSize(unencrypted_Command, unencrypted_command_len, block_size, padded_unencrypted_Command);
-    
+
     uint8_t padded_encrypted_Command[block_size];
     create_cryptogram(diversified_enc_key, padded_unencrypted_Command, padded_encrypted_Command, sizeof(padded_unencrypted_Command), encryption_algorithm);
 
-    uint8_t asn1_tag_cryptograph[2] = {0x85,ARRAYLEN(padded_encrypted_Command)};
-    uint8_t asn1_tag_mac[2] = {0x8e,0x08};
-    uint8_t command_trailer[2] = {0x97,0x00};
-    uint8_t padded_command_trailer[block_size - ARRAYLEN(command_trailer)]; 
+    uint8_t asn1_tag_cryptograph[2] = {0x85, ARRAYLEN(padded_encrypted_Command)};
+    uint8_t asn1_tag_mac[2] = {0x8e, 0x08};
+    uint8_t command_trailer[2] = {0x97, 0x00};
+    uint8_t padded_command_trailer[block_size - ARRAYLEN(command_trailer)];
     padToBlockSize(command_trailer, sizeof(command_trailer), block_size, padded_command_trailer);
 
     uint8_t toEncrypt[ARRAYLEN(rndCounter) + ARRAYLEN(padded_Command_Header) + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command) + ARRAYLEN(padded_command_trailer)];
@@ -236,10 +233,10 @@ static void generate_command_wrapping(uint8_t *command_Header, int command_heade
     // PrintAndLogEx(SUCCESS, "toEncrypt........................ " _YELLOW_("%s"), sprint_hex_inrow(toEncrypt,sizeof(toEncrypt)));
     // PrintAndLogEx(SUCCESS, "MAC.............................. " _YELLOW_("%s"), sprint_hex_inrow(mac,sizeof(mac)));
 
-    uint8_t sizeofcommand[1] = {ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command) + ARRAYLEN(command_trailer) + ARRAYLEN(asn1_tag_mac)+ ARRAYLEN(mac)};
+    uint8_t sizeofcommand[1] = {ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command) + ARRAYLEN(command_trailer) + ARRAYLEN(asn1_tag_mac) + ARRAYLEN(mac)};
     uint8_t respondTo[1] = {0x00};
 
-    uint8_t completedCommand[command_header_len + 1 + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command) + ARRAYLEN(command_trailer) + ARRAYLEN(asn1_tag_mac)+ ARRAYLEN(mac) + 1];
+    uint8_t completedCommand[command_header_len + 1 + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command) + ARRAYLEN(command_trailer) + ARRAYLEN(asn1_tag_mac) + ARRAYLEN(mac) + 1];
     memcpy(completedCommand, command_Header, command_header_len);
     memcpy(completedCommand + command_header_len, sizeofcommand, ARRAYLEN(sizeofcommand));
     memcpy(completedCommand + command_header_len + ARRAYLEN(sizeofcommand), asn1_tag_cryptograph, ARRAYLEN(asn1_tag_cryptograph));
@@ -259,7 +256,7 @@ static void generate_command_wrapping(uint8_t *command_Header, int command_heade
     //return;
 }
 
-static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_enc_key, uint8_t *diversified_mac_key, uint8_t *sioOutput,  int* sio_size, int encryption_algorithm, uint8_t* get_data_tlv, int get_data_tlv_len) {
+static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_enc_key, uint8_t *diversified_mac_key, uint8_t *sioOutput,  int *sio_size, int encryption_algorithm, uint8_t *get_data_tlv, int get_data_tlv_len) {
     // Intergrating our command generation with the GetData request to make my life easier in the future
 
     // Command Header is for the Get Data Command using
@@ -280,9 +277,9 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
 
     int command_header_len = ARRAYLEN(command_header);
 
-    // Command to be sent 
+    // Command to be sent
     // 5c [02] ff 00
-    // 5c = tag list data object 
+    // 5c = tag list data object
     // BER-TLV tag of the data object to be retrieved
     // uint8_t unencrypted_command[4] = {0x5c,0x02,0xff,0x00};
     // Modification of the tags 2nd place from 00 can return other data
@@ -338,7 +335,7 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
 
     uint8_t cryptogram[64];
     uint8_t responseCode[2];
-    uint8_t tag[2] = {0x00,0x00};
+    uint8_t tag[2] = {0x00, 0x00};
     int getDataSize = 0;
 
     // ------------------- Cryptogram Response -------------------
@@ -366,13 +363,12 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
         *sio_size = getDataSize;
         memcpy(responseCode, response + 68, 2);
 
-        PrintAndLogEx(SUCCESS, "Response Code.................... " _YELLOW_("%s"), sprint_hex_inrow(responseCode, (ARRAYLEN(responseCode))));     
+        PrintAndLogEx(SUCCESS, "Response Code.................... " _YELLOW_("%s"), sprint_hex_inrow(responseCode, (ARRAYLEN(responseCode))));
         PrintAndLogEx(SUCCESS, "Output........................... " _YELLOW_("%s"), sprint_hex_inrow(sioOutput, getDataSize));
-    }
-    else if (resplen >= 2 && response[0] == 0x99) {
+    } else if (resplen >= 2 && response[0] == 0x99) {
         memcpy(responseCode, response + 2, 2);
         // PrintAndLogEx(SUCCESS, "Raw Response..................... " _YELLOW_("%s"), sprint_hex_inrow(response, (resplen - 2)));
-        PrintAndLogEx(SUCCESS, "Response Code.................... " _YELLOW_("%s"), sprint_hex_inrow(responseCode, (ARRAYLEN(responseCode))));     
+        PrintAndLogEx(SUCCESS, "Response Code.................... " _YELLOW_("%s"), sprint_hex_inrow(responseCode, (ARRAYLEN(responseCode))));
     }
 
     return PM3_SUCCESS;
@@ -385,21 +381,21 @@ static void set_counter_big_endian(uint8_t *buffer, uint32_t counter) {
     buffer[3] = counter & 0xFF;
 }
 
-static void create_mutual_auth_key(uint8_t* KEYIFD, uint8_t* KEYICC, uint8_t* RNDICC, uint8_t* RNDIFD, uint8_t* EncryptionKey, uint8_t* MACKey, int encryptionAlgorithm ,int HashingAlgorithm) {
+static void create_mutual_auth_key(uint8_t *KEYIFD, uint8_t *KEYICC, uint8_t *RNDICC, uint8_t *RNDIFD, uint8_t *EncryptionKey, uint8_t *MACKey, int encryptionAlgorithm, int HashingAlgorithm) {
     // Creating Mutual Authentication Keys
-    // Structure 
+    // Structure
     // Prefix               = 00000000
-    // keyIFD.substring(16) = 0000000000000000      IFD = Interface Device 
+    // keyIFD.substring(16) = 0000000000000000      IFD = Interface Device
     // keyICC.substring(16) = 0000000000000000      ICC = Integrated Circuit Card
-    // hashing algorithm x2 = 09 09 
+    // hashing algorithm x2 = 09 09
     // randomICC            = 0000000000000000      ICC = Integrated Circuit Card
     // RandomIFD            = 0000000000000000      IFD = Interface Device
     // Will always be 38 bytes
-    // 
+    //
     // 00000000 E0EC1F2D7B000000 F0EC1F2D7B000000 09 09 B0EC1F2D7B000000B8EC1F2D7B000000
 
-    uint8_t prefix[4] = {0x00,0x00,0x00,0x00};
-    uint8_t aHashingAlgorithm[2] = {encryptionAlgorithm,encryptionAlgorithm};
+    uint8_t prefix[4] = {0x00, 0x00, 0x00, 0x00};
+    uint8_t aHashingAlgorithm[2] = {encryptionAlgorithm, encryptionAlgorithm};
     uint8_t hash_in[38];
 
     memcpy(hash_in, prefix, 4);
@@ -435,13 +431,11 @@ static void create_mutual_auth_key(uint8_t* KEYIFD, uint8_t* KEYICC, uint8_t* RN
         sha1hash(hash_in, sizeof(hash_in), hashedOutput);
         memcpy(output + 20, hashedOutput, 20);
         //PrintAndLogEx(SUCCESS, "key_out_temp..................... " _YELLOW_("%s"), sprint_hex_inrow(hash_in,ARRAYLEN(hash_in)));
-    }
-    else if (HashingAlgorithm == 0x07) {
+    } else if (HashingAlgorithm == 0x07) {
         sha256hash(hash_in, sizeof(hash_in), hashedOutput);
         memcpy(output, hashedOutput, 32);
-    }
-    else {
-        // Yes they generate their encryption keys and mac keys in a weird way for no fucking reason, the 2nd cycle isn't required. 
+    } else {
+        // Yes they generate their encryption keys and mac keys in a weird way for no fucking reason, the 2nd cycle isn't required.
         PrintAndLogEx(ERR, _RED_("Unknown Hashing Algorithm"));
         return;
     }
@@ -457,7 +451,7 @@ static void create_mutual_auth_key(uint8_t* KEYIFD, uint8_t* KEYICC, uint8_t* RN
     // PrintAndLogEx(SUCCESS, "MAC Key.......................... " _YELLOW_("%s"), sprint_hex_inrow(MACKey, 16));
 }
 
-static int seos_challenge_get(uint8_t* RNDICC, uint8_t RNDICC_len) {
+static int seos_challenge_get(uint8_t *RNDICC, uint8_t RNDICC_len) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
@@ -466,7 +460,7 @@ static int seos_challenge_get(uint8_t* RNDICC, uint8_t RNDICC_len) {
 
     // The Get Challenge seems to be static across all tested cards
     // 00870001047c02810000
-    
+
     char getChallengePre[21];
     strcpy(getChallengePre, "008700");
     const char keyslot_str[3] = "01";
@@ -500,7 +494,7 @@ static int seos_challenge_get(uint8_t* RNDICC, uint8_t RNDICC_len) {
     // 7C 0A 81 08 18 1E 43 80 10 10 20 11
     // 81 is the ASN.1 tag
 
-    uint8_t staticResponse[8] = {0x01,0x81,0xE4,0x38,0x01,0x01,0x02,0x01};
+    uint8_t staticResponse[8] = {0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01};
 
     PrintAndLogEx(INFO, "--- " _CYAN_("Get Challenge") " ---------------------------");
     //PrintAndLogEx(SUCCESS, "Challenge Input: " _YELLOW_("%s"), getChallengePre);
@@ -513,14 +507,14 @@ static int seos_challenge_get(uint8_t* RNDICC, uint8_t RNDICC_len) {
     return PM3_SUCCESS;
 };
 
-int seos_kdf(bool encryption, uint8_t* masterKey, uint8_t keyslot,
-             uint8_t* adfOid, size_t adfoid_len, uint8_t* diversifier, uint8_t diversifier_len, uint8_t* out, int encryption_algorithm, int hash_algorithm) {
+int seos_kdf(bool encryption, uint8_t *masterKey, uint8_t keyslot,
+             uint8_t *adfOid, size_t adfoid_len, uint8_t *diversifier, uint8_t diversifier_len, uint8_t *out, int encryption_algorithm, int hash_algorithm) {
 
     // Encryption key      = 04
     // KEK Encryption key  = 05
     // MAC key             = 06
     // KEK MAC key         = 07
-                
+
     uint8_t typeOfKey = 0x06;
     if (encryption == true) {
         typeOfKey = 0x04;
@@ -551,13 +545,13 @@ int seos_kdf(bool encryption, uint8_t* masterKey, uint8_t keyslot,
     // PrintAndLogEx(SUCCESS, "Input: " _YELLOW_("%s"), sprint_hex_inrow(input, (sizeof(input))));
 
     // ----------------- AES Key Generation -----------------
-    uint8_t AES_iv[16] = {}; 
+    uint8_t AES_iv[16] = {};
 
     aes_cmac(AES_iv, masterKey, input, out, sizeof(input));
     return PM3_SUCCESS;
 };
 
-static int select_DF_verify(uint8_t* response, uint8_t response_length, uint8_t* MAC_value, size_t MAC_value_len, int encryption_algorithm, int key_index) {
+static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t *MAC_value, size_t MAC_value_len, int encryption_algorithm, int key_index) {
     uint8_t input[response_length - 10];
     // Response is an ASN.1 encoded structure
     // Extract everything before the 8E tag
@@ -571,7 +565,7 @@ static int select_DF_verify(uint8_t* response, uint8_t response_length, uint8_t*
 
     // ----------------- MAC Key Generation -----------------
     uint8_t cmac[8];
-	uint8_t MAC_key[24] = {0x00};
+    uint8_t MAC_key[24] = {0x00};
     memcpy(MAC_key, keys[key_index].privMacKey, 16);
     create_cmac(MAC_key, input, cmac, sizeof(input), encryption_algorithm);
 
@@ -582,7 +576,7 @@ static int select_DF_verify(uint8_t* response, uint8_t response_length, uint8_t*
     if (memcmp(cmac, MAC_value, MAC_value_len) == 0) {
         // PrintAndLogEx(SUCCESS, _GREEN_("MAC Verification successful"));
         return PM3_SUCCESS;
-    } 
+    }
     // PrintAndLogEx(INFO, "MAC Type......................... " _YELLOW_("%s"), algorithm_name1);
     // PrintAndLogEx(INFO, "Supp MAC......................... " _YELLOW_("%s"), sprint_hex_inrow(MAC_value, MAC_value_len));
     // PrintAndLogEx(INFO, "Calc MAC......................... " _YELLOW_("%s"), sprint_hex_inrow(cmac, sizeof(cmac)));
@@ -592,9 +586,9 @@ static int select_DF_verify(uint8_t* response, uint8_t response_length, uint8_t*
     return PM3_ESOFT;
 }
 
-static int select_df_decode(uint8_t* response, uint8_t response_length, int* ALGORITHM_INFO_value1, int* ALGORITHM_INFO_value2, uint8_t* CRYPTOGRAM_encrypted_data, uint8_t* MAC_value) {
+static int select_df_decode(uint8_t *response, uint8_t response_length, int *ALGORITHM_INFO_value1, int *ALGORITHM_INFO_value2, uint8_t *CRYPTOGRAM_encrypted_data, uint8_t *MAC_value) {
     // Response is an ASN.1 encoded structure
-    // ASN.1 Information 
+    // ASN.1 Information
     // CF = Diversifier
     //
     // CD = ALGORITHM_INFO
@@ -642,7 +636,7 @@ static int select_df_decode(uint8_t* response, uint8_t response_length, int* ALG
             memcpy(CRYPTOGRAM_encrypted_data, &response[i + 2], 64);
             bufferPoint = i + (i + 1);
             break;
-        } 
+        }
     }
 
     for (int i = bufferPoint; i < response_length; i++) {
@@ -652,7 +646,7 @@ static int select_df_decode(uint8_t* response, uint8_t response_length, int* ALG
         }
     }
 
-    const char* algorithm_name1 = NULL;
+    const char *algorithm_name1 = NULL;
     for (int i = 0; i < ARRAYLEN(known_algorithm_map); i++) {
         if ((known_algorithm_map[i].value) == ALGORITHM_INFO_value1_n) {
             algorithm_name1 = known_algorithm_map[i].name;
@@ -660,7 +654,7 @@ static int select_df_decode(uint8_t* response, uint8_t response_length, int* ALG
         }
     }
 
-    const char* algorithm_name2 = NULL;
+    const char *algorithm_name2 = NULL;
     for (int i = 0; i < ARRAYLEN(known_algorithm_map); i++) {
         if (known_algorithm_map[i].value == ALGORITHM_INFO_value2_n) {
             algorithm_name2 = known_algorithm_map[i].name;
@@ -676,7 +670,7 @@ static int select_df_decode(uint8_t* response, uint8_t response_length, int* ALG
     }
 
     if (algorithm_name2 != NULL) {
-        PrintAndLogEx(SUCCESS, "algoIdHash (MAC)................. "_YELLOW_("%i (%s)"),ALGORITHM_INFO_value2_n, algorithm_name2);
+        PrintAndLogEx(SUCCESS, "algoIdHash (MAC)................. "_YELLOW_("%i (%s)"), ALGORITHM_INFO_value2_n, algorithm_name2);
     } else {
         PrintAndLogEx(ERR, "algoIdHash (MAC)............... %d (Unknown)", ALGORITHM_INFO_value2_n);
     }
@@ -688,7 +682,7 @@ static int select_df_decode(uint8_t* response, uint8_t response_length, int* ALG
     return PM3_SUCCESS;
 }
 
-static int select_ADF_decrypt(const char* selectADFOID, uint8_t* CRYPTOGRAM_encrypted_data_raw, uint8_t* CRYPTOGRAM_Diversifier, int encryption_algorithm, int key_index) {
+static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encrypted_data_raw, uint8_t *CRYPTOGRAM_Diversifier, int encryption_algorithm, int key_index) {
     // --------------- Decrypt ----------------
 
     // 1. MAC Verify - AES/CBC-decrypt (IV || cryptogram || 16 bytes after 8e 08) with the MAC key & keep the last block
@@ -707,7 +701,7 @@ static int select_ADF_decrypt(const char* selectADFOID, uint8_t* CRYPTOGRAM_encr
 
     // PrintAndLogEx(SUCCESS, "CRYPTOGRAM_encrypted_data_raw: " _YELLOW_("%s"), sprint_hex_inrow(CRYPTOGRAM_encrypted_data_raw, 64));
     // PrintAndLogEx(SUCCESS, "Raw Decrypted Data............... "_YELLOW_("%s"), sprint_hex_inrow(CRYPTOGRAM_decrypted_data,sizeof(CRYPTOGRAM_decrypted_data)));
-    
+
     // Rough Output
     // 06112B0601040181E438010102011801010202 CF 07 EFB08A28B0529F 5282752803B485BABF8CD88F3DA5515DF7712CF3
 
@@ -716,7 +710,7 @@ static int select_ADF_decrypt(const char* selectADFOID, uint8_t* CRYPTOGRAM_encr
     int diversifier_length = 0;
     int adf_length = 0;
 
-    int CRYPTOGRAM_decrypted_data_length = sizeof(CRYPTOGRAM_decrypted_data); 
+    int CRYPTOGRAM_decrypted_data_length = sizeof(CRYPTOGRAM_decrypted_data);
 
     for (int i = 0; i < CRYPTOGRAM_decrypted_data_length; i++) {
         // ADF OID tag
@@ -724,15 +718,15 @@ static int select_ADF_decrypt(const char* selectADFOID, uint8_t* CRYPTOGRAM_encr
             adf_length = ((CRYPTOGRAM_decrypted_data[i + 1]));
             diversifier_length = CRYPTOGRAM_decrypted_data[i + adf_length + 3];
 
-            uint8_t CRYPTOGRAM_ADF[strlen(selectADFOID)/2];
+            uint8_t CRYPTOGRAM_ADF[strlen(selectADFOID) / 2];
 
-            memcpy(CRYPTOGRAM_ADF, &CRYPTOGRAM_decrypted_data[i], strlen(selectADFOID)/2);
+            memcpy(CRYPTOGRAM_ADF, &CRYPTOGRAM_decrypted_data[i], strlen(selectADFOID) / 2);
             memcpy(CRYPTOGRAM_Diversifier, &CRYPTOGRAM_decrypted_data[i + adf_length + 4], diversifier_length);
 
-            const char* CRYPTOGRAM_ADF_CMP = (sprint_hex_inrow(CRYPTOGRAM_ADF,ARRAYLEN(CRYPTOGRAM_ADF)));
+            const char *CRYPTOGRAM_ADF_CMP = (sprint_hex_inrow(CRYPTOGRAM_ADF, ARRAYLEN(CRYPTOGRAM_ADF)));
 
-            char* CRYPTOGRAM_ADF_UPPER = strdup(CRYPTOGRAM_ADF_CMP);
-            char* selectADFOID_UPPER = strdup(selectADFOID);
+            char *CRYPTOGRAM_ADF_UPPER = strdup(CRYPTOGRAM_ADF_CMP);
+            char *selectADFOID_UPPER = strdup(selectADFOID);
 
             // Convert both strings to uppercase
             for (int x = 0; CRYPTOGRAM_ADF_UPPER[x]; x++) {
@@ -745,7 +739,7 @@ static int select_ADF_decrypt(const char* selectADFOID, uint8_t* CRYPTOGRAM_encr
 
             // Compare the 2 ADF responses, if they don't match then the decryption is wrong
             // We do the + 4 to remove the first 4 bytes of the ADF OID ASN.1 Tag (0611)
-            if (strcmp(CRYPTOGRAM_ADF_UPPER + 4, selectADFOID_UPPER + 4) != 0) {                
+            if (strcmp(CRYPTOGRAM_ADF_UPPER + 4, selectADFOID_UPPER + 4) != 0) {
                 PrintAndLogEx(ERR, "ADF does not match decrypted ADF");
                 PrintAndLogEx(ERR, "Likely wrong Key or IV");
                 // PrintAndLogEx(SUCCESS, "Decoded ADF....................... "_YELLOW_("%s"), CRYPTOGRAM_ADF_UPPER);                              // ADF Selected
@@ -763,8 +757,8 @@ static int select_ADF_decrypt(const char* selectADFOID, uint8_t* CRYPTOGRAM_encr
     return PM3_SUCCESS;
 };
 
-static int seos_mutual_auth(uint8_t* randomICC, uint8_t* CRYPTOGRAM_Diversifier, uint8_t diversifier_len, uint8_t* mutual_auth_randomIFD, uint8_t* mutual_auth_keyICC, uint8_t* randomIFD, uint8_t randomIFD_len, uint8_t* keyIFD, uint8_t keyIFD_len, int encryption_algorithm, int hash_algorithm, int key_index) {
-    uint8_t response[PM3_CMD_DATA_SIZE];    
+static int seos_mutual_auth(uint8_t *randomICC, uint8_t *CRYPTOGRAM_Diversifier, uint8_t diversifier_len, uint8_t *mutual_auth_randomIFD, uint8_t *mutual_auth_keyICC, uint8_t *randomIFD, uint8_t randomIFD_len, uint8_t *keyIFD, uint8_t keyIFD_len, int encryption_algorithm, int hash_algorithm, int key_index) {
+    uint8_t response[PM3_CMD_DATA_SIZE];
 
     // ---------------- Diversify Keys ----------------
     uint8_t undiversified_key[16] = { 0x00 };
@@ -773,10 +767,10 @@ static int seos_mutual_auth(uint8_t* randomICC, uint8_t* CRYPTOGRAM_Diversifier,
     uint8_t keyslot = 0x01; // up to 0x0F
     uint8_t AES_key[24] = {0x00};
     uint8_t MAC_key[24] = {0x00};
-    uint8_t adfOID[17] = {0x2b,0x06,0x01,0x04,0x01,0x81,0xe4,0x38,0x01,0x01,0x02,0x01,0x18,0x01,0x01,0x02,0x02};
+    uint8_t adfOID[17] = {0x2b, 0x06, 0x01, 0x04, 0x01, 0x81, 0xe4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02, 0x02};
 
     // Null AES IV
-    uint8_t nullDiversifier[7] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+    uint8_t nullDiversifier[7] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     if (memcmp(CRYPTOGRAM_Diversifier, nullDiversifier, sizeof(nullDiversifier)) == 0) {
         PrintAndLogEx(ERR, "No Diversifier found");
@@ -824,22 +818,22 @@ static int seos_mutual_auth(uint8_t* randomICC, uint8_t* CRYPTOGRAM_Diversifier,
 
     // ----------------- Command Generation -----------------
 
-    const char* prefixLenHex = "2c";
-    const char* ASN1_tagAboveLenHex = "2a";
-    const char* ASN1_auth_encryptedLenHex = "28";
+    const char *prefixLenHex = "2c";
+    const char *ASN1_tagAboveLenHex = "2a";
+    const char *ASN1_auth_encryptedLenHex = "28";
 
-    const char* mutual_auth_message = sprint_hex_inrow(message_authenticated, sizeof(message_authenticated));
-    
+    const char *mutual_auth_message = sprint_hex_inrow(message_authenticated, sizeof(message_authenticated));
+
     char keyslot_str[3];
     snprintf(keyslot_str, sizeof(keyslot_str), "%02X", keyslot);
 
-    const char* prefix = "008700";
-    const char* ASN1_tagAbove = "7c";
-    const char* ASN1_auth_encrypted = "82";
-    const char* suffix = "00";
+    const char *prefix = "008700";
+    const char *ASN1_tagAbove = "7c";
+    const char *ASN1_auth_encrypted = "82";
+    const char *suffix = "00";
 
     char mutual_auth[102];
-    snprintf(mutual_auth, sizeof(mutual_auth), "%s%s%s%s%s%s%s%s%s", prefix, keyslot_str, prefixLenHex, ASN1_tagAbove, ASN1_tagAboveLenHex,ASN1_auth_encrypted, ASN1_auth_encryptedLenHex, mutual_auth_message, suffix);
+    snprintf(mutual_auth, sizeof(mutual_auth), "%s%s%s%s%s%s%s%s%s", prefix, keyslot_str, prefixLenHex, ASN1_tagAbove, ASN1_tagAboveLenHex, ASN1_auth_encrypted, ASN1_auth_encryptedLenHex, mutual_auth_message, suffix);
     // PrintAndLogEx(SUCCESS, "Mutual Auth Encrypted Request.... " _YELLOW_("%s"), mutual_auth);
 
     // BLOCKS MUTUAL AUTH BEFORE REQUIRED
@@ -886,7 +880,7 @@ static int seos_mutual_auth(uint8_t* randomICC, uint8_t* CRYPTOGRAM_Diversifier,
 
     uint8_t mutual_auth_response_decrypted[32];
     if (encryption_algorithm == 0x09) {
-         aes_decode(iv, AES_key, mutual_auth_response, mutual_auth_response_decrypted, sizeof(mutual_auth_response));
+        aes_decode(iv, AES_key, mutual_auth_response, mutual_auth_response_decrypted, sizeof(mutual_auth_response));
     } else if (encryption_algorithm == 0x02) {
         mbedtls_des3_context ctx3;
         mbedtls_des3_set2key_dec(&ctx3, AES_key);
@@ -928,8 +922,8 @@ static int seos_aid_select(void) {
 
     // ---------------  Select AID for SEOS Card ----------------
     typedef struct {
-        const char* name;
-        const char* value;
+        const char *name;
+        const char *value;
     } seos_aid_t;
 
     static const seos_aid_t known_AID_map[] = {
@@ -942,16 +936,16 @@ static int seos_aid_select(void) {
     //PrintAndLogEx(INFO, "--- " _CYAN_("AID Selection") " ---------------------------");
     for (i = 0; i < ARRAYLEN(known_AID_map); i++) {
 
-        const char* selectedAID = known_AID_map[i].value;
+        const char *selectedAID = known_AID_map[i].value;
 
         // Select command prefixed with a 00
-        const char* prefix = "00A404";
+        const char *prefix = "00A404";
         uint16_t aidlen = strlen(selectedAID) >> 1;
 
         char aidlenHex[5];
         snprintf(aidlenHex, sizeof(aidlenHex), "%04X", aidlen);
 
-        const char* suffix = "0";
+        const char *suffix = "0";
         char combinedString[100];
 
         snprintf(combinedString, sizeof(combinedString), "%s%s%s%s", prefix, aidlenHex, selectedAID, suffix);
@@ -987,7 +981,7 @@ static int seos_aid_select(void) {
     return res;
 };
 
-static int seos_pacs_adf_select(char* oid, int oid_len, uint8_t* get_data, int get_data_len, int key_index) {
+static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *get_data, int get_data_len, int key_index) {
     int resplen = 0;
     uint8_t response[PM3_CMD_DATA_SIZE];
     bool activate_field = false;
@@ -1001,28 +995,28 @@ static int seos_pacs_adf_select(char* oid, int oid_len, uint8_t* get_data, int g
     // 2b0601040181e438010102011801010202 = ADF-OID
 
     // --------------- OID Selection ----------------
-    const char* ADFprefix = "06";
+    const char *ADFprefix = "06";
     char selectedOID[100];
     snprintf(selectedOID, sizeof(selectedOID), "%s", oid);
 
     uint16_t selectedOIDLen = strlen(selectedOID);
     char selectedOIDLenHex[3];
-    snprintf(selectedOIDLenHex, sizeof(selectedOIDLenHex), "%02X", (selectedOIDLen)/2);
+    snprintf(selectedOIDLenHex, sizeof(selectedOIDLenHex), "%02X", (selectedOIDLen) / 2);
 
     char selectedADF[strlen(ADFprefix) + strlen(selectedOIDLenHex) + selectedOIDLen + 1];
     snprintf(selectedADF, sizeof(selectedADF), "%s%s%s", ADFprefix, selectedOIDLenHex, selectedOID);
 
     // --------------- Command Builder Selection ----------------
     // prefix is the APDU command we are sending
-    const char* prefix = "80A504";
-    const char* suffix = "00";
-    const char* keyReference = "00";
+    const char *prefix = "80A504";
+    const char *suffix = "00";
+    const char *keyReference = "00";
 
     uint16_t selectedADFLen = strlen(selectedADF);
-    
+
     char adflenHex[3];
     snprintf(adflenHex, sizeof(adflenHex), "%02X", (selectedADFLen >> 1) & 0xFF);
-    
+
     char selectADF[strlen(prefix) + strlen(adflenHex) + selectedADFLen + strlen(suffix) + 1];
 
     // 80 A5 04 00 13 06 11 2B 06 01 04 01 81 E4 38 01 01 02 01 18 01 01 02 02 00
@@ -1030,7 +1024,7 @@ static int seos_pacs_adf_select(char* oid, int oid_len, uint8_t* get_data, int g
 
 
     PrintAndLogEx(INFO, "--- " _CYAN_("Select ADF") " ---------------------------");
-    PrintAndLogEx(SUCCESS, "Selected ADF..................... "_YELLOW_("%s"), selectedOID); 
+    PrintAndLogEx(SUCCESS, "Selected ADF..................... "_YELLOW_("%s"), selectedOID);
 
     // ---------------  Send APDU Command ----------------
 
@@ -1058,11 +1052,11 @@ static int seos_pacs_adf_select(char* oid, int oid_len, uint8_t* get_data, int g
     uint8_t CRYPTOGRAM_encrypted_data[64];      // Encrypted Data
     uint8_t MAC_value[8] = {0};                 // MAC Value
 
-    uint8_t diversifier[7] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+    uint8_t diversifier[7] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t RNDICC[8] = {0};
     uint8_t KeyICC[16] = {0};
-    uint8_t RNDIFD[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-    uint8_t KeyIFD[16] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+    uint8_t RNDIFD[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t KeyIFD[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     uint8_t Diversified_New_EncryptionKey[24] = {0};
     uint8_t Diversified_New_MACKey[24] = {0};
@@ -1076,7 +1070,7 @@ static int seos_pacs_adf_select(char* oid, int oid_len, uint8_t* get_data, int g
     if (res != PM3_SUCCESS) {
         return res;
     }
-    
+
     if (ALGORITHM_INFO_value1 == 0x09 || ALGORITHM_INFO_value1 == 0x02) {
 
         select_ADF_decrypt(selectedADF, CRYPTOGRAM_encrypted_data, diversifier, ALGORITHM_INFO_value1, key_index);
@@ -1098,7 +1092,7 @@ static int seos_pacs_adf_select(char* oid, int oid_len, uint8_t* get_data, int g
             PrintAndLogEx(INFO, "--- " _CYAN_("Key Data") " ---------------------------");
             PrintAndLogEx(SUCCESS, "SIO.............................. "_YELLOW_("%s"), sprint_hex_inrow(sioOutput, sizeof(sioOutput)));             // SIO
             PrintAndLogEx(SUCCESS, "SIO Size......................... "_YELLOW_("%i"), sio_size);                                                   // SIO Size
-            PrintAndLogEx(SUCCESS, "Diversifier...................... "_YELLOW_("%s"), sprint_hex_inrow(diversifier,ARRAYLEN(diversifier)));        // Diversifier
+            PrintAndLogEx(SUCCESS, "Diversifier...................... "_YELLOW_("%s"), sprint_hex_inrow(diversifier, ARRAYLEN(diversifier)));       // Diversifier
         };
 
     } else {
@@ -1109,29 +1103,29 @@ static int seos_pacs_adf_select(char* oid, int oid_len, uint8_t* get_data, int g
     return PM3_SUCCESS;
 };
 
-static int seos_adf_select(char* oid, int oid_len, int key_index) {
+static int seos_adf_select(char *oid, int oid_len, int key_index) {
     int resplen = 0;
     uint8_t response[PM3_CMD_DATA_SIZE];
     bool activate_field = false;
     bool keep_field_on = true;
 
     // --------------- OID Selection ----------------
-    const char* ADFprefix = "06";
+    const char *ADFprefix = "06";
     char selectedOID[100];
     snprintf(selectedOID, sizeof(selectedOID), "%s", oid);
 
     uint16_t selectedOIDLen = strlen(selectedOID);
     char selectedOIDLenHex[3];
-    snprintf(selectedOIDLenHex, sizeof(selectedOIDLenHex), "%02X", (selectedOIDLen)/2);
+    snprintf(selectedOIDLenHex, sizeof(selectedOIDLenHex), "%02X", (selectedOIDLen) / 2);
 
     char selectedADF[strlen(ADFprefix) + strlen(selectedOIDLenHex) + selectedOIDLen + 1];
     snprintf(selectedADF, sizeof(selectedADF), "%s%s%s", ADFprefix, selectedOIDLenHex, selectedOID);
 
     // --------------- Command Builder Selection ----------------
     // prefix is the APDU command we are sending
-    const char* prefix = "80A504";
-    const char* suffix = "00";
-    const char* keyReference = "00";
+    const char *prefix = "80A504";
+    const char *suffix = "00";
+    const char *keyReference = "00";
 
     uint16_t selectedADFLen = strlen(selectedADF);
     char adflenHex[3];
@@ -1141,7 +1135,7 @@ static int seos_adf_select(char* oid, int oid_len, int key_index) {
     // 80 A5 04 00 13 06 11 2B 06 01 04 01 81 E4 38 01 01 02 01 18 01 01 02 02 00
     snprintf(selectADF, sizeof(selectADF), "%s%s%s%s%s", prefix, keyReference, adflenHex, selectedADF, suffix);
     PrintAndLogEx(INFO, "--- " _CYAN_("Select ADF") " ---------------------------");
-    PrintAndLogEx(SUCCESS, "Selected ADF..................... "_YELLOW_("%s"), selectedADF); 
+    PrintAndLogEx(SUCCESS, "Selected ADF..................... "_YELLOW_("%s"), selectedADF);
 
     // ---------------  Send APDU Command ----------------
     uint8_t aSELECT_FILE_ADF[124];
@@ -1190,7 +1184,7 @@ static int seos_gdf_select(int key_index) {
     // 00A5070600
     // SelectGlobalDF = 00A50000
 
-    const char* getGDF = "00A5070600";
+    const char *getGDF = "00A5070600";
 
     uint8_t agetGDF[10];
     int agetGDF_n = 0;
@@ -1230,14 +1224,14 @@ static int seos_select(void) {
         return res;
     }
 
-    const char* oid = "2B0601040181E438010102011801010202";
+    const char *oid = "2B0601040181E438010102011801010202";
     int oid_len = strlen(oid);
-    res = seos_adf_select((char*)oid, oid_len, 0);
+    res = seos_adf_select((char *)oid, oid_len, 0);
     DropField();
     return res;
 }
 
-static int seos_pacs(char* oid, int oid_len, uint8_t* get_data, int get_data_len, int key_index) {
+static int seos_pacs(char *oid, int oid_len, uint8_t *get_data, int get_data_len, int key_index) {
     int res = seos_aid_select();
     if (res != PM3_SUCCESS) {
         DropField();
@@ -1271,8 +1265,7 @@ static int seos_print_keys(bool verbose) {
             PrintAndLogEx(INFO, "Admin Key........................ " _YELLOW_("%s"), sprint_hex(keys[i].adminKey, 16));
             PrintAndLogEx(INFO, "----------------------------");
         }
-    }
-    else {
+    } else {
         PrintAndLogEx(INFO, "idx| key");
         PrintAndLogEx(INFO, "---+------------------------");
         for (uint8_t i = 0; i < ARRAYLEN(keys); i++) {
@@ -1295,7 +1288,7 @@ static int seos_load_keys(char *filename) {
         return PM3_EFILE;
     }
 
-    // 16 = max line size 
+    // 16 = max line size
     // 8 = 8 items per keyset
     // 4 = 4 keysets
     if (bytes_read > 382) {
@@ -1333,7 +1326,7 @@ static int CmdHfSeosInfo(const char *Cmd) {
                   "- Are static RND.ICC keys used (can detect SEOS default keyset)\n"
                   "- What encryption and hashing algorithm is use\n",
                   "hf seos info"
-                );
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
@@ -1351,7 +1344,7 @@ static int CmdHfSeosGDF(const char *Cmd) {
                   "  - Key Index: 0\n",
                   "hf seos gdf"
                   "hf seos gdf --ki 0"
-                );
+                 );
     void *argtable[] = {
         arg_param_begin,
         arg_int0(NULL, "ki", "<dec>", "Specify key index to set key in memory"),
@@ -1368,14 +1361,14 @@ static int CmdHfSeosGDF(const char *Cmd) {
 static int CmdHfSeosPACS(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf seos pacs",
-                    "Make a GET DATA request to an ADF of a SEOS card\n\n"
-                    "By default:\n"
-                    "  - ADF OID  : 2B0601040181E438010102011801010202\n"
-                    "  - Key Index: 0\n",
-                    "hf seos pacs\n"
-                    "hf seos pacs --ki 1\n"
-                    "hf seos pacs -o 2B0601040181E438010102011801010202 --ki 0\n"
-                  );
+                  "Make a GET DATA request to an ADF of a SEOS card\n\n"
+                  "By default:\n"
+                  "  - ADF OID  : 2B0601040181E438010102011801010202\n"
+                  "  - Key Index: 0\n",
+                  "hf seos pacs\n"
+                  "hf seos pacs --ki 1\n"
+                  "hf seos pacs -o 2B0601040181E438010102011801010202 --ki 0\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1386,10 +1379,10 @@ static int CmdHfSeosPACS(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int get_data_len = 4;
-    uint8_t get_data[] = {0x5c,0x02,0xff,0x00};
+    uint8_t get_data[] = {0x5c, 0x02, 0xff, 0x00};
 
     int oid_len = 0;
-    uint8_t oid_hex[256] = {0x2B,0x06,0x01,0x04,0x01,0x81,0xE4,0x38,0x01,0x01,0x02,0x01,0x18,0x01,0x01,0x02};
+    uint8_t oid_hex[256] = {0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02};
     CLIGetHexWithReturn(ctx, 1, oid_hex, &oid_len);
 
     int key_index = arg_get_int_def(ctx, 2, 0);
@@ -1408,31 +1401,31 @@ static int CmdHfSeosPACS(const char *Cmd) {
         sprintf(oid_buffer + (i * 2), "%02X", oid_hex[i]);
     }
 
-    const char* oid = oid_buffer;
+    const char *oid = oid_buffer;
 
     if (oid_len == 0) {
         PrintAndLogEx(ERR, "OID value must be supplied");
         return PM3_ESOFT;
     }
 
-    return seos_pacs((char*)oid, oid_len, get_data, get_data_len, key_index);
+    return seos_pacs((char *)oid, oid_len, get_data, get_data_len, key_index);
 }
 
 static int CmdHfSeosADF(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf seos adf",
-                    "Make a GET DATA request to an Application Data File (ADF) of a SEOS Tag\n"
-                    "The ADF is meant to be read by an application\n"
-                    "You still need the valid authentication keys to read a card\n\n"
-                    "By default:\n"
-                    "  - ADF OID  : 2B0601040181E438010102011801010202\n"
-                    "  - Key Index: 0\n"
-                    "  - Tag List : 5c02ff00\n",
-                    "hf seos adf\n"
-                    "hf seos adf -o 2B0601040181E438010102011801010202\n"
-                    "hf seos adf -o 2B0601040181E438010102011801010202 --ki 0\n"
-                    "hf seos adf -o 2B0601040181E438010102011801010202 -c 5c02ff41\n"
-                  );
+                  "Make a GET DATA request to an Application Data File (ADF) of a SEOS Tag\n"
+                  "The ADF is meant to be read by an application\n"
+                  "You still need the valid authentication keys to read a card\n\n"
+                  "By default:\n"
+                  "  - ADF OID  : 2B0601040181E438010102011801010202\n"
+                  "  - Key Index: 0\n"
+                  "  - Tag List : 5c02ff00\n",
+                  "hf seos adf\n"
+                  "hf seos adf -o 2B0601040181E438010102011801010202\n"
+                  "hf seos adf -o 2B0601040181E438010102011801010202 --ki 0\n"
+                  "hf seos adf -o 2B0601040181E438010102011801010202 -c 5c02ff41\n"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1444,11 +1437,11 @@ static int CmdHfSeosADF(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int get_data_len = 0;
-    uint8_t get_data[256] = {0x5c,0x02,0xff,0x00};
+    uint8_t get_data[256] = {0x5c, 0x02, 0xff, 0x00};
     CLIGetHexWithReturn(ctx, 1, get_data, &get_data_len);
 
     int oid_len = 0;
-    uint8_t oid_hex[256] = {0x2B,0x06,0x01,0x04,0x01,0x81,0xE4,0x38,0x01,0x01,0x02,0x01,0x18,0x01,0x01,0x02};
+    uint8_t oid_hex[256] = {0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02};
     CLIGetHexWithReturn(ctx, 2, oid_hex, &oid_len);
 
     int key_index = arg_get_int_def(ctx, 3, 0);
@@ -1470,14 +1463,14 @@ static int CmdHfSeosADF(const char *Cmd) {
         sprintf(oid_buffer + (i * 2), "%02X", oid_hex[i]);
     }
 
-    const char* oid = oid_buffer;
+    const char *oid = oid_buffer;
 
     if (oid_len == 0) {
         PrintAndLogEx(ERR, "OID value must be supplied");
         return PM3_ESOFT;
     }
 
-    return seos_pacs((char*)oid, oid_len, get_data, get_data_len, key_index);
+    return seos_pacs((char *)oid, oid_len, get_data, get_data_len, key_index);
 }
 
 static int CmdHfSeosManageKeys(const char *Cmd) {
@@ -1489,7 +1482,7 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
                   "hf seos managekeys --ki 0 --nonce 0102030405060708  -> Set nonce value at key index 0\n"
                   "hf seos managekeys --load -f mykeys.bin -p          -> load from file and prints keys\n"
                   "hf seos managekeys --save -f mykeys.bin             -> saves keys to file\n"
-                );
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1542,26 +1535,25 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
     if (key_index >= 0) {
         operation += 3;
         if (key_index < 4) {
-                if (nonce_len != 0) {
-                    PrintAndLogEx(SUCCESS, "Current value for nonce[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].nonce, 8));
-                }
-                if (privenc_len != 0) {
-                    PrintAndLogEx(SUCCESS, "Current value for Priv Enc[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].privEncKey, 16));
-                }
-                if (privmac_len != 0) {
-                    PrintAndLogEx(SUCCESS, "Current value for Priv Mac[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].privMacKey, 16));
-                }
-                if (read_len != 0) {
-                    PrintAndLogEx(SUCCESS, "Current value for Read Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].readKey, 16));
-                }
-                if (write_len != 0) {
-                    PrintAndLogEx(SUCCESS, "Current value for Write Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].writeKey, 16));
-                }
-                if (admin_len != 0) {
-                    PrintAndLogEx(SUCCESS, "Current value for Admin Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].adminKey, 16));
-                }
+            if (nonce_len != 0) {
+                PrintAndLogEx(SUCCESS, "Current value for nonce[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].nonce, 8));
             }
-            else {
+            if (privenc_len != 0) {
+                PrintAndLogEx(SUCCESS, "Current value for Priv Enc[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].privEncKey, 16));
+            }
+            if (privmac_len != 0) {
+                PrintAndLogEx(SUCCESS, "Current value for Priv Mac[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].privMacKey, 16));
+            }
+            if (read_len != 0) {
+                PrintAndLogEx(SUCCESS, "Current value for Read Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].readKey, 16));
+            }
+            if (write_len != 0) {
+                PrintAndLogEx(SUCCESS, "Current value for Write Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].writeKey, 16));
+            }
+            if (admin_len != 0) {
+                PrintAndLogEx(SUCCESS, "Current value for Admin Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].adminKey, 16));
+            }
+        } else {
             PrintAndLogEx(ERR, "Key index is out-of-range");
             CLIParserFree(ctx);
             return PM3_EINVARG;
@@ -1638,7 +1630,7 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
             return PM3_SUCCESS;
         }
     }
-    
+
     return PM3_SUCCESS;
 }
 
