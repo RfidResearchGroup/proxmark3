@@ -158,7 +158,7 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
 
     tosend_t *ts = get_tosend();
 
-    for (uint16_t i = 0; i < ts->max; i += 16) {
+    for (int i = 0; i < ts->max; i += 16) {
         Dbhexdump(16, ts->buf + i, false);
     }
     DbpString("------------------------------------------");
