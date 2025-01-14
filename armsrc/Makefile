@@ -37,7 +37,7 @@ APP_CFLAGS = $(PLATFORM_DEFS) \
 SRC_LF = lfops.c lfsampling.c pcf7931.c lfdemod.c lfadc.c
 SRC_HF = hfops.c
 SRC_ISO15693 = iso15693.c iso15693tools.c
-SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c mifaresim.c sam_common.c sam_mfc.c sam_seos.c emvsim.c
+SRC_ISO14443a = iso14443a.c mifareutil.c mifarecmd.c epa.c mifaresim.c sam_common.c sam_mfc.c sam_seos.c
 
 #UNUSED: mifaresniff.c
 SRC_ISO14443b = iso14443b.c
@@ -60,7 +60,7 @@ else
 endif
 
 ifneq (,$(findstring WITH_SMARTCARD,$(APP_CFLAGS)))
-    SRC_SMARTCARD = i2c.c i2c_direct.c
+    SRC_SMARTCARD = i2c.c i2c_direct.c emvsim.c
 else
     SRC_SMARTCARD =
 endif
