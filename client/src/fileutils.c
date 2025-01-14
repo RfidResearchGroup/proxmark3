@@ -3048,10 +3048,16 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
     switch (dt) {
         case BIN: {
             res = loadFile_safe(fn, ".bin", pdump, dumplen);
+            if (res == PM3_SUCCESS && *dumplen > maxdumplen) {
+                *dumplen = maxdumplen;
+            }
             break;
         }
         case EML: {
             res = loadFileEML_safe(fn, pdump, dumplen);
+            if (res == PM3_SUCCESS && *dumplen > maxdumplen) {
+                *dumplen = maxdumplen;
+            }
             break;
         }
         case JSON: {
@@ -3080,6 +3086,9 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
         }
         case MCT: {
             res = loadFileMCT_safe(fn, pdump, dumplen);
+            if (res == PM3_SUCCESS && *dumplen > maxdumplen) {
+                *dumplen = maxdumplen;
+            }
             break;
         }
         case FLIPPER: {
