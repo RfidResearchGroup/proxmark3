@@ -4266,7 +4266,7 @@ static int CmdT55xxProtect(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-// if the difference between a and b is less then or eq to d  i.e. does a = b +/- d
+// if the difference between a and b is less than or eq to d  i.e. does a = b +/- d
 #define APPROX_EQ(a, b, d) ((abs(a - b) <= d) ? true : false)
 
 static uint8_t t55sniff_get_packet(const int *pulseBuffer, char *data, uint8_t width0, uint8_t width1, uint8_t tolerance) {

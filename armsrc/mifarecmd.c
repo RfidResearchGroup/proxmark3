@@ -1036,7 +1036,7 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 // acquire static encrypted nonces in order to perform the attack described in
 // Philippe Teuwen, "MIFARE Classic: exposing the static encrypted nonce variant"
 //-----------------------------------------------------------------------------
-int MifareAcquireStaticEncryptedNonces(uint32_t flags, const uint8_t *key, bool reply) {
+int MifareAcquireStaticEncryptedNonces(uint32_t flags, const uint8_t *key, bool reply, uint8_t first_block_no, uint8_t first_key_type) {
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
     pcs = &mpcs;
@@ -1055,6 +1055,10 @@ int MifareAcquireStaticEncryptedNonces(uint32_t flags, const uint8_t *key, bool 
     uint8_t buf[MIFARE_BLOCK_SIZE] = {0x00};
     uint64_t ui64Key = bytes_to_num(key, 6);
     bool with_data = flags & 1;
+    bool without_backdoor = (flags >> 1) & 1;
+    if (with_data && without_backdoor) {
+        return PM3_EINVARG;
+    }
     uint32_t cuid = 0;
     int16_t isOK = PM3_SUCCESS;
     uint8_t cascade_levels = 0;
@@ -1072,121 +1076,230 @@ int MifareAcquireStaticEncryptedNonces(uint32_t flags, const uint8_t *key, bool 
 
     LED_C_ON();
 
-    for (uint16_t sec = 0; sec < MIFARE_1K_MAXSECTOR + 1; sec++) {
-        uint16_t sec_gap = sec;
-        if (sec >= MIFARE_1K_MAXSECTOR) {
-            // gap between user blocks and advanced verification method blocks
-            sec_gap += 16;
+    if (without_backdoor) {
+        uint32_t nt1 = 0;
+
+        iso14a_card_select_t card_info;
+        if (iso14443a_select_card(uid, &card_info, &cuid, true, 0, true) == 0) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Can't select card (ALL)");
+            isOK = PM3_ERFTRANS;
+            goto out;
         }
-        uint16_t blockNo = sec_gap * 4;
-        for (uint8_t keyType = 0; keyType < 2; keyType++) {
-            // Test if the action was cancelled
-            if (BUTTON_PRESS()) {
-                isOK = PM3_EOPABORTED;
+        switch (card_info.uidlen) {
+            case 4 :
+                cascade_levels = 1;
                 break;
+            case 7 :
+                cascade_levels = 2;
+                break;
+            case 10:
+                cascade_levels = 3;
+                break;
+            default:
+                break;
+        }
+        if (mifare_classic_authex_cmd(pcs, cuid, first_block_no, MIFARE_AUTH_KEYA + first_key_type, ui64Key, AUTH_FIRST, &nt1, NULL, NULL, NULL, false, false)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth1 error");
+            isOK = PM3_ESOFT;
+            goto out;
+        };
+
+        uint16_t len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + first_key_type, first_block_no, receivedAnswer, sizeof(receivedAnswer), par_enc, NULL);
+        if (len != 4) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth2 error len=%d", len);
+            isOK = PM3_ESOFT;
+            goto out;
+        }
+        uint32_t nt_enc = bytes_to_num(receivedAnswer, 4);
+
+        // send some crap to fail auth
+        CHK_TIMEOUT();
+
+        if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Can't select card (UID)");
+            isOK = PM3_ERFTRANS;
+            goto out;
+        }
+        if (mifare_classic_authex_cmd(pcs, cuid, first_block_no, MIFARE_AUTH_KEYA + first_key_type, ui64Key, AUTH_FIRST, &nt1, NULL, NULL, NULL, false, false)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth1 error");
+            isOK = PM3_ESOFT;
+            goto out;
+        };
+        // Recover clear nt
+        struct Crypto1State mpcs_tmp = {0, 0};
+        struct Crypto1State *pcs_tmp = &mpcs_tmp;
+        crypto1_init(pcs_tmp, ui64Key);
+        uint32_t nt = crypto1_word(pcs_tmp, nt_enc ^ cuid, 1) ^ nt_enc;
+        int dist = nonce_distance(nt, nt1);
+        // ref dist is not always stable. Adjust physical distance to maximise ref dist, and try values around estimated nonces...
+        Dbprintf("Block %2i key %i nested nT=%08x first nT=%08x dist=%i", first_block_no, first_key_type, nt, nt1, dist);
+
+        for (uint16_t sec = 0; sec < MIFARE_1K_MAXSECTOR + 1; sec++) {
+            uint16_t sec_gap = sec;
+            if (sec >= MIFARE_1K_MAXSECTOR) {
+                // gap between user blocks and advanced verification method blocks
+                sec_gap += 16;
             }
-            if (have_uid == false) { // need a full select cycle to get the uid first
-                iso14a_card_select_t card_info;
-                if (iso14443a_select_card(uid, &card_info, &cuid, true, 0, true) == 0) {
-                    if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Can't select card (ALL)");
-                    isOK = PM3_ERFTRANS;
+            uint16_t blockNo = sec_gap * 4;
+            for (uint8_t keyType = 0; keyType < 2; keyType++) {
+                // Test if the action was cancelled
+                if (BUTTON_PRESS()) {
+                    isOK = PM3_EOPABORTED;
+                    break;
+                }
+
+                len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + keyType, blockNo, receivedAnswer, sizeof(receivedAnswer), par_enc, NULL);
+                if (len != 4) {
+                    if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth2 error len=%d", len);
+                    isOK = PM3_ESOFT;
                     goto out;
                 }
-                switch (card_info.uidlen) {
-                    case 4 :
-                        cascade_levels = 1;
-                        break;
-                    case 7 :
-                        cascade_levels = 2;
-                        break;
-                    case 10:
-                        cascade_levels = 3;
-                        break;
-                    default:
-                        break;
-                }
-                have_uid = true;
-            } else { // no need for anticollision. We can directly select the card
+                // store nt_enc
+                memcpy(buf + (keyType * 8) + 4, receivedAnswer, 4);
+                nt_enc = bytes_to_num(receivedAnswer, 4);
+                uint8_t nt_par_err = ((((par_enc[0] >> 7) & 1) ^ oddparity8((nt_enc >> 24) & 0xFF)) << 3 |
+                                      (((par_enc[0] >> 6) & 1) ^ oddparity8((nt_enc >> 16) & 0xFF)) << 2 |
+                                      (((par_enc[0] >> 5) & 1) ^ oddparity8((nt_enc >> 8) & 0xFF)) << 1 |
+                                      (((par_enc[0] >> 4) & 1) ^ oddparity8((nt_enc >> 0) & 0xFF)));
+                // Dbprintf("Sec %2i key %i {nT}=%02x%02x%02x%02x perr=%x", sec, keyType, receivedAnswer[0], receivedAnswer[1], receivedAnswer[2], receivedAnswer[3], nt_par_err);
+                // store nt_par_err
+                buf[(keyType * 8) + 2] = nt_par_err;
+                buf[(keyType * 8) + 3] = 0xAA; // extra check to tell we have nt/nt_enc/par_err
+
+                // send some crap to fail auth
+                CHK_TIMEOUT();
+
                 if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
                     if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Can't select card (UID)");
                     isOK = PM3_ERFTRANS;
                     goto out;
                 }
+                if (mifare_classic_authex_cmd(pcs, cuid, first_block_no, MIFARE_AUTH_KEYA + first_key_type, ui64Key, AUTH_FIRST, &nt1, NULL, NULL, NULL, false, false)) {
+                    if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth1 error");
+                    isOK = PM3_ESOFT;
+                    goto out;
+                };
+                nt1 = rewind_nonce(nt1, dist);
+                num_to_bytes(nt1 >> 16, 2, buf + (keyType * 8));
+                emlSetMem_xt(buf, (CARD_MEMORY_RF08S_OFFSET / MIFARE_BLOCK_SIZE) + sec, 1, MIFARE_BLOCK_SIZE);
             }
-
-            uint32_t nt1 = 0;
-            if (mifare_classic_authex_cmd(pcs, cuid, blockNo, MIFARE_AUTH_KEYA + keyType + 4, ui64Key, AUTH_FIRST, &nt1, NULL, NULL, NULL, false, false)) {
-                if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth1 error");
-                isOK = PM3_ESOFT;
-                goto out;
-            };
-            if ((with_data) && (keyType == 0)) {
-                uint8_t data[16];
-                uint8_t blocks = 4;
-                if (blockNo >= MIFARE_1K_MAXSECTOR * 4) {
-                    // special RF08S advanced authentication blocks, let's dump in emulator just in case
-                    blocks = 8;
+        }
+    } else {
+        for (uint16_t sec = 0; sec < MIFARE_1K_MAXSECTOR + 1; sec++) {
+            uint16_t sec_gap = sec;
+            if (sec >= MIFARE_1K_MAXSECTOR) {
+                // gap between user blocks and advanced verification method blocks
+                sec_gap += 16;
+            }
+            uint16_t blockNo = sec_gap * 4;
+            for (uint8_t keyType = 0; keyType < 2; keyType++) {
+                // Test if the action was cancelled
+                if (BUTTON_PRESS()) {
+                    isOK = PM3_EOPABORTED;
+                    break;
                 }
-                for (uint16_t tb = blockNo; tb < blockNo + blocks; tb++) {
-                    memset(data, 0x00, sizeof(data));
-                    int res = mifare_classic_readblock(pcs, tb, data);
-                    if (res == 1) {
-                        if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Read error");
-                        isOK = PM3_ESOFT;
+                if (have_uid == false) { // need a full select cycle to get the uid first
+                    iso14a_card_select_t card_info;
+                    if (iso14443a_select_card(uid, &card_info, &cuid, true, 0, true) == 0) {
+                        if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Can't select card (ALL)");
+                        isOK = PM3_ERFTRANS;
                         goto out;
                     }
-                    emlSetMem_xt(data, tb, 1, 16);
+                    switch (card_info.uidlen) {
+                        case 4 :
+                            cascade_levels = 1;
+                            break;
+                        case 7 :
+                            cascade_levels = 2;
+                            break;
+                        case 10:
+                            cascade_levels = 3;
+                            break;
+                        default:
+                            break;
+                    }
+                    have_uid = true;
+                } else { // no need for anticollision. We can directly select the card
+                    if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
+                        if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Can't select card (UID)");
+                        isOK = PM3_ERFTRANS;
+                        goto out;
+                    }
                 }
-            }
-            // nested authentication
-            uint16_t len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + keyType + 4, blockNo, receivedAnswer, sizeof(receivedAnswer), par_enc, NULL);
-            if (len != 4) {
-                if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth2 error len=%d", len);
-                isOK = PM3_ESOFT;
-                goto out;
-            }
-            uint32_t nt_enc = bytes_to_num(receivedAnswer, 4);
-            crypto1_init(pcs, ui64Key);
-            uint32_t nt = crypto1_word(pcs, nt_enc ^ cuid, 1) ^ nt_enc;
-            // Dbprintf("Sec %2i key %i nT=%08x", sec, keyType + 4, nt);
-            // store nt (first half)
-            num_to_bytes(nt >> 16, 2, buf + (keyType * 8));
-            // send some crap to fail auth
-            uint8_t nack[] = {0x04};
-            ReaderTransmit(nack, sizeof(nack), NULL);
 
-            if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
-                if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Can't select card (UID)");
-                isOK = PM3_ERFTRANS;
-                goto out;
-            }
-            if (mifare_classic_authex_cmd(pcs, cuid, blockNo, MIFARE_AUTH_KEYA + keyType + 4, ui64Key, AUTH_FIRST, &nt1, NULL, NULL, NULL, false, false)) {
-                if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth1 error");
-                isOK = PM3_ESOFT;
-                goto out;
-            };
+                uint32_t nt1 = 0;
+                if (mifare_classic_authex_cmd(pcs, cuid, blockNo, MIFARE_AUTH_KEYA + keyType + 4, ui64Key, AUTH_FIRST, &nt1, NULL, NULL, NULL, false, false)) {
+                    if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth1 error");
+                    isOK = PM3_ESOFT;
+                    goto out;
+                };
+                if ((with_data) && (keyType == 0)) {
+                    uint8_t data[16];
+                    uint8_t blocks = 4;
+                    if (blockNo >= MIFARE_1K_MAXSECTOR * 4) {
+                        // special RF08S advanced authentication blocks, let's dump in emulator just in case
+                        blocks = 8;
+                    }
+                    for (uint16_t tb = blockNo; tb < blockNo + blocks; tb++) {
+                        memset(data, 0x00, sizeof(data));
+                        int res = mifare_classic_readblock(pcs, tb, data);
+                        if (res == 1) {
+                            if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Read error");
+                            isOK = PM3_ESOFT;
+                            goto out;
+                        }
+                        emlSetMem_xt(data, tb, 1, 16);
+                    }
+                }
+                // nested authentication
+                uint16_t len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + keyType + 4, blockNo, receivedAnswer, sizeof(receivedAnswer), par_enc, NULL);
+                if (len != 4) {
+                    if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth2 error len=%d", len);
+                    isOK = PM3_ESOFT;
+                    goto out;
+                }
+                uint32_t nt_enc = bytes_to_num(receivedAnswer, 4);
+                crypto1_init(pcs, ui64Key);
+                uint32_t nt = crypto1_word(pcs, nt_enc ^ cuid, 1) ^ nt_enc;
+                // Dbprintf("Sec %2i key %i nT=%08x", sec, keyType + 4, nt);
+                // store nt (first half)
+                num_to_bytes(nt >> 16, 2, buf + (keyType * 8));
+                // send some crap to fail auth
+                CHK_TIMEOUT();
 
-            // nested authentication on regular keytype
-            len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + keyType, blockNo, receivedAnswer, sizeof(receivedAnswer), par_enc, NULL);
-            if (len != 4) {
-                if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth2 error len=%d", len);
-                isOK = PM3_ESOFT;
-                goto out;
+                if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
+                    if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Can't select card (UID)");
+                    isOK = PM3_ERFTRANS;
+                    goto out;
+                }
+                if (mifare_classic_authex_cmd(pcs, cuid, blockNo, MIFARE_AUTH_KEYA + keyType + 4, ui64Key, AUTH_FIRST, &nt1, NULL, NULL, NULL, false, false)) {
+                    if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth1 error");
+                    isOK = PM3_ESOFT;
+                    goto out;
+                };
+
+                // nested authentication on regular keytype
+                len = mifare_sendcmd_short(pcs, AUTH_NESTED, MIFARE_AUTH_KEYA + keyType, blockNo, receivedAnswer, sizeof(receivedAnswer), par_enc, NULL);
+                if (len != 4) {
+                    if (g_dbglevel >= DBG_ERROR) Dbprintf("AcquireStaticEncryptedNonces: Auth2 error len=%d", len);
+                    isOK = PM3_ESOFT;
+                    goto out;
+                }
+                // store nt_enc
+                memcpy(buf + (keyType * 8) + 4, receivedAnswer, 4);
+                nt_enc = bytes_to_num(receivedAnswer, 4);
+                uint8_t nt_par_err = ((((par_enc[0] >> 7) & 1) ^ oddparity8((nt_enc >> 24) & 0xFF)) << 3 |
+                                      (((par_enc[0] >> 6) & 1) ^ oddparity8((nt_enc >> 16) & 0xFF)) << 2 |
+                                      (((par_enc[0] >> 5) & 1) ^ oddparity8((nt_enc >> 8) & 0xFF)) << 1 |
+                                      (((par_enc[0] >> 4) & 1) ^ oddparity8((nt_enc >> 0) & 0xFF)));
+                // Dbprintf("Sec %2i key %i {nT}=%02x%02x%02x%02x perr=%x", sec, keyType, receivedAnswer[0], receivedAnswer[1], receivedAnswer[2], receivedAnswer[3], nt_par_err);
+                // store nt_par_err
+                buf[(keyType * 8) + 2] = nt_par_err;
+                buf[(keyType * 8) + 3] = 0xAA; // extra check to tell we have nt/nt_enc/par_err
+                emlSetMem_xt(buf, (CARD_MEMORY_RF08S_OFFSET / MIFARE_BLOCK_SIZE) + sec, 1, MIFARE_BLOCK_SIZE);
+                // send some crap to fail auth
+                CHK_TIMEOUT();
             }
-            // store nt_enc
-            memcpy(buf + (keyType * 8) + 4, receivedAnswer, 4);
-            nt_enc = bytes_to_num(receivedAnswer, 4);
-            uint8_t nt_par_err = ((((par_enc[0] >> 7) & 1) ^ oddparity8((nt_enc >> 24) & 0xFF)) << 3 |
-                                  (((par_enc[0] >> 6) & 1) ^ oddparity8((nt_enc >> 16) & 0xFF)) << 2 |
-                                  (((par_enc[0] >> 5) & 1) ^ oddparity8((nt_enc >> 8) & 0xFF)) << 1 |
-                                  (((par_enc[0] >> 4) & 1) ^ oddparity8((nt_enc >> 0) & 0xFF)));
-            // Dbprintf("Sec %2i key %i {nT}=%02x%02x%02x%02x perr=%x", sec, keyType, receivedAnswer[0], receivedAnswer[1], receivedAnswer[2], receivedAnswer[3], nt_par_err);
-            // store nt_par_err
-            buf[(keyType * 8) + 2] = nt_par_err;
-            buf[(keyType * 8) + 3] = 0xAA; // extra check to tell we have nt/nt_enc/par_err
-            emlSetMem_xt(buf, (CARD_MEMORY_RF08S_OFFSET / MIFARE_BLOCK_SIZE) + sec, 1, MIFARE_BLOCK_SIZE);
-            // send some crap to fail auth
-            ReaderTransmit(nack, sizeof(nack), NULL);
         }
     }
 out:
@@ -1194,7 +1307,7 @@ out:
     crypto1_deinit(pcs);
     LED_B_ON();
     if (reply) {
-        reply_old(CMD_ACK, isOK, cuid, 0, BigBuf_get_EM_addr() + CARD_MEMORY_RF08S_OFFSET, MIFARE_BLOCK_SIZE * (MIFARE_1K_MAXSECTOR + 1));
+        reply_mix(CMD_ACK, isOK, cuid, 0, BigBuf_get_EM_addr() + CARD_MEMORY_RF08S_OFFSET, MIFARE_BLOCK_SIZE * (MIFARE_1K_MAXSECTOR + 1));
     }
     LED_B_OFF();
 
@@ -1787,31 +1900,36 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 #ifdef WITH_FLASH
     if (use_flashmem) {
         BigBuf_free();
-        uint16_t isok = 0;
-        uint8_t size[2] = {0x00, 0x00};
-        isok = Flash_ReadData(DEFAULT_MF_KEYS_OFFSET_P(spi_flash_pages64k), size, 2);
-        if (isok != 2)
+        uint32_t size = 0;
+        if (exists_in_spiffs(MF_KEYS_FILE)) {
+            size = size_in_spiffs(MF_KEYS_FILE);
+        }
+        if (size == 0) {
+            Dbprintf("Spiffs file: %s does not exists or empty.", MF_KEYS_FILE);
             goto OUT;
+        }
 
-        keyCount = size[1] << 8 | size[0];
+        keyCount = size / MF_KEY_LENGTH;
 
         if (keyCount == 0)
             goto OUT;
 
         // limit size of available for keys in bigbuff
         // a key is 6bytes
-        uint16_t key_mem_available = MIN(BigBuf_get_size(), keyCount * 6);
+        uint16_t key_mem_available = MIN(BigBuf_get_size(), keyCount * MF_KEY_LENGTH);
 
-        keyCount = key_mem_available / 6;
+        keyCount = key_mem_available / MF_KEY_LENGTH;
 
         datain = BigBuf_malloc(key_mem_available);
         if (datain == NULL)
             goto OUT;
 
-        isok = Flash_ReadData(DEFAULT_MF_KEYS_OFFSET_P(spi_flash_pages64k) + 2, datain, key_mem_available);
-        if (isok != key_mem_available)
+        if (SPIFFS_OK == rdv40_spiffs_read_as_filetype(MF_KEYS_FILE, datain, keyCount * MF_KEY_LENGTH, RDV40_SPIFFS_SAFETY_SAFE)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Loaded %u keys from spiffs file: %s", keyCount, MF_KEYS_FILE);
+        } else {
+            Dbprintf("Spiffs file: %s cannot be read.", MF_KEYS_FILE);
             goto OUT;
-
+        }
     }
 #endif
 
@@ -2809,6 +2927,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
     uint8_t rdbl00[4] = {ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa8};
     uint8_t gen4gdmAuth[4] = {MIFARE_MAGIC_GDM_AUTH_KEY, 0x00, 0x6C, 0x92};
     uint8_t gen4gdmGetConf[4] = {MIFARE_MAGIC_GDM_READ_CFG, 0x00, 0x39, 0xF7};
+    uint8_t gen4gdmGetMagicBlock[4] = {MIFARE_MAGIC_GDM_READBLOCK, 0x00, 0xC2, 0x66};
     uint8_t gen4GetConf[8] = {GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_GETCNF, 0, 0};
     uint8_t superGen1[9] = {0x0A, 0x00, 0x00, 0xA6, 0xB0, 0x00, 0x10, 0x14, 0x1D};
     bool isGen2 = false;
@@ -2837,7 +2956,16 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
         ReaderTransmit(gen4gdmGetConf, sizeof(gen4gdmGetConf), NULL);
         res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
         if (res > 1) {
-            flag |= MAGIC_FLAG_GDM_WUP_40;
+            // could be ZUID or full USCUID, the magic blocks don't exist on ZUID so
+            // a failure here indicates a feature limited chip like ZUID
+            // check for GDM hidden block read
+            ReaderTransmit(gen4gdmGetMagicBlock, sizeof(gen4gdmGetMagicBlock), NULL);
+            res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
+            if (res > 1) {
+                flag |= MAGIC_FLAG_GDM_WUP_40;
+            } else {
+                flag |= MAGIC_FLAG_GDM_WUP_40_ZUID;
+            }
         }
     }
 
@@ -3127,7 +3255,8 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
             goto OUT;
         };
         first_nt_counter++;
-    } else for (uint8_t i = 0; i < nr_nested; i++) {
+    } else {
+        for (uint8_t i = 0; i < nr_nested; i++) {
             if (need_first_auth) {
                 cuid = 0;
 
@@ -3204,6 +3333,7 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
             }
             oldntenc = ntenc;
         }
+    }
 
     data[1] = (cuid >> 24) & 0xFF;
     data[2] = (cuid >> 16) & 0xFF;
@@ -3367,7 +3497,8 @@ void MifareGen3Blk(uint8_t block_len, uint8_t *block) {
             retval = PM3_ESOFT;
             goto OUT;
         }
-        cmd[ofs++] = card_info->sak;
+        cmd[ofs] = block_len <= card_info->uidlen ? card_info->sak : cmd[ofs];
+        ofs++;
         cmd[ofs++] = card_info->atqa[0];
         cmd[ofs++] = card_info->atqa[1];
         AddCrc14A(cmd, sizeof(block_cmd) + MIFARE_BLOCK_SIZE);

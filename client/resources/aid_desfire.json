@@ -859,8 +859,8 @@
         "AID": "014D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
-        "Name": "Delhi Metro Travel Card (DEL)",
-        "Description": "DEL Delhi Metro App 1",
+        "Name": "Delhi Metro Travel Card (DEL) (Alternative Endian)",
+        "Description": "DEL Delhi Metro (App 1)",
         "Type": "transport"
     },
     {
@@ -875,24 +875,48 @@
         "AID": "024D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
-        "Name": "Delhi Metro Travel Card (DEL)",
-        "Description": "DEL Delhi Metro App 2",
+        "Name": "Delhi Metro Travel Card (DEL) (Alternative Endian)",
+        "Description": "DEL Delhi Metro (App 2)",
+        "Type": "transport"
+    },
+    {
+        "AID": "025342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
     {
         "AID": "034D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
-        "Name": "Delhi Metro Travel Card (DEL)",
-        "Description": "DEL Delhi Metro App 3",
+        "Name": "Delhi Metro Travel Card (DEL) (Alternative Endian)",
+        "Description": "DEL Delhi Metro (App 3)",
+        "Type": "transport"
+    },
+    {
+        "AID": "035342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
     {
         "AID": "044D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
-        "Name": "Delhi Metro Travel Card (DEL)",
-        "Description": "DEL Delhi Metro App 4",
+        "Name": "Delhi Metro Travel Card (DEL) (Alternative Endian)",
+        "Description": "DEL Delhi Metro (App 4)",
+        "Type": "transport"
+    },
+    {
+        "AID": "045342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
     {
@@ -907,8 +931,16 @@
         "AID": "054D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
-        "Name": "Delhi Metro Travel Card (DEL)",
-        "Description": "DEL Delhi Metro App 5",
+        "Name": "Delhi Metro Travel Card (DEL) (Alternative Endian)",
+        "Description": "DEL Delhi Metro (App 5)",
+        "Type": "transport"
+    },
+    {
+        "AID": "055342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
     {
@@ -923,16 +955,40 @@
         "AID": "064D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
-        "Name": "Delhi Metro Travel Card (DEL)",
-        "Description": "DEL Delhi Metro App 6",
+        "Name": "Delhi Metro Travel Card (DEL) (Alternative Endian)",
+        "Description": "DEL Delhi Metro (App 6)",
+        "Type": "transport"
+    },
+    {
+        "AID": "065342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
     {
         "AID": "074D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
-        "Name": "Delhi Metro Travel Card (DEL)",
-        "Description": "DEL Delhi Metro App 7",
+        "Name": "Delhi Metro Travel Card (DEL) (Alternative Endian)",
+        "Description": "DEL Delhi Metro (App 7)",
+        "Type": "transport"
+    },
+    {
+        "AID": "075342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "085342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
     {
@@ -944,11 +1000,147 @@
         "Type": "transport"
     },
     {
+        "AID": "095342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "0A5342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "0B5342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "0C5342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "0D5342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "0E5342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "0F5342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "105342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "115342",
+        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Country": "TH",
+        "Name": "MRT Stored Value Card (BKK)",
+        "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
         "AID": "2211AF",
         "Vendor": "National Transport Authority",
         "Country": "IE",
         "Name": "TFI Leap Card (DUB)",
         "Description": "DUB Leap Card // Transport for Ireland // FIDs: 01,1F: Backup Data; 02-0A: Standard Data",
+        "Type": "transport"
+    },
+    {
+        "AID": "444D01",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro (App 1)",
+        "Type": "transport"
+    },
+    {
+        "AID": "444D02",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro (App 2)",
+        "Type": "transport"
+    },
+    {
+        "AID": "444D03",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro (App 3)",
+        "Type": "transport"
+    },
+    {
+        "AID": "444D04",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro (App 4)",
+        "Type": "transport"
+    },
+    {
+        "AID": "444D05",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro (App 5)",
+        "Type": "transport"
+    },
+    {
+        "AID": "444D05",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro (App 5)",
+        "Type": "transport"
+    },
+    {
+        "AID": "444D06",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro (App 6)",
+        "Type": "transport"
+    },
+    {
+        "AID": "444D07",
+        "Vendor": "Delhi Metro Rail Corporation Limited",
+        "Country": "IN",
+        "Name": "Delhi Metro Travel Card (DEL)",
+        "Description": "DEL Delhi Metro (App 7)",
         "Type": "transport"
     },
     {
@@ -1064,11 +1256,27 @@
         "Type": "transport"
     },
     {
+        "AID": "CC00CC",
+        "Vendor": "Central Ohio Transit Authority (COTA) via Masabi Ltd",
+        "Country": "US",
+        "Name": "COTA Smartcard (CMH)",
+        "Description": "CMH COTA Smartcard; Masabi Justride Tap and Ride DESFire Smartcard",
+        "Type": "transport"
+    },
+    {
+        "AID": "D000D0",
+        "Vendor": "Greater Dayton Regional Transit Authority (RTA) via Masabi Ltd",
+        "Country": "US",
+        "Name": "RTA Tapp Pay Card (DAY)",
+        "Description": "DAY RTA Tapp Pay Card; Masabi Justride Tap and Ride DESFire Smartcard",
+        "Type": "transport"
+    },
+    {
         "AID": "DD00DD",
-        "Vendor": "Regional Transporation District (RTD) via masabi justride",
+        "Vendor": "Regional Transporation District (RTD) via Masabi Ltd",
         "Country": "US",
         "Name": "MyRide Card (DEN)",
-        "Description": "DEN MyRide Card",
+        "Description": "DEN MyRide Card; Masabi Justride Tap and Ride DESFire Smartcard",
         "Type": "transport"
     },
     {
@@ -1149,6 +1357,30 @@
         "Country": "US",
         "Name": "Clipper Card (SFO)",
         "Description": "FIDs 02: Card Balance; 04: Refill History; 08: Card Information; 0E: Trip History",
+        "Type": "transport"
+    },
+    {
+        "AID": "F21201",
+        "Vendor": "Green Bay Metro Transit via Genfare",
+        "Country": "US",
+        "Name": "Tap-N-Go Card (GRB)",
+        "Description": "GRB Tap-N-Go Card",
+        "Type": "transport"
+    },
+    {
+        "AID": "F21202",
+        "Vendor": "Green Bay Metro Transit via Genfare",
+        "Country": "US",
+        "Name": "Tap-N-Go Card (GRB)",
+        "Description": "GRB Tap-N-Go Card",
+        "Type": "transport"
+    },
+    {
+        "AID": "F212A0",
+        "Vendor": "CTtransit",
+        "Country": "US",
+        "Name": "Go CT Card (BDL)",
+        "Description": "BDL Go CT Card",
         "Type": "transport"
     },
     {

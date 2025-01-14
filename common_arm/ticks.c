@@ -336,4 +336,5 @@ void WaitUS(uint32_t us) {
 void StopTicks(void) {
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS;
 }

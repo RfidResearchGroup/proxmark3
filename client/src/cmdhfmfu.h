@@ -96,6 +96,8 @@ int CmdHF14MfUTamper(const char *Cmd);
 #define MFU_TT_MAGIC_4          0x400000000ULL
 #define MFU_TT_MAGIC_4_GDM      0x800000000ULL
 #define MFU_TT_MAGIC_NTAG21X    0x1000000000ULL
+#define MFU_TT_ST25TN512        0x2000000000ULL
+#define MFU_TT_ST25TN01K        0x4000000000ULL
 #define MFU_TT_UL_MAGIC         (MFU_TT_UL | MFU_TT_MAGIC)
 #define MFU_TT_UL_C_MAGIC       (MFU_TT_UL_C | MFU_TT_MAGIC)
 // Don't forget to fill UL_TYPES_ARRAY and UL_MEMORY_ARRAY if new types are added

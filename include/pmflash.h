@@ -22,31 +22,31 @@
 #include "common.h"
 
 // RDV40 Section
-// 256kb divided into 4k sectors.
+// 256KB divided into 4K sectors.
+// +--------+-------------+---------+--------------------------+
+// | Sector | 256KB addr* |  Size   | Description              |
+// +--------+-------------+---------+--------------------------+
+// | N      |   0x3F000   | 1 * 4KB | signature                |
+// | N-1    |   0x3E000   | 1 * 4KB | reserved for future use  |
+// +--------+-------------+---------+--------------------------+
 //
-// 0x3F000 - 1 4kb sector = signature
-// 0x3E000 - 1 4kb sector = settings
-// 0x3D000 - 1 4kb sector = default T55XX keys dictionary
-// 0x3B000 - 1 4kb sector = default ICLASS keys dictionary
-// 0x38000 - 3 4kb sectors = default MFC keys dictionary
-//
+// * For different memory size than 256KB the address is not valid.
+//   Please instead refer to Sector number, where N is the last
+//   4KB secotr of the memory in question.
+
 #ifndef FLASH_MEM_BLOCK_SIZE
 # define FLASH_MEM_BLOCK_SIZE   256
 #endif
 
-#ifndef FLASH_MEM_MAX_SIZE
-# define FLASH_MEM_MAX_SIZE     0x40000  // (262144)
-#endif
 #ifndef FLASH_MEM_MAX_SIZE_P
 # define FLASH_MEM_MAX_SIZE_P(p64k) (1024 * 64 * (p64k))
 #endif
 
-#ifndef FLASH_MEM_MAX_4K_SECTOR
-# define FLASH_MEM_MAX_4K_SECTOR   0x3F000
-#endif
 #ifndef FLASH_MEM_MAX_4K_SECTOR_P
 # define FLASH_MEM_MAX_4K_SECTOR_P(p64k)  (FLASH_MEM_MAX_SIZE_P(p64k) - 4096)
 #endif
+
+#define FLASH_RESERVED_TRAILING_4K_SECTORS 2
 
 #ifndef FLASH_MEM_ID_LEN
 # define FLASH_MEM_ID_LEN 8
@@ -56,10 +56,7 @@
 # define FLASH_MEM_SIGNATURE_LEN 128
 #endif
 
-#ifndef FLASH_MEM_SIGNATURE_OFFSET
 // -1 for historical compatibility with already released Proxmark3 RDV4.0 devices
-# define FLASH_MEM_SIGNATURE_OFFSET (FLASH_MEM_MAX_SIZE - FLASH_MEM_SIGNATURE_LEN - 1)
-#endif
 #ifndef FLASH_MEM_SIGNATURE_OFFSET_P
 # define FLASH_MEM_SIGNATURE_OFFSET_P(p64k) (FLASH_MEM_MAX_SIZE_P(p64k) - FLASH_MEM_SIGNATURE_LEN - 1)
 #endif
@@ -68,42 +65,19 @@
 # define T55XX_CONFIG_LEN sizeof( t55xx_configurations_t )
 #endif
 
-#ifndef T55XX_CONFIG_OFFSET
-# define T55XX_CONFIG_OFFSET (FLASH_MEM_MAX_4K_SECTOR - 0x2000)
-#endif
-#ifndef T55XX_CONFIG_OFFSET_P
-# define T55XX_CONFIG_OFFSET_P(p64k) (FLASH_MEM_MAX_4K_SECTOR_P(p64k) - 0x2000)
-#endif
+#define T55XX_CONFIG_FILE "cfg_t55xx.bin"
 
-// Reserved space for T55XX PWD = 4 kb
-#ifndef DEFAULT_T55XX_KEYS_OFFSET
-# define DEFAULT_T55XX_KEYS_LEN (0x1000)
-# define DEFAULT_T55XX_KEYS_OFFSET (T55XX_CONFIG_OFFSET - DEFAULT_T55XX_KEYS_LEN)
-# define DEFAULT_T55XX_KEYS_MAX ((DEFAULT_T55XX_KEYS_LEN - 2) / 4)
-#endif
-#ifndef DEFAULT_T55XX_KEYS_OFFSET_P
-# define DEFAULT_T55XX_KEYS_OFFSET_P(p64k) (T55XX_CONFIG_OFFSET_P(p64k) - DEFAULT_T55XX_KEYS_LEN)
-#endif
+// T55XX PWD stored in spiffs
+#define T55XX_KEYS_FILE "dict_t55xx.bin"
+#define T55XX_KEY_LENGTH 4
 
-// Reserved space for iClass keys = 4 kb
-#ifndef DEFAULT_ICLASS_KEYS_OFFSET
-# define DEFAULT_ICLASS_KEYS_LEN (0x1000)
-# define DEFAULT_ICLASS_KEYS_OFFSET (DEFAULT_T55XX_KEYS_OFFSET - DEFAULT_ICLASS_KEYS_LEN)
-# define DEFAULT_ICLASS_KEYS_MAX ((DEFAULT_ICLASS_KEYS_LEN - 2) / 8)
-#endif
-#ifndef DEFAULT_ICLASS_KEYS_OFFSET_P
-# define DEFAULT_ICLASS_KEYS_OFFSET_P(p64k) (DEFAULT_T55XX_KEYS_OFFSET_P(p64k) - DEFAULT_ICLASS_KEYS_LEN)
-#endif
+// iClass keys stored in spiffs
+#define ICLASS_KEYS_FILE "dict_iclass.bin"
+#define ICLASS_KEY_LENGTH 8
 
-// Reserved space for MIFARE Keys = 12 kb
-#ifndef DEFAULT_MF_KEYS_OFFSET
-# define DEFAULT_MF_KEYS_LEN (0x3000)
-# define DEFAULT_MF_KEYS_OFFSET (DEFAULT_ICLASS_KEYS_OFFSET - DEFAULT_MF_KEYS_LEN)
-# define DEFAULT_MF_KEYS_MAX ((DEFAULT_MF_KEYS_LEN - 2) / 6)
-#endif
-#ifndef DEFAULT_MF_KEYS_OFFSET_P
-# define DEFAULT_MF_KEYS_OFFSET_P(p64k) (DEFAULT_ICLASS_KEYS_OFFSET_P(p64k) - DEFAULT_MF_KEYS_LEN)
-#endif
+// Mifare keys stored in spiffs
+#define MF_KEYS_FILE "dict_mf.bin"
+#define MF_KEY_LENGTH 6
 
 // RDV40,  validation structure to help identifying that client/firmware is talking with RDV40
 typedef struct {

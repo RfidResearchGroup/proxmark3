@@ -14,7 +14,7 @@ import json
 from fm11rf08s_recovery import recovery
 
 author = "@csBlueChip"
-script_ver = "1.2.0"
+script_ver = "1.4.0"
 
 # Copyright @csBlueChip
 
@@ -33,7 +33,7 @@ script_ver = "1.2.0"
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # The original version of this script can be found at:
-# https://github.com/csBlueChip/Proxmark_Stuff/tree/main/MiFare_Docs/Fudan_RF08(S)/PM3_Script
+# https://github.com/csBlueChip/Proxmark_Stuff/tree/main/MiFare_Docs/Fudan_RF08S/PM3_Script
 # The original version is released with an MIT Licence.
 # Or please reach out to me [BlueChip] personally for alternative licenses.
 
@@ -117,7 +117,7 @@ globals:
     args = parseCli()
 
     # No logfile name yet
-    lprint("Fudan FM11RF08[S] full card recovery")
+    lprint("Fudan FM11RF08S full card recovery")
     lprint("\nDump folder... " + color(f"{dpath}", fg="yellow"))
 
     # FIXME: script is announced as for RF08 and for RF08S but it comprises RF32N key
@@ -142,7 +142,10 @@ globals:
             lprint(f" Keys not loaded, use {s} to run recovery script [slow]", prompt="[" + color("!", fg="red") + "]")
         else:
             # FIXME: recovery() is only for RF08S. TODO for the other ones with a "darknested" attack
-            keyfile = recoverKeys()
+            keyfile = recoverKeys(uid=uid, kdf=[["Bambu v1", kdfBambu1]])
+            if keyfile == False:
+                lprint("Script failed - aborting")
+                return
             key = loadKeys(keyfile)
 
     if key is not None:
@@ -201,7 +204,7 @@ def checkVer():
 
 def parseCli():
     """Parse the CLi arguments"""
-    parser = argparse.ArgumentParser(description='Full recovery of Fudan FM11RF08* cards.')
+    parser = argparse.ArgumentParser(description='Full recovery of Fudan FM11RF08S cards.')
 
     parser.add_argument('-n', '--nokeys',   action='store_true', help='extract data even if keys are missing')
     parser.add_argument('-r', '--recover',  action='store_true', help='run key recovery script if required')
@@ -265,7 +268,7 @@ def getUIDfromBlock0(blk0):
 def decodeBlock0(blk0):
     """Extract data from block 0"""
     lprint()
-    lprint("             UID         BCC         ++----- RF08 ID -----++")
+    lprint("             UID         BCC         ++---- RF08* ID -----++")
     lprint("             !           !  SAK      !!                   !!")
     lprint("             !           !  !  ATQA  !!     Fudan Sig     !!")
     lprint("             !---------. !. !. !---. VV .---------------. VV")
@@ -291,10 +294,13 @@ def decodeBlock0(blk0):
 
     hash = blk0[27:44]                           # Fudan hash "99 AA BB CC DD EE"
 
+    is08S = False
+
     type = f"[{fida:02X}:{fidb:02X}]"            # type/name
     if fidb == 0x90:
         if fida == 0x01 or fida == 0x03 or fida == 0x04:
             type += " - Fudan FM11RF08S"
+            is08S = True
 
     elif fidb == 0x1D:
         if fida == 0x01 or fida == 0x02 or fida == 0x03:
@@ -332,6 +338,11 @@ def decodeBlock0(blk0):
     lprint(f"  ATQA     : {atqa:04X}")   # show ATQA
     lprint(f"  Fudan ID : {type}")       # show type
     lprint(f"  Fudan Sig: {hash}")       # show ?Partial HMAC?
+
+    if not is08S:
+        lprint("\n  This script is only for the RF08S cards")
+        lprint("  Other cards can be cracked with `hf mf autopwn`")
+        sys.exit(13)
 
 
 def fudanValidate(blk0, live=False):
@@ -396,21 +407,33 @@ If keys cannot be loaded AND --recover is specified, then run key recovery
     return key
 
 
-def recoverKeys():
+def recoverKeys(uid, kdf=[[]]):
     """Run key recovery script"""
     badrk = 0     # 'bad recovered key' count (ie. not recovered)
+
+    keys = False
+    lprint(f"\nTrying KDFs:");
+    for fn in kdf:
+        lprint(f"  {fn[0]:s}", end='')
+        keys = fn[1](uid)
+        if keys != False:
+            lprint(" .. Success", prompt='')
+            break
+        lprint(" .. Fail", prompt='')
 
     lprint("\nRunning recovery script, ETA: Less than 30 minutes")
 
     lprint('\n`-._,-\'"`-._,-"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,')
+    r = recovery(quiet=False, keyset=keys)
+    lprint('`-._,-\'"`-._,-"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,')
 
-    r = recovery(quiet=False)
+    if r == False:
+        return False
+
     keyfile = r['keyfile']
     rkey = r['found_keys']
     # fdump = r['dumpfile']
     # rdata = r['data']
-
-    lprint('`-._,-\'"`-._,-"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,')
 
     for k in range(0, 16+1):
         for ab in [0, 1]:
@@ -427,9 +450,57 @@ def recoverKeys():
                 lprint(f"[{kn}/", end='', prompt='')
                 lprint("A]" if ab == 0 else "B]", end='', prompt='')
     if badrk > 0:
-        lprint()
+        lprint("", prompt='')
     return keyfile
 
+def kdfBambu1(uid):
+    from Cryptodome.Protocol.KDF import HKDF
+    from Cryptodome.Hash         import SHA256
+
+    # Generate all keys
+    try:
+        # extracted from Bambu firmware
+        salt = bytes([0x9a,0x75,0x9c,0xf2,0xc4,0xf7,0xca,0xff,0x22,0x2c,0xb9,0x76,0x9b,0x41,0xbc,0x96])
+        keyA = HKDF(uid, 6, salt, SHA256, 16, context=b"RFID-A\0")
+        keyB = HKDF(uid, 6, salt, SHA256, 16, context=b"RFID-B\0")
+    except Exception as e:
+        print(f"{e}")
+        return False
+
+    # --- Grab block 13 (in sector 3) ---
+    cmd = f"hf mf rdbl -c 0 --key {keyA[3].hex()} --blk 12"
+    #lprint(f"  `{cmd}`", flush=True, log=False, end='')
+    for retry in range(5):
+        p.console(cmd)
+
+        found = False
+        for line in p.grabbed_output.split('\n'):
+            if " | " in line and "# | s" not in line:
+                lsub = line[4:76]
+                found = True
+        if found:
+            break
+    if not found:
+        return False
+
+    # --- Try to decode it as a bambu date string ---
+    try:
+        dl = bytes.fromhex(lsub[6:53]).decode('ascii').rstrip('\x00')
+    except Exception:
+        return False
+
+    # dl    2024_03_22_16_29
+    #       yy y    y     m    m     d    d     h    h     m    m
+    exp = r"20[2-3][0-9]_[0-1][0-9]_[0-3][0-9]_[0-2][0-9]_[0-5][0-9]"
+    if not re.search(exp, dl):
+        return False
+
+    # --- valid date string, we are confident this is a bambu card ---
+    keys = []
+    for i in range(0, 15+1):
+        keys.append([keyA[i].hex(), keyB[i].hex()])
+
+    return keys
 
 def verifyKeys(key):
     """Verify keys

@@ -263,20 +263,21 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MAGIC_SINGLE                (MAGIC_HALT | MAGIC_INIT | MAGIC_OFF) //0x1E
 
 // by CMD_HF_MIFARE_CIDENT / Flags
-#define MAGIC_FLAG_NONE          0x0000
-#define MAGIC_FLAG_GEN_1A        0x0001
-#define MAGIC_FLAG_GEN_1B        0x0002
-#define MAGIC_FLAG_GEN_2         0x0004
-#define MAGIC_FLAG_GEN_UNFUSED   0x0008
-#define MAGIC_FLAG_SUPER_GEN1    0x0010
-#define MAGIC_FLAG_SUPER_GEN2    0x0020
-#define MAGIC_FLAG_NTAG21X       0x0040
-#define MAGIC_FLAG_GEN_3         0x0080
-#define MAGIC_FLAG_GEN_4GTU      0x0100
-#define MAGIC_FLAG_GDM_AUTH      0x0200
-#define MAGIC_FLAG_QL88          0x0400
-#define MAGIC_FLAG_GDM_WUP_20    0x0800
-#define MAGIC_FLAG_GDM_WUP_40    0x1000
+#define MAGIC_FLAG_NONE            0x0000
+#define MAGIC_FLAG_GEN_1A          0x0001
+#define MAGIC_FLAG_GEN_1B          0x0002
+#define MAGIC_FLAG_GEN_2           0x0004
+#define MAGIC_FLAG_GEN_UNFUSED     0x0008
+#define MAGIC_FLAG_SUPER_GEN1      0x0010
+#define MAGIC_FLAG_SUPER_GEN2      0x0020
+#define MAGIC_FLAG_NTAG21X         0x0040
+#define MAGIC_FLAG_GEN_3           0x0080
+#define MAGIC_FLAG_GEN_4GTU        0x0100
+#define MAGIC_FLAG_GDM_AUTH        0x0200
+#define MAGIC_FLAG_QL88            0x0400
+#define MAGIC_FLAG_GDM_WUP_20      0x0800
+#define MAGIC_FLAG_GDM_WUP_40      0x1000
+#define MAGIC_FLAG_GDM_WUP_40_ZUID 0x2000
 
 
 // Commands for configuration of Gen4 GTU cards.
@@ -453,6 +454,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define PROTO_MFPLUS    17
 #define PROTO_TEXKOM    18
 #define PROTO_XEROX     19
+#define PROTO_FMCOS20   20
 
 // Picopass fuses
 #define FUSE_FPERS   0x80
@@ -949,6 +951,44 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 // 0x0A = ACK
 // 0x05 = NACK
+
+//FMCOS2.0
+#define FMCOS20_CMD_VERIFY_PIN                    0x20
+#define FMCOS20_CMD_EXTERNAL_AUTHENTICATION       0x82
+#define FMCOS20_CMD_GET_CHALLENGE                 0x84
+#define FMCOS20_CMD_INTERNAL_AUTHENTICATION       0x88
+#define FMCOS20_CMD_SELECT                        0xA4
+#define FMCOS20_CMD_READ_BINARY                   0xB0
+#define FMCOS20_CMD_READ_RECORD                   0xB2
+#define FMCOS20_CMD_GET_RESPONSE                  0xC0
+#define FMCOS20_CMD_UPDATE_BINARY                 0xD6
+#define FMCOS20_CMD_UPDATE_RECORD                 0xDC
+#define FMCOS20_CMD_APPEND_RECORD                 0xE2
+#define FMCOS20_CMD_CARD_BLOCK                    0x16
+#define FMCOS20_CMD_APP_UNBLOCK                   0x18
+#define FMCOS20_CMD_APP_BLOCK                     0x1E
+#define FMCOS20_CMD_PIN_UNBLOCK                   0x24
+#define FMCOS20_CMD_UNBLOCK                       0x2C
+#define FMCOS20_CMD_INITIALIZE_TRANSACTION        0x50
+#define FMCOS20_CMD_CREDIT_LOAD                   0x52
+#define FMCOS20_CMD_PURCHASE                      0x54
+#define FMCOS20_CMD_UPDATE_OVERDRAW_LIMIT         0x58
+#define FMCOS20_CMD_GET_TRANSACTION_PROOF         0x5A
+#define FMCOS20_CMD_GET_BALANCE                   0x5C
+#define FMCOS20_CMD_CHANGE_PIN                    0x5E
+#define FMCOS20_CMD_ERASE_DF                      0x0E
+#define FMCOS20_CMD_PULL                          0x30
+#define FMCOS20_CMD_CHARGE                        0x32
+#define FMCOS20_CMD_WRITE_KEY                     0xD4
+#define FMCOS20_CMD_CREATE_FILE                   0xE0
+#define FMCOS20_CMD_WRITE_EEPROM                  0x00
+#define FMCOS20_CMD_READ_EEPROM                   0x04
+#define FMCOS20_CMD_INITIALIZE_EEPROM             0x02
+#define FMCOS20_CMD_READ_ROM                      0x0C
+#define FMCOS20_CMD_INITIALIZE_GREY_LOCK_UNLOCK   0x7A
+#define FMCOS20_CMD_GREY_LOCK_UNLOCK              0x7C
+#define FMCOS20_CMD_DEBIT_UNLOCK                  0x7E
+#define FMCOS20_CMD_CALCULATE_ROM_CRC             0x0A
 
 #endif
 // PROTOCOLS_H

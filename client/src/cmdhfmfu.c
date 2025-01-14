@@ -35,6 +35,7 @@
 #include "fileutils.h"      // saveFile
 #include "cmdtrace.h"       // trace list
 #include "preferences.h"    // setDeviceDebugLevel
+#include "crypto/originality.h"
 
 #define MAX_UL_BLOCKS       0x0F
 #define MAX_ULC_BLOCKS      0x2F
@@ -53,6 +54,8 @@
 #define MAX_MY_D_MOVE_LEAN  0x0F
 #define MAX_UL_NANO_40      0x0A
 #define MAX_UL_AES          0x37
+#define MAX_ST25TN512       0x3F
+#define MAX_ST25TN01K       0x3F
 
 static int CmdHelp(const char *Cmd);
 
@@ -103,7 +106,9 @@ static uint64_t UL_TYPES_ARRAY[] = {
     MFU_TT_MAGIC_1A,          MFU_TT_MAGIC_1B,
     MFU_TT_MAGIC_NTAG,        MFU_TT_NTAG_210u,
     MFU_TT_UL_MAGIC,          MFU_TT_UL_C_MAGIC,
-    MFU_TT_UL_AES
+    MFU_TT_UL_AES,
+    MFU_TT_ST25TN512,         MFU_TT_ST25TN01K,
+
 };
 
 static uint8_t UL_MEMORY_ARRAY[ARRAYLEN(UL_TYPES_ARRAY)] = {
@@ -124,7 +129,9 @@ static uint8_t UL_MEMORY_ARRAY[ARRAYLEN(UL_TYPES_ARRAY)] = {
 //  MAGIC_1A,           MAGIC_1B,           MAGIC_NTAG,
     MAX_UL_BLOCKS,      MAX_UL_BLOCKS,      MAX_NTAG_216,
 //  NTAG_210u,          UL_MAGIC,           UL_C_MAGIC
-    MAX_NTAG_210,       MAX_UL_BLOCKS,      MAX_ULC_BLOCKS,      MAX_UL_AES
+    MAX_NTAG_210,       MAX_UL_BLOCKS,      MAX_ULC_BLOCKS,      MAX_UL_AES,
+//  ST25TN512,          ST25TN01K,
+    MAX_ST25TN512,      MAX_ST25TN01K,
 };
 
 static const ul_family_t ul_family[] = {
@@ -789,7 +796,13 @@ static int ul_print_default(uint8_t *data, uint8_t *real_uid) {
             PrintAndLogEx(SUCCESS, "      BCC1: %02X ( " _GREEN_("ok") " )", data[8]);
         else
             PrintAndLogEx(NORMAL, "      BCC1: %02X, crc should be %02X", data[8], crc1);
-        PrintAndLogEx(SUCCESS, "  Internal: %02X ( %s )", data[9], (data[9] == 0x48) ? _GREEN_("default") : _RED_("not default"));
+        if (uid[0] == 0x04) {
+            PrintAndLogEx(SUCCESS, "  Internal: %02X ( %s )", data[9], (data[9] == 0x48) ? _GREEN_("default") : _RED_("not default"));
+        } else if (uid[0] == 0x02) {
+            PrintAndLogEx(SUCCESS, "  Sysblock: %02X ( %s )", data[9], (data[9] == 0x2C) ? _GREEN_("default") : _RED_("not default"));
+        } else {
+            PrintAndLogEx(SUCCESS, "  Internal: %02X", data[9]);
+        }
     } else {
         PrintAndLogEx(SUCCESS, "Blocks 0-2: %s", sprint_hex(data + 0, 12));
     }
@@ -1011,6 +1024,10 @@ int ul_print_type(uint64_t tagtype, uint8_t spaces) {
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("INFINEON my-d\x99 move lean (SLE 66R01L)"), spaces, "");
     else if (tagtype & MFU_TT_FUDAN_UL)
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("FUDAN Ultralight Compatible (or other compatible)"), spaces, "");
+    else if (tagtype & MFU_TT_ST25TN512)
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("ST ST25TN512 64bytes"), spaces, "");
+    else if (tagtype & MFU_TT_ST25TN01K)
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("ST ST25TN01K 160bytes"), spaces, "");
     else
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("Unknown %06" PRIx64), spaces, "", tagtype);
 
@@ -1397,132 +1414,14 @@ static int ulev1_print_counters(void) {
 }
 
 static int ulev1_print_signature(uint64_t tagtype, uint8_t *uid, uint8_t *signature, size_t signature_len) {
-
-#define PUBLIC_ECDA_KEYLEN 33
-#define PUBLIC_ECDA_192_KEYLEN 49
-    // known public keys for the originality check (source: https://github.com/alexbatalov/node-nxp-originality-verifier)
-    // ref: AN11350 NTAG 21x Originality Signature Validation
-    // ref: AN11341 MIFARE Ultralight EV1 Originality Signature Validation
-    const ecdsa_publickey_t nxp_mfu_public_keys[] = {
-        {"NXP MIFARE Classic MFC1C14_x",   "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
-        {"MIFARE Classic / QL88",          "046F70AC557F5461CE5052C8E4A7838C11C7A236797E8A0730A101837C004039C2"},
-        {"NXP ICODE DNA, ICODE SLIX2",     "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0"},
-        {"NXP Public key",                 "04A748B6A632FBEE2C0897702B33BEA1C074998E17B84ACA04FF267E5D2C91F6DC"},
-        {"NXP Ultralight Ev1",             "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
-        {"NXP NTAG21x (2013)",             "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
-        {"MIKRON Public key",              "04F971EDA742A4A80D32DCF6A814A707CC3DC396D35902F72929FDCD698B3468F2"},
-        {"VivoKey Spark1 Public key",      "04D64BB732C0D214E7EC580736ACF847284B502C25C0F7F2FA86AACE1DADA4387A"},
-        {"TruST25 (ST) key 01?",           "041D92163650161A2548D33881C235D0FB2315C2C31A442F23C87ACF14497C0CBA"},
-        {"TruST25 (ST) key 04?",           "04101E188A8B4CDDBC62D5BC3E0E6850F0C2730E744B79765A0E079907FBDB01BC"},
-    };
-
-    // https://www.nxp.com/docs/en/application-note/AN13452.pdf
-    const ecdsa_publickey_t nxp_mfu_192_public_keys[] = {
-        {"NXP Ultralight AES", "0453BF8C49B7BD9FE3207A91513B9C1D238ECAB07186B772104AB535F7D3AE63CF7C7F3DD0D169DA3E99E43C6399621A86"},
-    };
-
-    /*
-        uint8_t nxp_mfu_public_keys[6][PUBLIC_ECDA_KEYLEN] = {
-            // UL, NTAG21x and NDEF
-            {
-                0x04, 0x49, 0x4e, 0x1a, 0x38, 0x6d, 0x3d, 0x3c,
-                0xfe, 0x3d, 0xc1, 0x0e, 0x5d, 0xe6, 0x8a, 0x49,
-                0x9b, 0x1c, 0x20, 0x2d, 0xb5, 0xb1, 0x32, 0x39,
-                0x3e, 0x89, 0xed, 0x19, 0xfe, 0x5b, 0xe8, 0xbc, 0x61
-            },
-            // UL EV1
-            {
-                0x04, 0x90, 0x93, 0x3b, 0xdc, 0xd6, 0xe9, 0x9b,
-                0x4e, 0x25, 0x5e, 0x3d, 0xa5, 0x53, 0x89, 0xa8,
-                0x27, 0x56, 0x4e, 0x11, 0x71, 0x8e, 0x01, 0x72,
-                0x92, 0xfa, 0xf2, 0x32, 0x26, 0xa9, 0x66, 0x14, 0xb8
-            },
-            // unknown. Needs identification
-            {
-                0x04, 0x4F, 0x6D, 0x3F, 0x29, 0x4D, 0xEA, 0x57,
-                0x37, 0xF0, 0xF4, 0x6F, 0xFE, 0xE8, 0x8A, 0x35,
-                0x6E, 0xED, 0x95, 0x69, 0x5D, 0xD7, 0xE0, 0xC2,
-                0x7A, 0x59, 0x1E, 0x6F, 0x6F, 0x65, 0x96, 0x2B, 0xAF
-            },
-            // unknown. Needs identification
-            {
-                0x04, 0xA7, 0x48, 0xB6, 0xA6, 0x32, 0xFB, 0xEE,
-                0x2C, 0x08, 0x97, 0x70, 0x2B, 0x33, 0xBE, 0xA1,
-                0xC0, 0x74, 0x99, 0x8E, 0x17, 0xB8, 0x4A, 0xCA,
-                0x04, 0xFF, 0x26, 0x7E, 0x5D, 0x2C, 0x91, 0xF6, 0xDC
-            },
-            // manufacturer public key
-            {
-                0x04, 0x6F, 0x70, 0xAC, 0x55, 0x7F, 0x54, 0x61,
-                0xCE, 0x50, 0x52, 0xC8, 0xE4, 0xA7, 0x83, 0x8C,
-                0x11, 0xC7, 0xA2, 0x36, 0x79, 0x7E, 0x8A, 0x07,
-                0x30, 0xA1, 0x01, 0x83, 0x7C, 0x00, 0x40, 0x39, 0xC2
-            },
-            // MIKRON public key.
-            {
-                0x04, 0xf9, 0x71, 0xed, 0xa7, 0x42, 0xa4, 0xa8,
-                0x0d, 0x32, 0xdc, 0xf6, 0xa8, 0x14, 0xa7, 0x07,
-                0xcc, 0x3d, 0xc3, 0x96, 0xd3, 0x59, 0x02, 0xf7,
-                0x29, 0x29, 0xfd, 0xcd, 0x69, 0x8b, 0x34, 0x68, 0xf2
-            }
-        };
-    */
-    uint8_t i;
-    bool is_valid = false;
+    int index = -1;
     if (signature_len == 32) {
-        for (i = 0; i < ARRAYLEN(nxp_mfu_public_keys); i++) {
-
-            int dl = 0;
-            uint8_t key[PUBLIC_ECDA_KEYLEN] = {0};
-            param_gethex_to_eol(nxp_mfu_public_keys[i].value, 0, key, PUBLIC_ECDA_KEYLEN, &dl);
-
-            int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 7, signature, signature_len, false);
-
-            is_valid = (res == 0);
-            if (is_valid)
-                break;
-        }
+        index = originality_check_verify(uid, 7, signature, signature_len, PK_MFUL);
+    } else if (signature_len == 48) {
+        index = originality_check_verify(uid, 7, signature, signature_len, PK_MFULAES);
     }
-
-    bool is_192_valid = false;
-    if (signature_len == 48) {
-        for (i = 0; i < ARRAYLEN(nxp_mfu_192_public_keys); i++) {
-            int dl = 0;
-            uint8_t key[PUBLIC_ECDA_192_KEYLEN] = {0};
-            param_gethex_to_eol(nxp_mfu_192_public_keys[i].value, 0, key, PUBLIC_ECDA_192_KEYLEN, &dl);
-
-            int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP192R1, key, uid, 7, signature, signature_len, false);
-
-            is_192_valid = (res == 0);
-            if (is_192_valid)
-                break;
-        }
-    }
-
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
-    if (is_192_valid) {
-        PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_mfu_192_public_keys[i].desc);
-        PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfu_192_public_keys[i].value);
-        PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp192r1");
-        PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, signature_len));
-        PrintAndLogEx(SUCCESS, "       Signature verification ( " _GREEN_("successful") " )");
-        return PM3_SUCCESS;
-    }
-
-    if (is_valid) {
-        PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_mfu_public_keys[i].desc);
-        PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfu_public_keys[i].value);
-        PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
-        PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, signature_len));
-        PrintAndLogEx(SUCCESS, "       Signature verification ( " _GREEN_("successful") " )");
-        return PM3_SUCCESS;
-    }
-
-    PrintAndLogEx(INFO, "    Elliptic curve parameters: %s", (signature_len == 48) ? "NID_secp192r1" : "NID_secp128r1");
-    PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, signature_len));
-    PrintAndLogEx(SUCCESS, "       Signature verification ( " _RED_("fail") " )");
-    return PM3_ESOFT;
+    return originality_check_print(signature, signature_len, index);
 }
 
 static int ulev1_print_version(uint8_t *data) {
@@ -1540,21 +1439,13 @@ static int ulev1_print_version(uint8_t *data) {
 }
 
 static int ntag_print_counter(void) {
-    // NTAG has one counter/tearing.  At address 0x02.
+    // NTAG has one counter. At address 0x02. With no tearing.
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Counter"));
-    uint8_t tear[1] = {0};
     uint8_t counter[3] = {0, 0, 0};
     uint16_t len;
-    len = ulev1_readTearing(0x02, tear, sizeof(tear));
-    (void)len;
     len = ulev1_readCounter(0x02, counter, sizeof(counter));
-    (void)len;
     PrintAndLogEx(INFO, "       [02]: %s", sprint_hex(counter, 3));
-    PrintAndLogEx(SUCCESS, "            - %02X tearing ( %s )"
-                  , tear[0]
-                  , (tear[0] == 0xBD) ? _GREEN_("ok") : _RED_("fail")
-                 );
     return len;
 }
 
@@ -2123,17 +2014,55 @@ uint64_t GetHF14AMfU_Type(void) {
 
     // Ultralight - ATQA / SAK
     if (card.atqa[1] != 0x00 || card.atqa[0] != 0x44 || card.sak != 0x00) {
-        //PrintAndLogEx(NORMAL, "Tag is not Ultralight | NTAG | MY-D  [ATQA: %02X %02X SAK: %02X]\n", card.atqa[1], card.atqa[0], card.sak);
+        //PrintAndLogEx(NORMAL, "Tag is not Ultralight | NTAG | MY-D |ST25TN [ATQA: %02X %02X SAK: %02X]\n", card.atqa[1], card.atqa[0], card.sak);
         DropField();
         return MFU_TT_UL_ERROR;
     }
-
-    if (card.uid[0] != 0x05) {
+    if (card.uid[0] == 0x02) {
+        // ST25TN
+        // read SYSBLOCK
+        uint8_t data[4] = {0x00};
+        int status = ul_read(0x02, data, sizeof(data));
+        if (status <= 1) {
+            tagtype = MFU_TT_UL;
+        } else {
+            status = ul_read(data[1] + 1, data, sizeof(data));
+            if (status <= 1) {
+                tagtype = MFU_TT_UL;
+            } else {
+                // data[3] == KID == 0x05 Key ID
+                // data[2] == REV == 0x13 Product version
+                if ((data[1] == 0x90) && (data[0] == 0x90)) {
+                    tagtype = MFU_TT_ST25TN01K;
+                } else if ((data[1] == 0x90) && (data[0] == 0x91)) {
+                    tagtype = MFU_TT_ST25TN512;
+                }
+            }
+        }
+    } else if (card.uid[0] == 0x05) {
+        // Infineon MY-D tests   Exam high nibble
+        DropField();
+        uint8_t nib = (card.uid[1] & 0xf0) >> 4;
+        switch (nib) {
+            // case 0: tagtype =  SLE66R35E7; break; //or SLE 66R35E7 - mifare compat... should have different sak/atqa for mf 1k
+            case 1:
+                tagtype =  MFU_TT_MY_D;
+                break; // or SLE 66RxxS ... up to 512 pages of 8 user bytes...
+            case 2:
+                tagtype = MFU_TT_MY_D_NFC;
+                break; // or SLE 66RxxP ... up to 512 pages of 8 user bytes... (or in nfc mode FF pages of 4 bytes)
+            case 3:
+                tagtype = (MFU_TT_MY_D_MOVE | MFU_TT_MY_D_MOVE_NFC);
+                break; // or SLE 66R01P // 38 pages of 4 bytes //notice: we can not currently distinguish between these two
+            case 7:
+                tagtype =  MFU_TT_MY_D_MOVE_LEAN;
+                break; // or SLE 66R01L  // 16 pages of 4 bytes
+        }
+    } else {
 
         uint8_t version[10] = {0x00};
         int len  = ulev1_getVersion(version, sizeof(version));
         DropField();
-
         switch (len) {
             case 0x0A: {
                 /*
@@ -2221,7 +2150,6 @@ uint64_t GetHF14AMfU_Type(void) {
                 tagtype = MFU_TT_UNKNOWN;
                 break;
         }
-
         // This is a test from cards that doesn't answer to GET_VERSION command
         // UL vs UL-C vs NTAG203 vs FUDAN FM11NT021 (which is NTAG213 compatiable)
         if (tagtype & (MFU_TT_UL | MFU_TT_UL_C | MFU_TT_NTAG_203)) {
@@ -2274,25 +2202,6 @@ uint64_t GetHF14AMfU_Type(void) {
         if (tagtype & MFU_TT_UL) {
             tagtype = ul_fudan_check();
             DropField();
-        }
-    } else {
-        DropField();
-        // Infinition MY-D tests   Exam high nibble
-        uint8_t nib = (card.uid[1] & 0xf0) >> 4;
-        switch (nib) {
-            // case 0: tagtype =  SLE66R35E7; break; //or SLE 66R35E7 - mifare compat... should have different sak/atqa for mf 1k
-            case 1:
-                tagtype =  MFU_TT_MY_D;
-                break; // or SLE 66RxxS ... up to 512 pages of 8 user bytes...
-            case 2:
-                tagtype = MFU_TT_MY_D_NFC;
-                break; // or SLE 66RxxP ... up to 512 pages of 8 user bytes... (or in nfc mode FF pages of 4 bytes)
-            case 3:
-                tagtype = (MFU_TT_MY_D_MOVE | MFU_TT_MY_D_MOVE_NFC);
-                break; // or SLE 66R01P // 38 pages of 4 bytes //notice: we can not currently distinguish between these two
-            case 7:
-                tagtype =  MFU_TT_MY_D_MOVE_LEAN;
-                break; // or SLE 66R01L  // 16 pages of 4 bytes
         }
     }
 
@@ -2501,6 +2410,39 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 return PM3_ESOFT;
             }
         }
+    }
+
+    // ST25TN info & signature
+    if (tagtype & (MFU_TT_ST25TN512 | MFU_TT_ST25TN01K)) {
+        status = ul_read(0x02, data, sizeof(data));
+        if (status <= 1) {
+            PrintAndLogEx(ERR, "Error: tag didn't answer to READ SYSBLOCK");
+            DropField();
+            return PM3_ESOFT;
+        }
+        status = ul_read(data[1] + 1, data, sizeof(data));
+        if (status <= 1) {
+            PrintAndLogEx(ERR, "Error: tag didn't answer to READ SYSBLOCK");
+            DropField();
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "--- " _CYAN_("Tag System Information"));
+        PrintAndLogEx(INFO, "              Key ID: %02x", data[3]);
+        PrintAndLogEx(INFO, "     Product Version: %02x", data[2]);
+        PrintAndLogEx(INFO, "        Product Code: %02x%02x", data[1], data[0]);
+        uint8_t signature[32] = {0};
+        for (int blkoff = 0; blkoff < 8; blkoff++) {
+            status = ul_read(0x34 + blkoff, signature + (blkoff * 4), 4);
+            if (status <= 1) {
+                PrintAndLogEx(ERR, "Error: tag didn't answer to READ SYSBLOCK");
+                DropField();
+                return PM3_ESOFT;
+            }
+        }
+        // check signature
+        int index = originality_check_verify_ex(card.uid, 7, signature, sizeof(signature), PK_ST25TN, false, true);
+        PrintAndLogEx(NORMAL, "");
+        originality_check_print(signature, sizeof(signature), index);
     }
 
     // Read signature
@@ -5833,6 +5775,127 @@ out:
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AMfUIncr(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu incr",
+                  "Increment a MIFARE Ultralight Ev1 counter\n"
+                  "Will read but not increment counter if NTAG is detected",
+                  "hf mfu incr -c 0 -v 1337\n"
+                  "hf mfu incr -c 2 -v 0 -p FFFFFFFF");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int1("c", "cnt", "<dec>", "Counter index from 0"),
+        arg_int1("v", "val", "<dec>", "Value to increment by (0-16777215)"),
+        arg_str0("p", "pwd", "<hex>", "PWD to authenticate with"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t counter = arg_get_int_def(ctx, 1, 3);
+    uint32_t value = arg_get_u32_def(ctx, 2, 16777216);
+
+    int pwd_len;
+    uint8_t pwd[4] = { 0x00 };
+    CLIGetHexWithReturn(ctx, 3, pwd, &pwd_len);
+    bool has_key = false;
+    if (pwd_len) {
+        has_key = true;
+        if (pwd_len != 4) {
+            PrintAndLogEx(WARNING, "incorrect PWD length");
+            return PM3_EINVARG;
+        }
+    }
+
+    CLIParserFree(ctx);
+
+    if (counter > 2) {
+        PrintAndLogEx(WARNING, "Counter index must be in range 0-2");
+        return PM3_EINVARG;
+    }
+    if (value > 16777215) {
+        PrintAndLogEx(WARNING, "Value to increment must be in range 0-16777215");
+        return PM3_EINVARG;
+    }
+
+    uint8_t increment_cmd[6] = { MIFARE_ULEV1_INCR_CNT, counter, 0x00, 0x00, 0x00, 0x00 };
+
+    for (uint8_t i = 0; i < 3; i++) {
+        increment_cmd[i + 2] = (value >> (8 * i)) & 0xff;
+    }
+
+    iso14a_card_select_t card;
+    if (ul_select(&card) == false) {
+        PrintAndLogEx(FAILED, "failed to select card, exiting...");
+        return PM3_ESOFT;
+    }
+
+    uint64_t tagtype = GetHF14AMfU_Type();
+    uint64_t tags_with_counter_ul = MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1;
+    uint64_t tags_with_counter_ntag = MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C | MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216;
+    if ((tagtype & (tags_with_counter_ul | tags_with_counter_ntag)) == 0) {
+        PrintAndLogEx(WARNING, "tag type does not have counters");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    bool is_ntag = (tagtype & tags_with_counter_ntag) != 0;
+    if (is_ntag && (counter != 2)) {
+        PrintAndLogEx(WARNING, "NTAG only has one counter at index 2");
+        DropField();
+        return PM3_EINVARG;
+    }
+
+    uint8_t pack[4] = { 0, 0, 0, 0 };
+    if (has_key) {
+        if (ulev1_requestAuthentication(pwd, pack, sizeof(pack)) == PM3_EWRONGANSWER) {
+            PrintAndLogEx(FAILED, "authentication failed UL-EV1/NTAG");
+            DropField();
+            return PM3_ESOFT;
+        }
+    }
+
+    uint8_t current_counter[3] = { 0, 0, 0 };
+    int len = ulev1_readCounter(counter, current_counter, sizeof(current_counter));
+    if (len != sizeof(current_counter)) {
+        PrintAndLogEx(FAILED, "failed to read old counter");
+        if (is_ntag) {
+            PrintAndLogEx(HINT, "NTAG detected, try reading with PWD");
+        }
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    uint32_t current_counter_num = current_counter[0] | (current_counter[1] << 8) | (current_counter[2] << 16);
+    PrintAndLogEx(INFO, "Current counter... " _GREEN_("%8d") " - " _GREEN_("%s"), current_counter_num, sprint_hex(current_counter, 3));
+
+    if ((tagtype & tags_with_counter_ntag) != 0) {
+        PrintAndLogEx(WARNING, "NTAG detected, unable to manually increment counter");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    uint8_t resp[1] = { 0x00 };
+    if (ul_send_cmd_raw(increment_cmd, sizeof(increment_cmd), resp, sizeof(resp)) < 0) {
+        PrintAndLogEx(FAILED, "failed to increment counter");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    uint8_t new_counter[3] = { 0, 0, 0 };
+    int new_len = ulev1_readCounter(counter, new_counter, sizeof(new_counter));
+    if (new_len != sizeof(current_counter)) {
+        PrintAndLogEx(FAILED, "failed to read new counter");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    uint32_t new_counter_num = new_counter[0] | (new_counter[1] << 8) | (new_counter[2] << 16);
+    PrintAndLogEx(INFO, "New counter....... " _GREEN_("%8d") " - " _GREEN_("%s"), new_counter_num, sprint_hex(new_counter, 3));
+
+    DropField();
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",     CmdHelp,                   AlwaysAvailable, "This help"},
     {"list",     CmdHF14AMfuList,           AlwaysAvailable, "List MIFARE Ultralight / NTAG history"},
@@ -5845,6 +5908,7 @@ static command_t CommandTable[] = {
     {"cauth",    CmdHF14AMfUCAuth,          IfPm3Iso14443a,  "Ultralight-C - Authentication"},
     {"setpwd",   CmdHF14AMfUCSetPwd,        IfPm3Iso14443a,  "Ultralight-C - Set 3DES key"},
     {"dump",     CmdHF14AMfUDump,           IfPm3Iso14443a,  "Dump MIFARE Ultralight family tag to binary file"},
+    {"incr",     CmdHF14AMfUIncr,           IfPm3Iso14443a,  "Increments Ev1/NTAG counter"},
     {"info",     CmdHF14AMfUInfo,           IfPm3Iso14443a,  "Tag information"},
     {"ndefread", CmdHF14MfuNDEFRead,        IfPm3Iso14443a,  "Prints NDEF records from card"},
     {"rdbl",     CmdHF14AMfURdBl,           IfPm3Iso14443a,  "Read block"},

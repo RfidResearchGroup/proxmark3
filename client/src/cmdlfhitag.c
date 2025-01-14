@@ -488,7 +488,22 @@ static int ht2_check_dictionary(uint32_t key_count, uint8_t *keys,  uint8_t keyl
 
     uint8_t *pkeys = keys;
 
+    uint32_t toti = key_count;
+    uint32_t cnt = 0;
+
     while (key_count--) {
+
+        cnt++;
+
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(INFO, "User aborted");
+            break;
+        }
+
+        PrintAndLogEx(INPLACE, "Checking Keys %u / %u", cnt, toti);
+
+        msleep(30);
 
         if (keylen == 4) {
             packet.cmd = HT2F_PASSWORD;
@@ -503,7 +518,7 @@ static int ht2_check_dictionary(uint32_t key_count, uint8_t *keys,  uint8_t keyl
         clearCommandBuffer();
         SendCommandNG(CMD_LF_HITAG_READER, (uint8_t *)&packet, sizeof(packet));
         PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_LF_HITAG_READER, &resp, 2000) == false) {
+        if (WaitForResponseTimeout(CMD_LF_HITAG_READER, &resp, 4000) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply.");
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
             return PM3_ETIMEOUT;

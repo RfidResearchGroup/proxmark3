@@ -37,7 +37,8 @@
 #include "protocols.h"
 #include "pmflash.h"
 #include "flashmem.h" // persistence on flash
-#include "appmain.h" // print stack
+#include "spiffs.h"   // spiffs
+#include "appmain.h"  // print stack
 
 /*
 Notes about EM4xxx timings.
@@ -324,31 +325,7 @@ void setT55xxConfig(uint8_t arg0, const t55xx_configurations_t *c) {
         return;
     }
 
-    if (!FlashInit()) {
-        BigBuf_free();
-        return;
-    }
-
-    uint8_t *buf = BigBuf_malloc(T55XX_CONFIG_LEN);
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    uint16_t res = Flash_ReadDataCont(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
-    if (res == 0) {
-        FlashStop();
-        BigBuf_free();
-        return;
-    }
-
-    memcpy(buf, &T55xx_Timing, T55XX_CONFIG_LEN);
-
-    // delete old configuration
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    Flash_WriteEnable();
-    Flash_Erase4k(3, 0xD);
-
-    // write new
-    res = Flash_Write(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
-
-    if (res == T55XX_CONFIG_LEN && g_dbglevel > 1) {
+    if (SPIFFS_OK == rdv40_spiffs_write(T55XX_CONFIG_FILE, (uint8_t *)&T55xx_Timing, T55XX_CONFIG_LEN, RDV40_SPIFFS_SAFETY_SAFE)) {
         DbpString("T55XX Config save " _GREEN_("success"));
     }
 
@@ -363,15 +340,23 @@ t55xx_configurations_t *getT55xxConfig(void) {
 void loadT55xxConfig(void) {
 #ifdef WITH_FLASH
 
-    if (!FlashInit()) {
+    uint8_t *buf = BigBuf_malloc(T55XX_CONFIG_LEN);
+
+    uint32_t size = 0;
+    if (exists_in_spiffs(T55XX_CONFIG_FILE)) {
+        size = size_in_spiffs(T55XX_CONFIG_FILE);
+    }
+    if (size == 0) {
+        Dbprintf("Spiffs file: %s does not exists or empty.", T55XX_CONFIG_FILE);
+        BigBuf_free();
         return;
     }
 
-    uint8_t *buf = BigBuf_malloc(T55XX_CONFIG_LEN);
-
-    Flash_CheckBusy(BUSY_TIMEOUT);
-    uint16_t isok = Flash_ReadDataCont(T55XX_CONFIG_OFFSET, buf, T55XX_CONFIG_LEN);
-    FlashStop();
+    if (SPIFFS_OK != rdv40_spiffs_read(T55XX_CONFIG_FILE, buf, T55XX_CONFIG_LEN, RDV40_SPIFFS_SAFETY_SAFE)) {
+        Dbprintf("Spiffs file: %s cannot be read.", T55XX_CONFIG_FILE);
+        BigBuf_free();
+        return;
+    }
 
     // verify read mem is actual data.
     uint8_t cntA = T55XX_CONFIG_LEN, cntB = T55XX_CONFIG_LEN;
@@ -380,6 +365,7 @@ void loadT55xxConfig(void) {
         if (buf[i] == 0x00) cntB--;
     }
     if (!cntA || !cntB) {
+        Dbprintf("Spiffs file: %s does not malformed or empty.", T55XX_CONFIG_FILE);
         BigBuf_free();
         return;
     }
@@ -387,7 +373,7 @@ void loadT55xxConfig(void) {
     if (buf[0] != 0xFF) // if not set for clear
         memcpy((uint8_t *)&T55xx_Timing, buf, T55XX_CONFIG_LEN);
 
-    if (isok == T55XX_CONFIG_LEN) {
+    if (size == T55XX_CONFIG_LEN) {
         if (g_dbglevel > 1) DbpString("T55XX Config load success");
     }
 
@@ -2146,29 +2132,34 @@ void T55xx_ChkPwds(uint8_t flags, bool ledcontrol) {
 #ifdef WITH_FLASH
 
     BigBuf_Clear_EM();
-    uint16_t isok = 0;
-    uint8_t counter[2] = {0x00, 0x00};
-    isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET_P(spi_flash_pages64k), counter, sizeof(counter));
-    if (isok != sizeof(counter))
-        goto OUT;
+    uint32_t size = 0;
 
-    pwd_count = (uint16_t)(counter[1] << 8 | counter[0]);
+    if (exists_in_spiffs(T55XX_KEYS_FILE)) {
+        size = size_in_spiffs(T55XX_KEYS_FILE);
+    }
+    if (size == 0) {
+        Dbprintf("Spiffs file: %s does not exists or empty.", T55XX_KEYS_FILE);
+        goto OUT;
+    }
+
+    pwd_count = size / T55XX_KEY_LENGTH;
     if (pwd_count == 0)
         goto OUT;
 
     // since flash can report way too many pwds, we need to limit it.
     // bigbuff EM size is determined by CARD_MEMORY_SIZE
     // a password is 4bytes.
-    uint16_t pwd_size_available = MIN(CARD_MEMORY_SIZE, pwd_count * 4);
+    uint16_t pwd_size_available = MIN(CARD_MEMORY_SIZE, pwd_count * T55XX_KEY_LENGTH);
 
     // adjust available pwd_count
-    pwd_count = pwd_size_available / 4;
+    pwd_count = pwd_size_available / T55XX_KEY_LENGTH;
 
-    isok = Flash_ReadData(DEFAULT_T55XX_KEYS_OFFSET_P(spi_flash_pages64k) + 2, pwds, pwd_size_available);
-    if (isok != pwd_size_available)
+    if (SPIFFS_OK == rdv40_spiffs_read_as_filetype(T55XX_KEYS_FILE, pwds, pwd_size_available, RDV40_SPIFFS_SAFETY_SAFE)) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Loaded %u passwords from spiffs file: %s", pwd_count, T55XX_KEYS_FILE);
+    } else {
+        Dbprintf("Spiffs file: %s cannot be read.", T55XX_KEYS_FILE);
         goto OUT;
-
-    Dbprintf("Password dictionary count " _YELLOW_("%d"), pwd_count);
+    }
 
 #endif
 

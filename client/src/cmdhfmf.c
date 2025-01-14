@@ -46,6 +46,7 @@
 #include "generator.h"              // keygens.
 #include "fpga.h"
 #include "mifare/mifarehost.h"
+#include "crypto/originality.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -68,52 +69,9 @@ static int usage_hf14_keybrute(void) {
 */
 
 int mfc_ev1_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
-
-    // ref:  MIFARE Classic EV1 Originality Signature Validation
-#define PUBLIC_MFCEV1_ECDA_KEYLEN 33
-    const ecdsa_publickey_t nxp_mfc_public_keys[] = {
-        {"NXP MIFARE Classic MFC1C14_x",   "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
-        {"MIFARE Classic / QL88",          "046F70AC557F5461CE5052C8E4A7838C11C7A236797E8A0730A101837C004039C2"},
-        {"NXP ICODE DNA, ICODE SLIX2",     "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0"},
-        {"NXP Public key",                 "04A748B6A632FBEE2C0897702B33BEA1C074998E17B84ACA04FF267E5D2C91F6DC"},
-        {"NXP Ultralight Ev1",             "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
-        {"NXP NTAG21x (2013)",             "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
-        {"MIKRON Public key",              "04F971EDA742A4A80D32DCF6A814A707CC3DC396D35902F72929FDCD698B3468F2"},
-        {"VivoKey Spark1 Public key",      "04D64BB732C0D214E7EC580736ACF847284B502C25C0F7F2FA86AACE1DADA4387A"},
-        {"TruST25 (ST) key 01?",           "041D92163650161A2548D33881C235D0FB2315C2C31A442F23C87ACF14497C0CBA"},
-        {"TruST25 (ST) key 04?",           "04101E188A8B4CDDBC62D5BC3E0E6850F0C2730E744B79765A0E079907FBDB01BC"},
-    };
-
-    uint8_t i;
-    bool is_valid = false;
-
-    for (i = 0; i < ARRAYLEN(nxp_mfc_public_keys); i++) {
-
-        int dl = 0;
-        uint8_t key[PUBLIC_MFCEV1_ECDA_KEYLEN];
-        param_gethex_to_eol(nxp_mfc_public_keys[i].value, 0, key, PUBLIC_MFCEV1_ECDA_KEYLEN, &dl);
-
-        int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, uidlen, signature, signature_len, false);
-        is_valid = (res == 0);
-        if (is_valid)
-            break;
-    }
-
-    PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
-    if (is_valid == false || i == ARRAYLEN(nxp_mfc_public_keys)) {
-        PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
-        PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 32));
-        PrintAndLogEx(SUCCESS, "       Signature verification: " _RED_("failed"));
-        return PM3_ESOFT;
-    }
-
-    PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_mfc_public_keys[i].desc);
-    PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_mfc_public_keys[i].value);
-    PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
-    PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 32));
-    PrintAndLogEx(SUCCESS, "       Signature verification: " _GREEN_("successful"));
-    return PM3_SUCCESS;
+    int index = originality_check_verify(uid, uidlen, signature, signature_len, PK_MFC);
+    PrintAndLogEx(NORMAL, "");
+    return originality_check_print(signature, signature_len, index);
 }
 
 static int mf_read_uid(uint8_t *uid, int *uidlen, int *nxptype) {
@@ -1159,7 +1117,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
     }
 
     if (s >= MIFARE_4K_MAXSECTOR) {
-        PrintAndLogEx(WARNING, "Sector number must be less then 40");
+        PrintAndLogEx(WARNING, "Sector number must be less than 40");
         return PM3_EINVARG;
     }
 
@@ -2481,7 +2439,10 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     CLIParserInit(&ctx, "hf mf autopwn",
                   "This command automates the key recovery process on MIFARE Classic cards.\n"
                   "It uses the fchk, chk, darkside, nested, hardnested and staticnested to recover keys.\n"
-                  "If all keys are found, it try dumping card content both to file and emulator memory.",
+                  "If all keys are found, it try dumping card content both to file and emulator memory.\n"
+                  "\n"
+                  "default file name template is `hf-mf-<uid>-<dump|key>.`\n"
+                  "using suffix the template becomes `hf-mf-<uid>-<dump|key>-<suffix>.` \n",
                   "hf mf autopwn\n"
                   "hf mf autopwn -s 0 -a -k FFFFFFFFFFFF     --> target MFC 1K card, Sector 0 with known key A 'FFFFFFFFFFFF'\n"
                   "hf mf autopwn --1k -f mfc_default_keys    --> target MFC 1K card, default dictionary\n"
@@ -2491,14 +2452,15 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_strx0("k",  "key",    "<hex>", "Known key, 12 hex bytes"),
-        arg_int0("s",  "sector", "<dec>", "Input sector number"),
-        arg_lit0("a",   NULL,             "Input key A (def)"),
-        arg_lit0("b",   NULL,             "Input key B"),
-        arg_str0("f", "file",    "<fn>",  "filename of dictionary"),
-        arg_lit0(NULL,  "slow",            "Slower acquisition (required by some non standard cards)"),
-        arg_lit0("l",  "legacy",          "legacy mode (use the slow `hf mf chk`)"),
-        arg_lit0("v",  "verbose",         "verbose output"),
+        arg_strx0("k", "key",    "<hex>",  "Known key, 12 hex bytes"),
+        arg_int0("s",  "sector", "<dec>",  "Input sector number"),
+        arg_lit0("a",   NULL,              "Input key A (def)"),
+        arg_lit0("b",   NULL,              "Input key B"),
+        arg_str0("f",  "file",    "<fn>",  "filename of dictionary"),
+        arg_str0(NULL, "suffix",  "<txt>", "Add this suffix to generated files"),
+        arg_lit0(NULL, "slow",             "Slower acquisition (required by some non standard cards)"),
+        arg_lit0("l",  "legacy",           "legacy mode (use the slow `hf mf chk`)"),
+        arg_lit0("v",  "verbose",          "verbose output"),
 
         arg_lit0(NULL, "ns", "No save to file"),
 
@@ -2543,29 +2505,34 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    bool slow = arg_get_lit(ctx, 6);
-    bool legacy_mfchk = arg_get_lit(ctx, 7);
-    bool verbose = arg_get_lit(ctx, 8);
+    int outfnlen = 0;
+    char outfilename[127] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)outfilename, 127, &outfnlen);
 
-    bool no_save = arg_get_lit(ctx, 9);
 
-    bool m0 = arg_get_lit(ctx, 10);
-    bool m1 = arg_get_lit(ctx, 11);
-    bool m2 = arg_get_lit(ctx, 12);
-    bool m4 = arg_get_lit(ctx, 13);
+    bool slow = arg_get_lit(ctx, 7);
+    bool legacy_mfchk = arg_get_lit(ctx, 8);
+    bool verbose = arg_get_lit(ctx, 9);
 
-    bool in = arg_get_lit(ctx, 14);
+    bool no_save = arg_get_lit(ctx, 10);
+
+    bool m0 = arg_get_lit(ctx, 11);
+    bool m1 = arg_get_lit(ctx, 12);
+    bool m2 = arg_get_lit(ctx, 13);
+    bool m4 = arg_get_lit(ctx, 14);
+
+    bool in = arg_get_lit(ctx, 15);
 #if defined(COMPILER_HAS_SIMD_X86)
-    bool im = arg_get_lit(ctx, 15);
-    bool is = arg_get_lit(ctx, 16);
-    bool ia = arg_get_lit(ctx, 17);
-    bool i2 = arg_get_lit(ctx, 18);
+    bool im = arg_get_lit(ctx, 16);
+    bool is = arg_get_lit(ctx, 17);
+    bool ia = arg_get_lit(ctx, 18);
+    bool i2 = arg_get_lit(ctx, 19);
 #endif
 #if defined(COMPILER_HAS_SIMD_AVX512)
-    bool i5 = arg_get_lit(ctx, 19);
+    bool i5 = arg_get_lit(ctx, 20);
 #endif
 #if defined(COMPILER_HAS_SIMD_NEON)
-    bool ie = arg_get_lit(ctx, 15);
+    bool ie = arg_get_lit(ctx, 16);
 #endif
 
     CLIParserFree(ctx);
@@ -2733,7 +2700,13 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     }
 
     // read uid to generate a filename for the key file
-    char *fptr = GenerateFilename("hf-mf-", "-key.bin");
+    char suffix[FILE_PATH_SIZE];
+    if (outfnlen) {
+        snprintf(suffix, sizeof(suffix) - strlen(outfilename), "-key-%s.bin", outfilename);
+    } else {
+        snprintf(suffix, sizeof(suffix), "-key.bin");
+    }
+    char *fptr = GenerateFilename("hf-mf-", suffix);
 
     // check if tag doesn't have static nonce
     int has_staticnonce = detect_classic_static_nonce();
@@ -3261,7 +3234,13 @@ all_found:
     }
 
     free(fptr);
-    fptr = GenerateFilename("hf-mf-", "-dump");
+
+    if (outfnlen) {
+        snprintf(suffix, sizeof(suffix), "-dump-%s", outfilename);
+    } else {
+        snprintf(suffix, sizeof(suffix), "-dump");
+    }
+    fptr = GenerateFilename("hf-mf-", suffix);
     if (fptr == NULL) {
         free(dump);
         free(e_sector);
@@ -4513,7 +4492,7 @@ static int CmdHF14AMfEGetSc(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (s >= MIFARE_4K_MAXSECTOR) {
-        PrintAndLogEx(WARNING, "Sector number must be less then 40");
+        PrintAndLogEx(WARNING, "Sector number must be less than 40");
         return PM3_EINVARG;
     }
 
@@ -5577,7 +5556,7 @@ static int CmdHF14AMfCGetSc(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (s >= MIFARE_4K_MAXSECTOR) {
-        PrintAndLogEx(WARNING, "Sector number must be less then 40");
+        PrintAndLogEx(WARNING, "Sector number must be less than 40");
         return PM3_EINVARG;
     }
 
@@ -7202,7 +7181,8 @@ static int CmdHf14AGen3Block(const char *Cmd) {
                   " - You can specify part of manufacturer block as\n"
                   "   4/7-bytes for UID change only\n"
                   "\n"
-                  "NOTE: BCC, SAK, ATQA will be calculated automatically"
+                  "NOTE: BCC and ATQA will be calculated automatically\n"
+                  "SAK will be automatically set to default values if not specified"
                   ,
                   "hf mf gen3blk                      --> print current data\n"
                   "hf mf gen3blk -d 01020304          --> set 4 byte uid\n"
@@ -7962,11 +7942,11 @@ static int parse_gtu_cfg(uint8_t *d, size_t n) {
 
     uint8_t atslen = d[7];
     if (atslen == 0) {
-        PrintAndLogEx(INFO, ".............. ATS length %u bytes ( %s )", atslen, _YELLOW_("zero"));
+        PrintAndLogEx(INFO, "..............%02X ATS length %u bytes ( %s )", d[7], atslen, _YELLOW_("zero"));
     } else if (atslen <= 16) {
-        PrintAndLogEx(INFO, ".............. ATS length %u bytes ( %s )", atslen, _GREEN_("ok"));
+        PrintAndLogEx(INFO, "..............%02X ATS length %u bytes ( %s )", d[7], atslen, _GREEN_("ok"));
     } else {
-        PrintAndLogEx(INFO, ".............. ATS length %u bytes ( %s )", atslen, _RED_("fail"));
+        PrintAndLogEx(INFO, "..............%02X ATS length %u bytes ( %s )", d[7], atslen, _RED_("fail"));
         atslen = 0;
     }
 
@@ -7975,7 +7955,7 @@ static int parse_gtu_cfg(uint8_t *d, size_t n) {
     // ATS seems to have 16 bytes reserved
     PrintAndLogEx(INFO, _CYAN_("Config 2 - ATS"));
     PrintAndLogEx(INFO, "%s", sprint_hex_inrow(d + 8, 16));
-    if (atslen <= 16) {
+    if ((atslen > 0) && (atslen <= 16)) {
         PrintAndLogEx(INFO, "%s.............. ATS ( %d bytes )", sprint_hex_inrow(&d[8], d[7]), d[7]);
         PrintAndLogEx(INFO, "..................%s Reserved for ATS", sprint_hex_inrow(d + 8 + d[7], 16 - d[7]));
     } else {
@@ -8064,21 +8044,32 @@ static int CmdHF14AGen4Info(const char *cmd) {
     size_t resplen = 0;
     int res = 0;
 
-    if (dlen != 32) {
-        res = mfG4GetConfig(pwd, resp, &resplen, verbose);
-        if (res != PM3_SUCCESS || resplen == 0) {
-            if (res == PM3_ETIMEOUT)
-                PrintAndLogEx(ERR, "No card in the field or card command timeout.");
-            else
-                PrintAndLogEx(ERR, "Error get config. Maybe not a Gen4 card?. error=%d rlen=%zu", res, resplen);
+    if (dlen == 0) {
+        if (IfPm3Iso14443a()) {
+            res = mfG4GetConfig(pwd, resp, &resplen, verbose);
+            if (res != PM3_SUCCESS || resplen == 0) {
+                if (res == PM3_ETIMEOUT)
+                    PrintAndLogEx(ERR, "No card in the field or card command timeout.");
+                else
+                    PrintAndLogEx(ERR, "Error get config. Maybe not a Gen4 card?. error=%d rlen=%zu", res, resplen);
+                return PM3_ESOFT;
+            }
+        } else {
+            PrintAndLogEx(ERR, "Offline mode, please provide data");
             return PM3_ESOFT;
         }
+    } else if (dlen != 32) {
+        PrintAndLogEx(FAILED, "Data must be 32 bytes length, got " _YELLOW_("%u"), dlen);
+        return PM3_EINVARG;
     } else {
         memcpy(resp, data, dlen);
         resplen = 32;
     }
 
     parse_gtu_cfg(resp, resplen);
+    if (! IfPm3Iso14443a()) {
+        return PM3_SUCCESS;
+    }
 
     uint8_t uid_len = resp[1];
 
@@ -9883,6 +9874,7 @@ static int CmdHF14AMfISEN(const char *Cmd) {
         arg_rem("FM11RF08S specific options:", "Incompatible with above options, except -k; output in JSON"),
         arg_lit0(NULL, "collect_fm11rf08s", "collect all nT/{nT}/par_err."),
         arg_lit0(NULL, "collect_fm11rf08s_with_data", "collect all nT/{nT}/par_err and data blocks."),
+        arg_lit0(NULL, "collect_fm11rf08s_without_backdoor", "collect all nT/{nT}/par_err without backdoor. Requires first auth keytype and block"),
         arg_str0("f", "file", "<fn>", "Specify a filename for collected data"),
         arg_param_end
     };
@@ -9954,9 +9946,18 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     if (collect_fm11rf08s_with_data) {
         collect_fm11rf08s = 1;
     }
+    bool collect_fm11rf08s_without_backdoor = arg_get_lit(ctx, 23);
+    if (collect_fm11rf08s_without_backdoor) {
+        collect_fm11rf08s = 1;
+    }
+    if (collect_fm11rf08s_with_data && collect_fm11rf08s_without_backdoor) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Don't mix with_data and without_backdoor options");
+        return PM3_EINVARG;
+    }
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 23), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 24), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     CLIParserFree(ctx);
 
@@ -10005,12 +10006,15 @@ static int CmdHF14AMfISEN(const char *Cmd) {
 
     if (collect_fm11rf08s) {
         uint64_t t1 = msclock();
-        uint32_t flags = collect_fm11rf08s_with_data;
-        SendCommandMIX(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, flags, 0, 0, key, sizeof(key));
-        if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, &resp, 1000)) {
-            if (resp.status == PM3_ESOFT) {
+        uint32_t flags = collect_fm11rf08s_with_data | (collect_fm11rf08s_without_backdoor << 1);
+        SendCommandMIX(CMD_HF_MIFARE_ACQ_STATIC_ENCRYPTED_NONCES, flags, blockn, keytype, key, sizeof(key));
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+            if (resp.oldarg[0] != PM3_SUCCESS) {
                 return NONCE_FAIL;
             }
+        } else {
+            PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
+            return PM3_ETIMEOUT;
         }
         uint8_t num_sectors = MIFARE_1K_MAXSECTOR + 1;
         iso14a_fm11rf08s_nonces_with_data_t nonces_dump = {0};
@@ -10146,7 +10150,7 @@ static command_t CommandTable[] = {
     {"gen3blk",     CmdHf14AGen3Block,      IfPm3Iso14443a,  "Overwrite manufacturer block"},
     {"gen3freeze",  CmdHf14AGen3Freeze,     IfPm3Iso14443a,  "Perma lock UID changes. irreversible"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "-------------------- " _CYAN_("magic gen4 GTU") " --------------------------"},
-    {"ginfo",       CmdHF14AGen4Info,       IfPm3Iso14443a,  "Info about configuration of the card"},
+    {"ginfo",       CmdHF14AGen4Info,       AlwaysAvailable,  "Info about configuration of the card"},
     {"ggetblk",     CmdHF14AGen4GetBlk,     IfPm3Iso14443a,  "Read block from card"},
     {"gload",       CmdHF14AGen4Load,       IfPm3Iso14443a,  "Load dump to card"},
     {"gsave",       CmdHF14AGen4Save,       IfPm3Iso14443a,  "Save dump from card into file or emulator"},

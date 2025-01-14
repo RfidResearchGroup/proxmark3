@@ -76,7 +76,7 @@ for tool, bin in tools.items():
             exit()
 
 
-def recovery(init_check=False, final_check=False, keep=False, debug=False, supply_chain=False, quiet=True):
+def recovery(init_check=False, final_check=False, keep=False, debug=False, supply_chain=False, quiet=True, keyset=False):
     def show(s='', prompt="[" + color("=", fg="yellow") + "] ", **kwargs):
         if not quiet:
             s = f"{prompt}" + f"\n{prompt}".join(s.split('\n'))
@@ -94,7 +94,7 @@ def recovery(init_check=False, final_check=False, keep=False, debug=False, suppl
 
     if uid is None:
         show("Card not found")
-        return
+        return False
     show("UID: " + color(f"{uid:08X}", fg="green"))
 
     def show_key(sec, key_type, key):
@@ -106,6 +106,14 @@ def recovery(init_check=False, final_check=False, keep=False, debug=False, suppl
     save_path = prefs['file.default.dumppath'] + os.path.sep
 
     found_keys = [["", ""] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
+
+    if keyset != False:
+        n = min(len(found_keys),len(keyset))
+        show(f"{n} Key pairs supplied: ")
+        for i in range(0, n):
+            found_keys[i] = keyset[i]
+            show(f"  Sector {i:2d} : A = {found_keys[i][0]:12s}   B = {found_keys[i][1]:12s}")
+
     if init_check:
         show("Checking default keys...")
         p.console("hf mf fchk")
@@ -135,7 +143,7 @@ def recovery(init_check=False, final_check=False, keep=False, debug=False, suppl
 
     if (nonces_with_data == ""):
         show("Error getting nonces, abort.")
-        return
+        return False
 
     try:
         with open(nonces_with_data, 'r') as file:
@@ -143,7 +151,7 @@ def recovery(init_check=False, final_check=False, keep=False, debug=False, suppl
             dict_nwd = json.load(file)
     except json.decoder.JSONDecodeError:
         show(f"Error parsing {nonces_with_data}, abort.")
-        return
+        return False
 
     nt = [["", ""] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
     nt_enc = [["", ""] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]

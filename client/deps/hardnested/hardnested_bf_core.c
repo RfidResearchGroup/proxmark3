@@ -442,9 +442,6 @@ uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, statel
 #if MAX_BITSLICES > 64
                                 && results.bytes64[1] == 0
 #endif
-#if MAX_BITSLICES > 64
-                                && results.bytes64[1] == 0
-#endif
 #if MAX_BITSLICES > 128
                                 && results.bytes64[2] == 0
                                 && results.bytes64[3] == 0

@@ -696,14 +696,18 @@ void print_progress(uint64_t count, uint64_t max, barMode_t style) {
     max = (count > max) ? count : max;
 #if defined(HAVE_READLINE)
     static int prev_cols = 0;
-    int rows;
-    rl_reset_screen_size(); // refresh Readline idea of the actual screen width
-    rl_get_screen_size(&rows, &cols);
+    int tmp_cols;
+    rl_get_screen_size(NULL, &tmp_cols);
+    // if cols==0: impossible to get screen size, e.g. when scripted
+    if (tmp_cols != 0) {
+        // don't call it if cols==0, it would segfault
+        rl_reset_screen_size(); // refresh Readline idea of the actual screen width
+        rl_get_screen_size(NULL, &cols);
 
-    if (cols < 36)
-        return;
+        if (cols < 36)
+            return;
+    }
 
-    (void) rows;
     if (prev_cols > cols) {
         PrintAndLogEx(NORMAL, _CLEAR_ _TOP_ "");
     }

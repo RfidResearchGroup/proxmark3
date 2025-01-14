@@ -554,8 +554,8 @@ size_t concatbits(uint8_t *dest, int dest_offset, const uint8_t *src, int src_of
         end = nbits;
         step = 1;
     } else {
-        i = nbits;
-        end = 0;
+        i = nbits - 1;
+        end = -1;
         step = -1;
     }
 

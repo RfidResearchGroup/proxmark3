@@ -43,6 +43,7 @@
 #include "cliparser.h"
 #include "util_posix.h"         // msleep
 #include "iso15.h"              // typedef structs / enum
+#include "crypto/originality.h"
 
 #define FrameSOF                Iso15693FrameSOF
 #define Logic0                  Iso15693Logic0
@@ -281,121 +282,35 @@ static const productName_t uidmapping[] = {
 static int CmdHF15Help(const char *Cmd);
 
 static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
-
-#define PUBLIC_ECDA_KEYLEN 33
-    const ecdsa_publickey_t nxp_15693_public_keys[] = {
-        {"NXP MIFARE Classic MFC1C14_x",   "044F6D3F294DEA5737F0F46FFEE88A356EED95695DD7E0C27A591E6F6F65962BAF"},
-        {"MIFARE Classic / QL88",          "046F70AC557F5461CE5052C8E4A7838C11C7A236797E8A0730A101837C004039C2"},
-        {"NXP ICODE DNA, ICODE SLIX2",     "048878A2A2D3EEC336B4F261A082BD71F9BE11C4E2E896648B32EFA59CEA6E59F0"},
-        {"NXP Public key",                 "04A748B6A632FBEE2C0897702B33BEA1C074998E17B84ACA04FF267E5D2C91F6DC"},
-        {"NXP Ultralight Ev1",             "0490933BDCD6E99B4E255E3DA55389A827564E11718E017292FAF23226A96614B8"},
-        {"NXP NTAG21x (2013)",             "04494E1A386D3D3CFE3DC10E5DE68A499B1C202DB5B132393E89ED19FE5BE8BC61"},
-        {"MIKRON Public key",              "04F971EDA742A4A80D32DCF6A814A707CC3DC396D35902F72929FDCD698B3468F2"},
-        {"VivoKey Spark1 Public key",      "04D64BB732C0D214E7EC580736ACF847284B502C25C0F7F2FA86AACE1DADA4387A"},
-        {"TruST25 (ST) key 01?",           "041D92163650161A2548D33881C235D0FB2315C2C31A442F23C87ACF14497C0CBA"},
-        {"TruST25 (ST) key 04?",           "04101E188A8B4CDDBC62D5BC3E0E6850F0C2730E744B79765A0E079907FBDB01BC"},
-    };
-    /*
-        uint8_t nxp_15693_public_keys[][PUBLIC_ECDA_KEYLEN] = {
-            // ICODE SLIX2 / DNA
-            {
-                0x04, 0x88, 0x78, 0xA2, 0xA2, 0xD3, 0xEE, 0xC3,
-                0x36, 0xB4, 0xF2, 0x61, 0xA0, 0x82, 0xBD, 0x71,
-                0xF9, 0xBE, 0x11, 0xC4, 0xE2, 0xE8, 0x96, 0x64,
-                0x8B, 0x32, 0xEF, 0xA5, 0x9C, 0xEA, 0x6E, 0x59, 0xF0
-            },
-            // unknown. Needs identification
-            {
-                0x04, 0x4F, 0x6D, 0x3F, 0x29, 0x4D, 0xEA, 0x57,
-                0x37, 0xF0, 0xF4, 0x6F, 0xFE, 0xE8, 0x8A, 0x35,
-                0x6E, 0xED, 0x95, 0x69, 0x5D, 0xD7, 0xE0, 0xC2,
-                0x7A, 0x59, 0x1E, 0x6F, 0x6F, 0x65, 0x96, 0x2B, 0xAF
-            },
-            // unknown. Needs identification
-            {
-                0x04, 0xA7, 0x48, 0xB6, 0xA6, 0x32, 0xFB, 0xEE,
-                0x2C, 0x08, 0x97, 0x70, 0x2B, 0x33, 0xBE, 0xA1,
-                0xC0, 0x74, 0x99, 0x8E, 0x17, 0xB8, 0x4A, 0xCA,
-                0x04, 0xFF, 0x26, 0x7E, 0x5D, 0x2C, 0x91, 0xF6, 0xDC
-            },
-            // manufacturer public key
-            {
-                0x04, 0x6F, 0x70, 0xAC, 0x55, 0x7F, 0x54, 0x61,
-                0xCE, 0x50, 0x52, 0xC8, 0xE4, 0xA7, 0x83, 0x8C,
-                0x11, 0xC7, 0xA2, 0x36, 0x79, 0x7E, 0x8A, 0x07,
-                0x30, 0xA1, 0x01, 0x83, 0x7C, 0x00, 0x40, 0x39, 0xC2
-            },
-            // MIKRON public key.
-            {
-                0x04, 0xf9, 0x71, 0xed, 0xa7, 0x42, 0xa4, 0xa8,
-                0x0d, 0x32, 0xdc, 0xf6, 0xa8, 0x14, 0xa7, 0x07,
-                0xcc, 0x3d, 0xc3, 0x96, 0xd3, 0x59, 0x02, 0xf7,
-                0x29, 0x29, 0xfd, 0xcd, 0x69, 0x8b, 0x34, 0x68, 0xf2
-            }
-        };
-    */
-
-    uint8_t revuid[HF15_UID_LENGTH] = {0};
-    reverse_array_copy(uid, sizeof(revuid), revuid);
-
-    uint8_t revsign[32] = {0};
-    reverse_array_copy(signature, sizeof(revsign), revsign);
-
-    uint8_t i;
     int reason = 0;
-    bool is_valid = false;
-    for (i = 0; i < ARRAYLEN(nxp_15693_public_keys); i++) {
-
-        int dl = 0;
-        uint8_t key[PUBLIC_ECDA_KEYLEN];
-        param_gethex_to_eol(nxp_15693_public_keys[i].value, 0, key, PUBLIC_ECDA_KEYLEN, &dl);
-
-        int res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 8, signature, 32, false);
-        is_valid = (res == 0);
-        if (is_valid) {
-            reason = 1;
-            break;
-        }
-
+    int index = -1;
+    index = originality_check_verify(uid, 8, signature, 32, PK_MFC);
+    if (index >= 0) {
+        reason = 1;
+    } else {
         // try with sha256
-        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, uid, 8, signature, 32, true);
-        is_valid = (res == 0);
-        if (is_valid) {
+        index = originality_check_verify_ex(uid, 8, signature, 32, PK_MFC, false, true);
+        if (index >= 0) {
             reason = 2;
-            break;
-        }
-
-        // try with reversed uid / signature
-        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, revuid, sizeof(revuid), revsign, sizeof(revsign), false);
-        is_valid = (res == 0);
-        if (is_valid) {
-            reason = 3;
-            break;
-        }
-
-        // try with sha256
-        res = ecdsa_signature_r_s_verify(MBEDTLS_ECP_DP_SECP128R1, key, revuid, sizeof(revuid), revsign, sizeof(revsign), true);
-        is_valid = (res == 0);
-        if (is_valid) {
-            reason = 4;
-            break;
+        } else {
+            // try with reversed uid / signature
+            index = originality_check_verify_ex(uid, 8, signature, 32, PK_MFC, true, false);
+            if (index >= 0) {
+                reason = 3;
+            } else {
+                // try with sha256 and reversed uid / signature
+                index = originality_check_verify_ex(uid, 8, signature, 32, PK_MFC, true, true);
+                if (index >= 0) {
+                    reason = 3;
+                }
+            }
         }
     }
-
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
-    if (is_valid == false || i == ARRAYLEN(nxp_15693_public_keys)) {
-        PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
-        PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 32));
-        PrintAndLogEx(SUCCESS, "       Signature verification: " _RED_("failed"));
-        return PM3_ESOFT;
+    int ret = originality_check_print(signature, 32, index);
+    if (ret != PM3_SUCCESS) {
+        return ret;
     }
-
-    PrintAndLogEx(INFO, " IC signature public key name: " _GREEN_("%s"), nxp_15693_public_keys[i].desc);
-    PrintAndLogEx(INFO, "IC signature public key value: %s", nxp_15693_public_keys[i].value);
-    PrintAndLogEx(INFO, "    Elliptic curve parameters: NID_secp128r1");
-    PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 32));
-    PrintAndLogEx(SUCCESS, "       Signature verification: " _GREEN_("successful"));
     switch (reason) {
         case 1:
             PrintAndLogEx(INFO, "                  Params used: UID and signature, plain");
@@ -416,14 +331,15 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
 // get a product description based on the UID
 // uid[8] tag uid
 // returns description of the best match
-static const char *getTagInfo_15(const uint8_t *uid) {
+static void printTagInfo_15(const uint8_t *uid) {
     if (uid == NULL) {
-        return "";
+        return;
     }
 
     uint64_t myuid, mask;
     int i = 0, best = -1;
     memcpy(&myuid, uid, sizeof(uint64_t));
+    // find first best match
     while (uidmapping[i].mask > 0) {
         if (uidmapping[i].mask > 64) {
             mask = uidmapping[i].mask;
@@ -441,10 +357,23 @@ static const char *getTagInfo_15(const uint8_t *uid) {
         }
         i++;
     }
+    if (best >= 0) {
+        i = 0;
+        while (uidmapping[i].mask > 0) {
+            if (uidmapping[i].mask > 64) {
+                mask = uidmapping[i].mask;
+            } else {
+                mask = (~0ULL) << (64 - uidmapping[i].mask);
+            }
+            if (((myuid & mask) == uidmapping[i].uid) && (uidmapping[i].mask == uidmapping[best].mask)) {
+                PrintAndLogEx(SUCCESS, "TYPE MATCH " _YELLOW_("%s"), uidmapping[i].desc);
+            }
+            i++;
+        }
+    } else {
+        PrintAndLogEx(SUCCESS, "TYPE...... " _YELLOW_("%s"), uidmapping[i].desc);
+    }
 
-    if (best >= 0)
-        return uidmapping[best].desc;
-    return uidmapping[i].desc;
 }
 
 // return a clear-text message to an errorcode
@@ -531,7 +460,7 @@ static int getUID(bool verbose, bool loop, uint8_t *buf) {
                 if (verbose) {
                     PrintAndLogEx(NORMAL, "");
                     PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%s"), iso15693_sprintUID(NULL, buf));
-                    PrintAndLogEx(SUCCESS, "TYPE... " _YELLOW_("%s"), getTagInfo_15(buf));
+                    printTagInfo_15(buf);
                     PrintAndLogEx(NORMAL, "");
                 }
                 res = PM3_SUCCESS;
@@ -963,6 +892,66 @@ static int NxpSysInfo(uint8_t *uid) {
     return PM3_SUCCESS;
 }
 
+static int StCheckSig(uint8_t *uid) {
+    // request to be sent to device/card
+    uint8_t approxlen = 2 + 8 + 1 + 2;
+    iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
+    if (packet == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    // ISO15693 Protocol params
+    packet->raw[packet->rawlen++] = arg_get_raw_flag(HF15_UID_LENGTH, false, false, false);
+    packet->raw[packet->rawlen++] = ISO15693_READBLOCK;
+    // add UID (scan, uid)
+    memcpy(packet->raw + packet->rawlen, uid, HF15_UID_LENGTH);
+    packet->rawlen += HF15_UID_LENGTH;
+    packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_NO_DISCONNECT);
+    uint16_t blkoff = packet->rawlen;
+    char signature_hex[65] = {0};
+    for (int j = 0; j < 17; j++) {
+        packet->rawlen = blkoff;
+        // block no
+        packet->raw[packet->rawlen++] = 0x3F + j;
+        // crc
+        AddCrc15(packet->raw,  packet->rawlen);
+        packet->rawlen += 2;
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_ISO15693_COMMAND, (uint8_t *)packet, ISO15_RAW_LEN(packet->rawlen));
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_HF_ISO15693_COMMAND, &resp, 2000) == false) {
+            PrintAndLogEx(DEBUG, "iso15693 timeout");
+            free(packet);
+            DropField();
+            return PM3_ETIMEOUT;
+        }
+        ISO15_ERROR_HANDLING_RESPONSE
+        uint8_t *d = resp.data.asBytes;
+        ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
+        if (j == 0) {
+            if (memcmp(d + 1, "K04S", 4) != 0) {
+                // No signature
+                free(packet);
+                return PM3_ESOFT;
+            }
+        } else {
+            memcpy(signature_hex + ((j - 1) * 4), d + 1, 4);
+        }
+        packet->flags = (ISO15_READ_RESPONSE | ISO15_NO_DISCONNECT);
+    }
+    free(packet);
+    DropField();
+    uint8_t signature[16];
+    size_t signature_len;
+    hexstr_to_byte_array(signature_hex, signature, &signature_len);
+    uint8_t uid_swap[HF15_UID_LENGTH];
+    reverse_array_copy(uid, HF15_UID_LENGTH, uid_swap);
+    int index = originality_check_verify_ex(uid_swap, HF15_UID_LENGTH, signature, signature_len, PK_ST25TV, false, true);
+    PrintAndLogEx(NORMAL, "");
+    return originality_check_print(signature, signature_len, index);
+}
+
 /**
  * Commandline handling: HF15 CMD SYSINFO
  * get system information from tag/VICC
@@ -1071,7 +1060,7 @@ static int CmdHF15Info(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
     PrintAndLogEx(SUCCESS, "UID....... " _GREEN_("%s"), iso15693_sprintUID(NULL, uid));
-    PrintAndLogEx(SUCCESS, "TYPE...... " _YELLOW_("%s"), getTagInfo_15(d + 2));
+    printTagInfo_15(d + 2);
     PrintAndLogEx(SUCCESS, "SYSINFO... %s", sprint_hex(d, resp.length - 2));
 
     // DSFID
@@ -1109,19 +1098,29 @@ static int CmdHF15Info(const char *Cmd) {
     uint8_t nxp_version = d[6] & 0x18;
     PrintAndLogEx(DEBUG, "NXP Version: %02x", nxp_version);
 
-    if (d[8] == 0x04 && d[7] == 0x01 && nxp_version == 0x08) {
-        PrintAndLogEx(DEBUG, "SLIX2 Detected, getting NXP System Info");
-        return NxpSysInfo(uid);
-
-    } else if (d[8] == 0x04 && d[7] == 0x01 && nxp_version == 0x18) { // If it is an NTAG 5
-        PrintAndLogEx(DEBUG, "NTAG 5 Detected, getting NXP System Info");
-        return NxpSysInfo(uid);
-
-    } else if (d[8] == 0x04 && (d[7] == 0x01 || d[7] == 0x02 || d[7] == 0x03)) { // If SLI, SLIX, SLIX-l, or SLIX-S check EAS status
-        PrintAndLogEx(DEBUG, "SLI, SLIX, SLIX-L, or SLIX-S Detected checking EAS status");
-        return NxpTestEAS(uid);
+    if (d[8] == 0x04) {
+        // NXP
+        if (d[7] == 0x01 && nxp_version == 0x08) {
+            PrintAndLogEx(DEBUG, "SLIX2 Detected, getting NXP System Info");
+            return NxpSysInfo(uid);
+        } else if (d[7] == 0x01 && nxp_version == 0x18) { // If it is an NTAG 5
+            PrintAndLogEx(DEBUG, "NTAG 5 Detected, getting NXP System Info");
+            return NxpSysInfo(uid);
+        } else if ((d[7] == 0x01 || d[7] == 0x02 || d[7] == 0x03)) { // If SLI, SLIX, SLIX-l, or SLIX-S check EAS status
+            PrintAndLogEx(DEBUG, "SLI, SLIX, SLIX-L, or SLIX-S Detected checking EAS status");
+            return NxpTestEAS(uid);
+        }
+    } else if (d[8] == 0x02) {
+        // ST, check d[7]:
+        // ST25TV512C/ST25TV02KC  0x08
+        // ST25TV512/ST25TV02K    0x23
+        // ST25TV04K-P            0x35
+        // ST25TV16K/ST25TV64K    0x48
+        if (d[7] == 0x08) {
+            PrintAndLogEx(DEBUG, "ST25TVxC Detected, getting ST Signature");
+            return StCheckSig(uid);
+        }
     }
-
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -1405,7 +1404,7 @@ static void print_tag_15693(iso15_tag_t *tag, bool dense_output, bool verbose) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " --%.*s", (tag->bytesPerPage * 3), dashes);
         PrintAndLogEx(SUCCESS, "UID....... " _GREEN_("%s"), iso15693_sprintUID(NULL, tag->uid));
-        PrintAndLogEx(SUCCESS, "TYPE...... " _YELLOW_("%s"), getTagInfo_15(tag->uid));
+        printTagInfo_15(tag->uid);
         PrintAndLogEx(SUCCESS, "DSFID..... 0x%02X", tag->dsfid);
         PrintAndLogEx(SUCCESS, "AFI....... 0x%02X", tag->afi);
         PrintAndLogEx(SUCCESS, "IC ref.... 0x%02X", tag->ic);
@@ -1934,7 +1933,7 @@ static int CmdHF15Dump(const char *Cmd) {
         tag->pagesCount = d[dCpt++] + 1;
         tag->bytesPerPage = d[dCpt++] + 1;
     } else {
-        // Set tag memory layout values (if can't be readed in SYSINFO)
+        // Set tag memory layout values (if can't be read in SYSINFO)
         tag->bytesPerPage = blocksize;
         tag->pagesCount = 128;
     }
@@ -1943,7 +1942,7 @@ static int CmdHF15Dump(const char *Cmd) {
         tag->ic = d[dCpt++];
     }
 
-    // add lenght for blockno (1)
+    // add length for blockno (1)
     packet->rawlen++;
     packet->raw[0] |= ISO15_REQ_OPTION; // Add option to dump lock status
     packet->raw[1] = ISO15693_READBLOCK;
@@ -3338,7 +3337,7 @@ static int CmdHF15View(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 15 view",
                   "Print a ISO-15693 tag dump file (bin/eml/json)",
-                  "hf 15 view -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
+                  "hf 15 view -f hf-15-1122334455667788-dump.bin\n"
                  );
     void *argtable[] = {
         arg_param_begin,

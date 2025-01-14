@@ -449,17 +449,19 @@ static int CmdEM410xSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 410x sim",
                   "Enables simulation of EM 410x card.\n"
-                  "Simulation runs until the button is pressed or another USB command is issued.",
+                  "Simulation runs until the button is pressed or another USB command is issued.\n"
+                  "Most common readers expects the code to be sent in loop without a break (i.e. --gap 0).\n"
+                  "For other, more advanced readers there might be a need to set a non-zero gap value.",
                   "lf em 410x sim --id 0F0368568B\n"
                   "lf em 410x sim --id 0F0368568B --clk 32\n"
-                  "lf em 410x sim --id 0F0368568B --gap 0"
+                  "lf em 410x sim --id 0F0368568B --gap 20"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0(NULL, "clk", "<dec>", "<32|64> clock (default 64)"),
         arg_str1(NULL, "id", "<hex>", "EM Tag ID number (5 hex bytes)"),
-        arg_u64_0(NULL, "gap", "<dec>", "gap (0's) between ID repeats (default 20)"),
+        arg_u64_0(NULL, "gap", "<dec>", "gap (0's) between ID repeats (default 0)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -467,7 +469,7 @@ static int CmdEM410xSim(const char *Cmd) {
     // clock is 64 in EM410x tags
     int clk = arg_get_u32_def(ctx, 1, 64);
     int uid_len = 0;
-    int gap = arg_get_u32_def(ctx, 3, 20);
+    int gap = arg_get_u32_def(ctx, 3, 0);
     uint8_t uid[5] = {0};
     CLIGetHexWithReturn(ctx, 2, uid, &uid_len);
     CLIParserFree(ctx);
@@ -732,6 +734,7 @@ static int CmdEM410xClone(const char *Cmd) {
 
             packet.cmd = HTSF_82xx;
             memcpy(packet.pwd, "\xBB\xDD\x33\x99", HITAGS_PAGE_SIZE);
+            packet.mode = HITAGS_UID_REQ_FADV;
             SendCommandNG(CMD_LF_HITAGS_WRITE, (uint8_t *)&packet, sizeof(packet));
             if (WaitForResponseTimeout(CMD_LF_HITAGS_WRITE, &resp, 4000) == false) {
                 PrintAndLogEx(WARNING, "timeout while waiting for reply.");

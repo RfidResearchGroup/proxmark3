@@ -161,7 +161,7 @@ typedef struct {
     uint8_t logdata_1[4];
     uint8_t nonce[4];
 
-    //Hitag s section
+    // Hitag S section
     uint8_t mode;
 } PACKED lf_hitag_data_t;
 

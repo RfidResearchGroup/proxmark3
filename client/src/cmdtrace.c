@@ -146,7 +146,7 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
     uint16_t data_len = hdr->data_len;
     uint8_t *frame = hdr->frame;
 
-    // sanity check tracking position is less then available trace size
+    // sanity check tracking position is less than available trace size
     if (tracepos + TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr) > traceLen) {
         PrintAndLogEx(DEBUG, "trace pos offset %"PRIu64 " larger than reported tracelen %u",
                       tracepos + TRACELOG_HDR_LEN + data_len + TRACELOG_PARITY_LEN(hdr),
@@ -779,6 +779,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
     switch (protocol) {
         case ISO_14443A:
         case ISO_7816_4:
+        case PROTO_FMCOS20:
             annotateIso14443a(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
             break;
         case PROTO_MIFARE:
@@ -835,6 +836,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 break;
             case SEOS:
                 annotateSeos(explanation, sizeof(explanation), frame, data_len);
+                break;
+            case PROTO_FMCOS20:
+                annotateFMCOS20(explanation, sizeof(explanation), frame, data_len);
                 break;
             default:
                 break;
@@ -1310,6 +1314,7 @@ int CmdTraceList(const char *Cmd) {
                   "trace list -t thinfilm -> interpret as " _YELLOW_("Thinfilm") "\n"
                   "trace list -t topaz    -> interpret as " _YELLOW_("Topaz") "\n"
                   "trace list -t mfp      -> interpret as " _YELLOW_("MIFARE Plus") "\n"
+                  "trace list -t fmcos20  -> interpret as " _YELLOW_("FMCOS 2.0") "\n"
                   "\n"
                   "trace list -t mf -f mfc_default_keys.dic     -> use default dictionary file\n"
                   "trace list -t 14a --frame                    -> show frame delay times\n"
@@ -1377,6 +1382,7 @@ int CmdTraceList(const char *Cmd) {
     else if (strcmp(type, "thinfilm") == 0) protocol = THINFILM;
     else if (strcmp(type, "topaz") == 0)    protocol = TOPAZ;
     else if (strcmp(type, "mfp") == 0)      protocol = PROTO_MFPLUS;
+    else if (strcmp(type, "fmcos20") == 0)  protocol = PROTO_FMCOS20;
     else if (strcmp(type, "") == 0)         protocol = -1;
     else {
         PrintAndLogEx(FAILED, "Unknown protocol \"%s\"", type);
@@ -1458,6 +1464,10 @@ int CmdTraceList(const char *Cmd) {
 
         if (protocol == PROTO_HITAG1 || protocol == PROTO_HITAG2 || protocol == PROTO_HITAGS) {
             PrintAndLogEx(INFO, _YELLOW_("Hitag 1 / Hitag 2 / Hitag S") " - Timings in ETU (8us)");
+        }
+
+        if (protocol == PROTO_FMCOS20) {
+            PrintAndLogEx(INFO, _YELLOW_("FMCOS 2.0 / CPU Card") " - Timings n/a");
         }
 
         if (protocol == FELICA) {

@@ -273,7 +273,9 @@ int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastCh
         // max timeout for one chunk of 85keys, 60*3sec = 180seconds
         // s70 with 40*2 keys to check, 80*85 = 6800 auth.
         // takes about 97s, still some margin before abort
-        if (timeout > 180) {
+        // timeout = 180 => ~360s @ Mifare Classic 1k @ ~2300 keys in dict
+        // ~2300 keys @ Mifare Classic 1k => ~620s
+        if (timeout > 60 * 12) {
             PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
             return PM3_ETIMEOUT;
         }
@@ -1142,7 +1144,7 @@ int mf_chinese_set_uid(uint8_t *uid, uint8_t uidlen, const uint8_t *atqa, const 
 
     res = mf_chinese_set_block(0, block0, NULL, params);
     if (res == PM3_SUCCESS) {
-        params = MAGIC_SINGLE | MAGIC_WUPC;
+        params = MAGIC_SINGLE | (gdm ? MAGIC_GDM_ALT_WUPC : MAGIC_WUPC);
         memset(block0, 0, sizeof(block0));
         res = mf_chinese_get_block(0, block0, params);
         if (res == 0) {
@@ -1610,6 +1612,10 @@ uint16_t detect_mf_magic(bool is_mfc, uint8_t key_type, uint64_t key) {
 
     if ((isMagic & MAGIC_FLAG_GDM_WUP_40) == MAGIC_FLAG_GDM_WUP_40) {
         PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GDM / USCUID") " ( Gen1 Magic Wakeup )");
+    }
+
+    if ((isMagic & MAGIC_FLAG_GDM_WUP_40_ZUID) == MAGIC_FLAG_GDM_WUP_40_ZUID) {
+        PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 4 GDM / USCUID") " ( ZUID Gen1 Magic Wakeup )");
     }
 
     if ((isMagic & MAGIC_FLAG_GEN_UNFUSED) == MAGIC_FLAG_GEN_UNFUSED) {
