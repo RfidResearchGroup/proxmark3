@@ -29,6 +29,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added simulation function to `hf iclass legrec` (@antiklesys)
 - Added keys from Momentum firmware projects. (@onovy)
 - Added Dutch Statistics Agency default key (@eagle00789)
+- Fixed Wiegand decode with hex input dropping the first bit (@emilyastranova)
 - Changed `hf mf autopwn` - now allows for custom suffix (@zxkmm)
 
 ## [Orca.4.19552][2024-11-22]
