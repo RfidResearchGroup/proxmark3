@@ -164,13 +164,17 @@ int originality_check_verify_ex(uint8_t *data, uint8_t data_len, uint8_t *signat
     }
 
     for (uint8_t i = 0; i < ARRAYLEN(manufacturer_public_keys); i++) {
-        if ((type != PK_ALL) && (type != manufacturer_public_keys[i].type))
+        if ((type != PK_ALL) && (type != manufacturer_public_keys[i].type)) {
             continue;
+        }
+
         int dl = 0;
         uint8_t key[manufacturer_public_keys[i].keylen];
         param_gethex_to_eol(manufacturer_public_keys[i].value, 0, key, manufacturer_public_keys[i].keylen, &dl);
-        if (ecdsa_signature_r_s_verify(manufacturer_public_keys[i].grp_id, key, tmp_data, data_len, tmp_signature, signature_len, hash) == 0)
+
+        if (ecdsa_signature_r_s_verify(manufacturer_public_keys[i].grp_id, key, tmp_data, data_len, tmp_signature, signature_len, hash) == 0) {
             return i;
+        }
     }
     return -1;
 }
