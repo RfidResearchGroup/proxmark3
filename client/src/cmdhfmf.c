@@ -5335,11 +5335,12 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "Specify a filename for dump file"),
         arg_lit0(NULL, "mini", "MIFARE Classic Mini / S20"),
-        arg_lit0(NULL, "1k", "MIFARE Classic 1k / S50 (def)"),
-        arg_lit0(NULL, "2k", "MIFARE Classic/Plus 2k"),
-        arg_lit0(NULL, "4k", "MIFARE Classic 4k / S70"),
-        arg_lit0(NULL, "emu", "from emulator memory"),
-        arg_lit0(NULL, "gdm", "use gdm alt (20/23) magic wakeup"),
+        arg_lit0(NULL, "1k",   "MIFARE Classic 1k / S50 (def)"),
+        arg_lit0(NULL, "1k+",  "MIFARE Classic Ev1 1k / S50"),
+        arg_lit0(NULL, "2k",   "MIFARE Classic/Plus 2k"),
+        arg_lit0(NULL, "4k",   "MIFARE Classic 4k / S70"),
+        arg_lit0(NULL, "emu",  "from emulator memory"),
+        arg_lit0(NULL, "gdm",  "use gdm alt (20/23) magic wakeup"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -5350,21 +5351,22 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 
     bool m0 = arg_get_lit(ctx, 2);
     bool m1 = arg_get_lit(ctx, 3);
-    bool m2 = arg_get_lit(ctx, 4);
-    bool m4 = arg_get_lit(ctx, 5);
-    bool fill_from_emulator = arg_get_lit(ctx, 6);
-    bool gdm = arg_get_lit(ctx, 7);
+    bool m1ev1 = arg_get_lit(ctx, 4);
+    bool m2 = arg_get_lit(ctx, 5);
+    bool m4 = arg_get_lit(ctx, 6);
+    bool fill_from_emulator = arg_get_lit(ctx, 7);
+    bool gdm = arg_get_lit(ctx, 8);
 
     CLIParserFree(ctx);
 
-    if ((m0 + m1 + m2 + m4) > 1) {
+    if ((m0 + m1 + m2 + m4 + m1ev1) > 1) {
         PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
         return PM3_EINVARG;
-    } else if ((m0 + m1 + m2 + m4) == 0) {
+    } else if ((m0 + m1 + m2 + m4 + m1ev1) == 0) {
         m1 = true;
     }
 
-    char s[6];
+    char s[8];
     memset(s, 0, sizeof(s));
     uint16_t block_cnt = MIFARE_1K_MAXBLOCK;
     if (m0) {
@@ -5373,6 +5375,9 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
     } else if (m1) {
         block_cnt = MIFARE_1K_MAXBLOCK;
         strncpy(s, "1K", 3);
+    } else if (m1ev1) {
+        block_cnt = MIFARE_1K_EV1_MAXBLOCK;
+        strncpy(s, "1K Ev1", 7);
     } else if (m2) {
         block_cnt = MIFARE_2K_MAXBLOCK;
         strncpy(s, "2K", 3);
@@ -5384,6 +5389,10 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    if (gdm == false && m1ev1) {
+        PrintAndLogEx(ERR, "Normally only a GDM / UMC card will handle the extra sectors");
+        return PM3_EINVARG;
+    }
 
     if (fill_from_emulator) {
 
