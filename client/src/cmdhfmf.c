@@ -294,21 +294,45 @@ static void mf_print_block(uint8_t blockno, uint8_t *d, bool verbose) {
         char ascii[24] = {0};
         ascii_to_buffer((uint8_t *)ascii, d, MFBLOCK_SIZE, sizeof(ascii) - 1, 1);
 
-        PrintAndLogEx(INFO, "%s| %3d | " _YELLOW_("%s") _MAGENTA_("%s") "%02X " _YELLOW_("%s") "| " _YELLOW_("%s"),
-                      secstr,
-                      blockno,
-                      keya,
-                      acl,
-                      d[9],
-                      keyb,
-                      ascii
-                     );
+        if (blockno >= MIFARE_1K_MAXBLOCK) {
+            PrintAndLogEx(INFO, 
+                _BACK_BLUE_("%s| %3d | " _YELLOW_("%s")) 
+                _BACK_BLUE_(_MAGENTA_("%s")) 
+                _BACK_BLUE_("%02X ") 
+                _BACK_BLUE_(_YELLOW_("%s"))
+                _BACK_BLUE_("| " _YELLOW_("%s"))
+                ,
+                    secstr,
+                    blockno,
+                    keya,
+                    acl,
+                    d[9],
+                    keyb,
+                    ascii
+                );
+        } else {
+            PrintAndLogEx(INFO, "%s| %3d | " _YELLOW_("%s") _MAGENTA_("%s") "%02X " _YELLOW_("%s") "| " _YELLOW_("%s"),
+                    secstr,
+                    blockno,
+                    keya,
+                    acl,
+                    d[9],
+                    keyb,
+                    ascii
+                );
+        }
     } else {
+
         int32_t value = 0;
         if (verbose && mfc_value(d, &value)) {
             PrintAndLogEx(INFO, "%s| %3d | " _CYAN_("%s") " %"PRIi32, secstr, blockno, sprint_hex_ascii(d, MFBLOCK_SIZE), value);
-        } else {
-            PrintAndLogEx(INFO, "%s| %3d | %s ", secstr, blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
+        }
+
+        if (blockno >= MIFARE_1K_MAXBLOCK) {
+            // MFC Ev1 signature blocks.
+            PrintAndLogEx(INFO, _BACK_BLUE_("%s| %3d | %s"), secstr, blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
+        } else  {
+            PrintAndLogEx(INFO, "%s| %3d | %s", secstr, blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
         }
     }
 }
@@ -324,6 +348,7 @@ static void mf_print_blocks(uint16_t n, uint8_t *d, bool verbose) {
     PrintAndLogEx(INFO, "-----+-----+-------------------------------------------------+-----------------");
     if (verbose) {
         PrintAndLogEx(HINT, _CYAN_("cyan") " = value block with decoded value");
+        PrintAndLogEx(HINT, _CYAN_("background blue") " = MFC Ev1 signature blocks");
     }
 
     // MAD detection
@@ -5389,9 +5414,8 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (gdm == false && m1ev1) {
-        PrintAndLogEx(ERR, "Normally only a GDM / UMC card will handle the extra sectors");
-        return PM3_EINVARG;
+    if (m1ev1) {
+        PrintAndLogEx(INFO, "Normally only a GDM / UMC card will handle the extra sectors");
     }
 
     if (fill_from_emulator) {
