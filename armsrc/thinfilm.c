@@ -43,20 +43,20 @@ void ReadThinFilm(void) {
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
     uint8_t len = 0;
-    uint8_t buf[36] = {0x00};
+    uint8_t *buf = BigBuf_calloc(36);
 
     // power on and listen for answer.
-    bool status = GetIso14443aAnswerFromTag_Thinfilm(buf, sizeof(buf), &len);
+    bool status = GetIso14443aAnswerFromTag_Thinfilm(buf, 36, &len);
     reply_ng(CMD_HF_THINFILM_READ, status ? PM3_SUCCESS : PM3_ENODATA, buf, len);
 
     hf_field_off();
     set_tracing(false);
+    BigBuf_free();
 }
 
 #define SEC_D 0xf0
 #define SEC_E 0x0f
 #define SEC_F 0x00
-static uint16_t FpgaSendQueueDelay;
 
 static uint16_t ReadReaderField(void) {
     return AvgAdc(ADC_CHAN_HF);
@@ -75,41 +75,47 @@ static void CodeThinfilmAsTag(const uint8_t *cmd, uint16_t len) {
             b <<= 1;
         }
     }
+
+    // Convert from last byte pos to length
     ts->max++;
 }
 
 static int EmSendCmdThinfilmRaw(const uint8_t *resp, uint16_t respLen) {
+
     volatile uint8_t b;
-    uint16_t i = 0;
-    uint32_t ThisTransferTime;
+    uint32_t ThisTransferTime ;
+
+    // clear receiving shift register and holding register
+    while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
+    b = AT91C_BASE_SSC->SSC_RHR;
+    (void) b;
+
     // wait for the FPGA to signal fdt_indicator == 1 (the FPGA is ready to queue new data in its delay line)
     for (uint8_t j = 0; j < 5; j++) {    // allow timeout - better late than never
         while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY));
-        if (AT91C_BASE_SSC->SSC_RHR) break;
+        if (AT91C_BASE_SSC->SSC_RHR) {
+            break;
+        }
     }
     while ((ThisTransferTime = GetCountSspClk()) & 0x00000007);
-
 
     // Clear TXRDY:
     AT91C_BASE_SSC->SSC_THR = SEC_F;
 
+    uint16_t FpgaSendQueueDelay = 0;
+
     // send cycle
+    uint16_t i = 0;
     for (; i < respLen;) {
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = resp[i++];
             FpgaSendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
         }
-
-        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
-            b = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
-            (void)b;
-        }
-        if (BUTTON_PRESS()) break;
     }
 
     // Ensure that the FPGA Delay Queue is empty
     uint8_t fpga_queued_bits = FpgaSendQueueDelay >> 3;
-    for (i = 0; i <= fpga_queued_bits / 8 + 1;) {
+    for (i = 0; i <= (fpga_queued_bits >> 3) + 1;) {
         if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_TXRDY)) {
             AT91C_BASE_SSC->SSC_THR = SEC_F;
             FpgaSendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -117,24 +123,31 @@ static int EmSendCmdThinfilmRaw(const uint8_t *resp, uint16_t respLen) {
         }
     }
 
-    return 0;
+    return PM3_SUCCESS;
 }
 
 void SimulateThinFilm(uint8_t *data, size_t len) {
 
+    switch_off(); // disconnect raw
+    SpinDelay(20);
+
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
 
-    Dbprintf("Simulate " _YELLOW_("%i-bit Thinfilm") " tag", len * 8);
-    Dbhexdump(len, data, true);
+    // allocate command receive buffer
+    BigBuf_free();
 
-    // Set up the synchronous serial port
-    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
+    Dbprintf("Simulate " _YELLOW_("%i-bit Thinfilm") " tag", len * 8);
 
     // connect Demodulated Signal to ADC:
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
 
+    // Set up the synchronous serial port
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
+
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_TAGSIM_MOD);
+
     SpinDelay(100);
+
     // Start the timer
     StartCountSspClk();
 
@@ -145,12 +158,18 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
 
     tosend_t *ts = get_tosend();
 
-    bool reader_detected = false;
+    for (uint16_t i = 0; i < ts->max; i += 16) {
+        Dbhexdump(16, ts->buf + i, false);
+    }
+    DbpString("------------------------------------------");
+
     LED_A_ON();
+
     for (;;) {
 
         WDT_HIT();
 
+        // Test if the action was cancelled
         if (BUTTON_PRESS() || data_available()) {
             status = PM3_EOPABORTED;
             break;
@@ -166,19 +185,16 @@ void SimulateThinFilm(uint8_t *data, size_t len) {
 
             EmSendCmdThinfilmRaw(ts->buf, ts->max);
 
-            if (reader_detected == false) {
-                LED_B_ON();
-                //Dbprintf("Reader detected, start beaming data");
-                reader_detected = true;
-            }
-        } else {
-            if (reader_detected) {
-                LED_B_OFF();
-                // Dbprintf("Reader gone, stop beaming data");
-                reader_detected = false;
+            if (len == 16) {
+                // wait 3.6ms
+                SpinDelayUs(3600);
+            } else {
+                // wait 2.4ms
+                SpinDelayUs(2400);
             }
         }
     }
+
     LED_A_OFF();
     reply_ng(CMD_HF_THINFILM_SIMULATE, status, NULL, 0);
 }
