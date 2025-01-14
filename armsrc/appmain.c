@@ -1663,6 +1663,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             ReaderIso14443a(packet);
             break;
         }
+#ifdef WITH_SMARTCARD
         case CMD_HF_ISO14443A_EMV_SIMULATE: {
             struct p {
                 uint16_t flags;
@@ -1676,6 +1677,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             EMVsim(payload->flags, payload->exitAfter, payload->uid, payload->atqa, payload->sak);
             break;
         }
+#endif 
         case CMD_HF_ISO14443A_SIMULATE: {
             struct p {
                 uint8_t tagtype;
