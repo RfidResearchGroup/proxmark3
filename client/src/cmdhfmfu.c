@@ -2039,6 +2039,7 @@ uint64_t GetHF14AMfU_Type(void) {
                 }
             }
         }
+
     } else if (card.uid[0] == 0x05) {
         // Infineon MY-D tests   Exam high nibble
         DropField();
@@ -2058,6 +2059,7 @@ uint64_t GetHF14AMfU_Type(void) {
                 tagtype =  MFU_TT_MY_D_MOVE_LEAN;
                 break; // or SLE 66R01L  // 16 pages of 4 bytes
         }
+
     } else {
 
         uint8_t version[10] = {0x00};
@@ -2101,7 +2103,8 @@ uint64_t GetHF14AMfU_Type(void) {
                 NT2L1001G0DUx 0004040102000B03
                 NT2H1001G0DUx 0004040202000B03
                 NT2H1311TTDUx 0004040203000F03
-                MF0AES2001DUD 0004030104000F03
+                MF0AES2001DUD 0004030104000F03 17pF
+                              0004030204000F03 50pF
 
                 Micron UL       0034210101000E03
                 Feiju NTAG      0053040201000F03
@@ -2114,6 +2117,7 @@ uint64_t GetHF14AMfU_Type(void) {
                 else if (memcmp(version, "\x00\x04\x03\x01\x01\x00\x0E", 7) == 0) { tagtype = MFU_TT_UL_EV1_128; break; }
                 else if (memcmp(version, "\x00\x04\x03\x02\x01\x00\x0E", 7) == 0) { tagtype = MFU_TT_UL_EV1_128; break; }
                 else if (memcmp(version, "\x00\x04\x03\x01\x04\x00\x0F\x03", 8) == 0) { tagtype = MFU_TT_UL_AES; break; }
+                else if (memcmp(version, "\x00\x04\x03\x02\x04\x00\x0F\x03", 8) == 0) { tagtype = MFU_TT_UL_AES; break; }
                 else if (memcmp(version, "\x00\x34\x21\x01\x01\x00\x0E", 7) == 0) { tagtype = MFU_TT_UL_EV1_128; break; } // Mikron JSC Russia EV1 41 pages tag
                 else if (memcmp(version, "\x00\x04\x04\x01\x01\x00\x0B", 7) == 0) { tagtype = MFU_TT_NTAG_210; break; }
                 else if (memcmp(version, "\x00\x04\x04\x01\x02\x00\x0B", 7) == 0) { tagtype = MFU_TT_NTAG_210u; break; }
