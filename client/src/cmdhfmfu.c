@@ -1435,6 +1435,11 @@ static int ulev1_print_version(uint8_t *data) {
     PrintAndLogEx(INFO, "   Minor version: %02X", data[5]);
     PrintAndLogEx(INFO, "            Size: %s", getUlev1CardSizeStr(data[6]));
     PrintAndLogEx(INFO, "   Protocol type: %02X%s", data[7], (data[7] == 0x3) ? ", ISO14443-3 Compliant" : "");
+
+    if (memcmp(data, "\x00\x04\x03\x03\x04\x00\x0F\x03", 8) == 0) {
+        PrintAndLogEx(INFO, _RED_("Send copy to iceman of this command output!"));
+    }
+
     return PM3_SUCCESS;
 }
 
@@ -2105,6 +2110,7 @@ uint64_t GetHF14AMfU_Type(void) {
                 NT2H1311TTDUx 0004040203000F03
                 MF0AES2001DUD 0004030104000F03 17pF
                               0004030204000F03 50pF
+                              0004030304000F03 75pF
 
                 Micron UL       0034210101000E03
                 Feiju NTAG      0053040201000F03
@@ -2118,6 +2124,7 @@ uint64_t GetHF14AMfU_Type(void) {
                 else if (memcmp(version, "\x00\x04\x03\x02\x01\x00\x0E", 7) == 0) { tagtype = MFU_TT_UL_EV1_128; break; }
                 else if (memcmp(version, "\x00\x04\x03\x01\x04\x00\x0F\x03", 8) == 0) { tagtype = MFU_TT_UL_AES; break; }
                 else if (memcmp(version, "\x00\x04\x03\x02\x04\x00\x0F\x03", 8) == 0) { tagtype = MFU_TT_UL_AES; break; }
+                else if (memcmp(version, "\x00\x04\x03\x03\x04\x00\x0F\x03", 8) == 0) { tagtype = MFU_TT_UL_AES; break; }
                 else if (memcmp(version, "\x00\x34\x21\x01\x01\x00\x0E", 7) == 0) { tagtype = MFU_TT_UL_EV1_128; break; } // Mikron JSC Russia EV1 41 pages tag
                 else if (memcmp(version, "\x00\x04\x04\x01\x01\x00\x0B", 7) == 0) { tagtype = MFU_TT_NTAG_210; break; }
                 else if (memcmp(version, "\x00\x04\x04\x01\x02\x00\x0B", 7) == 0) { tagtype = MFU_TT_NTAG_210u; break; }
