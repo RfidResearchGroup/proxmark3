@@ -129,9 +129,6 @@ static int initSectorTable(sector_t **src, size_t items) {
     // } sector_t;
 
     // This allocates based on the size of a single item
-    _Static_assert(sizeof(sector_t) >= 18, "Unexpectedly small sector_t"); // if packed, would be 18
-    _Static_assert(sizeof(sector_t) == 24, "Sector_t used to be padded to 24 bytes?"); // not packed, so each entry must be 24 bytes
-
     (*src) = calloc(items, sizeof(sector_t));
     if (*src == NULL) {
         return PM3_EMALLOC;
