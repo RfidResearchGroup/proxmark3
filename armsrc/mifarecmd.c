@@ -2704,8 +2704,8 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
     while (true) {
         // read UID and return to client with write
         if (workFlags & MAGIC_UID) {
-            if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
-                if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
+            if (iso14443a_select_card(uid, NULL, &cuid, true, 0, true) == 0) {
+                if (g_dbglevel >= DBG_INFO) Dbprintf("Can't select card");
                 errormsg = MAGIC_UID;
                 mifare_classic_halt(NULL);
                 break;
@@ -2717,7 +2717,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
         if (workFlags & MAGIC_WIPE) {
             ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
             if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
-                if (g_dbglevel >= DBG_ERROR) Dbprintf("wupC1 error");
+                if (g_dbglevel >= DBG_INFO) Dbprintf("wupC1 error");
                 errormsg = MAGIC_WIPE;
                 break;
             }
@@ -2730,7 +2730,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
 
             ReaderTransmit(wipeC, sizeof(wipeC), NULL);
             if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
-                if (g_dbglevel >= DBG_ERROR) Dbprintf("wipeC error");
+                if (g_dbglevel >= DBG_INFO) Dbprintf("wipeC error");
                 errormsg = MAGIC_WIPE;
                 break;
             }
@@ -2742,14 +2742,14 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
         if (workFlags & MAGIC_GDM_ALT_WUPC) {
             ReaderTransmitBitsPar(wupGDM1, 7, NULL, NULL);
             if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
-                if (g_dbglevel >= DBG_ERROR) Dbprintf("wupGDM1 error");
+                if (g_dbglevel >= DBG_INFO) Dbprintf("wupGDM1 error");
                 errormsg = MAGIC_WUPC;
                 break;
             }
 
             ReaderTransmit(wupGDM2, sizeof(wupC2), NULL);
             if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
-                if (g_dbglevel >= DBG_ERROR) Dbprintf("wupGDM2 error");
+                if (g_dbglevel >= DBG_INFO) Dbprintf("wupGDM2 error");
                 errormsg = MAGIC_WUPC;
                 break;
             }
@@ -2774,10 +2774,23 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
             }
         }
 
-        if ((mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_WRITEBLOCK, blockNo, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
-            if (g_dbglevel >= DBG_ERROR) Dbprintf("write block send command error");
-            errormsg = 4;
-            break;
+        // Write signature blocks using GDM write command
+        if (blockNo >= MIFARE_1K_MAXBLOCK && blockNo < MIFARE_1K_EV1_MAXBLOCK) {
+
+            blockNo %= 0x40;
+            if ((mifare_sendcmd_short(NULL, CRYPT_NONE, MIFARE_MAGIC_GDM_WRITEBLOCK, blockNo, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
+                if (g_dbglevel >= DBG_INFO) Dbprintf("Magic write block send command error");
+                errormsg = 4;
+                break;
+            }
+
+        } else {
+
+            if ((mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_WRITEBLOCK, blockNo, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL) != 1) || (receivedAnswer[0] != 0x0a)) {
+                if (g_dbglevel >= DBG_INFO) Dbprintf("write block send command error");
+                errormsg = 5;
+                break;
+            }
         }
 
         memcpy(data, datain, 16);
@@ -2785,7 +2798,7 @@ void MifareCSetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
 
         ReaderTransmit(data, sizeof(data), NULL);
         if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) != 1) || (receivedAnswer[0] != 0x0a)) {
-            if (g_dbglevel >= DBG_ERROR) Dbprintf("write block send data error");
+            if (g_dbglevel >= DBG_INFO) Dbprintf("write block send data error");
             errormsg = 0;
             break;
         }

@@ -5498,6 +5498,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 
         if (mf_chinese_set_block(blockno, data + (MFBLOCK_SIZE * blockno), NULL, flags)) {
             PrintAndLogEx(WARNING, "Can't set magic card block: %d", blockno);
+            PrintAndLogEx(HINT, "Verify that it is a GDM and not USCUID deriviate");
             free(data);
             return PM3_ESOFT;
         }

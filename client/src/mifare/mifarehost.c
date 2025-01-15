@@ -1211,16 +1211,27 @@ int mf_chinese_set_block(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t p
     SendCommandMIX(CMD_HF_MIFARE_CSETBL, params, blockNo, 0, data, MFBLOCK_SIZE);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 3500)) {
-        uint8_t isOK  = resp.oldarg[0] & 0xff;
+        uint8_t isOK  = resp.oldarg[0] & 0xFF;
         if (uid != NULL) {
             memcpy(uid, resp.data.asBytes, 4);
         }
 
         if (!isOK) {
+
+            uint8_t reason = (resp.oldarg[1] & 0xFF);
+            if ( reason == 4) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(WARNING, "GDM magic write signature block failed");
+            } else if (reason == 5) {
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(WARNING, "Write block failed");
+            }
+
             return PM3_EUNDEF;
         }
     } else {
-        PrintAndLogEx(WARNING, "command execution time out");
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(WARNING, "Command execution time out");
         return PM3_ETIMEOUT;
     }
     return PM3_SUCCESS;
