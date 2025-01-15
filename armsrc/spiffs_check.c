@@ -540,7 +540,7 @@ static s32_t spiffs_page_consistency_check_i(spiffs *fs) {
     uint32_t total_blocks = SPIFFS_PAGES_PER_BLOCK(fs) * block_count;
     uint32_t total_blocks_plus_one_page = total_blocks + SPIFFS_PAGES_PER_BLOCK(fs);
 
-#pragma region    // check for overflow once, before looping
+//#pragma region    // check for overflow once, before looping
     // this _should_ never happen, but prefer to see debug message / error
     // rather than silently entering infinite loop.
     if (block_count > ((spiffs_block_ix)(-1))) {
@@ -568,7 +568,7 @@ static s32_t spiffs_page_consistency_check_i(spiffs *fs) {
     }
     // RESULT: spiffs_page_ix can safely be used for loop index vs. each of
     //         block_count, total_blocks, and total_blocks_plus_one_page
-#pragma endregion // check for overflow once, before looping
+//#pragma endregion // check for overflow once, before looping
 
 
     // for each range of pages fitting into work memory
