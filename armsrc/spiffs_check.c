@@ -586,7 +586,7 @@ static s32_t spiffs_page_consistency_check_i(spiffs *fs) {
                      0);
             // traverse each page except for lookup pages
             spiffs_page_ix cur_pix = SPIFFS_OBJ_LOOKUP_PAGES(fs) + SPIFFS_PAGES_PER_BLOCK(fs) * cur_block;
-            while (!restart && cur_pix < total_blocks_plus_one_page) {
+            while (!restart && cur_pix < SPIFFS_PAGES_PER_BLOCK(fs) * (cur_block+1)) {
                 //if ((cur_pix & 0xff) == 0)
                 //  SPIFFS_CHECK_DBG("PA: processing pix "_SPIPRIpg", block "_SPIPRIbl" of pix "_SPIPRIpg", block "_SPIPRIbl"\n",
                 //      cur_pix, cur_block, total_blocks, block_count);
