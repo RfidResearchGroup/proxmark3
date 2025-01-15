@@ -245,7 +245,7 @@ static int ask_em410x_binary_decode(bool verbose, uint32_t *hi, uint64_t *lo, ui
         else if (ans == -4)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x preamble not found");
         else if (ans == -5)
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x Size not correct: %zu", size);
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x Size not correct: %zu", *size);
         else if (ans == -6)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x parity failed");
 

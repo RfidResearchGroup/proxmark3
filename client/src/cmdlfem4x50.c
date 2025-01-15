@@ -30,10 +30,12 @@
 
 static int CmdHelp(const char *Cmd);
 
-static void em4x50_prepare_result(const uint8_t *data, int fwr, int lwr, em4x50_word_t *words) {
+// Each record is 4 bytes long ... a single line in the dump output
+// Reads each record from `data`, reverses the four bytes, and writes to `words`
+static void em4x50_prepare_result(const uint8_t *data, int first_record_inclusive, int last_record_inclusive, em4x50_word_t *words) {
 
     // restructure received result in "em4x50_word_t" structure
-    for (int i = fwr; i <= lwr; i++) {
+    for (int i = first_record_inclusive; i <= last_record_inclusive; i++) {
         for (int j = 0; j < 4; j++) {
             words[i].byte[j] = data[i * 4 + (3 - j)];
         }
@@ -778,6 +780,12 @@ static int CmdEM4x50Reader(const char *Cmd) {
 
         // iceman,  misuse of return status code.
         int now = resp.status;
+
+        // prevent massive stack corruption if unexpected results from device.
+        if (now > EM4X50_NO_WORDS) {
+            PrintAndLogEx(WARNING, "word count was: %d, limiting to %d", now, EM4X50_NO_WORDS);
+            now = EM4X50_NO_WORDS;
+        }
 
         if (now > 0) {
 
