@@ -3260,7 +3260,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
         }
 
         if (resplen != segment_size + 2) {
-            PrintAndLogEx(ERR, "reading NDEF file failed, expected %i bytes, got %i bytes.", segment_size, resplen - 2);
+            PrintAndLogEx(ERR, "reading NDEF file failed, expected %zu bytes, got %i bytes.", segment_size, resplen - 2);
             DropField();
             free(ndef_file);
             return PM3_ESOFT;
