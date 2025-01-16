@@ -1142,8 +1142,7 @@ static int ulev1_print_configuration(uint64_t tagtype, uint8_t *data, uint8_t st
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Configuration"));
 
-    bool strg_mod_en = (data[0] & 2);
-
+    bool strg_mod_en = (data[0] & 0x04);
     uint8_t authlim = (data[4] & 0x07);
     bool nfc_cnf_prot_pwd = ((data[4] & 0x08) == 0x08);
     bool nfc_cnf_en  = ((data[4] & 0x10) == 0x10);
