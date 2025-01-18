@@ -17,7 +17,7 @@
     },
     {
         "AID": "1023F5",
-        "Vendor": "Integrated Control Technology Limited [ICT]",
+        "Vendor": "Integrated Control Technology Limited (ICT)",
         "Country": "NZ",
         "Name": "ICT Access Credential",
         "Description": "Default Secondary Application",
@@ -377,7 +377,7 @@
     },
     {
         "AID": "F52310",
-        "Vendor": "Integrated Control Technology Limited [ICT]",
+        "Vendor": "Integrated Control Technology Limited (ICT)",
         "Country": "NZ",
         "Name": "ICT Access Credential",
         "Description": "Default Primary Application",
@@ -385,7 +385,7 @@
     },
     {
         "AID": "F52318",
-        "Vendor": "Integrated Control Technology Limited [ICT]",
+        "Vendor": "Integrated Control Technology Limited (ICT)",
         "Country": "NZ",
         "Name": "ICT Access Credential",
         "Description": "Default Custom Application",
@@ -393,7 +393,7 @@
     },
     {
         "AID": "F5231E",
-        "Vendor": "Integrated Control Technology Limited [ICT]",
+        "Vendor": "Integrated Control Technology Limited (ICT)",
         "Country": "NZ",
         "Name": "ICT Access Credential",
         "Description": "Interoperability Application",
@@ -401,7 +401,7 @@
     },
     {
         "AID": "F5231F",
-        "Vendor": "Integrated Control Technology Limited [ICT]",
+        "Vendor": "Integrated Control Technology Limited (ICT)",
         "Country": "NZ",
         "Name": "ICT Access Credential",
         "Description": "Third-Party Locking Application",
@@ -691,7 +691,7 @@
         "AID": "CA1827",
         "Vendor": "Transact Campus Inc.",
         "Country": "US",
-        "Name": "Transact Campus ID [Custom AID]",
+        "Name": "Transact Campus ID (Custom AID)",
         "Description": "Campus Card",
         "Type": "student"
     },
@@ -808,6 +808,14 @@
         "Type": "payment system"
     },
     {
+        "AID": "F380F0",
+        "Vendor": "Air Amsterdam via Microtronic AG",
+        "Country": "NL",
+        "Name": "Club AIR Amsterdam Card",
+        "Description": "AIR Amsterdam Prepaid Card",
+        "Type": "payment system"
+    },
+    {
         "AID": "C26001",
         "Vendor": "car2go",
         "Country": "DE",
@@ -820,7 +828,7 @@
         "Vendor": "Invalid / Reserved",
         "Country": "",
         "Name": "Invalid / Reserved",
-        "Description": "Used by ATL Breeze, MAD Public Transport Card, and YVR Compass",
+        "Description": "Used by ATL Breeze and YVR Compass",
         "Type": "transport"
     },
     {
@@ -841,17 +849,17 @@
     },
     {
         "AID": "010000",
-        "Vendor": "Consorcio Regional de Transportes Públicos Regulares de Madrid (CRTM)",
+        "Vendor": "Consorcio Regional de Transportes Publicos Regulares de Madrid (CRTM)",
         "Country": "ES",
-        "Name": "Tarjeta Transporte Publico (MAD) (Alternative Endian)",
-        "Description": "MAD Public Transport Card (Alternative Endian)",
+        "Name": "Tarjeta Transporte Publico (MAD)",
+        "Description": "MAD Public Transport Card",
         "Type": "transport"
     },
     {
         "AID": "012242",
         "Vendor": "Belbim",
         "Country": "TR",
-        "Name": "İstanbulkart (IST)",
+        "Name": "Istanbulkart (IST)",
         "Description": "IST Istanbul Card (eBilet App)",
         "Type": "transport"
     },
@@ -872,6 +880,14 @@
         "Type": "transport"
     },
     {
+        "AID": "0183F1",
+        "Vendor": "Wroclaw Urban Transportation System ",
+        "Country": "PL",
+        "Name": "URBANCARD (WRO)",
+        "Description": "WRO URBANCARD (URBANCARD Holder App)",
+        "Type": "transport"
+    },
+    {
         "AID": "024D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
@@ -888,6 +904,14 @@
         "Type": "transport"
     },
     {
+        "AID": "0283F1",
+        "Vendor": "Wroclaw Urban Transportation System ",
+        "Country": "PL",
+        "Name": "URBANCARD (WRO)",
+        "Description": "WRO URBANCARD (URBANCARD EP App)",
+        "Type": "transport"
+    },
+    {
         "AID": "034D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
@@ -901,6 +925,22 @@
         "Country": "TH",
         "Name": "MRT Stored Value Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
+        "Type": "transport"
+    },
+    {
+        "AID": "0383F1",
+        "Vendor": "Wroclaw Urban Transportation System ",
+        "Country": "PL",
+        "Name": "URBANCARD (WRO)",
+        "Description": "WRO URBANCARD (URBANCARD Term App)",
+        "Type": "transport"
+    },
+    {
+        "AID": "042242",
+        "Vendor": "Belbim",
+        "Country": "TR",
+        "Name": "Istanbulkart (IST)",
+        "Description": "IST Istanbul Card (Unknown App)",
         "Type": "transport"
     },
     {
@@ -923,7 +963,7 @@
         "AID": "052242",
         "Vendor": "Belbim",
         "Country": "TR",
-        "Name": "İstanbulkart (IST)",
+        "Name": "Istanbulkart (IST)",
         "Description": "IST Istanbul Card (ISPARK App)",
         "Type": "transport"
     },
@@ -947,7 +987,7 @@
         "AID": "062242",
         "Vendor": "Belbim",
         "Country": "TR",
-        "Name": "İstanbulkart (IST)",
+        "Name": "Istanbulkart (IST)",
         "Description": "IST Istanbul Card (App 6)",
         "Type": "transport"
     },
@@ -1145,7 +1185,7 @@
     },
     {
         "AID": "484000",
-        "Vendor": "Sistema de Tren Elétrico Urbano (SITEUR)",
+        "Vendor": "Sistema de Tren Eletrico Urbano (SITEUR)",
         "Country": "MX",
         "Name": "Mi Movilidad Card (GDL)",
         "Description": "GDL Mi Movilidad Card",
@@ -1227,7 +1267,7 @@
         "AID": "A00216",
         "Vendor": "ITSO Ltd",
         "Country": "UK",
-        "Name": "EMR Smartcard (EMA) / GWR touch (BRS)",
+        "Name": "GWR touch (BRS) / EMR Smartcard (EMA) / WYTCL MCard (LBA)",
         "Description": "ITSO Public Transport Application // Provision of Citizen Services #0",
         "Type": "transport"
     },
@@ -1347,8 +1387,8 @@
         "AID": "F21150",
         "Vendor": "Prague Public Transit Company via Haguess a.s.",
         "Country": "CZ",
-        "Name": "Lítačka Opencard (PRG)",
-        "Description": "PRG Lítačka Opencard",
+        "Name": "Litacka Opencard (PRG)",
+        "Description": "PRG Litacka Opencard",
         "Type": "transport"
     },
     {
@@ -1396,7 +1436,7 @@
         "Vendor": "Chicago Transit Authority (CTA) via Cubic",
         "Country": "US",
         "Name": "Ventra Card (ORD)",
-        "Description": "ORD Ventra Card [Gen 2 Blue] // Multi-Modal Transit #1 // FIDs 00-01: Standard Data",
+        "Description": "ORD Ventra Card (Gen 2 Blue) // Multi-Modal Transit #1 // FIDs 00-01: Standard Data",
         "Type": "transport"
     },
     {
@@ -1427,7 +1467,7 @@
         "AID": "F40110",
         "Vendor": "ITSO Ltd",
         "Country": "UK",
-        "Name": "EMR Smartcard (EMA) / GWR touch (BRS)",
+        "Name": "GWR touch (BRS) / EMR Smartcard (EMA)",
         "Description": "UK National Smartcard Project // Provision of Citizen Services #1",
         "Type": "transport"
     },
@@ -1435,7 +1475,7 @@
         "AID": "F40111",
         "Vendor": "ITSO Ltd",
         "Country": "UK",
-        "Name": "EMR Smartcard (EMA) / GWR touch (BRS)",
+        "Name": "GWR touch (BRS) / EMR Smartcard (EMA)",
         "Description": "UK National Smartcard Project // Provision of Citizen Services #2",
         "Type": "transport"
     },
@@ -1443,7 +1483,7 @@
         "AID": "F40112",
         "Vendor": "ITSO Ltd",
         "Country": "UK",
-        "Name": "EMR Smartcard (EMA) / GWR touch (BRS)",
+        "Name": "GWR touch (BRS) / EMR Smartcard (EMA)",
         "Description": "UK National Smartcard Project // Provision of Citizen Services #3",
         "Type": "transport"
     },
@@ -1451,7 +1491,7 @@
         "AID": "F40113",
         "Vendor": "ITSO Ltd",
         "Country": "UK",
-        "Name": "EMR Smartcard (EMA) / GWR touch (BRS)",
+        "Name": "GWR touch (BRS) / EMR Smartcard (EMA)",
         "Description": "UK National Smartcard Project // Provision of Citizen Services #4",
         "Type": "transport"
     },
