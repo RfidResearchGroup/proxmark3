@@ -2,7 +2,7 @@ on: pull_request_target
 name: Changelog Reminder
 jobs:
   remind:
-    if: github.repository_owner = 'RfidResearchGroup'
+    if: github.repository_owner == 'RfidResearchGroup'
     name: Changelog Reminder
     runs-on: ubuntu-latest
     steps:
