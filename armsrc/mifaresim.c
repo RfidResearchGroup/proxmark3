@@ -198,7 +198,8 @@ static uint8_t MifareMaxSector(uint16_t flags) {
     }
 }
 
-static bool MifareSimInit(uint16_t flags, uint8_t *uid, uint16_t atqa, uint8_t sak, tag_response_info_t **responses, uint32_t *cuid, uint8_t *uid_len, uint8_t **rats, uint8_t *rats_len) {
+bool MifareSimInit (uint16_t flags, uint8_t *uid, uint16_t atqa, uint8_t sak, tag_response_info_t **responses, uint32_t *cuid, uint8_t *uid_len, uint8_t **rats, uint8_t *rats_len) {
+//static bool MifareSimInitX(uint16_t flags, uint8_t *datain, uint16_t atqa, uint8_t sak, tag_response_info_t **responses, uint32_t *cuid, uint8_t *uid_len, uint8_t **rats, uint8_t *rats_len) {
 
     uint8_t uid_tmp[10] = {0};
     // SPEC: https://www.nxp.com/docs/en/application-note/AN10833.pdf
@@ -293,6 +294,7 @@ static bool MifareSimInit(uint16_t flags, uint8_t *uid, uint16_t atqa, uint8_t s
         rSAK[0] = rSAK_1k;
         if (g_dbglevel > DBG_NONE) Dbprintf("Enforcing Mifare 1K ATQA/SAK");
     } else if (IS_FLAG_MF_SIZE(flags, MIFARE_2K_MAX_BYTES)) {
+        Dbprintf("We got this to happen!!!\n");
         memcpy(rATQA, rATQA_2k, sizeof(rATQA));
         rSAK[0] = rSAK_2k;
         *rats = rRATS;

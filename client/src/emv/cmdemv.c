@@ -643,21 +643,21 @@ static int CmdEMVSmartToNFC(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    int uid_len = 0;
+    int uidlen = 0;
     uint8_t uid[7] = {0};
-    CLIGetHexWithReturn(ctx, 2, uid, &uid_len);
+    CLIGetHexWithReturn(ctx, 2, uid, &uidlen);
 
-    if (uid_len == 0) {
+    if (uidlen == 0) {
         PrintAndLogEx(SUCCESS, "No UID provided, using default.");
         uint8_t default_uid[7] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
         memcpy(uid, default_uid, sizeof(default_uid));
-        uid_len = sizeof(default_uid);
-    } else if (uid_len != 7) {
+        uidlen = sizeof(default_uid);
+    } else if (uidlen != 7) {
         PrintAndLogEx(FAILED, "UID must be 7 bytes long.");
         return PM3_EINVARG;
     }
 
-    PrintAndLogEx(SUCCESS, "UID length is %d", uid_len);
+    PrintAndLogEx(SUCCESS, "UID length is %d", uidlen);
 
     bool testMode = arg_get_lit(ctx, 1);
     bool show_apdu = true;
@@ -670,7 +670,7 @@ static int CmdEMVSmartToNFC(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    // todo: check this is relevant for us.
+    // todo for PR: check this is relevant for us.
     SetAPDULogging(show_apdu);
 
     struct {
@@ -681,14 +681,33 @@ static int CmdEMVSmartToNFC(const char *Cmd) {
         uint8_t sak;
     } PACKED payload;
 
-    memcpy(payload.uid, uid, uid_len);
-    payload.flags = 0x1204;
+    memcpy(payload.uid, uid, uidlen);
+
+    // Set up the flags for 2K mifare sim with RATS
+    uint16_t flags = 0;
+
+    FLAG_SET_UID_IN_DATA(flags, uidlen);
+    if (IS_FLAG_UID_IN_EMUL(flags)) {
+        PrintAndLogEx(WARNING, "Invalid parameter for UID");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    FLAG_SET_MF_SIZE(flags, MIFARE_2K_MAX_BYTES);
+    //snprintf(csize, sizeof(csize), "2K with RATS");
+    //k_sectors_cnt = MIFARE_2K_MAXSECTOR; // todo: delete
+
+    flags |= FLAG_ATQA_IN_DATA;
+    flags |= FLAG_SAK_IN_DATA;
+
+    payload.flags = flags;
+    //payload.flags = 0x1204;
     payload.exitAfter = 0x1;
     payload.atqa = 0x0;
     payload.sak = 0x20;
 
     clearCommandBuffer();
-    SendCommandNG(0x0386, (uint8_t *)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_ISO14443A_EMV_SIMULATE, (uint8_t *)&payload, sizeof(payload));
 
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
 
