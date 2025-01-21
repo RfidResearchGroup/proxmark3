@@ -126,7 +126,6 @@ void ExecuteEMVSim(uint8_t *receivedCmd, uint16_t receivedCmd_len, uint8_t *rece
 
     // use annotate to give some hints about the command
     annotate(&receivedCmd[1], receivedCmd_len-1);
-    //Dbprintf("Annotated: %s", explanation);
 
     // This is a common request from the reader which we can just immediately respond to since we know we can't
     // handle it.
@@ -138,7 +137,6 @@ void ExecuteEMVSim(uint8_t *receivedCmd, uint16_t receivedCmd_len, uint8_t *rece
 
     // We want to modify corrupted request
     if ((receivedCmd_len > 5 && receivedCmd[0] != 0x03 && receivedCmd[0] != 0x02 && receivedCmd[1] == 0 && receivedCmd[4] == 0) || (receivedCmd[2] == 0xa8)) {
-        //if (receivedCmd[2] == 0xa8) {
         Dbprintf("We saw signing request... modifying it into a generate ac transaction !!!!");
 
         currentState = GENERATE_AC;
@@ -276,7 +274,6 @@ void ExecuteEMVSim(uint8_t *receivedCmd, uint16_t receivedCmd_len, uint8_t *rece
         }
 
         // If we would return a PAY1 fci response, we instead return a PAY2 fci response
-        //if (responseToReader[1] == fci_template_pay1[1] && true) {
         if (currentState == SELECT_PAY1_AID) {
             Dbprintf("We saw a PAY1 response... modifying it to a PAY2 response for outgoing !!!!");
             memcpy(responseToReader, fci_template_pay2, sizeof(fci_template_pay2));

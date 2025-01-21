@@ -694,14 +694,11 @@ static int CmdEMVSmartToNFC(const char *Cmd) {
     }
 
     FLAG_SET_MF_SIZE(flags, MIFARE_2K_MAX_BYTES);
-    //snprintf(csize, sizeof(csize), "2K with RATS");
-    //k_sectors_cnt = MIFARE_2K_MAXSECTOR; // todo: delete
 
     flags |= FLAG_ATQA_IN_DATA;
     flags |= FLAG_SAK_IN_DATA;
 
     payload.flags = flags;
-    //payload.flags = 0x1204;
     payload.exitAfter = 0x1;
     payload.atqa = 0x0;
     payload.sak = 0x20;
