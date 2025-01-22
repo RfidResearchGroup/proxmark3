@@ -198,7 +198,7 @@ static uint8_t MifareMaxSector(uint16_t flags) {
     }
 }
 
-static bool MifareSimInit(uint16_t flags, uint8_t *uid, uint16_t atqa, uint8_t sak, tag_response_info_t **responses, uint32_t *cuid, uint8_t *uid_len, uint8_t **rats, uint8_t *rats_len) {
+bool MifareSimInit(uint16_t flags, uint8_t *uid, uint16_t atqa, uint8_t sak, tag_response_info_t **responses, uint32_t *cuid, uint8_t *uid_len, uint8_t **rats, uint8_t *rats_len) {
 
     uint8_t uid_tmp[10] = {0};
     // SPEC: https://www.nxp.com/docs/en/application-note/AN10833.pdf

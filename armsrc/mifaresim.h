@@ -21,6 +21,7 @@
 #define __MIFARESIM_H
 
 #include "common.h"
+#include "mifare.h"
 
 #ifndef CheckCrc14A
 # define CheckCrc14A(data, len) check_crc(CRC_14443_A, (data), (len))
@@ -42,5 +43,6 @@
 #define AUTHKEYNONE              0xff
 
 void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t atqa, uint8_t sak);
+bool MifareSimInit(uint16_t flags, uint8_t *uid, uint16_t atqa, uint8_t sak, tag_response_info_t **responses, uint32_t *cuid, uint8_t *uid_len, uint8_t **rats, uint8_t *rats_len);
 
 #endif
