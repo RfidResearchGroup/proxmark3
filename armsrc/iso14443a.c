@@ -728,7 +728,6 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     // free all previous allocations first
     BigBuf_free();
     BigBuf_Clear_ext(false);
-    clear_trace();
     set_tracing(true);
 
     // The command (reader -> tag) that we're receiving.
@@ -798,13 +797,13 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
         }
 
         // primary buffer was stopped( <-- we lost data!
-        if (!AT91C_BASE_PDC_SSC->PDC_RCR) {
+        if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
             AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
             AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
             Dbprintf("[-] RxEmpty ERROR | data length %d", dataLen); // temporary
         }
         // secondary buffer sets as primary, secondary buffer was stopped
-        if (!AT91C_BASE_PDC_SSC->PDC_RNCR) {
+        if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
             AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
             AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
         }
@@ -3400,7 +3399,6 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
 
     BigBuf_free();
     BigBuf_Clear_ext(false);
-    clear_trace();
     set_tracing(true);
 
     uint8_t mf_auth[4] = { keytype, block, 0x00, 0x00 };
@@ -3717,7 +3715,6 @@ void DetectNACKbug(void) {
 
     BigBuf_free();
     BigBuf_Clear_ext(false);
-    clear_trace();
     set_tracing(true);
     iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
 

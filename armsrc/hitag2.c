@@ -1036,7 +1036,6 @@ void hitag_sniff(void) {
 
     BigBuf_free();
     BigBuf_Clear_ext(false);
-    clear_trace();
     set_tracing(true);
 
     // Set up eavesdropping mode, frequency divisor which will drive the FPGA
@@ -1061,7 +1060,6 @@ void SniffHitag2(bool ledcontrol) {
 
     BigBuf_free();
     BigBuf_Clear_ext(false);
-    clear_trace();
     set_tracing(true);
 
     /*
@@ -1418,7 +1416,6 @@ void SimulateHitag2(bool ledcontrol) {
 
     BigBuf_free();
     BigBuf_Clear_ext(false);
-    clear_trace();
     set_tracing(true);
 
     // empties bigbuff etc

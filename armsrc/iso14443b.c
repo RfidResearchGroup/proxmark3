@@ -980,7 +980,6 @@ void Simulate_iso14443b_srx_tag(uint8_t *uid) {
     // allocate command receive buffer
     BigBuf_free();
     BigBuf_Clear_ext(false);
-    clear_trace();
     set_tracing(true);
 
     uint16_t len, cmdsReceived = 0;
@@ -1381,12 +1380,12 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
             if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {
 
                 // primary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RCR == false) {
+                if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
                     AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
                     AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
                 }
                 // secondary buffer sets as primary, secondary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RNCR == false) {
+                if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
                     AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
                     AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
                 }
@@ -2463,12 +2462,12 @@ void SniffIso14443b(void) {
             if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {
 
                 // primary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RCR == false) {
+                if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
                     AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
                     AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
                 }
                 // secondary buffer sets as primary, secondary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RNCR == false) {
+                if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
                     AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
                     AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
                 }
@@ -2578,7 +2577,6 @@ void SendRawCommand14443B(iso14b_raw_cmd_t *p) {
 
     if ((p->flags & ISO14B_CLEARTRACE) == ISO14B_CLEARTRACE) {
         clear_trace();
-        BigBuf_Clear_ext(false);
     }
 
     set_tracing(true);

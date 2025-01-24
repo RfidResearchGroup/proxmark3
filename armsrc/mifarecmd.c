@@ -385,7 +385,6 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
     // free eventually allocated BigBuf memory
     BigBuf_free();
     BigBuf_Clear_ext(false);
-    clear_trace();
     set_tracing(true);
 
     // params
@@ -804,7 +803,6 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
 
     BigBuf_free();
     BigBuf_Clear_ext(false);
-    clear_trace();
     set_tracing(true);
 
     if (initialize)
@@ -918,7 +916,6 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
 
     BigBuf_free();
     BigBuf_Clear_ext(false);
-    clear_trace();
     set_tracing(false);
 
     if (initialize)
@@ -1069,7 +1066,6 @@ int MifareAcquireStaticEncryptedNonces(uint32_t flags, const uint8_t *key, bool 
 
     BigBuf_free();
     BigBuf_Clear_ext(false);
-    clear_trace();
     set_tracing(false);
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
@@ -1353,9 +1349,6 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
     BigBuf_free();
     BigBuf_Clear_ext(false);
 
-    if (calibrate)
-        clear_trace();
-
     set_tracing(true);
 
     // statistics on nonce distance
@@ -1595,7 +1588,6 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
     // free eventually allocated BigBuf memory
     BigBuf_free();
     BigBuf_Clear_ext(false);
-    clear_trace();
     set_tracing(true);
 
     int16_t isOK = PM3_ESOFT;
