@@ -1888,7 +1888,7 @@ static int CmdLFHitag2Chk(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag chk",
                   "Run dictionary key or password recovery against Hitag card.",
-                  "lf hitag chk\n               -> checks for both pwd / crypto keys"
+                  "lf hitag chk               -> checks for both pwd / crypto keys\n"
                   "lf hitag chk --crypto        -> use def dictionary\n"
                   "lf hitag chk --pwd -f my.dic -> pwd mode, custom dictionary"
                  );
