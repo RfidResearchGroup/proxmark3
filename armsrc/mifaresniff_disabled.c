@@ -50,7 +50,6 @@ void RAMFUNC SniffMifare(uint8_t param) {
     // free all previous allocations first
     BigBuf_free();
     BigBuf_Clear_ext(false);
-    clear_trace();
     set_tracing(true);
 
     // The command (reader -> tag) that we're receiving.
@@ -137,13 +136,13 @@ void RAMFUNC SniffMifare(uint8_t param) {
         if (dataLen < 1) continue;
 
         // primary buffer was stopped ( <-- we lost data!
-        if (!AT91C_BASE_PDC_SSC->PDC_RCR) {
+        if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
             AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t)dmaBuf;
             AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
             Dbprintf("[-] RxEmpty ERROR | data length %d", dataLen); // temporary
         }
         // secondary buffer sets as primary, secondary buffer was stopped
-        if (!AT91C_BASE_PDC_SSC->PDC_RNCR) {
+        if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
             AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t)dmaBuf;
             AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
         }

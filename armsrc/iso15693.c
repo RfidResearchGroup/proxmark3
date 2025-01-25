@@ -1032,12 +1032,12 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
             if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {
 
                 // primary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RCR == false) {
+                if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
                     AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
                     AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
                 }
                 // secondary buffer sets as primary, secondary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RNCR == false) {
+                if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
                     AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
                     AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
                 }
@@ -1708,12 +1708,12 @@ void SniffIso15693(uint8_t jam_search_len, uint8_t *jam_search_string, bool icla
             if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_ENDRX)) {
 
                 // primary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RCR == false) {
+                if (AT91C_BASE_PDC_SSC->PDC_RCR == 0) {
                     AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) dma->buf;
                     AT91C_BASE_PDC_SSC->PDC_RCR = DMA_BUFFER_SIZE;
                 }
                 // secondary buffer sets as primary, secondary buffer was stopped
-                if (AT91C_BASE_PDC_SSC->PDC_RNCR == false) {
+                if (AT91C_BASE_PDC_SSC->PDC_RNCR == 0) {
                     AT91C_BASE_PDC_SSC->PDC_RNPR = (uint32_t) dma->buf;
                     AT91C_BASE_PDC_SSC->PDC_RNCR = DMA_BUFFER_SIZE;
                 }

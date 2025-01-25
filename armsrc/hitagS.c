@@ -708,9 +708,8 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
     BigBuf_free();
     BigBuf_Clear_ext(false);
 
-    // Clean up trace and prepare it for storing frames
+    // Enable tracing
     set_tracing(true);
-    clear_trace();
 
     DbpString("Starting Hitag S simulation");
 

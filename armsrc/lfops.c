@@ -1006,7 +1006,6 @@ void CmdFSKsimTAGEx(uint8_t fchigh, uint8_t fclow, uint8_t separator, uint8_t cl
     // free eventually allocated BigBuf memory
     BigBuf_free();
     BigBuf_Clear_ext(false);
-    clear_trace();
     set_tracing(false);
 
     int n = 0, i = 0;
