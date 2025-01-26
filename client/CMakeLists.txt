@@ -425,6 +425,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/scripting.c
         ${PM3_ROOT}/client/src/ui.c
         ${PM3_ROOT}/client/src/util.c
+        ${PM3_ROOT}/client/src/util_hidsio.c
         ${PM3_ROOT}/client/src/wiegand_formats.c
         ${PM3_ROOT}/client/src/wiegand_formatutils.c
         ${CMAKE_BINARY_DIR}/version_pm3.c

@@ -38,6 +38,7 @@
 #include "crypto/libpcrypto.h"  // AES decrypt
 #include "commonutil.h"         // get_sw
 #include "protocols.h"          // ISO7816 APDU return codes
+#include "util_hidsio.h"
 
 static uint8_t zeros[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
@@ -98,17 +99,6 @@ static const known_algo_t known_algorithm_map[] = {
     {6, "SHA-1"},
     {7, "SHA-256"},
     {9, "AES-128_CBC_MODE"},
-};
-
-static const sioMediaTypeName_t sioMediaTypeMapping[] = {
-    { 0x00, "Unknown"},
-    { 0x01, "DESFire"},
-    { 0x02, "MIFARE"},
-    { 0x03, "iCLASS (PicoPass)"},
-    { 0x04, "ISO14443AL4"},
-    { 0x06, "MIFARE Plus"},
-    { 0x07, "Seos"},
-    { 0xFF, "INVALID VALUE"}
 };
 
 static int create_cmac(uint8_t *key, uint8_t *input, uint8_t *out, int input_len, int encryption_algorithm) {
@@ -1637,22 +1627,6 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
 static int CmdHfSeosList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf seos", "seos -c");
 }
-
-// get a SIO media type based on the UID
-//  uid[8] tag uid
-// returns description of the best match
-static const char *getSioMediaTypeInfo(uint8_t uid) {
-
-    for (int i = 0; i < ARRAYLEN(sioMediaTypeMapping); ++i) {
-        if (uid == sioMediaTypeMapping[i].uid) {
-            return sioMediaTypeMapping[i].desc;
-        }
-    }
-
-    //No match, return default
-    return sioMediaTypeMapping[ARRAYLEN(sioMediaTypeMapping) - 1].desc;
-}
-
 
 static int CmdHfSeosSAM(const char *Cmd) {
     CLIParserContext *ctx;

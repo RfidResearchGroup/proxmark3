@@ -13,16 +13,14 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// SEOS commands
+// HID Global SIO utilities
 //-----------------------------------------------------------------------------
-
-#ifndef CMDHFSEOS_H__
-#define CMDHFSEOS_H__
+#ifndef __UTIL_HIDSIO_H_
+#define __UTIL_HIDSIO_H_
 
 #include "common.h"
+#include "stdint.h"
 
-int infoSeos(bool verbose);
-int CmdHFSeos(const char *Cmd);
-int seos_kdf(bool encryption, uint8_t *masterKey, uint8_t keyslot,
-             uint8_t *adfOid, size_t adfoid_len, uint8_t *diversifier, uint8_t diversifier_len, uint8_t *out, int encryption_algorithm, int hash_algorithm);
+const char *getSioMediaTypeInfo(uint8_t uid);
+
 #endif
