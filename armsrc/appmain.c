@@ -2258,7 +2258,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
 
         case CMD_HF_SAM_PICOPASS: {
-            sam_picopass_get_pacs();
+            sam_picopass_get_pacs(packet);
             break;
         }
         case CMD_HF_SAM_SEOS: {

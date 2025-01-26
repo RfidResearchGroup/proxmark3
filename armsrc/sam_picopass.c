@@ -30,6 +30,183 @@
 #include "protocols.h"
 #include "optimized_cipher.h"
 #include "fpgaloader.h"
+#include "pm3_cmd.h"
+
+/**
+ * @brief Sends a request to the SAM and retrieves the response.
+ *
+ * Unpacks request to the SAM and relays ISO15 traffic to the card.
+ * If no request data provided, sends a request to get PACS data.
+ *
+ * @param request Pointer to the buffer containing the request to be sent to the SAM.
+ * @param request_len Length of the request to be sent to the SAM.
+ * @param response Pointer to the buffer where the retreived data will be stored.
+ * @param response_len Pointer to the variable where the length of the retreived data will be stored.
+ * @return Status code indicating success or failure of the operation.
+ */
+static int sam_send_request_iso15(const uint8_t *const request, const uint8_t request_len, uint8_t *response, uint8_t *response_len, const bool shallow_mod) {
+    int res = PM3_SUCCESS;
+    if (g_dbglevel >= DBG_DEBUG)
+        DbpString("start sam_send_request_iso14a");
+
+    uint8_t buf1[ISO7816_MAX_FRAME] = {0};
+    uint8_t buf2[ISO7816_MAX_FRAME] = {0};
+
+    uint8_t *sam_tx_buf = buf1;
+    uint16_t sam_tx_len;
+
+    uint8_t *sam_rx_buf = buf2;
+    uint16_t sam_rx_len;
+
+    uint8_t *nfc_tx_buf = buf1;
+    uint16_t nfc_tx_len;
+
+    uint8_t *nfc_rx_buf = buf2;
+    uint16_t nfc_rx_len;
+
+    if (request_len > 0) {
+        sam_tx_len = request_len;
+        memcpy(sam_tx_buf, request, sam_tx_len);
+    } else {
+        // send get pacs
+        static const uint8_t payload[] = {
+            0xa0, 19, // <- SAM command
+            0xBE, 17, // <- samCommandGetContentElement2
+            0x80, 1,
+            0x04, // <- implicitFormatPhysicalAccessBits
+            0x84, 12,
+            0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x04 // <- SoRootOID
+        };
+
+        sam_tx_len = sizeof(payload);
+        memcpy(sam_tx_buf, payload, sam_tx_len);
+    }
+
+    sam_send_payload(
+        0x44, 0x0a, 0x44,
+        sam_tx_buf, &sam_tx_len,
+        sam_rx_buf, &sam_rx_len
+    );
+
+    if (sam_rx_buf[1] == 0x61) { // commands to be relayed to card starts with 0x61
+        switch_clock_to_countsspclk();
+        // tag <-> SAM exchange starts here
+
+        while (sam_rx_buf[1] == 0x61) {
+            uint32_t start_time = GetCountSspClk();
+            uint32_t eof_time = start_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+
+            nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf);
+
+            // should consider blocking update(2) commands and simulating answer
+            // example command: 87  02  C9  FD  FF  FF  FF  FF  FF  FF  F4  BF  98  E2
+
+            if (g_dbglevel >= DBG_INFO) {
+                DbpString("ISO15 TAG REQUEST: ");
+                Dbhexdump(nfc_tx_len, nfc_tx_buf, false);
+            }
+
+            int tries = 3;
+            nfc_rx_len = 0;
+            while (tries-- > 0) {
+                iclass_send_as_reader(nfc_tx_buf, nfc_tx_len, &start_time, &eof_time, shallow_mod);
+
+                // should not always wait for ICLASS_READER_TIMEOUT_UPDATE. It is too long
+                // check if command in nfc_tx_buf was iclass update command
+                res = GetIso15693AnswerFromTag(nfc_rx_buf, ISO7816_MAX_FRAME, ICLASS_READER_TIMEOUT_UPDATE, &eof_time, false, true, &nfc_rx_len);
+                if (res == PM3_SUCCESS && nfc_rx_len > 0) {
+                    break;
+                }
+
+                start_time = eof_time + ((DELAY_ICLASS_VICC_TO_VCD_READER + DELAY_ISO15693_VCD_TO_VICC_READER + (8 * 8 * 8 * 16)) * 2);
+            }
+
+
+            if (res != PM3_SUCCESS ) {
+                res = PM3_ECARDEXCHANGE;
+                goto out;
+            }
+
+            if (g_dbglevel >= DBG_INFO) {
+                DbpString("ISO15 TAG RESPONSE: ");
+                Dbhexdump(nfc_rx_len, nfc_rx_buf, false);
+            }
+
+
+            switch_clock_to_ticks();
+            sam_tx_len = sam_copy_payload_nfc2sam(sam_tx_buf, nfc_rx_buf, nfc_rx_len);
+
+            sam_send_payload(
+                0x14, 0x0a, 0x14,
+                sam_tx_buf, &sam_tx_len,
+                sam_rx_buf, &sam_rx_len
+            );
+
+            // last SAM->TAG
+            // c1 61 c1 00 00 a1 02 >>82<< 00 90 00
+            if (sam_rx_buf[7] == 0x82) {
+                // tag <-> SAM exchange ends here
+                break;
+            }
+
+            switch_clock_to_countsspclk();
+
+        }
+
+        static const uint8_t hfack[] = {
+            0xbd, 0x04, 0xa0, 0x02, 0x82, 0x00
+        };
+
+        sam_tx_len = sizeof(hfack);
+        memcpy(sam_tx_buf, hfack, sam_tx_len);
+
+        sam_send_payload(
+            0x14, 0x0a, 0x00,
+            sam_tx_buf, &sam_tx_len,
+            sam_rx_buf, &sam_rx_len
+        );
+    }
+
+    // resp for SamCommandGetContentElement:
+    // c1 64 00 00 00
+    // bd 09
+    //    8a 07
+    //        03 05 <- include tag for pm3 client
+    //           06 85 80 6d c0 <- decoded PACS data
+    // 90 00
+
+    // resp for samCommandGetContentElement2:
+    // c1 64 00 00 00
+    // bd 1e
+    //    b3 1c
+    //       a0 1a
+    //          80 05
+    //             06 85 80 6d c0
+    //           81 0e
+    //              2b 06 01 04 01 81 e4 38 01 01 02 04 3c ff
+    //           82 01
+    //              07
+    // 90 00
+    if (request_len == 0) {
+        if (
+            !(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0x8a && sam_rx_buf[5 + 4] == 0x03)
+            &&
+            !(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0xb3 && sam_rx_buf[5 + 4] == 0xa0)
+        ) {
+            if (g_dbglevel >= DBG_ERROR)
+                Dbprintf("No PACS data in SAM response");
+            res = PM3_ESOFT;
+        }
+    }
+
+    *response_len = sam_rx_buf[5 + 1] + 2;
+    memcpy(response, sam_rx_buf + 5, *response_len);
+
+    goto out;
+
+out:
+    return res;
+}
 
 
 /**
@@ -41,7 +218,7 @@
  * @param card_select Pointer to the descriptor of the detected card.
  * @return Status code indicating success or failure of the operation.
  */
-static int sam_set_card_detected(picopass_hdr_t *card_select) {
+static int sam_set_card_detected_picopass(picopass_hdr_t *card_select) {
     int res = PM3_SUCCESS;
     if (g_dbglevel >= DBG_DEBUG)
         DbpString("start sam_set_card_detected");
@@ -107,366 +284,78 @@ out:
     return res;
 }
 
-// using HID SAM to authenticate w PICOPASS
-int sam_picopass_get_pacs(void) {
 
-    static uint8_t act_all[] = { ICLASS_CMD_ACTALL };
-    static uint8_t identify[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x00, 0x73, 0x33 };
-    static uint8_t read_conf[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x01, 0xfa, 0x22 };
-    uint8_t select[] = { 0x80 | ICLASS_CMD_SELECT, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    uint8_t read_aia[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x05, 0xde, 0x64};
-    uint8_t read_check_cc[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 };
+/**
+ * @brief Retrieves PACS data from PICOPASS card using SAM.
+ *
+ * This function is called by appmain.c
+ * It sends a request to the SAM to get the PACS data from the PICOPASS card.
+ * The PACS data is then returned to the PM3 client.
+ *
+ * @return Status code indicating success or failure of the operation.
+ */
+int sam_picopass_get_pacs(PacketCommandNG *c) {
+    bool disconnectAfter = c->oldarg[0] & 0x01;
+    bool skipDetect = c->oldarg[1] & 0x01;
+    bool shallow_mod = false;
 
-    picopass_hdr_t hdr = {0};
-    // Bit 4: K.If this bit equals to one, the READCHECK will use the Credit Key (Kc); if equals to zero, Debit Key (Kd) will be used
-    // bit 7: parity.
-    // if (use_credit_key)
-    //     read_check_cc[0] = 0x10 | ICLASS_CMD_READCHECK;
+    uint8_t *cmd = c->data.asBytes;
+    uint16_t cmd_len = (uint16_t) c->oldarg[2];
 
-    BigBuf_free_keep_EM();
+    int res = PM3_EFAILED;
 
     clear_trace();
-
     I2C_Reset_EnterMainProgram();
-    StopTicks();
 
-    uint8_t *resp = BigBuf_calloc(ISO7816_MAX_FRAME);
+    set_tracing(true);
+    StartTicks();
 
-    bool shallow_mod = false;
-    uint16_t resp_len = 0;
-    int res;
-    uint32_t eof_time = 0;
+    // step 1: ping SAM
+    sam_get_version();
 
-    // wakeup
-    Iso15693InitReader();
+    if (!skipDetect) {
+        // step 2: get card information
+        picopass_hdr_t card_a_info;
+        uint32_t eof_time = 0;
 
-    uint32_t start_time = GetCountSspClk();
-    iclass_send_as_reader(act_all, 1, &start_time, &eof_time, shallow_mod);
+        // implicit StartSspClk() happens here
+        Iso15693InitReader();
+        if(!select_iclass_tag(&card_a_info, false, &eof_time, shallow_mod)){
+            goto err;
+        }
 
-    res = GetIso15693AnswerFromTag(resp, ISO7816_MAX_FRAME, ICLASS_READER_TIMEOUT_ACTALL, &eof_time, false, true, &resp_len);
+        switch_clock_to_ticks();
+
+        // step 3: SamCommand CardDetected
+        sam_set_card_detected_picopass(&card_a_info);
+    }
+
+    // step 3: SamCommand RequestPACS, relay NFC communication
+    uint8_t sam_response[ISO7816_MAX_FRAME] = { 0x00 };
+    uint8_t sam_response_len = 0;
+    res = sam_send_request_iso15(cmd, cmd_len, sam_response, &sam_response_len, shallow_mod);
     if (res != PM3_SUCCESS) {
-        res = PM3_ECARDEXCHANGE;
-        goto out;
+        goto err;
     }
+    if (g_dbglevel >= DBG_INFO)
+        print_result("Response data", sam_response, sam_response_len);
 
-    // send Identify
-    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-    iclass_send_as_reader(identify, 1, &start_time, &eof_time, shallow_mod);
-
-    // expect a 10-byte response here, 8 byte anticollision-CSN and 2 byte CRC
-    res = GetIso15693AnswerFromTag(resp, ISO7816_MAX_FRAME, ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
-    if (res != PM3_SUCCESS || resp_len != 10) {
-        res = PM3_ECARDEXCHANGE;
-        goto out;
-    }
-
-    // copy the Anti-collision CSN to our select-packet
-    memcpy(&select[1], resp, 8);
-
-    // select the card
-    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-    iclass_send_as_reader(select, sizeof(select), &start_time, &eof_time, shallow_mod);
-
-    // expect a 10-byte response here, 8 byte CSN and 2 byte CRC
-    res = GetIso15693AnswerFromTag(resp, ISO7816_MAX_FRAME, ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
-    if (res != PM3_SUCCESS || resp_len != 10) {
-        res = PM3_ECARDEXCHANGE;
-        goto out;
-    }
-
-    // store CSN
-    memcpy(hdr.csn, resp, sizeof(hdr.csn));
-
-    // card selected, now read config (block1) (only 8 bytes no CRC)
-    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-    iclass_send_as_reader(read_conf, sizeof(read_conf), &start_time, &eof_time, shallow_mod);
-
-    // expect a 8-byte response here
-    res = GetIso15693AnswerFromTag(resp, ISO7816_MAX_FRAME, ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
-    if (res != PM3_SUCCESS || resp_len != 10) {
-        res = PM3_ECARDEXCHANGE;
-        goto out;
-    }
-
-    // store CONFIG
-    memcpy((uint8_t *)&hdr.conf, resp, sizeof(hdr.conf));
-
-    uint8_t pagemap = get_pagemap(&hdr);
-    if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
-        res = PM3_EWRONGANSWER;
-        goto out;
-    }
-
-    // read App Issuer Area block 5
-    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-    iclass_send_as_reader(read_aia, sizeof(read_aia), &start_time, &eof_time, shallow_mod);
-
-    // expect a 10-byte response here
-    res = GetIso15693AnswerFromTag(resp, ISO7816_MAX_FRAME, ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
-    if (res != PM3_SUCCESS || resp_len != 10) {
-        res = PM3_ECARDEXCHANGE;
-        goto out;
-    }
-
-    // store AIA
-    memcpy(hdr.app_issuer_area, resp, sizeof(hdr.app_issuer_area));
-
-    // card selected, now read e-purse (cc) (block2) (only 8 bytes no CRC)
-    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-    iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
-
-    // expect a 8-byte response here
-    res = GetIso15693AnswerFromTag(resp, ISO7816_MAX_FRAME, ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
-    if (res != PM3_SUCCESS || resp_len != 8) {
-        res = PM3_ECARDEXCHANGE;
-        goto out;
-    }
-
-    // store EPURSE
-    memcpy(hdr.epurse, resp, sizeof(hdr.epurse));
-
-    // -----------------------------------------------------------------------------
-    // SAM comms
-    // -----------------------------------------------------------------------------
-    size_t sam_len = 0;
-    uint8_t *sam_apdu = BigBuf_calloc(ISO7816_MAX_FRAME);
-
-    // -----------------------------------------------------------------------------
-    // first - set detected card (0xAD)
-    switch_clock_to_ticks();
-    sam_set_card_detected(&hdr);
-
-    // -----------------------------------------------------------------------------
-    // second - get PACS (0xA1)
-
-    // a0 05
-    //    a1 03
-    //       80 01
-    //          04
-    hexstr_to_byte_array("a005a103800104", sam_apdu, &sam_len);
-    if (sam_send_payload(0x44, 0x0a, 0x44, sam_apdu, (uint16_t *) &sam_len, resp, &resp_len) != PM3_SUCCESS) {
-        res = PM3_ECARDEXCHANGE;
-        goto out;
-    }
-    print_dbg("-- 2", resp, resp_len);
-
-    // TAG response
-    // --  0c 05 de64 // read block 5
-    // Tag|c00a140a000000a110a10e8004 0c05de64 8102 0004 820201f4
-
-    // -----------------------------------------------------------------------------
-    // third   AIA block 5 (emulated tag <-> SAM exchange starts here)
-    // a0da02631c140a00000000bd14a012a010800a ffffff0006fffffff88e 81020000
-    //  picopass  legacy is fixed.  wants AIA and crc. ff ff ff ff ff ff ff ff ea f5
-    //  picpoasss SE                                   ff ff ff 00 06 ff ff ff f8 8e
-    hexstr_to_byte_array("a0da02631c140a00000000bd14a012a010800affffff0006fffffff88e81020000", sam_apdu, &sam_len);
-    memcpy(sam_apdu + 19, hdr.app_issuer_area, sizeof(hdr.app_issuer_area));
-    AddCrc(sam_apdu + 19, 8);
-
-    if (sam_rxtx(sam_apdu, sam_len, resp, &resp_len) == false) {
-        res = PM3_ECARDEXCHANGE;
-        goto out;
-    }
-    print_dbg("-- 3", resp, resp_len);
-
-    // 88 02 --  readcheck  (block2 epurse, start of auth)
-    // Tag|c00a140a000000a10ea10c8002 8802 8102 0004 820201f4 9000
-    //    61 16 f5 0a140a000000a10ea10c 8002 8802 8102 0004 820201f4 9000
-
-    // -----------------------------------------------------------------------------
-    // forth  EPURSE
-    // a0da02631a140a00000000bd12a010a00e8008 ffffffffedffffff 81020000
-    hexstr_to_byte_array("a0da02631a140a00000000bd12a010a00e8008ffffffffedffffff81020000", sam_apdu, &sam_len);
-    memcpy(sam_apdu + 19, hdr.epurse, sizeof(hdr.epurse));
-
-    if (sam_rxtx(sam_apdu, sam_len, resp, &resp_len) == false) {
-        res = PM3_ECARDEXCHANGE;
-        goto out;
-    }
-    print_dbg("-- 4", resp, resp_len);
-
-    uint8_t nr_mac[9] = {0};
-    memcpy(nr_mac, resp + 11, sizeof(nr_mac));
-    // resp here hold the whole   NR/MAC
-    // 05 9bcd475e965ee20e // CHECK (w key)
-    print_dbg("NR/MAC", nr_mac, sizeof(nr_mac));
-
-    // c00a140a000000a115a1138009 059bcd475e965ee20e 8102 0004 820201f4 9000
-
-    // pre calc ourself?
-    // uint8_t cc_nr[] = {0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0};
-    uint8_t div_key[8] = {0};
-    static uint8_t legacy_aa1_key[] = {0xAE, 0xA6, 0x84, 0xA6, 0xDA, 0xB2, 0x32, 0x78};
-    iclass_calc_div_key(hdr.csn, legacy_aa1_key, div_key, false);
-
-    uint8_t mac[4] = {0};
-    if (g_dbglevel == DBG_DEBUG) {
-        uint8_t wb[16] = {0};
-        memcpy(wb, hdr.epurse, sizeof(hdr.epurse));
-        memcpy(wb + sizeof(hdr.epurse), nr_mac + 1, 4);
-        print_dbg("cc_nr...", wb, sizeof(wb));
-        doMAC_N(wb, sizeof(wb), div_key, mac);
-        print_dbg("Calc MAC...", mac, sizeof(mac));
-    }
-
-    // start ssp clock again...
-    switch_clock_to_countsspclk();
-
-    // NOW we auth against tag
-    uint8_t cmd_check[9] = { ICLASS_CMD_CHECK };
-    memcpy(cmd_check + 1, nr_mac + 1, 8);
-
-    start_time = GetCountSspClk();
-    iclass_send_as_reader(cmd_check, sizeof(cmd_check), &start_time, &eof_time, shallow_mod);
-
-    // expect a 10-byte response here
-    res = GetIso15693AnswerFromTag(resp, ISO7816_MAX_FRAME, ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
-    if (res != PM3_SUCCESS || resp_len != 4) {
-        res = PM3_ECARDEXCHANGE;
-        goto out;
-    }
-    // store MAC
-    memcpy(mac, resp, sizeof(mac));
-    print_dbg("Got MAC", mac, sizeof(mac));
-
-    // -----------------------------------------------------------------------------
-    // fifth  send received MAC
-    // A0DA026316140A00000000BD0EA00CA00A8004 311E32E9 81020000
-    hexstr_to_byte_array("A0DA026316140A00000000BD0EA00CA00A8004311E32E981020000", sam_apdu, &sam_len);
-    memcpy(sam_apdu + 19, mac, sizeof(mac));
-
-    switch_clock_to_ticks();
-    if (sam_rxtx(sam_apdu, sam_len, resp, &resp_len) == false) {
-        res = PM3_ECARDEXCHANGE;
-        goto out;
-    }
-    print_dbg("-- 5", resp, resp_len);
-
-    uint8_t tmp_p1[4] = {0};
-    uint8_t tmp_p2[4] = {0};
-
-    // c161c10000a11aa118800e8702 ffffffff88ffffff 0a914eb981020004820236b09000
-
-    memcpy(tmp_p1, resp + 13, sizeof(tmp_p1));
-    memcpy(tmp_p2, resp + 13 + 4, sizeof(tmp_p2));
-    // -----------------------------------------------------------------------------
-    // sixth  send fake epurse update
-    // A0DA02631C140A00000000BD14A012A010800A 88FFFFFFFFFFFFFF9DE1 81020000
-    hexstr_to_byte_array("A0DA02631C140A00000000BD14A012A010800A88FFFFFFFFFFFFFF9DE181020000", sam_apdu, &sam_len);
-
-    memcpy(sam_apdu + 19, tmp_p2, sizeof(tmp_p1));
-    memcpy(sam_apdu + 19 + 4, tmp_p1, sizeof(tmp_p1));
-    AddCrc(sam_apdu + 19, 8);
-
-    if (sam_rxtx(sam_apdu, sam_len, resp, &resp_len) == false) {
-        res = PM3_ECARDEXCHANGE;
-        goto out;
-    }
-    print_dbg("-- 6", resp, resp_len);
-    // c1 61 c1 00 00 a1 10 a1 0e 80 04 0c 06 45 56 81 02 00 04 82 02 01 f4 90 00
-
-    // read block 6
-    switch_clock_to_countsspclk();
-    start_time = GetCountSspClk();
-    iclass_send_as_reader(resp + 11, 4, &start_time, &eof_time, shallow_mod);
-
-    // expect a 10-byte response here
-    res = GetIso15693AnswerFromTag(resp, ISO7816_MAX_FRAME, ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
-    if (res != PM3_SUCCESS || resp_len != 10) {
-        res = PM3_ECARDEXCHANGE;
-        goto out;
-    }
-    print_dbg("Block 6 from Picopass", resp, resp_len);
-
-    // -----------------------------------------------------------------------------
-    // eight  send block 6 config to SAM
-    // A0DA02631C140A00000000BD14A012A010800A 030303030003E0174323 81020000
-    hexstr_to_byte_array("A0DA02631C140A00000000BD14A012A010800A030303030003E017432381020000", sam_apdu, &sam_len);
-    memcpy(sam_apdu + 19, resp, resp_len);
-
-    switch_clock_to_ticks();
-    if (sam_rxtx(sam_apdu, sam_len, resp, &resp_len) == false) {
-        res = PM3_ECARDEXCHANGE;
-        goto out;
-    }
-    print_dbg("-- 7", resp, resp_len);
-
-    // c161c10000a110a10e8004 0606455681020004820201f49000
-
-    // read the credential blocks
-    switch_clock_to_countsspclk();
-    start_time = GetCountSspClk();
-    iclass_send_as_reader(resp + 11, 4, &start_time, &eof_time, shallow_mod);
-
-    // expect a 10-byte response here
-    res = GetIso15693AnswerFromTag(resp, ISO7816_MAX_FRAME, ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
-    if (res != PM3_SUCCESS) {
-        res = PM3_ECARDEXCHANGE;
-        goto out;
-    }
-    print_dbg("Block 6-9 from Picopass", resp, resp_len);
-
-    // -----------------------------------------------------------------------------
-    // nine  send credential blocks to SAM
-    // A0DA026334140A00000000BD2CA02AA0288022 030303030003E017769CB4A198E0DEC82AD4C8211F9968712BE7393CF8E71D7E804C 81020000
-    hexstr_to_byte_array("A0DA026334140A00000000BD2CA02AA0288022030303030003E017769CB4A198E0DEC82AD4C8211F9968712BE7393CF8E71D7E804C81020000", sam_apdu, &sam_len);
-    memcpy(sam_apdu + 19, resp, resp_len);
-
-    switch_clock_to_ticks();
-    if (sam_rxtx(sam_apdu, sam_len, resp, &resp_len) == false) {
-        res = PM3_ECARDEXCHANGE;
-        goto out;
-    }
-    print_dbg("-- 8", resp, resp_len);
-
-
-    // -----------------------------------------------------------------------------
-    // TEN  ask for PACS data
-    // A0 DA 02 63 0C
-    // 44 0A 00 00 00 00
-    // BD 04
-    //    A0 02
-    //       82 00
-
-    // (emulated tag <-> SAM exchange ends here)
-    hexstr_to_byte_array("A0DA02630C440A00000000BD04A0028200", sam_apdu, &sam_len);
-    memcpy(sam_apdu + 19, resp, resp_len);
-
-    if (sam_rxtx(sam_apdu, sam_len, resp, &resp_len) == false) {
-        res = PM3_ECARDEXCHANGE;
-        goto out;
-    }
-
-    print_dbg("-- 9  response", resp, resp_len);
-    if (memcmp(resp, "\xc1\x64\x00\x00\x00\xbd\x17\x8a\x15", 9) == 0) {
-        res = PM3_ENOPACS;
-        goto out;
-    }
-
-    // resp:
-    // c1 64 00 00 00
-    // bd 09
-    //    8a 07
-    //       03 05 06 95 1f 9a 00 <- decoded PACS data
-    // 90 00
-    uint8_t *pacs = BigBuf_calloc(resp[8]);
-    memcpy(pacs, resp + 9, resp[8]);
-
-    print_dbg("-- 10  PACS data", pacs, resp[8]);
-
-    reply_ng(CMD_HF_SAM_PICOPASS, PM3_SUCCESS, pacs, resp[8]);
-    res = PM3_SUCCESS;
+    goto out;
     goto off;
 
-out:
+err:
+    res = PM3_ENOPACS;
     reply_ng(CMD_HF_SAM_PICOPASS, res, NULL, 0);
-
+    goto off;
+out:
+    reply_ng(CMD_HF_SAM_PICOPASS, PM3_SUCCESS, sam_response, sam_response_len);
+    goto off;
 off:
-    switch_off();
+    if (disconnectAfter) {
+        switch_off();
+    }
+    set_tracing(false);
     StopTicks();
     BigBuf_free();
     return res;
 }
-
-// HID SAM <-> MFC
-// HID SAM <-> SEOS

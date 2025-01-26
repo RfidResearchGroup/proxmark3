@@ -42,6 +42,7 @@
 #include "generator.h"
 #include "cmdhf14b.h"
 #include "cmdhw.h"
+#include "util_hidsio.h"
 
 
 #define NUM_CSNS               9
@@ -5403,10 +5404,35 @@ static int CmdHFiClassSAM(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0("k", "keep", "keep the field active after command executed"),
+        arg_lit0("n", "nodetect", "skip selecting the card and sending card details to SAM"),
+        arg_lit0("t",  "tlv",      "decode TLV"),
+        arg_strx0("d", "data",     "<hex>", "DER encoded command to send to SAM"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool verbose = arg_get_lit(ctx, 1);
+
+    bool verbose = false;
+    if (arg_get_lit(ctx, 1)) {
+        verbose = true;
+    }
+    bool disconnectAfter = true;
+    if (arg_get_lit(ctx, 2)) {
+        disconnectAfter = false;
+    }
+    bool skipDetect = false;
+    if (arg_get_lit(ctx, 3)) {
+        skipDetect = true;
+    }
+    bool decodeTLV = false;
+    if (arg_get_lit(ctx, 4)) {
+        decodeTLV = true;
+    }
+
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0};
+    int datalen = 0;
+    CLIGetHexBLessWithReturn(ctx, 5, data, &datalen, 0);
+
     CLIParserFree(ctx);
 
     if (IsHIDSamPresent(verbose) == false) {
@@ -5414,7 +5440,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_SAM_PICOPASS, NULL, 0);
+    SendCommandMIX(CMD_HF_SAM_PICOPASS, disconnectAfter, skipDetect, datalen, data, datalen);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_SAM_PICOPASS, &resp, 4000) == false) {
         PrintAndLogEx(WARNING, "SAM timeout");
@@ -5432,16 +5458,53 @@ static int CmdHFiClassSAM(const char *Cmd) {
             return resp.status;
     }
 
-    // CSN, config, epurse, NR/MAC, AIA
-    // PACS
-    // 03 05
-    //    06 85 80 6d c0
-    // first byte skip
-    // second byte length
-    // third padded
-    // fourth ..
     uint8_t *d = resp.data.asBytes;
-    HIDDumpPACSBits(d + 2, d[1], verbose);
+    // check for standard SamCommandGetContentElement response
+    // bd 09
+    //    8a 07
+    //       03 05 <- tag + length
+    //          06 85 80 6d c0 <- decoded PACS data
+    if (d[0] == 0xbd && d[2] == 0x8a && d[4] == 0x03) {
+        uint8_t pacs_length = d[5];
+        uint8_t *pacs_data = d + 6;
+        int res = HIDDumpPACSBits(pacs_data, pacs_length, verbose);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        // check for standard samCommandGetContentElement2:
+        // bd 1e
+        //    b3 1c
+        //       a0 1a
+        //          80 05
+        //             06 85 80 6d c0
+        //          81 0e
+        //             2b 06 01 04 01 81 e4 38 01 01 02 04 3c ff
+        //          82 01
+        //             07
+    } else if (d[0] == 0xbd && d[2] == 0xb3 && d[4] == 0xa0) {
+        const uint8_t *pacs = d + 6;
+        const uint8_t pacs_length = pacs[1];
+        const uint8_t *pacs_data = pacs + 2;
+        int res = HIDDumpPACSBits(pacs_data, pacs_length, verbose);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+
+        const uint8_t *oid = pacs + 2 + pacs_length;
+        const uint8_t oid_length = oid[1];
+        const uint8_t *oid_data = oid + 2;
+        PrintAndLogEx(SUCCESS, "SIO OID.......: " _GREEN_("%s"), sprint_hex_inrow(oid_data, oid_length));
+
+        const uint8_t *mediaType = oid + 2 + oid_length;
+        const uint8_t mediaType_data = mediaType[2];
+        PrintAndLogEx(SUCCESS, "SIO Media Type: " _GREEN_("%s"), getSioMediaTypeInfo(mediaType_data));
+
+    } else {
+        print_hex(d, resp.length);
+    }
+    if (decodeTLV) {
+        asn1_print(d, d[1] + 2, " ");
+    }
 
     return PM3_SUCCESS;
 }

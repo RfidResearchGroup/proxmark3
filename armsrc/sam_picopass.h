@@ -18,7 +18,8 @@
 
 #include "common.h"
 #include "sam_common.h"
+#include "pm3_cmd.h"
 
-int sam_picopass_get_pacs(void);
+int sam_picopass_get_pacs(PacketCommandNG *c);
 
 #endif
