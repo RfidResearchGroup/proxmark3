@@ -101,6 +101,8 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
             // should consider blocking update(2) commands and simulating answer
             // example command: 87  02  C9  FD  FF  FF  FF  FF  FF  FF  F4  BF  98  E2
 
+            bool is_cmd_update = (nfc_tx_buf[0] & 0x0F) == ICLASS_CMD_UPDATE;
+
             if (g_dbglevel >= DBG_INFO) {
                 DbpString("ISO15 TAG REQUEST: ");
                 Dbhexdump(nfc_tx_len, nfc_tx_buf, false);
@@ -110,10 +112,9 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
             nfc_rx_len = 0;
             while (tries-- > 0) {
                 iclass_send_as_reader(nfc_tx_buf, nfc_tx_len, &start_time, &eof_time, shallow_mod);
+                uint16_t timeout = is_cmd_update ? ICLASS_READER_TIMEOUT_UPDATE : ICLASS_READER_TIMEOUT_ACTALL;
 
-                // should not always wait for ICLASS_READER_TIMEOUT_UPDATE. It is too long
-                // check if command in nfc_tx_buf was iclass update command
-                res = GetIso15693AnswerFromTag(nfc_rx_buf, ISO7816_MAX_FRAME, ICLASS_READER_TIMEOUT_UPDATE, &eof_time, false, true, &nfc_rx_len);
+                res = GetIso15693AnswerFromTag(nfc_rx_buf, ISO7816_MAX_FRAME, timeout, &eof_time, false, true, &nfc_rx_len);
                 if (res == PM3_SUCCESS && nfc_rx_len > 0) {
                     break;
                 }
