@@ -113,81 +113,6 @@ out:
 }
 
 /**
- * @brief Copies the payload from an NFC buffer to a SAM buffer.
- *
- * Wraps received data from NFC into an ASN1 tree, so it can be transmitted to the SAM .
- *
- * @param sam_tx Pointer to the SAM transmit buffer.
- * @param nfc_rx Pointer to the NFC receive buffer.
- * @param nfc_len Length of the data to be copied from the NFC buffer.
- *
- * @return Length of SAM APDU to be sent.
- */
-inline static uint16_t sam_seos_copy_payload_nfc2sam(uint8_t *sam_tx, uint8_t *nfc_rx, uint8_t nfc_len) {
-    // NFC resp:
-    // 6f 0c 84 0a a0 00 00 04 40 00 01 01 00 01 90 00 fb e3
-
-    // SAM req:
-    // bd 1c
-    //    a0 1a
-    //       a0 18
-    //          80 12
-    //             6f 0c 84 0a a0 00 00 04 40 00 01 01 00 01 90 00 fb e3
-    //          81 02
-    //             00 00
-
-    const uint8_t payload[] = {
-        0xbd, 4,
-        0xa0, 2,
-        0xa0, 0
-    };
-
-    const uint8_t tag81[] = {
-        0x00, 0x00
-    };
-
-    memcpy(sam_tx, payload, sizeof(payload));
-
-    sam_append_asn1_node(sam_tx, sam_tx + 4, 0x80, nfc_rx, nfc_len);
-    sam_append_asn1_node(sam_tx, sam_tx + 4, 0x81, tag81, sizeof(tag81));
-
-    return sam_tx[1] + 2; // length of the ASN1 tree
-}
-
-/**
- * @brief Copies the payload from the SAM receive buffer to the NFC transmit buffer.
- *
- * Unpacks data to be transmitted from ASN1 tree in APDU received from SAM.
- *
- * @param nfc_tx_buf Pointer to the buffer where the NFC transmit data will be stored.
- * @param sam_rx_buf Pointer to the buffer containing the data received from the SAM.
- * @return Length of NFC APDU to be sent.
- */
-inline static uint16_t sam_seos_copy_payload_sam2nfc(uint8_t *nfc_tx_buf, uint8_t *sam_rx_buf) {
-    // SAM resp:
-    // c1 61 c1 00 00
-    //  a1 21 <- nfc command
-    //    a1 1f <- nfc send
-    //       80 10 <- data
-    //          00 a4 04 00 0a a0 00 00 04 40 00 01 01 00 01 00
-    //       81 02 <- protocol
-    //          02 02
-    //       82 02 <- timeout
-    //          01 2e
-    //       85 03 <- format
-    //          06 c0 00
-    //  90 00
-
-    // NFC req:
-    // 00 a4 04 00 0a a0 00 00 04 40 00 01 01 00 01 00
-
-    // copy data out of c1->a1>->a1->80 node
-    uint16_t nfc_tx_len = (uint8_t) * (sam_rx_buf + 10);
-    memcpy(nfc_tx_buf, sam_rx_buf + 11, nfc_tx_len);
-    return nfc_tx_len;
-}
-
-/**
  * @brief Sends a request to the SAM and retrieves the response.
  *
  * Unpacks request to the SAM and relays ISO14A traffic to the card.
@@ -247,7 +172,7 @@ static int sam_send_request_iso14a(const uint8_t *const request, const uint8_t r
         // tag <-> SAM exchange starts here
         while (sam_rx_buf[1] == 0x61) {
             switch_clock_to_countsspclk();
-            nfc_tx_len = sam_seos_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf);
+            nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf);
 
             nfc_rx_len = iso14_apdu(
                              nfc_tx_buf,
@@ -259,7 +184,7 @@ static int sam_send_request_iso14a(const uint8_t *const request, const uint8_t r
                          );
 
             switch_clock_to_ticks();
-            sam_tx_len = sam_seos_copy_payload_nfc2sam(sam_tx_buf, nfc_rx_buf, nfc_rx_len - 2);
+            sam_tx_len = sam_copy_payload_nfc2sam(sam_tx_buf, nfc_rx_buf, nfc_rx_len - 2);
 
             sam_send_payload(
                 0x14, 0x0a, 0x14,
