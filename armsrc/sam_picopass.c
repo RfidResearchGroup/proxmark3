@@ -44,7 +44,7 @@
  * @param response_len Pointer to the variable where the length of the retreived data will be stored.
  * @return Status code indicating success or failure of the operation.
  */
-static int sam_send_request_iso15(const uint8_t *const request, const uint8_t request_len, uint8_t *response, uint8_t *response_len, const bool shallow_mod) {
+static int sam_send_request_iso15(const uint8_t *const request, const uint8_t request_len, uint8_t *response, uint8_t *response_len, const bool shallow_mod, const bool break_on_nr_mac, const bool prevent_epurse_update) {
     int res = PM3_SUCCESS;
     if (g_dbglevel >= DBG_DEBUG)
         DbpString("start sam_send_request_iso14a");
@@ -98,39 +98,68 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
 
             nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf);
 
-            // should consider blocking update(2) commands and simulating answer
-            // example command: 87  02  C9  FD  FF  FF  FF  FF  FF  FF  F4  BF  98  E2
-
-            bool is_cmd_update = (nfc_tx_buf[0] & 0x0F) == ICLASS_CMD_UPDATE;
-
-            if (g_dbglevel >= DBG_INFO) {
-                DbpString("ISO15 TAG REQUEST: ");
-                Dbhexdump(nfc_tx_len, nfc_tx_buf, false);
-            }
-
-            int tries = 3;
-            nfc_rx_len = 0;
-            while (tries-- > 0) {
-                iclass_send_as_reader(nfc_tx_buf, nfc_tx_len, &start_time, &eof_time, shallow_mod);
-                uint16_t timeout = is_cmd_update ? ICLASS_READER_TIMEOUT_UPDATE : ICLASS_READER_TIMEOUT_ACTALL;
-
-                res = GetIso15693AnswerFromTag(nfc_rx_buf, ISO7816_MAX_FRAME, timeout, &eof_time, false, true, &nfc_rx_len);
-                if (res == PM3_SUCCESS && nfc_rx_len > 0) {
-                    break;
+            bool is_cmd_check = (nfc_tx_buf[0] & 0x0F) == ICLASS_CMD_CHECK;
+            if(is_cmd_check && break_on_nr_mac){
+                memcpy(response, nfc_tx_buf, nfc_tx_len);
+                *response_len = nfc_tx_len;
+                if (g_dbglevel >= DBG_INFO) {
+                    DbpString("NR-MAC: ");
+                    Dbhexdump((*response_len)-1, response+1, false);
                 }
-
-                start_time = eof_time + ((DELAY_ICLASS_VICC_TO_VCD_READER + DELAY_ISO15693_VCD_TO_VICC_READER + (8 * 8 * 8 * 16)) * 2);
-            }
-
-
-            if (res != PM3_SUCCESS ) {
-                res = PM3_ECARDEXCHANGE;
+                res = PM3_SUCCESS;
                 goto out;
             }
 
-            if (g_dbglevel >= DBG_INFO) {
-                DbpString("ISO15 TAG RESPONSE: ");
-                Dbhexdump(nfc_rx_len, nfc_rx_buf, false);
+            bool is_cmd_update = (nfc_tx_buf[0] & 0x0F) == ICLASS_CMD_UPDATE;
+            if(is_cmd_update && prevent_epurse_update && nfc_tx_buf[0] == 0x87 && nfc_tx_buf[1] == 0x02){
+                // block update(2) command and fake the response to prevent update of epurse
+
+                // NFC TX BUFFERS PREPARED BY SAM LOOKS LIKE:
+                // 87 02 #1(C9 FD FF FF) #2(FF FF FF FF) F4 BF 98 E2
+
+                // NFC RX BUFFERS EXPECTED BY SAM WOULD LOOK LIKE:
+                // #2(FF FF FF FF) #1(C9 FD FF FF) 3A 47
+
+                memcpy(nfc_rx_buf+0, nfc_tx_buf+6, 4);
+                memcpy(nfc_rx_buf+4, nfc_tx_buf+0, 4);
+                AddCrc(nfc_rx_buf, 8);
+                nfc_rx_len = 10;
+
+                if (g_dbglevel >= DBG_INFO) {
+                    DbpString("FAKE EPURSE UPDATE RESPONSE: ");
+                    Dbhexdump(nfc_rx_len, nfc_rx_buf, false);
+                }
+
+            } else {
+                if (g_dbglevel >= DBG_INFO) {
+                    DbpString("ISO15 TAG REQUEST: ");
+                    Dbhexdump(nfc_tx_len, nfc_tx_buf, false);
+                }
+
+                int tries = 3;
+                nfc_rx_len = 0;
+                while (tries-- > 0) {
+                    iclass_send_as_reader(nfc_tx_buf, nfc_tx_len, &start_time, &eof_time, shallow_mod);
+                    uint16_t timeout = is_cmd_update ? ICLASS_READER_TIMEOUT_UPDATE : ICLASS_READER_TIMEOUT_ACTALL;
+
+                    res = GetIso15693AnswerFromTag(nfc_rx_buf, ISO7816_MAX_FRAME, timeout, &eof_time, false, true, &nfc_rx_len);
+                    if (res == PM3_SUCCESS && nfc_rx_len > 0) {
+                        break;
+                    }
+
+                    start_time = eof_time + ((DELAY_ICLASS_VICC_TO_VCD_READER + DELAY_ISO15693_VCD_TO_VICC_READER + (8 * 8 * 8 * 16)) * 2);
+                }
+
+
+                if (res != PM3_SUCCESS ) {
+                    res = PM3_ECARDEXCHANGE;
+                    goto out;
+                }
+
+                if (g_dbglevel >= DBG_INFO) {
+                    DbpString("ISO15 TAG RESPONSE: ");
+                    Dbhexdump(nfc_rx_len, nfc_rx_buf, false);
+                }
             }
 
 
@@ -296,9 +325,11 @@ out:
  * @return Status code indicating success or failure of the operation.
  */
 int sam_picopass_get_pacs(PacketCommandNG *c) {
-    bool disconnectAfter = c->oldarg[0] & 0x01;
-    bool skipDetect = c->oldarg[1] & 0x01;
-    bool shallow_mod = false;
+    const bool disconnectAfter = !!(c->oldarg[0] & BITMASK(0));
+    const bool skipDetect = !!(c->oldarg[0] & BITMASK(1));
+    const bool breakOnNrMac = !!(c->oldarg[0] & BITMASK(2));
+    const bool preventEpurseUpdate = !!(c->oldarg[0] & BITMASK(3));
+    const bool shallow_mod = !!(c->oldarg[0] & BITMASK(4));
 
     uint8_t *cmd = c->data.asBytes;
     uint16_t cmd_len = (uint16_t) c->oldarg[2];
@@ -334,7 +365,7 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
     // step 3: SamCommand RequestPACS, relay NFC communication
     uint8_t sam_response[ISO7816_MAX_FRAME] = { 0x00 };
     uint8_t sam_response_len = 0;
-    res = sam_send_request_iso15(cmd, cmd_len, sam_response, &sam_response_len, shallow_mod);
+    res = sam_send_request_iso15(cmd, cmd_len, sam_response, &sam_response_len, shallow_mod, breakOnNrMac, preventEpurseUpdate);
     if (res != PM3_SUCCESS) {
         goto err;
     }

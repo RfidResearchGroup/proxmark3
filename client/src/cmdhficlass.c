@@ -5407,31 +5407,32 @@ static int CmdHFiClassSAM(const char *Cmd) {
         arg_lit0("k", "keep", "keep the field active after command executed"),
         arg_lit0("n", "nodetect", "skip selecting the card and sending card details to SAM"),
         arg_lit0("t",  "tlv",      "decode TLV"),
+        arg_lit0(NULL, "break-on-nr-mac", "stop tag interaction on nr-mac"),
+        arg_lit0("p", "prevent-epurse-update", "fake epurse update"),
+        arg_lit0(NULL, "shallow", "shallow mod"),
         arg_strx0("d", "data",     "<hex>", "DER encoded command to send to SAM"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool verbose = false;
-    if (arg_get_lit(ctx, 1)) {
-        verbose = true;
-    }
-    bool disconnectAfter = true;
-    if (arg_get_lit(ctx, 2)) {
-        disconnectAfter = false;
-    }
-    bool skipDetect = false;
-    if (arg_get_lit(ctx, 3)) {
-        skipDetect = true;
-    }
-    bool decodeTLV = false;
-    if (arg_get_lit(ctx, 4)) {
-        decodeTLV = true;
-    }
+    bool verbose = arg_get_lit(ctx, 1);
+    bool disconnectAfter = !arg_get_lit(ctx, 2);
+    bool skipDetect = arg_get_lit(ctx, 3);
+    bool decodeTLV = arg_get_lit(ctx, 4);
+    bool breakOnNrMac = arg_get_lit(ctx, 5);
+    bool preventEpurseUpdate = arg_get_lit(ctx, 6);
+    bool shallow_mod = arg_get_lit(ctx, 7);
+
+    uint64_t command_flags = 0;
+    if (disconnectAfter) command_flags |= BITMASK(0);
+    if (skipDetect) command_flags |= BITMASK(1);
+    if (breakOnNrMac) command_flags |= BITMASK(2);
+    if (preventEpurseUpdate) command_flags |= BITMASK(3);
+    if (shallow_mod) command_flags |= BITMASK(4);
 
     uint8_t data[PM3_CMD_DATA_SIZE] = {0};
     int datalen = 0;
-    CLIGetHexBLessWithReturn(ctx, 5, data, &datalen, 0);
+    CLIGetHexBLessWithReturn(ctx, 8, data, &datalen, 0);
 
     CLIParserFree(ctx);
 
@@ -5440,7 +5441,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_SAM_PICOPASS, disconnectAfter, skipDetect, datalen, data, datalen);
+    SendCommandMIX(CMD_HF_SAM_PICOPASS, command_flags, 0, datalen, data, datalen);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_SAM_PICOPASS, &resp, 4000) == false) {
         PrintAndLogEx(WARNING, "SAM timeout");
@@ -5498,7 +5499,12 @@ static int CmdHFiClassSAM(const char *Cmd) {
         const uint8_t *mediaType = oid + 2 + oid_length;
         const uint8_t mediaType_data = mediaType[2];
         PrintAndLogEx(SUCCESS, "SIO Media Type: " _GREEN_("%s"), getSioMediaTypeInfo(mediaType_data));
-
+    } else if(breakOnNrMac && d[0] == 0x05) {
+        PrintAndLogEx(SUCCESS, "Nr-MAC: " _GREEN_("%s"), sprint_hex_inrow(d+1, 8));
+        if(verbose){
+            PrintAndLogEx(INFO, "Replay Nr-MAC to dump SIO:");
+            PrintAndLogEx(SUCCESS, "    hf iclass dump -k \"%s\" --nr", sprint_hex_inrow(d+1, 8));
+        }
     } else {
         print_hex(d, resp.length);
     }
