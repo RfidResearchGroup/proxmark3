@@ -49,7 +49,7 @@
  * @param card_select Pointer to the descriptor of the detected card.
  * @return Status code indicating success or failure of the operation.
  */
-static int sam_set_card_detected(iso14a_card_select_t *card_select) {
+static int sam_set_card_detected_seos(iso14a_card_select_t *card_select) {
     int res = PM3_SUCCESS;
     if (g_dbglevel >= DBG_DEBUG)
         DbpString("start sam_set_card_detected");
@@ -296,7 +296,7 @@ int sam_seos_get_pacs(PacketCommandNG *c) {
         switch_clock_to_ticks();
 
         // step 3: SamCommand CardDetected
-        sam_set_card_detected(&card_a_info);
+        sam_set_card_detected_seos(&card_a_info);
     }
 
     // step 3: SamCommand RequestPACS, relay NFC communication
