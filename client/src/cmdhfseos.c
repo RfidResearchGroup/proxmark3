@@ -441,7 +441,7 @@ static void create_mutual_auth_key(uint8_t *KEYIFD, uint8_t *KEYICC, uint8_t *RN
     // PrintAndLogEx(SUCCESS, "MAC Key.......................... " _YELLOW_("%s"), sprint_hex_inrow(MACKey, 16));
 }
 
-static int seos_challenge_get(uint8_t *RNDICC, uint8_t RNDICC_len) {
+static int seos_challenge_get(uint8_t *RNDICC, uint8_t RNDICC_len, uint8_t keyslot) {
     uint8_t response[PM3_CMD_DATA_SIZE];
     int resplen = 0;
 
@@ -453,9 +453,10 @@ static int seos_challenge_get(uint8_t *RNDICC, uint8_t RNDICC_len) {
 
     char getChallengePre[21];
     strcpy(getChallengePre, "008700");
-    const char keyslot_str[3] = "01";
-    //snprintf(keyslot_str, sizeof(keyslot_str), "%02X", keyslot);
-    strcat(getChallengePre, keyslot_str);
+   
+    // const char keyslot_str[3] = "01";
+    //strcat(getChallengePre, keyslot_str);
+    snprintf(getChallengePre + strlen(getChallengePre), 3, "%02u", keyslot);
     strcat(getChallengePre, "047c02810000");
 
     uint8_t aGET_CHALLENGE[12];
@@ -545,12 +546,19 @@ static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t 
     uint8_t input[response_length - 10];
     // Response is an ASN.1 encoded structure
     // Extract everything before the 8E tag
+
+    int res = PM3_EWRONGANSWER;    
     for (int i = 0; i < response_length; i++) {
         // extract MAC
         if (response[i] == 0x8E) {
             memcpy(input, response, i);
             memcpy(MAC_value, response + (i + 2), MAC_value_len);
+            res = PM3_SUCCESS;
+            break;
         }
+    }
+    if (res != PM3_SUCCESS) {
+        goto out;
     }
 
     // ----------------- MAC Key Generation -----------------
@@ -570,9 +578,10 @@ static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t 
     // PrintAndLogEx(INFO, "MAC Type......................... " _YELLOW_("%s"), algorithm_name1);
     // PrintAndLogEx(INFO, "Supp MAC......................... " _YELLOW_("%s"), sprint_hex_inrow(MAC_value, MAC_value_len));
     // PrintAndLogEx(INFO, "Calc MAC......................... " _YELLOW_("%s"), sprint_hex_inrow(cmac, sizeof(cmac)));
+
+out: 
     PrintAndLogEx(INFO, "--- " _CYAN_("MAC") " ---------------------------");
     PrintAndLogEx(ERR, _RED_("MAC Verification Failed"));
-
     return PM3_ESOFT;
 }
 
@@ -1053,7 +1062,7 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *get_data, int g
 
     resplen -= 2;
 
-    seos_challenge_get(RNDICC, sizeof(RNDICC));
+    seos_challenge_get(RNDICC, sizeof(RNDICC), 0x01);
     select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
     res = select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
 
@@ -1157,7 +1166,7 @@ static int seos_adf_select(char *oid, int oid_len, int key_index) {
 
     resplen -= 2;
 
-    seos_challenge_get(RNDICC, sizeof(RNDICC));
+    seos_challenge_get(RNDICC, sizeof(RNDICC), 0x01);
     select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
     select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
     return PM3_SUCCESS;
@@ -1200,7 +1209,7 @@ static int seos_gdf_select(int key_index) {
     uint8_t MAC_value[8] = {0};                  // MAC Value
     uint8_t RNDICC[8] = {0};
 
-    seos_challenge_get(RNDICC, sizeof(RNDICC));
+    seos_challenge_get(RNDICC, sizeof(RNDICC), 0x09);
     select_df_decode(response, (resplen - 2), &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
     select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
 
@@ -1492,7 +1501,7 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
         arg_lit0("v", "verbose", "verbose (print all key info)"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
