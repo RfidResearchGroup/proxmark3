@@ -49,8 +49,12 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
     if (g_dbglevel >= DBG_DEBUG)
         DbpString("start sam_send_request_iso14a");
 
-    uint8_t buf1[ISO7816_MAX_FRAME] = {0};
-    uint8_t buf2[ISO7816_MAX_FRAME] = {0};
+    uint8_t * buf1 = BigBuf_malloc(ISO7816_MAX_FRAME);
+    uint8_t * buf2 = BigBuf_malloc(ISO7816_MAX_FRAME);
+    if(buf1 == NULL || buf2 == NULL){
+        res = PM3_EMALLOC;
+        goto out;
+    }
 
     uint8_t *sam_tx_buf = buf1;
     uint16_t sam_tx_len;
@@ -235,6 +239,7 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
     goto out;
 
 out:
+    BigBuf_free();
     return res;
 }
 
