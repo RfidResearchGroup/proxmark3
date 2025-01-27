@@ -5436,7 +5436,10 @@ static int CmdHFiClassSAM(const char *Cmd) {
     data[0] = flags;
 
     int cmdlen = 0;
-    CLIGetHexBLessWithReturn(ctx, 8, data+1, &cmdlen, 0);
+    if (CLIParamHexToBuf(arg_get_str(ctx, 8), data+1, PM3_CMD_DATA_SIZE-1, &cmdlen) != PM3_SUCCESS){
+        CLIParserFree(ctx);
+        return PM3_ESOFT;
+    }
 
     CLIParserFree(ctx);
 
