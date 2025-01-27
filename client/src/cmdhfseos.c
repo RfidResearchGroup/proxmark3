@@ -38,6 +38,7 @@
 #include "crypto/libpcrypto.h"  // AES decrypt
 #include "commonutil.h"         // get_sw
 #include "protocols.h"          // ISO7816 APDU return codes
+#include "hidsio.h"
 
 static uint8_t zeros[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
@@ -98,17 +99,6 @@ static const known_algo_t known_algorithm_map[] = {
     {6, "SHA-1"},
     {7, "SHA-256"},
     {9, "AES-128_CBC_MODE"},
-};
-
-static const sioMediaTypeName_t sioMediaTypeMapping[] = {
-    { 0x00, "Unknown"},
-    { 0x01, "DESFire"},
-    { 0x02, "MIFARE"},
-    { 0x03, "iCLASS (PicoPass)"},
-    { 0x04, "ISO14443AL4"},
-    { 0x06, "MIFARE Plus"},
-    { 0x07, "Seos"},
-    { 0xFF, "INVALID VALUE"}
 };
 
 static int create_cmac(uint8_t *key, uint8_t *input, uint8_t *out, int input_len, int encryption_algorithm) {
@@ -1638,31 +1628,13 @@ static int CmdHfSeosList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf seos", "seos -c");
 }
 
-// get a SIO media type based on the UID
-//  uid[8] tag uid
-// returns description of the best match
-static const char *getSioMediaTypeInfo(uint8_t uid) {
-
-    for (int i = 0; i < ARRAYLEN(sioMediaTypeMapping); ++i) {
-        if (uid == sioMediaTypeMapping[i].uid) {
-            return sioMediaTypeMapping[i].desc;
-        }
-    }
-
-    //No match, return default
-    return sioMediaTypeMapping[ARRAYLEN(sioMediaTypeMapping) - 1].desc;
-}
-
-
 static int CmdHfSeosSAM(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf seos sam",
                   "Extract PACS via a HID SAM\n",
                   "hf seos sam\n"
-                  "hd seos sam -d a005a103800104 -> get PACS data\n"
+                  "hf seos sam -d a005a103800104 -> get PACS data\n"
                  );
-
-
 
     void *argtable[] = {
         arg_param_begin,
@@ -1675,26 +1647,23 @@ static int CmdHfSeosSAM(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool verbose = false;
-    if (arg_get_lit(ctx, 1)) {
-        verbose = true;
-    }
-    bool disconnectAfter = true;
-    if (arg_get_lit(ctx, 2)) {
-        disconnectAfter = false;
-    }
-    bool skipDetect = false;
-    if (arg_get_lit(ctx, 3)) {
-        skipDetect = true;
-    }
-    bool decodeTLV = false;
-    if (arg_get_lit(ctx, 4)) {
-        decodeTLV = true;
-    }
+    bool verbose = arg_get_lit(ctx, 1);
+    bool disconnectAfter = !arg_get_lit(ctx, 2);
+    bool skipDetect = arg_get_lit(ctx, 3);
+    bool decodeTLV = arg_get_lit(ctx, 4);
+
+    uint8_t flags = 0;
+    if (disconnectAfter) flags |= BITMASK(0);
+    if (skipDetect) flags |= BITMASK(1);
 
     uint8_t data[PM3_CMD_DATA_SIZE] = {0};
-    int datalen = 0;
-    CLIGetHexBLessWithReturn(ctx, 5, data, &datalen, 0);
+    data[0] = flags;
+
+    int cmdlen = 0;
+    if (CLIParamHexToBuf(arg_get_str(ctx, 5), data+1, PM3_CMD_DATA_SIZE-1, &cmdlen) != PM3_SUCCESS){
+        CLIParserFree(ctx);
+        return PM3_ESOFT;
+    }
 
     CLIParserFree(ctx);
 
@@ -1703,7 +1672,7 @@ static int CmdHfSeosSAM(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_SAM_SEOS, disconnectAfter, skipDetect, datalen, data, datalen);
+    SendCommandNG(CMD_HF_SAM_SEOS, data, cmdlen+1);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_SAM_SEOS, &resp, 4000) == false) {
         PrintAndLogEx(WARNING, "SAM timeout");

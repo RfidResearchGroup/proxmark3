@@ -13,13 +13,14 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-#ifndef __SAM_PICOPASS_H
-#define __SAM_PICOPASS_H
+// HID Global SIO utilities
+//-----------------------------------------------------------------------------
+#ifndef __HIDSIO_H_
+#define __HIDSIO_H_
 
 #include "common.h"
-#include "sam_common.h"
-#include "pm3_cmd.h"
+#include "stdint.h"
 
-int sam_picopass_get_pacs(PacketCommandNG *c);
+const char *getSioMediaTypeInfo(uint8_t uid);
 
 #endif

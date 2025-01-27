@@ -723,6 +723,7 @@ SRCS =  mifare/aiddesfire.c \
 		flash.c \
 		generator.c \
 		graph.c \
+		hidsio.c \
 		jansson_path.c \
 		iso4217.c \
 		iso7816/apduinfo.c \

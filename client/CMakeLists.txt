@@ -413,6 +413,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/fileutils.c
         ${PM3_ROOT}/client/src/flash.c
         ${PM3_ROOT}/client/src/graph.c
+        ${PM3_ROOT}/client/src/hidsio.c
         ${PM3_ROOT}/client/src/iso4217.c
         ${PM3_ROOT}/client/src/jansson_path.c
         ${PM3_ROOT}/client/src/lua_bitlib.c

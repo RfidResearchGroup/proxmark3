@@ -46,4 +46,7 @@ void sam_append_asn1_node(const uint8_t *root, const uint8_t *node, uint8_t type
 
 void sam_send_ack(void);
 
+uint16_t sam_copy_payload_nfc2sam(uint8_t *sam_tx, uint8_t *nfc_rx, uint8_t nfc_len);
+uint16_t sam_copy_payload_sam2nfc(uint8_t *nfc_tx_buf, uint8_t *sam_rx_buf);
+
 #endif
