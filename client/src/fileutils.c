@@ -2385,16 +2385,21 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
             }
         }
 
-        // add null terminator
-        line[keylen] = 0;
+        // The line start with # is comment, skip
+        if (line[0] == '#') {
+            continue;
+        }
+
+        // remove newline/linefeed
+        str_cleanrn(line, strlen(line));
 
         // smaller keys than expected is skipped
         if (strlen(line) < keylen) {
             continue;
         }
 
-        // The line start with # is comment, skip
-        if (line[0] == '#') {
+        // larger keys than expected is skipped
+        if (strlen(line) > keylen) {
             continue;
         }
 
