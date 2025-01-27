@@ -191,13 +191,15 @@ int FillBuffer(uint8_t *data, size_t maxDataLength, size_t *dataLength, ...) {
 }
 
 bool CheckStringIsHEXValue(const char *value) {
-    for (size_t i = 0; i < strlen(value); i++)
-        if (!isxdigit(value[i]))
-            return false;
-
-    if (strlen(value) % 2)
+    if (strlen(value) % 2) {
         return false;
+    }
 
+    for (size_t i = 0; i < strlen(value); i++) {
+        if (!isxdigit(value[i])) {
+            return false;
+        }
+    }
     return true;
 }
 
