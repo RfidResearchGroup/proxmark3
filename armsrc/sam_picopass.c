@@ -325,14 +325,15 @@ out:
  * @return Status code indicating success or failure of the operation.
  */
 int sam_picopass_get_pacs(PacketCommandNG *c) {
-    const bool disconnectAfter = !!(c->oldarg[0] & BITMASK(0));
-    const bool skipDetect = !!(c->oldarg[0] & BITMASK(1));
-    const bool breakOnNrMac = !!(c->oldarg[0] & BITMASK(2));
-    const bool preventEpurseUpdate = !!(c->oldarg[0] & BITMASK(3));
-    const bool shallow_mod = !!(c->oldarg[0] & BITMASK(4));
+    const uint8_t flags = c->data.asBytes[0];
+    const bool disconnectAfter = !!(flags & BITMASK(0));
+    const bool skipDetect = !!(flags & BITMASK(1));
+    const bool breakOnNrMac = !!(flags & BITMASK(2));
+    const bool preventEpurseUpdate = !!(flags & BITMASK(3));
+    const bool shallow_mod = !!(flags & BITMASK(4));
 
-    uint8_t *cmd = c->data.asBytes;
-    uint16_t cmd_len = (uint16_t) c->oldarg[2];
+    uint8_t *cmd = c->data.asBytes + 1;
+    uint16_t cmd_len = c->length - 1;
 
     int res = PM3_EFAILED;
 

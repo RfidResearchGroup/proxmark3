@@ -5423,16 +5423,18 @@ static int CmdHFiClassSAM(const char *Cmd) {
     bool preventEpurseUpdate = arg_get_lit(ctx, 6);
     bool shallow_mod = arg_get_lit(ctx, 7);
 
-    uint64_t command_flags = 0;
-    if (disconnectAfter) command_flags |= BITMASK(0);
-    if (skipDetect) command_flags |= BITMASK(1);
-    if (breakOnNrMac) command_flags |= BITMASK(2);
-    if (preventEpurseUpdate) command_flags |= BITMASK(3);
-    if (shallow_mod) command_flags |= BITMASK(4);
+    uint8_t flags = 0;
+    if (disconnectAfter) flags |= BITMASK(0);
+    if (skipDetect) flags |= BITMASK(1);
+    if (breakOnNrMac) flags |= BITMASK(2);
+    if (preventEpurseUpdate) flags |= BITMASK(3);
+    if (shallow_mod) flags |= BITMASK(4);
 
     uint8_t data[PM3_CMD_DATA_SIZE] = {0};
-    int datalen = 0;
-    CLIGetHexBLessWithReturn(ctx, 8, data, &datalen, 0);
+    data[0] = flags;
+
+    int cmdlen = 0;
+    CLIGetHexBLessWithReturn(ctx, 8, data+1, &cmdlen, 0);
 
     CLIParserFree(ctx);
 
@@ -5441,7 +5443,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_SAM_PICOPASS, command_flags, 0, datalen, data, datalen);
+    SendCommandNG(CMD_HF_SAM_PICOPASS, data, cmdlen+1);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_SAM_PICOPASS, &resp, 4000) == false) {
         PrintAndLogEx(WARNING, "SAM timeout");
