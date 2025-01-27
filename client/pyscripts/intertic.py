@@ -158,7 +158,6 @@ def Describe_Usage_1_2(Usage, ContractMediumEndDate, Certificate):
     print('  left...               :', Usage.nom_bits_left())
     print('  [CER] Usage           : {:04x}'.format(Certificate.nom(16)))
 
-
 def Describe_Usage_2(Usage, ContractMediumEndDate, Certificate):
     EventDateStamp = Usage.nom(10)
     EventTimeStamp = Usage.nom(11)
@@ -179,6 +178,34 @@ def Describe_Usage_2(Usage, ContractMediumEndDate, Certificate):
     print('  unk1...               :', unk1)
     print('  GeoRouteId            : {}'. format(EventGeoRouteId))
     print('  Direction             : {} ({})'. format(EventGeoRoute_Direction, TYPE_EventGeoRoute_Direction.get(EventGeoRoute_Direction, '?')))
+    print('  Passengers(?)         : {}'. format(EventCountPassengers_mb))
+    print('  ValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
+    print('  left...               :', Usage.nom_bits_left())
+    print('  [CER] Usage           : {:04x}'.format(Certificate.nom(16)))
+
+def Describe_Usage_2_1(Usage, ContractMediumEndDate, Certificate):
+    EventDateStamp = Usage.nom(10)
+    EventTimeStamp = Usage.nom(11)
+    unk0 = Usage.nom_bits(8)
+    EventCode_Nature  = Usage.nom(5)
+    EventCode_Type  = Usage.nom(5)
+    unk = Usage.nom_bits(19)
+    EventGeoRouteId = Usage.nom(14)
+    EventGeoRoute_Direction = Usage.nom(2)
+    EventGeoVehicleId = Usage.nom(16)
+    EventCountPassengers_mb = Usage.nom(4)
+    
+    EventValidityTimeFirstStamp = Usage.nom(11)
+
+    print('  EventDateStamp        : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')))
+    print('  EventTimeStamp        : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
+    print('  unk0...               :', unk0)
+    print('  Code/Nature           : 0x{:x} ({})'.format(EventCode_Nature, TYPE_EventCode_Nature.get(EventCode_Nature, '?')))
+    print('  Code/Type             : 0x{:x} ({})'.format(EventCode_Type, TYPE_EventCode_Type.get(EventCode_Type, '?')))
+    print('  unk1...               :', unk)
+    print('  GeoRouteId            : {}'. format(EventGeoRouteId))
+    print('  Direction             : {} ({})'. format(EventGeoRoute_Direction, TYPE_EventGeoRoute_Direction.get(EventGeoRoute_Direction, '?')))
+    print('  GeoVehicleId          : {}'. format(EventGeoVehicleId))
     print('  Passengers(?)         : {}'. format(EventCountPassengers_mb))
     print('  ValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
     print('  left...               :', Usage.nom_bits_left())
@@ -226,6 +253,7 @@ class InterticHelper(NamedTuple):
 
 ISO_Countries = {
     0x250: 'France',
+    0x504: 'Maroc',
 }
 
 FRA_OrganizationalAuthority_Contract_Provider = {
@@ -288,6 +316,11 @@ FRA_OrganizationalAuthority_Contract_Provider = {
     },
 }
 
+MAR_OrganizationalAuthority_Contract_Provider = {
+    0x001: {
+        1: InterticHelper('Casablanca', 'Casa Transports / RATP', Describe_Usage_2_1),
+    },
+}
 
 def main():
 
@@ -408,11 +441,16 @@ def main():
 
         if (CountryCode == 0x250):
             oa = FRA_OrganizationalAuthority_Contract_Provider.get(OrganizationalAuthority)
-            if (oa is not None):
-                s = oa.get(ContractProvider)
-                if (s is not None):
-                    print('      ~ Authority & Provider ~    : {} ({})'.format(s.OrganizationalAuthority, s.ContractProvider))
-                    Describe_Usage = s.UsageDescribeFunction
+        elif (CountryCode == 0x504):
+            oa = MAR_OrganizationalAuthority_Contract_Provider.get(OrganizationalAuthority)
+        else:
+            oa = None
+            
+        if (oa is not None):
+            s = oa.get(ContractProvider)
+            if (s is not None):
+                print('      ~ Authority & Provider ~    : {} ({})'.format(s.OrganizationalAuthority, s.ContractProvider))
+                Describe_Usage = s.UsageDescribeFunction
 
         print('  ContractTariff                  :', ContractTariff)
         print('  ContractMediumEndDate           : {} ({})'.format(ContractMediumEndDate, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate)).strftime('%Y-%m-%d')))
