@@ -1633,7 +1633,7 @@ static int CmdHfSeosSAM(const char *Cmd) {
     CLIParserInit(&ctx, "hf seos sam",
                   "Extract PACS via a HID SAM\n",
                   "hf seos sam\n"
-                  "hd seos sam -d a005a103800104 -> get PACS data\n"
+                  "hf seos sam -d a005a103800104 -> get PACS data\n"
                  );
 
     void *argtable[] = {
