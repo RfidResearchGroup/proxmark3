@@ -5399,6 +5399,8 @@ static int CmdHFiClassSAM(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass sam",
                   "Extract PACS via a HID SAM\n",
                   "hf iclass sam\n"
+                  "hf iclass sam -p -d a005a103800104 -> get PACS data, but ensure that epurse will stay unchanged\n"
+                  "hf iclass sam --break-on-nr-mac -> get Nr-MAC for extracting encrypted SIO\n"
                  );
 
     void *argtable[] = {
