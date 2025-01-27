@@ -2398,8 +2398,18 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
             continue;
         }
 
+        char *pos = strstr(line, "#");
+        if (pos) {
+            // we found a inline comment,  add a null terminator, until we hit hexadecimal char
+            while (isxdigit(pos[0]) == 0) {
+                pos[0] = 0x00;
+                --pos;
+            }
+        }
+
         // larger keys than expected is skipped
         if (strlen(line) > keylen) {
+            PrintAndLogEx(INFO, "larger %zu - %s", strlen(line), line);
             continue;
         }
 
