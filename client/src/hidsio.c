@@ -15,12 +15,37 @@
 //-----------------------------------------------------------------------------
 // HID Global SIO utilities
 //-----------------------------------------------------------------------------
-#ifndef __UTIL_HIDSIO_H_
-#define __UTIL_HIDSIO_H_
+#include "commonutil.h"
+#include "hidsio.h"
 
-#include "common.h"
-#include "stdint.h"
+// structure and database for uid -> tagtype lookups
+typedef struct {
+    uint8_t uid;
+    const char *desc;
+} sioMediaTypeName_t;
 
-const char *getSioMediaTypeInfo(uint8_t uid);
+static const sioMediaTypeName_t sioMediaTypeMapping[] = {
+    { 0x00, "Unknown"},
+    { 0x01, "DESFire"},
+    { 0x02, "MIFARE"},
+    { 0x03, "iCLASS (PicoPass)"},
+    { 0x04, "ISO14443AL4"},
+    { 0x06, "MIFARE Plus"},
+    { 0x07, "Seos"},
+    { 0xFF, "INVALID VALUE"}
+};
 
-#endif
+// get a SIO media type based on the UID
+//  uid[8] tag uid
+// returns description of the best match
+const char *getSioMediaTypeInfo(uint8_t uid) {
+
+    for (int i = 0; i < ARRAYLEN(sioMediaTypeMapping); ++i) {
+        if (uid == sioMediaTypeMapping[i].uid) {
+            return sioMediaTypeMapping[i].desc;
+        }
+    }
+
+    //No match, return default
+    return sioMediaTypeMapping[ARRAYLEN(sioMediaTypeMapping) - 1].desc;
+}

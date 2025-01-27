@@ -38,7 +38,7 @@
 #include "crypto/libpcrypto.h"  // AES decrypt
 #include "commonutil.h"         // get_sw
 #include "protocols.h"          // ISO7816 APDU return codes
-#include "util_hidsio.h"
+#include "hidsio.h"
 
 static uint8_t zeros[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 

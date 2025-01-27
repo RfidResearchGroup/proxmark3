@@ -42,7 +42,7 @@
 #include "generator.h"
 #include "cmdhf14b.h"
 #include "cmdhw.h"
-#include "util_hidsio.h"
+#include "hidsio.h"
 
 
 #define NUM_CSNS               9

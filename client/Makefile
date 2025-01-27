@@ -723,6 +723,7 @@ SRCS =  mifare/aiddesfire.c \
 		flash.c \
 		generator.c \
 		graph.c \
+		hidsio.c \
 		jansson_path.c \
 		iso4217.c \
 		iso7816/apduinfo.c \
@@ -759,7 +760,6 @@ SRCS =  mifare/aiddesfire.c \
 		scripting.c \
 		ui.c \
 		util.c \
-		util_hidsio.c \
 		version_pm3.c \
 		wiegand_formats.c \
 		wiegand_formatutils.c
