@@ -271,11 +271,13 @@ out:
  * @return Status code indicating success or failure of the operation.
  */
 int sam_seos_get_pacs(PacketCommandNG *c) {
-    bool disconnectAfter = c->oldarg[0] & 0x01;
-    bool skipDetect = c->oldarg[1] & 0x01;
+    const uint8_t flags = c->data.asBytes[0];
+    const bool disconnectAfter = !!(flags & BITMASK(0));
+    const bool skipDetect = !!(flags & BITMASK(1));
 
-    uint8_t *cmd = c->data.asBytes;
-    uint16_t cmd_len = (uint16_t) c->oldarg[2];
+    uint8_t *cmd = c->data.asBytes + 1;
+    uint16_t cmd_len = c->length - 1;
+
 
     int res = PM3_EFAILED;
 

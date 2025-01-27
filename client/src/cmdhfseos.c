@@ -1652,9 +1652,15 @@ static int CmdHfSeosSAM(const char *Cmd) {
     bool skipDetect = arg_get_lit(ctx, 3);
     bool decodeTLV = arg_get_lit(ctx, 4);
 
+    uint8_t flags = 0;
+    if (disconnectAfter) flags |= BITMASK(0);
+    if (skipDetect) flags |= BITMASK(1);
+
     uint8_t data[PM3_CMD_DATA_SIZE] = {0};
-    int datalen = 0;
-    CLIGetHexBLessWithReturn(ctx, 5, data, &datalen, 0);
+    data[0] = flags;
+
+    int cmdlen = 0;
+    CLIGetHexBLessWithReturn(ctx, 5, data+1, &cmdlen, 0);
 
     CLIParserFree(ctx);
 
@@ -1663,7 +1669,7 @@ static int CmdHfSeosSAM(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_SAM_SEOS, disconnectAfter, skipDetect, datalen, data, datalen);
+    SendCommandNG(CMD_HF_SAM_SEOS, data, cmdlen+1);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_SAM_SEOS, &resp, 4000) == false) {
         PrintAndLogEx(WARNING, "SAM timeout");
