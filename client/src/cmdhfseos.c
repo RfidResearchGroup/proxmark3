@@ -1636,8 +1636,6 @@ static int CmdHfSeosSAM(const char *Cmd) {
                   "hd seos sam -d a005a103800104 -> get PACS data\n"
                  );
 
-
-
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v", "verbose", "verbose output"),
@@ -1649,22 +1647,10 @@ static int CmdHfSeosSAM(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    bool verbose = false;
-    if (arg_get_lit(ctx, 1)) {
-        verbose = true;
-    }
-    bool disconnectAfter = true;
-    if (arg_get_lit(ctx, 2)) {
-        disconnectAfter = false;
-    }
-    bool skipDetect = false;
-    if (arg_get_lit(ctx, 3)) {
-        skipDetect = true;
-    }
-    bool decodeTLV = false;
-    if (arg_get_lit(ctx, 4)) {
-        decodeTLV = true;
-    }
+    bool verbose = arg_get_lit(ctx, 1);
+    bool disconnectAfter = !arg_get_lit(ctx, 2);
+    bool skipDetect = arg_get_lit(ctx, 3);
+    bool decodeTLV = arg_get_lit(ctx, 4);
 
     uint8_t data[PM3_CMD_DATA_SIZE] = {0};
     int datalen = 0;
