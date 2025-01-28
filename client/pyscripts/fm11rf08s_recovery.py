@@ -76,7 +76,7 @@ for tool, bin in tools.items():
             exit()
 
 
-def recovery(init_check=False, final_check=False, keep=False, debug=False, supply_chain=False, quiet=True, keyset=False):
+def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debug=False, supply_chain=False, quiet=True, keyset=False):
     def show(s='', prompt="[" + color("=", fg="yellow") + "] ", **kwargs):
         if not quiet:
             s = f"{prompt}" + f"\n{prompt}".join(s.split('\n'))
@@ -580,7 +580,7 @@ def recovery(init_check=False, final_check=False, keep=False, debug=False, suppl
         unknown = False
         with (open(keyfile, "wb")) as f:
             for key_type in [0, 1]:
-                for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS):
+                for sec in range(NUM_SECTORS + NUM_EXTRA_SECTORS * (1 - int(no_oob))):
                     k = found_keys[sec][key_type]
                     if k == "":
                         k = "FFFFFFFFFFFF"
@@ -640,6 +640,7 @@ def main():
                                      'to recover all keys from a FM11RF08S card.')
     parser.add_argument('-x', '--init-check', action='store_true', help='Run an initial fchk for default keys')
     parser.add_argument('-y', '--final-check', action='store_true', help='Run a final fchk with the found keys')
+    parser.add_argument('-n', '--no-oob', action='store_true', help='Do not save out of bounds keys')
     parser.add_argument('-k', '--keep', action='store_true', help='Keep generated dictionaries after processing')
     parser.add_argument('-d', '--debug', action='store_true', help='Enable debug mode')
     parser.add_argument('-s', '--supply-chain', action='store_true', help='Enable supply-chain mode. '
@@ -653,6 +654,7 @@ def main():
         init_check=args.init_check,
         final_check=args.final_check,
         keep=args.keep,
+        no_oob=args.no_oob,
         debug=args.debug,
         supply_chain=args.supply_chain,
         quiet=False
