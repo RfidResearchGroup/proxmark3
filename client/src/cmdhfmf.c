@@ -9768,6 +9768,10 @@ static int CmdHF14AMfInfo(const char *Cmd) {
                    && card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
                    && (blockdata[8] >= 0x01 && blockdata[8] <= 0x03) && blockdata[15] == 0x1D) {
             PrintAndLogEx(SUCCESS, "Fudan FM11RF08");
+        } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
+                   && card.sak == 0x08 && memcmp(blockdata + 5, "\x00\x01\x00\x10", 4) == 0
+                   && blockdata[15] == 0x1D) {
+            PrintAndLogEx(SUCCESS, "Fudan FM11RF08-7B");
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k32, sizeof(fkey)) == 0
                    && card.sak == 0x18 && memcmp(blockdata + 5, "\x18\x02\x00\x46\x44\x53\x37\x30\x56\x30\x31", 11) == 0) {
             PrintAndLogEx(SUCCESS, "Fudan FM11RF32");
