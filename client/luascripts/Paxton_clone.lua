@@ -1,8 +1,4 @@
---------------------------------------------------------------------
--- Author - jareckib - 30.01.2025
--- Based on Equipter's tutorial - Downgrade Paxton to EM4102
--- version v 1.17
----------------------------------------------------------------------
+
 local getopt = require('getopt')
 local utils = require('utils')
 local ac = require('ansicolors')
@@ -14,6 +10,50 @@ local log_file_path = dir .. "Paxton_log.txt"
 local nam = ""
 local command = core.console
 
+author = '  Author: jareckib - 30.01.2025'
+tutorial = '  Based on Equipter tutorial - Downgrade Paxton to EM4102'
+version = '  version v1.18'
+desc = [[  
+  The script automates the copying of Paxton fobs read - write. 
+  It also allows manual input of data for blocks 4-7. 
+  The third option is reading data stored in the log file and create new fob. 
+  Additionally, the script calculates the ID for downgrading Paxton to EM4102.
+
+ ]]
+usage = [[
+  script run paxton_clone
+]]
+arguments = [[
+  script run paxton_clone -h    : this help
+]]
+
+local debug = true
+
+local function dbg(args)
+    if not DEBUG then return end
+    if type(args) == 'table' then
+        local i = 1
+        while args[i] do
+            dbg(args[i])
+            i = i+1
+        end
+    else
+        print('###', args)
+    end
+end
+
+local function help()
+    print()
+    print(author)
+	print(tutorial)
+    print(version)
+    print(desc)
+    print(ac.cyan..'  Usage'..ac.reset)
+	print(usage)
+    print(ac.cyan..'  Arguments'..ac.reset)
+	print(arguments)
+end
+	
 local function read_log_file(logfile)
     local file = io.open(logfile, "r")
     if not file then
@@ -257,12 +297,14 @@ local function is_valid_hex(input)
     return #input == 8 and input:match("^[0-9A-Fa-f]+$")
 end
 
-local function main()
+local function main(args)
     while true do
+	    for o, a in getopt.getopt(args, 'h') do
+             if o == 'h' then return help() end
+        end
         command('clear')
         print()
         print(dash)
-        local input_option
         print(ac.green .. '  Select option: ' .. ac.reset)
         print(ac.cyan .. '  1' .. ac.reset .. ' - Read Paxton blocks 4-7 to make a copy')
         print(ac.cyan .. '  2' .. ac.reset .. ' - Manually input data for Paxton blocks 4-7')
@@ -424,4 +466,4 @@ local function main()
 	end
 end
 
-main()
+main(args)
