@@ -29,6 +29,7 @@ Useful docs:
   * [MIFARE Classic Gen1B](#mifare-classic-gen1b)
   * [Mifare Classic Direct Write OTP](#mifare-classic-direct-write-otp)
   * [MIFARE Classic OTP 2.0](#mifare-classic-otp-20)
+  * [MIFARE Classic MF4](#mifare-classic-mf4)
   * [MIFARE Classic DirectWrite aka Gen2 aka CUID](#mifare-classic-directwrite-aka-gen2-aka-cuid)
   * [MIFARE Classic Gen3 aka APDU](#mifare-classic-gen3-aka-apdu)
   * [MIFARE Classic USCUID](#mifare-classic-uscuid)
@@ -642,6 +643,68 @@ hf mf info
 
 * Write: `40(7)`, `43`, `A0xx`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
 
+## MIFARE Classic MF4
+
+^[Top](#top)
+
+Similar to OTP 2.0, but now additional configuration is possible.
+Were manufactured by iKey LLC as a replacement for MF3.
+
+### Characteristics
+
+* Initial UID is 00000000
+* BCC: unknown
+* SAK/ATQA: configurable
+* ATS: configurable
+* PPS: configurable (fake response)
+* All bytes are 00 from factory wherever possible.
+
+### Identify
+
+^[Top](#top)
+
+Only possible before personalization.
+
+```
+hf mf info
+...
+[=] --- Magic Tag Information
+[+] Magic capabilities... Gen 1a
+
+[=] --- PRNG Information
+[+] Prng................. hard
+
+hf mf cgetblk --blk 3
+hf mf rdbl --blk 3
+[ If the ACLs do not match, this is an MF4 ]
+```
+
+### Magic commands
+
+^[Top](#top)
+
+Warning: changing the UID from 00000000 will disable all of these commands permanently.
+
+* Read backdoor: `40(7)`, `43`, `30xx`+crc
+* Write: `40(7)`, `43`, `A0xx`+crc, `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`+crc
+
+### Magic configuration
+
+By accessing the 14th and 15th sector trailers using gen1 mode, it is possible to re-configure the tag.
+
+The layout for a sector is below:
+* block 0: data
+* block 1: data
+* block 2: data
+* block 3[0-5] - key A
+* block 3[6] - configuration byte
+* block 3[7] - ACL byte, configuration/RFU
+* block 3[8] - ACL byte
+* block 3[9] - ACL user byte
+* block 3[10-15] - key B
+
+[ W.I.P - INCOMPLETE; DO NOT MERGE; DO NOT PUBLISH ]
+
 ## MIFARE Classic DirectWrite aka Gen2 aka CUID
 
 ^[Top](#top)
@@ -650,8 +713,8 @@ hf mf info
 
 * Other names:
   * MF-8 (RU)
-  * MF-3 (RU)
-    * What's so special about this chip in particular..?
+  * MF-3 (RU) - not susceptible to "field reset bug", a way to detect [OTP](#mifare-classic-direct-write-otp) chips.
+  * MF-3.2 (RU) - static nonce `01200145`, helps avoid magic detection.
 
 ### Identify
 
