@@ -5,15 +5,14 @@ local getopt = require('getopt')
 local dash = string.rep('--', 32)
 
 author = '    Author: jareckib - created 01.02.2025'
-version = '    version v1.00'
+version = '    version v1.01'
 desc = [[  
     A simple script for searching the password for T5577. The script creates a
     dictionary starting from the entered starting year to the entered ending year.
     There are two search methods - DDMMYYYY or YYYYMMDD. Checking the entire year
-    takes about 1 minutes and 50 seconds. Date from 1900 to 2100. The script may be
-    useful if the password is for example date of birth.
-
- ]]
+    takes about 1 minute and 50 seconds. Date from 1900 to 2100. The script may be
+    useful if the password is, for example, a date of birth.
+]]
 usage = [[
   script run t55_chk_date
 ]]
@@ -21,15 +20,13 @@ arguments = [[
   script run t55_chk_date -h    : this help
 ]]
 
-local debug = true
+local DEBUG = true
 
 local function dbg(args)
     if not DEBUG then return end
     if type(args) == 'table' then
-        local i = 1
-        while args[i] do
-            dbg(args[i])
-            i = i+1
+        for _, v in ipairs(args) do
+            dbg(v)
         end
     else
         print('###', args)
@@ -130,6 +127,19 @@ local function get_valid_ending_year_input(start_year)
     return end_year
 end
 
+local function get_valid_mode_input()
+    local mode
+    while true do
+        io.write('  Choose the searching mode ('..ac.cyan..'1'..ac.reset..' - YYYYMMDD '..ac.cyan..'2'..ac.reset..' - DDMMYYYY): ')
+        mode = io.read()
+        if mode == "1" or mode == "2" then
+            return mode
+        else
+            print(ac.yellow .. '  ERROR: ' .. ac.reset .. 'Invalid choice. Please enter 1 or 2.')
+        end
+    end
+end
+
 local function main(args)
     for o, a in getopt.getopt(args, 'h') do
          if o == 'h' then return help() end
@@ -140,12 +150,8 @@ local function main(args)
     local start_year = get_valid_year_input("  Enter the starting year: " .. ac.yellow)
     io.write(ac.reset..'')
     local end_year = get_valid_ending_year_input(start_year)
-    io.write('  Choose the searching mode ('..ac.cyan..'1'..ac.reset..' - YYYYMMDD '..ac.cyan..'2'..ac.reset..' - DDMMYYYY): ')
-    local mode = io.read()
-    if mode ~= "1" and mode ~= "2" then
-        print(ac.yellow .. '  ERROR: ' .. ac.reset .. 'Invalid choice.')
-        return
-    end
+    local mode = get_valid_mode_input()
+
     if generate_dictionary(start_year, end_year, mode) then
         print(ac.green .. "  File created: " .. dictionary_path .. ac.reset)
         print(ac.cyan .. "  Starting password testing on T5577..." .. ac.reset)
