@@ -284,6 +284,7 @@ FRA_OrganizationalAuthority_Contract_Provider = {
     },
     0x091: {
         1: InterticHelper('Strasbourg', 'CTS', Describe_Usage_4), # More dump needed, not only tram !
+        5: InterticHelper('Strasbourg', 'CTS / new', Describe_Usage_4), # More dump needed, not only tram !
     },
     0x502: {
         83: InterticHelper('Annecy', 'Sibra', Describe_Usage_2),
