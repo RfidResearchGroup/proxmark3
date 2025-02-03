@@ -690,7 +690,9 @@ Warning: changing the UID from 00000000 will disable all of these commands perma
 
 ### Magic configuration
 
-By accessing the 14th and 15th sector trailers using gen1 mode, it is possible to re-configure the tag.
+^[Top](#top)
+
+By accessing trailers of sectors 11-15 using gen1 mode, it is possible to re-configure the tag.
 
 The layout for a sector is below:
 * block 0: data
@@ -698,12 +700,34 @@ The layout for a sector is below:
 * block 2: data
 * block 3[0-5] - key A
 * block 3[6] - configuration byte
-* block 3[7] - ACL byte, configuration/RFU
+* block 3[7] - ACL byte [bits 7-4], configuration[3-0]/RFU
 * block 3[8] - ACL byte
 * block 3[9] - ACL user byte
 * block 3[10-15] - key B
 
-[ W.I.P - INCOMPLETE; DO NOT MERGE; DO NOT PUBLISH ]
+Any data set in one mode will be mirrored to the other, as such be careful when configuring from gen1 mode to avoid unintentionally changing access conditions, keys or configurations.
+
+Here is how the IC can be configured:
+* ATS
+  * Maximum length is 16 bytes inclduing TL
+  * Stored in trailers of sectors 0-10 (bytes 0-10: byte 6 of the matching sector; bytes 11-15: byte 7 lower half of sectors `(byte num.-11) (is lower half? +1 if yes)`)
+  * To avoid issues, please set unused bytes to 00
+  * **Example** - to make the 15th byte `AF` you should set block 31 to `FFFFFFFFFFFF 00 0 A 8000 FFFFFFFFFFFF` and block 35 to `FFFFFFFFFFFF 00 0 F 8000 FFFFFFFFFFFF`
+* ATQA/SAK
+  * If the values are changed from defaults, the custom values will be used during anticollision.
+  * SAK (CL2/final select, default 0x08): sector 11 trailer, byte 6
+  * SAK (7b intermediate, default 0x04): sector 12 trailer, byte 6
+  * ATQA (higher half (transmission), default 0x44): sector 13 trailer, byte 6
+  * ATQA (lower half (transmission), default 0x00): sector 14 trailer, byte 6
+  * **Example** - to make the SAK `28`, you should set block 47 to `FFFFFFFFFFFF 28 0 0 8000 FFFFFFFFFFFF`
+* Anticollision behavior
+  * PPS support: sector 14 trailer, byte 7, bit 2 (from least significant); 0: off, 1: on
+  * RATS support: sector 14 trailer, byte 7, bit 0 (from least significant); 0: off; 1: on
+  * CL2 (7 byte UID) support: sector 15 trailer, byte 7, bit 3 (from least significant); 0: 4 bytes, 1: 7 bytes
+  * **Example** - to enable 7 byte UIDs, you should set block 63 to `FFFFFFFFFFFF 00 0 8 8000 FFFFFFFFFFFF`
+* Locking the IC, i.e. removing magic wakeup
+  * In block 63, set byte 7 bits 2 and 0 to `0b1`, resulting in byte 7 containing at least `05`.
+  * Write your UID.
 
 ## MIFARE Classic DirectWrite aka Gen2 aka CUID
 
