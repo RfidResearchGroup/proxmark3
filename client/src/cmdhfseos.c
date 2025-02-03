@@ -999,7 +999,7 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *get_data, int g
     snprintf(selectedOID, sizeof(selectedOID), "%s", oid);
 
     uint16_t selectedOIDLen = strlen(selectedOID);
-    char selectedOIDLenHex[3];
+    char selectedOIDLenHex[5];
     snprintf(selectedOIDLenHex, sizeof(selectedOIDLenHex), "%02X", (selectedOIDLen) / 2);
 
     char selectedADF[strlen(ADFprefix) + strlen(selectedOIDLenHex) + selectedOIDLen + 1];
@@ -1112,9 +1112,8 @@ static int seos_adf_select(char *oid, int oid_len, int key_index) {
     const char *ADFprefix = "06";
     char selectedOID[100];
     snprintf(selectedOID, sizeof(selectedOID), "%s", oid);
-
     uint16_t selectedOIDLen = strlen(selectedOID);
-    char selectedOIDLenHex[3];
+    char selectedOIDLenHex[5];
     snprintf(selectedOIDLenHex, sizeof(selectedOIDLenHex), "%02X", (selectedOIDLen) / 2);
 
     char selectedADF[strlen(ADFprefix) + strlen(selectedOIDLenHex) + selectedOIDLen + 1];
