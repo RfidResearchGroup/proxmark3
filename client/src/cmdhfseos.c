@@ -999,8 +999,8 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *get_data, int g
     snprintf(selectedOID, sizeof(selectedOID), "%s", oid);
 
     uint16_t selectedOIDLen = strlen(selectedOID);
-    char selectedOIDLenHex[5];
-    snprintf(selectedOIDLenHex, sizeof(selectedOIDLenHex), "%02X", (selectedOIDLen) / 2);
+    char selectedOIDLenHex[3];
+    snprintf(selectedOIDLenHex, sizeof(selectedOIDLenHex), "%02X", (selectedOIDLen >> 1) & 0xFF);
 
     char selectedADF[strlen(ADFprefix) + strlen(selectedOIDLenHex) + selectedOIDLen + 1];
     snprintf(selectedADF, sizeof(selectedADF), "%s%s%s", ADFprefix, selectedOIDLenHex, selectedOID);
@@ -1113,8 +1113,8 @@ static int seos_adf_select(char *oid, int oid_len, int key_index) {
     char selectedOID[100];
     snprintf(selectedOID, sizeof(selectedOID), "%s", oid);
     uint16_t selectedOIDLen = strlen(selectedOID);
-    char selectedOIDLenHex[5];
-    snprintf(selectedOIDLenHex, sizeof(selectedOIDLenHex), "%02X", (selectedOIDLen) / 2);
+    char selectedOIDLenHex[3];
+    snprintf(selectedOIDLenHex, sizeof(selectedOIDLenHex), "%02X", (selectedOIDLen >> 1) & 0xFF);
 
     char selectedADF[strlen(ADFprefix) + strlen(selectedOIDLenHex) + selectedOIDLen + 1];
     snprintf(selectedADF, sizeof(selectedADF), "%s%s%s", ADFprefix, selectedOIDLenHex, selectedOID);
