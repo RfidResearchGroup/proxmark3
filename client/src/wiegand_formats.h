@@ -36,6 +36,10 @@ typedef struct {
     bool hasIssueLevel;
     bool hasOEMCode;
     bool hasParity;
+    uint32_t MaxFC; // max Facility Code
+    uint64_t MaxCN; // max CardNumber
+    uint32_t MaxIL; // max IssueLevel
+    uint32_t MaxOEM;// max OEM
 } cardformatdescriptor_t;
 
 // Structure for defined Wiegand card formats available for packing/unpacking
