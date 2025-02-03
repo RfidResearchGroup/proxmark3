@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `doc/magic_cards_notes.md` - now contains documentation for iKey LLC's MF4 tag (@team-orangeBlue)
 - Changed `hf mf cload` - now accepts MFC Ev1 sized dumps (@iceman1001)
 - Changed `hf mfu info` - now properly identify ULEv1 AES 50pF (@iceman1001)
 - Changed `hf mf info` - now differentiates between full USCUID and cut down ZUID chips (@nvx)
