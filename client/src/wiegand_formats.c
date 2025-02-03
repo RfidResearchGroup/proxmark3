@@ -19,13 +19,12 @@
 #include <stdlib.h>
 #include "commonutil.h"
 
+static bool validate_card_limit(int format_idx, wiegand_card_t *card);
 
-static bool Pack_Defcon32(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_Defcon32(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
-    if (card->FacilityCode > 0x00FFFF) return false; // Can't encode FC.
-    if (card->CardNumber > 0x0fffff) return false; // Can't encode CN.
-    if (card->IssueLevel > 0x00000F) return false; // Can't encode Issue
-    if (card->OEM > 0) return false; // Not used in this format
+
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 42;
     /*
@@ -83,13 +82,10 @@ static bool Unpack_Defcon32(wiegand_message_t *packed, wiegand_card_t *card) {
 }
 
 
-static bool Pack_H10301(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_H10301(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0xFF) return false; // Can't encode FC.
-    if (card->CardNumber > 0xFFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 26; // Set number of bits
     packed->Bot |= (card->CardNumber & 0xFFFF) << 1;
@@ -113,14 +109,11 @@ static bool Unpack_H10301(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_ind26(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_ind26(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
 
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0xFFF) return false; // 12 bits
-    if (card->CardNumber > 0xFFF) return false; // 12 bits
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false;  // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 26; // Set number of bits
 
@@ -153,13 +146,10 @@ static bool Unpack_ind26(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_Tecom27(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_Tecom27(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0x7FF) return false; // Can't encode FC.
-    if (card->CardNumber > 0xFFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 27;
     set_nonlinear_field(packed, card->FacilityCode, 11, (uint8_t[]) {15, 19, 24, 23, 22, 18, 6, 10, 14, 3, 2});
@@ -179,14 +169,11 @@ static bool Unpack_Tecom27(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_ind27(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_ind27(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
 
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0x1FFF) return false; // 13 bits
-    if (card->CardNumber > 0x3FFF) return false; // 14 bits
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // 4 bit
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 27; // Set number of bits
 
@@ -208,13 +195,10 @@ static bool Unpack_ind27(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_indasc27(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_indasc27(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0x1FFF) return false; // 13 bits
-    if (card->CardNumber > 0x3FFF) return false; // 14 bits
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 27;
     set_nonlinear_field(packed, card->FacilityCode, 13, (uint8_t[]) {9, 4, 6, 5, 0, 7, 19, 8, 10, 16, 24, 12, 22});
@@ -234,13 +218,10 @@ static bool Unpack_indasc27(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_2804W(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_2804W(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0x0FF) return false; // Can't encode FC.
-    if (card->CardNumber > 0x7FFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 28;
     set_linear_field(packed, card->FacilityCode, 4, 8);
@@ -273,14 +254,11 @@ static bool Unpack_2804W(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_ind29(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_ind29(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
 
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0x1FFF) return false; // 13 bits
-    if (card->CardNumber > 0xFFFF) return false; // 16 bits
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // 4 bit
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 29; // Set number of bits
 
@@ -302,13 +280,10 @@ static bool Unpack_ind29(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_ATSW30(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_ATSW30(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0xFFF) return false; // Can't encode FC.
-    if (card->CardNumber > 0xFFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 30;
     set_linear_field(packed, card->FacilityCode, 1, 12);
@@ -337,13 +312,10 @@ static bool Unpack_ATSW30(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_ADT31(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_ADT31(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0x0F) return false; // Can't encode FC.
-    if (card->CardNumber > 0x7FFFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 31;
     set_linear_field(packed, card->FacilityCode, 1, 4);
@@ -363,14 +335,11 @@ static bool Unpack_ADT31(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_hcp32(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_hcp32(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
 
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0) return false; // Not used
-    if (card->CardNumber > 0x3FFF) return false; // 24 bits
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 32; // Set number of bits
 
@@ -390,14 +359,11 @@ static bool Unpack_hcp32(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_hpp32(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_hpp32(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
 
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0xFFF) return false; // 12 bits
-    if (card->CardNumber > 0x1FFFFFFF) return false; // 29 bits
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 32; // Set number of bits
 
@@ -419,14 +385,11 @@ static bool Unpack_hpp32(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_wie32(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_wie32(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
 
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0xFFF) return false; // 12 bits
-    if (card->CardNumber > 0xFFFF) return false; // 16 bits
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 32; // Set number of bits
 
@@ -448,13 +411,10 @@ static bool Unpack_wie32(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_Kastle(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_Kastle(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0x00FF) return false; // Can't encode FC.
-    if (card->CardNumber > 0x0000FFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0x001F) return false; // IL is only 5 bits.
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 32; // Set number of bits
     set_bit_by_position(packed, 1, 1); // Always 1
@@ -483,13 +443,10 @@ static bool Unpack_Kastle(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_Kantech(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_Kantech(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0xFF) return false; // Can't encode FC.
-    if (card->CardNumber > 0xFFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 32;
     set_linear_field(packed, card->FacilityCode, 7, 8);
@@ -508,13 +465,10 @@ static bool Unpack_Kantech(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_D10202(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_D10202(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0x007F) return false; // Can't encode FC.
-    if (card->CardNumber > 0x00FFFFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 33; // Set number of bits
     set_linear_field(packed, card->FacilityCode, 1, 7);
@@ -539,13 +493,10 @@ static bool Unpack_D10202(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_H10306(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_H10306(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0xFFFF) return false; // Can't encode FC.
-    if (card->CardNumber > 0xFFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 34; // Set number of bits
     packed->Bot |= (card->CardNumber & 0xFFFF) << 1;
@@ -573,13 +524,10 @@ static bool Unpack_H10306(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_N10002(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_N10002(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0xFFFF) return false; // Can't encode FC.
-    if (card->CardNumber > 0xFFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 34; // Set number of bits
     set_linear_field(packed, card->FacilityCode, 1, 16);
@@ -612,13 +560,10 @@ static bool Unpack_N10002(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_C1k35s(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_C1k35s(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0xFFF) return false; // Can't encode FC.
-    if (card->CardNumber > 0xFFFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 35; // Set number of bits
     packed->Bot |= (card->CardNumber & 0x000FFFFF) << 1;
@@ -646,13 +591,10 @@ static bool Unpack_C1k35s(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_H10320(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_H10320(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0) return false; // Can't encode FC. (none in this format)
-    if (card->CardNumber > 99999999) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 37; // Set number of bits
 
@@ -707,13 +649,10 @@ static bool Unpack_H10320(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_S12906(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_S12906(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0xFF) return false; // Can't encode FC.
-    if (card->IssueLevel > 0x03) return false; // Can't encode IL.
-    if (card->CardNumber > 0x00FFFFFF) return false; // Can't encode CN.
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 36; // Set number of bits
     set_linear_field(packed, card->FacilityCode, 1, 8);
@@ -740,13 +679,10 @@ static bool Unpack_S12906(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_Sie36(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_Sie36(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0x0003FFFF) return false; // Can't encode FC.
-    if (card->CardNumber > 0x0000FFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 36; // Set number of bits
     set_linear_field(packed, card->FacilityCode, 1, 18);
@@ -775,13 +711,10 @@ static bool Unpack_Sie36(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_C15001(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_C15001(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0x000000FF) return false; // Can't encode FC.
-    if (card->CardNumber > 0x0000FFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0x000003FF) return false; // Can't encode OEM.
+    if (!validate_card_limit(format_idx, card)) return false;
 
     if (card->OEM == 0)
         card->OEM = 900;
@@ -813,13 +746,10 @@ static bool Unpack_C15001(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_H10302(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_H10302(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0) return false; // Can't encode FC. (none in this format)
-    if (card->CardNumber > 0x00000007FFFFFFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 37; // Set number of bits
     set_linear_field(packed, card->CardNumber, 1, 35);
@@ -842,13 +772,10 @@ static bool Unpack_H10302(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_P10004(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_P10004(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0x00001FFF) return false; // Can't encode FC.
-    if (card->CardNumber > 0x0003FFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 37; // Set number of bits
 
@@ -871,13 +798,10 @@ static bool Unpack_P10004(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_H10304(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_H10304(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0x0000FFFF) return false; // Can't encode FC.
-    if (card->CardNumber > 0x0007FFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 37; // Set number of bits
 
@@ -904,13 +828,10 @@ static bool Unpack_H10304(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_HGeneric37(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_HGeneric37(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0) return false; // Not used in this format
-    if (card->CardNumber > 0x0007FFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 37; // Set number of bits
 
@@ -956,13 +877,10 @@ static bool Unpack_HGeneric37(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_MDI37(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_MDI37(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0x0000F) return false; // Can't encode FC.
-    if (card->CardNumber > 0x1FFFFFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 37; // Set number of bits
 
@@ -991,14 +909,11 @@ static bool Unpack_MDI37(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_P10001(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_P10001(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
 
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0xFFF) return false; // Can't encode FC.
-    if (card->CardNumber > 0xFFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 40; // Set number of bits
     set_linear_field(packed, 0xF, 0, 4);
@@ -1032,14 +947,11 @@ static bool Unpack_P10001(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_C1k48s(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_C1k48s(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
 
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0x003FFFFF) return false; // Can't encode FC.
-    if (card->CardNumber > 0x007FFFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 48; // Set number of bits
     packed->Bot |= (card->CardNumber & 0x007FFFFF) << 1;
@@ -1069,14 +981,11 @@ static bool Unpack_C1k48s(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_CasiRusco40(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_CasiRusco40(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
 
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0) return false; // Can't encode FC.
-    if (card->CardNumber > 0xFFFFFFFFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 40; // Set number of bits
     set_linear_field(packed, card->CardNumber, 1, 38);
@@ -1095,14 +1004,11 @@ static bool Unpack_CasiRusco40(wiegand_message_t *packed, wiegand_card_t *card) 
     return true;
 }
 
-static bool Pack_Optus(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_Optus(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
 
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0x3FF) return false; // Can't encode FC.
-    if (card->CardNumber > 0xFFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 34; // Set number of bits
     set_linear_field(packed, card->CardNumber, 1, 16);
@@ -1123,14 +1029,11 @@ static bool Unpack_Optus(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_Smartpass(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_Smartpass(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
 
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0x3FF) return false; // Can't encode FC.
-    if (card->CardNumber > 0xFFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0x7) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 34; // Set number of bits
 
@@ -1153,14 +1056,11 @@ static bool Unpack_Smartpass(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_bqt34(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_bqt34(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
 
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0xFF) return false; // Can't encode FC.
-    if (card->CardNumber > 0xFFFFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 34; // Set number of bits
 
@@ -1193,14 +1093,11 @@ static bool Unpack_bqt34(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_bqt38(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_bqt38(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
 
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0xFFF) return false; // 12 bits
-    if (card->CardNumber > 0x3FFFF) return false; // 19 bits
-    if (card->IssueLevel > 0x7) return false; // 4 bit
-    if (card->OEM > 0) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 38; // Set number of bits
 
@@ -1235,14 +1132,11 @@ static bool Unpack_bqt38(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_iscs38(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_iscs38(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
 
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0x3FF) return false; // 12 bits
-    if (card->CardNumber > 0xFFFFFF) return false; // 19 bits
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0x7) return false; // 4 bit
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 38; // Set number of bits
 
@@ -1277,14 +1171,11 @@ static bool Unpack_iscs38(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-static bool Pack_pw39(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_pw39(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
 
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0xFFFF) return false; // 12 bits
-    if (card->CardNumber > 0xFFFFF) return false; // 19 bits
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0) return false; // 4 bit
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 39; // Set number of bits
 
@@ -1318,14 +1209,11 @@ static bool Unpack_pw39(wiegand_message_t *packed, wiegand_card_t *card) {
 }
 
 
-static bool Pack_bc40(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_bc40(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
 
     memset(packed, 0, sizeof(wiegand_message_t));
 
-    if (card->FacilityCode > 0xFFF) return false; // Can't encode FC.
-    if (card->CardNumber > 0xFFFFF) return false; // Can't encode CN.
-    if (card->IssueLevel > 0) return false; // Not used in this format
-    if (card->OEM > 0x7F) return false; // Not used in this format
+    if (!validate_card_limit(format_idx, card)) return false;
 
     packed->Length = 40; // Set number of bits
 
@@ -1372,12 +1260,11 @@ static bool step_parity_check(wiegand_message_t *packed, int start, int length, 
     return parity;
 }
 
-static bool Pack_Avig56(wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+static bool Pack_Avig56(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
     packed->Length = 56;
 
-    if (card->FacilityCode > 0xFFFFF) return false; // Can't encode FC.
-    if (card->CardNumber > 0x3FFFFFFFF) return false; // Can't encode CN.
+    if (!validate_card_limit(format_idx, card)) return false;
 
     set_linear_field(packed, card->FacilityCode, 1, 20);
     set_linear_field(packed, card->CardNumber, 21, 34);
@@ -1594,13 +1481,23 @@ int HIDFindCardFormat(const char *format) {
     return -1;
 }
 
+// validate if the card's FC, CN, IL, OEM are within the limit of its format
+// return true if the card is valid
+static bool validate_card_limit(int format_idx, wiegand_card_t *card) {
+    cardformatdescriptor_t card_descriptor = FormatTable[format_idx].Fields;
+    return !((card->FacilityCode > card_descriptor.MaxFC) ||
+             (card->CardNumber > card_descriptor.MaxCN)||
+             (card->IssueLevel > card_descriptor.MaxIL) ||
+             (card->OEM > card_descriptor.MaxOEM));
+}
+
 bool HIDPack(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
     if ((format_idx < 0) || (format_idx > ARRAYLEN(FormatTable) - 2))
         return false;
 
-    return FormatTable[format_idx].Pack(card, packed, preamble);
+    return FormatTable[format_idx].Pack(format_idx, card, packed, preamble);
 }
 
 void HIDPackTryAll(wiegand_card_t *card, bool preamble) {
@@ -1613,7 +1510,7 @@ void HIDPackTryAll(wiegand_card_t *card, bool preamble) {
     int i = 0;
     while (FormatTable[i].Name) {
         memset(&packed, 0, sizeof(wiegand_message_t));
-        bool res = FormatTable[i].Pack(card, &packed, preamble);
+        bool res = FormatTable[i].Pack(i, card, &packed, preamble);
         if (res) {
             cardformat_t fmt = HIDGetCardFormat(i);
             print_desc_wiegand(&fmt, &packed);
