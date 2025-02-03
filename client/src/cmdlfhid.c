@@ -544,6 +544,7 @@ static int CmdHIDBrute(const char *Cmd) {
     }
 
     wiegand_card_t card_hi, card_low;
+    cardformatlimit_t limit = get_card_format_limit(format_idx);
     memset(&card_hi, 0, sizeof(wiegand_card_t));
 
     char field[3] = {0};
@@ -623,13 +624,13 @@ static int CmdHIDBrute(const char *Cmd) {
                 return PM3_ESOFT;
             }
             if (strcmp(field, "fc") == 0) {
-                if (card_hi.FacilityCode < 0xFF) {
+                if (card_hi.FacilityCode < limit.FacilityCode) {
                     card_hi.FacilityCode++;
                 } else {
                     fin_hi = true;
                 }
             } else if (strcmp(field, "cn") == 0) {
-                if (card_hi.CardNumber < 0xFFFF) {
+                if (card_hi.CardNumber < limit.CardNumber) {
                     card_hi.CardNumber++;
                 } else {
                     fin_hi = true;
