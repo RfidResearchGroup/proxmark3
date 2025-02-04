@@ -45,7 +45,7 @@ typedef struct {
 // Structure for defined Wiegand card formats available for packing/unpacking
 typedef struct {
     const char *Name;
-    bool (*Pack)(wiegand_card_t *card, wiegand_message_t *packed, bool preamble);
+    bool (*Pack)(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble);
     bool (*Unpack)(wiegand_message_t *packed, wiegand_card_t *card);
     const char *Descrp;
     cardformatdescriptor_t Fields;
