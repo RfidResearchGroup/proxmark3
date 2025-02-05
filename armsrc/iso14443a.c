@@ -4055,15 +4055,20 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data,
             dynamic_response_info.modulation_n = 0;
 
             // Check for ISO 14443A-4 compliant commands, look at left nibble
+            uint8_t offset = 0;
             switch (receivedCmd[0]) {
-                case 0x0B:
-                case 0x0A: { // IBlock (command CID)
+                case 0x0B: // IBlock with CID
+                case 0x0A:
+                    offset = 1;
+                case 0x02: // IBlock without CID
+                case 0x03: {
                     dynamic_response_info.response[0] = receivedCmd[0];
                     dynamic_response_info.response[1] = 0x00;
 
-                    switch (receivedCmd[3]) { // APDU Class Byte
-                        // receivedCmd in this case is expecting to structured with a CID, then the APDU command for SelectFile
-                        // | IBlock (CID) | CID | APDU Command | CRC |
+                    switch (receivedCmd[2+offset]) { // APDU Class Byte
+                        // receivedCmd in this case is expecting to structured with possibly a CID, then the APDU command for SelectFile
+                        //    | IBlock (CID)   | CID | APDU Command | CRC |
+                        // or | IBlock (noCID) | APDU Command | CRC |
 
                         case 0xA4: {  // SELECT FILE
                             // Select File AID uses the following format for GlobalPlatform
@@ -4072,8 +4077,8 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data,
                             // xx in this case is len of the AID value in hex
 
                             // aid len is found as a hex value in receivedCmd[6] (Index Starts at 0)
-                            int aid_len = receivedCmd[6];
-                            uint8_t *received_aid = &receivedCmd[7];
+                            int aid_len = receivedCmd[5+offset];
+                            uint8_t *received_aid = &receivedCmd[6+offset];
 
                             // aid enumeration flag
                             if (enumerate == true) {
@@ -4083,29 +4088,29 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data,
 
                             if (memcmp(aidFilter, received_aid, aid_len) == 0) { // Evaluate the AID sent by the Reader to the AID supplied
                                 // AID Response will be parsed here
-                                memcpy(dynamic_response_info.response + 2, aidResponse, respondLen + 2);
+                                memcpy(dynamic_response_info.response + 1 + offset, aidResponse, respondLen + 1 + offset);
                                 dynamic_response_info.response_n = respondLen + 2;
                             } else { // Any other SELECT FILE command will return with a Not Found
-                                dynamic_response_info.response[2] = 0x6A;
-                                dynamic_response_info.response[3] = 0x82;
-                                dynamic_response_info.response_n = 4;
+                                dynamic_response_info.response[1 + offset] = 0x6A;
+                                dynamic_response_info.response[2 + offset] = 0x82;
+                                dynamic_response_info.response_n = 3 + offset;
                             }
                         }
                         break;
 
                         case 0xDA: { // PUT DATA
                             // Just send them a 90 00 response
-                            dynamic_response_info.response[2] = 0x90;
-                            dynamic_response_info.response[3] = 0x00;
-                            dynamic_response_info.response_n = 4;
+                            dynamic_response_info.response[1 + offset] = 0x90;
+                            dynamic_response_info.response[2 + offset] = 0x00;
+                            dynamic_response_info.response_n = 3 + offset;
                         }
                         break;
 
                         case 0xCA: { // GET DATA
                             if (sentCount == 0) {
                                 // APDU Command will just be parsed here
-                                memcpy(dynamic_response_info.response + 2, apduCommand, apduLen + 2);
-                                dynamic_response_info.response_n = respondLen + 2;
+                                memcpy(dynamic_response_info.response + 1 + offset, apduCommand, apduLen + 2);
+                                dynamic_response_info.response_n = respondLen + 1 + offset;
                             } else {
                                 finished = true;
                                 break;
@@ -4116,18 +4121,18 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data,
                         default : {
                             // Any other non-listed command
                             // Respond Not Found
-                            dynamic_response_info.response[2] = 0x6A;
-                            dynamic_response_info.response[3] = 0x82;
-                            dynamic_response_info.response_n = 4;
+                            dynamic_response_info.response[1 + offset] = 0x6A;
+                            dynamic_response_info.response[2 + offset] = 0x82;
+                            dynamic_response_info.response_n = 3 + offset;
                         }
                     }
                     break;
                 }
                 break;
 
-                case 0xCA:
-                case 0xC2: { // Readers sends deselect command
-                    dynamic_response_info.response[0] = 0xCA;
+                case 0xCA:   // S-Block Deselect with CID
+                case 0xC2: { // S-Block Deselect without CID
+                    dynamic_response_info.response[0] = receivedCmd[0];
                     dynamic_response_info.response[1] = 0x00;
                     dynamic_response_info.response_n = 2;
                     finished = true;
@@ -4149,7 +4154,9 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data,
             if (dynamic_response_info.response_n > 0) {
 
                 // Copy the CID from the reader query
-                dynamic_response_info.response[1] = receivedCmd[1];
+                if (offset > 0) {
+                    dynamic_response_info.response[1] = receivedCmd[1];
+                }
 
                 // Add CRC bytes, always used in ISO 14443A-4 compliant cards
                 AddCrc14A(dynamic_response_info.response, dynamic_response_info.response_n);
