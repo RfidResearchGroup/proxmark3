@@ -4009,6 +4009,7 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data,
 
     // main loop
     bool finished = false;
+    bool got_rats = false;
     while (finished == false) {
         // BUTTON_PRESS check done in GetIso14443aCommandFromReader
         WDT_HIT();
@@ -4046,9 +4047,12 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data,
         } else if (receivedCmd[0] == ISO14443A_CMD_HALT && len == 4) {    // Received a HALT
             LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
             p_response = NULL;
-            finished = true;
+            if (got_rats) {
+                finished = true;
+            }
         } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {    // Received a RATS request
             p_response = &responses[RESP_INDEX_RATS];
+            got_rats = true;
         } else {
             // clear old dynamic responses
             dynamic_response_info.response_n = 0;
