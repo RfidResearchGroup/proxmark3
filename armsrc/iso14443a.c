@@ -1185,7 +1185,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
             rATQA[1] = 0x03;
             sak = 0x20;
             memcpy(rRATS, "\x06\x75\x77\x81\x02\x80\x00\x00", 8);
-            rRATS_len = 8;
+            rRATS_len = 8; // including CRC
             break;
         }
         case 4: { // ISO/IEC 14443-4 - javacard (JCOP)
@@ -1254,8 +1254,8 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
         }
         case 11: { // ISO/IEC 14443-4 - javacard (JCOP) / EMV
 
-            memcpy(rRATS, "\x13\x78\x80\x72\x02\x80\x31\x80\x66\xb1\x84\x0c\x01\x6e\x01\x83\x00\x90\x00", 19);
-            rRATS_len = 19;
+            memcpy(rRATS, "\x13\x78\x80\x72\x02\x80\x31\x80\x66\xb1\x84\x0c\x01\x6e\x01\x83\x00\x90\x00\x00\x00", 21);
+            rRATS_len = 21; // including CRC
             rATQA[0] = 0x04;
             sak = 0x20;
             break;
