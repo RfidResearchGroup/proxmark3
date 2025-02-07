@@ -188,7 +188,6 @@ work:
 	$(Q)$(RM) $@ $*.drc $*.rbt
 	$(info [=] BITGEN $@)
 	$(Q)$(XILINX_TOOLS_PREFIX)bitgen $(VERBOSITY) -w $* $@
-	#$(shell printf '\xff%.0s' {1..22} | dd of=fpga_pm3_hf.bit bs=1 seek=48 conv=notrunc)
 	echo "FFFFFFFFFFFFFFFFFFFFFF" | dd of=fpga_pm3_hf.bit bs=1 seek=48 conv=notrunc
 	$(Q)$(CP) $@ ..
 
