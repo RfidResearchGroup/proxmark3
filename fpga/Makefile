@@ -44,6 +44,9 @@ XST_OPTS_AREA += -opt_level 2
 XST_OPTS_AREA += -fsm_style bram
 XST_OPTS_AREA += -fsm_encoding compact
 
+# par specific option (set determistic seed)
+PAR_OPTIONS = -t 1
+
 # Types of selective module compilation:
 # WITH_LF  Enables selection of LF modules (and disables all HF)
 
@@ -179,12 +182,14 @@ work:
 %.ncd: %_map.ncd
 	$(Q)$(RM) $@
 	$(info [-] PAR $@)
-	$(Q)$(XILINX_TOOLS_PREFIX)par $(VERBOSITY) -w $< $@
+	$(Q)$(XILINX_TOOLS_PREFIX)par $(PAR_OPTIONS) $(VERBOSITY) -w $< $@
 
 %.bit: %.ncd
 	$(Q)$(RM) $@ $*.drc $*.rbt
 	$(info [=] BITGEN $@)
 	$(Q)$(XILINX_TOOLS_PREFIX)bitgen $(VERBOSITY) -w $* $@
+	#$(shell printf '\xff%.0s' {1..22} | dd of=fpga_pm3_hf.bit bs=1 seek=48 conv=notrunc)
+	echo "FFFFFFFFFFFFFFFFFFFFFF" | dd of=fpga_pm3_hf.bit bs=1 seek=48 conv=notrunc
 	$(Q)$(CP) $@ ..
 
 # Build all targets
