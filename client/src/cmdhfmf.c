@@ -9818,7 +9818,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             }
 
         if (e_sector[1].foundKey[MF_KEY_A] && (e_sector[1].Key[MF_KEY_A] == 0x2A2C13CC242A)) {
-            PrintAndLogEx(SUCCESS, "Dorma Kaba SAFLOK detected");
+            PrintAndLogEx(SUCCESS, "dormakaba Saflok detected");
         }
 
     } else {
