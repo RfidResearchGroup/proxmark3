@@ -18,6 +18,13 @@
 
 #include "common.h"
 
+
+typedef enum{
+    UNDEFINED,
+    FALLING,
+    RISING 
+} EdgeType;
+
 size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol);
 bool IsBlock0PCF7931(uint8_t *block);
 bool IsBlock1PCF7931(const uint8_t *block);

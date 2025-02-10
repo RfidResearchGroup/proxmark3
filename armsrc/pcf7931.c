@@ -37,84 +37,147 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
     uint8_t *dest = BigBuf_get_addr();
 
     int g_GraphTraceLen = BigBuf_max_traceLen();
+    // limit g_GraphTraceLen to a little more than 2 data frames. 
+    // To make sure a complete dataframe is in the dataset.
     if (g_GraphTraceLen > 18000) {
         g_GraphTraceLen = 18000;
     }
 
-    int i = 2, j, lastval, bitidx, half_switch;
-    int clock = 64;
-    int tolerance = clock / 8;
+    int i = 2, j, bitPos;
+    uint8_t half_switch;
+
+    uint16_t bitPosLastEdge;
+    uint16_t bitPosCurrentEdge;
+    uint8_t lastClockDuration; // used to store the duration of the last "clock", for decoding.
+                               // clock may not be the correct term, maybe bit is better.
+                               // The duration between two edges is meant
+    const uint8_t clock = 64;
+    const uint8_t tolerance = clock / 8;
+    const uint8_t _16T0 = clock/4;
+    const uint8_t _32T0 = clock/2;
+    const uint8_t _64T0 = clock;
+
     int pmc, block_done;
-    int lc, warnings = 0;
+    int warnings = 0;
     size_t num_blocks = 0;
-    int lmin = 64, lmax = 192;
-    uint8_t dir;
+   // int lmin = 64, lmax = 192; // used for some thresholds to identify high/low
+    uint8_t threshold = 30; // threshold to filter out noise, from an actual slope.
+    EdgeType expectedNextEdge = UNDEFINED; // direction in which the next slope is expected should go.
+
 
     BigBuf_Clear_keep_EM();
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
     DoAcquisition_default(0, true, ledcontrol);
 
-    /* Find first local max/min */
-    if (dest[1] > dest[0]) {
-        while (i < g_GraphTraceLen) {
-            if (!(dest[i] > dest[i - 1]) && dest[i] > lmax) {
-                break;
-            }
-            i++;
+    // /* Find first local max/min */
+    // if (dest[1] > dest[0]) {
+    //     while (i < g_GraphTraceLen) {
+    //         // Todo: dont think that this condition is correct. same issue as below.
+    //         if (!(dest[i] > dest[i - 1]) && dest[i] > lmax) {
+    //             break;
+    //         }
+    //         i++;
+    //     }
+    //     dir = 0;
+    // } else {
+    //     while (i < g_GraphTraceLen) {
+    //          // Todo: dont think that this condition is correct. same issue as below.
+    //         if (!(dest[i] < dest[i - 1]) && dest[i] < lmin) {
+    //             break;
+    //         }
+    //         i++;
+    //     }
+    //     dir = 1;
+    // }
+
+    i = 1;
+    while (i < g_GraphTraceLen && expectedNextEdge==UNDEFINED) {
+        // find falling edge
+        if ((dest[i] + threshold) < dest[i-1]) {
+            expectedNextEdge = RISING; // current edge is falling, so next has to be rising
+        
+        // find rising edge
+        } else if ((dest[i] - threshold) > dest[i-1]){
+            expectedNextEdge = FALLING; // current edge is rising, so next has to be falling
         }
-        dir = 0;
-    } else {
-        while (i < g_GraphTraceLen) {
-            if (!(dest[i] < dest[i - 1]) && dest[i] < lmin) {
-                break;
-            }
-            i++;
-        }
-        dir = 1;
+
+        i++;
     }
 
-    lastval = i++;
+    bitPosLastEdge = i++;
     half_switch = 0;
     pmc = 0;
     block_done = 0;
 
-    for (bitidx = 0; i < g_GraphTraceLen; i++) {
+    for (bitPos = 0; i < g_GraphTraceLen; i++) {
 
-        if ((dest[i - 1] > dest[i] && dir == 1 && dest[i] > lmax) || (dest[i - 1] < dest[i] && dir == 0 && dest[i] < lmin)) {
-            lc = i - lastval;
-            lastval = i;
+        // Todo: This condition is not working properly. It is failing, in case the samples are falling/rising RAPIDLY.
+        // Imagine dest[i-1] = 255 and dest[i] = 0. THis would mean a clear falling edge. 
+        // However, this code would not work, since dest[i] > lmax is not true.
+        // This condition only works if I have at least 1 sample between lmax and 255.
+        // Same for the other way around.
+      //  if ((dest[i - 1] > dest[i] && dir == 1 && dest[i] > lmax) || (dest[i - 1] < dest[i] && dir == 0 && dest[i] < lmin)) {
+        
+        
+        if (bitPos%4 == 0){
+            //Dbprintf("dest[%d]: %d",i, dest[i]);
+        }
+         
+         // condition is searching for the next slope, in the expected diretion.
+        if ( ((dest[i] + threshold) < dest[i-1] && expectedNextEdge == FALLING ) || 
+             ((dest[i] - threshold) > dest[i-1] && expectedNextEdge == RISING )) {
+            
+            expectedNextEdge = (expectedNextEdge == FALLING) ? RISING : FALLING; //toggle the next expected edge
+            //okay, next falling/rising edge found
+            bitPosCurrentEdge = i;
 
-            // Switch depending on lc length:
+            lastClockDuration = bitPosCurrentEdge - bitPosLastEdge;
+            bitPosLastEdge = i;
+
+            // Switch depending on lastClockDuration length:
             // Tolerance is 1/8 of clock rate (arbitrary)
-            if (ABS(lc - clock / 4) < tolerance) {
-                // 16T0
-                if ((i - pmc) == lc) { // 16T0 was previous one
+
+            // 16T0 
+            if (ABS(lastClockDuration - _16T0) < tolerance) {
+                if ((i - pmc) == lastClockDuration) { // 16T0 was previous one
                     // It's a PMC
+                    Dbprintf(_GREEN_("PMC 16T0 FOUND:") " at i: %d", i);
                     i += (128 + 127 + 16 + 32 + 33 + 16) - 1;
-                    lastval = i;
+                    bitPosLastEdge = i;
                     pmc = 0;
                     block_done = 1;
                 } else {
                     pmc = i;
                 }
-            } else if (ABS(lc - clock / 2) < tolerance) {
-                // 32TO
-                if ((i - pmc) == lc) { // 16T0 was previous one
+            
+            // 32TO
+            } else if (ABS(lastClockDuration - _32T0) < tolerance) {
+                if ((i - pmc) == lastClockDuration) { // 16T0 was previous one
                     // It's a PMC !
+                    Dbprintf(_GREEN_("PMC 32T0 FOUND:") " at i: %d", i);
                     i += (128 + 127 + 16 + 32 + 33) - 1;
-                    lastval = i;
+                    bitPosLastEdge = i;
                     pmc = 0;
                     block_done = 1;
+
+                // if no pmc, then its a normal bit. Check if its the second time, the edge changed
+                // if yes, then the bit is 0
                 } else if (half_switch == 1) {
-                    bits[bitidx++] = 0;
+                    bits[bitPos++] = 0;
+                    // reset the edge counter to 0
                     half_switch = 0;
+
+                // so it is the first time the edge changed. No bit value will be set here, bit if the 
+                // edge changes again, it will be. see case above.
                 } else
                     half_switch++;
-            } else if (ABS(lc - clock) < tolerance) {
-                // 64TO
-                bits[bitidx++] = 1;
+
+            // 64T0
+            } else if (ABS(lastClockDuration - _64T0) < tolerance) {
+                bits[bitPos++] = 1;
+           
+           // Error
             } else {
-                // Error
                 if (++warnings > 10) {
 
                     if (g_dbglevel >= DBG_EXTENDED) {
@@ -126,7 +189,7 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
             }
 
             if (block_done == 1) {
-                if (bitidx == 128) {
+                if (bitPos == 128) {
                     for (j = 0; j < 16; ++j) {
                         blocks[num_blocks][j] =
                             128 * bits[j * 8 + 7] +
@@ -141,18 +204,15 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
                     }
                     num_blocks++;
                 }
-                bitidx = 0;
+                bitPos = 0;
                 block_done = 0;
                 half_switch = 0;
             }
 
-            if (i < g_GraphTraceLen) {
-                dir = (dest[i - 1] > dest[i]) ? 0 : 1;
-            }
         }
 
-        if (bitidx == 255) {
-            bitidx = 0;
+        if (bitPos == 255) {
+            bitPos = 0;
         }
 
         if (num_blocks == 4) {
