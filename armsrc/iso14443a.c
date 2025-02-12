@@ -1077,6 +1077,7 @@ bool prepare_tag_modulation(tag_response_info_t *response_info, size_t max_buffe
     if (ts->max > max_buffer_size) {
         Dbprintf("ToSend buffer, Out-of-bound, when modulating bits for tag answer:");
         Dbhexdump(response_info->response_n, response_info->response, false);
+        Dbprintf("Need %i, got %i", ts->max, max_buffer_size);
         return false;
     }
 
@@ -1491,7 +1492,17 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
 #define DYNAMIC_MODULATION_BUFFER_SIZE 512
 
     uint8_t *dynamic_response_buffer = BigBuf_calloc(DYNAMIC_RESPONSE_BUFFER_SIZE);
+    if (dynamic_response_buffer == NULL) {
+        BigBuf_free_keep_EM();
+        reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
+        return;
+    }
     uint8_t *dynamic_modulation_buffer = BigBuf_calloc(DYNAMIC_MODULATION_BUFFER_SIZE);
+    if (dynamic_modulation_buffer == NULL) {
+        BigBuf_free_keep_EM();
+        reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
+        return;
+    }
     tag_response_info_t dynamic_response_info = {
         .response = dynamic_response_buffer,
         .response_n = 0,
@@ -3971,7 +3982,17 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
 #define DYNAMIC_MODULATION_BUFFER2_SIZE 1536
 
     uint8_t *dynamic_response_buffer2 = BigBuf_calloc(DYNAMIC_RESPONSE_BUFFER2_SIZE);
+    if (dynamic_response_buffer2 == NULL) {
+        BigBuf_free_keep_EM();
+        reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
+        return;
+    }
     uint8_t *dynamic_modulation_buffer2 = BigBuf_calloc(DYNAMIC_MODULATION_BUFFER2_SIZE);
+    if (dynamic_modulation_buffer2 == NULL) {
+        BigBuf_free_keep_EM();
+        reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
+        return;
+    }
     tag_response_info_t dynamic_response_info = {
         .response = dynamic_response_buffer2,
         .response_n = 0,
@@ -4161,7 +4182,7 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
                 AddCrc14A(dynamic_response_info.response, dynamic_response_info.response_n);
                 dynamic_response_info.response_n += 2;
 
-                if (prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE) == false) {
+                if (prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER2_SIZE) == false) {
                     if (g_dbglevel >= DBG_DEBUG) DbpString("Error preparing tag response");
                     LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
                     break;
