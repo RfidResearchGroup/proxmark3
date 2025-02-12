@@ -4050,7 +4050,7 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
             dynamic_response_info.response_n = 0;
             dynamic_response_info.modulation_n = 0;
 
-            // Check for ISO 14443A-4 compliant commands, look at left nibble
+            // Check for ISO 14443A-4 compliant commands, look at left byte (PCB)
             uint8_t offset = 0;
             switch (receivedCmd[0]) {
                 case 0x0B: // IBlock with CID
@@ -4136,11 +4136,14 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
                 break;
 
                 default: {
-                    // Never seen this command before
+                    // Never seen this PCB before
                     LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
                     if (g_dbglevel >= DBG_DEBUG) {
                         Dbprintf("Received unknown command (len=%d):", len);
                         Dbhexdump(len, receivedCmd, false);
+                    }
+                    if ((receivedCmd[0] & 0x10) == 0x10) {
+                        Dbprintf("Warning, reader sent a chained command but we lack support for it. Ignoring command.");
                     }
                     // Do not respond
                     dynamic_response_info.response_n = 0;
