@@ -1696,20 +1696,21 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t tagtype;
                 uint16_t flags;
                 uint8_t uid[10];
-                uint8_t rats[20];
+                uint8_t ats[20];
                 uint8_t aid[30];
-                uint8_t response[100];
-                uint8_t apdu[100];
-                int aid_len;
-                int respond_len;
-                int apdu_len;
-                bool enumerate;
+                uint8_t selectaid_response[100];
+                uint8_t getdata_response[100];
+                uint32_t ats_len;
+                uint32_t aid_len;
+                uint32_t selectaid_response_len;
+                uint32_t getdata_response_len;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
+            // ## Simulate iso14443a tag - pass tag type, UID, ATS, AID, responses
             SimulateIso14443aTagAID(payload->tagtype, payload->flags, payload->uid,
-                                    payload->rats, sizeof(payload->rats), payload->aid, payload->response,
-                                    payload->apdu, payload->aid_len, payload->respond_len,
-                                    payload->apdu_len, payload->enumerate);  // ## Simulate iso14443a tag - pass tag type, UID, rats, aid, resp, apdu
+                                    payload->ats, payload->ats_len, payload->aid, payload->aid_len,
+                                    payload->selectaid_response, payload->selectaid_response_len,
+                                    payload->getdata_response, payload->getdata_response_len);
             break;
         }
         case CMD_HF_ISO14443A_ANTIFUZZ: {

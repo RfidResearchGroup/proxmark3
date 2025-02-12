@@ -445,7 +445,7 @@ void RunMod(void) {
                     // received a RATS request
                 } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {
                     prevCmd = 0;
-                    p_response = &responses[RESP_INDEX_RATS];
+                    p_response = &responses[RESP_INDEX_ATS];
 
                 } else {
                     if (g_dbglevel == DBG_DEBUG) {

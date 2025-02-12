@@ -105,7 +105,7 @@ typedef enum {
     RESP_INDEX_SAKC1,
     RESP_INDEX_SAKC2,
     RESP_INDEX_SAKC3,
-    RESP_INDEX_RATS,
+    RESP_INDEX_ATS,
     RESP_INDEX_VERSION,
     RESP_INDEX_SIGNATURE,
     RESP_INDEX_PPS,
@@ -145,9 +145,10 @@ void RAMFUNC SniffIso14443a(uint8_t param);
 void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t exitAfterNReads,
                           uint8_t *iRATs, size_t irats_len);
 
-void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data,
-                             uint8_t *iRATs, size_t irats_len,  uint8_t *aid, uint8_t *resp,
-                             uint8_t *apdu, int aid_len, int respond_len, int apdu_len, bool enumerate);
+void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
+                             uint8_t *ats, size_t ats_len,  uint8_t *aid, size_t aid_len,
+                             uint8_t *selectaid_response, size_t selectaid_response_len,
+                             uint8_t *getdata_response, size_t getdata_response_len);
 
 bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
                            uint8_t *iRATs, size_t irats_len, tag_response_info_t **responses,

@@ -772,7 +772,8 @@ typedef struct {
 #define FLAG_INTERACTIVE        0x0001
 #define FLAG_ATQA_IN_DATA       0x0002
 #define FLAG_SAK_IN_DATA        0x0004
-#define FLAG_RATS_IN_DATA       0x0008
+#define FLAG_ATS_IN_DATA        0x0008
+#define FLAG_ENUMERATE_AID      0x0010
 
 // internal constants, use the function macros instead
 #define FLAG_MASK_UID           0x0030

@@ -1108,7 +1108,7 @@ bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_
 }
 
 bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
-                           uint8_t *iRATs, size_t irats_len, tag_response_info_t **responses,
+                           uint8_t *ats, size_t ats_len, tag_response_info_t **responses,
                            uint32_t *cuid, uint32_t counters[3], uint8_t tearings[3], uint8_t *pages) {
     uint8_t sak = 0;
     // The first response contains the ATQA (note: bytes are transmitted in reverse order).
@@ -1130,9 +1130,9 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
     // TA(1) = 0x80: different divisors not supported, DR = 1, DS = 1
     // TB(1) = not present. Defaults: FWI = 4 (FWT = 256 * 16 * 2^4 * 1/fc = 4833us), SFGI = 0 (SFG = 256 * 16 * 2^0 * 1/fc = 302us)
     // TC(1) = 0x02: CID supported, NAD not supported
-//    static uint8_t rRATS[] = { 0x04, 0x58, 0x80, 0x02, 0x00, 0x00 };
-    static uint8_t rRATS[40] = { 0x05, 0x75, 0x80, 0x60, 0x02, 0x00, 0x00, 0x00 };
-    uint8_t rRATS_len = 8;
+//    static uint8_t rATS[] = { 0x04, 0x58, 0x80, 0x02, 0x00, 0x00 };
+    static uint8_t rATS[40] = { 0x05, 0x75, 0x80, 0x60, 0x02, 0x00, 0x00, 0x00 };
+    uint8_t rATS_len = 8;
 
     // GET_VERSION response for EV1/NTAG
     static uint8_t rVERSION[10] = { 0x00 };
@@ -1184,8 +1184,8 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
             rATQA[0] = 0x44;
             rATQA[1] = 0x03;
             sak = 0x20;
-            memcpy(rRATS, "\x06\x75\x77\x81\x02\x80\x00\x00", 8);
-            rRATS_len = 8; // including CRC
+            memcpy(rATS, "\x06\x75\x77\x81\x02\x80\x00\x00", 8);
+            rATS_len = 8; // including CRC
             break;
         }
         case 4: { // ISO/IEC 14443-4 - javacard (JCOP)
@@ -1254,8 +1254,8 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
         }
         case 11: { // ISO/IEC 14443-4 - javacard (JCOP) / EMV
 
-            memcpy(rRATS, "\x13\x78\x80\x72\x02\x80\x31\x80\x66\xb1\x84\x0c\x01\x6e\x01\x83\x00\x90\x00\x00\x00", 21);
-            rRATS_len = 21; // including CRC
+            memcpy(rATS, "\x13\x78\x80\x72\x02\x80\x31\x80\x66\xb1\x84\x0c\x01\x6e\x01\x83\x00\x90\x00\x00\x00", 21);
+            rATS_len = 21; // including CRC
             rATQA[0] = 0x04;
             sak = 0x20;
             break;
@@ -1271,17 +1271,17 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
         }
     }
 
-    // copy the iRATs if supplied.
-    // iRATs is a pointer to 20 byte array
-    // rRATS is a 40 byte array
-    if ((flags & FLAG_RATS_IN_DATA) == FLAG_RATS_IN_DATA) {
-        memcpy(rRATS, iRATs, irats_len);
+    // copy the ats if supplied.
+    // ats is a pointer to 20 byte array
+    // rATS is a 40 byte array
+    if ((flags & FLAG_ATS_IN_DATA) == FLAG_ATS_IN_DATA) {
+        memcpy(rATS, ats, ats_len);
         // rats len is dictated by the first char of the string, add 2 crc bytes
-        rRATS_len = (iRATs[0] + 2);
+        rATS_len = (ats[0] + 2);
         // Since its Varible length we can send value > 40 and overflow our array.
         // Even if RATS protocol defined as max 40 bytes doesn't mean people try stuff
-        if (rRATS_len > sizeof(rRATS)) {
-            if (g_dbglevel >= DBG_ERROR) Dbprintf("[-] ERROR: iRATS overflow. Max %zu, got %zu", sizeof(rRATS), rRATS_len);
+        if (rATS_len > sizeof(rATS)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("[-] ERROR: ATS overflow. Max %zu, got %zu", sizeof(rATS), rATS_len);
             return false;
         }
     }
@@ -1379,7 +1379,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
         return false;
     }
 
-    AddCrc14A(rRATS, rRATS_len - 2);
+    AddCrc14A(rATS, rATS_len - 2);
 
     AddCrc14A(rPPS, sizeof(rPPS) - 2);
 
@@ -1407,7 +1407,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
         { .response = rSAKc1,     .response_n = sizeof(rSAKc1)    },  // Acknowledge select - cascade 1
         { .response = rSAKc2,     .response_n = sizeof(rSAKc2)    },  // Acknowledge select - cascade 2
         { .response = rSAKc3,     .response_n = sizeof(rSAKc3)    },  // Acknowledge select - cascade 3
-        { .response = rRATS,      .response_n = sizeof(rRATS)     },  // dummy ATS (pseudo-ATR), answer to RATS
+        { .response = rATS,       .response_n = sizeof(rATS)      },  // dummy ATS (pseudo-ATR), answer to RATS
         { .response = rVERSION,   .response_n = sizeof(rVERSION)  },  // EV1/NTAG GET_VERSION response
         { .response = rSIGN,      .response_n = sizeof(rSIGN)     },  // EV1/NTAG READ_SIG response
         { .response = rPPS,       .response_n = sizeof(rPPS)      },  // PPS response
@@ -1415,7 +1415,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
     };
 
     // since rats len is variable now.
-    responses_init[RESP_INDEX_RATS].response_n = rRATS_len;
+    responses_init[RESP_INDEX_ATS].response_n = rATS_len;
 
     // "precompiled" responses.
     // These exist for speed reasons.  There are no time in the anti collision phase to calculate responses.
@@ -1428,7 +1428,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
     // 85 bytes normally (rats = 8 bytes)
     // 77 bytes + ratslen,
 
-#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE (  ((77 + rRATS_len) * 8) + 77 + rRATS_len + 12 + 12 + 12)
+#define ALLOCATED_TAG_MODULATION_BUFFER_SIZE (  ((77 + rATS_len) * 8) + 77 + rATS_len + 12 + 12 + 12)
 
     uint8_t *free_buffer = BigBuf_calloc(ALLOCATED_TAG_MODULATION_BUFFER_SIZE);
     // modulation buffer pointer and current buffer free space size
@@ -1455,7 +1455,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
 // 'hf 14a sim'
 //-----------------------------------------------------------------------------
 void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t exitAfterNReads,
-                          uint8_t *iRATs, size_t irats_len) {
+                          uint8_t *ats, size_t ats_len) {
 
 #define ATTACK_KEY_COUNT 16
 
@@ -1497,7 +1497,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
         .modulation_n = 0
     };
 
-    if (SimulateIso14443aInit(tagType, flags, data, iRATs, irats_len, &responses, &cuid, counters, tearings, &pages) == false) {
+    if (SimulateIso14443aInit(tagType, flags, data, ats, ats_len, &responses, &cuid, counters, tearings, &pages) == false) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
         return;
@@ -1820,7 +1820,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
                 EmSend4bit(CARD_NACK_NA);
                 p_response = NULL;
             } else {
-                p_response = &responses[RESP_INDEX_RATS];
+                p_response = &responses[RESP_INDEX_ATS];
             }
         } else if (receivedCmd[0] == MIFARE_ULC_AUTH_1) {  // ULC authentication, or Desfire Authentication
             LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
@@ -3941,9 +3941,10 @@ It can also continue after the AID has been selected, and respond to other reque
 This was forked from the original function to allow for more flexibility in the future, and to increase the processing speed of the original function.
 /// */
 
-void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data,
-                             uint8_t *iRATs, size_t irats_len, uint8_t *aid, uint8_t *resp,
-                             uint8_t *apdu, int aidLen, int respondLen, int apduLen, bool enumerate) {
+void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
+                             uint8_t *ats, size_t ats_len,  uint8_t *aid, size_t aid_len,
+                             uint8_t *selectaid_response, size_t selectaid_response_len,
+                             uint8_t *getdata_response, size_t getdata_response_len) {
     tag_response_info_t *responses;
     uint32_t cuid = 0;
     uint32_t counters[3] = { 0x00, 0x00, 0x00 };
@@ -3953,6 +3954,12 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data,
     // command buffers
     uint8_t receivedCmd[MAX_FRAME_SIZE] = { 0x00 };
     uint8_t receivedCmdPar[MAX_PARITY_SIZE] = { 0x00 };
+
+    // Buffers must be provided by the caller, even if lengths are 0
+    // Copy the AID, AID Response, and the GetData APDU response into our variables
+    if ((aid == NULL) || (selectaid_response == NULL) || (getdata_response == NULL)) {
+        reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINVARG, NULL, 0);
+    }
 
     // free eventually allocated BigBuf memory but keep Emulator Memory
     BigBuf_free_keep_EM();
@@ -3970,7 +3977,7 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data,
         .modulation_n = 0
     };
 
-    if (SimulateIso14443aInit(tagType, flags, data, iRATs, irats_len, &responses, &cuid, counters, tearings, &pages) == false) {
+    if (SimulateIso14443aInit(tagType, flags, uid, ats, ats_len, &responses, &cuid, counters, tearings, &pages) == false) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
         return;
@@ -3989,23 +3996,6 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data,
     clear_trace();
     set_tracing(true);
     LED_A_ON();
-
-    // Filters for when this comes through
-    static uint8_t aidFilter[30] = { 0x00 }; // Default AID Value
-    static uint8_t aidResponse[100] = { 0x00 }; // Default AID Response
-    static uint8_t apduCommand [100] = { 0x00 }; // Default APDU GetData Response
-
-    // Copy the AID, AID Response, and the GetData APDU response into our variables
-    if (aid != 0) {
-        memcpy(aidFilter, aid, aidLen);
-    }
-    if (resp != 0) {
-        memcpy(aidResponse, resp, respondLen);
-    }
-    if (apdu != 0) {
-        memcpy(apduCommand, apdu, apduLen);
-    }
-
 
     // main loop
     bool finished = false;
@@ -4051,7 +4041,7 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data,
                 finished = true;
             }
         } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {    // Received a RATS request
-            p_response = &responses[RESP_INDEX_RATS];
+            p_response = &responses[RESP_INDEX_ATS];
             got_rats = true;
         } else {
             // clear old dynamic responses
@@ -4081,19 +4071,19 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data,
                             // xx in this case is len of the AID value in hex
 
                             // aid len is found as a hex value in receivedCmd[6] (Index Starts at 0)
-                            int aid_len = receivedCmd[5+offset];
+                            int received_aid_len = receivedCmd[5+offset];
                             uint8_t *received_aid = &receivedCmd[6+offset];
 
                             // aid enumeration flag
-                            if (enumerate == true) {
-                                Dbprintf("Received AID (%d):", aid_len);
-                                Dbhexdump(aid_len, received_aid, false);
+                            if ((flags & FLAG_ENUMERATE_AID) == FLAG_ENUMERATE_AID) {
+                                Dbprintf("Received AID (%d):", received_aid_len);
+                                Dbhexdump(received_aid_len, received_aid, false);
                             }
 
-                            if (memcmp(aidFilter, received_aid, aid_len) == 0) { // Evaluate the AID sent by the Reader to the AID supplied
+                            if ((received_aid_len == aid_len) && (memcmp(aid, received_aid, aid_len) == 0)) { // Evaluate the AID sent by the Reader to the AID supplied
                                 // AID Response will be parsed here
-                                memcpy(dynamic_response_info.response + 1 + offset, aidResponse, respondLen + 1 + offset);
-                                dynamic_response_info.response_n = respondLen + 2;
+                                memcpy(dynamic_response_info.response + 1 + offset, selectaid_response, selectaid_response_len + 1 + offset);
+                                dynamic_response_info.response_n = selectaid_response_len + 2;
                             } else { // Any other SELECT FILE command will return with a Not Found
                                 dynamic_response_info.response[1 + offset] = 0x6A;
                                 dynamic_response_info.response[2 + offset] = 0x82;
@@ -4113,8 +4103,8 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *data,
                         case 0xCA: { // GET DATA
                             if (sentCount == 0) {
                                 // APDU Command will just be parsed here
-                                memcpy(dynamic_response_info.response + 1 + offset, apduCommand, apduLen + 2);
-                                dynamic_response_info.response_n = respondLen + 1 + offset;
+                                memcpy(dynamic_response_info.response + 1 + offset, getdata_response, getdata_response_len + 2);
+                                dynamic_response_info.response_n = selectaid_response_len + 1 + offset;
                             } else {
                                 finished = true;
                                 break;
