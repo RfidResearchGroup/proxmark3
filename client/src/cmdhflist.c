@@ -273,10 +273,11 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 snprintf(exp, size, "HALT");
                 MifareAuthState = masNone;
                 break;
-            case ISO14443A_CMD_RATS:
+            case ISO14443A_CMD_RATS: {
                 uint16_t fsdi2fsd[] = {16, 24, 32, 40, 48, 64, 96, 128, 256, 512, 1024, 2048, 4096, 4096, 4096, 4096};
                 snprintf(exp, size, "RATS - FSDI=%x (FSD=%u), CID=%x", (cmd[1] & 0xF0) >> 4, fsdi2fsd[(cmd[1] & 0xF0) >> 4], (cmd[1] & 0x0F));
                 break;
+            }
             /* Actually, PPSS is Dx
             case ISO14443A_CMD_PPS:
                 snprintf(exp, size, "PPS");
