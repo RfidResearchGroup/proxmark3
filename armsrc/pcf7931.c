@@ -39,133 +39,118 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
     int g_GraphTraceLen = BigBuf_max_traceLen();
     // limit g_GraphTraceLen to a little more than 2 data frames. 
     // To make sure a complete dataframe is in the dataset.
-    if (g_GraphTraceLen > 18000) {
-        g_GraphTraceLen = 18000;
-    }
+    // 1 Frame is 16 Byte -> 128byte. at a T0 of 64 -> 8129 Samples per frame.
+    // + PMC -> 384T0  --> 8576 samples required for one block
+    // to make sure that one complete block is definitely being sampled, we need 2 times that
+    // which is ~17.xxx samples. round up. and clamp to this value.
+  
+    // TODO: Doublecheck why this is being limited?
+    g_GraphTraceLen = (g_GraphTraceLen > 18000) ? 18000 : g_GraphTraceLen;
 
-    int i = 2, j, bitPos;
+    uint8_t j;
     uint8_t half_switch;
 
-    uint16_t bitPosLastEdge;
-    uint16_t bitPosCurrentEdge;
-    uint8_t lastClockDuration; // used to store the duration of the last "clock", for decoding.
-                               // clock may not be the correct term, maybe bit is better.
-                               // The duration between two edges is meant
+    uint8_t bitPos; // max 128 bit in one block. if more, then there is an error and PMC was not found.
+    
+    uint16_t sample;    // to keep track of the current sample that is being analyzed
+    uint16_t samplePosLastEdge;
+    uint16_t samplePosCurrentEdge;
+    uint8_t lastClockDuration; // used to store the duration of the last "clock", for decoding. clock may not be the correct term, maybe bit is better. The duration between two edges is meant
+    uint8_t beforeLastClockDuration; // store the clock duration of the cycle before the last Clock duration. Basically clockduration -2
+    
+
     const uint8_t clock = 64;
     const uint8_t tolerance = clock / 8;
     const uint8_t _16T0 = clock/4;
     const uint8_t _32T0 = clock/2;
     const uint8_t _64T0 = clock;
 
-    int pmc, block_done;
+    int block_done;
     int warnings = 0;
     size_t num_blocks = 0;
    // int lmin = 64, lmax = 192; // used for some thresholds to identify high/low
-    uint8_t threshold = 30; // threshold to filter out noise, from an actual slope.
-    EdgeType expectedNextEdge = UNDEFINED; // direction in which the next slope is expected should go.
+    uint8_t threshold = 30; // threshold to filter out noise, from an actual edge.
+    EdgeType expectedNextEdge = UNDEFINED; // direction in which the next edge is expected should go.
 
 
     BigBuf_Clear_keep_EM();
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
     DoAcquisition_default(0, true, ledcontrol);
 
-    // /* Find first local max/min */
-    // if (dest[1] > dest[0]) {
-    //     while (i < g_GraphTraceLen) {
-    //         // Todo: dont think that this condition is correct. same issue as below.
-    //         if (!(dest[i] > dest[i - 1]) && dest[i] > lmax) {
-    //             break;
-    //         }
-    //         i++;
-    //     }
-    //     dir = 0;
-    // } else {
-    //     while (i < g_GraphTraceLen) {
-    //          // Todo: dont think that this condition is correct. same issue as below.
-    //         if (!(dest[i] < dest[i - 1]) && dest[i] < lmin) {
-    //             break;
-    //         }
-    //         i++;
-    //     }
-    //     dir = 1;
-    // }
-
-    i = 1;
-    while (i < g_GraphTraceLen && expectedNextEdge==UNDEFINED) {
+    sample = 1;
+    while (sample < g_GraphTraceLen && expectedNextEdge==UNDEFINED) {
         // find falling edge
-        if ((dest[i] + threshold) < dest[i-1]) {
+        if ((dest[sample] + threshold) < dest[sample-1]) {
             expectedNextEdge = RISING; // current edge is falling, so next has to be rising
         
         // find rising edge
-        } else if ((dest[i] - threshold) > dest[i-1]){
+        } else if ((dest[sample] - threshold) > dest[sample-1]){
             expectedNextEdge = FALLING; // current edge is rising, so next has to be falling
         }
 
-        i++;
+        sample++;
     }
 
-    bitPosLastEdge = i++;
+    samplePosLastEdge = sample++;
     half_switch = 0;
-    pmc = 0;
     block_done = 0;
+    bitPos = 0;
+    lastClockDuration=0;
 
-    for (bitPos = 0; i < g_GraphTraceLen; i++) {
+    // dont reset sample here. we've already found the last edge. continue from here
+    for ( ; sample < g_GraphTraceLen; sample++) {
 
-        // Todo: This condition is not working properly. It is failing, in case the samples are falling/rising RAPIDLY.
-        // Imagine dest[i-1] = 255 and dest[i] = 0. THis would mean a clear falling edge. 
-        // However, this code would not work, since dest[i] > lmax is not true.
-        // This condition only works if I have at least 1 sample between lmax and 255.
-        // Same for the other way around.
-      //  if ((dest[i - 1] > dest[i] && dir == 1 && dest[i] > lmax) || (dest[i - 1] < dest[i] && dir == 0 && dest[i] < lmin)) {
-        
-        
-        if (bitPos%4 == 0){
-            //Dbprintf("dest[%d]: %d",i, dest[i]);
+        if (sample%4 == 0){
+          // Dbprintf("dest[%d]: %d, bitPos: %d",sample, dest[sample], bitPos);
         }
          
-         // condition is searching for the next slope, in the expected diretion.
-        if ( ((dest[i] + threshold) < dest[i-1] && expectedNextEdge == FALLING ) || 
-             ((dest[i] - threshold) > dest[i-1] && expectedNextEdge == RISING )) {
-            
-            expectedNextEdge = (expectedNextEdge == FALLING) ? RISING : FALLING; //toggle the next expected edge
+         // condition is searching for the next edge, in the expected diretion.
+        if ( ((dest[sample] + threshold) < dest[sample-1] && expectedNextEdge == FALLING ) || 
+             ((dest[sample] - threshold) > dest[sample-1] && expectedNextEdge == RISING )) {
             //okay, next falling/rising edge found
-            bitPosCurrentEdge = i;
 
-            lastClockDuration = bitPosCurrentEdge - bitPosLastEdge;
-            bitPosLastEdge = i;
+            expectedNextEdge = (expectedNextEdge == FALLING) ? RISING : FALLING; //toggle the next expected edge
+            samplePosCurrentEdge = sample;
+            beforeLastClockDuration = lastClockDuration; // save the previous clock duration for PMC recognition
+            lastClockDuration = samplePosCurrentEdge - samplePosLastEdge;
+            samplePosLastEdge = sample;
 
             // Switch depending on lastClockDuration length:
             // Tolerance is 1/8 of clock rate (arbitrary)
-
             // 16T0 
             if (ABS(lastClockDuration - _16T0) < tolerance) {
-                if ((i - pmc) == lastClockDuration) { // 16T0 was previous one
+
+                //tollerance is missing for PMC!! TODO
+                // if the clock before was 16, it is indicating a PMC - check this
+                if (ABS(beforeLastClockDuration - _16T0) < tolerance) { 
                     // It's a PMC
-                    Dbprintf(_GREEN_("PMC 16T0 FOUND:") " at i: %d", i);
-                    i += (128 + 127 + 16 + 32 + 33 + 16) - 1;
-                    bitPosLastEdge = i;
-                    pmc = 0;
+                    Dbprintf(_GREEN_("PMC 16T0 FOUND:") " bitPos: %d, sample: %d", bitPos, sample);
+                    sample += (128 + 127 + 16 + 32 + 33 + 16) - 1;  // move to the sample after PMC
+                    samplePosLastEdge = sample;
                     block_done = 1;
-                } else {
-                    pmc = i;
+                     // TODO: Not sure if sample need to set expected next edge?
+
                 }
             
             // 32TO
             } else if (ABS(lastClockDuration - _32T0) < tolerance) {
-                if ((i - pmc) == lastClockDuration) { // 16T0 was previous one
+                // if the clock before was 16, it is indicating a PMC - check this
+                if (ABS(beforeLastClockDuration - _16T0) < tolerance) {
                     // It's a PMC !
-                    Dbprintf(_GREEN_("PMC 32T0 FOUND:") " at i: %d", i);
-                    i += (128 + 127 + 16 + 32 + 33) - 1;
-                    bitPosLastEdge = i;
-                    pmc = 0;
+                    Dbprintf(_GREEN_("PMC 32T0 FOUND:") " bitPos: %d, sample: %d", bitPos, sample);
+                    sample += (128 + 127 + 16 + 32 + 33) - 1;    // move to the sample after PMC
+                    samplePosLastEdge = sample;
                     block_done = 1;
+
+                    // TODO: Not sure if sample need to set expected next edge?
 
                 // if no pmc, then its a normal bit. Check if its the second time, the edge changed
                 // if yes, then the bit is 0
                 } else if (half_switch == 1) {
-                    bits[bitPos++] = 0;
+                    bits[bitPos] = 0;
                     // reset the edge counter to 0
                     half_switch = 0;
+                    bitPos++;
 
                 // so it is the first time the edge changed. No bit value will be set here, bit if the 
                 // edge changes again, it will be. see case above.
@@ -174,21 +159,28 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
 
             // 64T0
             } else if (ABS(lastClockDuration - _64T0) < tolerance) {
-                bits[bitPos++] = 1;
+                // this means, bit here is 1
+                bits[bitPos] = 1;
+                bitPos++;
            
            // Error
             } else {
+                Dbprintf(_RED_("ELSE error case") " bitPos: %d, sample: %d", bitPos, sample);
                 if (++warnings > 10) {
 
                     if (g_dbglevel >= DBG_EXTENDED) {
                         Dbprintf("Error: too many detection errors, aborting");
-                    }
+                    }   
 
                     return 0;
                 }
             }
 
             if (block_done == 1) {
+                Dbprintf(_YELLOW_("Block Done") " bitPos: %d, sample: %d", bitPos, sample);
+                // check if it is a complete block. If bitpos <128, it means that we did not receive
+                // a complete block. E.g. at the first start of a transmission.
+                // only save if a complete block is being received.
                 if (bitPos == 128) {
                     for (j = 0; j < 16; ++j) {
                         blocks[num_blocks][j] =
@@ -204,6 +196,7 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
                     }
                     num_blocks++;
                 }
+                // now start over for the next block / first complete block. 
                 bitPos = 0;
                 block_done = 0;
                 half_switch = 0;
@@ -211,11 +204,16 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
 
         }
 
-        if (bitPos == 255) {
+        // one block only holds 16byte (=128 bit) and then comes the PMC. so if more bit are found than 129, there must be an issue and PMC has not been identfied...
+        // TODO: not sure what to do in such case...
+        if (bitPos >= 129) {
+            Dbprintf(_RED_("PMC should have been found...") " bitPos: %d, sample: %d", bitPos, sample);
             bitPos = 0;
         }
 
+        // Todo: No idea, why blocks 4 is checked..
         if (num_blocks == 4) {
+            Dbprintf(_RED_("we should never get here!!!") " at sample: %d", sample);
             break;
         }
     }
@@ -264,6 +262,9 @@ bool IsBlock1PCF7931(const uint8_t *block) {
 }
 
 void ReadPCF7931(bool ledcontrol) {
+    
+    Dbprintf("ReadPCF7931()==========");
+
     int found_blocks = 0; // successfully read blocks
     int max_blocks = 8;   // readable blocks
     uint8_t memory_blocks[8][17]; // PCF content
@@ -283,6 +284,7 @@ void ReadPCF7931(bool ledcontrol) {
     int i = 0, j = 0;
 
     do {
+        Dbprintf("ReadPCF7931() -- DO LOOP ==========");
         i = 0;
 
         memset(tmp_blocks, 0, 4 * 16 * sizeof(uint8_t));
