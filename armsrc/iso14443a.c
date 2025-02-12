@@ -1131,7 +1131,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
     // TB(1) = not present. Defaults: FWI = 4 (FWT = 256 * 16 * 2^4 * 1/fc = 4833us), SFGI = 0 (SFG = 256 * 16 * 2^0 * 1/fc = 302us)
     // TC(1) = 0x02: CID supported, NAD not supported
 //    static uint8_t rATS[] = { 0x04, 0x58, 0x80, 0x02, 0x00, 0x00 };
-    static uint8_t rATS[40] = { 0x05, 0x75, 0x80, 0x60, 0x02, 0x00, 0x00, 0x00 };
+    static uint8_t rATS[40] = { 0x06, 0x75, 0x80, 0x60, 0x02, 0x00, 0x00, 0x00 };
     uint8_t rATS_len = 8;
 
     // GET_VERSION response for EV1/NTAG
@@ -1275,14 +1275,16 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
     // ats is a pointer to 20 byte array
     // rATS is a 40 byte array
     if ((flags & FLAG_ATS_IN_DATA) == FLAG_ATS_IN_DATA) {
-        memcpy(rATS, ats, ats_len);
-        // rats len is dictated by the first char of the string, add 2 crc bytes
-        rATS_len = (ats[0] + 2);
-        // Since its Varible length we can send value > 40 and overflow our array.
-        // Even if RATS protocol defined as max 40 bytes doesn't mean people try stuff
-        if (rATS_len > sizeof(rATS)) {
-            if (g_dbglevel >= DBG_ERROR) Dbprintf("[-] ERROR: ATS overflow. Max %zu, got %zu", sizeof(rATS), rATS_len);
+        // Even if RATS protocol defined as max 40 bytes doesn't mean people try stuff. Check for overflow before copy
+        if (ats_len + 2 > sizeof(rATS)) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("[-] ERROR: ATS overflow. Max %zu, got %zu", sizeof(rATS) - 2, ats_len);
             return false;
+        }
+        memcpy(rATS, ats, ats_len);
+        rATS_len = ats_len + 2;
+        // ATS length (without CRC) is supposed to match its first byte TL
+        if (ats_len != ats[0]) {
+            if (g_dbglevel >= DBG_INFO) Dbprintf("[-] WARNING: actual ATS length (%zu) differs from its TL value (%u).", ats_len, ats[0]);
         }
     }
 

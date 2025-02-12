@@ -3715,12 +3715,12 @@ int CmdHF14AAIDSim(const char *Cmd) {
     CLIParserInit(&ctx, "hf 14a simaid",
                   "Simulate ISO/IEC 14443 type A tag with 4,7 or 10 byte UID, and filter for AID Values\n"
                   "These AID Values can be responded to and include extra APDU commands on GetData after response\n",
-                  "hf 14a simaid -t 3                                                                                     -> MIFARE Desfire\n"
-                  "hf 14a simaid -t 4                                                                                     -> ISO/IEC 14443-4\n"
-                  "hf 14a simaid -t 11                                                                                    -> Javacard (JCOP)\n"
-                  "hf 14a simaid -t 3 --aid a000000000000000000000 --selectaid_response 9000 --getdata_response 9000      -> Custom AID and responses\n"
-                  "hf 14a simaid -t 3 --ats 05788172220101 --selectaid_response 01009000 --getdata_response 86009000      -> Custom ATS and responses\n"
-                  "hf 14a simaid -t 3 --ats 05788172220101 -x                                                             -> Enumerate AID Values\n"
+                  "hf 14a simaid -t 3                                                                                 -> MIFARE Desfire\n"
+                  "hf 14a simaid -t 4                                                                                 -> ISO/IEC 14443-4\n"
+                  "hf 14a simaid -t 11                                                                                -> Javacard (JCOP)\n"
+                  "hf 14a simaid -t 3 --aid a000000000000000000000 --selectaid_response 9000 --getdata_response 9000  -> Custom AID and responses\n"
+                  "hf 14a simaid -t 3 --ats 0578817222 --selectaid_response 01009000 --getdata_response 86009000      -> Custom ATS and responses\n"
+                  "hf 14a simaid -t 3 --ats 0578817222 -x                                                             -> Enumerate AID Values\n"
                  );
 
     void *argtable[] = {
