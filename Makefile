@@ -29,7 +29,7 @@ ifneq (,$(DESTDIR))
     endif
 endif
 
-all clean install uninstall check: %: client/% bootrom/% armsrc/% recovery/% mfc_card_only/% mfc_card_reader/% mfd_aes_brute/% fpga_compress/% cryptorf/%
+all clean install uninstall check: %: client/% bootrom/% armsrc/% recovery/% mfc_card_only/% mfc_card_reader/% mfd_aes_brute/% mfulc_des_brute/% fpga_compress/% cryptorf/%
 # hitag2crack toolsuite is not yet integrated in "all", it must be called explicitly: "make hitag2crack"
 #all clean install uninstall check: %: hitag2crack/%
 clean: %: hitag2crack/%
@@ -157,6 +157,9 @@ mfc_card_only/%: FORCE
 mfc_card_reader/%: FORCE
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C tools/mfc/card_reader $(patsubst mfc_card_reader/%,%,$@) DESTDIR=$(MYDESTDIR)
+mfulc_des_brute/%: FORCE
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C tools/mfulc_des_brute $(patsubst mfulc_des_brute/%,%,$@) DESTDIR=$(MYDESTDIR)
 mfd_aes_brute/%: FORCE
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C tools/mfd_aes_brute $(patsubst mfd_aes_brute/%,%,$@) DESTDIR=$(MYDESTDIR)
@@ -182,7 +185,7 @@ hitag2crack/%: FORCE
 	$(Q)$(MAKE) --no-print-directory -C tools/hitag2crack $(patsubst hitag2crack/%,%,$@) DESTDIR=$(MYDESTDIR)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all clean install uninstall help _test bootrom fullimage recovery client mfc_card_only mfc_card_reader mfd_aes_brute hitag2crack style miscchecks release FORCE udev accessrights cleanifplatformchanged
+.PHONY: all clean install uninstall help _test bootrom fullimage recovery client mfc_card_only mfc_card_reader mfulc_des_brute mfd_aes_brute hitag2crack style miscchecks release FORCE udev accessrights cleanifplatformchanged
 
 help:
 	@echo "Multi-OS Makefile"
@@ -202,6 +205,7 @@ help:
 	@echo "+ cryptorf        - Make tools/cryptorf"
 	@echo "+ mfc_card_only   - Make tools/mfc/card_only"
 	@echo "+ mfc_card_reader - Make tools/mfc/card_reader"
+	@echo "+ mfulc_des_brute        - Make tools/mfulc_des_brute"
 	@echo "+ mfd_aes_brute   - Make tools/mfd_aes_brute"
 	@echo "+ hitag2crack     - Make tools/hitag2crack"
 	@echo "+ fpga_compress   - Make tools/fpga_compress"
@@ -245,6 +249,8 @@ cryptorf: cryptorf/all
 mfc_card_only: mfc_card_only/all
 
 mfc_card_reader: mfc_card_reader/all
+
+mfulc_des_brute: mfulc_des_brute/all
 
 mfd_aes_brute: mfd_aes_brute/all
 
