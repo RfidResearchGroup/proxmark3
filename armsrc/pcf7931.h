@@ -20,7 +20,6 @@
 
 
 typedef enum{
-    UNDEFINED,
     FALLING,
     RISING 
 } EdgeType;

@@ -30,6 +30,8 @@
 
 size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
 
+    const uint8_t DECIMATION = 4;
+
     // 2021 iceman, memor
     uint8_t bits[256] = {0x00};
     uint8_t blocks[8][16];
@@ -45,114 +47,102 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
     // which is ~17.xxx samples. round up. and clamp to this value.
   
     // TODO: Doublecheck why this is being limited?
-    g_GraphTraceLen = (g_GraphTraceLen > 18000) ? 18000 : g_GraphTraceLen;
+//    g_GraphTraceLen = (g_GraphTraceLen > 18000) ? 18000 : g_GraphTraceLen;
+
+    BigBuf_Clear_keep_EM();
+    LFSetupFPGAForADC(LF_DIVISOR_125, true);
+    // DoAcquisition_default(0, true, ledcontrol);
+    // sample with decimation of 2 --> This means double the values can be sampled.
+    // this is needed to get a complete frame in the buffer (64 * 8 * 16 * 8 + 8*PMC(~380)) = ~68.000 samples. Buffer is only 41.xxx
+    // with decimation 2, buffer will be twice as big.
+    DoAcquisition(DECIMATION, 8, 0, 0, false, 0, 0, 0, ledcontrol);
+    
 
     uint8_t j;
     uint8_t half_switch;
 
     uint8_t bitPos; // max 128 bit in one block. if more, then there is an error and PMC was not found.
     
-    uint16_t sample;    // to keep track of the current sample that is being analyzed
-    uint16_t samplePosLastEdge;
-    uint16_t samplePosCurrentEdge;
+    uint32_t sample;    // to keep track of the current sample that is being analyzed
+    uint32_t samplePosLastEdge;
+    uint32_t samplePosCurrentEdge;
     uint8_t lastClockDuration; // used to store the duration of the last "clock", for decoding. clock may not be the correct term, maybe bit is better. The duration between two edges is meant
     uint8_t beforeLastClockDuration; // store the clock duration of the cycle before the last Clock duration. Basically clockduration -2
-    
 
-    const uint8_t clock = 64;
+
+    const uint8_t clock = 64/DECIMATION;   // this actually is 64, but since samples are decimated by 2, clock is also /2
     const uint8_t tolerance = clock / 8;
     const uint8_t _16T0 = clock/4;
     const uint8_t _32T0 = clock/2;
     const uint8_t _64T0 = clock;
 
-    int block_done;
-    int warnings = 0;
+    const uint16_t pmc16T0Len = (128 + 127 + 16 + 32 + 33 + 16) * clock/64; // calculating the two possible pmc lengths, based on the clock. -4 at the end is to make sure not to increment too far
+    const uint16_t pmc32T0Len = (128 + 127 + 16 + 32 + 33 ) * clock/64;
+
+    uint8_t block_done;
     size_t num_blocks = 0;
-   // int lmin = 64, lmax = 192; // used for some thresholds to identify high/low
-    uint8_t threshold = 30; // threshold to filter out noise, from an actual edge.
-    EdgeType expectedNextEdge = UNDEFINED; // direction in which the next edge is expected should go.
+    uint8_t threshold = 50; // threshold to filter out noise, from an actual edge.
+    EdgeType expectedNextEdge = FALLING; // direction in which the next edge is expected should go.
 
-
-    BigBuf_Clear_keep_EM();
-    LFSetupFPGAForADC(LF_DIVISOR_125, true);
-    DoAcquisition_default(0, true, ledcontrol);
-
-    sample = 1;
-    while (sample < g_GraphTraceLen && expectedNextEdge==UNDEFINED) {
-        // find falling edge
-        if ((dest[sample] + threshold) < dest[sample-1]) {
-            expectedNextEdge = RISING; // current edge is falling, so next has to be rising
-        
-        // find rising edge
-        } else if ((dest[sample] - threshold) > dest[sample-1]){
-            expectedNextEdge = FALLING; // current edge is rising, so next has to be falling
-        }
-
-        sample++;
-    }
-
-    samplePosLastEdge = sample++;
     half_switch = 0;
+    samplePosLastEdge = 0;
     block_done = 0;
     bitPos = 0;
     lastClockDuration=0;
 
-    // dont reset sample here. we've already found the last edge. continue from here
-    for ( ; sample < g_GraphTraceLen; sample++) {
-
-        if (sample%4 == 0){
-          // Dbprintf("dest[%d]: %d, bitPos: %d",sample, dest[sample], bitPos);
-        }
-         
+    for (sample = 1 ; sample < g_GraphTraceLen; sample++) {
          // condition is searching for the next edge, in the expected diretion.
         if ( ((dest[sample] + threshold) < dest[sample-1] && expectedNextEdge == FALLING ) || 
              ((dest[sample] - threshold) > dest[sample-1] && expectedNextEdge == RISING )) {
             //okay, next falling/rising edge found
-
+            
+            
+            
             expectedNextEdge = (expectedNextEdge == FALLING) ? RISING : FALLING; //toggle the next expected edge
             samplePosCurrentEdge = sample;
             beforeLastClockDuration = lastClockDuration; // save the previous clock duration for PMC recognition
             lastClockDuration = samplePosCurrentEdge - samplePosLastEdge;
             samplePosLastEdge = sample;
 
+          //  Dbprintf("%d, %d, edge found, len: %d, nextEdge: %d", sample, dest[sample], lastClockDuration*DECIMATION, expectedNextEdge);
+            
             // Switch depending on lastClockDuration length:
-            // Tolerance is 1/8 of clock rate (arbitrary)
             // 16T0 
             if (ABS(lastClockDuration - _16T0) < tolerance) {
 
-                //tollerance is missing for PMC!! TODO
-                // if the clock before was 16, it is indicating a PMC - check this
+                // if the clock before also was 16T0, it is a PMC!
                 if (ABS(beforeLastClockDuration - _16T0) < tolerance) { 
                     // It's a PMC
                     Dbprintf(_GREEN_("PMC 16T0 FOUND:") " bitPos: %d, sample: %d", bitPos, sample);
-                    sample += (128 + 127 + 16 + 32 + 33 + 16) - 1;  // move to the sample after PMC
+                    sample += pmc16T0Len;  // move to the sample after PMC
+
+                    expectedNextEdge = FALLING;
                     samplePosLastEdge = sample;
                     block_done = 1;
-                     // TODO: Not sure if sample need to set expected next edge?
-
                 }
             
             // 32TO
             } else if (ABS(lastClockDuration - _32T0) < tolerance) {
-                // if the clock before was 16, it is indicating a PMC - check this
+                // if the clock before also was 16T0, it is a PMC!
                 if (ABS(beforeLastClockDuration - _16T0) < tolerance) {
                     // It's a PMC !
                     Dbprintf(_GREEN_("PMC 32T0 FOUND:") " bitPos: %d, sample: %d", bitPos, sample);
-                    sample += (128 + 127 + 16 + 32 + 33) - 1;    // move to the sample after PMC
+                    
+                    sample += pmc32T0Len;    // move to the sample after PMC
+
+                    expectedNextEdge = FALLING;
                     samplePosLastEdge = sample;
                     block_done = 1;
 
-                    // TODO: Not sure if sample need to set expected next edge?
-
-                // if no pmc, then its a normal bit. Check if its the second time, the edge changed
-                // if yes, then the bit is 0
+                // if no pmc, then its a normal bit. 
+                // Check if its the second time, the edge changed if yes, then the bit is 0
                 } else if (half_switch == 1) {
                     bits[bitPos] = 0;
                     // reset the edge counter to 0
                     half_switch = 0;
                     bitPos++;
 
-                // so it is the first time the edge changed. No bit value will be set here, bit if the 
+                // if it is the first time the edge changed. No bit value will be set here, bit if the 
                 // edge changes again, it will be. see case above.
                 } else
                     half_switch++;
@@ -165,19 +155,17 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
            
            // Error
             } else {
-                Dbprintf(_RED_("ELSE error case") " bitPos: %d, sample: %d", bitPos, sample);
-                if (++warnings > 10) {
+                // some Error. maybe check tolerances. 
+                // likeley to happen in the first block.
+                Dbprintf(_RED_("ERROR in demodulation") " Length last clock: %d - check threshold/tolerance/signal. Toss block", lastClockDuration*DECIMATION);
 
-                    if (g_dbglevel >= DBG_EXTENDED) {
-                        Dbprintf("Error: too many detection errors, aborting");
-                    }   
-
-                    return 0;
-                }
+                // Toss this block.
+                block_done = 1;
             }
 
             if (block_done == 1) {
-                Dbprintf(_YELLOW_("Block Done") " bitPos: %d, sample: %d", bitPos, sample);
+                // Dbprintf(_YELLOW_("Block Done") " bitPos: %d, sample: %d", bitPos, sample);
+                
                 // check if it is a complete block. If bitpos <128, it means that we did not receive
                 // a complete block. E.g. at the first start of a transmission.
                 // only save if a complete block is being received.
@@ -202,6 +190,8 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
                 half_switch = 0;
             }
 
+        }else {
+         // Dbprintf("%d, %d", sample, dest[sample]);
         }
 
         // one block only holds 16byte (=128 bit) and then comes the PMC. so if more bit are found than 129, there must be an issue and PMC has not been identfied...
@@ -211,12 +201,8 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
             bitPos = 0;
         }
 
-        // Todo: No idea, why blocks 4 is checked..
-        if (num_blocks == 4) {
-            Dbprintf(_RED_("we should never get here!!!") " at sample: %d", sample);
-            break;
-        }
-    }
+    } 
+    
     memcpy(outBlocks, blocks, 16 * num_blocks);
     return num_blocks;
 }
@@ -265,23 +251,29 @@ void ReadPCF7931(bool ledcontrol) {
     
     Dbprintf("ReadPCF7931()==========");
 
+    uint8_t maxBlocks = 8;   // readable blocks
+
     int found_blocks = 0; // successfully read blocks
-    int max_blocks = 8;   // readable blocks
-    uint8_t memory_blocks[8][17]; // PCF content
-    uint8_t single_blocks[8][17]; // PFC blocks with unknown position
+    
+    // TODO: Why 17 byte len? 16 should be good.
+    uint8_t memory_blocks[maxBlocks][17]; // PCF content
+    uint8_t single_blocks[maxBlocks][17]; // PFC blocks with unknown position
+    uint8_t tmp_blocks[4][16]; // temporary read buffer
+
     int single_blocks_cnt = 0;
 
     size_t n; // transmitted blocks
-    uint8_t tmp_blocks[4][16]; // temporary read buffer
-
-    uint8_t found_0_1 = 0; // flag: blocks 0 and 1 were found
+    
+    //uint8_t found_0_1 = 0; // flag: blocks 0 and 1 were found
     int errors = 0; // error counter
     int tries = 0; // tries counter
 
+    // reuse lenghts and consts to properly clear
     memset(memory_blocks, 0, 8 * 17 * sizeof(uint8_t));
     memset(single_blocks, 0, 8 * 17 * sizeof(uint8_t));
 
-    int i = 0, j = 0;
+    int i = 0;
+    //j = 0;
 
     do {
         Dbprintf("ReadPCF7931() -- DO LOOP ==========");
@@ -294,15 +286,13 @@ void ReadPCF7931(bool ledcontrol) {
 
         // exit if no block is received
         if (errors >= 10 && found_blocks == 0 && single_blocks_cnt == 0) {
-
-            if (g_dbglevel >= DBG_INFO)
-                Dbprintf("[!!] Error, no tag or bad tag");
-
+            Dbprintf("[!!] Error, no tag or bad tag");
             return;
         }
-        // exit if too many errors during reading
-        if (tries > 50 && (2 * errors > tries)) {
+        // exit if too many tries without finding the first block
+        if (tries > 10) {
 
+            Dbprintf("End after 10 tries");
             if (g_dbglevel >= DBG_INFO) {
                 Dbprintf("[!!] Error reading the tag, only partial content");
             }
@@ -310,93 +300,94 @@ void ReadPCF7931(bool ledcontrol) {
             goto end;
         }
 
-        // our logic breaks if we don't get at least two blocks
-        if (n < 2) {
-            // skip if all 0s block or no blocks
-            if (n == 0 || !memcmp(tmp_blocks[0], "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16))
-                continue;
+        // // our logic breaks if we don't get at least two blocks
+        // if (n < 2) {
+        //     // skip if all 0s block or no blocks
+        //     if (n == 0 || !memcmp(tmp_blocks[0], "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16))
+        //         continue;
 
-            // add block to single blocks list
-            if (single_blocks_cnt < max_blocks) {
-                for (i = 0; i < single_blocks_cnt; ++i) {
-                    if (!memcmp(single_blocks[i], tmp_blocks[0], 16)) {
-                        j = 1;
-                        break;
-                    }
-                }
-                if (j != 1) {
-                    memcpy(single_blocks[single_blocks_cnt], tmp_blocks[0], 16);
-                    print_result("got single block", single_blocks[single_blocks_cnt], 16);
-                    single_blocks_cnt++;
-                }
-                j = 0;
-            }
-            ++tries;
-            continue;
-        }
+        //     // add block to single blocks list
+        //     if (single_blocks_cnt < maxBlocks) {
+        //         for (i = 0; i < single_blocks_cnt; ++i) {
+        //             if (!memcmp(single_blocks[i], tmp_blocks[0], 16)) {
+        //                 j = 1;
+        //                 break;
+        //             }
+        //         }
+        //         if (j != 1) {
+        //             memcpy(single_blocks[single_blocks_cnt], tmp_blocks[0], 16);
+        //             print_result("got single block", single_blocks[single_blocks_cnt], 16);
+        //             single_blocks_cnt++;
+        //         }
+        //         j = 0;
+        //     }
+        //     ++tries;
+        //     continue;
+        // }
 
-        if (g_dbglevel >= DBG_EXTENDED)
-            Dbprintf("(dbg) got %d blocks (%d/%d found) (%d tries, %d errors)", n, found_blocks, (max_blocks == 0 ? found_blocks : max_blocks), tries, errors);
+        // Dbprintf("(dbg) got %d blocks (%d/%d found) (%d tries, %d errors)", n, found_blocks, (maxBlocks == 0 ? found_blocks : maxBlocks), tries, errors);
+        // if (g_dbglevel >= DBG_EXTENDED)
+        //     Dbprintf("(dbg) got %d blocks (%d/%d found) (%d tries, %d errors)", n, found_blocks, (maxBlocks == 0 ? found_blocks : maxBlocks), tries, errors);
 
         for (i = 0; i < n; ++i) {
             print_result("got consecutive blocks", tmp_blocks[i], 16);
         }
 
-        i = 0;
-        if (!found_0_1) {
-            while (i < n - 1) {
-                if (IsBlock0PCF7931(tmp_blocks[i]) && IsBlock1PCF7931(tmp_blocks[i + 1])) {
-                    found_0_1 = 1;
-                    memcpy(memory_blocks[0], tmp_blocks[i], 16);
-                    memcpy(memory_blocks[1], tmp_blocks[i + 1], 16);
-                    memory_blocks[0][ALLOC] = memory_blocks[1][ALLOC] = 1;
-                    // block 1 tells how many blocks are going to be sent
-                    max_blocks = MAX((memory_blocks[1][14] & 0x7f), memory_blocks[1][15]) + 1;
-                    found_blocks = 2;
+        // i = 0;
+        // if (!found_0_1) {
+        //     while (i < n - 1) {
+        //         if (IsBlock0PCF7931(tmp_blocks[i]) && IsBlock1PCF7931(tmp_blocks[i + 1])) {
+        //             found_0_1 = 1;
+        //             memcpy(memory_blocks[0], tmp_blocks[i], 16);
+        //             memcpy(memory_blocks[1], tmp_blocks[i + 1], 16);
+        //             memory_blocks[0][ALLOC] = memory_blocks[1][ALLOC] = 1;
+        //             // block 1 tells how many blocks are going to be sent
+        //             maxBlocks = MAX((memory_blocks[1][14] & 0x7f), memory_blocks[1][15]) + 1;
+        //             found_blocks = 2;
 
-                    Dbprintf("Found blocks 0 and 1. PCF is transmitting %d blocks.", max_blocks);
+        //             Dbprintf("Found blocks 0 and 1. PCF is transmitting %d blocks.", maxBlocks);
 
-                    // handle the following blocks
-                    for (j = i + 2; j < n; ++j) {
-                        memcpy(memory_blocks[found_blocks], tmp_blocks[j], 16);
-                        memory_blocks[found_blocks][ALLOC] = 1;
-                        ++found_blocks;
-                    }
-                    break;
-                }
-                ++i;
-            }
-        } else {
-            // Trying to re-order blocks
-            // Look for identical block in memory blocks
-            while (i < n - 1) {
-                // skip all zeroes blocks
-                if (memcmp(tmp_blocks[i], "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16)) {
-                    for (j = 1; j < max_blocks - 1; ++j) {
-                        if (!memcmp(tmp_blocks[i], memory_blocks[j], 16) && !memory_blocks[j + 1][ALLOC]) {
-                            memcpy(memory_blocks[j + 1], tmp_blocks[i + 1], 16);
-                            memory_blocks[j + 1][ALLOC] = 1;
-                            if (++found_blocks >= max_blocks) goto end;
-                        }
-                    }
-                }
-                if (memcmp(tmp_blocks[i + 1], "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16)) {
-                    for (j = 0; j < max_blocks; ++j) {
-                        if (!memcmp(tmp_blocks[i + 1], memory_blocks[j], 16) && !memory_blocks[(j == 0 ? max_blocks : j) - 1][ALLOC]) {
-                            if (j == 0) {
-                                memcpy(memory_blocks[max_blocks - 1], tmp_blocks[i], 16);
-                                memory_blocks[max_blocks - 1][ALLOC] = 1;
-                            } else {
-                                memcpy(memory_blocks[j - 1], tmp_blocks[i], 16);
-                                memory_blocks[j - 1][ALLOC] = 1;
-                            }
-                            if (++found_blocks >= max_blocks) goto end;
-                        }
-                    }
-                }
-                ++i;
-            }
-        }
+        //             // handle the following blocks
+        //             for (j = i + 2; j < n; ++j) {
+        //                 memcpy(memory_blocks[found_blocks], tmp_blocks[j], 16);
+        //                 memory_blocks[found_blocks][ALLOC] = 1;
+        //                 ++found_blocks;
+        //             }
+        //             break;
+        //         }
+        //         ++i;
+        //     }
+        // } else {
+        //     // Trying to re-order blocks
+        //     // Look for identical block in memory blocks
+        //     while (i < n - 1) {
+        //         // skip all zeroes blocks
+        //         if (memcmp(tmp_blocks[i], "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16)) {
+        //             for (j = 1; j < maxBlocks - 1; ++j) {
+        //                 if (!memcmp(tmp_blocks[i], memory_blocks[j], 16) && !memory_blocks[j + 1][ALLOC]) {
+        //                     memcpy(memory_blocks[j + 1], tmp_blocks[i + 1], 16);
+        //                     memory_blocks[j + 1][ALLOC] = 1;
+        //                     if (++found_blocks >= maxBlocks) goto end;
+        //                 }
+        //             }
+        //         }
+        //         if (memcmp(tmp_blocks[i + 1], "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16)) {
+        //             for (j = 0; j < maxBlocks; ++j) {
+        //                 if (!memcmp(tmp_blocks[i + 1], memory_blocks[j], 16) && !memory_blocks[(j == 0 ? maxBlocks : j) - 1][ALLOC]) {
+        //                     if (j == 0) {
+        //                         memcpy(memory_blocks[maxBlocks - 1], tmp_blocks[i], 16);
+        //                         memory_blocks[maxBlocks - 1][ALLOC] = 1;
+        //                     } else {
+        //                         memcpy(memory_blocks[j - 1], tmp_blocks[i], 16);
+        //                         memory_blocks[j - 1][ALLOC] = 1;
+        //                     }
+        //                     if (++found_blocks >= maxBlocks) goto end;
+        //                 }
+        //             }
+        //         }
+        //         ++i;
+        //     }
+        // }
         ++tries;
         if (BUTTON_PRESS()) {
             if (g_dbglevel >= DBG_EXTENDED)
@@ -404,13 +395,13 @@ void ReadPCF7931(bool ledcontrol) {
 
             goto end;
         }
-    } while (found_blocks < max_blocks);
+    } while (found_blocks < maxBlocks);
 
 end:
     Dbprintf("-----------------------------------------");
     Dbprintf("Memory content:");
     Dbprintf("-----------------------------------------");
-    for (i = 0; i < max_blocks; ++i) {
+    for (i = 0; i < maxBlocks; ++i) {
         if (memory_blocks[i][ALLOC])
             print_result("Block", memory_blocks[i], 16);
         else
@@ -418,7 +409,7 @@ end:
     }
     Dbprintf("-----------------------------------------");
 
-    if (found_blocks < max_blocks) {
+    if (found_blocks < maxBlocks) {
         Dbprintf("-----------------------------------------");
         Dbprintf("Blocks with unknown position:");
         Dbprintf("-----------------------------------------");
