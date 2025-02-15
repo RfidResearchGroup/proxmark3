@@ -336,6 +336,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "F484D1",
+        "Vendor": "HID",
+        "Country": "US",
+        "Name": "Unknown DESFire EV1",
+        "Description": "Access Control",
+        "Type": "pacs"
+    },
+    {
         "AID": "F484E3",
         "Vendor": "HID",
         "Country": "US",
@@ -1034,7 +1042,7 @@
     {
         "AID": "087522",
         "Vendor": "Umo Mobility via Cubic Transportation Systems",
-        "Country": "US",
+        "Country": "US / CA",
         "Name": "Umo Mobility Card",
         "Description": "Umo Mobility Card",
         "Type": "transport"
@@ -1160,14 +1168,6 @@
         "Type": "transport"
     },
     {
-        "AID": "444D05",
-        "Vendor": "Delhi Metro Rail Corporation Limited",
-        "Country": "IN",
-        "Name": "Delhi Metro Travel Card (DEL)",
-        "Description": "DEL Delhi Metro (App 5)",
-        "Type": "transport"
-    },
-    {
         "AID": "444D06",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
@@ -1219,7 +1219,7 @@
         "AID": "578000",
         "Vendor": "Norwegian Public Roads Administration (NPRA)",
         "Country": "NO",
-        "Name": "NORTIC (Norway Public Transport Card)",
+        "Name": "NORTIC (Norway Public Transport Card) (Card Issuer App)",
         "Description": "Norwegian Ticketing Interoperable Concept // FID 0C: Card Issuer Header",
         "Type": "transport"
     },
@@ -1227,7 +1227,7 @@
         "AID": "578001",
         "Vendor": "Norwegian Public Roads Administration (NPRA)",
         "Country": "NO",
-        "Name": "NORTIC (Norway Public Transport Card)",
+        "Name": "NORTIC (Norway Public Transport Card) (Transport App)",
         "Description": "FIDs 01: Product Retailer; 02: Service Provider; 03: Special Event; 04: Stored Value; 05: General Event Log; 06: SV Reload Log; 0A: Environment; 0C: Card Holder",
         "Type": "transport"
     },
@@ -1242,7 +1242,7 @@
     {
         "AID": "677F8E",
         "Vendor": "Umo Mobility via Cubic Transportation Systems",
-        "Country": "US",
+        "Country": "US / CA",
         "Name": "Umo Mobility Card",
         "Description": "Umo Mobility Card",
         "Type": "transport"
@@ -1258,7 +1258,7 @@
     {
         "AID": "992CB5",
         "Vendor": "Umo Mobility via Cubic Transportation Systems",
-        "Country": "US",
+        "Country": "US / CA",
         "Name": "Umo Mobility Card",
         "Description": "Umo Mobility Card",
         "Type": "transport"
@@ -1274,7 +1274,7 @@
     {
         "AID": "A4237D",
         "Vendor": "Umo Mobility via Cubic Transportation Systems",
-        "Country": "US",
+        "Country": "US / CA",
         "Name": "Umo Mobility Card",
         "Description": "Umo Mobility Card",
         "Type": "transport"
@@ -1282,7 +1282,7 @@
     {
         "AID": "C65B80",
         "Vendor": "Umo Mobility via Cubic Transportation Systems",
-        "Country": "US",
+        "Country": "US / CA",
         "Name": "Umo Mobility Card",
         "Description": "Umo Mobility Card",
         "Type": "transport"
@@ -1353,10 +1353,10 @@
     },
     {
         "AID": "F21050",
-        "Vendor": "Metro Christchurch via INIT",
-        "Country": "NZ",
-        "Name": "Metrocard (CHC)",
-        "Description": "FIDs: 00: Backup Data; 01/02: Trip History; 03: Card Balance",
+        "Vendor": "Metro Christchurch via INIT / Arc",
+        "Country": "NZ / CA",
+        "Name": "Metrocard (CHC) / Arc (YEG)",
+        "Description": "CHC FIDs: 00: Backup Data; 01/02: Trip History; 03: Card Balance",
         "Type": "transport"
     },
     {
