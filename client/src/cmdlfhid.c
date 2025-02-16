@@ -160,8 +160,7 @@ int demodHID(bool verbose) {
         return PM3_ESOFT;
     }
 
-    wiegand_message_t packed = initialize_message_object(hi2, hi, lo, 0);
-    if (HIDTryUnpack(&packed) == false) {
+    if (!decode_wiegand(hi2, hi, lo, 0)) { // if failed to unpack wiegand
         printDemodBuff(0, false, false, true);
     }
     PrintAndLogEx(INFO, "raw: " _GREEN_("%08x%08x%08x"), hi2, hi, lo);
@@ -214,8 +213,8 @@ static int CmdHIDReader(const char *Cmd) {
     }
 
     do {
-        lf_read(false, 16000);
-        demodHID(!cm);
+        lf_read(false, 16000); // get data of 16000 samples from proxmark device
+        demodHID(!cm); // demod data and print results if found
     } while (cm && !kbd_enter_pressed());
 
     return PM3_SUCCESS;

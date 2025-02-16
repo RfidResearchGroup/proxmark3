@@ -58,6 +58,7 @@ bool HIDPack(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bo
 bool HIDTryUnpack(wiegand_message_t *packed);
 void HIDPackTryAll(wiegand_card_t *card, bool preamble);
 void HIDUnpack(int idx, wiegand_message_t *packed);
+bool decode_wiegand(uint32_t top, uint32_t mid, uint32_t bot, int n);
 int HIDDumpPACSBits(const uint8_t *const data, const uint8_t length, bool verbose);
 void print_wiegand_code(wiegand_message_t *packed);
 void print_desc_wiegand(cardformat_t *fmt, wiegand_message_t *packed);

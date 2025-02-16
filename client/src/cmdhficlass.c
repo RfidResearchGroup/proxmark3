@@ -1451,8 +1451,7 @@ static int iclass_decode_credentials_new_pacs(uint8_t *d) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Wiegand decode");
-    wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
-    HIDTryUnpack(&packed);
+    decode_wiegand(top, mid, bot, 0);
 
     return PM3_SUCCESS;
 }
@@ -1492,8 +1491,7 @@ static void iclass_decode_credentials(uint8_t *data) {
             PrintAndLogEx(SUCCESS, "Binary..................... " _GREEN_("%s"), pbin);
 
             PrintAndLogEx(INFO, "Wiegand decode");
-            wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
-            HIDTryUnpack(&packed);
+            decode_wiegand(top, mid, bot, 0);
         }
 
     } else {
@@ -2916,8 +2914,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
                     PrintAndLogEx(SUCCESS, "      bin : %s", pbin);
                     PrintAndLogEx(INFO, "");
                     PrintAndLogEx(INFO, "------------------------------ " _CYAN_("Wiegand") " -------------------------------");
-                    wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
-                    HIDTryUnpack(&packed);
+                    decode_wiegand(top, mid, bot, 0);
                 }
             } else {
                 PrintAndLogEx(INFO, "no credential found");
