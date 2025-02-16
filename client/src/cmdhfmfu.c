@@ -669,6 +669,9 @@ static int try_default_aes_keys(bool override) {
 }
 
 static int ul_auth_select(iso14a_card_select_t *card, uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, uint8_t *pack, uint8_t packSize) {
+    if (ul_select(card) == false) {
+        return PM3_ESOFT;
+    }
 
     if (hasAuthKey && (tagtype & MFU_TT_UL_C)) {
         //will select card automatically and close connection on error
@@ -676,12 +679,7 @@ static int ul_auth_select(iso14a_card_select_t *card, uint64_t tagtype, bool has
             PrintAndLogEx(WARNING, "Authentication Failed UL-C");
             return PM3_ESOFT;
         }
-
     } else {
-        if (ul_select(card) == false) {
-            return PM3_ESOFT;
-        }
-
         if (hasAuthKey) {
             if (ulev1_requestAuthentication(authkey, pack, packSize) == PM3_EWRONGANSWER) {
                 DropField();
