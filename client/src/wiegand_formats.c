@@ -1534,18 +1534,18 @@ bool HIDTryUnpack(wiegand_message_t *packed) {
 
             found_cnt++;
             hid_print_card(&card, FormatTable[i]);
-
-            if (FormatTable[i].Fields.hasParity || card.ParityValid == false)
+            // if fields has parity AND card parity is false
+            if (FormatTable[i].Fields.hasParity && (card.ParityValid == false))
                 found_invalid_par++;
         }
         ++i;
     }
 
     if (found_cnt) {
-        PrintAndLogEx(INFO, "found %u matching format%c", found_cnt, (found_cnt > 1) ? 's' : ' ');
+        PrintAndLogEx(INFO, "found %u matching format%c with bit len %d", found_cnt, (found_cnt > 1) ? 's' : ' ', packed->Length);
     }
-
-    if (packed->Length && found_invalid_par == 0) {
+    
+    if (packed->Length && ((found_cnt - found_invalid_par) == 0)) { // if length > 0 and no valid parity matches
         PrintAndLogEx(WARNING, "Wiegand unknown bit len %d", packed->Length);
         PrintAndLogEx(HINT, "Try 0xFFFF's http://cardinfo.barkweb.com.au/");
     }
@@ -1559,6 +1559,31 @@ void HIDUnpack(int idx, wiegand_message_t *packed) {
     if (FormatTable[idx].Unpack(packed, &card)) {
         hid_print_card(&card, FormatTable[idx]);
     }
+}
+
+// decode wiegand format using HIDTryUnpack
+// return true if at least one valid matching formats found
+bool decode_wiegand(uint32_t top, uint32_t mid, uint32_t bot, int n) {
+    bool decode_result;
+    
+    if (top == 0 && mid == 0 && bot == 0) {
+        decode_result = false;
+    } else if ((n > 0) || ((mid & 0xFFFFFFC0) > 0)) {  // if n > 0 or there's more than 38 bits
+        wiegand_message_t packed = initialize_message_object(top, mid, bot, n);
+        decode_result = HIDTryUnpack(&packed);
+    } else { // n <= 0 and 39-64 bits are all 0, try two possible bitlens
+        wiegand_message_t packed1 = initialize_message_object(top, mid, bot, n); // 26-37 bits
+        wiegand_message_t packed2 = initialize_message_object(top, mid, bot, 38); // 38 bits
+        bool packed1_result = HIDTryUnpack(&packed1);
+        bool packed2_result = HIDTryUnpack(&packed2);
+        decode_result = (packed1_result || packed2_result);
+    }
+
+    if (decode_result == false) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID no values found"));
+    }
+
+    return decode_result;
 }
 
 int HIDDumpPACSBits(const uint8_t *const data, const uint8_t length, bool verbose) {

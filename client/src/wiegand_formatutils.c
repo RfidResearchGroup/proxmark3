@@ -132,7 +132,23 @@ static uint8_t get_length_from_header(wiegand_message_t *data) {
     /**
      * detect if message has "preamble" / "sentinel bit"
      * Right now we just calculate the highest bit set
-     * 37 bit formats is hard to detect since it doesnt have a sentinel bit
+     * 38 bits format is handled by directly setting n=38 in initialize_message_object()
+     * since it's hard to distinguish 38 bits with formats with preamble bit (26-36 bits)
+     * 
+     * (from http://www.proxmark.org/forum/viewtopic.php?pid=5368#p5368)
+     * 0000 0010 0000 0000 01xx xxxx xxxx xxxx xxxx xxxx xxxx  26-bit
+     * 0000 0010 0000 0000 1xxx xxxx xxxx xxxx xxxx xxxx xxxx  27-bit
+     * 0000 0010 0000 0001 xxxx xxxx xxxx xxxx xxxx xxxx xxxx  28-bit
+     * 0000 0010 0000 001x xxxx xxxx xxxx xxxx xxxx xxxx xxxx  29-bit
+     * 0000 0010 0000 01xx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  30-bit
+     * 0000 0010 0000 1xxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  31-bit
+     * 0000 0010 0001 xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  32-bit
+     * 0000 0010 001x xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  33-bit
+     * 0000 0010 01xx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  34-bit
+     * 0000 0010 1xxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  35-bit
+     * 0000 0011 xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  36-bit
+     * 0000 000x xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  37-bit
+     * 0000 00xx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  38-bit
      */
     uint8_t len = 0;
     uint32_t hfmt = 0; // for calculating card length
@@ -140,26 +156,23 @@ static uint8_t get_length_from_header(wiegand_message_t *data) {
     if ((data->Top & 0x000FFFFF) > 0) { // > 64 bits
         hfmt = data->Top & 0x000FFFFF;
         len = 64;
-    } else if (data->Mid > 0) { // < 63-32 bits
-
+    } else if (data->Mid > 0) { 
         // detect HID format b38 set
-        if (data->Mid & 0xFFFFFFC0) {
+        if (data->Mid & 0xFFFFFFC0) { // 39-64 bits
             hfmt = data->Mid;
-            len = 32;
-        } else {
-
+            len = 31; // remove leading 1 (preamble) in 39-64 bits format
+        } else { // detect card format 26-37 bits using "preamble" / "sentinel bit"
             PrintAndLogEx(DEBUG, "hid preamble detected");
-            len = 32;
 
-            if ((data->Mid ^ 0x20) == 0) { hfmt = data->Bot; len = 0; }
-            else if ((data->Mid & 0x10) == 0) { hfmt = data->Mid & 0x1F; }
-            else if ((data->Mid & 0x08) == 0) { hfmt = data->Mid & 0x0F; }
-            else if ((data->Mid & 0x04) == 0) { hfmt = data->Mid & 0x07; }
-            else if ((data->Mid & 0x02) == 0) { hfmt = data->Mid & 0x03; }
-            else if ((data->Mid & 0x01) == 0) { hfmt = data->Mid & 0x01; }
-            else { hfmt = data->Mid & 0x3F;}
-        }
-
+            // if bit 38 is set: => 26-36 bits
+            if (((data->Mid >> 5) & 1) == 1) { 
+                hfmt = (((data->Mid & 31) << 12) | (data->Bot >> 26)); //get bits 27-37 to check for format len bit
+                len = 19;
+            } else { // if bit 38 is not set => 37 bits
+                hfmt = 0;
+                len = 37;
+            }  
+        } 
     } else {
         hfmt = data->Bot;
         len = 0;

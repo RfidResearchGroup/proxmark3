@@ -6293,8 +6293,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
                 PrintAndLogEx(SUCCESS, "Binary... " _GREEN_("%s"), pbin);
 
                 PrintAndLogEx(INFO, "Wiegand decode");
-                wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
-                HIDTryUnpack(&packed);
+                decode_wiegand(top, mid, bot, 0);
             }
         }
 

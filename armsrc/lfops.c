@@ -1316,10 +1316,6 @@ int lf_hid_watch(int findone, uint32_t *high, uint32_t *low, bool ledcontrol) {
                         cardnum = (lo >> 1) & 0xFFFF;
                         fac = (lo >> 17) & 0xFF;
                     }
-                    if (bitlen == 37) {
-                        cardnum = (lo >> 1) & 0x7FFFF;
-                        fac = ((hi & 0xF) << 12) | (lo >> 20);
-                    }
                     if (bitlen == 34) {
                         cardnum = (lo >> 1) & 0xFFFF;
                         fac = ((hi & 1) << 15) | (lo >> 17);

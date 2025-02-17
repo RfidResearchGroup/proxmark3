@@ -160,8 +160,7 @@ int CmdWiegandDecode(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    wiegand_message_t packed = initialize_message_object(top, mid, bot, blen);
-    HIDTryUnpack(&packed);
+    decode_wiegand(top, mid, bot, blen);
     return PM3_SUCCESS;
 }
 
