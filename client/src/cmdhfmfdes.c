@@ -355,6 +355,10 @@ static nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
     if (type == 0x81 && major == 0x42 && minor == 0x00)
         return DESFIRE_EV2;
 
+    // Apple Wallet DESFire Applet
+    if (type == 0x91 && major == 0x62 && minor == 0x01)
+        return DESFIRE_EV2;
+
     // Plus EV1
     if (type == 0x02 && major == 0x11 && minor == 0x00)
         return PLUS_EV1;
@@ -377,7 +381,7 @@ static nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
 // ref:  https://www.nxp.com/docs/en/application-note/AN12343.pdf  p7
 static nxp_producttype_t getProductType(const uint8_t *versionhw) {
 
-    uint8_t product = versionhw[2];
+    uint8_t product = versionhw[1];
 
     if (product == 0x01)
         return DESFIRE_PHYSICAL;
@@ -394,7 +398,7 @@ static nxp_producttype_t getProductType(const uint8_t *versionhw) {
 
 static const char *getProductTypeStr(const uint8_t *versionhw) {
 
-    uint8_t product = versionhw[2];
+    uint8_t product = versionhw[1];
 
     if (product == 0x01)
         return "MIFARE DESFire native IC (physical card)";
