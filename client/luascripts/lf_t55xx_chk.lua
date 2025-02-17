@@ -19,7 +19,7 @@ desc = [[
 ]]
 
 usage = [[
-    script run t55_chk [-s start_year] [-e end_year] [-d | -y]
+    script run lf_t55xx_chk [-s start_year] [-e end_year] [-d | -y]
 ]]
 options = [[
     -h                    this help
@@ -29,10 +29,10 @@ options = [[
     -y                    search method: YYYYMMDD
 ]]
 examples = [[
-    script run t55_chk -s 1999 -d             -> start 1999, end is current year, method 01011999
-    script run t55_chk -s 1999 -y             -> start 1999, end is current year, method 19990101
-    script run t55_chk -s 1999 -e 2001 -y     -> start 1999, end year 2001, method 19990101
-    script run t55_chk -s 1999 -e 2001 -d     -> start 1999, end year 2001, method 01011999
+    script run lf_t55xx_chk -s 1999 -d             -> start 1999, end is current year, method 01011999
+    script run lf_t55xx_chk -s 1999 -y             -> start 1999, end is current year, method 19990101
+    script run lf_t55xx_chk -s 1999 -e 2001 -y     -> start 1999, end year 2001, method 19990101
+    script run lf_t55xx_chk -s 1999 -e 2001 -d     -> start 1999, end year 2001, method 01011999
 ]]
 
 local function help()

@@ -17,10 +17,10 @@ desc = [[
   only performs the reanimation procedure. The script revives 99% of blocked tags.
  ]]
 usage = [[
-  script run t55_fix
+  script run lf_t55xx_fix
 ]]
 arguments = [[
-  script run t55_fix -h    : this help
+  script run lf_t55xx_fix -h    : this help
 ]]
 
 local function help()

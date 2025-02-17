@@ -14,10 +14,10 @@ desc = [[
     useful if the password is, for example, a date of birth.
 ]]
 usage = [[
-  script run t55_chk_date
+  script run lf_t55xx_chk_date
 ]]
 arguments = [[
-  script run t55_chk_date -h    : this help
+  script run lf_t55xx_chk_date -h    : this help
 ]]
 
 local DEBUG = true
