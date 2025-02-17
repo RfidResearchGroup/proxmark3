@@ -107,6 +107,37 @@ int asn1_print(uint8_t *asn1buf, size_t asn1buflen, const char *indent) {
     return PM3_SUCCESS;
 }
 
+int asn1_get_tag_length(const uint8_t *data, size_t *n, size_t *offset, size_t total_length) {
+
+    if (*offset >= total_length) {
+        return -1;
+    }
+
+    if (data[*offset] & 0x80) {
+
+        // Long form: number of length bytes is indicated by the lower 7 bits
+        size_t len_bytes = data[*offset] & 0x7F;
+
+        *offset += 1;
+
+        if (*offset + len_bytes > total_length) {
+            return -1;
+        }
+
+        *n = 0;
+        for (size_t i = 0; i < len_bytes; i++) {
+            *n = (*n << 8) | data[*offset];
+            *offset += 1;
+        }
+    } else {
+        // Short form: length is directly represented
+        *n = data[*offset];
+        *offset += 1;
+    }
+
+    return 0;
+}
+
 
 typedef struct {
     const char *hex;

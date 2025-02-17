@@ -2067,6 +2067,7 @@ uint64_t GetHF14AMfU_Type(void) {
         uint8_t version[10] = {0x00};
         int len  = ulev1_getVersion(version, sizeof(version));
         DropField();
+
         switch (len) {
             case 0x0A: {
                 /*
@@ -2158,6 +2159,7 @@ uint64_t GetHF14AMfU_Type(void) {
                 tagtype = MFU_TT_UNKNOWN;
                 break;
         }
+
         // This is a test from cards that doesn't answer to GET_VERSION command
         // UL vs UL-C vs NTAG203 vs FUDAN FM11NT021 (which is NTAG213 compatiable)
         if (tagtype & (MFU_TT_UL | MFU_TT_UL_C | MFU_TT_NTAG_203)) {

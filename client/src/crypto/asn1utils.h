@@ -25,6 +25,8 @@
 
 int asn1_print(uint8_t *asn1buf, size_t asn1buflen, const char *indent);
 int ecdsa_asn1_get_signature(uint8_t *signature, size_t signaturelen, uint8_t *rval, uint8_t *sval);
+
+int asn1_get_tag_length(const uint8_t *data, size_t *n, size_t *offset, size_t total_length);
 int asn1_selftest(void);
 
 #endif /* asn1utils.h */

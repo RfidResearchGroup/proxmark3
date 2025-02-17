@@ -1105,7 +1105,9 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
 
 int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, nfc_df_e ft) {
 
-    if (data == NULL) return PM3_EINVARG;
+    if (data == NULL) {
+        return PM3_EINVARG;
+    }
 
     *datalen = 0;
     int retval = PM3_SUCCESS;
@@ -1137,16 +1139,17 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
         memset(line, 0, sizeof(line));
 
         if (fgets(line, sizeof(line), f) == NULL) {
-            if (feof(f))
+            if (feof(f)) {
                 break;
-
+            }
             fclose(f);
             PrintAndLogEx(FAILED, "file reading error");
             return PM3_EFILE;
         }
 
-        if (line[0] == '#')
+        if (line[0] == '#') {
             continue;
+        }
 
         str_cleanrn(line, sizeof(line));
         str_lower(line);
@@ -2626,6 +2629,7 @@ int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool 
     fclose(f);
 
     if (verbose) {
+
         switch (*dump_type) {
             case NFC_DF_MFU:
                 PrintAndLogEx(INFO, "Detected MIFARE Ultralight / NTAG based dump format");
@@ -3107,7 +3111,7 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
             break;
         }
         case FLIPPER: {
-            nfc_df_e dumptype;
+            nfc_df_e dumptype = NFC_DF_UNKNOWN;
             res = detect_nfc_dump_format(fn, &dumptype, true);
             if (res != PM3_SUCCESS) {
                 break;

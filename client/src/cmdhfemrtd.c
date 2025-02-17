@@ -1877,14 +1877,13 @@ static int emrtd_print_ef_sod_info(uint8_t *dg_hashes_calc, uint8_t *dg_hashes_s
     PrintAndLogEx(INFO, "------------------------ " _CYAN_("EF_SOD") " ------------------------");
     PrintAndLogEx(INFO, "Document Security Object");
     PrintAndLogEx(INFO, "contains the digital signatures of the passport data");
+    PrintAndLogEx(INFO, "");
 
     if (hash_algo == -1) {
         PrintAndLogEx(SUCCESS, "Hash algorithm... " _YELLOW_("Unknown"));
-        PrintAndLogEx(INFO, "");
     } else {
 
         PrintAndLogEx(SUCCESS, "Hash algorithm... " _YELLOW_("%s"), hashalg_table[hash_algo].name);
-        PrintAndLogEx(INFO, "");
 
         uint8_t all_zeroes[64] = { 0x00 };
 
