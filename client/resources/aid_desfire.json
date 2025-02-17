@@ -520,6 +520,46 @@
         "Type": "student"
     },
     {
+        "AID": "764970",
+        "Vendor": "Ubiquiti Inc",
+        "Country": "N/A",
+        "Name": "UniFi Access VID App",
+        "Description": "Contains issuer-signed static credential information used for KDF & other authentication operations",
+        "Type": "pacs"
+    },
+    {
+        "AID": "84D3FC",
+        "Vendor": "Ubiquiti Inc",
+        "Country": "N/A",
+        "Name": "UniFi Access FCD App",
+        "Description": "Contains static credential information used for KDF & other authentication operations",
+        "Type": "pacs"
+    },
+    {
+        "AID": "416343",
+        "Vendor": "Ubiquiti Inc",
+        "Country": "N/A",
+        "Name": "UniFi Access ACC App",
+        "Description": "Application created after enrollment into the system, containins unique authentication info",
+        "Type": "pacs"
+    },
+    {
+        "AID": "454955",
+        "Vendor": "Ubiquiti Inc",
+        "Country": "N/A",
+        "Name": "UniFi Access Touch Pass Apple Wallet Express",
+        "Description": "AID value is 'UIE' (UniFi Express) reversed. This app is selectable with or without auth",
+        "Type": "pacs"
+    },
+    {
+        "AID": "534955",
+        "Vendor": "Ubiquiti Inc",
+        "Country": "N/A",
+        "Name": "UniFi Access Touch Pass Apple Wallet Secure",
+        "Description": "AID value is 'UIS' (UniFi Secure) reversed. This app is selectable only after manual auth",
+        "Type": "pacs"
+    },
+    {
         "AID": "535501",
         "Vendor": "TU Delft",
         "Country": "NL",
@@ -1397,6 +1437,14 @@
         "Country": "US",
         "Name": "Clipper Card (SFO)",
         "Description": "FIDs 02: Card Balance; 04: Refill History; 08: Card Information; 0E: Trip History",
+        "Type": "transport"
+    },
+    {
+        "AID": "F21191",
+        "Vendor": "Metropolitan Transportation Commission via Cubic",
+        "Country": "US",
+        "Name": "Clipper Card (Mobile)",
+        "Description": "",
         "Type": "transport"
     },
     {
