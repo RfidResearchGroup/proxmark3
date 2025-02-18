@@ -291,9 +291,16 @@ int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastCh
 
     if ((singleSectorParams >> 15) & 1) {
         if (curr_keys) {
-            uint64_t foo = bytes_to_num(resp.data.asBytes, 6);
+            // uint64_t foo = bytes_to_num(resp.data.asBytes, 6);
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(SUCCESS, _GREEN_("Key %s for block %2i found: %012" PRIx64), (singleSectorParams >> 8) & 1 ? "B" : "A", singleSectorParams & 0xFF, foo);
+//            PrintAndLogEx(SUCCESS, "found Key %s for block %2i found: " _GREEN_("%012" PRIx64), (singleSectorParams >> 8) & 1 ? "B" : "A", singleSectorParams & 0xFF, foo);
+
+            PrintAndLogEx(SUCCESS, "\nTarget block %4u key type %c -- found valid key [ " _GREEN_("%s") " ]",
+                          singleSectorParams & 0xFF,
+                          ((singleSectorParams >> 8) & 1) ? 'B' : 'A',
+                          sprint_hex_inrow(resp.data.asBytes, MIFARE_KEY_SIZE)
+                         );
+
             return PM3_SUCCESS;
         }
     }

@@ -1344,10 +1344,7 @@ static int CmdHFiClassEView(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     printIclassDumpContents(dump, 1, blocks, bytes, dense_output);
-
-    if (verbose) {
-        print_iclass_sio(dump, bytes);
-    }
+    print_iclass_sio(dump, bytes, verbose);
 
     free(dump);
     return PM3_SUCCESS;
@@ -1708,11 +1705,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         }
 
         printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen, dense_output);
-
-        if (verbose) {
-            print_iclass_sio(decrypted, decryptedlen);
-        }
-
+        print_iclass_sio(decrypted, decryptedlen, verbose);
         PrintAndLogEx(NORMAL, "");
 
         // decode block 6
@@ -3518,10 +3511,7 @@ static int CmdHFiClassView(const char *Cmd) {
     print_picopass_info((picopass_hdr_t *) dump);
     printIclassDumpContents(dump, startblock, endblock, bytes_read, dense_output);
     iclass_decode_credentials(dump);
-
-    if (verbose) {
-        print_iclass_sio(dump, bytes_read);
-    }
+    print_iclass_sio(dump, bytes_read, verbose);
 
     free(dump);
     return PM3_SUCCESS;

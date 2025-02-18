@@ -1008,7 +1008,7 @@ void DesfirePrintAIDFunctions(uint32_t appid) {
     if ((aid[2] >> 4) == 0xF) {
         uint16_t short_aid = ((aid[2] & 0xF) << 12) | (aid[1] << 4) | (aid[0] >> 4);
         PrintAndLogEx(SUCCESS, "  AID mapped to MIFARE Classic AID (MAD): " _YELLOW_("%02X"), short_aid);
-        PrintAndLogEx(SUCCESS, "  MAD AID Cluster  0x%02X      : " _YELLOW_("%s"), short_aid >> 8, nxp_cluster_to_text(short_aid >> 8));
+        PrintAndLogEx(SUCCESS, "   MAD AID Cluster  0x%02X..... " _YELLOW_("%s"), short_aid >> 8, nxp_cluster_to_text(short_aid >> 8));
         MADDFDecodeAndPrint(short_aid, false);
     } else {
         AIDDFDecodeAndPrint(aid);
@@ -1016,53 +1016,64 @@ void DesfirePrintAIDFunctions(uint32_t appid) {
 }
 
 int DesfireSelectAndAuthenticateEx(DesfireContext_t *dctx, DesfireSecureChannel secureChannel, uint32_t aid, bool noauth, bool verbose) {
-    if (verbose)
+    if (verbose) {
         DesfirePrintContext(dctx);
+    }
 
     // needs card uid for diversification
-    if (dctx->kdfAlgo == MFDES_KDF_ALGO_GALLAGHER)
+    if (dctx->kdfAlgo == MFDES_KDF_ALGO_GALLAGHER) {
         DesfireGetCardUID(dctx);
+    }
 
     bool isosw = false;
     if (dctx->cmdSet == DCCISO) {
         dctx->cmdSet = DCCNativeISO;
         isosw = true;
-        if (verbose)
+        if (verbose) {
             PrintAndLogEx(INFO, "Switch to " _CYAN_("native") " for select");
+    }
     }
 
     int res;
     if (aid == 0x000000) {
         res = DesfireAnticollision(verbose);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire anticollision " _RED_("error") ".");
+            PrintAndLogEx(ERR, "Desfire anticollision " _RED_("fail"));
             return 200;
         }
-        if (verbose)
+
+        if (verbose) {
             PrintAndLogEx(INFO, "Anticollision " _GREEN_("ok"));
+        }
+
     } else {
         res = DesfireSelectAIDHex(dctx, aid, false, 0);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+            PrintAndLogEx(ERR, "Desfire select " _RED_("fail"));
             return 200;
         }
-        if (verbose)
+
+        if (verbose) {
             PrintAndLogEx(INFO, "App %06x " _GREEN_("selected"), aid);
     }
+    }
 
-    if (isosw)
+    if (isosw) {
         dctx->cmdSet = DCCISO;
+    }
 
     if (noauth == false) {
+
         res = DesfireAuthenticate(dctx, secureChannel, verbose);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: [%d] %s", res, DesfireAuthErrorToStr(res));
+            PrintAndLogEx(ERR, "Desfire authenticate " _RED_("fail") ". Result: [%d] %s", res, DesfireAuthErrorToStr(res));
             return res;
         }
 
         if (DesfireIsAuthenticated(dctx)) {
-            if (verbose)
+            if (verbose) {
                 PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
+            }
         } else {
             return 201;
         }
@@ -1087,7 +1098,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
 
         res = DesfireSelectAIDHex(dctx, id, false, 0);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire select " _RED_("error") ".");
+            PrintAndLogEx(ERR, "Desfire select " _RED_("error"));
             return 200;
         }
         if (verbose)
@@ -1097,7 +1108,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
     } else {
         res = DesfireSelectEx(dctx, true, way, id, NULL);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire %s select " _RED_("error") ".", DesfireSelectWayToStr(way));
+            PrintAndLogEx(ERR, "Desfire %s select " _RED_("error"), DesfireSelectWayToStr(way));
             return 202;
         }
         if (verbose)
@@ -1107,12 +1118,13 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
     if (selectfile) {
         res = DesfireSelectEx(dctx, false, ISWIsoID, isofileid, NULL);
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Desfire iso file select " _RED_("error") ".");
+            PrintAndLogEx(ERR, "Desfire iso file select " _RED_("error"));
             return 203;
         }
 
-        if (verbose)
+        if (verbose) {
             PrintAndLogEx(INFO, "Application %s file iso id %04x is " _GREEN_("selected"), DesfireWayIDStr(way, id), isofileid);
+    }
     }
 
     if (!noauth) {
@@ -1123,8 +1135,9 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
         }
 
         if (DesfireIsAuthenticated(dctx)) {
-            if (verbose)
+            if (verbose) {
                 PrintAndLogEx(INFO, "Desfire  " _GREEN_("authenticated"));
+            }
         } else {
             return 201;
         }
@@ -1864,17 +1877,21 @@ int DesfireFillAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS ap
 
 void DesfirePrintPICCInfo(DesfireContext_t *dctx, PICCInfo_t *PICCInfo) {
     PrintAndLogEx(SUCCESS, "------------------------------------ " _CYAN_("PICC level") " -------------------------------------");
-    if (PICCInfo->freemem == 0xffffffff)
-        PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _YELLOW_("n/a"), PICCInfo->appCount);
-    else
-        PrintAndLogEx(SUCCESS, "Applications count: " _GREEN_("%zu") " free memory " _GREEN_("%d") " bytes", PICCInfo->appCount, PICCInfo->freemem);
+    if (PICCInfo->freemem == 0xffffffff) {
+        PrintAndLogEx(SUCCESS, "# applications....... " _YELLOW_("%zu"), PICCInfo->appCount);
+    } else {
+        PrintAndLogEx(SUCCESS, "# applications....... " _YELLOW_("%zu"), PICCInfo->appCount);
+    }
+    PrintAndLogEx(SUCCESS, "");
+
     if (PICCInfo->authCmdCheck.checked) {
-        PrintAndLogEx(SUCCESS, "PICC level auth commands: ");
+        PrintAndLogEx(SUCCESS, "PICC level auth commands");
         DesfireCheckAuthCommandsPrint(&PICCInfo->authCmdCheck);
     }
+
     if (PICCInfo->numberOfKeys > 0) {
         PrintKeySettings(PICCInfo->keySettings, PICCInfo->numKeysRaw, false, true);
-        PrintAndLogEx(SUCCESS, "PICC key 0 version: %d (0x%02x)", PICCInfo->keyVersion0, PICCInfo->keyVersion0);
+        PrintAndLogEx(SUCCESS, "PICC key "_YELLOW_("0") " version: %d (0x%02x)", PICCInfo->keyVersion0, PICCInfo->keyVersion0);
     }
 }
 
@@ -1886,14 +1903,14 @@ void DesfirePrintAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS 
     PrintAndLogEx(SUCCESS, "--------------------------------- " _CYAN_("Applications list") " ---------------------------------");
 
     for (int i = 0; i < PICCInfo->appCount; i++) {
-        PrintAndLogEx(SUCCESS, _CYAN_("Application number: 0x%02X"), appList[i].appNum);
-        PrintAndLogEx(SUCCESS, "  ISO id.... " _GREEN_("0x%04X"), appList[i].appISONum);
-        PrintAndLogEx(SUCCESS, "  DF name... " _GREEN_("%s") " ( %s)", appList[i].appDFName, sprint_hex((uint8_t *)appList[i].appDFName, sizeof(appList[i].appDFName)));
+        PrintAndLogEx(SUCCESS, "Application ID....... " _CYAN_("0x%02X"), appList[i].appNum);
+        PrintAndLogEx(SUCCESS, "   ISO id............ " _GREEN_("0x%04X"), appList[i].appISONum);
+        PrintAndLogEx(SUCCESS, "   DF name........... " _GREEN_("%s") " ( %s )", appList[i].appDFName, sprint_hex_inrow((uint8_t *)appList[i].appDFName, sizeof(appList[i].appDFName)));
 
         DesfirePrintAIDFunctions(appList[i].appNum);
 
         if (PICCInfo->authCmdCheck.checked) {
-            PrintAndLogEx(SUCCESS, "Auth commands: ");
+            PrintAndLogEx(SUCCESS, "Auth commands");
             DesfireCheckAuthCommandsPrint(&appList[i].authCmdCheck);
             PrintAndLogEx(SUCCESS, "");
         }
@@ -1902,7 +1919,7 @@ void DesfirePrintAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS 
             PrintKeySettings(appList[i].keySettings, appList[i].numKeysRaw, true, true);
 
             if (appList[i].numberOfKeys > 0) {
-                PrintAndLogEx(SUCCESS, "Key versions [0..%d]: " NOLF, appList[i].numberOfKeys - 1);
+                PrintAndLogEx(SUCCESS, "Key versions [0..%d] " NOLF, appList[i].numberOfKeys - 1);
                 for (uint8_t keyn = 0; keyn < appList[i].numberOfKeys; keyn++) {
                     PrintAndLogEx(NORMAL, "%s %02x" NOLF, (keyn == 0) ? "" : ",",  appList[i].keyVersions[keyn]);
                 }
@@ -2254,7 +2271,7 @@ int DesfireUpdateRecord(DesfireContext_t *dctx, uint8_t fnum, uint32_t recnum, u
 }
 
 static void PrintKeySettingsPICC(uint8_t keysettings, uint8_t numkeys, bool print2ndbyte) {
-    PrintAndLogEx(SUCCESS, "PICC level rights:");
+    PrintAndLogEx(SUCCESS, "PICC level rights");
     PrintAndLogEx(SUCCESS, "[%c...] CMK Configuration changeable   : %s", (keysettings & (1 << 3)) ? '1' : '0', (keysettings & (1 << 3)) ? _GREEN_("YES") : _RED_("NO (frozen)"));
     PrintAndLogEx(SUCCESS, "[.%c..] CMK required for create/delete : %s", (keysettings & (1 << 2)) ? '1' : '0', (keysettings & (1 << 2)) ? _GREEN_("NO") : "YES");
     PrintAndLogEx(SUCCESS, "[..%c.] Directory list access with CMK : %s", (keysettings & (1 << 1)) ? '1' : '0', (keysettings & (1 << 1)) ? _GREEN_("NO") : "YES");
@@ -2263,27 +2280,27 @@ static void PrintKeySettingsPICC(uint8_t keysettings, uint8_t numkeys, bool prin
 
     if (print2ndbyte) {
         DesfirePrintCardKeyType(numkeys >> 6);
-        PrintAndLogEx(SUCCESS, "key count: %d", numkeys & 0x0f);
+        PrintAndLogEx(SUCCESS, "Key cnt.... " _YELLOW_("%d"), numkeys & 0x0F);
     }
 }
 
 static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys, bool print2ndbyte) {
     // Access rights.
-    PrintAndLogEx(SUCCESS, "Application level rights:");
+    PrintAndLogEx(SUCCESS, "Application level rights");
     uint8_t rights = ((keysettings >> 4) & 0x0F);
     switch (rights) {
         case 0x0:
-            PrintAndLogEx(SUCCESS, "-- AMK authentication is necessary to change any key (default)");
+            PrintAndLogEx(SUCCESS, " - AMK authentication is necessary to change any key (default)");
             break;
         case 0xE:
-            PrintAndLogEx(SUCCESS, "-- Authentication with the key to be changed (same KeyNo) is necessary to change a key");
+            PrintAndLogEx(SUCCESS, " - Authentication with the key to be changed (same KeyNo) is necessary to change a key");
             break;
         case 0xF:
-            PrintAndLogEx(SUCCESS, "-- All keys (except AMK,see Bit0) within this application are frozen");
+            PrintAndLogEx(SUCCESS, " - All keys (except AMK,see Bit0) within this application are frozen");
             break;
         default:
             PrintAndLogEx(SUCCESS,
-                          "-- Authentication with the specified key " _YELLOW_("(0x%02x)") " is necessary to change any key.\n"
+                          " - Authentication with the specified key " _YELLOW_("(0x%02x)") " is necessary to change any key.\n"
                           "A change key and a PICC master key (CMK) can only be changed after authentication with the master key.\n"
                           "For keys other then the master or change key, an authentication with the same key is needed.",
                           rights & 0x0f
@@ -2299,10 +2316,10 @@ static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys, bool print
 
     if (print2ndbyte) {
         DesfirePrintCardKeyType(numkeys >> 6);
-        PrintAndLogEx(SUCCESS, "key count: %d", numkeys & 0x0f);
-        if (numkeys & 0x20)
+        PrintAndLogEx(SUCCESS, "Key cnt.... " _YELLOW_("%d"), numkeys & 0x0F);
+        if (numkeys & 0x20) {
             PrintAndLogEx(SUCCESS, "iso file id: enabled");
-        PrintAndLogEx(SUCCESS, "");
+        }
     }
 }
 

@@ -69,8 +69,13 @@ static int open_mad_file(json_t **root, bool verbose) {
         goto out;
     }
 
-    if (verbose)
-        PrintAndLogEx(SUCCESS, "Loaded file " _YELLOW_("`%s`") " (%s) %zu records.", path,  _GREEN_("ok"), json_array_size(*root));
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Loaded file `" _YELLOW_("%s") "` " _GREEN_("%zu") " records ( " _GREEN_("ok") " )"
+                      , path
+                      , json_array_size(*root)
+                     );
+    }
+
 out:
     free(path);
     return retval;
@@ -415,7 +420,7 @@ int MADDFDecodeAndPrint(uint32_t short_aid, bool verbose) {
     open_mad_file(&mad_known_aids, false);
 
     char fmt[128];
-    snprintf(fmt, sizeof(fmt), "  MAD AID Function 0x%04X    :" _YELLOW_("%s"), short_aid, "%s");
+    snprintf(fmt, sizeof(fmt), "   MAD AID Function 0x%04X... " _YELLOW_("%s"), short_aid, "%s");
     print_aid_description(mad_known_aids, short_aid, fmt, verbose);
     close_mad_file(mad_known_aids);
     return PM3_SUCCESS;
@@ -429,8 +434,9 @@ bool HasMADKey(uint8_t *d) {
 }
 
 int DetectHID(uint8_t *d, uint16_t manufacture) {
-    if (d == NULL)
+    if (d == NULL) {
         return -1;
+    }
 
     // find HID
     for (int i = 1; i < 16; i++) {

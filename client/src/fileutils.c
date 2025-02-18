@@ -809,7 +809,7 @@ int saveFileJSONrootEx(const char *preferredName, const void *root, size_t flags
 
     if (res == 0) {
         if (verbose) {
-            PrintAndLogEx(SUCCESS, "Saved to json file `" _YELLOW_("%s") "`", filename);
+            PrintAndLogEx(SUCCESS, "Saved to json file " _YELLOW_("%s"), filename);
         }
         free(filename);
         return PM3_SUCCESS;
