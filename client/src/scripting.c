@@ -345,11 +345,11 @@ static int l_WaitForResponseTimeout(lua_State *L) {
 
     // extract first param.  cmd byte to look for
     if (n >= 1)
-        cmd = (uint32_t)luaL_checkinteger(L, 1);
+        cmd = luaL_checkunsigned(L, 1);
 
     // extract second param. timeout value
     if (n >= 2)
-        ms_timeout = luaL_checkinteger(L, 2);
+        ms_timeout = luaL_checkunsigned(L, 2);
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(cmd, &resp, ms_timeout) == false) {
@@ -647,7 +647,7 @@ static int l_crc8legic(lua_State *L) {
     size_t size;
     const char *p_hexstr = luaL_checklstring(L, 1, &size);
     uint16_t retval = CRC8Legic((uint8_t *)p_hexstr, size);
-    lua_pushinteger(L, retval);
+    lua_pushunsigned(L, retval);
     return 1;
 }
 
@@ -663,7 +663,7 @@ static int l_crc16legic(lua_State *L) {
 
     init_table(CRC_LEGIC_16);
     uint16_t retval = crc16_legic((uint8_t *)p_hexstr, hexsize, uidcrc);
-    lua_pushinteger(L, retval);
+    lua_pushunsigned(L, retval);
     return 1;
 }
 
@@ -673,7 +673,7 @@ static int l_crc16(lua_State *L) {
     const char *p_str = luaL_checklstring(L, 1, &size);
 
     uint16_t checksum = Crc16ex(CRC_CCITT, (uint8_t *) p_str, size);
-    lua_pushinteger(L, checksum);
+    lua_pushunsigned(L, checksum);
     return 1;
 }
 
@@ -739,7 +739,7 @@ static int l_reveng_models(lua_State *L) {
 #define NMODELS 106
 
     int count = 0;
-    uint8_t in_width = (uint8_t)luaL_checkinteger(L, 1);
+    uint8_t in_width = luaL_checkunsigned(L, 1);
     if (in_width > 89)
         return returnToLuaWithError(L, "Width cannot exceed 89, got %d", in_width);
 
@@ -920,8 +920,8 @@ static int l_keygen_algoB(lua_State *L) {
     uint32_t pwd = ul_ev1_pwdgenB(uid);
     uint16_t pack = ul_ev1_packgenB(uid);
 
-    lua_pushinteger(L, pwd);
-    lua_pushinteger(L, pack);
+    lua_pushunsigned(L, pwd);
+    lua_pushunsigned(L, pack);
     return 2;
 }
 
@@ -953,8 +953,8 @@ static int l_keygen_algoD(lua_State *L) {
     uint32_t pwd = ul_ev1_pwdgenD(uid);
     uint16_t pack = ul_ev1_packgenD(uid);
 
-    lua_pushinteger(L, pwd);
-    lua_pushinteger(L, pack);
+    lua_pushunsigned(L, pwd);
+    lua_pushunsigned(L, pack);
     return 2;
 }
 
@@ -1041,7 +1041,7 @@ static int l_T55xx_readblock(lua_State *L) {
         return returnToLuaWithError(L, "Failed to get actual data");
     }
 
-    lua_pushinteger(L, blockData);
+    lua_pushunsigned(L, blockData);
     return 1;
 }
 
