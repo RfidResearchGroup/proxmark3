@@ -58,6 +58,20 @@ The fastest option is to run the brew command with the `arch -arm64` prefix i.e.
 
 Visual Studio Code still runs under Rosetta 2 and if you're developing for proxmark3 on an Apple Silicon Mac you might want to consider running the Insiders build which has support for running natively on Apple Silicon.
 
+If you see an error when linking:
+```
+ld: warning: ignoring file /usr/local/Cellar/.../libpython3.9.dylib, building for macOS-arm64 but attempting to link with file built for macOS-x86_64
+Undefined symbols for architecture arm64:
+  "_PyArg_UnpackTuple", referenced from:
+      _SwigPyObject_own in pm3_pywrap.o
+      ...
+```
+your build environment has tried to link python across architectures. You can find or install python via homebrew (arm64) and inform the linker to use this
+```
+brew install python@<VERSION>
+export LDFLAGS="-L/opt/homebrew/Cellar/python@<VERSION>/<VERSION>.<MINORVERSION>/Frameworks/Python.framework/Versions/<VERSION>/lib/" && make
+```
+
 ## Install Proxmark3 tools
 ^[Top](#top)
 
