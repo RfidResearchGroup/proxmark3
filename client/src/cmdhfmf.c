@@ -2739,7 +2739,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     }
 
     // read uid to generate a filename for the key file
-    char suffix[FILE_PATH_SIZE];
+    char suffix[FILE_PATH_SIZE + strlen(outfilename)];
     if (outfnlen) {
         snprintf(suffix, sizeof(suffix) - strlen(outfilename), "-key-%s.bin", outfilename);
     } else {
