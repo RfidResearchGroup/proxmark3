@@ -1271,18 +1271,21 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
                     mf_crypto1_decryptEx(pcs, receivedCmd, receivedCmd_len, receivedCmd_dec);
                     if (CheckCrc14A(receivedCmd_dec, receivedCmd_len)) {
                         if (IsSectorTrailer(cardWRBL)) {
+
                             emlGetMem(response, cardWRBL, 1);
-                            if (!IsAccessAllowed(cardWRBL, cardAUTHKEY, AC_KEYA_WRITE)) {
+
+                            if (IsAccessAllowed(cardWRBL, cardAUTHKEY, AC_KEYA_WRITE) == false) {
                                 memcpy(receivedCmd_dec, response, 6); // don't change KeyA
                             }
-                            if (!IsAccessAllowed(cardWRBL, cardAUTHKEY, AC_KEYB_WRITE)) {
+                            if (IsAccessAllowed(cardWRBL, cardAUTHKEY, AC_KEYB_WRITE) == false) {
                                 memcpy(receivedCmd_dec + 10, response + 10, 6); // don't change KeyA
                             }
-                            if (!IsAccessAllowed(cardWRBL, cardAUTHKEY, AC_AC_WRITE)) {
+                            if (IsAccessAllowed(cardWRBL, cardAUTHKEY, AC_AC_WRITE) == false) {
                                 memcpy(receivedCmd_dec + 6, response + 6, 4); // don't change AC bits
                             }
+
                         } else {
-                            if (!IsAccessAllowed(cardWRBL, cardAUTHKEY, AC_DATA_WRITE)) {
+                            if (IsAccessAllowed(cardWRBL, cardAUTHKEY, AC_DATA_WRITE) == false) {
                                 memcpy(receivedCmd_dec, response, 16); // don't change anything
                             }
                         }
