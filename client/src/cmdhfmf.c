@@ -2542,8 +2542,8 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     int outfnlen = 0;
-    char outfilename[127] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)outfilename, 127, &outfnlen);
+    char outfilename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)outfilename, FILE_PATH_SIZE, &outfnlen);
 
 
     bool slow = arg_get_lit(ctx, 7);
@@ -4263,8 +4263,9 @@ static int CmdHF14AMfSim(const char *Cmd) {
                   , (uidlen == 0) ? "n/a" : sprint_hex(uid, uidlen)
                  );
 
-    PrintAndLogEx(INFO, "Options [ numreads: %d, flags: 0x%04x ]"
+    PrintAndLogEx(INFO, "Options [ numreads: %d, flags: %d (0x%04x) ]"
                   , exitAfterNReads
+                  , flags
                   , flags);
 
     struct {
@@ -4299,7 +4300,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
             bool keypress = kbd_enter_pressed();
             while (keypress == false) {
 
-                if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0) {
+                if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == false) {
                     keypress = kbd_enter_pressed();
                     continue;
                 }
@@ -9840,7 +9841,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
 
     res = detect_classic_static_nonce();
     if (res == NONCE_STATIC) {
-        PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
+        PrintAndLogEx(SUCCESS, "Static nonce... " _YELLOW_("yes"));
     }
 
 

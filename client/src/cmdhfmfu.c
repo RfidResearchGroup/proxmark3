@@ -4071,8 +4071,8 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_READBL, 2, 0, 0, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "command execution time out");
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
 
@@ -4084,8 +4084,8 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     // block 1 write and block2 write
     hf14a_config config;
     SendCommandNG(CMD_HF_ISO14443A_GET_CONFIG, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_HF_ISO14443A_GET_CONFIG, &resp, 2000)) {
-        PrintAndLogEx(WARNING, "command execution time out");
+    if (WaitForResponseTimeout(CMD_HF_ISO14443A_GET_CONFIG, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "command execute timeout");
         return PM3_ETIMEOUT;
     }
     memcpy(&config, resp.data.asBytes, sizeof(hf14a_config));
@@ -4103,8 +4103,8 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     data[3] =  0x88 ^ uid[0] ^ uid[1] ^ uid[2];
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 0, 0, 0, data, sizeof(data));
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "command execution time out");
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
 
@@ -4115,8 +4115,8 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     data[3] = uid[6];
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 1, 0, 0, data, sizeof(data));
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "command execution time out");
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
 
@@ -4127,8 +4127,8 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     data[3] = oldblock2[3];
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 2, 0, 0, data, sizeof(data));
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "command execution time out");
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
 

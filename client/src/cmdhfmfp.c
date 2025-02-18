@@ -1990,9 +1990,9 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
         memcpy(ndefkey, key, 16);
     }
 
-    uint8_t sector0[16 * 4] = {0};
-    uint8_t sector10[16 * 4] = {0};
-    uint8_t data[4096] = {0};
+    uint8_t sector0[MIFARE_1K_MAXBLOCK] = {0};
+    uint8_t sector10[MIFARE_1K_MAXBLOCK] = {0};
+    uint8_t data[MIFARE_4K_MAX_BYTES] = {0};
     int datalen = 0;
 
     if (verbose)
@@ -2034,7 +2034,7 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
     PrintAndLogEx(INFO, "reading data from tag");
     for (int i = 0; i < madlen; i++) {
         if (ndefAID == mad[i]) {
-            uint8_t vsector[16 * 4] = {0};
+            uint8_t vsector[MIFARE_1K_MAXBLOCK] = {0};
             if (mfpReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, ndefkey, vsector, false)) {
                 PrintAndLogEx(ERR, "error, reading sector %d", i + 1);
                 return PM3_ESOFT;

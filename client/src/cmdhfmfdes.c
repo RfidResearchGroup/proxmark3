@@ -756,7 +756,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     if (major == 2 && minor == 2)
         PrintAndLogEx(INFO, "\t2.2 - DESFire Ev2 XL, Originality check, proximity check, EAL5");
     if (major == 3 && minor == 0)
-        PrintAndLogEx(INFO, "\t3.0 - DESFire Ev3, Originality check, proximity check, badass EAL6 ?");
+        PrintAndLogEx(INFO, "\t3.0 - DESFire Ev3, Originality check, proximity check, badass EAL6");
     if (major == 0xA0 && minor == 0)
         PrintAndLogEx(INFO, "\tx.x - DUOX, Originality check, proximity check, EAL6++");
 
@@ -805,12 +805,16 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     }
 
     if (aidbuflen > 2) {
+
+        uint8_t j = aidbuflen / 3;
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(SUCCESS, "--- " _CYAN_("AID list"));
-        PrintAndLogEx(SUCCESS, "AIDs: " NOLF);
-        for (int i = 0; i < aidbuflen; i += 3)
-            PrintAndLogEx(NORMAL, "%s %06x" NOLF, (i == 0) ? "" : ",", DesfireAIDByteToUint(&aidbuf[i]));
-        PrintAndLogEx(NORMAL, "\n");
+        PrintAndLogEx(SUCCESS, "--- " _CYAN_("AID list")  " ( " _YELLOW_("%u") " found )", j);
+
+        j = 0;
+        for (int i = 0; i < aidbuflen; i += 3, j++) {
+            uint32_t aid = DesfireAIDByteToUint(&aidbuf[i]);
+            PrintAndLogEx(SUCCESS, _YELLOW_("%06X") ", %s", aid, getAidCommentStr(aid));
+        }
     }
 
     DesfireFillPICCInfo(&dctx, &PICCInfo, true);
@@ -821,7 +825,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Free memory"));
         if (PICCInfo.freemem != 0xffffffff) {
-            PrintAndLogEx(SUCCESS, "   Available free memory on card         : " _GREEN_("%d bytes"), PICCInfo.freemem);
+            PrintAndLogEx(SUCCESS, "   Available free memory on card... " _GREEN_("%d") " bytes", PICCInfo.freemem);
         } else {
             PrintAndLogEx(SUCCESS, "   Card doesn't support 'free mem' cmd");
         }
@@ -1809,7 +1813,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
     AppListS AppList = {{0}};
     DesfireFillAppList(&dctx, &PICCInfo, AppList, false, false, false); // no deep scan, no scan files
 
-    PrintAndLogEx(SUCCESS, "# Applications... " _GREEN_("%zu"), PICCInfo.appCount);
+    PrintAndLogEx(SUCCESS, "# Applications.... " _GREEN_("%zu"), PICCInfo.appCount);
     if (PICCInfo.freemem == 0xffffffff) {
         PrintAndLogEx(SUCCESS, "Free memory...... " _YELLOW_("n/a"));
     } else {
@@ -5594,7 +5598,7 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(INPLACE, _YELLOW_("It may take up to 15 seconds. Processing...."));
+    PrintAndLogEx(INFO, "It may take up to " _YELLOW_("15") " seconds. Processing...");
 
     res = DesfireSelectAndAuthenticateEx(&dctx, securechann, 0x000000, noauth, verbose);
     if (res != PM3_SUCCESS) {
@@ -5606,7 +5610,6 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
     AppListS AppList = {{0}};
     DesfireFillAppList(&dctx, &PICCInfo, AppList, !nodeep, scanfiles, true);
 
-    printf("\33[2K\r"); // clear current line before printing
     PrintAndLogEx(NORMAL, "");
 
     // print zone
