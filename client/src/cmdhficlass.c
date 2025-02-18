@@ -66,8 +66,6 @@ static uint8_t empty[PICOPASS_BLOCK_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 static uint8_t zeros[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static int CmdHelp(const char *Cmd);
-static void print_iclass_sio(uint8_t *iclass_dump, size_t dump_len);
-
 static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][PICOPASS_BLOCK_SIZE] = {
     { 0xAE, 0xA6, 0x84, 0xA6, 0xDA, 0xB2, 0x32, 0x78 },
     { 0xFD, 0xCB, 0x5A, 0x52, 0xEA, 0x8F, 0x30, 0x90 },
@@ -3184,7 +3182,7 @@ static void detect_credential(uint8_t *iclass_dump, size_t dump_len, bool *is_le
 
     picopass_hdr_t *hdr = (picopass_hdr_t *)iclass_dump;
 
-    if (!memcmp(hdr->app_issuer_area, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE)) {
+    if (memcmp(hdr->app_issuer_area, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE) == 0) {
         // Legacy AIA
         *is_legacy = true;
 
@@ -3206,7 +3204,7 @@ static void detect_credential(uint8_t *iclass_dump, size_t dump_len, bool *is_le
                 }
             }
         }
-    } else if (!memcmp(hdr->app_issuer_area, "\xFF\xFF\xFF\x00\x06\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE)) {
+    } else if (memcmp(hdr->app_issuer_area, "\xFF\xFF\xFF\x00\x06\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE) == 0) {
         // SE AIA
         *is_se = true;
 
@@ -3238,7 +3236,8 @@ static void detect_credential(uint8_t *iclass_dump, size_t dump_len, bool *is_le
 }
 
 // print ASN1 decoded array in TLV view
-static void print_iclass_sio(uint8_t *iclass_dump, size_t dump_len) {
+void print_iclass_sio(uint8_t *iclass_dump, size_t dump_len, bool verbose) {
+
     bool is_legacy, is_se, is_sr;
     uint8_t *sio_start;
     size_t sio_length;
@@ -3249,7 +3248,7 @@ static void print_iclass_sio(uint8_t *iclass_dump, size_t dump_len) {
     }
 
     if (dump_len < sio_length + (sio_start - iclass_dump)) {
-        // SIO length exceeds the size of the dump we have, bail
+        // SIO length exceeds the size of the dump
         return;
     }
 
@@ -3257,9 +3256,11 @@ static void print_iclass_sio(uint8_t *iclass_dump, size_t dump_len) {
     PrintAndLogEx(INFO, "---------------------------- " _CYAN_("SIO - RAW") " ----------------------------");
     print_hex_noascii_break(sio_start, sio_length, 32);
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "------------------------- " _CYAN_("SIO - ASN1 TLV") " --------------------------");
+    if (verbose) {
+        PrintAndLogEx(INFO, "----------------------- " _CYAN_("SIO - ASN1 TLV") " ---------------------------");
     asn1_print(sio_start, sio_length, "  ");
     PrintAndLogEx(NORMAL, "");
+   }
 }
 
 void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize, bool dense_output) {
@@ -3457,8 +3458,9 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     if (is_legacy)
         PrintAndLogEx(HINT, _YELLOW_("yellow") " = legacy credential");
 
-    if (is_se)
+    if (is_se) {
         PrintAndLogEx(HINT, _CYAN_("cyan") " = SIO / SE credential");
+    }
 
     if (is_sr)
         PrintAndLogEx(HINT, _CYAN_("cyan") " = SIO / SR credential");

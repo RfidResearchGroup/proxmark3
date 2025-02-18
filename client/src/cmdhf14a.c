@@ -2358,7 +2358,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 tc1 = (card.ats[1] & 0x40) == 0x40;
                 int16_t fsci = card.ats[1] & 0x0f;
 
-                PrintAndLogEx(INFO, "        " _YELLOW_("%02X") "............  T0    TA1 is%s present, TB1 is%s present, "
+                PrintAndLogEx(INFO, "     ..." _YELLOW_("%02X") "............  T0    TA1 is%s present, TB1 is%s present, "
                               "TC1 is%s present, FSCI is %d (FSC = %d)",
                               card.ats[1],
                               (ta1 ? "" : _RED_(" NOT")),
@@ -2380,7 +2380,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 if (card.ats[pos] & 0x04) strcat(dr, "8, ");
                 if (strlen(ds) != 0) ds[strlen(ds) - 2] = '\0';
                 if (strlen(dr) != 0) dr[strlen(dr) - 2] = '\0';
-                PrintAndLogEx(INFO, "           " _YELLOW_("%02X") ".........  TA1   different divisors are%s supported, "
+                PrintAndLogEx(INFO, "     ......" _YELLOW_("%02X") ".........  TA1   different divisors are%s supported, "
                               "DR: [%s], DS: [%s]",
                               card.ats[pos],
                               ((card.ats[pos] & 0x80) ? _RED_(" NOT") : ""),
@@ -2395,7 +2395,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 uint32_t sfgi = card.ats[pos] & 0x0F;
                 uint32_t fwi = card.ats[pos] >> 4;
 
-                PrintAndLogEx(INFO, "              " _YELLOW_("%02X") "......  TB1   SFGI = %d (SFGT = %s%d/fc), FWI = " _YELLOW_("%d") " (FWT = %d/fc)",
+                PrintAndLogEx(INFO, "     ........." _YELLOW_("%02X") "......  TB1   SFGI = %d (SFGT = %s%d/fc), FWI = " _YELLOW_("%d") " (FWT = %d/fc)",
                               card.ats[pos],
                               (sfgi),
                               sfgi ? "" : "(not needed) ",
@@ -2407,7 +2407,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             }
 
             if (tc1 && (card.ats_len > pos + 2)) {
-                PrintAndLogEx(INFO, "                 " _YELLOW_("%02X") "...  TC1   NAD is%s supported, CID is%s supported",
+                PrintAndLogEx(INFO, "     ............" _YELLOW_("%02X") "...  TC1   NAD is%s supported, CID is%s supported",
                               card.ats[pos],
                               (card.ats[pos] & 0x01) ? "" : _RED_(" NOT"),
                               (card.ats[pos] & 0x02) ? "" : _RED_(" NOT")
@@ -2546,11 +2546,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                                       , sprint_ascii(card.ats + pos, calen)
                                      );
                     }
-
-                    PrintAndLogEx(NORMAL, "");
                 }
             }
-
         }
 
         if (do_aid_search) {
