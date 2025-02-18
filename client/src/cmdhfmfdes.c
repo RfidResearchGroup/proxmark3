@@ -175,14 +175,15 @@ typedef struct aidhdr {
 } PACKED aidhdr_t;
 
 typedef struct {
+    const uint32_t aidnum;
     const char *aid;
     const char *comment;
 } mfdesCommonAID_t;
 
 static const mfdesCommonAID_t commonAids[] = {
     // AID, name/comment
-    { "\xf4\x81\x2f", "Gallagher card data application" },
-    { "\xf4\x81\x20", "Gallagher card application directory" }, // Can be 0xF48120 - 0xF4812B, but I've only ever seen 0xF48120
+    { 0xF4812F, "\xf4\x81\x2f", "Gallagher card data application" },
+    { 0xF48120, "\xf4\x81\x20", "Gallagher card application directory" }, // Can be 0xF48120 - 0xF4812B, but I've only ever seen 0xF48120
 };
 
 static int CmdHelp(const char *Cmd);
@@ -311,15 +312,13 @@ static char *getTypeStr(uint8_t type) {
     return buf;
 }
 
-
-static char noCommentStr[1] = { 0x00 };
-static const char *getAidCommentStr(uint8_t *aid) {
+static const char *getAidCommentStr(uint32_t aid) {
     for (int i = 0; i < ARRAYLEN(commonAids); i++) {
-        if (memcmp(aid, commonAids[i].aid, 3) == 0) {
+        if (aid == commonAids[i].aidnum) {
             return commonAids[i].comment;
         }
     }
-    return noCommentStr;
+    return "";
 }
 
 static nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
@@ -458,7 +457,6 @@ int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, si
     }
 
     int index = originality_check_verify(uid, uidlen, signature, signature_len, PK_MFDES);
-    PrintAndLogEx(NORMAL, "");
     return originality_check_print(signature, signature_len, index);
 }
 
@@ -3273,11 +3271,8 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     if (buflen >= 3) {
         PrintAndLogEx(INFO, "---- " _CYAN_("AID list") " ----");
         for (int i = 0; i < buflen; i += 3) {
-            const char *commentStr = getAidCommentStr(&buf[i]);
-            if ((void *) commentStr == &noCommentStr)
-                PrintAndLogEx(INFO, "AID: %06x", DesfireAIDByteToUint(&buf[i]));
-            else
-                PrintAndLogEx(INFO, "AID: %06x (%s)", DesfireAIDByteToUint(&buf[i]), commentStr);
+            uint32_t aid  = DesfireAIDByteToUint(&buf[i]);
+            PrintAndLogEx(SUCCESS, _YELLOW_("%06X") " %s", aid, getAidCommentStr(aid));
         }
     } else {
         PrintAndLogEx(INFO, "There is no applications on the card");
