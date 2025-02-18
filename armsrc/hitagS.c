@@ -1029,11 +1029,11 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
                 response_bit[i] = (rx[i / 8] >> (7 - (i % 8))) & 1;
             }
 
-            DBG Dbprintf("htS: rxlen...... %zu", *rxlen);
-            DBG Dbprintf("htS: sizeofrx... %zu", sizeofrx);
-            DBG DbpString("htS: response_bit:");
-            DBG Dbhexdump(*rxlen, response_bit, false);
-            DBG Dbprintf("htS: skipping %d bit SOF", sof_bits);
+            Dbprintf("htS: rxlen...... %zu", *rxlen);
+            Dbprintf("htS: sizeofrx... %zu", sizeofrx);
+            DbpString("htS: response_bit:");
+            Dbhexdump(*rxlen, response_bit, false);
+            Dbprintf("htS: skipping %d bit SOF", sof_bits);
 
 	        if ((rx[0] >> (8 - sof_bits)) != ((1 << sof_bits) - 1)) {
                 DBG DbpString("htS: Warning, not all bits of SOF are 1");

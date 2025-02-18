@@ -473,30 +473,30 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define PICOPASS_SECURE_PAGEMODE_KEYS_MODIFIABLE    0x03
 
 // ISO 7816-4 Basic interindustry commands. For command APDU's.
-#define ISO7816_READ_BINARY             0xB0
-#define ISO7816_WRITE_BINARY            0xD0
-#define ISO7816_UPDATE_BINARY           0xD6
-#define ISO7816_ERASE_BINARY            0x0E
-#define ISO7816_READ_RECORDS            0xB2
-#define ISO7816_WRITE_RECORDS           0xD2
-#define ISO7816_APPEND_RECORD           0xE2
-#define ISO7816_UPDATE_RECORD           0xDC
-#define ISO7816_GET_DATA                0xCA
-#define ISO7816_PUT_DATA                0xDA
-#define ISO7816_SELECT_FILE             0xA4
-#define ISO7816_VERIFY                  0x20
-#define ISO7816_INTERNAL_AUTHENTICATION 0x88
-#define ISO7816_EXTERNAL_AUTHENTICATION 0x82
-#define ISO7816_GET_CHALLENGE           0x84
-#define ISO7816_MANAGE_CHANNEL          0x70
-#define ISO7816_APPLICATION_BLOCK 0x1E
-#define ISO7816_APPLICATION_UNBLOCK 0x18
-#define ISO7816_CARD_BLOCK 0x16
+#define ISO7816_READ_BINARY                     0xB0
+#define ISO7816_WRITE_BINARY                    0xD0
+#define ISO7816_UPDATE_BINARY                   0xD6
+#define ISO7816_ERASE_BINARY                    0x0E
+#define ISO7816_READ_RECORDS                    0xB2
+#define ISO7816_WRITE_RECORDS                   0xD2
+#define ISO7816_APPEND_RECORD                   0xE2
+#define ISO7816_UPDATE_RECORD                   0xDC
+#define ISO7816_GET_DATA                        0xCA
+#define ISO7816_PUT_DATA                        0xDA
+#define ISO7816_SELECT_FILE                     0xA4
+#define ISO7816_VERIFY                          0x20
+#define ISO7816_INTERNAL_AUTHENTICATION         0x88
+#define ISO7816_EXTERNAL_AUTHENTICATION         0x82
+#define ISO7816_GET_CHALLENGE                   0x84
+#define ISO7816_MANAGE_CHANNEL                  0x70
+#define ISO7816_APPLICATION_BLOCK               0x1E
+#define ISO7816_APPLICATION_UNBLOCK             0x18
+#define ISO7816_CARD_BLOCK                      0x16
 #define ISO7816_GENERATE_APPLICATION_CRYPTOGRAM 0xAE
-#define ISO7816_GET_PROCESSING_OPTIONS 0xA8
-#define ISO7816_PIN_CHANGE 0x24
+#define ISO7816_GET_PROCESSING_OPTIONS          0xA8
+#define ISO7816_PIN_CHANGE                      0x24
 
-#define ISO7816_GET_RESPONSE            0xC0
+#define ISO7816_GET_RESPONSE                    0xC0
 
 // ISO7816-4 For response APDU's
 #define ISO7816_OK                              0x9000
