@@ -164,6 +164,7 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
     }
 
     // extract MFC
+    /*
     switch (frame[0]) {
         case MIFARE_AUTH_KEYA: {
             if (data_len > 3) {
@@ -176,9 +177,11 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
             break;
         }
     }
+    */
 
-    // extract MFU-C
+    // extract MFU-C KEY when written.
     switch (frame[0]) {
+
         case MIFARE_ULC_AUTH_1: {
             if (data_len != 4) {
                 break;
@@ -195,7 +198,7 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
                 break;
             }
 
-            PrintAndLogEx(INFO, "MFU-C AUTH");
+            PrintAndLogEx(INFO, "Found a MFU-C authententication attempt");
             PrintAndLogEx(INFO, "3DES %s " NOLF, sprint_hex_inrow(next_hdr->frame + 1, 8));
 
             next_hdr = (tracelog_hdr_t *)(trace + tracepos);
@@ -203,6 +206,8 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
 
             if (next_hdr->frame[0] == MIFARE_ULC_AUTH_2 && next_hdr->data_len == 19) {
                 PrintAndLogEx(NORMAL, "%s", sprint_hex_inrow(next_hdr->frame + 1, 16));
+            } else {
+                PrintAndLogEx(NORMAL, "( " _RED_("partial") " )");
             }
 
             return tracepos;
@@ -323,7 +328,7 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
             case MFDES_AUTHENTICATE: {
 
                 // Assume wrapped or unwrapped
-                PrintAndLogEx(INFO, "AUTH NATIVE (keyNo %d)", frame[pos + long_jmp]);
+                PrintAndLogEx(INFO, "Found a MFDES Auth NATIVE (keyNo %d)", frame[pos + long_jmp]);
                 if (next_record_is_response(tracepos, trace) == false) {
                     break;
                 }
@@ -348,7 +353,7 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
             }
             case MFDES_AUTHENTICATE_ISO: {
                 // Assume wrapped or unwrapped
-                PrintAndLogEx(INFO, "AUTH ISO (keyNo %d)", frame[pos + long_jmp]);
+                PrintAndLogEx(INFO, "Found a MFDES Auth ISO (keyNo %d)", frame[pos + long_jmp]);
                 if (next_record_is_response(tracepos, trace) == false) {
                     break;
                 }
@@ -379,7 +384,7 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
             }
             case MFDES_AUTHENTICATE_AES: {
                 // Assume wrapped or unwrapped
-                PrintAndLogEx(INFO, "AUTH AES (keyNo %d)", frame[pos + long_jmp]);
+                PrintAndLogEx(INFO, "Found a MFDES Auth AES (keyNo %d)", frame[pos + long_jmp]);
                 if (next_record_is_response(tracepos, trace)) {
                     break;
                 }
@@ -403,7 +408,7 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
                 return tracepos;
             }
             case MFDES_AUTHENTICATE_EV2F: {
-                PrintAndLogEx(INFO, "AUTH EV2 First");
+                PrintAndLogEx(INFO, "Found a MFDES Auth EV2 First");
                 uint16_t tmp = extractChall_ev2(tracepos, trace, pos, long_jmp);
                 if (tmp == 0)
                     break;
@@ -412,7 +417,7 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
 
             }
             case MFDES_AUTHENTICATE_EV2NF: {
-                PrintAndLogEx(INFO, "AUTH EV2 Non First");
+                PrintAndLogEx(INFO, "Found a MFDES Auth EV2 Non First");
                 uint16_t tmp = extractChall_ev2(tracepos, trace, pos, long_jmp);
                 if (tmp == 0)
                     break;

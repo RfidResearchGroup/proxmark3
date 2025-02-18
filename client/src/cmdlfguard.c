@@ -98,7 +98,7 @@ static int demod_guard_raw(uint8_t *raw, uint8_t rlen) {
 // but will leave the g_GraphBuffer intact.
 // if successful it will push askraw data back to g_DemodBuffer ready for emulation
 int demodGuard(bool verbose) {
-    (void) verbose; // unused so far
+    (void) verbose;
     //Differential Biphase
     //get binary from ask wave
     if (ASKbiphaseDemod(0, 64, 0, 0, false) != PM3_SUCCESS) {
@@ -285,7 +285,7 @@ static int CmdGuardClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    fmtlen &= 0x7f;
+    fmtlen &= 0x7F;
     uint32_t facilitycode = (fc & 0x000000FF);
     uint32_t cardnumber = (cn & 0x00FFFFFF);
 
@@ -317,7 +317,7 @@ static int CmdGuardClone(const char *Cmd) {
 
     free(bs);
 
-    PrintAndLogEx(INFO, "Preparing to clone Guardall to " _YELLOW_("%s") " with Facility Code: " _GREEN_("%u") " Card Number: " _GREEN_("%u") " xorKey: " _GREEN_("%u")
+    PrintAndLogEx(INFO, "Preparing to clone Guardall to " _YELLOW_("%s") " with fc: " _GREEN_("%u") " cn: " _GREEN_("%u") " xor: " _GREEN_("%u")
                   , cardtype
                   , facilitycode
                   , cardnumber
@@ -375,7 +375,7 @@ static int CmdGuardSim(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "Simulating Guardall Prox - xorKey: " _YELLOW_("%u") " Facility Code: " _YELLOW_("%u") " CardNumber: " _YELLOW_("%u")
+    PrintAndLogEx(SUCCESS, "Simulating Guardall Prox - xorKey: " _YELLOW_("%u") " fc: " _YELLOW_("%u") " cn: " _YELLOW_("%u")
                   , xorval
                   , facilitycode
                   , cardnumber
