@@ -877,6 +877,50 @@ static bool Unpack_HGeneric37(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
+static bool Pack_H800002(int format_idx, wiegand_card_t *card,
+                         wiegand_message_t *packed, bool preamble) {
+    uint32_t parity = 0;
+    memset(packed, 0, sizeof(wiegand_message_t));
+
+    if (!validate_card_limit(format_idx, card)) {
+      return false;
+    }
+
+    packed->Length = 46;
+    set_linear_field(packed, card->FacilityCode, 1, 14);
+    set_linear_field(packed, card->CardNumber, 15, 30);
+
+    parity = get_linear_field(packed, 1, 32);
+    parity ^= get_linear_field(packed, 33, 12);
+    set_bit_by_position(packed, evenparity32(parity), 0);
+    parity = get_linear_field(packed, 1, 32);
+    parity ^= get_linear_field(packed, 33, 12);
+    set_bit_by_position(packed, oddparity32(parity), 45);
+    if (preamble) {
+      return add_HID_header(packed);
+    }
+    return true;
+}
+
+static bool Unpack_H800002(wiegand_message_t *packed, wiegand_card_t *card) {
+    uint32_t parity = 0;
+    memset(card, 0, sizeof(wiegand_card_t));
+
+    if (packed->Length != 46) {
+      return false; // Wrong length? Stop here.
+    }
+
+    card->FacilityCode = get_linear_field(packed, 1, 14);
+    card->CardNumber = get_linear_field(packed, 15, 30);
+    parity = get_linear_field(packed, 1, 32);
+    parity ^= get_linear_field(packed, 33, 12);
+    card->ParityValid = get_bit_by_position(packed, 0) == evenparity32(parity);
+    parity = get_linear_field(packed, 1, 32);
+    parity ^= get_linear_field(packed, 33, 12);
+    card->ParityValid &= get_bit_by_position(packed, 45) == oddparity32(parity);
+    return true;
+}
+
 static bool Pack_MDI37(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
@@ -1413,6 +1457,7 @@ static const cardformat_t FormatTable[] = {
     {"H10320",  Pack_H10320,  Unpack_H10320,  "HID H10320 37-bit BCD",      {1, 0, 0, 0, 1, 0, 99999999, 0, 0}}, // from Proxmark forums
     {"H10302",  Pack_H10302,  Unpack_H10302,  "HID H10302 37-bit huge ID",  {1, 0, 0, 0, 1, 0, 0x7FFFFFFFF, 0, 0}}, // from Proxmark forums
     {"H10304",  Pack_H10304,  Unpack_H10304,  "HID H10304 37-bit",          {1, 1, 0, 0, 1, 0xFFFF, 0x7FFFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"H800002",  Pack_H800002,  Unpack_H800002,  "HID H800002 46-bit",      {1, 1, 0, 0, 1, 0x3FFF, 0x3FFFFFFF, 0, 0}},
     {"P10004",  Pack_P10004,  Unpack_P10004,  "HID P10004 37-bit PCSC",     {1, 1, 0, 0, 0, 0x1FFF, 0x3FFFF, 0, 0}}, // from @bthedorff; PR #1559
     {"HGen37",  Pack_HGeneric37, Unpack_HGeneric37,  "HID Generic 37-bit",  {1, 0, 0, 0, 1, 0, 0x7FFFF, 0, 0}}, // from cardinfo.barkweb.com.au
     {"MDI37",   Pack_MDI37,   Unpack_MDI37,   "PointGuard MDI 37-bit",         {1, 1, 0, 0, 1, 0xF, 0x1FFFFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
