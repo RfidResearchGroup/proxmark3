@@ -1449,10 +1449,10 @@
     },
     {
         "AID": "F21201",
-        "Vendor": "Green Bay Metro Transit via Genfare",
-        "Country": "US",
-        "Name": "Tap-N-Go Card (GRB)",
-        "Description": "GRB Tap-N-Go Card",
+        "Vendor": "Green Bay Metro Transit via Genfare / Winnipeg Transit",
+        "Country": "US / CA",
+        "Name": "Tap-N-Go Card (GRB) / peggo card (YWG)",
+        "Description": "GRB Tap-N-Go Card / YWG peggo card",
         "Type": "transport"
     },
     {
