@@ -188,7 +188,7 @@ work:
 	$(Q)$(RM) $@ $*.drc $*.rbt
 	$(info [=] BITGEN $@)
 	$(Q)$(XILINX_TOOLS_PREFIX)bitgen $(VERBOSITY) -w $* $@
-	echo "FFFFFFFFFFFFFFFFFFFFFF" | dd of=fpga_pm3_hf.bit bs=1 seek=48 conv=notrunc
+	#python3 ../strip_date_time_from_binary.py $@ || true
 	$(Q)$(CP) $@ ..
 
 # Build all targets
