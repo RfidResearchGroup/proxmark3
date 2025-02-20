@@ -15,20 +15,20 @@ def parse_and_split_file(filename):
     with open(filename, 'rb') as f:  # Read as binary to handle non-text files
         data = f.read(100)  # Read first 100 bytes which should contain all information
 
-    decoded_data = list(data.decode(errors='ignore'))
+    decoded_data = bytearray(data)
 
     for i in range(len(decoded_data) - 3):
         # subsequent two bytes after marker are null and the length
-        next_byte   = ord(decoded_data[i+1])
-        data_length = ord(decoded_data[i+2])
+        next_byte   = decoded_data[i+1]
+        data_length = decoded_data[i+2] - 1 # Don't overwrite terminating char
 
-        if decoded_data[i] == split_chars[0] and next_byte == 0x0:
+        if decoded_data[i] == ord(split_chars[0]) and next_byte == 0x0:
             start = i+3
-            extracted_data.append(''.join(decoded_data[start:start+data_length]))
+            extracted_data.append(decoded_data[start:start+data_length])
 
             # time, date
             if split_chars[0] == 'c' or split_chars[0] == 'd':
-                decoded_data[start:start+data_length] = 'F' * data_length
+                decoded_data[start:start+data_length] = bytes('F', encoding='ascii') * data_length
 
             split_chars.pop(0)
 
@@ -36,7 +36,6 @@ def parse_and_split_file(filename):
                 break
 
     print("Extracted data from bitfile: {}".format(extracted_data))
-    decoded_data = ''.join(decoded_data).encode()
 
     with open(filename, 'r+b') as f:  # Write back modified bytes
         f.seek(0)

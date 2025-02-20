@@ -23,6 +23,8 @@
 #include "fpga.h"
 #include "lz4hc.h"
 
+int fileno(FILE *);
+
 #ifndef MIN
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
@@ -356,6 +358,8 @@ static int FpgaGatherVersion(FILE *infile, char *infile_name, char *dst, int len
     for (uint16_t i = 0; i < FPGA_BITSTREAM_FIXED_HEADER_SIZE; i++) {
         if (fgetc(infile) != bitparse_fixed_header[i]) {
             fprintf(stderr, "Invalid FPGA file. Aborting...\n\n");
+            fprintf(stderr, "File: %s\n", infile_name);
+
             return (EXIT_FAILURE);
         }
     }
