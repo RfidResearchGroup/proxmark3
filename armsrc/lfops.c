@@ -968,13 +968,7 @@ void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
     uint16_t n = 8;
 
     if (longFMT) {
-        // Ensure no more than 84 bits supplied
-        if (hi2 > 0xFFFFF) {
-            DbpString("Tags can only have 84 bits.");
-            return;
-        }
         bitlen = 8 + 8 * 2 + 84 * 2;
-        hi2 |= 0x9E00000; // 9E: long format identifier
         manchesterEncodeUint32(hi2, 16 + 12, bits, &n);
         manchesterEncodeUint32(hi, 32, bits, &n);
         manchesterEncodeUint32(lo, 32, bits, &n);
@@ -2270,15 +2264,10 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
     uint8_t last_block = 0;
 
     if (longFMT) {
-        // Ensure no more than 84 bits supplied
-        if (hi2 > 0xFFFFF) {
-            DbpString("Tags can only have 84 bits");
-            return;
-        }
         // Build the 6 data blocks for supplied 84bit ID
         last_block = 6;
-        // load preamble (1D) & long format identifier (9E manchester encoded)
-        data[1] = 0x1D96A900 | (manchesterEncode2Bytes((hi2 >> 16) & 0xF) & 0xFF);
+        // load preamble (1D)
+        data[1] = 0x1D000000 | (manchesterEncode2Bytes((hi2 >> 16) & 0xFFFF) & 0xFFFFFF);
         // load raw id from hi2, hi, lo to data blocks (manchester encoded)
         data[2] = manchesterEncode2Bytes(hi2 & 0xFFFF);
         data[3] = manchesterEncode2Bytes(hi >> 16);
