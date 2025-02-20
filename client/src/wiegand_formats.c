@@ -879,7 +879,7 @@ static bool Unpack_HGeneric37(wiegand_message_t *packed, wiegand_card_t *card) {
 
 static bool Pack_H800002(int format_idx, wiegand_card_t *card,
                          wiegand_message_t *packed, bool preamble) {
-    uint32_t parity = 0;
+    int even_parity = 0;
     memset(packed, 0, sizeof(wiegand_message_t));
 
     if (!validate_card_limit(format_idx, card)) {
@@ -890,12 +890,11 @@ static bool Pack_H800002(int format_idx, wiegand_card_t *card,
     set_linear_field(packed, card->FacilityCode, 1, 14);
     set_linear_field(packed, card->CardNumber, 15, 30);
 
-    parity = get_linear_field(packed, 1, 32);
-    parity ^= get_linear_field(packed, 33, 12);
-    set_bit_by_position(packed, evenparity32(parity), 0);
-    parity = get_linear_field(packed, 1, 32);
-    parity ^= get_linear_field(packed, 33, 12);
-    set_bit_by_position(packed, oddparity32(parity), 45);
+    // Parity over 44 bits
+    even_parity = evenparity32((packed->Bot >> 1) ^ (packed->Mid & 0x1fff));
+    set_bit_by_position(packed, even_parity, 0);
+    // Invert parity for setting odd parity
+    set_bit_by_position(packed, even_parity ^ 1, 45);
     if (preamble) {
       return add_HID_header(packed);
     }
@@ -903,7 +902,7 @@ static bool Pack_H800002(int format_idx, wiegand_card_t *card,
 }
 
 static bool Unpack_H800002(wiegand_message_t *packed, wiegand_card_t *card) {
-    uint32_t parity = 0;
+    int even_parity = 0;
     memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 46) {
@@ -912,12 +911,10 @@ static bool Unpack_H800002(wiegand_message_t *packed, wiegand_card_t *card) {
 
     card->FacilityCode = get_linear_field(packed, 1, 14);
     card->CardNumber = get_linear_field(packed, 15, 30);
-    parity = get_linear_field(packed, 1, 32);
-    parity ^= get_linear_field(packed, 33, 12);
-    card->ParityValid = get_bit_by_position(packed, 0) == evenparity32(parity);
-    parity = get_linear_field(packed, 1, 32);
-    parity ^= get_linear_field(packed, 33, 12);
-    card->ParityValid &= get_bit_by_position(packed, 45) == oddparity32(parity);
+    even_parity = evenparity32((packed->Bot >> 1) ^ (packed->Mid & 0x1fff));
+    card->ParityValid = get_bit_by_position(packed, 0) == even_parity;
+    // Invert logic to compare against oddparity
+    card->ParityValid &= get_bit_by_position(packed, 45) != even_parity;
     return true;
 }
 
