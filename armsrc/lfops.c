@@ -944,6 +944,33 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, int16_t *remainder) {
     }
 }
 
+bool add_HID_preamble(uint32_t *hi2, uint32_t *hi, uint32_t *lo, uint8_t length){
+    // Invalid value
+    if (length > 84 || length == 0)
+        return false;
+
+    if (length == 48) {
+        *hi |= 1U << (length - 32); // Example leading 1: start bit
+        return true;
+    }
+    if (length >= 64) {
+        *hi2 |= 0x09e00000; // Extended-length header
+        *hi2 |= 1U << (length - 64); // leading 1: start bit
+    } else if (length > 37) {
+        *hi2 |= 0x09e00000; // Extended-length header
+        *hi |= 1U << (length - 32); // leading 1: start bit
+    } else if (length == 37) {
+        // No header bits added to 37-bit cards
+    } else if (length >= 32) {
+        *hi |= 0x20; // Bit 37; standard header
+       *hi |= 1U << (length - 32); // leading 1: start bit
+    } else {
+        *hi |= 0x20; // Bit 37; standard header
+        *lo |= 1U << length; // leading 1: start bit
+    }
+    return true;
+}
+
 // prepare a waveform pattern in the buffer based on the ID given then
 // simulate a HID tag until the button is pressed
 void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, bool ledcontrol, int numcycles) {
