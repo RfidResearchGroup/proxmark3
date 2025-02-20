@@ -18,6 +18,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <inttypes.h>
+#include <sys/stat.h>
+#include "time.h"
 #include "fpga.h"
 #include "lz4hc.h"
 
@@ -380,30 +382,22 @@ static int FpgaGatherVersion(FILE *infile, char *infile_name, char *dst, int len
         strncat(dst, tempstr, len - strlen(dst) - 1);
     }
 
-    strncat(dst, " ", len - strlen(dst) - 1);
-    if (bitparse_find_section(infile, 'c', &fpga_info_len)) {
-        for (uint32_t i = 0; i < fpga_info_len; i++) {
-            char c = (char)fgetc(infile);
-            if (i < sizeof(tempstr)) {
-                if (c == '/') c = '-';
-                if (c == ' ') c = '0';
-                tempstr[i] = c;
-            }
-        }
-        strncat(dst, tempstr, len - strlen(dst) - 1);
+    // Get file statistics to extract date and time via file timestamp
+    int fd = fileno(infile);
+    struct stat fileStat;
+
+    if (fstat(fd, &fileStat) == 0) {
+        struct tm *modTime = localtime(&fileStat.st_mtime);
+
+
+        char timeBuf[64];
+        snprintf(timeBuf, sizeof(timeBuf), " %02d-%02d-%04d %02d:%02d:%02d",
+                 modTime->tm_mday, modTime->tm_mon + 1, modTime->tm_year + 1900,
+                 modTime->tm_hour, modTime->tm_min, modTime->tm_sec);
+
+        strncat(dst, timeBuf, len - strlen(dst) - 1);
     }
 
-    if (bitparse_find_section(infile, 'd', &fpga_info_len)) {
-        strncat(dst, " ", len - strlen(dst) - 1);
-        for (uint32_t i = 0; i < fpga_info_len; i++) {
-            char c = (char)fgetc(infile);
-            if (i < sizeof(tempstr)) {
-                if (c == ' ') c = '0';
-                tempstr[i] = c;
-            }
-        }
-        strncat(dst, tempstr, len - strlen(dst) - 1);
-    }
     return 0;
 }
 
