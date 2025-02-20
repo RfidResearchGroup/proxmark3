@@ -20,6 +20,8 @@ import subprocess
 import argparse
 import json
 import pm3
+from pm3_resources import find_tool, find_dict
+
 # optional color support
 try:
     # pip install ansicolors
@@ -42,38 +44,11 @@ BACKDOOR_KEYS = ["A396EFA4E24F", "A31667A8CEC1", "518B3354E760"]
 
 NUM_SECTORS = 16
 NUM_EXTRA_SECTORS = 1
-DICT_DEF = "mfc_default_keys.dic"
 DEFAULT_KEYS = set()
-if __name__ == '__main__':
-    DIR_PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
-else:
-    DIR_PATH = os.path.dirname(os.path.abspath(__file__))
 
-if os.path.basename(os.path.dirname(DIR_PATH)) == 'client':
-    # dev setup
-    TOOLS_PATH = os.path.normpath(os.path.join(DIR_PATH,
-                                               "..", "..", "tools", "mfc", "card_only"))
-    DICT_DEF_PATH = os.path.normpath(os.path.join(DIR_PATH,
-                                                  "..", "dictionaries", DICT_DEF))
-else:
-    # assuming installed
-    TOOLS_PATH = os.path.normpath(os.path.join(DIR_PATH,
-                                               "..", "tools"))
-    DICT_DEF_PATH = os.path.normpath(os.path.join(DIR_PATH,
-                                                  "dictionaries", DICT_DEF))
-
-tools = {
-    "staticnested_1nt": os.path.join(f"{TOOLS_PATH}", "staticnested_1nt"),
-    "staticnested_2x1nt": os.path.join(f"{TOOLS_PATH}", "staticnested_2x1nt_rf08s"),
-    "staticnested_2x1nt1key": os.path.join(f"{TOOLS_PATH}", "staticnested_2x1nt_rf08s_1key"),
-}
-for tool, bin in tools.items():
-    if not os.path.isfile(bin):
-        if os.path.isfile(bin + ".exe"):
-            tools[tool] = bin + ".exe"
-        else:
-            print(f"Cannot find {bin}, abort!")
-            exit()
+staticnested_1nt_path = find_tool("staticnested_1nt")
+staticnested_2x1nt_path = find_tool("staticnested_2x1nt_rf08s")
+staticnested_2x1nt1key_path = find_tool("staticnested_2x1nt_rf08s_1key")
 
 
 def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debug=False, supply_chain=False, quiet=True, keyset=False):
@@ -193,14 +168,18 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
     show("----Step 1: " + color(f"{minutes:2}", fg="yellow") + " minutes " +
          color(f"{seconds:2}", fg="yellow") + " seconds -----------")
 
-    if os.path.isfile(DICT_DEF_PATH):
-        show(f"Loading {DICT_DEF}")
-        with open(DICT_DEF_PATH, 'r', encoding='utf-8') as file:
+    dict_def = "mfc_default_keys.dic"
+    try:
+        dict_path = find_dict(dict_def)
+        with open(dict_path, 'r', encoding='utf-8') as file:
             for line in file:
                 if line[0] != '#' and len(line) >= 12:
                     DEFAULT_KEYS.add(line[:12])
-    else:
-        show(f"Warning, {DICT_DEF} not found.")
+        show(f"Loaded {dict_def}")
+    except FileNotFoundError:
+        show(f"Warning, {dict_def} not found.")
+    except Exception as e:
+        raise Exception(f"Error loading {dict_def}: {e}")
 
     dict_dnwd = None
     def_nt = ["" for _ in range(NUM_SECTORS)]
@@ -233,12 +212,12 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
             continue
         if found_keys[sec][0] == "" and found_keys[sec][1] == "" and nt[sec][0] != nt[sec][1]:
             for key_type in [0, 1]:
-                cmd = [tools["staticnested_1nt"], f"{uid:08X}", f"{real_sec}",
+                cmd = [staticnested_1nt_path, f"{uid:08X}", f"{real_sec}",
                        nt[sec][key_type], nt_enc[sec][key_type], par_err[sec][key_type]]
                 if debug:
                     print(' '.join(cmd))
                 subprocess.run(cmd, capture_output=True)
-            cmd = [tools["staticnested_2x1nt"],
+            cmd = [staticnested_2x1nt_path,
                    f"keys_{uid:08x}_{real_sec:02}_{nt[sec][0]}.dic", f"keys_{uid:08x}_{real_sec:02}_{nt[sec][1]}.dic"]
             if debug:
                 print(' '.join(cmd))
@@ -254,7 +233,7 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
                     all_keys.update(keys_set)
                 if dict_dnwd is not None and sec < NUM_SECTORS:
                     # Prioritize keys from supply-chain attack
-                    cmd = [tools["staticnested_2x1nt1key"], def_nt[sec], "FFFFFFFFFFFF",
+                    cmd = [staticnested_2x1nt1key_path, def_nt[sec], "FFFFFFFFFFFF",
                            f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}_filtered.dic"]
                     if debug:
                         print(' '.join(cmd))
@@ -285,7 +264,7 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
                 key_type = 0
             else:
                 key_type = 1
-            cmd = [tools["staticnested_1nt"], f"{uid:08X}", f"{real_sec}",
+            cmd = [staticnested_1nt_path, f"{uid:08X}", f"{real_sec}",
                    nt[sec][key_type], nt_enc[sec][key_type], par_err[sec][key_type]]
             if debug:
                 print(' '.join(cmd))
@@ -299,7 +278,7 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
                 all_keys.update(keys_set)
             if dict_dnwd is not None and sec < NUM_SECTORS:
                 # Prioritize keys from supply-chain attack
-                cmd = [tools["staticnested_2x1nt1key"], def_nt[sec], "FFFFFFFFFFFF",
+                cmd = [staticnested_2x1nt1key_path, def_nt[sec], "FFFFFFFFFFFF",
                        f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type]}.dic"]
                 if debug:
                     print(' '.join(cmd))
@@ -509,7 +488,7 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
                 dic = f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type_target]}_filtered.dic"
             else:
                 dic = f"keys_{uid:08x}_{real_sec:02}_{nt[sec][key_type_target]}.dic"
-            cmd = [tools["staticnested_2x1nt1key"], nt[sec][key_type_source], found_keys[sec][key_type_source], dic]
+            cmd = [staticnested_2x1nt1key_path, nt[sec][key_type_source], found_keys[sec][key_type_source], dic]
             if debug:
                 print(' '.join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True).stdout
