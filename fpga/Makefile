@@ -188,7 +188,7 @@ work:
 	$(Q)$(RM) $@ $*.drc $*.rbt
 	$(info [=] BITGEN $@)
 	$(Q)$(XILINX_TOOLS_PREFIX)bitgen $(VERBOSITY) -w $* $@
-	#python3 ../strip_date_time_from_binary.py $@ || true
+	python3 ../strip_date_time_from_binary.py $@ || true
 	$(Q)$(CP) $@ ..
 
 # Build all targets
