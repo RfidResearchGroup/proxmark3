@@ -1134,7 +1134,8 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
 
             key_le = *(uint64_t *)packet->key;
 
-            uint64_t state = ht2_hitag2_init(REV64(key_le), REV32(tag.data.s.uid_le), REV32(*(uint32_t *)rnd));
+            uint32_t le_val = MemLeToUint4byte(rnd);
+            uint64_t state = ht2_hitag2_init(REV64(key_le), REV32(tag.data.s.uid_le), REV32(le_val));
 
             uint8_t auth_ks[4];
             for (int i = 0; i < 4; i++) {
@@ -1226,7 +1227,9 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
         pwdl1 = 0;
         if (packet->cmd == HTSF_KEY) {
 
-            uint64_t state = ht2_hitag2_init(REV64(key_le), REV32(tag.data.s.uid_le), REV32(*(uint32_t *)rnd));
+            uint32_t le_val = MemLeToUint4byte(rnd);
+            uint64_t state = ht2_hitag2_init(REV64(key_le), REV32(tag.data.s.uid_le), REV32(le_val));
+
             for (int i = 0; i < 4; i++) {
                 ht2_hitag2_byte(&state);
             }
