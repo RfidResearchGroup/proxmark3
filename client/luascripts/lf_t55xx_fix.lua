@@ -9,11 +9,11 @@ local command = core.console
 
 author = '  Author: jareckib - 15.02.2025'
 version = '  version v1.00'
-desc = [[  
-  This simple script first checks if a password has been set for the T5577. 
-  It uses the dictionary t55xx_default_pwds.dic for this purpose. If a password 
-  is found, it uses the wipe command to erase the T5577. Then the reanimation 
-  procedure is applied. If the password is not found or doesn't exist the script 
+desc = [[
+  This simple script first checks if a password has been set for the T5577.
+  It uses the dictionary t55xx_default_pwds.dic for this purpose. If a password
+  is found, it uses the wipe command to erase the T5577. Then the reanimation
+  procedure is applied. If the password is not found or doesn't exist the script
   only performs the reanimation procedure. The script revives 99% of blocked tags.
  ]]
 usage = [[
@@ -91,7 +91,7 @@ end
 local function main(args)
     for o, a in getopt.getopt(args, 'h') do
         if o == 'h' then return help() end
-    end   
+    end
     command('lf t55 chk')
     local log_content = read_log_file(logfile)
     local password = log_content and extract_password(log_content) or nil

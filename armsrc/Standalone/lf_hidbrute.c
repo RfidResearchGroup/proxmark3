@@ -150,7 +150,7 @@ void RunMod(void) {
             } else if (playing && selected == 2) {
                 // Now it work only with HID Corporate 1000 (35bit), but is easily extensible to others RFID.
                 // It is necessary only to calculate the correct parity.
-                
+
                 // Brute force code
                 // Check if the badge is an HID Corporate 1000
                 if ((high[selected] & 0xFFFFFFF8) != 0x28) {

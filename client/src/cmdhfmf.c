@@ -70,7 +70,6 @@ static int usage_hf14_keybrute(void) {
 
 int mfc_ev1_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
     int index = originality_check_verify(uid, uidlen, signature, signature_len, PK_MFC);
-    PrintAndLogEx(NORMAL, "");
     return originality_check_print(signature, signature_len, index);
 }
 
@@ -306,31 +305,31 @@ static void mf_print_block(uint8_t blockno, uint8_t *d, bool verbose) {
         ascii_to_buffer((uint8_t *)ascii, d, MFBLOCK_SIZE, sizeof(ascii) - 1, 1);
 
         if (blockno >= MIFARE_1K_MAXBLOCK) {
-            PrintAndLogEx(INFO, 
-                _BACK_BLUE_("%s| %3d | " _YELLOW_("%s")) 
-                _BACK_BLUE_(_MAGENTA_("%s")) 
-                _BACK_BLUE_("%02X ") 
-                _BACK_BLUE_(_YELLOW_("%s"))
-                _BACK_BLUE_("| " _YELLOW_("%s"))
-                ,
-                    secstr,
-                    blockno,
-                    keya,
-                    acl,
-                    d[9],
-                    keyb,
-                    ascii
-                );
+            PrintAndLogEx(INFO,
+                          _BACK_BLUE_("%s| %3d | " _YELLOW_("%s"))
+                          _BACK_BLUE_(_MAGENTA_("%s"))
+                          _BACK_BLUE_("%02X ")
+                          _BACK_BLUE_(_YELLOW_("%s"))
+                          _BACK_BLUE_("| " _YELLOW_("%s"))
+                          ,
+                          secstr,
+                          blockno,
+                          keya,
+                          acl,
+                          d[9],
+                          keyb,
+                          ascii
+                         );
         } else {
             PrintAndLogEx(INFO, "%s| %3d | " _YELLOW_("%s") _MAGENTA_("%s") "%02X " _YELLOW_("%s") "| " _YELLOW_("%s"),
-                    secstr,
-                    blockno,
-                    keya,
-                    acl,
-                    d[9],
-                    keyb,
-                    ascii
-                );
+                          secstr,
+                          blockno,
+                          keya,
+                          acl,
+                          d[9],
+                          keyb,
+                          ascii
+                         );
         }
     } else {
 
@@ -746,6 +745,7 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
     free(fptr);
     free(keyA);
     free(keyB);
+
     PrintAndLogEx(SUCCESS, "\nSucceeded in dumping all blocks");
     return PM3_SUCCESS ;
 }
@@ -2138,7 +2138,7 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
                         e_sector[sectorNo].foundKey[trgKeyType] = 1;
                         e_sector[sectorNo].Key[trgKeyType] = bytes_to_num(keyBlock, 6);
 
-                        // mfCheckKeys_fast(SectorsCnt, true, true, 2, 1, keyBlock, e_sector, false, false);
+                        // mf_check_keys_fast(SectorsCnt, true, true, 2, 1, keyBlock, e_sector, false, false);
                         continue;
                     default :
                         PrintAndLogEx(ERR, "unknown error.\n");
@@ -2955,7 +2955,7 @@ noValidKeyFound:
 
                 // Try the found keys are reused
                 if (bytes_to_num(tmp_key, MIFARE_KEY_SIZE) != 0) {
-                    // <!> The fast check --> mfCheckKeys_fast(sector_cnt, true, true, 2, 1, tmp_key, e_sector, false, verbose);
+                    // <!> The fast check --> mf_check_keys_fast(sector_cnt, true, true, 2, 1, tmp_key, e_sector, false, verbose);
                     // <!> Returns false keys, so we just stick to the slower mfchk.
                     for (int i = 0; i < sector_cnt; i++) {
                         for (int j = MF_KEY_A; j <= MF_KEY_B; j++) {
@@ -4251,6 +4251,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
             PrintAndLogEx(INFO, "Note: option -e implies -i");
             flags |= FLAG_INTERACTIVE;
         }
+
         if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK) {
             PrintAndLogEx(WARNING, "Option -e requires -x or -y");
             return PM3_EINVARG;
@@ -4278,22 +4279,27 @@ static int CmdHF14AMfSim(const char *Cmd) {
 
     payload.flags = flags;
     payload.exitAfter = exitAfterNReads;
+
     memcpy(payload.uid, uid, uidlen);
+
     payload.atqa = (atqa[1] << 8) | atqa[0];
     payload.sak = sak[0];
 
     clearCommandBuffer();
 
-    if (flags & FLAG_INTERACTIVE) {
+    if ((flags & FLAG_INTERACTIVE) == FLAG_INTERACTIVE) {
         PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or a key to abort simulation");
     } else {
         PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or send another cmd to abort simulation");
     }
+
     bool cont;
     do {
+
         cont = false;
         SendCommandNG(CMD_HF_MIFARE_SIMULATE, (uint8_t *)&payload, sizeof(payload));
-        if (flags & FLAG_INTERACTIVE) {
+
+        if ((flags & FLAG_INTERACTIVE) == FLAG_INTERACTIVE) {
             PacketResponseNG resp;
             sector_t *k_sector = NULL;
 
@@ -4305,19 +4311,24 @@ static int CmdHF14AMfSim(const char *Cmd) {
                     continue;
                 }
 
-                if (resp.status != PM3_SUCCESS)
+                if (resp.status != PM3_SUCCESS) {
                     break;
+                }
 
-                if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK)
+                if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK) {
                     break;
+                }
 
                 const nonces_t *data = (nonces_t *)resp.data.asBytes;
                 readerAttack(k_sector, k_sectors_cnt, data[0], setEmulatorMem, verbose);
+
                 if (setEmulatorMem) {
                     cont = true;
                 }
+
                 break;
             }
+
             if (keypress) {
                 if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
                     // inform device to break the sim loop since client has exited
@@ -7851,7 +7862,7 @@ static int CmdHF14AMfView(const char *Cmd) {
     if (bytes_read == MIFARE_MINI_MAX_BYTES)
         block_cnt = MIFARE_MINI_MAXBLOCK;
     else if (bytes_read == MIFARE_1K_EV1_MAX_BYTES)
-            block_cnt = MIFARE_1K_EV1_MAXBLOCK;
+        block_cnt = MIFARE_1K_EV1_MAXBLOCK;
     else if (bytes_read == MIFARE_2K_MAX_BYTES)
         block_cnt = MIFARE_2K_MAXBLOCK;
     else if (bytes_read == MIFARE_4K_MAX_BYTES)
@@ -9623,7 +9634,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
-        return 0;
+        return PM3_ETIMEOUT;
     }
 
     iso14a_card_select_t card;
@@ -9721,9 +9732,9 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         }
     }
 
-    uint8_t k08s[6] = {0xA3, 0x96, 0xEF, 0xA4, 0xE2, 0x4F};
-    uint8_t k08[6] = {0xA3, 0x16, 0x67, 0xA8, 0xCE, 0xC1};
-    uint8_t k32[6] = {0x51, 0x8B, 0x33, 0x54, 0xE7, 0x60};
+    uint8_t k08s[MIFARE_KEY_SIZE] = {0xA3, 0x96, 0xEF, 0xA4, 0xE2, 0x4F};
+    uint8_t k08[MIFARE_KEY_SIZE] = {0xA3, 0x16, 0x67, 0xA8, 0xCE, 0xC1};
+    uint8_t k32[MIFARE_KEY_SIZE] = {0x51, 0x8B, 0x33, 0x54, 0xE7, 0x60};
     if (mf_read_block(0, 4, k08s, blockdata) == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Backdoor key..... " _YELLOW_("%s"), sprint_hex_inrow(k08s, sizeof(k08s)));
         fKeyType = MF_KEY_BD;

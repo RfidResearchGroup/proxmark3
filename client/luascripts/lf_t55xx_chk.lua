@@ -10,7 +10,7 @@ local green = ac.green
 
 author = '    Author: jareckib - created 04.02.2025'
 version = '    version v1.05'
-desc = [[  
+desc = [[
     A simple script for searching the password for T5577. The script creates a
     dictionary starting from the entered starting year to the entered ending year.
     There are two search methods - DDMMYYYY or YYYYMMDD. Checking the entire year
@@ -102,11 +102,11 @@ local function main(args)
 
     for o, a in getopt.getopt(args, 'hs:e:dy') do
         if o == 'h' then return help() end
-        if o == 's' then 
+        if o == 's' then
             start_year = tonumber(a)
             if not start_year then return oops(' Invalid start year') end
         end
-        if o == 'e' then 
+        if o == 'e' then
             end_year = tonumber(a)
             if not end_year then return oops(' Invalid end year') end
         end
@@ -115,13 +115,13 @@ local function main(args)
     end
 
     if not start_year then return oops(' Starting year is required') end
-    if start_year < 1900 or start_year > 2100 then 
-        return oops(' Start year must be between 1900 and 2100') 
+    if start_year < 1900 or start_year > 2100 then
+        return oops(' Start year must be between 1900 and 2100')
     end
     if args[#args] == "-e" then return oops(' Ending year cannot be empty') end
     if not end_year then end_year = current_year end
-    if end_year < 1900 or end_year > 2100 then 
-        return oops(' End year must be between 1900 and 2100') 
+    if end_year < 1900 or end_year > 2100 then
+        return oops(' End year must be between 1900 and 2100')
     end
 
     if end_year < start_year then return oops(' End year cannot be earlier than start year') end
@@ -130,7 +130,7 @@ local function main(args)
     if generate_dictionary(start_year, end_year, mode) then
         print(ac.green .. "  File created: " .. dictionary_path .. res)
         print(cyan .. "  Starting password testing on T5577..." .. res)
-        core.console('lf t55 chk -f ' .. dictionary_path) 
+        core.console('lf t55 chk -f ' .. dictionary_path)
     else
         return oops('Problem saving the file')
     end

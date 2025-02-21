@@ -1,5 +1,5 @@
 #  paxton_net.py -  Convert Paxton Net2 to EM4102
-#  Author jareckib <jareckib@hotmail.com> 
+#  Author jareckib <jareckib@hotmail.com>
 #  Based on Equipter's tutorial - Downgrade Paxton Net to EM410x
 #
 #  This code is copyright (c) jareckib, 2025, All rights reserved.

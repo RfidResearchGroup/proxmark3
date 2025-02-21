@@ -125,7 +125,7 @@ void ExecuteEMVSim(uint8_t *receivedCmd, uint16_t receivedCmd_len, uint8_t *rece
     Dbprintf("");
 
     // use annotate to give some hints about the command
-    annotate(&receivedCmd[1], receivedCmd_len-1);
+    annotate(&receivedCmd[1], receivedCmd_len - 1);
 
     // This is a common request from the reader which we can just immediately respond to since we know we can't
     // handle it.
@@ -141,7 +141,7 @@ void ExecuteEMVSim(uint8_t *receivedCmd, uint16_t receivedCmd_len, uint8_t *rece
 
         currentState = GENERATE_AC;
 
-        memcpy(receivedCmd, (unsigned char[]){ 0x03, 0x80, 0xae, 0x80, 0x00, 0x1d }, 6);
+        memcpy(receivedCmd, (unsigned char[]) { 0x03, 0x80, 0xae, 0x80, 0x00, 0x1d }, 6);
 
         for (int i = 0; i < 29; i++) {
             receivedCmd[6 + i] = receivedCmd[12 + i];
@@ -240,7 +240,8 @@ void ExecuteEMVSim(uint8_t *receivedCmd, uint16_t receivedCmd_len, uint8_t *rece
                                    0x20, 0x00, 0x9f, 0x26, 0x08, 0x56, 0xcb, 0x4e, 0xe1, 0xa4,
                                    0xef, 0xac, 0x74, 0x9f, 0x27, 0x01, 0x80, 0x9f, 0x36, 0x02,
                                    0x00, 0x07, 0x9f, 0x6c, 0x02, 0x3e, 0x00, 0x9f, 0x6e, 0x04,
-                                   0x20, 0x70, 0x00, 0x00, 0x90, 0x00, 0xff, 0xff};
+                                   0x20, 0x70, 0x00, 0x00, 0x90, 0x00, 0xff, 0xff
+                                 };
 
             // do the replacement
             template[0] = responseToReader[0]; // class bit 0

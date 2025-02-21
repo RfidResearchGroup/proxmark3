@@ -150,7 +150,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`emv help               `|Y       |`This help`
 |`emv list               `|Y       |`List ISO7816 history`
-|`emv test               `|Y       |`Crypto logic selftest`
+|`emv test               `|Y       |`Perform crypto logic self tests`
 |`emv challenge          `|N       |`Generate challenge`
 |`emv exec               `|N       |`Executes EMV contactless transaction`
 |`emv genac              `|N       |`Generate ApplicationCryptogram`

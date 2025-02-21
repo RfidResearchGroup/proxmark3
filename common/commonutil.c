@@ -17,6 +17,7 @@
 //-----------------------------------------------------------------------------
 #include "commonutil.h"
 #include <string.h>
+#include "stdbool.h"
 
 /* Similar to FpgaGatherVersion this formats stored version information
  * into a string representation. It takes a pointer to the struct version_information_t,
@@ -403,25 +404,34 @@ void Uint8byteToMemBe(uint8_t *data, uint64_t value) {
 }
 
 // Rotate Left - Ultralight, Desfire
-void rol(uint8_t *data, const size_t len) {
+void rol(uint8_t *data, const size_t n) {
     uint8_t first = data[0];
-    for (size_t i = 0; i < len - 1; i++) {
+    for (size_t i = 0; i < n - 1; i++) {
         data[i] = data[i + 1];
     }
-    data[len - 1] = first;
+    data[n - 1] = first;
 }
 
 // Rotate Right - Ultralight, Desfire
-void ror(uint8_t *data, const size_t len) {
-    uint8_t last = data[len - 1];
+void ror(uint8_t *data, const size_t n) {
+    uint8_t last = data[n - 1];
 
-    for (int i = len - 1; i > 0; i--) {
+    for (int i = n - 1; i > 0; i--) {
         data[i] = data[i - 1];
     }
 
     data[0] = last;
 }
 
+void xor(uint8_t *dest, const uint8_t *src, size_t n) {
+
+    const uint8_t *s = src;
+    uint8_t *d = dest;
+
+    for (; n > 0; n--) {
+        *d++ ^= *s++;
+    }
+}
 
 void lsl(uint8_t *data, size_t len) {
     for (size_t n = 0; n < len - 1; n++) {

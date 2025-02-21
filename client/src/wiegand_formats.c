@@ -883,7 +883,7 @@ static bool Pack_H800002(int format_idx, wiegand_card_t *card,
     memset(packed, 0, sizeof(wiegand_message_t));
 
     if (!validate_card_limit(format_idx, card)) {
-      return false;
+        return false;
     }
 
     packed->Length = 46;
@@ -896,7 +896,7 @@ static bool Pack_H800002(int format_idx, wiegand_card_t *card,
     // Invert parity for setting odd parity
     set_bit_by_position(packed, even_parity ^ 1, 45);
     if (preamble) {
-      return add_HID_header(packed);
+        return add_HID_header(packed);
     }
     return true;
 }
@@ -906,7 +906,7 @@ static bool Unpack_H800002(wiegand_message_t *packed, wiegand_card_t *card) {
     memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 46) {
-      return false; // Wrong length? Stop here.
+        return false; // Wrong length? Stop here.
     }
 
     card->FacilityCode = get_linear_field(packed, 1, 14);
@@ -1528,7 +1528,7 @@ int HIDFindCardFormat(const char *format) {
 static bool validate_card_limit(int format_idx, wiegand_card_t *card) {
     cardformatdescriptor_t card_descriptor = FormatTable[format_idx].Fields;
     return !((card->FacilityCode > card_descriptor.MaxFC) ||
-             (card->CardNumber > card_descriptor.MaxCN)||
+             (card->CardNumber > card_descriptor.MaxCN) ||
              (card->IssueLevel > card_descriptor.MaxIL) ||
              (card->OEM > card_descriptor.MaxOEM));
 }
@@ -1586,7 +1586,7 @@ bool HIDTryUnpack(wiegand_message_t *packed) {
     if (found_cnt) {
         PrintAndLogEx(INFO, "found %u matching format%c with bit len %d", found_cnt, (found_cnt > 1) ? 's' : ' ', packed->Length);
     }
-    
+
     if (packed->Length && ((found_cnt - found_invalid_par) == 0)) { // if length > 0 and no valid parity matches
         PrintAndLogEx(WARNING, "Wiegand unknown bit len %d", packed->Length);
         PrintAndLogEx(HINT, "Try 0xFFFF's http://cardinfo.barkweb.com.au/");
@@ -1607,7 +1607,7 @@ void HIDUnpack(int idx, wiegand_message_t *packed) {
 // return true if at least one valid matching formats found
 bool decode_wiegand(uint32_t top, uint32_t mid, uint32_t bot, int n) {
     bool decode_result;
-    
+
     if (top == 0 && mid == 0 && bot == 0) {
         decode_result = false;
     } else if ((n > 0) || ((mid & 0xFFFFFFC0) > 0)) {  // if n > 0 or there's more than 38 bits

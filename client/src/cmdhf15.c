@@ -282,9 +282,9 @@ static const productName_t uidmapping[] = {
 static int CmdHF15Help(const char *Cmd);
 
 static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
+
     int reason = 0;
-    int index = -1;
-    index = originality_check_verify(uid, 8, signature, 32, PK_MFC);
+    int index = originality_check_verify(uid, 8, signature, 32, PK_MFC);
     if (index >= 0) {
         reason = 1;
     } else {
@@ -306,11 +306,12 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
             }
         }
     }
-    PrintAndLogEx(NORMAL, "");
+
     int ret = originality_check_print(signature, 32, index);
     if (ret != PM3_SUCCESS) {
         return ret;
     }
+
     switch (reason) {
         case 1:
             PrintAndLogEx(INFO, "                  Params used: UID and signature, plain");

@@ -311,7 +311,7 @@ void WriteTagToFlash(uint32_t uid, size_t size) {
     uint32_t len = size;
     uint8_t data[(size * (16 * 64)) / 1024];
 
-    emlGetMem(data, 0, (size * 64) / 1024);
+    emlGetMem_xt(data, 0, (size * 64) / 1024, MIFARE_BLOCK_SIZE);
 
     char dest[SPIFFS_OBJ_NAME_LEN];
     uint8_t buid[4];
@@ -646,7 +646,7 @@ failtag:
     emlClearMem();
     uint8_t mblock[16];
     for (uint8_t sectorNo = 0; sectorNo < sectorsCnt; sectorNo++) {
-        emlGetMem(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1);
+        emlGetMem_xt(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1, MIFARE_BLOCK_SIZE);
         for (uint8_t t = 0; t < 2; t++) {
             memcpy(mblock + t * 10, foundKey[t][sectorNo], 6);
         }
@@ -807,7 +807,7 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
                     emlSetMem_xt(dataoutbuf, FirstBlockOfSector(s) + blockNo, 1, 16);
                 } else {
                     // sector trailer, keep the keys, set only the AC
-                    emlGetMem(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1);
+                    emlGetMem_xt(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1, MIFARE_BLOCK_SIZE);
                     memcpy(&dataoutbuf2[6], &dataoutbuf[6], 4);
                     emlSetMem_xt(dataoutbuf2, FirstBlockOfSector(s) + blockNo, 1, 16);
                 }
@@ -878,7 +878,7 @@ void saMifareMakeTag(void) {
     int flags = 0;
     for (int blockNum = 0; blockNum < 16 * 4; blockNum++) {
         uint8_t mblock[16];
-        emlGetMem(mblock, blockNum, 1);
+        emlGetMem_xt(mblock, blockNum, 1, MIFARE_BLOCK_SIZE);
         // switch on field and send magic sequence
         if (blockNum == 0)
             flags = 0x08 + 0x02;

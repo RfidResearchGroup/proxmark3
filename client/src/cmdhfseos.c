@@ -453,7 +453,7 @@ static int seos_challenge_get(uint8_t *RNDICC, uint8_t RNDICC_len, uint8_t keysl
 
     char getChallengePre[21];
     strcpy(getChallengePre, "008700");
-   
+
     // const char keyslot_str[3] = "01";
     //strcat(getChallengePre, keyslot_str);
     snprintf(getChallengePre + strlen(getChallengePre), 3, "%02u", keyslot);
@@ -547,7 +547,7 @@ static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t 
     // Response is an ASN.1 encoded structure
     // Extract everything before the 8E tag
 
-    int res = PM3_EWRONGANSWER;    
+    int res = PM3_EWRONGANSWER;
     for (int i = 0; i < response_length; i++) {
         // extract MAC
         if (response[i] == 0x8E) {
@@ -558,7 +558,7 @@ static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t 
         }
     }
     if (res != PM3_SUCCESS) {
-        goto out;
+        return res;
     }
 
     // ----------------- MAC Key Generation -----------------
@@ -579,7 +579,6 @@ static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t 
     // PrintAndLogEx(INFO, "Supp MAC......................... " _YELLOW_("%s"), sprint_hex_inrow(MAC_value, MAC_value_len));
     // PrintAndLogEx(INFO, "Calc MAC......................... " _YELLOW_("%s"), sprint_hex_inrow(cmac, sizeof(cmac)));
 
-out: 
     PrintAndLogEx(INFO, "--- " _CYAN_("MAC") " ---------------------------");
     PrintAndLogEx(ERR, _RED_("MAC Verification Failed"));
     return PM3_ESOFT;
@@ -760,9 +759,8 @@ static int seos_mutual_auth(uint8_t *randomICC, uint8_t *CRYPTOGRAM_Diversifier,
     uint8_t response[PM3_CMD_DATA_SIZE];
 
     // ---------------- Diversify Keys ----------------
-    uint8_t undiversified_key[16] = { 0x00 };
-    memcpy(undiversified_key, keys[key_index].readKey, 16);
-
+    uint8_t mk[16] = { 0x00 };
+    memcpy(mk, keys[key_index].readKey, 16);
     uint8_t keyslot = 0x01; // up to 0x0F
     uint8_t AES_key[24] = {0x00};
     uint8_t MAC_key[24] = {0x00};
@@ -776,8 +774,8 @@ static int seos_mutual_auth(uint8_t *randomICC, uint8_t *CRYPTOGRAM_Diversifier,
         return PM3_ESOFT;
     }
 
-    seos_kdf(true, undiversified_key, keyslot, adfOID, sizeof(adfOID), CRYPTOGRAM_Diversifier, diversifier_len, AES_key, encryption_algorithm, hash_algorithm);
-    seos_kdf(false, undiversified_key, keyslot, adfOID, sizeof(adfOID), CRYPTOGRAM_Diversifier, diversifier_len, MAC_key, encryption_algorithm, hash_algorithm);
+    seos_kdf(true, mk, keyslot, adfOID, sizeof(adfOID), CRYPTOGRAM_Diversifier, diversifier_len, AES_key, encryption_algorithm, hash_algorithm);
+    seos_kdf(false, mk, keyslot, adfOID, sizeof(adfOID), CRYPTOGRAM_Diversifier, diversifier_len, MAC_key, encryption_algorithm, hash_algorithm);
 
     memcpy(&MAC_key[16], &MAC_key[0], 8);
     memcpy(&AES_key[16], &AES_key[0], 8);
@@ -976,7 +974,9 @@ static int seos_aid_select(void) {
         // if we made it here,  its a success and we break :)
         break;
     }
-
+    if (i == ARRAYLEN(known_AID_map)) {
+        return PM3_ESOFT;
+    }
     return res;
 };
 
@@ -1668,7 +1668,7 @@ static int CmdHfSeosSAM(const char *Cmd) {
     data[0] = flags;
 
     int cmdlen = 0;
-    if (CLIParamHexToBuf(arg_get_str(ctx, 5), data+1, PM3_CMD_DATA_SIZE-1, &cmdlen) != PM3_SUCCESS){
+    if (CLIParamHexToBuf(arg_get_str(ctx, 5), data + 1, PM3_CMD_DATA_SIZE - 1, &cmdlen) != PM3_SUCCESS) {
         CLIParserFree(ctx);
         return PM3_ESOFT;
     }
@@ -1680,7 +1680,7 @@ static int CmdHfSeosSAM(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_SAM_SEOS, data, cmdlen+1);
+    SendCommandNG(CMD_HF_SAM_SEOS, data, cmdlen + 1);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_SAM_SEOS, &resp, 4000) == false) {
         PrintAndLogEx(WARNING, "SAM timeout");

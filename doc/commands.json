@@ -920,7 +920,7 @@
         },
         "emv help": {
             "command": "emv help",
-            "description": "----------- ----------------------- General ----------------------- help This help list List ISO7816 history test Crypto logic selftest --------------------------------------------------------------------------------------- emv list available offline: yes Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "----------- ----------------------- General ----------------------- help This help list List ISO7816 history test Perform crypto logic self tests --------------------------------------------------------------------------------------- emv list available offline: yes Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "emv list --frame -> show frame delay times",
                 "emv list -1 -> use trace buffer"
@@ -1025,11 +1025,11 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-t, --selftest Self test",
+                "--test Perform self tests",
                 "-a, --apdu Show APDU requests and responses",
                 "-w, --wired Send data via contact (iso7816) interface. (def: Contactless interface)"
             ],
-            "usage": "emv roca [-htaw]"
+            "usage": "emv roca [-haw] [--test]"
         },
         "emv scan": {
             "command": "emv scan",
@@ -1410,19 +1410,19 @@
                 "hf 14a simaid -t 3 -> MIFARE Desfire",
                 "hf 14a simaid -t 4 -> ISO/IEC 14443-4",
                 "hf 14a simaid -t 11 -> Javacard (JCOP)",
-                "hf 14a simaid -t 3 --aid a000000000000000000000 --response 9000 --apdu 9000 -> AID, Response and APDU",
-                "hf 14a simaid -t 3 --rats 05788172220101 --response 01009000 --apdu 86009000 -> Custom RATS Added",
-                "hf 14a simaid -t 3 --rats 05788172220101 -x -> Enumerate AID Values"
+                "hf 14a simaid -t 3 --aid a000000000000000000000 --selectaid_response 9000 --getdata_response 9000 -> Custom AID and responses",
+                "hf 14a simaid -t 3 --ats 0578817222 --selectaid_response 01009000 --getdata_response 86009000 -> Custom ATS and responses",
+                "hf 14a simaid -t 3 --ats 0578817222 -x -> Enumerate AID Values"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-t, --type <1-12> Simulation type to use",
                 "-u, --uid <hex> <4|7|10> hex bytes UID",
-                "-r, --rats <hex> <0-20> hex bytes RATS",
-                "-a, --aid <hex> <0-100> hex bytes for AID to respond to (Default: A000000000000000000000)",
-                "-e, --response <hex> <0-100> hex bytes for APDU Response to AID Select (Default: 9000)",
-                "-p, --apdu <hex> <0-100> hex bytes for APDU Response to Get Data request after AID (Default: 9000)",
+                "-r, --ats <hex> <0-20> hex bytes ATS",
+                "-a, --aid <hex> <0-30> hex bytes for AID to respond to (Default: A000000000000000000000)",
+                "-e, --selectaid_response <hex> <0-100> hex bytes for APDU Response to AID Select (Default: 9000)",
+                "-p, --getdata_response <hex> <0-100> hex bytes for APDU Response to Get Data request after AID (Default: 9000)",
                 "-x, --enumerate Enumerate all AID values via returning Not Found and print them to console"
             ],
             "usage": "hf 14a simaid [-hx] -t <1-12> [-u <hex>] [-r <hex>] [-a <hex>] [-e <hex>] [-p <hex>]"
@@ -3657,14 +3657,23 @@
             "command": "hf iclass sam",
             "description": "Extract PACS via a HID SAM",
             "notes": [
-                "hf iclass sam"
+                "hf iclass sam",
+                "hf iclass sam -p -d a005a103800104 -> get PACS data, but ensure that epurse will stay unchanged",
+                "hf iclass sam --break-on-nr-mac -> get Nr-MAC for extracting encrypted SIO"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "-k, --keep keep the field active after command executed",
+                "-n, --nodetect skip selecting the card and sending card details to SAM",
+                "-t, --tlv decode TLV",
+                "--break-on-nr-mac stop tag interaction on nr-mac",
+                "-p, --prevent-epurse-update fake epurse update",
+                "--shallow shallow mod",
+                "-d, --data <hex> DER encoded command to send to SAM"
             ],
-            "usage": "hf iclass sam [-hv]"
+            "usage": "hf iclass sam [-hvkntp] [--break-on-nr-mac] [--shallow] [-d <hex>]..."
         },
         "hf iclass sim": {
             "command": "hf iclass sim",
@@ -4486,12 +4495,13 @@
                 "-f, --file <fn> Specify a filename for dump file",
                 "--mini MIFARE Classic Mini / S20",
                 "--1k MIFARE Classic 1k / S50 (def)",
+                "--1k+ MIFARE Classic Ev1 1k / S50",
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
                 "--emu from emulator memory",
                 "--gdm use gdm alt (20/23) magic wakeup"
             ],
-            "usage": "hf mf cload [-h] [-f <fn>] [--mini] [--1k] [--2k] [--4k] [--emu] [--gdm]"
+            "usage": "hf mf cload [-h] [-f <fn>] [--mini] [--1k] [--1k+] [--2k] [--4k] [--emu] [--gdm]"
         },
         "hf mf csave": {
             "command": "hf mf csave",
@@ -7693,7 +7703,7 @@
             "description": "Extract PACS via a HID SAM",
             "notes": [
                 "hf seos sam",
-                "hd seos sam -d a005a103800104 -> get PACS data"
+                "hf seos sam -d a005a103800104 -> get PACS data"
             ],
             "offline": false,
             "options": [
@@ -9851,8 +9861,8 @@
             "command": "lf hitag chk",
             "description": "Run dictionary key or password recovery against Hitag card.",
             "notes": [
-                "lf hitag chk",
-                "-> checks for both pwd / crypto keyslf hitag chk --crypto -> use def dictionary",
+                "lf hitag chk -> checks for both pwd / crypto keys",
+                "lf hitag chk --crypto -> use def dictionary",
                 "lf hitag chk --pwd -f my.dic -> pwd mode, custom dictionary"
             ],
             "offline": false,
@@ -13202,6 +13212,6 @@
     "metadata": {
         "commands_extracted": 759,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-01-14T15:42:02"
+        "extracted_on": "2025-02-21T14:36:13"
     }
 }

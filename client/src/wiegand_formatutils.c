@@ -134,7 +134,7 @@ static uint8_t get_length_from_header(wiegand_message_t *data) {
      * Right now we just calculate the highest bit set
      * 38 bits format is handled by directly setting n=38 in initialize_message_object()
      * since it's hard to distinguish 38 bits with formats with preamble bit (26-36 bits)
-     * 
+     *
      * (from http://www.proxmark.org/forum/viewtopic.php?pid=5368#p5368)
      * 0000 0010 0000 0000 01xx xxxx xxxx xxxx xxxx xxxx xxxx  26-bit
      * 0000 0010 0000 0000 1xxx xxxx xxxx xxxx xxxx xxxx xxxx  27-bit
@@ -156,7 +156,7 @@ static uint8_t get_length_from_header(wiegand_message_t *data) {
     if ((data->Top & 0x000FFFFF) > 0) { // > 64 bits
         hfmt = data->Top & 0x000FFFFF;
         len = 64;
-    } else if (data->Mid > 0) { 
+    } else if (data->Mid > 0) {
         // detect HID format b38 set
         if (data->Mid & 0xFFFFFFC0) { // 39-64 bits
             hfmt = data->Mid;
@@ -165,14 +165,14 @@ static uint8_t get_length_from_header(wiegand_message_t *data) {
             PrintAndLogEx(DEBUG, "hid preamble detected");
 
             // if bit 38 is set: => 26-36 bits
-            if (((data->Mid >> 5) & 1) == 1) { 
+            if (((data->Mid >> 5) & 1) == 1) {
                 hfmt = (((data->Mid & 31) << 12) | (data->Bot >> 26)); //get bits 27-37 to check for format len bit
                 len = 19;
             } else { // if bit 38 is not set => 37 bits
                 hfmt = 0;
                 len = 37;
-            }  
-        } 
+            }
+        }
     } else {
         hfmt = data->Bot;
         len = 0;

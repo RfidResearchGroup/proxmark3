@@ -192,7 +192,6 @@ static nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
 // --- GET SIGNATURE
 static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
     int index = originality_check_verify(uid, uidlen, signature, signature_len, PK_MFP);
-    PrintAndLogEx(NORMAL, "");
     return originality_check_print(signature, signature_len, index);
 }
 

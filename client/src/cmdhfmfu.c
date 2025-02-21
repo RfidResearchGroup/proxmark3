@@ -1417,7 +1417,6 @@ static int ulev1_print_signature(uint64_t tagtype, uint8_t *uid, uint8_t *signat
     } else if (signature_len == 48) {
         index = originality_check_verify(uid, 7, signature, signature_len, PK_MFULAES);
     }
-    PrintAndLogEx(NORMAL, "");
     return originality_check_print(signature, signature_len, index);
 }
 
@@ -2451,7 +2450,6 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         }
         // check signature
         int index = originality_check_verify_ex(card.uid, 7, signature, sizeof(signature), PK_ST25TN, false, true);
-        PrintAndLogEx(NORMAL, "");
         originality_check_print(signature, sizeof(signature), index);
     }
 

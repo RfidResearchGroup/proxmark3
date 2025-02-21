@@ -1031,7 +1031,7 @@ int DesfireSelectAndAuthenticateEx(DesfireContext_t *dctx, DesfireSecureChannel 
         isosw = true;
         if (verbose) {
             PrintAndLogEx(INFO, "Switch to " _CYAN_("native") " for select");
-    }
+        }
     }
 
     int res;
@@ -1055,7 +1055,7 @@ int DesfireSelectAndAuthenticateEx(DesfireContext_t *dctx, DesfireSecureChannel 
 
         if (verbose) {
             PrintAndLogEx(INFO, "App %06x " _GREEN_("selected"), aid);
-    }
+        }
     }
 
     if (isosw) {
@@ -1124,7 +1124,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
 
         if (verbose) {
             PrintAndLogEx(INFO, "Application %s file iso id %04x is " _GREEN_("selected"), DesfireWayIDStr(way, id), isofileid);
-    }
+        }
     }
 
     if (!noauth) {

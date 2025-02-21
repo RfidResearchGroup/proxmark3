@@ -150,7 +150,6 @@ static void print_st25ta_system_info(uint8_t *d, uint8_t n) {
 
 static int print_st25ta_signature(uint8_t *uid, uint8_t *signature) {
     int index = originality_check_verify_ex(uid, 7, signature, 32, PK_ST25TA, false, true);
-    PrintAndLogEx(NORMAL, "");
     return originality_check_print(signature, 32, index);
 }
 

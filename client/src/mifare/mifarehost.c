@@ -1036,19 +1036,25 @@ int mf_write_sector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8
 
 // EMULATOR
 int mf_eml_get_mem(uint8_t *data, int blockNum, int blocksCount) {
+    return mf_eml_get_mem_xt(data, blockNum, blocksCount, MFBLOCK_SIZE);
+}
 
-    size_t size = blocksCount * MFBLOCK_SIZE;
+int mf_eml_get_mem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth) {
+
+    size_t size = ((size_t) blocksCount) * blockBtWidth;
     if (size > PM3_CMD_DATA_SIZE) {
         return PM3_ESOFT;
     }
 
     struct {
-        uint8_t blockno;
+        uint16_t blockno;
         uint8_t blockcnt;
+        uint8_t blockwidth;
     } PACKED payload;
 
     payload.blockno = blockNum;
     payload.blockcnt = blocksCount;
+    payload.blockwidth = blockBtWidth;
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_EML_MEMGET, (uint8_t *)&payload, sizeof(payload));
@@ -1059,8 +1065,9 @@ int mf_eml_get_mem(uint8_t *data, int blockNum, int blocksCount) {
         return PM3_ETIMEOUT;
     }
 
-    if (resp.status == PM3_SUCCESS)
+    if (resp.status == PM3_SUCCESS) {
         memcpy(data, resp.data.asBytes, size);
+    }
 
     return resp.status;
 }
@@ -1072,7 +1079,7 @@ int mf_elm_set_mem(uint8_t *data, int blockNum, int blocksCount) {
 int mf_eml_set_mem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtWidth) {
 
     struct p {
-        uint8_t blockno;
+        uint16_t blockno;
         uint8_t blockcnt;
         uint8_t blockwidth;
         uint8_t data[];
@@ -1226,7 +1233,7 @@ int mf_chinese_set_block(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t p
         if (!isOK) {
 
             uint8_t reason = (resp.oldarg[1] & 0xFF);
-            if ( reason == 4) {
+            if (reason == 4) {
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(WARNING, "GDM magic write signature block failed");
             } else if (reason == 5) {

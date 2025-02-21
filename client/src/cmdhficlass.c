@@ -3246,14 +3246,14 @@ void print_iclass_sio(uint8_t *iclass_dump, size_t dump_len, bool verbose) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "---------------------------- " _CYAN_("SIO - RAW") " ----------------------------");
+    PrintAndLogEx(INFO, "--------------------------- " _CYAN_("SIO - RAW") " -----------------------------");
     print_hex_noascii_break(sio_start, sio_length, 32);
     PrintAndLogEx(NORMAL, "");
     if (verbose) {
         PrintAndLogEx(INFO, "----------------------- " _CYAN_("SIO - ASN1 TLV") " ---------------------------");
-    asn1_print(sio_start, sio_length, "  ");
-    PrintAndLogEx(NORMAL, "");
-   }
+        asn1_print(sio_start, sio_length, "  ");
+        PrintAndLogEx(NORMAL, "");
+    }
 }
 
 void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize, bool dense_output) {
@@ -3869,7 +3869,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         arg_lit0(NULL, "vb6kdf", "use the VB6 elite KDF instead of a file"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
@@ -5425,7 +5425,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
     data[0] = flags;
 
     int cmdlen = 0;
-    if (CLIParamHexToBuf(arg_get_str(ctx, 8), data+1, PM3_CMD_DATA_SIZE-1, &cmdlen) != PM3_SUCCESS){
+    if (CLIParamHexToBuf(arg_get_str(ctx, 8), data + 1, PM3_CMD_DATA_SIZE - 1, &cmdlen) != PM3_SUCCESS) {
         CLIParserFree(ctx);
         return PM3_ESOFT;
     }
@@ -5437,7 +5437,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_SAM_PICOPASS, data, cmdlen+1);
+    SendCommandNG(CMD_HF_SAM_PICOPASS, data, cmdlen + 1);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_SAM_PICOPASS, &resp, 4000) == false) {
         PrintAndLogEx(WARNING, "SAM timeout");
@@ -5495,11 +5495,11 @@ static int CmdHFiClassSAM(const char *Cmd) {
         const uint8_t *mediaType = oid + 2 + oid_length;
         const uint8_t mediaType_data = mediaType[2];
         PrintAndLogEx(SUCCESS, "SIO Media Type: " _GREEN_("%s"), getSioMediaTypeInfo(mediaType_data));
-    } else if(breakOnNrMac && d[0] == 0x05) {
-        PrintAndLogEx(SUCCESS, "Nr-MAC: " _GREEN_("%s"), sprint_hex_inrow(d+1, 8));
-        if(verbose){
+    } else if (breakOnNrMac && d[0] == 0x05) {
+        PrintAndLogEx(SUCCESS, "Nr-MAC: " _GREEN_("%s"), sprint_hex_inrow(d + 1, 8));
+        if (verbose) {
             PrintAndLogEx(INFO, "Replay Nr-MAC to dump SIO:");
-            PrintAndLogEx(SUCCESS, "    hf iclass dump -k \"%s\" --nr", sprint_hex_inrow(d+1, 8));
+            PrintAndLogEx(SUCCESS, "    hf iclass dump -k \"%s\" --nr", sprint_hex_inrow(d + 1, 8));
         }
     } else {
         print_hex(d, resp.length);

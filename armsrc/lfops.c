@@ -944,7 +944,7 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, int16_t *remainder) {
     }
 }
 
-bool add_HID_preamble(uint32_t *hi2, uint32_t *hi, uint32_t *lo, uint8_t length){
+bool add_HID_preamble(uint32_t *hi2, uint32_t *hi, uint32_t *lo, uint8_t length) {
     // Invalid value
     if (length > 84 || length == 0)
         return false;
@@ -963,7 +963,7 @@ bool add_HID_preamble(uint32_t *hi2, uint32_t *hi, uint32_t *lo, uint8_t length)
         // No header bits added to 37-bit cards
     } else if (length >= 32) {
         *hi |= 0x20; // Bit 37; standard header
-       *hi |= 1U << (length - 32); // leading 1: start bit
+        *hi |= 1U << (length - 32); // leading 1: start bit
     } else {
         *hi |= 0x20; // Bit 37; standard header
         *lo |= 1U << length; // leading 1: start bit

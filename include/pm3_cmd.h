@@ -924,6 +924,9 @@ typedef struct {
 // No key available                     client/pm3: no cryptographic key available.
 #define PM3_ENOKEY            -28
 
+// Cryptographic error                  client/pm3: cryptographic operation failed
+#define PM3_ECRYPTO           -29
+
 // No data                              client/pm3: no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program

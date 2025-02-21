@@ -1455,7 +1455,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
 // response to send, and send it.
 // 'hf 14a sim'
 //-----------------------------------------------------------------------------
-void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_t exitAfterNReads,
+void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uint8_t exitAfterNReads,
                           uint8_t *ats, size_t ats_len) {
 
 #define ATTACK_KEY_COUNT 16
@@ -1508,7 +1508,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
         .modulation_n = 0
     };
 
-    if (SimulateIso14443aInit(tagType, flags, data, ats, ats_len, &responses, &cuid, counters, tearings, &pages) == false) {
+    if (SimulateIso14443aInit(tagType, flags, useruid, ats, ats_len, &responses, &cuid, counters, tearings, &pages) == false) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
         return;
@@ -1684,8 +1684,8 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
                     // first blocks of emu are header
                     uint16_t start = block * 4 + MFU_DUMP_PREFIX_LENGTH;
                     uint8_t emdata[MAX_MIFARE_FRAME_SIZE];
-                    emlGet(emdata, start, 16);
-                    AddCrc14A(emdata, 16);
+                    emlGet(emdata, start, MIFARE_BLOCK_SIZE);
+                    AddCrc14A(emdata, MIFARE_BLOCK_SIZE);
                     EmSendCmd(emdata, sizeof(emdata));
                     numReads++;  // Increment number of times reader requested a block
 
@@ -1703,8 +1703,8 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
                 p_response = &responses[RESP_INDEX_UIDC1];
             } else { // all other tags (16 byte block tags)
                 uint8_t emdata[MAX_MIFARE_FRAME_SIZE] = {0};
-                emlGet(emdata, block, 16);
-                AddCrc14A(emdata, 16);
+                emlGet(emdata, block, MIFARE_BLOCK_SIZE);
+                AddCrc14A(emdata, MIFARE_BLOCK_SIZE);
                 EmSendCmd(emdata, sizeof(emdata));
                 // We already responded, do not send anything with the EmSendCmd14443aRaw() that is called below
                 p_response = NULL;
@@ -1847,7 +1847,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *data, uint8_
             }
 
             if (memcmp(pwd, "\x00\x00\x00\x00", 4) == 0) {
-                Uint4byteToMemLe(pwd, ul_ev1_pwdgenB(data));
+                Uint4byteToMemLe(pwd, ul_ev1_pwdgenB(useruid));
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Calc pwd... %02X %02X %02X %02X", pwd[0], pwd[1], pwd[2], pwd[3]);
             }
 
@@ -4080,7 +4080,7 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
                     dynamic_response_info.response[0] = receivedCmd[0];
                     dynamic_response_info.response[1] = 0x00;
 
-                    switch (receivedCmd[2+offset]) { // APDU Class Byte
+                    switch (receivedCmd[2 + offset]) { // APDU Class Byte
                         // receivedCmd in this case is expecting to structured with possibly a CID, then the APDU command for SelectFile
                         //    | IBlock (CID)   | CID | APDU Command | CRC |
                         // or | IBlock (noCID) | APDU Command | CRC |
@@ -4092,8 +4092,8 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
                             // xx in this case is len of the AID value in hex
 
                             // aid len is found as a hex value in receivedCmd[6] (Index Starts at 0)
-                            int received_aid_len = receivedCmd[5+offset];
-                            uint8_t *received_aid = &receivedCmd[6+offset];
+                            int received_aid_len = receivedCmd[5 + offset];
+                            uint8_t *received_aid = &receivedCmd[6 + offset];
 
                             // aid enumeration flag
                             if ((flags & FLAG_ENUMERATE_AID) == FLAG_ENUMERATE_AID) {

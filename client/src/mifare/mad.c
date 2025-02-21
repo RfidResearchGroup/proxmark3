@@ -188,7 +188,7 @@ static uint16_t madGetAID(const uint8_t *sector, bool swapmad, int MADver, int s
     }
 }
 
-int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) {
+int MADCheck(uint8_t *sector0, uint8_t *sector16, bool verbose, bool *haveMAD2) {
 
     if (sector0 == NULL)
         return PM3_EINVARG;
@@ -222,13 +222,13 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
         PrintAndLogEx(SUCCESS, "CRC8...... 0x%02X ( %s )", sector0[16], _GREEN_("ok"));
     }
 
-    if (mad_ver == 2 && sector10) {
-        int res2 = madCRCCheck(sector10, true, 2);
+    if (mad_ver == 2 && sector16) {
+        int res2 = madCRCCheck(sector16, true, 2);
         if (res == PM3_SUCCESS)
             res = res2;
 
         if (verbose && !res2)
-            PrintAndLogEx(SUCCESS, "CRC8...... 0x%02X ( %s )", sector10[0], _GREEN_("ok"));
+            PrintAndLogEx(SUCCESS, "CRC8...... 0x%02X ( %s )", sector16[0], _GREEN_("ok"));
     }
 
     // MA (multi-application card)
@@ -241,27 +241,30 @@ int MADCheck(uint8_t *sector0, uint8_t *sector10, bool verbose, bool *haveMAD2) 
     return res;
 }
 
-int MADDecode(uint8_t *sector0, uint8_t *sector10, uint16_t *mad, size_t *madlen, bool swapmad) {
+int MADDecode(uint8_t *sector0, uint8_t *sector16, uint16_t *mad, size_t *madlen, bool swapmad) {
     *madlen = 0;
     bool haveMAD2 = false;
-    int res = MADCheck(sector0, sector10, false, &haveMAD2);
+    int res = MADCheck(sector0, sector16, false, &haveMAD2);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Not a valid MAD");
         return res;
     }
 
-    for (int i = 1; i < 16; i++) {
+    // 7 + 8 == 15
+    for (int i = 1; i <= 16; i++) {
         mad[*madlen] = madGetAID(sector0, swapmad, 1, i);
         (*madlen)++;
     }
 
     if (haveMAD2) {
-        // mad2 sector (0x10 == 16dec) here
+        // mad2 sector (0x10 == 16) here
         mad[*madlen] = 0x0005;
         (*madlen)++;
 
+        // 7 + 8 + 8  == 23
         for (int i = 1; i < 24; i++) {
-            mad[*madlen] = madGetAID(sector10, swapmad, 2, i);
+            mad[*madlen] = madGetAID(sector16, swapmad, 2, i);
+
             (*madlen)++;
         }
     }
@@ -462,16 +465,16 @@ int convert_mad_to_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen)
     }
 
     uint8_t sector0[MFBLOCK_SIZE * 4] = {0};
-    uint8_t sector10[MFBLOCK_SIZE * 4] = {0};
+    uint8_t sector16[MFBLOCK_SIZE * 4] = {0};
 
     memcpy(sector0, in, sizeof(sector0));
     if (ilen == MIFARE_4K_MAX_BYTES) {
-        memcpy(sector10, in + (MF_MAD2_SECTOR * 4 * MFBLOCK_SIZE), sizeof(sector10));
+        memcpy(sector16, in + (MF_MAD2_SECTOR * 4 * MFBLOCK_SIZE), sizeof(sector16));
     }
 
     uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
     size_t madlen = 0;
-    if (MADDecode(sector0, sector10, mad, &madlen, false)) {
+    if (MADDecode(sector0, sector16, mad, &madlen, false)) {
         PrintAndLogEx(ERR, "can't decode MAD");
         return PM3_ESOFT;
     }

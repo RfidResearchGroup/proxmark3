@@ -1035,7 +1035,7 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
             Dbhexdump(*rxlen, response_bit, false);
             Dbprintf("htS: skipping %d bit SOF", sof_bits);
 
-	        if ((rx[0] >> (8 - sof_bits)) != ((1 << sof_bits) - 1)) {
+            if ((rx[0] >> (8 - sof_bits)) != ((1 << sof_bits) - 1)) {
                 DBG DbpString("htS: Warning, not all bits of SOF are 1");
             }
         }

@@ -6,7 +6,7 @@ local dash = string.rep('--', 32)
 
 author = '    Author: jareckib - created 01.02.2025'
 version = '    version v1.01'
-desc = [[  
+desc = [[
     A simple script for searching the password for T5577. The script creates a
     dictionary starting from the entered starting year to the entered ending year.
     There are two search methods - DDMMYYYY or YYYYMMDD. Checking the entire year
@@ -84,11 +84,11 @@ local function get_valid_year_input(prompt)
     local year
     while true do
         io.write(prompt)
-        local input = io.read()       
+        local input = io.read()
         if input == "" then
             print(ac.yellow .. '  ERROR: ' .. ac.reset .. 'Year cannot be empty')
         else
-            year = tonumber(input)         
+            year = tonumber(input)
             if not year then
                 print(ac.yellow .. '  ERROR: ' .. ac.reset .. 'Invalid input (digits only)')
             elseif year < 1900 then
@@ -155,7 +155,7 @@ local function main(args)
     if generate_dictionary(start_year, end_year, mode) then
         print(ac.green .. "  File created: " .. dictionary_path .. ac.reset)
         print(ac.cyan .. "  Starting password testing on T5577..." .. ac.reset)
-        core.console('lf t55 chk -f ' .. dictionary_path) 
+        core.console('lf t55 chk -f ' .. dictionary_path)
     else
         print(ac.yellow .. '  ERROR: ' .. ac.reset .. 'Problem saving the file.')
     end

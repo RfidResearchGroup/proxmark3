@@ -3784,22 +3784,22 @@ int CmdHF14AAIDSim(const char *Cmd) {
 
     if (ats_len > sizeof(ats)) {
         PrintAndLogEx(ERR, "Provided ATS too long");
-            return PM3_EINVARG;
+        return PM3_EINVARG;
     }
 
     if (aid_len > sizeof(aid)) {
         PrintAndLogEx(ERR, "Provided AID too long");
-            return PM3_EINVARG;
+        return PM3_EINVARG;
     }
 
     if (selectaid_response_len > sizeof(selectaid_response)) {
         PrintAndLogEx(ERR, "Provided SelectAID response too long");
-            return PM3_EINVARG;
+        return PM3_EINVARG;
     }
 
     if (getdata_response_len > sizeof(getdata_response)) {
         PrintAndLogEx(ERR, "Provided GetData response too long");
-            return PM3_EINVARG;
+        return PM3_EINVARG;
     }
 
     if (ats_len > 0) {
@@ -3857,14 +3857,17 @@ int CmdHF14AAIDSim(const char *Cmd) {
     bool keypress = kbd_enter_pressed();
     while (keypress == false) {
 
-        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0)
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0) {
             continue;
+        }
 
-        if (resp.status != PM3_SUCCESS)
+        if (resp.status != PM3_SUCCESS) {
             break;
+        }
 
-        if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK)
+        if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK) {
             break;
+        }
 
         keypress = kbd_enter_pressed();
     }

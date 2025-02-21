@@ -500,7 +500,7 @@ void RunMod(void) {
             uint8_t mblock[MIFARE_BLOCK_SIZE];
             for (uint8_t sectorNo = 0; sectorNo < sectorsCnt; ++sectorNo) {
                 if (validKey[0][sectorNo] || validKey[1][sectorNo]) {
-                    emlGetMem(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1);
+                    emlGetMem_xt(mblock, FirstBlockOfSector(sectorNo) + NumBlocksPerSector(sectorNo) - 1, 1, MIFARE_BLOCK_SIZE);
                     for (uint8_t keyType = 0; keyType < 2; ++keyType) {
                         if (validKey[keyType][sectorNo]) {
                             memcpy(mblock + keyType * 10, foundKey[keyType][sectorNo], 6);

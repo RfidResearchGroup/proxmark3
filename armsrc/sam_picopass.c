@@ -49,9 +49,9 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
     if (g_dbglevel >= DBG_DEBUG)
         DbpString("start sam_send_request_iso14a");
 
-    uint8_t * buf1 = BigBuf_malloc(ISO7816_MAX_FRAME);
-    uint8_t * buf2 = BigBuf_malloc(ISO7816_MAX_FRAME);
-    if(buf1 == NULL || buf2 == NULL){
+    uint8_t *buf1 = BigBuf_malloc(ISO7816_MAX_FRAME);
+    uint8_t *buf2 = BigBuf_malloc(ISO7816_MAX_FRAME);
+    if (buf1 == NULL || buf2 == NULL) {
         res = PM3_EMALLOC;
         goto out;
     }
@@ -103,19 +103,19 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
             nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf);
 
             bool is_cmd_check = (nfc_tx_buf[0] & 0x0F) == ICLASS_CMD_CHECK;
-            if(is_cmd_check && break_on_nr_mac){
+            if (is_cmd_check && break_on_nr_mac) {
                 memcpy(response, nfc_tx_buf, nfc_tx_len);
                 *response_len = nfc_tx_len;
                 if (g_dbglevel >= DBG_INFO) {
                     DbpString("NR-MAC: ");
-                    Dbhexdump((*response_len)-1, response+1, false);
+                    Dbhexdump((*response_len) - 1, response + 1, false);
                 }
                 res = PM3_SUCCESS;
                 goto out;
             }
 
             bool is_cmd_update = (nfc_tx_buf[0] & 0x0F) == ICLASS_CMD_UPDATE;
-            if(is_cmd_update && prevent_epurse_update && nfc_tx_buf[0] == 0x87 && nfc_tx_buf[1] == 0x02){
+            if (is_cmd_update && prevent_epurse_update && nfc_tx_buf[0] == 0x87 && nfc_tx_buf[1] == 0x02) {
                 // block update(2) command and fake the response to prevent update of epurse
 
                 // NFC TX BUFFERS PREPARED BY SAM LOOKS LIKE:
@@ -124,8 +124,8 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
                 // NFC RX BUFFERS EXPECTED BY SAM WOULD LOOK LIKE:
                 // #2(FF FF FF FF) #1(C9 FD FF FF) 3A 47
 
-                memcpy(nfc_rx_buf+0, nfc_tx_buf+6, 4);
-                memcpy(nfc_rx_buf+4, nfc_tx_buf+0, 4);
+                memcpy(nfc_rx_buf + 0, nfc_tx_buf + 6, 4);
+                memcpy(nfc_rx_buf + 4, nfc_tx_buf + 0, 4);
                 AddCrc(nfc_rx_buf, 8);
                 nfc_rx_len = 10;
 
@@ -155,7 +155,7 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
                 }
 
 
-                if (res != PM3_SUCCESS ) {
+                if (res != PM3_SUCCESS) {
                     res = PM3_ECARDEXCHANGE;
                     goto out;
                 }
@@ -358,7 +358,7 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
 
         // implicit StartSspClk() happens here
         Iso15693InitReader();
-        if(!select_iclass_tag(&card_a_info, false, &eof_time, shallow_mod)){
+        if (!select_iclass_tag(&card_a_info, false, &eof_time, shallow_mod)) {
             goto err;
         }
 
