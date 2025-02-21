@@ -180,10 +180,21 @@ typedef struct {
     const char *comment;
 } mfdesCommonAID_t;
 
+/*
+PACS application id(s) - HID Factory, CP1000 Standard, Mobile, Custom and Elite
+We have HID Factory,  Field Encoder == CP1000 (?)
+No mobile, Custom or Elite
+*/
+
 static const mfdesCommonAID_t commonAids[] = {
-    // AID, name/comment
+    { 0x53494F, "\x53\x49\x4F", "SIO DESFire EV1 - HID Factory" },
+    { 0xD3494F, "\xD3\x49\x4F", "SIO DESFire EV1 - Field Encoder" },
+    { 0xD9494F, "\xD9\x49\x4F", "SIO DESFire EV1 - Field Encoder" },
+    { 0xF484E3, "\xF4\x84\xE3", "SE Enhanced" },
+    { 0xF484E4, "\xF4\x84\xE4", "SE Enhanced" },
     { 0xF4812F, "\xf4\x81\x2f", "Gallagher card data application" },
     { 0xF48120, "\xf4\x81\x20", "Gallagher card application directory" }, // Can be 0xF48120 - 0xF4812B, but I've only ever seen 0xF48120
+    { 0xF47300, "\xf4\x73\x00", "Inner Range card application" },
 };
 
 static int CmdHelp(const char *Cmd);

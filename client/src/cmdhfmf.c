@@ -121,13 +121,6 @@ static char *GenerateFilename(const char *prefix, const char *suffix) {
 // Each entry also stores whether the key was "found", defaults to false (0)
 static int initSectorTable(sector_t **src, size_t items) {
 
-
-    // typedef struct {
-    //     uint64_t Key[2];
-    //     uint8_t foundKey[2];
-    // } sector_t;
-
-    // This allocates based on the size of a single item
     (*src) = calloc(items, sizeof(sector_t));
     if (*src == NULL) {
         return PM3_EMALLOC;
