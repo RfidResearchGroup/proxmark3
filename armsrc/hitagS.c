@@ -538,7 +538,8 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
             rotate_uid++;
             *txlen = 32;
             // init crypt engine
-            state = ht2_hitag2_init(REV64(tag.data.s.key), REV32(tag.data.s.uid_le), REV32(*(uint32_t *)rx));
+            uint32_t le_rx = MemLeToUint4byte(rx);
+            state = ht2_hitag2_init(REV64(tag.data.s.key), REV32(tag.data.s.uid_le), REV32(le_rx));
             DBG Dbhexdump(8, tx, false);
 
             for (int i = 0; i < 4; i++) {
@@ -1129,10 +1130,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
         // if the tag is in authentication mode try the key or challenge
         if (packet->cmd == HTSF_KEY) {
 
-            DBG DbpString("Authenticating using key:");
-            DBG Dbhexdump(6, packet->key, false);
-
-            key_le = *(uint64_t *)packet->key;
+            key_le = MemLeToUint6byte(packet->key);
 
             uint32_t le_val = MemLeToUint4byte(rnd);
             uint64_t state = ht2_hitag2_init(REV64(key_le), REV32(tag.data.s.uid_le), REV32(le_val));
@@ -1146,6 +1144,8 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
             txlen = concatbits(tx, txlen, rnd, 0, 32);
             txlen = concatbits(tx, txlen, auth_ks, 0, 32);
 
+            DBG DbpString("Authenticating using key:");
+            DBG Dbhexdump(6, packet->key, false);
             DBG Dbprintf("%02X %02X %02X %02X %02X %02X %02X %02X", tx[0], tx[1], tx[2], tx[3], tx[4], tx[5], tx[6], tx[7]);
 
         } else if (packet->cmd == HTSF_CHALLENGE) {
