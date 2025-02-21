@@ -150,7 +150,7 @@ void RunMod(void) {
             } else if (playing && selected == 2) {
                 // Now it work only with HID Corporate 1000 (35bit), but is easily extensible to others RFID.
                 // It is necessary only to calculate the correct parity.
-
+                
                 // Brute force code
                 // Check if the badge is an HID Corporate 1000
                 if ((high[selected] & 0xFFFFFFF8) != 0x28) {
@@ -257,7 +257,7 @@ void hid_corporate_1000_calculate_checksum_and_set(uint32_t *high, uint32_t *low
 
     // Calculate new high and low base value from card number and facility code, without parity
     new_low = (fc << 21) | (cardnum << 1);
-    new_high = 0x28 | ((fc >> 11) & 1); // 0x28 is 101000
+    new_high = (fc >> 11) & 1;
 
     int n_ones;
     uint32_t i;
@@ -319,6 +319,7 @@ void hid_corporate_1000_calculate_checksum_and_set(uint32_t *high, uint32_t *low
         new_high = new_high | 0x4;
 
     // Setting new calculated values
+    add_HID_preamble(0, &new_high, &new_low, 35);
     *low = new_low;
     *high = new_high;
 }

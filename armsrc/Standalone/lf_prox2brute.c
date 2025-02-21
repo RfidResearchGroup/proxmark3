@@ -16,8 +16,8 @@
 //-----------------------------------------------------------------------------
 // LF HID ProxII Brutforce v2 by lnv42 - based on Proxbrute by Brad antoniewicz
 //
-//     Following code is a trivial brute forcer for when you know the facility
-//     code and want to find valid(s) card number(s). It will try all card
+//     Following code is a trivial brute forcer (H10301 26-bit) when you know the
+//     facility code and want to find valid(s) card number(s). It will try all card
 //     fnumbers rom CARDNUM_START to CARDNUM_END one by one (max. ~65k tries).
 //     This brute force will be a lot faster than Proxbrute that will try all
 //     possibles values for LF low, even those with bad checksum (~4g tries).
@@ -46,8 +46,7 @@ void RunMod(void) {
     StandAloneMode();
     Dbprintf(">>  LF HID proxII bruteforce v2 a.k.a Prox2Brute Started <<");
     FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-
-    const uint32_t high = 0x20; // LF high value is always 0x20 here
+    uint32_t high = 0, low = 0;
 
     uint32_t fac = FACILITY_CODE, cardnum = 0;
 
@@ -79,9 +78,10 @@ void RunMod(void) {
         if (BUTTON_HELD(1000) == BUTTON_HOLD) break; // long button press (>=1sec) exit
 
         // calculate the new LF low value including Card number, Facility code and checksum
-        uint32_t low = (cardnum << 1) | (fac << 17);
+        low = (cardnum << 1) | (fac << 17);
         low |= oddparity32((low >> 1) & 0xFFF);
         low |= evenparity32((low >> 13) & 0xFFF) << 25;
+        add_HID_preamble(NULL, &high, &low, 26);
 
         Dbprintf("[=] trying Facility = %08x, Card = %08x, raw = %08x%08x",
                  fac, cardnum, high, low);
