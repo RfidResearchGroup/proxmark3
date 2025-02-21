@@ -822,11 +822,11 @@ static bool hitag2_crypto(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *
                 if (bCrypto == false) {
 
                     uint64_t ui64key = key[0] |
-                            ((uint64_t)key[1]) << 8 | 
-                            ((uint64_t)key[2]) << 16 | 
-                            ((uint64_t)key[3]) << 24 | 
-                            ((uint64_t)key[4]) << 32 | 
-                            ((uint64_t)key[5]) << 40;
+                                       ((uint64_t)key[1]) << 8 |
+                                       ((uint64_t)key[2]) << 16 |
+                                       ((uint64_t)key[3]) << 24 |
+                                       ((uint64_t)key[4]) << 32 |
+                                       ((uint64_t)key[5]) << 40;
 
                     uint32_t ui32uid = MemLeToUint4byte(rx);
 
