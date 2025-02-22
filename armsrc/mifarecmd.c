@@ -2376,8 +2376,8 @@ void MifareChkKeys_file(uint8_t *fn) {
 void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key) {
 
     uint16_t isOK = PM3_EUNDEF;
-    uint8_t uid[10];
-    uint32_t cuid;
+    uint8_t uid[10] = { 0 };
+    uint32_t cuid = 0;
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
     pcs = &mpcs;
@@ -2388,8 +2388,12 @@ void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key) {
 
     LED_A_ON();
 
+    uint8_t rec_answer[MAX_MIFARE_FRAME_SIZE] = {0};
+    uint8_t rec_answer_par[MAX_MIFARE_PARITY_SIZE] = {0};
+
     while (true) {
-        if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
+
+        if (iso14443a_select_card(uid, NULL, &cuid, true, 0, true) == false) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
             break;
         }
@@ -2400,11 +2404,9 @@ void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key) {
             break;
         }
 
-        uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
-        uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
-        int len = mifare_sendcmd_short(pcs, true, MIFARE_EV1_PERSONAL_UID, perso_option, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
-        if (len != 1 || receivedAnswer[0] != CARD_ACK) {
-            if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+        int len = mifare_sendcmd_short(pcs, true, MIFARE_EV1_PERSONAL_UID, perso_option, rec_answer, sizeof(rec_answer), rec_answer_par, NULL);
+        if (len != 1 || rec_answer[0] != CARD_ACK) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", rec_answer[0]);
             break;
         }
 

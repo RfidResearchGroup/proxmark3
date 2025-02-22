@@ -1682,8 +1682,8 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
                     EmSend4bit(CARD_NACK_IV);
                 } else {
                     // first blocks of emu are header
-                    uint16_t start = block * 4 + MFU_DUMP_PREFIX_LENGTH;
-                    uint8_t emdata[MAX_MIFARE_FRAME_SIZE];
+                    uint16_t start = (block * 4) + MFU_DUMP_PREFIX_LENGTH;
+                    uint8_t emdata[MAX_MIFARE_FRAME_SIZE] = {0};
                     emlGet(emdata, start, MIFARE_BLOCK_SIZE);
                     AddCrc14A(emdata, MIFARE_BLOCK_SIZE);
                     EmSendCmd(emdata, sizeof(emdata));
@@ -1728,13 +1728,14 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
         } else if (receivedCmd[0] == MIFARE_ULC_WRITE && len == 8 && (tagType == 2 || tagType == 7)) {        // Received a WRITE
             // cmd + block + 4 bytes data + 2 bytes crc
             if (CheckCrc14A(receivedCmd, len)) {
+
                 uint8_t block = receivedCmd[1];
                 if (block > pages) {
                     // send NACK 0x0 == invalid argument
                     EmSend4bit(CARD_NACK_IV);
                 } else {
                     // first blocks of emu are header
-                    emlSetMem_xt(&receivedCmd[2], block + MFU_DUMP_PREFIX_LENGTH / 4, 1, 4);
+                    emlSetMem_xt(&receivedCmd[2], block + (MFU_DUMP_PREFIX_LENGTH / 4), 1, 4);
                     // send ACK
                     EmSend4bit(CARD_ACK);
                 }
