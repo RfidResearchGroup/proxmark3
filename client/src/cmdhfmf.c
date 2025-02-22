@@ -326,16 +326,16 @@ static void mf_print_block(uint8_t blockno, uint8_t *d, bool verbose) {
         }
     } else {
 
-        int32_t value = 0;
-        if (verbose && mfc_value(d, &value)) {
-            PrintAndLogEx(INFO, "%s| %3d | " _CYAN_("%s") " %"PRIi32, secstr, blockno, sprint_hex_ascii(d, MFBLOCK_SIZE), value);
-        }
-
         if (blockno >= MIFARE_1K_MAXBLOCK) {
             // MFC Ev1 signature blocks.
             PrintAndLogEx(INFO, _BACK_BLUE_("%s| %3d | %s"), secstr, blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
         } else  {
-            PrintAndLogEx(INFO, "%s| %3d | %s", secstr, blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
+            int32_t value = 0;
+            if (verbose && mfc_value(d, &value)) {
+                PrintAndLogEx(INFO, "%s| %3d | " _CYAN_("%s") " %"PRIi32, secstr, blockno, sprint_hex_ascii(d, MFBLOCK_SIZE), value);
+            } else {
+                PrintAndLogEx(INFO, "%s| %3d | %s", secstr, blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
+            }
         }
     }
 }
