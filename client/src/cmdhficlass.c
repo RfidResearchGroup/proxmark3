@@ -1445,7 +1445,7 @@ static int iclass_decode_credentials_new_pacs(uint8_t *d) {
     free(binstr);
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Wiegand decode");
+    PrintAndLogEx(INFO, "------------------------- " _CYAN_("SIO - Wiegand") " ----------------------------");
     decode_wiegand(top, mid, bot, 0);
 
     return PM3_SUCCESS;

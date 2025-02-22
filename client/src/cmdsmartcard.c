@@ -1067,8 +1067,10 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
     smart_loadjson("aidlist", &root);
 
     uint8_t *buf = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
-    if (!buf)
+    if (buf == NULL) {
+        PrintAndLogEx(WARNING, "failed to allocate memory");
         return PM3_EMALLOC;
+    }
 
     PrintAndLogEx(INFO, "Selecting card");
     if (!smart_select(false, NULL)) {

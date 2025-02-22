@@ -19,8 +19,6 @@
 #include <stdlib.h>
 #include "commonutil.h"
 
-static bool validate_card_limit(int format_idx, wiegand_card_t *card);
-
 static bool Pack_Defcon32(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
@@ -80,7 +78,6 @@ static bool Unpack_Defcon32(wiegand_message_t *packed, wiegand_card_t *card) {
     evenparity32(get_nonlinear_field(packed, 10, (uint8_t[]) {2, 4, 6, 8, 10, 12, 14, 16, 18, 20})));
     return true;
 }
-
 
 static bool Pack_H10301(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
@@ -1249,7 +1246,6 @@ static bool Unpack_pw39(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
-
 static bool Pack_bc40(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
 
     memset(packed, 0, sizeof(wiegand_message_t));
@@ -1286,7 +1282,6 @@ static bool Unpack_bc40(wiegand_message_t *packed, wiegand_card_t *card) {
         (get_bit_by_position(packed, 39) == oddparity32(get_linear_field(packed, 19, 19)));
     return true;
 }
-
 
 static bool step_parity_check(wiegand_message_t *packed, int start, int length, bool even_parity) {
     bool parity = even_parity;
@@ -1349,7 +1344,7 @@ void print_desc_wiegand(cardformat_t *fmt, wiegand_message_t *packed) {
 
     size_t s_len = 128;
     char *s = calloc(s_len, sizeof(uint8_t));
-    snprintf(s, s_len * sizeof(uint8_t), _YELLOW_("%-10s")" %-32s",  fmt->Name, fmt->Descrp);
+    snprintf(s, s_len * sizeof(uint8_t), _YELLOW_("%-10s")" %-32s",  fmt->Name, fmt->Description);
 
     if (packed->Top != 0) {
         PrintAndLogEx(SUCCESS, "%s -> " _GREEN_("%X%08X%08X"),
@@ -1389,7 +1384,7 @@ void print_wiegand_code(wiegand_message_t *packed) {
 static void hid_print_card(wiegand_card_t *card, const cardformat_t format) {
 
     /*
-        PrintAndLogEx(SUCCESS, "       Format: %s (%s)", format.Name, format.Descrp);
+        PrintAndLogEx(SUCCESS, "       Format: %s (%s)", format.Name, format.Description);
 
         if (format.Fields.hasFacilityCode)
             PrintAndLogEx(SUCCESS, "Facility Code: %d",card->FacilityCode);
@@ -1423,51 +1418,51 @@ static void hid_print_card(wiegand_card_t *card, const cardformat_t format) {
     if (format.Fields.hasParity)
         snprintf(s + strlen(s), sizeof(s) - strlen(s), "  parity ( %s )", card->ParityValid ? _GREEN_("ok") : _RED_("fail"));
 
-    PrintAndLogEx(SUCCESS, "[%-8s] %-32s %s", format.Name, format.Descrp, s);
+    PrintAndLogEx(SUCCESS, "[%-8s] %-32s %s", format.Name, format.Description, s);
 }
 
 static const cardformat_t FormatTable[] = {
-    {"H10301",  Pack_H10301,  Unpack_H10301,  "HID H10301 26-bit",          {1, 1, 0, 0, 1, 0xFF, 0xFFFF, 0, 0}}, // imported from old pack/unpack
-    {"ind26",   Pack_ind26,   Unpack_ind26,   "Indala 26-bit",              {1, 1, 0, 0, 1, 0xFFF, 0xFFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"ind27",   Pack_ind27,   Unpack_ind27,   "Indala 27-bit",              {1, 1, 0, 0, 0, 0x1FFF, 0x3FFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"indasc27", Pack_indasc27, Unpack_indasc27, "Indala ASC 27-bit",       {1, 1, 0, 0, 0, 0x1FFF, 0x3FFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"Tecom27", Pack_Tecom27, Unpack_Tecom27, "Tecom 27-bit",               {1, 1, 0, 0, 0, 0x7FF, 0xFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"2804W",   Pack_2804W,   Unpack_2804W,   "2804 Wiegand 28-bit",        {1, 1, 0, 0, 1, 0xFF, 0x7FFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"ind29",   Pack_ind29,   Unpack_ind29,   "Indala 29-bit",              {1, 1, 0, 0, 0, 0x1FFF, 0xFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"ATSW30",  Pack_ATSW30,  Unpack_ATSW30,  "ATS Wiegand 30-bit",         {1, 1, 0, 0, 1, 0xFFF, 0xFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"ADT31",   Pack_ADT31,   Unpack_ADT31,   "HID ADT 31-bit",             {1, 1, 0, 0, 0, 0xF, 0x7FFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"HCP32",   Pack_hcp32,   Unpack_hcp32,   "HID Check Point 32-bit",     {1, 0, 0, 0, 0, 0, 0x3FFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"HPP32",   Pack_hpp32,   Unpack_hpp32,   "HID Hewlett-Packard 32-bit", {1, 1, 0, 0, 0, 0xFFF, 0x1FFFFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"Kastle",  Pack_Kastle,  Unpack_Kastle,  "Kastle 32-bit",              {1, 1, 1, 0, 1, 0xFF, 0xFFFF, 0x1F, 0}}, // from @xilni; PR #23 on RfidResearchGroup/proxmark3
-    {"Kantech", Pack_Kantech, Unpack_Kantech, "Indala/Kantech KFS 32-bit",  {1, 1, 0, 0, 0, 0xFF, 0xFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"WIE32",   Pack_wie32,   Unpack_wie32,   "Wiegand 32-bit",             {1, 1, 0, 0, 0, 0xFFF, 0xFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"D10202",  Pack_D10202,  Unpack_D10202,  "HID D10202 33-bit",          {1, 1, 0, 0, 1, 0x7F, 0xFFFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"H10306",  Pack_H10306,  Unpack_H10306,  "HID H10306 34-bit",          {1, 1, 0, 0, 1, 0xFFFF, 0xFFFF, 0, 0}}, // imported from old pack/unpack
-    {"N10002",  Pack_N10002,  Unpack_N10002,  "Honeywell/Northern N10002 34-bit", {1, 1, 0, 0, 1, 0xFFFF, 0xFFFF, 0, 0}}, // from proxclone.com
-    {"Optus34", Pack_Optus,   Unpack_Optus,   "Indala Optus 34-bit",        {1, 1, 0, 0, 0, 0x3FF, 0xFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"SMP34",   Pack_Smartpass, Unpack_Smartpass, "Cardkey Smartpass 34-bit", {1, 1, 1, 0, 0, 0x3FF, 0xFFFF, 0x7, 0}}, // from cardinfo.barkweb.com.au
-    {"BQT34",   Pack_bqt34,   Unpack_bqt34,   "BQT 34-bit",                 {1, 1, 0, 0, 1, 0xFF, 0xFFFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"C1k35s",  Pack_C1k35s,  Unpack_C1k35s,  "HID Corporate 1000 35-bit std", {1, 1, 0, 0, 1, 0xFFF, 0xFFFFF, 0, 0}}, // imported from old pack/unpack
-    {"C15001",  Pack_C15001,  Unpack_C15001,  "HID KeyScan 36-bit",         {1, 1, 0, 1, 1, 0xFF, 0xFFFF, 0, 0x3FF}}, // from Proxmark forums
-    {"S12906",  Pack_S12906,  Unpack_S12906,  "HID Simplex 36-bit",         {1, 1, 1, 0, 1, 0xFF, 0x3, 0xFFFFFF, 0}}, // from cardinfo.barkweb.com.au
-    {"Sie36",   Pack_Sie36,   Unpack_Sie36,   "HID 36-bit Siemens",         {1, 1, 0, 0, 1, 0x3FFFF, 0xFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"H10320",  Pack_H10320,  Unpack_H10320,  "HID H10320 37-bit BCD",      {1, 0, 0, 0, 1, 0, 99999999, 0, 0}}, // from Proxmark forums
-    {"H10302",  Pack_H10302,  Unpack_H10302,  "HID H10302 37-bit huge ID",  {1, 0, 0, 0, 1, 0, 0x7FFFFFFFF, 0, 0}}, // from Proxmark forums
-    {"H10304",  Pack_H10304,  Unpack_H10304,  "HID H10304 37-bit",          {1, 1, 0, 0, 1, 0xFFFF, 0x7FFFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"H800002",  Pack_H800002,  Unpack_H800002,  "HID H800002 46-bit",      {1, 1, 0, 0, 1, 0x3FFF, 0x3FFFFFFF, 0, 0}},
-    {"P10004",  Pack_P10004,  Unpack_P10004,  "HID P10004 37-bit PCSC",     {1, 1, 0, 0, 0, 0x1FFF, 0x3FFFF, 0, 0}}, // from @bthedorff; PR #1559
-    {"HGen37",  Pack_HGeneric37, Unpack_HGeneric37,  "HID Generic 37-bit",  {1, 0, 0, 0, 1, 0, 0x7FFFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"MDI37",   Pack_MDI37,   Unpack_MDI37,   "PointGuard MDI 37-bit",         {1, 1, 0, 0, 1, 0xF, 0x1FFFFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"BQT38",   Pack_bqt38,   Unpack_bqt38,   "BQT 38-bit",                    {1, 1, 1, 0, 1, 0xFFF, 0x3FFFF, 0x7, 0}}, // from cardinfo.barkweb.com.au
-    {"ISCS",    Pack_iscs38,  Unpack_iscs38,  "ISCS 38-bit",                   {1, 1, 0, 1, 1, 0x3FF, 0xFFFFFF, 0, 0x7}}, // from cardinfo.barkweb.com.au
-    {"PW39",    Pack_pw39,    Unpack_pw39,    "Pyramid 39-bit wiegand format", {1, 1, 0, 0, 1, 0xFFFF, 0xFFFFF, 0, 0}},  // from cardinfo.barkweb.com.au
-    {"P10001",  Pack_P10001,  Unpack_P10001,  "HID P10001 Honeywell 40-bit",   {1, 1, 0, 0, 0, 0xFFF, 0xFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"Casi40",  Pack_CasiRusco40, Unpack_CasiRusco40, "Casi-Rusco 40-bit",     {1, 0, 0, 0, 0, 0, 0xFFFFFFFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
-    {"C1k48s",  Pack_C1k48s,  Unpack_C1k48s,  "HID Corporate 1000 48-bit std", {1, 1, 0, 0, 1, 0x003FFFFF, 0x007FFFFF, 0, 0}}, // imported from old pack/unpack
-    {"BC40",    Pack_bc40,    Unpack_bc40,    "Bundy TimeClock 40-bit",        {1, 1, 0, 1, 1, 0xFFF, 0xFFFFF, 0, 0x7F}}, // from
-    {"Avig56",  Pack_Avig56,  Unpack_Avig56,  "Avigilon 56-bit",               {1, 1, 0, 0, 1, 0xFFFFF, 0x3FFFFFFFF, 0, 0}},
-    {"Defcon32",  Pack_Defcon32,  Unpack_Defcon32,  "Custom Defcon RFCTF 42 BIT format",  {1, 1, 1, 0, 1, 0xFFFF, 0xFFFFF, 0xF, 0}}, // Created by (@micsen) for the CTF
-    {NULL, NULL, NULL, NULL, {0, 0, 0, 0, 0, 0, 0, 0, 0}} // Must null terminate array
+    {"H10301",  Pack_H10301,  Unpack_H10301,  "HID H10301 26-bit", 26,                {1, 1, 0, 0, 1, 0xFF, 0xFFFF, 0, 0}}, // imported from old pack/unpack
+    {"ind26",   Pack_ind26,   Unpack_ind26,   "Indala 26-bit", 26,                    {1, 1, 0, 0, 1, 0xFFF, 0xFFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"ind27",   Pack_ind27,   Unpack_ind27,   "Indala 27-bit", 27,                    {1, 1, 0, 0, 0, 0x1FFF, 0x3FFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"indasc27", Pack_indasc27, Unpack_indasc27, "Indala ASC 27-bit", 27,             {1, 1, 0, 0, 0, 0x1FFF, 0x3FFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"Tecom27", Pack_Tecom27, Unpack_Tecom27, "Tecom 27-bit", 27,                     {1, 1, 0, 0, 0, 0x7FF, 0xFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"2804W",   Pack_2804W,   Unpack_2804W,   "2804 Wiegand 28-bit", 28,              {1, 1, 0, 0, 1, 0xFF, 0x7FFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"ind29",   Pack_ind29,   Unpack_ind29,   "Indala 29-bit", 29,                    {1, 1, 0, 0, 0, 0x1FFF, 0xFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"ATSW30",  Pack_ATSW30,  Unpack_ATSW30,  "ATS Wiegand 30-bit", 30,               {1, 1, 0, 0, 1, 0xFFF, 0xFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"ADT31",   Pack_ADT31,   Unpack_ADT31,   "HID ADT 31-bit", 31,                   {1, 1, 0, 0, 0, 0xF, 0x7FFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"HCP32",   Pack_hcp32,   Unpack_hcp32,   "HID Check Point 32-bit", 32,           {1, 0, 0, 0, 0, 0, 0x3FFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"HPP32",   Pack_hpp32,   Unpack_hpp32,   "HID Hewlett-Packard 32-bit", 32,       {1, 1, 0, 0, 0, 0xFFF, 0x1FFFFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"Kastle",  Pack_Kastle,  Unpack_Kastle,  "Kastle 32-bit", 32,                    {1, 1, 1, 0, 1, 0xFF, 0xFFFF, 0x1F, 0}}, // from @xilni; PR #23 on RfidResearchGroup/proxmark3
+    {"Kantech", Pack_Kantech, Unpack_Kantech, "Indala/Kantech KFS 32-bit", 32,        {1, 1, 0, 0, 0, 0xFF, 0xFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"WIE32",   Pack_wie32,   Unpack_wie32,   "Wiegand 32-bit", 32,                   {1, 1, 0, 0, 0, 0xFFF, 0xFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"D10202",  Pack_D10202,  Unpack_D10202,  "HID D10202 33-bit", 33,                {1, 1, 0, 0, 1, 0x7F, 0xFFFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"H10306",  Pack_H10306,  Unpack_H10306,  "HID H10306 34-bit", 34,                {1, 1, 0, 0, 1, 0xFFFF, 0xFFFF, 0, 0}}, // imported from old pack/unpack
+    {"N10002",  Pack_N10002,  Unpack_N10002,  "Honeywell/Northern N10002 34-bit", 34, {1, 1, 0, 0, 1, 0xFFFF, 0xFFFF, 0, 0}}, // from proxclone.com
+    {"Optus34", Pack_Optus,   Unpack_Optus,   "Indala Optus 34-bit", 34,              {1, 1, 0, 0, 0, 0x3FF, 0xFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"SMP34",   Pack_Smartpass, Unpack_Smartpass, "Cardkey Smartpass 34-bit", 34,     {1, 1, 1, 0, 0, 0x3FF, 0xFFFF, 0x7, 0}}, // from cardinfo.barkweb.com.au
+    {"BQT34",   Pack_bqt34,   Unpack_bqt34,   "BQT 34-bit", 34,                       {1, 1, 0, 0, 1, 0xFF, 0xFFFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"C1k35s",  Pack_C1k35s,  Unpack_C1k35s,  "HID Corporate 1000 35-bit std", 35,    {1, 1, 0, 0, 1, 0xFFF, 0xFFFFF, 0, 0}}, // imported from old pack/unpack
+    {"C15001",  Pack_C15001,  Unpack_C15001,  "HID KeyScan 36-bit", 36,               {1, 1, 0, 1, 1, 0xFF, 0xFFFF, 0, 0x3FF}}, // from Proxmark forums
+    {"S12906",  Pack_S12906,  Unpack_S12906,  "HID Simplex 36-bit", 36,               {1, 1, 1, 0, 1, 0xFF, 0x3, 0xFFFFFF, 0}}, // from cardinfo.barkweb.com.au
+    {"Sie36",   Pack_Sie36,   Unpack_Sie36,   "HID 36-bit Siemens", 36,               {1, 1, 0, 0, 1, 0x3FFFF, 0xFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"H10320",  Pack_H10320,  Unpack_H10320,  "HID H10320 37-bit BCD", 37,            {1, 0, 0, 0, 1, 0, 99999999, 0, 0}}, // from Proxmark forums
+    {"H10302",  Pack_H10302,  Unpack_H10302,  "HID H10302 37-bit huge ID", 37,        {1, 0, 0, 0, 1, 0, 0x7FFFFFFFF, 0, 0}}, // from Proxmark forums
+    {"H10304",  Pack_H10304,  Unpack_H10304,  "HID H10304 37-bit", 37,                {1, 1, 0, 0, 1, 0xFFFF, 0x7FFFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"P10004",  Pack_P10004,  Unpack_P10004,  "HID P10004 37-bit PCSC",  37,          {1, 1, 0, 0, 0, 0x1FFF, 0x3FFFF, 0, 0}}, // from @bthedorff; PR #1559
+    {"HGen37",  Pack_HGeneric37, Unpack_HGeneric37,  "HID Generic 37-bit", 37,        {1, 0, 0, 0, 1, 0, 0x7FFFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"MDI37",   Pack_MDI37,   Unpack_MDI37,   "PointGuard MDI 37-bit", 37,            {1, 1, 0, 0, 1, 0xF, 0x1FFFFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"BQT38",   Pack_bqt38,   Unpack_bqt38,   "BQT 38-bit", 38,                       {1, 1, 1, 0, 1, 0xFFF, 0x3FFFF, 0x7, 0}}, // from cardinfo.barkweb.com.au
+    {"ISCS",    Pack_iscs38,  Unpack_iscs38,  "ISCS 38-bit",  38,                     {1, 1, 0, 1, 1, 0x3FF, 0xFFFFFF, 0, 0x7}}, // from cardinfo.barkweb.com.au
+    {"PW39",    Pack_pw39,    Unpack_pw39,    "Pyramid 39-bit wiegand format", 39,    {1, 1, 0, 0, 1, 0xFFFF, 0xFFFFF, 0, 0}},  // from cardinfo.barkweb.com.au
+    {"P10001",  Pack_P10001,  Unpack_P10001,  "HID P10001 Honeywell 40-bit", 40,      {1, 1, 0, 0, 0, 0xFFF, 0xFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"Casi40",  Pack_CasiRusco40, Unpack_CasiRusco40, "Casi-Rusco 40-bit", 40,        {1, 0, 0, 0, 0, 0, 0xFFFFFFFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
+    {"BC40",    Pack_bc40,    Unpack_bc40,    "Bundy TimeClock 40-bit", 40,           {1, 1, 0, 1, 1, 0xFFF, 0xFFFFF, 0, 0x7F}}, // from
+    {"Defcon32",  Pack_Defcon32,  Unpack_Defcon32,  "Custom Defcon RFCTF 42-bit", 42, {1, 1, 1, 0, 1, 0xFFFF, 0xFFFFF, 0xF, 0}}, // Created by (@micsen) for the CTF
+    {"H800002",  Pack_H800002,  Unpack_H800002,  "HID H800002 46-bit", 46,            {1, 1, 0, 0, 1, 0x3FFF, 0x3FFFFFFF, 0, 0}},
+    {"C1k48s",  Pack_C1k48s,  Unpack_C1k48s,  "HID Corporate 1000 48-bit std", 48,    {1, 1, 0, 0, 1, 0x003FFFFF, 0x007FFFFF, 0, 0}}, // imported from old pack/unpack
+    {"Avig56",  Pack_Avig56,  Unpack_Avig56,  "Avigilon 56-bit", 56,                  {1, 1, 0, 0, 1, 0xFFFFF, 0x3FFFFFFFF, 0, 0}},
+    {NULL, NULL, NULL, NULL, 0, {0, 0, 0, 0, 0, 0, 0, 0, 0}} // Must null terminate array
 };
 
 void HIDListFormats(void) {
@@ -1480,7 +1475,7 @@ void HIDListFormats(void) {
 
     int i = 0;
     while (FormatTable[i].Name) {
-        PrintAndLogEx(INFO, _YELLOW_("%-10s")" %-30s", FormatTable[i].Name, FormatTable[i].Descrp);
+        PrintAndLogEx(INFO, _YELLOW_("%-10s")" %-30s", FormatTable[i].Name, FormatTable[i].Description);
         ++i;
     }
     PrintAndLogEx(INFO, "------------------------------------------------------------");
@@ -1525,7 +1520,7 @@ int HIDFindCardFormat(const char *format) {
 
 // validate if the card's FC, CN, IL, OEM are within the limit of its format
 // return true if the card is valid
-static bool validate_card_limit(int format_idx, wiegand_card_t *card) {
+bool validate_card_limit(int format_idx, wiegand_card_t *card) {
     cardformatdescriptor_t card_descriptor = FormatTable[format_idx].Fields;
     return !((card->FacilityCode > card_descriptor.MaxFC) ||
              (card->CardNumber > card_descriptor.MaxCN) ||
@@ -1584,13 +1579,17 @@ bool HIDTryUnpack(wiegand_message_t *packed) {
     }
 
     if (found_cnt) {
-        PrintAndLogEx(INFO, "found %u matching format%c with bit len %d", found_cnt, (found_cnt > 1) ? 's' : ' ', packed->Length);
+        PrintAndLogEx(INFO, "found " _YELLOW_("%u") " matching " _YELLOW_("%d bit") " format%s"
+                      , found_cnt
+                      , packed->Length
+                      , (found_cnt) ? "s" : ""
+                     );
     }
 
     if (packed->Length && ((found_cnt - found_invalid_par) == 0)) { // if length > 0 and no valid parity matches
-        PrintAndLogEx(WARNING, "Wiegand unknown bit len %d", packed->Length);
-        PrintAndLogEx(HINT, "Try 0xFFFF's http://cardinfo.barkweb.com.au/");
+        PrintAndLogEx(FAILED, "Parity tests failed");
     }
+    PrintAndLogEx(NORMAL, "");
 
     return ((found_cnt - found_invalid_par) > 0);
 }

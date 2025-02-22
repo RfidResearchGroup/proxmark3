@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed Wiegand formats to include number of bits (@iceman1001)
 - Fix compilation warning in hitagS (@iceman1001)
 - Added new wiegand format H800002 (@jmichelp)
 - Changed `Makefile.platform.sample` file - now have clear instructions for generating images for other proxmark3 hardware (@iceman1001)

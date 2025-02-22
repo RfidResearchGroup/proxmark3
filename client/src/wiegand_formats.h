@@ -47,10 +47,12 @@ typedef struct {
     const char *Name;
     bool (*Pack)(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble);
     bool (*Unpack)(wiegand_message_t *packed, wiegand_card_t *card);
-    const char *Descrp;
+    const char *Description;
+    uint32_t Bits;  // Number of bits in this format
     cardformatdescriptor_t Fields;
 } cardformat_t;
 
+bool validate_card_limit(int format_idx, wiegand_card_t *card);
 void HIDListFormats(void);
 int HIDFindCardFormat(const char *format);
 cardformat_t HIDGetCardFormat(int idx);
