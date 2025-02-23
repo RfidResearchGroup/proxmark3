@@ -842,7 +842,7 @@ static int seos_mutual_auth(uint8_t *randomICC, uint8_t *CRYPTOGRAM_Diversifier,
     bool activate_field = false;
     bool keep_field_on = true;
 
-    uint8_t aMUTUAL_AUTH[102];
+    uint8_t aMUTUAL_AUTH[102] = {0};
     int aMUTUAL_AUTH_n = 0;
     param_gethex_to_eol(mutual_auth, 0, aMUTUAL_AUTH, sizeof(aMUTUAL_AUTH), &aMUTUAL_AUTH_n);
     int res = ExchangeAPDU14a(aMUTUAL_AUTH, aMUTUAL_AUTH_n, activate_field, keep_field_on, response, sizeof(response), &resplen);

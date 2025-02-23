@@ -1300,18 +1300,18 @@ int ExchangeAPDU14a(const uint8_t *datain, int datainlen, bool activateField, bo
             *dataoutlen = 0;
             res = CmdExchangeAPDU(chainBlockNotLast, &datain[clen], vlen, vActivateField, dataout, maxdataoutlen, dataoutlen, &chaining);
             if (res != PM3_SUCCESS) {
-                if (leaveSignalON == false)
+                if (leaveSignalON == false) {
                     DropField();
-
+                }
                 return 200;
             }
 
             // check R-block ACK
             // TODO check this one...
             if ((*dataoutlen == 0) && (chaining != chainBlockNotLast)) {
-                if (leaveSignalON == false)
+                if (leaveSignalON == false) {
                     DropField();
-
+                }
                 return 201;
             }
 
@@ -1323,6 +1323,7 @@ int ExchangeAPDU14a(const uint8_t *datain, int datainlen, bool activateField, bo
                 }
                 break;
             }
+
         } while (clen < datainlen);
 
     } else {
