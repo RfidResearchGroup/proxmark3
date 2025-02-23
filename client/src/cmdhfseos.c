@@ -558,7 +558,7 @@ static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t 
         }
     }
     if (res != PM3_SUCCESS) {
-        return res;
+        goto out;
     }
 
     // ----------------- MAC Key Generation -----------------
@@ -579,6 +579,7 @@ static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t 
     // PrintAndLogEx(INFO, "Supp MAC......................... " _YELLOW_("%s"), sprint_hex_inrow(MAC_value, MAC_value_len));
     // PrintAndLogEx(INFO, "Calc MAC......................... " _YELLOW_("%s"), sprint_hex_inrow(cmac, sizeof(cmac)));
 
+out:
     PrintAndLogEx(INFO, "--- " _CYAN_("MAC") " ---------------------------");
     PrintAndLogEx(ERR, _RED_("MAC Verification Failed"));
     return PM3_ESOFT;
@@ -752,7 +753,7 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
 
         }
     }
-    return PM3_SUCCESS;
+    return PM3_ESOFT;
 };
 
 static int seos_mutual_auth(uint8_t *randomICC, uint8_t *CRYPTOGRAM_Diversifier, uint8_t diversifier_len, uint8_t *mutual_auth_randomIFD, uint8_t *mutual_auth_keyICC, uint8_t *randomIFD, uint8_t randomIFD_len, uint8_t *keyIFD, uint8_t keyIFD_len, int encryption_algorithm, int hash_algorithm, int key_index) {

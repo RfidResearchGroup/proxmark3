@@ -1467,8 +1467,8 @@ static const cardformat_t FormatTable[] = {
     {"H800002",  Pack_H800002,  Unpack_H800002,  "HID H800002 46-bit", 46,            {1, 1, 0, 0, 1, 0x3FFF, 0x3FFFFFFF, 0, 0}},
     {"C1k48s",  Pack_C1k48s,  Unpack_C1k48s,  "HID Corporate 1000 48-bit std", 48,    {1, 1, 0, 0, 1, 0x003FFFFF, 0x007FFFFF, 0, 0}}, // imported from old pack/unpack
     {"Avig56",  Pack_Avig56,  Unpack_Avig56,  "Avigilon 56-bit", 56,                  {1, 1, 0, 0, 1, 0xFFFFF, 0x3FFFFFFFF, 0, 0}},
-	{"IR56",    Pack_IR56,    Unpack_IR56,    "Inner Range 56-bit", 56,               {1, 1, 0, 0, 0, 0xFFFFFF, 0xFFFFFFFF, 0, 0}},
-	{NULL, NULL, NULL, NULL, 0, {0, 0, 0, 0, 0, 0, 0, 0, 0}} // Must null terminate array
+    {"IR56",    Pack_IR56,    Unpack_IR56,    "Inner Range 56-bit", 56,               {1, 1, 0, 0, 0, 0xFFFFFF, 0xFFFFFFFF, 0, 0}},
+    {NULL, NULL, NULL, NULL, 0, {0, 0, 0, 0, 0, 0, 0, 0, 0}} // Must null terminate array
 };
 
 

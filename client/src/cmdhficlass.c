@@ -4650,11 +4650,11 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     memcpy(CCNR + 8, macs, 4);
     memcpy(MAC_TAG, macs + 4, 4);
 
-    PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s"), sprint_hex(csn, sizeof(csn)));
-    PrintAndLogEx(SUCCESS, " Epurse: %s", sprint_hex(epurse, sizeof(epurse)));
-    PrintAndLogEx(SUCCESS, "   MACS: %s", sprint_hex(macs, sizeof(macs)));
-    PrintAndLogEx(SUCCESS, "   CCNR: " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
-    PrintAndLogEx(SUCCESS, "TAG MAC: %s", sprint_hex(MAC_TAG, sizeof(MAC_TAG)));
+    PrintAndLogEx(SUCCESS, "CSN....... " _GREEN_("%s"), sprint_hex(csn, sizeof(csn)));
+    PrintAndLogEx(SUCCESS, "Epurse.... %s", sprint_hex(epurse, sizeof(epurse)));
+    PrintAndLogEx(SUCCESS, "MACS...... %s", sprint_hex(macs, sizeof(macs)));
+    PrintAndLogEx(SUCCESS, "CCNR...... " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
+    PrintAndLogEx(SUCCESS, "TAG MAC... %s", sprint_hex(MAC_TAG, sizeof(MAC_TAG)));
 
     // Run time
     uint64_t t1 = msclock();
@@ -4733,7 +4733,7 @@ typedef struct {
     uint8_t use_raw;
     uint8_t use_elite;
     uint32_t keycnt;
-    uint8_t csn[8];
+    uint8_t csn[PICOPASS_BLOCK_SIZE];
     uint8_t cc_nr[12];
     uint8_t *keys;
     union {
@@ -4810,8 +4810,9 @@ void GenerateMacFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, 
         }
     }
 
-    for (int i = 0; i < iclass_tc; i++)
+    for (int i = 0; i < iclass_tc; i++) {
         pthread_join(threads[i], NULL);
+    }
 }
 
 static void *bf_generate_mackey(void *thread_arg) {
