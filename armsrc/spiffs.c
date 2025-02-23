@@ -658,7 +658,7 @@ void rdv40_spiffs_safe_print_tree(void) {
             }
         }
 
-        Dbprintf("[%04x] " _YELLOW_("%5i") " B |-- %s%s", pe->obj_id, pe->size, pe->name, resolvedlink);
+        Dbprintf("[%04u] " _YELLOW_("%5i") " B |-- %s%s", pe->obj_id, pe->size, pe->name, resolvedlink);
         printed = true;
     }
     if (printed == false) {

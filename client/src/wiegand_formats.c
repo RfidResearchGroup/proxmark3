@@ -1333,6 +1333,30 @@ static bool Unpack_Avig56(wiegand_message_t *packed, wiegand_card_t *card) {
     return true;
 }
 
+static bool Pack_IR56(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+    memset(packed, 0, sizeof(wiegand_message_t));
+    packed->Length = 56;
+
+    if (!validate_card_limit(format_idx, card)) return false;
+
+    set_linear_field(packed, card->FacilityCode, 1, 24);
+    set_linear_field(packed, card->CardNumber, 25, 32);
+
+    if (preamble)
+        return add_HID_header(packed);
+
+    return true;
+}
+
+static bool Unpack_IR56(wiegand_message_t *packed, wiegand_card_t *card) {
+    memset(card, 0, sizeof(wiegand_card_t));
+
+    if (packed->Length != 56) return false;
+
+    card->FacilityCode = get_linear_field(packed, 1, 24);
+    card->CardNumber = get_linear_field(packed, 25, 32);
+    return true;
+}
 // ---------------------------------------------------------------------------------------------------
 
 void print_desc_wiegand(cardformat_t *fmt, wiegand_message_t *packed) {
@@ -1382,25 +1406,6 @@ void print_wiegand_code(wiegand_message_t *packed) {
 }
 
 static void hid_print_card(wiegand_card_t *card, const cardformat_t format) {
-
-    /*
-        PrintAndLogEx(SUCCESS, "       Format: %s (%s)", format.Name, format.Description);
-
-        if (format.Fields.hasFacilityCode)
-            PrintAndLogEx(SUCCESS, "Facility Code: %d",card->FacilityCode);
-
-        if (format.Fields.hasCardNumber)
-            PrintAndLogEx(SUCCESS, "  Card Number: %d",card->CardNumber);
-
-        if (format.Fields.hasIssueLevel)
-            PrintAndLogEx(SUCCESS, "  Issue Level: %d",card->IssueLevel);
-
-        if (format.Fields.hasOEMCode)
-            PrintAndLogEx(SUCCESS, "     OEM Code: %d",card->OEM);
-
-        if (format.Fields.hasParity)
-            PrintAndLogEx(SUCCESS, "       Parity: %s",card->ParityValid ? "Valid" : "Invalid");
-    */
 
     char s[110] = {0};
     if (format.Fields.hasFacilityCode)
@@ -1462,8 +1467,10 @@ static const cardformat_t FormatTable[] = {
     {"H800002",  Pack_H800002,  Unpack_H800002,  "HID H800002 46-bit", 46,            {1, 1, 0, 0, 1, 0x3FFF, 0x3FFFFFFF, 0, 0}},
     {"C1k48s",  Pack_C1k48s,  Unpack_C1k48s,  "HID Corporate 1000 48-bit std", 48,    {1, 1, 0, 0, 1, 0x003FFFFF, 0x007FFFFF, 0, 0}}, // imported from old pack/unpack
     {"Avig56",  Pack_Avig56,  Unpack_Avig56,  "Avigilon 56-bit", 56,                  {1, 1, 0, 0, 1, 0xFFFFF, 0x3FFFFFFFF, 0, 0}},
-    {NULL, NULL, NULL, NULL, 0, {0, 0, 0, 0, 0, 0, 0, 0, 0}} // Must null terminate array
+	{"IR56",    Pack_IR56,    Unpack_IR56,    "Inner Range 56-bit", 56,               {1, 1, 0, 0, 0, 0xFFFFFF, 0xFFFFFFFF, 0, 0}},
+	{NULL, NULL, NULL, NULL, 0, {0, 0, 0, 0, 0, 0, 0, 0, 0}} // Must null terminate array
 };
+
 
 void HIDListFormats(void) {
     if (FormatTable[0].Name == NULL)
