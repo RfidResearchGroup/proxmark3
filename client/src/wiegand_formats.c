@@ -19,6 +19,19 @@
 #include <stdlib.h>
 #include "commonutil.h"
 
+static bool step_parity_check(wiegand_message_t *packed, int start, int length, bool even_parity) {
+    bool parity = even_parity;
+    for (int i = start; i < start + length; i += 2) {
+        // Extract 2 bits
+        bool bit1 = get_bit_by_position(packed, i);
+        bool bit2 = get_bit_by_position(packed, i + 1);
+
+        // Calculate parity for these 2 bits
+        parity ^= (bit1 ^ bit2);
+    }
+    return parity;
+}
+
 static bool Pack_Defcon32(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
 
@@ -63,9 +76,9 @@ static bool Pack_Defcon32(int format_idx, wiegand_card_t *card, wiegand_message_
 }
 
 static bool Unpack_Defcon32(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
-
     if (packed->Length != 42) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 1, 16);
     card->IssueLevel = get_linear_field(packed, 17, 4);
@@ -95,8 +108,9 @@ static bool Pack_H10301(int format_idx, wiegand_card_t *card, wiegand_message_t 
 }
 
 static bool Unpack_H10301(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
     if (packed->Length != 26) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->CardNumber = (packed->Bot >> 1) & 0xFFFF;
     card->FacilityCode = (packed->Bot >> 17) & 0xFF;
@@ -130,9 +144,9 @@ static bool Pack_ind26(int format_idx, wiegand_card_t *card, wiegand_message_t *
 }
 
 static bool Unpack_ind26(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
-
     if (packed->Length != 26) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 1, 12);
     card->CardNumber = get_linear_field(packed, 13, 12);
@@ -157,9 +171,10 @@ static bool Pack_Tecom27(int format_idx, wiegand_card_t *card, wiegand_message_t
 }
 
 static bool Unpack_Tecom27(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 27) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->CardNumber = get_nonlinear_field(packed, 16, (uint8_t[]) {0, 1, 13, 12, 9, 26, 20, 16, 17, 21, 25, 7, 8, 11, 4, 5});
     card->FacilityCode = get_nonlinear_field(packed, 11, (uint8_t[]) {15, 19, 24, 23, 22, 18, 6, 10, 14, 3, 2});
@@ -183,9 +198,9 @@ static bool Pack_ind27(int format_idx, wiegand_card_t *card, wiegand_message_t *
 }
 
 static bool Unpack_ind27(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
-
     if (packed->Length != 27) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 0, 13);
     card->CardNumber = get_linear_field(packed, 13, 14);
@@ -206,9 +221,9 @@ static bool Pack_indasc27(int format_idx, wiegand_card_t *card, wiegand_message_
 }
 
 static bool Unpack_indasc27(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
-
     if (packed->Length != 27) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_nonlinear_field(packed, 13, (uint8_t[]) {9, 4, 6, 5, 0, 7, 19, 8, 10, 16, 24, 12, 22});
     card->CardNumber = get_nonlinear_field(packed, 14, (uint8_t[]) {26, 1, 3, 15, 14, 17, 20, 13, 25, 2, 18, 21, 11, 23});
@@ -238,9 +253,10 @@ static bool Pack_2804W(int format_idx, wiegand_card_t *card, wiegand_message_t *
 }
 
 static bool Unpack_2804W(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 28) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 4, 8);
     card->CardNumber = get_linear_field(packed, 12, 15);
@@ -268,9 +284,9 @@ static bool Pack_ind29(int format_idx, wiegand_card_t *card, wiegand_message_t *
 }
 
 static bool Unpack_ind29(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
-
     if (packed->Length != 29) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 0, 13);
     card->CardNumber = get_linear_field(packed, 13, 16);
@@ -297,9 +313,9 @@ static bool Pack_ATSW30(int format_idx, wiegand_card_t *card, wiegand_message_t 
 }
 
 static bool Unpack_ATSW30(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
-
     if (packed->Length != 30) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 1, 12);
     card->CardNumber = get_linear_field(packed, 13, 16);
@@ -324,9 +340,11 @@ static bool Pack_ADT31(int format_idx, wiegand_card_t *card, wiegand_message_t *
 }
 
 static bool Unpack_ADT31(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 31) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
+
     card->FacilityCode = get_linear_field(packed, 1, 4);
     card->CardNumber = get_linear_field(packed, 5, 23);
     return true;
@@ -348,9 +366,10 @@ static bool Pack_hcp32(int format_idx, wiegand_card_t *card, wiegand_message_t *
 }
 
 static bool Unpack_hcp32(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 32) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->CardNumber = get_linear_field(packed, 1, 24);
     return true;
@@ -373,9 +392,10 @@ static bool Pack_hpp32(int format_idx, wiegand_card_t *card, wiegand_message_t *
 }
 
 static bool Unpack_hpp32(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 32) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 1, 12);
     card->CardNumber = get_linear_field(packed, 13, 29);
@@ -399,9 +419,10 @@ static bool Pack_wie32(int format_idx, wiegand_card_t *card, wiegand_message_t *
 }
 
 static bool Unpack_wie32(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 32) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 4, 12);
     card->CardNumber = get_linear_field(packed, 16, 16);
@@ -426,10 +447,11 @@ static bool Pack_Kastle(int format_idx, wiegand_card_t *card, wiegand_message_t 
 }
 
 static bool Unpack_Kastle(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 32) return false; // Wrong length? Stop here.
     if (get_bit_by_position(packed, 1) != 1) return false; // Always 1 in this format
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->IssueLevel = get_linear_field(packed, 2, 5);
     card->FacilityCode = get_linear_field(packed, 7, 8);
@@ -454,9 +476,10 @@ static bool Pack_Kantech(int format_idx, wiegand_card_t *card, wiegand_message_t
 }
 
 static bool Unpack_Kantech(wiegand_message_t *packed, wiegand_card_t *card) {
+    if (packed->Length != 32) return false; // Wrong length? Stop here.
+
     memset(card, 0, sizeof(wiegand_card_t));
 
-    if (packed->Length != 32) return false; // Wrong length? Stop here.
     card->FacilityCode = get_linear_field(packed, 7, 8);
     card->CardNumber = get_linear_field(packed, 15, 16);
     return true;
@@ -478,9 +501,10 @@ static bool Pack_D10202(int format_idx, wiegand_card_t *card, wiegand_message_t 
 }
 
 static bool Unpack_D10202(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 33) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->CardNumber = get_linear_field(packed, 8, 24);
     card->FacilityCode = get_linear_field(packed, 1, 7);
@@ -507,9 +531,10 @@ static bool Pack_H10306(int format_idx, wiegand_card_t *card, wiegand_message_t 
 }
 
 static bool Unpack_H10306(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 34) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 1, 16);
     card->CardNumber = get_linear_field(packed, 17, 16);
@@ -543,9 +568,10 @@ static bool Pack_N10002(int format_idx, wiegand_card_t *card, wiegand_message_t 
 }
 
 static bool Unpack_N10002(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 34) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 1, 16);
     card->CardNumber = get_linear_field(packed, 17, 16);
@@ -575,9 +601,10 @@ static bool Pack_C1k35s(int format_idx, wiegand_card_t *card, wiegand_message_t 
 }
 
 static bool Unpack_C1k35s(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 35) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->CardNumber = (packed->Bot >> 1) & 0x000FFFFF;
     card->FacilityCode = ((packed->Mid & 1) << 11) | ((packed->Bot >> 21));
@@ -620,12 +647,13 @@ static bool Pack_H10320(int format_idx, wiegand_card_t *card, wiegand_message_t 
 }
 
 static bool Unpack_H10320(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 37) return false; // Wrong length? Stop here.
     if (get_bit_by_position(packed, 0) != 1) {
         return false;
     }
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     // This card is BCD-encoded rather than binary. Get the 4-bit groups independently.
     for (uint32_t idx = 0; idx < 8; idx++) {
@@ -663,9 +691,9 @@ static bool Pack_S12906(int format_idx, wiegand_card_t *card, wiegand_message_t 
 }
 
 static bool Unpack_S12906(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
-
     if (packed->Length != 36) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 1, 8);
     card->IssueLevel = get_linear_field(packed, 9, 2);
@@ -696,9 +724,10 @@ static bool Pack_Sie36(int format_idx, wiegand_card_t *card, wiegand_message_t *
 }
 
 static bool Unpack_Sie36(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 36) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 1, 18);
     card->CardNumber = get_linear_field(packed, 19, 16);
@@ -728,11 +757,10 @@ static bool Pack_C15001(int format_idx, wiegand_card_t *card, wiegand_message_t 
 }
 
 static bool Unpack_C15001(wiegand_message_t *packed, wiegand_card_t *card) {
+
+    if (packed->Length != 36) return false; // Wrong length? Stop here.
+
     memset(card, 0, sizeof(wiegand_card_t));
-
-
-    if (packed->Length != 36)
-        return false; // Wrong length? Stop here.
 
     card->OEM = get_linear_field(packed, 1, 10);
     card->FacilityCode = get_linear_field(packed, 11, 8);
@@ -758,9 +786,9 @@ static bool Pack_H10302(int format_idx, wiegand_card_t *card, wiegand_message_t 
 }
 
 static bool Unpack_H10302(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
-
     if (packed->Length != 37) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->CardNumber = get_linear_field(packed, 1, 35);
     card->ParityValid =
@@ -785,9 +813,10 @@ static bool Pack_P10004(int format_idx, wiegand_card_t *card, wiegand_message_t 
 }
 
 static bool Unpack_P10004(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 37) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 1, 13);
     card->CardNumber = get_linear_field(packed, 14, 18);
@@ -813,9 +842,10 @@ static bool Pack_H10304(int format_idx, wiegand_card_t *card, wiegand_message_t 
 }
 
 static bool Unpack_H10304(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 37) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 1, 16);
     card->CardNumber = get_linear_field(packed, 17, 19);
@@ -860,10 +890,11 @@ static bool Pack_HGeneric37(int format_idx, wiegand_card_t *card, wiegand_messag
 }
 
 static bool Unpack_HGeneric37(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 37) return false; // Wrong length? Stop here.
     if (get_bit_by_position(packed, 36) != 1) return false; // Always 1 in this format
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->CardNumber = get_linear_field(packed, 4, 32);
     card->ParityValid =
@@ -899,12 +930,12 @@ static bool Pack_H800002(int format_idx, wiegand_card_t *card,
 }
 
 static bool Unpack_H800002(wiegand_message_t *packed, wiegand_card_t *card) {
-    int even_parity = 0;
-    memset(card, 0, sizeof(wiegand_card_t));
-
     if (packed->Length != 46) {
         return false; // Wrong length? Stop here.
     }
+
+    int even_parity = 0;
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 1, 14);
     card->CardNumber = get_linear_field(packed, 15, 30);
@@ -933,9 +964,9 @@ static bool Pack_MDI37(int format_idx, wiegand_card_t *card, wiegand_message_t *
 }
 
 static bool Unpack_MDI37(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
-
     if (packed->Length != 37) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 3, 4);;
     card->CardNumber = get_linear_field(packed, 7, 29);
@@ -970,9 +1001,9 @@ static bool Pack_P10001(int format_idx, wiegand_card_t *card, wiegand_message_t 
 
 static bool Unpack_P10001(wiegand_message_t *packed, wiegand_card_t *card) {
 
-    memset(card, 0, sizeof(wiegand_card_t));
-
     if (packed->Length != 40) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->CardNumber = get_linear_field(packed, 16, 16);
     card->FacilityCode = get_linear_field(packed, 4, 12);
@@ -1006,9 +1037,9 @@ static bool Pack_C1k48s(int format_idx, wiegand_card_t *card, wiegand_message_t 
 }
 
 static bool Unpack_C1k48s(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
-
     if (packed->Length != 48) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->CardNumber = (packed->Bot >> 1) & 0x007FFFFF;
     card->FacilityCode = ((packed->Mid & 0x00003FFF) << 8) | ((packed->Bot >> 24));
@@ -1034,9 +1065,10 @@ static bool Pack_CasiRusco40(int format_idx, wiegand_card_t *card, wiegand_messa
 }
 
 static bool Unpack_CasiRusco40(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 40) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->CardNumber = get_linear_field(packed, 1, 38);
     return true;
@@ -1044,9 +1076,9 @@ static bool Unpack_CasiRusco40(wiegand_message_t *packed, wiegand_card_t *card) 
 
 static bool Pack_Optus(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
 
-    memset(packed, 0, sizeof(wiegand_message_t));
-
     if (!validate_card_limit(format_idx, card)) return false;
+
+    memset(packed, 0, sizeof(wiegand_message_t));
 
     packed->Length = 34; // Set number of bits
     set_linear_field(packed, card->CardNumber, 1, 16);
@@ -1058,9 +1090,10 @@ static bool Pack_Optus(int format_idx, wiegand_card_t *card, wiegand_message_t *
 }
 
 static bool Unpack_Optus(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 34) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->CardNumber = get_linear_field(packed, 1, 16);
     card->FacilityCode = get_linear_field(packed, 22, 11);
@@ -1084,9 +1117,10 @@ static bool Pack_Smartpass(int format_idx, wiegand_card_t *card, wiegand_message
 }
 
 static bool Unpack_Smartpass(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 34) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 1, 13);
     card->IssueLevel = get_linear_field(packed, 14, 3);
@@ -1118,9 +1152,10 @@ static bool Pack_bqt34(int format_idx, wiegand_card_t *card, wiegand_message_t *
 }
 
 static bool Unpack_bqt34(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 34) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 1, 8);
     card->CardNumber = get_linear_field(packed, 9, 24);
@@ -1156,9 +1191,10 @@ static bool Pack_bqt38(int format_idx, wiegand_card_t *card, wiegand_message_t *
 }
 
 static bool Unpack_bqt38(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 38) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 24, 13);
     card->CardNumber = get_linear_field(packed, 1, 19);
@@ -1195,9 +1231,10 @@ static bool Pack_iscs38(int format_idx, wiegand_card_t *card, wiegand_message_t 
 }
 
 static bool Unpack_iscs38(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 38) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 5, 10);
     card->CardNumber = get_linear_field(packed, 15, 22);
@@ -1233,9 +1270,10 @@ static bool Pack_pw39(int format_idx, wiegand_card_t *card, wiegand_message_t *p
 }
 
 static bool Unpack_pw39(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 39) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 1, 17);
     card->CardNumber = get_linear_field(packed, 18, 20);
@@ -1270,9 +1308,11 @@ static bool Pack_bc40(int format_idx, wiegand_card_t *card, wiegand_message_t *p
 }
 
 static bool Unpack_bc40(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 40) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
+
 
     card->OEM = get_linear_field(packed, 0, 7);
     card->FacilityCode = get_linear_field(packed, 7, 12);
@@ -1281,19 +1321,6 @@ static bool Unpack_bc40(wiegand_message_t *packed, wiegand_card_t *card) {
     card->ParityValid =
         (get_bit_by_position(packed, 39) == oddparity32(get_linear_field(packed, 19, 19)));
     return true;
-}
-
-static bool step_parity_check(wiegand_message_t *packed, int start, int length, bool even_parity) {
-    bool parity = even_parity;
-    for (int i = start; i < start + length; i += 2) {
-        // Extract 2 bits
-        bool bit1 = get_bit_by_position(packed, i);
-        bool bit2 = get_bit_by_position(packed, i + 1);
-
-        // Calculate parity for these 2 bits
-        parity ^= (bit1 ^ bit2);
-    }
-    return parity;
 }
 
 static bool Pack_Avig56(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
@@ -1318,9 +1345,10 @@ static bool Pack_Avig56(int format_idx, wiegand_card_t *card, wiegand_message_t 
 }
 
 static bool Unpack_Avig56(wiegand_message_t *packed, wiegand_card_t *card) {
-    memset(card, 0, sizeof(wiegand_card_t));
 
     if (packed->Length != 56) return false;
+
+    memset(card, 0, sizeof(wiegand_card_t));
 
     card->FacilityCode = get_linear_field(packed, 1, 20);
     card->CardNumber = get_linear_field(packed, 21, 34);
@@ -1471,7 +1499,6 @@ static const cardformat_t FormatTable[] = {
     {NULL, NULL, NULL, NULL, 0, {0, 0, 0, 0, 0, 0, 0, 0, 0}} // Must null terminate array
 };
 
-
 void HIDListFormats(void) {
     if (FormatTable[0].Name == NULL)
         return;
@@ -1565,31 +1592,33 @@ void HIDPackTryAll(wiegand_card_t *card, bool preamble) {
 }
 
 bool HIDTryUnpack(wiegand_message_t *packed) {
-    if (FormatTable[0].Name == NULL)
+    if (FormatTable[0].Name == NULL) {
         return false;
+    }
 
-    int i = 0;
     wiegand_card_t card;
     memset(&card, 0, sizeof(wiegand_card_t));
     uint8_t found_cnt = 0, found_invalid_par = 0;
 
+    int i = 0;
     while (FormatTable[i].Name) {
         if (FormatTable[i].Unpack(packed, &card)) {
 
             found_cnt++;
             hid_print_card(&card, FormatTable[i]);
             // if fields has parity AND card parity is false
-            if (FormatTable[i].Fields.hasParity && (card.ParityValid == false))
+            if (FormatTable[i].Fields.hasParity && (card.ParityValid == false)) {
                 found_invalid_par++;
+            }
         }
         ++i;
     }
 
     if (found_cnt) {
-        PrintAndLogEx(INFO, "found " _YELLOW_("%u") " matching " _YELLOW_("%d bit") " format%s"
+        PrintAndLogEx(INFO, "found " _YELLOW_("%u") " matching " _YELLOW_("%d-bit") " format%s"
                       , found_cnt
                       , packed->Length
-                      , (found_cnt) ? "s" : ""
+                      , (found_cnt > 1) ? "s" : ""
                      );
     }
 
@@ -1612,26 +1641,37 @@ void HIDUnpack(int idx, wiegand_message_t *packed) {
 // decode wiegand format using HIDTryUnpack
 // return true if at least one valid matching formats found
 bool decode_wiegand(uint32_t top, uint32_t mid, uint32_t bot, int n) {
-    bool decode_result;
 
+    bool res = false;
     if (top == 0 && mid == 0 && bot == 0) {
-        decode_result = false;
-    } else if ((n > 0) || ((mid & 0xFFFFFFC0) > 0)) {  // if n > 0 or there's more than 38 bits
-        wiegand_message_t packed = initialize_message_object(top, mid, bot, n);
-        decode_result = HIDTryUnpack(&packed);
-    } else { // n <= 0 and 39-64 bits are all 0, try two possible bitlens
-        wiegand_message_t packed1 = initialize_message_object(top, mid, bot, n); // 26-37 bits
-        wiegand_message_t packed2 = initialize_message_object(top, mid, bot, 38); // 38 bits
-        bool packed1_result = HIDTryUnpack(&packed1);
-        bool packed2_result = HIDTryUnpack(&packed2);
-        decode_result = (packed1_result || packed2_result);
+        return res;
     }
 
-    if (decode_result == false) {
+    if (n || ((mid & 0xFFFFFFC0) > 0)) {  // if n > 0 or there's more than 38 bits
+        wiegand_message_t packed = initialize_message_object(top, mid, bot, n);
+        res = HIDTryUnpack(&packed);
+
+    } else { // n <= 0 and 39-64 bits are all 0, try two possible bitlens
+
+        wiegand_message_t packed = initialize_message_object(top, mid, bot, n); // 26-37 bits
+        res = HIDTryUnpack(&packed);
+
+        n = packed.Length - 1;
+        PrintAndLogEx(INFO, "Trying without a preamble bit...");
+        packed = initialize_message_object(top, mid, bot, n); // iclass has only a preamble bit.
+        res |= HIDTryUnpack(&packed);
+
+        if (res == false) {
+            packed = initialize_message_object(top, mid, bot, 38); // 38 bits
+            res |= HIDTryUnpack(&packed);
+        }
+    }
+
+    if (res == false) {
         PrintAndLogEx(DEBUG, "DEBUG: Error - " _RED_("HID no values found"));
     }
 
-    return decode_result;
+    return res;
 }
 
 int HIDDumpPACSBits(const uint8_t *const data, const uint8_t length, bool verbose) {
