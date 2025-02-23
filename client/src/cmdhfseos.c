@@ -1756,7 +1756,7 @@ static command_t CommandTable[] = {
     {"list",    CmdHfSeosList,          AlwaysAvailable, "List SEOS history"},
     {"sam",     CmdHfSeosSAM,           IfPm3Smartcard,  "SAM tests"},
     {"-----------", CmdHelp,            AlwaysAvailable, "----------------------- " _CYAN_("Operations") " -----------------------"},
-    {"info",    CmdHfSeosInfo,          IfPm3NfcBarcode, "Tag information"},
+    {"info",    CmdHfSeosInfo,          IfPm3Iso14443a, "Tag information"},
     {"pacs",    CmdHfSeosPACS,          AlwaysAvailable, "Extract PACS Information from card"},
     {"adf",     CmdHfSeosADF,           AlwaysAvailable, "Read an ADF from the card"},
     {"gdf",     CmdHfSeosGDF,           AlwaysAvailable, "Read an GDF from card"},

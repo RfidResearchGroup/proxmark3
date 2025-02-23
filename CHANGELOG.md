@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `wiegand decode` - now accepts new padding format (@iceman1001)
 - Changed `mem spiffs tree` - ID is now shown in decimal (@iceman1001)
 - Added sample wiegand format 56bit (@iceman1001)
 - Changed Wiegand formats to include number of bits (@iceman1001)

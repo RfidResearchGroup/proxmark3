@@ -66,6 +66,7 @@ static uint8_t empty[PICOPASS_BLOCK_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 static uint8_t zeros[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static int CmdHelp(const char *Cmd);
+
 static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][PICOPASS_BLOCK_SIZE] = {
     { 0xAE, 0xA6, 0x84, 0xA6, 0xDA, 0xB2, 0x32, 0x78 },
     { 0xFD, 0xCB, 0x5A, 0x52, 0xEA, 0x8F, 0x30, 0x90 },
@@ -1395,7 +1396,7 @@ static int CmdHFiClassESetBlk(const char *Cmd) {
 
 static bool iclass_detect_new_pacs(uint8_t *d) {
     uint8_t n = 0;
-    while (n++ < (PICOPASS_BLOCK_SIZE / 2)) {
+    while (n++ < (PICOPASS_BLOCK_SIZE >> 1)) {
         if (d[n] && d[n + 1] == 0xA6) {
             return true;
         }
@@ -1467,8 +1468,7 @@ static void iclass_decode_credentials(uint8_t *data) {
     if (has_values && encryption == None) {
 
         // todo:  remove preamble/sentinel
-        PrintAndLogEx(INFO, "Block 7 decoder");
-
+        PrintAndLogEx(INFO, "------------------------ " _CYAN_("Block 7 decoder") " --------------------------");
         if (has_new_pacs) {
             iclass_decode_credentials_new_pacs(b7);
         } else {
@@ -1483,9 +1483,7 @@ static void iclass_decode_credentials(uint8_t *data) {
             char *pbin = binstr;
             while (strlen(pbin) && *(++pbin) == '0');
 
-            PrintAndLogEx(SUCCESS, "Binary..................... " _GREEN_("%s"), pbin);
-
-            PrintAndLogEx(INFO, "Wiegand decode");
+            PrintAndLogEx(SUCCESS, "Binary... %zu - " _GREEN_("%s"), strlen(pbin), pbin);
             decode_wiegand(top, mid, bot, 0);
         }
 
@@ -1736,7 +1734,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
             }
         }
 
-        PrintAndLogEx(INFO, "-----------------------------------------------------------------");
+        PrintAndLogEx(INFO, "-------------------------------------------------------------------");
         free(decrypted);
     }
 
