@@ -74,7 +74,7 @@ static uint8_t pwdh0, pwdl0, pwdl1;                 // password bytes
 static uint8_t rnd[] = {0x85, 0x44, 0x12, 0x74};    // random number
 static uint16_t timestamp_high = 0;                 // Timer Counter 2 overflow count, ~47min
 
-#define TIMESTAMP (AT91C_BASE_TC2->TC_SR &AT91C_TC_COVFS ? timestamp_high += 1 : 0, ((timestamp_high << 16) + AT91C_BASE_TC2->TC_CV) / T0)
+#define TIMESTAMP ( (AT91C_BASE_TC2->TC_SR & AT91C_TC_COVFS) ? timestamp_high += 1 : 0, ((timestamp_high << 16) + AT91C_BASE_TC2->TC_CV) / T0)
 
 //#define SENDBIT_TEST
 
@@ -777,7 +777,9 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
 
                 if (ledcontrol) LED_B_ON();
                 // Capture reader cmd start timestamp
-                if (start_time == 0) start_time = TIMESTAMP - HITAG_T_LOW;
+                if (start_time == 0) {
+                    start_time = TIMESTAMP - HITAG_T_LOW;
+                }
 
                 // Capture reader frame
                 if (rb >= HITAG_T_STOP) {
@@ -864,9 +866,6 @@ static void hts_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint3
 
     uint32_t rb_i = 0, h2 = 0, h3 = 0, h4 = 0;
     uint8_t edges[160] = {0};
-
-    // Dbprintf("TC0_CV:%i TC1_CV:%i TC1_RB:%i TIMESTAMP:%u", AT91C_BASE_TC0->TC_CV, AT91C_BASE_TC1->TC_CV,
-    //          AT91C_BASE_TC1->TC_RB, TIMESTAMP);
 
     // Receive tag frame, watch for at most T0*HITAG_T_PROG_MAX periods
     while (AT91C_BASE_TC0->TC_CV < (T0 * HITAG_T_PROG_MAX)) {
