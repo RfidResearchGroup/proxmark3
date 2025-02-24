@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf mf gload` - now handles 1k ev1 sized dumps (@iceman1001)
 - Changed wiegand format unpack functions to clear struct later (@iceman1001)
 - Changed `wiegand decode` - now accepts new padding format (@iceman1001)
 - Changed `mem spiffs tree` - ID is now shown in decimal (@iceman1001)

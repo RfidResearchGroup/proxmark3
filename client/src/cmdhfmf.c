@@ -5490,7 +5490,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
         return PM3_EFILE;
     }
 
-    PrintAndLogEx(INFO, "Copying to magic gen1a card");
+    PrintAndLogEx(INFO, "Copying to magic gen1a MIFARE Classic " _GREEN_("%s"), s);
     PrintAndLogEx(INFO, "." NOLF);
 
     int blockno = 0;
@@ -5538,7 +5538,11 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
         return PM3_EFILE;
     }
 
-    PrintAndLogEx(SUCCESS, "Card loaded " _YELLOW_("%d") " blocks from file", block_cnt);
+    PrintAndLogEx(SUCCESS, 
+        "Card loaded " _YELLOW_("%d") " blocks from %s"
+        , block_cnt
+        , (fill_from_emulator ? "emulator memory" : "file")
+    );
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
@@ -8270,23 +8274,24 @@ static int CmdHF14AGen4Load(const char *cmd) {
     CLIExecWithReturn(ctx, cmd, argtable, false);
     bool m0 = arg_get_lit(ctx, 1);
     bool m1 = arg_get_lit(ctx, 2);
-    bool m2 = arg_get_lit(ctx, 3);
-    bool m4 = arg_get_lit(ctx, 4);
+    bool m1ev1 = arg_get_lit(ctx, 3);
+    bool m2 = arg_get_lit(ctx, 4);
+    bool m4 = arg_get_lit(ctx, 5);
 
     int pwd_len = 0;
     uint8_t pwd[4] = {0};
-    CLIGetHexWithReturn(ctx, 5, pwd, &pwd_len);
+    CLIGetHexWithReturn(ctx, 6, pwd, &pwd_len);
 
-    bool verbose = arg_get_lit(ctx, 6);
+    bool verbose = arg_get_lit(ctx, 7);
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 7), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 8), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    bool fill_from_emulator = arg_get_lit(ctx, 8);
+    bool fill_from_emulator = arg_get_lit(ctx, 9);
 
-    int start = arg_get_int_def(ctx, 9, 0);
-    int end = arg_get_int_def(ctx, 10, -1);
+    int start = arg_get_int_def(ctx, 10, 0);
+    int end = arg_get_int_def(ctx, 11, -1);
 
     CLIParserFree(ctx);
 
@@ -8296,14 +8301,14 @@ static int CmdHF14AGen4Load(const char *cmd) {
         return PM3_EINVARG;
     }
 
-    if ((m0 + m1 + m2 + m4) > 1) {
+    if ((m0 + m1 + m2 + m4 + m1ev1) > 1) {
         PrintAndLogEx(WARNING, "Only specify one MIFARE Type");
         return PM3_EINVARG;
-    } else if ((m0 + m1 + m2 + m4) == 0) {
+    } else if ((m0 + m1 + m2 + m4 + m1ev1) == 0) {
         m1 = true;
     }
 
-    char s[6];
+    char s[8];
     memset(s, 0, sizeof(s));
     uint16_t block_cnt = MIFARE_1K_MAXBLOCK;
     if (m0) {
@@ -8312,6 +8317,9 @@ static int CmdHF14AGen4Load(const char *cmd) {
     } else if (m1) {
         block_cnt = MIFARE_1K_MAXBLOCK;
         strncpy(s, "1K", 3);
+    } else if (m1ev1) {
+        block_cnt = MIFARE_1K_EV1_MAXBLOCK;
+        strncpy(s, "1K Ev1", 7);
     } else if (m2) {
         block_cnt = MIFARE_2K_MAXBLOCK;
         strncpy(s, "2K", 3);
@@ -8390,16 +8398,13 @@ static int CmdHF14AGen4Load(const char *cmd) {
     }
 
     if (verbose) {
-        if (fnlen != 0) {
-            PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
-            PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, block_cnt, block_cnt);
-        } else {
+        if (fnlen == 0) {
             PrintAndLogEx(INFO, "Read %d blocks from emulator memory", block_cnt);
         }
     }
 
     PrintAndLogEx(INFO, "Copying to magic gen4 GTU MIFARE Classic " _GREEN_("%s"), s);
-    PrintAndLogEx(INFO, "Starting block: %d. Ending block: %d.", start, end);
+    PrintAndLogEx(INFO, "Block... %d - %d", start, end);
 
     // copy to card
     for (uint16_t blockno = start; blockno <= end; blockno++) {
@@ -8427,10 +8432,15 @@ static int CmdHF14AGen4Load(const char *cmd) {
     }
     PrintAndLogEx(NORMAL, "\n");
 
-    if (data != NULL) free(data);
+    if (data != NULL) {
+        free(data);
+    }
 
-    PrintAndLogEx(SUCCESS, "Card loaded " _YELLOW_("%d") " blocks from %s", end - start + 1,
-                  (fill_from_emulator ? "emulator memory" : "file"));
+    PrintAndLogEx(SUCCESS, 
+        "Card loaded " _YELLOW_("%d") " blocks from %s"
+        , end - start + 1
+        , (fill_from_emulator ? "emulator memory" : "file")
+    );
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
