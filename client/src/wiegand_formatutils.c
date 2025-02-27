@@ -157,8 +157,8 @@ static uint8_t get_length_from_header(wiegand_message_t *data) {
         hfmt = data->Mid;
         len = 31; // remove leading 1 (preamble) in 38-64 bits format
     } else if (((data->Mid >> 5) & 1) == 1) { // bit 38 is set => 26-36bit format
-        hfmt = (((data->Mid & 31) << 12) | (data->Bot >> 26)); // get bits 27-37 to check for format len bit
-        len = 19;
+        hfmt = (((data->Mid & 31) << 6) | (data->Bot >> 26)); // get bits 27-37 to check for format len bit
+        len = 25;
     } else { // if bit 38 is not set => 37bit format
         hfmt = 0;
         len = 37;
