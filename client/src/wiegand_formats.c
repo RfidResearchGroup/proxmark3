@@ -1647,24 +1647,16 @@ bool decode_wiegand(uint32_t top, uint32_t mid, uint32_t bot, int n) {
         return res;
     }
 
-    if (n || ((mid & 0xFFFFFFC0) > 0)) {  // if n > 0 or there's more than 38 bits
+    if (n > 0) {
         wiegand_message_t packed = initialize_message_object(top, mid, bot, n);
         res = HIDTryUnpack(&packed);
-
-    } else { // n <= 0 and 39-64 bits are all 0, try two possible bitlens
-
+    } else {
         wiegand_message_t packed = initialize_message_object(top, mid, bot, n); // 26-37 bits
         res = HIDTryUnpack(&packed);
 
-        n = packed.Length - 1;
-        PrintAndLogEx(INFO, "Trying without a preamble bit...");
-        packed = initialize_message_object(top, mid, bot, n); // iclass has only a preamble bit.
+        PrintAndLogEx(INFO, "Trying with a preamble bit...");
+        packed.Length += 1;
         res |= HIDTryUnpack(&packed);
-
-        if (res == false) {
-            packed = initialize_message_object(top, mid, bot, 38); // 38 bits
-            res |= HIDTryUnpack(&packed);
-        }
     }
 
     if (res == false) {

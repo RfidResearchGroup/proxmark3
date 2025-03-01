@@ -69,8 +69,7 @@ static int wiegand_new_pacs(uint8_t *padded_pacs, uint8_t plen) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "------------------------- " _CYAN_("SIO - Wiegand") " ---------------------------");
-    wiegand_message_t packed = initialize_message_object(top, mid, bot, strlen(binstr));
-    HIDTryUnpack(&packed);
+    decode_wiegand(top, mid, bot, strlen(binstr));
     free(binstr);
     return PM3_SUCCESS;
 }
@@ -215,8 +214,7 @@ int CmdWiegandDecode(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Wiegand decode");
-    wiegand_message_t packed = initialize_message_object(top, mid, bot, blen);
-    HIDTryUnpack(&packed);
+    decode_wiegand(top, mid, bot, blen);
     return PM3_SUCCESS;
 }
 
