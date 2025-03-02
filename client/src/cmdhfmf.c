@@ -5538,11 +5538,11 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
         return PM3_EFILE;
     }
 
-    PrintAndLogEx(SUCCESS, 
-        "Card loaded " _YELLOW_("%d") " blocks from %s"
-        , block_cnt
-        , (fill_from_emulator ? "emulator memory" : "file")
-    );
+    PrintAndLogEx(SUCCESS,
+                  "Card loaded " _YELLOW_("%d") " blocks from %s"
+                  , block_cnt
+                  , (fill_from_emulator ? "emulator memory" : "file")
+                 );
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
@@ -8436,11 +8436,11 @@ static int CmdHF14AGen4Load(const char *cmd) {
         free(data);
     }
 
-    PrintAndLogEx(SUCCESS, 
-        "Card loaded " _YELLOW_("%d") " blocks from %s"
-        , end - start + 1
-        , (fill_from_emulator ? "emulator memory" : "file")
-    );
+    PrintAndLogEx(SUCCESS,
+                  "Card loaded " _YELLOW_("%d") " blocks from %s"
+                  , end - start + 1
+                  , (fill_from_emulator ? "emulator memory" : "file")
+                 );
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }

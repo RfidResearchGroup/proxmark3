@@ -128,7 +128,7 @@ bool set_nonlinear_field(wiegand_message_t *data, uint64_t value, uint8_t numBit
     return result;
 }
 
-static uint8_t get_length_from_header(wiegand_message_t *data) {
+uint8_t get_length_from_header(wiegand_message_t *data) {
     /**
      * detect if message has "preamble" / "sentinel bit"
      * Right now we just calculate the highest bit set
@@ -146,6 +146,7 @@ static uint8_t get_length_from_header(wiegand_message_t *data) {
      * 0000 0010 1xxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  35-bit
      * 0000 0011 xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  36-bit
      * 0000 000x xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  37-bit
+     * 0000 00xx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  38-bit
      */
     uint8_t len = 0;
     uint32_t hfmt = 0; // for calculating card length
@@ -188,13 +189,15 @@ wiegand_message_t initialize_message_object(uint32_t top, uint32_t mid, uint32_t
 
 bool add_HID_header(wiegand_message_t *data) {
     // Invalid value
-    if (data->Length > 84 || data->Length == 0)
+    if (data->Length > 84 || data->Length == 0) {
         return false;
+    }
 
     if (data->Length == 48) {
         data->Mid |= 1U << (data->Length - 32); // Example leading 1: start bit
         return true;
     }
+
     if (data->Length >= 64) {
         data->Top |= 0x09e00000; // Extended-length header
         data->Top |= 1U << (data->Length - 64); // leading 1: start bit

@@ -213,7 +213,8 @@ int CmdWiegandDecode(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Wiegand decode");
+    PrintAndLogEx(INFO, "------------------------- " _CYAN_("Wiegand") " ---------------------------");
+
     decode_wiegand(top, mid, bot, blen);
     return PM3_SUCCESS;
 }

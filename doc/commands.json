@@ -13167,8 +13167,8 @@
             "command": "wiegand decode",
             "description": "Decode raw hex or binary to wiegand format",
             "notes": [
-                "wiegand decode --raw 2006f623ae",
-                "wiegand decode --new 04801EEF8DC0 -> 4..8 bytes, new padded format"
+                "wiegand decode --raw 2006F623AE",
+                "wiegand decode --new 06BD88EB80 -> 4..8 bytes, new padded format"
             ],
             "offline": true,
             "options": [
@@ -13214,6 +13214,6 @@
     "metadata": {
         "commands_extracted": 759,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-02-23T21:55:16"
+        "extracted_on": "2025-03-02T15:43:45"
     }
 }

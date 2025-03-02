@@ -1676,17 +1676,18 @@ int HIDDumpPACSBits(const uint8_t *const data, const uint8_t length, bool verbos
 
     bytes_2_binstr(binstr, data + 1, n);
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "PACS......... " _GREEN_("%s"), sprint_hex_inrow(data, length));
-    PrintAndLogEx(SUCCESS, "padded bin... " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
+//    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "------------------------- " _CYAN_("Wiegand") " ---------------------------");
+    PrintAndLogEx(SUCCESS, "PACS............. " _GREEN_("%s"), sprint_hex_inrow(data, length));
+    PrintAndLogEx(DEBUG, "padded bin....... " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
 
     binstr[strlen(binstr) - pad] = '\0';
-    PrintAndLogEx(SUCCESS, "bin.......... " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
+    PrintAndLogEx(DEBUG, "bin.............. " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
 
     size_t hexlen = 0;
     uint8_t hex[16] = {0};
     binstr_2_bytes(hex, &hexlen, binstr);
-    PrintAndLogEx(SUCCESS, "hex.......... " _GREEN_("%s"), sprint_hex_inrow(hex, hexlen));
+    PrintAndLogEx(SUCCESS, "hex.............. " _GREEN_("%s"), sprint_hex_inrow(hex, hexlen));
 
     uint32_t top = 0, mid = 0, bot = 0;
     if (binstring_to_u96(&top, &mid, &bot, binstr) != strlen(binstr)) {
@@ -1696,13 +1697,15 @@ int HIDDumpPACSBits(const uint8_t *const data, const uint8_t length, bool verbos
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Wiegand decode");
     wiegand_message_t packed = initialize_message_object(top, mid, bot, strlen(binstr));
     HIDTryUnpack(&packed);
 
-    PrintAndLogEx(NORMAL, "");
-
     if (strlen(binstr) >= 26 && verbose) {
+
+
+        // SEOS
+        // iCLASS Legacy SE
+        // iCLASS Legacy SR
 
         // iCLASS Legacy
         PrintAndLogEx(INFO, "Clone to " _YELLOW_("iCLASS Legacy"));
@@ -1713,6 +1716,8 @@ int HIDDumpPACSBits(const uint8_t *const data, const uint8_t length, bool verbos
         PrintAndLogEx(INFO, "Downgrade to " _YELLOW_("HID Prox II"));
         PrintAndLogEx(SUCCESS, "    lf hid clone -w H10301 --bin %s", binstr);
         PrintAndLogEx(NORMAL, "");
+
+        // MIFARE DESFire
 
         // MIFARE Classic
         char mfcbin[28] = {0};

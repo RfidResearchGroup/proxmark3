@@ -52,6 +52,7 @@ bool set_nonlinear_field(wiegand_message_t *data, uint64_t value, uint8_t numBit
 
 wiegand_message_t initialize_message_object(uint32_t top, uint32_t mid, uint32_t bot, int n);
 
+uint8_t get_length_from_header(wiegand_message_t *data);
 bool add_HID_header(wiegand_message_t *data);
 
 #endif
