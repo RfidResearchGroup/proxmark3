@@ -645,8 +645,8 @@ bool AddPatternPCF7931(uint32_t a, uint32_t b, uint32_t c, uint32_t *tab) {
     uint32_t u = 0;
     for (u = 0; tab[u] != 0; u += 3) {} //we put the cursor at the last value of the array
 
-    tab[u]   = (u == 0) ? a : a + tab[u - 1];
-    tab[u + 1] = b + tab[u];
+    tab[u]   = (u == 0) ? a : a + tab[u - 1];   // if it is the first value of the array, nothing needs to be added.
+    tab[u + 1] = b + tab[u];                    // otherwise always add up the values, because later on it is compared to a counter
     tab[u + 2] = c + tab[u + 1];
 
     return true;
