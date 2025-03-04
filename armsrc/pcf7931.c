@@ -555,7 +555,7 @@ void SendCmdPCF7931(const uint32_t *tab, bool ledcontrol) {
     AT91C_BASE_PMC->PMC_PCER |= (0x1 << AT91C_ID_TC0);
     AT91C_BASE_TCB->TCB_BMR = AT91C_TCB_TC0XC0S_NONE | AT91C_TCB_TC1XC1S_TIOA0 | AT91C_TCB_TC2XC2S_NONE;
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;                 // timer disable
-    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;  // clock at 48/32 MHz
+    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;  // clock at 48/32 MHz (48Mhz clock, 32 = prescaler (div3))
     AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN;
 
     // Assert a sync signal. This sets all timers to 0 on next active clock edge
@@ -565,19 +565,19 @@ void SendCmdPCF7931(const uint32_t *tab, bool ledcontrol) {
     for (u = 0; tab[u] != 0; u += 3) {
         // modulate antenna
         HIGH(GPIO_SSC_DOUT);
-        while (tempo != tab[u]) {
+        while (tempo < tab[u]) {
             tempo = AT91C_BASE_TC0->TC_CV;
         }
 
         // stop modulating antenna
         LOW(GPIO_SSC_DOUT);
-        while (tempo != tab[u + 1]) {
+        while (tempo < tab[u + 1]) {
             tempo = AT91C_BASE_TC0->TC_CV;
         }
 
         // modulate antenna
         HIGH(GPIO_SSC_DOUT);
-        while (tempo != tab[u + 2]) {
+        while (tempo < tab[u + 2]) {
             tempo = AT91C_BASE_TC0->TC_CV;
         }
     }
