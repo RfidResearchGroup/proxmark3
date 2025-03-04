@@ -29,15 +29,10 @@
 #define ALLOC 16
 
 size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
-
     const uint8_t DECIMATION = 4;
-
-    // 2021 iceman, memor
     uint8_t bits[256] = {0x00};
     uint8_t blocks[8][16];
-
     uint8_t *dest = BigBuf_get_addr();
-
     int g_GraphTraceLen = BigBuf_max_traceLen();
     // limit g_GraphTraceLen to a little more than 2 data frames. 
     // To make sure a complete dataframe is in the dataset.
@@ -51,18 +46,12 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
 
     BigBuf_Clear_keep_EM();
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
-    // DoAcquisition_default(0, true, ledcontrol);
-    // sample with decimation of 2 --> This means double the values can be sampled.
-    // this is needed to get a complete frame in the buffer (64 * 8 * 16 * 8 + 8*PMC(~380)) = ~68.000 samples. Buffer is only 41.xxx
-    // with decimation 2, buffer will be twice as big.
     DoAcquisition(DECIMATION, 8, 0, 0, false, 0, 0, 0, ledcontrol);
-    
 
     uint8_t j;
     uint8_t half_switch;
+    uint8_t bitPos;
 
-    uint8_t bitPos; // max 128 bit in one block. if more, then there is an error and PMC was not found.
-    
     uint32_t sample;    // to keep track of the current sample that is being analyzed
     uint32_t samplePosLastEdge;
     uint32_t samplePosCurrentEdge;
@@ -421,7 +410,13 @@ end:
     reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
 }
 
-static void RealWritePCF7931(uint8_t *pass, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data, bool ledcontrol) {
+static void RealWritePCF7931(
+    uint8_t *pass,
+    uint16_t init_delay,
+    int8_t offsetPulseWidth, int8_t offsetPulsePosition,
+    uint8_t address, uint8_t byte, uint8_t data,
+    bool ledcontrol){
+
     uint32_t tab[1024] = {0}; // data times frame
     uint32_t u = 0;
     uint8_t parity = 0;
@@ -429,28 +424,36 @@ static void RealWritePCF7931(uint8_t *pass, uint16_t init_delay, int32_t l, int3
 
     //BUILD OF THE DATA FRAME
     //alimentation of the tag (time for initializing)
+    // ToDo: This could be optimized/automated. e.g. Read one cycle, find PMC and calculate time.
+    // I dont understand, why 8192/2
     AddPatternPCF7931(init_delay, 0, 8192 / 2 * T0_PCF, tab);
+
+    // why "... + 70"? Why not "... + x * T0"?
+    // I think he just added 70 to be somewhere in The PMC window, which is 32T0 (=32*8 = 256)
+    // 3*T0 = PMC width
+    // 29*T0 = rest of PMC window (total 32T0 = 3+29)
+    // after the PMC, it directly goes to the password indication bit.
     AddPatternPCF7931(8192 / 2 * T0_PCF + 319 * T0_PCF + 70, 3 * T0_PCF, 29 * T0_PCF, tab);
     //password indication bit
-    AddBitPCF7931(1, tab, l, p);
+    AddBitPCF7931(1, tab, offsetPulseWidth, offsetPulsePosition);
     //password (on 56 bits)
-    AddBytePCF7931(pass[0], tab, l, p);
-    AddBytePCF7931(pass[1], tab, l, p);
-    AddBytePCF7931(pass[2], tab, l, p);
-    AddBytePCF7931(pass[3], tab, l, p);
-    AddBytePCF7931(pass[4], tab, l, p);
-    AddBytePCF7931(pass[5], tab, l, p);
-    AddBytePCF7931(pass[6], tab, l, p);
-    //programming mode (0 or 1)
-    AddBitPCF7931(0, tab, l, p);
+    AddBytePCF7931(pass[0], tab, offsetPulseWidth, offsetPulsePosition);
+    AddBytePCF7931(pass[1], tab, offsetPulseWidth, offsetPulsePosition);
+    AddBytePCF7931(pass[2], tab, offsetPulseWidth, offsetPulsePosition);
+    AddBytePCF7931(pass[3], tab, offsetPulseWidth, offsetPulsePosition);
+    AddBytePCF7931(pass[4], tab, offsetPulseWidth, offsetPulsePosition);
+    AddBytePCF7931(pass[5], tab, offsetPulseWidth, offsetPulsePosition);
+    AddBytePCF7931(pass[6], tab, offsetPulseWidth, offsetPulsePosition);
+    //programming mode (0 or 1) -> 0 = byte wise; 1 = block wise programming
+    AddBitPCF7931(0, tab, offsetPulseWidth, offsetPulsePosition);
 
     //block address on 6 bits
     for (u = 0; u < 6; ++u) {
         if (address & (1 << u)) { // bit 1
             ++parity;
-            AddBitPCF7931(1, tab, l, p);
+            AddBitPCF7931(1, tab, offsetPulseWidth, offsetPulsePosition);
         } else {              // bit 0
-            AddBitPCF7931(0, tab, l, p);
+            AddBitPCF7931(0, tab, offsetPulseWidth, offsetPulsePosition);
         }
     }
 
@@ -458,28 +461,29 @@ static void RealWritePCF7931(uint8_t *pass, uint16_t init_delay, int32_t l, int3
     for (u = 0; u < 4; ++u) {
         if (byte & (1 << u)) { // bit 1
             parity++;
-            AddBitPCF7931(1, tab, l, p);
+            AddBitPCF7931(1, tab, offsetPulseWidth, offsetPulsePosition);
         } else                // bit 0
-            AddBitPCF7931(0, tab, l, p);
+            AddBitPCF7931(0, tab, offsetPulseWidth, offsetPulsePosition);
     }
 
     //data on 8 bits
     for (u = 0; u < 8; u++) {
         if (data & (1 << u)) { // bit 1
             parity++;
-            AddBitPCF7931(1, tab, l, p);
+            AddBitPCF7931(1, tab, offsetPulseWidth, offsetPulsePosition);
         } else                //bit 0
-            AddBitPCF7931(0, tab, l, p);
+            AddBitPCF7931(0, tab, offsetPulseWidth, offsetPulsePosition);
     }
 
     //parity bit
     if ((parity % 2) == 0)
-        AddBitPCF7931(0, tab, l, p); //even parity
+        AddBitPCF7931(0, tab, offsetPulseWidth, offsetPulsePosition); //even parity
     else
-        AddBitPCF7931(1, tab, l, p);//odd parity
+        AddBitPCF7931(1, tab, offsetPulseWidth, offsetPulsePosition);//odd parity
 
-    //time access memory
-    AddPatternPCF7931(5120 + 2680, 0, 0, tab);
+    // time access memory (640T0)
+    // Not sure why 335*T0, but should not matter. Since programming should be finished at that point
+    AddPatternPCF7931((640 + 335)* T0_PCF, 0, 0, tab);
 
     //conversion of the scale time
     for (u = 0; u < 500; ++u)
@@ -500,14 +504,19 @@ static void RealWritePCF7931(uint8_t *pass, uint16_t init_delay, int32_t l, int3
 
 /* Write on a byte of a PCF7931 tag
  * @param address : address of the block to write
-   @param byte : address of the byte to write
-    @param data : data to write
+ * @param byte : address of the byte to write
+ * @param data : data to write
  */
-void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, uint8_t pass5, uint8_t pass6, uint8_t pass7, uint16_t init_delay, int32_t l, int32_t p, uint8_t address, uint8_t byte, uint8_t data, bool ledcontrol) {
+void WritePCF7931(
+    uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, uint8_t pass5, uint8_t pass6, uint8_t pass7, 
+    uint16_t init_delay, 
+    int8_t offsetPulseWidth, int8_t offsetPulsePosition, 
+    uint8_t address, uint8_t byte, uint8_t data, 
+    bool ledcontrol) {
 
     if (g_dbglevel >= DBG_INFO) {
         Dbprintf("Initialization delay : %d us", init_delay);
-        Dbprintf("Offsets : %d us on the low pulses width, %d us on the low pulses positions", l, p);
+        Dbprintf("Offsets : %d us on the low pulses width, %d us on the low pulses positions", offsetPulseWidth, offsetPulsePosition);
     }
 
     Dbprintf("Password (LSB first on each byte): %02x %02x %02x %02x %02x %02x %02x", pass1, pass2, pass3, pass4, pass5, pass6, pass7);
@@ -517,11 +526,11 @@ void WritePCF7931(uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, ui
 
     uint8_t password[7] = {pass1, pass2, pass3, pass4, pass5, pass6, pass7};
 
-    RealWritePCF7931(password, init_delay, l, p, address, byte, data, ledcontrol);
+    RealWritePCF7931(password, init_delay, offsetPulseWidth, offsetPulsePosition, address, byte, data, ledcontrol);
 }
 
 
-/* Send a trame to a PCF7931 tags
+/* Send a frame to a PCF7931 tags
  * @param tab : array of the data frame
  */
 
@@ -581,32 +590,36 @@ void SendCmdPCF7931(const uint32_t *tab, bool ledcontrol) {
 }
 
 
-/* Add a byte for building the data frame of PCF7931 tags
+/* Add a byte for building the data frame of PCF7931 tags.
+ * See Datasheet of PCF7931 diagramm on page 8. This explains pulse widht & positioning
+ * Normally, no offset should be required.
  * @param b : byte to add
  * @param tab : array of the data frame
- * @param l : offset on low pulse width
- * @param p : offset on low pulse positioning
+ * @param offsetPulseWidth : offset on low pulse width in µs (default pulse widht is 6T0)
+ * @param offsetPulsePosition : offset on low pulse positioning in µs
  */
-bool AddBytePCF7931(uint8_t byte, uint32_t *tab, int32_t l, int32_t p) {
+bool AddBytePCF7931(uint8_t byte, uint32_t *tab, int8_t offsetPulseWidth, int8_t offsetPulsePosition) {
     uint32_t u;
     for (u = 0; u < 8; ++u) {
         if (byte & (1 << u)) { //bit is 1
-            AddBitPCF7931(1, tab, l, p);
+            AddBitPCF7931(1, tab, offsetPulseWidth, offsetPulsePosition);
         } else { //bit is 0
-            AddBitPCF7931(0, tab, l, p);
+            AddBitPCF7931(0, tab, offsetPulseWidth, offsetPulsePosition);
         }
     }
 
     return false;
 }
 
-/* Add a bits for building the data frame of PCF7931 tags
+/* Add a bits for building the data frame of PCF7931 tags.
+ * See Datasheet of PCF7931 diagramm on page 8. This explains pulse widht & positioning
+ * Normally, no offset should be required.
  * @param b : bit to add
  * @param tab : array of the data frame
- * @param l : offset on low pulse width
- * @param p : offset on low pulse positioning
+ * @param offsetPulseWidth : offset on low pulse width in µs (default pulse widht is 6T0)
+ * @param offsetPulsePosition : offset on low pulse positioning in µs
  */
-bool AddBitPCF7931(bool b, uint32_t *tab, int32_t l, int32_t p) {
+bool AddBitPCF7931(bool b, uint32_t *tab, int8_t offsetPulseWidth, int8_t offsetPulsePosition) {
     uint8_t u = 0;
 
     //we put the cursor at the last value of the array
@@ -614,21 +627,21 @@ bool AddBitPCF7931(bool b, uint32_t *tab, int32_t l, int32_t p) {
 
     if (b == 1) {   //add a bit 1
         if (u == 0)
-            tab[u] = 34 * T0_PCF + p;
+            tab[u] = 34 * T0_PCF + offsetPulsePosition;
         else
-            tab[u] = 34 * T0_PCF + tab[u - 1] + p;
+            tab[u] = 34 * T0_PCF + tab[u - 1] + offsetPulsePosition;
 
-        tab[u + 1] =  6 * T0_PCF + tab[u] + l;
-        tab[u + 2] = 88 * T0_PCF + tab[u + 1] - l - p;
+        tab[u + 1] =  6 * T0_PCF + tab[u] + offsetPulseWidth;
+        tab[u + 2] = 88 * T0_PCF + tab[u + 1] - offsetPulseWidth - offsetPulsePosition;
         
     } else { //add a bit 0
         if (u == 0)
-            tab[u] = 98 * T0_PCF + p;
+            tab[u] = 98 * T0_PCF + offsetPulsePosition;
         else
-            tab[u] = 98 * T0_PCF + tab[u - 1] + p;
+            tab[u] = 98 * T0_PCF + tab[u - 1] + offsetPulsePosition;
 
-        tab[u + 1] =  6 * T0_PCF + tab[u] + l;
-        tab[u + 2] = 24 * T0_PCF + tab[u + 1] - l - p;
+        tab[u + 1] =  6 * T0_PCF + tab[u] + offsetPulseWidth;
+        tab[u + 2] = 24 * T0_PCF + tab[u + 1] - offsetPulseWidth - offsetPulsePosition;
         
     }
     return true;
