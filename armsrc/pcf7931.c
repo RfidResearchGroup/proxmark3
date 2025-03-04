@@ -420,7 +420,6 @@ static void RealWritePCF7931(
     uint32_t tab[1024] = {0}; // data times frame
     uint32_t u = 0;
     uint8_t parity = 0;
-    bool comp = 0;
 
     //BUILD OF THE DATA FRAME
     //alimentation of the tag (time for initializing)
@@ -485,20 +484,6 @@ static void RealWritePCF7931(
     // Not sure why 335*T0, but should not matter. Since programming should be finished at that point
     AddPatternPCF7931((640 + 335)* T0_PCF, 0, 0, tab);
 
-    //conversion of the scale time
-    for (u = 0; u < 500; ++u)
-        tab[u] = (tab[u] * 3) / 2;
-
-    //compensation of the counter reload
-    while (!comp) {
-        comp = 1;
-        for (u = 0; tab[u] != 0; ++u)
-            if (tab[u] > 0xFFFF) {
-                tab[u] -= 0xFFFF;
-                comp = 0;
-            }
-    }
-
     SendCmdPCF7931(tab, ledcontrol);
 }
 
@@ -534,7 +519,7 @@ void WritePCF7931(
  * @param tab : array of the data frame
  */
 
-void SendCmdPCF7931(const uint32_t *tab, bool ledcontrol) {
+void SendCmdPCF7931(uint32_t *tab, bool ledcontrol) {
     uint16_t u = 0, tempo = 0;
 
     if (g_dbglevel >= DBG_INFO) {
@@ -546,6 +531,20 @@ void SendCmdPCF7931(const uint32_t *tab, bool ledcontrol) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
 
     if (ledcontrol) LED_A_ON();
+    
+    // rescale the values to match the time of the timer below.
+    for (u = 0; u < 500; ++u) {
+        tab[u] = (tab[u] * 3) / 2;
+    }
+
+    // compensation for the counter overflow
+    // only one overflow should be possible.
+    for (u = 0; tab[u] != 0; ++u)
+        if (tab[u] > 0xFFFF) {
+            tab[u] -= 0xFFFF;
+            break;
+        }
+
 
     // steal this pin from the SSP and use it to control the modulation
     AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
