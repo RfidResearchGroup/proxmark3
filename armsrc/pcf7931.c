@@ -591,9 +591,9 @@ bool AddBytePCF7931(uint8_t byte, uint32_t *tab, int32_t l, int32_t p) {
     uint32_t u;
     for (u = 0; u < 8; ++u) {
         if (byte & (1 << u)) { //bit is 1
-            if (AddBitPCF7931(1, tab, l, p) == 1) return true;
+            AddBitPCF7931(1, tab, l, p);
         } else { //bit is 0
-            if (AddBitPCF7931(0, tab, l, p) == 1) return true;
+            AddBitPCF7931(0, tab, l, p);
         }
     }
 
@@ -620,9 +620,8 @@ bool AddBitPCF7931(bool b, uint32_t *tab, int32_t l, int32_t p) {
 
         tab[u + 1] =  6 * T0_PCF + tab[u] + l;
         tab[u + 2] = 88 * T0_PCF + tab[u + 1] - l - p;
-        return false;
+        
     } else { //add a bit 0
-
         if (u == 0)
             tab[u] = 98 * T0_PCF + p;
         else
@@ -630,7 +629,7 @@ bool AddBitPCF7931(bool b, uint32_t *tab, int32_t l, int32_t p) {
 
         tab[u + 1] =  6 * T0_PCF + tab[u] + l;
         tab[u + 2] = 24 * T0_PCF + tab[u + 1] - l - p;
-        return false;
+        
     }
     return true;
 }
