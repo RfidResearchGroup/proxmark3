@@ -1367,8 +1367,8 @@ static bool Pack_IR56(int format_idx, wiegand_card_t *card, wiegand_message_t *p
 
     if (!validate_card_limit(format_idx, card)) return false;
 
-    set_linear_field(packed, card->FacilityCode, 1, 24);
-    set_linear_field(packed, card->CardNumber, 25, 32);
+    packed->Bot = card->CardNumber;
+    packed->Mid = card->FacilityCode;
 
     if (preamble)
         return add_HID_header(packed);
@@ -1381,8 +1381,8 @@ static bool Unpack_IR56(wiegand_message_t *packed, wiegand_card_t *card) {
 
     if (packed->Length != 56) return false;
 
-    card->FacilityCode = get_linear_field(packed, 1, 24);
-    card->CardNumber = get_linear_field(packed, 25, 32);
+    card->FacilityCode = packed->Mid;
+    card->CardNumber = packed->Bot;
     return true;
 }
 // ---------------------------------------------------------------------------------------------------
