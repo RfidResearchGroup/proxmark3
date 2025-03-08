@@ -2767,10 +2767,10 @@ void LockPassSlixIso15693(uint32_t pass_id, uint32_t password) {
     LED_A_ON();
 
     uint8_t cmd_inventory[]  = {ISO15693_REQ_DATARATE_HIGH | ISO15693_REQ_INVENTORY | ISO15693_REQINV_SLOT1, 0x01, 0x00, 0x00, 0x00 };
-    uint8_t cmd_get_rnd[]    = {ISO15693_REQ_DATARATE_HIGH, 0xB2, 0x04, 0x00, 0x00 };
-    uint8_t cmd_set_pass[]   = {ISO15693_REQ_DATARATE_HIGH, 0xB3, 0x04, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    //uint8_t cmd_write_pass[] = {ISO15693_REQ_DATARATE_HIGH | ISO15693_REQ_ADDRESS, 0xB4, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    uint8_t cmd_lock_pass[] = {ISO15693_REQ_DATARATE_HIGH | ISO15693_REQ_ADDRESS, 0xB5, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00 };
+    uint8_t cmd_get_rnd[]    = {ISO15693_REQ_DATARATE_HIGH, ISO15693_GET_RANDOM_NUMBER, 0x04, 0x00, 0x00 };
+    uint8_t cmd_set_pass[]   = {ISO15693_REQ_DATARATE_HIGH, ISO15693_SET_PASSWORD, 0x04, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    //uint8_t cmd_write_pass[] = {ISO15693_REQ_DATARATE_HIGH | ISO15693_REQ_ADDRESS, ISO15693_WRITE_PASSWORD, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    uint8_t cmd_lock_pass[] = {ISO15693_REQ_DATARATE_HIGH | ISO15693_REQ_ADDRESS, ISO15693_LOCK_PASSWORD, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00 };
     uint16_t crc;
     uint16_t recvlen = 0;
     uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
@@ -3054,7 +3054,7 @@ static uint32_t set_privacy_15693_Slix(uint32_t start_time, uint32_t *eof_time, 
     }
 
     // 0x04, == NXP from manufacture id list.
-    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, 0xBA, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, ISO15693_ENABLE_PRIVACY, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     init_password_15693_Slix(&c[3], password, rnd);
     AddCrc15(c, 7);
 
@@ -3088,7 +3088,7 @@ static uint32_t disable_eas_15693_Slix(uint32_t start_time, uint32_t *eof_time, 
     }
 
     // 0x04, == NXP from manufacture id list.
-    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, 0xA3, 0x04, 0x00, 0x00};
+    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, ISO15693_RESET_EAS, 0x04, 0x00, 0x00};
     AddCrc15(c, 3);
 
     start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
@@ -3119,7 +3119,7 @@ static uint32_t enable_eas_15693_Slix(uint32_t start_time, uint32_t *eof_time, c
         }
     }
     // 0x04, == NXP from manufacture id list.
-    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, 0xA2, 0x04, 0x00, 0x00};
+    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, ISO15693_SET_EAS, 0x04, 0x00, 0x00};
     //init_password_15693_Slix(&c[3], password, rnd);
     AddCrc15(c, 3);
 
