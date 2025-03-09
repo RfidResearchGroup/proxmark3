@@ -202,6 +202,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf 15 slixeasenable" },
     { 0, "hf 15 slixprivacydisable" },
     { 0, "hf 15 slixprivacyenable" },
+    { 0, "hf 15 slixprotectpage" },
     { 0, "hf 15 passprotectafi" },
     { 0, "hf 15 passprotecteas" },
     { 0, "hf 15 findafi" },

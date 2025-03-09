@@ -1467,6 +1467,17 @@ static void PacketReceived(PacketCommandNG *packet) {
             WritePasswordSlixIso15693(payload->old_pwd, payload->new_pwd, payload->pwd_id);
             break;
         }
+        case CMD_HF_ISO15693_SLIX_PROTECT_PAGE: {
+            struct p {
+                uint8_t read_pwd[4];
+                uint8_t write_pwd[4];
+                uint8_t divide_ptr;
+                uint8_t prot_status;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            ProtectPageSlixIso15693(payload->read_pwd, payload->write_pwd, payload->divide_ptr, payload->prot_status);
+            break;
+        }
         case CMD_HF_ISO15693_SLIX_DISABLE_PRIVACY: {
             struct p {
                 uint8_t pwd[4];

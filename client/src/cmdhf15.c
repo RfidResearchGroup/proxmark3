@@ -826,6 +826,8 @@ static int NxpSysInfo(uint8_t *uid) {
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, _CYAN_(" Password protection configuration"));
 
+    PrintAndLogEx(INFO, "    Page prot. ptr. " _YELLOW_("%d"), d[1]);
+
     PrintAndLogEx(INFO, "    Page L read.... %s"
                   , (d[2] & 0x01) ?  _RED_("password") : _GREEN_("no password")
                  );
@@ -3203,6 +3205,101 @@ static int CmdHF15SlixWritePassword(const char *Cmd) {
     return resp.status;
 }
 
+static int CmdHF15SlixProtectPage(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 15 slixprotectpage",
+                  "Defines protection pointer address of user mem and access cond. for pages",
+                  "hf 15 slixprotectpage -w deadbeef -p 3 -h 3");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("r", "readpw", "<hex>", "read password, 4 hex bytes"),
+        arg_str0("w", "writepw", "<hex>", "write password, 4 hex bytes"),
+        arg_int0("p", "ptr", "<dec>", "protection pointer page (0-78), if 0 entire user mem"),
+        arg_int1("l", "lo", "<dec>", "page protection flags of lo page (0-None, 1-ReadPR, 2-WritePR)"),
+        arg_int1("i", "hi", "<dec>", "page protection flags of hi page (0-None, 1-ReadPR, 2-WritePR)"),
+        arg_param_end
+    };
+
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    struct p {
+        uint8_t read_pwd[4];
+        uint8_t write_pwd[4];
+        uint8_t divide_ptr;
+        uint8_t prot_status;
+    } PACKED payload = {0};
+    int pwdlen = 0;
+
+    CLIGetHexWithReturn(ctx, 1, payload.read_pwd, &pwdlen);
+
+    if (pwdlen > 0 && pwdlen != 4) {
+        PrintAndLogEx(WARNING, "read password must be 4 hex bytes if provided");
+        CLIParserFree(ctx);
+        return PM3_ESOFT;
+    }
+
+    CLIGetHexWithReturn(ctx, 2, payload.write_pwd, &pwdlen);
+
+    if (pwdlen > 0 && pwdlen != 4) {
+        PrintAndLogEx(WARNING, "write password must be 4 hex bytes if provided");
+        CLIParserFree(ctx);
+        return PM3_ESOFT;
+    }
+
+    payload.divide_ptr = (uint8_t)arg_get_int_def(ctx, 3, 0);
+    if (payload.divide_ptr > 78) {
+        PrintAndLogEx(WARNING, "protection pointer page is invalid (is %d but should be <=78).", payload.divide_ptr);
+        CLIParserFree(ctx);
+        return PM3_ESOFT;
+    }
+
+    pwdlen = arg_get_int_def(ctx, 4, 0);
+    if (pwdlen > 3) {
+        PrintAndLogEx(WARNING, "page protection flags must be between 0 and 3");
+        CLIParserFree(ctx);
+        return PM3_ESOFT;
+    }
+    payload.prot_status = (uint8_t)pwdlen;
+
+    pwdlen = arg_get_int_def(ctx, 5, 0);
+    if (pwdlen > 3) {
+        PrintAndLogEx(WARNING, "page protection flags must be between 0 and 3");
+        CLIParserFree(ctx);
+        return PM3_ESOFT;
+    }
+    payload.prot_status |= (uint8_t)pwdlen<<4;
+
+    PrintAndLogEx(INFO, "Trying to set page protection pointer to " _YELLOW_("%d"), payload.divide_ptr);
+    PrintAndLogEx(INFO, _YELLOW_("LO") " page access %s%s", (payload.prot_status & 0x01)?_RED_("R"):_GREEN_("r"),  (payload.prot_status & 0x02)?_RED_("W"):_GREEN_("w"));
+    PrintAndLogEx(INFO, _YELLOW_("HI") " page access %s%s", (payload.prot_status & 0x10)?_RED_("R"):_GREEN_("r"),  (payload.prot_status & 0x20)?_RED_("W"):_GREEN_("w"));
+
+    PacketResponseNG resp;
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ISO15693_SLIX_PROTECT_PAGE, (uint8_t *)&payload, sizeof(payload));
+    if (WaitForResponseTimeout(CMD_HF_ISO15693_SLIX_PROTECT_PAGE, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    switch (resp.status) {
+        case PM3_ETIMEOUT: {
+            PrintAndLogEx(WARNING, "no tag found");
+            break;
+        }
+        case PM3_EWRONGANSWER: {
+            PrintAndLogEx(WARNING, "Protection flags were not accepted, locked? ( " _RED_("fail") " )");
+            break;
+        }
+        case PM3_SUCCESS: {
+            PrintAndLogEx(SUCCESS, "Page protection written ( " _GREEN_("ok") " ) ");
+            break;
+        }
+    }
+    return resp.status;
+}
+
 static int CmdHF15AFIPassProtect(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -3513,6 +3610,7 @@ static command_t CommandTable[] = {
     {"slixeasenable",       CmdHF15SlixEASEnable,     IfPm3Iso15693,   "Enable EAS mode on SLIX ISO-15693 tag"},
     {"slixprivacydisable",  CmdHF15SlixDisable,       IfPm3Iso15693,   "Disable privacy mode on SLIX ISO-15693 tag"},
     {"slixprivacyenable",   CmdHF15SlixEnable,        IfPm3Iso15693,   "Enable privacy mode on SLIX ISO-15693 tag"},
+    {"slixprotectpage",     CmdHF15SlixProtectPage,   IfPm3Iso15693,   "Protect pages on SLIX ISO-15693 tag"},
     {"passprotectafi",      CmdHF15AFIPassProtect,    IfPm3Iso15693,   "Password protect AFI - Cannot be undone"},
     {"passprotecteas",      CmdHF15EASPassProtect,    IfPm3Iso15693,   "Password protect EAS - Cannot be undone"},
     {"-----------",         CmdHF15Help,              IfPm3Iso15693,  "-------------------------- " _CYAN_("afi") " ------------------------"},
