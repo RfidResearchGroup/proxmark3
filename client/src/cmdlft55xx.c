@@ -2300,7 +2300,7 @@ static void printT5x7KnownBlock0(uint32_t b0) {
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "Pyronix ");
             break;
         case T55X7_TEXECOM_CONFIG_BLOCK:
-            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Telecom ");
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Texecom ");
             break;
         default:
             break;
