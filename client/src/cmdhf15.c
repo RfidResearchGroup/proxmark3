@@ -3268,11 +3268,11 @@ static int CmdHF15SlixProtectPage(const char *Cmd) {
         CLIParserFree(ctx);
         return PM3_ESOFT;
     }
-    payload.prot_status |= (uint8_t)pwdlen<<4;
+    payload.prot_status |= (uint8_t)pwdlen << 4;
 
     PrintAndLogEx(INFO, "Trying to set page protection pointer to " _YELLOW_("%d"), payload.divide_ptr);
-    PrintAndLogEx(INFO, _YELLOW_("LO") " page access %s%s", (payload.prot_status & 0x01)?_RED_("R"):_GREEN_("r"),  (payload.prot_status & 0x02)?_RED_("W"):_GREEN_("w"));
-    PrintAndLogEx(INFO, _YELLOW_("HI") " page access %s%s", (payload.prot_status & 0x10)?_RED_("R"):_GREEN_("r"),  (payload.prot_status & 0x20)?_RED_("W"):_GREEN_("w"));
+    PrintAndLogEx(INFO, _YELLOW_("LO") " page access %s%s", (payload.prot_status & 0x01) ? _RED_("R") : _GREEN_("r"), (payload.prot_status & 0x02) ? _RED_("W") : _GREEN_("w"));
+    PrintAndLogEx(INFO, _YELLOW_("HI") " page access %s%s", (payload.prot_status & 0x10) ? _RED_("R") : _GREEN_("r"), (payload.prot_status & 0x20) ? _RED_("W") : _GREEN_("w"));
 
     PacketResponseNG resp;
     clearCommandBuffer();

@@ -3301,7 +3301,7 @@ void ProtectPageSlixIso15693(const uint8_t *read_password, const uint8_t *write_
     if (res == PM3_SUCCESS && write_password)
         res = set_pass_15693_SlixRnd(start_time, &eof_time, 0x02, write_password, uid, rnd);
 
-    if (res == PM3_SUCCESS) 
+    if (res == PM3_SUCCESS)
         res = protect_page_15693_Slix(start_time, &eof_time, divide_ptr, prot_status, uid);
 
     reply_ng(CMD_HF_ISO15693_SLIX_PROTECT_PAGE, res, NULL, 0);

@@ -5023,6 +5023,7 @@
                 "-h, --help This help",
                 "--mini MIFARE Classic Mini / S20",
                 "--1k MIFARE Classic 1k / S50 (def)",
+                "--1k+ MIFARE Classic Ev1 1k / S50",
                 "--2k MIFARE Classic/Plus 2k",
                 "--4k MIFARE Classic 4k / S70",
                 "-p, --pwd <hex> password 4bytes",
@@ -5032,7 +5033,7 @@
                 "--start <dec> index of block to start writing (default 0)",
                 "--end <dec> index of block to end writing (default last block)"
             ],
-            "usage": "hf mf gload [-hv] [--mini] [--1k] [--2k] [--4k] [-p <hex>] [-f <fn>] [--emu] [--start <dec>] [--end <dec>]"
+            "usage": "hf mf gload [-hv] [--mini] [--1k] [--1k+] [--2k] [--4k] [-p <hex>] [-f <fn>] [--emu] [--start <dec>] [--end <dec>]"
         },
         "hf mf gsave": {
             "command": "hf mf gsave",
@@ -13214,6 +13215,6 @@
     "metadata": {
         "commands_extracted": 759,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-03-02T15:43:45"
+        "extracted_on": "2025-03-11T08:20:44"
     }
 }
