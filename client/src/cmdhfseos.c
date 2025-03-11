@@ -1381,7 +1381,7 @@ static int CmdHfSeosPACS(const char *Cmd) {
     uint8_t get_data[] = {0x5c, 0x02, 0xff, 0x00};
 
     int oid_len = 0;
-    uint8_t oid_hex[256] = {0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02};
+    uint8_t oid_hex[256] = {0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02, 0x02};
     CLIGetHexWithReturn(ctx, 1, oid_hex, &oid_len);
 
     int key_index = arg_get_int_def(ctx, 2, 0);
@@ -1390,7 +1390,7 @@ static int CmdHfSeosPACS(const char *Cmd) {
 
     // Fall back to default OID
     if (oid_len == 0) {
-        oid_len = 16;
+        oid_len = 17;
     }
 
     // convert OID hex to literal string
@@ -1440,7 +1440,7 @@ static int CmdHfSeosADF(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, get_data, &get_data_len);
 
     int oid_len = 0;
-    uint8_t oid_hex[256] = {0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02};
+    uint8_t oid_hex[256] = {0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02, 0x02};
     CLIGetHexWithReturn(ctx, 2, oid_hex, &oid_len);
 
     int key_index = arg_get_int_def(ctx, 3, 0);
@@ -1453,7 +1453,7 @@ static int CmdHfSeosADF(const char *Cmd) {
 
     // Catching when the OID value is not supplied
     if (oid_len == 0) {
-        oid_len = 16;
+        oid_len = 17;
     }
 
     // convert OID hex to literal string
