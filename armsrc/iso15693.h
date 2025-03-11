@@ -68,4 +68,5 @@ void EnableEAS_AFISlixIso15693(const uint8_t *password, bool usepwd);
 void PassProtextEASSlixIso15693(const uint8_t *password);
 void PassProtectAFISlixIso15693(const uint8_t *password);
 void WriteAFIIso15693(const uint8_t *password, bool use_pwd, uint8_t *uid, bool use_uid, uint8_t afi);
+void ProtectPageSlixIso15693(const uint8_t *read_password, const uint8_t *write_password, uint8_t divide_ptr, uint8_t prot_status);
 #endif

@@ -1,4 +1,3 @@
-//-----------------------------------------------------------------------------
 // Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -575,6 +574,7 @@ typedef struct {
 #define CMD_HF_ISO15693_SLIX_PASS_PROTECT_AFI                             0x0863
 #define CMD_HF_ISO15693_SLIX_PASS_PROTECT_EAS                             0x0864
 #define CMD_HF_ISO15693_SLIX_WRITE_PWD                                    0x0865
+#define CMD_HF_ISO15693_SLIX_PROTECT_PAGE                                 0x0868
 #define CMD_HF_ISO15693_WRITE_AFI                                         0x0866
 #define CMD_HF_TEXKOM_SIMULATE                                            0x0320
 #define CMD_HF_ISO15693_EML_CLEAR                                         0x0330

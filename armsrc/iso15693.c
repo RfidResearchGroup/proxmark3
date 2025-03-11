@@ -2767,10 +2767,10 @@ void LockPassSlixIso15693(uint32_t pass_id, uint32_t password) {
     LED_A_ON();
 
     uint8_t cmd_inventory[]  = {ISO15693_REQ_DATARATE_HIGH | ISO15693_REQ_INVENTORY | ISO15693_REQINV_SLOT1, 0x01, 0x00, 0x00, 0x00 };
-    uint8_t cmd_get_rnd[]    = {ISO15693_REQ_DATARATE_HIGH, 0xB2, 0x04, 0x00, 0x00 };
-    uint8_t cmd_set_pass[]   = {ISO15693_REQ_DATARATE_HIGH, 0xB3, 0x04, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    //uint8_t cmd_write_pass[] = {ISO15693_REQ_DATARATE_HIGH | ISO15693_REQ_ADDRESS, 0xB4, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    uint8_t cmd_lock_pass[] = {ISO15693_REQ_DATARATE_HIGH | ISO15693_REQ_ADDRESS, 0xB5, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00 };
+    uint8_t cmd_get_rnd[]    = {ISO15693_REQ_DATARATE_HIGH, ISO15693_GET_RANDOM_NUMBER, 0x04, 0x00, 0x00 };
+    uint8_t cmd_set_pass[]   = {ISO15693_REQ_DATARATE_HIGH, ISO15693_SET_PASSWORD, 0x04, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    //uint8_t cmd_write_pass[] = {ISO15693_REQ_DATARATE_HIGH | ISO15693_REQ_ADDRESS, ISO15693_WRITE_PASSWORD, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    uint8_t cmd_lock_pass[] = {ISO15693_REQ_DATARATE_HIGH | ISO15693_REQ_ADDRESS, ISO15693_LOCK_PASSWORD, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00 };
     uint16_t crc;
     uint16_t recvlen = 0;
     uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
@@ -3020,14 +3020,7 @@ static uint32_t disable_privacy_15693_Slix(uint32_t start_time, uint32_t *eof_ti
     return PM3_SUCCESS;
 }
 
-static uint32_t set_pass_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t pass_id, const uint8_t *password, const uint8_t *uid) {
-
-
-    uint8_t rnd[2];
-    if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
-        return PM3_ETIMEOUT;
-    }
-
+static uint32_t set_pass_15693_SlixRnd(uint32_t start_time, uint32_t *eof_time, uint8_t pass_id, const uint8_t *password, const uint8_t *uid, uint8_t *rnd) {
     // 0x04, == NXP from manufacture id list.
     uint8_t c[] = { (ISO15_REQ_DATARATE_HIGH | ISO15_REQ_ADDRESS), ISO15693_SET_PASSWORD, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, pass_id, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
@@ -3047,6 +3040,18 @@ static uint32_t set_pass_15693_Slix(uint32_t start_time, uint32_t *eof_time, uin
     return PM3_SUCCESS;
 }
 
+static uint32_t set_pass_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t pass_id, const uint8_t *password, const uint8_t *uid) {
+
+
+    uint8_t rnd[2];
+    if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
+        return PM3_ETIMEOUT;
+    }
+
+    return set_pass_15693_SlixRnd(start_time, eof_time, pass_id, password, uid, rnd);
+}
+
+
 static uint32_t set_privacy_15693_Slix(uint32_t start_time, uint32_t *eof_time, const uint8_t *password) {
     uint8_t rnd[2];
     if (get_rnd_15693_Slix(start_time, eof_time, rnd) == false) {
@@ -3054,7 +3059,7 @@ static uint32_t set_privacy_15693_Slix(uint32_t start_time, uint32_t *eof_time, 
     }
 
     // 0x04, == NXP from manufacture id list.
-    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, 0xBA, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, ISO15693_ENABLE_PRIVACY, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     init_password_15693_Slix(&c[3], password, rnd);
     AddCrc15(c, 7);
 
@@ -3088,7 +3093,7 @@ static uint32_t disable_eas_15693_Slix(uint32_t start_time, uint32_t *eof_time, 
     }
 
     // 0x04, == NXP from manufacture id list.
-    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, 0xA3, 0x04, 0x00, 0x00};
+    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, ISO15693_RESET_EAS, 0x04, 0x00, 0x00};
     AddCrc15(c, 3);
 
     start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
@@ -3119,7 +3124,7 @@ static uint32_t enable_eas_15693_Slix(uint32_t start_time, uint32_t *eof_time, c
         }
     }
     // 0x04, == NXP from manufacture id list.
-    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, 0xA2, 0x04, 0x00, 0x00};
+    uint8_t c[] = { ISO15_REQ_DATARATE_HIGH, ISO15693_SET_EAS, 0x04, 0x00, 0x00};
     //init_password_15693_Slix(&c[3], password, rnd);
     AddCrc15(c, 3);
 
@@ -3147,6 +3152,26 @@ static uint32_t write_password_15693_Slix(uint32_t start_time, uint32_t *eof_tim
     uint16_t recvlen = 0;
 
     int res_wrp = SendDataTag(new_pwd_cmd, sizeof(new_pwd_cmd), false, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, eof_time, &recvlen);
+    if (res_wrp != PM3_SUCCESS && recvlen != 3) {
+        return PM3_EWRONGANSWER;
+    }
+
+    return PM3_SUCCESS;
+}
+
+static uint32_t protect_page_15693_Slix(uint32_t start_time, uint32_t *eof_time, uint8_t divide_ptr, uint8_t prot_status, const uint8_t *uid) {
+
+    uint8_t protect_cmd[] = { (ISO15_REQ_DATARATE_HIGH | ISO15_REQ_ADDRESS), ISO15693_PROTECT_PAGE, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, divide_ptr, prot_status, 0x00, 0x00};
+
+    memcpy(&protect_cmd[3], uid, 8);
+
+    AddCrc15(protect_cmd, 13);
+
+    start_time = *eof_time + DELAY_ISO15693_VICC_TO_VCD_READER;
+    uint8_t recvbuf[ISO15693_MAX_RESPONSE_LENGTH];
+    uint16_t recvlen = 0;
+
+    int res_wrp = SendDataTag(protect_cmd, sizeof(protect_cmd), false, true, recvbuf, sizeof(recvbuf), start_time, ISO15693_READER_TIMEOUT_WRITE, eof_time, &recvlen);
     if (res_wrp != PM3_SUCCESS && recvlen != 3) {
         return PM3_EWRONGANSWER;
     }
@@ -3249,6 +3274,37 @@ void WritePasswordSlixIso15693(const uint8_t *old_password, const uint8_t *new_p
     res = write_password_15693_Slix(start_time, &eof_time, pwd_id, new_password, uid);
 
     reply_ng(CMD_HF_ISO15693_SLIX_WRITE_PWD, res, NULL, 0);
+
+    switch_off();
+
+}
+
+void ProtectPageSlixIso15693(const uint8_t *read_password, const uint8_t *write_password, uint8_t divide_ptr, uint8_t prot_status) {
+    LED_D_ON();
+    Iso15693InitReader();
+    StartCountSspClk();
+    uint32_t start_time = 0, eof_time = 0;
+    int res = PM3_SUCCESS;
+
+    uint8_t uid[8], rnd[2];
+    get_uid_slix(start_time, &eof_time, uid);
+
+    if (get_rnd_15693_Slix(start_time, &eof_time, rnd) == false) {
+        reply_ng(CMD_HF_ISO15693_SLIX_PROTECT_PAGE, PM3_ETIMEOUT, NULL, 0);
+        switch_off();
+        return;
+    }
+
+    if (read_password)
+        res = set_pass_15693_SlixRnd(start_time, &eof_time, 0x01, read_password, uid, rnd);
+
+    if (res == PM3_SUCCESS && write_password)
+        res = set_pass_15693_SlixRnd(start_time, &eof_time, 0x02, write_password, uid, rnd);
+
+    if (res == PM3_SUCCESS) 
+        res = protect_page_15693_Slix(start_time, &eof_time, divide_ptr, prot_status, uid);
+
+    reply_ng(CMD_HF_ISO15693_SLIX_PROTECT_PAGE, res, NULL, 0);
 
     switch_off();
 
