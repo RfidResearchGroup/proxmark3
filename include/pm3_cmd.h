@@ -1,3 +1,4 @@
+//-----------------------------------------------------------------------------
 // Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 //
 // This program is free software: you can redistribute it and/or modify

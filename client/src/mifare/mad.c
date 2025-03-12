@@ -355,8 +355,16 @@ int MAD1DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose, bool *haveMA
                           aid
                          );
         } else {
-            char fmt[60];
-            snprintf(fmt, sizeof(fmt), (ibs == i) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [" _GREEN_("%04X") "]%s", i, aid, "%s");
+            char fmt[80];
+            snprintf(fmt
+                     , sizeof(fmt)
+                     , (ibs == i) ?
+                     _MAGENTA_(" %02d [%04X] %s") :
+                     " %02d [" _GREEN_("%04X") "] %s"
+                     , i
+                     , aid
+                     , "%s"
+                    );
             print_aid_description(mad_known_aids, aid, fmt, verbose);
             prev_aid = aid;
         }
@@ -408,8 +416,16 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
                           aid
                          );
         } else {
-            char fmt[60];
-            snprintf(fmt, sizeof(fmt), (ibs == i) ? _MAGENTA_(" %02d [%04X]%s") : " %02d [" _GREEN_("%04X") "]%s", i + 16, aid, "%s");
+            char fmt[80];
+            snprintf(fmt
+                     , sizeof(fmt)
+                     , (ibs == i) ?
+                     _MAGENTA_(" %02d [%04X] %s") :
+                     " %02d [" _GREEN_("%04X") "] %s"
+                     , i + 16
+                     , aid
+                     , "%s"
+                    );
             print_aid_description(mad_known_aids, aid, fmt, verbose);
             prev_aid = aid;
         }

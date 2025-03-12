@@ -261,6 +261,7 @@ Check column "offline" for their availability.
 |`hf 15 slixeasenable    `|N       |`Enable EAS mode on SLIX ISO-15693 tag`
 |`hf 15 slixprivacydisable`|N       |`Disable privacy mode on SLIX ISO-15693 tag`
 |`hf 15 slixprivacyenable`|N       |`Enable privacy mode on SLIX ISO-15693 tag`
+|`hf 15 slixprotectpage  `|N       |`Protect pages on SLIX ISO-15693 tag`
 |`hf 15 passprotectafi   `|N       |`Password protect AFI - Cannot be undone`
 |`hf 15 passprotecteas   `|N       |`Password protect EAS - Cannot be undone`
 |`hf 15 findafi          `|N       |`Brute force AFI of an ISO-15693 tag`

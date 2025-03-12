@@ -2412,7 +2412,6 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
 
         // larger keys than expected is skipped
         if (strlen(line) > keylen) {
-            PrintAndLogEx(INFO, "larger %zu - %s", strlen(line), line);
             continue;
         }
 
@@ -3085,6 +3084,7 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
                 PrintAndLogEx(WARNING, "fail, cannot allocate memory");
                 return PM3_EMALLOC;
             }
+
             res = loadFileJSON(fn, *pdump, maxdumplen, dumplen, NULL);
             if (res == PM3_SUCCESS) {
                 return res;

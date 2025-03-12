@@ -1414,7 +1414,7 @@ static int iclass_decode_credentials_new_pacs(uint8_t *d) {
 
     uint8_t pad = d[offset];
 
-    PrintAndLogEx(INFO, "%u , %u", offset, pad);
+    PrintAndLogEx(DEBUG, "%u , %u", offset, pad);
 
     char *binstr = (char *)calloc((PICOPASS_BLOCK_SIZE * 8) + 1, sizeof(uint8_t));
     if (binstr == NULL) {
@@ -1424,17 +1424,16 @@ static int iclass_decode_credentials_new_pacs(uint8_t *d) {
     uint8_t n = PICOPASS_BLOCK_SIZE - offset - 2;
     bytes_2_binstr(binstr, d + offset + 2, n);
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "PACS......... " _GREEN_("%s"), sprint_hex_inrow(d + offset + 2, n));
-    PrintAndLogEx(SUCCESS, "padded bin... " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
+    PrintAndLogEx(DEBUG, "PACS......... " _GREEN_("%s"), sprint_hex_inrow(d + offset + 2, n));
+    PrintAndLogEx(DEBUG, "padded bin... " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
 
     binstr[strlen(binstr) - pad] = '\0';
-    PrintAndLogEx(SUCCESS, "bin.......... " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
+    PrintAndLogEx(DEBUG, "bin.......... " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
 
     size_t hexlen = 0;
     uint8_t hex[16] = {0};
     binstr_2_bytes(hex, &hexlen, binstr);
-    PrintAndLogEx(SUCCESS, "hex.......... " _GREEN_("%s"), sprint_hex_inrow(hex, hexlen));
+    PrintAndLogEx(DEBUG, "hex.......... " _GREEN_("%s"), sprint_hex_inrow(hex, hexlen));
 
     uint32_t top = 0, mid = 0, bot = 0;
     if (binstring_to_u96(&top, &mid, &bot, binstr) != strlen(binstr)) {
@@ -2852,8 +2851,9 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
         return PM3_SUCCESS;
 
     bool use_sc = IsCardHelperPresent(verbose);
-    if (use_sc == false)
+    if (use_sc == false) {
         return PM3_SUCCESS;
+    }
 
     // crypto helper available.
     PrintAndLogEx(INFO, "----------------------------- " _CYAN_("Cardhelper") " -----------------------------");
@@ -3234,6 +3234,7 @@ void print_iclass_sio(uint8_t *iclass_dump, size_t dump_len, bool verbose) {
     size_t sio_length;
     detect_credential(iclass_dump, dump_len, &is_legacy, &is_se, &is_sr, &sio_start, &sio_length);
 
+    // sanity checks
     if (sio_start == NULL) {
         return;
     }

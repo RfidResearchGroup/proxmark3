@@ -2064,6 +2064,23 @@
             ],
             "usage": "hf 15 slixprivacyenable [-h] -p <hex>"
         },
+        "hf 15 slixprotectpage": {
+            "command": "hf 15 slixprotectpage",
+            "description": "Defines protection pointer address of user mem and access cond. for pages",
+            "notes": [
+                "hf 15 slixprotectpage -w deadbeef -p 3 -h 3"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-r, --readpw <hex> read password, 4 hex bytes",
+                "-w, --writepw <hex> write password, 4 hex bytes",
+                "-p, --ptr <dec> protection pointer page (0-78), if 0 entire user mem",
+                "-l, --lo <dec> page protection flags of lo page (0-None, 1-ReadPR, 2-WritePR)",
+                "-i, --hi <dec> page protection flags of hi page (0-None, 1-ReadPR, 2-WritePR)"
+            ],
+            "usage": "hf 15 slixprotectpage [-h] [-r <hex>] [-w <hex>] [-p <dec>] -l <dec> -i <dec>"
+        },
         "hf 15 slixwritepwd": {
             "command": "hf 15 slixwritepwd",
             "description": "Write a password on a SLIX family ISO-15693 tag.nSome tags do not support all different password types.",
@@ -13213,8 +13230,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 759,
+        "commands_extracted": 760,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-03-11T08:20:44"
+        "extracted_on": "2025-03-12T08:23:41"
     }
 }

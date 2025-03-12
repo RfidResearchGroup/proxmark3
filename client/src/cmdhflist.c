@@ -70,8 +70,14 @@ static uint8_t *gs_mfuc_key = NULL;
  */
 
 uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
-    if (n < 3) return 2;
-    if (isResponse && (n == 5)) return 2;
+    if (n < 3) {
+        return 2;
+    }
+
+    if (isResponse && (n == 5)) {
+        return 2;
+    }
+
     if (d[1] == 0x50 &&
             d[0] >= ISO14443A_CMD_ANTICOLL_OR_SELECT &&
             d[0] <= ISO14443A_CMD_ANTICOLL_OR_SELECT_3) {
@@ -79,6 +85,25 @@ uint8_t iso14443A_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
     }
     return check_crc(CRC_14443_A, d, n);
 }
+
+uint8_t seos_CRC_check(bool isResponse, uint8_t *d, uint8_t n) {
+    if (n < 3) {
+        return 2;
+    }
+
+    // 5 bytes response Card busy 0xFA have crc, the rest is most likely 14a anticollision
+    if ((n == 5) && (d[0] != 0xFA)) {
+        return 2;
+    }
+
+    if (d[1] == 0x50 &&
+            d[0] >= ISO14443A_CMD_ANTICOLL_OR_SELECT &&
+            d[0] <= ISO14443A_CMD_ANTICOLL_OR_SELECT_3) {
+        return 2;
+    }
+    return check_crc(CRC_14443_A, d, n);
+}
+
 
 uint8_t mifare_CRC_check(bool isResponse, uint8_t *data, uint8_t len) {
     switch (MifareAuthState) {
@@ -423,14 +448,14 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                     snprintf(exp, size, "?");
                 break;
             }
-            case NTAG_I2C_FASTWRITE:
+            case NTAG_I2C_FASTWRITE: {
                 if (cmdsize == 69)
                     snprintf(exp, size, "FAST WRITE (" _MAGENTA_("%d-%d") ")", cmd[1], cmd[2]);
                 else
                     snprintf(exp, size, "?");
                 break;
-
-            default:
+            }
+            default: {
                 if ((cmd[0] & 0xF0) == 0xD0  && (cmdsize == 4 || cmdsize == 5)) {
                     snprintf(exp, size, "PPS - CID=%x", cmd[0] & 0x0F) ;
                 } else if ((cmd[0] & 0xF0) == 0x60  && (cmdsize == 4)) {
@@ -440,7 +465,10 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                     return PM3_ESOFT;
                 }
         }
+        }
+
     } else {
+
         if (gs_mfuc_state == 1) {
             if ((cmd[0] == 0xAF) && (cmdsize == 11)) {
                 // register RndB
@@ -450,6 +478,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 gs_mfuc_state = 0;
             }
         }
+
         if (gs_mfuc_state == 3) {
             if ((cmd[0] == 0x00) && (cmdsize == 11)) {
                 // register RndA'
@@ -1748,49 +1777,115 @@ void annotateCryptoRF(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     }
 }
 
-void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool isResponse) {
+
+    if (cmd[0] == 0xFA && cmdsize == 5) {
+        snprintf(exp, size, (isResponse) ? "BUSY" : "DONE?");
+        return;
+    }
 
     // it's basically a ISO14443a tag, so try annotation from there
     if (applyIso14443a(exp, size, cmd, cmdsize, false) != PM3_SUCCESS) {
 
         int pos = 0;
         switch (cmd[0]) {
-            case 2:
-            case 3:
-                pos = 2;
-                break;
             case 0:
+            case 2:
+            case 3: {
                 pos = 1;
                 break;
-            default:
+            }
+            default: {
                 pos = 2;
                 break;
         }
+        }
 
-        if (memcmp(cmd + pos, "\x00\xa4\x04\x00\x0a", 5) == 0) {
-            snprintf(exp, size, "SELECT AID");
+        if (memcmp(cmd + pos, "\x00\xA4\x04\x00", 4) == 0) {
+            uint8_t n = cmd[pos + 4];
+            snprintf(exp, size, "SELECT AID " _WHITE_("%s"), sprint_hex_inrow(cmd + pos + 4 + 1, n));
+            return;
+        }
+
+        if (memcmp(cmd + pos, "\x80\xA5\x00\x00", 4) == 0) {
+            snprintf(exp, size, "SELECT GDF");
+            return;
         }
 
         if (memcmp(cmd + pos, "\x80\xA5\x04\x00", 4) == 0) {
-            snprintf(exp, size, "SELECT ADF / OID");
+            uint8_t n = cmd[pos + 4 + 2];
+            snprintf(exp, size, "SELECT OID " _WHITE_("%s"), sprint_hex_inrow(cmd + pos + 4 + 2 + 1, n));
+            return;
         }
 
-        if (memcmp(cmd + pos, "\x00\x87\x00\x01\x04\x7c\x02\x81\x00", 9) == 0) {
-            snprintf(exp, size, "GET CHALLENGE");
+        if (memcmp(cmd + pos, "\x80\xA5\x07", 3) == 0) {
+            uint8_t ks = cmd[pos + 3];
+            snprintf(exp, size, "SELECT GDF " _WHITE_("(") " key " _MAGENTA_("%02X") " )", ks);
+            return;
         }
 
-        if (memcmp(cmd + pos, "\x00\x87\x00\x01\x2c", 5) == 0) {
-            snprintf(exp, size, "MUTUAL AUTHENTICATION");
+        if (memcmp(cmd + pos, "\x00\x87\x00", 3) == 0) {
+            uint8_t ks = cmd[pos + 3];
+            if (memcmp(cmd + pos + 3 + 1, "\x04\x7c\x02\x81\x00", 5) == 0) {
+                snprintf(exp, size, "GET CHALLENGE " _WHITE_("(") " key " _MAGENTA_("%02X") " )", ks);
+            }
+            return;
         }
 
-        if (memcmp(cmd + pos, "\x0c\xcb\x3f\xff", 4) == 0) {
+        if (memcmp(cmd + pos, "\x00\x87\x00", 3) == 0) {
+            uint8_t ks = cmd[pos + 3];
+            if (memcmp(cmd + pos + 3 + 1, "\x2C\x7C\x2A\x82\x28", 5) == 0) {
+                snprintf(exp, size, "MUTUAL AUTHENTICATION " _WHITE_("(") " key " _MAGENTA_("%02X") " )", ks);
+            }
+            return;
+        }
+
+        if (memcmp(cmd + pos, "\x0C\xCB\x3F\xFF", 4) == 0) {
             snprintf(exp, size, "GET DATA");
+            return;
         }
 
-        // apply ISO7816 annotations?
-//        if (annotateIso7816(exp, size, cmd, cmdsize) == 0) {
-//        }
-        // apply SEOS annotations?
+        if (memcmp(cmd + pos, "\x0C\xDB\x3F\xFF", 4) == 0) {
+            snprintf(exp, size, "UPDATE DATA");
+            return;
+        }
+
+        if (memcmp(cmd + pos, "\x0C\xED\x06\x00", 4) == 0) {
+            snprintf(exp, size, "DELETE DATA");
+            return;
+        }
+
+        if (memcmp(cmd + pos, "\x0C\x41\x0C\x03", 4) == 0) {
+            snprintf(exp, size, "CREATE ADF");
+            return;
+        }
+
+        if (isResponse) {
+
+            if (memcmp(cmd + pos, "\xCD\x02", 2) == 0) {
+
+                uint8_t ea = cmd[pos + 2];
+                uint8_t ha = cmd[pos + 3];
+
+                char eas[10] = {0};
+                if (ea == SEOS_ENCRYPTION_2K3DES) {
+                    strcat(eas, "2K3DES");
+                } else if (ea == SEOS_ENCRYPTION_3K3DES) {
+                    strcat(eas, "3K3DES");
+                } else if (ea == SEOS_ENCRYPTION_AES) {
+                    strcat(eas, "AES");
+                }
+
+                char has[10] = {0};
+                if (ha == SEOS_HASHING_SHA1) {
+                    strcat(has, "SHA1");
+                } else if (ha == SEOS_HASHING_SHA256) {
+                    strcat(has, "SHA256");
+                }
+                snprintf(exp, size, "%s / %s", eas, has);
+                return;
+            }
+        }
     }
 }
 
@@ -1830,11 +1925,13 @@ void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 
             uint16_t address = (cmd[2] << 7) | cmd[1] >> 1;
 
-            if (cmdBit == LEGIC_READ)
+            if (cmdBit == LEGIC_READ) {
                 snprintf(exp, size, "READ Byte(%d)", address);
+            }
 
-            if (cmdBit == LEGIC_WRITE)
+            if (cmdBit == LEGIC_WRITE) {
                 snprintf(exp, size, "WRITE Byte(%d)", address);
+            }
             break;
         }
         case 21: {
@@ -1854,8 +1951,9 @@ void annotateLegic(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             break;
         }
         case 12:
-        default:
+        default: {
             break;
+        }
     }
 }
 

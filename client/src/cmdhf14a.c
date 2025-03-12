@@ -1207,28 +1207,35 @@ static int CmdExchangeAPDU(bool chainingin, const uint8_t *datain, int datainlen
     }
 
     uint16_t cmdc = 0;
-    if (chainingin)
+    if (chainingin) {
         cmdc = ISO14A_SEND_CHAINING;
+    }
 
     // "Command APDU" length should be 5+255+1, but javacard's APDU buffer might be smaller - 133 bytes
     // https://stackoverflow.com/questions/32994936/safe-max-java-card-apdu-data-command-and-respond-size
     // here length PM3_CMD_DATA_SIZE=512
     // timeout must be authomatically set by "get ATS"
-    if (datain)
+    if (datain) {
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, (datainlen & 0x1FF), 0, datain, datainlen & 0x1FF);
-    else
+    } else {
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, 0, 0, NULL, 0);
+    }
 
     PacketResponseNG resp;
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, timeout)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, timeout) == false) {
+        PrintAndLogEx(DEBUG, "ERR: APDU: Reply timeout");
+        return PM3_EAPDU_FAIL;
+    }
+
         const uint8_t *recv = resp.data.asBytes;
         int iLen = resp.oldarg[0];
         uint8_t res = resp.oldarg[1];
 
         int dlen = iLen - 2;
-        if (dlen < 0)
+    if (dlen < 0) {
             dlen = 0;
+    }
         *dataoutlen += dlen;
 
         if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
@@ -1243,7 +1250,7 @@ static int CmdExchangeAPDU(bool chainingin, const uint8_t *datain, int datainlen
             return PM3_SUCCESS;
         }
 
-        if (!iLen) {
+    if (iLen == 0) {
             PrintAndLogEx(DEBUG, "ERR: APDU: No APDU response");
             return PM3_EAPDU_FAIL;
         }
@@ -1272,10 +1279,6 @@ static int CmdExchangeAPDU(bool chainingin, const uint8_t *datain, int datainlen
             PrintAndLogEx(DEBUG, "ERR: APDU: ISO 14443A CRC error");
             return PM3_EAPDU_FAIL;
         }
-    } else {
-        PrintAndLogEx(DEBUG, "ERR: APDU: Reply timeout");
-        return PM3_EAPDU_FAIL;
-    }
 
     return PM3_SUCCESS;
 }
@@ -2779,7 +2782,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         if ((isMagic & MAGIC_FLAG_GEN_2) == MAGIC_FLAG_GEN_2) {
             PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf") "` commands");
         } else {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mf`") " commands");
+            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mf info`"));
         }
     }
 

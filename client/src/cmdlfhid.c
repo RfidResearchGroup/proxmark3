@@ -575,11 +575,13 @@ static int CmdHIDBrute(const char *Cmd) {
         PrintAndLogEx(INFO, "Facility code.... %u", card_hi.FacilityCode);
         PrintAndLogEx(INFO, "Card number...... %" PRIu64, card_hi.CardNumber);
         PrintAndLogEx(INFO, "Delay............ " _YELLOW_("%d"), delay);
+
         if (strcmp(field, "fc") == 0) {
             PrintAndLogEx(INFO, "Field............ " _YELLOW_("fc"));
         } else if (strcmp(field, "cn") == 0) {
             PrintAndLogEx(INFO, "Field............ " _YELLOW_("cn"));
         }
+
         switch (direction) {
             case 0:
                 PrintAndLogEx(INFO, "Direction........ " _YELLOW_("both"));
@@ -594,6 +596,7 @@ static int CmdHIDBrute(const char *Cmd) {
                 break;
         }
     }
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Started bruteforcing HID Prox reader");
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");

@@ -561,8 +561,10 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             case ISO_14443A:
             case MFDES:
             case LTO:
-            case SEOS:
                 crcStatus = iso14443A_CRC_check(hdr->isResponse, frame, data_len);
+                break;
+            case SEOS:
+                crcStatus = seos_CRC_check(hdr->isResponse, frame, data_len);
                 break;
             case ISO_7816_4:
                 crcStatus = iso14443A_CRC_check(hdr->isResponse, frame, data_len) == 1 ? 3 : 0;
@@ -803,6 +805,9 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         case ICLASS:
             annotateIclass(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
             break;
+        case SEOS:
+            annotateSeos(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+            break;
         default:
             break;
     }
@@ -838,9 +843,6 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 break;
             case PROTO_CRYPTORF:
                 annotateCryptoRF(explanation, sizeof(explanation), frame, data_len);
-                break;
-            case SEOS:
-                annotateSeos(explanation, sizeof(explanation), frame, data_len);
                 break;
             case PROTO_FMCOS20:
                 annotateFMCOS20(explanation, sizeof(explanation), frame, data_len);
