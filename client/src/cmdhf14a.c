@@ -1228,57 +1228,57 @@ static int CmdExchangeAPDU(bool chainingin, const uint8_t *datain, int datainlen
         return PM3_EAPDU_FAIL;
     }
 
-        const uint8_t *recv = resp.data.asBytes;
-        int iLen = resp.oldarg[0];
-        uint8_t res = resp.oldarg[1];
+    const uint8_t *recv = resp.data.asBytes;
+    int iLen = resp.oldarg[0];
+    uint8_t res = resp.oldarg[1];
 
-        int dlen = iLen - 2;
+    int dlen = iLen - 2;
     if (dlen < 0) {
-            dlen = 0;
+        dlen = 0;
     }
-        *dataoutlen += dlen;
+    *dataoutlen += dlen;
 
-        if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
-            PrintAndLogEx(DEBUG, "ERR: APDU: Buffer too small(%d), needs %d bytes", *dataoutlen, maxdataoutlen);
-            return PM3_EAPDU_FAIL;
-        }
+    if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
+        PrintAndLogEx(DEBUG, "ERR: APDU: Buffer too small(%d), needs %d bytes", *dataoutlen, maxdataoutlen);
+        return PM3_EAPDU_FAIL;
+    }
 
-        // I-block ACK
-        if ((res & 0xF2) == 0xA2) {
-            *dataoutlen = 0;
-            *chainingout = true;
-            return PM3_SUCCESS;
-        }
+    // I-block ACK
+    if ((res & 0xF2) == 0xA2) {
+        *dataoutlen = 0;
+        *chainingout = true;
+        return PM3_SUCCESS;
+    }
 
     if (iLen == 0) {
-            PrintAndLogEx(DEBUG, "ERR: APDU: No APDU response");
-            return PM3_EAPDU_FAIL;
-        }
+        PrintAndLogEx(DEBUG, "ERR: APDU: No APDU response");
+        return PM3_EAPDU_FAIL;
+    }
 
-        // check apdu length
-        if (iLen < 2 && iLen >= 0) {
-            PrintAndLogEx(DEBUG, "ERR: APDU: Small APDU response, len %d", iLen);
-            return PM3_EAPDU_FAIL;
-        }
+    // check apdu length
+    if (iLen < 2 && iLen >= 0) {
+        PrintAndLogEx(DEBUG, "ERR: APDU: Small APDU response, len %d", iLen);
+        return PM3_EAPDU_FAIL;
+    }
 
-        // check block TODO
-        if (iLen == -2) {
-            PrintAndLogEx(DEBUG, "ERR: APDU: Block type mismatch");
-            return PM3_EAPDU_FAIL;
-        }
+    // check block TODO
+    if (iLen == -2) {
+        PrintAndLogEx(DEBUG, "ERR: APDU: Block type mismatch");
+        return PM3_EAPDU_FAIL;
+    }
 
-        memcpy(dataout, recv, dlen);
+    memcpy(dataout, recv, dlen);
 
-        // chaining
-        if ((res & 0x10) != 0) {
-            *chainingout = true;
-        }
+    // chaining
+    if ((res & 0x10) != 0) {
+        *chainingout = true;
+    }
 
-        // CRC Check
-        if (iLen == -1) {
-            PrintAndLogEx(DEBUG, "ERR: APDU: ISO 14443A CRC error");
-            return PM3_EAPDU_FAIL;
-        }
+    // CRC Check
+    if (iLen == -1) {
+        PrintAndLogEx(DEBUG, "ERR: APDU: ISO 14443A CRC error");
+        return PM3_EAPDU_FAIL;
+    }
 
     return PM3_SUCCESS;
 }

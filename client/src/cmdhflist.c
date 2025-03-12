@@ -464,7 +464,7 @@ int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool i
                 } else {
                     return PM3_ESOFT;
                 }
-        }
+            }
         }
 
     } else {
@@ -1798,7 +1798,7 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is
             default: {
                 pos = 2;
                 break;
-        }
+            }
         }
 
         if (memcmp(cmd + pos, "\x00\xA4\x04\x00", 4) == 0) {

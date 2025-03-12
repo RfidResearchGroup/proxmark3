@@ -1305,7 +1305,7 @@ int detect_num_CPUs(void) {
 void str_lower(char *s) {
     for (size_t i = 0; i < strlen(s); i++) {
         s[i] = tolower(s[i]);
-}
+    }
 }
 
 void str_upper(char *s) {
@@ -1315,7 +1315,7 @@ void str_upper(char *s) {
 void strn_upper(char *s, size_t n) {
     for (size_t i = 0; i < n; i++) {
         s[i] = toupper(s[i]);
-}
+    }
 }
 // check for prefix in string
 bool str_startswith(const char *s,  const char *pre) {
@@ -1352,8 +1352,8 @@ void str_creplace(char *buf, size_t len, char from, char to) {
     for (size_t i = 0; i < len; i++) {
         if (buf[i] == from) {
             buf[i] = to;
+        }
     }
-}
 }
 
 char *str_dup(const char *src) {

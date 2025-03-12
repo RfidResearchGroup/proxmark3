@@ -239,11 +239,11 @@ int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtab
                 } else {
 
 //                    if (isSpace(str[i]) == false) {
-                        *bufptr++ = str[i];
+                    *bufptr++ = str[i];
 //                    }
                 }
                 break;
-        }
+            }
         }
 
         if (bufptr > bufptrend) {
