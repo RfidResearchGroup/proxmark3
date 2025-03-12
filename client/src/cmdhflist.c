@@ -31,6 +31,7 @@
 #include "protocols.h"
 #include "cmdhficlass.h"
 #include "mifare/mifaredefault.h"  // mifare consts
+#include "cmdhfseos.h"
 
 enum MifareAuthSeq {
     masNone,
