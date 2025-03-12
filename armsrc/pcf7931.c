@@ -28,6 +28,13 @@
 #define T0_PCF 8 //period for the pcf7931 in us
 #define ALLOC 16
 
+// IIR filter consts
+#define IIR_CONST1 0.1f
+#define IIR_CONST2 0.9f
+
+// theshold for recognition of positive/negative slope
+#define THRESHOLD 80
+
 size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
     const uint8_t DECIMATION = 4;
     uint8_t bits[256] = {0x00};
@@ -70,7 +77,6 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
 
     uint8_t block_done;
     size_t num_blocks = 0;
-    uint8_t threshold = 50; // threshold to filter out noise, from an actual edge.
     EdgeType expectedNextEdge = FALLING; // direction in which the next edge is expected should go.
 
     half_switch = 0;
@@ -78,15 +84,16 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
     block_done = 0;
     bitPos = 0;
     lastClockDuration=0;
-
-    for (sample = 1 ; sample < g_GraphTraceLen; sample++) {
+    
+    for (sample = 1 ; sample < g_GraphTraceLen-4; sample++) {
          // condition is searching for the next edge, in the expected diretion.
-        if ( ((dest[sample] + threshold) < dest[sample-1] && expectedNextEdge == FALLING ) || 
-             ((dest[sample] - threshold) > dest[sample-1] && expectedNextEdge == RISING )) {
+        //todo: without flouz
+        dest[sample] = (uint8_t)(dest[sample-1] * IIR_CONST1 +  dest[sample] * IIR_CONST2); // apply IIR filter
+
+        if ( ((dest[sample] + THRESHOLD) < dest[sample-1] && expectedNextEdge == FALLING ) || 
+             ((dest[sample] - THRESHOLD) > dest[sample-1] && expectedNextEdge == RISING )) {
             //okay, next falling/rising edge found
-            
-            
-            
+
             expectedNextEdge = (expectedNextEdge == FALLING) ? RISING : FALLING; //toggle the next expected edge
             samplePosCurrentEdge = sample;
             beforeLastClockDuration = lastClockDuration; // save the previous clock duration for PMC recognition
@@ -146,7 +153,10 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
             } else {
                 // some Error. maybe check tolerances. 
                 // likeley to happen in the first block.
-                Dbprintf(_RED_("ERROR in demodulation") " Length last clock: %d - check threshold/tolerance/signal. Toss block", lastClockDuration*DECIMATION);
+               
+                // In an Ideal world, this can be enabled. However, if only bad antenna field, this print will flood the output
+                // and one might miss some "good" frames.
+                //Dbprintf(_RED_("ERROR in demodulation") " Length last clock: %d - check threshold/tolerance/signal. Toss block", lastClockDuration*DECIMATION);
 
                 // Toss this block.
                 block_done = 1;
