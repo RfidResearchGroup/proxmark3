@@ -32,15 +32,28 @@
 #define IIR_CONST1 0.1f
 #define IIR_CONST2 0.9f
 
+// used to decimate samples. this allows DoAcquisition to sample for a longer duration.
+// Decimation of 4 makes sure that all blocks can be sampled at once!
+#define DECIMATION 4
+
+#define CLOCK (64/DECIMATION) // this actually is 64, but since samples are decimated by 2, CLOCK is also /2
+#define TOLERANCE (CLOCK / 8)
+#define _16T0 (CLOCK/4)
+#define _32T0 (CLOCK/2)
+#define _64T0 (CLOCK)
+
+// calculating the two possible pmc lengths, based on the clock. -4 at the end is to make sure not to increment too far
+#define PMC_16T0_LEN ((128 + 127 + 16 + 32 + 33 + 16) * CLOCK/64); 
+#define PMC_32T0_LEN ((128 + 127 + 16 + 32 + 33 ) * CLOCK/64);
+
 // theshold for recognition of positive/negative slope
 #define THRESHOLD 80
 
 size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
-    const uint8_t DECIMATION = 4;
     uint8_t bits[256] = {0x00};
     uint8_t blocks[8][16];
     uint8_t *dest = BigBuf_get_addr();
-    int g_GraphTraceLen = BigBuf_max_traceLen();
+    uint16_t g_GraphTraceLen = BigBuf_max_traceLen();
     // limit g_GraphTraceLen to a little more than 2 data frames. 
     // To make sure a complete dataframe is in the dataset.
     // 1 Frame is 16 Byte -> 128byte. at a T0 of 64 -> 8129 Samples per frame.
@@ -48,8 +61,8 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
     // to make sure that one complete block is definitely being sampled, we need 2 times that
     // which is ~17.xxx samples. round up. and clamp to this value.
   
-    // TODO: Doublecheck why this is being limited?
-//    g_GraphTraceLen = (g_GraphTraceLen > 18000) ? 18000 : g_GraphTraceLen;
+    // TODO: Doublecheck why this is being limited? - seems not to be needed.
+    // g_GraphTraceLen = (g_GraphTraceLen > 18000) ? 18000 : g_GraphTraceLen;
 
     BigBuf_Clear_keep_EM();
     LFSetupFPGAForADC(LF_DIVISOR_125, true);
@@ -65,15 +78,6 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
     uint8_t lastClockDuration; // used to store the duration of the last "clock", for decoding. clock may not be the correct term, maybe bit is better. The duration between two edges is meant
     uint8_t beforeLastClockDuration; // store the clock duration of the cycle before the last Clock duration. Basically clockduration -2
 
-
-    const uint8_t clock = 64/DECIMATION;   // this actually is 64, but since samples are decimated by 2, clock is also /2
-    const uint8_t tolerance = clock / 8;
-    const uint8_t _16T0 = clock/4;
-    const uint8_t _32T0 = clock/2;
-    const uint8_t _64T0 = clock;
-
-    const uint16_t pmc16T0Len = (128 + 127 + 16 + 32 + 33 + 16) * clock/64; // calculating the two possible pmc lengths, based on the clock. -4 at the end is to make sure not to increment too far
-    const uint16_t pmc32T0Len = (128 + 127 + 16 + 32 + 33 ) * clock/64;
 
     uint8_t block_done;
     size_t num_blocks = 0;
@@ -104,13 +108,13 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
             
             // Switch depending on lastClockDuration length:
             // 16T0 
-            if (ABS(lastClockDuration - _16T0) < tolerance) {
+            if (ABS(lastClockDuration - _16T0) < TOLERANCE) {
 
                 // if the clock before also was 16T0, it is a PMC!
-                if (ABS(beforeLastClockDuration - _16T0) < tolerance) { 
+                if (ABS(beforeLastClockDuration - _16T0) < TOLERANCE) { 
                     // It's a PMC
                     Dbprintf(_GREEN_("PMC 16T0 FOUND:") " bitPos: %d, sample: %d", bitPos, sample);
-                    sample += pmc16T0Len;  // move to the sample after PMC
+                    sample += PMC_16T0_LEN;  // move to the sample after PMC
 
                     expectedNextEdge = FALLING;
                     samplePosLastEdge = sample;
@@ -118,13 +122,13 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
                 }
             
             // 32TO
-            } else if (ABS(lastClockDuration - _32T0) < tolerance) {
+            } else if (ABS(lastClockDuration - _32T0) < TOLERANCE) {
                 // if the clock before also was 16T0, it is a PMC!
-                if (ABS(beforeLastClockDuration - _16T0) < tolerance) {
+                if (ABS(beforeLastClockDuration - _16T0) < TOLERANCE) {
                     // It's a PMC !
                     Dbprintf(_GREEN_("PMC 32T0 FOUND:") " bitPos: %d, sample: %d", bitPos, sample);
                     
-                    sample += pmc32T0Len;    // move to the sample after PMC
+                    sample += PMC_32T0_LEN;    // move to the sample after PMC
 
                     expectedNextEdge = FALLING;
                     samplePosLastEdge = sample;
@@ -144,7 +148,7 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
                     half_switch++;
 
             // 64T0
-            } else if (ABS(lastClockDuration - _64T0) < tolerance) {
+            } else if (ABS(lastClockDuration - _64T0) < TOLERANCE) {
                 // this means, bit here is 1
                 bits[bitPos] = 1;
                 bitPos++;
@@ -248,10 +252,7 @@ bool IsBlock1PCF7931(const uint8_t *block) {
 
 void ReadPCF7931(bool ledcontrol) {
     
-    Dbprintf("ReadPCF7931()==========");
-
     uint8_t maxBlocks = 8;   // readable blocks
-
     int found_blocks = 0; // successfully read blocks
     
     // TODO: Why 17 byte len? 16 should be good.
@@ -275,7 +276,7 @@ void ReadPCF7931(bool ledcontrol) {
     //j = 0;
 
     do {
-        Dbprintf("ReadPCF7931() -- DO LOOP ==========");
+        Dbprintf("ReadPCF7931() -- Reading Loop ==========");
         i = 0;
 
         memset(tmp_blocks, 0, 4 * 16 * sizeof(uint8_t));
@@ -298,6 +299,9 @@ void ReadPCF7931(bool ledcontrol) {
 
             goto end;
         }
+
+        // This part was not working properly. 
+        // So currently the blocks are not being sorted, but at least printed.
 
         // // our logic breaks if we don't get at least two blocks
         // if (n < 2) {
@@ -328,8 +332,9 @@ void ReadPCF7931(bool ledcontrol) {
         // if (g_dbglevel >= DBG_EXTENDED)
         //     Dbprintf("(dbg) got %d blocks (%d/%d found) (%d tries, %d errors)", n, found_blocks, (maxBlocks == 0 ? found_blocks : maxBlocks), tries, errors);
 
+        // print blocks that have been found
         for (i = 0; i < n; ++i) {
-            print_result("got consecutive blocks", tmp_blocks[i], 16);
+            print_result("Block found: ", tmp_blocks[i], 16);
         }
 
         // i = 0;
@@ -396,7 +401,9 @@ void ReadPCF7931(bool ledcontrol) {
         }
     } while (found_blocks < maxBlocks);
 
+
 end:
+/*
     Dbprintf("-----------------------------------------");
     Dbprintf("Memory content:");
     Dbprintf("-----------------------------------------");
@@ -417,6 +424,8 @@ end:
 
         Dbprintf("-----------------------------------------");
     }
+*/
+
     reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
 }
 
