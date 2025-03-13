@@ -2122,9 +2122,9 @@ static int CmdEMVScan(const char *Cmd) {
 
     uint8_t psenum = (channel == CC_CONTACT) ? 1 : 2;
 
-    char filename[FILE_PATH_SIZE] = {0};
-    int fnlen = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 12), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    uint8_t filename[FILE_PATH_SIZE] = {0};
+    int filenamelen = sizeof(filename) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
+    CLIGetStrWithReturn(ctx, 12, filename, &filenamelen);
 
     CLIParserFree(ctx);
 
@@ -2507,7 +2507,7 @@ static int CmdEMVRoca(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("t",  "selftest", "Self test"),
+        arg_lit0(NULL, "test",   "Perform self tests"),
         arg_lit0("a",  "apdu",     "Show APDU requests and responses"),
         arg_lit0("w",  "wired",    "Send data via contact (iso7816) interface. (def: Contactless interface)"),
         arg_param_end
@@ -2981,7 +2981,7 @@ static command_t CommandTable[] =  {
     {"-----------", CmdHelp,                        AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
     {"help",        CmdHelp,                        AlwaysAvailable, "This help"},
     {"list",        CmdEMVList,                     AlwaysAvailable, "List ISO7816 history"},
-    {"test",        CmdEMVTest,                     AlwaysAvailable, "Crypto logic selftest"},
+    {"test",        CmdEMVTest,                     AlwaysAvailable, "Perform crypto logic self tests"},
     {"-----------", CmdHelp,                        IfPm3Iso14443a,  "---------------------- " _CYAN_("Operations") " ---------------------"},
     {"challenge",   CmdEMVGenerateChallenge,        IfPm3Iso14443,   "Generate challenge"},
     {"exec",        CmdEMVExec,                     IfPm3Iso14443,   "Executes EMV contactless transaction"},

@@ -21,6 +21,12 @@
 
 #include "common.h"
 
+#define SEOS_ENCRYPTION_2K3DES      0x02
+#define SEOS_ENCRYPTION_3K3DES      0x03
+#define SEOS_ENCRYPTION_AES         0x09
+
+#define SEOS_HASHING_SHA1           0x06
+#define SEOS_HASHING_SHA256         0x07
 int infoSeos(bool verbose);
 int CmdHFSeos(const char *Cmd);
 int seos_kdf(bool encryption, uint8_t *masterKey, uint8_t keyslot,

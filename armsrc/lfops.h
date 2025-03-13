@@ -34,6 +34,7 @@ void SimulateTagLowFrequencyEx(int period, int gap, bool ledcontrol, int numcycl
 void SimulateTagLowFrequency(int period, int gap, bool ledcontrol);
 void SimulateTagLowFrequencyBidir(int divisor, int max_bitlen);
 
+bool add_HID_preamble(uint32_t *hi2, uint32_t *hi, uint32_t *lo, uint8_t length);
 void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, bool ledcontrol, int numcycles);
 void CmdHIDsimTAG(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, bool ledcontrol);
 

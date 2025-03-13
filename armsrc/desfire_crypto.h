@@ -183,7 +183,7 @@ void tdes_nxp_send(const void *in, void *out, size_t length, const void *key, ui
 void aes128_nxp_receive(const void *in, void *out, size_t length, const void *key, unsigned char iv[16]);
 void aes128_nxp_send(const void *in, void *out, size_t length, const void *key, unsigned char iv[16]);
 
-void Desfire_des_key_new(const uint8_t value[8], desfirekey_t key);
+void Desfire_des_key_new(const uint8_t *value, desfirekey_t key);
 void Desfire_3des_key_new(const uint8_t value[16], desfirekey_t key);
 void Desfire_des_key_new_with_version(const uint8_t value[8], desfirekey_t key);
 void Desfire_3des_key_new_with_version(const uint8_t value[16], desfirekey_t key);
@@ -206,5 +206,7 @@ size_t maced_data_length(const desfirekey_t  key, const size_t nbytes);
 size_t enciphered_data_length(const desfiretag_t tag, const size_t nbytes, int communication_settings);
 void cmac_generate_subkeys(desfirekey_t key);
 void cmac(const desfirekey_t  key, uint8_t *ivect, const uint8_t *data, size_t len, uint8_t *cmac);
+
+size_t key_macing_length(desfirekey_t key);
 
 #endif

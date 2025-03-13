@@ -74,7 +74,7 @@ static uint8_t pwdh0, pwdl0, pwdl1;                 // password bytes
 static uint8_t rnd[] = {0x85, 0x44, 0x12, 0x74};    // random number
 static uint16_t timestamp_high = 0;                 // Timer Counter 2 overflow count, ~47min
 
-#define TIMESTAMP (AT91C_BASE_TC2->TC_SR &AT91C_TC_COVFS ? timestamp_high += 1 : 0, ((timestamp_high << 16) + AT91C_BASE_TC2->TC_CV) / T0)
+#define TIMESTAMP ( (AT91C_BASE_TC2->TC_SR & AT91C_TC_COVFS) ? timestamp_high += 1 : 0, ((timestamp_high << 16) + AT91C_BASE_TC2->TC_CV) / T0)
 
 //#define SENDBIT_TEST
 
@@ -538,7 +538,8 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
             rotate_uid++;
             *txlen = 32;
             // init crypt engine
-            state = ht2_hitag2_init(REV64(tag.data.s.key), REV32(tag.data.s.uid_le), REV32(*(uint32_t *)rx));
+            uint32_t le_rx = MemLeToUint4byte(rx);
+            state = ht2_hitag2_init(REV64(tag.data.s.key), REV32(tag.data.s.uid_le), REV32(le_rx));
             DBG Dbhexdump(8, tx, false);
 
             for (int i = 0; i < 4; i++) {
@@ -776,7 +777,9 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
 
                 if (ledcontrol) LED_B_ON();
                 // Capture reader cmd start timestamp
-                if (start_time == 0) start_time = TIMESTAMP - HITAG_T_LOW;
+                if (start_time == 0) {
+                    start_time = TIMESTAMP - HITAG_T_LOW;
+                }
 
                 // Capture reader frame
                 if (rb >= HITAG_T_STOP) {
@@ -863,9 +866,6 @@ static void hts_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint3
 
     uint32_t rb_i = 0, h2 = 0, h3 = 0, h4 = 0;
     uint8_t edges[160] = {0};
-
-    // Dbprintf("TC0_CV:%i TC1_CV:%i TC1_RB:%i TIMESTAMP:%u", AT91C_BASE_TC0->TC_CV, AT91C_BASE_TC1->TC_CV,
-    //          AT91C_BASE_TC1->TC_RB, TIMESTAMP);
 
     // Receive tag frame, watch for at most T0*HITAG_T_PROG_MAX periods
     while (AT91C_BASE_TC0->TC_CV < (T0 * HITAG_T_PROG_MAX)) {
@@ -1034,8 +1034,9 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
             DbpString("htS: response_bit:");
             Dbhexdump(*rxlen, response_bit, false);
             Dbprintf("htS: skipping %d bit SOF", sof_bits);
+
             if ((rx[0] >> (8 - sof_bits)) != ((1 << sof_bits) - 1)) {
-                DbpString("htS: Warning, not all bits of SOF are 1");
+                DBG DbpString("htS: Warning, not all bits of SOF are 1");
             }
         }
 
@@ -1128,12 +1129,10 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
         // if the tag is in authentication mode try the key or challenge
         if (packet->cmd == HTSF_KEY) {
 
-            DBG DbpString("Authenticating using key:");
-            DBG Dbhexdump(6, packet->key, false);
+            key_le = MemLeToUint6byte(packet->key);
 
-            key_le = *(uint64_t *)packet->key;
-
-            uint64_t state = ht2_hitag2_init(REV64(key_le), REV32(tag.data.s.uid_le), REV32(*(uint32_t *)rnd));
+            uint32_t le_val = MemLeToUint4byte(rnd);
+            uint64_t state = ht2_hitag2_init(REV64(key_le), REV32(tag.data.s.uid_le), REV32(le_val));
 
             uint8_t auth_ks[4];
             for (int i = 0; i < 4; i++) {
@@ -1144,6 +1143,8 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
             txlen = concatbits(tx, txlen, rnd, 0, 32);
             txlen = concatbits(tx, txlen, auth_ks, 0, 32);
 
+            DBG DbpString("Authenticating using key:");
+            DBG Dbhexdump(6, packet->key, false);
             DBG Dbprintf("%02X %02X %02X %02X %02X %02X %02X %02X", tx[0], tx[1], tx[2], tx[3], tx[4], tx[5], tx[6], tx[7]);
 
         } else if (packet->cmd == HTSF_CHALLENGE) {
@@ -1225,7 +1226,9 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
         pwdl1 = 0;
         if (packet->cmd == HTSF_KEY) {
 
-            uint64_t state = ht2_hitag2_init(REV64(key_le), REV32(tag.data.s.uid_le), REV32(*(uint32_t *)rnd));
+            uint32_t le_val = MemLeToUint4byte(rnd);
+            uint64_t state = ht2_hitag2_init(REV64(key_le), REV32(tag.data.s.uid_le), REV32(le_val));
+
             for (int i = 0; i < 4; i++) {
                 ht2_hitag2_byte(&state);
             }

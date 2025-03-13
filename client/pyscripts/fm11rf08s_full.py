@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""This script recovers Fudan FM11RF08S cards, including functionalities for Bambu tags decoding."""
 
 # ------------------------------------------------------------------------------
 # Imports
@@ -43,17 +44,18 @@ try:
     from colors import color
 except ModuleNotFoundError:
     def color(s, fg=None):
+        """Return the string as such, without color."""
         _ = fg
         return str(s)
 
 
 def initlog():
-    """Print and Log: init globals
+    """Print and Log: init globals.
 
-globals:
-- logbuffer (W)
-- logfile (W)
-"""
+    globals:
+    - logbuffer (W)
+    - logfile (W)
+    """
     global logbuffer
     global logfile
     logbuffer = ''
@@ -61,12 +63,12 @@ globals:
 
 
 def startlog(uid, dpath, append=False):
-    """Print and Log: set logfile and flush logbuffer
+    """Print and Log: set logfile and flush logbuffer.
 
-globals:
-- logbuffer (RW)
-- logfile (RW)
-"""
+    globals:
+    - logbuffer (RW)
+    - logfile (RW)
+    """
     global logfile
     global logbuffer
 
@@ -81,13 +83,12 @@ globals:
 
 
 def lprint(s='',  end='\n', flush=False, prompt="[" + color("=", fg="yellow") + "] ", log=True):
-    """Print and Log
+    """Print and Log.
 
-globals:
-- logbuffer (RW)
-- logfile (R)
-"""
-
+    globals:
+    - logbuffer (RW)
+    - logfile (R)
+    """
     s = f"{prompt}" + f"\n{prompt}".join(s.split('\n'))
     print(s, end=end, flush=flush)
 
@@ -102,11 +103,11 @@ globals:
 
 
 def main():
-    """== MAIN ==
+    """== MAIN ==.
 
-globals:
-- p (W)
-"""
+    globals:
+    - p (W)
+    """
     global p
     p = pm3.pm3()  # console interface
     initlog()
@@ -143,7 +144,7 @@ globals:
         else:
             # FIXME: recovery() is only for RF08S. TODO for the other ones with a "darknested" attack
             keyfile = recoverKeys(uid=uid, kdf=[["Bambu v1", kdfBambu1]])
-            if keyfile == False:
+            if keyfile is False:
                 lprint("Script failed - aborting")
                 return
             key = loadKeys(keyfile)
@@ -181,11 +182,11 @@ globals:
 
 
 def getPrefs():
-    """Get PM3 preferences
+    """Get PM3 preferences.
 
-globals:
-- p (R)
-"""
+    globals:
+    - p (R)
+    """
     p.console("prefs show --json")
     prefs = json.loads(p.grabbed_output)
     dpath = prefs['file.default.dumppath'] + os.path.sep
@@ -193,7 +194,7 @@ globals:
 
 
 def checkVer():
-    """Assert python version"""
+    """Assert python version."""
     required_version = (3, 8)
     if sys.version_info < required_version:
         print(f"Python version: {sys.version}")
@@ -203,7 +204,7 @@ def checkVer():
 
 
 def parseCli():
-    """Parse the CLi arguments"""
+    """Parse the CLi arguments."""
     parser = argparse.ArgumentParser(description='Full recovery of Fudan FM11RF08S cards.')
 
     parser.add_argument('-n', '--nokeys',   action='store_true', help='extract data even if keys are missing')
@@ -222,15 +223,15 @@ def parseCli():
 
 
 def getBackdoorKey():
-    """Find backdoor key
-[=]   # | sector 00 / 0x00                                | ascii
-[=] ----+-------------------------------------------------+-----------------
-[=]   0 | 5C B4 9C A6 D2 08 04 00 04 59 92 25 BF 5F 70 90 | \\........Y.%._p.
+    r"""Find backdoor key.
 
-globals:
-- p (R)
-"""
+    [=]   # | sector 00 / 0x00                                | ascii
+    [=] ----+-------------------------------------------------+-----------------
+    [=]   0 | 5C B4 9C A6 D2 08 04 00 04 59 92 25 BF 5F 70 90 | \........Y.%._p.
 
+    globals:
+    - p (R)
+    """
     #          FM11RF08S        FM11RF08        FM11RF32
     dklist = ["A396EFA4E24F", "A31667A8CEC1", "518b3354E760"]
 
@@ -259,14 +260,14 @@ globals:
 
 
 def getUIDfromBlock0(blk0):
-    """Extract UID from block 0"""
+    """Extract UID from block 0."""
     uids = blk0[0:11]                            # UID string  : "11 22 33 44"
     uid = bytes.fromhex(uids.replace(' ', ''))   # UID (bytes) : 11223344
     return uid
 
 
 def decodeBlock0(blk0):
-    """Extract data from block 0"""
+    """Extract data from block 0."""
     lprint()
     lprint("             UID         BCC         ++---- RF08* ID -----++")
     lprint("             !           !  SAK      !!                   !!")
@@ -346,7 +347,7 @@ def decodeBlock0(blk0):
 
 
 def fudanValidate(blk0, live=False):
-    """Fudan validation"""
+    """Fudan validation."""
     url = "https://rfid.fm-uivs.com/nfcTools/api/M1KeyRest"
     hdr = "Content-Type: application/text; charset=utf-8"
     post = f"{blk0.replace(' ', '')}"
@@ -387,10 +388,10 @@ def fudanValidate(blk0, live=False):
 
 
 def loadKeys(keyfile):
-    """Load keys from file
+    """Load keys from file.
 
-If keys cannot be loaded AND --recover is specified, then run key recovery
-"""
+    If keys cannot be loaded AND --recover is specified, then run key recovery
+    """
     key = [[b'' for _ in range(2)] for _ in range(17)]  # create a fresh array
 
     lprint("\nLoad keys from file... " + color(f"{keyfile}", fg="yellow"))
@@ -408,15 +409,15 @@ If keys cannot be loaded AND --recover is specified, then run key recovery
 
 
 def recoverKeys(uid, kdf=[[]]):
-    """Run key recovery script"""
+    """Run key recovery script."""
     badrk = 0     # 'bad recovered key' count (ie. not recovered)
 
-    keys = False
-    lprint(f"\nTrying KDFs:");
+    keys = []
+    lprint("\nTrying KDFs:")
     for fn in kdf:
         lprint(f"  {fn[0]:s}", end='')
         keys = fn[1](uid)
-        if keys != False:
+        if len(keys) > 0:
             lprint(" .. Success", prompt='')
             break
         lprint(" .. Fail", prompt='')
@@ -427,7 +428,7 @@ def recoverKeys(uid, kdf=[[]]):
     r = recovery(quiet=False, keyset=keys)
     lprint('`-._,-\'"`-._,-"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,-\'"`-._,')
 
-    if r == False:
+    if r is False:
         return False
 
     keyfile = r['keyfile']
@@ -453,14 +454,28 @@ def recoverKeys(uid, kdf=[[]]):
         lprint("", prompt='')
     return keyfile
 
+
 def kdfBambu1(uid):
+    """Derive keys from a given UID using the Bambu HKDF algorithm and validates the card data.
+
+    This function generates two keys (keyA and keyB) using the Bambu HKDF algorithm with a predefined salt and context.
+    It then attempts to read block 13 from sector 3 of the card using keyA. If successful, it decodes the data
+    and checks if it matches a specific date format. If the data is valid, it returns a list of derived keys.
+
+    Args:
+        uid (bytes): The UID of the card.
+
+    Returns:
+        list: A list of derived keys if the card data is valid.
+        bool: False if any step in the process fails.
+    """
     from Cryptodome.Protocol.KDF import HKDF
-    from Cryptodome.Hash         import SHA256
+    from Cryptodome.Hash import SHA256
 
     # Generate all keys
     try:
         # extracted from Bambu firmware
-        salt = bytes([0x9a,0x75,0x9c,0xf2,0xc4,0xf7,0xca,0xff,0x22,0x2c,0xb9,0x76,0x9b,0x41,0xbc,0x96])
+        salt = bytes([0x9a, 0x75, 0x9c, 0xf2, 0xc4, 0xf7, 0xca, 0xff, 0x22, 0x2c, 0xb9, 0x76, 0x9b, 0x41, 0xbc, 0x96])
         keyA = HKDF(uid, 6, salt, SHA256, 16, context=b"RFID-A\0")
         keyB = HKDF(uid, 6, salt, SHA256, 16, context=b"RFID-B\0")
     except Exception as e:
@@ -469,7 +484,7 @@ def kdfBambu1(uid):
 
     # --- Grab block 13 (in sector 3) ---
     cmd = f"hf mf rdbl -c 0 --key {keyA[3].hex()} --blk 12"
-    #lprint(f"  `{cmd}`", flush=True, log=False, end='')
+    # lprint(f"  `{cmd}`", flush=True, log=False, end='')
     for retry in range(5):
         p.console(cmd)
 
@@ -502,13 +517,13 @@ def kdfBambu1(uid):
 
     return keys
 
+
 def verifyKeys(key):
-    """Verify keys
+    """Verify keys.
 
-globals:
-- p (R)
-"""
-
+    globals:
+    - p (R)
+    """
     badk = 0
     mad = False
 
@@ -563,16 +578,15 @@ globals:
 
 
 def readBlocks(bdkey, fast=False):
+    r"""Read all block data - INCLUDING advanced verification blocks.
+
+    [=]   # | sector 00 / 0x00                                | ascii
+    [=] ----+-------------------------------------------------+-----------------
+    [=]   0 | 5C B4 9C A6 D2 08 04 00 04 59 92 25 BF 5F 70 90 | \........Y.%._p.
+
+    globals:
+    - p (R)
     """
-Read all block data - INCLUDING advanced verification blocks
-
-[=]   # | sector 00 / 0x00                                | ascii
-[=] ----+-------------------------------------------------+-----------------
-[=]   0 | 5C B4 9C A6 D2 08 04 00 04 59 92 25 BF 5F 70 90 | \\........Y.%._p.
-
-globals:
-- p (R)
-"""
     data = []
     blkn = list(range(0, 63 + 1)) + list(range(128, 135 + 1))
 
@@ -634,9 +648,10 @@ globals:
 
 
 def patchKeys(data, key):
-    """Patch keys in to data
-  3 | 00 00 00 00 00 00 87 87 87 69 00 00 00 00 00 00 | .........i......
-"""
+    """Patch keys in to data.
+
+    3 | 00 00 00 00 00 00 87 87 87 69 00 00 00 00 00 00 | .........i......
+    """
     lprint("\nPatching keys in to data")
 
     for sec in range(0, 16 + 1):
@@ -662,7 +677,7 @@ def patchKeys(data, key):
 
 
 def dumpData(data, blkn):
-    """Dump data"""
+    """Dump data."""
     lprint()
     lprint("===========")
     lprint(" Card Data")
@@ -708,14 +723,14 @@ def detectBambu(data):
 
 
 def dumpBambu(data):
-    """Dump bambu details
+    """Dump bambu details.
 
-https://github.com/Bambu-Research-Group/RFID-Tag-Guide/blob/main/README.md
+    https://github.com/Bambu-Research-Group/RFID-Tag-Guide/blob/main/README.md
 
-       6           18          30          42         53
-       |           |           |           |          |
-   3 | 00 00 00 00 00 00 87 87 87 69 00 00 00 00 00 00 | .........i......
-"""
+        6           18          30          42         53
+        |           |           |           |          |
+    3 | 00 00 00 00 00 00 87 87 87 69 00 00 00 00 00 00 | .........i......
+    """
     try:
         lprint()
         lprint("===========")
@@ -833,14 +848,14 @@ https://github.com/Bambu-Research-Group/RFID-Tag-Guide/blob/main/README.md
 
 #     The Access bits on both (used) Sectors is the same:  78 77 88
 
-#     Let's reorganise that according to the official spec Fig 9.
+#     Let's reorganize that according to the official spec Fig 9.
 #          Access        C1 C2 C3
 #      ========== ===========
 #         78 77 88  -->  78 87 87
 #         ab cd ef  -->  cb fa ed
 
 #     The second nybble of each byte is the inverse of the first nybble.
-#     It is there to trap tranmission errors, so we can just ignore it/them.
+#     It is there to trap transmission errors, so we can just ignore it/them.
 
 #     So our Access Control value is : {c, f, e} == {7, 8, 8}
 
@@ -903,13 +918,13 @@ https://github.com/Bambu-Research-Group/RFID-Tag-Guide/blob/main/README.md
 #         IF YOU PLAN TO CHANGE ACCESS BITS, RTFM, THERE IS MUCH TO CONSIDER !
 # ==============================================================================
 def dumpAcl(data):
-    """Dump ACL
+    """Dump ACL.
 
-       6           18    24 27 30 33       42         53
-       |           |     |  |  |  |        |          |
-   3 | 00 00 00 00 00 00 87 87 87 69 00 00 00 00 00 00 | .........i......
-                         ab cd ef
-"""
+        6           18    24 27 30 33       42         53
+        |           |     |  |  |  |        |          |
+    3 | 00 00 00 00 00 00 87 87 87 69 00 00 00 00 00 00 | .........i......
+                            ab cd ef
+    """
     aclkh = []      # key header
     aclk = [""] * 8  # key lookup
     aclkx = []      # key output
@@ -1010,10 +1025,10 @@ def dumpAcl(data):
 
 
 def diskDump(data, uid, dpath):
-    """Full Dump"""
+    """Full Dump."""
     dump18 = f'{dpath}hf-mf-{uid.hex().upper()}-dump18.bin'
 
-    lprint(f'\nDump card data to file... ' + color(dump18, fg='yellow'))
+    lprint('\nDump card data to file... ' + color(dump18, fg='yellow'))
 
     bad = False
     try:
@@ -1037,12 +1052,11 @@ def diskDump(data, uid, dpath):
 
 
 def dumpMad(dump18):
-    """Dump MAD
+    """Dump MAD.
 
-globals:
-- p (R)
-"""
-
+    globals:
+    - p (R)
+    """
     lprint()
     lprint("====================================")
     lprint(" MiFare Application Directory (MAD)")

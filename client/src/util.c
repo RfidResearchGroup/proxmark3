@@ -152,10 +152,10 @@ void FillFileNameByUID(char *filenamePrefix, const uint8_t *uid, const char *ext
 
     int len = strlen(filenamePrefix);
 
-    for (int j = 0; j < uidlen; j++) {
+    for (int i = 0; i < uidlen; i++) {
         // This is technically not the safest option, but there is no way to make this work without changing the function signature
         // Possibly todo for future PR, but given UID lenghts are defined by program and not variable, should not be an issue
-        snprintf(filenamePrefix + len + j * 2, 3, "%02X", uid[j]);
+        snprintf(filenamePrefix + len + i * 2, 3, "%02X", uid[i]);
     }
 
     strcat(filenamePrefix, ext);
@@ -196,7 +196,7 @@ bool CheckStringIsHEXValue(const char *value) {
     }
 
     for (size_t i = 0; i < strlen(value); i++) {
-        if (!isxdigit(value[i])) {
+        if (isxdigit(value[i]) == 0) {
             return false;
         }
     }
@@ -220,11 +220,13 @@ void ascii_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len
     }
 
     size_t m = (min_str_len > i) ? min_str_len : 0;
-    if (m > hex_max_len)
+    if (m > hex_max_len) {
         m = hex_max_len;
+    }
 
-    for (; i < m; i++, tmp++)
+    for (; i < m; i++, tmp++) {
         *tmp = ' ';
+    }
 
     // remove last space
     *tmp = '\0';
@@ -234,8 +236,9 @@ void hex_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, 
                    const size_t min_str_len, const size_t spaces_between, bool uppercase) {
 
     // sanity check
-    if (buf == NULL || hex_len < 1)
+    if (buf == NULL || hex_len < 1) {
         return;
+    }
 
     // 1. hex string length.
     // 2. byte array to be converted to string
@@ -252,18 +255,22 @@ void hex_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, 
         *(tmp++) = b2s((hex_data[i] >> 4), uppercase);
         *(tmp++) = b2s(hex_data[i], uppercase);
 
-        for (size_t j = 0; j < spaces_between; j++)
+        for (size_t j = 0; j < spaces_between; j++) {
             *(tmp++) = ' ';
+        }
     }
 
     i *= (2 + spaces_between);
 
     size_t m = (min_str_len > i) ? min_str_len : 0;
-    if (m > hex_max_len)
-        m = hex_max_len;
 
-    while (m--)
+    if (m > hex_max_len) {
+        m = hex_max_len;
+    }
+
+    while (m--) {
         *(tmp++) = ' ';
+    }
 
     // remove last space
     *tmp = '\0';
@@ -274,9 +281,9 @@ void hex_to_buffer(uint8_t *buf, const uint8_t *hex_data, const size_t hex_len, 
 void print_hex(const uint8_t *data, const size_t len) {
     if (data == NULL || len == 0) return;
 
-    for (size_t i = 0; i < len; i++)
+    for (size_t i = 0; i < len; i++) {
         PrintAndLogEx(NORMAL, "%02x " NOLF, data[i]);
-
+    }
     PrintAndLogEx(NORMAL, "");
 }
 
@@ -621,10 +628,13 @@ char *sprint_breakdown_bin(color_t color, const char *bs, int width, int padn, i
 }
 
 int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValueLen) {
+
     char buf[4] = {0};
     int indx = 0;
     int bytesValueLen = 0;
+
     while (hexValue[indx]) {
+
         if (hexValue[indx] == '\t' || hexValue[indx] == ' ') {
             indx++;
             continue;
@@ -684,6 +694,7 @@ void bytes_to_bytebits(const void *src, const size_t srclen, void *dest) {
 
     uint32_t i = srclen * 8;
     size_t j = srclen;
+
     while (j--) {
         uint8_t b = s[j];
         d[--i] = (b >> 0) & 1;
@@ -740,20 +751,33 @@ int param_getptr(const char *line, int *bg, int *en, int paramnum) {
     *en = 0;
 
     // skip spaces
-    while (line[*bg] == ' ' || line[*bg] == '\t')(*bg)++;
+    while (line[*bg] == ' ' || line[*bg] == '\t') {
+        (*bg)++;
+    }
+
     if (*bg >= len) {
         return 1;
     }
 
     for (i = 0; i < paramnum; i++) {
-        while (line[*bg] != ' ' && line[*bg] != '\t' && line[*bg] != '\0')(*bg)++;
-        while (line[*bg] == ' ' || line[*bg] == '\t')(*bg)++;
 
-        if (line[*bg] == '\0') return 1;
+        while (line[*bg] != ' ' && line[*bg] != '\t' && line[*bg] != '\0') {
+            (*bg)++;
+        }
+
+        while (line[*bg] == ' ' || line[*bg] == '\t') {
+            (*bg)++;
+        }
+
+        if (line[*bg] == '\0') {
+            return 1;
+        }
     }
 
     *en = *bg;
-    while (line[*en] != ' ' && line[*en] != '\t' && line[*en] != '\0')(*en)++;
+    while (line[*en] != ' ' && line[*en] != '\t' && line[*en] != '\0') {
+        (*en)++;
+    }
 
     (*en)--;
 
@@ -763,7 +787,9 @@ int param_getptr(const char *line, int *bg, int *en, int paramnum) {
 int param_getlength(const char *line, int paramnum) {
     int bg, en;
 
-    if (param_getptr(line, &bg, &en, paramnum)) return 0;
+    if (param_getptr(line, &bg, &en, paramnum)) {
+        return 0;
+    }
 
     return en - bg + 1;
 }
@@ -775,10 +801,13 @@ char param_getchar(const char *line, int paramnum) {
 char param_getchar_indx(const char *line, int indx, int paramnum) {
     int bg, en;
 
-    if (param_getptr(line, &bg, &en, paramnum)) return 0x00;
+    if (param_getptr(line, &bg, &en, paramnum)) {
+        return 0;
+    }
 
-    if (bg + indx > en)
+    if (bg + indx > en) {
         return '\0';
+    }
 
     return line[bg + indx];
 }
@@ -795,7 +824,9 @@ uint8_t param_get8(const char *line, int paramnum) {
  */
 uint8_t param_getdec(const char *line, int paramnum, uint8_t *destination) {
     uint8_t val =  param_get8ex(line, paramnum, 255, 10);
-    if ((int8_t) val == -1) return 1;
+    if ((int8_t) val == -1) {
+        return 1;
+    }
     (*destination) = val;
     return 0;
 }
@@ -808,49 +839,56 @@ uint8_t param_getdec(const char *line, int paramnum, uint8_t *destination) {
 uint8_t param_isdec(const char *line, int paramnum) {
     int bg, en;
     //TODO, check more thorougly
-    if (!param_getptr(line, &bg, &en, paramnum)) return 1;
+    if (!param_getptr(line, &bg, &en, paramnum)) {
+        return 1;
+    }
     // return strtoul(&line[bg], NULL, 10) & 0xff;
-
     return 0;
 }
 
 uint8_t param_get8ex(const char *line, int paramnum, int deflt, int base) {
     int bg, en;
-    if (!param_getptr(line, &bg, &en, paramnum))
+    if (param_getptr(line, &bg, &en, paramnum) == 0) {
         return strtoul(&line[bg], NULL, base) & 0xff;
-    else
+    } else {
         return deflt;
+    }
 }
 
 uint32_t param_get32ex(const char *line, int paramnum, int deflt, int base) {
     int bg, en;
-    if (!param_getptr(line, &bg, &en, paramnum))
+    if (param_getptr(line, &bg, &en, paramnum) == 0) {
         return strtoul(&line[bg], NULL, base);
-    else
+    } else {
         return deflt;
+    }
 }
 
 uint64_t param_get64ex(const char *line, int paramnum, int deflt, int base) {
     int bg, en;
-    if (!param_getptr(line, &bg, &en, paramnum))
+    if (param_getptr(line, &bg, &en, paramnum) == 0) {
         return strtoull(&line[bg], NULL, base);
-    else
+    } else {
         return deflt;
+    }
 }
 
 float param_getfloat(const char *line, int paramnum, float deflt) {
     int bg, en;
-    if (!param_getptr(line, &bg, &en, paramnum))
+    if (param_getptr(line, &bg, &en, paramnum) == 0) {
         return strtof(&line[bg], NULL);
-    else
+    } else {
         return deflt;
+    }
 }
 
 int param_gethex_ex(const char *line, int paramnum, uint8_t *data, int *hexcnt) {
     int bg, en, i;
     uint32_t temp;
 
-    if (param_getptr(line, &bg, &en, paramnum)) return 1;
+    if (param_getptr(line, &bg, &en, paramnum)) {
+        return 1;
+    }
 
     *hexcnt = en - bg + 1;
 
@@ -860,7 +898,9 @@ int param_gethex_ex(const char *line, int paramnum, uint8_t *data, int *hexcnt) 
     }
 
     for (i = 0; i < *hexcnt; i += 2) {
-        if (!(isxdigit(line[bg + i]) && isxdigit(line[bg + i + 1]))) return 1;
+        if (!(isxdigit(line[bg + i]) && isxdigit(line[bg + i + 1]))) {
+            return 1;
+        }
 
         sscanf((char[]) {line[bg + i], line[bg + i + 1], 0}, "%X", &temp);
         data[i / 2] = temp & 0xff;
@@ -873,14 +913,16 @@ int param_gethex_to_eol(const char *line, int paramnum, uint8_t *data, int maxda
 
     int bg, en;
 
-    if (param_getptr(line, &bg, &en, paramnum))
+    if (param_getptr(line, &bg, &en, paramnum)) {
         return 1;
+    }
 
     *datalen = 0;
     char buf[5] = {0};
 
     int indx = bg;
     while (line[indx]) {
+
         if (line[indx] == '\t' || line[indx] == ' ') {
             indx++;
             continue;
@@ -910,9 +952,10 @@ int param_gethex_to_eol(const char *line, int paramnum, uint8_t *data, int maxda
         indx++;
     }
 
-    if (strlen(buf) > 0)
+    if (strlen(buf) > 0) {
         //error when not completed hex bytes
         return 3;
+    }
 
     return 0;
 }
@@ -927,6 +970,7 @@ int param_getbin_to_eol(const char *line, int paramnum, uint8_t *data, int maxda
     char buf[5] = {0};
     int indx = bg;
     while (line[indx]) {
+
         if (line[indx] == '\t' || line[indx] == ' ') {
             indx++;
             continue;
@@ -992,11 +1036,14 @@ int hextobinarray_n(char *target, char *source, int sourcelen) {
     char *start = source;
     // process 4 bits (1 hex digit) at a time
     while (sourcelen--) {
+
         char x = *(source++);
+
         // capitalize
         if (x >= 'a' && x <= 'f') {
             x -= 32;
         }
+
         // convert to numeric value
         if (x >= '0' && x <= '9') {
             x -= '0';
@@ -1006,6 +1053,7 @@ int hextobinarray_n(char *target, char *source, int sourcelen) {
             PrintAndLogEx(INFO, "(hextobinarray) discovered unknown character %c %d at idx %d of %s", x, x, (int16_t)(source - start), start);
             return 0;
         }
+
         // output
         for (i = 0 ; i < 4 ; ++i, ++count) {
             *(target++) = (x >> (3 - i)) & 1;
@@ -1053,15 +1101,20 @@ int binarray_2_hex(char *target, const size_t targetlen, const char *source, siz
     uint32_t t = 0; // written target chars
     uint32_t r = 0; // consumed bits
     uint8_t w = 0; // wrong bits separator printed
+
     for (size_t s = 0 ; s < srclen; s++) {
+
         if ((source[s] == 0) || (source[s] == 1)) {
             w = 0;
             x += (source[s] << (3 - i));
             i++;
+
             if (i == 4) {
+
                 if (t >= targetlen - 2) {
                     return r;
                 }
+
                 snprintf(target + t, targetlen - t, "%X", x);
                 t++;
                 r += 4;
@@ -1069,10 +1122,13 @@ int binarray_2_hex(char *target, const size_t targetlen, const char *source, siz
                 i = 0;
             }
         } else {
+
             if (i > 0) {
+
                 if (t >= targetlen - 5) {
                     return r;
                 }
+
                 snprintf(target + t, targetlen - t, "%X[%i]", x, i);
                 t += 4;
                 r += i;
@@ -1080,13 +1136,17 @@ int binarray_2_hex(char *target, const size_t targetlen, const char *source, siz
                 i = 0;
                 w = 1;
             }
+
             if (w == 0) {
+
                 if (t >= targetlen - 2) {
                     return r;
                 }
+
                 snprintf(target + t, targetlen - t, " ");
                 t++;
             }
+
             r++;
         }
     }
@@ -1107,9 +1167,9 @@ int binstr_2_binarray(uint8_t *target, char *source, int length) {
     while (length--) {
         char x = *(source++);
         // convert from binary value
-        if (x >= '0' && x <= '1')
+        if (x >= '0' && x <= '1') {
             x -= '0';
-        else {
+        } else {
             PrintAndLogEx(WARNING, "(binstring2binarray) discovered unknown character %c %d at idx %d of %s", x, x, (int16_t)(source - start), start);
             return 0;
         }
@@ -1165,8 +1225,9 @@ void hex_xor_token(uint8_t *d, const uint8_t *x, int dn, int xn) {
 // return parity bit required to match type
 uint8_t GetParity(const uint8_t *bits, uint8_t type, int length) {
     int x;
-    for (x = 0 ; length > 0 ; --length)
+    for (x = 0 ; length > 0 ; --length) {
         x += bits[length - 1];
+    }
     x %= 2;
     return x ^ type;
 }
@@ -1190,24 +1251,30 @@ void wiegand_add_parity_swapped(uint8_t *target, const uint8_t *source, uint8_t 
 // Pack a bitarray into a uint32_t.
 uint32_t PackBits(uint8_t start, uint8_t len, const uint8_t *bits) {
 
-    if (len > 32) return 0;
+    if (len > 32) {
+        return 0;
+    }
 
     int i = start;
     int j = len - 1;
     uint32_t tmp = 0;
 
-    for (; j >= 0; --j, ++i)
+    for (; j >= 0; --j, ++i) {
         tmp |= bits[i] << j;
+    }
 
     return tmp;
 }
 
 uint64_t HornerScheme(uint64_t num, uint64_t divider, uint64_t factor) {
+
     uint64_t remaind = 0, quotient = 0, result = 0;
     remaind = num % divider;
     quotient = num / divider;
-    if (!(quotient == 0 && remaind == 0))
+
+    if (!(quotient == 0 && remaind == 0)) {
         result += HornerScheme(quotient, divider, factor) * factor + remaind;
+    }
     return result;
 }
 
@@ -1228,15 +1295,17 @@ int detect_num_CPUs(void) {
     return sysinfo.dwNumberOfProcessors;
 #else
     int count = sysconf(_SC_NPROCESSORS_ONLN);
-    if (count <= 0)
+    if (count <= 0) {
         count = 1;
+    }
     return count;
 #endif
 }
 
 void str_lower(char *s) {
-    for (size_t i = 0; i < strlen(s); i++)
+    for (size_t i = 0; i < strlen(s); i++) {
         s[i] = tolower(s[i]);
+    }
 }
 
 void str_upper(char *s) {
@@ -1244,8 +1313,9 @@ void str_upper(char *s) {
 }
 
 void strn_upper(char *s, size_t n) {
-    for (size_t i = 0; i < n; i++)
+    for (size_t i = 0; i < n; i++) {
         s[i] = toupper(s[i]);
+    }
 }
 // check for prefix in string
 bool str_startswith(const char *s,  const char *pre) {
@@ -1265,8 +1335,9 @@ bool str_endswith(const char *s,  const char *suffix) {
 // Replace unprintable characters with a dot in char buffer
 void clean_ascii(unsigned char *buf, size_t len) {
     for (size_t i = 0; i < len; i++) {
-        if (!isprint(buf[i]))
+        if (isprint(buf[i]) == 0) {
             buf[i] = '.';
+        }
     }
 }
 
@@ -1279,11 +1350,11 @@ void str_cleanrn(char *buf, size_t len) {
 // replace char in buffer
 void str_creplace(char *buf, size_t len, char from, char to) {
     for (size_t i = 0; i < len; i++) {
-        if (buf[i] == from)
+        if (buf[i] == from) {
             buf[i] = to;
+        }
     }
 }
-
 
 char *str_dup(const char *src) {
     return str_ndup(src, strlen(src));
@@ -1365,8 +1436,9 @@ int binstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str)
     for (;;) {
 
         int res = sscanf(&str[i], "%1u", &n);
-        if ((res != 1) || (n > 1))
+        if ((res != 1) || (n > 1)) {
             break;
+        }
 
         *hi2 = (*hi2 << 1) | (*hi >> 31);
         *hi = (*hi << 1) | (*lo >> 31);
@@ -1388,8 +1460,9 @@ int binarray_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const uint8_t *ar
     int i = 0;
     for (; i < arrlen; i++) {
         uint8_t n = arr[i];
-        if (n > 1)
+        if (n > 1) {
             break;
+        }
 
         *hi2 = (*hi2 << 1) | (*hi >> 31);
         *hi = (*hi << 1) | (*lo >> 31);
@@ -1445,17 +1518,20 @@ int byte_strstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_
     for (size_t i = 0; i < max; i++) {
 
         // compare only first byte
-        if (src[i] != pattern[0])
+        if (src[i] != pattern[0]) {
             continue;
+        }
 
         // try to match rest of the pattern
         for (int j = plen - 1; j >= 1; j--) {
 
-            if (src[i + j] != pattern[j])
+            if (src[i + j] != pattern[j]) {
                 break;
+            }
 
-            if (j == 1)
+            if (j == 1) {
                 return i;
+            }
         }
     }
     return -1;
@@ -1467,17 +1543,20 @@ int byte_strstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_
 int byte_strrstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_t plen) {
     for (int i = srclen - plen; i >= 0; i--) {
         // compare only first byte
-        if (src[i] != pattern[0])
+        if (src[i] != pattern[0]) {
             continue;
+        }
 
         // try to match rest of the pattern
         for (int j = plen - 1; j >= 1; j--) {
 
-            if (src[i + j] != pattern[j])
+            if (src[i + j] != pattern[j]) {
                 break;
+            }
 
-            if (j == 1)
+            if (j == 1) {
                 return i;
+            }
         }
     }
     return -1;

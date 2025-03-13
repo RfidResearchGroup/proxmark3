@@ -767,23 +767,35 @@ static bool emrtd_select_and_read(uint8_t *dataout, size_t *dataoutlen, uint16_t
 
 static const uint8_t jpeg_header[4] = { 0xFF, 0xD8, 0xFF, 0xE0 };
 static const uint8_t jpeg2k_header[6] = { 0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50 };
+static const uint8_t jpeg2k_cs_header[4] = { 0xFF, 0x4F, 0xFF, 0x51 };
 
 static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length, const char *path) {
     size_t offset;
     int datalen = 0;
+    char suffix[5] = { '\0' };
 
     // This is a hacky impl that just looks for the image header. I'll improve it eventually.
     // based on mrpkey.py
     // Note: Doing file_length - 6 to account for the longest data we're checking.
     // Checks first byte before the rest to reduce overhead
     for (offset = 0; offset < file_length - 6; offset++) {
-        if ((file_contents[offset] == 0xFF && memcmp(jpeg_header, file_contents + offset, 4) == 0) ||
-                (file_contents[offset] == 0x00 && memcmp(jpeg2k_header, file_contents + offset, 6) == 0)) {
+        if (file_contents[offset] == 0xFF) {
+            if (memcmp(jpeg_header, file_contents + offset, 4) == 0) {
+                datalen = file_length - offset;
+                strcpy(suffix, ".jpg");
+                break;
+            } else if (memcmp(jpeg2k_cs_header, file_contents + offset, 4) == 0) {
+                datalen = file_length - offset;
+                // no standardized extension for codestream data, using .jpc
+                strcpy(suffix, ".jpc");
+                break;
+            }
+        } else if (file_contents[offset] == 0x00 && memcmp(jpeg2k_header, file_contents + offset, 6) == 0) {
+            strcpy(suffix, ".jp2");
             datalen = file_length - offset;
             break;
         }
     }
-
     // If we didn't get any data, return false.
     if (datalen == 0) {
         return PM3_ESOFT;
@@ -797,7 +809,7 @@ static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length, const c
     strncat(filepath, PATHSEP, 2);
     strcat(filepath, dg_table[EF_DG2].filename);
 
-    saveFile(filepath, file_contents[offset] == 0xFF ? ".jpg" : ".jp2", file_contents + offset, datalen);
+    saveFile(filepath, suffix, file_contents + offset, datalen);
 
     free(filepath);
     return PM3_SUCCESS;
@@ -1865,14 +1877,13 @@ static int emrtd_print_ef_sod_info(uint8_t *dg_hashes_calc, uint8_t *dg_hashes_s
     PrintAndLogEx(INFO, "------------------------ " _CYAN_("EF_SOD") " ------------------------");
     PrintAndLogEx(INFO, "Document Security Object");
     PrintAndLogEx(INFO, "contains the digital signatures of the passport data");
+    PrintAndLogEx(INFO, "");
 
     if (hash_algo == -1) {
         PrintAndLogEx(SUCCESS, "Hash algorithm... " _YELLOW_("Unknown"));
-        PrintAndLogEx(INFO, "");
     } else {
 
         PrintAndLogEx(SUCCESS, "Hash algorithm... " _YELLOW_("%s"), hashalg_table[hash_algo].name);
-        PrintAndLogEx(INFO, "");
 
         uint8_t all_zeroes[64] = { 0x00 };
 

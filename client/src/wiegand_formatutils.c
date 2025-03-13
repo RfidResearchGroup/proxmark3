@@ -128,11 +128,25 @@ bool set_nonlinear_field(wiegand_message_t *data, uint64_t value, uint8_t numBit
     return result;
 }
 
-static uint8_t get_length_from_header(wiegand_message_t *data) {
+uint8_t get_length_from_header(wiegand_message_t *data) {
     /**
      * detect if message has "preamble" / "sentinel bit"
      * Right now we just calculate the highest bit set
-     * 37 bit formats is hard to detect since it doesnt have a sentinel bit
+     *
+     * (from http://www.proxmark.org/forum/viewtopic.php?pid=5368#p5368)
+     * 0000 0010 0000 0000 01xx xxxx xxxx xxxx xxxx xxxx xxxx  26-bit
+     * 0000 0010 0000 0000 1xxx xxxx xxxx xxxx xxxx xxxx xxxx  27-bit
+     * 0000 0010 0000 0001 xxxx xxxx xxxx xxxx xxxx xxxx xxxx  28-bit
+     * 0000 0010 0000 001x xxxx xxxx xxxx xxxx xxxx xxxx xxxx  29-bit
+     * 0000 0010 0000 01xx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  30-bit
+     * 0000 0010 0000 1xxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  31-bit
+     * 0000 0010 0001 xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  32-bit
+     * 0000 0010 001x xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  33-bit
+     * 0000 0010 01xx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  34-bit
+     * 0000 0010 1xxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  35-bit
+     * 0000 0011 xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  36-bit
+     * 0000 000x xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  37-bit
+     * 0000 00xx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx xxxx  38-bit
      */
     uint8_t len = 0;
     uint32_t hfmt = 0; // for calculating card length
@@ -140,39 +154,21 @@ static uint8_t get_length_from_header(wiegand_message_t *data) {
     if ((data->Top & 0x000FFFFF) > 0) { // > 64 bits
         hfmt = data->Top & 0x000FFFFF;
         len = 64;
-    } else if (data->Mid > 0) { // < 63-32 bits
-
-        // detect HID format b38 set
-        if (data->Mid & 0xFFFFFFC0) {
-            hfmt = data->Mid;
-            len = 32;
-        } else {
-
-            PrintAndLogEx(DEBUG, "hid preamble detected");
-            len = 32;
-
-            if ((data->Mid ^ 0x20) == 0) { hfmt = data->Bot; len = 0; }
-            else if ((data->Mid & 0x10) == 0) { hfmt = data->Mid & 0x1F; }
-            else if ((data->Mid & 0x08) == 0) { hfmt = data->Mid & 0x0F; }
-            else if ((data->Mid & 0x04) == 0) { hfmt = data->Mid & 0x07; }
-            else if ((data->Mid & 0x02) == 0) { hfmt = data->Mid & 0x03; }
-            else if ((data->Mid & 0x01) == 0) { hfmt = data->Mid & 0x01; }
-            else { hfmt = data->Mid & 0x3F;}
-        }
-
-    } else {
-        hfmt = data->Bot;
-        len = 0;
+    } else if (data->Mid & 0xFFFFFFC0) { // handle 38bit and above format
+        hfmt = data->Mid;
+        len = 31; // remove leading 1 (preamble) in 38-64 bits format
+    } else if (((data->Mid >> 5) & 1) == 1) { // bit 38 is set => 26-36bit format
+        hfmt = (((data->Mid & 31) << 6) | (data->Bot >> 26)); // get bits 27-37 to check for format len bit
+        len = 25;
+    } else { // if bit 38 is not set => 37bit format
+        hfmt = 0;
+        len = 37;
     }
 
     while (hfmt > 0) {
         hfmt >>= 1;
         len++;
     }
-
-    // everything less than 26 bits found, assume 26 bits
-    if (len < 26)
-        len = 26;
 
     return len;
 }
@@ -193,13 +189,15 @@ wiegand_message_t initialize_message_object(uint32_t top, uint32_t mid, uint32_t
 
 bool add_HID_header(wiegand_message_t *data) {
     // Invalid value
-    if (data->Length > 84 || data->Length == 0)
+    if (data->Length > 84 || data->Length == 0) {
         return false;
+    }
 
     if (data->Length == 48) {
         data->Mid |= 1U << (data->Length - 32); // Example leading 1: start bit
         return true;
     }
+
     if (data->Length >= 64) {
         data->Top |= 0x09e00000; // Extended-length header
         data->Top |= 1U << (data->Length - 64); // leading 1: start bit

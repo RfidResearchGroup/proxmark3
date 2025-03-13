@@ -2223,7 +2223,7 @@ OUT:
                     blockno = (32 * 4 + (i - 32) * 16) ^ 0xF;
                 }
                 // get ST
-                emlGetMem(block, blockno, 1);
+                emlGetMem_xt(block, blockno, 1, MIFARE_BLOCK_SIZE);
 
                 memcpy(block, k_sector[i].keyA, 6);
                 memcpy(block + 10, k_sector[i].keyB, 6);
@@ -2376,8 +2376,8 @@ void MifareChkKeys_file(uint8_t *fn) {
 void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key) {
 
     uint16_t isOK = PM3_EUNDEF;
-    uint8_t uid[10];
-    uint32_t cuid;
+    uint8_t uid[10] = { 0 };
+    uint32_t cuid = 0;
     struct Crypto1State mpcs = {0, 0};
     struct Crypto1State *pcs;
     pcs = &mpcs;
@@ -2388,8 +2388,12 @@ void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key) {
 
     LED_A_ON();
 
+    uint8_t rec_answer[MAX_MIFARE_FRAME_SIZE] = {0};
+    uint8_t rec_answer_par[MAX_MIFARE_PARITY_SIZE] = {0};
+
     while (true) {
-        if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
+
+        if (iso14443a_select_card(uid, NULL, &cuid, true, 0, true) == false) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
             break;
         }
@@ -2400,11 +2404,9 @@ void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key) {
             break;
         }
 
-        uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE];
-        uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE];
-        int len = mifare_sendcmd_short(pcs, true, MIFARE_EV1_PERSONAL_UID, perso_option, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
-        if (len != 1 || receivedAnswer[0] != CARD_ACK) {
-            if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+        int len = mifare_sendcmd_short(pcs, true, MIFARE_EV1_PERSONAL_UID, perso_option, rec_answer, sizeof(rec_answer), rec_answer_par, NULL);
+        if (len != 1 || rec_answer[0] != CARD_ACK) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", rec_answer[0]);
             break;
         }
 
@@ -2428,39 +2430,6 @@ void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key) {
 
 
 //-----------------------------------------------------------------------------
-// Work with emulator memory
-//
-// Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_HF) here although FPGA is not
-// involved in dealing with emulator memory. But if it is called later, it might
-// destroy the Emulator Memory.
-//-----------------------------------------------------------------------------
-
-void MifareEMemClr(void) {
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-    emlClearMem();
-}
-
-void MifareEMemGet(uint8_t blockno, uint8_t blockcnt) {
-    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-
-    //
-    size_t size = blockcnt * 16;
-    if (size > PM3_CMD_DATA_SIZE) {
-        reply_ng(CMD_HF_MIFARE_EML_MEMGET, PM3_EMALLOC, NULL, 0);
-        return;
-    }
-
-    uint8_t *buf = BigBuf_malloc(size);
-
-    emlGetMem(buf, blockno, blockcnt); // data, block num, blocks count (max 4)
-
-    LED_B_ON();
-    reply_ng(CMD_HF_MIFARE_EML_MEMGET, PM3_SUCCESS, buf, size);
-    LED_B_OFF();
-    BigBuf_free_keep_EM();
-}
-
-//-----------------------------------------------------------------------------
 // Load a card into the emulator memory
 //
 //-----------------------------------------------------------------------------
@@ -2471,12 +2440,15 @@ int MifareECardLoadExt(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
 }
 
 int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
+
     if ((keytype > MF_KEY_B) && (key == NULL)) {
+
         if (g_dbglevel >= DBG_ERROR) {
             Dbprintf("Error, missing key");
         }
         return PM3_EINVARG;
     }
+
     LED_A_ON();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -2510,10 +2482,10 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
             // MFC 1K EV1, skip sector 16 since its lockdown
             if (s == 16) {
                 // unknown sector trailer, keep the keys, set only the AC
-                uint8_t st[16] = {0x00};
-                emlGetMem(st, FirstBlockOfSector(s) + 3, 1);
+                uint8_t st[MIFARE_BLOCK_SIZE] = {0x00};
+                emlGetMem_xt(st, FirstBlockOfSector(s) + 3, 1, MIFARE_BLOCK_SIZE);
                 memcpy(st + 6, "\x70\xF0\xF8\x69", 4);
-                emlSetMem_xt(st, FirstBlockOfSector(s) + 3, 1, 16);
+                emlSetMem_xt(st, FirstBlockOfSector(s) + 3, 1, MIFARE_BLOCK_SIZE);
                 continue;
             }
 
@@ -2556,7 +2528,8 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
             }
             have_uid = true;
         } else { // no need for anticollision. We can directly select the card
-            if (!bd_authenticated) { // no need to select if bd_authenticated with backdoor
+
+            if (bd_authenticated == false) { // no need to select if bd_authenticated with backdoor
                 if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
                     continue;
                 }
@@ -2565,7 +2538,7 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
 
         // Auth
         if (keytype > MF_KEY_B) {
-            if (! bd_authenticated) {
+            if (bd_authenticated == false) {
                 ui64Key = bytes_to_num(key, 6);
                 if (mifare_classic_auth(pcs, cuid, 0, keytype, ui64Key, AUTH_FIRST)) {
                     retval = PM3_EFAILED;
@@ -2592,7 +2565,7 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
 
 #define MAX_RETRIES 2
 
-        uint8_t data[16] = {0x00};
+        uint8_t data[MIFARE_BLOCK_SIZE] = {0x00};
         for (uint8_t b = 0; b < NumBlocksPerSector(s); b++) {
 
             memset(data, 0x00, sizeof(data));
@@ -2614,18 +2587,18 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
                 }
 
                 // No need to copy empty
-                if (memcmp(data, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16) == 0) {
+                if (memcmp(data, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", sizeof(data)) == 0) {
                     break;
                 }
 
                 if (IsSectorTrailer(b)) {
                     // sector trailer, keep the keys, set only the AC
-                    uint8_t st[16] = {0x00};
-                    emlGetMem(st, tb, 1);
+                    uint8_t st[MIFARE_BLOCK_SIZE] = {0x00};
+                    emlGetMem_xt(st, tb, 1, MIFARE_BLOCK_SIZE);
                     memcpy(st + 6, data + 6, 4);
-                    emlSetMem_xt(st,  tb, 1, 16);
+                    emlSetMem_xt(st,  tb, 1, MIFARE_BLOCK_SIZE);
                 } else {
-                    emlSetMem_xt(data, tb, 1, 16);
+                    emlSetMem_xt(data, tb, 1, MIFARE_BLOCK_SIZE);
                 }
                 break;
             }
@@ -2927,7 +2900,6 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
     // variables
     uint8_t rec[1] = {0x00};
     uint8_t recpar[1] = {0x00};
-    uint8_t rats[4] = {ISO14443A_CMD_RATS, 0x80, 0x31, 0x73};
     uint8_t rdblf0[4] = {ISO14443A_CMD_READBLOCK, 0xF0, 0x8D, 0x5f};
     uint8_t rdbl00[4] = {ISO14443A_CMD_READBLOCK, 0x00, 0x02, 0xa8};
     uint8_t gen4gdmAuth[4] = {MIFARE_MAGIC_GDM_AUTH_KEY, 0x00, 0x6C, 0x92};
@@ -2940,6 +2912,8 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
     uint8_t *par = BigBuf_calloc(MAX_PARITY_SIZE);
     uint8_t *buf = BigBuf_calloc(PM3_CMD_DATA_SIZE);
     uint8_t *uid = BigBuf_calloc(10);
+    iso14a_card_select_t *card = (iso14a_card_select_t *) BigBuf_calloc(sizeof(iso14a_card_select_t));
+
     uint16_t flag = MAGIC_FLAG_NONE;
     uint32_t cuid = 0;
     int res = 0;
@@ -2991,144 +2965,141 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
     // reset card
     mf_reset_card();
 
-    res = iso14443a_select_card(uid, NULL, &cuid, true, 0, false);
+    res = iso14443a_select_card(uid, card, &cuid, true, 0, false);
     if (res) {
         if (cuid == 0xAA55C396) {
             flag |= MAGIC_FLAG_GEN_UNFUSED;
         }
 
-        ReaderTransmit(rats, sizeof(rats), NULL);
-        res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
+        if (memcmp(card->ats, "\x09\x78\x00\x91\x02\xDA\xBC\x19\x10", 9) == 0) {
+            // test for some MFC gen2
+            isGen2 = true;
+            flag |= MAGIC_FLAG_GEN_2;
+        } else if (memcmp(card->ats, "\x0D\x78\x00\x71\x02\x88\x49\xA1\x30\x20\x15\x06\x08\x56\x3D", 15) == 0) {
+            // test for some MFC 7b gen2
+            isGen2 = true;
+            flag |= MAGIC_FLAG_GEN_2;
+        } else if (memcmp(card->ats, "\x0A\x78\x00\x81\x02\xDB\xA0\xC1\x19\x40\x2A\xB5", 12) == 0) {
+            // test for Ultralight magic gen2
+            isGen2 = true;
+            flag |= MAGIC_FLAG_GEN_2;
+        } else if (memcmp(card->ats, "\x85\x00\x00\xA0\x00\x00\x0A\xC3\x00\x04\x03\x01\x01\x00\x0B\x03\x41\xDF", 18) == 0) {
+            // test for Ultralight EV1 magic gen2
+            isGen2 = true;
+            flag |= MAGIC_FLAG_GEN_2;
+        } else if (memcmp(card->ats, "\x85\x00\x00\xA0\x0A\x00\x0A\xC3\x00\x04\x03\x01\x01\x00\x0B\x03\x16\xD7", 18) == 0) {
+            // test for some other Ultralight EV1 magic gen2
+            isGen2 = true;
+            flag |= MAGIC_FLAG_GEN_2;
+        } else if (memcmp(card->ats, "\x85\x00\x00\xA0\x0A\x00\x0A\xB0\x00\x00\x00\x00\x00\x00\x00\x00\x18\x4D", 18) == 0) {
+            // test for some other Ultralight magic gen2
+            isGen2 = true;
+            flag |= MAGIC_FLAG_GEN_2;
+        } else if (memcmp(card->ats, "\x85\x00\x00\xA0\x00\x00\x0A\xA5\x00\x04\x04\x02\x01\x00\x0F\x03\x79\x0C", 18) == 0) {
+            // test for NTAG213 magic gen2
+            isGen2 = true;
+            flag |= MAGIC_FLAG_GEN_2;
+        }
 
-        if (res) {
-            if (memcmp(buf, "\x09\x78\x00\x91\x02\xDA\xBC\x19\x10", 9) == 0) {
-                // test for some MFC gen2
-                isGen2 = true;
-                flag |= MAGIC_FLAG_GEN_2;
-            } else if (memcmp(buf, "\x0D\x78\x00\x71\x02\x88\x49\xA1\x30\x20\x15\x06\x08\x56\x3D", 15) == 0) {
-                // test for some MFC 7b gen2
-                isGen2 = true;
-                flag |= MAGIC_FLAG_GEN_2;
-            } else if (memcmp(buf, "\x0A\x78\x00\x81\x02\xDB\xA0\xC1\x19\x40\x2A\xB5", 12) == 0) {
-                // test for Ultralight magic gen2
-                isGen2 = true;
-                flag |= MAGIC_FLAG_GEN_2;
-            } else if (memcmp(buf, "\x85\x00\x00\xA0\x00\x00\x0A\xC3\x00\x04\x03\x01\x01\x00\x0B\x03\x41\xDF", 18) == 0) {
-                // test for Ultralight EV1 magic gen2
-                isGen2 = true;
-                flag |= MAGIC_FLAG_GEN_2;
-            } else if (memcmp(buf, "\x85\x00\x00\xA0\x0A\x00\x0A\xC3\x00\x04\x03\x01\x01\x00\x0B\x03\x16\xD7", 18) == 0) {
-                // test for some other Ultralight EV1 magic gen2
-                isGen2 = true;
-                flag |= MAGIC_FLAG_GEN_2;
-            } else if (memcmp(buf, "\x85\x00\x00\xA0\x0A\x00\x0A\xB0\x00\x00\x00\x00\x00\x00\x00\x00\x18\x4D", 18) == 0) {
-                // test for some other Ultralight magic gen2
-                isGen2 = true;
-                flag |= MAGIC_FLAG_GEN_2;
-            } else if (memcmp(buf, "\x85\x00\x00\xA0\x00\x00\x0A\xA5\x00\x04\x04\x02\x01\x00\x0F\x03\x79\x0C", 18) == 0) {
-                // test for NTAG213 magic gen2
-                isGen2 = true;
-                flag |= MAGIC_FLAG_GEN_2;
+        // test for super card
+        ReaderTransmit(superGen1, sizeof(superGen1), NULL);
+        res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
+        if (res == 22) {
+            uint8_t isGen = MAGIC_FLAG_SUPER_GEN1;
+
+            // check for super card gen2
+            // not available after RATS, reset card before executing
+            mf_reset_card();
+
+            iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+            ReaderTransmit(rdbl00, sizeof(rdbl00), NULL);
+            res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
+            if (res == 18) {
+                isGen = MAGIC_FLAG_SUPER_GEN2;
             }
 
-            // test for super card
-            ReaderTransmit(superGen1, sizeof(superGen1), NULL);
+            flag |= isGen;
+        }
+    }
+
+    if (is_mfc == false) {
+        // magic ntag test
+        mf_reset_card();
+
+        res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+        if (res == 2) {
+            ReaderTransmit(rdblf0, sizeof(rdblf0), NULL);
             res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
-            if (res == 22) {
-                uint8_t isGen = MAGIC_FLAG_SUPER_GEN1;
-
-                // check for super card gen2
-                // not available after RATS, reset card before executing
-                mf_reset_card();
-
-                iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
-                ReaderTransmit(rdbl00, sizeof(rdbl00), NULL);
-                res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
-                if (res == 18) {
-                    isGen = MAGIC_FLAG_SUPER_GEN2;
-                }
-
-                flag |= isGen;
+            if (res == 18) {
+                flag |= MAGIC_FLAG_NTAG21X;
             }
         }
 
-        if (is_mfc == false) {
-            // magic ntag test
+    } else {
+
+        struct Crypto1State mpcs = {0, 0};
+        struct Crypto1State *pcs;
+        pcs = &mpcs;
+
+        // CUID (with default sector 0 B key) test
+        // regular cards will NAK the WRITEBLOCK(0) command, while DirectWrite will ACK it
+        // if we do get an ACK, we immediately abort to ensure nothing is ever actually written
+        // only perform test if we haven't already identified Gen2.  No need test if we have a positive identification already
+        if (isGen2 == false) {
             mf_reset_card();
 
             res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
-            if (res == 2) {
-                ReaderTransmit(rdblf0, sizeof(rdblf0), NULL);
-                res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
-                if (res == 18) {
-                    flag |= MAGIC_FLAG_NTAG21X;
-                }
-            }
-        } else {
+            if (res) {
 
-            struct Crypto1State mpcs = {0, 0};
-            struct Crypto1State *pcs;
-            pcs = &mpcs;
+                uint64_t tmpkey = bytes_to_num(key, 6);
+                if (mifare_classic_authex(pcs, cuid, 0, keytype, tmpkey, AUTH_FIRST, NULL, NULL) == 0) {
 
-            // CUID (with default sector 0 B key) test
-            // regular cards will NAK the WRITEBLOCK(0) command, while DirectWrite will ACK it
-            // if we do get an ACK, we immediately abort to ensure nothing is ever actually written
-            // only perform test if we haven't already identified Gen2.  No need test if we have a positive identification already
-            if (isGen2 == false) {
-                mf_reset_card();
-
-                res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
-                if (res) {
-
-                    uint64_t tmpkey = bytes_to_num(key, 6);
-                    if (mifare_classic_authex(pcs, cuid, 0, keytype, tmpkey, AUTH_FIRST, NULL, NULL) == 0) {
-
-                        if ((mifare_sendcmd_short(pcs, 1, ISO14443A_CMD_WRITEBLOCK, 0, buf, PM3_CMD_DATA_SIZE, par, NULL) == 1) && (buf[0] == 0x0A)) {
-                            flag |= MAGIC_FLAG_GEN_2;
-                            // turn off immediately to ensure nothing ever accidentally writes to the block
-                            FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
-                        }
+                    if ((mifare_sendcmd_short(pcs, 1, ISO14443A_CMD_WRITEBLOCK, 0, buf, PM3_CMD_DATA_SIZE, par, NULL) == 1) && (buf[0] == 0x0A)) {
+                        flag |= MAGIC_FLAG_GEN_2;
+                        // turn off immediately to ensure nothing ever accidentally writes to the block
+                        FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
                     }
-                    crypto1_deinit(pcs);
-                }
-            }
-
-            // magic MFC Gen3 test 1
-            mf_reset_card();
-
-            res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
-            if (res) {
-                ReaderTransmit(rdbl00, sizeof(rdbl00), NULL);
-                res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
-                if (res == 18) {
-                    flag |= MAGIC_FLAG_GEN_3;
-                }
-            }
-
-            // magic MFC Gen4 GDM magic auth test
-            mf_reset_card();
-
-            res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
-            if (res) {
-                ReaderTransmit(gen4gdmAuth, sizeof(gen4gdmAuth), NULL);
-                res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
-                if (res == 4) {
-                    flag |= MAGIC_FLAG_GDM_AUTH;
-                }
-            }
-
-            // QL88 test
-            mf_reset_card();
-
-            res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
-            if (res) {
-                if (mifare_classic_authex(pcs, cuid, 68, MF_KEY_B, 0x707B11FC1481, AUTH_FIRST, NULL, NULL) == 0) {
-                    flag |= MAGIC_FLAG_QL88;
                 }
                 crypto1_deinit(pcs);
             }
         }
-    };
+
+        // magic MFC Gen3 test 1
+        mf_reset_card();
+
+        res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+        if (res) {
+            ReaderTransmit(rdbl00, sizeof(rdbl00), NULL);
+            res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
+            if (res == 18) {
+                flag |= MAGIC_FLAG_GEN_3;
+            }
+        }
+
+        // magic MFC Gen4 GDM magic auth test
+        mf_reset_card();
+
+        res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+        if (res) {
+            ReaderTransmit(gen4gdmAuth, sizeof(gen4gdmAuth), NULL);
+            res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
+            if (res == 4) {
+                flag |= MAGIC_FLAG_GDM_AUTH;
+            }
+        }
+
+        // QL88 test
+        mf_reset_card();
+
+        res = iso14443a_select_card(uid, NULL, &cuid, true, 0, true);
+        if (res) {
+
+            if (mifare_classic_authex(pcs, cuid, 68, MF_KEY_B, 0x707B11FC1481, AUTH_FIRST, NULL, NULL) == 0) {
+                flag |= MAGIC_FLAG_QL88;
+            }
+            crypto1_deinit(pcs);
+        }
+    }
 
     // GDM alt magic wakeup (20)
     ReaderTransmitBitsPar(wupGDM1, 7, NULL, NULL);

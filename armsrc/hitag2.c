@@ -821,12 +821,17 @@ static bool hitag2_crypto(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *
                 // stage 1, got UID
                 if (bCrypto == false) {
 
+                    uint64_t ui64key = key[0] |
+                                       ((uint64_t)key[1]) << 8 |
+                                       ((uint64_t)key[2]) << 16 |
+                                       ((uint64_t)key[3]) << 24 |
+                                       ((uint64_t)key[4]) << 32 |
+                                       ((uint64_t)key[5]) << 40;
+
+                    uint32_t ui32uid = MemLeToUint4byte(rx);
+
                     DBG Dbprintf("hitag2_crypto: key array ");
                     DBG Dbhexdump(6, key, false);
-
-                    uint64_t ui64key = key[0] | ((uint64_t)key[1]) << 8 | ((uint64_t)key[2]) << 16 | ((uint64_t)key[3]) << 24 | ((uint64_t)key[4]) << 32 | ((uint64_t)key[5]) << 40;
-
-                    uint32_t ui32uid = rx[0] | ((uint32_t)rx[1]) << 8 | ((uint32_t)rx[2]) << 16 | ((uint32_t)rx[3]) << 24;
                     DBG Dbprintf("hitag2_crypto: key=0x%x%x uid=0x%x"
                                  , (uint32_t)((REV64(ui64key)) >> 32)
                                  , (uint32_t)((REV64(ui64key)) & 0xffffffff)

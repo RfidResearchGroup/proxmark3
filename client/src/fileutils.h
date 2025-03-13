@@ -282,7 +282,30 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
 */
 int loadFileDICTIONARY_safe(const char *preferredName, void **pdata, uint8_t keylen, uint32_t *keycnt);
 
+/**
+ * @brief  Utility function to load data safely from a DICTIONARY textfile. This method takes a preferred name.
+ * E.g. mfc_default_keys.dic
+ *
+ * @param preferredName
+ * @param suffix
+  * @param pdata A pointer to a pointer  (for reverencing the loaded dictionary)
+ * @param keylen  the number of bytes a key per row is
+ * @param verbose print messages if true
+ * @return 0 for ok, 1 for failz
+*/
 int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, void **pdata, uint8_t keylen, uint32_t *keycnt, bool verbose);
+
+/**
+ * @brief  Utility function to load data from a XML textfile. This method takes a preferred name.
+ * E.g. dumpdata-15.xml
+ *
+ * @param preferredName
+ * @param data The data array to store the loaded bytes from file
+ * @param maxdatalen maximum size of data array in bytes
+ * @param datalen the number of bytes loaded from file
+ * @return 0 for ok, 1 for failz
+*/
+int loadFileXML_safe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen);
 
 int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya, void **keyb, size_t *alen, size_t *blen);
 

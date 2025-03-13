@@ -453,7 +453,7 @@ static int seos_challenge_get(uint8_t *RNDICC, uint8_t RNDICC_len, uint8_t keysl
 
     char getChallengePre[21];
     strcpy(getChallengePre, "008700");
-   
+
     // const char keyslot_str[3] = "01";
     //strcat(getChallengePre, keyslot_str);
     snprintf(getChallengePre + strlen(getChallengePre), 3, "%02u", keyslot);
@@ -547,7 +547,7 @@ static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t 
     // Response is an ASN.1 encoded structure
     // Extract everything before the 8E tag
 
-    int res = PM3_EWRONGANSWER;    
+    int res = PM3_EWRONGANSWER;
     for (int i = 0; i < response_length; i++) {
         // extract MAC
         if (response[i] == 0x8E) {
@@ -579,7 +579,7 @@ static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t 
     // PrintAndLogEx(INFO, "Supp MAC......................... " _YELLOW_("%s"), sprint_hex_inrow(MAC_value, MAC_value_len));
     // PrintAndLogEx(INFO, "Calc MAC......................... " _YELLOW_("%s"), sprint_hex_inrow(cmac, sizeof(cmac)));
 
-out: 
+out:
     PrintAndLogEx(INFO, "--- " _CYAN_("MAC") " ---------------------------");
     PrintAndLogEx(ERR, _RED_("MAC Verification Failed"));
     return PM3_ESOFT;
@@ -753,16 +753,15 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
 
         }
     }
-    return PM3_SUCCESS;
+    return PM3_ESOFT;
 };
 
 static int seos_mutual_auth(uint8_t *randomICC, uint8_t *CRYPTOGRAM_Diversifier, uint8_t diversifier_len, uint8_t *mutual_auth_randomIFD, uint8_t *mutual_auth_keyICC, uint8_t *randomIFD, uint8_t randomIFD_len, uint8_t *keyIFD, uint8_t keyIFD_len, int encryption_algorithm, int hash_algorithm, int key_index) {
     uint8_t response[PM3_CMD_DATA_SIZE];
 
     // ---------------- Diversify Keys ----------------
-    uint8_t undiversified_key[16] = { 0x00 };
-    memcpy(undiversified_key, keys[key_index].readKey, 16);
-
+    uint8_t mk[16] = { 0x00 };
+    memcpy(mk, keys[key_index].readKey, 16);
     uint8_t keyslot = 0x01; // up to 0x0F
     uint8_t AES_key[24] = {0x00};
     uint8_t MAC_key[24] = {0x00};
@@ -776,8 +775,8 @@ static int seos_mutual_auth(uint8_t *randomICC, uint8_t *CRYPTOGRAM_Diversifier,
         return PM3_ESOFT;
     }
 
-    seos_kdf(true, undiversified_key, keyslot, adfOID, sizeof(adfOID), CRYPTOGRAM_Diversifier, diversifier_len, AES_key, encryption_algorithm, hash_algorithm);
-    seos_kdf(false, undiversified_key, keyslot, adfOID, sizeof(adfOID), CRYPTOGRAM_Diversifier, diversifier_len, MAC_key, encryption_algorithm, hash_algorithm);
+    seos_kdf(true, mk, keyslot, adfOID, sizeof(adfOID), CRYPTOGRAM_Diversifier, diversifier_len, AES_key, encryption_algorithm, hash_algorithm);
+    seos_kdf(false, mk, keyslot, adfOID, sizeof(adfOID), CRYPTOGRAM_Diversifier, diversifier_len, MAC_key, encryption_algorithm, hash_algorithm);
 
     memcpy(&MAC_key[16], &MAC_key[0], 8);
     memcpy(&AES_key[16], &AES_key[0], 8);
@@ -843,7 +842,7 @@ static int seos_mutual_auth(uint8_t *randomICC, uint8_t *CRYPTOGRAM_Diversifier,
     bool activate_field = false;
     bool keep_field_on = true;
 
-    uint8_t aMUTUAL_AUTH[102];
+    uint8_t aMUTUAL_AUTH[102] = {0};
     int aMUTUAL_AUTH_n = 0;
     param_gethex_to_eol(mutual_auth, 0, aMUTUAL_AUTH, sizeof(aMUTUAL_AUTH), &aMUTUAL_AUTH_n);
     int res = ExchangeAPDU14a(aMUTUAL_AUTH, aMUTUAL_AUTH_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
@@ -976,7 +975,9 @@ static int seos_aid_select(void) {
         // if we made it here,  its a success and we break :)
         break;
     }
-
+    if (i == ARRAYLEN(known_AID_map)) {
+        return PM3_ESOFT;
+    }
     return res;
 };
 
@@ -1380,7 +1381,7 @@ static int CmdHfSeosPACS(const char *Cmd) {
     uint8_t get_data[] = {0x5c, 0x02, 0xff, 0x00};
 
     int oid_len = 0;
-    uint8_t oid_hex[256] = {0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02};
+    uint8_t oid_hex[256] = {0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02, 0x02};
     CLIGetHexWithReturn(ctx, 1, oid_hex, &oid_len);
 
     int key_index = arg_get_int_def(ctx, 2, 0);
@@ -1389,7 +1390,7 @@ static int CmdHfSeosPACS(const char *Cmd) {
 
     // Fall back to default OID
     if (oid_len == 0) {
-        oid_len = 16;
+        oid_len = 17;
     }
 
     // convert OID hex to literal string
@@ -1439,7 +1440,7 @@ static int CmdHfSeosADF(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, get_data, &get_data_len);
 
     int oid_len = 0;
-    uint8_t oid_hex[256] = {0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02};
+    uint8_t oid_hex[256] = {0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02, 0x02};
     CLIGetHexWithReturn(ctx, 2, oid_hex, &oid_len);
 
     int key_index = arg_get_int_def(ctx, 3, 0);
@@ -1452,7 +1453,7 @@ static int CmdHfSeosADF(const char *Cmd) {
 
     // Catching when the OID value is not supplied
     if (oid_len == 0) {
-        oid_len = 16;
+        oid_len = 17;
     }
 
     // convert OID hex to literal string
@@ -1668,7 +1669,7 @@ static int CmdHfSeosSAM(const char *Cmd) {
     data[0] = flags;
 
     int cmdlen = 0;
-    if (CLIParamHexToBuf(arg_get_str(ctx, 5), data+1, PM3_CMD_DATA_SIZE-1, &cmdlen) != PM3_SUCCESS){
+    if (CLIParamHexToBuf(arg_get_str(ctx, 5), data + 1, PM3_CMD_DATA_SIZE - 1, &cmdlen) != PM3_SUCCESS) {
         CLIParserFree(ctx);
         return PM3_ESOFT;
     }
@@ -1680,7 +1681,7 @@ static int CmdHfSeosSAM(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_SAM_SEOS, data, cmdlen+1);
+    SendCommandNG(CMD_HF_SAM_SEOS, data, cmdlen + 1);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_SAM_SEOS, &resp, 4000) == false) {
         PrintAndLogEx(WARNING, "SAM timeout");
@@ -1755,7 +1756,7 @@ static command_t CommandTable[] = {
     {"list",    CmdHfSeosList,          AlwaysAvailable, "List SEOS history"},
     {"sam",     CmdHfSeosSAM,           IfPm3Smartcard,  "SAM tests"},
     {"-----------", CmdHelp,            AlwaysAvailable, "----------------------- " _CYAN_("Operations") " -----------------------"},
-    {"info",    CmdHfSeosInfo,          IfPm3NfcBarcode, "Tag information"},
+    {"info",    CmdHfSeosInfo,          IfPm3Iso14443a, "Tag information"},
     {"pacs",    CmdHfSeosPACS,          AlwaysAvailable, "Extract PACS Information from card"},
     {"adf",     CmdHfSeosADF,           AlwaysAvailable, "Read an ADF from the card"},
     {"gdf",     CmdHfSeosGDF,           AlwaysAvailable, "Read an GDF from card"},

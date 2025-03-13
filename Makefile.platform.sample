@@ -1,14 +1,27 @@
 # If you want to use it, copy this file as Makefile.platform and adjust it to your needs
 # Run 'make PLATFORM=' to get an exhaustive list of possible parameters for this file.
 
+# By default PM3 RDV4 image is generated.
+# Comment the line below and uncomment further down according to which device you have
 PLATFORM=PM3RDV4
+
+# For PM3 Easy:
+# uncomment the line below
 #PLATFORM=PM3GENERIC
+
+# For ICOPY-X and PM3 Max:
+# uncomment the two lines below
+#PLATFORM=PM3ICOPY3
+#PLATFORM_EXTRAS=FLASH
+
+
 # If you want more than one PLATFORM_EXTRAS option, separate them by spaces:
 #PLATFORM_EXTRAS=BTADDON
 #PLATFORM_EXTRAS=FLASH
 #PLATFORM_EXTRAS=SMARTCARD
 #PLATFORM_EXTRAS=BTADDON FLASH
 #STANDALONE=LF_SAMYRUN
+
 
 # Uncomment the line below to set the correct LED order on board Proxmark3 Easy
 # Only available with PLATFORM=PM3GENERIC

@@ -68,7 +68,7 @@ static uint8_t default_aes_keys[][16] = {
     { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }, // all FF
     { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF }, // 11 22 33
     { 0x47, 0x45, 0x4D, 0x58, 0x50, 0x52, 0x45, 0x53, 0x53, 0x4F, 0x53, 0x41, 0x4D, 0x50, 0x4C, 0x45 }, // gemalto
-    { 0x56, 0x4c, 0x67, 0x56, 0x99, 0x69, 0x64, 0x9f, 0x17, 0xC6, 0xC6, 0x16, 0x01, 0x10, 0x4D, 0xCA }  // Virtual Dorma Kaba
+    { 0x56, 0x4c, 0x67, 0x56, 0x99, 0x69, 0x64, 0x9f, 0x17, 0xC6, 0xC6, 0x16, 0x01, 0x10, 0x4D, 0xCA }  // Virtual dormakaba
 };
 
 static uint8_t default_3des_keys[][16] = {
@@ -669,6 +669,9 @@ static int try_default_aes_keys(bool override) {
 }
 
 static int ul_auth_select(iso14a_card_select_t *card, uint64_t tagtype, bool hasAuthKey, uint8_t *authkey, uint8_t *pack, uint8_t packSize) {
+    if (ul_select(card) == false) {
+        return PM3_ESOFT;
+    }
 
     if (hasAuthKey && (tagtype & MFU_TT_UL_C)) {
         //will select card automatically and close connection on error
@@ -676,12 +679,7 @@ static int ul_auth_select(iso14a_card_select_t *card, uint64_t tagtype, bool has
             PrintAndLogEx(WARNING, "Authentication Failed UL-C");
             return PM3_ESOFT;
         }
-
     } else {
-        if (ul_select(card) == false) {
-            return PM3_ESOFT;
-        }
-
         if (hasAuthKey) {
             if (ulev1_requestAuthentication(authkey, pack, packSize) == PM3_EWRONGANSWER) {
                 DropField();
@@ -1419,7 +1417,6 @@ static int ulev1_print_signature(uint64_t tagtype, uint8_t *uid, uint8_t *signat
     } else if (signature_len == 48) {
         index = originality_check_verify(uid, 7, signature, signature_len, PK_MFULAES);
     }
-    PrintAndLogEx(NORMAL, "");
     return originality_check_print(signature, signature_len, index);
 }
 
@@ -2069,6 +2066,7 @@ uint64_t GetHF14AMfU_Type(void) {
         uint8_t version[10] = {0x00};
         int len  = ulev1_getVersion(version, sizeof(version));
         DropField();
+
         switch (len) {
             case 0x0A: {
                 /*
@@ -2160,6 +2158,7 @@ uint64_t GetHF14AMfU_Type(void) {
                 tagtype = MFU_TT_UNKNOWN;
                 break;
         }
+
         // This is a test from cards that doesn't answer to GET_VERSION command
         // UL vs UL-C vs NTAG203 vs FUDAN FM11NT021 (which is NTAG213 compatiable)
         if (tagtype & (MFU_TT_UL | MFU_TT_UL_C | MFU_TT_NTAG_203)) {
@@ -2451,7 +2450,6 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         }
         // check signature
         int index = originality_check_verify_ex(card.uid, 7, signature, sizeof(signature), PK_ST25TN, false, true);
-        PrintAndLogEx(NORMAL, "");
         originality_check_print(signature, sizeof(signature), index);
     }
 
@@ -4071,8 +4069,8 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_READBL, 2, 0, 0, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "command execution time out");
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
 
@@ -4084,8 +4082,8 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     // block 1 write and block2 write
     hf14a_config config;
     SendCommandNG(CMD_HF_ISO14443A_GET_CONFIG, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_HF_ISO14443A_GET_CONFIG, &resp, 2000)) {
-        PrintAndLogEx(WARNING, "command execution time out");
+    if (WaitForResponseTimeout(CMD_HF_ISO14443A_GET_CONFIG, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "command execute timeout");
         return PM3_ETIMEOUT;
     }
     memcpy(&config, resp.data.asBytes, sizeof(hf14a_config));
@@ -4103,8 +4101,8 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     data[3] =  0x88 ^ uid[0] ^ uid[1] ^ uid[2];
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 0, 0, 0, data, sizeof(data));
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "command execution time out");
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
 
@@ -4115,8 +4113,8 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     data[3] = uid[6];
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 1, 0, 0, data, sizeof(data));
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "command execution time out");
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
 
@@ -4127,8 +4125,8 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     data[3] = oldblock2[3];
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 2, 0, 0, data, sizeof(data));
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        PrintAndLogEx(WARNING, "command execution time out");
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
 

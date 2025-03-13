@@ -175,14 +175,26 @@ typedef struct aidhdr {
 } PACKED aidhdr_t;
 
 typedef struct {
+    const uint32_t aidnum;
     const char *aid;
     const char *comment;
 } mfdesCommonAID_t;
 
+/*
+PACS application id(s) - HID Factory, CP1000 Standard, Mobile, Custom and Elite
+We have HID Factory,  Field Encoder == CP1000 (?)
+No mobile, Custom or Elite
+*/
+
 static const mfdesCommonAID_t commonAids[] = {
-    // AID, name/comment
-    { "\xf4\x81\x2f", "Gallagher card data application" },
-    { "\xf4\x81\x20", "Gallagher card application directory" }, // Can be 0xF48120 - 0xF4812B, but I've only ever seen 0xF48120
+    { 0x53494F, "\x53\x49\x4F", "SIO DESFire EV1 - HID Factory" },
+    { 0xD3494F, "\xD3\x49\x4F", "SIO DESFire EV1 - Field Encoder" },
+    { 0xD9494F, "\xD9\x49\x4F", "SIO DESFire EV1 - Field Encoder" },
+    { 0xF484E3, "\xF4\x84\xE3", "SE Enhanced" },
+    { 0xF484E4, "\xF4\x84\xE4", "SE Enhanced" },
+    { 0xF4812F, "\xf4\x81\x2f", "Gallagher card data application" },
+    { 0xF48120, "\xf4\x81\x20", "Gallagher card application directory" }, // Can be 0xF48120 - 0xF4812B, but I've only ever seen 0xF48120
+    { 0xF47300, "\xf4\x73\x00", "Inner Range card application" },
 };
 
 static int CmdHelp(const char *Cmd);
@@ -311,15 +323,13 @@ static char *getTypeStr(uint8_t type) {
     return buf;
 }
 
-
-static char noCommentStr[1] = { 0x00 };
-static const char *getAidCommentStr(uint8_t *aid) {
+static const char *getAidCommentStr(uint32_t aid) {
     for (int i = 0; i < ARRAYLEN(commonAids); i++) {
-        if (memcmp(aid, commonAids[i].aid, 3) == 0) {
+        if (aid == commonAids[i].aidnum) {
             return commonAids[i].comment;
         }
     }
-    return noCommentStr;
+    return "";
 }
 
 static nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
@@ -355,6 +365,10 @@ static nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
     if (type == 0x81 && major == 0x42 && minor == 0x00)
         return DESFIRE_EV2;
 
+    // Apple Wallet DESFire Applet
+    if (type == 0x91 && major == 0x62 && minor == 0x01)
+        return DESFIRE_EV2;
+
     // Plus EV1
     if (type == 0x02 && major == 0x11 && minor == 0x00)
         return PLUS_EV1;
@@ -377,7 +391,7 @@ static nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
 // ref:  https://www.nxp.com/docs/en/application-note/AN12343.pdf  p7
 static nxp_producttype_t getProductType(const uint8_t *versionhw) {
 
-    uint8_t product = versionhw[2];
+    uint8_t product = versionhw[1];
 
     if (product == 0x01)
         return DESFIRE_PHYSICAL;
@@ -394,7 +408,7 @@ static nxp_producttype_t getProductType(const uint8_t *versionhw) {
 
 static const char *getProductTypeStr(const uint8_t *versionhw) {
 
-    uint8_t product = versionhw[2];
+    uint8_t product = versionhw[1];
 
     if (product == 0x01)
         return "MIFARE DESFire native IC (physical card)";
@@ -454,7 +468,6 @@ int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, si
     }
 
     int index = originality_check_verify(uid, uidlen, signature, signature_len, PK_MFDES);
-    PrintAndLogEx(NORMAL, "");
     return originality_check_print(signature, signature_len, index);
 }
 
@@ -752,7 +765,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     if (major == 2 && minor == 2)
         PrintAndLogEx(INFO, "\t2.2 - DESFire Ev2 XL, Originality check, proximity check, EAL5");
     if (major == 3 && minor == 0)
-        PrintAndLogEx(INFO, "\t3.0 - DESFire Ev3, Originality check, proximity check, badass EAL6 ?");
+        PrintAndLogEx(INFO, "\t3.0 - DESFire Ev3, Originality check, proximity check, badass EAL6");
     if (major == 0xA0 && minor == 0)
         PrintAndLogEx(INFO, "\tx.x - DUOX, Originality check, proximity check, EAL6++");
 
@@ -801,12 +814,16 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     }
 
     if (aidbuflen > 2) {
+
+        uint8_t j = aidbuflen / 3;
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(SUCCESS, "--- " _CYAN_("AID list"));
-        PrintAndLogEx(SUCCESS, "AIDs: " NOLF);
-        for (int i = 0; i < aidbuflen; i += 3)
-            PrintAndLogEx(NORMAL, "%s %06x" NOLF, (i == 0) ? "" : ",", DesfireAIDByteToUint(&aidbuf[i]));
-        PrintAndLogEx(NORMAL, "\n");
+        PrintAndLogEx(SUCCESS, "--- " _CYAN_("AID list")  " ( " _YELLOW_("%u") " found )", j);
+
+        j = 0;
+        for (int i = 0; i < aidbuflen; i += 3, j++) {
+            uint32_t aid = DesfireAIDByteToUint(&aidbuf[i]);
+            PrintAndLogEx(SUCCESS, _YELLOW_("%06X") ", %s", aid, getAidCommentStr(aid));
+        }
     }
 
     DesfireFillPICCInfo(&dctx, &PICCInfo, true);
@@ -817,7 +834,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "--- " _CYAN_("Free memory"));
         if (PICCInfo.freemem != 0xffffffff) {
-            PrintAndLogEx(SUCCESS, "   Available free memory on card         : " _GREEN_("%d bytes"), PICCInfo.freemem);
+            PrintAndLogEx(SUCCESS, "   Available free memory on card... " _GREEN_("%d") " bytes", PICCInfo.freemem);
         } else {
             PrintAndLogEx(SUCCESS, "   Card doesn't support 'free mem' cmd");
         }
@@ -1805,7 +1822,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
     AppListS AppList = {{0}};
     DesfireFillAppList(&dctx, &PICCInfo, AppList, false, false, false); // no deep scan, no scan files
 
-    PrintAndLogEx(SUCCESS, "# Applications... " _GREEN_("%zu"), PICCInfo.appCount);
+    PrintAndLogEx(SUCCESS, "# Applications.... " _GREEN_("%zu"), PICCInfo.appCount);
     if (PICCInfo.freemem == 0xffffffff) {
         PrintAndLogEx(SUCCESS, "Free memory...... " _YELLOW_("n/a"));
     } else {
@@ -3265,11 +3282,8 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     if (buflen >= 3) {
         PrintAndLogEx(INFO, "---- " _CYAN_("AID list") " ----");
         for (int i = 0; i < buflen; i += 3) {
-            const char *commentStr = getAidCommentStr(&buf[i]);
-            if ((void *) commentStr == &noCommentStr)
-                PrintAndLogEx(INFO, "AID: %06x", DesfireAIDByteToUint(&buf[i]));
-            else
-                PrintAndLogEx(INFO, "AID: %06x (%s)", DesfireAIDByteToUint(&buf[i]), commentStr);
+            uint32_t aid  = DesfireAIDByteToUint(&buf[i]);
+            PrintAndLogEx(SUCCESS, _YELLOW_("%06X") " %s", aid, getAidCommentStr(aid));
         }
     } else {
         PrintAndLogEx(INFO, "There is no applications on the card");
@@ -5590,7 +5604,7 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
     SetAPDULogging(APDULogging);
     CLIParserFree(ctx);
 
-    PrintAndLogEx(INPLACE, _YELLOW_("It may take up to 15 seconds. Processing...."));
+    PrintAndLogEx(INFO, "It may take up to " _YELLOW_("15") " seconds. Processing...");
 
     res = DesfireSelectAndAuthenticateEx(&dctx, securechann, 0x000000, noauth, verbose);
     if (res != PM3_SUCCESS) {
@@ -5602,7 +5616,6 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
     AppListS AppList = {{0}};
     DesfireFillAppList(&dctx, &PICCInfo, AppList, !nodeep, scanfiles, true);
 
-    printf("\33[2K\r"); // clear current line before printing
     PrintAndLogEx(NORMAL, "");
 
     // print zone

@@ -756,14 +756,16 @@ uint8_t FirstBlockOfSector(uint8_t sectorNo) {
 }
 
 // work with emulator memory
-void emlSetMem_xt(uint8_t *data, int blockNum, int blocksCount, int block_width) {
+void emlSetMem_xt(uint8_t *data, uint16_t blockNum, uint8_t blocksCount, uint8_t block_width) {
     uint32_t offset = blockNum * block_width;
     uint32_t len =  blocksCount * block_width;
     emlSet(data, offset, len);
 }
 
-void emlGetMem(uint8_t *data, int blockNum, int blocksCount) {
-    emlGet(data, (blockNum * 16), (blocksCount * 16));
+void emlGetMem_xt(uint8_t *data, uint16_t blockNum, uint8_t blocksCount, uint8_t block_width) {
+    uint32_t offset = blockNum * block_width;
+    uint32_t len =  blocksCount * block_width;
+    emlGet(data, offset, len);
 }
 
 bool emlCheckValBl(int blockNum) {
@@ -817,10 +819,11 @@ uint64_t emlGetKey(int sectorNum, int keyType) {
 }
 
 void emlClearMem(void) {
+
+    BigBuf_Clear_EM();
+
     const uint8_t trailer[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x07, 0x80, 0x69, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
     const uint8_t uid[]   =   {0xe6, 0x84, 0x87, 0xf3, 0x16, 0x88, 0x04, 0x00, 0x46, 0x8e, 0x45, 0x55, 0x4d, 0x70, 0x41, 0x04};
-    uint8_t *mem = BigBuf_get_EM_addr();
-    memset(mem, 0, CARD_MEMORY_SIZE);
 
     // fill sectors trailer data
     for (uint16_t b = 3; b < MIFARE_4K_MAXBLOCK; ((b < MIFARE_2K_MAXBLOCK - 4) ? (b += 4) : (b += 16))) {
