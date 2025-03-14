@@ -13,7 +13,7 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// Hitag 2, Hitag S
+// Hitag 2, Hitag S, Hitag µ
 //-----------------------------------------------------------------------------
 
 
@@ -39,6 +39,26 @@
 #define HITAGS_UID_PADR         0
 #define HITAGS_CONFIG_PADR      1
 
+// Add Hitag µ specific definitions
+#define HITAGU_UID_SIZE         6
+#define HITAGU_BLOCK_SIZE       HITAG_BLOCK_SIZE
+#define HITAGU_MAX_BLOCKS       0x100
+#define HITAGU_MAX_BYTE_SIZE    (HITAGU_MAX_BLOCKS * HITAGU_BLOCK_SIZE)
+#define HITAGU_CONFIG_PADR      0xFF
+#define HITAGU_PASSWORD_PADR    0xFE
+
+// Hitag μ IC Revision (ICR) values
+#define HITAGU_ICR_STANDARD      0x10  // Standard Hitag μ
+#define HITAGU_ICR_ADVANCED      0x20  // Hitag μ advanced
+#define HITAGU_ICR_ADVANCED_PLUS 0x30  // Hitag μ advanced+
+#define HITAGU_ICR_8265          0x80  // 8265
+
+// Hitag μ memory sizes based on ICR
+#define HITAGU_MAX_PAGE_STANDARD      0x04  // 4 blocks (0x00-0x03) for standard Hitag μ
+#define HITAGU_MAX_PAGE_ADVANCED      0x10  // 16 blocks (0x00-0x0F) for Hitag μ advanced
+#define HITAGU_MAX_PAGE_ADVANCED_PLUS 0x37  // 56 blocks (0x00-0x36) for Hitag μ advanced+
+#define HITAGU_MAX_PAGE_8265          0x0F  // 15 blocks (0x00-0x0E) for 8265
+
 // need to see which limits these cards has
 #define HITAG1_MAX_BYTE_SIZE    64
 #define HITAG_MAX_BYTE_SIZE     (64 * HITAG_BLOCK_SIZE)
@@ -58,18 +78,24 @@ typedef enum {
     HTSF_82xx,
     HTSF_CHALLENGE,
     HTSF_KEY,
-    HTS_LAST_CMD              = HTSF_KEY,
+    HTS_LAST_CMD = HTSF_KEY,
 
     HT1F_PLAIN,
     HT1F_AUTHENTICATE,
-    HT1_LAST_CMD              = HT1F_AUTHENTICATE,
+    HT1_LAST_CMD = HT1F_AUTHENTICATE,
 
     HT2F_PASSWORD,
     HT2F_AUTHENTICATE,
     HT2F_CRYPTO,
     HT2F_TEST_AUTH_ATTEMPTS,
     HT2F_UID_ONLY,
-    HT2_LAST_CMD              = HT2F_UID_ONLY,
+    HT2_LAST_CMD = HT2F_UID_ONLY,
+
+    // Add Hitag µ commands
+    HTUF_PLAIN,
+    HTUF_82xx,
+    HTUF_PASSWORD,
+    HTU_LAST_CMD = HTUF_PASSWORD,
 } PACKED hitag_function;
 
 //---------------------------------------------------------
@@ -150,6 +176,57 @@ struct hitagS_tag {
 
 } PACKED;
 
+// Configuration byte 0 bit definitions
+#define HITAGU_BYTE0_DATARATE_MASK 0x03  // Bits 0-1: data rate
+#define HITAGU_BYTE0_DATARATE_2K 0x00    // 00 = 2kbit/s
+#define HITAGU_BYTE0_DATARATE_4K 0x01    // 01 = 4kbit/s
+#define HITAGU_BYTE0_DATARATE_8K 0x02    // 10 = 8kbit/s
+#define HITAGU_BYTE0_ENCODING_MASK       0x04   // Bit 2: encoding
+#define HITAGU_BYTE0_ENCODING_MANCHESTER 0x00   // 0 = Manchester
+#define HITAGU_BYTE0_ENCODING_BIPHASE    0x01 // 1 = Biphase
+
+// Hitag µ configuration structure
+typedef struct {
+    // byte0
+    uint8_t datarate: 2;
+    uint8_t encoding: 1;
+    uint8_t pwdW0_127: 1;
+    uint8_t pwdW128_511: 1;
+    uint8_t pwdW512_max: 1;
+    uint8_t pwdRW512_max: 1;
+} PACKED hitagu_config_t;
+
+typedef struct {
+    // byte0
+    uint8_t datarate : 2;  // 00 = 2kbit/s, 01 = 4kbit/s, 10 = 8kbit/s, 11 = 2kbit/s
+    uint8_t datarate_override : 1;  // 0 = datarate, 1 = 2kbit/s
+    uint8_t encoding : 1; // 0 = Manchester, 1 = Biphase
+
+    uint8_t reserved : 1;
+    uint8_t ttf_mode : 2;  // 00/10/11 = "Block 0, Block 1, Block 2, Block 3", 01 = "Block 0, Block 1"
+    uint8_t ttf : 1;
+} PACKED hitagu82xx_config_t;
+
+// Hitag µ tag structure
+struct hitagU_tag {
+    PSTATE   pstate;  // protocol-state
+    TSATE    tstate;  // tag-state
+
+    int      max_page;
+    uint8_t  uid[HITAGU_UID_SIZE];
+    union {
+        uint8_t asBytes[HITAGU_BLOCK_SIZE];
+        hitagu_config_t s;
+        hitagu82xx_config_t s82xx;
+    } config;
+    uint8_t  password[HITAG_PASSWORD_SIZE];
+    uint8_t icr;  // IC Revision value - determines memory size
+
+    union {
+        uint8_t pages[HITAGU_MAX_BLOCKS][HITAGU_BLOCK_SIZE];
+    } data;
+} PACKED;
+
 typedef struct {
     hitag_function cmd;
     uint8_t page;
@@ -170,6 +247,9 @@ typedef struct {
 
     // Hitag S section
     uint8_t mode;
+
+    // Hitag µ section
+    uint8_t uid[HITAGU_UID_SIZE];
 } PACKED lf_hitag_data_t;
 
 typedef struct {
@@ -185,4 +265,18 @@ typedef struct {
     int8_t  pages_reason[HITAGS_MAX_PAGES];
     uint8_t pages[HITAGS_MAX_PAGES][HITAGS_PAGE_SIZE];
 } PACKED lf_hts_read_response_t;
+
+// Hitag µ read response structure
+typedef struct {
+    union {
+        uint8_t asBytes[HITAGU_BLOCK_SIZE];
+        hitagu_config_t s;
+        hitagu82xx_config_t s82xx;
+    } config_page;
+    uint8_t uid[HITAGU_UID_SIZE];
+    uint8_t icr;                                  // IC Revision value for memory size detection
+    int8_t  pages_reason[HITAGU_MAX_PAGE_ADVANCED_PLUS];
+    uint8_t pages[HITAGU_MAX_PAGE_ADVANCED_PLUS][HITAGU_BLOCK_SIZE];
+} PACKED lf_htu_read_response_t;
+
 #endif

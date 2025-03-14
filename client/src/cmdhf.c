@@ -83,7 +83,7 @@ int CmdHFSearch(const char *Cmd) {
 
     int res = PM3_ESOFT;
 
-    uint8_t success[20] = {0};
+    uint8_t success[COUNT_OF_PROTOCOLS] = {0};
 
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, " Searching for ThinFilm tag...");
