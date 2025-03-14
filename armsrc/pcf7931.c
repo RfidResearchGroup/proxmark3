@@ -583,19 +583,19 @@ void SendCmdPCF7931(uint32_t *tab, bool ledcontrol) {
     for (u = 0; tab[u] != 0; u += 3) {
         // modulate antenna
         HIGH(GPIO_SSC_DOUT);
-        while (tempo < tab[u]) {
+        while ((uint32_t)tempo < tab[u]) {
             tempo = AT91C_BASE_TC0->TC_CV;
         }
 
         // stop modulating antenna
         LOW(GPIO_SSC_DOUT);
-        while (tempo < tab[u + 1]) {
+        while ((uint32_t)tempo < tab[u + 1]) {
             tempo = AT91C_BASE_TC0->TC_CV;
         }
 
         // modulate antenna
         HIGH(GPIO_SSC_DOUT);
-        while (tempo < tab[u + 2]) {
+        while ((uint32_t)tempo < tab[u + 2]) {
             tempo = AT91C_BASE_TC0->TC_CV;
         }
     }
