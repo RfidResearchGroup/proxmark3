@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Improved `pcf7931` generic readability of the code. Unified datatypes and added documentation/explainations (@tinooo)
+- Improved `lf pcf7931` read code - fixed some checks for more stability (@tinooo)
 - Changed `trace list -t seos` - improved annotation (@iceman1001)
 - Added `make commands` to regenerate commands documentation files and autocompletion data independently of `make style` (@doegox)
 - Added texecom identification,  thanks @en4rab ! (@iceman1001)
