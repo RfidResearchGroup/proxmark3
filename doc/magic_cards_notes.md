@@ -158,11 +158,17 @@ This is the cheapest and most common ID82xx chip available. It is usually sold a
 * Chip is likely a cut down version of Hitag μ (micro) clone
 * UID `00 00 00 00 00 00`
 * Password protection (4b), usually "00000000"(default) or "9AC4999C"(FURUI)
-* CON0
-  * bit 0-1 -> data rate ’00’... 2kbit/s ’01’... 4kbit/s ’10’... 8kbit/s ’11’... 2kbit/s
-  * bit 2 when set, fixed to MC 2kbit/s
-  * bit 3-6 reversed? all blocks always read without password and write with password
-  * bit 7 -> enable TTF
+* Config block 0xFF
+  * Byte0
+    * bit 0-1 : Data Rate. ’00’ -> 2kbit/s, ’01’ -> 4kbit/s, ’10’ -> 8kbit/s, ’11’ -> 2kbit/s
+    * bit 2   : 1 -> fixed to 2kbit/s
+    * bit 3   : 0 -> Manchester, 1 -> Bi-phase
+    * bit 4   : TTF blocks. 0 -> "Block 0, Block 1, Block 2, Block 3", 1 -> "Block 0, Block 1"
+    * bit 5-6 : reversed? all blocks always read without password and write with password
+    * bit 7   : 1 -> enable TTF
+  * Byte1 only bit 0 changable
+  * Byte2 fixed 0x00
+  * Byte3 only higher nibble changable
 * Currently unimplemented in proxmark3 client
 * Other names:
   * ID8210 (CN)
