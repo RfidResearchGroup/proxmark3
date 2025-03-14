@@ -1218,7 +1218,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_HITAGS_UID: {
-            hts_read_uid(NULL, false, true);
+            hts_read_uid(NULL, true, true);
             break;
         }
         case CMD_LF_HITAG2_WRITE: {

@@ -22,9 +22,10 @@
 #include "common.h"
 #include "hitag.h"
 
+void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response);
+
 int CmdLFHitagS(const char *Cmd);
 
 int read_hts_uid(void);
-void hitags_config_print(hitags_config_t config);
 
 #endif //CMDLFHITAGS_H__

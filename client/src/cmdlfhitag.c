@@ -793,9 +793,6 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
     free(binstr);
 }
 
-void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
-}
-
 static const char *identify_transponder_hitag2(uint32_t uid) {
 
     switch (uid) {
