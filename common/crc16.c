@@ -142,12 +142,17 @@ uint16_t update_crc16(uint16_t crc, uint8_t c) {
 }
 
 // two ways.  msb or lsb loop.
-uint16_t Crc16(uint8_t const *d, size_t length, uint16_t remainder, uint16_t polynomial, bool refin, bool refout) {
-    if (length == 0)
+uint16_t Crc16(uint8_t const *d, size_t bitlength, uint16_t remainder, uint16_t polynomial, bool refin, bool refout) {
+    if (bitlength == 0)
         return (~remainder);
 
-    for (uint32_t i = 0; i < length; ++i) {
-        uint8_t c = d[i];
+    uint8_t offset = 8 - (bitlength % 8);
+    // front padding with 0s won't change the CRC result
+    uint8_t prebits = 0;
+    for (uint32_t i = 0; i < (bitlength + 7) / 8; ++i) {
+        uint8_t c = prebits | d[i] >> offset;
+        prebits = d[i] << (8 - offset);
+
         if (refin) c = reflect8(c);
 
         // xor in at msb
