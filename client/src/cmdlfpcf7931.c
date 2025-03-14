@@ -105,8 +105,8 @@ static int CmdLFPCF7931Config(const char *Cmd) {
         arg_lit0("r", "reset", "Reset configuration to default values"),
         arg_str0("p", "pwd", "<hex>", "Password, 7bytes, LSB-order"),
         arg_u64_0("d", "delay", "<dec>", "Tag initialization delay (in us)"),
-        arg_int0(NULL, "lw", "<dec>", "offset, low pulses width (in us)"),
-        arg_int0(NULL, "lp", "<dec>", "offset, low pulses position (in us)"),
+        arg_int0(NULL, "lw", "<dec>", "offset, low pulses width (in us), optional!"),
+        arg_int0(NULL, "lp", "<dec>", "offset, low pulses position (in us), optional!"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
