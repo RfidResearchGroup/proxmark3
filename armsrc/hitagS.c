@@ -419,7 +419,7 @@ static void hts_init_clock(void) {
 static int check_select(const uint8_t *rx, uint32_t uid) {
 
     // global var?
-    concatbits((uint8_t *)&reader_selected_uid, 0, rx, 5, 32);
+    concatbits((uint8_t *)&reader_selected_uid, 0, rx, 5, 32, false);
     reader_selected_uid = BSWAP_32(reader_selected_uid);
 
     if (reader_selected_uid == uid) {
@@ -1090,7 +1090,7 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
 
     protocol_mode = packet->mode;
     uint8_t cmd = protocol_mode;
-    txlen = concatbits(tx, txlen, &cmd, 0, 5);
+    txlen = concatbits(tx, txlen, &cmd, 0, 5, false);
     hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, t_wait, ledcontrol, true);
 
     if (rxlen != 32) {
@@ -1105,10 +1105,10 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
     // select uid
     txlen = 0;
     cmd = HITAGS_SELECT;
-    txlen = concatbits(tx, txlen, &cmd, 0, 5);
-    txlen = concatbits(tx, txlen, rx, 0, 32);
+    txlen = concatbits(tx, txlen, &cmd, 0, 5, false);
+    txlen = concatbits(tx, txlen, rx, 0, 32, false);
     uint8_t crc = CRC8Hitag1Bits(tx, txlen);
-    txlen = concatbits(tx, txlen, &crc, 0, 8);
+    txlen = concatbits(tx, txlen, &crc, 0, 8, false);
 
     hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
@@ -1140,8 +1140,8 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
             }
 
             txlen = 0;
-            txlen = concatbits(tx, txlen, rnd, 0, 32);
-            txlen = concatbits(tx, txlen, auth_ks, 0, 32);
+            txlen = concatbits(tx, txlen, rnd, 0, 32, false);
+            txlen = concatbits(tx, txlen, auth_ks, 0, 32, false);
 
             DBG DbpString("Authenticating using key:");
             DBG Dbhexdump(6, packet->key, false);
@@ -1173,13 +1173,13 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
             // send write page request
             txlen = 0;
             cmd = HITAGS_WRITE_PAGE;
-            txlen = concatbits(tx, txlen, &cmd, 0, 4);
+            txlen = concatbits(tx, txlen, &cmd, 0, 4, false);
 
             uint8_t addr = 64;
-            txlen = concatbits(tx, txlen, &addr, 0, 8);
+            txlen = concatbits(tx, txlen, &addr, 0, 8, false);
 
             crc = CRC8Hitag1Bits(tx, txlen);
-            txlen = concatbits(tx, txlen, &crc, 0, 8);
+            txlen = concatbits(tx, txlen, &crc, 0, 8, false);
 
             hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
@@ -1189,9 +1189,9 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
             }
 
             txlen = 0;
-            txlen = concatbits(tx, txlen, packet->pwd, 0, 32);
+            txlen = concatbits(tx, txlen, packet->pwd, 0, 32, false);
             crc = CRC8Hitag1Bits(tx, txlen);
-            txlen = concatbits(tx, txlen, &crc, 0, 8);
+            txlen = concatbits(tx, txlen, &crc, 0, 8, false);
 
             hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
@@ -1287,11 +1287,11 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
         //send read request
         size_t txlen = 0;
         uint8_t cmd = HITAGS_READ_PAGE;
-        txlen = concatbits(tx, txlen, &cmd, 0, 4);
+        txlen = concatbits(tx, txlen, &cmd, 0, 4, false);
         uint8_t addr = page_addr;
-        txlen = concatbits(tx, txlen, &addr, 0, 8);
+        txlen = concatbits(tx, txlen, &addr, 0, 8, false);
         uint8_t crc = CRC8Hitag1Bits(tx, txlen);
-        txlen = concatbits(tx, txlen, &crc, 0, 8);
+        txlen = concatbits(tx, txlen, &crc, 0, 8, false);
 
         hts_send_receive(tx, txlen, rx, ARRAYLEN(rx), &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
@@ -1396,13 +1396,13 @@ void hts_write_page(const lf_hitag_data_t *payload, bool ledcontrol) {
     txlen = 0;
 
     uint8_t cmd = HITAGS_WRITE_PAGE;
-    txlen = concatbits(tx, txlen, &cmd, 0, 4);
+    txlen = concatbits(tx, txlen, &cmd, 0, 4, false);
 
     uint8_t addr = payload->page;
-    txlen = concatbits(tx, txlen, &addr, 0, 8);
+    txlen = concatbits(tx, txlen, &addr, 0, 8, false);
 
     uint8_t crc = CRC8Hitag1Bits(tx, txlen);
-    txlen = concatbits(tx, txlen, &crc, 0, 8);
+    txlen = concatbits(tx, txlen, &crc, 0, 8, false);
 
     hts_send_receive(tx, txlen, rx, ARRAYLEN(rx), &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
@@ -1430,9 +1430,9 @@ void hts_write_page(const lf_hitag_data_t *payload, bool ledcontrol) {
     // }
 
     txlen = 0;
-    txlen = concatbits(tx, txlen, payload->data, 0, 32);
+    txlen = concatbits(tx, txlen, payload->data, 0, 32, false);
     crc = CRC8Hitag1Bits(tx, txlen);
-    txlen = concatbits(tx, txlen, &crc, 0, 8);
+    txlen = concatbits(tx, txlen, &crc, 0, 8, false);
 
     enable_page_tearoff = g_tearoff_enabled;
 
@@ -1493,7 +1493,7 @@ int hts_read_uid(uint32_t *uid, bool ledcontrol, bool send_answer) {
     size_t txlen = 0;
     uint8_t tx[HITAG_FRAME_LEN] = { 0x00 };
 
-    txlen = concatbits(tx, txlen, &cmd, 0, 5);
+    txlen = concatbits(tx, txlen, &cmd, 0, 5, false);
 
     hts_send_receive(tx, txlen, rx, ARRAYLEN(rx), &rxlen, HITAG_T_WAIT_FIRST, ledcontrol, true);
 

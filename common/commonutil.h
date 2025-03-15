@@ -150,7 +150,7 @@ bool hexstr_to_byte_array(const char *hexstr, uint8_t *d, size_t *n);
 void reverse_arraybytes(uint8_t *arr, size_t len);
 void reverse_arraybytes_copy(uint8_t *arr, uint8_t *dest, size_t len);
 
-size_t concatbits(uint8_t *dest, int dest_offset, const uint8_t *src, int src_offset, size_t nbits);
+size_t concatbits(uint8_t *dest, int dest_offset, const uint8_t *src, int src_offset, size_t nbits, bool src_lsb);
 int char2int(char c);
 int hexstr2ByteArr(const char *hexstr, unsigned char *array, size_t asize);
 #endif
