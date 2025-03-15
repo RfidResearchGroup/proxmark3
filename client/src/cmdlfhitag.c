@@ -832,7 +832,7 @@ static bool ht2_get_uid(uint32_t *uid) {
     }
 
     if (resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - failed getting UID");
+        PrintAndLogEx(DEBUG, "DEBUG: Error - failed getting Hitag 2 UID");
         return false;
     }
 
