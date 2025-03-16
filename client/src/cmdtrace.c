@@ -801,7 +801,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             annotateHitag2(explanation, sizeof(explanation), frame, data_len, parityBytes[0], hdr->isResponse, mfDicKeys, mfDicKeysCount, false);
             break;
         case PROTO_HITAGS:
-            annotateHitagS(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+            annotateHitagS(explanation, sizeof(explanation), frame, (data_len * 8) - ((8 - parityBytes[0]) % 8), hdr->isResponse);
             break;
         case ICLASS:
             annotateIclass(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
