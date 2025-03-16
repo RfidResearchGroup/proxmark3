@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Major update to `lf em 4x70` internals on ARM side; Enabling improved debugging and reliability (@henrygab)
 - Changed `trace list -t seos` - improved annotation (@iceman1001)
 - Added `make commands` to regenerate commands documentation files and autocompletion data independently of `make style` (@doegox)
 - Added texecom identification,  thanks @en4rab ! (@iceman1001)
