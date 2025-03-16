@@ -34,9 +34,15 @@
 
 // TODO: Optional: use those unique structures in a union, call it em4x70_data_t, but add a first
 //       common header field that includes the command itself (to improve debugging / validation).
+
 typedef struct _em4x70_tag_info_t {
     /// <summary>
-    /// The full data on an em4x70 the tag.
+    /// The full data on an em4170 tag.
+    /// For V4070 tags:
+    /// * UM2 does not exist on the tag
+    /// * Pin does not exist on the tag
+    /// * UM1 (including the lock bits) might be one-time programmable (OTP)
+    /// 
     /// [31] == Block 15 MSB == UM2₆₃..UM2₅₆
     /// [30] == Block 15 LSB == UM2₅₅..UM2₄₈
     /// [29] == Block 14 MSB == UM2₄₇..UM2₄₀
@@ -168,6 +174,7 @@ typedef struct _em4x70_cmd_input_calculate_t {
     ID48LIB_KEY key;
     ID48LIB_NONCE rn;
 } em4x70_cmd_input_calculate_t;
+
 typedef struct _em4x70_cmd_output_calculate_t {
     ID48LIB_FRN frn;
     ID48LIB_GRN grn;
