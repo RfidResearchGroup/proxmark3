@@ -1,4 +1,3 @@
-
 local getopt = require('getopt')
 local utils = require('utils')
 local ac = require('ansicolors')
@@ -8,11 +7,14 @@ local dir = os.getenv('HOME') .. '/.proxmark3/logs/'
 local logfile = (io.popen('dir /a-d /o-d /tw /b/s "' .. dir .. '" 2>nul:'):read("*a"):match("%C+"))
 local log_file_path = dir .. "Paxton_log.txt"
 local nam = ""
+local pm3 = require('pm3')
+p = pm3.pm3()
 local command = core.console
+command('clear')
 
 author = '  Author: jareckib - 30.01.2025'
 tutorial = '  Based on Equipter tutorial - Downgrade Paxton to EM4102'
-version = '  version v1.18'
+version = '  version v1.19'
 desc = [[  
   The script automates the copying of Paxton fobs read - write. 
   It also allows manual input of data for blocks 4-7. 
@@ -228,13 +230,10 @@ end
 
 local function handle_cloning(decimal_id, padded_hex_id, blocks, was_option_3)
     while true do
-        print("  Create Paxton choose " .. ac.cyan .. "1" .. ac.reset .. " or EM4102 choose " .. ac.cyan .. "2" .. ac.reset)
-        print(dash)
-        io.write("  Your choice "..ac.cyan.."(1/2): "..ac.reset)
+        io.write("  Create Paxton choose " .. ac.cyan .. "1" .. ac.reset .. " or EM4102 choose " .. ac.cyan .. "2  " .. ac.reset)
         local choice = io.read()
         if choice == "1" then
-            print(dash)
-            print("  Place the" .. ac.cyan .. " Paxton " .. ac.reset .. "Fob on the coil to write.." .. ac.green .. " ENTER " .. ac.reset .. "to continue..")
+            io.write("  Place the" .. ac.cyan .. " Paxton " .. ac.reset .. "Fob on the coil to write.." .. ac.green .. " ENTER " .. ac.reset .. "to continue..")
             io.read()
             print(dash)
             command("lf hitag wrbl --ht2 -p 4 -d " .. blocks[4] .. " -k BDF5E846")
@@ -242,20 +241,18 @@ local function handle_cloning(decimal_id, padded_hex_id, blocks, was_option_3)
             command("lf hitag wrbl --ht2 -p 6 -d " .. blocks[6] .. " -k BDF5E846")
             command("lf hitag wrbl --ht2 -p 7 -d " .. blocks[7] .. " -k BDF5E846")
         elseif choice == "2" then
-            print(dash)
-            print("  Place the" .. ac.cyan .. " T5577 " .. ac.reset .. "tag on the coil and press" .. ac.green .. " ENTER " .. ac.reset .. "to continue..")
+            io.write("  Place the" .. ac.cyan .. " T5577 " .. ac.reset .. "tag on the coil and press" .. ac.green .. " ENTER " .. ac.reset .. "to continue..")
             io.read()
-            print(dash)
-            command("lf em 410x clone --id " .. padded_hex_id)
+            p:console("lf em 410x clone --id " .. padded_hex_id)
+			print('  Cloned EM4102 to T5577 with ID ' ..ac.green.. padded_hex_id ..ac.reset)
         else
             print(ac.yellow .. "  Invalid choice." .. ac.reset .. " Please enter " .. ac.cyan .. "1" .. ac.reset .. " or " .. ac.cyan .. "2" .. ac.reset)
             goto ask_again
         end
         while true do
             print(dash)
-            io.write("  Make next RFID Fob"..ac.cyan.." (y/n)"..ac.reset.." > "..ac.yellow)
+            io.write("  Make next RFID Fob"..ac.cyan.." (y/n)  "..ac.reset)
             local another = io.read()
-			io.write(ac.reset..'')
             if another:lower() == "n" then
                 if was_option_3 then
                     print("  No writing to Paxton_log.txt - Name: " ..ac.green.. nam .. ac.reset.. " exist")
@@ -303,7 +300,6 @@ local function main(args)
              if o == 'h' then return help() end
         end
         command('clear')
-        print()
         print(dash)
         print(ac.green .. '  Select option: ' .. ac.reset)
         print(ac.cyan .. '  1' .. ac.reset .. ' - Read Paxton blocks 4-7 to make a copy')
@@ -324,12 +320,11 @@ local function main(args)
             local show_place_message = true
             while true do
                 if show_place_message then
-                    print('  Place the' .. ac.cyan .. ' Paxton' .. ac.reset .. ' Fob on the coil to read..' .. ac.green .. 'ENTER' .. ac.reset .. ' to continue..')
-                    print(dash)
+                    io.write('  Place the' .. ac.cyan .. ' Paxton' .. ac.reset .. ' Fob on the coil to read..' .. ac.green .. 'ENTER' .. ac.reset .. ' to continue..')
                 end
                 io.read()
-                command('lf hitag read --ht2 -k BDF5E846')
-                command('clear')
+				print(dash)
+                p:console('lf hitag read --ht2 -k BDF5E846')
                 if not logfile then
                     error("  No files in this directory")
                 end
@@ -343,12 +338,11 @@ local function main(args)
                     end
                 end
                 if empty_block then
-                    print(dash)
-                    print(ac.yellow .. '  Adjust the Fob position on the coil.' .. ac.reset .. ' Press' .. ac.green .. ' ENTER' .. ac.reset .. ' to continue..')
-                    print(dash)
+                    io.write(ac.yellow .. '  Adjust the Fob position on the coil.' .. ac.reset .. ' Press' .. ac.green .. ' ENTER' .. ac.reset .. ' to continue..')
                     show_place_message = false
                 else
-                    print(dash)
+					print('                        Readed blocks:')
+					print()
                     for i = 4, 7 do
                         if blocks[i] then
                             print(string.format("                        Block %d: %s%s%s", i, ac.yellow, blocks[i], ac.reset))
@@ -364,7 +358,6 @@ local function main(args)
                         print('  Identified Paxton ' .. ac.cyan .. 'Switch2' .. ac.reset)
                         decimal_id, padded_hex_id = calculate_id_switch({blocks[4], blocks[5], blocks[6], blocks[7]})
                     end
-                    print(dash)
                     print(string.format("  ID for EM4102 is: %s", ac.green .. padded_hex_id .. ac.reset))
                     print(dash)
                     handle_cloning(decimal_id, padded_hex_id, blocks, was_option_3)
