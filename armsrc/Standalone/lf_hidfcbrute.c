@@ -176,8 +176,7 @@ void hid_calculate_checksum_and_set(uint32_t *high, uint32_t *low, uint32_t card
     newlow |= oddparity32((newlow >> 1) & 0xFFF);
     newlow |= (evenparity32((newlow >> 13) & 0xFFF)) << 25;
 
-    newhigh |= 0x20; // Bit 37; standard header
-    newlow |= 1U << 26; // leading 1: start bit
+    add_HID_preamble(NULL, &newhigh, &newlow, 26);
 
     *low = newlow;
     *high = newhigh;

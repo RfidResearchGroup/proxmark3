@@ -1550,6 +1550,7 @@ bool testKnownConfigBlock(uint32_t block0) {
         case T55X7_NEXWATCH_CONFIG_BLOCK:
         case T55X7_JABLOTRON_CONFIG_BLOCK:
         case T55X7_PYRONIX_CONFIG_BLOCK:
+        case T55X7_TEXECOM_CONFIG_BLOCK:
             return true;
     }
     return false;
@@ -2297,6 +2298,9 @@ static void printT5x7KnownBlock0(uint32_t b0) {
             break;
         case T55X7_PYRONIX_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "Pyronix ");
+            break;
+        case T55X7_TEXECOM_CONFIG_BLOCK:
+            snprintf(s + strlen(s), sizeof(s) - strlen(s), "Texecom ");
             break;
         default:
             break;

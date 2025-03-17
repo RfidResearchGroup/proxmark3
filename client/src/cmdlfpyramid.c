@@ -305,6 +305,7 @@ static int CmdPyramidClone(const char *Cmd) {
 
         uint8_t *bs = calloc(128, sizeof(uint8_t));
         if (bs == NULL) {
+            PrintAndLogEx(WARNING, "failed to allocate memory");
             return PM3_EMALLOC;
         }
 

@@ -1207,73 +1207,76 @@ static int CmdExchangeAPDU(bool chainingin, const uint8_t *datain, int datainlen
     }
 
     uint16_t cmdc = 0;
-    if (chainingin)
+    if (chainingin) {
         cmdc = ISO14A_SEND_CHAINING;
+    }
 
     // "Command APDU" length should be 5+255+1, but javacard's APDU buffer might be smaller - 133 bytes
     // https://stackoverflow.com/questions/32994936/safe-max-java-card-apdu-data-command-and-respond-size
     // here length PM3_CMD_DATA_SIZE=512
     // timeout must be authomatically set by "get ATS"
-    if (datain)
+    if (datain) {
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, (datainlen & 0x1FF), 0, datain, datainlen & 0x1FF);
-    else
+    } else {
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, 0, 0, NULL, 0);
+    }
 
     PacketResponseNG resp;
 
-    if (WaitForResponseTimeout(CMD_ACK, &resp, timeout)) {
-        const uint8_t *recv = resp.data.asBytes;
-        int iLen = resp.oldarg[0];
-        uint8_t res = resp.oldarg[1];
-
-        int dlen = iLen - 2;
-        if (dlen < 0)
-            dlen = 0;
-        *dataoutlen += dlen;
-
-        if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
-            PrintAndLogEx(DEBUG, "ERR: APDU: Buffer too small(%d), needs %d bytes", *dataoutlen, maxdataoutlen);
-            return PM3_EAPDU_FAIL;
-        }
-
-        // I-block ACK
-        if ((res & 0xF2) == 0xA2) {
-            *dataoutlen = 0;
-            *chainingout = true;
-            return PM3_SUCCESS;
-        }
-
-        if (!iLen) {
-            PrintAndLogEx(DEBUG, "ERR: APDU: No APDU response");
-            return PM3_EAPDU_FAIL;
-        }
-
-        // check apdu length
-        if (iLen < 2 && iLen >= 0) {
-            PrintAndLogEx(DEBUG, "ERR: APDU: Small APDU response, len %d", iLen);
-            return PM3_EAPDU_FAIL;
-        }
-
-        // check block TODO
-        if (iLen == -2) {
-            PrintAndLogEx(DEBUG, "ERR: APDU: Block type mismatch");
-            return PM3_EAPDU_FAIL;
-        }
-
-        memcpy(dataout, recv, dlen);
-
-        // chaining
-        if ((res & 0x10) != 0) {
-            *chainingout = true;
-        }
-
-        // CRC Check
-        if (iLen == -1) {
-            PrintAndLogEx(DEBUG, "ERR: APDU: ISO 14443A CRC error");
-            return PM3_EAPDU_FAIL;
-        }
-    } else {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, timeout) == false) {
         PrintAndLogEx(DEBUG, "ERR: APDU: Reply timeout");
+        return PM3_EAPDU_FAIL;
+    }
+
+    const uint8_t *recv = resp.data.asBytes;
+    int iLen = resp.oldarg[0];
+    uint8_t res = resp.oldarg[1];
+
+    int dlen = iLen - 2;
+    if (dlen < 0) {
+        dlen = 0;
+    }
+    *dataoutlen += dlen;
+
+    if (maxdataoutlen && *dataoutlen > maxdataoutlen) {
+        PrintAndLogEx(DEBUG, "ERR: APDU: Buffer too small(%d), needs %d bytes", *dataoutlen, maxdataoutlen);
+        return PM3_EAPDU_FAIL;
+    }
+
+    // I-block ACK
+    if ((res & 0xF2) == 0xA2) {
+        *dataoutlen = 0;
+        *chainingout = true;
+        return PM3_SUCCESS;
+    }
+
+    if (iLen == 0) {
+        PrintAndLogEx(DEBUG, "ERR: APDU: No APDU response");
+        return PM3_EAPDU_FAIL;
+    }
+
+    // check apdu length
+    if (iLen < 2 && iLen >= 0) {
+        PrintAndLogEx(DEBUG, "ERR: APDU: Small APDU response, len %d", iLen);
+        return PM3_EAPDU_FAIL;
+    }
+
+    // check block TODO
+    if (iLen == -2) {
+        PrintAndLogEx(DEBUG, "ERR: APDU: Block type mismatch");
+        return PM3_EAPDU_FAIL;
+    }
+
+    memcpy(dataout, recv, dlen);
+
+    // chaining
+    if ((res & 0x10) != 0) {
+        *chainingout = true;
+    }
+
+    // CRC Check
+    if (iLen == -1) {
+        PrintAndLogEx(DEBUG, "ERR: APDU: ISO 14443A CRC error");
         return PM3_EAPDU_FAIL;
     }
 
@@ -1300,18 +1303,18 @@ int ExchangeAPDU14a(const uint8_t *datain, int datainlen, bool activateField, bo
             *dataoutlen = 0;
             res = CmdExchangeAPDU(chainBlockNotLast, &datain[clen], vlen, vActivateField, dataout, maxdataoutlen, dataoutlen, &chaining);
             if (res != PM3_SUCCESS) {
-                if (leaveSignalON == false)
+                if (leaveSignalON == false) {
                     DropField();
-
+                }
                 return 200;
             }
 
             // check R-block ACK
             // TODO check this one...
             if ((*dataoutlen == 0) && (chaining != chainBlockNotLast)) {
-                if (leaveSignalON == false)
+                if (leaveSignalON == false) {
                     DropField();
-
+                }
                 return 201;
             }
 
@@ -1323,6 +1326,7 @@ int ExchangeAPDU14a(const uint8_t *datain, int datainlen, bool activateField, bo
                 }
                 break;
             }
+
         } while (clen < datainlen);
 
     } else {
@@ -2358,7 +2362,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 tc1 = (card.ats[1] & 0x40) == 0x40;
                 int16_t fsci = card.ats[1] & 0x0f;
 
-                PrintAndLogEx(INFO, "        " _YELLOW_("%02X") "............  T0    TA1 is%s present, TB1 is%s present, "
+                PrintAndLogEx(INFO, "     ..." _YELLOW_("%02X") "............  T0    TA1 is%s present, TB1 is%s present, "
                               "TC1 is%s present, FSCI is %d (FSC = %d)",
                               card.ats[1],
                               (ta1 ? "" : _RED_(" NOT")),
@@ -2380,7 +2384,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 if (card.ats[pos] & 0x04) strcat(dr, "8, ");
                 if (strlen(ds) != 0) ds[strlen(ds) - 2] = '\0';
                 if (strlen(dr) != 0) dr[strlen(dr) - 2] = '\0';
-                PrintAndLogEx(INFO, "           " _YELLOW_("%02X") ".........  TA1   different divisors are%s supported, "
+                PrintAndLogEx(INFO, "     ......" _YELLOW_("%02X") ".........  TA1   different divisors are%s supported, "
                               "DR: [%s], DS: [%s]",
                               card.ats[pos],
                               ((card.ats[pos] & 0x80) ? _RED_(" NOT") : ""),
@@ -2395,7 +2399,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 uint32_t sfgi = card.ats[pos] & 0x0F;
                 uint32_t fwi = card.ats[pos] >> 4;
 
-                PrintAndLogEx(INFO, "              " _YELLOW_("%02X") "......  TB1   SFGI = %d (SFGT = %s%d/fc), FWI = " _YELLOW_("%d") " (FWT = %d/fc)",
+                PrintAndLogEx(INFO, "     ........." _YELLOW_("%02X") "......  TB1   SFGI = %d (SFGT = %s%d/fc), FWI = " _YELLOW_("%d") " (FWT = %d/fc)",
                               card.ats[pos],
                               (sfgi),
                               sfgi ? "" : "(not needed) ",
@@ -2407,7 +2411,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             }
 
             if (tc1 && (card.ats_len > pos + 2)) {
-                PrintAndLogEx(INFO, "                 " _YELLOW_("%02X") "...  TC1   NAD is%s supported, CID is%s supported",
+                PrintAndLogEx(INFO, "     ............" _YELLOW_("%02X") "...  TC1   NAD is%s supported, CID is%s supported",
                               card.ats[pos],
                               (card.ats[pos] & 0x01) ? "" : _RED_(" NOT"),
                               (card.ats[pos] & 0x02) ? "" : _RED_(" NOT")
@@ -2546,11 +2550,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                                       , sprint_ascii(card.ats + pos, calen)
                                      );
                     }
-
-                    PrintAndLogEx(NORMAL, "");
                 }
             }
-
         }
 
         if (do_aid_search) {
@@ -2781,7 +2782,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         if ((isMagic & MAGIC_FLAG_GEN_2) == MAGIC_FLAG_GEN_2) {
             PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf") "` commands");
         } else {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mf`") " commands");
+            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mf info`"));
         }
     }
 
@@ -3715,58 +3716,61 @@ int CmdHF14AAIDSim(const char *Cmd) {
     CLIParserInit(&ctx, "hf 14a simaid",
                   "Simulate ISO/IEC 14443 type A tag with 4,7 or 10 byte UID, and filter for AID Values\n"
                   "These AID Values can be responded to and include extra APDU commands on GetData after response\n",
-                  "hf 14a simaid -t 3                                                               -> MIFARE Desfire\n"
-                  "hf 14a simaid -t 4                                                               -> ISO/IEC 14443-4\n"
-                  "hf 14a simaid -t 11                                                              -> Javacard (JCOP)\n"
-                  "hf 14a simaid -t 3 --aid a000000000000000000000 --response 9000 --apdu 9000      -> AID, Response and APDU\n"
-                  "hf 14a simaid -t 3 --rats 05788172220101 --response 01009000 --apdu 86009000     -> Custom RATS Added\n"
-                  "hf 14a simaid -t 3 --rats 05788172220101 -x                                      -> Enumerate AID Values\n"
+                  "hf 14a simaid -t 3                                                                                 -> MIFARE Desfire\n"
+                  "hf 14a simaid -t 4                                                                                 -> ISO/IEC 14443-4\n"
+                  "hf 14a simaid -t 11                                                                                -> Javacard (JCOP)\n"
+                  "hf 14a simaid -t 3 --aid a000000000000000000000 --selectaid_response 9000 --getdata_response 9000  -> Custom AID and responses\n"
+                  "hf 14a simaid -t 3 --ats 0578817222 --selectaid_response 01009000 --getdata_response 86009000      -> Custom ATS and responses\n"
+                  "hf 14a simaid -t 3 --ats 0578817222 -x                                                             -> Enumerate AID Values\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_int1("t", "type", "<1-12> ", "Simulation type to use"),
         arg_str0("u", "uid", "<hex>", "<4|7|10> hex bytes UID"),
-        arg_str0("r", "rats", "<hex>", "<0-20> hex bytes RATS"),
-        arg_str0("a", "aid", "<hex>", "<0-100> hex bytes for AID to respond to (Default: A000000000000000000000)"),
-        arg_str0("e", "response", "<hex>", "<0-100> hex bytes for APDU Response to AID Select (Default: 9000)"),
-        arg_str0("p", "apdu", "<hex>", "<0-100> hex bytes for APDU Response to Get Data request after AID (Default: 9000)"),
+        arg_str0("r", "ats", "<hex>", "<0-20> hex bytes ATS"),
+        arg_str0("a", "aid", "<hex>", "<0-30> hex bytes for AID to respond to (Default: A000000000000000000000)"),
+        arg_str0("e", "selectaid_response", "<hex>", "<0-100> hex bytes for APDU Response to AID Select (Default: 9000)"),
+        arg_str0("p", "getdata_response", "<hex>", "<0-100> hex bytes for APDU Response to Get Data request after AID (Default: 9000)"),
         arg_lit0("x", "enumerate", "Enumerate all AID values via returning Not Found and print them to console "),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int tagtype = arg_get_int_def(ctx, 1, 1);
-
-    bool enumerate = arg_get_lit(ctx, 7);
-
     int uid_len = 0;
-    int rats_len = 0;
+    int ats_len = 0;
     int aid_len = 0;
-    int respond_len = 0;
-    int apdu_len = 0;
+    int selectaid_response_len = 0;
+    int getdata_response_len = 0;
 
     uint8_t uid[10] = {0};
-    uint8_t rats[20] = {0};
-    uint8_t aid[30] = {0xA0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t response[100] = {0x90, 0x00};
-    uint8_t apdu[100] = {0x90, 0x00};
+    uint8_t ats[20] = {0};
+    uint8_t aid[30] = {0xA0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t default_aid_len = 11;
+    uint8_t selectaid_response[100] = {0x90, 0x00};
+    uint8_t default_selectaid_response_len = 2;
+    uint8_t getdata_response[100] = {0x90, 0x00};
+    uint8_t default_getdata_response_len = 2;
 
+    int tagtype = arg_get_int_def(ctx, 1, 1);
     CLIGetHexWithReturn(ctx, 2, uid, &uid_len);
-    CLIGetHexWithReturn(ctx, 3, rats, &rats_len);
+    CLIGetHexWithReturn(ctx, 3, ats, &ats_len);
     CLIGetHexWithReturn(ctx, 4, aid, &aid_len);
-    CLIGetHexWithReturn(ctx, 5, response, &respond_len);
-    CLIGetHexWithReturn(ctx, 6, apdu, &apdu_len);
+    CLIGetHexWithReturn(ctx, 5, selectaid_response, &selectaid_response_len);
+    CLIGetHexWithReturn(ctx, 6, getdata_response, &getdata_response_len);
+    bool enumerate = arg_get_lit(ctx, 7);
+    CLIParserFree(ctx);
 
-    // default value fill for the AID, response, and apdu
+    // default value fill for the AID, selectaid_response, and getdata_response
     if (aid_len == 0) {
-        aid_len = 11;
+        aid_len = default_aid_len;
     }
-    if (respond_len == 0) {
-        respond_len = 2;
+
+    if (selectaid_response_len == 0) {
+        selectaid_response_len = default_selectaid_response_len;
     }
-    if (apdu_len == 0) {
-        apdu_len = 2;
+    if (getdata_response_len == 0) {
+        getdata_response_len = default_getdata_response_len;
     }
 
     uint16_t flags = 0;
@@ -3776,19 +3780,39 @@ int CmdHF14AAIDSim(const char *Cmd) {
         FLAG_SET_UID_IN_DATA(flags, uid_len);
         if (IS_FLAG_UID_IN_EMUL(flags)) {
             PrintAndLogEx(ERR, "Please specify a 4, 7, or 10 byte UID");
-            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
         PrintAndLogEx(SUCCESS, "Emulating " _YELLOW_("ISO/IEC 14443 type A tag")" with " _GREEN_("%d byte UID (%s)"), uid_len, sprint_hex(uid, uid_len));
         useUIDfromEML = false;
     }
 
-    if (rats_len > 0) {
-        flags |= FLAG_RATS_IN_DATA;
+    if (ats_len > sizeof(ats)) {
+        PrintAndLogEx(ERR, "Provided ATS too long");
+        return PM3_EINVARG;
     }
 
+    if (aid_len > sizeof(aid)) {
+        PrintAndLogEx(ERR, "Provided AID too long");
+        return PM3_EINVARG;
+    }
 
-    CLIParserFree(ctx);
+    if (selectaid_response_len > sizeof(selectaid_response)) {
+        PrintAndLogEx(ERR, "Provided SelectAID response too long");
+        return PM3_EINVARG;
+    }
+
+    if (getdata_response_len > sizeof(getdata_response)) {
+        PrintAndLogEx(ERR, "Provided GetData response too long");
+        return PM3_EINVARG;
+    }
+
+    if (ats_len > 0) {
+        flags |= FLAG_ATS_IN_DATA;
+    }
+
+    if (enumerate) {
+        flags |= FLAG_ENUMERATE_AID;
+    }
 
     if (tagtype > 12) {
         PrintAndLogEx(ERR, "Undefined tag %d", tagtype);
@@ -3803,31 +3827,31 @@ int CmdHF14AAIDSim(const char *Cmd) {
         uint8_t tagtype;
         uint16_t flags;
         uint8_t uid[10];
-        uint8_t rats[20];
+        uint8_t ats[20];
         uint8_t aid[30];
-        uint8_t response[100];
-        uint8_t apdu[100];
-        int aid_len;
-        int respond_len;
-        int apdu_len;
-        bool enumerate;
+        uint8_t selectaid_response[100];
+        uint8_t getdata_response[100];
+        uint32_t ats_len;
+        uint32_t aid_len;
+        uint32_t selectaid_response_len;
+        uint32_t getdata_response_len;
     } PACKED payload;
 
     payload.tagtype = tagtype;
     payload.flags = flags;
-    payload.enumerate = enumerate;
 
     // Copy data to payload
     memcpy(payload.uid, uid, uid_len);
-    memcpy(payload.rats, rats, rats_len);
+    memcpy(payload.ats, ats, ats_len);
     memcpy(payload.aid, aid, aid_len);
-    memcpy(payload.response, response, respond_len);
-    memcpy(payload.apdu, apdu, apdu_len);
+    memcpy(payload.selectaid_response, selectaid_response, selectaid_response_len);
+    memcpy(payload.getdata_response, getdata_response, getdata_response_len);
 
     // copy the lengths data to the payload
-    memcpy(&payload.aid_len, &aid_len, sizeof(aid_len));
-    memcpy(&payload.respond_len, &respond_len, sizeof(respond_len));
-    memcpy(&payload.apdu_len, &apdu_len, sizeof(apdu_len));
+    payload.ats_len = ats_len;
+    payload.aid_len = aid_len;
+    payload.selectaid_response_len = selectaid_response_len;
+    payload.getdata_response_len = getdata_response_len;
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443A_SIM_AID, (uint8_t *)&payload, sizeof(payload));
@@ -3837,14 +3861,17 @@ int CmdHF14AAIDSim(const char *Cmd) {
     bool keypress = kbd_enter_pressed();
     while (keypress == false) {
 
-        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0)
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0) {
             continue;
+        }
 
-        if (resp.status != PM3_SUCCESS)
+        if (resp.status != PM3_SUCCESS) {
             break;
+        }
 
-        if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK)
+        if ((flags & FLAG_NR_AR_ATTACK) != FLAG_NR_AR_ATTACK) {
             break;
+        }
 
         keypress = kbd_enter_pressed();
     }

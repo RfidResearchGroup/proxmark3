@@ -136,25 +136,28 @@ const ecdsa_publickey_ng_t manufacturer_public_keys[] = {
 };
 
 
-// return pk if match index else -1
+// returns index of pk if match else -1
 int originality_check_verify(uint8_t *data, uint8_t data_len, uint8_t *signature, uint8_t signature_len, pk_type_t type) {
     return originality_check_verify_ex(data, data_len, signature, signature_len, type, false, false);
 }
 
 int originality_check_verify_ex(uint8_t *data, uint8_t data_len, uint8_t *signature, uint8_t signature_len, pk_type_t type, bool reverse, bool hash) {
-    // test if signature is null
+    // test if signature is all zeros
     bool is_zero = true;
     for (uint8_t i = 0; i < signature_len; i++) {
         if (signature[i] != 0) {
             is_zero = false;
+            break;
         }
     }
+
     if (is_zero) {
         return -1;
     }
 
     uint8_t tmp_data[data_len];
     uint8_t tmp_signature[signature_len];
+
     if (reverse) {
         reverse_array_copy(data, data_len, tmp_data);
         reverse_array_copy(signature, signature_len, tmp_signature);
@@ -180,17 +183,24 @@ int originality_check_verify_ex(uint8_t *data, uint8_t data_len, uint8_t *signat
 }
 
 int originality_check_print(uint8_t *signature, int signature_len, int index) {
+
+    PrintAndLogEx(NORMAL, "");
+
     if ((index < 0) || (index >= ARRAYLEN(manufacturer_public_keys))) {
+
         PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 16));
         if (signature_len > 16) {
             PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 16, 16));
         }
+
         if (signature_len > 32) {
             PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 32, 16));
         }
+
         if (signature_len > 48) {
             PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 48, signature_len - 48));
         }
+
         PrintAndLogEx(SUCCESS, "       Signature verification: " _RED_("failed"));
         return PM3_ESOFT;
     }
@@ -200,23 +210,30 @@ int originality_check_print(uint8_t *signature, int signature_len, int index) {
     if (manufacturer_public_keys[index].keylen > 16) {
         PrintAndLogEx(INFO, "                             : %.32s", manufacturer_public_keys[index].value + 32);
     }
+
     if (manufacturer_public_keys[index].keylen > 32) {
         PrintAndLogEx(INFO, "                             : %.32s", manufacturer_public_keys[index].value + 64);
     }
+
     if (manufacturer_public_keys[index].keylen > 48) {
         PrintAndLogEx(INFO, "                             : %.32s", manufacturer_public_keys[index].value + 96);
     }
+
     PrintAndLogEx(INFO, "    Elliptic curve parameters: %s", mbedtls_ecp_curve_info_from_grp_id(manufacturer_public_keys[index].grp_id)->name);
     PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 16));
+
     if (signature_len > 16) {
         PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 16, 16));
     }
+
     if (signature_len > 32) {
         PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 32, 16));
     }
+
     if (signature_len > 48) {
         PrintAndLogEx(INFO, "                             : %s", sprint_hex_inrow(signature + 48, signature_len - 48));
     }
+
     PrintAndLogEx(SUCCESS, "       Signature verification: " _GREEN_("successful"));
     return PM3_SUCCESS;
 }

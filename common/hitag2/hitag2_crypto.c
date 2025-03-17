@@ -404,15 +404,10 @@ void ht2_hitag2_cipher_reset(hitag2_t *tag, const uint8_t *iv) {
                    ((uint64_t)tag->sectors[1][1] << 24) |
                    ((uint64_t)tag->sectors[1][2] << 32) |
                    ((uint64_t)tag->sectors[1][3] << 40);
-    uint32_t uid = ((uint32_t)tag->sectors[0][0]) |
-                   ((uint32_t)tag->sectors[0][1] <<  8) |
-                   ((uint32_t)tag->sectors[0][2] << 16) |
-                   ((uint32_t)tag->sectors[0][3] << 24);
-    uint32_t iv_ = (((uint32_t)(iv[0]))) |
-                   (((uint32_t)(iv[1])) <<  8) |
-                   (((uint32_t)(iv[2])) << 16) |
-                   (((uint32_t)(iv[3])) << 24);
-    tag->cs = ht2_hitag2_init(REV64(key), REV32(uid), REV32(iv_));
+    uint32_t uid = MemLeToUint4byte(tag->sectors[0]);
+    uint32_t riv = MemLeToUint4byte(iv);
+
+    tag->cs = ht2_hitag2_init(REV64(key), REV32(uid), REV32(riv));
 }
 
 int ht2_hitag2_cipher_authenticate(uint64_t *state, const uint8_t *authenticator_is) {

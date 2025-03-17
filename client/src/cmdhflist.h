@@ -46,6 +46,7 @@ uint8_t felica_CRC_check(uint8_t *d, uint8_t n);
 uint8_t mifare_CRC_check(bool isResponse, uint8_t *data, uint8_t len);
 uint8_t iso15693_CRC_check(uint8_t *d, uint8_t n);
 uint8_t iclass_CRC_check(bool isResponse, uint8_t *d, uint8_t n);
+uint8_t seos_CRC_check(bool isResponse, uint8_t *d, uint8_t n);
 
 int applyIso14443a(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response);
 
@@ -68,7 +69,7 @@ void annotateMifare(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize,
 void annotateLTO(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 void annotateCryptoRF(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
 
-void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize);
+void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool isResponse);
 
 bool DecodeMifareData(uint8_t *cmd, uint8_t cmdsize, uint8_t *parity, bool isResponse, uint8_t *mfData, size_t *mfDataLen, const uint64_t *dicKeys, uint32_t dicKeysCount);
 bool NTParityChk(AuthData_t *ad, uint32_t ntx);

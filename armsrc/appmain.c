@@ -1370,7 +1370,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             // involved in dealing with emulator memory. But if it is called later, it might
             // destroy the Emulator Memory.
             //-----------------------------------------------------------------------------
-            EmlClearIso15693();
+            // Resetting the bitstream also frees the BigBuf memory, so we do this here to prevent
+            // an inconvenient reset in the future by Iso15693InitTag
+            FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
+            BigBuf_Clear_EM();
+            reply_ng(CMD_HF_ISO15693_EML_CLEAR, PM3_SUCCESS, NULL, 0);
             break;
         }
         case CMD_HF_ISO15693_EML_SETMEM: {
@@ -1402,7 +1406,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 return;
             }
 
-            uint8_t *buf = BigBuf_malloc(payload->length);
+            uint8_t *buf = BigBuf_calloc(payload->length);
             emlGet(buf, payload->offset, payload->length);
             LED_B_ON();
             reply_ng(CMD_HF_ISO15693_EML_GETMEM, PM3_SUCCESS, buf, payload->length);
@@ -1461,6 +1465,17 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
             WritePasswordSlixIso15693(payload->old_pwd, payload->new_pwd, payload->pwd_id);
+            break;
+        }
+        case CMD_HF_ISO15693_SLIX_PROTECT_PAGE: {
+            struct p {
+                uint8_t read_pwd[4];
+                uint8_t write_pwd[4];
+                uint8_t divide_ptr;
+                uint8_t prot_status;
+            } PACKED;
+            struct p *payload = (struct p *) packet->data.asBytes;
+            ProtectPageSlixIso15693(payload->read_pwd, payload->write_pwd, payload->divide_ptr, payload->prot_status);
             break;
         }
         case CMD_HF_ISO15693_SLIX_DISABLE_PRIVACY: {
@@ -1677,7 +1692,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             EMVsim(payload->flags, payload->exitAfter, payload->uid, payload->atqa, payload->sak);
             break;
         }
-#endif 
+#endif
         case CMD_HF_ISO14443A_SIMULATE: {
             struct p {
                 uint8_t tagtype;
@@ -1696,20 +1711,21 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t tagtype;
                 uint16_t flags;
                 uint8_t uid[10];
-                uint8_t rats[20];
+                uint8_t ats[20];
                 uint8_t aid[30];
-                uint8_t response[100];
-                uint8_t apdu[100];
-                int aid_len;
-                int respond_len;
-                int apdu_len;
-                bool enumerate;
+                uint8_t selectaid_response[100];
+                uint8_t getdata_response[100];
+                uint32_t ats_len;
+                uint32_t aid_len;
+                uint32_t selectaid_response_len;
+                uint32_t getdata_response_len;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
+            // ## Simulate iso14443a tag - pass tag type, UID, ATS, AID, responses
             SimulateIso14443aTagAID(payload->tagtype, payload->flags, payload->uid,
-                                    payload->rats, sizeof(payload->rats), payload->aid, payload->response,
-                                    payload->apdu, payload->aid_len, payload->respond_len,
-                                    payload->apdu_len, payload->enumerate);  // ## Simulate iso14443a tag - pass tag type, UID, rats, aid, resp, apdu
+                                    payload->ats, payload->ats_len, payload->aid, payload->aid_len,
+                                    payload->selectaid_response, payload->selectaid_response_len,
+                                    payload->getdata_response, payload->getdata_response_len);
             break;
         }
         case CMD_HF_ISO14443A_ANTIFUZZ: {
@@ -1889,36 +1905,65 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFARE_EML_MEMCLR: {
-            MifareEMemClr();
-            reply_ng(CMD_HF_MIFARE_EML_MEMCLR, PM3_SUCCESS, NULL, 0);
+
+            //-----------------------------------------------------------------------------
+            // Work with emulator memory
+            //
+            // Note: we call FpgaDownloadAndGo(FPGA_BITSTREAM_HF) here although FPGA is not
+            // involved in dealing with emulator memory. But if it is called later, it might
+            // destroy the Emulator Memory.
+            //-----------------------------------------------------------------------------
             FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+
+            // Not only clears the emulator memory,
+            // also sets default MIFARE values for sector trailers.
+            emlClearMem();
+            reply_ng(CMD_HF_MIFARE_EML_MEMCLR, PM3_SUCCESS, NULL, 0);
             break;
         }
         case CMD_HF_MIFARE_EML_MEMSET: {
+            FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
             struct p {
-                uint8_t blockno;
+                uint16_t blockno;
                 uint8_t blockcnt;
                 uint8_t blockwidth;
                 uint8_t data[];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
 
-            FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
-
             // backwards compat... default bytewidth
-            if (payload->blockwidth == 0)
-                payload->blockwidth = 16;
+            if (payload->blockwidth == 0) {
+                payload->blockwidth = MIFARE_BLOCK_SIZE;
+            }
 
             emlSetMem_xt(payload->data, payload->blockno, payload->blockcnt, payload->blockwidth);
             break;
         }
         case CMD_HF_MIFARE_EML_MEMGET: {
+
+            FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
             struct p {
-                uint8_t blockno;
+                uint16_t blockno;
                 uint8_t blockcnt;
+                uint8_t blockwidth;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            MifareEMemGet(payload->blockno, payload->blockcnt);
+
+            //
+            size_t size = payload->blockno * payload->blockwidth;
+            if (size > PM3_CMD_DATA_SIZE) {
+                reply_ng(CMD_HF_MIFARE_EML_MEMGET, PM3_EMALLOC, NULL, 0);
+                return;
+            }
+
+            uint8_t *buf = BigBuf_calloc(size);
+
+            emlGetMem_xt(buf, payload->blockno, payload->blockcnt, payload->blockwidth); // data, block num, blocks count (max 4)
+
+            LED_B_ON();
+            reply_ng(CMD_HF_MIFARE_EML_MEMGET, PM3_SUCCESS, buf, size);
+            LED_B_OFF();
+            BigBuf_free_keep_EM();
             break;
         }
         case CMD_HF_MIFARE_EML_LOAD: {

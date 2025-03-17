@@ -575,6 +575,7 @@ typedef struct {
 #define CMD_HF_ISO15693_SLIX_PASS_PROTECT_AFI                             0x0863
 #define CMD_HF_ISO15693_SLIX_PASS_PROTECT_EAS                             0x0864
 #define CMD_HF_ISO15693_SLIX_WRITE_PWD                                    0x0865
+#define CMD_HF_ISO15693_SLIX_PROTECT_PAGE                                 0x0868
 #define CMD_HF_ISO15693_WRITE_AFI                                         0x0866
 #define CMD_HF_TEXKOM_SIMULATE                                            0x0320
 #define CMD_HF_ISO15693_EML_CLEAR                                         0x0330
@@ -772,7 +773,8 @@ typedef struct {
 #define FLAG_INTERACTIVE        0x0001
 #define FLAG_ATQA_IN_DATA       0x0002
 #define FLAG_SAK_IN_DATA        0x0004
-#define FLAG_RATS_IN_DATA       0x0008
+#define FLAG_ATS_IN_DATA        0x0008
+#define FLAG_ENUMERATE_AID      0x0010
 
 // internal constants, use the function macros instead
 #define FLAG_MASK_UID           0x0030
@@ -922,6 +924,9 @@ typedef struct {
 
 // No key available                     client/pm3: no cryptographic key available.
 #define PM3_ENOKEY            -28
+
+// Cryptographic error                  client/pm3: cryptographic operation failed
+#define PM3_ECRYPTO           -29
 
 // No data                              client/pm3: no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98

@@ -129,9 +129,9 @@ static int sam_send_request_iso14a(const uint8_t *const request, const uint8_t r
     if (g_dbglevel >= DBG_DEBUG)
         DbpString("start sam_send_request_iso14a");
 
-    uint8_t * buf1 = BigBuf_malloc(ISO7816_MAX_FRAME);
-    uint8_t * buf2 = BigBuf_malloc(ISO7816_MAX_FRAME);
-    if(buf1 == NULL || buf2 == NULL){
+    uint8_t *buf1 = BigBuf_malloc(ISO7816_MAX_FRAME);
+    uint8_t *buf2 = BigBuf_malloc(ISO7816_MAX_FRAME);
+    if (buf1 == NULL || buf2 == NULL) {
         res = PM3_EMALLOC;
         goto out;
     }

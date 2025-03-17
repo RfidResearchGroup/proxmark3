@@ -344,12 +344,14 @@ static int l_WaitForResponseTimeout(lua_State *L) {
         return returnToLuaWithError(L, "You need to supply at least command to wait for");
 
     // extract first param.  cmd byte to look for
-    if (n >= 1)
+    if (n >= 1) {
         cmd = (uint32_t)luaL_checkinteger(L, 1);
+    }
 
     // extract second param. timeout value
-    if (n >= 2)
-        ms_timeout = luaL_checkinteger(L, 2);
+    if (n >= 2) {
+        ms_timeout = (size_t)luaL_checkinteger(L, 2);
+    }
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(cmd, &resp, ms_timeout) == false) {
@@ -740,8 +742,9 @@ static int l_reveng_models(lua_State *L) {
 
     int count = 0;
     uint8_t in_width = (uint8_t)luaL_checkinteger(L, 1);
-    if (in_width > 89)
+    if (in_width > 89) {
         return returnToLuaWithError(L, "Width cannot exceed 89, got %d", in_width);
+    }
 
     uint8_t width[NMODELS];
     memset(width, 0, sizeof(width));
@@ -749,8 +752,9 @@ static int l_reveng_models(lua_State *L) {
 
     width[0] = in_width;
 
-    if (!GetModels(models, &count, width))
+    if (!GetModels(models, &count, width)) {
         return returnToLuaWithError(L, "didn't find any models");
+    }
 
     lua_newtable(L);
     for (int i = 0; i < count; i++) {

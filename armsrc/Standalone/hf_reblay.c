@@ -338,7 +338,7 @@ void RunMod() {
                 } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 9) {  // Received a SELECT (cascade 1)
                     p_response = &responses[RESP_INDEX_SAKC1];
                 } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {  // Received a RATS request
-                    p_response = &responses[RESP_INDEX_RATS];
+                    p_response = &responses[RESP_INDEX_ATS];
                     resp = 1;
                 } else if (receivedCmd[0] == 0xf2 && len == 4) {  // ACKed - Time extension
                     DbpString(_YELLOW_("!!") " Reader accepted time extension!");

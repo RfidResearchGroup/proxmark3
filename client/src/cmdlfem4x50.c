@@ -30,12 +30,10 @@
 
 static int CmdHelp(const char *Cmd);
 
-// Each record is 4 bytes long ... a single line in the dump output
-// Reads each record from `data`, reverses the four bytes, and writes to `words`
-static void em4x50_prepare_result(const uint8_t *data, int first_record_inclusive, int last_record_inclusive, em4x50_word_t *words) {
+static void em4x50_prepare_result(const uint8_t *data, int fwr, int lwr, em4x50_word_t *words) {
 
     // restructure received result in "em4x50_word_t" structure
-    for (int i = first_record_inclusive; i <= last_record_inclusive; i++) {
+    for (int i = fwr; i <= lwr; i++) {
         for (int j = 0; j < 4; j++) {
             words[i].byte[j] = data[i * 4 + (3 - j)];
         }
@@ -641,8 +639,10 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out) {
         return PM3_ESOFT;
     }
 
+    em4x50_read_data_response_t *o = (em4x50_read_data_response_t *)resp.data.asBytes;
+
     em4x50_word_t words[EM4X50_NO_WORDS] = {0};
-    em4x50_prepare_result(resp.data.asBytes, etd->addresses & 0xFF, (etd->addresses >> 8) & 0xFF, words);
+    em4x50_prepare_result((uint8_t *)o->words, etd->addresses & 0xFF, (etd->addresses >> 8) & 0xFF, words);
 
     if (out != NULL) {
         memcpy(out, &words, sizeof(em4x50_word_t) * EM4X50_NO_WORDS);

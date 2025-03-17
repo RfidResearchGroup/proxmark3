@@ -194,7 +194,7 @@ def Describe_Usage_2_1(Usage, ContractMediumEndDate, Certificate):
     EventGeoRoute_Direction = Usage.nom(2)
     EventGeoVehicleId = Usage.nom(16)
     EventCountPassengers_mb = Usage.nom(4)
-    
+
     EventValidityTimeFirstStamp = Usage.nom(11)
 
     print('  EventDateStamp        : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')))
@@ -284,6 +284,7 @@ FRA_OrganizationalAuthority_Contract_Provider = {
     },
     0x091: {
         1: InterticHelper('Strasbourg', 'CTS', Describe_Usage_4), # More dump needed, not only tram !
+        5: InterticHelper('Strasbourg', 'CTS / new', Describe_Usage_4), # More dump needed, not only tram !
     },
     0x502: {
         83: InterticHelper('Annecy', 'Sibra', Describe_Usage_2),
@@ -445,7 +446,7 @@ def main():
             oa = MAR_OrganizationalAuthority_Contract_Provider.get(OrganizationalAuthority)
         else:
             oa = None
-            
+
         if (oa is not None):
             s = oa.get(ContractProvider)
             if (s is not None):

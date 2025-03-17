@@ -29,6 +29,7 @@ Always use the latest repository commits from *master* branch. There are always 
   - [Qt Session management error](#qt-session-management-error)
   - [found architecture 'x86\_64' required architecture 'arm64' error](#found-architecture-x86_64-required-architecture-arm64-error)
   - [wrong permissions on runtime directory /run/user/1000](#wrong-permissions-on-runtime-directory-runuser1000)
+  - [proxspace `file not found or locked` on Windows 11](#proxspace-file-not-found-or-locked-on-windows-11)
 
 ## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
@@ -360,4 +361,33 @@ export XDG_RUNTIME_DIR=/run/user/1000
 or
 
 export XDG_RUNTIME_DIR=/var/run/user/1000
+```
+
+## proxspace 'file not found or locked' on Windows 11
+^[Top](#top)
+
+if you receive an error "file not found or locked" for any operation that needs to write a file.
+
+The cause is that Windows locks down many folders as 'read only', and you can't easily change this setting.
+
+How to fix (use this at your own risk):
+
+```
+    Open your Windows Settings Control Panel
+    Then select "Privacy and security"
+    Then select "Windows Security"
+    Then select "Virus & threat protection"
+    Then scroll down and select "Manage ransomware protection"
+    Then select "Allow an app through Controlled folder access"
+    Answer "Yes" to allow this app to make changes to your system
+    Then select "Add an allowed app" to select the proper "proxmark3.exe" in the client folder.
+
+Potentially also do:
+    Select "Recently blocked apps"
+    Then select the most recent "proxmark3.exe" by pressing the "+" next to it.
+    Then select "Close".
+
+Side note: 
+You may also be able to choose "Browse all apps" and find your specific proxmark3.exe in the client folder but
+be sure to choose the proper location and specific file in case you have more than one stored on your PC somewhere.
 ```

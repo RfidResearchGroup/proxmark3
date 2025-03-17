@@ -180,8 +180,10 @@ int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtab
 
     // parse params
     for (int i = 0; i < len; i++) {
+
         switch (state) {
-            case PS_FIRST: // first char
+            case PS_FIRST: { // first char
+
                 if (!clueData || str[i] == '-') { // first char before space is '-' - next element - option OR not "clueData" for not-option fields
                     state = PS_OPTION;
 
@@ -193,24 +195,32 @@ int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtab
                     }
                 }
                 spaceptr = NULL;
-            case PS_ARGUMENT:
-                if (state == PS_FIRST)
+            }
+            case PS_ARGUMENT: {
+
+                if (state == PS_FIRST) {
                     state = PS_ARGUMENT;
-                if (str[i] == '"') {
+                }
+
+                if (str[i] == '"' || str[i] == '\'') {
                     state = PS_QUOTE;
                     break;
                 }
+
                 if (isSpace(str[i])) {
                     spaceptr = bufptr;
                     state = PS_FIRST;
                 }
+
                 *bufptr = str[i];
                 bufptr++;
                 break;
-            case PS_OPTION:
+            }
+
+            case PS_OPTION: {
+
                 if (isSpace(str[i])) {
                     state = PS_FIRST;
-
                     *bufptr = 0x00;
                     bufptr++;
                     argv[argc++] = bufptr;
@@ -220,17 +230,22 @@ int CLIParserParseStringEx(CLIParserContext *ctx, const char *str, void *vargtab
                 *bufptr = str[i];
                 bufptr++;
                 break;
-            case PS_QUOTE:
-                if (str[i] == '"') {
+            }
+            case PS_QUOTE: {
+
+                if (str[i] == '"' || str[i] == '\'') {
                     *bufptr++ = 0x00;
                     state = PS_FIRST;
                 } else {
-                    if (isSpace(str[i]) == false) {
-                        *bufptr++ = str[i];
-                    }
+
+//                    if (isSpace(str[i]) == false) {
+                    *bufptr++ = str[i];
+//                    }
                 }
                 break;
+            }
         }
+
         if (bufptr > bufptrend) {
             PrintAndLogEx(ERR, "ERROR: Line too long\n");
             fflush(stdout);
@@ -296,8 +311,9 @@ int CLIParamBinToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
 
 int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int *datalen) {
     *datalen = 0;
-    if (!argstr->count)
+    if (!argstr->count) {
         return 0;
+    }
 
     uint8_t tmpstr[MAX_INPUT_ARG_LENGTH + 1] = {0};
     int ibuf = 0;
@@ -319,8 +335,9 @@ int CLIParamStrToBuf(struct arg_str *argstr, uint8_t *data, int maxdatalen, int 
     ibuf = MIN(ibuf, (sizeof(tmpstr) / 2));
     tmpstr[ibuf] = 0;
 
-    if (ibuf == 0)
+    if (ibuf == 0) {
         return 0;
+    }
 
     if (ibuf > maxdatalen) {
         PrintAndLogEx(ERR, "Parameter error: string too long (%i chars), expected MAX %i chars\n", ibuf, maxdatalen);

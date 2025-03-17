@@ -43,8 +43,6 @@ void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem);
 void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain);
 void MifareChkKeys_file(uint8_t *fn);
 
-void MifareEMemClr(void);
-void MifareEMemGet(uint8_t blockno, uint8_t blockcnt);
 int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key);
 int MifareECardLoadExt(uint8_t sectorcnt, uint8_t keytype, uint8_t *key);
 

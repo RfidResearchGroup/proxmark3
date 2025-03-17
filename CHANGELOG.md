@@ -3,6 +3,23 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Improved `pcf7931` generic readability of the code. Unified datatypes and added documentation/explainations (@tinooo)
+- Improved `lf pcf7931` read code - fixed some checks for more stability (@tinooo)
+- Changed `trace list -t seos` - improved annotation (@iceman1001)
+- Added `make commands` to regenerate commands documentation files and autocompletion data independently of `make style` (@doegox)
+- Added texecom identification,  thanks @en4rab ! (@iceman1001)
+- Added `hf 15 slixprotectpage` command
+- Fixed `hf mf gload` - missing parameter (@iceman1001)
+- Changed `hf mf gload` - now handles 1k ev1 sized dumps (@iceman1001)
+- Changed wiegand format unpack functions to clear struct later (@iceman1001)
+- Changed `wiegand decode` - now accepts new padding format (@iceman1001)
+- Changed `mem spiffs tree` - ID is now shown in decimal (@iceman1001)
+- Added sample wiegand format 56bit (@iceman1001)
+- Changed Wiegand formats to include number of bits (@iceman1001)
+- Fix compilation warning in hitagS (@iceman1001)
+- Added new wiegand format H800002 (@jmichelp)
+- Changed `Makefile.platform.sample` file - now have clear instructions for generating images for other proxmark3 hardware (@iceman1001)
+- Changed `doc/magic_cards_notes.md` - now contains documentation for iKey LLC's MF4 tag (@team-orangeBlue)
 - Changed `hf mf cload` - now accepts MFC Ev1 sized dumps (@iceman1001)
 - Changed `hf mfu info` - now properly identify ULEv1 AES 50pF (@iceman1001)
 - Changed `hf mf info` - now differentiates between full USCUID and cut down ZUID chips (@nvx)

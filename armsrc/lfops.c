@@ -944,6 +944,33 @@ static void fcAll(uint8_t fc, int *n, uint8_t clock, int16_t *remainder) {
     }
 }
 
+bool add_HID_preamble(uint32_t *hi2, uint32_t *hi, uint32_t *lo, uint8_t length) {
+    // Invalid value
+    if (length > 84 || length == 0)
+        return false;
+
+    if (length == 48) {
+        *hi |= 1U << (length - 32); // Example leading 1: start bit
+        return true;
+    }
+    if (length >= 64) {
+        *hi2 |= 0x09e00000; // Extended-length header
+        *hi2 |= 1U << (length - 64); // leading 1: start bit
+    } else if (length > 37) {
+        *hi2 |= 0x09e00000; // Extended-length header
+        *hi |= 1U << (length - 32); // leading 1: start bit
+    } else if (length == 37) {
+        // No header bits added to 37-bit cards
+    } else if (length >= 32) {
+        *hi |= 0x20; // Bit 37; standard header
+        *hi |= 1U << (length - 32); // leading 1: start bit
+    } else {
+        *hi |= 0x20; // Bit 37; standard header
+        *lo |= 1U << length; // leading 1: start bit
+    }
+    return true;
+}
+
 // prepare a waveform pattern in the buffer based on the ID given then
 // simulate a HID tag until the button is pressed
 void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, bool ledcontrol, int numcycles) {
@@ -968,13 +995,7 @@ void CmdHIDsimTAGEx(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
     uint16_t n = 8;
 
     if (longFMT) {
-        // Ensure no more than 84 bits supplied
-        if (hi2 > 0xFFFFF) {
-            DbpString("Tags can only have 84 bits.");
-            return;
-        }
         bitlen = 8 + 8 * 2 + 84 * 2;
-        hi2 |= 0x9E00000; // 9E: long format identifier
         manchesterEncodeUint32(hi2, 16 + 12, bits, &n);
         manchesterEncodeUint32(hi, 32, bits, &n);
         manchesterEncodeUint32(lo, 32, bits, &n);
@@ -1315,10 +1336,6 @@ int lf_hid_watch(int findone, uint32_t *high, uint32_t *low, bool ledcontrol) {
                     if (bitlen == 26) {
                         cardnum = (lo >> 1) & 0xFFFF;
                         fac = (lo >> 17) & 0xFF;
-                    }
-                    if (bitlen == 37) {
-                        cardnum = (lo >> 1) & 0x7FFFF;
-                        fac = ((hi & 0xF) << 12) | (lo >> 20);
                     }
                     if (bitlen == 34) {
                         cardnum = (lo >> 1) & 0xFFFF;
@@ -2274,15 +2291,10 @@ void CopyHIDtoT55x7(uint32_t hi2, uint32_t hi, uint32_t lo, uint8_t longFMT, boo
     uint8_t last_block = 0;
 
     if (longFMT) {
-        // Ensure no more than 84 bits supplied
-        if (hi2 > 0xFFFFF) {
-            DbpString("Tags can only have 84 bits");
-            return;
-        }
         // Build the 6 data blocks for supplied 84bit ID
         last_block = 6;
-        // load preamble (1D) & long format identifier (9E manchester encoded)
-        data[1] = 0x1D96A900 | (manchesterEncode2Bytes((hi2 >> 16) & 0xF) & 0xFF);
+        // load preamble (1D)
+        data[1] = 0x1D000000 | (manchesterEncode2Bytes((hi2 >> 16) & 0xFFFF) & 0xFFFFFF);
         // load raw id from hi2, hi, lo to data blocks (manchester encoded)
         data[2] = manchesterEncode2Bytes(hi2 & 0xFFFF);
         data[3] = manchesterEncode2Bytes(hi >> 16);

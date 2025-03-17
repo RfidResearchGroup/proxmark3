@@ -160,8 +160,7 @@ int demodHID(bool verbose) {
         return PM3_ESOFT;
     }
 
-    wiegand_message_t packed = initialize_message_object(hi2, hi, lo, 0);
-    if (HIDTryUnpack(&packed) == false) {
+    if (!decode_wiegand(hi2, hi, lo, 0)) { // if failed to unpack wiegand
         printDemodBuff(0, false, false, true);
     }
     PrintAndLogEx(INFO, "raw: " _GREEN_("%08x%08x%08x"), hi2, hi, lo);
@@ -544,6 +543,7 @@ static int CmdHIDBrute(const char *Cmd) {
     }
 
     wiegand_card_t card_hi, card_low;
+    cardformatdescriptor_t card_descriptor = HIDGetCardFormat(format_idx).Fields;
     memset(&card_hi, 0, sizeof(wiegand_card_t));
 
     char field[3] = {0};
@@ -575,11 +575,13 @@ static int CmdHIDBrute(const char *Cmd) {
         PrintAndLogEx(INFO, "Facility code.... %u", card_hi.FacilityCode);
         PrintAndLogEx(INFO, "Card number...... %" PRIu64, card_hi.CardNumber);
         PrintAndLogEx(INFO, "Delay............ " _YELLOW_("%d"), delay);
+
         if (strcmp(field, "fc") == 0) {
             PrintAndLogEx(INFO, "Field............ " _YELLOW_("fc"));
         } else if (strcmp(field, "cn") == 0) {
             PrintAndLogEx(INFO, "Field............ " _YELLOW_("cn"));
         }
+
         switch (direction) {
             case 0:
                 PrintAndLogEx(INFO, "Direction........ " _YELLOW_("both"));
@@ -594,6 +596,7 @@ static int CmdHIDBrute(const char *Cmd) {
                 break;
         }
     }
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Started bruteforcing HID Prox reader");
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
@@ -623,13 +626,13 @@ static int CmdHIDBrute(const char *Cmd) {
                 return PM3_ESOFT;
             }
             if (strcmp(field, "fc") == 0) {
-                if (card_hi.FacilityCode < 0xFF) {
+                if (card_hi.FacilityCode < card_descriptor.MaxFC) {
                     card_hi.FacilityCode++;
                 } else {
                     fin_hi = true;
                 }
             } else if (strcmp(field, "cn") == 0) {
-                if (card_hi.CardNumber < 0xFFFF) {
+                if (card_hi.CardNumber < card_descriptor.MaxCN) {
                     card_hi.CardNumber++;
                 } else {
                     fin_hi = true;

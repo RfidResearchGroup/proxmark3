@@ -437,7 +437,7 @@ uint16_t sam_copy_payload_sam2nfc(uint8_t *nfc_tx_buf, uint8_t *sam_rx_buf) {
     //  90 00
 
     // NFC req:
-    // 0C  05  DE  64 
+    // 0C  05  DE  64
 
     // copy data out of c1->a1>->a1->80 node
     uint16_t nfc_tx_len = (uint8_t) * (sam_rx_buf + 10);

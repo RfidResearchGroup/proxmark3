@@ -108,6 +108,8 @@ static void em410x_construct_emul_graph(uint8_t *uid, uint8_t clock, uint8_t gap
 // print 64 bit EM410x ID in multiple formats
 void printEM410x(uint32_t hi, uint64_t id, bool verbose, int type) {
 
+    if (!id && !hi) return;
+
     if (verbose == false) {
         if (type & 0x1) { // Short ID
             PrintAndLogEx(SUCCESS, "EM 410x ID "_GREEN_("%010" PRIX64), id);
@@ -249,6 +251,11 @@ static int ask_em410x_binary_decode(bool verbose, uint32_t *hi, uint64_t *lo, ui
         else if (ans == -6)
             PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x parity failed");
 
+        return PM3_ESOFT;
+    }
+
+    if (!lo && !hi) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - Em410x decoded to all zeros");
         return PM3_ESOFT;
     }
 

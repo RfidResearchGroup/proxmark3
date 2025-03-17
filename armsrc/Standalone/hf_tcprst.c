@@ -247,7 +247,7 @@ void RunMod(void) {
                 } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && len == 9) {  // Received a SELECT (cascade 2)
                     p_response = &responses[RESP_INDEX_SAKC2];
                 } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {  // Received a RATS request
-                    p_response = &responses[RESP_INDEX_RATS];
+                    p_response = &responses[RESP_INDEX_ATS];
                 } else if (receivedCmd[0] == ISO14443A_CMD_PPS) {
                     p_response = &responses[RESP_INDEX_PPS];
                 } else {
@@ -425,7 +425,7 @@ void RunMod(void) {
                 } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT_2 && len == 9) {  // Received a SELECT (cascade 2)
                     p_response = &responses[RESP_INDEX_SAKC2];
                 } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {  // Received a RATS request
-                    p_response = &responses[RESP_INDEX_RATS];
+                    p_response = &responses[RESP_INDEX_ATS];
                 } else if (receivedCmd[0] == ISO14443A_CMD_PPS) {
                     p_response = &responses[RESP_INDEX_PPS];
                 } else {

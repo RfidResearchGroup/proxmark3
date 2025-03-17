@@ -321,9 +321,10 @@ bool RAMFUNC LogTraceBits(const uint8_t *btBytes, uint16_t bitLen, uint32_t time
 // Emulator memory
 int emlSet(const uint8_t *data, uint32_t offset, uint32_t length) {
     uint8_t *mem = BigBuf_get_EM_addr();
-    if (!mem) {
+    if (mem == NULL) {
         return PM3_EMALLOC;
     }
+
     if (offset + length <= CARD_MEMORY_SIZE) {
         memcpy(mem + offset, data, length);
         return PM3_SUCCESS;
@@ -335,9 +336,10 @@ int emlSet(const uint8_t *data, uint32_t offset, uint32_t length) {
 
 int emlGet(uint8_t *out, uint32_t offset, uint32_t length) {
     uint8_t *mem = BigBuf_get_EM_addr();
-    if (!mem) {
+    if (mem == NULL) {
         return PM3_EMALLOC;
     }
+
     if (offset + length <= CARD_MEMORY_SIZE) {
         memcpy(out, mem + offset, length);
         return PM3_SUCCESS;

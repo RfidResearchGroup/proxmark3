@@ -548,7 +548,7 @@ static s32_t spiffs_page_consistency_check_i(spiffs *fs) {
         SPIFFS_API_CHECK_RES(fs, SPIFFS_ERR_INTERNAL);
     }
     // this checks for overflow of the multiplication of block_count+1 with SPIFFS_PAGES_PER_BLOCK(fs)
-    if (((uint32_t)(-1)) / SPIFFS_PAGES_PER_BLOCK(fs) > (block_count+1)) {
+    if (((uint32_t)(-1)) / SPIFFS_PAGES_PER_BLOCK(fs) > (block_count + 1)) {
         // checking with +1 block count to avoid overflow also in inner loop, which adds one page...
         // would exceed value storable in uint32_t
         SPIFFS_DBG("Overflow: pages per block %04x with block count "_SPIPRIbl" results in overflow\n", SPIFFS_PAGES_PER_BLOCK(fs), block_count);
@@ -556,13 +556,13 @@ static s32_t spiffs_page_consistency_check_i(spiffs *fs) {
     }
     // because loop indices are using spiffs_page_ix type,
     // that type can hold a large enough value
-    if (total_blocks > ((spiffs_page_ix)-1)) {
+    if (total_blocks > ((spiffs_page_ix) - 1)) {
         SPIFFS_DBG("Avoiding infinite loop, total_blocks "_SPIPRIpg" too large for spiffs_page_ix type\n", total_blocks);
         SPIFFS_CHECK_RES(SPIFFS_ERR_INTERNAL);
     }
     // because loop indices are using spiffs_page_ix type,
     // that type can hold a large enough value
-    if (total_blocks_plus_one_page > ((spiffs_page_ix)-1) || total_blocks_plus_one_page < total_blocks) {
+    if (total_blocks_plus_one_page > ((spiffs_page_ix) - 1) || total_blocks_plus_one_page < total_blocks) {
         SPIFFS_DBG("Avoiding infinite loop, total_blocks_plus_one_page "_SPIPRIpg" too large for spiffs_page_ix type\n", total_blocks_plus_one_page);
         SPIFFS_CHECK_RES(SPIFFS_ERR_INTERNAL);
     }
@@ -586,7 +586,7 @@ static s32_t spiffs_page_consistency_check_i(spiffs *fs) {
                      0);
             // traverse each page except for lookup pages
             spiffs_page_ix cur_pix = SPIFFS_OBJ_LOOKUP_PAGES(fs) + SPIFFS_PAGES_PER_BLOCK(fs) * cur_block;
-            while (!restart && cur_pix < SPIFFS_PAGES_PER_BLOCK(fs) * (cur_block+1)) {
+            while (!restart && cur_pix < SPIFFS_PAGES_PER_BLOCK(fs) * (cur_block + 1)) {
                 //if ((cur_pix & 0xff) == 0)
                 //  SPIFFS_CHECK_DBG("PA: processing pix "_SPIPRIpg", block "_SPIPRIbl" of pix "_SPIPRIpg", block "_SPIPRIbl"\n",
                 //      cur_pix, cur_block, total_blocks, block_count);

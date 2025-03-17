@@ -6,6 +6,7 @@
 ## Table of Contents
 - [Windows Installation instructions](#windows-installation-instructions)
   - [Table of Contents](#table-of-contents)
+  - [Installing on WSL 2](#installing-on-wsl-2)
   - [Installing dev-environment with ProxSpace](#installing-dev-environment-with-proxspace)
   - [Video Installation guide](#video-installation-guide)
   - [Driver Installation ( Windows 7 )](#driver-installation--windows-7-)
@@ -25,6 +26,8 @@
   - [Done!](#done-1)
 
 
+
+
 There are three ways to install, build and use Proxmark3 on Windows:
 
 * Using Gator96100 **ProxSpace**, a package to assist in your Windows installation of MinGW
@@ -34,6 +37,9 @@ There are three ways to install, build and use Proxmark3 on Windows:
 We have listed three ways to use these two setups  (dev environment vs pre-compiled binaries)
 
 ---
+## Installing on WSL 2
+^[Top](#top)
+Installing on WSL 2 use this [installation readme](Windows-WSL2-Installation-Instructions.md).
 
 ## Installing dev-environment with ProxSpace
 ^[Top](#top)

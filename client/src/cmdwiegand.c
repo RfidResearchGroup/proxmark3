@@ -33,6 +33,46 @@
 
 static int CmdHelp(const char *Cmd);
 
+#define PACS_EXTRA_LONG_FORMAT  18     // 144 bits
+#define PACS_LONG_FORMAT        12     // 96 bits
+#define PACS_FORMAT             6      // 44 bits
+static int wiegand_new_pacs(uint8_t *padded_pacs, uint8_t plen) {
+
+    uint8_t d[PACS_EXTRA_LONG_FORMAT] = {0};
+    memcpy(d, padded_pacs, plen);
+
+    uint8_t pad = d[0];
+
+    char *binstr = (char *)calloc((PACS_EXTRA_LONG_FORMAT * 8) + 1, sizeof(uint8_t));
+    if (binstr == NULL) {
+        PrintAndLogEx(INFO, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    uint8_t n = plen - 1;
+
+    bytes_2_binstr(binstr, d + 1, n);
+
+    binstr[strlen(binstr) - pad] = '\0';
+
+    size_t tlen = 0;
+    uint8_t tmp[16] = {0};
+    binstr_2_bytes(tmp, &tlen, binstr);
+    PrintAndLogEx(SUCCESS, "Wiegand raw.... " _YELLOW_("%s"), sprint_hex_inrow(tmp, tlen));
+
+    uint32_t top = 0, mid = 0, bot = 0;
+    if (binstring_to_u96(&top, &mid, &bot, binstr) != strlen(binstr)) {
+        PrintAndLogEx(ERR, "Binary string contains none <0|1> chars");
+        free(binstr);
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "------------------------- " _CYAN_("SIO - Wiegand") " ---------------------------");
+    decode_wiegand(top, mid, bot, strlen(binstr));
+    free(binstr);
+    return PM3_SUCCESS;
+}
 int CmdWiegandList(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -116,16 +156,18 @@ int CmdWiegandDecode(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "wiegand decode",
                   "Decode raw hex or binary to wiegand format",
-                  "wiegand decode --raw 2006f623ae"
+                  "wiegand decode --raw 2006F623AE\n"
+                  "wiegand decode --new 06BD88EB80   -> 4..8 bytes, new padded format "
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("r", "raw", "<hex>", "raw hex to be decoded"),
         arg_str0("b", "bin", "<bin>", "binary string to be decoded"),
+        arg_str0("n", "new", "<hex>", "new padded pacs as raw hex to be decoded"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
     int hlen = 0;
     char hex[40] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)hex, sizeof(hex), &hlen);
@@ -133,6 +175,11 @@ int CmdWiegandDecode(const char *Cmd) {
     int blen = 0;
     uint8_t binarr[100] = {0x00};
     int res = CLIParamBinToBuf(arg_get_str(ctx, 2), binarr, sizeof(binarr), &blen);
+
+    int plen = 0;
+    uint8_t phex[8] = {0};
+    res = CLIParamHexToBuf(arg_get_str(ctx, 3), phex, sizeof(phex), &plen);
+
     CLIParserFree(ctx);
 
     if (res) {
@@ -155,13 +202,20 @@ int CmdWiegandDecode(const char *Cmd) {
             return PM3_EINVARG;
         }
         PrintAndLogEx(INFO, "Input bin len... %d", blen);
+
+    } else if (plen) {
+
+        return wiegand_new_pacs(phex, plen);
+
     } else {
         PrintAndLogEx(ERR, "Empty input");
         return PM3_EINVARG;
     }
 
-    wiegand_message_t packed = initialize_message_object(top, mid, bot, blen);
-    HIDTryUnpack(&packed);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "------------------------- " _CYAN_("Wiegand") " ---------------------------");
+
+    decode_wiegand(top, mid, bot, blen);
     return PM3_SUCCESS;
 }
 

@@ -66,7 +66,6 @@ static uint8_t empty[PICOPASS_BLOCK_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 static uint8_t zeros[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static int CmdHelp(const char *Cmd);
-static void print_iclass_sio(uint8_t *iclass_dump, size_t dump_len);
 
 static uint8_t iClass_Key_Table[ICLASS_KEYS_MAX][PICOPASS_BLOCK_SIZE] = {
     { 0xAE, 0xA6, 0x84, 0xA6, 0xDA, 0xB2, 0x32, 0x78 },
@@ -1346,10 +1345,7 @@ static int CmdHFiClassEView(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     printIclassDumpContents(dump, 1, blocks, bytes, dense_output);
-
-    if (verbose) {
-        print_iclass_sio(dump, bytes);
-    }
+    print_iclass_sio(dump, bytes, verbose);
 
     free(dump);
     return PM3_SUCCESS;
@@ -1400,7 +1396,7 @@ static int CmdHFiClassESetBlk(const char *Cmd) {
 
 static bool iclass_detect_new_pacs(uint8_t *d) {
     uint8_t n = 0;
-    while (n++ < (PICOPASS_BLOCK_SIZE / 2)) {
+    while (n++ < (PICOPASS_BLOCK_SIZE >> 1)) {
         if (d[n] && d[n + 1] == 0xA6) {
             return true;
         }
@@ -1418,7 +1414,7 @@ static int iclass_decode_credentials_new_pacs(uint8_t *d) {
 
     uint8_t pad = d[offset];
 
-    PrintAndLogEx(INFO, "%u , %u", offset, pad);
+    PrintAndLogEx(DEBUG, "%u , %u", offset, pad);
 
     char *binstr = (char *)calloc((PICOPASS_BLOCK_SIZE * 8) + 1, sizeof(uint8_t));
     if (binstr == NULL) {
@@ -1428,17 +1424,16 @@ static int iclass_decode_credentials_new_pacs(uint8_t *d) {
     uint8_t n = PICOPASS_BLOCK_SIZE - offset - 2;
     bytes_2_binstr(binstr, d + offset + 2, n);
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, "PACS......... " _GREEN_("%s"), sprint_hex_inrow(d + offset + 2, n));
-    PrintAndLogEx(SUCCESS, "padded bin... " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
+    PrintAndLogEx(DEBUG, "PACS......... " _GREEN_("%s"), sprint_hex_inrow(d + offset + 2, n));
+    PrintAndLogEx(DEBUG, "padded bin... " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
 
     binstr[strlen(binstr) - pad] = '\0';
-    PrintAndLogEx(SUCCESS, "bin.......... " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
+    PrintAndLogEx(DEBUG, "bin.......... " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
 
     size_t hexlen = 0;
     uint8_t hex[16] = {0};
     binstr_2_bytes(hex, &hexlen, binstr);
-    PrintAndLogEx(SUCCESS, "hex.......... " _GREEN_("%s"), sprint_hex_inrow(hex, hexlen));
+    PrintAndLogEx(DEBUG, "hex.......... " _GREEN_("%s"), sprint_hex_inrow(hex, hexlen));
 
     uint32_t top = 0, mid = 0, bot = 0;
     if (binstring_to_u96(&top, &mid, &bot, binstr) != strlen(binstr)) {
@@ -1450,9 +1445,8 @@ static int iclass_decode_credentials_new_pacs(uint8_t *d) {
     free(binstr);
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Wiegand decode");
-    wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
-    HIDTryUnpack(&packed);
+    PrintAndLogEx(INFO, "------------------------- " _CYAN_("SIO - Wiegand") " ----------------------------");
+    decode_wiegand(top, mid, bot, 0);
 
     return PM3_SUCCESS;
 }
@@ -1473,8 +1467,7 @@ static void iclass_decode_credentials(uint8_t *data) {
     if (has_values && encryption == None) {
 
         // todo:  remove preamble/sentinel
-        PrintAndLogEx(INFO, "Block 7 decoder");
-
+        PrintAndLogEx(INFO, "------------------------ " _CYAN_("Block 7 decoder") " --------------------------");
         if (has_new_pacs) {
             iclass_decode_credentials_new_pacs(b7);
         } else {
@@ -1489,11 +1482,8 @@ static void iclass_decode_credentials(uint8_t *data) {
             char *pbin = binstr;
             while (strlen(pbin) && *(++pbin) == '0');
 
-            PrintAndLogEx(SUCCESS, "Binary..................... " _GREEN_("%s"), pbin);
-
-            PrintAndLogEx(INFO, "Wiegand decode");
-            wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
-            HIDTryUnpack(&packed);
+            PrintAndLogEx(SUCCESS, "Binary... %zu - " _GREEN_("%s"), strlen(pbin), pbin);
+            decode_wiegand(top, mid, bot, 0);
         }
 
     } else {
@@ -1712,11 +1702,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         }
 
         printIclassDumpContents(decrypted, 1, (decryptedlen / 8), decryptedlen, dense_output);
-
-        if (verbose) {
-            print_iclass_sio(decrypted, decryptedlen);
-        }
-
+        print_iclass_sio(decrypted, decryptedlen, verbose);
         PrintAndLogEx(NORMAL, "");
 
         // decode block 6
@@ -1747,7 +1733,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
             }
         }
 
-        PrintAndLogEx(INFO, "-----------------------------------------------------------------");
+        PrintAndLogEx(INFO, "-------------------------------------------------------------------");
         free(decrypted);
     }
 
@@ -2865,8 +2851,9 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
         return PM3_SUCCESS;
 
     bool use_sc = IsCardHelperPresent(verbose);
-    if (use_sc == false)
+    if (use_sc == false) {
         return PM3_SUCCESS;
+    }
 
     // crypto helper available.
     PrintAndLogEx(INFO, "----------------------------- " _CYAN_("Cardhelper") " -----------------------------");
@@ -2916,8 +2903,7 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
                     PrintAndLogEx(SUCCESS, "      bin : %s", pbin);
                     PrintAndLogEx(INFO, "");
                     PrintAndLogEx(INFO, "------------------------------ " _CYAN_("Wiegand") " -------------------------------");
-                    wiegand_message_t packed = initialize_message_object(top, mid, bot, 0);
-                    HIDTryUnpack(&packed);
+                    decode_wiegand(top, mid, bot, 0);
                 }
             } else {
                 PrintAndLogEx(INFO, "no credential found");
@@ -3187,7 +3173,7 @@ static void detect_credential(uint8_t *iclass_dump, size_t dump_len, bool *is_le
 
     picopass_hdr_t *hdr = (picopass_hdr_t *)iclass_dump;
 
-    if (!memcmp(hdr->app_issuer_area, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE)) {
+    if (memcmp(hdr->app_issuer_area, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE) == 0) {
         // Legacy AIA
         *is_legacy = true;
 
@@ -3209,7 +3195,7 @@ static void detect_credential(uint8_t *iclass_dump, size_t dump_len, bool *is_le
                 }
             }
         }
-    } else if (!memcmp(hdr->app_issuer_area, "\xFF\xFF\xFF\x00\x06\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE)) {
+    } else if (memcmp(hdr->app_issuer_area, "\xFF\xFF\xFF\x00\x06\xFF\xFF\xFF", PICOPASS_BLOCK_SIZE) == 0) {
         // SE AIA
         *is_se = true;
 
@@ -3241,28 +3227,32 @@ static void detect_credential(uint8_t *iclass_dump, size_t dump_len, bool *is_le
 }
 
 // print ASN1 decoded array in TLV view
-static void print_iclass_sio(uint8_t *iclass_dump, size_t dump_len) {
+void print_iclass_sio(uint8_t *iclass_dump, size_t dump_len, bool verbose) {
+
     bool is_legacy, is_se, is_sr;
     uint8_t *sio_start;
     size_t sio_length;
     detect_credential(iclass_dump, dump_len, &is_legacy, &is_se, &is_sr, &sio_start, &sio_length);
 
+    // sanity checks
     if (sio_start == NULL) {
         return;
     }
 
     if (dump_len < sio_length + (sio_start - iclass_dump)) {
-        // SIO length exceeds the size of the dump we have, bail
+        // SIO length exceeds the size of the dump
         return;
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "---------------------------- " _CYAN_("SIO - RAW") " ----------------------------");
+    PrintAndLogEx(INFO, "--------------------------- " _CYAN_("SIO - RAW") " -----------------------------");
     print_hex_noascii_break(sio_start, sio_length, 32);
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "------------------------- " _CYAN_("SIO - ASN1 TLV") " --------------------------");
-    asn1_print(sio_start, sio_length, "  ");
-    PrintAndLogEx(NORMAL, "");
+    if (verbose) {
+        PrintAndLogEx(INFO, "----------------------- " _CYAN_("SIO - ASN1 TLV") " ---------------------------");
+        asn1_print(sio_start, sio_length, "  ");
+        PrintAndLogEx(NORMAL, "");
+    }
 }
 
 void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t endblock, size_t filesize, bool dense_output) {
@@ -3460,8 +3450,9 @@ void printIclassDumpContents(uint8_t *iclass_dump, uint8_t startblock, uint8_t e
     if (is_legacy)
         PrintAndLogEx(HINT, _YELLOW_("yellow") " = legacy credential");
 
-    if (is_se)
+    if (is_se) {
         PrintAndLogEx(HINT, _CYAN_("cyan") " = SIO / SE credential");
+    }
 
     if (is_sr)
         PrintAndLogEx(HINT, _CYAN_("cyan") " = SIO / SR credential");
@@ -3519,10 +3510,7 @@ static int CmdHFiClassView(const char *Cmd) {
     print_picopass_info((picopass_hdr_t *) dump);
     printIclassDumpContents(dump, startblock, endblock, bytes_read, dense_output);
     iclass_decode_credentials(dump);
-
-    if (verbose) {
-        print_iclass_sio(dump, bytes_read);
-    }
+    print_iclass_sio(dump, bytes_read, verbose);
 
     free(dump);
     return PM3_SUCCESS;
@@ -3880,7 +3868,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         arg_lit0(NULL, "vb6kdf", "use the VB6 elite KDF instead of a file"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
@@ -4661,11 +4649,11 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     memcpy(CCNR + 8, macs, 4);
     memcpy(MAC_TAG, macs + 4, 4);
 
-    PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s"), sprint_hex(csn, sizeof(csn)));
-    PrintAndLogEx(SUCCESS, " Epurse: %s", sprint_hex(epurse, sizeof(epurse)));
-    PrintAndLogEx(SUCCESS, "   MACS: %s", sprint_hex(macs, sizeof(macs)));
-    PrintAndLogEx(SUCCESS, "   CCNR: " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
-    PrintAndLogEx(SUCCESS, "TAG MAC: %s", sprint_hex(MAC_TAG, sizeof(MAC_TAG)));
+    PrintAndLogEx(SUCCESS, "CSN....... " _GREEN_("%s"), sprint_hex(csn, sizeof(csn)));
+    PrintAndLogEx(SUCCESS, "Epurse.... %s", sprint_hex(epurse, sizeof(epurse)));
+    PrintAndLogEx(SUCCESS, "MACS...... %s", sprint_hex(macs, sizeof(macs)));
+    PrintAndLogEx(SUCCESS, "CCNR...... " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
+    PrintAndLogEx(SUCCESS, "TAG MAC... %s", sprint_hex(MAC_TAG, sizeof(MAC_TAG)));
 
     // Run time
     uint64_t t1 = msclock();
@@ -4744,7 +4732,7 @@ typedef struct {
     uint8_t use_raw;
     uint8_t use_elite;
     uint32_t keycnt;
-    uint8_t csn[8];
+    uint8_t csn[PICOPASS_BLOCK_SIZE];
     uint8_t cc_nr[12];
     uint8_t *keys;
     union {
@@ -4821,8 +4809,9 @@ void GenerateMacFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elite, 
         }
     }
 
-    for (int i = 0; i < iclass_tc; i++)
+    for (int i = 0; i < iclass_tc; i++) {
         pthread_join(threads[i], NULL);
+    }
 }
 
 static void *bf_generate_mackey(void *thread_arg) {
@@ -5436,7 +5425,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
     data[0] = flags;
 
     int cmdlen = 0;
-    if (CLIParamHexToBuf(arg_get_str(ctx, 8), data+1, PM3_CMD_DATA_SIZE-1, &cmdlen) != PM3_SUCCESS){
+    if (CLIParamHexToBuf(arg_get_str(ctx, 8), data + 1, PM3_CMD_DATA_SIZE - 1, &cmdlen) != PM3_SUCCESS) {
         CLIParserFree(ctx);
         return PM3_ESOFT;
     }
@@ -5448,7 +5437,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_SAM_PICOPASS, data, cmdlen+1);
+    SendCommandNG(CMD_HF_SAM_PICOPASS, data, cmdlen + 1);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_SAM_PICOPASS, &resp, 4000) == false) {
         PrintAndLogEx(WARNING, "SAM timeout");
@@ -5506,11 +5495,11 @@ static int CmdHFiClassSAM(const char *Cmd) {
         const uint8_t *mediaType = oid + 2 + oid_length;
         const uint8_t mediaType_data = mediaType[2];
         PrintAndLogEx(SUCCESS, "SIO Media Type: " _GREEN_("%s"), getSioMediaTypeInfo(mediaType_data));
-    } else if(breakOnNrMac && d[0] == 0x05) {
-        PrintAndLogEx(SUCCESS, "Nr-MAC: " _GREEN_("%s"), sprint_hex_inrow(d+1, 8));
-        if(verbose){
+    } else if (breakOnNrMac && d[0] == 0x05) {
+        PrintAndLogEx(SUCCESS, "Nr-MAC: " _GREEN_("%s"), sprint_hex_inrow(d + 1, 8));
+        if (verbose) {
             PrintAndLogEx(INFO, "Replay Nr-MAC to dump SIO:");
-            PrintAndLogEx(SUCCESS, "    hf iclass dump -k \"%s\" --nr", sprint_hex_inrow(d+1, 8));
+            PrintAndLogEx(SUCCESS, "    hf iclass dump -k \"%s\" --nr", sprint_hex_inrow(d + 1, 8));
         }
     } else {
         print_hex(d, resp.length);

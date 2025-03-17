@@ -192,7 +192,6 @@ static nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
 // --- GET SIGNATURE
 static int plus_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len) {
     int index = originality_check_verify(uid, uidlen, signature, signature_len, PK_MFP);
-    PrintAndLogEx(NORMAL, "");
     return originality_check_print(signature, signature_len, index);
 }
 
@@ -1813,7 +1812,7 @@ static int CmdHFMFPMAD(const char *Cmd) {
     }
 
     uint8_t sector0[16 * 4] = {0};
-    uint8_t sector10[16 * 4] = {0};
+    uint8_t sector16[16 * 4] = {0};
 
     if (mfpReadSector(MF_MAD1_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector0, verbose)) {
         PrintAndLogEx(NORMAL, "");
@@ -1833,19 +1832,19 @@ static int CmdHFMFPMAD(const char *Cmd) {
     MAD1DecodeAndPrint(sector0, swapmad, verbose, &haveMAD2);
 
     if (haveMAD2) {
-        if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector10, verbose)) {
+        if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector16, verbose)) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(ERR, "error, read sector " _YELLOW_("0x10") ". Card doesn't have MAD or doesn't have MAD on default keys");
             return PM3_ESOFT;
         }
 
-        MAD2DecodeAndPrint(sector10, swapmad, verbose);
+        MAD2DecodeAndPrint(sector16, swapmad, verbose);
     }
 
     if (aidlen == 2 || decodeholder) {
         uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
         size_t madlen = 0;
-        if (MADDecode(sector0, sector10, mad, &madlen, swapmad)) {
+        if (MADDecode(sector0, sector16, mad, &madlen, swapmad)) {
             PrintAndLogEx(ERR, "can't decode MAD");
             return PM3_EWRONGANSWER;
         }
@@ -1990,9 +1989,9 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
         memcpy(ndefkey, key, 16);
     }
 
-    uint8_t sector0[16 * 4] = {0};
-    uint8_t sector10[16 * 4] = {0};
-    uint8_t data[4096] = {0};
+    uint8_t sector0[MIFARE_1K_MAXBLOCK] = {0};
+    uint8_t sector16[MIFARE_1K_MAXBLOCK] = {0};
+    uint8_t data[MIFARE_4K_MAX_BYTES] = {0};
     int datalen = 0;
 
     if (verbose)
@@ -2016,7 +2015,7 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
         if (verbose)
             PrintAndLogEx(INFO, "reading MAD v2 sector");
 
-        if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector10, verbose)) {
+        if (mfpReadSector(MF_MAD2_SECTOR, MF_KEY_A, (uint8_t *)g_mifarep_mad_key, sector16, verbose)) {
             PrintAndLogEx(ERR, "error, read sector 0x10. card doesn't have MAD or doesn't have MAD on default keys");
             PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfp ndefread -k `") " with your custom key");
             return PM3_ESOFT;
@@ -2025,7 +2024,7 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
 
     uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
     size_t madlen = 0;
-    res = MADDecode(sector0, (haveMAD2 ? sector10 : NULL), mad, &madlen, false);
+    res = MADDecode(sector0, (haveMAD2 ? sector16 : NULL), mad, &madlen, false);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "can't decode MAD");
         return res;
@@ -2034,7 +2033,7 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
     PrintAndLogEx(INFO, "reading data from tag");
     for (int i = 0; i < madlen; i++) {
         if (ndefAID == mad[i]) {
-            uint8_t vsector[16 * 4] = {0};
+            uint8_t vsector[MIFARE_1K_MAXBLOCK] = {0};
             if (mfpReadSector(i + 1, keyB ? MF_KEY_B : MF_KEY_A, ndefkey, vsector, false)) {
                 PrintAndLogEx(ERR, "error, reading sector %d", i + 1);
                 return PM3_ESOFT;

@@ -257,7 +257,7 @@ void hid_corporate_1000_calculate_checksum_and_set(uint32_t *high, uint32_t *low
 
     // Calculate new high and low base value from card number and facility code, without parity
     new_low = (fc << 21) | (cardnum << 1);
-    new_high = 0x28 | ((fc >> 11) & 1); // 0x28 is 101000
+    new_high = (fc >> 11) & 1;
 
     int n_ones;
     uint32_t i;
@@ -319,6 +319,7 @@ void hid_corporate_1000_calculate_checksum_and_set(uint32_t *high, uint32_t *low
         new_high = new_high | 0x4;
 
     // Setting new calculated values
+    add_HID_preamble(0, &new_high, &new_low, 35);
     *low = new_low;
     *high = new_high;
 }
