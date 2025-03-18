@@ -9,14 +9,14 @@ local command = core.console
 command('clear')
 author = '  Author: jareckib - 12.03.2025'
 version = '  version v1.03'
-desc = [[  
+desc = [[
   This simple script stores 1, 2 or 3 different EM4102 on a single T5577.
   There is an option to enter the number engraved on the fob in decimal form.
-  The script can therefore be useful if the original EM4102 doesn't work but 
-  has an engraved ID number. By entering such an ID as a single EM4102, we 
+  The script can therefore be useful if the original EM4102 doesn't work but
+  has an engraved ID number. By entering such an ID as a single EM4102, we
   can create a working copy of our damaged fob.
   A tag T5577 created in this way works with the following USB readers:
-  
+
   - ACM08Y
   - ACM26C
   - Sycreader R60D
@@ -121,7 +121,7 @@ local function get_uid_from_user()
     while true do
         print(dash)
         io.write(ac.cyan .. '(1)' .. ac.reset .. ' Manual entry UID |' .. ac.cyan .. ' (2)' .. ac.reset .. ' Read via Proxmark3 ')
-        
+
         local choice
         repeat
             choice = io.read()
@@ -159,7 +159,7 @@ local function get_uid_from_user()
             io.read()
 
             while true do
-                reset_log_file() 
+                reset_log_file()
                 command('lf em 410x read')
                 local log_content = read_log_file(logfile)
                 local uid = extract_uid(log_content)
@@ -178,7 +178,7 @@ end
 local function main(args)
     for o, a in getopt.getopt(args, 'h') do
         if o == 'h' then return help() end
-    end  
+    end
     local blocks = {}
     local uid_count = 0
 

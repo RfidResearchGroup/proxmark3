@@ -42,7 +42,7 @@ typedef struct _em4x70_tag_info_t {
     /// * UM2 does not exist on the tag
     /// * Pin does not exist on the tag
     /// * UM1 (including the lock bits) might be one-time programmable (OTP)
-    /// 
+    ///
     /// [31] == Block 15 MSB == UM2₆₃..UM2₅₆
     /// [30] == Block 15 LSB == UM2₅₅..UM2₄₈
     /// [29] == Block 14 MSB == UM2₄₇..UM2₄₀

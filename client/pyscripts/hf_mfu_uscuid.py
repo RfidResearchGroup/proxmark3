@@ -77,14 +77,14 @@ def parse_config(config: str):
     cfg_auth_type = config[8:10]
     cfg_cuid = config[12:14]
     cfg_memory_config = config[14:16]
-    
+
     log_magic_wup = "Magic wakeup " + ("en" if cfg_magic_wup != "8500" else "dis") + "abled" + (" with config access" if cfg_magic_wup == "7AFF" else "")
     log_wup_style = "Magic wakeup style " + ("Gen1a 40(7)/43" if cfg_wup_style == "00" else ("GDM 20(7)/23" if cfg_wup_style == "85" else "unknown"))
     log_regular_available = "Config " + ("" if cfg_regular_available == "A0" else "un") + "available in regular mode"
     log_auth_type = "Auth type " + ("1B - PWD" if cfg_auth_type == "00" else "1A - 3DES")
     log_cuid = "CUID " + ("dis" if cfg_cuid == "A0" else "en") + "abled"
     log_memory_config = "Maximum memory configuration: " + (MEMORY_CONFIG[cfg_memory_config] if cfg_memory_config in MEMORY_CONFIG.keys() else "unknown")
-    
+
     print(SUCCESS + "^^^^............................ " + log_magic_wup)
     print(SUCCESS + "....^^.......................... " + log_wup_style)
     print(SUCCESS + "......^^........................ " + log_regular_available)
@@ -93,7 +93,7 @@ def parse_config(config: str):
     print(SUCCESS + "............^^.................. " + log_cuid)
     print(SUCCESS + "..............^^................ " + log_memory_config)
     print(SUCCESS + "................^^^^^^^^^^^^^^^^ version info")
-    
+
 def try_auth_magic(enforced = False):
     if enforced and not (gen1a | alt):
         print(ERROR + "Magic wakeup required. Please select one.")
@@ -158,7 +158,7 @@ elif write_backdoor != None:
     if len(data) % 8 != 0:
         print(ERROR + "Data must be a multiple of 4 bytes.")
         exit()
-    
+
     try_auth_magic(True)
     for i in range(len(data) // 8):
         p.console("hf 14a raw -" + ("k" if i != (len(data) // 8 - 1) else "") + f"c A2{(write_backdoor_num + i):02x}{data[8*i:8*i+8]}", False, False)
@@ -171,13 +171,13 @@ elif uid != None:
     p.console(f"hf 14a raw -kc" + ("s" if not (gen1a or alt) else "") + " 3002")
     block_2 = p.grabbed_output.split("\n")[-2][4:-9].replace(" ", "")[:8]
     uid_bytes = [int(uid[2*x:2*x+2], 16) for x in range(7)]
-    
+
     bcc_0 = 0x88 ^ uid_bytes[0] ^ uid_bytes[1] ^ uid_bytes[2]
     new_block_0 = ""
     for i in range(3):
         new_block_0 += f"{uid_bytes[i]:02x}"
     new_block_0 += f"{bcc_0:02x}"
-    
+
     bcc_1 = uid_bytes[3] ^ uid_bytes[4] ^ uid_bytes[5] ^ uid_bytes[6]
     new_block_1 = uid[6:]
     new_block_2 = f"{bcc_1:02x}" + block_2[2:]

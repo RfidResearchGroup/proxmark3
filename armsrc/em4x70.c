@@ -108,13 +108,13 @@ static bool command_parity = true;
 //
 // Four of the commands send a predetermined bitstream, immediately synchronize
 // on the tag sending the header, and then receive a number of bits from the tag:
-// 
+//
 // #define EM4X70_COMMAND_ID                   0x01 // 0b0001      --> 0b001'1
 //    Tag:  [LIW]           [Header][ID₃₁..ID₀][LIW]
 // Reader:     [RM][Command]
 //  Bits Sent: RM     +  4 bits
 //  Bits Recv: Header + 32 bits
-// 
+//
 // #define EM4X70_COMMAND_UM1                  0x02 // 0b0010      --> 0b010'1
 //    Tag:  [LIW]           [Header][LB₁, LB₀, UM1₂₉..UM1₀][LIW]
 // Reader:     [RM][Command]
@@ -171,7 +171,7 @@ static bool command_parity = true;
 // Auto-detect tag variant and command parity?
 // EM4070/V4070 does not contain UM2 or PIN, and UM1 may be OTP (one-time programmable)
 // EM4170 added Pin and UM2, and UM1
-// 
+//
 // Thus, to check for overlap, need only check the first three commands with parity:
 // | CMD   |  P? | Bits     | Safe? | Overlaps With    | Notes
 // |-------|-----|----------|-------|------------------|------------
@@ -182,7 +182,7 @@ static bool command_parity = true;
 // | PIN   | No  | `0b0100` | N/A   |                  | DO NOT USE ... just in case
 // | UM2   | No  | `0b0111` | Yes   | None!            | Safe ... indicates no parity AND EM4170 tag type
 // | ID    | Yes | `0b0011` | Yes   | Auth w/o Parity  | Safe to try ... indicates parity if successful
-// | UM1   | Yes | `0b0101` | Yes   | Write w/o Parity | 
+// | UM1   | Yes | `0b0101` | Yes   | Write w/o Parity |
 // | AUTH  | Yes | `0b0110` | Yes   | None!            | Not testable
 // | WRITE | Yes | `0b1010` | NO    | None!            | DO NOT USE ... just in case
 // | PIN   | Yes | `0b1001` | N/A   | None!            | DO NOT USE ... just in case
@@ -359,15 +359,15 @@ typedef struct _em4x70_transmit_log_t {
     em4x70_sublog_t receive;
 } em4x70_transmitted_data_log_t;
 em4x70_transmitted_data_log_t g_not_used_directly; // change to bigbuff allocation?
-em4x70_transmitted_data_log_t* g_Log = &g_not_used_directly;
+em4x70_transmitted_data_log_t *g_Log = &g_not_used_directly;
 static void log_reset(void) {
     if (g_Log != NULL) {
         memset(g_Log, 0, sizeof(em4x70_transmitted_data_log_t));
     }
 }
-static void log_dump_helper(em4x70_sublog_t * part, bool is_transmit) {
+static void log_dump_helper(em4x70_sublog_t *part, bool is_transmit) {
     if (g_dbglevel >= DBG_INFO || FORCE_ENABLE_LOGGING) {
-        char const * const  direction = is_transmit ? "sent >>>" : "recv <<<";
+        char const *const  direction = is_transmit ? "sent >>>" : "recv <<<";
         if (part->bits_used == 0) {
             DPRINTF_EXTENDED(("%s: no data", direction));
         } else {
@@ -377,12 +377,12 @@ static void log_dump_helper(em4x70_sublog_t * part, bool is_transmit) {
                 bitstring[i] = part->bit[i] ? '1' : '0';
             }
             DPRINTF_EXTENDED((
-                "%s: [ %8d .. %8d ] ( %6d ) %2d bits: %s",
-                direction,
-                part->start_tick, part->end_tick,
-                part->end_tick - part->start_tick,
-                part->bits_used, bitstring
-                ));
+                                 "%s: [ %8d .. %8d ] ( %6d ) %2d bits: %s",
+                                 direction,
+                                 part->start_tick, part->end_tick,
+                                 part->end_tick - part->start_tick,
+                                 part->bits_used, bitstring
+                             ));
         }
     }
 }
@@ -390,7 +390,7 @@ static void log_dump(void) {
     if (g_dbglevel >= DBG_INFO || FORCE_ENABLE_LOGGING) {
         bool hasContent = false;
         if (g_Log != NULL) {
-            uint8_t * check_for_data = (uint8_t *)g_Log;
+            uint8_t *check_for_data = (uint8_t *)g_Log;
             for (size_t i = 0; i < sizeof(em4x70_transmitted_data_log_t); ++i) {
                 if (check_for_data[i] != 0) {
                     hasContent = true;
@@ -419,7 +419,7 @@ static void log_sent_bit_end(uint32_t end_tick) {
     }
 }
 static void log_received_bit_start(uint32_t start_tick) {
-    if (g_Log != NULL && g_Log->receive.start_tick == 0) {        
+    if (g_Log != NULL && g_Log->receive.start_tick == 0) {
         g_Log->receive.start_tick = start_tick;
     }
 }
@@ -475,7 +475,7 @@ static bool check_ack(void) {
     // ACK  64 + 64
     // NAK 64 + 48
     if (check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD) &&
-        check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
+            check_pulse_length(get_pulse_length(FALLING_EDGE), 2 * EM4X70_T_TAG_FULL_PERIOD)) {
         // ACK
         return true;
     }
@@ -516,12 +516,12 @@ typedef struct _em4x70_command_bitstream {
     uint8_t received_data_converted_to_bytes[(EM4X70_MAX_BITSTREAM_BITS / 8) + (EM4X70_MAX_BITSTREAM_BITS % 8 ? 1 : 0)];
 } em4x70_command_bitstream_t;
 
-typedef bool (*bitstream_command_generator_id_t)(em4x70_command_bitstream_t * out_cmd_bitstream, bool with_command_parity);
-typedef bool (*bitstream_command_generator_um1_t)(em4x70_command_bitstream_t * out_cmd_bitstream, bool with_command_parity);
-typedef bool (*bitstream_command_generator_um2_t)(em4x70_command_bitstream_t * out_cmd_bitstream, bool with_command_parity);
-typedef bool (*bitstream_command_generator_auth_t)(em4x70_command_bitstream_t * out_cmd_bitstream, bool with_command_parity, const uint8_t * rnd, const uint8_t * frnd);
-typedef bool (*bitstream_command_generator_pin_t)(em4x70_command_bitstream_t * out_cmd_bitstream, bool with_command_parity, const uint8_t * tag_id, const uint32_t pin_little_endian);
-typedef bool (*bitstream_command_generator_write_t)(em4x70_command_bitstream_t * out_cmd_bitstream, bool with_command_parity, uint16_t data_little_endian, uint8_t address);
+typedef bool (*bitstream_command_generator_id_t)(em4x70_command_bitstream_t *out_cmd_bitstream, bool with_command_parity);
+typedef bool (*bitstream_command_generator_um1_t)(em4x70_command_bitstream_t *out_cmd_bitstream, bool with_command_parity);
+typedef bool (*bitstream_command_generator_um2_t)(em4x70_command_bitstream_t *out_cmd_bitstream, bool with_command_parity);
+typedef bool (*bitstream_command_generator_auth_t)(em4x70_command_bitstream_t *out_cmd_bitstream, bool with_command_parity, const uint8_t *rnd, const uint8_t *frnd);
+typedef bool (*bitstream_command_generator_pin_t)(em4x70_command_bitstream_t *out_cmd_bitstream, bool with_command_parity, const uint8_t *tag_id, const uint32_t pin_little_endian);
+typedef bool (*bitstream_command_generator_write_t)(em4x70_command_bitstream_t *out_cmd_bitstream, bool with_command_parity, uint16_t data_little_endian, uint8_t address);
 
 typedef struct _em4x70_command_generators_t {
     bitstream_command_generator_id_t    id;
@@ -534,9 +534,9 @@ typedef struct _em4x70_command_generators_t {
 
 #endif // #pragma endregion // Bitstream structures / enumerations
 #if  1 // #pragma region    // Functions to dump bitstreams to debug output
-static void bitstream_dump_helper(const em4x70_bitstream_t * bitstream, bool is_transmit) {
+static void bitstream_dump_helper(const em4x70_bitstream_t *bitstream, bool is_transmit) {
     // mimic the log's output format to make comparisons easier
-    char const * const  direction = is_transmit ? "sent >>>" : "recv <<<";
+    char const *const  direction = is_transmit ? "sent >>>" : "recv <<<";
     if (bitstream->bitcount == 0) {
         if (g_dbglevel >= DBG_INFO || true) {
             DPRINTF_EXTENDED(("%s: no data", direction));
@@ -550,17 +550,17 @@ static void bitstream_dump_helper(const em4x70_bitstream_t * bitstream, bool is_
             bitstring[i] = bitstream->one_bit_per_byte[i] ? '1' : '0';
         }
         DPRINTF_EXTENDED((
-            "%s: [ %8d .. %8d ] ( %6d ) %2d bits: %s%s",
-            direction,
-            0, 0, 0,
-            bitstream->bitcount + (is_transmit ? 2u : 0u), // add the two RM bits to transmitted data
-            is_transmit ? "00" : "", // add the two RM bits to transmitted data
-            bitstring
-            ));
+                             "%s: [ %8d .. %8d ] ( %6d ) %2d bits: %s%s",
+                             direction,
+                             0, 0, 0,
+                             bitstream->bitcount + (is_transmit ? 2u : 0u), // add the two RM bits to transmitted data
+                             is_transmit ? "00" : "", // add the two RM bits to transmitted data
+                             bitstring
+                         ));
     }
 }
-static void bitstream_dump(const em4x70_command_bitstream_t * cmd_bitstream) {
-    bitstream_dump_helper(&cmd_bitstream->to_send,    true );
+static void bitstream_dump(const em4x70_command_bitstream_t *cmd_bitstream) {
+    bitstream_dump_helper(&cmd_bitstream->to_send,    true);
     bitstream_dump_helper(&cmd_bitstream->to_receive, false);
 }
 #endif // #pragma region    // Functions to dump bitstreams to debug output
@@ -569,14 +569,14 @@ static void bitstream_dump(const em4x70_command_bitstream_t * cmd_bitstream) {
 /// @brief Internal function to send a bitstream to the tag.
 /// @details This function presumes a validated structure, and sends the bitstream without delays, to support timing-sensitive operations.
 /// @param send The details on the bitstream to send to the tag.
-/// @return 
-static bool send_bitstream_internal(const em4x70_bitstream_t * send) {
+/// @return
+static bool send_bitstream_internal(const em4x70_bitstream_t *send) {
     // similar to original send_command_and_read, but using provided bitstream
     int retries = EM4X70_COMMAND_RETRIES;
 
     // TIMING SENSITIVE FUNCTION ... Minimize delays after finding the listen window
     while (retries) {
-        const uint8_t * s = send->one_bit_per_byte;
+        const uint8_t *s = send->one_bit_per_byte;
         uint8_t sent = 0;
         retries--;
         if (find_listen_window(true)) { // `true` will automatically send the two `RM` zero bits
@@ -597,9 +597,9 @@ static bool send_bitstream_internal(const em4x70_bitstream_t * send) {
 /// @param recv Buffer to store received data from the tag.
 ///             `recv->expected_bitcount` must be initialized to indicate expected bits to receive from the tag.
 /// @return true only if the bitstream was sent and the expected count of bits were received from the tag.
-static bool send_bitstream_and_read(em4x70_command_bitstream_t * command_bitstream) {
-    const em4x70_bitstream_t * send = &command_bitstream->to_send;
-    em4x70_bitstream_t * recv = &command_bitstream->to_receive;
+static bool send_bitstream_and_read(em4x70_command_bitstream_t *command_bitstream) {
+    const em4x70_bitstream_t *send = &command_bitstream->to_send;
+    em4x70_bitstream_t *recv = &command_bitstream->to_receive;
 
     // Validate the parameters before proceeding
     bool parameters_valid = true;
@@ -614,7 +614,7 @@ static bool send_bitstream_and_read(em4x70_command_bitstream_t * command_bitstre
             (command_bitstream->command == EM4X70_COMMAND_UM1) ||
             (command_bitstream->command == EM4X70_COMMAND_UM2) ||
             (command_bitstream->command == EM4X70_COMMAND_AUTH)
-            ) {
+        ) {
             // These are the four commands that are supported by this function.
             // Allow these to proceed.
         } else {
@@ -665,7 +665,7 @@ static bool send_bitstream_and_read(em4x70_command_bitstream_t * command_bitstre
 
     // similar to original send_command_and_read, but using provided bitstream
     int bits_received = 0;
-    
+
     // NOTE: reset of log does not track the time first bit is sent.  That occurs
     //       when the first sent bit is recorded in the log.
     log_reset();
@@ -694,9 +694,9 @@ static bool send_bitstream_and_read(em4x70_command_bitstream_t * command_bitstre
     // finally return the result of the operation
     return result;
 }
-static bool send_bitstream_wait_ack_wait_read(em4x70_command_bitstream_t * command_bitstream) {
-    const em4x70_bitstream_t * send = &command_bitstream->to_send;
-    em4x70_bitstream_t * recv = &command_bitstream->to_receive;
+static bool send_bitstream_wait_ack_wait_read(em4x70_command_bitstream_t *command_bitstream) {
+    const em4x70_bitstream_t *send = &command_bitstream->to_send;
+    em4x70_bitstream_t *recv = &command_bitstream->to_receive;
 
     // Validate the parameters before proceeding
     bool parameters_valid = true;
@@ -769,10 +769,10 @@ static bool send_bitstream_wait_ack_wait_read(em4x70_command_bitstream_t * comma
 
     return result;
 }
-static bool send_bitstream_wait_ack_wait_ack(em4x70_command_bitstream_t * command_bitstream) {
+static bool send_bitstream_wait_ack_wait_ack(em4x70_command_bitstream_t *command_bitstream) {
 
-    const em4x70_bitstream_t * send = &command_bitstream->to_send;
-    em4x70_bitstream_t * recv = &command_bitstream->to_receive;
+    const em4x70_bitstream_t *send = &command_bitstream->to_send;
+    em4x70_bitstream_t *recv = &command_bitstream->to_receive;
 
     // Validate the parameters before proceeding
     bool parameters_valid = true;
@@ -835,7 +835,7 @@ static bool send_bitstream_wait_ack_wait_ack(em4x70_command_bitstream_t * comman
 #endif // #pragma region    // Functions to send bitstreams, with options to receive data
 #if  1 // #pragma region    // Create bitstreams for each type of EM4x70 command
 
-static bool add_bit_to_bitstream(em4x70_bitstream_t * s, bool b) {
+static bool add_bit_to_bitstream(em4x70_bitstream_t *s, bool b) {
     uint8_t i = s->bitcount;
     uint8_t bits_to_add = 1u;
 
@@ -848,10 +848,10 @@ static bool add_bit_to_bitstream(em4x70_bitstream_t * s, bool b) {
     s->bitcount++;
     return true;
 }
-static bool add_nibble_to_bitstream(em4x70_bitstream_t * s, uint8_t nibble, bool add_fifth_parity_bit) {
+static bool add_nibble_to_bitstream(em4x70_bitstream_t *s, uint8_t nibble, bool add_fifth_parity_bit) {
     uint8_t i = s->bitcount;
     uint8_t bits_to_add = add_fifth_parity_bit ? 5u : 4u;
-    
+
     if (i > EM4X70_MAX_BITSTREAM_BITS - bits_to_add) {
         DPRINTF_ERROR(("Too many bits to add to bitstream: %d, %d", i, bits_to_add));
         return false;
@@ -875,7 +875,7 @@ static bool add_nibble_to_bitstream(em4x70_bitstream_t * s, uint8_t nibble, bool
     s->bitcount += bits_to_add;
     return true;
 }
-static bool add_byte_to_bitstream(em4x70_bitstream_t * s, uint8_t b) {
+static bool add_byte_to_bitstream(em4x70_bitstream_t *s, uint8_t b) {
     uint8_t i = s->bitcount;
     uint8_t bits_to_add = 8u;
 
@@ -897,7 +897,7 @@ static bool add_byte_to_bitstream(em4x70_bitstream_t * s, uint8_t b) {
 }
 
 
-static bool create_legacy_em4x70_bitstream_for_cmd_id(em4x70_command_bitstream_t * out_cmd_bitstream, bool with_command_parity) {
+static bool create_legacy_em4x70_bitstream_for_cmd_id(em4x70_command_bitstream_t *out_cmd_bitstream, bool with_command_parity) {
     const uint8_t expected_bits_to_send = 4u;
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
@@ -911,7 +911,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_id(em4x70_command_bitstream_t
     }
     return result;
 }
-static bool create_legacy_em4x70_bitstream_for_cmd_um1(em4x70_command_bitstream_t * out_cmd_bitstream, bool with_command_parity) {
+static bool create_legacy_em4x70_bitstream_for_cmd_um1(em4x70_command_bitstream_t *out_cmd_bitstream, bool with_command_parity) {
     const uint8_t expected_bits_to_send = 4u;
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
@@ -925,7 +925,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_um1(em4x70_command_bitstream_
     }
     return result;
 }
-static bool create_legacy_em4x70_bitstream_for_cmd_um2(em4x70_command_bitstream_t * out_cmd_bitstream, bool with_command_parity) {
+static bool create_legacy_em4x70_bitstream_for_cmd_um2(em4x70_command_bitstream_t *out_cmd_bitstream, bool with_command_parity) {
     const uint8_t expected_bits_to_send = 4u;
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
@@ -939,14 +939,14 @@ static bool create_legacy_em4x70_bitstream_for_cmd_um2(em4x70_command_bitstream_
     }
     return true;
 }
-static bool create_legacy_em4x70_bitstream_for_cmd_auth(em4x70_command_bitstream_t * out_cmd_bitstream, bool with_command_parity, const uint8_t *rnd, const uint8_t *frnd) {
+static bool create_legacy_em4x70_bitstream_for_cmd_auth(em4x70_command_bitstream_t *out_cmd_bitstream, bool with_command_parity, const uint8_t *rnd, const uint8_t *frnd) {
     const uint8_t expected_bits_to_send = 96u;
     bool result = true;
-    
+
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
     out_cmd_bitstream->command = EM4X70_COMMAND_AUTH;
 
-    em4x70_bitstream_t * s = &out_cmd_bitstream->to_send;
+    em4x70_bitstream_t *s = &out_cmd_bitstream->to_send;
 
     // *********************************************************************************
     // HACK -- Insert an extra zero bit to match legacy behavior
@@ -994,12 +994,12 @@ static bool create_legacy_em4x70_bitstream_for_cmd_auth(em4x70_command_bitstream
 
     return result;
 }
-static bool create_legacy_em4x70_bitstream_for_cmd_pin(em4x70_command_bitstream_t * out_cmd_bitstream, bool with_command_parity, const uint8_t *tag_id, const uint32_t pin) {
+static bool create_legacy_em4x70_bitstream_for_cmd_pin(em4x70_command_bitstream_t *out_cmd_bitstream, bool with_command_parity, const uint8_t *tag_id, const uint32_t pin) {
     const uint8_t expected_bits_to_send = 69; // normally 68 bits, but legacy hack inserts an extra RM bit, and always adds a command parity bit
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
 
-    em4x70_bitstream_t * s = &out_cmd_bitstream->to_send;
+    em4x70_bitstream_t *s = &out_cmd_bitstream->to_send;
 
     out_cmd_bitstream->command = EM4X70_COMMAND_PIN;
 
@@ -1015,7 +1015,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_pin(em4x70_command_bitstream_
     // Send tag's ID ... indexes 4 .. 35
     // e.g., tag_id points to &tag.data[4] ... &tag.data[7]
     for (uint_fast8_t i = 0; i < 4; i++) {
-        uint8_t b = tag_id[3-i];
+        uint8_t b = tag_id[3 - i];
         result = result && add_byte_to_bitstream(s, b);
     }
 
@@ -1033,13 +1033,13 @@ static bool create_legacy_em4x70_bitstream_for_cmd_pin(em4x70_command_bitstream_
     }
     return result;
 }
-static bool create_legacy_em4x70_bitstream_for_cmd_write(em4x70_command_bitstream_t * out_cmd_bitstream, bool with_command_parity, uint16_t new_data, uint8_t address) {
+static bool create_legacy_em4x70_bitstream_for_cmd_write(em4x70_command_bitstream_t *out_cmd_bitstream, bool with_command_parity, uint16_t new_data, uint8_t address) {
     const uint8_t expected_bits_to_send = 35u; // normally 34 bits, but legacy hack inserts an extra RM bit, and always adds a command parity bit
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
     out_cmd_bitstream->command = EM4X70_COMMAND_WRITE;
 
-    em4x70_bitstream_t * s = &out_cmd_bitstream->to_send;
+    em4x70_bitstream_t *s = &out_cmd_bitstream->to_send;
 
     // *********************************************************************************
     // HACK -- Insert an extra zero bit to match legacy behavior
@@ -1105,7 +1105,7 @@ const em4x70_command_generators_t legacy_em4x70_command_generators = {
 static int authenticate(const uint8_t *rnd, const uint8_t *frnd, uint8_t *response) {
     em4x70_command_bitstream_t auth_cmd;
 
-    const em4x70_command_generators_t * generator = &legacy_em4x70_command_generators;
+    const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
     generator->auth(&auth_cmd, command_parity, rnd, frnd);
 
     bool result = send_bitstream_and_read(&auth_cmd);
@@ -1193,7 +1193,7 @@ static int bruteforce(const uint8_t address, const uint8_t *rnd, const uint8_t *
 // log entry/exit point
 static int send_pin(const uint32_t pin) {
     em4x70_command_bitstream_t send_pin_cmd;
-    const em4x70_command_generators_t * generator = &legacy_em4x70_command_generators;
+    const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
     generator->pin(&send_pin_cmd, command_parity, &tag.data[4], pin);
 
     bool result = send_bitstream_wait_ack_wait_read(&send_pin_cmd);
@@ -1204,7 +1204,7 @@ static int send_pin(const uint32_t pin) {
 static int write(const uint16_t word, const uint8_t address) {
     em4x70_command_bitstream_t write_cmd;
 
-    const em4x70_command_generators_t * generator = &legacy_em4x70_command_generators;
+    const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
     generator->write(&write_cmd, command_parity, word, address);
 
     bool result = send_bitstream_wait_ack_wait_ack(&write_cmd);
@@ -1226,10 +1226,10 @@ static bool find_listen_window(bool command) {
         96 ( 64 + 32 )
         64 ( 32 + 16 +16 )*/
 
-        if (check_pulse_length(get_pulse_length(RISING_EDGE),  (2 * EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_HALF_PERIOD) &&
-            check_pulse_length(get_pulse_length(RISING_EDGE),  (2 * EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_HALF_PERIOD) &&
-            check_pulse_length(get_pulse_length(FALLING_EDGE), (2 * EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_FULL_PERIOD) &&
-            check_pulse_length(get_pulse_length(FALLING_EDGE), (1 * EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_FULL_PERIOD)) {
+        if (check_pulse_length(get_pulse_length(RISING_EDGE), (2 * EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_HALF_PERIOD) &&
+                check_pulse_length(get_pulse_length(RISING_EDGE), (2 * EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_HALF_PERIOD) &&
+                check_pulse_length(get_pulse_length(FALLING_EDGE), (2 * EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_FULL_PERIOD) &&
+                check_pulse_length(get_pulse_length(FALLING_EDGE), (1 * EM4X70_T_TAG_FULL_PERIOD) + EM4X70_T_TAG_FULL_PERIOD)) {
 
             if (command) {
                 /* Here we are after the 64 duration edge.
@@ -1238,7 +1238,7 @@ static bool find_listen_window(bool command) {
                  *
                  *   I've found 32-40 field cycles works best
                  *   Allow user adjustment in range: 24-48 field cycles?
-                 *   On PM3Easy I've seen success at 24..40 field 
+                 *   On PM3Easy I've seen success at 24..40 field
                  */
                 WaitTicks(40 * TICKS_PER_FC);
                 // Send RM Command
@@ -1291,7 +1291,7 @@ static uint8_t encoded_bit_array_to_byte(const uint8_t *bits, int count_of_bits)
  */
 static bool em4x70_read_id(void) {
     em4x70_command_bitstream_t read_id_cmd;
-    const em4x70_command_generators_t * generator = &legacy_em4x70_command_generators;
+    const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
     generator->id(&read_id_cmd, command_parity);
 
     bool result = send_bitstream_and_read(&read_id_cmd);
@@ -1308,7 +1308,7 @@ static bool em4x70_read_id(void) {
  */
 static bool em4x70_read_um1(void) {
     em4x70_command_bitstream_t read_um1_cmd;
-    const em4x70_command_generators_t * generator = &legacy_em4x70_command_generators;
+    const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
     generator->um1(&read_um1_cmd, command_parity);
 
     bool result = send_bitstream_and_read(&read_um1_cmd);
@@ -1327,7 +1327,7 @@ static bool em4x70_read_um1(void) {
  */
 static bool em4x70_read_um2(void) {
     em4x70_command_bitstream_t read_um2_cmd;
-    const em4x70_command_generators_t * generator = &legacy_em4x70_command_generators;
+    const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
     generator->um2(&read_um2_cmd, command_parity);
 
     bool result = send_bitstream_and_read(&read_um2_cmd);

@@ -102,7 +102,7 @@ local function reanimate_t5577(password)
     p:console('lf t55 write -b 0 -d 000880E0 --pg1 --r0 -p 00000000')
     p:console('lf t55 write -b 0 -d 000880E0 --pg1 --r1 -p 00000000')
     p:console('lf t55 write -b 0 -d 000880E0 --pg1 --r2 -p 00000000')
-    p:console('lf t55 write -b 0 -d 000880E0 --pg1 --r3 -p 00000000')   
+    p:console('lf t55 write -b 0 -d 000880E0 --pg1 --r3 -p 00000000')
     reset_log_file()
 end
 
@@ -118,7 +118,7 @@ local function main(args)
 	print(dash)
     print("::: "..ac.cyan.."Hold on, I'm searching for a password in the dictionary"..ac.reset.." :::")
     print(dash)
-    p:console('lf t55 chk')   
+    p:console('lf t55 chk')
     local log_content = read_log_file(logfile)
     local password = log_content and extract_password(log_content) or nil
     reanimate_t5577(password)
