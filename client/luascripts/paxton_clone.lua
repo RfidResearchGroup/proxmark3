@@ -14,7 +14,7 @@ command('clear')
 
 author = '  Author: jareckib - 30.01.2025'
 tutorial = '  Based on Equipter tutorial - Downgrade Paxton to EM4102'
-version = '  version v1.18'
+version = '  version v1.20'
 desc = [[  
   The script automates the copying of Paxton fobs read - write. 
   It also allows manual input of data for blocks 4-7. 
@@ -54,6 +54,12 @@ local function help()
 	print(usage)
     print(ac.cyan..'  Arguments'..ac.reset)
 	print(arguments)
+end
+
+local function reset_log_file()
+    local file = io.open(logfile, "w+")
+    file:write("")
+    file:close()
 end
 	
 local function read_log_file(logfile)
@@ -228,6 +234,25 @@ local function log_result(blocks, em410_id, name)
     end
 end
 
+local function verify_written_data(original_blocks)
+    p:console('lf hitag read --ht2 -k BDF5E846')
+    local result = read_log_file(logfile)
+    local verified_blocks = parse_blocks(result)
+    local success = true
+    for i = 4, 7 do
+        if original_blocks[i] ~= verified_blocks[i] then
+            print('  Verification failed.. Block '..ac.green.. i ..ac.reset.. ' inconsistent.')
+            success = false
+        end
+    end
+
+    if success then
+        print(ac.green..'  Verification successful. Data was written correctly.' .. ac.reset)
+    else
+        print(ac.yellow.. '  Adjust the position of the Paxton fob on the coil.' .. ac.reset)
+    end
+end
+
 local function handle_cloning(decimal_id, padded_hex_id, blocks, was_option_3)
     while true do
         io.write("  Create Paxton choose " .. ac.cyan .. "1" .. ac.reset .. " or EM4102 choose " .. ac.cyan .. "2  " .. ac.reset)
@@ -236,10 +261,13 @@ local function handle_cloning(decimal_id, padded_hex_id, blocks, was_option_3)
             io.write("  Place the" .. ac.cyan .. " Paxton " .. ac.reset .. "Fob on the coil to write.." .. ac.green .. " ENTER " .. ac.reset .. "to continue..")
             io.read()
             print(dash)
-            command("lf hitag wrbl --ht2 -p 4 -d " .. blocks[4] .. " -k BDF5E846")
-            command("lf hitag wrbl --ht2 -p 5 -d " .. blocks[5] .. " -k BDF5E846")
-            command("lf hitag wrbl --ht2 -p 6 -d " .. blocks[6] .. " -k BDF5E846")
-            command("lf hitag wrbl --ht2 -p 7 -d " .. blocks[7] .. " -k BDF5E846")
+            p:console("lf hitag wrbl --ht2 -p 4 -d " .. blocks[4] .. " -k BDF5E846")
+            p:console("lf hitag wrbl --ht2 -p 5 -d " .. blocks[5] .. " -k BDF5E846")
+            p:console("lf hitag wrbl --ht2 -p 6 -d " .. blocks[6] .. " -k BDF5E846")
+            p:console("lf hitag wrbl --ht2 -p 7 -d " .. blocks[7] .. " -k BDF5E846")
+			reset_log_file()
+			--timer(5)
+			verify_written_data(blocks)
         elseif choice == "2" then
             io.write("  Place the" .. ac.cyan .. " T5577 " .. ac.reset .. "tag on the coil and press" .. ac.green .. " ENTER " .. ac.reset .. "to continue..")
             io.read()
@@ -276,9 +304,7 @@ local function handle_cloning(decimal_id, padded_hex_id, blocks, was_option_3)
                 end
                 log_result(blocks, padded_hex_id, name)
                 print(ac.green .. "  Log saved successfully!" .. ac.reset)
-                local file = io.open(logfile, "w+")
-                file:write("")
-                file:close()
+                reset_log_file()
                 return
             elseif another:lower() == "y" then
                 goto ask_again
