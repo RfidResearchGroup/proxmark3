@@ -14,7 +14,7 @@ command('clear')
 
 author = '  Author: jareckib - 30.01.2025'
 tutorial = '  Based on Equipter tutorial - Downgrade Paxton to EM4102'
-version = '  version v1.19'
+version = '  version v1.18'
 desc = [[  
   The script automates the copying of Paxton fobs read - write. 
   It also allows manual input of data for blocks 4-7. 
