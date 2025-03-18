@@ -555,9 +555,13 @@ void reverse_arraybytes_copy(uint8_t *arr, uint8_t *dest, size_t len) {
 }
 
 // TODO: Boost performance by copying in chunks of 1, 2, or 4 bytes when feasible.
-size_t concatbits(uint8_t *dest, int dest_offset, const uint8_t *src, int src_offset, size_t nbits) {
+/**
+ * @brief Concatenate bits from src to dest, bitstream is stored MSB first
+ * which means that the dest_offset=0 is the MSB of the dest[0]
+ *
+ */
+size_t concatbits(uint8_t *dest, int dest_offset, const uint8_t *src, int src_offset, size_t nbits, bool src_lsb) {
     int i, end, step;
-
     // overlap
     if ((src - dest) * 8 + src_offset - dest_offset > 0) {
         i = 0;
@@ -571,8 +575,8 @@ size_t concatbits(uint8_t *dest, int dest_offset, const uint8_t *src, int src_of
 
     for (; i != end; i += step) {
         // equiv of dest_bits[dest_offset + i] = src_bits[src_offset + i]
-        CLEAR_BIT(dest, dest_offset + i);
-        if (TEST_BIT(src, src_offset + i)) SET_BIT(dest, dest_offset + i);
+        CLEAR_BIT_MSB(dest, dest_offset + i);
+        if (src_lsb ? TEST_BIT_LSB(src, src_offset + i) : TEST_BIT_MSB(src, src_offset + i)) SET_BIT_MSB(dest, dest_offset + i);
     }
 
     return dest_offset + nbits;

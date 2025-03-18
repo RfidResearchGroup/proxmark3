@@ -5047,7 +5047,7 @@
                 "-v, --verbose verbose output",
                 "-f, --file <fn> Specify a filename for dump file",
                 "--emu from emulator memory",
-                "--start <dec> index of block to start writing (default 0)",
+                "--start <dec> index of block to start writing (def 0)",
                 "--end <dec> index of block to end writing (default last block)"
             ],
             "usage": "hf mf gload [-hv] [--mini] [--1k] [--1k+] [--2k] [--4k] [-p <hex>] [-f <fn>] [--emu] [--start <dec>] [--end <dec>]"
@@ -10992,8 +10992,8 @@
                 "-r, --reset Reset configuration to default values",
                 "-p, --pwd <hex> Password, 7bytes, LSB-order",
                 "-d, --delay <dec> Tag initialization delay (in us)",
-                "--lw <dec> offset, low pulses width (in us)",
-                "--lp <dec> offset, low pulses position (in us)"
+                "--lw <dec> offset, low pulses width (in us), optional!",
+                "--lp <dec> offset, low pulses position (in us), optional!"
             ],
             "usage": "lf pcf7931 config [-hr] [-p <hex>] [-d <dec>] [--lw <dec>] [--lp <dec>]"
         },
@@ -13232,6 +13232,6 @@
     "metadata": {
         "commands_extracted": 760,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-03-12T15:46:33"
+        "extracted_on": "2025-03-18T06:54:58"
     }
 }

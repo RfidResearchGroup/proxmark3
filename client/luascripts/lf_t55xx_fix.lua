@@ -11,7 +11,7 @@ local command = core.console
 command('clear')
 
 author = '  Author: jareckib - 15.02.2025'
-version = '  version v1.01'
+version = '  version v1.02'
 desc = [[
   This simple script first checks if a password has been set for the T5577.
   It uses the dictionary t55xx_default_pwds.dic for this purpose. If a password
@@ -102,7 +102,7 @@ local function reanimate_t5577(password)
     p:console('lf t55 write -b 0 -d 000880E0 --pg1 --r0 -p 00000000')
     p:console('lf t55 write -b 0 -d 000880E0 --pg1 --r1 -p 00000000')
     p:console('lf t55 write -b 0 -d 000880E0 --pg1 --r2 -p 00000000')
-    p:console('lf t55 write -b 0 -d 000880E0 --pg1 --r3 -p 00000000')   
+    p:console('lf t55 write -b 0 -d 000880E0 --pg1 --r3 -p 00000000')
     reset_log_file()
 end
 
@@ -111,20 +111,23 @@ local function main(args)
         if o == 'h' then return help() end
     end
     p:console('clear')
-	print('        I am initiating the repair process for '..ac.cyan..'T5577'..ac.reset)
-    print(dash)
+	print(dash)
+	print('I am initiating the repair process for '..ac.cyan..'T5577'..ac.reset)
+	io.write("Place the" .. ac.cyan .. " T5577 " .. ac.reset .. "tag on the coil and press" .. ac.green .. " ENTER " .. ac.reset .. "to continue..")
+	io.read()
+	print(dash)
     print("::: "..ac.cyan.."Hold on, I'm searching for a password in the dictionary"..ac.reset.." :::")
     print(dash)
     p:console('lf t55 chk')
-    timer(5)    
     local log_content = read_log_file(logfile)
     local password = log_content and extract_password(log_content) or nil
     reanimate_t5577(password)
-    p:console('lf t55 detect')
+	p:console('lf t55 detect')
+    p:console('lf t55 read -b 0')
 	timer(5)
     local success = false
     for line in p.grabbed_output:gmatch("[^\r\n]+") do
-        if line:find("000880E0") then
+        if line:find("00 | 000880E0 |") then
             success = true
             break
         end
