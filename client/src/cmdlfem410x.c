@@ -688,11 +688,11 @@ static int CmdEM410xClone(const char *Cmd) {
         uint8_t r_parity = 0;
         uint8_t nibble = id >> i & 0xF;
 
-        databits = concatbits(data, databits, &nibble, 4, 4);
+        databits = concatbits(data, databits, &nibble, 4, 4, false);
         for (size_t j = 0; j < 4; j++) {
             r_parity ^= nibble >> j & 1;
         }
-        databits = concatbits(data, databits, &r_parity, 7, 1);
+        databits = concatbits(data, databits, &r_parity, 7, 1, false);
         c_parity ^= nibble;
     }
     data[7] |= c_parity << 1;

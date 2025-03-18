@@ -202,10 +202,15 @@ extern bool g_tearoff_enabled;
 #endif
 
 // bit stream operations
-#define TEST_BIT(data, i) (*((data) + ((i) / 8)) >> (7 - ((i) % 8))) & 1
-#define SET_BIT(data, i)   *((data) + ((i) / 8)) |= (1 << (7 - ((i) % 8)))
-#define CLEAR_BIT(data, i) *((data) + ((i) / 8)) &= ~(1 << (7 - ((i) % 8)))
-#define FLIP_BIT(data, i)  *((data) + ((i) / 8)) ^= (1 << (7 - ((i) % 8)))
+#define TEST_BIT_MSB(data, i)  ((*((data) + ((i) / 8)) >> (7 - ((i) % 8))) & 1)
+#define SET_BIT_MSB(data, i)   (*((data) + ((i) / 8)) |= (1 << (7 - ((i) % 8))))
+#define CLEAR_BIT_MSB(data, i) (*((data) + ((i) / 8)) &= ~(1 << (7 - ((i) % 8))))
+#define FLIP_BIT_MSB(data, i)  (*((data) + ((i) / 8)) ^= (1 << (7 - ((i) % 8))))
+
+#define TEST_BIT_LSB(data, i)  ((*((data) + ((i) / 8)) >> ((i) % 8)) & 1)
+#define SET_BIT_LSB(data, i)   (*((data) + ((i) / 8)) |= (1 << ((i) % 8)))
+#define CLEAR_BIT_LSB(data, i) (*((data) + ((i) / 8)) &= ~(1 << ((i) % 8)))
+#define FLIP_BIT_LSB(data, i)  (*((data) + ((i) / 8)) ^= (1 << ((i) % 8)))
 
 // time for decompressing and loading the image to the FPGA
 #define FPGA_LOAD_WAIT_TIME (1500)
