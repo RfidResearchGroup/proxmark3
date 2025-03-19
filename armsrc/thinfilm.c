@@ -111,6 +111,12 @@ static int EmSendCmdThinfilmRaw(const uint8_t *resp, uint16_t respLen) {
             AT91C_BASE_SSC->SSC_THR = resp[i++];
             FpgaSendQueueDelay = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
         }
+
+        if (AT91C_BASE_SSC->SSC_SR & (AT91C_SSC_RXRDY)) {
+            b = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
+            (void)b;
+        }
+        if (BUTTON_PRESS()) break;
     }
 
     // Ensure that the FPGA Delay Queue is empty
