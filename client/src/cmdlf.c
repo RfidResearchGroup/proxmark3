@@ -41,6 +41,7 @@
 #include "cmdlfhid.h"       // for hid menu
 #include "cmdlfhitag.h"     // for hitag menu
 #include "cmdlfhitaghts.h"  // for hitag S sub commands
+#include "cmdlfhitagu.h"    // for hitag µ sub commands
 #include "cmdlfidteck.h"    // for idteck menu
 #include "cmdlfio.h"        // for ioprox menu
 #include "cmdlfcotag.h"     // for COTAG menu
@@ -1599,6 +1600,14 @@ static bool check_chiptype(bool getDeviceData) {
         if (read_hts_uid() == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("Hitag 1/S / 82xx"));
             PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf hitag hts`") " commands");
+            retval = true;
+            goto out;
+        }
+
+        // Hitag µ
+        if (read_htu_uid() == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("Hitag µ / 8265"));
+            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf hitag htu`") " commands");
             retval = true;
             goto out;
         }

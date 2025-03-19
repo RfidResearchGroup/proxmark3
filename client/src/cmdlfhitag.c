@@ -16,6 +16,8 @@
 // Low frequency Hitag support
 //-----------------------------------------------------------------------------
 #include "cmdlfhitag.h"
+#include "cmdlfhitaghts.h"
+#include "cmdlfhitagu.h"
 #include <ctype.h>
 #include "cmdparser.h"  // command_t
 #include "comms.h"
@@ -31,7 +33,6 @@
 #include "pm3_cmd.h"    // return codes
 #include "hitag2/hitag2_crypto.h"
 #include "util_posix.h"             // msclock
-#include "cmdlfhitaghts.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -2458,6 +2459,7 @@ static command_t CommandTable[] = {
     {"help",        CmdHelp,                    AlwaysAvailable, "This help"},
     {"list",        CmdLFHitagList,             AlwaysAvailable, "List Hitag trace history"},
     {"hts",         CmdLFHitagS,                AlwaysAvailable, "{ Hitag S/8211 operations }"},
+    {"htu",         CmdLFHitagU,                AlwaysAvailable, "{ Hitag µ/8265 operations }"},
     {"-----------", CmdHelp,                    IfPm3Hitag,      "------------------------ " _CYAN_("General") " ------------------------"},
     {"info",        CmdLFHitagInfo,             IfPm3Hitag,      "Hitag 2 tag information"},
     {"reader",      CmdLFHitagReader,           IfPm3Hitag,      "Act like a Hitag 2 reader"},

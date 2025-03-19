@@ -660,6 +660,7 @@ SRCS =  mifare/aiddesfire.c \
 		cmdlfhid.c \
 		cmdlfhitag.c \
 		cmdlfhitaghts.c \
+		cmdlfhitagu.c \
 		cmdlfidteck.c \
 		cmdlfindala.c \
 		cmdlfio.c \
