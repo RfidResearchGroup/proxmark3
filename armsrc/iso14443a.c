@@ -1726,10 +1726,20 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
             }
             p_response = NULL;
         } else if (receivedCmd[0] == MIFARE_ULC_WRITE && len == 8 && (tagType == 2 || tagType == 7)) {        // Received a WRITE
+
+            p_response = NULL;
+
             // cmd + block + 4 bytes data + 2 bytes crc
             if (CheckCrc14A(receivedCmd, len)) {
 
                 uint8_t block = receivedCmd[1];
+
+                // sanity checks
+                if (block > pages) {
+                    // send NACK 0x0, invalid argument
+                    EmSend4bit(CARD_NACK_IV);
+                    goto jump;
+                }
 
                 // OTP sanity check
                 // Quite a bad one,  one should look at all individual bits and see if anyone tries be set as zero
@@ -1739,23 +1749,20 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
                         // OTP can't be set back to zero
                         // send NACK 0x0 == invalid argument,
                         EmSend4bit(CARD_NACK_IV);
+                        goto jump;
                     }
                 }
 
-                if (block > pages) {
-                    // send NACK 0x0 == invalid argument
-                    EmSend4bit(CARD_NACK_IV);
-                } else {
-                    // first blocks of emu are header
-                    emlSetMem_xt(&receivedCmd[2], block + (MFU_DUMP_PREFIX_LENGTH / 4), 1, 4);
-                    // send ACK
-                    EmSend4bit(CARD_ACK);
-                }
+                // first blocks of emu are header
+                emlSetMem_xt(&receivedCmd[2], block + (MFU_DUMP_PREFIX_LENGTH / 4), 1, 4);
+                // send ACK
+                EmSend4bit(CARD_ACK);
+
             } else {
                 // send NACK 0x1 == crc/parity error
                 EmSend4bit(CARD_NACK_PA);
             }
-            p_response = NULL;
+            goto jump;
         } else if (receivedCmd[0] == MIFARE_ULC_COMP_WRITE && len == 4 && (tagType == 2 || tagType == 7)) {
             // cmd + block + 2 bytes crc
             if (CheckCrc14A(receivedCmd, len)) {
@@ -2002,6 +2009,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
 
         // Count number of other messages after a halt
 //        if (order != ORDER_WUPA && lastorder == ORDER_HALTED) { happened2++; }
+jump:
 
         cmdsRecvd++;
 
@@ -3239,7 +3247,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
     }
 
     if ((param & ISO14A_APDU) == ISO14A_APDU) {
-        uint8_t res;
+        uint8_t res = 0;
         arg0 = iso14_apdu(
                    cmd,
                    len,

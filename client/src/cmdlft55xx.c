@@ -2303,7 +2303,7 @@ static void printT5x7KnownBlock0(uint32_t b0) {
         case T55X7_TEXECOM_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "Texecom ");
             break;
-        case T55X7_BETECH_CONFIG_BLOCK: 
+        case T55X7_BETECH_CONFIG_BLOCK:
             snprintf(s + strlen(s), sizeof(s) - strlen(s), "Be-Tech ");
             break;
         default:

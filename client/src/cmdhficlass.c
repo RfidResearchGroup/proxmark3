@@ -1482,7 +1482,8 @@ static void iclass_decode_credentials(uint8_t *data) {
             char *pbin = binstr;
             while (strlen(pbin) && *(++pbin) == '0');
 
-            PrintAndLogEx(SUCCESS, "Binary... %zu - " _GREEN_("%s"), strlen(pbin), pbin);
+            PrintAndLogEx(SUCCESS, "Binary... " _GREEN_("%s") " ( %zu )", pbin, strlen(pbin));
+            PrintAndLogEx(NORMAL, "");
             decode_wiegand(top, mid, bot, 0);
         }
 

@@ -6279,7 +6279,8 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         if (sector > -1) {
 
             // decode it
-            PrintAndLogEx(INFO, "");
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "------------------------- " _CYAN_("Wiegand") " ---------------------------");
             PrintAndLogEx(INFO, _CYAN_("HID PACS detected"));
 
             uint8_t pacs_sector[MFBLOCK_SIZE * 3] = {0};
@@ -6302,7 +6303,6 @@ static int CmdHF14AMfMAD(const char *Cmd) {
 
                 PrintAndLogEx(SUCCESS, "Binary... " _GREEN_("%s"), pbin);
 
-                PrintAndLogEx(INFO, "Wiegand decode");
                 decode_wiegand(top, mid, bot, 0);
             }
         }
