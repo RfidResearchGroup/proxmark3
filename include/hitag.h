@@ -47,16 +47,16 @@
 #define HITAGU_CONFIG_PADR      0xFF
 #define HITAGU_PASSWORD_PADR    0xFE
 
-// Hitag μ IC Revision (ICR) values
-#define HITAGU_ICR_STANDARD      0x10  // Standard Hitag μ
-#define HITAGU_ICR_ADVANCED      0x20  // Hitag μ advanced
-#define HITAGU_ICR_ADVANCED_PLUS 0x30  // Hitag μ advanced+
+// Hitag µ IC Revision (ICR) values
+#define HITAGU_ICR_STANDARD      0x10  // Standard Hitag µ
+#define HITAGU_ICR_ADVANCED      0x20  // Hitag µ advanced
+#define HITAGU_ICR_ADVANCED_PLUS 0x30  // Hitag µ advanced+
 #define HITAGU_ICR_8265          0x80  // 8265
 
-// Hitag μ memory sizes based on ICR
-#define HITAGU_MAX_PAGE_STANDARD      0x04  // 4 blocks (0x00-0x03) for standard Hitag μ
-#define HITAGU_MAX_PAGE_ADVANCED      0x10  // 16 blocks (0x00-0x0F) for Hitag μ advanced
-#define HITAGU_MAX_PAGE_ADVANCED_PLUS 0x37  // 56 blocks (0x00-0x36) for Hitag μ advanced+
+// Hitag µ memory sizes based on ICR
+#define HITAGU_MAX_PAGE_STANDARD      0x04  // 4 blocks (0x00-0x03) for standard Hitag µ
+#define HITAGU_MAX_PAGE_ADVANCED      0x10  // 16 blocks (0x00-0x0F) for Hitag µ advanced
+#define HITAGU_MAX_PAGE_ADVANCED_PLUS 0x37  // 56 blocks (0x00-0x36) for Hitag µ advanced+
 #define HITAGU_MAX_PAGE_8265          0x0F  // 15 blocks (0x00-0x0E) for 8265
 
 // need to see which limits these cards has

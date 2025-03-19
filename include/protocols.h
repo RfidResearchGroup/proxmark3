@@ -950,7 +950,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define HITAGS_WRITE_BLOCK              0x90    // 1001 WRITE BLOCK
 #define HITAGS_QUIET                    0x70    // 0111 QUIET
 
-// Hitag μ flags
+// Hitag µ flags
 #define HITAGU_FLAG_PEXT                0x01    // 0b00001 - Protocol EXTension flag
 #define HITAGU_FLAG_INV                 0x02    // 0b00010 - INVentory flag
 #define HITAGU_FLAG_CRCT                0x04    // 0b00100 - CRC Transponder flag
@@ -959,7 +959,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define HITAGU_FLAG_RFU                 0x08    // 0b01000 - Reserved For Use flag (when INV=1, always 0)
 #define HITAGU_FLAG_NOS                 0x10    // 0b10000 - Number Of Slots flag (when INV=1)
 
-// Hitag μ commands (6-bit)
+// Hitag µ commands (6-bit)
 #define HITAGU_CMD_LOGIN                   0x28    // 0b101000 - Login command
 #define HITAGU_CMD_INVENTORY               0x00    // 0b000000 - Inventory command
 #define HITAGU_CMD_READ_MULTIPLE_BLOCK     0x12    // 0b010010 - Read multiple block command

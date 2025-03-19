@@ -241,8 +241,8 @@ static uint8_t felica_select_card(felica_card_select_t *card) {
     // We try 10 times, or if answer was received.
     int len = 25;
     do {
-        // end-of-reception response packet data, wait approx. 501μs
-        // end-of-transmission command packet data, wait approx. 197μs
+        // end-of-reception response packet data, wait approx. 501µs
+        // end-of-transmission command packet data, wait approx. 197µs
         // polling card
         TransmitFor18092_AsReader(poll, sizeof(poll), NULL, 1, 0);
 

@@ -361,16 +361,16 @@ static int CmdLFHitagURead(const char *Cmd) {
 
     if (icr == HITAGU_ICR_STANDARD) {
         user_blocks = HITAGU_MAX_PAGE_STANDARD;
-        PrintAndLogEx(INFO, "Hitag μ Standard (ICR=0x%02X), user blocks: 0x%02X", icr, user_blocks);
+        PrintAndLogEx(INFO, "Hitag µ Standard (ICR=0x%02X), user blocks: 0x%02X", icr, user_blocks);
     } else if (icr == HITAGU_ICR_ADVANCED) {
         user_blocks = HITAGU_MAX_PAGE_ADVANCED;
-        PrintAndLogEx(INFO, "Hitag μ Advanced (ICR=0x%02X), user blocks: 0x%02X", icr, user_blocks);
+        PrintAndLogEx(INFO, "Hitag µ Advanced (ICR=0x%02X), user blocks: 0x%02X", icr, user_blocks);
     } else if (icr == HITAGU_ICR_ADVANCED_PLUS) {
         user_blocks = HITAGU_MAX_PAGE_ADVANCED_PLUS;
-        PrintAndLogEx(INFO, "Hitag μ Advanced+ (ICR=0x%02X), user blocks: 0x%02X", icr, user_blocks);
+        PrintAndLogEx(INFO, "Hitag µ Advanced+ (ICR=0x%02X), user blocks: 0x%02X", icr, user_blocks);
     } else if (icr == HITAGU_ICR_8265) {
         user_blocks = HITAGU_MAX_PAGE_8265;
-        PrintAndLogEx(INFO, "Hitag μ 8265 (ICR=0x%02X), user blocks: 0x%02X", icr, user_blocks);
+        PrintAndLogEx(INFO, "Hitag µ 8265 (ICR=0x%02X), user blocks: 0x%02X", icr, user_blocks);
     } else {
         user_blocks = HITAGU_MAX_PAGE_STANDARD;
         PrintAndLogEx(INFO, "Unknown ICR (0x%02X)", icr);
@@ -509,16 +509,16 @@ static int CmdLFHitagUDump(const char *Cmd) {
 
     if (icr == HITAGU_ICR_STANDARD) {
         user_blocks = HITAGU_MAX_PAGE_STANDARD;
-        PrintAndLogEx(INFO, "Hitag μ Standard (ICR=0x%02X), user blocks: 0x%02X", icr, user_blocks);
+        PrintAndLogEx(INFO, "Hitag µ Standard (ICR=0x%02X), user blocks: 0x%02X", icr, user_blocks);
     } else if (icr == HITAGU_ICR_ADVANCED) {
         user_blocks = HITAGU_MAX_PAGE_ADVANCED;
-        PrintAndLogEx(INFO, "Hitag μ Advanced (ICR=0x%02X), user blocks: 0x%02X", icr, user_blocks);
+        PrintAndLogEx(INFO, "Hitag µ Advanced (ICR=0x%02X), user blocks: 0x%02X", icr, user_blocks);
     } else if (icr == HITAGU_ICR_ADVANCED_PLUS) {
         user_blocks = HITAGU_MAX_PAGE_ADVANCED_PLUS;
-        PrintAndLogEx(INFO, "Hitag μ Advanced+ (ICR=0x%02X), user blocks: 0x%02X", icr, user_blocks);
+        PrintAndLogEx(INFO, "Hitag µ Advanced+ (ICR=0x%02X), user blocks: 0x%02X", icr, user_blocks);
     } else if (icr == HITAGU_ICR_8265) {
         user_blocks = HITAGU_MAX_PAGE_8265;
-        PrintAndLogEx(INFO, "Hitag μ 8265 (ICR=0x%02X), user blocks: 0x%02X", icr, user_blocks);
+        PrintAndLogEx(INFO, "Hitag µ 8265 (ICR=0x%02X), user blocks: 0x%02X", icr, user_blocks);
     } else {
         user_blocks = HITAGU_MAX_PAGE_STANDARD;
         PrintAndLogEx(INFO, "Unknown ICR (0x%02X)", icr);

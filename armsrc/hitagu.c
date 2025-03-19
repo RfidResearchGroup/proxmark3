@@ -58,24 +58,24 @@ static void update_tag_max_page_by_icr(void) {
     switch (tag.icr) {
         case HITAGU_ICR_STANDARD:
             tag.max_page = HITAGU_MAX_PAGE_STANDARD;
-            DBG Dbprintf("Detected standard Hitag μ (ICR=0x%02X), max page: 0x%02X", tag.icr, tag.max_page);
+            DBG Dbprintf("Detected standard Hitag µ (ICR=0x%02X), max page: 0x%02X", tag.icr, tag.max_page);
             break;
         case HITAGU_ICR_ADVANCED:
             tag.max_page = HITAGU_MAX_PAGE_ADVANCED;
-            DBG Dbprintf("Detected Hitag μ advanced (ICR=0x%02X), max page: 0x%02X", tag.icr, tag.max_page);
+            DBG Dbprintf("Detected Hitag µ advanced (ICR=0x%02X), max page: 0x%02X", tag.icr, tag.max_page);
             break;
         case HITAGU_ICR_ADVANCED_PLUS:
             tag.max_page = HITAGU_MAX_PAGE_ADVANCED_PLUS;
-            DBG Dbprintf("Detected Hitag μ advanced+ (ICR=0x%02X), max page: 0x%02X", tag.icr, tag.max_page);
+            DBG Dbprintf("Detected Hitag µ advanced+ (ICR=0x%02X), max page: 0x%02X", tag.icr, tag.max_page);
             break;
         case HITAGU_ICR_8265:
             tag.max_page = HITAGU_MAX_PAGE_8265;
-            DBG Dbprintf("Detected Hitag μ 8265 (ICR=0x%02X), max page: 0x%02X", tag.icr, tag.max_page);
+            DBG Dbprintf("Detected Hitag µ 8265 (ICR=0x%02X), max page: 0x%02X", tag.icr, tag.max_page);
             break;
         default:
             // Unknown ICR, use standard size as fallback
             tag.max_page = HITAGU_MAX_PAGE_STANDARD;
-            DBG Dbprintf("Unknown Hitag μ ICR: 0x%02X, defaulting to max page: 0x%02X", tag.icr, tag.max_page);
+            DBG Dbprintf("Unknown Hitag µ ICR: 0x%02X, defaulting to max page: 0x%02X", tag.icr, tag.max_page);
             break;
     }
 }

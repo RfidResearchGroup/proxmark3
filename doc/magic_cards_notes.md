@@ -155,7 +155,7 @@ This is the cheapest and most common ID82xx chip available. It is usually sold a
 
 #### Characteristics
 
-* Chip is likely a cut down version of Hitag μ (micro) clone
+* Chip is likely a cut down version of Hitag µ (micro) clone
 * UID `00 00 00 00 00 00`
 * Password protection (4b), usually "00000000"(default) or "9AC4999C"(FURUI)
 * Config block 0xFF
