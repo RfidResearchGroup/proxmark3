@@ -2923,6 +2923,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
 noValidKeyFound:
             PrintAndLogEx(FAILED, "No usable key was found!");
+            PrintAndLogEx(HINT, "try `" _YELLOW_("hf mf autopwn -f mfc_default_keys")"`  i.e. the Randy special");
             free(keyBlock);
             free(e_sector);
             free(fptr);
