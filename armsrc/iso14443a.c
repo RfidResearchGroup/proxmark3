@@ -3113,10 +3113,12 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
     size_t len = ReaderReceive(data, data_len, parity_array);
     uint8_t *data_bytes = (uint8_t *) data;
 
-    if (!len) {
+    if (len == 0) {
         BigBuf_free();
         return 0; // DATA LINK ERROR
-    } else {
+    } 
+    
+    
         // S-Block WTX
         while (len && ((data_bytes[0] & 0xF2) == 0xF2)) {
             uint32_t save_iso14a_timeout = iso14a_get_timeout();
@@ -3130,6 +3132,7 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
             // transmit S-Block
             ReaderTransmit(data_bytes, len, NULL);
             // retrieve the result again (with increased timeout)
+        data_bytes[0] = 0x00;
             len = ReaderReceive(data, data_len, parity_array);
             data_bytes = data;
             // restore timeout
@@ -3155,8 +3158,6 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
             BigBuf_free();
             return -1;
         }
-
-    }
 
     if (len) {
         // cut frame byte
