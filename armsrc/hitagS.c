@@ -474,6 +474,9 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
     // Disable timer 1 with external trigger to avoid triggers during our own modulation
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
 
+    DBG Dbprintf("tx %d bits:", txlen);
+    DBG Dbhexdump((txlen + 7) / 8, tx, false);
+
     // Wait for HITAG_T_WAIT_SC carrier periods after the last tag bit before transmitting,
     // Since the clock counts since the last falling edge, a 'one' means that the
     // falling edge occurred halfway the period. with respect to this falling edge,
@@ -499,6 +502,9 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
 
     hitag_reader_receive_frame(rx, sizeofrx, rxlen, &start_time, ledcontrol, m, sof_bits);
     // hts_receive_frame(rx, sizeofrx, rxlen, &start_time, ledcontrol);
+
+    DBG Dbprintf("rx %d bits:", *rxlen);
+    DBG Dbhexdump((*rxlen + 7) / 8, rx, false);
 
     // Check if frame was captured and store it
     if (*rxlen > 0) {

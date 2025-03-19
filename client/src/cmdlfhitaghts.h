@@ -22,7 +22,7 @@
 #include "common.h"
 #include "hitag.h"
 
-void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response);
+void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t nbits, bool is_response);
 
 int CmdLFHitagS(const char *Cmd);
 

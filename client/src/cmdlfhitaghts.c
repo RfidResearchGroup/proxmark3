@@ -36,7 +36,83 @@
 
 static int CmdHelp(const char *Cmd);
 
-void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {}
+void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t nbits, bool is_response) {
+    size_t exp_len = 0;
+    uint8_t command = 0;
+
+    if (is_response) {
+        // Handle responses
+        if (nbits == 32) {
+            exp_len = snprintf(exp, size, "UID: [%02X%02X%02X%02X]", cmd[0], cmd[1], cmd[2], cmd[3]);
+        } else if (nbits == 40) {
+            exp_len = snprintf(exp, size, "Data");
+        }
+    } else if (nbits >= 5) {
+        concatbits(&command, 0, cmd, 0, 5, false);
+
+        if (nbits == 5) {
+            concatbits(&command, 0, cmd, 0, 5, false);
+
+            switch (command) {
+                case HITAGS_UID_REQ_STD:
+                    exp_len += snprintf(exp + exp_len, size - exp_len, "UID Request (Standard 00110)");
+                    break;
+                case HITAGS_UID_REQ_ADV1:
+                    exp_len += snprintf(exp + exp_len, size - exp_len, "UID Request (Advanced 11000)");
+                    break;
+                case HITAGS_UID_REQ_ADV2:
+                    exp_len += snprintf(exp + exp_len, size - exp_len, "UID Request (Advanced 11001)");
+                    break;
+                case HITAGS_UID_REQ_FADV:
+                    exp_len += snprintf(exp + exp_len, size - exp_len, "UID Request (Fast Advanced 11010)");
+                    break;
+            }
+        } else if (nbits == 4 + 8 + 8) {
+            concatbits(&command, 0, cmd, 0, 4, false);
+
+            if (command == HITAGS_READ_PAGE) {
+                exp_len += snprintf(exp + exp_len, size - exp_len, "READ");
+            } else if (command == HITAGS_WRITE_PAGE) {
+                exp_len += snprintf(exp + exp_len, size - exp_len, "WRITE");
+            } else if (command == HITAGS_READ_BLOCK) {
+                exp_len += snprintf(exp + exp_len, size - exp_len, "READ_BLOCK");
+            } else if (command == HITAGS_WRITE_BLOCK) {
+                exp_len += snprintf(exp + exp_len, size - exp_len, "WRITE_BLOCK");
+            } else if (command == HITAGS_QUIET) {
+                exp_len += snprintf(exp + exp_len, size - exp_len, "QUIET");
+            }
+            // Hitag 1 commands
+            else if (command == HITAG1_RDCPAGE) {
+                exp_len += snprintf(exp + exp_len, size - exp_len, "RDCPAGE");
+            } else if (command == HITAG1_RDCBLK) {
+                exp_len += snprintf(exp + exp_len, size - exp_len, "RDCBLK");
+            } else if (command == HITAG1_WRCPAGE) {
+                exp_len += snprintf(exp + exp_len, size - exp_len, "WRCPAGE");
+            } else if (command == HITAG1_WRCBLK) {
+                exp_len += snprintf(exp + exp_len, size - exp_len, "WRCBLK");
+            } else {
+                exp_len += snprintf(exp + exp_len, size - exp_len, "Unknown (%02X)", command);
+            }
+
+            uint8_t page = 0;
+            concatbits(&page, 0, cmd, 5, 8, false);
+            exp_len += snprintf(exp + exp_len, size - exp_len, " Page: %d", page);
+        } else if (nbits == 32 + 8) {
+            concatbits(&command, 0, cmd, 0, 5, false);
+            exp_len += snprintf(exp + exp_len, size - exp_len, "Data");
+        } else if (nbits == 5 + 32 + 8 || nbits == 5 + 32 + 1 + 8) {
+            concatbits(&command, 0, cmd, 0, 5, false);
+
+            if (command == HITAGS_SELECT) {
+                uint8_t uid[4] = {0};
+                concatbits(uid, 0, cmd, 5, 32, false);
+                exp_len = snprintf(exp, size, "SELECT UID: %02X%02X%02X%02X", uid[0], uid[1], uid[2], uid[3]);
+            }
+        }
+    } else {
+        exp_len = snprintf(exp, size, "Invalid command (too short)");
+    }
+}
 
 static const char *hts_get_type_str(uint32_t uid) {
     // source 1: https://www.scorpio-lk.com/downloads/Tango/HITAG_Classification.pdf
