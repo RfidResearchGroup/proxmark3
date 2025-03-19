@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Change `hf mfu sim` deny OTP changes with all zeros (@iceman1001)
 - Added missing file in CMakeLists.txt (@iceman1001)
 - Major update to `lf em 4x70` internals on ARM side; Enabling improved debugging and reliability (@henrygab)
 - Improved `pcf7931` generic readability of the code. Unified datatypes and added documentation/explainations (@tinooo)
