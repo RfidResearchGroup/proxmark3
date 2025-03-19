@@ -13136,10 +13136,10 @@
                 "",
                 "trace list -t des -> interpret as MIFARE DESFire",
                 "trace list -t felica -> interpret as ISO18092 / FeliCa",
-                "trace list -t hitag1 -> interpret as Hitag 1",
-                "trace list -t hitag2 -> interpret as Hitag 2",
-                "trace list -t hitags -> interpret as Hitag S",
-                "trace list -t hitagu -> interpret as Hitag \u00b5",
+                "trace list -t ht1 -> interpret as Hitag 1",
+                "trace list -t ht2 -> interpret as Hitag 2",
+                "trace list -t hts -> interpret as Hitag S",
+                "trace list -t htu -> interpret as Hitag \u00b5",
                 "trace list -t iclass -> interpret as iCLASS",
                 "trace list -t legic -> interpret as LEGIC",
                 "trace list -t lto -> interpret as LTO-CM",
@@ -13357,6 +13357,6 @@
     "metadata": {
         "commands_extracted": 767,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-03-19T11:50:24"
+        "extracted_on": "2025-03-19T14:19:20"
     }
 }

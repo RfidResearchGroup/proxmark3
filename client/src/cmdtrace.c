@@ -1320,10 +1320,10 @@ int CmdTraceList(const char *Cmd) {
                   "trace list -t cryptorf -> interpret as " _YELLOW_("CryptoRF") "\n\n"
                   "trace list -t des      -> interpret as " _YELLOW_("MIFARE DESFire") "\n"
                   "trace list -t felica   -> interpret as " _YELLOW_("ISO18092 / FeliCa") "\n"
-                  "trace list -t hitag1   -> interpret as " _YELLOW_("Hitag 1") "\n"
-                  "trace list -t hitag2   -> interpret as " _YELLOW_("Hitag 2") "\n"
-                  "trace list -t hitags   -> interpret as " _YELLOW_("Hitag S") "\n"
-                  "trace list -t hitagu   -> interpret as " _YELLOW_("Hitag µ") "\n"
+                  "trace list -t ht1      -> interpret as " _YELLOW_("Hitag 1") "\n"
+                  "trace list -t ht2      -> interpret as " _YELLOW_("Hitag 2") "\n"
+                  "trace list -t hts      -> interpret as " _YELLOW_("Hitag S") "\n"
+                  "trace list -t htu      -> interpret as " _YELLOW_("Hitag µ") "\n"
                   "trace list -t iclass   -> interpret as " _YELLOW_("iCLASS") "\n"
                   "trace list -t legic    -> interpret as " _YELLOW_("LEGIC") "\n"
                   "trace list -t lto      -> interpret as " _YELLOW_("LTO-CM") "\n"
@@ -1388,10 +1388,10 @@ int CmdTraceList(const char *Cmd) {
     else if (strcmp(type, "cryptorf") == 0) protocol = PROTO_CRYPTORF;
     else if (strcmp(type, "des") == 0)      protocol = MFDES;
     else if (strcmp(type, "felica") == 0)   protocol = FELICA;
-    else if (strcmp(type, "hitag1") == 0)   protocol = PROTO_HITAG1;
-    else if (strcmp(type, "hitag2") == 0)   protocol = PROTO_HITAG2;
-    else if (strcmp(type, "hitags") == 0)   protocol = PROTO_HITAGS;
-    else if (strcmp(type, "hitagu") == 0)   protocol = PROTO_HITAGU;
+    else if (strcmp(type, "ht1") == 0)   protocol = PROTO_HITAG1;
+    else if (strcmp(type, "ht2") == 0)   protocol = PROTO_HITAG2;
+    else if (strcmp(type, "hts") == 0)   protocol = PROTO_HITAGS;
+    else if (strcmp(type, "htu") == 0)   protocol = PROTO_HITAGU;
     else if (strcmp(type, "iclass") == 0)   protocol = ICLASS;
     else if (strcmp(type, "legic") == 0)    protocol = LEGIC;
     else if (strcmp(type, "lto") == 0)      protocol = LTO;
