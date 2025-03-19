@@ -617,6 +617,7 @@ Check column "offline" for their availability.
 |`hf mfu otptear         `|N       |`Tear-off test on OTP bits`
 |`hf mfu cauth           `|N       |`Ultralight-C - Authentication`
 |`hf mfu setpwd          `|N       |`Ultralight-C - Set 3DES key`
+|`hf mfu aesauth         `|N       |`Ultralight-AES - Authentication`
 |`hf mfu dump            `|N       |`Dump MIFARE Ultralight family tag to binary file`
 |`hf mfu incr            `|N       |`Increments Ev1/NTAG counter`
 |`hf mfu info            `|N       |`Tag information`

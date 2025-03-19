@@ -7062,6 +7062,22 @@
             ],
             "usage": "hf mfp wrp [-hv] -a <hex> [-d <hex>]"
         },
+        "hf mfu aesauth": {
+            "command": "hf mfu aesauth",
+            "description": "Tests AES key on Mifare Ultralight AES tags. If no key is specified, null key will be tried. Key index 0: DataProtKey (default) Key index 1: UIDRetrKey Key index 2: OriginalityKey",
+            "notes": [
+                "hf mfu aesauth",
+                "hf mfu aesauth --key <32 bytes> --index <0..2>"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--key <hex> AES key (32 hex bytes)",
+                "-i, --index <0..2> Key index, default: 0",
+                "-k Keep field on (only if a key is provided)"
+            ],
+            "usage": "hf mfu aesauth [-hk] [--key <hex>] [-i <0..2>]"
+        },
         "hf mfu amiibo": {
             "command": "hf mfu amiibo",
             "description": "Tries to read all memory from amiibo tag and decrypt it",
@@ -13230,8 +13246,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 760,
+        "commands_extracted": 761,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-03-18T06:54:58"
+        "extracted_on": "2025-03-19T08:33:58"
     }
 }

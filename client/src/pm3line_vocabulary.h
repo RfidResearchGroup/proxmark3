@@ -430,6 +430,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf mfu otptear" },
     { 0, "hf mfu cauth" },
     { 0, "hf mfu setpwd" },
+    { 0, "hf mfu aesauth" },
     { 0, "hf mfu dump" },
     { 0, "hf mfu incr" },
     { 0, "hf mfu info" },
