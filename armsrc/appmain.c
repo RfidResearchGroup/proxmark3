@@ -1200,7 +1200,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_HITAGS_SIMULATE: { // Simulate Hitag s tag, args = memory content
-            hts_simulate((bool)packet->oldarg[0], packet->data.asBytes, true);
+            hts_simulate((bool)packet->oldarg[0], packet->oldarg[1], packet->data.asBytes, true);
             break;
         }
         case CMD_LF_HITAGS_TEST_TRACES: { // Tests every challenge within the given file
@@ -1218,7 +1218,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_HITAGS_UID: {
-            hts_read_uid(NULL, false, true);
+            hts_read_uid(NULL, true, true);
             break;
         }
         case CMD_LF_HITAG2_WRITE: {

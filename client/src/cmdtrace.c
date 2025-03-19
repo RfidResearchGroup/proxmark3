@@ -28,6 +28,7 @@
 #include "comms.h"              // for sending cmds to device. GetFromBigBuf
 #include "fileutils.h"          // for saveFile
 #include "cmdlfhitag.h"         // annotate hitag
+#include "cmdlfhitaghts.h"      // annotate hitags
 #include "pm3_cmd.h"            // tracelog_hdr_t
 #include "cliparser.h"          // args..
 

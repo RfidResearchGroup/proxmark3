@@ -36,6 +36,8 @@
 
 static int CmdHelp(const char *Cmd);
 
+void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {}
+
 static const char *hts_get_type_str(uint32_t uid) {
     // source 1: https://www.scorpio-lk.com/downloads/Tango/HITAG_Classification.pdf
     // IDE Mark
@@ -88,7 +90,7 @@ static bool hts_get_uid(uint32_t *uid) {
     }
 
     if (resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - failed getting UID");
+        PrintAndLogEx(DEBUG, "DEBUG: Error - failed getting Hitag S UID");
         return false;
     }
 
@@ -253,8 +255,36 @@ static void print_error(int8_t reason) {
             break;
         default:
             // PM3_REASON_UNKNOWN
-            PrintAndLogEx(DEBUG, "DEBUG: Error - Hitag S failed");
+            PrintAndLogEx(FAILED, "Error - Hitag S failed");
     }
+}
+
+static void hitags_config_print(hitags_config_t config) {
+    PrintAndLogEx(INFO, " Memory type...... " _GREEN_("%s"),
+    (const char *[]) {"Hitag S 32", "Hitag S 256", "Hitag S 2048", "Unknown Hitag S/8211"}[config.MEMT]);
+
+    PrintAndLogEx(INFO, " Authenticaion.... %s", config.auth ? _YELLOW_("Yes") : "No");
+
+    PrintAndLogEx(INFO, " TTF coding....... %s",
+    config.RES3 ? "FSK  0=RF/10 1=RF/8" : (const char *[]) {"Manchester", "Biphase"}[config.TTFC]);
+
+    PrintAndLogEx(INFO, " TTF data rate.... %s",
+    (const char *[]) {"4 kBit", "8 kBit", "2 kBit", "2 kBit and Pigeon Race Standard"}[config.TTFDR]);
+
+    PrintAndLogEx(INFO, " TTF mode......... %s",
+    (const char *[]) {
+        "TTF Mode disabled (= RTF Mode)",
+        "Page 4, Page 5",
+        "Page 4, Page 5, Page 6, Page 7",
+        "Page 4",
+        "TTF Mode disabled (= RTF Mode)",
+        "Page 4, Page 5, Page 6",
+        "Page 4, Page 5, Page 6, Page 7, Page 8",
+        "Page 4, Page 5, Page 6, Page 7, Page 8, Page 9, Page 10, Page 11",
+    }[config.RES0 << 2 | config.TTFM]);
+
+    PrintAndLogEx(INFO, " Config locked.... %s", config.LCON ? _RED_("Yes") : _GREEN_("No"));
+    PrintAndLogEx(INFO, " Key/PWD locked... %s", config.LKP ? _RED_("Yes") : _GREEN_("No"));
 }
 
 static int CmdLFHitagSRead(const char *Cmd) {
@@ -868,59 +898,28 @@ static int CmdLFHitagSSim(const char *Cmd) {
                   "Simulate Hitag S transponder\n"
                   "You need to `lf hitag hts eload` first",
                   "lf hitag hts sim\n"
-                  "lf hitag hts sim --82xx");
+                  "lf hitag hts sim --82xx\n"
+                  "lf hitag hts sim -t 30    -> set threshold to 30");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("8", "82xx", "simulate 8268/8310"),
+        arg_int0("t", "threshold", "<dec>", "set edge detect threshold (def: 127)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     // bool use_82xx = arg_get_lit(ctx, 1);    // not implemented yet
+    int threshold = arg_get_int_def(ctx, 2, 127);
     CLIParserFree(ctx);
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_LF_HITAGS_SIMULATE, false, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_LF_HITAGS_SIMULATE, false, threshold, 0, NULL, 0);
     return PM3_SUCCESS;
 }
 
 static int CmdLFHitagSList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "lf hitag hts", "hitags");
-}
-
-void hitags_config_print(hitags_config_t config) {
-    PrintAndLogEx(INFO, " Memory type...... " _GREEN_("%s"),
-    (const char *[]) {
-        "Hitag S 32", "Hitag S 256", "Hitag S 2048",
-        "Unknown Hitag S/8211"
-    }[config.MEMT]);
-
-    PrintAndLogEx(INFO, " Authenticaion.... %s", config.auth ? _YELLOW_("Yes") : "No");
-
-    PrintAndLogEx(INFO, " TTF coding....... %s",
-    config.RES3 ? "FSK  0=RF/10 1=RF/8" : (const char *[]) {"Manchester", "Biphase"}[config.TTFC]);
-
-    PrintAndLogEx(INFO, " TTF data rate.... %s",
-    (const char *[]) {
-        "4 kBit", "8 kBit", "2 kBit",
-        "2 kBit and Pigeon Race Standard"
-    }[config.TTFDR]);
-
-    PrintAndLogEx(INFO, " TTF mode......... %s",
-    (const char *[]) {
-        "TTF Mode disabled (= RTF Mode)",
-        "Page 4, Page 5",
-        "Page 4, Page 5, Page 6, Page 7",
-        "Page 4",
-        "TTF Mode disabled (= RTF Mode)",
-        "Page 4, Page 5, Page 6",
-        "Page 4, Page 5, Page 6, Page 7, Page 8",
-        "Page 4, Page 5, Page 6, Page 7, Page 8, Page 9, Page 10, Page 11",
-    }[config.RES0 << 2 | config.TTFM]);
-
-    PrintAndLogEx(INFO, " Config locked.... %s", config.LCON ? _RED_("Yes") : _GREEN_("No"));
-    PrintAndLogEx(INFO, " Key/PWD locked... %s", config.LKP ? _RED_("Yes") : _GREEN_("No"));
 }
 
 static command_t CommandTable[] = {

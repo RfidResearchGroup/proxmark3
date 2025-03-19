@@ -41,10 +41,17 @@
 
 // need to see which limits these cards has
 #define HITAG1_MAX_BYTE_SIZE    64
-#define HITAGU_MAX_BYTE_SIZE    64
-#define HITAG_MAX_BYTE_SIZE    (64 * HITAG_BLOCK_SIZE)
+#define HITAG_MAX_BYTE_SIZE     (64 * HITAG_BLOCK_SIZE)
 
 #define HITAG2_CONFIG_BLOCK     3
+
+// Modulation types - used by shared code
+typedef enum modulation {
+    AC2K = 0,  // Amplitude modulation 2000 bits/s
+    AC4K,      // Amplitude modulation 4000 bits/s
+    MC4K,      // Manchester modulation 4000 bits/s
+    MC8K       // Manchester modulation 8000 bits/s
+} MOD;
 
 typedef enum {
     HTSF_PLAIN,
@@ -125,7 +132,7 @@ struct hitagS_tag {
     int      max_page;
 
     union {
-        uint8_t pages[64][4];
+        uint8_t pages[HITAGS_MAX_PAGES][HITAGS_PAGE_SIZE];
         struct {
             // page 0
             uint32_t uid_le;
@@ -147,7 +154,7 @@ typedef struct {
     hitag_function cmd;
     uint8_t page;
     uint8_t page_count;
-    uint8_t data[HITAGS_PAGE_SIZE];
+    uint8_t data[HITAG_BLOCK_SIZE];
     uint8_t NrAr[HITAG_NRAR_SIZE];
     // unaligned access to key as uint64_t will abort.
     // todo: Why does the compiler without -munaligned-access generate unaligned-access code in the first place?
