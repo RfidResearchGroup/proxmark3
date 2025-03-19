@@ -798,7 +798,7 @@ static int CmdEM410xClone(const char *Cmd) {
                             config.datarate = 0x02;
                             break;
                     }
-                    packet.data[0] = reflect8(*(uint8_t*)&config);
+                    packet.data[0] = reflect8(*(uint8_t *)&config);
                     packet.page = HITAGU_CONFIG_PADR; // Config block
                     break;
                 }

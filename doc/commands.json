@@ -8841,12 +8841,13 @@
         },
         "lf em 410x clone": {
             "command": "lf em 410x clone",
-            "description": "clone a EM410x ID to a T55x7, Q5/T5555, EM4305/4469 or Hitag S/8211/8268/8310 tag.",
+            "description": "clone a EM410x ID to a T55x7, Q5/T5555, EM4305/4469, Hitag S/8211/8268/8310 or Hitag \u00b5/8265 tag.",
             "notes": [
                 "lf em 410x clone --id 0F0368568B -> encode for T55x7 tag",
                 "lf em 410x clone --id 0F0368568B --q5 -> encode for Q5/T5555 tag",
                 "lf em 410x clone --id 0F0368568B --em -> encode for EM4305/4469",
-                "lf em 410x clone --id 0F0368568B --hts -> encode for Hitag S/8211/8268/8310"
+                "lf em 410x clone --id 0F0368568B --hts -> encode for Hitag S/8211/8268/8310",
+                "lf em 410x clone --id 0F0368568B --htu -> encode for Hitag \u00b5/8265 tag"
             ],
             "offline": false,
             "options": [
@@ -8856,9 +8857,10 @@
                 "--q5 optional - specify writing to Q5/T5555 tag",
                 "--em optional - specify writing to EM4305/4469 tag",
                 "--hts optional - specify writing to Hitag S/8211/8268/8310 tag",
+                "--htu optional - specify writing to Hitag \u00b5/8265 tag",
                 "--electra optional - add Electra blocks to tag"
             ],
-            "usage": "lf em 410x clone [-h] [--clk <dec>] --id <hex> [--q5] [--em] [--hts] [--electra]"
+            "usage": "lf em 410x clone [-h] [--clk <dec>] --id <hex> [--q5] [--em] [--hts] [--htu] [--electra]"
         },
         "lf em 410x reader": {
             "command": "lf em 410x reader",
@@ -9975,7 +9977,7 @@
         },
         "lf hitag help": {
             "command": "lf hitag help",
-            "description": "help This help list List Hitag trace history hts { Hitag S/8211 operations } test Perform self tests view Display content from tag dump file lookup Uses authentication trace to check for key in dictionary file --------------------------------------------------------------------------------------- lf hitag list available offline: yes Alias of `trace list -t hitag2` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List Hitag trace history hts { Hitag S/8211 operations } htu { Hitag \u00b5/8265 operations } test Perform self tests view Display content from tag dump file lookup Uses authentication trace to check for key in dictionary file --------------------------------------------------------------------------------------- lf hitag list available offline: yes Alias of `trace list -t hitag2` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "lf hitag list --frame -> show frame delay times",
                 "lf hitag list -1 -> use trace buffer"
@@ -10136,6 +10138,110 @@
                 "-d, --data <hex> data, 4 hex bytes"
             ],
             "usage": "lf hitag hts wrbl [-h8] [--nrar <hex>] [--crypto] [-k <hex>] [-m <dec>] -p <dec> -d <hex>"
+        },
+        "lf hitag htu dump": {
+            "command": "lf hitag htu dump",
+            "description": "Read all Hitag \u00b5 memory and save to file 82xx password mode: - default password 00000000",
+            "notes": [
+                "lf hitag htu dump --82xx -> use def pwd",
+                "lf hitag htu dump --82xx -k 9AC4999C -> pwd mode"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-8, --82xx 82xx mode",
+                "-k, --key <hex> pwd, 4 hex bytes",
+                "-f, --file <fn> specify file name",
+                "--ns no save to file"
+            ],
+            "usage": "lf hitag htu dump [-h8] [-k <hex>] [-f <fn>] [--ns]"
+        },
+        "lf hitag htu help": {
+            "command": "lf hitag htu help",
+            "description": "help This help list List Hitag \u00b5 trace history --------------------------------------------------------------------------------------- lf hitag htu list available offline: yes Alias of `trace list -t hitagu` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "notes": [
+                "lf hitag htu list --frame -> show frame delay times",
+                "lf hitag htu list -1 -> use trace buffer"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-1, --buffer use data from trace buffer",
+                "--frame show frame delay times",
+                "-c mark CRC bytes",
+                "-r show relative times (gap and duration)",
+                "-u display times in microseconds instead of clock cycles",
+                "-x show hexdump to convert to pcap(ng)",
+                "or to import into Wireshark using encapsulation type \"ISO 14443\"",
+                "-f, --file <fn> filename of dictionary"
+            ],
+            "usage": "lf hitag htu list [-h1crux] [--frame] [-f <fn>]"
+        },
+        "lf hitag htu rdbl": {
+            "command": "lf hitag htu rdbl",
+            "description": "Read Hitag \u00b5 memory. 82xx password mode: - default password 00000000",
+            "notes": [
+                "lf hitag htu rdbl -p 1 -> Hitag \u00b5, plain mode",
+                "lf hitag htu rdbl -p 1 --82xx -> 82xx, password mode, def pass",
+                "lf hitag htu rdbl -p 1 --82xx -k 9AC4999C -> 82xx, password mode"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-8, --82xx 82xx mode",
+                "-k, --key <hex> pwd, 4 hex bytes",
+                "-p, --page <dec> block address to read from (def: 0)",
+                "-c, --count <dec> how many blocks to read. '0' reads all blocks (def: 1)"
+            ],
+            "usage": "lf hitag htu rdbl [-h8] [-k <hex>] [-p <dec>] [-c <dec>]"
+        },
+        "lf hitag htu reader": {
+            "command": "lf hitag htu reader",
+            "description": "Act as a Hitag \u00b5 reader. Look for Hitag \u00b5 tags until Enter or the pm3 button is pressed",
+            "notes": [
+                "lf hitag htu reader",
+                "lf hitag htu reader -@ -> Continuous mode"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-@ continuous reader mode"
+            ],
+            "usage": "lf hitag htu reader [-h@]"
+        },
+        "lf hitag htu sim": {
+            "command": "lf hitag htu sim",
+            "description": "Simulate Hitag \u00b5 transponder You need to `lf hitag htu eload` first",
+            "notes": [
+                "lf hitag htu sim",
+                "lf hitag htu sim --82xx",
+                "lf hitag htu sim -t 30 -> set threshold to 30"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-8, --82xx simulate 82xx",
+                "-t, --threshold <dec> set edge detect threshold (def: 127)"
+            ],
+            "usage": "lf hitag htu sim [-h8] [-t <dec>]"
+        },
+        "lf hitag htu wrbl": {
+            "command": "lf hitag htu wrbl",
+            "description": "Write a block in Hitag \u00b5 memory. 82xx password mode: - default password 00000000",
+            "notes": [
+                "lf hitag htu wrbl -p 6 -d 01020304 -> Hitag \u00b5, plain mode",
+                "lf hitag htu wrbl -p 6 -d 01020304 --82xx -> use def pwd",
+                "lf hitag htu wrbl -p 6 -d 01020304 --82xx -k 9AC4999C -> 82xx, password mode"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-8, --82xx 82xx mode",
+                "-k, --key <hex> pwd, 4 hex bytes",
+                "-p, --page <dec> block address to write to",
+                "-d, --data <hex> data, 4 hex bytes"
+            ],
+            "usage": "lf hitag htu wrbl [-h8] [-k <hex>] -p <dec> -d <hex>"
         },
         "lf hitag info": {
             "command": "lf hitag info",
@@ -13033,6 +13139,7 @@
                 "trace list -t hitag1 -> interpret as Hitag 1",
                 "trace list -t hitag2 -> interpret as Hitag 2",
                 "trace list -t hitags -> interpret as Hitag S",
+                "trace list -t hitagu -> interpret as Hitag \u00b5",
                 "trace list -t iclass -> interpret as iCLASS",
                 "trace list -t legic -> interpret as LEGIC",
                 "trace list -t lto -> interpret as LTO-CM",
@@ -13248,8 +13355,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 761,
+        "commands_extracted": 767,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-03-19T10:24:44"
+        "extracted_on": "2025-03-19T11:50:24"
     }
 }

@@ -672,7 +672,7 @@ int htu_read_uid(uint64_t *uid, bool ledcontrol, bool send_answer) {
     DBG Dbprintf("HitagU UID: %02X%02X%02X%02X%02X%02X", tag.uid[0], tag.uid[1], tag.uid[2], tag.uid[3], tag.uid[4], tag.uid[5]);
 
     if (uid) {
-        *uid = BSWAP_48(*(uint64_t*)&tag.uid);
+        *uid = BSWAP_48(*(uint64_t *)&tag.uid);
     }
 
 exit:

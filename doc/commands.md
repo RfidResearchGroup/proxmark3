@@ -1097,6 +1097,21 @@ Check column "offline" for their availability.
 |`lf hitag hts sim       `|N       |`Simulate Hitag S transponder`
 
 
+### lf hitag htu
+
+ { Hitag µ/8265 operations }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf hitag htu help      `|Y       |`This help`
+|`lf hitag htu list      `|Y       |`List Hitag µ trace history`
+|`lf hitag htu reader    `|N       |`Act like a Hitag µ reader`
+|`lf hitag htu rdbl      `|N       |`Read Hitag µ block`
+|`lf hitag htu dump      `|N       |`Dump Hitag µ blocks to a file`
+|`lf hitag htu wrbl      `|N       |`Write Hitag µ block`
+|`lf hitag htu sim       `|N       |`Simulate Hitag µ transponder`
+
+
 ### lf idteck
 
  { Idteck RFIDs...            }
