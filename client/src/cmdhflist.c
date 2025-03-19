@@ -1829,8 +1829,8 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is
             uint8_t ks = cmd[pos + 3];
             if (memcmp(cmd + pos + 3 + 1, "\x04\x7c\x02\x81\x00", 5) == 0) {
                 snprintf(exp, size, "GET CHALLENGE " _WHITE_("(") " key " _MAGENTA_("%02X") " )", ks);
+                return;
             }
-            return;
         }
 
         if (memcmp(cmd + pos, "\x00\x87\x00", 3) == 0) {
