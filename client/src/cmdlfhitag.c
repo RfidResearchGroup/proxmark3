@@ -80,7 +80,7 @@ static size_t nbytes(size_t nbits) {
 */
 
 static int CmdLFHitagList(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "lf hitag", "hitag2");
+    return CmdTraceListAlias(Cmd, "lf hitag", "ht2");
     /*
     uint8_t *got = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
     if (!got) {

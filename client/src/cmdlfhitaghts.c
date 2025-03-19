@@ -995,7 +995,7 @@ static int CmdLFHitagSSim(const char *Cmd) {
 }
 
 static int CmdLFHitagSList(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "lf hitag hts", "hitags");
+    return CmdTraceListAlias(Cmd, "lf hitag hts", "hts");
 }
 
 static command_t CommandTable[] = {
