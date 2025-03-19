@@ -9977,7 +9977,7 @@
         },
         "lf hitag help": {
             "command": "lf hitag help",
-            "description": "help This help list List Hitag trace history hts { Hitag S/8211 operations } htu { Hitag \u00b5/8265 operations } test Perform self tests view Display content from tag dump file lookup Uses authentication trace to check for key in dictionary file --------------------------------------------------------------------------------------- lf hitag list available offline: yes Alias of `trace list -t hitag2` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List Hitag trace history hts { Hitag S/8211 operations } htu { Hitag \u00b5/8265 operations } test Perform self tests view Display content from tag dump file lookup Uses authentication trace to check for key in dictionary file --------------------------------------------------------------------------------------- lf hitag list available offline: yes Alias of `trace list -t ht2` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "lf hitag list --frame -> show frame delay times",
                 "lf hitag list -1 -> use trace buffer"
@@ -10021,7 +10021,7 @@
         },
         "lf hitag hts help": {
             "command": "lf hitag hts help",
-            "description": "help This help list List Hitag S trace history --------------------------------------------------------------------------------------- lf hitag hts list available offline: yes Alias of `trace list -t hitags` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List Hitag S trace history --------------------------------------------------------------------------------------- lf hitag hts list available offline: yes Alias of `trace list -t hts` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "lf hitag hts list --frame -> show frame delay times",
                 "lf hitag hts list -1 -> use trace buffer"
@@ -10158,7 +10158,7 @@
         },
         "lf hitag htu help": {
             "command": "lf hitag htu help",
-            "description": "help This help list List Hitag \u00b5 trace history --------------------------------------------------------------------------------------- lf hitag htu list available offline: yes Alias of `trace list -t hitagu` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List Hitag \u00b5 trace history --------------------------------------------------------------------------------------- lf hitag htu list available offline: yes Alias of `trace list -t htu` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "lf hitag htu list --frame -> show frame delay times",
                 "lf hitag htu list -1 -> use trace buffer"
@@ -13357,6 +13357,6 @@
     "metadata": {
         "commands_extracted": 767,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-03-19T14:19:20"
+        "extracted_on": "2025-03-19T20:08:46"
     }
 }

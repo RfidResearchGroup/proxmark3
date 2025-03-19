@@ -55,91 +55,118 @@ void annotateHitagU(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
 
         size_t exp_len = snprintf(exp, size, "Flg:");
 
-        if (flag & HITAGU_FLAG_PEXT) {
+        if ((flag & HITAGU_FLAG_PEXT) == HITAGU_FLAG_PEXT) {
             exp_len += snprintf(exp + exp_len, size - exp_len, " PEXT");
         }
-        if (flag & HITAGU_FLAG_INV) {
+
+        if ((flag & HITAGU_FLAG_INV) == HITAGU_FLAG_INV) {
+
             exp_len += snprintf(exp + exp_len, size - exp_len, " INV");
-            if (flag & HITAGU_FLAG_RFU) {
+
+            if ((flag & HITAGU_FLAG_RFU) == HITAGU_FLAG_RFU) {
                 exp_len += snprintf(exp + exp_len, size - exp_len, " RFU");
             }
-            if (flag & HITAGU_FLAG_NOS) {
+
+            if ((flag & HITAGU_FLAG_NOS) == HITAGU_FLAG_NOS) {
                 exp_len += snprintf(exp + exp_len, size - exp_len, " NOS");
             }
+
         } else {
-            if (flag & HITAGU_FLAG_SEL) {
+
+            if ((flag & HITAGU_FLAG_SEL) == HITAGU_FLAG_SEL) {
                 exp_len += snprintf(exp + exp_len, size - exp_len, " SEL");
             }
-            if (flag & HITAGU_FLAG_ADR) {
+
+            if ((flag & HITAGU_FLAG_ADR) == HITAGU_FLAG_ADR) {
                 exp_len += snprintf(exp + exp_len, size - exp_len, " ADR");
                 has_uid = true;
             }
         }
-        if (flag & HITAGU_FLAG_CRCT) {
+
+        if ((flag & HITAGU_FLAG_CRCT) == HITAGU_FLAG_CRCT) {
             exp_len += snprintf(exp + exp_len, size - exp_len, " CRCT");
         }
 
         exp_len += snprintf(exp + exp_len, size - exp_len, "|Cmd: ");
+
         switch (command) {
             case HITAGU_CMD_LOGIN: {
+
                 bool has_mfc = false;
-                if (cmdsize == 6 + has_uid * HITAGU_UID_SIZE || cmdsize == 8 + has_uid * HITAGU_UID_SIZE) {
+
+                if (cmdsize == (6 + (has_uid * HITAGU_UID_SIZE)) || cmdsize == (8 + (has_uid * HITAGU_UID_SIZE))) {
+
                     exp_len += snprintf(exp + exp_len, size - exp_len, "8265 LOGIN");
-                } else if (cmdsize == 7 + has_uid * HITAGU_UID_SIZE || cmdsize == 9 + has_uid * HITAGU_UID_SIZE) {
-                    uint8_t mfc;
+
+                } else if (cmdsize == (7 + (has_uid * HITAGU_UID_SIZE)) || cmdsize == (9 + (has_uid * HITAGU_UID_SIZE))) {
+
+                    uint8_t mfc = 0;
                     concatbits(&mfc, 0, cmd, 5 + 6 + 8 + 32, 8, false);
                     exp_len += snprintf(exp + exp_len, size - exp_len, "LOGIN mfc:%02x ", mfc);
                     has_mfc = true;
                 }
+
                 if (has_uid) {
-                    uint8_t uid[HITAGU_UID_SIZE];
+                    uint8_t uid[HITAGU_UID_SIZE] = {0};
                     concatbits(uid, 0, cmd, 5 + 6 + has_mfc * 8 + 32, HITAGU_UID_SIZE * 8, false);
                     exp_len += snprintf(exp + exp_len, size - exp_len, " uid:%s", sprint_hex_inrow(uid, HITAGU_UID_SIZE));
                 }
-                uint8_t password[HITAG_PASSWORD_SIZE];
+
+                uint8_t password[HITAG_PASSWORD_SIZE] = {0};
                 concatbits(password, 0, cmd, 5 + 6 + has_mfc * 8 + has_uid * HITAGU_UID_SIZE * 8, HITAG_PASSWORD_SIZE * 8, false);
                 exp_len += snprintf(exp + exp_len, size - exp_len, " pwd:%s", sprint_hex_inrow(password, HITAG_PASSWORD_SIZE));
                 break;
             }
-            case HITAGU_CMD_INVENTORY:
+            case HITAGU_CMD_INVENTORY: {
                 exp_len += snprintf(exp + exp_len, size - exp_len, "INVENTORY");
                 break;
+            }
             case HITAGU_CMD_READ_MULTIPLE_BLOCK: {
-                uint8_t block_addr;
+                uint8_t block_addr = 0;
                 concatbits(&block_addr, 0, cmd, 5 + 6, 8, false);
 
-                uint8_t block_count;
+                uint8_t block_count = 0;
                 concatbits(&block_count, 0, cmd, 5 + 6 + 8, 8, false);
 
-                exp_len += snprintf(exp + exp_len, size - exp_len, "READ MULTIPLE BLOCK start:%d num:%d", reflect8(block_addr), reflect8(block_count));
+                exp_len += snprintf(exp + exp_len, size - exp_len, "READ MULTIPLE BLOCK start:%d num:%d"
+                                    , reflect8(block_addr)
+                                    , reflect8(block_count)
+                                   );
                 break;
             }
             case HITAGU_CMD_WRITE_SINGLE_BLOCK: {
-                uint8_t block_addr;
+                uint8_t block_addr = 0;
                 concatbits(&block_addr, 0, cmd, 5 + 6, 8, false);
 
-                uint8_t block_data[4];
+                uint8_t block_data[4] = {0};
                 concatbits(block_data, 0, cmd, 5 + 6 + 8, 32, false);
 
-                exp_len += snprintf(exp + exp_len, size - exp_len, "WRITE SINGLE BLOCK start:%d data:[%s]",
-                                    reflect8(block_addr), sprint_hex_inrow(block_data, 4));
+                exp_len += snprintf(exp + exp_len, size - exp_len, "WRITE SINGLE BLOCK start:%d data:[%s]"
+                                    , reflect8(block_addr)
+                                    , sprint_hex_inrow(block_data, 4)
+                                   );
                 break;
             }
-            case HITAGU_CMD_SELECT:
+            case HITAGU_CMD_SELECT: {
                 exp_len += snprintf(exp + exp_len, size - exp_len, "SELECT");
                 break;
-            case HITAGU_CMD_SYSINFO:
+            }
+            case HITAGU_CMD_SYSINFO: {
                 exp_len += snprintf(exp + exp_len, size - exp_len, "GET SYSTEM INFORMATION");
                 break;
-            case HITAGU_CMD_READ_UID:
+            }
+            case HITAGU_CMD_READ_UID: {
                 exp_len += snprintf(exp + exp_len, size - exp_len, "READ UID");
                 break;
-            case HITAGU_CMD_STAY_QUIET:
+            }
+            case HITAGU_CMD_STAY_QUIET: {
                 exp_len += snprintf(exp + exp_len, size - exp_len, "STAY QUIET");
                 break;
-            default:
+            }
+            default: {
                 exp_len += snprintf(exp + exp_len, size - exp_len, "Unknown 0x%02X", command);
                 break;
+            }
         }
     }
 }
@@ -206,10 +233,12 @@ static int process_hitagu_common_args(CLIParserContext *ctx, lf_hitag_data_t *co
         packet->cmd = HTUF_82xx;
         memcpy(packet->pwd, key, sizeof(packet->pwd));
         PrintAndLogEx(INFO, "Authenticating to " _YELLOW_("Hitag µ") " in 82xx mode");
+
     } else if (use_password) {
         packet->cmd = HTUF_PASSWORD;
         memcpy(packet->pwd, key, sizeof(packet->pwd));
         PrintAndLogEx(INFO, "Authenticating to " _YELLOW_("Hitag µ") " in password mode");
+
     } else {
         packet->cmd = HTUF_PLAIN;
         memcpy(packet->pwd, key, sizeof(packet->pwd));
@@ -220,43 +249,58 @@ static int process_hitagu_common_args(CLIParserContext *ctx, lf_hitag_data_t *co
 }
 
 static void print_error(int8_t reason) {
+
+    //todo:  USE ENUM OR DEFINES
     switch (reason) {
-        case 0:
+        case 0: {
             PrintAndLogEx(FAILED, "No data");
             break;
-        case -2:
+        }
+        case -2: {
             PrintAndLogEx(FAILED, "UID Request failed!");
             break;
-        case -3:
+        }
+        case -3: {
             PrintAndLogEx(FAILED, "Select UID failed!");
             break;
-        case -4:
+        }
+        case -4: {
             PrintAndLogEx(FAILED, "No write access on block. Not authorized?");
             break;
-        case -5:
+        }
+        case -5: {
             PrintAndLogEx(FAILED, "Write failed! Wrong password?");
             break;
-        case -6:
+        }
+        case -6: {
             PrintAndLogEx(FAILED, "Error, " _YELLOW_("AUT=1") " This tag is configured in Authentication Mode");
             break;
-        case -7:
+        }
+        case -7: {
             PrintAndLogEx(FAILED, "Error, unknown function");
             break;
-        case -8:
+        }
+        case -8: {
             PrintAndLogEx(FAILED, "Authenticate failed!");
             break;
-        case -9:
+        }
+        case -9: {
             PrintAndLogEx(FAILED, "No write access on block");
             break;
-        case -10:
+        }
+        case -10: {
             PrintAndLogEx(FAILED, "Write to block failed!");
             break;
-        case -11:
+        }
+        case -11: {
             PrintAndLogEx(FAILED, "Read block failed!");
             break;
-        default:
+        }
+        default: {
             // PM3_REASON_UNKNOWN
             PrintAndLogEx(FAILED, "Error - Hitag µ failed");
+            break;
+        }
     }
 }
 
@@ -312,19 +356,21 @@ static int CmdLFHitagURead(const char *Cmd) {
 
     lf_hitag_data_t packet;
 
-    if (process_hitagu_common_args(ctx, &packet) < 0) return PM3_EINVARG;
+    if (process_hitagu_common_args(ctx, &packet) < 0) {
+        return PM3_EINVARG;
+    }
 
     uint32_t page = arg_get_int_def(ctx, 3, 0);
 
     if (page >= HITAGU_MAX_BLOCKS) {
-        PrintAndLogEx(WARNING, "Block address Invalid. Maximum is 255.");
+        PrintAndLogEx(WARNING, "Block address out-of-range. Max is 255, got %u", page);
         return PM3_EINVARG;
     }
 
     uint32_t count = arg_get_int_def(ctx, 4, 1);
 
     if (count > HITAGU_MAX_BLOCKS) {
-        PrintAndLogEx(WARNING, "No more than %d blocks can be read at once.", HITAGU_MAX_BLOCKS);
+        PrintAndLogEx(WARNING, "No more than %d blocks can be read at once", HITAGU_MAX_BLOCKS);
         return PM3_EINVARG;
     }
 
@@ -334,14 +380,14 @@ static int CmdLFHitagURead(const char *Cmd) {
     packet.page_count = count;
     // packet.mode = 1;  // for debug
 
-    PrintAndLogEx(INFO, "Read Hitag µ memory block %d, count %d", page, count);
+    PrintAndLogEx(INFO, "Read Hitag µ memory block " _YELLOW_("%d") ", count " _YELLOW_("%d"), page, count);
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HITAGU_READ, (uint8_t *)&packet, sizeof(packet));
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_LF_HITAGU_READ, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         return PM3_ETIMEOUT;
     }
@@ -392,10 +438,12 @@ static int CmdLFHitagURead(const char *Cmd) {
     }
 
     for (int i = 0; i < count; ++i) {
+
         int page_addr = page + i;
         if (page_addr >= HITAGU_MAX_BLOCKS) {
             break;
         }
+
         if (card->pages_reason[i] > 0) {
             PrintAndLogEx(SUCCESS, "% 3u | %s  | " NOLF, page_addr, sprint_hex_ascii(card->pages[i], HITAGU_BLOCK_SIZE));
 
@@ -407,26 +455,36 @@ static int CmdLFHitagURead(const char *Cmd) {
                 PrintAndLogEx(NORMAL, _RED_("R/WP") NOLF);
                 // Hitag µ
             } else if (page_addr < HITAGU_MAX_PAGE_STANDARD) {
-                if (card->config_page.s.pwdW0_127)
+
+                if (card->config_page.s.pwdW0_127) {
                     PrintAndLogEx(NORMAL, _RED_("RO  ") NOLF);
-                else
+                } else {
                     PrintAndLogEx(NORMAL, _GREEN_("RW  ") NOLF);
+                }
+
             } else if (HITAGU_MAX_PAGE_STANDARD <= page_addr && page_addr < HITAGU_MAX_PAGE_ADVANCED) {
-                if (card->config_page.s.pwdW128_511)
+
+                if (card->config_page.s.pwdW128_511) {
                     PrintAndLogEx(NORMAL, _RED_("RO  ") NOLF);
-                else
+                } else {
                     PrintAndLogEx(NORMAL, _GREEN_("RW  ") NOLF);
+                }
+
             } else if (HITAGU_MAX_PAGE_ADVANCED <= page_addr && page_addr < HITAGU_MAX_PAGE_ADVANCED_PLUS) {
+
                 if (card->config_page.s.pwdRW512_max) {
                     PrintAndLogEx(NORMAL, _RED_("R/WP") NOLF);
                 } else {
-                    if (card->config_page.s.pwdW512_max)
+
+                    if (card->config_page.s.pwdW512_max) {
                         PrintAndLogEx(NORMAL, _RED_("RO  ") NOLF);
-                    else
+                    } else {
                         PrintAndLogEx(NORMAL, _GREEN_("RW  ") NOLF);
+                    }
                 }
-            } else
+            } else {
                 PrintAndLogEx(NORMAL, _YELLOW_("UNK ") NOLF);
+            }
 
             PrintAndLogEx(NORMAL, " | " NOLF);
 
@@ -435,8 +493,9 @@ static int CmdLFHitagURead(const char *Cmd) {
                 PrintAndLogEx(NORMAL, "Password");
             } else if (page_addr == HITAGU_CONFIG_PADR) {
                 PrintAndLogEx(NORMAL, "Config");
-            } else
+            } else {
                 PrintAndLogEx(NORMAL, "Data");
+            }
         } else {
             PrintAndLogEx(INFO, "% 3u | -- -- -- -- | ....  | N/A  | " NOLF, page_addr);
             print_error(card->pages_reason[i]);
@@ -493,7 +552,7 @@ static int CmdLFHitagUDump(const char *Cmd) {
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_LF_HITAGU_READ, &resp, 5000) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
@@ -540,7 +599,7 @@ static int CmdLFHitagUDump(const char *Cmd) {
 
     if (fnlen < 1) {
         char *fptr = filename;
-        fptr += snprintf(filename, sizeof(filename), "lf-hitagu-");
+        fptr += snprintf(filename, sizeof(filename), "lf-htu-");
         FillFileNameByUID(fptr, card->uid, "-dump", HITAGU_UID_SIZE);
     }
 
@@ -593,7 +652,7 @@ static int CmdLFHitagUWrite(const char *Cmd) {
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_LF_HITAGU_WRITE, &resp, 4000) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
@@ -617,7 +676,9 @@ static int CmdLFHitagUReader(const char *Cmd) {
                   "lf hitag htu reader\n"
                   "lf hitag htu reader -@   -> Continuous mode");
 
-    void *argtable[] = {arg_param_begin, arg_lit0("@", NULL, "continuous reader mode"), arg_param_end};
+    void *argtable[] = {
+        arg_param_begin, arg_lit0("@", NULL, "continuous reader mode"), arg_param_end
+    };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool cm = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
@@ -627,7 +688,6 @@ static int CmdLFHitagUReader(const char *Cmd) {
     }
 
     do {
-        // read UID
         read_htu_uid();
     } while (cm && kbd_enter_pressed() == false);
 
@@ -663,16 +723,16 @@ static int CmdLFHitagUSim(const char *Cmd) {
 static int CmdLFHitagUList(const char *Cmd) { return CmdTraceListAlias(Cmd, "lf hitag htu", "htu"); }
 
 static command_t CommandTable[] = {
-    {"help",        CmdHelp,            AlwaysAvailable, "This help"                                                               },
-    {"list",        CmdLFHitagUList,    AlwaysAvailable, "List Hitag µ trace history"                                              },
-    {"-----------", CmdHelp,            IfPm3Hitag,      "----------------------- " _CYAN_("General") " ------------------------"  },
-    {"reader",      CmdLFHitagUReader,  IfPm3Hitag,      "Act like a Hitag µ reader"                                               },
-    {"rdbl",        CmdLFHitagURead,    IfPm3Hitag,      "Read Hitag µ block"                                                       },
-    {"dump",        CmdLFHitagUDump,    IfPm3Hitag,      "Dump Hitag µ blocks to a file"                                            },
-    {"wrbl",        CmdLFHitagUWrite,   IfPm3Hitag,      "Write Hitag µ block"                                                      },
-    {"-----------", CmdHelp,            IfPm3Hitag,      "----------------------- " _CYAN_("Simulation") " -----------------------"},
-    {"sim",         CmdLFHitagUSim,     IfPm3Hitag,      "Simulate Hitag µ transponder"                                            },
-    {NULL,          NULL,               0,               NULL                                                                      }
+    {"help",        CmdHelp,            AlwaysAvailable, "This help"},
+    {"list",        CmdLFHitagUList,    AlwaysAvailable, "List Hitag µ trace history"},
+    {"-----------", CmdHelp,            IfPm3Hitag,      "----------- " _CYAN_("General") " -----------"},
+    {"reader",      CmdLFHitagUReader,  IfPm3Hitag,      "Act like a Hitag µ reader"},
+    {"rdbl",        CmdLFHitagURead,    IfPm3Hitag,      "Read Hitag µ block"},
+    {"dump",        CmdLFHitagUDump,    IfPm3Hitag,      "Dump Hitag µ blocks to a file"},
+    {"wrbl",        CmdLFHitagUWrite,   IfPm3Hitag,      "Write Hitag µ block"},
+    {"-----------", CmdHelp,            IfPm3Hitag,      "----------- " _CYAN_("Simulation") " -----------"},
+    {"sim",         CmdLFHitagUSim,     IfPm3Hitag,      "Simulate Hitag µ transponder"},
+    {NULL, NULL, 0, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {
