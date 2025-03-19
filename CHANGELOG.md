@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added Be-Tech identification (@iceman1001)
 - Added `lf em 410x clone --htu` clone EM410x ID to Hitag µ/8265 (@douniwan5788)
 - Added `lf hitag htu` support for Hitag µ/8265 (@douniwan5788)
 - Added `hf mfu aesauth` based on existing UL AES support (@doegox)
