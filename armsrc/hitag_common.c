@@ -451,7 +451,7 @@ void hitag_tag_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint32
 
     // Receive frame, watch for at most T0*EOF periods
     while (AT91C_BASE_TC1->TC_CV < T0 * HITAG_T_EOF) {
-        
+
         // Check if edge in modulation is detected
         if (AT91C_BASE_TC1->TC_SR & next_edge_event) {
             next_edge_event = next_edge_event ^ (AT91C_TC_LDRAS | AT91C_TC_LDRBS);

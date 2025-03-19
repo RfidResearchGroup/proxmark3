@@ -10102,14 +10102,16 @@
             "description": "Simulate Hitag S transponder You need to `lf hitag hts eload` first",
             "notes": [
                 "lf hitag hts sim",
-                "lf hitag hts sim --82xx"
+                "lf hitag hts sim --82xx",
+                "lf hitag hts sim -t 30 -> set threshold to 30"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-8, --82xx simulate 8268/8310"
+                "-8, --82xx simulate 8268/8310",
+                "-t, --threshold <dec> set edge detect threshold (def: 127)"
             ],
-            "usage": "lf hitag hts sim [-h8]"
+            "usage": "lf hitag hts sim [-h8] [-t <dec>]"
         },
         "lf hitag hts wrbl": {
             "command": "lf hitag hts wrbl",
@@ -13248,6 +13250,6 @@
     "metadata": {
         "commands_extracted": 761,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-03-19T08:33:58"
+        "extracted_on": "2025-03-19T10:24:44"
     }
 }

@@ -3116,48 +3116,48 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
     if (len == 0) {
         BigBuf_free();
         return 0; // DATA LINK ERROR
-    } 
-    
-    
-        // S-Block WTX
-        while (len && ((data_bytes[0] & 0xF2) == 0xF2)) {
-            uint32_t save_iso14a_timeout = iso14a_get_timeout();
-            // temporarily increase timeout
-            iso14a_set_timeout(MAX((data_bytes[1] & 0x3f) * save_iso14a_timeout, MAX_ISO14A_TIMEOUT));
-            // Transmit WTX back
-            // byte1 - WTXM [1..59]. command FWT=FWT*WTXM
-            data_bytes[1] = data_bytes[1] & 0x3f; // 2 high bits mandatory set to 0b
-            // now need to fix CRC.
-            AddCrc14A(data_bytes, len - 2);
-            // transmit S-Block
-            ReaderTransmit(data_bytes, len, NULL);
-            // retrieve the result again (with increased timeout)
+    }
+
+
+    // S-Block WTX
+    while (len && ((data_bytes[0] & 0xF2) == 0xF2)) {
+        uint32_t save_iso14a_timeout = iso14a_get_timeout();
+        // temporarily increase timeout
+        iso14a_set_timeout(MAX((data_bytes[1] & 0x3f) * save_iso14a_timeout, MAX_ISO14A_TIMEOUT));
+        // Transmit WTX back
+        // byte1 - WTXM [1..59]. command FWT=FWT*WTXM
+        data_bytes[1] = data_bytes[1] & 0x3f; // 2 high bits mandatory set to 0b
+        // now need to fix CRC.
+        AddCrc14A(data_bytes, len - 2);
+        // transmit S-Block
+        ReaderTransmit(data_bytes, len, NULL);
+        // retrieve the result again (with increased timeout)
         data_bytes[0] = 0x00;
-            len = ReaderReceive(data, data_len, parity_array);
-            data_bytes = data;
-            // restore timeout
-            iso14a_set_timeout(save_iso14a_timeout);
-        }
+        len = ReaderReceive(data, data_len, parity_array);
+        data_bytes = data;
+        // restore timeout
+        iso14a_set_timeout(save_iso14a_timeout);
+    }
 
-        // if we received an I- or R(ACK)-Block with a block number equal to the
-        // current block number, toggle the current block number
-        if (len >= 3 // PCB+CRC = 3 bytes
-                && ((data_bytes[0] & 0xC0) == 0 // I-Block
-                    || (data_bytes[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
-                && (data_bytes[0] & 0x01) == iso14_pcb_blocknum) { // equal block numbers
-            iso14_pcb_blocknum ^= 1;
-        }
+    // if we received an I- or R(ACK)-Block with a block number equal to the
+    // current block number, toggle the current block number
+    if (len >= 3 // PCB+CRC = 3 bytes
+            && ((data_bytes[0] & 0xC0) == 0 // I-Block
+                || (data_bytes[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
+            && (data_bytes[0] & 0x01) == iso14_pcb_blocknum) { // equal block numbers
+        iso14_pcb_blocknum ^= 1;
+    }
 
-        // if we received I-block with chaining we need to send ACK and receive another block of data
-        if (res) {
-            *res = data_bytes[0];
-        }
+    // if we received I-block with chaining we need to send ACK and receive another block of data
+    if (res) {
+        *res = data_bytes[0];
+    }
 
-        // crc check
-        if (len >= 3 && !CheckCrc14A(data_bytes, len)) {
-            BigBuf_free();
-            return -1;
-        }
+    // crc check
+    if (len >= 3 && !CheckCrc14A(data_bytes, len)) {
+        BigBuf_free();
+        return -1;
+    }
 
     if (len) {
         // cut frame byte

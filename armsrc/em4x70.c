@@ -906,7 +906,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_id(em4x70_command_bitstream_t
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
     out_cmd_bitstream->command = EM4X70_COMMAND_ID;
     //uint8_t cmd = with_command_parity ? 0x3u : 0x1u;
-    uint8_t cmd = 0x3u; 
+    uint8_t cmd = 0x3u;
     result = result && add_nibble_to_bitstream(&out_cmd_bitstream->to_send, cmd, false);
     out_cmd_bitstream->to_receive.bitcount = 32;
     if (out_cmd_bitstream->to_send.bitcount != expected_bits_to_send) {
