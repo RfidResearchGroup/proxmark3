@@ -46,7 +46,7 @@
 #define DPRINTF_PROLIX(x)   do { if ((FORCE_ENABLE_LOGGING) || (g_dbglevel >  DBG_EXTENDED)) { Dbprintf x ; } } while (0);
 // EM4170 requires a parity bit on commands, other variants do not.
 static bool g_command_parity = true;
-static em4x70_tag_t tag = { 0 };
+static em4x70_tag_t g_tag = { 0 };
 
 
 
@@ -215,7 +215,7 @@ static int em4x70_receive(uint8_t *bits, size_t maximum_bits_to_read);
 static bool find_listen_window(bool command);
 
 static void init_tag(void) {
-    memset(tag.data, 0x00, sizeof(tag.data));
+    memset(g_tag.data, 0x00, sizeof(g_tag.data));
 }
 
 static void em4x70_setup_read(void) {
@@ -1194,7 +1194,7 @@ static int bruteforce(const uint8_t address, const uint8_t *rnd, const uint8_t *
 static int send_pin(const uint32_t pin) {
     em4x70_command_bitstream_t send_pin_cmd;
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->pin(&send_pin_cmd, g_command_parity, &tag.data[4], pin);
+    generator->pin(&send_pin_cmd, g_command_parity, &g_tag.data[4], pin);
 
     bool result = send_bitstream_wait_ack_wait_read(&send_pin_cmd);
     return result ? PM3_SUCCESS : PM3_ESOFT;
@@ -1296,7 +1296,7 @@ static bool em4x70_read_id(void) {
 
     bool result = send_bitstream_and_read(&read_id_cmd);
     if (result) {
-        encoded_bit_array_to_bytes(read_id_cmd.to_receive.one_bit_per_byte, read_id_cmd.to_receive.bitcount, &tag.data[4]);
+        encoded_bit_array_to_bytes(read_id_cmd.to_receive.one_bit_per_byte, read_id_cmd.to_receive.bitcount, &g_tag.data[4]);
     }
     return result;
 }
@@ -1313,7 +1313,7 @@ static bool em4x70_read_um1(void) {
 
     bool result = send_bitstream_and_read(&read_um1_cmd);
     if (result) {
-        encoded_bit_array_to_bytes(read_um1_cmd.to_receive.one_bit_per_byte, read_um1_cmd.to_receive.bitcount, &tag.data[0]);
+        encoded_bit_array_to_bytes(read_um1_cmd.to_receive.one_bit_per_byte, read_um1_cmd.to_receive.bitcount, &g_tag.data[0]);
     }
 
     bitstream_dump(&read_um1_cmd);
@@ -1332,7 +1332,7 @@ static bool em4x70_read_um2(void) {
 
     bool result = send_bitstream_and_read(&read_um2_cmd);
     if (result) {
-        encoded_bit_array_to_bytes(read_um2_cmd.to_receive.one_bit_per_byte, read_um2_cmd.to_receive.bitcount, &tag.data[24]);
+        encoded_bit_array_to_bytes(read_um2_cmd.to_receive.one_bit_per_byte, read_um2_cmd.to_receive.bitcount, &g_tag.data[24]);
     }
 
 
@@ -1466,7 +1466,7 @@ void em4x70_info(const em4x70_data_t *etd, bool ledcontrol) {
         0;
 
     // not returning the data to the client about actual length read?
-    reply_ng(CMD_LF_EM4X70_INFO, status, tag.data, data_size);
+    reply_ng(CMD_LF_EM4X70_INFO, status, g_tag.data, data_size);
 }
 
 void em4x70_write(const em4x70_data_t *etd, bool ledcontrol) {
@@ -1501,7 +1501,7 @@ void em4x70_write(const em4x70_data_t *etd, bool ledcontrol) {
 
     StopTicks();
     lf_finalize(ledcontrol);
-    reply_ng(CMD_LF_EM4X70_WRITE, status, tag.data, sizeof(tag.data));
+    reply_ng(CMD_LF_EM4X70_WRITE, status, g_tag.data, sizeof(g_tag.data));
 }
 
 void em4x70_unlock(const em4x70_data_t *etd, bool ledcontrol) {
@@ -1534,7 +1534,7 @@ void em4x70_unlock(const em4x70_data_t *etd, bool ledcontrol) {
 
     StopTicks();
     lf_finalize(ledcontrol);
-    reply_ng(CMD_LF_EM4X70_UNLOCK, status, tag.data, sizeof(tag.data));
+    reply_ng(CMD_LF_EM4X70_UNLOCK, status, g_tag.data, sizeof(g_tag.data));
 }
 
 void em4x70_auth(const em4x70_data_t *etd, bool ledcontrol) {
@@ -1641,7 +1641,7 @@ void em4x70_write_pin(const em4x70_data_t *etd, bool ledcontrol) {
 
     StopTicks();
     lf_finalize(ledcontrol);
-    reply_ng(CMD_LF_EM4X70_SETPIN, status, tag.data, sizeof(tag.data));
+    reply_ng(CMD_LF_EM4X70_SETPIN, status, g_tag.data, sizeof(g_tag.data));
 }
 
 void em4x70_write_key(const em4x70_data_t *etd, bool ledcontrol) {
@@ -1688,5 +1688,5 @@ void em4x70_write_key(const em4x70_data_t *etd, bool ledcontrol) {
 
     StopTicks();
     lf_finalize(ledcontrol);
-    reply_ng(CMD_LF_EM4X70_SETKEY, status, tag.data, sizeof(tag.data));
+    reply_ng(CMD_LF_EM4X70_SETKEY, status, g_tag.data, sizeof(g_tag.data));
 }
