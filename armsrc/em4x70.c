@@ -946,7 +946,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_um2(em4x70_command_bitstream_
     return true;
 }
 static bool create_legacy_em4x70_bitstream_for_cmd_auth(em4x70_command_bitstream_t *out_cmd_bitstream, bool with_command_parity, const uint8_t *rnd, const uint8_t *frnd) {
-    const uint8_t expected_bits_to_send = 96u;
+    const uint8_t expected_bits_to_send = 95u;
     bool result = true;
 
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
@@ -996,7 +996,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_auth(em4x70_command_bitstream
     return result;
 }
 static bool create_legacy_em4x70_bitstream_for_cmd_pin(em4x70_command_bitstream_t *out_cmd_bitstream, bool with_command_parity, const uint8_t *tag_id, const uint32_t pin) {
-    const uint8_t expected_bits_to_send = 69; // normally 68 bits, but legacy hack inserts an extra RM bit, and always adds a command parity bit
+    const uint8_t expected_bits_to_send = 68;
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
 
@@ -1030,7 +1030,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_pin(em4x70_command_bitstream_
     return result;
 }
 static bool create_legacy_em4x70_bitstream_for_cmd_write(em4x70_command_bitstream_t *out_cmd_bitstream, bool with_command_parity, uint16_t new_data, uint8_t address) {
-    const uint8_t expected_bits_to_send = 35u; // normally 34 bits, but legacy hack inserts an extra RM bit, and always adds a command parity bit
+    const uint8_t expected_bits_to_send = 34u;
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
     out_cmd_bitstream->command = EM4X70_COMMAND_WRITE;
