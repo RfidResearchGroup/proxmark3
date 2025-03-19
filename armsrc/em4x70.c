@@ -72,6 +72,7 @@ static em4x70_tag_t g_tag = { 0 };
 
 #define EM4X70_T_TAG_TIMEOUT                 (4 * EM4X70_T_TAG_FULL_PERIOD) // Timeout if we ever get a pulse longer than this
 
+#define EM4X70_T_DELAY_FROM_LIW_TO_RM       (72 * TICKS_PER_FC) // Default delay from finding LIW until start sending RM bits
 
 #define EM4X70_T_PULSES_TO_SEARCH_FOR_LIW    50 // Pulses to wait for listen window
 #define EM4X70_T_PULSES_TO_SEARCH_FOR_HEADER_TRANSITION   16 // Read header length (16 bit periods), wait that many pulses to find transition from the 12x `1` to 4x `0`
@@ -904,7 +905,8 @@ static bool create_legacy_em4x70_bitstream_for_cmd_id(em4x70_command_bitstream_t
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
     out_cmd_bitstream->command = EM4X70_COMMAND_ID;
-    uint8_t cmd = with_command_parity ? 0x3u : 0x1u;
+    //uint8_t cmd = with_command_parity ? 0x3u : 0x1u;
+    uint8_t cmd = 0x3u; 
     result = result && add_nibble_to_bitstream(&out_cmd_bitstream->to_send, cmd, false);
     out_cmd_bitstream->to_receive.bitcount = 32;
     if (out_cmd_bitstream->to_send.bitcount != expected_bits_to_send) {
@@ -918,7 +920,8 @@ static bool create_legacy_em4x70_bitstream_for_cmd_um1(em4x70_command_bitstream_
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
     out_cmd_bitstream->command = EM4X70_COMMAND_UM1;
-    uint8_t cmd = with_command_parity ? 0x5u : 0x2u;
+    //uint8_t cmd = with_command_parity ? 0x5u : 0x2u;
+    uint8_t cmd = 0x5u;
     result = result && add_nibble_to_bitstream(&out_cmd_bitstream->to_send, cmd, false);
     out_cmd_bitstream->to_receive.bitcount = 32;
     if (out_cmd_bitstream->to_send.bitcount != expected_bits_to_send) {
@@ -932,7 +935,8 @@ static bool create_legacy_em4x70_bitstream_for_cmd_um2(em4x70_command_bitstream_
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
     out_cmd_bitstream->command = EM4X70_COMMAND_UM2;
-    uint8_t cmd = with_command_parity ? 0xFu : 0x7u;
+    //uint8_t cmd = with_command_parity ? 0xFu : 0x7u;
+    uint8_t cmd = 0xFu;
     result = result && add_nibble_to_bitstream(&out_cmd_bitstream->to_send, cmd, false);
     out_cmd_bitstream->to_receive.bitcount = 64;
     if (out_cmd_bitstream->to_send.bitcount != expected_bits_to_send) {
@@ -949,11 +953,6 @@ static bool create_legacy_em4x70_bitstream_for_cmd_auth(em4x70_command_bitstream
     out_cmd_bitstream->command = EM4X70_COMMAND_AUTH;
 
     em4x70_bitstream_t *s = &out_cmd_bitstream->to_send;
-
-    // *********************************************************************************
-    // HACK -- Insert an extra zero bit to match legacy behavior
-    // *********************************************************************************
-    result = result && add_bit_to_bitstream(s, 0);
 
     // uint8_t cmd = with_command_parity ? 0x6u : 0x3u;
     uint8_t cmd = 0x6u; // HACK - always sent with cmd parity
@@ -1005,11 +1004,6 @@ static bool create_legacy_em4x70_bitstream_for_cmd_pin(em4x70_command_bitstream_
 
     out_cmd_bitstream->command = EM4X70_COMMAND_PIN;
 
-    // *********************************************************************************
-    // HACK -- Insert an extra zero bit to match legacy behavior
-    // *********************************************************************************
-    result = result && add_bit_to_bitstream(s, 0);
-
     //uint8_t cmd = with_command_parity ? 0x9u : 0x4u;
     uint8_t cmd = 0x9u; // HACK - always sent with cmd parity, with extra zero bit in RM?
     result = result && add_nibble_to_bitstream(s, cmd, false);
@@ -1042,11 +1036,6 @@ static bool create_legacy_em4x70_bitstream_for_cmd_write(em4x70_command_bitstrea
     out_cmd_bitstream->command = EM4X70_COMMAND_WRITE;
 
     em4x70_bitstream_t *s = &out_cmd_bitstream->to_send;
-
-    // *********************************************************************************
-    // HACK -- Insert an extra zero bit to match legacy behavior
-    // *********************************************************************************
-    result = result && add_bit_to_bitstream(s, 0);
 
     //uint8_t cmd = with_command_parity ? 0xAu : 0x5u;
     uint8_t cmd = 0xAu; // HACK - always sent with cmd parity, with extra zero bit in RM?
@@ -1242,7 +1231,7 @@ static bool find_listen_window(bool command) {
                  *   Allow user adjustment in range: 24-48 field cycles?
                  *   On PM3Easy I've seen success at 24..40 field
                  */
-                WaitTicks(40 * TICKS_PER_FC);
+                WaitTicks(EM4X70_T_DELAY_FROM_LIW_TO_RM);
                 // Send RM Command
                 em4x70_send_bit(0);
                 em4x70_send_bit(0);
