@@ -1742,12 +1742,17 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
                 }
 
                 // OTP sanity check
-                // Quite a bad one,  one should look at all individual bits and see if anyone tries be set as zero
-                // we cheat and do fat 00000000 check instead
                 if (block == 0x03) {
-                    if (memcmp(receivedCmd + 2, "\x00\x00\x00\x00", 4) == 0) {
-                        // OTP can't be set back to zero
-                        // send NACK 0x0 == invalid argument,
+
+                    uint8_t orig[4] = {0};
+                    emlGet(orig, 12 + MFU_DUMP_PREFIX_LENGTH, 4);
+
+                    bool risky = false;
+                    for (int i = 0; i < len; i++) {
+                        risky |= orig[i] & ~receivedCmd[2 + i];
+                    }
+
+                    if (risky) {
                         EmSend4bit(CARD_NACK_IV);
                         goto jump;
                     }
