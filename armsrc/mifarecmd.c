@@ -294,13 +294,13 @@ void MifareUL_AES_Auth(bool turn_off_field, uint8_t keyno, uint8_t *keybytes) {
 
     if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
-        reply_ng(CMD_HF_MIFAREULAES_AUTH, PM3_ESOFT, NULL, 0);
+        OnErrorNG(CMD_HF_MIFAREULAES_AUTH, PM3_ESOFT);
         return;
     };
 
     if (!mifare_ultra_aes_auth(keyno, keybytes)) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Authentication failed");
-        reply_ng(CMD_HF_MIFAREULAES_AUTH, PM3_ESOFT, NULL, 0);
+        OnErrorNG(CMD_HF_MIFAREULAES_AUTH, PM3_ESOFT);
         return;
     }
 
