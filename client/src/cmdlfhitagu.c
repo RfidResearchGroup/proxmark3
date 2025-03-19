@@ -660,7 +660,7 @@ static int CmdLFHitagUSim(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdLFHitagUList(const char *Cmd) { return CmdTraceListAlias(Cmd, "lf hitag htu", "hitagu"); }
+static int CmdLFHitagUList(const char *Cmd) { return CmdTraceListAlias(Cmd, "lf hitag htu", "htu"); }
 
 static command_t CommandTable[] = {
     {"help",        CmdHelp,            AlwaysAvailable, "This help"                                                               },
