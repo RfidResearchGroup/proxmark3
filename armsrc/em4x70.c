@@ -51,7 +51,7 @@ static em4x70_tag_t g_tag = { 0 };
 
 
 #if 1 // Calculation of ticks for timing functions
-// Conversion from Ticks to RF periods
+// Nearly every calculation is done in terms of Field Codes (FC) aka RF periods
 // 1 us = 1.5 ticks
 // 1RF Period = 8us = 12 Ticks
 #define TICKS_PER_FC                        12
@@ -71,10 +71,12 @@ static em4x70_tag_t g_tag = { 0 };
 #define EM4X70_T_TAG_TOLERANCE               (8 * TICKS_PER_FC) // Tolerance in RF periods for receive/LIW
 
 #define EM4X70_T_TAG_TIMEOUT                 (4 * EM4X70_T_TAG_FULL_PERIOD) // Timeout if we ever get a pulse longer than this
-#define EM4X70_T_WAITING_FOR_LIW             50 // Pulses to wait for listen window
-#define EM4X70_T_READ_HEADER_LEN             16 // Read header length (16 bit periods)
 
-#define EM4X70_COMMAND_RETRIES               5 // Attempts to send/read command
+
+#define EM4X70_T_PULSES_TO_SEARCH_FOR_LIW    50 // Pulses to wait for listen window
+#define EM4X70_T_PULSES_TO_SEARCH_FOR_HEADER_TRANSITION   16 // Read header length (16 bit periods), wait that many pulses to find transition from the 12x `1` to 4x `0`
+
+#define EM4X70_COMMAND_LIW_SEARCH_RETRIES    5 // Attempts to send/read command
 #define EM4X70_MAX_SEND_BITCOUNT            96u // Authentication == CMD(4) + NONCE(56) + DIVERGENCY(7) + FRND(28) == 6 + 56 + 35 == 56 + 41 == 95 bits (NOTE: RM(2) is handled as part of LIW detection)
 #define EM4X70_MAX_RECEIVE_BITCOUNT         64u // Maximum bits to receive in response to any command (NOTE: This is EXCLUDING the 16-bit header of 0b1111'1111'1111'0000)
 #endif // Calculation of ticks for timing functions
@@ -572,7 +574,7 @@ static void bitstream_dump(const em4x70_command_bitstream_t *cmd_bitstream) {
 /// @return
 static bool send_bitstream_internal(const em4x70_bitstream_t *send) {
     // similar to original send_command_and_read, but using provided bitstream
-    int retries = EM4X70_COMMAND_RETRIES;
+    int retries = EM4X70_COMMAND_LIW_SEARCH_RETRIES; // only retries finding the LIW ... not the actual command
 
     // TIMING SENSITIVE FUNCTION ... Minimize delays after finding the listen window
     while (retries) {
@@ -1218,7 +1220,7 @@ static int write(const uint16_t word, const uint8_t address) {
 static bool find_listen_window(bool command) {
 
     int cnt = 0;
-    while (cnt < EM4X70_T_WAITING_FOR_LIW) {
+    while (cnt < EM4X70_T_PULSES_TO_SEARCH_FOR_LIW) {
         /*
         80 ( 64 + 16 )
         80 ( 64 + 16 )
@@ -1361,7 +1363,7 @@ static int em4x70_receive(uint8_t *bits, size_t maximum_bits_to_read) {
     WaitTicks(6 * EM4X70_T_TAG_FULL_PERIOD);
 
     // wait until we get the transition from 1's to 0's which is 1.5 full windows
-    for (int i = 0; i < EM4X70_T_READ_HEADER_LEN; i++) {
+    for (int i = 0; i < EM4X70_T_PULSES_TO_SEARCH_FOR_HEADER_TRANSITION; i++) {
         pl = get_pulse_length(edge);
         if (check_pulse_length(pl, 3 * EM4X70_T_TAG_HALF_PERIOD)) {
             foundheader = true;
