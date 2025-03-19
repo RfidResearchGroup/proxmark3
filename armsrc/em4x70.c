@@ -44,14 +44,14 @@
 #define DPRINTF_DEBUG(x)    do { if ((FORCE_ENABLE_LOGGING) || (g_dbglevel >= DBG_DEBUG   )) { Dbprintf x ; } } while (0);
 #define DPRINTF_EXTENDED(x) do { if ((FORCE_ENABLE_LOGGING) || (g_dbglevel >= DBG_EXTENDED)) { Dbprintf x ; } } while (0);
 #define DPRINTF_PROLIX(x)   do { if ((FORCE_ENABLE_LOGGING) || (g_dbglevel >  DBG_EXTENDED)) { Dbprintf x ; } } while (0);
-static em4x70_tag_t tag = { 0 };
-
 // EM4170 requires a parity bit on commands, other variants do not.
-static bool command_parity = true;
+static bool g_command_parity = true;
+static em4x70_tag_t g_tag = { 0 };
+
 
 
 #if 1 // Calculation of ticks for timing functions
-// Conversion from Ticks to RF periods
+// Nearly every calculation is done in terms of Field Codes (FC) aka RF periods
 // 1 us = 1.5 ticks
 // 1RF Period = 8us = 12 Ticks
 #define TICKS_PER_FC                        12
@@ -71,10 +71,13 @@ static bool command_parity = true;
 #define EM4X70_T_TAG_TOLERANCE               (8 * TICKS_PER_FC) // Tolerance in RF periods for receive/LIW
 
 #define EM4X70_T_TAG_TIMEOUT                 (4 * EM4X70_T_TAG_FULL_PERIOD) // Timeout if we ever get a pulse longer than this
-#define EM4X70_T_WAITING_FOR_LIW             50 // Pulses to wait for listen window
-#define EM4X70_T_READ_HEADER_LEN             16 // Read header length (16 bit periods)
 
-#define EM4X70_COMMAND_RETRIES               5 // Attempts to send/read command
+#define EM4X70_T_DELAY_FROM_LIW_TO_RM       (72 * TICKS_PER_FC) // Default delay from finding LIW until start sending RM bits
+
+#define EM4X70_T_PULSES_TO_SEARCH_FOR_LIW    50 // Pulses to wait for listen window
+#define EM4X70_T_PULSES_TO_SEARCH_FOR_HEADER_TRANSITION   16 // Read header length (16 bit periods), wait that many pulses to find transition from the 12x `1` to 4x `0`
+
+#define EM4X70_COMMAND_LIW_SEARCH_RETRIES    5 // Attempts to send/read command
 #define EM4X70_MAX_SEND_BITCOUNT            96u // Authentication == CMD(4) + NONCE(56) + DIVERGENCY(7) + FRND(28) == 6 + 56 + 35 == 56 + 41 == 95 bits (NOTE: RM(2) is handled as part of LIW detection)
 #define EM4X70_MAX_RECEIVE_BITCOUNT         64u // Maximum bits to receive in response to any command (NOTE: This is EXCLUDING the 16-bit header of 0b1111'1111'1111'0000)
 #endif // Calculation of ticks for timing functions
@@ -215,7 +218,7 @@ static int em4x70_receive(uint8_t *bits, size_t maximum_bits_to_read);
 static bool find_listen_window(bool command);
 
 static void init_tag(void) {
-    memset(tag.data, 0x00, sizeof(tag.data));
+    memset(g_tag.data, 0x00, sizeof(g_tag.data));
 }
 
 static void em4x70_setup_read(void) {
@@ -572,7 +575,7 @@ static void bitstream_dump(const em4x70_command_bitstream_t *cmd_bitstream) {
 /// @return
 static bool send_bitstream_internal(const em4x70_bitstream_t *send) {
     // similar to original send_command_and_read, but using provided bitstream
-    int retries = EM4X70_COMMAND_RETRIES;
+    int retries = EM4X70_COMMAND_LIW_SEARCH_RETRIES; // only retries finding the LIW ... not the actual command
 
     // TIMING SENSITIVE FUNCTION ... Minimize delays after finding the listen window
     while (retries) {
@@ -902,7 +905,8 @@ static bool create_legacy_em4x70_bitstream_for_cmd_id(em4x70_command_bitstream_t
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
     out_cmd_bitstream->command = EM4X70_COMMAND_ID;
-    uint8_t cmd = with_command_parity ? 0x3u : 0x1u;
+    //uint8_t cmd = with_command_parity ? 0x3u : 0x1u;
+    uint8_t cmd = 0x3u; 
     result = result && add_nibble_to_bitstream(&out_cmd_bitstream->to_send, cmd, false);
     out_cmd_bitstream->to_receive.bitcount = 32;
     if (out_cmd_bitstream->to_send.bitcount != expected_bits_to_send) {
@@ -916,7 +920,8 @@ static bool create_legacy_em4x70_bitstream_for_cmd_um1(em4x70_command_bitstream_
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
     out_cmd_bitstream->command = EM4X70_COMMAND_UM1;
-    uint8_t cmd = with_command_parity ? 0x5u : 0x2u;
+    //uint8_t cmd = with_command_parity ? 0x5u : 0x2u;
+    uint8_t cmd = 0x5u;
     result = result && add_nibble_to_bitstream(&out_cmd_bitstream->to_send, cmd, false);
     out_cmd_bitstream->to_receive.bitcount = 32;
     if (out_cmd_bitstream->to_send.bitcount != expected_bits_to_send) {
@@ -930,7 +935,8 @@ static bool create_legacy_em4x70_bitstream_for_cmd_um2(em4x70_command_bitstream_
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
     out_cmd_bitstream->command = EM4X70_COMMAND_UM2;
-    uint8_t cmd = with_command_parity ? 0xFu : 0x7u;
+    //uint8_t cmd = with_command_parity ? 0xFu : 0x7u;
+    uint8_t cmd = 0xFu;
     result = result && add_nibble_to_bitstream(&out_cmd_bitstream->to_send, cmd, false);
     out_cmd_bitstream->to_receive.bitcount = 64;
     if (out_cmd_bitstream->to_send.bitcount != expected_bits_to_send) {
@@ -947,11 +953,6 @@ static bool create_legacy_em4x70_bitstream_for_cmd_auth(em4x70_command_bitstream
     out_cmd_bitstream->command = EM4X70_COMMAND_AUTH;
 
     em4x70_bitstream_t *s = &out_cmd_bitstream->to_send;
-
-    // *********************************************************************************
-    // HACK -- Insert an extra zero bit to match legacy behavior
-    // *********************************************************************************
-    result = result && add_bit_to_bitstream(s, 0);
 
     // uint8_t cmd = with_command_parity ? 0x6u : 0x3u;
     uint8_t cmd = 0x6u; // HACK - always sent with cmd parity
@@ -1003,11 +1004,6 @@ static bool create_legacy_em4x70_bitstream_for_cmd_pin(em4x70_command_bitstream_
 
     out_cmd_bitstream->command = EM4X70_COMMAND_PIN;
 
-    // *********************************************************************************
-    // HACK -- Insert an extra zero bit to match legacy behavior
-    // *********************************************************************************
-    result = result && add_bit_to_bitstream(s, 0);
-
     //uint8_t cmd = with_command_parity ? 0x9u : 0x4u;
     uint8_t cmd = 0x9u; // HACK - always sent with cmd parity, with extra zero bit in RM?
     result = result && add_nibble_to_bitstream(s, cmd, false);
@@ -1040,11 +1036,6 @@ static bool create_legacy_em4x70_bitstream_for_cmd_write(em4x70_command_bitstrea
     out_cmd_bitstream->command = EM4X70_COMMAND_WRITE;
 
     em4x70_bitstream_t *s = &out_cmd_bitstream->to_send;
-
-    // *********************************************************************************
-    // HACK -- Insert an extra zero bit to match legacy behavior
-    // *********************************************************************************
-    result = result && add_bit_to_bitstream(s, 0);
 
     //uint8_t cmd = with_command_parity ? 0xAu : 0x5u;
     uint8_t cmd = 0xAu; // HACK - always sent with cmd parity, with extra zero bit in RM?
@@ -1106,7 +1097,7 @@ static int authenticate(const uint8_t *rnd, const uint8_t *frnd, uint8_t *respon
     em4x70_command_bitstream_t auth_cmd;
 
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->auth(&auth_cmd, command_parity, rnd, frnd);
+    generator->auth(&auth_cmd, g_command_parity, rnd, frnd);
 
     bool result = send_bitstream_and_read(&auth_cmd);
     if (result) {
@@ -1194,7 +1185,7 @@ static int bruteforce(const uint8_t address, const uint8_t *rnd, const uint8_t *
 static int send_pin(const uint32_t pin) {
     em4x70_command_bitstream_t send_pin_cmd;
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->pin(&send_pin_cmd, command_parity, &tag.data[4], pin);
+    generator->pin(&send_pin_cmd, g_command_parity, &g_tag.data[4], pin);
 
     bool result = send_bitstream_wait_ack_wait_read(&send_pin_cmd);
     return result ? PM3_SUCCESS : PM3_ESOFT;
@@ -1205,7 +1196,7 @@ static int write(const uint16_t word, const uint8_t address) {
     em4x70_command_bitstream_t write_cmd;
 
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->write(&write_cmd, command_parity, word, address);
+    generator->write(&write_cmd, g_command_parity, word, address);
 
     bool result = send_bitstream_wait_ack_wait_ack(&write_cmd);
     if (!result) {
@@ -1218,7 +1209,7 @@ static int write(const uint16_t word, const uint8_t address) {
 static bool find_listen_window(bool command) {
 
     int cnt = 0;
-    while (cnt < EM4X70_T_WAITING_FOR_LIW) {
+    while (cnt < EM4X70_T_PULSES_TO_SEARCH_FOR_LIW) {
         /*
         80 ( 64 + 16 )
         80 ( 64 + 16 )
@@ -1240,7 +1231,7 @@ static bool find_listen_window(bool command) {
                  *   Allow user adjustment in range: 24-48 field cycles?
                  *   On PM3Easy I've seen success at 24..40 field
                  */
-                WaitTicks(40 * TICKS_PER_FC);
+                WaitTicks(EM4X70_T_DELAY_FROM_LIW_TO_RM);
                 // Send RM Command
                 em4x70_send_bit(0);
                 em4x70_send_bit(0);
@@ -1292,11 +1283,11 @@ static uint8_t encoded_bit_array_to_byte(const uint8_t *bits, int count_of_bits)
 static bool em4x70_read_id(void) {
     em4x70_command_bitstream_t read_id_cmd;
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->id(&read_id_cmd, command_parity);
+    generator->id(&read_id_cmd, g_command_parity);
 
     bool result = send_bitstream_and_read(&read_id_cmd);
     if (result) {
-        encoded_bit_array_to_bytes(read_id_cmd.to_receive.one_bit_per_byte, read_id_cmd.to_receive.bitcount, &tag.data[4]);
+        encoded_bit_array_to_bytes(read_id_cmd.to_receive.one_bit_per_byte, read_id_cmd.to_receive.bitcount, &g_tag.data[4]);
     }
     return result;
 }
@@ -1309,11 +1300,11 @@ static bool em4x70_read_id(void) {
 static bool em4x70_read_um1(void) {
     em4x70_command_bitstream_t read_um1_cmd;
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->um1(&read_um1_cmd, command_parity);
+    generator->um1(&read_um1_cmd, g_command_parity);
 
     bool result = send_bitstream_and_read(&read_um1_cmd);
     if (result) {
-        encoded_bit_array_to_bytes(read_um1_cmd.to_receive.one_bit_per_byte, read_um1_cmd.to_receive.bitcount, &tag.data[0]);
+        encoded_bit_array_to_bytes(read_um1_cmd.to_receive.one_bit_per_byte, read_um1_cmd.to_receive.bitcount, &g_tag.data[0]);
     }
 
     bitstream_dump(&read_um1_cmd);
@@ -1328,11 +1319,11 @@ static bool em4x70_read_um1(void) {
 static bool em4x70_read_um2(void) {
     em4x70_command_bitstream_t read_um2_cmd;
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->um2(&read_um2_cmd, command_parity);
+    generator->um2(&read_um2_cmd, g_command_parity);
 
     bool result = send_bitstream_and_read(&read_um2_cmd);
     if (result) {
-        encoded_bit_array_to_bytes(read_um2_cmd.to_receive.one_bit_per_byte, read_um2_cmd.to_receive.bitcount, &tag.data[24]);
+        encoded_bit_array_to_bytes(read_um2_cmd.to_receive.one_bit_per_byte, read_um2_cmd.to_receive.bitcount, &g_tag.data[24]);
     }
 
 
@@ -1361,7 +1352,7 @@ static int em4x70_receive(uint8_t *bits, size_t maximum_bits_to_read) {
     WaitTicks(6 * EM4X70_T_TAG_FULL_PERIOD);
 
     // wait until we get the transition from 1's to 0's which is 1.5 full windows
-    for (int i = 0; i < EM4X70_T_READ_HEADER_LEN; i++) {
+    for (int i = 0; i < EM4X70_T_PULSES_TO_SEARCH_FOR_HEADER_TRANSITION; i++) {
         pl = get_pulse_length(edge);
         if (check_pulse_length(pl, 3 * EM4X70_T_TAG_HALF_PERIOD)) {
             foundheader = true;
@@ -1444,7 +1435,7 @@ void em4x70_info(const em4x70_data_t *etd, bool ledcontrol) {
     bool success_with_UM2 = false;
 
     // Support tags with and without command parity bits
-    command_parity = etd->parity;
+    g_command_parity = etd->parity;
 
     init_tag();
     em4x70_setup_read();
@@ -1466,16 +1457,16 @@ void em4x70_info(const em4x70_data_t *etd, bool ledcontrol) {
         0;
 
     // not returning the data to the client about actual length read?
-    reply_ng(CMD_LF_EM4X70_INFO, status, tag.data, data_size);
+    reply_ng(CMD_LF_EM4X70_INFO, status, g_tag.data, data_size);
 }
 
 void em4x70_write(const em4x70_data_t *etd, bool ledcontrol) {
     int status = PM3_ESOFT;
 
-    command_parity = etd->parity;
+    g_command_parity = etd->parity;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (command_parity) {
+    if (g_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 write` is  non-functional and may corrupt data on the tag."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
@@ -1501,14 +1492,14 @@ void em4x70_write(const em4x70_data_t *etd, bool ledcontrol) {
 
     StopTicks();
     lf_finalize(ledcontrol);
-    reply_ng(CMD_LF_EM4X70_WRITE, status, tag.data, sizeof(tag.data));
+    reply_ng(CMD_LF_EM4X70_WRITE, status, g_tag.data, sizeof(g_tag.data));
 }
 
 void em4x70_unlock(const em4x70_data_t *etd, bool ledcontrol) {
 
     int status = PM3_ESOFT;
 
-    command_parity = etd->parity;
+    g_command_parity = etd->parity;
 
     init_tag();
     em4x70_setup_read();
@@ -1534,7 +1525,7 @@ void em4x70_unlock(const em4x70_data_t *etd, bool ledcontrol) {
 
     StopTicks();
     lf_finalize(ledcontrol);
-    reply_ng(CMD_LF_EM4X70_UNLOCK, status, tag.data, sizeof(tag.data));
+    reply_ng(CMD_LF_EM4X70_UNLOCK, status, g_tag.data, sizeof(g_tag.data));
 }
 
 void em4x70_auth(const em4x70_data_t *etd, bool ledcontrol) {
@@ -1543,10 +1534,10 @@ void em4x70_auth(const em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t response[3] = {0};
 
-    command_parity = etd->parity;
+    g_command_parity = etd->parity;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (command_parity) {
+    if (g_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 auth` is  non-functional."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
@@ -1571,10 +1562,10 @@ void em4x70_brute(const em4x70_data_t *etd, bool ledcontrol) {
     int status = PM3_ESOFT;
     uint8_t response[2] = {0};
 
-    command_parity = etd->parity;
+    g_command_parity = etd->parity;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (command_parity) {
+    if (g_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 brute` is  non-functional and may corrupt data on the tag."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
@@ -1599,10 +1590,10 @@ void em4x70_write_pin(const em4x70_data_t *etd, bool ledcontrol) {
 
     int status = PM3_ESOFT;
 
-    command_parity = etd->parity;
+    g_command_parity = etd->parity;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (command_parity) {
+    if (g_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 setpin` is non-functional and may corrupt data on the tag."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
@@ -1641,17 +1632,17 @@ void em4x70_write_pin(const em4x70_data_t *etd, bool ledcontrol) {
 
     StopTicks();
     lf_finalize(ledcontrol);
-    reply_ng(CMD_LF_EM4X70_SETPIN, status, tag.data, sizeof(tag.data));
+    reply_ng(CMD_LF_EM4X70_SETPIN, status, g_tag.data, sizeof(g_tag.data));
 }
 
 void em4x70_write_key(const em4x70_data_t *etd, bool ledcontrol) {
 
     int status = PM3_ESOFT;
 
-    command_parity = etd->parity;
+    g_command_parity = etd->parity;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (command_parity) {
+    if (g_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 setkey` is non-functional and may corrupt data on the tag."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
@@ -1688,5 +1679,5 @@ void em4x70_write_key(const em4x70_data_t *etd, bool ledcontrol) {
 
     StopTicks();
     lf_finalize(ledcontrol);
-    reply_ng(CMD_LF_EM4X70_SETKEY, status, tag.data, sizeof(tag.data));
+    reply_ng(CMD_LF_EM4X70_SETKEY, status, g_tag.data, sizeof(g_tag.data));
 }
