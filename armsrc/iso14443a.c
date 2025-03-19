@@ -1748,7 +1748,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
                     emlGet(orig, 12 + MFU_DUMP_PREFIX_LENGTH, 4);
 
                     bool risky = false;
-                    for (int i = 0; i < len; i++) {
+                    for (int i = 0; i < 4; i++) {
                         risky |= orig[i] & ~receivedCmd[2 + i];
                     }
 
