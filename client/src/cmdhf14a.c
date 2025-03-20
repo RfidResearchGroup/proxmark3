@@ -498,7 +498,7 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
@@ -806,7 +806,7 @@ static int CmdHF14ACUIDs(const char *Cmd) {
         PacketResponseNG resp;
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
 
@@ -1670,7 +1670,7 @@ static int waitCmd(bool i_select, uint32_t timeout, bool verbose) {
         }
 
     } else {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
     return PM3_SUCCESS;
@@ -2264,7 +2264,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                         clearCommandBuffer();
                         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
                         if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-                            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+                            PrintAndLogEx(WARNING, "timeout while waiting for reply");
                             DropField();
                             return PM3_ETIMEOUT;
                         }
@@ -2324,7 +2324,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, sizeof(rats));
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
 

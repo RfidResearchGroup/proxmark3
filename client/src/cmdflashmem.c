@@ -349,7 +349,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
 
             PacketResponseNG resp;
             if (WaitForResponseTimeout(CMD_FLASHMEM_WRITE, &resp, 2000) == false) {
-                PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+                PrintAndLogEx(WARNING, "timeout while waiting for reply");
                 g_conn.block_after_ACK = false;
                 free(data);
                 return PM3_ETIMEOUT;
@@ -473,7 +473,7 @@ static int CmdFlashMemWipe(const char *Cmd) {
     SendCommandMIX(CMD_FLASHMEM_WIPE, page, initialwipe, 0, NULL, 0);
     PacketResponseNG resp;
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 10000)) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 

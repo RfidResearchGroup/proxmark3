@@ -922,7 +922,7 @@ static int CmdHFiClassSim(const char *Cmd) {
                     return PM3_EOPABORTED;
                 }
                 if (tries > 20) {
-                    PrintAndLogEx(WARNING, "\ntimeout while waiting for reply.");
+                    PrintAndLogEx(WARNING, "\ntimeout while waiting for reply");
                     return PM3_ETIMEOUT;
                 }
             }
@@ -973,7 +973,7 @@ static int CmdHFiClassSim(const char *Cmd) {
                     return PM3_EOPABORTED;
                 }
                 if (tries > 20) {
-                    PrintAndLogEx(WARNING, "\ntimeout while waiting for reply.");
+                    PrintAndLogEx(WARNING, "\ntimeout while waiting for reply");
                     return PM3_ETIMEOUT;
                 }
             }
@@ -1186,7 +1186,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
         SendCommandNG(CMD_SPIFFS_ELOAD, (uint8_t *)filename, fnlen);
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_SPIFFS_ELOAD, &resp, 2000) == false) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
 

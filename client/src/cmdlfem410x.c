@@ -756,7 +756,7 @@ static int CmdEM410xClone(const char *Cmd) {
             packet.mode = HITAGS_UID_REQ_FADV;
             SendCommandNG(CMD_LF_HITAGS_WRITE, (uint8_t *)&packet, sizeof(packet));
             if (WaitForResponseTimeout(CMD_LF_HITAGS_WRITE, &resp, 4000) == false) {
-                PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+                PrintAndLogEx(WARNING, "timeout while waiting for reply");
                 return PM3_ETIMEOUT;
             }
             if (resp.status != PM3_SUCCESS) {
@@ -814,7 +814,7 @@ static int CmdEM410xClone(const char *Cmd) {
 
             SendCommandNG(CMD_LF_HITAGU_WRITE, (uint8_t *)&packet, sizeof(packet));
             if (WaitForResponseTimeout(CMD_LF_HITAGU_WRITE, &resp, 4000) == false) {
-                PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+                PrintAndLogEx(WARNING, "timeout while waiting for reply");
                 return PM3_ETIMEOUT;
             }
 
@@ -851,7 +851,7 @@ static int CmdEM410xClone(const char *Cmd) {
 
         SendCommandNG(CMD_LF_EM410X_CLONE, (uint8_t *)&payload, sizeof(payload));
         if (WaitForResponseTimeout(CMD_LF_EM410X_CLONE, &resp, 2000) == false) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
     }

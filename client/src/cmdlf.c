@@ -456,7 +456,7 @@ int CmdLFCommandRead(const char *Cmd) {
             getSamples(samples, false);
             ret = PM3_SUCCESS;
         } else {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
 

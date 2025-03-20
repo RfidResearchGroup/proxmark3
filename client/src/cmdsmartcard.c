@@ -658,7 +658,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
         clearCommandBuffer();
         SendCommandNG(CMD_SMART_UPLOAD, (uint8_t *)&upload, sizeof(upload));
         if (!WaitForResponseTimeout(CMD_SMART_UPLOAD, &resp, 2000)) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             free(firmware);
             return PM3_ETIMEOUT;
         }
@@ -690,7 +690,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
     free(firmware);
     SendCommandNG(CMD_SMART_UPGRADE, (uint8_t *)&payload, sizeof(payload));
     if (!WaitForResponseTimeout(CMD_SMART_UPGRADE, &resp, 2500)) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 

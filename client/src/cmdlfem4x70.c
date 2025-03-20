@@ -478,7 +478,7 @@ static int CmdEM4x70Info(const char *Cmd) {
     int result = get_em4x70_info(&opts, &info);
 
     if (result == PM3_ETIMEOUT) {
-        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
     } else if (result == PM3_SUCCESS) {
         em4x70_print_info_result(&info);
     } else {
@@ -530,7 +530,7 @@ static int CmdEM4x70Write(const char *Cmd) {
     int result = writeblock_em4x70(&opts, &info);
 
     if (result == PM3_ETIMEOUT) {
-        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
     } else if (result == PM3_SUCCESS) {
         em4x70_print_info_result(&info);
     } else {
@@ -664,7 +664,7 @@ static int CmdEM4x70Unlock(const char *Cmd) {
     int result = unlock_em4x70(&opts, &info);
 
     if (result == PM3_ETIMEOUT) {
-        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
     } else if (result == PM3_SUCCESS) {
         em4x70_print_info_result(&info);
     } else {
@@ -726,7 +726,7 @@ static int CmdEM4x70Auth(const char *Cmd) {
     if (PM3_SUCCESS == result) {
         PrintAndLogEx(INFO, "Tag Auth Response: %02X %02X %02X", data.grn.grn[0], data.grn.grn[1], data.grn.grn[2]);
     } else if (PM3_ETIMEOUT == result) {
-        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
     } else {
         PrintAndLogEx(FAILED, "TAG Authentication ( " _RED_("fail") " )");
     }
@@ -768,7 +768,7 @@ static int CmdEM4x70SetPIN(const char *Cmd) {
     int result = setpin_em4x70(&opts, &info);
 
     if (result == PM3_ETIMEOUT) {
-        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
     } else if (result == PM3_SUCCESS) {
         em4x70_print_info_result(&info);
         PrintAndLogEx(INFO, "Writing new PIN ( " _GREEN_("ok") " )");
@@ -812,7 +812,7 @@ static int CmdEM4x70SetKey(const char *Cmd) {
     int result = setkey_em4x70(&opts);
 
     if (PM3_ETIMEOUT == result) {
-        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     } else if (PM3_SUCCESS != result) {
         PrintAndLogEx(FAILED, "Writing new key " _RED_("fail"));
@@ -857,7 +857,7 @@ static int CmdEM4x70SetKey(const char *Cmd) {
     result = verify_auth_em4x70(&opts_v);
 
     if (PM3_ETIMEOUT == result) {
-        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return result;
     } else if (PM3_SUCCESS != result) {
         PrintAndLogEx(FAILED, "Authenticating with new key ( " _RED_("fail") " )");
@@ -1204,7 +1204,7 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
         result = auth_em4x70(&opts_auth, &tag_grn);
 
         if (PM3_ETIMEOUT == result) {
-            PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return result;
         } else if (PM3_SUCCESS != result) {
             PrintAndLogEx(FAILED, "Authenticating with provided values ( " _RED_("fail") " )");
@@ -1248,7 +1248,7 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
             result = writeblock_em4x70(&opt_write_zeros, &tag_info);
 
             if (PM3_ETIMEOUT == result) {
-                PrintAndLogEx(FAILED, "Timeout while waiting for reply.");
+                PrintAndLogEx(FAILED, "timeout while waiting for reply");
                 PrintAndLogEx(HINT, "Block %d data may have been overwritten. Manually restart at step %d", block, step);
                 return result;
             } else if (PM3_SUCCESS != result) {
@@ -1273,7 +1273,7 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
             result = brute_em4x70(&opts_brute, &brute);
 
             if (PM3_ETIMEOUT == result) {
-                PrintAndLogEx(FAILED, "Timeout while waiting for reply.");
+                PrintAndLogEx(FAILED, "timeout while waiting for reply");
                 PrintAndLogEx(HINT, "Block %d data was overwritten. Manually restart at step %d", block, step);
                 return result;
             } else if (PM3_SUCCESS != result) {
@@ -1312,7 +1312,7 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
             result = writeblock_em4x70(&opt_write_zeros, &tag_info);
 
             if (PM3_ETIMEOUT == result) {
-                PrintAndLogEx(FAILED, "Timeout while waiting for reply.");
+                PrintAndLogEx(FAILED, "timeout while waiting for reply");
                 PrintAndLogEx(HINT, "Block %d data (" _GREEN_("%02X%02X") ") may need to be rewritten", block, brute.partial_key[0], brute.partial_key[1]);
                 return result;
             } else if (PM3_SUCCESS != result) {
@@ -1578,7 +1578,7 @@ bool detect_4x70_block(void) {
     int result = get_em4x70_info(&opts, &info);
 
     if (result == PM3_ETIMEOUT) { // consider removing this output?
-        PrintAndLogEx(WARNING, "Timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
     }
     return result == PM3_SUCCESS;
 }

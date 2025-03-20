@@ -469,7 +469,7 @@ static int em4x05_login_ext(uint32_t pwd) {
     SendCommandNG(CMD_LF_EM4X_LOGIN, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_LF_EM4X_LOGIN, &resp, 10000) == false) {
-        PrintAndLogEx(WARNING, "(em4x05_login_ext) timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "(em4x05_login_ext) timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
@@ -496,7 +496,7 @@ int em4x05_read_word_ext(uint8_t addr, uint32_t pwd, bool use_pwd, uint32_t *wor
     SendCommandNG(CMD_LF_EM4X_READWORD, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_LF_EM4X_READWORD, &resp, 10000) == false) {
-        PrintAndLogEx(WARNING, "(em4x05_read_word_ext) timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "(em4x05_read_word_ext) timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
@@ -1839,7 +1839,7 @@ int CmdEM4x05Brute(const char *Cmd) {
     SendCommandNG(CMD_LF_EM4X_BF, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_LF_EM4X_BF, &resp, 1000) == false) {
-        PrintAndLogEx(WARNING, "(EM4x05 Bruteforce) timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "(EM4x05 Bruteforce) timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
     PrintAndLogEx(INFO, "Bruteforce is running on device side, press button to interrupt");

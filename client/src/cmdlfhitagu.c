@@ -176,7 +176,7 @@ static bool htu_get_uid(uint64_t *uid) {
     SendCommandNG(CMD_LF_HITAGU_UID, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_LF_HITAGU_UID, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return false;
     }
 

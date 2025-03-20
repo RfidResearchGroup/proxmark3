@@ -520,7 +520,7 @@ static int ht2_check_dictionary(uint32_t key_count, uint8_t *keys,  uint8_t keyl
         SendCommandNG(CMD_LF_HITAG_READER, (uint8_t *)&packet, sizeof(packet));
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_LF_HITAG_READER, &resp, 4000) == false) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
             return PM3_ETIMEOUT;
         }
@@ -825,7 +825,7 @@ static bool ht2_get_uid(uint32_t *uid) {
     SendCommandNG(CMD_LF_HITAG_READER, (uint8_t *) &packet, sizeof(packet));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_LF_HITAG_READER, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return false;
     }
 
@@ -1052,7 +1052,7 @@ static int CmdLFHitagRd(const char *Cmd) {
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(pm3cmd, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         return PM3_ETIMEOUT;
     }
@@ -1141,7 +1141,7 @@ static int CmdLFHitag2CheckChallenges(const char *Cmd) {
     SendCommandNG(CMD_LF_HITAG_READER, (uint8_t *)&packet, sizeof(packet));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_LF_HITAG_READER, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
     if (resp.status != PM3_SUCCESS) {
@@ -1303,7 +1303,7 @@ static int CmdLFHitagWriter(const char *Cmd) {
         SendCommandNG(CMD_LF_HITAG2_WRITE, (uint8_t *)&packet, sizeof(packet));
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_LF_HITAG2_WRITE, &resp, 4000) == false) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
 
@@ -1526,7 +1526,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
 
         if (attempt == 0) {
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ESOFT;
         }
 
@@ -1544,7 +1544,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
     SendCommandNG(CMD_LF_HITAG_READER, (uint8_t *) &packet, sizeof(packet));
 
     if (WaitForResponseTimeout(CMD_LF_HITAG_READER, &resp, 5000) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
     if (resp.status != PM3_SUCCESS) {
@@ -2254,7 +2254,7 @@ static int CmdLFHitag2Crack2(const char *Cmd) {
 
     if (attempt == 0) {
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ESOFT;
     }
 

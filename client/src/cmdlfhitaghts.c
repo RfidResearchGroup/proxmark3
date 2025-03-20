@@ -161,7 +161,7 @@ static bool hts_get_uid(uint32_t *uid) {
     SendCommandNG(CMD_LF_HITAGS_UID, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_LF_HITAGS_UID, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return false;
     }
 
@@ -420,7 +420,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_LF_HITAGS_READ, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         return PM3_ETIMEOUT;
     }
@@ -607,7 +607,7 @@ static int CmdLFHitagSDump(const char *Cmd) {
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_LF_HITAGS_READ, &resp, 5000) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
@@ -709,7 +709,7 @@ static int CmdLFHitagSRestore(const char *Cmd) {
     PacketResponseNG resp;
 
     if (WaitForResponseTimeout(CMD_LF_HITAGS_READ, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         free(dump);
         return PM3_ETIMEOUT;
     }
@@ -760,7 +760,7 @@ static int CmdLFHitagSRestore(const char *Cmd) {
         SendCommandNG(CMD_LF_HITAGS_WRITE, (uint8_t *)&packet, sizeof(packet));
 
         if (WaitForResponseTimeout(CMD_LF_HITAGS_WRITE, &resp, 2000) == false) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             free(dump);
             return PM3_ETIMEOUT;
         }
@@ -833,7 +833,7 @@ static int CmdLFHitagSRestore(const char *Cmd) {
     SendCommandNG(CMD_LF_HITAGS_WRITE, (uint8_t *)&packet, sizeof(packet));
 
     if (WaitForResponseTimeout(CMD_LF_HITAGS_WRITE, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         free(dump);
         return PM3_ETIMEOUT;
     }
@@ -918,7 +918,7 @@ static int CmdLFHitagSWrite(const char *Cmd) {
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_LF_HITAGS_WRITE, &resp, 4000) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
