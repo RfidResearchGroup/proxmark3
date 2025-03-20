@@ -273,6 +273,13 @@
         "system_integrator": ""
     },
     {
+        "application": "Parking systems.",
+        "company": "Les parkings de Paris La Défense",
+        "mad": "0x00FF",
+        "service_provider": "Les parkings de Paris La Défense",
+        "system_integrator": "Les parkings de Paris La Défense"
+    },
+    {
         "application": "Internal use (Tests, Demos...)",
         "company": "Ascom Monétel",
         "mad": "0x0101",
@@ -4113,6 +4120,13 @@
         "application": "Access Control (SIO)",
         "company": "HID Global",
         "mad": "0x3D01",
+        "service_provider": "HID Corporation",
+        "system_integrator": "HID Corporation"
+    },
+    {
+        "application": "Access Control Biometric (SIO)",
+        "company": "HID Global",
+        "mad": "0x3D02",
         "service_provider": "HID Corporation",
         "system_integrator": "HID Corporation"
     },
