@@ -788,9 +788,9 @@
             "options": [
                 "-h, --help This help",
                 "--sr <float> sets timescale factor according to sampling rate",
-                "-u, --unit <string> time unit to display (max 10 chars)"
+                "-u, --unit <str> time unit to display (max 10 chars)"
             ],
-            "usage": "data timescale [-h] --sr <float> [-u <string>]"
+            "usage": "data timescale [-h] --sr <float> [-u <str>]"
         },
         "data undecimate": {
             "command": "data undecimate",
@@ -8338,10 +8338,10 @@
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "-p, --port <string> Serial port to connect to, else retry the last used one",
+                "-p, --port <str> Serial port to connect to, else retry the last used one",
                 "-b, --baud <dec> Baudrate"
             ],
-            "usage": "hw connect [-h] [-p <string>] [-b <dec>]"
+            "usage": "hw connect [-h] [-p <str>] [-b <dec>]"
         },
         "hw dbg": {
             "command": "hw dbg",
@@ -8956,9 +8956,9 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> loads a default keys dictionary file <*.dic>",
-                "-e, --em <EM4100> try the calculated password from some cloners based on EM4100 ID"
+                "-e, --em <pwd> try the calculated password from some cloners based on EM4100 ID"
             ],
-            "usage": "lf em 4x05 chk [-h] [-f <fn>] [-e <EM4100>]"
+            "usage": "lf em 4x05 chk [-h] [-f <fn>] [-e <pwd>]"
         },
         "lf em 4x05 config": {
             "command": "lf em 4x05 config",
@@ -10042,7 +10042,7 @@
         },
         "lf hitag hts rdbl": {
             "command": "lf hitag hts rdbl",
-            "description": "Read Hitag S memory. Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR) 8268/8310 password mode: - default password BBDD3399",
+            "description": "Read Hitag S memory Response protocol modes: 0 - Standard 00110 1 - Advanced 11000 2 - Advanced 11001 3 - Fast Advanced 11010 (def) Crypto mode: - key format ISK high + ISK low - default key 4F4E4D494B52 (ONMIKR) 8268/8310 password mode: - default password BBDD3399",
             "notes": [
                 "lf hitag hts rdbl -p 1 -> Hitag S/8211, plain mode",
                 "lf hitag hts rdbl -p 1 --82xx -k BBDD3399 -> 8268/8310, password mode",
@@ -10057,11 +10057,11 @@
                 "--nrar <hex> nonce / answer writer, 8 hex bytes",
                 "--crypto crypto mode",
                 "-k, --key <hex> pwd or key, 4 or 6 hex bytes",
-                "-m, --mode <dec> response protocol mode. 0 (Standard 00110), 1 (Advanced 11000), 2 (Advanced 11001), 3 (Fast Advanced 11010) (def: 3)",
+                "-m, --mode <0|1|2|3> response protocol mode (def 3)",
                 "-p, --page <dec> page address to read from",
                 "-c, --count <dec> how many pages to read. '0' reads all pages up to the end page (def: 1)"
             ],
-            "usage": "lf hitag hts rdbl [-h8] [--nrar <hex>] [--crypto] [-k <hex>] [-m <dec>] [-p <dec>] [-c <dec>]"
+            "usage": "lf hitag hts rdbl [-h8] [--nrar <hex>] [--crypto] [-k <hex>] [-m <0|1|2|3>] [-p <dec>] [-c <dec>]"
         },
         "lf hitag hts reader": {
             "command": "lf hitag hts reader",
@@ -11554,10 +11554,10 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-d, --data <string> raw bit string",
+                "-d, --data <bitstr> raw bit string",
                 "-t, --time <us> <0 - 200000> time in microseconds before dropping the field"
             ],
-            "usage": "lf t55xx dangerraw [-h] -d <string> -t <us>"
+            "usage": "lf t55xx dangerraw [-h] -d <bitstr> -t <us>"
         },
         "lf t55xx detect": {
             "command": "lf t55xx detect",
@@ -13133,7 +13133,6 @@
                 "trace list -t 15 -> interpret as ISO15693",
                 "trace list -t 7816 -> interpret as ISO7816-4",
                 "trace list -t cryptorf -> interpret as CryptoRF",
-                "",
                 "trace list -t des -> interpret as MIFARE DESFire",
                 "trace list -t felica -> interpret as ISO18092 / FeliCa",
                 "trace list -t ht1 -> interpret as Hitag 1",
@@ -13164,10 +13163,10 @@
                 "-u display times in microseconds instead of clock cycles",
                 "-x show hexdump to convert to pcap(ng)",
                 "or to import into Wireshark using encapsulation type \"ISO 14443\"",
-                "-t, --type <string> protocol to annotate the trace",
+                "-t, --type <str> protocol to annotate the trace",
                 "-f, --file <fn> filename of dictionary"
             ],
-            "usage": "trace list [-h1crux] [--frame] [-t <string>] [-f <fn>]"
+            "usage": "trace list [-h1crux] [--frame] [-t <str>] [-f <fn>]"
         },
         "trace load": {
             "command": "trace load",
@@ -13274,9 +13273,9 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-d, --data <string> string to send"
+                "-d, --data <str> string to send"
             ],
-            "usage": "usart tx [-h] -d <string>"
+            "usage": "usart tx [-h] -d <str>"
         },
         "usart txhex": {
             "command": "usart txhex",
@@ -13302,9 +13301,9 @@
             "options": [
                 "-h, --help This help",
                 "-t, --timeout <dec> timeout in ms, default is 1000 ms",
-                "-d, --data <string> string to send"
+                "-d, --data <str> string to send"
             ],
-            "usage": "usart txrx [-h] [-t <dec>] -d <string>"
+            "usage": "usart txrx [-h] [-t <dec>] -d <str>"
         },
         "wiegand decode": {
             "command": "wiegand decode",
@@ -13357,6 +13356,6 @@
     "metadata": {
         "commands_extracted": 767,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-03-19T20:08:46"
+        "extracted_on": "2025-03-20T18:37:09"
     }
 }

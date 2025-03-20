@@ -1942,7 +1942,7 @@ static int CmdT55xxDangerousRaw(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("d", "data", NULL, "raw bit string"),
+        arg_str1("d", "data", "<bitstr>", "raw bit string"),
         arg_int1("t", "time", "<us>", "<0 - 200000> time in microseconds before dropping the field"),
         arg_param_end
     };
