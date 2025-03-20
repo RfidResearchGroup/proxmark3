@@ -253,46 +253,30 @@ static void print_error(int8_t reason) {
     //todo:  USE ENUM OR DEFINES
     switch (reason) {
         case 0: {
-            PrintAndLogEx(FAILED, "No data");
+            PrintAndLogEx(INFO, "No data");
             break;
         }
         case -2: {
-            PrintAndLogEx(FAILED, "UID Request failed!");
+            PrintAndLogEx(FAILED, "READ UID failed!");
             break;
         }
         case -3: {
-            PrintAndLogEx(FAILED, "Select UID failed!");
+            PrintAndLogEx(FAILED, "Get System Information / Config failed!");
             break;
         }
         case -4: {
-            PrintAndLogEx(FAILED, "No write access on block. Not authorized?");
+            PrintAndLogEx(FAILED, "Login failed! Wrong password?");
             break;
         }
         case -5: {
-            PrintAndLogEx(FAILED, "Write failed! Wrong password?");
+            PrintAndLogEx(FAILED, "No write access on block. Not authorized?");
             break;
         }
         case -6: {
-            PrintAndLogEx(FAILED, "Error, " _YELLOW_("AUT=1") " This tag is configured in Authentication Mode");
+            PrintAndLogEx(FAILED, "Response CRC invalid!");
             break;
         }
         case -7: {
-            PrintAndLogEx(FAILED, "Error, unknown function");
-            break;
-        }
-        case -8: {
-            PrintAndLogEx(FAILED, "Authenticate failed!");
-            break;
-        }
-        case -9: {
-            PrintAndLogEx(FAILED, "No write access on block");
-            break;
-        }
-        case -10: {
-            PrintAndLogEx(FAILED, "Write to block failed!");
-            break;
-        }
-        case -11: {
             PrintAndLogEx(FAILED, "Read block failed!");
             break;
         }
