@@ -9860,7 +9860,6 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Static nonce... " _YELLOW_("yes"));
     }
 
-
     if (res == NONCE_NORMAL) {
         // not static
         res = detect_classic_prng();
@@ -9901,6 +9900,10 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         if (do_nack_test) {
             detect_classic_nackbug(verbose);
         }
+    }
+
+    if (res == NONCE_STATIC_ENC) {
+        PrintAndLogEx(HINT, "try `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
     }
 
     if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS) {
