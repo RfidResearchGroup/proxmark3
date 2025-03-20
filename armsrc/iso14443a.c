@@ -2079,13 +2079,16 @@ static void TransmitFor14443a(const uint8_t *cmd, uint16_t len, uint32_t *timing
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO14443A | FPGA_HF_ISO14443A_READER_MOD);
 
     if (timing) {
-        if (*timing == 0)                                        // Measure time
+
+        if (*timing == 0) {                                       // Measure time
             *timing = (GetCountSspClk() + 8) & 0xfffffff8;
-        else
+        } else {
             PrepareDelayedTransfer(*timing & 0x00000007);        // Delay transfer (fine tuning - up to 7 MF clock ticks)
+        }
 
         while (GetCountSspClk() < (*timing & 0xfffffff8)) {};    // Delay transfer (multiple of 8 MF clock ticks)
         LastTimeProxToAirStart = *timing;
+
     } else {
 
         uint32_t ThisTransferTime = 0;
@@ -3131,26 +3134,40 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
         return 0; // DATA LINK ERROR
     }
 
+    uint32_t save_iso14a_timeout = iso14a_get_timeout();
 
     // S-Block WTX
     while (len && ((data_bytes[0] & 0xF2) == 0xF2)) {
-        uint32_t save_iso14a_timeout = iso14a_get_timeout();
-        // temporarily increase timeout
-        iso14a_set_timeout(MAX((data_bytes[1] & 0x3f) * save_iso14a_timeout, MAX_ISO14A_TIMEOUT));
-        // Transmit WTX back
+
+        if (BUTTON_PRESS() || data_available()) {
+            BigBuf_free();
+            return -3;
+        }
+
+        // Inform client of WTX of timeout in ms
+        // 38ms == MAX_ISO14A_TIMEOUT
+        send_wtx(38);
+
         // byte1 - WTXM [1..59]. command FWT=FWT*WTXM
-        data_bytes[1] = data_bytes[1] & 0x3f; // 2 high bits mandatory set to 0b
-        // now need to fix CRC.
+        data_bytes[1] &= 0x3F; // 2 high bits mandatory set to 0b
+
+        // temporarily increase timeout
+        // field cycles,  1/1356000
+        // MAX_ISO14A_TIMEOUT ==  524288 / 13560000
+        // typically 8192 / 13560000
+        iso14a_set_timeout(MAX(data_bytes[1] * save_iso14a_timeout, MAX_ISO14A_TIMEOUT));
+
+        // Transmit WTX back
         AddCrc14A(data_bytes, len - 2);
-        // transmit S-Block
         ReaderTransmit(data_bytes, len, NULL);
+
         // retrieve the result again (with increased timeout)
-        data_bytes[0] = 0x00;
-        len = ReaderReceive(data, data_len, parity_array);
-        data_bytes = data;
-        // restore timeout
-        iso14a_set_timeout(save_iso14a_timeout);
+        len = ReaderReceive(data_bytes, data_len, parity_array);
+
     }
+
+    // restore timeout
+    iso14a_set_timeout(save_iso14a_timeout);
 
     // if we received an I- or R(ACK)-Block with a block number equal to the
     // current block number, toggle the current block number
@@ -3252,6 +3269,9 @@ void ReaderIso14443a(PacketCommandNG *c) {
     }
 
     if ((param & ISO14A_APDU) == ISO14A_APDU) {
+
+        FpgaDisableTracing();
+
         uint8_t res = 0;
         arg0 = iso14_apdu(
                    cmd,
@@ -3261,7 +3281,6 @@ void ReaderIso14443a(PacketCommandNG *c) {
                    sizeof(buf),
                    &res
                );
-        FpgaDisableTracing();
 
         reply_mix(CMD_ACK, arg0, res, 0, buf, sizeof(buf));
     }
@@ -3382,8 +3401,9 @@ void ReaderIso14443a(PacketCommandNG *c) {
         }
     }
 CMD_DONE:
-    if ((param & ISO14A_REQUEST_TRIGGER) == ISO14A_REQUEST_TRIGGER)
+    if ((param & ISO14A_REQUEST_TRIGGER) == ISO14A_REQUEST_TRIGGER) {
         iso14a_set_trigger(false);
+    }
 
     if ((param & ISO14A_SET_TIMEOUT) == ISO14A_SET_TIMEOUT) {
         iso14a_set_timeout(save_iso14a_timeout);

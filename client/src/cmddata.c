@@ -2253,7 +2253,7 @@ static int CmdTimeScale(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_dbl1(NULL,  "sr", "<float>", "sets timescale factor according to sampling rate"),
-        arg_str0("u", "unit", "<string>", "time unit to display (max 10 chars)"),
+        arg_str0("u", "unit", "<str>", "time unit to display (max 10 chars)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

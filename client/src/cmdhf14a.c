@@ -1280,6 +1280,11 @@ static int CmdExchangeAPDU(bool chainingin, const uint8_t *datain, int datainlen
         return PM3_EAPDU_FAIL;
     }
 
+    // Button pressed / user cancelled
+    if (iLen == -3) {
+        PrintAndLogEx(DEBUG, "ERR: APDU: User aborted");
+        return PM3_EAPDU_FAIL;
+    }
     return PM3_SUCCESS;
 }
 

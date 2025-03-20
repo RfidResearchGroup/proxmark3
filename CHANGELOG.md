@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf 14a apdu` - now can be interrupted and dynamically adds time (@iceman1001)
 - Changed `trace list -t` - shortend the hitag types (@iceman1001)
 - Added Be-Tech identification (@iceman1001)
 - Added `lf em 410x clone --htu` clone EM410x ID to Hitag µ/8265 (@douniwan5788)

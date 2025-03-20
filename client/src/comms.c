@@ -1041,8 +1041,9 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
     }
 
     // Add delay depending on the communication channel & speed
-    if (ms_timeout != (size_t) - 1)
+    if (ms_timeout != (size_t) - 1) {
         ms_timeout += communication_delay();
+    }
 
     __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
 
@@ -1055,6 +1056,7 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
         }
 
         while (getReply(response)) {
+
             if (cmd == CMD_UNKNOWN || response->cmd == cmd) {
                 return true;
             }

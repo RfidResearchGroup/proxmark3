@@ -74,22 +74,25 @@ int preferences_load(void) {
     setDefaultPath(spTrace, "");
 
     // default save path
-    if (get_my_user_directory() != NULL) // should return path to .proxmark3 folder
+    if (get_my_user_directory() != NULL) { // should return path to .proxmark3 folder
         setDefaultPath(spDefault, get_my_user_directory());
-    else
+    } else {
         setDefaultPath(spDefault, ".");
+    }
 
     // default dump path
-    if (get_my_user_directory() != NULL) // should return path to .proxmark3 folder
+    if (get_my_user_directory() != NULL) { // should return path to .proxmark3 folder
         setDefaultPath(spDump, get_my_user_directory());
-    else
+    } else {
         setDefaultPath(spDump, ".");
+    }
 
     // default dump path
-    if (get_my_user_directory() != NULL) // should return path to .proxmark3 folder
+    if (get_my_user_directory() != NULL) {// should return path to .proxmark3 folder
         setDefaultPath(spTrace, get_my_user_directory());
-    else
+    } else {
         setDefaultPath(spTrace, ".");
+    }
 
     if (g_session.incognito) {
         PrintAndLogEx(INFO, "No preferences file will be loaded");

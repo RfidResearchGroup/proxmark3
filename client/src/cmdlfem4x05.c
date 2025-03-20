@@ -1696,7 +1696,7 @@ int CmdEM4x05Chk(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0("f", "file", "<fn>", "loads a default keys dictionary file <*.dic>"),
-        arg_str0("e", "em", "<EM4100>", "try the calculated password from some cloners based on EM4100 ID"),
+        arg_str0("e", "em", "<pwd>", "try the calculated password from some cloners based on EM4100 ID"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

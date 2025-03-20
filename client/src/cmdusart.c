@@ -483,7 +483,7 @@ static int CmdUsartTX(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str1("d", "data", NULL, "string to send"),
+        arg_str1("d", "data", "<str>", "string to send"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -568,7 +568,7 @@ static int CmdUsartTXRX(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0("t", "timeout", "<dec>", "timeout in ms, default is 1000 ms"),
-        arg_str1("d", "data", NULL, "string to send"),
+        arg_str1("d", "data", "<str>", "string to send"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);

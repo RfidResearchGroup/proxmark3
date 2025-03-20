@@ -1332,8 +1332,9 @@ int main(int argc, char *argv[]) {
     // This will allow the command line to override the settings.json values
     preferences_load();
     // quick patch for debug level
-    if (! debug_mode_forced)
+    if (! debug_mode_forced) {
         g_debugMode = g_session.client_debug_level;
+    }
     // settings_save ();
     // End Settings
 

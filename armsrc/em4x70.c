@@ -113,26 +113,26 @@ static em4x70_tag_t g_tag = { 0 };
 // on the tag sending the header, and then receive a number of bits from the tag:
 //
 // #define EM4X70_COMMAND_ID                   0x01 // 0b0001      --> 0b001'1
-//    Tag:  [LIW]           [Header][ID₃₁..ID₀][LIW]
+//    Tag:  [LIW]           [Header][ID31..ID0][LIW]
 // Reader:     [RM][Command]
 //  Bits Sent: RM     +  4 bits
 //  Bits Recv: Header + 32 bits
 //
 // #define EM4X70_COMMAND_UM1                  0x02 // 0b0010      --> 0b010'1
-//    Tag:  [LIW]           [Header][LB₁, LB₀, UM1₂₉..UM1₀][LIW]
+//    Tag:  [LIW]           [Header][LB1, LB0, UM129..UM10][LIW]
 // Reader:     [RM][Command]
 //  Bits Sent: RM     +  4 bits
 //  Bits Recv: Header + 32 bits
 //
 // #define EM4X70_COMMAND_UM2                  0x07 // 0b0111      --> 0b111'1
-//    Tag:  [LIW]           [Header][UM2₆₃..UM2₀][LIW]
+//    Tag:  [LIW]           [Header][UM263..UM20][LIW]
 // Reader:     [RM][Command]
 //  Bits Sent: RM     +  4 bits
 //  Bits Recv: Header + 64 bits
 //
 // #define EM4X70_COMMAND_AUTH                 0x03 // 0b0011      --> 0b011'0
-//    Tag:  [LIW]                                              [Header][g(RN)₁₉..RN₀][LIW]
-// Reader:     [RM][Command][N₅₅..N₀][0000000][f(RN)₂₇..f(RN)₀]
+//    Tag:  [LIW]                                              [Header][g(RN)19..RN0][LIW]
+// Reader:     [RM][Command][N55..N0][0000000][f(RN)27..f(RN)0]
 //  Bits Sent: RM     + 95 bits
 //  Bits Recv: Header + 20 bits
 //
@@ -143,8 +143,8 @@ static em4x70_tag_t g_tag = { 0 };
 // receive a number of bits from the tag:
 //
 // #define EM4X70_COMMAND_PIN                  0x04 // 0b0100      --> 0b100'1
-//    Tag:  [LIW]                                    ..  [ACK]  ..  [Header][ID₃₁..ID₀][LIW]
-// Reader:     [RM][Command][ID₃₁..ID₀][Pin₃₁..Pin₀] ..         ..
+//    Tag:  [LIW]                                    ..  [ACK]  ..  [Header][ID31..ID0][LIW]
+// Reader:     [RM][Command][ID31..ID0][Pin31..Pin0] ..         ..
 //  Bits Sent: RM     + 68 bits
 //  Bits Recv: Header + 32 bits
 //
@@ -156,7 +156,7 @@ static em4x70_tag_t g_tag = { 0 };
 //
 // #define EM4X70_COMMAND_WRITE                0x05 // 0b0101      --> 0b101'0
 //    Tag:  [LIW]                                    ..  [ACK]  ..  [ACK][LIW]
-// Reader:     [RM][Command][A₃..A₀,Ap][Data5x5]     ..         ..
+// Reader:     [RM][Command][A3..A0,Ap][Data5x5]     ..         ..
 //  Bits Sent: RM     + 34 bits
 //  Bits Recv: !!!!!!!! NONE !!!!!!!!
 //
@@ -958,7 +958,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_auth(em4x70_command_bitstream
     uint8_t cmd = 0x6u; // HACK - always sent with cmd parity
     result = result && add_nibble_to_bitstream(s, cmd, false);
 
-    // Reader:     [RM][0][Command][N₅₅..N₀][0000000][f(RN)₂₇..f(RN)₀]
+    // Reader:     [RM][0][Command][N55..N0][0000000][f(RN)27..f(RN)0]
     //
     // ----> HACK <----- : [ 0 ] == extra bit of zero (!?)
     // Command is 4 bits : [ 1 ..  4 ]  <---- HACK: Always sent with command parity

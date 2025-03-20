@@ -510,20 +510,23 @@ int getGuardBits(uint8_t xorKey, uint8_t fmtlen, uint32_t fc, uint32_t cn, uint8
     rawbytes[3] = 0;
 
     // add wiegand to rawbytes
-    for (i = 0; i < 5; ++i)
+    for (i = 0; i < 5; ++i) {
         rawbytes[i + 4] = bytebits_to_byte(pre + (i * 8), 8);
+    }
 
     PrintAndLogEx(DEBUG, " WIE | %s", sprint_hex(rawbytes, sizeof(rawbytes)));
 
     // XOR (only works on wiegand stuff)
-    for (i = 1; i < sizeof(rawbytes); ++i)
+    for (i = 1; i < sizeof(rawbytes); ++i) {
         rawbytes[i] ^= xorKey ;
+    }
 
     PrintAndLogEx(DEBUG, " XOR | %s", sprint_hex(rawbytes, sizeof(rawbytes)));
 
     // convert rawbytes to bits in pre
-    for (i = 0; i < sizeof(rawbytes); ++i)
+    for (i = 0; i < sizeof(rawbytes); ++i) {
         num_to_bytebitsLSBF(rawbytes[i], 8, pre + (i * 8));
+    }
 
     PrintAndLogEx(DEBUG, " Raw | %s", sprint_hex(rawbytes, sizeof(rawbytes)));
     PrintAndLogEx(DEBUG, " Raw | %s", sprint_bytebits_bin(pre, 96));

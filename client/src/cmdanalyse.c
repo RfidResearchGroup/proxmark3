@@ -185,9 +185,7 @@ static uint16_t calcXORchecksum(uint8_t *bytes, uint8_t len, uint32_t mask) {
     return 0xFF - calcSumByteXor(bytes, len, mask);
 }
 
-
 //2148050707DB0A0E000001C4000000
-
 // measuring LFSR maximum length
 static int CmdAnalyseLfsr(const char *Cmd) {
     CLIParserContext *ctx;

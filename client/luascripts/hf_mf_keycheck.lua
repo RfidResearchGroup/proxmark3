@@ -60,8 +60,8 @@ end
 -- waits for answer from pm3 device
 local function checkCommand(response)
     if not response then
-        print("Timeout while waiting for response. Increase TIMEOUT in hf_mf_keycheck.lua to wait longer")
-        return nil, "Timeout while waiting for device to respond"
+        print("timeout while waiting for reply. Increase TIMEOUT in hf_mf_keycheck.lua to wait longer")
+        return nil, "timeout while waiting for reply"
     end
 
     if response.Status == PM3_SUCCESS then

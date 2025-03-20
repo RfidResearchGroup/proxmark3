@@ -178,7 +178,7 @@ static int CmdLFTune(const char *Cmd) {
 
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, params, sizeof(params));
     if (WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000) == false) {
-        PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark LF initialization, aborting");
+        PrintAndLogEx(WARNING, "timeout while waiting for Proxmark LF initialization, aborting");
         return PM3_ETIMEOUT;
     }
 
@@ -202,7 +202,7 @@ static int CmdLFTune(const char *Cmd) {
         SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, params, sizeof(params));
         if (WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000) == false) {
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark LF measure, aborting");
+            PrintAndLogEx(WARNING, "timeout while waiting for Proxmark LF measure, aborting");
             break;
         }
 
@@ -229,7 +229,7 @@ static int CmdLFTune(const char *Cmd) {
     params[0] = 3;
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING_LF, params, sizeof(params));
     if (WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING_LF, &resp, 1000) == false) {
-        PrintAndLogEx(WARNING, "Timeout while waiting for Proxmark LF shutdown, aborting");
+        PrintAndLogEx(WARNING, "timeout while waiting for Proxmark LF shutdown, aborting");
         return PM3_ETIMEOUT;
     }
 

@@ -366,7 +366,12 @@ static void hitags_config_print(hitags_config_t config) {
 static int CmdLFHitagSRead(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hitag hts rdbl",
-                  "Read Hitag S memory.\n\n"
+                  "Read Hitag S memory\n"
+                  "  Response protocol modes:\n"
+                  "   0 - Standard 00110\n"
+                  "   1 - Advanced 11000\n"
+                  "   2 - Advanced 11001\n"
+                  "   3 - Fast Advanced 11010 (def)\n\n"
                   "  Crypto mode: \n"
                   "    - key format ISK high + ISK low\n"
                   "    - default key 4F4E4D494B52 (ONMIKR)\n\n"
@@ -385,7 +390,7 @@ static int CmdLFHitagSRead(const char *Cmd) {
         arg_str0(NULL, "nrar", "<hex>", "nonce / answer writer, 8 hex bytes"),
         arg_lit0(NULL, "crypto", "crypto mode"),
         arg_str0("k", "key", "<hex>", "pwd or key, 4 or 6 hex bytes"),
-        arg_int0("m", "mode", "<dec>", "response protocol mode. 0 (Standard 00110), 1 (Advanced 11000), 2 (Advanced 11001), 3 (Fast Advanced 11010) (def: 3)"),
+        arg_int0("m", "mode", "<0|1|2|3>", "response protocol mode (def 3)"),
         arg_int0("p", "page", "<dec>", "page address to read from"),
         arg_int0("c", "count", "<dec>", "how many pages to read. '0' reads all pages up to the end page (def: 1)"),
         arg_param_end

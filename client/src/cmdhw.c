@@ -1358,7 +1358,7 @@ static int CmdConnect(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("p", "port", NULL, "Serial port to connect to, else retry the last used one"),
+        arg_str0("p", "port", "<str>", "Serial port to connect to, else retry the last used one"),
         arg_u64_0("b", "baud", "<dec>", "Baudrate"),
         arg_param_end
     };
