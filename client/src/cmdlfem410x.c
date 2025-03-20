@@ -624,11 +624,12 @@ static int CmdEM410xSpoof(const char *Cmd) {
 static int CmdEM410xClone(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 410x clone",
-                  "clone a EM410x ID to a T55x7, Q5/T5555, EM4305/4469 or Hitag S/8211/8268/8310 tag.",
+                  "clone a EM410x ID to a T55x7, Q5/T5555, EM4305/4469, Hitag S/8211/8268/8310 or Hitag µ/8265 tag.",
                   "lf em 410x clone --id 0F0368568B        -> encode for T55x7 tag\n"
                   "lf em 410x clone --id 0F0368568B --q5   -> encode for Q5/T5555 tag\n"
                   "lf em 410x clone --id 0F0368568B --em   -> encode for EM4305/4469\n"
-                  "lf em 410x clone --id 0F0368568B --hts  -> encode for Hitag S/8211/8268/8310"
+                  "lf em 410x clone --id 0F0368568B --hts  -> encode for Hitag S/8211/8268/8310\n"
+                  "lf em 410x clone --id 0F0368568B --htu  -> encode for Hitag µ/8265 tag"
                  );
 
     void *argtable[] = {
@@ -638,6 +639,7 @@ static int CmdEM410xClone(const char *Cmd) {
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_lit0(NULL, "hts", "optional - specify writing to Hitag S/8211/8268/8310 tag"),
+        arg_lit0(NULL, "htu", "optional - specify writing to Hitag µ/8265 tag"),
         arg_lit0(NULL, "electra", "optional - add Electra blocks to tag"),
         arg_param_end
     };
@@ -651,23 +653,23 @@ static int CmdEM410xClone(const char *Cmd) {
     bool q5 = arg_get_lit(ctx, 3);
     bool em = arg_get_lit(ctx, 4);
     bool hts = arg_get_lit(ctx, 5);
-    bool add_electra = arg_get_lit(ctx, 6);
+    bool htu = arg_get_lit(ctx, 6);
+    bool add_electra = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
-    if (q5 + em + hts > 1) {
+    if (q5 + em + hts + htu > 1) {
         PrintAndLogEx(FAILED, "Only specify one tag Type");
         return PM3_EINVARG;
     }
 
-    if (hts) {
-        if (IfPm3Hitag() == false) {
-            PrintAndLogEx(FAILED, "Device not compiled to support Hitag");
-            return PM3_EINVARG;
-        }
-        if (clk == 40) {
-            PrintAndLogEx(FAILED, "supported clock rates for Hitag are " _YELLOW_("16, 32, 64"));
-            return PM3_EINVARG;
-        }
+    if ((hts || htu) && IfPm3Hitag() == false) {
+        PrintAndLogEx(FAILED, "Device not compiled to support Hitag");
+        return PM3_EINVARG;
+    }
+
+    if ((hts || htu) && clk == 40) {
+        PrintAndLogEx(FAILED, "supported clock rates for Hitag are " _YELLOW_("16, 32, 64"));
+        return PM3_EINVARG;
     }
 
     // Allowed clock rates: 16, 32, 40 and 64
@@ -678,9 +680,9 @@ static int CmdEM410xClone(const char *Cmd) {
 
     uint64_t id = bytes_to_num(uid, uid_len);
     PrintAndLogEx(SUCCESS, "Preparing to clone EM4102 to " _YELLOW_("%s") " tag with EM Tag ID " _GREEN_("%010" PRIX64) " (RF/%d)",
-                  q5 ? "Q5/T5555" : (em ? "EM4305/4469" : (hts ? "Hitag S/82xx" : "T55x7")), id, clk);
+                  q5 ? "Q5/T5555" : (em ? "EM4305/4469" : (hts ? "Hitag S/82xx" : (htu ? "Hitag µ/82xx" : "T55x7"))), id, clk);
 
-    uint8_t data[HITAG_BLOCK_SIZE * 2] = {0xFF, 0x80}; // EM410X_HEADER 9 bits of one
+    uint8_t data[8] = {0xFF, 0x80}; // EM410X_HEADER 9 bits of one
     uint32_t databits = 9;
     uint8_t c_parity = 0;
 
@@ -688,11 +690,11 @@ static int CmdEM410xClone(const char *Cmd) {
         uint8_t r_parity = 0;
         uint8_t nibble = id >> i & 0xF;
 
-        databits = concatbits(data, databits, &nibble, 4, 4);
+        databits = concatbits(data, databits, &nibble, 4, 4, false);
         for (size_t j = 0; j < 4; j++) {
             r_parity ^= nibble >> j & 1;
         }
-        databits = concatbits(data, databits, &r_parity, 7, 1);
+        databits = concatbits(data, databits, &r_parity, 7, 1, false);
         c_parity ^= nibble;
     }
     data[7] |= c_parity << 1;
@@ -706,35 +708,45 @@ static int CmdEM410xClone(const char *Cmd) {
         lf_hitag_data_t packet;
         memset(&packet, 0, sizeof(packet));
 
-        for (size_t steps = 0; steps < 3; steps++) {
-            switch (steps) {
-                case 0:
-                    packet.data[0] = 0xCA; //compatiable for 82xx, no impact on Hitag S
-                    // clk -> TTFDR1 TTFDR0
-                    // 32  -> 0x00      4 kBit/s
-                    // 16  -> 0x10      8 kBit/s
-                    // 64  -> 0x20      2 kBit/s
-                    packet.data[1] = 0x04;
+        for (size_t step = 0; step < 3; step++) {
+            switch (step) {
+                case 0: {
+                    hitags_config_t config = {0};
+                    config.MEMT = 0x02; // compatiable for 82xx, no impact on Hitag S
+                    config.TTFM = 0x01; // 0 = "Block 0, Block 1, Block 2, Block 3", 1 = "Block 0, Block 1"
+                    config.TTFC = 0x00; // Manchester
+                    config.auth = 0x00; // Plain
+
+                    //compatiable for 82xx, no impact on Hitag S
+                    config.RES1 = 0x01;
+                    config.RES4 = 0x01;
+                    config.RES5 = 0x01;
                     switch (clk) {
+                        case 64:
+                            // 2 kBit/s
+                            config.TTFDR = 0x02;
+                            break;
                         case 32:
+                            // 4 kBit/s
+                            config.TTFDR = 0x00;
                             break;
                         case 16:
-                            packet.data[1] |= 0x10;
-                            break;
-                        case 64:
-                            packet.data[1] |= 0x20;
+                            // 8 kBit/s
+                            config.TTFDR = 0x01;
                             break;
                     }
-                    packet.data[2] = 0;
-                    packet.data[3] = 0; //TODO: keep PWDH0?
+                    //TODO: keep other fields?
+                    memcpy(packet.data, &config, sizeof(config));
+                    // PrintAndLogEx(INFO, "packet.data: %s", sprint_hex(packet.data, sizeof(packet.data)));
                     packet.page = 1;
                     break;
+                }
                 case 1:
-                    memcpy(packet.data, &data[HITAG_BLOCK_SIZE * 0], HITAG_BLOCK_SIZE);
+                    memcpy(packet.data, &data[HITAGS_PAGE_SIZE * 0], HITAGS_PAGE_SIZE);
                     packet.page = 4;
                     break;
                 case 2:
-                    memcpy(packet.data, &data[HITAG_BLOCK_SIZE * 1], HITAG_BLOCK_SIZE);
+                    memcpy(packet.data, &data[HITAGS_PAGE_SIZE * 1], HITAGS_PAGE_SIZE);
                     packet.page = 5;
                     break;
             }
@@ -744,13 +756,81 @@ static int CmdEM410xClone(const char *Cmd) {
             packet.mode = HITAGS_UID_REQ_FADV;
             SendCommandNG(CMD_LF_HITAGS_WRITE, (uint8_t *)&packet, sizeof(packet));
             if (WaitForResponseTimeout(CMD_LF_HITAGS_WRITE, &resp, 4000) == false) {
-                PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+                PrintAndLogEx(WARNING, "timeout while waiting for reply");
                 return PM3_ETIMEOUT;
             }
             if (resp.status != PM3_SUCCESS) {
-                PrintAndLogEx(WARNING, "Something went wrong");
+                PrintAndLogEx(WARNING, "Something went wrong in step %zu", step);
                 return resp.status;
             }
+        }
+    } else if (htu) {
+        lf_hitag_data_t packet;
+        memset(&packet, 0, sizeof(packet));
+
+        // Use password auth with default password
+        packet.cmd = HTUF_82xx;
+        memcpy(packet.pwd, "\x00\x00\x00\x00", HITAG_PASSWORD_SIZE);
+        // memcpy(packet.pwd, "\x9A\xC4\x99\x9C", HITAGU_BLOCK_SIZE);
+
+        for (size_t step = 0; step < 3; step++) {
+            switch (step) {
+                case 0: {
+                    // Configure datarate based on clock
+                    // clk -> datarate
+                    // 64  -> 0x00      2 kBit/s
+                    // 32  -> 0x01      4 kBit/s
+                    // 16  -> 0x10      8 kBit/s
+                    hitagu82xx_config_t config = {0};
+
+                    config.datarate_override = 0x00; // no datarate override
+                    config.encoding = 0x00; // Manchester
+                    config.ttf_mode = 0x01; // 01 = "Block 0, Block 1"
+                    config.ttf = 0x01; // enable TTF
+
+                    switch (clk) {
+                        case 64:
+                            break;
+                        case 32:
+                            config.datarate = 0x01;
+                            break;
+                        case 16:
+                            config.datarate = 0x02;
+                            break;
+                    }
+                    packet.data[0] = reflect8(*(uint8_t *)&config);
+                    packet.page = HITAGU_CONFIG_PADR; // Config block
+                    break;
+                }
+                case 1:
+                    memcpy(packet.data, &data[HITAGU_BLOCK_SIZE * 0], HITAGU_BLOCK_SIZE);
+                    packet.page = 0; // Start writing EM410x data
+                    break;
+                case 2:
+                    memcpy(packet.data, &data[HITAGU_BLOCK_SIZE * 1], HITAGU_BLOCK_SIZE);
+                    packet.page = 1; // Continue with second block
+                    break;
+            }
+
+            SendCommandNG(CMD_LF_HITAGU_WRITE, (uint8_t *)&packet, sizeof(packet));
+            if (WaitForResponseTimeout(CMD_LF_HITAGU_WRITE, &resp, 4000) == false) {
+                PrintAndLogEx(WARNING, "timeout while waiting for reply");
+                return PM3_ETIMEOUT;
+            }
+
+            if (resp.status != PM3_ENODATA && resp.status != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Something went wrong in step %zu, retrying... Press " _GREEN_("<Enter>") " to exit", step);
+                // 8265 Often fails during continuous command execution, need to retry
+                if (kbd_enter_pressed()) {
+                    PrintAndLogEx(INFO, "Button pressed, user aborted");
+                    return PM3_EOPABORTED;
+                }
+
+                step--;
+                continue;
+            }
+            //TODO: fix this
+            resp.status = PM3_SUCCESS;
         }
     } else {
         struct {
@@ -771,7 +851,7 @@ static int CmdEM410xClone(const char *Cmd) {
 
         SendCommandNG(CMD_LF_EM410X_CLONE, (uint8_t *)&payload, sizeof(payload));
         if (WaitForResponseTimeout(CMD_LF_EM410X_CLONE, &resp, 2000) == false) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
     }

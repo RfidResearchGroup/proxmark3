@@ -19,6 +19,7 @@
 //-----------------------------------------------------------------------------
 
 #include "hitagS.h"
+#include "hitag_common.h"
 
 #include "proxmark3_arm.h"
 #include "cmd.h"
@@ -33,11 +34,7 @@
 #include "lfadc.h"
 #include "crc.h"
 #include "protocols.h"
-#include "hitag.h"
 #include "appmain.h"    // tearoff_hook()
-
-#define CRC_PRESET 0xFF
-#define CRC_POLYNOM 0x1D
 
 static struct hitagS_tag tag = {
     .data.pages = {
@@ -58,13 +55,6 @@ static uint8_t page_to_be_written = 0;
 static int block_data_left = 0;
 static bool enable_page_tearoff = false;
 
-typedef enum modulation {
-    AC2K = 0,
-    AC4K,
-    MC4K,
-    MC8K
-} MOD;
-
 static uint8_t protocol_mode = HITAGS_UID_REQ_ADV1;
 static MOD m = AC2K;                                // used modulation
 static uint32_t reader_selected_uid;
@@ -72,9 +62,6 @@ static int rotate_uid = 0;
 static int sof_bits;                                // number of start-of-frame bits
 static uint8_t pwdh0, pwdl0, pwdl1;                 // password bytes
 static uint8_t rnd[] = {0x85, 0x44, 0x12, 0x74};    // random number
-static uint16_t timestamp_high = 0;                 // Timer Counter 2 overflow count, ~47min
-
-#define TIMESTAMP ( (AT91C_BASE_TC2->TC_SR & AT91C_TC_COVFS) ? timestamp_high += 1 : 0, ((timestamp_high << 16) + AT91C_BASE_TC2->TC_CV) / T0)
 
 //#define SENDBIT_TEST
 
@@ -98,60 +85,6 @@ datasheet HitagS_V11.pdf bytes in tables printed 3 2 1 0
 #define ht2bs_4b(a,b,c,d)   (~(((d|c)&(a^b))^(d|a|b)))
 #define ht2bs_5c(a,b,c,d,e) (~((((((c^e)|d)&a)^b)&(c^b))^(((d^e)|a)&((d^b)|c))))
 
-// Sam7s has several timers, we will use the source TIMER_CLOCK3 (aka AT91C_TC_CLKS_TIMER_DIV3_CLOCK)
-// TIMER_CLOCK3 = MCK/32, MCK is running at 48 MHz, Timer is running at 48MHz/32 = 1500 KHz
-// Hitag units (T0) have duration of 8 microseconds (us), which is 1/125000 per second (carrier)
-// T0 = TIMER_CLOCK3 / 125000 = 12
-
-#define T0                             12
-
-#define HITAG_FRAME_LEN                20
-
-// TC0 and TC1 are 16-bit counters and will overflow after 5461 * T0
-// Ensure not to set these timings above 5461 (~43ms) when comparing without considering overflow, as they will never reach that value.
-
-#define HITAG_T_STOP                   36  /* T_EOF should be > 36 */
-#define HITAG_T_LOW                    8   /* T_LOW should be 4..10 */
-#define HITAG_T_0_MIN                  15  /* T[0] should be 18..22 */
-#define HITAG_T_1_MIN                  25  /* T[1] should be 26..30 */
-#define HITAG_T_0                      20  /* T[0] should be 18..22 */
-#define HITAG_T_1                      28  /* T[1] should be 26..30 */
-// #define HITAG_T_EOF   40 /* T_EOF should be > 36 */
-#define HITAG_T_EOF                    80   /* T_EOF should be > 36 */
-#define HITAG_T_WAIT_RESP              200  /* T_wresp should be 204..212 */
-#define HITAG_T_WAIT_SC                200   /* T_wsc should be 90..5000 */
-#define HITAG_T_WAIT_FIRST             300  /* T_wfc should be 280..565 (T_ttf) */
-#define HITAG_T_PROG_MAX               750  /* T_prog should be 716..726 */
-
-#define HITAG_T_TAG_ONE_HALF_PERIOD    10
-#define HITAG_T_TAG_TWO_HALF_PERIOD    25
-#define HITAG_T_TAG_THREE_HALF_PERIOD  41
-#define HITAG_T_TAG_FOUR_HALF_PERIOD   57
-
-#define HITAG_T_TAG_HALF_PERIOD        16
-#define HITAG_T_TAG_FULL_PERIOD        32
-
-#define HITAG_T_TAG_CAPTURE_ONE_HALF   13
-#define HITAG_T_TAG_CAPTURE_TWO_HALF   25
-#define HITAG_T_TAG_CAPTURE_THREE_HALF 41
-#define HITAG_T_TAG_CAPTURE_FOUR_HALF  57
-
-/*
- * Implementation of the crc8 calculation from Hitag S
- * from http://www.proxmark.org/files/Documents/125%20kHz%20-%20Hitag/HitagS.V11.pdf
- */
-static void calc_crc(unsigned char *crc, unsigned char data, unsigned char Bitcount) {
-    *crc ^= data; // crc = crc (exor) data
-    do {
-        if (*crc & 0x80) { // if (MSB-CRC == 1)
-            *crc <<= 1; // CRC = CRC Bit-shift left
-            *crc ^= CRC_POLYNOM; // CRC = CRC (exor) CRC_POLYNOM
-        } else {
-            *crc <<= 1; // CRC = CRC Bit-shift left
-        }
-    } while (--Bitcount);
-}
-
 static void update_tag_max_page(void) {
     //check which memorysize this tag has
     if (tag.data.s.config.MEMT == 0x00) {
@@ -165,261 +98,13 @@ static void update_tag_max_page(void) {
     }
 }
 
-static void hitag_send_bit(int bit, bool ledcontrol) {
-
-    if (ledcontrol) LED_A_ON();
-    // Reset clock for the next bit
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-
-    switch (m) {
-        case AC2K: {
-            if (bit == 0) {
-                // AC Coding --__
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
-
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 64) {};
-
-            } else {
-                // AC coding -_-_
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
-
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
-
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 48) {};
-
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 64) {};
-
-            }
-            if (ledcontrol) LED_A_OFF();
-            break;
-        }
-        case AC4K: {
-            if (bit == 0) {
-                // AC Coding --__
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_TAG_HALF_PERIOD) {};
-
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_TAG_FULL_PERIOD) {};
-
-            } else {
-                // AC coding -_-_
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 8) {};
-
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
-
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 24) {};
-
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
-            }
-            if (ledcontrol) LED_A_OFF();
-            break;
-        }
-        case MC4K: {
-            if (bit == 0) {
-                // Manchester: Unloaded, then loaded |__--|
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
-
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
-
-            } else {
-                // Manchester: Loaded, then unloaded |--__|
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
-
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 32) {};
-
-            }
-            if (ledcontrol) LED_A_OFF();
-            break;
-        }
-        case MC8K: {
-            if (bit == 0) {
-                // Manchester: Unloaded, then loaded |__--|
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 8) {};
-
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
-
-            } else {
-                // Manchester: Loaded, then unloaded |--__|
-                HIGH(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 8) {};
-
-                LOW(GPIO_SSC_DOUT);
-                while (AT91C_BASE_TC0->TC_CV < T0 * 16) {};
-
-            }
-            if (ledcontrol) LED_A_OFF();
-            break;
-        }
-        default: {
-            break;
-        }
-    }
-}
-
-static void hitag_send_frame(const uint8_t *frame, size_t frame_len, bool ledcontrol) {
-
-    DBG Dbprintf("hitag_send_frame: (%i) %02X %02X %02X %02X", frame_len, frame[0], frame[1], frame[2], frame[3]);
-
-    // The beginning of the frame is hidden in some high level; pause until our bits will have an effect
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    HIGH(GPIO_SSC_DOUT);
-    switch (m) {
-        case AC4K:
-        case MC8K: {
-            while (AT91C_BASE_TC0->TC_CV < T0 * 40) {}; //FADV
-            break;
-        }
-        case AC2K:
-        case MC4K: {
-            while (AT91C_BASE_TC0->TC_CV < T0 * 20) {}; //STD + ADV
-            break;
-        }
-    }
-
-    // SOF - send start of frame
-    for (size_t i = 0; i < sof_bits; i++) {
-        hitag_send_bit(1, ledcontrol);
-    }
-
-    // Send the content of the frame
-    for (size_t i = 0; i < frame_len; i++) {
-        hitag_send_bit((frame[i / 8] >> (7 - (i % 8))) & 1, ledcontrol);
-    }
-
-    LOW(GPIO_SSC_DOUT);
-}
-
-static void hitag_reader_send_bit(int bit, bool ledcontrol) {
-
-    if (ledcontrol) LED_A_ON();
-    // Reset clock for the next bit
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    while (AT91C_BASE_TC0->TC_CV != 0) {};
-
-    // Binary puls length modulation (BPLM) is used to encode the data stream
-    // This means that a transmission of a one takes longer than that of a zero
-
-    HIGH(GPIO_SSC_DOUT);
-
-#ifdef SENDBIT_TEST
-    // Wait for 4-10 times the carrier period
-    while (AT91C_BASE_TC0->TC_CV < T0 * 6) {};
-
-    LOW(GPIO_SSC_DOUT);
-
-    if (bit == 0) {
-        // Zero bit: |_-|
-        while (AT91C_BASE_TC0->TC_CV < T0 * 11) {};
-    } else {
-        // One bit: |_--|
-        while (AT91C_BASE_TC0->TC_CV < T0 * 14) {};
-    }
-#else
-    // Wait for 4-10 times the carrier period
-    while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_LOW) {};
-
-    LOW(GPIO_SSC_DOUT);
-
-    if (bit == 0) {
-        // Zero bit: |_-|
-        while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_0) {};
-    } else {
-        // One bit: |_--|
-        while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_1) {};
-    }
-#endif
-
-    if (ledcontrol) LED_A_OFF();
-}
-
-static void hitag_reader_send_frame(const uint8_t *frame, size_t frame_len, bool ledcontrol) {
-    // Send the content of the frame
-    for (size_t i = 0; i < frame_len; i++) {
-        hitag_reader_send_bit((frame[i / 8] >> (7 - (i % 8))) & 1, ledcontrol);
-    }
-    // send EOF
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-    while (AT91C_BASE_TC0->TC_CV != 0) {};
-
-    HIGH(GPIO_SSC_DOUT);
-
-    // Wait for 4-10 times the carrier period
-    while (AT91C_BASE_TC0->TC_CV < T0 * HITAG_T_LOW) {};
-
-    LOW(GPIO_SSC_DOUT);
-}
-
-static void hts_stop_clock(void) {
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
-    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKDIS;
-}
-
-static void hts_init_clock(void) {
-    // Enable Peripheral Clock for
-    //   Timer Counter 0, used to measure exact timing before answering
-    //   Timer Counter 1, used to capture edges of the tag frames
-    //   Timer Counter 2, used to log trace time
-    AT91C_BASE_PMC->PMC_PCER |= (1 << AT91C_ID_TC0) | (1 << AT91C_ID_TC1) | (1 << AT91C_ID_TC2);
-
-    AT91C_BASE_PIOA->PIO_BSR = GPIO_SSC_FRAME;
-
-    // Disable timer during configuration
-    hts_stop_clock();
-
-    // TC0: Capture mode, default timer source = MCK/32 (TIMER_CLOCK3), no triggers
-    AT91C_BASE_TC0->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
-
-    // TC1: Capture mode, default timer source = MCK/32 (TIMER_CLOCK3), TIOA is external trigger,
-    AT91C_BASE_TC1->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK  // use MCK/32 (TIMER_CLOCK3)
-                             | AT91C_TC_ABETRG               // TIOA is used as an external trigger
-                             | AT91C_TC_ETRGEDG_FALLING      // external trigger on falling edge
-                             | AT91C_TC_LDRA_RISING          // load RA on on rising edge of TIOA
-                             | AT91C_TC_LDRB_FALLING;        // load RB on on falling edge of TIOA
-
-    // TC2: Capture mode, default timer source = MCK/32 (TIMER_CLOCK3), no triggers
-    AT91C_BASE_TC2->TC_CMR = AT91C_TC_CLKS_TIMER_DIV3_CLOCK;
-
-    // Enable and reset counters
-    AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-    AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-    AT91C_BASE_TC2->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-
-    // Assert a sync signal. This sets all timers to 0 on next active clock edge
-    AT91C_BASE_TCB->TCB_BCR = 1;
-
-    // synchronized startup procedure
-    // In theory, with MCK/32, we shouldn't be waiting longer than 32 instruction statements, right?
-    while (AT91C_BASE_TC0->TC_CV != 0) {};  // wait until TC0 returned to zero
-
-    // reset timestamp
-    timestamp_high = 0;
-}
-
 /*
  * to check if the right uid was selected
  */
 static int check_select(const uint8_t *rx, uint32_t uid) {
 
     // global var?
-    concatbits((uint8_t *)&reader_selected_uid, 0, rx, 5, 32);
+    concatbits((uint8_t *)&reader_selected_uid, 0, rx, 5, 32, false);
     reader_selected_uid = BSWAP_32(reader_selected_uid);
 
     if (reader_selected_uid == uid) {
@@ -506,7 +191,6 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
             DBG DbpString("SELECT");
 
             if ((rx[0] & 0xf8) == HITAGS_SELECT && check_select(rx, BSWAP_32(tag.data.s.uid_le)) == 1) {
-
                 DBG DbpString("SELECT match");
 
                 //if the right tag was selected
@@ -519,13 +203,8 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
 
                 if (protocol_mode != HITAGS_UID_REQ_STD) {
                     //add crc8
+                    crc = CRC8Hitag1Bits(tx, 32);
                     *txlen += 8;
-                    crc = CRC_PRESET;
-
-                    for (int i = 0; i < 4; i++) {
-                        calc_crc(&crc, tx[i], 8);
-                    }
-
                     tx[4] = crc;
                 }
             }
@@ -546,26 +225,31 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
                 ht2_hitag2_byte(&state);
             }
 
-            //send con2, pwdh0, pwdl0, pwdl1 encrypted as a response
-            tx[0] = ht2_hitag2_byte(&state) ^ tag.data.pages[HITAGS_CONFIG_PADR][2];
-            tx[1] = ht2_hitag2_byte(&state) ^ tag.data.s.config.pwdh0;
-            tx[2] = ht2_hitag2_byte(&state) ^ tag.data.s.pwdl0;
-            tx[3] = ht2_hitag2_byte(&state) ^ tag.data.s.pwdl1;
+            // store plaintext first
+            tx[0] = tag.data.pages[HITAGS_CONFIG_PADR][2];
+            tx[1] = tag.data.s.config.pwdh0;
+            tx[2] = tag.data.s.pwdl0;
+            tx[3] = tag.data.s.pwdl1;
 
             if (protocol_mode != HITAGS_UID_REQ_STD) {
-                //add crc8
+                // add crc8
                 *txlen += 8;
-                crc = CRC_PRESET;
-                calc_crc(&crc, tag.data.pages[HITAGS_CONFIG_PADR][2], 8);
-                calc_crc(&crc, tag.data.s.config.pwdh0, 8);
-                calc_crc(&crc, tag.data.s.pwdl0, 8);
-                calc_crc(&crc, tag.data.s.pwdl1, 8);
-                tx[4] = (crc ^ ht2_hitag2_byte(&state));
+                crc = CRC8Hitag1Bits(tx, 32);
+                tx[4] = crc;
             }
+
+            // then xor with keystream
+            tx[0] ^= ht2_hitag2_byte(&state);
+            tx[1] ^= ht2_hitag2_byte(&state);
+            tx[2] ^= ht2_hitag2_byte(&state);
+            tx[3] ^= ht2_hitag2_byte(&state);
+            if (protocol_mode != HITAGS_UID_REQ_STD) {
+                tx[4] ^= ht2_hitag2_byte(&state);
+            }
+
             /*
              * some readers do not allow to authenticate multiple times in a row with the same tag.
              * use this to change the uid between authentications.
-
              if (rotate_uid % 2 == 0) {
                  tag.data.s.uid_le = 0x44332211;
              } else {
@@ -621,11 +305,8 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
 
                 if (protocol_mode != HITAGS_UID_REQ_STD) {
                     //add crc8
+                    crc = CRC8Hitag1Bits(tx, 32);
                     *txlen += 8;
-                    crc = CRC_PRESET;
-                    for (int i = 0; i < 4; i++) {
-                        calc_crc(&crc, tx[i], 8);
-                    }
                     tx[4] = crc;
                 }
 
@@ -643,10 +324,7 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
 
                 if (protocol_mode != HITAGS_UID_REQ_STD) {
                     //add crc8
-                    crc = CRC_PRESET;
-                    for (int i = 0; i < *txlen / 8; i++) {
-                        calc_crc(&crc, tx[i], 8);
-                    }
+                    crc = CRC8Hitag1Bits(tx, *txlen);
                     *txlen += 8;
                     tx[16] = crc;
                 }
@@ -692,25 +370,16 @@ static void hts_handle_reader_command(uint8_t *rx, const size_t rxlen,
 /*
  * Emulates a Hitag S Tag with the given data from the .hts file
  */
-void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
-
-    StopTicks();
-
+void hts_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, bool ledcontrol) {
     int overflow = 0;
-    uint8_t rx[HITAG_FRAME_LEN];
+    uint8_t rx[HITAG_FRAME_LEN] = {0};
     size_t rxlen = 0;
     uint8_t tx[HITAG_FRAME_LEN];
     size_t txlen = 0;
 
-    // Reset the received frame, frame count and timing info
-    memset(rx, 0x00, sizeof(rx));
-
     // free eventually allocated BigBuf memory
     BigBuf_free();
     BigBuf_Clear_ext(false);
-
-    // Enable tracing
-    set_tracing(true);
 
     DbpString("Starting Hitag S simulation");
 
@@ -738,67 +407,16 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
                     );
     }
 
-
-    // Set up simulator mode, frequency divisor which will drive the FPGA
-    // and analog mux selection.
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
+    hitag_setup_fpga(0, threshold, ledcontrol);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125); //125kHz
-    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-
-    // Configure output pin that is connected to the FPGA (for modulating)
-    AT91C_BASE_PIOA->PIO_OER = GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_PER = GPIO_SSC_DOUT;
-
-    // Disable modulation at default, which means release resistance
-    LOW(GPIO_SSC_DOUT);
-
-    hts_init_clock();
-
-    if (ledcontrol) LED_D_ON();
 
     while ((BUTTON_PRESS() == false) && (data_available() == false)) {
         uint32_t start_time = 0;
 
         WDT_HIT();
 
-        // Receive frame, watch for at most T0*EOF periods
-        while (AT91C_BASE_TC1->TC_CV < T0 * HITAG_T_EOF) {
-
-            // Check if rising edge in modulation is detected
-            if (AT91C_BASE_TC1->TC_SR & AT91C_TC_LDRAS) {
-
-                // Retrieve the new timing values
-                int rb = (AT91C_BASE_TC1->TC_RB / T0) + overflow;
-                overflow = 0;
-
-                // Reset timer every frame, we have to capture the last edge for timing
-                AT91C_BASE_TC0->TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG;
-
-                if (ledcontrol) LED_B_ON();
-                // Capture reader cmd start timestamp
-                if (start_time == 0) {
-                    start_time = TIMESTAMP - HITAG_T_LOW;
-                }
-
-                // Capture reader frame
-                if (rb >= HITAG_T_STOP) {
-                    if (rxlen != 0) {
-                        //DbpString("weird0?");
-                    }
-                } else if (rb >= HITAG_T_1_MIN) {
-                    // '1' bit
-                    rx[rxlen / 8] |= 1 << (7 - (rxlen % 8));
-                    rxlen++;
-                } else if (rb >= HITAG_T_0_MIN) {
-                    // '0' bit
-                    rx[rxlen / 8] |= 0 << (7 - (rxlen % 8));
-                    rxlen++;
-                } else {
-                    // Ignore weird value, is to small to mean anything
-                }
-            }
-        }
+        // Receive commands from the reader
+        hitag_tag_receive_frame(rx, sizeof(rx), &rxlen, &start_time, ledcontrol, &overflow);
 
         // Check if frame was captured
         if (rxlen > 0) {
@@ -821,7 +439,7 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
             if (txlen > 0) {
                 // Transmit the tag frame
                 start_time = TIMESTAMP;
-                hitag_send_frame(tx, txlen, ledcontrol);
+                hitag_tag_send_frame(tx, txlen, sof_bits, m, ledcontrol);
                 LogTraceBits(tx, txlen, start_time, TIMESTAMP, false);
             }
 
@@ -842,150 +460,11 @@ void hts_simulate(bool tag_mem_supplied, const uint8_t *data, bool ledcontrol) {
 
     }
 
-    hts_stop_clock();
-    set_tracing(false);
-    lf_finalize(ledcontrol);
+    hitag_cleanup(ledcontrol);
     // release allocated memory from BigBuff.
     BigBuf_free();
 
     DbpString("Sim stopped");
-}
-
-static void hts_receive_frame(uint8_t *rx, size_t sizeofrx, size_t *rxlen, uint32_t *resptime, bool ledcontrol) {
-
-    // Reset values for receiving frames
-    memset(rx, 0x00, sizeofrx);
-    *rxlen = 0;
-
-    int lastbit = 1;
-    bool bSkip = true;
-    uint32_t errorCount = 0;
-    bool bStarted = false;
-    uint16_t next_edge_event = AT91C_TC_LDRBS;
-    int double_speed = (m == AC4K || m == MC8K) ? 2 : 1;
-
-    uint32_t rb_i = 0, h2 = 0, h3 = 0, h4 = 0;
-    uint8_t edges[160] = {0};
-
-    // Receive tag frame, watch for at most T0*HITAG_T_PROG_MAX periods
-    while (AT91C_BASE_TC0->TC_CV < (T0 * HITAG_T_PROG_MAX)) {
-
-        // Check if edge in tag modulation is detected
-        if (AT91C_BASE_TC1->TC_SR & next_edge_event) {
-
-            next_edge_event = next_edge_event ^ (AT91C_TC_LDRAS | AT91C_TC_LDRBS);
-
-            // only use AT91C_TC_LDRBS falling edge for now
-            if (next_edge_event == AT91C_TC_LDRBS) continue;
-
-            // Retrieve the new timing values
-            uint32_t rb = AT91C_BASE_TC1->TC_RB / T0;
-            edges[rb_i++] = rb;
-            // Reset timer every frame, we have to capture the last edge for timing
-            AT91C_BASE_TC0->TC_CCR = AT91C_TC_SWTRG;
-
-            if (ledcontrol) LED_B_ON();
-
-            // Capture tag response timestamp
-            if (*rxlen == 0) *resptime = TIMESTAMP;
-
-            // Capture tag frame (manchester decoding using only falling edges)
-            if (bStarted == false) {
-
-                if (rb >= HITAG_T_WAIT_RESP) {
-                    bStarted = true;
-
-                    // We always receive a 'one' first, which has the falling edge after a half period |-_|
-                    rx[0] = 0x80;
-                    (*rxlen)++;
-                } else {
-                    errorCount++;
-                }
-
-            } else {
-                // Anticollision Coding
-                if (m == AC2K || m == AC4K) {
-                    if (rb >= HITAG_T_TAG_CAPTURE_FOUR_HALF / double_speed) {
-                        // Anticollision Coding example |--__|--__| (00)
-                        lastbit = 0;
-                        rx[(*rxlen) / 8] |= lastbit << (7 - ((*rxlen) % 8));
-                        (*rxlen)++;
-                    } else if (rb >= HITAG_T_TAG_CAPTURE_THREE_HALF / double_speed) {
-                        // Anticollision Coding example |-_-_|--__| (10) or |--__|-_-_| (01)
-                        lastbit = !lastbit;
-                        rx[(*rxlen) / 8] |= lastbit << (7 - ((*rxlen) % 8));
-                        (*rxlen)++;
-
-                        bSkip = !!lastbit;
-                    } else if (rb >= HITAG_T_TAG_CAPTURE_TWO_HALF / double_speed) {
-                        // Anticollision Coding example |-_-_| (1)
-                        if (bSkip == false) {
-                            lastbit = 1;
-                            rx[(*rxlen) / 8] |= lastbit << (7 - ((*rxlen) % 8));
-                            (*rxlen)++;
-                        }
-
-                        bSkip = !bSkip;
-                    } else {
-                        // Ignore weird value, is to small to mean anything
-                        errorCount++;
-                    }
-                } else {
-                    // Manchester coding
-                    if (rb >= HITAG_T_TAG_CAPTURE_FOUR_HALF / double_speed) {
-                        // Manchester coding example |-_|_-|-_| (101)
-                        rx[(*rxlen) / 8] |= 0 << (7 - ((*rxlen) % 8));
-                        (*rxlen)++;
-
-                        rx[(*rxlen) / 8] |= 1 << (7 - ((*rxlen) % 8));
-                        (*rxlen)++;
-                        h4++;
-                    } else if (rb >= HITAG_T_TAG_CAPTURE_THREE_HALF / double_speed) {
-                        // Manchester coding example |_-|...|_-|-_| (0...01)
-                        rx[(*rxlen) / 8] |= 0 << (7 - ((*rxlen) % 8));
-                        (*rxlen)++;
-
-                        // We have to skip this half period at start and add the 'one' the second time
-                        if (bSkip == false) {
-                            rx[(*rxlen) / 8] |= 1 << (7 - ((*rxlen) % 8));
-                            (*rxlen)++;
-                        }
-
-                        lastbit = !lastbit;
-                        bSkip = !bSkip;
-                        h3++;
-                    } else if (rb >= HITAG_T_TAG_CAPTURE_TWO_HALF / double_speed) {
-                        // Manchester coding example |_-|_-| (00) or |-_|-_| (11)
-                        // bit is same as last bit
-                        rx[(*rxlen) / 8] |= lastbit << (7 - ((*rxlen) % 8));
-                        (*rxlen)++;
-                        h2++;
-                    } else {
-                        // Ignore weird value, is to small to mean anything
-                        errorCount++;
-                    }
-                }
-            }
-        }
-
-        // if we saw over 100 weird values break it probably isn't hitag...
-        if (errorCount > 100 || (*rxlen) / 8 >= sizeofrx) {
-            break;
-        }
-
-        // We can break this loop if we received the last bit from a frame
-        // max periods between 2 falling edge
-        // RTF AC64 |--__|--__| (00) 64 * T0
-        // RTF MC32 |_-|-_|_-| (010) 48 * T0
-        if (AT91C_BASE_TC1->TC_CV > (T0 * 80)) {
-            if ((*rxlen)) {
-                break;
-            }
-        }
-    }
-
-    DBG Dbprintf("RX0 %i:%02X.. err:%i resptime:%i h2:%i h3:%i h4:%i edges:", *rxlen, rx[0], errorCount, *resptime, h2, h3, h4);
-    DBG Dbhexdump(rb_i, edges, false);
 }
 
 static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t sizeofrx, size_t *rxlen, int t_wait, bool ledcontrol, bool ac_seq) {
@@ -994,6 +473,9 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
     // Send and store the reader command
     // Disable timer 1 with external trigger to avoid triggers during our own modulation
     AT91C_BASE_TC1->TC_CCR = AT91C_TC_CLKDIS;
+
+    DBG Dbprintf("tx %d bits:", txlen);
+    DBG Dbhexdump((txlen + 7) / 8, tx, false);
 
     // Wait for HITAG_T_WAIT_SC carrier periods after the last tag bit before transmitting,
     // Since the clock counts since the last falling edge, a 'one' means that the
@@ -1005,7 +487,7 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
     start_time = TIMESTAMP;
 
     // Transmit the reader frame
-    hitag_reader_send_frame(tx, txlen, ledcontrol);
+    hitag_reader_send_frame(tx, txlen, ledcontrol, false);
 
     if (enable_page_tearoff && tearoff_hook() == PM3_ETEAROFF) {
         return PM3_ETEAROFF;
@@ -1018,7 +500,11 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
 
     hts_set_frame_modulation(protocol_mode, ac_seq);
 
-    hts_receive_frame(rx, sizeofrx, rxlen, &start_time, ledcontrol);
+    hitag_reader_receive_frame(rx, sizeofrx, rxlen, &start_time, ledcontrol, m, sof_bits);
+    // hts_receive_frame(rx, sizeofrx, rxlen, &start_time, ledcontrol);
+
+    DBG Dbprintf("rx %d bits:", *rxlen);
+    DBG Dbhexdump((*rxlen + 7) / 8, rx, false);
 
     // Check if frame was captured and store it
     if (*rxlen > 0) {
@@ -1033,22 +519,7 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
             Dbprintf("htS: sizeofrx... %zu", sizeofrx);
             DbpString("htS: response_bit:");
             Dbhexdump(*rxlen, response_bit, false);
-            Dbprintf("htS: skipping %d bit SOF", sof_bits);
-
-            if ((rx[0] >> (8 - sof_bits)) != ((1 << sof_bits) - 1)) {
-                DBG DbpString("htS: Warning, not all bits of SOF are 1");
-            }
         }
-
-        // remove first sof_bits bits SOF
-        for (size_t i = 0; i < (*rxlen + 8) / 8; i++) {
-            rx[i] <<= sof_bits;
-            if (i + 1 < (*rxlen + 8) / 8) {
-                rx[i] |= (rx[i + 1] >> (8 - sof_bits));
-            }
-        }
-
-        *rxlen -= sof_bits;
 
         LogTraceBits(rx, *rxlen, start_time, TIMESTAMP, false);
     }
@@ -1057,40 +528,18 @@ static int hts_send_receive(const uint8_t *tx, size_t txlen, uint8_t *rx, size_t
 }
 
 static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t sizeoftx, uint8_t *rx, size_t sizeofrx, int t_wait, bool ledcontrol) {
+    size_t txlen = 0;
+    size_t rxlen = 0;
 
-    StopTicks();
-
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-
-    // Clean up trace and prepare it for storing frames
-    set_tracing(true);
-    clear_trace();
-
-    if (ledcontrol) LED_D_ON();
-
-    hts_init_clock();
-
-    // Set fpga in edge detect with reader field, we can modulate as reader now
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125); //125kHz
-    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-
-    // Configure output and enable pin that is connected to the FPGA (for modulating)
-    AT91C_BASE_PIOA->PIO_OER |= GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_PER |= GPIO_SSC_DOUT;
-
-    // Disable modulation at default, which means enable the field
-    LOW(GPIO_SSC_DOUT);
+    // Setup FPGA and initialize
+    hitag_setup_fpga(FPGA_LF_EDGE_DETECT_READER_FIELD, 127, ledcontrol);
 
     // UID request standard   00110
     // UID request Advanced   1100x
     // UID request FAdvanced  11010
-    size_t txlen = 0;
-    size_t rxlen = 0;
-
     protocol_mode = packet->mode;
     uint8_t cmd = protocol_mode;
-    txlen = concatbits(tx, txlen, &cmd, 0, 5);
+    txlen = concatbits(tx, txlen, &cmd, 0, 5, false);
     hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, t_wait, ledcontrol, true);
 
     if (rxlen != 32) {
@@ -1105,10 +554,10 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
     // select uid
     txlen = 0;
     cmd = HITAGS_SELECT;
-    txlen = concatbits(tx, txlen, &cmd, 0, 5);
-    txlen = concatbits(tx, txlen, rx, 0, 32);
+    txlen = concatbits(tx, txlen, &cmd, 0, 5, false);
+    txlen = concatbits(tx, txlen, rx, 0, 32, false);
     uint8_t crc = CRC8Hitag1Bits(tx, txlen);
-    txlen = concatbits(tx, txlen, &crc, 0, 8);
+    txlen = concatbits(tx, txlen, &crc, 0, 8, false);
 
     hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
@@ -1140,8 +589,8 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
             }
 
             txlen = 0;
-            txlen = concatbits(tx, txlen, rnd, 0, 32);
-            txlen = concatbits(tx, txlen, auth_ks, 0, 32);
+            txlen = concatbits(tx, txlen, rnd, 0, 32, false);
+            txlen = concatbits(tx, txlen, auth_ks, 0, 32, false);
 
             DBG DbpString("Authenticating using key:");
             DBG Dbhexdump(6, packet->key, false);
@@ -1173,13 +622,13 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
             // send write page request
             txlen = 0;
             cmd = HITAGS_WRITE_PAGE;
-            txlen = concatbits(tx, txlen, &cmd, 0, 4);
+            txlen = concatbits(tx, txlen, &cmd, 0, 4, false);
 
             uint8_t addr = 64;
-            txlen = concatbits(tx, txlen, &addr, 0, 8);
+            txlen = concatbits(tx, txlen, &addr, 0, 8, false);
 
             crc = CRC8Hitag1Bits(tx, txlen);
-            txlen = concatbits(tx, txlen, &crc, 0, 8);
+            txlen = concatbits(tx, txlen, &crc, 0, 8, false);
 
             hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
@@ -1189,9 +638,9 @@ static int hts_select_tag(const lf_hitag_data_t *packet, uint8_t *tx, size_t siz
             }
 
             txlen = 0;
-            txlen = concatbits(tx, txlen, packet->pwd, 0, 32);
+            txlen = concatbits(tx, txlen, packet->pwd, 0, 32, false);
             crc = CRC8Hitag1Bits(tx, txlen);
-            txlen = concatbits(tx, txlen, &crc, 0, 8);
+            txlen = concatbits(tx, txlen, &crc, 0, 8, false);
 
             hts_send_receive(tx, txlen, rx, sizeofrx, &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
@@ -1287,11 +736,11 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
         //send read request
         size_t txlen = 0;
         uint8_t cmd = HITAGS_READ_PAGE;
-        txlen = concatbits(tx, txlen, &cmd, 0, 4);
+        txlen = concatbits(tx, txlen, &cmd, 0, 4, false);
         uint8_t addr = page_addr;
-        txlen = concatbits(tx, txlen, &addr, 0, 8);
+        txlen = concatbits(tx, txlen, &addr, 0, 8, false);
         uint8_t crc = CRC8Hitag1Bits(tx, txlen);
-        txlen = concatbits(tx, txlen, &crc, 0, 8);
+        txlen = concatbits(tx, txlen, &crc, 0, 8, false);
 
         hts_send_receive(tx, txlen, rx, ARRAYLEN(rx), &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
@@ -1356,9 +805,7 @@ void hts_read(const lf_hitag_data_t *payload, bool ledcontrol) {
     }
 
 read_end:
-    hts_stop_clock();
-    set_tracing(false);
-    lf_finalize(ledcontrol);
+    hitag_cleanup(ledcontrol);
     reply_reason(CMD_LF_HITAGS_READ, status, reason, (uint8_t *)&card, sizeof(card));
 }
 
@@ -1396,13 +843,13 @@ void hts_write_page(const lf_hitag_data_t *payload, bool ledcontrol) {
     txlen = 0;
 
     uint8_t cmd = HITAGS_WRITE_PAGE;
-    txlen = concatbits(tx, txlen, &cmd, 0, 4);
+    txlen = concatbits(tx, txlen, &cmd, 0, 4, false);
 
     uint8_t addr = payload->page;
-    txlen = concatbits(tx, txlen, &addr, 0, 8);
+    txlen = concatbits(tx, txlen, &addr, 0, 8, false);
 
     uint8_t crc = CRC8Hitag1Bits(tx, txlen);
-    txlen = concatbits(tx, txlen, &crc, 0, 8);
+    txlen = concatbits(tx, txlen, &crc, 0, 8, false);
 
     hts_send_receive(tx, txlen, rx, ARRAYLEN(rx), &rxlen, HITAG_T_WAIT_SC, ledcontrol, false);
 
@@ -1430,9 +877,9 @@ void hts_write_page(const lf_hitag_data_t *payload, bool ledcontrol) {
     // }
 
     txlen = 0;
-    txlen = concatbits(tx, txlen, payload->data, 0, 32);
+    txlen = concatbits(tx, txlen, payload->data, 0, 32, false);
     crc = CRC8Hitag1Bits(tx, txlen);
-    txlen = concatbits(tx, txlen, &crc, 0, 8);
+    txlen = concatbits(tx, txlen, &crc, 0, 8, false);
 
     enable_page_tearoff = g_tearoff_enabled;
 
@@ -1449,41 +896,14 @@ void hts_write_page(const lf_hitag_data_t *payload, bool ledcontrol) {
     }
 
 write_end:
-    hts_stop_clock();
-    set_tracing(false);
-    lf_finalize(ledcontrol);
+    hitag_cleanup(ledcontrol);
     reply_reason(CMD_LF_HITAGS_WRITE, status, reason, NULL, 0);
 }
 
 int hts_read_uid(uint32_t *uid, bool ledcontrol, bool send_answer) {
+    // Setup FPGA and initialize
+    hitag_setup_fpga(FPGA_LF_EDGE_DETECT_READER_FIELD, 127, ledcontrol);
 
-    StopTicks();
-
-    FpgaDownloadAndGo(FPGA_BITSTREAM_LF);
-
-    // Clean up trace and prepare it for storing frames
-    set_tracing(true);
-    clear_trace();
-
-    if (ledcontrol) LED_D_ON();
-
-    hts_init_clock();
-
-    // Set fpga in edge detect with reader field, we can modulate as reader now
-    FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_EDGE_DETECT | FPGA_LF_EDGE_DETECT_READER_FIELD);
-    FpgaSendCommand(FPGA_CMD_SET_DIVISOR, LF_DIVISOR_125); //125kHz
-    SetAdcMuxFor(GPIO_MUXSEL_LOPKD);
-
-    // Configure output and enable pin that is connected to the FPGA (for modulating)
-    AT91C_BASE_PIOA->PIO_OER |= GPIO_SSC_DOUT;
-    AT91C_BASE_PIOA->PIO_PER |= GPIO_SSC_DOUT;
-
-    // Disable modulation at default, which means enable the field
-    LOW(GPIO_SSC_DOUT);
-
-    // UID request standard   00110
-    // UID request Advanced   1100x
-    // UID request FAdvanced  11010
     protocol_mode = HITAGS_UID_REQ_ADV1;
     uint8_t cmd = protocol_mode;
 
@@ -1493,7 +913,7 @@ int hts_read_uid(uint32_t *uid, bool ledcontrol, bool send_answer) {
     size_t txlen = 0;
     uint8_t tx[HITAG_FRAME_LEN] = { 0x00 };
 
-    txlen = concatbits(tx, txlen, &cmd, 0, 5);
+    txlen = concatbits(tx, txlen, &cmd, 0, 5, false);
 
     hts_send_receive(tx, txlen, rx, ARRAYLEN(rx), &rxlen, HITAG_T_WAIT_FIRST, ledcontrol, true);
 
@@ -1511,10 +931,10 @@ int hts_read_uid(uint32_t *uid, bool ledcontrol, bool send_answer) {
         status = PM3_ERFTRANS;
     }
 
-    hts_stop_clock();
-    set_tracing(false);
-    lf_finalize(ledcontrol);
-    reply_ng(CMD_LF_HITAGS_UID, status, (uint8_t *)tag.data.pages, sizeof(tag.data.pages));
+    hitag_cleanup(ledcontrol);
+    if (send_answer) {
+        reply_ng(CMD_LF_HITAGS_UID, status, (uint8_t *)tag.data.pages, sizeof(tag.data.pages));
+    }
     return status;
 }
 
@@ -1576,9 +996,7 @@ void hts_check_challenges(const uint8_t *data, uint32_t datalen, bool ledcontrol
         SpinDelay(2);
     }
 
-    hts_stop_clock();
-    set_tracing(false);
-    lf_finalize(ledcontrol);
+    hitag_cleanup(ledcontrol);
     reply_ng(CMD_LF_HITAGS_TEST_TRACES, PM3_SUCCESS, NULL, 0);
     return;
 }

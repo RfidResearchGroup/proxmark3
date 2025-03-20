@@ -617,6 +617,7 @@ Check column "offline" for their availability.
 |`hf mfu otptear         `|N       |`Tear-off test on OTP bits`
 |`hf mfu cauth           `|N       |`Ultralight-C - Authentication`
 |`hf mfu setpwd          `|N       |`Ultralight-C - Set 3DES key`
+|`hf mfu aesauth         `|N       |`Ultralight-AES - Authentication`
 |`hf mfu dump            `|N       |`Dump MIFARE Ultralight family tag to binary file`
 |`hf mfu incr            `|N       |`Increments Ev1/NTAG counter`
 |`hf mfu info            `|N       |`Tag information`
@@ -1094,6 +1095,21 @@ Check column "offline" for their availability.
 |`lf hitag hts restore   `|N       |`Restore Hitag S memory from dump file`
 |`lf hitag hts wrbl      `|N       |`Write Hitag S page`
 |`lf hitag hts sim       `|N       |`Simulate Hitag S transponder`
+
+
+### lf hitag htu
+
+ { Hitag µ/8265 operations }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`lf hitag htu help      `|Y       |`This help`
+|`lf hitag htu list      `|Y       |`List Hitag µ trace history`
+|`lf hitag htu reader    `|N       |`Act like a Hitag µ reader`
+|`lf hitag htu rdbl      `|N       |`Read Hitag µ block`
+|`lf hitag htu dump      `|N       |`Dump Hitag µ blocks to a file`
+|`lf hitag htu wrbl      `|N       |`Write Hitag µ block`
+|`lf hitag htu sim       `|N       |`Simulate Hitag µ transponder`
 
 
 ### lf idteck

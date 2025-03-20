@@ -1726,24 +1726,48 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
             }
             p_response = NULL;
         } else if (receivedCmd[0] == MIFARE_ULC_WRITE && len == 8 && (tagType == 2 || tagType == 7)) {        // Received a WRITE
+
+            p_response = NULL;
+
             // cmd + block + 4 bytes data + 2 bytes crc
             if (CheckCrc14A(receivedCmd, len)) {
 
                 uint8_t block = receivedCmd[1];
+
+                // sanity checks
                 if (block > pages) {
-                    // send NACK 0x0 == invalid argument
+                    // send NACK 0x0, invalid argument
                     EmSend4bit(CARD_NACK_IV);
-                } else {
-                    // first blocks of emu are header
-                    emlSetMem_xt(&receivedCmd[2], block + (MFU_DUMP_PREFIX_LENGTH / 4), 1, 4);
-                    // send ACK
-                    EmSend4bit(CARD_ACK);
+                    goto jump;
                 }
+
+                // OTP sanity check
+                if (block == 0x03) {
+
+                    uint8_t orig[4] = {0};
+                    emlGet(orig, 12 + MFU_DUMP_PREFIX_LENGTH, 4);
+
+                    bool risky = false;
+                    for (int i = 0; i < 4; i++) {
+                        risky |= orig[i] & ~receivedCmd[2 + i];
+                    }
+
+                    if (risky) {
+                        EmSend4bit(CARD_NACK_IV);
+                        goto jump;
+                    }
+                }
+
+                // first blocks of emu are header
+                emlSetMem_xt(&receivedCmd[2], block + (MFU_DUMP_PREFIX_LENGTH / 4), 1, 4);
+                // send ACK
+                EmSend4bit(CARD_ACK);
+
             } else {
                 // send NACK 0x1 == crc/parity error
                 EmSend4bit(CARD_NACK_PA);
             }
-            p_response = NULL;
+            goto jump;
         } else if (receivedCmd[0] == MIFARE_ULC_COMP_WRITE && len == 4 && (tagType == 2 || tagType == 7)) {
             // cmd + block + 2 bytes crc
             if (CheckCrc14A(receivedCmd, len)) {
@@ -1990,6 +2014,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
 
         // Count number of other messages after a halt
 //        if (order != ORDER_WUPA && lastorder == ORDER_HALTED) { happened2++; }
+jump:
 
         cmdsRecvd++;
 
@@ -3101,49 +3126,50 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
     size_t len = ReaderReceive(data, data_len, parity_array);
     uint8_t *data_bytes = (uint8_t *) data;
 
-    if (!len) {
+    if (len == 0) {
         BigBuf_free();
         return 0; // DATA LINK ERROR
-    } else {
-        // S-Block WTX
-        while (len && ((data_bytes[0] & 0xF2) == 0xF2)) {
-            uint32_t save_iso14a_timeout = iso14a_get_timeout();
-            // temporarily increase timeout
-            iso14a_set_timeout(MAX((data_bytes[1] & 0x3f) * save_iso14a_timeout, MAX_ISO14A_TIMEOUT));
-            // Transmit WTX back
-            // byte1 - WTXM [1..59]. command FWT=FWT*WTXM
-            data_bytes[1] = data_bytes[1] & 0x3f; // 2 high bits mandatory set to 0b
-            // now need to fix CRC.
-            AddCrc14A(data_bytes, len - 2);
-            // transmit S-Block
-            ReaderTransmit(data_bytes, len, NULL);
-            // retrieve the result again (with increased timeout)
-            len = ReaderReceive(data, data_len, parity_array);
-            data_bytes = data;
-            // restore timeout
-            iso14a_set_timeout(save_iso14a_timeout);
-        }
+    }
 
-        // if we received an I- or R(ACK)-Block with a block number equal to the
-        // current block number, toggle the current block number
-        if (len >= 3 // PCB+CRC = 3 bytes
-                && ((data_bytes[0] & 0xC0) == 0 // I-Block
-                    || (data_bytes[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
-                && (data_bytes[0] & 0x01) == iso14_pcb_blocknum) { // equal block numbers
-            iso14_pcb_blocknum ^= 1;
-        }
 
-        // if we received I-block with chaining we need to send ACK and receive another block of data
-        if (res) {
-            *res = data_bytes[0];
-        }
+    // S-Block WTX
+    while (len && ((data_bytes[0] & 0xF2) == 0xF2)) {
+        uint32_t save_iso14a_timeout = iso14a_get_timeout();
+        // temporarily increase timeout
+        iso14a_set_timeout(MAX((data_bytes[1] & 0x3f) * save_iso14a_timeout, MAX_ISO14A_TIMEOUT));
+        // Transmit WTX back
+        // byte1 - WTXM [1..59]. command FWT=FWT*WTXM
+        data_bytes[1] = data_bytes[1] & 0x3f; // 2 high bits mandatory set to 0b
+        // now need to fix CRC.
+        AddCrc14A(data_bytes, len - 2);
+        // transmit S-Block
+        ReaderTransmit(data_bytes, len, NULL);
+        // retrieve the result again (with increased timeout)
+        data_bytes[0] = 0x00;
+        len = ReaderReceive(data, data_len, parity_array);
+        data_bytes = data;
+        // restore timeout
+        iso14a_set_timeout(save_iso14a_timeout);
+    }
 
-        // crc check
-        if (len >= 3 && !CheckCrc14A(data_bytes, len)) {
-            BigBuf_free();
-            return -1;
-        }
+    // if we received an I- or R(ACK)-Block with a block number equal to the
+    // current block number, toggle the current block number
+    if (len >= 3 // PCB+CRC = 3 bytes
+            && ((data_bytes[0] & 0xC0) == 0 // I-Block
+                || (data_bytes[0] & 0xD0) == 0x80) // R-Block with ACK bit set to 0
+            && (data_bytes[0] & 0x01) == iso14_pcb_blocknum) { // equal block numbers
+        iso14_pcb_blocknum ^= 1;
+    }
 
+    // if we received I-block with chaining we need to send ACK and receive another block of data
+    if (res) {
+        *res = data_bytes[0];
+    }
+
+    // crc check
+    if (len >= 3 && !CheckCrc14A(data_bytes, len)) {
+        BigBuf_free();
+        return -1;
     }
 
     if (len) {
@@ -3226,7 +3252,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
     }
 
     if ((param & ISO14A_APDU) == ISO14A_APDU) {
-        uint8_t res;
+        uint8_t res = 0;
         arg0 = iso14_apdu(
                    cmd,
                    len,

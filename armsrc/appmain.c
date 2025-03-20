@@ -41,6 +41,7 @@
 #include "hitag2.h"
 #include "hitag2_crack.h"
 #include "hitagS.h"
+#include "hitagu.h"
 #include "em4x50.h"
 #include "em4x70.h"
 #include "iclass.h"
@@ -1200,7 +1201,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_HITAGS_SIMULATE: { // Simulate Hitag s tag, args = memory content
-            hts_simulate((bool)packet->oldarg[0], packet->data.asBytes, true);
+            hts_simulate((bool)packet->oldarg[0], packet->oldarg[1], packet->data.asBytes, true);
             break;
         }
         case CMD_LF_HITAGS_TEST_TRACES: { // Tests every challenge within the given file
@@ -1218,7 +1219,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_LF_HITAGS_UID: {
-            hts_read_uid(NULL, false, true);
+            hts_read_uid(NULL, true, true);
             break;
         }
         case CMD_LF_HITAG2_WRITE: {
@@ -1230,6 +1231,25 @@ static void PacketReceived(PacketCommandNG *packet) {
             lf_hitag_t *payload = (lf_hitag_t *) packet->data.asBytes;
             uint8_t *mem = BigBuf_get_EM_addr();
             memcpy(mem, payload->data, payload->len);
+            break;
+        }
+
+        case CMD_LF_HITAGU_READ: {
+            lf_hitag_data_t *payload = (lf_hitag_data_t *)packet->data.asBytes;
+            htu_read(payload, true);
+            break;
+        }
+        case CMD_LF_HITAGU_WRITE: {
+            lf_hitag_data_t *payload = (lf_hitag_data_t *)packet->data.asBytes;
+            htu_write_page(payload, true);
+            break;
+        }
+        case CMD_LF_HITAGU_SIMULATE: {
+            htu_simulate((bool)packet->oldarg[0], packet->oldarg[1], packet->data.asBytes, true);
+            break;
+        }
+        case CMD_LF_HITAGU_UID: {
+            htu_read_uid(NULL, true, true);
             break;
         }
 #endif

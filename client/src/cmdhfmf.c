@@ -2923,6 +2923,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
 noValidKeyFound:
             PrintAndLogEx(FAILED, "No usable key was found!");
+            PrintAndLogEx(HINT, "try `" _YELLOW_("hf mf autopwn -f mfc_default_keys")"`  i.e. the Randy special");
             free(keyBlock);
             free(e_sector);
             free(fptr);
@@ -4712,7 +4713,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
         SendCommandNG(CMD_SPIFFS_ELOAD, (uint8_t *)filename, fnlen);
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_SPIFFS_ELOAD, &resp, 2000) == false) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
 
@@ -6278,7 +6279,8 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         if (sector > -1) {
 
             // decode it
-            PrintAndLogEx(INFO, "");
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "------------------------- " _CYAN_("Wiegand") " ---------------------------");
             PrintAndLogEx(INFO, _CYAN_("HID PACS detected"));
 
             uint8_t pacs_sector[MFBLOCK_SIZE * 3] = {0};
@@ -6301,7 +6303,6 @@ static int CmdHF14AMfMAD(const char *Cmd) {
 
                 PrintAndLogEx(SUCCESS, "Binary... " _GREEN_("%s"), pbin);
 
-                PrintAndLogEx(INFO, "Wiegand decode");
                 decode_wiegand(top, mid, bot, 0);
             }
         }

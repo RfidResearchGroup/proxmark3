@@ -1,5 +1,4 @@
 #-----------------------------------------------------------------------------
-# Copyright (C) Jonathan Westhues, Mar 2006
 # Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -381,6 +380,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdlfhid.c
         ${PM3_ROOT}/client/src/cmdlfhitag.c
         ${PM3_ROOT}/client/src/cmdlfhitaghts.c
+        ${PM3_ROOT}/client/src/cmdlfhitagu.c
         ${PM3_ROOT}/client/src/cmdlfidteck.c
         ${PM3_ROOT}/client/src/cmdlfindala.c
         ${PM3_ROOT}/client/src/cmdlfio.c
@@ -414,6 +414,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/fileutils.c
         ${PM3_ROOT}/client/src/flash.c
         ${PM3_ROOT}/client/src/graph.c
+        ${PM3_ROOT}/client/src/hidsio.c
         ${PM3_ROOT}/client/src/iso4217.c
         ${PM3_ROOT}/client/src/jansson_path.c
         ${PM3_ROOT}/client/src/lua_bitlib.c

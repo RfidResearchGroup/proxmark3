@@ -315,7 +315,7 @@ int ul_read_uid(uint8_t *uid) {
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
     iso14a_card_select_t card;
@@ -3892,6 +3892,69 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+//-------------------------------------------------------------------------------
+// Ultralight AES Methods
+//-------------------------------------------------------------------------------
+
+// Ultralight AES Authentication
+//
+static int CmdHF14AMfUAESAuth(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu aesauth",
+                  "Tests AES key on Mifare Ultralight AES tags.\n"
+                  "If no key is specified, null key will be tried.\n"
+                  "Key index 0: DataProtKey (default)\n"
+                  "Key index 1: UIDRetrKey\n"
+                  "Key index 2: OriginalityKey\n",
+                  "hf mfu aesauth\n"
+                  "hf mfu aesauth --key <32 bytes> --index <0..2>"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "key", "<hex>",   "AES key (32 hex bytes)"),
+        arg_int0("i", "index", "<0..2>", "Key index, default: 0"),
+        arg_lit0("k", NULL, "Keep field on (only if a key is provided)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int ak_len = 0;
+    uint8_t authentication_key[32] = {0};
+    uint8_t *authKeyPtr = authentication_key;
+    CLIGetHexWithReturn(ctx, 1, authentication_key, &ak_len);
+    int key_index = arg_get_int_def(ctx, 2, 0);
+    bool keep_field_on = arg_get_lit(ctx, 3);
+
+    CLIParserFree(ctx);
+
+    if (ak_len == 0) {
+        // default to null key
+        ak_len = 32;
+    }
+    if (ak_len != 32) {
+        PrintAndLogEx(WARNING, "Invalid key length");
+        return PM3_EINVARG;
+    }
+
+    if (key_index < 0 || key_index > 2) {
+        PrintAndLogEx(WARNING, "Invalid key index");
+        return PM3_EINVARG;
+    }
+
+    int result = ulaes_requestAuthentication(authKeyPtr, key_index, !keep_field_on);
+
+    const char *key_type[] = { "DataProtKey", "UIDRetrKey", "OriginalityKey" };
+    if (result == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Authentication with " _YELLOW_("%s") " " _GREEN_("%s") " ( " _GREEN_("ok")" )",
+                      key_type[key_index], sprint_hex_inrow(authKeyPtr, ak_len));
+    } else {
+        PrintAndLogEx(WARNING, "Authentication with " _YELLOW_("%s") " ( " _RED_("fail") " )",
+                      key_type[key_index]);
+    }
+    return result;
+}
+
 /**
 A test function to validate that the polarssl-function works the same
 was as the openssl-implementation.
@@ -4168,7 +4231,7 @@ static int CmdHF14AMfUKeyGen(const char *Cmd) {
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_RATS, 0, 0, NULL, 0);
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
 
@@ -5915,6 +5978,7 @@ static command_t CommandTable[] = {
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("operations") " -----------------------"},
     {"cauth",    CmdHF14AMfUCAuth,          IfPm3Iso14443a,  "Ultralight-C - Authentication"},
     {"setpwd",   CmdHF14AMfUCSetPwd,        IfPm3Iso14443a,  "Ultralight-C - Set 3DES key"},
+    {"aesauth",  CmdHF14AMfUAESAuth,        IfPm3Iso14443a,  "Ultralight-AES - Authentication"},
     {"dump",     CmdHF14AMfUDump,           IfPm3Iso14443a,  "Dump MIFARE Ultralight family tag to binary file"},
     {"incr",     CmdHF14AMfUIncr,           IfPm3Iso14443a,  "Increments Ev1/NTAG counter"},
     {"info",     CmdHF14AMfUInfo,           IfPm3Iso14443a,  "Tag information"},

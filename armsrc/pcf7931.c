@@ -43,7 +43,7 @@
 #define _64T0 (CLOCK)
 
 // calculating the two possible pmc lengths, based on the clock. -4 at the end is to make sure not to increment too far
-#define PMC_16T0_LEN ((128 + 127 + 16 + 32 + 33 + 16) * CLOCK/64); 
+#define PMC_16T0_LEN ((128 + 127 + 16 + 32 + 33 + 16) * CLOCK/64);
 #define PMC_32T0_LEN ((128 + 127 + 16 + 32 + 33 ) * CLOCK/64);
 
 // theshold for recognition of positive/negative slope
@@ -54,13 +54,13 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
     uint8_t blocks[8][16];
     uint8_t *dest = BigBuf_get_addr();
     uint16_t g_GraphTraceLen = BigBuf_max_traceLen();
-    // limit g_GraphTraceLen to a little more than 2 data frames. 
+    // limit g_GraphTraceLen to a little more than 2 data frames.
     // To make sure a complete dataframe is in the dataset.
     // 1 Frame is 16 Byte -> 128byte. at a T0 of 64 -> 8129 Samples per frame.
     // + PMC -> 384T0  --> 8576 samples required for one block
     // to make sure that one complete block is definitely being sampled, we need 2 times that
     // which is ~17.xxx samples. round up. and clamp to this value.
-  
+
     // TODO: Doublecheck why this is being limited? - seems not to be needed.
     // g_GraphTraceLen = (g_GraphTraceLen > 18000) ? 18000 : g_GraphTraceLen;
 
@@ -87,15 +87,15 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
     samplePosLastEdge = 0;
     block_done = 0;
     bitPos = 0;
-    lastClockDuration=0;
-    
-    for (sample = 1 ; sample < g_GraphTraceLen-4; sample++) {
-         // condition is searching for the next edge, in the expected diretion.
-        //todo: without flouz
-        dest[sample] = (uint8_t)(dest[sample-1] * IIR_CONST1 +  dest[sample] * IIR_CONST2); // apply IIR filter
+    lastClockDuration = 0;
 
-        if ( ((dest[sample] + THRESHOLD) < dest[sample-1] && expectedNextEdge == FALLING ) || 
-             ((dest[sample] - THRESHOLD) > dest[sample-1] && expectedNextEdge == RISING )) {
+    for (sample = 1 ; sample < g_GraphTraceLen - 4; sample++) {
+        // condition is searching for the next edge, in the expected diretion.
+        //todo: without flouz
+        dest[sample] = (uint8_t)(dest[sample - 1] * IIR_CONST1 +  dest[sample] * IIR_CONST2); // apply IIR filter
+
+        if (((dest[sample] + THRESHOLD) < dest[sample - 1] && expectedNextEdge == FALLING) ||
+                ((dest[sample] - THRESHOLD) > dest[sample - 1] && expectedNextEdge == RISING)) {
             //okay, next falling/rising edge found
 
             expectedNextEdge = (expectedNextEdge == FALLING) ? RISING : FALLING; //toggle the next expected edge
@@ -104,14 +104,14 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
             lastClockDuration = samplePosCurrentEdge - samplePosLastEdge;
             samplePosLastEdge = sample;
 
-          //  Dbprintf("%d, %d, edge found, len: %d, nextEdge: %d", sample, dest[sample], lastClockDuration*DECIMATION, expectedNextEdge);
-            
+            //  Dbprintf("%d, %d, edge found, len: %d, nextEdge: %d", sample, dest[sample], lastClockDuration*DECIMATION, expectedNextEdge);
+
             // Switch depending on lastClockDuration length:
-            // 16T0 
+            // 16T0
             if (ABS(lastClockDuration - _16T0) < TOLERANCE) {
 
                 // if the clock before also was 16T0, it is a PMC!
-                if (ABS(beforeLastClockDuration - _16T0) < TOLERANCE) { 
+                if (ABS(beforeLastClockDuration - _16T0) < TOLERANCE) {
                     // It's a PMC
                     Dbprintf(_GREEN_("PMC 16T0 FOUND:") " bitPos: %d, sample: %d", bitPos, sample);
                     sample += PMC_16T0_LEN;  // move to the sample after PMC
@@ -120,44 +120,44 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
                     samplePosLastEdge = sample;
                     block_done = 1;
                 }
-            
-            // 32TO
+
+                // 32TO
             } else if (ABS(lastClockDuration - _32T0) < TOLERANCE) {
                 // if the clock before also was 16T0, it is a PMC!
                 if (ABS(beforeLastClockDuration - _16T0) < TOLERANCE) {
                     // It's a PMC !
                     Dbprintf(_GREEN_("PMC 32T0 FOUND:") " bitPos: %d, sample: %d", bitPos, sample);
-                    
+
                     sample += PMC_32T0_LEN;    // move to the sample after PMC
 
                     expectedNextEdge = FALLING;
                     samplePosLastEdge = sample;
                     block_done = 1;
 
-                // if no pmc, then its a normal bit. 
-                // Check if its the second time, the edge changed if yes, then the bit is 0
+                    // if no pmc, then its a normal bit.
+                    // Check if its the second time, the edge changed if yes, then the bit is 0
                 } else if (half_switch == 1) {
                     bits[bitPos] = 0;
                     // reset the edge counter to 0
                     half_switch = 0;
                     bitPos++;
 
-                // if it is the first time the edge changed. No bit value will be set here, bit if the 
-                // edge changes again, it will be. see case above.
+                    // if it is the first time the edge changed. No bit value will be set here, bit if the
+                    // edge changes again, it will be. see case above.
                 } else
                     half_switch++;
 
-            // 64T0
+                // 64T0
             } else if (ABS(lastClockDuration - _64T0) < TOLERANCE) {
                 // this means, bit here is 1
                 bits[bitPos] = 1;
                 bitPos++;
-           
-           // Error
+
+                // Error
             } else {
-                // some Error. maybe check tolerances. 
+                // some Error. maybe check tolerances.
                 // likeley to happen in the first block.
-               
+
                 // In an Ideal world, this can be enabled. However, if only bad antenna field, this print will flood the output
                 // and one might miss some "good" frames.
                 //Dbprintf(_RED_("ERROR in demodulation") " Length last clock: %d - check threshold/tolerance/signal. Toss block", lastClockDuration*DECIMATION);
@@ -168,7 +168,7 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
 
             if (block_done == 1) {
                 // Dbprintf(_YELLOW_("Block Done") " bitPos: %d, sample: %d", bitPos, sample);
-                
+
                 // check if it is a complete block. If bitpos <128, it means that we did not receive
                 // a complete block. E.g. at the first start of a transmission.
                 // only save if a complete block is being received.
@@ -187,14 +187,14 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
                     }
                     num_blocks++;
                 }
-                // now start over for the next block / first complete block. 
+                // now start over for the next block / first complete block.
                 bitPos = 0;
                 block_done = 0;
                 half_switch = 0;
             }
 
-        }else {
-         // Dbprintf("%d, %d", sample, dest[sample]);
+        } else {
+            // Dbprintf("%d, %d", sample, dest[sample]);
         }
 
         // one block only holds 16byte (=128 bit) and then comes the PMC. so if more bit are found than 129, there must be an issue and PMC has not been identfied...
@@ -204,8 +204,8 @@ size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol) {
             bitPos = 0;
         }
 
-    } 
-    
+    }
+
     memcpy(outBlocks, blocks, 16 * num_blocks);
     return num_blocks;
 }
@@ -251,10 +251,10 @@ bool IsBlock1PCF7931(const uint8_t *block) {
 }
 
 void ReadPCF7931(bool ledcontrol) {
-    
+
     uint8_t maxBlocks = 8;   // readable blocks
     int found_blocks = 0; // successfully read blocks
-    
+
     // TODO: Why 17 byte len? 16 should be good.
     uint8_t memory_blocks[maxBlocks][17]; // PCF content
     uint8_t single_blocks[maxBlocks][17]; // PFC blocks with unknown position
@@ -263,7 +263,7 @@ void ReadPCF7931(bool ledcontrol) {
     int single_blocks_cnt = 0;
 
     size_t n; // transmitted blocks
-    
+
     //uint8_t found_0_1 = 0; // flag: blocks 0 and 1 were found
     int errors = 0; // error counter
     int tries = 0; // tries counter
@@ -300,7 +300,7 @@ void ReadPCF7931(bool ledcontrol) {
             goto end;
         }
 
-        // This part was not working properly. 
+        // This part was not working properly.
         // So currently the blocks are not being sorted, but at least printed.
 
         // // our logic breaks if we don't get at least two blocks
@@ -403,28 +403,28 @@ void ReadPCF7931(bool ledcontrol) {
 
 
 end:
-/*
-    Dbprintf("-----------------------------------------");
-    Dbprintf("Memory content:");
-    Dbprintf("-----------------------------------------");
-    for (i = 0; i < maxBlocks; ++i) {
-        if (memory_blocks[i][ALLOC])
-            print_result("Block", memory_blocks[i], 16);
-        else
-            Dbprintf("<missing block %d>", i);
-    }
-    Dbprintf("-----------------------------------------");
+    /*
+        Dbprintf("-----------------------------------------");
+        Dbprintf("Memory content:");
+        Dbprintf("-----------------------------------------");
+        for (i = 0; i < maxBlocks; ++i) {
+            if (memory_blocks[i][ALLOC])
+                print_result("Block", memory_blocks[i], 16);
+            else
+                Dbprintf("<missing block %d>", i);
+        }
+        Dbprintf("-----------------------------------------");
 
-    if (found_blocks < maxBlocks) {
-        Dbprintf("-----------------------------------------");
-        Dbprintf("Blocks with unknown position:");
-        Dbprintf("-----------------------------------------");
-        for (i = 0; i < single_blocks_cnt; ++i)
-            print_result("Block", single_blocks[i], 16);
+        if (found_blocks < maxBlocks) {
+            Dbprintf("-----------------------------------------");
+            Dbprintf("Blocks with unknown position:");
+            Dbprintf("-----------------------------------------");
+            for (i = 0; i < single_blocks_cnt; ++i)
+                print_result("Block", single_blocks[i], 16);
 
-        Dbprintf("-----------------------------------------");
-    }
-*/
+            Dbprintf("-----------------------------------------");
+        }
+    */
 
     reply_mix(CMD_ACK, 0, 0, 0, 0, 0);
 }
@@ -434,7 +434,7 @@ static void RealWritePCF7931(
     uint16_t init_delay,
     int8_t offsetPulseWidth, int8_t offsetPulsePosition,
     uint8_t address, uint8_t byte, uint8_t data,
-    bool ledcontrol){
+    bool ledcontrol) {
 
     uint32_t tab[1024] = {0}; // data times frame
     uint32_t u = 0;
@@ -512,10 +512,10 @@ static void RealWritePCF7931(
  * @param data : data to write
  */
 void WritePCF7931(
-    uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, uint8_t pass5, uint8_t pass6, uint8_t pass7, 
-    uint16_t init_delay, 
-    int8_t offsetPulseWidth, int8_t offsetPulsePosition, 
-    uint8_t address, uint8_t byte, uint8_t data, 
+    uint8_t pass1, uint8_t pass2, uint8_t pass3, uint8_t pass4, uint8_t pass5, uint8_t pass6, uint8_t pass7,
+    uint16_t init_delay,
+    int8_t offsetPulseWidth, int8_t offsetPulsePosition,
+    uint8_t address, uint8_t byte, uint8_t data,
     bool ledcontrol) {
 
     if (g_dbglevel >= DBG_INFO) {
@@ -550,7 +550,7 @@ void SendCmdPCF7931(uint32_t *tab, bool ledcontrol) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_LF_PASSTHRU);
 
     if (ledcontrol) LED_A_ON();
-    
+
     // rescale the values to match the time of the timer below.
     for (u = 0; u < 500; ++u) {
         tab[u] = (tab[u] * 3) / 2;
@@ -651,7 +651,7 @@ bool AddBitPCF7931(bool b, uint32_t *tab, int8_t offsetPulseWidth, int8_t offset
 
         tab[u + 1] =  6 * T0_PCF + tab[u] + offsetPulseWidth;
         tab[u + 2] = 88 * T0_PCF + tab[u + 1] - offsetPulseWidth - offsetPulsePosition;
-        
+
     } else { //add a bit 0
         if (u == 0)
             tab[u] = 98 * T0_PCF + offsetPulsePosition;
@@ -660,7 +660,7 @@ bool AddBitPCF7931(bool b, uint32_t *tab, int8_t offsetPulseWidth, int8_t offset
 
         tab[u + 1] =  6 * T0_PCF + tab[u] + offsetPulseWidth;
         tab[u + 2] = 24 * T0_PCF + tab[u + 1] - offsetPulseWidth - offsetPulsePosition;
-        
+
     }
     return true;
 }

@@ -132,7 +132,7 @@ static int lto_send_cmd_raw(uint8_t *cmd, uint8_t len, uint8_t *response, uint16
     PacketResponseNG resp;
 
     if (!WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        if (verbose) PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 

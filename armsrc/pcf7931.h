@@ -19,9 +19,9 @@
 #include "common.h"
 
 
-typedef enum{
+typedef enum {
     FALLING,
-    RISING 
+    RISING
 } EdgeType;
 
 size_t DemodPCF7931(uint8_t **outBlocks, bool ledcontrol);

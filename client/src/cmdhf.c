@@ -83,7 +83,7 @@ int CmdHFSearch(const char *Cmd) {
 
     int res = PM3_ESOFT;
 
-    uint8_t success[20] = {0};
+    uint8_t success[COUNT_OF_PROTOCOLS] = {0};
 
     PROMPT_CLEARLINE;
     PrintAndLogEx(INPLACE, " Searching for ThinFilm tag...");
@@ -526,7 +526,7 @@ int handle_hf_plot(bool show_plot) {
 
     PacketResponseNG resp;
     if (GetFromDevice(FPGA_MEM, buf, FPGA_TRACE_SIZE, 0, NULL, 0, &resp, 4000, true) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 

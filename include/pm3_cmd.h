@@ -602,6 +602,12 @@ typedef struct {
 #define CMD_LF_HITAGS_WRITE                                               0x0375
 #define CMD_LF_HITAGS_UID                                                 0x037A
 
+// For Hitag µ
+#define CMD_LF_HITAGU_READ                                                0x037B
+#define CMD_LF_HITAGU_WRITE                                               0x037C
+#define CMD_LF_HITAGU_SIMULATE                                            0x037D
+#define CMD_LF_HITAGU_UID                                                 0x037E
+
 #define CMD_LF_HITAG_ELOAD                                                0x0376
 
 #define CMD_HF_ISO14443A_ANTIFUZZ                                         0x0380

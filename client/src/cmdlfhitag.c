@@ -16,6 +16,8 @@
 // Low frequency Hitag support
 //-----------------------------------------------------------------------------
 #include "cmdlfhitag.h"
+#include "cmdlfhitaghts.h"
+#include "cmdlfhitagu.h"
 #include <ctype.h>
 #include "cmdparser.h"  // command_t
 #include "comms.h"
@@ -31,7 +33,6 @@
 #include "pm3_cmd.h"    // return codes
 #include "hitag2/hitag2_crypto.h"
 #include "util_posix.h"             // msclock
-#include "cmdlfhitaghts.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -79,7 +80,7 @@ static size_t nbytes(size_t nbits) {
 */
 
 static int CmdLFHitagList(const char *Cmd) {
-    return CmdTraceListAlias(Cmd, "lf hitag", "hitag2");
+    return CmdTraceListAlias(Cmd, "lf hitag", "ht2");
     /*
     uint8_t *got = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
     if (!got) {
@@ -519,7 +520,7 @@ static int ht2_check_dictionary(uint32_t key_count, uint8_t *keys,  uint8_t keyl
         SendCommandNG(CMD_LF_HITAG_READER, (uint8_t *)&packet, sizeof(packet));
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_LF_HITAG_READER, &resp, 4000) == false) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
             return PM3_ETIMEOUT;
         }
@@ -793,9 +794,6 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
     free(binstr);
 }
 
-void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response) {
-}
-
 static const char *identify_transponder_hitag2(uint32_t uid) {
 
     switch (uid) {
@@ -827,12 +825,12 @@ static bool ht2_get_uid(uint32_t *uid) {
     SendCommandNG(CMD_LF_HITAG_READER, (uint8_t *) &packet, sizeof(packet));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_LF_HITAG_READER, &resp, 1500) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return false;
     }
 
     if (resp.status != PM3_SUCCESS) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - failed getting UID");
+        PrintAndLogEx(DEBUG, "DEBUG: Error - failed getting Hitag 2 UID");
         return false;
     }
 
@@ -1054,7 +1052,7 @@ static int CmdLFHitagRd(const char *Cmd) {
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(pm3cmd, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
         return PM3_ETIMEOUT;
     }
@@ -1143,7 +1141,7 @@ static int CmdLFHitag2CheckChallenges(const char *Cmd) {
     SendCommandNG(CMD_LF_HITAG_READER, (uint8_t *)&packet, sizeof(packet));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_LF_HITAG_READER, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
     if (resp.status != PM3_SUCCESS) {
@@ -1305,7 +1303,7 @@ static int CmdLFHitagWriter(const char *Cmd) {
         SendCommandNG(CMD_LF_HITAG2_WRITE, (uint8_t *)&packet, sizeof(packet));
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_LF_HITAG2_WRITE, &resp, 4000) == false) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
 
@@ -1528,7 +1526,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
 
         if (attempt == 0) {
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ESOFT;
         }
 
@@ -1546,7 +1544,7 @@ static int CmdLFHitag2Dump(const char *Cmd) {
     SendCommandNG(CMD_LF_HITAG_READER, (uint8_t *) &packet, sizeof(packet));
 
     if (WaitForResponseTimeout(CMD_LF_HITAG_READER, &resp, 5000) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
     if (resp.status != PM3_SUCCESS) {
@@ -2256,7 +2254,7 @@ static int CmdLFHitag2Crack2(const char *Cmd) {
 
     if (attempt == 0) {
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ESOFT;
     }
 
@@ -2461,6 +2459,7 @@ static command_t CommandTable[] = {
     {"help",        CmdHelp,                    AlwaysAvailable, "This help"},
     {"list",        CmdLFHitagList,             AlwaysAvailable, "List Hitag trace history"},
     {"hts",         CmdLFHitagS,                AlwaysAvailable, "{ Hitag S/8211 operations }"},
+    {"htu",         CmdLFHitagU,                AlwaysAvailable, "{ Hitag µ/8265 operations }"},
     {"-----------", CmdHelp,                    IfPm3Hitag,      "------------------------ " _CYAN_("General") " ------------------------"},
     {"info",        CmdLFHitagInfo,             IfPm3Hitag,      "Hitag 2 tag information"},
     {"reader",      CmdLFHitagReader,           IfPm3Hitag,      "Act like a Hitag 2 reader"},

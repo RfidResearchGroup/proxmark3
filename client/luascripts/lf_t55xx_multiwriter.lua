@@ -11,6 +11,7 @@ p = pm3.pm3()
 command('clear')
 author = '  Author: jareckib - 12.03.2025'
 version = '  version v1.05'
+
 desc = [[
   This simple script stores 1, 2 or 3 different EM4102 on a single T5577.
   There is an option to enter the number engraved on the fob in decimal form.
@@ -60,8 +61,6 @@ local function timer(n)
         n = n-1
     end
 end
-
-
 
 local function reset_log_file()
     local file = io.open(logfile, "w+")

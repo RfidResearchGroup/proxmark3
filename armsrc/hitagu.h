@@ -13,19 +13,18 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// Low frequency Hitag S support
+// Hitag µ functions
 //-----------------------------------------------------------------------------
 
-#ifndef CMDLFHITAGS_H__
-#define CMDLFHITAGS_H__
+#ifndef _HITAGU_H_
+#define _HITAGU_H_
 
 #include "common.h"
 #include "hitag.h"
 
-void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t nbits, bool is_response);
+void htu_simulate(bool tag_mem_supplied, int8_t threshold, const uint8_t *data, bool ledcontrol);
+void htu_read(const lf_hitag_data_t *payload, bool ledcontrol);
+void htu_write_page(const lf_hitag_data_t *payload, bool ledcontrol);
+int htu_read_uid(uint64_t *uid, bool ledcontrol, bool send_answer);
 
-int CmdLFHitagS(const char *Cmd);
-
-int read_hts_uid(void);
-
-#endif //CMDLFHITAGS_H__
+#endif

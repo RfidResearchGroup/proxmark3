@@ -264,7 +264,7 @@ static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
  */
 static bool waitCmdFelica(bool iSelect, PacketResponseNG *resp, bool verbose) {
     if (WaitForResponseTimeout(CMD_ACK, resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return false;
     }
 
@@ -2068,7 +2068,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
             return PM3_EOPABORTED;
         }
         if (timeout > 10) {
-            PrintAndLogEx(WARNING, "\ntimeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "\ntimeout while waiting for reply");
             DropField();
             return PM3_ETIMEOUT;
         }

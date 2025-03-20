@@ -498,7 +498,7 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
@@ -806,7 +806,7 @@ static int CmdHF14ACUIDs(const char *Cmd) {
         PacketResponseNG resp;
 
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
 
@@ -1206,9 +1206,9 @@ static int CmdExchangeAPDU(bool chainingin, const uint8_t *datain, int datainlen
         }
     }
 
-    uint16_t cmdc = 0;
+    uint16_t cmdc = (ISO14A_APDU | ISO14A_NO_DISCONNECT);
     if (chainingin) {
-        cmdc = ISO14A_SEND_CHAINING;
+        cmdc |= ISO14A_SEND_CHAINING;
     }
 
     // "Command APDU" length should be 5+255+1, but javacard's APDU buffer might be smaller - 133 bytes
@@ -1216,9 +1216,9 @@ static int CmdExchangeAPDU(bool chainingin, const uint8_t *datain, int datainlen
     // here length PM3_CMD_DATA_SIZE=512
     // timeout must be authomatically set by "get ATS"
     if (datain) {
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, (datainlen & 0x1FF), 0, datain, datainlen & 0x1FF);
+        SendCommandMIX(CMD_HF_ISO14443A_READER, cmdc, (datainlen & 0x1FF), 0, datain, (datainlen & 0x1FF));
     } else {
-        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_APDU | ISO14A_NO_DISCONNECT | cmdc, 0, 0, NULL, 0);
+        SendCommandMIX(CMD_HF_ISO14443A_READER, cmdc, 0, 0, NULL, 0);
     }
 
     PacketResponseNG resp;
@@ -1670,7 +1670,7 @@ static int waitCmd(bool i_select, uint32_t timeout, bool verbose) {
         }
 
     } else {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
     return PM3_SUCCESS;
@@ -2264,7 +2264,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                         clearCommandBuffer();
                         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
                         if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-                            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+                            PrintAndLogEx(WARNING, "timeout while waiting for reply");
                             DropField();
                             return PM3_ETIMEOUT;
                         }
@@ -2324,7 +2324,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, sizeof(rats));
         if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             return PM3_ETIMEOUT;
         }
 

@@ -13,19 +13,20 @@
 //
 // See LICENSE.txt for the text of the license.
 //-----------------------------------------------------------------------------
-// Low frequency Hitag S support
+// Low frequency Hitag µ support
 //-----------------------------------------------------------------------------
 
-#ifndef CMDLFHITAGS_H__
-#define CMDLFHITAGS_H__
+#ifndef CMDLFHITAGU_H__
+#define CMDLFHITAGU_H__
 
 #include "common.h"
 #include "hitag.h"
 
-void annotateHitagS(char *exp, size_t size, const uint8_t *cmd, uint8_t nbits, bool is_response);
+uint8_t hitagu_CRC_check(uint8_t *d, uint32_t nbit);
+void annotateHitagU(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize, bool is_response);
 
-int CmdLFHitagS(const char *Cmd);
+int CmdLFHitagU(const char *Cmd);
 
-int read_hts_uid(void);
+int read_htu_uid(void);
 
-#endif //CMDLFHITAGS_H__
+#endif //CMDLFHITAGU_H__

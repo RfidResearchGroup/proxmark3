@@ -28,6 +28,8 @@
 #include "comms.h"              // for sending cmds to device. GetFromBigBuf
 #include "fileutils.h"          // for saveFile
 #include "cmdlfhitag.h"         // annotate hitag
+#include "cmdlfhitaghts.h"      // annotate hitags
+#include "cmdlfhitagu.h"        // annotate hitagu
 #include "pm3_cmd.h"            // tracelog_hdr_t
 #include "cliparser.h"          // args..
 
@@ -585,8 +587,12 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             case PROTO_HITAG1:
             case PROTO_HITAGS:
                 crcStatus = hitag1_CRC_check(frame, (data_len * 8) - ((8 - parityBytes[0]) % 8));
-            case PROTO_CRYPTORF:
+                break;
+            case PROTO_HITAGU:
+                crcStatus = hitagu_CRC_check(frame, (data_len * 8) - ((8 - parityBytes[0]) % 8));
+                break;
             case PROTO_HITAG2:
+            case PROTO_CRYPTORF:
             default:
                 break;
         }
@@ -624,6 +630,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 && protocol != PROTO_HITAG1
                 && protocol != PROTO_HITAG2
                 && protocol != PROTO_HITAGS
+                && protocol != PROTO_HITAGU
                 && protocol != THINFILM
                 && protocol != FELICA
                 && protocol != LTO
@@ -646,7 +653,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 snprintf(line[j / 18] + ((j % 18) * 4), 120, "%02X! ", frame[j]);
             }
 
-        } else if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAG2) || (protocol == PROTO_HITAGS))) {
+        } else if (((protocol == PROTO_HITAG1) || (protocol == PROTO_HITAG2) || (protocol == PROTO_HITAGS) || (protocol == PROTO_HITAGU))) {
 
             if (j == 0) {
 
@@ -800,7 +807,10 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
             annotateHitag2(explanation, sizeof(explanation), frame, data_len, parityBytes[0], hdr->isResponse, mfDicKeys, mfDicKeysCount, false);
             break;
         case PROTO_HITAGS:
-            annotateHitagS(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
+            annotateHitagS(explanation, sizeof(explanation), frame, (data_len * 8) - ((8 - parityBytes[0]) % 8), hdr->isResponse);
+            break;
+        case PROTO_HITAGU:
+            annotateHitagU(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
             break;
         case ICLASS:
             annotateIclass(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
@@ -1102,7 +1112,7 @@ static int download_trace(void) {
     // Query for the size of the trace,  downloading PM3_CMD_DATA_SIZE
     PacketResponseNG resp;
     if (!GetFromDevice(BIG_BUF, gs_trace, PM3_CMD_DATA_SIZE, 0, NULL, 0, &resp, 4000, true)) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         free(gs_trace);
         gs_trace = NULL;
         return PM3_ETIMEOUT;
@@ -1310,9 +1320,10 @@ int CmdTraceList(const char *Cmd) {
                   "trace list -t cryptorf -> interpret as " _YELLOW_("CryptoRF") "\n\n"
                   "trace list -t des      -> interpret as " _YELLOW_("MIFARE DESFire") "\n"
                   "trace list -t felica   -> interpret as " _YELLOW_("ISO18092 / FeliCa") "\n"
-                  "trace list -t hitag1   -> interpret as " _YELLOW_("Hitag 1") "\n"
-                  "trace list -t hitag2   -> interpret as " _YELLOW_("Hitag 2") "\n"
-                  "trace list -t hitags   -> interpret as " _YELLOW_("Hitag S") "\n"
+                  "trace list -t ht1      -> interpret as " _YELLOW_("Hitag 1") "\n"
+                  "trace list -t ht2      -> interpret as " _YELLOW_("Hitag 2") "\n"
+                  "trace list -t hts      -> interpret as " _YELLOW_("Hitag S") "\n"
+                  "trace list -t htu      -> interpret as " _YELLOW_("Hitag µ") "\n"
                   "trace list -t iclass   -> interpret as " _YELLOW_("iCLASS") "\n"
                   "trace list -t legic    -> interpret as " _YELLOW_("LEGIC") "\n"
                   "trace list -t lto      -> interpret as " _YELLOW_("LTO-CM") "\n"
@@ -1377,9 +1388,10 @@ int CmdTraceList(const char *Cmd) {
     else if (strcmp(type, "cryptorf") == 0) protocol = PROTO_CRYPTORF;
     else if (strcmp(type, "des") == 0)      protocol = MFDES;
     else if (strcmp(type, "felica") == 0)   protocol = FELICA;
-    else if (strcmp(type, "hitag1") == 0)   protocol = PROTO_HITAG1;
-    else if (strcmp(type, "hitag2") == 0)   protocol = PROTO_HITAG2;
-    else if (strcmp(type, "hitags") == 0)   protocol = PROTO_HITAGS;
+    else if (strcmp(type, "ht1") == 0)   protocol = PROTO_HITAG1;
+    else if (strcmp(type, "ht2") == 0)   protocol = PROTO_HITAG2;
+    else if (strcmp(type, "hts") == 0)   protocol = PROTO_HITAGS;
+    else if (strcmp(type, "htu") == 0)   protocol = PROTO_HITAGU;
     else if (strcmp(type, "iclass") == 0)   protocol = ICLASS;
     else if (strcmp(type, "legic") == 0)    protocol = LEGIC;
     else if (strcmp(type, "lto") == 0)      protocol = LTO;
@@ -1469,8 +1481,8 @@ int CmdTraceList(const char *Cmd) {
         if (protocol == ISO_7816_4)
             PrintAndLogEx(INFO, _YELLOW_("ISO7816-4 / Smartcard") " - Timings n/a");
 
-        if (protocol == PROTO_HITAG1 || protocol == PROTO_HITAG2 || protocol == PROTO_HITAGS) {
-            PrintAndLogEx(INFO, _YELLOW_("Hitag 1 / Hitag 2 / Hitag S") " - Timings in ETU (8us)");
+        if (protocol == PROTO_HITAG1 || protocol == PROTO_HITAG2 || protocol == PROTO_HITAGS || protocol == PROTO_HITAGU) {
+            PrintAndLogEx(INFO, _YELLOW_("Hitag 1 / Hitag 2 / Hitag S / Hitag µ") " - Timings in ETU (8us)");
         }
 
         if (protocol == PROTO_FMCOS20) {
@@ -1551,7 +1563,7 @@ int CmdTraceList(const char *Cmd) {
         }
 
         // reset hitag state  machine
-        if (protocol == PROTO_HITAG1 || protocol == PROTO_HITAG2 || protocol == PROTO_HITAGS) {
+        if (protocol == PROTO_HITAG1 || protocol == PROTO_HITAG2 || protocol == PROTO_HITAGS || protocol == PROTO_HITAGU) {
             annotateHitag2_init();
         }
 

@@ -433,11 +433,21 @@ void xor(uint8_t *dest, const uint8_t *src, size_t n) {
     }
 }
 
-void lsl(uint8_t *data, size_t len) {
-    for (size_t n = 0; n < len - 1; n++) {
-        data[n] = (data[n] << 1) | (data[n + 1] >> 7);
+// left shift an array of length one bit
+void lsl(uint8_t *d, size_t n) {
+    for (size_t i = 0; i < n - 1; i++) {
+        d[i] = (d[i] << 1) | (d[i + 1] >> 7);
     }
-    data[len - 1] <<= 1;
+    d[n - 1] <<= 1;
+}
+
+void lslx(uint8_t *d, size_t n, uint8_t shifts) {
+    for (uint8_t i = 0; i < shifts; i++) {
+        for (size_t j = 0; j < n - 1; j++) {
+            d[j] = (d[j] << 1) | (d[j + 1] >> 7);
+        }
+        d[n - 1] <<= 1;
+    }
 }
 
 
@@ -555,7 +565,12 @@ void reverse_arraybytes_copy(uint8_t *arr, uint8_t *dest, size_t len) {
 }
 
 // TODO: Boost performance by copying in chunks of 1, 2, or 4 bytes when feasible.
-size_t concatbits(uint8_t *dest, int dest_offset, const uint8_t *src, int src_offset, size_t nbits) {
+/**
+ * @brief Concatenate bits from src to dest, bitstream is stored MSB first
+ * which means that the dest_offset=0 is the MSB of the dest[0]
+ *
+ */
+size_t concatbits(uint8_t *dest, int dest_offset, const uint8_t *src, int src_offset, size_t nbits, bool src_lsb) {
     int i, end, step;
 
     // overlap
@@ -571,8 +586,8 @@ size_t concatbits(uint8_t *dest, int dest_offset, const uint8_t *src, int src_of
 
     for (; i != end; i += step) {
         // equiv of dest_bits[dest_offset + i] = src_bits[src_offset + i]
-        CLEAR_BIT(dest, dest_offset + i);
-        if (TEST_BIT(src, src_offset + i)) SET_BIT(dest, dest_offset + i);
+        CLEAR_BIT_MSB(dest, dest_offset + i);
+        if (src_lsb ? TEST_BIT_LSB(src, src_offset + i) : TEST_BIT_MSB(src, src_offset + i)) SET_BIT_MSB(dest, dest_offset + i);
     }
 
     return dest_offset + nbits;

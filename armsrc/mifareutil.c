@@ -483,7 +483,7 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
     // send & receive
     len = mifare_sendcmd(MIFARE_ULAES_AUTH_2, enc_rnd_ab, sizeof(enc_rnd_ab), resp, sizeof(resp), respPar, NULL);
     if (len != 19) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x - expected 19 got " _RED_("%u"), resp[0], len);
+        if (g_dbglevel >= DBG_INFO) Dbprintf("Cmd Error: %02x - expected 19 got " _RED_("%u"), resp[0], len);
         return 0;
     }
 
@@ -492,7 +492,7 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
     mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_DECRYPT, sizeof(random_b), IV, resp + 1, random_b);
 
     if (memcmp(random_b, random_a, 16) != 0) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("failed authentication");
+        if (g_dbglevel >= DBG_INFO) Dbprintf("failed authentication");
         return 0;
     }
 

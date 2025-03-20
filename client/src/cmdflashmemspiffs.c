@@ -69,7 +69,7 @@ int flashmem_spiffs_load(const char *destfn, const uint8_t *data, size_t datalen
 
         uint8_t retry = 3;
         while (WaitForResponseTimeout(CMD_SPIFFS_WRITE, &resp, 2000) == false) {
-            PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
             retry--;
             if (retry == 0) {
                 ret_val = PM3_ETIMEOUT;
@@ -96,7 +96,7 @@ int flashmem_spiffs_download(char *fn, uint8_t fnlen, void **pdest, size_t *dest
     SendCommandNG(CMD_SPIFFS_STAT, (uint8_t *)fn, fnlen);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_SPIFFS_STAT, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
@@ -401,7 +401,7 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
     SendCommandNG(CMD_SPIFFS_STAT, (uint8_t *)src, slen);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_SPIFFS_STAT, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 

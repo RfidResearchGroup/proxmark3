@@ -455,12 +455,14 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define LTO             12
 #define PROTO_HITAG2    13
 #define PROTO_HITAGS    14
-#define PROTO_CRYPTORF  15
-#define SEOS            16
-#define PROTO_MFPLUS    17
-#define PROTO_TEXKOM    18
-#define PROTO_XEROX     19
-#define PROTO_FMCOS20   20
+#define PROTO_HITAGU    15
+#define PROTO_CRYPTORF  16
+#define SEOS            17
+#define PROTO_MFPLUS    18
+#define PROTO_TEXKOM    19
+#define PROTO_XEROX     20
+#define PROTO_FMCOS20   21
+#define COUNT_OF_PROTOCOLS 22
 
 // Picopass fuses
 #define FUSE_FPERS   0x80
@@ -947,6 +949,25 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define HITAGS_WRITE_PAGE               0x80    // 1000 WRITE PAGE
 #define HITAGS_WRITE_BLOCK              0x90    // 1001 WRITE BLOCK
 #define HITAGS_QUIET                    0x70    // 0111 QUIET
+
+// Hitag µ flags
+#define HITAGU_FLAG_PEXT                0x01    // 0b00001 - Protocol EXTension flag
+#define HITAGU_FLAG_INV                 0x02    // 0b00010 - INVentory flag
+#define HITAGU_FLAG_CRCT                0x04    // 0b00100 - CRC Transponder flag
+#define HITAGU_FLAG_SEL                 0x08    // 0b01000 - SELect flag (when INV=0)
+#define HITAGU_FLAG_ADR                 0x10    // 0b10000 - ADdRess flag (when INV=0)
+#define HITAGU_FLAG_RFU                 0x08    // 0b01000 - Reserved For Use flag (when INV=1, always 0)
+#define HITAGU_FLAG_NOS                 0x10    // 0b10000 - Number Of Slots flag (when INV=1)
+
+// Hitag µ commands (6-bit)
+#define HITAGU_CMD_LOGIN                   0x28    // 0b101000 - Login command
+#define HITAGU_CMD_INVENTORY               0x00    // 0b000000 - Inventory command
+#define HITAGU_CMD_READ_MULTIPLE_BLOCK     0x12    // 0b010010 - Read multiple block command
+#define HITAGU_CMD_WRITE_SINGLE_BLOCK      0x14    // 0b010100 - Write single block command
+#define HITAGU_CMD_SELECT                  0x18    // 0b011000 - Select command
+#define HITAGU_CMD_SYSINFO                 0x17    // 0b010111 - Get system information command
+#define HITAGU_CMD_READ_UID                0x02    // 0b000010 - Read UID command
+#define HITAGU_CMD_STAY_QUIET              0x01    // 0b000001 - Stay quiet command
 
 // LTO-CM commands
 #define LTO_REQ_STANDARD                0x45

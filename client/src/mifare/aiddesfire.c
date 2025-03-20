@@ -94,7 +94,7 @@ typedef enum {
 const char *nxp_cluster_to_text(uint8_t cluster) {
     switch (cluster) {
         case CL_ADMIN:
-            return "card administration";
+            return "Card administration";
         case CL_MISC1:
         case CL_MISC2:
         case CL_MISC3:
@@ -102,40 +102,40 @@ const char *nxp_cluster_to_text(uint8_t cluster) {
         case CL_MISC5:
         case CL_MISC6:
         case CL_MISC7:
-            return "miscellaneous applications";
+            return "Miscellaneous applications";
         case CL_AIRLINES:
-            return "airlines";
+            return "Airlines";
         case CL_FERRY:
-            return "ferry traffic";
+            return "Ferry traffic";
         case CL_RAIL:
-            return "railway services";
+            return "Railway services";
         case CL_MISC:
-            return "miscellaneous applications";
+            return "Miscellaneous applications";
         case CL_TRANSPORT:
-            return "transport";
+            return "Transport";
         case CL_SECURITY:
-            return "security solutions";
+            return "Security solutions";
         case CL_CITYTRAFFIC:
-            return "city traffic";
+            return "City traffic";
         case CL_CZECH_RAIL:
             return "Czech Railways";
         case CL_BUS:
-            return "bus services";
+            return "Bus services";
         case CL_MMT:
-            return "multi modal transit";
+            return "Multi modal transit";
         case CL_TAXI:
-            return "taxi";
+            return "Taxi";
         case CL_TOLL:
-            return "road toll";
+            return "Road toll";
         case CL_GENERIC_TRANS:
-            return "generic transport";
+            return "Generic transport";
         case CL_COMPANY_SERVICES:
-            return "company services";
+            return "Company services";
         case CL_CITYCARD:
-            return "city card services";
+            return "City card services";
         case CL_ACCESS_CONTROL_1:
         case CL_ACCESS_CONTROL_2:
-            return "access control & security";
+            return "Access control & security";
         case CL_VIGIK:
             return "VIGIK";
         case CL_NED_DEFENCE:
@@ -145,63 +145,63 @@ const char *nxp_cluster_to_text(uint8_t cluster) {
         case CL_EU:
             return "European Union Institutions";
         case CL_SKI_TICKET:
-            return "ski ticketing";
+            return "Ski ticketing";
         case CL_SOAA:
             return "SOAA standard for offline access standard";
         case CL_ACCESS2:
-            return "access control & security";
+            return "Access control & security";
         case CL_FOOD:
-            return "food";
+            return "Food";
         case CL_NONFOOD:
-            return "non-food trade";
+            return "Non-food trade";
         case CL_HOTEL:
-            return "hotel";
+            return "Hotel";
         case CL_LOYALTY:
-            return "loyalty";
+            return "Loyalty";
         case CL_AIRPORT:
-            return "airport services";
+            return "Airport services";
         case CL_CAR_RENTAL:
-            return "car rental";
+            return "Car rental";
         case CL_NED_GOV:
             return "Dutch government";
         case CL_ADMIN2:
-            return "administration services";
+            return "Administration services";
         case CL_PURSE:
-            return "electronic purse";
+            return "Electronic purse";
         case CL_TV:
-            return "television";
+            return "Television";
         case CL_CRUISESHIP:
-            return "cruise ship";
+            return "Cruise ship";
         case CL_IOPTA:
             return "IOPTA";
         case CL_METERING:
-            return "metering";
+            return "Metering";
         case CL_TELEPHONE:
-            return "telephone";
+            return "Telephone";
         case CL_HEALTH:
-            return "health services";
+            return "Health services";
         case CL_WAREHOUSE:
-            return "warehouse";
+            return "Warehouse";
         case CL_BANKING:
-            return "banking";
+            return "Banking";
         case CL_ENTERTAIN:
-            return "entertainment & sports";
+            return "Entertainment & sports";
         case CL_PARKING:
-            return "car parking";
+            return "Car parking";
         case CL_FLEET:
-            return "fleet management";
+            return "Fleet management";
         case CL_FUEL:
-            return "fuel, gasoline";
+            return "Fuel, gasoline";
         case CL_INFO:
-            return "info services";
+            return "Info services";
         case CL_PRESS:
-            return "press";
+            return "Press";
         case CL_NFC:
             return "NFC Forum";
         case CL_COMPUTER:
-            return "computer";
+            return "Computer";
         case CL_MAIL:
-            return "mail";
+            return "Mail";
         case CL_AMISC:
         case CL_AMISC1:
         case CL_AMISC2:
@@ -210,11 +210,11 @@ const char *nxp_cluster_to_text(uint8_t cluster) {
         case CL_AMISC5:
         case CL_AMISC6:
         case CL_AMISC7:
-            return "miscellaneous applications";
+            return "Miscellaneous applications";
         default:
             break;
     }
-    return "reserved";
+    return "Reserved";
 }
 
 static json_t *df_known_aids = NULL;
