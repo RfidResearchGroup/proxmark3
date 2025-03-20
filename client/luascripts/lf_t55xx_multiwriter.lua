@@ -6,17 +6,19 @@ local dash = string.rep('--', 32)
 local dir = os.getenv('HOME') .. '/.proxmark3/logs/'
 local logfile = (io.popen('dir /a-d /o-d /tw /b/s "' .. dir .. '" 2>nul:'):read("*a"):match("%C+"))
 local command = core.console
+local pm3 = require('pm3')
+p = pm3.pm3()
 command('clear')
 author = '  Author: jareckib - 12.03.2025'
-version = '  version v1.03'
-desc = [[  
+version = '  version v1.05'
+desc = [[
   This simple script stores 1, 2 or 3 different EM4102 on a single T5577.
   There is an option to enter the number engraved on the fob in decimal form.
-  The script can therefore be useful if the original EM4102 doesn't work but 
-  has an engraved ID number. By entering such an ID as a single EM4102, we 
+  The script can therefore be useful if the original EM4102 doesn't work but
+  has an engraved ID number. By entering such an ID as a single EM4102, we
   can create a working copy of our damaged fob.
   A tag T5577 created in this way works with the following USB readers:
-  
+
   - ACM08Y
   - ACM26C
   - Sycreader R60D
@@ -39,6 +41,27 @@ local function help()
     print(ac.cyan .. '  Arguments' .. ac.reset)
     print(arguments)
 end
+
+local function sleep(n)
+    os.execute("sleep " ..tonumber(n))
+end
+
+function wait(msec)
+   local t = os.clock()
+   repeat
+   until os.clock() > t + msec * 1e-3
+end
+
+local function timer(n)
+    while n > 0 do
+        io.write(ac.cyan.."::::: "..ac.yellow.. tonumber(n) ..ac.yellow.." sec "..ac.cyan..":::::\r"..ac.reset)
+        sleep(1)
+        io.flush()
+        n = n-1
+    end
+end
+
+
 
 local function reset_log_file()
     local file = io.open(logfile, "w+")
@@ -121,7 +144,7 @@ local function get_uid_from_user()
     while true do
         print(dash)
         io.write(ac.cyan .. '(1)' .. ac.reset .. ' Manual entry UID |' .. ac.cyan .. ' (2)' .. ac.reset .. ' Read via Proxmark3 ')
-        
+
         local choice
         repeat
             choice = io.read()
@@ -159,13 +182,14 @@ local function get_uid_from_user()
             io.read()
 
             while true do
-                reset_log_file() 
-                command('lf em 410x read')
+                reset_log_file()
+                p:console('lf em 410x read')
                 local log_content = read_log_file(logfile)
                 local uid = extract_uid(log_content)
 
                 if uid and #uid == 10 then
-                    return uid
+				    print("Readed EM4102 ID: " ..ac.green.. uid ..ac.reset)
+                    return uid				       
                 else
                     io.write(ac.yellow .. "Error reading UID. Please adjust FOB position and press Enter..." .. ac.reset)
                     io.read()
@@ -175,10 +199,50 @@ local function get_uid_from_user()
     end
 end
 
+local function verify_written_data(blocks, block0_value)
+    reset_log_file()
+	local block0_value = (uid_count == 1) and "00148040" or (uid_count == 2) and "00148080" or "001480C0"
+    p:console('lf t55 detect')
+    for i = 0, #blocks do
+        p:console('lf t55 read -b ' .. i)
+    end
+    local log_content = read_log_file(logfile)
+    local verified = true
+    local pattern_block0 = "%[%s*%+%]%s*00 |%s*([A-F0-9]+)"
+    local found_block0 = log_content:match(pattern_block0)
+
+    if not found_block0 or found_block0:upper() ~= block0_value:upper() then
+        print("Error in block 0 Expected " ..ac.green.. block0_value .. ac.reset.." Found " .. ac.green.. (found_block0 or "N/A")..ac.reset)
+        verified = false
+    end
+
+    for i = 1, #blocks do
+        local expected_block = blocks[i]
+        local pattern = "%[%s*%+%]%s*" .. string.format("%02X", i) .. " |%s*([A-F0-9]+)"
+        local found_block = log_content:match(pattern)
+
+        if not found_block or found_block:upper() ~= expected_block:upper() then
+            print("Error in block " .. i .. " Expected " ..ac.green.. expected_block ..ac.reset.. " Found " ..ac.green.. (found_block or "N/A")..ac.reset)
+            verified = false
+        end
+    end
+
+    return verified
+end
+
+local function write(blocks)
+    local block0_value = (uid_count == 1) and "00148040" or (uid_count == 2) and "00148080" or "001480C0"
+    p:console('lf t55xx write -b 0 -d ' .. block0_value)
+    for i = 1, #blocks do
+	    
+        p:console('lf t55xx write -b ' .. i .. ' -d ' .. blocks[i])
+    end
+end
+
 local function main(args)
     for o, a in getopt.getopt(args, 'h') do
         if o == 'h' then return help() end
-    end  
+    end
     local blocks = {}
     local uid_count = 0
 
@@ -211,17 +275,21 @@ local function main(args)
         end
     end
 
-    local block0_value = (uid_count == 1) and "00148040" or (uid_count == 2) and "00148080" or "001480C0"
-
     io.write("Place "..ac.cyan.."T5577"..ac.reset.." tag on coil for writing and press"..ac.cyan.." Enter..."..ac.reset)
     io.read()
-
-    command('lf t55xx write -b 0 -d ' .. block0_value)
-    for i = 1, #blocks do
-        command('lf t55xx write -b ' .. i .. ' -d ' .. blocks[i])
-    end
+    write(blocks)
     print(dash)
-    print(ac.green .. "Successfully written " .. uid_count .. " EM4102 UID(s) to T5577" .. ac.reset)
-end
+	timer(3)
+    local verified = verify_written_data(blocks, block0_value)
+    while not verified do
+        print("Verification failed. Please correct the"..ac.cyan.." T5577"..ac.reset.." position and try again.")
+        io.write("Press " .. ac.cyan .. "Enter" .. ac.reset .. " to retry...")
+        io.read()
+		write(blocks)
+		timer(3)
+        verified = verify_written_data(blocks)
+    end
+    print(ac.green .. "Successfully written " ..ac.reset.. uid_count .. ac.green.." EM4102 UID(s) to T5577" .. ac.reset)
+end	
 
 main(args)
