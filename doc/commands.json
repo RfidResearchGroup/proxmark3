@@ -5863,7 +5863,7 @@
                 "--rawdata <hex> Raw data that sends to command",
                 "--aid <hex> Application ID for create. Mandatory. (3 hex bytes, big endian)",
                 "--fid <hex> ISO file ID. Forbidden values: 0000 3F00, 3FFF, FFFF. (2 hex bytes, big endian)",
-                "--dfname <string> ISO DF Name (1..16 chars)",
+                "--dfname <str> ISO DF Name (1..16 chars)",
                 "--dfhex <hex> ISO DF Name as hex (1..16 bytes)",
                 "--ks1 <hex> Key settings 1 (1 hex byte). Application Master Key Settings (def: 0x0F)",
                 "--ks2 <hex> Key settings 2 (1 hex byte). (def: 0x0E)",
@@ -5871,7 +5871,7 @@
                 "--numkeys <dec> Number of keys 0x00..0x0e (def: 0x0E)",
                 "--no-auth Execute without authentication"
             ],
-            "usage": "hf mfdes createapp [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--rawdata <hex>] [--aid <hex>] [--fid <hex>] [--dfname <string>] [--dfhex <hex>] [--ks1 <hex>] [--ks2 <hex>] [--dstalgo <DES|2TDEA|3TDEA|AES>] [--numkeys <dec>] [--no-auth]"
+            "usage": "hf mfdes createapp [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--rawdata <hex>] [--aid <hex>] [--fid <hex>] [--dfname <str>] [--dfhex <hex>] [--ks1 <hex>] [--ks2 <hex>] [--dstalgo <DES|2TDEA|3TDEA|AES>] [--numkeys <dec>] [--no-auth]"
         },
         "hf mfdes createfile": {
             "command": "hf mfdes createfile",
@@ -13356,6 +13356,6 @@
     "metadata": {
         "commands_extracted": 767,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-03-20T18:37:09"
+        "extracted_on": "2025-03-20T21:56:35"
     }
 }
