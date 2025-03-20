@@ -540,7 +540,7 @@ static int htu_select_tag(const lf_hitag_data_t *payload, uint8_t *tx, size_t si
     // Check if the response is valid
     if (rxlen < 1 + 48 + 16 || Crc16(rx, rxlen, 0, CRC16_POLY_CCITT, false, false) != 0) {
         DBG Dbprintf("Read UID command failed! %i", rxlen);
-        return -1;  // Read UID failed
+        return -2;  // Read UID failed
     }
 
     // Process the UID from the response
@@ -565,7 +565,7 @@ static int htu_select_tag(const lf_hitag_data_t *payload, uint8_t *tx, size_t si
     if (rxlen < 1 + 16 + 16 || Crc16(rx, rxlen, 0, CRC16_POLY_CCITT, false, false) != 0) {
         // 8265 bug? sometile lost Data field first bit
         DBG Dbprintf("Get System Information command failed! %i", rxlen);
-        return -2;  // Get System Information failed
+        return -3;  // Get System Information failed
     }
 
     // 3. Read config block
@@ -590,7 +590,7 @@ static int htu_select_tag(const lf_hitag_data_t *payload, uint8_t *tx, size_t si
     // Check if the response is valid
     if (rxlen < 1 + 32 + 16 || Crc16(rx, rxlen, 0, CRC16_POLY_CCITT, false, false) != 0) {
         DBG Dbprintf("Read config block command failed! %i", rxlen);
-        return -2;  // Read config block failed
+        return -3;  // Read config block failed
     }
 
     // Process the config block from the response
@@ -616,7 +616,7 @@ static int htu_select_tag(const lf_hitag_data_t *payload, uint8_t *tx, size_t si
         // Check if login succeeded
         if (rxlen < 1 + 16 || Crc16(rx, rxlen, 0, CRC16_POLY_CCITT, false, false) != 0) {
             DBG Dbprintf("Login command failed! %i", rxlen);
-            return -3;  // Login failed
+            return -4;  // Login failed
         } else {
             DBG DbpString("Login successful");
         }
@@ -772,14 +772,14 @@ void htu_read(const lf_hitag_data_t *payload, bool ledcontrol) {
 
             if (flags & HITAGU_FLAG_CRCT && Crc16(rx, rxlen, 0, CRC16_POLY_CCITT, false, false) != 0) {
                 DBG Dbprintf("Error: response CRC invalid");
-                card.pages_reason[i] = -1;
+                card.pages_reason[i] = -6;
                 continue;
             }
 
             // Check response
             if (rxlen < 1 + HITAGU_BLOCK_SIZE * 8 + (flags & HITAGU_FLAG_CRCT ? 16 : 0)) {
                 DbpString("Error: invalid response received after read command");
-                card.pages_reason[i] = -11;
+                card.pages_reason[i] = -7;
             } else {
                 DBG Dbprintf("Read successful, response: %d bits", rxlen);
                 // todo: For certain pages, update our cached data
@@ -885,7 +885,7 @@ void htu_write_page(const lf_hitag_data_t *payload, bool ledcontrol) {
         status = PM3_ENODATA;
     } else if (rxlen != 1 + 16) {
         DbpString("Error: htu_write_page No valid response received after write command");
-        reason = -1;
+        reason = -5;
         status = PM3_ERFTRANS;
     } else {
         DBG Dbprintf("Write successful, response: %d bits", rxlen);
