@@ -1807,8 +1807,8 @@ static int CmdLFHitagSniff(const char *Cmd) {
     SendCommandNG(CMD_LF_HITAG_SNIFF, NULL, 0);
     WaitForResponse(CMD_LF_HITAG_SNIFF, &resp);
     PrintAndLogEx(INFO, "Done!");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("lf hitag list")"` to view captured tracelog");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf hitag list")"` to view captured tracelog");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
     return PM3_SUCCESS;
 }
 
@@ -2242,7 +2242,7 @@ static int CmdLFHitag2Crack2(const char *Cmd) {
             }
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, "Nonce replay and length extension attack ( %s )", _GREEN_("ok"));
-            PrintAndLogEx(HINT, "try running `tools/hitag2crack/crack2/ht2crack2search <FILE_with_above_bytes>");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("tools/hitag2crack/crack2/ht2crack2search <FILE_with_above_bytes>") "`");
             break;
         } else {
             PrintAndLogEx(NORMAL, "");

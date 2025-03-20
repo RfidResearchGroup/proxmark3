@@ -1231,7 +1231,7 @@ static int CmdTraceLoad(const char *Cmd) {
     gs_traceLen = (long)len;
 
     PrintAndLogEx(SUCCESS, "Recorded Activity (TraceLen = " _YELLOW_("%u") " bytes)", gs_traceLen);
-    PrintAndLogEx(HINT, "try " _YELLOW_("`trace list -1 -t ...`") " to view trace.  Remember the " _YELLOW_("`-1`") " param");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace list -1 -t ...") "` to view trace.  Remember the " _YELLOW_("`-1`") " param");
     return PM3_SUCCESS;
 }
 
@@ -1588,7 +1588,7 @@ int CmdTraceList(const char *Cmd) {
     }
 
     if (show_hex) {
-        PrintAndLogEx(HINT, "syntax to use: " _YELLOW_("`text2pcap -t \"%%S.\" -l 264 -n <input-text-file> <output-pcapng-file>`"));
+        PrintAndLogEx(HINT, "Hint: Syntax to use: `" _YELLOW_("text2pcap -t \"%%S.\" -l 264 -n <input-text-file> <output-pcapng-file>") "`");
     }
 
     return PM3_SUCCESS;

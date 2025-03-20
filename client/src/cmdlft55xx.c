@@ -900,7 +900,7 @@ int T55xxReadBlockEx(uint8_t block, bool page1, bool usepwd, uint8_t override, u
 
             if (t55xxTryDetectModulationEx(downlink_mode, false, 0, password) == false) {
                 PrintAndLogEx(WARNING, "Safety check: Could not detect if PWD bit is set in config block. Exits.");
-                PrintAndLogEx(HINT, "Consider using the override parameter to force read.");
+                PrintAndLogEx(HINT, "Hint: Consider using the override parameter to force read.");
                 return PM3_EWRONGANSWER;
             } else {
                 PrintAndLogEx(WARNING, "Safety check: PWD bit is NOT set in config block. Reading without password...");

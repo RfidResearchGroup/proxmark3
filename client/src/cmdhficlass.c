@@ -563,8 +563,8 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "sent " _YELLOW_("%u") " bytes of data to device emulator memory", bytes_sent);
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass eview") "` to view dump file");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass sim -t 3") "` to start simulating config card");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass eview") "` to view dump file");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass sim -t 3") "` to start simulating config card");
     return PM3_SUCCESS;
 }
 
@@ -825,10 +825,10 @@ static int CmdHFiClassSniff(const char *Cmd) {
     WaitForResponse(CMD_HF_ICLASS_SNIFF, &resp);
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass list") "` to view captured tracelog");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -f hf_iclass_mytrace") "` to save tracelog for later analysing");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass list") "` to view captured tracelog");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace save -f hf_iclass_mytrace") "` to save tracelog for later analysing");
     if (jam_epurse_update) {
-        PrintAndLogEx(HINT, "Verify if the jam worked by comparing value in trace and block 2");
+        PrintAndLogEx(HINT, "Hint: Verify if the jam worked by comparing value in trace and block 2");
     }
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
@@ -955,7 +955,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             saveFile("iclass_mac_attack", ".bin", dump, datalen);
             free(dump);
 
-            PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass loclass -f iclass_mac_attack.bin") "` to recover elite key");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass loclass -f iclass_mac_attack.bin") "` to recover elite key");
             break;
         }
         case ICLASS_SIM_MODE_READER_ATTACK_KEYROLL: {
@@ -1019,8 +1019,8 @@ static int CmdHFiClassSim(const char *Cmd) {
             saveFile("iclass_mac_attack_keyroll_B", ".bin", dump, datalen);
             free(dump);
 
-            PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass loclass -f iclass_mac_attack_keyroll_A.bin") "` to recover elite key");
-            PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass loclass -f iclass_mac_attack_keyroll_B.bin") "` to recover elite key");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass loclass -f iclass_mac_attack_keyroll_A.bin") "` to recover elite key");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass loclass -f iclass_mac_attack_keyroll_B.bin") "` to recover elite key");
             break;
         }
         case ICLASS_SIM_MODE_CSN:
@@ -1034,7 +1034,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, numberOfCSNs, 1, csn, 8);
 
             if (sim_type == ICLASS_SIM_MODE_FULL)
-                PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass esave -h") "` to save the emulator memory to file");
+                PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass esave -h") "` to save the emulator memory to file");
             break;
         }
     }
@@ -1227,7 +1227,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
     iclass_upload_emul(dump, bytes_read, 0, &bytes_sent);
     free(dump);
     PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", bytes_sent);
-    PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf iclass sim -h`"));
+    PrintAndLogEx(HINT, "Hint: You are ready to simulate. See `" _YELLOW_("hf iclass sim -h") "`");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
@@ -1284,7 +1284,7 @@ static int CmdHFiClassESave(const char *Cmd) {
     pm3_save_dump(filename, dump, bytes, jsfIclass);
     free(dump);
 
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass view -f") "` to view dump file");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass view -f") "` to view dump file");
     return PM3_SUCCESS;
 }
 
@@ -2242,8 +2242,8 @@ write_dump:
 
     pm3_save_dump(filename, tag_data, bytes_got, jsfIclass);
 
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass decrypt -f") "` to decrypt dump file");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass view -f") "` to view dump file");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass decrypt -f") "` to decrypt dump file");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass view -f") "` to view dump file");
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
@@ -2688,7 +2688,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
 
     if (resp.status == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "iCLASS restore " _GREEN_("successful"));
-        PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass rdbl") "` to verify data on card");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass rdbl") "` to verify data on card");
     } else {
         PrintAndLogEx(WARNING, "iCLASS restore " _RED_("failed"));
     }
@@ -3847,7 +3847,7 @@ static void add_key(uint8_t *key) {
     if (i == ICLASS_KEYS_MAX) {
         PrintAndLogEx(INFO, "Couldn't find an empty keyslot");
     } else {
-        PrintAndLogEx(HINT, "Try `" _YELLOW_("hf iclass managekeys -p") "` to view keys");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass managekeys -p") "` to view keys");
     }
 }
 
@@ -5248,7 +5248,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
         uint16_t byte_sent = 0;
         iclass_upload_emul(credential, sizeof(credential), 6 * PICOPASS_BLOCK_SIZE, &byte_sent);
         PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", byte_sent);
-        PrintAndLogEx(HINT, "You are now ready to simulate. See " _YELLOW_("`hf iclass sim -h`"));
+        PrintAndLogEx(HINT, "Hint: You are now ready to simulate. See `" _YELLOW_("hf iclass sim -h") "`");
     } else {
         for (uint8_t i = 0; i < 4; i++) {
             isok = iclass_write_block(6 + i, credential + (i * 8), NULL, key, use_credit_key, elite, rawkey, false, false, auth, shallow_mod);

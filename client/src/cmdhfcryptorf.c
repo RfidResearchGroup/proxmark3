@@ -96,8 +96,8 @@ static int CmdHFCryptoRFSniff(const char *Cmd) {
     PacketResponseNG resp;
     WaitForResponse(CMD_HF_ISO14443B_SNIFF, &resp);
 
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf cryptorf list") "` to view captured tracelog");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -f hf_cryptorf_mytrace") "` to save tracelog for later analysing");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf cryptorf list") "` to view captured tracelog");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace save -f hf_cryptorf_mytrace") "` to save tracelog for later analysing");
     return PM3_SUCCESS;
 }
 

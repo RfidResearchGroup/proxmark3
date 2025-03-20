@@ -914,7 +914,7 @@ int AutoCorrelate(const int *in, int *out, size_t len, size_t window, bool SaveG
             PrintAndLogEx(SUCCESS, "Possible correlation at "_YELLOW_("%4d") " samples", distance);
         }
     } else {
-        PrintAndLogEx(HINT, "No repeating pattern found, try increasing window size");
+        PrintAndLogEx(HINT, "Hint: No repeating pattern found, try increasing window size");
         // return value -1, indication to increase window size
         return -1;
     }
@@ -953,7 +953,7 @@ static int CmdAutoCorr(const char *Cmd) {
 
     if (g_GraphTraceLen == 0) {
         PrintAndLogEx(WARNING, "GraphBuffer is empty");
-        PrintAndLogEx(HINT, "Try `" _YELLOW_("lf read") "` to collect samples");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf read") "` to collect samples");
         return PM3_ESOFT;
     }
 

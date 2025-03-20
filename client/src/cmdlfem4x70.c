@@ -1191,7 +1191,7 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
     //    lf em 4x70 auth --rnd <rnd_1> --frn <frn_1>
     if (PM3_SUCCESS == result) {
         PrintAndLogEx(INFO, "Step 1. Verifying passed parameters authenticate with the tag (safety check)");
-        PrintAndLogEx(HINT, "        " _YELLOW_("lf em 4x70 auth --rnd %s --frn %s"), rnd_string, frn_string);
+        PrintAndLogEx(HINT, "Hint:        " _YELLOW_("lf em 4x70 auth --rnd %s --frn %s"), rnd_string, frn_string);
 
         em4x70_cmd_input_auth_t opts_auth = {
             .use_parity = opts.parity,
@@ -1237,7 +1237,7 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
         //    lf em 4x70 write   -b N -d 0000
         if (PM3_SUCCESS == result) {
             PrintAndLogEx(INFO, "Step %d. Brute force the key bits in block %d", step, block);
-            PrintAndLogEx(HINT, "        " _YELLOW_("lf em 4x70 write -b %d -d 0000"), block);
+            PrintAndLogEx(HINT, "Hint:        " _YELLOW_("lf em 4x70 write -b %d -d 0000"), block);
 
             em4x70_cmd_input_writeblock_t opt_write_zeros = {
                 .use_parity = opts.parity,
@@ -1249,18 +1249,18 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
 
             if (PM3_ETIMEOUT == result) {
                 PrintAndLogEx(FAILED, "timeout while waiting for reply");
-                PrintAndLogEx(HINT, "Block %d data may have been overwritten. Manually restart at step %d", block, step);
+                PrintAndLogEx(HINT, "Hint: Block %d data may have been overwritten. Manually restart at step %d", block, step);
                 return result;
             } else if (PM3_SUCCESS != result) {
                 PrintAndLogEx(FAILED, "Writing block %d ( " _RED_("fail") " )", block);
-                PrintAndLogEx(HINT, "Block %d data was overwritten.  Manually restart at step %d", block, step);
+                PrintAndLogEx(HINT, "Hint: Block %d data was overwritten.  Manually restart at step %d", block, step);
                 return result;
             }
         }
 
         //    lf em 4x70 brute -b N --rnd <rnd_1> --frn <frn_1>
         if (PM3_SUCCESS == result) {
-            PrintAndLogEx(HINT, "        " _YELLOW_("lf em 4x70 brute -b %d --rnd %s --frn %s"), block, rnd_string, frn_string);
+            PrintAndLogEx(HINT, "Hint:        " _YELLOW_("lf em 4x70 brute -b %d --rnd %s --frn %s"), block, rnd_string, frn_string);
 
             em4x70_cmd_input_brute_t opts_brute = {
                 .use_parity = opts.parity,
@@ -1274,11 +1274,11 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
 
             if (PM3_ETIMEOUT == result) {
                 PrintAndLogEx(FAILED, "timeout while waiting for reply");
-                PrintAndLogEx(HINT, "Block %d data was overwritten. Manually restart at step %d", block, step);
+                PrintAndLogEx(HINT, "Hint: Block %d data was overwritten. Manually restart at step %d", block, step);
                 return result;
             } else if (PM3_SUCCESS != result) {
                 PrintAndLogEx(FAILED, "Writing block %d ( " _RED_("fail") " )", block);
-                PrintAndLogEx(HINT, "Block %d data was overwritten. Manually restart at step %d", block, step);
+                PrintAndLogEx(HINT, "Hint: Block %d data was overwritten. Manually restart at step %d", block, step);
                 return result;
             } else {
                 PrintAndLogEx(INFO, "        Found: Partial key in block %d is " _GREEN_("%02X%02X")
@@ -1301,7 +1301,7 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
         }
         //    lf em 4x70 write   -b N -d <key_block_N>
         if (PM3_SUCCESS == result) {
-            PrintAndLogEx(HINT, "        " _YELLOW_("lf em 4x70 write -b %d -d %02X%02X"), block, brute.partial_key[0], brute.partial_key[1]);
+            PrintAndLogEx(HINT, "Hint:        " _YELLOW_("lf em 4x70 write -b %d -d %02X%02X"), block, brute.partial_key[0], brute.partial_key[1]);
 
             em4x70_cmd_input_writeblock_t opt_write_zeros = {
                 .use_parity = opts.parity,
@@ -1313,11 +1313,11 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
 
             if (PM3_ETIMEOUT == result) {
                 PrintAndLogEx(FAILED, "timeout while waiting for reply");
-                PrintAndLogEx(HINT, "Block %d data (" _GREEN_("%02X%02X") ") may need to be rewritten", block, brute.partial_key[0], brute.partial_key[1]);
+                PrintAndLogEx(HINT, "Hint: Block %d data (" _GREEN_("%02X%02X") ") may need to be rewritten", block, brute.partial_key[0], brute.partial_key[1]);
                 return result;
             } else if (PM3_SUCCESS != result) {
                 PrintAndLogEx(FAILED, "Writing block %d ( " _RED_("fail") " )", block);
-                PrintAndLogEx(HINT, "Block %d data (" _GREEN_("%02X%02X") ") may need to be rewritten", block, brute.partial_key[0], brute.partial_key[1]);
+                PrintAndLogEx(HINT, "Hint: Block %d data (" _GREEN_("%02X%02X") ") may need to be rewritten", block, brute.partial_key[0], brute.partial_key[1]);
                 return result;
             }
         }
@@ -1335,7 +1335,7 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
     //    lf em 4x70 recover --key <key_block_9><key_block_8><key_block_7> --rnd <rnd_1> --frn <frn_1>
     if (PM3_SUCCESS == result) {
         PrintAndLogEx(INFO, "Step 5. Recover potential values of the lower 48 bits of the key");
-        PrintAndLogEx(HINT, "        " _YELLOW_("lf em 4x70 recover --key %s --rnd %s --frn %s --grn %s"), key_string, rnd_string, frn_string, grn_string);
+        PrintAndLogEx(HINT, "Hint:        " _YELLOW_("lf em 4x70 recover --key %s --rnd %s --frn %s --grn %s"), key_string, rnd_string, frn_string, grn_string);
 
         result = recover_em4x70(&opts, &data);
 

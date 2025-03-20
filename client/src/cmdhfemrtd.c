@@ -1077,7 +1077,7 @@ static bool emrtd_do_auth(char *documentnumber, char *dob, char *expiry, bool BA
         // If BAC isn't available, exit out and warn user.
         if (BAC_available == false) {
             PrintAndLogEx(ERR, "This eMRTD enforces authentication, but you didn't supply MRZ data. Cannot proceed.");
-            PrintAndLogEx(HINT, "Check out `hf emrtd info/dump --h`, supply data with `-n` `-d` and `-e`");
+            PrintAndLogEx(HINT, "Hint: Check out `" _YELLOW_("hf emrtd info/dump --h") "`, supply data with `-n` `-d` and `-e`");
             return false;
         }
 
@@ -1105,7 +1105,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     // Dump EF_CardAccess (if available)
     if (emrtd_dump_file(ks_enc, ks_mac, ssc, dg_table[EF_CardAccess].fileid, dg_table[EF_CardAccess].filename, BAC, path) == false) {
         PrintAndLogEx(INFO, "Couldn't dump EF_CardAccess, card does not support PACE");
-        PrintAndLogEx(HINT, "This is expected behavior for cards without PACE, and isn't something to be worried about");
+        PrintAndLogEx(HINT, "Hint: This is expected behavior for cards without PACE and isn't something to be worried about");
     }
 
     // Authenticate with the eMRTD
@@ -1389,7 +1389,7 @@ static void emrtd_print_unknown_timestamp_5f85(uint8_t *data, size_t datalen) {
             );
 
     PrintAndLogEx(SUCCESS, "Unknown timestamp 5F85... " _YELLOW_("%s"), final_date);
-    PrintAndLogEx(HINT, "This is very likely the personalization timestamp, but it is using an undocumented tag.");
+    PrintAndLogEx(HINT, "Hint: This is very likely the personalization timestamp but it is using an undocumented tag.");
 }
 
 static int emrtd_print_ef_com_info(uint8_t *data, size_t datalen) {
@@ -1999,7 +1999,7 @@ int infoHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
     // Read EF_CardAccess
     if (emrtd_select_and_read(response, &resplen, dg_table[EF_CardAccess].fileid, ks_enc, ks_mac, ssc, BAC) == false) {
         PACE_available = false;
-        PrintAndLogEx(HINT, "The error above this is normal. It just means that your eMRTD lacks PACE.");
+        PrintAndLogEx(HINT, "Hint: The error above this is normal. It just means that your eMRTD lacks PACE.");
     }
 
     // Select and authenticate with the eMRTD
@@ -2140,7 +2140,7 @@ int infoHF_EMRTD_offline(const char *path) {
         emrtd_print_ef_cardaccess_info(data, datalen);
         free(data);
     } else {
-        PrintAndLogEx(HINT, "The error above this is normal. It just means that your eMRTD lacks PACE");
+        PrintAndLogEx(HINT, "Hint: The error above this is normal. It just means that your eMRTD lacks PACE");
     }
 
     strcpy(filepath, path);
@@ -2261,7 +2261,7 @@ static int CmdHFeMRTDDump(const char *Cmd) {
     } else {
         if (!validate_date(dob, slen)) {
             PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
-            PrintAndLogEx(HINT, "Use the format YYMMDD.");
+            PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
             error = true;
         }
     }
@@ -2271,7 +2271,7 @@ static int CmdHFeMRTDDump(const char *Cmd) {
     } else {
         if (!validate_date(expiry, slen)) {
             PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
-            PrintAndLogEx(HINT, "Use the format YYMMDD.");
+            PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
             error = true;
         }
     }
@@ -2289,12 +2289,12 @@ static int CmdHFeMRTDDump(const char *Cmd) {
             // TODO check MRZ checksums?
             if (!validate_date(dob, 6)) {
                 PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
-                PrintAndLogEx(HINT, "Use the format YYMMDD.");
+                PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
                 error = true;
             }
             if (!validate_date(expiry, 6)) {
                 PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
-                PrintAndLogEx(HINT, "Use the format YYMMDD.");
+                PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
                 error = true;
             }
         }
@@ -2368,7 +2368,7 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
     } else {
         if (!validate_date(dob, slen)) {
             PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
-            PrintAndLogEx(HINT, "Use the format YYMMDD.");
+            PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
             error = true;
         }
     }
@@ -2378,7 +2378,7 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
     } else {
         if (!validate_date(expiry, slen)) {
             PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
-            PrintAndLogEx(HINT, "Use the format YYMMDD.");
+            PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
             error = true;
         }
     }
@@ -2396,12 +2396,12 @@ static int CmdHFeMRTDInfo(const char *Cmd) {
             // TODO check MRZ checksums?
             if (!validate_date(dob, 6)) {
                 PrintAndLogEx(ERR, "Date of birth date format is incorrect, cannot continue.");
-                PrintAndLogEx(HINT, "Use the format YYMMDD.");
+                PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
                 error = true;
             }
             if (!validate_date(expiry, 6)) {
                 PrintAndLogEx(ERR, "Expiry date format is incorrect, cannot continue.");
-                PrintAndLogEx(HINT, "Use the format YYMMDD.");
+                PrintAndLogEx(HINT, "Hint: Use the format YYMMDD.");
                 error = true;
             }
         }

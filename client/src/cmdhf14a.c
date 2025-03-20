@@ -987,8 +987,8 @@ int CmdHF14ASniff(const char *Cmd) {
         PacketResponseNG resp;
         WaitForResponse(CMD_HF_ISO14443A_SNIFF, &resp);
         PrintAndLogEx(INFO, "Done!");
-        PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 14a list")"` to view captured tracelog");
-        PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14a list")"` to view captured tracelog");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
     }
     return PM3_SUCCESS;
 }
@@ -2764,30 +2764,30 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     if (isMifareClassic || isMifareMini) {
         if (((isMagic & MAGIC_FLAG_GEN_1A) == MAGIC_FLAG_GEN_1A) || ((isMagic & MAGIC_FLAG_GEN_1B) == MAGIC_FLAG_GEN_1B)) {
-            PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf c*") "` magic commands");
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf c*") "` magic commands");
 
             // if GEN4 GDM in Gen1a more,  hint about it
             if (((isMagic & MAGIC_FLAG_GDM_WUP_40) == MAGIC_FLAG_GDM_WUP_40) || ((isMagic & MAGIC_FLAG_GDM_WUP_40_ZUID) == MAGIC_FLAG_GDM_WUP_40_ZUID)) {
-                PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf gdm* --gen1a") "` magic commands");
+                PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf gdm* --gen1a") "` magic commands");
             }
         }
 
         if ((isMagic & MAGIC_FLAG_GEN_3) == MAGIC_FLAG_GEN_3) {
-            PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf gen3*") "` magic commands");
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf gen3*") "` magic commands");
         }
 
         if ((isMagic & MAGIC_FLAG_GEN_4GTU) == MAGIC_FLAG_GEN_4GTU) {
-            PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf g*") "` magic commands");
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf g*") "` magic commands");
         }
 
         if ((isMagic & MAGIC_FLAG_GDM_AUTH) == MAGIC_FLAG_GDM_AUTH) {
-            PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf gdm*") "` magic commands");
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf gdm*") "` magic commands");
         }
 
         if ((isMagic & MAGIC_FLAG_GEN_2) == MAGIC_FLAG_GEN_2) {
-            PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mf") "` commands");
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf") "` commands");
         } else {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mf info`"));
+            PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mf info`"));
         }
     }
 
@@ -2834,11 +2834,11 @@ int infoHF14A4Applications(bool verbose) {
         }
 
         if (found >= ARRAYLEN(hintAIDList) - 1) {
-            PrintAndLogEx(HINT, "Hint: card answers to all AID. It maybe the latest revision of plus/desfire/ultralight card.");
+            PrintAndLogEx(HINT, "Hint: Card answers to all AID. It maybe the latest revision of plus/desfire/ultralight card.");
         } else {
             for (int i = 0; i < ARRAYLEN(hintAIDList); i++) {
                 if (cardFound[i] && strlen(hintAIDList[i].hint))
-                    PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("%s") "` commands", hintAIDList[i].hint);
+                    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("%s") "` commands", hintAIDList[i].hint);
             }
         }
     }
@@ -3286,10 +3286,10 @@ int CmdHF14ANdefRead(const char *Cmd) {
     pm3_save_dump(filename, ndef_file, ndef_size, jsfNDEF);
 
     if (verbose == false) {
-        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf 14a ndefread -v`") " for more details");
+        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf 14a ndefread -v`") " for more details");
     } else {
         if (verbose2 == false) {
-            PrintAndLogEx(HINT, "Try " _YELLOW_("`hf 14a ndefread -vv`") " for more details");
+            PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf 14a ndefread -vv`") " for more details");
         }
     }
 
@@ -3890,8 +3890,8 @@ int CmdHF14AAIDSim(const char *Cmd) {
 
 
     PrintAndLogEx(INFO, "Done!");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace list -t 14a")"` to view captured tracelog");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace list -t 14a")"` to view captured tracelog");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
 
     return PM3_SUCCESS;
 }

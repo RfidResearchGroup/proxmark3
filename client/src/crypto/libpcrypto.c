@@ -128,7 +128,7 @@ void des3_decrypt(void *out, const void *in, const void *key, uint8_t keycount) 
 int aes_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length) {
     uint8_t iiv[16] = {0};
     if (iv) {
-        memcpy(iiv, iv, 16);
+        memcpy(iiv, iv, sizeof(iiv));
     }
 
     mbedtls_aes_context aes;

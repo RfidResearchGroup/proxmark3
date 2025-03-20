@@ -837,8 +837,8 @@ static int CmdHFTopazSniff(const char *Cmd) {
     PacketResponseNG resp;
     WaitForResponse(CMD_HF_ISO14443A_SNIFF, &resp);
     PrintAndLogEx(INFO, "Done!");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf topaz list")"` to view captured tracelog");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf topaz list")"` to view captured tracelog");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
     return PM3_SUCCESS;
 }
 
@@ -1052,7 +1052,7 @@ static int CmdHFTopazWrBl(const char *Cmd) {
 
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
-        PrintAndLogEx(HINT, "try `" _YELLOW_("hf topaz rdbl --blk %u") "` to verify", blockno);
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf topaz rdbl --blk %u") "` to verify", blockno);
 
     } else {
         PrintAndLogEx(WARNING, "Write ( " _RED_("fail") " )");

@@ -240,47 +240,47 @@ int CmdHFSearch(const char *Cmd) {
         // no need to print 14A hints,  since it will print itself
 
         if (success[THINFILM]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf thinfilm`") " commands\n");
+            PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf thinfilm") "` commands\n");
         }
 
         if (success[LTO]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf lto`") " commands\n");
+            PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf lto") "` commands\n");
         }
 
         if (success[LEGIC]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf legic`") " commands\n");
+            PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf legic") "` commands\n");
         }
 
         if (success[TOPAZ]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf topaz`") " commands\n");
+            PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf topaz") "` commands\n");
         }
 
         if (success[PROTO_TEXKOM]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf texkom`") " commands\n");
+            PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf texkom") "` commands\n");
         }
 
         if (success[PROTO_XEROX]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf xerox`") " commands\n");
+            PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf xerox") "` commands\n");
         }
 
         if (success[ISO_14443B]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf 14b`") " commands\n");
+            PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf 14b") "` commands\n");
         }
 
         if (success[ISO_15693]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf 15`") " commands\n");
+            PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf 15") "` commands\n");
         }
 
         if (success[ICLASS]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf iclass`") " commands\n");
+            PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf iclass") "` commands\n");
         }
 
         if (success[FELICA]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf felica`") " commands\n");
+            PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf felica") "` commands\n");
         }
 
         if (success[PROTO_CRYPTORF]) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf cryptorf`") " commands\n");
+            PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf cryptorf") "` commands\n");
         }
     }
 
@@ -498,9 +498,9 @@ int CmdHFSniff(const char *Cmd) {
 
                 PrintAndLogEx(INFO, "HF sniff (%u samples)", retval->len);
 
-                PrintAndLogEx(HINT, "Use `" _YELLOW_("data hpf") "` to remove offset");
-                PrintAndLogEx(HINT, "Use `" _YELLOW_("data plot") "` to view");
-                PrintAndLogEx(HINT, "Use `" _YELLOW_("data save") "` to save");
+                PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data hpf") "` to remove offset");
+                PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data plot") "` to view");
+                PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data save") "` to save");
 
                 // download bigbuf_malloc:d.
                 // it reserve memory from the higher end.

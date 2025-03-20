@@ -569,7 +569,7 @@ static int CmdLegicSim(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf legic list") "` to view trace log");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf legic list") "` to view trace log");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
@@ -936,7 +936,7 @@ static int CmdLegicDump(const char *Cmd) {
         // 0x00 ^ MCC = MCC. Finding the end of used data is not part of this function.
         if (legic_xor(data, dumplen) == false) {
             PrintAndLogEx(FAILED, "Deobsfuscate failed, exiting...");
-            PrintAndLogEx(HINT, "Try running command without `--de` parameter");
+            PrintAndLogEx(HINT, "Hint: Try running command without `--de` parameter");
             free(data);
             return PM3_EFAILED;
         }
@@ -1004,7 +1004,7 @@ static int CmdLegicRestore(const char *Cmd) {
     if (shall_obsfuscate) {
         if (legic_xor(dump, card.cardsize) == false) {
             PrintAndLogEx(FAILED, "Obsfuscate failed, exiting...");
-            PrintAndLogEx(HINT, "Try running command without `--ob` parameter");
+            PrintAndLogEx(HINT, "Hint: Try running command without `--ob` parameter");
             free(dump);
             return PM3_EFAILED;
         }
@@ -1109,7 +1109,7 @@ static int CmdLegicELoad(const char *Cmd) {
 
     free(dump);
 
-    PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf legic sim -h`"));
+    PrintAndLogEx(HINT, "Hint: You are ready to simulate. See `" _YELLOW_("hf legic sim -h") "`");
     PrintAndLogEx(SUCCESS, "Done!");
     return PM3_SUCCESS;
 }

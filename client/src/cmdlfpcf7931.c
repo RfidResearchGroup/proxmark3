@@ -44,7 +44,7 @@ int pcf7931_resetConfig(void) {
     configPcf.OffsetWidth = PCF7931_DEFAULT_OFFSET_WIDTH;
     configPcf.OffsetPosition = PCF7931_DEFAULT_OFFSET_POSITION;
     PrintAndLogEx(INFO, "Configuration reset");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf pcf7931 config`") " to view current settings");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf pcf7931 config") "` to view current settings");
     return PM3_SUCCESS;
 }
 
@@ -194,7 +194,7 @@ static int CmdLFPCF7931Write(const char *Cmd) {
     SendCommandMIX(CMD_LF_PCF7931_WRITE, block, idx, data[0], buf, sizeof(buf));
 
     PrintAndLogEx(SUCCESS, "Done!");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf pcf7931 reader`") " to verify");
+    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf pcf7931 reader`") " to verify");
     return PM3_SUCCESS;
 }
 

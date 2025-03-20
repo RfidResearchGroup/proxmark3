@@ -215,7 +215,7 @@ static int CmdEM4x50ELoad(const char *Cmd) {
 
     // upload to emulator memory
     em4x50_seteml(data, 0, EM4X50_DUMP_FILESIZE);
-    PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`lf em 4x50 sim -h`"));
+    PrintAndLogEx(HINT, "Hint: You are ready to simulate. See `" _YELLOW_("lf em 4x50 sim -h") "`");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
@@ -983,7 +983,7 @@ static int CmdEM4x50Write(const char *Cmd) {
     em4x50_prepare_result(data, addr, addr, words);
     em4x50_print_result(words, addr, addr);
     PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("lf em 4x50 rdbl -b %u") "` - to read your data", addr);
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf em 4x50 rdbl -b %u") "` - to read your data", addr);
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }

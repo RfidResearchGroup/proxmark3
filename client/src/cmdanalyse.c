@@ -927,7 +927,7 @@ static int CmdAnalyseDemodBuffer(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     g_DemodBufferLen = len;
     free(data);
-    PrintAndLogEx(HINT, "Use `" _YELLOW_("data print") "` to view DemodBuffer");
+    PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data print") "` to view DemodBuffer");
     return PM3_SUCCESS;
 }
 

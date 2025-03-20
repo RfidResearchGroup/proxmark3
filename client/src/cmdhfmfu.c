@@ -1930,9 +1930,9 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, const uint8_t *aut
                 if (item->Pwd) {
                     char s[40] = {0};
                     snprintf(s, sizeof(s), item->hint, item->Pwd(uid));
-                    PrintAndLogEx(HINT, "Use `" _YELLOW_("%s") "`", s);
+                    PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("%s") "`", s);
                 } else {
-                    PrintAndLogEx(HINT, "Use `" _YELLOW_("%s") "`", item->hint);
+                    PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("%s") "`", item->hint);
                 }
             }
         }
@@ -1948,9 +1948,9 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, const uint8_t *aut
             if (item->otp) {
                 char s[40] = {0};
                 snprintf(s, sizeof(s), item->hint, item->otp(uid));
-                PrintAndLogEx(HINT, "Use `" _YELLOW_("%s") "`", s);
+                PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("%s") "`", s);
             } else {
-                PrintAndLogEx(HINT, "Use `" _YELLOW_("%s") "`", item->hint);
+                PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("%s") "`", item->hint);
             }
         }
     }
@@ -2314,7 +2314,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         status = ul_read(0x28, ulc_conf, sizeof(ulc_conf));
         if (status <= 0) {
             PrintAndLogEx(ERR, "Error: tag didn't answer to READ UL-C");
-            PrintAndLogEx(HINT, "Hint: tag is likely fully read protected");
+            PrintAndLogEx(HINT, "Hint: Tag is most likely fully read protected");
             DropField();
             return PM3_ESOFT;
         }
@@ -2614,11 +2614,11 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             }
             if (len < 1) {
                 PrintAndLogEx(WARNING, _YELLOW_("password not known"));
-                PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
+                PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
             }
         } else {
             if (locked) {
-                PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
+                PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
             }
         }
     }
@@ -2630,11 +2630,11 @@ out:
 
     if (locked) {
         PrintAndLogEx(INFO, "\nTag appears to be locked, try using a key to get more info");
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
+        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfu pwdgen -r`") " to get see known pwd gen algo suggestions");
     }
 
     if (tagtype & (MFU_TT_MAGIC_1A | MFU_TT_MAGIC_1B | MFU_TT_MAGIC_2)) {
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`script run hf_mfu_setuid -h`") " to set UID");
+        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`script run hf_mfu_setuid -h`") " to set UID");
     }
 
     PrintAndLogEx(NORMAL, "");
@@ -2755,7 +2755,7 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
 
         if (res == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
-            PrintAndLogEx(HINT, "Try `" _YELLOW_("hf mfu rdbl -b %u") "` to verify ", blockno);
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu rdbl -b %u") "` to verify ", blockno);
         }
 
     } else {
@@ -2763,12 +2763,12 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
         switch (res) {
             case PM3_SUCCESS: {
                 PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
-                PrintAndLogEx(HINT, "Try `" _YELLOW_("hf mfu rdbl -b %u") "` to verify ", blockno);
+                PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu rdbl -b %u") "` to verify ", blockno);
                 break;
             }
             case PM3_ESOFT: {
                 PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
-                PrintAndLogEx(HINT, "Check password / key!");
+                PrintAndLogEx(HINT, "Hint: Check password / key!");
                 break;
             }
             case PM3_ETIMEOUT:
@@ -3242,10 +3242,10 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
             if (card_mem_size != (pages + 4)) {
                 PrintAndLogEx(INFO, "Partial dump, got " _RED_("%d") " bytes - card mem size is %u bytes", pages * MFU_BLOCK_SIZE, card_mem_size * MFU_BLOCK_SIZE);
-                PrintAndLogEx(HINT, "Try using a key");
+                PrintAndLogEx(HINT, "Hint: Try using a key");
             }
         } else {
-            PrintAndLogEx(HINT, "Try using a pwd");
+            PrintAndLogEx(HINT, "Hint: Try using a password");
         }
     }
 
@@ -3762,7 +3762,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
     DropField();
     free(dump);
-    PrintAndLogEx(HINT, "try `" _YELLOW_("hf mfu dump --ns") "` to verify");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu dump --ns") "` to verify");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
@@ -3798,7 +3798,7 @@ static int CmdHF14AMfUeLoad(const char *Cmd) {
     int res = CmdHF14AMfELoad(nc);
     free(nc);
 
-    PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mfu sim -t 7`") " to simulate an Amiibo.");
+    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mfu sim -t 7`") " to simulate an Amiibo.");
     PrintAndLogEx(INFO, "Done!");
     return res;
 }
@@ -5266,7 +5266,7 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
                 jooki++;
                 char s[17] = {0};
                 strncpy(s, jooki, 16);
-                PrintAndLogEx(HINT, "Use `" _YELLOW_("hf jooki decode -d %s") "` to decode", s);
+                PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf jooki decode -d %s") "` to decode", s);
                 break;
             }
         }
@@ -5838,7 +5838,7 @@ ulc:
     }
 
 
-    PrintAndLogEx(HINT, "try `" _YELLOW_("hf mfu dump --ns") "` to verify");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu dump --ns") "` to verify");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Done!");
 
@@ -5930,7 +5930,7 @@ static int CmdHF14AMfUIncr(const char *Cmd) {
     if (len != sizeof(current_counter)) {
         PrintAndLogEx(FAILED, "failed to read old counter");
         if (is_ntag) {
-            PrintAndLogEx(HINT, "NTAG detected, try reading with PWD");
+            PrintAndLogEx(HINT, "Hint: NTAG detected, try reading with password");
         }
         DropField();
         return PM3_ESOFT;

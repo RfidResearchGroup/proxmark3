@@ -314,7 +314,7 @@ static int CmdFlashMemSpiFFSRename(const char *Cmd) {
         PrintAndLogEx(INFO, "Done!");
     }
 
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("mem spiffs tree") "` to verify");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("mem spiffs tree") "` to verify");
     return PM3_SUCCESS;
 }
 
@@ -363,7 +363,7 @@ static int CmdFlashMemSpiFFSCopy(const char *Cmd) {
         PrintAndLogEx(INFO, "Done!");
     }
 
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("mem spiffs tree") "` to verify");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("mem spiffs tree") "` to verify");
     return PM3_SUCCESS;
 }
 
@@ -428,7 +428,7 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
             free(dump);
             return PM3_EMALLOC;
         }
-        PrintAndLogEx(HINT, "Use 'trace list -1 -t ...' to view, 'trace save -f ...' to save");
+        PrintAndLogEx(HINT, "Hint: Use 'trace list -1 -t ...' to view, 'trace save -f ...' to save");
     }
 
 
@@ -480,7 +480,7 @@ static int CmdFlashMemSpiFFSWipe(const char *Cmd) {
         PrintAndLogEx(INFO, "Done!");
     }
 
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("mem spiffs tree") "` to verify");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("mem spiffs tree") "` to verify");
     return PM3_SUCCESS;
 }
 
@@ -528,7 +528,7 @@ static int CmdFlashMemSpiFFSUpload(const char *Cmd) {
     if (res == PM3_SUCCESS)
         PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%zu") " bytes to file "_GREEN_("%s"), datalen, dest);
 
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("mem spiffs tree") "` to verify");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("mem spiffs tree") "` to verify");
     return res;
 }
 

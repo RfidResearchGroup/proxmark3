@@ -310,7 +310,7 @@ static int CmdKeriClone(const char *Cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Done!");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf keri read`") " to verify");
+    PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf keri read`") " to verify");
     return res;
 }
 

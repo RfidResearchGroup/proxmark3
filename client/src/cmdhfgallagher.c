@@ -1089,7 +1089,7 @@ static int CmdGallagherClone(const char *cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Done!");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf gallagher reader`") " to verify");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf gallagher reader") "` to verify");
     return PM3_SUCCESS;
 }
 
@@ -1170,7 +1170,7 @@ static int CmdGallagherDelete(const char *cmd) {
     }
 
     PrintAndLogEx(SUCCESS, "Done!");
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf gallagher reader`") " to verify");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf gallagher reader") "` to verify");
     return PM3_SUCCESS;
 }
 
@@ -1245,7 +1245,7 @@ static int CmdGallagherDiversify(const char *cmd) {
     PrintAndLogEx(SUCCESS, "Successfully diversified key: " _GREEN_("%s"), key_str);
 
     if (IfPm3Iso14443()) {
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf mfdes auth --aid %06X --keyno %d --algo AES --key %s`") " to verify",
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfdes auth --aid %06X --keyno %d --algo AES --key %s") "` to verify",
                       aid,
                       key_num,
                       key_str

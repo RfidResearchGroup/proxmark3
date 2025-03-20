@@ -145,15 +145,19 @@ static int print_aid_description(json_t *root, uint16_t aid, char *fmt, bool ver
     }
 
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "    MAD:               %s", vmad);
-        if (application)
-            PrintAndLogEx(SUCCESS, "    Application:       %s", application);
-        if (company)
-            PrintAndLogEx(SUCCESS, "    Company:           %s", company);
-        if (provider)
-            PrintAndLogEx(SUCCESS, "    Service provider:  %s", provider);
-        if (integrator)
-            PrintAndLogEx(SUCCESS, "    System integrator: %s", integrator);
+        PrintAndLogEx(SUCCESS, "     MAD................. %s", vmad);
+        if (application) {
+            PrintAndLogEx(SUCCESS, "     Application......... %s", application);
+        }
+        if (company) {
+            PrintAndLogEx(SUCCESS, "     Company............. %s", company);
+        }
+        if (provider) {
+            PrintAndLogEx(SUCCESS, "     Service provider.... %s", provider);
+        }
+        if (integrator) {
+            PrintAndLogEx(SUCCESS, "     System integrator... %s", integrator);
+        }
     }
     return PM3_SUCCESS;
 }

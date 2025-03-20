@@ -534,7 +534,7 @@ static int CmdHF15Demod(const char *Cmd) {
 
     if (g_GraphTraceLen < 1000) {
         PrintAndLogEx(FAILED, "Too few samples in GraphBuffer");
-        PrintAndLogEx(HINT, "Run " _YELLOW_("`hf 15 samples`") " to collect and download data");
+        PrintAndLogEx(HINT, "Hint: Run `" _YELLOW_("hf 15 samples") "` to collect and download data");
         return PM3_ESOFT;
     }
 
@@ -659,7 +659,7 @@ static int CmdHF15Samples(const char *Cmd) {
 
     getSamples(0, true);
 
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 15 demod") "` to decode signal");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 15 demod") "` to decode signal");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
@@ -1148,8 +1148,8 @@ static int CmdHF15Sniff(const char *Cmd) {
 
     WaitForResponse(CMD_HF_ISO15693_SNIFF, &resp);
 
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 15 list") "` to view captured tracelog");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 15 list") "` to view captured tracelog");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
@@ -1293,7 +1293,7 @@ static int CmdHF15ELoad(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%zu") " bytes to emulator memory", offset);
 
-    PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf 15 sim -h`"));
+    PrintAndLogEx(HINT, "Hint: You are ready to simulate. See `" _YELLOW_("hf 15 sim -h") "`");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
@@ -2778,7 +2778,7 @@ static int CmdHF15Restore(const char *Cmd) {
     DropField();
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(HINT, "try `" _YELLOW_("hf 15 dump --ns") "` to verify");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 15 dump --ns") "` to verify");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }

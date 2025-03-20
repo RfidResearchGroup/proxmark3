@@ -925,8 +925,8 @@ static int CmdHF14BSniff(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443B_SNIFF, NULL, 0);
     WaitForResponse(CMD_HF_ISO14443B_SNIFF, &resp);
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("hf 14b list") "` to view captured tracelog");
-    PrintAndLogEx(HINT, "Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14b list") "` to view captured tracelog");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
     return PM3_SUCCESS;
 }
 
@@ -2969,7 +2969,7 @@ static int CmdHF14BSetUID(const char *Cmd) {
 
     if (memcmp(card->uid, uid, uidlen) == 0) {
         PrintAndLogEx(SUCCESS, "Setting new UID ( " _GREEN_("ok") " )");
-        PrintAndLogEx(HINT, "try `" _YELLOW_("hf 14b reader") "` to verify");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14b reader") "` to verify");
         PrintAndLogEx(NORMAL, "");
         return PM3_SUCCESS;;
     }

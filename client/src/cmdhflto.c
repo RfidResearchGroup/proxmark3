@@ -682,7 +682,7 @@ static int CmdHfLTOWriteBlock(const char *Cmd) {
 
     int res = wrblLTO(blk, block_data, true);
     if (res == PM3_SUCCESS)
-        PrintAndLogEx(HINT, "Try `" _YELLOW_("hf lto rdbl") "` to verify");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf lto rdbl") "` to verify");
 
     return res;
 }

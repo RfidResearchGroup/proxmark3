@@ -479,7 +479,7 @@ static int CmdHIDClone(const char *Cmd) {
 
     if (resp.status == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Done!");
-        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf hid reader`") " to verify");
+        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf hid reader`") " to verify");
     } else {
         PrintAndLogEx(FAILED, "cloning ( " _RED_("fail") " )");
     }

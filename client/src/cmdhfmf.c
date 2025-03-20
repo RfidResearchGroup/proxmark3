@@ -356,7 +356,7 @@ static void mf_print_blocks(uint16_t n, uint8_t *d, bool verbose) {
 
     // MAD detection
     if (HasMADKey(d)) {
-        PrintAndLogEx(HINT, "MAD key detected. Try " _YELLOW_("`hf mf mad`") " for more details");
+        PrintAndLogEx(HINT, "Hint: MAD key detected. Try " _YELLOW_("`hf mf mad`") " for more details");
     }
     PrintAndLogEx(NORMAL, "");
 }
@@ -1017,13 +1017,13 @@ static int CmdHF14AMfWrBl(const char *Cmd) {
     int status  = resp.oldarg[0];
     if (status > 0) {
         PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
-        PrintAndLogEx(HINT, "try `" _YELLOW_("hf mf rdbl") "` to verify");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf rdbl") "` to verify");
     } else if (status == PM3_ETEAROFF) {
         return status;
     } else {
         PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
         // suggest the opposite keytype than what was used.
-        PrintAndLogEx(HINT, "Maybe access rights? Try specify keytype `" _YELLOW_("hf mf wrbl -%c ...") "` instead", (keytype == MF_KEY_A) ? 'b' : 'a');
+        PrintAndLogEx(HINT, "Hint: Maybe access rights? Try specify keytype `" _YELLOW_("hf mf wrbl -%c ...") "` instead", (keytype == MF_KEY_A) ? 'b' : 'a');
     }
     return PM3_SUCCESS;
 }
@@ -1611,7 +1611,7 @@ out:
     free(keyB);
     PrintAndLogEx(INFO, "-----+-------------------------------------------------+----------------");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(HINT, "try `" _YELLOW_("hf mf dump --ns") "` to verify");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf dump --ns") "` to verify");
     PrintAndLogEx(INFO, "Done!");
     return PM3_SUCCESS;
 }
@@ -2408,7 +2408,7 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
             // check if tag doesn't have static nonce
             if (detect_classic_static_nonce() == NONCE_STATIC) {
                 PrintAndLogEx(WARNING, "Static nonce detected. Quitting...");
-                PrintAndLogEx(HINT, "\tTry use `" _YELLOW_("hf mf staticnested") "`");
+                PrintAndLogEx(HINT, "Hint: Try use `" _YELLOW_("hf mf staticnested") "`");
                 return PM3_EOPABORTED;
             }
 
@@ -2923,7 +2923,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
 noValidKeyFound:
             PrintAndLogEx(FAILED, "No usable key was found!");
-            PrintAndLogEx(HINT, "try `" _YELLOW_("hf mf autopwn -f mfc_default_keys")"`  i.e. the Randy special");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf autopwn -f mfc_default_keys")"`  i.e. the Randy special");
             free(keyBlock);
             free(e_sector);
             free(fptr);
@@ -4470,11 +4470,11 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
 
     // MAD detection
     if (e_sector[MF_MAD1_SECTOR].foundKey[0] && e_sector[MF_MAD1_SECTOR].Key[0] == 0xA0A1A2A3A4A5) {
-        PrintAndLogEx(HINT, "MAD key detected. Try " _YELLOW_("`hf mf mad`") " for more details");
+        PrintAndLogEx(HINT, "Hint: MAD key detected. Try " _YELLOW_("`hf mf mad`") " for more details");
     }
     // NDEF detection
     if (has_ndef_key) {
-        PrintAndLogEx(HINT, "NDEF key detected. Try " _YELLOW_("`hf mf ndefread`") " for more details");
+        PrintAndLogEx(HINT, "Hint: NDEF key detected. Try " _YELLOW_("`hf mf ndefread`") " for more details");
     }
     PrintAndLogEx(NORMAL, "");
 }
@@ -4795,14 +4795,14 @@ int CmdHF14AMfELoad(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
 
     if (block_width == MFU_BLOCK_SIZE) {
-        PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf mfu sim -h`"));
+        PrintAndLogEx(HINT, "Hint: You are ready to simulate. See `" _YELLOW_("hf mfu sim -h`") "`");
         // MFU / NTAG
         if ((cnt != block_cnt)) {
             PrintAndLogEx(WARNING, "Warning, Ultralight/Ntag file content, Loaded %d blocks of expected %d blocks into emulator memory", cnt, block_cnt);
             return PM3_SUCCESS;
         }
     } else {
-        PrintAndLogEx(HINT, "You are ready to simulate. See " _YELLOW_("`hf mf sim -h`"));
+        PrintAndLogEx(HINT, "Hint: You are ready to simulate. See `" _YELLOW_("hf mf sim -h") "`");
         // MFC
         if ((cnt != block_cnt)) {
             PrintAndLogEx(WARNING, "Error, file content, Only loaded %d blocks, must be %d blocks into emulator memory", cnt, block_cnt);
@@ -5515,7 +5515,7 @@ static int CmdHF14AMfCLoad(const char *Cmd) {
 
         if (mf_chinese_set_block(blockno, data + (MFBLOCK_SIZE * blockno), NULL, flags)) {
             PrintAndLogEx(WARNING, "Can't set magic card block: %d", blockno);
-            PrintAndLogEx(HINT, "Verify that it is a GDM and not USCUID derivative");
+            PrintAndLogEx(HINT, "Hint: Verify that it is a GDM and not USCUID derivative");
             free(data);
             return PM3_ESOFT;
         }
@@ -5761,7 +5761,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
 
         if (mf_chinese_get_block(i, dump + (i * MFBLOCK_SIZE), flags)) {
             PrintAndLogEx(WARNING, "Can't get magic card block: %d", i);
-            PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
+            PrintAndLogEx(HINT, "Hint: Verify your card size and try again or try another tag position");
             free(dump);
             return PM3_ESOFT;
         }
@@ -5910,7 +5910,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
 
         if (mf_chinese_get_block(i, dump + (i * MFBLOCK_SIZE), flags)) {
             PrintAndLogEx(WARNING, "Can't get magic card block: " _YELLOW_("%u"), i);
-            PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
+            PrintAndLogEx(HINT, "Hint: Verify your card size and try again or try another tag position");
             free(dump);
             return PM3_ESOFT;
         }
@@ -6554,7 +6554,7 @@ int CmdHFMFNDEFRead(const char *Cmd) {
 
     if (mf_read_sector(MF_MAD1_SECTOR, MF_KEY_A, g_mifare_mad_key, sector0)) {
         PrintAndLogEx(ERR, "error, read sector 0. card doesn't have MAD or doesn't have MAD on default keys");
-        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
+        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
         return PM3_ESOFT;
     }
 
@@ -6630,10 +6630,10 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     }
 
     if (verbose == false) {
-        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -v`") " for more details");
+        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mf ndefread -v`") " for more details");
     } else {
         if (verbose2 == false) {
-            PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -vv`") " for more details");
+            PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mf ndefread -vv`") " for more details");
         }
     }
     return PM3_SUCCESS;
@@ -6919,7 +6919,7 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
     int res = mf_check_keys(0, MF_KEY_A, true, 1, (uint8_t *)g_mifare_mad_key, &key64);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Sector 0 failed to authenticate with MAD default key");
-        PrintAndLogEx(HINT, "Verify that the tag NDEF formatted");
+        PrintAndLogEx(HINT, "Hint: Verify that the tag NDEF formatted");
         return res;
     }
 
@@ -6993,7 +6993,7 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
     uint8_t sector0[MFBLOCK_SIZE * 4] = {0};
     if (mf_read_sector(MF_MAD1_SECTOR, MF_KEY_A, g_mifare_mad_key, sector0)) {
         PrintAndLogEx(ERR, "error, reading sector 0. Card doesn't have MAD or doesn't have MAD on default keys");
-        PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
+        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
         return PM3_ESOFT;
     }
 
@@ -7002,7 +7002,7 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
     if (m4) {
         if (mf_read_sector(MF_MAD2_SECTOR, MF_KEY_A, g_mifare_mad_key, sector10)) {
             PrintAndLogEx(ERR, "error, reading sector 10. Card doesn't have MAD or doesn't have MAD on default keys");
-            PrintAndLogEx(HINT, "Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
+            PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mf ndefread -k `") " with your custom key");
             return PM3_ESOFT;
         }
     }
@@ -7224,7 +7224,7 @@ static int CmdHf14AGen3UID(const char *Cmd) {
     int res = mf_chinese_gen_3_uid(uid, uidlen, old_uid);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Can't set UID");
-        PrintAndLogEx(HINT, "Are you sure your card is a Gen3 ?");
+        PrintAndLogEx(HINT, "Hint: Are you sure your card is a Gen3?");
         return PM3_ESOFT;
     }
 
@@ -8427,7 +8427,7 @@ static int CmdHF14AGen4Load(const char *cmd) {
         int res = mfG4SetBlock(pwd, blockno, data + (blockno * MFBLOCK_SIZE), flags);
         if (res !=  PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Can't set magic card block: %d. error=%d", blockno, res);
-            PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
+            PrintAndLogEx(HINT, "Hint: Verify your card size and try again or try another tag position");
             free(data);
             return PM3_ESOFT;
         }
@@ -8588,7 +8588,7 @@ static int CmdHF14AGen4View(const char *Cmd) {
         int res = mfG4GetBlock(pwd, i, dump + (i * MFBLOCK_SIZE), flags);
         if (res !=  PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Can't get magic card block: %u. error=%d", i, res);
-            PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
+            PrintAndLogEx(HINT, "Hint: Verify your card size and try again or try another tag position");
             free(dump);
             return PM3_ESOFT;
         }
@@ -8738,7 +8738,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
         if (res !=  PM3_SUCCESS) {
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "Can't get magic card block: %u. error=%d", i, res);
-            PrintAndLogEx(HINT, "Verify your card size, and try again or try another tag position");
+            PrintAndLogEx(HINT, "Hint: Verify your card size and try again or try another tag position");
             free(dump);
             return PM3_ESOFT;
         }
@@ -9076,7 +9076,7 @@ static int CmdHF14AGen4_GDM_SetCfg(const char *Cmd) {
 
     if (resp.status == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
-        PrintAndLogEx(HINT, "try `" _YELLOW_("hf mf gdmcfg") "` to verify");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf gdmcfg") "` to verify");
     } else {
         PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
     }
@@ -9159,7 +9159,7 @@ static int CmdHF14AGen4_GDM_SetBlk(const char *Cmd) {
 
     if (resp.status == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
-        PrintAndLogEx(HINT, "try `" _YELLOW_("hf mf rdbl") "` to verify");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf rdbl") "` to verify");
     } else if (resp.status == PM3_ETEAROFF) {
         PrintAndLogEx(INFO, "Tear off triggered");
         return resp.status;
@@ -10160,6 +10160,11 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     } else if (res == NONCE_STATIC_ENC) {
         PrintAndLogEx(SUCCESS, "Static enc nonce..... " _RED_("yes"));
     }
+
+    if (res == NONCE_STATIC_ENC) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
+    }
+
     if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS) {
         return PM3_EFAILED;
     }

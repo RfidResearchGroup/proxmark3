@@ -411,7 +411,7 @@ static int CmdHFFudanWrBl(const char *Cmd) {
     uint8_t isok  = resp.oldarg[0] & 0xff;
     if (isok) {
         PrintAndLogEx(SUCCESS, "Write ( " _GREEN_("ok") " )");
-        PrintAndLogEx(HINT, "try `" _YELLOW_("hf fudan rdbl") "` to verify");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf fudan rdbl") "` to verify");
     } else {
         PrintAndLogEx(FAILED, "Write ( " _RED_("fail") " )");
     }

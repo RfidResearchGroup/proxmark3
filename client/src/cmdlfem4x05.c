@@ -1486,7 +1486,7 @@ int CmdEM4x05Write(const char *Cmd) {
     else
         PrintAndLogEx(DEBUG, "No answer from tag");
 
-    PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 4x05 read`") " to verify");
+    PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf em 4x05 read") "` to verify");
     return status;
 }
 

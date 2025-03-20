@@ -1831,7 +1831,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
 
     if ((PICCInfo.keySettings & (1 << 1)) == 0) {
         PrintAndLogEx(WARNING, "Directory list access with CMK... ( " _RED_("Enabled") " )");
-        PrintAndLogEx(HINT, "Try to read MAD with Card Master Key (CMK)");
+        PrintAndLogEx(HINT, "Hint: Try to read MAD with Card Master Key (CMK)");
     }
 
     PrintAndLogEx(SUCCESS, "----------------------------------------- " _CYAN_("MAD") " ------------------------------------------");
@@ -2559,7 +2559,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         arg_str0(NULL, "rawdata", "<hex>", "Raw data that sends to command"),
         arg_str0(NULL, "aid",     "<hex>", "Application ID for create. Mandatory. (3 hex bytes, big endian)"),
         arg_str0(NULL, "fid",     "<hex>", "ISO file ID. Forbidden values: 0000 3F00, 3FFF, FFFF. (2 hex bytes, big endian)"),
-        arg_str0(NULL, "dfname",  "<string>", "ISO DF Name (1..16 chars)"),
+        arg_str0(NULL, "dfname",  "<str>", "ISO DF Name (1..16 chars)"),
         arg_str0(NULL, "dfhex",   "<hex>", "ISO DF Name as hex (1..16 bytes)"),
         arg_str0(NULL, "ks1",     "<hex>", "Key settings 1 (1 hex byte). Application Master Key Settings (def: 0x0F)"),
         arg_str0(NULL, "ks2",     "<hex>", "Key settings 2 (1 hex byte). (def: 0x0E)"),

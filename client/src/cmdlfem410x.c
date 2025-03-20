@@ -859,7 +859,7 @@ static int CmdEM410xClone(const char *Cmd) {
     switch (resp.status) {
         case PM3_SUCCESS: {
             PrintAndLogEx(SUCCESS, "Done!");
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`lf em 410x reader`") " to verify");
+            PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf em 410x reader`") " to verify");
             break;
         }
         default: {
