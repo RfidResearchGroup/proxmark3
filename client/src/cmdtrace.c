@@ -840,7 +840,7 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
                 annotateTopaz(explanation, sizeof(explanation), frame, data_len);
                 break;
             case ISO_7816_4:
-                annotateIso7816(explanation, sizeof(explanation), frame, data_len);
+                annotateIso7816(explanation, sizeof(explanation), frame, data_len, hdr->isResponse);
                 break;
             case ISO_15693:
                 annotateIso15693(explanation, sizeof(explanation), frame, data_len);
@@ -1070,13 +1070,13 @@ static uint16_t printTraceLine(uint16_t tracepos, uint16_t traceLen, uint8_t *tr
         }
 
         if (use_us) {
-            PrintAndLogEx(NORMAL, " %10.1f | %10.1f | %s |fdt (Frame Delay Time): " _YELLOW_("%.1f"),
+            PrintAndLogEx(NORMAL, " %10.1f | %10.1f | %s |Frame Delay Time " _CYAN_("%.1f"),
                           (float)time1 / 13.56,
                           (float)time2 / 13.56,
                           "   ",
                           (float)(next_hdr->timestamp - end_of_transmission_timestamp) / 13.56);
         } else {
-            PrintAndLogEx(NORMAL, " %10u | %10u | %s |fdt (Frame Delay Time): " _YELLOW_("%d"),
+            PrintAndLogEx(NORMAL, " %10u | %10u | %s |Frame Delay Time " _CYAN_("%d"),
                           time1,
                           time2,
                           "   ",
@@ -1317,7 +1317,7 @@ int CmdTraceList(const char *Cmd) {
                   "trace list -t 14b      -> interpret as " _YELLOW_("ISO14443-B") "\n"
                   "trace list -t 15       -> interpret as " _YELLOW_("ISO15693") "\n"
                   "trace list -t 7816     -> interpret as " _YELLOW_("ISO7816-4") "\n"
-                  "trace list -t cryptorf -> interpret as " _YELLOW_("CryptoRF") "\n\n"
+                  "trace list -t cryptorf -> interpret as " _YELLOW_("CryptoRF") "\n"
                   "trace list -t des      -> interpret as " _YELLOW_("MIFARE DESFire") "\n"
                   "trace list -t felica   -> interpret as " _YELLOW_("ISO18092 / FeliCa") "\n"
                   "trace list -t ht1      -> interpret as " _YELLOW_("Hitag 1") "\n"
@@ -1348,7 +1348,7 @@ int CmdTraceList(const char *Cmd) {
         arg_lit0("u", NULL, "display times in microseconds instead of clock cycles"),
         arg_lit0("x", NULL, "show hexdump to convert to pcap(ng)\n"
                  "                                   or to import into Wireshark using encapsulation type \"ISO 14443\""),
-        arg_str0("t", "type", NULL, "protocol to annotate the trace"),
+        arg_str0("t", "type", "<str>", "protocol to annotate the trace"),
         arg_str0("f", "file", "<fn>", "filename of dictionary"),
         arg_param_end
     };

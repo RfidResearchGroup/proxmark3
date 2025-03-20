@@ -799,14 +799,20 @@ void annotateTopaz(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
 }
 
 // iso 7816-3
-void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
+void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is_response) {
 
-    if (cmdsize < 2)
+    if (cmdsize < 2) {
         return;
+    }
+
+    if (is_response) {
+        return;
+    }
 
     // S-block
-    if ((cmd[0] & 0xC0) && (cmdsize == 3)) {
-        switch ((cmd[0] & 0x3f)) {
+    if ((cmd[0] & 0xC0) && ((cmdsize == 3) || (cmdsize == 4))) {
+
+        switch ((cmd[0] & 0x3F)) {
             case 0x00   :
                 snprintf(exp, size, "S-block RESYNCH req");
                 break;
@@ -831,6 +837,9 @@ void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
             case 0x23   :
                 snprintf(exp, size, "S-block WTX resp");
                 break;
+            case 0x32:
+                snprintf(exp, size, "S-block WTX req");
+                break;
             default     :
                 snprintf(exp, size, "S-block");
                 break;
@@ -845,6 +854,7 @@ void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
     }
     // I-block
     else {
+
         int pos = 0;
         switch (cmd[0]) {
             case 2:
@@ -858,6 +868,7 @@ void annotateIso7816(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
                 pos = 3;
                 break;
         }
+
         switch (cmd[pos]) {
             case ISO7816_READ_BINARY:
                 snprintf(exp, size, "READ BIN");
@@ -1787,6 +1798,8 @@ void annotateSeos(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize, bool is
 
     // it's basically a ISO14443a tag, so try annotation from there
     if (applyIso14443a(exp, size, cmd, cmdsize, false) != PM3_SUCCESS) {
+
+        annotateIso7816(exp, size, cmd, cmdsize, isResponse);
 
         int pos = 0;
         switch (cmd[0]) {
