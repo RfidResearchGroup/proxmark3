@@ -123,30 +123,30 @@ typedef enum TAG_STATE {
 typedef struct {
     // con0
     uint8_t MEMT : 2;
-    bool    RES0 : 1;  // for 82xx. Enable somekind extended TTF mode in conjunction with TTFM
-    bool    RES1 : 1;
-    bool    RES2 : 1;
-    bool    RES3 : 1;  // for 82xx. Enable TTF FSK mode  0=RF/10 1=RF/8
-    bool    RES4 : 1;
-    bool    RES5 : 1;
+    uint8_t RES0 : 1;  // for 82xx. Enable somekind extended TTF mode in conjunction with TTFM
+    uint8_t RES1 : 1;
+    uint8_t RES2 : 1;
+    uint8_t RES3 : 1;  // for 82xx. Enable TTF FSK mode  0=RF/10 1=RF/8
+    uint8_t RES4 : 1;
+    uint8_t RES5 : 1;
 
     // con1
-    bool    LKP : 1;    // 0 = page2/3 read write 1 =page2/3 read only in Plain mode and no access in authenticate mode
-    bool    LCON : 1;   // 0 = con1/2 read write  1 =con1 read only and con2 OTP
+    uint8_t LKP : 1;    // 0 = page2/3 read write 1 =page2/3 read only in Plain mode and no access in authenticate mode
+    uint8_t LCON : 1;   // 0 = con1/2 read write  1 =con1 read only and con2 OTP
     uint8_t TTFM : 2;   // the number of pages that are sent to the RWD
     uint8_t TTFDR : 2;  // data rate in TTF Mode
-    bool    TTFC : 1;   // Transponder Talks first coding. 0 = Manchester 1 = Biphase
-    bool    auth : 1;   // 0 = Plain 1 = Auth
+    uint8_t TTFC : 1;   // Transponder Talks first coding. 0 = Manchester 1 = Biphase
+    uint8_t auth : 1;   // 0 = Plain 1 = Auth
     // con2
     // 0 = read write 1 = read only
-    bool LCK0 : 1;  // page48-63
-    bool LCK1 : 1;  // page32-47
-    bool LCK2 : 1;  // page24-31
-    bool LCK3 : 1;  // page16-23
-    bool LCK4 : 1;  // page12-15
-    bool LCK5 : 1;  // page8-11
-    bool LCK6 : 1;  // page6/7
-    bool LCK7 : 1;  // page4/5
+    uint8_t LCK0 : 1;  // page48-63
+    uint8_t LCK1 : 1;  // page32-47
+    uint8_t LCK2 : 1;  // page24-31
+    uint8_t LCK3 : 1;  // page16-23
+    uint8_t LCK4 : 1;  // page12-15
+    uint8_t LCK5 : 1;  // page8-11
+    uint8_t LCK6 : 1;  // page6/7
+    uint8_t LCK7 : 1;  // page4/5
     // reserved/pwdh0
     uint8_t pwdh0;
 } PACKED hitags_config_t;
@@ -257,22 +257,26 @@ typedef struct {
     uint8_t data[256];
 } PACKED lf_hitag_crack_response_t;
 
+typedef union {
+    uint8_t asBytes[HITAGS_PAGE_SIZE];
+    hitags_config_t s;
+} hitags_config_page_t;
+
 typedef struct {
-    union {
-        uint8_t asBytes[HITAGS_PAGE_SIZE];
-        hitags_config_t s;
-    } config_page;
+    hitags_config_page_t config_page;
     int8_t  pages_reason[HITAGS_MAX_PAGES];
     uint8_t pages[HITAGS_MAX_PAGES][HITAGS_PAGE_SIZE];
 } PACKED lf_hts_read_response_t;
 
+typedef union {
+    uint8_t asBytes[HITAGU_BLOCK_SIZE];
+    hitagu_config_t s;
+    hitagu82xx_config_t s82xx;
+} hitagu_config_page_t;
+
 // Hitag µ read response structure
 typedef struct {
-    union {
-        uint8_t asBytes[HITAGU_BLOCK_SIZE];
-        hitagu_config_t s;
-        hitagu82xx_config_t s82xx;
-    } config_page;
+    hitagu_config_page_t config_page;
     uint8_t uid[HITAGU_UID_SIZE];
     uint8_t icr;                                  // IC Revision value for memory size detection
     int8_t  pages_reason[HITAGU_MAX_PAGE_ADVANCED_PLUS];

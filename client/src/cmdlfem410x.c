@@ -713,35 +713,35 @@ static int CmdEM410xClone(const char *Cmd) {
 
             switch (step) {
                 case 0: {
-                    hitags_config_t config = {0};
-                    config.MEMT = 0x02; // compatiable for 82xx, no impact on Hitag S
-                    config.TTFM = 0x01; // 0 = "Block 0, Block 1, Block 2, Block 3", 1 = "Block 0, Block 1"
-                    config.TTFC = 0x00; // Manchester
-                    config.auth = 0x00; // Plain
+                    hitags_config_page_t config_page = {0};
+                    config_page.s.MEMT = 0x02; // compatiable for 82xx, no impact on Hitag S
+                    config_page.s.TTFM = 0x01; // 0 = "Block 0, Block 1, Block 2, Block 3", 1 = "Block 0, Block 1"
+                    config_page.s.TTFC = 0x00; // Manchester
+                    config_page.s.auth = 0x00; // Plain
 
                     //compatiable for 82xx, no impact on Hitag S
-                    config.RES1 = 0x01;
-                    config.RES4 = 0x01;
-                    config.RES5 = 0x01;
+                    config_page.s.RES1 = 0x01;
+                    config_page.s.RES4 = 0x01;
+                    config_page.s.RES5 = 0x01;
                     switch (clk) {
                         case 64: {
                             // 2 kBit/s
-                            config.TTFDR = 0x02;
+                            config_page.s.TTFDR = 0x02;
                             break;
                         }
                         case 32: {
                             // 4 kBit/s
-                            config.TTFDR = 0x00;
+                            config_page.s.TTFDR = 0x00;
                             break;
                         }
                         case 16: {
                             // 8 kBit/s
-                            config.TTFDR = 0x01;
+                            config_page.s.TTFDR = 0x01;
                             break;
                         }
                     }
                     //TODO: keep other fields?
-                    memcpy(packet.data, &config, sizeof(config));
+                    memcpy(packet.data, &config_page, sizeof(config_page));
                     // PrintAndLogEx(INFO, "packet.data: %s", sprint_hex(packet.data, sizeof(packet.data)));
                     packet.page = 1;
                     break;
@@ -792,27 +792,27 @@ static int CmdEM410xClone(const char *Cmd) {
                     // 64  -> 0x00      2 kBit/s
                     // 32  -> 0x01      4 kBit/s
                     // 16  -> 0x10      8 kBit/s
-                    hitagu82xx_config_t config = {0};
+                    hitagu_config_page_t config_page = {0};
 
-                    config.datarate_override = 0x00; // no datarate override
-                    config.encoding = 0x00; // Manchester
-                    config.ttf_mode = 0x01; // 01 = "Block 0, Block 1"
-                    config.ttf = 0x01; // enable TTF
+                    config_page.s82xx.datarate_override = 0x00; // no datarate override
+                    config_page.s82xx.encoding = 0x00; // Manchester
+                    config_page.s82xx.ttf_mode = 0x01; // 01 = "Block 0, Block 1"
+                    config_page.s82xx.ttf = 0x01; // enable TTF
 
                     switch (clk) {
                         case 64: {
                             break;
                         }
                         case 32: {
-                            config.datarate = 0x01;
+                            config_page.s82xx.datarate = 0x01;
                             break;
                         }
                         case 16: {
-                            config.datarate = 0x02;
+                            config_page.s82xx.datarate = 0x02;
                             break;
                         }
                     }
-                    packet.data[0] = reflect8(*(uint8_t *)&config);
+                    reverse_arraybytes_copy(config_page.asBytes, packet.data, sizeof(config_page));
                     packet.page = HITAGU_CONFIG_PADR; // Config block
                     break;
                 }
