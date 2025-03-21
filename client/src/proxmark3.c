@@ -145,12 +145,12 @@ static const char *get_quote(void) {
         "La vie est un défi, relève-le!",
         "Qui ne tente rien n'a rien",
         "Le succès est la somme de petits efforts, répétés jour après jour",
-        "Faites de votre vie un rêve, et d’un rêve, une réalité",
-        "La seule façon de faire du bon travail est d’aimer ce que vous faites",
+        "Faites de votre vie un rêve, et d'un rêve, une réalité",
+        "La seule façon de faire du bon travail est d'aimer ce que vous faites",
         "Tout ce que vous pouvez faire, faites-le",
-        "Le succès, c’est d’aller d’échec en échec sans perdre son enthousiasme",
+        "Le succès, c'est d'aller d'échec en échec sans perdre son enthousiasme",
         "Crois en toi et tout deviendra possible",
-        "C’est en tombant qu’on apprend à se relever"
+        "C'est en tombant qu'on apprend à se relever"
     };
 
     const char *quotes_es[] = {
