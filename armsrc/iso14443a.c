@@ -1749,7 +1749,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
 
                     bool risky = false;
                     for (int i = 0; i < 4; i++) {
-                        risky |= orig[i] & ~receivedCmd[2 + i];
+                        risky |= (orig[i] & ~receivedCmd[2 + i]);
                     }
 
                     if (risky) {

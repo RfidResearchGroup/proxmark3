@@ -253,7 +253,7 @@ out:
  * @param card_select Pointer to the descriptor of the detected card.
  * @return Status code indicating success or failure of the operation.
  */
-static int sam_set_card_detected_picopass(picopass_hdr_t *card_select) {
+static int sam_set_card_detected_picopass(const picopass_hdr_t *card_select) {
     int res = PM3_SUCCESS;
     if (g_dbglevel >= DBG_DEBUG)
         DbpString("start sam_set_card_detected");
@@ -379,15 +379,15 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
         print_result("Response data", sam_response, sam_response_len);
 
     goto out;
-    goto off;
 
 err:
     res = PM3_ENOPACS;
     reply_ng(CMD_HF_SAM_PICOPASS, res, NULL, 0);
     goto off;
+
 out:
     reply_ng(CMD_HF_SAM_PICOPASS, PM3_SUCCESS, sam_response, sam_response_len);
-    goto off;
+
 off:
     if (disconnectAfter) {
         switch_off();

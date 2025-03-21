@@ -705,10 +705,12 @@ static int CmdEM410xClone(const char *Cmd) {
     PacketResponseNG resp;
 
     if (hts) {
+
         lf_hitag_data_t packet;
         memset(&packet, 0, sizeof(packet));
 
         for (size_t step = 0; step < 3; step++) {
+
             switch (step) {
                 case 0: {
                     hitags_config_t config = {0};
@@ -722,18 +724,21 @@ static int CmdEM410xClone(const char *Cmd) {
                     config.RES4 = 0x01;
                     config.RES5 = 0x01;
                     switch (clk) {
-                        case 64:
+                        case 64: {
                             // 2 kBit/s
                             config.TTFDR = 0x02;
                             break;
-                        case 32:
+                        }
+                        case 32: {
                             // 4 kBit/s
                             config.TTFDR = 0x00;
                             break;
-                        case 16:
+                        }
+                        case 16: {
                             // 8 kBit/s
                             config.TTFDR = 0x01;
                             break;
+                        }
                     }
                     //TODO: keep other fields?
                     memcpy(packet.data, &config, sizeof(config));
@@ -741,30 +746,35 @@ static int CmdEM410xClone(const char *Cmd) {
                     packet.page = 1;
                     break;
                 }
-                case 1:
+                case 1: {
                     memcpy(packet.data, &data[HITAGS_PAGE_SIZE * 0], HITAGS_PAGE_SIZE);
                     packet.page = 4;
                     break;
-                case 2:
+                }
+                case 2: {
                     memcpy(packet.data, &data[HITAGS_PAGE_SIZE * 1], HITAGS_PAGE_SIZE);
                     packet.page = 5;
                     break;
+                }
             }
 
             packet.cmd = HTSF_82xx;
             memcpy(packet.pwd, "\xBB\xDD\x33\x99", HITAGS_PAGE_SIZE);
             packet.mode = HITAGS_UID_REQ_FADV;
+
             SendCommandNG(CMD_LF_HITAGS_WRITE, (uint8_t *)&packet, sizeof(packet));
             if (WaitForResponseTimeout(CMD_LF_HITAGS_WRITE, &resp, 4000) == false) {
                 PrintAndLogEx(WARNING, "timeout while waiting for reply");
                 return PM3_ETIMEOUT;
             }
+
             if (resp.status != PM3_SUCCESS) {
                 PrintAndLogEx(WARNING, "Something went wrong in step %zu", step);
                 return resp.status;
             }
         }
     } else if (htu) {
+
         lf_hitag_data_t packet;
         memset(&packet, 0, sizeof(packet));
 
@@ -774,6 +784,7 @@ static int CmdEM410xClone(const char *Cmd) {
         // memcpy(packet.pwd, "\x9A\xC4\x99\x9C", HITAGU_BLOCK_SIZE);
 
         for (size_t step = 0; step < 3; step++) {
+
             switch (step) {
                 case 0: {
                     // Configure datarate based on clock
@@ -789,27 +800,32 @@ static int CmdEM410xClone(const char *Cmd) {
                     config.ttf = 0x01; // enable TTF
 
                     switch (clk) {
-                        case 64:
+                        case 64: {
                             break;
-                        case 32:
+                        }
+                        case 32: {
                             config.datarate = 0x01;
                             break;
-                        case 16:
+                        }
+                        case 16: {
                             config.datarate = 0x02;
                             break;
+                        }
                     }
                     packet.data[0] = reflect8(*(uint8_t *)&config);
                     packet.page = HITAGU_CONFIG_PADR; // Config block
                     break;
                 }
-                case 1:
+                case 1: {
                     memcpy(packet.data, &data[HITAGU_BLOCK_SIZE * 0], HITAGU_BLOCK_SIZE);
                     packet.page = 0; // Start writing EM410x data
                     break;
-                case 2:
+                }
+                case 2: {
                     memcpy(packet.data, &data[HITAGU_BLOCK_SIZE * 1], HITAGU_BLOCK_SIZE);
                     packet.page = 1; // Continue with second block
                     break;
+                }
             }
 
             SendCommandNG(CMD_LF_HITAGU_WRITE, (uint8_t *)&packet, sizeof(packet));
@@ -859,7 +875,7 @@ static int CmdEM410xClone(const char *Cmd) {
     switch (resp.status) {
         case PM3_SUCCESS: {
             PrintAndLogEx(SUCCESS, "Done!");
-            PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`lf em 410x reader`") " to verify");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf em 410x reader") "` to verify");
             break;
         }
         default: {

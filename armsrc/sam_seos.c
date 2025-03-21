@@ -125,9 +125,11 @@ out:
  * @return Status code indicating success or failure of the operation.
  */
 static int sam_send_request_iso14a(const uint8_t *const request, const uint8_t request_len, uint8_t *response, uint8_t *response_len) {
+
     int res = PM3_SUCCESS;
-    if (g_dbglevel >= DBG_DEBUG)
+    if (g_dbglevel >= DBG_DEBUG) {
         DbpString("start sam_send_request_iso14a");
+    }
 
     uint8_t *buf1 = BigBuf_malloc(ISO7816_MAX_FRAME);
     uint8_t *buf2 = BigBuf_malloc(ISO7816_MAX_FRAME);
@@ -178,23 +180,13 @@ static int sam_send_request_iso14a(const uint8_t *const request, const uint8_t r
             switch_clock_to_countsspclk();
             nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf);
 
-            nfc_rx_len = iso14_apdu(
-                             nfc_tx_buf,
-                             nfc_tx_len,
-                             false,
-                             nfc_rx_buf,
-                             ISO7816_MAX_FRAME,
-                             NULL
-                         );
+            nfc_rx_len = iso14_apdu(nfc_tx_buf, nfc_tx_len, false, nfc_rx_buf, ISO7816_MAX_FRAME, NULL);
+            // iceman:  should check nfc_rx_len ,  if negative something went wrong...
 
             switch_clock_to_ticks();
             sam_tx_len = sam_copy_payload_nfc2sam(sam_tx_buf, nfc_rx_buf, nfc_rx_len - 2);
 
-            sam_send_payload(
-                0x14, 0x0a, 0x14,
-                sam_tx_buf, &sam_tx_len,
-                sam_rx_buf, &sam_rx_len
-            );
+            sam_send_payload(0x14, 0x0a, 0x14, sam_tx_buf, &sam_tx_len, sam_rx_buf, &sam_rx_len);
 
             // last SAM->TAG
             // c1 61 c1 00 00 a1 02 >>82<< 00 90 00
@@ -240,21 +232,21 @@ static int sam_send_request_iso14a(const uint8_t *const request, const uint8_t r
     //              07
     // 90 00
     if (request_len == 0) {
+
         if (
-            !(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0x8a && sam_rx_buf[5 + 4] == 0x03)
-            &&
+            !(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0x8a && sam_rx_buf[5 + 4] == 0x03) &&
             !(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0xb3 && sam_rx_buf[5 + 4] == 0xa0)
         ) {
-            if (g_dbglevel >= DBG_ERROR)
+
+            if (g_dbglevel >= DBG_ERROR) {
                 Dbprintf("No PACS data in SAM response");
+            }
             res = PM3_ESOFT;
         }
     }
 
     *response_len = sam_rx_buf[5 + 1] + 2;
     memcpy(response, sam_rx_buf + 5, *response_len);
-
-    goto out;
 
 out:
     BigBuf_free();
@@ -290,13 +282,13 @@ int sam_seos_get_pacs(PacketCommandNG *c) {
     // step 1: ping SAM
     sam_get_version();
 
-    if (!skipDetect) {
+    if (skipDetect == false) {
         // step 2: get card information
         iso14a_card_select_t card_a_info;
 
         // implicit StartSspClk() happens here
         iso14443a_setup(FPGA_HF_ISO14443A_READER_MOD);
-        if (!iso14443a_select_card(NULL, &card_a_info, NULL, true, 0, false)) {
+        if (iso14443a_select_card(NULL, &card_a_info, NULL, true, 0, false) == 0) {
             goto err;
         }
 
@@ -313,19 +305,21 @@ int sam_seos_get_pacs(PacketCommandNG *c) {
     if (res != PM3_SUCCESS) {
         goto err;
     }
-    if (g_dbglevel >= DBG_INFO)
+
+    if (g_dbglevel >= DBG_INFO) {
         print_result("Response data", sam_response, sam_response_len);
+    }
 
     goto out;
-    goto off;
 
 err:
     res = PM3_ENOPACS;
     reply_ng(CMD_HF_SAM_SEOS, res, NULL, 0);
     goto off;
+
 out:
     reply_ng(CMD_HF_SAM_SEOS, PM3_SUCCESS, sam_response, sam_response_len);
-    goto off;
+
 off:
     if (disconnectAfter) {
         switch_off();

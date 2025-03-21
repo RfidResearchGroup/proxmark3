@@ -503,18 +503,22 @@ uint8_t DesfireKeyAlgoToType(DesfireCryptoAlgorithm keyType) {
 
 void DesfirePrintCardKeyType(uint8_t keyType) {
     switch (keyType) {
-        case 00:
+        case 00: {
             PrintAndLogEx(SUCCESS, "Key type... " _YELLOW_("2TDEA"));
             break;
-        case 01:
+        }
+        case 01: {
             PrintAndLogEx(SUCCESS, "Key type... " _YELLOW_("3TDEA"));
             break;
-        case 02:
+        }
+        case 02: {
             PrintAndLogEx(SUCCESS, "Key type... " _YELLOW_("AES"));
             break;
-        default:
+        }
+        default: {
             PrintAndLogEx(SUCCESS, "Key type... " _YELLOW_("unknown") " - 0x%02x", keyType);
             break;
+        }
     }
 }
 

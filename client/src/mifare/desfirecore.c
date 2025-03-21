@@ -1916,15 +1916,14 @@ void DesfirePrintAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS 
         }
 
         if (appList[i].numberOfKeys > 0) {
+
             PrintKeySettings(appList[i].keySettings, appList[i].numKeysRaw, true, true);
 
-            if (appList[i].numberOfKeys > 0) {
-                PrintAndLogEx(SUCCESS, "Key versions [0..%d] " NOLF, appList[i].numberOfKeys - 1);
-                for (uint8_t keyn = 0; keyn < appList[i].numberOfKeys; keyn++) {
-                    PrintAndLogEx(NORMAL, "%s %02x" NOLF, (keyn == 0) ? "" : ",",  appList[i].keyVersions[keyn]);
-                }
-                PrintAndLogEx(NORMAL, "\n");
+            PrintAndLogEx(SUCCESS, "Key versions [0..%d] " NOLF, appList[i].numberOfKeys - 1);
+            for (uint8_t keyn = 0; keyn < appList[i].numberOfKeys; keyn++) {
+                PrintAndLogEx(NORMAL, "%s %02x" NOLF, (keyn == 0) ? "" : ",",  appList[i].keyVersions[keyn]);
             }
+            PrintAndLogEx(NORMAL, "\n");
 
             if (appList[i].filesReaded) {
                 PrintAndLogEx(SUCCESS, "Application have " _GREEN_("%zu") " files", appList[i].filesCount);
@@ -1935,10 +1934,11 @@ void DesfirePrintAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS 
                         PrintAndLogEx(SUCCESS, "--------------------------------- " _CYAN_("File %02x") " ----------------------------------", appList[i].fileList[fnum].fileNum);
                         PrintAndLogEx(SUCCESS, "File ID         : " _GREEN_("%02x"), appList[i].fileList[fnum].fileNum);
                         if (appList[i].isoPresent) {
-                            if (appList[i].fileList[fnum].fileISONum != 0)
+                            if (appList[i].fileList[fnum].fileISONum != 0) {
                                 PrintAndLogEx(SUCCESS, "File ISO ID     : %04x", appList[i].fileList[fnum].fileISONum);
-                            else
+                            } else {
                                 PrintAndLogEx(SUCCESS, "File ISO ID     : " _YELLOW_("n/a"));
+                            }
                         }
                         DesfirePrintFileSettingsExtended(&appList[i].fileList[fnum].fileSettings);
                     }
@@ -2289,16 +2289,19 @@ static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys, bool print
     PrintAndLogEx(SUCCESS, "Application level rights");
     uint8_t rights = ((keysettings >> 4) & 0x0F);
     switch (rights) {
-        case 0x0:
+        case 0x0: {
             PrintAndLogEx(SUCCESS, " - AMK authentication is necessary to change any key (default)");
             break;
-        case 0xE:
+        }
+        case 0xE: {
             PrintAndLogEx(SUCCESS, " - Authentication with the key to be changed (same KeyNo) is necessary to change a key");
             break;
-        case 0xF:
+        }
+        case 0xF: {
             PrintAndLogEx(SUCCESS, " - All keys (except AMK,see Bit0) within this application are frozen");
             break;
-        default:
+        }
+        default: {
             PrintAndLogEx(SUCCESS,
                           " - Authentication with the specified key " _YELLOW_("(0x%02x)") " is necessary to change any key.\n"
                           "A change key and a PICC master key (CMK) can only be changed after authentication with the master key.\n"
@@ -2306,6 +2309,7 @@ static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys, bool print
                           rights & 0x0f
                          );
             break;
+        }
     }
 
     PrintAndLogEx(SUCCESS, "[%c...] AMK Configuration changeable   : %s", (keysettings & (1 << 3)) ? '1' : '0', (keysettings & (1 << 3)) ? _GREEN_("YES") : _RED_("NO (frozen)"));
@@ -2324,10 +2328,11 @@ static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys, bool print
 }
 
 void PrintKeySettings(uint8_t keysettings, uint8_t numkeys, bool applevel, bool print2ndbyte) {
-    if (applevel)
+    if (applevel) {
         PrintKeySettingsApp(keysettings, numkeys, print2ndbyte);
-    else
+    } else {
         PrintKeySettingsPICC(keysettings, numkeys, print2ndbyte);
+    }
 }
 
 static const char *DesfireUnknownStr = "unknown";

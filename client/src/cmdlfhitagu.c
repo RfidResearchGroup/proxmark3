@@ -210,7 +210,6 @@ static int process_hitagu_common_args(CLIParserContext *ctx, lf_hitag_data_t *co
 
     int res = CLIParamHexToBuf(arg_get_str(ctx, 2), key, HITAG_PASSWORD_SIZE, &key_len);
     if (res != 0) {
-        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -341,6 +340,7 @@ static int CmdLFHitagURead(const char *Cmd) {
     lf_hitag_data_t packet;
 
     if (process_hitagu_common_args(ctx, &packet) < 0) {
+        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -613,7 +613,10 @@ static int CmdLFHitagUWrite(const char *Cmd) {
 
     lf_hitag_data_t packet;
 
-    if (process_hitagu_common_args(ctx, &packet) < 0) return PM3_EINVARG;
+    if (process_hitagu_common_args(ctx, &packet) < 0) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
 
     int page = arg_get_int_def(ctx, 3, 0);
 
