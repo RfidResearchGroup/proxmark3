@@ -3397,6 +3397,12 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
 
     uint8_t *keyBlock = NULL;
     uint32_t keycnt = 0;
+
+    // If we use the dictionary in flash memory, we don't want to load keys
+    // from hard drive dictionary as it could exceed BigBuf capacity
+    if (use_flashmemory) {
+        fnlen = 0;
+    }
     int ret = mf_load_keys(&keyBlock, &keycnt, key, keylen, filename, fnlen, load_default);
     if (ret != PM3_SUCCESS) {
         return ret;
@@ -3423,7 +3429,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
     }
     if (use_flashmemory) {
         PrintAndLogEx(SUCCESS, "Using dictionary in flash memory");
-        mf_check_keys_fast_ex(sectorsCnt, true, true, 1, 0, keyBlock, e_sector, use_flashmemory, false, false, singleSectorParams);
+        mf_check_keys_fast_ex(sectorsCnt, true, true, 1, keycnt, keyBlock, e_sector, use_flashmemory, false, false, singleSectorParams);
     } else {
 
         // strategies. 1= deep first on sector 0 AB,  2= width first on all sectors
