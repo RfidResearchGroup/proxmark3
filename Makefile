@@ -319,7 +319,7 @@ style: commands
 		--style=google --pad-oper --unpad-paren --pad-header \
 		--align-pointer=name {} \;
 
-commands:
+commands: client
 	# Update commands.md
 	[ -x client/proxmark3 ] && client/proxmark3 -m | tr -d '\r' > doc/commands.md
 	# Make sure python3 is installed
