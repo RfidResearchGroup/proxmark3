@@ -1896,32 +1896,33 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
         if (exists_in_spiffs(MF_KEYS_FILE)) {
             size = size_in_spiffs(MF_KEYS_FILE);
         }
-        if (size == 0) {
+        if ((size == 0) || (size < MF_KEY_LENGTH)) {
             Dbprintf("Spiffs file: %s does not exists or empty.", MF_KEYS_FILE);
             goto OUT;
         }
 
-        keyCount = size / MF_KEY_LENGTH;
-
-        if (keyCount == 0)
-            goto OUT;
-
-        // limit size of available for keys in bigbuff
+        // Compute how many keys can fit in bigbuff
         // a key is 6bytes
-        uint16_t key_mem_available = MIN(BigBuf_get_size(), keyCount * MF_KEY_LENGTH);
+        uint16_t key_mem_available = MIN(BigBuf_get_size() / MF_KEY_LENGTH, keyCount + (size / MF_KEY_LENGTH));
 
-        keyCount = key_mem_available / MF_KEY_LENGTH;
-
-        datain = BigBuf_malloc(key_mem_available);
-        if (datain == NULL)
+        uint8_t *dictkeys = BigBuf_malloc(key_mem_available * MF_KEY_LENGTH);
+        if (dictkeys == NULL)
             goto OUT;
 
-        if (SPIFFS_OK == rdv40_spiffs_read_as_filetype(MF_KEYS_FILE, datain, keyCount * MF_KEY_LENGTH, RDV40_SPIFFS_SAFETY_SAFE)) {
-            if (g_dbglevel >= DBG_ERROR) Dbprintf("Loaded %u keys from spiffs file: %s", keyCount, MF_KEYS_FILE);
+        // Put user and hard-coded keys first
+        memcpy(dictkeys, datain, keyCount * MF_KEY_LENGTH);
+
+        // Now append the SPI flash dictionnary
+        if (SPIFFS_OK == rdv40_spiffs_read_as_filetype(MF_KEYS_FILE, dictkeys + keyCount * MF_KEY_LENGTH, (key_mem_available - keyCount) * MF_KEY_LENGTH, RDV40_SPIFFS_SAFETY_SAFE)) {
+            if (g_dbglevel >= DBG_ERROR) {
+                Dbprintf("Loaded %u keys from spiffs file: %s", key_mem_available, MF_KEYS_FILE);
+            }
         } else {
             Dbprintf("Spiffs file: %s cannot be read.", MF_KEYS_FILE);
             goto OUT;
         }
+        // Replace client provided keys
+        datain = dictkeys;
     }
 #endif
 

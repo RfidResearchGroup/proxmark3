@@ -2490,6 +2490,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         arg_lit0(NULL, "slow",             "Slower acquisition (required by some non standard cards)"),
         arg_lit0("l",  "legacy",           "legacy mode (use the slow `hf mf chk`)"),
         arg_lit0("v",  "verbose",          "verbose output"),
+        arg_lit0(NULL, "mem", "Use dictionary from flashmemory"),
 
         arg_lit0(NULL, "ns", "No save to file"),
 
@@ -2542,26 +2543,27 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     bool slow = arg_get_lit(ctx, 7);
     bool legacy_mfchk = arg_get_lit(ctx, 8);
     bool verbose = arg_get_lit(ctx, 9);
+    bool use_flashmemory = arg_get_lit(ctx, 10);
 
-    bool no_save = arg_get_lit(ctx, 10);
+    bool no_save = arg_get_lit(ctx, 11);
 
-    bool m0 = arg_get_lit(ctx, 11);
-    bool m1 = arg_get_lit(ctx, 12);
-    bool m2 = arg_get_lit(ctx, 13);
-    bool m4 = arg_get_lit(ctx, 14);
+    bool m0 = arg_get_lit(ctx, 12);
+    bool m1 = arg_get_lit(ctx, 13);
+    bool m2 = arg_get_lit(ctx, 14);
+    bool m4 = arg_get_lit(ctx, 15);
 
-    bool in = arg_get_lit(ctx, 15);
+    bool in = arg_get_lit(ctx, 16);
 #if defined(COMPILER_HAS_SIMD_X86)
-    bool im = arg_get_lit(ctx, 16);
-    bool is = arg_get_lit(ctx, 17);
-    bool ia = arg_get_lit(ctx, 18);
-    bool i2 = arg_get_lit(ctx, 19);
+    bool im = arg_get_lit(ctx, 17);
+    bool is = arg_get_lit(ctx, 1);
+    bool ia = arg_get_lit(ctx, 19);
+    bool i2 = arg_get_lit(ctx, 20);
 #endif
 #if defined(COMPILER_HAS_SIMD_AVX512)
-    bool i5 = arg_get_lit(ctx, 20);
+    bool i5 = arg_get_lit(ctx, 21);
 #endif
 #if defined(COMPILER_HAS_SIMD_NEON)
-    bool ie = arg_get_lit(ctx, 16);
+    bool ie = arg_get_lit(ctx, 17);
 #endif
 
     CLIParserFree(ctx);
@@ -2784,6 +2786,11 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Start the timer
     uint64_t t1 = msclock();
 
+    // If we use the dictionary in flash memory, we don't want to load keys
+    // from hard drive dictionary as it could exceed BigBuf capacity
+    if (use_flashmemory) {
+        fnlen = 0;
+    }
     int ret = mf_load_keys(&keyBlock, &key_cnt, in_keys, in_keys_len, filename, fnlen, true);
     if (ret != PM3_SUCCESS) {
         free(e_sector);
@@ -2793,7 +2800,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     int32_t res = PM3_SUCCESS;
 
     // Use the dictionary to find sector keys on the card
-    if (verbose) PrintAndLogEx(INFO, "======================= " _YELLOW_("START DICTIONARY ATTACK") " =======================");
+    if (verbose) {
+        PrintAndLogEx(INFO, "======================= " _YELLOW_("START DICTIONARY ATTACK") " =======================");
+    }
 
     if (legacy_mfchk) {
         PrintAndLogEx(INFO, "." NOLF);
@@ -2817,41 +2826,46 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         }
         PrintAndLogEx(NORMAL, "");
     } else {
+        if (use_flashmemory) {
+            PrintAndLogEx(SUCCESS, "Using dictionary in flash memory");
+            res = mf_check_keys_fast(sector_cnt, true, true, 1, key_cnt, keyBlock, e_sector, use_flashmemory, verbose);
+        } else {
 
-        uint32_t chunksize = key_cnt > (PM3_CMD_DATA_SIZE / MIFARE_KEY_SIZE) ? (PM3_CMD_DATA_SIZE / MIFARE_KEY_SIZE) : key_cnt;
-        bool firstChunk = true, lastChunk = false;
+            uint32_t chunksize = key_cnt > (PM3_CMD_DATA_SIZE / MIFARE_KEY_SIZE) ? (PM3_CMD_DATA_SIZE / MIFARE_KEY_SIZE) : key_cnt;
+            bool firstChunk = true, lastChunk = false;
 
-        for (uint8_t strategy = 1; strategy < 3; strategy++) {
-            PrintAndLogEx(INFO, "running strategy %u", strategy);
-            // main keychunk loop
-            for (uint32_t i = 0; i < key_cnt; i += chunksize) {
+            for (uint8_t strategy = 1; strategy < 3; strategy++) {
+                PrintAndLogEx(INFO, "Running strategy %u", strategy);
+                // main keychunk loop
+                for (uint32_t i = 0; i < key_cnt; i += chunksize) {
 
-                if (kbd_enter_pressed()) {
-                    PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
-                    i = key_cnt;
-                    strategy = 3;
-                    break; // Exit the loop
-                }
-                uint32_t size = ((key_cnt - i)  > chunksize) ? chunksize : key_cnt - i;
-                // last chunk?
-                if (size == key_cnt - i) {
-                    lastChunk = true;
-                }
+                    if (kbd_enter_pressed()) {
+                        PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
+                        i = key_cnt;
+                        strategy = 3;
+                        break; // Exit the loop
+                    }
+                    uint32_t size = ((key_cnt - i)  > chunksize) ? chunksize : key_cnt - i;
+                    // last chunk?
+                    if (size == key_cnt - i) {
+                        lastChunk = true;
+                    }
 
-                res = mf_check_keys_fast(sector_cnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * MIFARE_KEY_SIZE), e_sector, false, verbose);
-                if (firstChunk) {
-                    firstChunk = false;
-                }
-                // all keys,  aborted
-                if (res == PM3_SUCCESS) {
-                    i = key_cnt;
-                    strategy = 3;
-                    break; // Exit the loop
-                }
-            } // end chunks of keys
-            firstChunk = true;
-            lastChunk = false;
-        } // end strategy
+                    res = mf_check_keys_fast(sector_cnt, firstChunk, lastChunk, strategy, size, keyBlock + (i * MIFARE_KEY_SIZE), e_sector, false, verbose);
+                    if (firstChunk) {
+                        firstChunk = false;
+                    }
+                    // all keys,  aborted
+                    if (res == PM3_SUCCESS) {
+                        i = key_cnt;
+                        strategy = 3;
+                        break; // Exit the loop
+                    }
+                } // end chunks of keys
+                firstChunk = true;
+                lastChunk = false;
+            } // end strategy
+        }
     }
 
     // Analyse the dictionary attack
@@ -3383,6 +3397,12 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
 
     uint8_t *keyBlock = NULL;
     uint32_t keycnt = 0;
+
+    // If we use the dictionary in flash memory, we don't want to load keys
+    // from hard drive dictionary as it could exceed BigBuf capacity
+    if (use_flashmemory) {
+        fnlen = 0;
+    }
     int ret = mf_load_keys(&keyBlock, &keycnt, key, keylen, filename, fnlen, load_default);
     if (ret != PM3_SUCCESS) {
         return ret;
@@ -3409,7 +3429,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
     }
     if (use_flashmemory) {
         PrintAndLogEx(SUCCESS, "Using dictionary in flash memory");
-        mf_check_keys_fast_ex(sectorsCnt, true, true, 1, 0, keyBlock, e_sector, use_flashmemory, false, false, singleSectorParams);
+        mf_check_keys_fast_ex(sectorsCnt, true, true, 1, keycnt, keyBlock, e_sector, use_flashmemory, false, false, singleSectorParams);
     } else {
 
         // strategies. 1= deep first on sector 0 AB,  2= width first on all sectors
