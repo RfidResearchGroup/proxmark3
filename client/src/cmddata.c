@@ -2566,6 +2566,75 @@ static int CmdFSKToNRZ(const char *Cmd) {
     return ans;
 }
 
+/*
+// If reactivated, beware it doesn't compile on Android (DXL)
+void iceIIR_Butterworth(int *data, const size_t len) {
+
+    int *output = (int *) calloc(sizeof(int) * len, sizeof(uint8_t));
+    if (!output) return;
+
+    // clear mem
+    memset(output, 0x00, len);
+
+    size_t adjustedLen = len;
+    float fc = 0.1125f;          // center frequency
+
+    // create very simple low-pass filter to remove images (2nd-order Butterworth)
+    float complex iir_buf[3] = {0, 0, 0};
+    float b[3] = {0.003621681514929,  0.007243363029857, 0.003621681514929};
+    float a[3] = {1.000000000000000, -1.822694925196308, 0.837181651256023};
+
+    for (size_t i = 0; i < adjustedLen; ++i) {
+
+        float sample = data[i];          // input sample read from array
+        float complex x_prime  = 1.0f;   // save sample for estimating frequency
+        float complex x;
+
+        // remove DC offset and mix to complex baseband
+        x = (sample - 127.5f) * cexpf(_Complex_I * 2 * M_PI * fc * i);
+
+        // apply low-pass filter, removing spectral image (IIR using direct-form II)
+        iir_buf[2] = iir_buf[1];
+        iir_buf[1] = iir_buf[0];
+        iir_buf[0] = x - a[1] * iir_buf[1] - a[2] * iir_buf[2];
+        x          = b[0] * iir_buf[0] +
+                     b[1] * iir_buf[1] +
+                     b[2] * iir_buf[2];
+
+        // compute instantaneous frequency by looking at phase difference
+        // between adjacent samples
+        float freq = cargf(x * conjf(x_prime));
+        x_prime = x;    // retain this sample for next iteration
+
+        output[i] = (freq > 0) ? 127 : -127;
+    }
+
+    // show data
+    //memcpy(data, output, adjustedLen);
+    for (size_t j = 0; j < adjustedLen; ++j)
+        data[j] = output[j];
+
+    free(output);
+}
+*/
+
+static void iceSimple_Filter(int *data, const size_t len, uint8_t k) {
+// ref: http://www.edn.com/design/systems-design/4320010/A-simple-software-lowpass-filter-suits-embedded-system-applications
+// parameter K
+#define FILTER_SHIFT 4
+
+    int32_t filter_reg = 0;
+    int8_t shift = (k <= 8) ? k : FILTER_SHIFT;
+
+    for (size_t i = 0; i < len; ++i) {
+        // Update filter with current sample
+        filter_reg = filter_reg - (filter_reg >> shift) + data[i];
+
+        // Scale output for unity gain
+        data[i] = filter_reg >> shift;
+    }
+}
+
 static int CmdDataIIR(const char *Cmd) {
 
     CLIParserContext *ctx;

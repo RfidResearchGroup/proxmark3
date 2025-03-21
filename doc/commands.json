@@ -7734,7 +7734,7 @@
         },
         "hf seos sam": {
             "command": "hf seos sam",
-            "description": "Extract PACS via a HID SAM",
+            "description": "Extract PACS information via a HID SAM Make sure you got a SAM inserted in your sim module",
             "notes": [
                 "hf seos sam",
                 "hf seos sam -d a005a103800104 -> get PACS data"
@@ -13356,6 +13356,6 @@
     "metadata": {
         "commands_extracted": 767,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-03-20T21:56:35"
+        "extracted_on": "2025-03-21T07:07:05"
     }
 }

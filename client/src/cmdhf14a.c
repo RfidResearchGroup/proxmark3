@@ -2191,11 +2191,12 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         PrintAndLogEx(SUCCESS, "MANUFACTURER: " _YELLOW_("%s"), getTagInfo(card.uid[0]));
 
         switch (card.uid[0]) {
-            case 0x02: // ST
+            case 0x02: { // ST
                 isST = true;
                 isMifareClassic = false;
                 break;
-            case 0x04: // NXP
+            }
+            case 0x04: { // NXP
                 nxptype = detect_nxp_card_print(card.sak, ((card.atqa[1] << 8) + card.atqa[0]), select_status);
 
                 isMifareMini = ((nxptype & MTMINI) == MTMINI);
@@ -2205,17 +2206,21 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 isMifareUltralight = ((nxptype & MTULTRALIGHT) == MTULTRALIGHT);
                 isNTAG424 = ((nxptype & MT424) == MT424);
 
-                if ((nxptype & MTOTHER) == MTOTHER)
+                if ((nxptype & MTOTHER) == MTOTHER) {
                     isMifareClassic = true;
+                }
 
-                if ((nxptype & MTFUDAN) == MTFUDAN)
+                if ((nxptype & MTFUDAN) == MTFUDAN) {
                     isFUDAN = true;
+                }
 
-                if ((nxptype & MTEMV) == MTEMV)
+                if ((nxptype & MTEMV) == MTEMV) {
                     isEMV = true;
+                }
 
                 break;
-            case 0x05: // Infineon
+            }
+            case 0x05: { // Infineon
                 if ((card.uid[1] & 0xF0) == 0x10) {
                     printTag("my-d(tm) command set SLE 66R04/16/32P, SLE 66R04/16/32S");
                 } else if ((card.uid[1] & 0xF0) == 0x20) {
@@ -2235,19 +2240,22 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 }
                 getTagLabel(card.uid[0], card.uid[1]);
                 break;
-            case 0x46:
+            }
+            case 0x46: {
                 if (memcmp(card.uid, "FSTN10m", 7) == 0) {
                     isMifareClassic = false;
                     printTag("Waveshare NFC-Powered e-Paper 1.54\" (please disregard MANUFACTURER mapping above)");
                 }
                 break;
-            case 0x57:
+            }
+            case 0x57: {
                 if (memcmp(card.uid, "WSDZ10m", 7) == 0) {
                     isMifareClassic = false;
                     printTag("Waveshare NFC-Powered e-Paper (please disregard MANUFACTURER mapping above)");
                 }
                 break;
-            default:
+            }
+            default: {
                 getTagLabel(card.uid[0], card.uid[1]);
                 switch (card.sak) {
                     case 0x00: {
@@ -2320,6 +2328,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                     }
                 }
                 break;
+            }
         }
     }
 
@@ -2354,6 +2363,12 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             PrintAndLogEx(WARNING, _RED_("ATS may be corrupted."));
             PrintAndLogEx(INFO, "Length of ATS (%d bytes incl. 2 Bytes CRC) doesn't match TL", card.ats_len);
             bad_ats = true;
+        }
+
+        if (card.ats_len == 7 && memcmp(card.ats, "\x05\x78\x77\x80\x02\x9C\x3A", 7) == 0) {
+            isSEOS = true;
+            isNTAG424 = false;
+            isMifareDESFire = false;
         }
 
         PrintAndLogEx(SUCCESS, "ATS: " _YELLOW_("%s")"[ %02X %02X ]", sprint_hex(card.ats, card.ats_len - 2), card.ats[card.ats_len - 2], card.ats[card.ats_len - 1]);

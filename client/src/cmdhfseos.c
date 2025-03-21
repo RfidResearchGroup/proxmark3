@@ -1640,7 +1640,8 @@ static int CmdHfSeosList(const char *Cmd) {
 static int CmdHfSeosSAM(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf seos sam",
-                  "Extract PACS via a HID SAM\n",
+                  "Extract PACS information via a HID SAM\n"
+                  "Make sure you got a SAM inserted in your sim module",
                   "hf seos sam\n"
                   "hf seos sam -d a005a103800104 -> get PACS data\n"
                  );
@@ -1662,8 +1663,13 @@ static int CmdHfSeosSAM(const char *Cmd) {
     bool decodeTLV = arg_get_lit(ctx, 4);
 
     uint8_t flags = 0;
-    if (disconnectAfter) flags |= BITMASK(0);
-    if (skipDetect) flags |= BITMASK(1);
+    if (disconnectAfter) {
+        flags |= BITMASK(0);
+    }
+
+    if (skipDetect) {
+        flags |= BITMASK(1);
+    }
 
     uint8_t data[PM3_CMD_DATA_SIZE] = {0};
     data[0] = flags;
@@ -1680,23 +1686,28 @@ static int CmdHfSeosSAM(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    // iceman:  this command should use a struct for its data being transfered.
+
     clearCommandBuffer();
     SendCommandNG(CMD_HF_SAM_SEOS, data, cmdlen + 1);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_SAM_SEOS, &resp, 4000) == false) {
-        PrintAndLogEx(WARNING, "SAM timeout");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
     switch (resp.status) {
-        case PM3_SUCCESS:
+        case PM3_SUCCESS: {
             break;
-        case PM3_ENOPACS:
+        }
+        case PM3_ENOPACS: {
             PrintAndLogEx(SUCCESS, "No PACS data found. Card empty?");
             return resp.status;
-        default:
+        }
+        default: {
             PrintAndLogEx(WARNING, "SAM select failed");
             return resp.status;
+    }
     }
 
     uint8_t *d = resp.data.asBytes;
@@ -1705,7 +1716,7 @@ static int CmdHfSeosSAM(const char *Cmd) {
     //    8a 07
     //       03 05 <- tag + length
     //          06 85 80 6d c0 <- decoded PACS data
-    if (d[0] == 0xbd && d[2] == 0x8a && d[4] == 0x03) {
+    if (d[0] == 0xBD && d[2] == 0x8A && d[4] == 0x03) {
         uint8_t pacs_length = d[5];
         uint8_t *pacs_data = d + 6;
         int res = HIDDumpPACSBits(pacs_data, pacs_length, verbose);
