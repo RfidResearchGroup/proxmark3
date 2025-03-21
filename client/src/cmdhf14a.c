@@ -1839,21 +1839,28 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
     PrintAndLogEx(SUCCESS, "Possible types:");
 
     if ((sak & 0x02) != 0x02) {
+
         if ((sak & 0x19) == 0x19) {
             printTag("MIFARE Classic 2K");
             type |= MTCLASSIC;
-        } else if ((sak & 0x40) == 0x40) {
-            if ((atqa & 0x0110) == 0x0110)
-                printTag("P2P Support / Proprietary");
-            else
-                printTag("P2P Support / Android");
 
+        } else if ((sak & 0x40) == 0x40) {
+
+            if ((atqa & 0x0110) == 0x0110) {
+                printTag("P2P Support / Proprietary");
+            } else {
+                printTag("P2P Support / Android");
+            }
             type |= MTISO18092;
+
         } else if ((sak & 0x38) == 0x38) {
             printTag("SmartMX with MIFARE Classic 4K");
             type |= MTCLASSIC;
+
         } else if ((sak & 0x18) == 0x18) {
+
             if (select_status == 1) {
+
                 if ((atqa & 0x0040) == 0x0040) {
                     printTag("MIFARE Plus EV1 4K CL2 in SL1");
                     printTag("MIFARE Plus S 4K CL2 in SL1");
@@ -1863,32 +1870,36 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                     printTag("MIFARE Plus S 4K in SL1");
                     printTag("MIFARE Plus X 4K in SL1");
                 }
-
                 type |= MTPLUS;
+
             } else {
+
                 if ((atqa & 0x0040) == 0x0040) {
                     printTag("MIFARE Classic 4K CL2");
                 } else {
                     printTag("MIFARE Classic 4K");
                 }
-
                 type |= MTCLASSIC;
             }
+
         } else if ((sak & 0x09) == 0x09) {
+
             if ((atqa & 0x0040) == 0x0040) {
                 printTag("MIFARE Mini 0.3K CL2");
             } else {
                 printTag("MIFARE Mini 0.3K");
             }
-
             type |= MTMINI;
+
         } else if ((sak & 0x28) == 0x28) {
             printTag("SmartMX with MIFARE Classic 1K");
             printTag("FM1208-10 with MIFARE Classic 1K");
             printTag("FM1216-137 with MIFARE Classic 1K");
             type |= MTCLASSIC;
         } else if ((sak & 0x08) == 0x08) {
+
             if (select_status == 1) {
+
                 if ((atqa & 0x0040) == 0x0040) {
                     printTag("MIFARE Plus EV1 2K CL2 in SL1");
                     printTag("MIFARE Plus S 2K CL2 in SL1");
@@ -1900,17 +1911,17 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                     printTag("MIFARE Plus X 2K in SL1");
                     printTag("MIFARE Plus SE 1K");
                 }
-
                 type |= MTPLUS;
+
             } else {
                 if ((atqa & 0x0040) == 0x0040) {
                     printTag("MIFARE Classic 1K CL2");
                 } else {
                     printTag("MIFARE Classic 1K");
                 }
-
                 type |= MTCLASSIC;
             }
+
         } else if ((sak & 0x11) == 0x11) {
             printTag("MIFARE Plus 4K in SL2");
             type |= MTPLUS;
@@ -1925,8 +1936,11 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
             printTag("MIFARE DESFire EV1 CL1");
             type |= MTDESFIRE;
         } else if ((sak & 0x20) == 0x20) {
+
             if (select_status == 1) {
+
                 if ((atqa & 0x0040) == 0x0040) {
+
                     if ((atqa & 0x0300) == 0x0300) {
                         printTag("MIFARE DESFire CL2");
                         printTag("MIFARE DESFire EV1 256B/2K/4K/8K CL2");
@@ -1944,9 +1958,13 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                     }
                 } else {
 
-                    if ((atqa & 0x0001) == 0x0001) {
+                    if (
+                        ((atqa & 0x0001) == 0x0001) ||
+                        ((atqa & 0x0004) == 0x0004) 
+                        ) {
                         printTag("HID SEOS (smartmx / javacard)");
                         type |= HID_SEOS;
+
                     } else {
                         printTag("MIFARE Plus EV1 2K/4K in SL3");
                         printTag("MIFARE Plus S 2K/4K in SL3");
@@ -2365,7 +2383,11 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             bad_ats = true;
         }
 
-        if (card.ats_len == 7 && memcmp(card.ats, "\x05\x78\x77\x80\x02\x9C\x3A", 7) == 0) {
+        if (
+            (card.ats_len == 7 && memcmp(card.ats, "\x05\x78\x77\x80\x02\x9C\x3A", 7) == 0) ||
+            (card.ats_len == 7 && memcmp(card.ats, "\x05\x78\x77\x94\x02\x9C\x3A", 7) == 0)
+            ) 
+           {
             isSEOS = true;
             isNTAG424 = false;
             isMifareDESFire = false;
