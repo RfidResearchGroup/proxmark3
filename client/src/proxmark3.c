@@ -48,7 +48,7 @@ static int mainret = PM3_SUCCESS;
 
 #ifndef LIBPM3
 #define BANNERMSG1 ""
-#define BANNERMSG2 "   [ :coffee: ]"
+#define BANNERMSG2 ""
 #define BANNERMSG3 ""
 
 typedef enum LogoMode { UTF8, ANSI, ASCII } LogoMode;
@@ -125,83 +125,64 @@ static uint8_t detect_current_lang(void) {
 static const char *get_quote(void) {
 
     const char *quotes_en[] = {
-        "Fund creativity, empower dreams",
-        "Invest in open innovation",
-        "Donate, empower, grow, sustain",
-        "Back global innovation today",
-        "Fuel open source revolution",
-        "Contribute funds, drive progress",
-        "Sponsor innovation, build tomorrow",
-        "Consider supporting: fund innovation",
-        "Your donation fuels progress",
-        "Empower dreams with your support",
-        "Join us: finance creative freedom",
-        "Make an impact: donate today",
-        "Help us drive open innovation",
-        "Your support, our future",
-        "Invest in a better tomorrow",
-        "Every contribution powers change",
-        "Support us, shape the future",
-        "Ignite change: support open-source creativity",
-        "Together, we can innovate without limits",
+        "E Pluribus Unum",
+        "Carpe Diem",
+        "Ad astra per aspera",
+        "Fortes fortuna adiuvat",
+        "Non ducor, duco",
+        "Veni, vidi, vici",
+        "Audentes fortuna iuvat",
+        "Virtus in actione consistit",
+        "Dum spiro, spero",
+        "Non scholae, sed vitae discimus",
+        "Faber est suae quisque fortunae"
     };
 
     const char *quotes_fr[] = {
-        "Financez la créativité, donnez pouvoir aux rêves",
-        "Investissez dans l'innovation ouverte",
-        "Donnez, habilitez, croissez, soutenez",
-        "Soutenez l'innovation mondiale aujourd'hui",
-        "Alimentez la révolution open source",
-        "Contribuez financièrement, poussez le progrès",
-        "Parrainez l'innovation, construisez demain",
-        "Envisagez de soutenir : financez l'innovation",
-        "Votre don alimente le progrès",
-        "Donnez pouvoir aux rêves avec votre soutien",
-        "Rejoignez-nous : financez la liberté créative",
-        "Faites une différence : donnez aujourd'hui",
-        "Aidez-nous à stimuler l'innovation ouverte",
-        "Votre soutien, notre avenir",
-        "Investissez dans un meilleur demain",
-        "Chaque contribution favorise le changement",
-        "Soutenez-nous, façonnez l'avenir",
-        "Allumez le changement : soutenez la créativité open-source",
-        "Ensemble, nous pouvons innover sans limites",
+        "Liberté, égalité, fraternité",
+        "L'avenir appartient à ceux qui croient à la beauté de leurs rêves",
+        "Rien n'est impossible",
+        "La vie est un défi, relève-le!",
+        "Qui ne tente rien n'a rien",
+        "Le succès est la somme de petits efforts, répétés jour après jour",
+        "Faites de votre vie un rêve, et d’un rêve, une réalité",
+        "La seule façon de faire du bon travail est d’aimer ce que vous faites",
+        "Tout ce que vous pouvez faire, faites-le",
+        "Le succès, c’est d’aller d’échec en échec sans perdre son enthousiasme",
+        "Crois en toi et tout deviendra possible",
+        "C’est en tombant qu’on apprend à se relever"
     };
 
     const char *quotes_es[] = {
-        "Financia la creatividad, empodera sueños",
-        "Invierte en innovación abierta",
-        "Dona, empodera, crece, sostén",
-        "Apoya la innovación global hoy",
-        "Impulsa la revolución de código abierto",
-        "Contribuye fondos, impulsa el progreso",
-        "Patrocina la innovación, construye el mañana",
-        "Considera apoyar: financia la innovación",
-        "Tu donación impulsa el progreso",
-        "Empodera sueños con tu apoyo",
-        "Únete a nosotros: financia la libertad creativa",
-        "Haz un impacto: dona hoy",
-        "Ayúdanos a impulsar la innovación abierta",
-        "Tu apoyo, nuestro futuro",
-        "Invierte en un mejor mañana",
-        "Cada contribución impulsa el cambio",
-        "Apóyanos, forma el futuro",
-        "Enciende el cambio: apoya la creatividad de código abierto",
-        "Juntos, podemos innovar sin límites",
+        "El éxito es la suma de pequeños esfuerzos repetidos día tras día",
+        "Hazlo con pasión o no lo hagas",
+        "Nunca dejes de soñar",
+        "El único modo de hacer un gran trabajo es amar lo que haces",
+        "No hay que ir para atrás ni para darse impulso",
+        "Cada logro comienza con la decisión de intentarlo",
+        "No importa lo lento que vayas, siempre y cuando no te detengas",
+        "La disciplina es el puente entre las metas y los logros",
+        "Si puedes soñarlo, puedes lograrlo",
+        "La vida es una aventura, atrévete",
     };
 
+    int r = 0;
     srand((uint32_t)time(NULL));
-    int r = rand() % ARRAYLEN(quotes_en);
-
     uint8_t lang = detect_current_lang();
     switch (lang) {
-        case 2:
+        case 2: {
+            r = rand() % ARRAYLEN(quotes_fr);
             return quotes_fr[r];
-        case 3:
+        }
+        case 3: {
+            r = rand() % ARRAYLEN(quotes_es);
             return quotes_es[r];
+        }
         case 1:
-        default:
+        default: {
+            r = rand() % ARRAYLEN(quotes_en);
             return quotes_en[r];
+        }
     }
 }
 
@@ -223,10 +204,9 @@ static void showBanner(void) {
     showBanner_logo(ASCII);
 #endif
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(NORMAL, "  [ " _YELLOW_("%s!")" ]", get_quote());
-    PrintAndLogEx(NORMAL, "     Patreon - https://www.patreon.com/iceman1001/");
-    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(NORMAL, "  [ " _YELLOW_("%s!")" :coffee: ]", get_quote());
+//    PrintAndLogEx(NORMAL, "  [ https://patreon.com/iceman1001/ ]");
+//    PrintAndLogEx(NORMAL, "");
 //    PrintAndLogEx(NORMAL, "   Monero");
 //    PrintAndLogEx(NORMAL, " 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
     PrintAndLogEx(NORMAL, "");

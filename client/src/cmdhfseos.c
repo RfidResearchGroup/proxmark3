@@ -1707,7 +1707,7 @@ static int CmdHfSeosSAM(const char *Cmd) {
         default: {
             PrintAndLogEx(WARNING, "SAM select failed");
             return resp.status;
-    }
+        }
     }
 
     uint8_t *d = resp.data.asBytes;
