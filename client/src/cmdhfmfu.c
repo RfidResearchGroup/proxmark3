@@ -4698,8 +4698,8 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                     current++;
                     end++;
                     start++;
-                    retries = 0;
                     PrintAndLogEx(INFO, _CYAN_("Retried %u times, increased delay with 1us"), retries);
+                    retries = 0;
                 }
             }
         }
