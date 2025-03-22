@@ -88,7 +88,15 @@ void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, vo
 }
 
 void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len) {
+
     PacketCommandOLD c = {CMD_UNKNOWN, {0, 0, 0}, {{0}}};
+
+    if (len > PM3_CMD_DATA_SIZE) {
+        PrintAndLogEx(WARNING, "Sending " _RED_("%zu") " bytes of payload is too much for OLD frames, abort", len);
+        return;
+        // return PM3_EOUTOFBOUND;
+    } 
+
     c.cmd = cmd;
     c.arg[0] = arg0;
     c.arg[1] = arg1;
@@ -96,6 +104,7 @@ void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, c
     if (len && data) {
         memcpy(&c.d, data, len);
     }
+
 
 #ifdef COMMS_DEBUG
     PrintAndLogEx(NORMAL, "Sending %s", "OLD");
@@ -142,7 +151,7 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
         return;
     }
     if (len > PM3_CMD_DATA_SIZE) {
-        PrintAndLogEx(WARNING, "Sending %zu bytes of payload is too much, abort", len);
+        PrintAndLogEx(WARNING, "Sending " _RED_("%zu") " bytes of payload is too much, abort", len);
         return;
     }
 
@@ -203,7 +212,7 @@ void SendCommandNG(uint16_t cmd, uint8_t *data, size_t len) {
 void SendCommandMIX(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len) {
     uint64_t arg[3] = {arg0, arg1, arg2};
     if (len > PM3_CMD_DATA_SIZE_MIX) {
-        PrintAndLogEx(WARNING, "Sending %zu bytes of payload is too much for MIX frames, abort", len);
+        PrintAndLogEx(WARNING, "Sending " _RED_("%zu") " bytes of payload is too much for MIX frames, abort", len);
         return;
     }
     uint8_t cmddata[PM3_CMD_DATA_SIZE];

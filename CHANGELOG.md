@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf mf autopwn` - tries to detect static encrypted nonces and also user cancel during chk keys (@iceman1001)
 - Added option to `hf mf autopwn` to use SPI flash dictionary (@jmichelp)
 - Changed `trace list -t seos` - now annotate ISO7816 (@iceman1001)
 - Updated aid and mad json files (@iceman1001)

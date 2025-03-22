@@ -557,9 +557,8 @@ void reverse_arraybytes(uint8_t *arr, size_t len) {
     }
 }
 
-void reverse_arraybytes_copy(uint8_t *arr, uint8_t *dest, size_t len) {
-    size_t i;
-    for (i = 0; i < len ; i++) {
+void reverse_arraybytes_copy(const uint8_t *arr, uint8_t *dest, size_t len) {
+    for (size_t i = 0; i < len ; i++) {
         dest[i] = reflect8(arr[i]);
     }
 }

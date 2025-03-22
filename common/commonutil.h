@@ -86,10 +86,10 @@ void format_version_information_short(char *dst, int len, const void *version_in
 
 uint32_t reflect(uint32_t v, int b); // used in crc.c ...
 uint8_t reflect8(uint8_t b);         // dedicated 8bit reversal
-uint16_t reflect16(uint16_t b);      // dedicated 16bit reversal
-uint32_t reflect32(uint32_t b);      // dedicated 32bit reversal
-uint64_t reflect48(uint64_t b);      // dedicated 48bit reversal
-uint64_t reflect64(uint64_t b);      // dedicated 64bit reversal
+uint16_t reflect16(uint16_t v);      // dedicated 16bit reversal
+uint32_t reflect32(uint32_t v);      // dedicated 32bit reversal
+uint64_t reflect48(uint64_t v);      // dedicated 48bit reversal
+uint64_t reflect64(uint64_t v);      // dedicated 64bit reversal
 
 void num_to_bytes(uint64_t n, size_t len, uint8_t *dest);
 uint64_t bytes_to_num(const uint8_t *src, size_t len);
@@ -150,7 +150,7 @@ void reverse_array_copy(const uint8_t *src, int src_len, uint8_t *dest);
 bool hexstr_to_byte_array(const char *hexstr, uint8_t *d, size_t *n);
 
 void reverse_arraybytes(uint8_t *arr, size_t len);
-void reverse_arraybytes_copy(uint8_t *arr, uint8_t *dest, size_t len);
+void reverse_arraybytes_copy(const uint8_t *arr, uint8_t *dest, size_t len);
 
 size_t concatbits(uint8_t *dest, int dest_offset, const uint8_t *src, int src_offset, size_t nbits, bool src_lsb);
 int char2int(char c);

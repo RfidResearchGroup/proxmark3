@@ -356,7 +356,7 @@ static void mf_print_blocks(uint16_t n, uint8_t *d, bool verbose) {
 
     // MAD detection
     if (HasMADKey(d)) {
-        PrintAndLogEx(HINT, "Hint: MAD key detected. Try " _YELLOW_("`hf mf mad`") " for more details");
+        PrintAndLogEx(HINT, "Hint: MAD key detected. Try `" _YELLOW_("hf mf mad") "` for more details");
     }
     PrintAndLogEx(NORMAL, "");
 }
@@ -766,7 +766,7 @@ static int mf_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey
             PrintAndLogEx(DEBUG, _YELLOW_("%2d") " - %s", i, sprint_hex(*pkeyBlock + i * MIFARE_KEY_SIZE, MIFARE_KEY_SIZE));
         }
         *pkeycnt += numKeys;
-        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%2d") " user keys", numKeys);
+        PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%d") " user keys", numKeys);
     }
 
     if (load_default) {
@@ -2555,7 +2555,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     bool in = arg_get_lit(ctx, 16);
 #if defined(COMPILER_HAS_SIMD_X86)
     bool im = arg_get_lit(ctx, 17);
-    bool is = arg_get_lit(ctx, 1);
+    bool is = arg_get_lit(ctx, 18);
     bool ia = arg_get_lit(ctx, 19);
     bool i2 = arg_get_lit(ctx, 20);
 #endif
@@ -2754,6 +2754,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             free(fptr);
             return PM3_ESOFT;
         }
+
+        // 
+        has_staticnonce = detect_classic_static_encrypted_nonce(0, MF_KEY_A, g_mifare_default_key);
     }
 
     // print parameters
@@ -2765,12 +2768,24 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         PrintAndLogEx(INFO, " keytype ....... " _YELLOW_("%c"), (keytype == MF_KEY_B) ? 'B' : 'A');
         PrintAndLogEx(INFO, " known key ..... " _YELLOW_("%s"), sprint_hex_inrow(key, sizeof(key)));
 
-        if (has_staticnonce == NONCE_STATIC)
+        switch(has_staticnonce) {
+            case NONCE_STATIC: {
             PrintAndLogEx(INFO, " card PRNG ..... " _YELLOW_("STATIC"));
-        else if (has_staticnonce == NONCE_NORMAL)
+                break;
+            }
+            case NONCE_STATIC_ENC: {
+                PrintAndLogEx(INFO, " card PRNG ..... " _YELLOW_("STATIC ENCRYPTED"));
+                break;
+            }
+            case NONCE_NORMAL: {
             PrintAndLogEx(INFO, " card PRNG ..... " _YELLOW_("%s"), prng_type ? "WEAK" : "HARD");
-        else
+                break;
+            }
+            default: {
             PrintAndLogEx(INFO, " card PRNG ..... " _YELLOW_("Could not determine PRNG,") " " _RED_("read failed."));
+                break;
+            }
+        }
 
         PrintAndLogEx(INFO, " dictionary .... " _YELLOW_("%s"), strlen(filename) ? filename : "NONE");
         PrintAndLogEx(INFO, " legacy mode ... " _YELLOW_("%s"), legacy_mfchk ? "True" : "False");
@@ -2826,6 +2841,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         }
         PrintAndLogEx(NORMAL, "");
     } else {
+
         if (use_flashmemory) {
             PrintAndLogEx(SUCCESS, "Using dictionary in flash memory");
             res = mf_check_keys_fast(sector_cnt, true, true, 1, key_cnt, keyBlock, e_sector, use_flashmemory, verbose);
@@ -2845,6 +2861,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                         strategy = 3;
                         break; // Exit the loop
                     }
+
                     uint32_t size = ((key_cnt - i)  > chunksize) ? chunksize : key_cnt - i;
                     // last chunk?
                     if (size == key_cnt - i) {
@@ -2919,8 +2936,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
             isOK = mf_dark_side(mfFirstBlockOfSector(sectorno), MIFARE_AUTH_KEYA + keytype, &key64);
 
-            if (isOK != PM3_SUCCESS)
+            if (isOK != PM3_SUCCESS) {
                 goto noValidKeyFound;
+            }
 
             PrintAndLogEx(SUCCESS, "Found valid key [ " _GREEN_("%012" PRIx64) " ]\n", key64);
 
@@ -2937,7 +2955,15 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
 noValidKeyFound:
             PrintAndLogEx(FAILED, "No usable key was found!");
+            if (use_flashmemory == false && fnlen == 0) {
             PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf autopwn -f mfc_default_keys")"`  i.e. the Randy special");
+            }
+          
+            if (has_staticnonce == NONCE_STATIC_ENC) {
+                PrintAndLogEx(HINT, "Hint: Static encrypted nonce detected, run `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
+            }
+
+            DropField();
             free(keyBlock);
             free(e_sector);
             free(fptr);
@@ -3295,10 +3321,10 @@ all_found:
         return PM3_ESOFT;
     }
 
-    strncpy(filename, fptr, sizeof(filename) - 1);
+    strncpy(outfilename, fptr, sizeof(outfilename) - 1);
     free(fptr);
 
-    pm3_save_mf_dump(filename, dump, bytes, jsfCardMemory);
+    pm3_save_mf_dump(outfilename, dump, bytes, jsfCardMemory);
     free(dump);
 
 out:
@@ -3306,6 +3332,7 @@ out:
     t1 = msclock() - t1;
     PrintAndLogEx(INFO, "autopwn execution time: " _YELLOW_("%.0f") " seconds", (float)t1 / 1000.0);
 
+    DropField();
     free(e_sector);
     return PM3_SUCCESS;
 }
@@ -3397,7 +3424,6 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
 
     uint8_t *keyBlock = NULL;
     uint32_t keycnt = 0;
-
     // If we use the dictionary in flash memory, we don't want to load keys
     // from hard drive dictionary as it could exceed BigBuf capacity
     if (use_flashmemory) {
@@ -9923,7 +9949,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     }
 
     if (res == NONCE_STATIC_ENC) {
-        PrintAndLogEx(HINT, "try `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
     }
 
     if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS) {

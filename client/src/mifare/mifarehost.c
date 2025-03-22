@@ -209,10 +209,12 @@ int mf_dark_side(uint8_t blockno, uint8_t key_type, uint64_t *key) {
 }
 
 int mf_check_keys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t keycnt, uint8_t *keyBlock, uint64_t *key) {
+
     if (key) {
         *key = -1;
     }
-    clearCommandBuffer();
+
+
     uint8_t data[PM3_CMD_DATA_SIZE] = {0};
     data[0] = keyType;
     data[1] = blockNo;
@@ -220,12 +222,14 @@ int mf_check_keys(uint8_t blockNo, uint8_t keyType, bool clear_trace, uint8_t ke
     data[3] = 0;
     data[4] = keycnt;
     memcpy(data + 5, keyBlock, MIFARE_KEY_SIZE * keycnt);
-    SendCommandNG(CMD_HF_MIFARE_CHKKEYS, data, (5 + MIFARE_KEY_SIZE * keycnt));
 
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_CHKKEYS, data, (5 + MIFARE_KEY_SIZE * keycnt));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_CHKKEYS, &resp, 2500) == false) {
         return PM3_ETIMEOUT;
     }
+
     if (resp.status != PM3_SUCCESS) {
         return resp.status;
     }
@@ -257,11 +261,23 @@ int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastCh
 
     // send keychunk
     clearCommandBuffer();
-    SendCommandOLD(CMD_HF_MIFARE_CHKKEYS_FAST, (sectorsCnt | (firstChunk << 8) | (lastChunk << 12) | (singleSectorParams << 16)), ((use_flashmemory << 8) | strategy), size, keyBlock, 6 * size);
+    SendCommandOLD(CMD_HF_MIFARE_CHKKEYS_FAST
+            , (sectorsCnt | (firstChunk << 8) | (lastChunk << 12) | (singleSectorParams << 16))
+            , ((use_flashmemory << 8) | strategy)
+            , size
+            , keyBlock
+            , (MIFARE_KEY_SIZE * size)
+        );
     PacketResponseNG resp;
 
     uint32_t timeout = 0;
     while (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
+
+        while (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(NORMAL, "");
+            return PM3_EOPABORTED;
+        }
 
         if (quiet == false) {
             PrintAndLogEx((timeout) ? NORMAL : INFO, "." NOLF);
@@ -285,7 +301,6 @@ int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastCh
     if (timeout && (quiet == false)) {
         PrintAndLogEx(NORMAL, "");
     }
-
     // time to convert the returned data.
     uint8_t curr_keys = resp.oldarg[0];
 
@@ -366,8 +381,9 @@ int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastCh
     return PM3_ESOFT;
 }
 
-int mf_check_keys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy,
-                       uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory, bool verbose) {
+int mf_check_keys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy
+                        , uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory
+                        , bool verbose) {
     return mf_check_keys_fast_ex(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock, e_sector, use_flashmemory, verbose, false, 0);
 }
 
@@ -375,8 +391,10 @@ int mf_check_keys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk
 // As of now,  255 keys possible in the file
 // 6 * 255 = 1500 bytes
 int mf_check_keys_file(uint8_t *destfn, uint64_t *key) {
+
+    if (key) {
     *key = -1;
-    clearCommandBuffer();
+    }
 
     struct {
         uint8_t filename[32];
@@ -384,13 +402,14 @@ int mf_check_keys_file(uint8_t *destfn, uint64_t *key) {
 
     memcpy(payload_file.filename, destfn, sizeof(payload_file.filename) - 1);
 
+    clearCommandBuffer();
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_CHKKEYS_FILE, (uint8_t *)&payload_file, sizeof(payload_file));
 
     uint8_t retry = 10;
 
-    while (!WaitForResponseTimeout(CMD_HF_MIFARE_CHKKEYS, &resp, 2000)) {
+    while (WaitForResponseTimeout(CMD_HF_MIFARE_CHKKEYS, &resp, 2000) == false) {
 
         //flush queue
         while (kbd_enter_pressed()) {
@@ -406,14 +425,19 @@ int mf_check_keys_file(uint8_t *destfn, uint64_t *key) {
         }
     }
 
-    if (resp.status != PM3_SUCCESS) return resp.status;
+    if (resp.status != PM3_SUCCESS) {
+        return resp.status;
+    }
 
     struct kr {
         uint8_t key[MIFARE_KEY_SIZE];
         bool found;
     } PACKED;
     struct kr *keyresult = (struct kr *)&resp.data.asBytes;
-    if (!keyresult->found) return PM3_ESOFT;
+
+    if (keyresult->found == false) {
+        return PM3_ESOFT;
+    }
 
     *key = bytes_to_num(keyresult->key, sizeof(keyresult->key));
     return PM3_SUCCESS;
@@ -457,8 +481,9 @@ int mf_key_brute(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint64_t 
         }
 
         // progress
-        if (counter % 20 == 0)
+        if (counter % 20 == 0) {
             PrintAndLogEx(SUCCESS, "tried %s.. \t %u keys", sprint_hex(candidates + i, 6),  counter * KEYS_IN_BLOCK);
+    }
     }
     return found;
 }
@@ -494,7 +519,7 @@ __attribute__((force_align_arg_pointer))
 
 int mf_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKey, bool calibrate) {
 
-    uint32_t uid;
+    uint32_t uid = 0;
     StateList_t statelists[2];
     struct Crypto1State *p1, *p2, *p3, *p4;
 
@@ -611,7 +636,9 @@ int mf_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo
 
     //statelists[0].tail.keytail = --p7;
     uint32_t keycnt = statelists[0].len;
-    if (keycnt == 0) goto out;
+    if (keycnt == 0) {
+        goto out;
+    }
 
     PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") " key candidates", keycnt);
 
@@ -680,7 +707,7 @@ out:
 
 int mf_static_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKey) {
 
-    uint32_t uid;
+    uint32_t uid = 0;
     StateList_t statelists[2];
     struct Crypto1State *p1, *p2, *p3, *p4;
 
@@ -788,48 +815,6 @@ int mf_static_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trg
     qsort(statelists[1].head.keyhead, statelists[1].len, sizeof(uint64_t), compare_uint64);
     // Create the intersection
     statelists[0].len = intersection(statelists[0].head.keyhead, statelists[1].head.keyhead);
-
-
-    /*
-
-        memcpy(&uid, package->cuid, sizeof(package->cuid));
-
-        statelists[0].blockNo = package->block;
-        statelists[0].keyType = package->keytype;
-        statelists[0].uid = uid;
-
-        memcpy(&statelists[0].nt_enc, package->nt, sizeof(package->nt));
-        memcpy(&statelists[0].ks1, package->ks, sizeof(package->ks));
-
-        // calc keys
-        pthread_t t;
-
-        // create and run worker thread
-        pthread_create(&t, NULL, nested_worker_thread, &statelists[0]);
-
-        // wait for thread to terminate:
-        pthread_join(t, (void *)&statelists[0].head.slhead);
-
-        // the first 16 Bits of the cryptostate already contain part of our key.
-        p1 = p3 = statelists[0].head.slhead;
-
-        // create key candidates.
-        while (p1 <= statelists[0].tail.sltail) {
-            struct Crypto1State savestate;
-            savestate = *p1;
-            while (Compare16Bits(p1, &savestate) == 0 && p1 <= statelists[0].tail.sltail) {
-                *p3 = *p1;
-                lfsr_rollback_word(p3, statelists[0].nt_enc ^ statelists[0].uid, 0);
-                p3++;
-                p1++;
-            }
-        }
-
-        p3->odd = -1;
-        p3->even = -1;
-        statelists[0].len = p3 - statelists[0].head.slhead;
-        statelists[0].tail.sltail = --p3;
-    */
 
     uint32_t keycnt = statelists[0].len;
     if (keycnt == 0) {
@@ -1060,7 +1045,7 @@ int mf_eml_get_mem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtW
     SendCommandNG(CMD_HF_MIFARE_EML_MEMGET, (uint8_t *)&payload, sizeof(payload));
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_EML_MEMGET, &resp, 1500) == 0) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_EML_MEMGET, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
@@ -1182,13 +1167,16 @@ int mf_chinese_wipe(uint8_t *uid, const uint8_t *atqa, const uint8_t *sak, uint8
         memcpy(block0, uid, 4);
         block0[4] = block0[0] ^ block0[1] ^ block0[2] ^ block0[3];
     }
-    if (sak != NULL)
+
+    if (sak != NULL) {
         block0[5] = sak[0];
+    }
 
     if (atqa != NULL) {
         block0[6] = atqa[1];
         block0[7] = atqa[0];
     }
+
     int res;
     for (int blockNo = 0; blockNo < 4 * 16; blockNo++) {
         for (int retry = 0; retry < 3; retry++) {
@@ -1198,14 +1186,16 @@ int mf_chinese_wipe(uint8_t *uid, const uint8_t *atqa, const uint8_t *sak, uint8
             if (blockNo == 0) {
                 res = mf_chinese_set_block(blockNo, block0, NULL, params);
             } else {
-                if (mfIsSectorTrailer(blockNo))
+                if (mfIsSectorTrailer(blockNo)) {
                     res = mf_chinese_set_block(blockNo, blockK, NULL, params);
-                else
+                } else {
                     res = mf_chinese_set_block(blockNo, blockD, NULL, params);
             }
+            }
 
-            if (res == PM3_SUCCESS)
+            if (res == PM3_SUCCESS) {                
                 break;
+            }
 
             PrintAndLogEx(WARNING, "retry block %d ...", blockNo);
         }
@@ -1221,16 +1211,22 @@ int mf_chinese_wipe(uint8_t *uid, const uint8_t *atqa, const uint8_t *sak, uint8
 }
 
 int mf_chinese_set_block(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t params) {
+
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFARE_CSETBL, params, blockNo, 0, data, MFBLOCK_SIZE);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 3500)) {
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 3500) == false) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(WARNING, "Command execution time out");
+        return PM3_ETIMEOUT;
+    }
+
         uint8_t isOK  = resp.oldarg[0] & 0xFF;
         if (uid != NULL) {
             memcpy(uid, resp.data.asBytes, 4);
         }
 
-        if (!isOK) {
+    if (isOK == 0) {
 
             uint8_t reason = (resp.oldarg[1] & 0xFF);
             if (reason == 4) {
@@ -1243,11 +1239,7 @@ int mf_chinese_set_block(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t p
 
             return PM3_EUNDEF;
         }
-    } else {
-        PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(WARNING, "Command execution time out");
-        return PM3_ETIMEOUT;
-    }
+
     return PM3_SUCCESS;
 }
 
@@ -1257,7 +1249,7 @@ int mf_chinese_get_block(uint8_t blockNo, uint8_t *data, uint8_t params) {
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
         uint8_t isOK  = resp.oldarg[0] & 0xff;
-        if (!isOK) {
+        if (isOK == 0) {
             return PM3_EUNDEF;
         }
         memcpy(data, resp.data.asBytes, MFBLOCK_SIZE);
@@ -1287,31 +1279,27 @@ int mf_chinese_gen_3_block(uint8_t *block, int blockLen, uint8_t *newBlock) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_MIFARE_GEN3BLK, blockLen, 0, 0, block, MFBLOCK_SIZE);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_GEN3BLK, &resp, 3500)) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_GEN3BLK, &resp, 3500) == false) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+
         if (resp.status == PM3_SUCCESS && newBlock) {
             memcpy(newBlock, resp.data.asBytes, MFBLOCK_SIZE);
         }
         return resp.status;
-    } else {
-        PrintAndLogEx(WARNING, "command execution time out");
-        return PM3_ETIMEOUT;
-    }
 }
 
 int mf_chinese_gen_3_freeze(void) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_GEN3FREEZ, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_GEN3FREEZ, &resp, 3500)) {
-        return resp.status;
-    } else {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_GEN3FREEZ, &resp, 3500) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
+    return resp.status;
 }
-
-// variables
-uint32_t cuid = 0;    // uid part used for crypto1.
 
 void mf_crypto1_decrypt(struct Crypto1State *pcs, uint8_t *data, int len, bool isEncrypted) {
     if (len != 1) {
@@ -1357,9 +1345,8 @@ int detect_classic_prng(void) {
 
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, flags, sizeof(cmd), 0, cmd, sizeof(cmd));
-
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
-        PrintAndLogEx(WARNING, "PRNG UID: Reply timeout.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
@@ -1369,7 +1356,7 @@ int detect_classic_prng(void) {
         return PM3_ERFTRANS;
     }
     if (WaitForResponseTimeout(CMD_ACK, &respA, 2500) == false) {
-        PrintAndLogEx(WARNING, "PRNG data: Reply timeout.");
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
@@ -1428,6 +1415,7 @@ int detect_classic_nackbug(bool verbose) {
                 PrintAndLogEx(SUCCESS, "num of auth requests  : %u", auths);
                 PrintAndLogEx(SUCCESS, "num of received NACK  : %u", nacks);
             }
+
             switch (ok) {
                 case 96 :
                 case 98 : {
@@ -1443,18 +1431,22 @@ int detect_classic_nackbug(bool verbose) {
                     }
                     return PM3_SUCCESS;
                 }
-                case  2 :
+                case  2: {
                     PrintAndLogEx(SUCCESS, "NACK test: " _GREEN_("always leak NACK"));
                     return PM3_SUCCESS;
-                case  1 :
+                }
+                case  1: {
                     PrintAndLogEx(SUCCESS, "NACK test: " _GREEN_("detected"));
                     return PM3_SUCCESS;
-                case  0 :
+                }
+                case  0: {
                     PrintAndLogEx(SUCCESS, "NACK test: " _GREEN_("no bug"));
                     return PM3_SUCCESS;
-                default :
+                }
+                default: {
                     PrintAndLogEx(ERR, "errorcode from device " _RED_("[%i]"), ok);
                     return PM3_EUNDEF;
+            }
             }
             break;
         }
@@ -1476,8 +1468,9 @@ int detect_classic_static_nonce(void) {
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_NONCE, &resp, 1000)) {
 
-        if (resp.status == PM3_ESOFT)
+        if (resp.status == PM3_ESOFT) {
             return NONCE_FAIL;
+        }
 
         return resp.data.asBytes[0];
     }
@@ -1492,8 +1485,12 @@ returns:
 2  = cmd failed
 3  = has encrypted nonce
 */
-int detect_classic_static_encrypted_nonce_ex(uint8_t block_no, uint8_t key_type, uint8_t *key, uint8_t block_no_nested, uint8_t key_type_nested, uint8_t *key_nested, uint8_t nr_nested, bool reset, bool hardreset, bool addread, bool addauth, bool incblk2, bool corruptnrar, bool corruptnrarparity, bool verbose) {
-    clearCommandBuffer();
+int detect_classic_static_encrypted_nonce_ex(uint8_t block_no, uint8_t key_type, const uint8_t *key, uint8_t block_no_nested
+                                            , uint8_t key_type_nested, const uint8_t *key_nested
+                                            , uint8_t nr_nested, bool reset, bool hardreset
+                                            , bool addread, bool addauth, bool incblk2
+                                            , bool corruptnrar, bool corruptnrarparity, bool verbose) {
+
     uint8_t cdata[1 + 1 + MIFARE_KEY_SIZE + 1 + 1 + MIFARE_KEY_SIZE + 1 + 1 + 1 + 1 + 1 + 1 + 1] = { 0 };
     cdata[0] = block_no;
     cdata[1] = key_type;
@@ -1508,6 +1505,8 @@ int detect_classic_static_encrypted_nonce_ex(uint8_t block_no, uint8_t key_type,
     cdata[20] = incblk2;
     cdata[21] = corruptnrar;
     cdata[22] = corruptnrarparity;
+
+    clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, cdata, sizeof(cdata));
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, &resp, 1000)) {
@@ -1515,6 +1514,7 @@ int detect_classic_static_encrypted_nonce_ex(uint8_t block_no, uint8_t key_type,
         if (resp.status == PM3_ESOFT) {
             return NONCE_FAIL;
         }
+
         if (verbose && (resp.data.asBytes[0] == NONCE_STATIC_ENC)) {
 
             uint32_t uid = resp.data.asBytes[1] << 24 |
@@ -1539,7 +1539,7 @@ int detect_classic_static_encrypted_nonce_ex(uint8_t block_no, uint8_t key_type,
             struct Crypto1State *pcs;
             pcs = &mpcs;
 
-            uint64_t ui64key = bytes_to_num(key_nested, 6);
+            uint64_t ui64key = bytes_to_num(key_nested, MIFARE_KEY_SIZE);
 
             crypto1_init(pcs, ui64key); // key_nested
             uint32_t ks = crypto1_word(pcs, ntenc ^ uid, 1);
@@ -1578,7 +1578,7 @@ int detect_classic_static_encrypted_nonce_ex(uint8_t block_no, uint8_t key_type,
     return NONCE_FAIL;
 }
 
-int detect_classic_static_encrypted_nonce(uint8_t block_no, uint8_t key_type, uint8_t *key) {
+int detect_classic_static_encrypted_nonce(uint8_t block_no, uint8_t key_type, const uint8_t *key) {
     return detect_classic_static_encrypted_nonce_ex(block_no, key_type, key, block_no, key_type, key, 3, false, false, false, false, false, false, false, false);
 }
 
@@ -1696,8 +1696,9 @@ int read_mfc_ev1_signature(uint8_t *signature) {
 }
 
 int convert_mfc_2_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen) {
-    if (in == NULL || out == NULL)
+    if (in == NULL || out == NULL) {
         return PM3_EINVARG;
+    }
 
     uint8_t blockno = 0;
     while (ilen) {
