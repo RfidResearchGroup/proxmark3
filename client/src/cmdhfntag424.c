@@ -1018,7 +1018,7 @@ static int CmdHF_ntag424_read(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int fileno = arg_get_int(ctx, 1);
+    int l_fileno = arg_get_int(ctx, 1);
 
     int keyno = 0;
     uint8_t key[16] = {0};
@@ -1067,10 +1067,10 @@ static int CmdHF_ntag424_read(const char *Cmd) {
     }
 
     uint8_t data[512] = {0};
-    res = ntag424_read_data(fileno, offset, read_length, data, comm_mode, &session_keys);
+    res = ntag424_read_data(l_fileno, offset, read_length, data, comm_mode, &session_keys);
     DropField();
     if (res == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, " -------- Read file " _YELLOW_("%d") " contents ------------ ", fileno);
+        PrintAndLogEx(SUCCESS, " -------- Read file " _YELLOW_("%d") " contents ------------ ", l_fileno);
         print_hex_break(data, read_length, 16);
     }
     return res;
@@ -1095,7 +1095,7 @@ static int CmdHF_ntag424_write(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int fileno = arg_get_int(ctx, 1);
+    int l_fileno = arg_get_int(ctx, 1);
 
     int keyno = 0;
     uint8_t key[16] = {0};
@@ -1146,7 +1146,7 @@ static int CmdHF_ntag424_write(const char *Cmd) {
         }
     }
 
-    res = ntag424_write_data(fileno, offset, (uint32_t)datalen, data, comm_mode, &session_keys);
+    res = ntag424_write_data(l_fileno, offset, (uint32_t)datalen, data, comm_mode, &session_keys);
     DropField();
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Wrote " _YELLOW_("%d") " bytes ( " _GREEN_("ok") " )", datalen);
@@ -1168,7 +1168,7 @@ static int CmdHF_ntag424_getfilesettings(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int fileno = arg_get_int(ctx, 1);
+    int l_fileno = arg_get_int(ctx, 1);
 
     CLIParserFree(ctx);
 
@@ -1184,10 +1184,10 @@ static int CmdHF_ntag424_getfilesettings(const char *Cmd) {
     }
 
     ntag424_file_settings_t settings = {0};
-    int res = ntag424_get_file_settings(fileno, &settings);
+    int res = ntag424_get_file_settings(l_fileno, &settings);
     DropField();
     if (res == PM3_SUCCESS) {
-        ntag424_print_file_settings(fileno, &settings);
+        ntag424_print_file_settings(l_fileno, &settings);
     }
     return res;
 }
@@ -1247,7 +1247,7 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
-    int fileno = arg_get_int(ctx, 1);
+    int l_fileno = arg_get_int(ctx, 1);
 
     int keyno = 0;
     uint8_t key[16] = {0};
@@ -1339,7 +1339,7 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
     }
 
     ntag424_file_settings_t settings = {0};
-    if (ntag424_get_file_settings(fileno, &settings) != PM3_SUCCESS) {
+    if (ntag424_get_file_settings(l_fileno, &settings) != PM3_SUCCESS) {
         DropField();
         return PM3_ESOFT;
     }
@@ -1377,11 +1377,11 @@ static int CmdHF_ntag424_changefilesettings(const char *Cmd) {
         settings.optional_sdm_settings.sdm_data[i][0] = sdm_data[i][2];
     }
 
-    res = ntag424_write_file_settings(fileno, &settings, &session);
+    res = ntag424_write_file_settings(l_fileno, &settings, &session);
     DropField();
     if (res == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Write settings ( " _GREEN_("ok") " )");
-        ntag424_print_file_settings(fileno, &settings);
+        ntag424_print_file_settings(l_fileno, &settings);
     } else {
         PrintAndLogEx(ERR, "Write settings (" _RED_("fail") " )");
     }
