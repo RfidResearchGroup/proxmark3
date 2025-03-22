@@ -393,7 +393,7 @@ int mfc_algo_mizip_one(const uint8_t *uid, uint8_t sector, uint8_t keytype, uint
 
     } else {
 
-        uint8_t xor[6];
+        uint8_t txor[6];
 
         if (keytype == 0) {
 
@@ -404,15 +404,15 @@ int mfc_algo_mizip_one(const uint8_t *uid, uint8_t sector, uint8_t keytype, uint
                 0x317AB72F4490,
             };
 
-            num_to_bytes(xor_tbl_a[sector - 1], 6, xor);
+            num_to_bytes(xor_tbl_a[sector - 1], 6, txor);
 
             *key =
-                (uint64_t)(uid[0] ^ xor[0]) << 40 |
-                (uint64_t)(uid[1] ^ xor[1]) << 32 |
-                (uint64_t)(uid[2] ^ xor[2]) << 24 |
-                (uint64_t)(uid[3] ^ xor[3]) << 16 |
-                (uint64_t)(uid[0] ^ xor[4]) <<  8 |
-                (uint64_t)(uid[1] ^ xor[5])
+                (uint64_t)(uid[0] ^ txor[0]) << 40 |
+                (uint64_t)(uid[1] ^ txor[1]) << 32 |
+                (uint64_t)(uid[2] ^ txor[2]) << 24 |
+                (uint64_t)(uid[3] ^ txor[3]) << 16 |
+                (uint64_t)(uid[0] ^ txor[4]) <<  8 |
+                (uint64_t)(uid[1] ^ txor[5])
                 ;
 
         } else {
@@ -424,15 +424,15 @@ int mfc_algo_mizip_one(const uint8_t *uid, uint8_t sector, uint8_t keytype, uint
             };
 
             // B
-            num_to_bytes(xor_tbl_b[sector - 1], 6, xor);
+            num_to_bytes(xor_tbl_b[sector - 1], 6, txor);
 
             *key =
-                (uint64_t)(uid[2] ^ xor[0]) << 40 |
-                (uint64_t)(uid[3] ^ xor[1]) << 32 |
-                (uint64_t)(uid[0] ^ xor[2]) << 24 |
-                (uint64_t)(uid[1] ^ xor[3]) << 16 |
-                (uint64_t)(uid[2] ^ xor[4]) <<  8 |
-                (uint64_t)(uid[3] ^ xor[5])
+                (uint64_t)(uid[2] ^ txor[0]) << 40 |
+                (uint64_t)(uid[3] ^ txor[1]) << 32 |
+                (uint64_t)(uid[0] ^ txor[2]) << 24 |
+                (uint64_t)(uid[1] ^ txor[3]) << 16 |
+                (uint64_t)(uid[2] ^ txor[4]) <<  8 |
+                (uint64_t)(uid[3] ^ txor[5])
                 ;
 
         }
