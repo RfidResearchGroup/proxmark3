@@ -520,7 +520,7 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
         PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
         // identify TOPAZ
         if (card->atqa[1] == 0x0C && card->atqa[0] == 0x00) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf topaz info`"));
+            PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf topaz info`"));
         } else {
             PrintAndLogEx(SUCCESS, "\tATQA : %02X %02X", card->atqa[1], card->atqa[0]);
         }
@@ -685,7 +685,7 @@ static int CmdHF14AReader(const char *Cmd) {
 
                     // identify TOPAZ
                     if (card.atqa[1] == 0x0C && card.atqa[0] == 0x00) {
-                        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf topaz info`"));
+                        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf topaz info`"));
                     } else {
                         PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card.atqa[1], card.atqa[0]);
                     }
@@ -2161,7 +2161,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
         // identify TOPAZ
         if (card.atqa[1] == 0x0C && card.atqa[0] == 0x00) {
-            PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf topaz info`"));
+            PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf topaz info`"));
         }
 
         DropField();
@@ -2746,42 +2746,42 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     if (isMifareUltralight) {
 
         if (((isMagic & MAGIC_FLAG_GEN_1A) == MAGIC_FLAG_GEN_1A) || ((isMagic & MAGIC_FLAG_GEN_1B) == MAGIC_FLAG_GEN_1B)) {
-            PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mfu *") "` magic commands");
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mfu *") "` magic commands");
         }
 
         if ((isMagic & MAGIC_FLAG_NTAG21X) == MAGIC_FLAG_NTAG21X) {
-            PrintAndLogEx(HINT, "Hint: use `" _YELLOW_("hf mfu *") "` magic commands");
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mfu *") "` magic commands");
         }
 
-        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf mfu info") "`");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu info") "`");
     }
 
     if (isMifarePlus && (isMagic == MAGIC_FLAG_NONE)) {
-        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf mfp info") "`");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfp info") "`");
     }
 
     if (isMifareDESFire && (isMagic == MAGIC_FLAG_NONE) && isEMV == false) {
-        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf mfdes info") "`");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfdes info") "`");
     }
 
     if (isST) {
         if (card.ats_len > 0) {
-            PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf st25ta info") "`");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf st25ta info") "`");
         } else {
-            PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf mfu info") "`");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mfu info") "`");
         }
     }
 
     if (isEMV) {
-        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("emv reader") "`");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("emv reader") "`");
     }
 
     if (isSEOS) {
-        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf seos info") "`");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf seos info") "`");
     }
 
     if (isFUDAN) {
-        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf fudan dump") "`");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf fudan dump") "`");
         /*
         PrintAndLogEx(HINT, "  hf 14a raw -a -b 7 -k 26");
         PrintAndLogEx(HINT, "  hf 14a raw -k -c 3000");
@@ -2796,7 +2796,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     }
 
     if (isNTAG424) {
-        PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf ntag424 info") "`");
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf ntag424 info") "`");
     }
 
     if (isMifareClassic || isMifareMini) {

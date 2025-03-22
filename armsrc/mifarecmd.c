@@ -79,21 +79,24 @@ static bool mifare_wakeup_auth(struct Crypto1State *pcs, MifareWakeupType wakeup
     LED_C_OFF();
 
     switch (wakeup) {
-        case MF_WAKE_NONE:
+        case MF_WAKE_NONE: {
             break;
-        case MF_WAKE_WUPA:
-            if (!iso14443a_select_cardEx(NULL, NULL, &cuid, true, 0, true, &WUPA_POLLING_PARAMETERS)) {
+        }
+        case MF_WAKE_WUPA: {
+            if (iso14443a_select_cardEx(NULL, NULL, &cuid, true, 0, true, &WUPA_POLLING_PARAMETERS) == 0) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
                 return false;
             };
             break;
-        case MF_WAKE_REQA:
-            if (!iso14443a_select_cardEx(NULL, NULL, &cuid, true, 0, true, &REQA_POLLING_PARAMETERS)) {
+        }
+        case MF_WAKE_REQA: {
+            if (iso14443a_select_cardEx(NULL, NULL, &cuid, true, 0, true, &REQA_POLLING_PARAMETERS) == 0) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
                 return false;
             };
             break;
-        case MF_WAKE_GEN1A:
+        }
+        case MF_WAKE_GEN1A: {
             ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
             if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("wupC1 error");
@@ -105,14 +108,16 @@ static bool mifare_wakeup_auth(struct Crypto1State *pcs, MifareWakeupType wakeup
                 if (g_dbglevel >= DBG_INFO) Dbprintf("Assuming Magic Gen 1B tag. [wupC2 failed]");
             }
             break;
-        case MF_WAKE_GEN1B:
+        }
+        case MF_WAKE_GEN1B: {
             ReaderTransmitBitsPar(wupC1, 7, NULL, NULL);
             if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("wupC1 error");
                 return false;
             }
             break;
-        case MF_WAKE_GDM_ALT:
+        }
+        case MF_WAKE_GDM_ALT: {
             ReaderTransmitBitsPar(wupGDM1, 7, NULL, NULL);
             if ((ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) == 0) || (receivedAnswer[0] != 0x0a)) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("wupGDM1 error");
@@ -124,6 +129,7 @@ static bool mifare_wakeup_auth(struct Crypto1State *pcs, MifareWakeupType wakeup
                 // maybe this is fine on some tags?
             }
             break;
+    }
     }
 
     if (key_auth_cmd != 0) {
@@ -158,9 +164,9 @@ int16_t mifare_cmd_readblocks(MifareWakeupType wakeup, uint8_t key_auth_cmd, uin
         goto OUT;
     }
 
-    // frame waiting time (FWT) in 1/fc
+    // frame waiting time (FWT) in 1/fc   (524288)
     uint32_t fwt = 256 * 16 * (1 << 7);
-    iso14a_set_timeout(fwt / (8 * 16));
+    iso14a_set_timeout(fwt / (8 * 16)); // 4096
 
     for (uint8_t i = 0; i < count; i++) {
         if (mifare_classic_readblock_ex(pcs, block_no + i, block_data + (i * 16), read_cmd)) {
@@ -262,7 +268,7 @@ void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes) {
     clear_trace();
     set_tracing(true);
 
-    if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
+    if (iso14443a_select_card(NULL, NULL, NULL, true, 0, true) == 0) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
         OnError(0);
         return;
@@ -292,7 +298,7 @@ void MifareUL_AES_Auth(bool turn_off_field, uint8_t keyno, uint8_t *keybytes) {
     clear_trace();
     set_tracing(true);
 
-    if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
+    if (iso14443a_select_card(NULL, NULL, NULL, true, 0, true) == 0) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
         OnErrorNG(CMD_HF_MIFAREULAES_AUTH, PM3_ESOFT);
         return;
@@ -327,9 +333,8 @@ void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     clear_trace();
     set_tracing(true);
 
-    int len = iso14443a_select_card(NULL, NULL, NULL, true, 0, true);
-    if (!len) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card (RC:%02X)", len);
+    if (iso14443a_select_card(NULL, NULL, NULL, true, 0, true) == 0) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
         OnError(1);
         return;
     }
@@ -401,8 +406,8 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
     }
 
     int len = iso14443a_select_card(NULL, NULL, NULL, true, 0, true);
-    if (!len) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card (RC:%d)", len);
+    if (len == 0) {
+        if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
         OnError(1);
         return;
     }
@@ -412,7 +417,7 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
         uint8_t key[16] = {0x00};
         memcpy(key, datain, sizeof(key));
 
-        if (!mifare_ultra_auth(key)) {
+        if (mifare_ultra_auth(key) == 0) {
             OnError(1);
             return;
         }
@@ -424,7 +429,7 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
         memcpy(pwd, datain, sizeof(pwd));
         uint8_t pack[4] = {0, 0, 0, 0};
 
-        if (!mifare_ul_ev1_auth(pwd, pack)) {
+        if (mifare_ul_ev1_auth(pwd, pack) == 0) {
             OnError(1);
             return;
         }
@@ -507,7 +512,8 @@ void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
     LED_C_OFF();
 
     while (true) {
-        if (!iso14443a_select_card(uid, NULL, &cuid, true, 0, true)) {
+
+        if (iso14443a_select_card(uid, NULL, &cuid, true, 0, true) == 0) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
             break;
         };
@@ -578,7 +584,7 @@ static void MifareUWriteBlockEx(uint8_t arg0, uint8_t arg1, uint8_t *datain, boo
     clear_trace();
     set_tracing(true);
 
-    if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
+    if (iso14443a_select_card(NULL, NULL, NULL, true, 0, true) == 0) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
         OnError(0);
         return;
@@ -589,7 +595,7 @@ static void MifareUWriteBlockEx(uint8_t arg0, uint8_t arg1, uint8_t *datain, boo
         uint8_t key[16] = {0x00};
         memcpy(key, datain + 4, sizeof(key));
 
-        if (!mifare_ultra_auth(key)) {
+        if (mifare_ultra_auth(key) == 0) {
             OnError(1);
             return;
         }
@@ -600,7 +606,7 @@ static void MifareUWriteBlockEx(uint8_t arg0, uint8_t arg1, uint8_t *datain, boo
         uint8_t pwd[4] = {0x00};
         memcpy(pwd, datain + 4, 4);
         uint8_t pack[4] = {0, 0, 0, 0};
-        if (!mifare_ul_ev1_auth(pwd, pack)) {
+        if (mifare_ul_ev1_auth(pwd, pack) == 0) {
             OnError(1);
             return;
         }
@@ -620,8 +626,9 @@ static void MifareUWriteBlockEx(uint8_t arg0, uint8_t arg1, uint8_t *datain, boo
 
     if (g_dbglevel >= 2) DbpString("WRITE BLOCK FINISHED");
 
-    if (reply)
+    if (reply) {
         reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
+    }
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);
@@ -652,7 +659,7 @@ void MifareUWriteBlockCompat(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     clear_trace();
     set_tracing(true);
 
-    if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
+    if (iso14443a_select_card(NULL, NULL, NULL, true, 0, true) == 0) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
         OnError(0);
         return;
@@ -663,7 +670,7 @@ void MifareUWriteBlockCompat(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
         uint8_t key[16] = {0x00};
         memcpy(key, datain + 16, sizeof(key));
 
-        if (!mifare_ultra_auth(key)) {
+        if (mifare_ultra_auth(key) == 0) {
             OnError(1);
             return;
         }
@@ -715,7 +722,7 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain) {
     clear_trace();
     set_tracing(true);
 
-    if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
+    if (iso14443a_select_card(NULL, NULL, NULL, true, 0, true) == 0) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
         OnError(0);
         return;
@@ -805,8 +812,9 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
     BigBuf_Clear_ext(false);
     set_tracing(true);
 
-    if (initialize)
+    if (initialize) {
         iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    }
 
     LED_C_ON();
 
@@ -918,8 +926,9 @@ void MifareAcquireEncryptedNonces(uint32_t arg0, uint32_t arg1, uint32_t flags, 
     BigBuf_Clear_ext(false);
     set_tracing(false);
 
-    if (initialize)
+    if (initialize) {
         iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
+    }
 
     LED_C_ON();
 
@@ -1730,16 +1739,18 @@ typedef struct chk_t {
 // fast select,  tries 5 times to select
 //
 // return:
-//  2 = failed to select.
-//  1 = wrong key
-//  0 = correct key
+//  4 = failed to select
+//  3 = failed auth
+//  2 = timeout
+//  1 = failed auth
+//  0 = correct
 static uint8_t chkKey(struct chk_t *c) {
     uint8_t i = 0, res = 2;
     bool selected = false;
     while (i < 5) {
         // this part is from Piwi's faster nonce collecting part in Hardnested.
         // assume: fast select
-        if (!iso14443a_fast_select_card(c->uid, c->cl)) {
+        if (iso14443a_fast_select_card(c->uid, c->cl) == 0) {
             ++i;
             continue;
         }
@@ -1755,27 +1766,29 @@ static uint8_t chkKey(struct chk_t *c) {
     }
     if (selected == false) {
         Dbprintf("chkKey: Failed at fast selecting the card!");
+        res = 4;
     }
     return res;
 }
 
 static uint8_t chkKey_readb(struct chk_t *c, uint8_t *keyb) {
 
-    if (!iso14443a_fast_select_card(c->uid, c->cl))
+    if (iso14443a_fast_select_card(c->uid, c->cl) == 0) {
         return 2;
+    }
 
-    if (mifare_classic_authex(c->pcs, c->cuid, c->block, 0, c->key, AUTH_FIRST, NULL, NULL))
+    if (mifare_classic_authex(c->pcs, c->cuid, c->block, 0, c->key, AUTH_FIRST, NULL, NULL)) {
         return 1;
+    }
 
     uint8_t data[16] = {0x00};
     uint8_t res = mifare_classic_readblock(c->pcs, c->block, data);
 
     // successful read
-    if (!res) {
+    if (res == 0) {
         // data was something else than zeros.
         if (memcmp(data + 10, "\x00\x00\x00\x00\x00\x00", 6) != 0) {
             memcpy(keyb, data + 10, 6);
-            res = 0;
         } else {
             res = 3;
         }
@@ -1788,11 +1801,19 @@ static void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *fo
     for (uint8_t s = 0; s < *sectorcnt; s++) {
 
         // skip already found A keys
-        if (found[(s * 2)])
+        if (found[(s * 2)]) {
             continue;
+        }
 
         c->block = FirstBlockOfSector(s);
-        if (chkKey(c) == 0) {
+
+        uint8_t res = chkKey(c);
+        if (res == 4) {
+            // failed to select,  return immediately
+            return;
+        }
+
+        if (res == 0) {
             num_to_bytes(c->key, 6, k_sector[s].keyA);
             found[(s * 2)] = 1;
             ++*foundkeys;
@@ -1806,11 +1827,19 @@ static void chkKey_scanB(struct chk_t *c, struct sector_t *k_sector, uint8_t *fo
     for (uint8_t s = 0; s < *sectorcnt; s++) {
 
         // skip already found B keys
-        if (found[(s * 2) + 1])
+        if (found[(s * 2) + 1]) {
             continue;
+        }
 
         c->block = FirstBlockOfSector(s);
-        if (chkKey(c) == 0) {
+
+        uint8_t res = chkKey(c);
+        if (res == 4) {
+            // failed to select,  return immediately
+            return;
+        }
+        
+        if (res == 0) {
             num_to_bytes(c->key, 6, k_sector[s].keyB);
             found[(s * 2) + 1] = 1;
             ++*foundkeys;
@@ -1827,8 +1856,9 @@ static void chkKey_loopBonly(struct chk_t *c, struct sector_t *k_sector, uint8_t
     // read Block B, if A is found.
     for (uint8_t s = 0; s < *sectorcnt; ++s) {
 
-        if (found[(s * 2)] && found[(s * 2) + 1])
+        if (found[(s * 2)] && found[(s * 2) + 1]) {
             continue;
+        }
 
         c->block = (FirstBlockOfSector(s) + NumBlocksPerSector(s) - 1);
 
@@ -1885,7 +1915,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
     static uint8_t foundkeys = 0;
     static sector_t k_sector[80];
     static uint8_t found[80];
-    static uint8_t *uid;
+    static uint8_t uid[10] = {0};
 
     int oldbg = g_dbglevel;
 
@@ -1896,41 +1926,37 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
         if (exists_in_spiffs(MF_KEYS_FILE)) {
             size = size_in_spiffs(MF_KEYS_FILE);
         }
+
         if ((size == 0) || (size < MF_KEY_LENGTH)) {
-            Dbprintf("Spiffs file: %s does not exists or empty.", MF_KEYS_FILE);
+            Dbprintf("Spiffs file `" _RED_("%s") "` does not exists or empty", MF_KEYS_FILE);
             goto OUT;
         }
 
-        // Compute how many keys can fit in bigbuff
-        // a key is 6bytes
-        uint16_t key_mem_available = MIN(BigBuf_get_size() / MF_KEY_LENGTH, keyCount + (size / MF_KEY_LENGTH));
+        // Compute how many keys can fit in bigbuf
+        // a key is 6 bytes
+        uint16_t key_mem_available = MIN( (BigBuf_get_size() / MF_KEY_LENGTH), (keyCount + (size / MF_KEY_LENGTH)));
 
-        uint8_t *dictkeys = BigBuf_malloc(key_mem_available * MF_KEY_LENGTH);
-        if (dictkeys == NULL)
+        uint8_t *dictkeys = BigBuf_calloc(key_mem_available * MF_KEY_LENGTH);
+        if (dictkeys == NULL) {
             goto OUT;
+        }
 
         // Put user and hard-coded keys first
         memcpy(dictkeys, datain, keyCount * MF_KEY_LENGTH);
 
         // Now append the SPI flash dictionnary
-        if (SPIFFS_OK == rdv40_spiffs_read_as_filetype(MF_KEYS_FILE, dictkeys + keyCount * MF_KEY_LENGTH, (key_mem_available - keyCount) * MF_KEY_LENGTH, RDV40_SPIFFS_SAFETY_SAFE)) {
+        if (SPIFFS_OK == rdv40_spiffs_read_as_filetype(MF_KEYS_FILE, dictkeys + (keyCount * MF_KEY_LENGTH), (key_mem_available - keyCount) * MF_KEY_LENGTH, RDV40_SPIFFS_SAFETY_SAFE)) {
             if (g_dbglevel >= DBG_ERROR) {
-                Dbprintf("Loaded %u keys from spiffs file: %s", key_mem_available, MF_KEYS_FILE);
+                Dbprintf("loaded " _GREEN_("%u") " keys from spiffs file `" _YELLOW_("%s") "`", key_mem_available, MF_KEYS_FILE);
             }
         } else {
-            Dbprintf("Spiffs file: %s cannot be read.", MF_KEYS_FILE);
+            Dbprintf("Spiffs file `" _RED_("%s") "` cannot be read", MF_KEYS_FILE);
             goto OUT;
         }
         // Replace client provided keys
         datain = dictkeys;
     }
 #endif
-
-    if (uid == NULL || firstchunk) {
-        uid = BigBuf_malloc(10);
-        if (uid == NULL)
-            goto OUT;
-    }
 
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
@@ -1946,7 +1972,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
         foundkeys = 0;
 
         iso14a_card_select_t card_info;
-        if (!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
+        if (iso14443a_select_card(uid, &card_info, &cuid, true, 0, true) == 0) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("ChkKeys_fast: Can't select card (ALL)");
             goto OUT;
         }
@@ -1991,10 +2017,10 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 
             WDT_HIT();
 
-            chk_data.key = bytes_to_num(datain + i * 6, 6);
+            chk_data.key = bytes_to_num(datain + (i * MF_KEY_LENGTH), MF_KEY_LENGTH);
             if (chkKey(&chk_data) == 0) {
                 foundkeys++;
-                reply_old(CMD_ACK, 1, 0, 0, datain + i * 6, 6);
+                reply_old(CMD_ACK, 1, 0, 0, datain + (i * MF_KEY_LENGTH), MF_KEY_LENGTH);
                 goto out;
             }
         }
@@ -2024,8 +2050,9 @@ out:
         // keep track of how many sectors on card.
         for (uint8_t s = 0; s < sectorcnt; ++s) {
 
-            if (found[(s * 2)] && found[(s * 2) + 1])
+            if (found[(s * 2)] && found[(s * 2) + 1]) {
                 continue;
+            }
 
             for (uint16_t i = s_point; i < keyCount; ++i) {
 
@@ -2035,8 +2062,9 @@ out:
                 }
 
                 // found all keys?
-                if (foundkeys == allkeys)
+                if (foundkeys == allkeys) {
                     goto OUT;
+                }
 
                 WDT_HIT();
 
@@ -2044,14 +2072,21 @@ out:
                 chk_data.block = FirstBlockOfSector(s);
 
                 // new key
-                chk_data.key = bytes_to_num(datain + i * 6, 6);
+                chk_data.key = bytes_to_num(datain + (i * MF_KEY_LENGTH), MF_KEY_LENGTH);
 
                 // skip already found A keys
                 if (!found[(s * 2)]) {
+
                     chk_data.keyType = 0;
                     status = chkKey(&chk_data);
+
+                    if (status == 4) {
+                        // failed to select,  return immediately
+                        goto OUT;
+                    }
+
                     if (status == 0) {
-                        memcpy(k_sector[s].keyA, datain + i * 6, 6);
+                        memcpy(k_sector[s].keyA, datain + (i * MF_KEY_LENGTH), MF_KEY_LENGTH);
                         found[(s * 2)] = 1;
                         ++foundkeys;
 
@@ -2080,10 +2115,17 @@ out:
 
                 // skip already found B keys
                 if (!found[(s * 2) + 1]) {
+
                     chk_data.keyType = 1;
                     status = chkKey(&chk_data);
+
+                    if (status == 4) {
+                        // failed to select,  return immediately
+                        goto OUT;
+                    }
+
                     if (status == 0) {
-                        memcpy(k_sector[s].keyB, datain + i * 6, 6);
+                        memcpy(k_sector[s].keyB, datain + (i * MF_KEY_LENGTH), MF_KEY_LENGTH);
                         found[(s * 2) + 1] = 1;
                         ++foundkeys;
 
@@ -2101,20 +2143,23 @@ out:
                     }
                 }
 
-                if (found[(s * 2)] && found[(s * 2) + 1])
+                if (found[(s * 2)] && found[(s * 2) + 1]) {
                     break;
+                }
 
             } // end keys test loop - depth first
 
             // assume1. if no keys found in first sector, get next keychunk from client
-            if (!use_flashmem && (newfound - foundkeys == 0))
+            if (!use_flashmem && (newfound - foundkeys == 0)) {
                 goto OUT;
+            }
 
         } // end loop - sector
     } // end strategy 1
 
-    if (foundkeys == allkeys)
+    if (foundkeys == allkeys) {
         goto OUT;
+    }
 
     if (strategy == 2 || use_flashmem) {
 
@@ -2122,36 +2167,43 @@ out:
         for (uint16_t i = 0; i < keyCount; i++) {
 
             // Allow button press / usb cmd to interrupt device
-            if (BUTTON_PRESS() || data_available()) break;
+            if (BUTTON_PRESS() || data_available()) {
+                break;
+            }
 
             // found all keys?
-            if (foundkeys == allkeys)
+            if (foundkeys == allkeys) {
                 goto OUT;
+            }
 
             WDT_HIT();
 
             // new key
-            chk_data.key = bytes_to_num(datain + i * 6, 6);
+            chk_data.key = bytes_to_num(datain + (i * MF_KEY_LENGTH), MF_KEY_LENGTH);
 
             // Sector main loop
             // keep track of how many sectors on card.
             for (uint8_t s = 0; s < sectorcnt; ++s) {
 
-                if (found[(s * 2)] && found[(s * 2) + 1]) continue;
+                if (found[(s * 2)] && found[(s * 2) + 1]) {
+                    continue;
+                }
 
                 // found all keys?
-                if (foundkeys == allkeys)
+                if (foundkeys == allkeys) {
                     goto OUT;
+                }
 
                 // assume: block0,1,2 has more read rights in accessbits than the sectortrailer. authenticating against block0 in each sector
                 chk_data.block = FirstBlockOfSector(s);
 
                 // skip already found A keys
-                if (!found[(s * 2)]) {
-                    chk_data.keyType = 0;
+                if (found[(s * 2)] == 0) {
+
+                    chk_data.keyType = MF_KEY_A; 
                     status = chkKey(&chk_data);
                     if (status == 0) {
-                        memcpy(k_sector[s].keyA, datain + i * 6, 6);
+                        memcpy(k_sector[s].keyA, datain + (i * MF_KEY_LENGTH), MF_KEY_LENGTH);
                         found[(s * 2)] = 1;
                         ++foundkeys;
 
@@ -2165,11 +2217,12 @@ out:
                 }
 
                 // skip already found B keys
-                if (!found[(s * 2) + 1]) {
-                    chk_data.keyType = 1;
+                if (found[(s * 2) + 1] == 0) {
+
+                    chk_data.keyType = MF_KEY_B;
                     status = chkKey(&chk_data);
                     if (status == 0) {
-                        memcpy(k_sector[s].keyB, datain + i * 6, 6);
+                        memcpy(k_sector[s].keyB, datain + (i * MF_KEY_LENGTH), MF_KEY_LENGTH);
                         found[(s * 2) + 1] = 1;
                         ++foundkeys;
 
@@ -2226,8 +2279,8 @@ OUT:
                 // get ST
                 emlGetMem_xt(block, blockno, 1, MIFARE_BLOCK_SIZE);
 
-                memcpy(block, k_sector[i].keyA, 6);
-                memcpy(block + 10, k_sector[i].keyB, 6);
+                memcpy(block, k_sector[i].keyA, MF_KEY_LENGTH);
+                memcpy(block + 10, k_sector[i].keyB, MF_KEY_LENGTH);
 
                 emlSetMem_xt(block, blockno, 1, sizeof(block));
             }
@@ -2257,7 +2310,7 @@ void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem) {
     uint32_t cuid = 0;
     uint8_t cascade_levels = 0;
     struct {
-        uint8_t key[6];
+        uint8_t key[MF_KEY_LENGTH];
         bool found;
     } PACKED keyresult;
     keyresult.found = false;
@@ -2272,11 +2325,11 @@ void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem) {
 
     uint16_t key_mem_available;
     if (reserved_mem)
-        key_mem_available = key_count * 6;
+        key_mem_available = key_count * MF_KEY_LENGTH;
     else
-        key_mem_available = MIN((PM3_CMD_DATA_SIZE - 5), key_count * 6);
+        key_mem_available = MIN((PM3_CMD_DATA_SIZE - 5), (key_count * MF_KEY_LENGTH));
 
-    key_count = key_mem_available / 6;
+    key_count = (key_mem_available / MF_KEY_LENGTH);
 
     datain += 5;
 
@@ -2331,7 +2384,7 @@ void MifareChkKeys(uint8_t *datain, uint8_t reserved_mem) {
             continue;
         }
 
-        memcpy(keyresult.key, datain + i * 6, 6);
+        memcpy(keyresult.key, datain + (i * MF_KEY_LENGTH), MF_KEY_LENGTH);
         keyresult.found = true;
         break;
     }
@@ -2471,7 +2524,7 @@ int MifareECardLoad(uint8_t sectorcnt, uint8_t keytype, uint8_t *key) {
     // increase time-out.  Magic card etc are slow
     uint32_t timeout = iso14a_get_timeout();
     // frame waiting time (FWT) in 1/fc
-    uint32_t fwt = 256 * 16 * (1 << 6);
+    uint32_t fwt = 256 * 16 * (1 << 7);
     iso14a_set_timeout(fwt / (8 * 16));
 
     for (uint8_t s = 0; s < sectorcnt; s++) {
@@ -2873,15 +2926,19 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
     }
     // if MAGIC_DATAIN, the data stays on device side.
     if (workFlags & MAGIC_DATAIN) {
+
         if (isOK) {
             memcpy(datain, data, sizeof(data));
         }
+
     } else {
+
         if (isOK) {
             reply_old(CMD_ACK, 1, 0, 0, data, sizeof(data));
         } else {
             OnErrorMagic(errormsg);
         }
+
     }
 
     if (workFlags & MAGIC_OFF) {
@@ -2908,13 +2965,12 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
     uint8_t gen4gdmGetMagicBlock[4] = {MIFARE_MAGIC_GDM_READBLOCK, 0x00, 0xC2, 0x66};
     uint8_t gen4GetConf[8] = {GEN_4GTU_CMD, 0x00, 0x00, 0x00, 0x00, GEN_4GTU_GETCNF, 0, 0};
     uint8_t superGen1[9] = {0x0A, 0x00, 0x00, 0xA6, 0xB0, 0x00, 0x10, 0x14, 0x1D};
-    bool isGen2 = false;
-
+    uint8_t uid[10];
     uint8_t *par = BigBuf_calloc(MAX_PARITY_SIZE);
     uint8_t *buf = BigBuf_calloc(PM3_CMD_DATA_SIZE);
-    uint8_t *uid = BigBuf_calloc(10);
     iso14a_card_select_t *card = (iso14a_card_select_t *) BigBuf_calloc(sizeof(iso14a_card_select_t));
 
+    bool isGen2 = false;
     uint16_t flag = MAGIC_FLAG_NONE;
     uint32_t cuid = 0;
     int res = 0;
@@ -3121,9 +3177,7 @@ void MifareHasStaticNonce(void) {
     // variables
     int retval = PM3_SUCCESS;
     uint32_t nt = 0;
-    uint8_t *uid = BigBuf_malloc(10);
-
-    memset(uid, 0x00, 10);
+    uint8_t uid[10] = {0};
 
     uint8_t data[1] = { NONCE_FAIL };
     struct Crypto1State mpcs = {0, 0};
@@ -3135,7 +3189,7 @@ void MifareHasStaticNonce(void) {
     uint8_t counter = 0;
     for (uint8_t i = 0; i < 3; i++) {
 
-        if (!iso14443a_select_card(uid, NULL, NULL, true, 0, true)) {
+        if (iso14443a_select_card(uid, NULL, NULL, true, 0, true) == 0) {
             retval = PM3_ESOFT;
             goto OUT;
         }
@@ -3219,6 +3273,7 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
     uint32_t ntenc = 0;
     uint8_t ntencpar = 0;
     bool is_last_auth_first_auth = true;
+
     if (nr_nested == 0) {
         cuid = 0;
         if (iso14443a_select_card(NULL, NULL, &cuid, true, 0, true) == false) {
@@ -3232,8 +3287,11 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
             goto OUT;
         };
         first_nt_counter++;
+    
     } else {
+    
         for (uint8_t i = 0; i < nr_nested; i++) {
+    
             if (need_first_auth) {
                 cuid = 0;
 
@@ -3246,43 +3304,55 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
                     SpinDelay(150);
                     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
                 }
+
                 if (g_dbglevel >= DBG_EXTENDED) {
                     Dbprintf("select");
                 }
+
                 if (iso14443a_select_card(NULL, NULL, &cuid, true, 0, true) == false) {
                     retval = PM3_ESOFT;
                     goto OUT;
                 }
+
                 if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_FIRST, &nt_first, NULL, NULL, NULL, corruptnrar, corruptnrarparity)) {
                     if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
                     retval = PM3_ESOFT;
                     goto OUT;
                 };
+
                 is_last_auth_first_auth = true;
                 first_nt_counter++;
                 if ((first_nt_counter > 1) && (old_nt_first == nt_first)) {
                     first_nt_repetition_counter++;
                 }
+
                 old_nt_first = nt_first;
                 if (!reset && !hardreset) {
                     need_first_auth = false;
                 }
+
                 if (addread) {
                     uint8_t dataread[16] = {0x00};
                     mifare_classic_readblock(pcs, block_no, dataread);
                 }
+
                 if (addauth) {
+
                     if (mifare_classic_authex_cmd(pcs, cuid, block_no, key_auth_cmd, ui64key, AUTH_NESTED, &nt, NULL, NULL, NULL, false, false)) {
+
                         if (g_dbglevel >= DBG_ERROR) Dbprintf("Auth error");
                         retval = PM3_ESOFT;
                         goto OUT;
+
                     } else if (g_dbglevel >= DBG_EXTENDED) {
                         Dbprintf("Nonce distance: %5i (first nonce <> nested nonce)", nonce_distance(nt_first, nt));
                     }
+
                     is_last_auth_first_auth = false;
                     if (nt == nt_first) {
                         first_and_nested_nt_repetition_counter++;
                     }
+
                     old_nt = nt;
                 }
             }
@@ -3290,21 +3360,26 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
             nt = 0;
             ntenc = 0;
             if (mifare_classic_authex_cmd(pcs, cuid, incblk2 ? block_no_nested + (i * 4) : block_no_nested, key_auth_cmd_nested, ui64key_nested, AUTH_NESTED, &nt, &ntenc, &ntencpar, NULL, false, false)) {
+
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("Nested auth error");
                 need_first_auth = true;
+
             } else if (g_dbglevel >= DBG_EXTENDED) {
+
                 if (is_last_auth_first_auth) {
                     Dbprintf("Nonce distance: %5i (first nonce <> nested nonce)", nonce_distance(nt_first, nt));
                 } else {
                     Dbprintf("Nonce distance: %5i", nonce_distance(old_nt, nt));
                 }
             }
+
             nested_nt_session_counter++;
             is_last_auth_first_auth = false;
             old_nt = nt;
             if (nt == nt_first) {
                 first_and_nested_nt_repetition_counter++;
             }
+
             if ((nested_nt_session_counter > 1) && (oldntenc == ntenc)) {
                 nested_nt_repetition_counter++;
             }
@@ -3316,18 +3391,21 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
     data[2] = (cuid >> 16) & 0xFF;
     data[3] = (cuid >> 8) & 0xFF;
     data[4] = (cuid >> 0) & 0xFF;
+
     if (first_and_nested_nt_repetition_counter) {
         data[0] = NONCE_SUPERSTATIC;
         data[5] = (nt >> 24) & 0xFF;
         data[6] = (nt >> 16) & 0xFF;
         data[7] = (nt >> 8) & 0xFF;
         data[8] = (nt >> 0) & 0xFF;
+
     } else if (first_nt_repetition_counter) {
         data[0] = NONCE_STATIC;
         data[5] = (nt_first >> 24) & 0xFF;
         data[6] = (nt_first >> 16) & 0xFF;
         data[7] = (nt_first >> 8) & 0xFF;
         data[8] = (nt_first >> 0) & 0xFF;
+
     } else if (nested_nt_repetition_counter) {
         data[0] = NONCE_STATIC_ENC;
         data[5] = (nt >> 24) & 0xFF;
@@ -3339,6 +3417,7 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
         data[11] = (ntenc >> 8) & 0xFF;
         data[12] = (ntenc >> 0) & 0xFF;
         data[13] = ntencpar;
+
     } else {
         data[0] = NONCE_NORMAL;
         data[5] = (nt >> 24) & 0xFF;

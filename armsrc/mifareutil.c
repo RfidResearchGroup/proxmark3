@@ -156,7 +156,9 @@ int mifare_classic_authex_cmd(struct Crypto1State *pcs, uint32_t uid, uint8_t bl
 
     // Transmit MIFARE_CLASSIC_AUTH, 0x60 for key A, 0x61 for key B, or 0x80 for GDM backdoor
     int len = mifare_sendcmd_short(pcs, isNested, cmd, blockNo, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, timing);
-    if (len != 4) return 1;
+    if (len != 4) {
+        return 1;
+    }
 
     // Save the tag nonce (nt)
     uint32_t nt = bytes_to_num(receivedAnswer, 4);
@@ -334,8 +336,9 @@ int mifare_ul_ev1_auth(uint8_t *keybytes, uint8_t *pack) {
         return 0;
     }
 
-    if (g_dbglevel >= DBG_EXTENDED)
+    if (g_dbglevel >= DBG_EXTENDED) {
         Dbprintf("Auth Resp: %02x%02x%02x%02x", resp[0], resp[1], resp[2], resp[3]);
+    }
 
     memcpy(pack, resp, 4);
     return 1;
@@ -490,6 +493,7 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
     memset(IV, 0, 16);
     mbedtls_aes_setkey_dec(&actx, key, 128);
     mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_DECRYPT, sizeof(random_b), IV, resp + 1, random_b);
+    mbedtls_aes_free(&actx);
 
     if (memcmp(random_b, random_a, 16) != 0) {
         if (g_dbglevel >= DBG_INFO) Dbprintf("failed authentication");
@@ -507,8 +511,6 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
         Dbprintf("B:");
         Dbhexdump(16, random_b, false);
     }
-
-    mbedtls_aes_free(&actx);
     return 1;
 }
 

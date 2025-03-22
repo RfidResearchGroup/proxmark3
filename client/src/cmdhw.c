@@ -151,8 +151,6 @@ static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used) {
                   , mem_avail
                   , mem_avail == 0 ? 0.0f : (float)mem_used / (mem_avail * 1024) * 100
                  );
-
-    PrintAndLogEx(NORMAL, "");
 }
 
 static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
@@ -1571,6 +1569,23 @@ void pm3_version_short(void) {
 
             lookup_chipid_short(payload->id, payload->section_size);
 
+            if (IfPm3Rdv4Fw()) {
+
+                bool is_genuine_rdv4 = false;
+                // validate signature data
+                rdv40_validation_t mem;
+                if (rdv4_get_signature(&mem) == PM3_SUCCESS) {
+                    if (rdv4_validate(&mem) == PM3_SUCCESS) {
+                        is_genuine_rdv4 = true;
+                    }
+                }
+
+                PrintAndLogEx(NORMAL, "    Target.... %s", (is_genuine_rdv4) ? _YELLOW_("RDV4") : _RED_("device / fw mismatch"));
+            } else {
+                PrintAndLogEx(NORMAL, "    Target.... %s", _YELLOW_("PM3 GENERIC"));
+            }
+            PrintAndLogEx(NORMAL, "");
+
             // client
             char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
             format_version_information_short(temp, sizeof(temp), &g_version_information);
@@ -1588,42 +1603,24 @@ void pm3_version_short(void) {
             }
 
             // bootrom
-            ptr = strstr(payload->versionstr, " bootrom: ");
+            ptr = strstr(payload->versionstr, "Bootrom.... ");
             if (ptr != NULL) {
                 char *ptr_end = strstr(ptr, "\n");
                 if (ptr_end != NULL) {
                     uint8_t len = ptr_end - 19 - ptr;
-                    PrintAndLogEx(NORMAL, "    Bootrom... %.*s", len, ptr + 10);
+                    PrintAndLogEx(NORMAL, "    Bootrom... %.*s", len, ptr + 12);
                 }
             }
 
             // os:
-            ptr = strstr(payload->versionstr, " os: ");
+            ptr = strstr(payload->versionstr, "OS......... ");
             if (ptr != NULL) {
                 char *ptr_end = strstr(ptr, "\n");
                 if (ptr_end != NULL) {
                     uint8_t len = ptr_end - 14 - ptr;
-                    PrintAndLogEx(NORMAL, "    OS........ %.*s", len, ptr + 5);
+                    PrintAndLogEx(NORMAL, "    OS........ %.*s", len, ptr + 12);
                 }
             }
-
-
-            if (IfPm3Rdv4Fw()) {
-
-                bool is_genuine_rdv4 = false;
-                // validate signature data
-                rdv40_validation_t mem;
-                if (rdv4_get_signature(&mem) == PM3_SUCCESS) {
-                    if (rdv4_validate(&mem) == PM3_SUCCESS) {
-                        is_genuine_rdv4 = true;
-                    }
-                }
-
-                PrintAndLogEx(NORMAL, "    Target.... %s", (is_genuine_rdv4) ? _YELLOW_("RDV4") : _RED_("device / fw mismatch"));
-            } else {
-                PrintAndLogEx(NORMAL, "    Target.... %s", _YELLOW_("PM3 GENERIC"));
-            }
-
             PrintAndLogEx(NORMAL, "");
 
             if (armsrc_mismatch) {
@@ -1643,7 +1640,7 @@ void pm3_version(bool verbose, bool oneliner) {
     if (oneliner) {
         // For "proxmark3 -v", simple printf, avoid logging
         FormatVersionInformation(temp, sizeof(temp), "Client: ", &g_version_information);
-        PrintAndLogEx(NORMAL, "%s compiled with " PM3CLIENTCOMPILER __VERSION__ " OS:" PM3HOSTOS " ARCH:" PM3HOSTARCH "\n", temp);
+        PrintAndLogEx(NORMAL, "%s compiler: " PM3CLIENTCOMPILER __VERSION__ " OS:" PM3HOSTOS " ARCH:" PM3HOSTARCH "\n", temp);
         return;
     }
 
@@ -1655,8 +1652,8 @@ void pm3_version(bool verbose, bool oneliner) {
     PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Client") " ]");
     FormatVersionInformation(temp, sizeof(temp), "  ", &g_version_information);
     PrintAndLogEx(NORMAL, "%s", temp);
-    PrintAndLogEx(NORMAL, "  compiled with............. " PM3CLIENTCOMPILER __VERSION__);
-    PrintAndLogEx(NORMAL, "  platform.................. " PM3HOSTOS " / " PM3HOSTARCH);
+    PrintAndLogEx(NORMAL, "  Compiler.................. " PM3CLIENTCOMPILER __VERSION__);
+    PrintAndLogEx(NORMAL, "  Platform.................. " PM3HOSTOS " / " PM3HOSTARCH);
 #if defined(HAVE_READLINE)
     PrintAndLogEx(NORMAL, "  Readline support.......... " _GREEN_("present"));
 #elif defined(HAVE_LINENOISE)
@@ -1670,9 +1667,9 @@ void pm3_version(bool verbose, bool oneliner) {
     PrintAndLogEx(NORMAL, "  QT GUI support............ " _YELLOW_("absent"));
 #endif
 #ifdef HAVE_BLUEZ
-    PrintAndLogEx(NORMAL, "  native BT support......... " _GREEN_("present"));
+    PrintAndLogEx(NORMAL, "  Native BT support......... " _GREEN_("present"));
 #else
-    PrintAndLogEx(NORMAL, "  native BT support......... " _YELLOW_("absent"));
+    PrintAndLogEx(NORMAL, "  Native BT support......... " _YELLOW_("absent"));
 #endif
 #ifdef HAVE_PYTHON
     PrintAndLogEx(NORMAL, "  Python script support..... " _GREEN_("present") " ( " _YELLOW_(PY_VERSION) " )");
@@ -1692,7 +1689,7 @@ void pm3_version(bool verbose, bool oneliner) {
 #endif
 
     if (g_session.pm3_present) {
-        PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Proxmark3") " ]");
+        PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Model") " ]");
 
         PacketResponseNG resp;
         clearCommandBuffer();
@@ -1710,15 +1707,15 @@ void pm3_version(bool verbose, bool oneliner) {
                     }
                 }
 
-                PrintAndLogEx(NORMAL, "  device.................... %s", (is_genuine_rdv4) ? _GREEN_("RDV4") : _RED_("device / fw mismatch"));
-                PrintAndLogEx(NORMAL, "  firmware.................. %s", (is_genuine_rdv4) ? _GREEN_("RDV4") : _YELLOW_("RDV4"));
-                PrintAndLogEx(NORMAL, "  external flash............ %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
-                PrintAndLogEx(NORMAL, "  smartcard reader.......... %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
+                PrintAndLogEx(NORMAL, "  Device.................... %s", (is_genuine_rdv4) ? _GREEN_("RDV4") : _RED_("device / fw mismatch"));
+                PrintAndLogEx(NORMAL, "  Firmware.................. %s", (is_genuine_rdv4) ? _GREEN_("RDV4") : _YELLOW_("RDV4"));
+                PrintAndLogEx(NORMAL, "  External flash............ %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
+                PrintAndLogEx(NORMAL, "  Smartcard reader.......... %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
                 PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
             } else {
-                PrintAndLogEx(NORMAL, "  firmware.................. %s", _YELLOW_("PM3 GENERIC"));
+                PrintAndLogEx(NORMAL, "  Firmware.................. %s", _YELLOW_("PM3 GENERIC"));
                 if (IfPm3Flash()) {
-                    PrintAndLogEx(NORMAL, "  external flash............ %s", _GREEN_("present"));
+                    PrintAndLogEx(NORMAL, "  External flash............ %s", _GREEN_("present"));
                 }
 
                 if (IfPm3FpcUsartHost()) {
@@ -1742,7 +1739,7 @@ void pm3_version(bool verbose, bool oneliner) {
             struct p *payload = (struct p *)&resp.data.asBytes;
 
             bool armsrc_mismatch = false;
-            char *ptr = strstr(payload->versionstr, " os: ");
+            char *ptr = strstr(payload->versionstr, "OS......... ");
             if (ptr != NULL) {
                 ptr = strstr(ptr, "\n");
                 if ((ptr != NULL) && (strlen(g_version_information.armsrc) == 9)) {
