@@ -2433,7 +2433,7 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
     fclose(f);
 
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%2d") " keys from dictionary file `" _YELLOW_("%s") "`", *keycnt, path);
+        PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%d") " keys from dictionary file `" _YELLOW_("%s") "`", *keycnt, path);
     }
 
 out:

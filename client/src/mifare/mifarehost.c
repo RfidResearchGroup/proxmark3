@@ -262,12 +262,12 @@ int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastCh
     // send keychunk
     clearCommandBuffer();
     SendCommandOLD(CMD_HF_MIFARE_CHKKEYS_FAST
-            , (sectorsCnt | (firstChunk << 8) | (lastChunk << 12) | (singleSectorParams << 16))
-            , ((use_flashmemory << 8) | strategy)
-            , size
-            , keyBlock
-            , (MIFARE_KEY_SIZE * size)
-        );
+                   , (sectorsCnt | (firstChunk << 8) | (lastChunk << 12) | (singleSectorParams << 16))
+                   , ((use_flashmemory << 8) | strategy)
+                   , size
+                   , keyBlock
+                   , (MIFARE_KEY_SIZE * size)
+                  );
     PacketResponseNG resp;
 
     uint32_t timeout = 0;
@@ -382,8 +382,8 @@ int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastCh
 }
 
 int mf_check_keys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk, uint8_t strategy
-                        , uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory
-                        , bool verbose) {
+                       , uint32_t size, uint8_t *keyBlock, sector_t *e_sector, bool use_flashmemory
+                       , bool verbose) {
     return mf_check_keys_fast_ex(sectorsCnt, firstChunk, lastChunk, strategy, size, keyBlock, e_sector, use_flashmemory, verbose, false, 0);
 }
 
@@ -393,7 +393,7 @@ int mf_check_keys_fast(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastChunk
 int mf_check_keys_file(uint8_t *destfn, uint64_t *key) {
 
     if (key) {
-    *key = -1;
+        *key = -1;
     }
 
     struct {
@@ -483,7 +483,7 @@ int mf_key_brute(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint64_t 
         // progress
         if (counter % 20 == 0) {
             PrintAndLogEx(SUCCESS, "tried %s.. \t %u keys", sprint_hex(candidates + i, 6),  counter * KEYS_IN_BLOCK);
-    }
+        }
     }
     return found;
 }
@@ -1190,10 +1190,10 @@ int mf_chinese_wipe(uint8_t *uid, const uint8_t *atqa, const uint8_t *sak, uint8
                     res = mf_chinese_set_block(blockNo, blockK, NULL, params);
                 } else {
                     res = mf_chinese_set_block(blockNo, blockD, NULL, params);
-            }
+                }
             }
 
-            if (res == PM3_SUCCESS) {                
+            if (res == PM3_SUCCESS) {
                 break;
             }
 
@@ -1221,24 +1221,24 @@ int mf_chinese_set_block(uint8_t blockNo, uint8_t *data, uint8_t *uid, uint8_t p
         return PM3_ETIMEOUT;
     }
 
-        uint8_t isOK  = resp.oldarg[0] & 0xFF;
-        if (uid != NULL) {
-            memcpy(uid, resp.data.asBytes, 4);
-        }
+    uint8_t isOK  = resp.oldarg[0] & 0xFF;
+    if (uid != NULL) {
+        memcpy(uid, resp.data.asBytes, 4);
+    }
 
     if (isOK == 0) {
 
-            uint8_t reason = (resp.oldarg[1] & 0xFF);
-            if (reason == 4) {
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(WARNING, "GDM magic write signature block failed");
-            } else if (reason == 5) {
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(WARNING, "Write block failed");
-            }
-
-            return PM3_EUNDEF;
+        uint8_t reason = (resp.oldarg[1] & 0xFF);
+        if (reason == 4) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(WARNING, "GDM magic write signature block failed");
+        } else if (reason == 5) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(WARNING, "Write block failed");
         }
+
+        return PM3_EUNDEF;
+    }
 
     return PM3_SUCCESS;
 }
@@ -1284,10 +1284,10 @@ int mf_chinese_gen_3_block(uint8_t *block, int blockLen, uint8_t *newBlock) {
         return PM3_ETIMEOUT;
     }
 
-        if (resp.status == PM3_SUCCESS && newBlock) {
-            memcpy(newBlock, resp.data.asBytes, MFBLOCK_SIZE);
-        }
-        return resp.status;
+    if (resp.status == PM3_SUCCESS && newBlock) {
+        memcpy(newBlock, resp.data.asBytes, MFBLOCK_SIZE);
+    }
+    return resp.status;
 }
 
 int mf_chinese_gen_3_freeze(void) {
@@ -1446,7 +1446,7 @@ int detect_classic_nackbug(bool verbose) {
                 default: {
                     PrintAndLogEx(ERR, "errorcode from device " _RED_("[%i]"), ok);
                     return PM3_EUNDEF;
-            }
+                }
             }
             break;
         }
@@ -1486,10 +1486,10 @@ returns:
 3  = has encrypted nonce
 */
 int detect_classic_static_encrypted_nonce_ex(uint8_t block_no, uint8_t key_type, const uint8_t *key, uint8_t block_no_nested
-                                            , uint8_t key_type_nested, const uint8_t *key_nested
-                                            , uint8_t nr_nested, bool reset, bool hardreset
-                                            , bool addread, bool addauth, bool incblk2
-                                            , bool corruptnrar, bool corruptnrarparity, bool verbose) {
+                                             , uint8_t key_type_nested, const uint8_t *key_nested
+                                             , uint8_t nr_nested, bool reset, bool hardreset
+                                             , bool addread, bool addauth, bool incblk2
+                                             , bool corruptnrar, bool corruptnrarparity, bool verbose) {
 
     uint8_t cdata[1 + 1 + MIFARE_KEY_SIZE + 1 + 1 + MIFARE_KEY_SIZE + 1 + 1 + 1 + 1 + 1 + 1 + 1] = { 0 };
     cdata[0] = block_no;

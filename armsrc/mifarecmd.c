@@ -129,7 +129,7 @@ static bool mifare_wakeup_auth(struct Crypto1State *pcs, MifareWakeupType wakeup
                 // maybe this is fine on some tags?
             }
             break;
-    }
+        }
     }
 
     if (key_auth_cmd != 0) {
@@ -1838,7 +1838,7 @@ static void chkKey_scanB(struct chk_t *c, struct sector_t *k_sector, uint8_t *fo
             // failed to select,  return immediately
             return;
         }
-        
+
         if (res == 0) {
             num_to_bytes(c->key, 6, k_sector[s].keyB);
             found[(s * 2) + 1] = 1;
@@ -1934,7 +1934,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
 
         // Compute how many keys can fit in bigbuf
         // a key is 6 bytes
-        uint16_t key_mem_available = MIN( (BigBuf_get_size() / MF_KEY_LENGTH), (keyCount + (size / MF_KEY_LENGTH)));
+        uint16_t key_mem_available = MIN((BigBuf_get_size() / MF_KEY_LENGTH), (keyCount + (size / MF_KEY_LENGTH)));
 
         uint8_t *dictkeys = BigBuf_calloc(key_mem_available * MF_KEY_LENGTH);
         if (dictkeys == NULL) {
@@ -2200,7 +2200,7 @@ out:
                 // skip already found A keys
                 if (found[(s * 2)] == 0) {
 
-                    chk_data.keyType = MF_KEY_A; 
+                    chk_data.keyType = MF_KEY_A;
                     status = chkKey(&chk_data);
                     if (status == 0) {
                         memcpy(k_sector[s].keyA, datain + (i * MF_KEY_LENGTH), MF_KEY_LENGTH);
@@ -3287,11 +3287,11 @@ void MifareHasStaticEncryptedNonce(uint8_t block_no, uint8_t key_type, uint8_t *
             goto OUT;
         };
         first_nt_counter++;
-    
+
     } else {
-    
+
         for (uint8_t i = 0; i < nr_nested; i++) {
-    
+
             if (need_first_auth) {
                 cuid = 0;
 

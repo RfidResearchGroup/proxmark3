@@ -95,7 +95,7 @@ void SendCommandOLD(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, c
         PrintAndLogEx(WARNING, "Sending " _RED_("%zu") " bytes of payload is too much for OLD frames, abort", len);
         return;
         // return PM3_EOUTOFBOUND;
-    } 
+    }
 
     c.cmd = cmd;
     c.arg[0] = arg0;

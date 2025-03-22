@@ -2755,7 +2755,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        // 
+        //
         has_staticnonce = detect_classic_static_encrypted_nonce(0, MF_KEY_A, g_mifare_default_key);
     }
 
@@ -2768,9 +2768,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         PrintAndLogEx(INFO, " keytype ....... " _YELLOW_("%c"), (keytype == MF_KEY_B) ? 'B' : 'A');
         PrintAndLogEx(INFO, " known key ..... " _YELLOW_("%s"), sprint_hex_inrow(key, sizeof(key)));
 
-        switch(has_staticnonce) {
+        switch (has_staticnonce) {
             case NONCE_STATIC: {
-            PrintAndLogEx(INFO, " card PRNG ..... " _YELLOW_("STATIC"));
+                PrintAndLogEx(INFO, " card PRNG ..... " _YELLOW_("STATIC"));
                 break;
             }
             case NONCE_STATIC_ENC: {
@@ -2778,11 +2778,11 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
                 break;
             }
             case NONCE_NORMAL: {
-            PrintAndLogEx(INFO, " card PRNG ..... " _YELLOW_("%s"), prng_type ? "WEAK" : "HARD");
+                PrintAndLogEx(INFO, " card PRNG ..... " _YELLOW_("%s"), prng_type ? "WEAK" : "HARD");
                 break;
             }
             default: {
-            PrintAndLogEx(INFO, " card PRNG ..... " _YELLOW_("Could not determine PRNG,") " " _RED_("read failed."));
+                PrintAndLogEx(INFO, " card PRNG ..... " _YELLOW_("Could not determine PRNG,") " " _RED_("read failed."));
                 break;
             }
         }
@@ -2956,9 +2956,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 noValidKeyFound:
             PrintAndLogEx(FAILED, "No usable key was found!");
             if (use_flashmemory == false && fnlen == 0) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf autopwn -f mfc_default_keys")"`  i.e. the Randy special");
+                PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf autopwn -f mfc_default_keys")"`  i.e. the Randy special");
             }
-          
+
             if (has_staticnonce == NONCE_STATIC_ENC) {
                 PrintAndLogEx(HINT, "Hint: Static encrypted nonce detected, run `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
             }

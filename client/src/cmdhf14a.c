@@ -1960,8 +1960,8 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
 
                     if (
                         ((atqa & 0x0001) == 0x0001) ||
-                        ((atqa & 0x0004) == 0x0004) 
-                        ) {
+                        ((atqa & 0x0004) == 0x0004)
+                    ) {
                         printTag("HID SEOS (smartmx / javacard)");
                         type |= HID_SEOS;
 
@@ -2386,8 +2386,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         if (
             (card.ats_len == 7 && memcmp(card.ats, "\x05\x78\x77\x80\x02\x9C\x3A", 7) == 0) ||
             (card.ats_len == 7 && memcmp(card.ats, "\x05\x78\x77\x94\x02\x6D\xC8", 7) == 0)
-            ) 
-           {
+        ) {
             isSEOS = true;
             isNTAG424 = false;
             isMifareDESFire = false;
