@@ -16,6 +16,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "0584DF",
+        "Vendor": "GANTNER ELECTRONIC GMBH via SALTO SYSTEMS S.L",
+        "Country": "AT",
+        "Name": "Gantner GAT NET.Lock / GAT Eco.Lock / GAT ECO.Side Credential",
+        "Description": "Gantner GAT NET.Lock / GAT Eco.Lock / GAT ECO.Side Credential",
+        "Type": "pacs"
+    },
+    {
         "AID": "1023F5",
         "Vendor": "Integrated Control Technology Limited (ICT)",
         "Country": "NZ",
@@ -205,6 +213,14 @@
         "Country": "AU",
         "Name": "SIFER-P / SIFER-U Credential",
         "Description": "Inner Range Access Control",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F473A0",
+        "Vendor": "Securitron via ASSA ABLOY",
+        "Country": "US",
+        "Name": "Securitron DESFire EV2 Credential",
+        "Description": "Securitron DESFire EV2 Credential",
         "Type": "pacs"
     },
     {
@@ -876,7 +892,7 @@
         "Vendor": "Invalid / Reserved",
         "Country": "",
         "Name": "Invalid / Reserved",
-        "Description": "Used by ATL Breeze, MAD Public Transport Card, and YVR Compass",
+        "Description": "Used by ATL Breeze, MAD Tarjeta Transporte Publico, and YVR Compass",
         "Type": "transport"
     },
     {
@@ -899,7 +915,7 @@
         "AID": "010000",
         "Vendor": "Consorcio Regional de Transportes Publicos Regulares de Madrid (CRTM)",
         "Country": "ES",
-        "Name": "Tarjeta Transporte Publico (MAD)",
+        "Name": "Tarjeta Transporte Publico (MAD) (Alternative Endian)",
         "Description": "MAD Public Transport Card",
         "Type": "transport"
     },
