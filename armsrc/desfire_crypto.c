@@ -484,9 +484,6 @@ void *mifare_cryto_preprocess_data(desfiretag_t tag, void *data, size_t *nbytes,
                     // Copy again provided data (was overwritten by mifare_cypher_blocks_chained)
                     memcpy(res, data, *nbytes);
 
-                    if (!(communication_settings & MAC_COMMAND)) {
-                        break;
-                    }
                     // Append MAC
                     size_t bla = maced_data_length(DESFIRE(tag)->session_key, *nbytes - offset) + offset;
                     (void)bla++;
