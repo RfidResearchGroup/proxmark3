@@ -37,7 +37,7 @@ local function help()
     print()
     print(ac.yellow..'  Author:'..ac.reset..author)
     print(ac.yellow..'  Version:'..ac.reset..version)
-	print(ac.yellow..'  Modification date:'..ac.reset..mod)
+    print(ac.yellow..'  Modification date:'..ac.reset..mod)
     print(desc)
     print(ac.cyan .. '  Usage' .. ac.reset)
     print(usage)
@@ -175,7 +175,7 @@ local function get_uid_from_user()
                 local log_content = read_log_file(logfile)
                 local uid = extract_uid(log_content)
                 if uid and #uid == 10 then
-				    print("Readed EM4102 ID: " ..ac.green.. uid ..ac.reset)
+                    print("Readed EM4102 ID: " ..ac.green.. uid ..ac.reset)
                     return uid
                 else
                     io.write(ac.yellow .. "Error reading UID. Please adjust FOB position and press Enter..." .. ac.reset)

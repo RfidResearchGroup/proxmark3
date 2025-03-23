@@ -111,20 +111,20 @@ local function main(args)
         if o == 'h' then return help() end
     end
     p:console('clear')
-	print(dash)
-	print('I am initiating the repair process for '..ac.cyan..'T5577'..ac.reset)
-	io.write("Place the" .. ac.cyan .. " T5577 " .. ac.reset .. "tag on the coil and press" .. ac.green .. " ENTER " .. ac.reset .. "to continue..")
-	io.read()
-	print(dash)
+    print(dash)
+    print('I am initiating the repair process for '..ac.cyan..'T5577'..ac.reset)
+    io.write("Place the" .. ac.cyan .. " T5577 " .. ac.reset .. "tag on the coil and press" .. ac.green .. " ENTER " .. ac.reset .. "to continue..")
+    io.read()
+    print(dash)
     print("::: "..ac.cyan.."Hold on, I'm searching for a password in the dictionary"..ac.reset.." :::")
     print(dash)
     p:console('lf t55 chk')
     local log_content = read_log_file(logfile)
     local password = log_content and extract_password(log_content) or nil
     reanimate_t5577(password)
-	p:console('lf t55 detect')
+    p:console('lf t55 detect')
     p:console('lf t55 read -b 0')
-	timer(5)
+    timer(5)
     local success = false
     for line in p.grabbed_output:gmatch("[^\r\n]+") do
         if line:find("00 | 000880E0 |") then
@@ -138,7 +138,7 @@ local function main(args)
     else
         print('Recovery of '..ac.cyan..'T5577'..ac.reset..' was unsuccessful !!!')
     end
-	print(dash)
+    print(dash)
 end
 
 main(args)

@@ -297,7 +297,7 @@ end
 function xorme(hex, xor, index)
     if ( index >= 23 ) then
                 --return ('%02x'):format(bxor( tonumber(hex,16) , tonumber(xor,16) ))
-	return string.format("%x", tonumber(hex,16) ~ tonumber(xor,16))
+    return string.format("%x", tonumber(hex,16) ~ tonumber(xor,16))
     else
         return hex
     end

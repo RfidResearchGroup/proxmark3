@@ -47,13 +47,13 @@ end
 local function help()
     print()
     print(author)
-	print(tutorial)
+    print(tutorial)
     print(version)
     print(desc)
     print(ac.cyan..'  Usage'..ac.reset)
-	print(usage)
+    print(usage)
     print(ac.cyan..'  Arguments'..ac.reset)
-	print(arguments)
+    print(arguments)
 end
 
 local function reset_log_file()
@@ -61,7 +61,7 @@ local function reset_log_file()
     file:write("")
     file:close()
 end
-	
+    
 local function read_log_file(logfile)
     local file = io.open(logfile, "r")
     if not file then
@@ -265,14 +265,14 @@ local function handle_cloning(decimal_id, padded_hex_id, blocks, was_option_3)
             p:console("lf hitag wrbl --ht2 -p 5 -d " .. blocks[5] .. " -k BDF5E846")
             p:console("lf hitag wrbl --ht2 -p 6 -d " .. blocks[6] .. " -k BDF5E846")
             p:console("lf hitag wrbl --ht2 -p 7 -d " .. blocks[7] .. " -k BDF5E846")
-			reset_log_file()
-			--timer(5)
-			verify_written_data(blocks)
+            reset_log_file()
+            --timer(5)
+            verify_written_data(blocks)
         elseif choice == "2" then
             io.write("  Place the" .. ac.cyan .. " T5577 " .. ac.reset .. "tag on the coil and press" .. ac.green .. " ENTER " .. ac.reset .. "to continue..")
             io.read()
             p:console("lf em 410x clone --id " .. padded_hex_id)
-			print('  Cloned EM4102 to T5577 with ID ' ..ac.green.. padded_hex_id ..ac.reset)
+            print('  Cloned EM4102 to T5577 with ID ' ..ac.green.. padded_hex_id ..ac.reset)
         else
             print(ac.yellow .. "  Invalid choice." .. ac.reset .. " Please enter " .. ac.cyan .. "1" .. ac.reset .. " or " .. ac.cyan .. "2" .. ac.reset)
             goto ask_again
@@ -291,7 +291,7 @@ local function handle_cloning(decimal_id, padded_hex_id, blocks, was_option_3)
                 while true do
                     io.write("  Enter a name for database (cannot be empty/duplicate): "..ac.yellow)
                     name = io.read()
-					io.write(ac.reset..'')
+                    io.write(ac.reset..'')
                     if name == nil or name:match("^%s*$") then
                         print(ac.red .. '  ERROR:'..ac.reset..' Name cannot be empty.')
                     else
@@ -322,7 +322,7 @@ end
 
 local function main(args)
     while true do
-	    for o, a in getopt.getopt(args, 'h') do
+        for o, a in getopt.getopt(args, 'h') do
              if o == 'h' then return help() end
         end
         command('clear')
@@ -349,7 +349,7 @@ local function main(args)
                     io.write('  Place the' .. ac.cyan .. ' Paxton' .. ac.reset .. ' Fob on the coil to read..' .. ac.green .. 'ENTER' .. ac.reset .. ' to continue..')
                 end
                 io.read()
-				print(dash)
+                print(dash)
                 p:console('lf hitag read --ht2 -k BDF5E846')
                 if not logfile then
                     error("  No files in this directory")
@@ -367,8 +367,8 @@ local function main(args)
                     io.write(ac.yellow .. '  Adjust the Fob position on the coil.' .. ac.reset .. ' Press' .. ac.green .. ' ENTER' .. ac.reset .. ' to continue..')
                     show_place_message = false
                 else
-					print('                        Readed blocks:')
-					print()
+                    print('                        Readed blocks:')
+                    print()
                     for i = 4, 7 do
                         if blocks[i] then
                             print(string.format("                        Block %d: %s%s%s", i, ac.yellow, blocks[i], ac.reset))
@@ -428,12 +428,12 @@ local function main(args)
             was_option_3 = true
             local retries = 3
             while retries > 0 do
-                io.write('  Enter the name to search ('..retries..' attempts) : '..ac.yellow)				
+                io.write('  Enter the name to search ('..retries..' attempts) : '..ac.yellow)               
                 local user_input = io.read()
-				io.write(ac.reset..'')
-				if user_input == nil or user_input:match("^%s*$") then
-				    print(ac.yellow..'  Error: '..ac.reset.. 'Empty name !!!')
-				end
+                io.write(ac.reset..'')
+                if user_input == nil or user_input:match("^%s*$") then
+                    print(ac.yellow..'  Error: '..ac.reset.. 'Empty name !!!')
+                end
                 local name_clean = "^Name:%s*" .. user_input:gsub("%s", "%%s") .. "%s*$"
                 local file = io.open(log_file_path, "r")
                 if not file then
@@ -448,7 +448,7 @@ local function main(args)
                 local found = false
                 for i = 1, #lines do
                     if lines[i]:match(name_clean) then
-					    nam = user_input
+                        nam = user_input
                         local blocks = {
                             [4] = lines[i + 2]:match("Block 4: (.+)"),
                             [5] = lines[i + 3]:match("Block 5: (.+)"),
@@ -457,7 +457,7 @@ local function main(args)
                         }
                         local em4102_id = lines[i + 6]:match("EM4102 ID: (.+)")
                         print(dash)
-						print('            I found the data under the name: '..ac.yellow ..nam.. ac.reset)
+                        print('            I found the data under the name: '..ac.yellow ..nam.. ac.reset)
                         for j = 4, 7 do
                             print(string.format("                   Block %d: %s%s%s", j, ac.yellow, blocks[j] or "N/A", ac.reset))
                         end
@@ -479,10 +479,10 @@ local function main(args)
                 print(ac.yellow .. "  Name not found after 3 attempts." .. ac.reset)
             end
         end
-		print(dash)
+        print(dash)
         print('  Exiting script Lua...')
         return
-	end
+    end
 end
 
 main(args)
