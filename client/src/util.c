@@ -745,6 +745,9 @@ void SwapEndian64ex(const uint8_t *src, const size_t len, const uint8_t blockSiz
 //  -------------------------------------------------------------------------
 int param_getptr(const char *line, int *bg, int *en, int paramnum) {
     int i;
+    if (line == NULL) {
+        return 1;
+    }
     int len = strlen(line);
 
     *bg = 0;
