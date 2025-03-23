@@ -6,9 +6,6 @@
 
 int main(int argc, char *argv[]) {
 
-//    char buf[8196 + 1];
-    size_t n;
-
     if (argc < 2) {
         printf("Usage: %s <port>\n", argv[0]);
         exit(-1);
