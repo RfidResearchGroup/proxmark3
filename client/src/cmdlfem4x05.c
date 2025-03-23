@@ -1173,7 +1173,7 @@ int CmdEM4x05Dump(const char *Cmd) {
         } else if (status == PM3_EFAILED) {
             PrintAndLogEx(WARNING, "password ( " _RED_("fail") ") , will try without password");
             usePwd = false;
-        } else if (status != PM3_EFAILED) {
+        } else {
             PrintAndLogEx(WARNING, "Login attempt: no answer from tag");
             return status;
         }
