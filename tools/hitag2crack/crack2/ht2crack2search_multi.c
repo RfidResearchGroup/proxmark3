@@ -458,7 +458,16 @@ int main(int argc, char *argv[]) {
     // threads
     for (int i = 0; i < thread_count; ++i) {
         targs *a = calloc(1, rng.len + sizeof(targs));
+        if (a == NULL) {
+            printf("Memory allocation failed for thread arguments\n");
+            exit(1);
+        }
         a->r.data = calloc(1, rng.len);
+        if (a->r.data == NULL) {
+            printf("Memory allocation failed for rng data\n");
+            free(a);
+            exit(1);
+        }
 
         a->thread = i;
         a->idx = i;
