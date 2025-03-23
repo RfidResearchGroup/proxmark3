@@ -176,7 +176,7 @@ local function get_uid_from_user()
                 local uid = extract_uid(log_content)
                 if uid and #uid == 10 then
 				    print("Readed EM4102 ID: " ..ac.green.. uid ..ac.reset)
-                    return uid				       
+                    return uid
                 else
                     io.write(ac.yellow .. "Error reading UID. Please adjust FOB position and press Enter..." .. ac.reset)
                     io.read()
@@ -221,8 +221,8 @@ end
 
 local function main(args)
     for o, a in getopt.getopt(args, 'h') do
-        if o == 'h' then 
-            return help() 
+        if o == 'h' then
+            return help()
         end
     end
     local blocks = {}
@@ -254,7 +254,7 @@ local function main(args)
     io.write("Place the " .. ac.cyan .. "T5577" .. ac.reset .. " tag on the coil for writing and press " .. ac.cyan .. "Enter..." .. ac.reset)
     io.read()
     write(blocks, block0_value)
-    print(dash)   
+    print(dash)
     timer(3)
     local verified = verify_written_data(blocks, block0_value, uid_count)
     while not verified do
