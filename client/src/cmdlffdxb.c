@@ -58,6 +58,9 @@ static int CmdHelp(const char *Cmd);
 
 static int getFDXBBits(uint64_t national_code, uint16_t country_code, uint8_t is_animal, uint8_t is_extended, uint32_t extended, uint8_t *bits) {
 
+    if (bits == NULL) {
+        return PM3_ESOFT;
+    }
     // add preamble ten 0x00 and one 0x01
     memset(bits, 0x00, 10);
     bits[10] = 1;
