@@ -479,7 +479,7 @@ int uart_receive(const serial_port sp, uint8_t *pbtRx, uint32_t pszMaxRxLen, uin
     const serial_port_unix_t_t *spu = (serial_port_unix_t_t *)sp;
 
     if (newtimeout_pending) {
-        timeout.tv_usec = newtimeout_value * 1000;
+        timeout.tv_usec = ((suseconds_t)newtimeout_value) * 1000;
         newtimeout_pending = false;
     }
     // Reset the output count
