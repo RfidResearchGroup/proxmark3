@@ -454,11 +454,16 @@ static bool hitag1_plain(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *t
             /*tx[0] = 0xb0; // Rev 3.0*/
             tx[0] = HITAG1_SET_CC; // Rev 2.0
             *txlen = 5;
-            if (!bCollision) blocknr--;
+
+            if (bCollision == false) {
+                blocknr--;
+            }
+
             if (blocknr < 0) {
                 blocknr = 0;
             }
-            if (!hitag_s) {
+
+            if (hitag_s == false) {
                 if (blocknr > 1 && blocknr < 31) {
                     blocknr = 31;
                 }
@@ -483,11 +488,13 @@ static bool hitag1_plain(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *t
             } else {
                 memcpy(tag.sectors[blocknr], rx, 4);
                 blocknr++;
-                if (!hitag_s) {
+
+                if (hitag_s == false) {
                     if (blocknr > 1 && blocknr < 31) {
                         blocknr = 31;
                     }
                 }
+
                 if (blocknr > 63) {
                     DbpString("Read successful!");
                     *txlen = 0;
@@ -503,17 +510,15 @@ static bool hitag1_plain(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *t
                 tx[2] = crc << 4;
                 *txlen = 20;
             }
+            break;
         }
-        break;
         default: {
             Dbprintf("Unknown frame length: %d", rxlen);
             return false;
         }
-        break;
     }
     return true;
 }
-
 
 static bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t *txlen) {
     uint8_t crc;
@@ -524,18 +529,24 @@ static bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, si
             /*tx[0] = 0xb0; // Rev 3.0*/
             tx[0] = HITAG1_SELECT; // Rev 2.0
             *txlen = 5;
+
             if (bCrypto && byte_value <= 0xff) {
                 // to retry
                 bCrypto = false;
             }
-            if (!bCollision) blocknr--;
+
+            if (bCollision == false) {
+                blocknr--;
+            }
+
             if (blocknr < 0) {
                 blocknr = 0;
             }
+
             bCollision = true;
             // will receive 32-bit UID
+            break;
         }
-        break;
         case 2: {
             if (bAuthenticating) {
                 // received Auth init ACK, send nonce
@@ -560,8 +571,8 @@ static bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, si
                 *txlen = 20;
                 // will receive 32-bit encrypted page
             }
+            break;
         }
-        break;
         case 32: {
             if (bCollision) {
                 // Select card by serial from response
@@ -627,13 +638,12 @@ static bool hitag1_authenticate(uint8_t *rx, const size_t rxlen, uint8_t *tx, si
                                 *txlen = 20;
                 */
             }
+            break;
         }
-        break;
         default: {
             Dbprintf("Unknown frame length: %d", rxlen);
             return false;
         }
-        break;
     }
 
     return true;
@@ -713,8 +723,8 @@ static bool hitag2_password(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
                 }
                 *txlen = 5;
                 memcpy(tx, "\xC0", nbytes(*txlen));
+                break;
             }
-            break;
 
             // Received UID, tag password
             case 32: {
@@ -728,7 +738,9 @@ static bool hitag2_password(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
                     // stage 2, got config byte+password TAG, discard as will read later
                     if (bAuthenticating) {
                         bAuthenticating = false;
+
                         if (write) {
+
                             if (!hitag2_write_page(rx, rxlen, tx, txlen)) {
                                 return false;
                             }
@@ -750,15 +762,13 @@ static bool hitag2_password(uint8_t *rx, const size_t rxlen, uint8_t *tx, size_t
                     tx[0] = HITAG2_READ_PAGE | (blocknr << 3) | ((blocknr ^ 7) >> 2);
                     tx[1] = ((blocknr ^ 7) << 6);
                 }
+                break;
             }
-            break;
-
             // Unexpected response
             default: {
                 DBG Dbprintf("Unknown frame length: " _RED_("%d"), rxlen);
                 return false;
             }
-            break;
         }
     }
 
@@ -1003,9 +1013,8 @@ static bool hitag2_test_auth_attempts(uint8_t *rx, const size_t rxlen, uint8_t *
             }
             *txlen = 5;
             memcpy(tx, "\xc0", nbytes(*txlen));
+            break;
         }
-        break;
-
         // Received UID, crypto tag answer, or read block response
         case 32: {
             if (bCrypto == false) {
@@ -1021,16 +1030,13 @@ static bool hitag2_test_auth_attempts(uint8_t *rx, const size_t rxlen, uint8_t *
                 auth_table_pos += 8;
                 memcpy(NrAr, auth_table + auth_table_pos, 8);
             }
+            break;
         }
-        break;
-
         default: {
             Dbprintf("Unknown frame length: " _RED_("%d"), rxlen);
             return false;
         }
-        break;
     }
-
     return true;
 }
 
@@ -2093,8 +2099,8 @@ void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
             blocknr = payload->page;
             bCrypto = false;
             bAuthenticating = false;
+            break;
         }
-        break;
         case HT2F_PASSWORD: {
             DBG DbpString("Authenticating using password:");
             if (memcmp(payload->pwd, "\x00\x00\x00\x00", 4) == 0) {
@@ -2107,14 +2113,13 @@ void WriterHitag(const lf_hitag_data_t *payload, bool ledcontrol) {
             blocknr = payload->page;
             bPwd = false;
             bAuthenticating = false;
+            break;
         }
-        break;
         default: {
             DBG Dbprintf("Error, unknown function: " _RED_("%d"), payload->cmd);
             reply_ng(CMD_LF_HITAG2_WRITE, PM3_ESOFT, NULL, 0);
             return;
         }
-        break;
     }
 
     if (ledcontrol) LED_D_ON();
