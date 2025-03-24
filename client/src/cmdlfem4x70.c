@@ -1014,27 +1014,27 @@ static int CmdEM4x70Recover(const char *Cmd) {
 
         // dump the results to screen, to enable the user to manually check validity
         PrintAndLogEx(INFO,
-                        "Potential Key #%d: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
-                        " -->  " _YELLOW_("lf em 4x70 auth --rnd %02X%02X%02X%02X%02X%02X%02X --frn %02X%02X%02X%02X")
-                        " --> %02X%02X%02X",
-                        i,
-                        q.k[ 0], q.k[ 1], q.k[ 2], q.k[ 3], q.k[ 4], q.k[ 5],
-                        q.k[ 6], q.k[ 7], q.k[ 8], q.k[ 9], q.k[10], q.k[11],
-                        recover_ctx.alt_nonce.rn[0],
-                        recover_ctx.alt_nonce.rn[1],
-                        recover_ctx.alt_nonce.rn[2],
-                        recover_ctx.alt_nonce.rn[3],
-                        recover_ctx.alt_nonce.rn[4],
-                        recover_ctx.alt_nonce.rn[5],
-                        recover_ctx.alt_nonce.rn[6],
-                        alt_frn.frn[0],
-                        alt_frn.frn[1],
-                        alt_frn.frn[2],
-                        alt_frn.frn[3],
-                        alt_grn.grn[0],
-                        alt_grn.grn[1],
-                        alt_grn.grn[2]
-                        );
+                      "Potential Key #%d: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
+                      " -->  " _YELLOW_("lf em 4x70 auth --rnd %02X%02X%02X%02X%02X%02X%02X --frn %02X%02X%02X%02X")
+                      " --> %02X%02X%02X",
+                      i,
+                      q.k[ 0], q.k[ 1], q.k[ 2], q.k[ 3], q.k[ 4], q.k[ 5],
+                      q.k[ 6], q.k[ 7], q.k[ 8], q.k[ 9], q.k[10], q.k[11],
+                      recover_ctx.alt_nonce.rn[0],
+                      recover_ctx.alt_nonce.rn[1],
+                      recover_ctx.alt_nonce.rn[2],
+                      recover_ctx.alt_nonce.rn[3],
+                      recover_ctx.alt_nonce.rn[4],
+                      recover_ctx.alt_nonce.rn[5],
+                      recover_ctx.alt_nonce.rn[6],
+                      alt_frn.frn[0],
+                      alt_frn.frn[1],
+                      alt_frn.frn[2],
+                      alt_frn.frn[3],
+                      alt_grn.grn[0],
+                      alt_grn.grn[1],
+                      alt_grn.grn[2]
+                     );
     }
     printf("\n");
 
@@ -1207,10 +1207,10 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
         return result;
     } else if (memcmp(&opts.grn, &tag_grn, sizeof(ID48LIB_GRN)) != 0) {
         PrintAndLogEx(FAILED, "Authenticating with new key returned %02x %02x %02x"
-                        , tag_grn.grn.grn[0]
-                        , tag_grn.grn.grn[1]
-                        , tag_grn.grn.grn[2]
-                        );
+                      , tag_grn.grn.grn[0]
+                      , tag_grn.grn.grn[1]
+                      , tag_grn.grn.grn[2]
+                     );
         PrintAndLogEx(FAILED, "Expected %s [maybe 5 lsb of key wrong?] ( " _RED_("fail") " )", grn_string);
         result = PM3_EWRONGANSWER;
         return result;
@@ -1274,10 +1274,10 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
             return result;
         } else {
             PrintAndLogEx(INFO, "        Found: Partial key in block %d is " _GREEN_("%02X%02X")
-                            , block
-                            , brute.partial_key[0]
-                            , brute.partial_key[1]
-                            );
+                          , block
+                          , brute.partial_key[0]
+                          , brute.partial_key[1]
+                         );
             // Save the partial key...
             if (block == 9) {
                 opts.key.k[0] = brute.partial_key[0];
@@ -1336,15 +1336,15 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
         for (uint8_t idx = 0; idx < data.potential_key_count; ++idx) {
             ID48LIB_KEY q = data.potential_keys[idx];
             PrintAndLogEx(DEBUG, "        Potential Key %d: %s %02X%02X%02X%02X%02X%02X"
-                            , idx
-                            , key_string
-                            , q.k[ 6]
-                            , q.k[ 7]
-                            , q.k[ 8]
-                            , q.k[ 9]
-                            , q.k[10]
-                            , q.k[11]
-                            );
+                          , idx
+                          , key_string
+                          , q.k[ 6]
+                          , q.k[ 7]
+                          , q.k[ 8]
+                          , q.k[ 9]
+                          , q.k[10]
+                          , q.k[11]
+                         );
         }
         last_successful_step = 5;
     }
@@ -1409,8 +1409,8 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
         // print the validated key to the string buffer (for step 7)
         ID48LIB_KEY q = data.potential_keys[first_validated_key_idx];
         snprintf(key_string, 25, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
-                    q.k[ 0], q.k[ 1], q.k[ 2], q.k[ 3], q.k[ 4], q.k[ 5],
-                    q.k[ 6], q.k[ 7], q.k[ 8], q.k[ 9], q.k[10], q.k[11]
+                 q.k[ 0], q.k[ 1], q.k[ 2], q.k[ 3], q.k[ 4], q.k[ 5],
+                 q.k[ 6], q.k[ 7], q.k[ 8], q.k[ 9], q.k[10], q.k[11]
                 );
     }
     // 7. Print the validated key
