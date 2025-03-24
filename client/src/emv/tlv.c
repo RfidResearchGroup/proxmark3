@@ -94,6 +94,9 @@ static size_t tlv_parse_len(const unsigned char **buf, size_t *len) {
 }
 
 bool tlv_parse_tl(const unsigned char **buf, size_t *len, struct tlv *tlv) {
+    if (tlv == NULL) {
+        return false;
+    }
     tlv->value = 0;
 
     tlv->tag = tlv_parse_tag(buf, len);
@@ -113,6 +116,9 @@ static bool tlvdb_parse_one(struct tlvdb *tlvdb,
                             struct tlvdb *parent,
                             const unsigned char **tmp,
                             size_t *left) {
+    if (tlvdb == NULL) {
+        return false;
+    }
     tlvdb->next = tlvdb->children = NULL;
     tlvdb->parent = parent;
 
@@ -147,12 +153,18 @@ err:
 }
 
 static struct tlvdb *tlvdb_parse_children(struct tlvdb *parent) {
+    if (parent == NULL) {
+        return NULL;
+    }
     const unsigned char *tmp = parent->tag.value;
     size_t left = parent->tag.len;
     struct tlvdb *tlvdb, *first = NULL, *prev = NULL;
 
     while (left != 0) {
         tlvdb = calloc(1, sizeof(*tlvdb));
+        if (tlvdb == NULL) {
+            goto err;
+        }
         if (prev)
             prev->next = tlvdb;
         else
@@ -182,6 +194,9 @@ struct tlvdb *tlvdb_parse(const unsigned char *buf, size_t len) {
         return NULL;
 
     root = calloc(1, sizeof(*root) + len);
+    if (root == NULL) {
+        return NULL;
+    }
     root->len = len;
     memcpy(root->buf, buf, len);
 
@@ -277,6 +292,9 @@ bool tlvdb_parse_root_multi(struct tlvdb_root *root) {
     if (tlvdb_parse_one(&root->db, NULL, &tmp, &left) == true) {
         while (left > 0) {
             struct tlvdb *db = calloc(1, sizeof(*db));
+            if (db == NULL) {
+                return false;
+            }
             if (tlvdb_parse_one(db, NULL, &tmp, &left) == true) {
                 tlvdb_add(&root->db, db);
             } else {
@@ -291,6 +309,9 @@ bool tlvdb_parse_root_multi(struct tlvdb_root *root) {
 
 struct tlvdb *tlvdb_fixed(tlv_tag_t tag, size_t len, const unsigned char *value) {
     struct tlvdb_root *root = calloc(1, sizeof(*root) + len);
+    if (root == NULL) {
+        return NULL;
+    }
 
     root->len = len;
     memcpy(root->buf, value, len);
@@ -305,6 +326,9 @@ struct tlvdb *tlvdb_fixed(tlv_tag_t tag, size_t len, const unsigned char *value)
 
 struct tlvdb *tlvdb_external(tlv_tag_t tag, size_t len, const unsigned char *value) {
     struct tlvdb_root *root = calloc(1, sizeof(*root));
+    if (root == NULL) {
+        return NULL;
+    }
 
     root->len = 0;
 
@@ -606,19 +630,19 @@ bool tlv_equal(const struct tlv *a, const struct tlv *b) {
     return a->tag == b->tag && a->len == b->len && !memcmp(a->value, b->value, a->len);
 }
 
-struct tlvdb *tlvdb_elm_get_next(struct tlvdb *tlvdb) {
+struct tlvdb *tlvdb_elm_get_next(const struct tlvdb *tlvdb) {
     return tlvdb->next;
 }
 
-struct tlvdb *tlvdb_elm_get_children(struct tlvdb *tlvdb) {
+struct tlvdb *tlvdb_elm_get_children(const struct tlvdb *tlvdb) {
     return tlvdb->children;
 }
 
-struct tlvdb *tlvdb_elm_get_parent(struct tlvdb *tlvdb) {
+struct tlvdb *tlvdb_elm_get_parent(const struct tlvdb *tlvdb) {
     return tlvdb->parent;
 }
 
-bool tlvdb_get_uint8(struct tlvdb *tlvRoot, tlv_tag_t tag, uint8_t *value) {
+bool tlvdb_get_uint8(const struct tlvdb *tlvRoot, tlv_tag_t tag, uint8_t *value) {
     const struct tlv *tlvelm = tlvdb_get(tlvRoot, tag, NULL);
     return tlv_get_uint8(tlvelm, value);
 }
