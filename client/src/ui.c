@@ -715,6 +715,10 @@ void print_progress(uint64_t count, uint64_t max, barMode_t style) {
     size_t unit = strlen(block[mode]);
     // +1 for \0
     char *bar = (char *)calloc(unit * width + 1, sizeof(uint8_t));
+    if (bar == NULL) {
+        fprintf(stderr, "Memory allocation failed for progress bar\n");
+        return;
+    }
 
     uint8_t value = PERCENTAGE(count, max);
 
@@ -739,6 +743,11 @@ void print_progress(uint64_t count, uint64_t max, barMode_t style) {
     // color buffer
     size_t collen = strlen(bar) + 40;
     char *cbar = (char *)calloc(collen, sizeof(uint8_t));
+    if (cbar == NULL) {
+        fprintf(stderr, "Memory allocation failed for color buffer\n");
+        free(bar);
+        return;
+    }
 
     // Add colors
     if (g_session.supports_colors) {

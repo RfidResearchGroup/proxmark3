@@ -291,6 +291,10 @@ static int CmdGuardClone(const char *Cmd) {
 
     //GuardProxII - compat mode, ASK/Biphase,  data rate 64, 3 data blocks
     uint8_t *bs = calloc(96, sizeof(uint8_t));
+    if (bs == NULL) {
+        PrintAndLogEx(ERR, "Memory allocation failed.");
+        return PM3_EMALLOC;
+    }
     if (getGuardBits(xorval, fmtlen, facilitycode, cardnumber, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         free(bs);

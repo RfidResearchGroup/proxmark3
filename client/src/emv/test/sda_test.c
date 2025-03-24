@@ -132,6 +132,10 @@ static int sda_test_raw(bool verbose) {
 
     size_t ipk_pk_len = ipk_data[13];
     unsigned char *ipk_pk = calloc(1, ipk_pk_len);
+    if (!ipk_pk) {
+        free(ipk_data);
+        return 1;
+    }
     memcpy(ipk_pk, ipk_data + 15, ipk_data_len - 36);
     memcpy(ipk_pk + ipk_data_len - 36, issuer_rem, sizeof(issuer_rem));
 

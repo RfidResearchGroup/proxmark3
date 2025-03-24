@@ -199,6 +199,10 @@ static int CmdNoralsyClone(const char *Cmd) {
     }
 
     uint8_t *bits = calloc(96, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(ERR, "Memory allocation failed.");
+        return PM3_EMALLOC;
+    }
     if (getnoralsyBits(id, year, bits) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         free(bits);

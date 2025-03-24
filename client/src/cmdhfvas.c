@@ -114,6 +114,10 @@ static int CreateGetVASDataCommand(const uint8_t *pidHash, const char *url, size
 
     size_t reqTlvLen = 19 + (pidHash != NULL ? 35 : 0) + (url != NULL ? 3 + urlLen : 0);
     uint8_t *reqTlv = calloc(reqTlvLen, sizeof(uint8_t));
+    if (reqTlv == NULL) {
+        PrintAndLogEx(FAILED, "Memory allocation failed");
+        return PM3_EMALLOC;
+    }
 
     uint8_t version[] = {0x9F, 0x22, 0x02, 0x01, 0x00};
     memcpy(reqTlv, version, sizeof(version));
