@@ -21,7 +21,7 @@ static unsigned int claimed_iface = 0;
 unsigned char return_on_error = 0;
 unsigned char error_occurred = 0;
 
-void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, void *data, size_t len) {
+void SendCommandBL(uint64_t cmd, uint64_t arg0, uint64_t arg1, uint64_t arg2, const void *data, size_t len) {
     int ret;
     PacketCommandOLD c = {CMD_UNKNOWN, {0, 0, 0}, {{0}}};
     c.cmd = cmd;
@@ -115,7 +115,7 @@ usb_dev_handle *findProxmark(int verbose, unsigned int *iface) {
         struct usb_device *dev;
 
         for (dev = bus->devices; dev; dev = dev->next) {
-            struct usb_device_descriptor *desc = &(dev->descriptor);
+            const struct usb_device_descriptor *desc = &(dev->descriptor);
 
             if ((desc->idProduct == 0x4b8f) && (desc->idVendor == 0x9ac4)) {
                 handle = usb_open(dev);

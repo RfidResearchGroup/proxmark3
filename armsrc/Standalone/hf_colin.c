@@ -95,6 +95,11 @@ static iso14a_card_select_t colin_p_card;
 static int colin_currline;
 static int colin_currfline;
 static int colin_curlline;
+static int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace, uint8_t keyCount, const uint8_t *datain, uint64_t *key);
+static int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype);
+static void saMifareMakeTag(void);
+static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, const uint8_t *datain);
+static void WriteTagToFlash(uint32_t uid, size_t size);
 
 // TODO : Implement fast read of KEYS like in RFIdea
 // also http://ext.delaat.net/rp/2015-2016/p04/report.pdf
@@ -257,7 +262,7 @@ static char *ReadSchemasFromSPIFFS(char *filename) {
 
 static void add_schemas_from_json_in_spiffs(char *filename) {
 
-    char *jsonfile = ReadSchemasFromSPIFFS((char *)filename);
+    const char *jsonfile = ReadSchemasFromSPIFFS((char *)filename);
 
     int i, len = strlen(jsonfile);
     struct json_token t;
@@ -301,7 +306,7 @@ static void ReadLastTagFromFlash(void) {
     return;
 }
 
-void WriteTagToFlash(uint32_t uid, size_t size) {
+static void WriteTagToFlash(uint32_t uid, size_t size) {
     SpinOff(0);
     LED_A_ON();
     LED_B_ON();
@@ -763,7 +768,7 @@ readysim:
  * - *datain used as error return
  * - tracing is falsed
  */
-int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
+static int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
     uint8_t numSectors = numofsectors;
     uint8_t keyType = keytype;
 
@@ -825,8 +830,8 @@ int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
 
 /* the chk function is a piwi'ed(tm) check that will try all keys for
 a particular sector. also no tracing no dbg */
-int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace,
-                           uint8_t keyCount, uint8_t *datain, uint64_t *key) {
+static int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace,
+                                  uint8_t keyCount, const uint8_t *datain, uint64_t *key) {
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
     set_tracing(false);
 
@@ -863,7 +868,7 @@ int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTrace,
     return retval;
 }
 
-void saMifareMakeTag(void) {
+static void saMifareMakeTag(void) {
     uint8_t cfail = 0;
     cjSetCursLeft();
     cjTabulize();
@@ -923,7 +928,7 @@ void saMifareMakeTag(void) {
 // Matt's StandAlone mod.
 // Work with "magic Chinese" card (email him: ouyangweidaxian@live.cn)
 //-----------------------------------------------------------------------------
-int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *datain) {
+static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, const uint8_t *datain) {
     // params
     uint8_t needWipe = arg0;
     // bit 0 - need get UID

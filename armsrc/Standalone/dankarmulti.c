@@ -106,13 +106,11 @@ END_MODE_LIST
  *  End mode list  *
  *******************/
 
-void update_mode(int selected);
-
 void ModInfo(void) {
     DbpString("  Multi standalone loader aka dankarmulti (Daniel Karling)");
 }
 
-void update_mode(int selected) {
+static void update_mode(int selected) {
     if (selected >= NUM_MODES) {
         SpinDown(100);
         Dbprintf("Invalid mode selected");

@@ -67,38 +67,32 @@ typedef struct {
     uint8_t sak;
 } PACKED card_clone_t;
 
-int get_block_count(iso14a_card_select_t card, uint8_t *version, uint16_t version_len);
-uint16_t get_ev1_version(iso14a_card_select_t card, uint8_t *version, uint16_t version_len);
-uint16_t get_ev1_signature(iso14a_card_select_t card, uint8_t *signature, uint16_t sign_len);
-uint16_t get_ev1_counter(iso14a_card_select_t card, uint8_t counter, uint8_t *response, uint16_t resp_len);
-uint16_t get_ev1_tearing(iso14a_card_select_t card, uint8_t counter, uint8_t *response, uint16_t resp_len);
-
-uint16_t get_ev1_version(iso14a_card_select_t card, uint8_t *version, uint16_t version_len) {
+static uint16_t get_ev1_version(iso14a_card_select_t card, uint8_t *version, uint16_t version_len) {
     return mifare_sendcmd(MIFARE_ULEV1_VERSION, NULL, 0, version, version_len, NULL, NULL);
 }
 
-uint16_t get_ev1_signature(iso14a_card_select_t card, uint8_t *signature, uint16_t sign_len) {
+static uint16_t get_ev1_signature(iso14a_card_select_t card, uint8_t *signature, uint16_t sign_len) {
     uint8_t cmd[4] = {MIFARE_ULEV1_READSIG, 0x00, 0x00, 0x00};
     AddCrc14A(cmd, 2);
     ReaderTransmit(cmd, sizeof(cmd), NULL);
     return ReaderReceive(signature, sign_len, NULL);
 }
 
-uint16_t get_ev1_counter(iso14a_card_select_t card, uint8_t counter, uint8_t *response, uint16_t resp_len) {
+static uint16_t get_ev1_counter(iso14a_card_select_t card, uint8_t counter, uint8_t *response, uint16_t resp_len) {
     uint8_t cmd[4] = {MIFARE_ULEV1_READ_CNT, counter, 0x00, 0x00};
     AddCrc14A(cmd, 2);
     ReaderTransmit(cmd, sizeof(cmd), NULL);
     return ReaderReceive(response, resp_len, NULL);
 }
 
-uint16_t get_ev1_tearing(iso14a_card_select_t card, uint8_t counter, uint8_t *response, uint16_t resp_len) {
+static uint16_t get_ev1_tearing(iso14a_card_select_t card, uint8_t counter, uint8_t *response, uint16_t resp_len) {
     uint8_t cmd[4] = {MIFARE_ULEV1_CHECKTEAR, counter, 0x00, 0x00};
     AddCrc14A(cmd, 2);
     ReaderTransmit(cmd, sizeof(cmd), NULL);
     return ReaderReceive(response, resp_len, NULL);
 }
 
-int get_block_count(iso14a_card_select_t card, uint8_t *version, uint16_t version_len) {
+static int get_block_count(iso14a_card_select_t card, const uint8_t *version, uint16_t version_len) {
     // Default to MAX_DEFAULT_BLOCKS blocks
     int block_count = MAX_DEFAULT_BLOCKS;
     // Most of this code is from cmdhfmfu.c
