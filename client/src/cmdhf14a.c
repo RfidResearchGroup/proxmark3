@@ -3330,6 +3330,7 @@ int CmdHF14ANdefRead(const char *Cmd) {
     }
 
     free(ndef_file);
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -3589,8 +3590,8 @@ int CmdHF14ANdefFormat(const char *Cmd) {
         DropField();
     }
 
+    PrintAndLogEx(INFO, "Done!");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "finished");
     return PM3_SUCCESS;
 }
 
@@ -3742,8 +3743,8 @@ int CmdHF14ANdefWrite(const char *Cmd) {
         PrintAndLogEx(INFO, "Write data file %02x " _GREEN_("success"), fnum);
     }
 
+    PrintAndLogEx(INFO, "Done!");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "finished");
     return PM3_SUCCESS;
 }
 

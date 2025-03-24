@@ -247,7 +247,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
     uint8_t *data = calloc(FLASH_MEM_MAX_SIZE_P(spi_flash_pages), sizeof(uint8_t));
 
     switch (d) {
-        case DICTIONARY_MIFARE:
+        case DICTIONARY_MIFARE: {
             keylen = MF_KEY_LENGTH;
             res = loadFileDICTIONARY(filename, data, &datalen, keylen, &keycount);
             if (res || !keycount) {
@@ -261,7 +261,8 @@ static int CmdFlashMemLoad(const char *Cmd) {
             }
             strcpy(spiffsDest, MF_KEYS_FILE);
             break;
-        case DICTIONARY_T55XX:
+        }
+        case DICTIONARY_T55XX: {
             keylen = T55XX_KEY_LENGTH;
             res = loadFileDICTIONARY(filename, data, &datalen, keylen, &keycount);
             if (res || !keycount) {
@@ -275,7 +276,8 @@ static int CmdFlashMemLoad(const char *Cmd) {
             }
             strcpy(spiffsDest, T55XX_KEYS_FILE);
             break;
-        case DICTIONARY_ICLASS:
+        }
+        case DICTIONARY_ICLASS: {
             keylen = ICLASS_KEY_LENGTH;
             res = loadFileDICTIONARY(filename, data, &datalen, keylen, &keycount);
             if (res || !keycount) {
@@ -289,7 +291,8 @@ static int CmdFlashMemLoad(const char *Cmd) {
             }
             strcpy(spiffsDest, ICLASS_KEYS_FILE);
             break;
-        case DICTIONARY_NONE:
+        }
+        case DICTIONARY_NONE: {
             res = loadFile_safe(filename, ".bin", (void **)&data, &datalen);
             if (res != PM3_SUCCESS) {
                 free(data);
@@ -302,6 +305,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
                 return PM3_EOVFLOW;
             }
             break;
+        }
     }
 
     // ICEMAN: not needed when we transite to loadxxxx_safe methods

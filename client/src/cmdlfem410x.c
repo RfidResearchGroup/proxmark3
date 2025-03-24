@@ -741,8 +741,7 @@ static int CmdEM410xClone(const char *Cmd) {
                         }
                     }
                     //TODO: keep other fields?
-                    memcpy(packet.data, &config_page, sizeof(config_page));
-                    // PrintAndLogEx(INFO, "packet.data: %s", sprint_hex(packet.data, sizeof(packet.data)));
+                    memcpy(packet.data, &config_page.asBytes, sizeof(config_page.asBytes));
                     packet.page = 1;
                     break;
                 }

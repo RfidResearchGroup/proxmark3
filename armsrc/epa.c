@@ -649,5 +649,5 @@ void EPA_PACE_Simulate(const PacketCommandNG *c) {
 
     Dbprintf("Standardized Domain Parameter: %i", pace_version_info.parameter_id);
     DbpString("");
-    DbpString("finished");
+    DbpString("Done!");
 }

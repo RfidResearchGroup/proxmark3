@@ -2539,7 +2539,6 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     char outfilename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)outfilename, FILE_PATH_SIZE, &outfnlen);
 
-
     bool slow = arg_get_lit(ctx, 7);
     bool legacy_mfchk = arg_get_lit(ctx, 8);
     bool verbose = arg_get_lit(ctx, 9);
