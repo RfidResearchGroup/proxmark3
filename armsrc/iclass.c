@@ -2385,7 +2385,8 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             while (!reverted) {
                 //Regain privilege escalation with a readcheck
                 iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
-                res2 = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
+                // TODO: check result
+                GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
 
                 DbpString(_YELLOW_("Attempting to restore the original key. "));
                 if (iclass_writeblock_ext(blockno, genkeyblock, mac2, use_mac, shallow_mod)) {
@@ -2396,7 +2397,8 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                 DbpString(_YELLOW_("Verifying Key Restore..."));
                 //Do a readcheck first to reset the cypher state
                 iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
-                res2 = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
+                // TODO: check result
+                GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
 
                 //need to craft the authentication payload accordingly
                 memcpy(msg->req.key, original_mac, 8);
