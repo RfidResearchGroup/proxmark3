@@ -98,11 +98,6 @@
 }
 #endif
 
-typedef struct {
-    uint8_t lock;
-    uint8_t block[8];
-} t15memory_t;
-
 // structure and database for uid -> tagtype lookups
 typedef struct {
     uint64_t uid;
