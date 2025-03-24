@@ -1226,7 +1226,7 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
     //        lf em 4x70 write -b N -d 0000
     //        lf em 4x70 brute -b N --rnd <rnd_1> --frn <frn_1>
     //        lf em 4x70 write -b N -d <key_block_N>
-    for (uint8_t block = 9; (PM3_SUCCESS == result) && (block > 6); --block) {
+    for (uint8_t block = 9; block > 6; --block) {
         uint8_t step =
             block == 9 ? 2 :
             block == 8 ? 3 :
@@ -1324,6 +1324,8 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
 
         if (PM3_SUCCESS == result) {
             last_successful_step = step;
+        } else {
+            break;
         }
     }
     // The good news is that, if the above succeeded, then from this point forward, the tag remains in a known-good state.
