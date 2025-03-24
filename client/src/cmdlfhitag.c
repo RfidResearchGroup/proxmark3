@@ -2325,9 +2325,9 @@ static uint64_t hitag2_verify_crypto_test(void) {
     // key = 0x4ad292b272f2  after each byte has its bit order reversed
     // uid = 0x96eac292      ditto
     // initvec = 0x4ea276a6  ditto
-    const uint64_t key = REV64(0x524B494D4E4FUL);
-    const uint32_t uid = REV32(0x69574349);
-    const uint32_t iv = REV32(0x72456E65);
+    const uint64_t key = REV64(UINT64_C(0x524B494D4E4F));
+    const uint32_t uid = REV32(UINT32_C(0x69574349));
+    const uint32_t iv = REV32(UINT32_C(0x72456E65));
 
     PrintAndLogEx(DEBUG, "UID... %08" PRIx32, uid);
     PrintAndLogEx(DEBUG, "IV.... %08" PRIx32, iv);
@@ -2354,9 +2354,9 @@ static uint64_t hitag2_verify_crypto_test(void) {
 static uint64_t hitag2_verify_crypto_test_round(void) {
 
     uint8_t expected[16] = { 0xD7, 0x23, 0x7F, 0xCE, 0x8C, 0xD0, 0x37, 0xA9, 0x57, 0x49, 0xC1, 0xE6, 0x48, 0x00, 0x8A, 0xB6 };
-    const uint64_t key = REV64(0x524B494D4E4FUL);
-    const uint32_t uid = REV32(0x69574349);
-    const uint32_t iv = REV32(0x72456E65);
+    const uint64_t key = REV64(UINT64_C(0x524B494D4E4F));
+    const uint32_t uid = REV32(UINT32_C(0x69574349));
+    const uint32_t iv = REV32(UINT32_C(0x72456E65));
 
     PrintAndLogEx(DEBUG, "UID... %08" PRIx32, uid);
     PrintAndLogEx(DEBUG, "IV.... %08" PRIx32, iv);
