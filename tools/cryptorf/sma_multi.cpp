@@ -327,14 +327,14 @@ static inline uint8_t next_left_fast(uint8_t in, uint64_t *left) {
     if (in)
         *left ^= ((in & 0x1f) << 20);
 
-    lookup_entry *lookup = &(lookup_left[((*left) & 0xf801f)]);
+    const lookup_entry *lookup = &(lookup_left[((*left) & 0xf801f)]);
     *left = (((*left) >> 5) | ((uint64_t)lookup->addition << 30));
     return lookup->out;
 }
 
 static inline uint8_t next_right_fast(uint8_t in, uint64_t *right) {
     if (in) *right ^= ((in & 0xf8) << 12);
-    lookup_entry *lookup = &(lookup_right[((*right) & 0x7c1f)]);
+    const lookup_entry *lookup = &(lookup_right[((*right) & 0x7c1f)]);
     *right = (((*right) >> 5) | (lookup->addition << 20));
     return lookup->out;
 }
@@ -474,7 +474,7 @@ static void ice_sm_left_thread(
     size_t pos, bits;
     uint8_t correct_bits[16];
     uint8_t bt;
-    lookup_entry *lookup;
+    const lookup_entry *lookup;
 
     // Reset and initialize the cryptostate and vector
     cs_t state;
@@ -714,7 +714,7 @@ static inline void search_gc_candidates_left(const uint64_t lstate_before_gc, co
     printf("\n");
 }
 
-void combine_valid_left_right_states(vector<cs_t> *plcstates, vector<cs_t> *prcstates, vector<uint64_t> *pgc_candidates) {
+void combine_valid_left_right_states(const vector<cs_t> *plcstates, const vector<cs_t> *prcstates, vector<uint64_t> *pgc_candidates) {
     vector<cs_t>::iterator itl, itr;
     size_t pos;
     uint64_t gc;
@@ -763,11 +763,11 @@ static void ice_compare(
     uint8_t offset,
     uint8_t skips,
     vector<uint64_t> *candidates,
-    crypto_state_t *ostate,
-    uint8_t *Ci,
-    uint8_t *Q,
-    uint8_t *Ch,
-    uint8_t *Ci_1
+    const crypto_state_t *ostate,
+    const uint8_t *Ci,
+    const uint8_t *Q,
+    const uint8_t *Ch,
+    const uint8_t *Ci_1
 ) {
     uint8_t Gc_chk[8] = {0};
     uint8_t Ch_chk[8] = {0};
