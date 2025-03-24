@@ -1678,7 +1678,12 @@ static int CmdLFHitagEload(const char *Cmd) {
     // check dump len..
     if (bytes_read == HITAG2_MAX_BYTE_SIZE || bytes_read == 4 * 64) {
 
-        lf_hitag_t *payload =  calloc(1, sizeof(lf_hitag_t) + bytes_read);
+        lf_hitag_t *payload = calloc(1, sizeof(lf_hitag_t) + bytes_read);
+        if (payload == NULL) {
+            PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+            free(dump);
+            return PM3_EMALLOC;
+        }
 
         if (use_ht1)
             payload->type = 1;

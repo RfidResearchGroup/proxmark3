@@ -368,6 +368,10 @@ static int CmdPacSim(const char *Cmd) {
 
     // NRZ sim.
     lf_nrzsim_t *payload = calloc(1, sizeof(lf_nrzsim_t) + sizeof(bs));
+    if (payload == NULL) {
+        PrintAndLogEx(FAILED, "Memory allocation failed");
+        return PM3_EMALLOC;
+    }
     payload->invert = 0;
     payload->separator = 0;
     payload->clock = 32;

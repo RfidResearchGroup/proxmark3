@@ -770,6 +770,12 @@ bool OpenProxmarkSilent(pm3_device_t **dev, const char *port, uint32_t speed) {
         fflush(stdout);
         if (*dev == NULL) {
             *dev = calloc(sizeof(pm3_device_t), sizeof(uint8_t));
+            if (*dev == NULL) {
+                PrintAndLogEx(ERR, "Failed to allocate memory for pm3_device_t");
+                uart_close(sp);
+                sp = NULL;
+                return false;
+            }
         }
         (*dev)->g_conn = &g_conn; // TODO g_conn shouldn't be global
         return true;
@@ -827,7 +833,13 @@ bool OpenProxmark(pm3_device_t **dev, const char *port, bool wait_for_port, int 
 
         fflush(stdout);
         if (*dev == NULL) {
-            *dev = calloc(sizeof(pm3_device_t), sizeof(uint8_t));
+            *dev = calloc(1, sizeof(pm3_device_t));
+            if (*dev == NULL) {
+                PrintAndLogEx(ERR, "Failed to allocate memory for pm3_device_t");
+                uart_close(sp);
+                sp = NULL;
+                return false;
+            }
         }
         (*dev)->g_conn = &g_conn; // TODO g_conn shouldn't be global
         return true;

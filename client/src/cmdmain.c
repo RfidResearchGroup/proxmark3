@@ -59,6 +59,12 @@ static void AppendDate(char *s, size_t slen, const char *fmt) {
 #else
     ct = gmtime_r(&now, &tm_buf);
 #endif
+    if (ct == NULL) {
+        PrintAndLogEx(ERR, "gmtime failed");
+        return;
+    }
+
+    // If no format is specified, use ISO8601
     if (fmt == NULL)
         strftime(s, slen, "%Y-%m-%dT%H:%M:%SZ", ct);  // ISO8601
     else

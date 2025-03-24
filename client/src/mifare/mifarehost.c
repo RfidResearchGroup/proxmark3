@@ -1077,6 +1077,10 @@ int mf_eml_set_mem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtW
 
     size_t paylen = sizeof(struct p) + size;
     struct p *payload = calloc(1, paylen);
+    if (payload == NULL) {
+        PrintAndLogEx(ERR, "Memory allocation failed");
+        return PM3_EMALLOC;
+    }
 
     payload->blockno = blockNum;
     payload->blockcnt = blocksCount;

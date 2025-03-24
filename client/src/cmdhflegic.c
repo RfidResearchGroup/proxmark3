@@ -901,6 +901,10 @@ static int CmdLegicDump(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Reading tag memory." NOLF);
 
     legic_packet_t *payload = calloc(1, sizeof(legic_packet_t));
+    if (payload == NULL) {
+        PrintAndLogEx(WARNING, "Cannot allocate memory");
+        return PM3_EMALLOC;
+    }
     payload->offset = 0;
     payload->iv = 0x55;
     payload->len = dumplen;

@@ -542,6 +542,10 @@ static void topaz_print_control_TLVs(uint8_t *memory) {
 
             if (old == NULL) {
                 new = topaz_tag.dynamic_lock_areas = (dynamic_lock_area_t *) calloc(sizeof(dynamic_lock_area_t), sizeof(uint8_t));
+                if (new == NULL) {
+                    PrintAndLogEx(ERR, "Memory allocation failed");
+                    return;
+                }
             } else {
                 while (old->next != NULL) {
                     old = old->next;

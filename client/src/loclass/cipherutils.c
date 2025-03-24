@@ -131,6 +131,10 @@ void printarr(const char *name, uint8_t *arr, int len) {
     int cx, i;
     size_t outsize = 40 + strlen(name) + len * 5;
     char *output = calloc(outsize, sizeof(char));
+    if (output == NULL) {
+        PrintAndLogEx(ERR, "Memory allocation failed");
+        return;
+    }
     cx = snprintf(output, outsize, "uint8_t %s[] = {", name);
     for (i = 0; i < len; i++) {
         if (cx < outsize)

@@ -233,6 +233,10 @@ static int dda_test_raw(bool verbose) {
 
     size_t iccpk_pk_len = iccpk_data[19];
     unsigned char *iccpk_pk = calloc(1, iccpk_pk_len);
+    if (!iccpk_pk) {
+        free(iccpk_data);
+        return 1;
+    }
     memcpy(iccpk_pk, iccpk_data + 21, /*iccpk_data_len - 36*/iccpk_pk_len);
     /*memcpy(iccpk_pk + iccpk_data_len - 36, icc_rem, sizeof(icc_rem));*/
 

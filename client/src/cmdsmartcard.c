@@ -364,6 +364,10 @@ static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose) {
 
         uint8_t cmd_getresp[] = {0x00, ISO7816_GET_RESPONSE, 0x00, 0x00, len};
         smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + sizeof(cmd_getresp));
+        if (payload == NULL) {
+            PrintAndLogEx(FAILED, "failed to allocate memory");
+            goto out;
+        }
         payload->flags = SC_RAW | SC_LOG;
         payload->len = sizeof(cmd_getresp);
         payload->wait_delay = 0;
@@ -903,8 +907,10 @@ static int CmdSmartList(const char *Cmd) {
 static void smart_brute_prim(void) {
 
     uint8_t *buf = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
-    if (!buf)
+    if (buf == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
         return;
+    }
 
     uint8_t get_card_data[] = {
         0x80, 0xCA, 0x9F, 0x13, 0x00,
@@ -918,6 +924,11 @@ static void smart_brute_prim(void) {
     for (int i = 0; i < ARRAYLEN(get_card_data); i += 5) {
 
         smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + 5);
+        if (payload == NULL) {
+            PrintAndLogEx(FAILED, "failed to allocate memory");
+            free(buf);
+            return;
+        }
         payload->flags = SC_RAW_T0;
         payload->len = 5;
         payload->wait_delay = 0;
@@ -938,8 +949,10 @@ static void smart_brute_prim(void) {
 static int smart_brute_sfi(bool decodeTLV) {
 
     uint8_t *buf = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
-    if (buf == NULL)
+    if (buf == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
         return 1;
+    }
 
     int len;
     // READ RECORD
@@ -962,6 +975,11 @@ static int smart_brute_sfi(bool decodeTLV) {
             READ_RECORD[3] = (sfi << 3) | 4;
 
             smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) +  sizeof(READ_RECORD));
+            if (payload == NULL) {
+                PrintAndLogEx(FAILED, "failed to allocate memory");
+                free(buf);
+                return 1;
+            }
             payload->flags = SC_RAW_T0;
             payload->len = sizeof(READ_RECORD);
             payload->wait_delay = 0;
@@ -1007,13 +1025,20 @@ static int smart_brute_sfi(bool decodeTLV) {
 static void smart_brute_options(bool decodeTLV) {
 
     uint8_t *buf = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
-    if (!buf)
+    if (buf == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
         return;
+    }
 
     // Get processing options command
     uint8_t GET_PROCESSING_OPTIONS[] = {0x80, 0xA8, 0x00, 0x00, 0x02, 0x83, 0x00, 0x00};
 
     smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + sizeof(GET_PROCESSING_OPTIONS));
+    if (payload == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        free(buf);
+        return;
+    }
     payload->flags = SC_RAW_T0;
     payload->len = sizeof(GET_PROCESSING_OPTIONS);
     memcpy(payload->data, GET_PROCESSING_OPTIONS, sizeof(GET_PROCESSING_OPTIONS));
@@ -1111,6 +1136,12 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
 
         size_t aidlen = strlen(aid);
         caid = calloc(8 + 2 + aidlen + 1, sizeof(uint8_t));
+        if (caid == NULL) {
+            PrintAndLogEx(FAILED, "failed to allocate memory");
+            json_decref(root);
+            free(buf);
+            return PM3_EMALLOC;
+        }
         snprintf(caid, 8 + 2 + aidlen + 1, SELECT, aidlen >> 1, aid);
 
         int hexlen = 0;
@@ -1120,6 +1151,12 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
             continue;
 
         smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + hexlen);
+        if (payload == NULL) {
+            PrintAndLogEx(FAILED, "failed to allocate memory");
+            json_decref(root);
+            free(buf);
+            return PM3_EMALLOC;
+        }
         payload->flags = SC_RAW_T0;
         payload->len = hexlen;
         payload->wait_delay = 0;
@@ -1470,6 +1507,10 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
     *dataoutlen = 0;
 
     smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + datainlen);
+    if (payload == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     payload->flags = (SC_RAW_T0 | SC_LOG);
     if (activateCard) {
         payload->flags |= (SC_SELECT | SC_CONNECT);

@@ -218,6 +218,10 @@ static int CmdVikingSim(const char *Cmd) {
     num_to_bytebits(rawID, sizeof(bs), bs);
 
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
+    if (payload == NULL) {
+        PrintAndLogEx(ERR, "Memory allocation failed");
+        return PM3_EMALLOC;
+    }
     payload->encoding = 1;
     payload->invert = 0;
     payload->separator = 0;

@@ -333,6 +333,10 @@ static int CmdPrescoSim(const char *Cmd) {
     getPrescoBits(fullcode, bs);
 
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
+    if (payload == NULL) {
+        PrintAndLogEx(ERR, "Memory allocation failed");
+        return PM3_EMALLOC;
+    }
     payload->encoding = 1;
     payload->invert = 0;
     payload->separator = 1;

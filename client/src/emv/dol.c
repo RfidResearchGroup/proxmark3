@@ -55,6 +55,8 @@ struct tlv *dol_process(const struct tlv *tlv, const struct tlvdb *tlvdb, tlv_ta
     size_t res_len;
     if (!tlv || !(res_len = dol_calculate_len(tlv, 0))) {
         struct tlv *res_tlv = calloc(1, sizeof(*res_tlv));
+        if (!res_tlv)
+            return NULL;
 
         res_tlv->tag = tag;
         res_tlv->len = 0;

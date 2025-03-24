@@ -169,6 +169,9 @@ static ssize_t emv_pk_read_string(char *buf, size_t buflen, char *str, size_t si
 
 struct emv_pk *emv_pk_parse_pk(char *buf, size_t buflen) {
     struct emv_pk *r = calloc(1, sizeof(*r));
+    if (r == NULL) {
+        return NULL;
+    }
     ssize_t l;
     char temp[10];
 

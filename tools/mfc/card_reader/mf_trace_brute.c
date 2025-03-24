@@ -290,6 +290,10 @@ int main(int argc, const char *argv[]) {
     // threads
     for (int i = 0; i < thread_count; ++i) {
         struct thread_args *a = calloc(1, sizeof(struct thread_args));
+        if (a == NULL) {
+            fprintf(stderr, "Failed to allocate memory for thread arguments\n");
+            exit(EXIT_FAILURE);
+        }
         a->thread = i;
         a->idx = i;
         a->uid = uid;

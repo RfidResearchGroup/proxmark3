@@ -1385,6 +1385,10 @@ static int setLuaPath(lua_State *L, const char *path) {
     const char *cur_path = lua_tostring(L, -1);   // grab path string from top of stack
     int requiredLength = strlen(cur_path) + strlen(path) + 10; //A few bytes too many, whatever we can afford it
     char *buf = calloc(requiredLength, sizeof(char));
+    if (buf == NULL) {
+        lua_pop(L, 1);   // get rid of package table from top of stack
+        return returnToLuaWithError(L, "Failed to allocate memory");
+    }
     snprintf(buf, requiredLength, "%s;%s", cur_path, path);
     lua_pop(L, 1);   // get rid of the string on the stack we just pushed on line 5
     lua_pushstring(L, buf);   // push the new one

@@ -469,6 +469,12 @@ int main(int argc, char **argv) {
         uint8_t num_output_files = argc - 3;
         FILE **outfiles = calloc(num_output_files, sizeof(FILE *));
         char **outfile_names = calloc(num_output_files, sizeof(char *));
+        if (outfiles == NULL || outfile_names == NULL) {
+            fprintf(stderr, "Error. Cannot allocate memory for output files\n\n");
+            free(outfiles);
+            free(outfile_names);
+            return (EXIT_FAILURE);
+        }
         for (uint8_t i = 0; i < num_output_files; i++) {
             outfile_names[i] = argv[i + 3];
             outfiles[i] = fopen(outfile_names[i], "wb");
@@ -526,6 +532,12 @@ int main(int argc, char **argv) {
 
         FILE **infiles = calloc(num_input_files, sizeof(FILE *));
         char **infile_names = calloc(num_input_files, sizeof(char *));
+        if (infiles == NULL || infile_names == NULL) {
+            fprintf(stderr, "Error. Cannot allocate memory for input files\n\n");
+            free(infile_names);
+            free(infiles);
+            return (EXIT_FAILURE);
+        }
         for (uint8_t i = 0; i < num_input_files; i++) {
             infile_names[i] = argv[i + (generate_version_file ? 2 : 1)];
             infiles[i] = fopen(infile_names[i], "rb");

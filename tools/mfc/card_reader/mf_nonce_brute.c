@@ -737,6 +737,10 @@ int main(int argc, const char *argv[]) {
         printf("----------- " _CYAN_("Phase 1 pre-processing") " ------------------------\n");
         printf("Testing default keys using NESTED authentication...\n");
         struct thread_key_args *def = calloc(1, sizeof(struct thread_key_args));
+        if (def == NULL) {
+            fprintf(stderr, "Memory allocation failed\n");
+            exit(EXIT_FAILURE);
+        }
         def->thread = 0;
         def->idx = 0;
         def->uid = uid;
@@ -758,6 +762,10 @@ int main(int argc, const char *argv[]) {
     // the rest of available threads to EV1 scenario
     for (int i = 0; i < thread_count; ++i) {
         struct thread_args *a = calloc(1, sizeof(struct thread_args));
+        if (a == NULL) {
+            fprintf(stderr, "Memory allocation failed\n");
+            exit(EXIT_FAILURE);
+        }
         a->xored = xored;
         a->thread = i;
         a->idx = i;
@@ -780,6 +788,10 @@ int main(int argc, const char *argv[]) {
         // the rest of available threads to EV1 scenario
         for (int i = 0; i < thread_count; ++i) {
             struct thread_args *a = calloc(1, sizeof(struct thread_args));
+            if (a == NULL) {
+                fprintf(stderr, "Memory allocation failed\n");
+                exit(EXIT_FAILURE);
+            }
             a->xored = xored;
             a->thread = i;
             a->idx = i;
@@ -823,6 +835,10 @@ int main(int argc, const char *argv[]) {
     // threads
     for (int i = 0; i < thread_count; ++i) {
         struct thread_key_args *b = calloc(1, sizeof(struct thread_key_args));
+        if (b == NULL) {
+            fprintf(stderr, "Memory allocation failed\n");
+            exit(EXIT_FAILURE);
+        }
         b->thread = i;
         b->idx = i;
         b->uid = uid;

@@ -262,6 +262,10 @@ void doMAC_N(uint8_t *address_data_p, uint8_t address_data_size, uint8_t *div_ke
     uint8_t *address_data;
     uint8_t div_key[8];
     address_data = (uint8_t *) calloc(address_data_size, sizeof(uint8_t));
+    if (address_data == NULL) {
+        PrintAndLogEx(ERR, "Memory allocation failed\n");
+        return;
+    }
 
     memcpy(address_data, address_data_p, address_data_size);
     memcpy(div_key, div_key_p, 8);

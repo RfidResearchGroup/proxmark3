@@ -858,6 +858,10 @@ static int CmdFdxBSim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Simulating FDX-B animal ID: " _YELLOW_("%04u-%"PRIu64), country_code, national_code);
 
     uint8_t *bs = calloc(128, sizeof(uint8_t));
+    if (bs == NULL) {
+        PrintAndLogEx(ERR, "Memory allocation failed.");
+        return PM3_EMALLOC;
+    }
     if (getFDXBBits(national_code, country_code, is_animal, (extended > 0), extended, bs) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         free(bs);
@@ -866,6 +870,11 @@ static int CmdFdxBSim(const char *Cmd) {
 
     // 32, no STT, BIPHASE INVERTED == diphase
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + 128);
+    if (payload == NULL) {
+        PrintAndLogEx(ERR, "Memory allocation failed.");
+        free(bs);
+        return PM3_EMALLOC;
+    }
     payload->encoding = 2;
     payload->invert = 1;
     payload->separator = 0;

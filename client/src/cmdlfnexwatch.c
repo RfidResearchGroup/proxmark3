@@ -423,7 +423,17 @@ static int CmdNexWatchClone(const char *Cmd) {
         blocks[0] = 0x00042080;
 
         uint8_t *res_shifted = calloc(96, sizeof(uint8_t));
+        if (res_shifted == NULL) {
+            PrintAndLogEx(FAILED, "Memory allocation failed for res_shifted");
+            return PM3_EMALLOC;
+        }
+
         uint8_t *res = calloc(96, sizeof(uint8_t));
+        if (res == NULL) {
+            PrintAndLogEx(FAILED, "Memory allocation failed for res");
+            free(res_shifted);
+            return PM3_EMALLOC;
+        }
 
         bytes_to_bytebits(raw, 12, res);
         psk1TOpsk2(res, 96);
@@ -546,6 +556,10 @@ static int CmdNexWatchSim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Simulating NexWatch - raw " _YELLOW_("%s"), sprint_hex_inrow(raw, sizeof(raw)));
 
     lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));
+    if (payload == NULL) {
+        PrintAndLogEx(FAILED, "Memory allocation failed for payload");
+        return PM3_EMALLOC;
+    }
     payload->carrier = 2;
     payload->invert = 0;
     payload->clock = 32;

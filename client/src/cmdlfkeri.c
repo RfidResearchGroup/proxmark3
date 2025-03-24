@@ -346,6 +346,10 @@ static int CmdKeriSim(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Simulating KERI - Internal Id " _YELLOW_("%" PRIu64), internalid);
 
     lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));
+    if (payload == NULL) {
+        PrintAndLogEx(ERR, "Memory allocation failed");
+        return PM3_EMALLOC;
+    }
     payload->carrier =  2;
     payload->invert = 0;
     payload->clock = 32;

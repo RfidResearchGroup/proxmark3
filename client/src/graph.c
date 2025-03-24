@@ -471,6 +471,10 @@ bool fskClocks(uint8_t *fc1, uint8_t *fc2, uint8_t *rf1, int *firstClockEdge) {
 void add_temporary_marker(uint32_t position, const char *label) {
     if (g_TempMarkerSize == 0) { //Initialize the marker array
         g_TempMarkers = (marker_t *)calloc(1, sizeof(marker_t));
+        if (g_TempMarkers == NULL) { //Unable to allocate memory for the marker array
+            PrintAndLogEx(FAILED, "Unable to allocate memory for the temporary marker array!");
+            return;
+        }
     } else { //add more space to the marker array using realloc()
         marker_t *temp = (marker_t *)realloc(g_TempMarkers, ((g_TempMarkerSize + 1) * sizeof(marker_t)));
 
@@ -487,6 +491,10 @@ void add_temporary_marker(uint32_t position, const char *label) {
     g_TempMarkers[g_TempMarkerSize].pos = position;
 
     char *markerLabel = (char *)calloc(1, strlen(label) + 1);
+    if (markerLabel == NULL) {
+        PrintAndLogEx(FAILED, "Unable to allocate memory for marker label!");
+        return;
+    }
     strcpy(markerLabel, label);
 
     if (strlen(markerLabel) > 30) {
@@ -512,6 +520,11 @@ void remove_temporary_markers(void) {
 buffer_savestate_t save_buffer32(uint32_t *src, size_t length) {
     //calloc the memory needed
     uint32_t *savedBuffer = (uint32_t *)calloc(length, sizeof(uint32_t));
+    if (savedBuffer == NULL) {
+        PrintAndLogEx(FAILED, "Unable to allocate memory for the buffer!");
+        buffer_savestate_t bst = {0};
+        return bst;
+    }
 
     //Make a copy of the source buffer
     memcpy(savedBuffer, src, (length * sizeof(uint32_t)));
@@ -529,6 +542,11 @@ buffer_savestate_t save_buffer32(uint32_t *src, size_t length) {
 buffer_savestate_t save_bufferS32(int32_t *src, size_t length) {
     //calloc the memory needed
     uint32_t *savedBuffer = (uint32_t *)calloc(length, (sizeof(uint32_t)));
+    if (savedBuffer == NULL) {
+        PrintAndLogEx(FAILED, "Unable to allocate memory for the buffer!");
+        buffer_savestate_t bst = {0};
+        return bst;
+    }
 
     //Make a copy of the source buffer
     memcpy(savedBuffer, src, (length * sizeof(uint32_t)));
@@ -558,6 +576,11 @@ buffer_savestate_t save_buffer8(uint8_t *src, size_t length) {
 
     // calloc the memory needed
     uint32_t *savedBuffer = (uint32_t *)calloc(buffSize, sizeof(uint32_t));
+    if (savedBuffer == NULL) {
+        PrintAndLogEx(FAILED, "Unable to allocate memory for the buffer!");
+        buffer_savestate_t bst = {0};
+        return bst;
+    }
     size_t index = 0;
 
     // Pack the source array into the backing array

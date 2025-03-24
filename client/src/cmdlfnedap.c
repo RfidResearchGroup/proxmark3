@@ -539,6 +539,10 @@ static int CmdLFNedapSim(const char *Cmd) {
 
     // NEDAP,  Biphase = 2, clock 64, inverted,  (DIPhase == inverted BIphase)
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + g_DemodBufferLen);
+    if (payload == NULL) {
+        PrintAndLogEx(ERR, "Memory allocation failed");
+        return PM3_EMALLOC;
+    }
     payload->encoding = 2;
     payload->invert = 1;
     payload->separator = 0;

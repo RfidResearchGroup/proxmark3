@@ -276,6 +276,10 @@ static int CmdVisa2kSim(const char *Cmd) {
         num_to_bytebits(blocks[i], 32, bs + i * 32);
 
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
+    if (payload == NULL) {
+        PrintAndLogEx(ERR, "Memory allocation failed");
+        return PM3_EMALLOC;
+    }
     payload->encoding =  1;
     payload->invert = 0;
     payload->separator = 1;

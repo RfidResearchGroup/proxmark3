@@ -387,6 +387,10 @@ static int CmdGuardSim(const char *Cmd) {
 
     // Guard uses:  clk: 64, invert: 0, encoding: 2 (ASK Biphase)
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
+    if (payload == NULL) {
+        PrintAndLogEx(ERR, "Memory allocation failed.");
+        return PM3_EMALLOC;
+    }
     payload->encoding =  2;
     payload->invert = 0;
     payload->separator = 0;

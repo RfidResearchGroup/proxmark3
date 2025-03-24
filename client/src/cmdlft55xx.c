@@ -345,6 +345,14 @@ static void arg_add_t55xx_downloadlink(void *at[], uint8_t *idx, uint8_t show, u
     char *r2 = (char *)calloc(r_count, sizeof(uint8_t));
     char *r3 = (char *)calloc(r_count, sizeof(uint8_t));
 
+    if (r0 == NULL || r1 == NULL || r2 == NULL || r3 == NULL) {
+        PrintAndLogEx(ERR, "Memory allocation failed");
+        free(r0);
+        free(r1);
+        free(r2);
+        free(r3);
+        return;
+    }
     snprintf(r0, r_len, "downlink - fixed bit length %s", (dl_mode_def == 0) ? "(detected def)" : "");
     snprintf(r1, r_len, "downlink - long leading reference %s", (dl_mode_def == 1) ? "(detected def)" : "");
     snprintf(r2, r_len, "downlink - leading zero %s", (dl_mode_def == 2) ? "(detected def)" : "");
@@ -358,6 +366,14 @@ static void arg_add_t55xx_downloadlink(void *at[], uint8_t *idx, uint8_t show, u
 
     if (show == T55XX_DLMODE_ALL) {
         char *r4 = (char *)calloc(r_count, sizeof(uint8_t));
+        if (r4 == NULL) {
+            PrintAndLogEx(ERR, "Memory allocation failed");
+            free(r0);
+            free(r1);
+            free(r2);
+            free(r3);
+            return;
+        }
         snprintf(r4, r_len, "try all downlink modes %s", (dl_mode_def == 4) ? "(def)" : "");
         at[n++] = arg_lit0(NULL, "all", r4);
     }

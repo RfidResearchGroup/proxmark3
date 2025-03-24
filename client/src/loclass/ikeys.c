@@ -550,6 +550,10 @@ void invert_hash0(uint8_t k[8]) {
 
         // Initialize an array of pointers to uint64_t (start with one value, initialized to 0)
         uint64_t *hydra_heads = (uint64_t *)calloc(sizeof(uint64_t), 1); // Start with one uint64_t
+        if (hydra_heads == NULL) {
+            PrintAndLogEx(FAILED, "failed to allocate memory");
+            return;
+        }
         hydra_heads[0] = 0;  // Initialize first value to 0
         int heads_count = 1;  // Track number of forks
 

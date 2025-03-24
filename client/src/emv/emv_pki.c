@@ -346,6 +346,10 @@ unsigned char *emv_pki_sdatl_fill(const struct tlvdb *db, size_t *sdatl_len) {
     if (len) {
         *sdatl_len = len;
         unsigned char *value = calloc(1, len);
+        if (value == NULL) {
+            PrintAndLogEx(WARNING, "ERROR: Memory allocation failed");
+            return NULL;
+        }
         memcpy(value, buf, len);
         return value;
     }

@@ -446,6 +446,10 @@ static int CmdParadoxSim(const char *Cmd) {
     uint8_t clk = 50, high = 10, low = 8;
 
     lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + sizeof(bs));
+    if (payload == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
     payload->fchigh = high;
     payload->fclow =  low;
     payload->separator = 0;

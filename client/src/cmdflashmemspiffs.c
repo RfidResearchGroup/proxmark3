@@ -46,6 +46,11 @@ int flashmem_spiffs_load(const char *destfn, const uint8_t *data, size_t datalen
         uint32_t bytes_in_packet = MIN(FLASH_MEM_BLOCK_SIZE, bytes_remaining);
 
         flashmem_write_t *payload = calloc(1, sizeof(flashmem_write_t) + bytes_in_packet);
+        if (payload == NULL) {
+            PrintAndLogEx(ERR, "error, cannot allocate memory ");
+            ret_val = PM3_EMALLOC;
+            goto out;
+        }
 
         payload->append = (bytes_sent > 0);
 
