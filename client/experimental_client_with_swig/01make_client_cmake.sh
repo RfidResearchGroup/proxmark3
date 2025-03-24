@@ -9,8 +9,7 @@
     cmake ..
     make -j
   )
-  rm proxmark3
-  ln -s build/proxmark3 .
+  ln -sf build/proxmark3 .
 )
-ln -s ../pyscripts/pm3.py
-ln -s ../lualibs/dkjson.lua
+ln -sf ../pyscripts/pm3.py
+ln -sf ../lualibs/dkjson.lua
