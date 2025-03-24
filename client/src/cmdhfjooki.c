@@ -491,6 +491,10 @@ static int CmdHF14AJookiSim(const char *Cmd) {
 
     // hf mfu sim...
     uint8_t *data = calloc(144, sizeof(uint8_t));
+    if (data == NULL) {
+        PrintAndLogEx(ERR, "Memory allocation failed");
+        return PM3_EMALLOC;
+    }
 
     memcpy(data, uid, 3);
     memcpy(data + (1 * 4), uid + 3, 4);
