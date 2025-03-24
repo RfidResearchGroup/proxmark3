@@ -2075,6 +2075,7 @@ size_t fskdemod(uint8_t *dest, size_t size, uint8_t rfLen, uint8_t invert, uint8
 // only transition waves are 1s
 // TODO: Iceman - hard coded value 7,  should be #define
 void psk1TOpsk2(uint8_t *bits, size_t size) {
+    if (bits == NULL) return;
     uint8_t lastbit = bits[0];
     for (size_t i = 1; i < size; i++) {
         //ignore errors
