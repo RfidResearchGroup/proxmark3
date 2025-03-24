@@ -56,6 +56,10 @@ static int split(char *str, char *arr[MAX_ARGS]) {
         }
         int len = endIndex - beginIndex;
         char *tmp = calloc(len + 1, sizeof(char));
+        if (tmp == NULL) {
+            PrintAndLogEx(WARNING, "Memory allocation failed");
+            return wordCnt;
+        }
         memcpy(tmp, &str[beginIndex], len);
         arr[wordCnt++] = tmp;
         beginIndex = endIndex;
@@ -428,6 +432,10 @@ static int CmdrevengTestC(const char *Cmd) {
 //returns a calloced string (needs to be freed)
 static char *SwapEndianStr(const char *inStr, const size_t len, const uint8_t blockSize) {
     char *tmp = calloc(len + 1, sizeof(char));
+    if (tmp == NULL) {
+        PrintAndLogEx(WARNING, "Memory allocation failed");
+        return NULL;
+    }
     for (uint8_t block = 0; block < (uint8_t)(len / blockSize); block++) {
         for (size_t i = 0; i < blockSize; i += 2) {
             tmp[i + (blockSize * block)] = inStr[(blockSize - 1 - i - 1) + (blockSize * block)];

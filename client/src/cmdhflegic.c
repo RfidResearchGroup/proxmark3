@@ -642,6 +642,10 @@ static int CmdLegicWrbl(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Writing to tag to offset %i", offset);
 
     legic_packet_t *payload = calloc(1, sizeof(legic_packet_t) + dlen);
+    if (payload == NULL) {
+        PrintAndLogEx(WARNING, "Cannot allocate memory");
+        return PM3_EMALLOC;
+    }
     payload->offset = (offset & 0xFFFF);
     payload->iv = (IV & 0x7F);
     payload->len = dlen;
@@ -719,6 +723,10 @@ int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uin
     legic_chk_iv(&iv);
 
     legic_packet_t *payload = calloc(1, sizeof(legic_packet_t));
+    if (payload == NULL) {
+        PrintAndLogEx(WARNING, "Cannot allocate memory");
+        return PM3_EMALLOC;
+    }
     payload->offset = (offset & 0xFFFF);
     payload->iv = iv;
     payload->len = len;
@@ -817,6 +825,10 @@ void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
         }
 
         legic_packet_t *payload = calloc(1, sizeof(legic_packet_t) + len);
+        if (payload == NULL) {
+            PrintAndLogEx(WARNING, "Cannot allocate memory");
+            return;
+        }
         payload->offset = i;
         payload->len = len;
         memcpy(payload->data, src + i, len);
@@ -1027,6 +1039,11 @@ static int CmdLegicRestore(const char *Cmd) {
         }
 
         legic_packet_t *payload = calloc(1, sizeof(legic_packet_t) + len);
+        if (payload == NULL) {
+            PrintAndLogEx(WARNING, "Cannot allocate memory");
+            free(dump);
+            return PM3_EMALLOC;
+        }
         payload->offset = i;
         payload->iv = 0x55;
         payload->len = len;
@@ -1360,6 +1377,11 @@ static int CmdLegicWipe(const char *Cmd) {
         }
 
         legic_packet_t *payload = calloc(1, sizeof(legic_packet_t) + len);
+        if (payload == NULL) {
+            PrintAndLogEx(WARNING, "Cannot allocate memory");
+            free(data);
+            return PM3_EMALLOC;
+        }
         payload->offset = i;
         payload->iv = 0x55;
         payload->len = len;

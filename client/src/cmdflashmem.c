@@ -619,6 +619,10 @@ static int CmdFlashMemInfo(const char *Cmd) {
     } else {
 
         rsa = (mbedtls_rsa_context *)calloc(1, sizeof(mbedtls_rsa_context));
+        if (rsa == NULL) {
+            PrintAndLogEx(FAILED, "failed to allocate rsa context memory");
+            return PM3_EMALLOC;
+        }
         mbedtls_rsa_init(rsa, MBEDTLS_RSA_PKCS_V15, 0);
         rsa->len = RRG_RSA_KEY_LEN;
 

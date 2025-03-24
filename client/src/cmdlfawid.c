@@ -59,6 +59,10 @@ static int sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uin
     }
 
     lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + bs_len);
+    if (payload == NULL) {
+        PrintAndLogEx(ERR, "Memory allocation failed.");
+        return PM3_EMALLOC;
+    }
     payload->fchigh = 10;
     payload->fclow = 8;
     payload->separator = 1;
@@ -404,6 +408,11 @@ static int CmdAWIDClone(const char *Cmd) {
 
     uint8_t *bits = calloc(96, sizeof(uint8_t));
 
+    if (bits == NULL) {
+        PrintAndLogEx(ERR, "Memory allocation failed.");
+        return PM3_EMALLOC;
+    }
+
     if (getAWIDBits(fmtlen, fc, cn, bits) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Error with tag bitstream generation.");
         free(bits);
@@ -479,6 +488,10 @@ static int CmdAWIDSim(const char *Cmd) {
     // arg2 --- Inversion and clk setting
     // 96   --- Bitstream length: 96-bits == 12 bytes
     lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + sizeof(bs));
+    if (payload == NULL) {
+        PrintAndLogEx(ERR, "Memory allocation failed.");
+        return PM3_EMALLOC;
+    }
     payload->fchigh = 10;
     payload->fclow =  8;
     payload->separator = 1;

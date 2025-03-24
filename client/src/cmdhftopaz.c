@@ -547,6 +547,10 @@ static void topaz_print_control_TLVs(uint8_t *memory) {
                     old = old->next;
                 }
                 new = old->next = (dynamic_lock_area_t *) calloc(sizeof(dynamic_lock_area_t), sizeof(uint8_t));
+                if (new == NULL) {
+                    PrintAndLogEx(ERR, "Memory allocation failed");
+                    return;
+                }
             }
             new->next = NULL;
 

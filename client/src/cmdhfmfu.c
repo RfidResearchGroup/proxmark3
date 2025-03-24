@@ -1572,6 +1572,10 @@ static char *mfu_generate_filename(const char *prefix, const char *suffix) {
     }
 
     char *fptr = calloc(sizeof(char) * (strlen(prefix) + strlen(suffix)) + sizeof(card.uid) * 2 + 1,  sizeof(uint8_t));
+    if (fptr == NULL) {
+        PrintAndLogEx(FAILED, "Memory allocation failed");
+        return NULL;
+    }
     strcpy(fptr, prefix);
     FillFileNameByUID(fptr, card.uid, suffix, card.uidlen);
     return fptr;

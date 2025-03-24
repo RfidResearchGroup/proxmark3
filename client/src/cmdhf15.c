@@ -1199,6 +1199,10 @@ static int hf15EmlSetMem(const uint8_t *data, uint16_t count, size_t offset) {
 
     size_t paylen = sizeof(struct p) + count;
     struct p *payload = calloc(1, paylen);
+    if (payload == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
 
     payload->offset = offset;
     payload->count = count;
@@ -2733,6 +2737,11 @@ static int CmdHF15Restore(const char *Cmd) {
     size_t bytes = 0;
     uint16_t i = 0;
     uint8_t *data = calloc(tag->bytesPerPage, sizeof(uint8_t));
+    if (data == NULL) {
+        PrintAndLogEx(FAILED, "failed to allocate memory");
+        free(tag);
+        return PM3_EMALLOC;
+    }
     uint32_t tried;
     while (bytes < (tag->pagesCount * tag->bytesPerPage)) {
 

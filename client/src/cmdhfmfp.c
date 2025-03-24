@@ -1675,6 +1675,10 @@ static int CmdHFMFPChk(const char *Cmd) {
         }
 
         char *fptr = calloc(sizeof(char) * (strlen("hf-mfp-") + strlen("-key")) + card.uidlen * 2 + 1,  sizeof(uint8_t));
+        if (fptr == NULL) {
+            PrintAndLogEx(ERR, "Memory allocation failed");
+            return PM3_EMALLOC;
+        }
         strcpy(fptr, "hf-mfp-");
 
         FillFileNameByUID(fptr, card.uid, "-key", card.uidlen);

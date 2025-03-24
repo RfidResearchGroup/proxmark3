@@ -290,6 +290,10 @@ static void ntag424_calc_mac(const ntag424_session_keys_t *session_keys, uint8_t
     int mac_input_len = sizeof(mac_input_header) + datalen;
 
     uint8_t *mac_input = (uint8_t *)calloc(mac_input_len, sizeof(uint8_t));
+    if (mac_input == NULL) {
+        PrintAndLogEx(ERR, "Memory allocation failed");
+        return;
+    }
     memcpy(mac_input, mac_input_header, sizeof(mac_input_header));
     memcpy(&mac_input[sizeof(mac_input_header)], data, datalen);
     uint8_t mac[16] = {0};

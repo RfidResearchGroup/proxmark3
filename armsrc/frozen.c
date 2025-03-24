@@ -1360,7 +1360,7 @@ int json_prettify(const char *s, int len, struct json_out *out) {
 int json_prettify_file(const char *file_name) WEAK;
 int json_prettify_file(const char *file_name) {
     int res = -1;
-    char *s = json_fread(file_name);
+    const char *s = json_fread(file_name);
     FILE *fp;
     if (s != NULL && (fp = fopen(file_name, "wb")) != NULL) {
         struct json_out out = JSON_OUT_FILE(fp);
@@ -1369,6 +1369,9 @@ int json_prettify_file(const char *file_name) {
             /* On error, restore the old content */
             fclose(fp);
             fp = fopen(file_name, "wb");
+            if (fp == NULL) {
+                return -1;
+            }
             fseek(fp, 0, SEEK_SET);
             fwrite(s, 1, strlen(s), fp);
         } else {
