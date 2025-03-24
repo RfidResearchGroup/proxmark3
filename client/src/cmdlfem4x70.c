@@ -989,60 +989,57 @@ static int CmdEM4x70Recover(const char *Cmd) {
         result = recover_em4x70(&recover_ctx.opts, &recover_ctx.data);
         if (PM3_EOVFLOW == result) {
             PrintAndLogEx(ERR, "Found more than %d potential keys. This is unexpected and likely a code failure.", MAXIMUM_ID48_RECOVERED_KEY_COUNT);
+            return result;
         } else if (PM3_SUCCESS != result) {
             PrintAndLogEx(ERR, "No potential keys recovered.  This is unexpected and likely a code failure.");
+            return result;
         }
     }
 
     // generate alternate authentication for each potential key -- no error paths, sub-second execution
-    if (PM3_SUCCESS == result) {
-
-        fill_buffer_prng_bytes(&recover_ctx.alt_nonce, sizeof(ID48LIB_NONCE));
-        for (uint8_t i = 0; i < recover_ctx.data.potential_key_count; ++i) {
-            // generate the alternate frn/grn for the alternate nonce
-            id48lib_generator(&recover_ctx.data.potential_keys[i], &recover_ctx.alt_nonce, &recover_ctx.alt_frn[i], &recover_ctx.alt_grn[i]);
-        }
+    fill_buffer_prng_bytes(&recover_ctx.alt_nonce, sizeof(ID48LIB_NONCE));
+    for (uint8_t i = 0; i < recover_ctx.data.potential_key_count; ++i) {
+        // generate the alternate frn/grn for the alternate nonce
+        id48lib_generator(&recover_ctx.data.potential_keys[i], &recover_ctx.alt_nonce, &recover_ctx.alt_frn[i], &recover_ctx.alt_grn[i]);
     }
 
     // display alternate authentication for each potential key -- no error paths
-    if (PM3_SUCCESS == result) {
+    PrintAndLogEx(INFO, "Recovered %d potential keys:", recover_ctx.data.potential_key_count);
+    for (uint8_t i = 0; i < recover_ctx.data.potential_key_count; ++i) {
+        // generate an alternative authentication based on the potential key
+        // and the alternate nonce.
+        ID48LIB_KEY q = recover_ctx.data.potential_keys[i];
+        ID48LIB_FRN alt_frn = recover_ctx.alt_frn[i];
+        ID48LIB_GRN alt_grn = recover_ctx.alt_grn[i];
 
-        PrintAndLogEx(INFO, "Recovered %d potential keys:", recover_ctx.data.potential_key_count);
-        for (uint8_t i = 0; i < recover_ctx.data.potential_key_count; ++i) {
-            // generate an alternative authentication based on the potential key
-            // and the alternate nonce.
-            ID48LIB_KEY q = recover_ctx.data.potential_keys[i];
-            ID48LIB_FRN alt_frn = recover_ctx.alt_frn[i];
-            ID48LIB_GRN alt_grn = recover_ctx.alt_grn[i];
-
-            // dump the results to screen, to enable the user to manually check validity
-            PrintAndLogEx(INFO,
-                          "Potential Key #%d: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
-                          " -->  " _YELLOW_("lf em 4x70 auth --rnd %02X%02X%02X%02X%02X%02X%02X --frn %02X%02X%02X%02X")
-                          " --> %02X%02X%02X",
-                          i,
-                          q.k[ 0], q.k[ 1], q.k[ 2], q.k[ 3], q.k[ 4], q.k[ 5],
-                          q.k[ 6], q.k[ 7], q.k[ 8], q.k[ 9], q.k[10], q.k[11],
-                          recover_ctx.alt_nonce.rn[0],
-                          recover_ctx.alt_nonce.rn[1],
-                          recover_ctx.alt_nonce.rn[2],
-                          recover_ctx.alt_nonce.rn[3],
-                          recover_ctx.alt_nonce.rn[4],
-                          recover_ctx.alt_nonce.rn[5],
-                          recover_ctx.alt_nonce.rn[6],
-                          alt_frn.frn[0],
-                          alt_frn.frn[1],
-                          alt_frn.frn[2],
-                          alt_frn.frn[3],
-                          alt_grn.grn[0],
-                          alt_grn.grn[1],
-                          alt_grn.grn[2]
-                         );
-        }
-        printf("\n");
+        // dump the results to screen, to enable the user to manually check validity
+        PrintAndLogEx(INFO,
+                        "Potential Key #%d: %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
+                        " -->  " _YELLOW_("lf em 4x70 auth --rnd %02X%02X%02X%02X%02X%02X%02X --frn %02X%02X%02X%02X")
+                        " --> %02X%02X%02X",
+                        i,
+                        q.k[ 0], q.k[ 1], q.k[ 2], q.k[ 3], q.k[ 4], q.k[ 5],
+                        q.k[ 6], q.k[ 7], q.k[ 8], q.k[ 9], q.k[10], q.k[11],
+                        recover_ctx.alt_nonce.rn[0],
+                        recover_ctx.alt_nonce.rn[1],
+                        recover_ctx.alt_nonce.rn[2],
+                        recover_ctx.alt_nonce.rn[3],
+                        recover_ctx.alt_nonce.rn[4],
+                        recover_ctx.alt_nonce.rn[5],
+                        recover_ctx.alt_nonce.rn[6],
+                        alt_frn.frn[0],
+                        alt_frn.frn[1],
+                        alt_frn.frn[2],
+                        alt_frn.frn[3],
+                        alt_grn.grn[0],
+                        alt_grn.grn[1],
+                        alt_grn.grn[2]
+                        );
     }
+    printf("\n");
+
     // which of those keys actually validates?
-    if (PM3_SUCCESS == result && recover_ctx.opts.verify) {
+    if (recover_ctx.opts.verify) {
         // TODO: automatic verification against a present tag.
         // Updates ctx.potential_keys_validated[10] and ctx.keys_validated_count
         PrintAndLogEx(WARNING, "Automatic verification against tag is not yet implemented.");
