@@ -1,0 +1,1 @@
+DOCKER_IMAGE=pm3-fedora-37:1.0

@@ -1,0 +1,1 @@
+DOCKER_IMAGE=pm3-kali:1.0

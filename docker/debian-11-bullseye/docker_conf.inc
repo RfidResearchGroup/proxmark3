@@ -1,0 +1,1 @@
+DOCKER_IMAGE=pm3-debian-bullseye:1.0
