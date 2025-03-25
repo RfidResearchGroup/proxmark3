@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `des_talk.py` script for easier MIFARE DESFire handling (@trigat)
 - Fixed `hf 14b info` - wrong endianess when looking for lock bits etc (@gentilkiwi)
 - Changed `hf mf autopwn` - tries to detect static encrypted nonces and also user cancel during chk keys (@iceman1001)
 - Added option to `hf mf autopwn` to use SPI flash dictionary (@jmichelp)
