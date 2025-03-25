@@ -170,6 +170,7 @@ static ssize_t emv_pk_read_string(char *buf, size_t buflen, char *str, size_t si
 struct emv_pk *emv_pk_parse_pk(char *buf, size_t buflen) {
     struct emv_pk *r = calloc(1, sizeof(*r));
     if (r == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return NULL;
     }
     ssize_t l;
@@ -273,6 +274,7 @@ char *emv_pk_dump_pk(const struct emv_pk *pk) {
     size_t outsize = 1048;          // should be enough
     char *out = calloc(1, outsize); // should be enough
     if (out == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return NULL;
     }
 

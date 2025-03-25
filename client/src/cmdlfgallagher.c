@@ -364,7 +364,7 @@ static int CmdGallagherSim(const char *Cmd) {
 
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
     if (payload == NULL) {
-        PrintAndLogEx(FAILED, "Memory allocation failed");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     payload->encoding = 1;

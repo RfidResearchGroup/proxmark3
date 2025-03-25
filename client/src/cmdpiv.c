@@ -471,7 +471,7 @@ static void piv_print_fascn(const uint8_t *buf, const size_t len, int level) {
 
 static bool piv_tag_dump(const struct tlv *tlv, int level) {
     if (tlv == NULL) {
-        PrintAndLogEx(FAILED, "NULL");
+        PrintAndLogEx(FAILED, "tlv is NULL");
         return false;
     }
 
@@ -559,6 +559,7 @@ static void PrintTLVFromBuffer(const uint8_t *buf, size_t len) {
     }
     struct tlvdb_root *root = calloc(1, sizeof(*root) + len);
     if (root == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return;
     }
     root->len = len;
@@ -597,7 +598,7 @@ static int PivGetData(Iso7816CommandChannel channel, const uint8_t tag[], size_t
     size_t capacity = PM3_CMD_DATA_SIZE;
     struct tlvdb_root *root = calloc(1, sizeof(*root) + capacity);
     if (root == NULL) {
-        PrintAndLogEx(WARNING, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     root->len = 0;
@@ -629,7 +630,7 @@ static int PivGetData(Iso7816CommandChannel channel, const uint8_t tag[], size_t
                 capacity += PM3_CMD_DATA_SIZE;
                 struct tlvdb_root *new_root = realloc(root, sizeof(*root) + capacity);
                 if (new_root == NULL) {
-                    PrintAndLogEx(FAILED, "Running out of memory while re-allocating buffer");
+                    PrintAndLogEx(WARNING, "Failed to allocate memory");
                     //free(root);
                     tlvdb_root_free(root);
                     return PM3_EMALLOC;

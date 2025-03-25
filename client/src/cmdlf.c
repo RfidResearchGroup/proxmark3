@@ -474,7 +474,7 @@ int CmdFlexdemod(const char *Cmd) {
 
     int *data = calloc(g_GraphTraceLen, sizeof(int));
     if (data == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     memcpy(data, g_GraphBuffer, g_GraphTraceLen);
@@ -760,7 +760,7 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
     if (realtime) {
         uint8_t *realtimeBuf = calloc(samples, sizeof(uint8_t));
         if (realtimeBuf == NULL) {
-            PrintAndLogEx(FAILED, "failed to allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
 
@@ -887,7 +887,7 @@ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
     if (realtime) {
         uint8_t *realtimeBuf = calloc(samples, sizeof(uint8_t));
         if (realtimeBuf == NULL) {
-            PrintAndLogEx(FAILED, "failed to allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
 

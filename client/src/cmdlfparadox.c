@@ -105,7 +105,7 @@ int demodParadox(bool verbose, bool oldChksum) {
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
     if (bits == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     size_t size = getFromGraphBuffer(bits);
@@ -447,7 +447,7 @@ static int CmdParadoxSim(const char *Cmd) {
 
     lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + sizeof(bs));
     if (payload == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     payload->fchigh = high;

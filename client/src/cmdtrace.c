@@ -1103,7 +1103,7 @@ static int download_trace(void) {
 
     gs_trace = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
     if (gs_trace == NULL) {
-        PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -1126,7 +1126,7 @@ static int download_trace(void) {
         free(gs_trace);
         gs_trace = calloc(gs_traceLen, sizeof(uint8_t));
         if (gs_trace == NULL) {
-            PrintAndLogEx(FAILED, "Cannot allocate memory for trace");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
 

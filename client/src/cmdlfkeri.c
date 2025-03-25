@@ -347,7 +347,7 @@ static int CmdKeriSim(const char *Cmd) {
 
     lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));
     if (payload == NULL) {
-        PrintAndLogEx(ERR, "Memory allocation failed");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     payload->carrier =  2;

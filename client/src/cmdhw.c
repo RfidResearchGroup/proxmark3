@@ -687,8 +687,8 @@ static int CmdReadmem(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint8_t *buffer = calloc(len, sizeof(uint8_t));
-    if (!buffer) {
-        PrintAndLogEx(ERR, "error, cannot allocate memory ");
+    if (buffer == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 

@@ -115,7 +115,7 @@ static int CreateGetVASDataCommand(const uint8_t *pidHash, const char *url, size
     size_t reqTlvLen = 19 + (pidHash != NULL ? 35 : 0) + (url != NULL ? 3 + urlLen : 0);
     uint8_t *reqTlv = calloc(reqTlvLen, sizeof(uint8_t));
     if (reqTlv == NULL) {
-        PrintAndLogEx(FAILED, "Memory allocation failed");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 

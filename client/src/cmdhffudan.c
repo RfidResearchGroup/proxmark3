@@ -72,7 +72,7 @@ static char *GenerateFilename(iso14a_card_select_t *card, const char *prefix, co
     }
     char *fptr = calloc(sizeof(char) * (strlen(prefix) + strlen(suffix)) + sizeof(card->uid) * 2 + 1,  sizeof(uint8_t));
     if (fptr == NULL) {
-        PrintAndLogEx(FAILED, "Memory allocation failed");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return NULL;
     }
     strcpy(fptr, prefix);
@@ -344,8 +344,9 @@ static int CmdHFFudanDump(const char *Cmd) {
     // create filename if none was given
     if (strlen(dataFilename) < 1) {
         char *fptr = GenerateFilename(&card, "hf-fudan-", "-dump");
-        if (fptr == NULL)
+        if (fptr == NULL) {
             return PM3_ESOFT;
+        }
 
         strcpy(dataFilename, fptr);
         free(fptr);

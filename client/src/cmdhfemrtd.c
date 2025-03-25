@@ -802,8 +802,10 @@ static int emrtd_dump_ef_dg2(uint8_t *file_contents, size_t file_length, const c
     }
 
     char *filepath = calloc(strlen(path) + 100, sizeof(char));
-    if (filepath == NULL)
+    if (filepath == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
+    }
 
     strcpy(filepath, path);
     strncat(filepath, PATHSEP, 2);
@@ -827,6 +829,7 @@ static int emrtd_dump_ef_dg5(uint8_t *file_contents, size_t file_length, const c
     if (datalen < EMRTD_MAX_FILE_SIZE) {
         char *filepath = calloc(strlen(path) + 100, sizeof(char));
         if (filepath == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
         strcpy(filepath, path);
@@ -855,6 +858,7 @@ static int emrtd_dump_ef_dg7(uint8_t *file_contents, size_t file_length, const c
     if (datalen < EMRTD_MAX_FILE_SIZE) {
         char *filepath = calloc(strlen(path) + 100, sizeof(char));
         if (filepath == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
         strcpy(filepath, path);
@@ -882,6 +886,7 @@ static int emrtd_dump_ef_sod(uint8_t *file_contents, size_t file_length, const c
 
     char *filepath = calloc(strlen(path) + 100, sizeof(char));
     if (filepath == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -904,6 +909,7 @@ static bool emrtd_dump_file(uint8_t *ks_enc, uint8_t *ks_mac, uint8_t *ssc, uint
 
     char *filepath = calloc(strlen(path) + 100, sizeof(char));
     if (filepath == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return false;
     }
 
@@ -1124,6 +1130,7 @@ int dumpHF_EMRTD(char *documentnumber, char *dob, char *expiry, bool BAC_availab
 
     char *filepath = calloc(strlen(path) + 100, sizeof(char));
     if (filepath == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -2095,6 +2102,7 @@ int infoHF_EMRTD_offline(const char *path) {
     size_t datalen = 0;
     char *filepath = calloc(strlen(path) + 100, sizeof(char));
     if (filepath == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     strcpy(filepath, path);
@@ -2168,11 +2176,13 @@ int infoHF_EMRTD_offline(const char *path) {
 
     // Read files in the file list
     for (int i = 0; i < filelistlen; i++) {
+
         emrtd_dg_t *dg = emrtd_tag_to_dg(filelist[i]);
         if (dg == NULL) {
             PrintAndLogEx(INFO, "File tag not found, skipping... %02X", filelist[i]);
             continue;
         }
+
         if (!dg->pace && !dg->eac) {
             strcpy(filepath, path);
             strncat(filepath, PATHSEP, 2);

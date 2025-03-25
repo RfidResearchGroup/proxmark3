@@ -424,13 +424,13 @@ static int CmdNexWatchClone(const char *Cmd) {
 
         uint8_t *res_shifted = calloc(96, sizeof(uint8_t));
         if (res_shifted == NULL) {
-            PrintAndLogEx(FAILED, "Memory allocation failed for res_shifted");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
 
         uint8_t *res = calloc(96, sizeof(uint8_t));
         if (res == NULL) {
-            PrintAndLogEx(FAILED, "Memory allocation failed for res");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             free(res_shifted);
             return PM3_EMALLOC;
         }
@@ -557,7 +557,7 @@ static int CmdNexWatchSim(const char *Cmd) {
 
     lf_psksim_t *payload = calloc(1, sizeof(lf_psksim_t) + sizeof(bs));
     if (payload == NULL) {
-        PrintAndLogEx(FAILED, "Memory allocation failed for payload");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     payload->carrier = 2;

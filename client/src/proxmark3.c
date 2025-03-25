@@ -655,7 +655,7 @@ static void set_my_user_directory(void) {
         uint16_t pathLen = FILENAME_MAX; // should be a good starting point
         char *cwd_buffer = (char *)calloc(pathLen, sizeof(uint8_t));
         if (cwd_buffer == NULL) {
-            PrintAndLogEx(WARNING, "failed to allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return;
         }
 
@@ -664,7 +664,7 @@ static void set_my_user_directory(void) {
                 pathLen += 10;      // if buffer was too small add 10 characters and try again
                 char *tmp = realloc(cwd_buffer, pathLen);
                 if (tmp == NULL) {
-                    PrintAndLogEx(WARNING, "failed to allocate memory");
+                    PrintAndLogEx(WARNING, "Failed to allocate memory");
                     free(cwd_buffer);
                     return;
                 }
@@ -759,7 +759,7 @@ static int dumpmem_to_file(const char *filename, uint32_t addr, uint32_t len, bo
 
     uint8_t *buffer = calloc(len, sizeof(uint8_t));
     if (buffer == NULL) {
-        PrintAndLogEx(ERR, "error, cannot allocate memory ");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 

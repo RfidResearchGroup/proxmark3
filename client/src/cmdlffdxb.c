@@ -859,7 +859,7 @@ static int CmdFdxBSim(const char *Cmd) {
 
     uint8_t *bs = calloc(128, sizeof(uint8_t));
     if (bs == NULL) {
-        PrintAndLogEx(ERR, "Memory allocation failed.");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     if (getFDXBBits(national_code, country_code, is_animal, (extended > 0), extended, bs) != PM3_SUCCESS) {
@@ -871,7 +871,7 @@ static int CmdFdxBSim(const char *Cmd) {
     // 32, no STT, BIPHASE INVERTED == diphase
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + 128);
     if (payload == NULL) {
-        PrintAndLogEx(ERR, "Memory allocation failed.");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(bs);
         return PM3_EMALLOC;
     }

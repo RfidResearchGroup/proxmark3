@@ -387,7 +387,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
     // normal size
     uint8_t *data = calloc(1, tot_bytes);
     if (data == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -433,7 +433,7 @@ static int generate_config_card(const iclass_config_card_item_t *o,  uint8_t *ke
 
             uint8_t *p = realloc(data, tot_bytes);
             if (p == NULL) {
-                PrintAndLogEx(FAILED, "failed to allocate memory");
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
                 free(data);
                 return PM3_EMALLOC;
             }
@@ -935,7 +935,7 @@ static int CmdHFiClassSim(const char *Cmd) {
 
             size_t datalen = NUM_CSNS * MAC_ITEM_SIZE;
             uint8_t *dump = calloc(datalen, sizeof(uint8_t));
-            if (!dump) {
+            if (dump == NULL) {
                 PrintAndLogEx(WARNING, "Failed to allocate memory");
                 return PM3_EMALLOC;
             }
@@ -986,7 +986,7 @@ static int CmdHFiClassSim(const char *Cmd) {
 
             size_t datalen = NUM_CSNS * MAC_ITEM_SIZE;
             uint8_t *dump = calloc(datalen, sizeof(uint8_t));
-            if (!dump) {
+            if (dump == NULL) {
                 PrintAndLogEx(WARNING, "Failed to allocate memory");
                 return PM3_EMALLOC;
             }
@@ -1102,7 +1102,7 @@ int read_iclass_csn(bool loop, bool verbose, bool shallow_mod) {
                 free(card);
                 res = PM3_SUCCESS;
             } else {
-                PrintAndLogEx(FAILED, "failed to allocate memory");
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
                 res = PM3_EMALLOC;
             }
         }
@@ -1263,7 +1263,7 @@ static int CmdHFiClassESave(const char *Cmd) {
 
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
     if (dump == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -1326,7 +1326,7 @@ static int CmdHFiClassEView(const char *Cmd) {
 
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
     if (dump == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     memset(dump, 0, bytes);
@@ -1418,6 +1418,7 @@ static int iclass_decode_credentials_new_pacs(uint8_t *d) {
 
     char *binstr = (char *)calloc((PICOPASS_BLOCK_SIZE * 8) + 1, sizeof(uint8_t));
     if (binstr == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -3914,6 +3915,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         keycount = 5000;
         keyBlock = calloc(1, keycount * 8);
         if (keyBlock == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
 
@@ -3959,7 +3961,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
     // allocate memory for the pre calculated macs
     iclass_premac_t *pre = calloc(keycount, sizeof(iclass_premac_t));
     if (pre == NULL) {
-        PrintAndLogEx(WARNING, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -4021,7 +4023,7 @@ static int CmdHFiClassCheckKeys(const char *Cmd) {
         uint32_t tmp_plen = sizeof(iclass_chk_t) + (4 * curr_chunk_cnt);
         iclass_chk_t *packet = calloc(tmp_plen,  sizeof(uint8_t));
         if (packet == NULL) {
-            PrintAndLogEx(WARNING, "failed to allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             break;
         }
         packet->use_credit_key = use_credit_key;
@@ -4674,6 +4676,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
         keycount = 5000;
         keyBlock = calloc(1, keycount * 8);
         if (keyBlock == NULL)  {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
 

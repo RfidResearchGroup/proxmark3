@@ -65,6 +65,7 @@ static struct crypto_hash *crypto_hash_polarssl_open(enum crypto_algo_hash hash)
 
     struct crypto_hash_polarssl *ch = calloc(1, sizeof(*ch));
     if (ch == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return NULL;
     }
 
@@ -86,6 +87,7 @@ struct crypto_pk_polarssl {
 static struct crypto_pk *crypto_pk_polarssl_open_rsa(va_list vl) {
     struct crypto_pk_polarssl *cp = calloc(1, sizeof(*cp));
     if (cp == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return NULL;
     }
     memset(cp, 0x00, sizeof(*cp));
@@ -114,6 +116,7 @@ static struct crypto_pk *crypto_pk_polarssl_open_rsa(va_list vl) {
 static struct crypto_pk *crypto_pk_polarssl_open_priv_rsa(va_list vl) {
     struct crypto_pk_polarssl *cp = calloc(1, sizeof(*cp));
     if (cp == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return NULL;
     }
     memset(cp, 0x00, sizeof(*cp));
@@ -177,6 +180,7 @@ static int myrand(void *rng_state, unsigned char *output, size_t len) {
 static struct crypto_pk *crypto_pk_polarssl_genkey_rsa(va_list vl) {
     struct crypto_pk_polarssl *cp = calloc(1, sizeof(*cp));
     if (cp == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return NULL;
     }
     memset(cp, 0x00, sizeof(*cp));
@@ -264,7 +268,7 @@ static unsigned char *crypto_pk_polarssl_get_parameter(const struct crypto_pk *_
             *plen = mbedtls_mpi_size(&cp->ctx.N);
             result = calloc(1, *plen);
             if (result == NULL) {
-                PrintAndLogEx(WARNING, "Error allocating memory for parameter");
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
                 return 0;
             }
             memset(result, 0x00, *plen);
@@ -280,7 +284,7 @@ static unsigned char *crypto_pk_polarssl_get_parameter(const struct crypto_pk *_
             *plen = mbedtls_mpi_size(&cp->ctx.E);
             result = calloc(1, *plen);
             if (result == NULL) {
-                PrintAndLogEx(WARNING, "Error allocating memory for parameter");
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
                 return 0;
             }
             memset(result, 0x00, *plen);

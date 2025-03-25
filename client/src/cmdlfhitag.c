@@ -83,8 +83,8 @@ static int CmdLFHitagList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "lf hitag", "ht2");
     /*
     uint8_t *got = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
-    if (!got) {
-        PrintAndLogEx(WARNING, "Cannot allocate memory for trace");
+    if (got == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -100,7 +100,7 @@ static int CmdLFHitagList(const char *Cmd) {
     if (traceLen > PM3_CMD_DATA_SIZE) {
         uint8_t *p = realloc(got, traceLen);
         if (p == NULL) {
-            PrintAndLogEx(WARNING, "Cannot allocate memory for trace");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             free(got);
             return PM3_EMALLOC;
         }
@@ -589,6 +589,7 @@ void hitag2_annotate_plain(char *exp, size_t size, const uint8_t *cmd, uint8_t c
 
     char *binstr = (char *)calloc((cmdsize * 8) + 1, sizeof(uint8_t));
     if (binstr == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return;
     }
 
@@ -656,6 +657,7 @@ void annotateHitag2(char *exp, size_t size, const uint8_t *cmd, uint8_t cmdsize,
 
     char *binstr = (char *)calloc((cmdsize * 8) + 1, sizeof(uint8_t));
     if (binstr == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return;
     }
 
@@ -1680,7 +1682,7 @@ static int CmdLFHitagEload(const char *Cmd) {
 
         lf_hitag_t *payload = calloc(1, sizeof(lf_hitag_t) + bytes_read);
         if (payload == NULL) {
-            PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             free(dump);
             return PM3_EMALLOC;
         }
@@ -1728,7 +1730,7 @@ static int CmdLFHitagEview(const char *Cmd) {
     // reserve memory
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
     if (dump == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -1843,7 +1845,7 @@ static int CmdLFHitag2PWMDemod(const char *Cmd) {
 
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
     if (bits == NULL) {
-        PrintAndLogEx(INFO, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 

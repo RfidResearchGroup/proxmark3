@@ -364,7 +364,7 @@ static void asn1_tag_dump_object_id(const struct tlv *tlv, const struct asn1_tag
 
 bool asn1_tag_dump(const struct tlv *tlv, int level, bool *candump) {
     if (tlv == NULL) {
-        PrintAndLogEx(FAILED, "NULL\n");
+        PrintAndLogEx(WARNING, "tlv is NULL\n");
         return false;
     }
 

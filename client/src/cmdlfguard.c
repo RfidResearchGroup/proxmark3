@@ -292,7 +292,7 @@ static int CmdGuardClone(const char *Cmd) {
     //GuardProxII - compat mode, ASK/Biphase,  data rate 64, 3 data blocks
     uint8_t *bs = calloc(96, sizeof(uint8_t));
     if (bs == NULL) {
-        PrintAndLogEx(ERR, "Memory allocation failed.");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     if (getGuardBits(xorval, fmtlen, facilitycode, cardnumber, bs) != PM3_SUCCESS) {
@@ -388,7 +388,7 @@ static int CmdGuardSim(const char *Cmd) {
     // Guard uses:  clk: 64, invert: 0, encoding: 2 (ASK Biphase)
     lf_asksim_t *payload = calloc(1, sizeof(lf_asksim_t) + sizeof(bs));
     if (payload == NULL) {
-        PrintAndLogEx(ERR, "Memory allocation failed.");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     payload->encoding =  2;

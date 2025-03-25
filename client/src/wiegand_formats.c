@@ -1671,6 +1671,7 @@ int HIDDumpPACSBits(const uint8_t *const data, const uint8_t length, bool verbos
     uint8_t pad = data[0];
     char *binstr = (char *)calloc((length * 8) + 1, sizeof(uint8_t));
     if (binstr == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 

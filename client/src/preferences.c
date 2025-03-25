@@ -130,13 +130,13 @@ int preferences_save(void) {
     char *fn = prefGetFilename();
     int fn_len = strlen(fn) + 5; // .bak\0
 
-    // [FILENAME_MAX+sizeof(preferencesFilename)+10]
     char *backupFilename = (char *)calloc(fn_len, sizeof(uint8_t));
     if (backupFilename == NULL) {
-        PrintAndLogEx(ERR, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(fn);
         return PM3_EMALLOC;
     }
+
     snprintf(backupFilename, fn_len, "%s.bak", fn);
 
     // remove old backup file

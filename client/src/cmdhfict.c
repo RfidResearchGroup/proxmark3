@@ -520,7 +520,7 @@ static int CmdHfIctCredential(const char *Cmd) {
         uint16_t sc_size = mfNumBlocksPerSector(ICT_MIFARE_SECTOR) * MFBLOCK_SIZE;
         uint8_t *data = calloc(sc_size, sizeof(uint8_t));
         if (data == NULL) {
-            PrintAndLogEx(ERR, "failed to allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
 

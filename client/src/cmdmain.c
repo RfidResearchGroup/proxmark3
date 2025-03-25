@@ -60,7 +60,7 @@ static void AppendDate(char *s, size_t slen, const char *fmt) {
     ct = gmtime_r(&now, &tm_buf);
 #endif
     if (ct == NULL) {
-        PrintAndLogEx(ERR, "gmtime failed");
+        PrintAndLogEx(WARNING, "gmtime failed");
         return;
     }
 

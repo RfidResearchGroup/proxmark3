@@ -459,11 +459,11 @@ static int mfdes_get_info(mfdes_info_res_t *info) {
 int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, size_t signature_len) {
 
     if (uid == NULL) {
-        PrintAndLogEx(DEBUG, "UID=NULL");
+        PrintAndLogEx(DEBUG, "UID is NULL");
         return PM3_EINVARG;
     }
     if (signature == NULL) {
-        PrintAndLogEx(DEBUG, "SIGNATURE=NULL");
+        PrintAndLogEx(DEBUG, "SIGNATURE is NULL");
         return PM3_EINVARG;
     }
 
@@ -472,7 +472,9 @@ int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, si
 }
 
 static void swap24(uint8_t *data) {
-    if (data == NULL) return;
+    if (data == NULL) {
+        return;
+    }
     uint8_t tmp = data[0];
     data[0] = data[2];
     data[2] = tmp;
@@ -4850,7 +4852,7 @@ static int DesfileReadFileAndPrint(DesfireContext_t *dctx,
 
     uint8_t *resp  = calloc(DESFIRE_BUFFER_SIZE, 1);
     if (resp == NULL) {
-        PrintAndLogEx(ERR, "Desfire calloc " _RED_("error"));
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         DropField();
         return PM3_EMALLOC;
     }

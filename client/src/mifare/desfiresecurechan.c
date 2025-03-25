@@ -289,8 +289,10 @@ static bool DesfireISOChannelValidCmd(uint8_t cmd) {
 static void DesfireSecureChannelEncodeD40(DesfireContext_t *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
 
     uint8_t *data  = calloc(DESFIRE_BUFFER_SIZE, sizeof(uint8_t));
-    if (data == NULL)
+    if (data == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return;
+    }
 
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
@@ -364,6 +366,7 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext_t *ctx, uint8_t cmd, ui
 
     uint8_t *data  = calloc(DESFIRE_BUFFER_SIZE, sizeof(uint8_t));
     if (data == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return;
     }
 
@@ -429,8 +432,10 @@ static void DesfireSecureChannelEncodeEV1(DesfireContext_t *ctx, uint8_t cmd, ui
 static void DesfireSecureChannelEncodeEV2(DesfireContext_t *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
 
     uint8_t *data  = calloc(DESFIRE_BUFFER_SIZE, sizeof(uint8_t));
-    if (data == NULL)
+    if (data == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return;
+    }
 
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
@@ -472,9 +477,10 @@ static void DesfireSecureChannelEncodeEV2(DesfireContext_t *ctx, uint8_t cmd, ui
 static void DesfireSecureChannelEncodeLRP(DesfireContext_t *ctx, uint8_t cmd, uint8_t *srcdata, size_t srcdatalen, uint8_t *dstdata, size_t *dstdatalen) {
 
     uint8_t *data  = calloc(DESFIRE_BUFFER_SIZE, sizeof(uint8_t));
-    if (data == NULL)
+    if (data == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return;
-
+    }
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
 
@@ -538,9 +544,10 @@ void DesfireSecureChannelEncode(DesfireContext_t *ctx, uint8_t cmd, uint8_t *src
 static void DesfireSecureChannelDecodeD40(DesfireContext_t *ctx, uint8_t *srcdata, size_t srcdatalen, uint8_t respcode, uint8_t *dstdata, size_t *dstdatalen) {
 
     uint8_t *data  = calloc(DESFIRE_BUFFER_SIZE, sizeof(uint8_t));
-    if (data == NULL)
+    if (data == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return;
-
+    }
     memcpy(dstdata, srcdata, srcdatalen);
     *dstdatalen = srcdatalen;
 
@@ -786,8 +793,10 @@ static void DesfireISODecode(DesfireContext_t *ctx, uint8_t *srcdata, size_t src
         return;
 
     uint8_t *data  = calloc(DESFIRE_BUFFER_SIZE, 1);
-    if (data == NULL)
+    if (data == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return;
+    }
 
     uint8_t maclen = DesfireGetMACLength(ctx);
     if (DesfireIsAuthenticated(ctx)) {

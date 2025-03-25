@@ -45,7 +45,7 @@ static int wiegand_new_pacs(uint8_t *padded_pacs, uint8_t plen) {
 
     char *binstr = (char *)calloc((PACS_EXTRA_LONG_FORMAT * 8) + 1, sizeof(uint8_t));
     if (binstr == NULL) {
-        PrintAndLogEx(INFO, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 

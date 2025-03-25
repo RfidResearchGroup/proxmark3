@@ -81,11 +81,13 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
         } else {
             size_t nonce_length = resp.oldarg[1];
             size_t nonce_length_bytes = 2 * nonce_length + 1;
+
             char *nonce = (char *) calloc(2 * nonce_length + 1, sizeof(uint8_t));
             if (nonce == NULL) {
-                PrintAndLogEx(FAILED, "Memory allocation failed for nonce");
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
                 return PM3_EMALLOC;
             }
+
             for (int j = 0; j < nonce_length; j++) {
                 int nonce_offset = 2 * j;
                 snprintf(nonce + nonce_offset, (nonce_length_bytes * sizeof(uint8_t)) - nonce_offset, "%02X", resp.data.asBytes[j]);

@@ -790,7 +790,7 @@ static void emv_tag_dump_afl(const struct tlv *tlv, const struct emv_tag *tag, i
 
 bool emv_tag_dump(const struct tlv *tlv, int level) {
     if (tlv == NULL) {
-        PrintAndLogEx(FAILED, "NULL");
+        PrintAndLogEx(WARNING, "tlv is NULL");
         return false;
     }
 

@@ -155,13 +155,17 @@ static void ntag424_print_version_information(ntag424_version_information_t *ver
     if (is_hw) {
         const char *capacitance = "unknown";
         switch (version->sub_type & 0xf) {
-            case 2: capacitance = "50pF";
-            case 8: capacitance = "50pF + Tag Tamper";
+            case 2:
+                capacitance = "50pF";
+            case 8:
+                capacitance = "50pF + Tag Tamper";
         }
         const char *modulation = "unknown";
         switch ((version->sub_type >> 4) & 0xf) {
-            case 0: modulation = "strong";
-            case 8: modulation = "standard";
+            case 0:
+                modulation = "strong";
+            case 8:
+                modulation = "standard";
         }
         PrintAndLogEx(INFO, "    sub type: " _GREEN_("%02X (capacitance: %s, modulation: %s)"), version->sub_type, capacitance, modulation);
     } else {
@@ -305,7 +309,7 @@ static void ntag424_calc_mac(const ntag424_session_keys_t *session_keys, uint8_t
 
     uint8_t *mac_input = (uint8_t *)calloc(mac_input_len, sizeof(uint8_t));
     if (mac_input == NULL) {
-        PrintAndLogEx(ERR, "Memory allocation failed");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return;
     }
     memcpy(mac_input, mac_input_header, sizeof(mac_input_header));

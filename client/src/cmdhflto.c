@@ -755,8 +755,8 @@ static int CmdHfLTODump(const char *Cmd) {
 
     uint32_t dump_len = CM_MEM_MAX_SIZE;
     uint8_t *dump = calloc(dump_len, sizeof(uint8_t));
-    if (!dump) {
-        PrintAndLogEx(ERR, "error, cannot allocate memory");
+    if (dump == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 

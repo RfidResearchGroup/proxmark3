@@ -45,7 +45,7 @@ int demodPyramid(bool verbose) {
     //raw fsk demod no manchester decoding no start bit finding just get binary from wave
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
     if (bits == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     size_t size = getFromGraphBuffer(bits);
@@ -305,7 +305,7 @@ static int CmdPyramidClone(const char *Cmd) {
 
         uint8_t *bs = calloc(128, sizeof(uint8_t));
         if (bs == NULL) {
-            PrintAndLogEx(WARNING, "failed to allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
 
@@ -429,7 +429,7 @@ static int CmdPyramidSim(const char *Cmd) {
     // Pyramid uses:  fcHigh: 10, fcLow: 8, clk: 50, invert: 0
     lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + sizeof(bs));
     if (payload == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     payload->fchigh = 10;

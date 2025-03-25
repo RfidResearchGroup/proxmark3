@@ -1676,7 +1676,7 @@ static int CmdHFMFPChk(const char *Cmd) {
 
         char *fptr = calloc(sizeof(char) * (strlen("hf-mfp-") + strlen("-key")) + card.uidlen * 2 + 1,  sizeof(uint8_t));
         if (fptr == NULL) {
-            PrintAndLogEx(ERR, "Memory allocation failed");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
         strcpy(fptr, "hf-mfp-");
@@ -1742,7 +1742,7 @@ static int CmdHFMFPDump(const char *Cmd) {
         // read card
         uint8_t *mem = calloc(MIFARE_4K_MAXBLOCK * MFBLOCK_SIZE, sizeof(uint8_t));
         if (mem == NULL) {
-            PrintAndLogEx(ERR, "failed to allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
 

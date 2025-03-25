@@ -67,7 +67,7 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
     // copy input buffer into newly allocated buffer, because the existing code mutates the data inside.
     uint8_t *data = calloc(card_size, sizeof(uint8_t));
     if (data == NULL) {
-        PrintAndLogEx(WARNING, "Cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     memcpy(data, input_buffer, card_size);
@@ -432,7 +432,7 @@ static int CmdLegicInfo(const char *Cmd) {
     // allocate receiver buffer
     uint8_t *data = calloc(card.cardsize, sizeof(uint8_t));
     if (data == NULL) {
-        PrintAndLogEx(WARNING, "Cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -494,8 +494,8 @@ static int CmdLegicRdbl(const char *Cmd) {
 
     // allocate receiver buffer
     uint8_t *data = calloc(len, sizeof(uint8_t));
-    if (!data) {
-        PrintAndLogEx(WARNING, "Cannot allocate memory");
+    if (data == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -643,7 +643,7 @@ static int CmdLegicWrbl(const char *Cmd) {
 
     legic_packet_t *payload = calloc(1, sizeof(legic_packet_t) + dlen);
     if (payload == NULL) {
-        PrintAndLogEx(WARNING, "Cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     payload->offset = (offset & 0xFFFF);
@@ -724,7 +724,7 @@ int legic_read_mem(uint32_t offset, uint32_t len, uint32_t iv, uint8_t *out, uin
 
     legic_packet_t *payload = calloc(1, sizeof(legic_packet_t));
     if (payload == NULL) {
-        PrintAndLogEx(WARNING, "Cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     payload->offset = (offset & 0xFFFF);
@@ -826,7 +826,7 @@ void legic_seteml(uint8_t *src, uint32_t offset, uint32_t numofbytes) {
 
         legic_packet_t *payload = calloc(1, sizeof(legic_packet_t) + len);
         if (payload == NULL) {
-            PrintAndLogEx(WARNING, "Cannot allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return;
         }
         payload->offset = i;
@@ -902,7 +902,7 @@ static int CmdLegicDump(const char *Cmd) {
 
     legic_packet_t *payload = calloc(1, sizeof(legic_packet_t));
     if (payload == NULL) {
-        PrintAndLogEx(WARNING, "Cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     payload->offset = 0;
@@ -932,8 +932,8 @@ static int CmdLegicDump(const char *Cmd) {
 
     uint16_t readlen = resp.data.asDwords[0];
     uint8_t *data = calloc(readlen, sizeof(uint8_t));
-    if (!data) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+    if (data == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -1044,7 +1044,7 @@ static int CmdLegicRestore(const char *Cmd) {
 
         legic_packet_t *payload = calloc(1, sizeof(legic_packet_t) + len);
         if (payload == NULL) {
-            PrintAndLogEx(WARNING, "Cannot allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             free(dump);
             return PM3_EMALLOC;
         }
@@ -1184,7 +1184,7 @@ static int CmdLegicESave(const char *Cmd) {
     // set up buffer
     uint8_t *data = calloc(numofbytes, sizeof(uint8_t));
     if (data == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -1253,7 +1253,7 @@ static int CmdLegicEView(const char *Cmd) {
 
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
     if (dump == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -1317,7 +1317,7 @@ static int CmdLegicEInfo(const char *Cmd) {
 
     uint8_t *dump = calloc(card_size, sizeof(uint8_t));
     if (dump == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -1357,8 +1357,8 @@ static int CmdLegicWipe(const char *Cmd) {
 
     // set up buffer
     uint8_t *data = calloc(card.cardsize, sizeof(uint8_t));
-    if (!data) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+    if (data == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -1382,7 +1382,7 @@ static int CmdLegicWipe(const char *Cmd) {
 
         legic_packet_t *payload = calloc(1, sizeof(legic_packet_t) + len);
         if (payload == NULL) {
-            PrintAndLogEx(WARNING, "Cannot allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             free(data);
             return PM3_EMALLOC;
         }

@@ -362,6 +362,7 @@ static int topaz_set_cc_dynamic(const uint8_t *data) {
     topaz_tag.size = memsize;
     topaz_tag.dynamic_memory = calloc(memsize - TOPAZ_STATIC_MEMORY, sizeof(uint8_t));
     if (topaz_tag.dynamic_memory == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     return PM3_SUCCESS;
@@ -543,7 +544,7 @@ static void topaz_print_control_TLVs(uint8_t *memory) {
             if (old == NULL) {
                 new = topaz_tag.dynamic_lock_areas = (dynamic_lock_area_t *) calloc(sizeof(dynamic_lock_area_t), sizeof(uint8_t));
                 if (new == NULL) {
-                    PrintAndLogEx(ERR, "Memory allocation failed");
+                    PrintAndLogEx(WARNING, "Failed to allocate memory");
                     return;
                 }
             } else {
@@ -552,7 +553,7 @@ static void topaz_print_control_TLVs(uint8_t *memory) {
                 }
                 new = old->next = (dynamic_lock_area_t *) calloc(sizeof(dynamic_lock_area_t), sizeof(uint8_t));
                 if (new == NULL) {
-                    PrintAndLogEx(ERR, "Memory allocation failed");
+                    PrintAndLogEx(WARNING, "Failed to allocate memory");
                     return;
                 }
             }

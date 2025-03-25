@@ -60,7 +60,7 @@ static int sendTry(uint8_t fmtlen, uint32_t fc, uint32_t cn, uint32_t delay, uin
 
     lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + bs_len);
     if (payload == NULL) {
-        PrintAndLogEx(ERR, "Memory allocation failed.");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     payload->fchigh = 10;
@@ -151,7 +151,7 @@ int demodAWID(bool verbose) {
     (void) verbose; // unused so far
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
     if (bits == NULL) {
-        PrintAndLogEx(DEBUG, "DEBUG: Error - AWID failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -407,9 +407,8 @@ static int CmdAWIDClone(const char *Cmd) {
     verify_values(&fmtlen, &fc, &cn);
 
     uint8_t *bits = calloc(96, sizeof(uint8_t));
-
     if (bits == NULL) {
-        PrintAndLogEx(ERR, "Memory allocation failed.");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -489,7 +488,7 @@ static int CmdAWIDSim(const char *Cmd) {
     // 96   --- Bitstream length: 96-bits == 12 bytes
     lf_fsksim_t *payload = calloc(1, sizeof(lf_fsksim_t) + sizeof(bs));
     if (payload == NULL) {
-        PrintAndLogEx(ERR, "Memory allocation failed.");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     payload->fchigh = 10;

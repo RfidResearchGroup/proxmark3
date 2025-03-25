@@ -2089,11 +2089,11 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
 
     uint8_t *trace = calloc(tracelen, sizeof(uint8_t));
     if (trace == NULL) {
-        PrintAndLogEx(WARNING, "failed to allocate memory ");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
-    if (!GetFromDevice(BIG_BUF, trace, tracelen, 0, NULL, 0, NULL, 2500, false)) {
+    if (GetFromDevice(BIG_BUF, trace, tracelen, 0, NULL, 0, NULL, 2500, false) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         free(trace);
         return PM3_ETIMEOUT;

@@ -346,7 +346,7 @@ static void arg_add_t55xx_downloadlink(void *at[], uint8_t *idx, uint8_t show, u
     char *r3 = (char *)calloc(r_count, sizeof(uint8_t));
 
     if (r0 == NULL || r1 == NULL || r2 == NULL || r3 == NULL) {
-        PrintAndLogEx(ERR, "Memory allocation failed");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(r0);
         free(r1);
         free(r2);
@@ -367,7 +367,7 @@ static void arg_add_t55xx_downloadlink(void *at[], uint8_t *idx, uint8_t show, u
     if (show == T55XX_DLMODE_ALL) {
         char *r4 = (char *)calloc(r_count, sizeof(uint8_t));
         if (r4 == NULL) {
-            PrintAndLogEx(ERR, "Memory allocation failed");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             free(r0);
             free(r1);
             free(r2);
@@ -3200,7 +3200,7 @@ static int CmdResetRead(const char *Cmd) {
         uint16_t gotsize = g_pm3_capabilities.bigbuf_size - 1;
         uint8_t *got = calloc(gotsize, sizeof(uint8_t));
         if (got == NULL) {
-            PrintAndLogEx(WARNING, "failed to allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
 

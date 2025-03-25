@@ -753,8 +753,8 @@ static int mf_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey
     if (userkeylen >= MIFARE_KEY_SIZE) {
         int numKeys = userkeylen / MIFARE_KEY_SIZE;
         p = realloc(*pkeyBlock, numKeys * MIFARE_KEY_SIZE);
-        if (!p) {
-            PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
+        if (p == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             free(*pkeyBlock);
             return PM3_EMALLOC;
         }
@@ -772,8 +772,8 @@ static int mf_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey
     if (load_default) {
         // Handle default keys
         p = realloc(*pkeyBlock, (*pkeycnt + ARRAYLEN(g_mifare_default_keys)) * MIFARE_KEY_SIZE);
-        if (!p) {
-            PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
+        if (p == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             free(*pkeyBlock);
             return PM3_EMALLOC;
         }
@@ -799,8 +799,8 @@ static int mf_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey
             return PM3_EFILE;
         } else {
             p = realloc(*pkeyBlock, (*pkeycnt + loaded_numKeys) * MIFARE_KEY_SIZE);
-            if (!p) {
-                PrintAndLogEx(FAILED, "cannot allocate memory for Keys");
+            if (p == NULL) {
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
                 free(keyBlock_tmp);
                 free(*pkeyBlock);
                 return PM3_EMALLOC;
@@ -1155,7 +1155,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
 
     uint8_t *data = calloc(sc_size, sizeof(uint8_t));
     if (data == NULL) {
-        PrintAndLogEx(ERR, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -1315,7 +1315,7 @@ static int CmdHF14AMfDump(const char *Cmd) {
     iso14a_card_select_t card ;
     uint8_t *mem = calloc(MIFARE_4K_MAX_BYTES, sizeof(uint8_t));
     if (mem == NULL) {
-        PrintAndLogEx(ERR, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     int res = mfc_read_tag(&card, mem, numSectors, keyFilename);
@@ -3290,7 +3290,7 @@ all_found:
     bytes = block_cnt * MFBLOCK_SIZE;
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
     if (dump == NULL) {
-        PrintAndLogEx(ERR, "Fail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(e_sector);
         free(fptr);
         return PM3_EMALLOC;
@@ -4913,7 +4913,7 @@ static int CmdHF14AMfESave(const char *Cmd) {
     // reserv memory
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
     if (dump == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     memset(dump, 0, bytes);
@@ -4991,7 +4991,7 @@ static int CmdHF14AMfEView(const char *Cmd) {
 
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
     if (dump == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -5787,7 +5787,7 @@ static int CmdHF14AMfCSave(const char *Cmd) {
     uint16_t bytes = block_cnt * MFBLOCK_SIZE;
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
     if (dump == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -5937,7 +5937,7 @@ static int CmdHF14AMfCView(const char *Cmd) {
     uint16_t bytes = block_cnt * MFBLOCK_SIZE;
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
     if (dump == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -7949,6 +7949,7 @@ static int CmdHF14AMfView(const char *Cmd) {
         UDATA d;
         d.bytes = calloc(bytes_read, sizeof(uint8_t));
         if (d.bytes == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
         uint16_t dlen = 0;
@@ -8418,7 +8419,7 @@ static int CmdHF14AGen4Load(const char *cmd) {
     if (fill_from_emulator) {
         data = calloc(block_cnt * MFBLOCK_SIZE, sizeof(uint8_t));
         if (data == NULL) {
-            PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
 
@@ -8620,7 +8621,7 @@ static int CmdHF14AGen4View(const char *Cmd) {
     uint16_t bytes = block_cnt * MFBLOCK_SIZE;
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
     if (dump == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -8763,7 +8764,7 @@ static int CmdHF14AGen4Save(const char *Cmd) {
     uint16_t bytes = block_cnt * MFBLOCK_SIZE;
     uint8_t *dump = calloc(bytes, sizeof(uint8_t));
     if (dump == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -10161,10 +10162,10 @@ static int CmdHF14AMfISEN(const char *Cmd) {
 
             uint8_t *dump = calloc(bytes, sizeof(uint8_t));
             if (dump == NULL) {
-                PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
                 return PM3_EFAILED;
             }
-            if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
+            if (GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false) == false) {
                 PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
                 free(dump);
                 return PM3_ETIMEOUT;

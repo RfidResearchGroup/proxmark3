@@ -345,6 +345,7 @@ int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastCh
         // initialize storage for found keys
         icesector_t *tmp = calloc(sectorsCnt, sizeof(icesector_t));
         if (tmp == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
 
@@ -838,6 +839,7 @@ int mf_static_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trg
         // used for mfCheckKeys_file, which needs a header
         mem = calloc((maxkeysinblock * MIFARE_KEY_SIZE) + 5, sizeof(uint8_t));
         if (mem == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             free(statelists[0].head.slhead);
             return PM3_EMALLOC;
         }
@@ -854,6 +856,7 @@ int mf_static_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trg
         // used for mfCheckKeys, which adds its own header.
         mem = calloc((maxkeysinblock * MIFARE_KEY_SIZE), sizeof(uint8_t));
         if (mem == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             free(statelists[0].head.slhead);
             return PM3_EMALLOC;
         }
@@ -1078,7 +1081,7 @@ int mf_eml_set_mem_xt(uint8_t *data, int blockNum, int blocksCount, int blockBtW
     size_t paylen = sizeof(struct p) + size;
     struct p *payload = calloc(1, paylen);
     if (payload == NULL) {
-        PrintAndLogEx(ERR, "Memory allocation failed");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 

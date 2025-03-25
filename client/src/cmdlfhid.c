@@ -120,7 +120,7 @@ int demodHID(bool verbose) {
 
     uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
     if (bits == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     size_t size = getFromGraphBuffer(bits);

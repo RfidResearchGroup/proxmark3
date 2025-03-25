@@ -50,7 +50,9 @@ static int smart_loadjson(const char *preferredName, json_t **root) {
 
     json_error_t error;
 
-    if (preferredName == NULL) return 1;
+    if (preferredName == NULL) {
+        return 1;
+    }
 
     char *path;
     int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, ".json", false);
@@ -365,7 +367,7 @@ static int smart_responseEx(uint8_t *out, int maxoutlen, bool verbose) {
         uint8_t cmd_getresp[] = {0x00, ISO7816_GET_RESPONSE, 0x00, 0x00, len};
         smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + sizeof(cmd_getresp));
         if (payload == NULL) {
-            PrintAndLogEx(FAILED, "failed to allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             goto out;
         }
         payload->flags = SC_RAW | SC_LOG;
@@ -457,7 +459,7 @@ static int CmdSmartRaw(const char *Cmd) {
 
     smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + dlen);
     if (payload == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     payload->len = dlen;
@@ -487,7 +489,7 @@ static int CmdSmartRaw(const char *Cmd) {
 
     uint8_t *buf = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
     if (buf == NULL) {
-        PrintAndLogEx(DEBUG, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(payload);
         return PM3_EMALLOC;
     }
@@ -749,7 +751,7 @@ static int CmdSmartInfo(const char *Cmd) {
     // convert bytes to str.
     char *hexstr = calloc((card.atr_len << 1) + 1, sizeof(uint8_t));
     if (hexstr == NULL) {
-        PrintAndLogEx(WARNING, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -823,7 +825,7 @@ static int CmdSmartReader(const char *Cmd) {
     // convert bytes to str.
     char *hexstr = calloc((card->atr_len << 1) + 1, sizeof(uint8_t));
     if (hexstr == NULL) {
-        PrintAndLogEx(WARNING, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -908,7 +910,7 @@ static void smart_brute_prim(void) {
 
     uint8_t *buf = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
     if (buf == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return;
     }
 
@@ -925,7 +927,7 @@ static void smart_brute_prim(void) {
 
         smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + 5);
         if (payload == NULL) {
-            PrintAndLogEx(FAILED, "failed to allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             free(buf);
             return;
         }
@@ -950,7 +952,7 @@ static int smart_brute_sfi(bool decodeTLV) {
 
     uint8_t *buf = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
     if (buf == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return 1;
     }
 
@@ -976,7 +978,7 @@ static int smart_brute_sfi(bool decodeTLV) {
 
             smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) +  sizeof(READ_RECORD));
             if (payload == NULL) {
-                PrintAndLogEx(FAILED, "failed to allocate memory");
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
                 free(buf);
                 return 1;
             }
@@ -1026,7 +1028,7 @@ static void smart_brute_options(bool decodeTLV) {
 
     uint8_t *buf = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
     if (buf == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return;
     }
 
@@ -1035,7 +1037,7 @@ static void smart_brute_options(bool decodeTLV) {
 
     smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + sizeof(GET_PROCESSING_OPTIONS));
     if (payload == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(buf);
         return;
     }
@@ -1093,7 +1095,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
 
     uint8_t *buf = calloc(PM3_CMD_DATA_SIZE, sizeof(uint8_t));
     if (buf == NULL) {
-        PrintAndLogEx(WARNING, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -1137,7 +1139,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
         size_t aidlen = strlen(aid);
         caid = calloc(8 + 2 + aidlen + 1, sizeof(uint8_t));
         if (caid == NULL) {
-            PrintAndLogEx(FAILED, "failed to allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             json_decref(root);
             free(buf);
             return PM3_EMALLOC;
@@ -1152,7 +1154,7 @@ static int CmdSmartBruteforceSFI(const char *Cmd) {
 
         smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + hexlen);
         if (payload == NULL) {
-            PrintAndLogEx(FAILED, "failed to allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             json_decref(root);
             free(buf);
             return PM3_EMALLOC;
@@ -1508,7 +1510,7 @@ int ExchangeAPDUSC(bool verbose, uint8_t *datain, int datainlen, bool activateCa
 
     smart_card_raw_t *payload = calloc(1, sizeof(smart_card_raw_t) + datainlen);
     if (payload == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     payload->flags = (SC_RAW_T0 | SC_LOG);

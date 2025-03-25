@@ -1132,7 +1132,9 @@ bool WaitForResponse(uint32_t cmd, PacketResponseNG *response) {
 */
 bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, uint8_t *data, uint32_t datalen, PacketResponseNG *response, size_t ms_timeout, bool show_warning) {
 
-    if (dest == NULL) return false;
+    if (dest == NULL) {
+        return false;
+    }
 
     // init to ZERO
     PacketResponseNG resp;

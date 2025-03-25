@@ -85,6 +85,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
     size_t pathlen = strlen(user_path) + strlen(PM3_USER_DIRECTORY) + 1;
     char *path = calloc(pathlen, sizeof(char));
     if (path == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -120,6 +121,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
         pathlen += strlen(subdir);
         char *tmp = realloc(path, pathlen * sizeof(char));
         if (tmp == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             free(path);
             return PM3_EMALLOC;
         }
@@ -157,6 +159,7 @@ int searchHomeFilePath(char **foundpath, const char *subdir, const char *filenam
     pathlen += strlen(filename);
     char *tmp = realloc(path, pathlen * sizeof(char));
     if (tmp == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(path);
         return PM3_EMALLOC;
     }
@@ -180,7 +183,7 @@ static void fill_grabber(const char *string) {
         char *tmp = realloc(g_grabbed_output.ptr, g_grabbed_output.size + MAX_PRINT_BUFFER);
         if (tmp == NULL) {
             // We leave current g_grabbed_output untouched
-            PrintAndLogEx(ERR, "Out of memory error in fill_grabber()");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return;
         }
         g_grabbed_output.ptr = tmp;
@@ -716,7 +719,7 @@ void print_progress(uint64_t count, uint64_t max, barMode_t style) {
     // +1 for \0
     char *bar = (char *)calloc(unit * width + 1, sizeof(uint8_t));
     if (bar == NULL) {
-        fprintf(stderr, "Memory allocation failed for progress bar\n");
+        fprintf(stderr, "Failed to allocate memory\n");
         return;
     }
 
@@ -744,7 +747,7 @@ void print_progress(uint64_t count, uint64_t max, barMode_t style) {
     size_t collen = strlen(bar) + 40;
     char *cbar = (char *)calloc(collen, sizeof(uint8_t));
     if (cbar == NULL) {
-        fprintf(stderr, "Memory allocation failed for color buffer\n");
+        fprintf(stderr, "Failed to allocate memory\n");
         free(bar);
         return;
     }

@@ -554,6 +554,7 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
 
     uint8_t *buf  = calloc(DESFIRE_BUFFER_SIZE, 1);
     if (buf == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -680,6 +681,7 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
     uint16_t sw = 0;
     uint8_t *buf = calloc(DESFIRE_BUFFER_SIZE, 1);
     if (buf == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -802,6 +804,7 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
 static int DesfireExchangeISO(bool activate_field, DesfireContext_t *ctx, sAPDU_t apdu, uint16_t le, uint8_t *resp, size_t *resplen, uint16_t *sw) {
     uint8_t *data  = calloc(DESFIRE_BUFFER_SIZE, 1);
     if (data == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -861,6 +864,7 @@ int DesfireExchangeEx(bool activate_field, DesfireContext_t *ctx, uint8_t cmd, u
 
     uint8_t *databuf = calloc(DESFIRE_BUFFER_SIZE, 1);
     if (databuf == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -908,6 +912,7 @@ int DesfireExchange(DesfireContext_t *ctx, uint8_t cmd, uint8_t *data, size_t da
 
 int DesfireSelectAID(DesfireContext_t *ctx, uint8_t *aid1, uint8_t *aid2) {
     if (aid1 == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EINVARG;
     }
 
@@ -1958,6 +1963,7 @@ static int DesfireCommandEx(DesfireContext_t *dctx, uint8_t cmd, uint8_t *data, 
 
     uint8_t *xresp  = calloc(DESFIRE_BUFFER_SIZE, 1);
     if (xresp == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 

@@ -307,7 +307,7 @@ static const char *getUlev1CardSizeStr(uint8_t fsize) {
 
 int ul_read_uid(uint8_t *uid) {
     if (uid == NULL) {
-        PrintAndLogEx(WARNING, "NUll parameter UID");
+        PrintAndLogEx(WARNING, "UID is NULL");
         return PM3_ESOFT;
     }
     // read uid from tag
@@ -1573,7 +1573,7 @@ static char *mfu_generate_filename(const char *prefix, const char *suffix) {
 
     char *fptr = calloc(sizeof(char) * (strlen(prefix) + strlen(suffix)) + sizeof(card.uid) * 2 + 1,  sizeof(uint8_t));
     if (fptr == NULL) {
-        PrintAndLogEx(FAILED, "Memory allocation failed");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return NULL;
     }
     strcpy(fptr, prefix);
@@ -1596,7 +1596,7 @@ static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len) {
 
     *pdata = calloc(maxbytes, sizeof(uint8_t));
     if (*pdata == NULL) {
-        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         res = PM3_EMALLOC;
         goto out;
     }
@@ -1867,7 +1867,7 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, const uint8_t *aut
     maxbytes = ((maxbytes / MFU_BLOCK_SIZE) + 1) * MFU_BLOCK_SIZE;
     data = calloc(maxbytes, sizeof(uint8_t));
     if (data == NULL) {
-        PrintAndLogEx(ERR, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         res = PM3_EMALLOC;
         goto out;
     }
@@ -5304,7 +5304,7 @@ static int GetMfuDumpFromEMul(mfu_dump_t **buf) {
 
     mfu_dump_t *dump = calloc(1, sizeof(mfu_dump_t));
     if (dump == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 

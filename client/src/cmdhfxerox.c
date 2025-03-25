@@ -635,7 +635,7 @@ static int read_xerox_block(iso14b_card_select_t *card, uint8_t blockno, uint8_t
     uint8_t approx_len = (2 + card->uidlen + 1);
     iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + approx_len);
     if (packet == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 

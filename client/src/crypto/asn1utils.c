@@ -36,6 +36,7 @@ int ecdsa_asn1_get_signature(uint8_t *signature, size_t signaturelen, uint8_t *r
 
     uint8_t *p = calloc(sizeof(uint8_t), signaturelen);
     if (p == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -253,6 +254,7 @@ int asn1_selftest(void) {
 
         uint8_t *d = calloc(n, sizeof(uint8_t));
         if (d == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
         int len = 0;
