@@ -149,10 +149,24 @@ typedef struct {
 } ntag424_full_version_information_t;
 
 
-static void ntag424_print_version_information(ntag424_version_information_t *version) {
+static void ntag424_print_version_information(ntag424_version_information_t *version, bool is_hw) {
     PrintAndLogEx(INFO, "   vendor id: " _GREEN_("%02X"), version->vendor_id);
     PrintAndLogEx(INFO, "        type: " _GREEN_("%02X"), version->type);
-    PrintAndLogEx(INFO, "    sub type: " _GREEN_("%02X"), version->sub_type);
+    if (is_hw) {
+        const char *capacitance = "unknown";
+        switch (version->sub_type & 0xf) {
+            case 2: capacitance = "50pF";
+            case 8: capacitance = "50pF + Tag Tamper";
+        }
+        const char *modulation = "unknown";
+        switch ((version->sub_type >> 4) & 0xf) {
+            case 0: modulation = "strong";
+            case 8: modulation = "standard";
+        }
+        PrintAndLogEx(INFO, "    sub type: " _GREEN_("%02X (capacitance: %s, modulation: %s)"), version->sub_type, capacitance, modulation);
+    } else {
+        PrintAndLogEx(INFO, "    sub type: " _GREEN_("%02X"), version->sub_type);
+    }
     PrintAndLogEx(INFO, "     version: " _GREEN_("%d.%d"), version->major_version, version->minor_version);
     PrintAndLogEx(INFO, "storage size: " _GREEN_("%02X"), version->storage_size);
     PrintAndLogEx(INFO, "    protocol: " _GREEN_("%02X"), version->protocol);
@@ -168,10 +182,10 @@ static void ntag424_print_production_information(ntag424_production_information_
 
 static void ntag424_print_full_version_information(ntag424_full_version_information_t *version) {
     PrintAndLogEx(INFO, "--- " _CYAN_("Hardware version information:"));
-    ntag424_print_version_information(&version->hardware);
+    ntag424_print_version_information(&version->hardware, true);
 
     PrintAndLogEx(INFO, "--- " _CYAN_("Software version information:"));
-    ntag424_print_version_information(&version->software);
+    ntag424_print_version_information(&version->software, false);
 
     PrintAndLogEx(INFO, "--- " _CYAN_("Production information:"));
     ntag424_print_production_information(&version->production);
