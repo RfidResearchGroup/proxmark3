@@ -569,7 +569,7 @@ static const char *get_st_lock_info(uint8_t model, const uint8_t *lockbytes, uin
                 default:
                     return ST_LOCK_INFO_EMPTY;
             }
-            if ((lockbytes[1] & mask) == 0) {
+            if ((lockbytes[3] & mask) == 0) {
                 return _RED_("1");
             }
             return ST_LOCK_INFO_EMPTY;
@@ -578,7 +578,7 @@ static const char *get_st_lock_info(uint8_t model, const uint8_t *lockbytes, uin
         case 0x6:   // SRI512
         case 0xC: { // SRT512
             //need data[2] and data[3]
-            uint8_t b = 1;
+            uint8_t b = 2;
             switch (blk) {
                 case 0:
                     mask = 0x01;
@@ -606,35 +606,35 @@ static const char *get_st_lock_info(uint8_t model, const uint8_t *lockbytes, uin
                     break;
                 case 8:
                     mask = 0x01;
-                    b = 0;
+                    b = 3;
                     break;
                 case 9:
                     mask = 0x02;
-                    b = 0;
+                    b = 3;
                     break;
                 case 10:
                     mask = 0x04;
-                    b = 0;
+                    b = 3;
                     break;
                 case 11:
                     mask = 0x08;
-                    b = 0;
+                    b = 3;
                     break;
                 case 12:
                     mask = 0x10;
-                    b = 0;
+                    b = 3;
                     break;
                 case 13:
                     mask = 0x20;
-                    b = 0;
+                    b = 3;
                     break;
                 case 14:
                     mask = 0x40;
-                    b = 0;
+                    b = 3;
                     break;
                 case 15:
                     mask = 0x80;
-                    b = 0;
+                    b = 3;
                     break;
             }
             if ((lockbytes[b] & mask) == 0) {
@@ -679,7 +679,7 @@ static const char *get_st_lock_info(uint8_t model, const uint8_t *lockbytes, uin
                     break;
             }
             // iceman:  this is opposite!  need sample to test with.
-            if ((lockbytes[0] & mask)) {
+            if ((lockbytes[2] & mask)) {
                 return _RED_("1");
             }
             return ST_LOCK_INFO_EMPTY;
