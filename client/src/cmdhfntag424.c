@@ -152,22 +152,34 @@ typedef struct {
 static void ntag424_print_version_information(ntag424_version_information_t *version, bool is_hw) {
     PrintAndLogEx(INFO, "   vendor id: " _GREEN_("%02X"), version->vendor_id);
     PrintAndLogEx(INFO, "        type: " _GREEN_("%02X"), version->type);
+
     if (is_hw) {
+
         const char *capacitance = "unknown";
         switch (version->sub_type & 0xf) {
-            case 2:
+            case 2: {
                 capacitance = "50pF";
-            case 8:
+                break;
+            }
+            case 8: {
                 capacitance = "50pF + Tag Tamper";
+                break;
+            }
         }
+
         const char *modulation = "unknown";
         switch ((version->sub_type >> 4) & 0xf) {
-            case 0:
+            case 0: {
                 modulation = "strong";
-            case 8:
+                break;
+            }
+            case 8: {
                 modulation = "standard";
+                break;
+            }
         }
         PrintAndLogEx(INFO, "    sub type: " _GREEN_("%02X (capacitance: %s, modulation: %s)"), version->sub_type, capacitance, modulation);
+
     } else {
         PrintAndLogEx(INFO, "    sub type: " _GREEN_("%02X"), version->sub_type);
     }
