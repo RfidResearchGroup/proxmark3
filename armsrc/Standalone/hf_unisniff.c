@@ -201,7 +201,7 @@ void RunMod(void) {
     // available after filling the trace buffer.
     char *filename = (char *)BigBuf_calloc(64);
     if (filename == NULL) {
-        Dbprintf("failed to allocate memory");
+        Dbprintf("Failed to allocate memory");
         return;
     }
     // Read the config file.  Size is limited to defined value so as not to consume

@@ -1664,9 +1664,9 @@ void iClass_Dump(uint8_t *msg) {
     iclass_auth_req_t *req = &cmd->req;
     bool shallow_mod = req->shallow_mod;
 
-    uint8_t *dataout = BigBuf_malloc(ICLASS_16KS_SIZE);
+    uint8_t *dataout = BigBuf_calloc(ICLASS_16KS_SIZE);
     if (dataout == NULL) {
-        DbpString("fail to allocate memory");
+        DbpString("Failed to allocate memory");
         if (req->send_reply) {
             reply_ng(CMD_HF_ICLASS_DUMP, PM3_EMALLOC, NULL, 0);
         }

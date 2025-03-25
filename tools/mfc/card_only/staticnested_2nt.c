@@ -201,6 +201,7 @@ int main(int argc, char *const argv[]) {
     printf("Init...\n");
     NtpKs1 *pNK = calloc(2, sizeof(NtpKs1));
     if (pNK == NULL) {
+        printf("Failed to allocate memory\n");
         goto error;
     }
 

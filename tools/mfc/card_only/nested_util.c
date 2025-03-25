@@ -57,7 +57,7 @@ static countKeys *uniqsort(uint64_t *possibleKeys, uint32_t size) {
 
     our_counts = calloc(size, sizeof(countKeys));
     if (our_counts == NULL) {
-        printf("Memory allocation error for our_counts");
+        printf("Failed to allocate memory");
         exit(EXIT_FAILURE);
     }
 
@@ -113,7 +113,7 @@ static void *nested_revover(void *args) {
                 // printf("New chunk by %d, sizeof %lu\n", kcount, rp->keyCount * sizeof(uint64_t));
                 void *tmp = realloc(rp->keys, rp->keyCount * sizeof(uint64_t));
                 if (tmp == NULL) {
-                    printf("Memory allocation error for pk->possibleKeys");
+                    printf("Failed to allocate memory\n");
                     rp->keyCount = 0;
                     is_ok = false;
                     break;
@@ -136,7 +136,7 @@ static void *nested_revover(void *args) {
             rp->keyCount = kcount;
             void *tmp = (uint64_t *)realloc(rp->keys, rp->keyCount * sizeof(uint64_t));
             if (tmp == NULL) {
-                printf("Memory allocation error for pk->possibleKeys");
+                printf("Failed to allocate memory\n");
                 rp->keyCount = 0;
                 free(rp->keys);
             } else {
@@ -198,14 +198,14 @@ uint64_t *nested(NtpKs1 *pNK, uint32_t sizePNK, uint32_t authuid, uint32_t *keyC
     free(threads);
 
     if (*keyCount == 0) {
-        printf("Didn't recover any keys.\r\n");
+        printf("Didn't recover any keys\r\n");
         free(pRPs);
         return NULL;
     }
 
     keys = calloc((*keyCount) * sizeof(uint64_t), sizeof(uint8_t));
     if (keys == NULL) {
-        printf("Cannot allocate memory to merge keys.\r\n");
+        printf("Failed to allocate memory\r\n");
         free(pRPs);
         return NULL;
     }
@@ -231,7 +231,7 @@ uint64_t *nested(NtpKs1 *pNK, uint32_t sizePNK, uint32_t authuid, uint32_t *keyC
     *keyCount = 0;
 
     if (ck == NULL) {
-        printf("Cannot allocate memory for ck on uniqsort.");
+        printf("Failed to allocate memory\n");
         free(ck);
         free(pRPs);
         return NULL;
@@ -242,9 +242,10 @@ uint64_t *nested(NtpKs1 *pNK, uint32_t sizePNK, uint32_t authuid, uint32_t *keyC
         // This key can be found here two or more times
         if (ck[i].count > 0) {
             *keyCount += 1;
+
             void *tmp = realloc(keys, sizeof(uint64_t) * (*keyCount));
             if (tmp == NULL) {
-                printf("Cannot allocate memory for keys on merge.");
+                printf("Failed to allocate memory\n");
                 free(ck);
                 free(keys);
                 free(pRPs);

@@ -39,7 +39,7 @@ const char *getAtrInfo(const char *atr_str) {
 
             char *tmp_atr = calloc(slen, sizeof(uint8_t));
             if (tmp_atr == NULL) {
-                PrintAndLogEx(FAILED, "failed to allocate memory");
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
                 return NULL;
             }
 

@@ -103,8 +103,9 @@ static int CmdHFCryptoRFSniff(const char *Cmd) {
 
 static bool get_14b_UID(iso14b_card_select_t *card) {
 
-    if (card == NULL)
+    if (card == NULL) {
         return false;
+    }
 
     int8_t retry = 3;
     while (retry--) {
@@ -311,7 +312,7 @@ static int CmdHFCryptoRFDump(const char *Cmd) {
     // select tag
     iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + 2);
     if (packet == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     packet->flags = (ISO14B_CONNECT | ISO14B_SELECT_SR);
@@ -445,7 +446,7 @@ static int CmdHFCryptoRFELoad(const char *Cmd) {
     // set up buffer
     uint8_t *data = calloc(datalen, sizeof(uint8_t));
     if (data == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -505,7 +506,7 @@ static int CmdHFCryptoRFESave(const char *Cmd) {
     // set up buffer
     uint8_t *data = calloc(numofbytes, sizeof(uint8_t));
     if (data == NULL) {
-        PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 

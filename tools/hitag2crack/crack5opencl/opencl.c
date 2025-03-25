@@ -113,7 +113,7 @@ int discoverDevices(unsigned int profile_selected, uint32_t device_types_selecte
     // allocate memory to hold info about platforms/devices
     *cd_ctx = (compute_platform_ctx_t *) calloc(ocl_platform_cnt, sizeof(compute_platform_ctx_t));
     if (*cd_ctx == NULL) {
-        printf("Error: calloc (compute_platform_ctx_t) failed (%d): %s\n", errno, strerror(errno));
+        printf("Failed to allocate memory\n");
         free(ocl_platforms);
         return -5;
     }

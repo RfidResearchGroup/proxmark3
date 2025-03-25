@@ -51,7 +51,7 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
 
     uint8_t *fpga_config = calloc(num_infiles * FPGA_CONFIG_SIZE, sizeof(uint8_t));
     if (fpga_config == NULL) {
-        fprintf(stderr, "failed to allocate memory");
+        fprintf(stderr, "Failed to allocate memory\n");
         return (EXIT_FAILURE);
     }
 
@@ -94,14 +94,14 @@ static int zlib_compress(FILE *infile[], uint8_t num_infiles, FILE *outfile) {
 
     char *outbuf = calloc(outsize_max, sizeof(char));
     if (outbuf == NULL) {
-        fprintf(stderr, "failed to allocate memory");
+        fprintf(stderr, "Failed to allocate memory\n");
         free(fpga_config);
         return (EXIT_FAILURE);
     }
 
     char *ring_buffer = calloc(buffer_size, sizeof(char));
     if (ring_buffer == NULL) {
-        fprintf(stderr, "failed to allocate memory");
+        fprintf(stderr, "Failed to allocate memory\n");
         free(outbuf);
         free(fpga_config);
         return (EXIT_FAILURE);
@@ -470,7 +470,7 @@ int main(int argc, char **argv) {
         FILE **outfiles = calloc(num_output_files, sizeof(FILE *));
         char **outfile_names = calloc(num_output_files, sizeof(char *));
         if (outfiles == NULL || outfile_names == NULL) {
-            fprintf(stderr, "Error. Cannot allocate memory for output files\n\n");
+            fprintf(stderr, "Failed to allocate memory\n\n");
             free(outfiles);
             free(outfile_names);
             return (EXIT_FAILURE);
@@ -533,7 +533,7 @@ int main(int argc, char **argv) {
         FILE **infiles = calloc(num_input_files, sizeof(FILE *));
         char **infile_names = calloc(num_input_files, sizeof(char *));
         if (infiles == NULL || infile_names == NULL) {
-            fprintf(stderr, "Error. Cannot allocate memory for input files\n\n");
+            fprintf(stderr, "Failed to allocate memory\n\n");
             free(infile_names);
             free(infiles);
             return (EXIT_FAILURE);

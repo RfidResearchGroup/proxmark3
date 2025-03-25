@@ -2129,7 +2129,7 @@ void SimTagIso15693(const uint8_t *uid, uint8_t block_size) {
 
     iso15_tag_t *tag = (iso15_tag_t *) BigBuf_get_EM_addr();
     if (tag == NULL) {
-        Dbprintf("Can't allocate emulator memory");
+        if (g_dbglevel >= DBG_DEBUG) Dbprintf("Failed to allocate memory");
         reply_ng(CMD_HF_ISO15693_SIMULATE, PM3_EFAILED, NULL, 0);
         return;
     }

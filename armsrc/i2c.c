@@ -783,7 +783,6 @@ bool GetATR(smart_card_atr_t *card_ptr, bool verbose) {
         return false;
     }
 
-
     card_ptr->atr_len = 0;
     memset(card_ptr->atr, 0, sizeof(card_ptr->atr));
 

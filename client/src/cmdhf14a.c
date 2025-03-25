@@ -279,8 +279,9 @@ static int CmdHF14AList(const char *Cmd) {
 int hf14a_getconfig(hf14a_config *config) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
-    if (config == NULL)
+    if (config == NULL) {
         return PM3_EINVARG;
+    }
 
     clearCommandBuffer();
 
@@ -3254,9 +3255,10 @@ int CmdHF14ANdefRead(const char *Cmd) {
 
     uint16_t ndef_size = (response[0] << 8) + response[1];
     uint16_t offset = 2;
+
     uint8_t *ndef_file = calloc(ndef_size, sizeof(uint8_t));
     if (ndef_file == NULL) {
-        PrintAndLogEx(ERR, "Out of memory error in CmdHF14ANdef(). Aborting...\n");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         DropField();
         return PM3_EMALLOC;
     }

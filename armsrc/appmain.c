@@ -2696,7 +2696,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             uint8_t *buff = BigBuf_malloc(size);
             if (buff == NULL) {
-                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Could not allocate buffer");
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Failed to allocate memory");
                 // Trigger a finish downloading signal with an PM3_EMALLOC
                 reply_ng(CMD_SPIFFS_DOWNLOAD, PM3_EMALLOC, NULL, 0);
             } else {
@@ -2826,6 +2826,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             uint8_t *em = BigBuf_get_EM_addr();
             if (em == NULL) {
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Failed to allocate memory");
                 reply_ng(CMD_SPIFFS_ELOAD, PM3_EMALLOC, NULL, 0);
                 LED_B_OFF();
                 break;

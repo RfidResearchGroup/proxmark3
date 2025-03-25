@@ -739,8 +739,9 @@ void doCotagAcquisition(void) {
 
 uint16_t doCotagAcquisitionManchester(uint8_t *dest, uint16_t destlen) {
 
-    if (dest == NULL)
+    if (dest == NULL) {
         return 0;
+    }
 
     dest[0] = 0;
 

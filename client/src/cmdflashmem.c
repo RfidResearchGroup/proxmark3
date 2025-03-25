@@ -311,6 +311,7 @@ static int CmdFlashMemLoad(const char *Cmd) {
     // ICEMAN: not needed when we transite to loadxxxx_safe methods
     uint8_t *newdata = realloc(data, datalen);
     if (newdata == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(data);
         return PM3_EMALLOC;
     } else {
@@ -413,13 +414,13 @@ static int CmdFlashMemDump(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint8_t *dump = calloc(len, sizeof(uint8_t));
-    if (!dump) {
-        PrintAndLogEx(ERR, "error, cannot allocate memory ");
+    if (dump == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
     PrintAndLogEx(INFO, "downloading "_YELLOW_("%u")" bytes from flash memory", len);
-    if (!GetFromDevice(FLASH_MEM, dump, len, offset, NULL, 0, NULL, -1, true)) {
+    if (GetFromDevice(FLASH_MEM, dump, len, offset, NULL, 0, NULL, -1, true) == false) {
         PrintAndLogEx(FAILED, "ERROR; downloading from flash memory");
         free(dump);
         return PM3_EFLASH;
@@ -566,7 +567,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
 
         mbedtls_rsa_context *rsa = (mbedtls_rsa_context *)pkctx.pk_ctx;
         if (rsa == NULL) {
-            PrintAndLogEx(FAILED, "failed to allocate rsa context memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
         got_private = true;
@@ -620,7 +621,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
 
         rsa = (mbedtls_rsa_context *)calloc(1, sizeof(mbedtls_rsa_context));
         if (rsa == NULL) {
-            PrintAndLogEx(FAILED, "failed to allocate rsa context memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
         mbedtls_rsa_init(rsa, MBEDTLS_RSA_PKCS_V15, 0);

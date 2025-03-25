@@ -197,8 +197,8 @@ static void *crack(void *d) {
 
     // create space for tables
     Tk = (struct Tklower *)calloc(sizeof(struct Tklower) * 0x40000, sizeof(uint8_t));
-    if (!Tk) {
-        printf("Failed to allocate memory (Tk)\n");
+    if (Tk == NULL) {
+        printf("Failed to allocate memory\n");
         exit(1);
     }
 

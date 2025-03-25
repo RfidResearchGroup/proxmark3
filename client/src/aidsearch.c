@@ -84,16 +84,19 @@ static const char *jsonStrGet(json_t *data, const char *name) {
     json_t *jstr;
 
     jstr = json_object_get(data, name);
-    if (jstr == NULL)
+    if (jstr == NULL) {
         return NULL;
+    }
+
     if (!json_is_string(jstr)) {
         PrintAndLogEx(ERR, "`%s` is not a string", name);
         return NULL;
     }
 
     const char *cstr = json_string_value(jstr);
-    if (strlen(cstr) == 0)
+    if (strlen(cstr) == 0) {
         return NULL;
+    }
     return cstr;
 }
 
@@ -125,17 +128,20 @@ int PrintAIDDescription(json_t *xroot, char *aid, bool verbose) {
     int retval = PM3_SUCCESS;
 
     json_t *root = xroot;
-    if (root == NULL)
+    if (root == NULL) {
         root = AIDSearchInit(verbose);
-    if (root == NULL)
+    }
+    if (root == NULL) {
         goto out;
+    }
 
     json_t *elm = NULL;
     size_t maxaidlen = 0;
     for (size_t elmindx = 0; elmindx < json_array_size(root); elmindx++) {
         json_t *data = AIDSearchGetElm(root, elmindx);
-        if (data == NULL)
+        if (data == NULL) {
             continue;
+        }
         const char *dictaid = jsonStrGet(data, "AID");
         if (aidCompare(aid, dictaid)) {  // dictaid may be less length than requested aid
             if (maxaidlen < strlen(dictaid) && strlen(dictaid) <= strlen(aid)) {
@@ -145,8 +151,9 @@ int PrintAIDDescription(json_t *xroot, char *aid, bool verbose) {
         }
     }
 
-    if (elm == NULL)
+    if (elm == NULL) {
         goto out;
+    }
 
     // print here
     const char *vaid = jsonStrGet(elm, "AID");
@@ -175,8 +182,9 @@ int PrintAIDDescription(json_t *xroot, char *aid, bool verbose) {
     }
 
 out:
-    if (xroot == NULL)
+    if (xroot == NULL) {
         AIDSearchFree(root);
+    }
     return retval;
 }
 

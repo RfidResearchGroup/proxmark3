@@ -908,6 +908,7 @@ static int CmdAnalyseDemodBuffer(const char *Cmd) {
     // add 1 for null terminator.
     uint8_t *data = calloc(len + 1,  sizeof(uint8_t));
     if (data == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         CLIParserFree(ctx);
         return PM3_EMALLOC;
     }

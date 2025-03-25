@@ -392,13 +392,13 @@ uint8_t *get_uid_from_filename(const char *filename) {
     memset(uid, 0, 8);
 
     if (strlen(filename) < 23) {
-        PrintAndLogEx(ERR, "can't get uid from filename '%s'. Expected format is hf-14b-<uid>...", filename);
+        PrintAndLogEx(ERR, "can't get uid from filename `" _YELLOW_("%s") "` expected format is hf-14b-<uid>...", filename);
         return uid;
     }
 
     char *found = strstr(filename, "hf-14b-");
     if (found == NULL) {
-        PrintAndLogEx(ERR, "can't get uid from filename '%s'. Expected format is hf-14b-<uid>...", filename);
+        PrintAndLogEx(ERR, "can't get uid from filename `" _YELLOW_("%s") "` expected format is hf-14b-<uid>...", filename);
         return uid;
     }
 
@@ -1045,7 +1045,7 @@ static int CmdHF14BRaw(const char *Cmd) {
 
     iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + datalen);
     if (packet == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -1250,7 +1250,7 @@ static int write_sr_block(uint8_t blockno, uint8_t datalen, uint8_t *data) {
     uint8_t psize = sizeof(iso14b_raw_cmd_t) + datalen + 2;
     iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, psize);
     if (packet == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -1433,7 +1433,7 @@ bool HF14B_picopass_reader(bool verbose, bool info) {
 
             picopass_hdr_t *card = calloc(1, sizeof(picopass_hdr_t));
             if (card == NULL) {
-                PrintAndLogEx(FAILED, "failed to allocate memory");
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
                 return false;
             }
             memcpy(card, resp.data.asBytes, sizeof(picopass_hdr_t));
@@ -1465,7 +1465,7 @@ static bool HF14B_other_reader(bool verbose) {
 
     iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + 4);
     if (packet == NULL) {
-        PrintAndLogEx(FAILED, "failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return false;
     }
     packet->flags = (ISO14B_CONNECT | ISO14B_SELECT_STD | ISO14B_RAW | ISO14B_APPEND_CRC);
@@ -1795,7 +1795,7 @@ static int CmdHF14BDump(const char *Cmd) {
 
         iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + 2);
         if (packet == NULL) {
-            PrintAndLogEx(FAILED, "failed to allocate memory");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             return PM3_EMALLOC;
         }
         packet->flags = (ISO14B_CONNECT | ISO14B_SELECT_SR);
@@ -2235,7 +2235,7 @@ static int handle_14b_apdu(bool chainingin, uint8_t *datain, int datainlen,
 
     iso14b_raw_cmd_t *packet = (iso14b_raw_cmd_t *)calloc(1, sizeof(iso14b_raw_cmd_t) + datainlen);
     if (packet == NULL) {
-        PrintAndLogEx(FAILED, "APDU: failed to allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
     packet->flags = (ISO14B_APDU);

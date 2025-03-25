@@ -167,9 +167,10 @@ int CmdSmartRaw(const uint8_t prepend, const uint8_t *data, int dlen, uint8_t *o
 
     smart_card_raw_t *payload = (smart_card_raw_t *)BigBuf_calloc(sizeof(smart_card_raw_t) + dlen);
     if (payload == NULL) {
-        Dbprintf("failed to allocate memory");
+        Dbprintf("Failed to allocate memory");
         return PM3_EMALLOC;
     }
+
     payload->len = dlen;
     memcpy(payload->data, data, dlen);
 

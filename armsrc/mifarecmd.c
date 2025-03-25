@@ -398,9 +398,9 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
     bool useKey = (arg2 == 1); // UL_C
     bool usePwd = (arg2 == 2); // UL_EV1/NTAG
     uint32_t countblocks = 0;
-    uint8_t *dataout = BigBuf_malloc(CARD_MEMORY_SIZE);
+    uint8_t *dataout = BigBuf_calloc(CARD_MEMORY_SIZE);
     if (dataout == NULL) {
-        Dbprintf("out of memory");
+        Dbprintf("Failed to allocate memory");
         OnError(1);
         return;
     }

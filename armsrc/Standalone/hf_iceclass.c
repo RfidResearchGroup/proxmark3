@@ -252,7 +252,7 @@ static int reader_attack_mode(void) {
 
         uint8_t *dump = BigBuf_malloc(dumplen);
         if (dump == false) {
-            Dbprintf("failed to allocate memory");
+            Dbprintf("Failed to allocate memory");
             return PM3_EMALLOC;
         }
 

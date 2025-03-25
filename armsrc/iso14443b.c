@@ -1336,6 +1336,7 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
     // The DMA buffer, used to stream samples from the FPGA
     dmabuf16_t *dma = get_dma16();
     if (dma == NULL) {
+        if (g_dbglevel >= DBG_DEBUG) Dbprintf("Failed to allocate memory");
         return PM3_EMALLOC;
     }
 

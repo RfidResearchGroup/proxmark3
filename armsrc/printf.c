@@ -104,11 +104,13 @@ kvsprintf(char const *fmt, void *arg, int radix, va_list ap) {
     num = 0;
     d = (char *) arg;
 
-    if (fmt == NULL)
+    if (fmt == NULL) {
         fmt = "(fmt null)\n";
+    }
 
-    if (radix < 2 || radix > 36)
+    if (radix < 2 || radix > 36) {
         radix = 10;
+    }
 
     for (;;) {
         padc = ' ';

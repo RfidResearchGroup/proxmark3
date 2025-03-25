@@ -47,7 +47,7 @@ int flashmem_spiffs_load(const char *destfn, const uint8_t *data, size_t datalen
 
         flashmem_write_t *payload = calloc(1, sizeof(flashmem_write_t) + bytes_in_packet);
         if (payload == NULL) {
-            PrintAndLogEx(ERR, "error, cannot allocate memory ");
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
             ret_val = PM3_EMALLOC;
             goto out;
         }
@@ -113,7 +113,7 @@ int flashmem_spiffs_download(char *fn, uint8_t fnlen, void **pdest, size_t *dest
 
     *pdest = calloc(len, sizeof(uint8_t));
     if (*pdest == false) {
-        PrintAndLogEx(ERR, "error, cannot allocate memory ");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -413,7 +413,7 @@ static int CmdFlashMemSpiFFSDump(const char *Cmd) {
     uint32_t len = resp.data.asDwords[0];
     uint8_t *dump = calloc(len, sizeof(uint8_t));
     if (dump == NULL) {
-        PrintAndLogEx(ERR, "error, cannot allocate memory ");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 

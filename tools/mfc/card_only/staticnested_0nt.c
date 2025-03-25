@@ -424,6 +424,7 @@ int main(int argc, char *const argv[]) {
         uint32_t nttest = prng_successor(1, 16); // a first valid nonce
         pNtData->pNK = (NtpKs1 *)calloc(8192, sizeof(NtpKs1)); // 2**16 filtered with 3 parity bits => 2**13
         if (pNtData->pNK == NULL) {
+            printf("Failed to allocate memory\n");
             return 1;
         }
 

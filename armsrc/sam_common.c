@@ -261,20 +261,17 @@ int sam_get_version(void) {
     } else {
         uint8_t *sam_response_an = sam_find_asn1_node(response + 5, 0x8a);
         if (sam_response_an == NULL) {
-            if (g_dbglevel >= DBG_ERROR)
-                DbpString("SAM get response failed");
+            if (g_dbglevel >= DBG_ERROR) DbpString("SAM get response failed");
             goto error;
         }
         uint8_t *sam_version_an = sam_find_asn1_node(sam_response_an, 0x80);
         if (sam_version_an == NULL) {
-            if (g_dbglevel >= DBG_ERROR)
-                DbpString("SAM get version failed");
+            if (g_dbglevel >= DBG_ERROR) DbpString("SAM get version failed");
             goto error;
         }
         uint8_t *sam_build_an = sam_find_asn1_node(sam_response_an, 0x81);
         if (sam_build_an == NULL) {
-            if (g_dbglevel >= DBG_ERROR)
-                DbpString("SAM get firmware ID failed");
+            if (g_dbglevel >= DBG_ERROR) DbpString("SAM get firmware ID failed");
             goto error;
         }
         if (g_dbglevel >= DBG_INFO) {

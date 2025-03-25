@@ -2407,7 +2407,10 @@ int EmSendCmdEx(uint8_t *resp, uint16_t respLen, bool collision) {
 }
 
 int EmSendPrecompiledCmd(tag_response_info_t *p_response) {
-    if (p_response == NULL) return 0;
+    if (p_response  == NULL) {
+        return 0;
+    }
+
     int ret = EmSendCmd14443aRaw(p_response->modulation, p_response->modulation_n);
     // do the tracing for the previous reader request and this tag answer:
     GetParity(p_response->response, p_response->response_n, parity_array);
@@ -4032,12 +4035,14 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
         return;
     }
+
     uint8_t *dynamic_modulation_buffer2 = BigBuf_calloc(DYNAMIC_MODULATION_BUFFER2_SIZE);
     if (dynamic_modulation_buffer2 == NULL) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
         return;
     }
+
     tag_response_info_t dynamic_response_info = {
         .response = dynamic_response_buffer2,
         .response_n = 0,
