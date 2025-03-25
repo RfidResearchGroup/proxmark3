@@ -124,12 +124,14 @@ typedef struct _ID48LIB_GRN {
 /// the frn and grn values and store in caller-provided
 /// output parameters.
 /// </summary>
+/// <param name="k">key in 96 bits</param>
+/// <param name="n">nonce in 56 bits</param>
 /// <remarks>
 /// Note: In C++, each parameter would be a reference (not pointer).
 /// </remarks>
 void id48lib_generator(
-    const ID48LIB_KEY *key_96bit,
-    const ID48LIB_NONCE *nonce_56bit,
+    const ID48LIB_KEY *k,
+    const ID48LIB_NONCE *n,
     ID48LIB_FRN *frn28_out,
     ID48LIB_GRN *grn20_out
 );
