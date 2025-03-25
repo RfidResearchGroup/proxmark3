@@ -1882,11 +1882,7 @@ int DesfireFillAppList(DesfireContext_t *dctx, PICCInfo_t *PICCInfo, AppListS ap
 
 void DesfirePrintPICCInfo(DesfireContext_t *dctx, PICCInfo_t *PICCInfo) {
     PrintAndLogEx(SUCCESS, "------------------------------------ " _CYAN_("PICC level") " -------------------------------------");
-    if (PICCInfo->freemem == 0xffffffff) {
-        PrintAndLogEx(SUCCESS, "# applications....... " _YELLOW_("%zu"), PICCInfo->appCount);
-    } else {
-        PrintAndLogEx(SUCCESS, "# applications....... " _YELLOW_("%zu"), PICCInfo->appCount);
-    }
+    PrintAndLogEx(SUCCESS, "# applications....... " _YELLOW_("%zu"), PICCInfo->appCount);
     PrintAndLogEx(SUCCESS, "");
 
     if (PICCInfo->authCmdCheck.checked) {
