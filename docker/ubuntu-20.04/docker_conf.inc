@@ -1,1 +1,0 @@
-DOCKER_IMAGE=pm3-ubuntu-20.04:1.0

@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:24.04
 
 ENV LANG=C
 ENV DEBIAN_FRONTEND=noninteractive
@@ -9,15 +9,15 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends git ca-certificates build-essential cmake pkg-config libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev liblz4-dev libbluetooth-dev libpython3-dev libssl-dev libgd-dev sudo && \
     apt-get clean
 
-RUN apt-get install -y python3-minimal && \
-    apt-get install -y python3-pip && \
-    apt-get clean && \
-    python3 -m pip install ansicolors sslcrypto
+RUN apt-get install -y --no-install-recommends python3-minimal python3-pip python3-venv && \
+    apt-get clean
 
 RUN apt-get install -y opencl-dev && \
     apt-get clean
 
-# Create rrg user
+# Create rrg user => there is already a ubuntu user = 1000 that we need to move away
+RUN usermod -u 999 ubuntu
+RUN groupmod -g 999 ubuntu
 RUN useradd -ms /bin/bash rrg
 RUN passwd -d rrg
 ARG UART_GID

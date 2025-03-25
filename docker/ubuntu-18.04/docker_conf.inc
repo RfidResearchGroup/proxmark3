@@ -1,1 +1,0 @@
-DOCKER_IMAGE=pm3-ubuntu-18.04:1.0

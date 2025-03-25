@@ -9,11 +9,10 @@ If all tests OK,  the script will finish with PASS.
 The script is to be run in proxmark root folder inside the docker env.
 
 ```
-docker/debian-11-bullseye/run_tests.sh;
-```
+docker/ubuntu-24.04/run_tests.sh;
+``` 
 
-Or if you want to run single test,
-
+Or if you want to run single test,  
 ```
 sudo apt update
 make clean; make -j
