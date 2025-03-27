@@ -82,7 +82,7 @@ Unfortantely not all readers will have iCLASS legacy enabled and your **downgrad
 
 For the next steps, you will need a `Proxmark3` or `Flipper Zero` device.
 
-## Verfiy reader has iCLASS legacy enabled
+## Verify reader has iCLASS legacy enabled
 ^[Top](#top)
 
 Present a standard keyed iCLASS legacy credential at the reader and see if it beeps.
