@@ -1343,7 +1343,7 @@ All commands are available before sealing.
 
 ^[Top](#top)
 
-That tag is a UID tag, built on USCUID chip. It doesn't sold separately, but could be found on marketplaces under the guise of a UID tag.
+That tag is a UID tag, built on USCUID chip. It is not sold separately, but could be found on marketplaces under the guise of a UID tag.
 
 ### Characteristics
 
@@ -1351,7 +1351,14 @@ That tag is a UID tag, built on USCUID chip. It doesn't sold separately, but cou
 
 * Default configuration block value: `7AFF0000000000000000000000000008`
 * Responds to magic wakeup `40(7)`, `43` commands
-* Does not have hidden blocks, and only acknowledges the seventh (block use of key B if it is readable), eighth (direct write toggle), and last (SAK) config bytes.
+* Does not have hidden blocks, and only acknowledges the following bytes marked with carats. As such, Gen 1a mode cannot be disabled. All acknowledged bytes follow the standard USCUID format.
+
+```
+7AFF0000000000000000000000000008
+            ^^                   >> Block use of Key B if readable by ACL
+              ^^                 >> CUID mode
+                              ^^ >> SAK***
+```
 
 ### Identify
 
@@ -1364,9 +1371,6 @@ hf mf info
 [+] Magic capabilities... Gen 4 GDM / USCUID ( ZUID Gen1 Magic Wakeup )
 
 ```
-
-Currently Proxmark3 doesn't identify it as a separate tag.
-Could be detected from the config block value.
 
 ### Parsed configuration
 
