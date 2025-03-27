@@ -1349,10 +1349,9 @@ That tag is a UID tag, built on USCUID chip. It doesn't sold separately, but cou
 
 ^[Top](#top)
 
-* Configuration block value: `7AFF0000000000000000000000000008`
-* No direct write to block 0
+* Default configuration block value: `7AFF0000000000000000000000000008`
 * Responds to magic wakeup `40(7)`, `43` commands
-* Acknowledge only the first (except wakeup command) and last config byte(s), so doesn't have the hidden block
+* Does not have hidden blocks, and only acknowledges the seventh (block use of key B if it is readable), eighth (direct write toggle), and last (SAK) config bytes.
 
 ### Identify
 
@@ -1362,7 +1361,7 @@ That tag is a UID tag, built on USCUID chip. It doesn't sold separately, but cou
 hf mf info
 ...
 [+] Magic capabilities... Gen 1a
-[+] Magic capabilities... Gen 4 GDM / USCUID ( Gen1 Magic Wakeup )
+[+] Magic capabilities... Gen 4 GDM / USCUID ( ZUID Gen1 Magic Wakeup )
 
 ```
 
