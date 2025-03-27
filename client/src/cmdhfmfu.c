@@ -1613,6 +1613,7 @@ static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len) {
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         free(*pdata);
+        *pdata = NULL;
         res = PM3_ETIMEOUT;
         goto out;
     }
@@ -1620,6 +1621,7 @@ static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len) {
     if (resp.oldarg[0] != 1) {
         PrintAndLogEx(WARNING, "Failed reading card");
         free(*pdata);
+        *pdata = NULL;
         res = PM3_ESOFT;
         goto out;
     }
@@ -1635,6 +1637,7 @@ static int mfu_dump_tag(uint16_t pages, void **pdata, uint16_t *len) {
     if (GetFromDevice(BIG_BUF, *pdata, buffer_size, startindex, NULL, 0, NULL, 2500, false) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         free(*pdata);
+        *pdata = NULL;
         res = PM3_ETIMEOUT;
         goto out;
     }
