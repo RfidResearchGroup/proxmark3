@@ -33,6 +33,7 @@
 #include "mifaresim.h"  // mifare1ksim
 #include "mifareutil.h"
 #include "proxmark3_arm.h"
+#include "spiffs.h"
 #include "standalone.h" // standalone definitions
 #include "string.h"
 #include "ticks.h"
@@ -534,7 +535,12 @@ void RunMod(void) {
                 SpinErr(LED_D, 50, 8);
                 partialEmulation = true;
             } else {
-                DbpString("[" _GREEN_("+") "] " _GREEN_("Emulator memory filled completely."));
+                DbpString("[" _GREEN_("+") "] " _GREEN_("Emulator memory filled completely. Start storing card in spiff memory."));
+                uint8_t *emCARD = BigBuf_get_EM_addr();
+                char dumpFileName[30] = {0};
+                sprintf(dumpFileName, DUMP_FILE, mattyrun_card.uid[0], mattyrun_card.uid[1], mattyrun_card.uid[2], mattyrun_card.uid[3]);
+                rdv40_spiffs_write(dumpFileName, emCARD, 1024, RDV40_SPIFFS_SAFETY_SAFE);
+                Dbprintf("[" _GREEN_("+") "] " _GREEN_("Stored card on %s"), dumpFileName);
             }
 
             state = STATE_EMULATE;
