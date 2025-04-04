@@ -46,12 +46,15 @@ Useful docs:
   * [MIFARE Ultralight EV1 DirectWrite](#mifare-ultralight-ev1-directwrite)
   * [MIFARE Ultralight C Gen1A](#mifare-ultralight-c-gen1a)
   * [MIFARE Ultralight C DirectWrite](#mifare-ultralight-c-directwrite)
-  * [UL series (RU)](#ul-series-ru)
+  * [MIFARE Ultralight USCUID-UL](#mifare-ultralight-uscuid-ul)
+    * [UL-2](#ul-2)
+      * [UL-2 (20 blocks)](#ul-2-20-blocks)
+      * [UL-2 (41 blocks)](#ul-2-41-blocks)
+      * [UL-2 (44 blocks)](#ul-2-44-blocks)
     * [UL-Y](#ul-y)
-    * [ULtra](#ultra)
+    * [Ultra](#ultra-ru)
     * [UL-5](#ul-5)
     * [UL, other chips](#ul-other-chips)
-  * [MIFARE Ultralight USCUID-UL](#mifare-ultralight-uscuid-ul)
 * [NTAG](#ntag)
   * [NTAG213 DirectWrite](#ntag213-directwrite)
   * [NTAG21x](#ntag21x)
@@ -2033,121 +2036,6 @@ Anticol shortcut (CL1/3000): fails
 script run hf_mfu_magicwrite -h
 ```
 
-## UL series (RU)
-
-^[Top](#top)
-
-Custom chips, manufactured by iKey LLC for cloning Ultralight tags used in Visit intercoms. That leads to the non-standard for Ultralight chips tag version.
-
-### UL-Y
-
-^[Top](#top)
-
-Ultralight magic, 16 pages. Recommended for Vizit RF3.1 with markings "3.1" or "4.1".
-Behavior: allows writes to page 0-2.
-
-#### Identify
-
-^[Top](#top)
-
-```
-hf mfu rdbl --force -b 16
-hf 14a raw -sct 250 60
-```
-
-If tag replies with
-`Cmd Error: 00`
-`00 00 00 00 00 00 00 00`
-then it is UL-Y.
-
-### ULtra
-
-^[Top](#top)
-
-Ultralight EV1 magic; 41 page. Recommended for Vizit RF3.1 with 41 page.
-Behavior: allows writes to page 0-2.
-
-#### Identify
-
-^[Top](#top)
-
-```
-hf mfu info
-...
-[=] TAG IC Signature: 0000000000000000000000000000000000000000000000000000000000000000
-[=] --- Tag Version
-[=]        Raw bytes: 00 34 21 01 01 00 0E 03
-[=]        Vendor ID: 34, Mikron JSC Russia
-[=]     Product type: 21, unknown
-```
-
-#### ULtra flavour 1
-
-^[Top](#top)
-
-Could be identified by indirect evidence before writing
-
-* Initial UID: `34 D7 08 11 AD D7 D0`
-* `hf mfu dump --ns`
-
-  ```
-  [=]   3/0x03 | CF 39 A1 C8 | 1 | .9..
-  [=]   4/0x04 | B6 69 26 0D | 1 | .i&.
-  [=]   5/0x05 | EC A1 73 C4 | 1 | ..s.
-  [=]   6/0x06 | 81 3D 29 B8 | 1 | .=).
-  [=]  16/0x10 | 6A F0 2D FF | 0 | j.-.
-  [=]  20/0x14 | 6A F0 2D FF | 0 | j.-.
-  [=]  24/0x18 | 6A F0 2D FF | 0 | j.-.
-  [=]  38/0x26 | 00 E2 00 00 | 0 | .... <- E2, Virtual Card Type Identifier is not default
-
-  ```
-
-#### ULtra flavour 2
-
-^[Top](#top)
-
-Could be identified by indirect evidence before writing
-
-* Initial UID: `04 15 4A 23 36 2F 81`
-* Values in pages `3, 4, 5, 6, 16, 20, 24, 38` are default for that tag flavour
-
-### UL-5
-
-^[Top](#top)
-
-Ultralight EV1 magic; 41 page. Recommended for Vizit RF3.1 with 41 page.
-Created as a response to filters that try to overwrite page 0 (as a detection for [ULtra](#mifare-ultra) tags).
-
-Behavior: similar to Ultra, but after editing page 0 become locked and tag becomes the original Mifare Ultralight EV1 (except the tag version, which remains specific).
-
-**WARNING!** When using UL-5 to clone, write UID pages in inverse (from 2 to 0) and do NOT make mistakes! This tag does not allow reversing one-way actions (OTP page, lock bits).
-
-#### Identify
-
-^[Top](#top)
-
-```
-hf mfu info
-...
-TAG IC Signature: 0000000000000000000000000000000000000000000000000000000000000000
-[=] --- Tag Version
-[=]        Raw bytes: 00 34 21 01 01 00 0E 03
-[=]        Vendor ID: 34, Mikron JSC Russia
-```
-
-After personalization it is not possible to identify UL-5.
-
-The manufacturer confirmed unpersonalized tags could be identified by first 3 bytes of UID:
-
-* `AA 55 39...`
-* `AA 55 C3...`
-
-### UL, other chips
-
-**TODO**
-
-UL-X, UL-Z - ?
-
 ## MIFARE Ultralight USCUID-UL
 
 ^[Top](#top)
@@ -2318,7 +2206,9 @@ No implemented commands at time of writing
 No implemented commands at time of writing
 
 ### Variations
+
 ^[Top](#top)
+
 | Factory configuration | Name |
 | --- | --- |
 | 850000A0 00000AC3 00040301 01000B03 | UL-11 |
@@ -2327,6 +2217,172 @@ No implemented commands at time of writing
 | 850085A0 00000AA5 00040402 01000F03 | NTAG213 |
 | 850000A0 00000A5A 00040402 01001103 | NTAG215 |
 | 850000A0 00000AAA 00040402 01001303 | NTAG216 |
+
+Variations of USCUID-UL, that were distributed in ex-USSR countries are known as UL-family.
+Different variarions were targeted for copying different original tags + for bypassing of different filters.
+
+## UL-2
+
+^[Top](#top)
+
+Sold on Russian market in variations with 20, 41 and 44 blocks.
+All variations support direct write to block 0-2.
+
+### UL-2 (20 blocks)
+
+#### Characteristics
+
+^[Top](#top)
+
+* Configuration block value: `850000A000000AC30034210101000B03`.
+* EV1 Version: `0034210101000B03`.
+
+#### Identify
+
+^[Top](#top)
+
+```
+[usb] pm3 --> hf 14a info
+...
+[+] ATS: 85 00 00 A0 00 00 0A C3 00 34 21 01 01 00 0B 03 [ 84 00 ]
+```
+
+### UL-2 (41 blocks)
+
+Default configuration for USCUID-UL with 41 blocks. Can be found in China by names UL-21 or Ultra (targeting Russian market).
+
+In China exists in versions with opened and locked configuration.
+Could be used for intercoms Grazhda (UA) and Vizit (RU) with non-Micron chips (original chips have EV1 Version `0004030101000E03`).
+
+* Other names:
+  * Ultra (China)
+  * UL-21 (China)
+
+#### Characteristics
+
+^[Top](#top)
+
+* Configuration block value: `850000A000000A3C0004030101000E03`.
+* EV1 Version: `0004030101000E03`.
+
+#### Identify
+
+^[Top](#top)
+
+```
+[usb] pm3 --> hf 14a info
+...
+[+] ATS: 85 00 00 A0 00 00 0A 3C 00 04 03 01 01 00 0E 03 [ C8 1D ]
+```
+
+### UL-2 (44 blocks)
+
+#### Characteristics
+
+^[Top](#top)
+
+* Configuration block value: `850000A000000A5A0034210101000E03`.
+* EV1 Version: `0034210101000E03`.
+
+#### Identify
+
+^[Top](#top)
+
+```
+[usb] pm3 --> hf 14a info
+...
+[+] ATS: 85 00 00 A0 00 00 0A 5A 00 34 21 01 01 00 0E 03 [ F1 F3 ]
+```
+
+## UL-Y
+
+^[Top](#top)
+
+### Characteristics
+
+^[Top](#top)
+
+* Configuration block value: `850000A0AA000A5A0000000000000000`.
+* EV1 Version: `0000000000000000`.
+* Has 16 blocks.
+* Allows write to pages 0-2.
+
+### Identify
+
+^[Top](#top)
+
+```
+[usb] pm3 --> hf 14a info
+...
+[+] ATS: 85 00 00 A0 AA 00 0A 5A 00 00 00 00 00 00 00 00 [ D5 F9 ]
+```
+
+## Ultra (RU)
+
+^[Top](#top)
+
+Modification of [UL-2 (41 blocks)](#ul-2-41-blocks) for Vizit (RU) intercoms.
+Suitable for tags with EV1 Version `0034210101000E03`.
+
+After communication to iKey LLC (importer of those tags to Russian market), new revisions, imported to Russia have closed config.
+
+### Characteristics
+
+^[Top](#top)
+
+* Configuration block value: `850000A000000A3C0034210101000E03`.
+* EV1 Version: `0034210101000E03`.
+
+### Identify
+
+^[Top](#top)
+
+```
+[usb] pm3 --> hf 14a info
+...
+[+] ATS: 85 00 00 A0 00 00 0A 3C 00 04 03 01 01 00 0E 03 [ C8 1D ]
+```
+
+## UL-5
+
+^[Top](#top)
+
+Variation of [Ultra](#ultra-ru) tag, which allows to change UID only once.
+
+After editing page 0 become locked and tag becomes the original Mifare Ultralight EV1 (except the tag version, which remains specific).
+
+Created as a response to Vizit (RU) filters that try to overwrite page 0 (as a detection for Ultra (RU) tags).
+
+**WARNING!** When using UL-5 to clone, write UID pages in inverse (from 2 to 0) and do NOT make mistakes! This tag does not allow reversing one-way actions (OTP page, lock bits).
+
+It was confirmed from importers to Russian and Ukrainian market (independently) that UL-5 is a variation of USCUID-UL. But so far it's unknown how to achieve that behaviors, because by default UL-5 has it's config locked.
+
+### Identify
+
+^[Top](#top)
+
+```
+hf mfu info
+...
+TAG IC Signature: 0000000000000000000000000000000000000000000000000000000000000000
+[=] --- Tag Version
+[=]        Raw bytes: 00 34 21 01 01 00 0E 03
+[=]        Vendor ID: 34, Mikron JSC Russia
+```
+
+After personalization it is not possible to identify UL-5.
+
+The manufacturer confirmed unpersonalized tags could be identified by first 2 bytes of UID:
+
+* `AA 55...`
+
+## UL, other chips
+
+** TODO **
+
+* UL
+* UL-X
+* UL-Z
 
 # DESFire
 
