@@ -1413,8 +1413,6 @@ hf mf info
 * Magic wakeup: `40(7)`, `43`
   * Backdoor read main block: `30xx+crc`
   * Backdoor write main block: `A0xx+crc`, `[16 bytes data]+crc`
-  * Read hidden block: `38xx+crc`
-  * Write hidden block: `A8xx+crc`, `[16 bytes data]+crc`
   * Read configuration: `E000+crc`
   * Write configuration: `E100+crc`
 
