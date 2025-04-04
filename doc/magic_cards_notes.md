@@ -27,7 +27,6 @@ Useful docs:
   * [MIFARE Classic block0](#mifare-classic-block0)
   * [MIFARE Classic Gen1A aka UID](#mifare-classic-gen1a-aka-uid)
   * [MIFARE Classic Gen1B](#mifare-classic-gen1b)
-  * [Mifare Classic Direct Write OTP](#mifare-classic-direct-write-otp)
   * [MIFARE Classic OTP 2.0](#mifare-classic-otp-20)
   * [MIFARE Classic MF4](#mifare-classic-mf4)
   * [MIFARE Classic DirectWrite aka Gen2 aka CUID](#mifare-classic-directwrite-aka-gen2-aka-cuid)
@@ -618,7 +617,7 @@ hf mf info
 ^[Top](#top)
 
 Similar to Gen1A, but after first block 0 edit, tag no longer replies to 0x40 command.
-Were manufactured by iKey LLC as a replacement for [OTP](#mifare-classic-direct-write-otp)
+Were manufactured by iKey LLC as a replacement for [OTP](#fuid)
 
 ### Characteristics
 
@@ -743,9 +742,9 @@ Here is how the IC can be configured:
 
 * Other names:
   * MF-8 (RU)
-  * MF-3 (RU) - not susceptible to "field reset bug", a way to detect [OTP](#mifare-classic-direct-write-otp) chips.
-  * MF-3.2 (RU) - static nonce `01200145`, helps avoid magic detection.
-
+  * MF-3 (RU) - not susceptible to "field reset bug", a way to detect [OTP](#fuid) chips.
+  * MF-3.2 (RU) - static nonce `01200145`, potentially fixed chip which can bypass Iron Logic's filters.
+`
 ### Identify
 
 ^[Top](#top)
@@ -1146,13 +1145,26 @@ Well-known variations are described below.
 
 ^[Top](#top)
 
-Known as "write only once", which is only partially true. Please note that some newer FUIDs have had ton configration blocks locked down and are truly a write-once tag.
+* Other names:
+  * OTP (RU)
 
-Allows direct write to block 0 only when UID is default `AA55C396`. If your tag responds to a gen4 magic wakeup, the UID could always be rewritten multiple times with backdoors commands.
+Known as "write only once", which is only partially true, because old revisions had backdoor commands enabled, so you could manipulate the tag, using them.
+Newer FUIDs are based on new implementation of chip and have backdoor commands disabled by default.
 
-Backdoor commands are available even after the personalization and makes that tag detectable.
+Allows direct write to block 0 only when UID is default `AA55C396`. If your tag responds to a `20(7)`, `23` magic wakeup, the UID could always be rewritten multiple times with backdoors commands, but that makes that tag detecteable.
 
-That's a key difference from [OTP](#mifare-classic-direct-write-otp)/[OTP 2.0](#mifare-classic-otp-20) tags.
+### Market Usage
+
+In ex-USSR countries were widely used as a replacement for UID tags. Especially for protected Iron Logic readers.Later filter `OTP` was created in those readers.
+The idea of the filter is that old version's chip had an issue in the protocol implementation.
+
+The reader could interrupt radiofield for 2-3 microseconds (standard pause in the bit period of ISO14443-2).
+After the response to first `26 (7)` command, but before the following `93 70` command. In that case original M1 card will stop the flow, but OTP will continue it.
+
+That issue led to the development of the filters against that card and discontinuation of the production.
+As a successor, [OTP 2.0](#mifare-classic-otp-20) was created for that market.
+
+Newer FUID tags (with backdoor command disabled) has protocol fixed and works fine on Iron Logic readers with firmware older than 7.28, but are filtered by latest filters on mentioned firmware.
 
 ### Characteristics
 
@@ -1177,7 +1189,7 @@ hf mf info
 
 ```
 
-or locked down tag type:
+Or locked down tag type:
 
 ```
 hf mf info
