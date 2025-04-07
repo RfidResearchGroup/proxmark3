@@ -21,6 +21,9 @@
 
 #include <inttypes.h>
 
+// Filename to store the card info in spiff memory 
+#define DUMP_FILE "hf_mattyrun_dump_%02x%02x%02x%02x.bin"
+
 // Set of standard keys to be used
 static uint64_t const MATTYRUN_MFC_DEFAULT_KEYS[] = {
     0xFFFFFFFFFFFF,  // Default key
