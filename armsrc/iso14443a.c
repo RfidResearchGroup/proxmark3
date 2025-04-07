@@ -36,9 +36,9 @@
 #include "protocols.h"
 #include "generator.h"
 #include "desfire_crypto.h"  // UL-C authentication helpers
+#include "mifare.h"  // for iso14a_polling_frame_t structure
 
 #define MAX_ISO14A_TIMEOUT 524288
-
 // this timeout is in MS
 static uint32_t iso14a_timeout;
 
@@ -141,7 +141,7 @@ Default HF 14a config is set to:
     forcecl3 = 0 (auto)
     forcerats = 0 (auto)
 */
-static hf14a_config hf14aconfig = { 0, 0, 0, 0, 0 } ;
+static hf14a_config hf14aconfig = { 0, 0, 0, 0, 0, {{0}, 0, 0, 0} };
 
 
 // Polling frames and configurations
@@ -166,30 +166,36 @@ struct Crypto1State crypto1_state = {0, 0};
 
 void printHf14aConfig(void) {
     DbpString(_CYAN_("HF 14a config"));
-    Dbprintf("  [a] Anticol override.... %s%s%s",
+    Dbprintf("  [a] Anticol override.............. %s%s%s",
              (hf14aconfig.forceanticol == 0) ? _GREEN_("std") "    ( follow standard )" : "",
              (hf14aconfig.forceanticol == 1) ? _RED_("force") " ( always do anticol )" : "",
              (hf14aconfig.forceanticol == 2) ? _RED_("skip") "   ( always skip anticol )" : ""
             );
-    Dbprintf("  [b] BCC override........ %s%s%s",
+    Dbprintf("  [b] BCC override.................. %s%s%s",
              (hf14aconfig.forcebcc == 0) ? _GREEN_("std") "    ( follow standard )" : "",
              (hf14aconfig.forcebcc == 1) ? _RED_("fix") "    ( fix bad BCC )" : "",
              (hf14aconfig.forcebcc == 2) ? _RED_("ignore") " ( ignore bad BCC, always use card BCC )" : ""
             );
-    Dbprintf("  [2] CL2 override........ %s%s%s",
+    Dbprintf("  [2] CL2 override.................. %s%s%s",
              (hf14aconfig.forcecl2 == 0) ? _GREEN_("std") "    ( follow standard )" : "",
              (hf14aconfig.forcecl2 == 1) ? _RED_("force") "  ( always do CL2 )" : "",
              (hf14aconfig.forcecl2 == 2) ? _RED_("skip") "   ( always skip CL2 )" : ""
             );
-    Dbprintf("  [3] CL3 override........ %s%s%s",
+    Dbprintf("  [3] CL3 override.................. %s%s%s",
              (hf14aconfig.forcecl3 == 0) ? _GREEN_("std") "    ( follow standard )" : "",
              (hf14aconfig.forcecl3 == 1) ? _RED_("force") "  ( always do CL3 )" : "",
              (hf14aconfig.forcecl3 == 2) ? _RED_("skip") "   ( always skip CL3 )" : ""
             );
-    Dbprintf("  [r] RATS override....... %s%s%s",
+    Dbprintf("  [r] RATS override................. %s%s%s",
              (hf14aconfig.forcerats == 0) ? _GREEN_("std") "    ( follow standard )" : "",
              (hf14aconfig.forcerats == 1) ? _RED_("force") "  ( always do RATS )" : "",
              (hf14aconfig.forcerats == 2) ? _RED_("skip") "   ( always skip RATS )" : ""
+            );
+    Dbprintf("  [p] Polling loop annotation....... %s %*D",
+             (hf14aconfig.polling_loop_annotation.frame_length <= 0) ? _YELLOW_("disabled") : _GREEN_("enabled"),
+             hf14aconfig.polling_loop_annotation.frame_length, 
+             hf14aconfig.polling_loop_annotation.frame,
+            ""
             );
 }
 
@@ -213,6 +219,13 @@ void setHf14aConfig(const hf14a_config *hc) {
         hf14aconfig.forcecl3 = hc->forcecl3;
     if ((hc->forcerats >= 0) && (hc->forcerats <= 2))
         hf14aconfig.forcerats = hc->forcerats;
+
+    if (hc->polling_loop_annotation.frame_length > 0) {
+        memcpy(&hf14aconfig.polling_loop_annotation, &hc->polling_loop_annotation, sizeof(iso14a_polling_frame_t));
+    } else if (hc->polling_loop_annotation.frame_length < 0) {
+        // Reset if set to empty
+        hf14aconfig.polling_loop_annotation.frame_length = 0;
+    }
 }
 
 hf14a_config *getHf14aConfig(void) {
@@ -448,7 +461,6 @@ RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
                         Uart.parityBits |= ((Uart.shiftReg >> 8) & 0x01);        // store parity bit
                         Uart.bitCount = 0;
                         Uart.shiftReg = 0;
-
                         // Every 8 data bytes, store 8 parity bits into a parity byte
                         if ((Uart.len & 0x0007) == 0) {                          // every 8 data bytes
                             Uart.parity[Uart.parityLen++] = Uart.parityBits;     // store 8 parity bits
@@ -592,7 +604,7 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
 
                 if (Demod.bitCount > 0) {                               // there are some remaining data bits
                     Demod.shiftReg >>= (9 - Demod.bitCount);            // right align the decoded bits
-                    Demod.output[Demod.len++] = Demod.shiftReg & 0xff;  // and add them to the output
+                    Demod.output[Demod.len++] = (Demod.shiftReg & 0xff);  // and add them to the output
                     Demod.parityBits <<= 1;                             // add a (void) parity bit
                     Demod.parityBits <<= (8 - (Demod.len & 0x0007));    // left align remaining parity bits
                     Demod.parity[Demod.parityLen++] = Demod.parityBits; // and store them
@@ -1421,7 +1433,6 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
     // "precompiled" responses.
     // These exist for speed reasons.  There are no time in the anti collision phase to calculate responses.
     // There are 12 predefined responses with a total of 84 bytes data to transmit.
-    //
     // Coded responses need one byte per bit to transfer (data, parity, start, stop, correction)
     // 85 * 8 data bits, 85 * 1 parity bits, 12 start bits, 12 stop bits, 12 correction bits
     // 85 * 8 + 85 + 12 + 12 + 12 == 801
@@ -2702,16 +2713,37 @@ static int GetATQA(uint8_t *resp, uint16_t resp_len, uint8_t *resp_par, iso14a_p
 
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
     iso14a_set_timeout(1236 / 128 + 1);  // response to WUPA is expected at exactly 1236/fc. No need to wait longer.
+    
+    // Create temporary polling parameters structure that might include both standard and custom frames
+    iso14a_polling_parameters_t temp_params;
+    memcpy(&temp_params, polling_parameters, sizeof(iso14a_polling_parameters_t));
+    
+    // If we have a custom polling frame annotation, add it to the temporary structure
+    if (hf14aconfig.polling_loop_annotation.frame_length > 0) {
+        // Only add if we have space in the frames array
+        if (temp_params.frame_count < ARRAYLEN(temp_params.frames)) {
+            // Add the custom frame at the end of the frames array
+            memcpy(&temp_params.frames[temp_params.frame_count], 
+                   &hf14aconfig.polling_loop_annotation, 
+                   sizeof(iso14a_polling_frame_t));
+            temp_params.frame_count++;
+        }
+        
+        // Increase timeout if polling loop annotation is provided, as target may respond slower
+        if (temp_params.extra_timeout == 0) {
+            temp_params.extra_timeout = 250;
+        }
+    }
 
     bool first_try = true;
-    uint32_t retry_timeout = WUPA_RETRY_TIMEOUT * polling_parameters->frame_count + polling_parameters->extra_timeout;
-    uint32_t start_time = 0;
     int len;
-
+    uint32_t retry_timeout = WUPA_RETRY_TIMEOUT * temp_params.frame_count + temp_params.extra_timeout;
+    uint32_t start_time = 0;
     uint8_t current_frame = 0;
-
+    
+    // Use the temporary polling parameters
     do {
-        iso14a_polling_frame_t *frame_parameters = &polling_parameters->frames[current_frame];
+        iso14a_polling_frame_t *frame_parameters = &temp_params.frames[current_frame];
 
         if (frame_parameters->last_byte_bits == 8) {
             ReaderTransmit(frame_parameters->frame, frame_parameters->frame_length, NULL);
@@ -2729,12 +2761,11 @@ static int GetATQA(uint8_t *resp, uint16_t resp_len, uint8_t *resp_par, iso14a_p
         // We set the start_time here otherwise in some cases we miss the window and only ever try once
         if (first_try) {
             start_time = GetTickCount();
+            first_try = false;
         }
 
-        first_try = false;
-
         // Go over frame configurations, loop back when we reach the end
-        current_frame = current_frame < (polling_parameters->frame_count - 1) ? current_frame + 1 : 0;
+        current_frame = current_frame < (temp_params.frame_count - 1) ? current_frame + 1 : 0;
     } while (len == 0 && GetTickCountDelta(start_time) <= retry_timeout);
 
     iso14a_set_timeout(save_iso14a_timeout);
