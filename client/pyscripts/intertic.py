@@ -315,6 +315,9 @@ FRA_OrganizationalAuthority_Contract_Provider = {
         4: InterticHelper('Angers', 'Irigo / RATP', Describe_Usage_1_2),
         7: InterticHelper('Saint-Nazaire', 'Stran'),
     },
+    0x920: {
+        9: InterticHelper('Aix-en-Provence', 'Aixenbus / Keolis', Describe_Usage_2_1),
+    },
 }
 
 MAR_OrganizationalAuthority_Contract_Provider = {
