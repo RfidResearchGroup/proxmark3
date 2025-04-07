@@ -2133,6 +2133,9 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
         startAid[1] = 0x00;
         startAid[2] = 0x0F;
     }
+
+    reverse_array(startAid, 3);
+    reverse_array(endAid, 3);
     uint32_t idStart = DesfireAIDByteToUint(startAid);
     uint32_t idEnd = DesfireAIDByteToUint(endAid);
     if (idStart > idEnd) {
