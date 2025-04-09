@@ -2298,14 +2298,27 @@ Could be used for intercoms Grazhda (UA) and Vizit (RU) with non-Micron chips (o
 
 ^[Top](#top)
 
+Variation based on NTAG215 config. 
+Created for copying 16-blocks Vizit tags.
+Now there are well-known 2 variations, which differs only with EV1 Version.
+Newer has *Micron Russia* version.
+
 ### Characteristics
 
 ^[Top](#top)
 
-* Configuration block value: `850000A0AA000A5A0000000000000000`.
-* EV1 Version: `0000000000000000`.
-* Has 16 blocks.
+* Configuration block value: `850000A0AA000A5A0000000000000000` or `850000A0AA000A5A0034210100000000`.
+* EV1 Version: `0000000000000000` or `0034210100000000`.
+* Has 16 blocks readable.
 * Allows write to pages 0-2.
+* Has next NTAG215-related configuration:
+
+```
+[=] 130/0x82 | 00 00 00 BD | 0 | ...�
+[=] 131/0x83 | 04 00 00 10 | 0 | ....
+[=] 132/0x84 | C0 05 00 00 | 0 | �...
+[=] 133/0x85 | FF FF FF FF | 0 | .... // Password, will not be readable in normal conditions
+```
 
 ### Identify
 
