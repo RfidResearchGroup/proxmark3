@@ -43,6 +43,8 @@
 #include "mifare/desfirecore.h"  // desfire context
 #include "mifare/mifaredefault.h"
 #include "preferences.h"         // get/set device debug level
+#include "pm3_cmd.h"
+
 
 static bool g_apdu_in_framing_enable = true;
 bool Get_apdu_in_framing(void) {
@@ -333,6 +335,15 @@ static int hf_14a_config_example(void) {
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --atqa force --bcc ignore --cl2 force --cl3 skip -rats skip"));
     PrintAndLogEx(NORMAL, _YELLOW_("          hf mfu setuid --uid 04112233445566"));
     PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --std"));
+
+    PrintAndLogEx(NORMAL, "\nExamples of polling loop annotations used to enable anticollision on mobile targets:");
+    PrintAndLogEx(NORMAL, _CYAN_("    ECP Express Transit EMV")":");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --pla 6a02c801000300027900000000"));
+    PrintAndLogEx(NORMAL, _CYAN_("    ECP VAS Only")":");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --pla 6a01000002"));
+    PrintAndLogEx(NORMAL, _CYAN_("    ECP Access Wildcard")":");
+    PrintAndLogEx(NORMAL, _YELLOW_("          hf 14a config --pla 6a02c3020002ffff"));
+
     return PM3_SUCCESS;
 }
 static int CmdHf14AConfig(const char *Cmd) {
@@ -341,25 +352,26 @@ static int CmdHf14AConfig(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a config",
                   "Configure 14a settings (use with caution)\n"
-                  "   `-v` also prints examples for reviving Gen2 cards",
-                  "hf 14a config              -> Print current configuration\n"
-                  "hf 14a config --std        -> Reset default configuration (follow standard)\n"
-                  "hf 14a config --atqa std   -> Follow standard\n"
-                  "hf 14a config --atqa force -> Force execution of anticollision\n"
-                  "hf 14a config --atqa skip  -> Skip anticollision\n"
-                  "hf 14a config --bcc std    -> Follow standard\n"
-                  "hf 14a config --bcc fix    -> Fix bad BCC in anticollision\n"
-                  "hf 14a config --bcc ignore -> Ignore bad BCC and use it as such\n"
-                  "hf 14a config --cl2 std    -> Follow standard\n"
-                  "hf 14a config --cl2 force  -> Execute CL2\n"
-                  "hf 14a config --cl2 skip   -> Skip CL2\n"
-                  "hf 14a config --cl3 std    -> Follow standard\n"
-                  "hf 14a config --cl3 force  -> Execute CL3\n"
-                  "hf 14a config --cl3 skip   -> Skip CL3\n"
-                  "hf 14a config --rats std   -> Follow standard\n"
-                  "hf 14a config --rats force -> Execute RATS\n"
-                  "hf 14a config --rats skip  -> Skip RATS");
-
+                  "   `-v` also prints examples for reviving Gen2 cards & configuring polling loop annotations",
+                  "hf 14a config                   -> Print current configuration\n"
+                  "hf 14a config --std             -> Reset default configuration (follow standard)\n"
+                  "hf 14a config --atqa std        -> Follow standard\n"
+                  "hf 14a config --atqa force      -> Force execution of anticollision\n"
+                  "hf 14a config --atqa skip       -> Skip anticollision\n"
+                  "hf 14a config --bcc std         -> Follow standard\n"
+                  "hf 14a config --bcc fix         -> Fix bad BCC in anticollision\n"
+                  "hf 14a config --bcc ignore      -> Ignore bad BCC and use it as such\n"
+                  "hf 14a config --cl2 std         -> Follow standard\n"
+                  "hf 14a config --cl2 force       -> Execute CL2\n"
+                  "hf 14a config --cl2 skip        -> Skip CL2\n"
+                  "hf 14a config --cl3 std         -> Follow standard\n"
+                  "hf 14a config --cl3 force       -> Execute CL3\n"
+                  "hf 14a config --cl3 skip        -> Skip CL3\n"
+                  "hf 14a config --rats std        -> Follow standard\n"
+                  "hf 14a config --rats force      -> Execute RATS\n"
+                  "hf 14a config --rats skip       -> Skip RATS\n"
+                  "hf 14a config --pla <hex>       -> Set polling loop annotation (max 22 bytes)\n"
+                  "hf 14a config --pla skip        -> Disable polling loop annotation\n");
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "atqa", "<std|force|skip>", "Configure ATQA<>anticollision behavior"),
@@ -367,14 +379,17 @@ static int CmdHf14AConfig(const char *Cmd) {
         arg_str0(NULL, "cl2", "<std|force|skip>", "Configure SAK<>CL2 behavior"),
         arg_str0(NULL, "cl3", "<std|force|skip>", "Configure SAK<>CL3 behavior"),
         arg_str0(NULL, "rats", "<std|force|skip>", "Configure RATS behavior"),
+        arg_str0(NULL, "pla", "<hex|skip>", "Configure polling loop annotation"),
         arg_lit0(NULL, "std", "Reset default configuration: follow all standard"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool defaults = arg_get_lit(ctx, 6);
+    bool defaults = arg_get_lit(ctx, 7);
+    bool verbose = arg_get_lit(ctx, 8);
+
     int vlen = 0;
-    char value[10];
+    char value[64];
     int atqa = defaults ? 0 : -1;
     CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)value, sizeof(value), &vlen);
     if (vlen > 0) {
@@ -436,11 +451,43 @@ static int CmdHf14AConfig(const char *Cmd) {
         }
     }
 
-    bool verbose = arg_get_lit(ctx, 7);
+    // Handle polling loop annotation parameter
+    iso14a_polling_frame_t pla = {
+        // -1 signals that PLA has to be disabled, 0 signals that no change has to be made
+        .frame_length = defaults ? -1 : 0,
+        .last_byte_bits = 8,
+        .extra_delay = 5
+    };
+    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)value, sizeof(value), &vlen);
+    if (vlen > 0 && (strncmp((char *)value, "skip", 4) || strncmp((char *)value, "std", 3)) == 0) {
+        pla.frame_length = -1;
+    } else if (vlen > 0) {
+        // Convert hex string to bytes
+        int length = 0;
+        if (param_gethex_to_eol((char *)value, 0, pla.frame, sizeof(pla.frame), &length) != 0) {
+            PrintAndLogEx(ERR, "Error parsing polling loop annotation bytes");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+        pla.frame_length = length;
+
+        // Validate length before adding CRC
+        if (pla.frame_length < 1 || pla.frame_length > 22) {
+            PrintAndLogEx(ERR, "Polling loop annotation length invalid: min %d; max %d", 1, 22);
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+
+        uint8_t first, second;
+        compute_crc(CRC_14443_A, pla.frame, pla.frame_length, &first, &second);
+        pla.frame[pla.frame_length++] = first;
+        pla.frame[pla.frame_length++] = second;
+        PrintAndLogEx(INFO, "Added CRC16A to polling loop annotation: %s", sprint_hex(pla.frame, pla.frame_length));
+    }
 
     CLIParserFree(ctx);
 
-    // validations
+    // Handle empty command
     if (strlen(Cmd) == 0) {
         return hf14a_setconfig(NULL, verbose);
     }
@@ -449,12 +496,14 @@ static int CmdHf14AConfig(const char *Cmd) {
         hf_14a_config_example();
     }
 
+    // Initialize config with all parameters
     hf14a_config config = {
         .forceanticol = atqa,
         .forcebcc = bcc,
         .forcecl2 = cl2,
         .forcecl3 = cl3,
-        .forcerats = rats
+        .forcerats = rats,
+        .polling_loop_annotation = pla
     };
 
     return hf14a_setconfig(&config, verbose);

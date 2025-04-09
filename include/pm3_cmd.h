@@ -131,6 +131,27 @@ typedef struct {
     bool verbose;
 } PACKED sample_config;
 
+
+// Defines a frame that will be used in a polling sequence
+// Polling loop annotations are up to (7 + 16) bytes long, 24 bytes should cover future and other cases
+typedef struct {
+    uint8_t frame[24];
+    // negative values can be used to carry special info
+    int8_t frame_length;
+    uint8_t last_byte_bits;
+    uint16_t extra_delay;
+} PACKED iso14a_polling_frame_t;
+
+
+// Defines polling sequence configuration
+// 6 would be enough for 4 magsafe, 1 wupa, 1 pla,
+typedef struct {
+    iso14a_polling_frame_t frames[6];
+    int8_t frame_count;
+    uint16_t extra_timeout;
+} PACKED iso14a_polling_parameters_t;
+
+
 // A struct used to send hf14a-configs over USB
 typedef struct {
     int8_t forceanticol; // 0:auto 1:force executing anticol 2:force skipping anticol
@@ -138,6 +159,7 @@ typedef struct {
     int8_t forcecl2;     // 0:auto 1:force executing CL2 2:force skipping CL2
     int8_t forcecl3;     // 0:auto 1:force executing CL3 2:force skipping CL3
     int8_t forcerats;    // 0:auto 1:force executing RATS 2:force skipping RATS
+    iso14a_polling_frame_t polling_loop_annotation; // Polling loop annotation
 } PACKED hf14a_config;
 
 // Tracelog Header struct
