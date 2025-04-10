@@ -78,12 +78,6 @@ static const iso14a_polling_frame_t MAGWUPA4_FRAME = {
     { 0x7D }, 1, 7, 0
 };
 
-static const  iso14a_polling_frame_t ECP_FRAME = {
-    .frame = { 0x6a, 0x02, 0xC8, 0x01, 0x00, 0x03, 0x00, 0x02, 0x79, 0x00, 0x00, 0x00, 0x00, 0xC2, 0xD8},
-    .frame_length = 15,
-    .last_byte_bits = 8,
-    .extra_delay = 0
-};
 
 
 // based on ISO/IEC JTC1/SC17 STANDING DOCUMENT 5 (Updated 20 September 2024) Register of IC manufacturers
@@ -595,24 +589,8 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
     return PM3_SUCCESS;
 }
 
-iso14a_polling_parameters_t iso14a_get_polling_parameters(bool use_ecp, bool use_magsafe) {
-    // Extra 100ms give enough time for Apple (ECP) devices to proccess field info and make a decision
-
-    if (use_ecp && use_magsafe) {
-        iso14a_polling_parameters_t full_polling_parameters = {
-            .frames = { WUPA_FRAME, ECP_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME },
-            .frame_count = 6,
-            .extra_timeout = 100
-        };
-        return full_polling_parameters;
-    } else if (use_ecp) {
-        iso14a_polling_parameters_t ecp_polling_parameters = {
-            .frames = { WUPA_FRAME, ECP_FRAME },
-            .frame_count = 2,
-            .extra_timeout = 100
-        };
-        return ecp_polling_parameters;
-    } else if (use_magsafe) {
+iso14a_polling_parameters_t iso14a_get_polling_parameters(bool use_magsafe) {
+    if (use_magsafe) {
         iso14a_polling_parameters_t magsafe_polling_parameters = {
             .frames = { WUPA_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME },
             .frame_count = 5,
@@ -635,7 +613,6 @@ static int CmdHF14AReader(const char *Cmd) {
                   "Act as a ISO-14443a reader to identify tag. Look for ISO-14443a tags until Enter or the pm3 button is pressed",
                   "hf 14a reader\n"
                   "hf 14a reader -@     -> Continuous mode\n"
-                  "hf 14a reader --ecp  -> trigger apple enhanced contactless polling\n"
                   "hf 14a reader --mag  -> trigger apple magsafe polling\n"
                  );
 
@@ -645,7 +622,6 @@ static int CmdHF14AReader(const char *Cmd) {
         arg_lit0("s", "silent", "silent (no messages)"),
         arg_lit0(NULL, "drop", "just drop the signal field"),
         arg_lit0(NULL, "skip", "ISO14443-3 select only (skip RATS)"),
-        arg_lit0(NULL, "ecp", "Use enhanced contactless polling"),
         arg_lit0(NULL, "mag", "Use Apple magsafe polling"),
         arg_lit0("@", NULL, "continuous reader mode"),
         arg_lit0("w", "wait", "wait for card"),
@@ -669,12 +645,11 @@ static int CmdHF14AReader(const char *Cmd) {
         cm |= ISO14A_NO_RATS;
     }
 
-    bool use_ecp = arg_get_lit(ctx, 5);
-    bool use_magsafe = arg_get_lit(ctx, 6);
+    bool use_magsafe = arg_get_lit(ctx, 5);
 
     iso14a_polling_parameters_t *polling_parameters = NULL;
-    iso14a_polling_parameters_t parameters = iso14a_get_polling_parameters(use_ecp, use_magsafe);
-    if (use_ecp || use_magsafe) {
+    iso14a_polling_parameters_t parameters = iso14a_get_polling_parameters(use_magsafe);
+    if (use_magsafe) {
         cm |= ISO14A_USE_CUSTOM_POLLING;
         polling_parameters = &parameters;
     }
@@ -1546,7 +1521,6 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
                   "Sends raw bytes over ISO14443a. With option to use TOPAZ 14a mode.",
                   "hf 14a raw -sc 3000     -> select, crc, where 3000 == 'read block 00'\n"
                   "hf 14a raw -ak -b 7 40  -> send 7 bit byte 0x40\n"
-                  "hf 14a raw --ecp -s     -> send ECP before select\n"
                   "Crypto1 session example, with special auth shortcut 6xxx<key>:\n"
                   "hf 14a raw --crypto1 -skc 6000FFFFFFFFFFFF\n"
                   "hf 14a raw --crypto1 -kc 3000\n"
@@ -1565,7 +1539,6 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         arg_int0("t",  "timeout", "<ms>", "Timeout in milliseconds"),
         arg_int0("b",  NULL,      "<dec>", "Number of bits to send. Useful for send partial byte"),
         arg_lit0("v",  "verbose",         "Verbose output"),
-        arg_lit0(NULL, "ecp",             "Use enhanced contactless polling"),
         arg_lit0(NULL, "mag",             "Use Apple magsafe polling"),
         arg_lit0(NULL, "topaz",           "Use Topaz protocol to send command"),
         arg_lit0(NULL, "crypto1",         "Use crypto1 session"),
@@ -1583,10 +1556,9 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     uint32_t timeout = (uint32_t)arg_get_int_def(ctx, 7, 0);
     uint16_t numbits = (uint16_t)arg_get_int_def(ctx, 8, 0);
     bool verbose = arg_get_lit(ctx, 9);
-    bool use_ecp = arg_get_lit(ctx, 10);
-    bool use_magsafe = arg_get_lit(ctx, 11);
-    bool topazmode = arg_get_lit(ctx, 12);
-    bool crypto1mode = arg_get_lit(ctx, 13);
+    bool use_magsafe = arg_get_lit(ctx, 10);
+    bool topazmode = arg_get_lit(ctx, 11);
+    bool crypto1mode = arg_get_lit(ctx, 12);
 
     int datalen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE_MIX] = {0};
@@ -1646,7 +1618,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
 
     if (crypto1mode) {
         flags |= ISO14A_CRYPTO1MODE;
-        if (numbits > 0 || topazmode || use_ecp || use_magsafe) {
+        if (numbits > 0 || topazmode || use_magsafe) {
             PrintAndLogEx(FAILED, "crypto1 mode cannot be used with other modes or partial bytes");
             return PM3_EINVARG;
         }
@@ -1654,13 +1626,6 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
 
     if (no_rats) {
         flags |= ISO14A_NO_RATS;
-    }
-
-    // TODO: allow to use reader command with both data and polling configuration
-    if (use_ecp || use_magsafe) {
-        PrintAndLogEx(WARNING, "ECP and Magsafe not supported with this command at this moment. Instead use 'hf 14a reader -sk --ecp/--mag'");
-        // flags |= ISO14A_USE_MAGSAFE;
-        // flags |= ISO14A_USE_ECP;
     }
 
     // Max buffer is PM3_CMD_DATA_SIZE_MIX
