@@ -2316,7 +2316,7 @@ static void PrintKeySettingsApp(uint8_t keysettings, uint8_t numkeys, bool print
 
     PrintAndLogEx(SUCCESS, "[%c...] AMK Configuration changeable               : %s", (keysettings & (1 << 3)) ? '1' : '0', (keysettings & (1 << 3)) ? _GREEN_("YES") : _RED_("NO (frozen)"));
     PrintAndLogEx(SUCCESS, "[.%c..] AMK required for create/delete             : %s", (keysettings & (1 << 2)) ? '1' : '0', (keysettings & (1 << 2)) ? _GREEN_("NO") : _RED_("YES"));
-    PrintAndLogEx(SUCCESS, "[..%c.] AMK required for AID list / GetKeySettings : %s", (keysettings & (1 << 1)) ? '1' : '0', (keysettings & (1 << 1)) ? _GREEN_("NO") : _RED_("YES"));
+    PrintAndLogEx(SUCCESS, "[..%c.] AMK required for FID list / GetKeySettings : %s", (keysettings & (1 << 1)) ? '1' : '0', (keysettings & (1 << 1)) ? _GREEN_("NO") : _RED_("YES"));
     PrintAndLogEx(SUCCESS, "[...%c] AMK is changeable                          : %s", (keysettings & (1 << 0)) ? '1' : '0', (keysettings & (1 << 0)) ? _GREEN_("YES") : _RED_("NO (frozen)"));
     PrintAndLogEx(SUCCESS, "");
 
