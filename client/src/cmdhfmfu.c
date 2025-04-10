@@ -2320,8 +2320,8 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         uint8_t ulc_conf[16] = {0x00};
         status = ul_read(0x28, ulc_conf, sizeof(ulc_conf));
         if (status <= 0) {
-            PrintAndLogEx(ERR, "Error: tag didn't answer to READ UL-C");
-            PrintAndLogEx(HINT, "Hint: Tag is most likely fully read protected");
+            PrintAndLogEx(ERR, "Error: tag didn't answer to page 40 read command");
+            PrintAndLogEx(HINT, "Hint: tag config may be set to read-protect those pages, try dumping");
             DropField();
             return PM3_ESOFT;
         }
