@@ -58,28 +58,6 @@ static int CmdHelp(const char *Cmd);
 static int waitCmd(bool i_select, uint32_t timeout, bool verbose);
 
 
-static const iso14a_polling_frame_t WUPA_FRAME = {
-    { 0x52 }, 1, 7, 0,
-};
-
-static const iso14a_polling_frame_t MAGWUPA1_FRAME = {
-    { 0x7A }, 1, 7, 0
-};
-
-static const iso14a_polling_frame_t MAGWUPA2_FRAME = {
-    { 0x7B }, 1, 7, 0
-};
-
-static const iso14a_polling_frame_t MAGWUPA3_FRAME = {
-    { 0x7C }, 1, 7, 0
-};
-
-static const iso14a_polling_frame_t MAGWUPA4_FRAME = {
-    { 0x7D }, 1, 7, 0
-};
-
-
-
 // based on ISO/IEC JTC1/SC17 STANDING DOCUMENT 5 (Updated 20 September 2024) Register of IC manufacturers
 static const manufactureName_t manufactureMapping[] = {
     // ID,  "Vendor Country"
@@ -364,8 +342,10 @@ static int CmdHf14AConfig(const char *Cmd) {
                   "hf 14a config --rats std        -> Follow standard\n"
                   "hf 14a config --rats force      -> Execute RATS\n"
                   "hf 14a config --rats skip       -> Skip RATS\n"
+                  "hf 14a config --mag on          -> Enable Apple magsafe polling\n"
+                  "hf 14a config --mag off         -> Disable Apple magsafe polling\n"
                   "hf 14a config --pla <hex>       -> Set polling loop annotation (max 22 bytes)\n"
-                  "hf 14a config --pla skip        -> Disable polling loop annotation\n");
+                  "hf 14a config --pla off         -> Disable polling loop annotation\n");
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "atqa", "<std|force|skip>", "Configure ATQA<>anticollision behavior"),
@@ -373,14 +353,15 @@ static int CmdHf14AConfig(const char *Cmd) {
         arg_str0(NULL, "cl2", "<std|force|skip>", "Configure SAK<>CL2 behavior"),
         arg_str0(NULL, "cl3", "<std|force|skip>", "Configure SAK<>CL3 behavior"),
         arg_str0(NULL, "rats", "<std|force|skip>", "Configure RATS behavior"),
-        arg_str0(NULL, "pla", "<hex|skip>", "Configure polling loop annotation"),
+        arg_str0(NULL, "mag", "<on|off>", "Configure Apple MagSafe polling"),
+        arg_str0(NULL, "pla", "<hex|off>", "Configure polling loop annotation"),
         arg_lit0(NULL, "std", "Reset default configuration: follow all standard"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    bool defaults = arg_get_lit(ctx, 7);
-    bool verbose = arg_get_lit(ctx, 8);
+    bool defaults = arg_get_lit(ctx, 8);
+    bool verbose = arg_get_lit(ctx, 9);
 
     int vlen = 0;
     char value[64];
@@ -444,39 +425,57 @@ static int CmdHf14AConfig(const char *Cmd) {
             return PM3_EINVARG;
         }
     }
-
+    int magsafe = defaults ? 0 : -1;
+    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)value, sizeof(value), &vlen);
+    if (vlen > 0) {
+        if (strcmp(value, "std") == 0) magsafe = 0;
+        else if (strcmp(value, "skip") == 0) magsafe = 0;
+        else if (strcmp(value, "disable") == 0) magsafe = 0;
+        else if (strcmp(value, "off") == 0) magsafe = 0;
+        else if (strcmp(value, "enable") == 0) magsafe = 1;
+        else if (strcmp(value, "on") == 0) magsafe = 1;
+        else {
+            PrintAndLogEx(ERR, "magsafe argument must be 'std', 'skip', 'off', 'disable', 'on' or 'enable'");
+            CLIParserFree(ctx);
+            return PM3_EINVARG;
+        }
+    }
     // Handle polling loop annotation parameter
     iso14a_polling_frame_t pla = {
-        // -1 signals that PLA has to be disabled, 0 signals that no change has to be made
-        .frame_length = defaults ? -1 : 0,
+        // 0 signals that PLA has to be disabled, -1 signals that no change has to be made
+        .frame_length = defaults ? 0 : -1,
         .last_byte_bits = 8,
         .extra_delay = 5
     };
-    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)value, sizeof(value), &vlen);
-    if (vlen > 0 && (strncmp((char *)value, "skip", 4) || strncmp((char *)value, "std", 3)) == 0) {
-        pla.frame_length = -1;
-    } else if (vlen > 0) {
-        // Convert hex string to bytes
-        int length = 0;
-        if (param_gethex_to_eol((char *)value, 0, pla.frame, sizeof(pla.frame), &length) != 0) {
-            PrintAndLogEx(ERR, "Error parsing polling loop annotation bytes");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
-        }
-        pla.frame_length = length;
+    CLIParamStrToBuf(arg_get_str(ctx, 7), (uint8_t *)value, sizeof(value), &vlen);
+    if (vlen > 0) {
+        if (strncmp((char *)value, "std", 3) == 0) pla.frame_length = 0;
+        else if (strncmp((char *)value, "skip", 4) == 0) pla.frame_length = 0;
+        else if (strncmp((char *)value, "disable", 3) == 0) pla.frame_length = 0;
+        else if (strncmp((char *)value, "off", 3) == 0) pla.frame_length = 0;
+        else {
+            // Convert hex string to bytes
+            int length = 0;
+            if (param_gethex_to_eol((char *)value, 0, pla.frame, sizeof(pla.frame), &length) != 0) {
+                PrintAndLogEx(ERR, "Error parsing polling loop annotation bytes");
+                CLIParserFree(ctx);
+                return PM3_EINVARG;
+            }
+            pla.frame_length = length;
 
-        // Validate length before adding CRC
-        if (pla.frame_length < 1 || pla.frame_length > 22) {
-            PrintAndLogEx(ERR, "Polling loop annotation length invalid: min %d; max %d", 1, 22);
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
-        }
+            // Validate length before adding CRC
+            if (pla.frame_length < 1 || pla.frame_length > 22) {
+                PrintAndLogEx(ERR, "Polling loop annotation length invalid: min %d; max %d", 1, 22);
+                CLIParserFree(ctx);
+                return PM3_EINVARG;
+            }
 
-        uint8_t first, second;
-        compute_crc(CRC_14443_A, pla.frame, pla.frame_length, &first, &second);
-        pla.frame[pla.frame_length++] = first;
-        pla.frame[pla.frame_length++] = second;
-        PrintAndLogEx(INFO, "Added CRC16A to polling loop annotation: %s", sprint_hex(pla.frame, pla.frame_length));
+            uint8_t first, second;
+            compute_crc(CRC_14443_A, pla.frame, pla.frame_length, &first, &second);
+            pla.frame[pla.frame_length++] = first;
+            pla.frame[pla.frame_length++] = second;
+            PrintAndLogEx(INFO, "Added CRC16A to polling loop annotation: %s", sprint_hex(pla.frame, pla.frame_length));
+        }
     }
 
     CLIParserFree(ctx);
@@ -497,6 +496,7 @@ static int CmdHf14AConfig(const char *Cmd) {
         .forcecl2 = cl2,
         .forcecl3 = cl3,
         .forcerats = rats,
+        .magsafe = magsafe,
         .polling_loop_annotation = pla
     };
 
@@ -589,31 +589,12 @@ int Hf14443_4aGetCardData(iso14a_card_select_t *card) {
     return PM3_SUCCESS;
 }
 
-iso14a_polling_parameters_t iso14a_get_polling_parameters(bool use_magsafe) {
-    if (use_magsafe) {
-        iso14a_polling_parameters_t magsafe_polling_parameters = {
-            .frames = { WUPA_FRAME, MAGWUPA1_FRAME, MAGWUPA2_FRAME, MAGWUPA3_FRAME, MAGWUPA4_FRAME },
-            .frame_count = 5,
-            .extra_timeout = 0
-        };
-        return magsafe_polling_parameters;
-    }
-
-    iso14a_polling_parameters_t wupa_polling_parameters = {
-        .frames = { WUPA_FRAME },
-        .frame_count = 1,
-        .extra_timeout = 0,
-    };
-    return wupa_polling_parameters;
-}
-
 static int CmdHF14AReader(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf 14a reader",
                   "Act as a ISO-14443a reader to identify tag. Look for ISO-14443a tags until Enter or the pm3 button is pressed",
                   "hf 14a reader\n"
                   "hf 14a reader -@     -> Continuous mode\n"
-                  "hf 14a reader --mag  -> trigger apple magsafe polling\n"
                  );
 
     void *argtable[] = {
@@ -622,7 +603,6 @@ static int CmdHF14AReader(const char *Cmd) {
         arg_lit0("s", "silent", "silent (no messages)"),
         arg_lit0(NULL, "drop", "just drop the signal field"),
         arg_lit0(NULL, "skip", "ISO14443-3 select only (skip RATS)"),
-        arg_lit0(NULL, "mag", "Use Apple magsafe polling"),
         arg_lit0("@", NULL, "continuous reader mode"),
         arg_lit0("w", "wait", "wait for card"),
         arg_param_end
@@ -645,17 +625,8 @@ static int CmdHF14AReader(const char *Cmd) {
         cm |= ISO14A_NO_RATS;
     }
 
-    bool use_magsafe = arg_get_lit(ctx, 5);
-
-    iso14a_polling_parameters_t *polling_parameters = NULL;
-    iso14a_polling_parameters_t parameters = iso14a_get_polling_parameters(use_magsafe);
-    if (use_magsafe) {
-        cm |= ISO14A_USE_CUSTOM_POLLING;
-        polling_parameters = &parameters;
-    }
-
-    bool continuous = arg_get_lit(ctx, 7);
-    bool wait = arg_get_lit(ctx, 8);
+    bool continuous = arg_get_lit(ctx, 5);
+    bool wait = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
     bool found = false;
@@ -670,12 +641,7 @@ static int CmdHF14AReader(const char *Cmd) {
     int res = PM3_SUCCESS;
     do {
         clearCommandBuffer();
-
-        if ((cm & ISO14A_USE_CUSTOM_POLLING) == ISO14A_USE_CUSTOM_POLLING) {
-            SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, (uint8_t *)polling_parameters, sizeof(iso14a_polling_parameters_t));
-        } else {
-            SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
-        }
+        SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
 
         if ((cm & ISO14A_CONNECT) == ISO14A_CONNECT) {
             PacketResponseNG resp;
@@ -1437,9 +1403,10 @@ static int CmdHF14AAPDU(const char *Cmd) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
+    
     bool extendedAPDU = arg_get_lit(ctx, 6);
     int le = arg_get_int_def(ctx, 7, 0);
-
+    
     uint8_t data[PM3_CMD_DATA_SIZE];
     int datalen = 0;
 
@@ -1539,7 +1506,6 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         arg_int0("t",  "timeout", "<ms>", "Timeout in milliseconds"),
         arg_int0("b",  NULL,      "<dec>", "Number of bits to send. Useful for send partial byte"),
         arg_lit0("v",  "verbose",         "Verbose output"),
-        arg_lit0(NULL, "mag",             "Use Apple magsafe polling"),
         arg_lit0(NULL, "topaz",           "Use Topaz protocol to send command"),
         arg_lit0(NULL, "crypto1",         "Use crypto1 session"),
         arg_strx1(NULL, NULL,     "<hex>", "Raw bytes to send"),
@@ -1556,13 +1522,12 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     uint32_t timeout = (uint32_t)arg_get_int_def(ctx, 7, 0);
     uint16_t numbits = (uint16_t)arg_get_int_def(ctx, 8, 0);
     bool verbose = arg_get_lit(ctx, 9);
-    bool use_magsafe = arg_get_lit(ctx, 10);
-    bool topazmode = arg_get_lit(ctx, 11);
-    bool crypto1mode = arg_get_lit(ctx, 12);
+    bool topazmode = arg_get_lit(ctx, 10);
+    bool crypto1mode = arg_get_lit(ctx, 11);
 
     int datalen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE_MIX] = {0};
-    CLIGetHexWithReturn(ctx, 14, data, &datalen);
+    CLIGetHexWithReturn(ctx, 12, data, &datalen);
     CLIParserFree(ctx);
 
     bool bTimeout = (timeout) ? true : false;
@@ -1618,7 +1583,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
 
     if (crypto1mode) {
         flags |= ISO14A_CRYPTO1MODE;
-        if (numbits > 0 || topazmode || use_magsafe) {
+        if (numbits > 0 || topazmode) {
             PrintAndLogEx(FAILED, "crypto1 mode cannot be used with other modes or partial bytes");
             return PM3_EINVARG;
         }
