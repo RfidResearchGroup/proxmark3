@@ -1347,7 +1347,7 @@
                 "--crypto1 Use crypto1 session",
                 "<hex> Raw bytes to send"
             ],
-            "usage": "hf 14a raw [-hack3rsv] [-t <ms>] [-b <dec>] [--mag] [--topaz] [--crypto1] <hex> [<hex>]..."
+            "usage": "hf 14a raw [-hack3rsv] [-t <ms>] [-b <dec>] [--topaz] [--crypto1] <hex> [<hex>]..."
         },
         "hf 14a reader": {
             "command": "hf 14a reader",
@@ -1368,7 +1368,7 @@
                 "-@ continuous reader mode",
                 "-w, --wait wait for card"
             ],
-            "usage": "hf 14a reader [-hks@w] [--drop] [--skip] [--mag]"
+            "usage": "hf 14a reader [-hks@w] [--drop] [--skip]"
         },
         "hf 14a sim": {
             "command": "hf 14a sim",

@@ -157,9 +157,9 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
 bool GetIso14443aCommandFromReader(uint8_t *received, uint16_t received_maxlen, uint8_t *par, int *len);
 void iso14443a_antifuzz(uint32_t flags);
 void ReaderIso14443a(PacketCommandNG *c);
-void ReaderTransmit(uint8_t *frame, uint16_t len, uint32_t *timing);
-void ReaderTransmitBitsPar(uint8_t *frame, uint16_t bits, uint8_t *par, uint32_t *timing);
-void ReaderTransmitPar(uint8_t *frame, uint16_t len, uint8_t *par, uint32_t *timing);
+void ReaderTransmit(const uint8_t *frame, uint16_t len, uint32_t *timing);
+void ReaderTransmitBitsPar(const uint8_t *frame, uint16_t bits, uint8_t *par, uint32_t *timing);
+void ReaderTransmitPar(const uint8_t *frame, uint16_t len, uint8_t *par, uint32_t *timing);
 uint16_t ReaderReceive(uint8_t *receivedAnswer, uint16_t answer_maxlen, uint8_t *par);
 
 void iso14443a_setup(uint8_t fpga_minor_mode);
