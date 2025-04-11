@@ -2021,12 +2021,12 @@ uint64_t GetHF14AMfU_Type(void) {
         return MFU_TT_UL_ERROR;
 
     // Ultralight - ATQA / SAK
-    if (card.atqa[1] != 0x00 || card.atqa[0] != 0x44 || card.sak != 0x00) {
+    if (card.atqa[1] != 0x00 || card.sak != 0x00) {
         //PrintAndLogEx(NORMAL, "Tag is not Ultralight | NTAG | MY-D |ST25TN [ATQA: %02X %02X SAK: %02X]\n", card.atqa[1], card.atqa[0], card.sak);
         DropField();
         return MFU_TT_UL_ERROR;
     }
-    if (card.uid[0] == 0x02) {
+    if ((card.uid[0] == 0x02) && (card.atqa[0] == 0x44)) {
         // ST25TN
         // read SYSBLOCK
         uint8_t data[4] = {0x00};
@@ -2048,7 +2048,7 @@ uint64_t GetHF14AMfU_Type(void) {
             }
         }
 
-    } else if (card.uid[0] == 0x05) {
+    } else if ((card.uid[0] == 0x05) && (card.atqa[0] == 0x44)){
         // Infineon MY-D tests   Exam high nibble
         DropField();
         uint8_t nib = (card.uid[1] & 0xf0) >> 4;
@@ -2069,7 +2069,7 @@ uint64_t GetHF14AMfU_Type(void) {
         }
 
     } else {
-
+        // Note that SAK might be 0x44 but also e.g. 0x04 for cards in Random ID mode
         uint8_t version[10] = {0x00};
         int len  = ulev1_getVersion(version, sizeof(version));
         DropField();
@@ -2710,8 +2710,9 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
 
     // starting with getting tagtype
     uint64_t tagtype = GetHF14AMfU_Type();
-    if (tagtype == MFU_TT_UL_ERROR)
+    if (tagtype == MFU_TT_UL_ERROR) {
         return PM3_ESOFT;
+    }
 
     uint8_t maxblockno = 0;
     for (uint8_t idx = 1; idx < ARRAYLEN(UL_TYPES_ARRAY); idx++) {
