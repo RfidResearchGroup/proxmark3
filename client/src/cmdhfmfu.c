@@ -464,6 +464,23 @@ static int ulc_requestAuthentication(uint8_t *nonce, uint16_t nonceLength) {
     return ul_send_cmd_raw(cmd, sizeof(cmd), nonce, nonceLength);
 }
 
+int mfuc_test_authentication_support(void) {
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+        PrintAndLogEx(DEBUG, "iso14443a card select timeout");
+        DropField();
+        return PM3_ETIMEOUT;
+    }
+    uint8_t nonce1[11] = {0x00};
+    int resplen = ulc_requestAuthentication(nonce1, sizeof(nonce1));
+    DropField();
+    if (resplen == 11) { // ULC nonce
+        return PM3_SUCCESS;
+    }
+    return PM3_ESOFT;
+}
+
 static int ulev1_requestAuthentication(const uint8_t *pwd, uint8_t *pack, uint16_t packLength) {
 
     uint8_t cmd[] = {MIFARE_ULEV1_AUTH, pwd[0], pwd[1], pwd[2], pwd[3]};
@@ -1833,7 +1850,7 @@ static uint8_t mfu_max_len(void) {
     return n;
 }
 
-static int mfu_get_version_uid(uint8_t *version, uint8_t *uid) {
+int mfu_get_version_uid(uint8_t *version, uint8_t *uid) {
     iso14a_card_select_t card;
     if (ul_select(&card) == false) {
         return PM3_ESOFT;
