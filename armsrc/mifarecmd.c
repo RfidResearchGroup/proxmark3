@@ -1955,6 +1955,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
         }
         // Replace client provided keys
         datain = dictkeys;
+        keyCount = key_mem_available;
     }
 #endif
 

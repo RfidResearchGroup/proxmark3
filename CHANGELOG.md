@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mf fchk --mem` to actually use flash dict (@doegox)
 - Fixed `make install` on OSX thanks DaveItsLong (@doegox)
 
 ## [Blue Ice.4.20142][2025-03-25]
