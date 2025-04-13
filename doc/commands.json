@@ -7873,9 +7873,10 @@
             ],
             "offline": true,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-p, --parse Parse the certificates as ASN.1"
             ],
-            "usage": "hf telsa info [-h]"
+            "usage": "hf telsa info [-hp]"
         },
         "hf tesla list": {
             "command": "hf tesla list",
@@ -13357,6 +13358,6 @@
     "metadata": {
         "commands_extracted": 767,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-03-24T22:47:29"
+        "extracted_on": "2025-04-13T10:20:08"
     }
 }

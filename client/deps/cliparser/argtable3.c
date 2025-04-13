@@ -3621,12 +3621,12 @@ TRex *trex_compile(const TRexChar *pattern, const TRexChar **error, int flags) {
     exp->_first = trex_newnode(exp, OP_EXPR);
     exp->_error = error;
     exp->_jmpbuf = malloc(sizeof(jmp_buf));
-    
+
     if (exp->_jmpbuf == NULL) {
         trex_free(exp);
         return NULL;
     }
-    
+
     exp->_flags = flags;
     if (setjmp(*((jmp_buf *)exp->_jmpbuf)) == 0) {
         int res = trex_list(exp);

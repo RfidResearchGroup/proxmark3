@@ -193,9 +193,9 @@ void printHf14aConfig(void) {
             );
     Dbprintf("  [p] Polling loop annotation....... %s %*D",
              (hf14aconfig.polling_loop_annotation.frame_length <= 0) ? _YELLOW_("disabled") : _GREEN_("enabled"),
-             hf14aconfig.polling_loop_annotation.frame_length, 
+             hf14aconfig.polling_loop_annotation.frame_length,
              hf14aconfig.polling_loop_annotation.frame,
-            ""
+             ""
             );
 }
 
@@ -2713,22 +2713,22 @@ static int GetATQA(uint8_t *resp, uint16_t resp_len, uint8_t *resp_par, iso14a_p
 
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
     iso14a_set_timeout(1236 / 128 + 1);  // response to WUPA is expected at exactly 1236/fc. No need to wait longer.
-    
+
     // Create temporary polling parameters structure that might include both standard and custom frames
     iso14a_polling_parameters_t temp_params;
     memcpy(&temp_params, polling_parameters, sizeof(iso14a_polling_parameters_t));
-    
+
     // If we have a custom polling frame annotation, add it to the temporary structure
     if (hf14aconfig.polling_loop_annotation.frame_length > 0) {
         // Only add if we have space in the frames array
         if (temp_params.frame_count < ARRAYLEN(temp_params.frames)) {
             // Add the custom frame at the end of the frames array
-            memcpy(&temp_params.frames[temp_params.frame_count], 
-                   &hf14aconfig.polling_loop_annotation, 
+            memcpy(&temp_params.frames[temp_params.frame_count],
+                   &hf14aconfig.polling_loop_annotation,
                    sizeof(iso14a_polling_frame_t));
             temp_params.frame_count++;
         }
-        
+
         // Increase timeout if polling loop annotation is provided, as target may respond slower
         if (temp_params.extra_timeout == 0) {
             temp_params.extra_timeout = 250;
@@ -2740,7 +2740,7 @@ static int GetATQA(uint8_t *resp, uint16_t resp_len, uint8_t *resp_par, iso14a_p
     uint32_t retry_timeout = WUPA_RETRY_TIMEOUT * temp_params.frame_count + temp_params.extra_timeout;
     uint32_t start_time = 0;
     uint8_t current_frame = 0;
-    
+
     // Use the temporary polling parameters
     do {
         iso14a_polling_frame_t *frame_parameters = &temp_params.frames[current_frame];

@@ -451,7 +451,7 @@ static int ul_comp_write(uint8_t page, const uint8_t *data, uint8_t datalen) {
     uint8_t response[1] = {0xFF};
     ul_send_cmd_raw(cmd, 2 + datalen, response, sizeof(response));
     // ACK
-    if (response[0] == 0x0a) {
+    if (response[0] == CARD_ACK) {
         return PM3_SUCCESS;
     }
     // NACK
@@ -470,7 +470,8 @@ static int ulev1_requestAuthentication(const uint8_t *pwd, uint8_t *pack, uint16
     int len = ul_send_cmd_raw(cmd, sizeof(cmd), pack, packLength);
     // NACK tables different tags,  but between 0-9 is a NEGATIVE response.
     // ACK == 0xA
-    if (len == 1 && pack[0] <= 0x09) {
+    //  should only give you PACK (4 byytes)
+    if (len == 1) {
         return PM3_EWRONGANSWER;
     }
     return len;
@@ -498,10 +499,7 @@ static int ulaes_requestAuthentication(const uint8_t *key, uint8_t keyno, bool s
     if (WaitForResponseTimeout(CMD_HF_MIFAREULAES_AUTH, &resp, 1500) == false) {
         return PM3_ETIMEOUT;
     }
-    if (resp.status != PM3_SUCCESS) {
-        return resp.status;
-    }
-    return PM3_SUCCESS;
+    return resp.status;
 }
 
 static int ulc_authentication(const uint8_t *key, bool switch_off_field) {
@@ -2048,7 +2046,7 @@ uint64_t GetHF14AMfU_Type(void) {
             }
         }
 
-    } else if ((card.uid[0] == 0x05) && (card.atqa[0] == 0x44)){
+    } else if ((card.uid[0] == 0x05) && (card.atqa[0] == 0x44)) {
         // Infineon MY-D tests   Exam high nibble
         DropField();
         uint8_t nib = (card.uid[1] & 0xf0) >> 4;

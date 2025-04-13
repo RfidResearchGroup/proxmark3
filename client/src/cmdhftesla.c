@@ -193,17 +193,17 @@ static int info_hf_tesla(bool parse_certs) {
             }
 
             sw = get_sw(response, resplen);
-            if (sw == ISO7816_OK ) {
+            if (sw == ISO7816_OK) {
                 // save CERT for later
                 uint8_t cert[MAX_CERT_SIZE] = {0};
                 memcpy(cert, response, resplen - 2);
 
-                PrintAndLogEx(INFO, "%s", sprint_hex_inrow(cert+ (cert_len_present ? 2 : 0), resplen - 2));
+                PrintAndLogEx(INFO, "%s", sprint_hex_inrow(cert + (cert_len_present ? 2 : 0), resplen - 2));
                 if (parse_certs) {
-                    asn1_print(cert+ (cert_len_present ? 2 : 0), cert_len-2, "  ");
+                    asn1_print(cert + (cert_len_present ? 2 : 0), cert_len - 2, "  ");
                 }
             }
-        } else if ( sw == 0x6f17 ){
+        } else if (sw == 0x6f17) {
             PrintAndLogEx(INFO, "CERT # %i", i);
             PrintAndLogEx(INFO, "No certificate in slot %i", i);
         } else {
