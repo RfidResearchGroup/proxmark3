@@ -1915,11 +1915,11 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                     case 0x03:
                         major_product_version_str = "EV3";
                         break;
-                    case 0x0A:
-                        product_type_str = "MIFARE DUOX";
-                        break;
                     case 0x42:
                         major_product_version_str = "EV2 + EMV";
+                        break;
+                    case 0xA0:
+                        product_type_str = "MIFARE DUOX";
                         break;
                     default:
                         major_product_version_str = "Unknown";
