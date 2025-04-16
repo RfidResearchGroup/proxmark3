@@ -762,7 +762,7 @@ static int ntag424_write_data(uint8_t fileno, uint32_t offset, uint32_t num_byte
 static int ntag424_read_data(uint8_t fileno, uint16_t offset, uint16_t num_bytes, uint8_t *out, ntag424_communication_mode_t comm_mode, ntag424_session_keys_t *session_keys) {
     uint8_t cmd_header[] = {
         fileno,
-        (uint8_t)offset, (uint8_t)(offset << 8), (uint8_t)(offset << 16), // offset
+        (uint8_t)offset, (uint8_t)(offset >> 8), (uint8_t)(offset >> 16), // offset
         (uint8_t)num_bytes, (uint8_t)(num_bytes >> 8), 0x00
     };
 
