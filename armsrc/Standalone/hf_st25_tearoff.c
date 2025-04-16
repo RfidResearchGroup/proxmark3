@@ -585,7 +585,7 @@ static void st25tb_tag_print(st25tb_data_t *tag) {
 //=============================================================================
 
 /**
- * @brief Read a block using tear-off technique
+ * @brief Read a block
  * @param block_address Block address to read
  * @param block_value Pointer to store read value
  * @return Result code (0 for success)
