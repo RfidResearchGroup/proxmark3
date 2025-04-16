@@ -140,6 +140,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | HF_MFCSIM       | Simulate Mifare Classic 1k card storing in flashmem - Ray Lee
 | HF_MSDSAL       | EMV Read and emulation - Salvador Mendoza
 | HF_REBLAY       | 14A relay over BT  - Salvador Mendoza
+| HF_ST25_TEAROFF | Store/restore ST25TB tags with tear-off for counters - SecLabz 
 | HF_TCPRST       | IKEA Rothult ST25TA, Standalone Master Key Dump/Emulation - Nick Draffen
 | HF_TMUDFORD     | Read and emulate ISO15693 card UID - Tim Mudford
 | HF_UNISNIFF     | Combined 14a/14b/15 sniffer with runtime selection & extra save options

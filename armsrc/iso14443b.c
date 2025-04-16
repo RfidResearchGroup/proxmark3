@@ -1585,7 +1585,7 @@ static void CodeIso14443bAsReader(const uint8_t *cmd, int len, bool framing) {
 /*
 *  Convenience function to encode, transmit and trace iso 14443b comms
 */
-static void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t *start_time, uint32_t *eof_time, bool framing) {
+void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t *start_time, uint32_t *eof_time, bool framing) {
     const tosend_t *ts = get_tosend();
     CodeIso14443bAsReader(cmd, len, framing);
     TransmitFor14443b_AsReader(start_time);
@@ -1800,7 +1800,7 @@ static int iso14443b_select_cts_card(iso14b_cts_card_select_t *card) {
 /**
 * SRx Initialise.
 */
-static int iso14443b_select_srx_card(iso14b_card_select_t *card) {
+int iso14443b_select_srx_card(iso14b_card_select_t *card) {
     // INITIATE command: wake up the tag using the INITIATE
     static const uint8_t init_srx[] = { ISO14443B_INITIATE, 0x00, 0x97, 0x5b };
     uint8_t r_init[3] = { 0x00 };
@@ -2307,7 +2307,7 @@ void iso14443b_setup(void) {
 //
 // I tried to be systematic and check every answer of the tag, every CRC, etc...
 //-----------------------------------------------------------------------------
-static int read_14b_srx_block(uint8_t blocknr, uint8_t *block) {
+int read_14b_srx_block(uint8_t blocknr, uint8_t *block) {
 
     uint8_t cmd[] = {ISO14443B_READ_BLK, blocknr, 0x00, 0x00};
     AddCrc14B(cmd, 2);
