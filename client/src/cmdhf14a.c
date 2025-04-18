@@ -1898,14 +1898,15 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
     const char *major_product_version_str = "";
     const char *storage_size_str = "";
     if (version_hw_available) {
-        switch (version_hw->product_type) {
-            case 0x01:
-            case 0x81:
+        switch (version_hw->product_type & 0x0F) {
+            case 0x1:
                 product_type_str = "MIFARE DESFire";
+                // special cases, override product_type_str when needed
+                if (version_hw->product_type == 0x91) {
+                    product_type_str = "Apple Wallet DESFire Applet";
+                }
+                // general rule
                 switch (version_hw->major_product_version & 0x0F) {
-                    case 0x00:
-                        major_product_version_str = "MF3ICD40";
-                        break;
                     case 0x01:
                         major_product_version_str = "EV1";
                         break;
@@ -1915,18 +1916,21 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                     case 0x03:
                         major_product_version_str = "EV3";
                         break;
+                }
+                // special cases, override major_product_version_str when needed
+                switch (version_hw->major_product_version) {
+                    case 0x00:
+                        major_product_version_str = "MF3ICD40";
+                        break;
                     case 0x42:
                         major_product_version_str = "EV2 + EMV";
                         break;
                     case 0xA0:
                         product_type_str = "MIFARE DUOX";
                         break;
-                    default:
-                        major_product_version_str = "Unknown";
                 }
                 break;
-            case 0x02:
-            case 0x82:
+            case 0x2:
                 product_type_str = "MIFARE Plus";
                 switch (version_hw->major_product_version) {
                     case 0x11:
@@ -1939,7 +1943,7 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                         major_product_version_str = "Unknown";
                 }
                 break;
-            case 0x03:
+            case 0x3:
                 product_type_str = "MIFARE Ultralight";
                 switch (version_hw->major_product_version) {
                     case 0x01:
@@ -1955,7 +1959,7 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                         major_product_version_str = "Unknown";
                 }
                 break;
-            case 0x04:
+            case 0x4:
                 product_type_str = "NTAG";
                 switch (version_hw->major_product_version) {
                     case 0x01:
@@ -1978,10 +1982,13 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                         major_product_version_str = "Unknown";
                 }
                 break;
-            case 0x08:
+            case 0x7:
+                product_type_str = "NTAG I2C";
+                break;
+            case 0x8:
                 product_type_str = "MIFARE DESFire Light";
                 break;
-            case 0x09:
+            case 0x9:
                 product_type_str = "MIFARE Hospitality";
                 switch (version_hw->major_product_version) {
                     case 0x01:
@@ -1990,9 +1997,6 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                     default:
                         major_product_version_str = "Unknown";
                 }
-                break;
-            case 0x91:
-                product_type_str = "Apple Wallet DESFire Applet";
                 break;
             default:
                 product_type_str = "Unknown NXP tag";
