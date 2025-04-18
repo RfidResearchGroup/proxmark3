@@ -95,7 +95,7 @@ def lprint(s='',  end='\n', flush=False, prompt="[" + color("=", fg="yellow") + 
     if log is True:
         global logbuffer
         if logfile is not None:
-            with open(logfile, 'a') as f:
+            with open(logfile, 'a', encoding='utf-8') as f:
                 f.write(s + end)
         else:
             # buffering
