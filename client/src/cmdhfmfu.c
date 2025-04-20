@@ -3864,17 +3864,17 @@ static int CmdHF14AMfUSim(const char *Cmd) {
 static int CmdHF14AMfUCAuth(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu cauth",
-                  "Tests 3DES password on Mifare Ultralight-C tag.\n"
-                  "If password is not specified, a set of known defaults will be tested.",
+                  "Tests 3DES key on Mifare Ultralight-C tag.\n"
+                  "If key is not specified, a set of known defaults will be tried.",
                   "hf mfu cauth\n"
-                  "hf mfu cauth --key 000102030405060708090a0b0c0d0e0f"
+                  "hf mfu cauth --key <32 hex chars>"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0(NULL, "key", "<hex>", "Authentication key (UL-C 16 hex bytes)"),
+        arg_str0(NULL, "key", "<hex>", "Authentication key (16 bytes in hex)"),
         arg_lit0("l", NULL, "Swap entered key's endianness"),
-        arg_lit0("k", NULL, "Keep field on (only if a password is provided)"),
+        arg_lit0("k", NULL, "Keep field on (only if a key is provided)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3925,17 +3925,17 @@ static int CmdHF14AMfUAESAuth(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu aesauth",
                   "Tests AES key on Mifare Ultralight AES tags.\n"
-                  "If no key is specified, null key will be tried.\n"
+                  "If key is not specified, null key will be tried.\n"
                   "Key index 0: DataProtKey (default)\n"
                   "Key index 1: UIDRetrKey\n"
                   "Key index 2: OriginalityKey\n",
                   "hf mfu aesauth\n"
-                  "hf mfu aesauth --key <32 bytes> --index <0..2>"
+                  "hf mfu aesauth --key <32 hex chars> --index <0..2>"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0(NULL, "key", "<hex>",   "AES key (32 hex bytes)"),
+        arg_str0(NULL, "key", "<hex>",   "Authentication key (16 bytes in hex)"),
         arg_int0("i", "index", "<0..2>", "Key index, default: 0"),
         arg_lit0("k", NULL, "Keep field on (only if a key is provided)"),
         arg_param_end
@@ -3943,7 +3943,7 @@ static int CmdHF14AMfUAESAuth(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int ak_len = 0;
-    uint8_t authentication_key[32] = {0};
+    uint8_t authentication_key[16] = {0};
     uint8_t *authKeyPtr = authentication_key;
     CLIGetHexWithReturn(ctx, 1, authentication_key, &ak_len);
     int key_index = arg_get_int_def(ctx, 2, 0);
@@ -3953,9 +3953,9 @@ static int CmdHF14AMfUAESAuth(const char *Cmd) {
 
     if (ak_len == 0) {
         // default to null key
-        ak_len = 32;
+        ak_len = 16;
     }
-    if (ak_len != 32) {
+    if (ak_len != 16) {
         PrintAndLogEx(WARNING, "Invalid key length");
         return PM3_EINVARG;
     }

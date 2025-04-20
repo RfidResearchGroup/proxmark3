@@ -204,7 +204,7 @@ help:
 	@echo "+ fpga_compress   - Make tools/fpga_compress"
 	@echo
 	@echo "+ style           - Apply some automated source code formatting rules"
-	@echo "+ commands        - Regenerate commands documentation files and autocompletion data
+	@echo "+ commands        - Regenerate commands documentation files and autocompletion data"
 	@echo "+ check           - Run offline tests. Set CHECKARGS to pass arguments to the test script"
 	@echo "+ .../check       - Run offline tests against specific target. See above."
 	@echo "+ miscchecks      - Detect various encoding issues in source code"

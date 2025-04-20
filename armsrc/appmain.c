@@ -1806,7 +1806,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             struct p {
                 bool turn_off_field;
                 uint8_t keyno;
-                uint8_t key[18];
+                uint8_t key[16];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
             MifareUL_AES_Auth(payload->turn_off_field, payload->keyno, payload->key);

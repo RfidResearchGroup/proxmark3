@@ -7065,15 +7065,15 @@
         },
         "hf mfu aesauth": {
             "command": "hf mfu aesauth",
-            "description": "Tests AES key on Mifare Ultralight AES tags. If no key is specified, null key will be tried. Key index 0: DataProtKey (default) Key index 1: UIDRetrKey Key index 2: OriginalityKey",
+            "description": "Tests AES key on Mifare Ultralight AES tags. If key is not specified, null key will be tried. Key index 0: DataProtKey (default) Key index 1: UIDRetrKey Key index 2: OriginalityKey",
             "notes": [
                 "hf mfu aesauth",
-                "hf mfu aesauth --key <32 bytes> --index <0..2>"
+                "hf mfu aesauth --key <32 hex chars> --index <0..2>"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--key <hex> AES key (32 hex bytes)",
+                "--key <hex> Authentication key (16 bytes in hex)",
                 "-i, --index <0..2> Key index, default: 0",
                 "-k Keep field on (only if a key is provided)"
             ],
@@ -7099,17 +7099,17 @@
         },
         "hf mfu cauth": {
             "command": "hf mfu cauth",
-            "description": "Tests 3DES password on Mifare Ultralight-C tag. If password is not specified, a set of known defaults will be tested.",
+            "description": "Tests 3DES key on Mifare Ultralight-C tag. If key is not specified, a set of known defaults will be tried.",
             "notes": [
                 "hf mfu cauth",
-                "hf mfu cauth --key 000102030405060708090a0b0c0d0e0f"
+                "hf mfu cauth --key <32 hex chars>"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--key <hex> Authentication key (UL-C 16 hex bytes)",
+                "--key <hex> Authentication key (16 bytes in hex)",
                 "-l Swap entered key's endianness",
-                "-k Keep field on (only if a password is provided)"
+                "-k Keep field on (only if a key is provided)"
             ],
             "usage": "hf mfu cauth [-hlk] [--key <hex>]"
         },
@@ -13358,6 +13358,6 @@
     "metadata": {
         "commands_extracted": 767,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-04-13T10:20:08"
+        "extracted_on": "2025-04-20T09:18:59"
     }
 }
