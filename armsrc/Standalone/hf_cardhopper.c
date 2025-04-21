@@ -59,7 +59,7 @@ static const uint8_t magicCARD[4] = "CARD";
 static const uint8_t magicEND [4] = "\xff" "END";
 static const uint8_t magicRSRT[7] = "RESTART";
 static const uint8_t magicERR [4] = "\xff" "ERR";
-static       uint8_t magicACK [1] = "\xfe"; // is constant, but must be passed to API that doesn't like that
+static const uint8_t magicACK [1] = "\xfe";
 
 // Forward declarations
 static void become_reader(void);
@@ -72,7 +72,7 @@ static bool try_use_canned_response(const uint8_t *, int, tag_response_info_t *)
 static void reply_with_packet(packet_t *);
 
 static void read_packet(packet_t *);
-static void write_packet(packet_t *);
+static void write_packet(const packet_t *);
 
 static bool GetIso14443aCommandFromReaderInterruptible(uint8_t *, uint16_t, uint8_t *, int *);
 
@@ -146,7 +146,7 @@ static void become_reader(void) {
     packet_t packet = { 0 };
     packet_t *rx = &packet;
     packet_t *tx = &packet;
-    uint8_t toCard[256] = { 0 };
+    uint8_t toCard[MAX_FRAME_SIZE] = { 0 };
     uint8_t parity[MAX_PARITY_SIZE] = { 0 };
 
     while (1) {
@@ -178,11 +178,15 @@ static void become_reader(void) {
         AddCrc14A(toCard, rx->len);
         ReaderTransmit(toCard, rx->len + 2, NULL);
 
-        tx->len = ReaderReceive(tx->dat, sizeof(tx->dat), parity);
-        if (tx->len == 0) {
+        // read to toCard instead of tx->dat directly to allow the extra byte for the CRC
+        uint16_t fromCardLen = ReaderReceive(toCard, sizeof(toCard), parity);
+        if (fromCardLen <= 2) {
             tx->len = sizeof(magicERR);
             memcpy(tx->dat, magicERR, sizeof(magicERR));
-        } else tx->len -= 2; // cut off the CRC
+        } else {
+            tx->len = fromCardLen - 2; // cut off the CRC
+            memcpy(tx->dat, toCard, tx->len);
+        }
 
         write_packet(tx);
     }
@@ -236,7 +240,7 @@ static void become_card(void) {
 
     DbpString(_CYAN_("[@]") " Setup done - entering emulation loop");
     int fromReaderLen;
-    uint8_t fromReaderDat[256] = { 0 };
+    uint8_t fromReaderDat[MAX_FRAME_SIZE] = { 0 };
     uint8_t parity[MAX_PARITY_SIZE] = { 0 };
     packet_t packet = { 0 };
     packet_t *tx = &packet;
@@ -277,8 +281,14 @@ static void become_card(void) {
         memcpy(tx->dat, fromReaderDat, tx->len);
         write_packet(tx);
 
+        if (no_reply) {
+            // since the RATS reply has already been sent waiting here will can result in missing the next reader command
+            // if we do get a reply later on while waiting for the next reader message it will be safely ignored
+            continue;
+        }
+
         read_packet(rx);
-        if (!no_reply && rx->len > 0) {
+        if (rx->len > 0) {
             reply_with_packet(rx);
         }
     }
@@ -344,7 +354,13 @@ static void cook_ats(packet_t *ats, uint8_t fwi, uint8_t sfgi) {
 
         uint8_t orig_t0 = ats->dat[1];
         // Update FSCI in T0 from the received ATS
-        t0 |= orig_t0 & 0x0F;
+        uint8_t fsci = orig_t0 & 0x0F;
+        if (fsci > 8) {
+            // our packet length maxes out at 255 bytes, an FSCI of 8 requires 256 bytes
+            // but since we drop the 2 byte CRC16 we're safe capping this at 8
+            fsci = 8;
+        }
+        t0 |= fsci;
 
         uint8_t len = ats->len - 2;
         uint8_t *orig_ats_ptr = &ats->dat[2];
@@ -449,20 +465,12 @@ static bool try_use_canned_response(const uint8_t *dat, int len, tag_response_in
 }
 
 
-static uint8_t g_responseBuffer  [512 ] = { 0 };
-static uint8_t g_modulationBuffer[1024] = { 0 };
+static uint8_t g_responseBuffer  [MAX_FRAME_SIZE] = { 0 };
 
 static void reply_with_packet(packet_t *packet) {
-    tag_response_info_t response = { 0 };
-    response.response = g_responseBuffer;
-    response.modulation = g_modulationBuffer;
-
-    memcpy(response.response, packet->dat, packet->len);
-    AddCrc14A(response.response, packet->len);
-    response.response_n = packet->len + 2;
-
-    prepare_tag_modulation(&response, sizeof(g_modulationBuffer));
-    EmSendPrecompiledCmd(&response);
+    memcpy(g_responseBuffer, packet->dat, packet->len);
+    AddCrc14A(g_responseBuffer, packet->len);
+    EmSendCmd(g_responseBuffer, packet->len + 2);
 }
 
 
@@ -496,19 +504,27 @@ static void read_packet(packet_t *packet) {
 
             // clear any remaining buffered data
             while (cardhopper_data_available()) {
-                cardhopper_read(packet->dat, 255);
+                cardhopper_read(packet->dat, sizeof(packet->dat));
             }
 
             packet->len = 0;
             return;
         }
     }
-    cardhopper_write(magicACK, sizeof(magicACK));
+
+    if (packet->len > (MAX_FRAME_SIZE - 2)) {
+        // this will overrun MAX_FRAME_SIZE once we re-add the CRC
+        // in theory this should never happen but better to be defensive
+        packet->len = 0;
+        cardhopper_write(magicERR, sizeof(magicERR));
+    } else {
+        cardhopper_write(magicACK, sizeof(magicACK));
+    }
 }
 
 
-static void write_packet(packet_t *packet) {
-    cardhopper_write((uint8_t *) packet, packet->len + 1);
+static void write_packet(const packet_t *packet) {
+    cardhopper_write((const uint8_t *) packet, packet->len + 1);
 }
 
 
