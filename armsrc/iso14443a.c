@@ -133,6 +133,36 @@ static uint32_t LastProxToAirDuration;
 #define SEC_Y 0x00
 #define SEC_Z 0xc0
 
+
+static const iso14a_polling_frame_t WUPA_CMD = {
+    { ISO14443A_CMD_WUPA }, 1, 7, 0
+};
+
+static const iso14a_polling_frame_t REQA_CMD = {
+    {ISO14443A_CMD_REQA }, 1, 7, 0
+};
+
+static const iso14a_polling_frame_t MAGWUPA_COMMANDS[4] = {
+    {{ 0x7A }, 1, 7, 0},
+    {{ 0x7B }, 1, 7, 0},
+    {{ 0x7C }, 1, 7, 0},
+    {{ 0x7D }, 1, 7, 0}
+};
+
+
+// Polling frames and configurations
+iso14a_polling_parameters_t WUPA_POLLING_PARAMETERS = {
+    .frames = { WUPA_CMD },
+    .frame_count = 1,
+    .extra_timeout = 0,
+};
+
+iso14a_polling_parameters_t REQA_POLLING_PARAMETERS = {
+    .frames = { REQA_CMD },
+    .frame_count = 1,
+    .extra_timeout = 0,
+};
+
 /*
 Default HF 14a config is set to:
     forceanticol = 0 (auto)
@@ -140,21 +170,17 @@ Default HF 14a config is set to:
     forcecl2 = 0 (auto)
     forcecl3 = 0 (auto)
     forcerats = 0 (auto)
+    magsafe = 0 (disabled)
+    polling_loop_annotation = {{0}, 0, 0, 0} (disabled)
 */
-static hf14a_config hf14aconfig = { 0, 0, 0, 0, 0, {{0}, 0, 0, 0} };
+static hf14a_config hf14aconfig = { 0, 0, 0, 0, 0, 0, {{0}, 0, 0, 0} };
 
+static iso14a_polling_parameters_t hf14a_polling_parameters = {
+    .frames = { WUPA_CMD },
+    .frame_count = 1,
+    .extra_timeout = 0
+};
 
-// Polling frames and configurations
-iso14a_polling_parameters_t WUPA_POLLING_PARAMETERS = {
-    .frames = { {{ ISO14443A_CMD_WUPA }, 1, 7, 0} },
-    .frame_count = 1,
-    .extra_timeout = 0,
-};
-iso14a_polling_parameters_t REQA_POLLING_PARAMETERS = {
-    .frames = { {{ ISO14443A_CMD_REQA }, 1, 7, 0} },
-    .frame_count = 1,
-    .extra_timeout = 0,
-};
 
 // parity isn't used much
 static uint8_t parity_array[MAX_PARITY_SIZE] = {0};
@@ -191,6 +217,9 @@ void printHf14aConfig(void) {
              (hf14aconfig.forcerats == 1) ? _RED_("force") "  ( always do RATS )" : "",
              (hf14aconfig.forcerats == 2) ? _RED_("skip") "   ( always skip RATS )" : ""
             );
+    Dbprintf("  [m] Magsafe polling............... %s",
+             (hf14aconfig.magsafe == 1) ? _GREEN_("enabled") : _YELLOW_("disabled")
+            );
     Dbprintf("  [p] Polling loop annotation....... %s %*D",
              (hf14aconfig.polling_loop_annotation.frame_length <= 0) ? _YELLOW_("disabled") : _GREEN_("enabled"),
              hf14aconfig.polling_loop_annotation.frame_length,
@@ -208,7 +237,6 @@ void printHf14aConfig(void) {
  * @param sc
  */
 void setHf14aConfig(const hf14a_config *hc) {
-
     if ((hc->forceanticol >= 0) && (hc->forceanticol <= 2))
         hf14aconfig.forceanticol = hc->forceanticol;
     if ((hc->forcebcc >= 0) && (hc->forcebcc <= 2))
@@ -219,12 +247,30 @@ void setHf14aConfig(const hf14a_config *hc) {
         hf14aconfig.forcecl3 = hc->forcecl3;
     if ((hc->forcerats >= 0) && (hc->forcerats <= 2))
         hf14aconfig.forcerats = hc->forcerats;
-
-    if (hc->polling_loop_annotation.frame_length > 0) {
+    if ((hc->magsafe >= 0) && (hc->magsafe <= 1))
+        hf14aconfig.magsafe = hc->magsafe;
+    if (hc->polling_loop_annotation.frame_length >= 0) {
         memcpy(&hf14aconfig.polling_loop_annotation, &hc->polling_loop_annotation, sizeof(iso14a_polling_frame_t));
-    } else if (hc->polling_loop_annotation.frame_length < 0) {
-        // Reset if set to empty
-        hf14aconfig.polling_loop_annotation.frame_length = 0;
+    }
+
+    // Derive polling loop configuration based on 14a config
+    hf14a_polling_parameters.frames[0] = WUPA_CMD;
+    hf14a_polling_parameters.frame_count = 1;
+    hf14a_polling_parameters.extra_timeout = 0;
+    if (hf14aconfig.magsafe == 1) {
+        for (int i = 0; i < ARRAYLEN(MAGWUPA_COMMANDS); i++) {
+            if (hf14a_polling_parameters.frame_count < ARRAYLEN(hf14a_polling_parameters.frames) - 1) {
+                hf14a_polling_parameters.frames[hf14a_polling_parameters.frame_count] = MAGWUPA_COMMANDS[i];
+                hf14a_polling_parameters.frame_count += 1;
+            }
+        }
+    }
+    if (hf14aconfig.polling_loop_annotation.frame_length > 0) {
+        if (hf14a_polling_parameters.frame_count < ARRAYLEN(hf14a_polling_parameters.frames)) {
+            hf14a_polling_parameters.frames[hf14a_polling_parameters.frame_count] = hf14aconfig.polling_loop_annotation;
+            hf14a_polling_parameters.frame_count += 1;
+        }
+        hf14a_polling_parameters.extra_timeout = 250;
     }
 }
 
@@ -2560,8 +2606,7 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint16_t rec_max
     return false;
 }
 
-void ReaderTransmitBitsPar(uint8_t *frame, uint16_t bits, uint8_t *par, uint32_t *timing) {
-
+void ReaderTransmitBitsPar(const uint8_t *frame, uint16_t bits, uint8_t *par, uint32_t *timing) {
     CodeIso14443aBitsAsReaderPar(frame, bits, par);
     // Send command to tag
     tosend_t *ts = get_tosend();
@@ -2571,17 +2616,17 @@ void ReaderTransmitBitsPar(uint8_t *frame, uint16_t bits, uint8_t *par, uint32_t
     LogTrace(frame, nbytes(bits), (LastTimeProxToAirStart << 4) + DELAY_ARM2AIR_AS_READER, ((LastTimeProxToAirStart + LastProxToAirDuration) << 4) + DELAY_ARM2AIR_AS_READER, par, true);
 }
 
-void ReaderTransmitPar(uint8_t *frame, uint16_t len, uint8_t *par, uint32_t *timing) {
+void ReaderTransmitPar(const uint8_t *frame, uint16_t len, uint8_t *par, uint32_t *timing) {
     ReaderTransmitBitsPar(frame, len * 8, par, timing);
 }
 
-static void ReaderTransmitBits(uint8_t *frame, uint16_t len, uint32_t *timing) {
+static void ReaderTransmitBits(const uint8_t *frame, uint16_t len, uint32_t *timing) {
     // Generate parity and redirect
     GetParity(frame, len / 8, parity_array);
     ReaderTransmitBitsPar(frame, len, parity_array, timing);
 }
 
-void ReaderTransmit(uint8_t *frame, uint16_t len, uint32_t *timing) {
+void ReaderTransmit(const uint8_t *frame, uint16_t len, uint32_t *timing) {
     // Generate parity and redirect
     GetParity(frame, len, parity_array);
     ReaderTransmitBitsPar(frame, len * 8, parity_array, timing);
@@ -2708,42 +2753,23 @@ static void iso14a_set_ATS_times(const uint8_t *ats) {
 }
 
 
-static int GetATQA(uint8_t *resp, uint16_t resp_len, uint8_t *resp_par, iso14a_polling_parameters_t *polling_parameters) {
-#define WUPA_RETRY_TIMEOUT 10
+static int GetATQA(uint8_t *resp, uint16_t resp_len, uint8_t *resp_par, const iso14a_polling_parameters_t *polling_parameters) {
+    #define RETRY_TIMEOUT 10
 
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
     iso14a_set_timeout(1236 / 128 + 1);  // response to WUPA is expected at exactly 1236/fc. No need to wait longer.
 
-    // Create temporary polling parameters structure that might include both standard and custom frames
-    iso14a_polling_parameters_t temp_params;
-    memcpy(&temp_params, polling_parameters, sizeof(iso14a_polling_parameters_t));
-
-    // If we have a custom polling frame annotation, add it to the temporary structure
-    if (hf14aconfig.polling_loop_annotation.frame_length > 0) {
-        // Only add if we have space in the frames array
-        if (temp_params.frame_count < ARRAYLEN(temp_params.frames)) {
-            // Add the custom frame at the end of the frames array
-            memcpy(&temp_params.frames[temp_params.frame_count],
-                   &hf14aconfig.polling_loop_annotation,
-                   sizeof(iso14a_polling_frame_t));
-            temp_params.frame_count++;
-        }
-
-        // Increase timeout if polling loop annotation is provided, as target may respond slower
-        if (temp_params.extra_timeout == 0) {
-            temp_params.extra_timeout = 250;
-        }
-    }
+    polling_parameters = polling_parameters != NULL ? polling_parameters : &hf14a_polling_parameters;
 
     bool first_try = true;
     int len;
-    uint32_t retry_timeout = WUPA_RETRY_TIMEOUT * temp_params.frame_count + temp_params.extra_timeout;
+    uint32_t retry_timeout = RETRY_TIMEOUT * polling_parameters->frame_count + polling_parameters->extra_timeout;
     uint32_t start_time = 0;
     uint8_t current_frame = 0;
 
     // Use the temporary polling parameters
     do {
-        iso14a_polling_frame_t *frame_parameters = &temp_params.frames[current_frame];
+        const iso14a_polling_frame_t *frame_parameters = &polling_parameters->frames[current_frame];
 
         if (frame_parameters->last_byte_bits == 8) {
             ReaderTransmit(frame_parameters->frame, frame_parameters->frame_length, NULL);
@@ -2765,7 +2791,7 @@ static int GetATQA(uint8_t *resp, uint16_t resp_len, uint8_t *resp_par, iso14a_p
         }
 
         // Go over frame configurations, loop back when we reach the end
-        current_frame = current_frame < (temp_params.frame_count - 1) ? current_frame + 1 : 0;
+        current_frame = current_frame < (polling_parameters->frame_count - 1) ? current_frame + 1 : 0;
     } while (len == 0 && GetTickCountDelta(start_time) <= retry_timeout);
 
     iso14a_set_timeout(save_iso14a_timeout);
@@ -2774,7 +2800,7 @@ static int GetATQA(uint8_t *resp, uint16_t resp_len, uint8_t *resp_par, iso14a_p
 
 
 int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats) {
-    return iso14443a_select_cardEx(uid_ptr, p_card, cuid_ptr, anticollision, num_cascades, no_rats, &WUPA_POLLING_PARAMETERS);
+    return iso14443a_select_cardEx(uid_ptr, p_card, cuid_ptr, anticollision, num_cascades, no_rats, NULL);
 }
 
 
@@ -3047,7 +3073,7 @@ int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades) {
     uint8_t sak = 0x04; // cascade uid
     int cascade_level = 1;
 
-    if (GetATQA(resp, sizeof(resp), resp_par, &WUPA_POLLING_PARAMETERS) == 0) {
+    if (GetATQA(resp, sizeof(resp), resp_par, NULL) == 0) {
         return 0;
     }
 
@@ -3280,7 +3306,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
                        true,
                        0,
                        ((param & ISO14A_NO_RATS) == ISO14A_NO_RATS),
-                       ((param & ISO14A_USE_CUSTOM_POLLING) == ISO14A_USE_CUSTOM_POLLING) ? (iso14a_polling_parameters_t *)cmd : &WUPA_POLLING_PARAMETERS
+                       ((param & ISO14A_USE_CUSTOM_POLLING) == ISO14A_USE_CUSTOM_POLLING) ? (iso14a_polling_parameters_t *)cmd : NULL
                    );
             // TODO: Improve by adding a cmd parser pointer and moving it by struct length to allow combining data with polling params
             FpgaDisableTracing();

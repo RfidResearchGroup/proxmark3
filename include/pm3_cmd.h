@@ -133,7 +133,7 @@ typedef struct {
 
 
 // Defines a frame that will be used in a polling sequence
-// Polling loop annotations are up to (7 + 16) bytes long, 24 bytes should cover future and other cases
+// Polling loop annotations are up to 20 bytes long, 24 bytes should cover future and other cases
 typedef struct {
     uint8_t frame[24];
     // negative values can be used to carry special info
@@ -144,8 +144,8 @@ typedef struct {
 
 
 // Defines polling sequence configuration
-// 6 would be enough for 4 magsafe, 1 wupa, 1 pla,
 typedef struct {
+    // 6 would be enough for 4 magsafe, 1 wupa, 1 pla,
     iso14a_polling_frame_t frames[6];
     int8_t frame_count;
     uint16_t extra_timeout;
@@ -159,6 +159,7 @@ typedef struct {
     int8_t forcecl2;     // 0:auto 1:force executing CL2 2:force skipping CL2
     int8_t forcecl3;     // 0:auto 1:force executing CL3 2:force skipping CL3
     int8_t forcerats;    // 0:auto 1:force executing RATS 2:force skipping RATS
+    int8_t magsafe;      // 0:disabled 1:enabled
     iso14a_polling_frame_t polling_loop_annotation; // Polling loop annotation
 } PACKED hf14a_config;
 

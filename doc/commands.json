@@ -1324,7 +1324,6 @@
             "notes": [
                 "hf 14a raw -sc 3000 -> select, crc, where 3000 == 'read block 00'",
                 "hf 14a raw -ak -b 7 40 -> send 7 bit byte 0x40",
-                "hf 14a raw --ecp -s -> send ECP before select",
                 "Crypto1 session example, with special auth shortcut 6xxx<key>:",
                 "hf 14a raw --crypto1 -skc 6000FFFFFFFFFFFF",
                 "hf 14a raw --crypto1 -kc 3000",
@@ -1343,13 +1342,12 @@
                 "-t, --timeout <ms> Timeout in milliseconds",
                 "-b <dec> Number of bits to send. Useful for send partial byte",
                 "-v, --verbose Verbose output",
-                "--ecp Use enhanced contactless polling",
                 "--mag Use Apple magsafe polling",
                 "--topaz Use Topaz protocol to send command",
                 "--crypto1 Use crypto1 session",
                 "<hex> Raw bytes to send"
             ],
-            "usage": "hf 14a raw [-hack3rsv] [-t <ms>] [-b <dec>] [--ecp] [--mag] [--topaz] [--crypto1] <hex> [<hex>]..."
+            "usage": "hf 14a raw [-hack3rsv] [-t <ms>] [-b <dec>] [--topaz] [--crypto1] <hex> [<hex>]..."
         },
         "hf 14a reader": {
             "command": "hf 14a reader",
@@ -1357,7 +1355,6 @@
             "notes": [
                 "hf 14a reader",
                 "hf 14a reader -@ -> Continuous mode",
-                "hf 14a reader --ecp -> trigger apple enhanced contactless polling",
                 "hf 14a reader --mag -> trigger apple magsafe polling"
             ],
             "offline": false,
@@ -1367,12 +1364,11 @@
                 "-s, --silent silent (no messages)",
                 "--drop just drop the signal field",
                 "--skip ISO14443-3 select only (skip RATS)",
-                "--ecp Use enhanced contactless polling",
                 "--mag Use Apple magsafe polling",
                 "-@ continuous reader mode",
                 "-w, --wait wait for card"
             ],
-            "usage": "hf 14a reader [-hks@w] [--drop] [--skip] [--ecp] [--mag]"
+            "usage": "hf 14a reader [-hks@w] [--drop] [--skip]"
         },
         "hf 14a sim": {
             "command": "hf 14a sim",
