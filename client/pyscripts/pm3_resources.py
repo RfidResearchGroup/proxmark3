@@ -36,7 +36,7 @@ DIR_PATH = os.path.dirname(os.path.abspath(__file__))
 if TOOLS_PATH is None:
     if os.path.basename(os.path.dirname(DIR_PATH)) == 'client':
         # dev setup
-        DEV_TOOLS_PATH = os.path.normpath(os.path.join(DIR_PATH, "..", "..", "tools", "mfc", "card_only"))
+        DEV_TOOLS_PATH = os.path.normpath(os.path.join(DIR_PATH, "..", "..", "tools"))
         if os.path.isdir(DEV_TOOLS_PATH):
             TOOLS_PATH = DEV_TOOLS_PATH
 
@@ -62,11 +62,11 @@ def find_tool(tool_name):
         str: The full path to the tool if found, otherwise None.
     """
     if TOOLS_PATH is not None:
-        tool = os.path.join(TOOLS_PATH, tool_name)
-        if os.path.isfile(tool):
-            return tool
-        elif os.path.isfile(tool + ".exe"):
-            return tool + ".exe"
+        for root, _, files in os.walk(TOOLS_PATH):
+            if tool_name in files:
+                return os.path.join(root, tool_name)
+            elif tool_name + ".exe" in files:
+                return os.path.join(root, tool_name + ".exe")
     # if not found, search in the user PATH
     for path in os.environ["PATH"].split(os.pathsep):
         env_tool = os.path.join(path, tool_name)
