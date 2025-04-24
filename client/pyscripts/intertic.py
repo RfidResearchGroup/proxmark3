@@ -211,6 +211,37 @@ def Describe_Usage_2_1(Usage, ContractMediumEndDate, Certificate):
     print('  left...               :', Usage.nom_bits_left())
     print('  [CER] Usage           : {:04x}'.format(Certificate.nom(16)))
 
+def Describe_Usage_2_2(Usage, ContractMediumEndDate, Certificate):
+    EventDateStamp = Usage.nom(10)
+    EventTimeStamp = Usage.nom(11)
+    unk0 = Usage.nom_bits(8)
+    EventCode_Nature  = Usage.nom(5)
+    EventCode_Type  = Usage.nom(5)
+    unk1 = Usage.nom_bits(11)
+    EventGeoRouteId = Usage.nom(14)
+    EventGeoRoute_Direction = Usage.nom(2)
+    EventGeoVehicleId = Usage.nom(16)
+    unk2 = Usage.nom_bits(4)
+    EventValidityTimeFirstStamp = Usage.nom(11)
+    unk3 = Usage.nom_bits(3)
+    EventCountPassengers_mb = Usage.nom(4)
+
+    print('  DateStamp             : {} ({})'.format(EventDateStamp, (datetime(1997, 1, 1) + timedelta(days = ContractMediumEndDate - EventDateStamp)).strftime('%Y-%m-%d')))
+    print('  TimeStamp             : {} ({:02d}:{:02d})'. format(EventTimeStamp, EventTimeStamp // 60, EventTimeStamp % 60))
+    print('  unk0...               :', unk0)
+    print('  Code/Nature           : 0x{:x} ({})'.format(EventCode_Nature, TYPE_EventCode_Nature.get(EventCode_Nature, '?')))
+    print('  Code/Type             : 0x{:x} ({})'.format(EventCode_Type, TYPE_EventCode_Type.get(EventCode_Type, '?')))
+    print('  unk1...               :', unk1)
+    print('  GeoRouteId            : {}'. format(EventGeoRouteId))
+    print('  Direction             : {} ({})'. format(EventGeoRoute_Direction, TYPE_EventGeoRoute_Direction.get(EventGeoRoute_Direction, '?')))
+    print('  GeoVehicleId          : {}'. format(EventGeoVehicleId))
+    print('  unk2...               :', unk2)
+    print('  ValidityTimeFirstStamp: {} ({:02d}:{:02d})'. format(EventValidityTimeFirstStamp, EventValidityTimeFirstStamp // 60, EventValidityTimeFirstStamp % 60))
+    print('  unk3...               :', unk3)
+    print('  Passengers(?)         : {}'. format(EventCountPassengers_mb))
+    print('  left...               :', Usage.nom_bits_left())
+    print('  [CER] Usage           : {:04x}'.format(Certificate.nom(16)))
+
 def Describe_Usage_3(Usage, ContractMediumEndDate, Certificate):
     EventDateStamp = Usage.nom(10)
     EventTimeStamp = Usage.nom(11)
@@ -289,7 +320,7 @@ FRA_OrganizationalAuthority_Contract_Provider = {
     0x502: {
         83: InterticHelper('Annecy', 'Sibra', Describe_Usage_2),
         84: InterticHelper('Bourg-en-Bresse', 'Rubis / Keolis'),
-        10: InterticHelper('Clermont-Ferrand', 'T2C'),
+        10: InterticHelper('Clermont-Ferrand', 'T2C', Describe_Usage_2_2),
     },
     0x907: {
         1: InterticHelper('Dijon', 'Divia / Keolis'),
