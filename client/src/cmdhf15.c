@@ -279,22 +279,22 @@ static int CmdHF15Help(const char *Cmd);
 static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
 
     int reason = 0;
-    int index = originality_check_verify(uid, 8, signature, 32, PK_MFC);
+    int index = originality_check_verify(uid, 8, signature, 32, PK_15);
     if (index >= 0) {
         reason = 1;
     } else {
         // try with sha256
-        index = originality_check_verify_ex(uid, 8, signature, 32, PK_MFC, false, true);
+        index = originality_check_verify_ex(uid, 8, signature, 32, PK_15, false, true);
         if (index >= 0) {
             reason = 2;
         } else {
             // try with reversed uid / signature
-            index = originality_check_verify_ex(uid, 8, signature, 32, PK_MFC, true, false);
+            index = originality_check_verify_ex(uid, 8, signature, 32, PK_15, true, false);
             if (index >= 0) {
                 reason = 3;
             } else {
                 // try with sha256 and reversed uid / signature
-                index = originality_check_verify_ex(uid, 8, signature, 32, PK_MFC, true, true);
+                index = originality_check_verify_ex(uid, 8, signature, 32, PK_15, true, true);
                 if (index >= 0) {
                     reason = 3;
                 }
