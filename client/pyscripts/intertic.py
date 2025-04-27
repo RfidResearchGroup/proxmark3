@@ -289,6 +289,7 @@ ISO_Countries = {
 
 FRA_OrganizationalAuthority_Contract_Provider = {
     0x000: {
+        1: InterticHelper('Valenciennes', 'Transvilles / Keolis', Describe_Usage_1_1),
         5: InterticHelper('Lille', 'Ilévia / Keolis', Describe_Usage_1_1),
         7: InterticHelper('Lens-Béthune', 'Tadao / Transdev', Describe_Usage_1_1),
     },
