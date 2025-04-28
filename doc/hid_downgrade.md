@@ -24,7 +24,7 @@ This document targets both Proxmark3 and Flipper Zero devices.
 - [Simulate a standard keyed iCLASS legacy credential](#simulate-a-standard-keyed-iclass-legacy-credential)
 - [Write a downgraded iCLASS legacy credential](#write-a-downgraded-iclass-legacy-credential)
   - [Using Omnikey Reader 5427CK Gen2 and Proxmark3](#using-omnikey-reader-5427ck-gen2-and-proxmark3)
-  - [Using Elatec TWN4 or TWN4 mini (USB front reader)](#using-omnikey-reader-5427ck-gen2-and-proxmark3)
+  - [Using Elatec TWN4 or TWN4 mini (USB front reader)](#using-elatec-twn4-or-twn4-mini-usb-front-reader)
   - [Using Flipper Zero with NARD](#using-flipper-zero-with-nard)
   - [Using Weaponized HID Reader](#using-weaponized-hid-reader)
 - [Write ProxII credential to a T5577](#write-proxii-credential-to-a-t5577)
