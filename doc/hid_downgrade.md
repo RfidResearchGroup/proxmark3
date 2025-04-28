@@ -24,6 +24,7 @@ This document targets both Proxmark3 and Flipper Zero devices.
 - [Simulate a standard keyed iCLASS legacy credential](#simulate-a-standard-keyed-iclass-legacy-credential)
 - [Write a downgraded iCLASS legacy credential](#write-a-downgraded-iclass-legacy-credential)
   - [Using Omnikey Reader 5427CK Gen2 and Proxmark3](#using-omnikey-reader-5427ck-gen2-and-proxmark3)
+  - [Using Elatec TWN4 or TWN4 mini (USB front reader)](#using-omnikey-reader-5427ck-gen2-and-proxmark3)
   - [Using Flipper Zero with NARD](#using-flipper-zero-with-nard)
   - [Using Weaponized HID Reader](#using-weaponized-hid-reader)
 - [Write ProxII credential to a T5577](#write-proxii-credential-to-a-t5577)
@@ -189,6 +190,19 @@ drop iclass-flipper.picopass file here and simulate on Flipper
 5. Go to reader upload tab 
 6. Use the "load file" function and load the `encoder.cfg` [config file](../traces/iclass/encoder.cfg)
 7. Launch PM3 client, place iCLASS/Picopass card on HF antenna and read your original card on the Omnikey reader
+8. Press enter
+
+## Using Elatec TWN4 or TWN4 mini (USB front reader)
+^[Top](#top)
+
+OBS!
+The reader must have the `PI` designation on the label for it to have a embedded HID SAM. If the reader is any other configuration as per the label, a HID SAM will have to be installed in the SAM slot.
+
+1. Launch `appblaster.exe`
+2. Click on "program firmware image"
+3. Select `encoder.bix` as the reader firmware
+4. Click program image
+5. Launch PM3 client, place iCLASS/Picopass card on HF antenna and read your original card on the Elatec reader
 8. Press enter
 
 ## Using Flipper Zero with NARD
