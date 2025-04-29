@@ -236,7 +236,7 @@ Prequisite, you will need the following bill of materials (BOM):
 * Some 20-24 AWG wire or ethernet cable
 * Your preferred power source (5-9v)
 
-The easiest way is to buy a [ESPKEY](https://www.aliexpress.com/item/32850151497.html)
+The easiest way is to buy a [ESPKEY]([https://www.aliexpress.com/item/32850151497.html](https://www.aliexpress.com/w/wholesale-esp-rfid-tool.html))
 
 Follow these steps:
 
