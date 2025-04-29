@@ -196,7 +196,7 @@ drop iclass-flipper.picopass file here and simulate on Flipper
 ^[Top](#top)
 
 OBS!
-The reader must have the `PI` designation on the label for it to have a embedded HID SAM. If you have a reader with a different configuration as per the label, a HID SAM will have to be installed in the SAM slot.
+The reader must have the `PI` designation on the label for it to have a embedded HID SAM. If you have a reader with a different configuration as per the label, an HID SAM will have to be installed in the SAM slot.
 
 1. Launch [appblaster.exe](../traces/iclass/config/AppBlaster.exe)
 2. Click on "program firmware image"
