@@ -198,11 +198,12 @@ drop iclass-flipper.picopass file here and simulate on Flipper
 OBS!
 The reader must have the `PI` designation on the label for it to have a embedded HID SAM. If you have a reader with a different configuration as per the label, an HID SAM will have to be installed in the SAM slot.
 
-1. Launch [appblaster.exe](../traces/iclass/config/AppBlaster.exe)
-2. Click on "program firmware image"
-3. Select [encoder.bix](../traces/iclass/config/encoder.bix) as the reader firmware
-4. Click program image
-5. Launch PM3 client, place iCLASS/Picopass card on HF antenna and read your original card on the Elatec reader
+1. Plug in Elatec reader
+2. Launch [appblaster.exe](../traces/iclass/config/AppBlaster.exe)
+3. Click on "program firmware image"
+4. Select [encoder.bix](../traces/iclass/config/encoder.bix) as the reader firmware
+5. Click program image
+6. Launch PM3 client, place iCLASS/Picopass card on HF antenna and read your original card on the Elatec reader
 8. Press enter
 
 ## Using Flipper Zero with NARD
