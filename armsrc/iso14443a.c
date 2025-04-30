@@ -134,31 +134,29 @@ static uint32_t LastProxToAirDuration;
 #define SEC_Z 0xc0
 
 
-static const iso14a_polling_frame_t WUPA_CMD = {
-    { ISO14443A_CMD_WUPA }, 1, 7, 0
+static const iso14a_polling_frame_t WUPA_CMD_FRAME = {
+    .frame = { ISO14443A_CMD_WUPA },
+    .frame_length = 1,
+    .last_byte_bits = 7,
+    .extra_delay = 0
 };
 
-static const iso14a_polling_frame_t REQA_CMD = {
-    {ISO14443A_CMD_REQA }, 1, 7, 0
+static const iso14a_polling_frame_t MAGWUPA_CMD_FRAMES[] = {
+    {{ MAGSAFE_CMD_WUPA_1 }, 1, 7, 0},
+    {{ MAGSAFE_CMD_WUPA_2 }, 1, 7, 0},
+    {{ MAGSAFE_CMD_WUPA_3 }, 1, 7, 0},
+    {{ MAGSAFE_CMD_WUPA_4 }, 1, 7, 0}
 };
-
-static const iso14a_polling_frame_t MAGWUPA_COMMANDS[4] = {
-    {{ 0x7A }, 1, 7, 0},
-    {{ 0x7B }, 1, 7, 0},
-    {{ 0x7C }, 1, 7, 0},
-    {{ 0x7D }, 1, 7, 0}
-};
-
 
 // Polling frames and configurations
 iso14a_polling_parameters_t WUPA_POLLING_PARAMETERS = {
-    .frames = { WUPA_CMD },
+    .frames = { {{ ISO14443A_CMD_WUPA }, 1, 7, 0 }},
     .frame_count = 1,
     .extra_timeout = 0,
 };
 
 iso14a_polling_parameters_t REQA_POLLING_PARAMETERS = {
-    .frames = { REQA_CMD },
+    .frames = { {{ ISO14443A_CMD_REQA }, 1, 7, 0 }},
     .frame_count = 1,
     .extra_timeout = 0,
 };
@@ -176,7 +174,7 @@ Default HF 14a config is set to:
 static hf14a_config_t hf14aconfig = { 0, 0, 0, 0, 0, 0, {{0}, 0, 0, 0} };
 
 static iso14a_polling_parameters_t hf14a_polling_parameters = {
-    .frames = { WUPA_CMD},
+    .frames = { {{ ISO14443A_CMD_WUPA }, 1, 7, 0 }},
     .frame_count = 1,
     .extra_timeout = 0
 };
@@ -237,38 +235,57 @@ void printHf14aConfig(void) {
  * @param sc
  */
 void setHf14aConfig(const hf14a_config_t *hc) {
-    if ((hc->forceanticol >= 0) && (hc->forceanticol <= 2))
+    if ((hc->forceanticol >= 0) && (hc->forceanticol <= 2)) {
         hf14aconfig.forceanticol = hc->forceanticol;
-    if ((hc->forcebcc >= 0) && (hc->forcebcc <= 2))
+    }
+
+    if ((hc->forcebcc >= 0) && (hc->forcebcc <= 2)) {
         hf14aconfig.forcebcc = hc->forcebcc;
-    if ((hc->forcecl2 >= 0) && (hc->forcecl2 <= 2))
+    }
+
+    if ((hc->forcecl2 >= 0) && (hc->forcecl2 <= 2)) {
         hf14aconfig.forcecl2 = hc->forcecl2;
-    if ((hc->forcecl3 >= 0) && (hc->forcecl3 <= 2))
+    }
+
+    if ((hc->forcecl3 >= 0) && (hc->forcecl3 <= 2)) {
         hf14aconfig.forcecl3 = hc->forcecl3;
-    if ((hc->forcerats >= 0) && (hc->forcerats <= 2))
+    }
+
+    if ((hc->forcerats >= 0) && (hc->forcerats <= 2)) {
         hf14aconfig.forcerats = hc->forcerats;
-    if ((hc->magsafe >= 0) && (hc->magsafe <= 1))
+    }
+
+    if ((hc->magsafe >= 0) && (hc->magsafe <= 1)) {
         hf14aconfig.magsafe = hc->magsafe;
+    }
+
     if (hc->polling_loop_annotation.frame_length >= 0) {
         memcpy(&hf14aconfig.polling_loop_annotation, &hc->polling_loop_annotation, sizeof(iso14a_polling_frame_t));
     }
 
+    // iceman:  Somehow I think we should memcpy WUPA_CMD and all other hf14a_polling_parameters.frames[xxx] assignments
+    // right now we are assigning...
+
     // Derive polling loop configuration based on 14a config
-    hf14a_polling_parameters.frames[0] = WUPA_CMD;
+    hf14a_polling_parameters.frames[0] = WUPA_CMD_FRAME;
     hf14a_polling_parameters.frame_count = 1;
     hf14a_polling_parameters.extra_timeout = 0;
+
     if (hf14aconfig.magsafe == 1) {
-        for (int i = 0; i < ARRAYLEN(MAGWUPA_COMMANDS); i++) {
+
+        for (int i = 0; i < ARRAYLEN(MAGWUPA_CMD_FRAMES); i++) {
             if (hf14a_polling_parameters.frame_count < ARRAYLEN(hf14a_polling_parameters.frames) - 1) {
-                hf14a_polling_parameters.frames[hf14a_polling_parameters.frame_count] = MAGWUPA_COMMANDS[i];
-                hf14a_polling_parameters.frame_count += 1;
+                hf14a_polling_parameters.frames[hf14a_polling_parameters.frame_count] = MAGWUPA_CMD_FRAMES[i];
+                hf14a_polling_parameters.frame_count++;
             }
         }
     }
+
     if (hf14aconfig.polling_loop_annotation.frame_length > 0) {
-        if (hf14a_polling_parameters.frame_count < ARRAYLEN(hf14a_polling_parameters.frames)) {
+
+        if (hf14a_polling_parameters.frame_count < ARRAYLEN(hf14a_polling_parameters.frames) - 1) {
             hf14a_polling_parameters.frames[hf14a_polling_parameters.frame_count] = hf14aconfig.polling_loop_annotation;
-            hf14a_polling_parameters.frame_count += 1;
+            hf14a_polling_parameters.frame_count++;
         }
         hf14a_polling_parameters.extra_timeout = 250;
     }
@@ -2759,26 +2776,34 @@ static int GetATQA(uint8_t *resp, uint16_t resp_len, uint8_t *resp_par, const is
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
     iso14a_set_timeout(1236 / 128 + 1);  // response to WUPA is expected at exactly 1236/fc. No need to wait longer.
 
-    polling_parameters = polling_parameters != NULL ? polling_parameters : &hf14a_polling_parameters;
+    // refactored to use local pointer,  now no modification of polling_parameters pointer is done
+    // I don't think the intention was to modify polling_parameters when sending in WUPA_POLLING_PARAMETERS etc.  
+    // Modify polling_params,  if null use default values.
+    iso14a_polling_parameters_t p;
+    memcpy(&p, (uint8_t*)polling_parameters, sizeof(iso14a_polling_parameters_t));
+
+    if (polling_parameters == NULL) {
+        memcpy(&p, (uint8_t*)&hf14a_polling_parameters, sizeof(iso14a_polling_parameters_t));
+    }
 
     bool first_try = true;
     int len;
-    uint32_t retry_timeout = RETRY_TIMEOUT * polling_parameters->frame_count + polling_parameters->extra_timeout;
+    uint32_t retry_timeout = ((RETRY_TIMEOUT * p.frame_count) + p.extra_timeout);
     uint32_t start_time = 0;
-    uint8_t current_frame = 0;
+    uint8_t curr = 0;
 
     // Use the temporary polling parameters
     do {
-        const iso14a_polling_frame_t *frame_parameters = &polling_parameters->frames[current_frame];
+        iso14a_polling_frame_t *frp = &p.frames[curr];
 
-        if (frame_parameters->last_byte_bits == 8) {
-            ReaderTransmit(frame_parameters->frame, frame_parameters->frame_length, NULL);
+        if (frp->last_byte_bits == 8) {
+            ReaderTransmit(frp->frame, frp->frame_length, NULL);
         } else {
-            ReaderTransmitBitsPar(frame_parameters->frame, frame_parameters->last_byte_bits, NULL, NULL);
+            ReaderTransmitBitsPar(frp->frame, frp->last_byte_bits, NULL, NULL);
         }
 
-        if (frame_parameters->extra_delay) {
-            SpinDelay(frame_parameters->extra_delay);
+        if (frp->extra_delay) {
+            SpinDelay(frp->extra_delay);
         }
 
         // Receive the ATQA
@@ -2791,7 +2816,8 @@ static int GetATQA(uint8_t *resp, uint16_t resp_len, uint8_t *resp_par, const is
         }
 
         // Go over frame configurations, loop back when we reach the end
-        current_frame = current_frame < (polling_parameters->frame_count - 1) ? current_frame + 1 : 0;
+        curr = (curr < (p.frame_count - 1)) ? curr + 1 : 0;
+
     } while (len == 0 && GetTickCountDelta(start_time) <= retry_timeout);
 
     iso14a_set_timeout(save_iso14a_timeout);
