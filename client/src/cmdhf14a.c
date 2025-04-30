@@ -250,7 +250,7 @@ static int CmdHF14AList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf 14a", "14a -c");
 }
 
-int hf14a_getconfig(hf14a_config *config) {
+int hf14a_getconfig(hf14a_config_t *config) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
     if (config == NULL) {
@@ -265,16 +265,16 @@ int hf14a_getconfig(hf14a_config *config) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
-    memcpy(config, resp.data.asBytes, sizeof(hf14a_config));
+    memcpy(config, resp.data.asBytes, sizeof(hf14a_config_t));
     return PM3_SUCCESS;
 }
 
-int hf14a_setconfig(hf14a_config *config, bool verbose) {
+int hf14a_setconfig(hf14a_config_t *config, bool verbose) {
     if (!g_session.pm3_present) return PM3_ENOTTY;
 
     clearCommandBuffer();
     if (config != NULL) {
-        SendCommandNG(CMD_HF_ISO14443A_SET_CONFIG, (uint8_t *)config, sizeof(hf14a_config));
+        SendCommandNG(CMD_HF_ISO14443A_SET_CONFIG, (uint8_t *)config, sizeof(hf14a_config_t));
         if (verbose) {
             SendCommandNG(CMD_HF_ISO14443A_PRINT_CONFIG, NULL, 0);
         }
@@ -490,7 +490,7 @@ static int CmdHf14AConfig(const char *Cmd) {
     }
 
     // Initialize config with all parameters
-    hf14a_config config = {
+    hf14a_config_t config = {
         .forceanticol = atqa,
         .forcebcc = bcc,
         .forcecl2 = cl2,

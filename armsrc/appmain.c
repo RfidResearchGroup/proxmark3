@@ -1664,13 +1664,13 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_ISO14443A_GET_CONFIG: {
-            hf14a_config *hf14aconfig = getHf14aConfig();
-            reply_ng(CMD_HF_ISO14443A_GET_CONFIG, PM3_SUCCESS, (uint8_t *)hf14aconfig, sizeof(hf14a_config));
+            hf14a_config_t *hf14aconfig = getHf14aConfig();
+            reply_ng(CMD_HF_ISO14443A_GET_CONFIG, PM3_SUCCESS, (uint8_t *)hf14aconfig, sizeof(hf14a_config_t));
             break;
         }
         case CMD_HF_ISO14443A_SET_CONFIG: {
-            hf14a_config c;
-            memcpy(&c, packet->data.asBytes, sizeof(hf14a_config));
+            hf14a_config_t c;
+            memcpy(&c, packet->data.asBytes, sizeof(hf14a_config_t));
             setHf14aConfig(&c);
             break;
         }

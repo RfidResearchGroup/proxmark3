@@ -161,7 +161,7 @@ typedef struct {
     int8_t forcerats;    // 0:auto 1:force executing RATS 2:force skipping RATS
     int8_t magsafe;      // 0:disabled 1:enabled
     iso14a_polling_frame_t polling_loop_annotation; // Polling loop annotation
-} PACKED hf14a_config;
+} PACKED hf14a_config_t;
 
 // Tracelog Header struct
 typedef struct {

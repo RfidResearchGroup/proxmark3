@@ -173,10 +173,10 @@ Default HF 14a config is set to:
     magsafe = 0 (disabled)
     polling_loop_annotation = {{0}, 0, 0, 0} (disabled)
 */
-static hf14a_config hf14aconfig = { 0, 0, 0, 0, 0, 0, {{0}, 0, 0, 0} };
+static hf14a_config_t hf14aconfig = { 0, 0, 0, 0, 0, 0, {{0}, 0, 0, 0} };
 
 static iso14a_polling_parameters_t hf14a_polling_parameters = {
-    .frames = { WUPA_CMD },
+    .frames = { WUPA_CMD},
     .frame_count = 1,
     .extra_timeout = 0
 };
@@ -236,7 +236,7 @@ void printHf14aConfig(void) {
  * @brief setSamplingConfig
  * @param sc
  */
-void setHf14aConfig(const hf14a_config *hc) {
+void setHf14aConfig(const hf14a_config_t *hc) {
     if ((hc->forceanticol >= 0) && (hc->forceanticol <= 2))
         hf14aconfig.forceanticol = hc->forceanticol;
     if ((hc->forcebcc >= 0) && (hc->forcebcc <= 2))
@@ -274,7 +274,7 @@ void setHf14aConfig(const hf14a_config *hc) {
     }
 }
 
-hf14a_config *getHf14aConfig(void) {
+hf14a_config_t *getHf14aConfig(void) {
     return &hf14aconfig;
 }
 
