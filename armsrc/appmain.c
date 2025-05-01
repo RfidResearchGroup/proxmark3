@@ -1969,7 +1969,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             struct p *payload = (struct p *) packet->data.asBytes;
 
             //
-            size_t size = payload->blockno * payload->blockwidth;
+            size_t size = payload->blockcnt * payload->blockwidth;
             if (size > PM3_CMD_DATA_SIZE) {
                 reply_ng(CMD_HF_MIFARE_EML_MEMGET, PM3_EMALLOC, NULL, 0);
                 return;

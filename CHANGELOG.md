@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `hf mf ekeyprn` - failed to download emulator memory due to wrong size calculation (@iceman1001)
 - Fixed `hf mf fchk --mem` to actually use flash dict (@doegox)
 - Fixed `make install` on OSX thanks DaveItsLong (@doegox)
 - Added new standalone mode `HF_ST25_TEAROFF` to store/restore ST25TB tags with tearoff for counters (@seclabz)
