@@ -90,13 +90,14 @@ def lprint(s='',  end='\n', flush=False, prompt="[" + color("=", fg="yellow") + 
     - logfile (R)
     """
     s = f"{prompt}" + f"\n{prompt}".join(s.split('\n'))
-    print(s, end=end, flush=flush)
+    safe_s = s.encode('utf-8', errors='ignore').decode('utf-8')
+    print(safe_s, end=end, flush=flush)
 
     if log is True:
         global logbuffer
         if logfile is not None:
             with open(logfile, 'a', encoding='utf-8') as f:
-                f.write(s + end)
+                f.write(safe_s + end)
         else:
             # buffering
             logbuffer += s + end
