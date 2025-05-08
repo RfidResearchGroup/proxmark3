@@ -1351,7 +1351,7 @@ static int CmdHfSeosGDF(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    int key_index = arg_get_int_def(ctx, 1, -1);
+    int key_index = arg_get_int_def(ctx, 1, 0);
 
     CLIParserFree(ctx);
     return seos_global_df(key_index);
