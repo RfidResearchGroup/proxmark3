@@ -16,8 +16,9 @@
 #ifndef __USART_DEFS_H
 #define __USART_DEFS_H
 
-//#define USART_BAUD_RATE 9600
+#ifndef USART_BAUD_RATE
 #define USART_BAUD_RATE 115200
+#endif
 // BT HC-06 physical layer runs at 128kbps
 // so it's possible to gain a little bit by using 230400
 // with some risk to overflow its internal buffers:
