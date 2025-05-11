@@ -7,6 +7,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed `hf mf fchk --mem` to actually use flash dict (@doegox)
 - Fixed `make install` on OSX thanks DaveItsLong (@doegox)
 - Added new standalone mode `HF_ST25_TEAROFF` to store/restore ST25TB tags with tearoff for counters (@seclabz)
+- Added `hf_mfu_ultra.lua` script enables restoring dump to ULTRA/UL-5 tags and clearing previously written ULTRA tags (@mak-42)
 
 ## [Blue Ice.4.20142][2025-03-25]
 - Added `des_talk.py` script for easier MIFARE DESFire handling (@trigat)
