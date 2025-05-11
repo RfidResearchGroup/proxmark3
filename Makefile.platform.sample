@@ -27,6 +27,10 @@ PLATFORM=PM3RDV4
 # Only available with PLATFORM=PM3GENERIC
 #LED_ORDER=PM3EASY
 
+# Uncomment a line below to change default USART baud rate
+# defaults to 115200 used by HC-05 in Blueshark
+#USART_BAUD_RATE=19200
+
 # Uncomment the lines below in order to make a 256KB image
 # and comment out the lines above
 
