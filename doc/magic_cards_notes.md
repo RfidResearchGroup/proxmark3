@@ -2367,7 +2367,7 @@ Usage:
    ```
    script run hf_mfu_ultra -k <passwd> -r <dump filename>
    ```
-2. Wipe tag:
+2. Wipe tag (use it to prepare tag for restoring another dump):
    ```
    script run hf_mfu_ultra -k <passwd> -w
    ```
