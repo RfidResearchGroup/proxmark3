@@ -2356,6 +2356,36 @@ After communication to iKey LLC (importer of those tags to Russian market), new 
 [+] ATS: 85 00 00 A0 00 00 0A 3C 00 04 03 01 01 00 0E 03 [ C8 1D ]
 ```
 
+### Magic commands
+
+^[Top](#top)
+
+Use the script `hf_mfu_ultra.lua` to restore (write) dump to tag or clear previously written tag.
+
+Usage:
+1. Restore dump to tag:
+   ```
+   script run hf_mfu_ultra -f <dump filename> -k <passwd> -r
+   ```
+2. Wipe tag (use it to prepare tag for restoring another dump):
+   ```
+   script run hf_mfu_ultra -k <passwd> -w
+   ```
+3. Show help:
+   ```
+   script run hf_mfu_ultra -h
+   ```
+
+Examples:
+1. Restore dump to tag:
+   ```
+   script run hf_mfu_ultra -f hf-mfu-3476FF1514D866-dump.bin -k ffffffff -r
+   ```
+2. Wipe tag:
+   ```
+   script run hf_mfu_ultra -k 1d237f76 -w
+   ```
+
 ## UL-5
 
 ^[Top](#top)
@@ -2388,6 +2418,28 @@ After personalization it is not possible to identify UL-5.
 The manufacturer confirmed unpersonalized tags could be identified by first 2 bytes of UID:
 
 * `AA 55...`
+
+### Magic commands
+
+^[Top](#top)
+
+Use the script `hf_mfu_ultra.lua` to restore (write) dump to tag.
+
+Usage:
+1. Restore dump to tag:
+   ```
+   script run hf_mfu_ultra -f <dump filename> -k <passwd> -r
+   ```
+3. Show help:
+   ```
+   script run hf_mfu_ultra -h
+   ```
+
+Examples:
+1. Restore dump to tag:
+   ```
+   script run hf_mfu_ultra -f hf-mfu-3476FF1514D866-dump.bin -k ffffffff -r
+   ```
 
 ## UL, other chips
 
