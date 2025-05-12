@@ -1304,6 +1304,14 @@
         "Type": "transport"
     },
     {
+        "AID": "7A007A",
+        "Vendor": "Regional Transportation Commission of Southern Nevada (RTC) via Masabi Ltd",
+        "Country": "US",
+        "Name": "RTC TAP & GO (LAS)",
+        "Description": "LAS TAP & GO; Masabi Justride Tap and Ride DESFire Smartcard",
+        "Type": "transport"
+    },
+    {
         "AID": "784000",
         "Vendor": "Roads & Transport Authority (Government of Dubai)",
         "Country": "AE",

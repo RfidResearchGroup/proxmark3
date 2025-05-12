@@ -20,7 +20,7 @@
 #define CMDHF14A_H__
 
 #include "common.h"
-#include "pm3_cmd.h" //hf14a_config
+#include "pm3_cmd.h" //hf14a_config_t
 #include "mifare.h" // structs
 
 // structure and database for uid -> tagtype lookups
@@ -61,8 +61,8 @@ int CmdHF14ANdefWrite(const char *Cmd);     // used by cmdnfc.c
 
 int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status);
 
-int hf14a_getconfig(hf14a_config *config);
-int hf14a_setconfig(hf14a_config *config, bool verbose);
+int hf14a_getconfig(hf14a_config_t *config);
+int hf14a_setconfig(hf14a_config_t *config, bool verbose);
 int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search);
 int infoHF14A4Applications(bool verbose);
 const char *getTagInfo(uint8_t uid);

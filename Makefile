@@ -264,8 +264,11 @@ ifeq ($(PLATFORM_CHANGED),true)
 	$(Q)$(MAKE) --no-print-directory -C bootrom clean
 	$(Q)$(MAKE) --no-print-directory -C armsrc clean
 	$(Q)$(MAKE) --no-print-directory -C recovery clean
-	$(Q)$(MAKE) --no-print-directory -C client clean
 	$(Q)$(MAKE) --no-print-directory -C tools/fpga_compress clean
+# clean the client only if PLATFORM got changed from or to PM3ICOPYX
+ifeq (PM3ICOPYX,$(filter PM3ICOPYX, $(PLATFORM) $(CACHED_PLATFORM)))
+	$(Q)$(MAKE) --no-print-directory -C client clean
+endif
 	$(Q)$(ECHO) CACHED_PLATFORM=$(PLATFORM) > .Makefile.options.cache
 	$(Q)$(ECHO) CACHED_PLATFORM_EXTRAS=$(PLATFORM_EXTRAS) >> .Makefile.options.cache
 	$(Q)$(ECHO) CACHED_PLATFORM_DEFS=$(PLATFORM_DEFS) >> .Makefile.options.cache

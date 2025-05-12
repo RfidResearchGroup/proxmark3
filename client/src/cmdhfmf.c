@@ -5186,7 +5186,7 @@ static int CmdHF14AMfEKeyPrn(const char *Cmd) {
     memcpy(uid, data, sizeof(uid));
 
     // download keys from EMUL
-    for (int i = 0; i < sectors_cnt; i++) {
+    for (uint8_t i = 0; i < sectors_cnt; i++) {
 
         if (mf_eml_get_mem(data, mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1, 1) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "error get block %d", mfFirstBlockOfSector(i) + mfNumBlocksPerSector(i) - 1);
