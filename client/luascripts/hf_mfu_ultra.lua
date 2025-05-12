@@ -13,16 +13,17 @@ The script provides functionality for writing Mifare Ultralight Ultra/UL-5 tags.
 ]]
 example = [[
     -- restpre (write) dump to tag
-    ]]..ansicolors.yellow..[[script run hf_mfu_ultra -k ffffffff -r hf-mfu-3476FF1514D866-dump.bin]]..ansicolors.reset..[[
+    ]]..ansicolors.yellow..[[script run hf_mfu_ultra -f hf-mfu-3476FF1514D866-dump.bin -k ffffffff -r]]..ansicolors.reset..[[
 
     -- wipe tag (]]..ansicolors.red..[[Do not use it with UL-5!]]..ansicolors.reset..[[)
     ]]..ansicolors.yellow..[[script run hf_mfu_ultra -k 1d237f76 -w ]]..ansicolors.reset..[[
 ]]
 usage = [[
-script run hf_mfu_ultra -h -k <passwd> -w -r <dump filename>
+script run hf_mfu_ultra -h -f <dump filename> -k <passwd> -w -r
 ]]
 arguments = [[
     -h      this help
+    -f      filename for the datadump to read (bin)      
     -k      pwd to use with the restore and wipe operations
     -r      restore a binary dump to tag
     -w      wipe tag (]]..ansicolors.red..[[Do not use it with UL-5!]]..ansicolors.reset..[[)
@@ -181,6 +182,7 @@ local function writeDump(filename)
     if not info then return info, err end
 
     -- load dump from file
+    if not filename then return false, 'No dump filename provided' end
     io.write('Loading dump from file '..filename..'...')
     local dump
     dump, err = utils.ReadDumpFile(filename)
@@ -337,12 +339,15 @@ end
 local function main(args)
     if #args == 0 then return help() end
 
-    for opt, value in getopt.getopt(args, 'hk:r:w') do
+    local dumpFilename = nil
+
+    for opt, value in getopt.getopt(args, 'hf:k:rw') do
         local res, err
         res = true
         if opt == "h" then return help() end
+        if opt == "f" then dumpFilename = value end
         if opt == 'k' then res, err = setPassword(value) end
-        if opt == 'r' then res, err = writeDump(value) end
+        if opt == 'r' then res, err = writeDump(dumpFilename) end
         if opt == 'w' then res, err = wipe() end
         if not res then return error(err) end
     end

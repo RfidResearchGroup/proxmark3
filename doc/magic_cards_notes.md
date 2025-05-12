@@ -2365,7 +2365,7 @@ Use the script `hf_mfu_ultra.lua` to restore (write) dump to tag or clear previo
 Usage:
 1. Restore dump to tag:
    ```
-   script run hf_mfu_ultra -k <passwd> -r <dump filename>
+   script run hf_mfu_ultra -f <dump filename> -k <passwd> -r
    ```
 2. Wipe tag (use it to prepare tag for restoring another dump):
    ```
@@ -2379,7 +2379,7 @@ Usage:
 Examples:
 1. Restore dump to tag:
    ```
-   script run hf_mfu_ultra -k ffffffff -r hf-mfu-3476FF1514D866-dump.bin
+   script run hf_mfu_ultra -f hf-mfu-3476FF1514D866-dump.bin -k ffffffff -r
    ```
 2. Wipe tag:
    ```
@@ -2428,7 +2428,7 @@ Use the script `hf_mfu_ultra.lua` to restore (write) dump to tag.
 Usage:
 1. Restore dump to tag:
    ```
-   script run hf_mfu_ultra -k <passwd> -r <dump filename>
+   script run hf_mfu_ultra -f <dump filename> -k <passwd> -r
    ```
 3. Show help:
    ```
@@ -2438,7 +2438,7 @@ Usage:
 Examples:
 1. Restore dump to tag:
    ```
-   script run hf_mfu_ultra -k ffffffff -r hf-mfu-3476FF1514D866-dump.bin
+   script run hf_mfu_ultra -f hf-mfu-3476FF1514D866-dump.bin -k ffffffff -r
    ```
 
 ## UL, other chips
