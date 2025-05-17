@@ -2922,7 +2922,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass trbl",
                   "Tear off an iCLASS tag block",
                   "hf iclass trbl --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B --tdb 100 --tde 150\n"
-                  "hf iclass trbl --blk 10 -d AAAAAAAAAAAAAAAA --ki 0  --tdb 100 --tde 150");
+                  "hf iclass trbl --blk 10 -d AAAAAAAAAAAAAAAA --ki 0 --tdb 100 --tde 150");
 
     void *argtable[] = {
         arg_param_begin,
@@ -2937,8 +2937,8 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         arg_lit0(NULL, "nr", "replay of NR/MAC"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
-        arg_int1(NULL, "tdb", "<dec>", "tearoff delay start in ms"),
-        arg_int1(NULL, "tde", "<dec>", "tearoff delay end in ms"),
+        arg_int1(NULL, "tdb", "<dec>", "tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us."),
+        arg_int1(NULL, "tde", "<dec>", "tearoff delay end (in us) must be a higher value than the start delay."),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3030,6 +3030,12 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     int isok = 0;
     tearoff_params_t params;
     bool read_ok = false;
+
+    uint8_t keyType = 0x88; //debit key
+    if (use_credit_key) {
+        PrintAndLogEx(SUCCESS, "Using " _YELLOW_("credit") " key");
+        keyType = 0x18; //credit key
+    }
     while (tearoff_start < tearoff_end && !read_ok) {
         //perform read here, repeat if failed or 00s
 
@@ -3037,7 +3043,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         bool first_read = false;
         bool reread = false;
         while (!first_read) {
-            int res_orig = iclass_read_block_ex(key, blockno, 0x88, elite, rawkey, use_replay, verbose, auth, shallow_mod, data_read_orig, false);
+            int res_orig = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, shallow_mod, data_read_orig, false);
             if (res_orig == PM3_SUCCESS && !reread) {
                 if (memcmp(data_read_orig, zeros, 8) == 0) {
                     reread = true;
@@ -3054,7 +3060,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         params.on = true;
         params.delay_us = tearoff_start;
         handle_tearoff(&params, false);
-        PrintAndLogEx(INFO, "Tear off delay: "_YELLOW_("%d")" ms", tearoff_start);
+        PrintAndLogEx(INFO, "Tear off delay: "_YELLOW_("%d")" us", tearoff_start);
         isok = iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
         switch (isok) {
             case PM3_SUCCESS:
@@ -3072,7 +3078,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         reread = false;
         bool decrease = false;
         while (!first_read) {
-            int res = iclass_read_block_ex(key, blockno, 0x88, elite, rawkey, use_replay, verbose, auth, shallow_mod, data_read, false);
+            int res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, shallow_mod, data_read, false);
             if (res == PM3_SUCCESS && !reread) {
                 if (memcmp(data_read, zeros, 8) == 0) {
                     reread = true;
