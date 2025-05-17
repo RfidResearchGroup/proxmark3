@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed and updated `hf iclass trbl` to correctly use the credit key when passed and show partial tearoff results (@antiklesys)
+- Fixed `hf iclass legbrute` was not correctly parsin the index value
 - Fixed `hf mf ekeyprn` - failed to download emulator memory due to wrong size calculation (@iceman1001)
 - Fixed `hf mf fchk --mem` to actually use flash dict (@doegox)
 - Fixed `make install` on OSX thanks DaveItsLong (@doegox)
@@ -45,7 +47,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Changed `hf mf cload` - now accepts MFC Ev1 sized dumps (@iceman1001)
 - Changed `hf mfu info` - now properly identify ULEv1 AES 50pF (@iceman1001)
 - Changed `hf mf info` - now differentiates between full USCUID and cut down ZUID chips (@nvx)
-- Changed `lf hitag chk` - added key counter, client side abort and minor delay (@iceman1001) 
+- Changed `lf hitag chk` - added key counter, client side abort and minor delay (@iceman1001)
 - Added `hf seos sam` - Added support for HID SAM SEOS communications (@jkramarz)
 - Changed (extended) area accessible by spiffs into last page of FLASH (@piotrva)
 - Changed flash-stored key dictionaries (Mifare, iClass, T55XX) and T55XX configurations to SPIFFS files (@piotrva)
