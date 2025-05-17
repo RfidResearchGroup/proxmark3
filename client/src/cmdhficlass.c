@@ -3030,12 +3030,13 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     int isok = 0;
     tearoff_params_t params;
     bool read_ok = false;
-
     uint8_t keyType = 0x88; //debit key
+
     if (use_credit_key) {
         PrintAndLogEx(SUCCESS, "Using " _YELLOW_("credit") " key");
         keyType = 0x18; //credit key
     }
+
     while (tearoff_start < tearoff_end && !read_ok) {
         //perform read here, repeat if failed or 00s
 
@@ -3097,17 +3098,28 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             tearoff_start--;
         }
         bool tear_success = true;
-        for (int i = 0; i < PICOPASS_BLOCK_SIZE; i++) {
-            if (data[i] != data_read[i]) {
-                tear_success = false;
-            }
+        bool expected_values = true;
+        if(memcmp(data_read, data, 8) != 0) {
+            tear_success = false;
+        }else if ((!tear_success) && (memcmp(data_read, zeros, 8) != 0) && (memcmp(data_read, data_read_orig, 8) != 0)) { //tearoff succeeded (partially)
+                tear_success = true;
+                expected_values = false;
+                PrintAndLogEx(SUCCESS, _GREEN_("Tear-off Success! -> Different values"));
+                PrintAndLogEx(INFO, "Original: %s", sprint_hex(data_read_orig, sizeof(data_read)));
+                PrintAndLogEx(INFO, "Expected: %s", sprint_hex(data, sizeof(data)));
         }
         if (tear_success) { //tearoff succeeded
             read_ok = true;
-            PrintAndLogEx(SUCCESS, _GREEN_("Tear-off Success!"));
-            PrintAndLogEx(INFO, "Read: %s", sprint_hex(data_read, sizeof(data_read)));
+            if(expected_values) {
+                PrintAndLogEx(SUCCESS, _GREEN_("Tear-off Success! -> Expected values"));
+            }
+            PrintAndLogEx(INFO, "Read:     %s", sprint_hex(data_read, sizeof(data_read)));
         } else { //tearoff did not succeed
             PrintAndLogEx(FAILED, _RED_("Tear-off Failed!"));
+            if(verbose) {
+                PrintAndLogEx(INFO, "Read:     %s", sprint_hex(data_read, sizeof(data_read)));
+                PrintAndLogEx(INFO, "Expected: %s", sprint_hex(data, sizeof(data)));
+            }
             tearoff_start++;
         }
         PrintAndLogEx(INFO, "---------------");
