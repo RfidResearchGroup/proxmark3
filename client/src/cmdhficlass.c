@@ -2938,7 +2938,8 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_int1(NULL, "tdb", "<dec>", "tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us."),
-        arg_int1(NULL, "tde", "<dec>", "tearoff delay end (in us) must be a higher value than the start delay."),
+        arg_int0(NULL, "incr", "<dec>", "tearoff delay increment (in us) - default 10."),
+        arg_int0(NULL, "tde", "<dec>", "tearoff delay end (in us) must be a higher value than the start delay."),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3001,8 +3002,9 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         }
     }
 
-    int tearoff_start = arg_get_int_def(ctx, 12, 100);
-    int tearoff_end = arg_get_int_def(ctx, 13, 200);
+    int tearoff_start = arg_get_int_def(ctx, 12, 5000);
+    int tearoff_increment = arg_get_int_def(ctx, 13, 10);
+    int tearoff_end = arg_get_int_def(ctx, 14, tearoff_start+tearoff_increment+500);
 
     if (tearoff_end <= tearoff_start) {
         PrintAndLogEx(ERR, "Tearoff end delay must be bigger than the start delay.");
@@ -3037,7 +3039,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         keyType = 0x18; //credit key
     }
 
-    while (tearoff_start < tearoff_end && !read_ok) {
+    while (tearoff_start <= tearoff_end && !read_ok) {
         //perform read here, repeat if failed or 00s
 
         uint8_t data_read_orig[8] = {0};
@@ -3061,7 +3063,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         params.on = true;
         params.delay_us = tearoff_start;
         handle_tearoff(&params, false);
-        PrintAndLogEx(INFO, "Tear off delay: "_YELLOW_("%d")" us", tearoff_start);
+        PrintAndLogEx(INFO, "Tear off delay: "_YELLOW_("%d")"/"_YELLOW_("%d")" us", tearoff_start,tearoff_end);
         isok = iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
         switch (isok) {
             case PM3_SUCCESS:
@@ -3095,7 +3097,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             }
         }
         if (decrease && tearoff_start > 0) { //if there was an error reading repeat the tearoff with the same delay
-            tearoff_start--;
+            tearoff_start -= tearoff_increment;
         }
         bool tear_success = true;
         bool expected_values = true;
@@ -3120,7 +3122,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
                 PrintAndLogEx(INFO, "Read:     %s", sprint_hex(data_read, sizeof(data_read)));
                 PrintAndLogEx(INFO, "Expected: %s", sprint_hex(data, sizeof(data)));
             }
-            tearoff_start++;
+            tearoff_start += tearoff_increment;
         }
         PrintAndLogEx(INFO, "---------------");
     }
