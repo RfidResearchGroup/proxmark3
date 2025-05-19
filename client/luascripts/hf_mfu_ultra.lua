@@ -23,7 +23,7 @@ script run hf_mfu_ultra -h -f <dump filename> -k <passwd> -w -r
 ]]
 arguments = [[
     -h      this help
-    -f      filename for the datadump to read (bin)      
+    -f      filename for the datadump to read (bin)
     -k      pwd to use with the restore and wipe operations
     -r      restore a binary dump to tag
     -w      wipe tag (]]..ansicolors.red..[[Do not use it with UL-5!]]..ansicolors.reset..[[)
@@ -50,7 +50,7 @@ local function setPassword(password)
         _password = nil;
     elseif #password ~= 8 then
         return false, 'Password must be 4 hex bytes'
-    else 
+    else
         _password = password
     end
     return true, 'Sets'
@@ -102,7 +102,7 @@ end
 --- Sends raw data to PM3 and returns parsed response
 local function sendWithResponse(payload, options)
     local opts;
-    if options then 
+    if options then
         opts = options
     else
         opts = {ignore_response = false, keep_signal = true, append_crc = true}
@@ -351,7 +351,7 @@ local function main(args)
         if opt == 'w' then res, err = wipe() end
         if not res then return error(err) end
     end
-    
+
 end
 
 main(args)

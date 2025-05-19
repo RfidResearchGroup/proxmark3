@@ -786,7 +786,7 @@ Check column "offline" for their availability.
 
 ### hf vas
 
- { Apple Value Added Service           }
+ { Apple Value Added Service...        }
 
 |command                  |offline |description
 |-------                  |------- |-----------

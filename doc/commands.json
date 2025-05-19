@@ -1342,7 +1342,6 @@
                 "-t, --timeout <ms> Timeout in milliseconds",
                 "-b <dec> Number of bits to send. Useful for send partial byte",
                 "-v, --verbose Verbose output",
-                "--mag Use Apple magsafe polling",
                 "--topaz Use Topaz protocol to send command",
                 "--crypto1 Use crypto1 session",
                 "<hex> Raw bytes to send"
@@ -1354,8 +1353,7 @@
             "description": "Act as a ISO-14443a reader to identify tag. Look for ISO-14443a tags until Enter or the pm3 button is pressed",
             "notes": [
                 "hf 14a reader",
-                "hf 14a reader -@ -> Continuous mode",
-                "hf 14a reader --mag -> trigger apple magsafe polling"
+                "hf 14a reader -@ -> Continuous mode"
             ],
             "offline": false,
             "options": [
@@ -1364,7 +1362,6 @@
                 "-s, --silent silent (no messages)",
                 "--drop just drop the signal field",
                 "--skip ISO14443-3 select only (skip RATS)",
-                "--mag Use Apple magsafe polling",
                 "-@ continuous reader mode",
                 "-w, --wait wait for card"
             ],
@@ -3204,7 +3201,7 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service } waveshare { Waveshare NFC ePaper... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service... } waveshare { Waveshare NFC ePaper... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf list --frame -> show frame delay times",
                 "hf list -1 -> use trace buffer"
@@ -3741,10 +3738,11 @@
                 "--nr replay of NR/MAC",
                 "-v, --verbose verbose output",
                 "--shallow use shallow (ASK) reader modulation instead of OOK",
-                "--tdb <dec> tearoff delay start in ms",
-                "--tde <dec> tearoff delay end in ms"
+                "--tdb <dec> tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us.",
+                "--incr <dec> tearoff delay increment (in us) - default 10.",
+                "--tde <dec> tearoff delay end (in us) must be a higher value than the start delay."
             ],
-            "usage": "hf iclass trbl [-hv] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow] --tdb <dec> --tde <dec>"
+            "usage": "hf iclass trbl [-hv] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow] --tdb <dec> [--incr <dec>] [--tde <dec>]"
         },
         "hf iclass unhash": {
             "command": "hf iclass unhash",
@@ -13354,6 +13352,6 @@
     "metadata": {
         "commands_extracted": 767,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-04-20T09:18:59"
+        "extracted_on": "2025-05-19T11:17:19"
     }
 }

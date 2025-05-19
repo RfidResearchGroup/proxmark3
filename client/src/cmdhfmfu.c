@@ -1684,7 +1684,7 @@ typedef struct {
 } mfu_otp_identify_t;
 
 static mfu_otp_identify_t mfu_otp_ident_table[] = {
-    { "SALTO Systems card", 12, 4, "534C544F", ul_c_otpgenA, NULL },
+    { "SALTO Systems card", 12, 4, "534C544F", ul_c_otpgenA, "report to iceman!" },
     { NULL, 0, 0, NULL, NULL, NULL }
 };
 
@@ -1963,7 +1963,7 @@ static int mfu_fingerprint(uint64_t tagtype, bool hasAuthKey, const uint8_t *aut
     // OTP checks
     mfu_otp_identify_t *item = mfu_match_otp_fingerprint(uid, data);
     if (item) {
-        PrintAndLogEx(SUCCESS, _GREEN_("%s"), item->desc);
+        PrintAndLogEx(SUCCESS, _BACK_GREEN_(" %s "), item->desc);
         res = PM3_SUCCESS;
 
         if (item->hint) {

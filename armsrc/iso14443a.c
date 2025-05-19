@@ -524,6 +524,7 @@ RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
                         Uart.parityBits |= ((Uart.shiftReg >> 8) & 0x01);        // store parity bit
                         Uart.bitCount = 0;
                         Uart.shiftReg = 0;
+
                         // Every 8 data bytes, store 8 parity bits into a parity byte
                         if ((Uart.len & 0x0007) == 0) {                          // every 8 data bytes
                             Uart.parity[Uart.parityLen++] = Uart.parityBits;     // store 8 parity bits
@@ -1496,6 +1497,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
     // "precompiled" responses.
     // These exist for speed reasons.  There are no time in the anti collision phase to calculate responses.
     // There are 12 predefined responses with a total of 84 bytes data to transmit.
+    //
     // Coded responses need one byte per bit to transfer (data, parity, start, stop, correction)
     // 85 * 8 data bits, 85 * 1 parity bits, 12 start bits, 12 stop bits, 12 correction bits
     // 85 * 8 + 85 + 12 + 12 + 12 == 801
@@ -2771,19 +2773,19 @@ static void iso14a_set_ATS_times(const uint8_t *ats) {
 
 
 static int GetATQA(uint8_t *resp, uint16_t resp_len, uint8_t *resp_par, const iso14a_polling_parameters_t *polling_parameters) {
-    #define RETRY_TIMEOUT 10
+#define RETRY_TIMEOUT 10
 
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
     iso14a_set_timeout(1236 / 128 + 1);  // response to WUPA is expected at exactly 1236/fc. No need to wait longer.
 
     // refactored to use local pointer,  now no modification of polling_parameters pointer is done
-    // I don't think the intention was to modify polling_parameters when sending in WUPA_POLLING_PARAMETERS etc.  
+    // I don't think the intention was to modify polling_parameters when sending in WUPA_POLLING_PARAMETERS etc.
     // Modify polling_params,  if null use default values.
     iso14a_polling_parameters_t p;
-    memcpy(&p, (uint8_t*)polling_parameters, sizeof(iso14a_polling_parameters_t));
+    memcpy(&p, (uint8_t *)polling_parameters, sizeof(iso14a_polling_parameters_t));
 
     if (polling_parameters == NULL) {
-        memcpy(&p, (uint8_t*)&hf14a_polling_parameters, sizeof(iso14a_polling_parameters_t));
+        memcpy(&p, (uint8_t *)&hf14a_polling_parameters, sizeof(iso14a_polling_parameters_t));
     }
 
     bool first_try = true;

@@ -3004,7 +3004,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
 
     int tearoff_start = arg_get_int_def(ctx, 12, 5000);
     int tearoff_increment = arg_get_int_def(ctx, 13, 10);
-    int tearoff_end = arg_get_int_def(ctx, 14, tearoff_start+tearoff_increment+500);
+    int tearoff_end = arg_get_int_def(ctx, 14, tearoff_start + tearoff_increment + 500);
 
     if (tearoff_end <= tearoff_start) {
         PrintAndLogEx(ERR, "Tearoff end delay must be bigger than the start delay.");
@@ -3063,7 +3063,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         params.on = true;
         params.delay_us = tearoff_start;
         handle_tearoff(&params, false);
-        PrintAndLogEx(INFO, "Tear off delay: "_YELLOW_("%d")"/"_YELLOW_("%d")" us", tearoff_start,tearoff_end);
+        PrintAndLogEx(INFO, "Tear off delay: "_YELLOW_("%d")"/"_YELLOW_("%d")" us", tearoff_start, tearoff_end);
         isok = iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
         switch (isok) {
             case PM3_SUCCESS:
@@ -3101,24 +3101,24 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         }
         bool tear_success = true;
         bool expected_values = true;
-        if(memcmp(data_read, data, 8) != 0) {
+        if (memcmp(data_read, data, 8) != 0) {
             tear_success = false;
-        }else if ((!tear_success) && (memcmp(data_read, zeros, 8) != 0) && (memcmp(data_read, data_read_orig, 8) != 0)) { //tearoff succeeded (partially)
-                tear_success = true;
-                expected_values = false;
-                PrintAndLogEx(SUCCESS, _GREEN_("Tear-off Success! -> Different values"));
-                PrintAndLogEx(INFO, "Original: %s", sprint_hex(data_read_orig, sizeof(data_read)));
-                PrintAndLogEx(INFO, "Expected: %s", sprint_hex(data, sizeof(data)));
+        } else if ((!tear_success) && (memcmp(data_read, zeros, 8) != 0) && (memcmp(data_read, data_read_orig, 8) != 0)) { //tearoff succeeded (partially)
+            tear_success = true;
+            expected_values = false;
+            PrintAndLogEx(SUCCESS, _GREEN_("Tear-off Success! -> Different values"));
+            PrintAndLogEx(INFO, "Original: %s", sprint_hex(data_read_orig, sizeof(data_read)));
+            PrintAndLogEx(INFO, "Expected: %s", sprint_hex(data, sizeof(data)));
         }
         if (tear_success) { //tearoff succeeded
             read_ok = true;
-            if(expected_values) {
+            if (expected_values) {
                 PrintAndLogEx(SUCCESS, _GREEN_("Tear-off Success! -> Expected values"));
             }
             PrintAndLogEx(INFO, "Read:     %s", sprint_hex(data_read, sizeof(data_read)));
         } else { //tearoff did not succeed
             PrintAndLogEx(FAILED, _RED_("Tear-off Failed!"));
-            if(verbose) {
+            if (verbose) {
                 PrintAndLogEx(INFO, "Read:     %s", sprint_hex(data_read, sizeof(data_read)));
                 PrintAndLogEx(INFO, "Expected: %s", sprint_hex(data, sizeof(data)));
             }
