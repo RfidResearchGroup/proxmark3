@@ -233,10 +233,8 @@ static void become_card(void) {
 
     tag_response_info_t *canned;
     uint32_t cuid;
-    uint32_t counters[3] = { 0 };
-    uint8_t tearings[3] = { 0xbd, 0xbd, 0xbd };
     uint8_t pages;
-    SimulateIso14443aInit(tagType, flags, data, NULL, 0, &canned, &cuid, counters, tearings, &pages);
+    SimulateIso14443aInit(tagType, flags, data, NULL, 0, &canned, &cuid, &pages);
 
     DbpString(_CYAN_("[@]") " Setup done - entering emulation loop");
     int fromReaderLen;

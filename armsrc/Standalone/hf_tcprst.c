@@ -118,8 +118,6 @@ void RunMod(void) {
     uint8_t tagType = 10; // 10 = ST25TA IKEA Rothult
     tag_response_info_t *responses;
     uint32_t cuid = 0;
-    uint32_t counters[3] = { 0x00, 0x00, 0x00 };
-    uint8_t tearings[3] = { 0xbd, 0xbd, 0xbd };
     uint8_t pages = 0;
 
     // command buffers
@@ -193,7 +191,7 @@ void RunMod(void) {
 
             memcpy(data, stuid, sizeof(stuid));
 
-            if (SimulateIso14443aInit(tagType, flags, data, NULL, 0, &responses, &cuid, counters, tearings, &pages) == false) {
+            if (SimulateIso14443aInit(tagType, flags, data, NULL, 0, &responses, &cuid, &pages) == false) {
                 BigBuf_free_keep_EM();
                 reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
                 DbpString(_YELLOW_("!!") "Error initializing the simulation process!");
@@ -371,7 +369,7 @@ void RunMod(void) {
 
             memcpy(data, stuid, sizeof(stuid));
 
-            if (SimulateIso14443aInit(tagType, flags, data, NULL, 0, &responses, &cuid, counters, tearings, &pages) == false) {
+            if (SimulateIso14443aInit(tagType, flags, data, NULL, 0, &responses, &cuid, &pages) == false) {
                 BigBuf_free_keep_EM();
                 reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
                 DbpString(_YELLOW_("!!") "Error initializing the simulation process!");
