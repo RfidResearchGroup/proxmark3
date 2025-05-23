@@ -2917,6 +2917,50 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+
+static void iclass_cmp_print(uint8_t *b1, uint8_t *b2, const char *header1, const char *header2) {
+
+    char line1[240] = {0};
+    char line2[240] = {0};
+
+    strcat(line1, header1);
+    strcat(line2, header2);
+
+    for (uint8_t i = 0; i < PICOPASS_BLOCK_SIZE; i++ ) {
+
+        int l1 = strlen(line1);
+        int l2 = strlen(line2);
+
+        uint8_t hi1 = NIBBLE_HIGH(b1[i]);
+        uint8_t low1 = NIBBLE_LOW(b1[i]);
+
+        uint8_t hi2 = NIBBLE_HIGH(b2[i]);
+        uint8_t low2 = NIBBLE_LOW(b2[i]);
+
+        if (hi1 != hi2) {
+            snprintf(line1 + l1, sizeof(line1) - l1, _RED_("%1X"), hi1);
+            snprintf(line2 + l2, sizeof(line2) - l2, _GREEN_("%1X"), hi2);
+        } else {
+            snprintf(line1 + l1, sizeof(line1) - l1, "%1X", hi1);
+            snprintf(line2 + l2, sizeof(line2) - l2, "%1X", hi2);
+        }
+
+        l1 = strlen(line1);
+        l2 = strlen(line2);
+
+        if (low1 != low2) {
+            snprintf(line1 + l1, sizeof(line1) - l1, _RED_("%1X"), low1);
+            snprintf(line2 + l2, sizeof(line2) - l2, _GREEN_("%1X"), low2);
+        } else {
+            snprintf(line1 + l1, sizeof(line1) - l1, "%1X", low1);
+            snprintf(line2 + l2, sizeof(line2) - l2, "%1X", low2);
+        }
+    }
+
+    PrintAndLogEx(INFO, "%s", line1);
+    PrintAndLogEx(INFO, "%s", line2);
+}
+
 static int CmdHFiClass_TearBlock(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass tear",
@@ -3194,18 +3238,15 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             if (memcmp(data_read, ff_data, 8) == 0 && memcmp(data_read_orig, ff_data, 8) != 0) {
                 erase_phase = true;
                 PrintAndLogEx(SUCCESS, _BLUE_("Erase phase hit: ALL ONES"));
-                PrintAndLogEx(INFO, "Original: %s", sprint_hex_inrow(data_read_orig, sizeof(data_read)));
-                PrintAndLogEx(INFO, "Read:     "_BLUE_("%s"), sprint_hex_inrow(data_read, sizeof(data_read)));
+                iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
             } else {
 
                 if (erase_phase) {
                     PrintAndLogEx(SUCCESS, _MAGENTA_("Tearing! Write Phase (post erase)"));
-                    PrintAndLogEx(INFO, "Original: %s", sprint_hex_inrow(data_read_orig, sizeof(data_read)));
-                    PrintAndLogEx(INFO, "Read:     "_CYAN_("%s"), sprint_hex_inrow(data_read, sizeof(data_read)));
+                    iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
                 } else {
                     PrintAndLogEx(SUCCESS, _CYAN_("Tearing!  (unknown phase)"));
-                    PrintAndLogEx(INFO, "Original: %s", sprint_hex_inrow(data_read_orig, sizeof(data_read)));
-                    PrintAndLogEx(INFO, "Read:     "_CYAN_("%s"), sprint_hex_inrow(data_read, sizeof(data_read)));
+                    iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
                 }
             }
 
@@ -3223,8 +3264,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             }
 
         } else { // tearoff did not succeed
-            PrintAndLogEx(INFO, "Read:     %s", sprint_hex_inrow(data_read, sizeof(data_read)));
-            PrintAndLogEx(INFO, "Expected: %s", sprint_hex_inrow(data, sizeof(data)));
+            iclass_cmp_print(data, data_read, "Expected: ", "Read:     ");
         }
 
         if (tear_success) { // tearoff succeeded with expected values
