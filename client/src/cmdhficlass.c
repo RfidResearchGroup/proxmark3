@@ -2940,6 +2940,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         arg_int1(NULL, "s", "<dec>", "tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us."),
         arg_int0(NULL, "i", "<dec>", "tearoff delay increment (in us) - default 10."),
         arg_int0(NULL, "e", "<dec>", "tearoff delay end (in us) must be a higher value than the start delay."),
+        arg_int0(NULL, "loop", "<dec>", "number of times to loop per tearoff time."),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3005,6 +3006,8 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     int tearoff_start = arg_get_int_def(ctx, 12, 5000);
     int tearoff_increment = arg_get_int_def(ctx, 13, 10);
     int tearoff_end = arg_get_int_def(ctx, 14, tearoff_start+tearoff_increment+500);
+    int tearoff_loop = arg_get_int_def(ctx, 15, 1);
+    int loop_count = 0;
 
     if (tearoff_end <= tearoff_start) {
         PrintAndLogEx(ERR, "Tearoff end delay must be bigger than the start delay.");
@@ -3147,7 +3150,11 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             }
             PrintAndLogEx(INFO, "Read:     "_GREEN_("%s"), sprint_hex(data_read, sizeof(data_read)));
         }
-        tearoff_start += tearoff_increment;
+        loop_count++;
+        if (loop_count == tearoff_loop){
+            tearoff_start += tearoff_increment;
+            loop_count = 0;
+        }
         PrintAndLogEx(INFO, "---------------");
     }
     PrintAndLogEx(NORMAL, "");
