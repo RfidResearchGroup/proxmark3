@@ -142,9 +142,9 @@ function get_pm3_list_Windows {
 
         #prevent soft bricking when using pm3-flash-all on an outdated bootloader
         if [ $(basename -- "$0") = "pm3-flash-all" ]; then
-            
+
             line=$($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object {\$_.DeviceID -eq '$_comport'} | Select -expandproperty PNPDeviceID" 2>/dev/null);
-            
+
             if [[ ! $line =~ ^"USB\VID_9AC4&PID_4B8F\ICEMAN" ]]; then
                 echo -e "\033[0;31m[!] Using pm3-flash-all on an oudated bootloader, use pm3-flash-bootrom first!"
                 exit 1
@@ -169,7 +169,7 @@ function get_pm3_list_Windows {
 
     #white BT dongle SERIAL PORTS (COM)
     if $FINDBTDONGLE; then
-       
+
         for DEV in $($PSHEXE -command "Get-CimInstance -ClassName Win32_serialport | Where-Object PNPDeviceID -like '*VID_10C4&PID_EA60*' | Select -expandproperty DeviceID" 2>/dev/null); do
             PM3LIST+=("$DEV")
             if [ ${#PM3LIST[*]} -ge "$N" ]; then
