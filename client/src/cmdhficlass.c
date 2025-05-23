@@ -3042,6 +3042,44 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         keyType = 0x18; //credit key
     }
 
+    //check if the card is in secure mode or not
+    iclass_card_select_t payload_rdr = {
+        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
+    };
+
+    if (shallow_mod) {
+        payload_rdr.flags |= FLAG_ICLASS_READER_SHALLOW_MOD;
+    }
+    clearCommandBuffer();
+    PacketResponseNG resp;
+    SendCommandNG(CMD_HF_ICLASS_READER, (uint8_t *)&payload_rdr, sizeof(iclass_card_select_t));
+
+    if (WaitForResponseTimeout(CMD_HF_ICLASS_READER, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        DropField();
+        return PM3_ESOFT;
+    }
+    DropField();
+
+    if (resp.status == PM3_ERFTRANS) {
+        PrintAndLogEx(FAILED, "no tag found");
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    iclass_card_select_resp_t *r = (iclass_card_select_resp_t *)resp.data.asBytes;
+    if (r->status == FLAG_ICLASS_NULL) {
+        PrintAndLogEx(FAILED, "failed to read block 0,1,2");
+        return PM3_ESOFT;
+    }
+
+    picopass_hdr_t *hdr = &r->header.hdr;
+    uint8_t pagemap = get_pagemap(hdr);
+        if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
+            PrintAndLogEx(INFO, "Card in non-secure page mode detected");
+            auth = false;
+        }
+
     //perform initial read here, repeat if failed or 00s
     uint8_t data_read_orig[8] = {0};
     uint8_t ff_data[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
