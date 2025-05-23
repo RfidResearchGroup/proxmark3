@@ -3717,12 +3717,13 @@
             ],
             "usage": "hf iclass sniff [-hj]"
         },
-        "hf iclass trbl": {
-            "command": "hf iclass trbl",
-            "description": "Tear off an iCLASS tag block",
+        "hf iclass tear": {
+            "command": "hf iclass tear",
+            "description": "Tear off an iCLASS tag block e-purse usually 300-500us to trigger the erase phase also seen 1800-2100us on some cards",
             "notes": [
-                "hf iclass trbl --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B --tdb 100 --tde 150",
-                "hf iclass trbl --blk 10 -d AAAAAAAAAAAAAAAA --ki 0 --tdb 100 --tde 150"
+                "hf iclass tear --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B -s 300 -e 600",
+                "hf iclass tear --blk 10 -d AAAAAAAAAAAAAAAA --ki 0 -s 300 -e 600",
+                "hf iclass tear --blk 2 -d fdffffffffffffff --ki 1 --credit -s 400 -e 500"
             ],
             "offline": false,
             "options": [
@@ -3738,11 +3739,12 @@
                 "--nr replay of NR/MAC",
                 "-v, --verbose verbose output",
                 "--shallow use shallow (ASK) reader modulation instead of OOK",
-                "--s <dec> tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us.",
-                "--i <dec> tearoff delay increment (in us) - default 10.",
-                "--e <dec> tearoff delay end (in us) must be a higher value than the start delay."
+                "-s <dec> tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us.",
+                "-i <dec> tearoff delay increment (in us) - default 10.",
+                "-e <dec> tearoff delay end (in us) must be a higher value than the start delay.",
+                "--loop <dec> number of times to loop per tearoff time."
             ],
-            "usage": "hf iclass trbl [-hv] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow] --s <dec> [--i <dec>] [--e <dec>]"
+            "usage": "hf iclass tear [-hv] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow] -s <dec> [-i <dec>] [-e <dec>] [--loop <dec>]"
         },
         "hf iclass unhash": {
             "command": "hf iclass unhash",
@@ -13352,6 +13354,6 @@
     "metadata": {
         "commands_extracted": 767,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-05-23T08:30:58"
+        "extracted_on": "2025-05-23T15:21:08"
     }
 }

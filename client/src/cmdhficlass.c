@@ -2919,10 +2919,14 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
 
 static int CmdHFiClass_TearBlock(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf iclass trbl",
-                  "Tear off an iCLASS tag block",
-                  "hf iclass trbl --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B --tdb 100 --tde 150\n"
-                  "hf iclass trbl --blk 10 -d AAAAAAAAAAAAAAAA --ki 0 --tdb 100 --tde 150");
+    CLIParserInit(&ctx, "hf iclass tear",
+                  "Tear off an iCLASS tag block\n"
+                  "e-purse usually 300-500us to trigger the erase phase\n"
+                  "also seen 1800-2100us on some cards\n",
+                  "hf iclass tear --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B -s 300 -e 600\n"
+                  "hf iclass tear --blk 10 -d AAAAAAAAAAAAAAAA --ki 0 -s 300 -e 600\n"
+                  "hf iclass tear --blk 2 -d fdffffffffffffff --ki 1 --credit -s 400 -e 500"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -2937,9 +2941,9 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         arg_lit0(NULL, "nr", "replay of NR/MAC"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
-        arg_int1(NULL, "s", "<dec>", "tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us."),
-        arg_int0(NULL, "i", "<dec>", "tearoff delay increment (in us) - default 10."),
-        arg_int0(NULL, "e", "<dec>", "tearoff delay end (in us) must be a higher value than the start delay."),
+        arg_int1("s", NULL, "<dec>", "tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us."),
+        arg_int0("i", NULL, "<dec>", "tearoff delay increment (in us) - default 10."),
+        arg_int0("e", NULL, "<dec>", "tearoff delay end (in us) must be a higher value than the start delay."),
         arg_int0(NULL, "loop", "<dec>", "number of times to loop per tearoff time."),
         arg_param_end
     };
@@ -3075,10 +3079,10 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
 
     picopass_hdr_t *hdr = &r->header.hdr;
     uint8_t pagemap = get_pagemap(hdr);
-        if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
-            PrintAndLogEx(INFO, "Card in non-secure page mode detected");
-            auth = false;
-        }
+    if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
+        PrintAndLogEx(INFO, "Card in non-secure page mode detected");
+        auth = false;
+    }
 
     //perform initial read here, repeat if failed or 00s
     uint8_t data_read_orig[8] = {0};
@@ -3172,7 +3176,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             }
         }
 
-        if (decrease && tearoff_start > 0) { //if there was an error reading repeat the tearoff with the same delay
+        if (decrease && tearoff_start > 0) { // if there was an error reading repeat the tearoff with the same delay
             tearoff_start -= tearoff_increment;
         }
 
@@ -3183,7 +3187,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             tear_success = false;
         }
 
-        if ((tear_success == false) && (memcmp(data_read, zeros, 8) != 0) && (memcmp(data_read, data_read_orig, 8) != 0)) { //tearoff succeeded (partially)
+        if ((tear_success == false) && (memcmp(data_read, zeros, 8) != 0) && (memcmp(data_read, data_read_orig, 8) != 0)) { // tearoff succeeded (partially)
 
             expected_values = false;
 
@@ -3199,18 +3203,31 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
                     PrintAndLogEx(INFO, "Original: %s", sprint_hex_inrow(data_read_orig, sizeof(data_read)));
                     PrintAndLogEx(INFO, "Read:     "_CYAN_("%s"), sprint_hex_inrow(data_read, sizeof(data_read)));
                 } else {
-                    PrintAndLogEx(SUCCESS, _CYAN_("Tearing!(unknown phase)!"));
+                    PrintAndLogEx(SUCCESS, _CYAN_("Tearing!  (unknown phase)"));
                     PrintAndLogEx(INFO, "Original: %s", sprint_hex_inrow(data_read_orig, sizeof(data_read)));
                     PrintAndLogEx(INFO, "Read:     "_CYAN_("%s"), sprint_hex_inrow(data_read, sizeof(data_read)));
                 }
             }
 
-        } else { //tearoff did not succeed
+            if (blockno == 1) {
+                if (data_read[0] != data_read_orig[0]) {
+                    PrintAndLogEx(SUCCESS, "Application limit changed, from %u to %u", data_read_orig[0], data_read[0]);
+                    isok = PM3_SUCCESS;
+                    goto out;
+                }
+                if (data_read[7] != data_read_orig[7]) {
+                    PrintAndLogEx(SUCCESS, "Fuse changed, from %02x to %02x", data_read_orig[7], data_read[7]);
+                    isok = PM3_SUCCESS;
+                    goto out;
+                }
+            }
+
+        } else { // tearoff did not succeed
             PrintAndLogEx(INFO, "Read:     %s", sprint_hex_inrow(data_read, sizeof(data_read)));
             PrintAndLogEx(INFO, "Expected: %s", sprint_hex_inrow(data, sizeof(data)));
         }
 
-        if (tear_success) { //tearoff succeeded with expected values
+        if (tear_success) { // tearoff succeeded with expected values
             read_ok = true;
             tear_success = true;
             if (expected_values) {
@@ -3219,7 +3236,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             PrintAndLogEx(INFO, "Read:     "_GREEN_("%s"), sprint_hex_inrow(data_read, sizeof(data_read)));
         }
         loop_count++;
-        if (loop_count == tearoff_loop){
+        if (loop_count == tearoff_loop) {
             tearoff_start += tearoff_increment;
             loop_count = 0;
         }
@@ -5662,7 +5679,7 @@ static command_t CommandTable[] = {
     {"view",        CmdHFiClassView,            AlwaysAvailable, "Display content from tag dump file"},
     {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "Write Picopass / iCLASS block"},
     {"creditepurse", CmdHFiClassCreditEpurse,   IfPm3Iclass,     "Credit epurse value"},
-    {"trbl",        CmdHFiClass_TearBlock,      IfPm3Iclass,     "Performs tearoff attack on iClass block"},
+    {"tear",        CmdHFiClass_TearBlock,      IfPm3Iclass,     "Performs tearoff attack on iClass block"},
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("Recovery") " --------------------"},
 //    {"autopwn",     CmdHFiClassAutopwn,         IfPm3Iclass,     "Automatic key recovery tool for iCLASS"},
     {"chk",         CmdHFiClassCheckKeys,       IfPm3Iclass,     "Check keys"},

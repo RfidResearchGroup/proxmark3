@@ -281,7 +281,7 @@ const static vocabulary_t vocabulary[] = {
     { 1, "hf iclass view" },
     { 0, "hf iclass wrbl" },
     { 0, "hf iclass creditepurse" },
-    { 0, "hf iclass trbl" },
+    { 0, "hf iclass tear" },
     { 0, "hf iclass chk" },
     { 1, "hf iclass loclass" },
     { 1, "hf iclass lookup" },
