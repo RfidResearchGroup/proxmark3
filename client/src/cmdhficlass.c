@@ -2937,9 +2937,9 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         arg_lit0(NULL, "nr", "replay of NR/MAC"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
-        arg_int1(NULL, "tdb", "<dec>", "tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us."),
-        arg_int0(NULL, "incr", "<dec>", "tearoff delay increment (in us) - default 10."),
-        arg_int0(NULL, "tde", "<dec>", "tearoff delay end (in us) must be a higher value than the start delay."),
+        arg_int1(NULL, "s", "<dec>", "tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us."),
+        arg_int0(NULL, "i", "<dec>", "tearoff delay increment (in us) - default 10."),
+        arg_int0(NULL, "e", "<dec>", "tearoff delay end (in us) must be a higher value than the start delay."),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3004,7 +3004,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
 
     int tearoff_start = arg_get_int_def(ctx, 12, 5000);
     int tearoff_increment = arg_get_int_def(ctx, 13, 10);
-    int tearoff_end = arg_get_int_def(ctx, 14, tearoff_start + tearoff_increment + 500);
+    int tearoff_end = arg_get_int_def(ctx, 14, tearoff_start+tearoff_increment+500);
 
     if (tearoff_end <= tearoff_start) {
         PrintAndLogEx(ERR, "Tearoff end delay must be bigger than the start delay.");
@@ -3030,7 +3030,6 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         return PM3_EINVARG;
     }
     int isok = 0;
-    tearoff_params_t params;
     bool read_ok = false;
     uint8_t keyType = 0x88; //debit key
 
@@ -3039,49 +3038,63 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         keyType = 0x18; //credit key
     }
 
-    while (tearoff_start <= tearoff_end && !read_ok) {
-        //perform read here, repeat if failed or 00s
 
-        uint8_t data_read_orig[8] = {0};
-        bool first_read = false;
-        bool reread = false;
-        while (!first_read) {
-            int res_orig = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, shallow_mod, data_read_orig, false);
-            if (res_orig == PM3_SUCCESS && !reread) {
-                if (memcmp(data_read_orig, zeros, 8) == 0) {
-                    reread = true;
-                } else {
-                    first_read = true;
-                    reread = false;
-                }
-            } else if (res_orig == PM3_SUCCESS && reread) {
-                first_read = true;
-                reread = false;
-            }
+    //perform initial read here, repeat if failed or 00s
+    uint8_t data_read_orig[8] = {0};
+    uint8_t ff_data[8] = {0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff};
+    bool first_read = false;
+    bool reread = false;
+    bool erase_phase = false;
+
+    int res_orig = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, shallow_mod, data_read_orig, false);
+    if (res_orig == PM3_SUCCESS && !reread) {
+        if (memcmp(data_read_orig, zeros, 8) == 0) {
+            reread = true;
+        } else {
+            first_read = true;
+            reread = false;
+        }
+    } else if (res_orig == PM3_SUCCESS && reread) {
+        first_read = true;
+        reread = false;
+    }
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort");
+    while (tearoff_start <= tearoff_end && read_ok == false) {
+        if (kbd_enter_pressed()) {
+            PrintAndLogEx(WARNING, "\naborted via keyboard.");
+            return PM3_EOPABORTED;
         }
 
-        params.on = true;
-        params.delay_us = tearoff_start;
-        handle_tearoff(&params, false);
-        PrintAndLogEx(INFO, "Tear off delay: "_YELLOW_("%d")"/"_YELLOW_("%d")" us", tearoff_start, tearoff_end);
-        isok = iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
-        switch (isok) {
-            case PM3_SUCCESS:
-                PrintAndLogEx(SUCCESS, "Wrote block " _YELLOW_("%d") " / " _YELLOW_("0x%02X") " ( " _GREEN_("ok") " )", blockno, blockno);
-                break;
-            case PM3_ETEAROFF:
-                break;
-            default:
-                PrintAndLogEx(FAILED, "Writing failed");
-                break;
+        // set tear off trigger
+        clearCommandBuffer();
+        tearoff_params_t params = {
+            .delay_us = tearoff_start,
+            .on = true,
+            .off = false
+        };
+        int res = handle_tearoff(&params, verbose);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Failed to configure tear off");
+            return PM3_ESOFT;
         }
+
+        // write
+        // don't check the return value. As a tear-off occurred, the write failed.
+        PrintAndLogEx(INFO, "Tear off delay: "_YELLOW_("%d")"/"_YELLOW_("%d")" us", tearoff_start,tearoff_end);
+        iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
+
         //read the data back
         uint8_t data_read[8] = {0};
         first_read = false;
         reread = false;
         bool decrease = false;
-        while (!first_read) {
-            int res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, shallow_mod, data_read, false);
+        while (first_read == false) {
+            if (kbd_enter_pressed()) {
+                PrintAndLogEx(WARNING, "\naborted via keyboard.");
+                return PM3_EOPABORTED;
+            }
+            res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, shallow_mod, data_read, false);
             if (res == PM3_SUCCESS && !reread) {
                 if (memcmp(data_read, zeros, 8) == 0) {
                     reread = true;
@@ -3101,29 +3114,40 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         }
         bool tear_success = true;
         bool expected_values = true;
-        if (memcmp(data_read, data, 8) != 0) {
+        if(memcmp(data_read, data, 8) != 0) {
             tear_success = false;
-        } else if ((!tear_success) && (memcmp(data_read, zeros, 8) != 0) && (memcmp(data_read, data_read_orig, 8) != 0)) { //tearoff succeeded (partially)
-            tear_success = true;
+        }
+        if ((tear_success == false) && (memcmp(data_read, zeros, 8) != 0) && (memcmp(data_read, data_read_orig, 8) != 0)) { //tearoff succeeded (partially)
             expected_values = false;
-            PrintAndLogEx(SUCCESS, _GREEN_("Tear-off Success! -> Different values"));
-            PrintAndLogEx(INFO, "Original: %s", sprint_hex(data_read_orig, sizeof(data_read)));
+            if(memcmp(data_read, ff_data, 8) == 0 && memcmp(data_read_orig, ff_data, 8) != 0) {
+                erase_phase = true;
+                PrintAndLogEx(SUCCESS, _BLUE_("Erase phase hit: ALL ONES"));
+                PrintAndLogEx(INFO, "Original: %s", sprint_hex(data_read_orig, sizeof(data_read)));
+                PrintAndLogEx(INFO, "Read:     "_BLUE_("%s"), sprint_hex(data_read, sizeof(data_read)));
+            }else{
+                if (erase_phase) {
+                    PrintAndLogEx(SUCCESS, _MAGENTA_("Tearing! Write Phase (post erase)"));
+                    PrintAndLogEx(INFO, "Original: %s", sprint_hex(data_read_orig, sizeof(data_read)));
+                    PrintAndLogEx(INFO, "Read:     "_CYAN_("%s"), sprint_hex(data_read, sizeof(data_read)));
+                }else{
+                    PrintAndLogEx(SUCCESS, _CYAN_("Tearing!(unknown phase)!"));
+                    PrintAndLogEx(INFO, "Original: %s", sprint_hex(data_read_orig, sizeof(data_read)));
+                    PrintAndLogEx(INFO, "Read:     "_CYAN_("%s"), sprint_hex(data_read, sizeof(data_read)));
+                }
+            }
+        }else { //tearoff did not succeed
+            PrintAndLogEx(INFO, "Read:     %s", sprint_hex(data_read, sizeof(data_read)));
             PrintAndLogEx(INFO, "Expected: %s", sprint_hex(data, sizeof(data)));
         }
-        if (tear_success) { //tearoff succeeded
+        if (tear_success) { //tearoff succeeded with expected values
             read_ok = true;
-            if (expected_values) {
-                PrintAndLogEx(SUCCESS, _GREEN_("Tear-off Success! -> Expected values"));
+            tear_success = true;
+            if(expected_values) {
+                PrintAndLogEx(SUCCESS, _GREEN_("Expected values!"));
             }
-            PrintAndLogEx(INFO, "Read:     %s", sprint_hex(data_read, sizeof(data_read)));
-        } else { //tearoff did not succeed
-            PrintAndLogEx(FAILED, _RED_("Tear-off Failed!"));
-            if (verbose) {
-                PrintAndLogEx(INFO, "Read:     %s", sprint_hex(data_read, sizeof(data_read)));
-                PrintAndLogEx(INFO, "Expected: %s", sprint_hex(data, sizeof(data)));
-            }
-            tearoff_start += tearoff_increment;
+            PrintAndLogEx(INFO, "Read:     "_GREEN_("%s"), sprint_hex(data_read, sizeof(data_read)));
         }
+        tearoff_start += tearoff_increment;
         PrintAndLogEx(INFO, "---------------");
     }
     PrintAndLogEx(NORMAL, "");
