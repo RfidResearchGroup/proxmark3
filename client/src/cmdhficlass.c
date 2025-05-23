@@ -3009,6 +3009,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     int tearoff_loop = arg_get_int_def(ctx, 15, 1);
     int loop_count = 0;
 
+
     if (tearoff_end <= tearoff_start) {
         PrintAndLogEx(ERR, "Tearoff end delay must be bigger than the start delay.");
         return PM3_EINVARG;
