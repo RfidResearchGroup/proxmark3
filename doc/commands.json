@@ -3738,11 +3738,11 @@
                 "--nr replay of NR/MAC",
                 "-v, --verbose verbose output",
                 "--shallow use shallow (ASK) reader modulation instead of OOK",
-                "--tdb <dec> tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us.",
-                "--incr <dec> tearoff delay increment (in us) - default 10.",
-                "--tde <dec> tearoff delay end (in us) must be a higher value than the start delay."
+                "--s <dec> tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us.",
+                "--i <dec> tearoff delay increment (in us) - default 10.",
+                "--e <dec> tearoff delay end (in us) must be a higher value than the start delay."
             ],
-            "usage": "hf iclass trbl [-hv] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow] --tdb <dec> [--incr <dec>] [--tde <dec>]"
+            "usage": "hf iclass trbl [-hv] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow] --s <dec> [--i <dec>] [--e <dec>]"
         },
         "hf iclass unhash": {
             "command": "hf iclass unhash",
@@ -13352,6 +13352,6 @@
     "metadata": {
         "commands_extracted": 767,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-05-19T11:17:19"
+        "extracted_on": "2025-05-23T08:30:58"
     }
 }
