@@ -3081,14 +3081,19 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     int loop_count = 0;
     int isok = 0;
     bool read_ok = false;
-    uint8_t keyType = 0x88; //debit key
+    uint8_t keyType = 0x88; // debit key
 
     if (use_credit_key) {
         PrintAndLogEx(SUCCESS, "Using " _YELLOW_("credit") " key");
-        keyType = 0x18; //credit key
+        keyType = 0x18; // credit key
     }
+
     if (auth == false) {
         PrintAndLogEx(SUCCESS, "No key supplied. Trying no authentication read/writes");
+    }
+
+    if (tearoff_sleep) {
+        PrintAndLogEx(SUCCESS, "Using " _YELLOW_("%u") " ms delay between attempts", tearoff_sleep);
     }
 
     //check if the card is in secure mode or not
@@ -3189,7 +3194,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         // write
         // don't check the return value. As a tear-off occurred, the write failed.
         //PrintAndLogEx(NORMAL, "\r" NOLF);
-        PrintAndLogEx(INPLACE, "Tear off delay "_YELLOW_("%d")" / "_YELLOW_("%d")" us", tearoff_start, tearoff_end);
+        PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%d")" / "_YELLOW_("%d")" us", tearoff_start, tearoff_end);
         iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
 
         //read the data back
