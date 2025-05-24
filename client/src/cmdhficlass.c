@@ -2265,7 +2265,7 @@ static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *macdata
     SendCommandNG(CMD_HF_ICLASS_WRITEBL, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
 
-    if (WaitForResponseTimeout(CMD_HF_ICLASS_WRITEBL, &resp, 2000) == 0) {
+    if (WaitForResponseTimeout(CMD_HF_ICLASS_WRITEBL, &resp, 2000) == false) {
         if (verbose) PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
@@ -2491,7 +2491,7 @@ static int CmdHFiClassCreditEpurse(const char *Cmd) {
     PacketResponseNG resp;
 
     int isok;
-    if (WaitForResponseTimeout(CMD_HF_ICLASS_CREDIT_EPURSE, &resp, 2000) == 0) {
+    if (WaitForResponseTimeout(CMD_HF_ICLASS_CREDIT_EPURSE, &resp, 2000) == false) {
         if (verbose) PrintAndLogEx(WARNING, "command execution time out");
         isok = PM3_ETIMEOUT;
     } else if (resp.status != PM3_SUCCESS) {
@@ -2673,7 +2673,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ICLASS_RESTORE, (uint8_t *)payload, payload_size);
 
-    if (WaitForResponseTimeout(CMD_HF_ICLASS_RESTORE, &resp, 2500) == 0) {
+    if (WaitForResponseTimeout(CMD_HF_ICLASS_RESTORE, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         DropField();
         free(payload);
@@ -3092,7 +3092,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     }
 
     if (tearoff_loop > 1) {
-        PrintAndLogEx(SUCCESS, "Loop " _YELLOW_("%u") " times / attempt", tearoff_loop);
+        PrintAndLogEx(SUCCESS, _YELLOW_("%u") " attempts / tearoff", tearoff_loop);
     }
 
     if (tearoff_sleep) {
@@ -3174,7 +3174,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort");
 
-    while (tearoff_start <= tearoff_end && read_ok == false) {
+    while ((tearoff_start <= tearoff_end) && (read_ok == false)) {
 
         if (kbd_enter_pressed()) {
             PrintAndLogEx(WARNING, "\naborted via keyboard.");
@@ -3185,7 +3185,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         // set tear off trigger
         clearCommandBuffer();
         tearoff_params_t params = {
-            .delay_us = tearoff_start,
+            .delay_us = (tearoff_start & 0xFFFF),
             .on = true,
             .off = false
         };
@@ -3197,10 +3197,10 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             goto out;
         }
 
-        // write
-        // don't check the return value. As a tear-off occurred, the write failed.
-        //PrintAndLogEx(NORMAL, "\r" NOLF);
-        PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%d")" / "_YELLOW_("%d")" us", tearoff_start, tearoff_end);
+
+        PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%d")" / "_YELLOW_("%d")" us", (tearoff_start & 0xFFFF), (tearoff_end & 0xFFFF));
+
+        // write block - don't check the return value. As a tear-off occurred, the write failed.
         iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
 
         //read the data back
@@ -3234,7 +3234,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         }
 
         // if there was an error reading repeat the tearoff with the same delay
-        if (decrease && tearoff_start > 0) {
+        if (decrease && (tearoff_start > tearoff_increment)) {
             tearoff_start -= tearoff_increment;
         }
 
