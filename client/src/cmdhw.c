@@ -928,15 +928,19 @@ static int CmdTune(const char *Cmd) {
     SendCommandNG(CMD_MEASURE_ANTENNA_TUNING, NULL, 0);
     PacketResponseNG resp;
     PrintAndLogEx(INPLACE, "% 3i", timeout_max - timeout);
-    while (!WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING, &resp, 500)) {
+
+    while (WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING, &resp, 500) == false) {
+
         fflush(stdout);
         if (timeout >= timeout_max) {
             PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
             return PM3_ETIMEOUT;
         }
+
         timeout++;
         PrintAndLogEx(INPLACE, "% 3i", timeout_max - timeout);
     }
+
     PrintAndLogEx(NORMAL, "");
 
     if (resp.status != PM3_SUCCESS) {

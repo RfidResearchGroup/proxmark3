@@ -435,15 +435,17 @@ int CmdLFCommandRead(const char *Cmd) {
 
         i = 10;
         // 20sec wait loop
-        while (!WaitForResponseTimeout(CMD_LF_MOD_THEN_ACQ_RAW_ADC, &resp, 2000) && i != 0) {
+        while (WaitForResponseTimeout(CMD_LF_MOD_THEN_ACQ_RAW_ADC, &resp, 2000) == false && i != 0) {
             if (verbose) {
                 PrintAndLogEx(NORMAL, "." NOLF);
             }
             i--;
         }
+
         if (verbose) {
             PrintAndLogEx(NORMAL, "");
         }
+
         if (resp.status != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "command failed.");
             return PM3_ESOFT;
@@ -595,7 +597,7 @@ int lf_getconfig(sample_config *config) {
 
     SendCommandNG(CMD_LF_SAMPLING_GET_CONFIG, NULL, 0);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_LF_SAMPLING_GET_CONFIG, &resp, 2000)) {
+    if (WaitForResponseTimeout(CMD_LF_SAMPLING_GET_CONFIG, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
@@ -797,10 +799,12 @@ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples) {
         payload.samples = (samples > MAX_LF_SAMPLES) ? MAX_LF_SAMPLES : samples;
         SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
         PacketResponseNG resp;
+
         if (is_trigger_threshold_set) {
             WaitForResponse(CMD_LF_ACQ_RAW_ADC, &resp);
         } else {
-            if (!WaitForResponseTimeout(CMD_LF_ACQ_RAW_ADC, &resp, 2500)) {
+
+            if (WaitForResponseTimeout(CMD_LF_ACQ_RAW_ADC, &resp, 2500) == false) {
                 PrintAndLogEx(WARNING, "(lf_read) command execution time out");
                 return PM3_ETIMEOUT;
             }

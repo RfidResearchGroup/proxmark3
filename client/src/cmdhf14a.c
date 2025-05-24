@@ -914,7 +914,7 @@ int CmdHF14ASim(const char *Cmd) {
     bool keypress = kbd_enter_pressed();
     while (keypress == false) {
 
-        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0)
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == false)
             continue;
 
         if (resp.status != PM3_SUCCESS)
@@ -4037,7 +4037,7 @@ int CmdHF14AAIDSim(const char *Cmd) {
     bool keypress = kbd_enter_pressed();
     while (keypress == false) {
 
-        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0) {
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == false) {
             continue;
         }
 

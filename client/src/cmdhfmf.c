@@ -1915,9 +1915,13 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
                 SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
 
                 PacketResponseNG resp;
-                if (!WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500)) continue;
+                if (WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500) == false) {
+                    continue;
+                }
 
-                if (resp.status != PM3_SUCCESS) continue;
+                if (resp.status != PM3_SUCCESS) {
+                    continue;
+                }
 
                 uint8_t *data = resp.data.asBytes;
                 key64 = bytes_to_num(data + 10, 6);
@@ -4005,9 +4009,13 @@ static int CmdHF14AMfChk(const char *Cmd) {
                 SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
 
                 PacketResponseNG resp;
-                if (!WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500)) continue;
+                if (WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500) == false) {
+                    continue;
+                }
 
-                if (resp.status != PM3_SUCCESS) continue;
+                if (resp.status != PM3_SUCCESS) {
+                    continue;
+                }
 
                 uint8_t *data = resp.data.asBytes;
                 key64 = bytes_to_num(data + 10, MIFARE_KEY_SIZE);
@@ -4070,7 +4078,7 @@ out:
     // Disable fast mode and send a dummy command to make it effective
     g_conn.block_after_ACK = false;
     SendCommandNG(CMD_PING, NULL, 0);
-    if (!WaitForResponseTimeout(CMD_PING, NULL, 1000)) {
+    if (WaitForResponseTimeout(CMD_PING, NULL, 1000) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
@@ -6176,7 +6184,9 @@ static int CmdHF14AMfice(const char *Cmd) {
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_MIFARE_ACQ_NONCES, blockNo + keyType * 0x100, trgBlockNo + trgKeyType * 0x100, flags, NULL, 0);
 
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, 3000)) goto out;
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 3000) == false) {
+            goto out;
+        }
         if (resp.oldarg[0])  goto out;
 
         uint32_t items = resp.oldarg[2];
