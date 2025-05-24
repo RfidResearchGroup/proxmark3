@@ -3264,7 +3264,8 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             }
 
         } else { // tearoff did not succeed
-            iclass_cmp_print(data, data_read, "Expected: ", "Read:     ");
+            PrintAndLogEx(INFO, "Expected: %s", sprint_hex_inrow(data, sizeof(data)));
+            PrintAndLogEx(INFO, "Read:     %s", sprint_hex_inrow(data_read, sizeof(data_read)));
         }
 
         if (tear_success) { // tearoff succeeded with expected values
