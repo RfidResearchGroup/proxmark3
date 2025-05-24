@@ -527,6 +527,7 @@ Check column "offline" for their availability.
 |`hf mf fchk             `|N       |`Check keys fast, targets all keys on card`
 |`hf mf decrypt          `|Y       |`Decrypt Crypto1 data from sniff or trace`
 |`hf mf supercard        `|N       |`Extract info from a `super card``
+|`hf mf bambukeys        `|Y       |`Generate key table for Bambu Lab filament tag`
 |`hf mf auth4            `|N       |`ISO14443-4 AES authentication`
 |`hf mf acl              `|Y       |`Decode and print MIFARE Classic access rights bytes`
 |`hf mf dump             `|N       |`Dump MIFARE Classic tag to binary file`
