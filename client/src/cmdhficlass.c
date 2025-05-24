@@ -1903,15 +1903,32 @@ static int CmdHFiClassDump(const char *Cmd) {
 
     int key_len = 0;
     uint8_t key[8] = {0};
-    bool auth = false;
-
     CLIGetHexWithReturn(ctx, 2, key, &key_len);
 
     int deb_key_nr = arg_get_int_def(ctx, 3, -1);
 
+    int credit_key_len = 0;
+    uint8_t credit_key[8] = {0};
+    CLIGetHexWithReturn(ctx, 4, credit_key, &credit_key_len);
+
+    int credit_key_nr = arg_get_int_def(ctx, 5, -1);
+    bool elite = arg_get_lit(ctx, 6);
+    bool rawkey = arg_get_lit(ctx, 7);
+    bool use_replay = arg_get_lit(ctx, 8);
+    bool dense_output = g_session.dense_output || arg_get_lit(ctx, 9);
+    bool force = arg_get_lit(ctx, 10);
+    bool shallow_mod = arg_get_lit(ctx, 11);
+    bool nosave = arg_get_lit(ctx, 12);
+
+    CLIParserFree(ctx);
+
+    bool auth = false;
+    bool have_credit_key = false;
+
+    // Sanity checks
+
     if (key_len > 0 && deb_key_nr >= 0) {
         PrintAndLogEx(ERR, "Please specify debit key or index, not both");
-        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -1919,7 +1936,6 @@ static int CmdHFiClassDump(const char *Cmd) {
         auth = true;
         if (key_len != 8) {
             PrintAndLogEx(ERR, "Debit key is incorrect length");
-            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     }
@@ -1931,22 +1947,12 @@ static int CmdHFiClassDump(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "Using AA1 (debit) key[%d] " _GREEN_("%s"), deb_key_nr, sprint_hex(iClass_Key_Table[deb_key_nr], 8));
         } else {
             PrintAndLogEx(ERR, "Key number is invalid");
-            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     }
-
-    int credit_key_len = 0;
-    uint8_t credit_key[8] = {0};
-    bool have_credit_key = false;
-
-    CLIGetHexWithReturn(ctx, 4, credit_key, &credit_key_len);
-
-    int credit_key_nr = arg_get_int_def(ctx, 5, -1);
-
+    
     if (credit_key_len > 0 && credit_key_nr >= 0) {
         PrintAndLogEx(ERR, "Please specify credit key or index, not both");
-        CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
@@ -1955,7 +1961,6 @@ static int CmdHFiClassDump(const char *Cmd) {
         have_credit_key = true;
         if (credit_key_len != 8) {
             PrintAndLogEx(ERR, "Credit key is incorrect length");
-            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     }
@@ -1968,20 +1973,9 @@ static int CmdHFiClassDump(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "Using AA2 (credit) key[%d] " _GREEN_("%s"), credit_key_nr, sprint_hex(iClass_Key_Table[credit_key_nr], 8));
         } else {
             PrintAndLogEx(ERR, "Key number is invalid");
-            CLIParserFree(ctx);
             return PM3_EINVARG;
         }
     }
-
-    bool elite = arg_get_lit(ctx, 6);
-    bool rawkey = arg_get_lit(ctx, 7);
-    bool use_replay = arg_get_lit(ctx, 8);
-    bool dense_output = g_session.dense_output || arg_get_lit(ctx, 9);
-    bool force = arg_get_lit(ctx, 10);
-    bool shallow_mod = arg_get_lit(ctx, 11);
-    bool nosave = arg_get_lit(ctx, 12);
-
-    CLIParserFree(ctx);
 
     if ((use_replay + rawkey + elite) > 1) {
         PrintAndLogEx(ERR, "Can not use a combo of 'elite', 'raw', 'nr'");
@@ -2005,7 +1999,6 @@ static int CmdHFiClassDump(const char *Cmd) {
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandNG(CMD_HF_ICLASS_READER, (uint8_t *)&payload_rdr, sizeof(iclass_card_select_t));
-
     if (WaitForResponseTimeout(CMD_HF_ICLASS_READER, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         DropField();
@@ -2062,9 +2055,11 @@ static int CmdHFiClassDump(const char *Cmd) {
             PrintAndLogEx(INFO, "No keys needed, ignoring user supplied key");
         }
     } else {
+
         if (auth == false) {
-            PrintAndLogEx(FAILED, "Run command with keys");
-            return PM3_ESOFT;
+            auth = true;
+            memcpy(key, iClass_Key_Table[0], 8);
+            PrintAndLogEx(SUCCESS, "Default to AA1 (debit) " _GREEN_("%s"), sprint_hex(key, sizeof(key)));
         }
 
         if (app_limit2 != 0) {
@@ -2134,7 +2129,7 @@ static int CmdHFiClassDump(const char *Cmd) {
     uint8_t tempbuf[0x100 * 8];
 
     // response ok - now get bigbuf content of the dump
-    if (!GetFromDevice(BIG_BUF, tempbuf, sizeof(tempbuf), startindex, NULL, 0, NULL, 2500, false)) {
+    if (GetFromDevice(BIG_BUF, tempbuf, sizeof(tempbuf), startindex, NULL, 0, NULL, 2500, false) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
@@ -2199,7 +2194,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         }
 
         // get dumped data from bigbuf
-        if (!GetFromDevice(BIG_BUF, tempbuf, sizeof(tempbuf), startindex, NULL, 0, NULL, 2500, false)) {
+        if (GetFromDevice(BIG_BUF, tempbuf, sizeof(tempbuf), startindex, NULL, 0, NULL, 2500, false) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
             goto write_dump;
         }
@@ -3716,7 +3711,6 @@ static int CmdHFiClassView(const char *Cmd) {
     }
 
     if (verbose) {
-        PrintAndLogEx(INFO, "File: " _YELLOW_("%s"), filename);
         PrintAndLogEx(INFO, "File size %zu bytes, file blocks %d (0x%x)", bytes_read, (uint16_t)(bytes_read >> 3), (uint16_t)(bytes_read >> 3));
         PrintAndLogEx(INFO, "Printing blocks from: " _YELLOW_("%02d") " to: " _YELLOW_("%02d"), (startblock == 0) ? 6 : startblock, endblock);
     }
