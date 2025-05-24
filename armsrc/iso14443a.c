@@ -1184,7 +1184,7 @@ bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_
 
 bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
                            uint8_t *ats, size_t ats_len, tag_response_info_t **responses,
-                           uint32_t *cuid, uint32_t counters[3], uint8_t tearings[3], uint8_t *pages) {
+                           uint32_t *cuid, uint8_t *pages) {
     uint8_t sak = 0;
     // The first response contains the ATQA (note: bytes are transmitted in reverse order).
     static uint8_t rATQA[2] = { 0x00 };
@@ -1231,14 +1231,11 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
             mfu_dump_t *mfu_header = (mfu_dump_t *) BigBuf_get_EM_addr();
             *pages = MAX(mfu_header->pages, 15);
 
-            // counters and tearing flags
+            // tearing flags
             // for old dumps with all zero headers, we need to set default values.
             for (uint8_t i = 0; i < 3; i++) {
-
-                counters[i] = le24toh(mfu_header->counter_tearing[i]);
-
-                if (mfu_header->counter_tearing[i][3] != 0x00) {
-                    tearings[i] = mfu_header->counter_tearing[i][3];
+                if (mfu_header->counter_tearing[i][3] == 0x00) {
+                    mfu_header->counter_tearing[i][3] = 0xBD;
                 }
             }
 
@@ -1286,14 +1283,11 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
             mfu_dump_t *mfu_header = (mfu_dump_t *) BigBuf_get_EM_addr();
             *pages = MAX(mfu_header->pages, 19);
 
-            // counters and tearing flags
+            // tearing flags
             // for old dumps with all zero headers, we need to set default values.
             for (uint8_t i = 0; i < 3; i++) {
-
-                counters[i] = le24toh(mfu_header->counter_tearing[i]);
-
-                if (mfu_header->counter_tearing[i][3] != 0x00) {
-                    tearings[i] = mfu_header->counter_tearing[i][3];
+                if (mfu_header->counter_tearing[i][3] == 0x00) {
+                    mfu_header->counter_tearing[i][3] = 0xBD;
                 }
             }
 
@@ -1539,8 +1533,6 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
     tag_response_info_t *responses;
     uint32_t cuid = 0;
     uint32_t nonce = 0;
-    uint32_t counters[3] = { 0x00, 0x00, 0x00 };
-    uint8_t tearings[3] = { 0xbd, 0xbd, 0xbd };
     uint8_t pages = 0;
 
     // Here, we collect CUID, block1, keytype1, NT1, NR1, AR1, CUID, block2, keytyp2, NT2, NR2, AR2
@@ -1584,10 +1576,20 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
         .modulation_n = 0
     };
 
-    if (SimulateIso14443aInit(tagType, flags, useruid, ats, ats_len, &responses, &cuid, counters, tearings, &pages) == false) {
+    if (SimulateIso14443aInit(tagType, flags, useruid, ats, ats_len, &responses, &cuid, &pages) == false) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
         return;
+    }
+
+    mfu_dump_t *mfu_em_dump = NULL;
+    if (tagType == 2 || tagType == 7) {
+        mfu_em_dump = (mfu_dump_t *)BigBuf_get_EM_addr();
+        if (!mfu_em_dump) {
+            if (g_dbglevel >= DBG_ERROR) Dbprintf("[-] ERROR: Failed to get EM address for MFU/NTAG operations.");
+            reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
+            return;
+        }
     }
 
     // We need to listen to the high-frequency, peak-detected path.
@@ -1870,8 +1872,8 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
                 // send NACK 0x0 == invalid argument
                 EmSend4bit(CARD_NACK_IV);
             } else {
-                uint8_t cmd[] =  {0x00, 0x00, 0x00, 0x14, 0xa5};
-                htole24(counters[index], cmd);
+                uint8_t cmd[] = {0, 0, 0, 0x14, 0xa5};
+                memcpy(cmd, mfu_em_dump->counter_tearing[index], 3);
                 AddCrc14A(cmd, sizeof(cmd) - 2);
                 EmSendCmd(cmd, sizeof(cmd));
             }
@@ -1882,13 +1884,16 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
                 // send NACK 0x0 == invalid argument
                 EmSend4bit(CARD_NACK_IV);
             } else {
-                uint32_t val = le24toh(receivedCmd + 2) + counters[index];
+                uint32_t val = le24toh(mfu_em_dump->counter_tearing[index]); // get current counter value
+                val += le24toh(receivedCmd + 2); // increment in
+
                 // if new value + old value is bigger 24bits,  fail
                 if (val > 0xFFFFFF) {
                     // send NACK 0x4 == counter overflow
                     EmSend4bit(CARD_NACK_NA);
                 } else {
-                    counters[index] = val;
+                    htole24(val, mfu_em_dump->counter_tearing[index]);
+
                     // send ACK
                     EmSend4bit(CARD_ACK);
                 }
@@ -1902,7 +1907,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
                 EmSend4bit(CARD_NACK_IV);
             } else {
                 uint8_t cmd[3] = {0, 0, 0};
-                cmd[0] = tearings[index];
+                cmd[0] = mfu_em_dump->counter_tearing[index][3];
                 AddCrc14A(cmd, sizeof(cmd) - 2);
                 EmSendCmd(cmd, sizeof(cmd));
             }
@@ -4093,8 +4098,6 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
                              uint8_t *getdata_response, size_t getdata_response_len) {
     tag_response_info_t *responses;
     uint32_t cuid = 0;
-    uint32_t counters[3] = { 0x00, 0x00, 0x00 };
-    uint8_t tearings[3] = { 0xbd, 0xbd, 0xbd };
     uint8_t pages = 0;
 
     // command buffers
@@ -4135,7 +4138,7 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
         .modulation_n = 0
     };
 
-    if (SimulateIso14443aInit(tagType, flags, uid, ats, ats_len, &responses, &cuid, counters, tearings, &pages) == false) {
+    if (SimulateIso14443aInit(tagType, flags, uid, ats, ats_len, &responses, &cuid, &pages) == false) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
         return;
