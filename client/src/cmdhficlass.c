@@ -2985,78 +2985,83 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         arg_lit0(NULL, "nr", "replay of NR/MAC"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
-        arg_int1("s", NULL, "<dec>", "tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us."),
-        arg_int0("i", NULL, "<dec>", "tearoff delay increment (in us) - default 10."),
-        arg_int0("e", NULL, "<dec>", "tearoff delay end (in us) must be a higher value than the start delay."),
-        arg_int0(NULL, "loop", "<dec>", "number of times to loop per tearoff time."),
+        arg_int1("s", NULL, "<dec>", "tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3 us"),
+        arg_int0("i", NULL, "<dec>", "tearoff delay increment (in us) - default 10"),
+        arg_int0("e", NULL, "<dec>", "tearoff delay end (in us) must be a higher value than the start delay"),
+        arg_int0(NULL, "loop", "<dec>", "number of times to loop per tearoff time"),
+        arg_int0(NULL, "sleep", "<ms>", "Sleep between each tear"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     int key_len = 0;
     uint8_t key[8] = {0};
-
     CLIGetHexWithReturn(ctx, 1, key, &key_len);
 
     int key_nr = arg_get_int_def(ctx, 2, -1);
-
-    if (key_len > 0 && key_nr >= 0) {
-        PrintAndLogEx(ERR, "Please specify key or index, not both");
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-
-    bool auth = false;
-
-    if (key_len > 0) {
-        auth = true;
-        if (key_len != 8) {
-            PrintAndLogEx(ERR, "Key is incorrect length");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
-        }
-    } else if (key_nr >= 0) {
-        if (key_nr < ICLASS_KEYS_MAX) {
-            auth = true;
-            memcpy(key, iClass_Key_Table[key_nr], 8);
-            PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), key_nr, sprint_hex(iClass_Key_Table[key_nr], 8));
-        } else {
-            PrintAndLogEx(ERR, "Key number is invalid");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
-        }
-    }
-
     int blockno = arg_get_int_def(ctx, 3, 0);
 
     int data_len = 0;
     uint8_t data[8] = {0};
     CLIGetHexWithReturn(ctx, 4, data, &data_len);
 
-    if (data_len != 8) {
-        PrintAndLogEx(ERR, "Data must be 8 hex bytes (16 hex symbols)");
-        CLIParserFree(ctx);
-        return PM3_EINVARG;
-    }
-
     int mac_len = 0;
     uint8_t mac[4] = {0};
     CLIGetHexWithReturn(ctx, 5, mac, &mac_len);
 
-    if (mac_len) {
-        if (mac_len != 4) {
-            PrintAndLogEx(ERR, "MAC must be 4 hex bytes (8 hex symbols)");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
-        }
-    }
+    bool use_credit_key = arg_get_lit(ctx, 6);
+    bool elite = arg_get_lit(ctx, 7);
+    bool rawkey = arg_get_lit(ctx, 8);
+    bool use_replay = arg_get_lit(ctx, 9);
+    bool verbose = arg_get_lit(ctx, 10);
+    bool shallow_mod = arg_get_lit(ctx, 11);
 
     int tearoff_start = arg_get_int_def(ctx, 12, 5000);
     int tearoff_increment = arg_get_int_def(ctx, 13, 10);
     int tearoff_end = arg_get_int_def(ctx, 14, tearoff_start + tearoff_increment + 500);
     int tearoff_loop = arg_get_int_def(ctx, 15, 1);
-    int loop_count = 0;
+    int tearoff_sleep = arg_get_int_def(ctx, 16, 0);
 
+    CLIParserFree(ctx);
+
+    // Sanity checks
+    if (key_len > 0 && key_nr >= 0) {
+        PrintAndLogEx(ERR, "Please specify key or index, not both");
+        return PM3_EINVARG;
+    }
+
+    bool auth = false;
+
+    if (key_len > 0) {
+
+        auth = true;
+        if (key_len != 8) {
+            PrintAndLogEx(ERR, "Key is incorrect length");
+            return PM3_EINVARG;
+        }
+
+    } else if (key_nr >= 0) {
+
+        if (key_nr < ICLASS_KEYS_MAX) {
+            auth = true;
+            memcpy(key, iClass_Key_Table[key_nr], 8);
+            PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), key_nr, sprint_hex(iClass_Key_Table[key_nr], 8));
+        } else {
+            PrintAndLogEx(ERR, "Key number is invalid");
+            return PM3_EINVARG;
+        }
+
+    }
+
+    if (data_len != 8) {
+        PrintAndLogEx(ERR, "Data must be 8 hex bytes (16 hex symbols), got " _RED_("%u"), data_len);
+        return PM3_EINVARG;
+    }
+
+    if (mac_len && mac_len != 4) {
+        PrintAndLogEx(ERR, "MAC must be 4 hex bytes (8 hex symbols)");
+        return PM3_EINVARG;
+    }
 
     if (tearoff_end <= tearoff_start) {
         PrintAndLogEx(ERR, "Tearoff end delay must be bigger than the start delay.");
@@ -3068,19 +3073,12 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    bool use_credit_key = arg_get_lit(ctx, 6);
-    bool elite = arg_get_lit(ctx, 7);
-    bool rawkey = arg_get_lit(ctx, 8);
-    bool use_replay = arg_get_lit(ctx, 9);
-    bool verbose = arg_get_lit(ctx, 10);
-    bool shallow_mod = arg_get_lit(ctx, 11);
-
-    CLIParserFree(ctx);
-
     if ((use_replay + rawkey + elite) > 1) {
         PrintAndLogEx(ERR, "Can not use a combo of 'elite', 'raw', 'nr'");
         return PM3_EINVARG;
     }
+
+    int loop_count = 0;
     int isok = 0;
     bool read_ok = false;
     uint8_t keyType = 0x88; //debit key
@@ -3088,6 +3086,9 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     if (use_credit_key) {
         PrintAndLogEx(SUCCESS, "Using " _YELLOW_("credit") " key");
         keyType = 0x18; //credit key
+    }
+    if (auth == false) {
+        PrintAndLogEx(SUCCESS, "No key supplied. Trying no authentication read/writes");
     }
 
     //check if the card is in secure mode or not
@@ -3158,7 +3159,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         return PM3_EFAILED;
     }
 
-    PrintAndLogEx(INFO, "Starting tear off against block %u / 0x%02x", blockno, blockno);
+    PrintAndLogEx(INFO, "Starting tear off against block " _YELLOW_("%u") " / " _YELLOW_("0x%02x"), blockno, blockno);
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort");
 
@@ -3187,7 +3188,8 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
 
         // write
         // don't check the return value. As a tear-off occurred, the write failed.
-        PrintAndLogEx(INFO, "Tear off delay: "_YELLOW_("%d")" / "_YELLOW_("%d")" us", tearoff_start, tearoff_end);
+        //PrintAndLogEx(NORMAL, "\r" NOLF);
+        PrintAndLogEx(INPLACE, "Tear off delay "_YELLOW_("%d")" / "_YELLOW_("%d")" us", tearoff_start, tearoff_end);
         iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
 
         //read the data back
@@ -3237,14 +3239,17 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
 
             if (memcmp(data_read, ff_data, 8) == 0 && memcmp(data_read_orig, ff_data, 8) != 0) {
                 erase_phase = true;
+                PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(SUCCESS, _BLUE_("Erase phase hit: ALL ONES"));
                 iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
             } else {
 
                 if (erase_phase) {
+                    PrintAndLogEx(NORMAL, "");
                     PrintAndLogEx(SUCCESS, _MAGENTA_("Tearing! Write Phase (post erase)"));
                     iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
                 } else {
+                    PrintAndLogEx(NORMAL, "");
                     PrintAndLogEx(SUCCESS, _CYAN_("Tearing!  (unknown phase)"));
                     iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
                 }
@@ -3252,11 +3257,13 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
 
             if (blockno == 1) {
                 if (data_read[0] != data_read_orig[0]) {
+                    PrintAndLogEx(NORMAL, "");
                     PrintAndLogEx(SUCCESS, "Application limit changed, from %u to %u", data_read_orig[0], data_read[0]);
                     isok = PM3_SUCCESS;
                     goto out;
                 }
                 if (data_read[7] != data_read_orig[7]) {
+                    PrintAndLogEx(NORMAL, "");
                     PrintAndLogEx(SUCCESS, "Fuse changed, from %02x to %02x", data_read_orig[7], data_read[7]);
                     isok = PM3_SUCCESS;
                     goto out;
@@ -3264,27 +3271,38 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             }
 
         } else { // tearoff did not succeed
-            PrintAndLogEx(INFO, "Expected: %s", sprint_hex_inrow(data, sizeof(data)));
-            PrintAndLogEx(INFO, "Read:     %s", sprint_hex_inrow(data_read, sizeof(data_read)));
+            // PrintAndLogEx(INFO, "Expected: %s", sprint_hex_inrow(data, sizeof(data)));
+            // PrintAndLogEx(INFO, "Read:     %s", sprint_hex_inrow(data_read, sizeof(data_read)));
         }
 
         if (tear_success) { // tearoff succeeded with expected values
+
             read_ok = true;
             tear_success = true;
-            if (expected_values) {
-                PrintAndLogEx(SUCCESS, _GREEN_("Expected values!"));
-            }
-            PrintAndLogEx(INFO, "Read:     "_GREEN_("%s"), sprint_hex_inrow(data_read, sizeof(data_read)));
+
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "Read:     " _GREEN_("%s") " %s"
+                , sprint_hex_inrow(data_read, sizeof(data_read)),
+                (expected_values) ? _GREEN_(" -> Expected values!") : ""
+            );
         }
+
         loop_count++;
+
         if (loop_count == tearoff_loop) {
             tearoff_start += tearoff_increment;
             loop_count = 0;
         }
-        PrintAndLogEx(INFO, "--------------------------");
+
+        if (tearoff_sleep) {
+            msleep(tearoff_sleep);
+        }
     }
 
 out:
+
+    DropField();
+
     if (setDeviceDebugLevel(verbose ? MAX(dbg_curr, DBG_INFO) : DBG_NONE, false) != PM3_SUCCESS) {
         return PM3_EFAILED;
     }
@@ -3297,6 +3315,7 @@ out:
     };
     handle_tearoff(&params, false);
     PrintAndLogEx(NORMAL, "");
+    clearCommandBuffer();
     return isok;
 }
 
