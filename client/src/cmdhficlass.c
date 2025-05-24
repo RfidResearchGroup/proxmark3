@@ -5855,7 +5855,7 @@ int info_iclass(bool shallow_mod) {
     } else {
 
         if ((r->status & FLAG_ICLASS_CC) == FLAG_ICLASS_CC) {
-            PrintAndLogEx(SUCCESS, "E-purse: %s Card challenge, CC", sprint_hex(hdr->epurse, sizeof(hdr->epurse)));
+            PrintAndLogEx(SUCCESS, "E-purse: %s card challenge, CC", sprint_hex(hdr->epurse, sizeof(hdr->epurse)));
         }
 
         if (memcmp(hdr->key_d, zeros, sizeof(zeros))) {
