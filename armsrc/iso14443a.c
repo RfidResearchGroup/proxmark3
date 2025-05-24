@@ -190,35 +190,35 @@ struct Crypto1State crypto1_state = {0, 0};
 
 void printHf14aConfig(void) {
     DbpString(_CYAN_("HF 14a config"));
-    Dbprintf("  [a] Anticol override.............. %s%s%s",
+    Dbprintf("  [a] Anticol override........... %s%s%s",
              (hf14aconfig.forceanticol == 0) ? _GREEN_("std") "    ( follow standard )" : "",
              (hf14aconfig.forceanticol == 1) ? _RED_("force") " ( always do anticol )" : "",
              (hf14aconfig.forceanticol == 2) ? _RED_("skip") "   ( always skip anticol )" : ""
             );
-    Dbprintf("  [b] BCC override.................. %s%s%s",
+    Dbprintf("  [b] BCC override............... %s%s%s",
              (hf14aconfig.forcebcc == 0) ? _GREEN_("std") "    ( follow standard )" : "",
              (hf14aconfig.forcebcc == 1) ? _RED_("fix") "    ( fix bad BCC )" : "",
              (hf14aconfig.forcebcc == 2) ? _RED_("ignore") " ( ignore bad BCC, always use card BCC )" : ""
             );
-    Dbprintf("  [2] CL2 override.................. %s%s%s",
+    Dbprintf("  [2] CL2 override............... %s%s%s",
              (hf14aconfig.forcecl2 == 0) ? _GREEN_("std") "    ( follow standard )" : "",
              (hf14aconfig.forcecl2 == 1) ? _RED_("force") "  ( always do CL2 )" : "",
              (hf14aconfig.forcecl2 == 2) ? _RED_("skip") "   ( always skip CL2 )" : ""
             );
-    Dbprintf("  [3] CL3 override.................. %s%s%s",
+    Dbprintf("  [3] CL3 override............... %s%s%s",
              (hf14aconfig.forcecl3 == 0) ? _GREEN_("std") "    ( follow standard )" : "",
              (hf14aconfig.forcecl3 == 1) ? _RED_("force") "  ( always do CL3 )" : "",
              (hf14aconfig.forcecl3 == 2) ? _RED_("skip") "   ( always skip CL3 )" : ""
             );
-    Dbprintf("  [r] RATS override................. %s%s%s",
+    Dbprintf("  [r] RATS override.............. %s%s%s",
              (hf14aconfig.forcerats == 0) ? _GREEN_("std") "    ( follow standard )" : "",
              (hf14aconfig.forcerats == 1) ? _RED_("force") "  ( always do RATS )" : "",
              (hf14aconfig.forcerats == 2) ? _RED_("skip") "   ( always skip RATS )" : ""
             );
-    Dbprintf("  [m] Magsafe polling............... %s",
+    Dbprintf("  [m] Magsafe polling............ %s",
              (hf14aconfig.magsafe == 1) ? _GREEN_("enabled") : _YELLOW_("disabled")
             );
-    Dbprintf("  [p] Polling loop annotation....... %s %*D",
+    Dbprintf("  [p] Polling loop annotation.... %s %*D",
              (hf14aconfig.polling_loop_annotation.frame_length <= 0) ? _YELLOW_("disabled") : _GREEN_("enabled"),
              hf14aconfig.polling_loop_annotation.frame_length,
              hf14aconfig.polling_loop_annotation.frame,

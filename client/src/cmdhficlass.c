@@ -3040,7 +3040,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             auth = true;
             memcpy(key, iClass_Key_Table[key_nr], 8);
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), key_nr, sprint_hex(iClass_Key_Table[key_nr], 8));
+            PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), key_nr, sprint_hex_inrow(iClass_Key_Table[key_nr], 8));
         } else {
             PrintAndLogEx(ERR, "Key number is invalid");
             return PM3_EINVARG;
@@ -3156,6 +3156,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         first_read = true;
         reread = false;
     }
+
     PrintAndLogEx(SUCCESS, "Original block data... " _CYAN_("%s"), sprint_hex_inrow(data_read_orig, sizeof(data_read_orig)));
     PrintAndLogEx(SUCCESS, "New data to write..... " _YELLOW_("%s"), sprint_hex_inrow(data, sizeof(data)));
     PrintAndLogEx(INFO, "------------------------------------------");
