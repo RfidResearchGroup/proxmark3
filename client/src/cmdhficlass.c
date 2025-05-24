@@ -3034,18 +3034,19 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             PrintAndLogEx(ERR, "Key is incorrect length");
             return PM3_EINVARG;
         }
-
-    } else if (key_nr >= 0) {
-
+        PrintAndLogEx(NORMAL, "");
+    } 
+    
+    if (key_nr >= 0) {
         if (key_nr < ICLASS_KEYS_MAX) {
             auth = true;
             memcpy(key, iClass_Key_Table[key_nr], 8);
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), key_nr, sprint_hex(iClass_Key_Table[key_nr], 8));
         } else {
             PrintAndLogEx(ERR, "Key number is invalid");
             return PM3_EINVARG;
         }
-
     }
 
     if (data_len != 8) {
@@ -3085,6 +3086,10 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
 
     if (auth == false) {
         PrintAndLogEx(SUCCESS, "No key supplied. Trying no authentication read/writes");
+    }
+
+    if (tearoff_loop > 1) {
+        PrintAndLogEx(SUCCESS, "Loop " _YELLOW_("%u") " times / attempt", tearoff_loop);
     }
 
     if (tearoff_sleep) {
@@ -3148,7 +3153,9 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         first_read = true;
         reread = false;
     }
-
+    PrintAndLogEx(SUCCESS, "Original block data... " _CYAN_("%s"), sprint_hex_inrow(data_read_orig, sizeof(data_read_orig)));
+    PrintAndLogEx(SUCCESS, "New data to write..... " _YELLOW_("%s"), sprint_hex_inrow(data, sizeof(data)));
+    PrintAndLogEx(INFO, "------------------------------------------");
     // turn off Device side debug messages
     uint8_t dbg_curr = DBG_NONE;
     if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
@@ -3314,6 +3321,8 @@ out:
         .off = true
     };
     handle_tearoff(&params, false);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Done!");
     PrintAndLogEx(NORMAL, "");
     clearCommandBuffer();
     return isok;
