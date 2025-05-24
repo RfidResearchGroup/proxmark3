@@ -1467,8 +1467,9 @@ static void iclass_decode_credentials(uint8_t *data) {
     bool has_values = (memcmp(b7, empty, PICOPASS_BLOCK_SIZE) != 0) && (memcmp(b7, zeros, PICOPASS_BLOCK_SIZE) != 0);
     if (has_values && encryption == None) {
 
-        // todo:  remove preamble/sentinel
         PrintAndLogEx(INFO, "------------------------ " _CYAN_("Block 7 decoder") " --------------------------");
+
+        // todo:  remove preamble/sentinel
         if (has_new_pacs) {
             iclass_decode_credentials_new_pacs(b7);
         } else {
@@ -1487,9 +1488,6 @@ static void iclass_decode_credentials(uint8_t *data) {
             PrintAndLogEx(NORMAL, "");
             decode_wiegand(top, mid, bot, 0);
         }
-
-    } else {
-        PrintAndLogEx(INFO, "No unencrypted legacy credential found");
     }
 }
 
@@ -1950,7 +1948,7 @@ static int CmdHFiClassDump(const char *Cmd) {
             return PM3_EINVARG;
         }
     }
-    
+
     if (credit_key_len > 0 && credit_key_nr >= 0) {
         PrintAndLogEx(ERR, "Please specify credit key or index, not both");
         return PM3_EINVARG;
@@ -2921,7 +2919,7 @@ static void iclass_cmp_print(uint8_t *b1, uint8_t *b2, const char *header1, cons
     strcat(line1, header1);
     strcat(line2, header2);
 
-    for (uint8_t i = 0; i < PICOPASS_BLOCK_SIZE; i++ ) {
+    for (uint8_t i = 0; i < PICOPASS_BLOCK_SIZE; i++) {
 
         int l1 = strlen(line1);
         int l2 = strlen(line2);
@@ -3011,7 +3009,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 10);
     bool shallow_mod = arg_get_lit(ctx, 11);
 
-    int tearoff_start = arg_get_int_def(ctx, 12, 5000);
+    int tearoff_start = arg_get_int_def(ctx, 12, 100);
     int tearoff_increment = arg_get_int_def(ctx, 13, 10);
     int tearoff_end = arg_get_int_def(ctx, 14, tearoff_start + tearoff_increment + 500);
     int tearoff_loop = arg_get_int_def(ctx, 15, 1);
@@ -3035,8 +3033,8 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             return PM3_EINVARG;
         }
         PrintAndLogEx(NORMAL, "");
-    } 
-    
+    }
+
     if (key_nr >= 0) {
         if (key_nr < ICLASS_KEYS_MAX) {
             auth = true;
@@ -3060,17 +3058,22 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     }
 
     if (tearoff_end <= tearoff_start) {
-        PrintAndLogEx(ERR, "Tearoff end delay must be bigger than the start delay.");
+        PrintAndLogEx(ERR, "Tearoff end delay must be larger than the start delay");
         return PM3_EINVARG;
     }
 
-    if (tearoff_start < 0 || tearoff_end <= 0) {
-        PrintAndLogEx(ERR, "Tearoff start/end delays should be bigger than 0.");
+    if (tearoff_start <= 0) {
+        PrintAndLogEx(ERR, "Tearoff_start delays must be larger than 0");
+        return PM3_EINVARG;
+    }
+
+    if (tearoff_end <= 0) {
+        PrintAndLogEx(ERR, "Tearoff_end delays must be larger than 0");
         return PM3_EINVARG;
     }
 
     if ((use_replay + rawkey + elite) > 1) {
-        PrintAndLogEx(ERR, "Can not use a combo of 'elite', 'raw', 'nr'");
+        PrintAndLogEx(ERR, "Can not use a combo of `--elite`, `--raw`, `--nr`");
         return PM3_EINVARG;
     }
 
@@ -3134,7 +3137,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         auth = false;
     }
 
-    //perform initial read here, repeat if failed or 00s
+    // perform initial read here, repeat if failed or 00s
     uint8_t data_read_orig[8] = {0};
     uint8_t ff_data[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
     bool first_read = false;
@@ -3229,7 +3232,8 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             }
         }
 
-        if (decrease && tearoff_start > 0) { // if there was an error reading repeat the tearoff with the same delay
+        // if there was an error reading repeat the tearoff with the same delay
+        if (decrease && tearoff_start > 0) {
             tearoff_start -= tearoff_increment;
         }
 
@@ -3240,24 +3244,26 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             tear_success = false;
         }
 
-        if ((tear_success == false) && (memcmp(data_read, zeros, 8) != 0) && (memcmp(data_read, data_read_orig, 8) != 0)) { // tearoff succeeded (partially)
+        if ((tear_success == false) && (memcmp(data_read, zeros, 8) != 0) && (memcmp(data_read, data_read_orig, 8) != 0)) {
+
+            // tearoff succeeded (partially)
 
             expected_values = false;
 
             if (memcmp(data_read, ff_data, 8) == 0 && memcmp(data_read_orig, ff_data, 8) != 0) {
                 erase_phase = true;
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(SUCCESS, _BLUE_("Erase phase hit: ALL ONES"));
+                PrintAndLogEx(SUCCESS, _CYAN_("Erase phase hit... ALL ONES"));
                 iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
             } else {
 
                 if (erase_phase) {
                     PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(SUCCESS, _MAGENTA_("Tearing! Write Phase (post erase)"));
+                    PrintAndLogEx(SUCCESS, _MAGENTA_("Tearing! Write phase (post erase)"));
                     iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
                 } else {
                     PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(SUCCESS, _CYAN_("Tearing!  (unknown phase)"));
+                    PrintAndLogEx(SUCCESS, _CYAN_("Tearing! unknown phase"));
                     iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
                 }
             }
@@ -3269,6 +3275,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
                     isok = PM3_SUCCESS;
                     goto out;
                 }
+
                 if (data_read[7] != data_read_orig[7]) {
                     PrintAndLogEx(NORMAL, "");
                     PrintAndLogEx(SUCCESS, "Fuse changed, from %02x to %02x", data_read_orig[7], data_read[7]);
@@ -3276,10 +3283,6 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
                     goto out;
                 }
             }
-
-        } else { // tearoff did not succeed
-            // PrintAndLogEx(INFO, "Expected: %s", sprint_hex_inrow(data, sizeof(data)));
-            // PrintAndLogEx(INFO, "Read:     %s", sprint_hex_inrow(data_read, sizeof(data_read)));
         }
 
         if (tear_success) { // tearoff succeeded with expected values
@@ -3289,9 +3292,9 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
 
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(INFO, "Read:     " _GREEN_("%s") " %s"
-                , sprint_hex_inrow(data_read, sizeof(data_read)),
-                (expected_values) ? _GREEN_(" -> Expected values!") : ""
-            );
+                          , sprint_hex_inrow(data_read, sizeof(data_read)),
+                          (expected_values) ? _GREEN_(" -> Expected values!") : ""
+                         );
         }
 
         loop_count++;
@@ -5950,5 +5953,6 @@ int info_iclass(bool shallow_mod) {
         }
     }
 
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
