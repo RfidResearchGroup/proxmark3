@@ -805,12 +805,12 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     set_tracing(true);
 
     // The command (reader -> tag) that we're receiving.
-    uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
-    uint8_t *receivedCmdPar = BigBuf_malloc(MAX_PARITY_SIZE);
+    uint8_t *receivedCmd = BigBuf_calloc(MAX_FRAME_SIZE);
+    uint8_t *receivedCmdPar = BigBuf_calloc(MAX_PARITY_SIZE);
 
     // The response (tag -> reader) that we're receiving.
-    uint8_t *receivedResp = BigBuf_malloc(MAX_FRAME_SIZE);
-    uint8_t *receivedRespPar = BigBuf_malloc(MAX_PARITY_SIZE);
+    uint8_t *receivedResp = BigBuf_calloc(MAX_FRAME_SIZE);
+    uint8_t *receivedRespPar = BigBuf_calloc(MAX_PARITY_SIZE);
 
     uint8_t previous_data = 0;
     int maxDataLen = 0, dataLen;
@@ -2683,9 +2683,9 @@ void iso14443a_antifuzz(uint32_t flags) {
     int len = 0;
 
     // allocate buffers:
-    uint8_t *received = BigBuf_malloc(MAX_FRAME_SIZE);
-    uint8_t *receivedPar = BigBuf_malloc(MAX_PARITY_SIZE);
-    uint8_t *resp = BigBuf_malloc(20);
+    uint8_t *received = BigBuf_calloc(MAX_FRAME_SIZE);
+    uint8_t *receivedPar = BigBuf_calloc(MAX_PARITY_SIZE);
+    uint8_t *resp = BigBuf_calloc(20);
 
     memset(received, 0x00, MAX_FRAME_SIZE);
     memset(received, 0x00, MAX_PARITY_SIZE);
@@ -4070,9 +4070,7 @@ void DetectNACKbug(void) {
     // i  =  number of authentications sent.  Not always 256, since we are trying to sync but close to it.
     FpgaDisableTracing();
 
-    uint8_t *data = BigBuf_malloc(4);
-    data[0] = isOK;
-    data[1] = num_nacks;
+    uint8_t data[4] = {isOK, num_nacks, 0, 0};
     num_to_bytes(i, 2, data + 2);
     reply_ng(CMD_HF_MIFARE_NACK_DETECT, status, data, 4);
 

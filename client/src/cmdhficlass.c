@@ -3174,6 +3174,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort");
 
+    // Main loop
     while ((tearoff_start <= tearoff_end) && (read_ok == false)) {
 
         if (kbd_enter_pressed()) {
@@ -3197,8 +3198,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             goto out;
         }
 
-
-        PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%d")" / "_YELLOW_("%d")" us", (tearoff_start & 0xFFFF), (tearoff_end & 0xFFFF));
+        PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us", params.delay_us, (tearoff_end & 0xFFFF));
 
         // write block - don't check the return value. As a tear-off occurred, the write failed.
         iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);

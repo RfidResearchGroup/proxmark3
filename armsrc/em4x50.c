@@ -748,7 +748,7 @@ void em4x50_chk(const char *filename, bool ledcontrol) {
     uint16_t pwd_count = 0;
     uint32_t size = size_in_spiffs(filename);
     pwd_count = size / 4;
-    uint8_t *pwds = BigBuf_malloc(size);
+    uint8_t *pwds = BigBuf_calloc(size);
 
     rdv40_spiffs_read_as_filetype(filename, pwds, size, RDV40_SPIFFS_SAFETY_SAFE);
 

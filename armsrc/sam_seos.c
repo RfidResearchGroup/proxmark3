@@ -51,13 +51,14 @@
  */
 static int sam_set_card_detected_seos(iso14a_card_select_t *card_select) {
     int res = PM3_SUCCESS;
-    if (g_dbglevel >= DBG_DEBUG)
+    if (g_dbglevel >= DBG_DEBUG) {
         DbpString("start sam_set_card_detected");
+    }
 
-    uint8_t   *request = BigBuf_malloc(ISO7816_MAX_FRAME);
+    uint8_t *request = BigBuf_calloc(ISO7816_MAX_FRAME);
     uint16_t request_len = ISO7816_MAX_FRAME;
 
-    uint8_t   *response = BigBuf_malloc(ISO7816_MAX_FRAME);
+    uint8_t *response = BigBuf_calloc(ISO7816_MAX_FRAME);
     uint16_t response_len = ISO7816_MAX_FRAME;
 
     const uint8_t payload[] = {
@@ -107,8 +108,9 @@ error:
 out:
     BigBuf_free();
 
-    if (g_dbglevel >= DBG_DEBUG)
+    if (g_dbglevel >= DBG_DEBUG) {
         DbpString("end sam_set_card_detected");
+    }
     return res;
 }
 

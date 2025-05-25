@@ -2357,7 +2357,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             uint16_t available;
             uint16_t pre_available = 0;
-            uint8_t *dest = BigBuf_malloc(USART_FIFOLEN);
+            uint8_t *dest = BigBuf_calloc(USART_FIFOLEN);
             uint32_t wait = payload->waittime;
 
             StartTicks();
@@ -2401,7 +2401,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             uint16_t available;
             uint16_t pre_available = 0;
-            uint8_t *dest = BigBuf_malloc(USART_FIFOLEN);
+            uint8_t *dest = BigBuf_calloc(USART_FIFOLEN);
             uint32_t wait = payload->waittime;
 
             StartTicks();
@@ -2697,7 +2697,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             uint32_t size = packet->oldarg[1];
 
-            uint8_t *buff = BigBuf_malloc(size);
+            uint8_t *buff = BigBuf_calloc(size);
             if (buff == NULL) {
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Failed to allocate memory");
                 // Trigger a finish downloading signal with an PM3_EMALLOC
@@ -2902,7 +2902,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_FLASHMEM_DOWNLOAD: {
 
             LED_B_ON();
-            uint8_t *mem = BigBuf_malloc(PM3_CMD_DATA_SIZE);
+            uint8_t *mem = BigBuf_calloc(PM3_CMD_DATA_SIZE);
             uint32_t startidx = packet->oldarg[0];
             uint32_t numofbytes = packet->oldarg[1];
             // arg0 = startindex
@@ -2934,7 +2934,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_FLASHMEM_INFO: {
 
             LED_B_ON();
-            rdv40_validation_t *info = (rdv40_validation_t *)BigBuf_malloc(sizeof(rdv40_validation_t));
+            rdv40_validation_t *info = (rdv40_validation_t *)BigBuf_calloc(sizeof(rdv40_validation_t));
 
             bool isok = Flash_ReadData(FLASH_MEM_SIGNATURE_OFFSET_P(spi_flash_pages64k), info->signature, FLASH_MEM_SIGNATURE_LEN);
 
