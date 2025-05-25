@@ -2399,14 +2399,13 @@ static int CmdHFiClassCreditEpurse(const char *Cmd) {
                   "Credit the epurse on an iCLASS tag. The provided key must be the credit key.\n"
                   "The first two bytes of the epurse are the debit value (big endian) and may be any value except FFFF.\n"
                   "The remaining two bytes of the epurse are the credit value and must be smaller than the previous value.",
-                  "hf iclass creditepurse -d FEFFFFFF -k 001122334455667B\n"
-                  "hf iclass creditepurse -d FEFFFFFF --ki 0");
+                  "hf iclass creditepurse --ki 0 -d FEFFFEFF");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("k", "key", "<hex>", "Credit  key as 8 hex bytes"),
         arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
-        arg_str1("d", "data", "<hex>", "data to write as 8 hex bytes"),
+        arg_str1("d", "data", "<hex>", "data to write as 4 hex bytes"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "no computations applied to key"),
         arg_lit0("v", "verbose", "verbose output"),
@@ -3223,7 +3222,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
                 goto out;
             }
 
-            if (blockno == 1){
+            if (blockno == 1) {
                 read_auth = false;
             }
 
