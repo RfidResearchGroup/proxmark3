@@ -2013,7 +2013,7 @@ int CmdEM4x05Unlock(const char *Cmd) {
 
     PrintAndLogEx(INFO, "----------------------------------------------------------------------------\n");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>'") " to exit");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------------\n");
 
