@@ -3137,6 +3137,8 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         auth = false;
     }
 
+    bool read_auth = auth;
+
     // perform initial read here, repeat if failed or 00s
     uint8_t data_read_orig[8] = {0};
     uint8_t ff_data[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
@@ -3218,7 +3220,10 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
                 goto out;
             }
 
-            res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, shallow_mod, data_read, false);
+            if (blockno == 1){
+                read_auth = false;
+            }
+            res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read, false);
             if (res == PM3_SUCCESS && !reread) {
                 if (memcmp(data_read, zeros, 8) == 0) {
                     reread = true;
