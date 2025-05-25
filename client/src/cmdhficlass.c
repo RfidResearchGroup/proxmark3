@@ -3137,6 +3137,11 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         auth = false;
     }
 
+    if (pagemap == 0x0) {
+            PrintAndLogEx(WARNING, _RED_("No auth possible. Read only if RA is enabled"));
+            goto out;
+    }
+
     bool read_auth = auth;
 
     // perform initial read here, repeat if failed or 00s
