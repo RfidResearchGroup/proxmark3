@@ -3009,6 +3009,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     bool shallow_mod = arg_get_lit(ctx, 11);
 
     int tearoff_start = arg_get_int_def(ctx, 12, 100);
+    int tearoff_original_start = tearoff_start; // save original start value for later use
     int tearoff_increment = arg_get_int_def(ctx, 13, 10);
     int tearoff_end = arg_get_int_def(ctx, 14, tearoff_start + tearoff_increment + 500);
     int tearoff_loop = arg_get_int_def(ctx, 15, 1);
@@ -3208,7 +3209,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             goto out;
         }
 
-        PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us", params.delay_us, (tearoff_end & 0xFFFF));
+        PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us - "_YELLOW_("%u")" / "_YELLOW_("%d")" loops", params.delay_us, (tearoff_end & 0xFFFF), loop_count+1, tearoff_loop);
 
         // write block - don't check the return value. As a tear-off occurred, the write failed.
         iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
@@ -3248,7 +3249,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         }
 
         // if there was an error reading repeat the tearoff with the same delay
-        if (decrease && (tearoff_start > tearoff_increment)) {
+        if (decrease && (tearoff_start > tearoff_increment) && (tearoff_start >= tearoff_original_start)) {
             tearoff_start -= tearoff_increment;
         }
 
