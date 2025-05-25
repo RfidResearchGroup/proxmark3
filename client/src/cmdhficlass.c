@@ -3159,7 +3159,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "Original block data... " _CYAN_("%s"), sprint_hex_inrow(data_read_orig, sizeof(data_read_orig)));
     PrintAndLogEx(SUCCESS, "New data to write..... " _YELLOW_("%s"), sprint_hex_inrow(data, sizeof(data)));
-    PrintAndLogEx(INFO, "------------------------------------------");
+    PrintAndLogEx(SUCCESS, "Target block.......... " _YELLOW_("%u") " / " _YELLOW_("0x%02x"), blockno, blockno);
     // turn off Device side debug messages
     uint8_t dbg_curr = DBG_NONE;
     if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
@@ -3170,10 +3170,11 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         return PM3_EFAILED;
     }
 
-    PrintAndLogEx(INFO, "Starting tear off against block " _YELLOW_("%u") " / " _YELLOW_("0x%02x"), blockno, blockno);
-    PrintAndLogEx(INFO, "");
-    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort");
-
+    PrintAndLogEx(INFO, "---------------------------------------");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>'") " to exit");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------\n");
     // Main loop
     while ((tearoff_start <= tearoff_end) && (read_ok == false)) {
 
@@ -3203,7 +3204,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         // write block - don't check the return value. As a tear-off occurred, the write failed.
         iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
 
-        //read the data back
+        // read the data back
         uint8_t data_read[8] = {0};
         first_read = false;
         reread = false;
