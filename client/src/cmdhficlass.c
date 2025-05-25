@@ -3172,9 +3172,12 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         return PM3_EFAILED;
     }
 
+    // clear trace log
+    SendCommandNG(CMD_BUFF_CLEAR, NULL, 0);
+
     PrintAndLogEx(INFO, "---------------------------------------");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>'") " to exit");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------\n");
     // Main loop
@@ -3223,6 +3226,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             if (blockno == 1){
                 read_auth = false;
             }
+
             res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read, false);
             if (res == PM3_SUCCESS && !reread) {
                 if (memcmp(data_read, zeros, 8) == 0) {
