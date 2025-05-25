@@ -1611,7 +1611,7 @@ void pm3_version_short(void) {
             if (ptr != NULL) {
                 char *ptr_end = strstr(ptr, "\n");
                 if (ptr_end != NULL) {
-                    uint8_t len = ptr_end - 19 - ptr;
+                    uint8_t len = ptr_end - 12 - ptr;
                     PrintAndLogEx(NORMAL, "    Bootrom... %.*s", len, ptr + 12);
                 }
             }
@@ -1621,7 +1621,7 @@ void pm3_version_short(void) {
             if (ptr != NULL) {
                 char *ptr_end = strstr(ptr, "\n");
                 if (ptr_end != NULL) {
-                    uint8_t len = ptr_end - 14 - ptr;
+                    uint8_t len = ptr_end - 12 - ptr;
                     PrintAndLogEx(NORMAL, "    OS........ %.*s", len, ptr + 12);
                 }
             }
