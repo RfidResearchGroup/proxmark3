@@ -392,11 +392,19 @@
         "Type": "pacs"
     },
     {
+        "AID": "F51780",
+        "Vendor": "ASSA ABLOY",
+        "Country": "SE",
+        "Name": "SMARTair",
+        "Description": "SMARTair Credential",
+        "Type": "pacs"
+    },
+    {
         "AID": "F51BC0",
         "Vendor": "STid Group",
         "Country": "FR",
         "Name": "CCT Card / DTA Tag / PCG Fob",
-        "Description": "STid Easyline / Architect Access Credetials",
+        "Description": "STid Easyline / Architect Access Credentials",
         "Type": "pacs"
     },
     {
@@ -886,6 +894,14 @@
         "Name": "MemberCard",
         "Description": "car2go - Member Card // Multi Functional Badge / Private Application #1",
         "Type": "carsharing"
+    },
+    {
+        "AID": "000005",
+        "Vendor": "Transports Metropolitans de Barcelona (TMB)",
+        "Country": "ES",
+        "Name": "T-mobilitat (BCN)",
+        "Description": "BCN T-mobilitat",
+        "Type": "transport"
     },
     {
         "AID": "000001",
