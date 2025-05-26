@@ -48,6 +48,295 @@
 #include "mifare/mifarehost.h"
 #include "crypto/originality.h"
 
+
+// Defines for Saflok parsing
+#define SAFLOK_YEAR_OFFSET 1980
+#define SAFLOK_BASIC_ACCESS_BYTE_NUM 17
+#define SAFLOK_KEY_LENGTH 6
+#define SAFLOK_UID_LENGTH 4 // Matches Mifare 4-byte UID
+#define SAFLOK_MAGIC_TABLE_SIZE 192
+#define SAFLOK_CHECK_SECTOR 1
+
+typedef struct {
+    uint64_t a;
+    uint64_t b;
+} MfClassicKeyPair;
+
+
+// Structure for Saflok key levels
+typedef struct {
+    uint8_t level_num;
+    const char* level_name;
+} SaflokKeyLevel;
+
+// Static array for Saflok key levels
+static const SaflokKeyLevel saflok_key_levels[] = {
+    {1, "Guest Key"},
+    {2, "Connectors"},
+    {3, "Suite"},
+    {4, "Limited Use"},
+    {5, "Failsafe"},
+    {6, "Inhibit"},
+    {7, "Pool/Meeting Master"},
+    {8, "Housekeeping"},
+    {9, "Floor Key"},
+    {10, "Section Key"},
+    {11, "Rooms Master"},
+    {12, "Grand Master"},
+    {13, "Emergency"},
+    {14, "Electronic Lockout"},
+    {15, "Secondary Programming Key (SPK)"},
+    {16, "Primary Programming Key (PPK)"},
+};
+
+// Lookup table for Saflok decryption
+static const uint8_t saflok_c_aDecode[256] = {
+    0xEA, 0x0D, 0xD9, 0x74, 0x4E, 0x28, 0xFD, 0xBA, 0x7B, 0x98, 0x87, 0x78, 0xDD, 0x8D, 0xB5,
+    0x1A, 0x0E, 0x30, 0xF3, 0x2F, 0x6A, 0x3B, 0xAC, 0x09, 0xB9, 0x20, 0x6E, 0x5B, 0x2B, 0xB6,
+    0x21, 0xAA, 0x17, 0x44, 0x5A, 0x54, 0x57, 0xBE, 0x0A, 0x52, 0x67, 0xC9, 0x50, 0x35, 0xF5,
+    0x41, 0xA0, 0x94, 0x60, 0xFE, 0x24, 0xA2, 0x36, 0xEF, 0x1E, 0x6B, 0xF7, 0x9C, 0x69, 0xDA,
+    0x9B, 0x6F, 0xAD, 0xD8, 0xFB, 0x97, 0x62, 0x5F, 0x1F, 0x38, 0xC2, 0xD7, 0x71, 0x31, 0xF0,
+    0x13, 0xEE, 0x0F, 0xA3, 0xA7, 0x1C, 0xD5, 0x11, 0x4C, 0x45, 0x2C, 0x04, 0xDB, 0xA6, 0x2E,
+    0xF8, 0x64, 0x9A, 0xB8, 0x53, 0x66, 0xDC, 0x7A, 0x5D, 0x03, 0x07, 0x80, 0x37, 0xFF, 0xFC,
+    0x06, 0xBC, 0x26, 0xC0, 0x95, 0x4A, 0xF1, 0x51, 0x2D, 0x22, 0x18, 0x01, 0x79, 0x5E, 0x76,
+    0x1D, 0x7F, 0x14, 0xE3, 0x9E, 0x8A, 0xBB, 0x34, 0xBF, 0xF4, 0xAB, 0x48, 0x63, 0x55, 0x3E,
+    0x56, 0x8C, 0xD1, 0x12, 0xED, 0xC3, 0x49, 0x8E, 0x92, 0x9D, 0xCA, 0xB1, 0xE5, 0xCE, 0x4D,
+    0x3F, 0xFA, 0x73, 0x05, 0xE0, 0x4B, 0x93, 0xB2, 0xCB, 0x08, 0xE1, 0x96, 0x19, 0x3D, 0x83,
+    0x39, 0x75, 0xEC, 0xD6, 0x3C, 0xD0, 0x70, 0x81, 0x16, 0x29, 0x15, 0x6C, 0xC7, 0xE7, 0xE2,
+    0xF6, 0xB7, 0xE8, 0x25, 0x6D, 0x3A, 0xE6, 0xC8, 0x99, 0x46, 0xB0, 0x85, 0x02, 0x61, 0x1B,
+    0x8B, 0xB3, 0x9F, 0x0B, 0x2A, 0xA8, 0x77, 0x10, 0xC1, 0x88, 0xCC, 0xA4, 0xDE, 0x43, 0x58,
+    0x23, 0xB4, 0xA1, 0xA5, 0x5C, 0xAE, 0xA9, 0x7E, 0x42, 0x40, 0x90, 0xD2, 0xE9, 0x84, 0xCF,
+    0xE4, 0xEB, 0x47, 0x4F, 0x82, 0xD4, 0xC5, 0x8F, 0xCD, 0xD3, 0x86, 0x00, 0x59, 0xDF, 0xF2,
+    0x0C, 0x7C, 0xC6, 0xBD, 0xF9, 0x7D, 0xC4, 0x91, 0x27, 0x89, 0x32, 0x72, 0x33, 0x65, 0x68,
+    0xAF
+};
+
+// Function to decrypt Saflok card data
+static void DecryptSaflokCardData(
+    const uint8_t strCard[SAFLOK_BASIC_ACCESS_BYTE_NUM],
+    // int length, // length is always SAFLOK_BASIC_ACCESS_BYTE_NUM
+    uint8_t decryptedCard[SAFLOK_BASIC_ACCESS_BYTE_NUM]) {
+    int i, num, num2, num3, num4, b = 0, b2 = 0;
+
+    for(i = 0; i < SAFLOK_BASIC_ACCESS_BYTE_NUM; i++) {
+        num = saflok_c_aDecode[strCard[i]] - (i + 1);
+        if(num < 0) num += 256;
+        decryptedCard[i] = num;
+    }
+
+    b = decryptedCard[10];
+    b2 = b & 1;
+
+    for(num2 = SAFLOK_BASIC_ACCESS_BYTE_NUM; num2 > 0; num2--) {
+        b = decryptedCard[num2 - 1];
+        for(num3 = 8; num3 > 0; num3--) {
+            num4 = num2 + num3;
+            if(num4 > SAFLOK_BASIC_ACCESS_BYTE_NUM) num4 -= SAFLOK_BASIC_ACCESS_BYTE_NUM;
+            int b3 = decryptedCard[num4 - 1];
+            int b4 = (b3 & 0x80) >> 7;
+            b3 = ((b3 << 1) & 0xFF) | b2;
+            b2 = (b & 0x80) >> 7;
+            b = ((b << 1) & 0xFF) | b4;
+            decryptedCard[num4 - 1] = b3;
+        }
+        decryptedCard[num2 - 1] = b;
+    }
+}
+
+// Function to calculate Saflok checksum
+static uint8_t CalculateCheckSum(uint8_t data[SAFLOK_BASIC_ACCESS_BYTE_NUM]) {
+    int sum = 0;
+    for(int i = 0; i < SAFLOK_BASIC_ACCESS_BYTE_NUM - 1; i++) {
+        sum += data[i];
+    }
+    sum = 255 - (sum & 0xFF);
+    return sum & 0xFF;
+}
+
+// Function to parse and print Saflok data
+static void ParseAndPrintSaflokData(const sector_t* sector0_info, const sector_t* sector1_info) {
+    (void)sector1_info; // Not directly used for payload parsing currently
+
+    if (!sector0_info) {
+        PrintAndLogEx(WARNING, "Saflok: Sector 0 information not available for parsing.");
+        return;
+    }
+
+    uint8_t key_bytes_for_s0[MIFARE_KEY_SIZE];
+    uint8_t key_type_for_s0; // CORRECTED: Was MifareKeyType, now uint8_t
+    bool s0_key_found = false;
+
+    // Prioritize Key A for Sector 0 if available
+    if (sector0_info->foundKey[MF_KEY_A]) {
+        num_to_bytes(sector0_info->Key[MF_KEY_A], MIFARE_KEY_SIZE, key_bytes_for_s0);
+        key_type_for_s0 = MF_KEY_A; // MF_KEY_A is typically #define'd as 0x60
+        s0_key_found = true;
+        PrintAndLogEx(DEBUG, "Saflok: Using Sector 0 Key A for reading blocks.");
+    } else if (sector0_info->foundKey[MF_KEY_B]) { // Fallback to Key B for Sector 0
+        num_to_bytes(sector0_info->Key[MF_KEY_B], MIFARE_KEY_SIZE, key_bytes_for_s0);
+        key_type_for_s0 = MF_KEY_B; // MF_KEY_B is typically #define'd as 0x61
+        s0_key_found = true;
+        PrintAndLogEx(DEBUG, "Saflok: Using Sector 0 Key B for reading blocks.");
+    }
+
+    if (!s0_key_found) {
+        PrintAndLogEx(WARNING, "Saflok: No known keys for Sector 0. Cannot read blocks 1 & 2 for parsing.");
+        return;
+    }
+
+    uint8_t block1_content[MFBLOCK_SIZE];
+    uint8_t block2_content[MFBLOCK_SIZE];
+
+    // Read absolute block 1 (data block within sector 0)
+    if (mf_read_block(1, key_type_for_s0, key_bytes_for_s0, block1_content) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Saflok: Failed to read card Block 1 using Sector 0 %s key.", (key_type_for_s0 == MF_KEY_A) ? "A" : "B");
+        return;
+    }
+    PrintAndLogEx(DEBUG, "Saflok: Successfully read card Block 1.");
+
+    // Read absolute block 2 (data block within sector 0)
+    if (mf_read_block(2, key_type_for_s0, key_bytes_for_s0, block2_content) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Saflok: Failed to read card Block 2 using Sector 0 %s key.", (key_type_for_s0 == MF_KEY_A) ? "A" : "B");
+        return;
+    }
+    PrintAndLogEx(DEBUG, "Saflok: Successfully read card Block 2.");
+
+    uint8_t basicAccess[SAFLOK_BASIC_ACCESS_BYTE_NUM];
+    uint8_t decodedBA[SAFLOK_BASIC_ACCESS_BYTE_NUM];
+
+    memcpy(basicAccess, block1_content, 16);              // 16 bytes from Block 1
+    memcpy(basicAccess + 16, block2_content, 1);          // 1 byte from Block 2
+
+    DecryptSaflokCardData(basicAccess, decodedBA);
+
+
+    // Byte 0: Key level, LED warning bit, and subgroup functions
+    uint8_t key_level = (decodedBA[0] & 0xF0) >> 4;
+    uint8_t led_warning = (decodedBA[0] & 0x08) >> 3;
+
+    // Byte 1: Key ID
+    uint8_t key_id = decodedBA[1];
+
+    // Byte 2 & 3: KeyRecord, including OpeningKey flag
+    uint8_t key_record_high = decodedBA[2] & 0x7F;
+    uint8_t opening_key = (decodedBA[2] & 0x80) >> 7;
+    uint16_t key_record = (key_record_high << 8) | decodedBA[3];
+
+    // Byte 5 & 6: EncryptSequence + Combination
+    uint16_t sequence_combination_number = ((decodedBA[5] & 0x0F) << 8) | decodedBA[6];
+
+    // Byte 7: OverrideDeadbolt and Days
+    uint8_t override_deadbolt = (decodedBA[7] & 0x80) >> 7;
+    uint8_t restricted_weekday = decodedBA[7] & 0x7F;
+    
+    // Weekday names array
+    static const char* weekdays[] = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
+    
+    // Buffer to store the resulting string (sufficient size for all weekdays)
+    char restricted_weekday_string[128] = {0};
+    int restricted_count = 0;
+    
+    // Check each bit from Monday to Sunday
+    for(int i = 0; i < 7; i++) {
+        if(restricted_weekday & (0b01000000 >> i)) {
+            // If the bit is set, append the corresponding weekday to the buffer
+            if(restricted_count > 0) {
+                strcat(restricted_weekday_string, ", ");
+            }
+            strcat(restricted_weekday_string, weekdays[i]);
+            restricted_count++;
+        }
+    }
+
+    // Determine if all weekdays are restricted
+    if(restricted_weekday == 0b01111100) {
+        strcpy(restricted_weekday_string, "weekdays");
+    }
+    // If there are specific restricted days
+    else if(restricted_weekday == 0b00000011) {
+        strcpy(restricted_weekday_string, "weekends");
+    }
+    // If no weekdays are restricted
+    else if(restricted_weekday == 0) {
+        strcpy(restricted_weekday_string, "none");
+    }
+    
+    // Bytes 14-15: Property number and part of creation year
+    uint8_t creation_year_high_bits = (decodedBA[14] & 0xF0);
+    uint16_t property_id = ((decodedBA[14] & 0x0F) << 8) | decodedBA[15];
+
+    // Bytes 11-13: Creation date since SAFLOK_YEAR_OFFSET Jan 1st
+    uint16_t creation_year = (((decodedBA[11] & 0xF0) >> 4) + SAFLOK_YEAR_OFFSET) | creation_year_high_bits;
+    uint8_t creation_month = decodedBA[11] & 0x0F;
+    uint8_t creation_day = (decodedBA[12] >> 3) & 0x1F;
+    uint8_t creation_hour = ((decodedBA[12] & 0x07) << 2) | ((decodedBA[13] & 0xC0) >> 6);
+    uint8_t creation_minute = decodedBA[13] & 0x3F;
+
+    // Bytes 8-10: Expiry interval / absolute time components
+    uint8_t interval_year_val = (decodedBA[8] >> 4);
+    uint8_t interval_month_val = decodedBA[8] & 0x0F;
+    uint8_t interval_day_val = (decodedBA[9] >> 3) & 0x1F;
+    uint8_t expiry_hour = ((decodedBA[9] & 0x07) << 2) | ((decodedBA[10] & 0xC0) >> 6);
+    uint8_t expiry_minute = decodedBA[10] & 0x3F;
+
+    uint16_t expire_year = creation_year + interval_year_val;
+    uint8_t expire_month = creation_month + interval_month_val;
+    uint8_t expire_day = creation_day + interval_day_val;
+
+    // Handle month rollover for expiration
+    while(expire_month > 12) {
+        expire_month -= 12;
+        expire_year++;
+    }
+
+    // Handle day rollover for expiration
+    static const uint8_t days_in_month_lookup[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}; // 1-indexed month
+    if (expire_month > 0 && expire_month <= 12) {
+        while(true) {
+            uint8_t max_days = days_in_month_lookup[expire_month];
+            if(expire_month == 2 && (expire_year % 4 == 0 && (expire_year % 100 != 0 || expire_year % 400 == 0))) {
+                max_days = 29; // Leap year
+            }
+            if(expire_day <= max_days) {
+                break;
+            }
+            if (max_days == 0) { // Should not happen with valid month
+                PrintAndLogEx(WARNING, "Saflok: Invalid day/month for expiration rollover calculation.");
+                break;
+            }
+            expire_day -= max_days;
+            expire_month++;
+            if(expire_month > 12) {
+                expire_month = 1;
+                expire_year++;
+            }
+        }
+    } else if (expire_month != 0) { // Allow 0 if it signifies no expiration or error
+         PrintAndLogEx(WARNING, "Saflok: Invalid expiration month (%u) before day rollover.", expire_month);
+    }
+
+    uint8_t checksum = decodedBA[16];
+    uint8_t checksum_calculated = CalculateCheckSum(decodedBA);
+    bool checksum_valid = (checksum_calculated == checksum);
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Saflok Details"));
+    PrintAndLogEx(SUCCESS, "Key Level: %u (%s)", saflok_key_levels[key_level].level_num, saflok_key_levels[key_level].level_name);
+    PrintAndLogEx(SUCCESS, "LED Warning: %s", led_warning ? "Yes" : "No");
+    PrintAndLogEx(SUCCESS, "Key ID: %u (0x%02X)", key_id, key_id);
+    PrintAndLogEx(SUCCESS, "Key Record: %u (0x%04X)", key_record, key_record);
+    PrintAndLogEx(SUCCESS, "Opening Key: %s", opening_key ? "Yes" : "No");
+    PrintAndLogEx(SUCCESS, "Sequence Number & Combination: %u (0x%02X)", sequence_combination_number, sequence_combination_number);
+    PrintAndLogEx(SUCCESS, "Override Deadbolt: %s", override_deadbolt ? "Yes" : "No");
+    PrintAndLogEx(SUCCESS, "Restricted Weekdays: %s", restricted_weekday_string);
+    PrintAndLogEx(SUCCESS, "Property ID: %u (0x%04X)", property_id, property_id);
+    PrintAndLogEx(SUCCESS, "Creation Date: %04u-%02u-%02u %02u:%02u", creation_year, creation_month, creation_day, creation_hour, creation_minute);
+    PrintAndLogEx(SUCCESS, "Expiration Date: %04u-%02u-%02u %02u:%02u", expire_year, expire_month, expire_day, expiry_hour, expiry_minute);
+    PrintAndLogEx(SUCCESS, "Checksum Valid: %s", checksum_valid ? "Yes" : "No");
+}
+
+
+
 static int CmdHelp(const char *Cmd);
 
 /*
@@ -9889,8 +10178,9 @@ static int CmdHF14AMfInfo(const char *Cmd) {
                 PrintAndLogEx(SUCCESS, "unknown");
             }
 
-        if (e_sector[1].foundKey[MF_KEY_A] && (e_sector[1].Key[MF_KEY_A] == 0x2A2C13CC242A)) {
+        if (keycnt > 1 && e_sector != NULL && e_sector[1].foundKey[MF_KEY_A] && (e_sector[1].Key[MF_KEY_A] == 0x2A2C13CC242A)) {
             PrintAndLogEx(SUCCESS, "dormakaba Saflok detected");
+            ParseAndPrintSaflokData(&e_sector[0], &e_sector[1]);
         }
 
     } else {
