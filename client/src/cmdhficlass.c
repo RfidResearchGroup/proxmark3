@@ -3219,7 +3219,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         first_read = false;
         reread = false;
         bool decrease = false;
-
+        int readcount = 0;
         while (first_read == false) {
 
             if (kbd_enter_pressed()) {
@@ -3246,6 +3246,12 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             } else if (res != PM3_SUCCESS) {
                 decrease = true;
             }
+            if (readcount >= 10){
+                PrintAndLogEx(WARNING, "\n"_RED_("Read failed too many times, giving up"));
+                isok = PM3_EFAILED;
+                goto out;
+            }
+            readcount++;
         }
 
         // if there was an error reading repeat the tearoff with the same delay
