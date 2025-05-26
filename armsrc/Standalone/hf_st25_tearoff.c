@@ -252,7 +252,7 @@ static void update_leds_mode(standalone_mode_t mode) {
  */
 static void indicate_success(void) {
     // Blink Green LED (A) 3 times quickly for success
-    for(int i=0; i<3; ++i) {
+    for (int i = 0; i < 3; ++i) {
         LED_A_ON();
         SpinDelay(150);
         LED_A_OFF();
@@ -265,7 +265,7 @@ static void indicate_success(void) {
  */
 static void indicate_failure(void) {
     // Blink Red LED (B) 3 times quickly for failure
-    for(int i=0; i<3; ++i) {
+    for (int i = 0; i < 3; ++i) {
         LED_B_ON();
         SpinDelay(150);
         LED_B_OFF();
@@ -291,7 +291,7 @@ static bool load_tags_from_flash(st25tb_data_t collection[MAX_SAVED_TAGS]) {
     // Verify file size
     uint32_t size = size_in_spiffs(HF_ST25TB_MULTI_SR_FILE);
     if (size != sizeof(g_stored_tags)) {
-        Dbprintf(_RED_("Flash file size mismatch (expected %zu, got %u). Wiping old file."), 
+        Dbprintf(_RED_("Flash file size mismatch (expected %zu, got %u). Wiping old file."),
                  sizeof(g_stored_tags), size);
         // Remove corrupted file
         rdv40_spiffs_remove(HF_ST25TB_MULTI_SR_FILE, RDV40_SPIFFS_SAFETY_SAFE);
@@ -299,8 +299,8 @@ static bool load_tags_from_flash(st25tb_data_t collection[MAX_SAVED_TAGS]) {
     }
 
     // Read file contents
-    int res = rdv40_spiffs_read(HF_ST25TB_MULTI_SR_FILE, (uint8_t *)collection, 
-                               size, RDV40_SPIFFS_SAFETY_SAFE);
+    int res = rdv40_spiffs_read(HF_ST25TB_MULTI_SR_FILE, (uint8_t *)collection,
+                                size, RDV40_SPIFFS_SAFETY_SAFE);
 
     if (res != SPIFFS_OK) {
         Dbprintf(_RED_("Failed to read tag collection from flash (err %d)"), res);
@@ -319,8 +319,8 @@ static bool load_tags_from_flash(st25tb_data_t collection[MAX_SAVED_TAGS]) {
  * @return true if successful, false otherwise
  */
 static bool save_tags_to_flash(const st25tb_data_t collection[MAX_SAVED_TAGS]) {
-    int res = rdv40_spiffs_write(HF_ST25TB_MULTI_SR_FILE, (uint8_t *)collection, 
-                                sizeof(g_stored_tags), RDV40_SPIFFS_SAFETY_SAFE);
+    int res = rdv40_spiffs_write(HF_ST25TB_MULTI_SR_FILE, (uint8_t *)collection,
+                                 sizeof(g_stored_tags), RDV40_SPIFFS_SAFETY_SAFE);
     return (res == SPIFFS_OK);
 }
 
@@ -356,7 +356,7 @@ static int find_free_tag_slot(void) {
 //=============================================================================
 
 /**
- * @brief Stripped version of "iso14443b_setup" that avoids unnecessary LED 
+ * @brief Stripped version of "iso14443b_setup" that avoids unnecessary LED
  * operations and uses shorter delays
  */
 static void iso14443b_setup_light(void) {
@@ -417,7 +417,7 @@ static bool st25tb_tag_read(st25tb_data_t *tag_data_slot) {
 
     Dbprintf("Found ST tag. Reading %d blocks...", ST25TB_BLOCK_COUNT);
     tag_data_slot->uid = bytes_to_num_le(card_info.uid, sizeof(tag_data_slot->uid));
-    
+
     // Read all data blocks
     for (uint8_t block_address = 0; block_address < ST25TB_BLOCK_COUNT; block_address++) {
         WDT_HIT();
@@ -507,7 +507,7 @@ static bool st25tb_tag_restore(const st25tb_data_t *stored_data_slot) {
             }
 
             if (g_dbglevel >= DBG_DEBUG) {
-                Dbprintf("Counter Block %d: Stored=0x%08X, Current=0x%08X", 
+                Dbprintf("Counter Block %d: Stored=0x%08X, Current=0x%08X",
                          block_address, stored_value, current_value);
             }
 
@@ -528,7 +528,7 @@ static bool st25tb_tag_restore(const st25tb_data_t *stored_data_slot) {
                     break;
                 }
             } else {
-                Dbprintf("Counter block %d already has the target value (0x%08X). Skipping write.", 
+                Dbprintf("Counter block %d already has the target value (0x%08X). Skipping write.",
                          block_address, stored_value);
             }
         } else {
@@ -658,7 +658,7 @@ static void st25tb_tear_off_write_block(uint8_t block_address, uint32_t data, ui
     block[0] = (data & 0xFF);
     block[1] = (data >> 8) & 0xFF;
     block[2] = (data >> 16) & 0xFF;
-    block[3] = (data >> 24) & 0xFF; 
+    block[3] = (data >> 24) & 0xFF;
 
     iso14b_card_select_t card;
     int res = iso14443b_select_srx_card(&card);
@@ -667,7 +667,7 @@ static void st25tb_tear_off_write_block(uint8_t block_address, uint32_t data, ui
     }
 
     res = st25tb_cmd_write_block(block_address, block);
-    
+
     // Tear off the communication at precise timing
     SpinDelayUsPrecision(tearoff_delay_us);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -685,9 +685,9 @@ out:
  * @param read_back_value Pointer to store read-back value
  * @return 0 for success, -1 for failure
  */
-static int8_t st25tb_tear_off_retry_write_verify(uint8_t block_address, uint32_t target_value, 
-                                                uint32_t max_try_count, int sleep_time_ms, 
-                                                uint32_t *read_back_value) {
+static int8_t st25tb_tear_off_retry_write_verify(uint8_t block_address, uint32_t target_value,
+                                                 uint32_t max_try_count, int sleep_time_ms,
+                                                 uint32_t *read_back_value) {
     int i = 0;
     *read_back_value = ~target_value; // Initialize to ensure the loop runs at least once
 
@@ -711,9 +711,9 @@ static int8_t st25tb_tear_off_retry_write_verify(uint8_t block_address, uint32_t
  * @param read_value Pointer to store read value
  * @return 0 if consolidated, -1 otherwise
  */
-static int8_t st25tb_tear_off_is_consolidated(const uint8_t block_address, uint32_t value, 
-                                             int repeat_read, int sleep_time_ms, 
-                                             uint32_t *read_value) {
+static int8_t st25tb_tear_off_is_consolidated(const uint8_t block_address, uint32_t value,
+                                              int repeat_read, int sleep_time_ms,
+                                              uint32_t *read_value) {
     int result;
     for (int i = 0; i < repeat_read; i++) {
         if (sleep_time_ms > 0) SpinDelayUsPrecision(sleep_time_ms * 1000);
@@ -733,8 +733,8 @@ static int8_t st25tb_tear_off_is_consolidated(const uint8_t block_address, uint3
  * @param read_back_value Pointer to store read-back value
  * @return 0 for success, -1 for failure
  */
-static int8_t st25tb_tear_off_consolidate_block(const uint8_t block_address, uint32_t current_value, 
-                                               uint32_t target_value, uint32_t *read_back_value) {
+static int8_t st25tb_tear_off_consolidate_block(const uint8_t block_address, uint32_t current_value,
+                                                uint32_t target_value, uint32_t *read_back_value) {
     int8_t result;
     uint32_t consolidation_value;
 
@@ -746,8 +746,8 @@ static int8_t st25tb_tear_off_consolidate_block(const uint8_t block_address, uin
     }
 
     // Try writing value - 1
-    result = st25tb_tear_off_retry_write_verify(block_address, consolidation_value - 1, 
-                                              TEAR_OFF_WRITE_RETRY_COUNT, 0, read_back_value);
+    result = st25tb_tear_off_retry_write_verify(block_address, consolidation_value - 1,
+                                                TEAR_OFF_WRITE_RETRY_COUNT, 0, read_back_value);
     if (result != 0) {
         Dbprintf("Consolidation failed at step 1 (write 0x%08X)", consolidation_value - 1);
         return -1;
@@ -755,8 +755,8 @@ static int8_t st25tb_tear_off_consolidate_block(const uint8_t block_address, uin
 
     // If value is not FE or target is not FD, try writing value - 2
     if (*read_back_value != 0xFFFFFFFE || (*read_back_value == 0xFFFFFFFE && target_value == 0xFFFFFFFD)) {
-        result = st25tb_tear_off_retry_write_verify(block_address, consolidation_value - 2, 
-                                                  TEAR_OFF_WRITE_RETRY_COUNT, 0, read_back_value);
+        result = st25tb_tear_off_retry_write_verify(block_address, consolidation_value - 2,
+                                                    TEAR_OFF_WRITE_RETRY_COUNT, 0, read_back_value);
         if (result != 0) {
             Dbprintf("Consolidation failed at step 2 (write 0x%08X)", consolidation_value - 2);
             return -1;
@@ -765,12 +765,12 @@ static int8_t st25tb_tear_off_consolidate_block(const uint8_t block_address, uin
 
     // Final checks for stability of unstable high values (due to internal dual counters)
     if (result == 0 && target_value > 0xFFFFFFFD && *read_back_value > 0xFFFFFFFD) {
-        result = st25tb_tear_off_is_consolidated(block_address, *read_back_value, 
-                                               TEAR_OFF_CONSOLIDATE_READ_COUNT, 0, read_back_value);
+        result = st25tb_tear_off_is_consolidated(block_address, *read_back_value,
+                                                 TEAR_OFF_CONSOLIDATE_READ_COUNT, 0, read_back_value);
         if (result == 0) {
-            result = st25tb_tear_off_is_consolidated(block_address, *read_back_value, 
-                                                   TEAR_OFF_CONSOLIDATE_WAIT_READ_COUNT, 
-                                                   TEAR_OFF_CONSOLIDATE_WAIT_MS, read_back_value);
+            result = st25tb_tear_off_is_consolidated(block_address, *read_back_value,
+                                                     TEAR_OFF_CONSOLIDATE_WAIT_READ_COUNT,
+                                                     TEAR_OFF_CONSOLIDATE_WAIT_MS, read_back_value);
             if (result != 0) {
                 Dbprintf("Consolidation failed stability check (long wait)");
                 return -1;
@@ -861,8 +861,8 @@ static void st25tb_tear_off_log(int tear_off_us, char *color, uint32_t value) {
  * @param safety_value Safety threshold to prevent going below
  * @return 0 for success, non-zero for failure
  */
-static int8_t st25tb_tear_off_write_counter(uint8_t block_address, uint32_t target_value, 
-                                   uint32_t tear_off_adjustment_us, uint32_t safety_value) {
+static int8_t st25tb_tear_off_write_counter(uint8_t block_address, uint32_t target_value,
+                                            uint32_t tear_off_adjustment_us, uint32_t safety_value) {
     int result;
     bool trigger = true;
 
@@ -906,7 +906,7 @@ static int8_t st25tb_tear_off_write_counter(uint8_t block_address, uint32_t targ
     for (;;) {
         // Safety check: ensure we don't go below the safety threshold
         if (tear_off_value < safety_value) {
-            Dbprintf("Stopped. Safety threshold reached (next value 0x%08X < safety 0x%08X)", 
+            Dbprintf("Stopped. Safety threshold reached (next value 0x%08X < safety 0x%08X)",
                      tear_off_value, safety_value);
             return -1;
         }
@@ -921,15 +921,15 @@ static int8_t st25tb_tear_off_write_counter(uint8_t block_address, uint32_t targ
         }
 
         // Analyze the result and decide next action
-        if (read_value > current_value) { 
+        if (read_value > current_value) {
             // Partial write succeeded (successful tear-off)
             if (read_value >= 0xFFFFFFFE ||
-                (read_value - 2) > target_value ||
-                read_value != last_consolidated_value ||
-                ((read_value & 0xF0000000) > (current_value & 0xF0000000))) { // Major bit flip
-                
-                result = st25tb_tear_off_consolidate_block(block_address, read_value, 
-                                                         target_value, &current_value);
+                    (read_value - 2) > target_value ||
+                    read_value != last_consolidated_value ||
+                    ((read_value & 0xF0000000) > (current_value & 0xF0000000))) { // Major bit flip
+
+                result = st25tb_tear_off_consolidate_block(block_address, read_value,
+                                                           target_value, &current_value);
                 if (result == 0 && current_value == target_value) {
                     st25tb_tear_off_log(tear_off_us, GREEN, read_value);
                     Dbprintf("Target value 0x%08X reached successfully!", target_value);
@@ -1004,11 +1004,11 @@ static void run_learn_function(void) {
             } else {
                 // Only increment if we are adding to a new slot, not overwriting
                 if (!g_stored_tags[slot_index].data_valid) {
-                     g_valid_tag_count++;
+                    g_valid_tag_count++;
                 }
             }
         }
-        
+
         // Store tag data in collection
         memcpy(&g_stored_tags[slot_index], &temp_tag_data, sizeof(st25tb_data_t));
         g_stored_tags[slot_index].data_valid = true;
@@ -1020,7 +1020,7 @@ static void run_learn_function(void) {
         } else {
             DbpString(_RED_("Failed to save collection to flash!"));
         }
-        
+
         current_state = STATE_DONE; // Indicate success
     }
 }
@@ -1052,8 +1052,8 @@ static void run_restore_function(void) {
                 current_state = STATE_ERROR;
             }
         } else {
-             // Tag found but not in collection, remain busy to scan again
-             current_state = STATE_BUSY;
+            // Tag found but not in collection, remain busy to scan again
+            current_state = STATE_BUSY;
         }
     } else {
         // No tag found, remain busy to scan again
@@ -1131,10 +1131,10 @@ void RunMod(void) {
         // --- Update Display (only if mode changed) ---
         if (mode_display_update) {
             if (g_current_mode == MODE_LEARN) {
-                Dbprintf("Mode: " _YELLOW_("Learn") ". (Cnt: %d/%d)", 
+                Dbprintf("Mode: " _YELLOW_("Learn") ". (Cnt: %d/%d)",
                          g_valid_tag_count, MAX_SAVED_TAGS);
             } else {
-                Dbprintf("Mode: " _BLUE_("Restore") ". (Cnt: %d/%d)", 
+                Dbprintf("Mode: " _BLUE_("Restore") ". (Cnt: %d/%d)",
                          g_valid_tag_count, MAX_SAVED_TAGS);
             }
             mode_display_update = false;
@@ -1142,14 +1142,14 @@ void RunMod(void) {
         update_leds_mode(g_current_mode);
 
         // Process according to current state
-        if(current_state == STATE_BUSY) {
+        if (current_state == STATE_BUSY) {
             // Run appropriate function based on mode
             if (g_current_mode == MODE_LEARN) {
                 run_learn_function();
             } else { // MODE_RESTORE
                 run_restore_function();
             }
-        } else if(current_state == STATE_DONE) {
+        } else if (current_state == STATE_DONE) {
             indicate_success();
         } else {
             indicate_failure();

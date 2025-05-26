@@ -600,7 +600,7 @@ static command_t CommandTable[] = {
     {"texkom",      CmdHFTexkom,      AlwaysAvailable, "{ Texkom RFIDs...                     }"},
     {"thinfilm",    CmdHFThinfilm,    AlwaysAvailable, "{ Thinfilm RFIDs...                   }"},
     {"topaz",       CmdHFTopaz,       AlwaysAvailable, "{ TOPAZ (NFC Type 1) RFIDs...         }"},
-    {"vas",         CmdHFVAS,         AlwaysAvailable, "{ Apple Value Added Service           }"},
+    {"vas",         CmdHFVAS,         AlwaysAvailable, "{ Apple Value Added Service...        }"},
 #ifdef HAVE_GD
     {"waveshare",   CmdHFWaveshare,   AlwaysAvailable, "{ Waveshare NFC ePaper...             }"},
 #endif

@@ -3029,7 +3029,9 @@ int infoHF14B(bool verbose, bool do_aid_search) {
 
     // try unknown 14b read commands (to be identified later)
     //   could be read of calypso, CEPAS, moneo, or pico pass.
-    if (verbose) PrintAndLogEx(FAILED, "no 14443-B tag found");
+    if (verbose) {
+        PrintAndLogEx(FAILED, "no 14443-B tag found");
+    }
     return PM3_EOPABORTED;
 }
 

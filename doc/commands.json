@@ -1342,7 +1342,6 @@
                 "-t, --timeout <ms> Timeout in milliseconds",
                 "-b <dec> Number of bits to send. Useful for send partial byte",
                 "-v, --verbose Verbose output",
-                "--mag Use Apple magsafe polling",
                 "--topaz Use Topaz protocol to send command",
                 "--crypto1 Use crypto1 session",
                 "<hex> Raw bytes to send"
@@ -1354,8 +1353,7 @@
             "description": "Act as a ISO-14443a reader to identify tag. Look for ISO-14443a tags until Enter or the pm3 button is pressed",
             "notes": [
                 "hf 14a reader",
-                "hf 14a reader -@ -> Continuous mode",
-                "hf 14a reader --mag -> trigger apple magsafe polling"
+                "hf 14a reader -@ -> Continuous mode"
             ],
             "offline": false,
             "options": [
@@ -1364,7 +1362,6 @@
                 "-s, --silent silent (no messages)",
                 "--drop just drop the signal field",
                 "--skip ISO14443-3 select only (skip RATS)",
-                "--mag Use Apple magsafe polling",
                 "-@ continuous reader mode",
                 "-w, --wait wait for card"
             ],
@@ -3204,7 +3201,7 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service } waveshare { Waveshare NFC ePaper... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service... } waveshare { Waveshare NFC ePaper... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf list --frame -> show frame delay times",
                 "hf list -1 -> use trace buffer"
@@ -3288,15 +3285,14 @@
             "command": "hf iclass creditepurse",
             "description": "Credit the epurse on an iCLASS tag. The provided key must be the credit key. The first two bytes of the epurse are the debit value (big endian) and may be any value except FFFF. The remaining two bytes of the epurse are the credit value and must be smaller than the previous value.",
             "notes": [
-                "hf iclass creditepurse -d FEFFFFFF -k 001122334455667B",
-                "hf iclass creditepurse -d FEFFFFFF --ki 0"
+                "hf iclass creditepurse --ki 0 -d FEFFFEFF"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-k, --key <hex> Credit key as 8 hex bytes",
                 "--ki <dec> Key index to select key from memory 'hf iclass managekeys'",
-                "-d, --data <hex> data to write as 8 hex bytes",
+                "-d, --data <hex> data to write as 4 hex bytes",
                 "--elite elite computations applied to key",
                 "--raw no computations applied to key",
                 "-v, --verbose verbose output",
@@ -3720,12 +3716,13 @@
             ],
             "usage": "hf iclass sniff [-hj]"
         },
-        "hf iclass trbl": {
-            "command": "hf iclass trbl",
-            "description": "Tear off an iCLASS tag block",
+        "hf iclass tear": {
+            "command": "hf iclass tear",
+            "description": "Tear off an iCLASS tag block e-purse usually 300-500us to trigger the erase phase also seen 1800-2100us on some cards",
             "notes": [
-                "hf iclass trbl --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B --tdb 100 --tde 150",
-                "hf iclass trbl --blk 10 -d AAAAAAAAAAAAAAAA --ki 0 --tdb 100 --tde 150"
+                "hf iclass tear --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B -s 300 -e 600",
+                "hf iclass tear --blk 10 -d AAAAAAAAAAAAAAAA --ki 0 -s 300 -e 600",
+                "hf iclass tear --blk 2 -d fdffffffffffffff --ki 1 --credit -s 400 -e 500"
             ],
             "offline": false,
             "options": [
@@ -3741,10 +3738,13 @@
                 "--nr replay of NR/MAC",
                 "-v, --verbose verbose output",
                 "--shallow use shallow (ASK) reader modulation instead of OOK",
-                "--tdb <dec> tearoff delay start in ms",
-                "--tde <dec> tearoff delay end in ms"
+                "-s <dec> tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3 us",
+                "-i <dec> tearoff delay increment (in us) - default 10",
+                "-e <dec> tearoff delay end (in us) must be a higher value than the start delay",
+                "--loop <dec> number of times to loop per tearoff time",
+                "--sleep <ms> Sleep between each tear"
             ],
-            "usage": "hf iclass trbl [-hv] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow] --tdb <dec> --tde <dec>"
+            "usage": "hf iclass tear [-hv] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow] -s <dec> [-i <dec>] [-e <dec>] [--loop <dec>] [--sleep <ms>]"
         },
         "hf iclass unhash": {
             "command": "hf iclass unhash",
@@ -13354,6 +13354,6 @@
     "metadata": {
         "commands_extracted": 767,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-04-20T09:18:59"
+        "extracted_on": "2025-05-25T12:38:36"
     }
 }

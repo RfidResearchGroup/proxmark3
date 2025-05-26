@@ -252,6 +252,10 @@ endif
 # WITH_FPC_USART_* needs WITH_FPC_USART :
 ifneq (,$(findstring WITH_FPC_USART_,$(PLATFORM_DEFS)))
     PLATFORM_DEFS += -DWITH_FPC_USART
+    ifeq ($(USART_BAUD_RATE),)
+        USART_BAUD_RATE=115200
+    endif
+    PLATFORM_DEFS += -DUSART_BAUD_RATE=$(USART_BAUD_RATE)
 endif
 
 PLATFORM_DEFS_INFO = $(strip $(filter-out STANDALONE%, $(subst -DWITH_,,$(PLATFORM_DEFS))))

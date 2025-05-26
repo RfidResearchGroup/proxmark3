@@ -914,7 +914,7 @@ int CmdHF14ASim(const char *Cmd) {
     bool keypress = kbd_enter_pressed();
     while (keypress == false) {
 
-        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0)
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == false)
             continue;
 
         if (resp.status != PM3_SUCCESS)
@@ -1403,10 +1403,10 @@ static int CmdHF14AAPDU(const char *Cmd) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
-    
+
     bool extendedAPDU = arg_get_lit(ctx, 6);
     int le = arg_get_int_def(ctx, 7, 0);
-    
+
     uint8_t data[PM3_CMD_DATA_SIZE];
     int datalen = 0;
 
@@ -4037,7 +4037,7 @@ int CmdHF14AAIDSim(const char *Cmd) {
     bool keypress = kbd_enter_pressed();
     while (keypress == false) {
 
-        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == 0) {
+        if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == false) {
             continue;
         }
 

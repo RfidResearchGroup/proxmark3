@@ -303,7 +303,7 @@ static int l_GetFromFlashMemSpiffs(lua_State *L) {
     // get size from spiffs itself !
     SendCommandNG(CMD_SPIFFS_STAT, (uint8_t *)destfilename, 32);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_SPIFFS_STAT, &resp, 2000))
+    if (WaitForResponseTimeout(CMD_SPIFFS_STAT, &resp, 2000) == false)
         return returnToLuaWithError(L, "No response from the device");
 
     len = resp.data.asDwords[0];

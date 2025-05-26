@@ -399,40 +399,40 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
     int trace_data_size;
 
     // Respond SOF -- takes 1 bytes
-    uint8_t *resp_sof = BigBuf_malloc(1);
+    uint8_t resp_sof[1] = {0};
     int resp_sof_len;
 
     // Anticollision CSN (rotated CSN)
     // 22: Takes 2 bytes for SOF/EOF and 10 * 2 = 20 bytes (2 bytes/byte)
-    uint8_t *resp_anticoll = BigBuf_malloc(22);
+    uint8_t *resp_anticoll = BigBuf_calloc(22);
     int resp_anticoll_len;
 
     // CSN (block 0)
     // 22: Takes 2 bytes for SOF/EOF and 10 * 2 = 20 bytes (2 bytes/byte)
-    uint8_t *resp_csn = BigBuf_malloc(22);
+    uint8_t *resp_csn = BigBuf_calloc(22);
     int resp_csn_len;
 
     // configuration (blk 1) PICOPASS 2ks
-    uint8_t *resp_conf = BigBuf_malloc(22);
+    uint8_t *resp_conf = BigBuf_calloc(22);
     int resp_conf_len;
 
     // e-Purse (blk 2)
     // 18: Takes 2 bytes for SOF/EOF and 8 * 2 = 16 bytes (2 bytes/bit)
-    uint8_t *resp_cc = BigBuf_malloc(18);
+    uint8_t *resp_cc = BigBuf_calloc(18);
     int resp_cc_len;
 
     // Kd, Kc (blocks 3 and 4). Cannot be read. Always respond with 0xff bytes only
-    uint8_t *resp_ff = BigBuf_malloc(22);
+    uint8_t *resp_ff = BigBuf_calloc(22);
     int resp_ff_len;
     uint8_t ff_data[10] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00};
     AddCrc(ff_data, 8);
 
     // Application Issuer Area  (blk 5)
-    uint8_t *resp_aia = BigBuf_malloc(22);
+    uint8_t *resp_aia = BigBuf_calloc(22);
     int resp_aia_len;
 
     // receive command
-    uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
+    uint8_t *receivedCmd = BigBuf_calloc(MAX_FRAME_SIZE);
 
     // Prepare card messages
     tosend_t *ts = get_tosend();
@@ -474,11 +474,11 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
 
     //This is used for responding to READ-block commands or other data which is dynamically generated
     //First the 'trace'-data, not encoded for FPGA
-    uint8_t *data_generic_trace = BigBuf_malloc(34); // 32 bytes data + 2byte CRC is max tag answer
+    uint8_t *data_generic_trace = BigBuf_calloc(34); // 32 bytes data + 2byte CRC is max tag answer
 
     //Then storage for the modulated data
     //Each bit is doubled when modulated for FPGA, and we also have SOF and EOF (2 bytes)
-    uint8_t *data_response = BigBuf_malloc((34 * 2) + 3);
+    uint8_t *data_response = BigBuf_calloc((34 * 2) + 3);
 
     enum { IDLE, ACTIVATED, SELECTED, HALTED } chip_state = IDLE;
 
@@ -942,29 +942,29 @@ int do_iclass_simulation_nonsec(void) {
     int trace_data_size = 0;
 
     // Respond SOF -- takes 1 bytes
-    uint8_t *resp_sof = BigBuf_malloc(2);
+    uint8_t resp_sof[2] = { 0 };
     int resp_sof_len;
 
     // Anticollision CSN (rotated CSN)
     // 22: Takes 2 bytes for SOF/EOF and 10 * 2 = 20 bytes (2 bytes/byte)
-    uint8_t *resp_anticoll = BigBuf_malloc(28);
+    uint8_t *resp_anticoll = BigBuf_calloc(28);
     int resp_anticoll_len;
 
     // CSN
     // 22: Takes 2 bytes for SOF/EOF and 10 * 2 = 20 bytes (2 bytes/byte)
-    uint8_t *resp_csn = BigBuf_malloc(28);
+    uint8_t *resp_csn = BigBuf_calloc(28);
     int resp_csn_len;
 
     // configuration (blk 1) PICOPASS 2ks
-    uint8_t *resp_conf = BigBuf_malloc(28);
+    uint8_t *resp_conf = BigBuf_calloc(28);
     int resp_conf_len;
 
     // Application Issuer Area  (blk 5)
-    uint8_t *resp_aia = BigBuf_malloc(28);
+    uint8_t *resp_aia = BigBuf_calloc(28);
     int resp_aia_len;
 
     // receive command
-    uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
+    uint8_t *receivedCmd = BigBuf_calloc(MAX_FRAME_SIZE);
 
     // Prepare card messages
     tosend_t *ts = get_tosend();
@@ -997,11 +997,11 @@ int do_iclass_simulation_nonsec(void) {
 
     //This is used for responding to READ-block commands or other data which is dynamically generated
     //First the 'trace'-data, not encoded for FPGA
-    uint8_t *data_generic_trace = BigBuf_malloc(32 + 2); // 32 bytes data + 2byte CRC is max tag answer
+    uint8_t *data_generic_trace = BigBuf_calloc(32 + 2); // 32 bytes data + 2byte CRC is max tag answer
 
     //Then storage for the modulated data
     //Each bit is doubled when modulated for FPGA, and we also have SOF and EOF (2 bytes)
-    uint8_t *data_response = BigBuf_malloc((32 + 2) * 2 + 2);
+    uint8_t *data_response = BigBuf_calloc((32 + 2) * 2 + 2);
 
     enum { IDLE, ACTIVATED, SELECTED, HALTED } chip_state = IDLE;
 

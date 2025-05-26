@@ -221,10 +221,11 @@ out:
 int sam_get_version(void) {
     int res = PM3_SUCCESS;
 
-    if (g_dbglevel >= DBG_DEBUG)
+    if (g_dbglevel >= DBG_DEBUG) {
         DbpString("start sam_get_version");
+    }
 
-    uint8_t   *response =  BigBuf_malloc(ISO7816_MAX_FRAME);
+    uint8_t *response = BigBuf_calloc(ISO7816_MAX_FRAME);
     uint16_t response_len = ISO7816_MAX_FRAME;
 
     uint8_t payload[] = {
@@ -252,8 +253,9 @@ int sam_get_version(void) {
     //      82 01
     //       01
     // 90 00
-    if (g_dbglevel >= DBG_DEBUG)
+    if (g_dbglevel >= DBG_DEBUG) {
         DbpString("end sam_get_version");
+    }
 
     if (response[5] != 0xbd) {
         Dbprintf("Invalid SAM response");
@@ -289,8 +291,9 @@ error:
 out:
     BigBuf_free();
 
-    if (g_dbglevel >= DBG_DEBUG)
+    if (g_dbglevel >= DBG_DEBUG) {
         DbpString("end sam_get_version");
+    }
 
     return res;
 }
@@ -350,12 +353,10 @@ void sam_append_asn1_node(const uint8_t *root, const uint8_t *node, uint8_t type
 }
 
 void sam_send_ack(void) {
-    uint8_t   *response = BigBuf_malloc(ISO7816_MAX_FRAME);
+    uint8_t *response = BigBuf_calloc(ISO7816_MAX_FRAME);
     uint16_t response_len = ISO7816_MAX_FRAME;
 
-    uint8_t payload[] = {
-        0xa0, 0
-    };
+    uint8_t payload[] = { 0xa0, 0 };
     uint16_t payload_len = sizeof(payload);
 
     sam_send_payload(

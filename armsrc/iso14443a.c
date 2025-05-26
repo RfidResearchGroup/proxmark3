@@ -190,35 +190,35 @@ struct Crypto1State crypto1_state = {0, 0};
 
 void printHf14aConfig(void) {
     DbpString(_CYAN_("HF 14a config"));
-    Dbprintf("  [a] Anticol override.............. %s%s%s",
+    Dbprintf("  [a] Anticol override........... %s%s%s",
              (hf14aconfig.forceanticol == 0) ? _GREEN_("std") "    ( follow standard )" : "",
              (hf14aconfig.forceanticol == 1) ? _RED_("force") " ( always do anticol )" : "",
              (hf14aconfig.forceanticol == 2) ? _RED_("skip") "   ( always skip anticol )" : ""
             );
-    Dbprintf("  [b] BCC override.................. %s%s%s",
+    Dbprintf("  [b] BCC override............... %s%s%s",
              (hf14aconfig.forcebcc == 0) ? _GREEN_("std") "    ( follow standard )" : "",
              (hf14aconfig.forcebcc == 1) ? _RED_("fix") "    ( fix bad BCC )" : "",
              (hf14aconfig.forcebcc == 2) ? _RED_("ignore") " ( ignore bad BCC, always use card BCC )" : ""
             );
-    Dbprintf("  [2] CL2 override.................. %s%s%s",
+    Dbprintf("  [2] CL2 override............... %s%s%s",
              (hf14aconfig.forcecl2 == 0) ? _GREEN_("std") "    ( follow standard )" : "",
              (hf14aconfig.forcecl2 == 1) ? _RED_("force") "  ( always do CL2 )" : "",
              (hf14aconfig.forcecl2 == 2) ? _RED_("skip") "   ( always skip CL2 )" : ""
             );
-    Dbprintf("  [3] CL3 override.................. %s%s%s",
+    Dbprintf("  [3] CL3 override............... %s%s%s",
              (hf14aconfig.forcecl3 == 0) ? _GREEN_("std") "    ( follow standard )" : "",
              (hf14aconfig.forcecl3 == 1) ? _RED_("force") "  ( always do CL3 )" : "",
              (hf14aconfig.forcecl3 == 2) ? _RED_("skip") "   ( always skip CL3 )" : ""
             );
-    Dbprintf("  [r] RATS override................. %s%s%s",
+    Dbprintf("  [r] RATS override.............. %s%s%s",
              (hf14aconfig.forcerats == 0) ? _GREEN_("std") "    ( follow standard )" : "",
              (hf14aconfig.forcerats == 1) ? _RED_("force") "  ( always do RATS )" : "",
              (hf14aconfig.forcerats == 2) ? _RED_("skip") "   ( always skip RATS )" : ""
             );
-    Dbprintf("  [m] Magsafe polling............... %s",
+    Dbprintf("  [m] Magsafe polling............ %s",
              (hf14aconfig.magsafe == 1) ? _GREEN_("enabled") : _YELLOW_("disabled")
             );
-    Dbprintf("  [p] Polling loop annotation....... %s %*D",
+    Dbprintf("  [p] Polling loop annotation.... %s %*D",
              (hf14aconfig.polling_loop_annotation.frame_length <= 0) ? _YELLOW_("disabled") : _GREEN_("enabled"),
              hf14aconfig.polling_loop_annotation.frame_length,
              hf14aconfig.polling_loop_annotation.frame,
@@ -524,6 +524,7 @@ RAMFUNC bool MillerDecoding(uint8_t bit, uint32_t non_real_time) {
                         Uart.parityBits |= ((Uart.shiftReg >> 8) & 0x01);        // store parity bit
                         Uart.bitCount = 0;
                         Uart.shiftReg = 0;
+
                         // Every 8 data bytes, store 8 parity bits into a parity byte
                         if ((Uart.len & 0x0007) == 0) {                          // every 8 data bytes
                             Uart.parity[Uart.parityLen++] = Uart.parityBits;     // store 8 parity bits
@@ -804,12 +805,12 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
     set_tracing(true);
 
     // The command (reader -> tag) that we're receiving.
-    uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
-    uint8_t *receivedCmdPar = BigBuf_malloc(MAX_PARITY_SIZE);
+    uint8_t *receivedCmd = BigBuf_calloc(MAX_FRAME_SIZE);
+    uint8_t *receivedCmdPar = BigBuf_calloc(MAX_PARITY_SIZE);
 
     // The response (tag -> reader) that we're receiving.
-    uint8_t *receivedResp = BigBuf_malloc(MAX_FRAME_SIZE);
-    uint8_t *receivedRespPar = BigBuf_malloc(MAX_PARITY_SIZE);
+    uint8_t *receivedResp = BigBuf_calloc(MAX_FRAME_SIZE);
+    uint8_t *receivedRespPar = BigBuf_calloc(MAX_PARITY_SIZE);
 
     uint8_t previous_data = 0;
     int maxDataLen = 0, dataLen;
@@ -1496,6 +1497,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
     // "precompiled" responses.
     // These exist for speed reasons.  There are no time in the anti collision phase to calculate responses.
     // There are 12 predefined responses with a total of 84 bytes data to transmit.
+    //
     // Coded responses need one byte per bit to transfer (data, parity, start, stop, correction)
     // 85 * 8 data bits, 85 * 1 parity bits, 12 start bits, 12 stop bits, 12 correction bits
     // 85 * 8 + 85 + 12 + 12 + 12 == 801
@@ -2681,9 +2683,9 @@ void iso14443a_antifuzz(uint32_t flags) {
     int len = 0;
 
     // allocate buffers:
-    uint8_t *received = BigBuf_malloc(MAX_FRAME_SIZE);
-    uint8_t *receivedPar = BigBuf_malloc(MAX_PARITY_SIZE);
-    uint8_t *resp = BigBuf_malloc(20);
+    uint8_t *received = BigBuf_calloc(MAX_FRAME_SIZE);
+    uint8_t *receivedPar = BigBuf_calloc(MAX_PARITY_SIZE);
+    uint8_t *resp = BigBuf_calloc(20);
 
     memset(received, 0x00, MAX_FRAME_SIZE);
     memset(received, 0x00, MAX_PARITY_SIZE);
@@ -2771,19 +2773,19 @@ static void iso14a_set_ATS_times(const uint8_t *ats) {
 
 
 static int GetATQA(uint8_t *resp, uint16_t resp_len, uint8_t *resp_par, const iso14a_polling_parameters_t *polling_parameters) {
-    #define RETRY_TIMEOUT 10
+#define RETRY_TIMEOUT 10
 
     uint32_t save_iso14a_timeout = iso14a_get_timeout();
     iso14a_set_timeout(1236 / 128 + 1);  // response to WUPA is expected at exactly 1236/fc. No need to wait longer.
 
     // refactored to use local pointer,  now no modification of polling_parameters pointer is done
-    // I don't think the intention was to modify polling_parameters when sending in WUPA_POLLING_PARAMETERS etc.  
+    // I don't think the intention was to modify polling_parameters when sending in WUPA_POLLING_PARAMETERS etc.
     // Modify polling_params,  if null use default values.
     iso14a_polling_parameters_t p;
-    memcpy(&p, (uint8_t*)polling_parameters, sizeof(iso14a_polling_parameters_t));
+    memcpy(&p, (uint8_t *)polling_parameters, sizeof(iso14a_polling_parameters_t));
 
     if (polling_parameters == NULL) {
-        memcpy(&p, (uint8_t*)&hf14a_polling_parameters, sizeof(iso14a_polling_parameters_t));
+        memcpy(&p, (uint8_t *)&hf14a_polling_parameters, sizeof(iso14a_polling_parameters_t));
     }
 
     bool first_try = true;
@@ -4068,9 +4070,7 @@ void DetectNACKbug(void) {
     // i  =  number of authentications sent.  Not always 256, since we are trying to sync but close to it.
     FpgaDisableTracing();
 
-    uint8_t *data = BigBuf_malloc(4);
-    data[0] = isOK;
-    data[1] = num_nacks;
+    uint8_t data[4] = {isOK, num_nacks, 0, 0};
     num_to_bytes(i, 2, data + 2);
     reply_ng(CMD_HF_MIFARE_NACK_DETECT, status, data, 4);
 

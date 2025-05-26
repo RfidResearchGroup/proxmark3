@@ -40,7 +40,7 @@ static void SmartCardDirectSend(uint8_t prepend, const smart_card_raw_t *p, uint
     LED_D_ON();
 
     uint16_t len = 0;
-    uint8_t *resp = BigBuf_malloc(ISO7816_MAX_FRAME);
+    uint8_t *resp = BigBuf_calloc(ISO7816_MAX_FRAME);
     resp[0] = prepend;
     // check if alloacted...
     smartcard_command_t flags = p->flags;

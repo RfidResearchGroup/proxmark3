@@ -73,9 +73,9 @@ There is a docker image with webpack installed which has been built which you ca
 
 ```
 docker pull nhutton/prox-container:webp_image_complete
-docker run -v <LOCAL_PATH>/proxmark3:/tmp --rm -it nhutton/prox-container:webp_image_complete bash
-$ cd /tmp/proxmark/fpga
-$ make all
+docker run -v <LOCAL_PATH>/proxmark3:/tmp/proxmark3 --rm -it nhutton/prox-container:1.0 bash
+$ cd /tmp/proxmark3/fpga
+$ make all -j
 ```
 
 In order to save space,  these fpga images are LZ4 compressed and included in the fullimage.elf file when compiling the ARM SRC.  `make armsrc`

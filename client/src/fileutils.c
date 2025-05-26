@@ -165,6 +165,7 @@ static char *filenamemcopy(const char *preferredName, const char *suffix) {
 
     char *fileName = (char *) calloc(strlen(preferredName) + strlen(suffix) + 1, sizeof(uint8_t));
     if (fileName == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return NULL;
     }
 
@@ -993,8 +994,8 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
     }
 
     *pdata = calloc(fsize, sizeof(uint8_t));
-    if (!*pdata) {
-        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+    if (*pdata == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         fclose(f);
         return PM3_EMALLOC;
     }
@@ -1044,8 +1045,8 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
     }
 
     *pdata = calloc(fsize, sizeof(uint8_t));
-    if (!*pdata) {
-        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+    if (*pdata == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         fclose(f);
         return PM3_EMALLOC;
     }
@@ -1091,6 +1092,7 @@ int loadFileEML_safe(const char *preferredName, void **pdata, size_t *datalen) {
 
     uint8_t *newdump = realloc(*pdata, counter);
     if (newdump == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(*pdata);
         return PM3_EMALLOC;
     } else {
@@ -1366,8 +1368,8 @@ int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen) {
     }
 
     *pdata = calloc(fsize, sizeof(uint8_t));
-    if (!*pdata) {
-        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+    if (*pdata == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         fclose(f);
         return PM3_EMALLOC;
     }
@@ -1414,6 +1416,7 @@ int loadFileMCT_safe(const char *preferredName, void **pdata, size_t *datalen) {
 
     uint8_t *newdump = realloc(*pdata, counter);
     if (newdump == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(*pdata);
         return PM3_EMALLOC;
     } else {
@@ -2358,6 +2361,7 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
     // allocate some space for the dictionary
     *pdata = calloc(block_size, sizeof(uint8_t));
     if (*pdata == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(path);
         return PM3_EFILE;
     }
@@ -2377,9 +2381,10 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
         if ((*keycnt * (keylen >> 1)) >= mem_size) {
 
             mem_size += block_size;
-            *pdata = realloc(*pdata, mem_size);
 
+            *pdata = realloc(*pdata, mem_size);
             if (*pdata == NULL) {
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
                 retval = PM3_EFILE;
                 fclose(f);
                 goto out;
@@ -2473,7 +2478,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
 
     *keya = calloc(fsize, sizeof(uint8_t));
     if (*keya == NULL) {
-        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         fclose(f);
         free(path);
         return PM3_EMALLOC;
@@ -2483,7 +2488,7 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
 
     *keyb = calloc(fsize, sizeof(uint8_t));
     if (*keyb == NULL) {
-        PrintAndLogEx(FAILED, "error, cannot allocate memory");
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         fclose(f);
         free(*keya);
         free(path);
@@ -2663,6 +2668,7 @@ static int convert_plain_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose)
 
     mfu_dump_t *mfu = (mfu_dump_t *) calloc(sizeof(mfu_dump_t), sizeof(uint8_t));
     if (mfu == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -2700,6 +2706,7 @@ static int convert_old_mfu_dump(uint8_t **dump, size_t *dumplen, bool verbose) {
 
     mfu_dump_t *mfu_dump = (mfu_dump_t *) calloc(sizeof(mfu_dump_t), sizeof(uint8_t));
     if (mfu_dump == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -2846,6 +2853,7 @@ static int searchFinalFile(char **foundpath, const char *pm3dir, const char *sea
     // explicit absolute (/) or relative path (./) => try only to match it directly
     char *filename = calloc(strlen(searchname) + 1, sizeof(char));
     if (filename == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
@@ -3081,7 +3089,7 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
         case JSON: {
             *pdump = calloc(maxdumplen, sizeof(uint8_t));
             if (*pdump == NULL) {
-                PrintAndLogEx(WARNING, "fail, cannot allocate memory");
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
                 return PM3_EMALLOC;
             }
 
@@ -3121,7 +3129,7 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
 
                 *pdump = calloc(maxdumplen, sizeof(uint8_t));
                 if (*pdump == NULL) {
-                    PrintAndLogEx(WARNING, "Fail, cannot allocate memory");
+                    PrintAndLogEx(WARNING, "Failed to allocate memory");
                     return PM3_EMALLOC;
                 }
                 res = loadFileNFC_safe(fn, *pdump, maxdumplen, dumplen, dumptype);

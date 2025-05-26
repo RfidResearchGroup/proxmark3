@@ -562,7 +562,7 @@ static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t 
     }
 
     // ----------------- MAC Key Generation -----------------
-    uint8_t cmac[8];
+    uint8_t cmac[16];
     uint8_t MAC_key[24] = {0x00};
     memcpy(MAC_key, keys[key_index].privMacKey, 16);
     create_cmac(MAC_key, input, cmac, sizeof(input), encryption_algorithm);
@@ -1351,7 +1351,7 @@ static int CmdHfSeosGDF(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    int key_index = arg_get_int_def(ctx, 1, -1);
+    int key_index = arg_get_int_def(ctx, 1, 0);
 
     CLIParserFree(ctx);
     return seos_global_df(key_index);
