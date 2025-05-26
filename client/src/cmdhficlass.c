@@ -3251,6 +3251,10 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         // if there was an error reading repeat the tearoff with the same delay
         if (decrease && (tearoff_start > tearoff_increment) && (tearoff_start >= tearoff_original_start)) {
             tearoff_start -= tearoff_increment;
+            if(verbose){
+                PrintAndLogEx(INFO, " -> Read failed, retearing with "_CYAN_("%u")" us", tearoff_start);
+            }
+
         }
 
         bool tear_success = true;
@@ -3284,18 +3288,42 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
                 }
             }
 
+            bool goto_out = false;
             if (blockno == 1) {
                 if (data_read[0] != data_read_orig[0]) {
                     PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(SUCCESS, "Application limit changed, from %u to %u", data_read_orig[0], data_read[0]);
+                    PrintAndLogEx(SUCCESS, "Application limit changed, from "_YELLOW_("%u")" to "_YELLOW_("%u"), data_read_orig[0], data_read[0]);
                     isok = PM3_SUCCESS;
-                    goto out;
+                    goto_out = true;
                 }
 
                 if (data_read[7] != data_read_orig[7]) {
                     PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(SUCCESS, "Fuse changed, from %02x to %02x", data_read_orig[7], data_read[7]);
+                    PrintAndLogEx(SUCCESS, "Fuse changed, from "_YELLOW_("%02x")" to "_YELLOW_("%02x"), data_read_orig[7], data_read[7]);
+
+                    const char *flag_names[8] = {
+                        "RA",
+                        "Fprod0",
+                        "Fprod1",
+                        "Crypt0 (*1)",
+                        "Crypt1 (*0)",
+                        "Coding0",
+                        "Coding1",
+                        "Fpers  (*1)"
+                    };
+                    PrintAndLogEx(INFO, _YELLOW_("%-10s %-10s %-10s"), "Fuse", "Original", "Changed");
+                    PrintAndLogEx(INFO, "---------------------------------------");
+                    for (int i = 7; i >= 0; --i) {
+                        int bit1 = (data_read_orig[7] >> i) & 1;
+                        int bit2 = (data_read[7] >> i) & 1;
+                        PrintAndLogEx(INFO, "%-10s %-10d %-10d", flag_names[i], bit1, bit2);
+                    }
+
                     isok = PM3_SUCCESS;
+                    goto_out = true;
+                }
+
+                if (goto_out) {
                     goto out;
                 }
             }
