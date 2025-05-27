@@ -3211,14 +3211,14 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         }
 
         if (tearoff_loop > 1) {
-            PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us - "_YELLOW_("%u")" loops      ", params.delay_us, (tearoff_end & 0xFFFF), loop_count + 1);
+            PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us - "_YELLOW_("%3u")" loops", params.delay_us, (tearoff_end & 0xFFFF), loop_count + 1);
         } else {
             PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us", params.delay_us, (tearoff_end & 0xFFFF));
         }
 
         // write block - don't check the return value. As a tear-off occurred, the write failed.
         // when tear off is enabled,  the return code will always be PM3_ETEAROFF
-        iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
+        iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
 
         // read the data back
         uint8_t data_read[8] = {0};
@@ -3352,10 +3352,10 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
                     PrintAndLogEx(SUCCESS, "More OTP bits got set!!!");
                     isok = PM3_SUCCESS;
                 }
+            }
 
-                if (goto_out) {
-                    goto out;
-                }
+            if (goto_out) {
+                goto out;
             }
         }
 
