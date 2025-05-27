@@ -66,7 +66,7 @@ typedef struct {
 // Structure for Saflok key levels
 typedef struct {
     uint8_t level_num;
-    const char* level_name;
+    const char *level_name;
 } SaflokKeyLevel;
 
 // Static array for Saflok key levels
@@ -116,22 +116,28 @@ static void DecryptSaflokCardData(
     const uint8_t strCard[SAFLOK_BASIC_ACCESS_BYTE_NUM],
     // int length, // length is always SAFLOK_BASIC_ACCESS_BYTE_NUM
     uint8_t decryptedCard[SAFLOK_BASIC_ACCESS_BYTE_NUM]) {
-    int i, num, num2, num3, num4, b = 0, b2 = 0;
+    int i;
+    int num;
+    int num2;
+    int num3;
+    int num4;
+    int b = 0;
+    int b2 = 0;
 
-    for(i = 0; i < SAFLOK_BASIC_ACCESS_BYTE_NUM; i++) {
+    for (i = 0; i < SAFLOK_BASIC_ACCESS_BYTE_NUM; i++) {
         num = saflok_c_aDecode[strCard[i]] - (i + 1);
-        if(num < 0) num += 256;
+        if (num < 0) num += 256;
         decryptedCard[i] = num;
     }
 
     b = decryptedCard[10];
     b2 = b & 1;
 
-    for(num2 = SAFLOK_BASIC_ACCESS_BYTE_NUM; num2 > 0; num2--) {
+    for (num2 = SAFLOK_BASIC_ACCESS_BYTE_NUM; num2 > 0; num2--) {
         b = decryptedCard[num2 - 1];
-        for(num3 = 8; num3 > 0; num3--) {
+        for (num3 = 8; num3 > 0; num3--) {
             num4 = num2 + num3;
-            if(num4 > SAFLOK_BASIC_ACCESS_BYTE_NUM) num4 -= SAFLOK_BASIC_ACCESS_BYTE_NUM;
+            if (num4 > SAFLOK_BASIC_ACCESS_BYTE_NUM) num4 -= SAFLOK_BASIC_ACCESS_BYTE_NUM;
             int b3 = decryptedCard[num4 - 1];
             int b4 = (b3 & 0x80) >> 7;
             b3 = ((b3 << 1) & 0xFF) | b2;
@@ -146,7 +152,7 @@ static void DecryptSaflokCardData(
 // Function to calculate Saflok checksum
 static uint8_t CalculateCheckSum(uint8_t data[SAFLOK_BASIC_ACCESS_BYTE_NUM]) {
     int sum = 0;
-    for(int i = 0; i < SAFLOK_BASIC_ACCESS_BYTE_NUM - 1; i++) {
+    for (int i = 0; i < SAFLOK_BASIC_ACCESS_BYTE_NUM - 1; i++) {
         sum += data[i];
     }
     sum = 255 - (sum & 0xFF);
@@ -228,19 +234,19 @@ static void ParseAndPrintSaflokData(const sector_t* sector0_info, const sector_t
     // Byte 7: OverrideDeadbolt and Days
     uint8_t override_deadbolt = (decodedBA[7] & 0x80) >> 7;
     uint8_t restricted_weekday = decodedBA[7] & 0x7F;
-    
+
     // Weekday names array
-    static const char* weekdays[] = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
-    
+    static const char *weekdays[] = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
+
     // Buffer to store the resulting string (sufficient size for all weekdays)
     char restricted_weekday_string[128] = {0};
     int restricted_count = 0;
-    
+
     // Check each bit from Monday to Sunday
-    for(int i = 0; i < 7; i++) {
-        if(restricted_weekday & (0b01000000 >> i)) {
+    for (int i = 0; i < 7; i++) {
+        if (restricted_weekday & (0b01000000 >> i)) {
             // If the bit is set, append the corresponding weekday to the buffer
-            if(restricted_count > 0) {
+            if (restricted_count > 0) {
                 strcat(restricted_weekday_string, ", ");
             }
             strcat(restricted_weekday_string, weekdays[i]);
@@ -249,18 +255,18 @@ static void ParseAndPrintSaflokData(const sector_t* sector0_info, const sector_t
     }
 
     // Determine if all weekdays are restricted
-    if(restricted_weekday == 0b01111100) {
+    if (restricted_weekday == 0b01111100) {
         strcpy(restricted_weekday_string, "weekdays");
     }
     // If there are specific restricted days
-    else if(restricted_weekday == 0b00000011) {
+    else if (restricted_weekday == 0b00000011) {
         strcpy(restricted_weekday_string, "weekends");
     }
     // If no weekdays are restricted
-    else if(restricted_weekday == 0) {
+    else if (restricted_weekday == 0) {
         strcpy(restricted_weekday_string, "none");
     }
-    
+
     // Bytes 14-15: Property number and part of creation year
     uint8_t creation_year_high_bits = (decodedBA[14] & 0xF0);
     uint16_t property_id = ((decodedBA[14] & 0x0F) << 8) | decodedBA[15];
@@ -284,7 +290,7 @@ static void ParseAndPrintSaflokData(const sector_t* sector0_info, const sector_t
     uint8_t expire_day = creation_day + interval_day_val;
 
     // Handle month rollover for expiration
-    while(expire_month > 12) {
+    while (expire_month > 12) {
         expire_month -= 12;
         expire_year++;
     }
@@ -292,12 +298,12 @@ static void ParseAndPrintSaflokData(const sector_t* sector0_info, const sector_t
     // Handle day rollover for expiration
     static const uint8_t days_in_month_lookup[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}; // 1-indexed month
     if (expire_month > 0 && expire_month <= 12) {
-        while(true) {
+        while (true) {
             uint8_t max_days = days_in_month_lookup[expire_month];
-            if(expire_month == 2 && (expire_year % 4 == 0 && (expire_year % 100 != 0 || expire_year % 400 == 0))) {
+            if (expire_month == 2 && (expire_year % 4 == 0 && (expire_year % 100 != 0 || expire_year % 400 == 0))) {
                 max_days = 29; // Leap year
             }
-            if(expire_day <= max_days) {
+            if (expire_day <= max_days) {
                 break;
             }
             if (max_days == 0) { // Should not happen with valid month
@@ -306,13 +312,13 @@ static void ParseAndPrintSaflokData(const sector_t* sector0_info, const sector_t
             }
             expire_day -= max_days;
             expire_month++;
-            if(expire_month > 12) {
+            if (expire_month > 12) {
                 expire_month = 1;
                 expire_year++;
             }
         }
     } else if (expire_month != 0) { // Allow 0 if it signifies no expiration or error
-         PrintAndLogEx(WARNING, "Saflok: Invalid expiration month (%u) before day rollover.", expire_month);
+        PrintAndLogEx(WARNING, "Saflok: Invalid expiration month (%u) before day rollover.", expire_month);
     }
 
     uint8_t checksum = decodedBA[16];
@@ -4800,7 +4806,7 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
                       _YELLOW_("H") ":Hardnested / "
                       _YELLOW_("C") ":statiCnested / "
                       _YELLOW_("A") ":keyA "
-                      " )"
+                            " )"
                      );
         if (sectorscnt == 18) {
             PrintAndLogEx(INFO, "( " _MAGENTA_("*") " ) These sectors used for signature. Lays outside of user memory");
