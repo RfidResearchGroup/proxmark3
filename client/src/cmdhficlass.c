@@ -3209,9 +3209,14 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             goto out;
         }
 
-        PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us - "_YELLOW_("%u")" / "_YELLOW_("%d")" loops", params.delay_us, (tearoff_end & 0xFFFF), loop_count+1, tearoff_loop);
+        if (tearoff_loop > 1) {
+            PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us - "_YELLOW_("%u")" loops", params.delay_us, (tearoff_end & 0xFFFF), loop_count + 1);
+        } else {
+            PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us", params.delay_us, (tearoff_end & 0xFFFF));
+        }
 
         // write block - don't check the return value. As a tear-off occurred, the write failed.
+        // when tear off is enabled,  the return code will always be PM3_ETEAROFF
         iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
 
         // read the data back
@@ -3228,7 +3233,8 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
                 goto out;
             }
 
-            if (blockno == 1) {
+            // skip authentication for config and e-purse blocks (1,2)
+            if (blockno < 3) {
                 read_auth = false;
             }
 
@@ -3295,6 +3301,16 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             }
 
             bool goto_out = false;
+            if (blockno == 2) {
+                if (memcmp(data_read, ff_data, 8) == 0 && memcmp(data_read_orig, ff_data, 8) != 0) {
+                    PrintAndLogEx(SUCCESS, "E-purse has been teared ( %s )", _GREEN_("ok"));
+                    PrintAndLogEx(HINT, "Hint: try `hf iclass creditepurse -d FEFFFEFF --ki 1`");
+                    PrintAndLogEx(HINT, "Hint: try `hf iclass wrbl -d 'FFFFFFFF FFFF FEFF' --blk 2 --ki 1 --credit`");
+                    isok = PM3_SUCCESS;
+                    goto_out = true;
+                }
+            }
+
             if (blockno == 1) {
                 if (data_read[0] != data_read_orig[0]) {
                     PrintAndLogEx(NORMAL, "");
@@ -3322,11 +3338,18 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
                     for (int i = 7; i >= 0; --i) {
                         int bit1 = (data_read_orig[7] >> i) & 1;
                         int bit2 = (data_read[7] >> i) & 1;
-                        PrintAndLogEx(INFO, "%-10s %-10d %-10d", flag_names[i], bit1, bit2);
+                        PrintAndLogEx(INFO, "%-11s %-10d %-10d", flag_names[i], bit1, bit2);
                     }
 
                     isok = PM3_SUCCESS;
                     goto_out = true;
+                }
+
+                // if more OTP bits set..
+                if (data_read[1] > data_read_orig[1] ||
+                    data_read[2] > data_read_orig[2]) {
+                    PrintAndLogEx(SUCCESS, "More OTP bits got set!!!");
+                    isok = PM3_SUCCESS;
                 }
 
                 if (goto_out) {
