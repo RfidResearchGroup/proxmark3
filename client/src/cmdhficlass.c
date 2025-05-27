@@ -2958,7 +2958,8 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass tear",
                   "Tear off an iCLASS tag block\n"
                   "e-purse usually 300-500us to trigger the erase phase\n"
-                  "also seen 1800-2100us on some cards\n",
+                  "also seen 1800-2100us on some cards\n"
+                  "Make sure you know the target card credit key. Typical  `--ki 1` or `--ki 3`\n",
                   "hf iclass tear --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B -s 300 -e 600\n"
                   "hf iclass tear --blk 10 -d AAAAAAAAAAAAAAAA --ki 0 -s 300 -e 600\n"
                   "hf iclass tear --blk 2 -d fdffffffffffffff --ki 1 --credit -s 400 -e 500"
@@ -3138,8 +3139,8 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     }
 
     if (pagemap == 0x0) {
-            PrintAndLogEx(WARNING, _RED_("No auth possible. Read only if RA is enabled"));
-            goto out;
+        PrintAndLogEx(WARNING, _RED_("No auth possible. Read only if RA is enabled"));
+        goto out;
     }
 
     bool read_auth = auth;
@@ -3210,7 +3211,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         }
 
         if (tearoff_loop > 1) {
-            PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us - "_YELLOW_("%u")" loops", params.delay_us, (tearoff_end & 0xFFFF), loop_count + 1);
+            PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us - "_YELLOW_("%u")" loops      ", params.delay_us, (tearoff_end & 0xFFFF), loop_count + 1);
         } else {
             PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us", params.delay_us, (tearoff_end & 0xFFFF));
         }
@@ -3347,7 +3348,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
 
                 // if more OTP bits set..
                 if (data_read[1] > data_read_orig[1] ||
-                    data_read[2] > data_read_orig[2]) {
+                        data_read[2] > data_read_orig[2]) {
                     PrintAndLogEx(SUCCESS, "More OTP bits got set!!!");
                     isok = PM3_SUCCESS;
                 }

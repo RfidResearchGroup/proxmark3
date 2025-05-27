@@ -3718,7 +3718,7 @@
         },
         "hf iclass tear": {
             "command": "hf iclass tear",
-            "description": "Tear off an iCLASS tag block e-purse usually 300-500us to trigger the erase phase also seen 1800-2100us on some cards",
+            "description": "Tear off an iCLASS tag block e-purse usually 300-500us to trigger the erase phase also seen 1800-2100us on some cards Make sure you know the target card credit key. Typical `--ki 1` or `--ki 3`",
             "notes": [
                 "hf iclass tear --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B -s 300 -e 600",
                 "hf iclass tear --blk 10 -d AAAAAAAAAAAAAAAA --ki 0 -s 300 -e 600",
@@ -13354,6 +13354,6 @@
     "metadata": {
         "commands_extracted": 767,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-05-25T12:38:36"
+        "extracted_on": "2025-05-27T08:11:15"
     }
 }
