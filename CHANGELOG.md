@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf iclass info` - now uses CSN values based checks (@antiklesys)
 - Changed `hf iclass dump` - now uses default AA1 key when called without a key or key index (@iceman1001)
 - Renamed `hf iclass trbl` to `hf iclass tear` (@iceman1001)
 - Changed `hw tearoff` - the device side message is now debug log controlled (@iceman1001)
