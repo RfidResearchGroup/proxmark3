@@ -160,7 +160,7 @@ static uint8_t CalculateCheckSum(uint8_t data[SAFLOK_BASIC_ACCESS_BYTE_NUM]) {
 }
 
 // Function to parse and print Saflok data
-static void ParseAndPrintSaflokData(const sector_t* sector0_info, const sector_t* sector1_info) {
+static void ParseAndPrintSaflokData(const sector_t *sector0_info, const sector_t *sector1_info) {
     (void)sector1_info; // Not directly used for payload parsing currently
 
     if (!sector0_info) {
@@ -4806,7 +4806,7 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
                       _YELLOW_("H") ":Hardnested / "
                       _YELLOW_("C") ":statiCnested / "
                       _YELLOW_("A") ":keyA "
-                            " )"
+                      " )"
                      );
         if (sectorscnt == 18) {
             PrintAndLogEx(INFO, "( " _MAGENTA_("*") " ) These sectors used for signature. Lays outside of user memory");
@@ -10568,7 +10568,7 @@ static int CmdHF14AMfBambuKeys(const char *Cmd) {
     PrintAndLogEx(INFO, "-----------------------------------");
 
     uint8_t keys[32 * 6];
-    mfc_algo_bambu_all(uid, (void*)keys);
+    mfc_algo_bambu_all(uid, (void *)keys);
 
     for (int block = 0; block < 32; block++) {
         PrintAndLogEx(INFO, "%d: %012" PRIX64, block, bytes_to_num(keys + (block * 6), 6));
