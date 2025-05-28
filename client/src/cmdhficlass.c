@@ -3252,21 +3252,20 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             } else if (res != PM3_SUCCESS) {
                 decrease = true;
             }
-            if (readcount >= 10){
-                PrintAndLogEx(WARNING, "\n"_RED_("Read failed too many times, giving up"));
-                isok = PM3_EFAILED;
-                goto out;
-            }
+
             readcount++;
+        }
+
+        if (readcount > 1) {
+            PrintAndLogEx(WARNING, "\nRead block failed "_RED_("%d") " times", readcount);
         }
 
         // if there was an error reading repeat the tearoff with the same delay
         if (decrease && (tearoff_start > tearoff_increment) && (tearoff_start >= tearoff_original_start)) {
             tearoff_start -= tearoff_increment;
-            if(verbose){
+            if (verbose) {
                 PrintAndLogEx(INFO, " -> Read failed, retearing with "_CYAN_("%u")" us", tearoff_start);
             }
-
         }
 
         bool tear_success = true;
