@@ -10525,6 +10525,64 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHF14AMfBambuKeys(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mf bambukeys",
+                  "Generate keys for a Bambu Lab filament tag",
+                  "hf mf bambukeys -r\n"
+                  "hf mf bambukeys -r -d\n"
+                  "hf mf bambukeys -u 11223344\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("u", "uid", "<hex>", "UID (4 hex bytes)"),
+        arg_lit0("r", NULL, "Read UID from tag"),
+        arg_lit0("d", NULL, "Dump keys to file"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int u_len = 0;
+    uint8_t uid[7] = {0x00};
+    CLIGetHexWithReturn(ctx, 1, uid, &u_len);
+    bool use_tag = arg_get_lit(ctx, 2);
+    bool dump_keys = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    if (use_tag) {
+        // read uid from tag
+        int res = mf_read_uid(uid, &u_len, NULL);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+    }
+
+    if (u_len != 4) {
+        PrintAndLogEx(WARNING, "Key must be 4 hex bytes");
+        return PM3_EINVARG;
+    }
+
+    PrintAndLogEx(INFO, "-----------------------------------");
+    PrintAndLogEx(INFO, " UID 4b... " _YELLOW_("%s"), sprint_hex(uid, 4));
+    PrintAndLogEx(INFO, "-----------------------------------");
+
+    uint8_t keys[32 * 6];
+    mfc_algo_bambu_all(uid, (void*)keys);
+
+    for (int block = 0; block < 32; block++) {
+        PrintAndLogEx(INFO, "%d: %012" PRIX64, block, bytes_to_num(keys + (block * 6), 6));
+    }
+
+    if (dump_keys) {
+        char fn[FILE_PATH_SIZE] = {0};
+        snprintf(fn, sizeof(fn), "hf-mf-%s-key", sprint_hex_inrow(uid, 4));
+        saveFileEx(fn, ".bin", keys, 32 * 6, spDump);
+    }
+
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,                AlwaysAvailable, "This help"},
     {"list",        CmdHF14AMfList,         AlwaysAvailable, "List MIFARE history"},
@@ -10543,6 +10601,7 @@ static command_t CommandTable[] = {
     {"fchk",        CmdHF14AMfChk_fast,     IfPm3Iso14443a,  "Check keys fast, targets all keys on card"},
     {"decrypt",     CmdHf14AMfDecryptBytes, AlwaysAvailable, "Decrypt Crypto1 data from sniff or trace"},
     {"supercard",   CmdHf14AMfSuperCard,    IfPm3Iso14443a,  "Extract info from a `super card`"},
+    {"bambukeys",   CmdHF14AMfBambuKeys,    AlwaysAvailable, "Generate key table for Bambu Lab filament tag"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("operations") " -----------------------"},
     {"auth4",       CmdHF14AMfAuth4,        IfPm3Iso14443a,  "ISO14443-4 AES authentication"},
     {"acl",         CmdHF14AMfAcl,          AlwaysAvailable, "Decode and print MIFARE Classic access rights bytes"},
