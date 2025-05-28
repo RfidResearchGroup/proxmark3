@@ -3845,9 +3845,9 @@ static void HFiClassCalcNewKey(uint8_t *CSN, uint8_t *OLDKEY, uint8_t *NEWKEY, u
         xor_div_key[i] = old_div_key[i] ^ new_div_key[i];
     }
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "Old div key......... %s", sprint_hex(old_div_key, 8));
-        PrintAndLogEx(SUCCESS, "New div key......... %s", sprint_hex(new_div_key, 8));
-        PrintAndLogEx(SUCCESS, "Xor div key......... " _YELLOW_("%s") "\n", sprint_hex(xor_div_key, 8));
+        PrintAndLogEx(SUCCESS, "Old div key........ %s", sprint_hex(old_div_key, 8));
+        PrintAndLogEx(SUCCESS, "New div key........ %s", sprint_hex(new_div_key, 8));
+        PrintAndLogEx(SUCCESS, "Xor div key........ " _YELLOW_("%s") "\n", sprint_hex(xor_div_key, 8));
     }
 }
 
