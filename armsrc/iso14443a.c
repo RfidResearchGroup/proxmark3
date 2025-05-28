@@ -4276,6 +4276,7 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
                             dynamic_response_info.response_n = 3 + offset;
                         }
                     }
+                    break;
                 }
                 break;
 
