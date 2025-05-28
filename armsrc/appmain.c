@@ -99,6 +99,7 @@ int tearoff_hook(void) {
     if (g_tearoff_enabled) {
         if (g_tearoff_delay_us == 0) {
             Dbprintf(_RED_("No tear-off delay configured!"));
+            g_tearoff_enabled = false;
             return PM3_SUCCESS; // SUCCESS = the hook didn't do anything
         }
         SpinDelayUsPrecision(g_tearoff_delay_us);
@@ -254,7 +255,7 @@ static uint32_t MeasureAntennaTuningLfData(void) {
 void print_stack_usage(void) {
     for (uint32_t *p = _stack_start; ; ++p) {
         if (*p != 0xdeadbeef) {
-            Dbprintf("  Max stack usage......... %d / %d bytes", (uint32_t)_stack_end - (uint32_t)p, (uint32_t)_stack_end - (uint32_t)_stack_start);
+            Dbprintf("  Max stack usage..... %d / %d bytes", (uint32_t)_stack_end - (uint32_t)p, (uint32_t)_stack_end - (uint32_t)_stack_start);
             break;
         }
     }
@@ -365,7 +366,7 @@ static void print_debug_level(void) {
             sprintf(dbglvlstr, "extended");
             break;
     }
-    Dbprintf("  Debug log level......... %d ( " _YELLOW_("%s")" )", g_dbglevel, dbglvlstr);
+    Dbprintf("  Debug log level..... %d ( " _YELLOW_("%s")" )", g_dbglevel, dbglvlstr);
 }
 
 // measure the Connection Speed by sending SpeedTestBufferSize bytes to client and measuring the elapsed time.
@@ -421,11 +422,11 @@ static void SendStatus(uint32_t wait) {
     print_debug_level();
 
     tosend_t *ts = get_tosend();
-    Dbprintf("  ToSendMax............... %d", ts->max);
-    Dbprintf("  ToSend BUFFERSIZE....... %d", TOSEND_BUFFER_SIZE);
+    Dbprintf("  ToSendMax........... %d", ts->max);
+    Dbprintf("  ToSend BUFFERSIZE... %d", TOSEND_BUFFER_SIZE);
     while ((AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINRDY) == 0);       // Wait for MAINF value to become available...
     uint16_t mainf = AT91C_BASE_PMC->PMC_MCFR & AT91C_CKGR_MAINF;       // Get # main clocks within 16 slow clocks
-    Dbprintf("  Slow clock.............. %d Hz", (16 * MAINCK) / mainf);
+    Dbprintf("  Slow clock.......... %d Hz", (16 * MAINCK) / mainf);
     uint32_t delta_time = 0;
     uint32_t start_time = GetTickCount();
 #define SLCK_CHECK_MS 50
@@ -449,10 +450,11 @@ static void SendStatus(uint32_t wait) {
     } else {
         num = 0;
     }
+
     if (num > 0) {
-        Dbprintf("  Mifare.................. "_YELLOW_("%u")" keys (spiffs: "_GREEN_("%s")")", num, MF_KEYS_FILE);
+        Dbprintf("  Mifare... "_YELLOW_("%u")" keys - "_GREEN_("%s"), num, MF_KEYS_FILE);
     } else {
-        Dbprintf("  Mifare.................. "_RED_("%u")" keys (spiffs: "_RED_("%s")")", num, MF_KEYS_FILE);
+        Dbprintf("  Mifare... "_RED_("%u")" keys - "_RED_("%s"), num, MF_KEYS_FILE);
     }
 
     if (exists_in_spiffs(T55XX_KEYS_FILE)) {
@@ -460,10 +462,11 @@ static void SendStatus(uint32_t wait) {
     } else {
         num = 0;
     }
+
     if (num > 0) {
-        Dbprintf("  T55xx................... "_YELLOW_("%u")" keys (spiffs: "_GREEN_("%s")")", num, T55XX_KEYS_FILE);
+        Dbprintf("  T55xx.... "_YELLOW_("%u")" keys - "_GREEN_("%s"), num, T55XX_KEYS_FILE);
     } else {
-        Dbprintf("  T55xx................... "_RED_("%u")" keys (spiffs: "_RED_("%s")")", num, T55XX_KEYS_FILE);
+        Dbprintf("  T55xx.... "_RED_("%u")" keys - "_RED_("%s"), num, T55XX_KEYS_FILE);
     }
 
     if (exists_in_spiffs(ICLASS_KEYS_FILE)) {
@@ -471,10 +474,11 @@ static void SendStatus(uint32_t wait) {
     } else {
         num = 0;
     }
+
     if (num > 0) {
-        Dbprintf("  iClass.................. "_YELLOW_("%u")" keys (spiffs: "_GREEN_("%s")")", num, ICLASS_KEYS_FILE);
+        Dbprintf("  iClass... "_YELLOW_("%u")" keys - "_GREEN_("%s"), num, ICLASS_KEYS_FILE);
     } else {
-        Dbprintf("  iClass.................. "_RED_("%u")" keys (spiffs: "_RED_("%s")")", num, ICLASS_KEYS_FILE);
+        Dbprintf("  iClass... "_RED_("%u")" keys - "_RED_("%s"), num, ICLASS_KEYS_FILE);
     }
 #endif
     DbpString("");
@@ -2354,7 +2358,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             uint16_t available;
             uint16_t pre_available = 0;
-            uint8_t *dest = BigBuf_malloc(USART_FIFOLEN);
+            uint8_t *dest = BigBuf_calloc(USART_FIFOLEN);
             uint32_t wait = payload->waittime;
 
             StartTicks();
@@ -2398,7 +2402,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             uint16_t available;
             uint16_t pre_available = 0;
-            uint8_t *dest = BigBuf_malloc(USART_FIFOLEN);
+            uint8_t *dest = BigBuf_calloc(USART_FIFOLEN);
             uint32_t wait = payload->waittime;
 
             StartTicks();
@@ -2694,7 +2698,7 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             uint32_t size = packet->oldarg[1];
 
-            uint8_t *buff = BigBuf_malloc(size);
+            uint8_t *buff = BigBuf_calloc(size);
             if (buff == NULL) {
                 if (g_dbglevel >= DBG_DEBUG) Dbprintf("Failed to allocate memory");
                 // Trigger a finish downloading signal with an PM3_EMALLOC
@@ -2899,7 +2903,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_FLASHMEM_DOWNLOAD: {
 
             LED_B_ON();
-            uint8_t *mem = BigBuf_malloc(PM3_CMD_DATA_SIZE);
+            uint8_t *mem = BigBuf_calloc(PM3_CMD_DATA_SIZE);
             uint32_t startidx = packet->oldarg[0];
             uint32_t numofbytes = packet->oldarg[1];
             // arg0 = startindex
@@ -2931,7 +2935,7 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_FLASHMEM_INFO: {
 
             LED_B_ON();
-            rdv40_validation_t *info = (rdv40_validation_t *)BigBuf_malloc(sizeof(rdv40_validation_t));
+            rdv40_validation_t *info = (rdv40_validation_t *)BigBuf_calloc(sizeof(rdv40_validation_t));
 
             bool isok = Flash_ReadData(FLASH_MEM_SIGNATURE_OFFSET_P(spi_flash_pages64k), info->signature, FLASH_MEM_SIGNATURE_LEN);
 

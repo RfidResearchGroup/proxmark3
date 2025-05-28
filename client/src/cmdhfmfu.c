@@ -4628,7 +4628,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
 
         // we be getting ACK that we are silently ignoring here..
 
-        if (!WaitForResponseTimeout(CMD_HF_MFU_OTP_TEAROFF, &resp, 2000)) {
+        if (WaitForResponseTimeout(CMD_HF_MFU_OTP_TEAROFF, &resp, 2000) == false) {
             PrintAndLogEx(WARNING, "Failed");
             return PM3_ESOFT;
         }
@@ -4649,11 +4649,13 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
                 got_post = true;
             }
         }
-        if (! got_post) {
+
+        if (!got_post) {
             PrintAndLogEx(FAILED, "Failed to read block BEFORE");
             error_retries++;
             continue; // try again
         }
+
         error_retries = 0;
         char prestr[20] = {0};
         snprintf(prestr, sizeof(prestr), "%s", sprint_hex_inrow(pre, sizeof(pre)));
@@ -4936,7 +4938,7 @@ static int CmdHF14AMfuEv1CounterTearoff(const char *Cmd) {
         clearCommandBuffer();
         PacketResponseNG resp;
         SendCommandNG(CMD_HF_MFU_COUNTER_TEAROFF, (uint8_t*)&payload, sizeof(payload));
-        if (!WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000)) {
+        if (WaitForResponseTimeout(CMD_HF_MFU_COUNTER_TEAROFF, &resp, 2000) == false) {
             PrintAndLogEx(WARNING, "\ntear off command failed");
             continue;
         }

@@ -663,7 +663,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
 
         clearCommandBuffer();
         SendCommandNG(CMD_SMART_UPLOAD, (uint8_t *)&upload, sizeof(upload));
-        if (!WaitForResponseTimeout(CMD_SMART_UPLOAD, &resp, 2000)) {
+        if (WaitForResponseTimeout(CMD_SMART_UPLOAD, &resp, 2000) == false) {
             PrintAndLogEx(WARNING, "timeout while waiting for reply");
             free(firmware);
             return PM3_ETIMEOUT;
@@ -695,7 +695,7 @@ static int CmdSmartUpgrade(const char *Cmd) {
 
     free(firmware);
     SendCommandNG(CMD_SMART_UPGRADE, (uint8_t *)&payload, sizeof(payload));
-    if (!WaitForResponseTimeout(CMD_SMART_UPGRADE, &resp, 2500)) {
+    if (WaitForResponseTimeout(CMD_SMART_UPGRADE, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
@@ -876,7 +876,7 @@ static int CmdSmartSetClock(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_SMART_SETCLOCK, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_SMART_SETCLOCK, &resp, 2500)) {
+    if (WaitForResponseTimeout(CMD_SMART_SETCLOCK, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "smart card select failed");
         return PM3_ETIMEOUT;
     }

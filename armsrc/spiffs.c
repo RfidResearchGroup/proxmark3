@@ -312,7 +312,7 @@ static int is_valid_filename(const char *filename) {
 */
 static void copy_in_spiffs(const char *src, const char *dst) {
     uint32_t size = size_in_spiffs(src);
-    uint8_t *mem = BigBuf_malloc(size);
+    uint8_t *mem = BigBuf_calloc(size);
     read_from_spiffs(src, (uint8_t *)mem, size);
     write_to_spiffs(dst, (uint8_t *)mem, size);
 }

@@ -871,7 +871,7 @@ int TestProxmark(pm3_device_t *dev) {
 #endif
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeoutW(CMD_PING, &resp, timeout, false) == 0) {
+    if (WaitForResponseTimeoutW(CMD_PING, &resp, timeout, false) == false) {
         return PM3_ETIMEOUT;
     }
 
@@ -881,7 +881,7 @@ int TestProxmark(pm3_device_t *dev) {
     }
 
     SendCommandNG(CMD_CAPABILITIES, NULL, 0);
-    if (WaitForResponseTimeoutW(CMD_CAPABILITIES, &resp, 1000, false) == 0) {
+    if (WaitForResponseTimeoutW(CMD_CAPABILITIES, &resp, 1000, false) == false) {
         return PM3_ETIMEOUT;
     }
 

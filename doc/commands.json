@@ -3285,15 +3285,14 @@
             "command": "hf iclass creditepurse",
             "description": "Credit the epurse on an iCLASS tag. The provided key must be the credit key. The first two bytes of the epurse are the debit value (big endian) and may be any value except FFFF. The remaining two bytes of the epurse are the credit value and must be smaller than the previous value.",
             "notes": [
-                "hf iclass creditepurse -d FEFFFFFF -k 001122334455667B",
-                "hf iclass creditepurse -d FEFFFFFF --ki 0"
+                "hf iclass creditepurse --ki 0 -d FEFFFEFF"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-k, --key <hex> Credit key as 8 hex bytes",
                 "--ki <dec> Key index to select key from memory 'hf iclass managekeys'",
-                "-d, --data <hex> data to write as 8 hex bytes",
+                "-d, --data <hex> data to write as 4 hex bytes",
                 "--elite elite computations applied to key",
                 "--raw no computations applied to key",
                 "-v, --verbose verbose output",
@@ -3719,7 +3718,7 @@
         },
         "hf iclass tear": {
             "command": "hf iclass tear",
-            "description": "Tear off an iCLASS tag block e-purse usually 300-500us to trigger the erase phase also seen 1800-2100us on some cards",
+            "description": "Tear off an iCLASS tag block e-purse usually 300-500us to trigger the erase phase also seen 1800-2100us on some cards Make sure you know the target card credit key. Typical `--ki 1` or `--ki 3`",
             "notes": [
                 "hf iclass tear --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B -s 300 -e 600",
                 "hf iclass tear --blk 10 -d AAAAAAAAAAAAAAAA --ki 0 -s 300 -e 600",
@@ -3739,12 +3738,13 @@
                 "--nr replay of NR/MAC",
                 "-v, --verbose verbose output",
                 "--shallow use shallow (ASK) reader modulation instead of OOK",
-                "-s <dec> tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us.",
-                "-i <dec> tearoff delay increment (in us) - default 10.",
-                "-e <dec> tearoff delay end (in us) must be a higher value than the start delay.",
-                "--loop <dec> number of times to loop per tearoff time."
+                "-s <dec> tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3 us",
+                "-i <dec> tearoff delay increment (in us) - default 10",
+                "-e <dec> tearoff delay end (in us) must be a higher value than the start delay",
+                "--loop <dec> number of times to loop per tearoff time",
+                "--sleep <ms> Sleep between each tear"
             ],
-            "usage": "hf iclass tear [-hv] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow] -s <dec> [-i <dec>] [-e <dec>] [--loop <dec>]"
+            "usage": "hf iclass tear [-hv] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow] -s <dec> [-i <dec>] [-e <dec>] [--loop <dec>] [--sleep <ms>]"
         },
         "hf iclass unhash": {
             "command": "hf iclass unhash",
@@ -13371,6 +13371,6 @@
     "metadata": {
         "commands_extracted": 768,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-05-24T14:16:42"
+        "extracted_on": "2025-05-27T08:11:15"
     }
 }

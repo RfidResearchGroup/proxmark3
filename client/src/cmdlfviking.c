@@ -172,7 +172,7 @@ static int CmdVikingClone(const char *Cmd) {
 
     SendCommandNG(CMD_LF_VIKING_CLONE, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_LF_VIKING_CLONE, &resp, T55XX_WRITE_TIMEOUT)) {
+    if (WaitForResponseTimeout(CMD_LF_VIKING_CLONE, &resp, T55XX_WRITE_TIMEOUT) == false) {
         PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
         return PM3_ETIMEOUT;
     }

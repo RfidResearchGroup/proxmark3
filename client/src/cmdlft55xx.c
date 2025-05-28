@@ -466,7 +466,7 @@ int clone_t55xx_tag(uint32_t *blockdata, uint8_t numblocks) {
         ng.flags = 0;
 
         SendCommandNG(CMD_LF_T55XX_WRITEBL, (uint8_t *)&ng, sizeof(ng));
-        if (!WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, T55XX_WRITE_TIMEOUT)) {
+        if (WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, T55XX_WRITE_TIMEOUT) == false) {
             PrintAndLogEx(ERR, "Error occurred, device did not respond during write operation.");
             return PM3_ETIMEOUT;
         }
@@ -664,7 +664,7 @@ int t55xxWrite(uint8_t block, bool page1, bool usepwd, bool testMode, uint32_t p
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_LF_T55XX_WRITEBL, (uint8_t *)&ng, sizeof(ng));
-    if (!WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, 2000)) {
+    if (WaitForResponseTimeout(CMD_LF_T55XX_WRITEBL, &resp, 2000) == false) {
         PrintAndLogEx(ERR, "Error occurred, device did not ACK write operation.");
         return PM3_ETIMEOUT;
     }
@@ -1992,7 +1992,7 @@ static int CmdT55xxDangerousRaw(const char *Cmd) {
     PacketResponseNG resp;
     clearCommandBuffer();
     SendCommandNG(CMD_LF_T55XX_DANGERRAW, (uint8_t *)&ng, sizeof(ng));
-    if (!WaitForResponseTimeout(CMD_LF_T55XX_DANGERRAW, &resp, 2000)) {
+    if (WaitForResponseTimeout(CMD_LF_T55XX_DANGERRAW, &resp, 2000) == false) {
         PrintAndLogEx(ERR, "Error occurred, device did not ACK write operation.");
         return PM3_ETIMEOUT;
     }
@@ -2840,7 +2840,7 @@ bool AcquireData(uint8_t page, uint8_t block, bool pwdmode, uint32_t password, u
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_T55XX_READBL, (uint8_t *)&payload, sizeof(payload));
-    if (!WaitForResponseTimeout(CMD_LF_T55XX_READBL, NULL, 2500)) {
+    if (WaitForResponseTimeout(CMD_LF_T55XX_READBL, NULL, 2500) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return false;
     }
@@ -3435,7 +3435,7 @@ static int CmdT55xxChkPwds(const char *Cmd) {
         PacketResponseNG resp;
 
         uint8_t timeout = 0;
-        while (!WaitForResponseTimeout(CMD_LF_T55XX_CHK_PWDS, &resp, 2000)) {
+        while (WaitForResponseTimeout(CMD_LF_T55XX_CHK_PWDS, &resp, 2000) == false) {
             timeout++;
             PrintAndLogEx(NORMAL, "." NOLF);
             if (timeout > 180) {

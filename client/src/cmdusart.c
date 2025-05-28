@@ -35,7 +35,7 @@ static int usart_tx(uint8_t *data, size_t len) {
     clearCommandBuffer();
     SendCommandNG(CMD_USART_TX, data, len);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_USART_TX, &resp, 1000)) {
+    if (WaitForResponseTimeout(CMD_USART_TX, &resp, 1000) == false) {
         return PM3_ETIMEOUT;
     }
     return resp.status;
@@ -49,7 +49,7 @@ static int usart_rx(uint8_t *data, size_t *len, uint32_t waittime) {
     payload.waittime = waittime;
     SendCommandNG(CMD_USART_RX, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_USART_RX, &resp, waittime + 500)) {
+    if (WaitForResponseTimeout(CMD_USART_RX, &resp, waittime + 500) == false) {
         return PM3_ETIMEOUT;
     }
     if (resp.status == PM3_SUCCESS) {
@@ -99,7 +99,7 @@ static int set_usart_config(uint32_t baudrate, uint8_t parity) {
     payload.parity = parity;
     SendCommandNG(CMD_USART_CONFIG, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_USART_CONFIG, &resp, 1000)) {
+    if (WaitForResponseTimeout(CMD_USART_CONFIG, &resp, 1000) == false) {
         return PM3_ETIMEOUT;
     }
     return resp.status;
