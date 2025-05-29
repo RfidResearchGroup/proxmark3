@@ -3132,6 +3132,12 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    if (memcmp(r->header.hdr.csn + 4, "\xFE\xFF\x12\xE0", 4) == 0) {
+        PrintAndLogEx(SUCCESS, "CSN................... %s ( new silicon )", sprint_hex_inrow(r->header.hdr.csn, PICOPASS_BLOCK_SIZE));
+    } else {
+        PrintAndLogEx(SUCCESS, "CSN................... %s ( old silicon )", sprint_hex_inrow(r->header.hdr.csn, PICOPASS_BLOCK_SIZE));
+    }
+
     picopass_hdr_t *hdr = &r->header.hdr;
     uint8_t pagemap = get_pagemap(hdr);
     if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
