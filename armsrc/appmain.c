@@ -2230,6 +2230,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             iclass_credit_epurse((iclass_credit_epurse_t *)packet->data.asBytes);
             break;
         }
+        case CMD_HF_ICLASS_TEARBL: {
+            iClass_TearBlock((iclass_tearblock_req_t *)packet->data.asBytes);
+            break;
+        }
 #endif
 
 #ifdef WITH_HFSNIFF

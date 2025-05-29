@@ -2135,6 +2135,9 @@ static int iso14443b_select_picopass_card(picopass_hdr_t *hdr) {
     static uint8_t act_all[] = { ICLASS_CMD_ACTALL };
     static uint8_t identify[] = { ICLASS_CMD_READ_OR_IDENTIFY };
     static uint8_t read_conf[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x01, 0xfa, 0x22 };
+
+    // ICLASS_CMD_SELECT  0x81 tells  ISO14443b/BPSK coding/106 kbits/s
+    // ICLASS_CMD_SELECT  0x41 tells  ISO14443b/BPSK coding/423 kbits/s
     uint8_t select[] = { 0x80 | ICLASS_CMD_SELECT, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     uint8_t read_aia[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x05, 0xde, 0x64};
     uint8_t read_check_cc[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 };

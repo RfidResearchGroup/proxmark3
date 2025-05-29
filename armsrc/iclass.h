@@ -72,4 +72,5 @@ uint8_t get_pagemap(const picopass_hdr_t *hdr);
 void iclass_send_as_reader(uint8_t *frame, int len, uint32_t *start_time, uint32_t *end_time, bool shallow_mod);
 
 void iClass_Recover(iclass_recover_req_t *msg);
+void iClass_TearBlock(iclass_tearblock_req_t *msg);
 #endif
