@@ -299,7 +299,7 @@ static const char *getUlev1CardSizeStr(uint8_t fsize) {
 
     // is  LSB set?
     if (fsize & 1)
-        snprintf(buf, sizeof(buf), "%02X, (%u <-> %u bytes)", fsize, usize, lsize);
+        snprintf(buf, sizeof(buf), "%02X, (%u - %u bytes)", fsize, usize, lsize);
     else
         snprintf(buf, sizeof(buf), "%02X, (%u bytes)", fsize, lsize);
     return buf;
@@ -3925,17 +3925,17 @@ static int CmdHF14AMfUAESAuth(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfu aesauth",
                   "Tests AES key on Mifare Ultralight AES tags.\n"
-                  "If key is not specified, null key will be tried.\n"
+                  "If no key is specified, null key will be tried.\n"
                   "Key index 0: DataProtKey (default)\n"
                   "Key index 1: UIDRetrKey\n"
                   "Key index 2: OriginalityKey\n",
                   "hf mfu aesauth\n"
-                  "hf mfu aesauth --key <32 hex chars> --index <0..2>"
+                  "hf mfu aesauth --key <16 hex bytes> --index <0..2>"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0(NULL, "key", "<hex>",   "Authentication key (16 bytes in hex)"),
+        arg_str0(NULL, "key", "<hex>",   "AES key (16 hex bytes)"),
         arg_int0("i", "index", "<0..2>", "Key index, default: 0"),
         arg_lit0("k", NULL, "Keep field on (only if a key is provided)"),
         arg_param_end

@@ -1827,14 +1827,17 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
     const char *product_type_str = "";
     const char *major_product_version_str = "";
     const char *storage_size_str = "";
+
     if (version_hw_available) {
+
         switch (version_hw->product_type & 0x0F) {
-            case 0x1:
+            case 0x1: {
                 product_type_str = "MIFARE DESFire";
                 // special cases, override product_type_str when needed
                 if (version_hw->product_type == 0x91) {
                     product_type_str = "Apple Wallet DESFire Applet";
                 }
+
                 // general rule
                 switch (version_hw->major_product_version & 0x0F) {
                     case 0x01:
@@ -1847,6 +1850,7 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                         major_product_version_str = "EV3";
                         break;
                 }
+
                 // special cases, override major_product_version_str when needed
                 switch (version_hw->major_product_version) {
                     case 0x00:
@@ -1860,7 +1864,8 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                         break;
                 }
                 break;
-            case 0x2:
+            }
+            case 0x2: {
                 product_type_str = "MIFARE Plus";
                 switch (version_hw->major_product_version) {
                     case 0x11:
@@ -1870,15 +1875,23 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                         major_product_version_str = "EV2";
                         break;
                     default:
-                        major_product_version_str = "Unknown";
+                        major_product_version_str = "n/a";
                 }
                 break;
-            case 0x3:
+            }
+            case 0x3: {
                 product_type_str = "MIFARE Ultralight";
                 switch (version_hw->major_product_version) {
-                    case 0x01:
+                    case 0x01: {
                         major_product_version_str = "EV1";
+
+                        if (version_hw->storage_size == 0x0B) {
+                            storage_size_str = "48b";
+                        } else if (version_hw->storage_size == 0x0E) {
+                            storage_size_str = "128b";
+                        }
                         break;
+                    }
                     case 0x02:
                         major_product_version_str = "Nano";
                         break;
@@ -1886,10 +1899,11 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                         major_product_version_str = "AES";
                         break;
                     default:
-                        major_product_version_str = "Unknown";
+                        major_product_version_str = "n/a";
                 }
                 break;
-            case 0x4:
+            }
+            case 0x4: {
                 product_type_str = "NTAG";
                 switch (version_hw->major_product_version) {
                     case 0x01:
@@ -1909,37 +1923,66 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                         major_product_version_str = "4xx";
                         break;
                     default:
-                        major_product_version_str = "Unknown";
+                        major_product_version_str = "n/a";
                 }
                 break;
-            case 0x7:
+            }
+            case 0x7: {
                 product_type_str = "NTAG I2C";
                 break;
-            case 0x8:
+            }
+            case 0x8: {
                 product_type_str = "MIFARE DESFire Light";
                 break;
-            case 0x9:
+            }
+            case 0x9: {
                 product_type_str = "MIFARE Hospitality";
                 switch (version_hw->major_product_version) {
                     case 0x01:
                         major_product_version_str = "AES";
                         break;
                     default:
-                        major_product_version_str = "Unknown";
+                        major_product_version_str = "n/a";
                 }
                 break;
-            default:
+            }
+            default: {
                 product_type_str = "Unknown NXP tag";
+                break;
+            }
         }
-        uint32_t size = 1 << (version_hw->storage_size >> 1);
-        static char size_str[16];
-        if (size < 1024) {
-            snprintf(size_str, sizeof(size_str), "%s%uB", (version_hw->storage_size & 0x01) == 0 ? "" : "~", size);
-        } else {
-            snprintf(size_str, sizeof(size_str), "%s%uK", (version_hw->storage_size & 0x01) == 0 ? "" : "~", size / 1024);
+
+        if (storage_size_str == NULL) {
+            static char size_str[16];
+            uint16_t usize = 1 << ((version_hw->storage_size >> 1) + 1);
+            uint16_t lsize = 1 << (version_hw->storage_size >> 1);
+
+            // is LSB set?
+            if ((version_hw->storage_size & 0x01) == 1) {
+
+                // if set, its a range between upper size and lower size
+
+                if (lsize < 1024) {
+                    snprintf(size_str, sizeof(size_str), "%u - %uB", usize, lsize);
+                } else {
+                    snprintf(size_str, sizeof(size_str), "%u - %uK", (usize / 1024), (lsize / 1024));
+                }
+
+            } else {
+
+                // if not set, it's lower size
+                if (lsize < 1024) {
+                    snprintf(size_str, sizeof(size_str), "%uB", lsize);
+                } else {
+                    snprintf(size_str, sizeof(size_str), "%uK", lsize / 1024);
+                }
+            }
+
+            storage_size_str = size_str;
+
         }
-        storage_size_str = size_str;
     }
+
     char tag_info[128];
 
     if ((sak & 0x44) == 0x40) {
@@ -1951,25 +1994,36 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
         }
         type |= MTISO18092;
     }
+
     if ((sak & 0x02) == 0x00) { // SAK b2=0
+
         if ((sak & 0x08) == 0x08) { // SAK b2=0 b4=1
+
             if ((sak & 0x10) == 0x10) { // SAK b2=0 b4=1 b5=1
+
                 if ((sak & 0x01) == 0x01) { // SAK b2=0 b4=1 b5=1 b1=1, SAK=0x19
                     printTag("MIFARE Classic 2K");
                     type |= MTCLASSIC;
                 } else { // SAK b2=0 b4=1 b5=1 b1=0
+
                     if ((sak & 0x20) == 0x20) { // SAK b2=0 b4=1 b5=1 b1=0 b6=1, SAK=0x38
                         printTag("SmartMX with MIFARE Classic 4K");
                         type |= MTCLASSIC;
                     } else { // SAK b2=0 b4=1 b5=1 b1=0 b6=0
+
                         if (select_status == 4) { // SAK b2=0 b4=1 b5=1 b1=0 b6=0 ATS
+
                             if (version_hw_available) { // SAK b2=0 b4=1 b5=1 b1=0 b6=0 ATS GetVersion
                                 snprintf(tag_info, sizeof(tag_info), "%s %s %s in SL1", product_type_str, major_product_version_str, storage_size_str);
                                 printTag(tag_info);
                                 type |= MTPLUS;
+
                             } else { // SAK b2=0 b4=1 b5=1 b1=0 b6=0 ATS No_GetVersion
+
                                 if (ats_hist_len > 0) {
+
                                     if ((ats_hist_len == 9) && (memcmp(ats_hist, "\xC1\x05\x2F\x2F", 4) == 0)) {
+
                                         if (memcmp(ats_hist + 4, "\x00\x35\xC7", 3) == 0) {
                                             printTag("MIFARE Plus S 4K in SL1");
                                         } else if (memcmp(ats_hist + 4, "\x01\xBC\xD6", 3) == 0) {
@@ -1988,7 +2042,9 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                                     }
                                 }
                             }
+
                         } else { // SAK b2=0 b4=1 b5=1 b1=0 b6=0 no_ATS, SAK=0x18
+
                             if ((atqa & 0x0040) == 0x0040) {
                                 printTag("MIFARE Classic 4K CL2");
                             } else {
@@ -2000,28 +2056,38 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                 }
 
             } else { // SAK b2=0 b4=1 b5=0
+
                 if ((sak & 0x01) == 0x01) { // SAK b2=0 b4=1 b5=0 b1=1, SAK=0x09
+
                     if ((atqa & 0x0040) == 0x0040) {
                         printTag("MIFARE Mini 0.3K CL2");
                     } else {
                         printTag("MIFARE Mini 0.3K");
                     }
                     type |= MTMINI;
+
                 } else { // SAK b2=0 b4=1 b5=0 b1=0
+
                     if ((sak & 0x20) == 0x20) { // SAK b2=0 b4=1 b5=0 b1=0 b6=1, SAK=0x28
                         printTag("SmartMX with MIFARE Classic 1K");
                         printTag("FM1208-10 with MIFARE Classic 1K");
                         printTag("FM1216-137 with MIFARE Classic 1K");
                         type |= MTCLASSIC;
                     } else { // SAK b2=0 b4=1 b5=0 b1=0 b6=0
+
                         if (select_status == 4) { // SAK b2=0 b4=1 b5=0 b1=0 b6=0 ATS
+
                             if (version_hw_available) { // SAK b2=0 b4=1 b5=0 b1=0 b6=0 ATS GetVersion
                                 snprintf(tag_info, sizeof(tag_info), "%s %s %s in SL1", product_type_str, major_product_version_str, storage_size_str);
                                 printTag(tag_info);
                                 type |= MTPLUS;
+
                             } else { // SAK b2=0 b4=1 b5=0 b1=0 b6=0 ATS No_GetVersion
+
                                 if (ats_hist_len > 0) {
+
                                     if ((ats_hist_len == 9) && (memcmp(ats_hist, "\xC1\x05\x2F\x2F", 4) == 0)) {
+
                                         if (memcmp(ats_hist + 4, "\x00\x35\xC7", 3) == 0) {
                                             printTag("MIFARE Plus S 2K in SL1");
                                         } else if (memcmp(ats_hist + 4, "\x01\xBC\xD6", 3) == 0) {
@@ -2030,7 +2096,9 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                                             printTag("Unrecognized MIFARE Plus??");
                                         }
                                         type |= MTPLUS;
+
                                     } else if ((ats_hist_len == 9) && (memcmp(ats_hist, "\xC1\x05\x21\x30", 4) == 0)) {
+
                                         if (memcmp(ats_hist + 4, "\x00\xF6\xD1", 3) == 0) {
                                             printTag("MIFARE Plus SE 1K 17pF");
                                         } else if (memcmp(ats_hist + 4, "\x10\xF6\xD1", 3) == 0) {
@@ -2039,7 +2107,9 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                                             printTag("Unrecognized MIFARE Plus SE??");
                                         }
                                         type |= MTPLUS;
+
                                     } else {
+
                                         if ((atqa & 0x0040) == 0x0040) {
                                             printTag("MIFARE Classic 1K CL2 with ATS!");
                                         } else {
@@ -2060,8 +2130,11 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                     }
                 }
             }
+
         } else { // SAK b2=0 b4=0
+
             if ((sak & 0x10) == 0x10) { // SAK b2=0 b4=0 b5=1
+
                 if ((sak & 0x01) == 0x01) { // SAK b2=0 b4=0 b5=1 b1=1, SAK=0x11
                     printTag("MIFARE Plus 4K in SL2");
                     type |= MTPLUS;
@@ -2069,33 +2142,48 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                     printTag("MIFARE Plus 2K in SL2");
                     type |= MTPLUS;
                 }
+
             } else { // SAK b2=0 b4=0 b5=0
+
                 if ((sak & 0x01) == 0x01) { // SAK b2=0 b4=0 b5=0 b1=1
                     printTag("TNP3xxx (TagNPlay, Activision Game Appliance)");
                     type |= MTCLASSIC;
+
                 } else { // SAK b2=0 b4=0 b5=0 b1=0
+
                     if ((sak & 0x20) == 0x20) { // SAK b2=0 b4=0 b5=0 b1=0 b6=1, SAK=0x20
+
                         if (select_status == 1) { // SAK b2=0 b4=0 b5=0 b1=0 b6=1 ATS
+
                             if (version_hw_available) { // SAK b2=0 b4=0 b5=0 b1=0 b6=1 ATS GetVersion
+
                                 if ((version_hw->product_type & 0x7F) == 0x02) {
                                     snprintf(tag_info, sizeof(tag_info), "%s %s %s in SL0/SL3", product_type_str, major_product_version_str, storage_size_str);
                                     type |= MTPLUS;
+
                                 } else if (((version_hw->product_type & 0x7F) == 0x01) ||
                                            (version_hw->product_type == 0x08) ||
                                            (version_hw->product_type == 0x91)) {
                                     snprintf(tag_info, sizeof(tag_info), "%s %s %s", product_type_str, major_product_version_str, storage_size_str);
                                     type |= MTDESFIRE;
+
                                 } else if (version_hw->product_type == 0x04) {
                                     snprintf(tag_info, sizeof(tag_info), "%s %s %s", product_type_str, major_product_version_str, storage_size_str);
                                     type |= (MTDESFIRE | MT424);
+
                                 } else {
                                     snprintf(tag_info, sizeof(tag_info), "%s %s %s", product_type_str, major_product_version_str, storage_size_str);
                                 }
                                 printTag(tag_info);
+
                             } else { // SAK b2=0 b4=0 b5=0 b1=0 b6=1 ATS No GetVersion
+
                                 if (ats_hist_len > 0) {
+
                                     if ((ats_hist_len == 9) && (memcmp(ats_hist, "\xC1\x05\x2F\x2F", 4) == 0)) {
+
                                         if (memcmp(ats_hist + 4, "\x00\x35\xC7", 3) == 0) {
+
                                             if ((atqa & 0xFF0F) == 0x0004) {
                                                 printTag("MIFARE Plus S 2K in SL0/SL3");
                                             } else if ((atqa & 0xFF0F) == 0x0002) {
@@ -2103,21 +2191,28 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                                             } else {
                                                 printTag("Unrecognized MIFARE Plus??");
                                             }
+
                                         } else if (memcmp(ats_hist + 4, "\x01\xBC\xD6", 3) == 0) {
                                             printTag("MIFARE Plus X 2K/4K in SL0/SL3");
+
                                         } else if (memcmp(ats_hist + 4, "\x00\xF6\xD1", 3) == 0) {
                                             printTag("MIFARE Plus SE 1K 17pF");
+
                                         } else if (memcmp(ats_hist + 4, "\x10\xF6\xD1", 3) == 0) {
                                             printTag("MIFARE Plus SE 1K 70pF");
+
                                         } else {
-                                            printTag("Unrecognized MIFARE Plus??");
+                                            printTag("Unknown MIFARE Plus");
                                         }
                                         type |= MTPLUS;
+
                                     } else {
+
                                         if ((atqa == 0x0001) || (atqa == 0x0004)) {
                                             printTag("HID SEOS (smartmx / javacard)");
                                             type |= HID_SEOS;
                                         }
+
                                         if (atqa == 0x0004) {
                                             printTag("EMV");
                                             type |= MTEMV;
@@ -2128,11 +2223,15 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                         } else {
                             printTag("Unknown tag claims to support RATS in SAK but does not...");
                         }
+
                     } else {  // SAK b2=0 b4=0 b5=0 b1=0 b6=0, SAK=0x00
+
                         if (version_hw_available) { // SAK b2=0 b4=0 b5=0 b1=0 b6=0 GetVersion
                             snprintf(tag_info, sizeof(tag_info), "%s %s %s", product_type_str, major_product_version_str, storage_size_str);
                             printTag(tag_info);
+
                         } else { // SAK b2=0 b4=0 b5=0 b1=0 b6=0 No_GetVersion
+
                             int status = mfuc_test_authentication_support();
                             if (status == PM3_SUCCESS) {
                                 // TODO: read page 2/3, then ??
@@ -2141,6 +2240,7 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                             } else {
                                 printTag("MIFARE Ultralight");
                             }
+
                         }
                         type |= MTULTRALIGHT;
                     }
@@ -2148,20 +2248,25 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
             }
         }
     } else { // SAK b2=1
+
         if (sak == 0x0A) {
+
             if (atqa == 0x0003) {
                 // Uses Shanghai algo
                 printTag("FM11RF005SH (FUDAN Shanghai Metro)");
                 type |= MTFUDAN;
+
             } else if (atqa == 0x0005) {
                 printTag("FM11RF005M (FUDAN ISO14443A w Crypto-1 algo)");
                 type |= MTFUDAN;
             }
+
         } else if (sak == 0x53) {
             printTag("FM11RF08SH (FUDAN)");
             type |= MTFUDAN;
         }
     }
+
     if (type == MTNONE) {
         PrintAndLogEx(WARNING, "   failed to fingerprint");
     }
@@ -2803,8 +2908,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
                 }
                 DropField();
-                if (verbose == false && found)
+                if (verbose == false && found) {
                     PrintAndLogEx(INFO, "----------------------------------------------------");
+                }
             }
         }
 
@@ -2814,7 +2920,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             PrintAndLogEx(INFO, "proprietary iso18092 card found");
         } else {
 
-            PrintAndLogEx(INFO, "proprietary non iso14443-4 card found, RATS not supported");
+            PrintAndLogEx(INFO, "");
+            PrintAndLogEx(INFO, "Proprietary non iso14443-4 card found");
+            PrintAndLogEx(INFO, "RATS not supported");
             if ((card.sak & 0x20) == 0x20) {
                 PrintAndLogEx(INFO, "--> SAK incorrectly claims that card supports RATS <--");
             }
@@ -2829,7 +2937,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         return PM3_EFAILED;
     }
 
-    PrintAndLogEx(INFO, "");
+//    PrintAndLogEx(INFO, "");
 
     uint16_t isMagic = 0;
 

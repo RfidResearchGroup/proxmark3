@@ -10167,7 +10167,8 @@ static int CmdHF14AMfInfo(const char *Cmd) {
                    && card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x45", 4) == 0) {
             PrintAndLogEx(SUCCESS, "NXP MF1ICS5004");
         } else if (fKeyType == MF_KEY_BD) {
-            PrintAndLogEx(SUCCESS, _RED_("Unknown card with backdoor, please report details!"));
+            PrintAndLogEx(SUCCESS, _RED_("Unknown card with backdoor"));
+            PrintAndLogEx(INFO, "Please report details!");
         } else
             // other cards
             if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\x46", 4) == 0) {
@@ -10181,7 +10182,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             } else if (card.sak == 0x08 && memcmp(blockdata + 5, "\x88\x04\x00\xc0", 4) == 0) {
                 PrintAndLogEx(SUCCESS, "NXP MF1ICS5035");
             } else {
-                PrintAndLogEx(SUCCESS, "unknown");
+                PrintAndLogEx(SUCCESS, "n/a");
             }
 
         if (keycnt > 1 && e_sector != NULL && e_sector[1].foundKey[MF_KEY_A] && (e_sector[1].Key[MF_KEY_A] == 0x2A2C13CC242A)) {
