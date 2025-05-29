@@ -2292,8 +2292,6 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
         //Step2 Privilege Escalation: attempt to read AA2 with credentials for AA1
         uint8_t blockno = 24;
-        uint8_t cmd_read[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockno, 0x00, 0x00};
-        AddCrc(cmd_read + 1, 1);
         int priv_esc_tries = 0;
         bool priv_esc = false;
         while (!priv_esc) {
