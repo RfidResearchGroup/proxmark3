@@ -44,14 +44,17 @@
 #include "hidsio.h"
 
 
+#define ICLASS_DEBIT_KEYTYPE   ( 0x88 )
+#define ICLASS_CREDIT_KEYTYPE  ( 0x18 )
+
 #define NUM_CSNS               9
 #define MAC_ITEM_SIZE          24 // csn(8) + epurse(8) + nr(4) + mac(4) = 24 bytes
 #define ICLASS_KEYS_MAX        8
 #define ICLASS_AUTH_RETRY      10
 #define ICLASS_CFG_BLK_SR_BIT  0xA0 // indicates SIO present when set in block6[0] (legacy tags)
-#define ICLASS_DECRYPTION_BIN  "iclass_decryptionkey.bin"
-#define ICLASS_DEFAULT_KEY_DIC        "iclass_default_keys.dic"
-#define ICLASS_DEFAULT_KEY_ELITE_DIC  "iclass_elite_keys.dic"
+#define ICLASS_DECRYPTION_BIN           "iclass_decryptionkey.bin"
+#define ICLASS_DEFAULT_KEY_DIC          "iclass_default_keys.dic"
+#define ICLASS_DEFAULT_KEY_ELITE_DIC    "iclass_elite_keys.dic"
 
 static void print_picopass_info(const picopass_hdr_t *hdr);
 void print_picopass_header(const picopass_hdr_t *hdr);
@@ -2803,10 +2806,10 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
 
     int blockno = arg_get_int_def(ctx, 3, 0);
 
-    uint8_t keyType = 0x88; //debit key
+    uint8_t keyType = ICLASS_DEBIT_KEYTYPE;
     if (arg_get_lit(ctx, 4)) {
         PrintAndLogEx(SUCCESS, "Using " _YELLOW_("credit") " key");
-        keyType = 0x18; //credit key
+        keyType = ICLASS_CREDIT_KEYTYPE;
     }
 
     bool elite = arg_get_lit(ctx, 5);
@@ -3080,11 +3083,10 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     int loop_count = 0;
     int isok = 0;
     bool read_ok = false;
-    uint8_t keyType = 0x88; // debit key
-
+    uint8_t keyType = ICLASS_DEBIT_KEYTYPE;
     if (use_credit_key) {
         PrintAndLogEx(SUCCESS, "Using " _YELLOW_("credit") " key");
-        keyType = 0x18; // credit key
+        keyType = ICLASS_CREDIT_KEYTYPE;
     }
 
     if (auth == false) {
@@ -3142,9 +3144,9 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         goto out;
     }
 
-    bool read_auth = auth;
 
     // perform initial read here, repeat if failed or 00s
+    bool read_auth = auth;
     uint8_t data_read_orig[8] = {0};
     uint8_t ff_data[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
     bool first_read = false;
@@ -3346,9 +3348,17 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
 
                 // if more OTP bits set..
                 if (data_read[1] > data_read_orig[1] ||
-                        data_read[2] > data_read_orig[2]) {
+                    data_read[2] > data_read_orig[2]) {
                     PrintAndLogEx(SUCCESS, "More OTP bits got set!!!");
+
+                    data_read[7] = 0xBC;
+                    res = iclass_write_block(blockno, data_read, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
+                    if (res != PM3_SUCCESS) {
+                        PrintAndLogEx(INFO, "Stabilize the bits ( "_RED_("failed") " )" );
+                    }
+
                     isok = PM3_SUCCESS;
+                    goto_out = true;
                 }
             }
 
@@ -5991,25 +6001,38 @@ int info_iclass(bool shallow_mod) {
     if (legacy) {
 
         int res = PM3_ESOFT;
-        uint8_t key_type = 0x88; // debit key
-
         uint8_t dump[PICOPASS_BLOCK_SIZE * 8] = {0};
         // we take all raw bytes from response
         memcpy(dump, p_response, sizeof(picopass_hdr_t));
 
+        bool found_aa1 = false;
+        bool found_aa2 = false;
         uint8_t key[8] = {0};
         for (uint8_t i = 0; i < ARRAYLEN(iClass_Key_Table); i++) {
 
             memcpy(key, iClass_Key_Table[i], sizeof(key));
-            res = iclass_read_block_ex(key, 6, key_type, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 6), false);
+
+            if (found_aa1 == false) {
+                res = iclass_read_block_ex(key, 6, ICLASS_DEBIT_KEYTYPE, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 6), false);
+                if (res == PM3_SUCCESS) {
+                    PrintAndLogEx(SUCCESS, "    AA1 Key...... " _GREEN_("%s"), sprint_hex_inrow(key, sizeof(key)));
+                    found_aa1 = true;
+                }
+            }
+
+            res = iclass_read_block_ex(key, 6, ICLASS_CREDIT_KEYTYPE, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 7), false);
             if (res == PM3_SUCCESS) {
-                PrintAndLogEx(SUCCESS, "    AA1 Key...... " _GREEN_("%s"), sprint_hex_inrow(key, sizeof(key)));
+                PrintAndLogEx(SUCCESS, "    AA2 Key...... " _GREEN_("%s"), sprint_hex_inrow(key, sizeof(key)));
+                found_aa2 = true;
+            }
+
+            if (found_aa1 && found_aa2) {
                 break;
             }
         }
 
-        if (res == PM3_SUCCESS) {
-            res = iclass_read_block_ex(key, 7, key_type, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 7), false);
+        if (found_aa1) {
+            res = iclass_read_block_ex(key, 7, ICLASS_DEBIT_KEYTYPE, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 7), false);
             if (res == PM3_SUCCESS) {
 
                 BLOCK79ENCRYPTION aa1_encryption = (dump[(6 * PICOPASS_BLOCK_SIZE) + 7] & 0x03);
