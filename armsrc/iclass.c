@@ -2461,7 +2461,7 @@ void iClass_TearBlock(iclass_tearblock_req_t *msg) {
             read_ok = true;
             tear_success = true;
             DbpString("");
-            DbpString("tear success!");
+            DbpString("tear success (expected values)!");
         }
 
         loop_count++;
