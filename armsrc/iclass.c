@@ -2246,7 +2246,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
         while (!card_select || !card_auth) {
             Iso15693InitReader(); //has to be at the top as it starts tracing
-            if (!msg->debug) {
+            if (msg->debug == false) { 
                 set_tracing(false); //disable tracing to prevent crashes - set to true for debugging
             } else {
                 if (loops == 1) {
@@ -2280,7 +2280,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                     card_auth = true;
                 }
             }
-            if (!card_auth || !card_select) {
+            if (card_auth == false || card_select == false) {
                 reinit_tentatives++;
                 switch_off();
             }
@@ -2294,7 +2294,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         uint8_t blockno = 24;
         int priv_esc_tries = 0;
         bool priv_esc = false;
-        while (!priv_esc) {
+        while (priv_esc == false) {
             //The privilege escalation is done with a readcheck and not just a normal read!
             iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
             // expect a 8-byte response here
@@ -2341,7 +2341,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             memcpy(msg->req.key, original_mac, 8);
             res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
             if (msg->test) {
-                if (res != true) {
+                if (res == false) {
                     DbpString(_RED_("*** CARD EPURSE IS SILENT! RISK OF BRICKING! DO NOT EXECUTE KEY UPDATES! SCAN IT ON READER FOR EPURSE UPDATE, COLLECT NEW TRACES AND TRY AGAIN! ***"));
                     goto out;
                 } else {
@@ -2350,7 +2350,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                     goto out;
                 }
             } else {
-                if (res != true) {
+                if (res == false) {
                     DbpString("Write Operation : "_GREEN_("VERIFIED! Card Key Updated!"));
                     written = true;
                 } else {
@@ -2360,7 +2360,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             }
         }
 
-        if (!write_error) {
+        if (write_error == false) {
             //Step6 Perform 8 authentication attempts + 1 to verify if we found the weak key
             for (int i = 0; i < 8 ; ++i) {
                 iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
@@ -2380,7 +2380,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             //regardless of bits being found, restore the original key and verify it
             bool reverted = false;
             uint8_t revert_retries = 0;
-            while (!reverted) {
+            while (reverted == false) {
                 //Regain privilege escalation with a readcheck
                 iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
                 // TODO: check result
@@ -2424,7 +2424,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             completed = true;
             goto out;
         }
-        if (!write_error) { //if there was a write error, re-run the loop for the same key index
+        if (write_error == false) { //if there was a write error, re-run the loop for the same key index
             loops++;
             index++;
         }
