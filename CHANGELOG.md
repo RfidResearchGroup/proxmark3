@@ -3,8 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf iclass tear` - readability improvements for erase phase (@antiklesys)
 - Changed `hf iclass legrec` - code optimizations gaining a ~8% speed increase (@antiklesys)
-- Modified `hf iclass tear` - now has a device side implementation also. @antiklesys (@iceman1001)
+- Modified `hf iclass tear` - now has a device side implementation also. (@antiklesys) (@iceman1001)
 - Changed `hf iclass info` - now uses CSN values based checks (@antiklesys)
 - Changed `hf iclass dump` - now uses default AA1 key when called without a key or key index (@iceman1001)
 - Renamed `hf iclass trbl` to `hf iclass tear` (@iceman1001)
