@@ -2368,44 +2368,10 @@ void iClass_TearBlock(iclass_tearblock_req_t *msg) {
 
             if (req.blockno == 1) {
 
-                if (data_read[0] != data_read_orig[0]) {
-                    DbpString("");
-                    Dbprintf("Application limit changed, from "_YELLOW_("%u")" to "_YELLOW_("%u"), data_read_orig[0], data_read[0]);
-                    isok = PM3_SUCCESS;
-                    goto_out = true;
-                }
-
-                if (data_read[7] != data_read_orig[7]) {
-                    DbpString("");
-                    Dbprintf("Fuse changed, from "_YELLOW_("%02x")" to "_YELLOW_("%02x"), data_read_orig[7], data_read[7]);
-
-                    const char *flag_names[8] = {
-                        "RA",
-                        "Fprod0",
-                        "Fprod1",
-                        "Crypt0 (*1)",
-                        "Crypt1 (*0)",
-                        "Coding0",
-                        "Coding1",
-                        "Fpers  (*1)"
-                    };
-                    Dbprintf(_YELLOW_("%-10s %-10s %-10s"), "Fuse", "Original", "Changed");
-                    Dbprintf("---------------------------------------");
-                    for (int i = 7; i >= 0; --i) {
-                        int bit1 = (data_read_orig[7] >> i) & 1;
-                        int bit2 = (data_read[7] >> i) & 1;
-                        Dbprintf("%-11s %-10d %-10d", flag_names[i], bit1, bit2);
-                    }
-
-                    isok = PM3_SUCCESS;
-                    goto_out = true;
-                }
-
                 // if more OTP bits set..
                 if (data_read[1] > data_read_orig[1] ||
                         data_read[2] > data_read_orig[2]) {
-                    DbpString("");
-                    DbpString("More OTP bits got set!!!");
+
 
                     // step 4 if bits changed attempt to write the new bits to the tag
                     if (data_read[7] == 0xBC) {
@@ -2455,6 +2421,9 @@ void iClass_TearBlock(iclass_tearblock_req_t *msg) {
 
                     switch_off();
 
+                    DbpString("");
+                    DbpString("More OTP bits got set!!!");
+
                     Iso15693InitReader();
 
                     // select tag,   during which we read block1
@@ -2466,6 +2435,39 @@ void iClass_TearBlock(iclass_tearblock_req_t *msg) {
                         } else {
                             Dbprintf("Stabilize the bits ( "_RED_("failed") " )");
                         }
+                    }
+
+                    isok = PM3_SUCCESS;
+                    goto_out = true;
+                }
+
+                if (data_read[0] != data_read_orig[0]) {
+                    DbpString("");
+                    Dbprintf("Application limit changed, from "_YELLOW_("%u")" to "_YELLOW_("%u"), data_read_orig[0], data_read[0]);
+                    isok = PM3_SUCCESS;
+                    goto_out = true;
+                }
+
+                if (data_read[7] != data_read_orig[7]) {
+                    DbpString("");
+                    Dbprintf("Fuse changed, from "_YELLOW_("%02x")" to "_YELLOW_("%02x"), data_read_orig[7], data_read[7]);
+
+                    const char *flag_names[8] = {
+                        "RA",
+                        "Fprod0",
+                        "Fprod1",
+                        "Crypt0 (*1)",
+                        "Crypt1 (*0)",
+                        "Coding0",
+                        "Coding1",
+                        "Fpers  (*1)"
+                    };
+                    Dbprintf(_YELLOW_("%-10s %-10s %-10s"), "Fuse", "Original", "Changed");
+                    Dbprintf("---------------------------------------");
+                    for (int i = 7; i >= 0; --i) {
+                        int bit1 = (data_read_orig[7] >> i) & 1;
+                        int bit2 = (data_read[7] >> i) & 1;
+                        Dbprintf("%-11s %-10d %-10d", flag_names[i], bit1, bit2);
                     }
 
                     isok = PM3_SUCCESS;
