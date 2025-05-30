@@ -3340,10 +3340,13 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
 
                 if (memcmp(data_read, ff_data, 8) == 0 &&
                         memcmp(data_read_orig, ff_data, 8) != 0) {
+
+                    if (erase_phase == false){
+                        PrintAndLogEx(NORMAL, "");
+                        PrintAndLogEx(SUCCESS, _CYAN_("Erase phase hit... ALL ONES"));
+                        iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
+                    }
                     erase_phase = true;
-                    PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(SUCCESS, _CYAN_("Erase phase hit... ALL ONES"));
-                    iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
                 } else {
 
                     if (erase_phase) {

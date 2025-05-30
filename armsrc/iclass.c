@@ -2311,11 +2311,13 @@ void iClass_TearBlock(iclass_tearblock_req_t *msg) {
             if (memcmp(data_read, ff_data, PICOPASS_BLOCK_SIZE) == 0 &&
                     memcmp(data_read_orig, ff_data, PICOPASS_BLOCK_SIZE) != 0) {
 
-                erase_phase = true;
-                DbpString("");
-                DbpString(_CYAN_("Erase phase hit... ALL ONES"));
+                if(erase_phase == false){
+                    DbpString("");
+                    DbpString(_CYAN_("Erase phase hit... ALL ONES"));
 
-                iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
+                    iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
+                }
+                erase_phase = true;
 
             } else {
 
