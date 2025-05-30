@@ -3340,10 +3340,13 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
 
                 if (memcmp(data_read, ff_data, 8) == 0 &&
                         memcmp(data_read_orig, ff_data, 8) != 0) {
+
+                    if (erase_phase == false){
+                        PrintAndLogEx(NORMAL, "");
+                        PrintAndLogEx(SUCCESS, _CYAN_("Erase phase hit... ALL ONES"));
+                        iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
+                    }
                     erase_phase = true;
-                    PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(SUCCESS, _CYAN_("Erase phase hit... ALL ONES"));
-                    iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
                 } else {
 
                     if (erase_phase) {
@@ -4578,7 +4581,7 @@ void generate_key_block_inverted(const uint8_t *startingKey, uint64_t index, uin
     }
 }
 
-static int CmdHFiClassLegRecLookUp(const char *Cmd) {
+static int CmdHFiClassLegBrute(const char *Cmd) {
 
     //Standalone Command Start
     CLIParserContext *ctx;
@@ -4805,7 +4808,7 @@ static int CmdHFiClassLegacyRecSim(void) {
             PrintAndLogEx(SUCCESS, "Original Key: " _GREEN_("%s"), sprint_hex(original_key, sizeof(original_key)));
             PrintAndLogEx(SUCCESS, "Weak Key: " _GREEN_("%s"), sprint_hex(key, sizeof(key)));
             PrintAndLogEx(SUCCESS, "Key Updates Required to Weak Key: " _GREEN_("%d"), index);
-            PrintAndLogEx(SUCCESS, "Estimated Time: ~" _GREEN_("%d")" hours", index / 6545);
+            PrintAndLogEx(SUCCESS, "Estimated Time: ~" _GREEN_("%d")" hours", index / 7250);
         }
 
         index++;
@@ -5896,7 +5899,7 @@ static command_t CommandTable[] = {
     {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "Use loclass to perform bruteforce reader attack"},
     {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "Uses authentication trace to check for key in dictionary file"},
     {"legrec",      CmdHFiClassLegacyRecover,   IfPm3Iclass,     "Recovers 24 bits of the diversified key of a legacy card provided a valid nr-mac combination"},
-    {"legbrute",    CmdHFiClassLegRecLookUp,    AlwaysAvailable, "Bruteforces 40 bits of a partial diversified key, provided 24 bits of the key and two valid nr-macs"},
+    {"legbrute",    CmdHFiClassLegBrute,        AlwaysAvailable, "Bruteforces 40 bits of a partial diversified key, provided 24 bits of the key and two valid nr-macs"},
     {"unhash",      CmdHFiClassUnhash,          AlwaysAvailable, "Reverses a diversified key to retrieve hash0 pre-images after DES encryption"},
     {"-----------", CmdHelp,                    IfPm3Iclass,     "-------------------- " _CYAN_("Simulation") " -------------------"},
     {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "Simulate iCLASS tag"},
