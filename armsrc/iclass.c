@@ -2708,6 +2708,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         bool priv_esc = false;
         while (!priv_esc) {
             //The privilege escalation is done with a readcheck and not just a normal read!
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
             iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
             // expect a 8-byte response here
             res2 = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
@@ -2747,27 +2748,29 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                 Dbhexdump(8, genkeyblock, false);
             }
             //Reset cypher state
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
             iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
-            res2 = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
+            //res2 = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
             //try to authenticate with the original mac to verify the write happened
             memcpy(msg->req.key, original_mac, 8);
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
             res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
             if (msg->test) {
-                if (res != true) {
-                    DbpString(_RED_("*** CARD EPURSE IS SILENT! RISK OF BRICKING! DO NOT EXECUTE KEY UPDATES! SCAN IT ON READER FOR EPURSE UPDATE, COLLECT NEW TRACES AND TRY AGAIN! ***"));
-                    goto out;
-                } else {
+                if (res) {
                     DbpString(_GREEN_("*** CARD EPURSE IS LOUD! OK TO ATTEMPT KEY RETRIEVAL! RUN AGAIN WITH -notest ***"));
                     completed = true;
                     goto out;
+                } else {
+                    DbpString(_RED_("*** CARD EPURSE IS SILENT! RISK OF BRICKING! DO NOT EXECUTE KEY UPDATES! SCAN IT ON READER FOR EPURSE UPDATE, COLLECT NEW TRACES AND TRY AGAIN! ***"));
+                    goto out;
                 }
             } else {
-                if (res != true) {
-                    DbpString("Write Operation : "_GREEN_("VERIFIED! Card Key Updated!"));
-                    written = true;
-                } else {
+                if (res) {
                     DbpString("Write Operation : "_RED_("FAILED! Card Key is the Original. Retrying..."));
                     write_error = true;
+                } else {
+                    DbpString("Write Operation : "_GREEN_("VERIFIED! Card Key Updated!"));
+                    written = true;
                 }
             }
         }
@@ -2775,10 +2778,12 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         if (!write_error) {
             //Step6 Perform 8 authentication attempts + 1 to verify if we found the weak key
             for (int i = 0; i < 8 ; ++i) {
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                 iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
-                res2 = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
+                //res2 = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
                 //need to craft the authentication payload accordingly
                 memcpy(msg->req.key, iclass_mac_table[i], 8);
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                 res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1); //mac1 here shouldn't matter
                 if (res == true) {
                     bits_found = i;
@@ -2794,9 +2799,10 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             uint8_t revert_retries = 0;
             while (!reverted) {
                 //Regain privilege escalation with a readcheck
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                 iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
                 // TODO: check result
-                GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
+                //GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
 
                 DbpString(_YELLOW_("Attempting to restore the original key. "));
                 if (iclass_writeblock_ext(blockno, genkeyblock, mac2, use_mac, shallow_mod)) {
@@ -2806,12 +2812,14 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                 }
                 DbpString(_YELLOW_("Verifying Key Restore..."));
                 //Do a readcheck first to reset the cypher state
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                 iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
                 // TODO: check result
-                GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
+                //GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
 
                 //need to craft the authentication payload accordingly
                 memcpy(msg->req.key, original_mac, 8);
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                 res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
                 if (res == true) {
                     DbpString("Restore of Original Key "_GREEN_("VERIFIED! Card is usable again."));
