@@ -1795,6 +1795,28 @@ static bool iclass_writeblock_ext(uint8_t blockno, uint8_t *data, uint8_t *mac, 
     return true;
 }
 
+static bool iclass_writeblock_sp(uint8_t blockno, uint8_t *data, uint8_t *mac, bool shallow_mod, uint32_t *start_time, uint32_t *eof_time) {
+
+    // write command: cmd, 1 blockno, 8 data, 4 mac
+    uint8_t write[14] = { 0x80 | ICLASS_CMD_UPDATE, blockno };
+    uint8_t write_len = 14;
+    memcpy(write + 2, data, 8);
+    memcpy(write + 10, mac, 4);
+
+    uint8_t resp[10] = {0};
+    bool isOK = iclass_send_cmd_with_retries(write, write_len, resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_UPDATE, eof_time, shallow_mod);
+    if (isOK == false) {
+        return false;
+    }
+
+    // check response. All other updates return unchanged data
+    if (memcmp(data, resp, PICOPASS_BLOCK_SIZE)) {
+        return false;
+    }
+
+    return true;
+}
+
 // turn off afterwards
 void iClass_WriteBlock(uint8_t *msg) {
 
@@ -2657,8 +2679,14 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         uint8_t mac2[4] = {0};
         picopass_hdr_t hdr = {0};
         bool res = false;
+        int status_message = 0;
 
         while (!card_select || !card_auth) {
+            if (msg->test) {
+                Dbprintf(_YELLOW_("*Cycled Reader*") " ------------ TEST Index - Loops: "_YELLOW_("%3d / %3d") " *", loops, msg->loop);
+            } else {
+                Dbprintf(_YELLOW_("*Cycled Reader*") " ------------ Index: "_RED_("%3d")" Loops: "_YELLOW_("%3d / %3d") " *", index, loops, msg->loop);
+            }
             Iso15693InitReader(); //has to be at the top as it starts tracing
             if (!msg->debug) {
                 set_tracing(false); //disable tracing to prevent crashes - set to true for debugging
@@ -2667,18 +2695,11 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                     clear_trace(); //if we're debugging better to clear the trace but do it only on the first loop
                 }
             }
-            if (msg->test) {
-                Dbprintf(_YELLOW_("*Cycled Reader*") " ----------------- TEST Index - Loops: "_YELLOW_("%3d / %3d") " --------------*", loops, msg->loop);
-            } else {
-                Dbprintf(_YELLOW_("*Cycled Reader*") " ----------------- Index: "_RED_("%3d")" Loops: "_YELLOW_("%3d / %3d") " --------------*", index, loops, msg->loop);
-            }
             //Step0 Card Select Routine
             eof_time = 0; //reset eof time
             res = select_iclass_tag(&hdr, false, &eof_time, shallow_mod);
-            if (res == false) {
-                DbpString(_RED_("Unable to select card after reader cycle! Retrying..."));
-            } else {
-                DbpString(_GREEN_("Card selected successfully!"));
+            if (res) {
+                status_message = 1; //card select successful
                 card_select = true;
             }
 
@@ -2687,10 +2708,8 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                 memcpy(original_mac, msg->req.key, 8);
                 start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                 res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
-                if (res == false) {
-                    DbpString(_RED_("Unable to authenticate on AA1 using macs! Retrying..."));
-                } else {
-                    DbpString(_GREEN_("AA1 authentication with macs successful!"));
+                if (res) {
+                    status_message = 2; //authentication with AA1 macs successful
                     card_auth = true;
                 }
             }
@@ -2715,10 +2734,9 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             // expect a 8-byte response here
             res2 = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
             if (res2 != PM3_SUCCESS || resp_len != 8) {
-                DbpString(_YELLOW_("Privilege Escalation -> ")_RED_("Read failed! Trying again..."));
                 priv_esc_tries++;
             } else {
-                DbpString(_YELLOW_("Privilege Escalation -> ")_GREEN_("Response OK!"));
+                status_message = 3; //privilege escalation successful
                 priv_esc = true;
             }
             if (priv_esc_tries == 5) {
@@ -2740,19 +2758,16 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         wb[0] = blockno;
         memcpy(wb + 1, genkeyblock, 8);
         doMAC_N(wb, sizeof(wb), div_key2, mac2);
-        bool use_mac = true;
         bool written = false;
         bool write_error = false;
         while (written == false && write_error == false) {
             //Step5 Perform Write
-            if (iclass_writeblock_ext(blockno, genkeyblock, mac2, use_mac, shallow_mod)) {
-                DbpString("Wrote key: ");
-                Dbhexdump(8, genkeyblock, false);
+            if (iclass_writeblock_sp(blockno, genkeyblock, mac2, shallow_mod, &start_time, &eof_time)) {
+                status_message = 4; //wrote new key on the card - unverified
             }
             //Reset cypher state
             start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
             iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
-            //res2 = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
             //try to authenticate with the original mac to verify the write happened
             memcpy(msg->req.key, original_mac, 8);
             start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
@@ -2768,10 +2783,9 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                 }
             } else {
                 if (res) {
-                    DbpString("Write Operation : "_RED_("FAILED! Card Key is the Original. Retrying..."));
-                    write_error = true;
+                    write_error = true; //failed to update the key, the card's key is the original one
                 } else {
-                    DbpString("Write Operation : "_GREEN_("VERIFIED! Card Key Updated!"));
+                    status_message = 5; //verified the card key was updated to the new one
                     written = true;
                 }
             }
@@ -2782,16 +2796,12 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             for (int i = 0; i < 8 ; ++i) {
                 start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                 iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
-                //res2 = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
                 //need to craft the authentication payload accordingly
                 memcpy(msg->req.key, iclass_mac_table[i], 8);
                 start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                 res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1); //mac1 here shouldn't matter
                 if (res == true) {
                     bits_found = i;
-                    DbpString(_RED_("--------------------------------------------------------"));
-                    Dbprintf("Decimal Value of last 3 bits: " _GREEN_("[%3d]"), bits_found);
-                    DbpString(_RED_("--------------------------------------------------------"));
                     recovered = true;
                 }
             }
@@ -2805,36 +2815,31 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                 iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
                 // TODO: check result
                 //GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
-
-                DbpString(_YELLOW_("Attempting to restore the original key. "));
-                if (iclass_writeblock_ext(blockno, genkeyblock, mac2, use_mac, shallow_mod)) {
-                    DbpString("Restore of Original Key "_GREEN_("successful."));
-                } else {
-                    DbpString("Restore of Original Key " _RED_("failed."));
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                if (iclass_writeblock_sp(blockno, genkeyblock, mac2, shallow_mod, &start_time, &eof_time)) {
+                    status_message = 6; //restore of original key successful but unverified
                 }
-                DbpString(_YELLOW_("Verifying Key Restore..."));
                 //Do a readcheck first to reset the cypher state
                 start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                 iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
                 // TODO: check result
                 //GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
-
                 //need to craft the authentication payload accordingly
                 memcpy(msg->req.key, original_mac, 8);
                 start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                 res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
                 if (res == true) {
-                    DbpString("Restore of Original Key "_GREEN_("VERIFIED! Card is usable again."));
+                    status_message = 7; //restore of original key verified - card usable again
                     reverted = true;
                     if (recovered) {
                         goto restore;
                     }
-                } else {
-                    DbpString("Restore of Original Key "_RED_("VERIFICATION FAILED! Trying again..."));
                 }
 
                 revert_retries++;
                 if (revert_retries >= 7) { //must always be an odd number!
+                    DbpString("Wrote key: ");
+                    Dbhexdump(8, genkeyblock, false);
                     Dbprintf(_RED_("Attempted to restore original key for %3d times and failed. Stopping. Card is likely unusable."), revert_retries);
                     goto out;
                 }
@@ -2842,11 +2847,41 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
         }
 
+        if(msg->debug || msg->test){
+            if(status_message >= 1){
+                DbpString("Card Select:............."_GREEN_("Ok!"));
+            }
+            if(status_message >= 2){
+                DbpString("AA1 macs authentication:."_GREEN_("Ok!"));
+            }
+            if(status_message >= 3){
+                DbpString("Privilege Escalation:...."_GREEN_("Ok!"));
+            }
+            if(status_message >= 4){
+                DbpString("Wrote key: ");
+                Dbhexdump(8, genkeyblock, false);
+            }
+            if(status_message >= 5){
+                DbpString("Key Update:.............."_GREEN_("Verified!"));
+            }
+            if(status_message >= 6){
+                DbpString("Original Key Restore:...."_GREEN_("Ok!"));
+            }
+            if(status_message >= 7){
+                DbpString("Original Key Restore:...."_GREEN_("Verified!"));
+            }
+        }else{
+            Dbhexdump(8, genkeyblock, false);
+        }
+
+
         if (loops >= msg->loop) {
             completed = true;
             goto out;
         }
-        if (!write_error) { //if there was a write error, re-run the loop for the same key index
+        if (write_error && (msg->debug || msg->test)) { //if there was a write error, re-run the loop for the same key index
+            DbpString("Loop Error: "_RED_("Repeating Loop!"));
+        }else{
             loops++;
             index++;
         }
@@ -2862,6 +2897,9 @@ restore:
         partialkey[i] = genkeyblock[i] ^ bits_found;
     }
 
+    //Print the bits decimal value
+    DbpString(_RED_("--------------------------------------------------------"));
+    Dbprintf("Decimal Value of last 3 bits: " _GREEN_("[%3d]"), bits_found);
     //Print the 24 bits found from k1
     DbpString(_RED_("--------------------------------------------------------"));
     DbpString(_RED_("SUCCESS! Raw Key Partial Bytes: "));
