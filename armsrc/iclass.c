@@ -2642,6 +2642,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     int bits_found = -1;
     bool recovered = false;
     bool completed = false;
+    bool interrupted = false;
     uint8_t div_key2[8] = {0};
     uint32_t eof_time = 0;
     uint32_t start_time = 0;
@@ -2663,7 +2664,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     };
 
     LED_A_ON();
-    DbpString(_RED_("Interrupting this process will render the card unusable!"));
+    DbpString(_RED_("Interrupting this process may render the card unusable!"));
     memcpy(div_key2, msg->nfa, 8);
 
     //START LOOP
@@ -2684,10 +2685,22 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         int status_message = 0;
 
         while (!card_select || !card_auth) {
+
+            if (BUTTON_PRESS() || loops > msg->loop) {
+                if(loops > msg->loop){
+                    completed = true;
+                }else{
+                    interrupted = true;
+                }
+                goto out;
+            }
+
             if (msg->test) {
-                Dbprintf(_YELLOW_("*Cycled Reader*") " ------------ TEST Index - Loops: "_YELLOW_("%3d / %3d") " *", loops, msg->loop);
-            } else {
-                Dbprintf(_YELLOW_("*Cycled Reader*") " ------------ Index: "_RED_("%3d")" Loops: "_YELLOW_("%3d / %3d") " *", index, loops, msg->loop);
+                Dbprintf(_YELLOW_("*Cycled Reader*") " TEST Index - Loops: "_YELLOW_("%3d / %3d") " *", loops, msg->loop);
+            }else if (msg->debug){
+                Dbprintf(_YELLOW_("*Cycled Reader*") " Index: "_RED_("%3d")" Loops: "_YELLOW_("%3d / %3d") " *", index, loops, msg->loop);
+            }else{
+                DbprintfEx(FLAG_INPLACE, "[" _BLUE_("#") "] Index: "_CYAN_("%3d")" Loops: "_YELLOW_("%3d / %3d")" ", index, loops, msg->loop);
             }
             Iso15693InitReader(); //has to be at the top as it starts tracing
             if (!msg->debug) {
@@ -2720,6 +2733,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                 switch_off();
             }
             if (reinit_tentatives == 5) {
+                DbpString("");
                 DbpString(_RED_("Unable to select or authenticate with card multiple times! Stopping."));
                 goto out;
             }
@@ -2742,6 +2756,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                 priv_esc = true;
             }
             if (priv_esc_tries == 5) {
+                DbpString("");
                 DbpString(_RED_("Unable to complete privilege escalation! Stopping."));
                 goto out;
             }
@@ -2776,10 +2791,12 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
             if (msg->test) {
                 if (res) {
+                    DbpString("");
                     DbpString(_GREEN_("*** CARD EPURSE IS LOUD! OK TO ATTEMPT KEY RETRIEVAL! RUN AGAIN WITH -notest ***"));
                     completed = true;
                     goto out;
                 } else {
+                    DbpString("");
                     DbpString(_RED_("*** CARD EPURSE IS SILENT! RISK OF BRICKING! DO NOT EXECUTE KEY UPDATES! SCAN IT ON READER FOR EPURSE UPDATE, COLLECT NEW TRACES AND TRY AGAIN! ***"));
                     goto out;
                 }
@@ -2840,7 +2857,8 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
                 revert_retries++;
                 if (revert_retries >= 7) { //must always be an odd number!
-                    DbpString("Wrote key: ");
+                    DbpString("");
+                    DbpString(_CYAN_("Last Written Key: "));
                     Dbhexdump(8, genkeyblock, false);
                     Dbprintf(_RED_("Attempted to restore original key for %3d times and failed. Stopping. Card is likely unusable."), revert_retries);
                     goto out;
@@ -2849,8 +2867,9 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
         }
 
-        if(msg->debug || msg->test){
+        if(msg->debug){
             if(status_message >= 1){
+                DbpString("");
                 DbpString("Card Select:............."_GREEN_("Ok!"));
             }
             if(status_message >= 2){
@@ -2872,15 +2891,8 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             if(status_message >= 7){
                 DbpString("Original Key Restore:...."_GREEN_("Verified!"));
             }
-        }else{
-            Dbhexdump(8, genkeyblock, false);
         }
 
-
-        if (loops >= msg->loop) {
-            completed = true;
-            goto out;
-        }
         if (write_error && (msg->debug || msg->test)) { //if there was a write error, re-run the loop for the same key index
             DbpString("Loop Error: "_RED_("Repeating Loop!"));
         }else{
@@ -2900,6 +2912,7 @@ restore:
     }
 
     //Print the bits decimal value
+    DbpString("");
     DbpString(_RED_("--------------------------------------------------------"));
     Dbprintf("Decimal Value of last 3 bits: " _GREEN_("[%3d]"), bits_found);
     //Print the 24 bits found from k1
@@ -2916,6 +2929,8 @@ out:
     switch_off();
     if (completed) {
         reply_ng(CMD_HF_ICLASS_RECOVER, PM3_EINVARG, NULL, 0);
+    } else if (interrupted){
+        reply_ng(CMD_HF_ICLASS_RECOVER, PM3_EOPABORTED, NULL, 0);
     } else {
         reply_ng(CMD_HF_ICLASS_RECOVER, PM3_ESOFT, NULL, 0);
     }
