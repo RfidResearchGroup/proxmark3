@@ -4540,9 +4540,15 @@ static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, u
         WaitForResponse(CMD_HF_ICLASS_RECOVER, &resp);
 
         if (resp.status == PM3_SUCCESS) {
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, "iCLASS Key Bits Recovery: " _GREEN_("completed!"));
             repeat = false;
+        } else if (resp.status == PM3_EOPABORTED) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(WARNING, "iCLASS Key Bits Recovery: " _YELLOW_("user aborted"));
+            repeat = false;
         } else if (resp.status == PM3_ESOFT) {
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "iCLASS Key Bits Recovery: " _RED_("failed/errors"));
             repeat = false;
         } else if (resp.status == PM3_EINVARG) {
@@ -4887,8 +4893,14 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "---------------------------------------");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort");
+    PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------\n");
+
     iclass_recover(macs, index, loop, no_first_auth, debug, test, allnight);
 
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(WARNING, _YELLOW_("If the process completed successfully, you can now run 'hf iclass legbrute' with the partial key found."));
 
     PrintAndLogEx(NORMAL, "");
