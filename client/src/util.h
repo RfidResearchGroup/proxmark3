@@ -168,10 +168,12 @@ void str_creplace(char *buf, size_t len, char from, char to);
 void str_reverse(char *buf,  size_t len);
 void str_inverse_hex(char *buf, size_t len);
 void str_inverse_bin(char *buf, size_t len);
+void str_trim(char *s);
 
 char *str_dup(const char *src);
 char *str_ndup(const char *src, size_t len);
 size_t str_nlen(const char *src, size_t maxlen);
+
 int hexstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str);
 int binstring_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const char *str);
 int binarray_to_u96(uint32_t *hi2, uint32_t *hi, uint32_t *lo, const uint8_t *arr, int arrlen);
