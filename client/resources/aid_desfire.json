@@ -392,11 +392,19 @@
         "Type": "pacs"
     },
     {
+        "AID": "F51780",
+        "Vendor": "ASSA ABLOY",
+        "Country": "SE",
+        "Name": "SMARTair",
+        "Description": "SMARTair Credential",
+        "Type": "pacs"
+    },
+    {
         "AID": "F51BC0",
         "Vendor": "STid Group",
         "Country": "FR",
         "Name": "CCT Card / DTA Tag / PCG Fob",
-        "Description": "STid Easyline / Architect Access Credetials",
+        "Description": "STid Easyline / Architect Access Credentials",
         "Type": "pacs"
     },
     {
@@ -888,11 +896,19 @@
         "Type": "carsharing"
     },
     {
+        "AID": "000005",
+        "Vendor": "Transports Metropolitans de Barcelona (TMB)",
+        "Country": "ES",
+        "Name": "T-mobilitat (BCN)",
+        "Description": "BCN T-mobilitat",
+        "Type": "transport"
+    },
+    {
         "AID": "000001",
         "Vendor": "Invalid / Reserved",
         "Country": "",
         "Name": "Invalid / Reserved",
-        "Description": "Used by ATL Breeze, MAD Tarjeta Transporte Publico, and YVR Compass",
+        "Description": "Used by ATL Breeze, MAD Tarjeta Transporte Publico, PHL FREEDOM, and YVR Compass",
         "Type": "transport"
     },
     {
@@ -1184,6 +1200,22 @@
         "Type": "transport"
     },
     {
+        "AID": "402301",
+        "Vendor": "Ministry of Transport, Communications and Works of the Republic of Cyprus",
+        "Country": "CY",
+        "Name": "motion BUS CARD (ECN)",
+        "Description": "ECN motion BUS CARD (App 1)",
+        "Type": "transport"
+    },
+    {
+        "AID": "415431",
+        "Vendor": "Athens Urban Transport Organization (OASA)",
+        "Country": "GR",
+        "Name": "ATH.ENA CARD (ATH)",
+        "Description": "ATH ATH.ENA CARD",
+        "Type": "transport"
+    },
+    {
         "AID": "444D01",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
@@ -1256,6 +1288,14 @@
         "Type": "transport"
     },
     {
+        "AID": "502301",
+        "Vendor": "Ministry of Transport, Communications and Works of the Republic of Cyprus",
+        "Country": "CY",
+        "Name": "motion BUS CARD (ECN)",
+        "Description": "ECN motion BUS CARD (App 2)",
+        "Type": "transport"
+    },
+    {
         "AID": "534531",
         "Vendor": "Transport for New South Wales (TfNSW)",
         "Country": "AU",
@@ -1285,6 +1325,14 @@
         "Country": "NO",
         "Name": "NORTIC (Norway Public Transport Card) (Transport App)",
         "Description": "FIDs 01: Product Retailer; 02: Service Provider; 03: Special Event; 04: Stored Value; 05: General Event Log; 06: SV Reload Log; 0A: Environment; 0C: Card Holder",
+        "Type": "transport"
+    },
+    {
+        "AID": "602301",
+        "Vendor": "Ministry of Transport, Communications and Works of the Republic of Cyprus",
+        "Country": "CY",
+        "Name": "motion BUS CARD (ECN)",
+        "Description": "ECN motion BUS CARD (App 3)",
         "Type": "transport"
     },
     {
