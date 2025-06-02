@@ -2972,7 +2972,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         arg_str0("k", "key", "<hex>", "Access key as 8 hex bytes"),
         arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
         arg_int1(NULL, "blk", "<dec>", "block number"),
-        arg_str1("d", "data", "<hex>", "data to write as 8 hex bytes"),
+        arg_str0("d", "data", "<hex>", "data to write as 8 hex bytes"),
         arg_str0("m", "mac", "<hex>", "replay mac data (4 hex bytes)"),
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
@@ -3052,7 +3052,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         }
     }
 
-    if (data_len != 8) {
+    if (data_len && data_len != 8) {
         PrintAndLogEx(ERR, "Data must be 8 hex bytes (16 hex symbols), got " _RED_("%u"), data_len);
         return PM3_EINVARG;
     }
@@ -3091,7 +3091,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         keyType = ICLASS_CREDIT_KEYTYPE;
     }
 
-    if (auth == false) {
+    if (data_len && auth == false) {
         PrintAndLogEx(SUCCESS, "No key supplied. Trying no authentication read/writes");
     }
 
@@ -3134,10 +3134,12 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    int fail_tolerance = 1;
     if (memcmp(r->header.hdr.csn + 4, "\xFE\xFF\x12\xE0", 4) == 0) {
         PrintAndLogEx(SUCCESS, "CSN................... %s ( new silicon )", sprint_hex_inrow(r->header.hdr.csn, PICOPASS_BLOCK_SIZE));
     } else {
         PrintAndLogEx(SUCCESS, "CSN................... %s ( old silicon )", sprint_hex_inrow(r->header.hdr.csn, PICOPASS_BLOCK_SIZE));
+        fail_tolerance = 5;
     }
 
     picopass_hdr_t *hdr = &r->header.hdr;
@@ -3161,22 +3163,48 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     bool reread = false;
     bool erase_phase = false;
 
-    int res_orig = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, shallow_mod, data_read_orig, false);
-    if (res_orig == PM3_SUCCESS && !reread) {
-        if (memcmp(data_read_orig, zeros, 8) == 0) {
-            reread = true;
-        } else {
-            first_read = true;
+    if (blockno < 3){
+        read_auth = false;
+    }
+
+    int res_orig = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read_orig, false);
+    while (reread){
+        if (res_orig == PM3_SUCCESS && !reread) {
+            if (memcmp(data_read_orig, zeros, 8) == 0) {
+                reread = true;
+            } else {
+                reread = false;
+            }
+        } else if (res_orig == PM3_SUCCESS && reread) {
             reread = false;
+            if (blockno == 2 && memcmp(data_read_orig, zeros, 8) == 0){
+                reread = true;
+            }
         }
-    } else if (res_orig == PM3_SUCCESS && reread) {
-        first_read = true;
-        reread = false;
+    }
+
+    if (blockno == 2 && data_len == 0){
+        int value_index = 0; //assuming FFFFFFFF is on the right
+        if(memcmp(data_read_orig + 4, "\xFF\xFF\xFF\xFF", 4) != 0){ //FFFFFFFF is on the left
+            value_index = 4;
+        }
+        memcpy(key, iClass_Key_Table[1], PICOPASS_BLOCK_SIZE);
+        use_credit_key = true;
+        auth = true;
+        memcpy(data,data_read_orig,PICOPASS_BLOCK_SIZE);
+        //decrease the debit epurse value by 1
+        if(data_read_orig[value_index] != 0x00){
+            data[value_index]--;
+        }else{
+            data[value_index + 2]--;
+            data[value_index] = 0xFF;
+        }
     }
 
     PrintAndLogEx(SUCCESS, "Original block data... " _CYAN_("%s"), sprint_hex_inrow(data_read_orig, sizeof(data_read_orig)));
     PrintAndLogEx(SUCCESS, "New data to write..... " _YELLOW_("%s"), sprint_hex_inrow(data, sizeof(data)));
     PrintAndLogEx(SUCCESS, "Target block.......... " _YELLOW_("%u") " / " _YELLOW_("0x%02x"), blockno, blockno);
+    PrintAndLogEx(SUCCESS, "Using Key............. " _YELLOW_("%s"), sprint_hex_inrow(key, sizeof(key)));;
     // turn off Device side debug messages
     uint8_t dbg_curr = DBG_NONE;
     if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
@@ -3311,7 +3339,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
                 readcount++;
             }
 
-            if (readcount > 1) {
+            if (readcount > fail_tolerance) {
                 PrintAndLogEx(WARNING, "\nRead block failed "_RED_("%d") " times", readcount);
             }
 
