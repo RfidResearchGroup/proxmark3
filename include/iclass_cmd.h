@@ -87,6 +87,17 @@ typedef struct {
     uint8_t mac[4];
 } PACKED iclass_writeblock_req_t;
 
+// iCLASS tearoff block request data structure
+typedef struct {
+    iclass_auth_req_t req;
+    uint8_t data[8];
+    uint8_t mac[4];
+    int tear_start;
+    int tear_end;
+    int increment;
+    int tear_loop;
+} PACKED iclass_tearblock_req_t;
+
 // iCLASS write block request data structure
 typedef struct {
     iclass_auth_req_t req;

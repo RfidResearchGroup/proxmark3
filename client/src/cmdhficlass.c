@@ -40,19 +40,21 @@
 #include "crypto/asn1utils.h"       // ASN1 decoder
 #include "preferences.h"
 #include "generator.h"
-#include "cmdhf14b.h"
 #include "cmdhw.h"
 #include "hidsio.h"
 
+
+#define ICLASS_DEBIT_KEYTYPE   ( 0x88 )
+#define ICLASS_CREDIT_KEYTYPE  ( 0x18 )
 
 #define NUM_CSNS               9
 #define MAC_ITEM_SIZE          24 // csn(8) + epurse(8) + nr(4) + mac(4) = 24 bytes
 #define ICLASS_KEYS_MAX        8
 #define ICLASS_AUTH_RETRY      10
 #define ICLASS_CFG_BLK_SR_BIT  0xA0 // indicates SIO present when set in block6[0] (legacy tags)
-#define ICLASS_DECRYPTION_BIN  "iclass_decryptionkey.bin"
-#define ICLASS_DEFAULT_KEY_DIC        "iclass_default_keys.dic"
-#define ICLASS_DEFAULT_KEY_ELITE_DIC  "iclass_elite_keys.dic"
+#define ICLASS_DECRYPTION_BIN           "iclass_decryptionkey.bin"
+#define ICLASS_DEFAULT_KEY_DIC          "iclass_default_keys.dic"
+#define ICLASS_DEFAULT_KEY_ELITE_DIC    "iclass_elite_keys.dic"
 
 static void print_picopass_info(const picopass_hdr_t *hdr);
 void print_picopass_header(const picopass_hdr_t *hdr);
@@ -2804,10 +2806,10 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
 
     int blockno = arg_get_int_def(ctx, 3, 0);
 
-    uint8_t keyType = 0x88; //debit key
+    uint8_t keyType = ICLASS_DEBIT_KEYTYPE;
     if (arg_get_lit(ctx, 4)) {
         PrintAndLogEx(SUCCESS, "Using " _YELLOW_("credit") " key");
-        keyType = 0x18; //credit key
+        keyType = ICLASS_CREDIT_KEYTYPE;
     }
 
     bool elite = arg_get_lit(ctx, 5);
@@ -2958,7 +2960,8 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass tear",
                   "Tear off an iCLASS tag block\n"
                   "e-purse usually 300-500us to trigger the erase phase\n"
-                  "also seen 1800-2100us on some cards\n",
+                  "also seen 1800-2100us on some cards\n"
+                  "Make sure you know the target card credit key. Typical  `--ki 1` or `--ki 3`\n",
                   "hf iclass tear --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B -s 300 -e 600\n"
                   "hf iclass tear --blk 10 -d AAAAAAAAAAAAAAAA --ki 0 -s 300 -e 600\n"
                   "hf iclass tear --blk 2 -d fdffffffffffffff --ki 1 --credit -s 400 -e 500"
@@ -2982,6 +2985,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         arg_int0("e", NULL, "<dec>", "tearoff delay end (in us) must be a higher value than the start delay"),
         arg_int0(NULL, "loop", "<dec>", "number of times to loop per tearoff time"),
         arg_int0(NULL, "sleep", "<ms>", "Sleep between each tear"),
+        arg_lit0(NULL, "arm", "Runs the commands on device side and tries to stabilize tears"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3014,6 +3018,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     int tearoff_end = arg_get_int_def(ctx, 14, tearoff_start + tearoff_increment + 500);
     int tearoff_loop = arg_get_int_def(ctx, 15, 1);
     int tearoff_sleep = arg_get_int_def(ctx, 16, 0);
+    bool run_on_device = arg_get_lit(ctx, 17);
 
     CLIParserFree(ctx);
 
@@ -3078,13 +3083,12 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     }
 
     int loop_count = 0;
-    int isok = 0;
+    int isok = PM3_SUCCESS;
     bool read_ok = false;
-    uint8_t keyType = 0x88; // debit key
-
+    uint8_t keyType = ICLASS_DEBIT_KEYTYPE;
     if (use_credit_key) {
         PrintAndLogEx(SUCCESS, "Using " _YELLOW_("credit") " key");
-        keyType = 0x18; // credit key
+        keyType = ICLASS_CREDIT_KEYTYPE;
     }
 
     if (auth == false) {
@@ -3130,6 +3134,12 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    if (memcmp(r->header.hdr.csn + 4, "\xFE\xFF\x12\xE0", 4) == 0) {
+        PrintAndLogEx(SUCCESS, "CSN................... %s ( new silicon )", sprint_hex_inrow(r->header.hdr.csn, PICOPASS_BLOCK_SIZE));
+    } else {
+        PrintAndLogEx(SUCCESS, "CSN................... %s ( old silicon )", sprint_hex_inrow(r->header.hdr.csn, PICOPASS_BLOCK_SIZE));
+    }
+
     picopass_hdr_t *hdr = &r->header.hdr;
     uint8_t pagemap = get_pagemap(hdr);
     if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
@@ -3138,13 +3148,13 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     }
 
     if (pagemap == 0x0) {
-            PrintAndLogEx(WARNING, _RED_("No auth possible. Read only if RA is enabled"));
-            goto out;
+        PrintAndLogEx(WARNING, _RED_("No auth possible. Read only if RA is enabled"));
+        goto out;
     }
 
-    bool read_auth = auth;
 
     // perform initial read here, repeat if failed or 00s
+    bool read_auth = auth;
     uint8_t data_read_orig[8] = {0};
     uint8_t ff_data[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
     bool first_read = false;
@@ -3180,47 +3190,58 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     // clear trace log
     SendCommandNG(CMD_BUFF_CLEAR, NULL, 0);
 
-    PrintAndLogEx(INFO, "---------------------------------------");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------\n");
-    // Main loop
-    while ((tearoff_start <= tearoff_end) && (read_ok == false)) {
+    if (run_on_device) {
 
-        if (kbd_enter_pressed()) {
-            PrintAndLogEx(WARNING, "\naborted via keyboard.");
-            isok = PM3_EOPABORTED;
-            goto out;
-        }
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "---------------------------------------");
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort");
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------\n");
 
-        // set tear off trigger
-        clearCommandBuffer();
-        tearoff_params_t params = {
-            .delay_us = (tearoff_start & 0xFFFF),
-            .on = true,
-            .off = false
+        iclass_tearblock_req_t payload = {
+            .req.use_raw = rawkey,
+            .req.use_elite = elite,
+            .req.use_credit_key = use_credit_key,
+            .req.use_replay = use_replay,
+            .req.blockno = blockno,
+            .req.send_reply = true,
+            .req.do_auth = auth,
+            .req.shallow_mod = shallow_mod,
+            .tear_start = tearoff_start,
+            .tear_end = tearoff_end,
+            .increment = tearoff_increment,
+            .tear_loop = tearoff_loop,
         };
+        memcpy(payload.req.key, key, PICOPASS_BLOCK_SIZE);
+        memcpy(payload.data, data, sizeof(payload.data));
+        memcpy(payload.mac, mac, sizeof(payload.mac));
 
-        int res = handle_tearoff(&params, verbose);
-        if (res != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Failed to configure tear off");
-            isok = PM3_ESOFT;
-            goto out;
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_ICLASS_TEARBL, (uint8_t *)&payload, sizeof(payload));
+
+        if (WaitForResponseTimeout(CMD_HF_ICLASS_TEARBL, &resp, 1000)) {
+            if (resp.status == PM3_EOPABORTED) {
+                PrintAndLogEx(DEBUG, "Button pressed, user aborted");
+                isok = resp.status;
+            }
         }
 
-        PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us - "_YELLOW_("%u")" / "_YELLOW_("%d")" loops", params.delay_us, (tearoff_end & 0xFFFF), loop_count+1, tearoff_loop);
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "Done!");
+        PrintAndLogEx(NORMAL, "");
+        clearCommandBuffer();
+        return isok;
 
-        // write block - don't check the return value. As a tear-off occurred, the write failed.
-        iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
+    } else {
 
-        // read the data back
-        uint8_t data_read[8] = {0};
-        first_read = false;
-        reread = false;
-        bool decrease = false;
-
-        while (first_read == false) {
+        PrintAndLogEx(INFO, "---------------------------------------");
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------\n");
+        // Main loop
+        while ((tearoff_start <= tearoff_end) && (read_ok == false)) {
 
             if (kbd_enter_pressed()) {
                 PrintAndLogEx(WARNING, "\naborted via keyboard.");
@@ -3228,100 +3249,205 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
                 goto out;
             }
 
-            if (blockno == 1) {
-                read_auth = false;
+            // set tear off trigger
+            clearCommandBuffer();
+            tearoff_params_t params = {
+                .delay_us = (tearoff_start & 0xFFFF),
+                .on = true,
+                .off = false
+            };
+
+            int res = handle_tearoff(&params, verbose);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Failed to configure tear off");
+                isok = PM3_ESOFT;
+                goto out;
             }
 
-            res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read, false);
-            if (res == PM3_SUCCESS && !reread) {
-                if (memcmp(data_read, zeros, 8) == 0) {
-                    reread = true;
-                } else {
+            if (tearoff_loop > 1) {
+                PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us - "_YELLOW_("%3u")" iter", params.delay_us, (tearoff_end & 0xFFFF), loop_count + 1);
+            } else {
+                PrintAndLogEx(INPLACE, " Tear off delay "_YELLOW_("%u")" / "_YELLOW_("%d")" us", params.delay_us, (tearoff_end & 0xFFFF));
+            }
+
+            // write block - don't check the return value. As a tear-off occurred, the write failed.
+            // when tear off is enabled,  the return code will always be PM3_ETEAROFF
+            iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
+
+            // read the data back
+            uint8_t data_read[8] = {0};
+            first_read = false;
+            reread = false;
+            bool decrease = false;
+            int readcount = 0;
+            while (first_read == false) {
+
+                if (kbd_enter_pressed()) {
+                    PrintAndLogEx(WARNING, "\naborted via keyboard.");
+                    isok = PM3_EOPABORTED;
+                    goto out;
+                }
+
+                // skip authentication for config and e-purse blocks (1,2)
+                if (blockno < 3) {
+                    read_auth = false;
+                }
+
+                res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read, false);
+                if (res == PM3_SUCCESS && !reread) {
+                    if (memcmp(data_read, zeros, 8) == 0) {
+                        reread = true;
+                    } else {
+                        first_read = true;
+                        reread = false;
+                    }
+                } else if (res == PM3_SUCCESS && reread) {
                     first_read = true;
                     reread = false;
+                } else if (res != PM3_SUCCESS) {
+                    decrease = true;
                 }
-            } else if (res == PM3_SUCCESS && reread) {
-                first_read = true;
-                reread = false;
-            } else if (res != PM3_SUCCESS) {
-                decrease = true;
+
+                readcount++;
             }
-        }
 
-        // if there was an error reading repeat the tearoff with the same delay
-        if (decrease && (tearoff_start > tearoff_increment) && (tearoff_start >= tearoff_original_start)) {
-            tearoff_start -= tearoff_increment;
-        }
+            if (readcount > 1) {
+                PrintAndLogEx(WARNING, "\nRead block failed "_RED_("%d") " times", readcount);
+            }
 
-        bool tear_success = true;
-        bool expected_values = true;
+            // if there was an error reading repeat the tearoff with the same delay
+            if (decrease && (tearoff_start > tearoff_increment) && (tearoff_start >= tearoff_original_start)) {
+                tearoff_start -= tearoff_increment;
+                if (verbose) {
+                    PrintAndLogEx(INFO, " -> Read failed, retearing with "_CYAN_("%u")" us", tearoff_start);
+                }
+            }
 
-        if (memcmp(data_read, data, 8) != 0) {
-            tear_success = false;
-        }
+            bool tear_success = true;
+            bool expected_values = true;
 
-        if ((tear_success == false) && (memcmp(data_read, zeros, 8) != 0) && (memcmp(data_read, data_read_orig, 8) != 0)) {
+            if (memcmp(data_read, data, 8) != 0) {
+                tear_success = false;
+            }
 
-            // tearoff succeeded (partially)
+            if ((tear_success == false) &&
+                    (memcmp(data_read, zeros, 8) != 0) &&
+                    (memcmp(data_read, data_read_orig, 8) != 0)) {
 
-            expected_values = false;
+                // tearoff succeeded (partially)
 
-            if (memcmp(data_read, ff_data, 8) == 0 && memcmp(data_read_orig, ff_data, 8) != 0) {
-                erase_phase = true;
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(SUCCESS, _CYAN_("Erase phase hit... ALL ONES"));
-                iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
-            } else {
+                expected_values = false;
 
-                if (erase_phase) {
-                    PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(SUCCESS, _MAGENTA_("Tearing! Write phase (post erase)"));
-                    iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
+                if (memcmp(data_read, ff_data, 8) == 0 &&
+                        memcmp(data_read_orig, ff_data, 8) != 0) {
+
+                    if (erase_phase == false){
+                        PrintAndLogEx(NORMAL, "");
+                        PrintAndLogEx(SUCCESS, _CYAN_("Erase phase hit... ALL ONES"));
+                        iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
+                    }
+                    erase_phase = true;
                 } else {
-                    PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(SUCCESS, _CYAN_("Tearing! unknown phase"));
-                    iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
+
+                    if (erase_phase) {
+                        PrintAndLogEx(NORMAL, "");
+                        PrintAndLogEx(SUCCESS, _MAGENTA_("Tearing! Write phase (post erase)"));
+                        iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
+                    } else {
+                        PrintAndLogEx(NORMAL, "");
+                        PrintAndLogEx(SUCCESS, _CYAN_("Tearing! unknown phase"));
+                        iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
+                    }
+                }
+
+                bool goto_out = false;
+                if (blockno == 2) {
+                    if (memcmp(data_read, ff_data, 8) == 0 && memcmp(data_read_orig, ff_data, 8) != 0) {
+                        PrintAndLogEx(SUCCESS, "E-purse has been teared ( %s )", _GREEN_("ok"));
+                        PrintAndLogEx(HINT, "Hint: try `hf iclass creditepurse -d FEFFFEFF --ki 1`");
+                        PrintAndLogEx(HINT, "Hint: try `hf iclass wrbl -d 'FFFFFFFF FFFF FEFF' --blk 2 --ki 1 --credit`");
+                        isok = PM3_SUCCESS;
+                        goto_out = true;
+                    }
+                }
+
+                if (blockno == 1) {
+                    if (data_read[0] != data_read_orig[0]) {
+                        PrintAndLogEx(NORMAL, "");
+                        PrintAndLogEx(SUCCESS, "Application limit changed, from "_YELLOW_("%u")" to "_YELLOW_("%u"), data_read_orig[0], data_read[0]);
+                        isok = PM3_SUCCESS;
+                        goto_out = true;
+                    }
+
+                    if (data_read[7] != data_read_orig[7]) {
+                        PrintAndLogEx(NORMAL, "");
+                        PrintAndLogEx(SUCCESS, "Fuse changed, from "_YELLOW_("%02x")" to "_YELLOW_("%02x"), data_read_orig[7], data_read[7]);
+
+                        const char *flag_names[8] = {
+                            "RA",
+                            "Fprod0",
+                            "Fprod1",
+                            "Crypt0 (*1)",
+                            "Crypt1 (*0)",
+                            "Coding0",
+                            "Coding1",
+                            "Fpers  (*1)"
+                        };
+                        PrintAndLogEx(INFO, _YELLOW_("%-10s %-10s %-10s"), "Fuse", "Original", "Changed");
+                        PrintAndLogEx(INFO, "---------------------------------------");
+                        for (int i = 7; i >= 0; --i) {
+                            int bit1 = (data_read_orig[7] >> i) & 1;
+                            int bit2 = (data_read[7] >> i) & 1;
+                            PrintAndLogEx(INFO, "%-11s %-10d %-10d", flag_names[i], bit1, bit2);
+                        }
+
+                        isok = PM3_SUCCESS;
+                        goto_out = true;
+                    }
+
+                    // if more OTP bits set..
+                    if (data_read[1] > data_read_orig[1] ||
+                            data_read[2] > data_read_orig[2]) {
+                        PrintAndLogEx(SUCCESS, "More OTP bits got set!!!");
+
+                        data_read[7] = 0xBC;
+                        res = iclass_write_block(blockno, data_read, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
+                        if (res != PM3_SUCCESS) {
+                            PrintAndLogEx(INFO, "Stabilize the bits ( "_RED_("failed") " )");
+                        }
+
+                        isok = PM3_SUCCESS;
+                        goto_out = true;
+                    }
+                }
+
+                if (goto_out) {
+                    goto out;
                 }
             }
 
-            if (blockno == 1) {
-                if (data_read[0] != data_read_orig[0]) {
-                    PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(SUCCESS, "Application limit changed, from %u to %u", data_read_orig[0], data_read[0]);
-                    isok = PM3_SUCCESS;
-                    goto out;
-                }
+            if (tear_success) { // tearoff succeeded with expected values
 
-                if (data_read[7] != data_read_orig[7]) {
-                    PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(SUCCESS, "Fuse changed, from %02x to %02x", data_read_orig[7], data_read[7]);
-                    isok = PM3_SUCCESS;
-                    goto out;
-                }
+                read_ok = true;
+                tear_success = true;
+
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(INFO, "Read:     " _GREEN_("%s") " %s"
+                              , sprint_hex_inrow(data_read, sizeof(data_read)),
+                              (expected_values) ? _GREEN_(" -> Expected values!") : ""
+                             );
             }
-        }
 
-        if (tear_success) { // tearoff succeeded with expected values
+            loop_count++;
 
-            read_ok = true;
-            tear_success = true;
+            if (loop_count == tearoff_loop) {
+                tearoff_start += tearoff_increment;
+                loop_count = 0;
+            }
 
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "Read:     " _GREEN_("%s") " %s"
-                          , sprint_hex_inrow(data_read, sizeof(data_read)),
-                          (expected_values) ? _GREEN_(" -> Expected values!") : ""
-                         );
-        }
-
-        loop_count++;
-
-        if (loop_count == tearoff_loop) {
-            tearoff_start += tearoff_increment;
-            loop_count = 0;
-        }
-
-        if (tearoff_sleep) {
-            msleep(tearoff_sleep);
+            if (tearoff_sleep) {
+                msleep(tearoff_sleep);
+            }
         }
     }
 
@@ -3788,9 +3914,9 @@ static void HFiClassCalcNewKey(uint8_t *CSN, uint8_t *OLDKEY, uint8_t *NEWKEY, u
         xor_div_key[i] = old_div_key[i] ^ new_div_key[i];
     }
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "Old div key......... %s", sprint_hex(old_div_key, 8));
-        PrintAndLogEx(SUCCESS, "New div key......... %s", sprint_hex(new_div_key, 8));
-        PrintAndLogEx(SUCCESS, "Xor div key......... " _YELLOW_("%s") "\n", sprint_hex(xor_div_key, 8));
+        PrintAndLogEx(SUCCESS, "Old div key........ %s", sprint_hex(old_div_key, 8));
+        PrintAndLogEx(SUCCESS, "New div key........ %s", sprint_hex(new_div_key, 8));
+        PrintAndLogEx(SUCCESS, "Xor div key........ " _YELLOW_("%s") "\n", sprint_hex(xor_div_key, 8));
     }
 }
 
@@ -4414,9 +4540,15 @@ static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, u
         WaitForResponse(CMD_HF_ICLASS_RECOVER, &resp);
 
         if (resp.status == PM3_SUCCESS) {
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(SUCCESS, "iCLASS Key Bits Recovery: " _GREEN_("completed!"));
             repeat = false;
+        } else if (resp.status == PM3_EOPABORTED) {
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(WARNING, "iCLASS Key Bits Recovery: " _YELLOW_("user aborted"));
+            repeat = false;
         } else if (resp.status == PM3_ESOFT) {
+            PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(WARNING, "iCLASS Key Bits Recovery: " _RED_("failed/errors"));
             repeat = false;
         } else if (resp.status == PM3_EINVARG) {
@@ -4455,7 +4587,7 @@ void generate_key_block_inverted(const uint8_t *startingKey, uint64_t index, uin
     }
 }
 
-static int CmdHFiClassLegRecLookUp(const char *Cmd) {
+static int CmdHFiClassLegBrute(const char *Cmd) {
 
     //Standalone Command Start
     CLIParserContext *ctx;
@@ -4682,7 +4814,7 @@ static int CmdHFiClassLegacyRecSim(void) {
             PrintAndLogEx(SUCCESS, "Original Key: " _GREEN_("%s"), sprint_hex(original_key, sizeof(original_key)));
             PrintAndLogEx(SUCCESS, "Weak Key: " _GREEN_("%s"), sprint_hex(key, sizeof(key)));
             PrintAndLogEx(SUCCESS, "Key Updates Required to Weak Key: " _GREEN_("%d"), index);
-            PrintAndLogEx(SUCCESS, "Estimated Time: ~" _GREEN_("%d")" hours", index / 6545);
+            PrintAndLogEx(SUCCESS, "Estimated Time: ~" _GREEN_("%d")" hours", index / 7250);
         }
 
         index++;
@@ -4761,8 +4893,14 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "---------------------------------------");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort");
+    PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------\n");
+
     iclass_recover(macs, index, loop, no_first_auth, debug, test, allnight);
 
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(WARNING, _YELLOW_("If the process completed successfully, you can now run 'hf iclass legbrute' with the partial key found."));
 
     PrintAndLogEx(NORMAL, "");
@@ -5773,7 +5911,7 @@ static command_t CommandTable[] = {
     {"loclass",     CmdHFiClass_loclass,        AlwaysAvailable, "Use loclass to perform bruteforce reader attack"},
     {"lookup",      CmdHFiClassLookUp,          AlwaysAvailable, "Uses authentication trace to check for key in dictionary file"},
     {"legrec",      CmdHFiClassLegacyRecover,   IfPm3Iclass,     "Recovers 24 bits of the diversified key of a legacy card provided a valid nr-mac combination"},
-    {"legbrute",    CmdHFiClassLegRecLookUp,    AlwaysAvailable, "Bruteforces 40 bits of a partial diversified key, provided 24 bits of the key and two valid nr-macs"},
+    {"legbrute",    CmdHFiClassLegBrute,        AlwaysAvailable, "Bruteforces 40 bits of a partial diversified key, provided 24 bits of the key and two valid nr-macs"},
     {"unhash",      CmdHFiClassUnhash,          AlwaysAvailable, "Reverses a diversified key to retrieve hash0 pre-images after DES encryption"},
     {"-----------", CmdHelp,                    IfPm3Iclass,     "-------------------- " _CYAN_("Simulation") " -------------------"},
     {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "Simulate iCLASS tag"},
@@ -5927,33 +6065,46 @@ int info_iclass(bool shallow_mod) {
     uint8_t cardtype = get_mem_config(hdr);
     PrintAndLogEx(SUCCESS, "    Card type.... " _GREEN_("%s"), card_types[cardtype]);
 
-    if (HF14B_picopass_reader(false, false)) {
-        PrintAndLogEx(SUCCESS, "    Card chip.... "_YELLOW_("Old Silicon (14b support)"));
-    } else {
+    if (memcmp(hdr->csn + 4, "\xFE\xFF\x12\xE0", 4) == 0) {
         PrintAndLogEx(SUCCESS, "    Card chip.... "_YELLOW_("NEW Silicon (No 14b support)"));
+    } else {
+        PrintAndLogEx(SUCCESS, "    Card chip.... "_YELLOW_("Old Silicon (14b support)"));
     }
     if (legacy) {
 
         int res = PM3_ESOFT;
-        uint8_t key_type = 0x88; // debit key
-
         uint8_t dump[PICOPASS_BLOCK_SIZE * 8] = {0};
         // we take all raw bytes from response
         memcpy(dump, p_response, sizeof(picopass_hdr_t));
 
+        bool found_aa1 = false;
+        bool found_aa2 = false;
         uint8_t key[8] = {0};
         for (uint8_t i = 0; i < ARRAYLEN(iClass_Key_Table); i++) {
 
             memcpy(key, iClass_Key_Table[i], sizeof(key));
-            res = iclass_read_block_ex(key, 6, key_type, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 6), false);
+
+            if (found_aa1 == false) {
+                res = iclass_read_block_ex(key, 6, ICLASS_DEBIT_KEYTYPE, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 6), false);
+                if (res == PM3_SUCCESS) {
+                    PrintAndLogEx(SUCCESS, "    AA1 Key...... " _GREEN_("%s"), sprint_hex_inrow(key, sizeof(key)));
+                    found_aa1 = true;
+                }
+            }
+
+            res = iclass_read_block_ex(key, 6, ICLASS_CREDIT_KEYTYPE, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 7), false);
             if (res == PM3_SUCCESS) {
-                PrintAndLogEx(SUCCESS, "    AA1 Key...... " _GREEN_("%s"), sprint_hex_inrow(key, sizeof(key)));
+                PrintAndLogEx(SUCCESS, "    AA2 Key...... " _GREEN_("%s"), sprint_hex_inrow(key, sizeof(key)));
+                found_aa2 = true;
+            }
+
+            if (found_aa1 && found_aa2) {
                 break;
             }
         }
 
-        if (res == PM3_SUCCESS) {
-            res = iclass_read_block_ex(key, 7, key_type, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 7), false);
+        if (found_aa1) {
+            res = iclass_read_block_ex(key, 7, ICLASS_DEBIT_KEYTYPE, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 7), false);
             if (res == PM3_SUCCESS) {
 
                 BLOCK79ENCRYPTION aa1_encryption = (dump[(6 * PICOPASS_BLOCK_SIZE) + 7] & 0x03);

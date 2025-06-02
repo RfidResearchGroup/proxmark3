@@ -1409,6 +1409,20 @@ void str_inverse_bin(char *buf, size_t len) {
     }
 }
 
+void str_trim(char *s) {
+    if (s == NULL) {
+        return;
+    }
+
+    // handle empty string
+    if (!*s) {
+        return;
+    }
+
+    char *ptr;
+    for (ptr = s + strlen(s) - 1; (ptr >= s) && isspace(*ptr); --ptr);
+    ptr[1] = '\0';
+}
 
 /**
  * Converts a hex string to component "hi2", "hi" and "lo" 32-bit integers

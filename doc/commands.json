@@ -3718,7 +3718,7 @@
         },
         "hf iclass tear": {
             "command": "hf iclass tear",
-            "description": "Tear off an iCLASS tag block e-purse usually 300-500us to trigger the erase phase also seen 1800-2100us on some cards",
+            "description": "Tear off an iCLASS tag block e-purse usually 300-500us to trigger the erase phase also seen 1800-2100us on some cards Make sure you know the target card credit key. Typical `--ki 1` or `--ki 3`",
             "notes": [
                 "hf iclass tear --blk 10 -d AAAAAAAAAAAAAAAA -k 001122334455667B -s 300 -e 600",
                 "hf iclass tear --blk 10 -d AAAAAAAAAAAAAAAA --ki 0 -s 300 -e 600",
@@ -3742,9 +3742,10 @@
                 "-i <dec> tearoff delay increment (in us) - default 10",
                 "-e <dec> tearoff delay end (in us) must be a higher value than the start delay",
                 "--loop <dec> number of times to loop per tearoff time",
-                "--sleep <ms> Sleep between each tear"
+                "--sleep <ms> Sleep between each tear",
+                "--arm Runs the commands on device side and tries to stabilize tears"
             ],
-            "usage": "hf iclass tear [-hv] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow] -s <dec> [-i <dec>] [-e <dec>] [--loop <dec>] [--sleep <ms>]"
+            "usage": "hf iclass tear [-hv] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow] -s <dec> [-i <dec>] [-e <dec>] [--loop <dec>] [--sleep <ms>] [--arm]"
         },
         "hf iclass unhash": {
             "command": "hf iclass unhash",
@@ -4410,6 +4411,23 @@
                 "--i5 AVX512"
             ],
             "usage": "hf mf autopwn [-hablv] [-k <hex>]... [-s <dec>] [-f <fn>] [--suffix <txt>] [--slow] [--mem] [--ns] [--mini] [--1k] [--2k] [--4k] [--in] [--im] [--is] [--ia] [--i2] [--i5]"
+        },
+        "hf mf bambukeys": {
+            "command": "hf mf bambukeys",
+            "description": "Generate keys for a Bambu Lab filament tag",
+            "notes": [
+                "hf mf bambukeys -r",
+                "hf mf bambukeys -r -d",
+                "hf mf bambukeys -u 11223344"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-u, --uid <hex> UID (4 hex bytes)",
+                "-r Read UID from tag",
+                "-d Dump keys to file"
+            ],
+            "usage": "hf mf bambukeys [-hrd] [-u <hex>]"
         },
         "hf mf brute": {
             "command": "hf mf brute",
@@ -5145,7 +5163,7 @@
         },
         "hf mf help": {
             "command": "hf mf help",
-            "description": "help This help list List MIFARE history hardnested Nested attack for hardened MIFARE Classic cards decrypt Decrypt Crypto1 data from sniff or trace acl Decode and print MIFARE Classic access rights bytes mad Checks and prints MAD value Value blocks view Display content from tag dump file ginfo Info about configuration of the card gdmparsecfg Parse config block to card --------------------------------------------------------------------------------------- hf mf list available offline: yes Alias of `trace list -t mf -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List MIFARE history hardnested Nested attack for hardened MIFARE Classic cards decrypt Decrypt Crypto1 data from sniff or trace bambukeys Generate key table for Bambu Lab filament tag acl Decode and print MIFARE Classic access rights bytes mad Checks and prints MAD value Value blocks view Display content from tag dump file ginfo Info about configuration of the card gdmparsecfg Parse config block to card --------------------------------------------------------------------------------------- hf mf list available offline: yes Alias of `trace list -t mf -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf mf list --frame -> show frame delay times",
                 "hf mf list -1 -> use trace buffer"
@@ -7061,15 +7079,15 @@
         },
         "hf mfu aesauth": {
             "command": "hf mfu aesauth",
-            "description": "Tests AES key on Mifare Ultralight AES tags. If key is not specified, null key will be tried. Key index 0: DataProtKey (default) Key index 1: UIDRetrKey Key index 2: OriginalityKey",
+            "description": "Tests AES key on Mifare Ultralight AES tags. If no key is specified, null key will be tried. Key index 0: DataProtKey (default) Key index 1: UIDRetrKey Key index 2: OriginalityKey",
             "notes": [
                 "hf mfu aesauth",
-                "hf mfu aesauth --key <32 hex chars> --index <0..2>"
+                "hf mfu aesauth --key <16 hex bytes> --index <0..2>"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--key <hex> Authentication key (16 bytes in hex)",
+                "--key <hex> AES key (16 hex bytes)",
                 "-i, --index <0..2> Key index, default: 0",
                 "-k Keep field on (only if a key is provided)"
             ],
@@ -13352,8 +13370,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 767,
+        "commands_extracted": 768,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-05-25T12:38:36"
+        "extracted_on": "2025-05-29T23:30:20"
     }
 }

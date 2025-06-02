@@ -3,17 +3,22 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf iclass tear` - readability improvements for erase phase (@antiklesys)
+- Changed `hf iclass legrec` - code optimizations gaining a ~8% speed increase (@antiklesys)
+- Modified `hf iclass tear` - now has a device side implementation also. (@antiklesys) (@iceman1001)
+- Changed `hf iclass info` - now uses CSN values based checks (@antiklesys)
 - Changed `hf iclass dump` - now uses default AA1 key when called without a key or key index (@iceman1001)
 - Renamed `hf iclass trbl` to `hf iclass tear` (@iceman1001)
 - Changed `hw tearoff` - the device side message is now debug log controlled (@iceman1001)
 - Changed `pm3.sh` - Serial ports enumeration on Proxspace3.xx / MINGW environments,  now using powershell.exe since wmic is deprecated (@iceman1001)
 - Fixed and updated `hf iclass trbl` to correctly use the credit key when passed and show partial tearoff results (@antiklesys)
-- Fixed `hf iclass legbrute` was not correctly parsin the index value
+- Fixed `hf iclass legbrute` was not correctly parsing the index value
 - Fixed `hf mf ekeyprn` - failed to download emulator memory due to wrong size calculation (@iceman1001)
 - Fixed `hf mf fchk --mem` to actually use flash dict (@doegox)
 - Fixed `make install` on OSX thanks DaveItsLong (@doegox)
 - Added new standalone mode `HF_ST25_TEAROFF` to store/restore ST25TB tags with tearoff for counters (@seclabz)
 - Added `hf_mfu_ultra.lua` script enables restoring dump to ULTRA/UL-5 tags and clearing previously written ULTRA tags (@mak-42)
+- Fixed `hf mfu sim` to make persistent the counter increases in the emulator memory (@sup3rgiu)
 
 ## [Blue Ice.4.20142][2025-03-25]
 - Added `des_talk.py` script for easier MIFARE DESFire handling (@trigat)

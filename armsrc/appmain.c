@@ -99,6 +99,7 @@ int tearoff_hook(void) {
     if (g_tearoff_enabled) {
         if (g_tearoff_delay_us == 0) {
             Dbprintf(_RED_("No tear-off delay configured!"));
+            g_tearoff_enabled = false;
             return PM3_SUCCESS; // SUCCESS = the hook didn't do anything
         }
         SpinDelayUsPrecision(g_tearoff_delay_us);
@@ -2227,6 +2228,10 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_ICLASS_CREDIT_EPURSE: {
             iclass_credit_epurse((iclass_credit_epurse_t *)packet->data.asBytes);
+            break;
+        }
+        case CMD_HF_ICLASS_TEARBL: {
+            iClass_TearBlock((iclass_tearblock_req_t *)packet->data.asBytes);
             break;
         }
 #endif
