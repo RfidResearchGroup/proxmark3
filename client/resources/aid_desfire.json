@@ -908,7 +908,7 @@
         "Vendor": "Invalid / Reserved",
         "Country": "",
         "Name": "Invalid / Reserved",
-        "Description": "Used by ATL Breeze, MAD Tarjeta Transporte Publico, PHL FREEDOM, and YVR Compass",
+        "Description": "Used by ATL Breeze, PHL FREEDOM, and YVR Compass",
         "Type": "transport"
     },
     {
@@ -931,7 +931,7 @@
         "AID": "010000",
         "Vendor": "Consorcio Regional de Transportes Publicos Regulares de Madrid (CRTM)",
         "Country": "ES",
-        "Name": "Tarjeta Transporte Publico (MAD) (Alternative Endian)",
+        "Name": "Tarjeta Transporte Publico (MAD)",
         "Description": "MAD Public Transport Card",
         "Type": "transport"
     },
