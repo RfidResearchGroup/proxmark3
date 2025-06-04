@@ -704,7 +704,7 @@ static void mem_app_config(const picopass_hdr_t *hdr) {
     uint8_t app2_limit = card_app2_limit[type];
     uint8_t pagemap = get_pagemap(hdr);
 
-    PrintAndLogEx(INFO, "-------------------------- " _CYAN_("Memory") " --------------------------");
+    PrintAndLogEx(INFO, "------------------------ " _CYAN_("Memory") " -------------------------");
 
     if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
         PrintAndLogEx(INFO, " %u KBits ( " _YELLOW_("%u") " bytes )", kb, app2_limit * 8);
@@ -733,7 +733,7 @@ static void mem_app_config(const picopass_hdr_t *hdr) {
     [=]     AA2 blocks 5 { 0x100 - 0xFF (256 - 255) }
     */
 
-    PrintAndLogEx(INFO, "------------------------- " _CYAN_("KeyAccess") " ------------------------");
+    PrintAndLogEx(INFO, "----------------------- " _CYAN_("KeyAccess") " -----------------------");
     PrintAndLogEx(INFO, " * Kd, Debit key, AA1    Kc, Credit key, AA2 *");
     uint8_t keyAccess = isset(mem, 0x01);
     if (keyAccess) {
@@ -754,13 +754,13 @@ static void mem_app_config(const picopass_hdr_t *hdr) {
 }
 
 void print_picopass_info(const picopass_hdr_t *hdr) {
-    PrintAndLogEx(INFO, "-------------------- " _CYAN_("Card configuration") " --------------------");
+    PrintAndLogEx(INFO, "------------------- " _CYAN_("Card configuration") " ------------------");
     fuse_config(hdr);
     mem_app_config(hdr);
 }
 
 void print_picopass_header(const picopass_hdr_t *hdr) {
-    PrintAndLogEx(INFO, "--------------------------- " _CYAN_("Card") " ---------------------------");
+    PrintAndLogEx(INFO, "-------------------------- " _CYAN_("Card") " -------------------------");
     PrintAndLogEx(SUCCESS, "    CSN... " _GREEN_("%s") " uid", sprint_hex(hdr->csn, sizeof(hdr->csn)));
     PrintAndLogEx(SUCCESS, " Config... %s card configuration", sprint_hex((uint8_t *)&hdr->conf, sizeof(hdr->conf)));
     PrintAndLogEx(SUCCESS, "E-purse... %s card challenge, CC", sprint_hex(hdr->epurse, sizeof(hdr->epurse)));
@@ -768,13 +768,13 @@ void print_picopass_header(const picopass_hdr_t *hdr) {
     if (memcmp(hdr->key_d, zeros, sizeof(zeros)) && memcmp(hdr->key_d, empty, sizeof(empty))) {
         PrintAndLogEx(SUCCESS, "     Kd... " _YELLOW_("%s") " debit key", sprint_hex(hdr->key_d, sizeof(hdr->key_d)));
     } else {
-        PrintAndLogEx(SUCCESS, "     Kd... %s debit key ( hidden )", sprint_hex(hdr->key_d, sizeof(hdr->key_d)));
+        PrintAndLogEx(SUCCESS, "     Kd... -- -- -- -- -- -- -- --  debit key ( hidden )");
     }
 
     if (memcmp(hdr->key_c, zeros, sizeof(zeros)) && memcmp(hdr->key_c, empty, sizeof(empty))) {
         PrintAndLogEx(SUCCESS, "     Kc... " _YELLOW_("%s") " credit key", sprint_hex(hdr->key_c, sizeof(hdr->key_c)));
     } else {
-        PrintAndLogEx(SUCCESS, "     Kc... %s credit key ( hidden )", sprint_hex(hdr->key_c, sizeof(hdr->key_c)));
+        PrintAndLogEx(SUCCESS, "     Kc... -- -- -- -- -- -- -- --  credit key ( hidden )");
     }
 
     PrintAndLogEx(SUCCESS, "    AIA... %s application issuer area", sprint_hex(hdr->app_issuer_area, sizeof(hdr->app_issuer_area)));
@@ -3163,12 +3163,12 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     bool reread = false;
     bool erase_phase = false;
 
-    if (blockno < 3){
+    if (blockno < 3) {
         read_auth = false;
     }
 
     int res_orig = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read_orig, false);
-    while (reread){
+    while (reread) {
         if (res_orig == PM3_SUCCESS && !reread) {
             if (memcmp(data_read_orig, zeros, 8) == 0) {
                 reread = true;
@@ -3177,25 +3177,25 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             }
         } else if (res_orig == PM3_SUCCESS && reread) {
             reread = false;
-            if (blockno == 2 && memcmp(data_read_orig, zeros, 8) == 0){
+            if (blockno == 2 && memcmp(data_read_orig, zeros, 8) == 0) {
                 reread = true;
             }
         }
     }
 
-    if (blockno == 2 && data_len == 0){
+    if (blockno == 2 && data_len == 0) {
         int value_index = 0; //assuming FFFFFFFF is on the right
-        if(memcmp(data_read_orig + 4, "\xFF\xFF\xFF\xFF", 4) != 0){ //FFFFFFFF is on the left
+        if (memcmp(data_read_orig + 4, "\xFF\xFF\xFF\xFF", 4) != 0) { //FFFFFFFF is on the left
             value_index = 4;
         }
         memcpy(key, iClass_Key_Table[1], PICOPASS_BLOCK_SIZE);
         use_credit_key = true;
         auth = true;
-        memcpy(data,data_read_orig,PICOPASS_BLOCK_SIZE);
+        memcpy(data, data_read_orig, PICOPASS_BLOCK_SIZE);
         //decrease the debit epurse value by 1
-        if(data_read_orig[value_index] != 0x00){
+        if (data_read_orig[value_index] != 0x00) {
             data[value_index]--;
-        }else{
+        } else {
             data[value_index + 2]--;
             data[value_index] = 0xFF;
         }
@@ -3369,7 +3369,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
                 if (memcmp(data_read, ff_data, 8) == 0 &&
                         memcmp(data_read_orig, ff_data, 8) != 0) {
 
-                    if (erase_phase == false){
+                    if (erase_phase == false) {
                         PrintAndLogEx(NORMAL, "");
                         PrintAndLogEx(SUCCESS, _CYAN_("Erase phase hit... ALL ONES"));
                         iclass_cmp_print(data_read_orig, data_read, "Original: ", "Read:     ");
@@ -6018,7 +6018,7 @@ int info_iclass(bool shallow_mod) {
     picopass_ns_hdr_t *ns_hdr = &r->header.ns_hdr;
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ----------------------------------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " -------------------------------------");
 
     if ((r->status & FLAG_ICLASS_CSN) == FLAG_ICLASS_CSN) {
         PrintAndLogEx(SUCCESS, "    CSN: " _GREEN_("%s") " uid", sprint_hex(hdr->csn, sizeof(hdr->csn)));
@@ -6042,13 +6042,13 @@ int info_iclass(bool shallow_mod) {
         if (memcmp(hdr->key_d, zeros, sizeof(zeros))) {
             PrintAndLogEx(SUCCESS, "     Kd: " _YELLOW_("%s") " debit key", sprint_hex(hdr->key_d, sizeof(hdr->key_d)));
         } else {
-            PrintAndLogEx(SUCCESS, "     Kd: %s debit key ( hidden )", sprint_hex(hdr->key_d, sizeof(hdr->key_d)));
+            PrintAndLogEx(SUCCESS, "     Kd: -- -- -- -- -- -- -- --  debit key ( hidden )");
         }
 
         if (memcmp(hdr->key_c, zeros, sizeof(zeros))) {
             PrintAndLogEx(SUCCESS, "     Kc: " _YELLOW_("%s") " credit key", sprint_hex(hdr->key_c, sizeof(hdr->key_c)));
         } else {
-            PrintAndLogEx(SUCCESS, "     Kc: %s credit key ( hidden )", sprint_hex(hdr->key_c, sizeof(hdr->key_c)));
+            PrintAndLogEx(SUCCESS, "     Kc: -- -- -- -- -- -- -- --  credit key ( hidden )");
         }
 
 
@@ -6061,7 +6061,7 @@ int info_iclass(bool shallow_mod) {
         print_picopass_info(hdr);
     }
 
-    PrintAndLogEx(INFO, "------------------------ " _CYAN_("Fingerprint") " -----------------------");
+    PrintAndLogEx(INFO, "----------------------- " _CYAN_("Fingerprint") " ---------------------");
 
     uint8_t aia[8];
     if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {

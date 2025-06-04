@@ -3745,7 +3745,7 @@
                 "--sleep <ms> Sleep between each tear",
                 "--arm Runs the commands on device side and tries to stabilize tears"
             ],
-            "usage": "hf iclass tear [-hv] [-k <hex>] [--ki <dec>] --blk <dec> -d <hex> [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow] -s <dec> [-i <dec>] [-e <dec>] [--loop <dec>] [--sleep <ms>] [--arm]"
+            "usage": "hf iclass tear [-hv] [-k <hex>] [--ki <dec>] --blk <dec> [-d <hex>] [-m <hex>] [--credit] [--elite] [--raw] [--nr] [--shallow] -s <dec> [-i <dec>] [-e <dec>] [--loop <dec>] [--sleep <ms>] [--arm]"
         },
         "hf iclass unhash": {
             "command": "hf iclass unhash",
@@ -13372,6 +13372,6 @@
     "metadata": {
         "commands_extracted": 768,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-05-29T23:30:20"
+        "extracted_on": "2025-06-04T16:02:17"
     }
 }

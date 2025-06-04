@@ -400,7 +400,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
     int trace_data_size;
 
     // Respond SOF -- takes 1 bytes
-    uint8_t resp_sof[1] = {0};
+    uint8_t resp_sof[2] = {0};
     int resp_sof_len;
 
     // Anticollision CSN (rotated CSN)
@@ -2333,7 +2333,7 @@ void iClass_TearBlock(iclass_tearblock_req_t *msg) {
             if (memcmp(data_read, ff_data, PICOPASS_BLOCK_SIZE) == 0 &&
                     memcmp(data_read_orig, ff_data, PICOPASS_BLOCK_SIZE) != 0) {
 
-                if(erase_phase == false){
+                if (erase_phase == false) {
                     DbpString("");
                     DbpString(_CYAN_("Erase phase hit... ALL ONES"));
 
@@ -2679,44 +2679,44 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     uint8_t original_mac[8] = {0};
     uint8_t mac1[4] = {0};
 
-        while (!card_select || !card_auth) {
+    while (!card_select || !card_auth) {
 
-            Iso15693InitReader(); //has to be at the top as it starts tracing
-            if (!msg->debug) {
-                set_tracing(false); //disable tracing to prevent crashes - set to true for debugging
-            } else {
-                if (loops == 1) {
-                    clear_trace(); //if we're debugging better to clear the trace but do it only on the first loop
-                }
-            }
-            //Step0 Card Select Routine
-            eof_time = 0; //reset eof time
-            res = select_iclass_tag(&hdr, false, &eof_time, shallow_mod);
-            if (res) {
-                status_message = 1; //card select successful
-                card_select = true;
-            }
-
-            //Step1 Authenticate with AA1 using trace
-            if (card_select) {
-                memcpy(original_mac, msg->req.key, 8);
-                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-                res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
-                if (res) {
-                    status_message = 2; //authentication with AA1 macs successful
-                    card_auth = true;
-                }
-            }
-            if (!card_auth || !card_select) {
-                reinit_tentatives++;
-                switch_off();
-            }
-            if (reinit_tentatives == 5) {
-                DbpString("");
-                DbpString(_RED_("Unable to select or authenticate with card multiple times! Stopping."));
-                goto out;
+        Iso15693InitReader(); //has to be at the top as it starts tracing
+        if (!msg->debug) {
+            set_tracing(false); //disable tracing to prevent crashes - set to true for debugging
+        } else {
+            if (loops == 1) {
+                clear_trace(); //if we're debugging better to clear the trace but do it only on the first loop
             }
         }
+        //Step0 Card Select Routine
+        eof_time = 0; //reset eof time
+        res = select_iclass_tag(&hdr, false, &eof_time, shallow_mod);
+        if (res) {
+            status_message = 1; //card select successful
+            card_select = true;
+        }
+
+        //Step1 Authenticate with AA1 using trace
+        if (card_select) {
+            memcpy(original_mac, msg->req.key, 8);
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+            res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
+            if (res) {
+                status_message = 2; //authentication with AA1 macs successful
+                card_auth = true;
+            }
+        }
+        if (!card_auth || !card_select) {
+            reinit_tentatives++;
+            switch_off();
+        }
+        if (reinit_tentatives == 5) {
+            DbpString("");
+            DbpString(_RED_("Unable to select or authenticate with card multiple times! Stopping."));
+            goto out;
+        }
+    }
 
     while (bits_found == -1) {
 
@@ -2728,9 +2728,9 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         uint16_t resp_len = 0;
 
         if (BUTTON_PRESS() || loops > msg->loop) {
-            if(loops > msg->loop){
+            if (loops > msg->loop) {
                 completed = true;
-            }else{
+            } else {
                 interrupted = true;
             }
             goto out;
@@ -2738,9 +2738,9 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
         if (msg->test) {
             Dbprintf(_YELLOW_("*Cycled Reader*") " TEST Index - Loops: "_YELLOW_("%3d / %3d") " *", loops, msg->loop);
-        }else if (msg->debug || (!card_select && !card_auth)){
+        } else if (msg->debug || (!card_select && !card_auth)) {
             Dbprintf(_YELLOW_("*Cycled Reader*") " Index: "_RED_("%3d")" Loops: "_YELLOW_("%3d / %3d") " *", index, loops, msg->loop);
-        }else{
+        } else {
             DbprintfEx(FLAG_INPLACE, "[" _BLUE_("#") "] Index: "_CYAN_("%3d")" Loops: "_YELLOW_("%3d / %3d")" ", index, loops, msg->loop);
         }
 
@@ -2798,7 +2798,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                 goto out;
             }
         }
-        if(priv_esc && status_message != 3){
+        if (priv_esc && status_message != 3) {
             start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
             iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
             status_message = 3;
@@ -2851,7 +2851,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             }
         }
 
-        if (!write_error) {
+        if (write_error == false) {
             //Step6 Perform 8 authentication attempts + 1 to verify if we found the weak key
             for (int i = 0; i < 8 ; ++i) {
                 start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
@@ -2869,7 +2869,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             //regardless of bits being found, restore the original key and verify it
             bool reverted = false;
             uint8_t revert_retries = 0;
-            while (!reverted) {
+            while (reverted == false) {
                 //Regain privilege escalation with a readcheck
                 start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                 iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
@@ -2908,28 +2908,28 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
         }
 
-        if(msg->debug){
-            if(status_message >= 1){
+        if (msg->debug) {
+            if (status_message >= 1) {
                 DbpString("");
                 DbpString("Card Select:............."_GREEN_("Ok!"));
             }
-            if(status_message >= 2){
+            if (status_message >= 2) {
                 DbpString("AA1 macs authentication:."_GREEN_("Ok!"));
             }
-            if(status_message >= 3){
+            if (status_message >= 3) {
                 DbpString("Privilege Escalation:...."_GREEN_("Ok!"));
             }
-            if(status_message >= 4){
+            if (status_message >= 4) {
                 DbpString("Wrote key: ");
                 Dbhexdump(8, genkeyblock, false);
             }
-            if(status_message >= 5){
+            if (status_message >= 5) {
                 DbpString("Key Update:.............."_GREEN_("Verified!"));
             }
-            if(status_message >= 6){
+            if (status_message >= 6) {
                 DbpString("Original Key Restore:...."_GREEN_("Ok!"));
             }
-            if(status_message >= 7){
+            if (status_message >= 7) {
                 DbpString("Original Key Restore:...."_GREEN_("Verified!"));
             }
         }
@@ -2939,7 +2939,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             card_select = false;
             card_auth = false;
             priv_esc = false;
-        }else{
+        } else {
             loops++;
             index++;
             status_message = 2;
@@ -2974,7 +2974,7 @@ out:
     switch_off();
     if (completed) {
         reply_ng(CMD_HF_ICLASS_RECOVER, PM3_EINVARG, NULL, 0);
-    } else if (interrupted){
+    } else if (interrupted) {
         reply_ng(CMD_HF_ICLASS_RECOVER, PM3_EOPABORTED, NULL, 0);
     } else {
         reply_ng(CMD_HF_ICLASS_RECOVER, PM3_ESOFT, NULL, 0);
