@@ -2747,7 +2747,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         while (!card_select || !card_auth) {
 
             Iso15693InitReader(); //has to be at the top as it starts tracing
-
+            set_tracing(false); //disable tracing to prevent crashes - set to true for debugging
             //Step0 Card Select Routine
             eof_time = 0; //reset eof time
             res = select_iclass_tag(&hdr, false, &eof_time, shallow_mod);
