@@ -4842,7 +4842,7 @@ static int CmdHFiClassLegacyRecSim(void) {
             PrintAndLogEx(SUCCESS, "Original Key: " _GREEN_("%s"), sprint_hex(original_key, sizeof(original_key)));
             PrintAndLogEx(SUCCESS, "Weak Key: " _GREEN_("%s"), sprint_hex(key, sizeof(key)));
             PrintAndLogEx(SUCCESS, "Key Updates Required to Weak Key: " _GREEN_("%d"), index);
-            PrintAndLogEx(SUCCESS, "Estimated Time: ~" _GREEN_("%d")" hours", index / 7250);
+            PrintAndLogEx(SUCCESS, "Estimated Time: ~" _GREEN_("%d")" hours", index / 17800);
         }
 
         index++;
