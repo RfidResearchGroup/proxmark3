@@ -2669,39 +2669,18 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
     //START LOOP
     uint32_t loops = 1;
-
-    while (bits_found == -1) {
-        bool card_select = false;
-        bool card_auth = false;
-        int reinit_tentatives = 0;
-        uint8_t original_mac[8] = {0};
-        uint16_t resp_len = 0;
-        int res2;
-        uint8_t resp[10] = {0};
-        uint8_t mac1[4] = {0};
-        uint8_t mac2[4] = {0};
-        picopass_hdr_t hdr = {0};
-        bool res = false;
-        int status_message = 0;
+    bool card_select = false;
+    bool card_auth = false;
+    bool priv_esc = false;
+    int status_message = 0;
+    int reinit_tentatives = 0;
+    bool res = false;
+    picopass_hdr_t hdr = {0};
+    uint8_t original_mac[8] = {0};
+    uint8_t mac1[4] = {0};
 
         while (!card_select || !card_auth) {
 
-            if (BUTTON_PRESS() || loops > msg->loop) {
-                if(loops > msg->loop){
-                    completed = true;
-                }else{
-                    interrupted = true;
-                }
-                goto out;
-            }
-
-            if (msg->test) {
-                Dbprintf(_YELLOW_("*Cycled Reader*") " TEST Index - Loops: "_YELLOW_("%3d / %3d") " *", loops, msg->loop);
-            }else if (msg->debug){
-                Dbprintf(_YELLOW_("*Cycled Reader*") " Index: "_RED_("%3d")" Loops: "_YELLOW_("%3d / %3d") " *", index, loops, msg->loop);
-            }else{
-                DbprintfEx(FLAG_INPLACE, "[" _BLUE_("#") "] Index: "_CYAN_("%3d")" Loops: "_YELLOW_("%3d / %3d")" ", index, loops, msg->loop);
-            }
             Iso15693InitReader(); //has to be at the top as it starts tracing
             if (!msg->debug) {
                 set_tracing(false); //disable tracing to prevent crashes - set to true for debugging
@@ -2739,10 +2718,68 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             }
         }
 
+    while (bits_found == -1) {
+
+        reinit_tentatives = 0;
+        int res2;
+        uint8_t resp[10] = {0};
+        uint8_t mac2[4] = {0};
+        res = false;
+        uint16_t resp_len = 0;
+
+        if (BUTTON_PRESS() || loops > msg->loop) {
+            if(loops > msg->loop){
+                completed = true;
+            }else{
+                interrupted = true;
+            }
+            goto out;
+        }
+
+        if (msg->test) {
+            Dbprintf(_YELLOW_("*Cycled Reader*") " TEST Index - Loops: "_YELLOW_("%3d / %3d") " *", loops, msg->loop);
+        }else if (msg->debug || (!card_select && !card_auth)){
+            Dbprintf(_YELLOW_("*Cycled Reader*") " Index: "_RED_("%3d")" Loops: "_YELLOW_("%3d / %3d") " *", index, loops, msg->loop);
+        }else{
+            DbprintfEx(FLAG_INPLACE, "[" _BLUE_("#") "] Index: "_CYAN_("%3d")" Loops: "_YELLOW_("%3d / %3d")" ", index, loops, msg->loop);
+        }
+
+        while (!card_select || !card_auth) {
+
+            Iso15693InitReader(); //has to be at the top as it starts tracing
+
+            //Step0 Card Select Routine
+            eof_time = 0; //reset eof time
+            res = select_iclass_tag(&hdr, false, &eof_time, shallow_mod);
+            if (res) {
+                status_message = 1; //card select successful
+                card_select = true;
+            }
+
+            //Step1 Authenticate with AA1 using trace
+            if (card_select) {
+                memcpy(original_mac, msg->req.key, 8);
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
+                if (res) {
+                    status_message = 2; //authentication with AA1 macs successful
+                    card_auth = true;
+                }
+            }
+            if (!card_auth || !card_select) {
+                reinit_tentatives++;
+                switch_off();
+            }
+            if (reinit_tentatives == 5) {
+                DbpString("");
+                DbpString(_RED_("Unable to select or authenticate with card multiple times! Stopping."));
+                goto out;
+            }
+        }
+
         //Step2 Privilege Escalation: attempt to read AA2 with credentials for AA1
         uint8_t blockno = 24;
         int priv_esc_tries = 0;
-        bool priv_esc = false;
         while (!priv_esc) {
             //The privilege escalation is done with a readcheck and not just a normal read!
             start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
@@ -2760,6 +2797,11 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                 DbpString(_RED_("Unable to complete privilege escalation! Stopping."));
                 goto out;
             }
+        }
+        if(priv_esc && status_message != 3){
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+            iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
+            status_message = 3;
         }
 
         //Step3 Calculate New Key (Optimised Algo V2)
@@ -2895,9 +2937,13 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
         if (write_error && (msg->debug || msg->test)) { //if there was a write error, re-run the loop for the same key index
             DbpString("Loop Error: "_RED_("Repeating Loop!"));
+            card_select = false;
+            card_auth = false;
+            priv_esc = false;
         }else{
             loops++;
             index++;
+            status_message = 2;
         }
 
     }//end while
