@@ -45,7 +45,7 @@ XST_OPTS_AREA += -fsm_style bram
 XST_OPTS_AREA += -fsm_encoding compact
 
 # par specific option (set determistic seed)
-PAR_OPTIONS = -t 1
+PAR_OPTIONS = -t 2
 
 # Types of selective module compilation:
 # WITH_LF  Enables selection of LF modules (and disables all HF)
@@ -188,7 +188,7 @@ work:
 	$(Q)$(RM) $@ $*.drc $*.rbt
 	$(info [=] BITGEN $@)
 	$(Q)$(XILINX_TOOLS_PREFIX)bitgen $(VERBOSITY) -w $* $@
-	#python3 ../strip_date_time_from_binary.py $@ || true
+	python3 ../strip_date_time_from_binary.py $@ || true
 	$(Q)$(CP) $@ ..
 
 # Build all targets
