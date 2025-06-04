@@ -2778,7 +2778,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         }
 
         //Step2 Privilege Escalation: attempt to read AA2 with credentials for AA1
-        uint8_t blockno = 24;
+        uint8_t blockno = 3;
         int priv_esc_tries = 0;
         while (!priv_esc) {
             //The privilege escalation is done with a readcheck and not just a normal read!
@@ -2813,7 +2813,6 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         //Step4 Calculate New Mac
 
         uint8_t wb[9] = {0};
-        blockno = 3;
         wb[0] = blockno;
         memcpy(wb + 1, genkeyblock, 8);
         doMAC_N(wb, sizeof(wb), div_key2, mac2);
