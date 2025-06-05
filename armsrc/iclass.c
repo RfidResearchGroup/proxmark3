@@ -2896,37 +2896,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             uint8_t revert_retries = 0;
             if(msg->fast){ //if we're going fast only restore the original key at the end
                 if(recovered){
-                    while (!reverted) {
-                        //Regain privilege escalation with a readcheck
-                        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-                        iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
-                        memcpy(wb + 1, fast_restore_key, 8);
-                        doMAC_N(wb, sizeof(wb), div_key2, mac2);
-                        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-                        if (iclass_writeblock_sp(blockno, fast_restore_key, mac2, shallow_mod, &start_time, &eof_time)) {
-                            status_message = 6; //restore of original key successful but unverified
-                        }
-                        //Do a readcheck first to reset the cypher state
-                        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-                        iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
-                        //need to craft the authentication payload accordingly
-                        memcpy(msg->req.key, original_mac, 8);
-                        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-                        res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
-                        if (res == true) {
-                            status_message = 7; //restore of original key verified - card usable again
-                            reverted = true;
-                                goto restore;
-                        }
-                        revert_retries++;
-                        if (revert_retries >= 7) { //must always be an odd number!
-                            DbpString("");
-                            DbpString(_CYAN_("Last Written Key (fast): "));
-                            Dbhexdump(8, fast_restore_key, false);
-                            Dbprintf(_RED_("Attempted to restore original key for %3d times and failed. Stopping. Card is likely unusable."), revert_retries);
-                            goto out;
-                        }
-                    }
+                    goto fast_restore;
                 }
             }else{
                 //if we're NOT going fast, regardless of bits being found, restore the original key and verify it
@@ -3034,7 +3004,11 @@ fast_restore:
         if (res == true) {
             status_message = 7; //restore of original key verified - card usable again
             reverted = true;
-                goto out;
+                if(recovered){
+                    goto restore;
+                }else{
+                    goto out;
+                }
         }
         revert_retries++;
         if (revert_retries >= 7) { //must always be an odd number!
