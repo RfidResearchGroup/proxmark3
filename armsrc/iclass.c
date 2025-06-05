@@ -3004,11 +3004,6 @@ fast_restore:
         if (res == true) {
             status_message = 7; //restore of original key verified - card usable again
             reverted = true;
-                if(recovered){
-                    goto restore;
-                }else{
-                    goto out;
-                }
         }
         revert_retries++;
         if (revert_retries >= 7) { //must always be an odd number!
@@ -3016,6 +3011,10 @@ fast_restore:
             DbpString(_CYAN_("Last Written Key (fast): "));
             Dbhexdump(8, fast_restore_key, false);
             Dbprintf(_RED_("Attempted to restore original key for %3d times and failed. Stopping. Card is likely unusable."), revert_retries);
+        }
+        if(recovered){
+            goto restore;
+        }else{
             goto out;
         }
     }
