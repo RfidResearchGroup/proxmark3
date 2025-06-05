@@ -982,48 +982,20 @@ static int doTestsWithKnownInputs(void) {
     return res;
 }
 
-static bool readKeyFile(uint8_t *key, size_t keylen) {
-
-    bool retval = false;
-    size_t len = 0;
-    uint8_t *keyptr = NULL;
-    if (loadFile_safe("iclass_key.bin", "", (void **)&keyptr, &len) != PM3_SUCCESS) {
-        return retval;
-    }
-    if (keylen == len) {
-        memcpy(key, keyptr, keylen);
-        retval = true;
-    }
-    free(keyptr);
-    return retval;
-}
-
 int doKeyTests(void) {
 
-    PrintAndLogEx(INFO, "Checking if the master key is present (iclass_key.bin)...");
-    uint8_t key[8] = {0};
-    if (readKeyFile(key, sizeof(key)) == false) {
-        PrintAndLogEx(FAILED, "Master key not present, will not be able to do all testcases");
-    } else {
-
-        //Test if it's the right key...
-        uint8_t i;
-        uint8_t j = 0;
-        for (i = 0; i < ARRAYLEN(key); i++)
-            j += key[i];
-
-        if (j != 185) {
-            PrintAndLogEx(INFO, "A key was loaded, but it does not seem to be the correct one. Aborting these tests");
-        } else {
-            PrintAndLogEx(SUCCESS, "Key present");
-            PrintAndLogEx(SUCCESS, "Checking key parity...");
-            des_checkParity(key);
-
-            // Test hashing functions
-            PrintAndLogEx(SUCCESS, "The following tests require the correct 8-byte master key");
-            testKeyDiversificationWithMasterkeyTestcases(key);
-        }
+    uint8_t key[8] = { 0xAE, 0xA6, 0x84, 0xA6, 0xDA, 0xB2, 0x32, 0x78 };
+    uint8_t parity[8] = {0x00, 0x01, 0x01, 0x01, 0x00, 0x01, 0x00, 0x01};
+    for (int i = 0; i < 8; i++) {
+        key[i] += parity[i];
     }
+
+    PrintAndLogEx(SUCCESS, "Checking key parity...");
+    des_checkParity(key);
+
+    // Test hashing functions
+    PrintAndLogEx(SUCCESS, "The following tests require the correct 8-byte master key");
+    testKeyDiversificationWithMasterkeyTestcases(key);
     PrintAndLogEx(INFO, "Testing key diversification with non-sensitive keys...");
     return doTestsWithKnownInputs();
 }
