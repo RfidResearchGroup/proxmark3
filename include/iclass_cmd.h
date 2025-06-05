@@ -124,6 +124,7 @@ typedef struct {
     uint8_t nfa[8];
     bool debug;
     bool test;
+    bool fast;
 } PACKED iclass_recover_req_t;
 
 typedef struct iclass_premac {
