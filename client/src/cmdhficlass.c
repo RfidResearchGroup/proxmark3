@@ -4931,7 +4931,7 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort");
     PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------\n");
 
-    iclass_recover(macs, index, loop, no_first_auth, debug, test, allnight);
+    iclass_recover(macs, index, loop, no_first_auth, debug, test, fast, allnight);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(WARNING, _YELLOW_("If the process completed successfully, you can now run 'hf iclass legbrute' with the partial key found."));
