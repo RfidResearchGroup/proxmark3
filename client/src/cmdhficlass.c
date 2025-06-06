@@ -1037,7 +1037,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             clearCommandBuffer();
             SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, numberOfCSNs, 1, csn, 8);
 
-            if (sim_type == ICLASS_SIM_MODE_FULL || ICLASS_SIM_MODE_FULL_GLITCH)
+            if (sim_type == ICLASS_SIM_MODE_FULL || sim_type ==  ICLASS_SIM_MODE_FULL_GLITCH)
                 PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass esave -h") "` to save the emulator memory to file");
             break;
         }
