@@ -125,6 +125,7 @@ typedef struct {
     bool debug;
     bool test;
     bool fast;
+    bool short_delay;
 } PACKED iclass_recover_req_t;
 
 typedef struct iclass_premac {
