@@ -4524,7 +4524,7 @@ void picopass_elite_nextKey(uint8_t *key) {
     memcpy(key, key_state, 8);
 }
 
-static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, uint8_t no_first_auth[8], bool debug, bool test, bool fast, bool allnight) {
+static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, uint8_t no_first_auth[8], bool debug, bool test, bool fast, bool short_delay, bool allnight) {
 
     int runs = 1;
     int cycle = 1;
@@ -4557,6 +4557,7 @@ static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, u
         payload->debug = debug;
         payload->test = test;
         payload->fast = fast;
+        payload->short_delay = short_delay;
         memcpy(payload->nfa, no_first_auth, PICOPASS_BLOCK_SIZE);
         memcpy(payload->req.key, key, PICOPASS_BLOCK_SIZE);
         memcpy(payload->req2.key, aa2_standard_key, PICOPASS_BLOCK_SIZE);
@@ -4859,9 +4860,11 @@ static int CmdHFiClassLegacyRecSim(void) {
             bits_found = index;
             PrintAndLogEx(SUCCESS, "Original Key: " _GREEN_("%s"), sprint_hex(original_key, sizeof(original_key)));
             PrintAndLogEx(SUCCESS, "Weak Key: " _GREEN_("%s"), sprint_hex(key, sizeof(key)));
-            PrintAndLogEx(SUCCESS, "Key Updates Required to Weak Key :" _GREEN_("%d"), index);
+            PrintAndLogEx(SUCCESS, "Key Updates Required to Weak Key:  " _GREEN_("%d"), index);
             PrintAndLogEx(SUCCESS, "Estimated Time (default mode)   : ~" _GREEN_("%d")" hours", index / 17800);
+            PrintAndLogEx(SUCCESS, "Estimated Time (default + --sl) : ~" _GREEN_("%d")" hours", index / 19450);
             PrintAndLogEx(SUCCESS, "Estimated Time (--fast mode)    : ~" _GREEN_("%d")" hours", index / 26860);
+            PrintAndLogEx(SUCCESS, "Estimated Time (--fast + --sl)  : ~" _GREEN_("%d")" hours", index / 29750);
         }
 
         index++;
@@ -4890,6 +4893,7 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
         arg_lit0(NULL, "notest", "Perform real writes on the card!"),
         arg_lit0(NULL, "allnight", "Loops the loop for 10 times, recommended loop value of 5000."),
         arg_lit0(NULL, "fast", "Increases the speed (4.6->7.4 key updates/second), higher risk to brick the card."),
+        arg_lit0(NULL, "sl", "Lower card comms delay times, further speeds increases, may cause more errors."),
         arg_lit0(NULL, "est", "Estimates the key updates based on the card's CSN assuming standard key."),
         arg_param_end
     };
@@ -4906,7 +4910,8 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     bool no_test = arg_get_lit(ctx, 5);
     bool allnight = arg_get_lit(ctx, 6);
     bool fast = arg_get_lit(ctx, 7);
-    bool sim = arg_get_lit(ctx, 8);
+    bool short_delay = arg_get_lit(ctx, 8);
+    bool sim = arg_get_lit(ctx, 9);
 
     if (sim) {
         CmdHFiClassLegacyRecSim();
@@ -4948,8 +4953,8 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort");
     PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------\n");
 
-    iclass_recover(macs, index, loop, no_first_auth, debug, test, fast, allnight);
 
+    iclass_recover(macs, index, loop, no_first_auth, debug, test, fast, short_delay, allnight);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(WARNING, _YELLOW_("If the process completed successfully, you can now run 'hf iclass legbrute' with the partial key found."));
 

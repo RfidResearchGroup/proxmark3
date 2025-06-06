@@ -1795,7 +1795,7 @@ static bool iclass_writeblock_ext(uint8_t blockno, uint8_t *data, uint8_t *mac, 
     return true;
 }
 
-static bool iclass_writeblock_sp(uint8_t blockno, uint8_t *data, uint8_t *mac, bool shallow_mod, uint32_t *start_time, uint32_t *eof_time) {
+static bool iclass_writeblock_sp(uint8_t blockno, uint8_t *data, uint8_t *mac, bool shallow_mod, uint32_t *start_time, uint32_t *eof_time, bool short_delay) {
 
     // write command: cmd, 1 blockno, 8 data, 4 mac
     uint8_t write[14] = { 0x80 | ICLASS_CMD_UPDATE, blockno };
@@ -1804,7 +1804,12 @@ static bool iclass_writeblock_sp(uint8_t blockno, uint8_t *data, uint8_t *mac, b
     memcpy(write + 10, mac, 4);
 
     uint8_t resp[10] = {0};
-    bool isOK = iclass_send_cmd_with_retries(write, write_len, resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_UPDATE, eof_time, shallow_mod);
+    bool isOK = false;
+    if(short_delay){
+        isOK = iclass_send_cmd_with_retries(write, write_len, resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_UPDATE_FAST, eof_time, shallow_mod);
+    }else{
+        isOK = iclass_send_cmd_with_retries(write, write_len, resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_UPDATE, eof_time, shallow_mod);
+    }
     if (isOK == false) {
         return false;
     }
@@ -2642,6 +2647,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     uint8_t fast_previous_key[PICOPASS_BLOCK_SIZE] = {0};
     uint8_t fast_current_key[PICOPASS_BLOCK_SIZE] = {0};
     uint32_t index = msg->index;
+    bool short_delay = msg->short_delay;
     int bits_found = -1;
     bool recovered = false;
     bool completed = false;
@@ -2841,7 +2847,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         bool write_error = false;
         while (written == false && write_error == false) {
             //Step5 Perform Write
-            if (iclass_writeblock_sp(blockno, genkeyblock, mac2, shallow_mod, &start_time, &eof_time)) {
+            if (iclass_writeblock_sp(blockno, genkeyblock, mac2, shallow_mod, &start_time, &eof_time, short_delay)) {
                 status_message = 4; //wrote new key on the card - unverified
             }
             if(!msg->fast){ //if we're going slow we check at every write that the write actually happened
@@ -2905,7 +2911,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                     start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                     iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
                     start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-                    if (iclass_writeblock_sp(blockno, genkeyblock, mac2, shallow_mod, &start_time, &eof_time)) {
+                    if (iclass_writeblock_sp(blockno, genkeyblock, mac2, shallow_mod, &start_time, &eof_time, short_delay)) {
                         status_message = 6; //restore of original key successful but unverified
                     }
                     //Do a readcheck first to reset the cypher state
@@ -2991,7 +2997,7 @@ fast_restore:
         memcpy(wb + 1, fast_restore_key, 8);
         doMAC_N(wb, sizeof(wb), div_key2, mac2);
         start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-        if (iclass_writeblock_sp(blockno, fast_restore_key, mac2, shallow_mod, &start_time, &eof_time)) {
+        if (iclass_writeblock_sp(blockno, fast_restore_key, mac2, shallow_mod, &start_time, &eof_time, short_delay)) {
             status_message = 6; //restore of original key successful but unverified
         }
         //Do a readcheck first to reset the cypher state

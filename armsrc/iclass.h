@@ -34,6 +34,7 @@
 // times in samples @ 212kHz when acting as reader
 #define ICLASS_READER_TIMEOUT_ACTALL     330 // 1558us, nominal 330us + 7slots*160us = 1450us
 #define ICLASS_READER_TIMEOUT_UPDATE    3390 // 16000us, nominal 4-15ms
+#define ICLASS_READER_TIMEOUT_UPDATE_FAST    1500 // A copy of ICLASS_READER_TIMEOUT_UPDATE with reduced timeout values
 #define ICLASS_READER_TIMEOUT_OTHERS      80 // 380us, nominal 330us
 
 // The length of a received command will in most cases be no more than 18 bytes.
