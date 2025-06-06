@@ -3913,13 +3913,14 @@ static int CmdHFiClassView(const char *Cmd) {
 void HFiClassCalcDivKey(uint8_t *CSN, uint8_t *KEY, uint8_t *div_key, bool elite) {
     if (elite) {
         uint8_t keytable[128] = {0};
-        uint8_t key_index[8] = {0};
-        uint8_t key_sel[8] = { 0 };
-        uint8_t key_sel_p[8] = { 0 };
+        uint8_t key_index[PICOPASS_BLOCK_SIZE] = {0};
+        uint8_t key_sel[PICOPASS_BLOCK_SIZE] = {0};
+        uint8_t key_sel_p[PICOPASS_BLOCK_SIZE] = {0};
         hash2(KEY, keytable);
         hash1(CSN, key_index);
-        for (uint8_t i = 0; i < 8 ; i++)
+        for (uint8_t i = 0; i < 8 ; i++) {
             key_sel[i] = keytable[key_index[i]];
+        }
 
         //Permute from iclass format to standard format
         permutekey_rev(key_sel, key_sel_p);
@@ -4249,7 +4250,7 @@ static void add_key(uint8_t *key) {
 static int CmdHFiClassCheckKeys(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass chk",
-                  "Checkkeys loads a dictionary text file with 8byte hex keys to test authenticating against a iClass tag",
+                  "Checkkeys loads a dictionary text file with 8 byte hex keys to test authenticating against a iCLASS tag",
                   "hf iclass chk -f iclass_default_keys.dic\n"
                   "hf iclass chk -f iclass_elite_keys.dic --elite\n"
                   "hf iclass chk --vb6kdf\n");
@@ -4525,7 +4526,7 @@ void picopass_elite_nextKey(uint8_t *key) {
         }
         prepared = true;
     }
-    memcpy(key, key_state, 8);
+    memcpy(key, key_state, PICOPASS_BLOCK_SIZE);
 }
 
 static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, uint8_t no_first_auth[8], bool debug, bool test, bool fast, bool short_delay, bool allnight) {
@@ -4759,12 +4760,20 @@ static int CmdHFiClassLegBrute(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int epurse_len = 0, macs_len = 0, macs2_len = 0, startingkey_len = 0;
-    uint8_t epurse[PICOPASS_BLOCK_SIZE] = {0}, macs[PICOPASS_BLOCK_SIZE] = {0}, macs2[PICOPASS_BLOCK_SIZE] = {0}, startingKey[PICOPASS_BLOCK_SIZE] = {0};
-
+    int epurse_len = 0;
+    uint8_t epurse[PICOPASS_BLOCK_SIZE] = {0};
     CLIGetHexWithReturn(ctx, 1, epurse, &epurse_len);
+
+    int macs_len = 0;
+    uint8_t macs[PICOPASS_BLOCK_SIZE] = {0};
     CLIGetHexWithReturn(ctx, 2, macs, &macs_len);
+
+    int macs2_len = 0;
+    uint8_t macs2[PICOPASS_BLOCK_SIZE] = {0};
     CLIGetHexWithReturn(ctx, 3, macs2, &macs2_len);
+
+    int startingkey_len = 0;
+    uint8_t startingKey[PICOPASS_BLOCK_SIZE] = {0};
     CLIGetHexWithReturn(ctx, 4, startingKey, &startingkey_len);
 
     uint64_t index = arg_get_int_def(ctx, 5, 0);
@@ -4909,7 +4918,7 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass legrec",
-                  "Attempts to recover the diversified key of a specific iClass card. This may take several days.\n"
+                  "Attempts to recover the diversified key of a specific iCLASS card. This may take several days.\n"
                   "The card must remain be on the PM3 antenna during the whole process.\n"
                   _RED_(" ! Warning ! ") _WHITE_(" This process may brick the card! ") _RED_(" ! Warning ! "),
                   "hf iclass legrec --macs 0000000089cb984b\n"
@@ -5124,7 +5133,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     uint8_t *keyBlock = NULL;
     uint32_t keycount = 0;
 
-    if (!use_vb6kdf) {
+    if (use_vb6kdf == false) {
         // Load keys
         int res = loadFileDICTIONARY_safe(filename, (void **)&keyBlock, 8, &keycount);
         if (res != PM3_SUCCESS || keycount == 0) {
@@ -5176,7 +5185,6 @@ static int CmdHFiClassLookUp(const char *Cmd) {
 
     // Binsearch
     item = (iclass_prekey_t *) bsearch(&lookup, prekey, keycount, sizeof(iclass_prekey_t), cmp_uint32);
-
     if (item != NULL) {
         PrintAndLogEx(SUCCESS, "Found valid key " _GREEN_("%s"), sprint_hex(item->key, 8));
         add_key(item->key);
@@ -5219,23 +5227,24 @@ static void *bf_generate_mac(void *thread_arg) {
     uint8_t *keys = targ->keys;
     iclass_premac_t *list = targ->list.premac;
 
-    uint8_t csn[8];
+    uint8_t csn[PICOPASS_BLOCK_SIZE];
     uint8_t cc_nr[12];
     memcpy(csn, targ->csn, sizeof(csn));
     memcpy(cc_nr, targ->cc_nr, sizeof(cc_nr));
 
-    uint8_t key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t key[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t div_key[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     for (uint32_t i = idx; i < keycnt; i += iclass_tc) {
 
-        memcpy(key, keys + 8 * i, 8);
+        memcpy(key, keys + 8 * i, PICOPASS_BLOCK_SIZE);
 
         pthread_mutex_lock(&generator_mutex);
-        if (use_raw)
-            memcpy(div_key, key, 8);
-        else
+        if (use_raw) {
+            memcpy(div_key, key, PICOPASS_BLOCK_SIZE);
+        } else {
             HFiClassCalcDivKey(csn, key, div_key, use_elite);
+        }
 
         doMAC(cc_nr, div_key, list[i].mac);
         pthread_mutex_unlock(&generator_mutex);
@@ -5289,22 +5298,23 @@ static void *bf_generate_mackey(void *thread_arg) {
     uint8_t *keys = targ->keys;
     iclass_prekey_t *list = targ->list.prekey;
 
-    uint8_t csn[8];
+    uint8_t csn[PICOPASS_BLOCK_SIZE];
     uint8_t cc_nr[12];
     memcpy(csn, targ->csn, sizeof(csn));
     memcpy(cc_nr, targ->cc_nr, sizeof(cc_nr));
 
-    uint8_t div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t div_key[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     for (uint32_t i = idx; i < keycnt; i += iclass_tc) {
 
-        memcpy(list[i].key, keys + 8 * i, 8);
+        memcpy(list[i].key, keys + 8 * i, PICOPASS_BLOCK_SIZE);
 
         pthread_mutex_lock(&generator_mutex);
-        if (use_raw)
-            memcpy(div_key, list[i].key, 8);
-        else
+        if (use_raw) {
+            memcpy(div_key, list[i].key, PICOPASS_BLOCK_SIZE);
+        } else {
             HFiClassCalcDivKey(csn, list[i].key, div_key, use_elite);
+        }
 
         doMAC(cc_nr, div_key, list[i].mac);
         pthread_mutex_unlock(&generator_mutex);
@@ -5340,17 +5350,19 @@ void GenerateMacKeyFrom(uint8_t *CSN, uint8_t *CCNR, bool use_raw, bool use_elit
         }
     }
 
-    for (int i = 0; i < iclass_tc; i++)
+    for (int i = 0; i < iclass_tc; i++) {
         pthread_join(threads[i], NULL);
-
+    }
 }
 
 // print diversified keys
 void PrintPreCalcMac(uint8_t *keys, uint32_t keycnt, iclass_premac_t *pre_list) {
 
     iclass_prekey_t *b = calloc(keycnt, sizeof(iclass_prekey_t));
-    if (!b)
+    if (b == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return;
+    }
 
     for (uint32_t i = 0; i < keycnt; i++) {
         memcpy(b[i].key, keys + 8 * i, 8);
@@ -5423,30 +5435,26 @@ static void shave(uint8_t *data, uint8_t len) {
 }
 static void generate_rev(uint8_t *data, uint8_t len) {
     uint8_t *key = calloc(len, sizeof(uint8_t));
-    PrintAndLogEx(SUCCESS, "input permuted key | %s \n", sprint_hex(data, len));
+    PrintAndLogEx(SUCCESS, "permuted key..... %s", sprint_hex_inrow(data, len));
     permute_rev(data, len, key);
-    PrintAndLogEx(SUCCESS, "    unpermuted key | %s \n", sprint_hex(key, len));
+    PrintAndLogEx(SUCCESS, "unpermuted key... %s", sprint_hex_inrow(key, len));
     shave(key, len);
-    PrintAndLogEx(SUCCESS, "               key | %s \n", sprint_hex(key, len));
+    PrintAndLogEx(SUCCESS, "key.............. %s", sprint_hex_inrow(key, len));
     free(key);
 }
 static void generate(uint8_t *data, uint8_t len) {
     uint8_t *key = calloc(len, sizeof(uint8_t));
     uint8_t *pkey = calloc(len, sizeof(uint8_t));
-    PrintAndLogEx(SUCCESS, "   input key | %s \n", sprint_hex(data, len));
+    PrintAndLogEx(SUCCESS, "input key...... %s", sprint_hex_inrow(data, len));
     permute(data, len, pkey);
-    PrintAndLogEx(SUCCESS, "permuted key | %s \n", sprint_hex(pkey, len));
+    PrintAndLogEx(SUCCESS, "permuted key... %s", sprint_hex_inrow(pkey, len));
     simple_crc(pkey, len, key);
-    PrintAndLogEx(SUCCESS, "  CRC'ed key | %s \n", sprint_hex(key, len));
+    PrintAndLogEx(SUCCESS, "CRC'ed key..... %s", sprint_hex_inrow(key, len));
     free(key);
     free(pkey);
 }
 
 static int CmdHFiClassPermuteKey(const char *Cmd) {
-
-    uint8_t key[8] = {0};
-    uint8_t data[16] = {0};
-    int len = 0;
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass permutekey",
@@ -5461,22 +5469,29 @@ static int CmdHFiClassPermuteKey(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
+
     bool isReverse = arg_get_lit(ctx, 1);
-    CLIGetHexWithReturn(ctx, 2, data, &len);
+
+    int dlen = 0;
+    uint8_t data[16] = {0};
+    CLIGetHexWithReturn(ctx, 2, data, &dlen);
     CLIParserFree(ctx);
 
-    memcpy(key, data, 8);
+    uint8_t key[PICOPASS_BLOCK_SIZE] = {0};
+    memcpy(key, data, PICOPASS_BLOCK_SIZE);
 
     if (isReverse) {
-        generate_rev(data, len);
-        uint8_t key_std_format[8] = {0};
+        generate_rev(data, dlen);
+        uint8_t key_std_format[PICOPASS_BLOCK_SIZE] = {0};
         permutekey_rev(key, key_std_format);
-        PrintAndLogEx(SUCCESS, "Standard NIST format key " _YELLOW_("%s") " \n", sprint_hex(key_std_format, 8));
+        PrintAndLogEx(SUCCESS, "Standard NIST format key..... " _YELLOW_("%s"), sprint_hex_inrow(key_std_format, PICOPASS_BLOCK_SIZE));
+        PrintAndLogEx(NORMAL, "");
     } else {
-        generate(data, len);
-        uint8_t key_iclass_format[8] = {0};
+        generate(data, dlen);
+        uint8_t key_iclass_format[PICOPASS_BLOCK_SIZE] = {0};
         permutekey(key, key_iclass_format);
-        PrintAndLogEx(SUCCESS, "HID permuted iCLASS format: %s \n", sprint_hex(key_iclass_format, 8));
+        PrintAndLogEx(SUCCESS, "HID permuted iCLASS format... " _YELLOW_("%s"), sprint_hex_inrow(key_iclass_format, PICOPASS_BLOCK_SIZE));
+        PrintAndLogEx(NORMAL, "");
     }
     return PM3_SUCCESS;
 }
@@ -5486,12 +5501,12 @@ static int CmdHFiClassEncode(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass encode",
                   "Encode binary wiegand to block 7,8,9\n"
-                  "Use either --bin or --wiegand/--fc/--cn",
+                  "Use either --bin or --wiegand/--fc/--cn\n"
+                  "When using emulator you have to first load a credential into emulator memory",
                   "hf iclass encode --bin 10001111100000001010100011 --ki 0            -> FC 31 CN 337 (H10301)\n"
                   "hf iclass encode -w H10301 --fc 31 --cn 337 --ki 0                  -> FC 31 CN 337 (H10301)\n"
                   "hf iclass encode --bin 10001111100000001010100011 --ki 0 --elite    -> FC 31 CN 337 (H10301), writing w elite key\n"
-                  "hf iclass encode -w H10301 --fc 31 --cn 337 --emu                   -> Writes the ecoded data to emulator memory\n"
-                  "When using emulator you have to first load a credential into emulator memory"
+                  "hf iclass encode -w H10301 --fc 31 --cn 337 --emu                   -> Writes the ecoded data to emulator memory"
                  );
 
     void *argtable[] = {
@@ -5852,38 +5867,52 @@ static int CmdHFiClassSAM(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass sam",
                   "Extract PACS via a HID SAM\n",
                   "hf iclass sam\n"
-                  "hf iclass sam -p -d a005a103800104 -> get PACS data, but ensure that epurse will stay unchanged\n"
-                  "hf iclass sam --break-on-nr-mac -> get Nr-MAC for extracting encrypted SIO\n"
+                  "hf iclass sam -p -d a005a103800104  -> get PACS data, prevent epurse update\n"
+                  "hf iclass sam --break               -> get Nr-MAC for extracting encrypted SIO\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0("v", "verbose", "verbose output"),
-        arg_lit0("k", "keep", "keep the field active after command executed"),
-        arg_lit0("n", "nodetect", "skip selecting the card and sending card details to SAM"),
+        arg_lit0("v",  "verbose",  "verbose output"),
+        arg_lit0("k",  "keep",     "keep the field active after command executed"),
+        arg_lit0("n",  "nodetect", "skip selecting the card and sending card details to SAM"),
         arg_lit0("t",  "tlv",      "decode TLV"),
-        arg_lit0(NULL, "break-on-nr-mac", "stop tag interaction on nr-mac"),
-        arg_lit0("p", "prevent-epurse-update", "fake epurse update"),
-        arg_lit0(NULL, "shallow", "shallow mod"),
-        arg_strx0("d", "data",     "<hex>", "DER encoded command to send to SAM"),
+        arg_lit0(NULL, "break",    "stop tag interaction on nr-mac"),
+        arg_lit0("p",  "prevent",  "fake epurse update"),
+        arg_lit0(NULL, "shallow",  "shallow mod"),
+        arg_strx0("d", "data", "<hex>", "DER encoded command to send to SAM"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool verbose = arg_get_lit(ctx, 1);
-    bool disconnectAfter = !arg_get_lit(ctx, 2);
-    bool skipDetect = arg_get_lit(ctx, 3);
+    bool disconnect_after = !arg_get_lit(ctx, 2);
+    bool skip_detect = arg_get_lit(ctx, 3);
     bool decodeTLV = arg_get_lit(ctx, 4);
-    bool breakOnNrMac = arg_get_lit(ctx, 5);
-    bool preventEpurseUpdate = arg_get_lit(ctx, 6);
+    bool break_nrmac = arg_get_lit(ctx, 5);
+    bool prevent = arg_get_lit(ctx, 6);
     bool shallow_mod = arg_get_lit(ctx, 7);
 
     uint8_t flags = 0;
-    if (disconnectAfter) flags |= BITMASK(0);
-    if (skipDetect) flags |= BITMASK(1);
-    if (breakOnNrMac) flags |= BITMASK(2);
-    if (preventEpurseUpdate) flags |= BITMASK(3);
-    if (shallow_mod) flags |= BITMASK(4);
+    if (disconnect_after) {
+        flags |= BITMASK(0);
+    }
+
+    if (skip_detect) {
+        flags |= BITMASK(1);
+    }
+
+    if (break_nrmac) {
+        flags |= BITMASK(2);
+    }
+
+    if (prevent) {
+        flags |= BITMASK(3);
+    }
+
+    if (shallow_mod) {
+        flags |= BITMASK(4);
+    }
 
     uint8_t data[PM3_CMD_DATA_SIZE] = {0};
     data[0] = flags;
@@ -5954,20 +5983,21 @@ static int CmdHFiClassSAM(const char *Cmd) {
         const uint8_t *oid = pacs + 2 + pacs_length;
         const uint8_t oid_length = oid[1];
         const uint8_t *oid_data = oid + 2;
-        PrintAndLogEx(SUCCESS, "SIO OID.......: " _GREEN_("%s"), sprint_hex_inrow(oid_data, oid_length));
+        PrintAndLogEx(SUCCESS, "SIO OID.......... " _GREEN_("%s"), sprint_hex_inrow(oid_data, oid_length));
 
         const uint8_t *mediaType = oid + 2 + oid_length;
         const uint8_t mediaType_data = mediaType[2];
-        PrintAndLogEx(SUCCESS, "SIO Media Type: " _GREEN_("%s"), getSioMediaTypeInfo(mediaType_data));
-    } else if (breakOnNrMac && d[0] == 0x05) {
-        PrintAndLogEx(SUCCESS, "Nr-MAC: " _GREEN_("%s"), sprint_hex_inrow(d + 1, 8));
+        PrintAndLogEx(SUCCESS, "SIO Media Type... " _GREEN_("%s"), getSioMediaTypeInfo(mediaType_data));
+    } else if (break_nrmac && d[0] == 0x05) {
+        PrintAndLogEx(SUCCESS, "Nr-MAC........... " _GREEN_("%s"), sprint_hex_inrow(d + 1, 8));
         if (verbose) {
             PrintAndLogEx(INFO, "Replay Nr-MAC to dump SIO:");
-            PrintAndLogEx(SUCCESS, "    hf iclass dump -k \"%s\" --nr", sprint_hex_inrow(d + 1, 8));
+            PrintAndLogEx(SUCCESS, "    hf iclass dump --nr -k %s", sprint_hex_inrow(d + 1, 8));
         }
     } else {
         print_hex(d, resp.length);
     }
+
     if (decodeTLV) {
         asn1_print(d, d[1] + 2, " ");
     }
@@ -5990,7 +6020,7 @@ static command_t CommandTable[] = {
     {"view",        CmdHFiClassView,            AlwaysAvailable, "Display content from tag dump file"},
     {"wrbl",        CmdHFiClass_WriteBlock,     IfPm3Iclass,     "Write Picopass / iCLASS block"},
     {"creditepurse", CmdHFiClassCreditEpurse,   IfPm3Iclass,     "Credit epurse value"},
-    {"tear",        CmdHFiClass_TearBlock,      IfPm3Iclass,     "Performs tearoff attack on iClass block"},
+    {"tear",        CmdHFiClass_TearBlock,      IfPm3Iclass,     "Performs tearoff attack on iCLASS block"},
     {"-----------", CmdHelp,                    AlwaysAvailable, "--------------------- " _CYAN_("Recovery") " --------------------"},
 //    {"autopwn",     CmdHFiClassAutopwn,         IfPm3Iclass,     "Automatic key recovery tool for iCLASS"},
     {"chk",         CmdHFiClassCheckKeys,       IfPm3Iclass,     "Check keys"},

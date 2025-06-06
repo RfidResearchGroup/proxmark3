@@ -3244,7 +3244,7 @@
         },
         "hf iclass chk": {
             "command": "hf iclass chk",
-            "description": "Checkkeys loads a dictionary text file with 8byte hex keys to test authenticating against a iClass tag",
+            "description": "Checkkeys loads a dictionary text file with 8 byte hex keys to test authenticating against a iCLASS tag",
             "notes": [
                 "hf iclass chk -f iclass_default_keys.dic",
                 "hf iclass chk -f iclass_elite_keys.dic --elite",
@@ -3367,13 +3367,12 @@
         },
         "hf iclass encode": {
             "command": "hf iclass encode",
-            "description": "Encode binary wiegand to block 7,8,9 Use either --bin or --wiegand/--fc/--cn",
+            "description": "Encode binary wiegand to block 7,8,9 Use either --bin or --wiegand/--fc/--cn When using emulator you have to first load a credential into emulator memory",
             "notes": [
                 "hf iclass encode --bin 10001111100000001010100011 --ki 0 -> FC 31 CN 337 (H10301)",
                 "hf iclass encode -w H10301 --fc 31 --cn 337 --ki 0 -> FC 31 CN 337 (H10301)",
                 "hf iclass encode --bin 10001111100000001010100011 --ki 0 --elite -> FC 31 CN 337 (H10301), writing w elite key",
-                "hf iclass encode -w H10301 --fc 31 --cn 337 --emu -> Writes the ecoded data to emulator memory",
-                "When using emulator you have to first load a credential into emulator memory"
+                "hf iclass encode -w H10301 --fc 31 --cn 337 --emu -> Writes the ecoded data to emulator memory"
             ],
             "offline": true,
             "options": [
@@ -3511,7 +3510,7 @@
         },
         "hf iclass legrec": {
             "command": "hf iclass legrec",
-            "description": "Attempts to recover the diversified key of a specific iClass card. This may take several days. The card must remain be on the PM3 antenna during the whole process. ! Warning ! This process may brick the card! ! Warning !",
+            "description": "Attempts to recover the diversified key of a specific iCLASS card. This may take several days. The card must remain be on the PM3 antenna during the whole process. ! Warning ! This process may brick the card! ! Warning !",
             "notes": [
                 "hf iclass legrec --macs 0000000089cb984b",
                 "hf iclass legrec --macs 0000000089cb984b --index 0 --loop 100 --notest"
@@ -3670,8 +3669,8 @@
             "description": "Extract PACS via a HID SAM",
             "notes": [
                 "hf iclass sam",
-                "hf iclass sam -p -d a005a103800104 -> get PACS data, but ensure that epurse will stay unchanged",
-                "hf iclass sam --break-on-nr-mac -> get Nr-MAC for extracting encrypted SIO"
+                "hf iclass sam -p -d a005a103800104 -> get PACS data, prevent epurse update",
+                "hf iclass sam --break -> get Nr-MAC for extracting encrypted SIO"
             ],
             "offline": false,
             "options": [
@@ -3680,12 +3679,12 @@
                 "-k, --keep keep the field active after command executed",
                 "-n, --nodetect skip selecting the card and sending card details to SAM",
                 "-t, --tlv decode TLV",
-                "--break-on-nr-mac stop tag interaction on nr-mac",
-                "-p, --prevent-epurse-update fake epurse update",
+                "--break stop tag interaction on nr-mac",
+                "-p, --prevent fake epurse update",
                 "--shallow shallow mod",
                 "-d, --data <hex> DER encoded command to send to SAM"
             ],
-            "usage": "hf iclass sam [-hvkntp] [--break-on-nr-mac] [--shallow] [-d <hex>]..."
+            "usage": "hf iclass sam [-hvkntp] [--break] [--shallow] [-d <hex>]..."
         },
         "hf iclass sim": {
             "command": "hf iclass sim",
@@ -13375,6 +13374,6 @@
     "metadata": {
         "commands_extracted": 768,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-06-06T15:54:11"
+        "extracted_on": "2025-06-06T16:58:34"
     }
 }

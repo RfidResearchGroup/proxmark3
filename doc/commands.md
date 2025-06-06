@@ -404,7 +404,7 @@ Check column "offline" for their availability.
 |`hf iclass view         `|Y       |`Display content from tag dump file`
 |`hf iclass wrbl         `|N       |`Write Picopass / iCLASS block`
 |`hf iclass creditepurse `|N       |`Credit epurse value`
-|`hf iclass tear         `|N       |`Performs tearoff attack on iClass block`
+|`hf iclass tear         `|N       |`Performs tearoff attack on iCLASS block`
 |`hf iclass chk          `|N       |`Check keys`
 |`hf iclass loclass      `|Y       |`Use loclass to perform bruteforce reader attack`
 |`hf iclass lookup       `|Y       |`Uses authentication trace to check for key in dictionary file`
