@@ -3493,7 +3493,7 @@
         },
         "hf iclass legbrute": {
             "command": "hf iclass legbrute",
-            "description": "This command take sniffed trace data and partial raw key and bruteforces the remaining 40 bits of the raw key.",
+            "description": "This command takes sniffed trace data and a partial raw key and bruteforces the remaining 40 bits of the raw key. Complete 40 bit keyspace is 1'099'511'627'776 and command is lockdown to max 16 threads currently. A possible worst case scenario on 16 threads estimates XXX days YYY hours MMM minutes.",
             "notes": [
                 "hf iclass legbrute --epurse feffffffffffffff --macs1 1306cad9b6c24466 --macs2 f0bf905e35f97923 --pk B4F12AADC5301225"
             ],
@@ -3504,9 +3504,10 @@
                 "--macs1 <hex> MACs captured from the reader",
                 "--macs2 <hex> MACs captured from the reader, different than the first set (with the same csn and epurse value)",
                 "--pk <hex> Partial Key from legrec or starting key of keyblock from legbrute",
-                "--index <dec> Where to start from to retrieve the key, default 0 - value in millions e.g. 1 is 1 million"
+                "--index <dec> Where to start from to retrieve the key, default 0 - value in millions e.g. 1 is 1 million",
+                "--threads <dec> Number of threads to use, by default it uses the cpu's max threads (max 16)."
             ],
-            "usage": "hf iclass legbrute [-h] --epurse <hex> --macs1 <hex> --macs2 <hex> --pk <hex> [--index <dec>]"
+            "usage": "hf iclass legbrute [-h] --epurse <hex> --macs1 <hex> --macs2 <hex> --pk <hex> [--index <dec>] [--threads <dec>]"
         },
         "hf iclass legrec": {
             "command": "hf iclass legrec",
@@ -3524,9 +3525,11 @@
                 "--debug Re-enables tracing for debugging. Limits cycles to 1.",
                 "--notest Perform real writes on the card!",
                 "--allnight Loops the loop for 10 times, recommended loop value of 5000.",
+                "--fast Increases the speed (4.6->7.4 key updates/second), higher risk to brick the card.",
+                "--sl Lower card comms delay times, further speeds increases, may cause more errors.",
                 "--est Estimates the key updates based on the card's CSN assuming standard key."
             ],
-            "usage": "hf iclass legrec [-h] --macs <hex> [--index <dec>] [--loop <dec>] [--debug] [--notest] [--allnight] [--est]"
+            "usage": "hf iclass legrec [-h] --macs <hex> [--index <dec>] [--loop <dec>] [--debug] [--notest] [--allnight] [--fast] [--sl] [--est]"
         },
         "hf iclass loclass": {
             "command": "hf iclass loclass",
@@ -13372,6 +13375,6 @@
     "metadata": {
         "commands_extracted": 768,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-06-04T16:02:17"
+        "extracted_on": "2025-06-06T11:25:04"
     }
 }

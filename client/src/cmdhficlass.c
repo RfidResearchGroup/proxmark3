@@ -4634,11 +4634,15 @@ typedef struct {
 
 // HF iClass legbrute - Brute-force worker thread
 static void *brute_thread(void *args_void) {
+
     thread_args_t *args = (thread_args_t *)args_void;
-    uint8_t div_key[8], mac[4], verification_mac[4];
+    uint8_t div_key[8];
+    uint8_t mac[4];
+    uint8_t verification_mac[4];
     uint64_t index = args->index_start;
 
     while (!*(args->found)) {
+
         generate_key_block_inverted(args->startingKey, index, div_key);
         doMAC(args->CCNR1, div_key, mac);
 
@@ -4659,8 +4663,8 @@ static void *brute_thread(void *args_void) {
 
         if (index % 1000000 == 0 && !*(args->found)) {
             pthread_mutex_lock(args->log_lock);
-            if(args->thread_id == 0){
-                PrintAndLogEx(INPLACE, "Tested "_YELLOW_("%" PRIu64 )" million keys, using "_YELLOW_("%d")" threads - Index: "_YELLOW_("%" PRIu64 )" - Last key on Thread[0]: %s", (index / 1000000) * args->thread_count, args->thread_count, index / 1000000, sprint_hex(div_key, 8));
+            if (args->thread_id == 0) {
+                PrintAndLogEx(INPLACE, "Tested "_YELLOW_("%" PRIu64)" million keys, using "_YELLOW_("%d")" threads - Index: "_YELLOW_("%" PRIu64)" - Last key on Thread[0]: %s", (index / 1000000) * args->thread_count, args->thread_count, index / 1000000, sprint_hex(div_key, 8));
             }
             pthread_mutex_unlock(args->log_lock);
         }
@@ -4720,7 +4724,9 @@ static int CmdHFiClassLegBrute_MT(uint8_t epurse[8], uint8_t macs[8], uint8_t ma
 static int CmdHFiClassLegBrute(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass legbrute",
-                  "This command takes sniffed trace data and a partial raw key and bruteforces the remaining 40 bits of the raw key.",
+                  "This command takes sniffed trace data and a partial raw key and bruteforces the remaining 40 bits of the raw key.\n"
+                  "Complete 40 bit keyspace is 1'099'511'627'776 and command is lockdown to max 16 threads currently.\n"
+                  "A possible worst case scenario on 16 threads estimates XXX days YYY hours MMM minutes.",
                   "hf iclass legbrute --epurse feffffffffffffff --macs1 1306cad9b6c24466 --macs2 f0bf905e35f97923 --pk B4F12AADC5301225");
 
     void *argtable[] = {

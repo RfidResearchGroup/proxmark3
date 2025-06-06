@@ -1805,9 +1805,9 @@ static bool iclass_writeblock_sp(uint8_t blockno, uint8_t *data, uint8_t *mac, b
 
     uint8_t resp[10] = {0};
     bool isOK = false;
-    if(short_delay){
+    if (short_delay) {
         isOK = iclass_send_cmd_with_retries(write, write_len, resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_UPDATE_FAST, eof_time, shallow_mod);
-    }else{
+    } else {
         isOK = iclass_send_cmd_with_retries(write, write_len, resp, sizeof(resp), 10, 3, start_time, ICLASS_READER_TIMEOUT_UPDATE, eof_time, shallow_mod);
     }
     if (isOK == false) {
@@ -2706,7 +2706,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         }
 
         //Step 0A - The read_check_cc block has to be in AA2, set it by checking the card configuration
-        read_check_cc[1] = ((uint8_t*)&hdr.conf)[0] + 1; //first block of AA2
+        read_check_cc[1] = ((uint8_t *)&hdr.conf)[0] + 1; //first block of AA2
 
         //Step1 Authenticate with AA1 using trace
         if (card_select) {
@@ -2744,7 +2744,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             } else {
                 interrupted = true;
             }
-            if(msg->fast){
+            if (msg->fast) {
                 goto fast_restore;
             }
             goto out;
@@ -2823,10 +2823,10 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             memcpy(genkeyblock, zero_key, PICOPASS_BLOCK_SIZE);
         }
 
-        if(msg->fast){//if we're skipping restoring the original key to gain speed, xor the new index key with the previous index key and update the difference and track restore values differently
-            if(index > 0 && loops > 1){
-                generate_single_key_block_inverted_opt(zero_key, index -1, fast_previous_key);
-            }else{
+        if (msg->fast) { //if we're skipping restoring the original key to gain speed, xor the new index key with the previous index key and update the difference and track restore values differently
+            if (index > 0 && loops > 1) {
+                generate_single_key_block_inverted_opt(zero_key, index - 1, fast_previous_key);
+            } else {
                 memcpy(fast_previous_key, zero_key, PICOPASS_BLOCK_SIZE);
             }
             for (int i = 0; i < PICOPASS_BLOCK_SIZE; i++) {
@@ -2850,7 +2850,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             if (iclass_writeblock_sp(blockno, genkeyblock, mac2, shallow_mod, &start_time, &eof_time, short_delay)) {
                 status_message = 4; //wrote new key on the card - unverified
             }
-            if(!msg->fast){ //if we're going slow we check at every write that the write actually happened
+            if (!msg->fast) { //if we're going slow we check at every write that the write actually happened
                 //Reset cypher state
                 start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
                 iclass_send_as_reader(read_check_cc2, sizeof(read_check_cc2), &start_time, &eof_time, shallow_mod);
@@ -2877,7 +2877,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
                         written = true;
                     }
                 }
-            }else{ //if we're going fast we can skip the above checks as we're just xorring the key over and over
+            } else { //if we're going fast we can skip the above checks as we're just xorring the key over and over
                 status_message = 5;
                 written = true;
             }
@@ -2900,11 +2900,11 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
             bool reverted = false;
             uint8_t revert_retries = 0;
-            if(msg->fast){ //if we're going fast only restore the original key at the end
-                if(recovered){
+            if (msg->fast) { //if we're going fast only restore the original key at the end
+                if (recovered) {
                     goto fast_restore;
                 }
-            }else{
+            } else {
                 //if we're NOT going fast, regardless of bits being found, restore the original key and verify it
                 while (!reverted) {
                     //Regain privilege escalation with a readcheck
@@ -3018,9 +3018,9 @@ fast_restore:
             Dbhexdump(8, fast_restore_key, false);
             Dbprintf(_RED_("Attempted to restore original key for %3d times and failed. Stopping. Card is likely unusable."), revert_retries);
         }
-        if(recovered){
+        if (recovered) {
             goto restore;
-        }else{
+        } else {
             goto out;
         }
     }
@@ -3030,9 +3030,9 @@ restore:
     uint8_t partialkey[PICOPASS_BLOCK_SIZE] = {0};
 
     for (int i = 0; i < PICOPASS_BLOCK_SIZE; i++) {
-        if(msg->fast){
+        if (msg->fast) {
             partialkey[i] = fast_restore_key[i] ^ bits_found;
-        }else{
+        } else {
             partialkey[i] = genkeyblock[i] ^ bits_found;
         }
     }
