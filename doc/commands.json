@@ -3493,7 +3493,7 @@
         },
         "hf iclass legbrute": {
             "command": "hf iclass legbrute",
-            "description": "This command takes sniffed trace data and a partial raw key and bruteforces the remaining 40 bits of the raw key. Complete 40 bit keyspace is 1'099'511'627'776 and command is lockdown to max 16 threads currently. A possible worst case scenario on 16 threads estimates XXX days YYY hours MMM minutes.",
+            "description": "This command takes sniffed trace data and a partial raw key and bruteforces the remaining 40 bits of the raw key. Complete 40 bit keyspace is 1'099'511'627'776 and command is locked down to max 16 threads currently. A possible worst case scenario on 16 threads estimates XXX days YYY hours MMM minutes.",
             "notes": [
                 "hf iclass legbrute --epurse feffffffffffffff --macs1 1306cad9b6c24466 --macs2 f0bf905e35f97923 --pk B4F12AADC5301225"
             ],
@@ -3511,7 +3511,7 @@
         },
         "hf iclass legrec": {
             "command": "hf iclass legrec",
-            "description": "Attempts to recover the diversified key of a specific iClass card. This may take a long time. The Card must remain be on the PM3 antenna during the whole process! This process may brick the card!",
+            "description": "Attempts to recover the diversified key of a specific iClass card. This may take several days. The card must remain be on the PM3 antenna during the whole process. ! Warning ! This process may brick the card! ! Warning !",
             "notes": [
                 "hf iclass legrec --macs 0000000089cb984b",
                 "hf iclass legrec --macs 0000000089cb984b --index 0 --loop 100 --notest"
@@ -3520,14 +3520,14 @@
             "options": [
                 "-h, --help This help",
                 "--macs <hex> AA1 Authentication MACs",
-                "--index <dec> Where to start from to retrieve the key, default 0",
-                "--loop <dec> The number of key retrieval cycles to perform, max 10000, default 100",
-                "--debug Re-enables tracing for debugging. Limits cycles to 1.",
-                "--notest Perform real writes on the card!",
-                "--allnight Loops the loop for 10 times, recommended loop value of 5000.",
-                "--fast Increases the speed (4.6->7.4 key updates/second), higher risk to brick the card.",
-                "--sl Lower card comms delay times, further speeds increases, may cause more errors.",
-                "--est Estimates the key updates based on the card's CSN assuming standard key."
+                "--index <dec> Where to start from to retrieve the key (def: 0)",
+                "--loop <dec> The number of key retrieval cycles to perform, max 10000 (def 100)",
+                "--debug Re-enables tracing for debugging. Limits cycles to 1",
+                "--notest Perform real writes on the card",
+                "--allnight Loops the loop for 10 times, recommended loop value of 5000",
+                "--fast Increases the speed (4.6->7.4 key updates/second), higher risk to brick the card",
+                "--sl Lower card comms delay times, further speeds increases, may cause more errors",
+                "--est Estimates the key updates based on the card's CSN assuming standard key"
             ],
             "usage": "hf iclass legrec [-h] --macs <hex> [--index <dec>] [--loop <dec>] [--debug] [--notest] [--allnight] [--fast] [--sl] [--est]"
         },
@@ -13375,6 +13375,6 @@
     "metadata": {
         "commands_extracted": 768,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-06-06T11:25:04"
+        "extracted_on": "2025-06-06T15:54:11"
     }
 }

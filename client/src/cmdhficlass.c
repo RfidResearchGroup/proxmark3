@@ -1856,15 +1856,17 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool verbose, bool shallow_
         return false;
     }
 
-    if (CSN != NULL)
-        memcpy(CSN, hdr->csn, 8);
+    if (CSN != NULL) {
+        memcpy(CSN, hdr->csn, PICOPASS_BLOCK_SIZE);
+    }
 
-    if (CCNR != NULL)
-        memcpy(CCNR, hdr->epurse, 8);
+    if (CCNR != NULL) {
+        memcpy(CCNR, hdr->epurse, PICOPASS_BLOCK_SIZE);
+    }
 
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "CSN     %s", sprint_hex(CSN, 8));
-        PrintAndLogEx(SUCCESS, "epurse  %s", sprint_hex(CCNR, 8));
+        PrintAndLogEx(SUCCESS, "CSN............ %s", sprint_hex_inrow(CSN, PICOPASS_BLOCK_SIZE));
+        PrintAndLogEx(SUCCESS, "E-purse........ %s", sprint_hex_inrow(CCNR, PICOPASS_BLOCK_SIZE));
     }
     return true;
 }
@@ -3931,8 +3933,8 @@ void HFiClassCalcDivKey(uint8_t *CSN, uint8_t *KEY, uint8_t *div_key, bool elite
 //calculate and return xor_div_key (ready for a key write command)
 //print all div_keys if verbose
 static void HFiClassCalcNewKey(uint8_t *CSN, uint8_t *OLDKEY, uint8_t *NEWKEY, uint8_t *xor_div_key, bool elite, bool oldElite, bool verbose) {
-    uint8_t old_div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t new_div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t old_div_key[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t new_div_key[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     //get old div key
     HFiClassCalcDivKey(CSN, OLDKEY, old_div_key, oldElite);
     //get new div key
@@ -3942,9 +3944,9 @@ static void HFiClassCalcNewKey(uint8_t *CSN, uint8_t *OLDKEY, uint8_t *NEWKEY, u
         xor_div_key[i] = old_div_key[i] ^ new_div_key[i];
     }
     if (verbose) {
-        PrintAndLogEx(SUCCESS, "Old div key........ %s", sprint_hex(old_div_key, 8));
-        PrintAndLogEx(SUCCESS, "New div key........ %s", sprint_hex(new_div_key, 8));
-        PrintAndLogEx(SUCCESS, "Xor div key........ " _YELLOW_("%s") "\n", sprint_hex(xor_div_key, 8));
+        PrintAndLogEx(SUCCESS, "Old div key.... %s", sprint_hex_inrow(old_div_key, PICOPASS_BLOCK_SIZE));
+        PrintAndLogEx(SUCCESS, "New div key.... " _MAGENTA_("%s"), sprint_hex_inrow(new_div_key, PICOPASS_BLOCK_SIZE));
+        PrintAndLogEx(SUCCESS, "Xor div key.... " _YELLOW_("%s") "\n", sprint_hex_inrow(xor_div_key, PICOPASS_BLOCK_SIZE));
     }
 }
 
@@ -4067,6 +4069,7 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
 
     uint8_t xor_div_key[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
+    PrintAndLogEx(NORMAL, "");
     if (givenCSN == false) {
         uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
         if (select_only(csn, CCNR, true, false) == false) {
@@ -4076,7 +4079,8 @@ static int CmdHFiClassCalcNewKey(const char *Cmd) {
     }
 
     HFiClassCalcNewKey(csn, old_key, new_key, xor_div_key, elite, old_elite, true);
-
+    PrintAndLogEx(HINT, "Hint: Depending if card is in " _MAGENTA_("PERSONALIZATION") " or "_YELLOW_("APPLICATION") " mode");
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -4652,9 +4656,11 @@ static void *brute_thread(void *args_void) {
                 pthread_mutex_lock(args->log_lock);
                 if (!*(args->found)) {
                     *args->found = true;
+                    PrintAndLogEx(NORMAL, "\n");
+                    PrintAndLogEx(SUCCESS, "Found valid raw key " _GREEN_("%s"), sprint_hex_inrow(div_key, 8));
+                    PrintAndLogEx(HINT, "Hint: Run `"_YELLOW_("hf iclass unhash -k %s")"` to find the needed pre-images", sprint_hex_inrow(div_key, 8));
+                    PrintAndLogEx(INFO, "Done!");
                     PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(SUCCESS, _GREEN_("CONFIRMED VALID RAW key ") _RED_("%s"), sprint_hex(div_key, 8));
-                    PrintAndLogEx(INFO, "You can now run ->  "_YELLOW_("hf iclass unhash -k %s")"  <-to find the pre-images.", sprint_hex(div_key, 8));
                 }
                 pthread_mutex_unlock(args->log_lock);
                 break;
@@ -4662,13 +4668,18 @@ static void *brute_thread(void *args_void) {
         }
 
         if (index % 1000000 == 0 && !*(args->found)) {
-            pthread_mutex_lock(args->log_lock);
-            if (args->thread_id == 0) {
-                PrintAndLogEx(INPLACE, "Tested "_YELLOW_("%" PRIu64)" million keys, using "_YELLOW_("%d")" threads - Index: "_YELLOW_("%" PRIu64)" - Last key on Thread[0]: %s", (index / 1000000) * args->thread_count, args->thread_count, index / 1000000, sprint_hex(div_key, 8));
-            }
-            pthread_mutex_unlock(args->log_lock);
-        }
 
+            if (args->thread_id == 0) {
+                pthread_mutex_lock(args->log_lock);
+                PrintAndLogEx(INPLACE, "Tested "_YELLOW_("%" PRIu64)" million keys, curr index: "_YELLOW_("%" PRIu64)", Thread[0]: %s"
+                              , ((index / 1000000) * args->thread_count)
+                              , (index / 1000000)
+                              , sprint_hex_inrow(div_key, 8)
+                             );
+                pthread_mutex_unlock(args->log_lock);
+            }
+
+        }
         index++;
     }
     return NULL;
@@ -4676,9 +4687,16 @@ static void *brute_thread(void *args_void) {
 
 // HF iClass legbrute - Multithreaded brute-force function
 static int CmdHFiClassLegBrute_MT(uint8_t epurse[8], uint8_t macs[8], uint8_t macs2[8], uint8_t startingKey[8], uint64_t index, int threads) {
+
     int thread_count = threads;
-    if (thread_count < 1) thread_count = 1;
-    if (thread_count > 16) thread_count = 16;
+    if (thread_count < 1) {
+        thread_count = 1;
+    }
+    if (thread_count > 16) {
+        thread_count = 16;
+    }
+    PrintAndLogEx(INFO, "Bruteforcing using " _YELLOW_("%u") " threads", thread_count);
+    PrintAndLogEx(NORMAL, "");
 
     uint8_t CCNR[12], CCNR2[12], MAC_TAG[4], MAC_TAG2[4];
 
@@ -4725,7 +4743,7 @@ static int CmdHFiClassLegBrute(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass legbrute",
                   "This command takes sniffed trace data and a partial raw key and bruteforces the remaining 40 bits of the raw key.\n"
-                  "Complete 40 bit keyspace is 1'099'511'627'776 and command is lockdown to max 16 threads currently.\n"
+                  "Complete 40 bit keyspace is 1'099'511'627'776 and command is locked down to max 16 threads currently.\n"
                   "A possible worst case scenario on 16 threads estimates XXX days YYY hours MMM minutes.",
                   "hf iclass legbrute --epurse feffffffffffffff --macs1 1306cad9b6c24466 --macs2 f0bf905e35f97923 --pk B4F12AADC5301225");
 
@@ -4819,62 +4837,68 @@ static void generate_single_key_block_inverted_opt(const uint8_t *startingKey, u
 
 static int CmdHFiClassLegacyRecSim(void) {
 
+    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, _YELLOW_("This simulation assumes the card is standard keyed."));
-
-    uint8_t key[PICOPASS_BLOCK_SIZE] = {0};
-    uint8_t original_key[PICOPASS_BLOCK_SIZE];
+    PrintAndLogEx(INFO, "");
 
     uint8_t csn[8] = {0};
-    uint8_t new_div_key[8] = {0};
     uint8_t CCNR[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     if (select_only(csn, CCNR, true, false) == false) {
         DropField();
         return PM3_ESOFT;
     }
+
+    uint8_t new_div_key[8] = {0};
     HFiClassCalcDivKey(csn, iClass_Key_Table[0], new_div_key, false);
+
+    uint8_t key[PICOPASS_BLOCK_SIZE] = {0};
+    uint8_t original_key[PICOPASS_BLOCK_SIZE] = {0};
+
     memcpy(key, new_div_key, PICOPASS_BLOCK_SIZE);
     memcpy(original_key, key, PICOPASS_BLOCK_SIZE);
 
     uint8_t zero_key[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t zero_key_two[PICOPASS_BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     int bits_found = -1;
     uint32_t index = 0;
+
 #define MAX_UPDATES 16777216
+
     while (bits_found == -1 && index < MAX_UPDATES) {
-        uint8_t genkeyblock[PICOPASS_BLOCK_SIZE];
-        uint8_t xorkeyblock[PICOPASS_BLOCK_SIZE] = {0};
+
+        uint8_t genkeyblock[PICOPASS_BLOCK_SIZE] = {0};
 
         generate_single_key_block_inverted_opt(zero_key, index, genkeyblock);
-        memcpy(xorkeyblock, genkeyblock, PICOPASS_BLOCK_SIZE);
 
         for (int i = 0; i < 8 ; i++) {
-            key[i] = xorkeyblock[i] ^ original_key[i];
-            memcpy(zero_key_two, xorkeyblock, PICOPASS_BLOCK_SIZE);
+            key[i] = genkeyblock[i] ^ original_key[i];
         }
 
         // Extract the last 3 bits of the first byte
         uint8_t last_three_bits = key[0] & 0x07; // 0x07 is 00000111 in binary - bitmask
+
         bool same_bits = true;
         // Check if the last 3 bits of all bytes are the same
         for (int i = 1; i < PICOPASS_BLOCK_SIZE; i++) {
             if ((key[i] & 0x07) != last_three_bits) {
                 same_bits = false;
+                break;
             }
         }
+
         if (same_bits) {
-            bits_found = index;
-            PrintAndLogEx(SUCCESS, "Original Key: " _GREEN_("%s"), sprint_hex(original_key, sizeof(original_key)));
-            PrintAndLogEx(SUCCESS, "Weak Key: " _GREEN_("%s"), sprint_hex(key, sizeof(key)));
-            PrintAndLogEx(SUCCESS, "Key Updates Required to Weak Key:  " _GREEN_("%d"), index);
-            PrintAndLogEx(SUCCESS, "Estimated Time (default mode)   : ~" _GREEN_("%d")" hours", index / 17800);
-            PrintAndLogEx(SUCCESS, "Estimated Time (default + --sl) : ~" _GREEN_("%d")" hours", index / 19450);
-            PrintAndLogEx(SUCCESS, "Estimated Time (--fast mode)    : ~" _GREEN_("%d")" hours", index / 26860);
-            PrintAndLogEx(SUCCESS, "Estimated Time (--fast + --sl)  : ~" _GREEN_("%d")" hours", index / 29750);
+            PrintAndLogEx(SUCCESS, "Original key... " _GREEN_("%s"), sprint_hex_inrow(original_key, sizeof(original_key)));
+            PrintAndLogEx(SUCCESS, "Weak key....... " _YELLOW_("%s"), sprint_hex_inrow(key, sizeof(key)));
+            PrintAndLogEx(SUCCESS, "Key updates required to weak key..... " _GREEN_("%d"), index);
+            PrintAndLogEx(SUCCESS, "Estimated time ( default mode )...... " _GREEN_("~%d")" hours", index / 17800);
+            PrintAndLogEx(SUCCESS, "Estimated time ( default + --sl ).... " _GREEN_("~%d")" hours", index / 19450);
+            PrintAndLogEx(SUCCESS, "Estimated time ( --fast mode )....... " _GREEN_("~%d")" hours", index / 26860);
+            PrintAndLogEx(SUCCESS, "Estimated time ( --fast + --sl )..... " _GREEN_("~%d")" hours", index / 29750);
+            break;
         }
 
         index++;
-    }//end while
+    } // end while
 
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
@@ -4885,7 +4909,9 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass legrec",
-                  "Attempts to recover the diversified key of a specific iClass card. This may take a long time. The Card must remain be on the PM3 antenna during the whole process! This process may brick the card!",
+                  "Attempts to recover the diversified key of a specific iClass card. This may take several days.\n"
+                  "The card must remain be on the PM3 antenna during the whole process.\n"
+                  _RED_(" ! Warning ! ") _WHITE_(" This process may brick the card! ") _RED_(" ! Warning ! "),
                   "hf iclass legrec --macs 0000000089cb984b\n"
                   "hf iclass legrec --macs 0000000089cb984b --index 0 --loop 100 --notest"
                  );
@@ -4893,14 +4919,14 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1(NULL, "macs", "<hex>", "AA1 Authentication MACs"),
-        arg_int0(NULL, "index", "<dec>", "Where to start from to retrieve the key, default 0"),
-        arg_int0(NULL, "loop", "<dec>", "The number of key retrieval cycles to perform, max 10000, default 100"),
-        arg_lit0(NULL, "debug", "Re-enables tracing for debugging. Limits cycles to 1."),
-        arg_lit0(NULL, "notest", "Perform real writes on the card!"),
-        arg_lit0(NULL, "allnight", "Loops the loop for 10 times, recommended loop value of 5000."),
-        arg_lit0(NULL, "fast", "Increases the speed (4.6->7.4 key updates/second), higher risk to brick the card."),
-        arg_lit0(NULL, "sl", "Lower card comms delay times, further speeds increases, may cause more errors."),
-        arg_lit0(NULL, "est", "Estimates the key updates based on the card's CSN assuming standard key."),
+        arg_int0(NULL, "index", "<dec>", "Where to start from to retrieve the key (def: 0)"),
+        arg_int0(NULL, "loop", "<dec>", "The number of key retrieval cycles to perform, max 10000 (def 100)"),
+        arg_lit0(NULL, "debug", "Re-enables tracing for debugging. Limits cycles to 1"),
+        arg_lit0(NULL, "notest", "Perform real writes on the card"),
+        arg_lit0(NULL, "allnight", "Loops the loop for 10 times, recommended loop value of 5000"),
+        arg_lit0(NULL, "fast", "Increases the speed (4.6->7.4 key updates/second), higher risk to brick the card"),
+        arg_lit0(NULL, "sl", "Lower card comms delay times, further speeds increases, may cause more errors"),
+        arg_lit0(NULL, "est", "Estimates the key updates based on the card's CSN assuming standard key"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -4958,12 +4984,10 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     PrintAndLogEx(INFO, "---------------------------------------");
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort");
     PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------\n");
-
-
     iclass_recover(macs, index, loop, no_first_auth, debug, test, fast, short_delay, allnight);
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(WARNING, _YELLOW_("If the process completed successfully, you can now run 'hf iclass legbrute' with the partial key found."));
-
+    PrintAndLogEx(WARNING, _YELLOW_("If the process completed successfully"));
+    PrintAndLogEx(HINT, "Hint: run `" _YELLOW_("hf iclass legbrute -h") "` with the partial key found");
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 
@@ -4997,12 +5021,13 @@ static int CmdHFiClassUnhash(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Diversified key... %s", sprint_hex_inrow(div_key, sizeof(div_key)));
-
+    PrintAndLogEx(INFO, "-----------------------------------");
     invert_hash0(div_key);
-
-    PrintAndLogEx(SUCCESS, "You can now retrieve the master key by cracking DES with hashcat!");
-    PrintAndLogEx(SUCCESS, "hashcat.exe -a 3 -m 14000 preimage:csn -1 charsets/DES_full.hcchr --hex-charset ?1?1?1?1?1?1?1?1");
-
+    PrintAndLogEx(INFO, "-----------------------------------");
+    PrintAndLogEx(INFO, "You can now retrieve the master key by cracking DES with hashcat.");
+    PrintAndLogEx(INFO, "Create a text file with <preimage>:<csn> on each line and use it with hashcat.");
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(HINT, "Hint:  `" _YELLOW_("hashcat.exe -a 3 -m 14000 preimage:csn -1 charsets/DES_full.hcchr --hex-charset ?1?1?1?1?1?1?1?1") "`");
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }

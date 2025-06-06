@@ -657,7 +657,7 @@ void invert_hash0(uint8_t k[8]) {
             x_num_to_bytes(original_z, sizeof(original_z), des_pre_image);
 
             if (image_match) {
-                PrintAndLogEx(INFO, "Pre-image......... " _YELLOW_("%s") " ( "_GREEN_("valid") " )", sprint_hex_inrow(des_pre_image, sizeof(des_pre_image)));
+                PrintAndLogEx(INFO, "Pre-image......... " _YELLOW_("%s") " ( "_GREEN_("ok") " )", sprint_hex_inrow(des_pre_image, sizeof(des_pre_image)));
             } else {
 
                 if (g_debugMode > 0) {
