@@ -196,7 +196,7 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_
         if (send_reply)
             reply_old(CMD_ACK, CMD_HF_ICLASS_SIMULATE, i, 0, mac_responses, i * EPURSE_MAC_SIZE);
 
-    } else if (sim_type == ICLASS_SIM_MODE_FULL) {
+    } else if (sim_type == ICLASS_SIM_MODE_FULL || sim_type == ICLASS_SIM_MODE_FULL_GLITCH) {
 
         //This is 'full sim' mode, where we use the emulator storage for data.
         //ie:  BigBuf_get_EM_addr should be previously filled with data from the "eload" command
@@ -205,18 +205,12 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_
         if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
             do_iclass_simulation_nonsec();
         } else {
-            do_iclass_simulation(ICLASS_SIM_MODE_FULL, NULL);
+            do_iclass_simulation(sim_type, NULL);
         }
 
         if (send_reply) {
             reply_mix(CMD_ACK, CMD_HF_ICLASS_SIMULATE, 0, 0, NULL, 0);
         }
-
-    } else if (sim_type == ICLASS_SIM_MODE_CONFIG_CARD) {
-
-        // config card
-        do_iclass_simulation(ICLASS_SIM_MODE_FULL, NULL);
-        // swap bin
 
     } else if (sim_type == ICLASS_SIM_MODE_READER_ATTACK_KEYROLL) {
 
@@ -334,7 +328,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
     // AIA
     uint8_t aia_data[10] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00};
 
-    if (simulationMode == ICLASS_SIM_MODE_FULL) {
+    if (simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH) {
 
         memcpy(conf_block, emulator + (8 * 1), 8);            // blk 1
         memcpy(card_challenge_data, emulator + (8 * 2), 8); // e-purse, blk 2
@@ -373,7 +367,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
     cipher_state_KD[0] = opt_doTagMAC_1(card_challenge_data, diversified_kd);
     cipher_state_KC[0] = opt_doTagMAC_1(card_challenge_data, diversified_kc);
 
-    if (simulationMode == ICLASS_SIM_MODE_FULL) {
+    if (simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH) {
 
         for (int i = 1; i < max_page; i++) {
 
@@ -606,13 +600,21 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                         goto send;
                     }
                 } // switch
-            } else if (simulationMode == ICLASS_SIM_MODE_FULL) {
+            } else if (simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH) {
                 if (block == 3 || block == 4) { // Kd, Kc, always respond with 0xff bytes
                     modulated_response = resp_ff;
                     modulated_response_size = resp_ff_len;
                     trace_data = ff_data;
                     trace_data_size = sizeof(ff_data);
                 } else { // use data from emulator memory
+                    if (simulationMode == ICLASS_SIM_MODE_FULL_GLITCH){
+                        uint8_t block_check[8] ={0};
+                        memcpy(block_check, emulator + (current_page * page_size) + (31 * 8), 8);
+                        if (block == block_check[7]){
+                            goto send;
+                        }
+                    }
+
                     memcpy(data_generic_trace, emulator + (current_page * page_size) + (block * 8), 8);
                     AddCrc(data_generic_trace, 8);
                     trace_data = data_generic_trace;
@@ -655,7 +657,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                 goto send;
             }
 
-            if (simulationMode == ICLASS_SIM_MODE_FULL) {
+            if (simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH) {
                 // NR, from reader, is in receivedCmd +1
                 opt_doTagMAC_2(*cipher_state, receivedCmd + 1, data_generic_trace, diversified_key);
 
@@ -722,7 +724,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             chip_state = HALTED;
             goto send;
 
-        } else if (simulationMode == ICLASS_SIM_MODE_FULL && cmd == ICLASS_CMD_READ4 && len == 4) {  // 0x06
+        } else if ((simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH)&& cmd == ICLASS_CMD_READ4 && len == 4) {  // 0x06
 
             if (chip_state != SELECTED) {
                 goto send;
@@ -763,7 +765,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                 resp_cc_len = ts->max;
                 cipher_state_KD[current_page] = opt_doTagMAC_1(card_challenge_data, diversified_kd);
                 cipher_state_KC[current_page] = opt_doTagMAC_1(card_challenge_data, diversified_kc);
-                if (simulationMode == ICLASS_SIM_MODE_FULL) {
+                if (simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH) {
                     memcpy(emulator + (current_page * page_size) + (8 * 2), card_challenge_data, 8);
                 }
             } else if (block == 3) { // update Kd
@@ -775,7 +777,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                     }
                 }
                 cipher_state_KD[current_page] = opt_doTagMAC_1(card_challenge_data, diversified_kd);
-                if (simulationMode == ICLASS_SIM_MODE_FULL) {
+                if (simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH) {
                     memcpy(emulator + (current_page * page_size) + (8 * 3), diversified_kd, 8);
                 }
             } else if (block == 4) { // update Kc
@@ -787,12 +789,20 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                     }
                 }
                 cipher_state_KC[current_page] = opt_doTagMAC_1(card_challenge_data, diversified_kc);
-                if (simulationMode == ICLASS_SIM_MODE_FULL) {
+                if (simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH) {
                     memcpy(emulator + (current_page * page_size) + (8 * 4), diversified_kc, 8);
                 }
-            } else if (simulationMode == ICLASS_SIM_MODE_FULL) {
+            } else if (simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH) {
                 // update emulator memory
                 memcpy(emulator + (current_page * page_size) + (8 * block), receivedCmd + 2, 8);
+            }
+
+            if (simulationMode == ICLASS_SIM_MODE_FULL_GLITCH){
+                uint8_t block_check[8] ={0};
+                memcpy(block_check, emulator + (current_page * page_size) + (31 * 8), 8);
+                if (block == block_check[7]){
+                    goto send;
+                }
             }
 
             memcpy(data_generic_trace, receivedCmd + 2, 8);
@@ -814,7 +824,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                 goto send;
             }
 
-            if (simulationMode == ICLASS_SIM_MODE_FULL && max_page > 0) {
+            if ((simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH)&& max_page > 0) {
 
                 // if on 2k,  always ignore 3msb,  & 0x1F)
                 uint8_t page = receivedCmd[1] & 0x1F;
