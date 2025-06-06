@@ -4659,7 +4659,7 @@ static void *brute_thread(void *args_void) {
         if (index % 1000000 == 0 && !*(args->found)) {
             pthread_mutex_lock(args->log_lock);
             if(args->thread_id == 0){
-                PrintAndLogEx(INPLACE, "Tested "_YELLOW_("%" PRIu64 )" million keys, using "_YELLOW_("%d")" threads - Index: " _YELLOW_("%d") " - Last key on Thread[0]: %s", (index / 1000000) * args->thread_count, args->thread_count, index / 1000000, sprint_hex(div_key, 8));
+                PrintAndLogEx(INPLACE, "Tested "_YELLOW_("%d")" million keys, using "_YELLOW_("%d")" threads - Index: " _YELLOW_("%d") " - Last key on Thread[0]: %s", (index / 1000000) * args->thread_count, args->thread_count, index / 1000000, sprint_hex(div_key, 8));
             }
             pthread_mutex_unlock(args->log_lock);
         }
