@@ -48,7 +48,7 @@
 #define ICLASS_SIM_MODE_FULL                  3
 #define ICLASS_SIM_MODE_READER_ATTACK_KEYROLL 4
 #define ICLASS_SIM_MODE_EXIT_AFTER_MAC        5  // note: device internal only
-#define ICLASS_SIM_MODE_CONFIG_CARD           6
+#define ICLASS_SIM_MODE_FULL_GLITCH           6
 
 
 // iCLASS auth request data structure
