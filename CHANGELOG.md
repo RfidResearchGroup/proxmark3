@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf iclass legbrute` - implemented multithreading support (@antiklesys)
 - Changed `hf iclass legrec` - added a --fast option for further speed increase and automated AA2 block selection (@antiklesys)
 - Changed `hf iclass legrec` - additional code optimizations gaining a ~147% speed increase (@antiklesys)
 - Changed `hf iclass tear` - readability improvements for erase phase (@antiklesys)
