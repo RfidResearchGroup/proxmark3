@@ -4616,14 +4616,111 @@ void generate_key_block_inverted(const uint8_t *startingKey, uint64_t index, uin
     }
 }
 
-static int CmdHFiClassLegBrute(const char *Cmd) {
 
-    //Standalone Command Start
+// HF iClass legbrute - Thread argument structure
+typedef struct {
+    uint8_t startingKey[8];
+    uint64_t index_start;
+    uint8_t CCNR1[12];
+    uint8_t MAC_TAG1[4];
+    uint8_t CCNR2[12];
+    uint8_t MAC_TAG2[4];
+    int thread_id;
+    int thread_count;
+    volatile bool *found;
+    pthread_mutex_t *log_lock;
+} thread_args_t;
+
+// HF iClass legbrute - Brute-force worker thread
+static void *brute_thread(void *args_void) {
+    thread_args_t *args = (thread_args_t *)args_void;
+    uint8_t div_key[8], mac[4], verification_mac[4];
+    uint64_t index = args->index_start;
+
+    while (!*(args->found)) {
+        generate_key_block_inverted(args->startingKey, index, div_key);
+        doMAC(args->CCNR1, div_key, mac);
+
+        if (memcmp(mac, args->MAC_TAG1, 4) == 0) {
+            doMAC(args->CCNR2, div_key, verification_mac);
+            if (memcmp(verification_mac, args->MAC_TAG2, 4) == 0) {
+                pthread_mutex_lock(args->log_lock);
+                if (!*(args->found)) {
+                    *args->found = true;
+                    PrintAndLogEx(NORMAL, "");
+                    PrintAndLogEx(SUCCESS, _GREEN_("CONFIRMED VALID RAW key ") _RED_("%s"), sprint_hex(div_key, 8));
+                    PrintAndLogEx(INFO, "You can now run ->  "_YELLOW_("hf iclass unhash -k %s")"  <-to find the pre-images.", sprint_hex(div_key, 8));
+                }
+                pthread_mutex_unlock(args->log_lock);
+                break;
+            }
+        }
+
+        if (index % 1000000 == 0 && !*(args->found)) {
+            pthread_mutex_lock(args->log_lock);
+            if(args->thread_id == 0){
+                PrintAndLogEx(INPLACE, "Tested "_YELLOW_("%" PRIu64 )" million keys, using "_YELLOW_("%d")" threads - Index: "_YELLOW_("%" PRIu64 )" - Last key on Thread[0]: %s", (index / 1000000) * args->thread_count, args->thread_count, index / 1000000, sprint_hex(div_key, 8));
+            }
+            pthread_mutex_unlock(args->log_lock);
+        }
+
+        index++;
+    }
+    return NULL;
+}
+
+// HF iClass legbrute - Multithreaded brute-force function
+static int CmdHFiClassLegBrute_MT(uint8_t epurse[8], uint8_t macs[8], uint8_t macs2[8], uint8_t startingKey[8], uint64_t index, int threads) {
+    int thread_count = threads;
+    if (thread_count < 1) thread_count = 1;
+    if (thread_count > 16) thread_count = 16;
+
+    uint8_t CCNR[12], CCNR2[12], MAC_TAG[4], MAC_TAG2[4];
+
+    memcpy(CCNR, epurse, 8);
+    memcpy(CCNR2, epurse, 8);
+    memcpy(CCNR + 8, macs, 4);
+    memcpy(CCNR2 + 8, macs2, 4);
+    memcpy(MAC_TAG, macs + 4, 4);
+    memcpy(MAC_TAG2, macs2 + 4, 4);
+
+    pthread_t tids[thread_count];
+    thread_args_t args[thread_count];
+    volatile bool found = false;
+    pthread_mutex_t log_lock;
+    pthread_mutex_init(&log_lock, NULL);
+
+    int nibble_range = 16 / thread_count;
+    for (int i = 0; i < thread_count; i++) {
+        memcpy(args[i].startingKey, startingKey, 8);
+        args[i].startingKey[0] = (startingKey[0] & 0x0F) | ((i * nibble_range) << 4);
+        args[i].index_start = index;
+        memcpy(args[i].CCNR1, CCNR, 12);
+        memcpy(args[i].MAC_TAG1, MAC_TAG, 4);
+        memcpy(args[i].CCNR2, CCNR2, 12);
+        memcpy(args[i].MAC_TAG2, MAC_TAG2, 4);
+        args[i].thread_id = i;
+        args[i].thread_count = thread_count;
+        args[i].found = &found;
+        args[i].log_lock = &log_lock;
+
+        pthread_create(&tids[i], NULL, brute_thread, &args[i]);
+    }
+
+    for (int i = 0; i < thread_count; i++) {
+        pthread_join(tids[i], NULL);
+    }
+    pthread_mutex_destroy(&log_lock);
+
+    return found ? PM3_SUCCESS : ERR;
+}
+
+// CmdHFiClassLegBrute function with CLI and multithreading support
+static int CmdHFiClassLegBrute(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass legbrute",
-                  "This command take sniffed trace data and partial raw key and bruteforces the remaining 40 bits of the raw key.",
-                  "hf iclass legbrute --epurse feffffffffffffff --macs1 1306cad9b6c24466 --macs2 f0bf905e35f97923 --pk B4F12AADC5301225"
-                 );
+                  "This command takes sniffed trace data and a partial raw key and bruteforces the remaining 40 bits of the raw key.",
+                  "hf iclass legbrute --epurse feffffffffffffff --macs1 1306cad9b6c24466 --macs2 f0bf905e35f97923 --pk B4F12AADC5301225");
 
     void *argtable[] = {
         arg_param_begin,
@@ -4632,29 +4729,22 @@ static int CmdHFiClassLegBrute(const char *Cmd) {
         arg_str1(NULL, "macs2", "<hex>", "MACs captured from the reader, different than the first set (with the same csn and epurse value)"),
         arg_str1(NULL, "pk", "<hex>", "Partial Key from legrec or starting key of keyblock from legbrute"),
         arg_int0(NULL, "index", "<dec>", "Where to start from to retrieve the key, default 0 - value in millions e.g. 1 is 1 million"),
+        arg_int0(NULL, "threads", "<dec>", "Number of threads to use, by default it uses the cpu's max threads (max 16)."),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int epurse_len = 0;
-    uint8_t epurse[PICOPASS_BLOCK_SIZE] = {0};
+    int epurse_len = 0, macs_len = 0, macs2_len = 0, startingkey_len = 0;
+    uint8_t epurse[PICOPASS_BLOCK_SIZE] = {0}, macs[PICOPASS_BLOCK_SIZE] = {0}, macs2[PICOPASS_BLOCK_SIZE] = {0}, startingKey[PICOPASS_BLOCK_SIZE] = {0};
+
     CLIGetHexWithReturn(ctx, 1, epurse, &epurse_len);
-
-    int macs_len = 0;
-    uint8_t macs[PICOPASS_BLOCK_SIZE] = {0};
     CLIGetHexWithReturn(ctx, 2, macs, &macs_len);
-
-    int macs2_len = 0;
-    uint8_t macs2[PICOPASS_BLOCK_SIZE] = {0};
     CLIGetHexWithReturn(ctx, 3, macs2, &macs2_len);
-
-    int startingkey_len = 0;
-    uint8_t startingKey[PICOPASS_BLOCK_SIZE] = {0};
     CLIGetHexWithReturn(ctx, 4, startingKey, &startingkey_len);
 
-    uint64_t index = arg_get_int_def(ctx, 5, 0); //has to be 64 as we're bruteforcing 40 bits
-    index = index * 1000000;
-
+    uint64_t index = arg_get_int_def(ctx, 5, 0);
+    index *= 1000000;
+    int threads = arg_get_int_def(ctx, 6, num_CPUs());
     CLIParserFree(ctx);
 
     if (epurse_len && epurse_len != PICOPASS_BLOCK_SIZE) {
@@ -4676,81 +4766,8 @@ static int CmdHFiClassLegBrute(const char *Cmd) {
         PrintAndLogEx(ERR, "Partial Key is incorrect length");
         return PM3_EINVARG;
     }
-    //Standalone Command End
 
-    uint8_t CCNR[12];
-    uint8_t MAC_TAG[4] = {0, 0, 0, 0};
-    uint8_t CCNR2[12];
-    uint8_t MAC_TAG2[4] = {0, 0, 0, 0};
-
-    // Copy CCNR and MAC_TAG
-    memcpy(CCNR, epurse, 8);
-    memcpy(CCNR2, epurse, 8);
-    memcpy(CCNR + 8, macs, 4);
-    memcpy(CCNR2 + 8, macs2, 4);
-    memcpy(MAC_TAG, macs + 4, 4);
-    memcpy(MAC_TAG2, macs2 + 4, 4);
-
-    PrintAndLogEx(SUCCESS, " Epurse: %s", sprint_hex(epurse, 8));
-    PrintAndLogEx(SUCCESS, "   MACS1: %s", sprint_hex(macs, 8));
-    PrintAndLogEx(SUCCESS, "   MACS2: %s", sprint_hex(macs2, 8));
-    PrintAndLogEx(SUCCESS, "   CCNR1: " _GREEN_("%s"), sprint_hex(CCNR, sizeof(CCNR)));
-    PrintAndLogEx(SUCCESS, "   CCNR2: " _GREEN_("%s"), sprint_hex(CCNR2, sizeof(CCNR2)));
-    PrintAndLogEx(SUCCESS, "TAG MAC1: %s", sprint_hex(MAC_TAG, sizeof(MAC_TAG)));
-    PrintAndLogEx(SUCCESS, "TAG MAC2: %s", sprint_hex(MAC_TAG2, sizeof(MAC_TAG2)));
-    PrintAndLogEx(SUCCESS, "Starting Key: %s", sprint_hex(startingKey, 8));
-
-    bool verified = false;
-    uint8_t div_key[PICOPASS_BLOCK_SIZE] = {0};
-    uint8_t generated_mac[4] = {0, 0, 0, 0};
-
-    while (!verified) {
-
-        //generate the key block
-        generate_key_block_inverted(startingKey, index, div_key);
-
-        //generate the relevant macs
-
-        doMAC(CCNR, div_key, generated_mac);
-        bool mac_match = true;
-        for (int i = 0; i < 4; i++) {
-            if (MAC_TAG[i] != generated_mac[i]) {
-                mac_match = false;
-            }
-        }
-
-        if (mac_match) {
-            //verify this against macs2
-            PrintAndLogEx(WARNING, _YELLOW_("Found potentially valid RAW key ") _GREEN_("%s")_YELLOW_(" verifying it..."), sprint_hex(div_key, 8));
-            //generate the macs from the key and not the other way around, so we can quickly validate it
-            uint8_t verification_mac[4] = {0, 0, 0, 0};
-            doMAC(CCNR2, div_key, verification_mac);
-            PrintAndLogEx(INFO, "Usr Provided Mac2: " _GREEN_("%s"), sprint_hex(MAC_TAG2, sizeof(MAC_TAG2)));
-            PrintAndLogEx(INFO, "Verification  Mac: " _GREEN_("%s"), sprint_hex(verification_mac, sizeof(verification_mac)));
-            bool check_values = true;
-            for (int i = 0; i < 4; i++) {
-                if (MAC_TAG2[i] != verification_mac[i]) {
-                    check_values = false;
-                }
-            }
-            if (check_values) {
-                PrintAndLogEx(SUCCESS, _GREEN_("CONFIRMED VALID RAW key ") _RED_("%s"), sprint_hex(div_key, 8));
-                PrintAndLogEx(INFO, "You can now run ->  "_YELLOW_("hf iclass unhash -k %s")"  <-to find the pre-images.", sprint_hex(div_key, 8));
-                verified = true;
-            } else {
-                PrintAndLogEx(INFO, _YELLOW_("Raw Key Invalid"));
-            }
-
-        }
-        if (index % 1000000 == 0) {
-            PrintAndLogEx(INFO, "Tested: " _YELLOW_("%" PRIu64)" million keys", index / 1000000);
-            PrintAndLogEx(INFO, "Last Generated Key Value: " _YELLOW_("%s"), sprint_hex(div_key, 8));
-        }
-        index++;
-    }
-
-    PrintAndLogEx(NORMAL, "");
-    return PM3_SUCCESS;
+    return CmdHFiClassLegBrute_MT(epurse, macs, macs2, startingKey, index, threads);
 }
 
 static void generate_single_key_block_inverted_opt(const uint8_t *startingKey, uint32_t index, uint8_t *keyBlock) {
