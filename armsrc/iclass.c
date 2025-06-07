@@ -805,16 +805,15 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
 
             if (simulationMode == ICLASS_SIM_MODE_FULL_GLITCH){
                 //Jam the read based on the last SIO block
+                uint8_t *sr_or_sio = emulator + (current_page * page_size) + (6 * 8);
                 if (memcmp(emulator + (current_page * page_size) + (5 * 8), ff_data, PICOPASS_BLOCK_SIZE) == 0){ //SR card
                     if (block == 16){ //SR cards use a standard legth SIO
                         //update block 6 byte 1 from 03 to A3
-                        uint8_t *sr = emulator + (current_page * page_size) + (6 * 8);
-                        sr[0] |= 0xA0;
+                        sr_or_sio[0] |= 0xA0;
                         goto send;
                     }
                 }else{ //For SE cards we have to account for different SIO lengths depending if a standard or custom key is used
-                    uint8_t *sio = emulator + (current_page * page_size) + (6 * 8);
-                    if (block == (5 + ((sio[1] + 12) / 8))) {
+                    if (block == (5 + ((sr_or_sio[1] + 12) / 8))) {
                         goto send;
                     }
                 }
