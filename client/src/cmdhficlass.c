@@ -845,7 +845,7 @@ static int CmdHFiClassSim(const char *Cmd) {
                   "hf iclass sim -t 2                          --> execute loclass attack online part\n"
                   "hf iclass sim -t 3                          --> simulate full iCLASS 2k tag\n"
                   "hf iclass sim -t 4                          --> Reader-attack, adapted for KeyRoll mode, gather reader responses to extract elite key\n"
-                  "hf iclass sim -t 6                          --> same as -t 3, but doesn't respond to r/w for the block specified in last byte of blk 31");
+                  "hf iclass sim -t 6                          --> simulate full iCLASS 2k tag that doesn't respond to r/w requests to the last SIO block");
 
     void *argtable[] = {
         arg_param_begin,

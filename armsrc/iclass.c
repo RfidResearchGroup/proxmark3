@@ -608,10 +608,16 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                     trace_data_size = sizeof(ff_data);
                 } else { // use data from emulator memory
                     if (simulationMode == ICLASS_SIM_MODE_FULL_GLITCH){
-                        uint8_t block_check[8] ={0};
-                        memcpy(block_check, emulator + (current_page * page_size) + (31 * 8), 8);
-                        if (block == block_check[7]){
-                            goto send;
+                        //Jam the read based on the last SIO block
+                        if (memcmp(emulator + (current_page * page_size) + (5 * 8), ff_data, PICOPASS_BLOCK_SIZE) == 0){ //SR card
+                            if (block == 16){ //SR cards use a standard legth SIO
+                                goto send;
+                            }
+                        }else{ //For SE cards we have to account for different SIO lengths depending if a standard or custom key is used
+                            uint8_t *sio = emulator + (current_page * page_size) + (6 * 8);
+                            if (block == (5 + ((sio[1] + 12) / 8))) {
+                                goto send;
+                            }
                         }
                     }
 
@@ -798,10 +804,18 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             }
 
             if (simulationMode == ICLASS_SIM_MODE_FULL_GLITCH){
-                uint8_t block_check[8] ={0};
-                memcpy(block_check, emulator + (current_page * page_size) + (31 * 8), 8);
-                if (block == block_check[7]){
-                    goto send;
+                //Jam the read based on the last SIO block
+                uint8_t *sr_or_sio = emulator + (current_page * page_size) + (6 * 8);
+                if (memcmp(emulator + (current_page * page_size) + (5 * 8), ff_data, PICOPASS_BLOCK_SIZE) == 0){ //SR card
+                    if (block == 16){ //SR cards use a standard legth SIO
+                        //update block 6 byte 1 from 03 to A3
+                        sr_or_sio[0] |= 0xA0;
+                        goto send;
+                    }
+                }else{ //For SE cards we have to account for different SIO lengths depending if a standard or custom key is used
+                    if (block == (5 + ((sr_or_sio[1] + 12) / 8))) {
+                        goto send;
+                    }
                 }
             }
 
