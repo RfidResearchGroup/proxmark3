@@ -845,7 +845,8 @@ static int CmdHFiClassSim(const char *Cmd) {
                   "hf iclass sim -t 2                          --> execute loclass attack online part\n"
                   "hf iclass sim -t 3                          --> simulate full iCLASS 2k tag\n"
                   "hf iclass sim -t 4                          --> Reader-attack, adapted for KeyRoll mode, gather reader responses to extract elite key\n"
-                  "hf iclass sim -t 6                          --> simulate full iCLASS 2k tag that doesn't respond to r/w requests to the last SIO block");
+                  "hf iclass sim -t 6                          --> simulate full iCLASS 2k tag that doesn't respond to r/w requests to the last SIO block\n"
+                  "hf iclass sim -t 7                          --> simulate full iCLASS 2k tag that doesn't XOR or respond to r/w requests on block 3");
 
     void *argtable[] = {
         arg_param_begin,
@@ -876,7 +877,7 @@ static int CmdHFiClassSim(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    if (sim_type > 4 && sim_type != 6) {
+    if (sim_type > 4 && sim_type != 6 && sim_type != 7) {
         PrintAndLogEx(ERR, "Undefined simtype %d", sim_type);
         return PM3_EINVARG;
     }
@@ -1030,6 +1031,7 @@ static int CmdHFiClassSim(const char *Cmd) {
         case ICLASS_SIM_MODE_CSN_DEFAULT:
         case ICLASS_SIM_MODE_FULL:
         case ICLASS_SIM_MODE_FULL_GLITCH:
+        case ICLASS_SIM_MODE_FULL_GLITCH_KEY:
         default: {
             PrintAndLogEx(INFO, "Starting iCLASS simulation");
             PrintAndLogEx(INFO, "Press " _GREEN_("`pm3 button`") " to abort");
@@ -1037,7 +1039,7 @@ static int CmdHFiClassSim(const char *Cmd) {
             clearCommandBuffer();
             SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, numberOfCSNs, 1, csn, 8);
 
-            if (sim_type == ICLASS_SIM_MODE_FULL || sim_type ==  ICLASS_SIM_MODE_FULL_GLITCH)
+            if (sim_type == ICLASS_SIM_MODE_FULL || sim_type ==  ICLASS_SIM_MODE_FULL_GLITCH || sim_type ==  ICLASS_SIM_MODE_FULL_GLITCH_KEY)
                 PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass esave -h") "` to save the emulator memory to file");
             break;
         }

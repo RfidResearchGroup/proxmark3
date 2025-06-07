@@ -5,8 +5,10 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Updated the ATR list (@iceman1001)
 - Fixed fpga binary images to use fixed seed 2 (@n-hutton)
-- Changed `hf iclass sim -t 6` - implemented simulation that glitches specific block responses (@antiklesys)
+- Changed `hf iclass sim -t 7` - implemented simulation that glitches key block responses (@antiklesys)
+- Changed `hf iclass sim -t 6` - implemented simulation that glitches sio block (@antiklesys)
 - Changed `hf iclass legbrute` - implemented multithreading support (@antiklesys)
+- Changed `hf iclass legrec` - added a --sl option for further speed increase by tweaking the communication delays (@antiklesys)
 - Changed `hf iclass legrec` - added a --fast option for further speed increase and automated AA2 block selection (@antiklesys)
 - Changed `hf iclass legrec` - additional code optimizations gaining a ~147% speed increase (@antiklesys)
 - Changed `hf iclass tear` - readability improvements for erase phase (@antiklesys)
