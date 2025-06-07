@@ -614,9 +614,8 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                                 goto send;
                             }
                         }else{ //For SE cards we have to account for different SIO lengths depending if a standard or custom key is used
-                            uint8_t sio_size[8] = {0};
-                            memcpy(sio_size,emulator + (current_page * page_size) + (6 * 8), PICOPASS_BLOCK_SIZE);
-                            if (block == 5 + ((sio_size[1]+12)/8)){
+                            uint8_t *sio = emulator + (current_page * page_size) + (6 * 8);
+                            if (block == (5 + ((sio[1] + 12) / 8))) {
                                 goto send;
                             }
                         }
@@ -814,9 +813,8 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                         goto send;
                     }
                 }else{ //For SE cards we have to account for different SIO lengths depending if a standard or custom key is used
-                    uint8_t sio_size[8] = {0};
-                    memcpy(sio_size,emulator + (current_page * page_size) + (6 * 8), PICOPASS_BLOCK_SIZE);
-                    if (block == 5 + ((sio_size[1]+12)/8)){
+                    uint8_t *sio = emulator + (current_page * page_size) + (6 * 8);
+                    if (block == (5 + ((sio[1] + 12) / 8))) {
                         goto send;
                     }
                 }
