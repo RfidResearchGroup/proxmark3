@@ -408,14 +408,14 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
         uint16_t aid = madGetAID(sector, swapmad, 2, i);
         if (aid < 6) {
             PrintAndLogEx(INFO,
-                          (ibs == i) ? _MAGENTA_(" %02d [%04X] %s") : " %02d [" _GREEN_("%04X") "] %s",
+                          (ibs == i + 16) ? _MAGENTA_(" %02d [%04X] %s") : " %02d [" _GREEN_("%04X") "] %s",
                           i + 16,
                           aid,
                           aid_admin[aid]
                          );
         } else if (prev_aid == aid) {
             PrintAndLogEx(INFO,
-                          (ibs == i) ? _MAGENTA_(" %02d [%04X] continuation") : " %02d [" _YELLOW_("%04X") "] continuation",
+                          (ibs == i + 16) ? _MAGENTA_(" %02d [%04X] continuation") : " %02d [" _YELLOW_("%04X") "] continuation",
                           i + 16,
                           aid
                          );
@@ -423,7 +423,7 @@ int MAD2DecodeAndPrint(uint8_t *sector, bool swapmad, bool verbose) {
             char fmt[80];
             snprintf(fmt
                      , sizeof(fmt)
-                     , (ibs == i) ?
+                     , (ibs == i + 16) ?
                      _MAGENTA_(" %02d [%04X] %s") :
                      " %02d [" _GREEN_("%04X") "] %s"
                      , i + 16
