@@ -125,17 +125,18 @@ static uint8_t detect_current_lang(void) {
 static const char *get_quote(void) {
 
     const char *quotes_en[] = {
-        "E Pluribus Unum",
-        "Carpe Diem",
-        "Ad astra per aspera",
-        "Fortes fortuna adiuvat",
-        "Non ducor, duco",
-        "Veni, vidi, vici",
-        "Audentes fortuna iuvat",
-        "Virtus in actione consistit",
-        "Dum spiro, spero",
-        "Non scholae, sed vitae discimus",
-        "Faber est suae quisque fortunae"
+        "too many secrets",
+        "It’s not that simple",
+        "I have received a coded signal",
+        "I await your instructions",
+        "And so I watch, I wait",
+        "Listen to the Domain",
+        "ghost.713",
+        "Local node X.XX.713",
+        "Beggar after knowledge",
+        "343 Gulity Spark: offline",
+        "I serve the Builders!",
+        "This is rather distressing"
     };
 
     const char *quotes_fr[] = {
