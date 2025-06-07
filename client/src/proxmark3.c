@@ -126,7 +126,7 @@ static const char *get_quote(void) {
 
     const char *quotes_en[] = {
         "too many secrets",
-        "It’s not that simple",
+        "It's not that simple",
         "I have received a coded signal",
         "I await your instructions",
         "And so I watch, I wait",
