@@ -210,15 +210,18 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
     uint8_t RndA[17] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00};
     uint8_t RndB[17] = {0};
 
-    if (silentMode)
+    if (silentMode) {
         verbose = false;
+    }
 
-    if (mf4session)
+    if (mf4session) {
         mf4session->Authenticated = false;
+    }
 
     uint8_t cmd1[] = {0x70, keyn[1], keyn[0], 0x00};
     int res = ExchangeRAW14a(cmd1, sizeof(cmd1), activateField, true, data, sizeof(data), &datalen, silentMode);
     if (res != PM3_SUCCESS) {
+
         if (silentMode == false) {
             PrintAndLogEx(ERR, "Exchange raw error: %d", res);
         }
@@ -234,20 +237,35 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
     }
 
     if (datalen < 1) {
-        if (!silentMode) PrintAndLogEx(ERR, "Card response wrong length: %d", datalen);
-        if (dropFieldIfError) DropField();
+        if (silentMode == false) {
+            PrintAndLogEx(ERR, "Card response wrong length: %d", datalen);
+        }
+
+        if (dropFieldIfError) {
+            DropField();
+        }
         return PM3_EWRONGANSWER;
     }
 
     if (data[0] != 0x90) {
-        if (!silentMode) PrintAndLogEx(ERR, "Card response error: %02x %s", data[0], mfpGetErrorDescription(data[0]));
-        if (dropFieldIfError) DropField();
+        if (silentMode == false) {
+            PrintAndLogEx(ERR, "Card response error: %02x %s", data[0], mfpGetErrorDescription(data[0]));
+        }
+
+        if (dropFieldIfError) {
+            DropField();
+        }
         return PM3_EWRONGANSWER;
     }
 
     if (datalen != 19) { // code 1b + 16b + crc 2b
-        if (!silentMode) PrintAndLogEx(ERR, "Card response must be 19 bytes long instead of: %d", datalen);
-        if (dropFieldIfError) DropField();
+        if (silentMode == false) {
+            PrintAndLogEx(ERR, "Card response must be 19 bytes long instead of: %d", datalen);
+        }
+
+        if (dropFieldIfError) {
+            DropField();
+        }
         return PM3_EWRONGANSWER;
     }
 
@@ -268,11 +286,13 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
     if (verbose) {
         PrintAndLogEx(INFO, ">phase2: %s", sprint_hex(cmd2, 33));
     }
+
     res = ExchangeRAW14a(cmd2, sizeof(cmd2), false, true, data, sizeof(data), &datalen, silentMode);
     if (res != PM3_SUCCESS) {
         if (silentMode == false) {
             PrintAndLogEx(ERR, "Exchange raw error: %d", res);
         }
+
         if (dropFieldIfError) {
             DropField();
         }
@@ -291,12 +311,18 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
     }
 
     if (memcmp(&raw[4], &RndA[1], 16)) {
-        if (!silentMode) PrintAndLogEx(ERR, "\nAuthentication FAILED. rnd is not equal");
+        if (silentMode == false) {
+            PrintAndLogEx(ERR, "\nAuthentication FAILED. rnd is not equal");
+        }
+
         if (verbose) {
             PrintAndLogEx(ERR, "RndA reader: %s", sprint_hex(&RndA[1], 16));
             PrintAndLogEx(ERR, "RndA   card: %s", sprint_hex(&raw[4], 16));
         }
-        if (dropFieldIfError) DropField();
+
+        if (dropFieldIfError) {
+            DropField();
+        }
         return PM3_EWRONGANSWER;
     }
 
@@ -309,6 +335,7 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
     uint8_t kenc[16] = {0};
     memcpy(&kenc[0], &RndA[11], 5);
     memcpy(&kenc[5], &RndB[11], 5);
+
     for (int i = 0; i < 5; i++) {
         kenc[10 + i] = RndA[4 + i] ^ RndB[4 + i];
     }
@@ -322,6 +349,7 @@ int MifareAuth4(mf4Session_t *mf4session, const uint8_t *keyn, uint8_t *key, boo
     uint8_t kmac[16] = {0};
     memcpy(&kmac[0], &RndA[7], 5);
     memcpy(&kmac[5], &RndB[7], 5);
+
     for (int i = 0; i < 5; i++) {
         kmac[10 + i] = RndA[0 + i] ^ RndB[0 + i];
     }

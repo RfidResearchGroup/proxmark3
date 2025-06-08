@@ -26,7 +26,7 @@
 #include "mifaredefault.h"      // consts
 #include "protocol_vigik.h"
 
-#define MIFARE_SECTOR_RETRY     10
+#define MIFARE_SECTOR_RETRY     6
 
 // mifare tracer flags
 #define TRACE_IDLE              0x00

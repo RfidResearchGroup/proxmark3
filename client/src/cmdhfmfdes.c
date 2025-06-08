@@ -1187,8 +1187,8 @@ static int CmdHF14aDesChk(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfdes chk",
                   "Checks keys with MIFARE DESFire card.",
                   "hf mfdes chk --aid 123456 -k 000102030405060708090a0b0c0d0e0f  -> check key on aid 0x123456\n"
-                  "hf mfdes chk -d mfdes_default_keys                     -> check keys against all existing aid on card\n"
-                  "hf mfdes chk -d mfdes_default_keys --aid 123456        -> check keys against aid 0x123456\n"
+                  "hf mfdes chk -f mfdes_default_keys                     -> check keys against all existing aid on card\n"
+                  "hf mfdes chk -f mfdes_default_keys --aid 123456        -> check keys against aid 0x123456\n"
                   "hf mfdes chk --aid 123456 --pattern1b -j keys          -> check all 1-byte keys pattern on aid 0x123456 and save found keys to `keys.json`\n"
                   "hf mfdes chk --aid 123456 --pattern2b --startp2b FA00  -> check all 2-byte keys pattern on aid 0x123456. Start from key FA00FA00...FA00");
 
@@ -1196,7 +1196,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
         arg_param_begin,
         arg_str0(NULL, "aid",        "<hex>", "Use specific AID (3 hex bytes, big endian)"),
         arg_str0("k",  "key",        "<hex>", "Key for checking (HEX 16 bytes)"),
-        arg_str0("d",  "dict",       "<fn>", "Dictionary file with keys"),
+        arg_str0("f", "file",        "<fn>",  "Filename of dictionary"),
         arg_lit0(NULL, "pattern1b",  "Check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)"),
         arg_lit0(NULL, "pattern2b",  "Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)"),
         arg_str0(NULL, "startp2b",   "<pattern>", "Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)"),
@@ -1209,12 +1209,12 @@ static int CmdHF14aDesChk(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    bool APDULogging = arg_get_lit(ctx, 11);
-
     int aidlength = 0;
     uint8_t aid[3] = {0};
     CLIGetHexWithReturn(ctx, 1, aid, &aidlength);
+
     swap24(aid);
+
     uint8_t vkey[16] = {0};
     int vkeylen = 0;
     CLIGetHexWithReturn(ctx, 2, vkey, &vkeylen);
@@ -1293,17 +1293,26 @@ static int CmdHF14aDesChk(const char *Cmd) {
     int kdfInputLen = 0;
     CLIGetHexWithReturn(ctx, 10, kdfInput, &kdfInputLen);
 
+    bool APDULogging = arg_get_lit(ctx, 11);
+
     CLIParserFree(ctx);
     SetAPDULogging(APDULogging);
 
     // 1-byte pattern search mode
     if (pattern1b) {
-        for (uint32_t i = 0; i < 0x100; i++)
+
+        for (uint32_t i = 0; i < 0x100; i++) {
             memset(aeskeyList[i], i, 16);
-        for (uint32_t i = 0; i < 0x100; i++)
+        }
+
+        for (uint32_t i = 0; i < 0x100; i++) {
             memset(deskeyList[i], i, 8);
-        for (uint32_t i = 0; i < 0x100; i++)
+        }
+
+        for (uint32_t i = 0; i < 0x100; i++) {
             memset(k3kkeyList[i], i, 24);
+        }
+
         aeskeyListLen = 0x100;
         deskeyListLen = 0x100;
         k3kkeyListLen = 0x100;
@@ -1319,18 +1328,21 @@ static int CmdHF14aDesChk(const char *Cmd) {
     if (dict_filenamelen) {
 
         res = loadFileDICTIONARYEx((char *)dict_filename, deskeyList, sizeof(deskeyList), NULL, 8, &deskeyListLen, 0, &endFilePosition, true);
-        if (res == PM3_SUCCESS && endFilePosition)
+        if (res == PM3_SUCCESS && endFilePosition) {
             PrintAndLogEx(SUCCESS, "First part of des dictionary successfully loaded.");
+        }
 
         endFilePosition = 0;
         res = loadFileDICTIONARYEx((char *)dict_filename, aeskeyList, sizeof(aeskeyList), NULL, 16, &aeskeyListLen, 0, &endFilePosition, true);
-        if (res == PM3_SUCCESS && endFilePosition)
+        if (res == PM3_SUCCESS && endFilePosition) {
             PrintAndLogEx(SUCCESS, "First part of aes dictionary successfully loaded.");
+        }
 
         endFilePosition = 0;
         res = loadFileDICTIONARYEx((char *)dict_filename, k3kkeyList, sizeof(k3kkeyList), NULL, 24, &k3kkeyListLen, 0, &endFilePosition, true);
-        if (res == PM3_SUCCESS && endFilePosition)
+        if (res == PM3_SUCCESS && endFilePosition) {
             PrintAndLogEx(SUCCESS, "First part of k3kdes dictionary successfully loaded.");
+        }
 
         endFilePosition = 0;
     }
@@ -1352,8 +1364,9 @@ static int CmdHF14aDesChk(const char *Cmd) {
         PrintAndLogEx(INFO, "Loaded " _YELLOW_("%"PRIu32) " k3kdes keys", k3kkeyListLen);
     }
 
-    if (verbose == false)
+    if (verbose == false) {
         PrintAndLogEx(INFO, "Search keys:");
+    }
 
     bool result = false;
     uint8_t app_ids[78] = {0};
@@ -1508,7 +1521,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                   "Detect key type and tries to find one from the list.",
                   "hf mfdes detect                            -> detect key 0 from PICC level\n"
                   "hf mfdes detect --schann d40               -> detect key 0 from PICC level via secure channel D40\n"
-                  "hf mfdes detect --dict mfdes_default_keys  -> detect key 0 from PICC level with help of the standard dictionary\n"
+                  "hf mfdes detect -f mfdes_default_keys      -> detect key 0 from PICC level with help of the standard dictionary\n"
                   "hf mfdes detect --aid 123456 -n 2 --save   -> detect key 2 from app 123456 and if succeed - save params to defaults (`default` command)\n"
                   "hf mfdes detect --isoid df01 --save        -> detect key 0 and save to defaults with card in the LRP mode");
 
@@ -1526,7 +1539,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
         arg_str0(NULL, "schann",  "<d40|ev1|ev2|lrp>", "Secure channel"),
         arg_str0(NULL, "aid",     "<hex>", "Application ID (3 hex bytes, big endian)"),
         arg_str0(NULL, "isoid",   "<hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)."),
-        arg_str0(NULL, "dict",    "<fn>", "Dictionary file name with keys"),
+        arg_str0("f", "file",     "<fn>",  "Filename of dictionary"),
         arg_lit0(NULL, "save",    "Save found key and parameters to defaults"),
         arg_param_end
     };
@@ -1571,28 +1584,38 @@ static int CmdHF14aDesDetect(const char *Cmd) {
 
     uint8_t data[250] = {0};
     size_t datalen = 0;
+
     res = DesfireGetKeySettings(&dctx, data, &datalen);
     if (res == PM3_SUCCESS && datalen >= 2) {
+
         uint8_t num_keys = data[1];
+
         switch (num_keys >> 6) {
-            case 0:
+            case 0: {
                 keytypes[T_DES] = true;
                 keytypes[T_3DES] = true;
                 break;
-            case 1:
+            }
+            case 1: {
                 keytypes[T_3K3DES] = true;
                 break;
-            case 2:
+            }
+            case 2: {
                 keytypes[T_AES] = true;
                 break;
-            default:
+            }
+            default: {
                 break;
+            }
         }
+
     } else {
         // if fail - check auth commands
         AuthCommandsChk_t authCmdCheck = {0};
         DesfireCheckAuthCommands(selectway, id, NULL, 0, &authCmdCheck);
+
         if (authCmdCheck.checked) {
+
             if (authCmdCheck.auth) {
                 keytypes[T_DES] = true;
                 keytypes[T_3DES] = true;
@@ -1601,14 +1624,17 @@ static int CmdHF14aDesDetect(const char *Cmd) {
                     keytypes[T_3K3DES] = true;
                 }
             }
+
             if (authCmdCheck.authAES || authCmdCheck.authEV2) {
                 keytypes[T_AES] = true;
             }
+
             if (authCmdCheck.authLRP) {
                 keytypes[T_AES] = true;
                 uselrp = true;
                 securechann = DACLRP;
             }
+
         } else {
             // if nothing helps - we check DES only
             keytypes[T_DES] = true;
@@ -1623,10 +1649,13 @@ static int CmdHF14aDesDetect(const char *Cmd) {
     }
 
     if (verbose) {
-        if (DesfireMFSelected(selectway, id))
+
+        if (DesfireMFSelected(selectway, id)) {
             PrintAndLogEx(INFO, "Check PICC key num: %d (0x%02x)", dctx.keyNum, dctx.keyNum);
-        else
+        } else {
             PrintAndLogEx(INFO, "Check: %s key num: %d (0x%02x)", DesfireWayIDStr(selectway, id), dctx.keyNum, dctx.keyNum);
+        }
+
         PrintAndLogEx(INFO, "keys: DES: %s 2TDEA: %s 3TDEA: %s AES: %s LRP: %s",
                       keytypes[T_DES] ? _GREEN_("YES") : _RED_("NO"),
                       keytypes[T_3DES] ? _GREEN_("YES") : _RED_("NO"),
@@ -1640,43 +1669,61 @@ static int CmdHF14aDesDetect(const char *Cmd) {
     bool found = false;
     size_t errcount = 0;
     for (uint8_t ktype = T_DES; ktype <= T_AES; ktype++) {
-        if (!keytypes[ktype])
+
+        if (keytypes[ktype] == false) {
             continue;
+        }
+
         dctx.keyType = ktype;
-        if (verbose)
+
+        if (verbose) {
             PrintAndLogEx(INFO, "Scan key type: %s", CLIGetOptionListStr(DesfireAlgoOpts, dctx.keyType));
+        }
 
         if (dict_filenamelen == 0) {
             // keys from mifaredefault.h
             for (int i = 0; i < g_mifare_plus_default_keys_len; i++) {
+
                 uint8_t key[DESFIRE_MAX_KEY_SIZE] = {0};
-                if (hex_to_bytes(g_mifare_plus_default_keys[i], key, 16) != 16)
+                if (hex_to_bytes(g_mifare_plus_default_keys[i], key, 16) != 16) {
                     continue;
-                if (ktype == T_3K3DES)
+                }
+
+                if (ktype == T_3K3DES) {
                     memcpy(&key[16], key, 8);
+                }
 
                 res = DesfireAuthCheck(&dctx, selectway, id, securechann, key);
                 if (res == PM3_SUCCESS) {
                     found = true;
                     break; // all the params already in the dctx
                 }
+
                 if (res == -10) {
-                    if (verbose)
+
+                    if (verbose) {
                         PrintAndLogEx(ERR, "Can't select AID. There is no connection with card.");
+                    }
 
                     found = false;
                     break; // we can't select app after invalid 1st auth stages
                 }
+
                 if (res == -11) {
+
                     if (errcount > 10) {
-                        if (verbose)
+                        if (verbose) {
                             PrintAndLogEx(ERR, "Too much errors (%zu) from card", errcount);
+                        }
                         break;
                     }
                     errcount++;
-                } else
+
+                } else {
                     errcount = 0;
+                }
             }
+
         } else {
             // keys from file
             uint8_t keyList[MAX_KEYS_LIST_LEN * MAX_KEY_LEN] = {0};
@@ -1684,49 +1731,65 @@ static int CmdHF14aDesDetect(const char *Cmd) {
             size_t keylen = desfire_get_key_length(dctx.keyType);
             size_t endFilePosition = 0;
 
-            while (!found) {
+            while (found == false) {
+
                 res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, keylen, &keyListLen, endFilePosition, &endFilePosition, verbose);
-                if (res != 1 && res != PM3_SUCCESS)
+                if (res != 1 && res != PM3_SUCCESS) {
                     break;
+                }
 
                 for (int i = 0; i < keyListLen; i++) {
+
                     res = DesfireAuthCheck(&dctx, selectway, id, securechann, &keyList[i * keylen]);
                     if (res == PM3_SUCCESS) {
                         found = true;
                         break; // all the params already in the dctx
                     }
+
                     if (res == -10) {
-                        if (verbose)
+                        if (verbose) {
                             PrintAndLogEx(ERR, "Can't select AID. There is no connection with card.");
+                        }
 
                         found = false;
                         break; // we can't select app after invalid 1st auth stages
                     }
+
                     if (res == -11) {
+
                         if (errcount > 10) {
-                            if (verbose)
+                            if (verbose) {
                                 PrintAndLogEx(ERR, "Too much errors (%zu) from card", errcount);
+                            }
                             break;
                         }
                         errcount++;
-                    } else
+
+                    } else {
                         errcount = 0;
+                    }
+
                 }
 
-                if (endFilePosition == 0)
+                if (endFilePosition == 0) {
                     break;
+                }
             }
 
         }
-        if (found)
+
+        if (found) {
             break;
+        }
     }
 
     if (found) {
-        if (DesfireMFSelected(selectway, id))
+
+        if (DesfireMFSelected(selectway, id)) {
             PrintAndLogEx(INFO, _GREEN_("Found") " key num: %d (0x%02x)", dctx.keyNum, dctx.keyNum);
-        else
+        } else {
             PrintAndLogEx(INFO, "Found key for: %s key num: %d (0x%02x)", DesfireWayIDStr(selectway, id), dctx.keyNum, dctx.keyNum);
+        }
 
         PrintAndLogEx(INFO, "channel " _GREEN_("%s") " key " _GREEN_("%s") " [%d]: " _GREEN_("%s"),
                       CLIGetOptionListStr(DesfireSecureChannelOpts, securechann),
@@ -1741,6 +1804,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
     DropField();
 
     if (found && save) {
+
         defaultKeyNum = dctx.keyNum;
         defaultAlgoId = dctx.keyType;
         memcpy(defaultKey, dctx.key, DESFIRE_MAX_KEY_SIZE);
@@ -1751,17 +1815,16 @@ static int CmdHF14aDesDetect(const char *Cmd) {
         defaultCommSet = dctx.cmdSet;
 
         PrintAndLogEx(INFO, "-----------" _CYAN_("Default parameters") "---------------------------------");
-
-        PrintAndLogEx(INFO, "Key Num     : %d", defaultKeyNum);
-        PrintAndLogEx(INFO, "Algo        : %s", CLIGetOptionListStr(DesfireAlgoOpts, defaultAlgoId));
-        PrintAndLogEx(INFO, "Key         : %s", sprint_hex(defaultKey, desfire_get_key_length(defaultAlgoId)));
-        PrintAndLogEx(INFO, "KDF algo    : %s", CLIGetOptionListStr(DesfireKDFAlgoOpts, defaultKdfAlgo));
-        PrintAndLogEx(INFO, "KDF input   : [%d] %s", defaultKdfInputLen, sprint_hex(defaultKdfInput, defaultKdfInputLen));
-        PrintAndLogEx(INFO, "Secure chan : %s", CLIGetOptionListStr(DesfireSecureChannelOpts, defaultSecureChannel));
-        PrintAndLogEx(INFO, "Command set : %s", CLIGetOptionListStr(DesfireCommandSetOpts, defaultCommSet));
-        PrintAndLogEx(INFO, _GREEN_("Saved"));
+        PrintAndLogEx(INFO, "Key Num....... %d", defaultKeyNum);
+        PrintAndLogEx(INFO, "Algo.......... %s", CLIGetOptionListStr(DesfireAlgoOpts, defaultAlgoId));
+        PrintAndLogEx(INFO, "Key........... %s", sprint_hex(defaultKey, desfire_get_key_length(defaultAlgoId)));
+        PrintAndLogEx(INFO, "KDF algo...... %s", CLIGetOptionListStr(DesfireKDFAlgoOpts, defaultKdfAlgo));
+        PrintAndLogEx(INFO, "KDF input..... [%d] %s", defaultKdfInputLen, sprint_hex(defaultKdfInput, defaultKdfInputLen));
+        PrintAndLogEx(INFO, "Secure chan... %s", CLIGetOptionListStr(DesfireSecureChannelOpts, defaultSecureChannel));
+        PrintAndLogEx(INFO, "Command set... %s", CLIGetOptionListStr(DesfireCommandSetOpts, defaultCommSet));
+        PrintAndLogEx(INFO, "Parameters saved to in-memory ( %s )", _GREEN_("ok"));
     }
-
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 

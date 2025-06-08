@@ -575,7 +575,8 @@ static int CmdHFMFPInitPerso(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfp initp",
                   "Executes Write Perso command for all card's keys. Can be used in SL0 mode only.",
                   "hf mfp initp --key 000102030405060708090a0b0c0d0e0f  -> fill all the keys with key (00..0f)\n"
-                  "hf mfp initp -vv                                     -> fill all the keys with default key(0xff..0xff) and show all the data exchange");
+                  "hf mfp initp -vv                                     -> fill all the keys with default key(0xff..0xff) and show all the data exchange"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -700,13 +701,14 @@ static int CmdHFMFPAuth(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfp auth",
                   "Executes AES authentication command for MIFARE Plus card",
                   "hf mfp auth --ki 4000 --key 000102030405060708090a0b0c0d0e0f      -> executes authentication\n"
-                  "hf mfp auth --ki 9003 --key FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -v   -> executes authentication and shows all the system data");
+                  "hf mfp auth --ki 9003 --key FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF -v   -> executes authentication and shows all the system data"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_str1(NULL, "ki", "<hex>", "Key number, 2 hex bytes"),
-        arg_str1(NULL, "key", "<hex>", "Key, 16 hex bytes"),
+        arg_str1("k",  "key", "<hex>", "Key, 16 hex bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -756,7 +758,8 @@ static int CmdHFMFPRdbl(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfp rdbl",
                   "Reads blocks from MIFARE Plus card",
                   "hf mfp rdbl --blk 0 --key 000102030405060708090a0b0c0d0e0f   -> executes authentication and read block 0 data\n"
-                  "hf mfp rdbl --blk 1 -v                                       -> executes authentication and shows sector 1 data with default key 0xFF..0xFF");
+                  "hf mfp rdbl --blk 1 -v                                       -> executes authentication and shows sector 1 data with default key 0xFF..0xFF"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -874,7 +877,8 @@ static int CmdHFMFPRdsc(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfp rdsc",
                   "Reads one sector from MIFARE Plus card",
                   "hf mfp rdsc -s 0 --key 000102030405060708090a0b0c0d0e0f   -> executes authentication and read sector 0 data\n"
-                  "hf mfp rdsc -s 1 -v                                       -> executes authentication and shows sector 1 data with default key");
+                  "hf mfp rdsc -s 1 -v                                       -> executes authentication and shows sector 1 data with default key"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1418,9 +1422,10 @@ static int CmdHFMFPChk(const char *Cmd) {
                   "Checks keys on MIFARE Plus card",
                   "hf mfp chk -k 000102030405060708090a0b0c0d0e0f  -> check key on sector 0 as key A and B\n"
                   "hf mfp chk -s 2 -a                              -> check default key list on sector 2, only key A\n"
-                  "hf mfp chk -d mfp_default_keys -s0 -e6          -> check keys from dictionary against sectors 0-6\n"
+                  "hf mfp chk -f mfp_default_keys -s0 -e6          -> check keys from dictionary against sectors 0-6\n"
                   "hf mfp chk --pattern1b --dump                   -> check all 1-byte keys pattern and save found keys to file\n"
-                  "hf mfp chk --pattern2b --startp2b FA00          -> check all 2-byte keys pattern. Start from key FA00FA00...FA00");
+                  "hf mfp chk --pattern2b --startp2b FA00          -> check all 2-byte keys pattern. Start from key FA00FA00...FA00"
+                 );
 
     void *argtable[] = {
         arg_param_begin,
@@ -1429,7 +1434,7 @@ static int CmdHFMFPChk(const char *Cmd) {
         arg_int0("s",  "startsec",  "<0..255>", "Start sector number"),
         arg_int0("e",  "endsec",    "<0..255>", "End sector number"),
         arg_str0("k",  "key",       "<hex>", "Key for checking (HEX 16 bytes)"),
-        arg_str0("d",  "dict",      "<fn>", "Dictionary file with keys"),
+        arg_str0("f", "file", "<fn>", "Dictionary file with default keys"),
         arg_lit0(NULL, "pattern1b", "Check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)"),
         arg_lit0(NULL, "pattern2b", "Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)"),
         arg_str0(NULL, "startp2b",  "<pattern>", "Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)"),
@@ -1507,17 +1512,21 @@ static int CmdHFMFPChk(const char *Cmd) {
 
     uint8_t startKeyAB = 0;
     uint8_t endKeyAB = 1;
-    if (keyA && (keyB == false))
+    if (keyA && (keyB == false)) {
         endKeyAB = 0;
+    }
 
-    if ((keyA == false) && keyB)
+    if ((keyA == false) && keyB) {
         startKeyAB = 1;
+    }
 
-    if (endSector < startSector)
+    if (endSector < startSector) {
         endSector = startSector;
+    }
 
     // 1-byte pattern search mode
     if (pattern1b) {
+
         for (int i = 0; i < 0x100; i++) {
             memset(keyList[i], i, 16);
         }
@@ -1535,9 +1544,10 @@ static int CmdHFMFPChk(const char *Cmd) {
     // dictionary mode
     size_t endFilePosition = 0;
     if (dict_filenamelen) {
-        uint32_t keycnt = 0;
-        res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, 16, &keycnt, 0, &endFilePosition, true);
 
+        uint32_t keycnt = 0;
+
+        res = loadFileDICTIONARYEx((char *)dict_filename, keyList, sizeof(keyList), NULL, 16, &keycnt, 0, &endFilePosition, true);
         if (res == PM3_SUCCESS && endFilePosition) {
             keyListLen = keycnt;
             PrintAndLogEx(SUCCESS, "First part of dictionary successfully loaded.");
@@ -1604,13 +1614,13 @@ static int CmdHFMFPChk(const char *Cmd) {
     char strA[46 + 1] = {0};
     char strB[46 + 1] = {0};
 
-    uint8_t ndef_key[] = {0xD3, 0xF7, 0xD3, 0xF7, 0xD3, 0xF7, 0xD3, 0xF7, 0xD3, 0xF7, 0xD3, 0xF7, 0xD3, 0xF7, 0xD3, 0xF7};
+
     bool has_ndef_key = false;
     bool printedHeader = false;
     for (uint8_t s = startSector; s <= endSector; s++) {
 
-        if ((memcmp(&foundKeys[0][s][1], ndef_key, AES_KEY_LEN) == 0) ||
-                (memcmp(&foundKeys[1][s][1], ndef_key, AES_KEY_LEN) == 0)) {
+        if ((memcmp(&foundKeys[0][s][1], g_mifarep_ndef_key, AES_KEY_LEN) == 0) ||
+                (memcmp(&foundKeys[1][s][1], g_mifarep_ndef_key, AES_KEY_LEN) == 0)) {
             has_ndef_key = true;
         }
 
@@ -1637,10 +1647,12 @@ static int CmdHFMFPChk(const char *Cmd) {
         PrintAndLogEx(INFO, " " _YELLOW_("%03d") " | %s | %s", s, strA, strB);
     }
 
-    if (printedHeader == false)
-        PrintAndLogEx(INFO, "No keys found(");
-    else
-        PrintAndLogEx(INFO, "-----+----------------------------------+----------------------------------\n");
+    if (printedHeader == false) {
+        PrintAndLogEx(INFO, "No keys found");
+    } else {
+        PrintAndLogEx(INFO, "-----+----------------------------------+----------------------------------");
+    }
+    PrintAndLogEx(NORMAL, "");
 
     // save keys to json
     if (create_dumpfile && printedHeader) {
@@ -1691,7 +1703,7 @@ static int CmdHFMFPChk(const char *Cmd) {
     }
 
     // MAD detection
-    if ((memcmp(&foundKeys[0][0][1], "\xA0\xA1\xA2\xA3\xA4\xA5\xA6\xA7\xA0\xA1\xA2\xA3\xA4\xA5\xA6\xA7", AES_KEY_LEN) == 0)) {
+    if ((memcmp(&foundKeys[0][0][1], g_mifarep_mad_key, AES_KEY_LEN) == 0)) {
         PrintAndLogEx(HINT, "Hint: MAD key detected. Try " _YELLOW_("`hf mfp mad`") " for more details");
     }
 
@@ -1784,7 +1796,8 @@ static int CmdHFMFPMAD(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfp mad",
                   "Checks and prints MIFARE Application Directory (MAD)",
                   "hf mfp mad\n"
-                  "hf mfp mad --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7  -> read and print NDEF data from MAD aid");
+                  "hf mfp mad --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7  -> read and print NDEF data from MAD aid"
+                 );
 
     void *argtable[] = {
         arg_param_begin,

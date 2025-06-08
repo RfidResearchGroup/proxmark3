@@ -5755,8 +5755,8 @@
             "description": "Checks keys with MIFARE DESFire card.",
             "notes": [
                 "hf mfdes chk --aid 123456 -k 000102030405060708090a0b0c0d0e0f -> check key on aid 0x123456",
-                "hf mfdes chk -d mfdes_default_keys -> check keys against all existing aid on card",
-                "hf mfdes chk -d mfdes_default_keys --aid 123456 -> check keys against aid 0x123456",
+                "hf mfdes chk -f mfdes_default_keys -> check keys against all existing aid on card",
+                "hf mfdes chk -f mfdes_default_keys --aid 123456 -> check keys against aid 0x123456",
                 "hf mfdes chk --aid 123456 --pattern1b -j keys -> check all 1-byte keys pattern on aid 0x123456 and save found keys to `keys.json`",
                 "hf mfdes chk --aid 123456 --pattern2b --startp2b FA00 -> check all 2-byte keys pattern on aid 0x123456. Start from key FA00FA00...FA00"
             ],
@@ -5765,7 +5765,7 @@
                 "-h, --help This help",
                 "--aid <hex> Use specific AID (3 hex bytes, big endian)",
                 "-k, --key <hex> Key for checking (HEX 16 bytes)",
-                "-d, --dict <fn> Dictionary file with keys",
+                "-f, --file <fn> Filename of dictionary",
                 "--pattern1b Check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)",
                 "--pattern2b Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)",
                 "--startp2b <pattern> Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)",
@@ -5775,7 +5775,7 @@
                 "-i, --kdfi <hex> KDF input (1-31 hex bytes)",
                 "-a, --apdu Show APDU requests and responses"
             ],
-            "usage": "hf mfdes chk [-hva] [--aid <hex>] [-k <hex>] [-d <fn>] [--pattern1b] [--pattern2b] [--startp2b <pattern>] [-j <fn>] [--kdf <0|1|2>] [-i <hex>]"
+            "usage": "hf mfdes chk [-hva] [--aid <hex>] [-k <hex>] [-f <fn>] [--pattern1b] [--pattern2b] [--startp2b <pattern>] [-j <fn>] [--kdf <0|1|2>] [-i <hex>]"
         },
         "hf mfdes chkeysettings": {
             "command": "hf mfdes chkeysettings",
@@ -6130,7 +6130,7 @@
             "notes": [
                 "hf mfdes detect -> detect key 0 from PICC level",
                 "hf mfdes detect --schann d40 -> detect key 0 from PICC level via secure channel D40",
-                "hf mfdes detect --dict mfdes_default_keys -> detect key 0 from PICC level with help of the standard dictionary",
+                "hf mfdes detect -f mfdes_default_keys -> detect key 0 from PICC level with help of the standard dictionary",
                 "hf mfdes detect --aid 123456 -n 2 --save -> detect key 2 from app 123456 and if succeed - save params to defaults (`default` command)",
                 "hf mfdes detect --isoid df01 --save -> detect key 0 and save to defaults with card in the LRP mode"
             ],
@@ -6149,10 +6149,10 @@
                 "--schann <d40|ev1|ev2|lrp> Secure channel",
                 "--aid <hex> Application ID (3 hex bytes, big endian)",
                 "--isoid <hex> Application ISO ID (ISO DF ID) (2 hex bytes, big endian).",
-                "--dict <fn> Dictionary file name with keys",
+                "-f, --file <fn> Filename of dictionary",
                 "--save Save found key and parameters to defaults"
             ],
-            "usage": "hf mfdes detect [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--aid <hex>] [--isoid <hex>] [--dict <fn>] [--save]"
+            "usage": "hf mfdes detect [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--aid <hex>] [--isoid <hex>] [-f <fn>] [--save]"
         },
         "hf mfdes dump": {
             "command": "hf mfdes dump",
@@ -6770,9 +6770,9 @@
                 "-h, --help This help",
                 "-v, --verbose Verbose output",
                 "--ki <hex> Key number, 2 hex bytes",
-                "--key <hex> Key, 16 hex bytes"
+                "-k, --key <hex> Key, 16 hex bytes"
             ],
-            "usage": "hf mfp auth [-hv] --ki <hex> --key <hex>"
+            "usage": "hf mfp auth [-hv] --ki <hex> -k <hex>"
         },
         "hf mfp chconf": {
             "command": "hf mfp chconf",
@@ -6806,7 +6806,7 @@
             "notes": [
                 "hf mfp chk -k 000102030405060708090a0b0c0d0e0f -> check key on sector 0 as key A and B",
                 "hf mfp chk -s 2 -a -> check default key list on sector 2, only key A",
-                "hf mfp chk -d mfp_default_keys -s0 -e6 -> check keys from dictionary against sectors 0-6",
+                "hf mfp chk -f mfp_default_keys -s0 -e6 -> check keys from dictionary against sectors 0-6",
                 "hf mfp chk --pattern1b --dump -> check all 1-byte keys pattern and save found keys to file",
                 "hf mfp chk --pattern2b --startp2b FA00 -> check all 2-byte keys pattern. Start from key FA00FA00...FA00"
             ],
@@ -6818,14 +6818,14 @@
                 "-s, --startsec <0..255> Start sector number",
                 "-e, --endsec <0..255> End sector number",
                 "-k, --key <hex> Key for checking (HEX 16 bytes)",
-                "-d, --dict <fn> Dictionary file with keys",
+                "-f, --file <fn> Dictionary file with default keys",
                 "--pattern1b Check all 1-byte combinations of key (0000...0000, 0101...0101, 0202...0202, ...)",
                 "--pattern2b Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)",
                 "--startp2b <pattern> Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)",
                 "--dump Dump found keys to JSON file",
                 "-v, --verbose Verbose output"
             ],
-            "usage": "hf mfp chk [-habv] [-s <0..255>] [-e <0..255>] [-k <hex>] [-d <fn>] [--pattern1b] [--pattern2b] [--startp2b <pattern>] [--dump]"
+            "usage": "hf mfp chk [-habv] [-s <0..255>] [-e <0..255>] [-k <hex>] [-f <fn>] [--pattern1b] [--pattern2b] [--startp2b <pattern>] [--dump]"
         },
         "hf mfp chkey": {
             "command": "hf mfp chkey",
@@ -13376,6 +13376,6 @@
     "metadata": {
         "commands_extracted": 768,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-06-08T17:26:24"
+        "extracted_on": "2025-06-08T18:54:12"
     }
 }
