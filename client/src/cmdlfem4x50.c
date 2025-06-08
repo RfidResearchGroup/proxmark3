@@ -639,10 +639,8 @@ int em4x50_read(em4x50_data_t *etd, em4x50_word_t *out) {
         return PM3_ESOFT;
     }
 
-    em4x50_read_data_response_t *o = (em4x50_read_data_response_t *)resp.data.asBytes;
-
     em4x50_word_t words[EM4X50_NO_WORDS] = {0};
-    em4x50_prepare_result((uint8_t *)o->words, etd->addresses & 0xFF, (etd->addresses >> 8) & 0xFF, words);
+    em4x50_prepare_result(resp.data.asBytes, etd->addresses & 0xFF, (etd->addresses >> 8) & 0xFF, words);
 
     if (out != NULL) {
         memcpy(out, &words, sizeof(em4x50_word_t) * EM4X50_NO_WORDS);
