@@ -106,6 +106,10 @@ void DesfireSetKdf(DesfireContext_t *ctx, uint8_t kdfAlgo, uint8_t *kdfInput, ui
     }
 }
 
+void DesfireSetSecureChannel(DesfireContext_t *ctx, DesfireSecureChannel schann) {
+    ctx->secureChannel = schann;
+}
+
 bool DesfireIsAuthenticated(DesfireContext_t *dctx) {
     return dctx->secureChannel != DACNone;
 }

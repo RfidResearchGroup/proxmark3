@@ -817,7 +817,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
 
     if (aidbuflen > 2) {
 
-        uint8_t j = aidbuflen / 3;
+        uint8_t j = (aidbuflen / 3);
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(SUCCESS, "--- " _CYAN_("AID list")  " ( " _YELLOW_("%u") " found )", j);
 
@@ -826,6 +826,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
             uint32_t aid = DesfireAIDByteToUint(&aidbuf[i]);
             PrintAndLogEx(SUCCESS, _YELLOW_("%06X") ", %s", aid, getAidCommentStr(aid));
         }
+        PrintAndLogEx(NORMAL, "");
     }
 
     DesfireFillPICCInfo(&dctx, &PICCInfo, true);
@@ -3285,11 +3286,15 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     }
 
     if (buflen >= 3) {
-        PrintAndLogEx(INFO, "---- " _CYAN_("AID list") " ----");
+
+        uint8_t j = (buflen / 3);
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, "--- " _CYAN_("AID list")  " ( " _YELLOW_("%u") " found )", j);
         for (int i = 0; i < buflen; i += 3) {
             uint32_t aid  = DesfireAIDByteToUint(&buf[i]);
             PrintAndLogEx(SUCCESS, _YELLOW_("%06X") " %s", aid, getAidCommentStr(aid));
         }
+        PrintAndLogEx(NORMAL, "");
     } else {
         PrintAndLogEx(INFO, "There is no applications on the card");
     }
