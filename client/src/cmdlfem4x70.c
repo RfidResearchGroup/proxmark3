@@ -1521,7 +1521,7 @@ static int CmdHelp(const char *Cmd);
 static command_t CommandTable[] = {
     {"help",        CmdHelp,               AlwaysAvailable, "This help"},
     {"brute",       CmdEM4x70Brute,        IfPm3EM4x70,     "Bruteforce EM4X70 to find partial key"},
-    {"info",        CmdEM4x70Info,         IfPm3EM4x70,     "Tag information EM4x70"},
+    {"info",        CmdEM4x70Info,         IfPm3EM4x70,     "Tag information"},
     {"write",       CmdEM4x70Write,        IfPm3EM4x70,     "Write EM4x70"},
     {"unlock",      CmdEM4x70Unlock,       IfPm3EM4x70,     "Unlock EM4x70 for writing"},
     {"auth",        CmdEM4x70Auth,         IfPm3EM4x70,     "Authenticate EM4x70"},

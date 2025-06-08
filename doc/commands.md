@@ -277,7 +277,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf cipurse help        `|Y       |`This help.`
-|`hf cipurse info        `|N       |`Get info about CIPURSE tag`
+|`hf cipurse info        `|N       |`Tag information`
 |`hf cipurse select      `|N       |`Select CIPURSE application or file`
 |`hf cipurse auth        `|N       |`Authenticate CIPURSE tag`
 |`hf cipurse read        `|N       |`Read binary file`
@@ -313,7 +313,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf emrtd help          `|Y       |`This help`
 |`hf emrtd dump          `|N       |`Dump eMRTD files to binary files`
-|`hf emrtd info          `|Y       |`Display info about an eMRTD`
+|`hf emrtd info          `|Y       |`Tag information`
 |`hf emrtd list          `|Y       |`List ISO 14443A/7816 history`
 
 
@@ -351,7 +351,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf fido help           `|Y       |`This help.`
 |`hf fido list           `|Y       |`List ISO 14443A history`
-|`hf fido info           `|N       |`Info about FIDO tag.`
+|`hf fido info           `|N       |`Tag information`
 |`hf fido reg            `|N       |`FIDO U2F Registration Message.`
 |`hf fido auth           `|N       |`FIDO U2F Authentication Message.`
 |`hf fido make           `|N       |`FIDO2 MakeCredential command.`
@@ -460,7 +460,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf ksx6924 help        `|Y       |`This help`
 |`hf ksx6924 select      `|N       |`Select application, and leave field up`
-|`hf ksx6924 info        `|N       |`Get info about a KS X 6924 (T-Money, Snapper+) transit card`
+|`hf ksx6924 info        `|N       |`Tag information`
 |`hf ksx6924 balance     `|N       |`Get current purse balance`
 |`hf ksx6924 init        `|N       |`Perform transaction initialization with Mpda`
 |`hf ksx6924 prec        `|N       |`Send proprietary get record command (CLA=90, INS=4C)`
@@ -514,8 +514,6 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf mf help             `|Y       |`This help`
 |`hf mf list             `|Y       |`List MIFARE history`
-|`hf mf info             `|N       |`mfc card Info`
-|`hf mf isen             `|N       |`mfc card Info Static Encrypted Nonces`
 |`hf mf darkside         `|N       |`Darkside attack`
 |`hf mf nested           `|N       |`Nested attack`
 |`hf mf hardnested       `|Y       |`Nested attack for hardened MIFARE Classic cards`
@@ -531,6 +529,8 @@ Check column "offline" for their availability.
 |`hf mf auth4            `|N       |`ISO14443-4 AES authentication`
 |`hf mf acl              `|Y       |`Decode and print MIFARE Classic access rights bytes`
 |`hf mf dump             `|N       |`Dump MIFARE Classic tag to binary file`
+|`hf mf info             `|N       |`Tag information`
+|`hf mf isen             `|N       |`Information Static Encrypted Nonces`
 |`hf mf mad              `|Y       |`Checks and prints MAD`
 |`hf mf personalize      `|N       |`Personalize UID (MIFARE Classic EV1 only)`
 |`hf mf rdbl             `|N       |`Read MIFARE Classic block`
@@ -590,7 +590,7 @@ Check column "offline" for their availability.
 |`hf mfp auth            `|N       |`Authentication`
 |`hf mfp chk             `|N       |`Check keys`
 |`hf mfp dump            `|N       |`Dump MIFARE Plus tag to binary file`
-|`hf mfp info            `|N       |`Info about MIFARE Plus tag`
+|`hf mfp info            `|N       |`Tag information`
 |`hf mfp mad             `|N       |`Check and print MAD`
 |`hf mfp rdbl            `|N       |`Read blocks from card`
 |`hf mfp rdsc            `|N       |`Read sectors from card`
@@ -814,7 +814,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`hf xerox help          `|Y       |`This help`
 |`hf xerox list          `|Y       |`List ISO-14443B history`
-|`hf xerox info          `|N       |`Short info on Fuji/Xerox tag`
+|`hf xerox info          `|N       |`Tag information`
 |`hf xerox dump          `|N       |`Read all memory pages of an Fuji/Xerox tag, save to file`
 |`hf xerox reader        `|N       |`Act like a Fuji/Xerox reader`
 |`hf xerox view          `|Y       |`Display content from tag dump file`
@@ -991,7 +991,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf em 4x70 help        `|Y       |`This help`
 |`lf em 4x70 brute       `|N       |`Bruteforce EM4X70 to find partial key`
-|`lf em 4x70 info        `|N       |`Tag information EM4x70`
+|`lf em 4x70 info        `|N       |`Tag information`
 |`lf em 4x70 write       `|N       |`Write EM4x70`
 |`lf em 4x70 unlock      `|N       |`Unlock EM4x70 for writing`
 |`lf em 4x70 auth        `|N       |`Authenticate EM4x70`
@@ -1064,7 +1064,7 @@ Check column "offline" for their availability.
 |-------                  |------- |-----------
 |`lf hitag help          `|Y       |`This help`
 |`lf hitag list          `|Y       |`List Hitag trace history`
-|`lf hitag info          `|N       |`Hitag 2 tag information`
+|`lf hitag info          `|N       |`Tag information`
 |`lf hitag reader        `|N       |`Act like a Hitag 2 reader`
 |`lf hitag test          `|Y       |`Perform self tests`
 |`lf hitag dump          `|N       |`Dump Hitag 2 tag`
@@ -1402,7 +1402,7 @@ Check column "offline" for their availability.
 |`mem spiffs copy        `|N       |`Copy a file to another (destructively) in SPIFFS file system`
 |`mem spiffs check       `|N       |`Check/try to defrag faulty/fragmented file system`
 |`mem spiffs dump        `|N       |`Dump a file from SPIFFS file system`
-|`mem spiffs info        `|N       |`Print file system info and usage statistics`
+|`mem spiffs info        `|N       |`File system information and usage statistics`
 |`mem spiffs mount       `|N       |`Mount the SPIFFS file system if not already mounted`
 |`mem spiffs remove      `|N       |`Remove a file from SPIFFS file system`
 |`mem spiffs rename      `|N       |`Rename/move a file in SPIFFS file system`

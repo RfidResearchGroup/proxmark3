@@ -3867,7 +3867,7 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
                   "Tests 3DES key on Mifare Ultralight-C tag.\n"
                   "If key is not specified, a set of known defaults will be tried.",
                   "hf mfu cauth\n"
-                  "hf mfu cauth --key <32 hex chars>"
+                  "hf mfu cauth --key 000102030405060708090a0b0c0d0e0f"
                  );
 
     void *argtable[] = {

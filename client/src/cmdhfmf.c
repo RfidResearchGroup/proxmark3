@@ -2105,7 +2105,8 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
                 PrintAndLogEx(FAILED, "No valid key found");
                 break;
             case PM3_ESTATIC_NONCE:
-                PrintAndLogEx(ERR, "Error: Static encrypted nonce detected. Aborted\n");
+                PrintAndLogEx(ERR, "Static encrypted nonce detected. Aborted\n");
+                PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
                 break;
             case PM3_SUCCESS:
                 key64 = bytes_to_num(keyBlock, 6);
@@ -2189,7 +2190,8 @@ static int CmdHF14AMfNested(const char *Cmd) { //TODO: single mode broken? can't
                             calibrate = false;
                             continue;
                         case PM3_ESTATIC_NONCE:
-                            PrintAndLogEx(ERR, "Error: Static encrypted nonce detected. Aborted\n");
+                            PrintAndLogEx(ERR, "Static encrypted nonce detected. Aborted\n");
+                            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
                             break;
                         case PM3_SUCCESS:
                             calibrate = false;
@@ -2766,7 +2768,8 @@ static int CmdHF14AMfNestedHard(const char *Cmd) {
             PrintAndLogEx(WARNING, "Button pressed. Aborted\n");
             break;
         case PM3_ESTATIC_NONCE:
-            PrintAndLogEx(ERR, "Error: Static encrypted nonce detected. Aborted\n");
+            PrintAndLogEx(ERR, "Static encrypted nonce detected. Aborted\n");
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
             break;
         case PM3_EFAILED: {
             PrintAndLogEx(FAILED, "\nFailed to recover a key...");
@@ -3279,7 +3282,8 @@ noValidKeyFound:
             }
 
             if (has_staticnonce == NONCE_STATIC_ENC) {
-                PrintAndLogEx(HINT, "Hint: Static encrypted nonce detected, run `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
+                PrintAndLogEx(ERR, "Static encrypted nonce detected. Aborted\n");
+                PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
             }
 
             DropField();
@@ -3431,7 +3435,8 @@ tryNested:
                                 break;
                             }
                             case PM3_ESTATIC_NONCE: {
-                                PrintAndLogEx(ERR, "Error: Static encrypted nonce detected. Aborted\n");
+                                PrintAndLogEx(ERR, "Static encrypted nonce detected. Aborted\n");
+                                PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
 
                                 e_sector[current_sector_i].Key[current_key_type_i] = 0xffffffffffff;
                                 e_sector[current_sector_i].foundKey[current_key_type_i] = false;
@@ -10617,8 +10622,6 @@ static command_t CommandTable[] = {
     {"help",        CmdHelp,                AlwaysAvailable, "This help"},
     {"list",        CmdHF14AMfList,         AlwaysAvailable, "List MIFARE history"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("recovery") " -----------------------"},
-    {"info",        CmdHF14AMfInfo,         IfPm3Iso14443a,  "mfc card Info"},
-    {"isen",        CmdHF14AMfISEN,         IfPm3Iso14443a,  "mfc card Info Static Encrypted Nonces"},
     {"darkside",    CmdHF14AMfDarkside,     IfPm3Iso14443a,  "Darkside attack"},
     {"nested",      CmdHF14AMfNested,       IfPm3Iso14443a,  "Nested attack"},
     {"hardnested",  CmdHF14AMfNestedHard,   AlwaysAvailable, "Nested attack for hardened MIFARE Classic cards"},
@@ -10636,6 +10639,8 @@ static command_t CommandTable[] = {
     {"auth4",       CmdHF14AMfAuth4,        IfPm3Iso14443a,  "ISO14443-4 AES authentication"},
     {"acl",         CmdHF14AMfAcl,          AlwaysAvailable, "Decode and print MIFARE Classic access rights bytes"},
     {"dump",        CmdHF14AMfDump,         IfPm3Iso14443a,  "Dump MIFARE Classic tag to binary file"},
+    {"info",        CmdHF14AMfInfo,         IfPm3Iso14443a,  "Tag information"},
+    {"isen",        CmdHF14AMfISEN,         IfPm3Iso14443a,  "Information Static Encrypted Nonces"},
     {"mad",         CmdHF14AMfMAD,          AlwaysAvailable, "Checks and prints MAD"},
     {"personalize", CmdHFMFPersonalize,     IfPm3Iso14443a,  "Personalize UID (MIFARE Classic EV1 only)"},
     {"rdbl",        CmdHF14AMfRdBl,         IfPm3Iso14443a,  "Read MIFARE Classic block"},

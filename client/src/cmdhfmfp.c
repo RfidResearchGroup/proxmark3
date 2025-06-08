@@ -2152,7 +2152,7 @@ static command_t CommandTable[] = {
     {"auth",        CmdHFMFPAuth,            IfPm3Iso14443a,  "Authentication"},
     {"chk",         CmdHFMFPChk,             IfPm3Iso14443a,  "Check keys"},
     {"dump",        CmdHFMFPDump,            IfPm3Iso14443a,  "Dump MIFARE Plus tag to binary file"},
-    {"info",        CmdHFMFPInfo,            IfPm3Iso14443a,  "Info about MIFARE Plus tag"},
+    {"info",        CmdHFMFPInfo,            IfPm3Iso14443a,  "Tag information"},
     {"mad",         CmdHFMFPMAD,             IfPm3Iso14443a,  "Check and print MAD"},
     {"rdbl",        CmdHFMFPRdbl,            IfPm3Iso14443a,  "Read blocks from card"},
     {"rdsc",        CmdHFMFPRdsc,            IfPm3Iso14443a,  "Read sectors from card"},

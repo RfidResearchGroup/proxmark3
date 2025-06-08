@@ -1888,7 +1888,8 @@ static int CmdHFCipurseDefault(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",      CmdHelp,                   AlwaysAvailable, "This help."},
-    {"info",      CmdHFCipurseInfo,          IfPm3Iso14443a,  "Get info about CIPURSE tag"},
+    {"-----------", CmdHelp,                   IfPm3Iso14443a,  "------------------- " _CYAN_("Operations") " -------------------"},
+    {"info",        CmdHFCipurseInfo,          IfPm3Iso14443a,  "Tag information"},
     {"select",    CmdHFCipurseSelect,        IfPm3Iso14443a,  "Select CIPURSE application or file"},
     {"auth",      CmdHFCipurseAuth,          IfPm3Iso14443a,  "Authenticate CIPURSE tag"},
     {"read",      CmdHFCipurseReadFile,      IfPm3Iso14443a,  "Read binary file"},

@@ -2512,7 +2512,7 @@
         },
         "hf emrtd help": {
             "command": "hf emrtd help",
-            "description": "help This help info Display info about an eMRTD list List ISO 14443A/7816 history --------------------------------------------------------------------------------------- hf emrtd dump available offline: no Dump all files on an eMRTD",
+            "description": "help This help info Tag information list List ISO 14443A/7816 history --------------------------------------------------------------------------------------- hf emrtd dump available offline: no Dump all files on an eMRTD",
             "notes": [
                 "hf emrtd dump",
                 "hf emrtd dump --dir ../dump",
@@ -7120,7 +7120,7 @@
             "description": "Tests 3DES key on Mifare Ultralight-C tag. If key is not specified, a set of known defaults will be tried.",
             "notes": [
                 "hf mfu cauth",
-                "hf mfu cauth --key <32 hex chars>"
+                "hf mfu cauth --key 000102030405060708090a0b0c0d0e0f"
             ],
             "offline": false,
             "options": [
@@ -8234,7 +8234,7 @@
         },
         "hf xerox help": {
             "command": "hf xerox help",
-            "description": "help This help list List ISO-14443B history -------- ----------------------- General ----------------------- view Display content from tag dump file --------------------------------------------------------------------------------------- hf xerox list available offline: yes Alias of `trace list -t 14b -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List ISO-14443B history -------- ----------------------- Operations ----------------------- view Display content from tag dump file --------------------------------------------------------------------------------------- hf xerox list available offline: yes Alias of `trace list -t 14b -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf 14b list --frame -> show frame delay times",
                 "hf 14b list -1 -> use trace buffer"
@@ -13376,6 +13376,6 @@
     "metadata": {
         "commands_extracted": 768,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-06-08T18:54:12"
+        "extracted_on": "2025-06-08T19:44:35"
     }
 }

@@ -2449,8 +2449,9 @@ static int CmdHFeMRTDList(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",    CmdHelp,           AlwaysAvailable, "This help"},
+    {"-----------", CmdHelp,           IfPm3Iso14443,   "------------------- " _CYAN_("Operations") " -------------------"},
     {"dump",    CmdHFeMRTDDump,    IfPm3Iso14443,   "Dump eMRTD files to binary files"},
-    {"info",    CmdHFeMRTDInfo,    AlwaysAvailable, "Display info about an eMRTD"},
+    {"info",        CmdHFeMRTDInfo,    AlwaysAvailable, "Tag information"},
     {"list",    CmdHFeMRTDList,    AlwaysAvailable, "List ISO 14443A/7816 history"},
     {NULL, NULL, NULL, NULL}
 };
