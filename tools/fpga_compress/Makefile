@@ -11,6 +11,8 @@ MYINCLUDES = -I../../common_fpga
 MYCFLAGS = -std=c99 -D_ISOC99_SOURCE
 ifeq ($(PLATFORM),PM3ICOPYX)
   MYDEFS = -DXC3
+else ifeq ($(PLATFORM),PM3ULTIMATE)
+  MYDEFS = -DXC2S50
 else
   MYDEFS =
 endif
