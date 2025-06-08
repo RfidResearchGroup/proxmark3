@@ -587,6 +587,8 @@ uint8_t mfFirstBlockOfSector(uint8_t sectorNo) {
     }
 }
 
+// returns the sectortrailer block number in the range of all block no.
+// ie:  sector 1 has its sector trailer at block number 7
 uint8_t mfSectorTrailerOfSector(uint8_t sectorNo) {
     if (sectorNo < 32) {
         return (sectorNo * 4) | 0x03;

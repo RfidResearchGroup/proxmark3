@@ -88,7 +88,7 @@ int mf_key_brute(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint64_t 
 int mf_read_sector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8_t *data);
 int mf_read_block(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint8_t *data);
 
-int mf_write_block(uint8_t blockno, uint8_t keyType, const uint8_t *key, uint8_t *block);
+int mf_write_block(uint8_t blockno, uint8_t keyType, const uint8_t *key, const uint8_t *block);
 int mf_write_sector(uint8_t sectorNo, uint8_t keyType, const uint8_t *key, uint8_t *sector);
 
 int mf_eml_get_mem(uint8_t *data, int blockNum, int blocksCount);
@@ -104,6 +104,8 @@ int mf_chinese_get_block(uint8_t blockNo, uint8_t *data, uint8_t params);
 int mf_chinese_gen_3_uid(uint8_t *uid, uint8_t uidlen, uint8_t *oldUid);
 int mf_chinese_gen_3_block(uint8_t *block, int blockLen, uint8_t *newBlock);
 int mf_chinese_gen_3_freeze(void);
+
+int mf_chinese_gen_4_set_block(uint8_t blockNo, uint8_t *block, uint8_t *key);
 
 int try_decrypt_word(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len);
 

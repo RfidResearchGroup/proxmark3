@@ -991,7 +991,7 @@ int mf_read_block(uint8_t blockNo, uint8_t keyType, const uint8_t *key, uint8_t 
     return PM3_SUCCESS;
 }
 
-int mf_write_block(uint8_t blockno, uint8_t keyType, const uint8_t *key, uint8_t *block) {
+int mf_write_block(uint8_t blockno, uint8_t keyType, const uint8_t *key, const uint8_t *block) {
 
     uint8_t data[26];
     memcpy(data, key, MIFARE_KEY_SIZE);
@@ -1302,6 +1302,28 @@ int mf_chinese_gen_3_freeze(void) {
     SendCommandNG(CMD_HF_MIFARE_GEN3FREEZ, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_MIFARE_GEN3FREEZ, &resp, 3500) == false) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+    return resp.status;
+}
+
+// GDM Gen4 write block
+int mf_chinese_gen_4_set_block(uint8_t blockNo, uint8_t *block, uint8_t *key) {
+    struct p {
+        uint8_t blockno;
+        uint8_t key[6];
+        uint8_t data[MFBLOCK_SIZE]; // data to be written
+    } PACKED payload;
+
+    payload.blockno = blockNo;
+    memcpy(payload.key, key, sizeof(payload.key));
+    memcpy(payload.data, block, sizeof(payload.data));
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFARE_G4_GDM_WRBL, (uint8_t *)&payload, sizeof(payload));
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_G4_GDM_WRBL, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
