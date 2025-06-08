@@ -25,6 +25,9 @@
 #if defined XC3
 #define FPGA_TYPE "3s100evq100"
 #define FPGA_CONFIG_SIZE                    72864L  // FPGA .bit file rounded up to next multiple of FPGA_INTERLEAVE_SIZE
+#elif defined XC2S50
+#define FPGA_TYPE "2s50vq144"
+#define FPGA_CONFIG_SIZE                    69984L  // FPGA .bit file rounded up to next multiple of FPGA_INTERLEAVE_SIZE
 #else
 #define FPGA_TYPE "2s30vq100"
 #define FPGA_CONFIG_SIZE                    42336L  // FPGA .bit file rounded up to next multiple of FPGA_INTERLEAVE_SIZE

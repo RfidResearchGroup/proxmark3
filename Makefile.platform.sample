@@ -14,6 +14,9 @@ PLATFORM=PM3RDV4
 #PLATFORM=PM3ICOPYX
 #PLATFORM_EXTRAS=FLASH
 
+# For PM3 Ultimate:
+# uncomment the line below
+#PLATFORM=PM3ULTIMATE
 
 # If you want more than one PLATFORM_EXTRAS option, separate them by spaces:
 #PLATFORM_EXTRAS=BTADDON

@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added the `PM3ULTIMATE` platform in the build / docs. *untested* (@iceman1001) 
+- Added fpga compilation for PM3ULTIMATE device (@n-hutton)
 - Updated the ATR list (@iceman1001)
 - Fixed fpga binary images to use fixed seed 2 (@n-hutton)
 - Changed `hf iclass sim -t 7` - implemented simulation that glitches key block responses (@antiklesys)

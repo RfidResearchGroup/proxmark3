@@ -29,15 +29,17 @@ define KNOWN_PLATFORM_DEFINITIONS
 
 Known definitions:
 
-+============================================+
++==================================================+
 | PLATFORM        | DESCRIPTION              |
-+============================================+
++==================================================+
 | PM3RDV4 (def)   | Proxmark3 RDV4           |
-+--------------------------------------------+
++--------------------------------------------------+
 | PM3GENERIC      | Proxmark3 generic target |
-+--------------------------------------------+
++--------------------------------------------------+
 | PM3ICOPYX       | iCopy-X with XC3S100E    |
-+--------------------------------------------+
++--------------------------------------------------+
+| PM3ULTIMATE     | Proxmark3 Ultimate with XC2S50 |
++--------------------------------------------------+
 
 +============================================+
 | PLATFORM_EXTRAS | DESCRIPTION              |
@@ -153,7 +155,21 @@ else ifeq ($(PLATFORM),PM3ICOPYX)
     PLATFORM_DEFS = -DWITH_FLASH -DICOPYX -DXC3
     PLTNAME = iCopy-X with XC3S100E
     PLATFORM_FPGA = xc3s100e
-
+else ifeq ($(PLATFORM),PM3ULTIMATE)
+    # FPGA bitstream files, the order doesn't matter anymore - only hf has a bitstream
+    FPGA_BITSTREAMS = fpga_pm3_ult_hf.bit
+    ifneq ($(SKIP_LF),1)
+        FPGA_BITSTREAMS += fpga_pm3_ult_lf.bit
+    endif
+    ifneq ($(SKIP_FELICA),1)
+        FPGA_BITSTREAMS += fpga_pm3_ult_felica.bit
+    endif
+    ifneq ($(SKIP_ISO15693),1)
+        FPGA_BITSTREAMS += fpga_pm3_ult_hf_15.bit
+    endif
+    PLATFORM_DEFS = -DWITH_FLASH -DXC2S50
+    PLTNAME = Proxmark3 Ultimate with XC2S50
+    PLATFORM_FPGA = xc2s50
 else
     $(error Invalid or empty PLATFORM: $(PLATFORM). $(KNOWN_DEFINITIONS))
 endif

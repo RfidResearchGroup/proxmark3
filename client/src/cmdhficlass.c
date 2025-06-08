@@ -2250,7 +2250,8 @@ write_dump:
     return PM3_SUCCESS;
 }
 
-static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *macdata, uint8_t *KEY, bool use_credit_key, bool elite, bool rawkey, bool replay, bool verbose, bool use_secure_pagemode, bool shallow_mod) {
+static int iclass_write_block(uint8_t blockno, uint8_t *bldata, uint8_t *macdata, uint8_t *KEY, bool use_credit_key,
+                              bool elite, bool rawkey, bool replay, bool verbose, bool use_secure_pagemode, bool shallow_mod) {
 
     iclass_writeblock_req_t payload = {
         .req.use_raw = rawkey,
@@ -5067,55 +5068,48 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    bool use_vb6kdf = arg_get_lit(ctx, 7);
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-
-    bool use_elite = arg_get_lit(ctx, 5);
-    bool use_raw = arg_get_lit(ctx, 6);
-    if (use_vb6kdf) {
-        use_elite = true;
-    } else {
-        CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
-    }
 
     int csn_len = 0;
     uint8_t csn[8] = {0};
     CLIGetHexWithReturn(ctx, 2, csn, &csn_len);
 
-    if (csn_len > 0) {
-        if (csn_len != 8) {
-            PrintAndLogEx(ERR, "CSN is incorrect length");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
-        }
-    }
-
     int epurse_len = 0;
     uint8_t epurse[8] = {0};
     CLIGetHexWithReturn(ctx, 3, epurse, &epurse_len);
-
-    if (epurse_len > 0) {
-        if (epurse_len != 8) {
-            PrintAndLogEx(ERR, "ePurse is incorrect length");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
-        }
-    }
 
     int macs_len = 0;
     uint8_t macs[8] = {0};
     CLIGetHexWithReturn(ctx, 4, macs, &macs_len);
 
-    if (macs_len > 0) {
-        if (macs_len != 8) {
-            PrintAndLogEx(ERR, "MAC is incorrect length");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
-        }
+    bool use_elite = arg_get_lit(ctx, 5);
+    bool use_raw = arg_get_lit(ctx, 6);
+    bool use_vb6kdf = arg_get_lit(ctx, 7);
+
+    if (use_vb6kdf == false) {
+        CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     }
 
     CLIParserFree(ctx);
+
+    // santity checks
+
+    if (csn_len > 0 && csn_len != 8) {
+        PrintAndLogEx(ERR, "CSN is incorrect length");
+        return PM3_EINVARG;
+    }
+
+    if (epurse_len > 0 &&  epurse_len != 8) {
+        PrintAndLogEx(ERR, "ePurse is incorrect length");
+        return PM3_EINVARG;
+    }
+
+    if (macs_len > 0 && macs_len != 8) {
+        PrintAndLogEx(ERR, "MAC is incorrect length");
+        return PM3_EINVARG;
+    }
+
 
     uint8_t CCNR[12];
     uint8_t MAC_TAG[4] = { 0, 0, 0, 0 };
@@ -5161,7 +5155,8 @@ static int CmdHFiClassLookUp(const char *Cmd) {
 
     // Iclass_prekey_t
     iclass_prekey_t *prekey = calloc(keycount, sizeof(iclass_prekey_t));
-    if (!prekey) {
+    if (prekey == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(keyBlock);
         return PM3_EMALLOC;
     }
@@ -5182,13 +5177,14 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     // Sort mac list
     qsort(prekey, keycount, sizeof(iclass_prekey_t), cmp_uint32);
 
-    PrintAndLogEx(SUCCESS, "Searching for " _YELLOW_("%s") " key...", "DEBIT");
+    PrintAndLogEx(SUCCESS, "Searching for %s key...", _YELLOW_("DEBIT"));
     iclass_prekey_t *item;
     iclass_prekey_t lookup;
     memcpy(lookup.mac, MAC_TAG, 4);
 
     // Binsearch
     item = (iclass_prekey_t *) bsearch(&lookup, prekey, keycount, sizeof(iclass_prekey_t), cmp_uint32);
+
     if (item != NULL) {
         PrintAndLogEx(SUCCESS, "Found valid key " _GREEN_("%s"), sprint_hex(item->key, 8));
         add_key(item->key);

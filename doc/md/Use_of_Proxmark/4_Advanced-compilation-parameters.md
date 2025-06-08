@@ -61,11 +61,12 @@ For an up-to-date exhaustive list of options, you can run `make PLATFORM=`.
 
 Here are the supported values you can assign to `PLATFORM` in `Makefile.platform`:
 
-| PLATFORM        | DESCRIPTION              |
-|-----------------|--------------------------|
-| PM3RDV4 (def)   | Proxmark3 RDV4           |
-| PM3GENERIC      | Proxmark3 generic target |
-| PM3ICOPYX       | iCopy-X with XC3S100E    |
+| PLATFORM        | DESCRIPTION                   |
+|-----------------|-------------------------------|
+| PM3RDV4 (def)   | Proxmark3 RDV4                |
+| PM3GENERIC      | Proxmark3 generic target      |
+| PM3ICOPYX       | iCopy-X with XC3S100E         |
+| PM3ULTIMATE     | Proxmar3 Ultimate with XC2S50 |
 
 By default `PLATFORM=PM3RDV4`.
 

@@ -3695,7 +3695,8 @@
                 "hf iclass sim -t 2 -> execute loclass attack online part",
                 "hf iclass sim -t 3 -> simulate full iCLASS 2k tag",
                 "hf iclass sim -t 4 -> Reader-attack, adapted for KeyRoll mode, gather reader responses to extract elite key",
-                "hf iclass sim -t 6 -> simulate full iCLASS 2k tag that doesn't respond to r/w requests to the last SIO block"
+                "hf iclass sim -t 6 -> simulate full iCLASS 2k tag that doesn't respond to r/w requests to the last SIO block",
+                "hf iclass sim -t 7 -> simulate full iCLASS 2k tag that doesn't XOR or respond to r/w requests on block 3"
             ],
             "offline": false,
             "options": [
@@ -13375,6 +13376,6 @@
     "metadata": {
         "commands_extracted": 768,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-06-07T09:11:06"
+        "extracted_on": "2025-06-08T07:56:09"
     }
 }

@@ -667,7 +667,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
 
             if (simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY) {
 
-                if(glitch_key_read){
+                if (glitch_key_read) {
                     goto send;
                 }
 
@@ -792,7 +792,7 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
                 cipher_state_KD[current_page] = opt_doTagMAC_1(card_challenge_data, diversified_kd);
                 if (simulationMode == ICLASS_SIM_MODE_FULL || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH || simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY) {
                     memcpy(emulator + (current_page * page_size) + (8 * 3), diversified_kd, 8);
-                    if(simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY){
+                    if (simulationMode == ICLASS_SIM_MODE_FULL_GLITCH_KEY) {
                         glitch_key_read = true;
                         goto send;
                     }

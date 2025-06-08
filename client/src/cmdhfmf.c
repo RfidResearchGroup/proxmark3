@@ -48,20 +48,14 @@
 #include "mifare/mifarehost.h"
 #include "crypto/originality.h"
 
-
 // Defines for Saflok parsing
 #define SAFLOK_YEAR_OFFSET 1980
 #define SAFLOK_BASIC_ACCESS_BYTE_NUM 17
-#define SAFLOK_KEY_LENGTH 6
-#define SAFLOK_UID_LENGTH 4 // Matches Mifare 4-byte UID
-#define SAFLOK_MAGIC_TABLE_SIZE 192
-#define SAFLOK_CHECK_SECTOR 1
 
 typedef struct {
     uint64_t a;
     uint64_t b;
 } MfClassicKeyPair;
-
 
 // Structure for Saflok key levels
 typedef struct {
@@ -114,8 +108,8 @@ static const uint8_t saflok_c_aDecode[256] = {
 // Function to decrypt Saflok card data
 static void DecryptSaflokCardData(
     const uint8_t strCard[SAFLOK_BASIC_ACCESS_BYTE_NUM],
-    // int length, // length is always SAFLOK_BASIC_ACCESS_BYTE_NUM
-    uint8_t decryptedCard[SAFLOK_BASIC_ACCESS_BYTE_NUM]) {
+    uint8_t decryptedCard[SAFLOK_BASIC_ACCESS_BYTE_NUM]
+) {
     int i;
     int num;
     int num2;
@@ -163,8 +157,8 @@ static uint8_t CalculateCheckSum(uint8_t data[SAFLOK_BASIC_ACCESS_BYTE_NUM]) {
 static void ParseAndPrintSaflokData(const sector_t *sector0_info, const sector_t *sector1_info) {
     (void)sector1_info; // Not directly used for payload parsing currently
 
-    if (!sector0_info) {
-        PrintAndLogEx(WARNING, "Saflok: Sector 0 information not available for parsing.");
+    if (sector0_info == NULL) {
+        PrintAndLogEx(WARNING, "Saflok: Sector 0 information not available for parsing");
         return;
     }
 
@@ -177,16 +171,16 @@ static void ParseAndPrintSaflokData(const sector_t *sector0_info, const sector_t
         num_to_bytes(sector0_info->Key[MF_KEY_A], MIFARE_KEY_SIZE, key_bytes_for_s0);
         key_type_for_s0 = MF_KEY_A; // MF_KEY_A is typically #define'd as 0x60
         s0_key_found = true;
-        PrintAndLogEx(DEBUG, "Saflok: Using Sector 0 Key A for reading blocks.");
+        PrintAndLogEx(DEBUG, "Saflok: Using Sector 0 Key A for reading blocks");
     } else if (sector0_info->foundKey[MF_KEY_B]) { // Fallback to Key B for Sector 0
         num_to_bytes(sector0_info->Key[MF_KEY_B], MIFARE_KEY_SIZE, key_bytes_for_s0);
         key_type_for_s0 = MF_KEY_B; // MF_KEY_B is typically #define'd as 0x61
         s0_key_found = true;
-        PrintAndLogEx(DEBUG, "Saflok: Using Sector 0 Key B for reading blocks.");
+        PrintAndLogEx(DEBUG, "Saflok: Using Sector 0 Key B for reading blocks");
     }
 
-    if (!s0_key_found) {
-        PrintAndLogEx(WARNING, "Saflok: No known keys for Sector 0. Cannot read blocks 1 & 2 for parsing.");
+    if (s0_key_found == false) {
+        PrintAndLogEx(WARNING, "Saflok: No known keys for Sector 0. Cannot read blocks 1 & 2 for parsing");
         return;
     }
 
@@ -195,23 +189,23 @@ static void ParseAndPrintSaflokData(const sector_t *sector0_info, const sector_t
 
     // Read absolute block 1 (data block within sector 0)
     if (mf_read_block(1, key_type_for_s0, key_bytes_for_s0, block1_content) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Saflok: Failed to read card Block 1 using Sector 0 %s key.", (key_type_for_s0 == MF_KEY_A) ? "A" : "B");
+        PrintAndLogEx(WARNING, "Saflok: Failed to read card Block 1 using Sector 0 %s key", (key_type_for_s0 == MF_KEY_A) ? "A" : "B");
         return;
     }
-    PrintAndLogEx(DEBUG, "Saflok: Successfully read card Block 1.");
+    PrintAndLogEx(DEBUG, "Saflok: Successfully read card Block 1");
 
     // Read absolute block 2 (data block within sector 0)
     if (mf_read_block(2, key_type_for_s0, key_bytes_for_s0, block2_content) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Saflok: Failed to read card Block 2 using Sector 0 %s key.", (key_type_for_s0 == MF_KEY_A) ? "A" : "B");
+        PrintAndLogEx(WARNING, "Saflok: Failed to read card Block 2 using Sector 0 %s key", (key_type_for_s0 == MF_KEY_A) ? "A" : "B");
         return;
     }
-    PrintAndLogEx(DEBUG, "Saflok: Successfully read card Block 2.");
+    PrintAndLogEx(DEBUG, "Saflok: Successfully read card Block 2");
 
     uint8_t basicAccess[SAFLOK_BASIC_ACCESS_BYTE_NUM];
     uint8_t decodedBA[SAFLOK_BASIC_ACCESS_BYTE_NUM];
 
-    memcpy(basicAccess, block1_content, 16);              // 16 bytes from Block 1
-    memcpy(basicAccess + 16, block2_content, 1);          // 1 byte from Block 2
+    memcpy(basicAccess, block1_content, MFBLOCK_SIZE);              // 16 bytes from Block 1
+    memcpy(basicAccess + MFBLOCK_SIZE, block2_content, 1);          // 1 byte from Block 2
 
     DecryptSaflokCardData(basicAccess, decodedBA);
 
@@ -298,18 +292,25 @@ static void ParseAndPrintSaflokData(const sector_t *sector0_info, const sector_t
     // Handle day rollover for expiration
     static const uint8_t days_in_month_lookup[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}; // 1-indexed month
     if (expire_month > 0 && expire_month <= 12) {
+
         while (true) {
+
             uint8_t max_days = days_in_month_lookup[expire_month];
-            if (expire_month == 2 && (expire_year % 4 == 0 && (expire_year % 100 != 0 || expire_year % 400 == 0))) {
+            if (expire_month == 2 &&
+                    (expire_year % 4 == 0 &&
+                     (expire_year % 100 != 0 || expire_year % 400 == 0))) {
                 max_days = 29; // Leap year
             }
+
             if (expire_day <= max_days) {
                 break;
             }
+
             if (max_days == 0) { // Should not happen with valid month
-                PrintAndLogEx(WARNING, "Saflok: Invalid day/month for expiration rollover calculation.");
+                PrintAndLogEx(WARNING, "Saflok: Invalid day/month for expiration rollover calculation");
                 break;
             }
+
             expire_day -= max_days;
             expire_month++;
             if (expire_month > 12) {
@@ -317,8 +318,9 @@ static void ParseAndPrintSaflokData(const sector_t *sector0_info, const sector_t
                 expire_year++;
             }
         }
+
     } else if (expire_month != 0) { // Allow 0 if it signifies no expiration or error
-        PrintAndLogEx(WARNING, "Saflok: Invalid expiration month (%u) before day rollover.", expire_month);
+        PrintAndLogEx(WARNING, "Saflok: Invalid expiration month (%u) before day rollover", expire_month);
     }
 
     uint8_t checksum = decodedBA[16];
@@ -326,19 +328,19 @@ static void ParseAndPrintSaflokData(const sector_t *sector0_info, const sector_t
     bool checksum_valid = (checksum_calculated == checksum);
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("Saflok Details"));
-    PrintAndLogEx(SUCCESS, "Key Level: %u (%s)", saflok_key_levels[key_level].level_num, saflok_key_levels[key_level].level_name);
-    PrintAndLogEx(SUCCESS, "LED Warning: %s", led_warning ? "Yes" : "No");
-    PrintAndLogEx(SUCCESS, "Key ID: %u (0x%02X)", key_id, key_id);
-    PrintAndLogEx(SUCCESS, "Key Record: %u (0x%04X)", key_record, key_record);
-    PrintAndLogEx(SUCCESS, "Opening Key: %s", opening_key ? "Yes" : "No");
-    PrintAndLogEx(SUCCESS, "Sequence Number & Combination: %u (0x%02X)", sequence_combination_number, sequence_combination_number);
-    PrintAndLogEx(SUCCESS, "Override Deadbolt: %s", override_deadbolt ? "Yes" : "No");
-    PrintAndLogEx(SUCCESS, "Restricted Weekdays: %s", restricted_weekday_string);
-    PrintAndLogEx(SUCCESS, "Property ID: %u (0x%04X)", property_id, property_id);
-    PrintAndLogEx(SUCCESS, "Creation Date: %04u-%02u-%02u %02u:%02u", creation_year, creation_month, creation_day, creation_hour, creation_minute);
-    PrintAndLogEx(SUCCESS, "Expiration Date: %04u-%02u-%02u %02u:%02u", expire_year, expire_month, expire_day, expiry_hour, expiry_minute);
-    PrintAndLogEx(SUCCESS, "Checksum Valid: %s", checksum_valid ? "Yes" : "No");
+    PrintAndLogEx(INFO, "--- " _CYAN_("SAFLOK details"));
+    PrintAndLogEx(SUCCESS, "Key Level............. %u (%s)", saflok_key_levels[key_level].level_num, saflok_key_levels[key_level].level_name);
+    PrintAndLogEx(SUCCESS, "LED Warning........... %s", led_warning ? "Yes" : "No");
+    PrintAndLogEx(SUCCESS, "Key ID................ %u (0x%02X)", key_id, key_id);
+    PrintAndLogEx(SUCCESS, "Key Record............ %u (0x%04X)", key_record, key_record);
+    PrintAndLogEx(SUCCESS, "Opening Key........... %s", opening_key ? "Yes" : "No");
+    PrintAndLogEx(SUCCESS, "Sequence & Combination: %u (0x%02X)", sequence_combination_number, sequence_combination_number);
+    PrintAndLogEx(SUCCESS, "Override Deadbolt..... %s", override_deadbolt ? "Yes" : "No");
+    PrintAndLogEx(SUCCESS, "Restricted Weekdays... %s", restricted_weekday_string);
+    PrintAndLogEx(SUCCESS, "Property ID........... %u (0x%04X)", property_id, property_id);
+    PrintAndLogEx(SUCCESS, "Creation Date......... %04u-%02u-%02u %02u:%02u", creation_year, creation_month, creation_day, creation_hour, creation_minute);
+    PrintAndLogEx(SUCCESS, "Expiration Date....... %04u-%02u-%02u %02u:%02u", expire_year, expire_month, expire_day, expiry_hour, expiry_minute);
+    PrintAndLogEx(SUCCESS, "Checksum Valid........ ( %s )", checksum_valid ? _GREEN_("ok") : _RED_("fail"));
 }
 
 
@@ -434,19 +436,18 @@ static int initSectorTable(sector_t **src, size_t items) {
 static void decode_print_st(uint16_t blockno, uint8_t *data) {
     if (mfIsSectorTrailer(blockno)) {
         PrintAndLogEx(NORMAL, "");
-        PrintAndLogEx(INFO, "-------------------------- " _CYAN_("Sector trailer decoder") " --------------------------");
-        PrintAndLogEx(INFO, "key A........ " _GREEN_("%s"), sprint_hex_inrow(data, 6));
-        PrintAndLogEx(INFO, "acr.......... " _GREEN_("%s"), sprint_hex_inrow(data + 6, 3));
-        PrintAndLogEx(INFO, "user / gpb... " _GREEN_("%02x"), data[9]);
-        PrintAndLogEx(INFO, "key B........ " _GREEN_("%s"), sprint_hex_inrow(data + 10, 6));
+        PrintAndLogEx(INFO, "------------------------ " _CYAN_("Sector trailer decoder") " ------------------------");
+        PrintAndLogEx(INFO, " Key A........ " _BRIGHT_GREEN_("%s"), sprint_hex_inrow(data, 6));
+        PrintAndLogEx(INFO, " ACR.......... " _MAGENTA_("%s"), sprint_hex_inrow(data + 6, 3));
+        PrintAndLogEx(INFO, " User / gpb... %02x", data[9]);
+        PrintAndLogEx(INFO, " Key B........ " _GREEN_("%s"), sprint_hex_inrow(data + 10, 6));
         PrintAndLogEx(INFO, "");
         PrintAndLogEx(INFO, "  # | access rights");
-        PrintAndLogEx(INFO, "----+-----------------------------------------------------------------------");
+        PrintAndLogEx(INFO, "----+-------------------------------------------------------------------");
 
         if (mfValidateAccessConditions(&data[6]) == false) {
-            PrintAndLogEx(WARNING, _RED_("Invalid Access Conditions"));
+            PrintAndLogEx(WARNING, _RED_("Invalid access conditions"));
         }
-
 
         int bln = mfFirstBlockOfSector(mfSectorNum(blockno));
         int blinc = (mfNumBlocksPerSector(mfSectorNum(blockno)) > 4) ? 5 : 1;
@@ -458,13 +459,13 @@ static void decode_print_st(uint16_t blockno, uint8_t *data) {
                 uint8_t cond = mf_get_accesscondition(i, &data[6]);
                 if (cond == 0 || cond == 1 || cond == 2) {
                     PrintAndLogEx(INFO, "");
-                    PrintAndLogEx(INFO, "OBS! Key B is readable, it SHALL NOT be able to authenticate on original MFC");
+                    PrintAndLogEx(INFO, "OBS!");
+                    PrintAndLogEx(INFO, "Key B is readable, it SHALL NOT be able to authenticate on original MFC");
                 }
             }
         }
 
-
-        PrintAndLogEx(INFO, "----------------------------------------------------------------------------");
+        PrintAndLogEx(INFO, "------------------------------------------------------------------------");
         PrintAndLogEx(NORMAL, "");
     }
 }
@@ -541,7 +542,7 @@ void mf_print_block_one(uint8_t blockno, uint8_t *d, bool verbose) {
         char ascii[24] = {0};
         ascii_to_buffer((uint8_t *)ascii, d, MFBLOCK_SIZE, sizeof(ascii) - 1, 1);
 
-        PrintAndLogEx(INFO, "%3d | " _YELLOW_("%s") _MAGENTA_("%s") "%02X " _YELLOW_("%s") "| " _YELLOW_("%s"),
+        PrintAndLogEx(INFO, "%3d | " _BRIGHT_GREEN_("%s") _MAGENTA_("%s") "%02X " _GREEN_("%s") "| " _YELLOW_("%s"),
                       blockno,
                       keya,
                       acl,
@@ -1428,7 +1429,7 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
     }
 
     int keylen = 0;
-    uint8_t key[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    uint8_t key[MIFARE_KEY_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     CLIGetHexWithReturn(ctx, 4, key, &keylen);
 
     int s = arg_get_int_def(ctx, 5, 0);
