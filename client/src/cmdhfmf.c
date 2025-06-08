@@ -561,7 +561,7 @@ void mf_print_block_one(uint8_t blockno, uint8_t *d, bool verbose) {
     }
 }
 
-static void mf_print_block(uint8_t blockno, uint8_t *d, bool verbose) {
+static void mf_print_block(uint16_t maxblocks, uint8_t blockno, uint8_t *d, bool verbose) {
     uint8_t sectorno = mfSectorNum(blockno);
 
     char secstr[6] = "     ";
@@ -593,7 +593,7 @@ static void mf_print_block(uint8_t blockno, uint8_t *d, bool verbose) {
         char ascii[24] = {0};
         ascii_to_buffer((uint8_t *)ascii, d, MFBLOCK_SIZE, sizeof(ascii) - 1, 1);
 
-        if (blockno >= MIFARE_1K_MAXBLOCK) {
+        if (maxblocks < 18 && blockno >= MIFARE_1K_MAXBLOCK) {
             PrintAndLogEx(INFO,
                           _BACK_BLUE_("%s| %3d | " _YELLOW_("%s"))
                           _BACK_BLUE_(_MAGENTA_("%s"))
@@ -622,7 +622,7 @@ static void mf_print_block(uint8_t blockno, uint8_t *d, bool verbose) {
         }
     } else {
 
-        if (blockno >= MIFARE_1K_MAXBLOCK) {
+        if (maxblocks < 18 && blockno >= MIFARE_1K_MAXBLOCK) {
             // MFC Ev1 signature blocks.
             PrintAndLogEx(INFO, _BACK_BLUE_("%s| %3d | %s"), secstr, blockno, sprint_hex_ascii(d, MFBLOCK_SIZE));
         } else  {
@@ -641,10 +641,12 @@ static void mf_print_blocks(uint16_t n, uint8_t *d, bool verbose) {
     PrintAndLogEx(INFO, "-----+-----+-------------------------------------------------+-----------------");
     PrintAndLogEx(INFO, " sec | blk | data                                            | ascii");
     PrintAndLogEx(INFO, "-----+-----+-------------------------------------------------+-----------------");
+
     for (uint16_t i = 0; i < n; i++) {
-        mf_print_block(i, d + (i * MFBLOCK_SIZE), verbose);
+        mf_print_block(n, i, d + (i * MFBLOCK_SIZE), verbose);
     }
     PrintAndLogEx(INFO, "-----+-----+-------------------------------------------------+-----------------");
+
     if (verbose) {
         PrintAndLogEx(HINT, _CYAN_("cyan") " = value block with decoded value");
         PrintAndLogEx(HINT, _CYAN_("background blue") " = MFC Ev1 signature blocks");
@@ -5307,7 +5309,7 @@ static int CmdHF14AMfEView(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "downloading emulator memory");
-    if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
+    if (GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false) == false) {
         PrintAndLogEx(WARNING, "Fail, transfer from device time-out");
         free(dump);
         return PM3_ETIMEOUT;
