@@ -2657,7 +2657,7 @@ void BruteforceIso15693Afi(uint32_t flags) {
             Dbprintf("AFI = %i  UID = %s", i, iso15693_sprintUID(NULL, recv + 2));
         }
 
-        aborted = (BUTTON_PRESS() && data_available());
+        aborted = (BUTTON_PRESS() || data_available());
         if (aborted) {
             break;
         }
