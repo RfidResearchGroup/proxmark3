@@ -876,19 +876,24 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
     char *fptr = NULL;
     if (keyfn == NULL || keyfn[0] == '\0') {
         fptr = GenerateFilename("hf-mf-", "-key.bin");
-        if (fptr == NULL)
+        if (fptr == NULL) {
             return PM3_ESOFT;
+        }
 
         keyfn = fptr ;
     }
 
-    PrintAndLogEx(INFO, "Using... %s", keyfn);
-
     size_t alen = 0, blen = 0;
-    uint8_t *keyA, *keyB;
+    uint8_t *keyA = NULL, *keyB = NULL;
     if (loadFileBinaryKey(keyfn, "", (void **)&keyA, (void **)&keyB, &alen, &blen) != PM3_SUCCESS) {
         free(fptr);
         return PM3_ESOFT;
+    }
+    free(fptr);
+
+    if ((alen < (numSectors * MIFARE_KEY_SIZE)) || (blen < (numSectors * MIFARE_KEY_SIZE))) {
+        PrintAndLogEx(WARNING, "Key file is too small for selected card type");
+        return PM3_ELENGTH;
     }
 
     PrintAndLogEx(INFO, "Reading sector access bits...");
@@ -898,15 +903,17 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
 
     mf_readblock_t payload;
     uint8_t current_key;
+
     for (uint8_t sectorNo = 0; sectorNo < numSectors; sectorNo++) {
+
         current_key = MF_KEY_A;
+
         for (uint8_t tries = 0; tries < MIFARE_SECTOR_RETRY; tries++) {
             PrintAndLogEx(NORMAL, "." NOLF);
             fflush(stdout);
 
             if (kbd_enter_pressed()) {
                 PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
-                free(fptr);
                 free(keyA);
                 free(keyB);
                 return PM3_EOPABORTED;
@@ -951,7 +958,9 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
     PrintAndLogEx(INFO, "Dumping all blocks from card...");
 
     for (uint8_t sectorNo = 0; sectorNo < numSectors; sectorNo++) {
+
         for (uint8_t blockNo = 0; blockNo < mfNumBlocksPerSector(sectorNo); blockNo++) {
+
             bool received = false;
             current_key = MF_KEY_A;
             uint8_t data_area = (sectorNo < 32) ? blockNo : blockNo / 5;
@@ -972,6 +981,7 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
                     clearCommandBuffer();
                     SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
                     received = WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500);
+
                 } else {
                     // data block. Check if it can be read with key A or key B
                     if ((rights[sectorNo][data_area] == 0x03) || (rights[sectorNo][data_area] == 0x05)) {
@@ -983,6 +993,7 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
                         clearCommandBuffer();
                         SendCommandNG(CMD_HF_MIFARE_READBL, (uint8_t *)&payload, sizeof(mf_readblock_t));
                         received = WaitForResponseTimeout(CMD_HF_MIFARE_READBL, &resp, 1500);
+
                     } else {
                         // key A would work
                         payload.blockno = mfFirstBlockOfSector(sectorNo) + blockNo;
@@ -1033,7 +1044,7 @@ static int mfc_read_tag(iso14a_card_select_t *card, uint8_t *carddata, uint8_t n
         }
     }
 
-    free(fptr);
+
     free(keyA);
     free(keyB);
 
