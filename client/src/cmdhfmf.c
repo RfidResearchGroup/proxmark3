@@ -1461,6 +1461,13 @@ static int CmdHF14AMfRdSc(const char *Cmd) {
         uint8_t blocks = mfNumBlocksPerSector(sector);
         uint8_t start = mfFirstBlockOfSector(sector);
 
+        // since this was a successful read, add our known key to the output
+        if (keytype == MF_KEY_A) {
+            memcpy(data + ((blocks - 1) * MFBLOCK_SIZE), key, MIFARE_KEY_SIZE);
+        } else {
+            memcpy(data + ((blocks - 1) * MFBLOCK_SIZE) + 10, key, MIFARE_KEY_SIZE);
+        }
+
         mf_print_sector_hdr(sector);
         for (int i = 0; i < blocks; i++) {
             mf_print_block_one(start + i, data + (i * MFBLOCK_SIZE), verbose);
@@ -10029,6 +10036,13 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         return PM3_EFAILED;
     }
 
+    uint64_t tagtype = GetHF14AMfU_Type();
+    if (tagtype != MFU_TT_UL_ERROR)  {
+        PrintAndLogEx(INFO, "This is not MIFARE Classic based card");
+        PrintAndLogEx(HINT, "Hint:  try `" _YELLOW_("hf mfu info") "`");
+        goto out;
+    }
+
     uint8_t signature[32] = {0};
     int res = read_mfc_ev1_signature(signature);
     if (res == PM3_SUCCESS) {
@@ -10260,6 +10274,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("script run fm11rf08s_recovery.py") "`");
     }
 
+out:
     if (setDeviceDebugLevel(dbg_curr, false) != PM3_SUCCESS) {
         return PM3_EFAILED;
     }

@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf mf info` - skip checking if it detects a MIFARE Ultralight family card (@iceman1001)
+- Changed `hf mf rdsc` - it now addeds the used key to the output in the sector trailer (@iceman1001)
 - Added the `PM3ULTIMATE` platform in the build / docs. *untested* (@iceman1001) 
 - Added fpga compilation for PM3ULTIMATE device (@n-hutton)
 - Updated the ATR list (@iceman1001)
