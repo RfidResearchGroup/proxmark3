@@ -36,6 +36,16 @@ typedef struct {
     const char *hint;
 } hintAIDList_t;
 
+typedef struct {
+    uint8_t vendor_id;
+    uint8_t product_type;
+    uint8_t product_subtype;
+    uint8_t major_product_version;
+    uint8_t minor_product_version;
+    uint8_t storage_size;
+    uint8_t protocol_type;
+} version_hw_t;
+
 typedef enum {
     MTNONE = 0,
     MTCLASSIC = 1,
@@ -49,6 +59,9 @@ typedef enum {
     MTFUDAN = 256,
     MTISO18092 = 512,
     MT424 = 1024,
+    MTULTRALIGHT_C = 2048,
+    MTDUOX = 4096,
+    MTNTAG = 8192,
 } nxp_mifare_type_t;
 
 int CmdHF14A(const char *Cmd);
@@ -59,7 +72,10 @@ int CmdHF14ANdefRead(const char *Cmd);      // used by cmdnfc.c
 int CmdHF14ANdefFormat(const char *Cmd);    // used by cmdnfc.c
 int CmdHF14ANdefWrite(const char *Cmd);     // used by cmdnfc.c
 
-int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status);
+
+int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status,
+                    uint8_t ats_hist_len, uint8_t *ats_hist,
+                    bool version_hw_available, version_hw_t *version_hw);
 
 int hf14a_getconfig(hf14a_config_t *config);
 int hf14a_setconfig(hf14a_config_t *config, bool verbose);
@@ -75,4 +91,6 @@ int SelectCard14443A_4_WithParameters(bool disconnect, bool verbose, iso14a_card
 
 bool Get_apdu_in_framing(void);
 void Set_apdu_in_framing(bool v);
+int hf14a_getversion_data(iso14a_card_select_t *card, uint64_t select_status, version_hw_t *hw);
+
 #endif

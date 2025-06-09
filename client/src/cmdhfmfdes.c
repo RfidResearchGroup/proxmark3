@@ -89,15 +89,6 @@ typedef struct mfdes_data {
     uint8_t *data;
 } PACKED mfdes_data_t;
 
-typedef struct mfdes_info_res {
-    uint8_t isOK;
-    uint8_t uid[7];
-    uint8_t uidlen;
-    uint8_t versionHW[7];
-    uint8_t versionSW[7];
-    uint8_t details[14];
-} PACKED mfdes_info_res_t;
-
 typedef struct mfdes_value {
     uint8_t fileno;  //01
     uint8_t value[16];
@@ -135,21 +126,6 @@ typedef enum {
     MFDES_RECORD_FILE,
     MFDES_VALUE_FILE
 } MFDES_FILE_TYPE_T;
-
-typedef enum {
-    DESFIRE_UNKNOWN = 0,
-    DESFIRE_MF3ICD40,
-    DESFIRE_EV1,
-    DESFIRE_EV2,
-    DESFIRE_EV2_XL,
-    DESFIRE_EV3,
-    DESFIRE_LIGHT,
-    PLUS_EV1,
-    PLUS_EV2,
-    NTAG413DNA,
-    NTAG424,
-    DUOX,
-} nxp_cardtype_t;
 
 typedef enum {
     DESFIRE_UNKNOWN_PROD = 0,
@@ -332,7 +308,7 @@ static const char *getAidCommentStr(uint32_t aid) {
     return "";
 }
 
-static nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
+nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
 
     // DESFire MF3ICD40
     if (type == 0x01 && major == 0x00 && minor == 0x02)
@@ -385,7 +361,7 @@ static nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
     if (type == 0x04 && major == 0x30 && minor == 0x00)
         return NTAG424;
 
-    return DESFIRE_UNKNOWN;
+    return NXP_UNKNOWN;
 }
 
 // ref:  https://www.nxp.com/docs/en/application-note/AN12343.pdf  p7
@@ -423,7 +399,7 @@ static const char *getProductTypeStr(const uint8_t *versionhw) {
     return "UNKNOWN PROD";
 }
 
-static int mfdes_get_info(mfdes_info_res_t *info) {
+int mfdes_get_info(mfdes_info_res_t *info) {
 
     PacketResponseNG resp;
     SendCommandNG(CMD_HF_DESFIRE_INFO, NULL, 0);
@@ -710,7 +686,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
-    if (cardtype == DESFIRE_UNKNOWN) {
+    if (cardtype == NXP_UNKNOWN) {
         PrintAndLogEx(INFO, "HW Version.. %s", sprint_hex_inrow(info.versionHW, sizeof(info.versionHW)));
         PrintAndLogEx(INFO, "SW Version.. %s", sprint_hex_inrow(info.versionSW, sizeof(info.versionSW)));
         PrintAndLogEx(INFO, "Version data identification failed. Report to Iceman!");

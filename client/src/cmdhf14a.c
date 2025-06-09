@@ -246,6 +246,49 @@ static uint16_t gs_frame_len = 0;
 static uint8_t gs_frames_num = 0;
 static uint16_t atsFSC[] = {16, 24, 32, 40, 48, 64, 96, 128, 256};
 
+int hf14a_getversion_data(iso14a_card_select_t *card, uint64_t select_status, version_hw_t *hw) {
+
+    // field on, card selected if select_status is 1 or 4, not selected if 2
+    int res = PM3_EFAILED;
+
+    // if 4b UID or NXP, try to get version
+    if ((card->uidlen == 4) || ((card->uidlen == 7) && (card->uid[0] == 0x04))) {
+        // GetVersion
+        if ((select_status == 1) || (select_status == 4)) { // L4
+
+            uint8_t response[PM3_CMD_DATA_SIZE] = {0};
+            int resp_len = 0;
+            uint8_t getVersion[5] = {0x90, 0x60, 0x00, 0x00, 0x00};
+            res = ExchangeAPDU14a(getVersion, sizeof(getVersion), false, false, response, sizeof(response), &resp_len);
+            DropField();
+
+            if (res == PM3_ETIMEOUT) {
+                PrintAndLogEx(DEBUG, "iso14443a card select timeout");
+                return PM3_ETIMEOUT;
+            }
+
+            if (resp_len == 9) {
+                memcpy(hw, response, sizeof(version_hw_t));
+                return PM3_SUCCESS;
+            }
+            return PM3_EFAILED;
+
+        }
+
+        // select_status = 2, L3
+        uint8_t version[8] = {0};
+        uint8_t uid[7] = {0};
+        res = mfu_get_version_uid(version, uid);
+        DropField();
+        if (res == PM3_SUCCESS) {
+            memcpy(hw, version + 1, sizeof(version_hw_t));
+        }
+    }
+
+    DropField();
+    return res;
+}
+
 static int CmdHF14AList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf 14a", "14a -c");
 }
@@ -1735,94 +1778,236 @@ static void printTag(const char *tag) {
     PrintAndLogEx(SUCCESS, "   " _YELLOW_("%s"), tag);
 }
 
-int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status) {
-
+// Based on NXP AN10833 Rev 3.8 and NXP AN10834 Rev 4.2
+int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status,
+                    uint8_t ats_hist_len, uint8_t *ats_hist,
+                    bool version_hw_available, version_hw_t *version_hw) {
     int type = MTNONE;
 
-    if ((sak & 0x02) != 0x02) {
-        if ((sak & 0x19) == 0x19) {
-            type |= MTCLASSIC;
-        } else if ((sak & 0x40) == 0x40) {
-            type |= MTISO18092;
-        } else if ((sak & 0x38) == 0x38) {
-            type |= MTCLASSIC;
-        } else if ((sak & 0x18) == 0x18) {
-            if (select_status == 1) {
-                type |= MTPLUS;
-            } else {
-                type |= MTCLASSIC;
-            }
-        } else if ((sak & 0x09) == 0x09) {
-            type |= MTMINI;
-        } else if ((sak & 0x28) == 0x28) {
-            type |= MTCLASSIC;
-        } else if ((sak & 0x08) == 0x08) {
-            if (select_status == 1) {
-                type |= MTPLUS;
-            } else {
-                type |= MTCLASSIC;
-            }
-        } else if ((sak & 0x11) == 0x11) {
-            type |= MTPLUS;
-        } else if ((sak & 0x10) == 0x10) {
-            type |= MTPLUS;
-        } else if ((sak & 0x01) == 0x01) {
-            type |= MTCLASSIC;
-        } else if ((sak & 0x24) == 0x24) {
-            type |= MTDESFIRE;
-        } else if ((sak & 0x20) == 0x20) {
-            if (select_status == 1) {
-                if ((atqa & 0x0040) == 0x0040) {
-                    if ((atqa & 0x0300) == 0x0300) {
-                        type |= MTDESFIRE;
-                    } else {
-                        type |= MTPLUS;
-                    }
-                } else {
+    if (version_hw_available) {
 
-                    if ((atqa & 0x0001) == 0x0001) {
-                        type |= HID_SEOS;
-                    } else {
-                        type |= MTPLUS;
-                    }
+        switch (version_hw->product_type & 0x0F) {
+            case 0x1: {
+                type |= MTDESFIRE;
 
-                    if ((atqa & 0x0004) == 0x0004) {
+                // special cases, override major_product_version_str when needed
+                switch (version_hw->major_product_version) {
+                    case 0x42:
                         type |= MTEMV;
+                        break;
+                    case 0xA0:
+                        type |= MTDUOX;
+                        break;
+                }
+                break;
+            }
+            case 0x2: {
+                type |= MTPLUS;
+                break;
+            }
+            case 0x3: {
+                type |= MTULTRALIGHT;
+                break;
+            }
+            case 0x4: {
+                type |= MTNTAG;
+                break;
+            }
+            case 0x7: {
+                type |= MTNTAG;
+                break;
+            }
+            case 0x8: {
+                type |= MTDESFIRE;
+                break;
+            }
+            case 0x9: {
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+
+    }
+
+    if ((sak & 0x44) == 0x40) {
+        // ISO18092 Table 15: Target compliant with NFC transport protocol
+        type |= MTISO18092;
+    }
+
+    if ((sak & 0x02) == 0x00) { // SAK b2=0
+
+        if ((sak & 0x08) == 0x08) { // SAK b2=0 b4=1
+
+            if ((sak & 0x10) == 0x10) { // SAK b2=0 b4=1 b5=1
+
+                if ((sak & 0x01) == 0x01) { // SAK b2=0 b4=1 b5=1 b1=1, SAK=0x19
+                    type |= MTCLASSIC;
+
+                } else { // SAK b2=0 b4=1 b5=1 b1=0
+
+                    if ((sak & 0x20) == 0x20) { // SAK b2=0 b4=1 b5=1 b1=0 b6=1, SAK=0x38
+                        type |= MTCLASSIC;
+
+                    } else { // SAK b2=0 b4=1 b5=1 b1=0 b6=0
+
+                        if (select_status == 4) { // SAK b2=0 b4=1 b5=1 b1=0 b6=0 ATS
+
+                            if (version_hw_available) { // SAK b2=0 b4=1 b5=1 b1=0 b6=0 ATS GetVersion
+                                type |= MTPLUS;
+
+                            } else { // SAK b2=0 b4=1 b5=1 b1=0 b6=0 ATS No_GetVersion
+
+                                if (ats_hist_len > 0) {
+
+                                    if ((ats_hist_len == 9) && (memcmp(ats_hist, "\xC1\x05\x2F\x2F", 4) == 0)) {
+                                        type |= MTPLUS;
+                                    } else {
+                                        type |= MTCLASSIC;
+                                    }
+                                }
+                            }
+
+                        } else { // SAK b2=0 b4=1 b5=1 b1=0 b6=0 no_ATS, SAK=0x18
+                            type |= MTCLASSIC;
+                        }
                     }
                 }
-                type |= (MTDESFIRE | MT424);
-            }
-        } else if ((sak & 0x04) == 0x04) {
-            type |= MTDESFIRE;
-        } else {
-            type |= MTULTRALIGHT;
-        }
-    } else if ((sak & 0x0A) == 0x0A) {
 
-        if ((atqa & 0x0003) == 0x0003) {
-            type |= MTFUDAN;
-        } else if ((atqa & 0x0005) == 0x0005) {
+            } else { // SAK b2=0 b4=1 b5=0
+
+                if ((sak & 0x01) == 0x01) { // SAK b2=0 b4=1 b5=0 b1=1, SAK=0x09
+                    type |= MTMINI;
+
+                } else { // SAK b2=0 b4=1 b5=0 b1=0
+
+                    if ((sak & 0x20) == 0x20) { // SAK b2=0 b4=1 b5=0 b1=0 b6=1, SAK=0x28
+                        type |= MTCLASSIC;
+
+                    } else { // SAK b2=0 b4=1 b5=0 b1=0 b6=0
+
+                        if (select_status == 4) { // SAK b2=0 b4=1 b5=0 b1=0 b6=0 ATS
+
+                            if (version_hw_available) { // SAK b2=0 b4=1 b5=0 b1=0 b6=0 ATS GetVersion
+                                type |= MTPLUS;
+
+                            } else { // SAK b2=0 b4=1 b5=0 b1=0 b6=0 ATS No_GetVersion
+
+                                if (ats_hist_len > 0) {
+
+                                    if ((ats_hist_len == 9) && (memcmp(ats_hist, "\xC1\x05\x2F\x2F", 4) == 0)) {
+                                        type |= MTPLUS;
+
+                                    } else if ((ats_hist_len == 9) && (memcmp(ats_hist, "\xC1\x05\x21\x30", 4) == 0)) {
+                                        type |= MTPLUS;
+
+                                    } else {
+                                        type |= MTCLASSIC;
+                                    }
+                                }
+                            }
+                        } else { // SAK b2=0 b4=1 b5=0 b1=0 b6=0 no_ATS, SAK=0x08
+                            type |= MTCLASSIC;
+                        }
+                    }
+                }
+            }
+
+        } else { // SAK b2=0 b4=0
+
+            if ((sak & 0x10) == 0x10) { // SAK b2=0 b4=0 b5=1
+
+                if ((sak & 0x01) == 0x01) { // SAK b2=0 b4=0 b5=1 b1=1, SAK=0x11
+                    type |= MTPLUS;
+                } else { // SAK b2=0 b4=0 b5=1 b1=0, SAK=0x10
+                    type |= MTPLUS;
+                }
+
+            } else { // SAK b2=0 b4=0 b5=0
+
+                if ((sak & 0x01) == 0x01) { // SAK b2=0 b4=0 b5=0 b1=1
+                    type |= MTCLASSIC;
+
+                } else { // SAK b2=0 b4=0 b5=0 b1=0
+
+                    if ((sak & 0x20) == 0x20) { // SAK b2=0 b4=0 b5=0 b1=0 b6=1, SAK=0x20
+
+                        if (select_status == 1) { // SAK b2=0 b4=0 b5=0 b1=0 b6=1 ATS
+
+                            if (version_hw_available) { // SAK b2=0 b4=0 b5=0 b1=0 b6=1 ATS GetVersion
+
+                                if ((version_hw->product_type & 0x7F) == 0x02) {
+                                    type |= MTPLUS;
+
+                                } else if (((version_hw->product_type & 0x7F) == 0x01) ||
+                                           (version_hw->product_type == 0x08) ||
+                                           (version_hw->product_type == 0x91)) {
+                                    type |= MTDESFIRE;
+
+                                } else if (version_hw->product_type == 0x04) {
+                                    type |= (MTDESFIRE | MT424);
+                                }
+
+                            } else { // SAK b2=0 b4=0 b5=0 b1=0 b6=1 ATS No GetVersion
+
+                                if (ats_hist_len > 0) {
+
+                                    if ((ats_hist_len == 9) && (memcmp(ats_hist, "\xC1\x05\x2F\x2F", 4) == 0)) {
+                                        type |= MTPLUS;
+
+                                    } else {
+
+                                        if ((atqa == 0x0001) || (atqa == 0x0004)) {
+                                            type |= HID_SEOS;
+                                        }
+
+                                        if (atqa == 0x0004) {
+                                            type |= MTEMV;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                    } else {  // SAK b2=0 b4=0 b5=0 b1=0 b6=0, SAK=0x00
+
+                        if (version_hw_available == false) {
+                            // SAK b2=0 b4=0 b5=0 b1=0 b6=0 No_GetVersion
+                            int status = mfuc_test_authentication_support();
+                            if (status == PM3_SUCCESS) {
+                                type |= MTULTRALIGHT_C;
+                            }
+                        }
+                        type |= MTULTRALIGHT;
+                    }
+                }
+            }
+        }
+    } else { // SAK b2=1
+
+        if (sak == 0x0A) {
+
+            if (atqa == 0x0003) {
+                // Uses Shanghai algo
+                type |= MTFUDAN;
+
+            } else if (atqa == 0x0005) {
+                type |= MTFUDAN;
+            }
+
+        } else if (sak == 0x53) {
             type |= MTFUDAN;
         }
-    } else if ((sak & 0x53) == 0x53) {
-        type |= MTFUDAN;
     }
 
     return type;
 }
 
-typedef struct {
-    uint8_t vendor_id;
-    uint8_t product_type;
-    uint8_t product_subtype;
-    uint8_t major_product_version;
-    uint8_t minor_product_version;
-    uint8_t storage_size;
-    uint8_t protocol_type;
-} version_hw_t;
-
 // Based on NXP AN10833 Rev 3.8 and NXP AN10834 Rev 4.2
-static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_status, uint8_t ats_hist_len, uint8_t *ats_hist, bool version_hw_available, version_hw_t *version_hw) {
+static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_status,
+                                 uint8_t ats_hist_len, uint8_t *ats_hist,
+                                 bool version_hw_available, version_hw_t *version_hw) {
     int type = MTNONE;
     const char *product_type_str = "";
     const char *major_product_version_str = "";
@@ -2237,6 +2422,8 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                                 // TODO: read page 2/3, then ??
                                 printTag("MIFARE Ultralight C");
                                 printTag("MIFARE Hospitality");
+                                type |= MTULTRALIGHT_C;
+
                             } else {
                                 printTag("MIFARE Ultralight");
                             }
@@ -2450,36 +2637,12 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
         ats_hist_pos += (card.ats[1] & 0x40) == 0x40;
     }
 
-    // field on, card selected if select_status is 1 or 4, not selected if 2
-    bool version_hw_available = false;
+
     version_hw_t version_hw = {0};
     // if 4b UID or NXP, try to get version
-    if ((card.uidlen == 4) || ((card.uidlen == 7) && (card.uid[0] == 0x04))) {
-        // GetVersion
-        if ((select_status == 1) || (select_status == 4)) { // L4
-            uint8_t response[PM3_CMD_DATA_SIZE] = {0};
-            int resp_len = 0;
-            uint8_t getVersion[5] = {0x90, 0x60, 0x00, 0x00, 0x00};
-            int res = ExchangeAPDU14a(getVersion, sizeof(getVersion), false, false, response, sizeof(response), &resp_len);
-            if (res == PM3_ETIMEOUT) {
-                PrintAndLogEx(DEBUG, "iso14443a card select timeout");
-                DropField();
-                return PM3_ETIMEOUT;
-            }
-            if (resp_len == 9) {
-                memcpy(&version_hw, response, sizeof(version_hw));
-                version_hw_available = true;
-            }
-        } else { // select_status = 2, L3
-            uint8_t version[8] = {0};
-            uint8_t uid[7] = {0};
-            if (mfu_get_version_uid(version, uid) == PM3_SUCCESS) {
-                memcpy(&version_hw, version + 1, sizeof(version_hw));
-                version_hw_available = true;
-            }
-        }
-    }
-    DropField();
+    int res = hf14a_getversion_data(&card, select_status, &version_hw);
+    bool version_hw_available = (res == PM3_SUCCESS);
+
     PrintAndLogEx(INFO, "---------- " _CYAN_("ISO14443-A Information") " ----------");
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s") " %s", sprint_hex(card.uid, card.uidlen), get_uid_type(&card));
     PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
@@ -2501,9 +2664,13 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     bool isSEOS = false;
     int nxptype = MTNONE;
 
-    PrintAndLogEx(SUCCESS, "Possible types:");
     if (card.uidlen <= 4) {
-        nxptype = detect_nxp_card_print(card.sak, ((card.atqa[1] << 8) + card.atqa[0]), select_status, card.ats_len - ats_hist_pos, card.ats + ats_hist_pos, version_hw_available, &version_hw);
+
+        PrintAndLogEx(SUCCESS, "Possible types:");
+        nxptype = detect_nxp_card_print(card.sak, ((card.atqa[1] << 8) + card.atqa[0]),
+                                        select_status, card.ats_len - ats_hist_pos, card.ats + ats_hist_pos,
+                                        version_hw_available, &version_hw
+                                       );
 
         isMifareMini = ((nxptype & MTMINI) == MTMINI);
         isMifareClassic = ((nxptype & MTCLASSIC) == MTCLASSIC);
@@ -2522,7 +2689,8 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     } else {
 
         // Double & triple sized UID, can be mapped to a manufacturer.
-        PrintAndLogEx(SUCCESS, "MANUFACTURER: " _YELLOW_("%s"), getTagInfo(card.uid[0]));
+        PrintAndLogEx(SUCCESS, "      " _YELLOW_("%s"), getTagInfo(card.uid[0]));
+        PrintAndLogEx(SUCCESS, "Possible types:");
 
         switch (card.uid[0]) {
             case 0x02: { // ST
@@ -2531,7 +2699,10 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 break;
             }
             case 0x04: { // NXP
-                nxptype = detect_nxp_card_print(card.sak, ((card.atqa[1] << 8) + card.atqa[0]), select_status, card.ats_len - ats_hist_pos, card.ats + ats_hist_pos, version_hw_available, &version_hw);
+                nxptype = detect_nxp_card_print(card.sak, ((card.atqa[1] << 8) + card.atqa[0]),
+                                                select_status, card.ats_len - ats_hist_pos, card.ats + ats_hist_pos,
+                                                version_hw_available, &version_hw
+                                               );
 
                 isMifareMini = ((nxptype & MTMINI) == MTMINI);
                 isMifareClassic = ((nxptype & MTCLASSIC) == MTCLASSIC);
@@ -2595,6 +2766,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                     case 0x00: {
                         isMifareClassic = false;
 
+                        // ******** is card of the MFU type (UL/ULC/NTAG/ etc etc)
+                        DropField();
+
                         uint64_t tagT = GetHF14AMfU_Type();
                         if (tagT != MFU_TT_UL_ERROR) {
                             ul_print_type(tagT, 0);
@@ -2602,6 +2776,15 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                             printTag("MIFARE Ultralight/C/NTAG Compatible");
                         } else {
                             printTag("Possible AZTEK (iso14443a compliant)");
+                        }
+
+                        // reconnect for further tests
+                        clearCommandBuffer();
+                        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
+                        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+                            PrintAndLogEx(WARNING, "timeout while waiting for reply");
+                            DropField();
+                            return PM3_ETIMEOUT;
                         }
 
                         memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
@@ -2656,7 +2839,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
     if (card.ats_len >= 3) {        // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
 
-        PrintAndLogEx(INFO, "-------------------------- " _CYAN_("ATS") " --------------------------");
+        PrintAndLogEx(INFO, "-------------------------- " _CYAN_("ATS") " ----------------------------------");
         bool ta1 = 0, tb1 = 0, tc1 = 0;
 
         if (select_status == 2) {
@@ -2751,7 +2934,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             if ((card.ats[0] > pos) && (card.ats_len >= card.ats[0] + 2)) {
                 uint8_t calen = card.ats[0] - pos;
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(INFO, "-------------------- " _CYAN_("Historical bytes") " --------------------");
+                PrintAndLogEx(INFO, "-------------------- " _CYAN_("Historical bytes") " ----------------------------");
 
                 if (card.ats[pos] == 0xC1) {
                     PrintAndLogEx(INFO, "    %s", sprint_hex(card.ats + pos, calen));
@@ -2856,7 +3039,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                     uint16_t sw = 0;
                     uint8_t result[1024] = {0};
                     size_t resultlen = 0;
-                    int res = Iso7816Select(CC_CONTACTLESS, ActivateField, true, vaid, vaidlen, result, sizeof(result), &resultlen, &sw);
+                    res = Iso7816Select(CC_CONTACTLESS, ActivateField, true, vaid, vaidlen, result, sizeof(result), &resultlen, &sw);
                     ActivateField = false;
                     if (res)
                         continue;
@@ -2950,7 +3133,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     }
 
     if (isMifareClassic || isMifareMini) {
-        int res = detect_classic_static_nonce();
+        res = detect_classic_static_nonce();
         if (res == NONCE_STATIC) {
             PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
         }

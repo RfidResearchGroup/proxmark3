@@ -2221,6 +2221,8 @@ int loadFileDICTIONARY(const char *preferredName, void *data, size_t *datalen, u
     return loadFileDICTIONARYEx(preferredName, data, 0, datalen, keylen, keycnt, 0, NULL, true);
 }
 
+// this function handles exceptional large dictionaries,
+// using start position and end position parameters.
 int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, uint8_t keylen, uint32_t *keycnt,
                          size_t startFilePosition, size_t *endFilePosition, bool verbose) {
 
@@ -2246,17 +2248,17 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
     int retval = PM3_SUCCESS;
 
     FILE *f = fopen(path, "r");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
-        retval = PM3_EFILE;
-        goto out;
+        free(path);
+        return PM3_EFILE;
     }
 
     if (startFilePosition) {
         if (fseek(f, startFilePosition, SEEK_SET) < 0) {
             fclose(f);
-            retval = PM3_EFILE;
-            goto out;
+            free(path);
+            return PM3_EFILE;
         }
     }
 
@@ -2264,6 +2266,7 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
 
     // read file
     while (!feof(f)) {
+
         long filepos = ftell(f);
 
         if (!fgets(line, sizeof(line), f)) {
@@ -2321,7 +2324,7 @@ int loadFileDICTIONARYEx(const char *preferredName, void *data, size_t maxdatale
     if (keycnt) {
         *keycnt = vkeycnt;
     }
-out:
+
     free(path);
     return retval;
 }
@@ -2346,11 +2349,10 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
     // mf desfire == 3des3k 24 bytes
     // iclass == 8 bytes
     // default to 6 bytes.
-    if (keylen != 4 && keylen != 5 && keylen != 6 && keylen != 8 && keylen != 16 && keylen != 24) {
+    if (keylen != 4 && keylen != 5 && keylen != 6 && keylen != 8 && keylen != 12 && keylen != 16 && keylen != 24) {
         keylen = 6;
     }
 
-    size_t mem_size;
     size_t block_size = 10 * keylen;
 
     // double up since its chars
@@ -2365,10 +2367,10 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
         free(path);
         return PM3_EFILE;
     }
-    mem_size = block_size;
+    size_t mem_size = block_size;
 
     FILE *f = fopen(path, "r");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         retval = PM3_EFILE;
         goto out;
@@ -2400,6 +2402,7 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
 
         // remove newline/linefeed
         str_cleanrn(line, strlen(line));
+        str_trim(line);
 
         // smaller keys than expected is skipped
         if (strlen(line) < keylen) {
@@ -2417,6 +2420,7 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
 
         // larger keys than expected is skipped
         if (strlen(line) > keylen) {
+            PrintAndLogEx(INFO, "too long line (%zu) ... %s", strlen(line), line);
             continue;
         }
 

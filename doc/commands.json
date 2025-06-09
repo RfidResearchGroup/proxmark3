@@ -6806,7 +6806,7 @@
             "notes": [
                 "hf mfp chk -k 000102030405060708090a0b0c0d0e0f -> check key on sector 0 as key A and B",
                 "hf mfp chk -s 2 -a -> check default key list on sector 2, only key A",
-                "hf mfp chk -f mfp_default_keys -s0 -e6 -> check keys from dictionary against sectors 0-6",
+                "hf mfp chk -f mfp_default_keys -s 0 -e 6 -> check keys from dictionary against sectors 0-6",
                 "hf mfp chk --pattern1b --dump -> check all 1-byte keys pattern and save found keys to file",
                 "hf mfp chk --pattern2b --startp2b FA00 -> check all 2-byte keys pattern. Start from key FA00FA00...FA00"
             ],
@@ -6823,9 +6823,10 @@
                 "--pattern2b Check all 2-byte combinations of key (0000...0000, 0001...0001, 0002...0002, ...)",
                 "--startp2b <pattern> Start key (2-byte HEX) for 2-byte search (use with `--pattern2b`)",
                 "--dump Dump found keys to JSON file",
+                "--no-default Skip check default keys",
                 "-v, --verbose Verbose output"
             ],
-            "usage": "hf mfp chk [-habv] [-s <0..255>] [-e <0..255>] [-k <hex>] [-f <fn>] [--pattern1b] [--pattern2b] [--startp2b <pattern>] [--dump]"
+            "usage": "hf mfp chk [-habv] [-s <0..255>] [-e <0..255>] [-k <hex>] [-f <fn>] [--pattern1b] [--pattern2b] [--startp2b <pattern>] [--dump] [--no-default]"
         },
         "hf mfp chkey": {
             "command": "hf mfp chkey",
@@ -13376,6 +13377,6 @@
     "metadata": {
         "commands_extracted": 768,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-06-08T19:44:35"
+        "extracted_on": "2025-06-09T12:58:22"
     }
 }

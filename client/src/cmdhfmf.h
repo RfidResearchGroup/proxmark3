@@ -35,9 +35,13 @@ void printKeyTable(size_t sectorscnt, sector_t *e_sector);
 void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector);
 // void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector, bool singel_sector);
 
+
 bool mfc_value(const uint8_t *d, int32_t *val);
 void mf_print_sector_hdr(uint8_t sector);
 void mf_print_block_one(uint8_t blockno, uint8_t *d, bool verbose);
+
+int mf_print_keys(uint16_t n, uint8_t *d);
+void mf_print_blocks(uint16_t n, uint8_t *d, bool verbose);
 
 int mfc_ev1_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, int signature_len);
 #endif

@@ -19,20 +19,7 @@
 #define CMDHFMFP_H__
 
 #include "common.h"
-
-typedef enum {
-    MFP_UNKNOWN = 0,
-    DESFIRE_MF3ICD40,
-    DESFIRE_EV1,
-    DESFIRE_EV2,
-    DESFIRE_EV2_XL,
-    DESFIRE_EV3,
-    DESFIRE_LIGHT,
-    PLUS_EV1,
-    PLUS_EV2,
-    NTAG413DNA,
-    NTAG424
-} nxp_cardtype_t;
+#include "mifare/mifare4.h"
 
 typedef struct mfp_key_item {
     uint8_t a[16];
@@ -46,5 +33,5 @@ typedef struct mfp_keys {
 
 int CmdHFMFP(const char *Cmd);
 int CmdHFMFPNDEFRead(const char *Cmd);
-
+int mfp_data_crypt(mf4Session_t *mf4session, uint8_t *dati, uint8_t *dato, bool rev);
 #endif

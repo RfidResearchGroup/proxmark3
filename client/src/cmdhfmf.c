@@ -372,7 +372,7 @@ int mfc_ev1_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, in
 
 static int mf_read_uid(uint8_t *uid, int *uidlen, int *nxptype) {
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select failed");
@@ -383,13 +383,55 @@ static int mf_read_uid(uint8_t *uid, int *uidlen, int *nxptype) {
     iso14a_card_select_t card;
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
+    uint64_t select_status = resp.oldarg[0];
+
+    // try to request ATS even if tag claims not to support it. If yes => 4
+    if (select_status == 2) {
+        uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
+        clearCommandBuffer();
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, sizeof(rats));
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
+            return PM3_ETIMEOUT;
+        }
+
+        memcpy(card.ats, resp.data.asBytes, resp.oldarg[0]);
+        card.ats_len = resp.oldarg[0]; // note: ats_len includes CRC Bytes
+        if (card.ats_len > 3) {
+            select_status = 4;
+        }
+    }
+
+    uint8_t ats_hist_pos = 0;
+    if ((card.ats_len > 3) && (card.ats[0] > 1)) {
+        ats_hist_pos = 2;
+        ats_hist_pos += (card.ats[1] & 0x10) == 0x10;
+        ats_hist_pos += (card.ats[1] & 0x20) == 0x20;
+        ats_hist_pos += (card.ats[1] & 0x40) == 0x40;
+    }
+
+    version_hw_t version_hw = {0};
+    // if 4b UID or NXP, try to get version
+    int res = hf14a_getversion_data(&card, select_status, &version_hw);
+    DropField();
+
+    bool version_hw_available = (res == PM3_SUCCESS);
+
     if (nxptype) {
-        uint64_t select_status = resp.oldarg[0];
-        *nxptype = detect_nxp_card(card.sak, ((card.atqa[1] << 8) + card.atqa[0]), select_status);
+
+        *nxptype = detect_nxp_card(card.sak
+                                   , ((card.atqa[1] << 8) + card.atqa[0])
+                                   , select_status
+                                   , card.ats_len - ats_hist_pos
+                                   , card.ats + ats_hist_pos
+                                   , version_hw_available
+                                   , &version_hw
+                                  );
     }
 
     memcpy(uid, card.uid, card.uidlen * sizeof(uint8_t));
     *uidlen = card.uidlen;
+
     return PM3_SUCCESS;
 }
 
@@ -636,7 +678,7 @@ static void mf_print_block(uint16_t maxblocks, uint8_t blockno, uint8_t *d, bool
     }
 }
 
-static void mf_print_blocks(uint16_t n, uint8_t *d, bool verbose) {
+void mf_print_blocks(uint16_t n, uint8_t *d, bool verbose) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-----+-----+-------------------------------------------------+-----------------");
     PrintAndLogEx(INFO, " sec | blk | data                                            | ascii");
@@ -660,7 +702,7 @@ static void mf_print_blocks(uint16_t n, uint8_t *d, bool verbose) {
 }
 
 // assumes n is in number of blocks 0..255
-static int mf_print_keys(uint16_t n, uint8_t *d) {
+int mf_print_keys(uint16_t n, uint8_t *d) {
     uint8_t sectors = 0;
     switch (n) {
         case MIFARE_MINI_MAXBLOCK:
@@ -2967,7 +3009,9 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Settings
     int prng_type = PM3_EUNDEF;
     int isOK = 0;
+
     // ------------------------------
+    PrintAndLogEx(NORMAL, "");
 
     uint64_t tagT = GetHF14AMfU_Type();
     if (tagT != MFU_TT_UL_ERROR) {
@@ -2978,10 +3022,11 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
 
     // Select card to get UID/UIDLEN/ATQA/SAK information
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
+        DropField();
         return PM3_ETIMEOUT;
     }
 
@@ -2996,6 +3041,64 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // store card info
     iso14a_card_select_t card;
     memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
+
+    // try to request ATS even if tag claims not to support it. If yes => 4
+    if (select_status == 2) {
+        uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
+        clearCommandBuffer();
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, sizeof(rats));
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
+            return PM3_ETIMEOUT;
+        }
+
+        memcpy(card.ats, resp.data.asBytes, resp.oldarg[0]);
+        card.ats_len = resp.oldarg[0]; // note: ats_len includes CRC Bytes
+        if (card.ats_len > 3) {
+            select_status = 4;
+        }
+    }
+
+    uint8_t ats_hist_pos = 0;
+    if ((card.ats_len > 3) && (card.ats[0] > 1)) {
+        ats_hist_pos = 2;
+        ats_hist_pos += (card.ats[1] & 0x10) == 0x10;
+        ats_hist_pos += (card.ats[1] & 0x20) == 0x20;
+        ats_hist_pos += (card.ats[1] & 0x40) == 0x40;
+    }
+
+    version_hw_t version_hw = {0};
+    // if 4b UID or NXP, try to get version
+    int res = hf14a_getversion_data(&card, select_status, &version_hw);
+    DropField();
+
+    bool version_hw_available = (res == PM3_SUCCESS);
+
+    int nxptype = detect_nxp_card(card.sak
+                                  , ((card.atqa[1] << 8) + card.atqa[0])
+                                  , select_status
+                                  , card.ats_len - ats_hist_pos
+                                  , card.ats + ats_hist_pos
+                                  , version_hw_available
+                                  , &version_hw
+                                 );
+
+    if ((nxptype & MTDESFIRE) == MTDESFIRE) {
+        PrintAndLogEx(WARNING, "MIFARE DESFire card detected. Quitting...");
+        return PM3_ESOFT;
+    }
+
+    bool isMifareMini = ((nxptype & MTMINI) == MTMINI);
+    bool isMifarePlus = ((nxptype & MTPLUS) == MTPLUS);
+
+    if (isMifarePlus) {
+        PrintAndLogEx(INFO, "MIFARE Plus card detected.  Using limited set of attacks");
+    }
+
+    if (isMifareMini && sector_cnt != MIFARE_MINI_MAXSECTOR) {
+        PrintAndLogEx(WARNING, "MIFARE Mini S20 card detected. Changing sector count to %u", MIFARE_MINI_MAXSECTOR);
+        sector_cnt = MIFARE_MINI_MAXSECTOR;
+    }
 
     bool known_key = (in_keys_len > 5);
     uint8_t key[MIFARE_KEY_SIZE] = {0};
@@ -3134,7 +3237,7 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
         return ret;
     }
 
-    int32_t res = PM3_SUCCESS;
+    res = PM3_SUCCESS;
 
     // Use the dictionary to find sector keys on the card
     if (verbose) {
@@ -3465,6 +3568,20 @@ tryNested:
 
                     } else {
 tryHardnested: // If the nested attack fails then we try the hardnested attack
+
+                        // skip this
+                        if (isMifarePlus) {
+
+                            // Show the results to the user
+                            PrintAndLogEx(NORMAL, "");
+                            PrintAndLogEx(SUCCESS, _GREEN_("found keys:"));
+                            printKeyTable(sector_cnt, e_sector);
+                            PrintAndLogEx(NORMAL, "");
+                            free(e_sector);
+                            free(fptr);
+                            return PM3_ESOFT;
+                        }
+
                         if (verbose) {
                             PrintAndLogEx(INFO, "======================= " _YELLOW_("START HARDNESTED ATTACK") " =======================");
                             PrintAndLogEx(INFO, "sector no %3d, target key type %c, Slow %s",
@@ -9578,7 +9695,9 @@ static int CmdHF14AMfValue(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t blockno = (uint8_t)arg_get_int_def(ctx, 13, 1);
+    int keylen = 0;
+    uint8_t key[6] = {0};
+    CLIGetHexWithReturn(ctx, 1, key, &keylen);
 
     uint8_t keytype = MF_KEY_A;
     if (arg_get_lit(ctx, 2) && arg_get_lit(ctx, 3)) {
@@ -9589,22 +9708,6 @@ static int CmdHF14AMfValue(const char *Cmd) {
         keytype = MF_KEY_B;
     }
 
-    uint8_t transferkeytype = MF_KEY_A;
-    if (arg_get_lit(ctx, 9) && arg_get_lit(ctx, 10)) {
-        CLIParserFree(ctx);
-        PrintAndLogEx(WARNING, "Choose one single transfer key type");
-        return PM3_EINVARG;
-    } else if (arg_get_lit(ctx, 10)) {
-        transferkeytype = MF_KEY_B;
-    }
-
-    int keylen = 0;
-    uint8_t key[6] = {0};
-    CLIGetHexWithReturn(ctx, 1, key, &keylen);
-
-    int transferkeylen = 0;
-    uint8_t transferkey[6] = {0};
-    CLIGetHexWithReturn(ctx, 8, transferkey, &transferkeylen);
 
     /*
         Value    /Value   Value    BLK /BLK BLK /BLK
@@ -9619,11 +9722,29 @@ static int CmdHF14AMfValue(const char *Cmd) {
     int64_t decval = (int64_t)arg_get_u64_def(ctx, 5, -1); // Dec by -1 is invalid, so not set.
     int64_t setval = (int64_t)arg_get_u64_def(ctx, 6, 0x7FFFFFFFFFFFFFFF);  // out of bounds (for int32) so not set
     int64_t trnval = (int64_t)arg_get_u64_def(ctx, 7, -1);  // block to transfer to
+
+    int transferkeylen = 0;
+    uint8_t transferkey[6] = {0};
+    CLIGetHexWithReturn(ctx, 8, transferkey, &transferkeylen);
+
+    uint8_t transferkeytype = MF_KEY_A;
+    if (arg_get_lit(ctx, 9) && arg_get_lit(ctx, 10)) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "Choose one single transfer key type");
+        return PM3_EINVARG;
+    } else if (arg_get_lit(ctx, 10)) {
+        transferkeytype = MF_KEY_B;
+    }
+
     bool getval = arg_get_lit(ctx, 11);
     bool resval = arg_get_lit(ctx, 12);
+
+    uint8_t blockno = (uint8_t)arg_get_int_def(ctx, 13, 1);
+
     int dlen = 0;
     uint8_t data[16] = {0};
     CLIGetHexWithReturn(ctx, 14, data, &dlen);
+
     CLIParserFree(ctx);
 
     // sanity checks
@@ -10012,10 +10133,11 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     }
 
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT | ISO14A_NO_DISCONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
         PrintAndLogEx(DEBUG, "iso14443a card select timeout");
+        DropField();
         return PM3_ETIMEOUT;
     }
 
@@ -10029,6 +10151,23 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         3: proprietary Anticollision
     */
     uint64_t select_status = resp.oldarg[0];
+
+    // try to request ATS even if tag claims not to support it. If yes => 4
+    if (select_status == 2) {
+        uint8_t rats[] = { 0xE0, 0x80 }; // FSDI=8 (FSD=256), CID=0
+        clearCommandBuffer();
+        SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_DISCONNECT, 2, 0, rats, sizeof(rats));
+        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
+            return PM3_ETIMEOUT;
+        }
+
+        memcpy(card.ats, resp.data.asBytes, resp.oldarg[0]);
+        card.ats_len = resp.oldarg[0]; // note: ats_len includes CRC Bytes
+        if (card.ats_len > 3) {
+            select_status = 4;
+        }
+    }
 
     if (select_status == 0) {
         PrintAndLogEx(DEBUG, "iso14443a card select failed");
@@ -10050,19 +10189,62 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
     PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
 
-    if (setDeviceDebugLevel(verbose ? MAX(dbg_curr, DBG_INFO) : DBG_NONE, false) != PM3_SUCCESS) {
-        return PM3_EFAILED;
+
+    uint8_t ats_hist_pos = 0;
+    if ((card.ats_len > 3) && (card.ats[0] > 1)) {
+        ats_hist_pos = 2;
+        ats_hist_pos += (card.ats[1] & 0x10) == 0x10;
+        ats_hist_pos += (card.ats[1] & 0x20) == 0x20;
+        ats_hist_pos += (card.ats[1] & 0x40) == 0x40;
     }
 
-    uint64_t tagtype = GetHF14AMfU_Type();
-    if (tagtype != MFU_TT_UL_ERROR)  {
-        PrintAndLogEx(INFO, "This is not MIFARE Classic based card");
+    version_hw_t version_hw = {0};
+    // if 4b UID or NXP, try to get version
+    int res = hf14a_getversion_data(&card, select_status, &version_hw);
+    DropField();
+    bool version_hw_available = (res == PM3_SUCCESS);
+
+    int card_type = detect_nxp_card(card.sak
+                                    , ((card.atqa[1] << 8) + card.atqa[0])
+                                    , select_status
+                                    , card.ats_len - ats_hist_pos
+                                    , card.ats + ats_hist_pos
+                                    , version_hw_available
+                                    , &version_hw
+                                   );
+
+    if ((card_type & MTDESFIRE) == MTDESFIRE) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "MIFARE DESFire detected");
+        PrintAndLogEx(HINT, "Hint:  try `" _YELLOW_("hf mfdes info") "`");
+        goto out;
+    }
+
+    if ((card_type & MTULTRALIGHT) == MTULTRALIGHT) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "MIFARE Ultralight / NTAG detected");
         PrintAndLogEx(HINT, "Hint:  try `" _YELLOW_("hf mfu info") "`");
         goto out;
     }
 
+    if ((card_type & MTPLUS) == MTPLUS) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "MIFARE Plus detected");
+        PrintAndLogEx(HINT, "Hint:  try `" _YELLOW_("hf mfp info") "`");
+    }
+
+    if ((card_type & MTEMV) == MTEMV) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "EMV detected");
+        PrintAndLogEx(HINT, "Hint:  try `" _YELLOW_("emv info") "`");
+    }
+
+    if (setDeviceDebugLevel(verbose ? MAX(dbg_curr, DBG_INFO) : DBG_NONE, false) != PM3_SUCCESS) {
+        return PM3_EFAILED;
+    }
+
     uint8_t signature[32] = {0};
-    int res = read_mfc_ev1_signature(signature);
+    res = read_mfc_ev1_signature(signature);
     if (res == PM3_SUCCESS) {
         mfc_ev1_print_signature(card.uid, card.uidlen, signature, sizeof(signature));
     }

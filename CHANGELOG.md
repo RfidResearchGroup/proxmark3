@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `hf 14a info` - refactored code to be able to detect card technology across the client easier (@iceman1001)
+- Changed `hf mf info` - now informs better if a different card technology is detected (@iceman1001)
+- Changed `hf mf autopwn` - now exits if desfire is detected and limit attacks if mifare plus is detected (@iceman1001)
+- Changed `hf mfp chk` - improved key handling and output (@iceman1001)
 - Fix `hf mf dump` - added a check for keyfile to contain enough keys for card (@iceman1001)
 - Fix `hf mf eview` - now viewing 2k, 4k cards doesn't get wrong background color (@iceman1001)
 - Changed `hf mf info` - skip checking if it detects a MIFARE Ultralight family card (@iceman1001)
