@@ -444,17 +444,10 @@ static int CmdEM4x70Info(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "par", "DEPRECATED/IGNORED"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    {
-        bool requested_parity = arg_get_lit(ctx, 0);
-        if (requested_parity) {
-            PrintAndLogEx(WARNING, "--par option is deprecated and unused (client will reject this option soon).");
-        }
-    }
     CLIParserFree(ctx);
 
     // Client command line parsing and validation complete ... now use the helper function
@@ -482,27 +475,20 @@ static int CmdEM4x70Write(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "par",    "DEPRECATED/IGNORED"),
         arg_int1("b",  "block",  "<dec>", "block/word address, dec"),
         arg_str1("d",  "data",   "<hex>", "data, 2 bytes"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    {
-        bool requested_parity = arg_get_lit(ctx, 1);
-        if (requested_parity) {
-            PrintAndLogEx(WARNING, "--par option is deprecated and unused (client will reject this option soon).");
-        }
-    }
 
     em4x70_cmd_input_writeblock_t opts = {
-        .block = arg_get_int_def(ctx, 2, 1),
+        .block = arg_get_int_def(ctx, 1, 1),
         .value = {0}, // hex value macro exits function, so cannot be initialized here
     };
 
     int value_len = 0;
-    CLIGetHexWithReturn(ctx, 3, opts.value, &value_len);
+    CLIGetHexWithReturn(ctx, 2, opts.value, &value_len);
     CLIParserFree(ctx);
 
     if (opts.block >= EM4X70_NUM_BLOCKS) {
@@ -544,7 +530,6 @@ static int CmdEM4x70Brute(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "par", "DEPRECATED/IGNORED"),
         arg_int1("b",  "block",  "<dec>", "block/word address, dec"),
         arg_str1(NULL, "rnd", "<hex>", "Random 56-bit"),
         arg_str1(NULL, "frn", "<hex>", "F(RN) 28-bit as 4 hex bytes"),
@@ -552,15 +537,9 @@ static int CmdEM4x70Brute(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    {
-        bool requested_parity = arg_get_lit(ctx, 1);
-        if (requested_parity) {
-            PrintAndLogEx(WARNING, "--par option is deprecated and unused (client will reject this option soon).");
-        }
-    }
 
     em4x70_cmd_input_brute_t opts = {
-        .block = arg_get_int_def(ctx, 2, 0),
+        .block = arg_get_int_def(ctx, 1, 0),
         .rn = {{0}},                // hex value macro exits function, so cannot be initialized here
         .frn = {{0}},               // hex value macro exits function, so cannot be initialized here
         .partial_key_start = {0},   // hex value macro exits function, so cannot be initialized here
@@ -573,15 +552,15 @@ static int CmdEM4x70Brute(const char *Cmd) {
     }
 
     int rnd_len = 7;
-    CLIGetHexWithReturn(ctx, 3, opts.rn.rn, &rnd_len);
+    CLIGetHexWithReturn(ctx, 2, opts.rn.rn, &rnd_len);
 
     int frnd_len = 4;
-    CLIGetHexWithReturn(ctx, 4, opts.frn.frn, &frnd_len);
+    CLIGetHexWithReturn(ctx, 3, opts.frn.frn, &frnd_len);
 
     // would prefer to use above CLIGetHexWithReturn(), but it does not
     // appear to support optional arguments.
     uint32_t start_key = 0;
-    int res = arg_get_u32_hexstr_def_nlen(ctx, 5, 0, &start_key, 2, true); // this stores in NATIVE ENDIAN
+    int res = arg_get_u32_hexstr_def_nlen(ctx, 4, 0, &start_key, 2, true); // this stores in NATIVE ENDIAN
     if (res == 2) {
         PrintAndLogEx(WARNING, "start key parameter must be in range [0, FFFF]");
         CLIParserFree(ctx);
@@ -632,24 +611,17 @@ static int CmdEM4x70Unlock(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "par", "DEPRECATED/IGNORED"),
         arg_str1("p",  "pin", "<hex>", "pin, 4 bytes"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    {
-        bool requested_parity = arg_get_lit(ctx, 1);
-        if (requested_parity) {
-            PrintAndLogEx(WARNING, "--par option is deprecated and unused (client will reject this option soon).");
-        }
-    }
 
     em4x70_cmd_input_unlock_t opts = {
         .pin = {0}, // hex value macro exits function, so cannot be initialized here
     };
     int pin_len = 0;
-    CLIGetHexWithReturn(ctx, 2, opts.pin, &pin_len);
+    CLIGetHexWithReturn(ctx, 1, opts.pin, &pin_len);
     CLIParserFree(ctx);
 
     if (pin_len != 4) {
@@ -689,29 +661,22 @@ static int CmdEM4x70Auth(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "par", "DEPRECATED/IGNORED"),
         arg_str1(NULL, "rnd", "<hex>", "Random 56-bit"),
         arg_str1(NULL, "frn", "<hex>", "F(RN) 28-bit as 4 hex bytes"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    {
-        bool requested_parity = arg_get_lit(ctx, 1);
-        if (requested_parity) {
-            PrintAndLogEx(WARNING, "--par option is deprecated and unused (client will reject this option soon).");
-        }
-    }
 
     em4x70_cmd_input_auth_t opts = {
         .rn = {{0}},                // hex value macro exits function, so cannot be initialized here
         .frn = {{0}},               // hex value macro exits function, so cannot be initialized here
     };
     int rn_len = 7;
-    CLIGetHexWithReturn(ctx, 2, opts.rn.rn,   &rn_len);
+    CLIGetHexWithReturn(ctx, 1, opts.rn.rn,   &rn_len);
 
     int frn_len = 4;
-    CLIGetHexWithReturn(ctx, 3, opts.frn.frn, &frn_len);
+    CLIGetHexWithReturn(ctx, 2, opts.frn.frn, &frn_len);
     CLIParserFree(ctx);
     if (rn_len != 7) {
         PrintAndLogEx(FAILED, "Random number length must be 7 bytes, got %d", rn_len);
@@ -744,24 +709,16 @@ static int CmdEM4x70SetPIN(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "par", "DEPRECATED/IGNORED"),
         arg_str1("p",  "pin", "<hex>", "pin, 4 bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    {
-        bool requested_parity = arg_get_lit(ctx, 1);
-        if (requested_parity) {
-            PrintAndLogEx(WARNING, "--par option is deprecated and unused (client will reject this option soon).");
-        }
-    }
-
     em4x70_cmd_input_setpin_t opts = {
         .pin = {0}, // hex value macro exits function, so cannot be initialized here
     };
 
     int pin_len = 0;
-    CLIGetHexWithReturn(ctx, 2, opts.pin, &pin_len);
+    CLIGetHexWithReturn(ctx, 1, opts.pin, &pin_len);
     CLIParserFree(ctx);
 
     if (pin_len != 4) {
@@ -796,24 +753,16 @@ static int CmdEM4x70SetKey(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "par", "DEPRECATED/IGNORED"),
         arg_str1("k",  "key", "<hex>", "Key as 12 hex bytes"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    {
-        bool requested_parity = arg_get_lit(ctx, 1);
-        if (requested_parity) {
-            PrintAndLogEx(WARNING, "--par option is deprecated and unused (client will reject this option soon).");
-        }
-    }
-
     em4x70_cmd_input_setkey_t opts = {
         .key = {{0}}, // hex value macro exits function, so cannot be initialized here
     };
     int key_len = 12;
-    CLIGetHexWithReturn(ctx, 2, opts.key.k, &key_len);
+    CLIGetHexWithReturn(ctx, 1, opts.key.k, &key_len);
     CLIParserFree(ctx);
     if (key_len != 12) {
         PrintAndLogEx(FAILED, "Key length must be 12 bytes, got %d", key_len);
@@ -920,7 +869,6 @@ static int CmdEM4x70Recover_ParseArgs(const char *Cmd, em4x70_cmd_input_recover_
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "par",    "DEPRECATED/IGNORED"),
         arg_str1("k",  "key",    "<hex>", "Key as 6 hex bytes"),
         arg_str1(NULL, "rnd",    "<hex>", "Random 56-bit"),
         arg_str1(NULL, "frn",    "<hex>", "F(RN) 28-bit as 4 hex bytes"),
@@ -942,22 +890,16 @@ static int CmdEM4x70Recover_ParseArgs(const char *Cmd, em4x70_cmd_input_recover_
     // if all OK so far, convert to internal data structure
     if (PM3_SUCCESS == result) {
         // magic number == index in argtable above.  Fragile technique!
-        {
-            bool requested_parity = arg_get_lit(ctx, 1);
-            if (requested_parity) {
-                PrintAndLogEx(WARNING, "--par option is deprecated and unused (client will reject this option soon).");
-            }
-        }
-        if (CLIParamHexToBuf(arg_get_str(ctx, 2), &(out_results->key.k[0]), 12, &key_len)) {
+        if (CLIParamHexToBuf(arg_get_str(ctx, 1), &(out_results->key.k[0]), 12, &key_len)) {
             result = PM3_ESOFT;
         }
-        if (CLIParamHexToBuf(arg_get_str(ctx, 3), &(out_results->nonce.rn[0]), 7, &rnd_len)) {
+        if (CLIParamHexToBuf(arg_get_str(ctx, 2), &(out_results->nonce.rn[0]), 7, &rnd_len)) {
             result = PM3_ESOFT;
         }
-        if (CLIParamHexToBuf(arg_get_str(ctx, 4), &(out_results->frn.frn[0]), 4, &frn_len)) {
+        if (CLIParamHexToBuf(arg_get_str(ctx, 3), &(out_results->frn.frn[0]), 4, &frn_len)) {
             result = PM3_ESOFT;
         }
-        if (CLIParamHexToBuf(arg_get_str(ctx, 5), &(out_results->grn.grn[0]), 3, &grn_len)) {
+        if (CLIParamHexToBuf(arg_get_str(ctx, 4), &(out_results->grn.grn[0]), 3, &grn_len)) {
             result = PM3_ESOFT;
         }
         //out_results->verify = arg_get_lit(ctx, 6);
@@ -1128,7 +1070,6 @@ static int CmdEM4x70AutoRecover_ParseArgs(const char *Cmd, em4x70_cmd_input_reco
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "par",    "DEPRECATED/IGNORED"),
         arg_str1(NULL, "rnd",    "<hex>", "Random 56-bit from known-good authentication"),
         arg_str1(NULL, "frn",    "<hex>", "F(RN) 28-bit as 4 hex bytes from known-good authentication"),
         arg_str1(NULL, "grn",    "<hex>", "G(RN) 20-bit as 3 hex bytes from known-good authentication"),
@@ -1141,15 +1082,9 @@ static int CmdEM4x70AutoRecover_ParseArgs(const char *Cmd, em4x70_cmd_input_reco
     int rnd_len = 0; // must be 7 bytes hex data
     int frn_len = 0; // must be 4 bytes hex data
     int grn_len = 0; // must be 3 bytes hex data
-    {
-        bool requested_parity = arg_get_lit(ctx, 1);
-        if (requested_parity) {
-            PrintAndLogEx(WARNING, "--par option is deprecated and unused (client will reject this option soon).");
-        }
-    }
-    CLIGetHexWithReturn(ctx, 2, out_results->nonce.rn, &rnd_len);
-    CLIGetHexWithReturn(ctx, 3, out_results->frn.frn, &frn_len);
-    CLIGetHexWithReturn(ctx, 4, out_results->grn.grn, &grn_len);
+    CLIGetHexWithReturn(ctx, 1, out_results->nonce.rn, &rnd_len);
+    CLIGetHexWithReturn(ctx, 2, out_results->frn.frn, &frn_len);
+    CLIGetHexWithReturn(ctx, 3, out_results->grn.grn, &grn_len);
     CLIParserFree(ctx);
 
     if (rnd_len != 7) {
