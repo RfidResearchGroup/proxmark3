@@ -327,6 +327,29 @@ static const iclass_config_card_item_t *get_config_card_item(int idx) {
 static void print_config_cards(void) {
     PrintAndLogEx(INFO, "---- " _CYAN_("Config cards options") " ------------");
     for (int i = 0; i < ARRAYLEN(iclass_config_options)   ; ++i) {
+        switch (i){
+            case 0:
+                PrintAndLogEx(INFO, _YELLOW_("---- LED Operations ----"));
+                break;
+            case 16:
+                PrintAndLogEx(INFO, _YELLOW_("---- BEEP Operations ----"));
+                break;
+            case 18:
+                PrintAndLogEx(INFO, _YELLOW_("---- Mifare Operations ----"));
+                break;
+            case 22:
+                PrintAndLogEx(INFO, _YELLOW_("---- Keypad Operations ----"));
+                break;
+            case 25:
+                PrintAndLogEx(INFO, _YELLOW_("---- iClass Operations ----"));
+                break;
+            case 29:
+                PrintAndLogEx(INFO, _YELLOW_("---- Reset Operations ----"));
+                break;
+            case 31:
+                PrintAndLogEx(INFO, _YELLOW_("---- iClass Master Key Operations ----"));
+                break;
+        }
         PrintAndLogEx(INFO, "%2d, %s", i, iclass_config_options[i].desc);
     }
     PrintAndLogEx(NORMAL, "");
