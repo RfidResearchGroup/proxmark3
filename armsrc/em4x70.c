@@ -45,7 +45,7 @@
 #define DPRINTF_EXTENDED(x) do { if ((FORCE_ENABLE_LOGGING) || (g_dbglevel >= DBG_EXTENDED)) { Dbprintf x ; } } while (0);
 #define DPRINTF_PROLIX(x)   do { if ((FORCE_ENABLE_LOGGING) || (g_dbglevel >  DBG_EXTENDED)) { Dbprintf x ; } } while (0);
 // EM4170 requires a parity bit on commands, other variants do not.
-static bool g_command_parity = true;
+static bool g_deprecated_command_parity = false;
 static em4x70_tag_t g_tag = { 0 };
 
 
@@ -1097,7 +1097,7 @@ static int authenticate(const uint8_t *rnd, const uint8_t *frnd, uint8_t *respon
     em4x70_command_bitstream_t auth_cmd;
 
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->auth(&auth_cmd, g_command_parity, rnd, frnd);
+    generator->auth(&auth_cmd, g_deprecated_command_parity, rnd, frnd);
 
     bool result = send_bitstream_and_read(&auth_cmd);
     if (result) {
@@ -1185,7 +1185,7 @@ static int bruteforce(const uint8_t address, const uint8_t *rnd, const uint8_t *
 static int send_pin(const uint32_t pin) {
     em4x70_command_bitstream_t send_pin_cmd;
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->pin(&send_pin_cmd, g_command_parity, &g_tag.data[4], pin);
+    generator->pin(&send_pin_cmd, g_deprecated_command_parity, &g_tag.data[4], pin);
 
     bool result = send_bitstream_wait_ack_wait_read(&send_pin_cmd);
     return result ? PM3_SUCCESS : PM3_ESOFT;
@@ -1196,7 +1196,7 @@ static int write(const uint16_t word, const uint8_t address) {
     em4x70_command_bitstream_t write_cmd;
 
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->write(&write_cmd, g_command_parity, word, address);
+    generator->write(&write_cmd, g_deprecated_command_parity, word, address);
 
     bool result = send_bitstream_wait_ack_wait_ack(&write_cmd);
     if (!result) {
@@ -1283,7 +1283,7 @@ static uint8_t encoded_bit_array_to_byte(const uint8_t *bits, int count_of_bits)
 static bool em4x70_read_id(void) {
     em4x70_command_bitstream_t read_id_cmd;
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->id(&read_id_cmd, g_command_parity);
+    generator->id(&read_id_cmd, g_deprecated_command_parity);
 
     bool result = send_bitstream_and_read(&read_id_cmd);
     if (result) {
@@ -1300,7 +1300,7 @@ static bool em4x70_read_id(void) {
 static bool em4x70_read_um1(void) {
     em4x70_command_bitstream_t read_um1_cmd;
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->um1(&read_um1_cmd, g_command_parity);
+    generator->um1(&read_um1_cmd, g_deprecated_command_parity);
 
     bool result = send_bitstream_and_read(&read_um1_cmd);
     if (result) {
@@ -1319,7 +1319,7 @@ static bool em4x70_read_um1(void) {
 static bool em4x70_read_um2(void) {
     em4x70_command_bitstream_t read_um2_cmd;
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->um2(&read_um2_cmd, g_command_parity);
+    generator->um2(&read_um2_cmd, g_deprecated_command_parity);
 
     bool result = send_bitstream_and_read(&read_um2_cmd);
     if (result) {
@@ -1435,7 +1435,7 @@ void em4x70_info(const em4x70_data_t *etd, bool ledcontrol) {
     bool success_with_UM2 = false;
 
     // Support tags with and without command parity bits
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     init_tag();
     em4x70_setup_read();
@@ -1463,10 +1463,10 @@ void em4x70_info(const em4x70_data_t *etd, bool ledcontrol) {
 void em4x70_write(const em4x70_data_t *etd, bool ledcontrol) {
     int status = PM3_ESOFT;
 
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (g_command_parity) {
+    if (g_deprecated_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 write` is  non-functional and may corrupt data on the tag."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
@@ -1499,7 +1499,7 @@ void em4x70_unlock(const em4x70_data_t *etd, bool ledcontrol) {
 
     int status = PM3_ESOFT;
 
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     init_tag();
     em4x70_setup_read();
@@ -1534,10 +1534,10 @@ void em4x70_auth(const em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t response[3] = {0};
 
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (g_command_parity) {
+    if (g_deprecated_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 auth` is  non-functional."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
@@ -1562,10 +1562,10 @@ void em4x70_brute(const em4x70_data_t *etd, bool ledcontrol) {
     int status = PM3_ESOFT;
     uint8_t response[2] = {0};
 
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (g_command_parity) {
+    if (g_deprecated_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 brute` is  non-functional and may corrupt data on the tag."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
@@ -1590,10 +1590,10 @@ void em4x70_write_pin(const em4x70_data_t *etd, bool ledcontrol) {
 
     int status = PM3_ESOFT;
 
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (g_command_parity) {
+    if (g_deprecated_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 setpin` is non-functional and may corrupt data on the tag."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
@@ -1639,10 +1639,10 @@ void em4x70_write_key(const em4x70_data_t *etd, bool ledcontrol) {
 
     int status = PM3_ESOFT;
 
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (g_command_parity) {
+    if (g_deprecated_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 setkey` is non-functional and may corrupt data on the tag."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
