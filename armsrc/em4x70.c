@@ -905,8 +905,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_id(em4x70_command_bitstream_t
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
     out_cmd_bitstream->command = EM4X70_COMMAND_ID;
-    //uint8_t cmd = with_command_parity ? 0x3u : 0x1u;
-    uint8_t cmd = 0x3u;
+    uint8_t cmd = 0x3u; // CMD + Parity bit == 0b001'1
     result = result && add_nibble_to_bitstream(&out_cmd_bitstream->to_send, cmd, false);
     out_cmd_bitstream->to_receive.bitcount = 32;
     if (out_cmd_bitstream->to_send.bitcount != expected_bits_to_send) {
@@ -920,8 +919,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_um1(em4x70_command_bitstream_
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
     out_cmd_bitstream->command = EM4X70_COMMAND_UM1;
-    //uint8_t cmd = with_command_parity ? 0x5u : 0x2u;
-    uint8_t cmd = 0x5u;
+    uint8_t cmd = 0x5u; // CMD + Parity bit == 0b010'1
     result = result && add_nibble_to_bitstream(&out_cmd_bitstream->to_send, cmd, false);
     out_cmd_bitstream->to_receive.bitcount = 32;
     if (out_cmd_bitstream->to_send.bitcount != expected_bits_to_send) {
@@ -935,8 +933,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_um2(em4x70_command_bitstream_
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
     out_cmd_bitstream->command = EM4X70_COMMAND_UM2;
-    //uint8_t cmd = with_command_parity ? 0xFu : 0x7u;
-    uint8_t cmd = 0xFu;
+    uint8_t cmd = 0xFu;  // CMD + Parity bit == 0b111'1
     result = result && add_nibble_to_bitstream(&out_cmd_bitstream->to_send, cmd, false);
     out_cmd_bitstream->to_receive.bitcount = 64;
     if (out_cmd_bitstream->to_send.bitcount != expected_bits_to_send) {
@@ -954,8 +951,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_auth(em4x70_command_bitstream
 
     em4x70_bitstream_t *s = &out_cmd_bitstream->to_send;
 
-    // uint8_t cmd = with_command_parity ? 0x6u : 0x3u;
-    uint8_t cmd = 0x6u; // HACK - always sent with cmd parity
+    uint8_t cmd = 0x6u; // CMD + Parity bit == 0b011'0
     result = result && add_nibble_to_bitstream(s, cmd, false);
 
     // Reader:     [RM][0][Command][N55..N0][0000000][f(RN)27..f(RN)0]
@@ -1004,8 +1000,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_pin(em4x70_command_bitstream_
 
     out_cmd_bitstream->command = EM4X70_COMMAND_PIN;
 
-    //uint8_t cmd = with_command_parity ? 0x9u : 0x4u;
-    uint8_t cmd = 0x9u; // HACK - always sent with cmd parity, with extra zero bit in RM?
+    uint8_t cmd = 0x9u; // CMD + Parity bit == 0b100'1
     result = result && add_nibble_to_bitstream(s, cmd, false);
 
     // Send tag's ID ... indexes 4 .. 35
@@ -1037,8 +1032,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_write(em4x70_command_bitstrea
 
     em4x70_bitstream_t *s = &out_cmd_bitstream->to_send;
 
-    //uint8_t cmd = with_command_parity ? 0xAu : 0x5u;
-    uint8_t cmd = 0xAu; // HACK - always sent with cmd parity, with extra zero bit in RM?
+    uint8_t cmd = 0xAu; // CMD + Parity bit == 0b101'0
     result = result && add_nibble_to_bitstream(s, cmd, false);
 
     if ((address & 0x0Fu) != address) {
