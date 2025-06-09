@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Removed `--par` from `lf em 4x70` commands.
 - Changed `hf 14a info` - refactored code to be able to detect card technology across the client easier (@iceman1001)
 - Changed `hf mf info` - now informs better if a different card technology is detected (@iceman1001)
 - Changed `hf mf autopwn` - now exits if desfire is detected and limit attacks if mifare plus is detected (@iceman1001)
