@@ -221,7 +221,7 @@ static int get_em4x70_info(em4x70_tag_info_t *data_out) {
     memset(data_out, 0, sizeof(em4x70_tag_info_t));
 
     // TODO: change firmware to use per-cmd structures
-    em4x70_data_t edata = { .deprecated_ignored_use_parity = false };
+    em4x70_data_t edata = {0};
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X70_INFO, (uint8_t *)&edata, sizeof(em4x70_data_t));
     PacketResponseNG resp;
@@ -239,10 +239,10 @@ static int writeblock_em4x70(const em4x70_cmd_input_writeblock_t *opts, em4x70_t
     memset(data_out, 0, sizeof(em4x70_tag_info_t));
 
     // TODO: change firmware to use per-cmd structures
-    em4x70_data_t etd = {0};
-    etd.address = opts->block;
-    etd.word = BYTES2UINT16(opts->value);
-    etd.deprecated_ignored_use_parity = false;
+    em4x70_data_t etd = {
+        .address = opts->block,
+        .word = BYTES2UINT16(opts->value),
+    };
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X70_WRITE, (uint8_t *)&etd, sizeof(etd));
@@ -261,7 +261,6 @@ static int auth_em4x70(const em4x70_cmd_input_auth_t *opts, em4x70_cmd_output_au
 
     // TODO: change firmware to use per-cmd structures
     em4x70_data_t etd = {0};
-    etd.deprecated_ignored_use_parity = false;
     memcpy(&etd.rnd[0],  &opts->rn.rn[0],   7);
     memcpy(&etd.frnd[0], &opts->frn.frn[0], 4);
 
@@ -286,7 +285,6 @@ static int setkey_em4x70(const em4x70_cmd_input_setkey_t *opts) {
 
     // TODO: change firmware to use per-cmd structures
     em4x70_data_t etd = {0};
-    etd.deprecated_ignored_use_parity = false;
     memcpy(&etd.crypt_key[0], &opts->key.k[0], 12);
 
     clearCommandBuffer();
@@ -303,7 +301,6 @@ static int brute_em4x70(const em4x70_cmd_input_brute_t *opts, em4x70_cmd_output_
 
     // TODO: change firmware to use per-cmd structures
     em4x70_data_t etd = {0};
-    etd.deprecated_ignored_use_parity = false;
     etd.address = opts->block;
     memcpy(&etd.rnd[0],  &opts->rn.rn[0],   7);
     memcpy(&etd.frnd[0], &opts->frn.frn[0], 4);
@@ -354,7 +351,6 @@ static int unlock_em4x70(const em4x70_cmd_input_unlock_t *opts, em4x70_tag_info_
 
     // TODO: change firmware to use per-cmd structures
     em4x70_data_t etd = {0};
-    etd.deprecated_ignored_use_parity = false;
     etd.pin = BYTES2UINT32(opts->pin);
 
     clearCommandBuffer();
@@ -374,7 +370,6 @@ static int setpin_em4x70(const em4x70_cmd_input_setpin_t *opts, em4x70_tag_info_
 
     // TODO: change firmware to use per-cmd structures
     em4x70_data_t etd = {0};
-    etd.deprecated_ignored_use_parity = false;
     etd.pin = BYTES2UINT32(opts->pin);
 
     clearCommandBuffer();
