@@ -87,17 +87,17 @@ typedef struct _em4x70_tag_info_t {
 } em4x70_tag_info_t;
 
 typedef struct _em4x70_cmd_input_info_t {
-    uint8_t use_parity;
+    uint8_t deprecated_ignored_use_parity;
 } em4x70_cmd_input_info_t;
 
 typedef struct _em4x70_cmd_input_writeblock_t {
-    uint8_t use_parity;
+    uint8_t deprecated_ignored_use_parity;
     uint8_t block;
     uint8_t value[2];
 } em4x70_cmd_input_writeblock_t;
 
 typedef struct _em4x70_cmd_input_brute_t {
-    uint8_t use_parity;
+    uint8_t deprecated_ignored_use_parity;
     ID48LIB_NONCE rn;
     ID48LIB_FRN frn;
     uint8_t block;
@@ -121,12 +121,12 @@ typedef struct _em4x70_cmd_output_brute_t {
 } em4x70_cmd_output_brute_t;
 
 typedef struct _em4x70_cmd_input_unlock_t {
-    uint8_t use_parity;
+    uint8_t deprecated_ignored_use_parity;
     uint8_t pin[4];
 } em4x70_cmd_input_unlock_t;
 
 typedef struct _em4x70_cmd_input_auth_t {
-    uint8_t use_parity;
+    uint8_t deprecated_ignored_use_parity;
     ID48LIB_NONCE rn;
     ID48LIB_FRN frn;
 } em4x70_cmd_input_auth_t;
@@ -136,12 +136,12 @@ typedef struct _em4x70_cmd_output_auth_t {
 } em4x70_cmd_output_auth_t;
 
 typedef struct _em4x70_cmd_input_setpin_t {
-    uint8_t use_parity;
+    uint8_t deprecated_ignored_use_parity;
     uint8_t pin[4];
 } em4x70_cmd_input_setpin_t;
 
 typedef struct _em4x70_cmd_input_setkey_t {
-    uint8_t use_parity;
+    uint8_t deprecated_ignored_use_parity;
     ID48LIB_KEY key;
 } em4x70_cmd_input_setkey_t;
 
@@ -151,7 +151,7 @@ typedef struct _em4x70_cmd_input_recover_t {
     ID48LIB_NONCE nonce;
     ID48LIB_FRN   frn;
     ID48LIB_GRN   grn;
-    bool parity; // if true, add parity bit to commands sent to tag
+    bool deprecated_ignored_use_parity; // if true, add parity bit to commands sent to tag
     bool verify; // if true, tag must be present
 } em4x70_cmd_input_recover_t;
 
@@ -164,7 +164,7 @@ typedef struct _em4x70_cmd_output_recover_t {
 } em4x70_cmd_output_recover_t;
 
 typedef struct _em4x70_cmd_input_verify_auth_t {
-    uint8_t use_parity;
+    uint8_t deprecated_ignored_use_parity;
     ID48LIB_NONCE rn;
     ID48LIB_FRN frn;
     ID48LIB_GRN grn;
@@ -233,7 +233,7 @@ static int get_em4x70_info(const em4x70_cmd_input_info_t *opts, em4x70_tag_info_
     memset(data_out, 0, sizeof(em4x70_tag_info_t));
 
     // TODO: change firmware to use per-cmd structures
-    em4x70_data_t edata = { .parity = opts->use_parity };
+    em4x70_data_t edata = { .parity = false };
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X70_INFO, (uint8_t *)&edata, sizeof(em4x70_data_t));
     PacketResponseNG resp;
@@ -254,7 +254,7 @@ static int writeblock_em4x70(const em4x70_cmd_input_writeblock_t *opts, em4x70_t
     em4x70_data_t etd = {0};
     etd.address = opts->block;
     etd.word = BYTES2UINT16(opts->value);
-    etd.parity = opts->use_parity;
+    etd.parity = false;
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_EM4X70_WRITE, (uint8_t *)&etd, sizeof(etd));
@@ -273,7 +273,7 @@ static int auth_em4x70(const em4x70_cmd_input_auth_t *opts, em4x70_cmd_output_au
 
     // TODO: change firmware to use per-cmd structures
     em4x70_data_t etd = {0};
-    etd.parity = opts->use_parity;
+    etd.parity = false;
     memcpy(&etd.rnd[0],  &opts->rn.rn[0],   7);
     memcpy(&etd.frnd[0], &opts->frn.frn[0], 4);
 
@@ -298,7 +298,7 @@ static int setkey_em4x70(const em4x70_cmd_input_setkey_t *opts) {
 
     // TODO: change firmware to use per-cmd structures
     em4x70_data_t etd = {0};
-    etd.parity = opts->use_parity;
+    etd.parity = false;
     memcpy(&etd.crypt_key[0], &opts->key.k[0], 12);
 
     clearCommandBuffer();
@@ -315,7 +315,7 @@ static int brute_em4x70(const em4x70_cmd_input_brute_t *opts, em4x70_cmd_output_
 
     // TODO: change firmware to use per-cmd structures
     em4x70_data_t etd = {0};
-    etd.parity = opts->use_parity;
+    etd.parity = false;
     etd.address = opts->block;
     memcpy(&etd.rnd[0],  &opts->rn.rn[0],   7);
     memcpy(&etd.frnd[0], &opts->frn.frn[0], 4);
@@ -366,7 +366,7 @@ static int unlock_em4x70(const em4x70_cmd_input_unlock_t *opts, em4x70_tag_info_
 
     // TODO: change firmware to use per-cmd structures
     em4x70_data_t etd = {0};
-    etd.parity = opts->use_parity;
+    etd.parity = false;
     etd.pin = BYTES2UINT32(opts->pin);
 
     clearCommandBuffer();
@@ -386,7 +386,7 @@ static int setpin_em4x70(const em4x70_cmd_input_setpin_t *opts, em4x70_tag_info_
 
     // TODO: change firmware to use per-cmd structures
     em4x70_data_t etd = {0};
-    etd.parity = opts->use_parity;
+    etd.parity = false;
     etd.pin = BYTES2UINT32(opts->pin);
 
     clearCommandBuffer();
@@ -429,7 +429,7 @@ static int recover_em4x70(const em4x70_cmd_input_recover_t *opts, em4x70_cmd_out
 
 static int verify_auth_em4x70(const em4x70_cmd_input_verify_auth_t *opts) {
     em4x70_cmd_input_auth_t opts_auth = {
-        .use_parity = opts->use_parity,
+        .deprecated_ignored_use_parity = false,
         .rn = opts->rn,
         .frn = opts->frn,
     };
@@ -458,20 +458,24 @@ static int CmdEM4x70Info(const char *Cmd) {
                   "  ID48 does not use command parity (default).\n"
                   "  V4070 and EM4170 do require parity bit.",
                   "lf em 4x70 info\n"
-                  "lf em 4x70 info --par -> adds parity bit to command\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "par", "Add parity bit when sending commands"),
+        arg_lit0(NULL, "par", "DEPRECATED/IGNORED"),
         arg_param_end
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     em4x70_cmd_input_info_t opts = {
-        .use_parity = arg_get_lit(ctx, 0),
+        .deprecated_ignored_use_parity = arg_get_lit(ctx, 0),
     };
     CLIParserFree(ctx);
+
+    if (opts.deprecated_ignored_use_parity) {
+        PrintAndLogEx(WARNING, "--par option is deprecated and unused (client will reject this option soon).");
+        opts.deprecated_ignored_use_parity = false;
+    }
 
     // Client command line parsing and validation complete ... now use the helper function
     em4x70_tag_info_t info;
@@ -494,12 +498,11 @@ static int CmdEM4x70Write(const char *Cmd) {
     CLIParserInit(&ctx, "lf em 4x70 write",
                   "Write EM4x70\n",
                   "lf em 4x70 write -b 15 -d c0de       -> write 'c0de' to block 15\n"
-                  "lf em 4x70 write -b 15 -d c0de --par -> adds parity bit to commands\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "par",    "Add parity bit when sending commands"),
+        arg_lit0(NULL, "par",    "DEPRECATED/IGNORED"),
         arg_int1("b",  "block",  "<dec>", "block/word address, dec"),
         arg_str1("d",  "data",   "<hex>", "data, 2 bytes"),
         arg_param_end
@@ -508,10 +511,11 @@ static int CmdEM4x70Write(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     em4x70_cmd_input_writeblock_t opts = {
-        .use_parity = arg_get_lit(ctx, 1),
+        .deprecated_ignored_use_parity = arg_get_lit(ctx, 1),
         .block = arg_get_int_def(ctx, 2, 1),
         .value = {0}, // hex value macro exits function, so cannot be initialized here
     };
+
     int value_len = 0;
     CLIGetHexWithReturn(ctx, 3, opts.value, &value_len);
     CLIParserFree(ctx);
@@ -523,6 +527,11 @@ static int CmdEM4x70Write(const char *Cmd) {
     if (value_len != 2) {
         PrintAndLogEx(FAILED, "word/data length must be 2 bytes, got %d", value_len);
         return PM3_EINVARG;
+    }
+
+    if (opts.deprecated_ignored_use_parity) {
+        PrintAndLogEx(WARNING, "--par option is deprecated and unused (client will reject this option soon).");
+        opts.deprecated_ignored_use_parity = false;
     }
 
     // Client command line parsing and validation complete ... now use the helper function
@@ -555,7 +564,7 @@ static int CmdEM4x70Brute(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "par", "Add parity bit when sending commands"),
+        arg_lit0(NULL, "par", "DEPRECATED/IGNORED"),
         arg_int1("b",  "block",  "<dec>", "block/word address, dec"),
         arg_str1(NULL, "rnd", "<hex>", "Random 56-bit"),
         arg_str1(NULL, "frn", "<hex>", "F(RN) 28-bit as 4 hex bytes"),
@@ -565,7 +574,7 @@ static int CmdEM4x70Brute(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     em4x70_cmd_input_brute_t opts = {
-        .use_parity = arg_get_lit(ctx, 1),
+        .deprecated_ignored_use_parity = arg_get_lit(ctx, 1),
         .block = arg_get_int_def(ctx, 2, 0),
         .rn = {{0}},                // hex value macro exits function, so cannot be initialized here
         .frn = {{0}},               // hex value macro exits function, so cannot be initialized here
@@ -594,7 +603,7 @@ static int CmdEM4x70Brute(const char *Cmd) {
         return PM3_EINVARG;
     }
     CLIParserFree(ctx);
-
+    
     // opts structure takes value in BIG ENDIAN form
     opts.partial_key_start[0] = (uint8_t)((start_key >>  8) & 0xFF);
     opts.partial_key_start[1] = (uint8_t)((start_key >>  0) & 0xFF);
@@ -607,6 +616,11 @@ static int CmdEM4x70Brute(const char *Cmd) {
     if (frnd_len != 4) {
         PrintAndLogEx(FAILED, "F(RN) length must be 4 bytes, got %d", frnd_len);
         return PM3_EINVARG;
+    }
+
+    if (opts.deprecated_ignored_use_parity) {
+        PrintAndLogEx(WARNING, "--par option is deprecated and unused (client will reject this option soon).");
+        opts.deprecated_ignored_use_parity = false;
     }
 
     // Client command line parsing and validation complete ... now use the helper function
@@ -635,11 +649,10 @@ static int CmdEM4x70Unlock(const char *Cmd) {
                   " AAAAAAAA\n"
                   " 00000000\n",
                   "lf em 4x70 unlock -p 11223344 -> Unlock with PIN\n"
-                  "lf em 4x70 unlock -p 11223344 --par -> Unlock with PIN using parity commands\n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "par", "Add parity bit when sending commands"),
+        arg_lit0(NULL, "par", "DEPRECATED/IGNORED"),
         arg_str1("p",  "pin", "<hex>", "pin, 4 bytes"),
         arg_param_end
     };
@@ -647,7 +660,7 @@ static int CmdEM4x70Unlock(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     em4x70_cmd_input_unlock_t opts = {
-        .use_parity = arg_get_lit(ctx, 1),
+        .deprecated_ignored_use_parity = arg_get_lit(ctx, 1),
         .pin = {0}, // hex value macro exits function, so cannot be initialized here
     };
     int pin_len = 0;
@@ -659,6 +672,11 @@ static int CmdEM4x70Unlock(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    if (opts.deprecated_ignored_use_parity) {
+        PrintAndLogEx(WARNING, "--par option is deprecated and unused (client will reject this option soon).");
+        opts.deprecated_ignored_use_parity = false;
+    }
+    
     // Client command line parsing and validation complete ... now use the helper function
     em4x70_tag_info_t info;
     int result = unlock_em4x70(&opts, &info);
@@ -691,7 +709,7 @@ static int CmdEM4x70Auth(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "par", "Add parity bit when sending commands"),
+        arg_lit0(NULL, "par", "DEPRECATED/IGNORED"),
         arg_str1(NULL, "rnd", "<hex>", "Random 56-bit"),
         arg_str1(NULL, "frn", "<hex>", "F(RN) 28-bit as 4 hex bytes"),
         arg_param_end
@@ -700,7 +718,7 @@ static int CmdEM4x70Auth(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     em4x70_cmd_input_auth_t opts = {
-        .use_parity = arg_get_lit(ctx, 1),
+        .deprecated_ignored_use_parity = arg_get_lit(ctx, 1),
         .rn = {{0}},                // hex value macro exits function, so cannot be initialized here
         .frn = {{0}},               // hex value macro exits function, so cannot be initialized here
     };
@@ -717,6 +735,11 @@ static int CmdEM4x70Auth(const char *Cmd) {
     if (frn_len != 4) {
         PrintAndLogEx(FAILED, "F(RN) length must be 4 bytes, got %d", frn_len);
         return PM3_EINVARG;
+    }
+
+    if (opts.deprecated_ignored_use_parity) {
+        PrintAndLogEx(WARNING, "--par option is deprecated and unused (client will reject this option soon).");
+        opts.deprecated_ignored_use_parity = false;
     }
 
     // Client command line parsing and validation complete ... now use the helper function
@@ -738,18 +761,17 @@ static int CmdEM4x70SetPIN(const char *Cmd) {
     CLIParserInit(&ctx, "lf em 4x70 setpin",
                   "Write new PIN\n",
                   "lf em 4x70 setpin -p 11223344 -> Write new PIN\n"
-                  "lf em 4x70 setpin -p 11223344 --par -> Write new PIN using parity commands\n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "par", "Add parity bit when sending commands"),
+        arg_lit0(NULL, "par", "DEPRECATED/IGNORED"),
         arg_str1("p",  "pin", "<hex>", "pin, 4 bytes"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     em4x70_cmd_input_setpin_t opts = {
-        .use_parity = arg_get_lit(ctx, 1),
+        .deprecated_ignored_use_parity = arg_get_lit(ctx, 1),
         .pin = {0}, // hex value macro exits function, so cannot be initialized here
     };
 
@@ -760,6 +782,11 @@ static int CmdEM4x70SetPIN(const char *Cmd) {
     if (pin_len != 4) {
         PrintAndLogEx(FAILED, "PIN length must be 4 bytes, got %d", pin_len);
         return PM3_EINVARG;
+    }
+
+    if (opts.deprecated_ignored_use_parity) {
+        PrintAndLogEx(WARNING, "--par option is deprecated and unused (client will reject this option soon).");
+        opts.deprecated_ignored_use_parity = false;
     }
 
     // Client command line parsing and validation complete ... now use the helper function
@@ -789,7 +816,7 @@ static int CmdEM4x70SetKey(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "par", "Add parity bit when sending commands"),
+        arg_lit0(NULL, "par", "DEPRECATED/IGNORED"),
         arg_str1("k",  "key", "<hex>", "Key as 12 hex bytes"),
         arg_param_end
     };
@@ -797,7 +824,7 @@ static int CmdEM4x70SetKey(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     em4x70_cmd_input_setkey_t opts = {
-        .use_parity = arg_get_lit(ctx, 1),
+        .deprecated_ignored_use_parity = arg_get_lit(ctx, 1),
         .key = {{0}}, // hex value macro exits function, so cannot be initialized here
     };
     int key_len = 12;
@@ -808,6 +835,11 @@ static int CmdEM4x70SetKey(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    if (opts.deprecated_ignored_use_parity) {
+        PrintAndLogEx(WARNING, "--par option is deprecated and unused (client will reject this option soon).");
+        opts.deprecated_ignored_use_parity = false;
+    }
+    
     // Client command line parsing and validation complete ... now use the helper function
     int result = setkey_em4x70(&opts);
 
@@ -823,7 +855,7 @@ static int CmdEM4x70SetKey(const char *Cmd) {
 
     // Now verify authentication using the new key, to ensure it was correctly written
     em4x70_cmd_input_verify_auth_t opts_v = {
-        .use_parity = opts.use_parity,
+        .deprecated_ignored_use_parity = false,
         //.rn = opts_auth.rn,
         //.frn = opts_auth.frn,
         //.grn = {{0}},
@@ -909,7 +941,7 @@ static int CmdEM4x70Recover_ParseArgs(const char *Cmd, em4x70_cmd_input_recover_
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "par",    "Add parity bit when sending commands"),
+        arg_lit0(NULL, "par",    "DEPRECATED/IGNORED"),
         arg_str1("k",  "key",    "<hex>", "Key as 6 hex bytes"),
         arg_str1(NULL, "rnd",    "<hex>", "Random 56-bit"),
         arg_str1(NULL, "frn",    "<hex>", "F(RN) 28-bit as 4 hex bytes"),
@@ -931,7 +963,11 @@ static int CmdEM4x70Recover_ParseArgs(const char *Cmd, em4x70_cmd_input_recover_
     // if all OK so far, convert to internal data structure
     if (PM3_SUCCESS == result) {
         // magic number == index in argtable above.  Fragile technique!
-        out_results->parity = arg_get_lit(ctx, 1);
+        out_results->deprecated_ignored_use_parity = arg_get_lit(ctx, 1);
+        if (out_results->deprecated_ignored_use_parity) {
+            PrintAndLogEx(WARNING, "--par option is deprecated and unused (client will reject this option soon).");
+            out_results->deprecated_ignored_use_parity = false;
+        }
         if (CLIParamHexToBuf(arg_get_str(ctx, 2), &(out_results->key.k[0]), 12, &key_len)) {
             result = PM3_ESOFT;
         }
@@ -1112,7 +1148,7 @@ static int CmdEM4x70AutoRecover_ParseArgs(const char *Cmd, em4x70_cmd_input_reco
 
     void *argtable[] = {
         arg_param_begin,
-        arg_lit0(NULL, "par",    "Add parity bit when sending commands"),
+        arg_lit0(NULL, "par",    "DEPRECATED/IGNORED"),
         arg_str1(NULL, "rnd",    "<hex>", "Random 56-bit from known-good authentication"),
         arg_str1(NULL, "frn",    "<hex>", "F(RN) 28-bit as 4 hex bytes from known-good authentication"),
         arg_str1(NULL, "grn",    "<hex>", "G(RN) 20-bit as 3 hex bytes from known-good authentication"),
@@ -1125,11 +1161,16 @@ static int CmdEM4x70AutoRecover_ParseArgs(const char *Cmd, em4x70_cmd_input_reco
     int rnd_len = 0; // must be 7 bytes hex data
     int frn_len = 0; // must be 4 bytes hex data
     int grn_len = 0; // must be 3 bytes hex data
-    out_results->parity = arg_get_lit(ctx, 1);
+    out_results->deprecated_ignored_use_parity = arg_get_lit(ctx, 1);
     CLIGetHexWithReturn(ctx, 2, out_results->nonce.rn, &rnd_len);
     CLIGetHexWithReturn(ctx, 3, out_results->frn.frn, &frn_len);
     CLIGetHexWithReturn(ctx, 4, out_results->grn.grn, &grn_len);
     CLIParserFree(ctx);
+
+    if (out_results->deprecated_ignored_use_parity) {
+        PrintAndLogEx(WARNING, "--par option is deprecated and unused (client will reject this option soon).");
+        out_results->deprecated_ignored_use_parity = false;
+    }
 
     if (rnd_len != 7) {
         PrintAndLogEx(FAILED, "Random number length must be 7 bytes, got %d", rnd_len);
@@ -1190,7 +1231,7 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
     PrintAndLogEx(HINT, "Hint:        " _YELLOW_("lf em 4x70 auth --rnd %s --frn %s"), rnd_string, frn_string);
 
     em4x70_cmd_input_auth_t opts_auth = {
-        .use_parity = opts.parity,
+        .deprecated_ignored_use_parity = false,
         .rn  = opts.nonce,
         .frn = opts.frn,
     };
@@ -1234,7 +1275,7 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
         PrintAndLogEx(HINT, "Hint:        " _YELLOW_("lf em 4x70 write -b %d -d 0000"), block);
 
         em4x70_cmd_input_writeblock_t opt_write_zeros = {
-            .use_parity = opts.parity,
+            .deprecated_ignored_use_parity = false,
             .block = block,
             .value = {0x00, 0x00},
         };
@@ -1255,7 +1296,7 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
         PrintAndLogEx(HINT, "Hint:        " _YELLOW_("lf em 4x70 brute -b %d --rnd %s --frn %s"), block, rnd_string, frn_string);
 
         em4x70_cmd_input_brute_t opts_brute = {
-            .use_parity = opts.parity,
+            .deprecated_ignored_use_parity = false,
             .block = block,
             .rn = opts.nonce,
             .frn = opts.frn,
@@ -1294,7 +1335,7 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
         PrintAndLogEx(HINT, "Hint:        " _YELLOW_("lf em 4x70 write -b %d -d %02X%02X"), block, brute.partial_key[0], brute.partial_key[1]);
 
         em4x70_cmd_input_writeblock_t opt_write_zeros2 = {
-            .use_parity = opts.parity,
+            .deprecated_ignored_use_parity = false,
             .block = block,
             .value = {brute.partial_key[0], brute.partial_key[1]},
         };
@@ -1354,7 +1395,7 @@ static int CmdEM4x70AutoRecover(const char *Cmd) {
     PrintAndLogEx(INFO, "Step 6. Verify which potential key is actually on the tag");
 
     em4x70_cmd_input_verify_auth_t opts_v = {
-        .use_parity = opts.parity,
+        .deprecated_ignored_use_parity = false,
         //.rn  = {{0}},
         //.frn = {{0}},
         //.grn = {{0}},
