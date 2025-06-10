@@ -5904,6 +5904,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
         arg_lit0("p",  "prevent",  "fake epurse update"),
         arg_lit0(NULL, "shallow",  "shallow mod"),
         arg_strx0("d", "data", "<hex>", "DER encoded command to send to SAM"),
+        arg_lit0(NULL, "info",  "get SAM infos (version, serial number)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -5915,6 +5916,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
     bool break_nrmac = arg_get_lit(ctx, 5);
     bool prevent = arg_get_lit(ctx, 6);
     bool shallow_mod = arg_get_lit(ctx, 7);
+    bool info = arg_get_lit(ctx, 9);
 
     uint8_t flags = 0;
     if (disconnect_after) {
@@ -5935,6 +5937,10 @@ static int CmdHFiClassSAM(const char *Cmd) {
 
     if (shallow_mod) {
         flags |= BITMASK(4);
+    }
+
+    if (info) {
+        flags |= BITMASK(5);
     }
 
     uint8_t data[PM3_CMD_DATA_SIZE] = {0};

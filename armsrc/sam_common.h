@@ -39,7 +39,8 @@ int sam_send_payload(
     uint16_t *response_len
 );
 
-int sam_get_version(void);
+int sam_get_version(bool info);
+int sam_get_serial_number(void);
 
 uint8_t *sam_find_asn1_node(const uint8_t *root, const uint8_t type);
 void sam_append_asn1_node(const uint8_t *root, const uint8_t *node, uint8_t type, const uint8_t *const data, uint8_t len);
