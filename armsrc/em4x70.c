@@ -45,7 +45,7 @@
 #define DPRINTF_EXTENDED(x) do { if ((FORCE_ENABLE_LOGGING) || (g_dbglevel >= DBG_EXTENDED)) { Dbprintf x ; } } while (0);
 #define DPRINTF_PROLIX(x)   do { if ((FORCE_ENABLE_LOGGING) || (g_dbglevel >  DBG_EXTENDED)) { Dbprintf x ; } } while (0);
 // EM4170 requires a parity bit on commands, other variants do not.
-static bool g_command_parity = true;
+static bool g_deprecated_command_parity = false;
 static em4x70_tag_t g_tag = { 0 };
 
 
@@ -905,8 +905,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_id(em4x70_command_bitstream_t
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
     out_cmd_bitstream->command = EM4X70_COMMAND_ID;
-    //uint8_t cmd = with_command_parity ? 0x3u : 0x1u;
-    uint8_t cmd = 0x3u;
+    uint8_t cmd = 0x3u; // CMD + Parity bit == 0b001'1
     result = result && add_nibble_to_bitstream(&out_cmd_bitstream->to_send, cmd, false);
     out_cmd_bitstream->to_receive.bitcount = 32;
     if (out_cmd_bitstream->to_send.bitcount != expected_bits_to_send) {
@@ -920,8 +919,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_um1(em4x70_command_bitstream_
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
     out_cmd_bitstream->command = EM4X70_COMMAND_UM1;
-    //uint8_t cmd = with_command_parity ? 0x5u : 0x2u;
-    uint8_t cmd = 0x5u;
+    uint8_t cmd = 0x5u; // CMD + Parity bit == 0b010'1
     result = result && add_nibble_to_bitstream(&out_cmd_bitstream->to_send, cmd, false);
     out_cmd_bitstream->to_receive.bitcount = 32;
     if (out_cmd_bitstream->to_send.bitcount != expected_bits_to_send) {
@@ -935,8 +933,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_um2(em4x70_command_bitstream_
     bool result = true;
     memset(out_cmd_bitstream, 0, sizeof(em4x70_command_bitstream_t));
     out_cmd_bitstream->command = EM4X70_COMMAND_UM2;
-    //uint8_t cmd = with_command_parity ? 0xFu : 0x7u;
-    uint8_t cmd = 0xFu;
+    uint8_t cmd = 0xFu;  // CMD + Parity bit == 0b111'1
     result = result && add_nibble_to_bitstream(&out_cmd_bitstream->to_send, cmd, false);
     out_cmd_bitstream->to_receive.bitcount = 64;
     if (out_cmd_bitstream->to_send.bitcount != expected_bits_to_send) {
@@ -954,8 +951,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_auth(em4x70_command_bitstream
 
     em4x70_bitstream_t *s = &out_cmd_bitstream->to_send;
 
-    // uint8_t cmd = with_command_parity ? 0x6u : 0x3u;
-    uint8_t cmd = 0x6u; // HACK - always sent with cmd parity
+    uint8_t cmd = 0x6u; // CMD + Parity bit == 0b011'0
     result = result && add_nibble_to_bitstream(s, cmd, false);
 
     // Reader:     [RM][0][Command][N55..N0][0000000][f(RN)27..f(RN)0]
@@ -1004,8 +1000,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_pin(em4x70_command_bitstream_
 
     out_cmd_bitstream->command = EM4X70_COMMAND_PIN;
 
-    //uint8_t cmd = with_command_parity ? 0x9u : 0x4u;
-    uint8_t cmd = 0x9u; // HACK - always sent with cmd parity, with extra zero bit in RM?
+    uint8_t cmd = 0x9u; // CMD + Parity bit == 0b100'1
     result = result && add_nibble_to_bitstream(s, cmd, false);
 
     // Send tag's ID ... indexes 4 .. 35
@@ -1037,8 +1032,7 @@ static bool create_legacy_em4x70_bitstream_for_cmd_write(em4x70_command_bitstrea
 
     em4x70_bitstream_t *s = &out_cmd_bitstream->to_send;
 
-    //uint8_t cmd = with_command_parity ? 0xAu : 0x5u;
-    uint8_t cmd = 0xAu; // HACK - always sent with cmd parity, with extra zero bit in RM?
+    uint8_t cmd = 0xAu; // CMD + Parity bit == 0b101'0
     result = result && add_nibble_to_bitstream(s, cmd, false);
 
     if ((address & 0x0Fu) != address) {
@@ -1097,7 +1091,7 @@ static int authenticate(const uint8_t *rnd, const uint8_t *frnd, uint8_t *respon
     em4x70_command_bitstream_t auth_cmd;
 
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->auth(&auth_cmd, g_command_parity, rnd, frnd);
+    generator->auth(&auth_cmd, g_deprecated_command_parity, rnd, frnd);
 
     bool result = send_bitstream_and_read(&auth_cmd);
     if (result) {
@@ -1185,7 +1179,7 @@ static int bruteforce(const uint8_t address, const uint8_t *rnd, const uint8_t *
 static int send_pin(const uint32_t pin) {
     em4x70_command_bitstream_t send_pin_cmd;
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->pin(&send_pin_cmd, g_command_parity, &g_tag.data[4], pin);
+    generator->pin(&send_pin_cmd, g_deprecated_command_parity, &g_tag.data[4], pin);
 
     bool result = send_bitstream_wait_ack_wait_read(&send_pin_cmd);
     return result ? PM3_SUCCESS : PM3_ESOFT;
@@ -1196,7 +1190,7 @@ static int write(const uint16_t word, const uint8_t address) {
     em4x70_command_bitstream_t write_cmd;
 
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->write(&write_cmd, g_command_parity, word, address);
+    generator->write(&write_cmd, g_deprecated_command_parity, word, address);
 
     bool result = send_bitstream_wait_ack_wait_ack(&write_cmd);
     if (!result) {
@@ -1283,7 +1277,7 @@ static uint8_t encoded_bit_array_to_byte(const uint8_t *bits, int count_of_bits)
 static bool em4x70_read_id(void) {
     em4x70_command_bitstream_t read_id_cmd;
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->id(&read_id_cmd, g_command_parity);
+    generator->id(&read_id_cmd, g_deprecated_command_parity);
 
     bool result = send_bitstream_and_read(&read_id_cmd);
     if (result) {
@@ -1300,7 +1294,7 @@ static bool em4x70_read_id(void) {
 static bool em4x70_read_um1(void) {
     em4x70_command_bitstream_t read_um1_cmd;
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->um1(&read_um1_cmd, g_command_parity);
+    generator->um1(&read_um1_cmd, g_deprecated_command_parity);
 
     bool result = send_bitstream_and_read(&read_um1_cmd);
     if (result) {
@@ -1319,7 +1313,7 @@ static bool em4x70_read_um1(void) {
 static bool em4x70_read_um2(void) {
     em4x70_command_bitstream_t read_um2_cmd;
     const em4x70_command_generators_t *generator = &legacy_em4x70_command_generators;
-    generator->um2(&read_um2_cmd, g_command_parity);
+    generator->um2(&read_um2_cmd, g_deprecated_command_parity);
 
     bool result = send_bitstream_and_read(&read_um2_cmd);
     if (result) {
@@ -1435,7 +1429,7 @@ void em4x70_info(const em4x70_data_t *etd, bool ledcontrol) {
     bool success_with_UM2 = false;
 
     // Support tags with and without command parity bits
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     init_tag();
     em4x70_setup_read();
@@ -1463,10 +1457,10 @@ void em4x70_info(const em4x70_data_t *etd, bool ledcontrol) {
 void em4x70_write(const em4x70_data_t *etd, bool ledcontrol) {
     int status = PM3_ESOFT;
 
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (g_command_parity) {
+    if (g_deprecated_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 write` is  non-functional and may corrupt data on the tag."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
@@ -1499,7 +1493,7 @@ void em4x70_unlock(const em4x70_data_t *etd, bool ledcontrol) {
 
     int status = PM3_ESOFT;
 
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     init_tag();
     em4x70_setup_read();
@@ -1534,10 +1528,10 @@ void em4x70_auth(const em4x70_data_t *etd, bool ledcontrol) {
 
     uint8_t response[3] = {0};
 
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (g_command_parity) {
+    if (g_deprecated_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 auth` is  non-functional."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
@@ -1562,10 +1556,10 @@ void em4x70_brute(const em4x70_data_t *etd, bool ledcontrol) {
     int status = PM3_ESOFT;
     uint8_t response[2] = {0};
 
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (g_command_parity) {
+    if (g_deprecated_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 brute` is  non-functional and may corrupt data on the tag."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
@@ -1590,10 +1584,10 @@ void em4x70_write_pin(const em4x70_data_t *etd, bool ledcontrol) {
 
     int status = PM3_ESOFT;
 
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (g_command_parity) {
+    if (g_deprecated_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 setpin` is non-functional and may corrupt data on the tag."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
@@ -1639,10 +1633,10 @@ void em4x70_write_key(const em4x70_data_t *etd, bool ledcontrol) {
 
     int status = PM3_ESOFT;
 
-    g_command_parity = etd->parity;
+    g_deprecated_command_parity = false;
 
     // Disable to prevent sending corrupted data to the tag.
-    if (g_command_parity) {
+    if (g_deprecated_command_parity) {
         DPRINTF_ALWAYS(("Use of `--par` option with `lf em 4x70 setkey` is non-functional and may corrupt data on the tag."));
         // reply_ng(CMD_LF_EM4X70_WRITE, PM3_ENOTIMPL, NULL, 0);
         // return;
