@@ -338,11 +338,14 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
     const bool breakOnNrMac = !!(flags & BITMASK(2));
     const bool preventEpurseUpdate = !!(flags & BITMASK(3));
     const bool shallow_mod = !!(flags & BITMASK(4));
+    const bool info = !!(flags & BITMASK(5));
 
     uint8_t *cmd = c->data.asBytes + 1;
     uint16_t cmd_len = c->length - 1;
 
     int res = PM3_EFAILED;
+    uint8_t sam_response[ISO7816_MAX_FRAME] = { 0x00 };
+    uint8_t sam_response_len = 0;
 
     clear_trace();
     I2C_Reset_EnterMainProgram();
@@ -351,7 +354,12 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
     StartTicks();
 
     // step 1: ping SAM
-    sam_get_version();
+    sam_get_version(info);
+
+    if(info){
+        sam_get_serial_number();
+        goto out;
+    }
 
     if (!skipDetect) {
         // step 2: get card information
@@ -371,8 +379,6 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
     }
 
     // step 3: SamCommand RequestPACS, relay NFC communication
-    uint8_t sam_response[ISO7816_MAX_FRAME] = { 0x00 };
-    uint8_t sam_response_len = 0;
     res = sam_send_request_iso15(cmd, cmd_len, sam_response, &sam_response_len, shallow_mod, breakOnNrMac, preventEpurseUpdate);
     if (res != PM3_SUCCESS) {
         goto err;

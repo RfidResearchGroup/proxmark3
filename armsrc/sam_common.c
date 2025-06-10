@@ -218,7 +218,7 @@ out:
  *
  * @return Status code indicating success or failure of the operation.
  */
-int sam_get_version(void) {
+int sam_get_version(bool info) {
     int res = PM3_SUCCESS;
 
     if (g_dbglevel >= DBG_DEBUG) {
@@ -268,18 +268,18 @@ int sam_get_version(void) {
         }
         uint8_t *sam_version_an = sam_find_asn1_node(sam_response_an, 0x80);
         if (sam_version_an == NULL) {
-            if (g_dbglevel >= DBG_ERROR) DbpString("SAM get version failed");
+            if (g_dbglevel >= DBG_ERROR) DbpString(_RED_("SAM: get version failed"));
             goto error;
         }
         uint8_t *sam_build_an = sam_find_asn1_node(sam_response_an, 0x81);
         if (sam_build_an == NULL) {
-            if (g_dbglevel >= DBG_ERROR) DbpString("SAM get firmware ID failed");
+            if (g_dbglevel >= DBG_ERROR) DbpString(_RED_("SAM: get firmware ID failed"));
             goto error;
         }
-        if (g_dbglevel >= DBG_INFO) {
-            DbpString("SAM get version successful");
-            Dbprintf("Firmware version: %X.%X", sam_version_an[2], sam_version_an[3]);
-            Dbprintf("Firmware ID: ");
+        if (g_dbglevel >= DBG_INFO || info) {
+            DbpString(_BLUE_("-- SAM Information --"));
+            Dbprintf(_YELLOW_("Firmware version: ")"%X.%X", sam_version_an[2], sam_version_an[3]);
+            Dbprintf(_YELLOW_("Firmware ID     : "));
             Dbhexdump(sam_build_an[1], sam_build_an + 2, false);
         }
         goto out;
@@ -293,6 +293,75 @@ out:
 
     if (g_dbglevel >= DBG_DEBUG) {
         DbpString("end sam_get_version");
+    }
+
+    return res;
+}
+
+int sam_get_serial_number(void) {
+    int res = PM3_SUCCESS;
+
+    if (g_dbglevel >= DBG_DEBUG) {
+        DbpString("start sam_get_serial_number");
+    }
+
+    uint8_t *response = BigBuf_calloc(ISO7816_MAX_FRAME);
+    uint16_t response_len = ISO7816_MAX_FRAME;
+
+    uint8_t payload[] = {
+        0xa0, 0x02, // <- SAM command
+        0x96, 0x00 // <- get serial number
+    };
+    uint16_t payload_len = sizeof(payload);
+
+    sam_send_payload(
+        0x44, 0x0a, 0x44,
+        payload,
+        &payload_len,
+        response,
+        &response_len
+    );
+
+    //resp:
+    //c1 64 00 00 00
+    //   bd 0e <- SAM response
+    //    8a 0c <- get serial number response
+    //      61 01 13 51 22 66 6e 15 3e 1b ff ff
+    //90 00
+
+    if (g_dbglevel >= DBG_DEBUG) {
+        DbpString("end sam_get_serial_number");
+    }
+
+    if (response[5] != 0xbd) {
+        Dbprintf("Invalid SAM response");
+        goto error;
+    } else {
+        uint8_t *sam_response_an = sam_find_asn1_node(response + 5, 0x8a);
+        if (sam_response_an == NULL) {
+            if (g_dbglevel >= DBG_ERROR) DbpString(_RED_("SAM: get response failed"));
+            goto error;
+        }
+        uint8_t *sam_serial_an = sam_response_an + 2;
+        if (sam_serial_an == NULL) {
+            if (g_dbglevel >= DBG_ERROR) DbpString(_RED_("SAM get serial number failed"));
+            goto error;
+        }
+
+        Dbprintf(_YELLOW_("Sam Serial Number: "));
+        Dbhexdump(sam_response_an[1],sam_serial_an, false);
+
+        goto out;
+    }
+
+error:
+    res = PM3_ESOFT;
+
+out:
+    BigBuf_free();
+
+    if (g_dbglevel >= DBG_DEBUG) {
+        DbpString("end sam_get_serial_number");
     }
 
     return res;

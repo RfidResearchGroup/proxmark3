@@ -282,7 +282,7 @@ int sam_seos_get_pacs(PacketCommandNG *c) {
     StartTicks();
 
     // step 1: ping SAM
-    sam_get_version();
+    sam_get_version(false);
 
     if (skipDetect == false) {
         // step 2: get card information
