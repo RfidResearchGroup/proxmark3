@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# This is used to make sure that the language for the functions is english instead of the system default language.
+LANG=C
+
 PM3PATH="$(dirname "$0")/.."
 cd "$PM3PATH" || exit 1
 
