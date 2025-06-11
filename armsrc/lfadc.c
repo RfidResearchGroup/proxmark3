@@ -241,7 +241,7 @@ void lf_init(bool reader, bool simulate, bool ledcontrol) {
     //          280T0 = 280 * 8us = 2240us = 2.24ms - HitagS minimum time before the first command (powerup time)
     // maximum: 545T0 = 545 * 8us = 4360us = 4.36ms - Hitag2 command waiting time before it starts transmitting in public mode (if configured so)
     //          565T0 = 565 * 8us = 4520us = 4.52ms - HitagS waiting time before entering TTF mode (if configured so)
-    // Thus (2.50 ms + 4.36 ms) / 2 ~= 3 ms, should be a good timing for both tag models
+    // Thus (2.50 ms + 4.36 ms) / 2 ~= 3 ms (rounded down to integer), should be a good timing for both tag models
     SpinDelay(3);
 
     // Steal this pin from the SSP (SPI communication channel with fpga) and use it to control the modulation
