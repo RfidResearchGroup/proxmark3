@@ -234,7 +234,10 @@ static void become_card(void) {
     tag_response_info_t *canned;
     uint32_t cuid;
     uint8_t pages;
-    SimulateIso14443aInit(tagType, flags, data, NULL, 0, &canned, &cuid, &pages);
+    if (SimulateIso14443aInit(tagType, flags, data, NULL, 0, &canned, &cuid, &pages) == false) {
+        DbpString(_RED_("Error initializing the emulation process!"));
+        return;
+    }
 
     DbpString(_CYAN_("[@]") " Setup done - entering emulation loop");
     int fromReaderLen;
