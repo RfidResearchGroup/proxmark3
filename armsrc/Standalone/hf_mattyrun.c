@@ -535,7 +535,7 @@ void RunMod(void) {
                 SpinErr(LED_D, 50, 8);
                 partialEmulation = true;
             } else {
-#if WITH_FLASH                
+#ifdef WITH_FLASH
                 DbpString("[" _GREEN_("+") "] " _GREEN_("Emulator memory filled completely. Start storing card in spiff memory."));
                 uint8_t *emCARD = BigBuf_get_EM_addr();
                 char dumpFileName[30] = {0};
