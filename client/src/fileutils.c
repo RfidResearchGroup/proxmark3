@@ -3043,18 +3043,22 @@ out:
 
 int searchFile(char **foundpath, const char *pm3dir, const char *searchname, const char *suffix, bool silent) {
 
-    if (foundpath == NULL)
+    if (foundpath == NULL) {
         return PM3_EINVARG;
+    }
 
-    if (searchname == NULL || strlen(searchname) == 0)
+    if (searchname == NULL || strlen(searchname) == 0) {
         return PM3_EINVARG;
+    }
 
-    if (is_directory(searchname))
+    if (is_directory(searchname)) {
         return PM3_EINVARG;
+    }
 
     char *filename = filenamemcopy(searchname, suffix);
-    if (filename == NULL)
+    if (filename == NULL) {
         return PM3_EMALLOC;
+    }
 
     if (strlen(filename) == 0) {
         free(filename);

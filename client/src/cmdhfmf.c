@@ -3918,7 +3918,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
                     // BigBuf_Clear_ext(false);
                     goto out;
                 }
-                PrintAndLogEx(INPLACE, "Testing %5i/%5i %02.1f%%", i, keycnt, (float)i * 100 / keycnt);
+                PrintAndLogEx(INPLACE, "Testing %5i/%5i ( " _YELLOW_("%02.1f%%") " )", i, keycnt, (float)i * 100 / keycnt);
                 uint32_t size = ((keycnt - i)  > chunksize) ? chunksize : keycnt - i;
 
                 // last chunk?
@@ -3935,7 +3935,7 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
                     goto out;
                 }
             } // end chunks of keys
-            PrintAndLogEx(INPLACE, "Testing %5i/%5i 100.00%%", keycnt, keycnt);
+            PrintAndLogEx(INPLACE, "Testing %5i/%5i ( " _YELLOW_("100.00%%") " )", keycnt, keycnt);
             PrintAndLogEx(NORMAL, "");
             firstChunk = true;
             lastChunk = false;

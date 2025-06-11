@@ -3926,9 +3926,9 @@ static int CmdHF14AMfUAESAuth(const char *Cmd) {
     CLIParserInit(&ctx, "hf mfu aesauth",
                   "Tests AES key on Mifare Ultralight AES tags.\n"
                   "If no key is specified, null key will be tried.\n"
-                  "Key index 0: DataProtKey (default)\n"
-                  "Key index 1: UIDRetrKey\n"
-                  "Key index 2: OriginalityKey\n",
+                  "  Key index 0... DataProtKey (default)\n"
+                  "  Key index 1... UIDRetrKey\n"
+                  "  Key index 2... OriginalityKey\n",
                   "hf mfu aesauth\n"
                   "hf mfu aesauth --key <16 hex bytes> --index <0..2>"
                  );

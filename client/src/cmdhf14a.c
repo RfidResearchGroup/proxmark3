@@ -1918,11 +1918,10 @@ int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status,
 
             if ((sak & 0x10) == 0x10) { // SAK b2=0 b4=0 b5=1
 
-                if ((sak & 0x01) == 0x01) { // SAK b2=0 b4=0 b5=1 b1=1, SAK=0x11
+                // if ((sak & 0x01) == 0x01) { // SAK b2=0 b4=0 b5=1 b1=1, SAK=0x11
+                // } else { // SAK b2=0 b4=0 b5=1 b1=0, SAK=0x10
+                // }
                     type |= MTPLUS;
-                } else { // SAK b2=0 b4=0 b5=1 b1=0, SAK=0x10
-                    type |= MTPLUS;
-                }
 
             } else { // SAK b2=0 b4=0 b5=0
 
@@ -2150,7 +2149,7 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                 if (lsize < 1024) {
                     snprintf(size_str, sizeof(size_str), "%u - %uB", usize, lsize);
                 } else {
-                    snprintf(size_str, sizeof(size_str), "%u - %uK", (usize / 1024), (lsize / 1024));
+                    snprintf(size_str, sizeof(size_str), "%d - %dK", (usize / 1024), (lsize / 1024));
                 }
 
             } else {
@@ -2159,7 +2158,7 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                 if (lsize < 1024) {
                     snprintf(size_str, sizeof(size_str), "%uB", lsize);
                 } else {
-                    snprintf(size_str, sizeof(size_str), "%uK", lsize / 1024);
+                    snprintf(size_str, sizeof(size_str), "%dK", (lsize / 1024));
                 }
             }
 
@@ -2322,11 +2321,10 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
 
                 if ((sak & 0x01) == 0x01) { // SAK b2=0 b4=0 b5=1 b1=1, SAK=0x11
                     printTag("MIFARE Plus 4K in SL2");
-                    type |= MTPLUS;
                 } else { // SAK b2=0 b4=0 b5=1 b1=0, SAK=0x10
                     printTag("MIFARE Plus 2K in SL2");
-                    type |= MTPLUS;
                 }
+                type |= MTPLUS;
 
             } else { // SAK b2=0 b4=0 b5=0
 
