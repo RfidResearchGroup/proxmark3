@@ -1052,7 +1052,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
                     numReads++;
 
                     if (exitAfterNReads > 0 && numReads == exitAfterNReads) {
-                        Dbprintf("[MFEMUL_WORK] %d reads done, exiting", numReads);
+                        Dbprintf("[MFEMUL_WORK] " _YELLOW_("%u") " reads done, exiting", numReads);
                         finished = true;
                     }
                     break;

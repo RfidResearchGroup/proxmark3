@@ -1768,7 +1768,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
                     numReads++;  // Increment number of times reader requested a block
 
                     if (exitAfterNReads > 0 && numReads == exitAfterNReads) {
-                        Dbprintf("[MFUEMUL_WORK] %d reads done, exiting", numReads);
+                        Dbprintf("[MFUEMUL_WORK] " _YELLOW_("%u")  " reads done, exiting", numReads);
                         finished = true;
                     }
                 }
@@ -2441,7 +2441,7 @@ int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen) {
 
 int EmSend4bit(uint8_t resp) {
     Code4bitAnswerAsTag(resp);
-    tosend_t *ts = get_tosend();
+    const tosend_t *ts = get_tosend();
     int res = EmSendCmd14443aRaw(ts->buf, ts->max);
     // do the tracing for the previous reader request and this tag answer:
     uint8_t par[1] = {0x00};
@@ -2463,7 +2463,7 @@ int EmSendCmdPar(uint8_t *resp, uint16_t respLen, uint8_t *par) {
 }
 int EmSendCmdParEx(uint8_t *resp, uint16_t respLen, uint8_t *par, bool collision) {
     CodeIso14443aAsTagPar(resp, respLen, par, collision);
-    tosend_t *ts = get_tosend();
+    const tosend_t *ts = get_tosend();
     int res = EmSendCmd14443aRaw(ts->buf, ts->max);
 
     // do the tracing for the previous reader request and this tag answer:
@@ -2633,7 +2633,7 @@ static int GetIso14443aAnswerFromTag(uint8_t *receivedResponse, uint16_t rec_max
 void ReaderTransmitBitsPar(const uint8_t *frame, uint16_t bits, uint8_t *par, uint32_t *timing) {
     CodeIso14443aBitsAsReaderPar(frame, bits, par);
     // Send command to tag
-    tosend_t *ts = get_tosend();
+    const tosend_t *ts = get_tosend();
     TransmitFor14443a(ts->buf, ts->max, timing);
     if (g_trigger) LED_A_ON();
 
@@ -2801,7 +2801,7 @@ static int GetATQA(uint8_t *resp, uint16_t resp_len, uint8_t *resp_par, const is
 
     // Use the temporary polling parameters
     do {
-        iso14a_polling_frame_t *frp = &p.frames[curr];
+        const iso14a_polling_frame_t *frp = &p.frames[curr];
 
         if (frp->last_byte_bits == 8) {
             ReaderTransmit(frp->frame, frp->frame_length, NULL);
@@ -4211,8 +4211,9 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
             uint8_t offset = 0;
             switch (receivedCmd[0]) {
                 case 0x0B: // IBlock with CID
-                case 0x0A:
+                case 0x0A: {
                     offset = 1;
+                }
                 case 0x02: // IBlock without CID
                 case 0x03: {
                     dynamic_response_info.response[0] = receivedCmd[0];

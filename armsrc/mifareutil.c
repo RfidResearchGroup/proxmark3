@@ -440,21 +440,17 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
     uint8_t key[16] = { 0 };
     memcpy(key, keybytes, sizeof(key));
 
-    uint16_t len = 0;
-
     // 1 cmd + 16 bytes + 2 crc
     uint8_t resp[19] = {0x00};
     uint8_t respPar[5] = {0};
 
-
     // setup AES
     mbedtls_aes_context actx;
-    mbedtls_aes_init(&actx);
     mbedtls_aes_init(&actx);
     mbedtls_aes_setkey_dec(&actx, key, 128);
 
     // Send REQUEST AUTHENTICATION / receive tag nonce
-    len = mifare_sendcmd_short(NULL, CRYPT_NONE, MIFARE_ULAES_AUTH_1, keyno, resp, sizeof(resp), respPar, NULL);
+    uint16_t len = mifare_sendcmd_short(NULL, CRYPT_NONE, MIFARE_ULAES_AUTH_1, keyno, resp, sizeof(resp), respPar, NULL);
     if (len != 19) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x - expected 19 got " _RED_("%u"), resp[0], len);
         return 0;
