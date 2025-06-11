@@ -310,7 +310,7 @@ static int mfp_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userke
         *pkeyBlock = p;
 
         // Copy default keys to list
-        int cnt = 0;
+        size_t cnt = 0;
         for (cnt = 0; cnt < g_mifare_plus_default_keys_len; cnt++) {
 
             int len = hex_to_bytes(g_mifare_plus_default_keys[cnt], (uint8_t *)(*pkeyBlock + (*pkeycnt + cnt) * AES_KEY_LEN), AES_KEY_LEN);
@@ -348,13 +348,17 @@ static int mfp_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userke
                 return PM3_EMALLOC;
             }
             *pkeyBlock = p;
+
             memcpy(*pkeyBlock + *pkeycnt * AES_KEY_LEN, dict_keys, loaded_numKeys * AES_KEY_LEN);
+
             *pkeycnt += loaded_numKeys;
+
             free(dict_keys);
         }
     }
     return PM3_SUCCESS;
 }
+
 
 static int CmdHFMFPInfo(const char *Cmd) {
     CLIParserContext *ctx;
