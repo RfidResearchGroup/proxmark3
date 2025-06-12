@@ -35,6 +35,9 @@
 #include "cmdlfem4x05.h"   //
 #include "cliparser.h"
 
+// 8 bytes + null terminator
+#define PAC_ID_LEN  (8 + 1)
+
 static int CmdHelp(const char *Cmd);
 
 // PAC_8byte format: preamble (8 mark/idle bits), ascii STX (02), ascii '2' (32), ascii '0' (30), ascii bytes 0..7 (cardid), then xor checksum of cardid bytes
@@ -160,12 +163,13 @@ int demodPac(bool verbose) {
     uint32_t raw3 = bytebits_to_byte(g_DemodBuffer + 64, 32);
     uint32_t raw4 = bytebits_to_byte(g_DemodBuffer + 96, 32);
 
-    const size_t idLen = 9; // 8 bytes + null terminator
-    uint8_t cardid[idLen];
+    // 8 bytes + null terminator
+    uint8_t cardid[PAC_ID_LEN];
     int retval = pac_buf_to_cardid(g_DemodBuffer, g_DemodBufferLen, cardid, sizeof(cardid));
 
-    if (retval == PM3_SUCCESS)
+    if (retval == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "PAC/Stanley - Card: " _GREEN_("%s") ", Raw: %08X%08X%08X%08X", cardid, raw1, raw2, raw3, raw4);
+    }
 
     return retval;
 }
