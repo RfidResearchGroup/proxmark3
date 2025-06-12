@@ -5961,10 +5961,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_SAM_PICOPASS, data, cmdlen + 1);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_SAM_PICOPASS, &resp, 4000) == false) {
-        PrintAndLogEx(WARNING, "SAM timeout");
-        return PM3_ETIMEOUT;
-    }
+    WaitForResponse(CMD_HF_SAM_PICOPASS, &resp);
 
     switch (resp.status) {
         case PM3_SUCCESS:

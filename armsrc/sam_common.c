@@ -279,7 +279,7 @@ int sam_get_version(bool info) {
         if (g_dbglevel >= DBG_INFO || info) {
             DbpString(_BLUE_("-- SAM Information --"));
             Dbprintf(_YELLOW_("Firmware version: ")"%X.%X", sam_version_an[2], sam_version_an[3]);
-            Dbprintf(_YELLOW_("Firmware ID     : "));
+            Dbprintf(_YELLOW_("Firmware ID: "));
             Dbhexdump(sam_build_an[1], sam_build_an + 2, false);
         }
         goto out;
@@ -348,7 +348,7 @@ int sam_get_serial_number(void) {
             goto error;
         }
 
-        Dbprintf(_YELLOW_("Sam Serial Number: "));
+        Dbprintf(_YELLOW_("Serial Number: "));
         Dbhexdump(sam_response_an[1],sam_serial_an, false);
 
         goto out;

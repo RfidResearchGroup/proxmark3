@@ -36,7 +36,7 @@
 // 8051 speaks with smart card.
 // 1000*50*3.07   = 153.5ms
 // 1 byte transfer == 1ms with max frame being 256 bytes
-#define SIM_WAIT_DELAY  88000 // about 270ms delay // 109773 -- about 337.7ms delay
+#define SIM_WAIT_DELAY  150000 // about 270ms delay // 109773 -- about 337.7ms delay
 
 
 void I2C_recovery(void);
