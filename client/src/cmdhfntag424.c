@@ -34,8 +34,8 @@
 #include "crc32.h"
 #include "cmdhfmfdes.h"
 
-#define NTAG424_MAX_BYTES 412
-
+#define NTAG424_MAX_BYTES           412
+#define NTAG424_RESPONSE_LENGTH     2
 
 // NTAG424 commands currently implemented
 // icenam: should be able to use 14a / msdes to annotate NTAG424 communications
@@ -542,19 +542,17 @@ static void ntag424_print_file_settings(uint8_t fileno, const ntag424_file_setti
 
 // NTAG424 only have one static application, so we select it here
 static int ntag424_select_application(void) {
-    const size_t RESPONSE_LENGTH = 2;
     uint8_t cmd[] = {0x00, 0xA4, 0x04, 0x0C, 0x07, 0xD2, 0x76, 0x00, 0x00, 0x85, 0x01, 0x01, 0x00 };
-    uint8_t resp[RESPONSE_LENGTH];
+    uint8_t resp[NTAG424_RESPONSE_LENGTH];
     int outlen = 0;
-    int res;
 
-    res = ExchangeAPDU14a(cmd, sizeof(cmd), false, true, resp, RESPONSE_LENGTH, &outlen);
+    int res = ExchangeAPDU14a(cmd, sizeof(cmd), false, true, resp, NTAG424_RESPONSE_LENGTH, &outlen);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Failed to send apdu");
         return res;
     }
 
-    if (outlen != RESPONSE_LENGTH || resp[RESPONSE_LENGTH - 2] != 0x90 || resp[RESPONSE_LENGTH - 1] != 0x00) {
+    if (outlen != NTAG424_RESPONSE_LENGTH || resp[NTAG424_RESPONSE_LENGTH - 2] != 0x90 || resp[NTAG424_RESPONSE_LENGTH - 1] != 0x00) {
         PrintAndLogEx(ERR, "Failed to select application");
         return PM3_ESOFT;
     }
