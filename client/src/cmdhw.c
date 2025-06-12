@@ -1596,7 +1596,7 @@ void pm3_version_short(void) {
             PrintAndLogEx(NORMAL, "    Client.... %s", temp);
 
             bool armsrc_mismatch = false;
-            char *ptr = strstr(payload->versionstr, " os: ");
+            char *ptr = strstr(payload->versionstr, "OS......... ");
             if (ptr != NULL) {
                 ptr = strstr(ptr, "\n");
                 if ((ptr != NULL) && (strlen(g_version_information.armsrc) == 9)) {
