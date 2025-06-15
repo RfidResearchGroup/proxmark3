@@ -1764,7 +1764,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
                 } else {
                     // first blocks of emu are header
                     uint16_t start = (block * 4) + MFU_DUMP_PREFIX_LENGTH;
-                    uint8_t emdata[MAX_MIFARE_FRAME_SIZE] = {0};
+                    uint8_t emdata[MIFARE_BLOCK_SIZE + 2] = {0};
                     emlGet(emdata, start, MIFARE_BLOCK_SIZE);
                     AddCrc14A(emdata, MIFARE_BLOCK_SIZE);
                     EmSendCmd(emdata, sizeof(emdata));
@@ -1783,7 +1783,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
                 //   block1 = 4byte UID.
                 p_response = &responses[RESP_INDEX_UIDC1];
             } else { // all other tags (16 byte block tags)
-                uint8_t emdata[MAX_MIFARE_FRAME_SIZE] = {0};
+                uint8_t emdata[MIFARE_BLOCK_SIZE + 2] = {0};
                 emlGet(emdata, block, MIFARE_BLOCK_SIZE);
                 AddCrc14A(emdata, MIFARE_BLOCK_SIZE);
                 EmSendCmd(emdata, sizeof(emdata));

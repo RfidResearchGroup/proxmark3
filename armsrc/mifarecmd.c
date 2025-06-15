@@ -2909,7 +2909,7 @@ void MifareCGetBlock(uint32_t arg0, uint32_t arg1, uint8_t *datain) {
         }
 
         // read block
-        if ((mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL) != MAX_MIFARE_FRAME_SIZE)) {
+        if ((mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL) != MIFARE_BLOCK_SIZE + 2)) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("read block send command error");
             errormsg = 0;
             break;
@@ -3515,7 +3515,7 @@ void MifareGen3Blk(uint8_t block_len, uint8_t *block) {
 
     int retval = PM3_SUCCESS;
     uint8_t block_cmd[5] = { 0x90, 0xf0, 0xcc, 0xcc, 0x10 };
-    uint8_t cmdlen = sizeof(block_cmd) + MAX_MIFARE_FRAME_SIZE;
+    uint8_t cmdlen = sizeof(block_cmd) + MIFARE_BLOCK_SIZE + 2;
     uint8_t *cmd = BigBuf_calloc(cmdlen);
 
     iso14a_card_select_t *card_info = (iso14a_card_select_t *) BigBuf_calloc(sizeof(iso14a_card_select_t));
@@ -3532,7 +3532,7 @@ void MifareGen3Blk(uint8_t block_len, uint8_t *block) {
 
     bool doReselect = false;
     if (block_len < MIFARE_BLOCK_SIZE) {
-        if ((mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_READBLOCK, 0, &cmd[sizeof(block_cmd)], MAX_MIFARE_FRAME_SIZE, NULL, NULL) != MAX_MIFARE_FRAME_SIZE)) {
+        if ((mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_READBLOCK, 0, &cmd[sizeof(block_cmd)], MIFARE_BLOCK_SIZE + 2, NULL, NULL) != MIFARE_BLOCK_SIZE + 2)) {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Read manufacturer block failed");
             retval = PM3_ESOFT;
             goto OUT;
@@ -3567,7 +3567,7 @@ void MifareGen3Blk(uint8_t block_len, uint8_t *block) {
             }
         }
 
-        retval = DoGen3Cmd(cmd, sizeof(block_cmd) + MAX_MIFARE_FRAME_SIZE);
+        retval = DoGen3Cmd(cmd, sizeof(block_cmd) + MIFARE_BLOCK_SIZE + 2);
     }
 
 OUT:
