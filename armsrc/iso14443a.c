@@ -596,6 +596,9 @@ void Demod14aInit(uint8_t *d, uint16_t n, uint8_t *par) {
 RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_time) {
 
     if (Demod.len == Demod.output_len) {
+        // Flush last parity bits
+        Demod.parityBits <<= (8 - (Demod.len & 0x0007));    // left align remaining parity bits
+        Demod.parity[Demod.parityLen++] = Demod.parityBits; // and store them
         return true;
     }
 
