@@ -356,7 +356,7 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
     // step 1: ping SAM
     sam_get_version(info);
 
-    if(info){
+    if (info) {
         sam_get_serial_number();
         goto out;
     }

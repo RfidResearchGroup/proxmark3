@@ -567,7 +567,7 @@ static int CmdEM4x70Brute(const char *Cmd) {
         return PM3_EINVARG;
     }
     CLIParserFree(ctx);
-    
+
     // opts structure takes value in BIG ENDIAN form
     opts.partial_key_start[0] = (uint8_t)((start_key >>  8) & 0xFF);
     opts.partial_key_start[1] = (uint8_t)((start_key >>  0) & 0xFF);
@@ -628,7 +628,7 @@ static int CmdEM4x70Unlock(const char *Cmd) {
         PrintAndLogEx(FAILED, "PIN length must be 4 bytes, got %d", pin_len);
         return PM3_EINVARG;
     }
-    
+
     // Client command line parsing and validation complete ... now use the helper function
     em4x70_tag_info_t info;
     int result = unlock_em4x70(&opts, &info);
@@ -768,7 +768,7 @@ static int CmdEM4x70SetKey(const char *Cmd) {
         PrintAndLogEx(FAILED, "Key length must be 12 bytes, got %d", key_len);
         return PM3_EINVARG;
     }
-    
+
     // Client command line parsing and validation complete ... now use the helper function
     int result = setkey_em4x70(&opts);
 

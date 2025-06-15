@@ -542,7 +542,7 @@ void RunMod(void) {
                 sprintf(dumpFileName, DUMP_FILE, mattyrun_card.uid[0], mattyrun_card.uid[1], mattyrun_card.uid[2], mattyrun_card.uid[3]);
                 rdv40_spiffs_write(dumpFileName, emCARD, 1024, RDV40_SPIFFS_SAFETY_SAFE);
                 Dbprintf("[" _GREEN_("+") "] " _GREEN_("Stored card on %s"), dumpFileName);
-#endif                 
+#endif
             }
 
             state = STATE_EMULATE;

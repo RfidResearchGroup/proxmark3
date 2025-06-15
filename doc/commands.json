@@ -3682,9 +3682,10 @@
                 "--break stop tag interaction on nr-mac",
                 "-p, --prevent fake epurse update",
                 "--shallow shallow mod",
-                "-d, --data <hex> DER encoded command to send to SAM"
+                "-d, --data <hex> DER encoded command to send to SAM",
+                "--info get SAM infos (version, serial number)"
             ],
-            "usage": "hf iclass sam [-hvkntp] [--break] [--shallow] [-d <hex>]..."
+            "usage": "hf iclass sam [-hvkntp] [--break] [--shallow] [-d <hex>]... [--info]"
         },
         "hf iclass sim": {
             "command": "hf iclass sim",
@@ -7084,7 +7085,7 @@
         },
         "hf mfu aesauth": {
             "command": "hf mfu aesauth",
-            "description": "Tests AES key on Mifare Ultralight AES tags. If no key is specified, null key will be tried. Key index 0: DataProtKey (default) Key index 1: UIDRetrKey Key index 2: OriginalityKey",
+            "description": "Tests AES key on Mifare Ultralight AES tags. If no key is specified, null key will be tried. Key index 0... DataProtKey (default) Key index 1... UIDRetrKey Key index 2... OriginalityKey",
             "notes": [
                 "hf mfu aesauth",
                 "hf mfu aesauth --key <16 hex bytes> --index <0..2>"
@@ -9397,11 +9398,10 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--par Add parity bit when sending commands",
                 "--rnd <hex> Random 56-bit",
                 "--frn <hex> F(RN) 28-bit as 4 hex bytes"
             ],
-            "usage": "lf em 4x70 auth [-h] [--par] --rnd <hex> --frn <hex>"
+            "usage": "lf em 4x70 auth [-h] --rnd <hex> --frn <hex>"
         },
         "lf em 4x70 autorecover": {
             "command": "lf em 4x70 autorecover",
@@ -9414,12 +9414,11 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--par Add parity bit when sending commands",
                 "--rnd <hex> Random 56-bit from known-good authentication",
                 "--frn <hex> F(RN) 28-bit as 4 hex bytes from known-good authentication",
                 "--grn <hex> G(RN) 20-bit as 3 hex bytes from known-good authentication"
             ],
-            "usage": "lf em 4x70 autorecover [-h] [--par] --rnd <hex> --frn <hex> --grn <hex>"
+            "usage": "lf em 4x70 autorecover [-h] --rnd <hex> --frn <hex> --grn <hex>"
         },
         "lf em 4x70 calc": {
             "command": "lf em 4x70 calc",
@@ -9448,27 +9447,24 @@
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "--par Add parity bit when sending commands",
                 "-b, --block <dec> block/word address, dec",
                 "--rnd <hex> Random 56-bit",
                 "--frn <hex> F(RN) 28-bit as 4 hex bytes",
                 "-s, --start <hex> Start bruteforce enumeration from this key value"
             ],
-            "usage": "lf em 4x70 brute [-h] [--par] -b <dec> --rnd <hex> --frn <hex> [-s <hex>]"
+            "usage": "lf em 4x70 brute [-h] -b <dec> --rnd <hex> --frn <hex> [-s <hex>]"
         },
         "lf em 4x70 info": {
             "command": "lf em 4x70 info",
             "description": "Tag Information EM4x70 Tag variants include ID48 automotive transponder. ID48 does not use command parity (default). V4070 and EM4170 do require parity bit.",
             "notes": [
-                "lf em 4x70 info",
-                "lf em 4x70 info --par -> adds parity bit to command"
+                "lf em 4x70 info"
             ],
             "offline": false,
             "options": [
-                "-h, --help This help",
-                "--par Add parity bit when sending commands"
+                "-h, --help This help"
             ],
-            "usage": "lf em 4x70 info [-h] [--par]"
+            "usage": "lf em 4x70 info [-h]"
         },
         "lf em 4x70 recover": {
             "command": "lf em 4x70 recover",
@@ -9481,13 +9477,12 @@
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "--par Add parity bit when sending commands",
                 "-k, --key <hex> Key as 6 hex bytes",
                 "--rnd <hex> Random 56-bit",
                 "--frn <hex> F(RN) 28-bit as 4 hex bytes",
                 "--grn <hex> G(RN) 20-bit as 3 hex bytes"
             ],
-            "usage": "lf em 4x70 recover [-h] [--par] -k <hex> --rnd <hex> --frn <hex> --grn <hex>"
+            "usage": "lf em 4x70 recover [-h] -k <hex> --rnd <hex> --frn <hex> --grn <hex>"
         },
         "lf em 4x70 setkey": {
             "command": "lf em 4x70 setkey",
@@ -9500,56 +9495,49 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--par Add parity bit when sending commands",
                 "-k, --key <hex> Key as 12 hex bytes"
             ],
-            "usage": "lf em 4x70 setkey [-h] [--par] -k <hex>"
+            "usage": "lf em 4x70 setkey [-h] -k <hex>"
         },
         "lf em 4x70 setpin": {
             "command": "lf em 4x70 setpin",
             "description": "Write new PIN",
             "notes": [
-                "lf em 4x70 setpin -p 11223344 -> Write new PIN",
-                "lf em 4x70 setpin -p 11223344 --par -> Write new PIN using parity commands"
+                "lf em 4x70 setpin -p 11223344 -> Write new PIN"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--par Add parity bit when sending commands",
                 "-p, --pin <hex> pin, 4 bytes"
             ],
-            "usage": "lf em 4x70 setpin [-h] [--par] -p <hex>"
+            "usage": "lf em 4x70 setpin [-h] -p <hex>"
         },
         "lf em 4x70 unlock": {
             "command": "lf em 4x70 unlock",
             "description": "Unlock EM4x70 by sending PIN Default pin may be: AAAAAAAA 00000000",
             "notes": [
-                "lf em 4x70 unlock -p 11223344 -> Unlock with PIN",
-                "lf em 4x70 unlock -p 11223344 --par -> Unlock with PIN using parity commands"
+                "lf em 4x70 unlock -p 11223344 -> Unlock with PIN"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--par Add parity bit when sending commands",
                 "-p, --pin <hex> pin, 4 bytes"
             ],
-            "usage": "lf em 4x70 unlock [-h] [--par] -p <hex>"
+            "usage": "lf em 4x70 unlock [-h] -p <hex>"
         },
         "lf em 4x70 write": {
             "command": "lf em 4x70 write",
             "description": "Write EM4x70",
             "notes": [
-                "lf em 4x70 write -b 15 -d c0de -> write 'c0de' to block 15",
-                "lf em 4x70 write -b 15 -d c0de --par -> adds parity bit to commands"
+                "lf em 4x70 write -b 15 -d c0de -> write 'c0de' to block 15"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--par Add parity bit when sending commands",
                 "-b, --block <dec> block/word address, dec",
                 "-d, --data <hex> data, 2 bytes"
             ],
-            "usage": "lf em 4x70 write [-h] [--par] -b <dec> -d <hex>"
+            "usage": "lf em 4x70 write [-h] -b <dec> -d <hex>"
         },
         "lf em help": {
             "command": "lf em help",
@@ -13377,6 +13365,6 @@
     "metadata": {
         "commands_extracted": 768,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-06-09T12:58:22"
+        "extracted_on": "2025-06-15T10:52:29"
     }
 }

@@ -327,7 +327,7 @@ static const iclass_config_card_item_t *get_config_card_item(int idx) {
 static void print_config_cards(void) {
     PrintAndLogEx(INFO, "---- " _CYAN_("Config cards options") " ------------");
     for (int i = 0; i < ARRAYLEN(iclass_config_options)   ; ++i) {
-        switch (i){
+        switch (i) {
             case 0:
                 PrintAndLogEx(INFO, _YELLOW_("---- LED Operations ----"));
                 break;

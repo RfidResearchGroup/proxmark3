@@ -349,7 +349,7 @@ int sam_get_serial_number(void) {
         }
 
         Dbprintf(_YELLOW_("Serial Number: "));
-        Dbhexdump(sam_response_an[1],sam_serial_an, false);
+        Dbhexdump(sam_response_an[1], sam_serial_an, false);
 
         goto out;
     }

@@ -1921,7 +1921,7 @@ int detect_nxp_card(uint8_t sak, uint16_t atqa, uint64_t select_status,
                 // if ((sak & 0x01) == 0x01) { // SAK b2=0 b4=0 b5=1 b1=1, SAK=0x11
                 // } else { // SAK b2=0 b4=0 b5=1 b1=0, SAK=0x10
                 // }
-                    type |= MTPLUS;
+                type |= MTPLUS;
 
             } else { // SAK b2=0 b4=0 b5=0
 
