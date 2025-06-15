@@ -2,9 +2,9 @@
 # Iceman 2022
 #
 # This script is to be run from proxmark root folder inside the docker env
-# docker/fedora-43/run_tests.sh;
+# docker/ubuntu-24.10/run_tests.sh;
 
-sudo yum -y update
+sudo apt update && sudo apt upgrade -y
 python3 -m venv /tmp/venv
 source /tmp/venv/bin/activate
 python3 -m pip install --use-pep517 pyaes

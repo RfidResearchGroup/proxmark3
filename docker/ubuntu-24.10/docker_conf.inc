@@ -1,0 +1,1 @@
+DOCKER_IMAGE=pm3-ubuntu-24.10:1.0
