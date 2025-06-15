@@ -33,11 +33,23 @@ static void init_lfsr16_table(void) {
 }
 
 // static uint16_t next_lfsr16(uint16_t nonce) {
-//     return s_lfsr16[(i_lfsr16[nonce]+1) % 65535];
+//     uint16_t i = i_lfsr16[nonce];
+//     if (i == 0xffff) {
+//         i = 1;
+//     } else {
+//         i++;
+//     }
+//     return s_lfsr16[i];
 // }
 
 static uint16_t prev_lfsr16(uint16_t nonce) {
-    return s_lfsr16[(i_lfsr16[nonce] - 1) % 65535];
+    uint16_t i = i_lfsr16[nonce];
+    if (i == 1) {
+        i = 0xffff;
+    } else {
+        i--;
+    }
+    return s_lfsr16[i];
 }
 
 static uint16_t compute_seednt16_nt32(uint32_t nt32, uint64_t key) {
