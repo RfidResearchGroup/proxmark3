@@ -31,9 +31,13 @@ Run `tools/release_tests.sh` on:
 - [ ] Kali
 - [ ] Debian Stable
 - [ ] Debian Testing
-- [ ] Ubuntu 22
+- [ ] Ubuntu 24.04 (LTS)
+- [ ] Ubuntu 24.10
+- [ ] Ubuntu 25.04
 - [ ] ParrotOS
-- [ ] Fedora 37
+- [ ] Fedora 41 (till 2025-11-19)
+- [ ] Fedora 42 (till 2026-05-13)
+- [ ] Fedora 43 (till 2026-12-02)
 - [ ] OpenSuse Leap
 - [ ] OpenSuse Tumbleweed
 - [ ] OSX (MacPorts)
