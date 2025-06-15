@@ -100,7 +100,7 @@ uint16_t mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t
     uint16_t pos;
     uint8_t dcmd[4] = {cmd, data, 0x00, 0x00};
     uint8_t ecmd[4] = {0x00, 0x00, 0x00, 0x00};
-    uint8_t par[1] = {0x00}; // 1 Byte parity is enough here
+    uint8_t par[MAX_MIFARE_PARITY_SIZE] = {0x00}; // used for cmd and answer
     AddCrc14A(dcmd, 2);
     memcpy(ecmd, dcmd, sizeof(dcmd));
 
