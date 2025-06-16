@@ -369,8 +369,8 @@ release:
 	@echo "# - Release Tag:  $(VERSION)"
 	@echo "# - Release Name: $(RELEASE_NAME)"
 	# - Removing -Werror...
-	@find . \( -path "./Makefile.defs" -or -path "./client/Makefile" -or -path "./common_arm/Makefile.common" -or -path "./tools/hitag2crack/*/Makefile" \) -exec sed -i 's/ -Werror//' {} \;
-	@find . \( -path "./client/deps/*.cmake" -or -path "./client/CMakeLists.txt" \) -exec sed -i 's/ -Werror//' {} \;
+	@find . \( -path "./Makefile.defs" -or -path "./client/Makefile" -or -path "./common_arm/Makefile.common" -or -path "./tools/hitag2crack/*/Makefile" -or -path "./client/deps/*/Makefile" \) -exec sed -i 's/ -Werror//' {} \;
+	@find . \( -path "./client/deps/*.cmake" -or -path "./client/CMakeLists.txt" -or -path "./client/experimental_lib/CMakeLists.txt" \) -exec sed -i 's/ -Werror//' {} \;
 	# - Changing banner...
 	@sed -i "s/^#define BANNERMSG3 .*/#define BANNERMSG3 \"Release $(VERSION) - $(RELEASE_NAME)\"/" client/src/proxmark3.c
 	@echo -n "#   ";grep "^#define BANNERMSG3" client/src/proxmark3.c
