@@ -467,7 +467,7 @@ You must have Windows Terminal installed to use this script.
 3. Make sure your Proxmark3 is plugged in, and it is detected in the Device Manager as a COM port.
 4. Run **pm3_quick_startup_wsl2.bat** and accept the UAC prompt. The script auto detects and asks for admin privileges, so you don't have to right-click and select Run As Administrator.
 5. It will open up 2 windows. The first one is Command Prompt where initializing commands will run, and you need to keep this window open. The second one is Windows Terminal, where your pm3 client will run.
-
+6. On some systems, you will occasionally see this error popping up: `usbipd: error: WSL kernel is not USBIP capable`. Use command `service udev restart` to suppress that error.
 ```batch
 @echo off
 
@@ -513,6 +513,9 @@ ping 127.0.0.1 -n 3 > nul
 REM -- Replace the following hardware IDs with your actual Proxmark3 ID. You can find it by using "usbipd list"
 usbipd bind --hardware-id 9ac4:4b8f
 usbipd attach --auto-attach --hardware-id 9ac4:4b8f --wsl
+
+REM -- Activate below line by removing the "REM --" prefix if you encounter this error: "usbipd: error: WSL kernel is not USBIP capable"
+REM -- wsl -u root "modprobe vhci_hcd"
 
 wsl -u root "service udev restart"
 wsl -u root "udevadm trigger --action=change"
