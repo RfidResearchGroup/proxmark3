@@ -2,7 +2,7 @@
 All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
-## [Daddy Iceman][2025-06-16]
+## [Daddy Iceman.4.20469][2025-06-16]
 - Fixed edge case in fm11rf08s key recovery tools (@doegox)
 - Removed `--par` from `lf em 4x70` commands.
 - Changed `hf 14a info` - refactored code to be able to detect card technology across the client easier (@iceman1001)
