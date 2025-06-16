@@ -1039,8 +1039,8 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
                         }
                     }
                     AddCrc14A(response, MIFARE_BLOCK_SIZE);
-                    mf_crypto1_encrypt(pcs, response, MIFARE_BLOCK_SIZE + 2, response_par);
-                    EmSendCmdPar(response, MIFARE_BLOCK_SIZE + 2, response_par);
+                    mf_crypto1_encrypt(pcs, response, MIFARE_BLOCK_SIZE + CRC16_SIZE, response_par);
+                    EmSendCmdPar(response, MIFARE_BLOCK_SIZE + CRC16_SIZE, response_par);
                     FpgaDisableTracing();
 
                     if (g_dbglevel >= DBG_EXTENDED) {
@@ -1309,7 +1309,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
             // WRITE BL2
             case MFEMUL_WRITEBL2: {
 
-                if (receivedCmd_len == MIFARE_BLOCK_SIZE + 2) {
+                if (receivedCmd_len == MIFARE_BLOCK_SIZE + CRC16_SIZE) {
 
                     mf_crypto1_decryptEx(pcs, receivedCmd, receivedCmd_len, receivedCmd_dec);
 
