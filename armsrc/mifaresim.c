@@ -579,21 +579,6 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
             counter++;
         }
 
-        /*
-                // find reader field
-                if (cardSTATE == MFEMUL_NOFIELD) {
-
-                    vHf = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
-
-                    if (vHf > MF_MINFIELDV) {
-                        cardSTATE_TO_IDLE();
-                        LED_A_ON();
-                    }
-                    button_pushed = BUTTON_PRESS();
-                    continue;
-                }
-                */
-
         FpgaEnableTracing();
         //Now, get data
         int res = EmGetCmd(receivedCmd, sizeof(receivedCmd), &receivedCmd_len, receivedCmd_par);
@@ -759,10 +744,6 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
 
             // WORK
             case MFEMUL_WORK: {
-
-                if (g_dbglevel >= DBG_EXTENDED) {
-                    // Dbprintf("[MFEMUL_WORK] Enter in case");
-                }
 
                 if (receivedCmd_len == 0) {
                     if (g_dbglevel >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] NO CMD received");

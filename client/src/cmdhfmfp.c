@@ -315,7 +315,7 @@ static int mfp_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userke
 
             int len = hex_to_bytes(g_mifare_plus_default_keys[cnt], (uint8_t *)(*pkeyBlock + (*pkeycnt + cnt) * AES_KEY_LEN), AES_KEY_LEN);
 
-            PrintAndLogEx(DEBUG, _YELLOW_("%2d") " - %s", *pkeycnt + cnt, sprint_hex_inrow(*pkeyBlock + (*pkeycnt + cnt) * AES_KEY_LEN, AES_KEY_LEN));
+            PrintAndLogEx(DEBUG, _YELLOW_("%2u") " - %s", *pkeycnt + cnt, sprint_hex_inrow(*pkeyBlock + (*pkeycnt + cnt) * AES_KEY_LEN, AES_KEY_LEN));
             if (len != AES_KEY_LEN) {
                 break;
             }

@@ -2130,8 +2130,9 @@ static int CmdHFiClassDump(const char *Cmd) {
             return PM3_EOPABORTED;
         }
 
-        if (WaitForResponseTimeout(CMD_HF_ICLASS_DUMP, &resp, 2000))
+        if (WaitForResponseTimeout(CMD_HF_ICLASS_DUMP, &resp, 2000)) {
             break;
+        }
     }
 
     PrintAndLogEx(NORMAL, "");

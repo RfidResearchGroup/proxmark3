@@ -274,7 +274,7 @@ void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes) {
         return;
     };
 
-    if (!mifare_ultra_auth(keybytes)) {
+    if (mifare_ultra_auth(keybytes) == 0) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Authentication failed");
         OnError(1);
         return;
@@ -304,7 +304,7 @@ void MifareUL_AES_Auth(bool turn_off_field, uint8_t keyno, uint8_t *keybytes) {
         return;
     };
 
-    if (!mifare_ultra_aes_auth(keyno, keybytes)) {
+    if (mifare_ultra_aes_auth(keyno, keybytes) == 0) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Authentication failed");
         OnErrorNG(CMD_HF_MIFAREULAES_AUTH, PM3_ESOFT);
         return;

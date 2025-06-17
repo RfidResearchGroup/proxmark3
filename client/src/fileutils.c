@@ -72,9 +72,7 @@ DumpFileType_t get_filetype(const char *filename) {
     size_t len = strlen(filename);
     if (len > 4) {
         //  check if valid file extension and attempt to load data
-        char s[FILE_PATH_SIZE];
-        memset(s, 0, sizeof(s));
-        memcpy(s, filename, len);
+        char *s = str_dup(filename);
         str_lower(s);
 
         if (str_endswith(s, "bin")) {
@@ -97,6 +95,8 @@ DumpFileType_t get_filetype(const char *filename) {
             // log is text
             // .pm3 is text values of signal data
         }
+
+        free(s);
     }
     return o;
 }
@@ -2577,7 +2577,7 @@ int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool 
     }
 
     FILE *f = fopen(path, "r");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         free(path);
         return PM3_EFILE;

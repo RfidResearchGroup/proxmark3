@@ -287,8 +287,9 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
     }
 
     // Comment
-    if (cmd_name[0] == '#')
+    if (cmd_name[0] == '#') {
         return PM3_SUCCESS;
+    }
 
     // find args, check for -h / --help
     int tmplen = len;

@@ -55,13 +55,15 @@ void des_decrypt(void *out, const void *in, const void *key) {
 }
 
 void des_encrypt_ecb(void *out, const void *in, const int length, const void *key) {
-    for (int i = 0; i < length; i += 8)
+    for (int i = 0; i < length; i += 8) {
         des_encrypt((uint8_t *)out + i, (uint8_t *)in + i, key);
+    }
 }
 
 void des_decrypt_ecb(void *out, const void *in, const int length, const void *key) {
-    for (int i = 0; i < length; i += 8)
+    for (int i = 0; i < length; i += 8) {
         des_decrypt((uint8_t *)out + i, (uint8_t *)in + i, key);
+    }
 }
 
 void des_encrypt_cbc(void *out, const void *in, const int length, const void *key, uint8_t *iv) {

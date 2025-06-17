@@ -3939,7 +3939,9 @@ static int CmdHF14AMfChk_fast(const char *Cmd) {
             PrintAndLogEx(NORMAL, "");
             firstChunk = true;
             lastChunk = false;
-            if (blockn != -1) break;
+            if (blockn != -1) {
+                break;
+            }
         } // end strategy
     }
 out:
@@ -5247,7 +5249,7 @@ int CmdHF14AMfELoad(const char *Cmd) {
 
         // update expected blocks to match converted data.
         block_cnt = bytes_read / MFU_BLOCK_SIZE;
-        PrintAndLogEx(INFO, "MIFARE Ultralight override, will use %d blocks ( %u bytes )", block_cnt, block_cnt * block_width);
+        PrintAndLogEx(INFO, "MIFARE Ultralight override, will use " _YELLOW_("%d") " blocks ( " _YELLOW_("%u") " bytes )", block_cnt, block_cnt * block_width);
     }
 
     PrintAndLogEx(INFO, "Uploading to emulator memory");
