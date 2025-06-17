@@ -3930,13 +3930,13 @@ static int CmdHF14AMfUAESAuth(const char *Cmd) {
                   "  Key index 1... UIDRetrKey\n"
                   "  Key index 2... OriginalityKey\n",
                   "hf mfu aesauth\n"
-                  "hf mfu aesauth --key <16 hex bytes> --index <0..2>"
+                  "hf mfu aesauth --key <16 hex bytes> --idx <0..2>"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "key", "<hex>",   "AES key (16 hex bytes)"),
-        arg_int0("i", "index", "<0..2>", "Key index, default: 0"),
+        arg_int0("i", "idx", "<0..2>", "Key index (def: 0)"),
         arg_lit0("k", NULL, "Keep field on (only if a key is provided)"),
         arg_param_end
     };

@@ -7088,13 +7088,13 @@
             "description": "Tests AES key on Mifare Ultralight AES tags. If no key is specified, null key will be tried. Key index 0... DataProtKey (default) Key index 1... UIDRetrKey Key index 2... OriginalityKey",
             "notes": [
                 "hf mfu aesauth",
-                "hf mfu aesauth --key <16 hex bytes> --index <0..2>"
+                "hf mfu aesauth --key <16 hex bytes> --idx <0..2>"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "--key <hex> AES key (16 hex bytes)",
-                "-i, --index <0..2> Key index, default: 0",
+                "-i, --idx <0..2> Key index (def: 0)",
                 "-k Keep field on (only if a key is provided)"
             ],
             "usage": "hf mfu aesauth [-hk] [--key <hex>] [-i <0..2>]"
@@ -13365,6 +13365,6 @@
     "metadata": {
         "commands_extracted": 768,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-06-15T10:52:29"
+        "extracted_on": "2025-06-17T16:11:53"
     }
 }
