@@ -29,9 +29,10 @@ ifneq (,$(DESTDIR))
     endif
 endif
 
-all clean install uninstall check: %: client/% bootrom/% armsrc/% recovery/% mfc_card_only/% mfc_card_reader/% mfd_aes_brute/% fpga_compress/% cryptorf/% hitag2crack/%
+all clean install uninstall check: %: client/% bootrom/% armsrc/% recovery/% mfc_card_only/% mfc_card_reader/% mfd_aes_brute/% fpga_compress/% cryptorf/%
 # hitag2crack toolsuite is not yet integrated in "all", it must be called explicitly: "make hitag2crack"
 #all clean install uninstall check: %: hitag2crack/%
+clean: %: hitag2crack/%
 
 INSTALLTOOLS=mfc/pm3_eml2lower.sh mfc/pm3_eml2upper.sh mfc/pm3_mfdread.py mfc/pm3_mfd2eml.py mfc/pm3_eml2mfd.py pm3_amii_bin2eml.pl pm3_reblay-emulating.py pm3_reblay-reading.py
 INSTALLSIMFW=sim011.bin sim011.sha512.txt sim013.bin sim013.sha512.txt sim014.bin sim014.sha512.txt
