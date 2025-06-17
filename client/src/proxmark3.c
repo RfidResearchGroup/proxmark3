@@ -75,8 +75,9 @@ static void showBanner_logo(LogoMode mode) {
                           sq, sq, tl, hl, hl, hl, br, __, sq, sq, vl, bl, sq, sq, tl, br, sq, sq, vl, __, bl, hl, hl, sq, sq, tr);
             PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s")" " BANNERMSG1,
                           sq, sq, vl, __, __, __, __, __, sq, sq, vl, __, bl, hl, br, __, sq, sq, vl, sq, sq, sq, sq, sq, tl, br);
-            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s")" " BANNERMSG2,
+            PrintAndLogEx(NORMAL, "  " _BLUE_("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"),
                           bl, hl, br, __, __, __, __, __, bl, hl, br, __, __, __, __, __, bl, hl, br, bl, hl, hl, hl, hl, br, __);
+            PrintAndLogEx(NORMAL, "  " BANNERMSG2);
             break;
         }
         case ANSI: {
@@ -87,7 +88,8 @@ static void showBanner_logo(LogoMode mode) {
             PrintAndLogEx(NORMAL, "  " _CYAN_("8888888P\"  888 Y888P 888      \"Y8b.  "));
             PrintAndLogEx(NORMAL, "  " _CYAN_("888        888  Y8P  888 888    888  "));
             PrintAndLogEx(NORMAL, "  " _CYAN_("888        888   \"   888 Y88b  d88P") " " BANNERMSG1);
-            PrintAndLogEx(NORMAL, "  " _CYAN_("888        888       888  \"Y8888P\"") " " BANNERMSG2);
+            PrintAndLogEx(NORMAL, "  " _CYAN_("888        888       888  \"Y8888P\""));
+            PrintAndLogEx(NORMAL, "  " BANNERMSG2);
             break;
         }
         case ASCII: {
@@ -98,11 +100,11 @@ static void showBanner_logo(LogoMode mode) {
             PrintAndLogEx(NORMAL, "  8888888P\"  888 Y888P 888      \"Y8b.  ");
             PrintAndLogEx(NORMAL, "  888        888  Y8P  888 888    888    ");
             PrintAndLogEx(NORMAL, "  888        888   \"   888 Y88b  d88P " BANNERMSG1);
-            PrintAndLogEx(NORMAL, "  888        888       888  \"Y8888P\" " BANNERMSG2);
+            PrintAndLogEx(NORMAL, "  888        888       888  \"Y8888P\"");
+            PrintAndLogEx(NORMAL, "  " BANNERMSG2);
             break;
         }
     }
-    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(NORMAL, BANNERMSG3);
 }
 
