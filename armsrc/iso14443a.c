@@ -697,6 +697,9 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
 static RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
 
     if (Demod.len == Demod.output_len) {
+        // Flush last parity bits
+        Demod.parityBits <<= (8 - (Demod.len & 0x0007));    // left align remaining parity bits
+        Demod.parity[Demod.parityLen++] = Demod.parityBits; // and store them
         return true;
     }
 
@@ -2903,8 +2906,9 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
 
     if (anticollision) {
         // clear uid
-        if (uid_ptr)
+        if (uid_ptr) {
             memset(uid_ptr, 0, 10);
+        }
     }
 
     if (hf14aconfig.forceanticol == 0) {
