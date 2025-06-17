@@ -29,7 +29,7 @@ ifneq (,$(DESTDIR))
     endif
 endif
 
-all clean install uninstall check: %: client/% bootrom/% armsrc/% recovery/% mfc_card_only/% mfc_card_reader/% mfd_aes_brute/% fpga_compress/% cryptorf/%
+all clean install uninstall check: %: client/% bootrom/% armsrc/% recovery/% mfc_card_only/% mfc_card_reader/% mfd_aes_brute/% fpga_compress/% cryptorf/% hitag2crack/%
 # hitag2crack toolsuite is not yet integrated in "all", it must be called explicitly: "make hitag2crack"
 #all clean install uninstall check: %: hitag2crack/%
 
