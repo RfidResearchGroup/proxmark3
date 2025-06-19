@@ -27,7 +27,7 @@
 #include "util_posix.h" // msleep
 
 #if defined(__MACH__) && defined(__APPLE__)
-# include "pthread_spin_lock_shim.h"
+# include "pthread_spin_lock_shim.h"  // spinlock shim for OSX ..
 #endif
 
 #define MAX_PM3_INPUT_ARGS_LENGTH    4096
@@ -228,7 +228,6 @@ static int execute_system_command(const char *command) {
     pthread_spinlock_t sycmd_spinlock;
     pthread_spin_init(&sycmd_spinlock, 0);
     pthread_spin_lock(&sycmd_spinlock);
-
 
     int ret;
 

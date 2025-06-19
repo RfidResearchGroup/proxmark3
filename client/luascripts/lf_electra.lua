@@ -299,7 +299,7 @@ local function main(args)
         if answer == 'n' then
             core.console('clear')
             print( string.rep('--',39) )
-            print(ac.red..'                                  USER ABORTED'..ac.reset)
+            print(ac.red..'                                  Aborted via keyboard!'..ac.reset)
             print( string.rep('--',39) )
             break
         end

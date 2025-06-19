@@ -198,7 +198,7 @@ local function main(args)
                 core.console('lf em 410x reader')
             end
         else
-            print(ac.red..'User aborted'..ac.reset)
+            print(ac.red..'aborted via keyboard!'..ac.reset)
             low = i
             break
         end
