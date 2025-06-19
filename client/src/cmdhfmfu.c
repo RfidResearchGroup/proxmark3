@@ -5919,12 +5919,6 @@ static int CmdHF14AMfUIncr(const char *Cmd) {
         increment_cmd[i + 2] = (value >> (8 * i)) & 0xff;
     }
 
-    iso14a_card_select_t card;
-    if (ul_select(&card) == false) {
-        PrintAndLogEx(FAILED, "failed to select card, exiting...");
-        return PM3_ESOFT;
-    }
-
     uint64_t tagtype = GetHF14AMfU_Type();
     uint64_t tags_with_counter_ul = MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1;
     uint64_t tags_with_counter_ntag = MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C | MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216;
@@ -5948,6 +5942,12 @@ static int CmdHF14AMfUIncr(const char *Cmd) {
             DropField();
             return PM3_ESOFT;
         }
+    }
+
+    iso14a_card_select_t card;
+    if (ul_select(&card) == false) {
+        PrintAndLogEx(FAILED, "failed to select card, exiting...");
+        return PM3_ESOFT;
     }
 
     uint8_t current_counter[3] = { 0, 0, 0 };
