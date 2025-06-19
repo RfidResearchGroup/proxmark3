@@ -43,7 +43,7 @@ static inline int pthread_spin_trylock(pthread_spinlock_t *lock) {
 	if (__sync_bool_compare_and_swap(lock, 0, 1)) {
 		return 0;
 	}
-	return EBUSY;
+	return  16; // EBUSY;
 }
 
 static inline int pthread_spin_unlock(pthread_spinlock_t *lock) {
