@@ -238,7 +238,12 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
         }
     }
 
-    *response_len = sam_rx_buf[5 + 1] + 2;
+    if (sam_rx_buf[6] == 0x81 && sam_rx_buf[8] == 0x8a && sam_rx_buf[9] == 0x81 ){ //check if the response is an SNMP message
+        *response_len = sam_rx_buf[6 + 1] + 3;
+    }else{ //if not, use the old logic
+        *response_len = sam_rx_buf[5 + 1] + 2;
+    }
+
     memcpy(response, sam_rx_buf + 5, *response_len);
 
     goto out;
