@@ -26,6 +26,9 @@
 #include "comms.h"
 #include "util_posix.h" // msleep
 
+#if defined(__MACH__) && defined(__APPLE__)
+# include "pthread_spin_lock_shim.h"
+#endif
 
 #define MAX_PM3_INPUT_ARGS_LENGTH    4096
 
@@ -220,14 +223,16 @@ void CmdsHelp(const command_t Commands[]) {
     PrintAndLogEx(NORMAL, "");
 }
 
-pthread_spinlock_t sycmd_spinlock;
-
 static int execute_system_command(const char *command) {
+
+    pthread_spinlock_t sycmd_spinlock;
+    pthread_spin_init(&sycmd_spinlock, 0);
+    pthread_spin_lock(&sycmd_spinlock);
+
 
     int ret;
 
-    pthread_spin_lock(&sycmd_spinlock);
-#if defined(_WIN32)
+    #if defined(_WIN32)
     char wrapped_command[255];
     strncat(wrapped_command, "cmd /C \"", 9);
     strncat(wrapped_command, command, strlen(command));
@@ -238,6 +243,7 @@ static int execute_system_command(const char *command) {
     ret = system(command);
 #endif
     pthread_spin_unlock(&sycmd_spinlock);
+    pthread_spin_destroy(&sycmd_spinlock);
     return ret;
 }
 
@@ -291,10 +297,7 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
     }
 
     if (Cmd[0] == '!') {
-        pthread_spin_init(&sycmd_spinlock, 0);
-        int res = execute_system_command(Cmd + 1);
-        pthread_spin_destroy(&sycmd_spinlock);
-        return res;
+        return execute_system_command(Cmd + 1);
     }
 
     char cmd_name[128] = {0};
