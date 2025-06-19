@@ -350,6 +350,12 @@ typedef struct {
 } PACKED mfc_eload_t;
 
 typedef struct {
+    bool use_flashmem;
+    uint16_t keycount;
+    uint8_t keys[];
+} PACKED mfulc_keys_t;
+
+typedef struct {
     uint8_t status;
     uint8_t CSN[8];
     uint8_t CONFIG[8];

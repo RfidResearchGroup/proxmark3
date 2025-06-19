@@ -484,7 +484,7 @@ int EMVSearch(Iso7816CommandChannel channel, bool ActivateField, bool LeaveField
     for (int i = 0; i < ARRAYLEN(AIDlist); i ++) {
 
         if (kbd_enter_pressed()) {
-            PrintAndLogEx(INFO, "user aborted...");
+            PrintAndLogEx(WARNING, "\naborted via keyboard!");
             break;
         }
 

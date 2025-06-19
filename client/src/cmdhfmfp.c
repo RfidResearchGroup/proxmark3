@@ -1802,9 +1802,6 @@ static int CmdHFMFPChk(const char *Cmd) {
     t1 = msclock() - t1;
     PrintAndLogEx(INFO, "\ntime in checkkeys " _YELLOW_("%.0f") " seconds\n", (float)t1 / 1000.0);
 
-    PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(SUCCESS, _GREEN_("found keys:"));
-
     // print result
     char strA[46 + 1] = {0};
     char strB[46 + 1] = {0};

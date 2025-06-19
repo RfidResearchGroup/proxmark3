@@ -4609,7 +4609,7 @@ static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, u
             repeat = false;
         } else if (resp.status == PM3_EOPABORTED) {
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(WARNING, "iCLASS Key Bits Recovery: " _YELLOW_("user aborted"));
+            PrintAndLogEx(WARNING, "iCLASS Key Bits Recovery: " _YELLOW_("aborted via keyboard!"));
             repeat = false;
         } else if (resp.status == PM3_ESOFT) {
             PrintAndLogEx(NORMAL, "");
@@ -5210,7 +5210,7 @@ static int CmdHFiClassLookUp(const char *Cmd) {
     item = (iclass_prekey_t *) bsearch(&lookup, prekey, keycount, sizeof(iclass_prekey_t), cmp_uint32);
 
     if (item != NULL) {
-        PrintAndLogEx(SUCCESS, "Found valid key " _GREEN_("%s"), sprint_hex(item->key, 8));
+        PrintAndLogEx(SUCCESS, "Found valid key " _GREEN_("%s"), sprint_hex_inrow(item->key, 8));
         add_key(item->key);
     }
 

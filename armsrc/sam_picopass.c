@@ -103,10 +103,13 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
 
             nfc_tx_len = sam_copy_payload_sam2nfc(nfc_tx_buf, sam_rx_buf);
 
-            bool is_cmd_check = (nfc_tx_buf[0] & 0x0F) == ICLASS_CMD_CHECK;
+            bool is_cmd_check = ((nfc_tx_buf[0] & 0x0F) == ICLASS_CMD_CHECK);
+
             if (is_cmd_check && break_on_nr_mac) {
+
                 memcpy(response, nfc_tx_buf, nfc_tx_len);
                 *response_len = nfc_tx_len;
+
                 if (g_dbglevel >= DBG_INFO) {
                     DbpString("NR-MAC: ");
                     Dbhexdump((*response_len) - 1, response + 1, false);
@@ -115,7 +118,8 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
                 goto out;
             }
 
-            bool is_cmd_update = (nfc_tx_buf[0] & 0x0F) == ICLASS_CMD_UPDATE;
+            bool is_cmd_update = ((nfc_tx_buf[0] & 0x0F) == ICLASS_CMD_UPDATE);
+
             if (is_cmd_update && prevent_epurse_update && nfc_tx_buf[0] == 0x87 && nfc_tx_buf[1] == 0x02) {
                 // block update(2) command and fake the response to prevent update of epurse
 
@@ -223,13 +227,13 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
     //              07
     // 90 00
     if (request_len == 0) {
-        if (
-            !(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0x8a && sam_rx_buf[5 + 4] == 0x03)
-            &&
-            !(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0xb3 && sam_rx_buf[5 + 4] == 0xa0)
-        ) {
-            if (g_dbglevel >= DBG_ERROR)
+
+        if (!(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0x8a && sam_rx_buf[5 + 4] == 0x03) &&
+                !(sam_rx_buf[5] == 0xbd && sam_rx_buf[5 + 2] == 0xb3 && sam_rx_buf[5 + 4] == 0xa0)) {
+
+            if (g_dbglevel >= DBG_ERROR) {
                 Dbprintf("No PACS data in SAM response");
+            }
             res = PM3_ESOFT;
         }
     }
@@ -361,14 +365,14 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
         goto out;
     }
 
-    if (!skipDetect) {
+    if (skipDetect == false) {
         // step 2: get card information
         picopass_hdr_t card_a_info;
         uint32_t eof_time = 0;
 
         // implicit StartSspClk() happens here
         Iso15693InitReader();
-        if (!select_iclass_tag(&card_a_info, false, &eof_time, shallow_mod)) {
+        if (select_iclass_tag(&card_a_info, false, &eof_time, shallow_mod) == false) {
             goto err;
         }
 
@@ -383,8 +387,10 @@ int sam_picopass_get_pacs(PacketCommandNG *c) {
     if (res != PM3_SUCCESS) {
         goto err;
     }
-    if (g_dbglevel >= DBG_INFO)
+
+    if (g_dbglevel >= DBG_INFO) {
         print_result("Response data", sam_response, sam_response_len);
+    }
 
     goto out;
 

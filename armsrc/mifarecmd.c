@@ -344,7 +344,7 @@ void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
         uint8_t key[16] = {0x00};
         memcpy(key, datain, sizeof(key));
 
-        if (!mifare_ultra_auth(key)) {
+        if (mifare_ultra_auth(key) == 0) {
             OnError(1);
             return;
         }
@@ -1947,7 +1947,7 @@ void MifareChkKeys_fast(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint8_t *da
         // Now append the SPI flash dictionnary
         if (SPIFFS_OK == rdv40_spiffs_read_as_filetype(MF_KEYS_FILE, dictkeys + (keyCount * MF_KEY_LENGTH), (key_mem_available - keyCount) * MF_KEY_LENGTH, RDV40_SPIFFS_SAFETY_SAFE)) {
             if (g_dbglevel >= DBG_ERROR) {
-                Dbprintf("loaded " _GREEN_("%u") " keys from spiffs file `" _YELLOW_("%s") "`", key_mem_available, MF_KEYS_FILE);
+                Dbprintf("loaded " _GREEN_("%u") " keys from spiffs file `" _YELLOW_("%s") "`", key_mem_available - keyCount, MF_KEYS_FILE);
             }
         } else {
             Dbprintf("Spiffs file `" _RED_("%s") "` cannot be read", MF_KEYS_FILE);
@@ -3561,7 +3561,7 @@ void MifareGen3Blk(uint8_t block_len, uint8_t *block) {
         AddCrc14A(cmd, sizeof(block_cmd) + MIFARE_BLOCK_SIZE);
 
         if (doReselect) {
-            if (!iso14443a_select_card(NULL, NULL, NULL, true, 0, true)) {
+            if (iso14443a_select_card(NULL, NULL, NULL, true, 0, true) == 0) {
                 retval = PM3_ESOFT;
                 goto OUT;
             }

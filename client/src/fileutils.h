@@ -385,4 +385,15 @@ int pm3_save_mf_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft);
  * @return PM3_SUCCESS if OK
  */
 int pm3_save_fm11rf08s_nonces(const char *fn, iso14a_fm11rf08s_nonces_with_data_t *d, bool with_data);
+
+
+/**
+ * Inserts a line into a text file only if it does not already exist.
+ * Returns PM3_SUCCES or, PM3_EFILE;
+ *
+ * @param filepath Path to the file.
+ * @param line     Line to insert (should not contain a trailing newline).
+ */
+int insert_line_if_not_exists(const char *preferredName, const char *line);
+
 #endif // FILEUTILS_H

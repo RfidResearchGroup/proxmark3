@@ -177,14 +177,15 @@ crack_states_thread(void *x) {
 
                 char progress_text[80];
                 char keystr[19];
-                snprintf(keystr, sizeof(keystr), "%012" PRIX64 "  ", key);
+                snprintf(keystr, sizeof(keystr), "%012" PRIX64, key);
                 snprintf(progress_text, sizeof(progress_text), "Brute force phase completed.  Key found: " _GREEN_("%s"), keystr);
                 hardnested_print_progress(thread_arg->num_acquired_nonces, progress_text, 0.0, 0);
+                PrintAndLogEx(INFO, "---------+---------+---------------------------------------------------------+-----------------+-------");
                 break;
             } else if (keys_found) {
                 break;
             } else {
-                if (!thread_arg->silent) {
+                if (thread_arg->silent == false) {
                     char progress_text[80];
                     snprintf(progress_text, sizeof(progress_text), "Brute force phase: %6.02f%%  ", 100.0 * (float)num_keys_tested / (float)(thread_arg->maximum_states));
                     float remaining_bruteforce = thread_arg->nonces[thread_arg->best_first_bytes[0]].expected_num_brute_force - (float)num_keys_tested / 2;
@@ -337,7 +338,7 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
     bucket_count = 0;
     for (statelist_t *p = candidates; p != NULL; p = p->next) {
         if (p->states[ODD_STATE] != NULL && p->states[EVEN_STATE] != NULL) {
-            if (!ensure_buckets_alloc(bucket_count + 1)) {
+            if (ensure_buckets_alloc(bucket_count + 1) == false) {
                 PrintAndLogEx(ERR, "Can't allocate buckets, abort!");
                 return false;
             }
@@ -375,6 +376,7 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
         thread_args[i].best_first_bytes = best_first_bytes;
         pthread_create(&threads[i], NULL, crack_states_thread, (void *)&thread_args[i]);
     }
+
     for (uint32_t i = 0; i < num_brute_force_threads; i++) {
         pthread_join(threads[i], 0);
     }
@@ -385,11 +387,13 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
 
     uint64_t elapsed_time = msclock() - start_time;
 
-    if (bf_rate != NULL)
+    if (bf_rate != NULL) {
         *bf_rate = (float)num_keys_tested / ((float)elapsed_time / 1000.0);
+    }
 
-    if (keys_found > 0)
+    if (keys_found > 0) {
         *found_key = found_bs_key;
+    }
 
     return (keys_found != 0);
 }

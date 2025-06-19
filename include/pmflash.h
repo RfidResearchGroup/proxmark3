@@ -79,6 +79,13 @@
 #define MF_KEYS_FILE "dict_mf.bin"
 #define MF_KEY_LENGTH 6
 
+// MIFARE Ultralight-C keys stored in spiffs
+#define MFULC_KEYS_FILE "dict_mfulc.bin"
+#define MFULC_KEY_LENGTH (16)
+
+// MIFARE Ultralight-AES keys stored in spiffs
+#define MFULAES_KEYS_FILE "dict_mfulaes.bin"
+#define MFULAES_KEY_LENGTH (16)
 // RDV40,  validation structure to help identifying that client/firmware is talking with RDV40
 typedef struct {
     uint8_t magic[4];

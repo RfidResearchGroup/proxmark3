@@ -96,7 +96,7 @@ void RunMod(void) {
                     }
                 }
 
-                if (!iso14443a_select_card(NULL, &card[selected], NULL, true, 0, true)) {
+                if (iso14443a_select_card(NULL, &card[selected], NULL, true, 0, true) == 0) {
                     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
                     LED_D_OFF();
                     SpinDelay(500);
@@ -253,25 +253,25 @@ void RunMod(void) {
 
                     if (uids[selected].sak == 0x08 && uids[selected].atqa[0] == 0x04 && uids[selected].atqa[1] == 0) {
                         DbpString("Mifare Classic 1k");
-                        SimulateIso14443aTag(1, flags, data, 0, NULL, 0);
+                        SimulateIso14443aTag(1, flags, data, 0, NULL, 0, false, false);
                     } else if (uids[selected].sak == 0x18 && uids[selected].atqa[0] == 0x02 && uids[selected].atqa[1] == 0) {
                         DbpString("Mifare Classic 4k (4b uid)");
-                        SimulateIso14443aTag(8, flags, data, 0, NULL, 0);
+                        SimulateIso14443aTag(8, flags, data, 0, NULL, 0, false, false);
                     } else if (uids[selected].sak == 0x08 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0) {
                         DbpString("Mifare Classic 4k (7b uid)");
-                        SimulateIso14443aTag(8, flags, data, 0, NULL, 0);
+                        SimulateIso14443aTag(8, flags, data, 0, NULL, 0, false, false);
                     } else if (uids[selected].sak == 0x00 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0) {
                         DbpString("Mifare Ultralight");
-                        SimulateIso14443aTag(2, flags, data, 0, NULL, 0);
+                        SimulateIso14443aTag(2, flags, data, 0, NULL, 0, false, false);
                     } else if (uids[selected].sak == 0x20 && uids[selected].atqa[0] == 0x04 && uids[selected].atqa[1] == 0x03) {
                         DbpString("Mifare DESFire");
-                        SimulateIso14443aTag(3, flags, data, 0, NULL, 0);
+                        SimulateIso14443aTag(3, flags, data, 0, NULL, 0, false, false);
                     } else if (uids[selected].sak == 0x20 && uids[selected].atqa[0] == 0x44 && uids[selected].atqa[1] == 0x03) {
                         DbpString("Mifare DESFire Ev1/Plus/JCOP");
-                        SimulateIso14443aTag(3, flags, data, 0, NULL, 0);
+                        SimulateIso14443aTag(3, flags, data, 0, NULL, 0, false, false);
                     } else {
                         Dbprintf("Unrecognized tag type -- defaulting to Mifare Classic emulation");
-                        SimulateIso14443aTag(1, flags, data, 0, NULL, 0);
+                        SimulateIso14443aTag(1, flags, data, 0, NULL, 0, false, false);
                     }
 
                 } else if (button_pressed == BUTTON_SINGLE_CLICK) {

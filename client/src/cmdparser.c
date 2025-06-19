@@ -20,7 +20,8 @@
 
 #include <stdio.h>
 #include <string.h>
-
+#include <pthread.h>      // spinlock
+#include <stdlib.h>       // system
 #include "ui.h"
 #include "comms.h"
 #include "util_posix.h" // msleep
@@ -219,6 +220,28 @@ void CmdsHelp(const command_t Commands[]) {
     PrintAndLogEx(NORMAL, "");
 }
 
+pthread_spinlock_t sycmd_spinlock;
+
+static int execute_system_command(const char *command) {
+
+    int ret;
+
+    pthread_spin_lock(&sycmd_spinlock);
+#if defined(_WIN32)
+    char wrapped_command[255];
+    strncat(wrapped_command, "cmd /C \"", 9);
+    strncat(wrapped_command, command, strlen(command));
+    strncat(wrapped_command, "\"", 2);
+
+    ret = system(wrapped_command);
+#else
+    ret = system(command);
+#endif
+    pthread_spin_unlock(&sycmd_spinlock);
+    return ret;
+}
+
+
 int CmdsParse(const command_t Commands[], const char *Cmd) {
 
     if (g_session.client_exe_delay != 0) {
@@ -267,6 +290,12 @@ int CmdsParse(const command_t Commands[], const char *Cmd) {
         return PM3_SUCCESS;
     }
 
+    if (Cmd[0] == '!') {
+        pthread_spin_init(&sycmd_spinlock, 0);
+        int res = execute_system_command(Cmd + 1);
+        pthread_spin_destroy(&sycmd_spinlock);
+        return res;
+    }
 
     char cmd_name[128] = {0};
     memset(cmd_name, 0, sizeof(cmd_name));

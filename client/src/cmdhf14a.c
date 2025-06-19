@@ -880,6 +880,7 @@ int CmdHF14ASim(const char *Cmd) {
                   "hf 14a sim -t 10                -> ST25TA IKEA Rothult\n"
                   "hf 14a sim -t 11                -> Javacard (JCOP)\n"
                   "hf 14a sim -t 12                -> 4K Seos card\n"
+                  "hf 14a sim -t 13                -> MIFARE Ultralight C"
                  );
 
     void *argtable[] = {
@@ -890,6 +891,8 @@ int CmdHF14ASim(const char *Cmd) {
         arg_lit0("x",  NULL, "Performs the 'reader attack', nr/ar attack against a reader"),
         arg_lit0(NULL, "sk", "Fill simulator keys from found keys"),
         arg_lit0("v", "verbose", "verbose output"),
+        arg_lit0(NULL, "c1", "UL-C Auth - all zero handshake part 1"),
+        arg_lit0(NULL, "c2", "UL-C Auth - all zero handshake part 2"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -923,9 +926,12 @@ int CmdHF14ASim(const char *Cmd) {
     bool setEmulatorMem = arg_get_lit(ctx, 5);
     bool verbose = arg_get_lit(ctx, 6);
 
+    bool ulc_p1 = arg_get_lit(ctx, 7);
+    bool ulc_p2 = arg_get_lit(ctx, 8);
+
     CLIParserFree(ctx);
 
-    if (tagtype > 12) {
+    if (tagtype > 13) {
         PrintAndLogEx(ERR, "Undefined tag %d", tagtype);
         return PM3_EINVARG;
     }
@@ -939,11 +945,16 @@ int CmdHF14ASim(const char *Cmd) {
         uint16_t flags;
         uint8_t uid[10];
         uint8_t exitAfter;
+        uint8_t rats[20];
+        bool ulc_p1;
+        bool ulc_p2;
     } PACKED payload;
 
     payload.tagtype = tagtype;
     payload.flags = flags;
     payload.exitAfter = exitAfterNReads;
+    payload.ulc_p1 = ulc_p1;
+    payload.ulc_p2 = ulc_p2;
     memcpy(payload.uid, uid, uid_len);
 
     clearCommandBuffer();
@@ -1319,7 +1330,7 @@ static int CmdExchangeAPDU(bool chainingin, const uint8_t *datain, int datainlen
 
     // Button pressed / user cancelled
     if (iLen == -3) {
-        PrintAndLogEx(DEBUG, "ERR: APDU: User aborted");
+        PrintAndLogEx(DEBUG, "\naborted via keyboard!");
         return PM3_EAPDU_FAIL;
     }
     return PM3_SUCCESS;

@@ -194,4 +194,7 @@ struct smartbuf {
 void sb_append_char(smartbuf *sb, unsigned char c);
 
 uint8_t get_highest_frequency(const uint8_t *d, uint8_t n);
+
+size_t unduplicate(uint8_t *d, size_t n, const uint8_t item_n);
+
 #endif

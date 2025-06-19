@@ -3075,6 +3075,82 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
     return res;
 }
 
+/**
+ * Inserts a line into a text file only if it does not already exist.
+ * Returns PM3_SUCCES or, PM3_EFILE;
+ *
+ * @param filepath Path to the file.
+ * @param line     Line to insert (should not contain a trailing newline).
+ */
+int insert_line_if_not_exists(const char *preferredName, const char *keystr) {
+
+    char *path;
+    int res = searchFile(&path, DICTIONARIES_SUBDIR, preferredName, ".dic", false);
+    if (res != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    FILE *f = fopen(path, "r");
+    if (f == NULL) {
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
+        free(path);
+        return PM3_EFILE;
+    }
+
+    // Maximum line length we assume (adjust as necessary for your use case)
+    char line[255];
+    bool key_exists = false;
+
+    char *keystrdup = str_dup(keystr);
+    str_upper(keystrdup);
+
+    // First pass: check if the line exists
+    while (fgets(line, sizeof(line), f)) {
+
+        // The line start with # is comment, skip
+        if (line[0] == '#') {
+            continue;
+        }
+
+        // Remove trailing newline for comparison
+        line[strcspn(line, "\n")] = '\0';
+
+        // UPPER CASE
+        str_upper(line);
+
+        key_exists = str_startswith(line, keystrdup);
+        if (key_exists) {
+            fclose(f);
+            free(path);
+            PrintAndLogEx(INFO, "already in there...");
+            return PM3_SUCCESS;
+        }
+    }
+
+    fclose(f);
+
+
+    // Reopen for appending if line doesn't exist
+    f = fopen(path, "a");
+    if (f == NULL) {
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
+        free(path);
+        return PM3_EFILE;
+    }
+
+    free(path);
+
+    // Append the line with a newline
+    if (fprintf(f, "%s\n", keystrdup) < 0) {
+        PrintAndLogEx(WARNING, "error writing to file");
+        fclose(f);
+        return PM3_EFILE;
+    }
+
+    fclose(f);
+    return PM3_SUCCESS;
+}
+
 int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumplen) {
 
     int res = PM3_SUCCESS;

@@ -560,7 +560,7 @@ static int CmdLegicSim(const char *Cmd) {
     for (;;) {
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(DEBUG, "User aborted");
+            PrintAndLogEx(DEBUG, "Aborted via keyboard!");
             break;
         }
 

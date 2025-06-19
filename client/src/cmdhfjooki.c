@@ -584,7 +584,7 @@ static int CmdHF14AJookiSim(const char *Cmd) {
     for (;;) {
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(DEBUG, "User aborted");
+            PrintAndLogEx(DEBUG, "\naborted via keyboard!");
             break;
         }
 

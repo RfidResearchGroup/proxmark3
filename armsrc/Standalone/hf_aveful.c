@@ -157,7 +157,7 @@ void RunMod(void) {
             if (button_pressed != BUTTON_NO_CLICK || data_available())
                 break;
             else if (state == STATE_SEARCH) {
-                if (!iso14443a_select_card(NULL, &card, NULL, true, 0, true)) {
+                if (iso14443a_select_card(NULL, &card, NULL, true, 0, true) == 0) {
                     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
                     LED_D_OFF();
                     SpinDelay(500);
@@ -246,7 +246,7 @@ void RunMod(void) {
                 FLAG_SET_UID_IN_DATA(flags, 7);
 
                 Dbprintf("Starting simulation, press " _GREEN_("pm3 button") " to stop and go back to search state.");
-                SimulateIso14443aTag(7, flags, card.uid, 0, NULL, 0);
+                SimulateIso14443aTag(7, flags, card.uid, 0, NULL, 0, false, false);
 
                 // Go back to search state if user presses pm3-button
                 state = STATE_SEARCH;

@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `mem load` - now handles UL-C and UL-AES dictionary files (@iceman1001)
+- Changed `hf mfu sim` - now support UL-C simulation (@iceman1001)
+- Added `!` - run system commands from inside the client. Potentially dangerous if running client as SUDO, SU, ROOT (@iceman1001)
 
 ## [Daddy Iceman.4.20469][2025-06-16]
 - Fixed edge case in fm11rf08s key recovery tools (@doegox)

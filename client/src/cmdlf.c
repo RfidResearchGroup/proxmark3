@@ -83,7 +83,7 @@ int lfsim_wait_check(uint32_t cmd) {
     for (;;) {
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(DEBUG, "User aborted");
+            PrintAndLogEx(DEBUG, "\naborted via keyboard!");
             break;
         }
 

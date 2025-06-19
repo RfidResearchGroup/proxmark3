@@ -43,6 +43,8 @@
 #include "cmdhf14a.h"
 #include "gen4.h"
 #include "parity.h"
+#include "pmflash.h"
+#include "preferences.h"        // setDeviceDebugLevel
 
 int mf_dark_side(uint8_t blockno, uint8_t key_type, uint64_t *key) {
     uint32_t uid = 0;
@@ -275,7 +277,7 @@ int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastCh
 
         while (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(INFO, "aborted via keyboard!");
             return PM3_EOPABORTED;
         }
 
@@ -305,12 +307,11 @@ int mf_check_keys_fast_ex(uint8_t sectorsCnt, uint8_t firstChunk, uint8_t lastCh
     uint8_t curr_keys = resp.oldarg[0];
 
     if ((singleSectorParams >> 15) & 1) {
-        if (curr_keys) {
-            // uint64_t foo = bytes_to_num(resp.data.asBytes, 6);
-            PrintAndLogEx(NORMAL, "");
-//            PrintAndLogEx(SUCCESS, "found Key %s for block %2i found: " _GREEN_("%012" PRIx64), (singleSectorParams >> 8) & 1 ? "B" : "A", singleSectorParams & 0xFF, foo);
 
-            PrintAndLogEx(SUCCESS, "\nTarget block %4u key type %c -- found valid key [ " _GREEN_("%s") " ]",
+        if (curr_keys) {
+
+            PrintAndLogEx(NORMAL, "");
+            PrintAndLogEx(SUCCESS, "\nTarget block " _GREEN_("%4u") " key type " _GREEN_("%c") " -- found valid key [ " _GREEN_("%s") " ]",
                           singleSectorParams & 0xFF,
                           ((singleSectorParams >> 8) & 1) ? 'B' : 'A',
                           sprint_hex_inrow(resp.data.asBytes, MIFARE_KEY_SIZE)
@@ -561,8 +562,9 @@ int mf_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo
     struct p *package = (struct p *)resp.data.asBytes;
 
     // error during nested on device side
-    if (package->isOK != PM3_SUCCESS)
+    if (package->isOK != PM3_SUCCESS) {
         return package->isOK;
+    }
 
     memcpy(&uid, package->cuid, sizeof(package->cuid));
 
@@ -582,12 +584,14 @@ int mf_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo
     pthread_t thread_id[2];
 
     // create and run worker threads
-    for (uint8_t i = 0; i < 2; i++)
+    for (uint8_t i = 0; i < 2; i++) {
         pthread_create(thread_id + i, NULL, nested_worker_thread, &statelists[i]);
+    }
 
     // wait for threads to terminate:
-    for (uint8_t i = 0; i < 2; i++)
+    for (uint8_t i = 0; i < 2; i++) {
         pthread_join(thread_id[i], (void *)&statelists[i].head.slhead);
+    }
 
     // the first 16 Bits of the cryptostate already contain part of our key.
     // Create the intersection of the two lists based on these 16 Bits and
@@ -596,9 +600,11 @@ int mf_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo
     p2 = p4 = statelists[1].head.slhead;
 
     while (p1 <= statelists[0].tail.sltail && p2 <= statelists[1].tail.sltail) {
+
         if (Compare16Bits(p1, p2) == 0) {
 
             struct Crypto1State savestate;
+
             savestate = *p1;
             while (Compare16Bits(p1, &savestate) == 0 && p1 <= statelists[0].tail.sltail) {
                 *p3 = *p1;
@@ -606,6 +612,7 @@ int mf_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo
                 p3++;
                 p1++;
             }
+
             savestate = *p2;
             while (Compare16Bits(p2, &savestate) == 0 && p2 <= statelists[1].tail.sltail) {
                 *p4 = *p2;
@@ -613,6 +620,7 @@ int mf_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo
                 p4++;
                 p2++;
             }
+
         } else {
             while (Compare16Bits(p1, p2) == -1) p1++;
             while (Compare16Bits(p1, p2) == 1) p2++;
@@ -635,13 +643,15 @@ int mf_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo
     // Create the intersection
     statelists[0].len = intersection(statelists[0].head.keyhead, statelists[1].head.keyhead);
 
+    bool looped = false;
+
     //statelists[0].tail.keytail = --p7;
     uint32_t keycnt = statelists[0].len;
     if (keycnt == 0) {
         goto out;
     }
 
-    PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") " key candidates", keycnt);
+    PrintAndLogEx(SUCCESS, "Found " _YELLOW_("%u") " key candidate%c", keycnt, (keycnt > 1) ? 's' : ' ');
 
     memset(resultKey, 0, MIFARE_KEY_SIZE);
     uint64_t key64 = -1;
@@ -659,44 +669,53 @@ int mf_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo
         register uint8_t j;
         for (j = 0; j < size; j++) {
             crypto1_get_lfsr(statelists[0].head.slhead + i, &key64);
-            num_to_bytes(key64, 6, keyBlock + j * MIFARE_KEY_SIZE);
+            num_to_bytes(key64, MIFARE_KEY_SIZE, keyBlock + j * MIFARE_KEY_SIZE);
         }
 
         if (mf_check_keys(statelists[0].blockNo, statelists[0].keyType, false, size, keyBlock, &key64) == PM3_SUCCESS) {
+
+            if (looped) {
+                PrintAndLogEx(NORMAL, "");
+            }
+
             free(statelists[0].head.slhead);
             free(statelists[1].head.slhead);
-            num_to_bytes(key64, 6, resultKey);
+            num_to_bytes(key64, MIFARE_KEY_SIZE, resultKey);
 
             if (package->keytype < 2) {
-                PrintAndLogEx(SUCCESS, "\nTarget block %4u key type %c -- found valid key [ " _GREEN_("%s") " ]",
+                PrintAndLogEx(SUCCESS, "Target block " _GREEN_("%4u") " key type " _GREEN_("%c") " -- found valid key [ " _GREEN_("%s") " ]",
                               package->block,
                               package->keytype ? 'B' : 'A',
                               sprint_hex_inrow(resultKey, MIFARE_KEY_SIZE)
                              );
             } else {
-                PrintAndLogEx(SUCCESS, "\nTarget block %4u key type %02x -- found valid key [ " _GREEN_("%s") " ]",
+                PrintAndLogEx(SUCCESS, "Target block " _GREEN_("%4u") " key type " _GREEN_("%02x") " -- found valid key [ " _GREEN_("%s") " ]",
                               package->block,
                               MIFARE_AUTH_KEYA + package->keytype,
                               sprint_hex_inrow(resultKey, MIFARE_KEY_SIZE)
                              );
             }
-
-
             return PM3_SUCCESS;
         }
 
         float bruteforce_per_second = (float)(i + max_keys) / ((msclock() - start_time) / 1000.0);
         PrintAndLogEx(INPLACE, "%6d/%u keys | %5.1f keys/sec | worst case %6.1f seconds remaining", i, keycnt, bruteforce_per_second, (keycnt - i) / bruteforce_per_second);
+        looped = true;
     }
 
 out:
+
+    if (looped) {
+        PrintAndLogEx(NORMAL, "");
+    }
+
     if (package->keytype < 2) {
-        PrintAndLogEx(SUCCESS, "\nTarget block %4u key type %c",
+        PrintAndLogEx(SUCCESS, "Target block " _YELLOW_("%4u") " key type " _YELLOW_("%c"),
                       package->block,
                       package->keytype ? 'B' : 'A'
                      );
     } else {
-        PrintAndLogEx(SUCCESS, "\nTarget block %4u key type %02x",
+        PrintAndLogEx(SUCCESS, "Target block " _YELLOW_("%4u") " key type " _YELLOW_("%02x"),
                       package->block,
                       MIFARE_AUTH_KEYA + package->keytype
                      );
@@ -911,10 +930,11 @@ int mf_static_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trg
 
             num_to_bytes(key64, MIFARE_KEY_SIZE, resultKey);
 
-            if (IfPm3Flash() && keycnt > 70)
+            if (IfPm3Flash() && keycnt > 70) {
                 PrintAndLogEx(NORMAL, "");
+            }
 
-            PrintAndLogEx(SUCCESS, "target block %4u key type %c -- found valid key [ " _GREEN_("%s") " ]",
+            PrintAndLogEx(SUCCESS, "target block " _GREEN_("%4u") " key type " _GREEN_("%c") " -- found valid key [ " _GREEN_("%s") " ]",
                           package->block,
                           package->keytype ? 'B' : 'A',
                           sprint_hex_inrow(resultKey, MIFARE_KEY_SIZE)
@@ -1535,10 +1555,21 @@ int detect_classic_static_encrypted_nonce_ex(uint8_t block_no, uint8_t key_type,
     cdata[21] = corruptnrar;
     cdata[22] = corruptnrarparity;
 
+    uint8_t dbg_curr = DBG_NONE;
+    if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
+        return PM3_EFAILED;
+    }
+
+    if (setDeviceDebugLevel(verbose ? MAX(dbg_curr, DBG_INFO) : DBG_NONE, false) != PM3_SUCCESS) {
+        return PM3_EFAILED;
+    }
+
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, cdata, sizeof(cdata));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, &resp, 1000)) {
+    if (WaitForResponseTimeout(CMD_HF_MIFARE_STATIC_ENCRYPTED_NONCE, &resp, 1500)) {
+
+        setDeviceDebugLevel(dbg_curr, false);
 
         if (resp.status == PM3_ESOFT) {
             return NONCE_FAIL;
@@ -1604,6 +1635,8 @@ int detect_classic_static_encrypted_nonce_ex(uint8_t block_no, uint8_t key_type,
         }
         return resp.data.asBytes[0];
     }
+
+    setDeviceDebugLevel(dbg_curr, false);
     return NONCE_FAIL;
 }
 

@@ -21,6 +21,12 @@
 
 #define AEND  "\x1b[0m"
 
+#define _CLEAR_ "\x1b[2J"
+#define _CLEAR_SCROLLBACK_ "\x1b[3J"
+#define _TOP_   "\x1b[1;1f"
+
+#define _CLR_ "\x1b[0K"
+
 #define _BLACK_(s)          "\x1b[30m" s AEND
 #define _RED_(s)            "\x1b[31m" s AEND
 #define _GREEN_(s)          "\x1b[32m" s AEND
@@ -56,10 +62,6 @@
 #define _BACK_BRIGHT_MAGENTA_(s) "\x1b[45;1m" s AEND
 #define _BACK_BRIGHT_CYAN_(s)    "\x1b[46;1m" s AEND
 #define _BACK_BRIGHT_WHITE_(s)   "\x1b[47;1m" s AEND
-
-#define _CLEAR_ "\x1b[2J"
-#define _CLEAR_SCROLLBACK_ "\x1b[3J"
-#define _TOP_   "\x1b[1;1f"
 
 #if defined(HAVE_READLINE)
 // https://wiki.hackzine.org/development/misc/readline-color-prompt.html

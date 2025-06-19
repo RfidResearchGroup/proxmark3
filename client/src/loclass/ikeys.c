@@ -803,17 +803,17 @@ static bool des_getParityBitFromKey(uint8_t key) {
 }
 
 static void des_checkParity(uint8_t *key) {
-    int i;
     int fails = 0;
-    for (i = 0; i < 8; i++) {
+    for (uint8_t i = 0; i < 8; i++) {
         bool parity = des_getParityBitFromKey(key[i]);
         if (parity != (key[i] & 0x1)) {
             fails++;
             PrintAndLogEx(FAILED, "parity1 fail, byte %d [%02x] was %d, should be %d", i, key[i], (key[i] & 0x1), parity);
         }
     }
+
     if (fails) {
-        PrintAndLogEx(FAILED, "parity fails: %d", fails);
+        PrintAndLogEx(FAILED, "parity fails...  " _RED_("%d"), fails);
     } else {
         PrintAndLogEx(SUCCESS, "    Key syntax is with parity bits inside each byte (%s)", _GREEN_("ok"));
     }
@@ -894,15 +894,17 @@ static int testKeyDiversificationWithMasterkeyTestcases(uint8_t *key) {
     int i, error = 0;
     uint8_t empty[8] = {0};
 
-    PrintAndLogEx(INFO, "Testing encryption/decryption");
+    PrintAndLogEx(INFO, "Testing encryption/decryption...");
 
-    for (i = 0; memcmp(testcases + i, empty, 8); i++)
+    for (i = 0; memcmp(testcases + i, empty, 8); i++) {
         error += testDES(key, testcases[i]);
+    }
 
-    if (error)
-        PrintAndLogEx(FAILED, "%d errors occurred (%d testcases)", error, i);
-    else
-        PrintAndLogEx(SUCCESS, "Hashing seems to work (%d testcases)", i);
+    if (error) {
+        PrintAndLogEx(FAILED, "%d errors occurred, %d testcases ( %s )", error, i, _RED_("fail"));
+    } else {
+        PrintAndLogEx(SUCCESS, "    Hashing seems to work, " _YELLOW_("%d") " testcases ( %s )", i, _GREEN_("ok"));
+    }
     return error;
 }
 
@@ -942,8 +944,9 @@ static int testDES2(uint8_t *key, uint64_t csn, uint64_t expected) {
     PrintAndLogEx(DEBUG, "   {csn}    %"PRIx64, crypt_csn);
     PrintAndLogEx(DEBUG, "   expected %"PRIx64 "    (%s)", expected, (expected == crypt_csn) ? _GREEN_("ok") : _RED_("fail"));
 
-    if (expected != crypt_csn)
+    if (expected != crypt_csn) {
         return PM3_ESOFT;
+    }
     return PM3_SUCCESS;
 }
 
@@ -954,12 +957,12 @@ static int testDES2(uint8_t *key, uint64_t csn, uint64_t expected) {
  */
 static int doTestsWithKnownInputs(void) {
     // KSel from http://www.proxmark.org/forum/viewtopic.php?pid=10977#p10977
-    PrintAndLogEx(INFO, "Testing DES encryption");
+    PrintAndLogEx(INFO, "Testing DES encryption... ");
     uint8_t key[8] = {0x6c, 0x8d, 0x44, 0xf9, 0x2a, 0x2d, 0x01, 0xbf};
 
     testDES2(key, 0xbbbbaaaabbbbeeee, 0xd6ad3ca619659e6b);
 
-    PrintAndLogEx(INFO, "Testing hashing algorithm");
+    PrintAndLogEx(INFO, "Testing hashing algorithm... ");
 
     int res = PM3_SUCCESS;
     res += testCryptedCSN(0x0102030405060708, 0x0bdd6512073c460a);
@@ -973,10 +976,10 @@ static int doTestsWithKnownInputs(void) {
     res += testCryptedCSN(0x14e2adfc5bb7e134, 0x6ac90c6508bd9ea3);
 
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(FAILED, "%d res occurred (9 testcases)", res);
+        PrintAndLogEx(FAILED, "%d res occurred " _YELLOW_("9") " testcases ( %s )", res, _RED_("fail"));
         res = PM3_ESOFT;
     } else {
-        PrintAndLogEx(SUCCESS, "Hashing seems to work (9 testcases)");
+        PrintAndLogEx(SUCCESS, "    Hashing seems to work " _YELLOW_("9") " testcases ( %s )", _GREEN_("ok"));
         res = PM3_SUCCESS;
     }
     return res;
@@ -986,6 +989,7 @@ int doKeyTests(void) {
 
     uint8_t key[8] = { 0xAE, 0xA6, 0x84, 0xA6, 0xDA, 0xB2, 0x32, 0x78 };
     uint8_t parity[8] = {0x00, 0x01, 0x01, 0x01, 0x00, 0x01, 0x00, 0x01};
+
     for (int i = 0; i < 8; i++) {
         key[i] += parity[i];
     }
@@ -994,7 +998,6 @@ int doKeyTests(void) {
     des_checkParity(key);
 
     // Test hashing functions
-    PrintAndLogEx(SUCCESS, "The following tests require the correct 8-byte master key");
     testKeyDiversificationWithMasterkeyTestcases(key);
     PrintAndLogEx(INFO, "Testing key diversification with non-sensitive keys...");
     return doTestsWithKnownInputs();

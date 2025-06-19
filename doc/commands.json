@@ -1382,7 +1382,8 @@
                 "hf 14a sim -t 9 -> FM11RF005SH Shanghai Metro",
                 "hf 14a sim -t 10 -> ST25TA IKEA Rothult",
                 "hf 14a sim -t 11 -> Javacard (JCOP)",
-                "hf 14a sim -t 12 -> 4K Seos card"
+                "hf 14a sim -t 12 -> 4K Seos card",
+                "hf 14a sim -t 13 -> MIFARE Ultralight C"
             ],
             "offline": false,
             "options": [
@@ -1392,9 +1393,11 @@
                 "-n, --num <dec> Exit simulation after <numreads> blocks have been read by reader. 0 = infinite",
                 "-x Performs the 'reader attack', nr/ar attack against a reader",
                 "--sk Fill simulator keys from found keys",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "--c1 UL-C Auth - all zero handshake part 1",
+                "--c2 UL-C Auth - all zero handshake part 2"
             ],
-            "usage": "hf 14a sim [-hxv] -t <1-12> [-u <hex>] [-n <dec>] [--sk]"
+            "usage": "hf 14a sim [-hxv] -t <1-12> [-u <hex>] [-n <dec>] [--sk] [--c1] [--c2]"
         },
         "hf 14a simaid": {
             "command": "hf 14a simaid",
@@ -7398,21 +7401,24 @@
         },
         "hf mfu sim": {
             "command": "hf mfu sim",
-            "description": "Simulate MIFARE Ultralight family type based upon ISO/IEC 14443 type A tag with 4,7 or 10 byte UID from emulator memory. See `hf mfu eload` first. The UID from emulator memory will be used if not specified. See `hf 14a sim -h` to see available types. You want 2 or 7 usually.",
+            "description": "Simulate MIFARE Ultralight family type based upon ISO/IEC 14443 type A tag with 4,7 or 10 byte UID from emulator memory. See `hf mfu eload` first. The UID from emulator memory will be used if not specified. See `hf 14a sim -h` to see available types. You want 2, 7 or 13 usually.",
             "notes": [
                 "hf mfu sim -t 2 --uid 11223344556677 -> MIFARE Ultralight",
                 "hf mfu sim -t 7 --uid 11223344556677 -n 5 -> MFU EV1 / NTAG 215 Amiibo",
-                "hf mfu sim -t 7 -> MFU EV1 / NTAG 215 Amiibo"
+                "hf mfu sim -t 7 -> MFU EV1 / NTAG 215 Amiibo",
+                "hf mfu sim -t 13 -> MIFARE Ultralight-C"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-t, --type <1..12> Simulation type to use",
+                "-t, --type <1..13> Simulation type to use",
                 "-u, --uid <hex> <4|7|10> hex bytes UID",
                 "-n, --num <dec> Exit simulation after <numreads> blocks. 0 = infinite",
-                "-v, --verbose Verbose output"
+                "-v, --verbose Verbose output",
+                "--c1 UL-C Auth - all zero handshake part 1",
+                "--c2 UL-C Auth - all zero handshake part 2"
             ],
-            "usage": "hf mfu sim [-hv] -t <1..12> [-u <hex>] [-n <dec>]"
+            "usage": "hf mfu sim [-hv] -t <1..13> [-u <hex>] [-n <dec>] [--c1] [--c2]"
         },
         "hf mfu tamper": {
             "command": "hf mfu tamper",
@@ -12121,9 +12127,10 @@
             "notes": [
                 "mem load -f myfile -> upload file myfile values at default offset 0",
                 "mem load -f myfile -o 1024 -> upload file myfile values at offset 1024",
-                "mem load -f mfc_default_keys -m -> upload MFC keys",
+                "mem load -f mfc_default_keys -m -> upload MIFARE Classic keys",
                 "mem load -f t55xx_default_pwds -t -> upload T55XX passwords",
-                "mem load -f iclass_default_keys -i -> upload iCLASS keys"
+                "mem load -f iclass_default_keys -i -> upload iCLASS keys",
+                "mem load -f mfulc_default_keys --ulc -> upload MIFARE UL-C keys"
             ],
             "offline": false,
             "options": [
@@ -12132,9 +12139,11 @@
                 "-m, --mifare, --mfc upload 6 bytes keys (mifare key dictionary)",
                 "-i, --iclass upload 8 bytes keys (iClass key dictionary)",
                 "-t, --t55xx upload 4 bytes keys (password dictionary)",
+                "--ulc upload 16 bytes keys (mifare UL-C key dictionary)",
+                "--ulaes upload 16 bytes keys (mifare UL-AES key dictionary)",
                 "-f, --file <fn> file name"
             ],
-            "usage": "mem load [-hmit] [-o <dec>] -f <fn>"
+            "usage": "mem load [-hmit] [-o <dec>] [--ulc] [--ulaes] -f <fn>"
         },
         "mem spiffs check": {
             "command": "mem spiffs check",
@@ -13365,6 +13374,6 @@
     "metadata": {
         "commands_extracted": 768,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-06-17T16:11:53"
+        "extracted_on": "2025-06-19T15:01:51"
     }
 }

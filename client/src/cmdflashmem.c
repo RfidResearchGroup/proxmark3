@@ -192,21 +192,24 @@ static int CmdFlashMemLoad(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "mem load",
                   "Loads binary file into flash memory on device\n"
-                  "Warning: mem area to be written must have been wiped first\n"
-                  "( dictionaries are serviced as files in spiffs so no wipe is needed )",
-                  "mem load -f myfile                 -> upload file myfile values at default offset 0\n"
-                  "mem load -f myfile -o 1024         -> upload file myfile values at offset 1024\n"
-                  "mem load -f mfc_default_keys -m    -> upload MFC keys\n"
-                  "mem load -f t55xx_default_pwds -t  -> upload T55XX passwords\n"
-                  "mem load -f iclass_default_keys -i -> upload iCLASS keys\n"
+                  "Warning! - mem area to be written must have been wiped first\n\n"
+                  "OBS! - dictionaries are serviced as files in spiffs so no wipe is needed",
+                  "mem load -f myfile                    -> upload file myfile values at default offset 0\n"
+                  "mem load -f myfile -o 1024            -> upload file myfile values at offset 1024\n"
+                  "mem load -f mfc_default_keys -m       -> upload MIFARE Classic keys\n"
+                  "mem load -f t55xx_default_pwds -t     -> upload T55XX passwords\n"
+                  "mem load -f iclass_default_keys -i    -> upload iCLASS keys\n"
+                  "mem load -f mfulc_default_keys --ulc  -> upload MIFARE UL-C keys\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_int0("o", "offset", "<dec>", "offset in memory"),
-        arg_lit0("m", "mifare,mfc", "upload 6 bytes keys (mifare key dictionary)"),
-        arg_lit0("i", "iclass", "upload 8 bytes keys (iClass key dictionary)"),
-        arg_lit0("t", "t55xx", "upload 4 bytes keys (password dictionary)"),
+        arg_lit0("m", "mfc", "upload 6 bytes keys (MIFARE Classic dictionary)"),
+        arg_lit0("i", "iclass", "upload 8 bytes keys (iClass dictionary)"),
+        arg_lit0("t", "t55xx", "upload 4 bytes keys (T55xx dictionary)"),
+        arg_lit0(NULL, "ulc", "upload 16 bytes keys (MIFARE UL-C dictionary)"),
+        arg_lit0(NULL, "aes", "upload 16 bytes keys (MIFARE UL-AES dictionary)"),
         arg_str1("f", "file", "<fn>", "file name"),
         arg_param_end
     };
@@ -216,28 +219,35 @@ static int CmdFlashMemLoad(const char *Cmd) {
     bool is_mfc = arg_get_lit(ctx, 2);
     bool is_iclass = arg_get_lit(ctx, 3);
     bool is_t55xx = arg_get_lit(ctx, 4);
+    bool is_ulc = arg_get_lit(ctx, 5);
+    bool is_ulaes = arg_get_lit(ctx, 6);
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    char spiffsDest[32] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 7), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
     CLIParserFree(ctx);
 
     Dictionary_t d = DICTIONARY_NONE;
     if (is_mfc) {
         d = DICTIONARY_MIFARE;
-        PrintAndLogEx(INFO, "treating file as MIFARE Classic keys");
+        PrintAndLogEx(INFO, "Treating file as MIFARE Classic keys");
     } else if (is_iclass) {
         d = DICTIONARY_ICLASS;
-        PrintAndLogEx(INFO, "treating file as iCLASS keys");
+        PrintAndLogEx(INFO, "Treating file as iCLASS keys");
     } else if (is_t55xx) {
         d = DICTIONARY_T55XX;
-        PrintAndLogEx(INFO, "treating file as T55xx passwords");
+        PrintAndLogEx(INFO, "Treating file as T55xx passwords");
+    } else if (is_ulc) {
+        d = DICTIONARY_MIFARE_ULC;
+        PrintAndLogEx(INFO, "Treating file as MIFARE Ultralight-C keys");
+    } else if (is_ulaes) {
+        d = DICTIONARY_MIFARE_ULAES;
+        PrintAndLogEx(INFO, "Treating file as MIFARE Ultralight AES keys");
     }
 
     uint8_t spi_flash_pages = 0;
     int res = rdv4_get_flash_pages64k(&spi_flash_pages);
     if (res != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "failed to get flash pages count (%x)", res);
+        PrintAndLogEx(ERR, "Failed to get flash pages count (%x)", res);
         return res;
     }
 
@@ -245,6 +255,8 @@ static int CmdFlashMemLoad(const char *Cmd) {
     uint32_t keycount = 0;
     uint8_t keylen = 0;
     uint8_t *data = calloc(FLASH_MEM_MAX_SIZE_P(spi_flash_pages), sizeof(uint8_t));
+
+    char spiffsDest[32] = {0};
 
     switch (d) {
         case DICTIONARY_MIFARE: {
@@ -292,6 +304,36 @@ static int CmdFlashMemLoad(const char *Cmd) {
             strcpy(spiffsDest, ICLASS_KEYS_FILE);
             break;
         }
+        case DICTIONARY_MIFARE_ULC: {
+            keylen = MFULC_KEY_LENGTH;
+            res = loadFileDICTIONARY(filename, data, &datalen, keylen, &keycount);
+            if (res || !keycount) {
+                free(data);
+                return PM3_EFILE;
+            }
+            if (datalen > FLASH_MEM_MAX_SIZE_P(spi_flash_pages)) {
+                PrintAndLogEx(ERR, "error, filesize is larger than available memory");
+                free(data);
+                return PM3_EOVFLOW;
+            }
+            strcpy(spiffsDest, MFULC_KEYS_FILE);
+            break;
+        }
+        case DICTIONARY_MIFARE_ULAES: {
+            keylen = MFULAES_KEY_LENGTH;
+            res = loadFileDICTIONARY(filename, data, &datalen, keylen, &keycount);
+            if (res || !keycount) {
+                free(data);
+                return PM3_EFILE;
+            }
+            if (datalen > FLASH_MEM_MAX_SIZE_P(spi_flash_pages)) {
+                PrintAndLogEx(ERR, "error, filesize is larger than available memory");
+                free(data);
+                return PM3_EOVFLOW;
+            }
+            strcpy(spiffsDest, MFULAES_KEYS_FILE);
+            break;
+        }
         case DICTIONARY_NONE: {
             res = loadFile_safe(filename, ".bin", (void **)&data, &datalen);
             if (res != PM3_SUCCESS) {
@@ -330,7 +372,12 @@ static int CmdFlashMemLoad(const char *Cmd) {
             free(data);
             return res;
         }
-        PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%u")" passwords to file "_GREEN_("%s"), keycount, spiffsDest);
+
+        if (d == DICTIONARY_T55XX) {
+            PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%u")" passwords to file "_GREEN_("%s"), keycount, spiffsDest);
+        } else {
+            PrintAndLogEx(SUCCESS, "Wrote "_GREEN_("%u")" keys to file "_GREEN_("%s"), keycount, spiffsDest);
+        }
         SendCommandNG(CMD_SPIFFS_UNMOUNT, NULL, 0);
         SendCommandNG(CMD_SPIFFS_MOUNT, NULL, 0);
     } else {
@@ -729,6 +776,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
 static command_t CommandTable[] = {
     {"spiffs",   CmdFlashMemSpiFFS,  IfPm3Flash,  "{ SPI File system }"},
     {"help",     CmdHelp,            AlwaysAvailable, "This help"},
+    {"-----------", CmdHelp,            IfPm3Flash,      "------------------- " _CYAN_("Operations") " -------------------"},
     {"baudrate", CmdFlashmemSpiBaud, IfPm3Flash,  "Set Flash memory Spi baudrate"},
     {"dump",     CmdFlashMemDump,    IfPm3Flash,  "Dump data from flash memory"},
     {"info",     CmdFlashMemInfo,    IfPm3Flash,  "Flash memory information"},

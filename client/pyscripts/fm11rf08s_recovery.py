@@ -584,8 +584,6 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False,
             if "Found keys have been dumped to" in line:
                 keyfile = line[line.index("`"):].strip("`")
     else:
-        show()
-        show(color("found keys:", fg="green"), prompt=plus)
         show(prompt=plus)
         show("-----+-----+--------------+---+--------------+----", prompt=plus)
         show(" Sec | Blk | key A        |res| key B        |res", prompt=plus)

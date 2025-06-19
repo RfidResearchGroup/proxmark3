@@ -477,7 +477,7 @@ int CmdHFSniff(const char *Cmd) {
 
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(INFO, "User aborted");
+            PrintAndLogEx(WARNING, "\naborted via keyboard!");
             break;
         }
 

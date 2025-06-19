@@ -587,7 +587,7 @@ static int CmdEM4x70Brute(const char *Cmd) {
     em4x70_cmd_output_brute_t data;
     int result = brute_em4x70(&opts, &data);
     if (result == PM3_EOPABORTED) {
-        PrintAndLogEx(DEBUG, "User aborted");
+        PrintAndLogEx(DEBUG, "\naborted via keyboard!");
     } else if (result == PM3_ETIMEOUT) {
         PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
     } else if (result == PM3_SUCCESS) {

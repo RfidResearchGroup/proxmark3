@@ -498,7 +498,7 @@ failtag:
     SpinOff(50);
     LED_A_ON();
 
-    while (!iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true)) {
+    while (iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true) == 0) {
         WDT_HIT();
         if (BUTTON_HELD(10) == BUTTON_HOLD) {
             WDT_HIT();
@@ -785,7 +785,7 @@ static int e_MifareECardLoad(uint32_t numofsectors, uint8_t keytype) {
 
     bool isOK = true;
 
-    if (!iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true)) {
+    if (iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true) == 0) {
         isOK = false;
     }
 
@@ -844,8 +844,7 @@ static int cjat91_saMifareChkKeys(uint8_t blockNo, uint8_t keyType, bool clearTr
     for (uint8_t i = 0; i < keyCount; i++) {
 
         /* no need for anticollision. just verify tag is still here */
-        // if (!iso14443a_fast_select_card(colin_cjuid, 0)) {
-        if (!iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true)) {
+        if (iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true) == 0) {
             cjSetCursLeft();
             DbprintfEx(FLAG_NEWLINE, "%sFATAL%s : E_MF_LOSTTAG", _XRED_, _XWHITE_);
             break;
@@ -963,7 +962,7 @@ static int saMifareCSetBlock(uint32_t arg0, uint32_t arg1, uint32_t arg2, const 
 
         // get UID from chip
         if (workFlags & 0x01) {
-            if (!iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true)) {
+            if (iso14443a_select_card(colin_cjuid, &colin_p_card, &colin_cjcuid, true, 0, true) == 0) {
                 DbprintfEx(FLAG_NEWLINE, "Can't select card");
                 break;
             };

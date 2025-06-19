@@ -498,7 +498,7 @@ static int ht2_check_dictionary(uint32_t key_count, uint8_t *keys,  uint8_t keyl
 
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(INFO, "User aborted");
+            PrintAndLogEx(WARNING, "\naborted via keyboard!");
             break;
         }
 

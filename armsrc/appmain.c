@@ -480,6 +480,32 @@ static void SendStatus(uint32_t wait) {
     } else {
         Dbprintf("  iClass... "_RED_("%u")" keys - "_RED_("%s"), num, ICLASS_KEYS_FILE);
     }
+
+    if (exists_in_spiffs(MFULC_KEYS_FILE)) {
+        num = size_in_spiffs(MFULC_KEYS_FILE) / MFULC_KEY_LENGTH;
+    } else {
+        num = 0;
+    }
+
+    if (num > 0) {
+        Dbprintf("  UL-C..... "_YELLOW_("%u")" keys - "_GREEN_("%s"), num, MFULC_KEYS_FILE);
+    } else {
+        Dbprintf("  UL-C..... "_RED_("%u")" keys - "_RED_("%s"), num, MFULC_KEYS_FILE);
+    }
+
+    if (exists_in_spiffs(MFULAES_KEYS_FILE)) {
+        num = size_in_spiffs(MFULAES_KEYS_FILE) / MFULAES_KEY_LENGTH;
+    } else {
+        num = 0;
+    }
+
+    if (num > 0) {
+        Dbprintf("  UL-AES... "_YELLOW_("%u")" keys - "_GREEN_("%s"), num, MFULAES_KEYS_FILE);
+    } else {
+        Dbprintf("  UL-AES... "_RED_("%u")" keys - "_RED_("%s"), num, MFULAES_KEYS_FILE);
+    }
+
+
 #endif
     DbpString("");
     reply_ng(CMD_STATUS, PM3_SUCCESS, NULL, 0);
@@ -1723,10 +1749,13 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t uid[10];
                 uint8_t exitAfter;
                 uint8_t rats[20];
+                bool ulc_p1;
+                bool ulc_p2;
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
             SimulateIso14443aTag(payload->tagtype, payload->flags, payload->uid,
-                                 payload->exitAfter, payload->rats, sizeof(payload->rats));  // ## Simulate iso14443a tag - pass tag type & UID
+                                 payload->exitAfter, payload->rats, sizeof(payload->rats),
+                                 payload->ulc_p1, payload->ulc_p2);  // ## Simulate iso14443a tag - pass tag type & UID
             break;
         }
         case CMD_HF_ISO14443A_SIM_AID: {

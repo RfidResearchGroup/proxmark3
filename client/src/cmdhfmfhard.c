@@ -127,7 +127,6 @@ static void print_progress_header(void) {
     get_SIMD_instruction_set(instr_set);
     snprintf(progress_text, sizeof(progress_text), "Start using " _YELLOW_("%d") " threads and " _YELLOW_("%s") " SIMD core", num_CPUs(), instr_set);
 
-    PrintAndLogEx(INFO, "Hardnested attack starting...");
     PrintAndLogEx(INFO, "---------+---------+---------------------------------------------------------+-----------------+-------");
     PrintAndLogEx(INFO, "         |         |                                                         | Expected to brute force");
     PrintAndLogEx(INFO, " Time    | #nonces | Activity                                                | #states         | time ");
@@ -136,12 +135,16 @@ static void print_progress_header(void) {
 }
 
 void hardnested_print_progress(uint32_t nonces, const char *activity, float brute_force, uint64_t min_diff_print_time) {
+
     static uint64_t last_print_time = 0;
+
     if (msclock() - last_print_time >= min_diff_print_time) {
+
         last_print_time = msclock();
         uint64_t total_time = msclock() - start_time;
         float brute_force_time = brute_force / brute_force_per_second;
         char brute_force_time_string[20];
+
         if (brute_force_time < 90) {
             snprintf(brute_force_time_string, sizeof(brute_force_time_string), "%2.0fs", brute_force_time);
         } else if (brute_force_time < 60 * 90) {
@@ -151,7 +154,24 @@ void hardnested_print_progress(uint32_t nonces, const char *activity, float brut
         } else {
             snprintf(brute_force_time_string, sizeof(brute_force_time_string), "%2.0fd", brute_force_time / (60 * 60 * 24));
         }
-        PrintAndLogEx(INFO, " %7.0f | %7u | %-55s | %15.0f | %5s", (float)total_time / 1000.0, nonces, activity, brute_force, brute_force_time_string);
+
+        if (strlen(activity) > 67) {
+            PrintAndLogEx(INFO, " %7.0f | %7u | %-82s | %15.0f | %5s"
+                          , (float)total_time / 1000.0
+                          , nonces
+                          , activity
+                          , brute_force
+                          , brute_force_time_string
+                         );
+        } else {
+            PrintAndLogEx(INFO, " %7.0f | %7u | %-55s | %15.0f | %5s"
+                          , (float)total_time / 1000.0
+                          , nonces
+                          , activity
+                          , brute_force
+                          , brute_force_time_string
+                         );
+        }
     }
 }
 
@@ -486,8 +506,14 @@ static void init_bitflip_bitarrays(void) {
         effective_bitflip[odd_even][num_effective_bitflips[odd_even]] = 0x400; // EndOfList marker
     }
     {
-        char progress_text[80];
-        snprintf(progress_text, sizeof(progress_text), "Loaded %u RAW / %u LZ4 / %u BZ2 in %"PRIu64" ms", nraw, nlz4, nbz2, msclock() - init_bitflip_bitarrays_starttime);
+        char progress_text[100];
+        memset(progress_text, 0, sizeof(progress_text));
+        snprintf(progress_text, sizeof(progress_text), "Loaded " _YELLOW_("%u") " RAW / " _YELLOW_("%u") " LZ4 / " _YELLOW_("%u") " BZ2 in %"PRIu64" ms"
+                 , nraw
+                 , nlz4
+                 , nbz2
+                 , msclock() - init_bitflip_bitarrays_starttime
+                );
         hardnested_print_progress(0, progress_text, (float)(1LL << 47), 0);
     }
     uint16_t i = 0;
@@ -2481,8 +2507,10 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
                 free_candidates_memory(candidates);
                 candidates = NULL;
             } else {
+
                 pre_XOR_nonces();
                 prepare_bf_test_nonces(nonces, best_first_bytes[0]);
+
                 for (uint8_t j = 0; j < NUM_SUMS && !key_found; j++) {
                     float expected_brute_force = nonces[best_first_bytes[0]].expected_num_brute_force;
                     snprintf(progress_text, sizeof(progress_text), "(%d. guess: Sum(a8) = %" PRIu16 ")", j + 1, sums[nonces[best_first_bytes[0]].sum_a8_guess[j].sum_a8_idx]);
@@ -2544,7 +2572,9 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
 
         int res;
         if (nonce_file_read) {  // use pre-acquired data from file nonces.bin
+
             res = read_nonce_file(filename);
+
             if (res != PM3_SUCCESS) {
                 free_bitflip_bitarrays();
                 free_nonces_memory();
@@ -2554,12 +2584,16 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
                 free_part_sum_bitarrays();
                 return res;
             }
+
             hardnested_stage = CHECK_1ST_BYTES | CHECK_2ND_BYTES;
             update_nonce_data(false);
             float brute_force_depth;
             shrink_key_space(&brute_force_depth);
+
         } else { // acquire nonces.
+
             res = acquire_nonces(blockNo, keyType, key, trgBlockNo, trgKeyType, nonce_file_write, slow, filename);
+
             if (res != PM3_SUCCESS) {
                 free_bitflip_bitarrays();
                 free_nonces_memory();

@@ -26,7 +26,9 @@ typedef enum {
     DICTIONARY_NONE = 0,
     DICTIONARY_MIFARE,
     DICTIONARY_T55XX,
-    DICTIONARY_ICLASS
+    DICTIONARY_ICLASS,
+    DICTIONARY_MIFARE_ULC,
+    DICTIONARY_MIFARE_ULAES,
 } Dictionary_t;
 
 int CmdFlashMem(const char *Cmd);

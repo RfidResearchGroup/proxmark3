@@ -308,16 +308,18 @@ static bool DetectWindowsAnsiSupport(void) {
 #endif
 
     // disable colors if stdin or stdout are redirected
-    if ((! g_session.stdinOnTTY) || (! g_session.stdoutOnTTY))
+    if ((! g_session.stdinOnTTY) || (! g_session.stdoutOnTTY)) {
         return false;
+    }
 
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD dwMode = 0;
     GetConsoleMode(hOut, &dwMode);
 
     //ENABLE_VIRTUAL_TERMINAL_PROCESSING is already set
-    if ((dwMode & ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+    if ((dwMode & ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
         return true;
+    }
 
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 
@@ -337,11 +339,13 @@ int push_cmdscriptfile(char *path, bool stayafter) {
     }
 
     FILE *f = fopen(path, "r");
-    if (f == NULL)
+    if (f == NULL) {
         return PM3_EFILE;
+    }
 
-    if (cmdscriptfile_idx == 0)
+    if (cmdscriptfile_idx == 0) {
         cmdscriptfile_stayafter = stayafter;
+    }
 
     cmdscriptfile[++cmdscriptfile_idx] = f;
     return PM3_SUCCESS;
@@ -373,28 +377,32 @@ main_loop(const char *script_cmds_file, char *script_cmd, bool stayInCommandLoop
     bool execCommand = (script_cmd != NULL);
     bool fromInteractive = false;
     uint16_t script_cmd_len = 0;
+
     if (execCommand) {
         script_cmd_len = strlen(script_cmd);
         str_creplace(script_cmd, script_cmd_len, ';', '\0');
     }
+
     bool stdinOnPipe = !isatty(STDIN_FILENO);
     char script_cmd_buf[256] = {0x00};  // iceman, needs lua script the same file_path_buffer as the rest
 
     // cache Version information now:
-    if (execCommand || script_cmds_file || stdinOnPipe)
+    if (execCommand || script_cmds_file || stdinOnPipe) {
         pm3_version(false, false);
-    else
+    } else {
         pm3_version_short();
+    }
 
     if (script_cmds_file) {
 
         char *path;
         int res = searchFile(&path, CMD_SCRIPTS_SUBDIR, script_cmds_file, ".cmd", false);
         if (res == PM3_SUCCESS) {
-            if (push_cmdscriptfile(path, stayInCommandLoop) == PM3_SUCCESS)
+            if (push_cmdscriptfile(path, stayInCommandLoop) == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "executing commands from file: %s\n", path);
-            else
+            } else {
                 PrintAndLogEx(ERR, "could not open " _YELLOW_("%s") "...", path);
+            }
             free(path);
         }
     }
@@ -451,20 +459,23 @@ check_script:
                 prompt_ctx = stdinOnPipe ? PROXPROMPT_CTX_STDIN : PROXPROMPT_CTX_SCRIPTCMD;
 
                 cmd = str_dup(script_cmd);
-                if ((cmd != NULL) && (! fromInteractive))
+                if ((cmd != NULL) && (! fromInteractive)) {
                     printprompt = true;
+                }
 
                 uint16_t len = strlen(script_cmd) + 1;
                 script_cmd += len;
 
-                if (script_cmd_len == len - 1)
+                if (script_cmd_len == len - 1) {
                     execCommand = false;
+                }
 
                 script_cmd_len -= len;
             } else {
                 // exit after exec command
-                if (script_cmd && !stayInCommandLoop)
+                if (script_cmd && !stayInCommandLoop) {
                     break;
+                }
 
                 // if there is a pipe from stdin
                 if (stdinOnPipe) {
@@ -554,22 +565,27 @@ check_script:
                 mainret = CommandReceived(cmd);
 
                 // exit or quit
-                if (mainret == PM3_EFATAL)
+                if (mainret == PM3_EFATAL) {
                     break;
+                }
+
                 if (mainret == PM3_SQUIT) {
                     // Normal quit, map to 0
                     mainret = PM3_SUCCESS;
                     break;
                 }
             }
+
             free(cmd);
             cmd = NULL;
+
         } else {
             PrintAndLogEx(NORMAL, "\n");
-            if (script_cmds_file && stayInCommandLoop)
+            if (script_cmds_file && stayInCommandLoop) {
                 stayInCommandLoop = false;
-            else
+            } else {
                 break;
+            }
         }
     } // end while
 
@@ -618,8 +634,9 @@ const char *get_my_executable_directory(void) {
 
 static void set_my_executable_path(void) {
     int path_length = wai_getExecutablePath(NULL, 0, NULL);
-    if (path_length == -1)
+    if (path_length == -1) {
         return;
+    }
 
     my_executable_path = (char *)calloc(path_length + 1, sizeof(uint8_t));
     int dirname_length = 0;
@@ -844,12 +861,13 @@ finish2:
     CloseProxmark(g_session.current_device);
 
 finish:
-    if (ret == PM3_SUCCESS)
+    if (ret == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, _CYAN_("All done"));
-    else if (ret == PM3_EOPABORTED)
+    } else if (ret == PM3_EOPABORTED) {
         PrintAndLogEx(FAILED, "Aborted by user");
-    else
+    } else {
         PrintAndLogEx(ERR, "Aborted on error %u", ret);
+    }
     return ret;
 }
 
@@ -908,8 +926,9 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, const char *file
         goto finish;
     }
 
-    if (num_files == 0)
+    if (num_files == 0) {
         goto finish;
+    }
 
     for (int i = 0 ; i < num_files; ++i) {
         ret = flash_prepare(&files[i], can_write_bl, max_allowed * ONE_KB);
@@ -938,12 +957,15 @@ finish2:
     for (int i = 0 ; i < num_files; ++i) {
         flash_free(&files[i]);
     }
-    if (ret == PM3_SUCCESS)
+
+    if (ret == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, _CYAN_("All done"));
-    else if (ret == PM3_EOPABORTED)
+    } else if (ret == PM3_EOPABORTED) {
         PrintAndLogEx(FAILED, "Aborted by user");
-    else
+    } else {
         PrintAndLogEx(ERR, "Aborted on error");
+    }
+
     PrintAndLogEx(INFO, "\nHave a nice day!");
     return ret;
 }
@@ -1054,6 +1076,7 @@ int main(int argc, char *argv[]) {
                 show_help(false, exec_name);
                 return 1;
             }
+
             if (port != NULL) {
                 // We got already one
                 PrintAndLogEx(ERR, _RED_("ERROR:") " cannot parse command line. We got " _YELLOW_("%s") " as port and now we got also: " _YELLOW_("%s") "\n", port, argv[i + 1]);
@@ -1315,21 +1338,22 @@ int main(int argc, char *argv[]) {
     // This will allow the command line to override the settings.json values
     preferences_load();
     // quick patch for debug level
-    if (! debug_mode_forced) {
+    if (debug_mode_forced == false) {
         g_debugMode = g_session.client_debug_level;
     }
     // settings_save ();
     // End Settings
 
     // even if prefs, we disable colors if stdin or stdout is not a TTY
-    if ((! g_session.stdinOnTTY) || (! g_session.stdoutOnTTY)) {
+    if ((g_session.stdinOnTTY == false) || (g_session.stdoutOnTTY == false)) {
         g_session.supports_colors = false;
         g_session.emoji_mode = EMO_ALTTEXT;
     }
 
     // Let's take a baudrate ok for real UART, USB-CDC & BT don't use that info anyway
-    if (speed == 0)
+    if (speed == 0) {
         speed = USART_BAUD_RATE;
+    }
 
     if (dumpmem_mode) {
         dumpmem_pm3(port, dumpmem_filename, dumpmem_addr, dumpmem_len, dumpmem_raw);
@@ -1347,8 +1371,9 @@ int main(int argc, char *argv[]) {
     }
 
     if (script_cmd) {
-        while (script_cmd[strlen(script_cmd) - 1] == ' ')
+        while (script_cmd[strlen(script_cmd) - 1] == ' ') {
             script_cmd[strlen(script_cmd) - 1] = 0x00;
+        }
 
         if (strlen(script_cmd) == 0) {
             script_cmd = NULL;
@@ -1381,23 +1406,23 @@ int main(int argc, char *argv[]) {
         CloseProxmark(g_session.current_device);
     }
 
-    if ((port != NULL) && (!g_session.pm3_present)) {
+    if ((port != NULL) && (g_session.pm3_present == false)) {
         exit(EXIT_FAILURE);
     }
 
-    if (!g_session.pm3_present) {
+    if (g_session.pm3_present == false) {
         PrintAndLogEx(INFO, _YELLOW_("OFFLINE") " mode. Check " _YELLOW_("\"%s -h\"") " if it's not what you want.\n", exec_name);
     }
 
     // ascii art only in interactive client
-    if (!script_cmds_file && !script_cmd && g_session.stdinOnTTY && g_session.stdoutOnTTY && !dumpmem_mode && !flash_mode && !reboot_bootloader_mode) {
+    if (!script_cmds_file && !script_cmd && g_session.stdinOnTTY && g_session.stdoutOnTTY && (dumpmem_mode == false) && (flash_mode == false) && (reboot_bootloader_mode == false)) {
         showBanner();
     }
 
     // Save settings if not loaded from settings json file.
     // Doing this here will ensure other checks and updates are saved to over rule default
     // e.g. Linux color use check
-    if ((!g_session.preferences_loaded) && (!g_session.incognito)) {
+    if ((g_session.preferences_loaded == false) && (g_session.incognito == false)) {
         PrintAndLogEx(INFO, "Creating initial preferences file");  // json save reports file name, so just info msg here
         preferences_save();  // Save defaults
         g_session.preferences_loaded = true;
@@ -1417,7 +1442,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef HAVE_GUI
 
-#  if defined(_WIN32)
+#  if defined(_WIN32) || (defined(__MACH__) && defined(__APPLE__))
     InitGraphics(argc, argv, script_cmds_file, script_cmd, stayInCommandLoop);
     MainGraphics();
 #  else

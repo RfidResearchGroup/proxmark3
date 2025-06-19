@@ -1803,7 +1803,7 @@ static int CmdHFFelicaSniff(const char *Cmd) {
     for (;;) {
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(DEBUG, "User aborted");
+            PrintAndLogEx(DEBUG, "\naborted via keyboard!");
             msleep(300);
             break;
         }
@@ -1851,7 +1851,7 @@ static int CmdHFFelicaSimLite(const char *Cmd) {
     for (;;) {
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(DEBUG, "User aborted");
+            PrintAndLogEx(DEBUG, "\naborted via keyboard!");
             msleep(300);
             break;
         }
@@ -2054,7 +2054,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
 
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(DEBUG, "User aborted");
+            PrintAndLogEx(DEBUG, "\naborted via keyboard!");
             return PM3_EOPABORTED;
         }
 

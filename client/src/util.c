@@ -1606,3 +1606,37 @@ uint8_t get_highest_frequency(const uint8_t *d, uint8_t n) {
     PrintAndLogEx(DEBUG, "highest occurance... %u  xor byte... 0x%02X", highest, v);
     return v;
 }
+
+size_t unduplicate(uint8_t *d, size_t n, const uint8_t item_n) {
+    if (n == 0) {
+        return 0;
+    }
+
+    int write_index = 0;
+
+    for (int read_index = 0; read_index < n; ++read_index) {
+        uint8_t *current = d + read_index * item_n;
+
+        bool is_duplicate = false;
+
+        // Check against all previous unique elements
+        for (int i = 0; i < write_index; ++i) {
+            uint8_t *unique = d + i * item_n;
+            if (memcmp(current, unique, item_n) == 0) {
+                is_duplicate = 1;
+                break;
+            }
+        }
+
+        // If not duplicate, move to the write_index position
+        if (is_duplicate == false) {
+            uint8_t *dest = d + write_index * item_n;
+            if (dest != current) {
+                memcpy(dest, current, item_n);
+            }
+            write_index++;
+        }
+    }
+
+    return write_index;
+}

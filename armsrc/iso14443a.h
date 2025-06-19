@@ -143,7 +143,7 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
 
 void RAMFUNC SniffIso14443a(uint8_t param);
 void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uint8_t exitAfterNReads,
-                          uint8_t *ats, size_t ats_len);
+                          uint8_t *ats, size_t ats_len, bool ulc_part1, bool ulc_part2);
 
 void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
                              uint8_t *ats, size_t ats_len,  uint8_t *aid, size_t aid_len,
@@ -152,7 +152,8 @@ void SimulateIso14443aTagAID(uint8_t tagType, uint16_t flags, uint8_t *uid,
 
 bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
                            uint8_t *ats, size_t ats_len, tag_response_info_t **responses,
-                           uint32_t *cuid, uint8_t *pages);
+                           uint32_t *cuid, uint8_t *pages,
+                           uint8_t *ulc_key);
 
 bool GetIso14443aCommandFromReader(uint8_t *received, uint16_t received_maxlen, uint8_t *par, int *len);
 void iso14443a_antifuzz(uint32_t flags);
@@ -165,8 +166,10 @@ uint16_t ReaderReceive(uint8_t *receivedAnswer, uint16_t answer_maxlen, uint8_t 
 void iso14443a_setup(uint8_t fpga_minor_mode);
 int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, uint16_t data_len, uint8_t *res);
 int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats);
-int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats, iso14a_polling_parameters_t *polling_parameters);
-int iso14443a_fast_select_card(uint8_t *uid_ptr, uint8_t num_cascades);
+int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr,
+                            bool anticollision, uint8_t num_cascades, bool no_rats,
+                            const iso14a_polling_parameters_t *polling_parameters);
+int iso14443a_fast_select_card(const uint8_t *uid_ptr, uint8_t num_cascades);
 void iso14a_set_trigger(bool enable);
 
 int EmSendCmd14443aRaw(const uint8_t *resp, uint16_t respLen);
@@ -181,8 +184,9 @@ int EmSendPrecompiledCmd(tag_response_info_t *p_response);
 bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_t **buffer, size_t *max_buffer_size);
 bool prepare_tag_modulation(tag_response_info_t *response_info, size_t max_buffer_size);
 
-bool EmLogTrace(uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime, uint32_t reader_EndTime, uint8_t *reader_Parity,
-                uint8_t *tag_data, uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, uint8_t *tag_Parity);
+bool EmLogTrace(const uint8_t *reader_data, uint16_t reader_len, uint32_t reader_StartTime,
+                uint32_t reader_EndTime, const uint8_t *reader_Parity,  const uint8_t *tag_data,
+                uint16_t tag_len, uint32_t tag_StartTime, uint32_t tag_EndTime, const uint8_t *tag_Parity);
 
 void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype);
 void DetectNACKbug(void);
