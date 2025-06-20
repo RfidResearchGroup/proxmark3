@@ -6054,8 +6054,8 @@ static int CmdHFiClassSAM(const char *Cmd) {
         }else if (match_with_wildcard(d, snmp_pattern, snmp_mask, 6)){
             is_snmp = true;
             PrintAndLogEx(SUCCESS, _YELLOW_("[samSNMPMessageResponse] ")"%s", sprint_hex(d + 6, resp.length - 6));
-            PrintAndLogEx(SUCCESS, _YELLOW_("[samResponseAcknowledge] ")"%s", sprint_hex(d + 4, resp.length - 4));
         }else if (match_with_wildcard(d,ok_pattern, ok_mask, 3)){
+            PrintAndLogEx(SUCCESS, _YELLOW_("[samResponseAcknowledge] ")"%s", sprint_hex(d + 4, resp.length - 4));
         }else{
             print_hex(d, resp.length);
         }
