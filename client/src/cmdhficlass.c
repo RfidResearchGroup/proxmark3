@@ -5974,10 +5974,10 @@ static int CmdHFiClassSAM(const char *Cmd) {
     WaitForResponse(CMD_HF_SAM_PICOPASS, &resp);
 
     bool is_snmp = false;
-    uint8_t snmp_pattern[] = {0xBD, 0x81, 0xFF, 0x8A, 0x81, 0xFF}; // 0xFF is a placeholder for the length message
-    bool snmp_mask[] = {true, true, false, true, true, false}; // false means wildcard
-    uint8_t ack_pattern[] = {0xBD, 0xFF, 0x8A}; // 0xFF is a placeholder for the length message
-    bool ack_mask[] = {true, false, true}; // false means wildcard
+    uint8_t snmp_pattern[] = {0xBD, 0x81, 0xFF, 0x8A, 0x81, 0xFF}; // SNMP Response header pattern, 0xFF is a wildcard value for message length
+    bool snmp_mask[] = {true, true, false, true, true, false}; // false means wildcard value in that position
+    uint8_t ack_pattern[] = {0xBD, 0xFF, 0x8A}; // Acknowledge Response header pattern, 0xFF is a wildcard value for message length
+    bool ack_mask[] = {true, false, true}; // false means wildcard value in that position
 
     switch (resp.status) {
         case PM3_SUCCESS:
