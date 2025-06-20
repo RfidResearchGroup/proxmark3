@@ -5914,6 +5914,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
         arg_lit0("p",  "prevent",  "fake epurse update"),
         arg_lit0(NULL, "shallow",  "shallow mod"),
         arg_strx0("d", "data", "<hex>", "DER encoded command to send to SAM"),
+        arg_lit0("s", "snmp",  "data is in snmp format without headers"),
         arg_lit0(NULL, "info",  "get SAM infos (version, serial number)"),
         arg_param_end
     };
@@ -5926,7 +5927,8 @@ static int CmdHFiClassSAM(const char *Cmd) {
     bool break_nrmac = arg_get_lit(ctx, 5);
     bool prevent = arg_get_lit(ctx, 6);
     bool shallow_mod = arg_get_lit(ctx, 7);
-    bool info = arg_get_lit(ctx, 9);
+    bool snmp_data = arg_get_lit(ctx, 9);
+    bool info = arg_get_lit(ctx, 10);
 
     uint8_t flags = 0;
     if (disconnect_after) {
@@ -5968,6 +5970,14 @@ static int CmdHFiClassSAM(const char *Cmd) {
         return PM3_ESOFT;
     }
 
+    if (snmp_data) {
+        uint8_t header[4] = {0xa0, cmdlen+2 , 0x94, cmdlen };
+        memmove(data + 4, data, cmdlen+1);
+        data[0] = flags;
+        memcpy(data+1, header, 4);
+        cmdlen += 4;
+    }
+
     clearCommandBuffer();
     SendCommandNG(CMD_HF_SAM_PICOPASS, data, cmdlen + 1);
     PacketResponseNG resp;
@@ -5976,8 +5986,8 @@ static int CmdHFiClassSAM(const char *Cmd) {
     bool is_snmp = false;
     uint8_t snmp_pattern[] = {0xBD, 0x81, 0xFF, 0x8A, 0x81, 0xFF}; // SNMP Response header pattern, 0xFF is a wildcard value for message length
     bool snmp_mask[] = {true, true, false, true, true, false}; // false means wildcard value in that position
-    uint8_t ack_pattern[] = {0xBD, 0xFF, 0x8A}; // Acknowledge Response header pattern, 0xFF is a wildcard value for message length
-    bool ack_mask[] = {true, false, true}; // false means wildcard value in that position
+    uint8_t ok_pattern[] = {0xBD, 0xFF, 0x8A}; // Ok response header pattern, 0xFF is a wildcard value for message length
+    bool ok_mask[] = {true, false, true}; // false means wildcard value in that position
 
     switch (resp.status) {
         case PM3_SUCCESS:
@@ -6044,7 +6054,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
         }else if (match_with_wildcard(d, snmp_pattern, snmp_mask, 6)){
             is_snmp = true;
             PrintAndLogEx(SUCCESS, _YELLOW_("[samSNMPMessageResponse] ")"%s", sprint_hex(d + 6, resp.length - 6));
-        }else if (match_with_wildcard(d,ack_pattern, ack_mask, 3)){
+        }else if (match_with_wildcard(d,ok_pattern, ok_mask, 3)){
             PrintAndLogEx(SUCCESS, _YELLOW_("[samResponseAcknowledge] ")"%s", sprint_hex(d + 4, resp.length - 4));
         }else{
             print_hex(d, resp.length);
