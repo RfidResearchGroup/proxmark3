@@ -5974,6 +5974,10 @@ static int CmdHFiClassSAM(const char *Cmd) {
     WaitForResponse(CMD_HF_SAM_PICOPASS, &resp);
 
     bool is_snmp = false;
+    uint8_t snmp_pattern[] = {0xBD, 0x81, 0xFF, 0x8A, 0x81, 0xFF}; // 0xFF is a placeholder for the length message
+    bool snmp_mask[] = {true, true, false, true, true, false}; // false means wildcard
+    uint8_t ack_pattern[] = {0xBD, 0xFF, 0x8A}; // 0xFF is a placeholder for the length message
+    bool ack_mask[] = {true, false, true}; // false means wildcard
 
     switch (resp.status) {
         case PM3_SUCCESS:
@@ -6037,21 +6041,19 @@ static int CmdHFiClassSAM(const char *Cmd) {
         if (memcmp(d, "\xBE\x07\x80\x01", 4) == 0) { //if it the string is 0xbe 0x07 0x80 0x01 the next byte will indicate the error code
             PrintAndLogEx(ERR,_RED_("Sam Error Code: %02x"), d[4]);
             print_hex(d, resp.length);
+        }else if (match_with_wildcard(d, snmp_pattern, snmp_mask, 6)){
+            is_snmp = true;
+            PrintAndLogEx(SUCCESS, _YELLOW_("[samSNMPMessageResponse] ")"%s", sprint_hex(d + 6, resp.length - 6));
+        }else if (match_with_wildcard(d,ack_pattern, ack_mask, 3)){
+            PrintAndLogEx(SUCCESS, _YELLOW_("[samResponseAcknowledge] ")"%s", sprint_hex(d + 4, resp.length - 4));
         }else{
-            uint8_t pattern[] = {0xBD, 0x81, 0xFF, 0x8A, 0x81, 0xFF}; // 0xFF is a placeholder for the length message
-            bool mask[] = {true, true, false, true, true, false}; // false means wildcard
-            if (match_with_wildcard(d, pattern, mask, 4)) { // Pattern matched with wildcard support
-                is_snmp = true;
-                PrintAndLogEx(SUCCESS, _YELLOW_("samSNMPMessageResponse: ")"%s", sprint_hex(d + 6, resp.length - 6));
-            }else{
-                print_hex(d, resp.length);
-            }
+            print_hex(d, resp.length);
         }
     }
 
     if (decodeTLV && is_snmp == false) {
         asn1_print(d, d[1] + 2, " ");
-    } else{
+    } else if (decodeTLV && is_snmp){
         asn1_print(d + 6, resp.length - 6, "  ");
     }
 
