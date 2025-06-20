@@ -2080,6 +2080,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
             prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
             p_response = &dynamic_response_info;
             order = ORDER_NONE;
+
         } else if (receivedCmd[0] == MIFARE_ULEV1_AUTH && len == 7 && tagType == 7) { // NTAG / EV-1
             uint8_t pwd[4] = {0, 0, 0, 0};
             emlGet(pwd, (pages - 1) * 4 + MFU_DUMP_PREFIX_LENGTH, sizeof(pwd));
@@ -3815,8 +3816,9 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
         ReaderTransmit(mf_auth, sizeof(mf_auth), &sync_time);
 
         // Receive the (4 Byte) "random" TAG nonce
-        if (ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) != 4)
+        if (ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar) != 4) {
             continue;
+        }
 
         previous_nt = nt;
         nt = bytes_to_num(receivedAnswer, 4);
