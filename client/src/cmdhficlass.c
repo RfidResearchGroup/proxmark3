@@ -5886,6 +5886,15 @@ static int CmdHFiClassConfigCard(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static bool match_with_wildcard(const uint8_t *data, const uint8_t *pattern, const bool *mask, size_t length) {
+    for (size_t i = 0; i < length; ++i) {
+        if (mask[i] && data[i] != pattern[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static int CmdHFiClassSAM(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass sam",
@@ -5964,6 +5973,12 @@ static int CmdHFiClassSAM(const char *Cmd) {
     PacketResponseNG resp;
     WaitForResponse(CMD_HF_SAM_PICOPASS, &resp);
 
+    bool is_snmp = false;
+    uint8_t snmp_pattern[] = {0xBD, 0x81, 0xFF, 0x8A, 0x81, 0xFF}; // SNMP Response header pattern, 0xFF is a wildcard value for message length
+    bool snmp_mask[] = {true, true, false, true, true, false}; // false means wildcard value in that position
+    uint8_t ack_pattern[] = {0xBD, 0xFF, 0x8A}; // Acknowledge Response header pattern, 0xFF is a wildcard value for message length
+    bool ack_mask[] = {true, false, true}; // false means wildcard value in that position
+
     switch (resp.status) {
         case PM3_SUCCESS:
             break;
@@ -6022,11 +6037,24 @@ static int CmdHFiClassSAM(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "    hf iclass dump --nr -k %s", sprint_hex_inrow(d + 1, 8));
         }
     } else {
-        print_hex(d, resp.length);
+        //if it is an error decode it
+        if (memcmp(d, "\xBE\x07\x80\x01", 4) == 0) { //if it the string is 0xbe 0x07 0x80 0x01 the next byte will indicate the error code
+            PrintAndLogEx(ERR,_RED_("Sam Error Code: %02x"), d[4]);
+            print_hex(d, resp.length);
+        }else if (match_with_wildcard(d, snmp_pattern, snmp_mask, 6)){
+            is_snmp = true;
+            PrintAndLogEx(SUCCESS, _YELLOW_("[samSNMPMessageResponse] ")"%s", sprint_hex(d + 6, resp.length - 6));
+        }else if (match_with_wildcard(d,ack_pattern, ack_mask, 3)){
+            PrintAndLogEx(SUCCESS, _YELLOW_("[samResponseAcknowledge] ")"%s", sprint_hex(d + 4, resp.length - 4));
+        }else{
+            print_hex(d, resp.length);
+        }
     }
 
-    if (decodeTLV) {
+    if (decodeTLV && is_snmp == false) {
         asn1_print(d, d[1] + 2, " ");
+    } else if (decodeTLV && is_snmp){
+        asn1_print(d + 6, resp.length - 6, "  ");
     }
 
     return PM3_SUCCESS;
