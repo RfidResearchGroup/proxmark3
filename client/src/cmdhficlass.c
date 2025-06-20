@@ -6035,7 +6035,7 @@ static int CmdHFiClassSAM(const char *Cmd) {
     } else {
         //if it is an error decode it
         if (memcmp(d, "\xBE\x07\x80\x01", 4) == 0) { //if it the string is 0xbe 0x07 0x80 0x01 the next byte will indicate the error code
-        PrintAndLogEx(ERR,_RED_("Sam Error Code: %s"), d[4]);
+        PrintAndLogEx(ERR,_RED_("Sam Error Code: %02x"), d[4]);
         print_hex(d, resp.length);
 
         }else{
