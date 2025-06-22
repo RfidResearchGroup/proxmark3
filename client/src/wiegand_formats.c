@@ -1477,7 +1477,7 @@ static const cardformat_t FormatTable[] = {
     {"BQT34",   Pack_bqt34,   Unpack_bqt34,   "BQT 34-bit", 34,                       {1, 1, 0, 0, 1, 0xFF, 0xFFFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
     {"C1k35s",  Pack_C1k35s,  Unpack_C1k35s,  "HID Corporate 1000 35-bit std", 35,    {1, 1, 0, 0, 1, 0xFFF, 0xFFFFF, 0, 0}}, // imported from old pack/unpack
     {"C15001",  Pack_C15001,  Unpack_C15001,  "HID KeyScan 36-bit", 36,               {1, 1, 0, 1, 1, 0xFF, 0xFFFF, 0, 0x3FF}}, // from Proxmark forums
-    {"S12906",  Pack_S12906,  Unpack_S12906,  "HID Simplex 36-bit", 36,               {1, 1, 1, 0, 1, 0xFF, 0x3, 0xFFFFFF, 0}}, // from cardinfo.barkweb.com.au
+    {"S12906",  Pack_S12906,  Unpack_S12906,  "HID Simplex 36-bit", 36,               {1, 1, 1, 0, 1, 0xFF, 0xFFFFFF, 0x3, 0}}, // from cardinfo.barkweb.com.au
     {"Sie36",   Pack_Sie36,   Unpack_Sie36,   "HID 36-bit Siemens", 36,               {1, 1, 0, 0, 1, 0x3FFFF, 0xFFFF, 0, 0}}, // from cardinfo.barkweb.com.au
     {"H10320",  Pack_H10320,  Unpack_H10320,  "HID H10320 37-bit BCD", 37,            {1, 0, 0, 0, 1, 0, 99999999, 0, 0}}, // from Proxmark forums
     {"H10302",  Pack_H10302,  Unpack_H10302,  "HID H10302 37-bit huge ID", 37,        {1, 0, 0, 0, 1, 0, 0x7FFFFFFFF, 0, 0}}, // from Proxmark forums
