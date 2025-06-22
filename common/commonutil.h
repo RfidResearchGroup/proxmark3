@@ -135,6 +135,9 @@ void xor(uint8_t *dest, const uint8_t *src, size_t n);
 void lsl(uint8_t *d, size_t n);
 void lslx(uint8_t *d, size_t n, uint8_t shifts);
 
+void rsl(uint8_t *d, size_t n);
+void rslx(uint8_t *d, size_t n, uint8_t shifts);
+
 uint32_t le24toh(const uint8_t data[3]);
 void htole24(uint32_t val, uint8_t data[3]);
 

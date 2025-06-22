@@ -2353,7 +2353,7 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
         keylen = 6;
     }
 
-    size_t block_size = 10 * keylen;
+    size_t block_size = 1000 * keylen;
 
     // double up since its chars
     keylen <<= 1;
@@ -2428,10 +2428,9 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
             continue;
         }
 
-        if (hex_to_bytes(
-                    line,
-                    (uint8_t *)*pdata + (*keycnt * (keylen >> 1)),
-                    keylen >> 1) != (keylen >> 1)) {
+        int ret = hex_to_bytes(line, (uint8_t *)*pdata + (*keycnt * (keylen >> 1)),  keylen >> 1);
+        if (ret != (keylen >> 1)) {
+            PrintAndLogEx(INFO, "hex to bytes wrong  %i", ret);
             continue;
         }
 
@@ -2450,16 +2449,16 @@ out:
     return retval;
 }
 
-int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya, void **keyb, size_t *alen, size_t *blen) {
+int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya, void **keyb, size_t *alen, size_t *blen, bool verbose) {
 
     char *path;
     int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, suffix, false);
     if (res != PM3_SUCCESS) {
-        return PM3_EFILE;
+        return PM3_ENOFILE;
     }
 
     FILE *f = fopen(path, "rb");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         free(path);
         return PM3_EFILE;
@@ -2502,7 +2501,9 @@ int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya
     *blen = fread(*keyb, 1, fsize, f);
     fclose(f);
 
-    PrintAndLogEx(SUCCESS, "Loaded binary key file `" _YELLOW_("%s") "`", path);
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Loaded binary key file `" _YELLOW_("%s") "`", path);
+    }
     free(path);
     return PM3_SUCCESS;
 }

@@ -307,7 +307,7 @@ int loadFileDICTIONARY_safe_ex(const char *preferredName, const char *suffix, vo
 */
 int loadFileXML_safe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen);
 
-int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya, void **keyb, size_t *alen, size_t *blen);
+int loadFileBinaryKey(const char *preferredName, const char *suffix, void **keya, void **keyb, size_t *alen, size_t *blen, bool verbose);
 
 /**
  * @brief  Utility function to check and convert plain mfu dump format to new mfu binary format.

@@ -5971,10 +5971,10 @@ static int CmdHFiClassSAM(const char *Cmd) {
     }
 
     if (snmp_data) {
-        uint8_t header[4] = {0xa0, cmdlen+2 , 0x94, cmdlen };
-        memmove(data + 4, data, cmdlen+1);
+        uint8_t header[4] = {0xa0, cmdlen + 2, 0x94, cmdlen };
+        memmove(data + 4, data, cmdlen + 1);
         data[0] = flags;
-        memcpy(data+1, header, 4);
+        memcpy(data + 1, header, 4);
         cmdlen += 4;
     }
 
@@ -6049,21 +6049,21 @@ static int CmdHFiClassSAM(const char *Cmd) {
     } else {
         //if it is an error decode it
         if (memcmp(d, "\xBE\x07\x80\x01", 4) == 0) { //if it the string is 0xbe 0x07 0x80 0x01 the next byte will indicate the error code
-            PrintAndLogEx(ERR,_RED_("Sam Error Code: %02x"), d[4]);
+            PrintAndLogEx(ERR, _RED_("Sam Error Code: %02x"), d[4]);
             print_hex(d, resp.length);
-        }else if (match_with_wildcard(d, snmp_pattern, snmp_mask, 6)){
+        } else if (match_with_wildcard(d, snmp_pattern, snmp_mask, 6)) {
             is_snmp = true;
             PrintAndLogEx(SUCCESS, _YELLOW_("[samSNMPMessageResponse] ")"%s", sprint_hex(d + 6, resp.length - 6));
-        }else if (match_with_wildcard(d,ok_pattern, ok_mask, 3)){
+        } else if (match_with_wildcard(d, ok_pattern, ok_mask, 3)) {
             PrintAndLogEx(SUCCESS, _YELLOW_("[samResponseAcknowledge] ")"%s", sprint_hex(d + 4, resp.length - 4));
-        }else{
+        } else {
             print_hex(d, resp.length);
         }
     }
 
     if (decodeTLV && is_snmp == false) {
         asn1_print(d, d[1] + 2, " ");
-    } else if (decodeTLV && is_snmp){
+    } else if (decodeTLV && is_snmp) {
         asn1_print(d + 6, resp.length - 6, "  ");
     }
 

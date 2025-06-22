@@ -231,7 +231,7 @@ static int execute_system_command(const char *command) {
 
     int ret;
 
-    #if defined(_WIN32)
+#if defined(_WIN32)
     char wrapped_command[255];
     strncat(wrapped_command, "cmd /C \"", 9);
     strncat(wrapped_command, command, strlen(command));

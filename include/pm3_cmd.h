@@ -964,6 +964,8 @@ typedef struct {
 // Cryptographic error                  client/pm3: cryptographic operation failed
 #define PM3_ECRYPTO           -29
 
+// File error                           client:     error related to file does not exist in search paths
+#define PM3_ENOFILE           -30
 // No data                              client/pm3: no data available, no host frame available (not really an error)
 #define PM3_ENODATA           -98
 // Quit program                         client:     reserved, order to quit the program

@@ -450,6 +450,43 @@ void lslx(uint8_t *d, size_t n, uint8_t shifts) {
     }
 }
 
+// right shift an array of length one bit
+void rsl(uint8_t *d, size_t n) {
+
+    uint8_t carry = 0;
+
+    for (size_t i = 0; i < n; i++) {
+
+        // Save the LSB before shifting
+        uint8_t new_carry = d[i] & 0x1;
+
+        // Shift current byte right and incorporate previous carry
+        d[i] = (d[i] >> 1) | (carry ? 0x80 : 0);
+
+        // Update carry for next byte
+        carry = new_carry;
+    }
+}
+
+void rslx(uint8_t *d, size_t n, uint8_t shifts) {
+
+    uint8_t carry = 0;
+    for (uint8_t j = 0; j < shifts; j++) {
+
+        for (size_t i = 0; i < n; i++) {
+
+            // Save the LSB before shifting
+            uint8_t new_carry = d[i] & 0x1;
+
+            // Shift current byte right and incorporate previous carry
+            d[i] = (d[i] >> 1) | (carry ? 0x80 : 0);
+
+            // Update carry for next byte
+            carry = new_carry;
+        }
+    }
+}
+
 
 // BSWAP24 of array[3]
 uint32_t le24toh(const uint8_t data[3]) {

@@ -64,7 +64,7 @@ int mf_dark_side(uint8_t blockno, uint8_t key_type, uint64_t *key) {
         //flush queue
         while (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(WARNING, "Aborted via keyboard");
+            PrintAndLogEx(WARNING, "aborted via keyboard");
             return PM3_EOPABORTED;
         }
 
@@ -90,7 +90,7 @@ int mf_dark_side(uint8_t blockno, uint8_t key_type, uint64_t *key) {
             //TODO: Not really stopping the command in time.
             if (kbd_enter_pressed()) {
                 SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-                PrintAndLogEx(WARNING, "\nAborted via keyboard");
+                PrintAndLogEx(WARNING, "\naborted via keyboard");
                 return PM3_EOPABORTED;
             }
 

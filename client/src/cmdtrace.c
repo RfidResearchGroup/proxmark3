@@ -181,7 +181,7 @@ static uint16_t extractChallenges(uint16_t tracepos, uint16_t traceLen, uint8_t 
     }
     */
 
-    // extract MFU-C KEY when written.
+    // extract UL-C KEY when written.
     switch (frame[0]) {
 
         case MIFARE_ULC_AUTH_1: {

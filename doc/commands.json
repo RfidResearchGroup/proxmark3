@@ -3686,9 +3686,10 @@
                 "-p, --prevent fake epurse update",
                 "--shallow shallow mod",
                 "-d, --data <hex> DER encoded command to send to SAM",
+                "-s, --snmp data is in snmp format without headers",
                 "--info get SAM infos (version, serial number)"
             ],
-            "usage": "hf iclass sam [-hvkntp] [--break] [--shallow] [-d <hex>]... [--info]"
+            "usage": "hf iclass sam [-hvkntps] [--break] [--shallow] [-d <hex>]... [--info]"
         },
         "hf iclass sim": {
             "command": "hf iclass sim",
@@ -12123,7 +12124,7 @@
         },
         "mem load": {
             "command": "mem load",
-            "description": "Loads binary file into flash memory on device Warning: mem area to be written must have been wiped first ( dictionaries are serviced as files in spiffs so no wipe is needed )",
+            "description": "Loads binary file into flash memory on device Warning! - mem area to be written must have been wiped first OBS! - dictionaries are serviced as files in spiffs so no wipe is needed",
             "notes": [
                 "mem load -f myfile -> upload file myfile values at default offset 0",
                 "mem load -f myfile -o 1024 -> upload file myfile values at offset 1024",
@@ -12136,14 +12137,14 @@
             "options": [
                 "-h, --help This help",
                 "-o, --offset <dec> offset in memory",
-                "-m, --mifare, --mfc upload 6 bytes keys (mifare key dictionary)",
-                "-i, --iclass upload 8 bytes keys (iClass key dictionary)",
-                "-t, --t55xx upload 4 bytes keys (password dictionary)",
-                "--ulc upload 16 bytes keys (mifare UL-C key dictionary)",
-                "--ulaes upload 16 bytes keys (mifare UL-AES key dictionary)",
+                "-m, --mfc upload 6 bytes keys (MIFARE Classic dictionary)",
+                "-i, --iclass upload 8 bytes keys (iClass dictionary)",
+                "-t, --t55xx upload 4 bytes keys (T55xx dictionary)",
+                "--ulc upload 16 bytes keys (MIFARE UL-C dictionary)",
+                "--aes upload 16 bytes keys (MIFARE UL-AES dictionary)",
                 "-f, --file <fn> file name"
             ],
-            "usage": "mem load [-hmit] [-o <dec>] [--ulc] [--ulaes] -f <fn>"
+            "usage": "mem load [-hmit] [-o <dec>] [--ulc] [--aes] -f <fn>"
         },
         "mem spiffs check": {
             "command": "mem spiffs check",
@@ -13374,6 +13375,6 @@
     "metadata": {
         "commands_extracted": 768,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-06-19T15:01:51"
+        "extracted_on": "2025-06-22T18:30:29"
     }
 }

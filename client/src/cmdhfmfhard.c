@@ -508,7 +508,7 @@ static void init_bitflip_bitarrays(void) {
     {
         char progress_text[100];
         memset(progress_text, 0, sizeof(progress_text));
-        snprintf(progress_text, sizeof(progress_text), "Loaded " _YELLOW_("%u") " RAW / " _YELLOW_("%u") " LZ4 / " _YELLOW_("%u") " BZ2 in %"PRIu64" ms"
+        snprintf(progress_text, sizeof(progress_text), "Loaded " _YELLOW_("%u") " RAW / " _YELLOW_("%u") " LZ4 / " _YELLOW_("%u") " BZ2 in %4"PRIu64" ms"
                  , nraw
                  , nlz4
                  , nbz2
