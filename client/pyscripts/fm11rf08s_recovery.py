@@ -226,6 +226,7 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False,
     dict_dnwd = None
     def_nt = ["" for _ in range(NUM_SECTORS)]
     if supply_chain:
+        default_nonces = ''
         try:
             default_nonces = f'{save_path}hf-mf-{uid:04X}-default_nonces.json'
             with open(default_nonces, 'r') as file:
