@@ -733,7 +733,7 @@ static bool Unpack_Sie36(wiegand_message_t *packed, wiegand_card_t *card) {
     card->CardNumber = get_linear_field(packed, 19, 16);
     card->ParityValid =
     (get_bit_by_position(packed, 0) == oddparity32(get_nonlinear_field(packed, 23, (uint8_t[]) {1, 3, 4, 6, 7, 9, 10, 12, 13, 15, 16, 18, 19, 21, 22, 24, 25, 27, 28, 30, 31, 33, 34}))) &&
-    (get_bit_by_position(packed, 35) == oddparity32(get_nonlinear_field(packed, 23, (uint8_t[]) {1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 16, 17, 19, 20, 22, 23, 25, 26, 28, 29, 31, 32, 34})));
+    (get_bit_by_position(packed, 35) == evenparity32(get_nonlinear_field(packed, 23, (uint8_t[]) {1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 16, 17, 19, 20, 22, 23, 25, 26, 28, 29, 31, 32, 34})));
     return true;
 }
 
