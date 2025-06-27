@@ -305,6 +305,9 @@ FRA_OrganizationalAuthority_Contract_Provider = {
     0x021: {
         1: InterticHelper('Bordeaux', 'TBM / Keolis', Describe_Usage_1_1),
     },
+    0x040: {
+        28: InterticHelper('Colmar', 'Trace / Keolis', Describe_Usage_1_1),
+    },
     0x057: {
         1: InterticHelper('Lyon', 'TCL / Keolis', Describe_Usage_1), # Strange usage ?, kept on generic 1
     },
