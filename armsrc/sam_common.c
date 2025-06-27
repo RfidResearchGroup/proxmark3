@@ -229,7 +229,8 @@ int sam_get_version(bool info) {
     uint16_t response_len = ISO7816_MAX_FRAME;
 
     uint8_t payload[] = {
-        0xa0, 0x02, // <- SAM command
+        0xa0, // <- SAM command
+        0x02, // <- Length
         0x82, 0x00 // <- get version
     };
     uint16_t payload_len = sizeof(payload);
@@ -278,7 +279,7 @@ int sam_get_version(bool info) {
         }
         if (g_dbglevel >= DBG_INFO || info) {
             DbpString(_BLUE_("-- SAM Information --"));
-            Dbprintf(_YELLOW_("Firmware version: ")"%X.%X", sam_version_an[2], sam_version_an[3]);
+            Dbprintf(_YELLOW_("Firmware version: ")"%d.%d", sam_version_an[2], sam_version_an[3]);
             Dbprintf(_YELLOW_("Firmware ID: "));
             Dbhexdump(sam_build_an[1], sam_build_an + 2, false);
         }
@@ -309,7 +310,8 @@ int sam_get_serial_number(void) {
     uint16_t response_len = ISO7816_MAX_FRAME;
 
     uint8_t payload[] = {
-        0xa0, 0x02, // <- SAM command
+        0xa0, // <- SAM command
+        0x02, // <- Length
         0x96, 0x00 // <- get serial number
     };
     uint16_t payload_len = sizeof(payload);
