@@ -2624,7 +2624,7 @@ static int CmdHF15Restore(const char *Cmd) {
                   "hf 15 restore -u E011223344556677 -f hf-15-my-dump.bin"
                  );
 
-    void *argtable[6 + 5] = {0};
+    void *argtable[6 + 4] = {0};
     uint8_t arglen = arg_add_default(argtable);
     argtable[arglen++] = arg_str0("f", "file", "<fn>", "Specify a filename for dump file");
     argtable[arglen++] = arg_int0("r", "retry", "<dec>", "number of retries (def 3)");
@@ -3498,8 +3498,8 @@ static int CmdHF15Wipe(const char *Cmd) {
                  );
     void *argtable[6 + 3] = {0};
     uint8_t arglen = arg_add_default(argtable);
-    argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)"),
-                         argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
+    argtable[arglen++] = arg_int0(NULL, "bs", "<dec>", "block size (def 4)");
+    argtable[arglen++] = arg_lit0("v", "verbose", "verbose output");
     argtable[arglen++] = arg_param_end;
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
