@@ -10237,7 +10237,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("ISO14443-a Information") " ---------------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("ISO14443-a Information") " -----------------------------");
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
     PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
     PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
@@ -10290,6 +10290,13 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "EMV detected");
         PrintAndLogEx(HINT, "Hint:  try `" _YELLOW_("emv info") "`");
+    }
+
+    if ((card_type & MTFUDAN) == MTFUDAN) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(INFO, "FUDAN FM11RF005 detected");
+        PrintAndLogEx(HINT, "Hint:  try `" _YELLOW_("hf fudan dump") "`");
+        goto out;
     }
 
     if (setDeviceDebugLevel(verbose ? MAX(dbg_curr, DBG_INFO) : DBG_NONE, false) != PM3_SUCCESS) {
@@ -10764,7 +10771,7 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     }
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("ISO14443-a Information") " ---------------------");
+    PrintAndLogEx(INFO, "--- " _CYAN_("ISO14443-a Information") " -----------------------------");
     PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
     PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
     PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
@@ -10776,11 +10783,11 @@ static int CmdHF14AMfISEN(const char *Cmd) {
 
     int res = detect_classic_static_encrypted_nonce_ex(blockn, keytype, key, blockn_nested, keytype_nested, key_nested, nr_nested, reset, hardreset, addread, addauth, incblk2, corruptnrar, corruptnrarparity, true);
     if (res == NONCE_STATIC) {
-        PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
+        PrintAndLogEx(SUCCESS, "Static nonce....... " _YELLOW_("yes"));
     } else if (res == NONCE_SUPERSTATIC) {
-        PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes, even when nested"));
+        PrintAndLogEx(SUCCESS, "Static nonce....... " _YELLOW_("yes, even when nested"));
     } else if (res == NONCE_STATIC_ENC) {
-        PrintAndLogEx(SUCCESS, "Static enc nonce..... " _RED_("yes"));
+        PrintAndLogEx(SUCCESS, "Static enc nonce... " _RED_("yes"));
     }
 
     if (res == NONCE_STATIC_ENC) {

@@ -3147,18 +3147,18 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     if (isMifareClassic || isMifareMini) {
         res = detect_classic_static_nonce();
         if (res == NONCE_STATIC) {
-            PrintAndLogEx(SUCCESS, "Static nonce......... " _YELLOW_("yes"));
+            PrintAndLogEx(SUCCESS, "Static nonce....... " _YELLOW_("yes"));
         }
 
         if (res == NONCE_NORMAL) {
             // not static
             res = detect_classic_prng();
             if (res == 1) {
-                PrintAndLogEx(SUCCESS, "Prng detection....... " _GREEN_("weak"));
+                PrintAndLogEx(SUCCESS, "Prng detection..... " _GREEN_("weak"));
             } else if (res == 0) {
-                PrintAndLogEx(SUCCESS, "Prng detection....... " _YELLOW_("hard"));
+                PrintAndLogEx(SUCCESS, "Prng detection..... " _YELLOW_("hard"));
             } else {
-                PrintAndLogEx(FAILED, "Prng detection........ " _RED_("fail"));
+                PrintAndLogEx(FAILED, "Prng detection...... " _RED_("fail"));
             }
 
             if (do_nack_test) {

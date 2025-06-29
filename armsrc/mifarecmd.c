@@ -3220,7 +3220,7 @@ void MifareHasStaticNonce(void) {
     }
 
     if (counter) {
-        Dbprintf("Static nonce......... " _YELLOW_("%08x"), nt);
+        Dbprintf("Static nonce....... " _YELLOW_("%08x"), nt);
         data[0] = NONCE_STATIC;
     } else {
         data[0] = NONCE_NORMAL;
