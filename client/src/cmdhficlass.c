@@ -5058,6 +5058,24 @@ static int CmdHFiClassUnhash(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    //check if divkey respects hash0 rules (legacy format) or if it could be AES Based
+
+    int count_lsb0 = 0;
+    int count_lsb1 = 0;
+
+    for (int i = 0; i < PICOPASS_BLOCK_SIZE; i++) {
+        if ((div_key[i] & 0x01) == 0) {
+            count_lsb0++;
+        } else {
+            count_lsb1++;
+        }
+    }
+
+    if(count_lsb0 != 4 || count_lsb1 != 4){
+        PrintAndLogEx(INFO, _RED_("Incorrect LSB Distribution, unable to unhash - the key might be AES based."));
+        return PM3_SUCCESS;
+    }
+
     PrintAndLogEx(INFO, "Diversified key... %s", sprint_hex_inrow(div_key, sizeof(div_key)));
     PrintAndLogEx(INFO, "-----------------------------------");
     invert_hash0(div_key);
