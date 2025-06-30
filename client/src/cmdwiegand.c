@@ -201,7 +201,7 @@ int CmdWiegandDecode(const char *Cmd) {
             PrintAndLogEx(ERR, "Binary string contains none <0|1> chars");
             return PM3_EINVARG;
         }
-        PrintAndLogEx(INFO, "Input bin len... %d", blen);
+        PrintAndLogEx(INFO, "#bits... %d", blen);
 
     } else if (plen) {
 
