@@ -949,10 +949,13 @@ static int flash_pm3(char *serial_port_name, uint8_t num_files, const char *file
     }
 
 finish:
-    if (ret != PM3_SUCCESS)
+    if (ret != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "The flashing procedure failed, follow the suggested steps!");
+    }
+
     ret = flash_stop_flashing();
     CloseProxmark(g_session.current_device);
+
 finish2:
     for (int i = 0 ; i < num_files; ++i) {
         flash_free(&files[i]);
@@ -1001,7 +1004,6 @@ void pm3_init(void) {
     // set global variables soon enough to get the log path
     set_my_executable_path();
     set_my_user_directory();
-
 }
 
 #ifndef LIBPM3

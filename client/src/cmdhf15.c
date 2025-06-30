@@ -50,22 +50,6 @@
 #define Logic1                  Iso15693Logic1
 #define FrameEOF                Iso15693FrameEOF
 #define CARD_MEMORY_SIZE        4096
-#define HF15_UID_LENGTH         8
-
-#ifndef Crc15
-# define Crc15(data, len)       Crc16ex(CRC_15693, (data), (len))
-#endif
-#ifndef CheckCrc15
-# define CheckCrc15(data, len)  check_crc(CRC_15693, (data), (len))
-#endif
-#ifndef AddCrc15
-#define AddCrc15(data, len)     compute_crc(CRC_15693, (data), (len), (data)+(len), (data)+(len)+1)
-#endif
-
-#ifndef ISO15_RAW_LEN
-#define ISO15_RAW_LEN(x)  (sizeof(iso15_raw_cmd_t) + (x))
-#endif
-
 
 #ifndef ISO15_ERROR_HANDLING_RESPONSE
 #define ISO15_ERROR_HANDLING_RESPONSE { \
@@ -97,6 +81,11 @@
     } \
 }
 #endif
+
+typedef struct {
+    uint8_t lock;
+    uint8_t block[8];
+} t15memory_t;
 
 // structure and database for uid -> tagtype lookups
 typedef struct {
@@ -474,7 +463,7 @@ static int getUID(bool verbose, bool loop, uint8_t *buf) {
 
 // used with 'hf search'
 bool readHF15Uid(bool loop, bool verbose) {
-    uint8_t uid[HF15_UID_LENGTH] = {0};
+    uint8_t uid[ISO15693_UID_LENGTH] = {0};
     if (getUID(verbose, loop, uid) != PM3_SUCCESS) {
         return false;
     }
@@ -665,7 +654,7 @@ static int NxpTestEAS(const uint8_t *uid) {
         return PM3_EINVARG;
     }
 
-    uint8_t approxlen = 3 + HF15_UID_LENGTH + 2;
+    uint8_t approxlen = 3 + ISO15693_UID_LENGTH + 2;
     iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
@@ -677,8 +666,8 @@ static int NxpTestEAS(const uint8_t *uid) {
     packet->raw[packet->rawlen++] = ISO15693_EAS_ALARM;
     packet->raw[packet->rawlen++] = 0x04; // IC manufacturer code
 
-    memcpy(packet->raw + packet->rawlen, uid, HF15_UID_LENGTH); // add UID
-    packet->rawlen += HF15_UID_LENGTH;
+    memcpy(packet->raw + packet->rawlen, uid, ISO15693_UID_LENGTH); // add UID
+    packet->rawlen += ISO15693_UID_LENGTH;
 
     AddCrc15(packet->raw,  packet->rawlen);
     packet->rawlen += 2;
@@ -720,7 +709,7 @@ static int NxpCheckSig(uint8_t *uid) {
         return PM3_EINVARG;
     }
 
-    uint8_t approxlen = 3 + HF15_UID_LENGTH + 2;
+    uint8_t approxlen = 3 + ISO15693_UID_LENGTH + 2;
     iso15_raw_cmd_t *packet = (iso15_raw_cmd_t *)calloc(1, sizeof(iso15_raw_cmd_t) + approxlen);
     if (packet == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
@@ -733,8 +722,8 @@ static int NxpCheckSig(uint8_t *uid) {
     packet->raw[packet->rawlen++] = ISO15693_READ_SIGNATURE;
     packet->raw[packet->rawlen++] = 0x04; // IC manufacturer code
 
-    memcpy(packet->raw + packet->rawlen, uid, HF15_UID_LENGTH); // add UID
-    packet->rawlen += HF15_UID_LENGTH;
+    memcpy(packet->raw + packet->rawlen, uid, ISO15693_UID_LENGTH); // add UID
+    packet->rawlen += ISO15693_UID_LENGTH;
 
     AddCrc15(packet->raw,  packet->rawlen);
     packet->rawlen += 2;
@@ -787,7 +776,7 @@ static int NxpSysInfo(uint8_t *uid) {
     packet->raw[packet->rawlen++] = 0x04; // IC manufacturer code
 
     memcpy(packet->raw + 3, uid, 8); // add UID
-    packet->rawlen += HF15_UID_LENGTH;
+    packet->rawlen += ISO15693_UID_LENGTH;
 
     AddCrc15(packet->raw,  packet->rawlen);
     packet->rawlen += 2;
@@ -900,11 +889,11 @@ static int StCheckSig(uint8_t *uid) {
     }
 
     // ISO15693 Protocol params
-    packet->raw[packet->rawlen++] = arg_get_raw_flag(HF15_UID_LENGTH, false, false, false);
+    packet->raw[packet->rawlen++] = arg_get_raw_flag(ISO15693_UID_LENGTH, false, false, false);
     packet->raw[packet->rawlen++] = ISO15693_READBLOCK;
     // add UID (scan, uid)
-    memcpy(packet->raw + packet->rawlen, uid, HF15_UID_LENGTH);
-    packet->rawlen += HF15_UID_LENGTH;
+    memcpy(packet->raw + packet->rawlen, uid, ISO15693_UID_LENGTH);
+    packet->rawlen += ISO15693_UID_LENGTH;
     packet->flags = (ISO15_CONNECT | ISO15_READ_RESPONSE | ISO15_NO_DISCONNECT);
     uint16_t blkoff = packet->rawlen;
     char signature_hex[65] = {0};
@@ -943,9 +932,9 @@ static int StCheckSig(uint8_t *uid) {
     uint8_t signature[16];
     size_t signature_len;
     hexstr_to_byte_array(signature_hex, signature, &signature_len);
-    uint8_t uid_swap[HF15_UID_LENGTH];
-    reverse_array_copy(uid, HF15_UID_LENGTH, uid_swap);
-    int index = originality_check_verify_ex(uid_swap, HF15_UID_LENGTH, signature, signature_len, PK_ST25TV, false, true);
+    uint8_t uid_swap[ISO15693_UID_LENGTH];
+    reverse_array_copy(uid, ISO15693_UID_LENGTH, uid_swap);
+    int index = originality_check_verify_ex(uid_swap, ISO15693_UID_LENGTH, signature, signature_len, PK_ST25TV, false, true);
     PrintAndLogEx(NORMAL, "");
     return originality_check_print(signature, signature_len, index);
 }
@@ -970,7 +959,7 @@ static int CmdHF15Info(const char *Cmd) {
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t uid[HF15_UID_LENGTH];
+    uint8_t uid[ISO15693_UID_LENGTH];
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
     bool unaddressed = arg_get_lit(ctx, 2);
@@ -987,7 +976,7 @@ static int CmdHF15Info(const char *Cmd) {
     }
 
     // default fallback to scan for tag.
-    if (unaddressed == false && uidlen != HF15_UID_LENGTH) {
+    if (unaddressed == false && uidlen != ISO15693_UID_LENGTH) {
         scan = true;
     }
 
@@ -1014,10 +1003,10 @@ static int CmdHF15Info(const char *Cmd) {
                 free(packet);
                 return PM3_EINVARG;
             }
-            uidlen = HF15_UID_LENGTH;
+            uidlen = ISO15693_UID_LENGTH;
         }
 
-        if (uidlen == HF15_UID_LENGTH) {
+        if (uidlen == ISO15693_UID_LENGTH) {
             // add UID (scan, uid)
             memcpy(packet->raw + packet->rawlen, uid, uidlen);
             packet->rawlen += uidlen;
@@ -1486,7 +1475,7 @@ static int CmdHF15Sim(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     struct {
-        uint8_t uid[HF15_UID_LENGTH];
+        uint8_t uid[ISO15693_UID_LENGTH];
         uint8_t block_size;
     } PACKED payload;
     memset(&payload, 0, sizeof(payload));
@@ -1497,7 +1486,7 @@ static int CmdHF15Sim(const char *Cmd) {
     CLIParserFree(ctx);
 
     // sanity checks
-    if (uidlen != 0 && uidlen != HF15_UID_LENGTH) {
+    if (uidlen != 0 && uidlen != ISO15693_UID_LENGTH) {
         PrintAndLogEx(WARNING, "UID must include 8 hex bytes, got ( " _RED_("%i") " )", uidlen);
         return PM3_EINVARG;
     }
@@ -1624,7 +1613,7 @@ static int CmdHF15WriteAfi(const char *Cmd) {
     struct {
         uint8_t pwd[4];
         bool use_pwd;
-        uint8_t uid[HF15_UID_LENGTH];
+        uint8_t uid[ISO15693_UID_LENGTH];
         bool use_uid;
         uint8_t afi;
     } PACKED payload;
@@ -1645,7 +1634,7 @@ static int CmdHF15WriteAfi(const char *Cmd) {
     }
 
     payload.use_uid = false;
-    if (uidlen == HF15_UID_LENGTH) {
+    if (uidlen == ISO15693_UID_LENGTH) {
         payload.use_uid = true;
     }
 
@@ -1703,7 +1692,7 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t uid[HF15_UID_LENGTH] = {0};
+    uint8_t uid[ISO15693_UID_LENGTH] = {0};
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
 
@@ -1742,10 +1731,10 @@ static int CmdHF15WriteDsfid(const char *Cmd) {
                 free(packet);
                 return PM3_EINVARG;
             }
-            uidlen = HF15_UID_LENGTH;
+            uidlen = ISO15693_UID_LENGTH;
         }
 
-        if (uidlen == HF15_UID_LENGTH) {
+        if (uidlen == ISO15693_UID_LENGTH) {
             // add UID (scan, uid)
             memcpy(packet->raw + packet->rawlen, uid, uidlen);
             packet->rawlen += uidlen;
@@ -1807,7 +1796,7 @@ static int CmdHF15Dump(const char *Cmd) {
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t uid[HF15_UID_LENGTH] = {0};
+    uint8_t uid[ISO15693_UID_LENGTH] = {0};
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
 
@@ -1838,7 +1827,7 @@ static int CmdHF15Dump(const char *Cmd) {
     }
 
     // default fallback to scan for tag.
-    if (uidlen != HF15_UID_LENGTH && !unaddressed) {
+    if (uidlen != ISO15693_UID_LENGTH && !unaddressed) {
         scan = true;
     }
 
@@ -1874,11 +1863,11 @@ static int CmdHF15Dump(const char *Cmd) {
                 return PM3_EINVARG;
             }
         } else {
-            reverse_array(uid, HF15_UID_LENGTH);
+            reverse_array(uid, ISO15693_UID_LENGTH);
         }
         // add UID (scan, uid)
-        memcpy(packet->raw + packet->rawlen, uid, HF15_UID_LENGTH);
-        packet->rawlen += HF15_UID_LENGTH;
+        memcpy(packet->raw + packet->rawlen, uid, ISO15693_UID_LENGTH);
+        packet->rawlen += ISO15693_UID_LENGTH;
         used_uid = true;
     } else {
         PrintAndLogEx(INFO, "Using unaddressed mode");
@@ -2178,10 +2167,10 @@ static int CmdHF15Readmulti(const char *Cmd) {
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t uid[HF15_UID_LENGTH] = {0x00};
+    uint8_t uid[ISO15693_UID_LENGTH] = {0x00};
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
-    bool uid_set = (uidlen == HF15_UID_LENGTH) ? true : false;
+    bool uid_set = (uidlen == ISO15693_UID_LENGTH) ? true : false;
 
     bool unaddressed = arg_get_lit(ctx, 2);
     bool scan = (arg_get_lit(ctx, 3) || (!uid_set && !unaddressed)) ? true : false; //Default fallback to scan for tag. Overriding unaddressed parameter.
@@ -2239,11 +2228,11 @@ static int CmdHF15Readmulti(const char *Cmd) {
                 return PM3_EINVARG;
             }
         } else {
-            reverse_array(uid, HF15_UID_LENGTH);
+            reverse_array(uid, ISO15693_UID_LENGTH);
         }
         // add UID (scan, uid)
-        memcpy(packet->raw + packet->rawlen, uid, HF15_UID_LENGTH);
-        packet->rawlen += HF15_UID_LENGTH;
+        memcpy(packet->raw + packet->rawlen, uid, ISO15693_UID_LENGTH);
+        packet->rawlen += ISO15693_UID_LENGTH;
 
     } else {
         PrintAndLogEx(INFO, "Using unaddressed mode");
@@ -2336,10 +2325,10 @@ static int CmdHF15Readblock(const char *Cmd) {
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t uid[HF15_UID_LENGTH];
+    uint8_t uid[ISO15693_UID_LENGTH];
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
-    bool uid_set = (uidlen == HF15_UID_LENGTH) ? true : false;
+    bool uid_set = (uidlen == ISO15693_UID_LENGTH) ? true : false;
 
     bool unaddressed = arg_get_lit(ctx, 2);
     bool scan = (arg_get_lit(ctx, 3) || (!uid_set && !unaddressed)) ? true : false; // Default fallback to scan for tag. Overriding unaddressed parameter.
@@ -2393,11 +2382,11 @@ static int CmdHF15Readblock(const char *Cmd) {
                 return PM3_EINVARG;
             }
         } else {
-            reverse_array(uid, HF15_UID_LENGTH);
+            reverse_array(uid, ISO15693_UID_LENGTH);
         }
         // add UID (scan, uid)
-        memcpy(packet->raw + packet->rawlen, uid, HF15_UID_LENGTH);
-        packet->rawlen += HF15_UID_LENGTH;
+        memcpy(packet->raw + packet->rawlen, uid, ISO15693_UID_LENGTH);
+        packet->rawlen += ISO15693_UID_LENGTH;
 
     } else {
         PrintAndLogEx(INFO, "Using unaddressed mode");
@@ -2490,8 +2479,8 @@ static int hf_15_write_blk(const uint8_t *pm3flags, uint16_t flags, const uint8_
 
     // add UID
     if (uid) {
-        memcpy(packet->raw +  packet->rawlen, uid, HF15_UID_LENGTH);
-        packet->rawlen += HF15_UID_LENGTH;
+        memcpy(packet->raw +  packet->rawlen, uid, ISO15693_UID_LENGTH);
+        packet->rawlen += ISO15693_UID_LENGTH;
     }
 
     packet->raw[packet->rawlen++] = blockno;
@@ -2550,10 +2539,10 @@ static int CmdHF15Write(const char *Cmd) {
     argtable[arglen++] = arg_param_end;
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t uid[HF15_UID_LENGTH];
+    uint8_t uid[ISO15693_UID_LENGTH];
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
-    bool uid_set = (uidlen == HF15_UID_LENGTH) ? true : false;
+    bool uid_set = (uidlen == ISO15693_UID_LENGTH) ? true : false;
 
     bool unaddressed = arg_get_lit(ctx, 2);
     bool scan = (arg_get_lit(ctx, 3) || (!uid_set && !unaddressed)) ? true : false; // Default fallback to scan for tag. Overriding unaddressed parameter.
@@ -2589,7 +2578,7 @@ static int CmdHF15Write(const char *Cmd) {
                 return PM3_EINVARG;
             }
         } else {
-            reverse_array(uid, HF15_UID_LENGTH);
+            reverse_array(uid, ISO15693_UID_LENGTH);
         }
     } else {
         PrintAndLogEx(INFO, "Using unaddressed mode");
@@ -2632,7 +2621,7 @@ static int CmdHF15Restore(const char *Cmd) {
     argtable[arglen++] = arg_param_end;
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t uid[HF15_UID_LENGTH];
+    uint8_t uid[ISO15693_UID_LENGTH];
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
 
@@ -2662,7 +2651,7 @@ static int CmdHF15Restore(const char *Cmd) {
 
     // default fallback to scan for tag.
     // overriding unaddress parameter :)
-    if (uidlen != HF15_UID_LENGTH) {
+    if (uidlen != ISO15693_UID_LENGTH) {
         scan = true;
     }
 
@@ -2674,7 +2663,7 @@ static int CmdHF15Restore(const char *Cmd) {
                 return PM3_EINVARG;
             }
         } else {
-            reverse_array(uid, HF15_UID_LENGTH);
+            reverse_array(uid, ISO15693_UID_LENGTH);
         }
     } else {
         PrintAndLogEx(INFO, "Using unaddressed mode");
@@ -2809,7 +2798,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     struct {
-        uint8_t uid[HF15_UID_LENGTH];
+        uint8_t uid[ISO15693_UID_LENGTH];
     } PACKED payload;
 
     int uidlen = 0;
@@ -2817,7 +2806,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
     bool use_v2 = arg_get_lit(ctx, 2);
     CLIParserFree(ctx);
 
-    if (uidlen != HF15_UID_LENGTH) {
+    if (uidlen != ISO15693_UID_LENGTH) {
         PrintAndLogEx(WARNING, "UID must include 8 hex bytes, got " _RED_("%i"), uidlen);
         return PM3_EINVARG;
     }
@@ -2831,7 +2820,7 @@ static int CmdHF15CSetUID(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Get current tag");
 
-    uint8_t carduid[HF15_UID_LENGTH] = {0x00};
+    uint8_t carduid[ISO15693_UID_LENGTH] = {0x00};
     if (getUID(true, false, carduid) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "no tag found");
         return PM3_ESOFT;
@@ -2861,10 +2850,10 @@ static int CmdHF15CSetUID(const char *Cmd) {
     }
 
     // reverse cardUID to compare
-    uint8_t revuid[HF15_UID_LENGTH] = {0};
+    uint8_t revuid[ISO15693_UID_LENGTH] = {0};
     reverse_array_copy(carduid, sizeof(carduid), revuid);
 
-    if (memcmp(revuid, payload.uid, HF15_UID_LENGTH) == 0) {
+    if (memcmp(revuid, payload.uid, ISO15693_UID_LENGTH) == 0) {
         PrintAndLogEx(SUCCESS, "Setting new UID ( " _GREEN_("ok") " )");
         PrintAndLogEx(NORMAL, "");
         return PM3_SUCCESS;;
@@ -3503,10 +3492,10 @@ static int CmdHF15Wipe(const char *Cmd) {
     argtable[arglen++] = arg_param_end;
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t uid[HF15_UID_LENGTH];
+    uint8_t uid[ISO15693_UID_LENGTH];
     int uidlen = 0;
     CLIGetHexWithReturn(ctx, 1, uid, &uidlen);
-    bool uid_set = (uidlen == HF15_UID_LENGTH) ? true : false;
+    bool uid_set = (uidlen == ISO15693_UID_LENGTH) ? true : false;
 
     bool unaddressed = arg_get_lit(ctx, 2);
     bool scan = (arg_get_lit(ctx, 3) || (!uid_set && !unaddressed)) ? true : false; // Default fallback to scan for tag. Overriding unaddressed parameter.
@@ -3538,7 +3527,7 @@ static int CmdHF15Wipe(const char *Cmd) {
                 return PM3_EINVARG;
             }
         } else {
-            reverse_array(uid, HF15_UID_LENGTH);
+            reverse_array(uid, ISO15693_UID_LENGTH);
         }
     } else {
         PrintAndLogEx(INFO, "Using unaddressed mode");

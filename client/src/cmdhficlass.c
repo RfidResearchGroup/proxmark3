@@ -5071,7 +5071,7 @@ static int CmdHFiClassUnhash(const char *Cmd) {
         }
     }
 
-    if(count_lsb0 != 4 || count_lsb1 != 4){
+    if (count_lsb0 != 4 || count_lsb1 != 4) {
         PrintAndLogEx(INFO, _RED_("Incorrect LSB Distribution, unable to unhash - the key might be AES based."));
         return PM3_SUCCESS;
     }

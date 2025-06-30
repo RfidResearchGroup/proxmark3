@@ -20,10 +20,14 @@
 #define _ISO15_H_
 
 #include "common.h"
+
+#define ISO15693_UID_LENGTH      8
+#define ISO15693_ATQB_LENGTH     7
+
 typedef struct {
-    uint8_t uid[8];
+    uint8_t uid[ISO15693_UID_LENGTH];
     uint8_t uidlen;
-    uint8_t atqb[7];
+    uint8_t atqb[ISO15693_ATQB_LENGTH];
     uint8_t chipid;
     uint8_t cid;
 } PACKED iso15_card_select_t;
