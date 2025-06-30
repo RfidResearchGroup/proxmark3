@@ -30,6 +30,7 @@
 #include "util_posix.h"
 #include "comms.h"
 #include "commonutil.h"
+#include "fileutils.h"
 
 #define FLASH_START            0x100000
 
@@ -266,7 +267,7 @@ int flash_load(flash_file_t *ctx, bool force) {
     int res = PM3_EUNDEF;
 
     fd = fopen(ctx->filename, "rb");
-    if (!fd) {
+    if (fd == NULL) {
         PrintAndLogEx(ERR, _RED_("Could not open file") " %s  >>> ", ctx->filename);
         res = PM3_EFILE;
         goto fail;
@@ -652,17 +653,41 @@ static const char ice[] =
     "        !!: :!!      !!:      !!:     !!: !!:  !!! !!:  !!!\n        :    :: :: : : :: :::  :      :    :   : : ::    : \n"
     _RED_("        .    .. .. . . .. ...  .      .    .   . . ..    . ");
 
+
+#define ICEMAN_LOGO_FN  "iceman.txt"
+#define ICEMAN_LOGO_SIZE (5000)
 // Write a file's segments to Flash
 int flash_write(flash_file_t *ctx) {
-    int len = 0;
+
+    char ice2[ICEMAN_LOGO_SIZE] = {0};
+    char ice3[ICEMAN_LOGO_SIZE] = {0};
+
+    bool is_loaded = false;
+    if (g_session.supports_colors) {
+
+        uint8_t *iraw = NULL;
+        size_t irawlen = 0;
+        int res = loadFile_safeEx(ICEMAN_LOGO_FN, "", (void **)&iraw, &irawlen, false);
+        if (res == PM3_SUCCESS && irawlen > ICEMAN_LOGO_SIZE) {
+            irawlen = ICEMAN_LOGO_SIZE;
+        }
+        if (res == PM3_SUCCESS) {
+            memcpy(ice3, iraw, irawlen);
+            free(iraw);
+            is_loaded = true;
+        }
+    }
+
+    if (is_loaded == false) {
+        memcpy_filter_ansi(ice2, ice, sizeof(ice), !g_session.supports_colors);
+        memcpy_filter_emoji(ice3, ice2, sizeof(ice2), g_session.emoji_mode);
+    }
+
+    size_t ice3len = strlen(ice3);
 
     PrintAndLogEx(SUCCESS, "Writing segments for file: %s", ctx->filename);
 
-    char ice2[sizeof(ice)] = {0};
-    char ice3[sizeof(ice)] = {0};
-    memcpy_filter_ansi(ice2, ice, sizeof(ice), !g_session.supports_colors);
-    memcpy_filter_emoji(ice3, ice2, sizeof(ice2), g_session.emoji_mode);
-    size_t ice3len = strlen(ice3);
+    int len = 0;
 
     for (int i = 0; i < ctx->num_segs; i++) {
         flash_seg_t *seg = &ctx->segments[i];
@@ -672,6 +697,9 @@ int flash_write(flash_file_t *ctx) {
         uint32_t end = seg->start + length;
 
         PrintAndLogEx(SUCCESS, " 0x%08x..0x%08x [0x%x / %u blocks]", seg->start, end - 1, length, blocks);
+        if (is_loaded) {
+            fprintf(stdout, "\n\n");
+        }
         fflush(stdout);
         int block = 0;
         uint8_t *data = seg->data;
@@ -693,15 +721,36 @@ int flash_write(flash_file_t *ctx) {
             length -= block_size;
             block++;
 
-            if (len < ice3len) {
-                fprintf(stdout, "%c", ice3[len++]);
-            } else {
+            if (is_loaded) {
+                if (len < ice3len) {
+                    fprintf(stdout, "%c", ice3[len++]);
+                    fprintf(stdout, "%c", ice3[len++]);
+                    fprintf(stdout, "%c", ice3[len++]);
+                    fprintf(stdout, "%c", ice3[len++]);
+                    fprintf(stdout, "%c", ice3[len++]);
+                    fprintf(stdout, "%c", ice3[len++]);
+                    fprintf(stdout, "%c", ice3[len++]);
+                    fprintf(stdout, "%c", ice3[len++]);
+                } else {
 
-                if ((len - ice3len) % 67 == 0) {
-                    fprintf(stdout, "\n");
+                    if ((len - ice3len - 1) % 61 == 0) {
+                        fprintf(stdout, "\n");
+                    }
+                    fprintf(stdout, ".");
+                    len++;
                 }
-                fprintf(stdout, ".");
-                len++;
+
+            } else {
+                if (len < ice3len) {
+                    fprintf(stdout, "%c", ice3[len++]);
+                } else {
+
+                    if ((len - ice3len) % 67 == 0) {
+                        fprintf(stdout, "\n");
+                    }
+                    fprintf(stdout, ".");
+                    len++;
+                }
             }
             fflush(stdout);
         }
