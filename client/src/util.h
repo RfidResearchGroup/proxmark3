@@ -141,6 +141,9 @@ int binstr_2_binarray(uint8_t *target, char *source, int length);
 void bytes_2_binstr(char *target,  const uint8_t *source, size_t sourcelen);
 void binstr_2_bytes(uint8_t *target, size_t *targetlen, const char *src);
 
+void binstr_2_u8(char *src, uint8_t n, uint8_t *dest);
+void binstr_2_u16(char *src, uint8_t n, uint16_t *dest);
+
 void hex_xor(uint8_t *d, const uint8_t *x, int n);
 void hex_xor_token(uint8_t *d, const uint8_t *x, int dn, int xn);
 

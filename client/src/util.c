@@ -1212,6 +1212,29 @@ void binstr_2_bytes(uint8_t *target, size_t *targetlen, const char *src) {
     }
 }
 
+void binstr_2_u8(char *src, uint8_t n, uint8_t *dest) {
+
+    uint8_t b = 0;
+    // Process binary string
+    for (uint8_t i = 0; i < n; ++i) {
+        b = (b << 1) | (src[i] == '1');
+    }
+    if (dest) {
+        *dest = b;
+    }
+}
+
+void binstr_2_u16(char *src, uint8_t n, uint16_t *dest) {
+    uint16_t b = 0;
+    // Process binary string
+    for (uint8_t i = 0; i < n; ++i) {
+        b = (b << 1) | (src[i] == '1');
+    }
+    if (dest) {
+        *dest = b;
+    }
+}
+
 void hex_xor(uint8_t *d, const uint8_t *x, int n) {
     while (n--) {
         d[n] ^= x[n];
@@ -1610,6 +1633,9 @@ uint8_t get_highest_frequency(const uint8_t *d, uint8_t n) {
 size_t unduplicate(uint8_t *d, size_t n, const uint8_t item_n) {
     if (n == 0) {
         return 0;
+    }
+    if (n == 1) {
+        return 1;
     }
 
     int write_index = 0;
