@@ -2274,7 +2274,7 @@ static int CmdHF15Readmulti(const char *Cmd) {
     ISO15_ERROR_HANDLING_CARD_RESPONSE(d, resp.length)
 
     // 1 byte cmd,  1 lock byte,  4 / 8 bytes block size,  2 crc
-    if (resp.length > (1 + (blockcnt * (blocksize + 1)) + 2)) {
+    if (resp.length > (1 + ((blockcnt + 1) * (blocksize + 1)) + 2)) {
         PrintAndLogEx(WARNING, "got longer response. Check block size!");
     }
 
