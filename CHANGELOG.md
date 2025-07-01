@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `make clean` - it now removes all __pycache__ folders (@iceman1001)
 - Fixed `hf 15 readmulti` - fix block calculations (@iceman1001)
 - Changed `mem load` - now handles UL-C and UL-AES dictionary files (@iceman1001)
 - Changed `hf mfu sim` - now support UL-C simulation (@iceman1001)
