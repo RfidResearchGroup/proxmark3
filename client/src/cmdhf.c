@@ -231,60 +231,60 @@ int CmdHFSearch(const char *Cmd) {
     }
     */
 
+    DropField();
+
     PROMPT_CLEARLINE;
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, _RED_("No known/supported 13.56 MHz tags found"));
-        res = PM3_ESOFT;
-    } else {
-
-        // no need to print 14A hints,  since it will print itself
-
-        if (success[THINFILM]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf thinfilm") "` commands\n");
-        }
-
-        if (success[LTO]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf lto") "` commands\n");
-        }
-
-        if (success[LEGIC]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf legic") "` commands\n");
-        }
-
-        if (success[TOPAZ]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf topaz") "` commands\n");
-        }
-
-        if (success[PROTO_TEXKOM]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf texkom") "` commands\n");
-        }
-
-        if (success[PROTO_XEROX]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf xerox") "` commands\n");
-        }
-
-        if (success[ISO_14443B]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14b") "` commands\n");
-        }
-
-        if (success[ISO_15693]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 15") "` commands\n");
-        }
-
-        if (success[ICLASS]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass") "` commands\n");
-        }
-
-        if (success[FELICA]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf felica") "` commands\n");
-        }
-
-        if (success[PROTO_CRYPTORF]) {
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf cryptorf") "` commands\n");
-        }
+        return res;
     }
 
-    DropField();
+    // no need to print 14A hints,  since it will print itself
+
+    if (success[THINFILM]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf thinfilm") "` commands\n");
+    }
+
+    if (success[LTO]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf lto") "` commands\n");
+    }
+
+    if (success[LEGIC]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf legic") "` commands\n");
+    }
+
+    if (success[TOPAZ]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf topaz") "` commands\n");
+    }
+
+    if (success[PROTO_TEXKOM]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf texkom") "` commands\n");
+    }
+
+    if (success[PROTO_XEROX]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf xerox") "` commands\n");
+    }
+
+    if (success[ISO_14443B]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14b") "` commands\n");
+    }
+
+    if (success[ISO_15693]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 15") "` commands\n");
+    }
+
+    if (success[ICLASS]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass") "` commands\n");
+    }
+
+    if (success[FELICA]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf felica") "` commands\n");
+    }
+
+    if (success[PROTO_CRYPTORF]) {
+        PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf cryptorf") "` commands\n");
+    }
+
     return res;
 }
 

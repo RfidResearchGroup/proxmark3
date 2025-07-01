@@ -1481,19 +1481,19 @@ int detect_classic_nackbug(bool verbose) {
                     return PM3_SUCCESS;
                 }
                 case  2: {
-                    PrintAndLogEx(SUCCESS, "NACK test: " _GREEN_("always leak NACK"));
+                    PrintAndLogEx(SUCCESS, "NACK test... " _GREEN_("always leak NACK"));
                     return PM3_SUCCESS;
                 }
                 case  1: {
-                    PrintAndLogEx(SUCCESS, "NACK test: " _GREEN_("detected"));
+                    PrintAndLogEx(SUCCESS, "NACK test... " _GREEN_("detected"));
                     return PM3_SUCCESS;
                 }
                 case  0: {
-                    PrintAndLogEx(SUCCESS, "NACK test: " _GREEN_("no bug"));
+                    PrintAndLogEx(SUCCESS, "NACK test... " _GREEN_("no bug"));
                     return PM3_SUCCESS;
                 }
                 default: {
-                    PrintAndLogEx(ERR, "errorcode from device " _RED_("[%i]"), ok);
+                    PrintAndLogEx(ERR, "errorcode from device  (" _RED_("%u") " )", ok);
                     return PM3_EUNDEF;
                 }
             }

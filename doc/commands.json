@@ -5490,7 +5490,8 @@
                 "hf mf sim --1k -u 11223344556677 -> MIFARE Classic 1k with 7b UID",
                 "hf mf sim --1k -u 11223344 -i -x -> Perform reader attack in interactive mode",
                 "hf mf sim --2k -> MIFARE 2k",
-                "hf mf sim --4k -> MIFARE 4khf mf sim --1k -x -e --> Keep simulation running and populate with found reader keys"
+                "hf mf sim --4k -> MIFARE 4k",
+                "hf mf sim --1k -x -e -> Keep simulation running and populate with found reader keys"
             ],
             "offline": false,
             "options": [
@@ -13375,6 +13376,6 @@
     "metadata": {
         "commands_extracted": 768,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-06-22T18:30:29"
+        "extracted_on": "2025-07-01T14:12:39"
     }
 }

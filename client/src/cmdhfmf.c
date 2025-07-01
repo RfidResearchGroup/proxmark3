@@ -4651,7 +4651,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
                   "hf mf sim --1k -u 11223344556677    --> MIFARE Classic 1k with 7b UID\n"
                   "hf mf sim --1k -u 11223344 -i -x    --> Perform reader attack in interactive mode\n"
                   "hf mf sim --2k                      --> MIFARE 2k\n"
-                  "hf mf sim --4k                      --> MIFARE 4k"
+                  "hf mf sim --4k                      --> MIFARE 4k\n"
                   "hf mf sim --1k -x -e                --> Keep simulation running and populate with found reader keys\n"
                  );
 
