@@ -244,6 +244,10 @@ static int sam_send_request_iso15(const uint8_t *const request, const uint8_t re
         *response_len = sam_rx_buf[5 + 1] + 2;
     }
 
+    if (sam_rx_buf[5] == 0xBD && sam_rx_buf[4] != 0x00){ //secure channel flag is not 0x00
+        Dbprintf(_YELLOW_("Secure channel flag set to: ")"%02x", sam_rx_buf[4]);
+    }
+
     memcpy(response, sam_rx_buf + 5, *response_len);
 
     goto out;
