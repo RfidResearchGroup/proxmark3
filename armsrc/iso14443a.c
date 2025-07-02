@@ -2976,9 +2976,13 @@ static int GetATQA(uint8_t *resp, uint16_t resp_len, uint8_t *resp_par, const is
 
 
 int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats) {
-    return iso14443a_select_cardEx(uid_ptr, p_card, cuid_ptr, anticollision, num_cascades, no_rats, NULL);
+    return iso14443a_select_cardEx(uid_ptr, p_card, cuid_ptr, anticollision, num_cascades, no_rats, NULL, false);
 }
-
+int iso14443a_select_card_for_magic(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades){
+    // Bug fix: When SAK is 0x00, `iso14443a_select_cardEx` would return too early at 
+    // line "if (hf14aconfig.forcerats == 0)".`force_rats` is used to force RATS execution and ATS retrieval.
+    return iso14443a_select_cardEx(uid_ptr, p_card, cuid_ptr, anticollision, num_cascades, false, NULL, true);
+}
 
 // performs iso14443a anticollision (optional) and card select procedure
 // fills the uid and cuid pointer unless NULL
@@ -2988,7 +2992,7 @@ int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32
 // requests ATS unless no_rats is true
 int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr,
                             bool anticollision, uint8_t num_cascades, bool no_rats,
-                            const iso14a_polling_parameters_t *polling_parameters) {
+                            const iso14a_polling_parameters_t *polling_parameters, bool force_rats) {
 
     uint8_t resp[MAX_FRAME_SIZE] = {0}; // theoretically. A usual RATS will be much smaller
 
@@ -3206,18 +3210,18 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
         p_card->sak = sak;
     }
 
-    if (hf14aconfig.forcerats == 0) {
+    if (hf14aconfig.forcerats == 0 && force_rats == false) {
         // PICC compliant with iso14443a-4 ---> (SAK & 0x20 != 0)
         if ((sak & 0x20) == 0) {
             return 2;
         }
 
-    } else if (hf14aconfig.forcerats == 2) {
+    } else if (hf14aconfig.forcerats == 2 && force_rats == false) {
         if ((sak & 0x20) != 0) Dbprintf("Skipping RATS according to hf 14a config");
         return 2;
     } // else force RATS
 
-    if ((sak & 0x20) == 0) Dbprintf("Forcing RATS according to hf 14a config");
+    if ((sak & 0x20) == 0 && force_rats == false) Dbprintf("Forcing RATS according to hf 14a config");
 
     // RATS, Request for answer to select
     if (no_rats == false) {
@@ -3483,7 +3487,8 @@ void ReaderIso14443a(PacketCommandNG *c) {
                        true,
                        0,
                        ((param & ISO14A_NO_RATS) == ISO14A_NO_RATS),
-                       ((param & ISO14A_USE_CUSTOM_POLLING) == ISO14A_USE_CUSTOM_POLLING) ? (iso14a_polling_parameters_t *)cmd : NULL
+                       ((param & ISO14A_USE_CUSTOM_POLLING) == ISO14A_USE_CUSTOM_POLLING) ? (iso14a_polling_parameters_t *)cmd : NULL,
+                       false
                    );
             // TODO: Improve by adding a cmd parser pointer and moving it by struct length to allow combining data with polling params
             FpgaDisableTracing();
