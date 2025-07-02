@@ -1240,8 +1240,11 @@ static int CmdHF15ELoad(const char *Cmd) {
             ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
             (tag->pagesCount == 0) ||
             (tag->bytesPerPage == 0)) {
+
         PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
-                      tag->pagesCount, tag->bytesPerPage);
+                      tag->pagesCount,
+                      tag->bytesPerPage
+                     );
         free(tag);
         return PM3_EINVARG;
     }
@@ -1904,33 +1907,47 @@ static int CmdHF15Dump(const char *Cmd) {
     uint8_t dCpt = 10;
 
     int res = iso15_error_handling_card_response(d, resp.length);
-    if (res != PM3_SUCCESS) {
+    if (res == PM3_ECRC) {
         free(tag);
         free(packet);
         return res;
     }
 
-    memcpy(tag->uid, &d[2], 8);
+    if (res == PM3_SUCCESS) {
+        memcpy(tag->uid, d + 2, 8);
 
-    if (d[1] & 0x01) {
-        tag->dsfid = d[dCpt++];
-    }
+        if (d[1] & 0x01) {
+            tag->dsfid = d[dCpt];
+        }
+        dCpt++;
 
-    if (d[1] & 0x02) {
-        tag->afi = d[dCpt++];
-    }
+        if (d[1] & 0x02) {
+            tag->afi = d[dCpt];
+        }
+        dCpt++;
 
-    if (d[1] & 0x04) {
-        tag->pagesCount = d[dCpt++] + 1;
-        tag->bytesPerPage = d[dCpt++] + 1;
+        if (d[1] & 0x04) {
+            tag->pagesCount = d[dCpt] + 1;
+            tag->bytesPerPage = d[dCpt + 1] + 1;
+        } else {
+            // Set tag memory layout values (if can't be read in SYSINFO)
+            tag->bytesPerPage = blocksize;
+            tag->pagesCount = 128;
+        }
+        dCpt += 2;
+
+        if (d[1] & 0x08) {
+            tag->ic = d[dCpt];
+        }
+        dCpt++;
+
     } else {
+        tag->uid[0] = 0xE0;
+        tag->dsfid = 0;
+        tag->afi = 0;
         // Set tag memory layout values (if can't be read in SYSINFO)
         tag->bytesPerPage = blocksize;
         tag->pagesCount = 128;
-    }
-
-    if (d[1] & 0x08) {
-        tag->ic = d[dCpt++];
     }
 
     // add length for blockno (1)
@@ -2244,7 +2261,9 @@ static int CmdHF15Readmulti(const char *Cmd) {
 
     // 0 means 1 page,
     // 1 means 2 pages, ...
-    if (blockcnt > 0) blockcnt--;
+    if (blockcnt > 0) {
+        blockcnt--;
+    }
 
     packet->raw[packet->rawlen++] = blockno;
     packet->raw[packet->rawlen++] = blockcnt;
@@ -2702,8 +2721,11 @@ static int CmdHF15Restore(const char *Cmd) {
             ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
             (tag->pagesCount == 0) ||
             (tag->bytesPerPage == 0)) {
+
         PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
-                      tag->pagesCount, tag->bytesPerPage);
+                      tag->pagesCount,
+                      tag->bytesPerPage
+                     );
         free(tag);
         return PM3_EINVARG;
     }
@@ -2734,8 +2756,8 @@ static int CmdHF15Restore(const char *Cmd) {
 
         for (tried = 0; tried < retries; tried++) {
 
-            retval = hf_15_write_blk(&pm3flags, flags, uid, fast
-                                     , i, data, tag->bytesPerPage);
+            retval = hf_15_write_blk(&pm3flags, flags, uid, fast, i, data, tag->bytesPerPage);
+
             if (retval == PM3_SUCCESS) {
                 PrintAndLogEx(INPLACE, "blk %3d", i);
 
@@ -3467,8 +3489,11 @@ static int CmdHF15View(const char *Cmd) {
             ((tag->pagesCount * tag->bytesPerPage) > ISO15693_TAG_MAX_SIZE) ||
             (tag->pagesCount == 0) ||
             (tag->bytesPerPage == 0)) {
+
         PrintAndLogEx(FAILED, "Tag size error: pagesCount=%d, bytesPerPage=%d",
-                      tag->pagesCount, tag->bytesPerPage);
+                      tag->pagesCount,
+                      tag->bytesPerPage
+                     );
         free(tag);
         return PM3_EINVARG;
     }
