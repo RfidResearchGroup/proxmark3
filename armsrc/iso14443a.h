@@ -168,7 +168,8 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
 int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats);
 int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr,
                             bool anticollision, uint8_t num_cascades, bool no_rats,
-                            const iso14a_polling_parameters_t *polling_parameters);
+                            const iso14a_polling_parameters_t *polling_parameters, bool force_rats);
+int iso14443a_select_card_for_magic(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades);
 int iso14443a_fast_select_card(const uint8_t *uid_ptr, uint8_t num_cascades);
 void iso14a_set_trigger(bool enable);
 

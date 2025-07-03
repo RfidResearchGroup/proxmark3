@@ -83,14 +83,14 @@ static bool mifare_wakeup_auth(struct Crypto1State *pcs, MifareWakeupType wakeup
             break;
         }
         case MF_WAKE_WUPA: {
-            if (iso14443a_select_cardEx(NULL, NULL, &cuid, true, 0, true, &WUPA_POLLING_PARAMETERS) == 0) {
+            if (iso14443a_select_cardEx(NULL, NULL, &cuid, true, 0, true, &WUPA_POLLING_PARAMETERS, false) == 0) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
                 return false;
             };
             break;
         }
         case MF_WAKE_REQA: {
-            if (iso14443a_select_cardEx(NULL, NULL, &cuid, true, 0, true, &REQA_POLLING_PARAMETERS) == 0) {
+            if (iso14443a_select_cardEx(NULL, NULL, &cuid, true, 0, true, &REQA_POLLING_PARAMETERS, false) == 0) {
                 if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
                 return false;
             };
@@ -3022,8 +3022,8 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
 
     // reset card
     mf_reset_card();
-
-    res = iso14443a_select_card(uid, card, &cuid, true, 0, false);
+    // Use special magic detection function that always attempts RATS regardless of SAK
+    res = iso14443a_select_card_for_magic(uid, card, &cuid, true, 0);
     if (res) {
         if (cuid == 0xAA55C396) {
             flag |= MAGIC_FLAG_GEN_UNFUSED;
