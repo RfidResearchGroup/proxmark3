@@ -3025,6 +3025,7 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
     // Use special magic detection function that always attempts RATS regardless of SAK
     res = iso14443a_select_card_for_magic(uid, card, &cuid, true, 0);
     if (res) {
+        mf_reset_card();
         if (cuid == 0xAA55C396) {
             flag |= MAGIC_FLAG_GEN_UNFUSED;
         }
