@@ -415,8 +415,8 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
 
     // e-Purse (blk 2)
     // 18: Takes 2 bytes for SOF/EOF and 8 * 2 = 16 bytes (2 bytes/bit)
-    uint8_t *resp = BigBuf_calloc(18);
-    int resp_len;
+    uint8_t *resp_cc = BigBuf_calloc(18);
+    int resp_cc_len;
 
     // Kd, Kc (blocks 3 and 4). Cannot be read. Always respond with 0xff bytes only
     uint8_t *resp_ff = BigBuf_calloc(22);
