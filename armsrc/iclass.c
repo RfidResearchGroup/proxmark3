@@ -415,8 +415,8 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
 
     // e-Purse (blk 2)
     // 18: Takes 2 bytes for SOF/EOF and 8 * 2 = 16 bytes (2 bytes/bit)
-    uint8_t *resp_cc = BigBuf_calloc(18);
-    int resp_cc_len;
+    uint8_t *resp = BigBuf_calloc(18);
+    int resp_len;
 
     // Kd, Kc (blocks 3 and 4). Cannot be read. Always respond with 0xff bytes only
     uint8_t *resp_ff = BigBuf_calloc(22);
@@ -2614,7 +2614,7 @@ void iClass_Restore(iclass_restore_req_t *msg) {
     }
     iclass_calc_div_key(hdr.csn, credit_key, div_cc, false);
 
-    read_check_cc[1] = ((uint8_t *)&hdr.conf)[0] + 1; //first block of AA2
+    read_check_cc[1] = hdr.conf.app_limit + 1; //first block of AA2
     // authenticate
     uint8_t mac[4] = {0};
     uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
@@ -2784,7 +2784,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         }
 
         //Step 0A - The read_check_cc block has to be in AA2, set it by checking the card configuration
-        read_check_cc[1] = ((uint8_t *)&hdr.conf)[0] + 1; //first block of AA2
+        read_check_cc[1] = hdr.conf.app_limit + 1; //first block of AA2
 
         //Step1 Authenticate with AA1 using trace
         if (card_select) {
