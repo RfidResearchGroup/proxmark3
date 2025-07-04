@@ -2553,13 +2553,13 @@ out:
 }
 
 static bool do_privilege_escalation(uint8_t *read_check_cc, size_t cc_len, uint32_t *eof_time){
-    uint16_t resp_len = 0;
-    int res2;
-    uint8_t resp[10] = {0};
     int priv_esc_tries = 0;
     bool priv_esc = false;
     uint32_t start_time = 0;
     while (!priv_esc) {
+        uint16_t resp_len = 0;
+        int res2;
+        uint8_t resp[10] = {0};
         //The privilege escalation is done with a readcheck and not just a normal read!
         start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
         iclass_send_as_reader(read_check_cc, cc_len, &start_time, eof_time, false);
@@ -2612,7 +2612,7 @@ void iClass_Restore(iclass_restore_req_t *msg) {
     if (res == false) {
         goto out;
     }
-    iclass_calc_div_key((uint8_t *)&hdr.csn, credit_key, div_cc, false);
+    iclass_calc_div_key(hdr.csn, credit_key, div_cc, false);
 
     read_check_cc[1] = ((uint8_t *)&hdr.conf)[0] + 1; //first block of AA2
     // authenticate
