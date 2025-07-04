@@ -272,7 +272,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MAGIC_FLAG_NONE            0x0000
 #define MAGIC_FLAG_GEN_1A          0x0001
 #define MAGIC_FLAG_GEN_1B          0x0002
-#define MAGIC_FLAG_GEN_2           0x0004
+#define MAGIC_FLAG_GEN_2_ATS       0x0004   // Gen 2 detected via ATS signature
 #define MAGIC_FLAG_GEN_UNFUSED     0x0008
 #define MAGIC_FLAG_SUPER_GEN1      0x0010
 #define MAGIC_FLAG_SUPER_GEN2      0x0020
@@ -284,7 +284,7 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define MAGIC_FLAG_GDM_WUP_20      0x0800
 #define MAGIC_FLAG_GDM_WUP_40      0x1000
 #define MAGIC_FLAG_GDM_WUP_40_ZUID 0x2000
-
+#define MAGIC_FLAG_GEN_2_INVASIVE  0x4000   // Gen 2 detected via invasive test
 
 // Commands for configuration of Gen4 GTU cards.
 // see https://github.com/RfidResearchGroup/proxmark3/blob/master/doc/magic_cards_notes.md
