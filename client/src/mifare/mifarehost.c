@@ -1677,10 +1677,6 @@ uint16_t detect_mf_magic(bool is_mfc, uint8_t key_type, uint64_t key) {
         PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 1b"));
     }
 
-    if ((isMagic & MAGIC_FLAG_GEN_2) == MAGIC_FLAG_GEN_2) {  // deprecated
-        PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 2 / CUID"));  // deprecated
-    }  // deprecated
-
     if ((isMagic & MAGIC_FLAG_GEN_2_ATS) == MAGIC_FLAG_GEN_2_ATS) {
         PrintAndLogEx(SUCCESS, "Magic capabilities... " _GREEN_("Gen 2 / CUID") " ( detected via ATS signature )");
     }

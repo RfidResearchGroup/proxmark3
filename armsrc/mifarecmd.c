@@ -3033,33 +3033,30 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
         if (memcmp(card->ats, "\x09\x78\x00\x91\x02\xDA\xBC\x19\x10", 9) == 0) {
             // test for some MFC gen2
             isGen2 = true;
-            flag |= MAGIC_FLAG_GEN_2_ATS;
         } else if (memcmp(card->ats, "\x0D\x78\x00\x71\x02\x88\x49\xA1\x30\x20\x15\x06\x08\x56\x3D", 15) == 0) {
             // test for some MFC 7b gen2
             isGen2 = true;
-            flag |= MAGIC_FLAG_GEN_2_ATS;
         } else if (memcmp(card->ats, "\x0A\x78\x00\x81\x02\xDB\xA0\xC1\x19\x40\x2A\xB5", 12) == 0) {
             // test for Ultralight magic gen2
             isGen2 = true;
-            flag |= MAGIC_FLAG_GEN_2_ATS;
         } else if (memcmp(card->ats, "\x85\x00\x00\xA0\x00\x00\x0A\xC3\x00\x04\x03\x01\x01\x00\x0B\x03\x41\xDF", 18) == 0) {
             // test for Ultralight EV1 magic gen2
             isGen2 = true;
-            flag |= MAGIC_FLAG_GEN_2_ATS;
         } else if (memcmp(card->ats, "\x85\x00\x00\xA0\x0A\x00\x0A\xC3\x00\x04\x03\x01\x01\x00\x0B\x03\x16\xD7", 18) == 0) {
             // test for some other Ultralight EV1 magic gen2
             isGen2 = true;
-            flag |= MAGIC_FLAG_GEN_2_ATS;
         } else if (memcmp(card->ats, "\x85\x00\x00\xA0\x0A\x00\x0A\xB0\x00\x00\x00\x00\x00\x00\x00\x00\x18\x4D", 18) == 0) {
             // test for some other Ultralight magic gen2
             isGen2 = true;
-            flag |= MAGIC_FLAG_GEN_2_ATS;
         } else if (memcmp(card->ats, "\x85\x00\x00\xA0\x00\x00\x0A\xA5\x00\x04\x04\x02\x01\x00\x0F\x03\x79\x0C", 18) == 0) {
             // test for NTAG213 magic gen2
             isGen2 = true;
-            flag |= MAGIC_FLAG_GEN_2_ATS;
         }
 
+        if (isGen2) {
+            flag |= MAGIC_FLAG_GEN_2_ATS;  // for detection flag on the above tests
+        }
+        
         // test for super card
         ReaderTransmit(superGen1, sizeof(superGen1), NULL);
         res = ReaderReceive(buf, PM3_CMD_DATA_SIZE, par);
