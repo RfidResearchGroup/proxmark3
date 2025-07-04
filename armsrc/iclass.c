@@ -2828,7 +2828,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
         if (msg->test) {
             Dbprintf(_YELLOW_("*Cycled Reader*") " TEST Index - Loops: "_YELLOW_("%3d / %3d") " *", loops, msg->loop);
-        } else if (msg->debug || ((card_select == false) || (card_auth == false))) {
+        } else if (msg->debug || ((card_select == false) && (card_auth == false))) {
             Dbprintf(_YELLOW_("*Cycled Reader*") " Index: "_RED_("%3d")" Loops: "_YELLOW_("%3d / %3d") " *", index, loops, msg->loop);
         } else {
             DbprintfEx(FLAG_INPLACE, "[" _BLUE_("#") "] Index: "_CYAN_("%3d")" Loops: "_YELLOW_("%3d / %3d")" ", index, loops, msg->loop);
