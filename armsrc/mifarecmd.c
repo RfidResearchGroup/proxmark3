@@ -3051,6 +3051,12 @@ void MifareCIdent(bool is_mfc, uint8_t keytype, uint8_t *key) {
         } else if (memcmp(card->ats, "\x85\x00\x00\xA0\x00\x00\x0A\xA5\x00\x04\x04\x02\x01\x00\x0F\x03\x79\x0C", 18) == 0) {
             // test for NTAG213 magic gen2
             isGen2 = true;
+        } else if (memcmp(card->ats, "\x85\x00\x00\xA0\x00\x00\x0A\xAA\x00\x04\x04\x02\x01\x00\x13\x03\x60\xA6", 18) == 0) {
+            // test for non-standard NTAG216 magic gen2 888bytes (NT2H1611G0DU) ( USCUID-UL )
+            isGen2 = true;
+        } else if (memcmp(card->ats, "\x85\x00\x85\xA0\x00\x00\x0A\x5A\x00\x04\x04\x02\x01\x00\x11\x03\x44\xB4", 18) == 0) {
+            // test for non-standard NTAG215 magic gen2 504bytes (NT2H1511G0DU) ( USCUID-UL )
+            isGen2 = true;
         }
 
         if (isGen2) {
