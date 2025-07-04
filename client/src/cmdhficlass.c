@@ -2569,6 +2569,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
         arg_lit0(NULL, "raw", "no computations applied to key"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
+        arg_lit0(NULL, "nr", "replay of nr mac with privilege escalation"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -2619,6 +2620,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
     bool rawkey = arg_get_lit(ctx, 8);
     bool verbose = arg_get_lit(ctx, 9);
     bool shallow_mod = arg_get_lit(ctx, 10);
+    bool use_replay = arg_get_lit(ctx, 11);
 
     CLIParserFree(ctx);
 
@@ -2665,7 +2667,7 @@ static int CmdHFiClassRestore(const char *Cmd) {
     payload->req.use_raw = rawkey;
     payload->req.use_elite = elite;
     payload->req.use_credit_key = use_credit_key;
-    payload->req.use_replay = false;
+    payload->req.use_replay = use_replay;
     payload->req.blockno = startblock;
     payload->req.send_reply = true;
     payload->req.do_auth = true;
