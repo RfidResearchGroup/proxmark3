@@ -2978,8 +2978,8 @@ static int GetATQA(uint8_t *resp, uint16_t resp_len, uint8_t *resp_par, const is
 int iso14443a_select_card(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades, bool no_rats) {
     return iso14443a_select_cardEx(uid_ptr, p_card, cuid_ptr, anticollision, num_cascades, no_rats, NULL, false);
 }
-int iso14443a_select_card_for_magic(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades){
-    // Bug fix: When SAK is 0x00, `iso14443a_select_cardEx` would return too early at 
+int iso14443a_select_card_for_magic(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint32_t *cuid_ptr, bool anticollision, uint8_t num_cascades) {
+    // Bug fix: When SAK is 0x00, `iso14443a_select_cardEx` would return too early at
     // line "if (hf14aconfig.forcerats == 0)".`force_rats` is used to force RATS execution and ATS retrieval.
     return iso14443a_select_cardEx(uid_ptr, p_card, cuid_ptr, anticollision, num_cascades, false, NULL, true);
 }

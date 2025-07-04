@@ -3663,9 +3663,10 @@
                 "--elite elite computations applied to key",
                 "--raw no computations applied to key",
                 "-v, --verbose verbose output",
-                "--shallow use shallow (ASK) reader modulation instead of OOK"
+                "--shallow use shallow (ASK) reader modulation instead of OOK",
+                "--nr replay of nr mac with privilege escalation"
             ],
-            "usage": "hf iclass restore [-hv] -f <fn> [-k <hex>] [--ki <dec>] --first <dec> --last <dec> [--credit] [--elite] [--raw] [--shallow]"
+            "usage": "hf iclass restore [-hv] -f <fn> [-k <hex>] [--ki <dec>] --first <dec> --last <dec> [--credit] [--elite] [--raw] [--shallow] [--nr]"
         },
         "hf iclass sam": {
             "command": "hf iclass sam",
@@ -13376,6 +13377,6 @@
     "metadata": {
         "commands_extracted": 768,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-07-01T14:12:39"
+        "extracted_on": "2025-07-04T10:19:21"
     }
 }

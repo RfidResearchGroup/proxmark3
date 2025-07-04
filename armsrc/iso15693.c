@@ -985,10 +985,11 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
     DecodeTagFSK_t dtfm = { 0 };
     DecodeTagFSK_t *dtf = &dtfm;
 
-    if (fsk)
+    if (fsk) {
         DecodeTagFSKInit(dtf, response, max_len);
-    else
+    } else {
         DecodeTagInit(dt, response, max_len);
+    }
 
     // wait for last transfer to complete
     while (!(AT91C_BASE_SSC->SSC_SR & AT91C_SSC_TXEMPTY));
@@ -1014,8 +1015,9 @@ int GetIso15693AnswerFromTag(uint8_t *response, uint16_t max_len, uint16_t timeo
     for (;;) {
 
         volatile uint16_t behindBy = ((uint16_t *)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
-        if (behindBy == 0)
+        if (behindBy == 0) {
             continue;
+        }
 
         samples++;
         if (samples == 1) {
