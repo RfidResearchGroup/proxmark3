@@ -1584,6 +1584,14 @@
         "Type": "transport"
     },
     {
+        "AID": "F21400",
+        "Vendor": "Spokane Transit Authority (STA) via INIT",
+        "Country": "US",
+        "Name": "Connect Card (GEG)",
+        "Description": "GEG Connect Card",
+        "Type": "transport"
+    },
+    {
         "AID": "F40110",
         "Vendor": "ITSO Ltd",
         "Country": "UK",
