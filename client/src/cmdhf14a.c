@@ -3256,7 +3256,9 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf gdm*") "` magic commands");
         }
 
-        if ((isMagic & MAGIC_FLAG_GEN_2) == MAGIC_FLAG_GEN_2) {
+        if ((isMagic & MAGIC_FLAG_GEN_2_ATS) == MAGIC_FLAG_GEN_2_ATS) {
+            PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf") "` commands");
+        } else if ((isMagic & MAGIC_FLAG_GEN_2_INVASIVE) == MAGIC_FLAG_GEN_2_INVASIVE) {
             PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("hf mf") "` commands");
         } else {
             PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf mf info`"));
