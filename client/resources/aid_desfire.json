@@ -1465,7 +1465,7 @@
     },
     {
         "AID": "F21050",
-        "Vendor": "Metro Christchurch via INIT / Arc",
+        "Vendor": "Metro Christchurch via INIT / Arc via Vix Technologies",
         "Country": "NZ / CA",
         "Name": "Metrocard (CHC) / Arc (YEG)",
         "Description": "CHC FIDs: 00: Backup Data; 01/02: Trip History; 03: Card Balance",
@@ -1473,7 +1473,7 @@
     },
     {
         "AID": "F210E0",
-        "Vendor": "TriMet",
+        "Vendor": "TriMet via INIT",
         "Country": "US",
         "Name": "hop fastpass (PDX)",
         "Description": "PDX hop fastpass Card",
@@ -1521,7 +1521,7 @@
     },
     {
         "AID": "F21201",
-        "Vendor": "Green Bay Metro Transit via Genfare / Winnipeg Transit",
+        "Vendor": "Green Bay Metro Transit via Genfare / Winnipeg Transit via Genfare",
         "Country": "US / CA",
         "Name": "Tap-N-Go Card (GRB) / peggo card (YWG)",
         "Description": "GRB Tap-N-Go Card / YWG peggo card",
@@ -1537,7 +1537,7 @@
     },
     {
         "AID": "F212A0",
-        "Vendor": "CTtransit",
+        "Vendor": "CTtransit via Genfare",
         "Country": "US",
         "Name": "Go CT Card (BDL)",
         "Description": "BDL Go CT Card",
@@ -1545,7 +1545,7 @@
     },
     {
         "AID": "F21360",
-        "Vendor": "INIT",
+        "Vendor": "The City and County of Honolulu via INIT",
         "Country": "US",
         "Name": "HOLO Card (HNL)",
         "Description": "HNL HOLO Card",
@@ -1561,7 +1561,7 @@
     },
     {
         "AID": "F21390",
-        "Vendor": "Multiple NZ Transit Agencies via Otago Regional Council",
+        "Vendor": "Otago Regional Council via INIT",
         "Country": "NZ",
         "Name": "Bee Card (DUD)",
         "Description": "Multi-Modal Transit #0 // FIDs 00: Backup Data; 01-02: Trip History; 03: Card Balance",
@@ -1625,7 +1625,7 @@
     },
     {
         "AID": "FF30FF",
-        "Vendor": "Metrolinx",
+        "Vendor": "Metrolinx via Accenture",
         "Country": "CA",
         "Name": "PRESTO Card (YYZ/YHM/YOW)",
         "Description": "FID 08: Standard Data",
