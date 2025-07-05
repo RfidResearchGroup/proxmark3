@@ -2329,7 +2329,7 @@ static int CmdHFiClass_WriteBlock(const char *Cmd) {
         arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_lit0(NULL, "elite", "elite computations applied to key"),
         arg_lit0(NULL, "raw", "no computations applied to key"),
-        arg_lit0(NULL, "nr", "replay of NR/MAC"),
+        arg_lit0(NULL, "nr", "replay of NR/MAC using privilege escalation"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_param_end

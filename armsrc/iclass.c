@@ -1857,8 +1857,39 @@ static bool iclass_writeblock_sp(uint8_t blockno, uint8_t *data, uint8_t *mac, b
     return true;
 }
 
+uint8_t credit_key[8] = {0xFD, 0xCB, 0x5A, 0x52, 0xEA, 0x8F, 0x30, 0x90};
+
+static bool do_privilege_escalation(uint8_t *read_check_cc, size_t cc_len, uint32_t *eof_time) {
+
+    int priv_esc_tries = 5;
+
+    while (priv_esc_tries--) {
+
+        uint16_t resp_len = 0;
+        uint8_t resp[10] = {0};
+        //The privilege escalation is done with a readcheck and not just a normal read!
+        uint32_t start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+
+        iclass_send_as_reader(read_check_cc, cc_len, &start_time, eof_time, false);
+        // expect a 8-byte response here
+        int res = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time, false, true, &resp_len);
+        if (res == PM3_SUCCESS && resp_len == 8) {
+            return true;
+        }
+    }
+
+    if (g_dbglevel == DBG_INFO) {
+        DbpString("");
+        DbpString(_RED_("Unable to complete privilege escalation! Stopping."));
+    }
+    return false;
+}
+
 // turn off afterwards
 void iClass_WriteBlock(uint8_t *msg) {
+    bool priv_esc = false;
+    uint8_t read_check_cc[] = { 0x10 | ICLASS_CMD_READCHECK, 0x18 };
+    uint8_t div_cc[8] = {0};
 
     LED_A_ON();
 
@@ -1877,6 +1908,9 @@ void iClass_WriteBlock(uint8_t *msg) {
     if (res == false) {
         goto out;
     }
+
+    iclass_calc_div_key(hdr.csn, credit_key, div_cc, false);
+    read_check_cc[1] = hdr.conf.app_limit + 1; //first block of AA2
 
     uint32_t start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
 
@@ -1904,21 +1938,24 @@ void iClass_WriteBlock(uint8_t *msg) {
         write_len -= 2;
     } else {
 
-        if (payload->req.use_replay) {
-            memcpy(write + 10, payload->mac, sizeof(payload->mac));
-        } else {
-            // Secure tags uses MAC
-            uint8_t wb[9];
-            wb[0] = payload->req.blockno;
-            memcpy(wb + 1, payload->data, PICOPASS_BLOCK_SIZE);
+        // Secure tags uses MAC
+        uint8_t wb[9];
+        wb[0] = payload->req.blockno;
+        memcpy(wb + 1, payload->data, PICOPASS_BLOCK_SIZE);
 
-            if (payload->req.use_credit_key)
-                doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
-            else
-                doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
-
-            memcpy(write + 10, mac, sizeof(mac));
+        if (payload->req.use_credit_key){
+            doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
+        } else if (payload->req.use_replay) {
+            priv_esc = do_privilege_escalation(read_check_cc, sizeof(read_check_cc), &eof_time);
+            if (priv_esc == false) {
+                goto out;
+            }
+            doMAC_N(wb, sizeof(wb), div_cc, mac);
+        }else{
+            doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
         }
+        memcpy(write + 10, mac, sizeof(mac));
+
     }
 
     start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
@@ -2552,36 +2589,9 @@ out:
     }
 }
 
-static bool do_privilege_escalation(uint8_t *read_check_cc, size_t cc_len, uint32_t *eof_time) {
-
-    int priv_esc_tries = 5;
-
-    while (priv_esc_tries--) {
-
-        uint16_t resp_len = 0;
-        uint8_t resp[10] = {0};
-        //The privilege escalation is done with a readcheck and not just a normal read!
-        uint32_t start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
-
-        iclass_send_as_reader(read_check_cc, cc_len, &start_time, eof_time, false);
-        // expect a 8-byte response here
-        int res = GetIso15693AnswerFromTag(resp, sizeof(resp), ICLASS_READER_TIMEOUT_OTHERS, eof_time, false, true, &resp_len);
-        if (res == PM3_SUCCESS && resp_len == 8) {
-            return true;
-        }
-    }
-
-    if (g_dbglevel == DBG_INFO) {
-        DbpString("");
-        DbpString(_RED_("Unable to complete privilege escalation! Stopping."));
-    }
-    return false;
-}
-
 void iClass_Restore(iclass_restore_req_t *msg) {
     bool priv_esc = false;
     uint8_t read_check_cc[] = { 0x10 | ICLASS_CMD_READCHECK, 0x18 };
-    uint8_t credit_key[8] = {0xFD, 0xCB, 0x5A, 0x52, 0xEA, 0x8F, 0x30, 0x90};
     uint8_t div_cc[8] = {0};
 
     // sanitation
@@ -2626,13 +2636,6 @@ void iClass_Restore(iclass_restore_req_t *msg) {
         }
     }
 
-    if (msg->req.use_replay) {
-        priv_esc = do_privilege_escalation(read_check_cc, sizeof(read_check_cc), &eof_time);
-        if (priv_esc == false) {
-            goto out;
-        }
-    }
-
     // main loop
     bool use_mac;
     for (uint8_t i = 0; i < msg->item_cnt; i++) {
@@ -2653,6 +2656,10 @@ void iClass_Restore(iclass_restore_req_t *msg) {
             if (msg->req.use_credit_key) {
                 doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
             } else if (msg->req.use_replay) {
+                priv_esc = do_privilege_escalation(read_check_cc, sizeof(read_check_cc), &eof_time);
+                if (priv_esc == false) {
+                    goto out;
+                }
                 doMAC_N(wb, sizeof(wb), div_cc, mac);
             } else {
                 doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
