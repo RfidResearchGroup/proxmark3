@@ -1938,7 +1938,7 @@ void iClass_WriteBlock(uint8_t *msg) {
         write_len -= 2;
     } else {
 
-        if (payload->req.use_replay && sizeof(payload->mac) > 0) {
+        if (payload->req.use_replay && (memcmp(payload->mac, "\x00\x00\x00\x00", 4) != 0)) {
             memcpy(write + 10, payload->mac, sizeof(payload->mac));
         } else {
         // Secure tags uses MAC
