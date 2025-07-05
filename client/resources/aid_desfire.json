@@ -1576,19 +1576,19 @@
         "Type": "transport"
     },
     {
-        "AID": "F21400",
-        "Vendor": "Spokane Transit Authority (STA) via INIT",
-        "Country": "US",
-        "Name": "Connect Card (GEG)",
-        "Description": "GEG Connect Card",
-        "Type": "transport"
-    },
-    {
         "AID": "F213F0",
         "Vendor": "Puget Sound Transit Agencies via Vix Technologies",
         "Country": "US",
         "Name": "ORCA (One Regional Card for All) (SEA)",
         "Description": "One Regional Card for All // FIDs 00: Standard Data; 01: Backup Data",
+        "Type": "transport"
+    },
+    {
+        "AID": "F21400",
+        "Vendor": "Spokane Transit Authority (STA) via INIT",
+        "Country": "US",
+        "Name": "Connect Card (GEG)",
+        "Description": "GEG Connect Card",
         "Type": "transport"
     },
     {
