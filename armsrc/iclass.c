@@ -1938,6 +1938,9 @@ void iClass_WriteBlock(uint8_t *msg) {
         write_len -= 2;
     } else {
 
+        if (payload->req.use_replay && sizeof(payload->mac) > 0) {
+            memcpy(write + 10, payload->mac, sizeof(payload->mac));
+        } else {
         // Secure tags uses MAC
         uint8_t wb[9];
         wb[0] = payload->req.blockno;
@@ -1954,8 +1957,9 @@ void iClass_WriteBlock(uint8_t *msg) {
         }else{
             doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
         }
-        memcpy(write + 10, mac, sizeof(mac));
 
+        memcpy(write + 10, mac, sizeof(mac));
+        }
     }
 
     start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
