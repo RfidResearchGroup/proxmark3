@@ -1941,24 +1941,24 @@ void iClass_WriteBlock(uint8_t *msg) {
         if (payload->req.use_replay && (memcmp(payload->mac, "\x00\x00\x00\x00", 4) != 0)) {
             memcpy(write + 10, payload->mac, sizeof(payload->mac));
         } else {
-        // Secure tags uses MAC
-        uint8_t wb[9];
-        wb[0] = payload->req.blockno;
-        memcpy(wb + 1, payload->data, PICOPASS_BLOCK_SIZE);
+            // Secure tags uses MAC
+            uint8_t wb[9];
+            wb[0] = payload->req.blockno;
+            memcpy(wb + 1, payload->data, PICOPASS_BLOCK_SIZE);
 
-        if (payload->req.use_credit_key){
-            doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
-        } else if (payload->req.use_replay) {
-            priv_esc = do_privilege_escalation(read_check_cc, sizeof(read_check_cc), &eof_time);
-            if (priv_esc == false) {
-                goto out;
+            if (payload->req.use_credit_key) {
+                doMAC_N(wb, sizeof(wb), hdr.key_c, mac);
+            } else if (payload->req.use_replay) {
+                priv_esc = do_privilege_escalation(read_check_cc, sizeof(read_check_cc), &eof_time);
+                if (priv_esc == false) {
+                    goto out;
+                }
+                doMAC_N(wb, sizeof(wb), div_cc, mac);
+            } else {
+                doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
             }
-            doMAC_N(wb, sizeof(wb), div_cc, mac);
-        }else{
-            doMAC_N(wb, sizeof(wb), hdr.key_d, mac);
-        }
 
-        memcpy(write + 10, mac, sizeof(mac));
+            memcpy(write + 10, mac, sizeof(mac));
         }
     }
 
