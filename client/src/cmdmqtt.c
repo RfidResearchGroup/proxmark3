@@ -21,7 +21,12 @@
 #include "cliparser.h"
 #include "mqtt.h"            // MQTT support
 //#include "mbedtls_sockets.h" // MQTT networkings examples
+
+#ifndef _WIN32
 #include "posix_sockets.h" // MQTT networkings examples
+#else
+#include "win32_sockets.h" // MQTT networkings examples
+#endif
 #include "util_posix.h"  // time
 #include "fileutils.h"
 
@@ -62,7 +67,9 @@ static int mqtt_exit(int status, int sockfd, pthread_t *client_daemon) {
 
     if (client_daemon != NULL) {
         pthread_cancel(*client_daemon);
+#ifndef _WIN32        
         pthread_join(*client_daemon, NULL); // Wait for the thread to finish
+#endif
     }
     return status;
 }
