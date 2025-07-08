@@ -215,7 +215,7 @@ static int CmdHIDReader(const char *Cmd) {
     do {
         lf_read(false, 16000);
         demodHID(!cm);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }

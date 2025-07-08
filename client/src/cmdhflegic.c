@@ -781,17 +781,20 @@ int legic_print_type(uint32_t tagtype, uint8_t spaces) {
 }
 int legic_get_type(legic_card_select_t *card) {
 
-    if (card == NULL)
+    if (card == NULL) {
         return PM3_EINVARG;
+    }
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_LEGIC_INFO, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_LEGIC_INFO, &resp, 1500) == false)
+    if (WaitForResponseTimeout(CMD_HF_LEGIC_INFO, &resp, 1500) == false) {
         return PM3_ETIMEOUT;
+    }
 
-    if (resp.status != PM3_SUCCESS)
+    if (resp.status != PM3_SUCCESS) {
         return PM3_ESOFT;
+    }
 
     memcpy(card, resp.data.asBytes, sizeof(legic_card_select_t));
     return PM3_SUCCESS;
@@ -1527,7 +1530,7 @@ int readLegicUid(bool loop, bool verbose) {
         PrintAndLogEx(SUCCESS, " MSN: " _GREEN_("%s"), sprint_hex(card.uid + 1, sizeof(card.uid) - 1));
         legic_print_type(card.cardsize, 0);
 
-    } while (loop && kbd_enter_pressed() == false);
+    } while (loop && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }

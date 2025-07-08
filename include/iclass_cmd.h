@@ -24,7 +24,8 @@
 //-----------------------------------------------------------------------------
 // iCLASS / PICOPASS
 //-----------------------------------------------------------------------------
-#define PICOPASS_BLOCK_SIZE    8
+#define PICOPASS_BLOCK_SIZE    ( 8 )
+#define PICOPASS_MAX_BYTES     ( 4096 )  // # 32k bits = 4096 bytes
 
 // iCLASS reader flags
 #define FLAG_ICLASS_READER_INIT        0x01
@@ -197,5 +198,12 @@ typedef struct {
     } header;
 } PACKED iclass_card_select_resp_t;
 
+typedef struct {
+    union {
+        picopass_hdr_t hdr;
+        picopass_ns_hdr_t ns_hdr;
+    } header;
+    uint8_t data[PICOPASS_MAX_BYTES];
+} PACKED iclass_tag_t;
 
 #endif // _ICLASS_H_

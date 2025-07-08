@@ -75,6 +75,7 @@ typedef struct {
 
 
 int calculate_hours_between_dates(const Date_t s, Date_t *e);
+void add_minutes(Date_t *d, int minutes_to_add);
 void add_hours(Date_t *d, int hours_to_add);
 void add_days(Date_t *d, int days_to_add);
 uint8_t days_in_month(int year, int month);

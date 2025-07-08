@@ -1135,7 +1135,7 @@ int read_iclass_csn(bool loop, bool verbose, bool shallow_mod) {
                 res = PM3_EMALLOC;
             }
         }
-    } while (loop && kbd_enter_pressed() == false);
+    } while (loop && (kbd_enter_pressed() == false));
 
     DropField();
     return res;

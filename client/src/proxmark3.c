@@ -17,14 +17,12 @@
 //-----------------------------------------------------------------------------
 
 #include "proxmark3.h"
-
 #include <stdlib.h>
 #include <limits.h>
 #include <unistd.h>
 #include <ctype.h>
 #include <libgen.h>        // basename
 #include <time.h>
-
 #include "pm3line.h"
 #include "usart_defs.h"
 #include "util_posix.h"
@@ -42,7 +40,6 @@
 #ifndef _WIN32
 #include <locale.h>
 #endif
-
 
 static int mainret = PM3_SUCCESS;
 
@@ -209,7 +206,6 @@ static void showBanner(void) {
 
     PrintAndLogEx(NORMAL, "  [ " _YELLOW_("%s!")" :coffee: ]", get_quote());
 //    PrintAndLogEx(NORMAL, "  [ https://patreon.com/iceman1001/ ]");
-//    PrintAndLogEx(NORMAL, "");
 //    PrintAndLogEx(NORMAL, "   Monero");
 //    PrintAndLogEx(NORMAL, " 43mNJLpgBVaTvyZmX9ajcohpvVkaRy1kbZPm8tqAb7itZgfuYecgkRF36rXrKFUkwEGeZedPsASRxgv4HPBHvJwyJdyvQuP");
     PrintAndLogEx(NORMAL, "");

@@ -462,7 +462,7 @@ int CmdLFCommandRead(const char *Cmd) {
             return PM3_ETIMEOUT;
         }
 
-    } while (cm && kbd_enter_pressed() == false);
+    } while (cm && (kbd_enter_pressed() == false));
     return ret;
 }
 
@@ -859,7 +859,7 @@ int CmdLFRead(const char *Cmd) {
     int ret = PM3_SUCCESS;
     do {
         ret = lf_read_internal(realtime, verbose, samples);
-    } while (cm && kbd_enter_pressed() == false);
+    } while (cm && (kbd_enter_pressed() == false));
 
     if (ret == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Got " _YELLOW_("%zu") " samples", g_GraphTraceLen);
@@ -985,7 +985,7 @@ int CmdLFSniff(const char *Cmd) {
     int ret = PM3_SUCCESS;
     do {
         ret = lf_sniff(realtime, verbose, samples);
-    } while (cm && kbd_enter_pressed() == false);
+    } while (cm && (kbd_enter_pressed() == false));
     return ret;
 }
 
