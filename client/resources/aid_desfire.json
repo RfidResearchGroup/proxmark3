@@ -36,7 +36,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -44,7 +44,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -52,7 +52,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -60,7 +60,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -68,7 +68,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -76,7 +76,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -84,7 +84,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -92,7 +92,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -100,7 +100,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -108,7 +108,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -116,7 +116,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -124,7 +124,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application (Alternative Endian)",
+        "Description": "Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -132,7 +132,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Unused Cardax Card Data Application (Alternative Endian)",
+        "Description": "Unused Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -140,7 +140,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Unused Cardax Card Data Application (Alternative Endian)",
+        "Description": "Unused Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -148,7 +148,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Unused Cardax Card Data Application (Alternative Endian)",
+        "Description": "Unused Cardax Card Data Application",
         "Type": "pacs"
     },
     {
@@ -156,7 +156,7 @@
         "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
         "Country": "NZ",
         "Name": "Gallagher Security Credential",
-        "Description": "Card Application Directory (CAD) (Alternative Endian)",
+        "Description": "Card Application Directory (CAD)",
         "Type": "pacs"
     },
     {
@@ -221,134 +221,6 @@
         "Country": "US",
         "Name": "Securitron DESFire EV2 Credential",
         "Description": "Securitron DESFire EV2 Credential",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48120",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48121",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48122",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48123",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48124",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48125",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48126",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48127",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48128",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F48129",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F4812A",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F4812B",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F4812C",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Unused Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F4812D",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Unused Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F4812E",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Unused Cardax Card Data Application",
-        "Type": "pacs"
-    },
-    {
-        "AID": "F4812F",
-        "Vendor": "Gallagher Group Limited via PEC (New Zealand) Limited",
-        "Country": "NZ",
-        "Name": "Gallagher Security Credential",
-        "Description": "Card Application Directory (CAD)",
         "Type": "pacs"
     },
     {
