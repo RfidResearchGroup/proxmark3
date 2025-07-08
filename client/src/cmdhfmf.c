@@ -267,7 +267,7 @@ static void ParseAndPrintSaflokData(const sector_t *sector0_info, const sector_t
     uint16_t property_id = ((decodedBA[14] & 0x0F) << 8) | decodedBA[15];
 
     // Bytes 11-13: Creation date since SAFLOK_YEAR_OFFSET Jan 1st
-    uint16_t creation_year = (((decodedBA[11] & 0xF0) >> 4) + SAFLOK_YEAR_OFFSET) | creation_year_high_bits;
+    uint16_t creation_year = (creation_year_high_bits | (decodedBA[11] >> 4)) + SAFLOK_YEAR_OFFSET;
     uint8_t creation_month = decodedBA[11] & 0x0F;
     uint8_t creation_day = (decodedBA[12] >> 3) & 0x1F;
     uint8_t creation_hour = ((decodedBA[12] & 0x07) << 2) | ((decodedBA[13] & 0xC0) >> 6);
@@ -329,7 +329,7 @@ static void ParseAndPrintSaflokData(const sector_t *sector0_info, const sector_t
     bool checksum_valid = (checksum_calculated == checksum);
 
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--- " _CYAN_("SAFLOK details"));
+    PrintAndLogEx(INFO, "--- " _CYAN_("Saflok details"));
     PrintAndLogEx(SUCCESS, "Key Level............. %u (%s)", saflok_key_levels[key_level].level_num, saflok_key_levels[key_level].level_name);
     PrintAndLogEx(SUCCESS, "LED Warning........... %s", led_warning ? "Yes" : "No");
     PrintAndLogEx(SUCCESS, "Key ID................ %u (0x%02X)", key_id, key_id);

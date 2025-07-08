@@ -698,8 +698,13 @@ int flash_write(flash_file_t *ctx) {
 
         PrintAndLogEx(SUCCESS, " 0x%08x..0x%08x [0x%x / %u blocks]", seg->start, end - 1, length, blocks);
         if (is_loaded) {
-            fprintf(stdout, "\n\n");
+            if (blocks < 50) {
+                PrintAndLogEx(SUCCESS, "" NOLF);
+            } else {
+                fprintf(stdout, "\n\n");
+            }
         }
+
         fflush(stdout);
         int block = 0;
         uint8_t *data = seg->data;
@@ -721,6 +726,15 @@ int flash_write(flash_file_t *ctx) {
             length -= block_size;
             block++;
 
+            // small files, like bootrom
+            if (blocks < 50) {
+                fprintf(stdout, ".");
+                len++;
+                fflush(stdout);
+                continue;
+            }
+
+            // large fullimage write
             if (is_loaded) {
                 if (len < ice3len) {
                     fprintf(stdout, "%c", ice3[len++]);

@@ -3810,7 +3810,7 @@
                 "--credit key is assumed to be the credit key",
                 "--elite elite computations applied to key",
                 "--raw no computations applied to key",
-                "--nr replay of NR/MAC",
+                "--nr replay of NR/MAC block write or use privilege escalation if mac is empty",
                 "-v, --verbose verbose output",
                 "--shallow use shallow (ASK) reader modulation instead of OOK"
             ],
@@ -13377,6 +13377,6 @@
     "metadata": {
         "commands_extracted": 768,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-07-04T10:19:21"
+        "extracted_on": "2025-07-06T18:10:18"
     }
 }
