@@ -31,11 +31,9 @@
 static int CmdHelp(const char *Cmd);
 
 static void mqtt_publish_callback(void **unused, struct mqtt_response_publish *published) {
-    /* note that published->topic_name is NOT null-terminated (here we'll change it to a c-string) */
+    // note that published->topic_name is NOT null-terminated (here we'll change it to a c-string)
     char *topic_name = (char *) calloc(published->topic_name_size + 1, 1);
     memcpy(topic_name, published->topic_name, published->topic_name_size);
-
-    PrintAndLogEx(INFO, "rec.. %zu", published->application_message_size);
 
     const char *msg = published->application_message;
 
@@ -43,10 +41,10 @@ static void mqtt_publish_callback(void **unused, struct mqtt_response_publish *p
     if (ps) {
         int res = saveFileTXT("ice_mqtt", ".json", msg, published->application_message_size, spDefault);
         if (res == PM3_SUCCESS) {
-            PrintAndLogEx(INFO, "Got a json file, save OK");
+            PrintAndLogEx(INFO, "Got a json file ( %s )", _GREEN_("ok"));
         }
     } else {
-        PrintAndLogEx(SUCCESS, "[" _GREEN_("%s")"] " _YELLOW_("%s"), topic_name, msg);
+        PrintAndLogEx(SUCCESS, _GREEN_("%s") " - ( %zu ) " _YELLOW_("%s"), topic_name, published->application_message_size, msg);
     }
     free(topic_name);
 }
@@ -102,7 +100,7 @@ static void mqtt_reconnect_client(struct mqtt_client* client, void **reconnect_s
 }
 */
 
-static int mqtt_receive(const char *addr, const char *port, const char *topic) {
+static int mqtt_receive(const char *addr, const char *port, const char *topic, const char *fn) {
     // open the non-blocking TCP socket (connecting to the broker)
     int sockfd = open_nb_socket(addr, port);
     if (sockfd == -1) {
@@ -324,10 +322,10 @@ static int CmdMqttReceive(const char *Cmd) {
         arg_str0(NULL, "addr", "<str>", "MQTT server address"),
         arg_str0("p", "port", "<str>", "MQTT server port"),
         arg_str0(NULL, "topic", "<str>", "MQTT topic"),
-        arg_str0("f", "file", "<fn>", "file to send"),
+        arg_str0("f", "file", "<fn>", "file name to use for received files"),
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int alen = 0;
     char addr[256] = {0x00};
@@ -363,7 +361,7 @@ static int CmdMqttReceive(const char *Cmd) {
         strcpy(topic, "proxdump");
     }
 
-    return mqtt_receive(addr, port, topic);
+    return mqtt_receive(addr, port, topic, filename);
 }
 
 static command_t CommandTable[] = {
