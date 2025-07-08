@@ -48,6 +48,7 @@
 #include "commonutil.h"   // ARRAYLEN
 #include "preferences.h"
 #include "cliparser.h"
+#include "cmdmqtt.h"
 
 static int CmdHelp(const char *Cmd);
 
@@ -338,6 +339,7 @@ static command_t CommandTable[] = {
     {"hw",           CmdHW,        AlwaysAvailable,         "{ Hardware commands... }"},
     {"lf",           CmdLF,        AlwaysAvailable,         "{ Low frequency commands... }"},
     {"mem",          CmdFlashMem,  IfPm3Flash,              "{ Flash memory manipulation... }"},
+    {"mqtt",         CmdMqtt,      AlwaysAvailable,         "{ MQTT commmands... }"},
     {"nfc",          CmdNFC,       AlwaysAvailable,         "{ NFC commands... }"},
     {"piv",          CmdPIV,       AlwaysAvailable,         "{ PIV commands... }"},
     {"reveng",       CmdRev,       AlwaysAvailable,         "{ CRC calculations from RevEng software... }"},

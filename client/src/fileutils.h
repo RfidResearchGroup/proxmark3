@@ -100,8 +100,15 @@ typedef enum {
     NFC_DF_14_3A,
     NFC_DF_14_3B,
     NFC_DF_14_4A,
+    NFC_DF_15,
     NFC_DF_PICOPASS,
 } nfc_df_e;
+
+typedef enum {
+    ISO15_DF_UNKNOWN,
+    ISO15_DF_V4_BIN,
+    ISO15_DF_V5_BIN
+} iso15_df_e;
 
 int fileExists(const char *filename);
 
@@ -116,7 +123,7 @@ void truncate_filename(char *fn,  uint16_t maxlen);
 /**
  * @brief Utility function to save data to a binary file. This method takes a preferred name, but if that
  * file already exists, it tries with another name until it finds something suitable.
- * E.g. dumpdata-15.txt
+ * E.g. dumpdata-15.bin
  *
  * @param preferredName
  * @param suffix the file suffix. Including the ".".
@@ -126,6 +133,19 @@ void truncate_filename(char *fn,  uint16_t maxlen);
  */
 int saveFile(const char *preferredName, const char *suffix, const void *data, size_t datalen);
 int saveFileEx(const char *preferredName, const char *suffix, const void *data, size_t datalen, savePaths_t e_save_path);
+
+/**
+ * @brief Utility function to save data to a text file. This method takes a preferred name, but if that
+ * file already exists, it tries with another name until it finds something suitable.
+ * E.g. dumpdata-15.txt
+ *
+ * @param preferredName
+ * @param suffix the file suffix. Including the ".".
+ * @param data The binary data to write to the file
+ * @param datalen the length of the data
+ * @return 0 for ok, 1 for failz
+ */
+int saveFileTXT(const char *preferredName, const char *suffix, const void *data, size_t datalen, savePaths_t e_save_path);
 
 /** STUB
  * @brief Utility function to save JSON data to a file. This method takes a preferred name, but if that
@@ -190,6 +210,19 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, const sector
 */
 int loadFile_safe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen);
 int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata, size_t *datalen, bool verbose);
+
+/**
+ * @brief Utility function to load a text file. This method takes a preferred name.
+ * E.g. dumpdata-15.json,  tries to search for it,  and allocated memory.
+ *
+ * @param preferredName
+ * @param suffix the file suffix. Including the ".".
+ * @param data The data array to store the loaded bytes from file
+ * @param datalen the number of bytes loaded from file
+ * @return PM3_SUCCESS for ok, PM3_E* for failz
+*/
+int loadFile_TXTsafe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen, bool verbose);
+
 /**
  * @brief  Utility function to load data from a textfile (EML). This method takes a preferred name.
  * E.g. dumpdata-15.txt

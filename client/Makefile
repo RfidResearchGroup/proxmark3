@@ -131,6 +131,12 @@ WHEREAMILIBINC = -I$(WHEREAMILIBPATH)
 WHEREAMILIB = $(WHEREAMILIBPATH)/libwhereami.a
 WHEREAMILIBLD =
 
+## MQTT
+MQTTLIBPATH = ./deps/mqtt
+MQTTLIBINC = -I$(MQTTLIBPATH)
+MQTTLIB = $(MQTTLIBPATH)/mqtt.a
+MQTTLIBLD =
+
 ##########################
 # common local libraries #
 ##########################
@@ -238,6 +244,12 @@ endif
 STATICLIBS += $(WHEREAMILIB)
 LDLIBS += $(WHEREAMILIBLD)
 PM3INCLUDES += $(WHEREAMILIBINC)
+
+## MQTT
+# not distributed as system library
+STATICLIBS += $(MQTTLIB)
+LDLIBS += $(MQTTLIBLD)
+PM3INCLUDES += $(MQTTLIBINC)
 
 ####################
 # system libraries #
@@ -682,6 +694,7 @@ SRCS =  mifare/aiddesfire.c \
 		cmdlfvisa2000.c \
 		cmdlfzx8211.c \
 		cmdmain.c \
+		cmdmqtt.c \
 		cmdnfc.c \
 		cmdparser.c \
 		cmdpiv.c \
@@ -877,6 +890,7 @@ endif
 	$(Q)$(MAKE) --no-print-directory -C $(REVENGLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(TINYCBORLIBPATH) clean
 	$(Q)$(MAKE) --no-print-directory -C $(WHEREAMILIBPATH) clean
+	$(Q)$(MAKE) --no-print-directory -C $(MQTTLIBPATH) clean
 	@# Just in case someone compiled within these dirs:
 	$(Q)$(MAKE) --no-print-directory -C $(MBEDTLSLIBPATH) clean
 
@@ -973,6 +987,10 @@ ifneq ($(WHEREAMI_FOUND),1)
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C $(WHEREAMILIBPATH) all
 endif
+
+$(MQTTLIB): .FORCE
+	$(info [*] MAKE $@)
+	$(Q)$(MAKE) --no-print-directory -C $(MQTTLIBPATH) all
 
 ########
 # SWIG #

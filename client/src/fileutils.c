@@ -278,7 +278,7 @@ int saveFileEx(const char *preferredName, const char *suffix, const void *data, 
 
     // Opening file for writing in binary mode
     FILE *f = fopen(fileName, "wb");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fileName);
         free(fileName);
         return PM3_EFILE;
@@ -287,6 +287,33 @@ int saveFileEx(const char *preferredName, const char *suffix, const void *data, 
     fflush(f);
     fclose(f);
     PrintAndLogEx(SUCCESS, "Saved " _YELLOW_("%zu") " bytes to binary file `" _YELLOW_("%s") "`", datalen, fileName);
+    free(fileName);
+    return PM3_SUCCESS;
+}
+
+int saveFileTXT(const char *preferredName, const char *suffix, const void *data, size_t datalen, savePaths_t e_save_path) {
+    if (data == NULL || datalen == 0) {
+        return PM3_EINVARG;
+    }
+
+    char *fileName = newfilenamemcopyEx(preferredName, suffix, e_save_path);
+    if (fileName == NULL) {
+        return PM3_EMALLOC;
+    }
+
+    // We should have a valid filename now, e.g. dumpdata-3.txt
+
+    // Opening file for writing in text mode
+    FILE *f = fopen(fileName, "w");
+    if (f == NULL) {
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", fileName);
+        free(fileName);
+        return PM3_EFILE;
+    }
+    fwrite(data, 1, datalen, f);
+    fflush(f);
+    fclose(f);
+    PrintAndLogEx(SUCCESS, "Saved " _YELLOW_("%zu") " bytes to text file `" _YELLOW_("%s") "`", datalen, fileName);
     free(fileName);
     return PM3_SUCCESS;
 }
@@ -794,8 +821,9 @@ int saveFileJSONroot(const char *preferredName, void *root, size_t flags, bool v
 }
 
 int saveFileJSONrootEx(const char *preferredName, const void *root, size_t flags, bool verbose, bool overwrite, savePaths_t e_save_path) {
-    if (root == NULL)
+    if (root == NULL) {
         return PM3_EINVARG;
+    }
 
     char *filename = NULL;
     if (overwrite)
@@ -975,7 +1003,7 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
     }
 
     FILE *f = fopen(path, "rb");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         free(path);
         return PM3_EFILE;
@@ -1014,6 +1042,58 @@ int loadFile_safeEx(const char *preferredName, const char *suffix, void **pdata,
 
     if (verbose) {
         PrintAndLogEx(SUCCESS, "Loaded " _YELLOW_("%zu") " bytes from binary file `" _YELLOW_("%s") "`", bytes_read, preferredName);
+    }
+    return PM3_SUCCESS;
+}
+
+int loadFile_TXTsafe(const char *preferredName, const char *suffix, void **pdata, size_t *datalen, bool verbose) {
+
+    char *path;
+    int res = searchFile(&path, RESOURCES_SUBDIR, preferredName, suffix, false);
+    if (res != PM3_SUCCESS) {
+        return PM3_EFILE;
+    }
+
+    FILE *f = fopen(path, "r");
+    if (f == NULL) {
+        PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
+        free(path);
+        return PM3_EFILE;
+    }
+    free(path);
+
+    // get filesize in order to malloc memory
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    if (fsize <= 0) {
+        PrintAndLogEx(FAILED, "error, when getting filesize");
+        fclose(f);
+        return PM3_EFILE;
+    }
+
+    *pdata = calloc(fsize, sizeof(uint8_t));
+    if (*pdata == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        fclose(f);
+        return PM3_EMALLOC;
+    }
+
+    size_t bytes_read = fread(*pdata, 1, fsize, f);
+
+    fclose(f);
+
+    if (bytes_read != fsize) {
+        PrintAndLogEx(FAILED, "error, bytes read mismatch file size");
+        free(*pdata);
+        return PM3_EFILE;
+    }
+
+    *datalen = bytes_read;
+
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "Loaded " _YELLOW_("%zu") " bytes from text file `" _YELLOW_("%s") "`", bytes_read, preferredName);
     }
     return PM3_SUCCESS;
 }
@@ -1121,7 +1201,7 @@ int loadFileNFC_safe(const char *preferredName, void *data, size_t maxdatalen, s
     }
 
     FILE *f = fopen(path, "r");
-    if (!f) {
+    if (f == NULL) {
         PrintAndLogEx(WARNING, "file not found or locked `" _YELLOW_("%s") "`", path);
         free(path);
         return PM3_EFILE;
@@ -1446,7 +1526,9 @@ int loadFileJSON(const char *preferredName, void *data, size_t maxdatalen, size_
 }
 int loadFileJSONex(const char *preferredName, void *data, size_t maxdatalen, size_t *datalen, bool verbose, void (*callback)(json_t *)) {
 
-    if (data == NULL) return PM3_EINVARG;
+    if (data == NULL) {
+        return PM3_EINVARG;
+    }
 
     *datalen = 0;
     int retval = PM3_SUCCESS;
@@ -2629,6 +2711,10 @@ int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool 
             *dump_type = NFC_DF_14_4A;
             break;
         }
+        if (str_startswith(line, "device type: iso15693")) {
+            *dump_type = NFC_DF_15;
+            break;
+        }
         if (str_startswith(line, "filetype: flipper picopass device")) {
             *dump_type = NFC_DF_PICOPASS;
             break;
@@ -2661,6 +2747,8 @@ int detect_nfc_dump_format(const char *preferredName, nfc_df_e *dump_type, bool 
             case NFC_DF_PICOPASS:
                 PrintAndLogEx(INFO, "Detected PICOPASS based dump format");
                 break;
+            case NFC_DF_15:
+                PrintAndLogEx(INFO, "Detected ISO15693 based dump format");
             case NFC_DF_UNKNOWN:
                 PrintAndLogEx(WARNING, "Failed to detected dump format");
                 break;
@@ -3210,7 +3298,7 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
                 break;
             }
 
-            if (dumptype == NFC_DF_MFC || dumptype == NFC_DF_MFU || dumptype == NFC_DF_PICOPASS) {
+            if (dumptype == NFC_DF_MFC || dumptype == NFC_DF_MFU || dumptype == NFC_DF_PICOPASS || dumptype == NFC_DF_15) {
 
                 *pdump = calloc(maxdumplen, sizeof(uint8_t));
                 if (*pdump == NULL) {
@@ -3247,6 +3335,7 @@ int pm3_save_dump(const char *fn, uint8_t *d, size_t n, JSONFileType jsft) {
         PrintAndLogEx(INFO, "No data to save, skipping...");
         return PM3_EINVARG;
     }
+
     saveFile(fn, ".bin", d, n);
     saveFileJSON(fn, jsft, d, n, NULL);
     return PM3_SUCCESS;
