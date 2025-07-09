@@ -1136,7 +1136,7 @@
         },
         "help": {
             "command": "help",
-            "description": "help Use `<command> help` for details of a command prefs { Edit client/device preferences... } -------- ----------------------- Technology ----------------------- analyse { Analyse utils... } data { Plot window / data buffer manipulation... } emv { EMV ISO-14443 / ISO-7816... } hf { High frequency commands... } hw { Hardware commands... } lf { Low frequency commands... } nfc { NFC commands... } piv { PIV commands... } reveng { CRC calculations from RevEng software... } smart { Smart card ISO-7816 commands... } script { Scripting commands... } trace { Trace manipulation... } wiegand { Wiegand format manipulation... } -------- ----------------------- General ----------------------- clear Clear screen hints Turn hints on / off msleep Add a pause in milliseconds rem Add a text line in log file quit exit Exit program --------------------------------------------------------------------------------------- auto available offline: no Run LF SEARCH / HF SEARCH / DATA PLOT / DATA SAVE",
+            "description": "help Use `<command> help` for details of a command prefs { Edit client/device preferences... } -------- ----------------------- Technology ----------------------- analyse { Analyse utils... } data { Plot window / data buffer manipulation... } emv { EMV ISO-14443 / ISO-7816... } hf { High frequency commands... } hw { Hardware commands... } lf { Low frequency commands... } mqtt { MQTT commmands... } nfc { NFC commands... } piv { PIV commands... } reveng { CRC calculations from RevEng software... } smart { Smart card ISO-7816 commands... } script { Scripting commands... } trace { Trace manipulation... } wiegand { Wiegand format manipulation... } -------- ----------------------- General ----------------------- clear Clear screen hints Turn hints on / off msleep Add a pause in milliseconds rem Add a text line in log file quit exit Exit program --------------------------------------------------------------------------------------- auto available offline: no Run LF SEARCH / HF SEARCH / DATA PLOT / DATA SAVE",
             "notes": [
                 "auto"
             ],
@@ -12331,6 +12331,42 @@
             ],
             "usage": "mem wipe [-h] [-p <dec>]"
         },
+        "mqtt help": {
+            "command": "mqtt help",
+            "description": "help This help send Send messages or json file over MQTT receive Receive message or json file over MQTT --------------------------------------------------------------------------------------- mqtt send available offline: yes This command send MQTT messages. You can send JSON file Default server: proxdump.com:1883 topic: proxdump",
+            "notes": [
+                "mqtt send --msg \"Hello from Pm3\" -> sending msg to default server/port/topic",
+                "mqtt send -f myfile.json -> sending file to default server/port/topic",
+                "mqtt send --addr test.mosquitto.org -p 1883 --topic pm3 --msg \"custom mqtt server \""
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--addr <str> MQTT server address",
+                "-p, --port <str> MQTT server port",
+                "--topic <str> MQTT topic",
+                "--msg <str> Message to send over MQTT",
+                "-f, --file <fn> file to send"
+            ],
+            "usage": "mqtt send [-h] [--addr <str>] [-p <str>] [--topic <str>] [--msg <str>] [-f <fn>]"
+        },
+        "mqtt receive": {
+            "command": "mqtt receive",
+            "description": "This command receives MQTT messages. JSON text will be saved to file if detected Default server: proxdump.com:1883 topic: proxdump",
+            "notes": [
+                "mqtt receive -> listening to default server/port/topic",
+                "mqtt receive --addr test.mosquitto.org -p 1883 --topic pm3"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--addr <str> MQTT server address",
+                "-p, --port <str> MQTT server port",
+                "--topic <str> MQTT topic",
+                "-f, --file <fn> file to send"
+            ],
+            "usage": "mqtt receive [-h] [--addr <str>] [-p <str>] [--topic <str>] [-f <fn>]"
+        },
         "msleep": {
             "command": "msleep",
             "description": "Sleep for given amount of milliseconds",
@@ -13375,8 +13411,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 768,
+        "commands_extracted": 770,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-07-06T18:10:18"
+        "extracted_on": "2025-07-08T19:08:23"
     }
 }

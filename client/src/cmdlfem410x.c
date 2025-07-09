@@ -445,7 +445,7 @@ static int CmdEM410xReader(const char *Cmd) {
         if (break_first && gs_em410xid != 0) {
             break;
         }
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }

@@ -575,10 +575,11 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
     size_t sentdatalen = 0;
     while (cdatalen >= sentdatalen) {
 
-        if ((cdatalen - sentdatalen) > DESFIRE_TX_FRAME_MAX_LEN)
+        if ((cdatalen - sentdatalen) > DESFIRE_TX_FRAME_MAX_LEN) {
             len = DESFIRE_TX_FRAME_MAX_LEN;
-        else
+        } else {
             len = cdatalen - sentdatalen;
+        }
 
         size_t sendindx = sentdatalen;
         size_t sendlen = len;
@@ -657,8 +658,9 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
         }
         pos += buflen;
 
-        if (rcode != MFDES_ADDITIONAL_FRAME)
+        if (rcode != MFDES_ADDITIONAL_FRAME) {
             break;
+        }
     }
 
     if (resplen) {
@@ -969,12 +971,14 @@ int DesfireSelectAIDHexNoFieldOn(DesfireContext_t *ctx, uint32_t aid) {
     ctx->secureChannel = DACNone;
     int res = DesfireExchangeEx(false, ctx, MFDES_SELECT_APPLICATION, data, 3, &respcode, resp, &resplen, true, 0);
     if (res == PM3_SUCCESS) {
-        if (resplen != 0)
+        if (resplen != 0) {
             return PM3_ECARDEXCHANGE;
+        }
 
         // select operation fail
-        if (respcode != MFDES_S_OPERATION_OK)
+        if (respcode != MFDES_S_OPERATION_OK) {
             return PM3_EAPDU_FAIL;
+        }
 
         DesfireClearSession(ctx);
         ctx->appSelected = (aid != 0x000000);

@@ -29,7 +29,7 @@ typedef struct {
     enum {
         TAG_STATE_RESET      = 0x01,       // Just powered up, awaiting GetSnr
         TAG_STATE_ACTIVATING = 0x02,       // In activation phase (password mode), sent UID, awaiting reader password
-        TAG_STATE_ACTIVATED  = 0x03,       // Activation complete, awaiting read/write commands
+//        TAG_STATE_ACTIVATED  = 0x03,       // Activation complete, awaiting read/write commands
         TAG_STATE_WRITING    = 0x04,       // In write command, awaiting sector contents to be written
     } state;
     uint16_t active_sector;

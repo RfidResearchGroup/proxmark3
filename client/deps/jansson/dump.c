@@ -440,33 +440,32 @@ int json_dumpfd(const json_t *json, int output, size_t flags) {
 }
 
 int json_dump_file(const json_t *json, const char *path, size_t flags) {
-    int result;
 
-    FILE *output = fopen(path, "w");
-    if (!output)
+    FILE *f = fopen(path, "w");
+    if (f == NULL) {
+        return -1;
+    }
+
+    int res = json_dumpf(json, f, flags);
+
+    if (fclose(f) != 0)
         return -1;
 
-    result = json_dumpf(json, output, flags);
-
-    if (fclose(output) != 0)
-        return -1;
-
-    return result;
+    return res;
 }
 
 int json_dump_callback(const json_t *json, json_dump_callback_t callback, void *data, size_t flags) {
-    int res;
-    hashtable_t parents_set;
-
     if (!(flags & JSON_ENCODE_ANY)) {
-        if (!json_is_array(json) && !json_is_object(json))
+        if (!json_is_array(json) && !json_is_object(json)) {
             return -1;
+        }
     }
 
-    if (hashtable_init(&parents_set))
+    hashtable_t parents_set;
+    if (hashtable_init(&parents_set)) {
         return -1;
-    res = do_dump(json, flags, 0, &parents_set, callback, data);
+    }
+    int res = do_dump(json, flags, 0, &parents_set, callback, data);
     hashtable_close(&parents_set);
-
     return res;
 }

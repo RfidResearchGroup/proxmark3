@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `mqtt` - the pm3 client can now send and receive MQTT messages or json files. (@iceman1001)
 - Changed `hf iclass wrbl` - replay behavior to use privilege escalation if the macs field is not passed empty(@antiklesys)
 - Changed `hf iclass restore` - it now supports privilege escalation to restore card content using replay (@antiklesys)
 - Fixed `hf 15 dump` - now reads sysinfo response correct (@iceman1001)

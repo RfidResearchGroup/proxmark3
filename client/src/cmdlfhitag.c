@@ -912,7 +912,7 @@ static int CmdLFHitagReader(const char *Cmd) {
         if (ht2_get_uid(&uid)) {
             PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%08X"), uid);
         }
-    } while (cm && kbd_enter_pressed() == false);
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }

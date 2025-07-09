@@ -1414,6 +1414,17 @@ Check column "offline" for their availability.
 |`mem spiffs wipe        `|N       |`Wipe all files from SPIFFS file system   * dangerous *`
 
 
+### mqtt
+
+ { MQTT commmands... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`mqtt help              `|Y       |`This help`
+|`mqtt send              `|Y       |`Send messages or json file over MQTT`
+|`mqtt receive           `|Y       |`Receive message or json file over MQTT`
+
+
 ### nfc
 
  { NFC commands... }
