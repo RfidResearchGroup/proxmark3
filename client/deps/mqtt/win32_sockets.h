@@ -1,4 +1,5 @@
 #if !defined(__WIN32_SOCKET_TEMPLATE_H__)
+#define __WIN32_SOCKET_TEMPLATE_H__
 
 #include <stdio.h>
 #include <unistd.h>
@@ -9,16 +10,16 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-void close_nb_socket(int sockfd);
-int open_nb_socket(const char *addr, const char *port);
+void close_nb_socket(mqtt_pal_socket_handle sockfd);
+mqtt_pal_socket_handle open_nb_socket(const char *addr, const char *port);
 
-int open_nb_socket(const char *addr, const char *port) {
+mqtt_pal_socket_handle open_nb_socket(const char *addr, const char *port) {
 
     WSADATA wsaData;
     int res = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (res != 0) {
         fprintf(stderr, "error: WSAStartup failed with error: %i", res);
-        return -1;
+        return INVALID_SOCKET;
     }
 
     struct addrinfo hints;
@@ -33,7 +34,7 @@ int open_nb_socket(const char *addr, const char *port) {
     if (rv != 0) {
         fprintf(stderr, "error: getaddrinfo: %s", gai_strerror(rv));
         WSACleanup();
-        return -1;
+        return INVALID_SOCKET;
     }
 
     /* open the first possible socket */
@@ -61,13 +62,13 @@ int open_nb_socket(const char *addr, const char *port) {
     if (p == NULL) {               // No address succeeded
         fprintf(stderr, "error: Could not connect");
         WSACleanup();
-        return -1;
+        return INVALID_SOCKET;
     }
 
     // make non-blocking
     if (hSocket != INVALID_SOCKET) {
-        uint32_t mode = 1;  // FIONBIO returns size on 32b
-        ioctlsocket(hSocket, FIONBIO, (u_long *)&mode);
+        u_long mode = 1;  // FIONBIO returns size on 32b
+        ioctlsocket(hSocket, FIONBIO, &mode);
     }
 
     int flag = 1;
@@ -75,15 +76,15 @@ int open_nb_socket(const char *addr, const char *port) {
     if (res != 0) {
         closesocket(hSocket);
         WSACleanup();
-        return -1;
+        return INVALID_SOCKET;
     }
 
     return hSocket;
 }
 
-void close_nb_socket(int sockfd) {
-    if (sockfd != -1) {
-        close(sockfd);
+void close_nb_socket(mqtt_pal_socket_handle sockfd) {
+    if (sockfd != INVALID_SOCKET) {
+        closesocket(sockfd);
     }
 }
 #endif
