@@ -768,19 +768,19 @@
         "Type": "carsharing"
     },
     {
-        "AID": "000005",
-        "Vendor": "Transports Metropolitans de Barcelona (TMB)",
-        "Country": "ES",
-        "Name": "T-mobilitat (BCN)",
-        "Description": "BCN T-mobilitat",
-        "Type": "transport"
-    },
-    {
         "AID": "000001",
         "Vendor": "Invalid / Reserved",
         "Country": "",
         "Name": "Invalid / Reserved",
         "Description": "Used by ATL Breeze, PHL FREEDOM, and YVR Compass",
+        "Type": "transport"
+    },
+    {
+        "AID": "000005",
+        "Vendor": "Transports Metropolitans de Barcelona (TMB)",
+        "Country": "ES",
+        "Name": "T-mobilitat (BCN)",
+        "Description": "BCN T-mobilitat",
         "Type": "transport"
     },
     {
@@ -793,7 +793,7 @@
     },
     {
         "AID": "002000",
-        "Vendor": "Metrolinx",
+        "Vendor": "Metrolinx via Accenture",
         "Country": "CA",
         "Name": "PRESTO Card (YYZ/YHM/YOW)",
         "Description": "FIDs 00,0F: Backup Data; 08-0E,10-14: Standard Data",
@@ -1081,7 +1081,7 @@
     },
     {
         "AID": "415431",
-        "Vendor": "Athens Urban Transport Organization (OASA)",
+        "Vendor": "Athens Urban Transport Organisation (OASA)",
         "Country": "GR",
         "Name": "ATH.ENA CARD (ATH)",
         "Description": "ATH ATH.ENA CARD",
@@ -1153,7 +1153,7 @@
     },
     {
         "AID": "4F5931",
-        "Vendor": "Transport for London (TfL)",
+        "Vendor": "Transport for London (TfL) via Cubic Transportation Systems",
         "Country": "UK",
         "Name": "Oyster Card (LHR)",
         "Description": "FIDs: 00-07: Standard Data",
@@ -1169,7 +1169,7 @@
     },
     {
         "AID": "534531",
-        "Vendor": "Transport for New South Wales (TfNSW)",
+        "Vendor": "Transport for New South Wales (TfNSW) via Pearl Consortium",
         "Country": "AU",
         "Name": "Opal Card (SYD)",
         "Description": "FIDs 00-06: Standard Data; 07: Card Balance/Number and Trip History",
@@ -1177,7 +1177,7 @@
     },
     {
         "AID": "554000",
-        "Vendor": "Auckland Transport",
+        "Vendor": "Auckland Transport via Thales Group",
         "Country": "NZ",
         "Name": "AT HOP Card (AKL)",
         "Description": "FIDs: 00: Backup Data; 08/09/0A",
