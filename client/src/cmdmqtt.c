@@ -56,20 +56,18 @@ static void mqtt_publish_callback(void **unused, struct mqtt_response_publish *p
 
 static void *mqtt_client_refresher(void *client) {
     while (1) {
+        pthread_testcancel(); // check if we cancelled
         mqtt_sync((struct mqtt_client *) client);
         msleep(100);
     }
     return NULL;
 }
 
-static int mqtt_exit(int status, int sockfd, pthread_t *client_daemon) {
+static int mqtt_exit(int status, mqtt_pal_socket_handle sockfd, pthread_t *client_daemon) {
     close_nb_socket(sockfd);
-
     if (client_daemon != NULL) {
         pthread_cancel(*client_daemon);
-#ifndef _WIN32        
         pthread_join(*client_daemon, NULL); // Wait for the thread to finish
-#endif
     }
     return status;
 }
@@ -109,7 +107,7 @@ static void mqtt_reconnect_client(struct mqtt_client* client, void **reconnect_s
 
 static int mqtt_receive(const char *addr, const char *port, const char *topic, const char *fn) {
     // open the non-blocking TCP socket (connecting to the broker)
-    int sockfd = open_nb_socket(addr, port);
+    mqtt_pal_socket_handle sockfd = open_nb_socket(addr, port);
     if (sockfd == -1) {
         PrintAndLogEx(FAILED, "Failed to open socket");
         return mqtt_exit(PM3_EFAILED, sockfd, NULL);
