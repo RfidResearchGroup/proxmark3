@@ -45,7 +45,7 @@ int open_nb_socket(const char *addr, const char *port) {
             continue;
         }
 
-        // connect to server 
+        // connect to server
         if (connect(hSocket, p->ai_addr, (int)p->ai_addrlen) != INVALID_SOCKET) {
             break;
         }
@@ -66,7 +66,7 @@ int open_nb_socket(const char *addr, const char *port) {
 
     // make non-blocking
     if (hSocket != INVALID_SOCKET) {
-        uint32_t mode;  // FIONBIO returns size on 32b
+        uint32_t mode = 1;  // FIONBIO returns size on 32b
         ioctlsocket(hSocket, FIONBIO, (u_long *)&mode);
     }
 
@@ -76,7 +76,7 @@ int open_nb_socket(const char *addr, const char *port) {
         closesocket(hSocket);
         WSACleanup();
         return -1;
-    }    
+    }
 
     return hSocket;
 }
