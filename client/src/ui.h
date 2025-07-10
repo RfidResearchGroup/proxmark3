@@ -63,6 +63,9 @@ typedef struct {
     char *history_path;
     pm3_device_t *current_device;
     uint32_t timeout;
+    char *mqtt_server;
+    char *mqtt_port;
+    char *mqtt_topic;
 } session_arg_t;
 
 extern session_arg_t g_session;
