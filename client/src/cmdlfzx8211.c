@@ -138,7 +138,7 @@ static int CmdzxReader(const char *Cmd) {
     do {
         lf_Zx_read();
         demodzx(!cm);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
     return PM3_SUCCESS;
 }
 

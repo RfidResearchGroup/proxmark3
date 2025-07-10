@@ -692,7 +692,7 @@ static int CmdFdxBReader(const char *Cmd) {
         lf_read(false, 10000);
         ret = demodFDXB(!cm); // be verbose only if not in continuous mode
 
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
 
     if (old_div != curr_div) {

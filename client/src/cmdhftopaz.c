@@ -109,7 +109,7 @@ static int topaz_select(uint8_t *atqa, uint8_t atqa_len, uint8_t *rid_response, 
 }
 
 // read all of the static memory of a selected Topaz tag.
-static int topaz_rall(uint8_t *uid, uint8_t *response) {
+static int topaz_rall(const uint8_t *uid, uint8_t *response) {
 
     uint16_t resp_len = 124;
     uint8_t rall_cmd[] = {TOPAZ_RALL, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -1180,7 +1180,7 @@ int readTopazUid(bool loop, bool verbose) {
         topaz_tag.HR01[0] = rid_response[0];
         topaz_tag.HR01[1] = rid_response[1];
 
-    } while (loop && kbd_enter_pressed() == false);
+    } while (loop && (kbd_enter_pressed() == false));
 
     topaz_switch_off_field();
     return res;

@@ -145,7 +145,7 @@ local function readfile()
     local f = io.open(ID_STATUS, "r")
     for line in f:lines() do
         id = line:match"^(%x+)"
-        if id then break end
+    if id then break end
     end
     f:close()
     if not id then

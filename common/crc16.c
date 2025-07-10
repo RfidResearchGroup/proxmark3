@@ -27,12 +27,14 @@ static CrcType_t current_crc_type = CRC_NONE;
 void init_table(CrcType_t crctype) {
 
     // same crc algo, and initialised already
-    if (crctype == current_crc_type && crc_table_init)
+    if (crctype == current_crc_type && crc_table_init) {
         return;
+    }
 
     // not the same crc algo. reset table.
-    if (crctype != current_crc_type)
+    if (crctype != current_crc_type) {
         reset_table();
+    }
 
     current_crc_type = crctype;
 
@@ -68,23 +70,29 @@ void init_table(CrcType_t crctype) {
 void generate_table(uint16_t polynomial, bool refin) {
 
     for (uint16_t i = 0; i < 256; i++) {
+
         uint16_t c, crc = 0;
-        if (refin)
+
+        if (refin) {
             c = reflect8(i) << 8;
-        else
+        } else {
             c = i << 8;
+        }
 
         for (uint16_t j = 0; j < 8; j++) {
 
-            if ((crc ^ c) & 0x8000)
+            if ((crc ^ c) & 0x8000) {
                 crc = (crc << 1) ^ polynomial;
-            else
+            } else {
                 crc =   crc << 1;
+            }
 
             c = c << 1;
         }
-        if (refin)
+
+        if (refin) {
             crc = reflect16(crc);
+        }
 
         crc_table[i] = crc;
     }
@@ -102,21 +110,25 @@ uint16_t crc16_fast(uint8_t const *d, size_t n, uint16_t initval, bool refin, bo
 
     // fast lookup table algorithm without augmented zero bytes, e.g. used in pkzip.
     // only usable with polynom orders of 8, 16, 24 or 32.
-    if (n == 0)
+    if (n == 0) {
         return (~initval);
+    }
 
     uint16_t crc = initval;
 
-    if (refin)
+    if (refin) {
         crc = reflect16(crc);
+    }
 
-    if (!refin)
+    if (refin == false) {
         while (n--) crc = (crc << 8) ^ crc_table[((crc >> 8) ^ *d++) & 0xFF ];
-    else
+    } else {
         while (n--) crc = (crc >> 8) ^ crc_table[(crc & 0xFF) ^ *d++];
+    }
 
-    if (refout ^ refin)
+    if (refout ^ refin) {
         crc = reflect16(crc);
+    }
 
     return crc;
 }
@@ -143,8 +155,9 @@ uint16_t update_crc16(uint16_t crc, uint8_t c) {
 
 // two ways.  msb or lsb loop.
 uint16_t Crc16(uint8_t const *d, size_t bitlength, uint16_t remainder, uint16_t polynomial, bool refin, bool refout) {
-    if (bitlength == 0)
+    if (bitlength == 0) {
         return (~remainder);
+    }
 
     uint8_t offset = 8 - (bitlength % 8);
     // front padding with 0s won't change the CRC result
@@ -153,7 +166,9 @@ uint16_t Crc16(uint8_t const *d, size_t bitlength, uint16_t remainder, uint16_t 
         uint8_t c = prebits | d[i] >> offset;
         prebits = d[i] << (8 - offset);
 
-        if (refin) c = reflect8(c);
+        if (refin) {
+            c = reflect8(c);
+        }
 
         // xor in at msb
         remainder ^= (c << 8);
@@ -167,8 +182,10 @@ uint16_t Crc16(uint8_t const *d, size_t bitlength, uint16_t remainder, uint16_t 
             }
         }
     }
-    if (refout)
+
+    if (refout) {
         remainder = reflect16(remainder);
+    }
 
     return remainder;
 }

@@ -199,7 +199,7 @@ int read_fudan_uid(bool loop, bool verbose) {
             PrintAndLogEx(NORMAL, "");
         }
 
-    } while (loop && kbd_enter_pressed() == false);
+    } while (loop && (kbd_enter_pressed() == false));
 
 
     return PM3_SUCCESS;

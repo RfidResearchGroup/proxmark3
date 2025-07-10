@@ -325,7 +325,7 @@ static int CmdTIReader(const char *Cmd) {
     do {
         clearCommandBuffer();
         SendCommandNG(CMD_LF_TI_READ, NULL, 0);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }

@@ -214,7 +214,7 @@ static int CmdPacReader(const char *Cmd) {
     do {
         lf_read(false, 4096 * 2 + 20);
         demodPac(!cm);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }

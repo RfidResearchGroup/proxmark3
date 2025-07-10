@@ -30,12 +30,17 @@
 #include "util_posix.h"  // time
 #include "fileutils.h"
 
-
 #define MQTT_BUFFER_SIZE    ( 1 << 16 )
 
 static int CmdHelp(const char *Cmd);
 
 static void mqtt_publish_callback(void **unused, struct mqtt_response_publish *published) {
+
+    if (published == NULL) {
+        return;
+    }
+
+
     // note that published->topic_name is NOT null-terminated (here we'll change it to a c-string)
     char *topic_name = (char *) calloc(published->topic_name_size + 1, 1);
     memcpy(topic_name, published->topic_name, published->topic_name_size);

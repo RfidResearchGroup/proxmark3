@@ -623,7 +623,7 @@ int read_texkom_uid(bool loop, bool verbose) {
             }
         }
 
-    } while (loop && kbd_enter_pressed() == false);
+    } while (loop && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }

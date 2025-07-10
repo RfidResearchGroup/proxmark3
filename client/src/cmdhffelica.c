@@ -348,7 +348,7 @@ int read_felica_uid(bool loop, bool verbose) {
             res = PM3_SUCCESS;
         }
 
-    } while (loop && kbd_enter_pressed() == false);
+    } while (loop && (kbd_enter_pressed() == false));
 
     DropField();
     return res;

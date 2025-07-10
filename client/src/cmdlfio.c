@@ -202,7 +202,7 @@ static int CmdIOProxReader(const char *Cmd) {
     do {
         lf_read(false, 12000);
         demodIOProx(!cm);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }

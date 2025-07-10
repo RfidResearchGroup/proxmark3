@@ -232,8 +232,7 @@ int readHFCryptoRF(bool loop, bool verbose) {
             PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex_inrow(card.uid, card.uidlen));
             set_last_known_card(card);
         }
-    } while (loop && kbd_enter_pressed() == false);
-
+    } while (loop && (kbd_enter_pressed() == false));
     DropField();
     return res;
 }

@@ -12363,7 +12363,7 @@
                 "--addr <str> MQTT server address",
                 "-p, --port <str> MQTT server port",
                 "--topic <str> MQTT topic",
-                "-f, --file <fn> file to send"
+                "-f, --file <fn> file name to use for received files"
             ],
             "usage": "mqtt receive [-h] [--addr <str>] [-p <str>] [--topic <str>] [-f <fn>]"
         },
@@ -13413,6 +13413,6 @@
     "metadata": {
         "commands_extracted": 770,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-07-08T19:08:23"
+        "extracted_on": "2025-07-10T05:07:28"
     }
 }

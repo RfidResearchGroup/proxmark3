@@ -3073,7 +3073,7 @@ plot:
             }
         }
 
-    } while (loop && kbd_enter_pressed() == false);
+    } while (loop && (kbd_enter_pressed() == false));
 
     if (verbose && found == false) {
         PrintAndLogEx(FAILED, "no ISO 14443-B tag found");

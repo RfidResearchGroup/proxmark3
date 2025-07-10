@@ -438,7 +438,7 @@ int reader_lto(bool loop, bool verbose) {
             PrintAndLogEx(INFO, "UID......... " _GREEN_("%s"), sprint_hex_inrow(serial, sizeof(serial)));
         }
 
-    } while (loop && kbd_enter_pressed() == false);
+    } while (loop && (kbd_enter_pressed() == false));
 
     lto_switch_off_field();
     return ret;

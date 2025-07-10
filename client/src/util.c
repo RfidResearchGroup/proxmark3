@@ -73,6 +73,7 @@ int kbd_enter_pressed(void) {
         c = getchar();
         ret |= c == '\n';
     } while (c != EOF);
+
     //blocking
     flags &= ~O_NONBLOCK;
     if (fcntl(STDIN_FILENO, F_SETFL, flags) < 0) {

@@ -84,7 +84,7 @@ static int CmdLFPCF7931Reader(const char *Cmd) {
             PrintAndLogEx(WARNING, "command execution time out");
             return PM3_ETIMEOUT;
         }
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }

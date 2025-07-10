@@ -102,7 +102,7 @@ static int CmdVikingReader(const char *Cmd) {
     do {
         lf_read(false, 10000);
         demodViking(true);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }

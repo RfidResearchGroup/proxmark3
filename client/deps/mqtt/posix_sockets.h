@@ -53,7 +53,7 @@ int open_nb_socket(const char *addr, const char *port) {
         break;
     }
 
-    // free servinfo 
+    // free servinfo
     freeaddrinfo(servinfo);
 
     // make non-blocking

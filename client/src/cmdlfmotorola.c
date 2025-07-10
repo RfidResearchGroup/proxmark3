@@ -179,7 +179,7 @@ static int CmdMotorolaReader(const char *Cmd) {
         // 64 * 32 * 2 * n-ish
         lf_read(false, 5000);
         res = demodMotorola(!cm);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     // reset back to 125 kHz
     sc.divisor = LF_DIVISOR_125;

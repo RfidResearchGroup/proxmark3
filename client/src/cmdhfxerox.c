@@ -593,7 +593,7 @@ int read_xerox_uid(bool loop, bool verbose) {
             return PM3_ESOFT;
         }
 
-    } while (loop && kbd_enter_pressed() == false);
+    } while (loop && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }

@@ -315,7 +315,7 @@ static int CmdIdteckReader(const char *Cmd) {
     do {
         lf_read(false, 5000);
         demodIdteck(NULL, !cm);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }

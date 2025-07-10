@@ -83,6 +83,7 @@ typedef enum {
     DICTIONARY,
     MCT,
     FLIPPER,
+    TAGINFO,
 } DumpFileType_t;
 
 typedef enum {

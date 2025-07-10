@@ -452,6 +452,7 @@ endif
 ifeq ($(SWIG_LUA_FOUND),1)
     PM3CFLAGS += -DHAVE_LUA_SWIG
 endif
+
 ifeq ($(SWIG_PYTHON_FOUND),1)
     PM3CFLAGS += -DHAVE_PYTHON_SWIG
 endif
@@ -594,6 +595,7 @@ endif
 ifeq ($(SWIG_LUA_FOUND),1)
         $(info Lua SWIG:          wrapper found)
 endif
+
 ifeq ($(SWIG_PYTHON_FOUND),1)
         $(info Python SWIG:       wrapper found)
 endif

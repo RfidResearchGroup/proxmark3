@@ -89,6 +89,8 @@ DumpFileType_t get_filetype(const char *filename) {
             o = FLIPPER;
         } else if (str_endswith(s, "picopass")) {
             o = FLIPPER;
+        } else if (str_endswith(s, "xml")) {
+            o = TAGINFO;
         } else {
             // mfd, trc, trace is binary
             o = BIN;
@@ -3321,6 +3323,10 @@ int pm3_load_dump(const char *fn, void **pdump, size_t *dumplen, size_t maxdumpl
                 // unknown dump file type
                 res = PM3_ESOFT;
             }
+            break;
+        }
+        case TAGINFO: {
+            //res = loadFileXML_safe(fn, ".xml", pdump, dumplen);
             break;
         }
     }

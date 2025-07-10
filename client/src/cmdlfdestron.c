@@ -129,7 +129,7 @@ static int CmdDestronReader(const char *Cmd) {
     do {
         lf_read(false, 16000);
         demodDestron(!cm);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm && (kbd_enter_pressed() == false));
 
     return PM3_SUCCESS;
 }

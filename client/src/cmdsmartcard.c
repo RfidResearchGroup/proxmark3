@@ -1469,7 +1469,7 @@ static int CmdPCSC(const char *Cmd) {
             msleep(300);
         }
 
-    } while (!kbd_enter_pressed());
+    } while (kbd_enter_pressed() == false);
 
     mbedtls_net_close(&netCtx);
     mbedtls_net_free(&netCtx);

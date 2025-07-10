@@ -632,7 +632,7 @@ static int CmdIndalaReader(const char *Cmd) {
     do {
         lf_read(false, 30000);
         demodIndalaEx(clk, invert, max_err, !cm);
-    } while (cm && !kbd_enter_pressed());
+    } while (cm & (kbd_enter_pressed() == false));
     return PM3_SUCCESS;
 }
 
