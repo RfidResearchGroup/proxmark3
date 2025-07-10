@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `mqtt` commnands - now honors preference settings (@iceman1001)
+- Changed `prefs` - now handles MQTT settings too (@iceman1001)
 - Fixed `mqtt` segfault and gdb warning under windows (proper thread stopping and socket handling). (@virtyvoid)
 - Added `mqtt` - the pm3 client can now send and receive MQTT messages or json files. (@iceman1001)
 - Changed `hf iclass wrbl` - replay behavior to use privilege escalation if the macs field is not passed empty(@antiklesys)

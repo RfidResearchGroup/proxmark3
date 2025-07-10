@@ -166,7 +166,7 @@ static int mqtt_receive(const char *addr, const char *port, const char *topic, c
     // subscribe to a topic with a max QoS level of 0
     mqtt_subscribe(&client, topic, 0);
 
-    PrintAndLogEx(INFO, _CYAN_("%s") " listening at " _CYAN_("%s:%s") " for " _YELLOW_("%s") " messages", cid, addr, port, topic);
+    PrintAndLogEx(INFO, _CYAN_("%s") " listening at " _CYAN_("%s:%s/%s"), cid, addr, port, topic);
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
 
     while (kbd_enter_pressed() == false) {
@@ -299,13 +299,27 @@ static int CmdMqttSend(const char *Cmd) {
     }
 
     if (alen == 0) {
+        if (strlen(g_session.mqtt_server)) {
+            strcpy(addr, g_session.mqtt_server);
+        } else {
         strcpy(addr, "proxdump.com");
     }
+    }
+
     if (plen == 0) {
+        if (strlen(g_session.mqtt_port)) {
+            strcpy(port, g_session.mqtt_port);
+        } else {
         strcpy(port, "1883");
     }
+    }
+
     if (tlen == 0) {
+        if (strlen(g_session.mqtt_topic)) {
+            strcpy(topic, g_session.mqtt_topic);
+        } else {
         strcpy(topic, "proxdump");
+        }
     }
 
     if (fnlen) {
@@ -362,13 +376,27 @@ static int CmdMqttReceive(const char *Cmd) {
     }
 
     if (alen == 0) {
+        if (strlen(g_session.mqtt_server)) {
+            strcpy(addr, g_session.mqtt_server);
+        } else {
         strcpy(addr, "proxdump.com");
     }
+    }
+
     if (plen == 0) {
+        if (strlen(g_session.mqtt_port)) {
+            strcpy(port, g_session.mqtt_port);
+        } else {
         strcpy(port, "1883");
     }
+    }
+
     if (tlen == 0) {
+        if (strlen(g_session.mqtt_topic)) {
+            strcpy(topic, g_session.mqtt_topic);
+        } else {
         strcpy(topic, "proxdump");
+        }
     }
 
     return mqtt_receive(addr, port, topic, filename);
