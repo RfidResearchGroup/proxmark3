@@ -1418,6 +1418,45 @@ int detect_classic_prng(void) {
     uint32_t nonce = bytes_to_num(respA.data.asBytes, respA.oldarg[0]);
     return validate_prng_nonce(nonce);
 }
+
+
+/* Detect supported Auth,
+* function performs a partial AUTH,  where it tries to authenticate against block0, but only collects tag nonce.
+* @returns
+*   TRUE if tag replies with a nonce
+*   FALSE is tag does not reply with a nonce
+*/
+int detect_classic_auth(uint8_t key_type) {
+
+    PacketResponseNG resp, respA;
+    uint8_t cmd[] = {MIFARE_AUTH_KEYA + key_type, 0x00};
+    uint32_t flags = ISO14A_CONNECT | ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS;
+
+    clearCommandBuffer();
+    SendCommandMIX(CMD_HF_ISO14443A_READER, flags, sizeof(cmd), 0, cmd, sizeof(cmd));
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_ETIMEOUT;
+    }
+
+    // if select tag failed.
+    if (resp.oldarg[0] == 0) {
+        PrintAndLogEx(ERR, "error:  selecting tag failed,  can't detect nonce\n");
+        return PM3_ERFTRANS;
+    }
+    if (WaitForResponseTimeout(CMD_ACK, &respA, 2500) == false) {
+        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        return PM3_ETIMEOUT;
+    }
+
+    // check respA
+    if (respA.oldarg[0] != 4) {
+        PrintAndLogEx(ERR, "PRNG data error: Wrong length: %"PRIu64, respA.oldarg[0]);
+        return false;
+    }
+    return true;
+}
+
 /* Detect Mifare Classic NACK bug
 
 returns:

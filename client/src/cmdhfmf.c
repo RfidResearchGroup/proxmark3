@@ -10342,7 +10342,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "Sector 0 key A... " _GREEN_("%012" PRIX64), e_sector[0].Key[MF_KEY_A]);
 
             num_to_bytes(e_sector[0].Key[MF_KEY_A], MIFARE_KEY_SIZE, fkey);
-            if (mf_read_block(0, MF_KEY_A, key, blockdata) == PM3_SUCCESS) {
+            if (mf_read_block(0, MF_KEY_A, fkey, blockdata) == PM3_SUCCESS) {
                 fKeyType = MF_KEY_A;
             }
         }
@@ -10352,7 +10352,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
 
             if (fKeyType == 0xFF) {
                 num_to_bytes(e_sector[0].Key[MF_KEY_B], MIFARE_KEY_SIZE, fkey);
-                if (mf_read_block(0, MF_KEY_B, key, blockdata) == PM3_SUCCESS) {
+                if (mf_read_block(0, MF_KEY_B, fkey, blockdata) == PM3_SUCCESS) {
                     fKeyType = MF_KEY_B;
                 }
             }
@@ -10361,33 +10361,56 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         if (e_sector[1].foundKey[MF_KEY_A]) {
             PrintAndLogEx(SUCCESS, "Sector 1 key A... " _GREEN_("%012" PRIX64), e_sector[1].Key[MF_KEY_A]);
         }
+
+        if (e_sector[1].foundKey[MF_KEY_B]) {
+            PrintAndLogEx(SUCCESS, "Sector 1 key B... " _GREEN_("%012" PRIX64), e_sector[1].Key[MF_KEY_B]);
+        }
     }
 
     uint8_t k08s[MIFARE_KEY_SIZE] = {0xA3, 0x96, 0xEF, 0xA4, 0xE2, 0x4F};
     uint8_t k08[MIFARE_KEY_SIZE] = {0xA3, 0x16, 0x67, 0xA8, 0xCE, 0xC1};
-    uint8_t k32[MIFARE_KEY_SIZE] = {0x51, 0x8B, 0x33, 0x54, 0xE7, 0x60};
+    uint8_t k32n[MIFARE_KEY_SIZE] = {0x51, 0x8B, 0x33, 0x54, 0xE7, 0x60};
+    uint8_t k32n2[MIFARE_KEY_SIZE] = {0x73, 0xB9, 0x83, 0x6C, 0xF1, 0x68};
     if (mf_read_block(0, 4, k08s, blockdata) == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Backdoor key..... " _YELLOW_("%s"), sprint_hex_inrow(k08s, sizeof(k08s)));
         fKeyType = MF_KEY_BD;
         memcpy(fkey, k08s, sizeof(fkey));
-
     } else if (mf_read_block(0, 4, k08, blockdata) == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Backdoor key..... " _YELLOW_("%s"), sprint_hex_inrow(k08, sizeof(k08)));
         fKeyType = MF_KEY_BD;
         memcpy(fkey, k08, sizeof(fkey));
-    } else if (mf_read_block(0, 4, k32, blockdata) == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "Backdoor key..... " _YELLOW_("%s"), sprint_hex_inrow(k32, sizeof(k32)));
+    } else if (mf_read_block(0, 4, k32n, blockdata) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Backdoor key..... " _YELLOW_("%s"), sprint_hex_inrow(k32n, sizeof(k32n)));
         fKeyType = MF_KEY_BD;
-        memcpy(fkey, k32, sizeof(fkey));
+        memcpy(fkey, k32n, sizeof(fkey));
+    } else if (mf_read_block(0, 4, k32n2, blockdata) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "Backdoor key..... " _YELLOW_("%s"), sprint_hex_inrow(k32n2, sizeof(k32n2)));
+        fKeyType = MF_KEY_BD;
+        memcpy(fkey, k32n2, sizeof(fkey));
+    }
+
+    if ((fKeyType == MF_KEY_A) || (fKeyType == MF_KEY_B)) {
+        // we've a key but not a backdoor key
+        uint8_t blockdata2[MFBLOCK_SIZE] = {0};
+        if (mf_read_block(0, fKeyType + 4, key, blockdata2) == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Backdoor key..... " _GREEN_("same as keyA/keyB"));
+        } else if (detect_classic_auth(MF_KEY_BD)) {
+            PrintAndLogEx(SUCCESS, "Backdoor key..... " _RED_("detected but unknown!"));
+            PrintAndLogEx(HINT, "Hint: Try........ "
+                          _YELLOW_("hf mf nested --blk 0 -%s -k %s --tblk 0 --tc 4"),
+                          (fKeyType == MF_KEY_A) ? "a" : "b", sprint_hex_inrow(fkey, sizeof(fkey)));
+            fKeyType = MF_KEY_BD;
+        }
     }
 
     if (fKeyType != 0xFF) {
-        PrintAndLogEx(SUCCESS, "Block 0.... %s | " NOLF, sprint_hex_inrow(blockdata, MFBLOCK_SIZE));
+        PrintAndLogEx(SUCCESS, "Block 0.......... %s | " NOLF, sprint_hex_inrow(blockdata, MFBLOCK_SIZE));
         PrintAndLogEx(NORMAL, "%s", sprint_ascii(blockdata + 8, 8));
     }
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
+    bool expect_static_enc_nonce = false;
 
     if (fKeyType != 0xFF) {
         // cards with known backdoor
@@ -10397,15 +10420,23 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08s, sizeof(fkey)) == 0
                    && card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
                    && (blockdata[8] == 0x03 || blockdata[8] == 0x04) && blockdata[15] == 0x90) {
-            PrintAndLogEx(SUCCESS, "Fudan FM11RF08S");
+            PrintAndLogEx(SUCCESS, "Fudan FM11RF08S %02X%02X", blockdata[8], blockdata[15]);
+            expect_static_enc_nonce = true;
+        } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08s, sizeof(fkey)) == 0
+                   && card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
+                   && (blockdata[8] == 0x03 || blockdata[8] == 0x04) && blockdata[15] == 0x91) {
+            PrintAndLogEx(SUCCESS, "Fudan FM11RF08S %02X%02X without static enc nonce", blockdata[8], blockdata[15]);
+            expect_static_enc_nonce = false;
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08s, sizeof(fkey)) == 0
                    && card.sak == 0x08 && memcmp(blockdata + 5, "\x00\x03\x00\x10", 4) == 0
                    && blockdata[15] == 0x90) {
-            PrintAndLogEx(SUCCESS, "Fudan FM11RF08S-7B");
+            PrintAndLogEx(SUCCESS, "Fudan FM11RF08S-7B %02X%02X", blockdata[8], blockdata[15]);
+            expect_static_enc_nonce = true;
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
                    && card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
                    && blockdata[15] == 0x98) {
-            PrintAndLogEx(SUCCESS, "Fudan FM11RF08S **98");
+            PrintAndLogEx(SUCCESS, "Fudan FM11RF08S %02X%02X", blockdata[8], blockdata[15]);
+            expect_static_enc_nonce = true;
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
                    && card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
                    && (blockdata[8] >= 0x01 && blockdata[8] <= 0x03) && blockdata[15] == 0x1D) {
@@ -10414,9 +10445,12 @@ static int CmdHF14AMfInfo(const char *Cmd) {
                    && card.sak == 0x08 && memcmp(blockdata + 5, "\x00\x01\x00\x10", 4) == 0
                    && blockdata[15] == 0x1D) {
             PrintAndLogEx(SUCCESS, "Fudan FM11RF08-7B");
-        } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k32, sizeof(fkey)) == 0
+        } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k32n, sizeof(fkey)) == 0
                    && card.sak == 0x18 && memcmp(blockdata + 5, "\x18\x02\x00\x46\x44\x53\x37\x30\x56\x30\x31", 11) == 0) {
-            PrintAndLogEx(SUCCESS, "Fudan FM11RF32");
+            PrintAndLogEx(SUCCESS, "Fudan FM11RF32N");
+        } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k32n2, sizeof(fkey)) == 0
+                   && card.sak == 0x18 && memcmp(blockdata + 5, "\x18\x02\x00\x46\x44\x53\x37\x30\x56\x30\x31", 11) == 0) {
+            PrintAndLogEx(SUCCESS, "Fudan FM11RF32N (variant)");
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
                    && card.sak == 0x20 && memcmp(blockdata + 8, "\x62\x63\x64\x65\x66\x67\x68\x69", 8) == 0) {
             PrintAndLogEx(SUCCESS, "Fudan FM11RF32 (SAK=20)");
@@ -10499,6 +10533,9 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             PrintAndLogEx(FAILED, "Prng........ " _RED_("fail"));
         }
 
+        bool tested_static_nonce = false;
+        int result_static_nonce = 0;
+
         // detect static encrypted nonce
         if (keylen == MIFARE_KEY_SIZE) {
             res = detect_classic_static_encrypted_nonce(blockn, keytype, key);
@@ -10512,6 +10549,8 @@ static int CmdHF14AMfInfo(const char *Cmd) {
                 PrintAndLogEx(SUCCESS, "Static enc nonce... " _RED_("yes"));
                 fKeyType = 0xFF; // dont detect twice
             }
+            result_static_nonce = res;
+            tested_static_nonce = true;
         }
 
         if (fKeyType != 0xFF) {
@@ -10522,6 +10561,16 @@ static int CmdHF14AMfInfo(const char *Cmd) {
                 PrintAndLogEx(SUCCESS, "Static nonce... " _YELLOW_("yes, even when nested"));
             } else if (res == NONCE_STATIC_ENC) {
                 PrintAndLogEx(SUCCESS, "Static enc nonce... " _RED_("yes"));
+            }
+            result_static_nonce = res;
+            tested_static_nonce = true;
+        }
+        if (tested_static_nonce) {
+            if ((result_static_nonce == NONCE_STATIC_ENC) && (!expect_static_enc_nonce)) {
+                PrintAndLogEx(WARNING, "Static enc nonce detected on a card not supposed to support it, please report... ");
+            }
+            if ((result_static_nonce != NONCE_STATIC_ENC) && (expect_static_enc_nonce)) {
+                PrintAndLogEx(WARNING, "Static enc nonce not detected on a card supposed to support it, please report... ");
             }
         }
 

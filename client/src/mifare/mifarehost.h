@@ -110,6 +110,7 @@ int mf_chinese_gen_4_set_block(uint8_t blockNo, uint8_t *block, uint8_t *key);
 int try_decrypt_word(uint32_t nt, uint32_t ar_enc, uint32_t at_enc, uint8_t *data, int len);
 
 int detect_classic_prng(void);
+int detect_classic_auth(uint8_t key_type);
 int detect_classic_nackbug(bool verbose);
 uint16_t detect_mf_magic(bool is_mfc, uint8_t key_type, uint64_t key);
 int detect_classic_static_nonce(void);
