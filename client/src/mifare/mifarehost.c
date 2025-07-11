@@ -1449,12 +1449,8 @@ int detect_classic_auth(uint8_t key_type) {
         return PM3_ETIMEOUT;
     }
 
-    // check respA
-    if (respA.oldarg[0] != 4) {
-        PrintAndLogEx(ERR, "PRNG data error: Wrong length: %"PRIu64, respA.oldarg[0]);
-        return false;
-    }
-    return true;
+    // check respA for a nonce
+    return respA.oldarg[0] == 4;
 }
 
 /* Detect Mifare Classic NACK bug
