@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- Changed `hf mfdes info` - add recognition of Swissbit iShield Key Mifare
+- Changed `hf mfdes info` - add recognition of Swissbit iShield Key Mifare (@ah01)
 - Changed `hf mf info` - add detection for unknown backdoor keys and for some backdoor variants (@doegox)
 - Changed `mqtt` commnands - now honors preference settings (@iceman1001)
 - Changed `prefs` - now handles MQTT settings too (@iceman1001)
