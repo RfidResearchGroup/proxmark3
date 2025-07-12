@@ -238,7 +238,7 @@ static char *getProtocolStr(uint8_t id, bool hw) {
 
 static char *getVersionStr(uint8_t type, uint8_t major, uint8_t minor) {
 
-    static char buf[40] = {0x00};
+    static char buf[60] = {0x00};
     char *retStr = buf;
 
     if (type == 0x01 && major == 0x00)
@@ -255,6 +255,8 @@ static char *getVersionStr(uint8_t type, uint8_t major, uint8_t minor) {
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV2") " )", major, minor);
     else if (type == 0x01 && major == 0x33 && minor == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV3") " )", major, minor);
+    else if (type == 0x81 && major == 0x43 && minor == 0x01)
+        snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire EV3C implementation on P71D600") " )", major, minor); // Swisskey iShield Key
     else if (type == 0x01 && major == 0x30 && minor == 0x00)
         snprintf(retStr, sizeof(buf), "%x.%x ( " _GREEN_("DESFire Light") " )", major, minor);
     else if (type == 0x02 && major == 0x11 && minor == 0x00)
@@ -327,6 +329,9 @@ nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
 
     // DESFire EV3
     if (type == 0x01 && major == 0x33 && minor == 0x00)
+        return DESFIRE_EV3;
+
+    if (type == 0x81 && major == 0x43 && minor == 0x01)
         return DESFIRE_EV3;
 
     // Duox
