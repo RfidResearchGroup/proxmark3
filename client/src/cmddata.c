@@ -3527,8 +3527,8 @@ static int CmdAtrLookup(const char *Cmd) {
 static int CmdCryptography(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "data crypto",
-                  "Encrypt data, right here, right now. Or decrypt.",
-                  "Supply data, key, IV (needed for des MAC or aes), and cryptography action.\n"
+                  "This command lets you encrypt or decrypt data using DES/3DES/AES.\n"
+                  "Supply data, key, IV (needed for des MAC or aes), and cryptography action.\n",
                   "To calculate a MAC for FMCOS, supply challenge as IV, data as data, and session/line protection key as key.\n"
                   "To calculate a MAC for FeliCa, supply first RC as IV, BLE+data as data and session key as key.\n"
                   "data crypto -d 04D6850E06AABB80 -k FFFFFFFFFFFFFFFF --iv 9EA0401A00000000 --des  -> Calculate a MAC for FMCOS chip. The result should be ED3A0133\n"
@@ -3544,76 +3544,97 @@ static int CmdCryptography(const char *Cmd) {
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
+
     uint8_t dati[250] = {0};
     uint8_t dato[250] = {0};
     int datilen = 0;
     CLIGetHexWithReturn(ctx, 1, dati, &datilen);
-    uint8_t key[25] = {0};
+
+    uint8_t key[33] = {0};
     int keylen = 0;
     CLIGetHexWithReturn(ctx, 2, key, &keylen);
-    int type = 0;
-    if (arg_get_lit(ctx, 3)) type ^= 8;
-    if (arg_get_lit(ctx, 4)) type ^= 4;
-    if (arg_get_lit(ctx, 5)) type ^= 2;
+
+    uint8_t type = 0;
+    if (arg_get_lit(ctx, 3)) {
+        type ^= 0x08;
+    }
+
+    if (arg_get_lit(ctx, 4)) {
+        type ^= 0x04;
+    }
+
+    if (arg_get_lit(ctx, 5)) {
+        type ^= 0x02;
+    }
+
     uint8_t iv[250] = {0};
     int ivlen = 0;
     CLIGetHexWithReturn(ctx, 6, iv, &ivlen);
     CLIParserFree(ctx);
 
     // Do data length check
-    if ((type & 0x4) >> 2) { // Use AES(0) or DES(1)?
+    if ((type & 0x04) == 0x04) { // Use AES(0) or DES(1)?
 
         if (datilen % 8 != 0) {
             PrintAndLogEx(ERR, "<data> length must be a multiple of 8. Got %d", datilen);
             return PM3_EINVARG;
         }
 
-        if (keylen != 8 && keylen != 16 && keylen != 24) {
-            PrintAndLogEx(ERR, "<key> must be 8, 16 or 24 bytes. Got %d", keylen);
+        if (keylen != 8 && keylen != 16 && keylen != 24 && keylen != 32) {
+            PrintAndLogEx(ERR, "<key> must be 8, 16, 24, 32 bytes. Got %d", keylen);
             return PM3_EINVARG;
         }
 
     } else {
 
-        if (datilen % 16 != 0 && ((type & 0x2) >> 1 == 0)) {
+        if (datilen % 16 != 0 && ((type & 0x02) == 0)) {
             PrintAndLogEx(ERR, "<data> length must be a multiple of 16. Got %d", datilen);
             return PM3_EINVARG;
         }
 
-        if (keylen != 16) {
-            PrintAndLogEx(ERR, "<key> must be 16 bytes. Got %d", keylen);
+        if (keylen != 16 && keylen != 32) {
+            PrintAndLogEx(ERR, "<key> must be 16 or 32 bytes. Got %d", keylen);
             return PM3_EINVARG;
         }
     }
 
     // Encrypt(0) or decrypt(1)?
-    if ((type & 0x8) >> 3) {
+    if ((type & 0x08) == 0x08) {
 
-        if ((type & 0x4) >> 2) { // AES or DES?
+        if ((type & 0x04) == 0x04) { // AES or DES?
 
             if (keylen > 8) {
 
-                PrintAndLogEx(INFO, "Called 3DES decrypt");
                 des3_decrypt(dato, dati, key, keylen / 8);
+                PrintAndLogEx(INFO, "3DES decrypt... " _YELLOW_("%s"), sprint_hex_inrow(dato, datilen));
 
             } else {
 
-                PrintAndLogEx(INFO, "Called DES decrypt");
+
                 if (ivlen == 0) {
                     // If there's an IV, use CBC
                     des_decrypt_ecb(dato, dati, datilen, key);
+                    PrintAndLogEx(INFO, "DES ECB decrypt... " _YELLOW_("%s"), sprint_hex_inrow(dato, datilen));
                 } else {
                     des_decrypt_cbc(dato, dati, datilen, key, iv);
+                    PrintAndLogEx(INFO, "DES CBC decrypt... " _YELLOW_("%s"), sprint_hex_inrow(dato, datilen));
                 }
             }
+
         } else {
-            PrintAndLogEx(INFO, "Called AES decrypt");
+            if (keylen == 32) {
+                aes256_decode(iv, key, dati, dato, datilen);
+                PrintAndLogEx(INFO, "AES-256 decrypt... " _YELLOW_("%s"), sprint_hex_inrow(dato, datilen));
+            } else {
             aes_decode(iv, key, dati, dato, datilen);
+                PrintAndLogEx(INFO, "AES-128 decrypt... " _YELLOW_("%s"), sprint_hex_inrow(dato, datilen));
+            }
         }
 
     } else {
-        if (type & 0x4) { // AES or DES?
-            if (type & 0x02) { // If we will calculate a MAC
+
+        if ((type & 0x04) == 0x04)  { // AES or DES?
+            if ((type & 0x02) == 0x02) { // If we will calculate a MAC
                 /*PrintAndLogEx(INFO, "Called FeliCa MAC");
                     // For DES all I know useful is the felica and fudan MAC algorithm.This is just des-cbc, but felica needs it in its way.
                     for (int i = 0; i < datilen; i+=8){ // For all 8 byte sequences
@@ -3637,37 +3658,42 @@ static int CmdCryptography(const char *Cmd) {
             } else {
 
                 if (keylen > 8) {
-                    PrintAndLogEx(INFO, "Called 3DES encrypt keysize: %i", keylen / 8);
                     des3_encrypt(dato, dati, key, keylen / 8);
+                    PrintAndLogEx(INFO, "3DES encrypt keysize ( %d )... " _YELLOW_("%s"), (keylen / 8), sprint_hex_inrow(dato, datilen));                    
                 } else {
-
-                    PrintAndLogEx(INFO, "Called DES encrypt");
 
                     if (ivlen == 0) {
                         // If there's an IV, use ECB
                         des_encrypt_ecb(dato, dati, datilen, key);
+                        PrintAndLogEx(INFO, "DES ECB encrypt... " _YELLOW_("%s"), sprint_hex_inrow(dato, datilen));
                     } else {
                         des_encrypt_cbc(dato, dati, datilen, key, iv);
                         char pad[250];
                         memset(pad, ' ', 4 + 8 + (datilen - 8) * 3);
                         pad[8 + (datilen - 8) * 3] = 0; // Make a padding to insert FMCOS macing algorithm guide
                         PrintAndLogEx(INFO, "%sVV VV VV VV FMCOS MAC", pad);
+                        PrintAndLogEx(INFO, "DES CBC encrypt... " _YELLOW_("%s"), sprint_hex_inrow(dato, datilen));
                     }
                 }
             }
         } else {
 
-            if (type & 0x02) {
-                PrintAndLogEx(INFO, "Called AES CMAC");
+            if ((type & 0x02) == 0x02) {
                 // If we will calculate a MAC
                 aes_cmac8(iv, key, dati, dato, datilen);
+                PrintAndLogEx(INFO, "AES CMAC... " _YELLOW_("%s"), sprint_hex_inrow(dato, datilen));
             } else {
-                PrintAndLogEx(INFO, "Called AES encrypt");
+                if (keylen == 32) {
+                    aes256_encode(iv, key, dati, dato, datilen);
+                    PrintAndLogEx(INFO, "AES-256 encrypt... " _YELLOW_("%s"), sprint_hex_inrow(dato, datilen));
+                } else {
                 aes_encode(iv, key, dati, dato, datilen);
+                    PrintAndLogEx(INFO, "AES-128 encrypt... " _YELLOW_("%s"), sprint_hex_inrow(dato, datilen));
+                }
             }
         }
     }
-    PrintAndLogEx(SUCCESS, "Result: %s", sprint_hex(dato, datilen));
+    
     return PM3_SUCCESS;
 }
 
