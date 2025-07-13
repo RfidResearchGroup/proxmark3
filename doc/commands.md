@@ -46,6 +46,7 @@ Check column "offline" for their availability.
 |`prefs get hints        `|Y       |`Get hint display preference`
 |`prefs get output       `|Y       |`Get dump output style preference`
 |`prefs get plotsliders  `|Y       |`Get plot slider display preference`
+|`prefs get mqtt         `|Y       |`Get MQTT preference`
 
 
 ### prefs set
@@ -65,6 +66,7 @@ Check column "offline" for their availability.
 |`prefs set savepaths    `|Y       |`... to be adjusted next ... `
 |`prefs set output       `|Y       |`Set dump output style`
 |`prefs set plotsliders  `|Y       |`Set plot slider display`
+|`prefs set mqtt         `|Y       |`Set MQTT default values`
 
 
 ### analyse

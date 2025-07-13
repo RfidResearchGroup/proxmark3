@@ -3626,7 +3626,7 @@ static int CmdCryptography(const char *Cmd) {
                 aes256_decode(iv, key, dati, dato, datilen);
                 PrintAndLogEx(INFO, "AES-256 decrypt... " _YELLOW_("%s"), sprint_hex_inrow(dato, datilen));
             } else {
-            aes_decode(iv, key, dati, dato, datilen);
+                aes_decode(iv, key, dati, dato, datilen);
                 PrintAndLogEx(INFO, "AES-128 decrypt... " _YELLOW_("%s"), sprint_hex_inrow(dato, datilen));
             }
         }
@@ -3659,7 +3659,7 @@ static int CmdCryptography(const char *Cmd) {
 
                 if (keylen > 8) {
                     des3_encrypt(dato, dati, key, keylen / 8);
-                    PrintAndLogEx(INFO, "3DES encrypt keysize ( %d )... " _YELLOW_("%s"), (keylen / 8), sprint_hex_inrow(dato, datilen));                    
+                    PrintAndLogEx(INFO, "3DES encrypt keysize ( %d )... " _YELLOW_("%s"), (keylen / 8), sprint_hex_inrow(dato, datilen));
                 } else {
 
                     if (ivlen == 0) {
@@ -3687,13 +3687,13 @@ static int CmdCryptography(const char *Cmd) {
                     aes256_encode(iv, key, dati, dato, datilen);
                     PrintAndLogEx(INFO, "AES-256 encrypt... " _YELLOW_("%s"), sprint_hex_inrow(dato, datilen));
                 } else {
-                aes_encode(iv, key, dati, dato, datilen);
+                    aes_encode(iv, key, dati, dato, datilen);
                     PrintAndLogEx(INFO, "AES-128 encrypt... " _YELLOW_("%s"), sprint_hex_inrow(dato, datilen));
                 }
             }
         }
     }
-    
+
     return PM3_SUCCESS;
 }
 

@@ -303,23 +303,23 @@ static int CmdMqttSend(const char *Cmd) {
         if (strlen(g_session.mqtt_server)) {
             strcpy(addr, g_session.mqtt_server);
         } else {
-        strcpy(addr, "proxdump.com");
-    }
+            strcpy(addr, "proxdump.com");
+        }
     }
 
     if (plen == 0) {
         if (strlen(g_session.mqtt_port)) {
             strcpy(port, g_session.mqtt_port);
         } else {
-        strcpy(port, "1883");
-    }
+            strcpy(port, "1883");
+        }
     }
 
     if (tlen == 0) {
         if (strlen(g_session.mqtt_topic)) {
             strcpy(topic, g_session.mqtt_topic);
         } else {
-        strcpy(topic, "proxdump");
+            strcpy(topic, "proxdump");
         }
     }
 
@@ -380,23 +380,23 @@ static int CmdMqttReceive(const char *Cmd) {
         if (strlen(g_session.mqtt_server)) {
             strcpy(addr, g_session.mqtt_server);
         } else {
-        strcpy(addr, "proxdump.com");
-    }
+            strcpy(addr, "proxdump.com");
+        }
     }
 
     if (plen == 0) {
         if (strlen(g_session.mqtt_port)) {
             strcpy(port, g_session.mqtt_port);
         } else {
-        strcpy(port, "1883");
-    }
+            strcpy(port, "1883");
+        }
     }
 
     if (tlen == 0) {
         if (strlen(g_session.mqtt_topic)) {
             strcpy(topic, g_session.mqtt_topic);
         } else {
-        strcpy(topic, "proxdump");
+            strcpy(topic, "proxdump");
         }
     }
 

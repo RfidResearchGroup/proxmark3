@@ -10398,9 +10398,9 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         } else if (detect_classic_auth(MF_KEY_BD)) {
             PrintAndLogEx(SUCCESS, "Backdoor key..... " _RED_("detected but unknown!"));
             PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf nested --blk 0 -%s -k %s --tblk 0 --tc 4") "`"
-                        , (fKeyType == MF_KEY_A) ? "a" : "b"
-                        , sprint_hex_inrow(fkey, MIFARE_KEY_SIZE)
-                    );
+                          , (fKeyType == MF_KEY_A) ? "a" : "b"
+                          , sprint_hex_inrow(fkey, MIFARE_KEY_SIZE)
+                         );
             fKeyType = MF_KEY_BD;
         }
     }
