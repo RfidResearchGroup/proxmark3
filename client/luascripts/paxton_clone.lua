@@ -4,7 +4,16 @@ local ac = require('ansicolors')
 local os = require('os')
 local dash = string.rep('--', 32)
 local dir = os.getenv('HOME') .. '/.proxmark3/logs/'
-local logfile = (io.popen('dir /a-d /o-d /tw /b/s "' .. dir .. '" 2>nul:'):read("*a"):match("%C+"))
+local logfilecmd
+
+--Determine platform for logfile handling (Windows vs Unix/Linux)
+if package.config:sub(1,1) == "\\" then
+  logfilecmd = 'dir /a-d /o-d /tw /b/s "' .. dir .. '" 2>nul:'
+else
+  logfilecmd = 'find "' .. dir .. '" -type f -printf "%T@ %p\\n" | sort -nr | cut -d" " -f2-'
+end
+
+local logfile = (io.popen(logfilecmd):read("*a"):match("%C+"))
 local log_file_path = dir .. "Paxton_log.txt"
 local nam = ""
 local pm3 = require('pm3')
