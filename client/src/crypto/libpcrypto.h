@@ -38,6 +38,10 @@ void des3_decrypt(void *out, const void *in, const void *key, uint8_t keycount);
 
 int aes_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length);
 int aes_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length);
+
+int aes256_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length);
+int aes256_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length);
+
 int aes_cmac(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *mac, int length);
 int aes_cmac8(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *mac, int length);
 

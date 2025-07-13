@@ -163,6 +163,45 @@ int aes_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int l
     return PM3_SUCCESS;
 }
 
+// NIST Special Publication 800-38A — Recommendation for block cipher modes of operation: methods and techniques, 2001.
+int aes256_encode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length) {
+    uint8_t iiv[16] = {0};
+    if (iv) {
+        memcpy(iiv, iv, sizeof(iiv));
+    }
+
+    mbedtls_aes_context aes;
+    mbedtls_aes_init(&aes);
+    if (mbedtls_aes_setkey_enc(&aes, key, 256)) {
+        return 1;
+    }
+    if (mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_ENCRYPT, length, iiv, input, output)) {
+        return 2;
+    }
+    mbedtls_aes_free(&aes);
+    return PM3_SUCCESS;
+}
+
+
+int aes256_decode(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *output, int length) {
+    uint8_t iiv[16] = {0};
+    if (iv) {
+        memcpy(iiv, iv, 16);
+    }
+
+    mbedtls_aes_context aes;
+    mbedtls_aes_init(&aes);
+    if (mbedtls_aes_setkey_dec(&aes, key, 256)) {
+        return 1;
+    }
+    if (mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_DECRYPT, length, iiv, input, output)) {
+        return 2;
+    }
+    mbedtls_aes_free(&aes);
+    return PM3_SUCCESS;
+}
+
+
 // NIST Special Publication 800-38B — Recommendation for block cipher modes of operation: The CMAC mode for authentication.
 // https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/AES_CMAC.pdf
 int aes_cmac(uint8_t *iv, uint8_t *key, uint8_t *input, uint8_t *mac, int length) {
