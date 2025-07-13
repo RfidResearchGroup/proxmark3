@@ -1,6 +1,8 @@
 ifeq ($(PLTNAME),)
     -include ../../Makefile.platform
     -include ../../.Makefile.options.cache
+# Default platform if no platform specified
+    PLATFORM?=PM3RDV4
     ifneq ($(PLATFORM), $(CACHED_PLATFORM))
         $(error platform definitions have been changed, please "make clean" at the root of the project)
     endif
