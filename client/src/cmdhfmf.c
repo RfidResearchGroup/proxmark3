@@ -1128,9 +1128,9 @@ static int mf_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, uint8_t *userkey
         }
         *pkeyBlock = p;
         // Copy default keys to list
-        for (int i = 0; i < ARRAYLEN(g_mifare_default_keys); i++) {
+        for (uint32_t i = 0; i < ARRAYLEN(g_mifare_default_keys); i++) {
             num_to_bytes(g_mifare_default_keys[i], MIFARE_KEY_SIZE, (uint8_t *)(*pkeyBlock + (*pkeycnt + i) * MIFARE_KEY_SIZE));
-            PrintAndLogEx(DEBUG, _YELLOW_("%2d") " - %s", *pkeycnt + i, sprint_hex(*pkeyBlock + (*pkeycnt + i) * MIFARE_KEY_SIZE, MIFARE_KEY_SIZE));
+            PrintAndLogEx(DEBUG, _YELLOW_("%2u") " - %s", *pkeycnt + i, sprint_hex(*pkeyBlock + (*pkeycnt + i) * MIFARE_KEY_SIZE, MIFARE_KEY_SIZE));
         }
         *pkeycnt += ARRAYLEN(g_mifare_default_keys);
         PrintAndLogEx(SUCCESS, "loaded " _GREEN_("%zu") " hardcoded keys", ARRAYLEN(g_mifare_default_keys));
@@ -10402,6 +10402,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             fKeyType = MF_KEY_BD;
         }
     }
+
 
     if (fKeyType != 0xFF) {
         PrintAndLogEx(SUCCESS, "Block 0.......... %s | " NOLF, sprint_hex_inrow(blockdata, MFBLOCK_SIZE));
