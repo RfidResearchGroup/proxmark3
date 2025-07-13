@@ -59,20 +59,21 @@ static void mqtt_publish_callback(void **unused, struct mqtt_response_publish *p
     free(topic_name);
 }
 
+static volatile int mqtt_client_should_exit = 0;
+
 static void *mqtt_client_refresher(void *client) {
-    while (1) {
-        pthread_testcancel(); // check if we cancelled
+    while (!mqtt_client_should_exit) {
         mqtt_sync((struct mqtt_client *) client);
         msleep(100);
     }
     return NULL;
 }
-
 static int mqtt_exit(int status, mqtt_pal_socket_handle sockfd, pthread_t *client_daemon) {
     close_nb_socket(sockfd);
     if (client_daemon != NULL) {
-        pthread_cancel(*client_daemon);
+        mqtt_client_should_exit = 1;
         pthread_join(*client_daemon, NULL); // Wait for the thread to finish
+        mqtt_client_should_exit = 0;
     }
     return status;
 }
