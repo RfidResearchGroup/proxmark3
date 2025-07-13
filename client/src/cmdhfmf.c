@@ -10336,6 +10336,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
 
     uint8_t blockdata[MFBLOCK_SIZE] = {0};
     res = mf_check_keys_fast(sectorsCnt, true, true, 1, keycnt, keyBlock, e_sector, false, verbose);
+    // Identify Backdoor keyed cards
     if (res == PM3_SUCCESS || res == PM3_EPARTIAL) {
 
         if (e_sector[0].foundKey[MF_KEY_A]) {
@@ -10393,12 +10394,13 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         // we've a key but not a backdoor key
         uint8_t blockdata2[MFBLOCK_SIZE] = {0};
         if (mf_read_block(0, fKeyType + 4, key, blockdata2) == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Backdoor key..... " _GREEN_("same as keyA/keyB"));
+            PrintAndLogEx(SUCCESS, "Backdoor key..... " _GREEN_("same as key A/B"));
         } else if (detect_classic_auth(MF_KEY_BD)) {
             PrintAndLogEx(SUCCESS, "Backdoor key..... " _RED_("detected but unknown!"));
-            PrintAndLogEx(HINT, "Hint: Try........ "
-                          _YELLOW_("hf mf nested --blk 0 -%s -k %s --tblk 0 --tc 4"),
-                          (fKeyType == MF_KEY_A) ? "a" : "b", sprint_hex_inrow(fkey, sizeof(fkey)));
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf nested --blk 0 -%s -k %s --tblk 0 --tc 4") "`"
+                        , (fKeyType == MF_KEY_A) ? "a" : "b"
+                        , sprint_hex_inrow(fkey, MIFARE_KEY_SIZE)
+                    );
             fKeyType = MF_KEY_BD;
         }
     }
