@@ -1032,7 +1032,7 @@ static int AuthCheckDesfire(DesfireContext_t *dctx,
                     DesfireSetKeyNoClear(dctx, keyno, T_DES, deskeyList[curkey]);
                     res = DesfireAuthenticate(dctx, secureChannel, false);
                     if (res == PM3_SUCCESS) {
-                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found DES Key %02u          : " _GREEN_("%s"), curaid, keyno, sprint_hex(deskeyList[curkey], 8));
+                        PrintAndLogEx(SUCCESS, "AID 0x%06X, Found DES Key %02u... " _GREEN_("%s"), curaid, keyno, sprint_hex(deskeyList[curkey], 8));
                         foundKeys[0][keyno][0] = 0x01;
                         *result = true;
                         memcpy(&foundKeys[0][keyno][1], deskeyList[curkey], 8);
@@ -2181,25 +2181,32 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
 
     reverse_array(startAid, 3);
     reverse_array(endAid, 3);
+
     uint32_t idStart = DesfireAIDByteToUint(startAid);
     uint32_t idEnd = DesfireAIDByteToUint(endAid);
+
     if (idStart > idEnd) {
         PrintAndLogEx(ERR, "Start should be lower than end. start: %06x end: %06x", idStart, idEnd);
         return PM3_EINVARG;
     }
-    PrintAndLogEx(INFO, "Bruteforce from %06x to %06x", idStart, idEnd);
-    PrintAndLogEx(INFO, "Enumerating through all AIDs manually, this will take a while!");
-    for (uint32_t id = idStart; id <= idEnd && id >= idStart; id += idIncrement) {
-        if (kbd_enter_pressed()) break;
 
-        int progress = ((id - idStart) * 100) / ((idEnd - idStart));
-        PrintAndLogEx(INPLACE, "Progress: %d %%, current AID: %06X", progress, id);
+    PrintAndLogEx(INFO, "Bruteforce from " _YELLOW_("%06x") " to " _YELLOW_("%06x"), idStart, idEnd);
+    PrintAndLogEx(INFO, "Enumerating through all AIDs manually, this will take a while!");
+
+    for (uint32_t id = idStart; id <= idEnd && id >= idStart; id += idIncrement) {
+
+        if (kbd_enter_pressed()) {
+            break;
+        }
+
+        float progress = ((id - idStart) / (idEnd - idStart));
+        PrintAndLogEx(INPLACE, "Progress " _YELLOW_("%0.1f") " %%   current AID: %06X", progress, id);
 
         res = DesfireSelectAIDHexNoFieldOn(&dctx, id);
 
         if (res == PM3_SUCCESS) {
             printf("\33[2K\r"); // clear current line before printing
-            PrintAndLogEx(SUCCESS, "Got new APPID %06X", id);
+            PrintAndLogEx(SUCCESS, "Got new APPID " _GREEN_("%06X"), id);
         }
     }
 
