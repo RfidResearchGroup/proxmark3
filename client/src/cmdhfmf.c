@@ -10393,13 +10393,14 @@ static int CmdHF14AMfInfo(const char *Cmd) {
     if ((fKeyType == MF_KEY_A) || (fKeyType == MF_KEY_B)) {
         // we've a key but not a backdoor key
         uint8_t blockdata2[MFBLOCK_SIZE] = {0};
-        if (mf_read_block(0, fKeyType + 4, key, blockdata2) == PM3_SUCCESS) {
+        if (mf_read_block(0, fKeyType + 4, fkey, blockdata2) == PM3_SUCCESS) {
             PrintAndLogEx(SUCCESS, "Backdoor key..... " _GREEN_("same as key A/B"));
         } else if (detect_classic_auth(MF_KEY_BD)) {
             PrintAndLogEx(SUCCESS, "Backdoor key..... " _RED_("detected but unknown!"));
-            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf nested --blk 0 -%s -k %s --tblk 0 --tc 4") "`"
+            PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf mf nested --blk 0 -%s -k %s --tblk 0 --tc %i") "`"
                           , (fKeyType == MF_KEY_A) ? "a" : "b"
                           , sprint_hex_inrow(fkey, MIFARE_KEY_SIZE)
+                          , fKeyType + 4
                          );
             fKeyType = MF_KEY_BD;
         }
