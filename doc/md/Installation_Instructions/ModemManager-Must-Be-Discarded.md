@@ -55,6 +55,14 @@ sudo systemctl stop ModemManager
 sudo systemctl disable ModemManager
 sudo systemctl mask ModemManager
 ```
+After doing this check if it has been masked with:
+`systemctl status ModemManager`
+If you'll get something like this, you've masked ModemManager and you will be ready to install and setup your pm3.
+```
+○ ModemManager.service
+     Loaded: masked (Reason: Unit ModemManager.service is masked.)
+     Active: inactive (dead)
+```
 
 # Solution 3: use filtering udev rules
 ^[Top](#top)
