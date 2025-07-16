@@ -47,12 +47,13 @@ On Archlinux:
 sudo pacman -R modemmanager
 ```
 
-# Solution 2: disable ModemManager
+# Solution 2: mask ModemManager
 ^[Top](#top)
 
 ```sh
 sudo systemctl stop ModemManager
 sudo systemctl disable ModemManager
+sudo systemctl mask ModemManager
 ```
 
 # Solution 3: use filtering udev rules
