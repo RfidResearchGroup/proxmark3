@@ -424,18 +424,13 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
 #ifdef RL_STATE_READCMD
     // We are using GNU readline. libedit (OSX) doesn't support this flag.
     int need_hack = (rl_readline_state & RL_STATE_READCMD) > 0;
-    char *saved_line;
-    int saved_point;
+    char *saved_line = NULL;
 
     if (need_hack) {
-        saved_point = rl_point;
         saved_line = rl_copy_text(0, rl_end);
-        rl_save_prompt();
-        rl_replace_line("", 0);
-        rl_redisplay();
+        rl_clear_visible_line();
     }
 #endif
-
     va_start(argptr, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, argptr);
     va_end(argptr);
@@ -453,14 +448,13 @@ static void fPrintAndLog(FILE *stream, const char *fmt, ...) {
         if (linefeed) {
             fprintf(stream, "\n");
         }
+        fflush(stream);
     }
 
 #ifdef RL_STATE_READCMD
-    // We are using GNU readline. libedit (OSX) doesn't support this flag.
     if (need_hack) {
-        rl_restore_prompt();
+        rl_on_new_line();
         rl_replace_line(saved_line, 0);
-        rl_point = saved_point;
         rl_redisplay();
         free(saved_line);
     }
