@@ -1881,9 +1881,15 @@ static uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace, uint16_t trac
     uint8_t status1 = trace[1];
     uint8_t status2 = trace[2];
 
+    bool error = (status1 != 0x00 && (status2 == 0xB1 || status2 == 0xB2));
+
     char line[110] = {0};
     for (int j = 0; j < 16; j++) {
-        snprintf(line + (j * 4), sizeof(line) - 1 - (j * 4), "%02x  ", trace[j + 3]);
+        if (error) {
+            snprintf(line + (j * 4), sizeof(line) - 1 - (j * 4), "??  ");
+        } else {
+            snprintf(line + (j * 4), sizeof(line) - 1 - (j * 4), "%02x  ", trace[j + 3]);
+        }
     }
 
     PrintAndLogEx(NORMAL, "block number %02x, status: %02x %02x", blocknum, status1, status2);
@@ -1931,13 +1937,17 @@ static uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace, uint16_t trac
             PrintAndLogEx(NORMAL,  "S_PAD13: %s", line);
             break;
         case 0x0E: {
-            uint32_t regA = trace[3] | trace[4] << 8 | trace[5] << 16 | trace[ 6] << 24;
+            uint32_t regA = trace[3] | trace[4] << 8 | trace[5] << 16 | trace[6] << 24;
             uint32_t regB = trace[7] | trace[8] << 8 | trace[9] << 16 | trace[10] << 24;
             line[0] = 0;
             for (int j = 0; j < 8; j++)
                 snprintf(line + (j * 2), sizeof(line) - 1 - (j * 2), "%02x", trace[j + 11]);
 
-            PrintAndLogEx(NORMAL,  "REG: regA: %d regB: %d regC: %s ", regA, regB, line);
+            if (error) {
+                PrintAndLogEx(NORMAL,  "REG: regA: ???????? regB: ???????? regC: ???????????????? ");
+            } else {
+                PrintAndLogEx(NORMAL,  "REG: regA: %d regB: %d regC: %s ", regA, regB, line);
+            }
         }
         break;
         case 0x80:
