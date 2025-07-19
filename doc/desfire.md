@@ -23,6 +23,7 @@
     - [How to create files](#how-to-create-files)
     - [How to delete files](#how-to-delete-files)
     - [How to read/write files](#how-to-readwrite-files)
+    - [How to work with value files](#how-to-work-with-value-files)
     - [How to work with transaction mac](#how-to-work-with-transaction-mac)
     - [How to switch DESFire Light to LRP mode](#how-to-switch-desfire-light-to-lrp-mode)
 
@@ -254,7 +255,7 @@ Create standard file with mac access mode and specified access settings. access 
 
 `hf mfdes createfile --aid 123456 --fid 01 --isofid 0001 --size 000010 --amode mac --rrights free --wrights free --rwrights free --chrights key0`
 
-`hf mfdes createvaluefile --aid 123456 --fid 01 --isofid 0001 --lower 00000010 --upper 00010000 --value 00000100` - create value file
+`hf mfdes createvaluefile --aid 123456 --fid 01 --isofid 0001 --lower 00000010 --upper 00010000 --value 00000100` - create value file (see [How to work with value files](#how-to-work-with-value-files) for detailed examples)
 
 `hf mfdes createrecordfile --aid 123456 --fid 01 --isofid 0001 --size 000010 --maxrecord 000010` - create linear record file
 
@@ -294,9 +295,11 @@ Here it is needed to specify the type of the file because there is no `hf mfdes 
 
 `hf mfdes write --aid 123456 --fid 01 --type data -d 01020304 --commit` - write backup data file and commit
 
-`hf mfdes write --aid 123456 --fid 01 --type value -d 00000001` increment value file
+`hf mfdes write --aid 123456 --fid 01 --type value -d 00000001` increment value file (deprecated, use `hf mfdes value` command)
 
-`hf mfdes write --aid 123456 --fid 01 --type value -d 00000001 --debit` decrement value file
+`hf mfdes write --aid 123456 --fid 01 --type value -d 00000001 --debit` decrement value file (deprecated, use `hf mfdes value` command)
+
+For modern value file operations, see [How to work with value files](#how-to-work-with-value-files)
 
 `hf mfdes write --aid 123456 --fid 01 --type record -d 01020304` write data to a record file
 
@@ -313,6 +316,188 @@ Here it is needed to specify the type of the file because there is no `hf mfdes 
 For more detailed samples look at the next howto.
 
 `hf mfdes write --aid 123456 --fid 01 -d 01020304 --readerid 010203` write data to the file with CommitReaderID command before and CommitTransaction after write
+
+### How to work with value files
+^[Top](#top)
+
+Value files are specialized files designed for storing and manipulating monetary values or counters. They provide atomic operations for incrementing (credit) and decrementing (debit) values with built-in limits and security features.
+
+**Key Features:**
+- 32-bit value storage (represented internally as unsigned)
+- Lower and upper limits to prevent underflow/overflow
+- Atomic operations with automatic transaction commit
+- Transaction logging support
+- Secure communication modes (plain, MAC, encrypted)
+
+**Value File Structure:**
+- Current value: 32-bit value
+- Lower limit: minimum allowed value (prevents underflow)
+- Upper limit: maximum allowed value (prevents overflow)
+
+**Access Rights:**
+Value files use four access right categories:
+- **Read**: Required to get the current value (`hf mfdes value --op get`)
+- **Write**: Required for debit operations (`hf mfdes value --op debit`)
+- **Read/Write**: Required for credit operations (`hf mfdes value --op credit`)
+- **Change**: Required to modify file settings or delete the file
+
+Access rights can be set to:
+- `key0` through `keyE`: Requires authentication with the specified key
+- `free`: No authentication required
+- `deny`: Operation is forbidden
+
+*Create value file:*
+
+Creating a Bitcoin wallet on your DESFire card:
+```
+pm3 --> hf mfdes createapp --aid 425443 --ks1 0B --ks2 0E
+[+] Desfire application 425443 successfully created
+
+pm3 --> hf mfdes createvaluefile --aid 425443 --fid 01 --lower 00000000 --upper 01406F40 --value 00000032
+[=] ---- Create file settings ----
+[+] File type        : Value
+[+] File number      : 0x01 (1)
+[+] File comm mode   : Plain
+[+] Additional access: No
+[+] Access rights    : EEEE
+[+]   read......... free
+[+]   write........ free
+[+]   read/write... free
+[+]   change....... free
+[=] Lower limit... 0 / 0x00000000
+[=] Upper limit... 21000000 / 0x01406F40
+[=] Value............ 50 / 0x00000032
+[=] Limited credit... 0 - disabled
+[=] GetValue access... Not Free
+[+] Value file 01 in the app 425443 created successfully
+```
+This creates a DESFire Bitcoin wallet with:
+- Application ID 0x425443 (ASCII "BTC")
+- File ID 0x01 for the wallet
+- Lower limit: 0 BTC (no overdrafts in crypto)
+- Upper limit: 21,000,000 BTC (respecting Satoshi's vision)
+- Initial value: 50 BTC (the original block reward)
+
+Creating the infamous Pizza Day wallet:
+```
+pm3 --> hf mfdes createvaluefile --aid 425443 --fid 02 --lower 00000000 --upper 01406F40 --value 00002710
+[=] ---- Create file settings ----
+[+] File type        : Value
+[+] File number      : 0x02 (2)
+[+] File comm mode   : Plain
+[+] Additional access: No
+[+] Access rights    : EEEE
+[+]   read......... free
+[+]   write........ free
+[+]   read/write... free
+[+]   change....... free
+[=] Lower limit... 0 / 0x00000000
+[=] Upper limit... 21000000 / 0x01406F40
+[=] Value............ 10000 / 0x00002710
+[=] Limited credit... 0 - disabled
+[=] GetValue access... Not Free
+[+] Value file 02 in the app 425443 created successfully
+```
+This creates a wallet pre-loaded with 10,000 BTC (historical exchange rate: 2 pizzas)
+
+*Value file operations:*
+
+Check your Bitcoin balance:
+```
+pm3 --> hf mfdes value --aid 425443 --fid 01 --op get
+[+] Value: 50 (0x00000032)
+
+pm3 --> hf mfdes value --aid 425443 --fid 01 --op get -m mac
+[+] Value: 50 (0x00000032)
+```
+
+Loading Bitcoin IOUs onto your card:
+```
+pm3 --> hf mfdes value --aid 425443 --fid 01 --op credit -d 00000019
+[+] Value changed successfully
+
+pm3 --> hf mfdes value --aid 425443 --fid 01 --op get
+[+] Value: 75 (0x0000004b)
+```
+Card now holds 75 BTC in IOUs ($9,000,000 in debt obligations)
+
+Buying coffee with Bitcoin IOUs:
+```
+pm3 --> hf mfdes value --aid 425443 --fid 01 --op debit -d 00000001
+[+] Value changed successfully  # You now owe the coffee shop $120,000
+
+pm3 --> hf mfdes value --aid 425443 --fid 01 --op get
+[+] Value: 74 (0x0000004a)  # Remaining debt capacity
+```
+
+The legendary Pizza Day recreation:
+```
+pm3 --> hf mfdes value --aid 425443 --fid 02 --op debit -d 00002710
+[+] Value changed successfully  # You now owe Papa John's $1.2 billion
+
+pm3 --> hf mfdes value --aid 425443 --fid 02 --op get
+[+] Value: 0 (0x00000000)  # Card empty, bankruptcy imminent
+```
+
+*Communication modes:*
+
+Value files support different communication modes for security:
+
+Plain mode (no encryption):
+```
+pm3 --> hf mfdes value --aid 123456 --fid 02 --op get -m plain
+[+] Value: 125 (0x0000007d)
+```
+
+MAC mode (message authentication):
+```
+pm3 --> hf mfdes value --aid 123456 --fid 02 --op credit -d 00000032 -m mac
+[+] Value changed successfully
+```
+
+Encrypted mode (full encryption):
+```
+pm3 --> hf mfdes value --aid 123456 --fid 02 --op debit -d 00000014 -m encrypted
+[+] Value changed successfully
+```
+
+*Error handling and compatibility:*
+
+The Proxmark3 implementation includes automatic fallback for compatibility:
+- If MAC mode fails with a length error (-20), it automatically retries in plain mode
+- This ensures compatibility across different DESFire card generations
+- Original communication mode is restored after fallback
+
+*Transaction behavior:*
+
+Value operations are atomic with automatic commit:
+- The `hf mfdes value` command automatically issues CommitTransaction after credit/debit operations
+- Get operations do not require a commit
+- Operations either complete fully (including commit) or fail completely
+- No manual transaction management required when using the `hf mfdes value` command
+- Transaction MAC files can log all value operations for audit trails
+
+*Practical examples:*
+
+Daily Bitcoin IOU catastrophes:
+```
+# Check morning IOU balance
+pm3 --> hf mfdes value --aid 425443 --fid 01 --op get
+[+] Value: 50 (0x00000032)  # $6 million in IOUs
+
+# Friend sends you more IOUs via NFC bump
+pm3 --> hf mfdes value --aid 425443 --fid 01 --op credit -d 000000C8
+[+] Value changed successfully  # +200 BTC IOUs ($24M more debt)
+
+# Buy a Tesla (tap payment)
+pm3 --> hf mfdes value --aid 425443 --fid 01 --op debit -d 00000001
+[+] Value changed successfully
+
+# Check remaining IOU capacity
+pm3 --> hf mfdes value --aid 425443 --fid 01 --op get
+[+] Value: 273 (0x00000111)  # $32.76M in transferable debt
+```
+
 
 ### How to work with transaction mac
 ^[Top](#top)
