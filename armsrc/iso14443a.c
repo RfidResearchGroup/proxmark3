@@ -37,6 +37,7 @@
 #include "generator.h"
 #include "desfire_crypto.h"  // UL-C authentication helpers
 #include "mifare.h"  // for iso14a_polling_frame_t structure
+#include "desfiresim.h"  // DESFire emulation
 
 #define MAX_ISO14A_TIMEOUT 524288
 // this timeout is in MS
@@ -1203,6 +1204,470 @@ static void Simulate_reread_ulc_key(uint8_t *ulc_key) {
     reverse_array(ulc_key + 8, 4);
     reverse_array(ulc_key + 12, 4);
 }
+
+//-----------------------------------------------------------------------------
+// DESFire command dispatcher
+//-----------------------------------------------------------------------------
+uint8_t HandleDesfireCommand(uint8_t *cmd, uint8_t cmd_len, uint8_t *response, uint8_t *response_len) {
+    if (cmd_len < 1 || response == NULL || response_len == NULL) {
+        if (response != NULL && response_len != NULL) {
+            response[0] = MFDES_PARAMETER_ERROR;
+            *response_len = 1;
+        }
+        return MFDES_PARAMETER_ERROR;
+    }
+    
+    // Check for ISO7816-wrapped commands (CLA=90 or 91, etc.)
+    if ((cmd[0] & 0xF0) == 0x90 && cmd_len >= 5) {
+        // ISO7816 wrapped command format: CLA INS P1 P2 [Lc Data] [Le]
+        uint8_t cla = cmd[0];
+        uint8_t ins = cmd[1];
+        uint8_t p1 = cmd[2];
+        uint8_t p2 = cmd[3];
+        uint8_t lc = 0;
+        uint8_t *data = NULL;
+        
+        // Validate CLA - should be 0x90 for DESFire
+        if (cla != 0x90) {
+            response[0] = 0x6E;  // Class not supported
+            response[1] = 0x00;
+            *response_len = 2;
+            return MFDES_COMMAND_ABORTED;
+        }
+        
+        // Validate P1 - should be 0x00 for most DESFire commands
+        if (p1 != 0x00) {
+            response[0] = 0x6A;  // Wrong P1-P2
+            response[1] = 0x86;
+            *response_len = 2;
+            return MFDES_PARAMETER_ERROR;
+        }
+        
+        // Extract data length and pointer
+        if (cmd_len > 5) {
+            lc = cmd[4];
+            if (cmd_len >= 5 + lc) {
+                data = &cmd[5];
+            }
+        }
+        
+        // Map ISO7816 INS to DESFire commands
+        uint8_t desfire_cmd;
+        switch (ins) {
+            case 0x5A: desfire_cmd = MFDES_SELECT_APPLICATION; break;
+            case 0x60: desfire_cmd = MFDES_GET_VERSION; break;
+            case 0x6A: desfire_cmd = MFDES_GET_APPLICATION_IDS; break;
+            case 0x6F: desfire_cmd = MFDES_GET_FILE_IDS; break;
+            case 0xF5: desfire_cmd = MFDES_GET_FILE_SETTINGS; break;
+            case 0x45: desfire_cmd = MFDES_GET_KEY_SETTINGS; break;
+            case 0xAA: desfire_cmd = MFDES_AUTHENTICATE_AES; break;
+            case 0x0A: desfire_cmd = MFDES_AUTHENTICATE; break;
+            case 0x1A: desfire_cmd = MFDES_AUTHENTICATE_3DES; break;
+            case 0xBD: desfire_cmd = MFDES_READ_DATA; break;
+            case 0x3D: desfire_cmd = MFDES_WRITE_DATA; break;
+            case 0xCA: desfire_cmd = MFDES_CREATE_APPLICATION; break;
+            case 0xDA: desfire_cmd = MFDES_DELETE_APPLICATION; break;
+            case 0xCD: desfire_cmd = MFDES_CREATE_STD_DATA_FILE; break;
+            case 0xCB: desfire_cmd = MFDES_CREATE_BACKUP_DATA_FILE; break;
+            case 0xCC: desfire_cmd = MFDES_CREATE_VALUE_FILE; break;
+            case 0xC1: desfire_cmd = MFDES_CREATE_LINEAR_RECORD_FILE; break;
+            case 0xC0: desfire_cmd = MFDES_CREATE_CYCLIC_RECORD_FILE; break;
+            case 0xDF: desfire_cmd = MFDES_DELETE_FILE; break;
+            case 0x6C: desfire_cmd = MFDES_GET_VALUE; break;
+            case 0x0C: desfire_cmd = MFDES_CREDIT; break;
+            case 0xDC: desfire_cmd = MFDES_DEBIT; break;
+            case 0x1C: desfire_cmd = MFDES_LIMITED_CREDIT; break;
+            case 0x3B: desfire_cmd = MFDES_WRITE_RECORD; break;
+            case 0xBB: desfire_cmd = MFDES_READ_RECORDS; break;
+            case 0xEB: desfire_cmd = MFDES_CLEAR_RECORD_FILE; break;
+            case 0x6E: desfire_cmd = MFDES_GET_FREE_MEM; break;
+            case 0x6D: desfire_cmd = MFDES_GET_DF_NAMES; break;
+            case 0x61: desfire_cmd = MFDES_GET_FILE_ISO_IDS; break;
+            case 0x51: desfire_cmd = MFDES_GET_CARD_UID; break;
+            case 0x5C: desfire_cmd = MFDES_SET_CONFIGURATION; break;
+            case 0x71: desfire_cmd = MFDES_AUTHENTICATE_EV2_FIRST; break;
+            case 0x77: desfire_cmd = MFDES_AUTHENTICATE_EV2_NONFIRST; break;
+            case 0xC8: desfire_cmd = MFDES_COMMIT_READER_ID; break;
+            case 0xAF: desfire_cmd = 0xAF; break; // Additional frame
+            default:
+                // Unknown ISO7816 command
+                response[0] = MFDES_COMMAND_ABORTED;
+                response[1] = 0x00; // SW2
+                *response_len = 2;
+                return MFDES_COMMAND_ABORTED;
+        }
+        
+        // Handle the DESFire command
+        uint8_t status;
+        uint8_t desfire_response[DESFIRE_MAX_RESPONSE_SIZE];
+        uint8_t desfire_response_len = 0;
+        
+        // Build native DESFire command
+        if (desfire_cmd == 0xAF) {
+            // Additional frame - just pass the data
+            if (data != NULL && lc > 0) {
+                status = HandleDesfireAuthenticate(0xFF, data, lc, desfire_response, &desfire_response_len);
+            } else {
+                status = MFDES_PARAMETER_ERROR;
+            }
+        } else if (desfire_cmd == MFDES_SELECT_APPLICATION && data != NULL && lc >= 3) {
+            status = HandleDesfireSelectApp(data, desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_GET_VERSION) {
+            status = HandleDesfireGetVersion(desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_GET_APPLICATION_IDS) {
+            status = HandleDesfireGetAppIDs(desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_GET_FILE_IDS) {
+            status = HandleDesfireGetFileIDs(desfire_response, &desfire_response_len);
+        } else if ((desfire_cmd == MFDES_AUTHENTICATE || desfire_cmd == MFDES_AUTHENTICATE_3DES || 
+                    desfire_cmd == MFDES_AUTHENTICATE_AES) && lc >= 1) {
+            uint8_t keyno = (data != NULL && lc > 0) ? data[0] : p2;
+            uint8_t *auth_data = (lc > 1 && data != NULL) ? &data[1] : NULL;
+            uint8_t auth_len = (lc > 1) ? (lc - 1) : 0;
+            status = HandleDesfireAuthenticate(keyno, auth_data, auth_len, desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_READ_DATA && data != NULL && lc >= 7) {
+            uint8_t file_no = data[0];
+            uint32_t offset = (data[1] | (data[2] << 8) | (data[3] << 16));
+            uint32_t length = (data[4] | (data[5] << 8) | (data[6] << 16));
+            status = HandleDesfireReadData(file_no, offset, length, desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_WRITE_DATA && data != NULL && lc >= 7) {
+            uint8_t file_no = data[0];
+            uint32_t offset = (data[1] | (data[2] << 8) | (data[3] << 16));
+            uint32_t length = (data[4] | (data[5] << 8) | (data[6] << 16));
+            if (lc >= 7 + length) {
+                status = HandleDesfireWriteData(file_no, offset, length, &data[7], desfire_response, &desfire_response_len);
+            } else {
+                status = MFDES_PARAMETER_ERROR;
+            }
+        } else if (desfire_cmd == MFDES_CREATE_APPLICATION && data != NULL && lc >= 5) {
+            status = HandleDesfireCreateApp(data, data[3], data[4], desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_DELETE_APPLICATION && data != NULL && lc >= 3) {
+            status = HandleDesfireDeleteApp(data, desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_CREATE_STD_DATA_FILE && data != NULL && lc >= 7) {
+            status = HandleDesfireCreateStdDataFile(data, lc, desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_CREATE_BACKUP_DATA_FILE && data != NULL && lc >= 7) {
+            status = HandleDesfireCreateBackupDataFile(data, lc, desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_CREATE_VALUE_FILE && data != NULL && lc >= 17) {
+            status = HandleDesfireCreateValueFile(data, lc, desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_CREATE_LINEAR_RECORD_FILE && data != NULL && lc >= 10) {
+            status = HandleDesfireCreateLinearRecordFile(data, lc, desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_CREATE_CYCLIC_RECORD_FILE && data != NULL && lc >= 10) {
+            status = HandleDesfireCreateCyclicRecordFile(data, lc, desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_DELETE_FILE && data != NULL && lc >= 1) {
+            status = HandleDesfireDeleteFile(data[0], desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_GET_FILE_SETTINGS && data != NULL && lc >= 1) {
+            status = HandleDesfireGetFileSettings(data[0], desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_GET_KEY_SETTINGS) {
+            status = HandleDesfireGetKeySettings(desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_GET_VALUE && data != NULL && lc >= 1) {
+            status = HandleDesfireGetValue(data[0], desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_CREDIT && data != NULL && lc >= 5) {
+            uint8_t file_no = data[0];
+            int32_t value = (data[1] | (data[2] << 8) | (data[3] << 16) | (data[4] << 24));
+            status = HandleDesfireCredit(file_no, value, desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_DEBIT && data != NULL && lc >= 5) {
+            uint8_t file_no = data[0];
+            int32_t value = (data[1] | (data[2] << 8) | (data[3] << 16) | (data[4] << 24));
+            status = HandleDesfireDebit(file_no, value, desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_LIMITED_CREDIT && data != NULL && lc >= 5) {
+            uint8_t file_no = data[0];
+            int32_t value = (data[1] | (data[2] << 8) | (data[3] << 16) | (data[4] << 24));
+            status = HandleDesfireLimitedCredit(file_no, value, desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_WRITE_RECORD && data != NULL && lc >= 7) {
+            uint8_t file_no = data[0];
+            uint32_t offset = (data[1] | (data[2] << 8) | (data[3] << 16));
+            uint32_t length = (data[4] | (data[5] << 8) | (data[6] << 16));
+            if (lc >= 7 + length) {
+                status = HandleDesfireWriteRecord(file_no, offset, length, &data[7], desfire_response, &desfire_response_len);
+            } else {
+                status = MFDES_PARAMETER_ERROR;
+            }
+        } else if (desfire_cmd == MFDES_READ_RECORDS && data != NULL && lc >= 7) {
+            uint8_t file_no = data[0];
+            uint32_t offset = (data[1] | (data[2] << 8) | (data[3] << 16));
+            uint32_t length = (data[4] | (data[5] << 8) | (data[6] << 16));
+            status = HandleDesfireReadRecords(file_no, offset, length, desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_CLEAR_RECORD_FILE && data != NULL && lc >= 1) {
+            status = HandleDesfireClearRecordFile(data[0], desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_GET_FREE_MEM) {
+            status = HandleDesfireGetFreeMem(desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_GET_DF_NAMES) {
+            status = HandleDesfireGetDFNames(desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_GET_FILE_ISO_IDS) {
+            status = HandleDesfireGetFileISOIDs(desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_GET_CARD_UID) {
+            status = HandleDesfireGetCardUID(desfire_response, &desfire_response_len);
+        } else if (desfire_cmd == MFDES_SET_CONFIGURATION && data != NULL && lc >= 1) {
+            status = HandleDesfireSetConfiguration(data[0], (lc > 1) ? &data[1] : NULL, (lc > 1) ? lc - 1 : 0, desfire_response, &desfire_response_len);
+        } else {
+            status = MFDES_PARAMETER_ERROR;
+        }
+        
+        // Format ISO7816 response
+        if (status == MFDES_OPERATION_OK || status == MFDES_ADDITIONAL_FRAME) {
+            // Copy response data
+            if (desfire_response_len > 0 && desfire_response_len <= DESFIRE_MAX_RESPONSE_SIZE - 2) {
+                memcpy(response, desfire_response, desfire_response_len);
+                *response_len = desfire_response_len;
+            }
+            // Add SW1 SW2 (90 00 for normal, 91 AF for additional frame)
+            if (status == MFDES_ADDITIONAL_FRAME) {
+                response[(*response_len)++] = 0x91;
+                response[(*response_len)++] = 0xAF;
+            } else {
+                response[(*response_len)++] = 0x91;
+                response[(*response_len)++] = 0x00;
+            }
+        } else {
+            // Error response with status code
+            response[0] = 0x91;
+            response[1] = status;
+            *response_len = 2;
+        }
+        
+        return status;
+    }
+    
+    // Native DESFire command handling
+    switch (cmd[0]) {
+        case MFDES_GET_VERSION:
+            return HandleDesfireGetVersion(response, response_len);
+            
+        case MFDES_SELECT_APPLICATION:
+            if (cmd_len < 4) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            return HandleDesfireSelectApp(&cmd[1], response, response_len);
+            
+        case MFDES_GET_APPLICATION_IDS:
+            return HandleDesfireGetAppIDs(response, response_len);
+            
+        case MFDES_GET_FILE_IDS:
+            return HandleDesfireGetFileIDs(response, response_len);
+            
+        case MFDES_AUTHENTICATE:
+        case MFDES_AUTHENTICATE_3DES:
+        case MFDES_AUTHENTICATE_AES:
+            if (cmd_len < 2) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            return HandleDesfireAuthenticate(cmd[1], &cmd[2], cmd_len - 2, response, response_len);
+            
+        case MFDES_READ_DATA: {
+            if (cmd_len < 8) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            // Parse read data command: file_no, offset (3 bytes), length (3 bytes)
+            uint8_t file_no = cmd[1];
+            uint32_t offset = (cmd[2] | (cmd[3] << 8) | (cmd[4] << 16));
+            uint32_t length = (cmd[5] | (cmd[6] << 8) | (cmd[7] << 16));
+            return HandleDesfireReadData(file_no, offset, length, response, response_len);
+        }
+            
+        case MFDES_CREATE_APPLICATION:
+            if (cmd_len < 6) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            // Parse create application command: AID (3 bytes), key_settings, num_keys
+            return HandleDesfireCreateApp(&cmd[1], cmd[4], cmd[5], response, response_len);
+            
+        case MFDES_DELETE_APPLICATION:
+            if (cmd_len < 4) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            return HandleDesfireDeleteApp(&cmd[1], response, response_len);
+            
+        case MFDES_WRITE_DATA: {
+            if (cmd_len < 8) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            uint8_t file_no = cmd[1];
+            uint32_t offset = (cmd[2] | (cmd[3] << 8) | (cmd[4] << 16));
+            uint32_t length = (cmd[5] | (cmd[6] << 8) | (cmd[7] << 16));
+            if (cmd_len < 8 + length) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            return HandleDesfireWriteData(file_no, offset, length, &cmd[8], response, response_len);
+        }
+            
+        case MFDES_CREATE_STD_DATA_FILE:
+            if (cmd_len < 8) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            return HandleDesfireCreateStdDataFile(&cmd[1], cmd_len - 1, response, response_len);
+            
+        case MFDES_CREATE_BACKUP_DATA_FILE:
+            if (cmd_len < 8) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            return HandleDesfireCreateBackupDataFile(&cmd[1], cmd_len - 1, response, response_len);
+            
+        case MFDES_CREATE_VALUE_FILE:
+            if (cmd_len < 18) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            return HandleDesfireCreateValueFile(&cmd[1], cmd_len - 1, response, response_len);
+            
+        case MFDES_CREATE_LINEAR_RECORD_FILE:
+            if (cmd_len < 11) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            return HandleDesfireCreateLinearRecordFile(&cmd[1], cmd_len - 1, response, response_len);
+            
+        case MFDES_CREATE_CYCLIC_RECORD_FILE:
+            if (cmd_len < 11) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            return HandleDesfireCreateCyclicRecordFile(&cmd[1], cmd_len - 1, response, response_len);
+            
+        case MFDES_DELETE_FILE:
+            if (cmd_len < 2) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            return HandleDesfireDeleteFile(cmd[1], response, response_len);
+            
+        case MFDES_GET_FILE_SETTINGS:
+            if (cmd_len < 2) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            return HandleDesfireGetFileSettings(cmd[1], response, response_len);
+            
+        case MFDES_GET_KEY_SETTINGS:
+            return HandleDesfireGetKeySettings(response, response_len);
+            
+        case MFDES_GET_VALUE:
+            if (cmd_len < 2) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            return HandleDesfireGetValue(cmd[1], response, response_len);
+            
+        case MFDES_CREDIT: {
+            if (cmd_len < 6) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            uint8_t file_no = cmd[1];
+            int32_t value = (cmd[2] | (cmd[3] << 8) | (cmd[4] << 16) | (cmd[5] << 24));
+            return HandleDesfireCredit(file_no, value, response, response_len);
+        }
+            
+        case MFDES_DEBIT: {
+            if (cmd_len < 6) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            uint8_t file_no = cmd[1];
+            int32_t value = (cmd[2] | (cmd[3] << 8) | (cmd[4] << 16) | (cmd[5] << 24));
+            return HandleDesfireDebit(file_no, value, response, response_len);
+        }
+            
+        case MFDES_LIMITED_CREDIT: {
+            if (cmd_len < 6) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            uint8_t file_no = cmd[1];
+            int32_t value = (cmd[2] | (cmd[3] << 8) | (cmd[4] << 16) | (cmd[5] << 24));
+            return HandleDesfireLimitedCredit(file_no, value, response, response_len);
+        }
+            
+        case MFDES_WRITE_RECORD: {
+            if (cmd_len < 8) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            uint8_t file_no = cmd[1];
+            uint32_t offset = (cmd[2] | (cmd[3] << 8) | (cmd[4] << 16));
+            uint32_t length = (cmd[5] | (cmd[6] << 8) | (cmd[7] << 16));
+            if (cmd_len < 8 + length) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            return HandleDesfireWriteRecord(file_no, offset, length, &cmd[8], response, response_len);
+        }
+            
+        case MFDES_READ_RECORDS: {
+            if (cmd_len < 8) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            uint8_t file_no = cmd[1];
+            uint32_t offset = (cmd[2] | (cmd[3] << 8) | (cmd[4] << 16));
+            uint32_t length = (cmd[5] | (cmd[6] << 8) | (cmd[7] << 16));
+            return HandleDesfireReadRecords(file_no, offset, length, response, response_len);
+        }
+            
+        case MFDES_CLEAR_RECORD_FILE:
+            if (cmd_len < 2) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            return HandleDesfireClearRecordFile(cmd[1], response, response_len);
+            
+        case MFDES_GET_FREE_MEM:
+            return HandleDesfireGetFreeMem(response, response_len);
+            
+        case MFDES_GET_DF_NAMES:
+            return HandleDesfireGetDFNames(response, response_len);
+            
+        case MFDES_GET_FILE_ISO_IDS:
+            return HandleDesfireGetFileISOIDs(response, response_len);
+            
+        case MFDES_GET_CARD_UID:
+            return HandleDesfireGetCardUID(response, response_len);
+            
+        case MFDES_SET_CONFIGURATION:
+            if (cmd_len < 2) {
+                response[0] = MFDES_PARAMETER_ERROR;
+                *response_len = 1;
+                return MFDES_PARAMETER_ERROR;
+            }
+            return HandleDesfireSetConfiguration(cmd[1], (cmd_len > 2) ? &cmd[2] : NULL, (cmd_len > 2) ? cmd_len - 2 : 0, response, response_len);
+            
+        default:
+            // Unknown command
+            response[0] = MFDES_COMMAND_ABORTED;
+            *response_len = 1;
+            return MFDES_COMMAND_ABORTED;
+    }
+}
+
 bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
                            uint8_t *ats, size_t ats_len, tag_response_info_t **responses,
                            uint32_t *cuid, uint8_t *pages, uint8_t *ulc_key) {
@@ -1279,6 +1744,19 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
             sak = 0x20;
             memcpy(rATS, "\x06\x75\x77\x81\x02\x80\x00\x00", 8);
             rATS_len = 8; // including CRC
+            
+            // Initialize DESFire simulation
+            DesfireSimInit();
+            
+            // Set version response from emulator memory card header
+            desfire_card_t *card = DesfireGetCard();
+            if (card != NULL && card->version[0] != 0x00) {
+                memcpy(rVERSION, card->version, 8);
+            } else {
+                // Default DESFire EV1 version (proper EV1 response)
+                memcpy(rVERSION, "\x04\x01\x01\x01\x00\x1A\x05\x91", 8);
+            }
+            AddCrc14A(rVERSION, sizeof(rVERSION) - 2);
             break;
         }
         case 4: { // ISO/IEC 14443-4 - javacard (JCOP)
@@ -1983,6 +2461,33 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
             p_response = &responses[RESP_INDEX_VERSION];
         } else if (receivedCmd[0] == MFDES_GET_VERSION && len == 4 && (tagType == 3)) {
             p_response = &responses[RESP_INDEX_VERSION];
+        } else if (tagType == 3) {  // DESFire emulation - handle all DESFire commands
+            uint8_t response_len = 0;
+            uint8_t status = HandleDesfireCommand(receivedCmd, len, dynamic_response_info.response, &response_len);
+            
+            if (status == MFDES_OPERATION_OK) {
+                dynamic_response_info.response_n = response_len;
+                prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+                p_response = &dynamic_response_info;
+            } else if (status == MFDES_ADDITIONAL_FRAME) {
+                // Authentication in progress - send challenge
+                dynamic_response_info.response_n = response_len;
+                prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+                p_response = &dynamic_response_info;
+            } else {
+                // Error - DESFire sends error status in response, not NACK
+                // The error status is already in the response buffer
+                // Clear authentication state on certain errors
+                if (status == MFDES_AUTHENTICATION_ERROR || status == MFDES_APPLICATION_NOT_FOUND) {
+                    // Reset authentication state on critical errors
+                    // Note: g_desfire_state is already declared extern in desfiresim.h
+                    g_desfire_state.auth_state = DESFIRE_AUTH_NONE;
+                    g_desfire_state.auth_keyno = 0xFF;
+                }
+                dynamic_response_info.response_n = response_len;
+                prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+                p_response = &dynamic_response_info;
+            }
         } else if ((receivedCmd[0] == MIFARE_AUTH_KEYA || receivedCmd[0] == MIFARE_AUTH_KEYB) && len == 4 && tagType != 2 && tagType != 7 && tagType != 13) {     // Received an authentication request
             cardAUTHKEY = receivedCmd[0] - 0x60;
             cardAUTHSC = receivedCmd[1] / 4; // received block num
@@ -2143,6 +2648,101 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
                     dynamic_response_info.response[1] = 0x90;
                     dynamic_response_info.response[2] = 0x00;
                     dynamic_response_info.response_n = 3;
+                }
+            } else if (tagType == 3) {
+                // DESFire ISO14443-4 command handling
+                // Check for ISO 14443A-4 I-Block
+                if ((receivedCmd[0] & 0xC0) == 0x00 || (receivedCmd[0] & 0xC0) == 0x40) {  // I-Block
+                    uint8_t pcb = receivedCmd[0];
+                    uint8_t block_num = pcb & 0x01;
+                    uint8_t chain_bit = (pcb & 0x10) >> 4;
+                    (void)chain_bit; // Mark as intentionally unused for now
+                    
+                    // Extract the ISO7816 APDU from the I-Block
+                    uint8_t apdu_offset = 1;  // Skip PCB
+                    if (pcb & 0x08) apdu_offset++;  // Skip CID if present
+                    if (pcb & 0x04) apdu_offset++;  // Skip NAD if present
+                    
+                    if (len > apdu_offset + 2) {  // Must have at least PCB + APDU + CRC
+                        uint8_t apdu_len = len - apdu_offset - 2;  // Remove CRC
+                        uint8_t response_len = 0;
+                        uint8_t desfire_response[DESFIRE_MAX_RESPONSE_SIZE];
+                        
+                        // Process the DESFire command
+                        uint8_t status = HandleDesfireCommand(&receivedCmd[apdu_offset], apdu_len, desfire_response, &response_len);
+                        
+                        // Build I-Block response
+                        dynamic_response_info.response[0] = pcb & 0x0B;  // Keep CID/NAD bits, clear chain bit
+                        dynamic_response_info.response[0] |= block_num;  // Echo block number
+                        
+                        uint8_t resp_offset = 1;
+                        if (pcb & 0x08) {  // Echo CID if present
+                            dynamic_response_info.response[resp_offset++] = receivedCmd[1];
+                        }
+                        
+                        // Copy DESFire response
+                        if (response_len > 0) {
+                            memcpy(&dynamic_response_info.response[resp_offset], desfire_response, response_len);
+                            dynamic_response_info.response_n = resp_offset + response_len;
+                        } else {
+                            // Empty response with just status
+                            dynamic_response_info.response[resp_offset] = 0x91;
+                            dynamic_response_info.response[resp_offset + 1] = status;
+                            dynamic_response_info.response_n = resp_offset + 2;
+                        }
+                    } else {
+                        // Invalid I-Block
+                        dynamic_response_info.response[0] = 0x92;  // R-Block NACK
+                        dynamic_response_info.response_n = 1;
+                    }
+                } else if ((receivedCmd[0] & 0xC0) == 0xC0) {  // S-Block
+                    // Handle S-Block (DESELECT, WTX)
+                    dynamic_response_info.response[0] = receivedCmd[0];
+                    dynamic_response_info.response_n = 1;
+                } else if ((receivedCmd[0] & 0xC0) == 0x80) {  // R-Block
+                    // Handle R-Block (ACK/NAK)
+                    dynamic_response_info.response[0] = receivedCmd[0];
+                    dynamic_response_info.response_n = 1;
+                } else if ((receivedCmd[0] & 0xF0) != 0x90) {
+                    // Not an ISO7816 wrapped command, might be native DESFire
+                    // Native DESFire commands in I-Block: PCB + native command
+                    uint8_t pcb = receivedCmd[0];
+                    uint8_t apdu_offset = 1;
+                    if (pcb & 0x08) apdu_offset++;  // Skip CID if present
+                    if (pcb & 0x04) apdu_offset++;  // Skip NAD if present
+                    
+                    if (len > apdu_offset + 2) {  // Must have at least PCB + cmd + CRC
+                        uint8_t cmd_len = len - apdu_offset - 2;  // Remove CRC
+                        uint8_t response_len = 0;
+                        uint8_t desfire_response[DESFIRE_MAX_RESPONSE_SIZE];
+                        
+                        // Process native DESFire command
+                        uint8_t status = HandleDesfireCommand(&receivedCmd[apdu_offset], cmd_len, desfire_response, &response_len);
+                        
+                        // Build I-Block response with native DESFire format
+                        dynamic_response_info.response[0] = pcb & 0x0B;  // Keep CID/NAD bits
+                        dynamic_response_info.response[0] |= (pcb & 0x01);  // Echo block number
+                        
+                        uint8_t resp_offset = 1;
+                        if (pcb & 0x08) {  // Echo CID if present
+                            dynamic_response_info.response[resp_offset++] = receivedCmd[1];
+                        }
+                        
+                        // For native DESFire, status byte comes first
+                        dynamic_response_info.response[resp_offset++] = status;
+                        
+                        // Then data if any
+                        if (response_len > 0 && status == MFDES_OPERATION_OK) {
+                            memcpy(&dynamic_response_info.response[resp_offset], desfire_response, response_len);
+                            dynamic_response_info.response_n = resp_offset + response_len;
+                        } else {
+                            dynamic_response_info.response_n = resp_offset;
+                        }
+                    }
+                } else {
+                    // Unknown format
+                    dynamic_response_info.response[0] = 0x92;  // R-Block NACK
+                    dynamic_response_info.response_n = 1;
                 }
             } else {
 

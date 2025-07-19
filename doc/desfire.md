@@ -23,8 +23,14 @@
     - [How to create files](#how-to-create-files)
     - [How to delete files](#how-to-delete-files)
     - [How to read/write files](#how-to-readwrite-files)
+    - [How to work with value files](#how-to-work-with-value-files)
     - [How to work with transaction mac](#how-to-work-with-transaction-mac)
     - [How to switch DESFire Light to LRP mode](#how-to-switch-desfire-light-to-lrp-mode)
+    - [How to get File ISO IDs](#how-to-get-file-iso-ids)
+    - [How to use DESFire emulation](#how-to-use-desfire-emulation)
+  - [Emulation limitations](#emulation-limitations)
+  - [Testing](#testing)
+  - [Real DESFire card notes](#real-desfire-card-notes)
 
 
 ## Documentation
@@ -161,6 +167,29 @@ So (to fast check- it is needed to delete this file) it has default file id - 0x
 FCI sends from card to reader after selecting the application (df01 by default)
 
 If it needs to have more space for FCI - just change the ID of one of the bigger files to 0x1f (and the current ID to something else) via SetConfiguration command.
+
+### DESFire Light File Access Rights
+
+Access rights are defined as 2 bytes (16 bits) per file:
+- **Bits 15-12**: Read access condition
+- **Bits 11-8**: Write access condition  
+- **Bits 7-4**: ReadWrite access condition
+- **Bits 3-0**: Change access condition
+
+Access condition values:
+- **0x0 to 0x4**: Key number requiring authentication
+- **0xE**: Free access (no authentication)
+- **0xF**: No access allowed
+
+Default file access rights:
+| File | Type | Read | Write | RW | Change |
+|------|------|------|-------|-------|--------|
+| 0x1F | StandardData | 0xE | 0xF | 0x3 | 0x0 |
+| 0x00 | StandardData | 0x1 | 0xF | 0x3 | 0x0 |
+| 0x04 | StandardData | 0x1 | 0x2 | 0x3 | 0x0 |
+| 0x03 | Value | 0x1 | 0x2 | 0x3 | 0x0 |
+| 0x01 | CyclicRecord | 0x1 | 0x2 | 0x3 | 0x0 |
+| 0x0F | TransactionMAC | 0x1 | 0xF | 0x1 | 0x0 |
 
 ## How to
 
@@ -314,6 +343,33 @@ For more detailed samples look at the next howto.
 
 `hf mfdes write --aid 123456 --fid 01 -d 01020304 --readerid 010203` write data to the file with CommitReaderID command before and CommitTransaction after write
 
+### How to work with value files
+^[Top](#top)
+
+Value files provide secure counter functionality with automatic transaction support.
+
+*create value file:*
+
+`hf mfdes createvaluefile --aid 123456 --fid 02 --lower 00000000 --upper 000003E8 --value 00000064 --rrights free --wrights free --rwrights free --chrights key0` - create value file with limits 0-1000, initial value 100
+
+*value operations:*
+
+`hf mfdes value --aid 123456 --fid 02 --op get -m plain` - read current value in plain mode
+
+`hf mfdes value --aid 123456 --fid 02 --op get -m mac` - read current value in MAC mode
+
+`hf mfdes value --aid 123456 --fid 02 --op credit -d 00000032 -m plain` - add 50 to value in plain mode
+
+`hf mfdes value --aid 123456 --fid 02 --op credit -d 00000032 -m mac` - add 50 to value in MAC mode
+
+`hf mfdes value --aid 123456 --fid 02 --op debit -d 00000014 -m mac` - subtract 20 from value in MAC mode
+
+`hf mfdes value --aid 123456 --fid 02 --op limcredit -d 0000000A -m mac` - limited credit operation (if enabled)
+
+*note on MAC mode:*
+
+Value operations now work correctly in MAC mode on all DESFire variants. If you encounter issues with older cards, the system automatically falls back to plain mode for compatibility.
+
 ### How to work with transaction mac
 ^[Top](#top)
 
@@ -387,5 +443,126 @@ or in the LRP mode
 Switch LRP mode on
 
 `hf mfdes setconfig --appisoid df01 -t aes -s ev2 --param 05 --data 00000000010000000000`
+
+
+### How to get File ISO IDs
+^[Top](#top)
+
+DESFire EV1+ supports ISO file IDs that can be used for ISO 7816-4 compatible access.
+
+`hf mfdes getfileisoids --aid 123456`  -- Get ISO file IDs for a specific application
+
+`hf mfdes getfileisoids --no-auth`     -- Get ISO file IDs without authentication
+
+### How to use DESFire emulation
+^[Top](#top)
+
+The DESFire emulator supports simulating DESFire EV1/EV2/EV3 cards with most features:
+
+Start emulation:
+`hf mfdes sim`                         -- Start emulation with default card
+`hf mfdes sim -u 04112233445566`       -- Start emulation with custom 7-byte UID
+
+Reset emulator to factory state:
+`hf mfdes sim ereset`                  -- Reset to factory DESFire card (2TDEA master key)
+
+Load a card dump:
+`hf mfdes sim eload -f mydump.bin`     -- Load card data from binary file
+`hf mfdes sim eload -j mydump.json`    -- Load card data from JSON file
+
+View emulator state:
+`hf mfdes sim eview`                   -- Display current card structure
+`hf mfdes sim eview --detailed`        -- Display detailed card information
+
+Test emulator functionality:
+`hf mfdes sim test`                    -- Run comprehensive emulator tests
+
+Example workflow:
+```
+# Reset emulator to factory state
+hf mfdes sim ereset
+
+# Start emulation
+hf mfdes sim
+
+# In another terminal, interact with the emulated card
+hf mfdes info
+hf mfdes auth -n 0 -t 2tdea -k 00000000000000000000000000000000 --kdf none
+hf mfdes createapp --aid 112233
+hf mfdes selectapp --aid 112233
+hf mfdes createfile --fid 01 --size 20 --isofid 1001
+hf mfdes write --fid 01 -d 48656c6c6f20576f726c64
+```
+
+The emulator supports:
+- All authentication modes (DES, 2TDEA/3DES, 3TDEA, AES)
+- All file types (Standard, Backup, Value, Linear/Cyclic Record)
+- Value file operations (get, credit, debit, limited credit) with proper limit checking
+- Access rights enforcement
+- ISO file IDs (EV1+ feature)
+- GetCardUID with proper encryption
+- SetConfiguration command
+- GetDFNames for application enumeration
+- Transaction MAC with CommitReaderID
+- Automatic transaction commitment for value operations
+
+### Emulation limitations
+
+The DESFire emulator supports:
+- Maximum 28 applications (EV1 standard limit)
+- Up to 16 files per application  
+- Up to 14 keys per application
+- 4KB total memory for data storage
+
+## Testing
+^[Top](#top)
+
+### Built-in Tests
+
+Run comprehensive DESFire tests with:
+
+`./tools/pm3_tests.sh --desfire` - run DESFire-specific tests including emulator validation
+
+`./tools/pm3_tests.sh --long` - run all tests including DESFire tests
+
+`hf mfdes test` - run offline cryptographic and core protocol tests
+
+`hf mfdes sim test` - run basic emulator functionality tests
+
+`hf mfdes sim test --all` - run extended emulator validation with stress testing
+
+### Manual Testing
+
+Test value operations on both emulator and real cards:
+
+```bash
+# Test with emulator (requires two terminals)
+# Terminal 1: Start emulator
+hf mfdes sim ereset
+hf mfdes sim
+
+# Terminal 2: Test value operations with multiple applications
+hf mfdes createapp --aid 123456 --ks1 0F --ks2 0E --numkeys 1
+hf mfdes createapp --aid 789ABC --ks1 0F --ks2 0E --numkeys 1
+hf mfdes getaids
+hf mfdes selectapp --aid 123456
+hf mfdes auth -n 0 -t 2tdea -k 00000000000000000000000000000000 --kdf none
+hf mfdes createvaluefile --fid 02 --lower 00000000 --upper 000003E8 --value 00000064 --rrights free --wrights free --rwrights free --chrights key0
+hf mfdes value --fid 02 --op get -m plain
+hf mfdes value --fid 02 --op credit -d 00000032 -m mac
+hf mfdes value --fid 02 --op debit -d 00000014 -m mac
+hf mfdes value --fid 02 --op get -m mac
+
+# Test with real card (place DESFire card on reader)
+# Same commands as above
+```
+
+### Real DESFire card notes
+
+When working with real DESFire cards:
+- Factory cards use 2TDEA (16-byte 3DES) as the default master key, not DES or AES
+- The default master key is all zeros (16 bytes: 00000000000000000000000000000000)
+- EV1 cards are limited to 26 applications maximum
+- EV3 cards report version 03.xx.xx in hardware version field
 
 

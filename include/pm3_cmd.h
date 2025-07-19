@@ -758,6 +758,10 @@ typedef struct {
 #define CMD_HF_DESFIRE_READER                                             0x072c
 #define CMD_HF_DESFIRE_INFO                                               0x072d
 #define CMD_HF_DESFIRE_COMMAND                                            0x072e
+#define CMD_HF_DESFIRE_SIM_RESET                                          0x072f
+#define CMD_HF_DESFIRE_EML_MEMCLR                                         0x0750
+#define CMD_HF_DESFIRE_EML_MEMSET                                         0x0751
+#define CMD_HF_DESFIRE_EML_MEMGET                                         0x0752
 
 #define CMD_HF_MIFARE_NACK_DETECT                                         0x0730
 #define CMD_HF_MIFARE_STATIC_NONCE                                        0x0731

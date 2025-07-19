@@ -194,6 +194,9 @@ void DetectNACKbug(void);
 
 bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse, uint16_t rec_maxlen, uint8_t *received_len);
 
+// DESFire emulation command dispatcher
+uint8_t HandleDesfireCommand(uint8_t *cmd, uint8_t cmd_len, uint8_t *response, uint8_t *response_len);
+
 extern iso14a_polling_parameters_t WUPA_POLLING_PARAMETERS;
 extern iso14a_polling_parameters_t REQA_POLLING_PARAMETERS;
 

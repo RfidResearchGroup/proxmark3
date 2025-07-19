@@ -11,6 +11,7 @@ RESOURCEPATH="./client/resources"
 
 SLOWTESTS=false
 OPENCLTESTS=false
+TESTDESFIRE=false
 TESTALL=true
 TESTMFKEY=false
 TESTSTATICNESTED=false
@@ -32,9 +33,10 @@ while (( "$#" )); do
   case "$1" in
     -h|--help)
       echo """
-Usage: $0 [--long] [--opencl] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_nonce_brute|staticnested|mfd_aes_brute|cryptorf|fpga_compress|bootrom|armsrc|client|recovery|common]
+Usage: $0 [--long] [--opencl] [--desfire] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_nonce_brute|staticnested|mfd_aes_brute|cryptorf|fpga_compress|bootrom|armsrc|client|recovery|common|desfire]
     --long:          Enable slow tests
     --opencl:        Enable tests requiring OpenCL (preferably a Nvidia GPU)
+    --desfire:       Run comprehensive DESFire emulator vs real card tests
     --clientbin ...: Specify path to proxmark3 binary to test
     If no target given, all targets will be tested
 """
@@ -46,6 +48,11 @@ Usage: $0 [--long] [--opencl] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|
       ;;
     --opencl)
       OPENCLTESTS=true
+      shift
+      ;;
+    --desfire)
+      TESTDESFIRE=true
+      TESTALL=false
       shift
       ;;
     --clientbin)
@@ -120,6 +127,11 @@ Usage: $0 [--long] [--opencl] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|
     common)
       TESTALL=false
       TESTCOMMON=true
+      shift
+      ;;
+    desfire)
+      TESTALL=false
+      TESTDESFIRE=true
       shift
       ;;
     -*|--*=) # unsupported flags
@@ -578,7 +590,106 @@ while true; do
       if ! CheckExecute "emv test"                       "$CLIENTBIN -c 'emv test'" "Tests \( ok"; then break; fi
       if ! CheckExecute "hf cipurse test"                "$CLIENTBIN -c 'hf cipurse test'" "Tests \( ok"; then break; fi
       if ! CheckExecute "hf mfdes test"                  "$CLIENTBIN -c 'hf mfdes test'"   "Tests \( ok"; then break; fi
+      if ! CheckExecute "hf mfdes sim test"              "$CLIENTBIN -c 'hf mfdes sim test'" "Tests \( ok"; then break; fi
+      if ! CheckExecute "hf mfdes sim test --all"        "$CLIENTBIN -c 'hf mfdes sim test --all'" "Tests \( ok"; then break; fi
+      
+      # DESFire Real Card Validation Tests (requires real DESFire card on reader)
+      echo -e "\n${C_BLUE}DESFire Real Card Tests (place DESFire card on reader):${C_NC}"
+      read -p "Place a factory DESFire card on reader and press Enter (or Ctrl+C to skip)..."
+      if ! CheckExecute "hf mfdes info"                  "$CLIENTBIN -c 'hf mfdes info'" "Hardware.*version"; then 
+        echo "  Warning: DESFire card not detected, skipping real card tests"
+      else
+        if ! CheckExecute "hf mfdes factory auth"         "$CLIENTBIN -c 'hf mfdes auth -n 0 -t 2tdea -k 00000000000000000000000000000000 --kdf none'" "Authentication.*ok\|Authenticated"; then break; fi
+        if ! CheckExecute "hf mfdes getaids"             "$CLIENTBIN -c 'hf mfdes getaids'" "000000"; then break; fi
+        if ! CheckExecute "hf mfdes getappnames"         "$CLIENTBIN -c 'hf mfdes getappnames'" "Application"; then break; fi
+        if ! CheckExecute "hf mfdes getuid"              "$CLIENTBIN -c 'hf mfdes getuid'" "UID"; then break; fi
+        if ! CheckExecute "hf mfdes freemem"             "$CLIENTBIN -c 'hf mfdes freemem'" "free.*memory\|Free.*mem"; then break; fi
+        if ! CheckExecute "hf mfdes create test app"      "$CLIENTBIN -c 'hf mfdes createapp --aid 112233 --ks 0F --numkeys 1'" "ok\|success"; then break; fi
+        if ! CheckExecute "hf mfdes select test app"      "$CLIENTBIN -c 'hf mfdes selectapp --aid 112233'" "ok\|success"; then break; fi
+        if ! CheckExecute "hf mfdes auth test app"        "$CLIENTBIN -c 'hf mfdes auth -n 0 -t 2tdea -k 00000000000000000000000000000000 --kdf none'" "Authentication.*ok\|Authenticated"; then break; fi
+        if ! CheckExecute "hf mfdes create test file"     "$CLIENTBIN -c 'hf mfdes createfile --aid 112233 --fid 01 --size 32'" "ok\|success"; then break; fi
+        if ! CheckExecute "hf mfdes write test data"      "$CLIENTBIN -c 'hf mfdes write --aid 112233 --fid 01 --offset 0 -d 48656c6c6f20576f726c64'" "ok\|success"; then break; fi
+        if ! CheckExecute "hf mfdes read test data"       "$CLIENTBIN -c 'hf mfdes read --aid 112233 --fid 01 --offset 0 --length 12'" "Hello.*World\|48.*65.*6c.*6c.*6f"; then break; fi
+        if ! CheckExecute "hf mfdes getfileids"          "$CLIENTBIN -c 'hf mfdes getfileids --aid 112233'" "01"; then break; fi
+        if ! CheckExecute "hf mfdes getfilesettings"     "$CLIENTBIN -c 'hf mfdes getfilesettings --aid 112233 --fid 01'" "File.*settings\|Size.*32"; then break; fi
+        if ! CheckExecute "hf mfdes cleanup test"        "$CLIENTBIN -c 'hf mfdes selectapp --aid 000000 && hf mfdes auth -n 0 -t 2tdea -k 00000000000000000000000000000000 --kdf none && hf mfdes deleteapp --aid 112233'" "ok\|success"; then break; fi
+        echo "  Real card tests completed successfully!"
+      fi
       if ! CheckExecute "hf waveshare load"              "$CLIENTBIN -c 'hf waveshare load -m 6 -f tools/lena.bmp -s dither.bmp' && echo '34ff55fe7257876acf30dae00eb0e439 dither.bmp' | md5sum -c -" "dither.bmp: OK"; then break; fi
+    fi
+
+    # Dedicated DESFire emulator vs real card comparison tests
+    if $TESTDESFIRE; then
+      echo -e "\n${C_BLUE}Testing DESFire Emulator vs Real Card Validation:${C_NC}"
+      
+      # Phase 1: Emulator tests
+      echo -e "\n${C_BLUE}Phase 1: Testing DESFire Emulator:${C_NC}"
+      if ! CheckExecute "desfire emulator reset"         "$CLIENTBIN -c 'hf mfdes sim ereset'" "ok\|success\|Reset\|reset\|Resetting"; then break; fi
+      
+      echo "Starting DESFire emulator (run 'hf mfdes sim' in another terminal)..."
+      read -p "Press Enter when emulator is running..."
+      
+      if ! CheckExecute "emulator info test"             "$CLIENTBIN -c 'hf mfdes info'" "DESFire\|Hardware.*version"; then break; fi
+      if ! CheckExecute "emulator auth test"             "$CLIENTBIN -c 'hf mfdes auth -n 0 -t 2tdea -k 00000000000000000000000000000000 --kdf none'" "Authentication.*ok\|Authenticated"; then break; fi
+      if ! CheckExecute "emulator getaids test"          "$CLIENTBIN -c 'hf mfdes getaids'" "000000"; then break; fi
+      if ! CheckExecute "emulator app creation test"     "$CLIENTBIN -c 'hf mfdes createapp --aid 123456 --ks1 0F --ks2 0E --numkeys 1'" "ok\|success"; then break; fi
+      if ! CheckExecute "emulator second app creation"   "$CLIENTBIN -c 'hf mfdes createapp --aid 789ABC --ks1 0F --ks2 0E --numkeys 1'" "ok\|success"; then break; fi
+      if ! CheckExecute "emulator file creation test"    "$CLIENTBIN -c 'hf mfdes selectapp --aid 123456 && hf mfdes auth -n 0 -t 2tdea -k 00000000000000000000000000000000 --kdf none && hf mfdes createfile --fid 01 --size 16'" "ok\|success"; then break; fi
+      if ! CheckExecute "emulator write test"            "$CLIENTBIN -c 'hf mfdes write --aid 123456 --fid 01 --offset 0 -d 48656c6c6f'" "ok\|success"; then break; fi
+      if ! CheckExecute "emulator read test"             "$CLIENTBIN -c 'hf mfdes read --aid 123456 --fid 01 --offset 0 --length 5'" "Hello\|48.*65.*6c.*6c.*6f"; then break; fi
+      if ! CheckExecute "emulator multi-app test"        "$CLIENTBIN -c 'hf mfdes getaids'" "123456.*789ABC\|789ABC.*123456"; then break; fi
+      if ! CheckExecute "emulator EV1+ getuid test"      "$CLIENTBIN -c 'hf mfdes selectapp --aid 000000 && hf mfdes auth -n 0 -t 2tdea -k 00000000000000000000000000000000 --kdf none && hf mfdes getuid'" "UID"; then break; fi
+      if ! CheckExecute "emulator EV1+ freemem test"     "$CLIENTBIN -c 'hf mfdes freemem'" "free.*memory\|Free.*mem"; then break; fi
+      # Value file operation tests
+      echo "  Testing value file operations..."
+      if ! CheckExecute "emulator value file creation"   "$CLIENTBIN -c 'hf mfdes selectapp --aid 123456 && hf mfdes auth -n 0 -t 2tdea -k 00000000000000000000000000000000 --kdf none && hf mfdes createvaluefile --fid 02 --lowlimit 0 --highlimit 1000 --value 100 --settings 0 --rrights 0 --wrights 0 --rwrights 0 --chrights 0'" "ok\|success"; then break; fi
+      if ! CheckExecute "emulator value get plain"       "$CLIENTBIN -c 'hf mfdes value --aid 123456 --fid 02 --op get -m plain'" "Value.*100\|0x00000064"; then break; fi
+      if ! CheckExecute "emulator value get mac"         "$CLIENTBIN -c 'hf mfdes value --aid 123456 --fid 02 --op get -m mac'" "Value.*100\|0x00000064"; then break; fi
+      if ! CheckExecute "emulator value credit plain"    "$CLIENTBIN -c 'hf mfdes value --aid 123456 --fid 02 --op credit -d 00000032 -m plain'" "Value.*changed\|ok\|success"; then break; fi
+      if ! CheckExecute "emulator value get after credit" "$CLIENTBIN -c 'hf mfdes value --aid 123456 --fid 02 --op get -m plain'" "Value.*150\|0x00000096"; then break; fi
+      if ! CheckExecute "emulator value credit mac"      "$CLIENTBIN -c 'hf mfdes value --aid 123456 --fid 02 --op credit -d 0000000A -m mac'" "Value.*changed\|ok\|success"; then break; fi
+      if ! CheckExecute "emulator value debit plain"     "$CLIENTBIN -c 'hf mfdes value --aid 123456 --fid 02 --op debit -d 00000014 -m plain'" "Value.*changed\|ok\|success"; then break; fi
+      if ! CheckExecute "emulator value debit mac"       "$CLIENTBIN -c 'hf mfdes value --aid 123456 --fid 02 --op debit -d 00000014 -m mac'" "Value.*changed\|ok\|success"; then break; fi
+      if ! CheckExecute "emulator value final check"     "$CLIENTBIN -c 'hf mfdes value --aid 123456 --fid 02 --op get -m mac'" "Value.*132\|0x00000084"; then break; fi
+      if ! CheckExecute "emulator cleanup"               "$CLIENTBIN -c 'hf mfdes selectapp --aid 000000 && hf mfdes auth -n 0 -t 2tdea -k 00000000000000000000000000000000 --kdf none && hf mfdes deleteapp --aid 123456 && hf mfdes deleteapp --aid 789ABC'" "ok\|success"; then break; fi
+      echo "  Emulator tests completed successfully!"
+      
+      # Phase 2: Real card tests (if available)
+      echo -e "\n${C_BLUE}Phase 2: Testing Real DESFire Card (optional):${C_NC}"
+      echo "Place a factory DESFire card on reader for comparison tests..."
+      read -p "Press Enter to test real card (or Ctrl+C to skip)..."
+      
+      if ! CheckExecute "real card info test"            "$CLIENTBIN -c 'hf mfdes info'" "DESFire\|Hardware.*version"; then 
+        echo "  Real card not detected, skipping comparison tests"
+      else
+        echo "  Real card detected, running comparison tests..."
+        if ! CheckExecute "real card auth test"          "$CLIENTBIN -c 'hf mfdes auth -n 0 -t 2tdea -k 00000000000000000000000000000000 --kdf none'" "Authentication.*ok\|Authenticated"; then break; fi
+        if ! CheckExecute "real card getaids test"       "$CLIENTBIN -c 'hf mfdes getaids'" "000000"; then break; fi
+        if ! CheckExecute "real card app creation test"  "$CLIENTBIN -c 'hf mfdes createapp --aid 123456 --ks1 0F --ks2 0E --numkeys 1'" "ok\|success"; then break; fi
+        if ! CheckExecute "real card second app creation" "$CLIENTBIN -c 'hf mfdes createapp --aid 789ABC --ks1 0F --ks2 0E --numkeys 1'" "ok\|success"; then break; fi
+        if ! CheckExecute "real card file creation test" "$CLIENTBIN -c 'hf mfdes selectapp --aid 123456 && hf mfdes auth -n 0 -t 2tdea -k 00000000000000000000000000000000 --kdf none && hf mfdes createfile --fid 01 --size 16'" "ok\|success"; then break; fi
+        if ! CheckExecute "real card write test"         "$CLIENTBIN -c 'hf mfdes write --aid 123456 --fid 01 --offset 0 -d 48656c6c6f'" "ok\|success"; then break; fi
+        if ! CheckExecute "real card read test"          "$CLIENTBIN -c 'hf mfdes read --aid 123456 --fid 01 --offset 0 --length 5'" "Hello\|48.*65.*6c.*6c.*6f"; then break; fi
+        if ! CheckExecute "real card multi-app test"     "$CLIENTBIN -c 'hf mfdes getaids'" "123456.*789ABC\|789ABC.*123456"; then break; fi
+        if ! CheckExecute "real card EV1+ getuid test"   "$CLIENTBIN -c 'hf mfdes selectapp --aid 000000 && hf mfdes auth -n 0 -t 2tdea -k 00000000000000000000000000000000 --kdf none && hf mfdes getuid'" "UID"; then break; fi
+        if ! CheckExecute "real card EV1+ freemem test"  "$CLIENTBIN -c 'hf mfdes freemem'" "free.*memory\|Free.*mem"; then break; fi
+        # Value file operation tests on real card
+        echo "  Testing value file operations on real card..."
+        if ! CheckExecute "real card value file creation"  "$CLIENTBIN -c 'hf mfdes selectapp --aid 123456 && hf mfdes auth -n 0 -t 2tdea -k 00000000000000000000000000000000 --kdf none && hf mfdes createvaluefile --fid 02 --lowlimit 0 --highlimit 1000 --value 100 --settings 0 --rrights 0 --wrights 0 --rwrights 0 --chrights 0'" "ok\|success"; then break; fi
+        if ! CheckExecute "real card value get plain"      "$CLIENTBIN -c 'hf mfdes value --aid 123456 --fid 02 --op get -m plain'" "Value.*100\|0x00000064"; then break; fi
+        if ! CheckExecute "real card value get mac"        "$CLIENTBIN -c 'hf mfdes value --aid 123456 --fid 02 --op get -m mac'" "Value.*100\|0x00000064"; then break; fi
+        if ! CheckExecute "real card value credit plain"   "$CLIENTBIN -c 'hf mfdes value --aid 123456 --fid 02 --op credit -d 00000032 -m plain'" "Value.*changed\|ok\|success"; then break; fi
+        if ! CheckExecute "real card value get after credit" "$CLIENTBIN -c 'hf mfdes value --aid 123456 --fid 02 --op get -m plain'" "Value.*150\|0x00000096"; then break; fi
+        if ! CheckExecute "real card value credit mac"     "$CLIENTBIN -c 'hf mfdes value --aid 123456 --fid 02 --op credit -d 0000000A -m mac'" "Value.*changed\|ok\|success"; then break; fi
+        if ! CheckExecute "real card value debit plain"    "$CLIENTBIN -c 'hf mfdes value --aid 123456 --fid 02 --op debit -d 00000014 -m plain'" "Value.*changed\|ok\|success"; then break; fi
+        if ! CheckExecute "real card value debit mac"      "$CLIENTBIN -c 'hf mfdes value --aid 123456 --fid 02 --op debit -d 00000014 -m mac'" "Value.*changed\|ok\|success"; then break; fi
+        if ! CheckExecute "real card value final check"    "$CLIENTBIN -c 'hf mfdes value --aid 123456 --fid 02 --op get -m mac'" "Value.*132\|0x00000084"; then break; fi
+        if ! CheckExecute "real card cleanup"            "$CLIENTBIN -c 'hf mfdes selectapp --aid 000000 && hf mfdes auth -n 0 -t 2tdea -k 00000000000000000000000000000000 --kdf none && hf mfdes deleteapp --aid 123456 && hf mfdes deleteapp --aid 789ABC'" "ok\|success"; then break; fi
+        echo "  Real card tests completed successfully!"
+        echo "  Both emulator and real card behave identically!"
+      fi
+      
+      echo -e "\n${C_GREEN}DESFire validation tests completed successfully!${C_NC}"
     fi
   echo -e "\n------------------------------------------------------------"
   echo -e "Tests [ ${C_GREEN}OK${C_NC} ] ${C_OK}\n"

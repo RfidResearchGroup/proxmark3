@@ -27,6 +27,7 @@
 #include "cmdhf14a.h"
 #include "aes.h"
 #include "crypto/libpcrypto.h"
+#include "cmdhfmfdessim.h"
 #include "protocols.h"
 #include "cmdtrace.h"
 #include "cliparser.h"
@@ -463,7 +464,7 @@ static void swap24(uint8_t *data) {
 
 // default parameters
 static uint8_t defaultKeyNum = 0;
-static DesfireCryptoAlgorithm defaultAlgoId = T_DES;
+static DesfireCryptoAlgorithm defaultAlgoId = T_3DES;  // Real DESFire cards use 2TDEA by default
 static uint8_t defaultKey[DESFIRE_MAX_KEY_SIZE] = {0};
 static int defaultKdfAlgo = MFDES_KDF_ALGO_NONE;
 static int defaultKdfInputLen = 0;
@@ -604,8 +605,8 @@ static int CmdHF14ADesDefault(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_int0("n",  "keyno", "<dec>", "Key number"),
-        arg_str0("t",  "algo", "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
-        arg_str0("k",  "key", "<hex>", "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo", "<DES|2TDEA|3TDEA|AES>", "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key", "<hex>", "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf", "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi", "<hex>", "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode", "<plain|mac|encrypt>", "Communicaton mode"),
@@ -1511,8 +1512,8 @@ static int CmdHF14aDesDetect(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>", "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>", "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>", "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>", "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -1828,8 +1829,8 @@ static int CmdHF14aDesMAD(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -2002,8 +2003,8 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -2171,7 +2172,25 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
         return res;
     }
 
-    // TODO: We need to check the tag version, EV1 should stop after 26 apps are found
+    // Get card version to check if it's EV1 (limited to 26 apps)
+    mfdes_info_res_t info;
+    int version_res = mfdes_get_info(&info);
+    bool is_ev1 = false;
+    if (version_res == PM3_SUCCESS) {
+        // Check if it's DESFire EV1 (version 1.x.x)
+        if (info.versionHW[1] == 0x01) {
+            is_ev1 = true;
+            PrintAndLogEx(INFO, "DESFire EV1 detected - will limit search to 26 applications");
+        }
+    }
+    
+    // re-select PICC after getting version
+    res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(FAILED, "Desfire PICC level select " _RED_("failed") " after version check.");
+        return res;
+    }
     if (mad) {
         idIncrement = 0x10;
         startAid[0] = 0xF0;
@@ -2192,10 +2211,17 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
 
     PrintAndLogEx(INFO, "Bruteforce from " _YELLOW_("%06x") " to " _YELLOW_("%06x"), idStart, idEnd);
     PrintAndLogEx(INFO, "Enumerating through all AIDs manually, this will take a while!");
-
+    
+    int app_count = 0;
     for (uint32_t id = idStart; id <= idEnd && id >= idStart; id += idIncrement) {
 
         if (kbd_enter_pressed()) {
+            break;
+        }
+        
+        // EV1 is limited to 26 applications
+        if (is_ev1 && app_count >= 26) {
+            PrintAndLogEx(INFO, "\nDESFire EV1 card limited to 26 applications - stopping search");
             break;
         }
 
@@ -2207,6 +2233,7 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
         if (res == PM3_SUCCESS) {
             printf("\33[2K\r"); // clear current line before printing
             PrintAndLogEx(SUCCESS, "Got new APPID " _GREEN_("%06X"), id);
+            app_count++;
         }
     }
 
@@ -2228,9 +2255,10 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mfdes auth",
                   "Select application on the card. It selects app if it is a valid one or returns an error.",
-                  "hf mfdes auth  -n 0 -t des -k 0000000000000000 --kdf none       -> select PICC level and authenticate with key num=0, key type=des, key=00..00 and key derivation = none\n"
-                  "hf mfdes auth  -n 0 -t aes -k 00000000000000000000000000000000  -> select PICC level and authenticate with key num=0, key type=aes, key=00..00 and key derivation = none\n"
-                  "hf mfdes auth  -n 0 -t des -k 0000000000000000 --save           -> select PICC level and authenticate and in case of successful authentication - save channel parameters to defaults\n"
+                  "hf mfdes auth  -n 0 -t 2tdea -k 00000000000000000000000000000000 --kdf none -> select PICC level and authenticate with key num=0, key type=2tdea (default for factory cards), key=00..00\n"
+                  "hf mfdes auth  -n 0 -t des -k 0000000000000000 --kdf none       -> select PICC level and authenticate with key num=0, key type=des (single DES, rarely used), key=00..00\n"
+                  "hf mfdes auth  -n 0 -t aes -k 00000000000000000000000000000000  -> select PICC level and authenticate with key num=0, key type=aes, key=00..00\n"
+                  "hf mfdes auth  -n 0 -t 2tdea -k 00000000000000000000000000000000 --save  -> authenticate and save channel parameters to defaults\n"
                   "hf mfdes auth --aid 123456    -> select application 123456 and authenticate via parameters from `default` command");
 
     void *argtable[] = {
@@ -2238,8 +2266,8 @@ static int CmdHF14ADesAuth(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>", "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>", "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>", "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>", "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>", "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -2606,8 +2634,8 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -2778,8 +2806,8 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -2841,8 +2869,8 @@ static int CmdHF14ADesGetUID(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -2921,8 +2949,8 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -2978,8 +3006,8 @@ static int CmdHF14ADesGetFreeMem(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -3040,8 +3068,8 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -3113,8 +3141,8 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number for authentication"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -3215,8 +3243,8 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -3293,8 +3321,8 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -3365,8 +3393,8 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -3437,8 +3465,8 @@ static int CmdHF14ADesGetFileIDs(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -3511,8 +3539,8 @@ static int CmdHF14ADesGetFileISOIDs(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -3584,8 +3612,8 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -3753,8 +3781,8 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -3896,8 +3924,8 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4034,8 +4062,8 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4160,8 +4188,8 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4396,8 +4424,8 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4474,8 +4502,8 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -4646,8 +4674,8 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5051,8 +5079,8 @@ static int CmdHF14ADesReadData(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5222,8 +5250,8 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5561,8 +5589,8 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5634,8 +5662,8 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5699,8 +5727,8 @@ static int CmdHF14ADesDump(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
-        arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Key type (default: 2TDEA for factory cards)"),
+        arg_str0("k",  "key",     "<hex>",   "Key (hex): 8 bytes (DES), 16 bytes (2TDEA/AES), 24 bytes (3TDEA)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
         arg_str0("m",  "cmode",   "<plain|mac|encrypt>", "Communicaton mode"),
@@ -5853,6 +5881,8 @@ static command_t CommandTable[] = {
     {"write",            CmdHF14ADesWriteData,        IfPm3Iso14443a,  "Write data to standard/backup/record/value file"},
     {"value",            CmdHF14ADesValueOperations,  IfPm3Iso14443a,  "Operations with value file (get/credit/limited credit/debit/clear)"},
     {"clearrecfile",     CmdHF14ADesClearRecordFile,  IfPm3Iso14443a,  "Clear record File"},
+    {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "-------------------- " _CYAN_("Simulation") " --------------------"},
+    {"sim",              CmdHFMFDesSim,               IfPm3Iso14443a,  "Simulate DESFire EV1 card"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("System") " -----------------------"},
     {"test",             CmdHF14ADesTest,             AlwaysAvailable, "Regression crypto tests"},
     {NULL, NULL, NULL, NULL}

@@ -55,6 +55,7 @@
 #include "mifarecmd.h"
 #include "mifaredesfire.h"
 #include "mifaresim.h"
+#include "desfiresim.h"
 #include "emvsim.h"
 #include "pcf7931.h"
 #include "Standalone/standalone.h"
@@ -2128,6 +2129,55 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_DESFIRE_COMMAND: {
             MifareSendCommand(packet->data.asBytes);
+            break;
+        }
+        case CMD_HF_DESFIRE_SIM_RESET: {
+            // Reset DESFire emulator to factory-fresh state
+            DesfireSimInit();
+            reply_ng(CMD_HF_DESFIRE_SIM_RESET, PM3_SUCCESS, NULL, 0);
+            break;
+        }
+        case CMD_HF_DESFIRE_EML_MEMCLR: {
+            DesfireEmlClear();
+            reply_ng(CMD_HF_DESFIRE_EML_MEMCLR, PM3_SUCCESS, NULL, 0);
+            break;
+        }
+        case CMD_HF_DESFIRE_EML_MEMSET: {
+            struct p {
+                uint32_t offset;
+                uint32_t length;
+                uint8_t data[PM3_CMD_DATA_SIZE - 8];
+            } *payload = (struct p *) packet->data.asBytes;
+
+            if (payload->length > PM3_CMD_DATA_SIZE - 8) {
+                reply_ng(CMD_HF_DESFIRE_EML_MEMSET, PM3_EMALLOC, NULL, 0);
+                return;
+            }
+            
+            int res = DesfireEmlSet(payload->data, payload->offset, payload->length);
+            reply_ng(CMD_HF_DESFIRE_EML_MEMSET, res, NULL, 0);
+            break;
+        }
+        case CMD_HF_DESFIRE_EML_MEMGET: {
+            struct p {
+                uint32_t offset;
+                uint32_t length;
+            } *payload = (struct p *) packet->data.asBytes;
+
+            if (payload->length > PM3_CMD_DATA_SIZE) {
+                reply_ng(CMD_HF_DESFIRE_EML_MEMGET, PM3_EMALLOC, NULL, 0);
+                return;
+            }
+
+            uint8_t *buf = BigBuf_calloc(payload->length);
+            if (buf == NULL) {
+                reply_ng(CMD_HF_DESFIRE_EML_MEMGET, PM3_EMALLOC, NULL, 0);
+                return;
+            }
+            
+            int res = DesfireEmlGet(buf, payload->offset, payload->length);
+            reply_ng(CMD_HF_DESFIRE_EML_MEMGET, res, buf, payload->length);
+            BigBuf_free_keep_EM();
             break;
         }
         case CMD_HF_MIFARE_NACK_DETECT: {
