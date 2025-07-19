@@ -463,7 +463,7 @@ static void swap24(uint8_t *data) {
 
 // default parameters
 static uint8_t defaultKeyNum = 0;
-static DesfireCryptoAlgorithm defaultAlgoId = T_DES;
+static DesfireCryptoAlgorithm defaultAlgoId = T_3DES;  // Real DESFire cards seem to use 2TDEA by default
 static uint8_t defaultKey[DESFIRE_MAX_KEY_SIZE] = {0};
 static int defaultKdfAlgo = MFDES_KDF_ALGO_NONE;
 static int defaultKdfInputLen = 0;
@@ -4034,7 +4034,7 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo (deft: 2TDEA)"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
@@ -4474,7 +4474,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
         arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
         arg_lit0("v",  "verbose", "Verbose output"),
         arg_int0("n",  "keyno",   "<dec>", "Key number"),
-        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo"),
+        arg_str0("t",  "algo",    "<DES|2TDEA|3TDEA|AES>",  "Crypt algo (deft: 2TDEA)"),
         arg_str0("k",  "key",     "<hex>",   "Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)"),
         arg_str0(NULL, "kdf",     "<none|AN10922|gallagher>",   "Key Derivation Function (KDF)"),
         arg_str0("i",  "kdfi",    "<hex>",  "KDF input (1-31 hex bytes)"),
