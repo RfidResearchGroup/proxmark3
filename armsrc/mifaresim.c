@@ -793,7 +793,8 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
                     if (cardAUTHSC >= cardMaxSEC) {
                         cardAUTHKEY = AUTHKEYNONE; // not authenticated
                         cardSTATE_TO_IDLE();
-                        if (g_dbglevel >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] Out of range sector %d(0x%02x)", cardAUTHSC, cardAUTHSC);
+                        if (g_dbglevel >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] Out of range sector %d(0x%02x) >= %d(0x%02x)", cardAUTHSC, cardAUTHSC, cardMaxSEC, cardMaxSEC);
+                        LogTrace(uart->output, uart->len, uart->startTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->endTime * 16 - DELAY_AIR2ARM_AS_TAG, uart->parity, true);
                         break;
                     }
 
