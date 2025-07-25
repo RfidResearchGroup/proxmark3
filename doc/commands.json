@@ -5509,10 +5509,11 @@
                 "-y Performs the nested 'reader attack'. This requires preloading nt & nt_enc in emulator memory. Implies -x.",
                 "-e, --emukeys Fill simulator keys from found keys. Requires -x or -y. Implies -i. Simulation will restart automatically.",
                 "--allowkeyb Allow key B even if readable",
+                "--allowover Allow auth attempts out of range for selected MIFARE Classic type",
                 "-v, --verbose Verbose output",
                 "--cve Trigger CVE 2021_0430"
             ],
-            "usage": "hf mf sim [-hixyev] [-u <hex>] [--mini] [--1k] [--2k] [--4k] [--atqa <hex>] [--sak <hex>] [-n <dec> ] [--allowkeyb] [--cve]"
+            "usage": "hf mf sim [-hixyev] [-u <hex>] [--mini] [--1k] [--2k] [--4k] [--atqa <hex>] [--sak <hex>] [-n <dec> ] [--allowkeyb] [--allowover] [--cve]"
         },
         "hf mf staticnested": {
             "command": "hf mf staticnested",
@@ -6037,7 +6038,7 @@
                 "-a, --apdu Show APDU requests and responses",
                 "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
-                "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
+                "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo (deft: 2TDEA)",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
                 "--kdf <none|AN10922|gallagher> Key Derivation Function (KDF)",
                 "-i, --kdfi <hex> KDF input (1-31 hex bytes)",
@@ -6699,7 +6700,7 @@
                 "-a, --apdu Show APDU requests and responses",
                 "-v, --verbose Verbose output",
                 "-n, --keyno <dec> Key number",
-                "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
+                "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo (deft: 2TDEA)",
                 "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
                 "--kdf <none|AN10922|gallagher> Key Derivation Function (KDF)",
                 "-i, --kdfi <hex> KDF input (1-31 hex bytes)",
@@ -13440,6 +13441,6 @@
     "metadata": {
         "commands_extracted": 772,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-07-13T13:53:32"
+        "extracted_on": "2025-07-25T20:28:03"
     }
 }
