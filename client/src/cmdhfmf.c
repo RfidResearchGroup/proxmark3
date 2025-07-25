@@ -4671,7 +4671,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
         arg_lit0("e", "emukeys", "Fill simulator keys from found keys. Requires -x or -y. Implies -i. Simulation will restart automatically."),
         // If access bits show that key B is Readable, any subsequent memory access should be refused.
         arg_lit0(NULL, "allowkeyb", "Allow key B even if readable"),
-        arg_lit0(NULL, "allowover", "Allow auth attempts out of range for selected mifare type"),
+        arg_lit0(NULL, "allowover", "Allow auth attempts out of range for selected MIFARE Classic type"),
         arg_lit0("v", "verbose", "Verbose output"),
         arg_lit0(NULL, "cve", "Trigger CVE 2021_0430"),
         arg_param_end
