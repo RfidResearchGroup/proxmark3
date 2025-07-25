@@ -790,7 +790,7 @@ void Mifare1ksim(uint16_t flags, uint8_t exitAfterNReads, uint8_t *uid, uint16_t
                     if (g_dbglevel >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] KEY %c: %012" PRIx64, (cardAUTHKEY == 0) ? 'A' : 'B', emlGetKey(cardAUTHSC, cardAUTHKEY));
 
                     // sector out of range - do not respond
-                    if (cardAUTHSC >= cardMaxSEC) {
+                    if ((cardAUTHSC >= cardMaxSEC) && (flags & FLAG_MF_ALLOW_OOB_AUTH) == 0) {
                         cardAUTHKEY = AUTHKEYNONE; // not authenticated
                         cardSTATE_TO_IDLE();
                         if (g_dbglevel >= DBG_EXTENDED) Dbprintf("[MFEMUL_WORK] Out of range sector %d(0x%02x) >= %d(0x%02x)", cardAUTHSC, cardAUTHSC, cardMaxSEC, cardMaxSEC);

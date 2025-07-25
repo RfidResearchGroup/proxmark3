@@ -4671,6 +4671,7 @@ static int CmdHF14AMfSim(const char *Cmd) {
         arg_lit0("e", "emukeys", "Fill simulator keys from found keys. Requires -x or -y. Implies -i. Simulation will restart automatically."),
         // If access bits show that key B is Readable, any subsequent memory access should be refused.
         arg_lit0(NULL, "allowkeyb", "Allow key B even if readable"),
+        arg_lit0(NULL, "allowover", "Allow auth attempts out of range for selected mifare type"),
         arg_lit0("v", "verbose", "Verbose output"),
         arg_lit0(NULL, "cve", "Trigger CVE 2021_0430"),
         arg_param_end
@@ -4725,9 +4726,13 @@ static int CmdHF14AMfSim(const char *Cmd) {
         flags |= FLAG_MF_USE_READ_KEYB;
     }
 
-    bool verbose = arg_get_lit(ctx, 14);
+    if (arg_get_lit(ctx, 14)) {
+        flags |= FLAG_MF_ALLOW_OOB_AUTH;
+    }
 
-    if (arg_get_lit(ctx, 15)) {
+    bool verbose = arg_get_lit(ctx, 15);
+
+    if (arg_get_lit(ctx, 16)) {
         flags |= FLAG_CVE21_0430;
     }
     CLIParserFree(ctx);

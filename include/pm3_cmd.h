@@ -872,7 +872,7 @@ typedef struct {
 #define FLAG_NR_AR_ATTACK       0x0400
 // support nested authentication attack
 #define FLAG_NESTED_AUTH_ATTACK 0x0800
-
+#define FLAG_MF_ALLOW_OOB_AUTH  0x1000
 
 #define MODE_SIM_CSN        0
 #define MODE_EXIT_AFTER_MAC 1
