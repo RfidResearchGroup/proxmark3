@@ -10434,7 +10434,7 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08s, sizeof(fkey)) == 0
                    && card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
                    && (blockdata[8] == 0x03 || blockdata[8] == 0x04) && blockdata[15] == 0x91) {
-            PrintAndLogEx(SUCCESS, "Fudan FM11RF08S %02X%02X without static enc nonce", blockdata[8], blockdata[15]);
+            PrintAndLogEx(SUCCESS, "Fudan FM11RF08 %02X%02X with advanced verification method", blockdata[8], blockdata[15]);
             expect_static_enc_nonce = false;
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08s, sizeof(fkey)) == 0
                    && card.sak == 0x08 && memcmp(blockdata + 5, "\x00\x03\x00\x10", 4) == 0
