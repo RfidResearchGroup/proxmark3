@@ -1789,6 +1789,8 @@ static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
     if(!check_last_idm(data, datalen))
         return PM3_EINVARG;
     
+    PrintAndLogEx(HINT, "Area and service code are printed in big endian.");
+    PrintAndLogEx(HINT, "Don't forget to convert to little endian when using hf felica rdbl.");
     PrintAndLogEx(INFO, "┌───────────────────────────────────────────────");
     
     uint8_t flags = FELICA_APPEND_CRC | FELICA_RAW;
