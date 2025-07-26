@@ -1765,64 +1765,100 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+/**
+ * Command parser for rqservice.
+ * @param Cmd input data of the user.
+ * @return client result code.
+ */
 static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
+    /* ── CLI boilerplate (unchanged) ─────────────────────────────── */
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf felica scsvcode",
                   "Dump all existing Area Code and Service Code.\n",
-                  "hf felica scsvcode"
-                 );
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-
+                  "hf felica scsvcode");
+    void *argtable[] = { arg_param_begin, arg_param_end };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
+    /* ── build static part of Search-Service frame ──────────────── */
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0};
+    data[0] = 0x0C;                      /* LEN               */
+    data[1] = 0x0A;                      /* CMD = 0x0A         */
+    uint16_t datalen = 12;               /* LEN + CMD + IDm + cursor */
 
-    uint8_t data[PM3_CMD_DATA_SIZE];
-    memset(data, 0, sizeof(data));
-    data[0] = 0x0C; // Static length
-    data[1] = 0x0A; // Command ID
-
-    uint16_t datalen = 12; // Length (1), Command ID (1), IDm (8), Cursor Node (2)
-    if (check_last_idm(data, datalen) == false) {
+    if(!check_last_idm(data, datalen))
         return PM3_EINVARG;
+    
+    PrintAndLogEx(INFO, "Dumping Service Code and Area Code...\n");
+
+    uint8_t flags = FELICA_APPEND_CRC | FELICA_RAW;
+
+    /* ── traversal state ────────────────────────────────────────── */
+    uint16_t cursor = 0x0000;
+    uint16_t area_end_stack[8] = {0xFFFF};   /* root “end” = 0xFFFF */
+    int      depth = 0;                      /* current stack depth */
+
+    felica_service_dump_response_t resp;
+
+    while(true){
+
+        /* insert cursor LE */
+        data[10] = cursor & 0xFF;
+        data[11] = cursor >> 8;
+        AddCrc(data, datalen);
+
+        if(send_dump_sv_plain(flags, datalen + 2, data, 0,
+                              &resp, false) != PM3_SUCCESS){
+            PrintAndLogEx(ERR, "No response at cursor 0x%04X", cursor);
+            return PM3_ERFTRANS;
+        }
+        if(resp.frame_response.cmd_code[0] != 0x0B){
+            PrintAndLogEx(ERR, "Bad response cmd 0x%02X @ 0x%04X",
+                          resp.frame_response.cmd_code[0], cursor);
+            return PM3_ERFTRANS;
+        }
+
+        uint8_t len = resp.frame_response.length[0];
+        uint16_t node_code = resp.payload[0] | (resp.payload[1] << 8);
+
+        if(node_code == 0xFFFF) break;           /* end-marker */
+
+        /* pop finished areas */
+        while(depth && node_code > area_end_stack[depth]) depth--;
+
+        /* ---------- build pretty prefix & print node -------------- */
+        /* 1. Is this the last child in its parent? */
+        bool last_in_parent = (node_code == area_end_stack[depth]);
+
+        /* 2. Compose prefix string */
+        char prefix[64] = "";
+        for(int i = 1; i < depth; i++) {
+            bool more_siblings = (cursor < area_end_stack[i]);
+            strcat(prefix, more_siblings ? "│   " : "    ");
+        }
+        strcat(prefix, last_in_parent ? "└── " : "├── ");
+
+        /* 3. Print the line */
+        if(len == 0x0E) {                       /* AREA */
+            uint16_t end_code = resp.payload[2] | (resp.payload[3] << 8);
+            PrintAndLogEx(INFO, "%sAREA_%04X", prefix, node_code >> 6);
+
+            if(depth < 7) {                     /* push end */
+                depth++;
+                area_end_stack[depth] = end_code;
+            }
+        } else if (len == 0x0C) {                                /* SERVICE */
+            PrintAndLogEx(INFO, "%ssvc_%04X", prefix, node_code);
+        } else{
+            PrintAndLogEx(ERR, "Unexpected length 0x%02X @ 0x%04X",
+                           len, cursor);
+            return PM3_ERFTRANS;
+        }
+        cursor++;
+        if(cursor == 0) break; /* overflow safety */
     }
 
-    uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
-
-    // for each cursor stuff RFU
-    data[10] = 0x00; // Cursor Node
-    data[11] = 0x00; // Cursor Node
-
-    AddCrc(data, datalen);
-
-    felica_service_dump_response_t dump_sv_resp;
-    bool is_area = false;
-
-            if ((send_dump_sv_plain(flags, datalen + 2, data, 0, &dump_sv_resp, is_area) == PM3_SUCCESS)) {
-                if (dump_sv_resp.frame_response.cmd_code[0] != 0x0B) {
-                    PrintAndLogEx(ERR, "Return command wrong. \nExpected 0x0B, got 0x%02X", dump_sv_resp.frame_response.cmd_code[0]);
-                    return PM3_ERFTRANS;
-                } else {
-                    if (dump_sv_resp.frame_response.length[0] == 0x0C) {
-                        // service code read
-                        PrintAndLogEx(SUCCESS, "Service Code Read 0x%02X%02X", dump_sv_resp.payload[0], dump_sv_resp.payload[1]);
-                    } else if (dump_sv_resp.frame_response.length[0] == 0x0E) {
-                        // service code read with area (this current parsing is wrong.)
-                        PrintAndLogEx(SUCCESS, "Service Code Read 0x%02X%02X Area 0x%02X%02X", dump_sv_resp.payload[0], dump_sv_resp.payload[1], dump_sv_resp.payload[2], dump_sv_resp.payload[3]);
-                    } else {
-                        PrintAndLogEx(ERR, "Something went wrong, check your card");
-                        return PM3_ERFTRANS;
-
-                    }
-                }
-            } else {
-                PrintAndLogEx(ERR, "Something went wrong, check your card");
-                return PM3_ERFTRANS;
-            }
-
+    PrintAndLogEx(SUCCESS, "Service code and area dump complete.");
     return PM3_SUCCESS;
 }
 
@@ -2292,7 +2328,7 @@ static command_t CommandTable[] = {
     //{"dump",          CmdHFFelicaDump,                    IfPm3Felica,     "Wait for and try dumping FeliCa"},
     {"rqservice",       CmdHFFelicaRequestService,        IfPm3Felica,     "verify the existence of Area and Service, and to acquire Key Version."},
     {"rqresponse",      CmdHFFelicaRequestResponse,       IfPm3Felica,     "verify the existence of a card and its Mode."},
-    {"scsvcode",        CmdHFFelicaNotImplementedYet,     IfPm3Felica,     "acquire Area Code and Service Code."},
+    {"scsvcode",        CmdHFFelicaDumpServiceArea,       IfPm3Felica,     "acquire Area Code and Service Code."},
     {"rqsyscode",       CmdHFFelicaRequestSystemCode,     IfPm3Felica,     "acquire System Code registered to the card."},
     {"auth1",           CmdHFFelicaAuthentication1,       IfPm3Felica,     "authenticate a card. Start mutual authentication with Auth1"},
     {"auth2",           CmdHFFelicaAuthentication2,       IfPm3Felica,     "allow a card to authenticate a Reader/Writer. Complete mutual authentication"},
