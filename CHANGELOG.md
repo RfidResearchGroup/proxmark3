@@ -20,6 +20,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Changed `mem load` - now handles UL-C and UL-AES dictionary files (@iceman1001)
 - Changed `hf mfu sim` - now support UL-C simulation (@iceman1001)
 - Added `!` - run system commands from inside the client. Potentially dangerous if running client as SUDO, SU, ROOT (@iceman1001)
+- Implemented `hf felica scsvcode` - now dumps all service and area codes. (@zinongli)
 
 ## [Daddy Iceman.4.20469][2025-06-16]
 - Fixed edge case in fm11rf08s key recovery tools (@doegox)
