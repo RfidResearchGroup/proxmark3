@@ -532,6 +532,28 @@ int send_rd_plain(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, 
 }
 
 /**
+ * Sends a dump_service frame to the pm3 and prints response.
+ * @param flags to use for pm3 communication.
+ * @param datalen frame length.
+ * @param data frame to be send.
+ * @param verbose display additional output.
+ * @param dump_sv_resp frame in which the response will be saved.
+ * @param is_area true if the service is an area, false if it is a service.
+ * @return success if response was received.
+ */
+int send_dump_sv_plain(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, felica_service_dump_response_t *dump_sv_resp, bool is_area) {
+    clear_and_send_command(flags, datalen, data, verbose);
+    PacketResponseNG resp;
+    if (waitCmdFelica(false, &resp, verbose) == false) {
+        PrintAndLogEx(ERR, "No response from card");
+        return PM3_ERFTRANS;
+    } else {
+        memcpy(dump_sv_resp, (felica_service_dump_response_t *)resp.data.asBytes, sizeof(felica_service_dump_response_t));
+        return PM3_SUCCESS;
+    }
+}
+
+/**
  * Checks if last known card can be added to data and adds it if possible.
  * @param custom_IDm
  * @param data
@@ -1743,18 +1765,64 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHFFelicaNotImplementedYet(const char *Cmd) {
+static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf felica scsvcode",
-                  "Feature not implemented yet.  Feel free to contribute!",
+                  "Dump all existing Area Code and Service Code.\n",
                   "hf felica scsvcode"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_param_end
     };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
+
+
+    uint8_t data[PM3_CMD_DATA_SIZE];
+    memset(data, 0, sizeof(data));
+    data[0] = 0x0C; // Static length
+    data[1] = 0x0A; // Command ID
+
+    uint16_t datalen = 12; // Length (1), Command ID (1), IDm (8), Cursor Node (2)
+    if (check_last_idm(data, datalen) == false) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
+
+    // for each cursor stuff RFU
+    data[10] = 0x00; // Cursor Node
+    data[11] = 0x00; // Cursor Node
+
+    AddCrc(data, datalen);
+
+    felica_service_dump_response_t dump_sv_resp;
+    bool is_area = false;
+
+            if ((send_dump_sv_plain(flags, datalen + 2, data, 0, &dump_sv_resp, is_area) == PM3_SUCCESS)) {
+                if (dump_sv_resp.frame_response.cmd_code[0] != 0x0B) {
+                    PrintAndLogEx(ERR, "Return command wrong. \nExpected 0x0B, got 0x%02X", dump_sv_resp.frame_response.cmd_code[0]);
+                    return PM3_ERFTRANS;
+                } else {
+                    if (dump_sv_resp.frame_response.length[0] == 0x0C) {
+                        // service code read
+                        PrintAndLogEx(SUCCESS, "Service Code Read 0x%02X%02X", dump_sv_resp.payload[0], dump_sv_resp.payload[1]);
+                    } else if (dump_sv_resp.frame_response.length[0] == 0x0E) {
+                        // service code read with area (this current parsing is wrong.)
+                        PrintAndLogEx(SUCCESS, "Service Code Read 0x%02X%02X Area 0x%02X%02X", dump_sv_resp.payload[0], dump_sv_resp.payload[1], dump_sv_resp.payload[2], dump_sv_resp.payload[3]);
+                    } else {
+                        PrintAndLogEx(ERR, "Something went wrong, check your card");
+                        return PM3_ERFTRANS;
+
+                    }
+                }
+            } else {
+                PrintAndLogEx(ERR, "Something went wrong, check your card");
+                return PM3_ERFTRANS;
+            }
+
     return PM3_SUCCESS;
 }
 

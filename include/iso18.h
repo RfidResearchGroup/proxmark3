@@ -124,4 +124,9 @@ typedef struct {
     uint8_t PMi[8];
 } PACKED felica_auth2_response_t;
 
+typedef struct {
+    felica_frame_response_t frame_response;
+    uint8_t payload[4];
+} PACKED felica_service_dump_response_t;
+
 #endif // _ISO18_H_
