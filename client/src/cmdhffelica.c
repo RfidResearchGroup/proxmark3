@@ -47,10 +47,10 @@ static void print_status_flag1_interpretation(void) {
     PrintAndLogEx(INFO, "----+--------------------------------------------------------------------------------------------------------------------");
     PrintAndLogEx(INFO, " 00 | Indicates the successful completion of a command.");
     PrintAndLogEx(INFO, " FF | If an error occurs during the processing of a command that includes no list in the command packet, \n"
-                  "    | or if an error occurs independently of any list, the card returns a response by setting FFh to Status Flag1.");
+                        "    | or if an error occurs independently of any list, the card returns a response by setting FFh to Status Flag1.");
     PrintAndLogEx(INFO, " XX | If an error occurs while processing a command that includes Service Code List or Block List \n"
-                  "    | in the command packet, the card returns a response by setting a number in the list to Status Flag1,\n"
-                  "    | indicating the location of the error.");
+                        "    | in the command packet, the card returns a response by setting a number in the list to Status Flag1,\n"
+                        "    | indicating the location of the error.");
     PrintAndLogEx(INFO, "----+--------------------------------------------------------------------------------------------------------------------");
 }
 
@@ -59,28 +59,28 @@ static void print_status_flag2_interpration(void) {
     PrintAndLogEx(INFO, "----+--------------------------------------------------------------------------------------------------------------------");
     PrintAndLogEx(INFO, " 00 | Indicates the successful completion of a command.");
     PrintAndLogEx(INFO, " 01 | The calculated result is either less than zero when the purse data is decremented, or exceeds 4\n"
-                  "    | Bytes when the purse data is incremented.");
+                        "    | Bytes when the purse data is incremented.");
     PrintAndLogEx(INFO, " 02 | The specified data exceeds the value of cashback data at cashback of purse.");
     PrintAndLogEx(INFO, " 70 | Memory error (fatal error).");
     PrintAndLogEx(INFO, " 71 | The number of memory rewrites exceeds the upper limit (this is only a warning; data writing is performed as normal).\n"
-                  "    | The maximum number of rewrites can differ, depending on the product being used.\n"
-                  "    | In addition, Status Flag1 is either 00h or FFh depending on the product being used.");
+                        "    | The maximum number of rewrites can differ, depending on the product being used.\n"
+                        "    | In addition, Status Flag1 is either 00h or FFh depending on the product being used.");
 
     PrintAndLogEx(INFO, " A1 | Illegal Number of Service| Number of Service or Number of Node specified by the command \n"
-                  "    | falls outside the range of the prescribed value.");
+                        "    | falls outside the range of the prescribed value.");
     PrintAndLogEx(INFO, " A2 | Illegal command packet (specified Number of Block) : Number of Block specified by the \n"
-                  "    | command falls outside the range of the prescribed values for the product.");
+                        "    | command falls outside the range of the prescribed values for the product.");
     PrintAndLogEx(INFO, " A3 | Illegal Block List (specified order of Service) : Service Code List Order specified by \n"
-                  "    | Block List Element falls outside the Number of Service specified by the command \n"
-                  "    | (or the Number of Service specified at the times of mutual authentication).");
+                        "    | Block List Element falls outside the Number of Service specified by the command \n"
+                        "    | (or the Number of Service specified at the times of mutual authentication).");
     PrintAndLogEx(INFO, " A4 | Illegal Service type : Area Attribute specified by the command or Service Attribute of Service Code is incorrect.");
     PrintAndLogEx(INFO, " A5 | Access is not allowed : Area or Service specified by the command cannot be accessed.\n"
-                  "    | The parameter specified by the command does not satisfy the conditions for success.");
+                        "    | The parameter specified by the command does not satisfy the conditions for success.");
     PrintAndLogEx(INFO, " A6 | Illegal Service Code List : Target to be accessed, identified by Service Code List Order, specified by Block\n"
-                  "    | List Element does not exist. Or, Node specified by Node Code List does not exist.");
+                        "    | List Element does not exist. Or, Node specified by Node Code List does not exist.");
     PrintAndLogEx(INFO, " A7 | Illegal Block List (Access Mode) : Access Mode specified by Block List Element is incorrect.");
     PrintAndLogEx(INFO, " A8 | Illegal Block Number Block Number (access to the specified data is inhibited) :\n"
-                  "    | specified by Block List Element exceeds the number of Blocks assigned to Service.");
+                        "    | specified by Block List Element exceeds the number of Blocks assigned to Service.");
     PrintAndLogEx(INFO, " A9 | Data write failure : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " AA | Key-change failure : Key change failed.");
     PrintAndLogEx(INFO, " AB | Illegal Package Parity or illegal Package MAC : This is the error that occurs in issuance commands.");
@@ -88,7 +88,7 @@ static void print_status_flag2_interpration(void) {
     PrintAndLogEx(INFO, " AD | Service exists already : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " AE | Illegal System Code : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " AF | Too many simultaneous cyclic write operations : Number of simultaneous write Blocks\n"
-                  "    | specified by the command to Cyclic Service exceeds the number of Blocks assigned to Service.");
+                        "    | specified by the command to Cyclic Service exceeds the number of Blocks assigned to Service.");
     PrintAndLogEx(INFO, " C0 | Illegal Package Identifier : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " C1 | Discrepancy of parameters inside and outside Package : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " C2 | Command is disabled already : This is the error that occurs in issuance commands.");
@@ -112,16 +112,16 @@ static void print_number_of_service_constraints(void) {
 
 static void print_number_of_block_constraints(void) {
     PrintAndLogEx(INFO, "    - Number of Block: shall be less than or equal to the maximum number of Blocks that can be read simultaneously.\n"
-                  "            The maximum number of Blocks that can be read simultaneously can differ, depending on the product being used.\n"
-                  "            Use as default 01");
+                        "            The maximum number of Blocks that can be read simultaneously can differ, depending on the product being used.\n"
+                        "            Use as default 01");
 }
 
 static void print_service_code_list_constraints(void) {
     PrintAndLogEx(INFO, "    - Service Code List: For Service Code List, only Service Code existing in the product shall be specified:");
     PrintAndLogEx(INFO, "        - Even when Service Code exists in the product, Service Code not referenced from Block List shall not \n"
-                  "          be specified to Service Code List.");
+                        "          be specified to Service Code List.");
     PrintAndLogEx(INFO, "        - For existence or nonexistence of Service in a product, please check using the Request Service \n"
-                  "          (or Request Service v2) command.");
+                        "          (or Request Service v2) command.");
 }
 
 /*
@@ -527,6 +527,28 @@ int send_rd_plain(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, 
     } else {
         memcpy(rd_noCry_resp, (felica_read_without_encryption_response_t *)resp.data.asBytes, sizeof(felica_read_without_encryption_response_t));
         rd_noCry_resp->block_element_number[0] = data[15];
+        return PM3_SUCCESS;
+    }
+}
+
+/**
+ * Sends a dump_service frame to the pm3 and prints response.
+ * @param flags to use for pm3 communication.
+ * @param datalen frame length.
+ * @param data frame to be send.
+ * @param verbose display additional output.
+ * @param dump_sv_resp frame in which the response will be saved.
+ * @param is_area true if the service is an area, false if it is a service.
+ * @return success if response was received.
+ */
+int send_dump_sv_plain(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, felica_service_dump_response_t *dump_sv_resp, bool is_area) {
+    clear_and_send_command(flags, datalen, data, verbose);
+    PacketResponseNG resp;
+    if (waitCmdFelica(false, &resp, verbose) == false) {
+        PrintAndLogEx(ERR, "No response from card");
+        return PM3_ERFTRANS;
+    } else {
+        memcpy(dump_sv_resp, (felica_service_dump_response_t *)resp.data.asBytes, sizeof(felica_service_dump_response_t));
         return PM3_SUCCESS;
     }
 }
@@ -1743,18 +1765,119 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHFFelicaNotImplementedYet(const char *Cmd) {
+/**
+ * Command parser for rqservice.
+ * @param Cmd input data of the user.
+ * @return client result code.
+ */
+static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
+    /* ── CLI boilerplate (unchanged) ─────────────────────────────── */
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf felica scsvcode",
-                  "Feature not implemented yet.  Feel free to contribute!",
-                  "hf felica scsvcode"
-                 );
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, false);
+                  "Dump all existing Area Code and Service Code.\n",
+                  "hf felica scsvcode");
+    void *argtable[] = { arg_param_begin, arg_param_end };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
+
+    /* ── build static part of Search-Service frame ──────────────── */
+    uint8_t data[PM3_CMD_DATA_SIZE] = {0};
+    data[0] = 0x0C;                      /* LEN               */
+    data[1] = 0x0A;                      /* CMD = 0x0A         */
+    uint16_t datalen = 12;               /* LEN + CMD + IDm + cursor */
+
+    if (!check_last_idm(data, datalen))
+        return PM3_EINVARG;
+
+    PrintAndLogEx(HINT, "Area and service code are printed in big endian.");
+    PrintAndLogEx(HINT, "Don't forget to convert to little endian when using hf felica rdbl.");
+    PrintAndLogEx(INFO, "┌───────────────────────────────────────────────");
+
+    uint8_t flags = FELICA_APPEND_CRC | FELICA_RAW;
+
+    /* ── traversal state ────────────────────────────────────────── */
+    uint16_t cursor = 0x0000;
+    uint16_t area_end_stack[8] = {0xFFFF};   /* root “end” = 0xFFFF */
+    int      depth = 0;                      /* current stack depth */
+
+    felica_service_dump_response_t resp;
+
+    while (true) {
+
+        /* insert cursor LE */
+        data[10] = cursor & 0xFF;
+        data[11] = cursor >> 8;
+        AddCrc(data, datalen);
+
+        if (send_dump_sv_plain(flags, datalen + 2, data, 0,
+                               &resp, false) != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "No response at cursor 0x%04X", cursor);
+            return PM3_ERFTRANS;
+        }
+        if (resp.frame_response.cmd_code[0] != 0x0B) {
+            PrintAndLogEx(FAILED, "Bad response cmd 0x%02X @ 0x%04X.",
+                          resp.frame_response.cmd_code[0], cursor);
+            PrintAndLogEx(INFO, "This is a normal signal issue. Please try again.");
+            PrintAndLogEx(INFO, "If the issue persists, move the card around and check signal strength. FeliCa can be hard to keep in field.");
+            return PM3_ERFTRANS;
+        }
+
+        uint8_t len = resp.frame_response.length[0];
+        uint16_t node_code = resp.payload[0] | (resp.payload[1] << 8);
+
+        if (node_code == 0xFFFF) break;          /* end-marker */
+
+        /* pop finished areas */
+        while (depth && node_code > area_end_stack[depth]) depth--;
+
+
+        /* ----- compose nice prefix ------------------------------------ */
+        char prefix[64] = "";
+        for (int i = 1; i < depth; i++) {
+            bool more_siblings = (cursor < area_end_stack[i]);
+            strcat(prefix, more_siblings ? "│   " : "    ");
+        }
+        /* decide glyph for this line (areas always use └──) */
+        const char *line_glyph = "├── ";
+        strcat(prefix, line_glyph);
+
+        /* ----- print --------------------------------------------------- */
+        if (len == 0x0E) {                          /* AREA node */
+            uint16_t end_code = resp.payload[2] | (resp.payload[3] << 8);
+            PrintAndLogEx(INFO, "%sAREA_%04X", prefix, node_code >> 6);
+
+            if (depth < 7) {
+                area_end_stack[++depth] = end_code;
+            }
+        } else if (len == 0x0C) {                                /* SERVICE */
+            PrintAndLogEx(INFO, "%ssvc_%04X", prefix, node_code);
+        } else {
+            PrintAndLogEx(FAILED, "Unexpected length 0x%02X @ 0x%04X",
+                          len, cursor);
+            return PM3_ERFTRANS;
+        }
+        cursor++;
+        if (cursor == 0) break; /* overflow safety */
+    }
+
+    /* draw closing bar └─┴─... based on final depth */
+    char bar[128];                 /* large enough for depth≤7 */
+    size_t pos = 0;
+
+    /* leading corner */
+    pos += snprintf(bar + pos, sizeof(bar) - pos, "└");
+
+    /* one segment per level-1 */
+    for (int i = 0; i < depth - 1 && pos < sizeof(bar); i++)
+        pos += snprintf(bar + pos, sizeof(bar) - pos, "───┴");
+
+    /* tail */
+    snprintf(bar + pos, sizeof(bar) - pos, "───────────────────────");
+
+    PrintAndLogEx(INFO, "%s", bar);
+
+
+    PrintAndLogEx(SUCCESS, "Service code and area dump complete.");
     return PM3_SUCCESS;
 }
 
@@ -2224,7 +2347,7 @@ static command_t CommandTable[] = {
     //{"dump",          CmdHFFelicaDump,                    IfPm3Felica,     "Wait for and try dumping FeliCa"},
     {"rqservice",       CmdHFFelicaRequestService,        IfPm3Felica,     "verify the existence of Area and Service, and to acquire Key Version."},
     {"rqresponse",      CmdHFFelicaRequestResponse,       IfPm3Felica,     "verify the existence of a card and its Mode."},
-    {"scsvcode",        CmdHFFelicaNotImplementedYet,     IfPm3Felica,     "acquire Area Code and Service Code."},
+    {"scsvcode",        CmdHFFelicaDumpServiceArea,       IfPm3Felica,     "acquire Area Code and Service Code."},
     {"rqsyscode",       CmdHFFelicaRequestSystemCode,     IfPm3Felica,     "acquire System Code registered to the card."},
     {"auth1",           CmdHFFelicaAuthentication1,       IfPm3Felica,     "authenticate a card. Start mutual authentication with Auth1"},
     {"auth2",           CmdHFFelicaAuthentication2,       IfPm3Felica,     "allow a card to authenticate a Reader/Writer. Complete mutual authentication"},
