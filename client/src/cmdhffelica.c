@@ -1789,8 +1789,8 @@ static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
     if(!check_last_idm(data, datalen))
         return PM3_EINVARG;
     
-    PrintAndLogEx(INFO, "Dumping Service Code and Area Code...\n");
-
+    PrintAndLogEx(INFO, "┌───────────────────────────────────────────────");
+    
     uint8_t flags = FELICA_APPEND_CRC | FELICA_RAW;
 
     /* ── traversal state ────────────────────────────────────────── */
@@ -1809,12 +1809,14 @@ static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
 
         if(send_dump_sv_plain(flags, datalen + 2, data, 0,
                               &resp, false) != PM3_SUCCESS){
-            PrintAndLogEx(ERR, "No response at cursor 0x%04X", cursor);
+            PrintAndLogEx(FAILED, "No response at cursor 0x%04X", cursor);
             return PM3_ERFTRANS;
         }
         if(resp.frame_response.cmd_code[0] != 0x0B){
-            PrintAndLogEx(ERR, "Bad response cmd 0x%02X @ 0x%04X",
+            PrintAndLogEx(FAILED, "Bad response cmd 0x%02X @ 0x%04X.",
                           resp.frame_response.cmd_code[0], cursor);
+            PrintAndLogEx(INFO, "This is a normal signal issue. Please try again.");
+            PrintAndLogEx(INFO, "If the issue persists, move the card around and check signal strength. FeliCa can be hard to keep in field.");
             return PM3_ERFTRANS;
         }
 
@@ -1826,37 +1828,52 @@ static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
         /* pop finished areas */
         while(depth && node_code > area_end_stack[depth]) depth--;
 
-        /* ---------- build pretty prefix & print node -------------- */
-        /* 1. Is this the last child in its parent? */
-        bool last_in_parent = (node_code == area_end_stack[depth]);
-
-        /* 2. Compose prefix string */
+        
+        /* ----- compose nice prefix ------------------------------------ */
         char prefix[64] = "";
-        for(int i = 1; i < depth; i++) {
+        for (int i = 1; i < depth; i++) {
             bool more_siblings = (cursor < area_end_stack[i]);
             strcat(prefix, more_siblings ? "│   " : "    ");
         }
-        strcat(prefix, last_in_parent ? "└── " : "├── ");
+        /* decide glyph for this line (areas always use └──) */
+        const char *line_glyph = "├── ";
+        strcat(prefix, line_glyph);
 
-        /* 3. Print the line */
-        if(len == 0x0E) {                       /* AREA */
+        /* ----- print --------------------------------------------------- */
+        if (len == 0x0E) {                          /* AREA node */
             uint16_t end_code = resp.payload[2] | (resp.payload[3] << 8);
             PrintAndLogEx(INFO, "%sAREA_%04X", prefix, node_code >> 6);
 
-            if(depth < 7) {                     /* push end */
-                depth++;
-                area_end_stack[depth] = end_code;
+            if (depth < 7) { 
+                area_end_stack[++depth] = end_code; 
             }
         } else if (len == 0x0C) {                                /* SERVICE */
             PrintAndLogEx(INFO, "%ssvc_%04X", prefix, node_code);
         } else{
-            PrintAndLogEx(ERR, "Unexpected length 0x%02X @ 0x%04X",
+            PrintAndLogEx(FAILED, "Unexpected length 0x%02X @ 0x%04X",
                            len, cursor);
             return PM3_ERFTRANS;
         }
         cursor++;
         if(cursor == 0) break; /* overflow safety */
     }
+
+    /* draw closing bar └─┴─... based on final depth */
+    char bar[128];                 /* large enough for depth≤7 */
+    size_t pos = 0;
+
+    /* leading corner */
+    pos += snprintf(bar + pos, sizeof(bar) - pos, "└");
+
+    /* one segment per level-1 */
+    for(int i = 0; i < depth - 1 && pos < sizeof(bar); i++)
+        pos += snprintf(bar + pos, sizeof(bar) - pos, "───┴");
+
+    /* tail */
+    snprintf(bar + pos, sizeof(bar) - pos, "───────────────────────");
+
+    PrintAndLogEx(INFO, "%s", bar);
+
 
     PrintAndLogEx(SUCCESS, "Service code and area dump complete.");
     return PM3_SUCCESS;
