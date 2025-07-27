@@ -338,6 +338,7 @@ FRA_OrganizationalAuthority_Contract_Provider = {
     },
     0x912: {
         3: InterticHelper('Le Havre', 'Lia / Transdev', Describe_Usage_1_1),
+        29: InterticHelper('Caen', 'Twisto / RATP', Describe_Usage_2),
         35: InterticHelper('Cherbourg-en-Cotentin', 'Cap Cotentin / Transdev'),
     },
     0x913: {
