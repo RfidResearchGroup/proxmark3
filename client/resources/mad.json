@@ -4131,6 +4131,13 @@
         "system_integrator": "HID Corporation"
     },
     {
+        "application": "Access Control (SIO Elite)",
+        "company": "HID Global",
+        "mad": "0x3D05",
+        "service_provider": "HID Corporation",
+        "system_integrator": "HID Corporation"
+    },
+    {
         "application": "City transport, prepaid ticket, cardholder, servicespass",
         "company": "Ridango AS",
         "mad": "0x3C56",
