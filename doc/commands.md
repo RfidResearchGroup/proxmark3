@@ -1344,6 +1344,7 @@ Check column "offline" for their availability.
 |`lf t55xx restore       `|N       |`Restore T55xx card Page 0 / Page 1 blocks`
 |`lf t55xx trace         `|Y       |`Show T55x7 traceability data (page 1/ blk 0-1)`
 |`lf t55xx wakeup        `|N       |`Send AOR wakeup command`
+|`lf t55xx view          `|Y       |`Display content from tag dump file`
 |`lf t55xx write         `|N       |`Write T55xx block data`
 |`lf t55xx bruteforce    `|N       |`Simple bruteforce attack to find password`
 |`lf t55xx chk           `|N       |`Check passwords`

@@ -796,6 +796,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "lf t55xx restore" },
     { 1, "lf t55xx trace" },
     { 0, "lf t55xx wakeup" },
+    { 1, "lf t55xx view" },
     { 0, "lf t55xx write" },
     { 0, "lf t55xx bruteforce" },
     { 0, "lf t55xx chk" },

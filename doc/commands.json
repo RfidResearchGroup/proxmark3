@@ -2854,7 +2854,7 @@
         },
         "hf felica scsvcode": {
             "command": "hf felica scsvcode",
-            "description": "Feature not implemented yet. Feel free to contribute!",
+            "description": "Dump all existing Area Code and Service Code.",
             "notes": [
                 "hf felica scsvcode"
             ],
@@ -11648,7 +11648,7 @@
         },
         "lf t55xx help": {
             "command": "lf t55xx help",
-            "description": "----------- ---------------------------- notice ----------------------------- Remember to run `lf t55xx detect` first whenever a new card is placed on the Proxmark3 or the config block changed. help This help ----------- --------------------- operations --------------------- config Set/Get T55XX configuration (modulation, inverted, offset, rate) detect Try detecting the tag modulation from reading the configuration block info Show T55x7 configuration data (page 0/ blk 0) trace Show T55x7 traceability data (page 1/ blk 0-1) ----------- --------------------- recovery --------------------- sniff Attempt to recover T55xx commands from sample buffer --------------------------------------------------------------------------------------- lf t55xx clonehelp available offline: no Display a list of available commands for cloning specific techs on T5xx tags",
+            "description": "----------- ---------------------------- notice ----------------------------- Remember to run `lf t55xx detect` first whenever a new card is placed on the Proxmark3 or the config block changed. help This help ----------- --------------------- operations --------------------- config Set/Get T55XX configuration (modulation, inverted, offset, rate) detect Try detecting the tag modulation from reading the configuration block info Show T55x7 configuration data (page 0/ blk 0) trace Show T55x7 traceability data (page 1/ blk 0-1) view Display content from tag dump file ----------- --------------------- recovery --------------------- sniff Attempt to recover T55xx commands from sample buffer --------------------------------------------------------------------------------------- lf t55xx clonehelp available offline: no Display a list of available commands for cloning specific techs on T5xx tags",
             "notes": [
                 "lf t55xx clonehelp"
             ],
@@ -11842,6 +11842,20 @@
                 "--r3 downlink - 1 of 4 coding reference"
             ],
             "usage": "lf t55xx trace [-h1] [--r0] [--r1] [--r2] [--r3]"
+        },
+        "lf t55xx view": {
+            "command": "lf t55xx view",
+            "description": "Print a T55xx dump file (bin/eml/json)",
+            "notes": [
+                "lf t55xx view -f lf-t55xx-00000000-11111111-22222222-33333333-dump.bin"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> Specify a filename for dump file",
+                "-v, --verbose verbose output"
+            ],
+            "usage": "lf t55xx view [-hv] -f <fn>"
         },
         "lf t55xx wakeup": {
             "command": "lf t55xx wakeup",
@@ -13439,8 +13453,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 772,
+        "commands_extracted": 773,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-07-25T20:28:03"
+        "extracted_on": "2025-07-28T13:42:15"
     }
 }

@@ -4694,6 +4694,74 @@ static int CmdT55xxSniff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdT55xxView(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf t55xx view",
+                  "Print a T55xx dump file (bin/eml/json)\n",
+                  "lf t55xx view -f lf-t55xx-00000000-11111111-22222222-33333333-dump.bin"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str1("f", "file", "<fn>", "Specify a filename for dump file"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE];
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    // bool verbose = arg_get_lit(ctx, 2);
+    CLIParserFree(ctx);
+
+    if (fnlen == 0) {
+        PrintAndLogEx(ERR, "Must specify a filename");
+        return PM3_EINVARG;
+    }
+
+    // read dump file
+    uint32_t *dump = NULL;
+    size_t bytes_read = 0;
+    int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (T55x7_BLOCK_COUNT * 4));
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (bytes_read != (T55x7_BLOCK_COUNT * 4)) {
+        free(dump);
+        PrintAndLogEx(FAILED, "wrong length of dump file. Expected 48 bytes, got %zu", bytes_read);
+        return PM3_EFILE;
+    }
+
+
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(SUCCESS, "       " _CYAN_("Page 0"));
+    PrintAndLogEx(SUCCESS, "----+----------+-------");
+    PrintAndLogEx(SUCCESS, "blk | hex data | ascii");
+    PrintAndLogEx(SUCCESS, "----+----------+-------");
+
+    uint32_t *pd = dump;
+    uint8_t tmp[4] = {0};
+    for (uint8_t i = 0; i < 8; ++i) {
+        Uint4byteToMemLe(tmp, *pd);
+        PrintAndLogEx(SUCCESS, " %02d | %s | %s", i, sprint_hex_inrow(tmp, sizeof(tmp)), sprint_ascii(tmp, 4));
+        pd++;
+    }
+    PrintAndLogEx(INFO, "");
+    PrintAndLogEx(SUCCESS, "       " _CYAN_("Page 1"));
+    PrintAndLogEx(SUCCESS, "----+----------+-------");
+    PrintAndLogEx(SUCCESS, "blk | hex data | ascii");
+    PrintAndLogEx(SUCCESS, "----+----------+-------");
+    for (uint8_t i = 0; i < 4; i++) {
+        Uint4byteToMemLe(tmp, *pd);
+        PrintAndLogEx(SUCCESS, " %02d | %s | %s", i, sprint_hex_inrow(tmp, sizeof(tmp)), sprint_ascii(tmp, 4));
+        pd++;
+    }
+    PrintAndLogEx(NORMAL, "");
+    free(dump);
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"-----------",  CmdHelp,                 AlwaysAvailable, "---------------------------- " _CYAN_("notice") " -----------------------------"},
     {"",             CmdHelp,                 AlwaysAvailable, "Remember to run `" _YELLOW_("lf t55xx detect") "` first whenever a new card"},
@@ -4714,6 +4782,7 @@ static command_t CommandTable[] = {
     {"restore",      CmdT55xxRestore,         IfPm3Lf,         "Restore T55xx card Page 0 / Page 1 blocks"},
     {"trace",        CmdT55xxReadTrace,       AlwaysAvailable, "Show T55x7 traceability data (page 1/ blk 0-1)"},
     {"wakeup",       CmdT55xxWakeUp,          IfPm3Lf,         "Send AOR wakeup command"},
+    {"view",         CmdT55xxView,            AlwaysAvailable, "Display content from tag dump file"},
     {"write",        CmdT55xxWriteBlock,      IfPm3Lf,         "Write T55xx block data"},
     {"-----------",  CmdHelp,                 AlwaysAvailable, "--------------------- " _CYAN_("recovery") " ---------------------"},
     {"bruteforce",   CmdT55xxBruteForce,      IfPm3Lf,         "Simple bruteforce attack to find password"},

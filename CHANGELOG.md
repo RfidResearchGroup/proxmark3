@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `lf t55xx view` - now viewing of T55XX dump files is possible (@iceman1001)
+- Fixed `lf indala cone` - now writing the right bits when using `--fc` and `--cn`
 - Changed readline hack logic for async dbg msg to be ready for readline 8.3 (@doegox)
 - Improved To avoid conflicts with ModemManager on Linux, is recommended to masking the service (@grugnoymeme)
 - Changed `data crypto` - now also handles AES-256 (@iceman1001)
@@ -21,7 +23,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Changed `hf mfu sim` - now support UL-C simulation (@iceman1001)
 - Added `!` - run system commands from inside the client. Potentially dangerous if running client as SUDO, SU, ROOT (@iceman1001)
 - Implemented `hf felica scsvcode` - now dumps all service and area codes. (@zinongli)
-- Fixed `lf indala cone` - now writing the right bits when using `--fc` and `--cn`
+
 
 ## [Daddy Iceman.4.20469][2025-06-16]
 - Fixed edge case in fm11rf08s key recovery tools (@doegox)
