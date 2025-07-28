@@ -1163,14 +1163,21 @@ int getIndalaBits(uint8_t fc, uint16_t cn, uint8_t *bits) {
     chk += ((cn >> 2) & 1); //y14 == 89 - 30 = 59
     chk += (cn & 1); //y16 == 71 - 30 = 41
 
-    if ((chk % 2) == 0) { // If the sum is even, checksum is '10' (binary) = 2.
+    if ((chk & 1) == 0) { // If the sum is even, checksum is '10' (binary) = 2.
         bits[62] = 1;
         bits[63] = 0;
     } else {              // If the sum is odd, checksum is '01' (binary) = 1.
         bits[62] = 0;
         bits[63] = 1;
     }
+    
+    // add parity
+    // bits[34] = 1; // p1  64 - 30 = 34
+    // bits[38] = 1; // p2  68 - 30 = 38
 
+    // 92 = 62
+    // 93 = 63
+    
     bits[34] = 0; // parity for odd bits
     bits[38] = 0; // parity for even bits
     uint8_t p1 = 1;
