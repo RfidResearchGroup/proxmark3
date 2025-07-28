@@ -2245,11 +2245,11 @@ int DesfireValueFileOperations(DesfireContext_t *dctx, uint8_t fid, uint8_t oper
         PrintAndLogEx(INFO, "MAC mode failed with length error, retrying with plain mode");
         DesfireCommunicationMode original_mode = dctx->commMode;
         dctx->commMode = DCMPlain;
-        
+
         memset(resp, 0, sizeof(resp));
         resplen = 0;
         res = DesfireCommand(dctx, operation, data, datalen, resp, &resplen, -1);
-        
+
         // Restore original mode for future commands
         dctx->commMode = original_mode;
     }
