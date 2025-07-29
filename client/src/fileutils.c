@@ -977,7 +977,7 @@ int createMfcKeyDump(const char *preferredName, uint8_t sectorsCnt, const sector
     }
 
     for (int i = 0; i < sectorsCnt; i++) {
-        if (e_sector[i].foundKey[0])
+        if (e_sector[i].foundKey[1])
             num_to_bytes(e_sector[i].Key[1], sizeof(tmp), tmp);
         else
             memcpy(tmp, empty, sizeof(tmp));
