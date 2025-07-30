@@ -23,6 +23,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Changed `hf mfu sim` - now support UL-C simulation (@iceman1001)
 - Added `!` - run system commands from inside the client. Potentially dangerous if running client as SUDO, SU, ROOT (@iceman1001)
 - Implemented `hf felica scsvcode` - now dumps all service and area codes. (@zinongli)
+- Added `hf felica liteauth` - now support FeliCa Lite-S authentication(@q0jt)
 
 
 ## [Daddy Iceman.4.20469][2025-06-16]
