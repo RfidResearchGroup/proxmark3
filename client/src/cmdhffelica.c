@@ -2287,7 +2287,7 @@ static int read_without_encryption(
     uint16_t *n) {
 
     felica_read_request_haeder_t request = {
-        .command_code = 0x06,
+        .command_code = { 0x06 },
         .number_of_service = { 1 },
         .service_code_list = { 0x00B },
         .number_of_block = { num },
@@ -2336,7 +2336,7 @@ static int write_without_encryption(
     uint16_t *n) {
 
     felica_write_request_haeder_t hdr = {
-        .command_code = 0x08,
+        .command_code = { 0x08 },
         .number_of_service = { 1 },
         .service_code_list = { 0x009 },
         .number_of_block = { num },
