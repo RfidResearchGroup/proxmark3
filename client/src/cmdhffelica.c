@@ -2589,8 +2589,11 @@ static int CmdHFFelicaAuthenticationLite(const char *Cmd) {
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW | FELICA_NO_DISCONNECT);
 
     felica_status_response_t sres;
-    bool error = (send_wr_plain(flags, datalen, data, false, &sres) != PM3_SUCCESS);
-    if (error && sres.status_flags.status_flag1[0] != 0x00 && sres.status_flags.status_flag2[0] != 0x00) {
+    if (send_wr_plain(flags, datalen, data, false, &sres) != PM3_SUCCESS) {
+        return PM3_ERFTRANS; 
+    }
+    
+    if (sres.status_flags.status_flag1[0] != 0x00 && sres.status_flags.status_flag2[0] != 0x00) {
         PrintAndLogEx(ERR, "\nError RC Write");
         return PM3_ERFTRANS;
     }
