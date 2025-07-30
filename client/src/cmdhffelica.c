@@ -2288,9 +2288,9 @@ static int read_without_encryption(
 
     felica_read_request_haeder_t request = {
         .command_code = 0x06,
-        .number_of_service = 1,
-        .service_code_list = 0x00B,
-        .number_of_block = num,
+        .number_of_service = { 1 },
+        .service_code_list = { 0x00B },
+        .number_of_block = { num },
     };
     memcpy(request.IDm, idm, sizeof(request.IDm));
 
@@ -2337,9 +2337,9 @@ static int write_without_encryption(
 
     felica_write_request_haeder_t hdr = {
         .command_code = 0x08,
-        .number_of_service = 1,
-        .service_code_list = 0x009,
-        .number_of_block = num,
+        .number_of_service = { 1 },
+        .service_code_list = { 0x009 },
+        .number_of_block = { num },
     };
     memcpy(hdr.IDm, idm, sizeof(hdr.IDm));
 
