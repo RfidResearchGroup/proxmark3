@@ -129,4 +129,26 @@ typedef struct {
     uint8_t payload[4];
 } PACKED felica_service_dump_response_t;
 
+typedef struct {
+    uint8_t command_code[1];
+    uint8_t IDm[8];
+    uint8_t number_of_service[1];
+    uint8_t service_code_list[2];
+    uint8_t number_of_block[1];
+} PACKED felica_write_request_haeder_t;
+
+typedef struct {
+    uint8_t command_code[1];
+    uint8_t IDm[8];
+    uint8_t number_of_service[1];
+    uint8_t service_code_list[2];
+    uint8_t number_of_block[1];
+} PACKED felica_read_request_haeder_t;
+
+
+typedef struct {
+    uint8_t random_challenge[16];
+    uint8_t session_key[16];
+} PACKED felica_auth_context_t;
+
 #endif // _ISO18_H_

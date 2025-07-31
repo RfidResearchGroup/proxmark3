@@ -29,8 +29,12 @@
 #include "ui.h"
 #include "iso18.h"       // felica_card_select_t struct
 #include "des.h"
+#include "platform_util.h"
 #include "cliparser.h"   // cliparser
 #include "util_posix.h"  // msleep
+
+#define FELICA_BLK_SIZE 16
+#define FELICA_BLK_HALF (FELICA_BLK_SIZE/2)
 
 #define AddCrc(data, len) compute_crc(CRC_FELICA, (data), (len), (data)+(len)+1, (data)+(len))
 
@@ -2247,6 +2251,419 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int felica_make_block_list(uint16_t *out, const uint8_t *blk_numbers, const size_t length) {
+    if (length > 4) {
+        PrintAndLogEx(ERR, "felica_make_block_list: exceeds max size");
+        return PM3_EINVARG;
+    }
+
+    uint16_t tmp[4];
+    memset(tmp, 0, sizeof(tmp));
+
+    for (size_t i = 0; i < length; i++) {
+        tmp[i] = (uint16_t)(blk_numbers[i] << 8) | 0x80;
+    }
+    memcpy(out, tmp, length * sizeof(uint16_t));
+
+    return PM3_SUCCESS;
+}
+
+static int read_without_encryption(
+    const uint8_t *idm,
+    const uint8_t num,
+    const uint8_t *blk_numbers,
+    uint8_t *out,
+    uint16_t *n) {
+
+    felica_read_request_haeder_t request = {
+        .command_code = { 0x06 },
+        .number_of_service = { 1 },
+        .service_code_list = { 0x00B },
+        .number_of_block = { num },
+    };
+    memcpy(request.IDm, idm, sizeof(request.IDm));
+
+    uint16_t svc[num];
+    int ret = felica_make_block_list(svc, blk_numbers, num);
+    if (ret) {
+        return PM3_EINVARG;
+    }
+
+    size_t hdr_size = sizeof(request);
+    uint16_t size = hdr_size + sizeof(svc) + 1;
+    *n = size;
+
+    memcpy(out, &(uint8_t){ size }, sizeof(uint8_t));
+    memcpy(out + 1, &request, hdr_size);
+    memcpy(out + hdr_size + 1, &svc, sizeof(svc));
+
+    return PM3_SUCCESS;
+}
+
+static bool check_write_req_data(const felica_write_request_haeder_t *hdr, const uint8_t datalen) {
+    if (!hdr || !datalen)
+        return false;
+
+    uint8_t num = *(hdr->number_of_block);
+    if (num != 1 && num != 2)
+        return false;
+    
+    // Check Block data size
+    if (num * 16 != datalen)
+        return false;
+
+    return true;
+}
+
+static int write_without_encryption( 
+    const uint8_t *idm, 
+    uint8_t num, 
+    uint8_t *blk_numbers, 
+    const uint8_t *data, 
+    size_t datalen,
+    uint8_t *out,
+    uint16_t *n) {
+
+    felica_write_request_haeder_t hdr = {
+        .command_code = { 0x08 },
+        .number_of_service = { 1 },
+        .service_code_list = { 0x009 },
+        .number_of_block = { num },
+    };
+    memcpy(hdr.IDm, idm, sizeof(hdr.IDm));
+
+    uint8_t dl = (uint8_t)(datalen);
+
+    if (check_write_req_data(&hdr, dl) == false) {
+        PrintAndLogEx(FAILED, "invalid request");
+        return PM3_EINVARG;
+    }
+
+    uint16_t blk[num];
+    int ret = felica_make_block_list(blk, blk_numbers, num);
+    if (ret) {
+        return PM3_EINVARG;
+    }
+    
+
+    size_t hdr_size = sizeof(hdr);
+    size_t offset = hdr_size + (num * 2) + 1;
+
+    uint8_t size = hdr_size + sizeof(blk) + dl + 1;
+    *n = size;
+
+    memcpy(out, &(uint8_t){ size }, sizeof(uint8_t));
+    memcpy(out + 1, &hdr, hdr_size);
+    memcpy(out + hdr_size + 1, &blk, sizeof(blk));
+    memcpy(out + offset, data, dl);
+
+    return PM3_SUCCESS;
+}
+
+static int parse_multiple_block_data(const uint8_t *data, const size_t datalen, uint8_t *out, uint8_t *outlen) {
+    if (datalen < 3) {
+        PrintAndLogEx(ERR, "\ndata size must be at least 3 bytes");
+        return PM3_EINVARG;
+    }
+
+    felica_status_response_t res;
+    memcpy(&res, data, sizeof(res));
+
+    uint8_t empty[8] = {0};
+
+    if (!memcmp(res.frame_response.IDm, empty, sizeof(empty))) {
+        PrintAndLogEx(ERR, "internal error");
+        return PM3_ERFTRANS;
+    }
+    
+
+    if (res.status_flags.status_flag1[0] != 0x00 || res.status_flags.status_flag2[0] != 0x00) {
+        PrintAndLogEx(ERR, "error status");
+        return PM3_ERFTRANS;
+    }
+
+    size_t res_size = sizeof(res);
+
+    uint8_t num = 0;
+    memcpy(&num, data + res_size, sizeof(uint8_t));
+    res_size++;
+
+    memcpy(out, data + res_size, num * FELICA_BLK_SIZE);
+
+    *outlen = num * FELICA_BLK_SIZE;
+
+    return PM3_SUCCESS;
+}
+
+static int felica_auth_context_init(
+    mbedtls_des3_context* ctx,
+    const uint8_t* rc,
+    const size_t rclen,
+    const uint8_t* key,
+    const size_t keylen,
+    felica_auth_context_t *auth_ctx) {
+    
+    int ret = PM3_SUCCESS;
+
+    uint8_t rev_rc[16], rev_key[16];
+    uint8_t encrypted_sk[16], rev_sk[16];
+    uint8_t iv[8] = {0};
+
+    if (!ctx || !auth_ctx || rclen != 16 || keylen != 16) {
+        PrintAndLogEx(ERR, "\nfelica_auth_context_init: invalid parameters");
+        return PM3_EINVARG;
+    }
+
+    SwapEndian64ex(rc, sizeof(rev_rc), 8, rev_rc);
+    memcpy(auth_ctx->random_challenge, rev_rc, sizeof(auth_ctx->random_challenge));
+
+    SwapEndian64ex(key, sizeof(rev_key), 8, rev_key);
+
+    if (mbedtls_des3_set2key_enc(ctx, rev_key) != 0) {
+        ret = PM3_ECRYPTO;
+        goto cleanup;
+    }
+    
+    if (mbedtls_des3_crypt_cbc(ctx, MBEDTLS_DES_ENCRYPT, 16, iv, rev_rc, encrypted_sk) != 0) {
+        ret = PM3_ECRYPTO;
+        goto cleanup;
+    }
+
+    SwapEndian64ex(encrypted_sk, sizeof(encrypted_sk), 8, rev_sk);
+
+    memcpy(auth_ctx->session_key, rev_sk, sizeof(auth_ctx->session_key));
+
+cleanup:
+    mbedtls_platform_zeroize(rev_rc, sizeof(rev_rc));
+    mbedtls_platform_zeroize(rev_key, sizeof(rev_key));
+    mbedtls_platform_zeroize(iv, sizeof(iv));
+    mbedtls_platform_zeroize(encrypted_sk, sizeof(encrypted_sk));
+    mbedtls_platform_zeroize(rev_sk, sizeof(rev_sk));
+
+    return ret;
+}
+
+static int felica_generate_mac(
+    mbedtls_des3_context* ctx,
+    const felica_auth_context_t *auth_ctx,
+    const uint8_t* initialize_block,
+    const uint8_t* block_data,
+    const size_t length,
+    uint8_t* mac) {
+
+    int ret = PM3_SUCCESS;
+
+    uint8_t rev_sk[FELICA_BLK_SIZE];
+    uint8_t iv[8], rev_block[8], out[8];
+
+    if (!ctx || !auth_ctx || !initialize_block || !block_data || !mac) {
+        return PM3_EINVARG;
+    }
+
+    if (length % FELICA_BLK_HALF != 0) {
+        return PM3_EINVARG;
+    }
+
+    SwapEndian64ex(auth_ctx->session_key, sizeof(auth_ctx->session_key), 8, rev_sk);
+
+    memcpy(iv, auth_ctx->random_challenge, sizeof(iv));
+
+    SwapEndian64ex(initialize_block, sizeof(rev_block), 8, rev_block);
+
+    if (mbedtls_des3_set2key_enc(ctx, rev_sk) != 0) {
+        ret = PM3_ECRYPTO;
+        goto cleanup;
+    }
+
+    for (int i = 0; i <= length; i += 8) {
+        if (mbedtls_des3_crypt_cbc(ctx, MBEDTLS_DES_ENCRYPT, sizeof(rev_block), iv, rev_block, out) != 0) {
+            ret = PM3_ECRYPTO;
+            goto cleanup;
+        }
+        memcpy(iv, out, sizeof(iv));
+        SwapEndian64ex(block_data + i, 8, 8, rev_block);
+    }
+
+    SwapEndian64ex(out, FELICA_BLK_HALF, 8, mac);
+
+cleanup:
+    mbedtls_platform_zeroize(rev_sk, sizeof(rev_sk));
+    mbedtls_platform_zeroize(iv, sizeof(iv));
+    mbedtls_platform_zeroize(out, sizeof(out));
+    mbedtls_platform_zeroize(rev_block, sizeof(rev_block));
+
+    return ret;
+}
+
+/**
+ * Command parser for liteauth.
+ * @param Cmd input data of the user.
+ * @return client result code.
+ */
+static int CmdHFFelicaAuthenticationLite(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf felica liteauth",
+                  "Authenticate",
+                  "hf felica liteauth -i 11100910C11BC407\n"
+                  "hf felica liteauth -k 46656c69436130313233343536616263\n"
+                  "hf felica liteauth -c 701185c59f8d30afeab8e4b3a61f5cc4 -k 46656c69436130313233343536616263"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("k", "key", "<hex>", "set card key, 16 bytes"),
+        arg_str0("c", "", "<hex>", "set random challenge, 16 bytes"),
+        arg_str0("i", "", "<hex>", "set custom IDm"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t key[FELICA_BLK_SIZE];
+    memset(key, 0, sizeof(key));
+    int keylen = 0;
+    int ret = CLIParamHexToBuf(arg_get_str(ctx, 1), key, sizeof(key), &keylen);
+    if (ret) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t rc[FELICA_BLK_SIZE];
+    memset(rc, 0, sizeof(rc));
+    int rclen = 0;
+    ret = CLIParamHexToBuf(arg_get_str(ctx, 2), rc, sizeof(rc), &rclen);
+    if (ret) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint8_t idm[8];
+    memset(idm, 0, sizeof(idm));
+    int ilen = 0;
+    ret = CLIParamHexToBuf(arg_get_str(ctx, 3), idm, sizeof(idm), &ilen);
+    if (ret) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    CLIParserFree(ctx);
+
+    if (!ilen) {
+        if (last_known_card.IDm[0] != 0 && last_known_card.IDm[1] != 0) {
+            memcpy(idm, last_known_card.IDm, sizeof(idm));
+        } else {
+            PrintAndLogEx(WARNING, "No last known card! Use `" _YELLOW_("hf felica reader") "` first or set a custom IDm");
+            return PM3_EINVARG;
+        }
+    }
+
+    PrintAndLogEx(INFO, "Card Key: %s", sprint_hex(key, sizeof(key)));
+    PrintAndLogEx(INFO, "Random Challenge(RC): %s", sprint_hex(rc, sizeof(rc)));
+
+    PrintAndLogEx(SUCCESS, "FeliCa lite - auth started");
+
+    uint8_t data[PM3_CMD_DATA_SIZE];
+    memset(data, 0, sizeof(data));
+
+    uint8_t blk_numbers[1] = {0x80}; // RC
+
+    uint16_t datalen = 0;
+
+    ret = write_without_encryption(idm, (uint8_t)sizeof(blk_numbers), blk_numbers, rc, sizeof(rc), data, &datalen);
+    if (ret) {
+        return PM3_ERFTRANS;
+    }
+
+    AddCrc(data, datalen);
+    datalen += 2;
+
+    uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW | FELICA_NO_DISCONNECT);
+
+    felica_status_response_t sres;
+    if (send_wr_plain(flags, datalen, data, false, &sres) != PM3_SUCCESS) {
+        return PM3_ERFTRANS; 
+    }
+
+    if (sres.status_flags.status_flag1[0] != 0x00 && sres.status_flags.status_flag2[0] != 0x00) {
+        PrintAndLogEx(ERR, "\nError RC Write");
+        return PM3_ERFTRANS;
+    }
+
+    mbedtls_des3_context des3_ctx;
+    mbedtls_des3_init(&des3_ctx);
+
+    felica_auth_context_t auth_ctx;
+
+    ret = felica_auth_context_init(&des3_ctx, rc, sizeof(rc), key, sizeof(key), &auth_ctx);
+    if (ret) {
+        return PM3_ERFTRANS;
+    }
+
+    PrintAndLogEx(INFO, "Session Key(SK): %s", sprint_hex(auth_ctx.session_key, sizeof(auth_ctx.session_key)));
+
+    memset(data, 0, sizeof(data));
+
+    uint8_t blk_numbers2[2] = {0x82, 0x91};
+
+    ret = read_without_encryption(idm, (uint8_t)sizeof(blk_numbers2), blk_numbers2, data, &datalen);
+    if (ret) {
+        return PM3_ERFTRANS;
+    }
+
+    AddCrc(data, datalen);
+    datalen += 2;
+
+    flags &= ~FELICA_NO_DISCONNECT;
+
+    clear_and_send_command(flags, datalen, data, false);
+    PacketResponseNG pres;
+    if (waitCmdFelica(false, &pres, false) == false) {
+        PrintAndLogEx(ERR, "\nGot no response from card");
+        return PM3_ERFTRANS;
+    }
+
+    uint8_t pd[64];
+    memset(pd, 0, sizeof(pd));
+
+    uint8_t pd_size = 0;
+    ret = parse_multiple_block_data(pres.data.asBytes, sizeof(pres.data.asBytes), pd, &pd_size);
+    if (ret) {
+        return PM3_ERFTRANS;
+    }
+
+    uint8_t id_blk[FELICA_BLK_SIZE];
+    memcpy(id_blk, pd, FELICA_BLK_SIZE);
+
+    uint8_t mac_blk[FELICA_BLK_SIZE];
+    memcpy(mac_blk, pd + FELICA_BLK_SIZE, FELICA_BLK_SIZE);
+
+    uint8_t initialize_blk[8];
+    memset(initialize_blk, 0xFF, sizeof(initialize_blk));
+
+    initialize_blk[0] = 0x82; // ID
+    initialize_blk[1] = 0x00;
+    initialize_blk[2] = 0x91; // MAC_A
+    initialize_blk[3] = 0x00;
+
+    uint8_t mac[FELICA_BLK_HALF];
+
+    ret = felica_generate_mac(&des3_ctx, &auth_ctx, initialize_blk, id_blk, sizeof(id_blk), mac);
+    if (ret) {
+        return PM3_ERFTRANS;
+    }
+
+    PrintAndLogEx(SUCCESS, "MAC_A: %s", sprint_hex(mac, sizeof(mac)));
+
+    mbedtls_des3_free(&des3_ctx);
+
+    if (memcmp(mac_blk, mac, FELICA_BLK_HALF) != 0) {
+        PrintAndLogEx(ERR, "\nAuthenticate Failed");
+        return PM3_ERFTRANS;   
+    }
+
+    PrintAndLogEx(SUCCESS, "Authenticate Success");
+
+    return PM3_SUCCESS;
+}
+
 static int CmdHFFelicaCmdRaw(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -2365,6 +2782,7 @@ static command_t CommandTable[] = {
     {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("FeliCa Light") " -----------------------"},
     {"litesim",         CmdHFFelicaSimLite,               IfPm3Felica,     "Emulating ISO/18092 FeliCa Lite tag"},
     {"litedump",        CmdHFFelicaDumpLite,              IfPm3Felica,     "Wait for and try dumping FelicaLite"},
+    {"liteauth",        CmdHFFelicaAuthenticationLite,    IfPm3Felica,     "authenticate a card."},
     //    {"sim",       CmdHFFelicaSim,                   IfPm3Felica,     "<UID> -- Simulate ISO 18092/FeliCa tag"}
     {NULL, NULL, NULL, NULL}
 };
