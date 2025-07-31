@@ -2251,17 +2251,6 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static void reverse_byte_array(const uint8_t* in, const int length, uint8_t* out) {
-    for (int i = 0; i < length; i++) {
-        out[i] = in[(length - 1) - i];
-    }
-}
-
-static void reverse_block16(const uint8_t* in, uint8_t *out) {
-    reverse_byte_array(in, 8, out);
-    reverse_byte_array(in + 8, 8, out + 8);
-}
-
 static int felica_make_block_list(uint16_t *out, const uint8_t *blk_numbers, const size_t length) {
     if (length > 4) {
         PrintAndLogEx(ERR, "felica_make_block_list: exceeds max size");
@@ -2345,7 +2334,7 @@ static int write_without_encryption(
 
     uint8_t dl = (uint8_t)(datalen);
 
-    if (!check_write_req_data(&hdr, dl)) {
+    if (check_write_req_data(&hdr, dl) == false) {
         PrintAndLogEx(FAILED, "invalid request");
         return PM3_EINVARG;
     }
@@ -2425,10 +2414,10 @@ static int felica_auth_context_init(
         return PM3_EINVARG;
     }
 
-    reverse_block16(rc, rev_rc);
+    SwapEndian64ex(rc, sizeof(rev_rc), 8, rev_rc);
     memcpy(auth_ctx->random_challenge, rev_rc, sizeof(auth_ctx->random_challenge));
 
-    reverse_block16(key, rev_key);
+    SwapEndian64ex(key, sizeof(rev_key), 8, rev_key);
 
     if (mbedtls_des3_set2key_enc(ctx, rev_key) != 0) {
         ret = PM3_ECRYPTO;
@@ -2440,7 +2429,7 @@ static int felica_auth_context_init(
         goto cleanup;
     }
 
-    reverse_block16(encrypted_sk, rev_sk);
+    SwapEndian64ex(encrypted_sk, sizeof(encrypted_sk), 8, rev_sk);
 
     memcpy(auth_ctx->session_key, rev_sk, sizeof(auth_ctx->session_key));
 
@@ -2475,11 +2464,11 @@ static int felica_generate_mac(
         return PM3_EINVARG;
     }
 
-    reverse_block16(auth_ctx->session_key, rev_sk);
+    SwapEndian64ex(auth_ctx->session_key, sizeof(auth_ctx->session_key), 8, rev_sk);
 
     memcpy(iv, auth_ctx->random_challenge, sizeof(iv));
 
-    reverse_byte_array(initialize_block, sizeof(rev_block), rev_block);
+    SwapEndian64ex(initialize_block, sizeof(rev_block), 8, rev_block);
 
     if (mbedtls_des3_set2key_enc(ctx, rev_sk) != 0) {
         ret = PM3_ECRYPTO;
@@ -2492,10 +2481,10 @@ static int felica_generate_mac(
             goto cleanup;
         }
         memcpy(iv, out, sizeof(iv));
-        reverse_byte_array(block_data + i, 8, rev_block);
+        SwapEndian64ex(block_data + i, 8, 8, rev_block);
     }
 
-    reverse_byte_array(out, FELICA_BLK_HALF, mac);
+    SwapEndian64ex(out, FELICA_BLK_HALF, 8, mac);
 
 cleanup:
     mbedtls_platform_zeroize(rev_sk, sizeof(rev_sk));
@@ -2592,7 +2581,7 @@ static int CmdHFFelicaAuthenticationLite(const char *Cmd) {
     if (send_wr_plain(flags, datalen, data, false, &sres) != PM3_SUCCESS) {
         return PM3_ERFTRANS; 
     }
-    
+
     if (sres.status_flags.status_flag1[0] != 0x00 && sres.status_flags.status_flag2[0] != 0x00) {
         PrintAndLogEx(ERR, "\nError RC Write");
         return PM3_ERFTRANS;
