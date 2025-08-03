@@ -25,6 +25,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Implemented `hf felica scsvcode` - now dumps all service and area codes. (@zinongli)
 - Added `hf felica liteauth` - now support FeliCa Lite-S authentication(@q0jt)
 - Added `he felica dump` - partial support for dumping all blocks from unauth readable services (@zinongli)
+- Changed `hf 14b calypso` - now don't break the file id loop when one file can't be selected or read. Add new file ids to iterate through (@zinongli)
 
 
 ## [Daddy Iceman.4.20469][2025-06-16]
