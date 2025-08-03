@@ -1675,7 +1675,6 @@ static int CmdHFFelicaRequestSystemCode(const char *Cmd) {
  * @return client result code.
  */
 static int CmdHFFelicaDump(const char *Cmd) {
-    /* -- CLI boilerplate (unchanged) ------------------------------- */
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf felica dump",
                   "Dump all existing Area Code and Service Code.\n"
