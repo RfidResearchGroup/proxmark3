@@ -2708,25 +2708,32 @@ static int CmdHF14BCalypsoRead(const char *Cmd) {
     CLIParserFree(ctx);
 
     transport_14b_apdu_t cmds[] = {
-        {"01.Select ICC file",     "\x94\xa4\x08\x00\x04\x3f\x00\x00\x02", 9},
-        {"02.ICC",                 "\x94\xb2\x01\x04\x1d", 5},
-        {"03.Select EnvHol file",  "\x94\xa4\x08\x00\x04\x20\x00\x20\x01", 9},
-        {"04.EnvHol1",             "\x94\xb2\x01\x04\x1d", 5},
-        {"05.Select EvLog file",   "\x94\xa4\x08\x00\x04\x20\x00\x20\x10", 9},
-        {"06.EvLog1",              "\x94\xb2\x01\x04\x1d", 5},
-        {"07.EvLog2",              "\x94\xb2\x02\x04\x1d", 5},
-        {"08.EvLog3",              "\x94\xb2\x03\x04\x1d", 5},
-        {"09.Select ConList file", "\x94\xa4\x08\x00\x04\x20\x00\x20\x50", 9},
-        {"10.ConList",             "\x94\xb2\x01\x04\x1d", 5},
-        {"11.Select Contra file",  "\x94\xa4\x08\x00\x04\x20\x00\x20\x20", 9},
-        {"12.Contra1",             "\x94\xb2\x01\x04\x1d", 5},
-        {"13.Contra2",             "\x94\xb2\x02\x04\x1d", 5},
-        {"14.Contra3",             "\x94\xb2\x03\x04\x1d", 5},
-        {"15.Contra4",             "\x94\xb2\x04\x04\x1d", 5},
-        {"16.Select Counter file", "\x94\xa4\x08\x00\x04\x20\x00\x20\x69", 9},
-        {"17.Counter",             "\x94\xb2\x01\x04\x1d", 5},
-        {"18.Select SpecEv file",  "\x94\xa4\x08\x00\x04\x20\x00\x20\x40", 9},
-        {"19.SpecEv1",             "\x94\xb2\x01\x04\x1d", 5},
+        {"01.Select ICC     ",      "\x94\xa4\x08\x00\x04\x3f\x00\x00\x02", 9},
+        {"02.ICC            ",             "\x94\xb2\x01\x04\x1d", 5},
+        {"03.Select EnvHol  ",   "\x94\xa4\x08\x00\x04\x20\x00\x20\x01", 9},
+        {"04.EnvHol1        ",         "\x94\xb2\x01\x04\x1d", 5},
+        {"05.Select EvLog   ",    "\x94\xa4\x08\x00\x04\x20\x00\x20\x10", 9},
+        {"06.EvLog1         ",          "\x94\xb2\x01\x04\x1d", 5},
+        {"07.EvLog2         ",          "\x94\xb2\x02\x04\x1d", 5},
+        {"08.EvLog3         ",          "\x94\xb2\x03\x04\x1d", 5},
+        {"09.Select ConList ",  "\x94\xa4\x08\x00\x04\x20\x00\x20\x50", 9},
+        {"10.ConList        ",         "\x94\xb2\x01\x04\x1d", 5},
+        {"11.Select Contra  ",   "\x94\xa4\x08\x00\x04\x20\x00\x20\x20", 9},
+        {"12.Contra1        ",         "\x94\xb2\x01\x04\x1d", 5},
+        {"13.Contra2        ",         "\x94\xb2\x02\x04\x1d", 5},
+        {"14.Contra3        ",         "\x94\xb2\x03\x04\x1d", 5},
+        {"15.Contra4        ",         "\x94\xb2\x04\x04\x1d", 5},
+        {"16.Select Counter ",  "\x94\xa4\x08\x00\x04\x20\x00\x20\x69", 9},
+        {"17.Counter        ",         "\x94\xb2\x01\x04\x1d", 5},
+        {"18.Select SpecEv  ",   "\x94\xa4\x08\x00\x04\x20\x00\x20\x40", 9},
+        {"19.SpecEv1        ",         "\x94\xb2\x01\x04\x1d", 5},
+        {"20.Select Purse   ",    "\x00\xa4\x00\x00\x02\x10\x15", 7},
+        {"21.Purse1         ",          "\x00\xb2\x01\x04\x1d", 5},
+        {"22.Purse2         ",          "\x00\xb2\x02\x04\x1d", 5},
+        {"23.Purse3         ",          "\x00\xb2\x03\x04\x1d", 5},
+        {"24.Select Top Up  ",   "\x00\xa4\x00\x00\x02\x10\x14", 7},
+        {"25.Topup1         ",          "\x00\xb2\x01\x04\x1d", 5},
+        {"26.Select 1TIC.ICA", "\x00\xa4\x04\x00\x08\x31\x54\x49\x43\x2e\x49\x43\x41", 13},
     };
 
     /*
@@ -2780,9 +2787,8 @@ static int CmdHF14BCalypsoRead(const char *Cmd) {
 
         uint16_t sw = get_sw(response, resplen);
         if (sw != ISO7816_OK) {
-            PrintAndLogEx(ERR, "Sending command failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-            switch_off_field_14b();
-            return PM3_ESOFT;
+            PrintAndLogEx(INFO, "%s - command failed (%04x - %s).", cmds[i].desc, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+            continue;
         }
 
         PrintAndLogEx(INFO, "%s - %s", cmds[i].desc, sprint_hex(response, resplen));
