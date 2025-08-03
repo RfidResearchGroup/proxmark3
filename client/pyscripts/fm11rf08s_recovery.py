@@ -216,7 +216,7 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False,
         with open(dict_path, 'r', encoding='utf-8') as file:
             for line in file:
                 if line[0] != '#' and len(line) >= 12:
-                    DEFAULT_KEYS.add(line[:12])
+                    DEFAULT_KEYS.add(line[:12].lower())
         show(f"Loaded {dict_def}")
     except FileNotFoundError:
         show(f"Warning, {dict_def} not found.")
