@@ -36,6 +36,14 @@
 #define FELICA_BLK_SIZE 16
 #define FELICA_BLK_HALF (FELICA_BLK_SIZE/2)
 
+#define FELICA_SERVICE_ATTRIBUTE_UNAUTH_READ    (0b000001)
+#define FELICA_SERVICE_ATTRIBUTE_READ_ONLY      (0b000010)
+#define FELICA_SERVICE_ATTRIBUTE_RANDOM_ACCESS  (0b001000)
+#define FELICA_SERVICE_ATTRIBUTE_CYCLIC         (0b001100)
+#define FELICA_SERVICE_ATTRIBUTE_PURSE          (0b010000)
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_SUBFIELD (0b000110)
+
+
 #define AddCrc(data, len) compute_crc(CRC_FELICA, (data), (len), (data)+(len)+1, (data)+(len))
 
 static int CmdHelp(const char *Cmd);
@@ -254,6 +262,7 @@ static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
             return "FeliCa Standard RC-S919";
         case 0x0B:
         case 0x31:
+        case 0x36:
             return "Suica card (FeliCa Standard RC-S ?)";
         default:
             break;
@@ -477,7 +486,7 @@ static void print_rd_plain_response(felica_read_without_encryption_response_t *r
         temp = sprint_hex(rd_noCry_resp->block_element_number, sizeof(rd_noCry_resp->block_element_number));
         strncpy(bl_element_number, temp, sizeof(bl_element_number) - 1);
 
-        PrintAndLogEx(INFO, " %s | %s  ", bl_element_number, bl_data);
+        PrintAndLogEx(INFO, "  %s  | %s  ", bl_element_number, bl_data);
     } else {
         PrintAndLogEx(SUCCESS, "IDm... %s", sprint_hex_inrow(rd_noCry_resp->frame_response.IDm, sizeof(rd_noCry_resp->frame_response.IDm)));
         PrintAndLogEx(SUCCESS, "  Status flag 1... %s", sprint_hex(rd_noCry_resp->status_flags.status_flag1, sizeof(rd_noCry_resp->status_flags.status_flag1)));
@@ -1665,6 +1674,152 @@ static int CmdHFFelicaRequestSystemCode(const char *Cmd) {
  * @param Cmd input data of the user.
  * @return client result code.
  */
+static int CmdHFFelicaDump(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf felica dump",
+                  "Dump all existing Area Code and Service Code.\n"
+                  "Only works on services that do not require authentication yet.\n",
+                  "hf felica dump");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0(NULL, "no-auth", "read public services"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    // bool no_auth = arg_get_lit(ctx, 1);
+
+    uint8_t data_service_dump[PM3_CMD_DATA_SIZE] = {0};
+    data_service_dump[0] = 0x0C;
+    data_service_dump[1] = 0x0A;
+    uint16_t service_datalen = 12;
+    if (!check_last_idm(data_service_dump, service_datalen))
+        return PM3_EINVARG;
+
+    uint8_t data_block_dump[PM3_CMD_DATA_SIZE] = {0};
+    data_block_dump[0] = 0x10; // Static length
+    data_block_dump[1] = 0x06; // unauth read block command
+    data_block_dump[10] = 0x01; // read one service at a time
+    data_block_dump[13] = 0x01; // read one block at a time
+    data_block_dump[14] = 0x80; // block list element first byte
+    uint16_t block_datalen = 16; // Length (1), Command ID (1), IDm (8), Number of Service (1), Service Code List(2), Number of Block(1), Block List(3)
+    if (!check_last_idm(data_block_dump, block_datalen)) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t flags = FELICA_APPEND_CRC | FELICA_RAW;
+
+    uint16_t cursor = 0x0000;
+
+    felica_service_dump_response_t resp;
+
+    while (true) {
+
+        data_service_dump[10] = cursor & 0xFF;
+        data_service_dump[11] = cursor >> 8;
+        AddCrc(data_service_dump, service_datalen);
+
+        if (send_dump_sv_plain(flags, service_datalen + 2, data_service_dump, 0,
+                               &resp, false) != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "No response at cursor 0x%04X", cursor);
+            return PM3_ERFTRANS;
+        }
+        if (resp.frame_response.cmd_code[0] != 0x0B) {
+            PrintAndLogEx(FAILED, "Bad response cmd 0x%02X @ 0x%04X.",
+                          resp.frame_response.cmd_code[0], cursor);
+            PrintAndLogEx(INFO, "This is a normal signal issue. Please try again.");
+            PrintAndLogEx(INFO, "If the issue persists, move the card around and check signal strength. FeliCa can be hard to keep in field.");
+            return PM3_ERFTRANS;
+        }
+        uint8_t len = resp.frame_response.length[0];
+        uint16_t node_code = resp.payload[0] | (resp.payload[1] << 8);
+        if (node_code == 0xFFFF) break; 
+        char attrib_str[64] = "";
+        switch (len) {
+        case 0x0E:
+            break;
+        case 0x0C: {
+            uint8_t attribute = node_code & 0x3F;
+            bool is_public = (attribute & FELICA_SERVICE_ATTRIBUTE_UNAUTH_READ) != 0;
+            strcat(attrib_str, is_public ? "| Public  " : "| Private ");
+
+            bool is_purse = (attribute & FELICA_SERVICE_ATTRIBUTE_PURSE) != 0;
+            // Subfield bitwise attributes are applicable depending on is PURSE or not
+
+            if(is_purse) {
+                strcat(attrib_str, "| Purse  |");
+                switch((attribute & FELICA_SERVICE_ATTRIBUTE_PURSE_SUBFIELD) >> 1) {
+                case 0:
+                    strcat(attrib_str, " Direct     |");
+                    break;
+                case 1:
+                    strcat(attrib_str, " Cashback   |");
+                    break;
+                case 2:
+                    strcat(attrib_str, " Decrement  |");
+                    break;
+                case 3:
+                    strcat(attrib_str, " Read Only  |");
+                    break;
+                default:
+                    strcat(attrib_str, " Unknown    |");
+                    break;
+                }
+            } else {
+                bool is_random = (attribute & FELICA_SERVICE_ATTRIBUTE_RANDOM_ACCESS) != 0;
+                strcat(attrib_str, is_random ? "| Random |" : "| Cyclic |");
+                bool is_readonly = (attribute & FELICA_SERVICE_ATTRIBUTE_READ_ONLY) != 0;
+                strcat(attrib_str, is_readonly ? " Read Only  |" : " Read/Write |");
+            }
+
+            PrintAndLogEx(INFO, "Service %04X %s", node_code, attrib_str);
+
+            if (is_public) {
+                // dump blocks here
+                PrintAndLogEx(INFO, " block | data  ");
+                PrintAndLogEx(INFO, "-------+----------------------------------------");
+
+                data_block_dump[11] = resp.payload[0]; // convert service code to little endian
+                data_block_dump[12] = resp.payload[1];
+
+                uint16_t last_blockno = 0xFF;
+                for (uint16_t i = 0x00; i < last_blockno; i++) {
+                    data_block_dump[15] = i;
+                    AddCrc(data_block_dump, block_datalen);
+                    felica_read_without_encryption_response_t rd_noCry_resp;
+                    if ((send_rd_plain(flags, block_datalen + 2, data_block_dump, 0, &rd_noCry_resp) == PM3_SUCCESS)) {
+                        if (rd_noCry_resp.status_flags.status_flag1[0] == 0 && rd_noCry_resp.status_flags.status_flag2[0] == 0) {
+                            print_rd_plain_response(&rd_noCry_resp);
+                        } else {
+                            break; // no more blocks to read
+                        }
+                    } else {
+                        break;
+                    }
+                }
+            }
+            break;
+        }
+        default:
+            PrintAndLogEx(FAILED, "Unexpected length 0x%02X @ 0x%04X",
+                          len, cursor);
+            return PM3_ERFTRANS;
+        }
+        cursor++;
+        if (cursor == 0) break; 
+    }
+
+    PrintAndLogEx(SUCCESS, "Unauth service dump complete.");
+    return PM3_SUCCESS;
+}
+
+
+/**
+ * Command parser for rqservice.
+ * @param Cmd input data of the user.
+ * @return client result code.
+ */
 static int CmdHFFelicaRequestService(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf felica rqservice",
@@ -2761,7 +2916,7 @@ static command_t CommandTable[] = {
     {"sniff",           CmdHFFelicaSniff,                 IfPm3Felica,     "Sniff ISO 18092/FeliCa traffic"},
     {"wrbl",            CmdHFFelicaWritePlain,            IfPm3Felica,     "write block data to an authentication-not-required Service."},
     {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("FeliCa Standard") " -----------------------"},
-    //{"dump",          CmdHFFelicaDump,                    IfPm3Felica,     "Wait for and try dumping FeliCa"},
+    {"dump",            CmdHFFelicaDump,                  IfPm3Felica,     "Wait for and try dumping FeliCa"},
     {"rqservice",       CmdHFFelicaRequestService,        IfPm3Felica,     "verify the existence of Area and Service, and to acquire Key Version."},
     {"rqresponse",      CmdHFFelicaRequestResponse,       IfPm3Felica,     "verify the existence of a card and its Mode."},
     {"scsvcode",        CmdHFFelicaDumpServiceArea,       IfPm3Felica,     "acquire Area Code and Service Code."},
