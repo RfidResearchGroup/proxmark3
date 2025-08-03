@@ -24,6 +24,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added `!` - run system commands from inside the client. Potentially dangerous if running client as SUDO, SU, ROOT (@iceman1001)
 - Implemented `hf felica scsvcode` - now dumps all service and area codes. (@zinongli)
 - Added `hf felica liteauth` - now support FeliCa Lite-S authentication(@q0jt)
+- Added `he felica dump` - partial support for dumping all blocks from unauth readable services (@zinongli)
 
 
 ## [Daddy Iceman.4.20469][2025-06-16]
