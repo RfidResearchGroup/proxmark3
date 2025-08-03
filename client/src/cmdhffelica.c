@@ -1700,8 +1700,8 @@ static int CmdHFFelicaDump(const char *Cmd) {
     uint8_t data_block_dump[PM3_CMD_DATA_SIZE] = {0};
     data_block_dump[0] = 0x10; // Static length
     data_block_dump[1] = 0x06; // unauth read block command
-    data_block_dump[10] = 1; // read one service at a time
-    data_block_dump[13] = 1; // read one block at a time
+    data_block_dump[10] = 0x01; // read one service at a time
+    data_block_dump[13] = 0x01; // read one block at a time
     data_block_dump[14] = 0x80; // block list element first byte
     uint16_t block_datalen = 16; // Length (1), Command ID (1), IDm (8), Number of Service (1), Service Code List(2), Number of Block(1), Block List(3)
     if (!check_last_idm(data_block_dump, block_datalen)) {
