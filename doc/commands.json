@@ -2659,6 +2659,19 @@
             ],
             "usage": "hf felica auth2 [-hv] [-i <hex>] [-c <hex>] [-k <hex>]"
         },
+        "hf felica dump": {
+            "command": "hf felica dump",
+            "description": "Dump all existing Area Code and Service Code. Only works on services that do not require authentication yet.",
+            "notes": [
+                "hf felica dump"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--no-auth read public services"
+            ],
+            "usage": "hf felica dump [-h] [--no-auth]"
+        },
         "hf felica help": {
             "command": "hf felica help",
             "description": "----------- ----------------------- General ----------------------- help This help list List ISO 18092/FeliCa history ----------- ----------------------- Operations ----------------------- ----------- ----------------------- FeliCa Standard ----------------------- ----------- ----------------------- FeliCa Light ----------------------- --------------------------------------------------------------------------------------- hf felica list available offline: yes Alias of `trace list -t felica` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
@@ -2691,6 +2704,23 @@
                 "-h, --help This help"
             ],
             "usage": "hf felica info [-h]"
+        },
+        "hf felica liteauth": {
+            "command": "hf felica liteauth",
+            "description": "Authenticate",
+            "notes": [
+                "hf felica liteauth -i 11100910C11BC407",
+                "hf felica liteauth -k 46656c69436130313233343536616263",
+                "hf felica liteauth -c 701185c59f8d30afeab8e4b3a61f5cc4 -k 46656c69436130313233343536616263"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --key <hex> set card key, 16 bytes",
+                "-c, <hex> set random challenge, 16 bytes",
+                "-i, <hex> set custom IDm"
+            ],
+            "usage": "hf felica liteauth [-h] [-k <hex>] [-c <hex>] [-i <hex>]"
         },
         "hf felica litedump": {
             "command": "hf felica litedump",
@@ -13453,8 +13483,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 773,
+        "commands_extracted": 775,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-07-28T13:42:15"
+        "extracted_on": "2025-08-04T17:50:35"
     }
 }

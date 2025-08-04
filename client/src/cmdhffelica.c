@@ -1734,80 +1734,80 @@ static int CmdHFFelicaDump(const char *Cmd) {
         }
         uint8_t len = resp.frame_response.length[0];
         uint16_t node_code = resp.payload[0] | (resp.payload[1] << 8);
-        if (node_code == 0xFFFF) break; 
+        if (node_code == 0xFFFF) break;
         char attrib_str[64] = "";
         switch (len) {
-        case 0x0E:
-            break;
-        case 0x0C: {
-            uint8_t attribute = node_code & 0x3F;
-            bool is_public = (attribute & FELICA_SERVICE_ATTRIBUTE_UNAUTH_READ) != 0;
-            strcat(attrib_str, is_public ? "| Public  " : "| Private ");
+            case 0x0E:
+                break;
+            case 0x0C: {
+                uint8_t attribute = node_code & 0x3F;
+                bool is_public = (attribute & FELICA_SERVICE_ATTRIBUTE_UNAUTH_READ) != 0;
+                strcat(attrib_str, is_public ? "| Public  " : "| Private ");
 
-            bool is_purse = (attribute & FELICA_SERVICE_ATTRIBUTE_PURSE) != 0;
-            // Subfield bitwise attributes are applicable depending on is PURSE or not
+                bool is_purse = (attribute & FELICA_SERVICE_ATTRIBUTE_PURSE) != 0;
+                // Subfield bitwise attributes are applicable depending on is PURSE or not
 
-            if(is_purse) {
-                strcat(attrib_str, "| Purse  |");
-                switch((attribute & FELICA_SERVICE_ATTRIBUTE_PURSE_SUBFIELD) >> 1) {
-                case 0:
-                    strcat(attrib_str, " Direct     |");
-                    break;
-                case 1:
-                    strcat(attrib_str, " Cashback   |");
-                    break;
-                case 2:
-                    strcat(attrib_str, " Decrement  |");
-                    break;
-                case 3:
-                    strcat(attrib_str, " Read Only  |");
-                    break;
-                default:
-                    strcat(attrib_str, " Unknown    |");
-                    break;
+                if (is_purse) {
+                    strcat(attrib_str, "| Purse  |");
+                    switch ((attribute & FELICA_SERVICE_ATTRIBUTE_PURSE_SUBFIELD) >> 1) {
+                        case 0:
+                            strcat(attrib_str, " Direct     |");
+                            break;
+                        case 1:
+                            strcat(attrib_str, " Cashback   |");
+                            break;
+                        case 2:
+                            strcat(attrib_str, " Decrement  |");
+                            break;
+                        case 3:
+                            strcat(attrib_str, " Read Only  |");
+                            break;
+                        default:
+                            strcat(attrib_str, " Unknown    |");
+                            break;
+                    }
+                } else {
+                    bool is_random = (attribute & FELICA_SERVICE_ATTRIBUTE_RANDOM_ACCESS) != 0;
+                    strcat(attrib_str, is_random ? "| Random |" : "| Cyclic |");
+                    bool is_readonly = (attribute & FELICA_SERVICE_ATTRIBUTE_READ_ONLY) != 0;
+                    strcat(attrib_str, is_readonly ? " Read Only  |" : " Read/Write |");
                 }
-            } else {
-                bool is_random = (attribute & FELICA_SERVICE_ATTRIBUTE_RANDOM_ACCESS) != 0;
-                strcat(attrib_str, is_random ? "| Random |" : "| Cyclic |");
-                bool is_readonly = (attribute & FELICA_SERVICE_ATTRIBUTE_READ_ONLY) != 0;
-                strcat(attrib_str, is_readonly ? " Read Only  |" : " Read/Write |");
-            }
 
-            PrintAndLogEx(INFO, "Service %04X %s", node_code, attrib_str);
+                PrintAndLogEx(INFO, "Service %04X %s", node_code, attrib_str);
 
-            if (is_public) {
-                // dump blocks here
-                PrintAndLogEx(INFO, " block | data  ");
-                PrintAndLogEx(INFO, "-------+----------------------------------------");
+                if (is_public) {
+                    // dump blocks here
+                    PrintAndLogEx(INFO, " block | data  ");
+                    PrintAndLogEx(INFO, "-------+----------------------------------------");
 
-                data_block_dump[11] = resp.payload[0]; // convert service code to little endian
-                data_block_dump[12] = resp.payload[1];
+                    data_block_dump[11] = resp.payload[0]; // convert service code to little endian
+                    data_block_dump[12] = resp.payload[1];
 
-                uint16_t last_blockno = 0xFF;
-                for (uint16_t i = 0x00; i < last_blockno; i++) {
-                    data_block_dump[15] = i;
-                    AddCrc(data_block_dump, block_datalen);
-                    felica_read_without_encryption_response_t rd_noCry_resp;
-                    if ((send_rd_plain(flags, block_datalen + 2, data_block_dump, 0, &rd_noCry_resp) == PM3_SUCCESS)) {
-                        if (rd_noCry_resp.status_flags.status_flag1[0] == 0 && rd_noCry_resp.status_flags.status_flag2[0] == 0) {
-                            print_rd_plain_response(&rd_noCry_resp);
+                    uint16_t last_blockno = 0xFF;
+                    for (uint16_t i = 0x00; i < last_blockno; i++) {
+                        data_block_dump[15] = i;
+                        AddCrc(data_block_dump, block_datalen);
+                        felica_read_without_encryption_response_t rd_noCry_resp;
+                        if ((send_rd_plain(flags, block_datalen + 2, data_block_dump, 0, &rd_noCry_resp) == PM3_SUCCESS)) {
+                            if (rd_noCry_resp.status_flags.status_flag1[0] == 0 && rd_noCry_resp.status_flags.status_flag2[0] == 0) {
+                                print_rd_plain_response(&rd_noCry_resp);
+                            } else {
+                                break; // no more blocks to read
+                            }
                         } else {
-                            break; // no more blocks to read
+                            break;
                         }
-                    } else {
-                        break;
                     }
                 }
+                break;
             }
-            break;
-        }
-        default:
-            PrintAndLogEx(FAILED, "Unexpected length 0x%02X @ 0x%04X",
-                          len, cursor);
-            return PM3_ERFTRANS;
+            default:
+                PrintAndLogEx(FAILED, "Unexpected length 0x%02X @ 0x%04X",
+                              len, cursor);
+                return PM3_ERFTRANS;
         }
         cursor++;
-        if (cursor == 0) break; 
+        if (cursor == 0) break;
     }
 
     PrintAndLogEx(SUCCESS, "Unauth service dump complete.");
@@ -2448,7 +2448,7 @@ static int read_without_encryption(
     uint16_t size = hdr_size + sizeof(svc) + 1;
     *n = size;
 
-    memcpy(out, &(uint8_t){ size }, sizeof(uint8_t));
+    memcpy(out, &(uint8_t) { size }, sizeof(uint8_t));
     memcpy(out + 1, &request, hdr_size);
     memcpy(out + hdr_size + 1, &svc, sizeof(svc));
 
@@ -2462,7 +2462,7 @@ static bool check_write_req_data(const felica_write_request_haeder_t *hdr, const
     uint8_t num = *(hdr->number_of_block);
     if (num != 1 && num != 2)
         return false;
-    
+
     // Check Block data size
     if (num * 16 != datalen)
         return false;
@@ -2470,11 +2470,11 @@ static bool check_write_req_data(const felica_write_request_haeder_t *hdr, const
     return true;
 }
 
-static int write_without_encryption( 
-    const uint8_t *idm, 
-    uint8_t num, 
-    uint8_t *blk_numbers, 
-    const uint8_t *data, 
+static int write_without_encryption(
+    const uint8_t *idm,
+    uint8_t num,
+    uint8_t *blk_numbers,
+    const uint8_t *data,
     size_t datalen,
     uint8_t *out,
     uint16_t *n) {
@@ -2499,7 +2499,7 @@ static int write_without_encryption(
     if (ret) {
         return PM3_EINVARG;
     }
-    
+
 
     size_t hdr_size = sizeof(hdr);
     size_t offset = hdr_size + (num * 2) + 1;
@@ -2507,7 +2507,7 @@ static int write_without_encryption(
     uint8_t size = hdr_size + sizeof(blk) + dl + 1;
     *n = size;
 
-    memcpy(out, &(uint8_t){ size }, sizeof(uint8_t));
+    memcpy(out, &(uint8_t) { size }, sizeof(uint8_t));
     memcpy(out + 1, &hdr, hdr_size);
     memcpy(out + hdr_size + 1, &blk, sizeof(blk));
     memcpy(out + offset, data, dl);
@@ -2530,7 +2530,7 @@ static int parse_multiple_block_data(const uint8_t *data, const size_t datalen, 
         PrintAndLogEx(ERR, "internal error");
         return PM3_ERFTRANS;
     }
-    
+
 
     if (res.status_flags.status_flag1[0] != 0x00 || res.status_flags.status_flag2[0] != 0x00) {
         PrintAndLogEx(ERR, "error status");
@@ -2551,13 +2551,13 @@ static int parse_multiple_block_data(const uint8_t *data, const size_t datalen, 
 }
 
 static int felica_auth_context_init(
-    mbedtls_des3_context* ctx,
-    const uint8_t* rc,
+    mbedtls_des3_context *ctx,
+    const uint8_t *rc,
     const size_t rclen,
-    const uint8_t* key,
+    const uint8_t *key,
     const size_t keylen,
     felica_auth_context_t *auth_ctx) {
-    
+
     int ret = PM3_SUCCESS;
 
     uint8_t rev_rc[16], rev_key[16];
@@ -2578,7 +2578,7 @@ static int felica_auth_context_init(
         ret = PM3_ECRYPTO;
         goto cleanup;
     }
-    
+
     if (mbedtls_des3_crypt_cbc(ctx, MBEDTLS_DES_ENCRYPT, 16, iv, rev_rc, encrypted_sk) != 0) {
         ret = PM3_ECRYPTO;
         goto cleanup;
@@ -2599,12 +2599,12 @@ cleanup:
 }
 
 static int felica_generate_mac(
-    mbedtls_des3_context* ctx,
+    mbedtls_des3_context *ctx,
     const felica_auth_context_t *auth_ctx,
-    const uint8_t* initialize_block,
-    const uint8_t* block_data,
+    const uint8_t *initialize_block,
+    const uint8_t *block_data,
     const size_t length,
-    uint8_t* mac) {
+    uint8_t *mac) {
 
     int ret = PM3_SUCCESS;
 
@@ -2734,7 +2734,7 @@ static int CmdHFFelicaAuthenticationLite(const char *Cmd) {
 
     felica_status_response_t sres;
     if (send_wr_plain(flags, datalen, data, false, &sres) != PM3_SUCCESS) {
-        return PM3_ERFTRANS; 
+        return PM3_ERFTRANS;
     }
 
     if (sres.status_flags.status_flag1[0] != 0x00 && sres.status_flags.status_flag2[0] != 0x00) {
@@ -2811,7 +2811,7 @@ static int CmdHFFelicaAuthenticationLite(const char *Cmd) {
 
     if (memcmp(mac_blk, mac, FELICA_BLK_HALF) != 0) {
         PrintAndLogEx(ERR, "\nAuthenticate Failed");
-        return PM3_ERFTRANS;   
+        return PM3_ERFTRANS;
     }
 
     PrintAndLogEx(SUCCESS, "Authenticate Success");

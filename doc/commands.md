@@ -333,6 +333,7 @@ Check column "offline" for their availability.
 |`hf felica reader       `|N       |`Act like an ISO18092/FeliCa reader`
 |`hf felica sniff        `|N       |`Sniff ISO 18092/FeliCa traffic`
 |`hf felica wrbl         `|N       |`write block data to an authentication-not-required Service.`
+|`hf felica dump         `|N       |`Wait for and try dumping FeliCa`
 |`hf felica rqservice    `|N       |`verify the existence of Area and Service, and to acquire Key Version.`
 |`hf felica rqresponse   `|N       |`verify the existence of a card and its Mode.`
 |`hf felica scsvcode     `|N       |`acquire Area Code and Service Code.`
@@ -343,6 +344,7 @@ Check column "offline" for their availability.
 |`hf felica resetmode    `|N       |`reset Mode to Mode 0.`
 |`hf felica litesim      `|N       |`Emulating ISO/18092 FeliCa Lite tag`
 |`hf felica litedump     `|N       |`Wait for and try dumping FelicaLite`
+|`hf felica liteauth     `|N       |`authenticate a card.`
 
 
 ### hf fido
