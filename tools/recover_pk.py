@@ -173,10 +173,10 @@ def selftests():
          'samples': ["045E4CC2451390", "C9BBDA1B99EB6634CDFD8E3251AC5C4742EA5FA507B8A8A8B39B19AB7340D173331589C54C56C49F0CCA6DDBAC1E492A",                   # noqa: E501
                      "043F88C2451390", "5C2055A7373F119C3FDD9843020B06AA0E6DE18C16496C425C4AD971A50F05FA1A67B9E39CA60C355EEEEBF8214A84A5"],                  # noqa: E501
          'pk': "0453BF8C49B7BD9FE3207A91513B9C1D238ECAB07186B772104AB535F7D3AE63CF7C7F3DD0D169DA3E99E43C6399621A86"},                                        # noqa: E501
-        {'name': "MIFARE Ultralight AES (alt key)",
+        {'name': "MIFARE Ultralight AES (Vingcard alt key)",
          # uses prime192v1, None,
-         # TODO more samples
-         'samples': ["04A31232241C90", "057595DCC601CA7E21341F1F978FA134F0204D87A33749C56DDB4ABD6F1F26194341DB10093B34C42F524A30DCC5CE54"],                  # noqa: E501
+         'samples': ["04A31232241C90", "057595DCC601CA7E21341F1F978FA134F0204D87A33749C56DDB4ABD6F1F26194341DB10093B34C42F524A30DCC5CE54",                   # noqa: E501
+                     "041BC1D2F31B90", "FB5CF8F1B3CC39984BCA54A50FCF47ACFDC8C969010C1F4599554AF9A8E4F2B8371524855E45AD7EE71179A660D27667"],                  # noqa: E501
          'pk': "04DC34DAA903F2726A6225B11C692AF6AB4396575CA12810CBBCE3F781A097B3833B50AB364A70D9C2B641A728A599AE74"},                                        # noqa: E501
         {'name': "MIFARE Classic / QL88",
          'samples': ["30933C61", "AEA4DD0B800FAC63D4DE08EE91F4650ED825FD6B4D7DEEE98DBC9BAE10BE003E",
@@ -215,7 +215,7 @@ def selftests():
     succeeded = True
     for t in tests:
 
-        print("Testing %-40s" % (t['name']+":"), end="")
+        print("Testing %-41s" % (t['name']+":"), end="")
 
         curvenames = guess_curvename(t['samples'][1])
         recovered = set()
@@ -229,16 +229,16 @@ def selftests():
             c, h, pk = recovered.pop()
             pk = binascii.hexlify(pk).decode('utf8')
             if pk.lower() == t['pk'].lower():
-                print("%15s/%-8s ( %s )" % (c, h, color('ok', fg='green')))
+                print("%14s/%-8s ( %s )" % (c, h, color('ok', fg='green')))
             else:
                 succeeded = False
-                print("%15s/%-8s ( %s ) got %s" % (c, h, color('fail', fg='red'), pk.lower()))
+                print("%14s/%-8s ( %s ) got %s" % (c, h, color('fail', fg='red'), pk.lower()))
         elif len(t['samples'])//2 == 1:
             recovereds = [(c, h) for c, h, pk in list(recovered)
                           if t['pk'].lower() == binascii.hexlify(pk).decode('utf8').lower()]
             if len(recovereds) == 1:
                 c, h = recovereds[0]
-                print("%15s/%-8s ( %s ) partial" % (c, h, color('ok', fg='green')))
+                print("%14s/%-8s ( %s ) partial" % (c, h, color('ok', fg='green')))
             else:
                 succeeded = False
                 print("                         ( %s ), got" % color('fail', fg='red'))
