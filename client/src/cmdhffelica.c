@@ -2157,262 +2157,6 @@ static int CmdHFFelicaSimLite(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static void printSep(void) {
-    PrintAndLogEx(INFO, "------------------------------------------------------------------------------------");
-}
-
-static uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace, uint16_t tracelen) {
-    if (tracepos + 19 >= tracelen)
-        return tracelen;
-
-    trace += tracepos;
-    uint8_t blocknum = trace[0];
-    uint8_t status1 = trace[1];
-    uint8_t status2 = trace[2];
-
-    bool error = (status1 != 0x00 && (status2 == 0xB1 || status2 == 0xB2));
-
-    char line[110] = {0};
-    for (int j = 0; j < 16; j++) {
-        if (error) {
-            snprintf(line + (j * 4), sizeof(line) - 1 - (j * 4), "??  ");
-        } else {
-            snprintf(line + (j * 4), sizeof(line) - 1 - (j * 4), "%02x  ", trace[j + 3]);
-        }
-    }
-
-    PrintAndLogEx(NORMAL, "block number %02x, status: %02x %02x", blocknum, status1, status2);
-    switch (blocknum) {
-        case 0x00:
-            PrintAndLogEx(NORMAL,  "S_PAD0: %s", line);
-            break;
-        case 0x01:
-            PrintAndLogEx(NORMAL,  "S_PAD1: %s", line);
-            break;
-        case 0x02:
-            PrintAndLogEx(NORMAL,  "S_PAD2: %s", line);
-            break;
-        case 0x03:
-            PrintAndLogEx(NORMAL,  "S_PAD3: %s", line);
-            break;
-        case 0x04:
-            PrintAndLogEx(NORMAL,  "S_PAD4: %s", line);
-            break;
-        case 0x05:
-            PrintAndLogEx(NORMAL,  "S_PAD5: %s", line);
-            break;
-        case 0x06:
-            PrintAndLogEx(NORMAL,  "S_PAD6: %s", line);
-            break;
-        case 0x07:
-            PrintAndLogEx(NORMAL,  "S_PAD7: %s", line);
-            break;
-        case 0x08:
-            PrintAndLogEx(NORMAL,  "S_PAD8: %s", line);
-            break;
-        case 0x09:
-            PrintAndLogEx(NORMAL,  "S_PAD9: %s", line);
-            break;
-        case 0x0a:
-            PrintAndLogEx(NORMAL,  "S_PAD10: %s", line);
-            break;
-        case 0x0b:
-            PrintAndLogEx(NORMAL,  "S_PAD11: %s", line);
-            break;
-        case 0x0c:
-            PrintAndLogEx(NORMAL,  "S_PAD12: %s", line);
-            break;
-        case 0x0d:
-            PrintAndLogEx(NORMAL,  "S_PAD13: %s", line);
-            break;
-        case 0x0E: {
-            uint32_t regA = trace[3] | trace[4] << 8 | trace[5] << 16 | trace[6] << 24;
-            uint32_t regB = trace[7] | trace[8] << 8 | trace[9] << 16 | trace[10] << 24;
-            line[0] = 0;
-            for (int j = 0; j < 8; j++)
-                snprintf(line + (j * 2), sizeof(line) - 1 - (j * 2), "%02x", trace[j + 11]);
-
-            if (error) {
-                PrintAndLogEx(NORMAL,  "REG: regA: ???????? regB: ???????? regC: ???????????????? ");
-            } else {
-                PrintAndLogEx(NORMAL,  "REG: regA: %d regB: %d regC: %s ", regA, regB, line);
-            }
-        }
-        break;
-        case 0x80:
-            PrintAndLogEx(NORMAL,  "Random Challenge, WO:  %s ", line);
-            break;
-        case 0x81:
-            PrintAndLogEx(NORMAL,  "MAC, only set on dual read:  %s ", line);
-            break;
-        case 0x82: {
-            char idd[20];
-            char idm[20];
-            for (int j = 0; j < 8; j++)
-                snprintf(idd + (j * 2), sizeof(idd) - 1 - (j * 2), "%02x", trace[j + 3]);
-
-            for (int j = 0; j < 6; j++)
-                snprintf(idm + (j * 2), sizeof(idm) - 1 - (j * 2), "%02x", trace[j + 13]);
-
-            PrintAndLogEx(NORMAL,  "ID Block, IDd: 0x%s DFC: 0x%02x%02x Arb: %s ", idd, trace[11], trace [12], idm);
-        }
-        break;
-        case 0x83: {
-            char idm[20];
-            char pmm[20];
-            for (int j = 0; j < 8; j++)
-                snprintf(idm + (j * 2), sizeof(idm) - 1 - (j * 2), "%02x", trace[j + 3]);
-
-            for (int j = 0; j < 8; j++)
-                snprintf(pmm + (j * 2), sizeof(pmm) - 1 - (j * 2), "%02x", trace[j + 11]);
-
-            PrintAndLogEx(NORMAL,  "DeviceId:  IDm: 0x%s PMm: 0x%s ", idm, pmm);
-        }
-        break;
-        case 0x84:
-            PrintAndLogEx(NORMAL,  "SER_C: 0x%02x%02x ", trace[3], trace[4]);
-            break;
-        case 0x85:
-            PrintAndLogEx(NORMAL,  "SYS_Cl 0x%02x%02x ", trace[3], trace[4]);
-            break;
-        case 0x86:
-            PrintAndLogEx(NORMAL,  "CKV (key version): 0x%02x%02x ", trace[3], trace[4]);
-            break;
-        case 0x87:
-            PrintAndLogEx(NORMAL,  "CK (card key), WO:   %s ", line);
-            break;
-        case 0x88: {
-            PrintAndLogEx(NORMAL,  "Memory Configuration (MC):");
-            PrintAndLogEx(NORMAL,  "MAC needed to write state: %s", trace[3 + 12] ? "on" : "off");
-            //order might be off here...
-            PrintAndLogEx(NORMAL,  "Write with MAC for S_PAD  : %s ", sprint_bin(trace + 3 + 10, 2));
-            PrintAndLogEx(NORMAL,  "Write with AUTH for S_PAD : %s ", sprint_bin(trace + 3 + 8, 2));
-            PrintAndLogEx(NORMAL,  "Read after AUTH for S_PAD : %s ", sprint_bin(trace + 3 + 6, 2));
-            PrintAndLogEx(NORMAL,  "MAC needed to write CK and CKV: %s", trace[3 + 5] ? "on" : "off");
-            PrintAndLogEx(NORMAL,  "RF parameter: %02x", (trace[3 + 4] & 0x7));
-            PrintAndLogEx(NORMAL,  "Compatible with NDEF: %s", trace[3 + 3] ? "yes" : "no");
-            PrintAndLogEx(NORMAL,  "Memory config writable : %s", (trace[3 + 2] == 0xff) ? "yes" : "no");
-            PrintAndLogEx(NORMAL,  "RW access for S_PAD : %s ", sprint_bin(trace + 3, 2));
-        }
-        break;
-        case 0x90: {
-            PrintAndLogEx(NORMAL,  "Write counter, RO:   %02x %02x %02x ", trace[3], trace[4], trace[5]);
-        }
-        break;
-        case 0x91: {
-            PrintAndLogEx(NORMAL,  "MAC_A, RW (auth):   %s ", line);
-        }
-        break;
-        case 0x92:
-            PrintAndLogEx(NORMAL,  "State:");
-            PrintAndLogEx(NORMAL,  "Polling disabled: %s", trace[3 + 8] ? "yes" : "no");
-            PrintAndLogEx(NORMAL,  "Authenticated: %s", trace[3] ? "yes" : "no");
-            break;
-        case 0xa0:
-            PrintAndLogEx(NORMAL,  "CRC of all blocks match : %s", (trace[3 + 2] == 0xff) ? "no" : "yes");
-            break;
-        default:
-            PrintAndLogEx(WARNING,  "INVALID %d: %s", blocknum, line);
-            break;
-    }
-    return tracepos + 19;
-}
-
-static int CmdHFFelicaDumpLite(const char *Cmd) {
-
-    /*
-    iceman 2021,
-    Why does this command say it dumps a FeliCa lite card
-    and then tries to print a trace?!?
-    Is this a trace list or a FeliCa dump cmd?
-    */
-
-
-    CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf felica litedump",
-                  "Dump ISO/18092 FeliCa Lite tag.  It will timeout after 200sec",
-                  "hf felica litedump"
-                 );
-    void *argtable[] = {
-        arg_param_begin,
-        arg_param_end
-    };
-    CLIExecWithReturn(ctx, Cmd, argtable, true);
-    CLIParserFree(ctx);
-
-    PrintAndLogEx(SUCCESS, "FeliCa lite - dump started");
-
-    clearCommandBuffer();
-    SendCommandNG(CMD_HF_FELICALITE_DUMP, NULL, 0);
-    PacketResponseNG resp;
-
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort dumping");
-
-    uint8_t timeout = 0;
-    while (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
-
-        if (kbd_enter_pressed()) {
-            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-            PrintAndLogEx(DEBUG, "\naborted via keyboard!");
-            return PM3_EOPABORTED;
-        }
-
-        timeout++;
-        PrintAndLogEx(INPLACE, "% 3i", timeout);
-
-        fflush(stdout);
-        if (kbd_enter_pressed()) {
-            PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
-            DropField();
-            return PM3_EOPABORTED;
-        }
-        if (timeout > 10) {
-            PrintAndLogEx(WARNING, "\ntimeout while waiting for reply");
-            DropField();
-            return PM3_ETIMEOUT;
-        }
-    }
-
-    PrintAndLogEx(NORMAL, "");
-
-    if (resp.oldarg[0] == 0) {
-        PrintAndLogEx(WARNING, "Button pressed, aborted");
-        return PM3_EOPABORTED;
-    }
-
-    uint16_t tracelen = resp.oldarg[1];
-    if (tracelen == 0) {
-        PrintAndLogEx(WARNING, "No trace data! Maybe not a FeliCa Lite card?");
-        return PM3_ESOFT;
-    }
-
-    uint8_t *trace = calloc(tracelen, sizeof(uint8_t));
-    if (trace == NULL) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        return PM3_EMALLOC;
-    }
-
-    if (GetFromDevice(BIG_BUF, trace, tracelen, 0, NULL, 0, NULL, 2500, false) == false) {
-        PrintAndLogEx(WARNING, "command execution time out");
-        free(trace);
-        return PM3_ETIMEOUT;
-    }
-
-
-    PrintAndLogEx(SUCCESS, "Recorded Activity (trace len = %"PRIu32" bytes)", tracelen);
-    print_hex_break(trace, tracelen, 32);
-    printSep();
-
-    uint16_t tracepos = 0;
-    while (tracepos < tracelen)
-        tracepos = PrintFliteBlock(tracepos, trace, tracelen);
-
-    printSep();
-
-    free(trace);
-    return PM3_SUCCESS;
-}
-
 static int felica_make_block_list(uint16_t *out, const uint8_t *blk_numbers, const size_t length) {
     if (length > 4) {
         PrintAndLogEx(ERR, "felica_make_block_list: exceeds max size");
@@ -2741,10 +2485,11 @@ static int write_with_mac(
 
 static int felica_internal_authentication(
     const uint8_t *idm,
-    const uint8_t* rc,
+    const uint8_t *rc,
     const size_t rclen,
     mbedtls_des3_context *ctx,
-    const felica_auth_context_t *auth_ctx) {
+    const felica_auth_context_t *auth_ctx,
+    bool verbose) {
 
     uint8_t data[PM3_CMD_DATA_SIZE];
     memset(data, 0, sizeof(data));
@@ -2775,7 +2520,7 @@ static int felica_internal_authentication(
 
     memset(data, 0, sizeof(data));
 
-    uint8_t blk_numbers2[2] = {0x82, 0x91};
+    uint8_t blk_numbers2[2] = {FELICA_BLK_NUMBER_ID, FELICA_BLK_NUMBER_MACA};
 
     ret = read_without_encryption(idm, (uint8_t)sizeof(blk_numbers2), blk_numbers2, data, &datalen);
     if (ret) {
@@ -2814,7 +2559,9 @@ static int felica_internal_authentication(
         return PM3_ERFTRANS;
     }
 
-    PrintAndLogEx(SUCCESS, "MAC_A: %s", sprint_hex(mac, sizeof(mac)));
+    if (verbose) {
+        PrintAndLogEx(SUCCESS, "MAC_A: %s", sprint_hex(mac, sizeof(mac)));
+    }
 
     if (memcmp(mac_blk, mac, FELICA_BLK_HALF) != 0) {
         PrintAndLogEx(ERR, "\nInternal Authenticate: " _RED_("Failed"));
@@ -2896,6 +2643,48 @@ static int felica_external_authentication(
     return PM3_SUCCESS;
 }
 
+static int felica_mutual_authentication(
+    const uint8_t *idm,
+    const uint8_t *rc,
+    const size_t rclen,
+    const uint8_t *key,
+    const size_t keylen,
+    bool keep,
+    bool verbose) {
+
+    int ret = PM3_SUCCESS;
+
+    mbedtls_des3_context des3_ctx;
+    mbedtls_des3_init(&des3_ctx);
+
+    felica_auth_context_t auth_ctx;
+
+    ret = felica_auth_context_init(&des3_ctx, rc, rclen, key, keylen, &auth_ctx);
+    if (ret) {
+        goto cleanup;
+    }
+
+    if (verbose) {
+        PrintAndLogEx(INFO, "Session Key(SK): %s", sprint_hex(auth_ctx.session_key, sizeof(auth_ctx.session_key)));
+    }
+
+    ret = felica_internal_authentication(idm, rc, rclen, &des3_ctx, &auth_ctx, verbose);
+    if (ret) {
+        goto cleanup;
+    }
+
+    ret = felica_external_authentication(idm, &des3_ctx, &auth_ctx, keep);
+    if (ret) {
+        goto cleanup;
+    }
+
+cleanup:
+    mbedtls_des3_free(&des3_ctx);
+    felica_auth_context_free(&auth_ctx);
+
+    return ret;
+}
+
 /**
  * Command parser for liteauth.
  * @param Cmd input data of the user.
@@ -2906,16 +2695,16 @@ static int CmdHFFelicaAuthenticationLite(const char *Cmd) {
     CLIParserInit(&ctx, "hf felica liteauth",
                   "Authenticate",
                   "hf felica liteauth -i 11100910C11BC407\n"
-                  "hf felica liteauth -k 46656c69436130313233343536616263\n"
-                  "hf felica liteauth -k 46656c69436130313233343536616263 -@\n"
-                  "hf felica liteauth -c 701185c59f8d30afeab8e4b3a61f5cc4 -k 46656c69436130313233343536616263"
+                  "hf felica liteauth --key 46656c69436130313233343536616263\n"
+                  "hf felica liteauth --key 46656c69436130313233343536616263 -k\n"
+                  "hf felica liteauth -c 701185c59f8d30afeab8e4b3a61f5cc4 --key 46656c69436130313233343536616263"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("k", "key", "<hex>", "set card key, 16 bytes"),
+        arg_str0(NULL, "key", "<hex>", "set card key, 16 bytes"),
         arg_str0("c", "", "<hex>", "set random challenge, 16 bytes"),
         arg_str0("i", "", "<hex>", "set custom IDm"),
-        arg_lit0("@", "", "keep signal field ON after receive"),
+        arg_lit0("k", "", "keep signal field ON after receive"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2967,33 +2756,309 @@ static int CmdHFFelicaAuthenticationLite(const char *Cmd) {
 
     PrintAndLogEx(SUCCESS, "FeliCa lite - auth started");
 
-    mbedtls_des3_context des3_ctx;
-    mbedtls_des3_init(&des3_ctx);
-
-    felica_auth_context_t auth_ctx;
-
-    ret = felica_auth_context_init(&des3_ctx, rc, sizeof(rc), key, sizeof(key), &auth_ctx);
+    ret = felica_mutual_authentication(idm, rc, sizeof(rc), key, sizeof(key), keep_field_on, true);
     if (ret) {
-        goto cleanup;
+        return PM3_EINVARG;
     }
 
-    PrintAndLogEx(INFO, "Session Key(SK): %s", sprint_hex(auth_ctx.session_key, sizeof(auth_ctx.session_key)));
+    return PM3_SUCCESS;
+}
 
-    ret = felica_internal_authentication(idm, rc, sizeof(rc), &des3_ctx, &auth_ctx);
-    if (ret) {
-        goto cleanup;
+static void printSep(void) {
+    PrintAndLogEx(INFO, "------------------------------------------------------------------------------------");
+}
+
+static uint16_t PrintFliteBlock(uint16_t tracepos, uint8_t *trace, uint16_t tracelen) {
+    if (tracepos + 19 >= tracelen)
+        return tracelen;
+
+    trace += tracepos;
+    uint8_t blocknum = trace[0];
+    uint8_t status1 = trace[1];
+    uint8_t status2 = trace[2];
+
+    bool error = (status1 != 0x00 && (status2 == 0xB1 || status2 == 0xB2));
+
+    char line[110] = {0};
+    for (int j = 0; j < 16; j++) {
+        if (error) {
+            snprintf(line + (j * 4), sizeof(line) - 1 - (j * 4), "??  ");
+        } else {
+            snprintf(line + (j * 4), sizeof(line) - 1 - (j * 4), "%02x  ", trace[j + 3]);
+        }
     }
 
-    ret = felica_external_authentication(idm, &des3_ctx, &auth_ctx, keep_field_on);
-    if (ret) {
-        goto cleanup;
+    PrintAndLogEx(NORMAL, "block number %02x, status: %02x %02x", blocknum, status1, status2);
+    switch (blocknum) {
+        case 0x00:
+            PrintAndLogEx(NORMAL,  "S_PAD0: %s", line);
+            break;
+        case 0x01:
+            PrintAndLogEx(NORMAL,  "S_PAD1: %s", line);
+            break;
+        case 0x02:
+            PrintAndLogEx(NORMAL,  "S_PAD2: %s", line);
+            break;
+        case 0x03:
+            PrintAndLogEx(NORMAL,  "S_PAD3: %s", line);
+            break;
+        case 0x04:
+            PrintAndLogEx(NORMAL,  "S_PAD4: %s", line);
+            break;
+        case 0x05:
+            PrintAndLogEx(NORMAL,  "S_PAD5: %s", line);
+            break;
+        case 0x06:
+            PrintAndLogEx(NORMAL,  "S_PAD6: %s", line);
+            break;
+        case 0x07:
+            PrintAndLogEx(NORMAL,  "S_PAD7: %s", line);
+            break;
+        case 0x08:
+            PrintAndLogEx(NORMAL,  "S_PAD8: %s", line);
+            break;
+        case 0x09:
+            PrintAndLogEx(NORMAL,  "S_PAD9: %s", line);
+            break;
+        case 0x0a:
+            PrintAndLogEx(NORMAL,  "S_PAD10: %s", line);
+            break;
+        case 0x0b:
+            PrintAndLogEx(NORMAL,  "S_PAD11: %s", line);
+            break;
+        case 0x0c:
+            PrintAndLogEx(NORMAL,  "S_PAD12: %s", line);
+            break;
+        case 0x0d:
+            PrintAndLogEx(NORMAL,  "S_PAD13: %s", line);
+            break;
+        case 0x0E: {
+            uint32_t regA = trace[3] | trace[4] << 8 | trace[5] << 16 | trace[6] << 24;
+            uint32_t regB = trace[7] | trace[8] << 8 | trace[9] << 16 | trace[10] << 24;
+            line[0] = 0;
+            for (int j = 0; j < 8; j++)
+                snprintf(line + (j * 2), sizeof(line) - 1 - (j * 2), "%02x", trace[j + 11]);
+
+            if (error) {
+                PrintAndLogEx(NORMAL,  "REG: regA: ???????? regB: ???????? regC: ???????????????? ");
+            } else {
+                PrintAndLogEx(NORMAL,  "REG: regA: %d regB: %d regC: %s ", regA, regB, line);
+            }
+        }
+        break;
+        case 0x80:
+            PrintAndLogEx(NORMAL,  "Random Challenge, WO:  %s ", line);
+            break;
+        case 0x81:
+            PrintAndLogEx(NORMAL,  "MAC, only set on dual read:  %s ", line);
+            break;
+        case 0x82: {
+            char idd[20];
+            char idm[20];
+            for (int j = 0; j < 8; j++)
+                snprintf(idd + (j * 2), sizeof(idd) - 1 - (j * 2), "%02x", trace[j + 3]);
+
+            for (int j = 0; j < 6; j++)
+                snprintf(idm + (j * 2), sizeof(idm) - 1 - (j * 2), "%02x", trace[j + 13]);
+
+            PrintAndLogEx(NORMAL,  "ID Block, IDd: 0x%s DFC: 0x%02x%02x Arb: %s ", idd, trace[11], trace [12], idm);
+        }
+        break;
+        case 0x83: {
+            char idm[20];
+            char pmm[20];
+            for (int j = 0; j < 8; j++)
+                snprintf(idm + (j * 2), sizeof(idm) - 1 - (j * 2), "%02x", trace[j + 3]);
+
+            for (int j = 0; j < 8; j++)
+                snprintf(pmm + (j * 2), sizeof(pmm) - 1 - (j * 2), "%02x", trace[j + 11]);
+
+            PrintAndLogEx(NORMAL,  "DeviceId:  IDm: 0x%s PMm: 0x%s ", idm, pmm);
+        }
+        break;
+        case 0x84:
+            PrintAndLogEx(NORMAL,  "SER_C: 0x%02x%02x ", trace[3], trace[4]);
+            break;
+        case 0x85:
+            PrintAndLogEx(NORMAL,  "SYS_Cl 0x%02x%02x ", trace[3], trace[4]);
+            break;
+        case 0x86:
+            PrintAndLogEx(NORMAL,  "CKV (key version): 0x%02x%02x ", trace[3], trace[4]);
+            break;
+        case 0x87:
+            PrintAndLogEx(NORMAL,  "CK (card key), WO:   %s ", line);
+            break;
+        case 0x88: {
+            PrintAndLogEx(NORMAL,  "Memory Configuration (MC):");
+            PrintAndLogEx(NORMAL,  "MAC needed to write state: %s", trace[3 + 12] ? "on" : "off");
+            //order might be off here...
+            PrintAndLogEx(NORMAL,  "Write with MAC for S_PAD  : %s ", sprint_bin(trace + 3 + 10, 2));
+            PrintAndLogEx(NORMAL,  "Write with AUTH for S_PAD : %s ", sprint_bin(trace + 3 + 8, 2));
+            PrintAndLogEx(NORMAL,  "Read after AUTH for S_PAD : %s ", sprint_bin(trace + 3 + 6, 2));
+            PrintAndLogEx(NORMAL,  "MAC needed to write CK and CKV: %s", trace[3 + 5] ? "on" : "off");
+            PrintAndLogEx(NORMAL,  "RF parameter: %02x", (trace[3 + 4] & 0x7));
+            PrintAndLogEx(NORMAL,  "Compatible with NDEF: %s", trace[3 + 3] ? "yes" : "no");
+            PrintAndLogEx(NORMAL,  "Memory config writable : %s", (trace[3 + 2] == 0xff) ? "yes" : "no");
+            PrintAndLogEx(NORMAL,  "RW access for S_PAD : %s ", sprint_bin(trace + 3, 2));
+        }
+        break;
+        case 0x90: {
+            PrintAndLogEx(NORMAL,  "Write counter, RO:   %02x %02x %02x ", trace[3], trace[4], trace[5]);
+        }
+        break;
+        case 0x91: {
+            PrintAndLogEx(NORMAL,  "MAC_A, RW (auth):   %s ", line);
+        }
+        break;
+        case 0x92:
+            PrintAndLogEx(NORMAL,  "State:");
+            PrintAndLogEx(NORMAL,  "Polling disabled: %s", trace[3 + 8] ? "yes" : "no");
+            PrintAndLogEx(NORMAL,  "Authenticated: %s", trace[3] ? "yes" : "no");
+            break;
+        case 0xa0:
+            PrintAndLogEx(NORMAL,  "CRC of all blocks match : %s", (trace[3 + 2] == 0xff) ? "no" : "yes");
+            break;
+        default:
+            PrintAndLogEx(WARNING,  "INVALID %d: %s", blocknum, line);
+            break;
+    }
+    return tracepos + 19;
+}
+
+static int CmdHFFelicaDumpLite(const char *Cmd) {
+
+    /*
+    iceman 2021,
+    Why does this command say it dumps a FeliCa lite card
+    and then tries to print a trace?!?
+    Is this a trace list or a FeliCa dump cmd?
+    */
+
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf felica litedump",
+                  "Dump ISO/18092 FeliCa Lite tag.  It will timeout after 200sec",
+                  "hf felica litedump"
+                 );
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("i", "", "<hex>", "set custom IDm"),
+        arg_str0(NULL, "key", "<hex>", "set card key, 16 bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint8_t idm[8];
+    memset(idm, 0, sizeof(idm));
+    int ilen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 1), idm, sizeof(idm), &ilen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
 
-cleanup:
-    mbedtls_des3_free(&des3_ctx);
-    felica_auth_context_free(&auth_ctx);
+    uint8_t key[FELICA_BLK_SIZE];
+    memset(key, 0, sizeof(key));
+    int keylen = 0;
+    res = CLIParamHexToBuf(arg_get_str(ctx, 2), key, sizeof(key), &keylen);
+    if (res) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
 
-    return ret;
+    CLIParserFree(ctx);
+
+    if (keylen != 0) {
+        if (!ilen) {
+            if (last_known_card.IDm[0] != 0 && last_known_card.IDm[1] != 0) {
+                memcpy(idm, last_known_card.IDm, sizeof(idm));
+            } else {
+                PrintAndLogEx(WARNING, "No last known card! Use `" _YELLOW_("hf felica reader") "` first or set a custom IDm");
+                return PM3_EINVARG;
+            }
+        }
+
+        uint8_t rc[FELICA_BLK_SIZE] = {0};
+
+        int ret = felica_mutual_authentication(idm, rc, sizeof(rc), key, sizeof(key), true, false);
+        if (ret) {
+            PrintAndLogEx(WARNING, "Authenticate Failed");
+        }
+    }
+
+    PrintAndLogEx(NORMAL, "");
+
+    PrintAndLogEx(SUCCESS, "FeliCa lite - dump started");
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_FELICALITE_DUMP, NULL, 0);
+    PacketResponseNG resp;
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort dumping");
+
+    uint8_t timeout = 0;
+    while (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
+
+        if (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, "\naborted via keyboard!");
+            return PM3_EOPABORTED;
+        }
+
+        timeout++;
+        PrintAndLogEx(INPLACE, "% 3i", timeout);
+
+        fflush(stdout);
+        if (kbd_enter_pressed()) {
+            PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
+            DropField();
+            return PM3_EOPABORTED;
+        }
+        if (timeout > 10) {
+            PrintAndLogEx(WARNING, "\ntimeout while waiting for reply");
+            DropField();
+            return PM3_ETIMEOUT;
+        }
+    }
+
+    PrintAndLogEx(NORMAL, "");
+
+    if (resp.oldarg[0] == 0) {
+        PrintAndLogEx(WARNING, "Button pressed, aborted");
+        return PM3_EOPABORTED;
+    }
+
+    uint16_t tracelen = resp.oldarg[1];
+    if (tracelen == 0) {
+        PrintAndLogEx(WARNING, "No trace data! Maybe not a FeliCa Lite card?");
+        return PM3_ESOFT;
+    }
+
+    uint8_t *trace = calloc(tracelen, sizeof(uint8_t));
+    if (trace == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+
+    if (GetFromDevice(BIG_BUF, trace, tracelen, 0, NULL, 0, NULL, 2500, false) == false) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        free(trace);
+        return PM3_ETIMEOUT;
+    }
+
+
+    PrintAndLogEx(SUCCESS, "Recorded Activity (trace len = %"PRIu32" bytes)", tracelen);
+    print_hex_break(trace, tracelen, 32);
+    printSep();
+
+    uint16_t tracepos = 0;
+    while (tracepos < tracelen)
+        tracepos = PrintFliteBlock(tracepos, trace, tracelen);
+
+    printSep();
+
+    free(trace);
+    return PM3_SUCCESS;
 }
 
 static int CmdHFFelicaCmdRaw(const char *Cmd) {
@@ -3113,8 +3178,8 @@ static command_t CommandTable[] = {
     //{"uprandomid",    CmdHFFelicaNotImplementedYet,     IfPm3Felica,     "update Random ID (IDr)."},
     {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("FeliCa Light") " -----------------------"},
     {"litesim",         CmdHFFelicaSimLite,               IfPm3Felica,     "Emulating ISO/18092 FeliCa Lite tag"},
-    {"litedump",        CmdHFFelicaDumpLite,              IfPm3Felica,     "Wait for and try dumping FelicaLite"},
     {"liteauth",        CmdHFFelicaAuthenticationLite,    IfPm3Felica,     "authenticate a card."},
+    {"litedump",        CmdHFFelicaDumpLite,              IfPm3Felica,     "Wait for and try dumping FelicaLite"},
     //    {"sim",       CmdHFFelicaSim,                   IfPm3Felica,     "<UID> -- Simulate ISO 18092/FeliCa tag"}
     {NULL, NULL, NULL, NULL}
 };
