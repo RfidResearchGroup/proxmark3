@@ -175,19 +175,19 @@ static void pm3_staticnested(uint32_t uid, uint32_t nt1, uint32_t ks1,  uint32_t
     }
 }
 
-static int usage(void) {
+static int usage(const char *prog) {
     printf("\n");
     printf("\nProgram tries to recover keys from static encrypted nested MFC cards\n");
     printf("using two different implementations, Chameleon Ultra (CU) and Proxmark3.\n");
     printf("It uses the nonce, keystream sent from pm3 device to client.\n");
     printf("ie: NOT the CU data which is data in the trace.\n");
     printf("\n");
-    printf("syntax:  staticnested <uid> <nt1> <ks1> <nt2> <ks2>\n\n");
+    printf("syntax:  %s <uid> <nt1> <ks1> <nt2> <ks2>\n\n", prog);
     printf("samples:\n");
     printf("\n");
-    printf("  ./staticnested 461dce03 7eef3586 ffb02eda 322bc14d ffc875ca\n");
-    printf("  ./staticnested 461dce03 7eef3586 1fb6b496 322bc14d 1f4eebdd\n");
-    printf("  ./staticnested 461dce03 7eef3586 7fa28c7e 322bc14d 7f62b3d6\n");
+    printf("  %s 461dce03 7eef3586 ffb02eda 322bc14d ffc875ca\n", prog);
+    printf("  %s 461dce03 7eef3586 1fb6b496 322bc14d 1f4eebdd\n", prog);
+    printf("  %s 461dce03 7eef3586 7fa28c7e 322bc14d 7f62b3d6\n", prog);
     printf("\n");
     return 1;
 }
@@ -196,7 +196,7 @@ int main(int argc, char *const argv[]) {
 
     printf("\nMIFARE Classic static nested key recovery\n\n");
 
-    if (argc < 5) return usage();
+    if (argc < 5) return usage(argv[0]);
 
     printf("Init...\n");
     NtpKs1 *pNK = calloc(2, sizeof(NtpKs1));
