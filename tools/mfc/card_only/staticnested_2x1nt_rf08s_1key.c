@@ -5,7 +5,7 @@
 // * keyA and keyB are different for the targeted sector
 //
 // Strategy:
-// * Use f08s_nested_known_collision to crack keyA
+// * Use staticnested_2x1nt_rf08s to crack keyA
 // * If keyB not readable, find keyB in its dictionary based on the obscure relationship between keyA, keyB and their nT
 //
 //  Doegox, 2024, cf https://eprint.iacr.org/2024/1275 for more info
@@ -89,7 +89,7 @@ int main(int argc, char *const argv[]) {
 
     if (argc != 4) {
         printf("Usage:\n  %s <nt1:08x> <key1:012x> keys_<uid:08x>_<sector:02>_<nt2:08x>.dic\n"
-               "  where dict file is produced by rf08s_nested_known *for the same UID and same sector* as provided nt and key\n",
+               "  where dict file is produced by staticnested_1nt *for the same UID and same sector* as provided nt and key\n",
                argv[0]);
         return 1;
     }
