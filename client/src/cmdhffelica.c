@@ -2311,7 +2311,7 @@ static int send_rd_multiple_plain(uint8_t flags, uint16_t datalen, uint8_t *data
         return PM3_ERFTRANS;
     }
 
-    uint8_t block_data[FELICA_BLK_SIZE*4];
+    uint8_t block_data[FELICA_BLK_SIZE * 4];
     memset(block_data, 0, sizeof(block_data));
 
     uint8_t outlen = 0;
@@ -2453,13 +2453,13 @@ static int write_with_mac(
     const uint8_t blk_number,
     const uint8_t *block_data,
     uint8_t *out) {
-        
+
     uint8_t initialize_blk[FELICA_BLK_HALF];
     memset(initialize_blk, 0, sizeof(initialize_blk));
-    
+
     uint8_t wcnt[3];
     memcpy(wcnt, counter, 3);
-    
+
     memcpy(initialize_blk, wcnt, sizeof(wcnt));
     initialize_blk[4] = blk_number;
     initialize_blk[6] = 0x91;
@@ -2471,7 +2471,7 @@ static int write_with_mac(
         return ret;
     }
 
-    uint8_t payload[FELICA_BLK_SIZE*2];
+    uint8_t payload[FELICA_BLK_SIZE * 2];
     memset(payload, 0, sizeof(payload));
 
     memcpy(payload, block_data, FELICA_BLK_SIZE);
@@ -2510,7 +2510,7 @@ static int felica_internal_authentication(
 
     felica_status_response_t res;
     if (send_wr_plain(flags, datalen, data, false, &res) != PM3_SUCCESS) {
-        return PM3_ERFTRANS; 
+        return PM3_ERFTRANS;
     }
 
     if (res.status_flags.status_flag1[0] != 0x00 && res.status_flags.status_flag2[0] != 0x00) {
@@ -2530,7 +2530,7 @@ static int felica_internal_authentication(
     AddCrc(data, datalen);
     datalen += 2;
 
-    uint8_t pd[FELICA_BLK_SIZE*sizeof(blk_numbers2)];
+    uint8_t pd[FELICA_BLK_SIZE * sizeof(blk_numbers2)];
     memset(pd, 0, sizeof(pd));
 
     ret = send_rd_multiple_plain(flags, datalen, data, pd);
@@ -2565,7 +2565,7 @@ static int felica_internal_authentication(
 
     if (memcmp(mac_blk, mac, FELICA_BLK_HALF) != 0) {
         PrintAndLogEx(ERR, "\nInternal Authenticate: " _RED_("Failed"));
-        return PM3_ERFTRANS;   
+        return PM3_ERFTRANS;
     }
 
     PrintAndLogEx(SUCCESS, "Internal Authenticate: " _GREEN_("OK"));
@@ -2607,7 +2607,7 @@ static int felica_external_authentication(
 
     ext_auth[0] = 1; // After Authenticate
 
-    uint8_t mac_w[FELICA_BLK_SIZE*2];
+    uint8_t mac_w[FELICA_BLK_SIZE * 2];
 
     ret = write_with_mac(ctx, auth_ctx, wcnt_blk, FELICA_BLK_NUMBER_STATE, ext_auth, mac_w);
     if (ret) {
@@ -2630,7 +2630,7 @@ static int felica_external_authentication(
 
     felica_status_response_t res;
     if (send_wr_plain(flags, datalen, data, false, &res) != PM3_SUCCESS) {
-        return PM3_ERFTRANS; 
+        return PM3_ERFTRANS;
     }
 
     if (res.status_flags.status_flag1[0] != 0x00 && res.status_flags.status_flag2[0] != 0x00) {

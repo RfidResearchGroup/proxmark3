@@ -343,8 +343,8 @@ Check column "offline" for their availability.
 |`hf felica rqspecver    `|N       |`acquire the version of card OS.`
 |`hf felica resetmode    `|N       |`reset Mode to Mode 0.`
 |`hf felica litesim      `|N       |`Emulating ISO/18092 FeliCa Lite tag`
-|`hf felica litedump     `|N       |`Wait for and try dumping FelicaLite`
 |`hf felica liteauth     `|N       |`authenticate a card.`
+|`hf felica litedump     `|N       |`Wait for and try dumping FelicaLite`
 
 
 ### hf fido

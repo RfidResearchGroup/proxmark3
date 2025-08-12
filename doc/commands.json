@@ -2710,17 +2710,19 @@
             "description": "Authenticate",
             "notes": [
                 "hf felica liteauth -i 11100910C11BC407",
-                "hf felica liteauth -k 46656c69436130313233343536616263",
-                "hf felica liteauth -c 701185c59f8d30afeab8e4b3a61f5cc4 -k 46656c69436130313233343536616263"
+                "hf felica liteauth --key 46656c69436130313233343536616263",
+                "hf felica liteauth --key 46656c69436130313233343536616263 -k",
+                "hf felica liteauth -c 701185c59f8d30afeab8e4b3a61f5cc4 --key 46656c69436130313233343536616263"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-k, --key <hex> set card key, 16 bytes",
+                "--key <hex> set card key, 16 bytes",
                 "-c, <hex> set random challenge, 16 bytes",
-                "-i, <hex> set custom IDm"
+                "-i, <hex> set custom IDm",
+                "-k, keep signal field ON after receive"
             ],
-            "usage": "hf felica liteauth [-h] [-k <hex>] [-c <hex>] [-i <hex>]"
+            "usage": "hf felica liteauth [-hk] [--key <hex>] [-c <hex>] [-i <hex>]"
         },
         "hf felica litedump": {
             "command": "hf felica litedump",
@@ -2730,9 +2732,11 @@
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-i, <hex> set custom IDm",
+                "--key <hex> set card key, 16 bytes"
             ],
-            "usage": "hf felica litedump [-h]"
+            "usage": "hf felica litedump [-h] [-i <hex>] [--key <hex>]"
         },
         "hf felica litesim": {
             "command": "hf felica litesim",
@@ -13485,6 +13489,6 @@
     "metadata": {
         "commands_extracted": 775,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-08-04T17:50:35"
+        "extracted_on": "2025-08-12T16:26:32"
     }
 }
