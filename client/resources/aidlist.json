@@ -1248,14 +1248,6 @@
         "Type": ""
     },
     {
-        "AID": "A000000308000010000100",
-        "Vendor": "National Institute of Standards and Technology",
-        "Country": "United States",
-        "Name": "Personal Identity Verification (PIV) / ID-ONE PIV BIO",
-        "Description": "PIV End Point Applet. Last 2 bytes designate version",
-        "Type": ""
-    },
-    {
         "AID": "A00000031510100528",
         "Vendor": "Currence Holding/PIN BV",
         "Country": "The Netherlands",
@@ -2470,5 +2462,37 @@
         "Name": "Navigo",
         "Description": "CALYPSO-based transit card",
         "Type": "transport"
+    },
+    {
+        "AID": "A0000000791000",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "Crescendo ACA",
+        "Description": "HID Crescendo ACA",
+        "Type": "access"
+    },
+    {
+        "AID": "A0000000792300",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "Crescendo OATH #0 (HOTP)",
+        "Description": "HID Crescendo Key OATH instance 0 (default HOTP slot)",
+        "Type": "access"
+    },
+    {
+        "AID": "A0000000792301",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "Crescendo OATH #1",
+        "Description": "HID Crescendo Key OATH instance 1",
+        "Type": "access"
+    },
+    {
+        "AID": "A0000000792302",
+        "Vendor": "HID Global",
+        "Country": "",
+        "Name": "Crescendo OATH #2",
+        "Description": "HID Crescendo Key OATH instance 2",
+        "Type": "access"
     }
 ]
