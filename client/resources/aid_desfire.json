@@ -1264,6 +1264,14 @@
         "Type": "transport"
     },
     {
+        "AID": "C1B1A1",
+        "Vendor": "AHORROBUS via MOBILITY ADO",
+        "Country": "MX",
+        "Name": "AHORROBUS Card (MEX)",
+        "Description": "MEX AHORROBUS Card",
+        "Type": "transport"
+    },
+    {
         "AID": "C65B80",
         "Vendor": "Umo Mobility via Cubic Transportation Systems",
         "Country": "US / CA",
