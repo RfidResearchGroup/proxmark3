@@ -101,8 +101,17 @@ void DesfireSetCommMode(DesfireContext_t *ctx, DesfireCommunicationMode commMode
 void DesfireSetKdf(DesfireContext_t *ctx, uint8_t kdfAlgo, uint8_t *kdfInput, uint8_t kdfInputLen) {
     ctx->kdfAlgo = kdfAlgo;
     ctx->kdfInputLen = kdfInputLen;
-    if (kdfInputLen) {
+    if (kdfInputLen)
         memcpy(ctx->kdfInput, kdfInput, kdfInputLen);
+}
+
+void DesfireSetDFName(DesfireContext_t *ctx, uint8_t *dfname, uint8_t dfnameLen) {
+    ctx->selectedDFNameLen = 0;
+    memset(ctx->selectedDFName, 0, sizeof(ctx->selectedDFName));
+    
+    if (dfname && dfnameLen > 0 && dfnameLen <= 16) {
+        ctx->selectedDFNameLen = dfnameLen;
+        memcpy(ctx->selectedDFName, dfname, dfnameLen);
     }
 }
 
