@@ -334,7 +334,7 @@ void cmac(const desfirekey_t key, uint8_t *ivect, const uint8_t *data, size_t le
         return;
     }
 
-    uint8_t *buffer = BigBuf_malloc(padded_data_length(len, kbs));
+    uint8_t *buffer = BigBuf_calloc(padded_data_length(len, kbs));
 
     memcpy(buffer, data, len);
 

@@ -497,7 +497,7 @@ static void iso18092_setup(uint8_t fpga_minor_mode) {
     BigBuf_Clear_ext(false);
 
     // Initialize Demod and Uart structs
-    // DemodInit(BigBuf_malloc(MAX_FRAME_SIZE));
+    // DemodInit(BigBuf_calloc(MAX_FRAME_SIZE));
     FelicaFrameinit(BigBuf_calloc(FELICA_MAX_FRAME_SIZE));
 
     felica_nexttransfertime = 2 * DELAY_ARM2AIR_AS_READER;  // 418

@@ -247,7 +247,7 @@ void RunMod(void) {
     // usb_disable();
 
     // Allocate dictionary buffer
-    uint64_t *const mfcKeys = (uint64_t *)BigBuf_malloc(
+    uint64_t *const mfcKeys = (uint64_t *)BigBuf_calloc(
                                   sizeof(uint64_t) * (ARRAYLEN(MATTYRUN_MFC_ESSENTIAL_KEYS) +
                                                       ARRAYLEN(MATTYRUN_MFC_DEFAULT_KEYS) +
                                                       MIFARE_4K_MAXSECTOR * 2));

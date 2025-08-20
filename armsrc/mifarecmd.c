@@ -2252,7 +2252,7 @@ OUT:
             bar |= ((uint16_t)(found[m] & 1) << j++);
         }
 
-        uint8_t *tmp = BigBuf_malloc(480 + 10);
+        uint8_t *tmp = BigBuf_calloc(480 + 10);
         memcpy(tmp, k_sector, sectorcnt * sizeof(sector_t));
         num_to_bytes(foo, 8, tmp + 480);
         tmp[488] = bar & 0xFF;
@@ -2409,7 +2409,7 @@ void MifareChkKeys_file(uint8_t *fn) {
 
     int changed = rdv40_spiffs_lazy_mount();
     uint32_t size = size_in_spiffs((char *)fn);
-    uint8_t *mem = BigBuf_malloc(size);
+    uint8_t *mem = BigBuf_calloc(size);
 
     rdv40_spiffs_read_as_filetype((char *)fn, mem, size, RDV40_SPIFFS_SAFETY_SAFE);
 
@@ -3609,13 +3609,13 @@ void MifareG4ReadBlk(uint8_t blockno, uint8_t *pwd, uint8_t workFlags) {
     int res = 0;
     int retval = PM3_SUCCESS;
 
-    uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
+    uint8_t *buf = BigBuf_calloc(PM3_CMD_DATA_SIZE);
     if (buf == NULL) {
         retval = PM3_EMALLOC;
         goto OUT;
     }
 
-    uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
+    uint8_t *par = BigBuf_calloc(MAX_PARITY_SIZE);
     if (par == NULL) {
         retval = PM3_EMALLOC;
         goto OUT;
@@ -3685,7 +3685,7 @@ void MifareG4WriteBlk(uint8_t blockno, uint8_t *pwd, uint8_t *data, uint8_t work
     int res = 0;
     int retval = PM3_SUCCESS;
 
-    uint8_t *buf = BigBuf_malloc(PM3_CMD_DATA_SIZE);
+    uint8_t *buf = BigBuf_calloc(PM3_CMD_DATA_SIZE);
     if (buf == NULL) {
         retval = PM3_EMALLOC;
         goto OUT;
@@ -3697,7 +3697,7 @@ void MifareG4WriteBlk(uint8_t blockno, uint8_t *pwd, uint8_t *data, uint8_t work
         goto OUT;
     }
 
-    uint8_t *par = BigBuf_malloc(MAX_PARITY_SIZE);
+    uint8_t *par = BigBuf_calloc(MAX_PARITY_SIZE);
     if (par == NULL) {
         retval = PM3_EMALLOC;
         goto OUT;

@@ -340,7 +340,7 @@ t55xx_configurations_t *getT55xxConfig(void) {
 void loadT55xxConfig(void) {
 #ifdef WITH_FLASH
 
-    uint8_t *buf = BigBuf_malloc(T55XX_CONFIG_LEN);
+    uint8_t *buf = BigBuf_calloc(T55XX_CONFIG_LEN);
 
     uint32_t size = 0;
     if (exists_in_spiffs(T55XX_CONFIG_FILE)) {
@@ -2912,7 +2912,7 @@ void Cotag(uint32_t arg0, bool ledcontrol) {
             break;
         }
         case 1: {
-            uint8_t *dest = BigBuf_malloc(COTAG_BITS);
+            uint8_t *dest = BigBuf_calloc(COTAG_BITS);
             uint16_t bits = doCotagAcquisitionManchester(dest, COTAG_BITS);
             reply_ng(CMD_LF_COTAG_READ, PM3_SUCCESS, dest, bits);
             break;

@@ -917,8 +917,9 @@ send:
 
     LEDsoff();
 
-    if (button_pressed)
+    if (button_pressed) {
         DbpString("button pressed");
+    }
 
     return button_pressed;
 }

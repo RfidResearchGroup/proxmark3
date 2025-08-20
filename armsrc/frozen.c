@@ -26,7 +26,7 @@
 #include "nprintf.h"
 
 #include "BigBuf.h"
-#define malloc(X) BigBuf_malloc(X)
+#define malloc(X) BigBuf_calloc(X)
 #define free(X)
 
 #if !defined(WEAK)

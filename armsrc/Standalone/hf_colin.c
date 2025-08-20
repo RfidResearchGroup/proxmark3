@@ -250,7 +250,7 @@ static char *ReadSchemasFromSPIFFS(char *filename) {
 
     int changed = rdv40_spiffs_lazy_mount();
     uint32_t size = size_in_spiffs((char *)filename);
-    uint8_t *mem = BigBuf_malloc(size);
+    uint8_t *mem = BigBuf_calloc(size);
     rdv40_spiffs_read_as_filetype((char *)filename, (uint8_t *)mem, size, RDV40_SPIFFS_SAFETY_SAFE);
 
     if (changed) {
@@ -292,7 +292,7 @@ static void ReadLastTagFromFlash(void) {
     DbprintfEx(FLAG_NEWLINE, "Button HELD ! Using LAST Known TAG for Simulation...");
     cjSetCursLeft();
 
-    uint8_t *mem = BigBuf_malloc(size);
+    uint8_t *mem = BigBuf_calloc(size);
 
     // this one will handle filetype (symlink or not) and resolving by itself
     rdv40_spiffs_read_as_filetype((char *)HFCOLIN_LASTTAG_SYMLINK, (uint8_t *)mem, len, RDV40_SPIFFS_SAFETY_SAFE);
@@ -445,11 +445,11 @@ void RunMod(void) {
     };
 
     // Can remember something like that in case of Bigbuf
-    keyBlock = BigBuf_malloc(ARRAYLEN(mfKeys) * 6);
+    keyBlock = BigBuf_calloc(ARRAYLEN(mfKeys) * MF_KEY_LENGTH);
     int mfKeysCnt = ARRAYLEN(mfKeys);
 
     for (int mfKeyCounter = 0; mfKeyCounter < mfKeysCnt; mfKeyCounter++) {
-        num_to_bytes(mfKeys[mfKeyCounter], 6, (uint8_t *)(keyBlock + mfKeyCounter * 6));
+        num_to_bytes(mfKeys[mfKeyCounter], MF_KEY_LENGTH, (uint8_t *)(keyBlock + (mfKeyCounter * MF_KEY_LENGTH)));
     }
 
     // TODO : remember why we actually had need to initialize this array in such specific case

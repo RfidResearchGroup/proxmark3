@@ -786,14 +786,14 @@ void SimulateIso14443bTag(const uint8_t *pupi) {
 
     // prepare "ATQB" tag answer (encoded):
     CodeIso14443bAsTag(respATQB, sizeof(respATQB));
-    uint8_t *encodedATQB = BigBuf_malloc(ts->max);
+    uint8_t *encodedATQB = BigBuf_calloc(ts->max);
     uint16_t encodedATQBLen = ts->max;
     memcpy(encodedATQB, ts->buf, ts->max);
 
 
     // prepare "OK" tag answer (encoded):
     CodeIso14443bAsTag(respOK, sizeof(respOK));
-    uint8_t *encodedOK = BigBuf_malloc(ts->max);
+    uint8_t *encodedOK = BigBuf_calloc(ts->max);
     uint16_t encodedOKLen = ts->max;
     memcpy(encodedOK, ts->buf, ts->max);
 
@@ -988,18 +988,18 @@ void Simulate_iso14443b_srx_tag(uint8_t *uid) {
 
     tosend_t *ts = get_tosend();
 
-    uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
+    uint8_t *receivedCmd = BigBuf_calloc(MAX_FRAME_SIZE);
 
     // prepare "ATQB" tag answer (encoded):
     CodeIso14443bAsTag(respATQB, sizeof(respATQB));
-    uint8_t *encodedATQB = BigBuf_malloc(ts->max);
+    uint8_t *encodedATQB = BigBuf_calloc(ts->max);
     uint16_t encodedATQBLen = ts->max;
     memcpy(encodedATQB, ts->buf, ts->max);
 
 
     // prepare "OK" tag answer (encoded):
     CodeIso14443bAsTag(respOK, sizeof(respOK));
-    uint8_t *encodedOK = BigBuf_malloc(ts->max);
+    uint8_t *encodedOK = BigBuf_calloc(ts->max);
     uint16_t encodedOKLen = ts->max;
     memcpy(encodedOK, ts->buf, ts->max);
 
@@ -2405,8 +2405,8 @@ void SniffIso14443b(void) {
     uint8_t ua_buf[MAX_FRAME_SIZE] = {0};
     Uart14bInit(ua_buf);
 
-    //Demod14bInit(BigBuf_malloc(MAX_FRAME_SIZE), MAX_FRAME_SIZE);
-    //Uart14bInit(BigBuf_malloc(MAX_FRAME_SIZE));
+    //Demod14bInit(BigBuf_calloc(MAX_FRAME_SIZE));
+    //Uart14bInit(BigBuf_calloc(MAX_FRAME_SIZE));
 
     // Set FPGA in the appropriate mode
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_848_KHZ | FPGA_HF_READER_MODE_SNIFF_IQ);

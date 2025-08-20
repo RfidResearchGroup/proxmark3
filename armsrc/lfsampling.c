@@ -149,7 +149,7 @@ void initSampleBufferEx(uint32_t *sample_size, bool use_malloc) {
             data.buffer = BigBuf_get_addr();
         } else {
             *sample_size = MIN(*sample_size, BigBuf_max_traceLen());
-            data.buffer = BigBuf_malloc(*sample_size);
+            data.buffer = BigBuf_calloc(*sample_size);
         }
 
     } else {
@@ -669,7 +669,7 @@ void doT55x7Acquisition(size_t sample_size, bool ledcontrol) {
 void doCotagAcquisition(void) {
 
     uint16_t bufsize = BigBuf_max_traceLen();
-    uint8_t *dest = BigBuf_malloc(bufsize);
+    uint8_t *dest = BigBuf_calloc(bufsize);
 
     dest[0] = 0;
 

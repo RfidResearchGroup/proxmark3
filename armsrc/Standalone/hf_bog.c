@@ -63,18 +63,18 @@ static void RAMFUNC SniffAndStore(uint8_t param) {
     set_tracing(true);
 
     // Array to store the authpwds
-    uint8_t *capturedPwds = BigBuf_malloc(4 * MAX_PWDS_PER_SESSION);
+    uint8_t *capturedPwds = BigBuf_calloc(4 * MAX_PWDS_PER_SESSION);
 
     // The command (reader -> tag) that we're receiving.
-    uint8_t *receivedCmd = BigBuf_malloc(MAX_FRAME_SIZE);
-    uint8_t *receivedCmdPar = BigBuf_malloc(MAX_PARITY_SIZE);
+    uint8_t *receivedCmd = BigBuf_calloc(MAX_FRAME_SIZE);
+    uint8_t *receivedCmdPar = BigBuf_calloc(MAX_PARITY_SIZE);
 
     // The response (tag -> reader) that we're receiving.
-    uint8_t *receivedResp = BigBuf_malloc(MAX_FRAME_SIZE);
-    uint8_t *receivedRespPar = BigBuf_malloc(MAX_PARITY_SIZE);
+    uint8_t *receivedResp = BigBuf_calloc(MAX_FRAME_SIZE);
+    uint8_t *receivedRespPar = BigBuf_calloc(MAX_PARITY_SIZE);
 
     // The DMA buffer, used to stream samples from the FPGA
-    uint8_t *dmaBuf = BigBuf_malloc(DMA_BUFFER_SIZE);
+    uint8_t *dmaBuf = BigBuf_calloc(DMA_BUFFER_SIZE);
     uint8_t *data = dmaBuf;
 
     uint8_t previous_data = 0;
