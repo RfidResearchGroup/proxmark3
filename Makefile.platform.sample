@@ -5,7 +5,7 @@
 # Comment the line below and uncomment further down according to which device you have
 PLATFORM=PM3RDV4
 
-# For PM3 Easy:
+# For PM3 RDV1, RDV2, Easy or rysccorps etc
 # uncomment the line below
 #PLATFORM=PM3GENERIC
 
@@ -23,7 +23,7 @@ PLATFORM=PM3RDV4
 #PLATFORM_EXTRAS=FLASH
 #PLATFORM_EXTRAS=SMARTCARD
 #PLATFORM_EXTRAS=BTADDON FLASH
-#STANDALONE=LF_SAMYRUN
+STANDALONE=HF_UNISNIFF
 
 
 # Uncomment the line below to set the correct LED order on board Proxmark3 Easy
