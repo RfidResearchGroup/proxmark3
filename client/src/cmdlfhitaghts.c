@@ -182,8 +182,8 @@ int read_hts_uid(void) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%08X"), uid);
-    PrintAndLogEx(SUCCESS, "TYPE... " _GREEN_("%s"), hts_get_type_str(uid));
+    PrintAndLogEx(SUCCESS, "UID....... " _GREEN_("%08X"), uid);
+    PrintAndLogEx(SUCCESS, "TYPE...... " _GREEN_("%s"), hts_get_type_str(uid));
     return PM3_SUCCESS;
 }
 

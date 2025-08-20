@@ -1100,7 +1100,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
         DesfirePrintContext(dctx);
 
     int res = 0;
-    
+
     // Handle DF Name selection if it's present in the context
     if (dctx->selectedDFNameLen > 0) {
         // Select DF by name using ISO7816 SELECT
@@ -1114,7 +1114,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
         if (verbose) {
             PrintAndLogEx(INFO, "DF %s is " _GREEN_("selected"), sprint_hex(dctx->selectedDFName, dctx->selectedDFNameLen));
         }
-        
+
         // If both dfname and aid are specified, now also select by AID
         if (way == ISW6bAID && id != 0x000000) {
             if (dctx->cmdSet == DCCISO) {

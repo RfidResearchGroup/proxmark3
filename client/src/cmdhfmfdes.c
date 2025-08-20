@@ -3154,7 +3154,7 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
         arg_str0(NULL, "keynum",  "<hex>", "Key number/count (1 hex byte). (def: 0x00)"),
         arg_str0(NULL, "keyset",  "<hex>", "Keyset number (1 hex byte)"),
         arg_lit0(NULL, "no-auth", "Execute without authentication"),
-       
+
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3199,7 +3199,7 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
         DropField();
         PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
-    }    
+    }
 
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t buflen = 0;
@@ -3509,7 +3509,7 @@ static int CmdHF14ADesGetFileIDs(const char *Cmd) {
         PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, id), res, DesfireAuthErrorToStr(res));
         return res;
     }
-    
+
 
     uint8_t buf[APDU_RES_LEN] = {0};
     size_t buflen = 0;
@@ -4235,7 +4235,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
     DesfireContext_t dctx;
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 0,&securechann, DCMMACed, &appid, NULL);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 0, &securechann, DCMMACed, &appid, NULL);
     if (res) {
         CLIParserFree(ctx);
         return res;
@@ -4460,7 +4460,7 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
-    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 0,&securechann, DCMMACed, &id, &selectway);
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 0, &securechann, DCMMACed, &id, &selectway);
     if (res) {
         CLIParserFree(ctx);
         return res;

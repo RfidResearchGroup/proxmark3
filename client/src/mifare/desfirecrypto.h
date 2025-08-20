@@ -74,7 +74,7 @@ typedef struct {
     bool isoChaining;
     bool appSelected; // for iso auth
     uint32_t selectedAID;
-    
+
     uint8_t selectedDFName[16];
     uint8_t selectedDFNameLen;
 

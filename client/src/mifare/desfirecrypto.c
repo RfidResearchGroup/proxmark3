@@ -108,7 +108,7 @@ void DesfireSetKdf(DesfireContext_t *ctx, uint8_t kdfAlgo, uint8_t *kdfInput, ui
 void DesfireSetDFName(DesfireContext_t *ctx, uint8_t *dfname, uint8_t dfnameLen) {
     ctx->selectedDFNameLen = 0;
     memset(ctx->selectedDFName, 0, sizeof(ctx->selectedDFName));
-    
+
     if (dfname && dfnameLen > 0 && dfnameLen <= 16) {
         ctx->selectedDFNameLen = dfnameLen;
         memcpy(ctx->selectedDFName, dfname, dfnameLen);

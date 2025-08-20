@@ -477,6 +477,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf mfdes getkeyversions" },
     { 0, "hf mfdes getfileids" },
     { 0, "hf mfdes getfileisoids" },
+    { 0, "hf mfdes lsfile" },
     { 0, "hf mfdes lsfiles" },
     { 0, "hf mfdes dump" },
     { 0, "hf mfdes createfile" },

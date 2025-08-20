@@ -498,25 +498,28 @@ int getPyramidBits(uint32_t fc, uint32_t cn, uint8_t *pyramidBits) {
 
 // FSK Demod then try to locate a Farpointe Data (pyramid) ID
 int detectPyramid(uint8_t *dest, size_t *size, int *waveStartIdx) {
-    //make sure buffer has data
+    // make sure buffer has data
     if (*size < 128 * 50) return -1;
 
-    //test samples are not just noise
+    // test samples are not just noise
     if (getSignalProperties()->isnoise) return -2;
 
     // FSK demodulator RF/50 FSK 10,8
     *size = fskdemod(dest, *size, 50, 1, 10, 8, waveStartIdx);  // pyramid fsk2
 
-    //did we get a good demod?
+    // did we get a good demod?
     if (*size < 128) return -3;
 
     size_t startIdx = 0;
     uint8_t preamble[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1};
-    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx))
-        return -4; //preamble not found
+    if (!preambleSearch(dest, preamble, sizeof(preamble), size, &startIdx)) {
+        return -4; // preamble not found
+    }
 
     // wrong size?  (between to preambles)
-    if (*size < 128) return -5;
+    if (*size < 128) {
+        return -5;
+    }
 
     return (int)startIdx;
 }

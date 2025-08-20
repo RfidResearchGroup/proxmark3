@@ -672,6 +672,7 @@ Check column "offline" for their availability.
 |`hf mfdes getkeyversions`|N       |`Get Key Versions`
 |`hf mfdes getfileids    `|N       |`Get File IDs list`
 |`hf mfdes getfileisoids `|N       |`Get File ISO IDs list`
+|`hf mfdes lsfile        `|N       |`Show all files list`
 |`hf mfdes lsfiles       `|N       |`Show all files list`
 |`hf mfdes dump          `|N       |`Dump all files`
 |`hf mfdes createfile    `|N       |`Create Standard/Backup File`

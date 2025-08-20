@@ -2428,8 +2428,8 @@ int ht2_read_uid(void) {
         return PM3_ESOFT;
     }
 
-    PrintAndLogEx(SUCCESS, "UID.... " _GREEN_("%08X"), uid);
-    PrintAndLogEx(SUCCESS, "TYPE... " _GREEN_("%s"), getHitagTypeStr(uid));
+    PrintAndLogEx(SUCCESS, "UID....... " _GREEN_("%08X"), uid);
+    PrintAndLogEx(SUCCESS, "TYPE...... " _GREEN_("%s"), getHitagTypeStr(uid));
     return PM3_SUCCESS;
 }
 
