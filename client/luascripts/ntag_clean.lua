@@ -1,22 +1,35 @@
-copyright = "Trigat"
-author = "Trigat"
-desc = "Zero-fill NTAG pages within a range"
+local reader = require('read14a')
+local ansicolors  = require('ansicolors')
 
-local function help()
-    print([[
-NTAG_CLEAN - Zero-fill NTAG pages/blocks
+copyright = 'Trigat'
+author = 'Trigat'
+version = 'v0.0.1'
+desc = [[
+This script zero-fills NTAG pages in a user-specified range,
+or defaults to pages 4–39.
 
-Options:
-  -h            : this help
-  -s <start>    : start block (default 4)
-  -e <end>      : end block (default 39)
-  -d <hex>      : data to write (8 hex chars, e.g. 00000000)
-                  If 2 hex chars given (e.g. "FF"), it repeats to 8 ("FFFFFFFF").
+Pages 0–3 (UID and configuration) cannot be erased.
+]]
+example = [[
+    -- Zero-fill default range (pages 4–39) with 0x00
+    1. script run ntag_clean
 
-Running with no options will zero out pages 4-39.
+    -- Zero-fill a custom range (pages 6–10)
+    2. script run ntag_clean -s 6 -e 10
 
-]])
-end
+    -- Fill pages 4–39 with 0xFF
+    3. script run ntag_clean -d FF
+]]
+usage = [[
+script run ntag_clean [-s <start>] [-e <end>] [-d <hex>]
+]]
+arguments = [[
+    -h             : this help
+    -s <start>     : start page (default 4)
+    -e <end>       : end page (default 39)
+    -d <hex>       : data to write (8 hex chars, e.g. 00000000)
+                     If 2 hex chars are given (e.g. FF), it repeats to 8 (FFFFFFFF).
+]]
 
 local function normalize_hex(h)
     if not h then return nil end
@@ -52,7 +65,6 @@ end
 
 -- check if card exists
 local function card_present()
-    local reader = require("read14a")
     local tag, err = reader.read()
     if not tag then
         print("No card detected. Aborting.")
@@ -61,6 +73,19 @@ local function card_present()
 
     print("Card detected:", tag.uid, tag.name)
     return true
+end
+
+-- Help output
+local function help()
+    print(author)
+    print(version)
+    print(desc)
+    print(ansicolors.cyan..'Usage'..ansicolors.reset)
+    print(usage)
+    print(ansicolors.cyan..'Arguments'..ansicolors.reset)
+    print(arguments)
+    print(ansicolors.cyan..'Example usage'..ansicolors.reset)
+    print(example)
 end
 
 -- convert global args string into table
@@ -75,7 +100,7 @@ end
 
 local function main(args)
     local start_block = 4
-    local end_block   = 39  -- CHANGE HERE
+    local end_block   = 39  -- Can be modified by user
     local data        = "00000000"
 
     local argv = split_args(args)
