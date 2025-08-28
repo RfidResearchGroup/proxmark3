@@ -355,6 +355,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhfmfp.c
         ${PM3_ROOT}/client/src/cmdhfmfu.c
         ${PM3_ROOT}/client/src/cmdhfntag424.c
+        ${PM3_ROOT}/client/src/cmdhfsaflok.c
         ${PM3_ROOT}/client/src/cmdhfseos.c
         ${PM3_ROOT}/client/src/cmdhfst.c
         ${PM3_ROOT}/client/src/cmdhfst25ta.c

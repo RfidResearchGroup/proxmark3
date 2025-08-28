@@ -44,6 +44,7 @@
 #include "cmdhfmfp.h"       // Mifare Plus
 #include "cmdhfmfdes.h"     // DESFIRE
 #include "cmdhfntag424.h"   // NTAG 424 DNA
+#include "cmdhfsaflok.h"    // Saflok
 #include "cmdhfseos.h"      // SEOS
 #include "cmdhfst25ta.h"    // ST25TA
 #include "cmdhftesla.h"     // Tesla
@@ -594,6 +595,7 @@ static command_t CommandTable[] = {
     {"mfu",         CmdHFMFUltra,     AlwaysAvailable, "{ MIFARE Ultralight RFIDs...          }"},
     {"mfdes",       CmdHFMFDes,       AlwaysAvailable, "{ MIFARE Desfire RFIDs...             }"},
     {"ntag424",     CmdHF_ntag424,    AlwaysAvailable, "{ NXP NTAG 4242 DNA RFIDs...          }"},
+    {"saflok",      CmdHFSaflok,      AlwaysAvailable, "{ Saflok MFC RFIDs...                 }"},
     {"seos",        CmdHFSeos,        AlwaysAvailable, "{ SEOS RFIDs...                       }"},
     {"st25ta",      CmdHFST25TA,      AlwaysAvailable, "{ ST25TA RFIDs...                     }"},
     {"tesla",       CmdHFTESLA,       AlwaysAvailable, "{ TESLA Cards...                      }"},
