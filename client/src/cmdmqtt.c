@@ -62,7 +62,7 @@ static void mqtt_publish_callback(void **unused, struct mqtt_response_publish *p
 static volatile int mqtt_client_should_exit = 0;
 
 static void *mqtt_client_refresher(void *client) {
-    while (!mqtt_client_should_exit) {
+    while (mqtt_client_should_exit == 0) {
         mqtt_sync((struct mqtt_client *) client);
         msleep(100);
     }
