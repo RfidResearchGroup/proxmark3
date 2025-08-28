@@ -503,7 +503,7 @@ int CmdHFSniff(const char *Cmd) {
                 PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data plot") "` to view");
                 PrintAndLogEx(HINT, "Hint: Use `" _YELLOW_("data save") "` to save");
 
-                // download bigbuf_malloc:d.
+                // download bigbuf_calloc:d.
                 // it reserve memory from the higher end.
                 // At the moment, sniff takes all free memory in bigbuff. If this changes,
                 // we can't start from beginning idx 0 but from that hi-to-start-of-allocated.

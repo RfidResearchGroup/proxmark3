@@ -223,10 +223,11 @@ static int CLIParseCommandParametersEx(CLIParserContext *ctx, size_t keyid, size
             return PM3_EINVARG;
         }
 
-        if (hdatalen)
+        if (hdatalen) {
             memcpy(key, hdata, CIPURSE_AES_KEY_LENGTH);
-        else
+        } else {
             memcpy(key, defaultKey, sizeof(defaultKey));
+        }
     }
 
     if (useaid) {
@@ -274,17 +275,23 @@ static int CLIParseCommandParametersEx(CLIParserContext *ctx, size_t keyid, size
         *fid = 0;
         if (hdatalen) {
             *fid = (hdata[0] << 8) + hdata[1];
-            if (usefid)
+            if (usefid) {
                 *usefid = true;
+            }
         }
     }
 
-    if (usechfid)
+    if (usechfid) {
         *usechfid = false;
+    }
+
     if (chfidid && chfid) {
+
         hdatalen = sizeof(hdata);
-        if (CLIParamHexToBuf(arg_get_str(ctx, chfidid), hdata, hdatalen, &hdatalen))
+        if (CLIParamHexToBuf(arg_get_str(ctx, chfidid), hdata, hdatalen, &hdatalen)) {
             return PM3_ESOFT;
+        }
+
         if (hdatalen && hdatalen != 2) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " child file id length must be 2 bytes only");
             return PM3_EINVARG;
@@ -293,8 +300,10 @@ static int CLIParseCommandParametersEx(CLIParserContext *ctx, size_t keyid, size
         *chfid = defaultFileId;
         if (hdatalen) {
             *chfid = (hdata[0] << 8) + hdata[1];
-            if (usechfid)
+
+            if (usechfid) {
                 *usechfid = true;
+            }
         }
     }
 

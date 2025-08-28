@@ -3135,7 +3135,7 @@ static int CmdDiff(const char *Cmd) {
 }
 
 /**
- * @brief Utility for number conversion via cmdline.
+ * @brief Utility for number conversion in client.
  * @param Cmd
  * @return
  */
