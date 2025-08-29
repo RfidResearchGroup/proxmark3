@@ -3237,7 +3237,7 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service... } waveshare { Waveshare NFC ePaper... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } saflok { Saflok MFC RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service... } waveshare { Waveshare NFC ePaper... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf list --frame -> show frame delay times",
                 "hf list -1 -> use trace buffer"
@@ -5344,8 +5344,8 @@
             "notes": [
                 "hf mf ndefread -> shows NDEF parsed data",
                 "hf mf ndefread -vv -> shows NDEF parsed and raw data",
-                "hf mf ndefread --aid e103 -k ffffffffffff -b -> shows NDEF data with custom AID, key and with key B",
-                "hf mf ndefread -f myfilename -> save raw NDEF to file"
+                "hf mf ndefread -f myfilename -> save raw NDEF to file",
+                "hf mf ndefread --aid e103 -k ffffffffffff -b -> shows NDEF data with custom AID, key and with key B"
             ],
             "offline": false,
             "options": [
@@ -5354,9 +5354,10 @@
                 "--aid <aid> replace default aid for NDEF",
                 "-k, --key <key> replace default key for NDEF",
                 "-b, --keyb use key B for access sectors (by default: key A)",
-                "-f, --file <fn> save raw NDEF to file"
+                "-f, --file <fn> save raw NDEF to file",
+                "--override override failed crc check"
             ],
-            "usage": "hf mf ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>]"
+            "usage": "hf mf ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>] [--override]"
         },
         "hf mf ndefwrite": {
             "command": "hf mf ndefwrite",
@@ -6552,34 +6553,6 @@
             ],
             "usage": "hf mfdes lsapp [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--no-auth] [--no-deep] [--files] [--dfname <hex>]"
         },
-        "hf mfdes lsfile": {
-            "command": "hf mfdes lsfile",
-            "description": "This commands List files inside application AID / ISOID. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
-            "notes": [
-                "hf mfdes lsfiles --aid 123456 -> AID 123456, list files using `default` command creds",
-                "hf mfdes lsfiles --isoid df01 --no-auth -> list files for DESFire light",
-                "hf mfdes lsfiles --dfname D2760000850100 -> select DF by name and list files"
-            ],
-            "offline": false,
-            "options": [
-                "-h, --help This help",
-                "-a, --apdu Show APDU requests and responses",
-                "-v, --verbose Verbose output",
-                "-n, --keyno <dec> Key number",
-                "-t, --algo <DES|2TDEA|3TDEA|AES> Crypt algo",
-                "-k, --key <hex> Key for authenticate (HEX 8(DES), 16(2TDEA or AES) or 24(3TDEA) bytes)",
-                "--kdf <none|AN10922|gallagher> Key Derivation Function (KDF)",
-                "-i, --kdfi <hex> KDF input (1-31 hex bytes)",
-                "-m, --cmode <plain|mac|encrypt> Communicaton mode",
-                "-c, --ccset <native|niso|iso> Communicaton command set",
-                "--schann <d40|ev1|ev2|lrp> Secure channel",
-                "--aid <hex> Application ID (3 hex bytes, big endian)",
-                "--isoid <hex> Application ISO ID (ISO DF ID) (2 hex bytes, big endian)",
-                "--dfname <hex> Application ISO DF Name (5-16 hex bytes, big endian)",
-                "--no-auth Execute without authentication"
-            ],
-            "usage": "hf mfdes lsfiles [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--aid <hex>] [--isoid <hex>] [--dfname <hex>] [--no-auth]"
-        },
         "hf mfdes lsfiles": {
             "command": "hf mfdes lsfiles",
             "description": "This commands List files inside application AID / ISOID. Master key needs to be provided or flag --no-auth set (depend on cards settings).",
@@ -7029,9 +7002,10 @@
                 "-k, --key <hex> Key for printing sectors",
                 "-b, --keyb Use key B for access printing sectors (def: key A)",
                 "--be (optional: BigEndian)",
-                "--dch Decode Card Holder information"
+                "--dch Decode Card Holder information",
+                "--override override failed crc check"
             ],
-            "usage": "hf mfp mad [-hvb] [--aid <hex>] [-k <hex>] [--be] [--dch]"
+            "usage": "hf mfp mad [-hvb] [--aid <hex>] [-k <hex>] [--be] [--dch] [--override]"
         },
         "hf mfp ndefformat": {
             "command": "hf mfp ndefformat",
@@ -7053,8 +7027,8 @@
             "notes": [
                 "hf mfp ndefread",
                 "hf mfp ndefread -vv -> shows NDEF parsed and raw data",
-                "hf mfp ndefread --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key",
-                "hf mfp ndefread -f myfilename -> save raw NDEF to file"
+                "hf mfp ndefread -f myfilename -> save raw NDEF to file",
+                "hf mfp ndefread --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key"
             ],
             "offline": false,
             "options": [
@@ -7063,9 +7037,10 @@
                 "--aid <aid> replace default aid for NDEF",
                 "-k, --key <key> replace default key for NDEF",
                 "-b, --keyb use key B for access sectors (by default: key A)",
-                "-f, --file <fn> save raw NDEF to file"
+                "-f, --file <fn> save raw NDEF to file",
+                "--override override failed crc check"
             ],
-            "usage": "hf mfp ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>]"
+            "usage": "hf mfp ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>] [--override]"
         },
         "hf mfp ndefwrite": {
             "command": "hf mfp ndefwrite",
@@ -7723,6 +7698,144 @@
                 "-h, --help This help"
             ],
             "usage": "hf plot [-h]"
+        },
+        "hf saflok cksum": {
+            "command": "hf saflok cksum",
+            "description": "Generate Saflok checksum and append to block",
+            "notes": [
+                "hf saflok cksum -d <16 byte hex>"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-d data 16-byte decrypted Saflok block"
+            ],
+            "usage": "hf saflok cksum [-h] -d data"
+        },
+        "hf saflok decode": {
+            "command": "hf saflok decode",
+            "description": "Decode saflok data",
+            "notes": [
+                "hf saflok decode"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-d data Encrypted 17 byte card data"
+            ],
+            "usage": "hf saflok decode [-h] -d data"
+        },
+        "hf saflok decrypt": {
+            "command": "hf saflok decrypt",
+            "description": "Decrypt a 17-byte Saflok block",
+            "notes": [
+                "hf saflok decrypt -d <17 byte hex>"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-d data 17-byte encrypted hex block"
+            ],
+            "usage": "hf saflok decrypt [-h] -d data"
+        },
+        "hf saflok encode": {
+            "command": "hf saflok encode",
+            "description": "Encode Saflok data",
+            "notes": [
+                "hf saflok encode"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--level <decimal> Card Level",
+                "--type <decimal> Card Type",
+                "--id <decimal> Card ID",
+                "--open <decimal> Opening Bits",
+                "--lock_id <decimal> Lock ID",
+                "--pass_num <decimal> Pass Number",
+                "--seq_combo <decimal> Sequence and Combination",
+                "--deadbolt <decimal> Deadbolt Override",
+                "--days <decimal> Restricted Days",
+                "--expire <YYYY-MM-DDTHH:mm> Expire Date Offset",
+                "--created <YYYY-MM-DDTHH:mm> Card Creation Date",
+                "--prop_id <decimal> Property ID"
+            ],
+            "usage": "hf saflok encode [-h] --level <decimal> --type <decimal> --id <decimal> --open <decimal> --lock_id <decimal> --pass_num <decimal> --seq_combo <decimal> --deadbolt <decimal> --days <decimal> --expire <YYYY-MM-DDTHH:mm> --created <YYYY-MM-DDTHH:mm> --prop_id <decimal>"
+        },
+        "hf saflok encrypt": {
+            "command": "hf saflok encrypt",
+            "description": "Encrypt a 17-byte Saflok block",
+            "notes": [
+                "hf saflok encrypt -d <17 byte hex>"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-d data 17-byte unencrypted hex block"
+            ],
+            "usage": "hf saflok encrypt [-h] -d data"
+        },
+        "hf saflok help": {
+            "command": "hf saflok help",
+            "description": "help This help encode Encode Saflok card data decode Decode Saflok card data modify Modify Saflok card data encrypt Encrypt 17-byte decrypted block decrypt Decrypt 17-byte encrypted block --------------------------------------------------------------------------------------- hf saflok read available offline: no Read Saflok card (MIFARE Classic only)",
+            "notes": [
+                "hf saflok read"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hf saflok read [-h]"
+        },
+        "hf saflok interrogate": {
+            "command": "hf saflok interrogate",
+            "description": "Interrogate Saflok card",
+            "notes": [
+                "hf saflok interrogate"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help"
+            ],
+            "usage": "hf saflok interrogate [-h]"
+        },
+        "hf saflok modify": {
+            "command": "hf saflok modify",
+            "description": "Modify Saflok card data",
+            "notes": [
+                "hf saflok modify"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "--level <decimal> Card Level",
+                "--type <decimal> Card Type",
+                "--id <decimal> Card ID",
+                "--open <decimal> Opening Bits",
+                "--lock_id <decimal> Lock ID",
+                "--pass_num <decimal> Pass Number",
+                "--seq_combo <decimal> Sequence and Combination",
+                "--deadbolt <decimal> Deadbolt Override",
+                "--days <decimal> Restricted Days",
+                "--expire <YYYY-MM-DDTHH:mm> Expire Date Offset",
+                "--created <YYYY-MM-DDTHH:mm> Card Creation Date",
+                "--prop_id <decimal> Property ID",
+                "-d data Unencrypted 17 byte card data"
+            ],
+            "usage": "hf saflok modify [-h] [--level <decimal>] [--type <decimal>] [--id <decimal>] [--open <decimal>] [--lock_id <decimal>] [--pass_num <decimal>] [--seq_combo <decimal>] [--deadbolt <decimal>] [--days <decimal>] [--expire <YYYY-MM-DDTHH:mm>] [--created <YYYY-MM-DDTHH:mm>] [--prop_id <decimal>] -d data"
+        },
+        "hf saflok provision": {
+            "command": "hf saflok provision",
+            "description": "Provision a Saflok card",
+            "notes": [
+                "hf saflok provision -d <17-byte encrypted hex block>"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-d data 17-byte block"
+            ],
+            "usage": "hf saflok provision [-h] -d data"
         },
         "hf search": {
             "command": "hf search",
@@ -12523,9 +12636,10 @@
                 "-h, --help This help",
                 "-d, --data <hex> NDEF data to decode",
                 "-f, --file <fn> file to load",
+                "--override override failed crc check",
                 "-v, --verbose verbose output"
             ],
-            "usage": "nfc decode [-hv] [-d <hex>] [-f <fn>]"
+            "usage": "nfc decode [-hv] [-d <hex>] [-f <fn>] [--override]"
         },
         "nfc mf cread": {
             "command": "nfc mf cread",
@@ -12533,8 +12647,8 @@
             "notes": [
                 "hf mf ndefread -> shows NDEF parsed data",
                 "hf mf ndefread -vv -> shows NDEF parsed and raw data",
-                "hf mf ndefread --aid e103 -k ffffffffffff -b -> shows NDEF data with custom AID, key and with key B",
-                "hf mf ndefread -f myfilename -> save raw NDEF to file"
+                "hf mf ndefread -f myfilename -> save raw NDEF to file",
+                "hf mf ndefread --aid e103 -k ffffffffffff -b -> shows NDEF data with custom AID, key and with key B"
             ],
             "offline": false,
             "options": [
@@ -12543,9 +12657,10 @@
                 "--aid <aid> replace default aid for NDEF",
                 "-k, --key <key> replace default key for NDEF",
                 "-b, --keyb use key B for access sectors (by default: key A)",
-                "-f, --file <fn> save raw NDEF to file"
+                "-f, --file <fn> save raw NDEF to file",
+                "--override override failed crc check"
             ],
-            "usage": "hf mf ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>]"
+            "usage": "hf mf ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>] [--override]"
         },
         "nfc mf cwrite": {
             "command": "nfc mf cwrite",
@@ -12587,8 +12702,8 @@
             "notes": [
                 "hf mfp ndefread",
                 "hf mfp ndefread -vv -> shows NDEF parsed and raw data",
-                "hf mfp ndefread --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key",
-                "hf mfp ndefread -f myfilename -> save raw NDEF to file"
+                "hf mfp ndefread -f myfilename -> save raw NDEF to file",
+                "hf mfp ndefread --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7 -> shows NDEF data with custom AID and key"
             ],
             "offline": false,
             "options": [
@@ -12597,9 +12712,10 @@
                 "--aid <aid> replace default aid for NDEF",
                 "-k, --key <key> replace default key for NDEF",
                 "-b, --keyb use key B for access sectors (by default: key A)",
-                "-f, --file <fn> save raw NDEF to file"
+                "-f, --file <fn> save raw NDEF to file",
+                "--override override failed crc check"
             ],
-            "usage": "hf mfp ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>]"
+            "usage": "hf mfp ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>] [--override]"
         },
         "nfc type1 help": {
             "command": "nfc type1 help",
@@ -13536,8 +13652,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 780,
+        "commands_extracted": 788,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-08-20T08:39:30"
+        "extracted_on": "2025-08-29T11:56:30"
     }
 }

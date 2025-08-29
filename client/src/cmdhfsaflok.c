@@ -91,25 +91,25 @@ static const uint8_t c_aEncode[256] = {
 };
 
 uint8_t magic_table[192] = {
-                    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0xF0, 0x57, 0xB3, 0x9E, 0xE3, 0xD8,
-                    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x96, 0x9D, 0x95, 0x4A, 0xC1, 0x57,
-                    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x8F, 0x43, 0x58, 0x0D, 0x2C, 0x9D,
-                    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0xFF, 0xCC, 0xE0, 0x05, 0x0C, 0x43,
-                    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x34, 0x1B, 0x15, 0xA6, 0x90, 0xCC,
-                    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x89, 0x58, 0x56, 0x12, 0xE7, 0x1B,
-                    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0xBB, 0x74, 0xB0, 0x95, 0x36, 0x58,
-                    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0xFB, 0x97, 0xF8, 0x4B, 0x5B, 0x74,
-                    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0xC9, 0xD1, 0x88, 0x35, 0x9F, 0x92,
-                    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x8F, 0x92, 0xE9, 0x7F, 0x58, 0x97,
-                    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x16, 0x6C, 0xA2, 0xB0, 0x9F, 0xD1,
-                    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x27, 0xDD, 0x93, 0x10, 0x1C, 0x6C,
-                    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0xDA, 0x3E, 0x3F, 0xD6, 0x49, 0xDD,
-                    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x58, 0xDD, 0xED, 0x07, 0x8E, 0x3E,
-                    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x5C, 0xD0, 0x05, 0xCF, 0xD9, 0x07,
-                    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x11, 0x8D, 0xD0, 0x01, 0x87, 0xD0
+    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0xF0, 0x57, 0xB3, 0x9E, 0xE3, 0xD8,
+    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x96, 0x9D, 0x95, 0x4A, 0xC1, 0x57,
+    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x8F, 0x43, 0x58, 0x0D, 0x2C, 0x9D,
+    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0xFF, 0xCC, 0xE0, 0x05, 0x0C, 0x43,
+    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x34, 0x1B, 0x15, 0xA6, 0x90, 0xCC,
+    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x89, 0x58, 0x56, 0x12, 0xE7, 0x1B,
+    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0xBB, 0x74, 0xB0, 0x95, 0x36, 0x58,
+    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0xFB, 0x97, 0xF8, 0x4B, 0x5B, 0x74,
+    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0xC9, 0xD1, 0x88, 0x35, 0x9F, 0x92,
+    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x8F, 0x92, 0xE9, 0x7F, 0x58, 0x97,
+    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x16, 0x6C, 0xA2, 0xB0, 0x9F, 0xD1,
+    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x27, 0xDD, 0x93, 0x10, 0x1C, 0x6C,
+    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0xDA, 0x3E, 0x3F, 0xD6, 0x49, 0xDD,
+    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x58, 0xDD, 0xED, 0x07, 0x8E, 0x3E,
+    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x5C, 0xD0, 0x05, 0xCF, 0xD9, 0x07,
+    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x11, 0x8D, 0xD0, 0x01, 0x87, 0xD0
 };
 
-static const char* level_names[] = {
+static const char *level_names[] = {
     "Guest Key",                     // Index 0
     "Connectors",                    // Index 1
     "Suite",                         // Index 2
@@ -133,7 +133,7 @@ static int CmdHelp(const char *Cmd);
 
 static void saflok_decrypt(uint8_t *strCard, int length, uint8_t *decryptedCard) {
 
-   for (int i = 0; i < length; i++) {
+    for (int i = 0; i < length; i++) {
         int num = c_aDecode[strCard[i]] - (i + 1);
         if (num < 0) {
             num += 256;
@@ -218,15 +218,15 @@ static void insert_bits(uint8_t *data, size_t start_bit, size_t num_bits, uint32
     for (size_t i = 0; i < num_bits; i++) {
         size_t current_bit = start_bit + i;
         size_t byte_index = current_bit / 8;
-        size_t bit_index = 7 - (current_bit % 8); 
-        
+        size_t bit_index = 7 - (current_bit % 8);
+
         uint32_t bit_value = (value >> (num_bits - 1 - i)) & 1U;
-        
+
         data[byte_index] = (data[byte_index] & ~(1 << bit_index)) | (bit_value << bit_index);
     }
 }
 
-static char* bytes_to_hex(const uint8_t *data, size_t len) {
+static char *bytes_to_hex(const uint8_t *data, size_t len) {
     static char buf[256];
     for (size_t i = 0; i < len; i++) {
         sprintf(buf + (i * 2), "%02X", data[i]);
@@ -236,37 +236,37 @@ static char* bytes_to_hex(const uint8_t *data, size_t len) {
 }
 
 
-static int pack_datetime_expr(char* exp_datetime, uint8_t* data) {
+static int pack_datetime_expr(char *exp_datetime, uint8_t *data) {
     int year, month, day, hour, minute;
 
-    if (sscanf(exp_datetime, "%4d-%2d-%2dT%2d:%2d", 
+    if (sscanf(exp_datetime, "%4d-%2d-%2dT%2d:%2d",
                &year, &month, &day, &hour, &minute) != 5) {
         return -1;
     }
-    
+
     data[8] = ((year & 0x0F) << 4) | (month & 0x0F);
     data[9] = ((day & 0x1F) << 3) | ((hour & 0x1C) >> 2);
     data[10] = ((hour & 0x03) << 6) | (minute & 0x3F);
 
-    return 0; 
+    return 0;
 }
 
-static int pack_datetime(char* datetime_str, uint8_t* data) {
+static int pack_datetime(char *datetime_str, uint8_t *data) {
     int year, month, day, hour, minute;
-    
-    if (sscanf(datetime_str, "%4d-%2d-%2dT%2d:%2d", 
+
+    if (sscanf(datetime_str, "%4d-%2d-%2dT%2d:%2d",
                &year, &month, &day, &hour, &minute) != 5) {
-        return -1; 
+        return -1;
     }
-    
+
     uint8_t year_offset = year - 1980;
-    
+
     data[11] = ((year_offset & 0x0F) << 4) | (month & 0x0F);
     data[12] = ((day & 0x1F) << 3) | ((hour & 0x1C) >> 2);
     data[13] = ((hour & 0x03) << 6) | (minute & 0x3F);
     data[14] = (data[14] & 0x0F) | ((year_offset & 0x70) << 0);
 
-    return 0; 
+    return 0;
 }
 
 
@@ -279,7 +279,7 @@ static uint8_t saflok_checksum(unsigned char *data, int length) {
     return sum & 0xFF;
 }
 
-static void saflok_kdf(const uint8_t* uid, uint8_t* key_out) {
+static void saflok_kdf(const uint8_t *uid, uint8_t *key_out) {
 
     uint8_t magic_byte = (uid[3] >> 4) + (uid[2] >> 4) + (uid[0] & 0x0F);
     uint8_t magickal_index = (magic_byte & 0x0F) * 12 + 11;
@@ -321,7 +321,7 @@ static void saflok_decode(uint8_t *data) {
 
     uint8_t creation_year_bits = (data[14] & 0xF0);
     uint16_t creation_year =
-    (creation_year_bits | ((data[11] & 0xF0) >> 4)) + 1980;
+        (creation_year_bits | ((data[11] & 0xF0) >> 4)) + 1980;
     uint8_t creation_month = data[11] & 0x0F;
     uint8_t creation_day = (data[12] >> 3) & 0x1F;
     uint8_t creation_hour = ((data[12] & 0x07) << 2) | (data[13] >> 6);
@@ -334,26 +334,26 @@ static void saflok_decode(uint8_t *data) {
     uint8_t expire_minute = interval_minute;
 
     // Handle month rollover
-    while(expire_month > 12) {
+    while (expire_month > 12) {
         expire_month -= 12;
         expire_year++;
     }
 
     // Handle day rollover
     static const uint8_t days_in_month[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-    while(true) {
+    while (true) {
         uint8_t max_days = days_in_month[expire_month - 1];
         // Adjust for leap years
-        if(expire_month == 2 &&
-           (expire_year % 4 == 0 && (expire_year % 100 != 0 || expire_year % 400 == 0))) {
+        if (expire_month == 2 &&
+                (expire_year % 4 == 0 && (expire_year % 100 != 0 || expire_year % 400 == 0))) {
             max_days = 29;
         }
-        if(expire_day <= max_days) {
+        if (expire_day <= max_days) {
             break;
         }
         expire_day -= max_days;
         expire_month++;
-        if(expire_month > 12) {
+        if (expire_month > 12) {
             expire_month = 1;
             expire_year++;
         }
@@ -369,19 +369,19 @@ static void saflok_decode(uint8_t *data) {
     PrintAndLogEx(SUCCESS, "Deadbolt Override: " _GREEN_("%u"), deadbolt_override);
     PrintAndLogEx(SUCCESS, "Restricted Days: " _GREEN_("%u"), restricted_days);
     PrintAndLogEx(SUCCESS, "Card Creation Date: " _GREEN_("%u-%02d-%02d %02d:%02d"),
-            creation_year,
-            creation_month,
-            creation_day,
-            creation_hour,
-            creation_minute);
+                  creation_year,
+                  creation_month,
+                  creation_day,
+                  creation_hour,
+                  creation_minute);
     PrintAndLogEx(SUCCESS, "Expire Date: " _GREEN_("%u-%02d-%02d %02d:%02d"),
-            expire_year,
-            expire_month,
-            expire_day,
-            expire_hour,
-            expire_minute);
+                  expire_year,
+                  expire_month,
+                  expire_day,
+                  expire_hour,
+                  expire_minute);
     PrintAndLogEx(SUCCESS, "Property ID: " _GREEN_("%u"), property_id);
-    PrintAndLogEx(SUCCESS, "Checksum: " _GREEN_("0x%X") " (%s)", checksum,(checksum == saflok_checksum(data, 16)) ? _GREEN_("ok") : _RED_("bad"));
+    PrintAndLogEx(SUCCESS, "Checksum: " _GREEN_("0x%X") " (%s)", checksum, (checksum == saflok_checksum(data, 16)) ? _GREEN_("ok") : _RED_("bad"));
     PrintAndLogEx(NORMAL, "");
 
 }
@@ -390,7 +390,7 @@ static void saflok_encode(uint8_t *data, uint32_t card_level, uint32_t card_type
                           uint32_t opening_key, uint32_t lock_id, uint32_t pass_number,
                           uint32_t sequence_and_combination, uint32_t deadbolt_override,
                           uint32_t restricted_days, uint32_t expire_date, uint32_t card_creation_date,
-                          uint32_t property_id, char* dt_e, char* dt) {
+                          uint32_t property_id, char *dt_e, char *dt) {
     insert_bits(data, 0, 4, card_level);
     insert_bits(data, 4, 4, card_type);
     insert_bits(data, 8, 8, card_id);
@@ -401,23 +401,23 @@ static void saflok_encode(uint8_t *data, uint32_t card_level, uint32_t card_type
     insert_bits(data, 56, 1, deadbolt_override);
     insert_bits(data, 57, 7, restricted_days);
     insert_bits(data, 64, 24, expire_date);
-    insert_bits(data, 88, 28,card_creation_date);
+    insert_bits(data, 88, 28, card_creation_date);
     insert_bits(data, 116, 12, property_id);
 
     int year, month, day, hour, minute;
 
-    if (sscanf(dt, "%4d-%2d-%2dT%2d:%2d", 
+    if (sscanf(dt, "%4d-%2d-%2dT%2d:%2d",
                &year, &month, &day, &hour, &minute) == 5) {
-        pack_datetime(dt,data);
+        pack_datetime(dt, data);
     }
     //else{
     //insert_bits(data, 88, 28,card_creation_date);
     //PrintAndLogEx(SUCCESS, "DT BITS INSERTED");
     //}
 
-    if (sscanf(dt_e, "%4d-%2d-%2dT%2d:%2d", 
+    if (sscanf(dt_e, "%4d-%2d-%2dT%2d:%2d",
                &year, &month, &day, &hour, &minute) == 5) {
-        pack_datetime_expr(dt_e,data);
+        pack_datetime_expr(dt_e, data);
     }
     //else{
     //insert_bits(data, 64, 24, expire_date);
@@ -514,8 +514,8 @@ static int CmdHFSaflokEncode(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
 
-    uint8_t rsaflokdata[17]={0};
-    uint8_t esaflokdata[17]={0};
+    uint8_t rsaflokdata[17] = {0};
+    uint8_t esaflokdata[17] = {0};
 
     int slen = 0;
     char dt[100];
@@ -525,23 +525,23 @@ static int CmdHFSaflokEncode(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 10), (uint8_t *)dt_e, 100, &slen);
 
 
-    saflok_encode(rsaflokdata, 
-        arg_get_u32_def(ctx, 1, 0),
-        arg_get_u32_def(ctx, 2, 0),
-        arg_get_u32_def(ctx, 3, 0),
-        arg_get_u32_def(ctx, 4, 0),
-        arg_get_u32_def(ctx, 5, 0),
-        arg_get_u32_def(ctx, 6, 0),
-        arg_get_u32_def(ctx, 7, 0),
-        arg_get_u32_def(ctx, 8, 0),
-        arg_get_u32_def(ctx, 9, 0),
-        0,
-        0, 
-        arg_get_u32_def(ctx, 12, 0),
-        dt_e,
-        dt);
+    saflok_encode(rsaflokdata,
+                  arg_get_u32_def(ctx, 1, 0),
+                  arg_get_u32_def(ctx, 2, 0),
+                  arg_get_u32_def(ctx, 3, 0),
+                  arg_get_u32_def(ctx, 4, 0),
+                  arg_get_u32_def(ctx, 5, 0),
+                  arg_get_u32_def(ctx, 6, 0),
+                  arg_get_u32_def(ctx, 7, 0),
+                  arg_get_u32_def(ctx, 8, 0),
+                  arg_get_u32_def(ctx, 9, 0),
+                  0,
+                  0,
+                  arg_get_u32_def(ctx, 12, 0),
+                  dt_e,
+                  dt);
 
-    saflok_encrypt(rsaflokdata,17,esaflokdata);
+    saflok_encrypt(rsaflokdata, 17, esaflokdata);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Encoded Card Data"));
@@ -573,8 +573,8 @@ static int CmdHFSaflokDecode(const char *Cmd) {
 
 
     if (dlen != 17) {
-       PrintAndLogEx(WARNING, "saflok data must include 17 HEX bytes. Got %i", dlen);
-       return PM3_EINVARG;
+        PrintAndLogEx(WARNING, "saflok data must include 17 HEX bytes. Got %i", dlen);
+        return PM3_EINVARG;
     }
 
     saflok_decrypt(saflokdata, 17, dsaflokdata);
@@ -614,14 +614,14 @@ static int CmdHFSaflokModify(const char *Cmd) {
 
     uint8_t user_saflokdata[17];
     uint8_t rsaflokdata[17];
-    uint8_t esaflokdata[17]={0};
-   
+    uint8_t esaflokdata[17] = {0};
+
     int dlen;
     CLIGetHexWithReturn(ctx, 13, user_saflokdata, &dlen);
 
     if (dlen != 17) {
-       PrintAndLogEx(WARNING, "block data must include 17 HEX bytes. Got %i", dlen);
-       return PM3_EINVARG;
+        PrintAndLogEx(WARNING, "block data must include 17 HEX bytes. Got %i", dlen);
+        return PM3_EINVARG;
     }
 
     saflok_decrypt(user_saflokdata, 17, rsaflokdata);
@@ -671,23 +671,23 @@ static int CmdHFSaflokModify(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 10), (uint8_t *)dt_e, 100, &slen2);
 
     saflok_encode(rsaflokdata,
-        card_level,
-        card_type,
-        card_id,
-        opening_key,
-        lock_id,
-        pass_number,
-        sequence_and_combination,
-        deadbolt_override,
-        restricted_days,
-        expire_date,
-        card_creation_date,
-        property_id,
-        dt_e,
-        dt);
+                  card_level,
+                  card_type,
+                  card_id,
+                  opening_key,
+                  lock_id,
+                  pass_number,
+                  sequence_and_combination,
+                  deadbolt_override,
+                  restricted_days,
+                  expire_date,
+                  card_creation_date,
+                  property_id,
+                  dt_e,
+                  dt);
 
-   
-    saflok_encrypt(rsaflokdata,17,esaflokdata);
+
+    saflok_encrypt(rsaflokdata, 17, esaflokdata);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Modified Card Data"));
@@ -717,7 +717,7 @@ static int CmdHFSaflokEncrypt(const char *Cmd) {
     int len;
     CLIGetHexWithReturn(ctx, 1, raw, &len);
 
-    if(len != 17) {
+    if (len != 17) {
         PrintAndLogEx(WARNING, "Expected 17 bytes. Got %d.", len);
         CLIParserFree(ctx);
         return PM3_EINVARG;
@@ -748,7 +748,7 @@ static int CmdHFSaflokDecrypt(const char *Cmd) {
     int len;
     CLIGetHexWithReturn(ctx, 1, encrypted, &len);
 
-    if(len != 17) {
+    if (len != 17) {
         PrintAndLogEx(WARNING, "Expected 17 bytes. Got %d.", len);
         CLIParserFree(ctx);
         return PM3_EINVARG;
@@ -774,18 +774,18 @@ static int CmdHFSaflokChecksum(const char *Cmd) {
     };
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
-    
+
     uint8_t data[17];
     int len;
     CLIGetHexWithReturn(ctx, 1, data, &len);
 
-    if(len != 16) {
+    if (len != 16) {
         PrintAndLogEx(WARNING, "Expected 16 bytes. Got %d.", len);
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
 
-    data[16] = saflok_checksum(data, 16);  
+    data[16] = saflok_checksum(data, 16);
 
     PrintAndLogEx(SUCCESS, "Block + checksum: " _GREEN_("%s"), bytes_to_hex(data, 17));
     PrintAndLogEx(SUCCESS, "Checksum byte: " _GREEN_("0x%02X"), data[16]);
@@ -794,13 +794,13 @@ static int CmdHFSaflokChecksum(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHFSaflokProvision(const char* Cmd) {
-    CLIParserContext* ctx;
+static int CmdHFSaflokProvision(const char *Cmd) {
+    CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf saflok provision",
-        "Provision a Saflok card",
-        "hf saflok provision -d <17-byte encrypted hex block>");
+                  "Provision a Saflok card",
+                  "hf saflok provision -d <17-byte encrypted hex block>");
 
-    void* argtable[] = {
+    void *argtable[] = {
         arg_param_begin,
         arg_str1("d", NULL, "data", "17-byte block"),
         arg_param_end,
@@ -871,7 +871,7 @@ static int CmdHFSaflokProvision(const char* Cmd) {
         set_keys = 1;
     }
 
-    if(set_keys){
+    if (set_keys) {
         uint8_t trailer7[16] = {
             0x2A, 0x2C, 0x13, 0xCC, 0x24, 0x2A,
             0xFF, 0x07, 0x80, 0x69,
@@ -892,17 +892,17 @@ static int CmdHFSaflokProvision(const char* Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHFSaflokInterrogate(const char* Cmd) {
-    CLIParserContext* ctx;
+static int CmdHFSaflokInterrogate(const char *Cmd) {
+    CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf saflok interrogate",
                   "Interrogate Saflok card",
                   "hf saflok interrogate");
 
-    void* argtable[] = {
+    void *argtable[] = {
         arg_param_begin,
         arg_param_end,
     };
-    
+
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
@@ -927,7 +927,7 @@ static int CmdHFSaflokInterrogate(const char* Cmd) {
 
     uint8_t control_byte = block2[5];
     uint8_t subblock_stop = (control_byte >> 3);
-    if(subblock_stop == 0) {
+    if (subblock_stop == 0) {
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
@@ -937,7 +937,7 @@ static int CmdHFSaflokInterrogate(const char* Cmd) {
     int total_bytes = 0;
 
     while (1) {
-        int current_subblocks = (current_block-16) * 2;
+        int current_subblocks = (current_block - 16) * 2;
         if (current_subblocks >= subblock_stop) break;
 
         if (current_block % 4 == 3) {
@@ -954,15 +954,14 @@ static int CmdHFSaflokInterrogate(const char* Cmd) {
         current_block++;
 
     }
-    
-    if(subblock_stop % 2 != 0){
-        total_bytes-=8;
+
+    if (subblock_stop % 2 != 0) {
+        total_bytes -= 8;
     }
 
-    if(total_bytes>0){
+    if (total_bytes > 0) {
         PrintAndLogEx(SUCCESS, "Card has variable keys to the following locks:");
-    }
-    else{
+    } else {
         PrintAndLogEx(SUCCESS, "Card has no variable keys");
     }
     int cursor = 0;
@@ -988,13 +987,13 @@ static command_t CommandTable[] = {
     {"modify",  CmdHFSaflokModify,  AlwaysAvailable, "Modify Saflok card data"},
     {"encrypt", CmdHFSaflokEncrypt, AlwaysAvailable, "Encrypt 17-byte decrypted block"},
     {"decrypt", CmdHFSaflokDecrypt, AlwaysAvailable, "Decrypt 17-byte encrypted block"},
-    {"interrogate", CmdHFSaflokInterrogate,IfPm3NfcBarcode, "Interrogate saflok card"},
+    {"interrogate", CmdHFSaflokInterrogate, IfPm3NfcBarcode, "Interrogate saflok card"},
     {"cksum",   CmdHFSaflokChecksum, IfPm3NfcBarcode, "Generate checksum for data block"},
     {NULL, NULL, NULL, NULL}
 };
 
 static int CmdHelp(const char *Cmd) {
-    (void)Cmd; 
+    (void)Cmd;
     CmdsHelp(CommandTable);
     return PM3_SUCCESS;
 }
