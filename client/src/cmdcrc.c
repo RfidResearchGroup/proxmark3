@@ -451,9 +451,11 @@ static int CmdrevengSearch(const char *Cmd) {
 
 #define NMODELS 106
 
-    char inHexStr[256] = {0x00};
+    char inHexStr[1024] = {0};
     int dataLen = param_getstr(Cmd, 0, inHexStr, sizeof(inHexStr));
-    if (dataLen < 4) return 0;
+    if (dataLen < 4) {
+        return 0;
+    }
 
     // these two arrays, must match preset size.
     char *Models[NMODELS];
@@ -463,13 +465,14 @@ static int CmdrevengSearch(const char *Cmd) {
     char result[50 + 1] = {0};
     char revResult[50 + 1] = {0};
     int ans = GetModels(Models, &count, width);
-    bool found = false;
-    if (!ans) {
+    if (ans == 0) {
         for (int i = 0; i < count; i++) {
             free(Models[i]);
         }
         return 0;
     }
+
+    bool found = false;
 
     str_lower(inHexStr);
 
@@ -576,7 +579,7 @@ static int CmdrevengSearch(const char *Cmd) {
 }
 
 int CmdCrc(const char *Cmd) {
-    char c[100 + 7];
+    char c[1024 + 7];
     snprintf(c, sizeof(c), "reveng ");
     snprintf(c + strlen(c), sizeof(c) - strlen(c), Cmd, strlen(Cmd));
 

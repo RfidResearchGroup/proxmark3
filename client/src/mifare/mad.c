@@ -235,7 +235,7 @@ int MADCheck(uint8_t *sector0, uint8_t *sector16, bool verbose, bool *haveMAD2) 
 
         if (verbose && !res2) {
             PrintAndLogEx(SUCCESS, "CRC8...... 0x%02X ( %s )", sector16[0], _GREEN_("ok"));
-    }
+        }
     }
 
     // MA (multi-application card)
