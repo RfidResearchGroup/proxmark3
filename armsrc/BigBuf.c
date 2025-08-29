@@ -354,7 +354,7 @@ int emlGet(uint8_t *out, uint32_t offset, uint32_t length) {
 tosend_t *get_tosend(void) {
 
     if (s_toSend.buf == NULL) {
-        s_toSend.buf = BigBuf_calloc(TOSEND_BUFFER_SIZE);
+        s_toSend.buf = BigBuf_malloc(TOSEND_BUFFER_SIZE);
     }
     return &s_toSend;
 }
@@ -390,14 +390,14 @@ void tosend_stuffbit(int b) {
 
 dmabuf16_t *get_dma16(void) {
     if (s_dma_16.buf == NULL) {
-        s_dma_16.buf = (uint16_t *)BigBuf_calloc(DMA_BUFFER_SIZE * sizeof(uint16_t));
+        s_dma_16.buf = (uint16_t *)BigBuf_malloc(DMA_BUFFER_SIZE * sizeof(uint16_t));
     }
     return &s_dma_16;
 }
 
 dmabuf8_t *get_dma8(void) {
     if (s_dma_8.buf == NULL) {
-        s_dma_8.buf = BigBuf_calloc(DMA_BUFFER_SIZE);
+        s_dma_8.buf = BigBuf_malloc(DMA_BUFFER_SIZE);
     }
     return &s_dma_8;
 }
