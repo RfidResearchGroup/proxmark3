@@ -3704,8 +3704,8 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
     uint8_t uid[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t par_list[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint8_t ks_list[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
-    uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
+    uint8_t receivedAnswer[4] = {0x00};
+    uint8_t receivedAnswerPar[1] = {0x00};
     uint8_t par[1] = {0};    // maximum 8 Bytes to be sent here, 1 byte parity is therefore enough
     uint8_t nt_diff = 0;
 
@@ -3768,9 +3768,9 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
         ++checkbtn_cnt;
 
         // this part is from Piwi's faster nonce collecting part in Hardnested.
-        if (!have_uid) { // need a full select cycle to get the uid first
+        if (have_uid == false) { // need a full select cycle to get the uid first
             iso14a_card_select_t card_info;
-            if (!iso14443a_select_card(uid, &card_info, &cuid, true, 0, true)) {
+            if (iso14443a_select_card(uid, &card_info, &cuid, true, 0, true) == 0) {
                 if (g_dbglevel >= DBG_INFO)    Dbprintf("Mifare: Can't select card (ALL)");
                 continue;
             }
@@ -3789,7 +3789,7 @@ void ReaderMifare(bool first_try, uint8_t block, uint8_t keytype) {
             }
             have_uid = true;
         } else { // no need for anticollision. We can directly select the card
-            if (!iso14443a_fast_select_card(uid, cascade_levels)) {
+            if (iso14443a_fast_select_card(uid, cascade_levels) == 0) {
                 if (g_dbglevel >= DBG_INFO)    Dbprintf("Mifare: Can't select card (UID)");
                 continue;
             }
