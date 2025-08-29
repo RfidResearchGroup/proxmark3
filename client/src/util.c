@@ -1563,6 +1563,10 @@ int byte_strstr(const uint8_t *src, size_t srclen, const uint8_t *pattern, size_
             continue;
         }
 
+        if (plen == 1) {
+            return i;
+        }
+
         // try to match rest of the pattern
         for (int j = plen - 1; j >= 1; j--) {
 

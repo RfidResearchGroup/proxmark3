@@ -453,7 +453,7 @@ int main(int argc, char *argv[]) {
 
     // make the table of tables
     t = (struct table *)calloc(sizeof(struct table) * 65536, sizeof(uint8_t));
-    if (!t) {
+    if (t == NULL) {
         printf("calloc failed\n");
         exit(1);
     }
