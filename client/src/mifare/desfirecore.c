@@ -1096,8 +1096,9 @@ int DesfireSelectAndAuthenticate(DesfireContext_t *dctx, DesfireSecureChannel se
 }
 
 int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel secureChannel, DesfireISOSelectWay way, uint32_t id, bool selectfile, uint16_t isofileid, bool noauth, bool verbose) {
-    if (verbose)
+    if (verbose) {
         DesfirePrintContext(dctx);
+    }
 
     int res = 0;
 
@@ -1106,11 +1107,13 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
         // Select DF by name using ISO7816 SELECT
         uint8_t resp[250] = {0};
         size_t resplen = 0;
+
         res = DesfireISOSelect(dctx, ISSDFName, dctx->selectedDFName, dctx->selectedDFNameLen, resp, &resplen);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire DF name select " _RED_("error"));
             return 200;
         }
+
         if (verbose) {
             PrintAndLogEx(INFO, "DF %s is " _GREEN_("selected"), sprint_hex(dctx->selectedDFName, dctx->selectedDFNameLen));
         }
@@ -1119,27 +1122,33 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
         if (way == ISW6bAID && id != 0x000000) {
             if (dctx->cmdSet == DCCISO) {
                 dctx->cmdSet = DCCNativeISO;
-                if (verbose)
+                if (verbose) {
                     PrintAndLogEx(INFO, "Select via " _CYAN_("native iso wrapping") " interface");
+                }
 
                 res = DesfireSelectAIDHex(dctx, id, false, 0);
                 if (res != PM3_SUCCESS) {
                     PrintAndLogEx(ERR, "Desfire select " _RED_("error"));
                     return 200;
                 }
-                if (verbose)
+
+                if (verbose) {
                     PrintAndLogEx(INFO, "App %06x via native iso channel is " _GREEN_("selected"), id);
+                }
 
                 dctx->cmdSet = DCCISO;
+
             } else {
                 res = DesfireSelectEx(dctx, false, way, id, NULL);
                 if (res != PM3_SUCCESS) {
                     PrintAndLogEx(ERR, "Desfire %s select " _RED_("error"), DesfireSelectWayToStr(way));
                     return 202;
                 }
-                if (verbose)
+                if (verbose) {
                     PrintAndLogEx(INFO, "%s is " _GREEN_("selected"), DesfireWayIDStr(way, id));
             }
+            }
+
         } else if (way == ISWIsoID && id != 0x0000) {
             // Also select by ISO ID if specified
             res = DesfireSelectEx(dctx, false, way, id, NULL);
@@ -1147,31 +1156,38 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
                 PrintAndLogEx(ERR, "Desfire %s select " _RED_("error"), DesfireSelectWayToStr(way));
                 return 202;
             }
-            if (verbose)
+
+            if (verbose) {
                 PrintAndLogEx(INFO, "%s is " _GREEN_("selected"), DesfireWayIDStr(way, id));
+            }
         }
     } else if (way == ISW6bAID && dctx->cmdSet == DCCISO) {
         dctx->cmdSet = DCCNativeISO;
-        if (verbose)
+        if (verbose) {
             PrintAndLogEx(INFO, "Select via " _CYAN_("native iso wrapping") " interface");
+        }
 
         res = DesfireSelectAIDHex(dctx, id, false, 0);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire select " _RED_("error"));
             return 200;
         }
-        if (verbose)
+
+        if (verbose) {
             PrintAndLogEx(INFO, "App %06x via native iso channel is " _GREEN_("selected"), id);
+        }
 
         dctx->cmdSet = DCCISO;
+
     } else {
         res = DesfireSelectEx(dctx, true, way, id, NULL);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire %s select " _RED_("error"), DesfireSelectWayToStr(way));
             return 202;
         }
-        if (verbose)
+        if (verbose) {
             PrintAndLogEx(INFO, "%s is " _GREEN_("selected"), DesfireWayIDStr(way, id));
+        }
     }
 
     if (selectfile) {
@@ -1186,7 +1202,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
         }
     }
 
-    if (!noauth) {
+    if (noauth == false) {
         res = DesfireAuthenticate(dctx, secureChannel, verbose);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire authenticate " _RED_("error") ". Result: [%d] %s", res, DesfireAuthErrorToStr(res));

@@ -443,6 +443,7 @@ int desfire_print_signature(uint8_t *uid, uint8_t uidlen, uint8_t *signature, si
         PrintAndLogEx(DEBUG, "UID is NULL");
         return PM3_EINVARG;
     }
+
     if (signature == NULL) {
         PrintAndLogEx(DEBUG, "SIGNATURE is NULL");
         return PM3_EINVARG;
@@ -497,8 +498,9 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext_t *d
     memcpy(kdfInput, defaultKdfInput, defaultKdfInputLen);
 
     int commmode = defaultCommMode;
-    if (defcommmode != DCMNone)
+    if (defcommmode != DCMNone) {
         commmode = defcommmode;
+    }
 
     int commset = defaultCommSet;
     int secchann = defaultSecureChannel;
@@ -560,7 +562,6 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext_t *d
     }
 
     if (schannid) {
-
         if (CLIGetOptionList(arg_get_str(ctx, schannid), DesfireSecureChannelOpts, &secchann))
             return PM3_ESOFT;
     }
@@ -570,10 +571,14 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext_t *d
         uint8_t dfname_data[16] = {0};
         int dfname_len = 0;
         if (CLIParamHexToBuf(arg_get_str(ctx, dfnameid), dfname_data, sizeof(dfname_data), &dfname_len) == 0 && dfname_len > 0) {
+
             if (dfname_len <= 16) {
+
                 DesfireSetDFName(dctx, dfname_data, dfname_len);
-                if (selectway)
+                if (selectway) {
                     *selectway = ISWDFName;
+                }
+
             } else {
                 PrintAndLogEx(ERR, "DF name length must be between 1-16 bytes, got %d", dfname_len);
                 return PM3_EINVARG;
@@ -583,31 +588,37 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext_t *d
 
     if (appid && id) {
         *id = 0x000000;
-        if (CLIGetUint32Hex(ctx, appid, 0x000000, id, NULL, 3, "AID must have 3 bytes length"))
+        if (CLIGetUint32Hex(ctx, appid, 0x000000, id, NULL, 3, "AID must have 3 bytes length")) {
             return PM3_EINVARG;
-        if (selectway)
+        }
+
+        if (selectway) {
             *selectway = ISW6bAID;
+    }
     }
 
     if (appisoid && id) {
         uint32_t xisoid = 0x0000;
         bool isoidpresent = false;
-        if (CLIGetUint32Hex(ctx, appisoid, 0x0000, &xisoid, &isoidpresent, 2, "Application ISO ID (for EF) must have 2 bytes length"))
+        if (CLIGetUint32Hex(ctx, appisoid, 0x0000, &xisoid, &isoidpresent, 2, "Application ISO ID (for EF) must have 2 bytes length")) {
             return PM3_EINVARG;
+        }
 
         if (isoidpresent) {
             *id = xisoid & 0xffff;
-            if (selectway)
+            if (selectway) {
                 *selectway = ISWIsoID;
         }
+    }
     }
 
     DesfireSetKey(dctx, keynum, algores, key);
     DesfireSetKdf(dctx, kdfAlgo, kdfInput, kdfInputLen);
     DesfireSetCommandSet(dctx, commset);
     DesfireSetCommMode(dctx, commmode);
-    if (securechannel)
+    if (securechannel) {
         *securechannel = secchann;
+    }
 
     return PM3_SUCCESS;
 }
@@ -641,6 +652,10 @@ static int CmdHF14ADesDefault(const char *Cmd) {
     }
 
     CLIParserFree(ctx);
+
+    // clear out select DF Name length and array when resetting to default the desfire context
+    dctx.selectedDFNameLen = 0;
+    memset(dctx.selectedDFName, 0, sizeof(dctx.selectedDFName));
 
     defaultKeyNum = dctx.keyNum;
     defaultAlgoId = dctx.keyType;
@@ -2299,10 +2314,11 @@ static int CmdHF14ADesAuth(const char *Cmd) {
 
     if (dctx.selectedDFNameLen > 0) {
         PrintAndLogEx(SUCCESS, "DF selected and authenticated " _GREEN_("successfully"));
-    } else if (DesfireMFSelected(selectway, id))
+    } else if (DesfireMFSelected(selectway, id)) {
         PrintAndLogEx(SUCCESS, "PICC selected and authenticated " _GREEN_("succesfully"));
-    else
+    } else {
         PrintAndLogEx(SUCCESS, "Application " _CYAN_("%s") " selected and authenticated " _GREEN_("succesfully"), DesfireWayIDStr(selectway, id));
+    }
 
     PrintAndLogEx(SUCCESS, _CYAN_("Context: "));
     DesfirePrintContext(&dctx);
