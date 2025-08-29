@@ -767,7 +767,8 @@ typedef struct {
 #define CMD_HF_MFU_OTP_TEAROFF                                            0x0740
 // MFU_Ev1 Counter TearOff
 #define CMD_HF_MFU_COUNTER_TEAROFF                                        0x0741
-
+#define CMD_HF_MFU_ULC_CHKKEYS                                            0x0742
+#define CMD_HF_MFU_ULAES_CHKKEYS                                          0x0743
 
 
 #define CMD_HF_SNIFF                                                      0x0800

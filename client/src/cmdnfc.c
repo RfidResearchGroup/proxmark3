@@ -83,6 +83,7 @@ static int CmdNfcDecode(const char *Cmd) {
         arg_param_begin,
         arg_str0("d",  "data", "<hex>", "NDEF data to decode"),
         arg_str0("f", "file", "<fn>", "file to load"),
+        arg_lit0(NULL, "override", "override failed crc check"),
         arg_lit0("v",  "verbose", "verbose output"),
         arg_param_end
     };
@@ -96,7 +97,8 @@ static int CmdNfcDecode(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    bool verbose = arg_get_lit(ctx, 3);
+    bool override = arg_get_lit(ctx, 3);
+    bool verbose = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
     if (((datalen != 0) && (fnlen != 0)) || ((datalen == 0) && (fnlen == 0))) {
         PrintAndLogEx(ERR, "You must provide either data in hex or a filename");
@@ -141,7 +143,7 @@ static int CmdNfcDecode(const char *Cmd) {
                 uint8_t ndef[4096] = {0};
                 uint16_t ndeflen = 0;
 
-                if (convert_mad_to_arr(tmp, bytes_read, ndef, &ndeflen) != PM3_SUCCESS) {
+                if (convert_mad_to_arr(tmp, bytes_read, ndef, &ndeflen, override) != PM3_SUCCESS) {
                     PrintAndLogEx(FAILED, "Failed converting, aborting...");
                     free(dump);
                     return PM3_ESOFT;

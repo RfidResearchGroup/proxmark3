@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `--override` parameter to NDEF read for overriding MAD CRC check (@iceman1001)
 - Added `hf saflok` commands (@stiebeljoshua)
 - Added `ntag_clean.lua` script for easier NTAG memory wipe (@trigat)
 - Changed from Bigbuf malloc to Bigbuf calloc calls on device side (@iceman1001)

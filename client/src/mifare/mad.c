@@ -198,16 +198,17 @@ int MADCheck(uint8_t *sector0, uint8_t *sector16, bool verbose, bool *haveMAD2) 
         return PM3_EINVARG;
 
     uint8_t GPB = sector0[(3 * 16) + 9];
-    if (verbose)
+    if (verbose) {
         PrintAndLogEx(SUCCESS, "GPB....... " _GREEN_("0x%02X"), GPB);
+    }
 
     // DA (MAD available)
-    if (!(GPB & 0x80)) {
+    if ((GPB & 0x80) == 0x00) {
         PrintAndLogEx(ERR, "DA = 0! MAD not available");
         return PM3_ESOFT;
     }
 
-    uint8_t mad_ver = GPB & 0x03;
+    uint8_t mad_ver = (GPB & 0x03);
     if (verbose)
         PrintAndLogEx(SUCCESS, "Version... " _GREEN_("%d"), mad_ver);
 
@@ -228,11 +229,13 @@ int MADCheck(uint8_t *sector0, uint8_t *sector16, bool verbose, bool *haveMAD2) 
 
     if (mad_ver == 2 && sector16) {
         int res2 = madCRCCheck(sector16, true, 2);
-        if (res == PM3_SUCCESS)
+        if (res == PM3_SUCCESS) {
             res = res2;
+        }
 
-        if (verbose && !res2)
+        if (verbose && !res2) {
             PrintAndLogEx(SUCCESS, "CRC8...... 0x%02X ( %s )", sector16[0], _GREEN_("ok"));
+    }
     }
 
     // MA (multi-application card)
@@ -245,13 +248,18 @@ int MADCheck(uint8_t *sector0, uint8_t *sector16, bool verbose, bool *haveMAD2) 
     return res;
 }
 
-int MADDecode(uint8_t *sector0, uint8_t *sector16, uint16_t *mad, size_t *madlen, bool swapmad) {
+int MADDecode(uint8_t *sector0, uint8_t *sector16, uint16_t *mad, size_t *madlen, bool swapmad, bool override) {
     *madlen = 0;
     bool haveMAD2 = false;
     int res = MADCheck(sector0, sector16, false, &haveMAD2);
-    if (res != PM3_SUCCESS) {
+
+    if (res != PM3_SUCCESS && override == false) {
         PrintAndLogEx(WARNING, "Not a valid MAD");
         return res;
+    }
+
+    if (override) {
+        PrintAndLogEx(INFO, "overriding crc check");
     }
 
     // 7 + 8 == 15
@@ -472,7 +480,7 @@ int DetectHID(uint8_t *d, uint16_t manufacture) {
     return -1;
 }
 
-int convert_mad_to_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen) {
+int convert_mad_to_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen, bool override) {
 
     if (in == NULL || out == NULL || ilen == 0) {
         return PM3_EINVARG;
@@ -494,7 +502,7 @@ int convert_mad_to_arr(uint8_t *in, uint16_t ilen, uint8_t *out, uint16_t *olen)
 
     uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
     size_t madlen = 0;
-    if (MADDecode(sector0, sector16, mad, &madlen, false)) {
+    if (MADDecode(sector0, sector16, mad, &madlen, false, override)) {
         PrintAndLogEx(ERR, "can't decode MAD");
         return PM3_ESOFT;
     }

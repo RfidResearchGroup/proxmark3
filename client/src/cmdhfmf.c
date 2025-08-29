@@ -6787,6 +6787,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     bool swapmad = arg_get_lit(ctx, 5);
     bool decodeholder = arg_get_lit(ctx, 6);
     bool force = arg_get_lit(ctx, 8);
+    bool override = arg_get_lit(ctx, 9);
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
@@ -6874,7 +6875,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
         if (aidlen == 2 || decodeholder) {
             uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
             size_t madlen = 0;
-            if (MADDecode(dump, dump + (0x10 * MIFARE_1K_MAXBLOCK), mad, &madlen, swapmad)) {
+            if (MADDecode(dump, dump + (0x10 * MIFARE_1K_MAXBLOCK), mad, &madlen, swapmad, override)) {
                 PrintAndLogEx(ERR, "can't decode MAD");
                 free(dump);
                 return PM3_ESOFT;
@@ -6959,7 +6960,7 @@ static int CmdHF14AMfMAD(const char *Cmd) {
     if (aidlen == 2 || decodeholder) {
         uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
         size_t madlen = 0;
-        if (MADDecode(sector0, sector10, mad, &madlen, swapmad)) {
+        if (MADDecode(sector0, sector10, mad, &madlen, swapmad, override)) {
             PrintAndLogEx(ERR, "can't decode MAD");
             return PM3_ESOFT;
         }
@@ -7052,8 +7053,8 @@ int CmdHFMFNDEFRead(const char *Cmd) {
                   "Prints NFC Data Exchange Format (NDEF)",
                   "hf mf ndefread -> shows NDEF parsed data\n"
                   "hf mf ndefread -vv -> shows NDEF parsed and raw data\n"
+                  "hf mf ndefread -f myfilename                   -> save raw NDEF to file\n"
                   "hf mf ndefread --aid e103 -k ffffffffffff -b -> shows NDEF data with custom AID, key and with key B\n"
-                  "hf mf ndefread -f myfilename -> save raw NDEF to file"
                  );
 
     void *argtable[] = {
@@ -7063,6 +7064,7 @@ int CmdHFMFNDEFRead(const char *Cmd) {
         arg_str0("k",  "key",      "<key>", "replace default key for NDEF"),
         arg_lit0("b",  "keyb",     "use key B for access sectors (by default: key A)"),
         arg_str0("f", "file", "<fn>", "save raw NDEF to file"),
+        arg_lit0(NULL, "override", "override failed crc check"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -7083,6 +7085,7 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 5), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
+    bool override = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
     uint16_t ndef_aid = NDEF_MFC_AID;
@@ -7131,7 +7134,7 @@ int CmdHFMFNDEFRead(const char *Cmd) {
 
     uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
     size_t madlen = 0;
-    res = MADDecode(sector0, sector10, mad, &madlen, false);
+    res = MADDecode(sector0, sector10, mad, &madlen, false, override);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "can't decode MAD");
         return res;
@@ -7561,7 +7564,7 @@ int CmdHFMFNDEFWrite(const char *Cmd) {
     // decode MAD v1
     uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
     size_t madlen = 0;
-    res = MADDecode(sector0, sector10, mad, &madlen, false);
+    res = MADDecode(sector0, sector10, mad, &madlen, false, false);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "can't decode MAD");
         return res;
@@ -8441,7 +8444,7 @@ static int CmdHF14AMfView(const char *Cmd) {
         // decode MAD v1
         uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
         size_t madlen = 0;
-        res = MADDecode(dump, NULL, mad, &madlen, false);
+        res = MADDecode(dump, NULL, mad, &madlen, false, true);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "can't decode MAD");
             return res;
