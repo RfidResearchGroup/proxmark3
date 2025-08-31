@@ -643,7 +643,7 @@ static int CmdHF14ADesDefault(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     int res = CmdDesGetSessionParameters(ctx, &dctx, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, &securechann, DCMNone, NULL, NULL);
     if (res) {
@@ -1387,7 +1387,7 @@ static int CmdHF14aDesChk(const char *Cmd) {
 
     clearCommandBuffer();
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     DesfireSetKdf(&dctx, cmdKDFAlgo, kdfInput, kdfInputLen);
     DesfireSetCommandSet(&dctx, DCCNativeISO);
     DesfireSetCommMode(&dctx, DCMPlain);
@@ -1562,7 +1562,7 @@ static int CmdHF14aDesDetect(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
@@ -1878,7 +1878,7 @@ static int CmdHF14aDesMAD(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
     int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 0, &securechann, DCMPlain, &appid, NULL);
@@ -2054,7 +2054,7 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
     int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 0, &securechann, DCMPlain, &appid, NULL);
@@ -2177,7 +2177,7 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     int res = CmdDesGetSessionParameters(ctx, &dctx, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, &securechann, DCMNone, NULL, NULL);
     if (res) {
@@ -2290,7 +2290,7 @@ static int CmdHF14ADesAuth(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
@@ -2389,7 +2389,7 @@ static int CmdHF14ADesSetConfiguration(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
@@ -2504,7 +2504,7 @@ static int CmdHF14ADesChangeKey(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
@@ -2668,7 +2668,7 @@ static int CmdHF14ADesCreateApp(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
     int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 12, 0, 0, &securechann, DCMMACed, &appid, NULL);
@@ -2831,7 +2831,7 @@ static int CmdHF14ADesDeleteApp(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
     int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 0, &securechann, DCMMACed, &appid, NULL);
@@ -2897,7 +2897,7 @@ static int CmdHF14ADesGetUID(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
@@ -2976,7 +2976,7 @@ static int CmdHF14ADesFormatPICC(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
     int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 0, &securechann, DCMMACed, &appid, NULL);
@@ -3036,7 +3036,7 @@ static int CmdHF14ADesGetFreeMem(const char *Cmd) {
 
     bool noauth = arg_get_lit(ctx, 11);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
@@ -3099,7 +3099,7 @@ static int CmdHF14ADesChKeySettings(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
     int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 0, &securechann, DCMEncrypted, &appid, NULL);
@@ -3179,7 +3179,7 @@ static int CmdHF14ADesGetKeyVersions(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 16);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
@@ -3278,7 +3278,7 @@ static int CmdHF14ADesGetKeySettings(const char *Cmd) {
     bool APDULogging = arg_get_lit(ctx, 1);
     bool verbose = arg_get_lit(ctx, 2);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
@@ -3358,7 +3358,7 @@ static int CmdHF14ADesGetAIDs(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 11);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0, 0, &securechann, DCMMACed, NULL, NULL);
     if (res) {
@@ -3430,7 +3430,7 @@ static int CmdHF14ADesGetAppNames(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 11);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0, 0, &securechann, DCMMACed, NULL, NULL);
     if (res) {
@@ -3506,7 +3506,7 @@ static int CmdHF14ADesGetFileIDs(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 14);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
@@ -3583,7 +3583,7 @@ static int CmdHF14ADesGetFileISOIDs(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 14);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
@@ -3659,7 +3659,7 @@ static int CmdHF14ADesGetFileSettings(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 15);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
@@ -3836,7 +3836,7 @@ static int CmdHF14ADesChFileSettings(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 21);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
@@ -3984,7 +3984,7 @@ static int CmdHF14ADesCreateFile(const char *Cmd) {
     bool backup = arg_get_lit(ctx, 24);
     uint8_t filetype = (backup) ? 0x01 : 0x00; // backup / standard data file
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
     int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 0, &securechann, DCMMACed, &appid, NULL);
@@ -4121,7 +4121,7 @@ static int CmdHF14ADesCreateValueFile(const char *Cmd) {
 
     uint8_t filetype = 0x02; // value file
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
     int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 0, &securechann, DCMMACed, &appid, NULL);
@@ -4248,7 +4248,7 @@ static int CmdHF14ADesCreateRecordFile(const char *Cmd) {
     bool cyclic = arg_get_lit(ctx, 23);
     uint8_t filetype = (cyclic) ? 0x04 : 0x03; // linear(03) / cyclic(04) record file
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t appid = 0x000000;
     int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 0, &securechann, DCMMACed, &appid, NULL);
@@ -4365,7 +4365,7 @@ static int CmdHF14ADesCreateTrMACFile(const char *Cmd) {
 
     uint8_t filetype = 0x05; // transaction mac file
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
@@ -4472,7 +4472,7 @@ static int CmdHF14ADesDeleteFile(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 14);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
@@ -4552,7 +4552,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 16);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
@@ -4722,7 +4722,7 @@ static int CmdHF14ADesClearRecordFile(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 14);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
@@ -5132,7 +5132,7 @@ static int CmdHF14ADesReadData(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 13);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
@@ -5307,7 +5307,7 @@ static int CmdHF14ADesWriteData(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 13);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
@@ -5638,7 +5638,7 @@ static int CmdHF14ADesLsFiles(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 14);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
@@ -5715,7 +5715,7 @@ static int CmdHF14ADesLsApp(const char *Cmd) {
     bool nodeep = arg_get_lit(ctx, 12);
     bool scanfiles = arg_get_lit(ctx, 13);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     int res = CmdDesGetSessionParameters(ctx, &dctx, 3, 4, 5, 6, 7, 8, 9, 10, 0, 0, 14, &securechann, (noauth) ? DCMPlain : DCMMACed, NULL, NULL);
     if (res) {
@@ -5780,7 +5780,7 @@ static int CmdHF14ADesDump(const char *Cmd) {
     bool verbose = arg_get_lit(ctx, 2);
     bool noauth = arg_get_lit(ctx, 15);
 
-    DesfireContext_t dctx;
+    DesfireContext_t dctx = {0};
     int securechann = defaultSecureChannel;
     uint32_t id = 0x000000;
     DesfireISOSelectWay selectway = ISW6bAID;
