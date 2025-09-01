@@ -31,6 +31,9 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added `hf felica liteauth` - now support FeliCa Lite-S authentication(@q0jt)
 - Added `he felica dump` - partial support for dumping all blocks from unauth readable services (@zinongli)
 - Changed `hf 14b calypso` - now don't break the file id loop when one file can't be selected or read. Add new file ids to iterate through (@zinongli)
+- Fixed `script run hf_mfu_amiibo_restore.lua` - broken reference to a dependency. (@CorySolovewicz)
+- Changed `/client/update_amiibo_tools_lua.py` - updated the output to make things more clear. (@CorySolovewicz)
+- Changed `/client/lualibs/amiibo_tools.lua` - updated to the most recent data. (@CorySolovewicz)
 
 
 ## [Daddy Iceman.4.20469][2025-06-16]
