@@ -34,6 +34,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Fixed `script run hf_mfu_amiibo_restore.lua` - broken reference to a dependency. (@CorySolovewicz)
 - Changed `/client/update_amiibo_tools_lua.py` - updated the output to make things more clear. (@CorySolovewicz)
 - Changed `/client/lualibs/amiibo_tools.lua` - updated to the most recent data. (@CorySolovewicz)
+- Changed `/client/pyscripts/mf_backdoor_dump.py` - fixed output checks to handle whitespace variations. (@robo-w)
 
 
 ## [Daddy Iceman.4.20469][2025-06-16]
