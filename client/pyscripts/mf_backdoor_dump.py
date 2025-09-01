@@ -22,18 +22,18 @@ for bk, sz in BACKDOOR_KEYS:
     p.console(f"hf mf ecfill --{sz} -c 4 -k {bk}")
     output = p.grabbed_output.split('\n')
 
-    if "[#] Card not found" in output:
+    if any("Card not found" in output_line for output_line in output):
         print("Error reading the tag:")
         print("\n".join(output))
         break
-    elif "[-] Fill ( fail )" in output:
+    elif any("Fill ( fail )" in output_line for output_line in output):
         continue
-    elif "[+] Fill ( ok )" not in output:
-        print("Unexpected output, exiting:")
-        print("\n".join(output))
+    elif any("Fill ( ok )" in output_line for output_line in output):
+        WORKING_KEY = bk
         break
     else:
-        WORKING_KEY = bk
+        print("Unexpected output, exiting:")
+        print("\n".join(output))
         break
 
 if WORKING_KEY is None:
