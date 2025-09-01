@@ -41,4 +41,4 @@ if WORKING_KEY is None:
 else:
     print(f"Backdoor key {WORKING_KEY} seems to work, dumping data...")
     print("IMPORTANT: Only data blocks and access bytes can be dumped; keys will be shown as all 0's")
-    p.console(f"hf mf eview --{sz}", True)
+    p.console(f"hf mf eview --{sz}", quiet=False)
