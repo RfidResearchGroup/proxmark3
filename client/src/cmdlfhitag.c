@@ -58,6 +58,8 @@ static const char *getHitagTypeStr(uint32_t uid) {
             return "PCF 7941";
         case 7:
             return "PCF 7952";
+        case 8:
+            return "PCF 7961";
         case 9:
             return "PCF 7945";
         default:
