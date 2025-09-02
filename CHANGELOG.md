@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Change `lf search` - also test for chipset even if there was just signal noice (@iceman1001)
 - Added detection of PCF 7961 , thanks progman (@iceman1001)
 - Change `reveng -g` - now correctly take 1024 hexstring as input (@iceman1001)
 - Added `--override` parameter to NDEF read for overriding MAD CRC check (@iceman1001)

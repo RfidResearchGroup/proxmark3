@@ -1572,18 +1572,18 @@ static bool check_chiptype(bool getDeviceData) {
     saveState_db.clock = g_DemodClock;
     saveState_db.offset = g_DemodStartIdx;
 
-    //check for em4x05/em4x69 chips first
+    // check for em4x05/em4x69 chips first
     uint32_t word = 0;
     if (IfPm3EM4x50() && em4x05_isblock0(&word)) {
-        PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x05 / EM4x69"));
+        PrintAndLogEx(SUCCESS, "Chipset... " _GREEN_("EM4x05 / EM4x69"));
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf em 4x05") "` commands");
         retval = true;
         goto out;
     }
 
-    //check for t55xx chip...
+    // check for t55xx chip...
     if (tryDetectP1(true)) {
-        PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("T55xx"));
+        PrintAndLogEx(SUCCESS, "Chipset... " _GREEN_("T55xx"));
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf t55xx") "` commands");
         retval = true;
         goto out;
@@ -1594,7 +1594,7 @@ static bool check_chiptype(bool getDeviceData) {
 
         // Hitag 2
         if (ht2_read_uid() == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("Hitag 2"));
+            PrintAndLogEx(SUCCESS, "Chipset... " _GREEN_("Hitag 2"));
             PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf hitag") "` commands");
             retval = true;
             goto out;
@@ -1602,7 +1602,7 @@ static bool check_chiptype(bool getDeviceData) {
 
         // Hitag S
         if (read_hts_uid() == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("Hitag 1/S / 82xx"));
+            PrintAndLogEx(SUCCESS, "Chipset... " _GREEN_("Hitag 1/S / 82xx"));
             PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf hitag hts") "` commands");
             retval = true;
             goto out;
@@ -1610,7 +1610,7 @@ static bool check_chiptype(bool getDeviceData) {
 
         // Hitag µ
         if (read_htu_uid() == PM3_SUCCESS) {
-            PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("Hitag µ / 8265"));
+            PrintAndLogEx(SUCCESS, "Chipset... " _GREEN_("Hitag µ / 8265"));
             PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf hitag htu") "` commands");
             retval = true;
             goto out;
@@ -1621,7 +1621,7 @@ static bool check_chiptype(bool getDeviceData) {
 #if !defined ICOPYX
     // check for em4x50 chips
     if (IfPm3EM4x50() && detect_4x50_block()) {
-        PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x50"));
+        PrintAndLogEx(SUCCESS, "Chipset... " _GREEN_("EM4x50"));
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf em 4x50") "` commands");
         retval = true;
         goto out;
@@ -1629,7 +1629,7 @@ static bool check_chiptype(bool getDeviceData) {
 
     // check for em4x70 chips
     if (IfPm3EM4x70() && detect_4x70_block()) {
-        PrintAndLogEx(SUCCESS, "Chipset detection: " _GREEN_("EM4x70"));
+        PrintAndLogEx(SUCCESS, "Chipset... " _GREEN_("EM4x70"));
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("lf em 4x70") "` commands");
         retval = true;
         goto out;
@@ -1787,6 +1787,12 @@ int CmdLFfind(const char *Cmd) {
 
             PrintAndLogEx(NORMAL, "");
             PrintAndLogEx(FAILED, _RED_("No data found!"));
+
+            // identify chipset
+            if (check_chiptype(is_online) == false) {
+                PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed"));
+            }
+
             PrintAndLogEx(HINT, "Hint: Maybe not an LF tag?");
             PrintAndLogEx(NORMAL, "");
             if (search_cont == 0) {
