@@ -333,7 +333,7 @@ int main(int argc, char *argv[]) {
     // read in nR aR pairs
     numnrar = 0;
     buf = (char *)calloc(1, lenbuf);
-    if (!buf) {
+    if (buf == NULL) {
         printf("cannot calloc buf\n");
         exit(1);
     }

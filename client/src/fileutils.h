@@ -426,8 +426,8 @@ int pm3_save_fm11rf08s_nonces(const char *fn, iso14a_fm11rf08s_nonces_with_data_
  * Returns PM3_SUCCES or, PM3_EFILE;
  *
  * @param filepath Path to the file.
- * @param line     Line to insert (should not contain a trailing newline).
+ * @param keystr     Line to insert (should not contain a trailing newline).
  */
-int insert_line_if_not_exists(const char *preferredName, const char *line);
+int insert_line_if_not_exists(const char *preferredName, const char *keystr);
 
 #endif // FILEUTILS_H

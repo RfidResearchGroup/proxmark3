@@ -635,10 +635,20 @@ static void set_my_executable_path(void) {
     }
 
     my_executable_path = (char *)calloc(path_length + 1, sizeof(uint8_t));
+    if (my_executable_path == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return;
+    }
+
     int dirname_length = 0;
     if (wai_getExecutablePath(my_executable_path, path_length, &dirname_length) != -1) {
         my_executable_path[path_length] = '\0';
         my_executable_directory = (char *)calloc(dirname_length + 2, sizeof(uint8_t));
+        if (my_executable_path == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            return;
+        }
+
         strncpy(my_executable_directory, my_executable_path, dirname_length + 1);
         my_executable_directory[dirname_length + 1] = '\0';
     }

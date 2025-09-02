@@ -784,6 +784,9 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
     length = ((sizeof(graphText)) + (sizeof(uint32_t) * 3) + sizeof(scalestr) + sizeof(float_t));
 
     annotation = (char *)calloc(1, length);
+    if (annotation == NULL) {
+        return;
+    }
 
     snprintf(annotation, length, graphText,
              g_GraphStart,
@@ -805,6 +808,9 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
         length = (sizeof(gridText) + (sizeof(double) * 3) + sizeof(gridLocked));
 
         annotation = (char *)calloc(1, length);
+        if (annotation == NULL) {
+            return;
+        }
 
         snprintf(annotation, length, gridText,
                  g_DefaultGridX,
@@ -831,7 +837,14 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
         size_t value;
 
         annotation = (char *)calloc(1, length);
+        if (annotation == NULL) {
+            return;
+        }
+
         char *textA = (char *)calloc(1, length);
+        if (textA == NULL) {
+            return;
+        }
 
         strcat(textA, markerText);
         strcat(textA, " (%s%u)");
@@ -863,6 +876,9 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
         pos = g_MarkerB.pos;
 
         annotation = (char *)calloc(1, length);
+        if (annotation == NULL) {
+            return;
+        }
 
         snprintf(annotation, length, markerText,
                  "B",
@@ -880,6 +896,9 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
         pos = g_MarkerC.pos;
 
         annotation = (char *)calloc(1, length);
+        if (annotation == NULL) {
+            return;
+        }
 
         snprintf(annotation, length, markerText,
                  "C",
@@ -897,6 +916,9 @@ void Plot::drawAnnotations(QRect annotationRect, QPainter *painter) {
         pos = g_MarkerD.pos;
 
         annotation = (char *)calloc(1, length);
+        if (annotation == NULL) {
+            return;
+        }
 
         snprintf(annotation, length, markerText,
                  "D",

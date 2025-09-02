@@ -3171,7 +3171,7 @@ int searchFile(char **foundpath, const char *pm3dir, const char *searchname, con
  * Returns PM3_SUCCES or, PM3_EFILE;
  *
  * @param filepath Path to the file.
- * @param line     Line to insert (should not contain a trailing newline).
+ * @param keystr     Line to insert (should not contain a trailing newline).
  */
 int insert_line_if_not_exists(const char *preferredName, const char *keystr) {
 

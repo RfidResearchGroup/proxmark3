@@ -266,7 +266,7 @@ static void init_guess_table(char *filename, char *uidstr) {
 
     num_nRaR = 0;
     buf = (char *)calloc(1, lenbuf);
-    if (!buf) {
+    if (buf == NULL) {
         printf("cannot calloc buf\n");
         exit(1);
     }

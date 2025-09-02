@@ -43,11 +43,15 @@ static void mqtt_publish_callback(void **unused, struct mqtt_response_publish *p
 
     // note that published->topic_name is NOT null-terminated (here we'll change it to a c-string)
     char *topic_name = (char *) calloc(published->topic_name_size + 1, 1);
+    if (topic_name == NULL) {
+        return;
+    }
+
     memcpy(topic_name, published->topic_name, published->topic_name_size);
 
     const char *msg = published->application_message;
 
-    char *ps = strstr(msg, "Created\": \"proxmark3");
+    const char *ps = strstr(msg, "Created\": \"proxmark3");
     if (ps) {
         int res = saveFileTXT("ice_mqtt", ".json", msg, published->application_message_size, spDefault);
         if (res == PM3_SUCCESS) {
@@ -68,7 +72,8 @@ static void *mqtt_client_refresher(void *client) {
     }
     return NULL;
 }
-static int mqtt_exit(int status, mqtt_pal_socket_handle sockfd, pthread_t *client_daemon) {
+
+static int mqtt_exit(int status, mqtt_pal_socket_handle sockfd, const pthread_t *client_daemon) {
     close_nb_socket(sockfd);
     if (client_daemon != NULL) {
         mqtt_client_should_exit = 1;
@@ -277,15 +282,15 @@ static int CmdMqttSend(const char *Cmd) {
 
     int plen = 0;
     char port[10 + 1] = {0x00};
-    res = CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)port, sizeof(port), &plen);
+    res |= CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)port, sizeof(port), &plen);
 
     int tlen = 0;
     char topic[128] = {0x00};
-    res = CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)topic, sizeof(topic), &tlen);
+    res |= CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)topic, sizeof(topic), &tlen);
 
     int mlen = 0;
     char msg[128] = {0x00};
-    res = CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)msg, sizeof(msg), &mlen);
+    res |= CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)msg, sizeof(msg), &mlen);
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
@@ -358,11 +363,11 @@ static int CmdMqttReceive(const char *Cmd) {
 
     int plen = 0;
     char port[10 + 1] = {0x00};
-    res = CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)port, sizeof(port), &plen);
+    res |= CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)port, sizeof(port), &plen);
 
     int tlen = 0;
     char topic[128] = {0x00};
-    res = CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)topic, sizeof(topic), &tlen);
+    res |= CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)topic, sizeof(topic), &tlen);
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};

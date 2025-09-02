@@ -262,7 +262,7 @@ int main(int argc, char *argv[]) {
     }
 
     ctx.kernelSource = (char *)calloc(1, filestat.st_size);
-    if (!ctx.kernelSource) {
+    if (ctx.kernelSource == NULL) {
         printf("Cannot calloc kernelSource\n");
         exit(1);
     }
