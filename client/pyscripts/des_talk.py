@@ -80,7 +80,7 @@ def send_proxmark_command(command):
         host_device = detect_proxmark_device()
 
         process = subprocess.Popen(
-            ["proxmark3", host_device],
+            ["proxmark3", "-p", host_device],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -154,7 +154,7 @@ def authenticate_and_menu():
         print("3. Delete an AID")
         print("4. Format PICC")
         print("5. Show free memory")
-        print("6. Change keys")
+        print("6. Change Master and AID keys")
         print("7. Exit")
 
         choice = input("Enter your choice: ").strip()
@@ -241,6 +241,7 @@ def create_aid(key_type, key, com_mode):
     create_command = f"hf mfdes createapp -n 0 --aid {aid} --fid {iso_fid} --dstalgo {dstalgo} -t {key_type} -k {key} -m {com_mode} -a"
     response = send_proxmark_command(create_command)
     print(response)
+    print("\n.:: DESFire assigns all-zero keys to new applications by default. Keys can be modified via the main menu. ::.\n")
 
 def delete_aid(key_type, key, com_mode):
 
@@ -337,7 +338,8 @@ def list_files(aid, key_type, key, com_mode, aid_key_type, aid_key):
             print(f"{i}. {file_id}")
         return file_ids
     else:
-        print("No files found in this AID.")
+        print("No files found in this AID.\n")
+        print(response)
         return []
 
 def read_file(aid, key_type, key, com_mode, aid_key_type, aid_key):
@@ -355,6 +357,11 @@ def read_file(aid, key_type, key, com_mode, aid_key_type, aid_key):
     read_command = f"hf mfdes read --aid {aid} --fid {file_id} -t {aid_key_type} -k {aid_key} " \
                    f"--offset {offset_hex} --length {length_hex} -m {com_mode}"
     response = send_proxmark_command(read_command)
+
+    # Check for authentication error
+    if "authenticate error" in response.lower():
+        print("\nAuthentication Error")
+        return None
 
     # Extract and display file content
     print("\nFile Data:")
@@ -409,6 +416,11 @@ def write_to_file(aid, key_type, key, com_mode, aid_key_type, aid_key):
     # Get file size
     file_size_command = f"hf mfdes getfilesettings --aid {aid} --fid {file_id} -t {aid_key_type} -k {aid_key} -m {com_mode}"
     response = send_proxmark_command(file_size_command)
+
+    # Check for authentication error
+    if "authenticate error" in response.lower():
+        print("\nAuthentication Error")
+        return None
 
     # Extract the file size from the response
     file_size_match = re.search(r"File size \(bytes\)... (\d+) / 0x([0-9A-Fa-f]+)", response)
