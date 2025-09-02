@@ -1146,7 +1146,7 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
                 }
                 if (verbose) {
                     PrintAndLogEx(INFO, "%s is " _GREEN_("selected"), DesfireWayIDStr(way, id));
-            }
+                }
             }
 
         } else if (way == ISWIsoID && id != 0x0000) {

@@ -594,7 +594,7 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext_t *d
 
         if (selectway) {
             *selectway = ISW6bAID;
-    }
+        }
     }
 
     if (appisoid && id) {
@@ -608,8 +608,8 @@ static int CmdDesGetSessionParameters(CLIParserContext *ctx, DesfireContext_t *d
             *id = xisoid & 0xffff;
             if (selectway) {
                 *selectway = ISWIsoID;
+            }
         }
-    }
     }
 
     DesfireSetKey(dctx, keynum, algores, key);

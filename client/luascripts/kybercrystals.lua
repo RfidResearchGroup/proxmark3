@@ -2,7 +2,7 @@
     Simple script to program DIY kyber crystals
     works on real kyber crystals and EM4305 2.12x12mm chips
     simply run the program and select a profile via a number
-    
+
     issues
     if you are getting errors when trying to read or write a chip
     run the cmd "lf tune" with no chip on the device, then move the chip over the coils till you see the lowest voltage. try different angles and in the center and or the edge of the antenna ring.
@@ -10,7 +10,7 @@
     if thats still not working run "lf tune" again and put the chip in the best position like before
     the total voltage may be too high to reduce it slowly lower tin foil over the antenna and watch the voltage.
     the foil should be a bit bigger than the coil exact size does not matter.
-    
+
     data pulled from here
     https://docs.google.com/spreadsheets/d/13P_GE6tNYpGvoVUTEQvA3SQzMqpZ-SoiWaTNoJoTV9Q/edit?usp=sharing
 --]]
@@ -663,12 +663,12 @@ function get_profile_data(profile_name)
             [9] = "010D0000"
         }
     }
-    
+
     -- When called without arguments, return the whole table
     if not profile_name then
         return profiles
     end
-    
+
     -- Otherwise return the specific profile or wipe chip
     return profiles[profile_name] or profiles["wipe chip"]
 end
@@ -676,7 +676,7 @@ end
 function get_profile_names()
     -- Get the complete profiles table from get_profile_data
     local all_profiles = get_profile_data()
-    
+
     local names = {}
     for name, _ in pairs(all_profiles) do
         table.insert(names, name)
@@ -687,16 +687,16 @@ end
 
 function select_profile()
     local profile_names = get_profile_names()
-    
+
     print("\nAvailable profiles:")
     for i, name in ipairs(profile_names) do
         print(string.format("%d. %s", i, name))
     end
-    
+
     while true do
         io.write("\nSelect profile (1-" .. #profile_names .. "): ")
         local choice = tonumber(io.read())
-        
+
         if choice and choice >= 1 and choice <= #profile_names then
             return profile_names[choice]
         else
@@ -707,40 +707,40 @@ end
 
 function main()
     print("\n[=== kyber crystal programmer ===]")
-    
+
     -- Get profile from command line argument or prompt user
     local profile_name = args and args[1]
     if not profile_name then
         --print("\nNo profile specified as argument.")
         profile_name = select_profile()
     end
-    
+
     local data_to_write = get_profile_data(profile_name)
     print("\n[+] Using profile: " .. profile_name)
-    
+
     -- Display what will be written
     print("\n[+] Data to be written:")
     for addr, data in pairs(data_to_write) do
         print(string.format("Address %d: %s", addr, data))
     end
-    
+
     -- Step 1: Wipe the tag
     print("\n[+] Wiping tag...")
     send_command("lf em 4x05 wipe --4305")
-    
+
     -- Step 2: Write data
     print("\n[+] Writing data...")
     for addr, data in pairs(data_to_write) do
         send_command("lf em 4x05 write -a " .. addr .. " -d " .. data)
         utils.Sleep(0.5)
     end
-    
+
     -- Step 3: Read back and display data for verification
     print("\n[+] Verifying writes by reading back data...")
     for addr, expected_data in pairs(data_to_write) do
         local output = send_command("lf em 4x05 read -a " .. addr)
     end
-    
+
     print("\n[+] Read complete. Review output above.")
 end
 

@@ -10,7 +10,7 @@ For more info, check the comments in the code
 ]]
 example = [[
     --
-    script run lf_awid_bulkclone.lua -f 1 -b 1000 
+    script run lf_awid_bulkclone.lua -f 1 -b 1000
 ]]
 usage = [[
 script run lf_awid_bulkclone.lua -f facility -b base_id_num
@@ -91,7 +91,7 @@ local function main(args)
             end
         end
         if o == 'b' then
-            if isempty(a) then 
+            if isempty(a) then
                 print('You did not supply a starting card number, using 59615')
                 cn = 59615
             else
@@ -105,18 +105,18 @@ local function main(args)
 
     print("Session Start: " .. sessionStart)
     print("Facility Code,Card Number")
-    
+
     while true do
         print(string.format("Preparing to Write: Facility Code %d, Card Number %d", fc, cn))
-        
+
         local command = string.format("lf awid clone --fmt 26 --fc %d --cn %d", fc, cn)
         core.console(command)
-        
+
         print(string.format("%d,%d", fc, cn))
-        
+
         print("Press Enter to continue with the next card number or type 'q' and press Enter to quit.")
         local user_input = io.read()
-        
+
         if user_input:lower() == 'q' then
             break
         else

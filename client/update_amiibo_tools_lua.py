@@ -9,7 +9,7 @@ Author: Cory Solovewicz
 Description:
 This is a python script to automate what the updating of the /lualibs/amiibo_tools.lua
 file which holds a lua table of all known amiibos. Previously updating the
-amiibo_tools.lua was a very manual process. 
+amiibo_tools.lua was a very manual process.
 
 This script automates the following original command:
 curl https://raw.githubusercontent.com/N3evin/AmiiboAPI/master/database/amiibo.json | jq 'del(.amiibos[].release)' | jq 'del(.characters)' | pbcopy --> transform to table
