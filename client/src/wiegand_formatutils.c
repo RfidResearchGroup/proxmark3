@@ -23,7 +23,7 @@
 #include "wiegand_formatutils.h"
 #include "ui.h"
 
-uint8_t get_bit_by_position(wiegand_message_t *data, uint8_t pos) {
+uint8_t get_bit_by_position(const wiegand_message_t *data, uint8_t pos) {
     if (pos >= data->Length) return false;
     pos = (data->Length - pos) - 1; // invert ordering; Indexing goes from 0 to 1. Subtract 1 for weight of bit.
     uint8_t result = 0;
@@ -72,7 +72,7 @@ bool set_bit_by_position(wiegand_message_t *data, bool value, uint8_t pos) {
  * If the definition of the wiegand_message struct changes, this function must also
  * be updated to match.
  */
-static void message_datacopy(wiegand_message_t *src, wiegand_message_t *dest) {
+static void message_datacopy(const wiegand_message_t *src, wiegand_message_t *dest) {
     dest->Bot = src->Bot;
     dest->Mid = src->Mid;
     dest->Top = src->Top;
@@ -85,7 +85,7 @@ static void message_datacopy(wiegand_message_t *src, wiegand_message_t *dest) {
  * until all the bugs shaken from the block/chunk version of the code.
  *
  */
-uint64_t get_linear_field(wiegand_message_t *data, uint8_t firstBit, uint8_t length) {
+uint64_t get_linear_field(const wiegand_message_t *data, uint8_t firstBit, uint8_t length) {
     uint64_t result = 0;
     for (uint8_t i = 0; i < length; i++) {
         result = (result << 1) | get_bit_by_position(data, firstBit + i);
@@ -105,14 +105,14 @@ bool set_linear_field(wiegand_message_t *data, uint64_t value, uint8_t firstBit,
     return result;
 }
 
-uint64_t get_nonlinear_field(wiegand_message_t *data, uint8_t numBits, uint8_t *bits) {
+uint64_t get_nonlinear_field(const wiegand_message_t *data, uint8_t numBits, const uint8_t *bits) {
     uint64_t result = 0;
     for (int i = 0; i < numBits; i++) {
         result = (result << 1) | get_bit_by_position(data, *(bits + i));
     }
     return result;
 }
-bool set_nonlinear_field(wiegand_message_t *data, uint64_t value, uint8_t numBits, uint8_t *bits) {
+bool set_nonlinear_field(wiegand_message_t *data, uint64_t value, uint8_t numBits, const uint8_t *bits) {
 
     wiegand_message_t tmpdata;
     message_datacopy(data, &tmpdata);
@@ -128,7 +128,7 @@ bool set_nonlinear_field(wiegand_message_t *data, uint64_t value, uint8_t numBit
     return result;
 }
 
-uint8_t get_length_from_header(wiegand_message_t *data) {
+uint8_t get_length_from_header(const wiegand_message_t *data) {
     /**
      * detect if message has "preamble" / "sentinel bit"
      * Right now we just calculate the highest bit set
