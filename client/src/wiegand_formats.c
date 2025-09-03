@@ -1610,6 +1610,20 @@ int HIDFindCardFormat(const char *format) {
 // return true if the card is valid
 bool validate_card_limit(int format_idx, wiegand_card_t *card) {
     cardformatdescriptor_t card_descriptor = FormatTable[format_idx].Fields;
+
+    // If a field is not supported, it's implicitly required to be zero
+    if ((!card_descriptor.hasCardNumber  ) && (card->CardNumber   != 0u)) {
+        return false; // Format does not support card number, but non-zero card number provided
+    }
+    if ((!card_descriptor.hasFacilityCode) && (card->FacilityCode != 0u)) {
+        return false; // Format does not support facility code, but non-zero facility code provided
+    }
+    if ((!card_descriptor.hasIssueLevel  ) && (card->IssueLevel   != 0u)) {
+        return false; // Format does not support issue levels, but non-zero issue level provided
+    }
+    if ((!card_descriptor.hasOEMCode     ) && (card->OEM          != 0u)) {
+        return false; // Format does not support OEM codes, but non-zero OEM code provided
+    }
     return !((card->FacilityCode > card_descriptor.MaxFC) ||
              (card->CardNumber > card_descriptor.MaxCN) ||
              (card->IssueLevel > card_descriptor.MaxIL) ||
