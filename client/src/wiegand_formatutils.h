@@ -41,18 +41,18 @@ typedef struct {
     bool ParityValid; // Only valid for responses
 } wiegand_card_t;
 
-uint8_t get_bit_by_position(wiegand_message_t *data, uint8_t pos);
+uint8_t get_bit_by_position(const wiegand_message_t *data, uint8_t pos);
 bool set_bit_by_position(wiegand_message_t *data, bool value, uint8_t pos);
 
-uint64_t get_linear_field(wiegand_message_t *data, uint8_t firstBit, uint8_t length);
+uint64_t get_linear_field(const wiegand_message_t *data, uint8_t firstBit, uint8_t length);
 bool set_linear_field(wiegand_message_t *data, uint64_t value, uint8_t firstBit, uint8_t length);
 
-uint64_t get_nonlinear_field(wiegand_message_t *data, uint8_t numBits, uint8_t *bits);
-bool set_nonlinear_field(wiegand_message_t *data, uint64_t value, uint8_t numBits, uint8_t *bits);
+uint64_t get_nonlinear_field(const wiegand_message_t *data, uint8_t numBits, const uint8_t *bits);
+bool set_nonlinear_field(wiegand_message_t *data, uint64_t value, uint8_t numBits, const uint8_t *bits);
 
 wiegand_message_t initialize_message_object(uint32_t top, uint32_t mid, uint32_t bot, int n);
 
-uint8_t get_length_from_header(wiegand_message_t *data);
+uint8_t get_length_from_header(const wiegand_message_t *data);
 bool add_HID_header(wiegand_message_t *data);
 
 #endif
