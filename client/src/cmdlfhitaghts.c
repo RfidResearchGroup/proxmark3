@@ -152,8 +152,9 @@ static const char *hts_get_type_str(uint32_t uid) {
             default:
                 return "n/a";
         }
-    } else
+    } else {
         return "Probably not NXP Hitag S";
+    }
 }
 
 static bool hts_get_uid(uint32_t *uid) {
