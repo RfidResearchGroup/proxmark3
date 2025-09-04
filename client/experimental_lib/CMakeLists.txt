@@ -355,6 +355,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhfmfp.c
         ${PM3_ROOT}/client/src/cmdhfmfu.c
         ${PM3_ROOT}/client/src/cmdhfntag424.c
+        ${PM3_ROOT}/client/src/cmdhfsaflok.c
         ${PM3_ROOT}/client/src/cmdhfseos.c
         ${PM3_ROOT}/client/src/cmdhfst.c
         ${PM3_ROOT}/client/src/cmdhfst25ta.c
@@ -402,6 +403,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdlfvisa2000.c
         ${PM3_ROOT}/client/src/cmdlfzx8211.c
         ${PM3_ROOT}/client/src/cmdmain.c
+        ${PM3_ROOT}/client/src/cmdmqtt.c
         ${PM3_ROOT}/client/src/cmdnfc.c
         ${PM3_ROOT}/client/src/cmdparser.c
         ${PM3_ROOT}/client/src/cmdpiv.c
@@ -774,6 +776,7 @@ target_link_libraries(pm3rrg_rdv4 PRIVATE
         pm3rrg_rdv4_reveng
         pm3rrg_rdv4_hardnested
         pm3rrg_rdv4_id48
+        pm3rrg_rdv4_mqtt
         ${ADDITIONAL_LNK})
 
 if (NOT SKIPPTHREAD EQUAL 1)
