@@ -705,8 +705,6 @@ static bool Unpack_S12906(wiegand_message_t *packed, wiegand_card_t *card) {
 }
 
 
-// if (card->FacilityCode != 217) return false; // Must be 0b11011001 aka 217 for Grinnell?
-// card->IssueLevel = get_linear_field(packed, 9, 2); // These are actually the two even parity bits...
 // using 1-based indexing (as shown in screenshots posted by digitalfx):
 // Bit  1 ==  odd parity over bits                     2,  3,  5,  6,   8,  9, 13, 14,   16, 17, 19, 20,   22, 23, 25, 26,   28, 29, 31, 32,   34, 35
 // Bit 10 == even parity over bits                     3,  4,  6,  7,   9, 12, 14, 15,   17, 18, 20, 21,   23, 24, 26, 27,   29, 30, 32, 33,   35, 36
@@ -717,6 +715,7 @@ static const uint8_t S12906b_odd_parity_bit_0[]   = {  1,  2,  4,  5,   7,  8, 1
 static const uint8_t S12906b_even_parity_bit_9[]  = {  2,  3,  5,  6,   8, 11, 13, 14,   16, 17, 19, 20,   22, 23, 25, 26,   28, 29, 31, 32,   34, 35 };
 static const uint8_t S12906b_even_parity_bit_10[] = {  1,  3,  4,  6,   7, 11, 12, 14,   15, 17, 18, 20,   21, 23, 24, 26,   27, 29, 30, 32,   33, 35 };
 #define S12906b_BITS_USED_BY_PARITY (22u)
+#define S12906b_FACILITY_CODE       (217u)
 _Static_assert((sizeof( S12906b_odd_parity_bit_0 ) / sizeof( S12906b_odd_parity_bit_0 [0])) == S12906b_BITS_USED_BY_PARITY, "Wrong array length");
 _Static_assert((sizeof(S12906b_even_parity_bit_9 ) / sizeof(S12906b_even_parity_bit_9 [0])) == S12906b_BITS_USED_BY_PARITY, "Wrong array length");
 _Static_assert((sizeof(S12906b_even_parity_bit_10) / sizeof(S12906b_even_parity_bit_10[0])) == S12906b_BITS_USED_BY_PARITY, "Wrong array length");
@@ -725,14 +724,14 @@ static bool Pack_S12906b(int format_idx, wiegand_card_t *card, wiegand_message_t
     memset(packed, 0, sizeof(wiegand_message_t));
 
     if (!validate_card_limit(format_idx, card)) return false;
-    // if (card->FacilityCode != 217) return false; // Must be 0b11011001 aka 217 for Grinnell?
+    if (card->FacilityCode != S12906b_FACILITY_CODE) return false;
     if (card->IssueLevel != 0u) return false; // This card does not support issue levels
     if (!card->ParityValid) return false; // Cannot intentionally guess which parity caller wants to invalidate
     if (card->OEM != 0u) return false; // Card does not support OEM values
 
     packed->Length = 36; // Set number of bits
-    set_linear_field(packed, card->FacilityCode, 1, 8);
-    set_linear_field(packed, card->CardNumber, 11, 24);
+    set_linear_field(packed, card->FacilityCode,  1,  8);
+    set_linear_field(packed, card->CardNumber,   11, 24);
     set_bit_by_position(packed, oddparity32 (get_nonlinear_field(packed, S12906b_BITS_USED_BY_PARITY, S12906b_odd_parity_bit_0)),    0);
     set_bit_by_position(packed, evenparity32(get_nonlinear_field(packed, S12906b_BITS_USED_BY_PARITY, S12906b_even_parity_bit_9)),   9);
     set_bit_by_position(packed, evenparity32(get_nonlinear_field(packed, S12906b_BITS_USED_BY_PARITY, S12906b_even_parity_bit_10)), 10);
@@ -743,13 +742,12 @@ static bool Pack_S12906b(int format_idx, wiegand_card_t *card, wiegand_message_t
 }
 
 static bool Unpack_S12906b(wiegand_message_t *packed, wiegand_card_t *card) {
-    if (packed->Length != 36) return false; // Wrong length? Stop here.
-
     memset(card, 0, sizeof(wiegand_card_t));
 
+    if (packed->Length != 36) return false; // Wrong length? Stop here.
     card->FacilityCode = get_linear_field(packed, 1, 8);
-    card->CardNumber = get_linear_field(packed, 11, 24);
-    // if (card->FacilityCode != 217) return false; // Must be 0b11011001 aka 217 for Grinnell?
+    card->CardNumber   = get_linear_field(packed, 11, 24);
+    if (card->FacilityCode != S12906b_FACILITY_CODE) return false;
     bool odd_1 = get_bit_by_position(packed,  0) == oddparity32( get_nonlinear_field(packed, S12906b_BITS_USED_BY_PARITY, S12906b_odd_parity_bit_0));
     bool even1 = get_bit_by_position(packed,  9) == evenparity32(get_nonlinear_field(packed, S12906b_BITS_USED_BY_PARITY, S12906b_even_parity_bit_9));
     bool even2 = get_bit_by_position(packed, 10) == evenparity32(get_nonlinear_field(packed, S12906b_BITS_USED_BY_PARITY, S12906b_even_parity_bit_10));
