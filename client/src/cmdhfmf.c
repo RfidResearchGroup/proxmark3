@@ -10432,30 +10432,36 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08s, sizeof(fkey)) == 0
                    && card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
                    && (blockdata[8] == 0x03 || blockdata[8] == 0x04 || blockdata[8] == 0x05) && blockdata[15] == 0x90) {
+            // 0390/0490/0590 with RF08S backdoor key
             PrintAndLogEx(SUCCESS, "Fudan FM11RF08S %02X%02X", blockdata[8], blockdata[15]);
             expect_static_enc_nonce = true;
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08s, sizeof(fkey)) == 0
                    && card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
                    && (blockdata[8] == 0x03 || blockdata[8] == 0x04) && blockdata[15] == 0x91) {
+            // 0391/0491 with RF08S backdoor key
             PrintAndLogEx(SUCCESS, "Fudan FM11RF08 %02X%02X with advanced verification method", blockdata[8], blockdata[15]);
             expect_static_enc_nonce = false;
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08s, sizeof(fkey)) == 0
                    && card.sak == 0x08 && memcmp(blockdata + 5, "\x00\x03\x00\x10", 4) == 0
                    && blockdata[15] == 0x90) {
+            // 1090 with RF08S backdoor key
             PrintAndLogEx(SUCCESS, "Fudan FM11RF08S-7B %02X%02X", blockdata[8], blockdata[15]);
             expect_static_enc_nonce = true;
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
                    && card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
                    && blockdata[15] == 0x98) {
+            // 1098 with RF08 backdoor key
             PrintAndLogEx(SUCCESS, "Fudan FM11RF08S %02X%02X", blockdata[8], blockdata[15]);
             expect_static_enc_nonce = true;
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
                    && card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
                    && (blockdata[8] >= 0x01 && blockdata[8] <= 0x03) && blockdata[15] == 0x1D) {
+            // 011D/021D/031D with RF08 backdoor key
             PrintAndLogEx(SUCCESS, "Fudan FM11RF08");
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
                    && card.sak == 0x08 && memcmp(blockdata + 5, "\x00\x01\x00\x10", 4) == 0
                    && blockdata[15] == 0x1D) {
+            // 101D with RF08 backdoor key
             PrintAndLogEx(SUCCESS, "Fudan FM11RF08-7B");
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k32n, sizeof(fkey)) == 0
                    && card.sak == 0x18 && memcmp(blockdata + 5, "\x18\x02\x00\x46\x44\x53\x37\x30\x56\x30\x31", 11) == 0) {
@@ -10463,6 +10469,9 @@ static int CmdHF14AMfInfo(const char *Cmd) {
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k32n2, sizeof(fkey)) == 0
                    && card.sak == 0x18 && memcmp(blockdata + 5, "\x18\x02\x00\x46\x44\x53\x37\x30\x56\x30\x31", 11) == 0) {
             PrintAndLogEx(SUCCESS, "Fudan FM11RF32N (variant)");
+        } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
+                   && card.sak == 0x19 && memcmp(blockdata + 8, "\x69\x44\x4C\x4B\x56\x32\x01\x92", 8) == 0) {
+            PrintAndLogEx(SUCCESS, "Fudan-based iDTRONICS IDT M1K ? (SAK=19)");
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
                    && card.sak == 0x20 && memcmp(blockdata + 8, "\x62\x63\x64\x65\x66\x67\x68\x69", 8) == 0) {
             PrintAndLogEx(SUCCESS, "Fudan FM11RF32 (SAK=20)");
@@ -10473,6 +10482,11 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             // Note: it also has ATS =
             // 10 78 80 90 02 20 90 00 00 00 00 00 + UID + CRC
             PrintAndLogEx(SUCCESS, "Fudan FM1208-10");
+        } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
+                   && card.sak == 0x28 && memcmp(blockdata + 5, "\x28\x04\x00\x90\x93\x56\x09\x00\x00\x00\x00", 11) == 0) {
+            // Note: it also has ATS =
+            // 0E 28 B0 20 90 00 00 00 00 00 + UID + CRC
+            PrintAndLogEx(SUCCESS, "Fudan FM1216-110");
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
                    && card.sak == 0x28 && memcmp(blockdata + 5, "\x28\x04\x00\x90\x53\xB7\x0C\x00\x00\x00\x00", 11) == 0) {
             // Note: it also has ATS =
