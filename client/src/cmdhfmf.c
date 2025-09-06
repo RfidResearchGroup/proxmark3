@@ -10449,8 +10449,8 @@ static int CmdHF14AMfInfo(const char *Cmd) {
             expect_static_enc_nonce = true;
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
                    && card.sak == 0x08 && memcmp(blockdata + 5, "\x08\x04\x00", 3) == 0
-                   && blockdata[15] == 0x98) {
-            // 1098 with RF08 backdoor key
+                   && (blockdata[8] == 0x04 || blockdata[8] == 0x05) && blockdata[15] == 0x98) {
+            // 0498/0598 with RF08 backdoor key
             PrintAndLogEx(SUCCESS, "Fudan FM11RF08S %02X%02X", blockdata[8], blockdata[15]);
             expect_static_enc_nonce = true;
         } else if (fKeyType == MF_KEY_BD && memcmp(fkey, k08, sizeof(fkey)) == 0
