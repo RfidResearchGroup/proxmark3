@@ -2755,9 +2755,17 @@ static int CmdT55xxRestore(const char *Cmd) {
     config.downlink_mode = downlink_mode;
 
     // Write the page 0 config
-    snprintf(wcmd, sizeof(wcmd), "-b 0 -d %08X %s", dump[0], pwdopt);
-    if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
-        PrintAndLogEx(WARNING, "Warning: error writing blk 0");
+    // 
+    // when running `lf t55xx dump` and user failed,  the dump file will have a all zero block0 (ie: config block)
+    // writing this bad config block will brick the tag.
+    if (dump[0] != 0x00000000) {
+        snprintf(wcmd, sizeof(wcmd), "-b 0 -d %08X %s", dump[0], pwdopt);
+        if (CmdT55xxWriteBlock(wcmd) != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Warning: error writing blk 0");
+        }
+    } else {
+        PrintAndLogEx(WARNING, "Warning: the dump file contains a all zero config block.");
+        PrintAndLogEx(HINT, "Make sure you dumped the card correct");
     }
     free(dump);
     PrintAndLogEx(INFO, "Done!");
