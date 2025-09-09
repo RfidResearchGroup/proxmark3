@@ -354,22 +354,50 @@ def read_file(aid, key_type, key, com_mode, aid_key_type, aid_key):
     length_input = input("Enter length to read (e.g., 16 for 16 bytes, 64 for 64 bytes, default full read): ").strip() or "0"
     length_hex = format(int(length_input), '06X')  # Convert to 3-byte hex
 
+    text_only = input("Show only human-readable text? (y/N): ").strip().lower() == "y"
+
     read_command = f"hf mfdes read --aid {aid} --fid {file_id} -t {aid_key_type} -k {aid_key} " \
                    f"--offset {offset_hex} --length {length_hex} -m {com_mode}"
     response = send_proxmark_command(read_command)
 
-    # Check for authentication error
     if "authenticate error" in response.lower():
         print("\nAuthentication Error")
         return None
 
-    # Extract and display file content
-    print("\nFile Data:")
-    for line in response.splitlines():
-        if re.search(r"\| [0-9A-Fa-f]{2} .* \|", line):  # Matches data table format
-            print(line)
+    if text_only:
+        all_chars = []
+        for line in response.splitlines():
+            # Regex looks for hex column. e.g. | 65 20 70 69 7A ... |
+            m = re.search(r"\|\s*([0-9A-Fa-f\s]+)\s*\|", line)
+            if not m:
+                continue
 
-    return response
+            # Split hex into individual bytes
+            hex_blob = m.group(1).strip()
+            for token in hex_blob.split():
+                try:
+                    b = int(token, 16)  # Convert each byte or token into a number
+                except ValueError:
+                    continue
+                if b == 0:  # Stop at NULL
+                    break
+                # Check if byte falls in printable ASCII range
+                all_chars.append(chr(b) if 0x20 <= b <= 0x7E else '.')
+
+        if all_chars:
+            text = "".join(all_chars)
+            print("\nPlain text:\n")
+            print(text)
+        else:
+            print("\nNo printable text found in the response.")
+
+        return response
+    else:
+        print("\nFile Data:\n")
+        for line in response.splitlines():
+            if re.search(r"\| [0-9A-Fa-f]{2} .* \|", line):
+                print(line)
+        return response
 
 def create_file(aid, key_type, key, com_mode, aid_key_type, aid_key):
 
