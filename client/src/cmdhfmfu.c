@@ -2948,15 +2948,17 @@ void mfu_print_dump(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool de
     bool bit_stat[16]  = {0};
     bool bit_dyn[16] = {0};
 
-    // Load static lock bytes.
-    memcpy(lockbytes_sta, data + 10, sizeof(lockbytes_sta));
-    for (j = 0; j < 16; j++) {
-        bit_stat[j] = lockbytes_sta[j / 8] & (1 << (7 - j % 8));
+    if (startpage == 0) {
+        // Load static lock bytes.
+        memcpy(lockbytes_sta, data + 10, sizeof(lockbytes_sta));
+        for (j = 0; j < 16; j++) {
+            bit_stat[j] = lockbytes_sta[j / 8] & (1 << (7 - j % 8));
+        }
     }
 
     // Load dynamic lockbytes if available
     // TODO -- FIGURE OUT LOCK BYTES FOR TO EV1 and/or NTAG
-    if (pages == 44) {
+    if ((startpage == 0) && (pages == 44)) {
 
         memcpy(lockbytes_dyn, data + (40 * 4), sizeof(lockbytes_dyn));
 
@@ -2974,7 +2976,7 @@ void mfu_print_dump(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool de
     bool in_repeated_block = false;
 
     for (uint16_t i = 0; i < pages; ++i) {
-        if (i < 3) {
+        if (i + startpage < 3) {
             PrintAndLogEx(INFO, "%3d/0x%02X | " _RED_("%s")"|   | %s",
                           i + startpage,
                           i + startpage,
@@ -3098,13 +3100,16 @@ void mfu_print_dump(mfu_dump_t *card, uint16_t pages, uint8_t startpage, bool de
             in_repeated_block = false;
         }
 
-
+        const char *lckbitchar = "?";
+        if ((startpage == 0) && ((i < 16) || (pages == 44))) {
+            lckbitchar = (lckbit) ? _RED_("1") : "0";
+        }
         if (in_repeated_block == false) {
             PrintAndLogEx(INFO, "%3d/0x%02X | %s| %s | %s"
                           , i + startpage
                           , i + startpage
                           , sprint_hex(data + i * 4, 4)
-                          , (lckbit) ? _RED_("1") : "0"
+                          , lckbitchar
                           , sprint_ascii(data + i * 4, 4)
                          );
         }
