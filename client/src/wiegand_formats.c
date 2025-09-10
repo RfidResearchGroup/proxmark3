@@ -716,9 +716,9 @@ static const uint8_t S12906b_even_parity_bit_9[]  = {  2,  3,  5,  6,   8, 11, 1
 static const uint8_t S12906b_even_parity_bit_10[] = {  1,  3,  4,  6,   7, 11, 12, 14,   15, 17, 18, 20,   21, 23, 24, 26,   27, 29, 30, 32,   33, 35 };
 #define S12906b_BITS_USED_BY_PARITY (22u)
 #define S12906b_FACILITY_CODE       (217u)
-_Static_assert((sizeof( S12906b_odd_parity_bit_0 ) / sizeof( S12906b_odd_parity_bit_0 [0])) == S12906b_BITS_USED_BY_PARITY, "Wrong array length");
-_Static_assert((sizeof(S12906b_even_parity_bit_9 ) / sizeof(S12906b_even_parity_bit_9 [0])) == S12906b_BITS_USED_BY_PARITY, "Wrong array length");
-_Static_assert((sizeof(S12906b_even_parity_bit_10) / sizeof(S12906b_even_parity_bit_10[0])) == S12906b_BITS_USED_BY_PARITY, "Wrong array length");
+_Static_assert((ARRAYLEN(S12906b_odd_parity_bit_0)) == S12906b_BITS_USED_BY_PARITY, "Wrong array length");
+_Static_assert((ARRAYLEN(S12906b_even_parity_bit_9)) == S12906b_BITS_USED_BY_PARITY, "Wrong array length");
+_Static_assert((ARRAYLEN(S12906b_even_parity_bit_10)) == S12906b_BITS_USED_BY_PARITY, "Wrong array length");
 
 static bool Pack_S12906b(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
     memset(packed, 0, sizeof(wiegand_message_t));
