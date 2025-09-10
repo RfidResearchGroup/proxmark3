@@ -47,6 +47,8 @@
 #define MAX_NTAG_213        0x2C
 #define MAX_NTAG_215        0x86
 #define MAX_NTAG_216        0xE6
+#define MAX_NTAG_223_DNA    0x3B
+#define MAX_NTAG_224_DNA    0x4B
 #define MAX_NTAG_I2C_1K     0xE9
 #define MAX_NTAG_I2C_2K     0xE9
 #define MAX_MY_D_NFC        0xFF
@@ -97,6 +99,8 @@ static uint64_t UL_TYPES_ARRAY[] = {
     MFU_TT_NTAG_203,          MFU_TT_NTAG_210,
     MFU_TT_NTAG_212,          MFU_TT_NTAG_213,
     MFU_TT_NTAG_215,          MFU_TT_NTAG_216,
+    MFU_TT_NTAG_223_DNA,      MFU_TT_NTAG_223_DNA_SD,
+    MFU_TT_NTAG_224_DNA,      MFU_TT_NTAG_224_DNA_SD,
     MFU_TT_MY_D,              MFU_TT_MY_D_NFC,
     MFU_TT_MY_D_MOVE,         MFU_TT_MY_D_MOVE_NFC,
     MFU_TT_MY_D_MOVE_LEAN,    MFU_TT_NTAG_I2C_1K,
@@ -120,6 +124,8 @@ static uint8_t UL_MEMORY_ARRAY[ARRAYLEN(UL_TYPES_ARRAY)] = {
     MAX_NTAG_203,       MAX_NTAG_203,       MAX_NTAG_210,        MAX_NTAG_212,
 //  NTAG_213,           NTAG_215,           NTAG_216,
     MAX_NTAG_213,       MAX_NTAG_215,       MAX_NTAG_216,
+//  NTAG_223_DNA,       NTAG_223_DNA_SD,    NTAG_224_DNA,        NTAG_224_DNA_SD,
+    MAX_NTAG_223_DNA,   MAX_NTAG_223_DNA,   MAX_NTAG_224_DNA,     MAX_NTAG_224_DNA,
 //  MY_D,               MY_D_NFC,           MY_D_MOVE,           MY_D_MOVE_NFC,      MY_D_MOVE_LEAN,
     MAX_UL_BLOCKS,      MAX_MY_D_NFC,       MAX_MY_D_MOVE,       MAX_MY_D_MOVE,      MAX_MY_D_MOVE_LEAN,
 //  NTAG_I2C_1K,        NTAG_I2C_2K,        NTAG_I2C_1K_PLUS,    NTAG_I2C_2K_PLUS,
@@ -159,6 +165,10 @@ static const ul_family_t ul_family[] = {
     {"NTAG 216F", "NT2H1611F0Dxy", "\x00\x04\x04\x04\x01\x00\x13\x03"},
     {"NTAG 213C", "NT2H1311C1DTL", "\x00\x04\x04\x02\x01\x01\x0F\x03"},
     {"NTAG 213TT", "NT2H1311TTDUx", "\x00\x04\x04\x02\x03\x00\x0F\x03"},
+    {"NTAG 223 DNA", "NT2H2331G0", "\x00\x04\x04\x02\x04\x00\x0F\x03"},
+    {"NTAG 223 DNA SD", "NT2H2331S0", "\x00\x04\x04\x08\x04\x00\x0F\x03"},
+    {"NTAG 224 DNA", "NT2H2421G0", "\x00\x04\x04\x02\x05\x00\x10\x03"},
+    {"NTAG 224 DNA SD", "NT2H2421S0", "\x00\x04\x04\x08\x05\x00\x10\x03"},
     {"NTAG I2C 1k", "NT3H1101W0FHK", "\x00\x04\x04\x05\x02\x00\x13\x03"},
     {"NTAG I2C 1k", "NT3H1101W0FHK_Variant", "\x00\x04\x04\x05\x02\x01\x13\x03"},
     {"NTAG I2C 2k", "NT3H1201W0FHK", "\x00\x04\x04\x05\x02\x00\x15\x03"},
@@ -746,7 +756,7 @@ static int ulev1_readSignature(uint8_t *response, uint16_t responseLength) {
 //  UL responds with read of page 0, fudan doesn't respond.
 //
 // make sure field is off before calling this function
-static int ul_fudan_check(void) {
+static long long unsigned int ul_fudan_check(void) {
     iso14a_card_select_t card;
     if (ul_select(&card) == false) {
         return MFU_TT_UL_ERROR;
@@ -1019,6 +1029,14 @@ int ul_print_type(uint64_t tagtype, uint8_t spaces) {
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG 216 888bytes (NT2H1611G0DU)"), spaces, "");
     else if (tagtype & MFU_TT_NTAG_216_F)
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG 216F 888bytes (NT2H1611F0DTL)"), spaces, "");
+    else if (tagtype & MFU_TT_NTAG_223_DNA)
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG 223 DNA 144bytes (NT2H2331G0)"), spaces, "");
+    else if (tagtype & MFU_TT_NTAG_223_DNA_SD)
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG 223 DNA StatusDetect 144bytes (NT2H2331S0)"), spaces, "");
+    else if (tagtype & MFU_TT_NTAG_224_DNA)
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG 224 DNA 208bytes (NT2H2421G0)"), spaces, "");
+    else if (tagtype & MFU_TT_NTAG_224_DNA_SD)
+        snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG 224 DNA StatusDetect 208bytes (NT2H2421S0)"), spaces, "");
     else if (tagtype & MFU_TT_NTAG_I2C_1K)
         snprintf(typestr, sizeof(typestr), "%*sTYPE: " _YELLOW_("NTAG I2C 888bytes (NT3H1101FHK)"), spaces, "");
     else if (tagtype & MFU_TT_NTAG_I2C_2K)
@@ -2160,6 +2178,10 @@ uint64_t GetHF14AMfU_Type(void) {
                 else if (memcmp(version, "\x00\x04\x04\x04\x01\x00\x0F", 7) == 0) { tagtype = MFU_TT_NTAG_213_F; break; }
                 else if (memcmp(version, "\x00\x04\x04\x04\x01\x00\x13", 7) == 0) { tagtype = MFU_TT_NTAG_216_F; break; }
                 else if (memcmp(version, "\x00\x04\x04\x02\x03\x00\x0F", 7) == 0) { tagtype = MFU_TT_NTAG_213_TT; break; }
+                else if (memcmp(version, "\x00\x04\x04\x02\x04\x00\x0F", 7) == 0) { tagtype = MFU_TT_NTAG_223_DNA; break; }
+                else if (memcmp(version, "\x00\x04\x04\x08\x04\x00\x0F", 7) == 0) { tagtype = MFU_TT_NTAG_223_DNA_SD; break; }
+                else if (memcmp(version, "\x00\x04\x04\x02\x05\x00\x10", 7) == 0) { tagtype = MFU_TT_NTAG_224_DNA; break; }
+                else if (memcmp(version, "\x00\x04\x04\x08\x05\x00\x10", 7) == 0) { tagtype = MFU_TT_NTAG_224_DNA_SD; break; }
                 else if (memcmp(version, "\x00\x04\x04\x05\x02\x01\x13", 7) == 0) { tagtype = MFU_TT_NTAG_I2C_1K; break; }
                 else if (memcmp(version, "\x00\x04\x04\x05\x02\x01\x15", 7) == 0) { tagtype = MFU_TT_NTAG_I2C_2K; break; }
                 else if (memcmp(version, "\x00\x04\x04\x05\x02\x02\x13", 7) == 0) { tagtype = MFU_TT_NTAG_I2C_1K_PLUS; break; }
@@ -2481,6 +2503,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     if ((tagtype & (MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1 | MFU_TT_UL_NANO_40 |
                     MFU_TT_NTAG_210u | MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C |
                     MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216 | MFU_TT_NTAG_216_F |
+                    MFU_TT_NTAG_223_DNA | MFU_TT_NTAG_223_DNA_SD | MFU_TT_NTAG_224_DNA |MFU_TT_NTAG_224_DNA_SD |
                     MFU_TT_NTAG_I2C_1K | MFU_TT_NTAG_I2C_2K | MFU_TT_NTAG_I2C_1K_PLUS | MFU_TT_NTAG_I2C_2K_PLUS |
                     MFU_TT_UL_AES))) {
         uint8_t ulev1_signature[48] = {0x00};
@@ -3510,7 +3533,7 @@ int CmdHF14MfUTamper(const char *Cmd) {
     if (use_msg) {
         if (ul_select(&card) == false) {
             DropField();
-            return MFU_TT_UL_ERROR;
+            return PM3_ESOFT;
         }
         PrintAndLogEx(INFO, "Trying to write tamper message");
         SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, tt_msg_page, 0, 0, msg_data, 4);
@@ -3533,7 +3556,7 @@ int CmdHF14MfUTamper(const char *Cmd) {
         if (ul_select(&card) == false) {
             PrintAndLogEx(ERR, "Unable to select tag");
             DropField();
-            return MFU_TT_UL_ERROR;
+            return PM3_ESOFT;
         }
 
         uint8_t cfg_page[4] = {0x00};
@@ -5774,6 +5797,7 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
         if ((tagtype & (MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1 | MFU_TT_UL_NANO_40 |
                         MFU_TT_NTAG_210u | MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C |
                         MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216 | MFU_TT_NTAG_216_F |
+                        MFU_TT_NTAG_223_DNA | MFU_TT_NTAG_223_DNA_SD |
                         MFU_TT_NTAG_I2C_1K | MFU_TT_NTAG_I2C_2K | MFU_TT_NTAG_I2C_1K_PLUS | MFU_TT_NTAG_I2C_2K_PLUS
                        ))) {
 

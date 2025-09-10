@@ -61,7 +61,7 @@ const ecdsa_publickey_ng_t manufacturer_public_keys[] = {
 
     // ref: AN12998 NTAG 22x DNA (StatusDetect) - Features and hints
     {
-        PK_MFUL,    MBEDTLS_ECP_DP_SECP192R1, 49, "NXP NTAG 22x DNA",
+        PK_MFULAES, MBEDTLS_ECP_DP_SECP192R1, 49, "NXP NTAG 22x DNA",
         "0485D5B9353B4FAA77581BA2AE96630C5876D6E8603308ABE9A81A0B506F52D02D04FEE6F2D365B3DEE7B9FAD9133E2976"
     },
 
