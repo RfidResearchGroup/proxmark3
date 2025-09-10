@@ -1306,7 +1306,7 @@ static bool iclass_send_cmd_with_retries(uint8_t *cmd, size_t cmdsize, uint8_t *
  * @return false = fail
  *         true = Got all.
  */
-static bool select_iclass_tag_ex(picopass_hdr_t *hdr, bool use_credit_key, uint32_t *eof_time, uint8_t *status, bool shallow_mod) {
+static bool select_iclass_tag_ex(picopass_hdr_t *hdr, bool use_credit_key, uint32_t *eof_time, uint8_t *status, bool shallow_mod, uint8_t page) {
 
     static uint8_t act_all[] = { ICLASS_CMD_ACTALL };
     static uint8_t identify[] = { ICLASS_CMD_READ_OR_IDENTIFY, 0x00, 0x73, 0x33 };
@@ -1353,6 +1353,19 @@ static bool select_iclass_tag_ex(picopass_hdr_t *hdr, bool use_credit_key, uint3
 
     // save CSN
     memcpy(hdr->csn, resp, sizeof(hdr->csn));
+
+    // select page
+    uint8_t pagesel_resp[10];
+    start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
+    uint8_t pagesel[] = {0x80 | ICLASS_CMD_PAGESEL, page, 0x00, 0x00};
+    AddCrc(pagesel + 1, 1);
+
+    bool pagesel_res = iclass_send_cmd_with_retries(pagesel, sizeof(pagesel), pagesel_resp, sizeof(resp),
+            10, 2, &start_time, ICLASS_READER_TIMEOUT_OTHERS, eof_time, shallow_mod);
+
+    if (pagesel_res == false) {
+        return false;
+    }
 
     // card selected, now read config (block1) (only 8 bytes no CRC)
     start_time = *eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
@@ -1428,7 +1441,12 @@ static bool select_iclass_tag_ex(picopass_hdr_t *hdr, bool use_credit_key, uint3
 
 bool select_iclass_tag(picopass_hdr_t *hdr, bool use_credit_key, uint32_t *eof_time, bool shallow_mod) {
     uint8_t result = 0;
-    return select_iclass_tag_ex(hdr, use_credit_key, eof_time, &result, shallow_mod);
+    return select_iclass_tag_ex(hdr, use_credit_key, eof_time, &result, shallow_mod, 0); //page 0 is default
+}
+
+bool select_iclass_tag_and_page(picopass_hdr_t *hdr, bool use_credit_key, uint32_t *eof_time, bool shallow_mod, uint8_t page) {
+    uint8_t result = 0;
+    return select_iclass_tag_ex(hdr, use_credit_key, eof_time, &result, shallow_mod, page);
 }
 
 // Reader iClass Anticollission
@@ -1452,7 +1470,8 @@ void ReaderIClass(uint8_t flags) {
     uint32_t eof_time = 0;
     picopass_hdr_t hdr = {0};
 
-    if (select_iclass_tag_ex(&hdr, use_credit_key, &eof_time, &res, shallow_mod) == false) {
+    // for now only get page 0 - this doesn't play well with iclass dump --page command
+    if (select_iclass_tag_ex(&hdr, use_credit_key, &eof_time, &res, shallow_mod, 0) == false) {
         reply_ng(CMD_HF_ICLASS_READER, PM3_ERFTRANS, NULL, 0);
         goto out;
     }
@@ -1700,6 +1719,7 @@ void iClass_Dump(uint8_t *msg) {
     iclass_dump_req_t *cmd = (iclass_dump_req_t *)msg;
     iclass_auth_req_t *req = &cmd->req;
     bool shallow_mod = req->shallow_mod;
+    uint8_t page = cmd->page;
 
     uint8_t *dataout = BigBuf_calloc(ICLASS_16KS_SIZE);
     if (dataout == NULL) {
@@ -1719,7 +1739,7 @@ void iClass_Dump(uint8_t *msg) {
     picopass_hdr_t hdr = {0};
     memset(&hdr, 0xff, sizeof(picopass_hdr_t));
 
-    bool res = select_iclass_tag(&hdr, req->use_credit_key, &eof_time, shallow_mod);
+    bool res = select_iclass_tag_and_page(&hdr, req->use_credit_key, &eof_time, shallow_mod, page);
     if (res == false) {
         if (req->send_reply) {
             reply_ng(CMD_HF_ICLASS_DUMP, PM3_ETIMEOUT, NULL, 0);

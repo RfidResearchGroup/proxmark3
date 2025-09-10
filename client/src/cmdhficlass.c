@@ -1922,6 +1922,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         arg_lit0(NULL, "force", "force unsecure card read"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_lit0(NULL, "ns", "no save to file"),
+        arg_int0(NULL, "page", "<dec>", "which page to dump from"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -1948,6 +1949,7 @@ static int CmdHFiClassDump(const char *Cmd) {
     bool force = arg_get_lit(ctx, 10);
     bool shallow_mod = arg_get_lit(ctx, 11);
     bool nosave = arg_get_lit(ctx, 12);
+    int page = arg_get_int_def(ctx, 13, 0);
 
     CLIParserFree(ctx);
 
@@ -2107,6 +2109,7 @@ static int CmdHFiClassDump(const char *Cmd) {
         .req.do_auth = auth,
         .req.shallow_mod = shallow_mod,
         .end_block = app_limit1,
+        .page = page,
     };
     memcpy(payload.req.key, key, 8);
 
