@@ -2,6 +2,7 @@
 All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
+## [unreleased][unreleased]
 
 ## [Phrack.4.20728][2025-09-11]
 - Change `lf t55xx restore` - now skips writing block0 if its all zeros (@iceman1001)
