@@ -2,7 +2,8 @@
 All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
-## [unreleased][unreleased]
+
+## [Phrack][2025-09-11]
 - Change `lf t55xx restore` - now skips writing block0 if its all zeros (@iceman1001)
 - Added `HID Simplex Grinnell 36-bit` - Improved Simplex decoder (@datafx, @henrygab)
 - Change `lf search` - also test for chipset even if there was just signal noice (@iceman1001)
