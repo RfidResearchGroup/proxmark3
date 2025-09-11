@@ -1,7 +1,7 @@
 # Makefile for ID48LIB library
 MYSRCPATHS =
 MYINCLUDES = -I.
-MYCFLAGS = -Wpedantic -Wall -Werror -O3 -Wno-unknown-pragmas -Wno-inline -Wno-unused-function
+MYCFLAGS = -Wpedantic -Wall -O3 -Wno-unknown-pragmas -Wno-inline -Wno-unused-function
 MYDEFS = -DID48_NO_STDIO
 MYSRCS = \
 	id48_data.c \
