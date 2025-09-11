@@ -27,23 +27,23 @@ Run `tools/release_tests.sh` on:
 - [ ] Jetson Nano
 - [ ] WSL
 - [ ] PSv3.xx
-- [ ] Archlinux
-- [ ] Kali
-- [ ] Debian Stable
-- [ ] Debian Testing
-- [ ] Ubuntu 24.04 (LTS)
-- [ ] Ubuntu 24.10
-- [ ] Ubuntu 25.04
-- [ ] ParrotOS
-- [ ] Fedora 41 (till 2025-11-19)
-- [ ] Fedora 42 (till 2026-05-13)
-- [ ] Fedora 43 (till 2026-12-02)
-- [ ] OpenSuse Leap
-- [ ] OpenSuse Tumbleweed
+- via Docker
+  - [ ] Archlinux
+  - [ ] Debian Stable
+  - [ ] Debian Testing
+  - [ ] Fedora 42 (till 2026-05-13)
+  - [ ] Fedora 43 (till 2026-12-02)
+  - [ ] Kali
+  - [ ] OpenSuse Leap
+  - [ ] OpenSuse Tumbleweed
+  - [ ] ParrotOS
+  - [ ] Ubuntu 24.04 (LTS)
+  - [ ] Ubuntu 24.10
+  - [ ] Ubuntu 25.04
 - [ ] OSX (MacPorts)
 - [ ] OSX (Homebrew)
-- [ ] Android
 - [ ] Termux
+- [ ] Android cmake cross-compilation ?
 
 # creating release
 
