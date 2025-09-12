@@ -554,7 +554,7 @@ void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 
     crypto1_deinit(pcs);
 
-    if (g_dbglevel >= 2) DbpString("WRITE BLOCK FINISHED");
+    if (g_dbglevel >= DBG_INFO) DbpString("WRITE BLOCK FINISHED");
 
     reply_mix(CMD_ACK, isOK, 0, 0, 0, 0);
 
@@ -624,7 +624,7 @@ static void MifareUWriteBlockEx(uint8_t arg0, uint8_t arg1, uint8_t *datain, boo
         return;
     };
 
-    if (g_dbglevel >= 2) DbpString("WRITE BLOCK FINISHED");
+    if (g_dbglevel >= DBG_INFO) DbpString("WRITE BLOCK FINISHED");
 
     if (reply) {
         reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
@@ -699,7 +699,7 @@ void MifareUWriteBlockCompat(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
         return;
     };
 
-    if (g_dbglevel >= 2) DbpString("WRITE BLOCK FINISHED");
+    if (g_dbglevel >= DBG_INFO) DbpString("WRITE BLOCK FINISHED");
 
     reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -864,7 +864,7 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
         CHK_TIMEOUT();
 
         if (len != 4) {
-            if (g_dbglevel >= 2) Dbprintf("AcquireNonces: Auth1 error");
+            if (g_dbglevel >= DBG_INFO) Dbprintf("AcquireNonces: Auth1 error");
             continue;
         }
 
@@ -878,7 +878,7 @@ void MifareAcquireNonces(uint32_t arg0, uint32_t flags) {
     reply_old(CMD_ACK, isOK, cuid, num_nonces, buf, sizeof(buf));
     LED_B_OFF();
 
-    if (g_dbglevel >= 3) DbpString("AcquireNonces finished");
+    if (g_dbglevel >= DBG_DEBUG) DbpString("AcquireNonces finished");
 
     if (field_off) {
         FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
@@ -1818,7 +1818,7 @@ static void chkKey_scanA(struct chk_t *c, struct sector_t *k_sector, uint8_t *fo
             found[(s * 2)] = 1;
             ++*foundkeys;
 
-            if (g_dbglevel >= 3) Dbprintf("ChkKeys_fast: Scan A found (%d)", c->block);
+            if (g_dbglevel >= DBG_DEBUG) Dbprintf("ChkKeys_fast: Scan A found (%d)", c->block);
         }
     }
 }
@@ -1844,7 +1844,7 @@ static void chkKey_scanB(struct chk_t *c, struct sector_t *k_sector, uint8_t *fo
             found[(s * 2) + 1] = 1;
             ++*foundkeys;
 
-            if (g_dbglevel >= 3) Dbprintf("ChkKeys_fast: Scan B found (%d)", c->block);
+            if (g_dbglevel >= DBG_DEBUG) Dbprintf("ChkKeys_fast: Scan B found (%d)", c->block);
         }
     }
 }
@@ -1870,7 +1870,7 @@ static void chkKey_loopBonly(struct chk_t *c, struct sector_t *k_sector, uint8_t
                 found[(s * 2) + 1] = 1;
                 ++*foundkeys;
 
-                if (g_dbglevel >= 3) Dbprintf("ChkKeys_fast: Reading B found (%d)", c->block);
+                if (g_dbglevel >= DBG_DEBUG) Dbprintf("ChkKeys_fast: Reading B found (%d)", c->block);
 
                 // try quick find all B?
                 // assume: keys comes in groups. Find one B, test against all B.

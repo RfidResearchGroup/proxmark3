@@ -2905,7 +2905,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
     }
 
     if (ak_len) {
-        PrintAndLogEx(INFO, "Using %s " _GREEN_("%s"), (ak_len == 16) ? "3des" : "pwd", sprint_hex(authenticationkey, ak_len));
+        PrintAndLogEx(INFO, "Using %s... " _GREEN_("%s"), (ak_len == 16) ? "3des" : "pwd", sprint_hex_inrow(authenticationkey, ak_len));
     }
 
     //Read Block
@@ -2931,7 +2931,7 @@ static int CmdHF14AMfURdBl(const char *Cmd) {
             PrintAndLogEx(INFO, "-----------------------------");
             PrintAndLogEx(INFO, "%02d/0x%02X | %s| %s\n", blockno, blockno, sprint_hex(d, 4), sprint_ascii(d, 4));
         } else {
-            PrintAndLogEx(WARNING, "Failed reading block: ( %02x )", isOK);
+            PrintAndLogEx(WARNING, "Failed reading block %u ( %02x )", blockno, isOK);
         }
     } else {
         PrintAndLogEx(WARNING, "command execution time out");
@@ -3934,6 +3934,8 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
 
     // If no hex key is specified, try default keys
     if (ak_len == 0) {
+
+        PrintAndLogEx(INFO, "Called with no key, checking default keys...");
         isok = try_default_3des_keys(false, &authKeyPtr);
     } else {
         // try user-supplied

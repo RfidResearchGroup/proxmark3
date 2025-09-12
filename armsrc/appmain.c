@@ -1827,7 +1827,6 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFAREU_READBL: {
-
             MifareUReadBlock(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
             break;
         }
@@ -2916,20 +2915,22 @@ static void PacketReceived(PacketCommandNG *packet) {
             LED_B_ON();
             uint8_t page = packet->oldarg[0];
             uint8_t initialwipe = packet->oldarg[1];
+
             bool isok = false;
             if (initialwipe) {
                 isok = Flash_WipeMemory();
-                reply_mix(CMD_ACK, isok, 0, 0, 0, 0);
+                reply_ng(CMD_FLASHMEM_WIPE, (isok) ? PM3_SUCCESS : PM3_EFAILED, NULL, 0);
                 LED_B_OFF();
                 break;
             }
+
             if (page < spi_flash_pages64k - 1) {
                 isok = Flash_WipeMemoryPage(page);
                 // let spiffs check and update its info post flash erase
                 rdv40_spiffs_check();
             }
 
-            reply_mix(CMD_ACK, isok, 0, 0, 0, 0);
+            reply_ng(CMD_FLASHMEM_WIPE, (isok) ? PM3_SUCCESS : PM3_EFAILED, NULL, 0);
             LED_B_OFF();
             break;
         }
@@ -2950,13 +2951,15 @@ static void PacketReceived(PacketCommandNG *packet) {
             for (size_t i = 0; i < numofbytes; i += PM3_CMD_DATA_SIZE) {
                 size_t len = MIN((numofbytes - i), PM3_CMD_DATA_SIZE);
                 Flash_CheckBusy(BUSY_TIMEOUT);
-                bool isok = Flash_ReadDataCont(startidx + i, mem, len);
-                if (isok == false)
-                    Dbprintf("reading flash memory failed ::  | bytes between %d - %d", i, len);
-
+                uint16_t isok = Flash_ReadDataCont(startidx + i, mem, len);
+                if (isok == false) {
+                    Dbprintf("reading flash memory failed with bytes between %d - %d", i, len);
+                }
                 isok = reply_old(CMD_FLASHMEM_DOWNLOADED, i, len, 0, mem, len);
-                if (isok != 0)
-                    Dbprintf("transfer to client failed ::  | bytes between %d - %d", i, len);
+                
+                if (isok != PM3_SUCCESS) {
+                    Dbprintf("transfer to client failed with bytes between %d - %d", i, len);
+                }
             }
             FlashStop();
 
@@ -2968,15 +2971,19 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_FLASHMEM_INFO: {
 
             LED_B_ON();
+
             rdv40_validation_t *info = (rdv40_validation_t *)BigBuf_calloc(sizeof(rdv40_validation_t));
 
-            bool isok = Flash_ReadData(FLASH_MEM_SIGNATURE_OFFSET_P(spi_flash_pages64k), info->signature, FLASH_MEM_SIGNATURE_LEN);
+            // returns 0 when failing
+            uint16_t isok = Flash_ReadData(FLASH_MEM_SIGNATURE_OFFSET_P(spi_flash_pages64k), info->signature, FLASH_MEM_SIGNATURE_LEN);
 
-            if (FlashInit()) {
+            // re-init since command above calls FlashStop()
+            if (isok && FlashInit()) {
                 Flash_UniqueID(info->flashid);
                 FlashStop();
             }
-            reply_mix(CMD_ACK, isok, 0, 0, info, sizeof(rdv40_validation_t));
+
+            reply_ng(CMD_FLASHMEM_INFO, (isok) ? PM3_SUCCESS : PM3_EFLASH, (uint8_t*)info, sizeof(rdv40_validation_t));
             BigBuf_free();
 
             LED_B_OFF();
@@ -2986,15 +2993,14 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             LED_B_ON();
 
-            bool isok = false;
-            if (FlashInit()) {
-                isok = true;
+            bool isok = FlashInit();
+            if (isok) {
                 if (g_dbglevel >= DBG_DEBUG) {
                     Dbprintf("  CMD_FLASHMEM_PAGE64K 0x%02x (%d 64k pages)", spi_flash_pages64k, spi_flash_pages64k);
                 }
                 FlashStop();
             }
-            reply_mix(CMD_ACK, isok, 0, 0, &spi_flash_pages64k, sizeof(uint8_t));
+            reply_ng(CMD_FLASHMEM_PAGES64K, (isok) ? PM3_SUCCESS : PM3_EFLASH, &spi_flash_pages64k, sizeof(uint8_t));
 
             LED_B_OFF();
             break;

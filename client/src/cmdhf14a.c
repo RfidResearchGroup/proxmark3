@@ -304,7 +304,7 @@ int hf14a_getconfig(hf14a_config_t *config) {
 
     SendCommandNG(CMD_HF_ISO14443A_GET_CONFIG, NULL, 0);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_HF_ISO14443A_GET_CONFIG, &resp, 2000)) {
+    if (WaitForResponseTimeout(CMD_HF_ISO14443A_GET_CONFIG, &resp, 2000) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }

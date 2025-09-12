@@ -59,18 +59,17 @@ int rdv4_get_flash_pages64k(uint8_t *pages64k) {
     clearCommandBuffer();
     SendCommandNG(CMD_FLASHMEM_PAGES64K, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    if (WaitForResponseTimeout(CMD_FLASHMEM_PAGES64K, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "rdv4_get_flash_pages64k() timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
-    uint8_t isok = resp.oldarg[0] & 0xFF;
-    if (isok == false) {
+    if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "fail reading from flash (pages 64k)");
         return PM3_EFLASH;
     }
 
-    memcpy(pages64k, (uint8_t *)resp.data.asBytes, sizeof(uint8_t));
+    *pages64k = resp.data.asBytes[0];
     return PM3_SUCCESS;
 }
 
@@ -82,18 +81,16 @@ int rdv4_get_signature(rdv40_validation_t *out) {
     clearCommandBuffer();
     SendCommandNG(CMD_FLASHMEM_INFO, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    if (WaitForResponseTimeout(CMD_FLASHMEM_INFO, &resp, 2500) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
-    uint8_t isok = resp.oldarg[0] & 0xFF;
-    if (isok == false) {
+    if (resp.status != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "fail reading from flashmemory");
         return PM3_EFLASH;
     }
 
-    //rdv40_validation_t mem;
     memcpy(out, (rdv40_validation_t *)resp.data.asBytes, sizeof(rdv40_validation_t));
     return PM3_SUCCESS;
 }
@@ -498,7 +495,7 @@ static int CmdFlashMemWipe(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int0("p", NULL, "<dec>", "0,1,2 page memory"),
+        arg_int0("p", NULL, "<dec>", "page memory"),
 //        arg_lit0("i", NULL, "initial total wipe"),
         arg_param_end
     };
@@ -524,21 +521,19 @@ static int CmdFlashMemWipe(const char *Cmd) {
     clearCommandBuffer();
     SendCommandMIX(CMD_FLASHMEM_WIPE, page, initialwipe, 0, NULL, 0);
     PacketResponseNG resp;
-    if (!WaitForResponseTimeout(CMD_ACK, &resp, 10000)) {
+    if (WaitForResponseTimeout(CMD_FLASHMEM_WIPE, &resp, 10000) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return PM3_ETIMEOUT;
     }
 
     const char *msg = "Flash WIPE ";
-    uint8_t isok  = resp.oldarg[0] & 0xFF;
-    if (isok)
+    if (resp.status == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "%s ( " _GREEN_("ok")" )", msg);
-    else {
+    } else {
         PrintAndLogEx(FAILED, "%s ( " _RED_("failed") " )", msg);
-        return PM3_EFLASH;
     }
 
-    return PM3_SUCCESS;
+    return resp.status;
 }
 
 static int CmdFlashMemInfo(const char *Cmd) {
@@ -555,7 +550,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
         arg_str0("d", NULL, "<hex>", "flash memory id, 8 hex bytes"),
         arg_str0("p", "pem",  "<fn>", "key in PEM format"),
         arg_lit0("v", "verbose", "verbose output"),
-//        arg_lit0("w", "write", "write signature to flash memory"),
+        arg_lit0("w", "write", "write signature to flash memory"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -571,8 +566,7 @@ static int CmdFlashMemInfo(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)pem_fn, FILE_PATH_SIZE, &pemlen);
 
     bool verbose = arg_get_lit(ctx, 4);
-    bool shall_write = false;
-//    shall_write = arg_get_lit(ctx, 5);
+    bool shall_write = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
     if (res) {
