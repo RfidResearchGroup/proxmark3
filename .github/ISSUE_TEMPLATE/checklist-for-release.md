@@ -24,9 +24,8 @@ assignees: doegox, iceman1001
 Run `tools/release_tests.sh` on:
 
 - [ ] RPI Zero
-- [ ] Jetson Nano
 - [ ] WSL
-- [ ] PSv3.xx
+- [ ] ProxSpace v3.xx
 - via Docker
   - [ ] Archlinux
   - [ ] Debian Stable
@@ -47,11 +46,11 @@ Run `tools/release_tests.sh` on:
 
 # creating release
 
-- [ ] CHANGELOG.md: add title: `## [myreleasename][YYYY-MM-DD]`
+- [ ] CHANGELOG.md: add title: `## [myreleasename][YYYY-MM-DD]` and push to repo.
 - [ ] `make release RELEASE_NAME="myreleasename"`
   - last line of output gives you next command to run.
   - Sample:  `git push && git push origin v4.12345`
-- [ ] CHANGELOG.md: edit title to add version info: `## [myreleasename.4.12345][YYYY-MM-DD]`
+- [ ] CHANGELOG.md: edit title to add version info: `## [myreleasename.4.12345][YYYY-MM-DD]` push to repo.
 
 ## Step Github releases
 
@@ -64,6 +63,10 @@ Run `tools/release_tests.sh` on:
 ```
 Release v4.12345
 Nickname "myreleasename"
+
+## CHANGELOG   -  [myreleasename][YYYY-MM-DD]
+
+< paste relevant part from CHANGELOG file here >
 ```
 
 ## Step Homebrew updates
