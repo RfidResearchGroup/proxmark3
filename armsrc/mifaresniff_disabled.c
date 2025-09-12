@@ -84,7 +84,7 @@ void RAMFUNC SniffMifare(uint8_t param) {
     // Setup and start DMA.
     // set transfer address and number of bytes. Start transfer.
     if (!FpgaSetupSscDma(dmaBuf, DMA_BUFFER_SIZE)) {
-        if (g_dbglevel > 1) Dbprintf("[!] FpgaSetupSscDma failed. Exiting");
+        if (g_dbglevel > DBG_ERROR) Dbprintf("[!] FpgaSetupSscDma failed. Exiting");
         return;
     }
 

@@ -374,7 +374,7 @@ void loadT55xxConfig(void) {
         memcpy((uint8_t *)&T55xx_Timing, buf, T55XX_CONFIG_LEN);
 
     if (size == T55XX_CONFIG_LEN) {
-        if (g_dbglevel > 1) DbpString("T55XX Config load success");
+        if (g_dbglevel > DBG_ERROR) DbpString("T55XX Config load success");
     }
 
     BigBuf_free();
@@ -1889,7 +1889,7 @@ void T55xxDangerousRawTest(const uint8_t *data, bool ledcontrol) {
     for (uint8_t i = 0; i < c->bitlen; i++)
         len = T55xx_SetBits(bs, len, c->data[i], 1, sizeof(bs));
 
-    if (g_dbglevel > 1) {
+    if (g_dbglevel > DBG_ERROR) {
         Dbprintf("LEN %i, TIMING %i", len, c->time);
         for (uint8_t i = 0; i < len; i++) {
             uint8_t sendbits = (bs[BITSTREAM_BYTE(i)] >> BITSTREAM_BIT(i));

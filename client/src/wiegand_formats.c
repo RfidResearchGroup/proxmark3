@@ -732,7 +732,7 @@ static bool Pack_S12906b(int format_idx, wiegand_card_t *card, wiegand_message_t
     packed->Length = 36; // Set number of bits
     set_linear_field(packed, card->FacilityCode,  1,  8);
     set_linear_field(packed, card->CardNumber,   11, 24);
-    set_bit_by_position(packed, oddparity32 (get_nonlinear_field(packed, S12906b_BITS_USED_BY_PARITY, S12906b_odd_parity_bit_0)),    0);
+    set_bit_by_position(packed, oddparity32(get_nonlinear_field(packed, S12906b_BITS_USED_BY_PARITY, S12906b_odd_parity_bit_0)),    0);
     set_bit_by_position(packed, evenparity32(get_nonlinear_field(packed, S12906b_BITS_USED_BY_PARITY, S12906b_even_parity_bit_9)),   9);
     set_bit_by_position(packed, evenparity32(get_nonlinear_field(packed, S12906b_BITS_USED_BY_PARITY, S12906b_even_parity_bit_10)), 10);
     if (preamble) {
@@ -748,7 +748,7 @@ static bool Unpack_S12906b(wiegand_message_t *packed, wiegand_card_t *card) {
     card->FacilityCode = get_linear_field(packed, 1, 8);
     card->CardNumber   = get_linear_field(packed, 11, 24);
     if (card->FacilityCode != S12906b_FACILITY_CODE) return false;
-    bool odd_1 = get_bit_by_position(packed,  0) == oddparity32( get_nonlinear_field(packed, S12906b_BITS_USED_BY_PARITY, S12906b_odd_parity_bit_0));
+    bool odd_1 = get_bit_by_position(packed,  0) == oddparity32(get_nonlinear_field(packed, S12906b_BITS_USED_BY_PARITY, S12906b_odd_parity_bit_0));
     bool even1 = get_bit_by_position(packed,  9) == evenparity32(get_nonlinear_field(packed, S12906b_BITS_USED_BY_PARITY, S12906b_even_parity_bit_9));
     bool even2 = get_bit_by_position(packed, 10) == evenparity32(get_nonlinear_field(packed, S12906b_BITS_USED_BY_PARITY, S12906b_even_parity_bit_10));
     card->ParityValid = odd_1 && even1 && even2;
@@ -1548,8 +1548,8 @@ static const cardformat_t FormatTable[] = {                                     
     {"C1k48s",    Pack_C1k48s,      Unpack_C1k48s,      "HID Corporate 1000 48-bit std",     48,  {1, 1, 0,  0,     1, 0x003FFFFFu, 0x00000000007FFFFFu, 0x00000000u, 0x00000000u}}, // imported from old pack/unpack
     {"Avig56",    Pack_Avig56,      Unpack_Avig56,      "Avigilon 56-bit",                   56,  {1, 1, 0,  0,     1, 0x000FFFFFu, 0x00000003FFFFFFFFu, 0x00000000u, 0x00000000u}},
     {"IR56",      Pack_IR56,        Unpack_IR56,        "Inner Range 56-bit",                56,  {1, 1, 0,  0,     0, 0x00FFFFFFu, 0x00000000FFFFFFFFu, 0x00000000u, 0x00000000u}},
-    {NULL, NULL, NULL, NULL, 0, {0, 0, 0, 0, 0, 0, 0, 0, 0}} // Must null terminate array 
-}; 
+    {NULL, NULL, NULL, NULL, 0, {0, 0, 0, 0, 0, 0, 0, 0, 0}} // Must null terminate array
+};
 
 void HIDListFormats(void) {
     if (FormatTable[0].Name == NULL)
@@ -1610,16 +1610,16 @@ bool validate_card_limit(int format_idx, wiegand_card_t *card) {
     cardformatdescriptor_t card_descriptor = FormatTable[format_idx].Fields;
 
     // If a field is not supported, it's implicitly required to be zero
-    if ((!card_descriptor.hasCardNumber  ) && (card->CardNumber   != 0u)) {
+    if ((!card_descriptor.hasCardNumber) && (card->CardNumber   != 0u)) {
         return false; // Format does not support card number, but non-zero card number provided
     }
     if ((!card_descriptor.hasFacilityCode) && (card->FacilityCode != 0u)) {
         return false; // Format does not support facility code, but non-zero facility code provided
     }
-    if ((!card_descriptor.hasIssueLevel  ) && (card->IssueLevel   != 0u)) {
+    if ((!card_descriptor.hasIssueLevel) && (card->IssueLevel   != 0u)) {
         return false; // Format does not support issue levels, but non-zero issue level provided
     }
-    if ((!card_descriptor.hasOEMCode     ) && (card->OEM          != 0u)) {
+    if ((!card_descriptor.hasOEMCode) && (card->OEM          != 0u)) {
         return false; // Format does not support OEM codes, but non-zero OEM code provided
     }
     return !((card->FacilityCode > card_descriptor.MaxFC) ||

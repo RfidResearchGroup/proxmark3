@@ -635,7 +635,7 @@ int FpgaGetCurrent(void) {
 // if HF,  Disable SSC DMA
 // turn off trace and leds off.
 void switch_off(void) {
-    if (g_dbglevel > 3) {
+    if (g_dbglevel > DBG_DEBUG) {
         Dbprintf("switch_off");
     }
 
