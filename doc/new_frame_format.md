@@ -433,7 +433,7 @@ Sending multiple commands can still be slow because it waits regularly for incom
             // Disable fast mode
             conn.block_after_ACK = false;
         SendCommandOLD / SendCommandMix
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, some_timeout)) {
+        if (WaitForResponseTimeout(CMD_ACK, &resp, some_timeout) == false) {
             ....
             conn.block_after_ACK = false;
             return PM3_ETIMEOUT;
@@ -447,7 +447,7 @@ Or if it's too complex to determine when we're sending the last command:
     conn.block_after_ACK = true;
     some loop {
         SendCommandOLD / SendCommandMIX
-        if (!WaitForResponseTimeout(CMD_ACK, &resp, some_timeout)) {
+        if (WaitForResponseTimeout(CMD_ACK, &resp, some_timeout) == false) {
             ....
             conn.block_after_ACK = false;
             return PM3_ETIMEOUT;
