@@ -41,9 +41,14 @@ These instructions will show how to setup the environment on OSX to the point wh
 
       ```bash
       export MACPORTS_PREFIX="/opt/local"
-      # we assume you'll use GNU coreutils; which is also a required dependency for proxmark3
-      # install it with `sudo port install coreutils`
-      export "$MACPORTS_PREFIX/libexec/gnubin:$MACPORTS_PREFIX/bin:$MACPORTS_PREFIX/sbin:$PATH"
+
+      # Proxmark3 build system does not auto-detect MacPorts installations
+      # (this is sort of intentional). So USE_MACPORTS has to be set first.
+      export USE_MACPORTS=1
+
+      # GNU coreutils is a required dependency for Proxmark3.
+      # Please install it with `sudo port install coreutils`.
+      export PATH="$MACPORTS_PREFIX/libexec/gnubin:$MACPORTS_PREFIX/bin:$MACPORTS_PREFIX/sbin:$PATH"
       ```
 
       For a somewhat seamless development environment, you can use these in your shell rc file:
@@ -61,7 +66,25 @@ These instructions will show how to setup the environment on OSX to the point wh
 2. Install dependencies:
 
     ```bash
-    sudo port install readline jansson lua52 python311 bzip2 lz4 openssl11 arm-none-eabi-gcc arm-none-eabi-binutils coreutils qt5 qt5-qtbase gd2 pkgconfig
+    sudo port install \
+    	gd2 \
+    	lz4 \
+    	qt5 \
+    	bzip2 \
+    	lua54 \
+    	jansson \
+    	readline \
+    	coreutils \
+    	openssl11 \
+    	pkgconfig \
+    	python312 \
+    	qt5-qtbase \
+    	py312-pexpect \
+    	py312-bitstring \
+    	py312-sslcrypto \
+    	py312-ansicolors \
+    	arm-none-eabi-gcc \
+    	arm-none-eabi-binutils
     ```
 
 3. Clamp Python version for pkg-config
@@ -69,29 +92,29 @@ These instructions will show how to setup the environment on OSX to the point wh
     MacPorts doesn't handle Python version defaults when it comes to pkg-config. So even if you have done:
 
     ```bash
-    sudo port install python311 cython311
+    sudo port install python312 cython312
 
-    sudo port select --set python python311  # this also makes calls to "python" operate on python3.11
-    sudo port select --set python3 python311
-    sudo port select --set cython cython311
+    sudo port select --set python python312  # this also makes calls to "python" operate on python3.12
+    sudo port select --set python3 python312
+    sudo port select --set cython cython312
     ```
 
     This won't set a default python3.pc (and python3-embed.pc) under the MacPorts pkgconfig includes folder.
 
-    To fix that, follow these steps:
+    To fix that, you can either follow these steps:
 
     ```bash
     cd /opt/local/lib/pkgconfig
-    sudo ln -svf python3.pc python-3.11.pc
-    sudo ln -svf python3-embed.pc python-3.11-embed.pc
+    sudo ln -svf python-3.12.pc python3.pc
+    sudo ln -svf python-3.12-embed.pc python3-embed.pc
     ```
 
     _Or_ you can use a framework definition in your shell rc file:
 
     ```bash
     export MACPORTS_FRAMEWORKS_DIR="$MACPORTS_PREFIX/Library/Frameworks"
-    export PYTHON_FRAMEWORK_DIR="$MACPORTS_FRAMEWORKS_DIR:/Python.framework/Versions/3.11"
-    export PKG_CONFIG_PATH="$PYTHON_FRAMEWORK_DIR:$PKG_CONFIG_PATH"
+    export PYTHON_FRAMEWORK_DIR="$MACPORTS_FRAMEWORKS_DIR/Python.framework/Versions/3.12"
+    export PKG_CONFIG_PATH="$PYTHON_FRAMEWORK_DIR/lib/pkgconfig:$PKG_CONFIG_PATH"
     ```
 
 4. (optional) Install makefile dependencies:
@@ -113,7 +136,7 @@ cd proxmark3
 ^[Top](#top)
 
 Now you're ready to follow the [compilation instructions](/doc/md/Use_of_Proxmark/0_Compilation-Instructions.md).
-From there, you can follow the original instructions. 
+From there, you can follow the original instructions.
 _Take extra note to instructions if you **don't** have a Proxmark3 RDV4 device._
 
 To flash on OS X, better to enter the bootloader mode manually, else you may experience errors.
