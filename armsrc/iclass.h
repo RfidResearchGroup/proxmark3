@@ -67,6 +67,7 @@ void iClass_ReadBlock(uint8_t *msg);
 bool iclass_read_block(uint16_t blockno, uint8_t *data, uint32_t *start_time, uint32_t *eof_time, bool shallow_mod);
 
 bool select_iclass_tag(picopass_hdr_t *hdr, bool use_credit_key, uint32_t *eof_time, bool shallow_mod);
+bool select_iclass_tag_and_page(picopass_hdr_t *hdr, bool use_credit_key, uint32_t *eof_time, bool shallow_mod, uint8_t page);
 bool authenticate_iclass_tag(iclass_auth_req_t *payload, picopass_hdr_t *hdr, uint32_t *start_time, uint32_t *eof_time, uint8_t *mac_out);
 
 uint8_t get_pagemap(const picopass_hdr_t *hdr);
