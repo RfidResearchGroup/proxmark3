@@ -3024,18 +3024,20 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                                       , sprint_ascii(card.ats + pos, calen)
                                      );
                     }
-                    PrintAndLogEx(NORMAL, "");
-                    PrintAndLogEx(INFO, "------------------ " _CYAN_("ATR fingerprinting") " ---------------------------");
-                    uint8_t atr[256] = {0};
-                    int atrLen = 0;
-                    atsToEmulatedAtr(card.ats, atr, &atrLen);
-                    char *copy = str_dup(getAtrInfo(sprint_hex_inrow(atr, atrLen)));
-                    char *token = strtok(copy, "\n");
-                    while (token != NULL) {
-                        PrintAndLogEx(SUCCESS, "    %s", token);
-                        token = strtok(NULL, "\n");
+                    if (calen > 1) {
+                        PrintAndLogEx(NORMAL, "");
+                        PrintAndLogEx(INFO, "------------------ " _CYAN_("ATR fingerprinting") " ---------------------------");
+                        uint8_t atr[256] = {0};
+                        int atrLen = 0;
+                        atsToEmulatedAtr(card.ats, atr, &atrLen);
+                        char *copy = str_dup(getAtrInfo(sprint_hex_inrow(atr, atrLen)));
+                        char *token = strtok(copy, "\n");
+                        while (token != NULL) {
+                            PrintAndLogEx(SUCCESS, "    %s", token);
+                            token = strtok(NULL, "\n");
+                        }
+                        free(copy);
                     }
-                    free(copy);
                 }
             }
         }
