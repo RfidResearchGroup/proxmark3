@@ -34,7 +34,8 @@
 #include "aidsearch.h"
 #include "fileutils.h"          // saveFile
 #include "iclass_cmd.h"         // picopass defines
-#include "cmdhf.h"               // handle HF plot
+#include "cmdhf.h"              // handle HF plot
+#include "atrs.h"               // atqbToEmulatedAtr
 
 #define MAX_14B_TIMEOUT_MS (4949U)
 
@@ -467,8 +468,8 @@ static int print_atqb_resp(uint8_t *data, uint8_t cid) {
     PrintAndLogEx(SUCCESS, "  CID : %u", cid & 0x0f);
     PrintAndLogEx(NORMAL, "");
 
-    PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
     if (memcmp(data, "\x54\x43\x4F\x53", 4) == 0) {
+        PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint") " -------------------------------");
 
         int outlen = 0;
         uint8_t out[PM3_CMD_DATA_SIZE] = {0};
@@ -483,7 +484,17 @@ static int print_atqb_resp(uint8_t *data, uint8_t cid) {
         }
 
     } else {
-        PrintAndLogEx(INFO, "n/a");
+        PrintAndLogEx(INFO, "--- " _CYAN_("ATR fingerprint") " ---------------------------");
+        uint8_t atr[256] = {0};
+        int atrLen = 0;
+        atqbToEmulatedAtr(data, cid, atr, &atrLen);
+        char *copy = str_dup(getAtrInfo(sprint_hex_inrow(atr, atrLen)));
+        char *token = strtok(copy, "\n");
+        while (token != NULL) {
+            PrintAndLogEx(INFO, "    %s", token);
+            token = strtok(NULL, "\n");
+        }
+        free(copy);
     }
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
