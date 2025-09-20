@@ -2946,7 +2946,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             if ((card.ats[0] > pos) && (card.ats_len >= card.ats[0] + 2)) {
                 uint8_t calen = card.ats[0] - pos;
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(INFO, "-------------------- " _CYAN_("Historical bytes") " ----------------------------");
+                PrintAndLogEx(INFO, "-------------------- " _CYAN_("Historical bytes") " ---------------------------");
 
                 if (card.ats[pos] == 0xC1) {
                     PrintAndLogEx(INFO, "    %s", sprint_hex(card.ats + pos, calen));
@@ -3024,6 +3024,18 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                                       , sprint_ascii(card.ats + pos, calen)
                                      );
                     }
+                    PrintAndLogEx(NORMAL, "");
+                    PrintAndLogEx(INFO, "------------------ " _CYAN_("ATR fingerprinting") " ---------------------------");
+                    uint8_t atr[256] = {0};
+                    int atrLen = 0;
+                    atsToEmulatedAtr(card.ats, atr, &atrLen);
+                    char *copy = str_dup(getAtrInfo(sprint_hex_inrow(atr, atrLen)));
+                    char *token = strtok(copy, "\n");
+                    while (token != NULL) {
+                        PrintAndLogEx(INFO, "    %s", token);
+                        token = strtok(NULL, "\n");
+                    }
+                    free(copy);
                 }
             }
         }
