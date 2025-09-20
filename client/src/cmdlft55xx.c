@@ -2755,7 +2755,7 @@ static int CmdT55xxRestore(const char *Cmd) {
     config.downlink_mode = downlink_mode;
 
     // Write the page 0 config
-    // 
+    //
     // when running `lf t55xx dump` and user failed,  the dump file will have a all zero block0 (ie: config block)
     // writing this bad config block will brick the tag.
     if (dump[0] != 0x00000000) {

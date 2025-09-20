@@ -2956,7 +2956,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                     Dbprintf("reading flash memory failed with bytes between %d - %d", i, len);
                 }
                 isok = reply_old(CMD_FLASHMEM_DOWNLOADED, i, len, 0, mem, len);
-                
+
                 if (isok != PM3_SUCCESS) {
                     Dbprintf("transfer to client failed with bytes between %d - %d", i, len);
                 }
@@ -2983,7 +2983,7 @@ static void PacketReceived(PacketCommandNG *packet) {
                 FlashStop();
             }
 
-            reply_ng(CMD_FLASHMEM_INFO, (isok) ? PM3_SUCCESS : PM3_EFLASH, (uint8_t*)info, sizeof(rdv40_validation_t));
+            reply_ng(CMD_FLASHMEM_INFO, (isok) ? PM3_SUCCESS : PM3_EFLASH, (uint8_t *)info, sizeof(rdv40_validation_t));
             BigBuf_free();
 
             LED_B_OFF();

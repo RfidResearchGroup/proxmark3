@@ -3032,7 +3032,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                     char *copy = str_dup(getAtrInfo(sprint_hex_inrow(atr, atrLen)));
                     char *token = strtok(copy, "\n");
                     while (token != NULL) {
-                        PrintAndLogEx(INFO, "    %s", token);
+                        PrintAndLogEx(SUCCESS, "    %s", token);
                         token = strtok(NULL, "\n");
                     }
                     free(copy);

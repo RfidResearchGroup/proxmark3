@@ -491,7 +491,7 @@ static int print_atqb_resp(uint8_t *data, uint8_t cid) {
         char *copy = str_dup(getAtrInfo(sprint_hex_inrow(atr, atrLen)));
         char *token = strtok(copy, "\n");
         while (token != NULL) {
-            PrintAndLogEx(INFO, "    %s", token);
+            PrintAndLogEx(SUCCESS, "    %s", token);
             token = strtok(NULL, "\n");
         }
         free(copy);

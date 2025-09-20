@@ -12330,9 +12330,10 @@
                 "-s, --sign create a signature",
                 "-d <hex> flash memory id, 8 hex bytes",
                 "-p, --pem <fn> key in PEM format",
-                "-v, --verbose verbose output"
+                "-v, --verbose verbose output",
+                "-w, --write write signature to flash memory"
             ],
-            "usage": "mem info [-hsv] [-d <hex>] [-p <fn>]"
+            "usage": "mem info [-hsvw] [-d <hex>] [-p <fn>]"
         },
         "mem load": {
             "command": "mem load",
@@ -12537,7 +12538,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-p <dec> 0,1,2 page memory"
+                "-p <dec> page memory"
             ],
             "usage": "mem wipe [-h] [-p <dec>]"
         },
@@ -13654,6 +13655,6 @@
     "metadata": {
         "commands_extracted": 784,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-09-02T14:01:50"
+        "extracted_on": "2025-09-20T20:01:43"
     }
 }

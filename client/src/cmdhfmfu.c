@@ -2503,7 +2503,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
     if ((tagtype & (MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1 | MFU_TT_UL_NANO_40 |
                     MFU_TT_NTAG_210u | MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C |
                     MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216 | MFU_TT_NTAG_216_F |
-                    MFU_TT_NTAG_223_DNA | MFU_TT_NTAG_223_DNA_SD | MFU_TT_NTAG_224_DNA |MFU_TT_NTAG_224_DNA_SD |
+                    MFU_TT_NTAG_223_DNA | MFU_TT_NTAG_223_DNA_SD | MFU_TT_NTAG_224_DNA | MFU_TT_NTAG_224_DNA_SD |
                     MFU_TT_NTAG_I2C_1K | MFU_TT_NTAG_I2C_2K | MFU_TT_NTAG_I2C_1K_PLUS | MFU_TT_NTAG_I2C_2K_PLUS |
                     MFU_TT_UL_AES))) {
         uint8_t ulev1_signature[48] = {0x00};
