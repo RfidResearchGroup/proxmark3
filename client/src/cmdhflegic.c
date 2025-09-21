@@ -300,9 +300,9 @@ static int decode_and_print_memory(uint16_t card_size, const uint8_t *input_buff
                 // does this one work? (Answer: Only if KGH/BGH is used with BCD encoded card number! So maybe this will show just garbage...)
                 if (wrp_len == 8) {
                     PrintAndLogEx(SUCCESS, "Card ID: " _YELLOW_("%2X%02X%02X"),
-                                  data[i - 4] ^ crc,
-                                  data[i - 3] ^ crc,
-                                  data[i - 2] ^ crc
+                                  data[i - 4],
+                                  data[i - 3],
+                                  data[i - 2]
                                  );
                 }
             }
