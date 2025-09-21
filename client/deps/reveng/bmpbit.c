@@ -73,10 +73,10 @@ main(int argc, char *argv[]) {
     setbmp();
     if (BMP_BIT != bmpbit || BMP_SUB != bmpsub) {
         fprintf(stderr, "reveng: configuration fault.  Update "
-                "reveng/config.h with these definitions and "
-                "recompile:\n"
-                "\t#define BMP_BIT   %d\n"
-                "\t#define BMP_SUB   %d\n",
+                        "reveng/config.h with these definitions and "
+                        "recompile:\n"
+                        "\t#define BMP_BIT   %d\n"
+                        "\t#define BMP_SUB   %d\n",
                 bmpbit, bmpsub);
         exit(EXIT_FAILURE);
     }
@@ -84,8 +84,8 @@ main(int argc, char *argv[]) {
     /* check the bitmap constant macro */
     if (~(bmp_t) 0 != ~BMP_C(0)) {
         fprintf(stderr, "reveng: configuration fault.  Edit "
-                "the definition of BMP_C() in config.h to "
-                "match BMP_T and recompile.\n");
+                        "the definition of BMP_C() in config.h to "
+                        "match BMP_T and recompile.\n");
         exit(EXIT_FAILURE);
     }
     exit(EXIT_SUCCESS);

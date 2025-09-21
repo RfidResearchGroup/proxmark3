@@ -66,10 +66,10 @@ static void print_status_flag1_interpretation(void) {
     PrintAndLogEx(INFO, "----+--------------------------------------------------------------------------------------------------------------------");
     PrintAndLogEx(INFO, " 00 | Indicates the successful completion of a command.");
     PrintAndLogEx(INFO, " FF | If an error occurs during the processing of a command that includes no list in the command packet, \n"
-                  "    | or if an error occurs independently of any list, the card returns a response by setting FFh to Status Flag1.");
+                        "    | or if an error occurs independently of any list, the card returns a response by setting FFh to Status Flag1.");
     PrintAndLogEx(INFO, " XX | If an error occurs while processing a command that includes Service Code List or Block List \n"
-                  "    | in the command packet, the card returns a response by setting a number in the list to Status Flag1,\n"
-                  "    | indicating the location of the error.");
+                        "    | in the command packet, the card returns a response by setting a number in the list to Status Flag1,\n"
+                        "    | indicating the location of the error.");
     PrintAndLogEx(INFO, "----+--------------------------------------------------------------------------------------------------------------------");
 }
 
@@ -78,28 +78,28 @@ static void print_status_flag2_interpration(void) {
     PrintAndLogEx(INFO, "----+--------------------------------------------------------------------------------------------------------------------");
     PrintAndLogEx(INFO, " 00 | Indicates the successful completion of a command.");
     PrintAndLogEx(INFO, " 01 | The calculated result is either less than zero when the purse data is decremented, or exceeds 4\n"
-                  "    | Bytes when the purse data is incremented.");
+                        "    | Bytes when the purse data is incremented.");
     PrintAndLogEx(INFO, " 02 | The specified data exceeds the value of cashback data at cashback of purse.");
     PrintAndLogEx(INFO, " 70 | Memory error (fatal error).");
     PrintAndLogEx(INFO, " 71 | The number of memory rewrites exceeds the upper limit (this is only a warning; data writing is performed as normal).\n"
-                  "    | The maximum number of rewrites can differ, depending on the product being used.\n"
-                  "    | In addition, Status Flag1 is either 00h or FFh depending on the product being used.");
+                        "    | The maximum number of rewrites can differ, depending on the product being used.\n"
+                        "    | In addition, Status Flag1 is either 00h or FFh depending on the product being used.");
 
     PrintAndLogEx(INFO, " A1 | Illegal Number of Service| Number of Service or Number of Node specified by the command \n"
-                  "    | falls outside the range of the prescribed value.");
+                        "    | falls outside the range of the prescribed value.");
     PrintAndLogEx(INFO, " A2 | Illegal command packet (specified Number of Block) : Number of Block specified by the \n"
-                  "    | command falls outside the range of the prescribed values for the product.");
+                        "    | command falls outside the range of the prescribed values for the product.");
     PrintAndLogEx(INFO, " A3 | Illegal Block List (specified order of Service) : Service Code List Order specified by \n"
-                  "    | Block List Element falls outside the Number of Service specified by the command \n"
-                  "    | (or the Number of Service specified at the times of mutual authentication).");
+                        "    | Block List Element falls outside the Number of Service specified by the command \n"
+                        "    | (or the Number of Service specified at the times of mutual authentication).");
     PrintAndLogEx(INFO, " A4 | Illegal Service type : Area Attribute specified by the command or Service Attribute of Service Code is incorrect.");
     PrintAndLogEx(INFO, " A5 | Access is not allowed : Area or Service specified by the command cannot be accessed.\n"
-                  "    | The parameter specified by the command does not satisfy the conditions for success.");
+                        "    | The parameter specified by the command does not satisfy the conditions for success.");
     PrintAndLogEx(INFO, " A6 | Illegal Service Code List : Target to be accessed, identified by Service Code List Order, specified by Block\n"
-                  "    | List Element does not exist. Or, Node specified by Node Code List does not exist.");
+                        "    | List Element does not exist. Or, Node specified by Node Code List does not exist.");
     PrintAndLogEx(INFO, " A7 | Illegal Block List (Access Mode) : Access Mode specified by Block List Element is incorrect.");
     PrintAndLogEx(INFO, " A8 | Illegal Block Number Block Number (access to the specified data is inhibited) :\n"
-                  "    | specified by Block List Element exceeds the number of Blocks assigned to Service.");
+                        "    | specified by Block List Element exceeds the number of Blocks assigned to Service.");
     PrintAndLogEx(INFO, " A9 | Data write failure : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " AA | Key-change failure : Key change failed.");
     PrintAndLogEx(INFO, " AB | Illegal Package Parity or illegal Package MAC : This is the error that occurs in issuance commands.");
@@ -107,7 +107,7 @@ static void print_status_flag2_interpration(void) {
     PrintAndLogEx(INFO, " AD | Service exists already : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " AE | Illegal System Code : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " AF | Too many simultaneous cyclic write operations : Number of simultaneous write Blocks\n"
-                  "    | specified by the command to Cyclic Service exceeds the number of Blocks assigned to Service.");
+                        "    | specified by the command to Cyclic Service exceeds the number of Blocks assigned to Service.");
     PrintAndLogEx(INFO, " C0 | Illegal Package Identifier : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " C1 | Discrepancy of parameters inside and outside Package : This is the error that occurs in issuance commands.");
     PrintAndLogEx(INFO, " C2 | Command is disabled already : This is the error that occurs in issuance commands.");
@@ -131,16 +131,16 @@ static void print_number_of_service_constraints(void) {
 
 static void print_number_of_block_constraints(void) {
     PrintAndLogEx(INFO, "    - Number of Block: shall be less than or equal to the maximum number of Blocks that can be read simultaneously.\n"
-                  "            The maximum number of Blocks that can be read simultaneously can differ, depending on the product being used.\n"
-                  "            Use as default 01");
+                        "            The maximum number of Blocks that can be read simultaneously can differ, depending on the product being used.\n"
+                        "            Use as default 01");
 }
 
 static void print_service_code_list_constraints(void) {
     PrintAndLogEx(INFO, "    - Service Code List: For Service Code List, only Service Code existing in the product shall be specified:");
     PrintAndLogEx(INFO, "        - Even when Service Code exists in the product, Service Code not referenced from Block List shall not \n"
-                  "          be specified to Service Code List.");
+                        "          be specified to Service Code List.");
     PrintAndLogEx(INFO, "        - For existence or nonexistence of Service in a product, please check using the Request Service \n"
-                  "          (or Request Service v2) command.");
+                        "          (or Request Service v2) command.");
 }
 
 /*
