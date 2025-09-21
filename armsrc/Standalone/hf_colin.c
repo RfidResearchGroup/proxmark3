@@ -125,7 +125,7 @@ static uint64_t hex2i(const char *s) {
         s += 2;
     else if (*s == 'x')
         s++;
-    while (colin_is_hex[(uint8_t)*s])
+    while (colin_is_hex[(uint8_t) * s])
         val = (val << 4) | (colin_is_hex[(uint8_t) * (s++)] - 1);
     return val;
 }

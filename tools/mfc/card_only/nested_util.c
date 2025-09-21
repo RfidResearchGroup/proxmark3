@@ -77,7 +77,7 @@ static countKeys *uniqsort(uint64_t *possibleKeys, uint32_t size) {
 
 // nested decrypt
 static void *nested_revover(void *args) {
-    struct Crypto1State *revstate, * revstate_start = NULL;
+    struct Crypto1State *revstate, *revstate_start = NULL;
     uint64_t lfsr = 0;
     uint32_t i, kcount = 0;
     bool is_ok = true;

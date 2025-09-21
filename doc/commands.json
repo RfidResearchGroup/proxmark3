@@ -6766,7 +6766,7 @@
                 "--aid <hex> Application ID (3 hex bytes, big endian)",
                 "--isoid <hex> Application ISO ID (ISO DF ID) (2 hex bytes, big endian)",
                 "--fid <hex> File ID (1 hex byte)",
-                "-o, --op <get/credit/limcredit/debit/clear> Operation: get(default)/credit/limcredit(limited credit)/debit/clear. Operation clear: get-getopt-debit to min value",
+                "-o, --op <get/credit/limcredit/debit/clear> Operation: get(default)/credit/limcredit(limited credit)/debit/clear. Additional operation clear: get-getopt-debit to min value",
                 "-d, --data <hex> Value for operation (HEX 4 bytes)",
                 "--no-auth Execute without authentication"
             ],
@@ -13653,8 +13653,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 784,
+        "commands_extracted": 783,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-09-20T20:01:43"
+        "extracted_on": "2025-09-21T13:25:47"
     }
 }

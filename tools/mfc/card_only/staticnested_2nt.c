@@ -92,7 +92,7 @@ __attribute__((force_align_arg_pointer))
 static void pm3_staticnested(uint32_t uid, uint32_t nt1, uint32_t ks1,  uint32_t nt2, uint32_t ks2) {
 
     StateList_t statelists[2];
-    struct Crypto1State *p1, * p2, * p3, * p4;
+    struct Crypto1State *p1, *p2, *p3, *p4;
 
     for (uint8_t i = 0; i < 2; i++) {
         statelists[i].uid = uid;
