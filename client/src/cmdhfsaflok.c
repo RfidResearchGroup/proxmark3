@@ -605,7 +605,7 @@ static int CmdHFSaflokModify(const char *Cmd) {
         arg_str0(NULL, "expire", "<YYYY-MM-DDTHH:mm>", "Expire Date Offset"),
         arg_str0(NULL, "created", "<YYYY-MM-DDTHH:mm>", "Card Creation Date"),
         arg_u64_0(NULL, "prop_id", "<decimal>", "Property ID"),
-        arg_str1("d", NULL, "data", "Unencrypted 17 byte card data"),
+        arg_str1("d", NULL, "data", "Encrypted 17 byte card data"),
         arg_param_end
     };
 
