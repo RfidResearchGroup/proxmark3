@@ -4541,7 +4541,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
         arg_str0(NULL, "aid",     "<hex>", "Application ID (3 hex bytes, big endian)"),
         arg_str0(NULL, "isoid",   "<hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)"),
         arg_str0(NULL, "fid",     "<hex>", "File ID (1 hex byte)"),
-        arg_str0("o",  "op",      "<get/credit/limcredit/debit/clear>", "Operation: get(default)/credit/limcredit(limited credit)/debit/clear. Operation clear: get-getopt-debit to min value"),
+        arg_str0("o",  "op",      "<get/credit/limcredit/debit/clear>", "Operation: get(default)/credit/limcredit(limited credit)/debit/clear. Additional operation clear: get-getopt-debit to min value"),
         arg_str0("d",  "data",    "<hex>", "Value for operation (HEX 4 bytes)"),
         arg_lit0(NULL, "no-auth", "Execute without authentication"),
         arg_param_end
@@ -4623,6 +4623,8 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "Value changed " _GREEN_("successfully"));
         }
     } else {
+        DesfireCommunicationMode fileCommMode = dctx.commMode;
+
         res = DesfireValueFileOperations(&dctx, fileid, MFDES_GET_VALUE, &value);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire GetValue command ( " _RED_("error") ") Result: %d", res);
@@ -4630,11 +4632,12 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
             return PM3_ESOFT;
         }
         if (verbose)
-            PrintAndLogEx(INFO, "current value: 0x%08x", value);
+            PrintAndLogEx(INFO, _YELLOW_("GetValue") " command is " _GREEN_("ok") ". Current value: 0x%08x", value);
 
         uint8_t buf[250] = {0};
         size_t buflen = 0;
 
+        DesfireSetCommMode(&dctx, DCMMACed);
         res = DesfireGetFileSettings(&dctx, fileid, buf, &buflen);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire GetFileSettings command ( " _RED_("error") " ) Result: %d", res);
@@ -4643,7 +4646,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
         }
 
         if (verbose)
-            PrintAndLogEx(INFO, "file settings[%zu]: %s", buflen, sprint_hex(buf, buflen));
+            PrintAndLogEx(INFO, _YELLOW_("GetFileSettings") " is " _GREEN_("ok") " . File settings[%zu]: %s", buflen, sprint_hex(buf, buflen));
 
         if (buflen < 8 || buf[0] != 0x02) {
             PrintAndLogEx(ERR, "Desfire GetFileSettings command returns " _RED_("wrong") " data");
@@ -4651,14 +4654,33 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        uint32_t minvalue = MemLeToUint4byte(&buf[4]);
-        uint32_t delta = (value > minvalue) ? value - minvalue : 0;
+        int32_t minvalue = (int)MemLeToUint4byte(&buf[4]);
+        uint32_t delta = ((int64_t)value > minvalue) ? value - minvalue : 0;
         if (verbose) {
-            PrintAndLogEx(INFO, "minimum value: 0x%08x", minvalue);
-            PrintAndLogEx(INFO, "delta value  : 0x%08x", delta);
+            PrintAndLogEx(INFO, "value: 0x%08x (%d)", value, value);
+            PrintAndLogEx(INFO, "minimum value: 0x%08x (%d)", minvalue, minvalue);
+            PrintAndLogEx(INFO, "delta value  : 0x%08x (%d)", delta, delta);
         }
 
         if (delta > 0) {
+            DesfireSetCommMode(&dctx, fileCommMode);
+
+            uint32_t maxdelta = 0x7fffffff;
+            if (delta > maxdelta) {
+                res = DesfireValueFileOperations(&dctx, fileid, MFDES_DEBIT, &maxdelta);
+                if (res != PM3_SUCCESS) {
+                    PrintAndLogEx(ERR, "Desfire Debit maxdelta operation ( " _RED_("error") " ) Result: %d", res);
+                    DropField();
+                    return PM3_ESOFT;
+                }
+
+                delta -= maxdelta;
+                if (verbose) {
+                    PrintAndLogEx(INFO, "Value maxdelta debited " _GREEN_("ok"));
+                    PrintAndLogEx(INFO, "delta value  : 0x%08x (%d)", delta, delta);
+                }
+            }
+
             res = DesfireValueFileOperations(&dctx, fileid, MFDES_DEBIT, &delta);
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Desfire Debit operation ( " _RED_("error") " ) Result: %d", res);
@@ -4667,7 +4689,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
             }
 
             if (verbose)
-                PrintAndLogEx(INFO, "Value debited");
+                PrintAndLogEx(INFO, "Value debited " _GREEN_("ok"));
 
             DesfireSetCommMode(&dctx, DCMMACed);
             res = DesfireCommitTransaction(&dctx, false, 0);
@@ -4678,7 +4700,7 @@ static int CmdHF14ADesValueOperations(const char *Cmd) {
             }
 
             if (verbose)
-                PrintAndLogEx(INFO, "Transaction committed");
+                PrintAndLogEx(INFO, "Transaction :" _GREEN_("committed"));
         } else {
             if (verbose)
                 PrintAndLogEx(INFO, "Nothing to clear. Value already in the minimum level.");
