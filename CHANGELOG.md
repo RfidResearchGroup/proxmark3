@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fix `hf mfdes value --op clear` commands for clearing more than 0x80000000 values and getfilesettings mac mode (@merlokk)
 - Added ATR fingerprinting to `hf 14a/14b info` (@doegox)
 
 ## [Phrack.4.20728][2025-09-11]
