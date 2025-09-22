@@ -285,7 +285,7 @@ static int nxp_15693_print_signature(uint8_t *uid, uint8_t *signature) {
                 // try with sha256 and reversed uid / signature
                 index = originality_check_verify_ex(uid, 8, signature, 32, PK_15, true, true);
                 if (index >= 0) {
-                    reason = 3;
+                    reason = 4;
                 }
             }
         }
