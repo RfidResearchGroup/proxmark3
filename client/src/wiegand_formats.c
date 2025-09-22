@@ -1688,10 +1688,12 @@ bool HIDTryUnpack(wiegand_message_t *packed) {
                      );
     }
 
-    if (packed->Length && ((found_cnt - found_invalid_par) == 0)) { // if length > 0 and no valid parity matches
-        PrintAndLogEx(FAILED, "Parity tests failed");
+    if(found_cnt > 0){
+        if (packed->Length && ((found_cnt - found_invalid_par) == 0)) { // if length > 0 and no valid parity matches
+            PrintAndLogEx(FAILED, "Parity tests failed");
+        }
+        PrintAndLogEx(NORMAL, "");
     }
-    PrintAndLogEx(NORMAL, "");
 
     return ((found_cnt - found_invalid_par) > 0);
 }
