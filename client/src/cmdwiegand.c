@@ -165,6 +165,7 @@ int CmdWiegandDecode(const char *Cmd) {
         arg_str0("r", "raw", "<hex>", "raw hex to be decoded"),
         arg_str0("b", "bin", "<bin>", "binary string to be decoded"),
         arg_str0("n", "new", "<hex>", "new padded pacs as raw hex to be decoded"),
+        arg_lit0("f", "force", "skip preabmle checking, brute force all possible lengths for raw hex input"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -179,6 +180,8 @@ int CmdWiegandDecode(const char *Cmd) {
     int plen = 0;
     uint8_t phex[8] = {0};
     res = CLIParamHexToBuf(arg_get_str(ctx, 3), phex, sizeof(phex), &plen);
+
+    bool no_preamble = arg_get_lit(ctx, 4);
 
     CLIParserFree(ctx);
 
@@ -195,6 +198,12 @@ int CmdWiegandDecode(const char *Cmd) {
             PrintAndLogEx(ERR, "Hex string contains none hex chars");
             return PM3_EINVARG;
         }
+
+        if(no_preamble){
+            // pass hex input length as is and brute force all possible lengths
+            blen = -hlen;
+        }
+
     } else if (blen) {
         int n = binarray_to_u96(&top, &mid, &bot, binarr, blen);
         if (n != blen) {
