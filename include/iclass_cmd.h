@@ -78,6 +78,7 @@ typedef struct {
 // iCLASS dump data structure
 typedef struct {
     iclass_auth_req_t req;
+    uint8_t page;
     uint8_t start_block;
     uint8_t end_block;
 } PACKED iclass_dump_req_t;
