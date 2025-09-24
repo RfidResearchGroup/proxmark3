@@ -1251,7 +1251,7 @@
         "AID": "A00216",
         "Vendor": "ITSO Ltd",
         "Country": "UK",
-        "Name": "GWR touch (BRS) / EMR Smartcard (EMA) / WYTCL MCard (LBA)",
+        "Name": "GWR touch (BRS) / EMR Smartcard (EMA) / WYTCL MCard (LBA) / StagecoachSmart card",
         "Description": "ITSO Public Transport Application // Provision of Citizen Services #0",
         "Type": "transport"
     },
