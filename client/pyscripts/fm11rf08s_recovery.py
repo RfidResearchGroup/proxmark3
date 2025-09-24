@@ -101,10 +101,15 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False,
     start_time = time.time()
     p = pm3.pm3()
 
-    p.console("hf 14a read")
+    cmd = "hf 14a read"
+    if debug:
+        print(cmd)
+    p.console(cmd)
     uid = None
 
     for line in p.grabbed_output.split('\n'):
+        if debug:
+            print(line)
         if "UID:" in line:
             uid = int(line[10:].replace(' ', '')[-8:], 16)
 
@@ -117,8 +122,14 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False,
         kt = ['A', 'B'][key_type]
         show(f"Sector {sec:2} key{kt} = " + color(key, fg="green"))
 
-    p.console("prefs show --json")
-    prefs = json.loads(p.grabbed_output)
+    cmd = "prefs show --json"
+    if debug:
+        print(cmd)
+    p.console(cmd)
+    jprefs = p.grabbed_output
+    if debug:
+        print(jprefs)
+    prefs = json.loads(jprefs)
     save_path = prefs['file.default.dumppath'] + os.path.sep
 
     found_keys = [["", ""] for _ in range(NUM_SECTORS + NUM_EXTRA_SECTORS)]
@@ -132,9 +143,14 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False,
 
     if init_check:
         show("Checking default keys...")
-        p.console("hf mf fchk")
+        cmd = "hf mf fchk"
+        if debug:
+            print(cmd)
+        p.console(cmd)
         for line in p.grabbed_output.split('\n'):
             if "[+]  0" in line:
+                if debug:
+                    print(line)
                 res = [x.strip() for x in line.split('|')]
                 sec = int(res[0][4:])
                 if res[3] == '1':
@@ -148,12 +164,16 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False,
     nonces_with_data = ""
     for key in BACKDOOR_KEYS:
         cmd = f"hf mf isen --collect_fm11rf08s_with_data --key {key}"
+        if debug:
+            print(cmd)
         p.console(cmd)
         for line in p.grabbed_output.split('\n'):
             if "Wrong" in line or "error" in line:
                 break
             matched = "Saved to json file "
             if matched in line:
+                if debug:
+                    print(line)
                 nonces_with_data = line[line.index(matched)+len(matched):]
         if nonces_with_data != "":
             break
@@ -466,6 +486,8 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False,
                         abort = True
                     matched = match_key(line)
                     if matched is not None:
+                        if debug:
+                            print(line)
                         found_keys[sec][key_type] = matched
                         show_key(real_sec, key_type, found_keys[sec][key_type])
                         if nt[sec][0] == nt[sec][1] and found_keys[sec][key_type ^ 1] == "":
@@ -493,6 +515,8 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False,
                         abort = True
                     matched = match_key(line)
                     if matched is not None:
+                        if debug:
+                            print(line)
                         found_keys[sec][key_type] = matched
                         show_key(real_sec, key_type, found_keys[sec][key_type])
             if abort:
@@ -515,6 +539,8 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False,
                     abort = True
                 matched = match_key(line)
                 if matched is not None:
+                    if debug:
+                        print(line)
                     found_keys[sec][0] = matched
                     found_keys[sec][1] = matched
                     show_key(real_sec, 0, found_keys[sec][0])
@@ -558,6 +584,8 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False,
                         abort = True
                     matched = match_key(line)
                     if matched is not None:
+                        if debug:
+                            print(line)
                         found_keys[sec][key_type_target] = matched
             elif len(keys) == 1:
                 found_keys[sec][key_type_target] = keys.pop()
@@ -583,6 +611,8 @@ def recovery(init_check=False, final_check=False, keep=False, no_oob=False,
         p.console(cmd, capture=True, quiet=False)
         for line in p.grabbed_output.split('\n'):
             if "Found keys have been dumped to" in line:
+                if debug:
+                    print(line)
                 keyfile = line[line.index("`"):].strip("`")
     else:
         show(prompt=plus)
