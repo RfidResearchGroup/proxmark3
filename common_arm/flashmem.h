@@ -21,6 +21,8 @@
 #define __FLASHMEM_H
 
 #include "common.h"
+#include "pmflash.h"
+
 
 //    Used Command
 #define ID              0x90
@@ -135,11 +137,7 @@ uint16_t Flash_WriteData(uint32_t address, uint8_t *in, uint16_t len);
 uint16_t Flash_WriteDataCont(uint32_t address, uint8_t *in, uint16_t len);
 void Flashmem_print_status(void);
 
-typedef struct {
-    uint8_t  manufacturer_id;
-    uint8_t  device_id;
-    uint16_t jedec_id;
-} spi_flash_t;
+spi_flash_t *flash_get_info(void);
 
 extern uint8_t spi_flash_pages64k;
 

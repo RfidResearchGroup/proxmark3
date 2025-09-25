@@ -2968,7 +2968,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             LED_B_OFF();
             break;
         }
-        case CMD_FLASHMEM_INFO: {
+        case CMD_FLASHMEM_GET_SIGNATURE: {
 
             LED_B_ON();
 
@@ -2983,9 +2983,16 @@ static void PacketReceived(PacketCommandNG *packet) {
                 FlashStop();
             }
 
-            reply_ng(CMD_FLASHMEM_INFO, (isok) ? PM3_SUCCESS : PM3_EFLASH, (uint8_t *)info, sizeof(rdv40_validation_t));
+            reply_ng(CMD_FLASHMEM_GET_SIGNATURE, (isok) ? PM3_SUCCESS : PM3_EFLASH, (uint8_t *)info, sizeof(rdv40_validation_t));
             BigBuf_free();
 
+            LED_B_OFF();
+            break;
+        }
+        case CMD_FLASHMEM_GET_INFO: {
+            LED_B_ON();
+            spi_flash_t *spi = flash_get_info();
+            reply_ng(CMD_FLASHMEM_GET_INFO, PM3_SUCCESS, (uint8_t *)spi, sizeof(spi_flash_t));
             LED_B_OFF();
             break;
         }

@@ -31,8 +31,14 @@ typedef enum {
     DICTIONARY_MIFARE_ULAES,
 } Dictionary_t;
 
+typedef enum {
+    SIGN_RDV4 = 0,
+    SIGN_GENERIC,
+    SIGN_UNK = 99
+} signature_e;
+
 int CmdFlashMem(const char *Cmd);
-int rdv4_get_signature(rdv40_validation_t *out);
-int rdv4_validate(rdv40_validation_t *mem);
-int rdv4_get_flash_pages64k(uint8_t *pages64k);
+int pm3_get_signature(rdv40_validation_t *out);
+int pm3_validate(rdv40_validation_t *mem, signature_e *type);
+int pm3_get_flash_pages64k(uint8_t *pages64k);
 #endif

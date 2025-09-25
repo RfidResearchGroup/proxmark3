@@ -305,7 +305,7 @@ typedef struct {
 
 typedef struct {
     // 64KB SRAM -> 524288 bits(max sample num) < 2^30
-    uint32_t samples  :
+uint32_t samples  :
     LF_SAMPLES_BITS;
     bool     realtime : 1;
     bool     verbose  : 1;
@@ -472,6 +472,9 @@ typedef struct {
 #define CMD_SPIFFS_MOUNT                                                  0x0130
 #define CMD_SPIFFS_UNMOUNT                                                0x0131
 #define CMD_SPIFFS_WRITE                                                  0x0132
+
+#define CMD_FLASHMEM_GET_SIGNATURE                                        0x0147
+#define CMD_FLASHMEM_GET_INFO                                             0x0148
 
 // We take +0x1000 when having a variant of similar function (todo : make it an argument!)
 #define CMD_SPIFFS_APPEND                                                 0x1132
@@ -844,11 +847,13 @@ typedef struct {
 #define MIFARE_2K_MAX_BYTES     2048
 #define MIFARE_1K_MAX_BYTES     1024
 #define MIFARE_MINI_MAX_BYTES   320
+
 #define FLAG_MASK_MF_SIZE       0x00C0
 #define FLAG_MF_MINI            0x0000
 #define FLAG_MF_1K              0x0040
 #define FLAG_MF_2K              0x0080
 #define FLAG_MF_4K              0x00C0
+
 #define FLAG_SET_MF_SIZE(flags, size) {\
     flags = (flags & (~FLAG_MASK_MF_SIZE))|\
         (size == MIFARE_MINI_MAX_BYTES ? FLAG_MF_MINI : \
@@ -857,6 +862,7 @@ typedef struct {
         (size == MIFARE_4K_MAX_BYTES ? FLAG_MF_4K : \
         0))));\
     }
+
 // else we tell to take UID from block 0:
 #define IS_FLAG_MF_SIZE(flags, size) (\
     (flags & FLAG_MASK_MF_SIZE) == \

@@ -43,9 +43,13 @@ static uint32_t FLASHMEM_SPIBAUDRATE = FLASH_BAUD;
 
 #ifndef AS_BOOTROM
 
-
-spi_flash_t spi_flash_data = {0};
 uint8_t spi_flash_pages64k = 4;
+static spi_flash_t spi_flash_data = {0};
+
+spi_flash_t *flash_get_info(void) {
+    return &spi_flash_data;
+}
+
 
 void FlashmemSetSpiBaudrate(uint32_t baudrate) {
     FLASHMEM_SPIBAUDRATE = baudrate;
@@ -387,7 +391,7 @@ void Flashmem_print_status(void) {
                 );
     }
 
-    Dbprintf("  Memory size............. " _YELLOW_("%d kB (%d pages * 64k)"), spi_flash_pages64k * 64, spi_flash_pages64k);
+    Dbprintf("  Memory size............. " _YELLOW_("%d Kb") " ( %d pages * 64k )", spi_flash_pages64k * 64, spi_flash_pages64k);
 
     uint8_t uid[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     Flash_UniqueID(uid);
@@ -439,6 +443,7 @@ bool FlashDetect(void) {
         }
     }
 
+    spi_flash_data.pages64k = spi_flash_pages64k;
     return ret;
 }
 

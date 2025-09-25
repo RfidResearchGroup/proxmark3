@@ -1575,16 +1575,25 @@ void pm3_version_short(void) {
 
             if (IfPm3Rdv4Fw()) {
 
-                bool is_genuine_rdv4 = false;
+
                 // validate signature data
                 rdv40_validation_t mem;
-                if (rdv4_get_signature(&mem) == PM3_SUCCESS) {
-                    if (rdv4_validate(&mem) == PM3_SUCCESS) {
-                        is_genuine_rdv4 = true;
+                signature_e type;
+
+                if (pm3_get_signature(&mem) == PM3_SUCCESS) {
+                    if (pm3_validate(&mem, &type) == PM3_SUCCESS) {
+
+                        if (type == SIGN_RDV4) {
+                            PrintAndLogEx(NORMAL, "    Target.... %s", _YELLOW_("RDV4"));
+                        } else if (type == SIGN_GENERIC) {
+                            PrintAndLogEx(NORMAL, "    Target.... %s", _YELLOW_("GENERIC"));
+                        } else {
+                            PrintAndLogEx(NORMAL, "    Target.... %s", _RED_("device / fw mismatch"));
+                        }
                     }
                 }
 
-                PrintAndLogEx(NORMAL, "    Target.... %s", (is_genuine_rdv4) ? _YELLOW_("RDV4") : _RED_("device / fw mismatch"));
+
             } else {
                 PrintAndLogEx(NORMAL, "    Target.... %s", _YELLOW_("PM3 GENERIC"));
             }
@@ -1702,17 +1711,26 @@ void pm3_version(bool verbose, bool oneliner) {
         if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
             if (IfPm3Rdv4Fw()) {
 
-                bool is_genuine_rdv4 = false;
                 // validate signature data
                 rdv40_validation_t mem;
-                if (rdv4_get_signature(&mem) == PM3_SUCCESS) {
-                    if (rdv4_validate(&mem) == PM3_SUCCESS) {
-                        is_genuine_rdv4 = true;
+                signature_e type;
+
+                if (pm3_get_signature(&mem) == PM3_SUCCESS) {
+                    if (pm3_validate(&mem, &type) == PM3_SUCCESS) {
+
+                        if (type == SIGN_RDV4) {
+                            PrintAndLogEx(NORMAL, "  Device.................... " _GREEN_("RDV4"));
+                            PrintAndLogEx(NORMAL, "  Firmware.................. " _GREEN_("RDV4"));
+                        } else if (type == SIGN_GENERIC) {
+                            PrintAndLogEx(NORMAL, "  Device.................... ", _GREEN_("GENERIC"));
+                            PrintAndLogEx(NORMAL, "  Firmware.................. ", _GREEN_("GENERIC"));
+                        } else {
+                            PrintAndLogEx(NORMAL, "  Device.................... " _RED_("Bad signature detected!"));
+                            PrintAndLogEx(NORMAL, "  Firmware.................. " _YELLOW_("N/A"));
+                        }
                     }
                 }
 
-                PrintAndLogEx(NORMAL, "  Device.................... %s", (is_genuine_rdv4) ? _GREEN_("RDV4") : _RED_("device / fw mismatch"));
-                PrintAndLogEx(NORMAL, "  Firmware.................. %s", (is_genuine_rdv4) ? _GREEN_("RDV4") : _YELLOW_("RDV4"));
                 PrintAndLogEx(NORMAL, "  External flash............ %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
                 PrintAndLogEx(NORMAL, "  Smartcard reader.......... %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
                 PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));

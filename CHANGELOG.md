@@ -3,15 +3,17 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `mem info` and how the signature handling is done (@iceman1001)
+- Added `client/resources/pm3_generic_private_key.pem` in order to self-sign a modded device (@iceman1001)
 - Fix `hf mfdes value --op clear` commands for clearing more than 0x80000000 values and getfilesettings mac mode (@merlokk)
 - Added ATR fingerprinting to `hf 14a/14b info` (@doegox)
 
 ## [Phrack.4.20728][2025-09-11]
-- Change `lf t55xx restore` - now skips writing block0 if its all zeros (@iceman1001)
+- Changed `lf t55xx restore` - now skips writing block0 if its all zeros (@iceman1001)
 - Added `HID Simplex Grinnell 36-bit` - Improved Simplex decoder (@datafx, @henrygab)
-- Change `lf search` - also test for chipset even if there was just signal noice (@iceman1001)
+- Changed `lf search` - also test for chipset even if there was just signal noice (@iceman1001)
 - Added detection of PCF 7961 , thanks progman (@iceman1001)
-- Change `reveng -g` - now correctly take 1024 hexstring as input (@iceman1001)
+- Changed `reveng -g` - now correctly take 1024 hexstring as input (@iceman1001)
 - Added `--override` parameter to NDEF read for overriding MAD CRC check (@iceman1001)
 - Added `hf saflok` commands (@stiebeljoshua)
 - Added `ntag_clean.lua` script for easier NTAG memory wipe (@trigat)
@@ -19,7 +21,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added `lf t55xx view` - now viewing of T55XX dump files is possible (@iceman1001)
 - Fixed `lf indala cone` - now writing the right bits when using `--fc` and `--cn`
 - Changed readline hack logic for async dbg msg to be ready for readline 8.3 (@doegox)
-- Improved To avoid conflicts with ModemManager on Linux, is recommended to masking the service (@grugnoymeme)
+- Changed documentation to avoid conflicts with ModemManager on Linux, is recommended to masking the service (@grugnoymeme)
 - Changed `data crypto` - now also handles AES-256 (@iceman1001)
 - Changed `hf mfdes info` - add recognition of Swissbit iShield Key Mifare (@ah01)
 - Changed `hf mf info` - add detection for unknown backdoor keys and for some backdoor variants (@doegox)
