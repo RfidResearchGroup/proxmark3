@@ -839,7 +839,7 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 
     // Setup and start DMA.
     if (FpgaSetupSscDma((uint8_t *) dma->buf, DMA_BUFFER_SIZE) == false) {
-        if (g_dbglevel > 1) Dbprintf("FpgaSetupSscDma failed. Exiting");
+        if (g_dbglevel > DBG_ERROR) Dbprintf("FpgaSetupSscDma failed. Exiting");
         return;
     }
 
@@ -2803,10 +2803,10 @@ uint16_t ReaderReceive(uint8_t *receivedAnswer, uint16_t answer_maxlen, uint8_t 
     if (GetIso14443aAnswerFromTag(receivedAnswer, answer_maxlen, par, 0) == false) {
         return 0;
     }
+
     LogTrace(receivedAnswer, Demod.len, Demod.startTime * 16 - DELAY_AIR2ARM_AS_READER, Demod.endTime * 16 - DELAY_AIR2ARM_AS_READER, par, false);
     return Demod.len;
 }
-
 
 // This function misstreats the ISO 14443a anticollision procedure.
 // by fooling the reader there is a collision and forceing the reader to

@@ -1688,7 +1688,7 @@ bool HIDTryUnpack(wiegand_message_t *packed) {
                      );
     }
 
-    if(found_cnt > 0){
+    if (found_cnt > 0) {
         if (packed->Length && ((found_cnt - found_invalid_par) == 0)) { // if length > 0 and no valid parity matches
             PrintAndLogEx(FAILED, "Parity tests failed");
         }
@@ -1718,23 +1718,23 @@ bool decode_wiegand(uint32_t top, uint32_t mid, uint32_t bot, int n) {
     if (n > 0) {
         wiegand_message_t packed = initialize_message_object(top, mid, bot, n);
         res = HIDTryUnpack(&packed);
-    } else if(n < 0) {
+    } else if (n < 0) {
         PrintAndLogEx(INFO, "Brute forcing all possible lengths...");
-        int scan_end = (-n)*4;
-        int scan_start = scan_end-3;
+        int scan_end = (-n) * 4;
+        int scan_start = scan_end - 3;
 
         wiegand_message_t packed = initialize_message_object(top, mid, bot, scan_end);
- 
+
         // find the first bit set in the first nibble
-        for(int i = 0; i < 4; i++) {
+        for (int i = 0; i < 4; i++) {
             if (get_bit_by_position(&packed, i) == 1) {
-                scan_start = scan_end-i;
+                scan_start = scan_end - i;
                 break;
             }
         }
 
         PrintAndLogEx(INFO, "Scanning from bit %d to %d...", scan_start, scan_end);
-        for(int i = scan_start; i <= scan_end; i++) {
+        for (int i = scan_start; i <= scan_end; i++) {
             packed.Length = i;
             res |= HIDTryUnpack(&packed);
         }
