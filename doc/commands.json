@@ -7820,7 +7820,7 @@
                 "--expire <YYYY-MM-DDTHH:mm> Expire Date Offset",
                 "--created <YYYY-MM-DDTHH:mm> Card Creation Date",
                 "--prop_id <decimal> Property ID",
-                "-d data Unencrypted 17 byte card data"
+                "-d data Encrypted 17 byte card data"
             ],
             "usage": "hf saflok modify [-h] [--level <decimal>] [--type <decimal>] [--id <decimal>] [--open <decimal>] [--lock_id <decimal>] [--pass_num <decimal>] [--seq_combo <decimal>] [--deadbolt <decimal>] [--days <decimal>] [--expire <YYYY-MM-DDTHH:mm>] [--created <YYYY-MM-DDTHH:mm>] [--prop_id <decimal>] -d data"
         },
@@ -12322,7 +12322,10 @@
             "command": "mem info",
             "description": "Collect signature and verify it from flash memory",
             "notes": [
-                "mem info"
+                "mem info",
+                "mem info -v -> print public keys",
+                "mem info -s -p pm3_generic_private_key.pem -> generate a RSA 1024 signature for your SPI ID",
+                "mem info -s -p pm3_generic_private_key.pem -w -> generate and write a RSA 1024 signature for your SPI ID"
             ],
             "offline": false,
             "options": [
@@ -13616,9 +13619,10 @@
                 "-h, --help This help",
                 "-r, --raw <hex> raw hex to be decoded",
                 "-b, --bin <bin> binary string to be decoded",
-                "-n, --new <hex> new padded pacs as raw hex to be decoded"
+                "-n, --new <hex> new padded pacs as raw hex to be decoded",
+                "-f, --force skip preabmle checking, brute force all possible lengths for raw hex input"
             ],
-            "usage": "wiegand decode [-h] [-r <hex>] [-b <bin>] [-n <hex>]"
+            "usage": "wiegand decode [-hf] [-r <hex>] [-b <bin>] [-n <hex>]"
         },
         "wiegand encode": {
             "command": "wiegand encode",
@@ -13653,8 +13657,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 783,
+        "commands_extracted": 784,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-09-21T13:25:47"
+        "extracted_on": "2025-09-25T17:48:12"
     }
 }

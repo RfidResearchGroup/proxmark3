@@ -663,7 +663,9 @@ static int CmdFlashMemInfo(const char *Cmd) {
     CLIParserInit(&ctx, "mem info",
                   "Collect signature and verify it from flash memory",
                   "mem info\n"
-                  "mem info -s -d 0102030405060708 -p pm3_generic_private_key.pem -w  --> generate and write a RSA 1024 signature "
+                  "mem info -v   --> print public keys\n"
+                  "mem info -s -p pm3_generic_private_key.pem     --> generate a RSA 1024 signature for your SPI ID\n"
+                  "mem info -s -p pm3_generic_private_key.pem -w  --> generate and write a RSA 1024 signature for your SPI ID"
                  );
 
     void *argtable[] = {
