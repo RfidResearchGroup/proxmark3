@@ -2878,10 +2878,15 @@ static int CmdHF14BMobibRead(const char *Cmd) {
     };
     transport_14b_apdu_t cmds_v2[] = {
         {"SELECT AID ??",         "\x00\xa4\x04\x00\x0b\xa0\x00\x00\x02\x91\xd0\x56\x00\x01\x90\x01", 16},
-        // Holder
+        // ShortEF=02: ICC
+        {"- ICC",                 "\x00\xb2\x01\x14\x1d", 5},
+        // ShortEF=06: ??, records length up to 0x20?
+        //{"- ShortEF=06",          "\x00\xb2\x01\x34\x1d", 5},
+        // ShortEF=1C: Holder, records length up to 0x30?
         {"- Holder1",             "\x00\xb2\x01\xe4\x1d", 5},
+        {"- Holder2",             "\x00\xb2\x02\xe4\x1d", 5}, // extra
         {"SELECT AID 1TIC.ICA",   "\x00\xa4\x04\x00\x0e\x31\x54\x49\x43\x2e\x49\x43\x41\xd0\x56\x00\x01\x91\x01\x00", 20},
-        // Contracts
+        // ShortEF=09: Contracts
         {"- Contra1",             "\x00\xb2\x01\x4c\x1d", 5},
         {"- Contra2",             "\x00\xb2\x02\x4c\x1d", 5},
         {"- Contra3",             "\x00\xb2\x03\x4c\x1d", 5},
@@ -2890,9 +2895,14 @@ static int CmdHF14BMobibRead(const char *Cmd) {
         {"- Contra6",             "\x00\xb2\x06\x4c\x1d", 5},
         {"- Contra7",             "\x00\xb2\x07\x4c\x1d", 5},
         {"- Contra8",             "\x00\xb2\x08\x4c\x1d", 5},
-        // Counter
-        {"- Counter",             "\x00\xb2\x01\xcc\x24", 5},
-        // Events
+        {"- Contra9",             "\x00\xb2\x09\x4c\x1d", 5},
+        {"- ContraA",             "\x00\xb2\x0a\x4c\x1d", 5}, // extra
+        {"- ContraB",             "\x00\xb2\x0b\x4c\x1d", 5}, // extra
+        {"- ContraC",             "\x00\xb2\x0c\x4c\x1d", 5}, // extra
+        // ShortEF=19: Counter, length up to 0x24?
+        {"- Counter",             "\x00\xb2\x01\xcc\x1d", 5},
+        // ShortEF=17: Events
+        // ShortEF=1d: Special Events
         {"- ? Ev1",               "\x00\xb2\x01\xbc\x1d", 5},
         {"- SpecEv1",             "\x00\xb2\x01\xec\x1d", 5},
         {"- ? Ev2",               "\x00\xb2\x02\xbc\x1d", 5},
@@ -2901,8 +2911,9 @@ static int CmdHF14BMobibRead(const char *Cmd) {
         {"- SpecEv3",             "\x00\xb2\x03\xec\x1d", 5},
         {"- ? Ev4",               "\x00\xb2\x04\xbc\x1d", 5},
         {"- SpecEv4",             "\x00\xb2\x04\xec\x1d", 5},
-        // Contract Extensions
-        {"- ? ContraExt",         "\x00\xb2\x0c\x4c\x1d", 5},
+        // ShortEF=16: Contract Extensions
+        //{"- ? ContraExt",         "\x00\xb2\x0c\x4c\x1d", 5}, == ContraC
+        {"- ? ContraExt1",        "\x00\xb2\x01\xb4\x1d", 5},
         {"- ? ContraExt2",        "\x00\xb2\x02\xb4\x1d", 5},
         {"- ? ContraExt3",        "\x00\xb2\x03\xb4\x1d", 5},
         {"- ? ContraExt4",        "\x00\xb2\x04\xb4\x1d", 5},
@@ -2910,8 +2921,23 @@ static int CmdHF14BMobibRead(const char *Cmd) {
         {"- ? ContraExt6",        "\x00\xb2\x06\xb4\x1d", 5},
         {"- ? ContraExt7",        "\x00\xb2\x07\xb4\x1d", 5},
         {"- ? ContraExt8",        "\x00\xb2\x08\xb4\x1d", 5},
-        // Best Contract?
-        {"- ConList",             "\x00\xb2\x01\xf4\x30", 5},
+        // ShortEF=1E: Best Contract?, length up to 0x30?
+        {"- ConList",             "\x00\xb2\x01\xf4\x1d", 5},
+        // ShortEF=01: ??, 1 records length up to 0x30?
+        // ShortEF=07: ??, 2 records length up to 0x30?
+        {"- ShortEF=07, rec1",    "\x00\xb2\x01\x3c\x1d", 5},
+        {"- ShortEF=07, rec2",    "\x00\xb2\x02\x3c\x1d", 5},
+        // ShortEF=08: ??, 3 records length up to 0x30?
+        // ShortEF=10: ??, 1 records length up to 0x24?
+        // ShortEF=11: ??, 1 records length up to 0x30?
+        // ShortEF=12: ??, 12 records length up to 0x15?
+        // ShortEF=13: ??, 4 records length up to 0x30?
+        // ShortEF=14: ??, 1 records length up to 0x20?
+        // ShortEF=15: ??, 8 records length up to 0x40?
+        // ShortEF=18: ??, 8 records length up to 0x40?
+        // ShortEF=1A: ??, 8 records length up to 0x30?
+        // ShortEF=1B: ??, 1 records length up to 0x18?
+        // ShortEF=1C: ??, 1 records length up to 0x18?
     };
     bool activate_field = true;
     bool leave_signal_on = true;
