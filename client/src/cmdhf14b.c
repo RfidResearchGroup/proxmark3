@@ -2719,32 +2719,32 @@ static int CmdHF14BCalypsoRead(const char *Cmd) {
     CLIParserFree(ctx);
 
     transport_14b_apdu_t cmds[] = {
-        {"01.Select ICC     ",      "\x94\xa4\x08\x00\x04\x3f\x00\x00\x02", 9},
-        {"02.ICC            ",             "\x94\xb2\x01\x04\x1d", 5},
-        {"03.Select EnvHol  ",   "\x94\xa4\x08\x00\x04\x20\x00\x20\x01", 9},
-        {"04.EnvHol1        ",         "\x94\xb2\x01\x04\x1d", 5},
-        {"05.Select EvLog   ",    "\x94\xa4\x08\x00\x04\x20\x00\x20\x10", 9},
-        {"06.EvLog1         ",          "\x94\xb2\x01\x04\x1d", 5},
-        {"07.EvLog2         ",          "\x94\xb2\x02\x04\x1d", 5},
-        {"08.EvLog3         ",          "\x94\xb2\x03\x04\x1d", 5},
-        {"09.Select ConList ",  "\x94\xa4\x08\x00\x04\x20\x00\x20\x50", 9},
-        {"10.ConList        ",         "\x94\xb2\x01\x04\x1d", 5},
-        {"11.Select Contra  ",   "\x94\xa4\x08\x00\x04\x20\x00\x20\x20", 9},
-        {"12.Contra1        ",         "\x94\xb2\x01\x04\x1d", 5},
-        {"13.Contra2        ",         "\x94\xb2\x02\x04\x1d", 5},
-        {"14.Contra3        ",         "\x94\xb2\x03\x04\x1d", 5},
-        {"15.Contra4        ",         "\x94\xb2\x04\x04\x1d", 5},
-        {"16.Select Counter ",  "\x94\xa4\x08\x00\x04\x20\x00\x20\x69", 9},
-        {"17.Counter        ",         "\x94\xb2\x01\x04\x1d", 5},
-        {"18.Select SpecEv  ",   "\x94\xa4\x08\x00\x04\x20\x00\x20\x40", 9},
-        {"19.SpecEv1        ",         "\x94\xb2\x01\x04\x1d", 5},
-        {"20.Select Purse   ",    "\x00\xa4\x00\x00\x02\x10\x15", 7},
-        {"21.Purse1         ",          "\x00\xb2\x01\x04\x1d", 5},
-        {"22.Purse2         ",          "\x00\xb2\x02\x04\x1d", 5},
-        {"23.Purse3         ",          "\x00\xb2\x03\x04\x1d", 5},
-        {"24.Select Top Up  ",   "\x00\xa4\x00\x00\x02\x10\x14", 7},
-        {"25.Topup1         ",          "\x00\xb2\x01\x04\x1d", 5},
-        {"26.Select 1TIC.ICA", "\x00\xa4\x04\x00\x08\x31\x54\x49\x43\x2e\x49\x43\x41", 13},
+        {"Select ICC",        "\x94\xa4\x08\x00\x04\x3f\x00\x00\x02", 9},
+        {"- ICC",             "\x94\xb2\x01\x04\x1d", 5},
+        {"Select EnvHol",     "\x94\xa4\x08\x00\x04\x20\x00\x20\x01", 9},
+        {"- EnvHol1",         "\x94\xb2\x01\x04\x1d", 5},
+        {"Select EvLog",      "\x94\xa4\x08\x00\x04\x20\x00\x20\x10", 9},
+        {"- EvLog1",          "\x94\xb2\x01\x04\x1d", 5},
+        {"- EvLog2",          "\x94\xb2\x02\x04\x1d", 5},
+        {"- EvLog3",          "\x94\xb2\x03\x04\x1d", 5},
+        {"Select ConList",    "\x94\xa4\x08\x00\x04\x20\x00\x20\x50", 9},
+        {"- ConList",         "\x94\xb2\x01\x04\x1d", 5},
+        {"Select Contra",     "\x94\xa4\x08\x00\x04\x20\x00\x20\x20", 9},
+        {"- Contra1",         "\x94\xb2\x01\x04\x1d", 5},
+        {"- Contra2",         "\x94\xb2\x02\x04\x1d", 5},
+        {"- Contra3",         "\x94\xb2\x03\x04\x1d", 5},
+        {"- Contra4",         "\x94\xb2\x04\x04\x1d", 5},
+        {"Select Counter",    "\x94\xa4\x08\x00\x04\x20\x00\x20\x69", 9},
+        {"- Counter",         "\x94\xb2\x01\x04\x1d", 5},
+        {"Select SpecEv",     "\x94\xa4\x08\x00\x04\x20\x00\x20\x40", 9},
+        {"- SpecEv1",         "\x94\xb2\x01\x04\x1d", 5},
+        {"Select Purse",      "\x00\xa4\x00\x00\x02\x10\x15", 7},
+        {"- Purse1",          "\x00\xb2\x01\x04\x1d", 5},
+        {"- Purse2",          "\x00\xb2\x02\x04\x1d", 5},
+        {"- Purse3",          "\x00\xb2\x03\x04\x1d", 5},
+        {"Select Top Up",     "\x00\xa4\x00\x00\x02\x10\x14", 7},
+        {"- Topup1",          "\x00\xb2\x01\x04\x1d", 5},
+        {"Select 1TIC.ICA",   "\x00\xa4\x04\x00\x08\x31\x54\x49\x43\x2e\x49\x43\x41", 13},
     };
 
     /*
@@ -2802,7 +2802,7 @@ static int CmdHF14BCalypsoRead(const char *Cmd) {
             continue;
         }
 
-        PrintAndLogEx(INFO, "%s - %s", cmds[i].desc, sprint_hex(response, resplen));
+        PrintAndLogEx(INFO, "%-22s - %s", cmds[i].desc, sprint_hex(response, resplen - 2));
         activate_field = false;
     }
 
@@ -2819,67 +2819,102 @@ static int CmdHF14BMobibRead(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
+        arg_lit0("o", "old", "for old cards"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool old = arg_get_lit(ctx, 1);
     CLIParserFree(ctx);
 
-    transport_14b_apdu_t cmds[] = {
-        {"01.SELECT AID 1TIC.ICA",   "\x00\xa4\x04\x00\x08\x31\x54\x49\x43\x2e\x49\x43\x41", 13},
-        {"02.Select ICC file a",     "\x00\xa4\x00\x00\x02\x3f\x00", 7},
-        {"03.Select ICC file b",     "\x00\xa4\x00\x00\x02\x00\x02", 7},
-        {"04.ICC",                   "\x00\xb2\x01\x04\x1d", 5},
-        {"05.Select Holder file",    "\x00\xa4\x00\x00\x02\x3f\x1c", 7},
-        {"06.Holder1",               "\x00\xb2\x01\x04\x1d", 5},
-        {"07.Holder2",               "\x00\xb2\x02\x04\x1d", 5},
-        {"08.Select EnvHol file a",  "\x00\xa4\x00\x00\x00", 5},
-        {"09.Select EnvHol file b",  "\x00\xa4\x00\x00\x02\x20\x00", 7},
-        {"10.Select EnvHol file c",  "\x00\xa4\x00\x00\x02\x20\x01", 7},
-        {"11.EnvHol1",               "\x00\xb2\x01\x04\x1D", 5},
-        {"11.EnvHol2",               "\x00\xb2\x02\x04\x1D", 5},
-        {"12.Select EvLog file",     "\x00\xa4\x00\x00\x02\x20\x10", 7},
-        {"13.EvLog1",                "\x00\xb2\x01\x04\x1D", 5},
-        {"14.EvLog2",                "\x00\xb2\x02\x04\x1D", 5},
-        {"15.EvLog3",                "\x00\xb2\x03\x04\x1D", 5},
-        {"16.Select ConList file",   "\x00\xa4\x00\x00\x02\x20\x50", 7},
-        {"17.ConList",               "\x00\xb2\x01\x04\x1D", 5},
-        {"18.Select Contra file",    "\x00\xa4\x00\x00\x02\x20\x20", 7},
-        {"19.Contra1",               "\x00\xb2\x01\x04\x1D", 5},
-        {"20.Contra2",               "\x00\xb2\x02\x04\x1D", 5},
-        {"21.Contra3",               "\x00\xb2\x03\x04\x1D", 5},
-        {"22.Contra4",               "\x00\xb2\x04\x04\x1D", 5},
-        {"23.Contra5",               "\x00\xb2\x05\x04\x1D", 5},
-        {"24.Contra6",               "\x00\xb2\x06\x04\x1D", 5},
-        {"25.Contra7",               "\x00\xb2\x07\x04\x1D", 5},
-        {"26.Contra8",               "\x00\xb2\x08\x04\x1D", 5},
-        {"27.Contra9",               "\x00\xb2\x09\x04\x1D", 5},
-        {"28.ContraA",               "\x00\xb2\x0a\x04\x1D", 5},
-        {"29.ContraB",               "\x00\xb2\x0b\x04\x1D", 5},
-        {"30.ContraC",               "\x00\xb2\x0c\x04\x1D", 5},
-        {"31.Select Counter file",   "\x00\xa4\x00\x00\x02\x20\x69", 7},
-        {"32.Counter",               "\x00\xb2\x01\x04\x1D", 5},
-        {"33.Select LoadLog file a", "\x00\xa4\x00\x00\x00", 5},
-        {"34.Select LoadLog file b", "\x00\xa4\x00\x00\x02\x10\x00", 7},
-        {"35.Select LoadLog file c", "\x00\xa4\x00\x00\x02\x10\x14", 7},
-        {"36.LoadLog",               "\x00\xb2\x01\x04\x1D", 5},
-        {"37.Select Purcha file",    "\x00\xa4\x00\x00\x02\x10\x15", 7},
-        {"38.Purcha1",               "\x00\xb2\x01\x04\x1D", 5},
-        {"39.Purcha2",               "\x00\xb2\x02\x04\x1D", 5},
-        {"40.Purcha3",               "\x00\xb2\x03\x04\x1D", 5},
-        {"41.Select SpecEv file a",  "\x00\xa4\x00\x00\x00", 5},
-        {"42.Select SpecEv file b",  "\x00\xa4\x00\x00\x02\x20\x00", 7},
-        {"43.Select SpecEv file c",  "\x00\xa4\x00\x00\x02\x20\x40", 7},
-        {"44.SpecEv1",               "\x00\xb2\x01\x04\x1D", 5},
-        {"45.SpecEv2",               "\x00\xb2\x02\x04\x1D", 5},
-        {"46.SpecEv3",               "\x00\xb2\x03\x04\x1D", 5},
-        {"47.SpecEv4",               "\x00\xb2\x04\x04\x1d", 5},
+    transport_14b_apdu_t cmds_v1[] = {
+        {"SELECT AID 1TIC.ICA",   "\x00\xa4\x04\x00\x08\x31\x54\x49\x43\x2e\x49\x43\x41", 13},
+        {"Select ICC file a",     "\x00\xa4\x00\x00\x02\x3f\x00", 7},
+        {"Select ICC file b",     "\x00\xa4\x00\x00\x02\x00\x02", 7},
+        {"- ICC",                 "\x00\xb2\x01\x04\x1d", 5},
+        {"Select Holder file",    "\x00\xa4\x00\x00\x02\x3f\x1c", 7},
+        {"- Holder1",             "\x00\xb2\x01\x04\x1d", 5},
+        {"- Holder2",             "\x00\xb2\x02\x04\x1d", 5},
+        {"Select EnvHol file a",  "\x00\xa4\x00\x00\x00", 5},
+        {"Select EnvHol file b",  "\x00\xa4\x00\x00\x02\x20\x00", 7},
+        {"Select EnvHol file c",  "\x00\xa4\x00\x00\x02\x20\x01", 7},
+        {"- EnvHol1",             "\x00\xb2\x01\x04\x1D", 5},
+        {"- EnvHol2",             "\x00\xb2\x02\x04\x1D", 5},
+        {"Select EvLog file",     "\x00\xa4\x00\x00\x02\x20\x10", 7},
+        {"- EvLog1",              "\x00\xb2\x01\x04\x1D", 5},
+        {"- EvLog2",              "\x00\xb2\x02\x04\x1D", 5},
+        {"- EvLog3",              "\x00\xb2\x03\x04\x1D", 5},
+        {"Select ConList file",   "\x00\xa4\x00\x00\x02\x20\x50", 7},
+        {"- ConList",             "\x00\xb2\x01\x04\x1D", 5},
+        {"Select Contra file",    "\x00\xa4\x00\x00\x02\x20\x20", 7},
+        {"- Contra1",             "\x00\xb2\x01\x04\x1D", 5},
+        {"- Contra2",             "\x00\xb2\x02\x04\x1D", 5},
+        {"- Contra3",             "\x00\xb2\x03\x04\x1D", 5},
+        {"- Contra4",             "\x00\xb2\x04\x04\x1D", 5},
+        {"- Contra5",             "\x00\xb2\x05\x04\x1D", 5},
+        {"- Contra6",             "\x00\xb2\x06\x04\x1D", 5},
+        {"- Contra7",             "\x00\xb2\x07\x04\x1D", 5},
+        {"- Contra8",             "\x00\xb2\x08\x04\x1D", 5},
+        {"- Contra9",             "\x00\xb2\x09\x04\x1D", 5},
+        {"- ContraA",             "\x00\xb2\x0a\x04\x1D", 5},
+        {"- ContraB",             "\x00\xb2\x0b\x04\x1D", 5},
+        {"- ContraC",             "\x00\xb2\x0c\x04\x1D", 5},
+        {"Select Counter file",   "\x00\xa4\x00\x00\x02\x20\x69", 7},
+        {"- Counter",             "\x00\xb2\x01\x04\x1D", 5},
+        {"Select LoadLog file a", "\x00\xa4\x00\x00\x00", 5},
+        {"Select LoadLog file b", "\x00\xa4\x00\x00\x02\x10\x00", 7},
+        {"Select LoadLog file c", "\x00\xa4\x00\x00\x02\x10\x14", 7},
+        {"- LoadLog",             "\x00\xb2\x01\x04\x1D", 5},
+        {"Select Purcha file",    "\x00\xa4\x00\x00\x02\x10\x15", 7},
+        {"- Purcha1",             "\x00\xb2\x01\x04\x1D", 5},
+        {"- Purcha2",             "\x00\xb2\x02\x04\x1D", 5},
+        {"- Purcha3",             "\x00\xb2\x03\x04\x1D", 5},
+        {"Select SpecEv file a",  "\x00\xa4\x00\x00\x00", 5},
+        {"Select SpecEv file b",  "\x00\xa4\x00\x00\x02\x20\x00", 7},
+        {"Select SpecEv file c",  "\x00\xa4\x00\x00\x02\x20\x40", 7},
+        {"- SpecEv1",             "\x00\xb2\x01\x04\x1D", 5},
+        {"- SpecEv2",             "\x00\xb2\x02\x04\x1D", 5},
+        {"- SpecEv3",             "\x00\xb2\x03\x04\x1D", 5},
+        {"- SpecEv4",             "\x00\xb2\x04\x04\x1d", 5},
     };
-
+    transport_14b_apdu_t cmds_v2[] = {
+        {"SELECT AID ??",         "\x00\xa4\x04\x00\x0b\xa0\x00\x00\x02\x91\xd0\x56\x00\x01\x90\x01", 16},
+        {"- Holder1",             "\x00\xb2\x01\xe4\x1d", 5},
+        {"SELECT AID 1TIC.ICA",   "\x00\xa4\x04\x00\x0e\x31\x54\x49\x43\x2e\x49\x43\x41\xd0\x56\x00\x01\x91\x01\x00", 20},
+        {"- Contra1",             "\x00\xb2\x01\x4c\x1d", 5},
+        {"- Contra2",             "\x00\xb2\x02\x4c\x1d", 5},
+        {"- Contra3",             "\x00\xb2\x03\x4c\x1d", 5},
+        {"- Contra4",             "\x00\xb2\x04\x4c\x1d", 5},
+        {"- Contra5",             "\x00\xb2\x05\x4c\x1d", 5},
+        {"- Contra6",             "\x00\xb2\x06\x4c\x1d", 5},
+        {"- Contra7",             "\x00\xb2\x07\x4c\x1d", 5},
+        {"- Contra8",             "\x00\xb2\x08\x4c\x1d", 5},
+        {"- Counter",             "\x00\xb2\x01\xcc\x24", 5},
+        {"- ? BC record1",        "\x00\xb2\x01\xbc\x1d", 5},
+        {"- SpecEv1",             "\x00\xb2\x01\xec\x1d", 5},
+        {"- ? BC record2",        "\x00\xb2\x02\xbc\x1d", 5},
+        {"- SpecEv2",             "\x00\xb2\x02\xec\x1d", 5},
+        {"- ? BC record3",        "\x00\xb2\x03\xbc\x1d", 5},
+        {"- SpecEv3",             "\x00\xb2\x03\xec\x1d", 5},
+        {"- ? BC record4",        "\x00\xb2\x04\xbc\x1d", 5},
+        {"- SpecEv4",             "\x00\xb2\x04\xec\x1d", 5},
+        {"- ? 0C4C",              "\x00\xb2\x0c\x4c\x1d", 5},
+        {"- ? B4 record2",        "\x00\xb2\x02\xb4\x1d", 5},
+        {"- ? B4 record3",        "\x00\xb2\x03\xb4\x1d", 5},
+        {"- ? B4 record4",        "\x00\xb2\x04\xb4\x1d", 5},
+        {"- ? B4 record5",        "\x00\xb2\x05\xb4\x1d", 5},
+        {"- ? B4 record6",        "\x00\xb2\x06\xb4\x1d", 5},
+        {"- ? B4 record7",        "\x00\xb2\x07\xb4\x1d", 5},
+        {"- ? B4 record8",        "\x00\xb2\x08\xb4\x1d", 5},
+        {"- ConList",             "\x00\xb2\x01\xf4\x30", 5},
+    };
     bool activate_field = true;
     bool leave_signal_on = true;
     uint8_t response[PM3_CMD_DATA_SIZE] = { 0x00 };
 
-    for (int i = 0; i < ARRAYLEN(cmds); i++) {
+    transport_14b_apdu_t *cmds = old ? cmds_v1 : cmds_v2;
+    int cmds_count = old ? ARRAYLEN(cmds_v1) : ARRAYLEN(cmds_v2);
+
+    for (int i = 0; i < cmds_count; i++) {
 
         int user_timeout = -1;
         int resplen = 0;
@@ -2906,8 +2941,7 @@ static int CmdHF14BMobibRead(const char *Cmd) {
             switch_off_field_14b();
             return PM3_ESOFT;
         }
-
-        PrintAndLogEx(INFO, "%s - %s", cmds[i].desc, sprint_hex(response, resplen));
+        PrintAndLogEx(INFO, "%-22s - %s", cmds[i].desc, sprint_hex(response, resplen - 2));
         activate_field = false;
     }
 
