@@ -2878,8 +2878,10 @@ static int CmdHF14BMobibRead(const char *Cmd) {
     };
     transport_14b_apdu_t cmds_v2[] = {
         {"SELECT AID ??",         "\x00\xa4\x04\x00\x0b\xa0\x00\x00\x02\x91\xd0\x56\x00\x01\x90\x01", 16},
+        // Holder
         {"- Holder1",             "\x00\xb2\x01\xe4\x1d", 5},
         {"SELECT AID 1TIC.ICA",   "\x00\xa4\x04\x00\x0e\x31\x54\x49\x43\x2e\x49\x43\x41\xd0\x56\x00\x01\x91\x01\x00", 20},
+        // Contracts
         {"- Contra1",             "\x00\xb2\x01\x4c\x1d", 5},
         {"- Contra2",             "\x00\xb2\x02\x4c\x1d", 5},
         {"- Contra3",             "\x00\xb2\x03\x4c\x1d", 5},
@@ -2888,23 +2890,27 @@ static int CmdHF14BMobibRead(const char *Cmd) {
         {"- Contra6",             "\x00\xb2\x06\x4c\x1d", 5},
         {"- Contra7",             "\x00\xb2\x07\x4c\x1d", 5},
         {"- Contra8",             "\x00\xb2\x08\x4c\x1d", 5},
+        // Counter
         {"- Counter",             "\x00\xb2\x01\xcc\x24", 5},
-        {"- ? BC record1",        "\x00\xb2\x01\xbc\x1d", 5},
+        // Events
+        {"- ? Ev1",               "\x00\xb2\x01\xbc\x1d", 5},
         {"- SpecEv1",             "\x00\xb2\x01\xec\x1d", 5},
-        {"- ? BC record2",        "\x00\xb2\x02\xbc\x1d", 5},
+        {"- ? Ev2",               "\x00\xb2\x02\xbc\x1d", 5},
         {"- SpecEv2",             "\x00\xb2\x02\xec\x1d", 5},
-        {"- ? BC record3",        "\x00\xb2\x03\xbc\x1d", 5},
+        {"- ? Ev3",               "\x00\xb2\x03\xbc\x1d", 5},
         {"- SpecEv3",             "\x00\xb2\x03\xec\x1d", 5},
-        {"- ? BC record4",        "\x00\xb2\x04\xbc\x1d", 5},
+        {"- ? Ev4",               "\x00\xb2\x04\xbc\x1d", 5},
         {"- SpecEv4",             "\x00\xb2\x04\xec\x1d", 5},
-        {"- ? 0C4C",              "\x00\xb2\x0c\x4c\x1d", 5},
-        {"- ? B4 record2",        "\x00\xb2\x02\xb4\x1d", 5},
-        {"- ? B4 record3",        "\x00\xb2\x03\xb4\x1d", 5},
-        {"- ? B4 record4",        "\x00\xb2\x04\xb4\x1d", 5},
-        {"- ? B4 record5",        "\x00\xb2\x05\xb4\x1d", 5},
-        {"- ? B4 record6",        "\x00\xb2\x06\xb4\x1d", 5},
-        {"- ? B4 record7",        "\x00\xb2\x07\xb4\x1d", 5},
-        {"- ? B4 record8",        "\x00\xb2\x08\xb4\x1d", 5},
+        // Contract Extensions
+        {"- ? ContraExt",         "\x00\xb2\x0c\x4c\x1d", 5},
+        {"- ? ContraExt2",        "\x00\xb2\x02\xb4\x1d", 5},
+        {"- ? ContraExt3",        "\x00\xb2\x03\xb4\x1d", 5},
+        {"- ? ContraExt4",        "\x00\xb2\x04\xb4\x1d", 5},
+        {"- ? ContraExt5",        "\x00\xb2\x05\xb4\x1d", 5},
+        {"- ? ContraExt6",        "\x00\xb2\x06\xb4\x1d", 5},
+        {"- ? ContraExt7",        "\x00\xb2\x07\xb4\x1d", 5},
+        {"- ? ContraExt8",        "\x00\xb2\x08\xb4\x1d", 5},
+        // Best Contract?
         {"- ConList",             "\x00\xb2\x01\xf4\x30", 5},
     };
     bool activate_field = true;
