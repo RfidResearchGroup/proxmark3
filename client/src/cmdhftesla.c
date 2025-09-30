@@ -137,7 +137,7 @@ static int info_hf_tesla(bool parse_certs) {
 
     uint8_t aREAD_VERSION[30];
     int aREAD_VERSION_n = 0;
-    param_gethex_to_eol("80170000", 0, aREAD_VERSION, sizeof(aREAD_VERSION), &aREAD_VERSION_n);
+    param_gethex_to_eol("80070000", 0, aREAD_VERSION, sizeof(aREAD_VERSION), &aREAD_VERSION_n);
     res = ExchangeAPDU14a(aREAD_VERSION, aREAD_VERSION_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
     if (res != PM3_SUCCESS) {
         DropField();
