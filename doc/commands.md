@@ -620,9 +620,9 @@ Check column "offline" for their availability.
 |`hf mfu keygen          `|Y       |`Generate DES/3DES/AES MIFARE diversified keys`
 |`hf mfu pwdgen          `|Y       |`Generate pwd from known algos`
 |`hf mfu otptear         `|N       |`Tear-off test on OTP bits`
-|`hf mfu cauth           `|N       |`Ultralight-C - Authentication`
-|`hf mfu setpwd          `|N       |`Ultralight-C - Set 3DES key`
-|`hf mfu aesauth         `|N       |`Ultralight-AES - Authentication`
+|`hf mfu cauth           `|N       |`Ultralight C - Authentication`
+|`hf mfu aesauth         `|N       |`Ultralight AES - Authentication`
+|`hf mfu setkey          `|N       |`Ultralight C/AES - Set 3DES/AES keys`
 |`hf mfu dump            `|N       |`Dump MIFARE Ultralight family tag to binary file`
 |`hf mfu incr            `|N       |`Increments Ev1/NTAG counter`
 |`hf mfu info            `|N       |`Tag information`

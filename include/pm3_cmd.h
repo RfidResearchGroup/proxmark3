@@ -751,7 +751,7 @@ typedef struct {
 // Ultralight AES
 #define CMD_HF_MIFAREULAES_AUTH                                           0x0725
 // 0x0726 no longer used
-#define CMD_HF_MIFAREUC_SETPWD                                            0x0727
+#define CMD_HF_MIFAREU_SETKEY                                             0x0727
 
 // mifare desfire
 #define CMD_HF_DESFIRE_READBL                                             0x0728

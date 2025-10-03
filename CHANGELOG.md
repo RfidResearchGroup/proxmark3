@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added support for Ultralight AES auth in `hf mfu info/rdbl/wrbl/dump/ndefread/wipe/setkey` (@doegox)
 - Added Ultralight AES basic DataProtKey emulation support (@doegox)
 - Changed `mem info` and how the signature handling is done (@iceman1001)
 - Added `client/resources/pm3_generic_private_key.pem` in order to self-sign a modded device (@iceman1001)

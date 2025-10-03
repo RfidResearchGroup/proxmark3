@@ -1382,21 +1382,22 @@
                 "hf 14a sim -t 10 -> ST25TA IKEA Rothult",
                 "hf 14a sim -t 11 -> Javacard (JCOP)",
                 "hf 14a sim -t 12 -> 4K Seos card",
-                "hf 14a sim -t 13 -> MIFARE Ultralight C"
+                "hf 14a sim -t 13 -> MIFARE Ultralight C",
+                "hf 14a sim -t 14 -> MIFARE Ultralight AES"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-t, --type <1-12> Simulation type to use",
+                "-t, --type <1-14> Simulation type to use",
                 "-u, --uid <hex> <4|7|10> hex bytes UID",
                 "-n, --num <dec> Exit simulation after <numreads> blocks have been read by reader. 0 = infinite",
                 "-x Performs the 'reader attack', nr/ar attack against a reader",
                 "--sk Fill simulator keys from found keys",
                 "-v, --verbose verbose output",
-                "--c1 UL-C Auth - all zero handshake part 1",
-                "--c2 UL-C Auth - all zero handshake part 2"
+                "--z1 ULC/ULAES Auth - all zero handshake part 1",
+                "--z2 ULC/ULAES Auth - all zero handshake part 2"
             ],
-            "usage": "hf 14a sim [-hxv] -t <1-12> [-u <hex>] [-n <dec>] [--sk] [--c1] [--c2]"
+            "usage": "hf 14a sim [-hxv] -t <1-14> [-u <hex>] [-n <dec>] [--sk] [--z1] [--z2]"
         },
         "hf 14a simaid": {
             "command": "hf 14a simaid",
@@ -1533,9 +1534,10 @@
             ],
             "offline": false,
             "options": [
-                "-h, --help This help"
+                "-h, --help This help",
+                "-o, --old for old cards"
             ],
-            "usage": "hf 14b mobib [-h]"
+            "usage": "hf 14b mobib [-ho]"
         },
         "hf 14b ndefread": {
             "command": "hf 14b ndefread",
@@ -7159,9 +7161,10 @@
                 "-h, --help This help",
                 "--key <hex> AES key (16 hex bytes)",
                 "-i, --idx <0..2> Key index (def: 0)",
+                "-l Swap entered key's endianness",
                 "-k Keep field on (only if a key is provided)"
             ],
-            "usage": "hf mfu aesauth [-hk] [--key <hex>] [-i <0..2>]"
+            "usage": "hf mfu aesauth [-hlk] [--key <hex>] [-i <0..2>]"
         },
         "hf mfu amiibo": {
             "command": "hf mfu amiibo",
@@ -7199,7 +7202,7 @@
         },
         "hf mfu dump": {
             "command": "hf mfu dump",
-            "description": "Dump MIFARE Ultralight/NTAG tag to files (bin/json) It autodetects card type.Supports: Ultralight, Ultralight-C, Ultralight EV1 NTAG 203, NTAG 210, NTAG 212, NTAG 213, NTAG 215, NTAG 216",
+            "description": "Dump MIFARE Ultralight/NTAG tag to files (bin/json) It autodetects card type.Supports: Ultralight, Ultralight C, Ultralight AES, Ultralight EV1 NTAG 203, NTAG 210, NTAG 212, NTAG 213, NTAG 215, NTAG 216",
             "notes": [
                 "hf mfu dump -f myfile",
                 "hf mfu dump -k AABBCCDD -> dump whole tag using pwd AABBCCDD",
@@ -7211,7 +7214,7 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> Specify a filename for dump file",
-                "-k, --key <hex> Key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)",
+                "-k, --key <hex> Key for authentication (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)",
                 "-l Swap entered key's endianness",
                 "-p, --page <dec> Manually set start page number to start from",
                 "-q, --qty <dec> Manually set number of pages to dump",
@@ -7405,7 +7408,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-k, --key <hex> Authentication key (UL-C 16 bytes, EV1/NTAG 4 bytes)",
+                "-k, --key <hex> Authentication key (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)",
                 "-l Swap entered key's endianness",
                 "-b, --block <dec> Block number to read",
                 "--force Force operation even if address is out of range"
@@ -7434,18 +7437,21 @@
             ],
             "usage": "hf mfu restore [-hlservz] -f <fn> [-k <hex>]"
         },
-        "hf mfu setpwd": {
-            "command": "hf mfu setpwd",
-            "description": "Set the 3DES key on MIFARE Ultralight-C tag.",
+        "hf mfu setkey": {
+            "command": "hf mfu setkey",
+            "description": "Set the 3DES key on MIFARE Ultralight C tag and the AES keys on Ultralight AES. Note: AUTH0 must allow unauthenticated writes to the key blocks UL-AES: New Key index 0... DataProtKey (default) New Key index 1... UIDRetrKey",
             "notes": [
-                "hf mfu setpwd --key 000102030405060708090a0b0c0d0e0f"
+                "hf mfu setkey --key 49454D4B41455242214E4143554F5946",
+                "hf mfu setkey --key <16 hex bytes> --idx <0..1>"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-k, --key <hex> New key (16 hex bytes)"
+                "-k, --key <hex> New key (16 hex bytes)",
+                "-i, --idx <0..1> New key index (def: 0), only for UL-AES",
+                "-l Swap entered keys' endianness"
             ],
-            "usage": "hf mfu setpwd [-h] [-k <hex>]"
+            "usage": "hf mfu setkey [-hl] [-k <hex>] [-i <0..1>]"
         },
         "hf mfu setuid": {
             "command": "hf mfu setuid",
@@ -7462,24 +7468,25 @@
         },
         "hf mfu sim": {
             "command": "hf mfu sim",
-            "description": "Simulate MIFARE Ultralight family type based upon ISO/IEC 14443 type A tag with 4,7 or 10 byte UID from emulator memory. See `hf mfu eload` first. The UID from emulator memory will be used if not specified. See `hf 14a sim -h` to see available types. You want 2, 7 or 13 usually.",
+            "description": "Simulate MIFARE Ultralight family type based upon ISO/IEC 14443 type A tag with 4,7 or 10 byte UID from emulator memory. See `hf mfu eload` first. The UID from emulator memory will be used if not specified. See `hf 14a sim -h` to see available types. You want 2, 7, 13 or 14 usually.",
             "notes": [
                 "hf mfu sim -t 2 --uid 11223344556677 -> MIFARE Ultralight",
                 "hf mfu sim -t 7 --uid 11223344556677 -n 5 -> MFU EV1 / NTAG 215 Amiibo",
                 "hf mfu sim -t 7 -> MFU EV1 / NTAG 215 Amiibo",
-                "hf mfu sim -t 13 -> MIFARE Ultralight-C"
+                "hf mfu sim -t 13 -> MIFARE Ultralight C",
+                "hf mfu sim -t 14 -> MIFARE Ultralight AES"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-t, --type <1..13> Simulation type to use",
+                "-t, --type <1..14> Simulation type to use",
                 "-u, --uid <hex> <4|7|10> hex bytes UID",
                 "-n, --num <dec> Exit simulation after <numreads> blocks. 0 = infinite",
                 "-v, --verbose Verbose output",
-                "--c1 UL-C Auth - all zero handshake part 1",
-                "--c2 UL-C Auth - all zero handshake part 2"
+                "--z1 ULC/ULAES Auth - all zero handshake part 1",
+                "--z2 ULC/ULAES Auth - all zero handshake part 2"
             ],
-            "usage": "hf mfu sim [-hv] -t <1..13> [-u <hex>] [-n <dec>] [--c1] [--c2]"
+            "usage": "hf mfu sim [-hv] -t <1..14> [-u <hex>] [-n <dec>] [--z1] [--z2]"
         },
         "hf mfu tamper": {
             "command": "hf mfu tamper",
@@ -7517,7 +7524,7 @@
         },
         "hf mfu wipe": {
             "command": "hf mfu wipe",
-            "description": "Wipe card to zeros. It will ignore block0,1,2,3 you will need to call it with password in order to wipe the config and sett default pwd/pack Abort by pressing a key New password.... FFFFFFFF New 3-DES key... 49454D4B41455242214E4143554F5946",
+            "description": "Wipe card to zeros. It will ignore block0,1,2,3 you will need to call it with password in order to wipe the config and sett default pwd/pack Abort by pressing a key New password.... FFFFFFFF New 3-DES key... 49454D4B41455242214E4143554F5946 New AES keys... 00000000000000000000000000000000",
             "notes": [
                 "hf mfu wipe",
                 "hf mfu wipe -k 49454D4B41455242214E4143554F5946"
@@ -7541,7 +7548,7 @@
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "-k, --key <hex> Authentication key (UL-C 16 bytes, EV1/NTAG 4 bytes)",
+                "-k, --key <hex> Authentication key (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)",
                 "-l Swap entered key's endianness",
                 "-b, --block <dec> Block number to write",
                 "-d, --data <hex> Block data (4 or 16 hex bytes, 16 hex bytes will do a compatibility write)",
@@ -13659,6 +13666,6 @@
     "metadata": {
         "commands_extracted": 784,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-09-25T17:48:12"
+        "extracted_on": "2025-10-03T23:59:38"
     }
 }

@@ -323,8 +323,9 @@ void MifareUL_AES_Auth(bool turn_off_field, uint8_t keyno, uint8_t *keybytes) {
 void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     uint8_t blockNo = arg0;
     uint8_t dataout[16] = {0x00};
-    bool useKey = (arg1 == 1); //UL_C
-    bool usePwd = (arg1 == 2); //UL_EV1/NTAG
+    bool useCKey = (arg1 == 1); // UL_C
+    bool usePwd = (arg1 == 2); // UL_EV1/NTAG
+    bool useAESKey = (arg1 == 3); // UL_AES
 
     LEDsoff();
     LED_A_ON();
@@ -340,11 +341,22 @@ void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     }
 
     // UL-C authentication
-    if (useKey) {
+    if (useCKey) {
         uint8_t key[16] = {0x00};
         memcpy(key, datain, sizeof(key));
 
         if (mifare_ultra_auth(key) == 0) {
+            OnError(1);
+            return;
+        }
+    }
+
+    // UL-AES authentication
+    if (useAESKey) {
+        uint8_t key[16] = {0x00};
+        memcpy(key, datain, sizeof(key));
+
+        if (mifare_ultra_aes_auth(0, key) == 0) {
             OnError(1);
             return;
         }
@@ -395,8 +407,9 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
     // params
     uint8_t blockNo = arg0;
     uint16_t blocks = arg1;
-    bool useKey = (arg2 == 1); // UL_C
+    bool useCKey = (arg2 == 1); // UL_C
     bool usePwd = (arg2 == 2); // UL_EV1/NTAG
+    bool useAESKey = (arg2 == 3); // UL_AES
     uint32_t countblocks = 0;
     uint8_t *dataout = BigBuf_calloc(CARD_MEMORY_SIZE);
     if (dataout == NULL) {
@@ -413,11 +426,22 @@ void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain)
     }
 
     // UL-C authentication
-    if (useKey) {
+    if (useCKey) {
         uint8_t key[16] = {0x00};
         memcpy(key, datain, sizeof(key));
 
         if (mifare_ultra_auth(key) == 0) {
+            OnError(1);
+            return;
+        }
+    }
+
+    // UL-AES authentication
+    if (useAESKey) {
+        uint8_t key[16] = {0x00};
+        memcpy(key, datain, sizeof(key));
+
+        if (mifare_ultra_aes_auth(0, key) == 0) {
             OnError(1);
             return;
         }
@@ -571,8 +595,9 @@ void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain) {
 //        : 4/16 next bytes is authentication key.
 static void MifareUWriteBlockEx(uint8_t arg0, uint8_t arg1, uint8_t *datain, bool reply) {
     uint8_t blockNo = arg0;
-    bool useKey = (arg1 == 1); //UL_C
-    bool usePwd = (arg1 == 2); //UL_EV1/NTAG
+    bool useCKey = (arg1 == 1); // UL_C
+    bool usePwd = (arg1 == 2); // UL_EV1/NTAG
+    bool useAESKey = (arg1 == 3); // UL_AES
     uint8_t blockdata[4] = {0x00};
 
     memcpy(blockdata, datain, 4);
@@ -591,11 +616,22 @@ static void MifareUWriteBlockEx(uint8_t arg0, uint8_t arg1, uint8_t *datain, boo
     };
 
     // UL-C authentication
-    if (useKey) {
+    if (useCKey) {
         uint8_t key[16] = {0x00};
         memcpy(key, datain + 4, sizeof(key));
 
         if (mifare_ultra_auth(key) == 0) {
+            OnError(1);
+            return;
+        }
+    }
+
+    // UL-AES authentication
+    if (useAESKey) {
+        uint8_t key[16] = {0x00};
+        memcpy(key, datain + 4, sizeof(key));
+
+        if (mifare_ultra_aes_auth(0, key) == 0) {
             OnError(1);
             return;
         }
@@ -646,8 +682,9 @@ void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
 //        : 4/16 next bytes is authentication key.
 void MifareUWriteBlockCompat(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     uint8_t blockNo = arg0;
-    bool useKey = (arg1 == 1); //UL_C
-    bool usePwd = (arg1 == 2); //UL_EV1/NTAG
+    bool useCKey = (arg1 == 1); // UL_C
+    bool usePwd = (arg1 == 2); // UL_EV1/NTAG
+    bool useAESKey = (arg1 == 3); // UL_AES
     uint8_t blockdata[16] = {0x00};
 
     memcpy(blockdata, datain, 16);
@@ -666,11 +703,22 @@ void MifareUWriteBlockCompat(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     };
 
     // UL-C authentication
-    if (useKey) {
+    if (useCKey) {
         uint8_t key[16] = {0x00};
         memcpy(key, datain + 16, sizeof(key));
 
         if (mifare_ultra_auth(key) == 0) {
+            OnError(1);
+            return;
+        }
+    }
+
+    // UL-AES authentication
+    if (useAESKey) {
+        uint8_t key[16] = {0x00};
+        memcpy(key, datain + 16, sizeof(key));
+
+        if (mifare_ultra_aes_auth(0, key) == 0) {
             OnError(1);
             return;
         }
@@ -707,12 +755,15 @@ void MifareUWriteBlockCompat(uint8_t arg0, uint8_t arg1, uint8_t *datain) {
     set_tracing(false);
 }
 
-void MifareUSetPwd(uint8_t arg0, uint8_t *datain) {
+void MifareUSetKey(uint8_t arg0, uint8_t *datain) {
 
-    uint8_t pwd[16] = {0x00};
-    uint8_t blockdata[4] = {0x00};
+    uint8_t key[16] = {0x00};
+    if (arg0 < 1 || arg0 > 3) {
+        OnError(0);
+        return;
+    }
 
-    memcpy(pwd, datain, 16);
+    memcpy(key, datain, 16);
 
     LED_A_ON();
     LED_B_OFF();
@@ -728,45 +779,26 @@ void MifareUSetPwd(uint8_t arg0, uint8_t *datain) {
         return;
     };
 
-    blockdata[0] = pwd[7];
-    blockdata[1] = pwd[6];
-    blockdata[2] = pwd[5];
-    blockdata[3] = pwd[4];
-    if (mifare_ultra_writeblock(44, blockdata) != PM3_SUCCESS) {
-        if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
-        OnError(44);
-        return;
-    };
+    uint8_t start_block = 4; // just to be safe
+    switch (arg0) {
+        case 1: // UL-C
+            start_block = 44;
+            break;
+        case 2: // UL-AES DataProtKey
+            start_block = 48;
+            break;
+        case 3: // UL-AES UIDRetrKey
+            start_block = 52;
+            break;
+    }
 
-    blockdata[0] = pwd[3];
-    blockdata[1] = pwd[2];
-    blockdata[2] = pwd[1];
-    blockdata[3] = pwd[0];
-    if (mifare_ultra_writeblock(45, blockdata) != PM3_SUCCESS) {
-        if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
-        OnError(45);
-        return;
-    };
-
-    blockdata[0] = pwd[15];
-    blockdata[1] = pwd[14];
-    blockdata[2] = pwd[13];
-    blockdata[3] = pwd[12];
-    if (mifare_ultra_writeblock(46, blockdata) != PM3_SUCCESS) {
-        if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
-        OnError(46);
-        return;
-    };
-
-    blockdata[0] = pwd[11];
-    blockdata[1] = pwd[10];
-    blockdata[2] = pwd[9];
-    blockdata[3] = pwd[8];
-    if (mifare_ultra_writeblock(47, blockdata) != PM3_SUCCESS) {
-        if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
-        OnError(47);
-        return;
-    };
+    for (int i = 0; i < 4; i++) {
+        if (mifare_ultra_writeblock(start_block + i, key + (i * 4)) != PM3_SUCCESS) {
+            if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
+            OnError(start_block + i);
+            return;
+        };
+    }
 
     if (mifare_ultra_halt()) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Halt error");

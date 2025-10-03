@@ -198,7 +198,7 @@ typedef struct {
 //ultralightC
 #define CMD_HF_MIFAREUC_AUTH                                              0x0724
 //0x0725 and 0x0726 no longer used
-#define CMD_HF_MIFAREUC_SETPWD                                            0x0727
+#define CMD_HF_MIFAREU_SETKEY                                             0x0727
 
 
 // mifare desfire

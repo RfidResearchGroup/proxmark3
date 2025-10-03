@@ -1848,8 +1848,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareUReadCard(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
             break;
         }
-        case CMD_HF_MIFAREUC_SETPWD: {
-            MifareUSetPwd(packet->oldarg[0], packet->data.asBytes);
+        case CMD_HF_MIFAREU_SETKEY: {
+            MifareUSetKey(packet->oldarg[0], packet->data.asBytes);
             break;
         }
         case CMD_HF_MIFARE_READSC: {
