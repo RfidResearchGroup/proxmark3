@@ -3866,21 +3866,22 @@ static int CmdHF14AMfUSim(const char *Cmd) {
                   "ISO/IEC 14443 type A tag with 4,7 or 10 byte UID\n"
                   "from emulator memory.  See `hf mfu eload` first. \n"
                   "The UID from emulator memory will be used if not specified.\n"
-                  "See `hf 14a sim -h` to see available types. You want 2, 7 or 13 usually.",
+                  "See `hf 14a sim -h` to see available types. You want 2, 7, 13 or 14 usually.",
                   "hf mfu sim -t 2 --uid 11223344556677        -> MIFARE Ultralight\n"
                   "hf mfu sim -t 7 --uid 11223344556677 -n 5   -> MFU EV1 / NTAG 215 Amiibo\n"
                   "hf mfu sim -t 7                             -> MFU EV1 / NTAG 215 Amiibo\n"
-                  "hf mfu sim -t 13                            -> MIFARE Ultralight-C\n"
+                  "hf mfu sim -t 13                            -> MIFARE Ultralight C\n"
+                  "hf mfu sim -t 14                            -> MIFARE Ultralight AES\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("t", "type", "<1..13> ", "Simulation type to use"),
+        arg_int1("t", "type", "<1..14> ", "Simulation type to use"),
         arg_str0("u", "uid", "<hex>", "<4|7|10> hex bytes UID"),
         arg_int0("n", "num", "<dec>", "Exit simulation after <numreads> blocks. 0 = infinite"),
         arg_lit0("v", "verbose", "Verbose output"),
-        arg_lit0(NULL, "c1", "UL-C Auth - all zero handshake part 1"),
-        arg_lit0(NULL, "c2", "UL-C Auth - all zero handshake part 2"),
+        arg_lit0(NULL, "z1", "ULC/ULAES Auth - all zero handshake part 1"),
+        arg_lit0(NULL, "z2", "ULC/ULAES Auth - all zero handshake part 2"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

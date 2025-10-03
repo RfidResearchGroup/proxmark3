@@ -1188,11 +1188,10 @@ bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_
     }
 }
 
-static void Simulate_reread_ulc_key(uint8_t *ulc_key) {
+static void Simulate_read_ulc_key(uint8_t *ulc_key) {
     // copy UL-C key from emulator memory
 
     mfu_dump_t *mfu_header = (mfu_dump_t *) BigBuf_get_EM_addr();
-
     memcpy(ulc_key,      mfu_header->data + (0x2D * 4), 4);
     memcpy(ulc_key +  4, mfu_header->data + (0x2C * 4), 4);
     memcpy(ulc_key +  8, mfu_header->data + (0x2F * 4), 4);
@@ -1203,6 +1202,22 @@ static void Simulate_reread_ulc_key(uint8_t *ulc_key) {
     reverse_array(ulc_key + 8, 4);
     reverse_array(ulc_key + 12, 4);
 }
+
+static void Simulate_read_ulaes_key0(uint8_t *ulaes_key0) {
+    // copy UL-AES DataProtKey from emulator memory
+
+    mfu_dump_t *mfu_header = (mfu_dump_t *) BigBuf_get_EM_addr();
+    memcpy(ulaes_key0, mfu_header->data + (0x33 * 4), 4);
+    memcpy(ulaes_key0 + 4, mfu_header->data + (0x32 * 4), 4);
+    memcpy(ulaes_key0 + 8, mfu_header->data + (0x31 * 4), 4);
+    memcpy(ulaes_key0 + 12, mfu_header->data + (0x30 * 4), 4);
+
+    reverse_array(ulaes_key0, 4);
+    reverse_array(ulaes_key0 + 4, 4);
+    reverse_array(ulaes_key0 + 8, 4);
+    reverse_array(ulaes_key0 + 12, 4);
+}
+
 bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
                            uint8_t *ats, size_t ats_len, tag_response_info_t **responses,
                            uint32_t *cuid, uint8_t *pages, uint8_t *ulc_key) {
@@ -1355,7 +1370,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
             sak = 0x20;
             break;
         }
-        case 13: { // MIFARE Ultralight-C
+        case 13: { // MIFARE Ultralight C
 
             rATQA[0] = 0x44;
             sak = 0x00;
@@ -1364,16 +1379,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
             mfu_dump_t *mfu_header = (mfu_dump_t *) BigBuf_get_EM_addr();
             *pages = MAX(mfu_header->pages, 47);
 
-            // copy UL-C key from emulator memory
-            memcpy(ulc_key, mfu_header->data + (0x2D * 4), 4);
-            memcpy(ulc_key + 4, mfu_header->data + (0x2C * 4), 4);
-            memcpy(ulc_key + 8, mfu_header->data + (0x2F * 4), 4);
-            memcpy(ulc_key + 12, mfu_header->data + (0x2E * 4), 4);
-
-            reverse_array(ulc_key, 4);
-            reverse_array(ulc_key + 4, 4);
-            reverse_array(ulc_key + 8, 4);
-            reverse_array(ulc_key + 12, 4);
+            Simulate_read_ulc_key(ulc_key);
 
             /*
             Dbprintf("UL-C Pages....... %u ( 47 )", *pages);
@@ -1383,6 +1389,29 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
 
             if (IS_FLAG_UID_IN_DATA(flags, 7)) {
                 DbpString("UL-C UID........ ");
+                Dbhexdump(7, data, false);
+            }
+            break;
+        }
+        case 14: { // MIFARE Ultralight AES
+
+            rATQA[0] = 0x44;
+            sak = 0x00;
+
+            // some first pages of UL/NTAG dump is special data
+            mfu_dump_t *mfu_header = (mfu_dump_t *) BigBuf_get_EM_addr();
+            *pages = MAX(mfu_header->pages, 47);
+
+            Simulate_read_ulaes_key0(ulc_key);
+
+            /*
+            Dbprintf("UL-AES Pages....... %u ( 47 )", *pages);
+            DbpString("UL-AES key0... ");
+            Dbhexdump(16, ulc_key, false);
+            */
+
+            if (IS_FLAG_UID_IN_DATA(flags, 7)) {
+                DbpString("UL-AES UID........ ");
                 Dbhexdump(7, data, false);
             }
             break;
@@ -1412,7 +1441,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
 
     // if uid not supplied then get from emulator memory
     if ((memcmp(data, "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 10) == 0) || IS_FLAG_UID_IN_EMUL(flags)) {
-        if (tagType == 2 || tagType == 7 || tagType == 13) {
+        if (tagType == 2 || tagType == 7 || tagType == 13 || tagType == 14) {
             uint16_t start = MFU_DUMP_PREFIX_LENGTH;
             uint8_t emdata[8];
             emlGet(emdata, start, sizeof(emdata));
@@ -1579,7 +1608,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
 // 'hf 14a sim'
 //-----------------------------------------------------------------------------
 void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uint8_t exitAfterNReads,
-                          uint8_t *ats, size_t ats_len, bool ulc_part1, bool ulc_part2) {
+                          uint8_t *ats, size_t ats_len, bool ulauth_z1, bool ulauth_z2) {
 
 #define ATTACK_KEY_COUNT 16
 #define ULC_TAG_NONCE       "\x01\x02\x03\x04\x05\x06\x07\x08"
@@ -1588,9 +1617,10 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
     uint32_t cuid = 0;
     uint32_t nonce = 0;
     /// Ultralight-C 3des2k
-    uint8_t ulc_key[16] = { 0x00 };
-    uint8_t ulc_iv[8] = { 0x00 };
+    uint8_t ulc_key[16] = { 0x00 }; // also for UL-AES
+    uint8_t ulc_iv[16] = { 0x00 }; // also for UL-AES
     bool ulc_reread_key = false;
+    bool ulaes_reread_key = false;
     uint8_t pages = 0;
 
     // Here, we collect CUID, block1, keytype1, NT1, NR1, AR1, CUID, block2, keytyp2, NT2, NR2, AR2
@@ -1724,7 +1754,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
             order = ORDER_NONE; // back to work state
             p_response = NULL;
 
-        } else if (order == ORDER_AUTH && len == 8 && tagType != 2 && tagType != 7 && tagType != 13) {
+        } else if (order == ORDER_AUTH && len == 8 && tagType != 2 && tagType != 7 && tagType != 13 && tagType != 14) {
             // Received {nr] and {ar} (part of authentication)
             LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
             uint32_t nr = bytes_to_num(receivedCmd, 4);
@@ -1814,7 +1844,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
         } else if (receivedCmd[0] == ISO14443A_CMD_READBLOCK && len == 4) {    // Received a (plain) READ
             uint8_t block = receivedCmd[1];
             // if Ultralight or NTAG (4 byte blocks)
-            if (tagType == 7 || tagType == 2 || tagType == 13) {
+            if (tagType == 7 || tagType == 2 || tagType == 13 || tagType == 14) {
                 if (block > pages) {
                     // send NACK 0x0 == invalid argument
                     EmSend4bit(CARD_NACK_IV);
@@ -1863,7 +1893,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
                 EmSendCmd(emdata, len + 2);
             }
             p_response = NULL;
-        } else if (receivedCmd[0] == MIFARE_ULC_WRITE && len == 8 && (tagType == 2 || tagType == 7 || tagType == 13)) {        // Received a WRITE
+        } else if (receivedCmd[0] == MIFARE_ULC_WRITE && len == 8 && (tagType == 2 || tagType == 7 || tagType == 13 || tagType == 13)) {        // Received a WRITE
 
             p_response = NULL;
 
@@ -1904,12 +1934,15 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
                 if (tagType == 13 && block >= 0x2c && block <= 0x2F) {
                     ulc_reread_key = true;
                 }
+                if (tagType == 14 && block >= 0x30 && block <= 0x37) {
+                    ulaes_reread_key = true;
+                }
             } else {
                 // send NACK 0x1 == crc/parity error
                 EmSend4bit(CARD_NACK_PA);
             }
             goto jump;
-        } else if (receivedCmd[0] == MIFARE_ULC_COMP_WRITE && len == 4 && (tagType == 2 || tagType == 7 || tagType == 13)) {
+        } else if (receivedCmd[0] == MIFARE_ULC_COMP_WRITE && len == 4 && (tagType == 2 || tagType == 7 || tagType == 13 || tagType == 14)) {
             // cmd + block + 2 bytes crc
             if (CheckCrc14A(receivedCmd, len)) {
                 wrblock = receivedCmd[1];
@@ -1983,7 +2016,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
             p_response = &responses[RESP_INDEX_VERSION];
         } else if (receivedCmd[0] == MFDES_GET_VERSION && len == 4 && (tagType == 3)) {
             p_response = &responses[RESP_INDEX_VERSION];
-        } else if ((receivedCmd[0] == MIFARE_AUTH_KEYA || receivedCmd[0] == MIFARE_AUTH_KEYB) && len == 4 && tagType != 2 && tagType != 7 && tagType != 13) {     // Received an authentication request
+        } else if ((receivedCmd[0] == MIFARE_AUTH_KEYA || receivedCmd[0] == MIFARE_AUTH_KEYB) && len == 4 && tagType != 2 && tagType != 7 && tagType != 13 && tagType != 14) {     // Received an authentication request
             cardAUTHKEY = receivedCmd[0] - 0x60;
             cardAUTHSC = receivedCmd[1] / 4; // received block num
 
@@ -2002,13 +2035,14 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
             } else {
                 p_response = &responses[RESP_INDEX_ATS];
             }
+
         } else if (receivedCmd[0] == MIFARE_ULC_AUTH_1 && len == 4 && tagType == 13) {  // ULC authentication, or Desfire Authentication
 
             // reset IV to all zeros
             memset(ulc_iv, 0x00, 8);
 
             if (ulc_reread_key) {
-                Simulate_reread_ulc_key(ulc_key);
+                Simulate_read_ulc_key(ulc_key);
                 ulc_reread_key = false;
             }
 
@@ -2017,7 +2051,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
             // our very random TAG NONCE
             memcpy(dynamic_response_info.response + 1, ULC_TAG_NONCE, 8);
 
-            if (ulc_part1) {
+            if (ulauth_z1) {
                 memset(dynamic_response_info.response + 1, 0, 8);
             } else {
                 // encrypt TAG NONCE
@@ -2048,12 +2082,15 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
 
             if (memcmp(rnd_ab + 8, ULC_TAG_NONCE, 8) != 0) {
                 Dbprintf("failed authentication");
+                EmSend4bit(CARD_NACK_IV);
+                p_response = NULL;
+                goto jump;
             }
 
             // OK response
             dynamic_response_info.response[0] = 0x00;
 
-            if (ulc_part2) {
+            if (ulauth_z2) {
                 // try empty auth but with correct CRC and 0x00 command
                 memset(dynamic_response_info.response + 1, 0, 8);
             } else {
@@ -2068,6 +2105,83 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
             AddCrc14A(dynamic_response_info.response, 9);
 
             dynamic_response_info.response_n = 1 + 8 + 2;
+
+            prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+            p_response = &dynamic_response_info;
+            order = ORDER_NONE;
+
+        } else if (receivedCmd[0] == MIFARE_ULC_AUTH_1 && len == 4 && tagType == 14) {  // ULAES authentication
+
+            memset(ulc_iv, 0x00, 16);
+
+            if (ulaes_reread_key) {
+                Simulate_read_ulaes_key0(ulc_key);
+                ulaes_reread_key = false;
+            }
+
+            dynamic_response_info.response[0] = MIFARE_ULC_AUTH_2;
+
+            // our very random TAG NONCE
+            memcpy(dynamic_response_info.response + 1, ULC_TAG_NONCE, 8);
+            memcpy(dynamic_response_info.response + 9, ULC_TAG_NONCE, 8);
+
+            if (ulauth_z1) {
+                memset(dynamic_response_info.response + 1, 0, 16);
+            } else {
+                // encrypt TAG NONCE
+                aes128_nxp_send(dynamic_response_info.response + 1, dynamic_response_info.response + 1, 16, ulc_key, ulc_iv);
+            }
+
+            // Add CRC
+            AddCrc14A(dynamic_response_info.response, 17);
+
+            // prepare to send
+            dynamic_response_info.response_n = 1 + 16 + 2;
+            prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
+            p_response = &dynamic_response_info;
+            order = ORDER_AUTH;
+
+        } else if (receivedCmd[0] == MIFARE_ULC_AUTH_2 && len == 35 && tagType == 14) {  // ULAES authentication
+
+            memset(ulc_iv, 0x00, 16);
+            uint8_t enc_rnd_ab[32] = { 0x00 };
+            uint8_t rnd_ab[32] = { 0x00 };
+
+            // copy reader response
+            memcpy(enc_rnd_ab, receivedCmd + 1, 32);
+
+            // decrypt
+            aes128_nxp_receive(enc_rnd_ab, rnd_ab, 32, ulc_key, ulc_iv);
+
+            ror(rnd_ab + 16, 16);
+
+            // Remember our tag nonce is twice the ULC_TAG_NONCE
+            if ((memcmp(rnd_ab + 16, ULC_TAG_NONCE, 8) != 0) || (memcmp(rnd_ab + 24, ULC_TAG_NONCE, 8) != 0)) {
+                Dbprintf("failed authentication");
+                EmSend4bit(CARD_NACK_IV);
+                p_response = NULL;
+                goto jump;
+            }
+
+            // OK response
+            dynamic_response_info.response[0] = 0x00;
+
+            if (ulauth_z2) {
+                // try empty auth but with correct CRC and 0x00 command
+                memset(dynamic_response_info.response + 1, 0, 16);
+            } else {
+                // rol RndA
+                rol(rnd_ab, 16);
+
+                memset(ulc_iv, 0x00, 16);
+                // encrypt RndA
+                aes128_nxp_send(rnd_ab, dynamic_response_info.response + 1, 16, ulc_key, ulc_iv);
+            }
+
+            // Add CRC
+            AddCrc14A(dynamic_response_info.response, 17);
+
+            dynamic_response_info.response_n = 1 + 16 + 2;
 
             prepare_tag_modulation(&dynamic_response_info, DYNAMIC_MODULATION_BUFFER_SIZE);
             p_response = &dynamic_response_info;

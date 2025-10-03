@@ -880,19 +880,20 @@ int CmdHF14ASim(const char *Cmd) {
                   "hf 14a sim -t 10                -> ST25TA IKEA Rothult\n"
                   "hf 14a sim -t 11                -> Javacard (JCOP)\n"
                   "hf 14a sim -t 12                -> 4K Seos card\n"
-                  "hf 14a sim -t 13                -> MIFARE Ultralight C"
+                  "hf 14a sim -t 13                -> MIFARE Ultralight C\n"
+                  "hf 14a sim -t 14                -> MIFARE Ultralight AES"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("t", "type", "<1-12> ", "Simulation type to use"),
+        arg_int1("t", "type", "<1-14> ", "Simulation type to use"),
         arg_str0("u", "uid", "<hex>", "<4|7|10> hex bytes UID"),
         arg_int0("n", "num", "<dec>", "Exit simulation after <numreads> blocks have been read by reader. 0 = infinite"),
         arg_lit0("x",  NULL, "Performs the 'reader attack', nr/ar attack against a reader"),
         arg_lit0(NULL, "sk", "Fill simulator keys from found keys"),
         arg_lit0("v", "verbose", "verbose output"),
-        arg_lit0(NULL, "c1", "UL-C Auth - all zero handshake part 1"),
-        arg_lit0(NULL, "c2", "UL-C Auth - all zero handshake part 2"),
+        arg_lit0(NULL, "z1", "ULC/ULAES Auth - all zero handshake part 1"),
+        arg_lit0(NULL, "z2", "ULC/ULAES Auth - all zero handshake part 2"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -926,12 +927,12 @@ int CmdHF14ASim(const char *Cmd) {
     bool setEmulatorMem = arg_get_lit(ctx, 5);
     bool verbose = arg_get_lit(ctx, 6);
 
-    bool ulc_p1 = arg_get_lit(ctx, 7);
-    bool ulc_p2 = arg_get_lit(ctx, 8);
+    bool ulauth_z1 = arg_get_lit(ctx, 7);
+    bool ulauth_z2 = arg_get_lit(ctx, 8);
 
     CLIParserFree(ctx);
 
-    if (tagtype > 13) {
+    if (tagtype > 14) {
         PrintAndLogEx(ERR, "Undefined tag %d", tagtype);
         return PM3_EINVARG;
     }
@@ -946,15 +947,15 @@ int CmdHF14ASim(const char *Cmd) {
         uint8_t uid[10];
         uint8_t exitAfter;
         uint8_t rats[20];
-        bool ulc_p1;
-        bool ulc_p2;
+        bool ulauth_z1;
+        bool ulauth_z2;
     } PACKED payload;
 
     payload.tagtype = tagtype;
     payload.flags = flags;
     payload.exitAfter = exitAfterNReads;
-    payload.ulc_p1 = ulc_p1;
-    payload.ulc_p2 = ulc_p2;
+    payload.ulauth_z1 = ulauth_z1;
+    payload.ulauth_z2 = ulauth_z2;
     memcpy(payload.uid, uid, uid_len);
 
     clearCommandBuffer();
