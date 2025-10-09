@@ -1341,11 +1341,12 @@
                 "-t, --timeout <ms> Timeout in milliseconds",
                 "-b <dec> Number of bits to send. Useful for send partial byte",
                 "-v, --verbose Verbose output",
+                "-w, --wait <us> Wait in microseconds between select and command",
                 "--topaz Use Topaz protocol to send command",
                 "--crypto1 Use crypto1 session",
                 "<hex> Raw bytes to send"
             ],
-            "usage": "hf 14a raw [-hack3rsv] [-t <ms>] [-b <dec>] [--topaz] [--crypto1] <hex> [<hex>]..."
+            "usage": "hf 14a raw [-hack3rsv] [-t <ms>] [-b <dec>] [-w <us>] [--topaz] [--crypto1] <hex> [<hex>]..."
         },
         "hf 14a reader": {
             "command": "hf 14a reader",
@@ -8771,7 +8772,8 @@
             "notes": [
                 "hw tearoff --delay 1200 -> define delay of 1200us",
                 "hw tearoff --on -> (re)activate a previously defined delay",
-                "hw tearoff --off -> deactivate a previously activated but not yet triggered hook"
+                "hw tearoff --off -> deactivate a previously activated but not yet triggered hook",
+                "hw tearoff --list -> list commands implementing tear-off hooks"
             ],
             "offline": false,
             "options": [
@@ -8779,9 +8781,11 @@
                 "--delay <dec> Delay in us before triggering tear-off, must be between 1 and 43000",
                 "--on Activate tear-off hook",
                 "--off Deactivate tear-off hook",
-                "-s, --silent less verbose output"
+                "--skip <dec> Skip N triggers before activating the hook",
+                "-s, --silent less verbose output",
+                "--list List commands implementing tear-off hooks"
             ],
-            "usage": "hw tearoff [-hs] [--delay <dec>] [--on] [--off]"
+            "usage": "hw tearoff [-hs] [--delay <dec>] [--on] [--off] [--skip <dec>] [--list]"
         },
         "hw tia": {
             "command": "hw tia",
@@ -13666,6 +13670,6 @@
     "metadata": {
         "commands_extracted": 784,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-10-03T23:59:38"
+        "extracted_on": "2025-10-09T20:44:39"
     }
 }
