@@ -9,6 +9,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added `client/resources/pm3_generic_private_key.pem` in order to self-sign a modded device (@iceman1001)
 - Fix `hf mfdes value --op clear` commands for clearing more than 0x80000000 values and getfilesettings mac mode (@merlokk)
 - Added ATR fingerprinting to `hf 14a/14b info` (@doegox)
+- Added `Verkada 40-bit` format (@aaronmaxlevy)
 
 ## [Phrack.4.20728][2025-09-11]
 - Changed `lf t55xx restore` - now skips writing block0 if its all zeros (@iceman1001)
