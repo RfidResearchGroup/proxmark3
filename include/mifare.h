@@ -105,7 +105,8 @@ typedef enum ISO14A_COMMAND {
     ISO14A_USE_ECP = (1 << 11),
     ISO14A_USE_MAGSAFE = (1 << 12),
     ISO14A_USE_CUSTOM_POLLING = (1 << 13),
-    ISO14A_CRYPTO1MODE = (1 << 14)
+    ISO14A_CRYPTO1MODE = (1 << 14),
+    ISO14A_SET_WAIT_US = (1 << 15),
 } iso14a_command_t;
 
 typedef struct {

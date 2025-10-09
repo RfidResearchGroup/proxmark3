@@ -1564,6 +1564,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         arg_int0("t",  "timeout", "<ms>", "Timeout in milliseconds"),
         arg_int0("b",  NULL,      "<dec>", "Number of bits to send. Useful for send partial byte"),
         arg_lit0("v",  "verbose",         "Verbose output"),
+        arg_int0("w",  "wait", "<us>",    "Wait in microseconds between select and command"),
         arg_lit0(NULL, "topaz",           "Use Topaz protocol to send command"),
         arg_lit0(NULL, "crypto1",         "Use crypto1 session"),
         arg_strx1(NULL, NULL,     "<hex>", "Raw bytes to send"),
@@ -1580,12 +1581,13 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     uint32_t timeout = (uint32_t)arg_get_int_def(ctx, 7, 0);
     uint16_t numbits = (uint16_t)arg_get_int_def(ctx, 8, 0);
     bool verbose = arg_get_lit(ctx, 9);
-    bool topazmode = arg_get_lit(ctx, 10);
-    bool crypto1mode = arg_get_lit(ctx, 11);
+    uint32_t wait_us = (uint32_t)arg_get_int_def(ctx, 10, 0);
+    bool topazmode = arg_get_lit(ctx, 11);
+    bool crypto1mode = arg_get_lit(ctx, 12);
 
     int datalen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE_MIX] = {0};
-    CLIGetHexWithReturn(ctx, 12, data, &datalen);
+    CLIGetHexWithReturn(ctx, 13, data, &datalen);
     CLIParserFree(ctx);
 
     bool bTimeout = (timeout) ? true : false;
@@ -1616,7 +1618,13 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
             flags |= ISO14A_NO_SELECT;
     }
 
-    uint32_t argtimeout = 0;
+    // 32b MSB encode wait_us, 32b LSB encode timeout
+    uint64_t argtimeout = 0;
+    if (wait_us) {
+        flags |= ISO14A_SET_WAIT_US;
+        argtimeout = ((uint64_t)wait_us) << 32;
+    }
+
     if (bTimeout) {
 #define MAX_TIMEOUT 40542464 // = (2^32-1) * (8*16) / 13560000Hz * 1000ms/s
         flags |= ISO14A_SET_TIMEOUT;
@@ -1624,7 +1632,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
             timeout = MAX_TIMEOUT;
             PrintAndLogEx(INFO, "Set timeout to 40542 seconds (11.26 hours). The max we can wait for response");
         }
-        argtimeout = 13560000 / 1000 / (8 * 16) * timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
+        argtimeout |= 13560000 / 1000 / (8 * 16) * timeout; // timeout in ETUs (time to transfer 1 bit, approx. 9.4 us)
     }
 
     if (keep_field_on) {

@@ -3561,7 +3561,8 @@ void ReaderIso14443a(PacketCommandNG *c) {
     iso14a_command_t param = c->oldarg[0];
     size_t len = c->oldarg[1] & 0xffff;
     size_t lenbits = c->oldarg[1] >> 16;
-    uint32_t timeout = c->oldarg[2];
+    uint32_t timeout = c->oldarg[2] & 0xffffffff;
+    uint32_t wait_us = c->oldarg[2] >> 32;
     uint8_t *cmd = c->data.asBytes;
     uint32_t arg0;
 
@@ -3614,6 +3615,12 @@ void ReaderIso14443a(PacketCommandNG *c) {
     if ((param & ISO14A_SET_TIMEOUT) == ISO14A_SET_TIMEOUT) {
         save_iso14a_timeout = iso14a_get_timeout();
         iso14a_set_timeout(timeout);
+    }
+
+    if ((param & ISO14A_SET_WAIT_US) == ISO14A_SET_WAIT_US) {
+        if (wait_us > 0) {
+            SpinDelayUsPrecision(wait_us);
+        }
     }
 
     if ((param & ISO14A_APDU) == ISO14A_APDU) {
