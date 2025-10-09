@@ -371,6 +371,7 @@ typedef struct {
 
 typedef struct {
     uint16_t delay_us;
+    int8_t skip;
     bool on;
     bool off;
 } PACKED tearoff_params_t;

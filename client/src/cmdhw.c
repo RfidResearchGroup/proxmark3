@@ -1174,6 +1174,11 @@ int handle_tearoff(tearoff_params_t *params, bool verbose) {
         if (params->delay_us > 0 && verbose)
             PrintAndLogEx(INFO, "Tear-off hook configured with delay of " _GREEN_("%i us"), params->delay_us);
 
+        if (params->skip > 0 && verbose)
+            PrintAndLogEx(INFO, "Tear-off hook will be skipped " _YELLOW_("%i times") " before being activated", params->skip);
+        if (params->skip == 0 && verbose)
+            PrintAndLogEx(INFO, "Tear-off hook skipping " _GREEN_("disabled"));
+
         if (params->on && verbose)
             PrintAndLogEx(INFO, "Tear-off hook " _GREEN_("enabled"));
 
@@ -1201,6 +1206,7 @@ static int CmdTearoff(const char *Cmd) {
         arg_int0(NULL, "delay", "<dec>", "Delay in us before triggering tear-off, must be between 1 and 43000"),
         arg_lit0(NULL, "on", "Activate tear-off hook"),
         arg_lit0(NULL, "off", "Deactivate tear-off hook"),
+        arg_int0(NULL, "skip", "<dec>", "Skip N triggers before activating the hook"),
         arg_lit0("s", "silent", "less verbose output"),
         arg_lit0(NULL, "list", "List commands implementing tear-off hooks"),
         arg_param_end
@@ -1211,8 +1217,9 @@ static int CmdTearoff(const char *Cmd) {
     int delay = arg_get_int_def(ctx, 1, -1);
     params.on = arg_get_lit(ctx, 2);
     params.off = arg_get_lit(ctx, 3);
-    bool silent = arg_get_lit(ctx, 4);
-    bool list = arg_get_lit(ctx, 5);
+    int skip = arg_get_int_def(ctx, 4, -1);
+    bool silent = arg_get_lit(ctx, 5);
+    bool list = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
     if (list) {
@@ -1223,8 +1230,8 @@ static int CmdTearoff(const char *Cmd) {
         PrintAndLogEx(INFO, "  hf 15 raw");
         PrintAndLogEx(INFO, "  hf iclass creditepurse");
         PrintAndLogEx(INFO, "  hf iclass wrbl");
-        PrintAndLogEx(INFO, "  hf mfc wrbl");
-        // PrintAndLogEx(INFO, "  hf mfu wrbl");
+        PrintAndLogEx(INFO, "  hf mf wrbl");
+        PrintAndLogEx(INFO, "  hf mfu wrbl (with --skip 3)");
         PrintAndLogEx(INFO, "  hf topaz wrbl");
         PrintAndLogEx(INFO, "  lf em 4x05 write");
         PrintAndLogEx(INFO, "  lf em 4x50 wrbl");
@@ -1251,6 +1258,16 @@ static int CmdTearoff(const char *Cmd) {
     }
 
     params.delay_us = delay;
+
+    if (skip != -1) {
+        if ((skip < 0) || (skip > 127)) {
+            PrintAndLogEx(WARNING, "You can't set skip out of 0..127 range!");
+            return PM3_EINVARG;
+        }
+    }
+
+    params.skip = skip;
+
     if (params.on && params.off) {
         PrintAndLogEx(WARNING, "You can't set both --on and --off!");
         return PM3_EINVARG;

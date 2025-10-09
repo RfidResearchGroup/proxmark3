@@ -94,12 +94,18 @@ static int button_status = BUTTON_NO_CLICK;
 static bool allow_send_wtx = false;
 uint16_t g_tearoff_delay_us = 0;
 bool g_tearoff_enabled = false;
+uint8_t g_tearoff_skip = 0;
 
 int tearoff_hook(void) {
     if (g_tearoff_enabled) {
         if (g_tearoff_delay_us == 0) {
             Dbprintf(_RED_("No tear-off delay configured!"));
             g_tearoff_enabled = false;
+            return PM3_SUCCESS; // SUCCESS = the hook didn't do anything
+        }
+        if (g_tearoff_skip > 0) {
+            Dbprintf(_GREEN_("Tear-off skipped!"));
+            g_tearoff_skip--;
             return PM3_SUCCESS; // SUCCESS = the hook didn't do anything
         }
         SpinDelayUsPrecision(g_tearoff_delay_us);
@@ -882,12 +888,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_SET_TEAROFF: {
-            struct p {
-                uint16_t delay_us;
-                bool on;
-                bool off;
-            } PACKED;
-            struct p *payload = (struct p *)packet->data.asBytes;
+            tearoff_params_t *payload = (tearoff_params_t *)packet->data.asBytes;
             if (payload->on && payload->off) {
                 reply_ng(CMD_SET_TEAROFF, PM3_EINVARG, NULL, 0);
             }
@@ -902,6 +903,10 @@ static void PacketReceived(PacketCommandNG *packet) {
 
             if (payload->delay_us > 0) {
                 g_tearoff_delay_us = payload->delay_us;
+            }
+
+            if (payload->skip > -1) {
+                g_tearoff_skip = payload->skip;
             }
             reply_ng(CMD_SET_TEAROFF, PM3_SUCCESS, NULL, 0);
             break;

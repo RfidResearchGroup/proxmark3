@@ -87,6 +87,9 @@ uint16_t mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *
 
     AddCrc14A(dcmd, data_size + 1);
     ReaderTransmit(dcmd, sizeof(dcmd), timing);
+    if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
+        return 0;
+    }
     uint16_t len = ReaderReceive(answer, answer_len, answer_parity);
     if (len == 0) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("%02X Cmd failed. Card timeout.", cmd);
@@ -113,6 +116,9 @@ uint16_t mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t
         ReaderTransmitPar(ecmd, sizeof(ecmd), par, timing);
     } else {
         ReaderTransmit(dcmd, sizeof(dcmd), timing);
+    }
+    if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
+        return 0;
     }
 
     uint16_t len = ReaderReceive(answer, answer_len, par);
