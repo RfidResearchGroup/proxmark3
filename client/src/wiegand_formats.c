@@ -1125,6 +1125,46 @@ static bool Unpack_CasiRusco40(wiegand_message_t *packed, wiegand_card_t *card) 
     return true;
 }
 
+static bool Pack_Verkada40(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
+    memset(packed, 0, sizeof(wiegand_message_t));
+
+    if (!validate_card_limit(format_idx, card)) return false;
+
+    packed->Length = 40; // Set number of bits
+
+    set_linear_field(packed, card->FacilityCode, 1, 10);
+
+    set_linear_field(packed, card->CardNumber, 11, 28);
+
+    set_bit_by_position(packed,
+                        evenparity32(get_linear_field(packed, 1, 10))
+                        , 0);
+
+    set_bit_by_position(packed,
+                        evenparity32(get_linear_field(packed, 11, 28))
+                        , 39);
+
+    if (preamble)
+        return add_HID_header(packed);
+    return true;
+}
+
+static bool Unpack_Verkada40(wiegand_message_t *packed, wiegand_card_t *card) {
+    if (packed->Length != 40) return false; // Wrong length? Stop here.
+
+    memset(card, 0, sizeof(wiegand_card_t));
+
+    card->FacilityCode = get_linear_field(packed, 1, 10);
+
+    card->CardNumber = get_linear_field(packed, 11, 28);
+
+    card->ParityValid =
+        (get_bit_by_position(packed, 0) == evenparity32(get_linear_field(packed, 1, 10))) &&
+        (get_bit_by_position(packed, 39) == evenparity32(get_linear_field(packed, 11, 28)));
+
+    return true;
+}
+
 static bool Pack_Optus(int format_idx, wiegand_card_t *card, wiegand_message_t *packed, bool preamble) {
 
     if (!validate_card_limit(format_idx, card)) return false;
@@ -1542,6 +1582,7 @@ static const cardformat_t FormatTable[] = {                                     
     {"PW39",      Pack_pw39,        Unpack_pw39,        "Pyramid 39-bit wiegand format",     39,  {1, 1, 0,  0,     1, 0x0000FFFFu, 0x00000000000FFFFFu, 0x00000000u, 0x00000000u}},  // from cardinfo.barkweb.com.au
     {"P10001",    Pack_P10001,      Unpack_P10001,      "HID P10001 Honeywell 40-bit",       40,  {1, 1, 0,  0,     0, 0x00000FFFu, 0x000000000000FFFFu, 0x00000000u, 0x00000000u}}, // from cardinfo.barkweb.com.au
     {"Casi40",    Pack_CasiRusco40, Unpack_CasiRusco40, "Casi-Rusco 40-bit",                 40,  {1, 0, 0,  0,     0, 0x00000000u, 0x000000FFFFFFFFFFu, 0x00000000u, 0x00000000u}}, // from cardinfo.barkweb.com.au
+    {"Verkada40", Pack_Verkada40,   Unpack_Verkada40,   "Verkada 40-bit",                    40,  {1, 1, 0,  0,     1, 0x000003FFu, 0x000000000FFFFFFFu, 0x00000000u, 0x00000000u}}, // Verkada 40-bit format
     {"BC40",      Pack_bc40,        Unpack_bc40,        "Bundy TimeClock 40-bit",            40,  {1, 1, 0,  1,     1, 0x00000FFFu, 0x00000000000FFFFFu, 0x00000000u, 0x0000007Fu}}, // from
     {"Defcon32",  Pack_Defcon32,    Unpack_Defcon32,    "Custom Defcon RFCTF 42-bit",        42,  {1, 1, 1,  0,     1, 0x0000FFFFu, 0x00000000000FFFFFu, 0x0000000Fu, 0x00000000u}}, // Created by (@micsen) for the CTF
     {"H800002",   Pack_H800002,     Unpack_H800002,     "HID H800002 46-bit",                46,  {1, 1, 0,  0,     1, 0x00003FFFu, 0x000000003FFFFFFFu, 0x00000000u, 0x00000000u}},
