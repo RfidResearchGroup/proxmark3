@@ -1184,6 +1184,7 @@ int handle_tearoff(tearoff_params_t *params, bool verbose) {
     return resp.status;
 }
 
+
 static int CmdTearoff(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw tearoff",
@@ -1192,7 +1193,8 @@ static int CmdTearoff(const char *Cmd) {
                   "Delay (in us) must be between 1 and 43000 (43ms). Precision is about 1/3us.",
                   "hw tearoff --delay 1200 --> define delay of 1200us\n"
                   "hw tearoff --on --> (re)activate a previously defined delay\n"
-                  "hw tearoff --off --> deactivate a previously activated but not yet triggered hook\n");
+                  "hw tearoff --off --> deactivate a previously activated but not yet triggered hook\n"
+                  "hw tearoff --list --> list commands implementing tear-off hooks\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1200,6 +1202,7 @@ static int CmdTearoff(const char *Cmd) {
         arg_lit0(NULL, "on", "Activate tear-off hook"),
         arg_lit0(NULL, "off", "Deactivate tear-off hook"),
         arg_lit0("s", "silent", "less verbose output"),
+        arg_lit0(NULL, "list", "List commands implementing tear-off hooks"),
         arg_param_end
     };
 
@@ -1209,7 +1212,34 @@ static int CmdTearoff(const char *Cmd) {
     params.on = arg_get_lit(ctx, 2);
     params.off = arg_get_lit(ctx, 3);
     bool silent = arg_get_lit(ctx, 4);
+    bool list = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
+
+    if (list) {
+        PrintAndLogEx(INFO, "Commands implementing tear-off hooks:");
+        PrintAndLogEx(INFO, "  hf 14a raw");
+        PrintAndLogEx(INFO, "  hf 14b apdu");
+        PrintAndLogEx(INFO, "  hf 14b raw");
+        PrintAndLogEx(INFO, "  hf 15 raw");
+        PrintAndLogEx(INFO, "  hf iclass creditepurse");
+        PrintAndLogEx(INFO, "  hf iclass wrbl");
+        PrintAndLogEx(INFO, "  hf mfc wrbl");
+        // PrintAndLogEx(INFO, "  hf mfu wrbl");
+        PrintAndLogEx(INFO, "  hf topaz wrbl");
+        PrintAndLogEx(INFO, "  lf em 4x05 write");
+        PrintAndLogEx(INFO, "  lf em 4x50 wrbl");
+        PrintAndLogEx(INFO, "  lf em 4x50 wrpwd");
+        PrintAndLogEx(INFO, "  lf hitag wrbl");
+        PrintAndLogEx(INFO, "  lf hitag hts wrbl");
+        PrintAndLogEx(INFO, "");
+        PrintAndLogEx(INFO, "See also commands implementing tearing-off on their own:");
+        PrintAndLogEx(INFO, "  lf em 4x05_unlock");
+        PrintAndLogEx(INFO, "  lf t55xx dangerraw");
+        PrintAndLogEx(INFO, "  hf iclass tear");
+        PrintAndLogEx(INFO, "  hf mfu otptear");
+        PrintAndLogEx(INFO, "  Standalone mode HF_ST25_TEAROFF");
+        return PM3_SUCCESS;
+    }
 
     if (delay != -1) {
         if ((delay < 1) || (delay > 43000)) {
