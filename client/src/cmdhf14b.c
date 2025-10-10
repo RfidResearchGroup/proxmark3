@@ -2797,12 +2797,12 @@ static int CmdHF14BCalypsoRead(const char *Cmd) {
         }
 
         uint16_t sw = get_sw(response, resplen);
-        if (sw != ISO7816_OK) {
-            PrintAndLogEx(INFO, "%s - command failed (%04x - %s).", cmds[i].desc, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-            continue;
+        if (sw == ISO7816_OK) {
+            PrintAndLogEx(SUCCESS, "%-22s - %s", cmds[i].desc, sprint_hex(response, resplen - 2));
+        } else {
+            PrintAndLogEx(INFO, "%-22s - Sending command failed (%04x - %s).", cmds[i].desc, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         }
-
-        PrintAndLogEx(INFO, "%-22s - %s", cmds[i].desc, sprint_hex(response, resplen - 2));
+        
         activate_field = false;
     }
 
@@ -2968,12 +2968,11 @@ static int CmdHF14BMobibRead(const char *Cmd) {
         }
 
         uint16_t sw = get_sw(response, resplen);
-        if (sw != ISO7816_OK) {
-            PrintAndLogEx(ERR, "Sending command failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-            switch_off_field_14b();
-            return PM3_ESOFT;
+        if (sw == ISO7816_OK) {
+            PrintAndLogEx(SUCCESS, "%-22s - %s", cmds[i].desc, sprint_hex(response, resplen - 2));
+        } else {
+            PrintAndLogEx(INFO, "%-22s - Sending command failed (%04x - %s).", cmds[i].desc, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         }
-        PrintAndLogEx(INFO, "%-22s - %s", cmds[i].desc, sprint_hex(response, resplen - 2));
         activate_field = false;
     }
 
