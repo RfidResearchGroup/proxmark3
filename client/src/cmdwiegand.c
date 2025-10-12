@@ -199,7 +199,7 @@ int CmdWiegandDecode(const char *Cmd) {
             return PM3_EINVARG;
         }
 
-        if(no_preamble){
+        if (no_preamble) {
             // pass hex input length as is and brute force all possible lengths
             blen = -hlen;
         }
