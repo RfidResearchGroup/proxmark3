@@ -2026,7 +2026,7 @@ static int mfu_write_block(const uint8_t *data, uint8_t datalen, uint8_t keytype
     // 1 - 3des key (16 bytes)
     // 2 - pwd  (4 bytes)
     // 3 - AES key (16 bytes)
-    if ((keytype == 1)||(keytype == 3)) {
+    if ((keytype == 1) || (keytype == 3)) {
         memcpy(cmd + datalen, auth_key_ptr, 16);
         cmdlen += 16;
     } else if (keytype == 2) {

@@ -373,7 +373,7 @@ static int hfgal_create_creds_app(DesfireContext_t *ctx, uint8_t *site_key, uint
     // UID is required for key diversification
     if (ctx->uidlen == 0) {
         PM3_RET_ERR(PM3_EINVARG, "UID is required for key diversification. "
-                                 "Please fetch it before calling `hfgal_create_creds_app`");
+                    "Please fetch it before calling `hfgal_create_creds_app`");
     }
 
     // Create application
@@ -862,11 +862,11 @@ static int hfgal_read_card(uint32_t aid, uint8_t *site_key, bool verbose, bool q
         PM3_RET_IF_ERR_MAYBE_MSG(res, !quiet, "Failed reading card application credentials");
 
         PrintAndLogEx(SUCCESS, "Gallagher (AID %06X) - region: " _GREEN_("%c") " ( " _GREEN_("%u") " )"
-                               ", facility: " _GREEN_("%u")
-                               ", card number: " _GREEN_("%u")
-                               ", issue level: " _GREEN_("%u"),
+                      ", facility: " _GREEN_("%u")
+                      ", card number: " _GREEN_("%u")
+                      ", issue level: " _GREEN_("%u"),
                       current_aid,
-        'A' + creds.region_code,
+                      'A' + creds.region_code,
                       creds.region_code,
                       creds.facility_code,
                       creds.card_number,
@@ -1299,10 +1299,10 @@ static int CmdGallagherDecode(const char *cmd) {
     gallagher_decode_creds(data_buf, &creds);
 
     PrintAndLogEx(SUCCESS, "Gallagher - region: " _GREEN_("%c") " ( " _GREEN_("%u") " )"
-                           ", facility: " _GREEN_("%u")
-                           ", card number: " _GREEN_("%u")
-                           ", issue level: " _GREEN_("%u"),
-    'A' + creds.region_code,
+                  ", facility: " _GREEN_("%u")
+                  ", card number: " _GREEN_("%u")
+                  ", issue level: " _GREEN_("%u"),
+                  'A' + creds.region_code,
                   creds.region_code,
                   creds.facility_code,
                   creds.card_number,

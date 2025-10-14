@@ -2802,7 +2802,7 @@ static int CmdHF14BCalypsoRead(const char *Cmd) {
         } else {
             PrintAndLogEx(INFO, "%-22s - Sending command failed (%04x - %s).", cmds[i].desc, sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         }
-        
+
         activate_field = false;
     }
 

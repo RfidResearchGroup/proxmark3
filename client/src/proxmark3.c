@@ -840,7 +840,7 @@ static int dumpmem_pm3(char *serial_port_name, const char *filename, uint32_t ad
             PrintAndLogEx(INFO, "Device is running the bootloader.");
         } else {
             PrintAndLogEx(ERR, "Device is running the bootloader, but the bootloader"
-                               " doesn't understand the READ MEM command.");
+                          " doesn't understand the READ MEM command.");
             goto finish2;
         }
     }

@@ -2756,9 +2756,9 @@ static int _wrap_new_pm3(lua_State *L) {
     }
 
     SWIG_Lua_pusherrstring(L, "Wrong arguments for overloaded function 'new_pm3'\n"
-                              "  Possible C/C++ prototypes are:\n"
-                              "    pm3::pm3()\n"
-                              "    pm3::pm3(char *)\n");
+                           "  Possible C/C++ prototypes are:\n"
+                           "    pm3::pm3()\n"
+                           "    pm3::pm3(char *)\n");
     lua_error(L);
     return 0;
 }

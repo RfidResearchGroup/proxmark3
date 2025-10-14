@@ -63,8 +63,8 @@ typedef struct {
     uint64_t current_key; // Use 64 bit and truncate when needed.
     uint8_t mode;
     uint8_t charset[
-        BF_CHARSET_DIGITS_SIZE
-        + BF_CHARSET_UPPERCASE_SIZE
+     BF_CHARSET_DIGITS_SIZE
+     + BF_CHARSET_UPPERCASE_SIZE
     ];
     uint8_t charset_length;
 
