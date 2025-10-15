@@ -22,6 +22,7 @@ TESTSTATICNESTED=false
 TESTNONCE2KEY=false
 TESTMFNONCEBRUTE=false
 TESTMFDAESBRUTE=false
+TESTMFULCDESBRUTE=false
 TESTHITAG2CRACK=false
 TESTCRYPTORF=false
 TESTFPGACOMPRESS=false
@@ -37,7 +38,7 @@ while (( "$#" )); do
   case "$1" in
     -h|--help)
       echo """
-Usage: $0 [--long] [--opencl] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_nonce_brute|staticnested|mfd_aes_brute|cryptorf|fpga_compress|bootrom|armsrc|client|recovery|common]
+Usage: $0 [--long] [--opencl] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|mf_nonce_brute|staticnested|mfd_aes_brute|mfulc_des_brute|cryptorf|fpga_compress|bootrom|armsrc|client|recovery|common]
     --long:          Enable slow tests
     --opencl:        Enable tests requiring OpenCL (preferably a Nvidia GPU)
     --clientbin ...: Specify path to proxmark3 binary to test
@@ -90,6 +91,11 @@ Usage: $0 [--long] [--opencl] [--clientbin /path/to/proxmark3] [mfkey|nonce2key|
     mfd_aes_brute)
       TESTALL=false
       TESTMFDAESBRUTE=true
+      shift
+      ;;
+    mfulc_des_brute)
+      TESTALL=false
+      TESTMFULCDESBRUTE=true
       shift
       ;;
     fpga_compress)
@@ -350,7 +356,16 @@ while true; do
       if ! CheckExecute      "mfd_aes_brute test 1/2"         "$MFDASEBRUTEBIN 1629394800 bb6aea729414a5b1eff7b16328ce37fd 82f5f498dbc29f7570102397a2e5ef2b6dc14a864f665b3c54d11765af81e95c" "key.................... .*261C07A23F2BC8262F69F10A5BDF3764"; then break; fi
       if ! CheckExecute slow "mfd_aes_brute test 2/2"         "$MFDASEBRUTEBIN 1546300800 3fda933e2953ca5e6cfbbf95d1b51ddf 97fe4b5de24188458d102959b888938c988e96fb98469ce7426f50f108eaa583" "key.................... .*E757178E13516A4F3171BC6EA85E165A"; then break; fi
     fi
-
+    if $TESTALL || $TESTMFULCDESBRUTE; then
+      echo -e "\n${C_BLUE}Testing mfulc_des_brute:${C_NC} ${MFULCDESBRUTEBIN:=./tools/mfulc_des_brute/mfulc_des_brute}"
+      if ! CheckFileExist "mfulc_des_brute exists"        "$MFULCDESBRUTEBIN"; then break; fi
+      # USCUID-UL
+      if ! CheckExecute "mfulc_des_brute test 1/3"        "$MFULCDESBRUTEBIN -c F35C740106ECED87 E9E0DC67B35919FC 00000000000000000000000000000000 2 4" "00000000404452420000000000000000"; then break; fi
+      # ULCG
+      if ! CheckExecute "mfulc_des_brute test 2/3"        "$MFULCDESBRUTEBIN -c 49C1603621CCAA72 8122262EF5FA8DEB 48444C4A4044524200000000544E5846 3 4" "48444C4A40445242204E4042544E5846"; then break; fi
+      # Reader RndB nonce key recovery
+      if ! CheckExecute "mfulc_des_brute test 2/3"        "$MFULCDESBRUTEBIN -r EC9C5CF763244367 2283BFE8DEBE1780922327794D0706EF 48444C4A4044524200000000544E5846 3 4" "48444C4A40445242204E4042544E5846"; then break; fi
+    fi
     if $TESTALL || $TESTCRYPTORF; then
       echo -e "\n${C_BLUE}Testing CryptoRF sma:${C_NC} ${CRYPTRFBRUTEBIN:=./tools/cryptorf/sma} ${CRYPTRF_MULTI_BRUTEBIN:=./tools/cryptorf/sma_multi}"
       if ! CheckFileExist "sma exists"               "$CRYPTRFBRUTEBIN"; then break; fi
