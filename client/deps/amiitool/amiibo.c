@@ -72,8 +72,8 @@ bool nfc3d_amiibo_unpack(const nfc3d_amiibo_keys_t *amiiboKeys, const uint8_t *t
 
     uint8_t internal[NFC3D_AMIIBO_SIZE] = {0};
 
-    nfc3d_keygen_derivedkeys_t dataKeys;
-    nfc3d_keygen_derivedkeys_t tagKeys;
+    nfc3d_keygen_derivedkeys_t dataKeys = {0};
+    nfc3d_keygen_derivedkeys_t tagKeys = {0};
 
     // Convert format
     nfc3d_amiibo_tag_to_internal(tag, internal);
@@ -109,8 +109,8 @@ bool nfc3d_amiibo_unpack(const nfc3d_amiibo_keys_t *amiiboKeys, const uint8_t *t
 
 void nfc3d_amiibo_pack(const nfc3d_amiibo_keys_t *amiiboKeys, const uint8_t *plain, uint8_t *tag) {
     uint8_t cipher[NFC3D_AMIIBO_SIZE] = {0};
-    nfc3d_keygen_derivedkeys_t tagKeys;
-    nfc3d_keygen_derivedkeys_t dataKeys;
+    nfc3d_keygen_derivedkeys_t tagKeys = {0};
+    nfc3d_keygen_derivedkeys_t dataKeys = {0};
 
     // Generate keys
     nfc3d_amiibo_keygen(&amiiboKeys->tag, plain, &tagKeys);
