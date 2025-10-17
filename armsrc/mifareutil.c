@@ -544,10 +544,7 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes, bool schann) {
         return 1;
     }
 
-    // Session key calculation
-    if (g_dbglevel >= DBG_DEBUG) {
-        DbpString("");
-    }
+    // Session key calculation setion
 
     // clear global session variable
     init_secure_session();
@@ -602,14 +599,6 @@ static int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData) {
         ulaes_cmac(sobj->sessionkey, sizeof(sobj->sessionkey), cmd_mac, 4, mac);
         ulaes_cmac8(mac, cmd_mac + 4);
 
-        if (g_dbglevel >= DBG_DEBUG) {
-            print_result("cntr || cmd...", cmd_mac, 4);
-            print_result("session key...", sobj->sessionkey, 16);
-            print_result("session mac...", mac, 16);
-            print_result("calc cmac.....", cmd_mac, sizeof(cmd_mac));
-            print_result("session cmd data", cmd_mac + 4, 8);
-        }
-
         increase_session_counter();
 
         len = mifare_sendcmd_schann(cmd_mac + 2, sizeof(cmd_mac) - 2, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
@@ -643,7 +632,8 @@ static int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData) {
         return PM3_ECRC;
     }
 
-    // we are skipping verifying the cmac,  since we don't care.
+    // we are skipping verifying the cmac since we don't care.
+
     // increase counter for the read response
     increase_session_counter();
 
@@ -836,14 +826,6 @@ int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData) {
     if (sobj->use_schann) {
 
         uint8_t mac[16] = {0};
-        /*
-            2b counter
-            1b cmd
-            1b blockno
-            4b data
-            8b cmac
-            2b crc  --> not included
-        */
         uint8_t cmd_mac[2 + 1 + 1 + 4 + 8] = {
             sobj->counter & 0xFF,
             (sobj->counter >> 8) & 0xFF,
@@ -854,14 +836,6 @@ int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData) {
 
         ulaes_cmac(sobj->sessionkey, sizeof(sobj->sessionkey), cmd_mac, 8, mac);
         ulaes_cmac8(mac, cmd_mac + 8);
-
-        if (g_dbglevel >= DBG_DEBUG) {
-            print_result("cntr || cmd...", cmd_mac, 8);
-            print_result("session key...", sobj->sessionkey, 16);
-            print_result("session mac...", mac, 16);
-            print_result("calc cmac.....", cmd_mac, sizeof(cmd_mac));
-            print_result("session cmd data", cmd_mac + 8, 8);
-        }
 
         increase_session_counter();
 
