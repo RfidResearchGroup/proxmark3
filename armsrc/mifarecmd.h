@@ -25,13 +25,14 @@ int16_t mifare_cmd_writeblocks(MifareWakeupType wakeup, uint8_t key_auth_cmd, ui
 void MifareReadSector(uint8_t sector_no, uint8_t key_type, uint8_t *key);
 void MifareValue(uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t *datain);
 
-void MifareUReadBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
+void MifareUReadBlock(mful_readblock_t *packet);
 void MifareUC_Auth(uint8_t arg0, uint8_t *keybytes);
-void MifareUL_AES_Auth(bool turn_off_field, uint8_t keyno, uint8_t *keybytes);
 
-void MifareUReadCard(uint8_t arg0, uint16_t arg1, uint8_t arg2, uint8_t *datain);
-void MifareUWriteBlockCompat(uint8_t arg0, uint8_t arg1, uint8_t *datain);
-void MifareUWriteBlock(uint8_t arg0, uint8_t arg1, uint8_t *datain);
+void MifareUL_AES_Auth(mfulaes_keys_t *packet);
+void MifareUReadCard(mful_readblock_t *packet);
+
+void MifareUWriteBlockCompat(mful_writeblock_t *packet);
+void MifareUWriteBlock(mful_writeblock_t *packet);
 
 void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, bool calibrate, uint8_t *key);
 void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, uint8_t *key);

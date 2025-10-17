@@ -188,7 +188,7 @@ void RunMod(void) {
 
                 for (int i = 0; i < block_count; i++) {
                     uint8_t dataout[16] = {0x00};
-                    if (mifare_ultra_readblock(i, dataout)) {
+                    if (mifare_ultra_readblock(i, dataout) != PM3_SUCCESS) {
                         // If there's an error reading, go back to search state
                         read_successful = false;
                         break;

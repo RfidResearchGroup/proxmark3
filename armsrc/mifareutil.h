@@ -23,6 +23,7 @@
 #include "common.h"
 #include "crapto1/crapto1.h"
 
+
 // mifare authentication
 #define CRYPT_NONE    0
 #define CRYPT_ALL     1
@@ -82,6 +83,8 @@
 #endif
 
 //functions
+uint16_t mifare_sendcmd_schann(uint8_t *data, uint8_t data_size, uint8_t *answer, uint16_t answer_len, uint8_t *answer_parity, uint32_t *timing);
+
 uint16_t mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *answer, uint16_t answer_len, uint8_t *answer_parity, uint32_t *timing);
 uint16_t mifare_sendcmd_short(struct Crypto1State *pcs, uint8_t crypted, uint8_t cmd, uint8_t data,
                               uint8_t *answer, uint16_t answer_len, uint8_t *answer_parity, uint32_t *timing);
@@ -102,7 +105,7 @@ int mifare_classic_value(struct Crypto1State *pcs, uint8_t blockNo, uint8_t *blo
 // Ultralight/NTAG...
 int mifare_ul_ev1_auth(uint8_t *keybytes, uint8_t *pack);
 int mifare_ultra_auth(uint8_t *keybytes);
-int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes);
+int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes, bool schann);
 int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData);
 int mifare_ultra_writeblock_compat(uint8_t blockNo, uint8_t *blockData);
 int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData);

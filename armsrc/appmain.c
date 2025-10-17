@@ -67,6 +67,7 @@
 #include "sam_picopass.h"
 #include "sam_seos.h"
 #include "sam_mfc.h"
+#include "cmac_calc.h"
 
 #ifdef WITH_LCD
 #include "LCD_disabled.h"
@@ -1832,7 +1833,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFAREU_READBL: {
-            MifareUReadBlock(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+            MifareUReadBlock((mful_readblock_t *)packet->data.asBytes);
             break;
         }
         case CMD_HF_MIFAREUC_AUTH: {
@@ -1840,17 +1841,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFAREULAES_AUTH: {
-            struct p {
-                bool turn_off_field;
-                uint8_t keyno;
-                uint8_t key[16];
-            } PACKED;
-            struct p *payload = (struct p *) packet->data.asBytes;
-            MifareUL_AES_Auth(payload->turn_off_field, payload->keyno, payload->key);
+            MifareUL_AES_Auth((mfulaes_keys_t *)packet->data.asBytes);
             break;
         }
         case CMD_HF_MIFAREU_READCARD: {
-            MifareUReadCard(packet->oldarg[0], packet->oldarg[1], packet->oldarg[2], packet->data.asBytes);
+            MifareUReadCard((mful_readblock_t *)packet->data.asBytes);
             break;
         }
         case CMD_HF_MIFAREU_SETKEY: {
@@ -1888,11 +1883,11 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFAREU_WRITEBL: {
-            MifareUWriteBlock(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+            MifareUWriteBlock((mful_writeblock_t *)packet->data.asBytes);
             break;
         }
         case CMD_HF_MIFAREU_WRITEBL_COMPAT: {
-            MifareUWriteBlockCompat(packet->oldarg[0], packet->oldarg[1], packet->data.asBytes);
+            MifareUWriteBlockCompat((mful_writeblock_t *)packet->data.asBytes);
             break;
         }
         case CMD_HF_MIFARE_ACQ_ENCRYPTED_NONCES: {

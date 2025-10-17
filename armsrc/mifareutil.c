@@ -18,6 +18,8 @@
 //-----------------------------------------------------------------------------
 #include "mifareutil.h"
 
+#include <stdint.h>
+#include <string.h>
 #include "appmain.h"  // tearoff hook
 #include "string.h"
 #include "BigBuf.h"
@@ -29,6 +31,11 @@
 #include "crc16.h"
 #include "protocols.h"
 #include "desfire_crypto.h"
+#include "mbedtls/aes.h"
+#include "cmac_calc.h"
+
+#define AES_BLOCK_SIZE 16
+
 
 // crypto1 helpers
 void mf_crypto1_decryptEx(struct Crypto1State *pcs, const uint8_t *data_in, int len, uint8_t *data_out) {
@@ -92,7 +99,30 @@ uint16_t mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *
     }
     uint16_t len = ReaderReceive(answer, answer_len, answer_parity);
     if (len == 0) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("%02X Cmd failed. Card timeout.", cmd);
+        if (g_dbglevel >= DBG_ERROR)
+            Dbprintf("%02X Cmd failed. Card timeout.", cmd);
+        len = ReaderReceive(answer, answer_len, answer_parity);
+    }
+    return len;
+}
+
+// send X byte basic commands secure channel (UL AES)
+uint16_t mifare_sendcmd_schann(uint8_t *data, uint8_t data_size, uint8_t *answer, uint16_t answer_len, uint8_t *answer_parity, uint32_t *timing) {
+
+    uint8_t dcmd[data_size + 2];
+    if (data_size > 0) {
+        memcpy(dcmd, data, data_size);
+    }
+
+    AddCrc14A(dcmd, data_size);
+    ReaderTransmit(dcmd, sizeof(dcmd), timing);
+
+    if (tearoff_hook() == PM3_ETEAROFF) { // tearoff occurred
+        return 0;
+    }
+
+    uint16_t len = ReaderReceive(answer, answer_len, answer_parity);
+    if (len == 0) {
         len = ReaderReceive(answer, answer_len, answer_parity);
     }
     return len;
@@ -435,20 +465,20 @@ int mifare_ultra_auth(uint8_t *keybytes) {
     return 1;
 }
 
-int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
+int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes, bool schann) {
 
     /// aes-128
     uint8_t random_a[16] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-    uint8_t random_b[16] = { 0 };
-    uint8_t rnd_ab[32] = { 0 };
-    uint8_t enc_rnd_ab[32] = { 0 };
-    uint8_t IV[16] = { 0 };
-    uint8_t key[16] = { 0 };
+    uint8_t random_b[16] = { 0x00 };
+    uint8_t rnd_ab[32] = { 0x00 };
+    uint8_t enc_rnd_ab[32] = { 0x00 };
+    uint8_t IV[16] = { 0x00 };
+    uint8_t key[16] = { 0x00 };
     memcpy(key, keybytes, sizeof(key));
 
     // 1 cmd + 16 bytes + 2 crc
-    uint8_t resp[19] = {0x00};
-    uint8_t respPar[5] = {0};
+    uint8_t resp[19] = { 0x00 };
+    uint8_t respPar[5] = { 0x00 };
 
     // setup AES
     mbedtls_aes_context actx;
@@ -458,7 +488,9 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
     // Send REQUEST AUTHENTICATION / receive tag nonce
     uint16_t len = mifare_sendcmd_short(NULL, CRYPT_NONE, MIFARE_ULAES_AUTH_1, keyno, resp, sizeof(resp), respPar, NULL);
     if (len != 19) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x - expected 19 got " _RED_("%u"), resp[0], len);
+        if (g_dbglevel >= DBG_ERROR) {
+            Dbprintf("Cmd Error: %02x - expected 19 got " _RED_("%u"), resp[0], len);
+        }
         return 0;
     }
 
@@ -488,71 +520,148 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes) {
     // send & receive
     len = mifare_sendcmd(MIFARE_ULAES_AUTH_2, enc_rnd_ab, sizeof(enc_rnd_ab), resp, sizeof(resp), respPar, NULL);
     if (len != 19) {
-        if (g_dbglevel >= DBG_INFO) Dbprintf("Cmd Error: %02x - expected 19 got " _RED_("%u"), resp[0], len);
+        if (g_dbglevel >= DBG_INFO) {
+            Dbprintf("Cmd Error: %02x - expected 19 got " _RED_("%u"), resp[0], len);
+        }
         return 0;
     }
 
     memset(IV, 0, 16);
     mbedtls_aes_setkey_dec(&actx, key, 128);
-    mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_DECRYPT, sizeof(random_b), IV, resp + 1, random_b);
+    uint8_t rec_rnd_a[16] = {0};
+    mbedtls_aes_crypt_cbc(&actx, MBEDTLS_AES_DECRYPT, sizeof(rec_rnd_a), IV, resp + 1, rec_rnd_a);
     mbedtls_aes_free(&actx);
 
-    if (memcmp(random_b, random_a, 16) != 0) {
-        if (g_dbglevel >= DBG_INFO) Dbprintf("failed authentication");
+    if (memcmp(rec_rnd_a, random_a, 16) != 0) {
+        if (g_dbglevel >= DBG_INFO) {
+            Dbprintf("failed authentication");
+        }
         return 0;
     }
 
-    if (g_dbglevel >= DBG_EXTENDED) {
-
-        Dbprintf("e_AB:");
-        Dbhexdump(32, enc_rnd_ab, false);
-
-        Dbprintf("A:");
-        Dbhexdump(16, random_a, false);
-
-        Dbprintf("B:");
-        Dbhexdump(16, random_b, false);
+    // If no secure messaging,  return early.
+    if (schann == false) {
+        return 1;
     }
+
+    // Session key calculation
+    if (g_dbglevel >= DBG_DEBUG) {
+        DbpString("");
+    }
+
+    // clear global session variable
+    init_secure_session();
+    set_session_channel(schann);
+    ulaes_key_t *sobj = get_secure_session_obj();
+
+    // SV = 5Ah||A5h||00h||01h||00h||80h||RndA[15..14]||RndA[13..8] XOR RndB[15..10])||RndB[9..0]||RndA[7..0]
+    uint8_t *ra = random_a;
+    uint8_t *rb = random_b;
+
+    // do we need to unroll it?
+    ror(rb, 16);
+
+    uint8_t session_vec[] = {
+        0x5a, 0xa5,      // to be used for MAC
+        0x00, 0x01,      // counter
+        0x00, 0x80,      // 128 bit length 128
+        ra[0], ra[1],
+        (ra[2] ^ rb[0]),
+        (ra[3] ^ rb[1]),
+        (ra[4] ^ rb[2]),
+        (ra[5] ^ rb[3]),
+        (ra[6] ^ rb[4]),
+        (ra[7] ^ rb[5]),
+        rb[6], rb[7], rb[8], rb[9], rb[10], rb[11], rb[12], rb[13], rb[14], rb[15],
+        ra[8], ra[9], ra[10], ra[11], ra[12], ra[13], ra[14], ra[15]
+    };
+    
+    // session key is the CMAC of  session_vec  using the KEY
+    ulaes_cmac(key, sizeof(key), session_vec, sizeof(session_vec), sobj->sessionkey);
     return 1;
 }
 
 static int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData) {
-    uint16_t len = 0;
-    uint8_t bt[2] = {0x00, 0x00};
+
     uint8_t receivedAnswer[MAX_FRAME_SIZE] = {0x00};
     uint8_t receivedAnswerPar[MAX_PARITY_SIZE] = {0x00};
+    uint16_t len = 0;
+    uint8_t offset = 0;
 
-    len = mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
+    ulaes_key_t *sobj = get_secure_session_obj();
+
+    if (sobj->use_schann) {
+        offset = 8;
+        uint8_t mac[16] = {0};
+        // counter 2b, cmd, arg,  8byte cmac, 2b crc
+        uint8_t cmd_mac[2 + 2 + 8] = {
+            sobj->counter & 0xFF,
+            (sobj->counter >> 8) & 0xFF,
+            ISO14443A_CMD_READBLOCK, blockNo
+        };
+        ulaes_cmac(sobj->sessionkey, sizeof(sobj->sessionkey), cmd_mac, 4, mac);
+        ulaes_cmac8(mac, cmd_mac + 4);
+
+        if (g_dbglevel >= DBG_DEBUG) {
+            print_result("cntr || cmd...", cmd_mac, 4);
+            print_result("session key...", sobj->sessionkey, 16);
+            print_result("session mac...", mac, 16);
+            print_result("calc cmac.....", cmd_mac, sizeof(cmd_mac));
+            print_result("session cmd data", cmd_mac + 4, 8);
+        }
+
+        increase_session_counter();
+
+        len = mifare_sendcmd_schann(cmd_mac + 2, sizeof(cmd_mac) - 2, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
+    } else {
+        len = mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
+    }
+
     if (len == 1) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
-        return 1;
-    }
-    if (len != 18) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd Error: card timeout. len: %x", len);
-        return 2;
+        if (g_dbglevel >= DBG_ERROR) {
+            Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+        }
+        return PM3_ECARDEXCHANGE;
     }
 
-    memcpy(bt, receivedAnswer + 16, 2);
-    AddCrc14A(receivedAnswer, 16);
-    if (bt[0] != receivedAnswer[16] || bt[1] != receivedAnswer[17]) {
-        if (g_dbglevel >= DBG_ERROR) Dbprintf("Cmd CRC response error.");
-        return 3;
+    // Ev1 / Ul-C == 18 bytes response
+    // UL-Aes in secure messaging == 26
+    if (len != 18 + offset) {
+        if (g_dbglevel >= DBG_ERROR) {
+            Dbprintf("Cmd Error: card timeout. len: %x", len);
+        }
+        return PM3_ETIMEOUT;
     }
+
+    uint8_t bt[2] = {0x00, 0x00};
+    memcpy(bt, receivedAnswer + 16 + offset, 2);
+    AddCrc14A(receivedAnswer, 16 + offset);
+    if (bt[0] != receivedAnswer[16 + offset] || bt[1] != receivedAnswer[17 + offset]) {
+        if (g_dbglevel >= DBG_ERROR) {
+            Dbprintf("Cmd CRC response error.");
+        }
+        return PM3_ECRC;
+    }
+
+    // we are skipping verifying the cmac,  since we don't care.
+    // increase counter for the read response
+    increase_session_counter();
 
     memcpy(blockData, receivedAnswer, 16);
-    return 0;
+    return PM3_SUCCESS;
 }
+
 int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData) {
 #define MFU_MAX_RETRIES 5
-    uint8_t res;
+    int res;
 
     for (uint8_t retries = 0; retries < MFU_MAX_RETRIES; ++retries) {
         res = mifare_ultra_readblockEx(blockNo, blockData);
 
-        // break if OK,  or NACK.
+        // break if OK, or NACK.
         switch (res) {
-            case 0:
-            case 1:
+            case PM3_SUCCESS:
+            case PM3_ECARDEXCHANGE:
                 return res;
             default:
                 continue;
@@ -574,8 +683,10 @@ int mifare_classic_writeblock_ex(struct Crypto1State *pcs, uint8_t blockNo, uint
     // MIFARE_MAGIC_GDM_WRITEBLOCK or MIFARE_MAGIC_GDM_WRITE_CFG for certain magic tags
     uint16_t len = mifare_sendcmd_short(pcs, 1, cmd, blockNo, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
 
-    if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
-        if (g_dbglevel >= DBG_INFO) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+    if ((len != 1) || (receivedAnswer[0] != 0x0A)) {
+        //  0x0a - ACK
+        if (g_dbglevel >= DBG_INFO)
+            Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
         return PM3_EFAILED;
     }
 
@@ -642,8 +753,10 @@ int mifare_classic_value(struct Crypto1State *pcs, uint8_t blockNo, uint8_t *blo
     // Send increment or decrement command
     len = mifare_sendcmd_short(pcs, 1, command, blockNo, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
 
-    if ((len != 1) || (receivedAnswer[0] != 0x0A)) {   //  0x0a - ACK
-        if (g_dbglevel >= DBG_INFO) Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+    if ((len != 1) || (receivedAnswer[0] != 0x0A)) {
+        //  0x0a - ACK
+        if (g_dbglevel >= DBG_INFO)
+            Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
         return PM3_EFAILED;
     }
 
@@ -661,7 +774,8 @@ int mifare_classic_value(struct Crypto1State *pcs, uint8_t blockNo, uint8_t *blo
     // Receive the response NO Response means OK ... i.e. NOT NACK
     len = ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar);
 
-    if (len != 0) { // Something not right, len == 0 (no response is ok as its waiting for transfer
+    if (len != 0) {
+        // Something not right, len == 0 (no response is ok as its waiting for transfer
         uint8_t res = 0;
         res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 0)) << 0;
         res |= (crypto1_bit(pcs, 0, 0) ^ BIT(receivedAnswer[0], 1)) << 1;
@@ -679,21 +793,19 @@ int mifare_classic_value(struct Crypto1State *pcs, uint8_t blockNo, uint8_t *blo
 
 int mifare_ultra_writeblock_compat(uint8_t blockNo, uint8_t *blockData) {
     // variables
-    uint16_t len = 0;
-
-    uint8_t d_block[18];
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
     uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
+    uint16_t len = mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_WRITEBLOCK, blockNo, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
 
-    len = mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_WRITEBLOCK, blockNo, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
-
-    if (receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
+    if (receivedAnswer[0] != CARD_ACK) {
+        //  0x0a - ACK
         if (g_dbglevel >= DBG_INFO) {
             Dbprintf("Cmd Send Error: %02x %d", receivedAnswer[0], len);
         }
         return PM3_EFAILED;
     }
 
+    uint8_t d_block[18];
     memcpy(d_block, blockData, 16);
     AddCrc14A(d_block, 16);
 
@@ -702,32 +814,86 @@ int mifare_ultra_writeblock_compat(uint8_t blockNo, uint8_t *blockData) {
     // Receive the response
     len = ReaderReceive(receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar);
 
-    if (receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
+    if (receivedAnswer[0] != CARD_ACK) {
+        //  0x0a - ACK
         if (g_dbglevel >= DBG_INFO) {
             Dbprintf("Cmd Send Data Error: %02x %d", receivedAnswer[0], len);
         }
         return PM3_EFAILED;
     }
+
     return PM3_SUCCESS;
 }
 
 int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData) {
-    uint16_t len = 0;
-    uint8_t block[5] = {blockNo, 0x00, 0x00, 0x00, 0x00 };
+
     uint8_t receivedAnswer[MAX_MIFARE_FRAME_SIZE] = {0x00};
     uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
+    uint16_t len = 0;
 
-    // command MIFARE_CLASSIC_WRITEBLOCK
-    memcpy(block + 1, blockData, 4);
+    ulaes_key_t *sobj = get_secure_session_obj();
 
-    len = mifare_sendcmd(MIFARE_ULC_WRITE, block, sizeof(block), receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
+    if (sobj->use_schann) {
 
-    if (receivedAnswer[0] != 0x0A) {   //  0x0a - ACK
-        if (g_dbglevel >= DBG_INFO) {
-            Dbprintf("Cmd Send Error: %02x %d", receivedAnswer[0], len);
+        uint8_t mac[16] = {0};
+        /*
+            2b counter
+            1b cmd
+            1b blockno
+            4b data
+            8b cmac
+            2b crc  --> not included
+        */
+        uint8_t cmd_mac[2 + 1 + 1 + 4 + 8] = {
+            sobj->counter & 0xFF,
+            (sobj->counter >> 8) & 0xFF,
+            MIFARE_ULC_WRITE,
+            blockNo
+        };
+        memcpy(cmd_mac + 4, blockData, 4);
+
+        ulaes_cmac(sobj->sessionkey, sizeof(sobj->sessionkey), cmd_mac, 8, mac);
+        ulaes_cmac8(mac, cmd_mac + 8);
+
+        if (g_dbglevel >= DBG_DEBUG) {
+            print_result("cntr || cmd...", cmd_mac, 8);
+            print_result("session key...", sobj->sessionkey, 16);
+            print_result("session mac...", mac, 16);
+            print_result("calc cmac.....", cmd_mac, sizeof(cmd_mac));
+            print_result("session cmd data", cmd_mac + 8, 8);
         }
-        return PM3_EFAILED;
+
+        increase_session_counter();
+
+        len = mifare_sendcmd_schann(cmd_mac + 2, sizeof(cmd_mac) - 2, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
+
+        // we are skipping verifying the cmac,  since we don't care.
+        // increase counter for the write response
+        increase_session_counter();
+
+        if (len != 10) {
+            if (g_dbglevel >= DBG_INFO) {
+                Dbprintf("Cmd Send Error: " _RED_("%d"), len);
+            }
+            return PM3_EFAILED;
+        }
+
+    } else {
+
+        // command MIFARE_CLASSIC_WRITEBLOCK
+        uint8_t block[5] = {blockNo, 0x00, 0x00, 0x00, 0x00 };
+        memcpy(block + 1, blockData, 4);
+        len = mifare_sendcmd(MIFARE_ULC_WRITE, block, sizeof(block), receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
+
+        if (receivedAnswer[0] != CARD_ACK) {
+
+            if (g_dbglevel >= DBG_INFO) {
+                Dbprintf("Cmd Send Error: %02x %d", receivedAnswer[0], len);
+            }
+            return PM3_EFAILED;
+        }
     }
+
     return PM3_SUCCESS;
 }
 
@@ -744,7 +910,6 @@ int mifare_classic_halt(struct Crypto1State *pcs) {
 int mifare_ultra_halt(void) {
     return mifare_classic_halt(NULL);
 }
-
 
 // Mifare Memory Structure: up to 32 Sectors with 4 blocks each (1k and 2k cards),
 // plus evtl. 8 sectors with 16 blocks each (4k cards)
