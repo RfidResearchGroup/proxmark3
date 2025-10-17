@@ -44,7 +44,7 @@
 #include "mifare/mifaredefault.h"
 #include "preferences.h"         // get/set device debug level
 #include "pm3_cmd.h"
-
+#include "mbedtls/cmac.h"
 
 static bool g_apdu_in_framing_enable = true;
 bool Get_apdu_in_framing(void) {
@@ -1567,6 +1567,7 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         arg_int0("w",  "wait", "<us>",    "Wait in microseconds between select and command"),
         arg_lit0(NULL, "topaz",           "Use Topaz protocol to send command"),
         arg_lit0(NULL, "crypto1",         "Use crypto1 session"),
+        arg_lit0(NULL, "schann", "use secure channel. Must have key"),
         arg_strx1(NULL, NULL,     "<hex>", "Raw bytes to send"),
         arg_param_end
     };
@@ -1584,10 +1585,11 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
     uint32_t wait_us = (uint32_t)arg_get_int_def(ctx, 10, 0);
     bool topazmode = arg_get_lit(ctx, 11);
     bool crypto1mode = arg_get_lit(ctx, 12);
+    bool use_schann = arg_get_lit(ctx, 13);
 
     int datalen = 0;
     uint8_t data[PM3_CMD_DATA_SIZE_MIX] = {0};
-    CLIGetHexWithReturn(ctx, 13, data, &datalen);
+    CLIGetHexWithReturn(ctx, 14, data, &datalen);
     CLIParserFree(ctx);
 
     bool bTimeout = (timeout) ? true : false;
@@ -1597,6 +1599,18 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         if (crc) {
             PrintAndLogEx(FAILED, "Buffer is full, we can't add CRC to your data");
             return PM3_EINVARG;
+        }
+    }
+
+    uint32_t flags = 0;
+
+    if (use_schann) {
+        flags |= ISO14A_APPEND_CMAC;
+
+        // Can't precalculate crc client side since we are adding cmac on device side.
+        if (crc) {
+            flags |= ISO14A_APPEND_CRC;
+            crc = false;
         }
     }
 
@@ -1611,7 +1625,6 @@ static int CmdHF14ACmdRaw(const char *Cmd) {
         data[datalen++] = second;
     }
 
-    uint16_t flags = 0;
     if (active || active_select) {
         flags |= ISO14A_CONNECT;
         if (active)

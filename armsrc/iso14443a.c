@@ -37,6 +37,7 @@
 #include "generator.h"
 #include "desfire_crypto.h"  // UL-C authentication helpers
 #include "mifare.h"  // for iso14a_polling_frame_t structure
+#include "cmac_calc.h"
 
 #define MAX_ISO14A_TIMEOUT 524288
 // this timeout is in MS
@@ -3658,9 +3659,21 @@ void ReaderIso14443a(PacketCommandNG *c) {
                 goto CMD_DONE;
             }
         }
+
+        if ((param & ISO14A_APPEND_CMAC) == ISO14A_APPEND_CMAC) {
+
+            if (len) {
+                // calc and append CMAC
+                append_cmac(cmd, len);
+
+                len += 8;
+                // we skip lenbits since short 7bit commands is not in Ul-AES command set
+            }
+        }
+
         if ((param & ISO14A_APPEND_CRC) == ISO14A_APPEND_CRC) {
             // Don't append crc on empty bytearray...
-            if (len > 0) {
+            if (len) {
 
                 if ((param & ISO14A_TOPAZMODE) == ISO14A_TOPAZMODE) {
                     AddCrc14B(cmd, len);
@@ -3750,6 +3763,10 @@ void ReaderIso14443a(PacketCommandNG *c) {
                 if ((param & ISO14A_CRYPTO1MODE) == ISO14A_CRYPTO1MODE) {
                     mf_crypto1_decrypt(&crypto1_state, buf, arg0);
                 }
+
+                if ((param & ISO14A_APPEND_CMAC) == ISO14A_APPEND_CMAC) {
+                    increase_session_counter();
+                }
                 FpgaDisableTracing();
                 reply_mix(CMD_ACK, arg0, 0, 0, buf, sizeof(buf));
             }
@@ -3769,6 +3786,7 @@ CMD_DONE:
     }
 
 OUT:
+
     crypto1_auth_state = AUTH_FIRST;
     hf_field_off();
     set_tracing(false);
