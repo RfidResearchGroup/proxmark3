@@ -3681,7 +3681,7 @@ static int CmdCryptography(const char *Cmd) {
             if ((type & 0x02) == 0x02) {
                 // If we will calculate a MAC
                 aes_cmac8(iv, key, dati, dato, datilen);
-                PrintAndLogEx(INFO, "AES CMAC... " _YELLOW_("%s"), sprint_hex_inrow(dato, datilen));
+                PrintAndLogEx(INFO, "AES CMAC... " _YELLOW_("%s"), sprint_hex_inrow(dato, 8));
             } else {
                 if (keylen == 32) {
                     aes256_encode(iv, key, dati, dato, datilen);

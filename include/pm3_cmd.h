@@ -356,6 +356,36 @@ typedef struct {
 } PACKED mfulc_keys_t;
 
 typedef struct {
+    bool turn_off_field;
+    bool use_schann;
+    uint8_t keyno;
+    uint8_t key[16];
+} PACKED mfulaes_keys_t;
+
+typedef struct {
+    bool use_schann;
+    uint8_t block_no;
+    uint8_t num_of_blocks;
+    uint8_t keytype;
+    uint8_t keylen;
+    uint8_t key[16];
+} PACKED mful_readblock_t;
+
+typedef struct {
+    uint8_t bytelen;
+    uint16_t startidx;
+} PACKED mful_readblock_resp_t;
+
+typedef struct {
+    bool use_schann;
+    uint8_t block_no;
+    uint8_t keytype;
+    uint8_t keylen;
+    uint8_t key[16];
+    uint8_t data[16];
+} PACKED mful_writeblock_t;
+
+typedef struct {
     uint8_t status;
     uint8_t CSN[8];
     uint8_t CONFIG[8];
