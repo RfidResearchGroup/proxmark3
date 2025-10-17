@@ -1344,9 +1344,10 @@
                 "-w, --wait <us> Wait in microseconds between select and command",
                 "--topaz Use Topaz protocol to send command",
                 "--crypto1 Use crypto1 session",
+                "--schann use secure channel. Must have key",
                 "<hex> Raw bytes to send"
             ],
-            "usage": "hf 14a raw [-hack3rsv] [-t <ms>] [-b <dec>] [-w <us>] [--topaz] [--crypto1] <hex> [<hex>]..."
+            "usage": "hf 14a raw [-hack3rsv] [-t <ms>] [-b <dec>] [-w <us>] [--topaz] [--crypto1] [--schann] <hex> [<hex>]..."
         },
         "hf 14a reader": {
             "command": "hf 14a reader",
@@ -7155,7 +7156,8 @@
             "description": "Tests AES key on Mifare Ultralight AES tags. If no key is specified, null key will be tried. Key index 0... DataProtKey (default) Key index 1... UIDRetrKey Key index 2... OriginalityKey",
             "notes": [
                 "hf mfu aesauth",
-                "hf mfu aesauth --key <16 hex bytes> --idx <0..2>"
+                "hf mfu aesauth --key <16 hex bytes> --idx <0..2>",
+                "hf mfu aesauth --key <16 hex bytes> --idx <0..2> --schann"
             ],
             "offline": false,
             "options": [
@@ -7163,9 +7165,10 @@
                 "--key <hex> AES key (16 hex bytes)",
                 "-i, --idx <0..2> Key index (def: 0)",
                 "-l Swap entered key's endianness",
-                "-k Keep field on (only if a key is provided)"
+                "-k Keep field on (only if a key is provided)",
+                "--schann use secure channel. Must have key"
             ],
-            "usage": "hf mfu aesauth [-hlk] [--key <hex>] [-i <0..2>]"
+            "usage": "hf mfu aesauth [-hlk] [--key <hex>] [-i <0..2>] [--schann]"
         },
         "hf mfu amiibo": {
             "command": "hf mfu amiibo",
@@ -7220,9 +7223,10 @@
                 "-p, --page <dec> Manually set start page number to start from",
                 "-q, --qty <dec> Manually set number of pages to dump",
                 "--ns no save to file",
-                "-z, --dense dense dump output style"
+                "-z, --dense dense dump output style",
+                "--schann use secure channel. Must have key"
             ],
-            "usage": "hf mfu dump [-hlz] [-f <fn>] [-k <hex>] [-p <dec>] [-q <dec>] [--ns]"
+            "usage": "hf mfu dump [-hlz] [-f <fn>] [-k <hex>] [-p <dec>] [-q <dec>] [--ns] [--schann]"
         },
         "hf mfu eload": {
             "command": "hf mfu eload",
@@ -7321,9 +7325,10 @@
                 "-h, --help This help",
                 "-k, --key <hex> Authentication key (UL-C 16 bytes, EV1/NTAG 4 bytes)",
                 "-l Swap entered key's endianness",
-                "--force override `hw dbg` settings"
+                "--force override `hw dbg` settings",
+                "--schann use secure channel. Must have key"
             ],
-            "usage": "hf mfu info [-hl] [-k <hex>] [--force]"
+            "usage": "hf mfu info [-hl] [-k <hex>] [--force] [--schann]"
         },
         "hf mfu keygen": {
             "command": "hf mfu keygen",
@@ -7354,9 +7359,10 @@
                 "-h, --help This help",
                 "-l Swap entered key's endianness",
                 "-f, --file <fn> Save raw NDEF to file",
-                "-v, --verbose Verbose output"
+                "-v, --verbose Verbose output",
+                "--schann use secure channel. Must have key"
             ],
-            "usage": "hf mfu ndefread [-hlv] [-k Replace default key for NDEF] [-f <fn>]"
+            "usage": "hf mfu ndefread [-hlv] [-k Replace default key for NDEF] [-f <fn>] [--schann]"
         },
         "hf mfu otptear": {
             "command": "hf mfu otptear",
@@ -7404,7 +7410,8 @@
             "notes": [
                 "hf mfu rdbl -b 0",
                 "hf mfu rdbl -b 0 -k AABBCCDD",
-                "hf mfu rdbl -b 0 --key 00112233445566778899AABBCCDDEEFF"
+                "hf mfu rdbl -b 0 --key 00112233445566778899AABBCCDDEEFF",
+                "hf mfu rdbl -b 0 --key 00112233445566778899AABBCCDDEEFF --schann"
             ],
             "offline": false,
             "options": [
@@ -7412,9 +7419,10 @@
                 "-k, --key <hex> Authentication key (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)",
                 "-l Swap entered key's endianness",
                 "-b, --block <dec> Block number to read",
-                "--force Force operation even if address is out of range"
+                "--force Force operation even if address is out of range",
+                "--schann use secure channel. Must have key"
             ],
-            "usage": "hf mfu rdbl [-hl] [-k <hex>] -b <dec> [--force]"
+            "usage": "hf mfu rdbl [-hl] [-k <hex>] -b <dec> [--force] [--schann]"
         },
         "hf mfu restore": {
             "command": "hf mfu restore",
@@ -7528,15 +7536,17 @@
             "description": "Wipe card to zeros. It will ignore block0,1,2,3 you will need to call it with password in order to wipe the config and sett default pwd/pack Abort by pressing a key New password.... FFFFFFFF New 3-DES key... 49454D4B41455242214E4143554F5946 New AES keys... 00000000000000000000000000000000",
             "notes": [
                 "hf mfu wipe",
-                "hf mfu wipe -k 49454D4B41455242214E4143554F5946"
+                "hf mfu wipe -k 49454D4B41455242214E4143554F5946",
+                "hf mfu wipe -k 49454D4B41455242214E4143554F5946 --schann"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-k, --key <hex> Key for authentication (UL-C 16 bytes, EV1/NTAG 4 bytes)",
-                "-l Swap entered key's endianness"
+                "-l Swap entered key's endianness",
+                "--schann use secure channel. Must have key"
             ],
-            "usage": "hf mfu wipe [-hl] [-k <hex>]"
+            "usage": "hf mfu wipe [-hl] [-k <hex>] [--schann]"
         },
         "hf mfu wrbl": {
             "command": "hf mfu wrbl",
@@ -7544,7 +7554,8 @@
             "notes": [
                 "hf mfu wrbl -b 0 -d 01234567",
                 "hf mfu wrbl -b 0 -d 01234567 -k AABBCCDD",
-                "hf mfu wrbl -b 0 -d 01234567 -k 00112233445566778899AABBCCDDEEFF"
+                "hf mfu wrbl -b 0 -d 01234567 -k 00112233445566778899AABBCCDDEEFF",
+                "hf mfu wrbl -b 0 -d 01234567 -k 00112233445566778899AABBCCDDEEFF --schann"
             ],
             "offline": false,
             "options": [
@@ -7553,9 +7564,10 @@
                 "-l Swap entered key's endianness",
                 "-b, --block <dec> Block number to write",
                 "-d, --data <hex> Block data (4 or 16 hex bytes, 16 hex bytes will do a compatibility write)",
-                "--force Force operation even if address is out of range"
+                "--force Force operation even if address is out of range",
+                "--schann use secure channel. Must have key"
             ],
-            "usage": "hf mfu wrbl [-hl] [-k <hex>] -b <dec> -d <hex> [--force]"
+            "usage": "hf mfu wrbl [-hl] [-k <hex>] -b <dec> -d <hex> [--force] [--schann]"
         },
         "hf ntag424 auth": {
             "command": "hf ntag424 auth",
@@ -12745,9 +12757,10 @@
                 "-h, --help This help",
                 "-l Swap entered key's endianness",
                 "-f, --file <fn> Save raw NDEF to file",
-                "-v, --verbose Verbose output"
+                "-v, --verbose Verbose output",
+                "--schann use secure channel. Must have key"
             ],
-            "usage": "hf mfu ndefread [-hlv] [-k Replace default key for NDEF] [-f <fn>]"
+            "usage": "hf mfu ndefread [-hlv] [-k Replace default key for NDEF] [-f <fn>] [--schann]"
         },
         "nfc type1 read": {
             "command": "nfc type1 read",
@@ -13670,6 +13683,6 @@
     "metadata": {
         "commands_extracted": 784,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-10-14T07:50:15"
+        "extracted_on": "2025-10-17T11:36:43"
     }
 }

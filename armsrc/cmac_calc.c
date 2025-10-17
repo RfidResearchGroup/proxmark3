@@ -29,8 +29,8 @@ static ulaes_key_t g_secure_session = {
     .use_schann = false,
 };
 
-// init clears all 
-void init_secure_session(void) {    
+// init clears all
+void init_secure_session(void) {
     g_secure_session.counter = 0;
     g_secure_session.use_schann = false;
     memset(g_secure_session.cmac_sk1, 0, sizeof(g_secure_session.cmac_sk1));
@@ -75,7 +75,7 @@ static void generate_subkeys(mbedtls_aes_context *ctx, uint8_t *K1, uint8_t *K2)
 
     // Step 2: K1 = L << 1 (with conditional XOR with 0x87)
     left_shift_128(L, K1);
-    if (L[0] & 0x80) {        
+    if (L[0] & 0x80) {
         // If MSB is 1
         K1[15] ^= 0x87;
     }

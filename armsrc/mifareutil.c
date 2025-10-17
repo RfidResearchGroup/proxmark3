@@ -575,7 +575,7 @@ int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes, bool schann) {
         rb[6], rb[7], rb[8], rb[9], rb[10], rb[11], rb[12], rb[13], rb[14], rb[15],
         ra[8], ra[9], ra[10], ra[11], ra[12], ra[13], ra[14], ra[15]
     };
-    
+
     // session key is the CMAC of  session_vec  using the KEY
     ulaes_cmac(key, sizeof(key), session_vec, sizeof(session_vec), sobj->sessionkey);
     return 1;
