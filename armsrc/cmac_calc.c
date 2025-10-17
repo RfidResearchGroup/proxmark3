@@ -29,7 +29,7 @@ static ulaes_key_t g_secure_session = {
     .use_schann = false,
 };
 
-// init clears all
+// initialise global secure session object
 void init_secure_session(void) {
     g_secure_session.counter = 0;
     g_secure_session.use_schann = false;
