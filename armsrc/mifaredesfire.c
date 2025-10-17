@@ -369,13 +369,13 @@ void MifareDES_Auth1(uint8_t *datain) {
         if (g_dbglevel >= DBG_ERROR) {
             DbpString("Authentication failed. Card timeout.");
         }
-        OnErrorNG(CMD_HF_DESFIRE_AUTH1, 3);
+        OnErrorNG(CMD_HF_DESFIRE_AUTH1, PM3_ETIMEOUT);
         return;
     }
 
     if (resp[2] == (uint8_t)MFDES_ADDITIONAL_FRAME) {
         DbpString("Authentication failed. Invalid key number.");
-        OnErrorNG(CMD_HF_DESFIRE_AUTH1, 3);
+        OnErrorNG(CMD_HF_DESFIRE_AUTH1, PM3_EINVARG);
         return;
     }
 
@@ -396,7 +396,7 @@ void MifareDES_Auth1(uint8_t *datain) {
             DbpString("Authentication failed. Length of answer doesn't match algo.");
             print_result("Res-Buffer: ", resp, len);
         }
-        OnErrorNG(CMD_HF_DESFIRE_AUTH1, 3);
+        OnErrorNG(CMD_HF_DESFIRE_AUTH1, PM3_EWRONGANSWER);
         return;
     }
 
@@ -414,7 +414,7 @@ void MifareDES_Auth1(uint8_t *datain) {
             if (g_dbglevel >= DBG_EXTENDED) {
                 DbpString("mbedtls_aes_setkey_dec failed");
             }
-            OnErrorNG(CMD_HF_DESFIRE_AUTH1, 7);
+            OnErrorNG(CMD_HF_DESFIRE_AUTH1, PM3_ECRYPTO);
             return;
         }
         mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, 16, IV, encRndB, RndB);
@@ -472,7 +472,7 @@ void MifareDES_Auth1(uint8_t *datain) {
                 if (g_dbglevel >= DBG_EXTENDED) {
                     DbpString("mbedtls_aes_setkey_enc failed");
                 }
-                OnErrorNG(CMD_HF_DESFIRE_AUTH1, 7);
+                OnErrorNG(CMD_HF_DESFIRE_AUTH1, PM3_ECRYPTO);
                 return;
             }
             mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, 32, IV, tmp, both);
@@ -499,11 +499,11 @@ void MifareDES_Auth1(uint8_t *datain) {
         len = DesfireAPDU(cmd, 1 + bothlen, resp);
     }
 
-    if (!len) {
+    if (len == 0) {
         if (g_dbglevel >= DBG_ERROR) {
             DbpString("Authentication failed. Card timeout.");
         }
-        OnErrorNG(CMD_HF_DESFIRE_AUTH1, 3);
+        OnErrorNG(CMD_HF_DESFIRE_AUTH1, PM3_ETIMEOUT);
         return;
     }
 
@@ -511,7 +511,7 @@ void MifareDES_Auth1(uint8_t *datain) {
 
         if ((resp[len - 4] != 0x91) || (resp[len - 3] != 0x00)) {
             DbpString("Authentication failed.");
-            OnErrorNG(CMD_HF_DESFIRE_AUTH1, 6);
+            OnErrorNG(CMD_HF_DESFIRE_AUTH1, PM3_ESOFT);
             return;
         }
 
@@ -519,7 +519,7 @@ void MifareDES_Auth1(uint8_t *datain) {
 
         if (resp[1] != 0x00) {
             DbpString("Authentication failed.");
-            OnErrorNG(CMD_HF_DESFIRE_AUTH1, 6);
+            OnErrorNG(CMD_HF_DESFIRE_AUTH1, PM3_ESOFT);
             return;
         }
 
@@ -555,7 +555,7 @@ void MifareDES_Auth1(uint8_t *datain) {
             if (g_dbglevel >= DBG_EXTENDED) {
                 DbpString("mbedtls_aes_setkey_dec failed");
             }
-            OnErrorNG(CMD_HF_DESFIRE_AUTH1, 7);
+            OnErrorNG(CMD_HF_DESFIRE_AUTH1, PM3_ECRYPTO);
             return;
         }
         mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, 16, IV, encRndA, encRndA);
@@ -571,7 +571,7 @@ void MifareDES_Auth1(uint8_t *datain) {
     for (int x = 0; x < rndlen; x++) {
         if (RndA[x] != encRndA[x]) {
             DbpString("Authentication failed. Cannot verify Session Key.");
-            OnErrorNG(CMD_HF_DESFIRE_AUTH1, 4);
+            OnErrorNG(CMD_HF_DESFIRE_AUTH1, PM3_ECRYPTO);
             return;
         }
     }
