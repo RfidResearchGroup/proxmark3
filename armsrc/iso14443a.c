@@ -1893,7 +1893,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
                 EmSendCmd(emdata, len + 2);
             }
             p_response = NULL;
-        } else if (receivedCmd[0] == MIFARE_ULC_WRITE && len == 8 && (tagType == 2 || tagType == 7 || tagType == 13 || tagType == 13)) {        // Received a WRITE
+        } else if (receivedCmd[0] == MIFARE_ULC_WRITE && len == 8 && (tagType == 2 || tagType == 7 || tagType == 13 || tagType == 14)) {        // Received a WRITE
 
             p_response = NULL;
 
