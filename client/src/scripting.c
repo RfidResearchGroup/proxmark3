@@ -516,7 +516,7 @@ static int l_iso14443b_crc(lua_State *L) {
 }
 
 /*
- Simple AES 128 cbc hook up to OpenSSL.
+ Simple AES 128 cbc hook up to mbedtls.
  params:  key, input
 */
 static int l_aes128decrypt_cbc(lua_State *L) {
