@@ -104,8 +104,8 @@ int mifare_classic_value(struct Crypto1State *pcs, uint8_t blockNo, uint8_t *blo
 
 // Ultralight/NTAG...
 int mifare_ul_ev1_auth(uint8_t *keybytes, uint8_t *pack);
-int mifare_ultra_auth(uint8_t *keybytes);
-int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes, bool schann);
+int mifare_ultra_3des_auth(uint8_t *keybytes, bool check_answer);
+int mifare_ultra_aes_auth(uint8_t keyno, uint8_t *keybytes, bool schann, bool check_answer);
 int mifare_ultra_readblock(uint8_t blockNo, uint8_t *blockData);
 int mifare_ultra_writeblock_compat(uint8_t blockNo, uint8_t *blockData);
 int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData);

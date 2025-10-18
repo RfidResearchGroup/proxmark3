@@ -161,6 +161,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
 
 bool GetIso14443aCommandFromReader(uint8_t *received, uint16_t received_maxlen, uint8_t *par, int *len);
 void iso14443a_antifuzz(uint32_t flags);
+int GetATQA(uint8_t *resp, uint16_t resp_len, uint8_t *resp_par, const iso14a_polling_parameters_t *polling_parameters);
 void ReaderIso14443a(PacketCommandNG *c);
 void ReaderTransmit(const uint8_t *frame, uint16_t len, uint32_t *timing);
 void ReaderTransmitBitsPar(const uint8_t *frame, uint16_t bits, uint8_t *par, uint32_t *timing);

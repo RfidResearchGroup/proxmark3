@@ -32,6 +32,7 @@
 #include "cmdmain.h"
 #include "amiibo.h"         // amiiboo fcts
 #include "base64.h"
+#include "util_posix.h"     // msclock
 #include "fileutils.h"      // saveFile
 #include "cmdtrace.h"       // trace list
 #include "preferences.h"    // setDeviceDebugLevel
@@ -59,6 +60,9 @@
 #define MAX_UL_AES          0x37
 #define MAX_ST25TN512       0x3F
 #define MAX_ST25TN01K       0x3F
+
+#define MIFAREU3P_KEY_SIZE 16
+#define MIFAREULC_KEY_INDEX 3
 
 static int CmdHelp(const char *Cmd);
 
@@ -517,36 +521,36 @@ Default AES key is 00-00h. Both the data and UID one.
 Data key is 00, UID is 01. Authenticity is 02h
 Auth is 1A[Key ID][CRC] - AF[RndB] - AF[RndA][RndB'] - 00[RndA']
 */
-static int ulaes_requestAuthentication(const uint8_t *key, uint8_t keyno, bool switch_off_field, bool schann) {
-
-    mfulaes_keys_t payload = {
+static int ul3pass_authentication(const uint8_t *key, uint8_t keyno, bool switch_off_field, int retries, uint32_t *auths, uint32_t *ms, bool schann, bool check_answer) {
+    // keyno < 3: ULAES
+    // keyno = 3: ULC
+    mful_3passauth_t payload = {
         .turn_off_field = switch_off_field,
+        .check_answer = check_answer,
         .use_schann = schann,
-        .keyno = keyno
+        .keyno = keyno,
+        .retries = retries,
     };
     memcpy(payload.key, key, sizeof(payload.key));
-
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFAREULAES_AUTH, (uint8_t *)&payload, sizeof(payload));
+    SendCommandNG(CMD_HF_MIFAREU3P_AUTH, (uint8_t *)&payload, sizeof(payload));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_MIFAREULAES_AUTH, &resp, 1500) == false) {
+    if (WaitForResponseTimeout(CMD_HF_MIFAREU3P_AUTH, &resp, 1500 + (retries * 15)) == false) {
         return PM3_ETIMEOUT;
+    }
+    struct rp {
+        uint32_t auths;
+        uint32_t ticks;
+    } PACKED;
+    struct rp *rpayload = (struct rp *) resp.data.asBytes;
+
+    if (auths != NULL) {
+        *auths += rpayload->auths;
+    }
+    if (ms != NULL) {
+        *ms += rpayload->ticks;
     }
     return resp.status;
-}
-
-static int ulc_authentication(const uint8_t *key, bool switch_off_field) {
-
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREUC_AUTH, switch_off_field, 0, 0, key, 16);
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
-        return PM3_ETIMEOUT;
-    }
-    if (resp.oldarg[0] == 1) {
-        return PM3_SUCCESS;
-    }
-    return PM3_ESOFT;
 }
 
 static int trace_mfuc_try_key(uint8_t *key, int state, uint8_t (*authdata)[16]) {
@@ -629,7 +633,7 @@ static int try_default_3des_keys(bool override, uint8_t **correct_key) {
 
     for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {
         uint8_t *key = default_3des_keys[i];
-        if (ulc_authentication(key, true) == PM3_SUCCESS) {
+        if (ul3pass_authentication(key, MIFAREULC_KEY_INDEX, true, 0, NULL, NULL, false, true) == PM3_SUCCESS) {
             *correct_key = key;
             res = PM3_SUCCESS;
             break;
@@ -666,7 +670,7 @@ static int try_default_aes_keys(bool override, bool use_schann) {
 
         for (uint8_t keyno = 0; keyno < 3; keyno++) {
 
-            if (ulaes_requestAuthentication(key, keyno, true, use_schann) == PM3_SUCCESS) {
+            if (ul3pass_authentication(key, keyno, true, 0, NULL, NULL, use_schann, true) == PM3_SUCCESS) {
 
                 char keystr[20] = {0};
                 switch (keyno) {
@@ -706,13 +710,13 @@ static int ul_auth_select(iso14a_card_select_t *card, uint64_t tagtype, bool has
 
     if (hasAuthKey && (tagtype & MFU_TT_UL_C)) {
         //will select card automatically and close connection on error
-        if (ulc_authentication(authkey, false) != PM3_SUCCESS) {
+        if (ul3pass_authentication(authkey, MIFAREULC_KEY_INDEX, false, 0, NULL, NULL, false, true) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Authentication Failed UL-C");
             return PM3_ESOFT;
         }
     } else if (hasAuthKey && (tagtype & MFU_TT_UL_AES)) {
         //will select card automatically and close connection on error
-        if (ulaes_requestAuthentication(authkey, 0, false, use_schann) != PM3_SUCCESS) {
+        if (ul3pass_authentication(authkey, 0, false, 0, NULL, NULL, use_schann, true) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Authentication Failed UL-AES");
             return PM3_ESOFT;
         }
@@ -4240,6 +4244,128 @@ static int CmdHF14AMfUSim(const char *Cmd) {
     return CmdHF14ASim(Cmd);
 }
 
+
+//-------------------------------------------------------------------------------
+// Ultralight C & AES helpers
+//-------------------------------------------------------------------------------
+
+static int mfu_3pass_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, const char *filename, int fnlen, uint8_t keysize) {
+    // Handle Keys
+    *pkeycnt = 0;
+    *pkeyBlock = NULL;
+    uint8_t *p;
+    // Handle user supplied dictionary file
+    if (fnlen > 0) {
+        uint32_t loaded_numKeys = 0;
+        uint8_t *keyBlock_tmp = NULL;
+        int res = loadFileDICTIONARY_safe(filename, (void **) &keyBlock_tmp, keysize, &loaded_numKeys);
+        if (res != PM3_SUCCESS || loaded_numKeys == 0 || keyBlock_tmp == NULL) {
+            PrintAndLogEx(FAILED, "An error occurred while loading the dictionary!");
+            free(keyBlock_tmp);
+            free(*pkeyBlock);
+            return PM3_EFILE;
+        } else {
+            p = realloc(*pkeyBlock, (*pkeycnt + loaded_numKeys) * keysize);
+            if (p == NULL) {
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
+                free(keyBlock_tmp);
+                free(*pkeyBlock);
+                return PM3_EMALLOC;
+            }
+            *pkeyBlock = p;
+            memcpy(*pkeyBlock + *pkeycnt * keysize, keyBlock_tmp, loaded_numKeys * keysize);
+            *pkeycnt += loaded_numKeys;
+            free(keyBlock_tmp);
+        }
+    }
+    return PM3_SUCCESS;
+}
+
+#define MIFAREU3P_CHKKEY_HEADER (3 + MIFAREU3P_KEY_SIZE)
+
+static int mfu_3pass_check_keys(uint8_t key_index, uint8_t firstChunk, uint8_t lastChunk,
+                                uint32_t nkeys, int segment, uint8_t *ref_key, bool xor_ref_key, uint8_t *keyBlock,
+                                bool verbose, bool quiet, uint32_t *auths, uint32_t *ms, bool check_answer) {
+    // send keychunk
+    clearCommandBuffer();
+
+    mful_3passchk_t payload = {
+        .key_index = key_index,
+        .firstchunk = firstChunk,
+        .lastchunk = lastChunk,
+        .xor_ref_key = xor_ref_key,
+        .segment = segment != -1 ? segment : 4,
+        .check_answer = check_answer,
+        .nkeys = nkeys
+    };
+    struct rp {
+        uint32_t auths;
+        uint32_t ticks;
+        uint8_t key[16];
+    } PACKED;
+    uint8_t keysize = segment != -1 ? MIFAREU3P_KEY_SIZE / 4 : MIFAREU3P_KEY_SIZE;
+    memcpy(payload.ref_key, ref_key, MIFAREU3P_KEY_SIZE);
+    if (nkeys * keysize > sizeof(payload.data)) {
+        PrintAndLogEx(ERR, "Key chunk size exceeds payload size");
+        return PM3_ESOFT;
+    }
+    memcpy(payload.data, keyBlock, nkeys * keysize);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_MIFAREU3P_CHKKEY, (uint8_t *)&payload, sizeof(payload));
+
+    PacketResponseNG resp;
+
+    uint32_t timeout = 0;
+    while (WaitForResponseTimeout(CMD_HF_MIFAREU3P_CHKKEY, &resp, 2000) == false) {
+
+        while (kbd_enter_pressed()) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(INFO, "aborted via keyboard!");
+            return PM3_EOPABORTED;
+        }
+
+        if (quiet == false) {
+            PrintAndLogEx((timeout) ? NORMAL : INFO, "." NOLF);
+            fflush(stdout);
+        }
+
+        timeout++;
+
+        // max timeout for one chunk of 85keys, 60*3sec = 180seconds
+        // s70 with 40*2 keys to check, 80*85 = 6800 auth.
+        // takes about 97s, still some margin before abort
+        // timeout = 180 => ~360s @ Mifare Classic 1k @ ~2300 keys in dict
+        // ~2300 keys @ Mifare Classic 1k => ~620s
+        if (timeout > 60 * 12) {
+            PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
+            return PM3_ETIMEOUT;
+        }
+    }
+
+    if (timeout && (quiet == false)) {
+        PrintAndLogEx(NORMAL, "");
+    }
+    // time to convert the returned data.
+    struct rp *rpayload = (struct rp *) resp.data.asBytes;
+
+    if (auths != NULL) {
+        *auths += rpayload->auths;
+    }
+    if (ms != NULL) {
+        *ms += rpayload->ticks;
+    }
+
+    if (resp.status == PM3_SUCCESS) {
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(SUCCESS, "Target key " _GREEN_("%1u") " -- found valid key [ " _GREEN_("%s") " ]",
+                      key_index,
+                      sprint_hex_inrow(rpayload->key, MIFAREU3P_KEY_SIZE)
+                     );
+    }
+    return resp.status;
+}
+
 //-------------------------------------------------------------------------------
 // Ultralight C Methods
 //-------------------------------------------------------------------------------
@@ -4260,6 +4386,8 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
         arg_str0(NULL, "key", "<hex>", "Authentication key (16 bytes in hex)"),
         arg_lit0("l", NULL, "Swap entered key's endianness"),
         arg_lit0("k", NULL, "Keep field on (only if a key is provided)"),
+        arg_int0("r", "retries", "<n>", "Number of retries with provided key (def: 0)"),
+        arg_lit0("n", "nocheck", "Skip checking tag answer correctness (only if a key is provided)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4270,10 +4398,24 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, authenticationkey, &ak_len);
     bool swap_endian = arg_get_lit(ctx, 2);
     bool keep_field_on = arg_get_lit(ctx, 3);
+    int retries = arg_get_int_def(ctx, 4, 0);
+    bool check_answer = !arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
     if (ak_len != 16 && ak_len != 0) {
         PrintAndLogEx(WARNING, "ERROR: Key is incorrect length");
+        return PM3_EINVARG;
+    }
+    if (retries < 0 || retries > 10000) {
+        PrintAndLogEx(ERR, "Invalid retries (must be 0..10000)");
+        return PM3_EINVARG;
+    }
+    if ((retries > 0) && (ak_len == 0)) {
+        PrintAndLogEx(WARNING, "ERROR: Key is required for retries");
+        return PM3_EINVARG;
+    }
+    if ((! check_answer) && (ak_len == 0)) {
+        PrintAndLogEx(WARNING, "ERROR: Key is required for nocheck");
         return PM3_EINVARG;
     }
 
@@ -4283,6 +4425,8 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
     }
 
     int isok;
+    uint32_t auths = 0;
+    uint32_t ms = 0;
 
     // If no hex key is specified, try default keys
     if (ak_len == 0) {
@@ -4291,7 +4435,8 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
         isok = try_default_3des_keys(false, &auth_key_ptr);
     } else {
         // try user-supplied
-        isok = ulc_authentication(auth_key_ptr, !keep_field_on);
+
+        isok = ul3pass_authentication(auth_key_ptr, MIFAREULC_KEY_INDEX, !keep_field_on, retries, &auths, &ms, false, check_answer);
     }
 
     if (isok == PM3_SUCCESS) {
@@ -4299,9 +4444,127 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
     } else {
         PrintAndLogEx(WARNING, "Authentication ( " _RED_("fail") " )");
     }
-    return PM3_SUCCESS;
+    if (retries > 0) {
+        PrintAndLogEx(INFO, "Time spent " _YELLOW_("%.1fs"), (float)(ms / 1000.0));
+        PrintAndLogEx(INFO, "Authentication attempts: %u", auths);
+        PrintAndLogEx(INFO, "Speed: %.1f auths/s", (float)(auths * 1000.0 / ms));
+    }
+    return isok;
 }
 
+static int CmdHF14AMfUCAuthChk(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu cchk",
+                  "It checks MIFARE Ultralight C tags keys against a dictionary file with keys\n",
+                  "hf mfu cchk -f mfulc_default_keys.dic");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<fn>", "filename of dictionary"),
+        arg_int0("s", "segment", "<0..3>", "Segment index (full key if not specified)"),
+        arg_int0("r", "retries", "<0..255>", "Number of retries (def: 0)"),
+        arg_str0("k", "key", "<hex>", "Starting key, 16 hex bytes (def: zero key), for segment check"),
+        arg_lit0("x", "xor", "XOR starting key with segment candidates (def: override)"),
+        arg_lit0("n", "nocheck", "Skip checking tag answer correctness"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    int segment = arg_get_int_def(ctx, 2, -1);   // -1 means full key
+    int retries = arg_get_int_def(ctx, 3, 0);
+    int ref_keylen = 0;
+    uint8_t ref_key[16] = {0};
+    CLIGetHexWithReturn(ctx, 4, ref_key, &ref_keylen);
+    bool xor_ref_key = arg_get_lit(ctx, 5);
+    bool check_answer = !arg_get_lit(ctx, 6);
+    CLIParserFree(ctx);
+
+    if (fnlen == 0) {
+        PrintAndLogEx(ERR, "No dictionary file specified");
+        return PM3_EFILE;
+    }
+    if (segment < -1 || segment > 3) {
+        PrintAndLogEx(ERR, "Invalid segment (must be 0..3)");
+        return PM3_EINVARG;
+    }
+    if (retries < 0 || retries > 255) {
+        PrintAndLogEx(ERR, "Invalid retries (must be 0..255)");
+        return PM3_EINVARG;
+    }
+    if (ref_keylen && ref_keylen != MIFAREU3P_KEY_SIZE) {
+        PrintAndLogEx(WARNING, "Key must be %i hex bytes. Got %d", MIFAREU3P_KEY_SIZE, ref_keylen);
+        return PM3_EINVARG;
+    }
+    if (ref_keylen == 0) {
+        ref_keylen = MIFAREU3P_KEY_SIZE;
+    }
+
+    uint8_t *keyBlock = NULL;
+    uint32_t keycnt = 0;
+    int keysize = segment != -1 ? MIFAREU3P_KEY_SIZE / 4 : MIFAREU3P_KEY_SIZE;
+    int ret = mfu_3pass_load_keys(&keyBlock, &keycnt, filename, fnlen, keysize);
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+    if (keycnt == 0) {
+        PrintAndLogEx(ERR, "Dictionary contains no keys");
+        free(keyBlock);
+        return PM3_ESOFT;
+    }
+
+    uint32_t chunksize = (keycnt > (PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER) / keysize) ?
+                         ((PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER) / keysize) : keycnt;
+    bool firstChunk = true, lastChunk = false;
+
+    int i = 0;
+
+    // time
+    uint32_t auths = 0;
+    uint32_t ms = 0;
+
+    // main keychunk loop
+    for (int r = 0; r < retries + 1; r++) {
+        for (i = 0; i < keycnt; i += chunksize) {
+            if (kbd_enter_pressed()) {
+                clearCommandBuffer();
+                SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+                SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);   // field is still ON if not on last chunk
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(WARNING, "\naborted via keyboard!");
+                goto out;
+            }
+
+            uint32_t nkeys = ((keycnt - i)  > chunksize) ? chunksize : keycnt - i;
+
+            // last chunk?
+            if (nkeys == keycnt - i) {
+                lastChunk = true;
+            }
+            int res = mfu_3pass_check_keys(MIFAREULC_KEY_INDEX, firstChunk, lastChunk, nkeys, segment, ref_key, xor_ref_key, keyBlock + (i * keysize), false, true, &auths, &ms, check_answer);
+            if (firstChunk)
+                firstChunk = false;
+
+            // all keys,  aborted
+            if (res == PM3_SUCCESS || res == 2) {
+                PrintAndLogEx(NORMAL, "");
+                goto out;
+            }
+            PrintAndLogEx(INPLACE, "Testing %5i/%5i ( " _YELLOW_("%02.1f %%") " )", i, keycnt, (float)i * 100 / keycnt);
+        } // end chunks of keys
+    }
+    PrintAndLogEx(NORMAL, "");
+out:
+    PrintAndLogEx(INFO, "Time spent " _YELLOW_("%.1fs"), (float)(ms / 1000.0));
+    PrintAndLogEx(INFO, "Authentication attempts: %u", auths);
+    PrintAndLogEx(INFO, "Speed: %.1f auths/s", (float)(auths * 1000.0 / ms));
+
+    free(keyBlock);
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
 //-------------------------------------------------------------------------------
 // Ultralight AES Methods
 //-------------------------------------------------------------------------------
@@ -4328,6 +4591,8 @@ static int CmdHF14AMfUAESAuth(const char *Cmd) {
         arg_lit0("l", NULL, "Swap entered key's endianness"),
         arg_lit0("k", NULL, "Keep field on (only if a key is provided)"),
         arg_lit0(NULL, "schann", "use secure channel. Must have key"),
+        arg_int0("r", "retries", "<n>", "Number of retries (def: 0)"),
+        arg_lit0("n", "nocheck", "Skip checking tag answer correctness"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4340,6 +4605,8 @@ static int CmdHF14AMfUAESAuth(const char *Cmd) {
     bool swap_endian = arg_get_lit(ctx, 3);
     bool keep_field_on = arg_get_lit(ctx, 4);
     bool use_schann = arg_get_lit(ctx, 5);
+    int retries = arg_get_int_def(ctx, 6, 0);
+    bool check_answer = !arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
     if (ak_len == 0) {
@@ -4361,7 +4628,14 @@ static int CmdHF14AMfUAESAuth(const char *Cmd) {
         auth_key_ptr = SwapEndian64(authentication_key, ak_len, 16);
     }
 
-    int result = ulaes_requestAuthentication(auth_key_ptr, key_index, !keep_field_on, use_schann);
+    if (retries < 0 || retries > 10000) {
+        PrintAndLogEx(ERR, "Invalid retries (must be 0..10000)");
+        return PM3_EINVARG;
+    }
+    uint32_t auths = 0;
+    uint32_t ms = 0;
+
+    int result = ul3pass_authentication(auth_key_ptr, key_index, !keep_field_on, retries, &auths, &ms, use_schann, check_answer);
     if (result == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Authentication with " _YELLOW_("%s") " " _GREEN_("%s") " ( " _GREEN_("ok")" )"
                       , key_type[key_index]
@@ -4370,7 +4644,135 @@ static int CmdHF14AMfUAESAuth(const char *Cmd) {
     } else {
         PrintAndLogEx(WARNING, "Authentication with " _YELLOW_("%s") " ( " _RED_("fail") " )", key_type[key_index]);
     }
+    if (retries > 0) {
+        PrintAndLogEx(INFO, "Time spent " _YELLOW_("%.1fs"), (float)(ms / 1000.0));
+        PrintAndLogEx(INFO, "Authentication attempts: %u", auths);
+        PrintAndLogEx(INFO, "Speed: %.1f auths/s", (float)(auths * 1000.0 / ms));
+    }
     return result;
+}
+
+static int CmdHF14AMfUAESAuthChk(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfu aeschk",
+                  "It checks MIFARE Ultralight AES tags keys against a dictionary file with keys\n"
+                  "  Key index 0... DataProtKey (default)\n"
+                  "  Key index 1... UIDRetrKey\n"
+                  "  Key index 2... OriginalityKey\n",
+                  "hf mfu aeschk -f mfulaes_default_keys.dic");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<fn>", "filename of dictionary"),
+        arg_int0("i", "idx", "<0..2>", "Key index (def: 0)"),
+        arg_int0("s", "segment", "<0..3>", "Segment index (full key if not specified)"),
+        arg_int0("r", "retries", "<0..255>", "Number of retries (def: 0)"),
+        arg_str0("k", "key", "<hex>", "Starting key, 16 hex bytes (def: zero key), for segment check"),
+        arg_lit0("x", "xor", "XOR starting key with segment candidates (def: override)"),
+        arg_lit0("n", "nocheck", "Skip checking tag answer correctness"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    int key_index = arg_get_int_def(ctx, 2, 0);
+    int segment = arg_get_int_def(ctx, 3, -1);   // -1 means full key
+    int retries = arg_get_int_def(ctx, 4, 0);
+    int ref_keylen = 0;
+    uint8_t ref_key[16] = {0};
+    CLIGetHexWithReturn(ctx, 5, ref_key, &ref_keylen);
+    bool xor_ref_key = arg_get_lit(ctx, 6);
+    bool check_answer = !arg_get_lit(ctx, 7);
+    CLIParserFree(ctx);
+
+    if (fnlen == 0) {
+        PrintAndLogEx(ERR, "No dictionary file specified");
+        return PM3_EFILE;
+    }
+    if (key_index < 0 || key_index > 2) {
+        PrintAndLogEx(ERR, "Invalid key index (must be 0..2)");
+        return PM3_EINVARG;
+    }
+    if (segment < -1 || segment > 3) {
+        PrintAndLogEx(ERR, "Invalid segment (must be 0..3)");
+        return PM3_EINVARG;
+    }
+    if (retries < 0 || retries > 255) {
+        PrintAndLogEx(ERR, "Invalid retries (must be 0..255)");
+        return PM3_EINVARG;
+    }
+    if (ref_keylen && ref_keylen != MIFAREU3P_KEY_SIZE) {
+        PrintAndLogEx(WARNING, "Key must be %i hex bytes. Got %d", MIFAREU3P_KEY_SIZE, ref_keylen);
+        return PM3_EINVARG;
+    }
+    if (ref_keylen == 0) {
+        ref_keylen = MIFAREU3P_KEY_SIZE;
+    }
+
+    uint8_t *keyBlock = NULL;
+    uint32_t keycnt = 0;
+    int keysize = segment != -1 ? MIFAREU3P_KEY_SIZE / 4 : MIFAREU3P_KEY_SIZE;
+    int ret = mfu_3pass_load_keys(&keyBlock, &keycnt, filename, fnlen, keysize);
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+    if (keycnt == 0) {
+        PrintAndLogEx(ERR, "Dictionary contains no keys");
+        free(keyBlock);
+        return PM3_ESOFT;
+    }
+
+    uint32_t chunksize = (keycnt > (PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER) / keysize) ?
+                         ((PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER) / keysize) : keycnt;
+    bool firstChunk = true, lastChunk = false;
+
+    int i = 0;
+
+    uint32_t auths = 0;
+    uint32_t ms = 0;
+
+    // main keychunk loop
+    for (int r = 0; r < retries + 1; r++) {
+        for (i = 0; i < keycnt; i += chunksize) {
+            if (kbd_enter_pressed()) {
+                clearCommandBuffer();
+                SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+                SendCommandNG(CMD_FPGA_MAJOR_MODE_OFF, NULL, 0);   // field is still ON if not on last chunk
+                PrintAndLogEx(NORMAL, "");
+                PrintAndLogEx(WARNING, "\naborted via keyboard!");
+                goto out;
+            }
+
+            uint32_t nkeys = ((keycnt - i)  > chunksize) ? chunksize : keycnt - i;
+
+            // last chunk?
+            if (nkeys == keycnt - i) {
+                lastChunk = true;
+            }
+
+            int res = mfu_3pass_check_keys(key_index, firstChunk, lastChunk, nkeys, segment, ref_key, xor_ref_key, keyBlock + (i * keysize), false, true, &auths, &ms, check_answer);
+            if (firstChunk)
+                firstChunk = false;
+
+            // all keys,  aborted
+            if (res == PM3_SUCCESS || res == 2) {
+                PrintAndLogEx(NORMAL, "");
+                goto out;
+            }
+            PrintAndLogEx(INPLACE, "Testing %5i/%5i ( " _YELLOW_("%02.1f %%") " )", i, keycnt, (float)i * 100 / keycnt);
+        } // end chunks of keys
+    }
+    PrintAndLogEx(NORMAL, "");
+out:
+    PrintAndLogEx(INFO, "Time spent " _YELLOW_("%.1fs"), (float)(ms / 1000.0));
+    PrintAndLogEx(INFO, "Authentication attempts: %u", auths);
+    PrintAndLogEx(INFO, "Speed: %.1f auths/s", (float)(auths * 1000.0 / ms));
+
+    free(keyBlock);
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
 }
 
 /**
@@ -6519,8 +6921,10 @@ static command_t CommandTable[] = {
     {"otptear",  CmdHF14AMfuOtpTearoff,     IfPm3Iso14443a,  "Tear-off test on OTP bits"},
 //    {"tear_cnt", CmdHF14AMfuEv1CounterTearoff,     IfPm3Iso14443a,  "Tear-off test on Ev1/NTAG Counter bits"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("operations") " -----------------------"},
-    {"cauth",    CmdHF14AMfUCAuth,          IfPm3Iso14443a,  "Ultralight C - Authentication"},
-    {"aesauth",  CmdHF14AMfUAESAuth,        IfPm3Iso14443a,  "Ultralight AES - Authentication"},
+    {"cauth",    CmdHF14AMfUCAuth,          IfPm3Iso14443a,  "Ultralight-C - Authentication"},
+    {"cchk",     CmdHF14AMfUCAuthChk,       IfPm3Iso14443a,  "Ultralight-C - Authentication dictionary check"},
+    {"aesauth",  CmdHF14AMfUAESAuth,        IfPm3Iso14443a,  "Ultralight-AES - Authentication"},
+    {"aeschk",   CmdHF14AMfUAESAuthChk,     IfPm3Iso14443a,  "Ultralight-AES - Authentication dictionary check"},
     {"setkey",   CmdHF14AMfUSetKey,         IfPm3Iso14443a,  "Ultralight C/AES - Set 3DES/AES keys"},
     {"dump",     CmdHF14AMfUDump,           IfPm3Iso14443a,  "Dump MIFARE Ultralight family tag to binary file"},
     {"incr",     CmdHF14AMfUIncr,           IfPm3Iso14443a,  "Increments Ev1/NTAG counter"},

@@ -382,8 +382,10 @@ def main():
         description=main.__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument('-c', '--challenges', help='Set number of challenges to collect (default:1000)', type=int, default=1000)
-    parser.add_argument('-t', '--threads', help='Set number of threads to use for key recovery (default:1)', type=int, default=1)
+    parser.add_argument('-c', '--challenges', help='Set number of challenges to collect (default:1000)',
+                        type=int, default=1000)
+    parser.add_argument('-t', '--threads', help='Set number of threads to use for key recovery (default:1)',
+                        type=int, default=16)
     parser.add_argument('-d', '--debug', action='store_true', help='Enable debug mode')
     parser.add_argument('-j', '--json', help='Path to JSON file to load or save collected challenges')
     parser.add_argument('-o', '--offline', action='store_true', help='Use offline mode with pre-collected challenges')

@@ -1864,12 +1864,12 @@ static void PacketReceived(PacketCommandNG *packet) {
             MifareUReadBlock((mful_readblock_t *)packet->data.asBytes);
             break;
         }
-        case CMD_HF_MIFAREUC_AUTH: {
-            MifareUC_Auth(packet->oldarg[0], packet->data.asBytes);
+        case CMD_HF_MIFAREU3P_AUTH: {
+            MifareU3PassAuth((mful_3passauth_t *)packet->data.asBytes);
             break;
         }
-        case CMD_HF_MIFAREULAES_AUTH: {
-            MifareUL_AES_Auth((mfulaes_keys_t *)packet->data.asBytes);
+        case CMD_HF_MIFAREU3P_CHKKEY: {
+            MifareU3PassChkKeys((mful_3passchk_t *)packet->data.asBytes);
             break;
         }
         case CMD_HF_MIFAREU_READCARD: {

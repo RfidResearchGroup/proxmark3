@@ -195,9 +195,10 @@ typedef struct {
 #define CMD_HF_MIFARE_SETMOD                                              0x0624
 
 #define CMD_HF_MIFARE_SNIFF                                               0x0630
-//ultralightC
-#define CMD_HF_MIFAREUC_AUTH                                              0x0724
-//0x0725 and 0x0726 no longer used
+// ultralight-C & AES
+#define CMD_HF_MIFAREU3P_AUTH                                             0x0724
+// 0x0725 is free
+#define CMD_HF_MIFAREU3P_CHKKEY                                           0x0726
 #define CMD_HF_MIFAREU_SETKEY                                             0x0727
 
 

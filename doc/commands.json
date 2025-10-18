@@ -1411,10 +1411,10 @@
                 "-x Performs the 'reader attack', nr/ar attack against a reader",
                 "--sk Fill simulator keys from found keys",
                 "-v, --verbose verbose output",
-                "--z1 ULC/ULAES Auth - all zero handshake part 1",
-                "--z2 ULC/ULAES Auth - all zero handshake part 2"
+                "--1a1 <hex> <8|16> hex bytes ULC/ULAES Auth reply step1: ek(RndB)",
+                "--1a2 <hex> <8|16> hex bytes ULC/ULAES Auth reply step2: ek(RndA')"
             ],
-            "usage": "hf 14a sim [-hxv] -t <1-14> [-u <hex>] [-n <dec>] [--sk] [--z1] [--z2]"
+            "usage": "hf 14a sim [-hxv] -t <1-14> [-u <hex>] [-n <dec>] [--sk] [--1a1 <hex>] [--1a2 <hex>]"
         },
         "hf 14a simaid": {
             "command": "hf 14a simaid",
@@ -7183,9 +7183,30 @@
                 "-i, --idx <0..2> Key index (def: 0)",
                 "-l Swap entered key's endianness",
                 "-k Keep field on (only if a key is provided)",
-                "--schann use secure channel. Must have key"
+                "--schann use secure channel. Must have key",
+                "-r, --retries <n> Number of retries (def: 0)",
+                "-n, --nocheck Skip checking tag answer correctness"
             ],
-            "usage": "hf mfu aesauth [-hlk] [--key <hex>] [-i <0..2>] [--schann]"
+            "usage": "hf mfu aesauth [-hlkn] [--key <hex>] [-i <0..2>] [--schann] [-r <n>]"
+        },
+        "hf mfu aeschk": {
+            "command": "hf mfu aeschk",
+            "description": "It checks MIFARE Ultralight AES tags keys against a dictionary file with keys Key index 0... DataProtKey (default) Key index 1... UIDRetrKey Key index 2... OriginalityKey",
+            "notes": [
+                "hf mfu aeschk -f mfulaes_default_keys.dic"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> filename of dictionary",
+                "-i, --idx <0..2> Key index (def: 0)",
+                "-s, --segment <0..3> Segment index (full key if not specified)",
+                "-r, --retries <0..255> Number of retries (def: 0)",
+                "-k, --key <hex> Starting key, 16 hex bytes (def: zero key), for segment check",
+                "-x, --xor XOR starting key with segment candidates (def: override)",
+                "-n, --nocheck Skip checking tag answer correctness"
+            ],
+            "usage": "hf mfu aeschk [-hxn] [-f <fn>] [-i <0..2>] [-s <0..3>] [-r <0..255>] [-k <hex>]"
         },
         "hf mfu amiibo": {
             "command": "hf mfu amiibo",
@@ -7217,9 +7238,29 @@
                 "-h, --help This help",
                 "--key <hex> Authentication key (16 bytes in hex)",
                 "-l Swap entered key's endianness",
-                "-k Keep field on (only if a key is provided)"
+                "-k Keep field on (only if a key is provided)",
+                "-r, --retries <n> Number of retries with provided key (def: 0)",
+                "-n, --nocheck Skip checking tag answer correctness (only if a key is provided)"
             ],
-            "usage": "hf mfu cauth [-hlk] [--key <hex>]"
+            "usage": "hf mfu cauth [-hlkn] [--key <hex>] [-r <n>]"
+        },
+        "hf mfu cchk": {
+            "command": "hf mfu cchk",
+            "description": "It checks MIFARE Ultralight C tags keys against a dictionary file with keys",
+            "notes": [
+                "hf mfu cchk -f mfulc_default_keys.dic"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> filename of dictionary",
+                "-s, --segment <0..3> Segment index (full key if not specified)",
+                "-r, --retries <0..255> Number of retries (def: 0)",
+                "-k, --key <hex> Starting key, 16 hex bytes (def: zero key), for segment check",
+                "-x, --xor XOR starting key with segment candidates (def: override)",
+                "-n, --nocheck Skip checking tag answer correctness"
+            ],
+            "usage": "hf mfu cchk [-hxn] [-f <fn>] [-s <0..3>] [-r <0..255>] [-k <hex>]"
         },
         "hf mfu dump": {
             "command": "hf mfu dump",
@@ -7510,10 +7551,10 @@
                 "-u, --uid <hex> <4|7|10> hex bytes UID",
                 "-n, --num <dec> Exit simulation after <numreads> blocks. 0 = infinite",
                 "-v, --verbose Verbose output",
-                "--z1 ULC/ULAES Auth - all zero handshake part 1",
-                "--z2 ULC/ULAES Auth - all zero handshake part 2"
+                "--1a1 <hex> <8|16> hex bytes ULC/ULAES Auth reply step1: ek(RndB)",
+                "--1a2 <hex> <8|16> hex bytes ULC/ULAES Auth reply step2: ek(RndA')"
             ],
-            "usage": "hf mfu sim [-hv] -t <1..14> [-u <hex>] [-n <dec>] [--z1] [--z2]"
+            "usage": "hf mfu sim [-hv] -t <1..14> [-u <hex>] [-n <dec>] [--1a1 <hex>] [--1a2 <hex>]"
         },
         "hf mfu tamper": {
             "command": "hf mfu tamper",

@@ -366,17 +366,30 @@ typedef struct {
 } PACKED mfc_eload_t;
 
 typedef struct {
-    bool use_flashmem;
-    uint16_t keycount;
-    uint8_t keys[];
-} PACKED mfulc_keys_t;
-
-typedef struct {
-    bool turn_off_field;
-    bool use_schann;
-    uint8_t keyno;
+    uint8_t turn_off_field : 1;
+    uint8_t check_answer : 1;
+    uint8_t keyno : 2;
+    uint8_t use_schann : 1;
+    uint8_t reserved : 3;
+    uint16_t retries;
     uint8_t key[16];
-} PACKED mfulaes_keys_t;
+} PACKED mful_3passauth_t;
+
+enum {
+    MIFAREU3P_KEY_SIZE = 16,
+    MIFAREU3P_CHKKEY_HEADER = 2 + MIFAREU3P_KEY_SIZE
+};
+typedef struct {
+    uint8_t key_index : 2;
+    uint8_t firstchunk : 1;
+    uint8_t lastchunk : 1;
+    uint8_t xor_ref_key : 1;
+    uint8_t segment : 3;
+    uint8_t check_answer : 1;
+    uint8_t nkeys : 7;
+    uint8_t ref_key[MIFAREU3P_KEY_SIZE];
+    uint8_t data[PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER];
+} PACKED mful_3passchk_t;
 
 typedef struct {
     bool use_schann;
@@ -798,11 +811,10 @@ typedef struct {
 #define CMD_HF_MIFARE_MFKEY                                               0x0631
 #define CMD_HF_MIFARE_PERSONALIZE_UID                                     0x0632
 
-// ultralight-C
-#define CMD_HF_MIFAREUC_AUTH                                              0x0724
-// Ultralight AES
-#define CMD_HF_MIFAREULAES_AUTH                                           0x0725
-// 0x0726 no longer used
+// ultralight-C & AES
+#define CMD_HF_MIFAREU3P_AUTH                                             0x0724
+// 0x0725 is free
+#define CMD_HF_MIFAREU3P_CHKKEY                                           0x0726
 #define CMD_HF_MIFAREU_SETKEY                                             0x0727
 
 // mifare desfire
