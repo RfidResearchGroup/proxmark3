@@ -22,6 +22,8 @@ import re
 import datetime
 import argparse
 import logging
+from pathlib import Path
+import subprocess
 
 ##############################################################################
 # Script version data: (Please increment when making updates)
@@ -46,6 +48,23 @@ def main():
     logging.info(f'{get_version()} starting...')
     help_text = args.input_file.read()
     command_data = parse_all_command_data(help_text)
+    # Collect all git-tracked scripts
+    paths = [('*.py', Path(__file__).parent),
+             ('*.lua', Path(__file__).parent.parent / 'luascripts'),
+             ('*.cmd', Path(__file__).parent.parent / 'cmdscripts')]
+    try:
+        for pattern, scripts_dir in paths:
+            result = subprocess.run(['git', 'ls-files', pattern],
+                                    cwd=scripts_dir,
+                                    capture_output=True,
+                                    text=True,
+                                    check=True)
+            for file_path in result.stdout.strip().split('\n'):
+                if file_path:
+                    file = Path(file_path)
+                    command_data[file.name] = {'command': f'script run {file.name}', 'offline': False}
+    except subprocess.CalledProcessError:
+        print("Error, need git")
 
     args.output_file.write("""//-----------------------------------------------------------------------------
 // Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
