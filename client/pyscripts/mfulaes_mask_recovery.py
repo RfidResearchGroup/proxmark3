@@ -235,7 +235,7 @@ def main():
                 console_debug(p, 'hw tearoff --off', capture=False, debug=debug)
                 for i in range(48 + 4*idx, 52 + 4*idx):
                     console_debug(p, f'hf 14a raw -sc a2{i:02x}00000000', capture=False, debug=debug)
-                exit(0)
+                return
         if tear2_changed:
             console_debug(p, f'hw tearoff --delay {tear2}', capture=False, debug=debug)
 
