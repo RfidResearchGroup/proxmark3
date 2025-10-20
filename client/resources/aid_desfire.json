@@ -320,6 +320,14 @@
         "Type": "pacs"
     },
     {
+        "AID": "F532F0",
+        "Vendor": "Schlage via Allegion PLC",
+        "Country": "US",
+        "Name": "Schlage Access Credential",
+        "Description": "FKA aptiQ Access Credential",
+        "Type": "pacs"
+    },
+    {
         "AID": "F534F1",
         "Vendor": "MOBOTIX AG",
         "Country": "DE",
@@ -760,27 +768,51 @@
         "Type": "payment system"
     },
     {
+        "AID": "4B4550",
+        "Vendor": "Lucid Motors via Lucid Group",
+        "Country": "US",
+        "Name": "Lucid Motors Valet Card",
+        "Description": "Lucid Motors Valet Card",
+        "Type": "vehicle access"
+    },
+    {
         "AID": "C26001",
-        "Vendor": "car2go",
+        "Vendor": "Free2move",
         "Country": "DE",
-        "Name": "MemberCard",
-        "Description": "car2go - Member Card // Multi Functional Badge / Private Application #1",
-        "Type": "carsharing"
+        "Name": "car2go Defunct Membership Card",
+        "Description": "car2go Defunct Membership Card // Defunct // Private Application #1",
+        "Type": "vehicle access"
+    },
+    {
+        "AID": "F52100",
+        "Vendor": "Lucid Motors via Lucid Group",
+        "Country": "US",
+        "Name": "Lucid Motors Valet Card",
+        "Description": "Lucid Motors Valet Card",
+        "Type": "vehicle access"
     },
     {
         "AID": "000001",
         "Vendor": "Invalid / Reserved",
         "Country": "",
         "Name": "Invalid / Reserved",
-        "Description": "Used by ATL Breeze, PHL FREEDOM, and YVR Compass",
+        "Description": "Used by ATL Breeze, LJU Urbana, MIA Easy, PHL FREEDOM, and YVR Compass",
+        "Type": "transport"
+    },
+    {
+        "AID": "000002",
+        "Vendor": "Javnim Podjetjem Ljubljanski Potniski Promet DOO (LPP)",
+        "Country": "SI",
+        "Name": "Urbana Card (LJU)",
+        "Description": "LJU Urbana Card",
         "Type": "transport"
     },
     {
         "AID": "000005",
-        "Vendor": "Transports Metropolitans de Barcelona (TMB)",
-        "Country": "ES",
-        "Name": "T-mobilitat (BCN)",
-        "Description": "BCN T-mobilitat",
+        "Vendor": "Transports Metropolitans de Barcelona (TMB) / Javnim Podjetjem LPP DOO (LPP)",
+        "Country": "ES / SI",
+        "Name": "T-mobilitat Card (BCN) / Urbana Card (LJU)",
+        "Description": "BCN T-mobilitat Card / LJU Urbana Card",
         "Type": "transport"
     },
     {
@@ -801,10 +833,10 @@
     },
     {
         "AID": "010000",
-        "Vendor": "Consorcio Regional de Transportes Publicos Regulares de Madrid (CRTM)",
-        "Country": "ES",
-        "Name": "Tarjeta Transporte Publico (MAD)",
-        "Description": "MAD Public Transport Card",
+        "Vendor": "Consorcio Regional de Transportes Publicos Regulares de Madrid (CRTM) / AF Payments Inc (AFPI)",
+        "Country": "ES / PH",
+        "Name": "Tarjeta Transporte Publico (MAD) / beep Card (MNL)",
+        "Description": "MAD Public Transport Card / MNL beep Card",
         "Type": "transport"
     },
     {
@@ -825,9 +857,9 @@
     },
     {
         "AID": "015342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM) / Bangkok Mass Transit System PCL (BTS)",
         "Country": "TH",
-        "Name": "MRT Stored Value Card (BKK)",
+        "Name": "BEM MRT Stored Value Card (BKK) / BTS Rabbit Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
@@ -840,6 +872,14 @@
         "Type": "transport"
     },
     {
+        "AID": "020000",
+        "Vendor": "AF Payments Inc (AFPI)",
+        "Country": "PH",
+        "Name": "beep Card (MNL)",
+        "Description": "MNL beep Card",
+        "Type": "transport"
+    },
+    {
         "AID": "024D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
@@ -849,9 +889,9 @@
     },
     {
         "AID": "025342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM) / Bangkok Mass Transit System PCL (BTS)",
         "Country": "TH",
-        "Name": "MRT Stored Value Card (BKK)",
+        "Name": "BEM MRT Stored Value Card (BKK) / BTS Rabbit Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
@@ -864,6 +904,14 @@
         "Type": "transport"
     },
     {
+        "AID": "030000",
+        "Vendor": "AF Payments Inc (AFPI)",
+        "Country": "PH",
+        "Name": "beep Card (MNL)",
+        "Description": "MNL beep Card",
+        "Type": "transport"
+    },
+    {
         "AID": "034D44",
         "Vendor": "Delhi Metro Rail Corporation Limited",
         "Country": "IN",
@@ -873,9 +921,9 @@
     },
     {
         "AID": "035342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM) / Bangkok Mass Transit System PCL (BTS)",
         "Country": "TH",
-        "Name": "MRT Stored Value Card (BKK)",
+        "Name": "BEM MRT Stored Value Card (BKK) / BTS Rabbit Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
@@ -885,6 +933,14 @@
         "Country": "PL",
         "Name": "URBANCARD (WRO)",
         "Description": "WRO URBANCARD (URBANCARD Term App)",
+        "Type": "transport"
+    },
+    {
+        "AID": "040000",
+        "Vendor": "AF Payments Inc (AFPI)",
+        "Country": "PH",
+        "Name": "beep Card (MNL)",
+        "Description": "MNL beep Card",
         "Type": "transport"
     },
     {
@@ -905,9 +961,9 @@
     },
     {
         "AID": "045342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM) / Bangkok Mass Transit System PCL (BTS)",
         "Country": "TH",
-        "Name": "MRT Stored Value Card (BKK)",
+        "Name": "BEM MRT Stored Value Card (BKK) / BTS Rabbit Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
@@ -929,9 +985,9 @@
     },
     {
         "AID": "055342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM) / Bangkok Mass Transit System PCL (BTS)",
         "Country": "TH",
-        "Name": "MRT Stored Value Card (BKK)",
+        "Name": "BEM MRT Stored Value Card (BKK) / BTS Rabbit Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
@@ -953,9 +1009,9 @@
     },
     {
         "AID": "065342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM) / Bangkok Mass Transit System PCL (BTS)",
         "Country": "TH",
-        "Name": "MRT Stored Value Card (BKK)",
+        "Name": "BEM MRT Stored Value Card (BKK) / BTS Rabbit Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
@@ -969,17 +1025,25 @@
     },
     {
         "AID": "075342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM) / Bangkok Mass Transit System PCL (BTS)",
         "Country": "TH",
-        "Name": "MRT Stored Value Card (BKK)",
+        "Name": "BEM MRT Stored Value Card (BKK) / BTS Rabbit Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
     {
+        "AID": "081117",
+        "Vendor": "JourneyTech Inc",
+        "Country": "PH",
+        "Name": "TRIPKO Card (MNL)",
+        "Description": "MNL MYTRIP Card",
+        "Type": "transport"
+    },
+    {
         "AID": "085342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM) / Bangkok Mass Transit System PCL (BTS)",
         "Country": "TH",
-        "Name": "MRT Stored Value Card (BKK)",
+        "Name": "BEM MRT Stored Value Card (BKK) / BTS Rabbit Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
@@ -993,15 +1057,15 @@
     },
     {
         "AID": "095342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM) / Bangkok Mass Transit System PCL (BTS)",
         "Country": "TH",
-        "Name": "MRT Stored Value Card (BKK)",
+        "Name": "BEM MRT Stored Value Card (BKK) / BTS Rabbit Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
         "Type": "transport"
     },
     {
         "AID": "0A5342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM)",
         "Country": "TH",
         "Name": "MRT Stored Value Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
@@ -1009,7 +1073,7 @@
     },
     {
         "AID": "0B5342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM)",
         "Country": "TH",
         "Name": "MRT Stored Value Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
@@ -1017,7 +1081,7 @@
     },
     {
         "AID": "0C5342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM)",
         "Country": "TH",
         "Name": "MRT Stored Value Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
@@ -1025,7 +1089,7 @@
     },
     {
         "AID": "0D5342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM)",
         "Country": "TH",
         "Name": "MRT Stored Value Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
@@ -1033,7 +1097,7 @@
     },
     {
         "AID": "0E5342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM)",
         "Country": "TH",
         "Name": "MRT Stored Value Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
@@ -1041,7 +1105,7 @@
     },
     {
         "AID": "0F5342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM)",
         "Country": "TH",
         "Name": "MRT Stored Value Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
@@ -1049,7 +1113,7 @@
     },
     {
         "AID": "105342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM)",
         "Country": "TH",
         "Name": "MRT Stored Value Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
@@ -1057,7 +1121,7 @@
     },
     {
         "AID": "115342",
-        "Vendor": "Bangkok Expressway and Metro Public Limited Company (BEM)",
+        "Vendor": "Bangkok Expressway and Metro PCL (BEM)",
         "Country": "TH",
         "Name": "MRT Stored Value Card (BKK)",
         "Description": "Might also be used by BKK MRT Plus and/or BKK Park & Ride Plus Cards",
@@ -1155,7 +1219,7 @@
         "AID": "4F5931",
         "Vendor": "Transport for London (TfL) via Cubic Transportation Systems",
         "Country": "UK",
-        "Name": "Oyster Card (LHR)",
+        "Name": "Oyster Card (LCY)",
         "Description": "FIDs: 00-07: Standard Data",
         "Type": "transport"
     },
@@ -1224,11 +1288,19 @@
         "Type": "transport"
     },
     {
+        "AID": "6C006C",
+        "Vendor": "Lehigh and Northampton Transportation Authority (LANta) via Masabi Ltd",
+        "Country": "US",
+        "Name": "ValleyRide Card (ABE)",
+        "Description": "ABE ValleyRide Card; Masabi Justride Tap and Ride DESFire Smartcard",
+        "Type": "transport"
+    },
+    {
         "AID": "7A007A",
         "Vendor": "Regional Transportation Commission of Southern Nevada (RTC) via Masabi Ltd",
         "Country": "US",
-        "Name": "RTC TAP & GO (LAS)",
-        "Description": "LAS TAP & GO; Masabi Justride Tap and Ride DESFire Smartcard",
+        "Name": "RTC TAP & GO Card (LAS)",
+        "Description": "LAS TAP & GO Card; Masabi Justride Tap and Ride DESFire Smartcard",
         "Type": "transport"
     },
     {
@@ -1250,8 +1322,8 @@
     {
         "AID": "A00216",
         "Vendor": "ITSO Ltd",
-        "Country": "UK",
-        "Name": "GWR touch (BRS) / EMR Smartcard (EMA) / WYTCL MCard (LBA) / StagecoachSmart card",
+        "Country": "GB",
+        "Name": "ITSO Smartcard / The Key Card / touch Card (GBR)",
         "Description": "ITSO Public Transport Application // Provision of Citizen Services #0",
         "Type": "transport"
     },
@@ -1299,8 +1371,8 @@
         "AID": "D000D0",
         "Vendor": "Greater Dayton Regional Transit Authority (RTA) via Masabi Ltd",
         "Country": "US",
-        "Name": "RTA Tapp Pay Card (DAY)",
-        "Description": "DAY RTA Tapp Pay Card; Masabi Justride Tap and Ride DESFire Smartcard",
+        "Name": "Tapp Pay Card (DAY)",
+        "Description": "DAY Tapp Pay Card; Masabi Justride Tap and Ride DESFire Smartcard",
         "Type": "transport"
     },
     {
@@ -1325,6 +1397,14 @@
         "Country": "ES",
         "Name": "BAT Card (VIT)",
         "Description": "VIT BAT Card // Used on Euskotren // Interoperable PT Card",
+        "Type": "transport"
+    },
+    {
+        "AID": "F20330",
+        "Vendor": "NJ Transit via Conduent Inc and G+D GmbH",
+        "Country": "US",
+        "Name": "FARE-PAY Card (EWR)",
+        "Description": "EWR FARE-PAY Card",
         "Type": "transport"
     },
     {
@@ -1416,6 +1496,14 @@
         "Type": "transport"
     },
     {
+        "AID": "F21240",
+        "Vendor": "Sacramento Area Council of Governments (SACOG) via INIT",
+        "Country": "US",
+        "Name": "Connect Transit Card (SMF)",
+        "Description": "SMF Connect Transit Card",
+        "Type": "transport"
+    },
+    {
         "AID": "F212A0",
         "Vendor": "CTtransit via Genfare",
         "Country": "US",
@@ -1474,33 +1562,42 @@
     {
         "AID": "F40110",
         "Vendor": "ITSO Ltd",
-        "Country": "UK",
-        "Name": "GWR touch (BRS) / EMR Smartcard (EMA)",
+        "Country": "GB",
+        "Name": "ITSO Smartcard / The Key Card / touch Card (GBR)",
         "Description": "UK National Smartcard Project // Provision of Citizen Services #1",
         "Type": "transport"
     },
     {
         "AID": "F40111",
         "Vendor": "ITSO Ltd",
-        "Country": "UK",
-        "Name": "GWR touch (BRS) / EMR Smartcard (EMA)",
+        "Country": "GB",
+        "Name": "ITSO Smartcard / The Key Card / touch Card (GBR)",
         "Description": "UK National Smartcard Project // Provision of Citizen Services #2",
         "Type": "transport"
     },
     {
         "AID": "F40112",
         "Vendor": "ITSO Ltd",
-        "Country": "UK",
-        "Name": "GWR touch (BRS) / EMR Smartcard (EMA)",
+        "Country": "GB",
+        "Name": "ITSO Smartcard / The Key Card / touch Card (GBR)",
         "Description": "UK National Smartcard Project // Provision of Citizen Services #3",
         "Type": "transport"
     },
     {
         "AID": "F40113",
         "Vendor": "ITSO Ltd",
-        "Country": "UK",
-        "Name": "GWR touch (BRS) / EMR Smartcard (EMA)",
+        "Country": "GB",
+        "Name": "ITSO Smartcard / The Key Card / touch Card (GBR)",
         "Description": "UK National Smartcard Project // Provision of Citizen Services #4",
+        "Type": "transport"
+    },
+
+    {
+        "AID": "F40113",
+        "Vendor": "ITSO Ltd",
+        "Country": "GB",
+        "Name": "ITSO Smartcard / The Key Card / touch Card (GBR)",
+        "Description": "UK National Smartcard Project // Provision of Citizen Services #5",
         "Type": "transport"
     },
     {
