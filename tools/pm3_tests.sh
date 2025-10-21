@@ -6,6 +6,11 @@ LANG=C
 PM3PATH="$(dirname "$0")/.."
 cd "$PM3PATH" || exit 1
 
+PYTHON=python3
+if command -v uv >/dev/null 2>&1; then
+    PYTHON="uv run --script"
+fi
+
 DICPATH="./client/dictionaries"
 RESOURCEPATH="./client/resources"
 
@@ -279,11 +284,11 @@ while true; do
       if ! CheckFileExist "HITAG2 dictionary exists"        "$DICPATH/ht2_default.dic"; then break; fi
 
       echo -e "\n${C_BLUE}Testing tools:${C_NC}"
-      if ! CheckExecute "xorcheck test"                    "tools/xorcheck.py 04 00 80 64 ba" "final LRC XOR byte value: 5A"; then break; fi
-      if ! CheckExecute "findbits test"                    "tools/findbits.py 73 0110010101110011" "Match at bit 9: 011001010"; then break; fi
-      if ! CheckExecute "findbits_test test"               "tools/findbits_test.py 2>&1" "OK"; then break; fi
-      if ! CheckExecute "pm3_eml_mfd test"                 "tools/mfc/pm3_eml_mfd_test.py 2>&1" "OK"; then break; fi
-      if ! CheckExecute "recover_pk test"                  "tools/recover_pk.py selftests 2>&1" "Tests:.*\(.*ok.*"; then break; fi
+      if ! CheckExecute "xorcheck test"                    "$PYTHON tools/xorcheck.py 04 00 80 64 ba" "final LRC XOR byte value: 5A"; then break; fi
+      if ! CheckExecute "findbits test"                    "$PYTHON tools/findbits.py 73 0110010101110011" "Match at bit 9: 011001010"; then break; fi
+      if ! CheckExecute "findbits_test test"               "$PYTHON tools/findbits_test.py 2>&1" "OK"; then break; fi
+      if ! CheckExecute "pm3_eml_mfd test"                 "$PYTHON tools/mfc/pm3_eml_mfd_test.py 2>&1" "OK"; then break; fi
+      if ! CheckExecute "recover_pk test"                  "$PYTHON tools/recover_pk.py selftests 2>&1" "Tests:.*\(.*ok.*"; then break; fi
       if ! CheckExecute "mkversion create test"            "tools/mkversion.sh --short" 'Iceman/'; then break; fi
     fi
     if $TESTALL || $TESTBOOTROM; then
@@ -372,7 +377,7 @@ while true; do
       HT2CRACK3KEY=000102030405
       HT2CRACK3N=32
       HT2CRACK3NRAR=hitag2_${HT2CRACK3UID}_nrar_${HT2CRACK3N}emul.txt
-      if ! CheckExecute "ht2crack3 gen testfile"           "cd $HT2CRACK3PATH; python3 ../hitag2_gen_nRaR.py $HT2CRACK3KEY $HT2CRACK3UID $HT2CRACK3N > $HT2CRACK3NRAR && echo SUCCESS" "SUCCESS"; then break; fi
+      if ! CheckExecute "ht2crack3 gen testfile"           "cd $HT2CRACK3PATH; $PYTHON ../hitag2_gen_nRaR.py $HT2CRACK3KEY $HT2CRACK3UID $HT2CRACK3N > $HT2CRACK3NRAR && echo SUCCESS" "SUCCESS"; then break; fi
       if ! CheckExecute "ht2crack3test test"               "cd $HT2CRACK3PATH; ./ht2crack3test $HT2CRACK3NRAR $HT2CRACK3KEY $HT2CRACK3UID|grep -v SUCCESS||echo SUCCESS" "SUCCESS"; then break; fi
       if ! CheckExecute "ht2crack3 test"                   "cd $HT2CRACK3PATH; ./ht2crack3 $HT2CRACK3UID $HT2CRACK3NRAR |grep -E -v '(trying|partial)'" "key = $HT2CRACK3KEY"; then break; fi
       if ! CheckExecute "ht2crack3 rm testfile"            "cd $HT2CRACK3PATH; rm $HT2CRACK3NRAR && echo SUCCESS" "SUCCESS"; then break; fi
@@ -386,7 +391,7 @@ while true; do
       # The success is probabilistic: a fresh random nRaR file is required for each run
       # Order of magnitude to crack it: ~15s -> tagged as "slow"
       if ! CheckExecute slow retry ignore "ht2crack4 test" "cd $HT2CRACK4PATH; \
-                                                            python3 ../hitag2_gen_nRaR.py $HT2CRACK4KEY $HT2CRACK4UID $HT2CRACK4N > $HT2CRACK4NRAR; \
+                                                            $PYTHON ../hitag2_gen_nRaR.py $HT2CRACK4KEY $HT2CRACK4UID $HT2CRACK4N > $HT2CRACK4NRAR; \
                                                             ./ht2crack4 -u $HT2CRACK4UID -n $HT2CRACK4NRAR -N 16 -t 500000 2>&1; \
                                                             rm $HT2CRACK4NRAR" "key = $HT2CRACK4KEY"; then break; fi
 

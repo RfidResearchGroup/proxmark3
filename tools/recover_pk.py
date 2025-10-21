@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+#
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#     "ansicolors",
+#     "sslcrypto",
+# ]
+# ///
+
 # MIT License
 # Copyright (c) 2020 @doegox
 

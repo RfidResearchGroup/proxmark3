@@ -9,11 +9,11 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends git ca-certificates build-essential cmake pkg-config libreadline-dev gcc-arm-none-eabi libnewlib-dev libbz2-dev liblz4-dev libbluetooth-dev libpython3-dev libssl-dev libgd-dev sudo && \
     apt-get clean
 
-RUN apt-get install -y --no-install-recommends python3-minimal python3-pip python3-venv && \
-    apt-get clean
-
 RUN apt-get install -y opencl-dev && \
     apt-get clean
+
+# uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Create rrg user => there is already a ubuntu user = 1000 that we need to move away
 RUN usermod -u 999 ubuntu

@@ -2,13 +2,14 @@ FROM fedora:41
 
 ENV LANG=C
 # qt5-qtbase-devel skipped
-RUN dnf install -y passwd sudo git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel bzip2-devel lz4-devel bluez-libs-devel python3-devel openssl-devel gd-devel libatomic findutils
+RUN dnf install -y passwd sudo git make cmake gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel bzip2-devel lz4-devel bluez-libs-devel python3-devel openssl-devel gd-devel libatomic findutils
 
 RUN yum -y update
-RUN yum -y install cmake python-pip
-RUN python3 -m pip install ansicolors sslcrypto
 
 RUN yum -y install mesa-libOpenCL ocl-icd-devel
+
+# uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Create rrg user
 RUN useradd -ms /bin/bash rrg
