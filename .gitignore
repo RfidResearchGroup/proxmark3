@@ -45,13 +45,15 @@ Makefile.platform.*
 
 # cmake
 CMakeFiles/
-deps/
 client/CMakeFiles/
-client/deps/
+client/deps/**
+!client/deps/id48/
+!client/deps/id48/**
 client/build/
 client/android/build/
 CMakeCache.txt
 *.cmake
+.cache
 
 # Coverity
 cov-int/

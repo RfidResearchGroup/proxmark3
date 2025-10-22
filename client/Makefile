@@ -74,8 +74,9 @@ HARDNESTEDLIB = $(HARDNESTEDLIBPATH)/libhardnested.a
 HARDNESTEDLIBLD =
 
 ## ID48
-ID48LIBPATH = ./deps/id48
-ID48LIBINC = -I$(ID48LIBPATH)
+## must be manually kept in sync with updates to deps/id48/CMakeLists.txt
+ID48LIBPATH = ./deps/id48/src
+ID48LIBINC = -I$(ID48LIBPATH)/../public
 ID48LIB = $(ID48LIBPATH)/libid48.a
 ID48LIBLD =
 
