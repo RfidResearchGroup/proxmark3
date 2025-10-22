@@ -146,6 +146,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | HF_TMUDFORD     | Read and emulate ISO15693 card UID - Tim Mudford
 | HF_UNISNIFF     | Combined 14a/14b/15 sniffer with runtime selection & extra save options
 | HF_YOUNG        | Mifare sniff/simulation - Craig Young
+| HF_EMVPNG       | EMV Read and emulation - Davi Mikael (Penegui)
 | DANKARMULTI     | Standalone mode that bakes together multiple other standalone modes. - dankar
 
 By default `STANDALONE=LF_SAMYRUN`.

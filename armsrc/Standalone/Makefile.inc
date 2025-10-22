@@ -161,6 +161,10 @@ endif
 ifneq (,$(findstring WITH_STANDALONE_HF_ST25_TEAROFF,$(APP_CFLAGS)))
     SRC_STANDALONE = hf_st25_tearoff.c
 endif
+# WITH_STANDALONE_HF_EMVPNG
+ifneq (,$(findstring WITH_STANDALONE_HF_EMVPNG,$(APP_CFLAGS)))
+    SRC_STANDALONE = hf_emvpng.c
+endif
 
 ifneq (,$(findstring WITH_STANDALONE_DANKARMULTI,$(APP_CFLAGS)))
     SRC_STANDALONE = dankarmulti.c
