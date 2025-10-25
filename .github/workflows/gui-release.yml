@@ -1,0 +1,60 @@
+name: GUI Release
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch: {}
+
+jobs:
+  build-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install build deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install build appimage-builder
+
+      - name: Build wheel
+        run: |
+          python -m build -w gui -o dist_gui
+
+      - name: Create .deb using fpm (best-effort)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ruby ruby-dev build-essential
+          gem install --no-document fpm
+          # pack the wheel into a deb; fpm supports -s python pointing at wheel filename
+          WHEEL=$(ls dist_gui/*.whl | head -n1)
+          if [ -n "$WHEEL" ]; then
+            fpm -s python -t deb "$WHEEL" --name pm3-gui --version 0.1.0 -p dist_gui
+          else
+            echo "No wheel found to package" >&2
+            exit 1
+          fi
+
+      - name: Attempt AppImage build (local recipe)
+        run: |
+          # Install appimage-builder
+          pip install appimage-builder
+          # Run appimage-builder with our recipe; best-effort build
+          if [ -f gui/packaging/appimage.yml ]; then
+            appimage-builder --recipe gui/packaging/appimage.yml || echo "AppImage build failed (best-effort)"
+          else
+            echo "No AppImage recipe found" >&2
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pm3-gui-artifacts
+          path: |
+            dist_gui/*.whl
+            dist_gui/*.deb
+            *.AppImage
