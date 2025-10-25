@@ -1,0 +1,10 @@
+version: 1
+AppImage:
+  name: pm3-gui
+  version: 0.1.0
+  exec: pm3-gui
+  icon: icons/proxmark3.svg
+
+# This is a minimal appimage-builder config skeleton. To build an AppImage locally:
+# 1. Install appimage-builder (https://appimage-builder.readthedocs.io/)
+# 2. Run: appimage-builder --recipe gui/packaging/appimage.yml --config gui/packaging

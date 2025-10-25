@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=pm3 GUI (Proxmark3)
+Comment=Graphical frontend for the Proxmark3 client
+Exec=pm3-gui
+Icon=proxmark3
+Terminal=false
+Type=Application
+Categories=Utility;Hardware;
+
+# If you place the `proxmark3.svg` into ~/.local/share/icons or the system icons
+# directory, desktop environments will pick it up automatically. The `install-desktop.sh`
+# script copies the .desktop file but does not manage icons; package installers
+# or distro packagers should place the icon accordingly.

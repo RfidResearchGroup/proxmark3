@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pm3-gui"
+version = "0.1.0"
+description = "Lightweight GUI wrapper for the Proxmark3 client (pm3)." 
+readme = "README.md"
+license = { file = "../LICENSE.txt" }
+authors = [ { name = "Proxmark3 GUI team" } ]
+dependencies = ["PySide6>=6.5", "pyserial>=3.5", "pyte>=0.8.0"]
+
+[project.urls]
+Homepage = "https://github.com/harribow89/proxmark3"
+
+[project.scripts]
+pm3-gui = "pm3_gui.main:main"
