@@ -2435,7 +2435,7 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                                         if (atqa == 0x0004 || atqa == 0x0048) {
                                             printTag("EMV");
                                             type |= MTEMV;
-                                        }                                   
+                                        }
                                     }
                                 }
                             }
@@ -2730,6 +2730,12 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
             case 0x02: { // ST
                 isST = true;
                 isMifareClassic = false;
+
+                uint16_t atqa = MemLeToUint2byte(card.atqa);
+                if (atqa == 0x0044) {
+                    printTag("EMV");
+                    isEMV = true;
+                }
                 break;
             }
             case 0x04: { // NXP
