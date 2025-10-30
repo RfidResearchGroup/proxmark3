@@ -2432,10 +2432,10 @@ static int detect_nxp_card_print(uint8_t sak, uint16_t atqa, uint64_t select_sta
                                             type |= HID_SEOS;
                                         }
 
-                                        if (atqa == 0x0004) {
+                                        if (atqa == 0x0004 || atqa == 0x0048) {
                                             printTag("EMV");
                                             type |= MTEMV;
-                                        }
+                                        }                                   
                                     }
                                 }
                             }
@@ -3081,16 +3081,18 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                     json_t *data = AIDSearchGetElm(root, elmindx);
                     uint8_t vaid[200] = {0};
                     int vaidlen = 0;
-                    if (!AIDGetFromElm(data, vaid, sizeof(vaid), &vaidlen) || !vaidlen)
+                    if ((AIDGetFromElm(data, vaid, sizeof(vaid), &vaidlen) == false) || (vaidlen == 0)) {
                         continue;
+                    }
 
                     uint16_t sw = 0;
                     uint8_t result[1024] = {0};
                     size_t resultlen = 0;
                     res = Iso7816Select(CC_CONTACTLESS, ActivateField, true, vaid, vaidlen, result, sizeof(result), &resultlen, &sw);
                     ActivateField = false;
-                    if (res)
+                    if (res) {
                         continue;
+                    }
 
                     uint8_t dfname[200] = {0};
                     size_t dfnamelen = 0;
@@ -3118,16 +3120,19 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
 
                         if (dfnamelen) {
                             if (dfnamelen == vaidlen) {
+
                                 if (memcmp(dfname, vaid, vaidlen) == 0) {
                                     if (verbose) PrintAndLogEx(INFO, "(DF) Name found and equal to AID");
                                 } else {
-                                    PrintAndLogEx(INFO, "(DF) Name not equal to AID: %s :", sprint_hex(dfname, dfnamelen));
+                                    PrintAndLogEx(INFO, "(DF) Name not equal to AID: " _YELLOW_("%s"), sprint_hex_inrow(dfname, dfnamelen));
                                     PrintAIDDescriptionBuf(root, dfname, dfnamelen, verbose);
                                 }
+
                             } else {
-                                PrintAndLogEx(INFO, "(DF) Name not equal to AID: %s :", sprint_hex(dfname, dfnamelen));
+                                PrintAndLogEx(INFO, "(DF) Name not equal to AID: " _YELLOW_("%s"), sprint_hex_inrow(dfname, dfnamelen));
                                 PrintAIDDescriptionBuf(root, dfname, dfnamelen, verbose);
                             }
+
                         } else {
                             if (verbose) PrintAndLogEx(INFO, "(DF) Name not found");
                         }
