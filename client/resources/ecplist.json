@@ -1,121 +1,209 @@
 [
     {
+        "type": "vasorpay",
         "value": "6a01000000",
         "name": "VAS or payment",
         "description": "Used when a reader needs a pass or a payment card. Sometimes called VAS over Payment"
     },
     {
+        "type": "vasandpay",
         "value": "6a01000001",
         "name": "VAS and payment",
         "description": "Also called single tap mode. Displays pass info under a payment card. Allows reading multiple passes with different ids in one tap"
     },
     {
+        "type": "vasonly",
         "value": "6a01000002",
         "name": "VAS only",
         "description": "Used when a reader requests passes only"
     },
     {
+        "type": "payonly",
         "value": "6a01000003",
         "name": "Payment only",
         "description": "Used when a reader requests payment cards only. Also disables express mode for chinese transit cards"
     },
     {
+        "type": "gymkit",
+        "value": "6a01c30000",
+        "name": "GymKit",
+        "description": "Used to pair Apple Watch with equipment supporting Apple GymKit"
+    },
+    {
+        "type": "ignore",
         "value": "6a01cf0000",
         "name": "Ignore",
         "description": "iPhones before IOS17 emit this frame so that other Apple devices don't react to the field during background reading. Also emitted during NFCReaderSession subtypes"
     },
-
     {
+        "type": "transit",
+        "key": ["ventra", "chicago"],
         "value": "6a02c801000300000000000000",
         "name": "Transit: Ventra",
         "description": ""
     },
     {
+        "type": "transit",
+        "key": ["hopcard", "portland", "hopfastpass"],
         "value": "6a02c801000304000000000000",
         "name": "Transit: HOP Fastpass",
         "description": ""
     },
     {
+        "type": "transit",
+        "key": ["wmata", "smarttrip", "washington"],
         "value": "6a02c801000300010000000000",
         "name": "Transit: WMATA",
         "description": ""
     },
     {
+        "type": "transit",
+        "key": ["tfl", "london", "emv"],
         "value": "6a02c801000300027900000000",
         "name": "Transit: TFL",
         "description": "Found by a member of Proxmark community. Data bytes define a mask of supported EMV payment networks for fallback. In this case: Amex, Visa, Mastercard, Maestro, Vpay"
     },
     {
+        "type": "transit",
+        "key": ["latap", "losangeles"],
         "value": "6a02c801000300050000000000",
         "name": "Transit: LA TAP",
         "description": ""
     },
     {
+        "type": "transit",
+        "key": ["clipper", "sanfrancisco"],
         "value": "6a02c801000300070000000000",
         "name": "Transit: Clipper",
         "description": ""
     },
     {
+        "type": "transit",
+        "key": ["navigo", "idfm", "paris"],
         "value": "6a02c8010003095a0000000000",
         "name": "Transit: Navigo",
         "description": ""
     },
-
     {
-        "value": "6a02c3020002ffff",
-        "name": "Access: Hotel: Hilton",
-        "description": "TCI might be a wildcard before a reservation is made"
+        "type": "transit",
+        "key": ["presto", "toronto"],
+        "value": "6a02c801000309600000000000",
+        "name": "Transit: Presto",
+        "description": ""
     },
-
     {
+        "type": "access",
+        "key": ["demo", "placeholder"],
+        "value": "6a02c3020002ffff",
+        "name": "Access: Demo TCI 02FFFF",
+        "description": "Demo TCI assigned by Apple to test access control systems; Also used as a placeholder in some cases"
+    },
+    {
+        "type": "access",
+        "subtype": "home",
         "value": "6a02cb0206021100deadbeefdeadbeef",
-        "name": "Access: Home Key",
+        "name": "Access: Home Key (HomeKey)",
         "description": "Last 8 bytes refer to reader group identifier, common for all readers in same home installation, allows to differentiate between keys for different homes"
     },
-
     {
+        "type": "access",
+        "subtype": "home",
+        "key": ["aliro"],
+        "value": "6a02cb0206204220deadbeefdeadbeef",
+        "name": "Access: Home Key (Aliro)",
+        "description": "Last 8 bytes refer to reader group identifier, common for all readers in same home installation, allows to differentiate between keys for different homes"
+    },
+    {
+        "type": "access",
+        "subtype": "pairing",
+        "key": ["bmw"],
         "value": "6a02c30209010001",
         "name": "Access: Car Pairing: BMW",
         "description": "Device does not respond to poll after this frame. Displays a car pairing popup for BMW"
     },
     {
+        "type": "access",
+        "subtype": "pairing",
+        "key": ["mercedes"],
         "value": "6a02c30209010201",
         "name": "Access: Car Pairing: Mercedes",
         "description": "Device does not respond to poll after this frame. Displays a car pairing popup for Mercedes"
     },
     {
+        "type": "access",
+        "subtype": "pairing",
+        "key": ["genesis"],
         "value": "6a02c30209010051",
         "name": "Access: Car Pairing: Genesis",
         "description": "Device does not respond to poll after this frame. Displays a car pairing popup for Genesis"
     },
     {
+        "type": "access",
+        "subtype": "pairing",
+        "key": ["kia"],
         "value": "6a02c30209010041",
         "name": "Access: Car Pairing: KIA",
         "description": "Device does not respond to poll after this frame. Displays a car pairing popup for KIA"
     },
     {
+        "type": "access",
+        "subtype": "pairing",
+        "key": ["hyundai"],
         "value": "6a02c30209010301",
         "name": "Access: Car Pairing: Hyundai",
         "description": "Device does not respond to poll after this frame. Displays a car pairing popup for Hyundai"
     },
     {
+        "type": "access",
+        "subtype": "pairing",
+        "key": ["byd"],
         "value": "6a02c30209010701",
         "name": "Access: Car Pairing: BYD",
         "description": "Device does not respond to poll after this frame. Displays a car pairing popup for BYD"
     },
     {
+        "type": "access",
+        "subtype": "pairing",
+        "key": ["denza"],
         "value": "6a02c30209010241",
         "name": "Access: Car Pairing: Denza",
         "description": "Device does not respond to poll after this frame. Displays a car pairing popup for Denza"
     },
     {
+        "type": "access",
+        "subtype": "pairing",
+        "key": ["lotus"],
         "value": "6a02c30209010091",
         "name": "Access: Car Pairing: Lotus",
         "description": "Device does not respond to poll after this frame. Displays a car pairing popup for Lotus"
     },
-
+    {
+        "type": "access",
+        "subtype": "pairing",
+        "key": ["audi"],
+        "value": "6a02c30209010111",
+        "name": "Access: Car Pairing: Audi",
+        "description": "Device does not respond to poll after this frame. Displays a car pairing popup for Audi"
+    },
+    {
+        "type": "access",
+        "subtype": "pairing",
+        "key": ["volvo"],
+        "value": "6a02c30209010401",
+        "name": "Access: Car Pairing: Volvo",
+        "description": "Device does not respond to poll after this frame. Displays a car pairing popup for Volvo"
+    },
+    {
+        "type": "access",
+        "subtype": "pairing",
+        "key": ["polestar", "plst"],
+        "value": "6a02c30209010131",
+        "name": "Access: Car Pairing: Polestar",
+        "description": "Device does not respond to poll after this frame. Displays a car pairing popup for Polestar"
+    },
 
     {
+        "type": "identity",
         "value": "6a0281030000",
         "name": "Identity",
         "description": "Used for reading ISO18013 digital IDs"
@@ -123,11 +211,13 @@
 
 
     {
+        "type": "namedrop",
         "value": "6a02890500010001deadbeef6969",
         "name": "NameDrop",
         "description": "Triggers a warp animation. Device does not respond to poll after this frame, but it serves as a trigger for AirDrop frame. Data part contains BLE MAC address"
     },
     {
+        "type": "airdrop",
         "value": "6a02890500010000000000000000",
         "name": "AirDrop",
         "description": "Only sent if sees a NameDrop frame of other device. Device responds to poll with UID 00010203"
