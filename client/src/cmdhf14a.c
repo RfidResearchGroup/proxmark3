@@ -21,6 +21,7 @@
 #include "cmdparser.h"          // command_t
 #include "commonutil.h"         // ARRAYLEN
 #include "comms.h"              // clearCommandBuffer
+#include "util.h"               // str_ndup
 #include "cmdtrace.h"
 #include "cliparser.h"
 #include "cmdhfmf.h"
@@ -575,7 +576,7 @@ static int parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_si
         size_t second_term_len = p - second_term;
         char *second = NULL;
         if (second_term_len > 0) {
-            second = strndup(second_term, second_term_len);
+            second = str_ndup(second_term, second_term_len);
         }
         
         // Skip whitespace
@@ -593,7 +594,7 @@ static int parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_si
             }
             size_t third_term_len = p - third_term;
             if (third_term_len > 0) {
-                third = strndup(third_term, third_term_len);
+                third = str_ndup(third_term, third_term_len);
             }
         }
         
