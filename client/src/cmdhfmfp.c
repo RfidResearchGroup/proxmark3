@@ -2203,7 +2203,10 @@ int CmdHFMFPNDEFRead(const char *Cmd) {
     int res = MADCheck(sector0, NULL, verbose, &haveMAD2);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "MAD error %d", res);
-        return res;
+        if (override)
+            PrintAndLogEx(INFO, "overriding CRC check");
+        else
+            return res;
     }
 
     if (haveMAD2) {
