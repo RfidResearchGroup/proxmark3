@@ -7129,7 +7129,10 @@ int CmdHFMFNDEFRead(const char *Cmd) {
     int res = MADCheck(sector0, sector10, verbose, &haveMAD2);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "MAD error %d", res);
-        return res;
+        if (override)
+            PrintAndLogEx(INFO, "overriding CRC check");
+        else
+            return res;
     }
 
     uint16_t mad[7 + 8 + 8 + 8 + 8] = {0};
