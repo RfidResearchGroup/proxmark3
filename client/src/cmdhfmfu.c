@@ -2412,6 +2412,20 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         locked = true;
     }
 
+    // NXP specific
+    if ((tagtype & (MFU_TT_UL | MFU_TT_UL_C | MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1 | MFU_TT_UL_NANO_40 |
+                    MFU_TT_NTAG | MFU_TT_NTAG_203 | MFU_TT_NTAG_210 | MFU_TT_NTAG_210u | MFU_TT_NTAG_212 |
+                    MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C |
+                    MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216 | MFU_TT_NTAG_216_F |
+                    MFU_TT_NTAG_223_DNA | MFU_TT_NTAG_223_DNA_SD | MFU_TT_NTAG_224_DNA | MFU_TT_NTAG_224_DNA_SD |
+                    MFU_TT_NTAG_I2C_1K | MFU_TT_NTAG_I2C_2K | MFU_TT_NTAG_I2C_1K_PLUS | MFU_TT_NTAG_I2C_2K_PLUS |
+                    MFU_TT_UL_AES)) &&
+        ((tagtype & (MFU_TT_MAGIC | MFU_TT_MAGIC_1A | MFU_TT_MAGIC_1B | MFU_TT_MAGIC_NTAG |
+        MFU_TT_MAGIC_2 | MFU_TT_MAGIC_4 | MFU_TT_MAGIC_4_GDM | MFU_TT_MAGIC_NTAG21X)) == 0)) {
+        // print silicon info
+        ul_print_nxp_silicon_info(card.uid);
+    }
+
     // UL_C Specific
     if ((tagtype & MFU_TT_UL_C)) {
 
@@ -2553,9 +2567,6 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                 return PM3_ESOFT;
             }
         }
-
-        // print silicon info
-        ul_print_nxp_silicon_info(card.uid);
 
         // Get Version
         uint8_t version[10] = {0x00};
