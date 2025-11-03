@@ -2232,14 +2232,14 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
             break;
         }
 
-        float progress = 100.000 * (float)(id - idStart) / ((float)(idEnd - idStart));
-        PrintAndLogEx(INPLACE, "Brute DESFire AID Progress " _YELLOW_("%0.1ff") " %%   current AID: %06X", progress, id);
+        float progress = 100.0 * (float)(id - idStart) / ((float)(idEnd - idStart));
+        PrintAndLogEx(INPLACE, "Brute DESFire AID Progress " _YELLOW_("%0.001f") " %%   current AID: %06X", progress, id);
 
         res = DesfireSelectAIDHexNoFieldOn(&dctx, id);
 
         if (res == PM3_SUCCESS) {
             printf("\33[2K\r"); // clear current line before printing
-            PrintAndLogEx(SUCCESS, "Found New DESFire Application ID " _GREEN_("%06X"), id);
+            PrintAndLogEx(SUCCESS, "Found New DESFire AID " _GREEN_("%06X"), id);
         }
     }
 
