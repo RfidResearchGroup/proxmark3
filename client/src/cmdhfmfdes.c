@@ -2233,7 +2233,7 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
         }
 
         float progress = 100.0 * (float)(id - idStart) / ((float)(idEnd - idStart));
-        PrintAndLogEx(INPLACE, "Brute DESFire AID Progress " _YELLOW_("%0.001f") " %%   current AID: %06X", progress, id);
+        PrintAndLogEx(INPLACE, "Brute DESFire AID Progress " _YELLOW_("%0.1f") " %%   current AID: %06X", progress, id);
 
         res = DesfireSelectAIDHexNoFieldOn(&dctx, id);
 
@@ -2251,7 +2251,7 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
 
 // MIAFRE DESFire Authentication
 // keys:
-// NR  DESC     KEYLENGHT
+// NR  DESC     KEYLENGTH
 // ------------------------
 // 1 = DES      8
 // 2 = 3DES     16
