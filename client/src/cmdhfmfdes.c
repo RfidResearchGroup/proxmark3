@@ -2232,7 +2232,7 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
             break;
         }
 
-        float progress = ((id - idStart) / (idEnd - idStart));
+        float progress = 100.0 * (float)(id - idStart) / ((float)(idEnd - idStart));
         PrintAndLogEx(INPLACE, "Progress " _YELLOW_("%0.1f") " %%   current AID: %06X", progress, id);
 
         res = DesfireSelectAIDHexNoFieldOn(&dctx, id);
