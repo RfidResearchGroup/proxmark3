@@ -2232,14 +2232,14 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
             break;
         }
 
-        float progress = ((id - idStart) / (idEnd - idStart));
-        PrintAndLogEx(INPLACE, "Progress " _YELLOW_("%0.1f") " %%   current AID: %06X", progress, id);
+        float progress = 100.0 * (float)(id - idStart) / ((float)(idEnd - idStart));
+        PrintAndLogEx(INPLACE, "Brute DESFire AID Progress " _YELLOW_("%0.1f") " %%   current AID: %06X", progress, id);
 
         res = DesfireSelectAIDHexNoFieldOn(&dctx, id);
 
         if (res == PM3_SUCCESS) {
             printf("\33[2K\r"); // clear current line before printing
-            PrintAndLogEx(SUCCESS, "Got new APPID " _GREEN_("%06X"), id);
+            PrintAndLogEx(SUCCESS, "Found New DESFire AID " _GREEN_("%06X"), id);
         }
     }
 
@@ -2251,7 +2251,7 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
 
 // MIAFRE DESFire Authentication
 // keys:
-// NR  DESC     KEYLENGHT
+// NR  DESC     KEYLENGTH
 // ------------------------
 // 1 = DES      8
 // 2 = 3DES     16
