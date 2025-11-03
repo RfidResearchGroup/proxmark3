@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Updated id48lib (adds unit tests, better build management)
 - Added two trace files for Ultralight AES (@iceman1001)
 - Added support for Ultralight AES secure messaing in `hf 14a raw` (@iceman1001)
 - Added support for Ultralight AES secure messaging in `hf mfu info/rdbl/wrbl/dump/ndefread/wipe/setkey` (@iceman1001)

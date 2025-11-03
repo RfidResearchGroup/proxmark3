@@ -103,7 +103,7 @@ static uint8_t treatPDOL(const uint8_t *apdu) {
             ppdol[plen + 4] = 0x01;
             ppdol[plen + 5] = 0x00;
             plen += 6;
-            i += 2;        
+            i += 2;
         } else if (apdu[i] == 0x9F && apdu[i + 1] == 0x03) { // Secondary / cashback amount
             ppdol[plen] = 0x00;
             ppdol[plen + 1] = 0x00;
@@ -113,7 +113,7 @@ static uint8_t treatPDOL(const uint8_t *apdu) {
             ppdol[plen + 5] = 0x00;
             plen += 6;
             i += 2;
-        }else if (apdu[i] == 0x5F && apdu[i + 1] == 0x2A) { // Transaction Currency Code
+        } else if (apdu[i] == 0x5F && apdu[i + 1] == 0x2A) { // Transaction Currency Code
             ppdol[plen] = 0x5F;
             ppdol[plen + 1] = 0x2A;
             plen += 2;
@@ -203,7 +203,7 @@ void RunMod(void) {
     // Trailing.................        000991
 
     //                     44   12   34   56   05   78   12   34   D 1711     2   01   00   00   03   00   00   99   1
-    char token[19] = {0x44,0x12,0x34,0x56,0x05,0x78,0x12,0x34,0xd1,0x71,0x12,0x01,0x00,0x00,0x03,0x00,0x00,0x99,0x1f};
+    char token[19] = {0x44, 0x12, 0x34, 0x56, 0x05, 0x78, 0x12, 0x34, 0xd1, 0x71, 0x12, 0x01, 0x00, 0x00, 0x03, 0x00, 0x00, 0x99, 0x1f};
     // It is possible to initialize directly the emulation mode, having "token" with data and set "chktoken" = true ;)
     //
     //char token[19] = {0x00};
@@ -331,10 +331,10 @@ void RunMod(void) {
                                     apduslen[2] = plen;
                                     existpdol = true;
                                 }
-                            
+
 
                             } else if (i == 3) {
-                            
+
 
                                 // find track 2
                                 if (apdubuffer[u] == 0x57 && apdubuffer[u + 1] == 0x13 && !chktoken) {
@@ -342,7 +342,7 @@ void RunMod(void) {
                                     memcpy(&token, &apdubuffer[u + 2], 19);
                                     break;
                                 }
-                            }                   
+                            }
                         }
 
                         if (i == 1) {
@@ -413,7 +413,7 @@ void RunMod(void) {
 
                 // dynamic_response_info will be in charge of responses
                 dynamic_response_info.response_n = 0;
-                
+
                 //Dbprintf("receivedCmd: %02x\n", receivedCmd);
                 // received a REQUEST
                 if (receivedCmd[0] == ISO14443A_CMD_REQA && len == 1) {
@@ -436,12 +436,12 @@ void RunMod(void) {
                     // received request for UID (cascade 1)
                 } else if (receivedCmd[1] == 0x20 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 2) {
                     //DbpString(_YELLOW_("+") "Request for UID C1");
-                    p_response = &responses[RESP_INDEX_UIDC1];                    
+                    p_response = &responses[RESP_INDEX_UIDC1];
 
                     // received a SELECT (cascade 1)
                 } else if (receivedCmd[1] == 0x70 && receivedCmd[0] == ISO14443A_CMD_ANTICOLL_OR_SELECT && len == 9) {
                     //DbpString(_YELLOW_("+") "Request for SELECT S1");
-                    p_response = &responses[RESP_INDEX_SAKC1];                    
+                    p_response = &responses[RESP_INDEX_SAKC1];
 
                     // received a RATS request
                 } else if (receivedCmd[0] == ISO14443A_CMD_RATS && len == 4) {
@@ -449,7 +449,7 @@ void RunMod(void) {
                     prevCmd = 0;
                     //p_response = &responses[RESP_INDEX_RATS];
 
-                    static uint8_t rRATS[] = { 0x13, 0x78, 0x80, 0x72, 0x02, 0x80, 0x31, 0x80, 0x66, 0xb1, 0x84, 0x0c, 0x01, 0x6e, 0x01, 0x83, 0x00, 0x90, 0x00 };                    
+                    static uint8_t rRATS[] = { 0x13, 0x78, 0x80, 0x72, 0x02, 0x80, 0x31, 0x80, 0x66, 0xb1, 0x84, 0x0c, 0x01, 0x6e, 0x01, 0x83, 0x00, 0x90, 0x00 };
 
                     memcpy(&dynamic_response_info.response[0], rRATS, sizeof(rRATS));
                     dynamic_response_info.response_n = sizeof(rRATS);
@@ -473,7 +473,7 @@ void RunMod(void) {
                                 0x10, 0x10, 0x87, 0x01, 0x01, 0x9F, 0x12, 0x07,
                                 0x43, 0x52, 0x45, 0x44, 0x49, 0x54, 0x4F, 0x61,
                                 0x15, 0x4F, 0x07, 0xA0, 0x00, 0x00, 0x00, 0x03,
-                                0x20, 0x10, 0x87, 0x01, 0x02, 0x9F, 0x12, 0x06,                                
+                                0x20, 0x10, 0x87, 0x01, 0x02, 0x9F, 0x12, 0x06,
                                 0x44, 0x45, 0x42, 0x49, 0x54, 0x4F, 0x90, 0x00
                             };
                             memcpy(&dynamic_response_info.response[1], ppsea, sizeof(ppsea));
@@ -490,10 +490,10 @@ void RunMod(void) {
                                 0x07, 0x43, 0x52, 0x45, 0x44, 0x49, 0x54, 0x4F,
                                 0x5F, 0x2D, 0x08, 0x70, 0x74, 0x65, 0x73, 0x65,
                                 0x6E, 0x66, 0x72, 0x9F, 0x11, 0x01, 0x01, 0x9F,
-                                0x38, 0x18, 
-								// Tag 9F66 - Decodificador TTQ (Qualificadores de Transação de Terminal)
-								0x9F, 0x66, 0x04, 
-								0x9F, 0x02, 0x06,								
+                                0x38, 0x18,
+                                // Tag 9F66 - Decodificador TTQ (Qualificadores de Transação de Terminal)
+                                0x9F, 0x66, 0x04,
+                                0x9F, 0x02, 0x06,
                                 0x9F, 0x03, 0x06, 0x9F, 0x1A, 0x02, 0x95, 0x05,
                                 0x5F, 0x2A, 0x02, 0x9A, 0x03, 0x9C, 0x01, 0x9F,
                                 0x37, 0x04, 0xBF, 0x0C, 0x0E, 0x9F, 0x5A, 0x06,
@@ -510,27 +510,27 @@ void RunMod(void) {
                             uint8_t processing_long_rest[72] = {
                                 0x5f, 0x20, 0x0c, 0x50, 0x41, 0x59, 0x57, 0x41,
                                 0x56, 0x45, 0x2f, 0x56, 0x49, 0x53, 0x41, 0x5f,
-                                0x34, 0x01, 0x00, 
-								// Tag 9F10 - Issuer Application Data (IAD) Decoder
-								0x9f, 0x10, 0x07, 0x06, 0x01,  0x12, 0x03, 0xa0, 0x20, 0x00, 
-								//assinatura ARQC Estatica
-								0x9f, 0x26, 0x08, 0xcb, 0x44, 0x0d, 0x86, 0x1a, 0xa8, 0x33, 0x1d,
-								//que tipo de assinatura
+                                0x34, 0x01, 0x00,
+                                // Tag 9F10 - Issuer Application Data (IAD) Decoder
+                                0x9f, 0x10, 0x07, 0x06, 0x01,  0x12, 0x03, 0xa0, 0x20, 0x00,
+                                //assinatura ARQC Estatica
+                                0x9f, 0x26, 0x08, 0xcb, 0x44, 0x0d, 0x86, 0x1a, 0xa8, 0x33, 0x1d,
+                                //que tipo de assinatura
                                 0x9f, 0x27, 0x01, 0x80,
 
-								0x9f, 0x36, 0x02, 0x0f,
+                                0x9f, 0x36, 0x02, 0x0f,
                                 0x57, 0x9f, 0x5d, 0x06, 0x00, 0x00, 0x00, 0x00,
-                                0x00, 0x00, 
-								// Tag 9F6C - Decodificador CTQ (Qualificadores de Transação de Cartão)
-								0x9f, 0x6c, 0x02, 0x00, 0x80,
-								// Tag 9F6E - Form Factor Indicator (Third Party Data Decoder)
-								0x9f, 0x6e, 0x04, 0x20, 0x70, 0x00, 0x00, 
-								
-								0x90, 0x00
+                                0x00, 0x00,
+                                // Tag 9F6C - Decodificador CTQ (Qualificadores de Transação de Cartão)
+                                0x9f, 0x6c, 0x02, 0x00, 0x80,
+                                // Tag 9F6E - Form Factor Indicator (Third Party Data Decoder)
+                                0x9f, 0x6e, 0x04, 0x20, 0x70, 0x00, 0x00,
+
+                                0x90, 0x00
                             };
 
                             uint8_t processing_long[99];
-                            
+
                             memcpy(&processing_long[0], processing_long_last, sizeof(processing_long_last));
                             memcpy(&processing_long[8], token, sizeof(token));
                             memcpy(&processing_long[27], processing_long_rest, sizeof(processing_long_rest));

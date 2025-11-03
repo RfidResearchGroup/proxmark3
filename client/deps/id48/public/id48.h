@@ -31,13 +31,13 @@
 #include <string.h>
 #include <stdbool.h>
 #if defined(NDEBUG)
-#define ASSERT(x) ((void)0)
+    #define ASSERT(x) ((void)0)
 #elif defined(ID48_NO_STDIO)
-#define ASSERT(x) ((void)0)
+    #define ASSERT(x) ((void)0)
 #else // neither NDEBUG nor ID48_NO_STDIO defined
-#include <stdio.h>
-#include <assert.h>
-#define ASSERT(x) assert((x))
+    #include <stdio.h>
+    #include <assert.h>
+    #define ASSERT(x) assert((x))
 #endif
 
 
