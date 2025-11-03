@@ -765,27 +765,35 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "--------------------------------- " _CYAN_("Card capabilities") " ---------------------------------");
     uint8_t major = info.versionSW[3];
     uint8_t minor = info.versionSW[4];
+
+    if (major == 0 && minor == 2)
+        PrintAndLogEx(INFO, "\t0.2 - DESFire Light, Originality check, ");
+
     if (major == 0 && minor == 4)
         PrintAndLogEx(INFO, "\t0.4 - DESFire MF3ICD40, No support for APDU (only native commands)");
     if (major == 0 && minor == 5)
         PrintAndLogEx(INFO, "\t0.5 - DESFire MF3ICD40, Support for wrapping commands inside ISO 7816 style APDUs");
     if (major == 0 && minor == 6)
         PrintAndLogEx(INFO, "\t0.6 - DESFire MF3ICD40, Add ISO/IEC 7816 command set compatibility");
+
+    if (major == 1 && minor == 0)
+        PrintAndLogEx(INFO, "\t1.0 - DESFire Ev1 MF3ICDQ1/MF3ICDHQ1, EAL4+");
     if (major == 1 && minor == 3)
         PrintAndLogEx(INFO, "\t1.3 - DESFire Ev1 MF3ICD21/41/81, Support extended APDU commands, EAL4+");
     if (major == 1 && minor == 4)
         PrintAndLogEx(INFO, "\t1.4 - DESFire Ev1 MF3ICD21/41/81, EAL4+");
+
     if (major == 2 && minor == 0)
         PrintAndLogEx(INFO, "\t2.0 - DESFire Ev2, Originality check, proximity check, EAL5");
     if (major == 2 && minor == 2)
         PrintAndLogEx(INFO, "\t2.2 - DESFire Ev2 XL, Originality check, proximity check, EAL5");
+
     if (major == 3 && minor == 0)
         PrintAndLogEx(INFO, "\t3.0 - DESFire Ev3, Originality check, proximity check, badass EAL6");
+
     if (major == 0xA0 && minor == 0)
         PrintAndLogEx(INFO, "\tx.x - DUOX, Originality check, proximity check, EAL6++");
 
-    if (major == 0 && minor == 2)
-        PrintAndLogEx(INFO, "\t0.2 - DESFire Light, Originality check, ");
 
     DesfireContext_t dctx = {0};
     dctx.commMode = DCMPlain;
