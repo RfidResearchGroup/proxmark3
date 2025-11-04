@@ -921,8 +921,8 @@ int CmdHF14ASim(const char *Cmd) {
         arg_lit0("x",  NULL, "Performs the 'reader attack', nr/ar attack against a reader"),
         arg_lit0(NULL, "sk", "Fill simulator keys from found keys"),
         arg_lit0("v", "verbose", "verbose output"),
-        arg_lit0(NULL, "z1", "ULC/ULAES Auth - all zero handshake part 1"),
-        arg_lit0(NULL, "z2", "ULC/ULAES Auth - all zero handshake part 2"),
+        arg_str0(NULL, "1a1", "<hex>", "<8|16> hex bytes ULC/ULAES Auth reply step1: ek(RndB)"),
+        arg_str0(NULL, "1a2", "<hex>", "<8|16> hex bytes ULC/ULAES Auth reply step2: ek(RndA')"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -956,10 +956,52 @@ int CmdHF14ASim(const char *Cmd) {
     bool setEmulatorMem = arg_get_lit(ctx, 5);
     bool verbose = arg_get_lit(ctx, 6);
 
-    bool ulauth_z1 = arg_get_lit(ctx, 7);
-    bool ulauth_z2 = arg_get_lit(ctx, 8);
-
+    int ulauth_1a1_len = 0;
+    int ulauth_1a2_len = 0;
+    uint8_t ulauth_1a1[16] = {0};
+    uint8_t ulauth_1a2[16] = {0};
+    CLIGetHexWithReturn(ctx, 7, ulauth_1a1, &ulauth_1a1_len);
+    CLIGetHexWithReturn(ctx, 8, ulauth_1a2, &ulauth_1a2_len);
     CLIParserFree(ctx);
+
+    if (ulauth_1a1_len > 0) {
+        switch (tagtype) {
+            case 13: // ULC
+                if (ulauth_1a1_len != 8) {
+                    PrintAndLogEx(ERR, "ULC --1a1 length must be 8 bytes");
+                    return PM3_EINVARG;
+                }
+                break;
+            case 14: // ULAES
+                if (ulauth_1a1_len != 16) {
+                    PrintAndLogEx(ERR, "ULAES --1a1 length must be 16 bytes");
+                    return PM3_EINVARG;
+                }
+                break;
+            default:
+                PrintAndLogEx(ERR, "--1a1 option is only valid for tag types 13 (ULC) and 14 (ULAES)");
+                return PM3_EINVARG;
+        }
+    }
+    if (ulauth_1a2_len > 0) {
+        switch (tagtype) {
+            case 13: // ULC
+                if (ulauth_1a2_len != 8) {
+                    PrintAndLogEx(ERR, "ULC --1a2 length must be 8 bytes");
+                    return PM3_EINVARG;
+                }
+                break;
+            case 14: // ULAES
+                if (ulauth_1a2_len != 16) {
+                    PrintAndLogEx(ERR, "ULAES --1a2 length must be 16 bytes");
+                    return PM3_EINVARG;
+                }
+                break;
+            default:
+                PrintAndLogEx(ERR, "--1a2 option is only valid for tag types 13 (ULC) and 14 (ULAES)");
+                return PM3_EINVARG;
+        }
+    }
 
     if (tagtype > 14) {
         PrintAndLogEx(ERR, "Undefined tag %d", tagtype);
@@ -976,16 +1018,20 @@ int CmdHF14ASim(const char *Cmd) {
         uint8_t uid[10];
         uint8_t exitAfter;
         uint8_t rats[20];
-        bool ulauth_z1;
-        bool ulauth_z2;
+        uint8_t ulauth_1a1_len;
+        uint8_t ulauth_1a2_len;
+        uint8_t ulauth_1a1[16];
+        uint8_t ulauth_1a2[16];
     } PACKED payload;
 
     payload.tagtype = tagtype;
     payload.flags = flags;
     payload.exitAfter = exitAfterNReads;
-    payload.ulauth_z1 = ulauth_z1;
-    payload.ulauth_z2 = ulauth_z2;
+    payload.ulauth_1a1_len = ulauth_1a1_len;
+    payload.ulauth_1a2_len = ulauth_1a2_len;
     memcpy(payload.uid, uid, uid_len);
+    memcpy(payload.ulauth_1a1, ulauth_1a1, ulauth_1a1_len);
+    memcpy(payload.ulauth_1a2, ulauth_1a2, ulauth_1a2_len);
 
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443A_SIMULATE, (uint8_t *)&payload, sizeof(payload));

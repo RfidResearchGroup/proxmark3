@@ -246,7 +246,7 @@ void RunMod(void) {
                 FLAG_SET_UID_IN_DATA(flags, 7);
 
                 Dbprintf("Starting simulation, press " _GREEN_("pm3 button") " to stop and go back to search state.");
-                SimulateIso14443aTag(7, flags, card.uid, 0, NULL, 0, false, false);
+                SimulateIso14443aTag(7, flags, card.uid, 0);
 
                 // Go back to search state if user presses pm3-button
                 state = STATE_SEARCH;

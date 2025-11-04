@@ -4125,8 +4125,8 @@ static int CmdHF14AMfUSim(const char *Cmd) {
         arg_str0("u", "uid", "<hex>", "<4|7|10> hex bytes UID"),
         arg_int0("n", "num", "<dec>", "Exit simulation after <numreads> blocks. 0 = infinite"),
         arg_lit0("v", "verbose", "Verbose output"),
-        arg_lit0(NULL, "z1", "ULC/ULAES Auth - all zero handshake part 1"),
-        arg_lit0(NULL, "z2", "ULC/ULAES Auth - all zero handshake part 2"),
+        arg_str0(NULL, "1a1", "<hex>", "<8|16> hex bytes ULC/ULAES Auth reply step1: ek(RndB)"),
+        arg_str0(NULL, "1a2", "<hex>", "<8|16> hex bytes ULC/ULAES Auth reply step2: ek(RndA')"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);

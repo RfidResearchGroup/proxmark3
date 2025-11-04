@@ -1621,9 +1621,14 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
 // response to send, and send it.
 // 'hf 14a sim'
 //-----------------------------------------------------------------------------
-void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uint8_t exitAfterNReads,
-                          uint8_t *ats, size_t ats_len, bool ulauth_z1, bool ulauth_z2) {
+void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uint8_t exitAfterNReads) {
+    SimulateIso14443aTagEx(tagType, flags, useruid, exitAfterNReads, NULL, 0, NULL, 0, NULL, 0);
+}
 
+void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, uint8_t exitAfterNReads,
+                            uint8_t *ats, size_t ats_len,
+                            uint8_t *ulauth_1a1, uint8_t ulauth_1a1_len,
+                            uint8_t *ulauth_1a2, uint8_t ulauth_1a2_len) {
 #define ATTACK_KEY_COUNT 16
 #define ULC_TAG_NONCE       "\x01\x02\x03\x04\x05\x06\x07\x08"
 
@@ -2065,8 +2070,8 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
             // our very random TAG NONCE
             memcpy(dynamic_response_info.response + 1, ULC_TAG_NONCE, 8);
 
-            if (ulauth_z1) {
-                memset(dynamic_response_info.response + 1, 0, 8);
+            if (ulauth_1a1_len == 8 && ulauth_1a1 != NULL) {
+                memcpy(dynamic_response_info.response + 1, ulauth_1a1, ulauth_1a1_len);
             } else {
                 // encrypt TAG NONCE
                 tdes_nxp_send(dynamic_response_info.response + 1, dynamic_response_info.response + 1, 8, ulc_key, ulc_iv, 2);
@@ -2104,9 +2109,8 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
             // OK response
             dynamic_response_info.response[0] = 0x00;
 
-            if (ulauth_z2) {
-                // try empty auth but with correct CRC and 0x00 command
-                memset(dynamic_response_info.response + 1, 0, 8);
+            if (ulauth_1a2_len == 8 && ulauth_1a2 != NULL) {
+                memcpy(dynamic_response_info.response + 1, ulauth_1a2, ulauth_1a2_len);
             } else {
                 // rol RndA
                 rol(rnd_ab, 8);
@@ -2139,8 +2143,8 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
             memcpy(dynamic_response_info.response + 1, ULC_TAG_NONCE, 8);
             memcpy(dynamic_response_info.response + 9, ULC_TAG_NONCE, 8);
 
-            if (ulauth_z1) {
-                memset(dynamic_response_info.response + 1, 0, 16);
+            if (ulauth_1a1_len == 16 && ulauth_1a1 != NULL) {
+                memcpy(dynamic_response_info.response + 1, ulauth_1a1, ulauth_1a1_len);
             } else {
                 // encrypt TAG NONCE
                 aes128_nxp_send(dynamic_response_info.response + 1, dynamic_response_info.response + 1, 16, ulc_key, ulc_iv);
@@ -2180,9 +2184,8 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
             // OK response
             dynamic_response_info.response[0] = 0x00;
 
-            if (ulauth_z2) {
-                // try empty auth but with correct CRC and 0x00 command
-                memset(dynamic_response_info.response + 1, 0, 16);
+            if (ulauth_1a2_len == 16 && ulauth_1a2 != NULL) {
+                memcpy(dynamic_response_info.response + 1, ulauth_1a2, ulauth_1a2_len);
             } else {
                 // rol RndA
                 rol(rnd_ab, 16);
