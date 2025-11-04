@@ -110,7 +110,10 @@ def write_config(config: str):
 def grab_config() -> str:
     try_auth_magic()
     p.console("hf 14a raw -c" + ("s" if not (gen1a or alt) else "") + " E050")
-    return p.grabbed_output.split("\n")[-2][4:-9].replace(" ", "")
+    out = p.grabbed_output
+    if out == "":
+        return out
+    return out.split("\n")[-2][4:-9].replace(" ", "")
 
 if gen1a and alt:
     print(ERROR + "Please only choose one magic wakeup type.")
