@@ -84,6 +84,7 @@ typedef enum {
     MCT,
     FLIPPER,
     TAGINFO,
+    BRUCE,
 } DumpFileType_t;
 
 typedef enum {
