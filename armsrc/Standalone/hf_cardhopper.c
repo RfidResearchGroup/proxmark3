@@ -250,7 +250,7 @@ static void become_card(void) {
     while (1) {
         WDT_HIT();
 
-        if (!GetIso14443aCommandFromReaderInterruptible(fromReaderDat, sizeof(fromReaderDat), parity, &fromReaderLen)) {
+        if (GetIso14443aCommandFromReaderInterruptible(fromReaderDat, sizeof(fromReaderDat), parity, &fromReaderLen) == false) {
             if (cardhopper_data_available()) {
                 read_packet(rx);
                 if (memcmp(magicRSRT, rx->dat, sizeof(magicRSRT)) == 0) {

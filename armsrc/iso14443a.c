@@ -2951,7 +2951,7 @@ void iso14443a_antifuzz(uint32_t flags) {
         WDT_HIT();
 
         // Clean receive command buffer
-        if (!GetIso14443aCommandFromReader(received, MAX_FRAME_SIZE, receivedPar, &len)) {
+        if (GetIso14443aCommandFromReader(received, MAX_FRAME_SIZE, receivedPar, &len) == false) {
             Dbprintf("Anti-fuzz stopped. Trace length: %d ", BigBuf_get_traceLen());
             break;
         }
