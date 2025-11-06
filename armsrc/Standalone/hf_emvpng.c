@@ -308,7 +308,7 @@ void RunMod(void) {
                     chktoken = false;
                     LED_C_OFF();
                     LED_B_ON();
-                    uint8_t apdulen = iso14_apdu(apdus[i], (uint16_t) apduslen[i], false, apdubuffer, NULL);
+                    uint8_t apdulen = iso14_apdu(apdus[i], (uint16_t) apduslen[i], false, apdubuffer, sizeof(apdubuffer), NULL);
 
                     if (apdulen > 0) {
                         DbpString(_YELLOW_("[ ") "Proxmark command" _YELLOW_(" ]"));
@@ -377,7 +377,7 @@ void RunMod(void) {
             // free eventually allocated BigBuf memory but keep Emulator Memory
             BigBuf_free_keep_EM();
 
-            if (SimulateIso14443aInit(tagType, flags, data, &responses, &cuid, counters, tearings, &pages) == false) {
+            if (SimulateIso14443aInit(tagType, flags, data, NULL, 0, &responses, &cuid, counters, tearings, &pages) == false) {
                 BigBuf_free_keep_EM();
                 reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EINIT, NULL, 0);
                 DbpString(_YELLOW_("!!") "Error initializing the emulation process!");
