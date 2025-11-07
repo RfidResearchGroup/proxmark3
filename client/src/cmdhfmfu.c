@@ -3629,15 +3629,15 @@ static int CmdHF14AMfUDump(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static void wait4response(uint8_t b) {
+static void wait4response(uint32_t cmd, uint8_t b) {
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        uint8_t isOK  = resp.oldarg[0] & 0xff;
-        if (isOK == 0) {
-            PrintAndLogEx(WARNING, "failed to write block %d", b);
-        }
-    } else {
+    if (WaitForResponseTimeout(cmd, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "command execution time out");
+        return;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "failed to write block " _YELLOW_("%d"), b);
     }
 }
 
@@ -3666,8 +3666,6 @@ int CmdHF14MfUTamper(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    int tt_cfg_page = 41;
-    int tt_msg_page = 45;
     int msg_len = 0;
     uint8_t msg_data[4] = {0x00};
     CLIGetHexWithReturn(ctx, 3, msg_data, &msg_len);
@@ -3675,7 +3673,6 @@ int CmdHF14MfUTamper(const char *Cmd) {
 
     if (use_msg && msg_len != 4) {
         PrintAndLogEx(WARNING, "The tamper message must be 4 hex bytes if provided");
-        DropField();
         CLIParserFree(ctx);
         return PM3_ESOFT;
     }
@@ -3686,57 +3683,64 @@ int CmdHF14MfUTamper(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint64_t tagtype = GetHF14AMfU_Type();
+    DropField();
+
     if (tagtype == MFU_TT_UL_ERROR) {
         PrintAndLogEx(WARNING, "Tag type not detected");
-        DropField();
         return PM3_ESOFT;
     }
     if (tagtype != MFU_TT_NTAG_213_TT) {
         PrintAndLogEx(WARNING, "Tag type not NTAG 213TT");
-        DropField();
         return PM3_ESOFT;
     }
-
-    DropField();
-    iso14a_card_select_t card;
 
     if (enable && disable) {
         PrintAndLogEx(WARNING, "You can only select one of the options enable/disable tamper feature");
-        DropField();
         return PM3_ESOFT;
     }
 
+    mful_writeblock_t packet = {
+        .keytype = 0,   // no key
+        .use_schann = false,
+        .keylen = 0,
+    };
+    memcpy(packet.data, msg_data, msg_len);
+
     if (use_msg) {
-        if (ul_select(&card) == false) {
-            DropField();
-            return PM3_ESOFT;
-        }
-        PrintAndLogEx(INFO, "Trying to write tamper message");
-        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, tt_msg_page, 0, 0, msg_data, 4);
 
+        PrintAndLogEx(INFO, "Trying to write tamper message...");
+
+        int tt_msg_page = 45;
+        packet.block_no = tt_msg_page;
+
+        SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t*)&packet, sizeof(packet));
         PacketResponseNG resp;
-
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            uint8_t isOK  = resp.oldarg[0] & 0xff;
-            if (!isOK)
-                PrintAndLogEx(WARNING, "Failed to write tamper message");
-            else
-                PrintAndLogEx(SUCCESS, "Tamper message written successfully");
-        } else {
+        if (WaitForResponseTimeout(CMD_HF_MIFAREU_WRITEBL, &resp, 1500) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
+            return PM3_ETIMEOUT;
+        }
+
+        if (resp.status == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Writing tamper message ( %s )", _GREEN_("ok"));
+        } else {
+            PrintAndLogEx(FAILED, "Writing tamper message ( %s )", _RED_("fail"));
         }
     }
 
     if (enable || disable || lock_msg) {
 
+        PrintAndLogEx(INFO, "Reading current tag config...");
+
+        iso14a_card_select_t card;
         if (ul_select(&card) == false) {
             PrintAndLogEx(ERR, "Unable to select tag");
             DropField();
             return PM3_ESOFT;
         }
 
-        uint8_t cfg_page[4] = {0x00};
-        uint8_t cmd[] = {ISO14443A_CMD_READBLOCK, tt_cfg_page};
+        int tt_cfg_page = 41;
+        uint8_t cfg_page[4] = { 0x00 };
+        uint8_t cmd[] = { ISO14443A_CMD_READBLOCK, tt_cfg_page };
         int status = ul_send_cmd_raw(cmd, sizeof(cmd), cfg_page, 4, false);
         DropField();
 
@@ -3747,33 +3751,37 @@ int CmdHF14MfUTamper(const char *Cmd) {
         }
 
         if (enable) {
-            cfg_page[1] = cfg_page[1] | 0x02;
+            cfg_page[1] |= 0x02;
             PrintAndLogEx(INFO, "Enabling tamper feature");
         }
+
         if (disable) {
-            cfg_page[1] = cfg_page[1] & 0xFD;
+            cfg_page[1] &= 0xFD;
             PrintAndLogEx(INFO, "Disabling tamper feature");
         }
+
         if (lock_msg) {
-            cfg_page[1] = cfg_page[1] | 0x04;
+            cfg_page[1] |= 0x04;
             PrintAndLogEx(INFO, "Locking tamper message");
         }
 
-        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, tt_cfg_page, 0, 0, cfg_page, 4);
+        packet.block_no = tt_cfg_page;
+        memcpy(packet.data, cfg_page, sizeof(cfg_page));
+        SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t*)&packet, sizeof(packet));
         PacketResponseNG resp;
-
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            uint8_t isOK  = resp.oldarg[0] & 0xff;
-            if (!isOK)
-                PrintAndLogEx(WARNING, "Failed to write tamper configuration");
-            else
-                PrintAndLogEx(SUCCESS, "Tamper configuration written successfully");
-        } else {
+        if (WaitForResponseTimeout(CMD_HF_MIFAREU_WRITEBL, &resp, 1500) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
+            return PM3_ETIMEOUT;
         }
+
+        if (resp.status == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "Writing tamper configuration ( %s )", _GREEN_("ok"));
+        } else {
+            PrintAndLogEx(FAILED, "Writing tamper configuration ( %s )", _RED_("fail"));
+        }
+        return resp.status;
     }
 
-    DropField();
     return PM3_SUCCESS;
 }
 
@@ -3931,7 +3939,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
             clearCommandBuffer();
             SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PWD, keytype, 0, data, sizeof(data));
 
-            wait4response(MFU_NTAG_SPECIAL_PWD);
+            wait4response(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PWD);
 
             // copy the new key
             keytype = 2;
@@ -3946,7 +3954,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         PrintAndLogEx(INFO, "special PACK    block written 0x%X - %s", MFU_NTAG_SPECIAL_PACK, sprint_hex(data, 4));
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PACK, keytype, 0, data, sizeof(data));
-        wait4response(MFU_NTAG_SPECIAL_PACK);
+        wait4response(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PACK);
 
         // Signature
         for (uint8_t s = MFU_NTAG_SPECIAL_SIGNATURE, i = 0; s < MFU_NTAG_SPECIAL_SIGNATURE + 8; s++, i += 4) {
@@ -3954,7 +3962,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
             PrintAndLogEx(INFO, "special SIG     block written 0x%X - %s", s, sprint_hex(data, 4));
             clearCommandBuffer();
             SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, s, keytype, 0, data, sizeof(data));
-            wait4response(s);
+            wait4response(CMD_HF_MIFAREU_WRITEBL, s);
         }
 
         // Version
@@ -3963,7 +3971,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
             PrintAndLogEx(INFO, "special VERSION block written 0x%X - %s", s, sprint_hex(data, 4));
             clearCommandBuffer();
             SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, s, keytype, 0, data, sizeof(data));
-            wait4response(s);
+            wait4response(CMD_HF_MIFAREU_WRITEBL, s);
         }
     }
 
@@ -3978,7 +3986,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         memcpy(data, mem->data + (b * 4), 4);
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
-        wait4response(b);
+        wait4response(CMD_HF_MIFAREU_WRITEBL, b);
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
     }
@@ -4003,7 +4011,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
             memcpy(data, mem->data + (b * 4), 4);
             clearCommandBuffer();
             SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
-            wait4response(b);
+            wait4response(CMD_HF_MIFAREU_WRITEBL, b);
             PrintAndLogEx(INFO, "special block written " _YELLOW_("%u") " - %s", b, sprint_hex(data, 4));
         }
     }
