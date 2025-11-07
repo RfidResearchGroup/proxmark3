@@ -1155,7 +1155,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`lf indala help         `|Y       |`This help`
-|`lf indala brute        `|N       |`Demodulate an Indala tag (PSK1) from the GraphBuffer`
+|`lf indala brute        `|N       |`Bruteforce an Indala reader with a specified facility code`
 |`lf indala demod        `|Y       |`Demodulate an Indala tag (PSK1) from the GraphBuffer`
 |`lf indala altdemod     `|Y       |`Alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)`
 |`lf indala reader       `|N       |`Read an Indala tag from the antenna`

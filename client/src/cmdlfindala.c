@@ -1096,7 +1096,7 @@ static int CmdIndalaBrute(const char *Cmd) {
 
 static command_t CommandTable[] = {
     {"help",     CmdHelp,            AlwaysAvailable, "This help"},
-    {"brute",    CmdIndalaBrute,     IfPm3Lf,         "Demodulate an Indala tag (PSK1) from the GraphBuffer"},
+    {"brute",    CmdIndalaBrute,     IfPm3Lf,         "Bruteforce an Indala reader with a specified facility code"},
     {"demod",    CmdIndalaDemod,     AlwaysAvailable, "Demodulate an Indala tag (PSK1) from the GraphBuffer"},
     {"altdemod", CmdIndalaDemodAlt,  AlwaysAvailable, "Alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"},
     {"reader",   CmdIndalaReader,    IfPm3Lf,         "Read an Indala tag from the antenna"},
