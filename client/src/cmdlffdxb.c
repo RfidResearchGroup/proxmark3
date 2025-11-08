@@ -569,7 +569,7 @@ int demodFDXB(bool verbose) {
 
     if (verbose == false) {
         PROMPT_CLEARLINE;
-        PrintAndLogEx(SUCCESS, "Animal ID........... " _GREEN_("%04u-%012"PRIu64), countryCode, NationalCode);
+        PrintAndLogEx(SUCCESS, "Animal ID........... " _GREEN_("%03u-%012"PRIu64), countryCode, NationalCode);
         return PM3_SUCCESS;
     }
 
