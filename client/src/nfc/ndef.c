@@ -42,6 +42,8 @@
 #define NDEF_BLUEAPPL_LE        "application/vnd.bluetooth.le.oob"
 #define NDEF_BLUEAPPL_SECURE_LE "application/vnd.bluetooth.secure.le.oob"
 
+#define NDEF_OPENPRINT_TAG   "application/vnd.openprinttag"
+
 #define NDEF_ANDROID_PROVISION   "application/com.android.managedprovisioning"
 #define NDEF_IMAGE               "image/"
 
@@ -828,6 +830,19 @@ static int ndefDecodeMime_wifi_p2p(NDEFHeader_t *ndef) {
     return PM3_SUCCESS;
 }
 
+static int ndefDecodeMime_openprint_tag(NDEFHeader_t *ndef) {
+    if (ndef->PayloadLen == 0) {
+        PrintAndLogEx(INFO, "no payload");
+        return PM3_SUCCESS;
+    }
+
+    PrintAndLogEx(INFO, _CYAN_("NDEF Open Print Tag Record"));
+    PrintAndLogEx(INFO, "Type............ " _YELLOW_("%.*s"), (int)ndef->TypeLen, ndef->Type);
+    PrintAndLogEx(INFO, "to be implemented, feel free to contribute!");
+    return PM3_SUCCESS;
+}
+
+
 static int ndefDecodeMime_vcard(NDEFHeader_t *ndef) {
     if (ndef->PayloadLen == 0) {
         PrintAndLogEx(INFO, "no payload");
@@ -1090,20 +1105,23 @@ static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose) {
             if (str_startswith(begin, NDEF_WIFIAPPL_WSC)) {
                 ndefDecodeMime_wifi_wsc(ndef);
             }
+
             if (str_startswith(begin, NDEF_WIFIAPPL_P2P)) {
                 ndefDecodeMime_wifi_p2p(ndef);
             }
+
             if (str_startswith(begin, NDEF_VCARDTEXT) || str_startswith(begin, NDEF_XVCARDTEXT)) {
                 ndefDecodeMime_vcard(ndef);
             }
 
-
             if (str_startswith(begin, NDEF_BLUEAPPL_EP)) {
                 ndefDecodeMime_bt(ndef);
             }
+
             if (str_startswith(begin, NDEF_BLUEAPPL_SECURE_LE)) {
                 ndefDecodeMime_bt_secure_le_oob(ndef);
             }
+
             if (str_startswith(begin, NDEF_BLUEAPPL_LE)) {
                 ndefDecodeMime_bt_le_oob(ndef);
             }
@@ -1120,6 +1138,9 @@ static int ndefDecodePayload(NDEFHeader_t *ndef, bool verbose) {
                 ndefDecodeMime_image(ndef);
             }
 
+            if (str_startswith(begin, NDEF_OPENPRINT_TAG)) {
+                ndefDecodeMime_openprint_tag(ndef);
+            }
             free(begin);
             begin = NULL;
             break;
