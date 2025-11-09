@@ -780,6 +780,7 @@ SRCS =  mifare/aiddesfire.c \
 		scripting.c \
 		ui.c \
 		util.c \
+		qrcode/qrcode.c \
 		version_pm3.c \
 		wiegand_formats.c \
 		wiegand_formatutils.c
