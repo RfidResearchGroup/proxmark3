@@ -139,6 +139,7 @@ Check column "offline" for their availability.
 |`data diff              `|Y       |`Diff of input files`
 |`data hexsamples        `|N       |`Dump big buffer as hex bytes`
 |`data samples           `|N       |`Get raw samples for graph window ( GraphBuffer )`
+|`data qrcode            `|Y       |`Create a QR code`
 |`data test_ss8          `|N       |`Test the implementation of Buffer Save States (8-bit buffer)`
 |`data test_ss32         `|N       |`Test the implementation of Buffer Save States (32-bit buffer)`
 |`data test_ss32s        `|N       |`Test the implementation of Buffer Save States (32-bit signed buffer)`

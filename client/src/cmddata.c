@@ -42,6 +42,7 @@
 #include "mbedtls/ctr_drbg.h"    // random generator
 #include "atrs.h"                // ATR lookup
 #include "crypto/libpcrypto.h"   // Cryptography
+#include "qrcode/qrcode.h"       // QR Code lib
 
 
 uint8_t g_DemodBuffer[MAX_DEMOD_BUF_LEN] = { 0x00 };
@@ -3976,6 +3977,74 @@ static int CmdTestSaveState32S(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdQRcode(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "data qrcode",
+                  "Generate a QR code with the input data",
+                  "data qrcode -f <filename>\n"
+                  "data qrcode -d 123456789\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("f", "file", "<fn>", "Specify a filename"),
+        arg_str0("d", "data", "<hex>", "message as hex bytes"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, false);
+
+    int fnlen = 0;
+    char filename[FILE_PATH_SIZE] = { 0 };
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+
+    int dlen = 0;
+    char data[1024] = { 0 };
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)data, sizeof(data), &dlen);
+    CLIParserFree(ctx);
+
+    if (fnlen && dlen) {
+        PrintAndLogEx(WARNING, "Please specify filename or datastring");
+        return PM3_EINVARG;
+    }
+
+    QRCode qrcode;
+
+    if (fnlen) {
+
+        uint8_t *dump = NULL;
+        size_t bytes_read = 0;
+
+        // read from file
+        int res = pm3_load_dump(filename, (void **)&dump, &bytes_read, (MFBLOCK_SIZE * MIFARE_4K_MAXBLOCK));
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+
+        // check file size corresponds to card size.
+        if (dump != NULL) {
+            free(dump);
+            return PM3_EFILE;
+        }
+    }
+
+    if (dlen) {
+
+        // calc size of input data to get the correct
+        int smallest_version = (dlen + 17) / 20;
+        uint8_t qr_arr[qrcode_getBufferSize(smallest_version)];
+        qrcode_initText(&qrcode, qr_arr, smallest_version, ECC_LOW, (char *) data);
+
+        PrintAndLogEx(NORMAL, "");
+        qrcode_print_matrix_utf8(&qrcode);
+        PrintAndLogEx(NORMAL, "");
+        PrintAndLogEx(NORMAL, "");
+        qrcode_print_matrix_utf8_2x2(&qrcode);
+        PrintAndLogEx(NORMAL, "");
+    }
+
+    return PM3_SUCCESS;
+}
+
 static command_t CommandTable[] = {
     {"help",             CmdHelp,                 AlwaysAvailable,  "This help"},
     {"-----------",      CmdHelp,                 AlwaysAvailable, "------------------------- " _CYAN_("General") "-------------------------"},
@@ -4028,6 +4097,7 @@ static command_t CommandTable[] = {
     {"diff",             CmdDiff,                 AlwaysAvailable,  "Diff of input files"},
     {"hexsamples",       CmdHexsamples,           IfPm3Present,     "Dump big buffer as hex bytes"},
     {"samples",          CmdSamples,              IfPm3Present,     "Get raw samples for graph window ( GraphBuffer )"},
+    {"qrcode",           CmdQRcode,               AlwaysAvailable,  "Create a QR code"},
 
     {"-----------",      CmdHelp,                 IfClientDebugEnabled, "------------------------- " _CYAN_("Debug") "-------------------------"},
     {"test_ss8",         CmdTestSaveState8,       IfClientDebugEnabled, "Test the implementation of Buffer Save States (8-bit buffer)"},

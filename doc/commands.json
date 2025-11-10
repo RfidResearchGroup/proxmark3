@@ -434,7 +434,7 @@
         },
         "data help": {
             "command": "data help",
-            "description": "help This help ----------- ------------------------- General------------------------- clear Clears various buffers used by the graph window hide Hide the graph window load Load contents of file into graph window num Converts dec/hex/bin plot Show the graph window print Print the data in the DemodBuffer save Save signal trace data setdebugmode Set Debugging Level on client side xor Xor a input string ----------- ------------------------- Modulation------------------------- biphaserawdecode Biphase decode bin stream in DemodBuffer detectclock Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer fsktonrz Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk) manrawdecode Manchester decode binary stream in DemodBuffer modulation Identify LF signal for clock and modulation rawdemod Demodulate the data in the GraphBuffer and output binary ----------- ------------------------- Graph------------------------- askedgedetect Adjust Graph for manual ASK demod autocorr Autocorrelation over window convertbitstream Convert GraphBuffer's 0/1 values to 127 / -127 cthreshold Average out all values between dirthreshold Max rising higher up-thres/ Min falling lower down-thres decimate Decimate samples envelope Generate square envelope of samples grid overlay grid on graph window getbitstream Convert GraphBuffer's >=1 values to 1 and <1 to 0 hpf Remove DC offset from trace iir Apply IIR buttersworth filter on plot data ltrim Trim samples from left of trace mtrim Trim out samples from the specified start to the specified stop norm Normalize max/min to +/-128 rtrim Trim samples from right of trace setgraphmarkers Set the markers in the graph window shiftgraphzero Shift 0 for Graphed wave + or - shift value timescale Set cursor display timescale undecimate Un-decimate samples zerocrossings Count time between zero-crossings ----------- ------------------------- Operations------------------------- asn1 ASN1 decoder atr ATR lookup bmap Convert hex value according a binary template crypto Encrypt and decrypt data diff Diff of input files --------------------------------------------------------------------------------------- data clear available offline: yes This function clears the BigBuf on device side and graph window ( graphbuffer )",
+            "description": "help This help ----------- ------------------------- General------------------------- clear Clears various buffers used by the graph window hide Hide the graph window load Load contents of file into graph window num Converts dec/hex/bin plot Show the graph window print Print the data in the DemodBuffer save Save signal trace data setdebugmode Set Debugging Level on client side xor Xor a input string ----------- ------------------------- Modulation------------------------- biphaserawdecode Biphase decode bin stream in DemodBuffer detectclock Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer fsktonrz Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk) manrawdecode Manchester decode binary stream in DemodBuffer modulation Identify LF signal for clock and modulation rawdemod Demodulate the data in the GraphBuffer and output binary ----------- ------------------------- Graph------------------------- askedgedetect Adjust Graph for manual ASK demod autocorr Autocorrelation over window convertbitstream Convert GraphBuffer's 0/1 values to 127 / -127 cthreshold Average out all values between dirthreshold Max rising higher up-thres/ Min falling lower down-thres decimate Decimate samples envelope Generate square envelope of samples grid overlay grid on graph window getbitstream Convert GraphBuffer's >=1 values to 1 and <1 to 0 hpf Remove DC offset from trace iir Apply IIR buttersworth filter on plot data ltrim Trim samples from left of trace mtrim Trim out samples from the specified start to the specified stop norm Normalize max/min to +/-128 rtrim Trim samples from right of trace setgraphmarkers Set the markers in the graph window shiftgraphzero Shift 0 for Graphed wave + or - shift value timescale Set cursor display timescale undecimate Un-decimate samples zerocrossings Count time between zero-crossings ----------- ------------------------- Operations------------------------- asn1 ASN1 decoder atr ATR lookup bmap Convert hex value according a binary template crypto Encrypt and decrypt data diff Diff of input files qrcode Create a QR code --------------------------------------------------------------------------------------- data clear available offline: yes This function clears the BigBuf on device side and graph window ( graphbuffer )",
             "notes": [
                 "data clear"
             ],
@@ -621,6 +621,21 @@
                 "-x, --hex output in hex (omit for binary output)"
             ],
             "usage": "data print [-hisx] [-o <dec>]"
+        },
+        "data qrcode": {
+            "command": "data qrcode",
+            "description": "Generate a QR code with the input data",
+            "notes": [
+                "data qrcode -f <filename>",
+                "data qrcode -d 123456789"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-f, --file <fn> Specify a filename",
+                "-d, --data <hex> message as hex bytes"
+            ],
+            "usage": "data qrcode [-h] [-f <fn>] [-d <hex>]"
         },
         "data rawdemod": {
             "command": "data rawdemod",
@@ -7442,9 +7457,10 @@
                 "-e enable special write version/signature -MAGIC NTAG 21* ONLY-",
                 "-r use password found in dumpfile to configure tag. Requires '-e' parameter to work",
                 "-v, --verbose verbose output",
-                "-z, --dense dense dump output style"
+                "-z, --dense dense dump output style",
+                "--schann use secure channel. Must have key"
             ],
-            "usage": "hf mfu restore [-hlservz] -f <fn> [-k <hex>]"
+            "usage": "hf mfu restore [-hlservz] -f <fn> [-k <hex>] [--schann]"
         },
         "hf mfu setkey": {
             "command": "hf mfu setkey",
@@ -13681,8 +13697,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 784,
+        "commands_extracted": 785,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-10-17T11:36:43"
+        "extracted_on": "2025-11-10T15:12:49"
     }
 }
