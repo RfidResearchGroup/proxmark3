@@ -334,27 +334,27 @@ int hf14a_setconfig(hf14a_config_t *config, bool verbose) {
 static json_t *load_ecplist(void) {
     json_error_t error;
     char *path;
-    
+
     int res = searchFile(&path, RESOURCES_SUBDIR, "ecplist", ".json", false);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Cannot find ecplist.json");
         return NULL;
     }
-    
+
     json_t *root = json_load_file(path, 0, &error);
     free(path);
-    
+
     if (!root) {
         PrintAndLogEx(ERR, "json error on line %d: %s", error.line, error.text);
         return NULL;
     }
-    
+
     if (!json_is_array(root)) {
         PrintAndLogEx(ERR, "Invalid ecplist.json format. Root must be an array.");
         json_decref(root);
         return NULL;
     }
-    
+
     return root;
 }
 
@@ -365,7 +365,7 @@ static json_t *load_ecplist(void) {
 static json_t *search_ecplist_by_key(json_t *root, const char *type, const char *subtype, const char *key) {
     size_t index;
     json_t *entry;
-    
+
     json_array_foreach(root, index, entry) {
         // If type filter is specified, check if entry has matching type
         if (type != NULL) {
@@ -373,7 +373,7 @@ static json_t *search_ecplist_by_key(json_t *root, const char *type, const char 
             if (!type_obj) {
                 continue; // Skip entries without type field
             }
-            
+
             bool type_matched = false;
             if (json_is_string(type_obj)) {
                 const char *type_str = json_string_value(type_obj);
@@ -391,7 +391,7 @@ static json_t *search_ecplist_by_key(json_t *root, const char *type, const char 
                     }
                 }
             }
-            
+
             if (!type_matched) {
                 continue; // Type doesn't match
             }
@@ -401,10 +401,10 @@ static json_t *search_ecplist_by_key(json_t *root, const char *type, const char 
                 continue;
             }
         }
-        
+
         bool key_matched = (key == NULL); // If no key specified, consider it matched
         bool subtype_matched = (subtype == NULL); // If no subtype specified, consider it matched
-        
+
         // Check if the subtype matches the "subtype" field (string or array)
         if (subtype != NULL) {
             json_t *subtype_obj = json_object_get(entry, "subtype");
@@ -427,7 +427,7 @@ static json_t *search_ecplist_by_key(json_t *root, const char *type, const char 
                 }
             }
         }
-        
+
         // Check if the key matches the "key" field (string or array)
         if (key != NULL) {
             json_t *key_obj = json_object_get(entry, "key");
@@ -450,13 +450,13 @@ static json_t *search_ecplist_by_key(json_t *root, const char *type, const char 
                 }
             }
         }
-        
+
         // Entry must match both key and subtype criteria (if specified)
         if (key_matched && subtype_matched) {
             return entry;
         }
     }
-    
+
     return NULL; // Not found
 }
 
@@ -472,7 +472,7 @@ static int parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_si
     if (!cmd_copy) {
         return -1;
     }
-    
+
     for (char *p_char = cmd_copy; *p_char != '\0'; p_char++) {
         if (*p_char == '.' || *p_char == ':') {
             *p_char = ' ';
@@ -499,7 +499,7 @@ static int parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_si
     int result = -1;
     const char *type = NULL;
     const char *search_term = p;
-    
+
     // Check if first term is a type ("transit" or "access")
     if (strncmp(p, "transit", 7) == 0) {
         type = "transit";
@@ -508,7 +508,7 @@ static int parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_si
             p++;
         }
         search_term = p;
-        
+
         // If second term provided, search by key in transit entries
         if (*p != '\0') {
             json_t *entry = search_ecplist_by_key(ecplist, type, NULL, search_term);
@@ -528,7 +528,7 @@ static int parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_si
                     }
                 }
             }
-            
+
             // If not found, try interpreting as hex TCI
             if (result == -1) {
                 char *endptr;
@@ -556,34 +556,34 @@ static int parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_si
         } else {
             PrintAndLogEx(ERR, "Transit type requires a key or TCI value");
         }
-        
+
     } else if (strncmp(p, "access", 6) == 0) {
         type = "access";
         p += 6;
         while (*p == ' ' || *p == '\t') {
             p++;
         }
-        
+
         // Parse second term
         const char *second_term = p;
-        
+
         // Skip to end of second term
         while (*p != '\0' && *p != ' ' && *p != '\t') {
             p++;
         }
-        
+
         // Extract second term
         size_t second_term_len = p - second_term;
         char *second = NULL;
         if (second_term_len > 0) {
             second = str_ndup(second_term, second_term_len);
         }
-        
+
         // Skip whitespace
         while (*p == ' ' || *p == '\t') {
             p++;
         }
-        
+
         // Parse third term if present
         const char *third_term = p;
         char *third = NULL;
@@ -597,26 +597,26 @@ static int parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_si
                 third = str_ndup(third_term, third_term_len);
             }
         }
-        
+
         // Default TCI is 02ffff if not provided
         uint32_t tci = 0x02ffff;
-        
+
         // If terms provided, try to parse them
         if (second != NULL && *second != '\0') {
             json_t *entry = NULL;
-            
+
             if (third != NULL && *third != '\0') {
                 // Two terms: second is subtype, third is key
                 entry = search_ecplist_by_key(ecplist, type, second, third);
             } else {
                 // One term: try as subtype first, then as key
                 entry = search_ecplist_by_key(ecplist, type, second, NULL);
-                
+
                 if (!entry) {
                     entry = search_ecplist_by_key(ecplist, type, NULL, second);
                 }
             }
-            
+
             if (entry) {
                 // Found matching entry, use its value
                 json_t *value_obj = json_object_get(entry, "value");
@@ -633,7 +633,7 @@ static int parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_si
                     }
                 }
             }
-            
+
             // If not found and no third term, try interpreting second term as hex TCI
             if (result == -1 && third == NULL) {
                 char *endptr;
@@ -655,14 +655,14 @@ static int parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_si
                 return -1;
             }
         }
-        
+
         if (second) {
             free(second);
         }
         if (third) {
             free(third);
         }
-        
+
         // Build frame with TCI if we didn't find a matching entry
         if (result == -1) {
             // Build frame: 6a02c30200{tci as 3 bytes}
@@ -676,7 +676,7 @@ static int parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_si
             frame[7] = tci & 0xff;
             result = 8;
         }
-        
+
     } else {
         // No type specified, search for entries without type field by key
         json_t *entry = search_ecplist_by_key(ecplist, search_term, NULL, NULL);
@@ -699,7 +699,7 @@ static int parse_ecp_subcommand(const char *cmd, uint8_t *frame, size_t frame_si
             PrintAndLogEx(HINT, "Available types: access, transit, vasorpay, vasandpay, vasonly, payonly, gymkit, identity, aidrop");
         }
     }
-    
+
     json_decref(ecplist);
     free(cmd_copy);
     return result;
@@ -879,11 +879,11 @@ static int CmdHf14AConfig(const char *Cmd) {
         .last_byte_bits = 8,
         .extra_delay = 5
     };
-    
+
     // Get main --pla value
     CLIParamStrToBuf(arg_get_str(ctx, 7), (uint8_t *)value, sizeof(value), &vlen);
     str_lower((char *)value);
-    
+
     if (vlen > 0) {
         if (strncmp((char *)value, "std", 3) == 0) pla.frame_length = 0;
         else if (strncmp((char *)value, "skip", 4) == 0) pla.frame_length = 0;
@@ -904,8 +904,7 @@ static int CmdHf14AConfig(const char *Cmd) {
             pla.frame[pla.frame_length++] = first;
             pla.frame[pla.frame_length++] = second;
             PrintAndLogEx(INFO, "Set polling loop annotation to ECP: %s", sprint_hex(pla.frame, pla.frame_length));
-        }
-        else {
+        } else {
             // Convert hex string to bytes
             int length = 0;
             if (param_gethex_to_eol((char *)value, 0, pla.frame, sizeof(pla.frame), &length) != 0) {
