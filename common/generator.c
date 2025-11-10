@@ -280,6 +280,7 @@ uint32_t ul_c_otpgenA(const uint8_t *uid) {
 // Each algo implementation should offer two key generation functions.
 // 1. function that returns all keys
 // 2. function that returns one key, target sector | block
+// Then add function to KDFTable with allowed UID sizes
 //------------------------------------
 
 //------------------------------------
@@ -574,6 +575,68 @@ int mfc_algo_bambu_all(uint8_t *uid, uint8_t *keys) {
     mbedtls_hkdf(info, bambu_salt, sizeof(bambu_salt), uid, 4, bambu_context_a, sizeof(bambu_context_a), keys, (16 * 6));
     mbedtls_hkdf(info, bambu_salt, sizeof(bambu_salt), uid, 4, bambu_context_b, sizeof(bambu_context_b), keys + (16 * 6), (16 * 6));
     return PM3_SUCCESS;
+}
+
+const uint8_t snapmaker_salt_a[] = "Snapmaker_qwertyuiop[,.;]";
+const uint8_t snapmaker_salt_b[] = "Snapmaker_qwertyuiop[,.;]_1q2w3e";
+
+int mfc_algo_snapmaker_one(uint8_t *uid, uint8_t sector, uint8_t keytype, uint64_t *key) {
+    if (uid == NULL) return PM3_EINVARG;
+    if (key == NULL) return PM3_EINVARG;
+    if (sector >= 16) return PM3_EINVARG;
+
+    const uint8_t *salt = (keytype == 0) ? snapmaker_salt_a : snapmaker_salt_b;
+    size_t salt_len = (keytype == 0) ? sizeof(snapmaker_salt_a) - 1 : sizeof(snapmaker_salt_b) - 1;
+    char key_char = (keytype == 0) ? 'a' : 'b';
+
+    // "key_a_0", "key_b_15"
+    char info[16];
+    snprintf(info, sizeof(info), "key_%c_%d", key_char, sector);
+
+    uint8_t output[6];
+    const mbedtls_md_info_t *md_info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+    mbedtls_hkdf(md_info, salt, salt_len, uid, 4, (const uint8_t *)info, strlen(info), output, 6);
+
+    *key = bytes_to_num(output, 6);
+    return PM3_SUCCESS;
+}
+
+int mfc_algo_snapmaker_all(uint8_t *uid, uint8_t *keys) {
+    if (uid == NULL) return PM3_EINVARG;
+    if (keys == NULL) return PM3_EINVARG;
+
+    for (int i = 0; i < 16; i++) {
+        uint64_t key = 0;
+        mfc_algo_snapmaker_one(uid, i, 0, &key);
+        num_to_bytes(key, 6, keys + (i * 6));
+    }
+
+    for (int i = 0; i < 16; i++) {
+        uint64_t key = 0;
+        mfc_algo_snapmaker_one(uid, i, 1, &key);
+        num_to_bytes(key, 6, keys + ((16 + i) * 6));
+    }
+
+    return PM3_SUCCESS;
+}
+
+static kdf_t KDFTable[] = {
+    {"Saflok / Maid", 16, mfc_algo_saflok_all, 4},
+    {"MIZIP", 5, mfc_algo_mizip_all, 4},
+    {"Disney Infinity", 5, mfc_algo_di_all, 7},
+    {"Skylanders", 16, mfc_algo_sky_all, 4},
+    {"Bambu Lab Filament Spool", 16, mfc_algo_bambu_all, 4},
+    {"Snapmaker Filament Spool", 16, mfc_algo_snapmaker_all, 4},
+    // {"Vinglock", 16, mfc_algo_ving_all, 4}, // not implemented
+    // {"Yale Doorman", 16, mfc_algo_yale_all, 4}, // not implemented
+};
+
+const kdf_t *get_kdf_table(void) {
+    return KDFTable;
+}
+
+size_t get_kdf_table_size(void) {
+    return ARRAYLEN(KDFTable);
 }
 
 // LF T55x7 White gun cloner algo

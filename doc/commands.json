@@ -4474,23 +4474,6 @@
             ],
             "usage": "hf mf autopwn [-hablv] [-k <hex>]... [-s <dec>] [-f <fn>] [--suffix <txt>] [--slow] [--mem] [--ns] [--mini] [--1k] [--2k] [--4k] [--in] [--im] [--is] [--ia] [--i2] [--i5]"
         },
-        "hf mf bambukeys": {
-            "command": "hf mf bambukeys",
-            "description": "Generate keys for a Bambu Lab filament tag",
-            "notes": [
-                "hf mf bambukeys -r",
-                "hf mf bambukeys -r -d",
-                "hf mf bambukeys -u 11223344"
-            ],
-            "offline": true,
-            "options": [
-                "-h, --help This help",
-                "-u, --uid <hex> UID (4 hex bytes)",
-                "-r Read UID from tag",
-                "-d Dump keys to file"
-            ],
-            "usage": "hf mf bambukeys [-hrd] [-u <hex>]"
-        },
         "hf mf brute": {
             "command": "hf mf brute",
             "description": "This is a smart bruteforce, exploiting common patterns, bugs and bad designs in key generators.",
@@ -5225,7 +5208,7 @@
         },
         "hf mf help": {
             "command": "hf mf help",
-            "description": "help This help list List MIFARE history hardnested Nested attack for hardened MIFARE Classic cards decrypt Decrypt Crypto1 data from sniff or trace bambukeys Generate key table for Bambu Lab filament tag acl Decode and print MIFARE Classic access rights bytes mad Checks and prints MAD value Value blocks view Display content from tag dump file ginfo Info about configuration of the card gdmparsecfg Parse config block to card --------------------------------------------------------------------------------------- hf mf list available offline: yes Alias of `trace list -t mf -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "help This help list List MIFARE history hardnested Nested attack for hardened MIFARE Classic cards decrypt Decrypt Crypto1 data from sniff or trace keygen Generate key table for some known KDFs acl Decode and print MIFARE Classic access rights bytes mad Checks and prints MAD value Value blocks view Display content from tag dump file ginfo Info about configuration of the card gdmparsecfg Parse config block to card --------------------------------------------------------------------------------------- hf mf list available offline: yes Alias of `trace list -t mf -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf mf list --frame -> show frame delay times",
                 "hf mf list -1 -> use trace buffer"
@@ -5302,6 +5285,25 @@
                 "-f, --file <fn> Specify a filename for collected data"
             ],
             "usage": "hf mf isen [-hab] [--blk <dec>] [-c <dec>] [-k <hex>] [--blk2 <dec>] [--a2] [--b2] [--c2 <dec>] [--key2 <hex>] [-n <dec>] [--reset] [--hardreset] [--addread] [--addauth] [--incblk2] [--corruptnrar] [--corruptnrarparity] FM11RF08S specific options: [--collect_fm11rf08s] [--collect_fm11rf08s_with_data] [--collect_fm11rf08s_without_backdoor] [-f <fn>]"
+        },
+        "hf mf keygen": {
+            "command": "hf mf keygen",
+            "description": "Generate key table for some known KDFs Available KDFs: 0 - Saflok / Maid 1 - MIZIP 2 - Disney Infinity 3 - Skylanders 4 - Bambu Lab Filament Spool 5 - Snapmaker Filament Spool",
+            "notes": [
+                "hf mf keygen -r -k 0",
+                "hf mf keygen -r -d -k 0",
+                "hf mf keygen -u 11223344 -k 0",
+                "hf mf keygen -u 11223344 -k 1"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-u, --uid <hex> UID 4/7 hex bytes",
+                "-r Read UID from tag",
+                "-d Dump keys to file",
+                "-k, --kdf <dec> KDF algorithm"
+            ],
+            "usage": "hf mf keygen [-hrd] [-u <hex>] [-k <dec>]"
         },
         "hf mf mad": {
             "command": "hf mf mad",
@@ -13699,6 +13701,6 @@
     "metadata": {
         "commands_extracted": 785,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-11-10T15:12:49"
+        "extracted_on": "2025-11-10T17:48:24"
     }
 }

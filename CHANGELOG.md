@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added Snapmaker U1 filament spool KDF in `hf mf keygen` (@Foxushka)
+- Replaced `hf mf bambukeys` with `hf mf keygen` with multiple KDFs support (@Foxushka)
 - Fix `hf seos adf/pacs` handling of cards with different diversifier lengths and different ADF OIDs (@nvx)
 - Added `data qrcode` - to generate QR codes from inside the pm3 client (@iceman1001)
 - Fix unicode on mingw/proxspace (@nvx)
