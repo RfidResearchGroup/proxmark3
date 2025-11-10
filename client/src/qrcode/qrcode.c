@@ -899,21 +899,21 @@ void qrcode_print_matrix_utf8_2x2(QRCode *q) {
     // UTF-8 block elements for 2x2 pixel blocks
     static const char* block_chars[16] = {
         " ",  // 0000: 0
-        "▗",  // 0001: 1
-        "▖",  // 0010: 2
-        "▄",  // 0011: 3
-        "▝",  // 0100: 4
-        "▐",   // 0101: 5
-        "▞",  // 0110: 6 
-        "▟",  // 0111: 7
-        "▘",  // 1000: 8
-        "▚",  // 1001: 9
-        "▌",   // 1010: a
-        "▙" , // 1011: b
-        "▀",   // 1100: c       
-        "▜",  // 1101: D
-        "▛",  // 1110: E
-        "█"   // 1111   F
+        "\xE2\x96\x97",  // 0001: 1
+        "\xE2\x96\x96",  // 0010: 2
+        "\xE2\x96\x84",  // 0011: 3
+        "\xE2\x96\x9D",  // 0100: 4
+        "\xE2\x96\x90",  // 0101: 5
+        "\xE2\x96\x9E",  // 0110: 6
+        "\xE2\x96\x9F",  // 0111: 7
+        "\xE2\x96\x98",  // 1000: 8
+        "\xE2\x96\x9A",  // 1001: 9
+        "\xE2\x96\x8C",  // 1010: a
+        "\xE2\x96\x99" , // 1011: b
+        "\xE2\x96\x80",  // 1100: c
+        "\xE2\x96\x9C",  // 1101: D
+        "\xE2\x96\x9B",  // 1110: E
+        "\xE2\x96\x88"   // 1111: F
     };
 
     for (uint8_t y = 0; y < q->size; y += 2) {
@@ -932,8 +932,6 @@ void qrcode_print_matrix_utf8_2x2(QRCode *q) {
             }
 
             uint8_t pattern = ((a << 3) | (b << 2) | (c << 1) | d);
-            //printf("%02x, ", pattern);
-
             PrintAndLogEx(NORMAL, "%s" NOLF, block_chars[pattern]);
         }
         PrintAndLogEx(NORMAL, "");
