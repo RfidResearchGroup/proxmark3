@@ -42,6 +42,8 @@
 
 static uint8_t zeros[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
+#define MAX_DIVERSIFIER_LEN 16
+
 static int CmdHelp(const char *Cmd);
 
 typedef struct {
@@ -681,7 +683,7 @@ static int select_df_decode(uint8_t *response, uint8_t response_length, int *ALG
     return PM3_SUCCESS;
 }
 
-static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encrypted_data_raw, uint8_t *CRYPTOGRAM_Diversifier, int encryption_algorithm, int key_index) {
+static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encrypted_data_raw, uint8_t *CRYPTOGRAM_Diversifier, int *diversifier_length_out, int encryption_algorithm, int key_index) {
     // --------------- Decrypt ----------------
 
     // 1. MAC Verify - AES/CBC-decrypt (IV || cryptogram || 16 bytes after 8e 08) with the MAC key & keep the last block
@@ -716,6 +718,10 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
         if (CRYPTOGRAM_decrypted_data[i] == 0x06 && CRYPTOGRAM_decrypted_data[i + 1] < 20) {
             adf_length = ((CRYPTOGRAM_decrypted_data[i + 1]));
             diversifier_length = CRYPTOGRAM_decrypted_data[i + adf_length + 3];
+            if (*diversifier_length_out < diversifier_length) {
+                PrintAndLogEx(ERR, "Diversifier too long");
+                return PM3_ESOFT;
+            }
 
             uint8_t CRYPTOGRAM_ADF[strlen(selectADFOID) / 2];
 
@@ -745,6 +751,7 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
                 // PrintAndLogEx(SUCCESS, "Supplied ADF...................... "_YELLOW_("%s"), selectADFOID_UPPER);                                // ADF Selected
                 return PM3_ESOFT;
             }
+            *diversifier_length_out = diversifier_length;
 
             // PrintAndLogEx(INFO, "--- " _CYAN_("Decrypted Response") " ---------------------------");
             // PrintAndLogEx(SUCCESS, "Decoded ADF...................... "_YELLOW_("%s"), sprint_hex_inrow(&CRYPTOGRAM_ADF[2],adf_length));                 // ADF Selected
@@ -756,7 +763,7 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
     return PM3_ESOFT;
 };
 
-static int seos_mutual_auth(uint8_t *randomICC, uint8_t *CRYPTOGRAM_Diversifier, uint8_t diversifier_len, uint8_t *mutual_auth_randomIFD, uint8_t *mutual_auth_keyICC, uint8_t *randomIFD, uint8_t randomIFD_len, uint8_t *keyIFD, uint8_t keyIFD_len, int encryption_algorithm, int hash_algorithm, int key_index) {
+static int seos_mutual_auth(uint8_t *adfOID, size_t adfoid_len, uint8_t *randomICC, uint8_t *CRYPTOGRAM_Diversifier, uint8_t diversifier_len, uint8_t *mutual_auth_randomIFD, uint8_t *mutual_auth_keyICC, uint8_t *randomIFD, uint8_t randomIFD_len, uint8_t *keyIFD, uint8_t keyIFD_len, int encryption_algorithm, int hash_algorithm, int key_index) {
     uint8_t response[PM3_CMD_DATA_SIZE];
 
     // ---------------- Diversify Keys ----------------
@@ -765,18 +772,17 @@ static int seos_mutual_auth(uint8_t *randomICC, uint8_t *CRYPTOGRAM_Diversifier,
     uint8_t keyslot = 0x01; // up to 0x0F
     uint8_t AES_key[24] = {0x00};
     uint8_t MAC_key[24] = {0x00};
-    uint8_t adfOID[17] = {0x2b, 0x06, 0x01, 0x04, 0x01, 0x81, 0xe4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02, 0x02};
 
     // Null AES IV
-    uint8_t nullDiversifier[7] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t nullDiversifier[MAX_DIVERSIFIER_LEN] = {0};
 
-    if (memcmp(CRYPTOGRAM_Diversifier, nullDiversifier, sizeof(nullDiversifier)) == 0) {
+    if (memcmp(CRYPTOGRAM_Diversifier, nullDiversifier, diversifier_len) == 0) {
         PrintAndLogEx(ERR, "No Diversifier found");
         return PM3_ESOFT;
     }
 
-    seos_kdf(true, mk, keyslot, adfOID, sizeof(adfOID), CRYPTOGRAM_Diversifier, diversifier_len, AES_key, encryption_algorithm, hash_algorithm);
-    seos_kdf(false, mk, keyslot, adfOID, sizeof(adfOID), CRYPTOGRAM_Diversifier, diversifier_len, MAC_key, encryption_algorithm, hash_algorithm);
+    seos_kdf(true, mk, keyslot, adfOID, adfoid_len, CRYPTOGRAM_Diversifier, diversifier_len, AES_key, encryption_algorithm, hash_algorithm);
+    seos_kdf(false, mk, keyslot, adfOID, adfoid_len, CRYPTOGRAM_Diversifier, diversifier_len, MAC_key, encryption_algorithm, hash_algorithm);
 
     memcpy(&MAC_key[16], &MAC_key[0], 8);
     memcpy(&AES_key[16], &AES_key[0], 8);
@@ -1052,7 +1058,7 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *get_data, int g
     uint8_t CRYPTOGRAM_encrypted_data[64];      // Encrypted Data
     uint8_t MAC_value[8] = {0};                 // MAC Value
 
-    uint8_t diversifier[7] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t diversifier[MAX_DIVERSIFIER_LEN] = {0};
     uint8_t RNDICC[8] = {0};
     uint8_t KeyICC[16] = {0};
     uint8_t RNDIFD[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -1072,9 +1078,15 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *get_data, int g
     }
 
     if (ALGORITHM_INFO_value1 == 0x09 || ALGORITHM_INFO_value1 == 0x02) {
+        uint8_t adf_bytes[124];
+        int adf_bytes_len = 0;
+        // Input into getHextoEOL is a Char string
+        param_gethex_to_eol(selectedOID, 0, adf_bytes, sizeof(adf_bytes), &adf_bytes_len);
 
-        select_ADF_decrypt(selectedADF, CRYPTOGRAM_encrypted_data, diversifier, ALGORITHM_INFO_value1, key_index);
-        seos_mutual_auth(RNDICC, diversifier, sizeof(diversifier), RNDIFD, KeyICC, RNDIFD, sizeof(RNDIFD), KeyIFD, sizeof(KeyIFD), ALGORITHM_INFO_value1, ALGORITHM_INFO_value2, key_index);
+
+        int diversifier_length = sizeof(diversifier);
+        select_ADF_decrypt(selectedADF, CRYPTOGRAM_encrypted_data, diversifier, &diversifier_length, ALGORITHM_INFO_value1, key_index);
+        seos_mutual_auth(adf_bytes, adf_bytes_len, RNDICC, diversifier, diversifier_length, RNDIFD, KeyICC, RNDIFD, sizeof(RNDIFD), KeyIFD, sizeof(KeyIFD), ALGORITHM_INFO_value1, ALGORITHM_INFO_value2, key_index);
         create_mutual_auth_key(KeyIFD, KeyICC, RNDICC, RNDIFD, Diversified_New_EncryptionKey, Diversified_New_MACKey, ALGORITHM_INFO_value1, ALGORITHM_INFO_value2);
 
         uint8_t sio_buffer_out[PM3_CMD_DATA_SIZE];
