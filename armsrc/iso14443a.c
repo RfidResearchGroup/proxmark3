@@ -3474,6 +3474,12 @@ int iso14_apdu(uint8_t *cmd, uint16_t cmd_len, bool send_chaining, void *data, u
 
     ReaderTransmit(real_cmd, cmd_len + 3, NULL);
 
+    // tearoff occurred
+    if (tearoff_hook() == PM3_ETEAROFF) {
+        BigBuf_free();
+        return -1;
+    }
+
     size_t len = ReaderReceive(data, data_len, parity_array);
     uint8_t *data_bytes = (uint8_t *) data;
 
