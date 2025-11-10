@@ -22,7 +22,7 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
   - [Generic Proxmark3 platforms](#generic-proxmark3-platforms)
 - [What has changed?](#what-has-changed)
 - [Development](#development)
-  - [Supported operative systems](#supported-operative-systems)
+  - [Supported operating systems](#supported-operating-systems)
   - [Precompiled binaries](#precompiled-binaries)
   - [Proxmark3 GUI](#proxmark3-gui)
   - [Official channels](#official-channels)
@@ -183,7 +183,7 @@ We usually merge your contributions fast since we do like the idea of getting a 
 The [public roadmap](https://github.com/RfidResearchGroup/proxmark3/wiki/Public-Roadmap) is an excellent start to read if you are interesting in contributing.
 
 
-## Supported operating systems 
+## Supported operating systems
 
 This repo compiles nicely on 
    - WSL1 on Windows 10

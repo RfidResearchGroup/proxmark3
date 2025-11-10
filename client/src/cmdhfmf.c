@@ -5008,7 +5008,7 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
                       _YELLOW_("H") ":Hardnested / "
                       _YELLOW_("C") ":statiCnested / "
                       _YELLOW_("A") ":keyA "
-                      " )"
+                            " )"
                      );
         if (sectorscnt == 18) {
             PrintAndLogEx(INFO, "( " _MAGENTA_("*") " ) These sectors used for signature. Lays outside of user memory");
@@ -10880,20 +10880,39 @@ static int CmdHF14AMfISEN(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdHF14AMfBambuKeys(const char *Cmd) {
+static int CmdHF14AMfKeyGen(const char *Cmd) {
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf mf bambukeys",
-                  "Generate keys for a Bambu Lab filament tag",
-                  "hf mf bambukeys -r\n"
-                  "hf mf bambukeys -r -d\n"
-                  "hf mf bambukeys -u 11223344\n"
+
+    char kdf_list[256] = {0};
+    snprintf(kdf_list, sizeof(kdf_list), "Available KDFs:");
+
+    const kdf_t *kdf_table = get_kdf_table();
+    size_t kdf_table_size = get_kdf_table_size();
+
+    for (size_t i = 0; i < kdf_table_size; i++) {
+        char tmp[128];
+        snprintf(tmp, sizeof(tmp), "\n    %zu - %s", i, kdf_table[i].name);
+        strncat(kdf_list, tmp, sizeof(kdf_list) - strlen(kdf_list) - 1);
+    }
+
+    char help_text[512] = {0};
+    snprintf(help_text, sizeof(help_text),
+             "Generate key table for some known KDFs\n%s", kdf_list);
+
+    CLIParserInit(&ctx, "hf mf keygen",
+                  help_text,
+                  "hf mf keygen -r -k 0\n"
+                  "hf mf keygen -r -d -k 0\n"
+                  "hf mf keygen -u 11223344 -k 0\n"
+                  "hf mf keygen -u 11223344 -k 1\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("u", "uid", "<hex>", "UID (4 hex bytes)"),
+        arg_str0("u", "uid", "<hex>", "UID 4/7 hex bytes"),
         arg_lit0("r", NULL, "Read UID from tag"),
         arg_lit0("d", NULL, "Dump keys to file"),
+        arg_int0("k", "kdf", "<dec>", "KDF algorithm"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -10903,7 +10922,15 @@ static int CmdHF14AMfBambuKeys(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, uid, &u_len);
     bool use_tag = arg_get_lit(ctx, 2);
     bool dump_keys = arg_get_lit(ctx, 3);
+    int kdf_idx = arg_get_int_def(ctx, 4, -1);
     CLIParserFree(ctx);
+
+    if (kdf_idx < 0 || kdf_idx >= kdf_table_size) {
+        PrintAndLogEx(WARNING, "Invalid KDF algorithm index. Must be 0-%zu", kdf_table_size - 1);
+        return PM3_EINVARG;
+    }
+
+    kdf_t kdf = kdf_table[kdf_idx];
 
     if (use_tag) {
         // read uid from tag
@@ -10913,28 +10940,51 @@ static int CmdHF14AMfBambuKeys(const char *Cmd) {
         }
     }
 
-    if (u_len != 4) {
-        PrintAndLogEx(WARNING, "Key must be 4 hex bytes");
+    if (u_len != kdf.uid_length) {
+        PrintAndLogEx(WARNING, "UID with length %d is required for %s",
+                      kdf.uid_length,
+                      kdf.name);
         return PM3_EINVARG;
     }
 
     PrintAndLogEx(INFO, "-----------------------------------");
-    PrintAndLogEx(INFO, " UID 4b... " _YELLOW_("%s"), sprint_hex(uid, 4));
+    PrintAndLogEx(INFO, " KDF...... " _YELLOW_("%s"), kdf.name);
+    PrintAndLogEx(INFO, " UID %db... " _YELLOW_("%s"), u_len, sprint_hex(uid, u_len));
     PrintAndLogEx(INFO, "-----------------------------------");
 
-    uint8_t keys[32 * 6];
-    mfc_algo_bambu_all(uid, (void *)keys);
-
-    for (int block = 0; block < 32; block++) {
-        PrintAndLogEx(INFO, "%d: %012" PRIX64, block, bytes_to_num(keys + (block * 6), 6));
+    int sector_count = kdf.sector_count;
+    uint8_t *keys = calloc(sector_count * 2 * 6, sizeof(uint8_t));
+    if (keys == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return PM3_EMALLOC;
     }
+
+    kdf.kdf_function(uid, keys);
+
+    sector_t *e_sector = NULL;
+    if (initSectorTable(&e_sector, sector_count) != PM3_SUCCESS) {
+        free(keys);
+        return PM3_EMALLOC;
+    }
+
+    // write required info for table
+    for (int i = 0; i < sector_count; i++) {
+        e_sector[i].foundKey[0] = true;
+        e_sector[i].foundKey[1] = true;
+        e_sector[i].Key[0] = bytes_to_num(keys + (i * 6), 6);
+        e_sector[i].Key[1] = bytes_to_num(keys + ((sector_count + i) * 6), 6);
+    }
+
+    printKeyTable(sector_count, e_sector);
 
     if (dump_keys) {
         char fn[FILE_PATH_SIZE] = {0};
-        snprintf(fn, sizeof(fn), "hf-mf-%s-key", sprint_hex_inrow(uid, 4));
-        saveFileEx(fn, ".bin", keys, 32 * 6, spDump);
+        snprintf(fn, sizeof(fn), "hf-mf-%s-key", sprint_hex_inrow(uid, u_len));
+        saveFileEx(fn, ".bin", keys, sector_count * 2 * 6, spDump);
     }
 
+    free(keys);
+    free(e_sector);
     return PM3_SUCCESS;
 }
 
@@ -10954,7 +11004,7 @@ static command_t CommandTable[] = {
     {"fchk",        CmdHF14AMfChk_fast,     IfPm3Iso14443a,  "Check keys fast, targets all keys on card"},
     {"decrypt",     CmdHf14AMfDecryptBytes, AlwaysAvailable, "Decrypt Crypto1 data from sniff or trace"},
     {"supercard",   CmdHf14AMfSuperCard,    IfPm3Iso14443a,  "Extract info from a `super card`"},
-    {"bambukeys",   CmdHF14AMfBambuKeys,    AlwaysAvailable, "Generate key table for Bambu Lab filament tag"},
+    {"keygen",      CmdHF14AMfKeyGen,       AlwaysAvailable, "Generate key table for some known KDFs"},
     {"-----------", CmdHelp,                IfPm3Iso14443a,  "----------------------- " _CYAN_("operations") " -----------------------"},
     {"auth4",       CmdHF14AMfAuth4,        IfPm3Iso14443a,  "ISO14443-4 AES authentication"},
     {"acl",         CmdHF14AMfAcl,          AlwaysAvailable, "Decode and print MIFARE Classic access rights bytes"},
