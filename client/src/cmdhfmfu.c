@@ -3944,9 +3944,20 @@ static int CmdHF14AMfURestore(const char *Cmd) {
             }
 
             PrintAndLogEx(INFO, "special PWD     block written 0x%X - %s", MFU_NTAG_SPECIAL_PWD, sprint_hex(data, 4));
-            clearCommandBuffer();
-            SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PWD, keytype, 0, data, sizeof(data));
 
+            mful_writeblock_t packet = {
+                .block_no = MFU_NTAG_SPECIAL_PWD,
+                .keytype = keytype,
+                .keylen = 4,
+                .use_schann = use_schann,
+            };
+            memcpy(packet.key, auth_key_ptr, 4); // password to authenticate
+
+            memcpy(packet.data, data, 4);  // new password
+
+            clearCommandBuffer();
+            SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packet, sizeof(packet));
+            // SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PWD, keytype, 0, data, sizeof(data));
             wait4response(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PWD);
 
             // copy the new key
