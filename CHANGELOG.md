@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- fix `hf felica raw` - wrong length calculationes. Thanks @dxl for the solutions! (@iceman1001)
 - Added basic QR code generation support. Thanks @mistial-dev for the idea! (@iceman1001)
 - Added identification of NDEF/Open print tag record (@iceman1001)
 - Added support for Bruce dump files [.rfid] (@iceman1001)

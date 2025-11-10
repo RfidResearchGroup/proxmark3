@@ -572,26 +572,31 @@ void felica_sendraw(const PacketCommandNG *c) {
 
     if ((param & FELICA_RAW) == FELICA_RAW) {
 
-        // 2 sync, 1 len, 2crc == 5
+        // 2 sync, 1 len, 2 crc == 5
         uint8_t *buf = BigBuf_calloc(len + 5);
         // add sync bits
         buf[0] = 0xb2;
         buf[1] = 0x4d;
-        buf[2] = len;
+
+        // len (number of bytes) + 1 for len byte itself
+        buf[2] = len + 1;
 
         // copy command
-        memcpy(buf + 2, c->data.asBytes, len);
+        memcpy(buf + 3, c->data.asBytes, len);
 
         if ((param & FELICA_APPEND_CRC) == FELICA_APPEND_CRC) {
             // Don't append crc on empty bytearray...
-            if (len > 0) {
-                AddCrc(buf + 2, len);
+            if (len) {
+                // n bytes + len 1 byte
+                AddCrc(buf + 2, len + 1);
             }
         }
 
         if (g_dbglevel >= DBG_DEBUG) {
             Dbprintf("Transmit Frame (no CRC shown):");
-            Dbhexdump(len, buf, 0);
+            // 0,1,2, n  
+            Dbhexdump(len + 1 + 2, buf, 0);
+            // total buffer length:   len + 1 len byte + 2 sync bytes + 2 crc bytes
             Dbprintf("Buffer Length: %i", buf[2] + 4);
         };
 
