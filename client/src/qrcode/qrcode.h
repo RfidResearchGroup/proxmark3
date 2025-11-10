@@ -68,7 +68,7 @@ typedef struct QRCode {
 
 
 #ifdef __cplusplus
-extern "C"{
+extern "C" {
 #endif  /* __cplusplus */
 
 

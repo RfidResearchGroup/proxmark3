@@ -36,7 +36,7 @@ DDF_PPSE = b"2PAY.SYS.DDF01"
 
 class BridgePM3:
     """Bridge class for communicating with Proxmark3 device."""
-    
+
     def __init__(self, hw_debug: bool, pm3: Any = None):
         self._debug = hw_debug
         if pm3 is None:
@@ -48,7 +48,7 @@ class BridgePM3:
         """Receive data from PM3."""
         if self.recv_buff is None:
             raise ValueError("No data in receive buffer")
-        
+
         ret_buff = bytes.fromhex(self.recv_buff)
 
         if self._debug:
@@ -62,7 +62,7 @@ class BridgePM3:
     def hw_reset(self) -> None:
         """Reset the Proxmark3 hardware."""
         self.pm3.console("hw reset")
-    
+
     def send(self, data: bytes, select: bool = False) -> None:
         """Send APDU command to card via PM3."""
 
@@ -70,7 +70,7 @@ class BridgePM3:
 
         if select:
             exec_cmd += "s"  # activate field and select card
-        
+
         exec_cmd += "d "  # full APDU package
 
         # Convert bytearray to string
@@ -113,7 +113,7 @@ class BridgePM3:
         if recvdata is None:
             raise ValueError("Did not receive any data from PM3")
         return recvdata
-    
+
     def waitForCard(self, max_tries: int = MAX_CARD_POLL_TRIES) -> bool:
         """Poll for a card up to max_tries. Return True if found, else False."""
         tries = 0
@@ -276,43 +276,43 @@ def parse_return_code(ret_code: Optional[bytes], console_print: bool = True) -> 
 def parse_tlv(data: bytes, tag_length: int) -> List[Tuple[bytes, bytes]]:
     """
     Parse TLV (Tag-Length-Value) structure.
-    
+
     Args:
         data: bytes or bytearray containing TLV data
         tag_length: int, number of bytes for the tag field (must be > 0)
-    
+
     Returns:
         list of tuples: [(tag, value), (tag, value), ...]
     """
     if tag_length <= 0:
         raise ValueError(f"Invalid tag_length: {tag_length}, must be > 0")
-    
+
     result = []
     offset = 0
-    
+
     while offset < len(data):
         # Check if we have enough bytes for tag and length
         if offset + tag_length + 1 > len(data):
             break
-        
+
         # Extract tag
         tag = data[offset:offset + tag_length]
         offset += tag_length
-        
+
         # Extract length (assuming 1 byte for length)
         length = data[offset]
         offset += 1
-        
+
         # Check if we have enough bytes for value
         if offset + length > len(data):
             break
-        
+
         # Extract value
         value = data[offset:offset + length]
         offset += length
-        
+
         result.append((tag, value))
-    
+
     return result
 
 # https://github.com/SocialSisterYi/T-Union_Master/blob/857ffec87d67413e759c5e055e6a410a93536b2e/src/protocol/t_union_poller_i.c#L88
@@ -320,7 +320,7 @@ def parse_tunion_meta(level: int, tlv_data: bytes) -> None:
     """Parse T-Union card metadata from TLV data."""
     if len(tlv_data) < 0x1C:
         raise ValueError(f"TLV data too short: {len(tlv_data)} bytes, expected at least 28")
-    
+
     card_type = tlv_data[0]
     city_id = int.from_bytes(tlv_data[1:3], byteorder='big')
     card_number = tlv_data[10:20].hex().upper()
@@ -346,7 +346,7 @@ def decode_transaction(data: bytes) -> None:
     """Decode and display transaction record."""
     if len(data) < 23:
         raise ValueError(f"Transaction data too short: {len(data)} bytes, expected at least 23")
-    
+
     sequence = int.from_bytes(data[0:2], byteorder='big')
     money = int.from_bytes(data[5:9], byteorder='big')
     trans_type = data[9]
@@ -379,7 +379,7 @@ def decode_travel(data: bytes) -> None:
     """Decode and display travel record."""
     if len(data) < 42:
         raise ValueError(f"Travel data too short: {len(data)} bytes, expected at least 42")
-    
+
     travel_type = data[0]
     terminal_id = data[1:9].hex().upper()
     sub_type = data[9]
@@ -456,10 +456,10 @@ def process_tlv(tlv_data: bytes) -> None:
     """Process TLV data after checking status word."""
     if DEBUG:
         print(f"[{color('+', fg='green')}] Calling: {sys._getframe(0).f_code.co_name}")
-    
+
     if len(tlv_data) < 2:
         raise ValueError("TLV data too short")
-    
+
     SW1_SW2 = tlv_data[-2:]
     answer = tlv_data[:-2]
 
@@ -479,7 +479,7 @@ def strToint16(hex_str: str) -> List[int]:
     """
     if len(hex_str) % 2 != 0:
         raise ValueError(f"Hex string must have even length, got {len(hex_str)}")
-    
+
     return [int(hex_str[i:i+2], 16) for i in range(0, len(hex_str), 2)]
 
 def GetRecData(pm3_conn: BridgePM3) -> bytes:
@@ -492,7 +492,7 @@ def GetRecData(pm3_conn: BridgePM3) -> bytes:
     parse_return_code(nfcdata[-2:], DEBUG)
     return nfcdata
 
-def sendCommand(pm3_conn: BridgePM3, cla: int, ins: int, p1: int, p2: int, 
+def sendCommand(pm3_conn: BridgePM3, cla: int, ins: int, p1: int, p2: int,
                 Data: Optional[bytes] = None, le: Optional[int] = None) -> bytes:
     """Send APDU command and receive response."""
     context = [cla, ins, p1, p2]
@@ -514,7 +514,7 @@ def sendCommand(pm3_conn: BridgePM3, cla: int, ins: int, p1: int, p2: int,
     pm3_conn.sendToNfc(bytes(context))
     recdata = GetRecData(pm3_conn)
     return recdata
-        
+
 def cmd_select(pm3_conn: BridgePM3, fileID: Optional[str] = None, name: Optional[bytes] = None) -> bytes:
     """Send SELECT command to card."""
     if DEBUG:
@@ -552,7 +552,7 @@ def cmd_get_balance(pm3_conn: BridgePM3) -> bytes:
     ins = 0x5C
     p1 = 0x00
     p2 = 0x02
-    
+
     ret = sendCommand(pm3_conn, cla=cla, ins=ins, p1=p1, p2=p2, le=4)
     if DEBUG:
         print(f"[{color('=', fg='yellow')}] GET_BALANCE => {bytes_to_hexstr(ret)}\n")
@@ -562,7 +562,7 @@ def cmd_read_record(pm3_conn: BridgePM3, record_number: int, file_id: int) -> by
     """Read a record from a file on the card."""
     if DEBUG:
         print(f"[{color('+', fg='green')}] Calling: {sys._getframe(0).f_code.co_name}")
-    
+
     cla = 0x00
     ins = 0xB2
     p1 = record_number
@@ -597,7 +597,7 @@ def process_tunion_transit_card(pm3_conn: BridgePM3) -> None:
         except (AssertionError, ValueError) as e:
             print(f" Error: {e}")
             break
-        
+
     print("\nReading Travel Records...")
     for i in range(MAX_TRAVEL_RECORDS):
         print(f"Reading Travel Record {i+1}...", end="")
@@ -624,7 +624,7 @@ def main() -> None:
         print("\nSelecting DDF...")
         ret = cmd_select(pm3_conn, name=DDF_PPSE)
         assert_success(ret)
-        
+
         for aidl in [AID_PBOC_DEBIT_CREDIT, AID_TUNION_TRANSIT]:
             print(f"\nSelecting AID: {aidl}")
             ret = cmd_select(pm3_conn, name=bytes.fromhex(aidl))
