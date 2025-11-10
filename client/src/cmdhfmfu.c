@@ -2420,8 +2420,8 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
                     MFU_TT_NTAG_223_DNA | MFU_TT_NTAG_223_DNA_SD | MFU_TT_NTAG_224_DNA | MFU_TT_NTAG_224_DNA_SD |
                     MFU_TT_NTAG_I2C_1K | MFU_TT_NTAG_I2C_2K | MFU_TT_NTAG_I2C_1K_PLUS | MFU_TT_NTAG_I2C_2K_PLUS |
                     MFU_TT_UL_AES)) &&
-        ((tagtype & (MFU_TT_MAGIC | MFU_TT_MAGIC_1A | MFU_TT_MAGIC_1B | MFU_TT_MAGIC_NTAG |
-        MFU_TT_MAGIC_2 | MFU_TT_MAGIC_4 | MFU_TT_MAGIC_4_GDM | MFU_TT_MAGIC_NTAG21X)) == 0)) {
+            ((tagtype & (MFU_TT_MAGIC | MFU_TT_MAGIC_1A | MFU_TT_MAGIC_1B | MFU_TT_MAGIC_NTAG |
+                         MFU_TT_MAGIC_2 | MFU_TT_MAGIC_4 | MFU_TT_MAGIC_4_GDM | MFU_TT_MAGIC_NTAG21X)) == 0)) {
         // print silicon info
         ul_print_nxp_silicon_info(card.uid);
     }
@@ -3713,7 +3713,8 @@ int CmdHF14MfUTamper(const char *Cmd) {
         int tt_msg_page = 45;
         packet.block_no = tt_msg_page;
 
-        SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t*)&packet, sizeof(packet));
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packet, sizeof(packet));
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_HF_MIFAREU_WRITEBL, &resp, 1500) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
@@ -3767,7 +3768,9 @@ int CmdHF14MfUTamper(const char *Cmd) {
 
         packet.block_no = tt_cfg_page;
         memcpy(packet.data, cfg_page, sizeof(cfg_page));
-        SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t*)&packet, sizeof(packet));
+
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packet, sizeof(packet));
         PacketResponseNG resp;
         if (WaitForResponseTimeout(CMD_HF_MIFAREU_WRITEBL, &resp, 1500) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
@@ -3807,6 +3810,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         arg_lit0("r", NULL, "use password found in dumpfile to configure tag. Requires " _YELLOW_("'-e'") " parameter to work"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0("z", "dense", "dense dump output style"),
+        arg_lit0(NULL, "schann", "use secure channel. Must have key"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -3826,6 +3830,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     bool read_key = arg_get_lit(ctx, 6);
     bool verbose = arg_get_lit(ctx, 7);
     bool dense_output = (g_session.dense_output || arg_get_lit(ctx, 8));
+    bool use_schann = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
 
     bool has_key = false;
@@ -3883,8 +3888,9 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     if (tagtype == MFU_TT_UL_ERROR) {
         return PM3_ESOFT;
     }
+
     if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
-        PrintAndLogEx(ERR, "Sorry, UL-AES not yet supported");
+        PrintAndLogEx(ERR, "Sorry, UL-AES not yet supported.  Feel free to implement!");
         free(dump);
         return PM3_ENOTIMPL;
     }
@@ -3909,12 +3915,14 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     uint8_t data[20] = {0};
     uint8_t keytype = 0;
     if (has_key) {
-        if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C)
+
+        if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
             keytype = 1; // UL_C auth
-        else if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)
+        } else if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
             keytype = 3; // UL_AES auth
-        else
+        } else {
             keytype = 2; // UL_EV1/NTAG auth
+        }
         memcpy(data + 4, auth_key_ptr, ak_len);
     }
 
