@@ -1403,6 +1403,14 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
             mfu_dump_t *mfu_header = (mfu_dump_t *) BigBuf_get_EM_addr();
             *pages = MAX(mfu_header->pages, 47);
 
+            // GET_VERSION
+            if (memcmp(mfu_header->version, "\x00\x00\x00\x00\x00\x00\x00\x00", 8) == 0) {
+                memcpy(rVERSION, "\x00\x04\x03\x01\x04\x00\x0F\x03", 8);
+            } else {
+                memcpy(rVERSION, mfu_header->version, 8);
+            }
+            AddCrc14A(rVERSION, sizeof(rVERSION) - 2);
+
             Simulate_read_ulaes_key0(ulc_key);
 
             /*
@@ -2013,7 +2021,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
             LogTrace(receivedCmd, Uart.len, Uart.startTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.endTime * 16 - DELAY_AIR2ARM_AS_TAG, Uart.parity, true);
             p_response = NULL;
             order = ORDER_HALTED;
-        } else if (receivedCmd[0] == MIFARE_ULEV1_VERSION && len == 3 && (tagType == 2 || tagType == 7)) {
+        } else if (receivedCmd[0] == MIFARE_ULEV1_VERSION && len == 3 && (tagType == 2 || tagType == 7 || tagType == 14)) {
             p_response = &responses[RESP_INDEX_VERSION];
         } else if (receivedCmd[0] == MFDES_GET_VERSION && len == 4 && (tagType == 3)) {
             p_response = &responses[RESP_INDEX_VERSION];
