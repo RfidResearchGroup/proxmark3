@@ -2568,79 +2568,178 @@ int CmdHF14BNdefRead(const char *Cmd) {
     // ---------------  Select NDEF Tag application ----------------
     uint8_t aSELECT_AID[80];
     int aSELECT_AID_n = 0;
-    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n);
+    // It's likely safe to ignore the backwards compatibility select that's present in the 14443A part of this code.
+    // Full-fledged 14443B is rare, after all. And if not.. your eMRTD passport doesn't have NDEF for a fact.
+    param_gethex_to_eol("00a4040007d276000085010100", 0, aSELECT_AID, sizeof(aSELECT_AID), &aSELECT_AID_n); // Select NDEF application D2760000850101
     int res = exchange_14b_apdu(aSELECT_AID, aSELECT_AID_n, activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
     if (res) {
-        goto out;
+        switch_off_field_14b();
+        return res;
     }
 
     if (resplen < 2) {
         res = PM3_ESOFT;
-        goto out;
+        switch_off_field_14b();
+        return res;
     }
 
     uint16_t sw = get_sw(response, resplen);
     if (sw != ISO7816_OK) {
-        PrintAndLogEx(ERR, "Selecting NDEF aid failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        PrintAndLogEx(ERR, "Selecting NDEF AID failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         res = PM3_ESOFT;
-        goto out;
+        switch_off_field_14b();
+        return res;
     }
 
     activate_field = false;
     keep_field_on = true;
-    // ---------------  Send CC select ----------------
-    // ---------------  Read binary ----------------
 
-    // ---------------  NDEF file reading ----------------
-    uint8_t aSELECT_FILE_NDEF[30];
-    int aSELECT_FILE_NDEF_n = 0;
-    param_gethex_to_eol("00a4000c020001", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
-    res = exchange_14b_apdu(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
-    if (res)
-        goto out;
-
-    sw = get_sw(response, resplen);
-    if (sw != ISO7816_OK) {
-        PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
-        res = PM3_ESOFT;
-        goto out;
-    }
-
-    // ---------------  Read binary ----------------
-    uint8_t aREAD_NDEF[30];
-    int aREAD_NDEF_n = 0;
-    param_gethex_to_eol("00b0000002", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
-    res = exchange_14b_apdu(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
+    // ---------------  CC file reading ----------------
+    uint8_t aSELECT_FILE_CC[30];
+    int aSELECT_FILE_CC_n = 0;
+    param_gethex_to_eol("00a4000c02e103", 0, aSELECT_FILE_CC, sizeof(aSELECT_FILE_CC), &aSELECT_FILE_CC_n); // Select E103 file with payload information
+    res = exchange_14b_apdu(aSELECT_FILE_CC, aSELECT_FILE_CC_n, activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
     if (res) {
-        goto out;
+        switch_off_field_14b();
+        return res;
     }
 
     sw = get_sw(response, resplen);
     if (sw != ISO7816_OK) {
-        PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        PrintAndLogEx(ERR, "Selecting CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         res = PM3_ESOFT;
-        goto out;
+        switch_off_field_14b();
+        return res;
+    }
+
+    // ---------------  Read binary ----------------
+    uint8_t aREAD_CC[30];
+    int aREAD_CC_n = 0;
+    param_gethex_to_eol("00b000000f", 0, aREAD_CC, sizeof(aREAD_CC), &aREAD_CC_n);
+    res = exchange_14b_apdu(aREAD_CC, aREAD_CC_n, activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
+    if (res) {
+        switch_off_field_14b();
+        return res;
+    }
+
+    sw = get_sw(response, resplen);
+    if (sw != ISO7816_OK) {
+        PrintAndLogEx(ERR, "reading CC file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        res = PM3_ESOFT;
+        switch_off_field_14b();
+        return res;
     }
     // take offset from response
     uint8_t offset = response[1];
+    
+    // Parse CC data
+    uint8_t cc_data[resplen - 2];
+    memcpy(cc_data, response, sizeof(cc_data));
+    uint8_t file_id[2] = {cc_data[9], cc_data[10]};
+    
 
-    // ---------------  Read binary w offset ----------------
-    keep_field_on = false;
+    uint16_t max_rapdu_size = (cc_data[3] << 8 | cc_data[4]) - 2;
+    
+    max_rapdu_size = max_rapdu_size < sizeof(response) - 2 ? max_rapdu_size : sizeof(response) - 2;
+    // ---------------  NDEF file reading ----------------
+    uint8_t aSELECT_FILE_NDEF[30];
+    int aSELECT_FILE_NDEF_n = 0;
+    param_gethex_to_eol("00a4000c02", 0, aSELECT_FILE_NDEF, sizeof(aSELECT_FILE_NDEF), &aSELECT_FILE_NDEF_n);
+    memcpy(aSELECT_FILE_NDEF + aSELECT_FILE_NDEF_n, file_id, sizeof(file_id));
+    res = exchange_14b_apdu(aSELECT_FILE_NDEF, aSELECT_FILE_NDEF_n + sizeof(file_id), activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
+    if (res != PM3_SUCCESS) {
+        switch_off_field_14b();
+        return res;
+    }
+    sw = get_sw(response, resplen);
+    if (sw != ISO7816_OK) {
+        PrintAndLogEx(ERR, "Selecting NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        switch_off_field_14b();
+        return PM3_ESOFT;
+    }
+    // ---------------  Read binary size ----------------
+    uint8_t aREAD_NDEF[30];
+    int aREAD_NDEF_n = 0;
     aREAD_NDEF_n = 0;
-    param_gethex_to_eol("00b00002", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
-    aREAD_NDEF[4] = offset;
+    param_gethex_to_eol("00b0000002", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
     res = exchange_14b_apdu(aREAD_NDEF, aREAD_NDEF_n, activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
     if (res) {
-        goto out;
+        switch_off_field_14b();
+        return res;
     }
 
     sw = get_sw(response, resplen);
     if (sw != ISO7816_OK) {
         PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
         res = PM3_ESOFT;
-        goto out;
+        switch_off_field_14b();
+        return res;
     }
 
+    uint16_t ndef_size = (response[0] << 8) + response[1];
+    offset = 2;
+
+    uint8_t *ndef_file = calloc(ndef_size, sizeof(uint8_t));
+    if (ndef_file == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        switch_off_field_14b();
+        return PM3_EMALLOC;
+    }
+
+    if (ndef_size + offset > 0xFFFF) {
+        PrintAndLogEx(ERR, "NDEF size abnormally large in CmdHF14BNdefRead(). Aborting...\n");
+        free(ndef_file);
+        switch_off_field_14b();
+        return PM3_EOVFLOW;
+    }
+    for (size_t i = offset; i < ndef_size + offset; i += max_rapdu_size) {
+        size_t segment_size = max_rapdu_size < ndef_size + offset - i ? max_rapdu_size : ndef_size + offset - i;
+
+        keep_field_on = i < ndef_size + offset - max_rapdu_size;
+        aREAD_NDEF_n = 0;
+        param_gethex_to_eol("00b00000", 0, aREAD_NDEF, sizeof(aREAD_NDEF), &aREAD_NDEF_n);
+        aREAD_NDEF[2] = i >> 8;
+        aREAD_NDEF[3] = i & 0xFF;
+
+        // Segment_size is stuffed into a single-byte field below ... so error out if overflows
+        if (segment_size > 0xFFu) {
+            PrintAndLogEx(ERR, "Segment size too large (0x%zx > 0xFF)", segment_size);
+            switch_off_field_14b();
+            free(ndef_file);
+            return PM3_EOVFLOW;
+        }
+        aREAD_NDEF[4] = segment_size;
+
+        res = exchange_14b_apdu(aREAD_NDEF, aREAD_NDEF_n + 1, activate_field, keep_field_on, response, sizeof(response), &resplen, -1);
+        if (res != PM3_SUCCESS) {
+            switch_off_field_14b();
+            free(ndef_file);
+            return res;
+        }
+
+        sw = get_sw(response, resplen);
+        if (sw != ISO7816_OK) {
+            PrintAndLogEx(ERR, "reading NDEF file failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+            switch_off_field_14b();
+            free(ndef_file);
+            return PM3_ESOFT;
+        }
+
+        if (resplen != segment_size + 2) {
+            PrintAndLogEx(ERR, "reading NDEF file failed, expected %zu bytes, got %i bytes.", segment_size, resplen - 2);
+            switch_off_field_14b();
+            free(ndef_file);
+            return PM3_ESOFT;
+        }
+
+        memcpy(ndef_file + (i - offset), response, segment_size);
+    }
+
+    if (verbose == false) {
+        PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf 14b ndefread -v`") " for more details"); // So far this prints absolutely nothing
+    }
+
+    
     // get total NDEF length before save. If fails, we save it all
     size_t n = 0;
     if (NDEFGetTotalLength(response + 2, resplen - 4, &n) != PM3_SUCCESS)
@@ -2648,11 +2747,11 @@ int CmdHF14BNdefRead(const char *Cmd) {
 
     pm3_save_dump(filename, response + 2, n, jsfNDEF);
 
-    res = NDEFRecordsDecodeAndPrint(response + 2, resplen - 4, verbose);
-
-out:
+    NDEFRecordsDecodeAndPrint(ndef_file, ndef_size, verbose);
+    free(ndef_file);
+    PrintAndLogEx(NORMAL, "");
     switch_off_field_14b();
-    return res;
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14BView(const char *Cmd) {
