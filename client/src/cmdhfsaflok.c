@@ -246,8 +246,16 @@ static void insert_bits(uint8_t *data, size_t start_bit, size_t num_bits, uint32
     }
 }
 
+// Static analysis hint: reads all bytes of `data[len]`
+// * NOT THREAD SAFE ... uses a static buffer for result,
+//   so multiple calls will overwrite previous results.
+//   This style of design SPAWNS BUGS.
+// NOTE: apparently accepted for this legacy codebase.
 static char *bytes_to_hex(const uint8_t *data, size_t len) {
-    static char buf[256];
+    static char buf[256]; // WARNING: caller must immediately use or copy the result, and it's still not thread-safe!
+    // BUGBUG: previously had no bounds checking on len!
+    assert(len < (ARRAYLEN(buf)/2));
+    len = (len < (ARRAYLEN(buf)/2)) ? len : (ARRAYLEN(buf)/2) - 1; // prevent buffer overflow
     for (size_t i = 0; i < len; i++) {
         sprintf(buf + (i * 2), "%02X", data[i]);
     }
