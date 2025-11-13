@@ -20,7 +20,7 @@ volatile int key_found = 0;
 typedef enum {
     LFSR_UNDEF = 0,
     LFSR_ULCG = 1,
-    LFSR_USCUIDUL = 2
+    LFSR_MFC = 2   // For USCUID-UL and FJ8010
 } lfsr_t;
 
 typedef struct {
@@ -68,7 +68,7 @@ static bool valid_lfsr_ulcg(uint64_t x64) {
     return true;
 }
 
-static bool valid_lfsr_uscuidul(uint64_t x64) {
+static bool valid_LFSR_MFC(uint64_t x64) {
     x64 = __builtin_bswap64(x64);
     uint16_t x16 = x64 & 0xFFFF;
     for (int i = 0; i < 16; i++) x16 = x16 >> 1 | (x16 ^ x16 >> 2 ^ x16 >> 3 ^ x16 >> 5) << 15;
@@ -85,8 +85,8 @@ static bool valid_lfsr(uint64_t x64, lfsr_t lfsr_type) {
     switch (lfsr_type) {
         case LFSR_ULCG:
             return valid_lfsr_ulcg(x64);
-        case LFSR_USCUIDUL:
-            return valid_lfsr_uscuidul(x64);
+        case LFSR_MFC:
+            return valid_LFSR_MFC(x64);
         case LFSR_UNDEF:
         default:
             return false;
@@ -101,8 +101,8 @@ static lfsr_t detect_lfsr_type(unsigned char *init_ciphertext) {
     DES_ecb_encrypt((DES_cblock *)init_ciphertext, (DES_cblock *)&out, &fixed_schedule, DES_DECRYPT);
     if (valid_lfsr_ulcg(out)) {
         return LFSR_ULCG;
-    } else if (valid_lfsr_uscuidul(out)) {
-        return LFSR_USCUIDUL;
+    } else if (valid_LFSR_MFC(out)) {
+        return LFSR_MFC;
     }
     return LFSR_UNDEF;
 }
@@ -308,8 +308,8 @@ int main(int argc, char **argv) {
             case LFSR_ULCG:
                 printf("LFSR detection: ULCG\n");
                 break;
-            case LFSR_USCUIDUL:
-                printf("LFSR detection: ULC_USCUIDUL\n");
+            case LFSR_MFC:
+                printf("LFSR detection: MFC (USCUID-UL and FJ8010)\n");
                 break;
             case LFSR_UNDEF:
             default:

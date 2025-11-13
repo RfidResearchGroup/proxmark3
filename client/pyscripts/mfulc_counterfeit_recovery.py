@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Key recovery for Giantec ULCG and USCUID-UL cards (won't work on NXP cards!)
+# Key recovery for Giantec GT23SC4489/ULCG, Feiju FJ8010 and USCUID-UL cards (won't work on NXP cards!)
 #
 # Conditions:
 # * AUTH0 allowing unauthenticated writes to key blocks, e.g. by completing a relay attack in UNLOCK mode
@@ -346,10 +346,10 @@ def collect(num_challenges: int, p, debug: bool) -> Optional[dict]:
 
 def main():
     """
-    Key recovery for Giantec ULCG and USCUID-UL cards (won't work on NXP cards!)
+    Key recovery for Giantec GT23SC4489/ULCG, Feiju FJ8010 and USCUID-UL cards (won't work on NXP cards!)
 
     This script collects the necessary challenges either from a Proxmark3 device or from a file, and attempts
-    to crack the ULCG/USCUID-UL keys using the collected challenges, with the help of the mfulc_des_brute tool.
+    to crack the ULCG/FJ8010/USCUID-UL keys using the collected challenges, with the help of the mfulc_des_brute tool.
 
     Conditions:
     * AUTH0 must allow unauthenticated writes to key blocks,
