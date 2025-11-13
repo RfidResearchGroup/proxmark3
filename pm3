@@ -424,6 +424,9 @@ fi
 
 # priority to the help options
 for ARG; do
+    if [ "$ARG" == "--" ]; then
+        break
+    fi
     if [ "$ARG" == "-h" ] || [ "$ARG" == "--help" ]; then
         HELP
         exit 0
