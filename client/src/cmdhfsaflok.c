@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 #include "cliparser.h"
 #include "cmdparser.h"
 #include "comms.h"
@@ -30,7 +31,26 @@
 #include "generator.h"
 #include "cmdhfmf.h"
 
-#define KEY_LENGTH 6
+// MiFARE Classic encoded with SafeLok encoded data
+// defining this structure makes it more clear what
+// is passed around, and avoids the need to pass lengths
+// to many of the functions.
+
+typedef struct _safelok_mfc_data_t {
+    uint8_t data[16]; // 8*16 == 128 bits of encoded, packed data
+    uint8_t checksum;
+} safelok_mfc_data_t;
+typedef struct _safelock_mfc_uid_t {
+    uint8_t uid[4];
+} safelok_mfc_uid_t;
+typedef struct _safelok_mfc_key_t {
+    uint8_t key[6];
+} safelok_mfc_key_t;
+#define KEY_LENGTH sizeof(safelok_mfc_key_t)
+
+
+
+
 
 static const uint8_t c_aDecode[256] = {
     234, 13, 217, 116, 78, 40, 253, 186, 123, 152,
@@ -106,26 +126,26 @@ uint8_t magic_table[192] = {
     0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0xDA, 0x3E, 0x3F, 0xD6, 0x49, 0xDD,
     0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x58, 0xDD, 0xED, 0x07, 0x8E, 0x3E,
     0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x5C, 0xD0, 0x05, 0xCF, 0xD9, 0x07,
-    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x11, 0x8D, 0xD0, 0x01, 0x87, 0xD0
+    0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x11, 0x8D, 0xD0, 0x01, 0x87, 0xD0,
 };
 
-static const char *level_names[] = {
-    "Guest Key",                     // Index 0
-    "Connectors",                    // Index 1
-    "Suite",                         // Index 2
-    "Limited Use",                   // Index 3
-    "Failsafe",                      // Index 4
-    "Inhibit",                       // Index 5
-    "Pool/Meeting Master",           // Index 6
-    "Housekeeping",                  // Index 7
-    "Floor Key",                     // Index 8
-    "Section Key",                   // Index 9
-    "Rooms Master",                  // Index 10
-    "Grand Master",                  // Index 11
-    "Emergency",                     // Index 12
-    "Electronic Lockout",            // Index 13
+static const char *level_names[16] = {
+    "Guest Key",                       // Index 0
+    "Connectors",                      // Index 1
+    "Suite",                           // Index 2
+    "Limited Use",                     // Index 3
+    "Failsafe",                        // Index 4
+    "Inhibit",                         // Index 5
+    "Pool/Meeting Master",             // Index 6
+    "Housekeeping",                    // Index 7
+    "Floor Key",                       // Index 8
+    "Section Key",                     // Index 9
+    "Rooms Master",                    // Index 10
+    "Grand Master",                    // Index 11
+    "Emergency",                       // Index 12
+    "Electronic Lockout",              // Index 13
     "Secondary Programming Key (SPK)", // Index 14
-    "Primary Programming Key (PPK)",  // Index 15
+    "Primary Programming Key (PPK)",   // Index 15
 };
 
 
@@ -279,21 +299,21 @@ static uint8_t saflok_checksum(unsigned char *data, int length) {
     return sum & 0xFF;
 }
 
-static void saflok_kdf(const uint8_t *uid, uint8_t *key_out) {
+static void saflok_kdf(const safelok_mfc_uid_t *uid, safelok_mfc_key_t *key_out) {
 
-    uint8_t magic_byte = (uid[3] >> 4) + (uid[2] >> 4) + (uid[0] & 0x0F);
+    uint8_t magic_byte = (uid->uid[3] >> 4) + (uid->uid[2] >> 4) + (uid->uid[0] & 0x0F);
     uint8_t magickal_index = (magic_byte & 0x0F) * 12 + 11;
     uint8_t carry_sum = 0;
 
-    uint8_t key[KEY_LENGTH] = {magic_byte, uid[0], uid[1], uid[2], uid[3], magic_byte};
+    safelok_mfc_key_t key = {{magic_byte, uid->uid[0], uid->uid[1], uid->uid[2], uid->uid[3], magic_byte}};
 
     for (int i = KEY_LENGTH - 1; i >= 0; i--, magickal_index--) {
-        uint16_t keysum = key[i] + magic_table[magickal_index];
-        key[i] = (keysum & 0xFF) + carry_sum;
+        uint16_t keysum = key.key[i] + magic_table[magickal_index];
+        key.key[i] = (keysum & 0xFF) + carry_sum;
         carry_sum = keysum >> 8;
     }
 
-    memcpy(key_out, key, KEY_LENGTH);
+    memcpy(key_out, &key, KEY_LENGTH);
 }
 
 static void saflok_decode(uint8_t *data) {
@@ -826,9 +846,12 @@ static int CmdHFSaflokProvision(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    uint8_t keyA[6];
-    saflok_kdf(uid, keyA);
-    PrintAndLogEx(INFO, "Generated UID-derived key: " _GREEN_("%s"), bytes_to_hex(keyA, 6));
+    _Static_assert(ARRAYLEN(uid) >= sizeof(safelok_mfc_uid_t), "UID array too small");
+    const safelok_mfc_uid_t * saflok_uid = (const safelok_mfc_uid_t *)uid;
+    safelok_mfc_key_t keyA = {0};
+    
+    saflok_kdf(saflok_uid, &keyA);
+    PrintAndLogEx(INFO, "Generated UID-derived key: " _GREEN_("%s"), bytes_to_hex(keyA.key, ARRAYLEN(keyA.key)));
 
     uint8_t all_F[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     uint8_t block1[16];
@@ -840,20 +863,21 @@ static int CmdHFSaflokProvision(const char *Cmd) {
     block2[3] = 0x00;
     block2[4] = 0x01;
 
-    bool write_success = mf_write_block(1, 0, keyA, block1) == PM3_SUCCESS &&
-                         mf_write_block(2, 0, keyA, block2) == PM3_SUCCESS;
+    bool write_success = mf_write_block(1, 0, keyA.key, block1) == PM3_SUCCESS &&
+                         mf_write_block(2, 0, keyA.key, block2) == PM3_SUCCESS;
 
     uint8_t trailer0[16] = {0};
     uint8_t set_keys = 0;
     if (!write_success) {
         PrintAndLogEx(WARNING, "Initial write failed. Attempting to set sector 0 keys...");
 
-        memcpy(trailer0, keyA, 6);
+        _Static_assert(sizeof(safelok_mfc_key_t) == 6u, "safelok_mfc_key_t size changed?");
+        memcpy(trailer0, &keyA, sizeof(safelok_mfc_key_t));
         trailer0[6] = 0xFF;
         trailer0[7] = 0x07;
         trailer0[8] = 0x80;
         trailer0[9] = 0x69;
-        memcpy(trailer0 + 10, all_F, 6);
+        memset(trailer0 + 10, 0xFF, sizeof(safelok_mfc_key_t));
 
         if (mf_write_block(3, 1, all_F, trailer0) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Failed to set key in sector 0. Try wiping the card first.");
@@ -861,8 +885,8 @@ static int CmdHFSaflokProvision(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        write_success = mf_write_block(1, 0, keyA, block1) == PM3_SUCCESS &&
-                        mf_write_block(2, 0, keyA, block2) == PM3_SUCCESS;
+        write_success = mf_write_block(1, 0, keyA.key, block1) == PM3_SUCCESS &&
+                        mf_write_block(2, 0, keyA.key, block2) == PM3_SUCCESS;
         if (!write_success) {
             PrintAndLogEx(WARNING, "Write still failed after setting keys.");
             CLIParserFree(ctx);
@@ -915,11 +939,14 @@ static int CmdHFSaflokInterrogate(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    uint8_t key[6];
-    saflok_kdf(uid, key);
+    _Static_assert(ARRAYLEN(uid) >= sizeof(safelok_mfc_uid_t), "UID array too small");
+    const safelok_mfc_uid_t * saflok_uid = (const safelok_mfc_uid_t *)uid;
+
+    safelok_mfc_key_t key;
+    saflok_kdf(saflok_uid, &key);
 
     uint8_t block2[16];
-    if (mf_read_block(2, 0, key, block2) != PM3_SUCCESS) {
+    if (mf_read_block(2, 0, key.key, block2) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Failed to read block 2 with derived key.");
         CLIParserFree(ctx);
         return PM3_ESOFT;
@@ -945,7 +972,7 @@ static int CmdHFSaflokInterrogate(const char *Cmd) {
             continue;
         }
 
-        if (mf_read_block(current_block, 0, key, buffer + total_bytes) != PM3_SUCCESS) {
+        if (mf_read_block(current_block, 0, key.key, buffer + total_bytes) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Failed to read block %d", current_block);
             break;
         }
