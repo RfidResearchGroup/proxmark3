@@ -253,30 +253,59 @@ static void saflok_encrypt(const saflok_mfc_data_t *keyCard, saflok_mfc_data_t *
     }
 }
 
-// unsafe without static analysis hints.
-// Will access data[] at all indices from:
-//     floor(start_bit/8) .. ceil((start_bit + num_bits - 1)/8)
-// safelok_mfc_data_t* for data parameter?
-static uint32_t extract_bits(const uint8_t *data, size_t start_bit, size_t num_bits) {
+static uint32_t extract_bits(const saflok_mfc_data_t *data, size_t start_bit, size_t num_bits) {
+    static const size_t total_available_bits = ARRAYLEN(data->raw) * 8;
+    if (start_bit >= total_available_bits) {
+        // Out of bounds access
+        assert(!"extract_bits: Out of bounds access (start_bit)");
+        return 0;
+    }
+    if (num_bits > 32) {
+        // Exceeds maximum supported bit extraction
+        assert(!"extract_bits: num_bits exceeds 32");
+        return 0;
+    }
+    if (total_available_bits - start_bit < num_bits) {
+        // Out of bounds access
+        assert(!"extract_bits: Out of bounds access (num_bits)");
+        return 0;
+    }
+
     uint32_t result = 0;
     for (size_t i = 0; i < num_bits; i++) {
         size_t byte_index = (start_bit + i) / 8;
         size_t bit_index = (start_bit + i) % 8;
-        if (data[byte_index] & (1 << (7 - bit_index))) {
+        if (data->raw[byte_index] & (1 << (7 - bit_index))) {
             result |= (1ULL << (num_bits - 1 - i));
         }
     }
     return result;
 }
 
-// unsafe without static analysis hints.
-// Will access data[] at all indices from:
-//     floor(start_bit/8) .. ceil((start_bit + num_bits - 1)/8)
-// A maximum of 32 bits can be inserted by this function.
-// reject values that exceed the size of safelok_mfc_data_t->data[]
-// safelok_mfc_data_t* for data parameter?
+static void insert_bits(saflok_mfc_data_t *data, size_t start_bit, size_t num_bits, uint32_t value) {
+    static const size_t total_available_bits = ARRAYLEN(data->raw) * 8;
+    if (start_bit >= total_available_bits) {
+        // Out of bounds access
+        assert(!"insert_bits: Out of bounds access (start_bit)");
+        return;
+    }
+    if (num_bits > 32) {
+        // Exceeds maximum supported bit extraction
+        assert(!"insert_bits: num_bits exceeds 32");
+        return;
+    }
+    if (total_available_bits - start_bit < num_bits) {
+        // Out of bounds access
+        assert(!"insert_bits: Out of bounds access (num_bits)");
+        return;
+    }
+    if ((num_bits < 32) && ((value >> num_bits) != 0)) {
+        // Value exceeds the size of the specified bit field
+        assert(!"insert_bits: value exceeds bit field size");
+        return;
+    }
 
-static void insert_bits(uint8_t *data, size_t start_bit, size_t num_bits, uint32_t value) {
+
     for (size_t i = 0; i < num_bits; i++) {
         size_t current_bit = start_bit + i;
         size_t byte_index = current_bit / 8;
@@ -284,7 +313,7 @@ static void insert_bits(uint8_t *data, size_t start_bit, size_t num_bits, uint32
 
         uint32_t bit_value = (value >> (num_bits - 1 - i)) & 1U;
 
-        data[byte_index] = (data[byte_index] & ~(1 << bit_index)) | (bit_value << bit_index);
+        data->raw[byte_index] = (data->raw[byte_index] & ~(1 << bit_index)) | (bit_value << bit_index);
     }
 }
 
@@ -306,8 +335,7 @@ static char *bytes_to_hex(const uint8_t *data, size_t len) {
 }
 
 
-// safelok_mfc_data_t* for data parameter?
-static int pack_datetime_expr(char *expiration_datetime, uint8_t *data) {
+static int pack_datetime_expr(char *expiration_datetime, saflok_mfc_data_t *data) {
     int year, month, day, hour, minute;
 
     if (sscanf(expiration_datetime, "%4d-%2d-%2dT%2d:%2d",
@@ -315,15 +343,14 @@ static int pack_datetime_expr(char *expiration_datetime, uint8_t *data) {
         return -1;
     }
 
-    data[8] = ((year & 0x0F) << 4) | (month & 0x0F);
-    data[9] = ((day & 0x1F) << 3) | ((hour & 0x1C) >> 2);
-    data[10] = ((hour & 0x03) << 6) | (minute & 0x3F);
+    data->raw[8] = ((year & 0x0F) << 4) | (month & 0x0F);
+    data->raw[9] = ((day & 0x1F) << 3) | ((hour & 0x1C) >> 2);
+    data->raw[10] = ((hour & 0x03) << 6) | (minute & 0x3F);
 
     return 0;
 }
 
-// safelok_mfc_data_t* for data parameter?
-static int pack_datetime(char *datetime_str, uint8_t *data) {
+static int pack_datetime(char *datetime_str, saflok_mfc_data_t *data) {
     int year, month, day, hour, minute;
 
     if (sscanf(datetime_str, "%4d-%2d-%2dT%2d:%2d",
@@ -333,23 +360,19 @@ static int pack_datetime(char *datetime_str, uint8_t *data) {
 
     uint8_t year_offset = year - 1980;
 
-    data[11] = ((year_offset & 0x0F) << 4) | (month & 0x0F);
-    data[12] = ((day & 0x1F) << 3) | ((hour & 0x1C) >> 2);
-    data[13] = ((hour & 0x03) << 6) | (minute & 0x3F);
-    data[14] = (data[14] & 0x0F) | ((year_offset & 0x70) << 0);
+    data->raw[11] = ((year_offset & 0x0F) << 4) | (month & 0x0F);
+    data->raw[12] = ((day & 0x1F) << 3) | ((hour & 0x1C) >> 2);
+    data->raw[13] = ((hour & 0x03) << 6) | (minute & 0x3F);
+    data->raw[14] = (data->raw[14] & 0x0F) | ((year_offset & 0x70) << 0);
 
     return 0;
 }
 
-// unsafe without static analysis hints.
-// Will access all bytes of `data[len]`
-// length is ALWAYS 16 for safelock_mfc_data_t ...
-// safelok_mfc_data_t* for data parameter, and only access data[0..15]?
-// BUGBUG -- first parameter should point to 'const' data?
-static uint8_t saflok_checksum(unsigned char *data, int length) {
+static uint8_t calculated_saflok_checksum(const saflok_mfc_data_t *data) {
+    _Static_assert(ARRAYLEN(data->raw) == 17, "saflok_mfc_data_t raw size must be 17 bytes");
     int sum = 0;
-    for (int i = 0; i < length; i++) {
-        sum += data[i];
+    for (int i = 0; i < 16; i++) {
+        sum += data->raw[i];
     }
     sum = 255 - (sum & 0xFF);
     return sum & 0xFF;
@@ -372,8 +395,7 @@ static void saflok_kdf(const saflok_mfc_uid_t *uid, saflok_mfc_key_t *key_out) {
     memcpy(key_out, &key, KEY_LENGTH);
 }
 
-// unsafe!  data : struct containing uint8[17]
-static void saflok_decode(uint8_t *data) {
+static void saflok_decode(const saflok_mfc_data_t *data) {
 
     uint32_t card_level = extract_bits(data, 0, 4);
     uint32_t card_type = extract_bits(data, 4, 4);
@@ -390,19 +412,19 @@ static void saflok_decode(uint8_t *data) {
     uint32_t checksum = extract_bits(data, 128, 8);
 
     //date parsing, stolen from flipper code
-    uint16_t interval_year = (data[8] >> 4);
-    uint8_t interval_month = data[8] & 0x0F;
-    uint8_t interval_day = (data[9] >> 3) & 0x1F;
-    uint8_t interval_hour = ((data[9] & 0x07) << 2) | (data[10] >> 6);
-    uint8_t interval_minute = data[10] & 0x3F;
+    uint16_t interval_year = (data->raw[8] >> 4);
+    uint8_t interval_month = data->raw[8] & 0x0F;
+    uint8_t interval_day = (data->raw[9] >> 3) & 0x1F;
+    uint8_t interval_hour = ((data->raw[9] & 0x07) << 2) | (data->raw[10] >> 6);
+    uint8_t interval_minute = data->raw[10] & 0x3F;
 
-    uint8_t creation_year_bits = (data[14] & 0xF0);
+    uint8_t creation_year_bits = (data->raw[14] & 0xF0);
     uint16_t creation_year =
-        (creation_year_bits | ((data[11] & 0xF0) >> 4)) + 1980;
-    uint8_t creation_month = data[11] & 0x0F;
-    uint8_t creation_day = (data[12] >> 3) & 0x1F;
-    uint8_t creation_hour = ((data[12] & 0x07) << 2) | (data[13] >> 6);
-    uint8_t creation_minute = data[13] & 0x3F;
+        (creation_year_bits | ((data->raw[11] & 0xF0) >> 4)) + 1980;
+    uint8_t creation_month = data->raw[11] & 0x0F;
+    uint8_t creation_day = (data->raw[12] >> 3) & 0x1F;
+    uint8_t creation_hour = ((data->raw[12] & 0x07) << 2) | (data->raw[13] >> 6);
+    uint8_t creation_minute = data->raw[13] & 0x3F;
 
     uint16_t expire_year = creation_year + interval_year;
     uint8_t expire_month = creation_month + interval_month;
@@ -458,16 +480,28 @@ static void saflok_decode(uint8_t *data) {
                   expire_hour,
                   expire_minute);
     PrintAndLogEx(SUCCESS, "Property ID: " _GREEN_("%u"), property_id);
-    PrintAndLogEx(SUCCESS, "Checksum: " _GREEN_("0x%X") " (%s)", checksum, (checksum == saflok_checksum(data, 16)) ? _GREEN_("ok") : _RED_("bad"));
+    PrintAndLogEx(SUCCESS, "Checksum: " _GREEN_("0x%X") " (%s)", checksum, (checksum == calculated_saflok_checksum(data)) ? _GREEN_("ok") : _RED_("bad"));
     PrintAndLogEx(NORMAL, "");
 
 }
 
-static void saflok_encode(uint8_t *data, uint32_t card_level, uint32_t card_type, uint32_t card_id,
-                          uint32_t opening_key, uint32_t lock_id, uint32_t pass_number,
-                          uint32_t sequence_and_combination, uint32_t deadbolt_override,
-                          uint32_t restricted_days, uint32_t expire_date, uint32_t card_creation_date,
-                          uint32_t property_id, char *dt_e, char *dt) {
+static void saflok_encode(
+    saflok_mfc_data_t *data,
+    uint32_t card_level,
+    uint32_t card_type,
+    uint32_t card_id,
+    uint32_t opening_key,
+    uint32_t lock_id,
+    uint32_t pass_number,
+    uint32_t sequence_and_combination,
+    uint32_t deadbolt_override,
+    uint32_t restricted_days,
+    uint32_t expire_date,
+    uint32_t card_creation_date,
+    uint32_t property_id,
+    char *dt_expiration,
+    char *dt
+    ) {
     insert_bits(data, 0, 4, card_level);
     insert_bits(data, 4, 4, card_type);
     insert_bits(data, 8, 8, card_id);
@@ -483,6 +517,7 @@ static void saflok_encode(uint8_t *data, uint32_t card_level, uint32_t card_type
 
     int year, month, day, hour, minute;
 
+    // BUGBUG -- sscanf() occurs twice: once here, and once in pack_datetime
     if (sscanf(dt, "%4d-%2d-%2dT%2d:%2d",
                &year, &month, &day, &hour, &minute) == 5) {
         pack_datetime(dt, data);
@@ -492,20 +527,23 @@ static void saflok_encode(uint8_t *data, uint32_t card_level, uint32_t card_type
     //PrintAndLogEx(SUCCESS, "DT BITS INSERTED");
     //}
 
-    if (sscanf(dt_e, "%4d-%2d-%2dT%2d:%2d",
+    // BUGBUG -- sscanf() occurs twice: once here, and once in pack_datetime_expr
+    if (sscanf(dt_expiration, "%4d-%2d-%2dT%2d:%2d",
                &year, &month, &day, &hour, &minute) == 5) {
-        pack_datetime_expr(dt_e, data);
+        pack_datetime_expr(dt_expiration, data);
     }
     //else{
     //insert_bits(data, 64, 24, expire_date);
     //PrintAndLogEx(SUCCESS, "DTE BITS INSERTED");
     //}
 
-    uint8_t checksum = saflok_checksum(data, 16);
+    uint8_t checksum = calculated_saflok_checksum(data);
     insert_bits(data, 128, 8, checksum);
 
 }
 
+// TODO: make clearer how many bytes secdata must minimally point to,
+//       perhaps by creating a struct to avoid having to pass a length parameter.
 static int saflok_read_sector(int sector, uint8_t *secdata) {
     clearCommandBuffer();
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
@@ -551,16 +589,17 @@ static int CmdHFSaflokRead(const char *Cmd) {
         return PM3_EFAILED;
     }
 
-    saflok_mfc_data_t decrypted[17];
     saflok_read_sector(0, secdata); // 64 bytes
+
     const saflok_mfc_data_t * encrypted = (const saflok_mfc_data_t *)(secdata + 16);
-    saflok_decrypt(encrypted, decrypted);
+    saflok_mfc_data_t decrypted = {0};
+    saflok_decrypt(encrypted, &decrypted);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Card Information"));
     PrintAndLogEx(SUCCESS, "Encrypted Data: " _GREEN_("%s"), bytes_to_hex(encrypted->raw, sizeof(saflok_mfc_data_t)));
 
-    saflok_decode(decrypted->raw);
+    saflok_decode(&decrypted);
 
     return PM3_SUCCESS;
 }
@@ -603,7 +642,7 @@ static int CmdHFSaflokEncode(const char *Cmd) {
     CLIParamStrToBuf(arg_get_str(ctx, 10), (uint8_t *)dt_e, 100, &slen);
 
 
-    saflok_encode(decrypted.raw,
+    saflok_encode(&decrypted,
                   arg_get_u32_def(ctx, 1, 0),
                   arg_get_u32_def(ctx, 2, 0),
                   arg_get_u32_def(ctx, 3, 0),
@@ -656,7 +695,7 @@ static int CmdHFSaflokDecode(const char *Cmd) {
     }
 
     saflok_decrypt(&encrypted, &decrypted);
-    saflok_decode(decrypted.raw);
+    saflok_decode(&decrypted);
 
     return PM3_SUCCESS;
 }
@@ -704,40 +743,40 @@ static int CmdHFSaflokModify(const char *Cmd) {
 
     saflok_decrypt(&encrypted, &decrypted);
 
-    uint32_t card_level = extract_bits(decrypted.raw, 0, 4);
+    uint32_t card_level = extract_bits(&decrypted, 0, 4);
     card_level = arg_get_u32_def(ctx, 1, card_level);
 
-    uint32_t card_type = extract_bits(decrypted.raw, 4, 4);
+    uint32_t card_type = extract_bits(&decrypted, 4, 4);
     card_type = arg_get_u32_def(ctx, 2, card_type);
 
-    uint32_t card_id = extract_bits(decrypted.raw, 8, 8);
+    uint32_t card_id = extract_bits(&decrypted, 8, 8);
     card_id = arg_get_u32_def(ctx, 3, card_id);
 
-    uint32_t opening_key = extract_bits(decrypted.raw, 16, 2);
+    uint32_t opening_key = extract_bits(&decrypted, 16, 2);
     opening_key = arg_get_u32_def(ctx, 4, opening_key);
 
-    uint32_t lock_id = extract_bits(decrypted.raw, 18, 14);
+    uint32_t lock_id = extract_bits(&decrypted, 18, 14);
     lock_id = arg_get_u32_def(ctx, 5, lock_id);
 
-    uint32_t pass_number = extract_bits(decrypted.raw, 32, 12);
+    uint32_t pass_number = extract_bits(&decrypted, 32, 12);
     pass_number = arg_get_u32_def(ctx, 6, pass_number);
 
-    uint32_t sequence_and_combination = extract_bits(decrypted.raw, 44, 12);
+    uint32_t sequence_and_combination = extract_bits(&decrypted, 44, 12);
     sequence_and_combination = arg_get_u32_def(ctx, 7, sequence_and_combination);
 
-    uint32_t deadbolt_override = extract_bits(decrypted.raw, 56, 1);
+    uint32_t deadbolt_override = extract_bits(&decrypted, 56, 1);
     deadbolt_override = arg_get_u32_def(ctx, 8, deadbolt_override);
 
-    uint32_t restricted_days = extract_bits(decrypted.raw, 57, 7);
+    uint32_t restricted_days = extract_bits(&decrypted, 57, 7);
     restricted_days = arg_get_u32_def(ctx, 9, restricted_days);
 
-    uint32_t expire_date = extract_bits(decrypted.raw, 64, 24);
+    uint32_t expire_date = extract_bits(&decrypted, 64, 24);
     //expire_date = arg_get_u32_def(ctx, 10, expire_date);
 
-    uint32_t card_creation_date = extract_bits(decrypted.raw, 88, 28);
+    uint32_t card_creation_date = extract_bits(&decrypted, 88, 28);
     //card_creation_date = arg_get_u32_def(ctx, 11, card_creation_date);
 
-    uint32_t property_id = extract_bits(decrypted.raw, 116, 12);
+    uint32_t property_id = extract_bits(&decrypted, 116, 12);
     property_id = arg_get_u32_def(ctx, 12, property_id);
 
     int slen = 0;
@@ -748,7 +787,7 @@ static int CmdHFSaflokModify(const char *Cmd) {
     char dt_e[100];
     CLIParamStrToBuf(arg_get_str(ctx, 10), (uint8_t *)dt_e, 100, &slen2);
 
-    saflok_encode(decrypted.raw,
+    saflok_encode(&decrypted,
                   card_level,
                   card_type,
                   card_id,
@@ -855,9 +894,9 @@ static int CmdHFSaflokChecksum(const char *Cmd) {
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t data[17];
+    saflok_mfc_data_t data = {0};
     int len;
-    CLIGetHexWithReturn(ctx, 1, data, &len);
+    CLIGetHexWithReturn(ctx, 1, data.raw, &len);
 
     if (len != 16) {
         PrintAndLogEx(WARNING, "Expected 16 bytes. Got %d.", len);
@@ -865,10 +904,10 @@ static int CmdHFSaflokChecksum(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    data[16] = saflok_checksum(data, 16);
+    data.raw[16] = calculated_saflok_checksum(&data);
 
-    PrintAndLogEx(SUCCESS, "Block + checksum: " _GREEN_("%s"), bytes_to_hex(data, 17));
-    PrintAndLogEx(SUCCESS, "Checksum byte: " _GREEN_("0x%02X"), data[16]);
+    PrintAndLogEx(SUCCESS, "Block + checksum: " _GREEN_("%s"), bytes_to_hex(data.raw, 17));
+    PrintAndLogEx(SUCCESS, "Checksum byte: " _GREEN_("0x%02X"), data.raw[16]);
 
     CLIParserFree(ctx);
     return PM3_SUCCESS;
@@ -888,9 +927,9 @@ static int CmdHFSaflokProvision(const char *Cmd) {
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    uint8_t data[17];
+    saflok_mfc_data_t data = {0};
     int len;
-    CLIGetHexWithReturn(ctx, 1, data, &len);
+    CLIGetHexWithReturn(ctx, 1, data.raw, &len);
 
     if (len != 17) {
         PrintAndLogEx(WARNING, "Expected 17 bytes, got %d", len);
@@ -898,6 +937,7 @@ static int CmdHFSaflokProvision(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    // buffer size for UID is eight bytes ... even though saflok only uses first four bytes
     uint8_t uid[8];
     int uid_len;
     if (mf_read_uid(uid, &uid_len, NULL) != PM3_SUCCESS || uid_len < 4) {
@@ -916,8 +956,8 @@ static int CmdHFSaflokProvision(const char *Cmd) {
     uint8_t all_F[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     uint8_t block1[16];
     uint8_t block2[16] = {0};
-    memcpy(block1, data, 16);
-    block2[0] = data[16];
+    memcpy(block1, data.raw, 16);
+    block2[0] = data.raw[16];
     block2[1] = 0x00;
     block2[2] = 0x04;
     block2[3] = 0x00;
