@@ -307,10 +307,10 @@ static char *bytes_to_hex(const uint8_t *data, size_t len) {
 
 
 // safelok_mfc_data_t* for data parameter?
-static int pack_datetime_expr(char *exp_datetime, uint8_t *data) {
+static int pack_datetime_expr(char *expiration_datetime, uint8_t *data) {
     int year, month, day, hour, minute;
 
-    if (sscanf(exp_datetime, "%4d-%2d-%2dT%2d:%2d",
+    if (sscanf(expiration_datetime, "%4d-%2d-%2dT%2d:%2d",
                &year, &month, &day, &hour, &minute) != 5) {
         return -1;
     }
