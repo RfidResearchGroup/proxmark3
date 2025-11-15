@@ -39,6 +39,19 @@
 // to many of the functions.
 static const uint8_t days_in_month_lookup[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
+static inline uint8_t get_days_in_month(uint16_t year, uint8_t month) {
+    assert(month >= 1 && month <= 12); // this uses 1-based indexing!
+    uint8_t days = days_in_month_lookup[month];
+    // Adjust for leap years
+    if ((month == 2u) &&
+        (year % 4u == 0u) &&
+        ((year % 100u != 0u) || (year % 400u == 0u))
+       ) {
+        days = 29u;
+    }
+    return days;
+}
+
 // TODO: consider separate structs for encrypted vs. decrypted
 //       for even greater type safety.
 typedef struct _saflok_mfc_data_t {
@@ -51,18 +64,18 @@ typedef struct _saflok_mfc_key_t {
     uint8_t key[6];
 } saflok_mfc_key_t;
 typedef struct _saflok_mfc_datetime_t {
-    uint16_t year;
-    uint8_t month;
-    uint8_t day;
-    uint8_t hour;
-    uint8_t minute;
+    uint16_t year;  // full year, e.g., 2024
+    uint8_t month;  // Month in range [1..12]
+    uint8_t day;    // day of month, max range [1..31]
+    uint8_t hour;   // hour of day, range [0..23]
+    uint8_t minute; // minute of hour, range [0..59]
 } saflok_mfc_datetime_t;
 typedef struct _saflok_mfc_datetime_offset_t {
-    uint8_t years;
-    uint8_t months;
-    uint8_t days;
-    uint8_t hours;
-    uint8_t minutes;
+    uint8_t years;   // range [0..15]
+    uint8_t months;  // range [0..11]
+    uint8_t days;    // maximum range [0..31]
+    uint8_t hours;   // range [0..23]
+    uint8_t minutes; // range [0..59]
 } saflok_mfc_datetime_offset_t;
 
 #define KEY_LENGTH sizeof(saflok_mfc_key_t)
@@ -429,7 +442,7 @@ static void insert_bits(saflok_mfc_data_t *data, size_t start_bit, size_t num_bi
 #endif // getters for interval (expiration) components
 #if 1 // Setting the interval date is based on the creation date.
 
-    static inline saflok_mfc_datetime_offset_t get_saflok_mfc_interval(
+    static saflok_mfc_datetime_offset_t get_saflok_mfc_interval(
         const saflok_mfc_data_t *data
         ) {
         saflok_mfc_datetime_offset_t offset = {
@@ -441,7 +454,7 @@ static void insert_bits(saflok_mfc_data_t *data, size_t start_bit, size_t num_bi
         };
         return offset;
     }
-    static inline bool set_saflok_mfc_interval(
+    static bool set_saflok_mfc_interval(
         saflok_mfc_data_t *data,
         saflok_mfc_datetime_offset_t offset
         ) {
@@ -453,7 +466,7 @@ static void insert_bits(saflok_mfc_data_t *data, size_t start_bit, size_t num_bi
             _set_saflok_mfc_interval_minutes_impl(data, offset.minutes);
         return result;
     }
-    static inline saflok_mfc_datetime_t add_offset(
+    static saflok_mfc_datetime_t add_offset(
         const saflok_mfc_datetime_t *base,
         const saflok_mfc_datetime_offset_t offset
         ) {
@@ -462,7 +475,7 @@ static void insert_bits(saflok_mfc_data_t *data, size_t start_bit, size_t num_bi
         struct tm tm = {
             .tm_year = base->year - 1900,
             .tm_mon  = base->month - 1,
-            .tm_mday = base->day,
+            .tm_mday = base->day - 1,
             .tm_hour = base->hour,
             .tm_min  = base->minute,
             .tm_sec  = 30, // selecting midpoint to avoid leapseconds changing minute
@@ -474,67 +487,105 @@ static void insert_bits(saflok_mfc_data_t *data, size_t start_bit, size_t num_bi
         tm.tm_mday += offset.days;
         tm.tm_hour += offset.hours;
         tm.tm_min  += offset.minutes;
-        // normalize into EPOCH ... which allows out-of-bounds values
-        time_t fixed = timegm(&tm);
-        // convert EPOCH back into a tm structure
-        gmtime_r(&fixed, &tm);
+        // now deal with carrying overflows
+        if (tm.tm_min >= 60) {
+            tm.tm_hour ++;
+            tm.tm_min -= 60;
+        }
+        if (tm.tm_hour >= 24) {
+            tm.tm_mday ++;
+            tm.tm_hour -= 24;
+        }
+        // addition is easy...
+        uint8_t days_in_month = get_days_in_month(tm.tm_year + 1900, tm.tm_mon + 1);
+        if (tm.tm_mday >= days_in_month) {
+            tm.tm_mon ++;
+            tm.tm_mday -= days_in_month;
+        }
+        if (tm.tm_mon >= 12) {
+            tm.tm_year ++;
+            tm.tm_mon -= 12;
+        }
         // and finally convert back into saflok_mfc_datetime_t
         saflok_mfc_datetime_t result = {
             .year   = tm.tm_year + 1900,
             .month  = tm.tm_mon + 1,
-            .day    = tm.tm_mday,
+            .day    = tm.tm_mday + 1,
             .hour   = tm.tm_hour,
             .minute = tm.tm_min
         };
         return result;
     }
-    static inline saflok_mfc_datetime_offset_t get_datetime_offset(
+    static saflok_mfc_datetime_offset_t get_datetime_offset(
         const saflok_mfc_datetime_t *start,
         const saflok_mfc_datetime_t *end
         ) {
-        // convert both to `struct tm`
-        struct tm tm_start = {
-            .tm_year = start->year - 1900,
-            .tm_mon  = start->month - 1,
-            .tm_mday = start->day,
-            .tm_hour = start->hour,
-            .tm_min  = start->minute,
-            .tm_sec  = 30, // selecting midpoint to avoid leapseconds changing minute
-            .tm_isdst = 0, // UTC has no DST
-        };
-        struct tm tm_end = {
-            .tm_year = end->year - 1900,
-            .tm_mon  = end->month - 1,
-            .tm_mday = end->day,
-            .tm_hour = end->hour,
-            .tm_min  = end->minute,
-            .tm_sec  = 30, // selecting midpoint to avoid leapseconds changing minute
-            .tm_isdst = 0, // UTC has no DST
-        };
-        // convert both to EPOCH
-        time_t epoch_start = timegm(&tm_start);
-        time_t epoch_end = timegm(&tm_end);
-        // subtract the epoch values to get delta in seconds
-        if (epoch_end < epoch_start) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " end date is before start date\n");
-            saflok_mfc_datetime_offset_t zero_offset = {0};
-            return zero_offset;
+
+        enum logLevel MYDBG = WARNING;
+        saflok_mfc_datetime_offset_t result = {0};
+
+        if (!is_saflok_mfc_datetime_valid(start)) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " start date is invalid\n");
+            return result;
         }
-        time_t delta = epoch_end - epoch_start;
-        // convert delta seconds back into `struct tm`
-        struct tm result_tm = {0};
-        gmtime_r(&delta, &result_tm);
-        saflok_mfc_datetime_offset_t result = {
-            .years   = result_tm.tm_year,
-            .months  = result_tm.tm_mon,
-            .days    = result_tm.tm_mday,
-            .hours   = result_tm.tm_hour,
-            .minutes = result_tm.tm_min
+        if (!is_saflok_mfc_datetime_valid(end)) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " end date is invalid\n");
+            return result;
+        }
+
+        PrintAndLogEx(MYDBG, "Calculating offset from %04u-%02u-%02uT%02u:%02u to %04u-%02u-%02uT%02u:%02u\n",
+            start->year, start->month, start->day, start->hour, start->minute,
+            end->year, end->month, end->day, end->hour, end->minute
+        );
+        // use `struct tm`, which uses signed integers for each part
+        // and thus allows simpler checks for borrowing
+        struct tm diff = {
+            .tm_year = end->year - start->year,
+            .tm_mon  = end->month - start->month,
+            .tm_mday = end->day - start->day,
+            .tm_hour = end->hour - start->hour,
+            .tm_min  = end->minute - start->minute,
         };
+        PrintAndLogEx(MYDBG, "Initial diff: %d years, %d months, %d days, %d hours, %d minutes\n",
+            diff.tm_year, diff.tm_mon, diff.tm_mday, diff.tm_hour, diff.tm_min
+            );
+        if (diff.tm_min < 0) {
+            diff.tm_min += 60;
+            diff.tm_hour -= 1;
+        }
+        if (diff.tm_hour < 0) {
+            diff.tm_hour += 24;
+            diff.tm_mday -= 1;
+        }
+        if (diff.tm_mday < 0) {
+            // determine days in previous month
+            uint16_t tgt_year = end->year - (end->month == 1 ? 1 : 0);
+            uint8_t tgt_month = (end->month == 1 ? 12 : (end->month - 1));
+            uint8_t days_in_prev_month = get_days_in_month(tgt_year, tgt_month);
+            PrintAndLogEx(MYDBG, "Borrowing days from month %02u of year %04u which has %02u days\n",
+                tgt_month, tgt_year, days_in_prev_month
+                );
+
+            // borrow from previous month
+            diff.tm_mon -= 1;
+            diff.tm_mday += days_in_prev_month;
+        }
+        if (diff.tm_mon < 0) {
+            diff.tm_mon += 12;
+            diff.tm_year -= 1;
+        }
+
+        result.years   = diff.tm_year;
+        result.months  = diff.tm_mon;
+        result.days    = diff.tm_mday;
+        result.hours   = diff.tm_hour;
+        result.minutes = diff.tm_min;
+        PrintAndLogEx(MYDBG, "Final offset: %d years, %d months, %d days, %d hours, %d minutes\n",
+            result.years, result.months, result.days, result.hours, result.minutes
+            );
         return result;
     }
-
-    static inline saflok_mfc_datetime_t get_saflok_mfc_card_expiration_datetime(
+    static saflok_mfc_datetime_t get_saflok_mfc_card_expiration_datetime(
         const saflok_mfc_data_t *data
         ) {
         saflok_mfc_datetime_t creation_date = get_saflok_mfc_card_creation_datetime(data);
@@ -542,7 +593,7 @@ static void insert_bits(saflok_mfc_data_t *data, size_t start_bit, size_t num_bi
         saflok_mfc_datetime_t expiration = add_offset(&creation_date, offset);
         return expiration;
     }
-    static inline bool set_saflok_mfc_card_expiration_datetime(
+    static bool set_saflok_mfc_card_expiration_datetime(
         saflok_mfc_data_t *data,
         const saflok_mfc_datetime_t * expiration
         ) {
@@ -743,17 +794,17 @@ static uint32_t extract_bits(const saflok_mfc_data_t *data, size_t start_bit, si
     static const size_t total_available_bits = ARRAYLEN(data->raw) * 8;
     if (start_bit >= total_available_bits) {
         // Out of bounds access
-        assert(!"extract_bits: Out of bounds access (start_bit)");
+        PrintAndLogEx(ERR, "extract_bits: out of bounds access (start_bit=%zu, total_available_bits=%zu)\n", start_bit, total_available_bits);
         return 0;
     }
     if (num_bits > 32) {
         // Exceeds maximum supported bit extraction
-        assert(!"extract_bits: num_bits exceeds 32");
+        PrintAndLogEx(ERR, "extract_bits: out of bounds access (num_bits=%zu, max=32)\n", num_bits);
         return 0;
     }
     if (total_available_bits - start_bit < num_bits) {
         // Out of bounds access
-        assert(!"extract_bits: Out of bounds access (num_bits)");
+        PrintAndLogEx(ERR, "extract_bits: out of bounds access (start_bit=%zu + num_bits=%zu > total_available_bits=%zu)\n", start_bit, num_bits, total_available_bits);
         return 0;
     }
 
@@ -772,22 +823,22 @@ static void insert_bits(saflok_mfc_data_t *data, size_t start_bit, size_t num_bi
     static const size_t total_available_bits = ARRAYLEN(data->raw) * 8;
     if (start_bit >= total_available_bits) {
         // Out of bounds access
-        assert(!"insert_bits: Out of bounds access (start_bit)");
+        PrintAndLogEx(ERR, "insert_bits: out of bounds access (start_bit=%zu, total_available_bits=%zu)\n", start_bit, total_available_bits);
         return;
     }
     if (num_bits > 32) {
         // Exceeds maximum supported bit extraction
-        assert(!"insert_bits: num_bits exceeds 32");
+        PrintAndLogEx(ERR, "insert_bits: num_bits exceeds 32\n", num_bits);
         return;
     }
     if (total_available_bits - start_bit < num_bits) {
         // Out of bounds access
-        assert(!"insert_bits: Out of bounds access (num_bits)");
+        PrintAndLogEx(ERR, "insert_bits: out of bounds access (start_bit=%zu + num_bits=%zu > total_available_bits=%zu)\n", start_bit, num_bits, total_available_bits);
         return;
     }
     if ((num_bits < 32) && ((value >> num_bits) != 0)) {
         // Value exceeds the size of the specified bit field
-        assert(!"insert_bits: value exceeds bit field size");
+        PrintAndLogEx(ERR, "insert_bits: value exceeds bit field size (value=%u (0x%08x), num_bits=%zu)\n", value, value, num_bits);
         return;
     }
 
@@ -1408,6 +1459,8 @@ saflok_mfc_datetime_offset_t  get_datetime_offset
 saflok_mfc_datetime_t         get_saflok_mfc_card_expiration_datetime
 bool                          set_saflok_mfc_card_expiration_datetime
 */
+    saflok_mfc_data_t test_data = {0};
+    (void)get_saflok_mfc_card_expiration_datetime(&test_data);
 
 
 
