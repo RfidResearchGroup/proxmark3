@@ -722,6 +722,7 @@ Check column "offline" for their availability.
 |`hf saflok decrypt      `|Y       |`Decrypt 17-byte encrypted block`
 |`hf saflok interrogate  `|N       |`Interrogate saflok card`
 |`hf saflok cksum        `|N       |`Generate checksum for data block`
+|`hf saflok selftest     `|Y       |`Run self-test`
 
 
 ### hf seos
@@ -817,16 +818,6 @@ Check column "offline" for their availability.
 |`hf vas help            `|Y       |`This help`
 |`hf vas reader          `|N       |`Read and decrypt VAS message`
 |`hf vas decrypt         `|Y       |`Decrypt a previously captured VAS cryptogram`
-
-
-### hf waveshare
-
- { Waveshare NFC ePaper...             }
-
-|command                  |offline |description
-|-------                  |------- |-----------
-|`hf waveshare help      `|Y       |`This help`
-|`hf waveshare load      `|Y       |`Load image file to Waveshare NFC ePaper`
 
 
 ### hf xerox
