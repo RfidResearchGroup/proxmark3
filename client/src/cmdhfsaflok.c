@@ -20,6 +20,8 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#include <inttypes.h>
+#include <time.h>
 #include "cliparser.h"
 #include "cmdparser.h"
 #include "comms.h"
@@ -35,6 +37,7 @@
 // defining this structure makes it more clear what
 // is passed around, and avoids the need to pass lengths
 // to many of the functions.
+static const uint8_t days_in_month_lookup[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 // TODO: consider separate structs for encrypted vs. decrypted
 //       for even greater type safety.
@@ -47,35 +50,514 @@ typedef struct _saflock_mfc_uid_t {
 typedef struct _saflok_mfc_key_t {
     uint8_t key[6];
 } saflok_mfc_key_t;
+typedef struct _saflok_mfc_datetime_t {
+    uint16_t year;
+    uint8_t month;
+    uint8_t day;
+    uint8_t hour;
+    uint8_t minute;
+} saflok_mfc_datetime_t;
+typedef struct _saflok_mfc_datetime_offset_t {
+    uint8_t years;
+    uint8_t months;
+    uint8_t days;
+    uint8_t hours;
+    uint8_t minutes;
+} saflok_mfc_datetime_offset_t;
+
 #define KEY_LENGTH sizeof(saflok_mfc_key_t)
 
-
-// TODO: define inline helper functions to get/set named fields from saflok_mfc_data_t
-// Example:
-// inline uint32_t get_saflok_mfc_card_level(saflok_mfc_data_t *data) {
-//     return extract_bits(data->raw, 0, 4);
-// }
-// inline void set_saflok_mfc_card_level(saflok_mfc_data_t *data, uint32_t level) {
-//     insert_bits(data->raw, 0, 4, level);
-// }
-
-// insert_bits(data,   0,  4, card_level              );
-// insert_bits(data,   4,  4, card_type               );
-// insert_bits(data,   8,  8, card_id                 );
-// insert_bits(data,  16,  2, opening_key             );
-// insert_bits(data,  18, 14, lock_id                 );
-// insert_bits(data,  32, 12, pass_number             );
-// insert_bits(data,  44, 12, sequence_and_combination);
-// insert_bits(data,  56,  1, deadbolt_override       );
-// insert_bits(data,  57,  7, restricted_days         );
-// insert_bits(data,  64, 24, expire_date             );
-// insert_bits(data,  88, 28, card_creation_date      );
-// insert_bits(data, 116, 12, property_id             );
-//
-// And checksum as simple byte read/write of raw[16]...
+static uint32_t extract_bits(const saflok_mfc_data_t *data, size_t start_bit, size_t num_bits);
+static void insert_bits(saflok_mfc_data_t *data, size_t start_bit, size_t num_bits, uint32_t value);
 
 
-static const uint8_t c_aDecode[256] = {
+
+#if 1 // getters and setters for each bitfield in saflok_mfc_data_t
+    // TODO: consider update to setter functions to use smaller type for data?
+    //       avoiding for this commit, as larger change.
+    //
+    // card_level               field is  4 bits
+    // card_type                field is  4 bits
+    // card_id                  field is  8 bits
+    // opening_key              field is  2 bits
+    // lock_id                  field is 14 bits
+    // pass_number              field is 12 bits
+    // sequence_and_combination field is 12 bits
+    // deadbolt_override        field is  1 bits
+    // restricted_days          field is  7 bits
+    // raw_expire_date          field is 24 bits -- special set processing needed
+    // raw_card_creation_date   field is 28 bits -- special set processing needed
+    // property_id              field is 12 bits
+
+    static inline uint8_t get_saflok_mfc_card_level(const saflok_mfc_data_t *data) {
+        return (uint8_t)extract_bits(data, 0, 4);
+    }
+    static inline bool set_saflok_mfc_card_level(saflok_mfc_data_t *data, uint32_t card_level) {
+        if (card_level > 0xFu) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " card_level out of range (%08x)\n", card_level);
+            return false;
+        }
+        insert_bits(data, 0, 4, card_level);
+        return true;
+    }
+    static inline uint8_t get_saflok_mfc_card_type(const saflok_mfc_data_t *data) {
+        return (uint8_t)extract_bits(data, 4, 4);
+    }
+    static inline bool set_saflok_mfc_card_type(saflok_mfc_data_t *data, uint32_t card_type) {
+        if (card_type > 0xFu) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " card_type out of range (%08x)\n", card_type);
+            return false;
+        }
+        insert_bits(data, 4, 4, card_type);
+        return true;
+    }
+    static inline uint8_t get_saflok_mfc_card_id(const saflok_mfc_data_t *data) {
+        return (uint8_t)extract_bits(data, 8, 8);
+    }
+    static inline bool set_saflok_mfc_card_id(saflok_mfc_data_t *data, uint32_t card_id) {
+        if (card_id > 0xFFu) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " card_id out of range (%08x)\n", card_id);
+            return false;
+        }
+        insert_bits(data, 8, 8, card_id);
+        return true;
+    }
+    static inline uint8_t get_saflok_mfc_opening_key(const saflok_mfc_data_t *data) {
+        return (uint8_t)extract_bits(data, 16, 2);
+    }
+    static inline bool set_saflok_mfc_opening_key(saflok_mfc_data_t *data, uint32_t opening_key) {
+        if (opening_key > 0x3u) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " opening_key out of range (%08x)\n", opening_key);
+            return false;
+        }
+        insert_bits(data, 16, 2, opening_key);
+        return true;
+    }
+    static inline uint16_t get_saflok_mfc_lock_id(const saflok_mfc_data_t *data) {
+        return (uint16_t)extract_bits(data, 18, 14);
+    }
+    static inline bool set_saflok_mfc_lock_id(saflok_mfc_data_t *data, uint32_t lock_id) {
+        if (lock_id > 0x3FFFu) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " lock_id out of range (%08x)\n", lock_id);
+            return false;
+        }
+        insert_bits(data, 18, 14, lock_id);
+        return true;
+    }
+    static inline uint16_t get_saflok_mfc_pass_number(const saflok_mfc_data_t *data) {
+        return (uint16_t)extract_bits(data, 32, 12);
+    }
+    static inline bool set_saflok_mfc_pass_number(saflok_mfc_data_t *data, uint32_t pass_number) {
+        if (pass_number > 0xFFFu) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " pass_number out of range (%08x)\n", pass_number);
+            return false;
+        }
+        insert_bits(data, 32, 12, pass_number);
+        return true;
+    }
+    static inline uint16_t get_saflok_mfc_sequence_and_combination(const saflok_mfc_data_t *data) {
+        return (uint16_t)extract_bits(data, 44, 12);
+    }
+    static inline bool set_saflok_mfc_sequence_and_combination(saflok_mfc_data_t *data, uint32_t sequence_and_combination) {
+        if (sequence_and_combination > 0xFFFu) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " sequence_and_combination out of range (%08x)\n", sequence_and_combination);
+            return false;
+        }
+        insert_bits(data, 44, 12, sequence_and_combination);
+        return true;
+    }
+    static inline bool get_saflok_mfc_deadbolt_override(const saflok_mfc_data_t *data) {
+        uint32_t result = extract_bits(data, 56, 1);
+        return (result != 0);
+    }
+    static inline bool set_saflok_mfc_deadbolt_override(saflok_mfc_data_t *data, uint32_t deadbolt_override) {
+        insert_bits(data, 56, 1, deadbolt_override ? 0x1 : 0x0);
+        return true;
+    }
+    static inline uint8_t get_saflok_mfc_restricted_days(const saflok_mfc_data_t *data) {
+        return (uint8_t)extract_bits(data, 57, 7);
+    }
+    static inline bool set_saflok_mfc_restricted_days(saflok_mfc_data_t *data, uint32_t restricted_days) {
+        if (restricted_days > 0x7Fu) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " restricted_days out of range (%08x)\n", restricted_days);
+            return false;
+        }
+        insert_bits(data, 57, 7, restricted_days);
+        return true;
+    }
+    static inline uint32_t get_saflok_mfc_raw_interval_date(const saflok_mfc_data_t *data) {
+        return extract_bits(data, 64, 24);
+    }
+    static inline bool set_saflok_mfc_raw_interval_date(saflok_mfc_data_t *data, uint32_t raw_interval_date) {
+        if (raw_interval_date > 0xFFFFFFu) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " raw_interval_date out of range (%08x)\n", raw_interval_date);
+            return false;
+        }
+        insert_bits(data, 64, 24, raw_interval_date);
+        return true;
+    }
+    static inline uint32_t get_saflok_mfc_raw_card_creation_date(const saflok_mfc_data_t *data) {
+        return extract_bits(data, 88, 28);
+    }
+    static inline bool set_saflok_mfc_raw_card_creation_date(saflok_mfc_data_t *data, uint32_t raw_card_creation_date) {
+        if (raw_card_creation_date > 0x0FFFFFFFu) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " raw_card_creation_date out of range (%08x)\n", raw_card_creation_date);
+            return false;
+        }
+        insert_bits(data, 88, 28, raw_card_creation_date);
+        return true;
+    }
+    static inline uint16_t get_saflok_mfc_property_id(const saflok_mfc_data_t *data) {
+        return extract_bits(data, 116, 12);
+    }
+    static inline bool set_saflok_mfc_property_id(saflok_mfc_data_t *data, uint32_t property_id) {
+        if (property_id > 0xFFFFu) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " property_id out of range (%08x)\n", property_id);
+            return false;
+        }
+        insert_bits(data, 116, 12, property_id);
+        return true;
+    }
+#endif // getters and setters for each bitfield in saflok_mfc_data_t
+
+#if 1 // helpers for get/set_saflok_mfc_card_creation_date() ... do not call these directly as does not validate...
+    static inline uint16_t _get_saflok_mfc_card_creation_year_impl(const saflok_mfc_data_t *data) {
+        uint8_t creation_year_bits_high = (data->raw[14] & 0xF0u);
+        uint8_t creation_year_bits_low  = (data->raw[11] & 0xF0u) >> 4;
+        uint8_t creation_year_bits = creation_year_bits_high | creation_year_bits_low;
+        uint16_t creation_year = 1980u + creation_year_bits; // automatically extends to uint16_t
+        return creation_year;
+    }
+    static inline bool _set_saflok_mfc_card_creation_year_impl(saflok_mfc_data_t *data, uint16_t year) {
+        if (year < 1980u || year > (1980u+0xFFu)) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " year out of range (%u)\n", year);
+            return false;
+        }
+        uint16_t year_bits = year - 1980u;
+        uint8_t creation_year_bits_high = year_bits & 0xF0u;
+        uint8_t creation_year_bits_low  = (year_bits & 0x0Fu) << 4;
+        data->raw[14] = (data->raw[14] & 0x0Fu) | creation_year_bits_high;
+        data->raw[11] = (data->raw[11] & 0x0Fu) | creation_year_bits_low;
+        return true;
+    }
+    static inline uint8_t _get_saflok_mfc_card_creation_month_impl(const saflok_mfc_data_t *data) {
+        // should be in range [1..12] ... value of zero is invalid
+        return (data->raw[11] & 0x0Fu);
+    }
+    static inline bool _set_saflok_mfc_card_creation_month_impl(saflok_mfc_data_t *data, uint8_t month) {
+        if (month < 1 || month > 12) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " month out of range (%u)\n", month);
+            return false;
+        }
+        data->raw[11] = (data->raw[11] & 0xF0u) | (month & 0x0Fu);
+        return true;
+    }
+    static inline uint8_t _get_saflok_mfc_card_creation_day_impl(const saflok_mfc_data_t *data) {
+        return ((data->raw[12] >> 3) & 0x1Fu);
+    }
+    static inline bool _set_saflok_mfc_card_creation_day_impl(saflok_mfc_data_t *data, uint8_t day) {
+        data->raw[12] = (data->raw[12] & 0xE0u) | ((day & 0x1Fu) << 3);
+        return true;
+    }
+    static inline uint8_t _get_saflok_mfc_card_creation_hour_impl(const saflok_mfc_data_t *data) {
+        // low three bits from raw[12]
+        // high two bits from raw[13]
+        return (((data->raw[12] & 0x07u) << 2) | (data->raw[13] >> 6));
+    }
+    static inline bool _set_saflok_mfc_card_creation_hour_impl(saflok_mfc_data_t *data, uint8_t hour) {
+        data->raw[12] = (data->raw[12] & 0xF8u) | ((hour >> 2) & 0x07u);
+        data->raw[13] = (data->raw[13] & 0x3Fu) | ((hour & 0x03u) << 6);
+        return true;
+    }
+    static inline uint8_t _get_saflok_mfc_card_creation_minute_impl(const saflok_mfc_data_t *data) {
+        return (data->raw[13] & 0x3Fu);
+    }
+    static inline bool _set_saflok_mfc_card_creation_minute_impl(saflok_mfc_data_t *data, uint8_t minute) {
+        data->raw[13] = (data->raw[13] & 0xC0u) | (minute & 0x3Fu);
+        return true;
+    }
+#endif // // helpers for get/set_saflok_mfc_card_creation_date() ... do not call these directly as does not validate...
+#if 1 // getters and setters for creation date
+
+    static inline bool is_saflok_mfc_datetime_valid(const saflok_mfc_datetime_t *date) {
+        bool result = true;
+        if ((date->year < 1980) || (date->year > (1980u+0xFFu)) ) {
+            PrintAndLogEx(WARNING, "year out of range (%d)\n", date->year);
+            result = false;
+        }
+        if ((date->month < 1) || (date->month > 12)) {
+            PrintAndLogEx(WARNING, "month out of range (%d)\n", date->month);
+            result = false;
+        }
+        uint8_t max_days = days_in_month_lookup[date->month];
+        // Adjust for leap years
+        if ((date->month == 2u) &&
+            (date->year % 4u == 0u) &&
+            ((date->year % 100u != 0u) || (date->year % 400u == 0u))
+           ) {
+            max_days = 29u;
+        }
+        if ((date->day < 1u) || (date->day > max_days)) {
+            PrintAndLogEx(WARNING, "day out of range (%d) for month %d year %d\n", date->day, date->month, date->year);
+            result = false;
+        }
+        if (date->hour > 23) {
+            PrintAndLogEx(WARNING, "hour out of range (%d)\n", date->hour);
+            result = false;
+        }
+        if (date->minute > 59) {
+            PrintAndLogEx(WARNING, "minute out of range (%d)\n", date->minute);
+            result = false;
+        }
+        return result;
+    }
+    static inline saflok_mfc_datetime_t get_saflok_mfc_card_creation_datetime(
+        const saflok_mfc_data_t *data
+        ) {
+        saflok_mfc_datetime_t date = {
+            .year = _get_saflok_mfc_card_creation_year_impl(data),
+            .month = _get_saflok_mfc_card_creation_month_impl(data),
+            .day = _get_saflok_mfc_card_creation_day_impl(data),
+            .hour = _get_saflok_mfc_card_creation_hour_impl(data),
+            .minute = _get_saflok_mfc_card_creation_minute_impl(data)
+        };
+        if (!is_saflok_mfc_datetime_valid(&date)) {
+            PrintAndLogEx(WARNING, "Warning: creation date appears invalid: %04d-%02d-%02dT%02d:%02d\n",
+                date.year, date.month, date.day, date.hour, date.minute
+            );
+        }
+        return date;
+    }
+    static inline bool set_saflok_mfc_card_creation_datetime(saflok_mfc_data_t * data, const saflok_mfc_datetime_t * date) {
+        if (!is_saflok_mfc_datetime_valid(date)) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " creation date is invalid\n");
+            return false;
+        }
+        bool result =
+            _set_saflok_mfc_card_creation_year_impl(data, date->year) &&
+            _set_saflok_mfc_card_creation_month_impl(data, date->month) &&
+            _set_saflok_mfc_card_creation_day_impl(data, date->day) &&
+            _set_saflok_mfc_card_creation_hour_impl(data, date->hour) &&
+            _set_saflok_mfc_card_creation_minute_impl(data, date->minute);
+        if (!result) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " failed to set creation date of %04d-%02d-%02dT%02d:%02d\n",
+                date->year, date->month, date->day, date->hour, date->minute
+            );
+        }
+        return result;
+    }
+#endif // getters and setters for creation date components
+#if 1 // helpers for get/set_saflok_mfc_expiration_date()
+    static inline uint8_t _get_saflok_mfc_interval_years_impl(const saflok_mfc_data_t *data) {
+        // supports up to 15 year intervals(!)
+        return (data->raw[8] >> 4);
+    }
+    static inline bool _set_saflok_mfc_interval_years_impl(saflok_mfc_data_t *data, uint32_t years) {
+        if (years > 0xFu) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " interval years out of range (%u)\n", years);
+            return false;
+        }
+        data->raw[8] = (data->raw[8] & 0x0Fu) | ((years & 0xFFu) << 4);
+        return true;
+    }
+    static inline uint8_t _get_saflok_mfc_interval_months_impl(const saflok_mfc_data_t *data) {
+        uint8_t months = data->raw[8] & 0x0Fu;
+        if (months >= 12u) {
+            PrintAndLogEx(WARNING, "Warning: interval months appears invalid (%u)\n", months);
+        }
+        return months;
+    }
+    static inline bool _set_saflok_mfc_interval_months_impl(saflok_mfc_data_t *data, uint8_t months) {
+        if (months >= 12u) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " interval months out of range (%u)\n", months);
+            return false;
+        }
+        data->raw[8] = (data->raw[8] & 0xF0u) | (months & 0x0Fu);
+        return true;
+    }
+    static inline uint8_t _get_saflok_mfc_interval_days_impl(const saflok_mfc_data_t *data) {
+        uint8_t days = (data->raw[9] >> 3) & 0x1Fu;
+        if (days > 31u) {
+            PrintAndLogEx(WARNING, "Warning: interval days appears invalid (%u)\n", days);
+        }
+        return days;
+    }
+    static inline bool _set_saflok_mfc_interval_days_impl(saflok_mfc_data_t *data, uint8_t days) {
+        if (days > 31u) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " interval days out of range (%u)\n", days);
+            return false;
+        }
+        data->raw[9] = (data->raw[9] & 0xC7u) | ((days & 0x1Fu) << 3);
+        return true;
+    }
+    static inline uint8_t _get_saflok_mfc_interval_hours_impl(const saflok_mfc_data_t *data) {
+        // low three bits from raw[9]
+        // top two bits from raw[10]
+        uint8_t hours = ((data->raw[9] & 0x07u) << 2) | (data->raw[10] >> 6);
+        if (hours > 23u) {
+            PrintAndLogEx(WARNING, "Warning: interval hours appears invalid (%u)\n", hours);
+        }
+        return hours;
+    }
+    static inline bool _set_saflok_mfc_interval_hours_impl(saflok_mfc_data_t *data, uint8_t hours) {
+        if (hours > 23u) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " interval hours out of range (%u)\n", hours);
+            return false;
+        }
+        // five bit value split across two bytes:
+        // three MSB go into the low three bits from raw[9]
+        // two LSB go into the top two bits from raw[10]
+        data->raw[9] = (data->raw[9] & 0xF8u) | ((hours >> 2) & 0x07u);
+        data->raw[10] = (data->raw[10] & 0x3Fu) | ((hours & 0x03u) << 6);
+        return true;
+    }
+    static inline uint8_t _get_saflok_mfc_interval_minutes_impl(const saflok_mfc_data_t *data) {
+        uint8_t minutes = (data->raw[10] & 0x3Fu);
+        if (minutes > 59u) {
+            PrintAndLogEx(WARNING, "Warning: interval minutes appears invalid (%u)\n", minutes);
+        }
+        return minutes;
+    }
+    static inline bool _set_saflok_mfc_interval_minutes_impl(saflok_mfc_data_t *data, uint8_t minutes) {
+        if (minutes > 59u) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " interval minutes out of range (%u)\n", minutes);
+            return false;
+        }
+        data->raw[10] = (data->raw[10] & 0xC0u) | (minutes & 0x3Fu);
+        return true;
+    }
+#endif // getters for interval (expiration) components
+#if 1 // Setting the interval date is based on the creation date.
+
+    static inline saflok_mfc_datetime_offset_t get_saflok_mfc_interval(
+        const saflok_mfc_data_t *data
+        ) {
+        saflok_mfc_datetime_offset_t offset = {
+            .years   = _get_saflok_mfc_interval_years_impl(data),
+            .months  = _get_saflok_mfc_interval_months_impl(data),
+            .days    = _get_saflok_mfc_interval_days_impl(data),
+            .hours   = _get_saflok_mfc_interval_hours_impl(data),
+            .minutes = _get_saflok_mfc_interval_minutes_impl(data)
+        };
+        return offset;
+    }
+    static inline bool set_saflok_mfc_interval(
+        saflok_mfc_data_t *data,
+        saflok_mfc_datetime_offset_t offset
+        ) {
+        bool result =
+            _set_saflok_mfc_interval_years_impl(data, offset.years) &&
+            _set_saflok_mfc_interval_months_impl(data, offset.months) &&
+            _set_saflok_mfc_interval_days_impl(data, offset.days) &&
+            _set_saflok_mfc_interval_hours_impl(data, offset.hours) &&
+            _set_saflok_mfc_interval_minutes_impl(data, offset.minutes);
+        return result;
+    }
+    static inline saflok_mfc_datetime_t add_offset(
+        const saflok_mfc_datetime_t *base,
+        const saflok_mfc_datetime_offset_t offset
+        ) {
+        // adding dates is non-trivial.
+        // luckily, there's already a standard for this...
+        struct tm tm = {
+            .tm_year = base->year - 1900,
+            .tm_mon  = base->month - 1,
+            .tm_mday = base->day,
+            .tm_hour = base->hour,
+            .tm_min  = base->minute,
+            .tm_sec  = 30, // selecting midpoint to avoid leapseconds changing minute
+            .tm_isdst = 0, // UTC has no DST
+        };
+        // add the offsets ... and it's OK for them to be out of range
+        tm.tm_year += offset.years;
+        tm.tm_mon  += offset.months;
+        tm.tm_mday += offset.days;
+        tm.tm_hour += offset.hours;
+        tm.tm_min  += offset.minutes;
+        // normalize into EPOCH ... which allows out-of-bounds values
+        time_t fixed = timegm(&tm);
+        // convert EPOCH back into a tm structure
+        gmtime_r(&fixed, &tm);
+        // and finally convert back into saflok_mfc_datetime_t
+        saflok_mfc_datetime_t result = {
+            .year   = tm.tm_year + 1900,
+            .month  = tm.tm_mon + 1,
+            .day    = tm.tm_mday,
+            .hour   = tm.tm_hour,
+            .minute = tm.tm_min
+        };
+        return result;
+    }
+    static inline saflok_mfc_datetime_offset_t get_datetime_offset(
+        const saflok_mfc_datetime_t *start,
+        const saflok_mfc_datetime_t *end
+        ) {
+        // convert both to `struct tm`
+        struct tm tm_start = {
+            .tm_year = start->year - 1900,
+            .tm_mon  = start->month - 1,
+            .tm_mday = start->day,
+            .tm_hour = start->hour,
+            .tm_min  = start->minute,
+            .tm_sec  = 30, // selecting midpoint to avoid leapseconds changing minute
+            .tm_isdst = 0, // UTC has no DST
+        };
+        struct tm tm_end = {
+            .tm_year = end->year - 1900,
+            .tm_mon  = end->month - 1,
+            .tm_mday = end->day,
+            .tm_hour = end->hour,
+            .tm_min  = end->minute,
+            .tm_sec  = 30, // selecting midpoint to avoid leapseconds changing minute
+            .tm_isdst = 0, // UTC has no DST
+        };
+        // convert both to EPOCH
+        time_t epoch_start = timegm(&tm_start);
+        time_t epoch_end = timegm(&tm_end);
+        // subtract the epoch values to get delta in seconds
+        if (epoch_end < epoch_start) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " end date is before start date\n");
+            saflok_mfc_datetime_offset_t zero_offset = {0};
+            return zero_offset;
+        }
+        time_t delta = epoch_end - epoch_start;
+        // convert delta seconds back into `struct tm`
+        struct tm result_tm = {0};
+        gmtime_r(&delta, &result_tm);
+        saflok_mfc_datetime_offset_t result = {
+            .years   = result_tm.tm_year,
+            .months  = result_tm.tm_mon,
+            .days    = result_tm.tm_mday,
+            .hours   = result_tm.tm_hour,
+            .minutes = result_tm.tm_min
+        };
+        return result;
+    }
+
+    static inline saflok_mfc_datetime_t get_saflok_mfc_card_expiration_datetime(
+        const saflok_mfc_data_t *data
+        ) {
+        saflok_mfc_datetime_t creation_date = get_saflok_mfc_card_creation_datetime(data);
+        saflok_mfc_datetime_offset_t offset = get_saflok_mfc_interval(data);
+        saflok_mfc_datetime_t expiration = add_offset(&creation_date, offset);
+        return expiration;
+    }
+    static inline bool set_saflok_mfc_card_expiration_datetime(
+        saflok_mfc_data_t *data,
+        const saflok_mfc_datetime_t * expiration
+        ) {
+        if (!is_saflok_mfc_datetime_valid(expiration)) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " expiration date is invalid\n");
+            return false;
+        }
+        saflok_mfc_datetime_t creation_datetime = get_saflok_mfc_card_creation_datetime(data);
+        saflok_mfc_datetime_offset_t offset = get_datetime_offset(&creation_datetime, expiration);
+        bool result = set_saflok_mfc_interval(data, offset);
+        return result;
+    }
+#endif // Setting the interval date is based on the creation date.
+
+static const uint8_t c_aDecode[] = {
     234, 13, 217, 116, 78, 40, 253, 186, 123, 152,
     135, 120, 221, 141, 181, 26, 14, 48, 243, 47,
     106, 59, 172, 9, 185, 32, 110, 91, 43, 182,
@@ -103,8 +585,9 @@ static const uint8_t c_aDecode[256] = {
     12, 124, 198, 189, 249, 125, 196, 145, 39, 137,
     50, 114, 51, 101, 104, 175
 };
+_Static_assert(ARRAYLEN(c_aDecode) == 256, "c_aDecode must have 256 elements");
 
-static const uint8_t c_aEncode[256] = {
+static const uint8_t c_aEncode[] = {
     236, 116, 192, 99, 86, 153, 105, 100, 159, 23,
     38, 198, 240, 1, 16, 77, 202, 82, 138, 75,
     122, 175, 173, 32, 115, 162, 15, 194, 80, 120,
@@ -132,8 +615,9 @@ static const uint8_t c_aEncode[256] = {
     74, 111, 239, 18, 129, 44, 180, 56, 90, 244,
     151, 64, 104, 6, 49, 103
 };
+_Static_assert(ARRAYLEN(c_aEncode) == 256, "c_aEncode must have 256 elements");
 
-uint8_t magic_table[192] = {
+uint8_t magic_table[] = {
     0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0xF0, 0x57, 0xB3, 0x9E, 0xE3, 0xD8,
     0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x96, 0x9D, 0x95, 0x4A, 0xC1, 0x57,
     0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x8F, 0x43, 0x58, 0x0D, 0x2C, 0x9D,
@@ -151,8 +635,9 @@ uint8_t magic_table[192] = {
     0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x5C, 0xD0, 0x05, 0xCF, 0xD9, 0x07,
     0x00, 0x00, 0xAA, 0x00, 0x00, 0x00, 0x11, 0x8D, 0xD0, 0x01, 0x87, 0xD0,
 };
+_Static_assert(ARRAYLEN(magic_table) == 192, "magic_table must have 192 elements");
 
-static const char *level_names[16] = {
+static const char *level_names[] = {
     "Guest Key",                       // Index 0
     "Connectors",                      // Index 1
     "Suite",                           // Index 2
@@ -170,6 +655,7 @@ static const char *level_names[16] = {
     "Secondary Programming Key (SPK)", // Index 14
     "Primary Programming Key (PPK)",   // Index 15
 };
+_Static_assert(ARRAYLEN(level_names) == 16, "level_names must have 16 elements");
 
 
 static int CmdHelp(const char *Cmd);
@@ -334,40 +820,6 @@ static char *bytes_to_hex(const uint8_t *data, size_t len) {
     return buf;
 }
 
-
-static int pack_datetime_expr(char *expiration_datetime, saflok_mfc_data_t *data) {
-    int year, month, day, hour, minute;
-
-    if (sscanf(expiration_datetime, "%4d-%2d-%2dT%2d:%2d",
-               &year, &month, &day, &hour, &minute) != 5) {
-        return -1;
-    }
-
-    data->raw[8] = ((year & 0x0F) << 4) | (month & 0x0F);
-    data->raw[9] = ((day & 0x1F) << 3) | ((hour & 0x1C) >> 2);
-    data->raw[10] = ((hour & 0x03) << 6) | (minute & 0x3F);
-
-    return 0;
-}
-
-static int pack_datetime(char *datetime_str, saflok_mfc_data_t *data) {
-    int year, month, day, hour, minute;
-
-    if (sscanf(datetime_str, "%4d-%2d-%2dT%2d:%2d",
-               &year, &month, &day, &hour, &minute) != 5) {
-        return -1;
-    }
-
-    uint8_t year_offset = year - 1980;
-
-    data->raw[11] = ((year_offset & 0x0F) << 4) | (month & 0x0F);
-    data->raw[12] = ((day & 0x1F) << 3) | ((hour & 0x1C) >> 2);
-    data->raw[13] = ((hour & 0x03) << 6) | (minute & 0x3F);
-    data->raw[14] = (data->raw[14] & 0x0F) | ((year_offset & 0x70) << 0);
-
-    return 0;
-}
-
 static uint8_t calculated_saflok_checksum(const saflok_mfc_data_t *data) {
     _Static_assert(ARRAYLEN(data->raw) == 17, "saflok_mfc_data_t raw size must be 17 bytes");
     int sum = 0;
@@ -439,9 +891,8 @@ static void saflok_decode(const saflok_mfc_data_t *data) {
     }
 
     // Handle day rollover
-    static const uint8_t days_in_month[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
     while (true) {
-        uint8_t max_days = days_in_month[expire_month - 1];
+        uint8_t max_days = days_in_month_lookup[expire_month];
         // Adjust for leap years
         if (expire_month == 2 &&
                 (expire_year % 4 == 0 && (expire_year % 100 != 0 || expire_year % 400 == 0))) {
@@ -515,22 +966,24 @@ static void saflok_encode(
     insert_bits(data, 88, 28, card_creation_date);
     insert_bits(data, 116, 12, property_id);
 
-    int year, month, day, hour, minute;
 
-    // BUGBUG -- sscanf() occurs twice: once here, and once in pack_datetime
-    if (sscanf(dt, "%4d-%2d-%2dT%2d:%2d",
-               &year, &month, &day, &hour, &minute) == 5) {
-        pack_datetime(dt, data);
+    // Parsing date time string from "YYYY-MM-DDTHH:mm" into `saflok_mfc_datetime_t`
+    static const char * fmt = "%4" SCNu16 "-%2" SCNu8 "-%2" SCNu8 "T%2" SCNu8 ":%2" SCNu8;
+
+    saflok_mfc_datetime_t creation_dt = {0};
+    if (sscanf(dt, fmt, &creation_dt.year, &creation_dt.month, &creation_dt.day, &creation_dt.hour, &creation_dt.minute) == 5) {
+        // return value ignored ... function here is void(!)
+        set_saflok_mfc_card_creation_datetime(data, &creation_dt);
     }
     //else{
     //insert_bits(data, 88, 28,card_creation_date);
     //PrintAndLogEx(SUCCESS, "DT BITS INSERTED");
     //}
 
-    // BUGBUG -- sscanf() occurs twice: once here, and once in pack_datetime_expr
-    if (sscanf(dt_expiration, "%4d-%2d-%2dT%2d:%2d",
-               &year, &month, &day, &hour, &minute) == 5) {
-        pack_datetime_expr(dt_expiration, data);
+    saflok_mfc_datetime_t expiration_dt = {0};
+    if (sscanf(dt_expiration, fmt, &expiration_dt.year, &expiration_dt.month, &expiration_dt.day, &expiration_dt.hour, &expiration_dt.minute) == 5) {
+        // return value ignored ... function here is void(!)
+        set_saflok_mfc_card_expiration_datetime(data, &expiration_dt);
     }
     //else{
     //insert_bits(data, 64, 24, expire_date);
