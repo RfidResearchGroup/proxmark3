@@ -393,6 +393,26 @@ sudo service udev restart
 sudo udevadm trigger --action=change
 ```
 
+#### USB device access in WSL2 (tty permissions)
+
+When you attach the Proxmark3 to WSL2 via `usbipd`, the Linux device node (for example `/dev/ttyACM0`) is created inside the WSL distro. That device is usually owned by `root:dialout` and is only readable/writable by `root` and members of the `dialout` group.
+
+If you are seeing `Could not find Proxmark3 on /dev/ttyACM0`, it usually means your user doesn't have permission to open the serial device.
+
+Fix:
+```bash
+# add your user to the dialout group (this is persistent)
+sudo usermod -aG dialout $USER
+
+# apply the new group membership in the current shell (no restart)
+newgrp dialout
+
+# verify the changes:
+id            # should show 'dialout' in the groups list
+ls -l /dev/ttyACM*   # device should be group 'dialout' and group-writable
+```
+
+
 ## Verify Device Exists
 ^[Top](#top)
 
