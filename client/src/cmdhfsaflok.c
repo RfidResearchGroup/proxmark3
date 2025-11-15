@@ -1740,7 +1740,6 @@ static int CmdHFSaflokInterrogate(const char *Cmd) {
 
     if (mf_read_uid(uid, &uid_len, NULL) != PM3_SUCCESS || uid_len < 4) {
         PrintAndLogEx(WARNING, "Failed to read UID.");
-        CLIParserFree(ctx);
         return PM3_ESOFT;
     }
 
@@ -1753,14 +1752,13 @@ static int CmdHFSaflokInterrogate(const char *Cmd) {
     uint8_t block2[16];
     if (mf_read_block(2, 0, key.key, block2) != PM3_SUCCESS) {
         PrintAndLogEx(WARNING, "Failed to read block 2 with derived key.");
-        CLIParserFree(ctx);
         return PM3_ESOFT;
     }
 
     uint8_t control_byte = block2[5];
     uint8_t subblock_stop = (control_byte >> 3);
     if (subblock_stop == 0) {
-        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "subblock_stop is invalid (zero).");
         return PM3_EINVARG;
     }
 
@@ -1806,7 +1804,6 @@ static int CmdHFSaflokInterrogate(const char *Cmd) {
         cursor += 6;
     }
 
-    CLIParserFree(ctx);
     return PM3_SUCCESS;
 }
 
