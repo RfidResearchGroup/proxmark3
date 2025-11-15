@@ -325,16 +325,17 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
     // 8E is our MAC response (8 bytes)
     // PrintAndLogEx(SUCCESS, "Raw Response..................... " _YELLOW_("%s"), sprint_hex_inrow(response, (resplen - 2)));
 
-    uint8_t cryptogram[64];
     uint8_t responseCode[2];
     uint8_t tag[2] = {0x00, 0x00};
     int getDataSize = 0;
 
     // ------------------- Cryptogram Response -------------------
-    if (resplen >= 2 && response[0] == 0x85 && response[1] == 0x40) {
-        uint8_t decrypted[64];
-        memcpy(cryptogram, response + 2, 64);
-        memcpy(responseCode, response + 68, 2);
+    if (resplen >= 2 && response[0] == 0x85 && response[1] >= 0x40) {
+        uint8_t cryptogram_length = response[1];
+        uint8_t cryptogram[cryptogram_length];
+        uint8_t decrypted[cryptogram_length];
+        memcpy(cryptogram, response + 2, cryptogram_length);
+        memcpy(responseCode, response + cryptogram_length + 4, 2);
 
         // Decrypt the response
         decrypt_cryptogram(diversified_enc_key, cryptogram, decrypted, sizeof(cryptogram), encryption_algorithm);
@@ -353,7 +354,7 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
         memmove(decrypted, decrypted + 1, sizeof(decrypted) - 1);
         memmove(sioOutput, decrypted + 2, getDataSize);
         *sio_size = getDataSize;
-        memcpy(responseCode, response + 68, 2);
+        memcpy(responseCode, response + cryptogram_length + 4, 2);
 
         PrintAndLogEx(SUCCESS, "Response Code.................... " _YELLOW_("%s"), sprint_hex_inrow(responseCode, (ARRAYLEN(responseCode))));
         PrintAndLogEx(SUCCESS, "Output........................... " _YELLOW_("%s"), sprint_hex_inrow(sioOutput, getDataSize));
