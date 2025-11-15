@@ -1758,7 +1758,8 @@ static int CmdHFSaflokInterrogate(const char *Cmd) {
     uint8_t control_byte = block2[5];
     uint8_t subblock_stop = (control_byte >> 3);
     if (subblock_stop == 0) {
-        PrintAndLogEx(WARNING, "subblock_stop is invalid (zero).");
+        // same message as below for total_bytes == 0
+        PrintAndLogEx(SUCCESS, "Card has no variable keys");
         return PM3_EINVARG;
     }
 
