@@ -231,6 +231,13 @@ static void insert_bits(saflok_mfc_data_t *data, size_t start_bit, size_t num_bi
         insert_bits(data, 116, 12, property_id);
         return true;
     }
+    static inline uint8_t get_saflok_mfc_checksum(const saflok_mfc_data_t *data) {
+        return data->raw[16];
+    }
+    static inline bool set_saflok_mfc_checksum(saflok_mfc_data_t *data, uint8_t checksum) {
+        data->raw[16] = checksum;
+        return true;
+    }   
 #endif // getters and setters for each bitfield in saflok_mfc_data_t
 
 #if 1 // helpers for get/set_saflok_mfc_card_creation_date() ... do not call these directly as does not validate...
@@ -521,7 +528,7 @@ static void insert_bits(saflok_mfc_data_t *data, size_t start_bit, size_t num_bi
         const saflok_mfc_datetime_t *end
         ) {
 
-        enum logLevel MYDBG = WARNING;
+        enum logLevel MYDBG = DEBUG;
         saflok_mfc_datetime_offset_t result = {0};
 
         if (!is_saflok_mfc_datetime_valid(start)) {
@@ -717,11 +724,11 @@ static int CmdHelp(const char *Cmd);
 // decryptedCard : uint8_t[length]
 // length        : ALWAYS == 17
 // safelok_mfc_data_t* for both parameters?
-static void saflok_decrypt(const saflok_mfc_data_t *strCard, saflok_mfc_data_t *decryptedCard) {
+static void saflok_decrypt(const saflok_mfc_data_t *encryptedCard, saflok_mfc_data_t *decryptedCard) {
     
-    static const size_t length = ARRAYLEN(strCard->raw);
+    static const size_t length = ARRAYLEN(encryptedCard->raw);
     for (int i = 0; i < length; i++) {
-        int num = c_aDecode[strCard->raw[i]] - (i + 1);
+        int num = c_aDecode[encryptedCard->raw[i]] - (i + 1);
         if (num < 0) {
             num += 256;
         }
@@ -755,10 +762,10 @@ static void saflok_decrypt(const saflok_mfc_data_t *strCard, saflok_mfc_data_t *
 }
 
 
-static void saflok_encrypt(const saflok_mfc_data_t *keyCard, saflok_mfc_data_t *encryptedCard) {
-    static const size_t length = ARRAYLEN(keyCard->raw);
+static void saflok_encrypt(const saflok_mfc_data_t *plaintext, saflok_mfc_data_t *encryptedCard) {
+    static const size_t length = ARRAYLEN(plaintext->raw);
     int b = 0;
-    memcpy(encryptedCard->raw, keyCard->raw, length);
+    memcpy(encryptedCard->raw, plaintext->raw, length);
     for (int i = 0; i < length; i++) {
         int b2 = encryptedCard->raw[i];
         int num2 = i;
@@ -898,7 +905,7 @@ static void saflok_kdf(const saflok_mfc_uid_t *uid, saflok_mfc_key_t *key_out) {
     memcpy(key_out, &key, KEY_LENGTH);
 }
 
-static void saflok_decode(const saflok_mfc_data_t *data) {
+static void saflok_decode_legacy(const saflok_mfc_data_t *data) {
 
     uint32_t card_level = extract_bits(data, 0, 4);
     uint32_t card_type = extract_bits(data, 4, 4);
@@ -960,6 +967,7 @@ static void saflok_decode(const saflok_mfc_data_t *data) {
         }
     }
 
+    PrintAndLogEx(SUCCESS, "---- OLD routines ----" );
     PrintAndLogEx(SUCCESS, "Card Level: " _GREEN_("%u (%s)"), card_level, level_names[card_level]);
     PrintAndLogEx(SUCCESS, "Card Type: " _GREEN_("%u"), card_type);
     PrintAndLogEx(SUCCESS, "Card ID: " _GREEN_("%u"), card_id);
@@ -985,6 +993,58 @@ static void saflok_decode(const saflok_mfc_data_t *data) {
     PrintAndLogEx(SUCCESS, "Checksum: " _GREEN_("0x%X") " (%s)", checksum, (checksum == calculated_saflok_checksum(data)) ? _GREEN_("ok") : _RED_("bad"));
     PrintAndLogEx(NORMAL, "");
 
+}
+
+static void saflok_decode_new(const saflok_mfc_data_t *data) {
+
+    uint32_t card_level = get_saflok_mfc_card_level(data);
+    uint32_t card_type = get_saflok_mfc_card_type(data);
+    uint32_t card_id = get_saflok_mfc_card_id(data);
+    uint32_t opening_key = get_saflok_mfc_opening_key(data);
+    uint32_t lock_id = get_saflok_mfc_lock_id(data);
+    uint32_t pass_number = get_saflok_mfc_pass_number(data);
+    uint32_t sequence_and_combination = get_saflok_mfc_sequence_and_combination(data);
+    uint32_t deadbolt_override = get_saflok_mfc_deadbolt_override(data);
+    uint32_t restricted_days = get_saflok_mfc_restricted_days(data);
+    saflok_mfc_datetime_t creation_date = get_saflok_mfc_card_creation_datetime(data);
+    saflok_mfc_datetime_t expiration_date = get_saflok_mfc_card_expiration_datetime(data);
+    uint32_t property_id = get_saflok_mfc_property_id(data);
+    uint32_t checksum = get_saflok_mfc_checksum(data);
+
+    PrintAndLogEx(SUCCESS, "---- NEW routines ----" );
+    PrintAndLogEx(SUCCESS, "Card Level: " _GREEN_("%u (%s)"), card_level, level_names[card_level]);
+    PrintAndLogEx(SUCCESS, "Card Type: " _GREEN_("%u"), card_type);
+    PrintAndLogEx(SUCCESS, "Card ID: " _GREEN_("%u"), card_id);
+    PrintAndLogEx(SUCCESS, "Opening Key: " _GREEN_("%u"), opening_key);
+    PrintAndLogEx(SUCCESS, "Lock ID: " _GREEN_("%u"), lock_id);
+    PrintAndLogEx(SUCCESS, "Pass Number: " _GREEN_("%u"), pass_number);
+    PrintAndLogEx(SUCCESS, "Sequence and Combination: " _GREEN_("%u"), sequence_and_combination);
+    PrintAndLogEx(SUCCESS, "Deadbolt Override: " _GREEN_("%u"), deadbolt_override);
+    PrintAndLogEx(SUCCESS, "Restricted Days: " _GREEN_("%u"), restricted_days);
+    PrintAndLogEx(SUCCESS, "Card Creation Date: " _GREEN_("%u-%02d-%02d %02d:%02d"),
+                  creation_date.year,
+                  creation_date.month,
+                  creation_date.day,
+                  creation_date.hour,
+                  creation_date.minute);
+    PrintAndLogEx(SUCCESS, "Expire Date: " _GREEN_("%u-%02d-%02d %02d:%02d"),
+                  expiration_date.year,
+                  expiration_date.month,
+                  expiration_date.day,
+                  expiration_date.hour,
+                  expiration_date.minute);
+    PrintAndLogEx(SUCCESS, "Property ID: " _GREEN_("%u"), property_id);
+    PrintAndLogEx(SUCCESS, "Checksum: " _GREEN_("0x%X") " (%s)", checksum, (checksum == calculated_saflok_checksum(data)) ? _GREEN_("ok") : _RED_("bad"));
+    PrintAndLogEx(NORMAL, "");
+
+}
+static void saflok_decode(const saflok_mfc_data_t *data) {
+    static uint8_t which = 0;
+    if (which++ % 2 == 0) {
+        saflok_decode_legacy(data);
+    } else {
+        saflok_decode_new(data);
+    }
 }
 
 static void saflok_encode(
@@ -1147,18 +1207,18 @@ static int CmdHFSaflokEncode(const char *Cmd) {
 
 
     saflok_encode(&decrypted,
-                  arg_get_u32_def(ctx, 1, 0),
-                  arg_get_u32_def(ctx, 2, 0),
-                  arg_get_u32_def(ctx, 3, 0),
-                  arg_get_u32_def(ctx, 4, 0),
-                  arg_get_u32_def(ctx, 5, 0),
-                  arg_get_u32_def(ctx, 6, 0),
-                  arg_get_u32_def(ctx, 7, 0),
-                  arg_get_u32_def(ctx, 8, 0),
-                  arg_get_u32_def(ctx, 9, 0),
+                  arg_get_u32_def(ctx, 1, 0),  // card_level
+                  arg_get_u32_def(ctx, 2, 0),  // card_type
+                  arg_get_u32_def(ctx, 3, 0),  // card_id
+                  arg_get_u32_def(ctx, 4, 0),  // opening_key
+                  arg_get_u32_def(ctx, 5, 0),  // lock_id
+                  arg_get_u32_def(ctx, 6, 0),  // pass_num
+                  arg_get_u32_def(ctx, 7, 0),  // seq_combo
+                  arg_get_u32_def(ctx, 8, 0),  // deadbolt
+                  arg_get_u32_def(ctx, 9, 0),  // days
                   0,
                   0,
-                  arg_get_u32_def(ctx, 12, 0),
+                  arg_get_u32_def(ctx, 12, 0), // property_id
                   dt_e,
                   dt);
 
@@ -1404,67 +1464,122 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
     //       verify the resulting decoded data matches expectations,
     //       or investigate which one results in correct data.
 
-/*
-uint8_t                       get_saflok_mfc_card_level
-bool                          set_saflok_mfc_card_level
-uint8_t                       get_saflok_mfc_card_type
-bool                          set_saflok_mfc_card_type
-uint8_t                       get_saflok_mfc_card_id
-bool                          set_saflok_mfc_card_id
-uint8_t                       get_saflok_mfc_opening_key
-bool                          set_saflok_mfc_opening_key
-uint16_t                      get_saflok_mfc_lock_id
-bool                          set_saflok_mfc_lock_id
-uint16_t                      get_saflok_mfc_pass_number
-bool                          set_saflok_mfc_pass_number
-uint16_t                      get_saflok_mfc_sequence_and_combination
-bool                          set_saflok_mfc_sequence_and_combination
-bool                          get_saflok_mfc_deadbolt_override
-bool                          set_saflok_mfc_deadbolt_override
-uint8_t                       get_saflok_mfc_restricted_days
-bool                          set_saflok_mfc_restricted_days
-uint32_t                      get_saflok_mfc_raw_interval_date
-bool                          set_saflok_mfc_raw_interval_date
-uint32_t                      get_saflok_mfc_raw_card_creation_date
-bool                          set_saflok_mfc_raw_card_creation_date
-uint16_t                      get_saflok_mfc_property_id
-bool                          set_saflok_mfc_property_id
-uint16_t                      _get_saflok_mfc_card_creation_year_impl
-bool                          _set_saflok_mfc_card_creation_year_impl
-uint8_t                       _get_saflok_mfc_card_creation_month_impl
-bool                          _set_saflok_mfc_card_creation_month_impl
-uint8_t                       _get_saflok_mfc_card_creation_day_impl
-bool                          _set_saflok_mfc_card_creation_day_impl
-uint8_t                       _get_saflok_mfc_card_creation_hour_impl
-bool                          _set_saflok_mfc_card_creation_hour_impl
-uint8_t                       _get_saflok_mfc_card_creation_minute_impl
-bool                          _set_saflok_mfc_card_creation_minute_impl
-bool                          is_saflok_mfc_datetime_valid
-saflok_mfc_datetime_t         get_saflok_mfc_card_creation_datetime
-bool                          set_saflok_mfc_card_creation_datetime
-uint8_t                       _get_saflok_mfc_interval_years_impl
-bool                          _set_saflok_mfc_interval_years_impl
-uint8_t                       _get_saflok_mfc_interval_months_impl
-bool                          _set_saflok_mfc_interval_months_impl
-uint8_t                       _get_saflok_mfc_interval_days_impl
-bool                          _set_saflok_mfc_interval_days_impl
-uint8_t                       _get_saflok_mfc_interval_hours_impl
-bool                          _set_saflok_mfc_interval_hours_impl
-uint8_t                       _get_saflok_mfc_interval_minutes_impl
-bool                          _set_saflok_mfc_interval_minutes_impl
-saflok_mfc_datetime_offset_t  get_saflok_mfc_interval
-bool                          set_saflok_mfc_interval
-saflok_mfc_datetime_t         add_offset
-saflok_mfc_datetime_offset_t  get_datetime_offset
-saflok_mfc_datetime_t         get_saflok_mfc_card_expiration_datetime
-bool                          set_saflok_mfc_card_expiration_datetime
-*/
-    saflok_mfc_data_t test_data = {0};
-    (void)get_saflok_mfc_card_expiration_datetime(&test_data);
+    /*
+    [ ] get_saflok_mfc_card_level
+    [ ] set_saflok_mfc_card_level
+    [ ] get_saflok_mfc_card_type
+    [ ] set_saflok_mfc_card_type
+    [ ] get_saflok_mfc_card_id
+    [ ] set_saflok_mfc_card_id
+    [ ] get_saflok_mfc_opening_key
+    [ ] set_saflok_mfc_opening_key
+    [ ] get_saflok_mfc_lock_id
+    [ ] set_saflok_mfc_lock_id
+    [ ] get_saflok_mfc_pass_number
+    [ ] set_saflok_mfc_pass_number
+    [ ] get_saflok_mfc_sequence_and_combination
+    [ ] set_saflok_mfc_sequence_and_combination
+    [ ] get_saflok_mfc_deadbolt_override
+    [ ] set_saflok_mfc_deadbolt_override
+    [ ] get_saflok_mfc_restricted_days
+    [ ] set_saflok_mfc_restricted_days
+    [ ] get_saflok_mfc_raw_interval_date
+    [ ] set_saflok_mfc_raw_interval_date
+    [ ] get_saflok_mfc_raw_card_creation_date
+    [ ] set_saflok_mfc_raw_card_creation_date
+    [ ] get_saflok_mfc_property_id
+    [ ] set_saflok_mfc_property_id
+    [ ] _get_saflok_mfc_card_creation_year_impl
+    [ ] _set_saflok_mfc_card_creation_year_impl
+    [ ] _get_saflok_mfc_card_creation_month_impl
+    [ ] _set_saflok_mfc_card_creation_month_impl
+    [ ] _get_saflok_mfc_card_creation_day_impl
+    [ ] _set_saflok_mfc_card_creation_day_impl
+    [ ] _get_saflok_mfc_card_creation_hour_impl
+    [ ] _set_saflok_mfc_card_creation_hour_impl
+    [ ] _get_saflok_mfc_card_creation_minute_impl
+    [ ] _set_saflok_mfc_card_creation_minute_impl
+    [ ] is_saflok_mfc_datetime_valid
+    [ ] get_saflok_mfc_card_creation_datetime
+    [ ] set_saflok_mfc_card_creation_datetime
+    [ ] _get_saflok_mfc_interval_years_impl
+    [ ] _set_saflok_mfc_interval_years_impl
+    [ ] _get_saflok_mfc_interval_months_impl
+    [ ] _set_saflok_mfc_interval_months_impl
+    [ ] _get_saflok_mfc_interval_days_impl
+    [ ] _set_saflok_mfc_interval_days_impl
+    [ ] _get_saflok_mfc_interval_hours_impl
+    [ ] _set_saflok_mfc_interval_hours_impl
+    [ ] _get_saflok_mfc_interval_minutes_impl
+    [ ] _set_saflok_mfc_interval_minutes_impl
+    [ ] get_saflok_mfc_interval
+    [ ] set_saflok_mfc_interval
+    [ ] add_offset
+    [ ] get_datetime_offset
+    [ ] get_saflok_mfc_card_expiration_datetime
+    [ ] set_saflok_mfc_card_expiration_datetime
+    */
+
+    if (true) { // test encode+encrypt, including interval affected by leap-year
+
+        // Equivalent to running the following commands manually:
+        //
+        // [usb] pm3 --> hf saflok encode
+        //     --level 15 --type 7 --id 176 --open 2 --lock_id 257 --pass_num 4095 --seq_combo 2047
+        //     --deadbolt 1 --days 30 --expire 2020-03-01T00:00 --created 2019-02-20T00:00 --prop_id 999
+        //
+        // [=] --- Encoded Card Data
+        // [+] Encrypted Data: 5A4A845610B6B1DD8F4753872BC0E91095
+        //
+        // [usb] pm3 --> hf saflok decode -d 5A4A845610B6B1DD8F4753872BC0E91095
+        // [+] Card Level: 15 (Primary Programming Key (PPK))
+        // [+] Card Type: 7
+        // [+] Card ID: 176
+        // [+] Opening Key: 2
+        // [+] Lock ID: 257
+        // [+] Pass Number: 4095
+        // [+] Sequence and Combination: 2047
+        // [+] Deadbolt Override: 1
+        // [+] Restricted Days: 30 == 0b0011110
+        // [+] Card Creation Date: 2019-02-20 00:00
+        // [+] Expire Date: 2020-03-01 00:00
+        // [+] Property ID: 999
+        // [+] Checksum: 0xC7 (ok)
 
 
+        saflok_mfc_data_t test_data = {0};
+        set_saflok_mfc_card_level(&test_data, 15);
+        set_saflok_mfc_card_type(&test_data, 7);
+        set_saflok_mfc_card_id(&test_data, 176);
+        set_saflok_mfc_opening_key(&test_data, 2);
+        set_saflok_mfc_lock_id(&test_data, 257);
+        set_saflok_mfc_pass_number(&test_data, 4095);
+        set_saflok_mfc_sequence_and_combination(&test_data, 2047);
+        set_saflok_mfc_deadbolt_override(&test_data, true);
+        set_saflok_mfc_restricted_days(&test_data, 30);
+        saflok_mfc_datetime_t creation_date = {.year = 2019, .month = 2, .day = 20, .hour = 0, .minute = 0};
+        saflok_mfc_datetime_t expiration_date = {.year = 2020, .month = 3, .day = 1, .hour = 0, .minute = 0};
+        set_saflok_mfc_card_creation_datetime(&test_data, &creation_date);
+        set_saflok_mfc_card_expiration_datetime(&test_data, &expiration_date);
+        set_saflok_mfc_property_id(&test_data, 999);
+        uint8_t checksum = calculated_saflok_checksum(&test_data);
+        set_saflok_mfc_checksum(&test_data, checksum);
 
+        saflok_mfc_data_t encrypted = {0};
+        saflok_encrypt(&test_data, &encrypted);
 
+        saflok_mfc_data_t expected = {
+            .raw = {0x5A, 0x4A, 0x84, 0x56, 0x10, 0xB6, 0xB1, 0xDD,
+                    0x8F, 0x47, 0x53, 0x87, 0x2B, 0xC0, 0xE9, 0x10,
+                    0x95},
+        };
+        if (memcmp(encrypted.raw, expected.raw, sizeof(saflok_mfc_data_t)) == 0) {
+            PrintAndLogEx(SUCCESS, "Self-test passed: encoded+encrypted data matches expected value.");
+        } else {
+            PrintAndLogEx(FAILED, "Self-test failed: encoded+encrypted data did not match expected value.");
+            result = PM3_EFAILED;
+        }
+    }
 
     return result;
 }
