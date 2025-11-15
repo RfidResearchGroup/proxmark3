@@ -550,14 +550,24 @@ static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t 
     // Extract everything before the 8E tag
 
     int res = PM3_EWRONGANSWER;
-    for (int i = 0; i < response_length; i++) {
+    for (int i = 0; i < response_length - 2;) {
         // extract MAC
         if (response[i] == 0x8E) {
+            if (response[i+1] != MAC_value_len) {
+                goto out;
+            }
+            // Ensure there's enough bytes remaining
+            // in the response for the full MAC
+            if (i+2+MAC_value_len > response_length) {
+                goto out;
+            }
             memcpy(input, response, i);
             memcpy(MAC_value, response + (i + 2), MAC_value_len);
             res = PM3_SUCCESS;
             break;
         }
+        // skip to next tag
+        i += 2 + response[i+1];
     }
     if (res != PM3_SUCCESS) {
         goto out;
