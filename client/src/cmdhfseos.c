@@ -202,7 +202,7 @@ static void generate_command_wrapping(uint8_t *command_Header, int command_heade
     uint8_t asn1_tag_mac[2] = {0x8e, 0x08};
     uint8_t command_trailer[2] = {0x97, 0x00};
     uint8_t padded_command_trailer[block_size - ARRAYLEN(command_trailer)];
-    padToBlockSize(command_trailer, sizeof(command_trailer), block_size, padded_command_trailer);
+    padToBlockSize(command_trailer, sizeof(command_trailer), sizeof(padded_command_trailer), padded_command_trailer);
 
     uint8_t toEncrypt[ARRAYLEN(rndCounter) + ARRAYLEN(padded_Command_Header) + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command) + ARRAYLEN(padded_command_trailer)];
 
@@ -290,8 +290,8 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
     // Convert command from buffer to stream
     uint8_t command_convert[command_len];
     memcpy(command_convert, command_buffer, command_len);
-    char completedCommandChar[sizeof(command_len) * 2 + 1];
-    for (int i = 0; i < sizeof(command_convert); i++) {
+    char completedCommandChar[command_len * 2 + 1];
+    for (int i = 0; i < command_len; i++) {
         snprintf(&completedCommandChar[i * 2], 3, "%02X", command_convert[i]);
     }
     // PrintAndLogEx(SUCCESS, "Command.......................... " _YELLOW_("%s"), completedCommandChar);
