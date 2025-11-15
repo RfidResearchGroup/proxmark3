@@ -1333,6 +1333,29 @@ static int CmdHFSaflokDecrypt(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdHFSaflokSelfTest(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf saflok selftest",
+                  "Validate internal functionality of Saflok routines",
+                  "hf saflok selftest");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    int result = PM3_SUCCESS;
+
+    PrintAndLogEx(WARNING, "NYI: Saflok self-test not yet implemented.");
+
+
+
+    return result;
+}
+
+
 static int CmdHFSaflokChecksum(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf saflok cksum",
@@ -1569,6 +1592,7 @@ static command_t CommandTable[] = {
     {"decrypt", CmdHFSaflokDecrypt, AlwaysAvailable, "Decrypt 17-byte encrypted block"},
     {"interrogate", CmdHFSaflokInterrogate, IfPm3NfcBarcode, "Interrogate saflok card"},
     {"cksum",   CmdHFSaflokChecksum, IfPm3NfcBarcode, "Generate checksum for data block"},
+    {"selftest", CmdHFSaflokSelfTest, AlwaysAvailable, "Run self-test"},
     {NULL, NULL, NULL, NULL}
 };
 
