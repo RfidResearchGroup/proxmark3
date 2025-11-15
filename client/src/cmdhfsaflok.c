@@ -1349,6 +1349,67 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
     int result = PM3_SUCCESS;
 
     PrintAndLogEx(WARNING, "NYI: Saflok self-test not yet implemented.");
+    // TODO: encode some sample cards using prior versions of the code.
+    //       verify the resulting decoded data matches expectations,
+    //       or investigate which one results in correct data.
+
+/*
+uint8_t                       get_saflok_mfc_card_level
+bool                          set_saflok_mfc_card_level
+uint8_t                       get_saflok_mfc_card_type
+bool                          set_saflok_mfc_card_type
+uint8_t                       get_saflok_mfc_card_id
+bool                          set_saflok_mfc_card_id
+uint8_t                       get_saflok_mfc_opening_key
+bool                          set_saflok_mfc_opening_key
+uint16_t                      get_saflok_mfc_lock_id
+bool                          set_saflok_mfc_lock_id
+uint16_t                      get_saflok_mfc_pass_number
+bool                          set_saflok_mfc_pass_number
+uint16_t                      get_saflok_mfc_sequence_and_combination
+bool                          set_saflok_mfc_sequence_and_combination
+bool                          get_saflok_mfc_deadbolt_override
+bool                          set_saflok_mfc_deadbolt_override
+uint8_t                       get_saflok_mfc_restricted_days
+bool                          set_saflok_mfc_restricted_days
+uint32_t                      get_saflok_mfc_raw_interval_date
+bool                          set_saflok_mfc_raw_interval_date
+uint32_t                      get_saflok_mfc_raw_card_creation_date
+bool                          set_saflok_mfc_raw_card_creation_date
+uint16_t                      get_saflok_mfc_property_id
+bool                          set_saflok_mfc_property_id
+uint16_t                      _get_saflok_mfc_card_creation_year_impl
+bool                          _set_saflok_mfc_card_creation_year_impl
+uint8_t                       _get_saflok_mfc_card_creation_month_impl
+bool                          _set_saflok_mfc_card_creation_month_impl
+uint8_t                       _get_saflok_mfc_card_creation_day_impl
+bool                          _set_saflok_mfc_card_creation_day_impl
+uint8_t                       _get_saflok_mfc_card_creation_hour_impl
+bool                          _set_saflok_mfc_card_creation_hour_impl
+uint8_t                       _get_saflok_mfc_card_creation_minute_impl
+bool                          _set_saflok_mfc_card_creation_minute_impl
+bool                          is_saflok_mfc_datetime_valid
+saflok_mfc_datetime_t         get_saflok_mfc_card_creation_datetime
+bool                          set_saflok_mfc_card_creation_datetime
+uint8_t                       _get_saflok_mfc_interval_years_impl
+bool                          _set_saflok_mfc_interval_years_impl
+uint8_t                       _get_saflok_mfc_interval_months_impl
+bool                          _set_saflok_mfc_interval_months_impl
+uint8_t                       _get_saflok_mfc_interval_days_impl
+bool                          _set_saflok_mfc_interval_days_impl
+uint8_t                       _get_saflok_mfc_interval_hours_impl
+bool                          _set_saflok_mfc_interval_hours_impl
+uint8_t                       _get_saflok_mfc_interval_minutes_impl
+bool                          _set_saflok_mfc_interval_minutes_impl
+saflok_mfc_datetime_offset_t  get_saflok_mfc_interval
+bool                          set_saflok_mfc_interval
+saflok_mfc_datetime_t         add_offset
+saflok_mfc_datetime_offset_t  get_datetime_offset
+saflok_mfc_datetime_t         get_saflok_mfc_card_expiration_datetime
+bool                          set_saflok_mfc_card_expiration_datetime
+*/
+
+
 
 
 
