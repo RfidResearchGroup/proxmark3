@@ -242,21 +242,21 @@ static void insert_bits(saflok_mfc_data_t *data, size_t start_bit, size_t num_bi
 
 #if 1 // helpers for get/set_saflok_mfc_card_creation_date() ... do not call these directly as does not validate...
     static inline uint16_t _get_saflok_mfc_card_creation_year_impl(const saflok_mfc_data_t *data) {
-        uint8_t creation_year_bits_high = (data->raw[14] & 0xF0u);
+        uint8_t creation_year_bits_high = (data->raw[14] & 0x70u);
         uint8_t creation_year_bits_low  = (data->raw[11] & 0xF0u) >> 4;
         uint8_t creation_year_bits = creation_year_bits_high | creation_year_bits_low;
         uint16_t creation_year = 1980u + creation_year_bits; // automatically extends to uint16_t
         return creation_year;
     }
     static inline bool _set_saflok_mfc_card_creation_year_impl(saflok_mfc_data_t *data, uint16_t year) {
-        if (year < 1980u || year > (1980u+0xFFu)) {
+        if (year < 1980u || year > (1980u+0x7Fu)) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " year out of range (%u)\n", year);
             return false;
         }
         uint16_t year_bits = year - 1980u;
-        uint8_t creation_year_bits_high = year_bits & 0xF0u;
+        uint8_t creation_year_bits_high = year_bits & 0x70u;
         uint8_t creation_year_bits_low  = (year_bits & 0x0Fu) << 4;
-        data->raw[14] = (data->raw[14] & 0x0Fu) | creation_year_bits_high;
+        data->raw[14] = (data->raw[14] & 0x8Fu) | creation_year_bits_high;
         data->raw[11] = (data->raw[11] & 0x0Fu) | creation_year_bits_low;
         return true;
     }
