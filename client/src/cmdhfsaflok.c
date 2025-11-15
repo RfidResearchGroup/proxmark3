@@ -198,15 +198,15 @@ static void insert_bits(saflok_mfc_data_t *data, size_t start_bit, size_t num_bi
         insert_bits(data, 57, 7, restricted_days);
         return true;
     }
-    static inline uint32_t get_saflok_mfc_raw_interval_date(const saflok_mfc_data_t *data) {
+    static inline uint32_t get_saflok_mfc_raw_interval(const saflok_mfc_data_t *data) {
         return extract_bits(data, 64, 24);
     }
-    static inline bool set_saflok_mfc_raw_interval_date(saflok_mfc_data_t *data, uint32_t raw_interval_date) {
-        if (raw_interval_date > 0xFFFFFFu) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " raw_interval_date out of range (%08x)\n", raw_interval_date);
+    static inline bool set_saflok_mfc_raw_interval(saflok_mfc_data_t *data, uint32_t raw_interval) {
+        if (raw_interval > 0xFFFFFFu) {
+            PrintAndLogEx(ERR, _RED_("ERROR:") " raw_interval out of range (%08x)\n", raw_interval);
             return false;
         }
-        insert_bits(data, 64, 24, raw_interval_date);
+        insert_bits(data, 64, 24, raw_interval);
         return true;
     }
     static inline uint32_t get_saflok_mfc_raw_card_creation_date(const saflok_mfc_data_t *data) {
@@ -718,7 +718,6 @@ _Static_assert(ARRAYLEN(level_names) == 16, "level_names must have 16 elements")
 
 static int CmdHelp(const char *Cmd);
 
-
 // unsafe without static analysis hints.
 // strCard       : uint8_t[length]
 // decryptedCard : uint8_t[length]
@@ -905,97 +904,7 @@ static void saflok_kdf(const saflok_mfc_uid_t *uid, saflok_mfc_key_t *key_out) {
     memcpy(key_out, &key, KEY_LENGTH);
 }
 
-static void saflok_decode_legacy(const saflok_mfc_data_t *data) {
-
-    uint32_t card_level = extract_bits(data, 0, 4);
-    uint32_t card_type = extract_bits(data, 4, 4);
-    uint32_t card_id = extract_bits(data, 8, 8);
-    uint32_t opening_key = extract_bits(data, 16, 2);
-    uint32_t lock_id = extract_bits(data, 18, 14);
-    uint32_t pass_number = extract_bits(data, 32, 12);
-    uint32_t sequence_and_combination = extract_bits(data, 44, 12);
-    uint32_t deadbolt_override = extract_bits(data, 56, 1);
-    uint32_t restricted_days = extract_bits(data, 57, 7);
-    //uint32_t expire_date = extract_bits(data, 64, 24);
-    //uint32_t card_creation_date = extract_bits(data, 88, 28);
-    uint32_t property_id = extract_bits(data, 116, 12);
-    uint32_t checksum = extract_bits(data, 128, 8);
-
-    //date parsing, stolen from flipper code
-    uint16_t interval_year = (data->raw[8] >> 4);
-    uint8_t interval_month = data->raw[8] & 0x0F;
-    uint8_t interval_day = (data->raw[9] >> 3) & 0x1F;
-    uint8_t interval_hour = ((data->raw[9] & 0x07) << 2) | (data->raw[10] >> 6);
-    uint8_t interval_minute = data->raw[10] & 0x3F;
-
-    uint8_t creation_year_bits = (data->raw[14] & 0xF0);
-    uint16_t creation_year =
-        (creation_year_bits | ((data->raw[11] & 0xF0) >> 4)) + 1980;
-    uint8_t creation_month = data->raw[11] & 0x0F;
-    uint8_t creation_day = (data->raw[12] >> 3) & 0x1F;
-    uint8_t creation_hour = ((data->raw[12] & 0x07) << 2) | (data->raw[13] >> 6);
-    uint8_t creation_minute = data->raw[13] & 0x3F;
-
-    uint16_t expire_year = creation_year + interval_year;
-    uint8_t expire_month = creation_month + interval_month;
-    uint8_t expire_day = creation_day + interval_day;
-    uint8_t expire_hour = interval_hour;
-    uint8_t expire_minute = interval_minute;
-
-    // Handle month rollover
-    while (expire_month > 12) {
-        expire_month -= 12;
-        expire_year++;
-    }
-
-    // Handle day rollover
-    while (true) {
-        uint8_t max_days = days_in_month_lookup[expire_month];
-        // Adjust for leap years
-        if (expire_month == 2 &&
-                (expire_year % 4 == 0 && (expire_year % 100 != 0 || expire_year % 400 == 0))) {
-            max_days = 29;
-        }
-        if (expire_day <= max_days) {
-            break;
-        }
-        expire_day -= max_days;
-        expire_month++;
-        if (expire_month > 12) {
-            expire_month = 1;
-            expire_year++;
-        }
-    }
-
-    PrintAndLogEx(SUCCESS, "---- OLD routines ----" );
-    PrintAndLogEx(SUCCESS, "Card Level: " _GREEN_("%u (%s)"), card_level, level_names[card_level]);
-    PrintAndLogEx(SUCCESS, "Card Type: " _GREEN_("%u"), card_type);
-    PrintAndLogEx(SUCCESS, "Card ID: " _GREEN_("%u"), card_id);
-    PrintAndLogEx(SUCCESS, "Opening Key: " _GREEN_("%u"), opening_key);
-    PrintAndLogEx(SUCCESS, "Lock ID: " _GREEN_("%u"), lock_id);
-    PrintAndLogEx(SUCCESS, "Pass Number: " _GREEN_("%u"), pass_number);
-    PrintAndLogEx(SUCCESS, "Sequence and Combination: " _GREEN_("%u"), sequence_and_combination);
-    PrintAndLogEx(SUCCESS, "Deadbolt Override: " _GREEN_("%u"), deadbolt_override);
-    PrintAndLogEx(SUCCESS, "Restricted Days: " _GREEN_("%u"), restricted_days);
-    PrintAndLogEx(SUCCESS, "Card Creation Date: " _GREEN_("%u-%02d-%02d %02d:%02d"),
-                  creation_year,
-                  creation_month,
-                  creation_day,
-                  creation_hour,
-                  creation_minute);
-    PrintAndLogEx(SUCCESS, "Expire Date: " _GREEN_("%u-%02d-%02d %02d:%02d"),
-                  expire_year,
-                  expire_month,
-                  expire_day,
-                  expire_hour,
-                  expire_minute);
-    PrintAndLogEx(SUCCESS, "Property ID: " _GREEN_("%u"), property_id);
-    PrintAndLogEx(SUCCESS, "Checksum: " _GREEN_("0x%X") " (%s)", checksum, (checksum == calculated_saflok_checksum(data)) ? _GREEN_("ok") : _RED_("bad"));
-    PrintAndLogEx(NORMAL, "");
-
-}
-
-static void saflok_decode_new(const saflok_mfc_data_t *data) {
+static void saflok_decode(const saflok_mfc_data_t *data) {
 
     uint32_t card_level = get_saflok_mfc_card_level(data);
     uint32_t card_type = get_saflok_mfc_card_type(data);
@@ -1038,14 +947,6 @@ static void saflok_decode_new(const saflok_mfc_data_t *data) {
     PrintAndLogEx(NORMAL, "");
 
 }
-static void saflok_decode(const saflok_mfc_data_t *data) {
-    static uint8_t which = 0;
-    if (which++ % 2 == 0) {
-        saflok_decode_legacy(data);
-    } else {
-        saflok_decode_new(data);
-    }
-}
 
 static void saflok_encode(
     saflok_mfc_data_t *data,
@@ -1058,25 +959,24 @@ static void saflok_encode(
     uint32_t sequence_and_combination,
     uint32_t deadbolt_override,
     uint32_t restricted_days,
-    uint32_t expire_date,
-    uint32_t card_creation_date,
+    uint32_t raw_interval,
+    uint32_t raw_card_creation_date,
     uint32_t property_id,
     char *dt_expiration,
     char *dt
     ) {
-    insert_bits(data, 0, 4, card_level);
-    insert_bits(data, 4, 4, card_type);
-    insert_bits(data, 8, 8, card_id);
-    insert_bits(data, 16, 2, opening_key);
-    insert_bits(data, 18, 14, lock_id);
-    insert_bits(data, 32, 12, pass_number);
-    insert_bits(data, 44, 12, sequence_and_combination);
-    insert_bits(data, 56, 1, deadbolt_override);
-    insert_bits(data, 57, 7, restricted_days);
-    insert_bits(data, 64, 24, expire_date);
-    insert_bits(data, 88, 28, card_creation_date);
-    insert_bits(data, 116, 12, property_id);
-
+    set_saflok_mfc_card_level(data, card_level);
+    set_saflok_mfc_card_type(data, card_type);
+    set_saflok_mfc_card_id(data, card_id);
+    set_saflok_mfc_opening_key(data, opening_key);
+    set_saflok_mfc_lock_id(data, lock_id);
+    set_saflok_mfc_pass_number(data, pass_number);
+    set_saflok_mfc_sequence_and_combination(data, sequence_and_combination);
+    set_saflok_mfc_deadbolt_override(data, deadbolt_override);
+    set_saflok_mfc_restricted_days(data, restricted_days);
+    set_saflok_mfc_raw_interval(data, raw_interval);
+    set_saflok_mfc_raw_card_creation_date(data, raw_card_creation_date);
+    set_saflok_mfc_property_id(data, property_id);
 
     // Parsing date time string from "YYYY-MM-DDTHH:mm" into `saflok_mfc_datetime_t`
     static const char * fmt = "%4" SCNu16 "-%2" SCNu8 "-%2" SCNu8 "T%2" SCNu8 ":%2" SCNu8;
@@ -1334,7 +1234,7 @@ static int CmdHFSaflokModify(const char *Cmd) {
     uint32_t restricted_days = get_saflok_mfc_restricted_days(&decrypted);
     restricted_days = arg_get_u32_def(ctx, 9, restricted_days);
 
-    uint32_t interval = get_saflok_mfc_raw_interval_date(&decrypted);
+    uint32_t interval = get_saflok_mfc_raw_interval(&decrypted);
     //expire_date = arg_get_u32_def(ctx, 10, expire_date);
 
     uint32_t raw_card_creation_date = get_saflok_mfc_raw_card_creation_date(&decrypted);
