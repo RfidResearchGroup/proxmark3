@@ -1307,40 +1307,40 @@ static int CmdHFSaflokModify(const char *Cmd) {
 
     saflok_decrypt(&encrypted, &decrypted);
 
-    uint32_t card_level = extract_bits(&decrypted, 0, 4);
+    uint32_t card_level = get_saflok_mfc_card_level(&decrypted);
     card_level = arg_get_u32_def(ctx, 1, card_level);
 
-    uint32_t card_type = extract_bits(&decrypted, 4, 4);
+    uint32_t card_type = get_saflok_mfc_card_type(&decrypted);
     card_type = arg_get_u32_def(ctx, 2, card_type);
 
-    uint32_t card_id = extract_bits(&decrypted, 8, 8);
+    uint32_t card_id = get_saflok_mfc_card_id(&decrypted);
     card_id = arg_get_u32_def(ctx, 3, card_id);
 
-    uint32_t opening_key = extract_bits(&decrypted, 16, 2);
+    uint32_t opening_key = get_saflok_mfc_opening_key(&decrypted);
     opening_key = arg_get_u32_def(ctx, 4, opening_key);
 
-    uint32_t lock_id = extract_bits(&decrypted, 18, 14);
+    uint32_t lock_id = get_saflok_mfc_lock_id(&decrypted);
     lock_id = arg_get_u32_def(ctx, 5, lock_id);
 
-    uint32_t pass_number = extract_bits(&decrypted, 32, 12);
+    uint32_t pass_number = get_saflok_mfc_pass_number(&decrypted);
     pass_number = arg_get_u32_def(ctx, 6, pass_number);
 
-    uint32_t sequence_and_combination = extract_bits(&decrypted, 44, 12);
+    uint32_t sequence_and_combination = get_saflok_mfc_sequence_and_combination(&decrypted);
     sequence_and_combination = arg_get_u32_def(ctx, 7, sequence_and_combination);
 
-    uint32_t deadbolt_override = extract_bits(&decrypted, 56, 1);
+    uint32_t deadbolt_override = get_saflok_mfc_deadbolt_override(&decrypted);
     deadbolt_override = arg_get_u32_def(ctx, 8, deadbolt_override);
 
-    uint32_t restricted_days = extract_bits(&decrypted, 57, 7);
+    uint32_t restricted_days = get_saflok_mfc_restricted_days(&decrypted);
     restricted_days = arg_get_u32_def(ctx, 9, restricted_days);
 
-    uint32_t expire_date = extract_bits(&decrypted, 64, 24);
+    uint32_t interval = get_saflok_mfc_raw_interval_date(&decrypted);
     //expire_date = arg_get_u32_def(ctx, 10, expire_date);
 
-    uint32_t card_creation_date = extract_bits(&decrypted, 88, 28);
+    uint32_t raw_card_creation_date = get_saflok_mfc_raw_card_creation_date(&decrypted);
     //card_creation_date = arg_get_u32_def(ctx, 11, card_creation_date);
 
-    uint32_t property_id = extract_bits(&decrypted, 116, 12);
+    uint32_t property_id = get_saflok_mfc_property_id(&decrypted);
     property_id = arg_get_u32_def(ctx, 12, property_id);
 
     int slen = 0;
@@ -1361,8 +1361,8 @@ static int CmdHFSaflokModify(const char *Cmd) {
                   sequence_and_combination,
                   deadbolt_override,
                   restricted_days,
-                  expire_date,
-                  card_creation_date,
+                  interval,
+                  raw_card_creation_date,
                   property_id,
                   dt_e,
                   dt);
