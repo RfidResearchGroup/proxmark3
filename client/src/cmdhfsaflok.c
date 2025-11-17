@@ -455,50 +455,103 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
         const saflok_mfc_datetime_t *base,
         const saflok_mfc_datetime_offset_t offset
         ) {
+
+        static const int MY_DEBUG_LEVEL = DEBUG;
         // adding dates is non-trivial.
         // luckily, there's already a standard for this...
         struct tm tm = {
-            .tm_year = base->year - 1900,
-            .tm_mon  = base->month,
-            .tm_mday = base->day,
-            .tm_hour = base->hour,
-            .tm_min  = base->minute,
+            .tm_year = base->year - 1900,  // years since 1900
+            .tm_mon  = base->month - 1,    // range: [0..11]
+            .tm_mday = base->day,          // range: [1..31]
+            .tm_hour = base->hour,         // range: [0..23]
+            .tm_min  = base->minute,       // range: [0..59]
             .tm_sec  = 30, // selecting midpoint to avoid leapseconds changing minute
             .tm_isdst = 0, // UTC has no DST
         };
+
+        PrintAndLogEx(MY_DEBUG_LEVEL, "Base date: %04u-%02u-%02uT%02u:%02u\n",
+            base->year, base->month, base->day,
+            base->hour, base->minute
+        );
+        PrintAndLogEx(MY_DEBUG_LEVEL, "As struct tm: %04d-%02d-%02dT%02d:%02d\n",
+            tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday,
+            tm.tm_hour, tm.tm_min
+        );
+        PrintAndLogEx(MY_DEBUG_LEVEL, "Offset to add: %u years, %u months, %u days, %u hours, %u minutes\n",
+            offset.years, offset.months, offset.days,
+            offset.hours, offset.minutes
+        );
+
         // add the offsets ... and it's OK for them to be out of range
         tm.tm_year += offset.years;
         tm.tm_mon  += offset.months;
         tm.tm_mday += offset.days;
         tm.tm_hour += offset.hours;
         tm.tm_min  += offset.minutes;
-        // now deal with carrying overflows
+
+        PrintAndLogEx(MY_DEBUG_LEVEL, "With Offset (pre-normalization): %04d-%02d-%02dT%02d:%02d\n",
+            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+            tm.tm_hour, tm.tm_min
+        );
+
         if (tm.tm_min >= 60) {
-            tm.tm_hour ++;
-            tm.tm_min -= 60;
+            tm.tm_hour += tm.tm_min / 60;
+            tm.tm_min = tm.tm_min % 60;
+            PrintAndLogEx(MY_DEBUG_LEVEL, "Normalized minutes: %04d-%02d-%02dT%02d:%02d\n",
+                tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+                tm.tm_hour, tm.tm_min
+            );
+
         }
         if (tm.tm_hour >= 24) {
-            tm.tm_mday ++;
-            tm.tm_hour -= 24;
+            tm.tm_mday += tm.tm_hour / 24;
+            tm.tm_hour = tm.tm_hour % 24;
+            PrintAndLogEx(MY_DEBUG_LEVEL, "Normalized hours: %04d-%02d-%02dT%02d:%02d\n",
+                tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+                tm.tm_hour, tm.tm_min
+            );
         }
-        // addition is easy...
-        uint8_t days_in_month = get_days_in_month(tm.tm_year + 1900, tm.tm_mon + 1);
-        if (tm.tm_mday > days_in_month) {
-            tm.tm_mon ++;
+        // variable days per month ... loop is simplest option
+        for (uint8_t days_in_month = get_days_in_month(tm.tm_year + 1900, tm.tm_mon + 1);
+             tm.tm_mday > days_in_month;
+             days_in_month = get_days_in_month(tm.tm_year + 1900, tm.tm_mon + 1)
+            ) {
+            tm.tm_mon  ++;
             tm.tm_mday -= days_in_month;
+            if (tm.tm_mon >= 12) {
+                tm.tm_year ++;
+                tm.tm_mon -= 12;
+            }
+            PrintAndLogEx(MY_DEBUG_LEVEL, "Normalized days: %04d-%02d-%02dT%02d:%02d\n",
+                tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+                tm.tm_hour, tm.tm_min
+            );
         }
         if (tm.tm_mon >= 12) {
-            tm.tm_year ++;
-            tm.tm_mon -= 12;
+            tm.tm_year += tm.tm_mon / 12;
+            tm.tm_mon = tm.tm_mon % 12;
+            PrintAndLogEx(MY_DEBUG_LEVEL, "Normalized months: %04d-%02d-%02dT%02d:%02d\n",
+                tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+                tm.tm_hour, tm.tm_min
+            );
         }
+        PrintAndLogEx(MY_DEBUG_LEVEL, "Final normalized date: %04d-%02d-%02dT%02d:%02d\n",
+            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+            tm.tm_hour, tm.tm_min
+        );
+
         // and finally convert back into saflok_mfc_datetime_t
         saflok_mfc_datetime_t result = {
             .year   = tm.tm_year + 1900,
-            .month  = tm.tm_mon,
+            .month  = tm.tm_mon + 1,
             .day    = tm.tm_mday,
             .hour   = tm.tm_hour,
             .minute = tm.tm_min
         };
+        PrintAndLogEx(MY_DEBUG_LEVEL, "Converted back to saflok_mfc_datetime_t: %04d-%02d-%02dT%02d:%02d\n",
+            result.year, result.month, result.day,
+            result.hour, result.minute
+        );
         return result;
     }
     static saflok_mfc_datetime_offset_t get_datetime_offset(
@@ -573,9 +626,22 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     static saflok_mfc_datetime_t get_saflok_mfc_card_expiration_datetime(
         const saflok_mfc_data_t *data
         ) {
+        static const int MY_DEBUG_LEVEL = DEBUG;
         saflok_mfc_datetime_t creation_date = get_saflok_mfc_card_creation_datetime(data);
         saflok_mfc_datetime_offset_t offset = get_saflok_mfc_interval(data);
+        PrintAndLogEx(MY_DEBUG_LEVEL, "Card Creation Date: %04u-%02u-%02uT%02u:%02u",
+            creation_date.year, creation_date.month, creation_date.day,
+            creation_date.hour, creation_date.minute
+        );
+        PrintAndLogEx(MY_DEBUG_LEVEL, "Card Interval Offset: %u years, %u months, %u days, %u hours, %u minutes\n",
+            offset.years, offset.months, offset.days,
+            offset.hours, offset.minutes
+        );
         saflok_mfc_datetime_t expiration = add_offset(&creation_date, offset);
+        PrintAndLogEx(MY_DEBUG_LEVEL, "Calculated Expiration Date: %04u-%02u-%02uT%02u:%02u\n",
+            expiration.year, expiration.month, expiration.day,
+            expiration.hour, expiration.minute
+        );
         return expiration;
     }
     static bool set_saflok_mfc_card_expiration_datetime(
@@ -838,13 +904,14 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
 // NOTE: apparently accepted for this legacy codebase.
 static char *bytes_to_hex(const uint8_t *data, size_t len) {
     static char buf[256]; // WARNING: caller must immediately use or copy the result, and it's still not thread-safe!
+    static const size_t maximum_data_len = (ARRAYLEN(buf) / 2) - 1; // leave room for null terminator
     // BUGBUG: previously had no bounds checking on len!
-    assert(len < (ARRAYLEN(buf)/2)); // calling with larger length is a programming error which previously caused silent data corruption.
-    len = (len < (ARRAYLEN(buf)/2)) ? len : (ARRAYLEN(buf)/2) - 1; // prevent buffer overflow
+    assert(len <= maximum_data_len); // calling with larger length is a programming error which previously caused silent data corruption.
+    len = (len < maximum_data_len) ? len : maximum_data_len;
+    memset(buf, 0, sizeof(buf)); // Clear the buffer before use
     for (size_t i = 0; i < len; i++) {
         sprintf(buf + (i * 2), "%02X", data[i]);
     }
-    buf[len * 2] = '\0';
     return buf;
 }
 
@@ -1339,7 +1406,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
 
     int result = PM3_SUCCESS;
 
-    PrintAndLogEx(WARNING, "NYI: Saflok self-test not yet fully implemented.");
+    PrintAndLogEx(WARNING, "Saflok self-test is non-exhaustive, 4-byte MFC only.");
     // TODO: encode some sample cards using prior versions of the code.
     //       verify the resulting decoded data matches expectations,
     //       or investigate which one results in correct data.
@@ -1355,12 +1422,12 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
                     uint32_t value_set = (uint32_t)iter;
                     bool success = set_bitfield(&testdata, start_bit, num_bits, value_set);
                     if (!success) {
-                        PrintAndLogEx(FAILED, "set_bitfield failed for start_bit %zu, num_bits %zu, test_value %llu", start_bit, num_bits, value_set);
+                        PrintAndLogEx(FAILED, "set_bitfield failed for start_bit %zu, num_bits %zu, test_value " PRIx32, start_bit, num_bits, value_set);
                         result_bitfield = PM3_EFAILED;
                     }
                     uint32_t x = get_bitfield(&testdata, start_bit, num_bits);
                     if (x != value_set) {
-                        PrintAndLogEx(FAILED, "get/set_bitfield failed for start_bit %zu, num_bits %zu, test_value %llu: got %u, expected %llu", start_bit, num_bits, value_set, x, value_set);
+                        PrintAndLogEx(FAILED, "get/set_bitfield failed for start_bit %zu, num_bits %zu, test_value " PRIx32 ": got " PRIx32", expected " PRIx32, start_bit, num_bits, value_set, x, value_set);
                         result_bitfield = PM3_EFAILED;
                     }
                     // Clear the field for the next test
@@ -1618,6 +1685,11 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             [ ] set_saflok_mfc_raw_card_creation_date
         }
         if (true) {
+            [ ] is_saflok_mfc_datetime_valid
+            [ ] add_offset
+            [ ] get_datetime_offset
+        }
+        if (true) {
             [ ] _get_saflok_mfc_card_creation_year_impl
             [ ] _set_saflok_mfc_card_creation_year_impl
             [ ] _get_saflok_mfc_card_creation_month_impl
@@ -1628,7 +1700,6 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             [ ] _set_saflok_mfc_card_creation_hour_impl
             [ ] _get_saflok_mfc_card_creation_minute_impl
             [ ] _set_saflok_mfc_card_creation_minute_impl
-            [ ] is_saflok_mfc_datetime_valid
             [ ] get_saflok_mfc_card_creation_datetime
             [ ] set_saflok_mfc_card_creation_datetime
         }
@@ -1646,8 +1717,6 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             [ ] _set_saflok_mfc_interval_minutes_impl
             [ ] get_saflok_mfc_interval
             [ ] set_saflok_mfc_interval
-            [ ] add_offset
-            [ ] get_datetime_offset
             [ ] get_saflok_mfc_card_expiration_datetime
             [ ] set_saflok_mfc_card_expiration_datetime
         }
