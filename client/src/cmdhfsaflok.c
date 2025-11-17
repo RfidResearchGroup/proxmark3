@@ -81,7 +81,7 @@ typedef struct _saflok_mfc_datetime_offset_t {
 #define KEY_LENGTH sizeof(saflok_mfc_key_t)
 
 static uint32_t get_bitfield(const saflok_mfc_data_t *data, size_t start_bit, size_t num_bits);
-static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_bits, uint32_t value);
+static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_bits, uint32_t value);
 
 
 
@@ -95,8 +95,8 @@ static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
             PrintAndLogEx(ERR, _RED_("ERROR:") " card_level out of range (%08x)\n", card_level);
             return false;
         }
-        set_bitfield(data, 0, 4, card_level);
-        return true;
+        bool success = set_bitfield(data, 0, 4, card_level);
+        return success;
     }
     static inline uint8_t get_saflok_mfc_card_type(const saflok_mfc_data_t *data) {
         return (uint8_t)get_bitfield(data, 4, 4);
@@ -106,8 +106,8 @@ static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
             PrintAndLogEx(ERR, _RED_("ERROR:") " card_type out of range (%08x)\n", card_type);
             return false;
         }
-        set_bitfield(data, 4, 4, card_type);
-        return true;
+        bool success = set_bitfield(data, 4, 4, card_type);
+        return success;
     }
     static inline uint8_t get_saflok_mfc_card_id(const saflok_mfc_data_t *data) {
         return (uint8_t)get_bitfield(data, 8, 8);
@@ -117,8 +117,8 @@ static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
             PrintAndLogEx(ERR, _RED_("ERROR:") " card_id out of range (%08x)\n", card_id);
             return false;
         }
-        set_bitfield(data, 8, 8, card_id);
-        return true;
+        bool success = set_bitfield(data, 8, 8, card_id);
+        return success;
     }
     static inline uint8_t get_saflok_mfc_opening_key(const saflok_mfc_data_t *data) {
         return (uint8_t)get_bitfield(data, 16, 2);
@@ -128,8 +128,8 @@ static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
             PrintAndLogEx(ERR, _RED_("ERROR:") " opening_key out of range (%08x)\n", opening_key);
             return false;
         }
-        set_bitfield(data, 16, 2, opening_key);
-        return true;
+        bool success = set_bitfield(data, 16, 2, opening_key);
+        return success;
     }
     static inline uint16_t get_saflok_mfc_lock_id(const saflok_mfc_data_t *data) {
         return (uint16_t)get_bitfield(data, 18, 14);
@@ -139,8 +139,8 @@ static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
             PrintAndLogEx(ERR, _RED_("ERROR:") " lock_id out of range (%08x)\n", lock_id);
             return false;
         }
-        set_bitfield(data, 18, 14, lock_id);
-        return true;
+        bool success = set_bitfield(data, 18, 14, lock_id);
+        return success;
     }
     static inline uint16_t get_saflok_mfc_pass_number(const saflok_mfc_data_t *data) {
         return (uint16_t)get_bitfield(data, 32, 12);
@@ -150,8 +150,8 @@ static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
             PrintAndLogEx(ERR, _RED_("ERROR:") " pass_number out of range (%08x)\n", pass_number);
             return false;
         }
-        set_bitfield(data, 32, 12, pass_number);
-        return true;
+        bool success = set_bitfield(data, 32, 12, pass_number);
+        return success;
     }
     static inline uint16_t get_saflok_mfc_sequence_and_combination(const saflok_mfc_data_t *data) {
         return (uint16_t)get_bitfield(data, 44, 12);
@@ -161,16 +161,16 @@ static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
             PrintAndLogEx(ERR, _RED_("ERROR:") " sequence_and_combination out of range (%08x)\n", sequence_and_combination);
             return false;
         }
-        set_bitfield(data, 44, 12, sequence_and_combination);
-        return true;
+        bool success = set_bitfield(data, 44, 12, sequence_and_combination);
+        return success;
     }
     static inline bool get_saflok_mfc_deadbolt_override(const saflok_mfc_data_t *data) {
         uint32_t result = get_bitfield(data, 56, 1);
         return (result != 0);
     }
     static inline bool set_saflok_mfc_deadbolt_override(saflok_mfc_data_t *data, uint32_t deadbolt_override) {
-        set_bitfield(data, 56, 1, deadbolt_override ? 0x1 : 0x0);
-        return true;
+        bool success = set_bitfield(data, 56, 1, deadbolt_override ? 0x1 : 0x0);
+        return success;
     }
     static inline uint8_t get_saflok_mfc_restricted_days(const saflok_mfc_data_t *data) {
         return (uint8_t)get_bitfield(data, 57, 7);
@@ -180,8 +180,8 @@ static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
             PrintAndLogEx(ERR, _RED_("ERROR:") " restricted_days out of range (%08x)\n", restricted_days);
             return false;
         }
-        set_bitfield(data, 57, 7, restricted_days);
-        return true;
+        bool success = set_bitfield(data, 57, 7, restricted_days);
+        return success;
     }
     static inline uint32_t get_saflok_mfc_raw_interval(const saflok_mfc_data_t *data) {
         return get_bitfield(data, 64, 24);
@@ -191,8 +191,8 @@ static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
             PrintAndLogEx(ERR, _RED_("ERROR:") " raw_interval out of range (%08x)\n", raw_interval);
             return false;
         }
-        set_bitfield(data, 64, 24, raw_interval);
-        return true;
+        bool success = set_bitfield(data, 64, 24, raw_interval);
+        return success;
     }
     static inline uint32_t get_saflok_mfc_raw_card_creation_date(const saflok_mfc_data_t *data) {
         return get_bitfield(data, 88, 28);
@@ -202,8 +202,8 @@ static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
             PrintAndLogEx(ERR, _RED_("ERROR:") " raw_card_creation_date out of range (%08x)\n", raw_card_creation_date);
             return false;
         }
-        set_bitfield(data, 88, 28, raw_card_creation_date);
-        return true;
+        bool success = set_bitfield(data, 88, 28, raw_card_creation_date);
+        return success;
     }
     static inline uint16_t get_saflok_mfc_property_id(const saflok_mfc_data_t *data) {
         return get_bitfield(data, 116, 12);
@@ -213,8 +213,8 @@ static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
             PrintAndLogEx(ERR, _RED_("ERROR:") " property_id out of range (%08x)\n", property_id);
             return false;
         }
-        set_bitfield(data, 116, 12, property_id);
-        return true;
+        bool success = set_bitfield(data, 116, 12, property_id);
+        return success;
     }
     static inline uint8_t get_saflok_mfc_checksum(const saflok_mfc_data_t *data) {
         return data->raw[16];
@@ -795,27 +795,27 @@ static uint32_t get_bitfield(const saflok_mfc_data_t *data, size_t start_bit, si
     return result;
 }
 
-static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_bits, uint32_t value) {
+static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_bits, uint32_t value) {
     static const size_t total_available_bits = ARRAYLEN(data->raw) * 8;
     if (start_bit >= total_available_bits) {
         // Out of bounds access
         PrintAndLogEx(ERR, "set_bitfield: out of bounds access (start_bit=%zu, total_available_bits=%zu)\n", start_bit, total_available_bits);
-        return;
+        return false;
     }
     if (num_bits > 32) {
         // Exceeds maximum supported bit extraction
         PrintAndLogEx(ERR, "set_bitfield: num_bits exceeds 32\n");
-        return;
+        return false;
     }
     if (total_available_bits - start_bit < num_bits) {
         // Out of bounds access
         PrintAndLogEx(ERR, "set_bitfield: out of bounds access (start_bit=%zu + num_bits=%zu > total_available_bits=%zu)\n", start_bit, num_bits, total_available_bits);
-        return;
+        return false;
     }
     if ((num_bits < 32) && ((value >> num_bits) != 0)) {
         // Value exceeds the size of the specified bit field
         PrintAndLogEx(ERR, "set_bitfield: value exceeds bit field size (value=%u (0x%08x), num_bits=%zu)\n", value, value, num_bits);
-        return;
+        return false;
     }
 
 
@@ -828,6 +828,7 @@ static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
 
         data->raw[byte_index] = (data->raw[byte_index] & ~(1 << bit_index)) | (bit_value << bit_index);
     }
+    return true;
 }
 
 // Static analysis hint: reads all bytes of `data[len]`
@@ -1343,6 +1344,36 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
     //       verify the resulting decoded data matches expectations,
     //       or investigate which one results in correct data.
 
+    // get/set bitfield tests
+    if (true) {
+        int result_bitfield = PM3_SUCCESS;
+        saflok_mfc_data_t testdata = {0};
+        for (size_t start_bit = 0; start_bit < ARRAYLEN(testdata.raw) * 8; start_bit += 3) {
+            for (size_t num_bits = 1; num_bits <= 32 && (start_bit + num_bits) <= (ARRAYLEN(testdata.raw) * 8); ++num_bits) {
+                uint64_t max_test_value = (num_bits == 32) ? 0xFFFFFFFFu : ((1ULL << num_bits) - 1);
+                for (uint64_t iter = 0u; iter <= max_test_value; iter += (max_test_value / 1024) + 1) {
+                    uint32_t value_set = (uint32_t)iter;
+                    bool success = set_bitfield(&testdata, start_bit, num_bits, value_set);
+                    if (!success) {
+                        PrintAndLogEx(FAILED, "set_bitfield failed for start_bit %zu, num_bits %zu, test_value %llu", start_bit, num_bits, value_set);
+                        result_bitfield = PM3_EFAILED;
+                    }
+                    uint32_t x = get_bitfield(&testdata, start_bit, num_bits);
+                    if (x != value_set) {
+                        PrintAndLogEx(FAILED, "get/set_bitfield failed for start_bit %zu, num_bits %zu, test_value %llu: got %u, expected %llu", start_bit, num_bits, value_set, x, value_set);
+                        result_bitfield = PM3_EFAILED;
+                    }
+                    // Clear the field for the next test
+                    memset(testdata.raw, 0, sizeof(testdata.raw));
+                }
+            }
+        }
+        if (result_bitfield == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "get/set_bitfield passed");
+        } else {
+            result = PM3_EFAILED;
+        }   
+    }
     // card_level               field is  4 bits
     if (true) {
         int result_card_level = PM3_SUCCESS;
@@ -1574,10 +1605,10 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             result = PM3_EFAILED;
         }
     }
-    // raw_interval             field is 20 bits -- special set processing needed
-    // raw_expire_date          field is 24 bits -- special set processing needed
-    // raw_card_creation_date   field is 28 bits -- special set processing needed
     /*
+        // raw_interval             field is 20 bits -- special set processing needed
+        // raw_expire_date          field is 24 bits -- special set processing needed
+        // raw_card_creation_date   field is 28 bits -- special set processing needed
         if (true) {
             [ ] get_saflok_mfc_raw_interval_date
             [ ] set_saflok_mfc_raw_interval_date
