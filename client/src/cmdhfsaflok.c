@@ -41,7 +41,7 @@ static const uint8_t _days_in_month_lookup[] = {0, 31, 28, 31, 30, 31, 30, 31, 3
 
 static inline uint8_t get_days_in_month(uint16_t year, uint8_t month) {
     if (month < 1 || month > 12) { // programmer error ... this function uses 1-based indexing!
-        PrintAndLogEx(ERR, "Invalid month lookup: %d, expected range [1..12] ... returning 0 days!\n", month);
+        PrintAndLogEx(ERR, "Invalid month lookup: %d, expected range [1..12] ... returning 0 days!", month);
         return 0;
     }
     
@@ -96,7 +96,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     }
     static inline bool set_saflok_mfc_card_level(saflok_mfc_data_t *data, uint32_t card_level) {
         if (card_level > 0xFu) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " card_level out of range (%08x)\n", card_level);
+            PrintAndLogEx(ERR, _RED_("ERROR:") " card_level out of range (%08x)", card_level);
             return false;
         }
         bool success = set_bitfield(data, 0, 4, card_level);
@@ -107,7 +107,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     }
     static inline bool set_saflok_mfc_card_type(saflok_mfc_data_t *data, uint32_t card_type) {
         if (card_type > 0xFu) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " card_type out of range (%08x)\n", card_type);
+            PrintAndLogEx(ERR, _RED_("ERROR:") " card_type out of range (%08x)", card_type);
             return false;
         }
         bool success = set_bitfield(data, 4, 4, card_type);
@@ -118,7 +118,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     }
     static inline bool set_saflok_mfc_card_id(saflok_mfc_data_t *data, uint32_t card_id) {
         if (card_id > 0xFFu) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " card_id out of range (%08x)\n", card_id);
+            PrintAndLogEx(ERR, _RED_("ERROR:") " card_id out of range (%08x)", card_id);
             return false;
         }
         bool success = set_bitfield(data, 8, 8, card_id);
@@ -129,7 +129,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     }
     static inline bool set_saflok_mfc_opening_key(saflok_mfc_data_t *data, uint32_t opening_key) {
         if (opening_key > 0x3u) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " opening_key out of range (%08x)\n", opening_key);
+            PrintAndLogEx(ERR, _RED_("ERROR:") " opening_key out of range (%08x)", opening_key);
             return false;
         }
         bool success = set_bitfield(data, 16, 2, opening_key);
@@ -140,7 +140,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     }
     static inline bool set_saflok_mfc_lock_id(saflok_mfc_data_t *data, uint32_t lock_id) {
         if (lock_id > 0x3FFFu) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " lock_id out of range (%08x)\n", lock_id);
+            PrintAndLogEx(ERR, _RED_("ERROR:") " lock_id out of range (%08x)", lock_id);
             return false;
         }
         bool success = set_bitfield(data, 18, 14, lock_id);
@@ -151,7 +151,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     }
     static inline bool set_saflok_mfc_pass_number(saflok_mfc_data_t *data, uint32_t pass_number) {
         if (pass_number > 0xFFFu) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " pass_number out of range (%08x)\n", pass_number);
+            PrintAndLogEx(ERR, _RED_("ERROR:") " pass_number out of range (%08x)", pass_number);
             return false;
         }
         bool success = set_bitfield(data, 32, 12, pass_number);
@@ -162,7 +162,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     }
     static inline bool set_saflok_mfc_sequence_and_combination(saflok_mfc_data_t *data, uint32_t sequence_and_combination) {
         if (sequence_and_combination > 0xFFFu) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " sequence_and_combination out of range (%08x)\n", sequence_and_combination);
+            PrintAndLogEx(ERR, _RED_("ERROR:") " sequence_and_combination out of range (%08x)", sequence_and_combination);
             return false;
         }
         bool success = set_bitfield(data, 44, 12, sequence_and_combination);
@@ -181,7 +181,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     }
     static inline bool set_saflok_mfc_restricted_days(saflok_mfc_data_t *data, uint32_t restricted_days) {
         if (restricted_days > 0x7Fu) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " restricted_days out of range (%08x)\n", restricted_days);
+            PrintAndLogEx(ERR, _RED_("ERROR:") " restricted_days out of range (%08x)", restricted_days);
             return false;
         }
         bool success = set_bitfield(data, 57, 7, restricted_days);
@@ -192,7 +192,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     }
     static inline bool set_saflok_mfc_raw_interval(saflok_mfc_data_t *data, uint32_t raw_interval) {
         if (raw_interval > 0xFFFFFFu) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " raw_interval out of range (%08x)\n", raw_interval);
+            PrintAndLogEx(ERR, _RED_("ERROR:") " raw_interval out of range (%08x)", raw_interval);
             return false;
         }
         bool success = set_bitfield(data, 64, 24, raw_interval);
@@ -203,7 +203,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     }
     static inline bool set_saflok_mfc_raw_card_creation_date(saflok_mfc_data_t *data, uint32_t raw_card_creation_date) {
         if (raw_card_creation_date > 0x0FFFFFFFu) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " raw_card_creation_date out of range (%08x)\n", raw_card_creation_date);
+            PrintAndLogEx(ERR, _RED_("ERROR:") " raw_card_creation_date out of range (%08x)", raw_card_creation_date);
             return false;
         }
         bool success = set_bitfield(data, 88, 28, raw_card_creation_date);
@@ -214,7 +214,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     }
     static inline bool set_saflok_mfc_property_id(saflok_mfc_data_t *data, uint32_t property_id) {
         if (property_id > 0xFFFu) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " property_id out of range (%08x)\n", property_id);
+            PrintAndLogEx(ERR, _RED_("ERROR:") " property_id out of range (%08x)", property_id);
             return false;
         }
         bool success = set_bitfield(data, 116, 12, property_id);
@@ -239,7 +239,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     }
     static inline bool _set_saflok_mfc_card_creation_year_impl(saflok_mfc_data_t *data, uint16_t year) {
         if (year < 1980u || year > (1980u+0x7Fu)) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " year out of range (%u)\n", year);
+            PrintAndLogEx(ERR, _RED_("ERROR:") " year out of range (%u)", year);
             return false;
         }
         uint16_t year_bits = year - 1980u;
@@ -255,7 +255,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     }
     static inline bool _set_saflok_mfc_card_creation_month_impl(saflok_mfc_data_t *data, uint8_t month) {
         if (month < 1 || month > 12) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " month out of range (%u)\n", month);
+            PrintAndLogEx(ERR, _RED_("ERROR:") " month out of range (%u)", month);
             return false;
         }
         data->raw[11] = (data->raw[11] & 0xF0u) | (month & 0x0Fu);
@@ -291,24 +291,24 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     static inline bool is_saflok_mfc_datetime_valid(const saflok_mfc_datetime_t *date) {
         bool result = true;
         if ((date->year < 1980) || (date->year > (1980u+0xFFu)) ) {
-            PrintAndLogEx(WARNING, "year out of range (%d)\n", date->year);
+            PrintAndLogEx(WARNING, "year out of range (%d)", date->year);
             result = false;
         }
         if ((date->month < 1) || (date->month > 12)) {
-            PrintAndLogEx(WARNING, "month out of range (%d)\n", date->month);
+            PrintAndLogEx(WARNING, "month out of range (%d)", date->month);
             result = false;
         }
         uint8_t max_days = get_days_in_month(date->year, date->month);
         if ((date->day < 1u) || (date->day > max_days)) {
-            PrintAndLogEx(WARNING, "day out of range (%d) for month %d year %d\n", date->day, date->month, date->year);
+            PrintAndLogEx(WARNING, "day out of range (%d) for month %d year %d", date->day, date->month, date->year);
             result = false;
         }
         if (date->hour > 23) {
-            PrintAndLogEx(WARNING, "hour out of range (%d)\n", date->hour);
+            PrintAndLogEx(WARNING, "hour out of range (%d)", date->hour);
             result = false;
         }
         if (date->minute > 59) {
-            PrintAndLogEx(WARNING, "minute out of range (%d)\n", date->minute);
+            PrintAndLogEx(WARNING, "minute out of range (%d)", date->minute);
             result = false;
         }
         return result;
@@ -324,7 +324,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
             .minute = _get_saflok_mfc_card_creation_minute_impl(data)
         };
         if (!is_saflok_mfc_datetime_valid(&date)) {
-            PrintAndLogEx(WARNING, "Warning: creation date appears invalid: %04d-%02d-%02dT%02d:%02d\n",
+            PrintAndLogEx(WARNING, "Warning: creation date appears invalid: %04d-%02d-%02dT%02d:%02d",
                 date.year, date.month, date.day, date.hour, date.minute
             );
         }
@@ -332,7 +332,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     }
     static inline bool set_saflok_mfc_card_creation_datetime(saflok_mfc_data_t * data, const saflok_mfc_datetime_t * date) {
         if (!is_saflok_mfc_datetime_valid(date)) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " creation date is invalid\n");
+            PrintAndLogEx(ERR, _RED_("ERROR:") " creation date is invalid");
             return false;
         }
         bool result =
@@ -342,7 +342,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
             _set_saflok_mfc_card_creation_hour_impl(data, date->hour) &&
             _set_saflok_mfc_card_creation_minute_impl(data, date->minute);
         if (!result) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " failed to set creation date of %04d-%02d-%02dT%02d:%02d\n",
+            PrintAndLogEx(ERR, _RED_("ERROR:") " failed to set creation date of %04d-%02d-%02dT%02d:%02d",
                 date->year, date->month, date->day, date->hour, date->minute
             );
         }
@@ -356,7 +356,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     }
     static inline bool _set_saflok_mfc_interval_years_impl(saflok_mfc_data_t *data, uint32_t years) {
         if (years > 0xFu) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " interval years out of range (%u)\n", years);
+            PrintAndLogEx(ERR, _RED_("ERROR:") " interval years out of range (%u)", years);
             return false;
         }
         data->raw[8] = (data->raw[8] & 0x0Fu) | ((years & 0xFFu) << 4);
@@ -365,13 +365,13 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     static inline uint8_t _get_saflok_mfc_interval_months_impl(const saflok_mfc_data_t *data) {
         uint8_t months = data->raw[8] & 0x0Fu;
         if (months >= 12u) {
-            PrintAndLogEx(WARNING, "Warning: interval months appears invalid (%u)\n", months);
+            PrintAndLogEx(WARNING, "Warning: interval months appears invalid (%u)", months);
         }
         return months;
     }
     static inline bool _set_saflok_mfc_interval_months_impl(saflok_mfc_data_t *data, uint8_t months) {
         if (months >= 12u) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " interval months out of range (%u)\n", months);
+            PrintAndLogEx(ERR, _RED_("ERROR:") " interval months out of range (%u)", months);
             return false;
         }
         data->raw[8] = (data->raw[8] & 0xF0u) | (months & 0x0Fu);
@@ -380,13 +380,13 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     static inline uint8_t _get_saflok_mfc_interval_days_impl(const saflok_mfc_data_t *data) {
         uint8_t days = (data->raw[9] >> 3) & 0x1Fu;
         if (days > 31u) {
-            PrintAndLogEx(WARNING, "Warning: interval days appears invalid (%u)\n", days);
+            PrintAndLogEx(WARNING, "Warning: interval days appears invalid (%u)", days);
         }
         return days;
     }
     static inline bool _set_saflok_mfc_interval_days_impl(saflok_mfc_data_t *data, uint8_t days) {
         if (days > 31u) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " interval days out of range (%u)\n", days);
+            PrintAndLogEx(ERR, _RED_("ERROR:") " interval days out of range (%u)", days);
             return false;
         }
         data->raw[9] = (data->raw[9] & 0x07u) | ((days & 0x1Fu) << 3);
@@ -397,13 +397,13 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
         // top two bits from raw[10]
         uint8_t hours = ((data->raw[9] & 0x07u) << 2) | (data->raw[10] >> 6);
         if (hours > 23u) {
-            PrintAndLogEx(WARNING, "Warning: interval hours appears invalid (%u)\n", hours);
+            PrintAndLogEx(WARNING, "Warning: interval hours appears invalid (%u)", hours);
         }
         return hours;
     }
     static inline bool _set_saflok_mfc_interval_hours_impl(saflok_mfc_data_t *data, uint8_t hours) {
         if (hours > 23u) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " interval hours out of range (%u)\n", hours);
+            PrintAndLogEx(ERR, _RED_("ERROR:") " interval hours out of range (%u)", hours);
             return false;
         }
         // five bit value split across two bytes:
@@ -416,13 +416,13 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     static inline uint8_t _get_saflok_mfc_interval_minutes_impl(const saflok_mfc_data_t *data) {
         uint8_t minutes = (data->raw[10] & 0x3Fu);
         if (minutes > 59u) {
-            PrintAndLogEx(WARNING, "Warning: interval minutes appears invalid (%u)\n", minutes);
+            PrintAndLogEx(WARNING, "Warning: interval minutes appears invalid (%u)", minutes);
         }
         return minutes;
     }
     static inline bool _set_saflok_mfc_interval_minutes_impl(saflok_mfc_data_t *data, uint8_t minutes) {
         if (minutes > 59u) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " interval minutes out of range (%u)\n", minutes);
+            PrintAndLogEx(ERR, _RED_("ERROR:") " interval minutes out of range (%u)", minutes);
             return false;
         }
         data->raw[10] = (data->raw[10] & 0xC0u) | (minutes & 0x3Fu);
@@ -473,15 +473,15 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
             .tm_isdst = 0, // UTC has no DST
         };
 
-        PrintAndLogEx(MY_DEBUG_LEVEL, "Base date: %04u-%02u-%02uT%02u:%02u\n",
+        PrintAndLogEx(MY_DEBUG_LEVEL, "Base date: %04u-%02u-%02uT%02u:%02u",
             base->year, base->month, base->day,
             base->hour, base->minute
         );
-        PrintAndLogEx(MY_DEBUG_LEVEL, "As struct tm: %04d-%02d-%02dT%02d:%02d\n",
+        PrintAndLogEx(MY_DEBUG_LEVEL, "As struct tm: %04d-%02d-%02dT%02d:%02d",
             tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday,
             tm.tm_hour, tm.tm_min
         );
-        PrintAndLogEx(MY_DEBUG_LEVEL, "Offset to add: %u years, %u months, %u days, %u hours, %u minutes\n",
+        PrintAndLogEx(MY_DEBUG_LEVEL, "Offset to add: %u years, %u months, %u days, %u hours, %u minutes",
             offset.years, offset.months, offset.days,
             offset.hours, offset.minutes
         );
@@ -493,7 +493,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
         tm.tm_hour += offset.hours;
         tm.tm_min  += offset.minutes;
 
-        PrintAndLogEx(MY_DEBUG_LEVEL, "With Offset (pre-normalization): %04d-%02d-%02dT%02d:%02d\n",
+        PrintAndLogEx(MY_DEBUG_LEVEL, "With Offset (pre-normalization): %04d-%02d-%02dT%02d:%02d",
             tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
             tm.tm_hour, tm.tm_min
         );
@@ -501,7 +501,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
         if (tm.tm_min >= 60) {
             tm.tm_hour += tm.tm_min / 60;
             tm.tm_min = tm.tm_min % 60;
-            PrintAndLogEx(MY_DEBUG_LEVEL, "Normalized minutes: %04d-%02d-%02dT%02d:%02d\n",
+            PrintAndLogEx(MY_DEBUG_LEVEL, "Normalized minutes: %04d-%02d-%02dT%02d:%02d",
                 tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
                 tm.tm_hour, tm.tm_min
             );
@@ -510,7 +510,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
         if (tm.tm_hour >= 24) {
             tm.tm_mday += tm.tm_hour / 24;
             tm.tm_hour = tm.tm_hour % 24;
-            PrintAndLogEx(MY_DEBUG_LEVEL, "Normalized hours: %04d-%02d-%02dT%02d:%02d\n",
+            PrintAndLogEx(MY_DEBUG_LEVEL, "Normalized hours: %04d-%02d-%02dT%02d:%02d",
                 tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
                 tm.tm_hour, tm.tm_min
             );
@@ -526,7 +526,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
                 tm.tm_year ++;
                 tm.tm_mon -= 12;
             }
-            PrintAndLogEx(MY_DEBUG_LEVEL, "Normalized days: %04d-%02d-%02dT%02d:%02d\n",
+            PrintAndLogEx(MY_DEBUG_LEVEL, "Normalized days: %04d-%02d-%02dT%02d:%02d",
                 tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
                 tm.tm_hour, tm.tm_min
             );
@@ -534,12 +534,12 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
         if (tm.tm_mon >= 12) {
             tm.tm_year += tm.tm_mon / 12;
             tm.tm_mon = tm.tm_mon % 12;
-            PrintAndLogEx(MY_DEBUG_LEVEL, "Normalized months: %04d-%02d-%02dT%02d:%02d\n",
+            PrintAndLogEx(MY_DEBUG_LEVEL, "Normalized months: %04d-%02d-%02dT%02d:%02d",
                 tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
                 tm.tm_hour, tm.tm_min
             );
         }
-        PrintAndLogEx(MY_DEBUG_LEVEL, "Final normalized date: %04d-%02d-%02dT%02d:%02d\n",
+        PrintAndLogEx(MY_DEBUG_LEVEL, "Final normalized date: %04d-%02d-%02dT%02d:%02d",
             tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
             tm.tm_hour, tm.tm_min
         );
@@ -552,7 +552,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
             .hour   = tm.tm_hour,
             .minute = tm.tm_min
         };
-        PrintAndLogEx(MY_DEBUG_LEVEL, "Converted back to saflok_mfc_datetime_t: %04d-%02d-%02dT%02d:%02d\n",
+        PrintAndLogEx(MY_DEBUG_LEVEL, "Converted back to saflok_mfc_datetime_t: %04d-%02d-%02dT%02d:%02d",
             result.year, result.month, result.day,
             result.hour, result.minute
         );
@@ -567,15 +567,15 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
         saflok_mfc_datetime_offset_t result = {0};
 
         if (!is_saflok_mfc_datetime_valid(start)) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " start date is invalid\n");
+            PrintAndLogEx(ERR, _RED_("ERROR:") " start date is invalid");
             return result;
         }
         if (!is_saflok_mfc_datetime_valid(end)) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " end date is invalid\n");
+            PrintAndLogEx(ERR, _RED_("ERROR:") " end date is invalid");
             return result;
         }
 
-        PrintAndLogEx(MYDBG, "Calculating offset from %04u-%02u-%02uT%02u:%02u to %04u-%02u-%02uT%02u:%02u\n",
+        PrintAndLogEx(MYDBG, "Calculating offset from %04u-%02u-%02uT%02u:%02u to %04u-%02u-%02uT%02u:%02u",
             start->year, start->month, start->day, start->hour, start->minute,
             end->year, end->month, end->day, end->hour, end->minute
         );
@@ -588,7 +588,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
             .tm_hour = end->hour - start->hour,
             .tm_min  = end->minute - start->minute,
         };
-        PrintAndLogEx(MYDBG, "Initial diff: %d years, %d months, %d days, %d hours, %d minutes\n",
+        PrintAndLogEx(MYDBG, "Initial diff: %d years, %d months, %d days, %d hours, %d minutes",
             diff.tm_year, diff.tm_mon, diff.tm_mday, diff.tm_hour, diff.tm_min
             );
         if (diff.tm_min < 0) {
@@ -604,7 +604,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
             uint16_t tgt_year = end->year - (end->month == 1 ? 1 : 0);
             uint8_t tgt_month = (end->month == 1 ? 12 : (end->month - 1));
             uint8_t days_in_prev_month = get_days_in_month(tgt_year, tgt_month);
-            PrintAndLogEx(MYDBG, "Borrowing days from month %02u of year %04u which has %02u days\n",
+            PrintAndLogEx(MYDBG, "Borrowing days from month %02u of year %04u which has %02u days",
                 tgt_month, tgt_year, days_in_prev_month
                 );
 
@@ -622,7 +622,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
         result.days    = diff.tm_mday;
         result.hours   = diff.tm_hour;
         result.minutes = diff.tm_min;
-        PrintAndLogEx(MYDBG, "Final offset: %d years, %d months, %d days, %d hours, %d minutes\n",
+        PrintAndLogEx(MYDBG, "Final offset: %d years, %d months, %d days, %d hours, %d minutes",
             result.years, result.months, result.days, result.hours, result.minutes
             );
         return result;
@@ -637,12 +637,12 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
             creation_date.year, creation_date.month, creation_date.day,
             creation_date.hour, creation_date.minute
         );
-        PrintAndLogEx(MY_DEBUG_LEVEL, "Card Interval Offset: %u years, %u months, %u days, %u hours, %u minutes\n",
+        PrintAndLogEx(MY_DEBUG_LEVEL, "Card Interval Offset: %u years, %u months, %u days, %u hours, %u minutes",
             offset.years, offset.months, offset.days,
             offset.hours, offset.minutes
         );
         saflok_mfc_datetime_t expiration = add_offset(&creation_date, offset);
-        PrintAndLogEx(MY_DEBUG_LEVEL, "Calculated Expiration Date: %04u-%02u-%02uT%02u:%02u\n",
+        PrintAndLogEx(MY_DEBUG_LEVEL, "Calculated Expiration Date: %04u-%02u-%02uT%02u:%02u",
             expiration.year, expiration.month, expiration.day,
             expiration.hour, expiration.minute
         );
@@ -653,7 +653,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
         const saflok_mfc_datetime_t * expiration
         ) {
         if (!is_saflok_mfc_datetime_valid(expiration)) {
-            PrintAndLogEx(ERR, _RED_("ERROR:") " expiration date is invalid\n");
+            PrintAndLogEx(ERR, _RED_("ERROR:") " expiration date is invalid");
             return false;
         }
         saflok_mfc_datetime_t creation_datetime = get_saflok_mfc_card_creation_datetime(data);
@@ -840,17 +840,17 @@ static uint32_t get_bitfield(const saflok_mfc_data_t *data, size_t start_bit, si
     static const size_t total_available_bits = ARRAYLEN(data->raw) * 8;
     if (start_bit >= total_available_bits) {
         // Out of bounds access
-        PrintAndLogEx(ERR, "get_bitfield: out of bounds access (start_bit=%zu, total_available_bits=%zu)\n", start_bit, total_available_bits);
+        PrintAndLogEx(ERR, "get_bitfield: out of bounds access (start_bit=%zu, total_available_bits=%zu)", start_bit, total_available_bits);
         return 0;
     }
     if (num_bits > 32) {
         // Exceeds maximum supported bit extraction
-        PrintAndLogEx(ERR, "get_bitfield: out of bounds access (num_bits=%zu, max=32)\n", num_bits);
+        PrintAndLogEx(ERR, "get_bitfield: out of bounds access (num_bits=%zu, max=32)", num_bits);
         return 0;
     }
     if (total_available_bits - start_bit < num_bits) {
         // Out of bounds access
-        PrintAndLogEx(ERR, "get_bitfield: out of bounds access (start_bit=%zu + num_bits=%zu > total_available_bits=%zu)\n", start_bit, num_bits, total_available_bits);
+        PrintAndLogEx(ERR, "get_bitfield: out of bounds access (start_bit=%zu + num_bits=%zu > total_available_bits=%zu)", start_bit, num_bits, total_available_bits);
         return 0;
     }
 
@@ -869,22 +869,22 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     static const size_t total_available_bits = ARRAYLEN(data->raw) * 8;
     if (start_bit >= total_available_bits) {
         // Out of bounds access
-        PrintAndLogEx(ERR, "set_bitfield: out of bounds access (start_bit=%zu, total_available_bits=%zu)\n", start_bit, total_available_bits);
+        PrintAndLogEx(ERR, "set_bitfield: out of bounds access (start_bit=%zu, total_available_bits=%zu)", start_bit, total_available_bits);
         return false;
     }
     if (num_bits > 32) {
         // Exceeds maximum supported bit extraction
-        PrintAndLogEx(ERR, "set_bitfield: num_bits exceeds 32\n");
+        PrintAndLogEx(ERR, "set_bitfield: num_bits exceeds 32");
         return false;
     }
     if (total_available_bits - start_bit < num_bits) {
         // Out of bounds access
-        PrintAndLogEx(ERR, "set_bitfield: out of bounds access (start_bit=%zu + num_bits=%zu > total_available_bits=%zu)\n", start_bit, num_bits, total_available_bits);
+        PrintAndLogEx(ERR, "set_bitfield: out of bounds access (start_bit=%zu + num_bits=%zu > total_available_bits=%zu)", start_bit, num_bits, total_available_bits);
         return false;
     }
     if ((num_bits < 32) && ((value >> num_bits) != 0)) {
         // Value exceeds the size of the specified bit field
-        PrintAndLogEx(ERR, "set_bitfield: value exceeds bit field size (value=%u (0x%08x), num_bits=%zu)\n", value, value, num_bits);
+        PrintAndLogEx(ERR, "set_bitfield: value exceeds bit field size (value=%u (0x%08x), num_bits=%zu)", value, value, num_bits);
         return false;
     }
 
@@ -911,7 +911,7 @@ static char *bytes_to_hex(const uint8_t *data, size_t len) {
     static const size_t maximum_data_len = (ARRAYLEN(buf) / 2) - 1; // leave room for null terminator
 
     if (len > maximum_data_len) {
-        PrintAndLogEx(ERR, "saflok bytes_to_hex: input length %zu exceeds maximum supported %zu, results will be truncated!\n", len, maximum_data_len);
+        PrintAndLogEx(ERR, "saflok bytes_to_hex: input length %zu exceeds maximum supported %zu, results will be truncated!", len, maximum_data_len);
         len = maximum_data_len;
     }
     memset(buf, 0, sizeof(buf)); // Clear the buffer before use
