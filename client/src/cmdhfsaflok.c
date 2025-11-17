@@ -37,11 +37,11 @@
 // defining this structure makes it more clear what
 // is passed around, and avoids the need to pass lengths
 // to many of the functions.
-static const uint8_t days_in_month_lookup[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+static const uint8_t _days_in_month_lookup[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 static inline uint8_t get_days_in_month(uint16_t year, uint8_t month) {
     assert(month >= 1 && month <= 12); // this uses 1-based indexing!
-    uint8_t days = days_in_month_lookup[month];
+    uint8_t days = _days_in_month_lookup[month];
     // Adjust for leap years
     if ((month == 2u) &&
         (year % 4u == 0u) &&
@@ -80,155 +80,140 @@ typedef struct _saflok_mfc_datetime_offset_t {
 
 #define KEY_LENGTH sizeof(saflok_mfc_key_t)
 
-static uint32_t extract_bits(const saflok_mfc_data_t *data, size_t start_bit, size_t num_bits);
-static void insert_bits(saflok_mfc_data_t *data, size_t start_bit, size_t num_bits, uint32_t value);
+static uint32_t get_bitfield(const saflok_mfc_data_t *data, size_t start_bit, size_t num_bits);
+static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_bits, uint32_t value);
 
 
 
 #if 1 // getters and setters for each bitfield in saflok_mfc_data_t
-    // TODO: consider update to setter functions to use smaller type for data?
-    //       avoiding for this commit, as larger change.
-    //
-    // card_level               field is  4 bits
-    // card_type                field is  4 bits
-    // card_id                  field is  8 bits
-    // opening_key              field is  2 bits
-    // lock_id                  field is 14 bits
-    // pass_number              field is 12 bits
-    // sequence_and_combination field is 12 bits
-    // deadbolt_override        field is  1 bits
-    // restricted_days          field is  7 bits
-    // raw_expire_date          field is 24 bits -- special set processing needed
-    // raw_card_creation_date   field is 28 bits -- special set processing needed
-    // property_id              field is 12 bits
 
     static inline uint8_t get_saflok_mfc_card_level(const saflok_mfc_data_t *data) {
-        return (uint8_t)extract_bits(data, 0, 4);
+        return (uint8_t)get_bitfield(data, 0, 4);
     }
     static inline bool set_saflok_mfc_card_level(saflok_mfc_data_t *data, uint32_t card_level) {
         if (card_level > 0xFu) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " card_level out of range (%08x)\n", card_level);
             return false;
         }
-        insert_bits(data, 0, 4, card_level);
+        set_bitfield(data, 0, 4, card_level);
         return true;
     }
     static inline uint8_t get_saflok_mfc_card_type(const saflok_mfc_data_t *data) {
-        return (uint8_t)extract_bits(data, 4, 4);
+        return (uint8_t)get_bitfield(data, 4, 4);
     }
     static inline bool set_saflok_mfc_card_type(saflok_mfc_data_t *data, uint32_t card_type) {
         if (card_type > 0xFu) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " card_type out of range (%08x)\n", card_type);
             return false;
         }
-        insert_bits(data, 4, 4, card_type);
+        set_bitfield(data, 4, 4, card_type);
         return true;
     }
     static inline uint8_t get_saflok_mfc_card_id(const saflok_mfc_data_t *data) {
-        return (uint8_t)extract_bits(data, 8, 8);
+        return (uint8_t)get_bitfield(data, 8, 8);
     }
     static inline bool set_saflok_mfc_card_id(saflok_mfc_data_t *data, uint32_t card_id) {
         if (card_id > 0xFFu) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " card_id out of range (%08x)\n", card_id);
             return false;
         }
-        insert_bits(data, 8, 8, card_id);
+        set_bitfield(data, 8, 8, card_id);
         return true;
     }
     static inline uint8_t get_saflok_mfc_opening_key(const saflok_mfc_data_t *data) {
-        return (uint8_t)extract_bits(data, 16, 2);
+        return (uint8_t)get_bitfield(data, 16, 2);
     }
     static inline bool set_saflok_mfc_opening_key(saflok_mfc_data_t *data, uint32_t opening_key) {
         if (opening_key > 0x3u) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " opening_key out of range (%08x)\n", opening_key);
             return false;
         }
-        insert_bits(data, 16, 2, opening_key);
+        set_bitfield(data, 16, 2, opening_key);
         return true;
     }
     static inline uint16_t get_saflok_mfc_lock_id(const saflok_mfc_data_t *data) {
-        return (uint16_t)extract_bits(data, 18, 14);
+        return (uint16_t)get_bitfield(data, 18, 14);
     }
     static inline bool set_saflok_mfc_lock_id(saflok_mfc_data_t *data, uint32_t lock_id) {
         if (lock_id > 0x3FFFu) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " lock_id out of range (%08x)\n", lock_id);
             return false;
         }
-        insert_bits(data, 18, 14, lock_id);
+        set_bitfield(data, 18, 14, lock_id);
         return true;
     }
     static inline uint16_t get_saflok_mfc_pass_number(const saflok_mfc_data_t *data) {
-        return (uint16_t)extract_bits(data, 32, 12);
+        return (uint16_t)get_bitfield(data, 32, 12);
     }
     static inline bool set_saflok_mfc_pass_number(saflok_mfc_data_t *data, uint32_t pass_number) {
         if (pass_number > 0xFFFu) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " pass_number out of range (%08x)\n", pass_number);
             return false;
         }
-        insert_bits(data, 32, 12, pass_number);
+        set_bitfield(data, 32, 12, pass_number);
         return true;
     }
     static inline uint16_t get_saflok_mfc_sequence_and_combination(const saflok_mfc_data_t *data) {
-        return (uint16_t)extract_bits(data, 44, 12);
+        return (uint16_t)get_bitfield(data, 44, 12);
     }
     static inline bool set_saflok_mfc_sequence_and_combination(saflok_mfc_data_t *data, uint32_t sequence_and_combination) {
         if (sequence_and_combination > 0xFFFu) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " sequence_and_combination out of range (%08x)\n", sequence_and_combination);
             return false;
         }
-        insert_bits(data, 44, 12, sequence_and_combination);
+        set_bitfield(data, 44, 12, sequence_and_combination);
         return true;
     }
     static inline bool get_saflok_mfc_deadbolt_override(const saflok_mfc_data_t *data) {
-        uint32_t result = extract_bits(data, 56, 1);
+        uint32_t result = get_bitfield(data, 56, 1);
         return (result != 0);
     }
     static inline bool set_saflok_mfc_deadbolt_override(saflok_mfc_data_t *data, uint32_t deadbolt_override) {
-        insert_bits(data, 56, 1, deadbolt_override ? 0x1 : 0x0);
+        set_bitfield(data, 56, 1, deadbolt_override ? 0x1 : 0x0);
         return true;
     }
     static inline uint8_t get_saflok_mfc_restricted_days(const saflok_mfc_data_t *data) {
-        return (uint8_t)extract_bits(data, 57, 7);
+        return (uint8_t)get_bitfield(data, 57, 7);
     }
     static inline bool set_saflok_mfc_restricted_days(saflok_mfc_data_t *data, uint32_t restricted_days) {
         if (restricted_days > 0x7Fu) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " restricted_days out of range (%08x)\n", restricted_days);
             return false;
         }
-        insert_bits(data, 57, 7, restricted_days);
+        set_bitfield(data, 57, 7, restricted_days);
         return true;
     }
     static inline uint32_t get_saflok_mfc_raw_interval(const saflok_mfc_data_t *data) {
-        return extract_bits(data, 64, 24);
+        return get_bitfield(data, 64, 24);
     }
     static inline bool set_saflok_mfc_raw_interval(saflok_mfc_data_t *data, uint32_t raw_interval) {
         if (raw_interval > 0xFFFFFFu) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " raw_interval out of range (%08x)\n", raw_interval);
             return false;
         }
-        insert_bits(data, 64, 24, raw_interval);
+        set_bitfield(data, 64, 24, raw_interval);
         return true;
     }
     static inline uint32_t get_saflok_mfc_raw_card_creation_date(const saflok_mfc_data_t *data) {
-        return extract_bits(data, 88, 28);
+        return get_bitfield(data, 88, 28);
     }
     static inline bool set_saflok_mfc_raw_card_creation_date(saflok_mfc_data_t *data, uint32_t raw_card_creation_date) {
         if (raw_card_creation_date > 0x0FFFFFFFu) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " raw_card_creation_date out of range (%08x)\n", raw_card_creation_date);
             return false;
         }
-        insert_bits(data, 88, 28, raw_card_creation_date);
+        set_bitfield(data, 88, 28, raw_card_creation_date);
         return true;
     }
     static inline uint16_t get_saflok_mfc_property_id(const saflok_mfc_data_t *data) {
-        return extract_bits(data, 116, 12);
+        return get_bitfield(data, 116, 12);
     }
     static inline bool set_saflok_mfc_property_id(saflok_mfc_data_t *data, uint32_t property_id) {
         if (property_id > 0xFFFFu) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " property_id out of range (%08x)\n", property_id);
             return false;
         }
-        insert_bits(data, 116, 12, property_id);
+        set_bitfield(data, 116, 12, property_id);
         return true;
     }
     static inline uint8_t get_saflok_mfc_checksum(const saflok_mfc_data_t *data) {
@@ -309,14 +294,7 @@ static void insert_bits(saflok_mfc_data_t *data, size_t start_bit, size_t num_bi
             PrintAndLogEx(WARNING, "month out of range (%d)\n", date->month);
             result = false;
         }
-        uint8_t max_days = days_in_month_lookup[date->month];
-        // Adjust for leap years
-        if ((date->month == 2u) &&
-            (date->year % 4u == 0u) &&
-            ((date->year % 100u != 0u) || (date->year % 400u == 0u))
-           ) {
-            max_days = 29u;
-        }
+        uint8_t max_days = get_days_in_month(date->year, date->month);
         if ((date->day < 1u) || (date->day > max_days)) {
             PrintAndLogEx(WARNING, "day out of range (%d) for month %d year %d\n", date->day, date->month, date->year);
             result = false;
@@ -718,11 +696,6 @@ _Static_assert(ARRAYLEN(level_names) == 16, "level_names must have 16 elements")
 
 static int CmdHelp(const char *Cmd);
 
-// unsafe without static analysis hints.
-// strCard       : uint8_t[length]
-// decryptedCard : uint8_t[length]
-// length        : ALWAYS == 17
-// safelok_mfc_data_t* for both parameters?
 static void saflok_decrypt(const saflok_mfc_data_t *encryptedCard, saflok_mfc_data_t *decryptedCard) {
     
     static const size_t length = ARRAYLEN(encryptedCard->raw);
@@ -759,8 +732,6 @@ static void saflok_decrypt(const saflok_mfc_data_t *encryptedCard, saflok_mfc_da
         decryptedCard->raw[num2 - 1] = b;
     }
 }
-
-
 static void saflok_encrypt(const saflok_mfc_data_t *plaintext, saflok_mfc_data_t *encryptedCard) {
     static const size_t length = ARRAYLEN(plaintext->raw);
     int b = 0;
@@ -795,22 +766,21 @@ static void saflok_encrypt(const saflok_mfc_data_t *plaintext, saflok_mfc_data_t
         encryptedCard->raw[i] = c_aEncode[j];
     }
 }
-
-static uint32_t extract_bits(const saflok_mfc_data_t *data, size_t start_bit, size_t num_bits) {
+static uint32_t get_bitfield(const saflok_mfc_data_t *data, size_t start_bit, size_t num_bits) {
     static const size_t total_available_bits = ARRAYLEN(data->raw) * 8;
     if (start_bit >= total_available_bits) {
         // Out of bounds access
-        PrintAndLogEx(ERR, "extract_bits: out of bounds access (start_bit=%zu, total_available_bits=%zu)\n", start_bit, total_available_bits);
+        PrintAndLogEx(ERR, "get_bitfield: out of bounds access (start_bit=%zu, total_available_bits=%zu)\n", start_bit, total_available_bits);
         return 0;
     }
     if (num_bits > 32) {
         // Exceeds maximum supported bit extraction
-        PrintAndLogEx(ERR, "extract_bits: out of bounds access (num_bits=%zu, max=32)\n", num_bits);
+        PrintAndLogEx(ERR, "get_bitfield: out of bounds access (num_bits=%zu, max=32)\n", num_bits);
         return 0;
     }
     if (total_available_bits - start_bit < num_bits) {
         // Out of bounds access
-        PrintAndLogEx(ERR, "extract_bits: out of bounds access (start_bit=%zu + num_bits=%zu > total_available_bits=%zu)\n", start_bit, num_bits, total_available_bits);
+        PrintAndLogEx(ERR, "get_bitfield: out of bounds access (start_bit=%zu + num_bits=%zu > total_available_bits=%zu)\n", start_bit, num_bits, total_available_bits);
         return 0;
     }
 
@@ -825,26 +795,26 @@ static uint32_t extract_bits(const saflok_mfc_data_t *data, size_t start_bit, si
     return result;
 }
 
-static void insert_bits(saflok_mfc_data_t *data, size_t start_bit, size_t num_bits, uint32_t value) {
+static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_bits, uint32_t value) {
     static const size_t total_available_bits = ARRAYLEN(data->raw) * 8;
     if (start_bit >= total_available_bits) {
         // Out of bounds access
-        PrintAndLogEx(ERR, "insert_bits: out of bounds access (start_bit=%zu, total_available_bits=%zu)\n", start_bit, total_available_bits);
+        PrintAndLogEx(ERR, "set_bitfield: out of bounds access (start_bit=%zu, total_available_bits=%zu)\n", start_bit, total_available_bits);
         return;
     }
     if (num_bits > 32) {
         // Exceeds maximum supported bit extraction
-        PrintAndLogEx(ERR, "insert_bits: num_bits exceeds 32\n", num_bits);
+        PrintAndLogEx(ERR, "set_bitfield: num_bits exceeds 32\n", num_bits);
         return;
     }
     if (total_available_bits - start_bit < num_bits) {
         // Out of bounds access
-        PrintAndLogEx(ERR, "insert_bits: out of bounds access (start_bit=%zu + num_bits=%zu > total_available_bits=%zu)\n", start_bit, num_bits, total_available_bits);
+        PrintAndLogEx(ERR, "set_bitfield: out of bounds access (start_bit=%zu + num_bits=%zu > total_available_bits=%zu)\n", start_bit, num_bits, total_available_bits);
         return;
     }
     if ((num_bits < 32) && ((value >> num_bits) != 0)) {
         // Value exceeds the size of the specified bit field
-        PrintAndLogEx(ERR, "insert_bits: value exceeds bit field size (value=%u (0x%08x), num_bits=%zu)\n", value, value, num_bits);
+        PrintAndLogEx(ERR, "set_bitfield: value exceeds bit field size (value=%u (0x%08x), num_bits=%zu)\n", value, value, num_bits);
         return;
     }
 
@@ -986,23 +956,15 @@ static void saflok_encode(
         // return value ignored ... function here is void(!)
         set_saflok_mfc_card_creation_datetime(data, &creation_dt);
     }
-    //else{
-    //insert_bits(data, 88, 28,card_creation_date);
-    //PrintAndLogEx(SUCCESS, "DT BITS INSERTED");
-    //}
 
     saflok_mfc_datetime_t expiration_dt = {0};
     if (sscanf(dt_expiration, fmt, &expiration_dt.year, &expiration_dt.month, &expiration_dt.day, &expiration_dt.hour, &expiration_dt.minute) == 5) {
         // return value ignored ... function here is void(!)
         set_saflok_mfc_card_expiration_datetime(data, &expiration_dt);
     }
-    //else{
-    //insert_bits(data, 64, 24, expire_date);
-    //PrintAndLogEx(SUCCESS, "DTE BITS INSERTED");
-    //}
 
     uint8_t checksum = calculated_saflok_checksum(data);
-    insert_bits(data, 128, 8, checksum);
+    set_bitfield(data, 128, 8, checksum);
 
 }
 
@@ -1359,65 +1321,94 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
 
     int result = PM3_SUCCESS;
 
-    PrintAndLogEx(WARNING, "NYI: Saflok self-test not yet implemented.");
+    PrintAndLogEx(WARNING, "NYI: Saflok self-test not yet fully implemented.");
     // TODO: encode some sample cards using prior versions of the code.
     //       verify the resulting decoded data matches expectations,
     //       or investigate which one results in correct data.
 
     /*
-    [ ] get_saflok_mfc_card_level
-    [ ] set_saflok_mfc_card_level
-    [ ] get_saflok_mfc_card_type
-    [ ] set_saflok_mfc_card_type
-    [ ] get_saflok_mfc_card_id
-    [ ] set_saflok_mfc_card_id
-    [ ] get_saflok_mfc_opening_key
-    [ ] set_saflok_mfc_opening_key
-    [ ] get_saflok_mfc_lock_id
-    [ ] set_saflok_mfc_lock_id
-    [ ] get_saflok_mfc_pass_number
-    [ ] set_saflok_mfc_pass_number
-    [ ] get_saflok_mfc_sequence_and_combination
-    [ ] set_saflok_mfc_sequence_and_combination
-    [ ] get_saflok_mfc_deadbolt_override
-    [ ] set_saflok_mfc_deadbolt_override
-    [ ] get_saflok_mfc_restricted_days
-    [ ] set_saflok_mfc_restricted_days
-    [ ] get_saflok_mfc_raw_interval_date
-    [ ] set_saflok_mfc_raw_interval_date
-    [ ] get_saflok_mfc_raw_card_creation_date
-    [ ] set_saflok_mfc_raw_card_creation_date
-    [ ] get_saflok_mfc_property_id
-    [ ] set_saflok_mfc_property_id
-    [ ] _get_saflok_mfc_card_creation_year_impl
-    [ ] _set_saflok_mfc_card_creation_year_impl
-    [ ] _get_saflok_mfc_card_creation_month_impl
-    [ ] _set_saflok_mfc_card_creation_month_impl
-    [ ] _get_saflok_mfc_card_creation_day_impl
-    [ ] _set_saflok_mfc_card_creation_day_impl
-    [ ] _get_saflok_mfc_card_creation_hour_impl
-    [ ] _set_saflok_mfc_card_creation_hour_impl
-    [ ] _get_saflok_mfc_card_creation_minute_impl
-    [ ] _set_saflok_mfc_card_creation_minute_impl
-    [ ] is_saflok_mfc_datetime_valid
-    [ ] get_saflok_mfc_card_creation_datetime
-    [ ] set_saflok_mfc_card_creation_datetime
-    [ ] _get_saflok_mfc_interval_years_impl
-    [ ] _set_saflok_mfc_interval_years_impl
-    [ ] _get_saflok_mfc_interval_months_impl
-    [ ] _set_saflok_mfc_interval_months_impl
-    [ ] _get_saflok_mfc_interval_days_impl
-    [ ] _set_saflok_mfc_interval_days_impl
-    [ ] _get_saflok_mfc_interval_hours_impl
-    [ ] _set_saflok_mfc_interval_hours_impl
-    [ ] _get_saflok_mfc_interval_minutes_impl
-    [ ] _set_saflok_mfc_interval_minutes_impl
-    [ ] get_saflok_mfc_interval
-    [ ] set_saflok_mfc_interval
-    [ ] add_offset
-    [ ] get_datetime_offset
-    [ ] get_saflok_mfc_card_expiration_datetime
-    [ ] set_saflok_mfc_card_expiration_datetime
+        if (true) {
+            [ ] get_saflok_mfc_card_level
+            [ ] set_saflok_mfc_card_level
+        }
+        if (true) {
+            [ ] get_saflok_mfc_card_type
+            [ ] set_saflok_mfc_card_type
+        }
+        if (true) {
+            [ ] get_saflok_mfc_card_id
+            [ ] set_saflok_mfc_card_id
+        }
+        if (true) {
+            [ ] get_saflok_mfc_opening_key
+            [ ] set_saflok_mfc_opening_key
+        }
+        if (true) {
+            [ ] get_saflok_mfc_lock_id
+            [ ] set_saflok_mfc_lock_id
+        }
+        if (true) {
+            [ ] get_saflok_mfc_pass_number
+            [ ] set_saflok_mfc_pass_number
+        }
+        if (true) {
+            [ ] get_saflok_mfc_sequence_and_combination
+            [ ] set_saflok_mfc_sequence_and_combination
+        }
+        if (true) {
+            [ ] get_saflok_mfc_deadbolt_override
+            [ ] set_saflok_mfc_deadbolt_override
+        }
+        if (true) {
+            [ ] get_saflok_mfc_restricted_days
+            [ ] set_saflok_mfc_restricted_days
+        }
+        if (true) {
+            [ ] get_saflok_mfc_raw_interval_date
+            [ ] set_saflok_mfc_raw_interval_date
+        }
+        if (true) {
+            [ ] get_saflok_mfc_raw_card_creation_date
+            [ ] set_saflok_mfc_raw_card_creation_date
+        }
+        if (true) {
+            [ ] get_saflok_mfc_property_id
+            [ ] set_saflok_mfc_property_id
+        }
+        if (true) {
+            [ ] _get_saflok_mfc_card_creation_year_impl
+            [ ] _set_saflok_mfc_card_creation_year_impl
+            [ ] _get_saflok_mfc_card_creation_month_impl
+            [ ] _set_saflok_mfc_card_creation_month_impl
+            [ ] _get_saflok_mfc_card_creation_day_impl
+            [ ] _set_saflok_mfc_card_creation_day_impl
+            [ ] _get_saflok_mfc_card_creation_hour_impl
+            [ ] _set_saflok_mfc_card_creation_hour_impl
+            [ ] _get_saflok_mfc_card_creation_minute_impl
+            [ ] _set_saflok_mfc_card_creation_minute_impl
+            [ ] is_saflok_mfc_datetime_valid
+            [ ] get_saflok_mfc_card_creation_datetime
+            [ ] set_saflok_mfc_card_creation_datetime
+        }
+        if (true) {
+            // NOTE: these require card creation date to be set first
+            [ ] _get_saflok_mfc_interval_years_impl
+            [ ] _set_saflok_mfc_interval_years_impl
+            [ ] _get_saflok_mfc_interval_months_impl
+            [ ] _set_saflok_mfc_interval_months_impl
+            [ ] _get_saflok_mfc_interval_days_impl
+            [ ] _set_saflok_mfc_interval_days_impl
+            [ ] _get_saflok_mfc_interval_hours_impl
+            [ ] _set_saflok_mfc_interval_hours_impl
+            [ ] _get_saflok_mfc_interval_minutes_impl
+            [ ] _set_saflok_mfc_interval_minutes_impl
+            [ ] get_saflok_mfc_interval
+            [ ] set_saflok_mfc_interval
+            [ ] add_offset
+            [ ] get_datetime_offset
+            [ ] get_saflok_mfc_card_expiration_datetime
+            [ ] set_saflok_mfc_card_expiration_datetime
+        }
     */
 
     if (true) { // test encode+encrypt, including interval affected by leap-year
