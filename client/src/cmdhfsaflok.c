@@ -209,7 +209,7 @@ static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
         return get_bitfield(data, 116, 12);
     }
     static inline bool set_saflok_mfc_property_id(saflok_mfc_data_t *data, uint32_t property_id) {
-        if (property_id > 0xFFFFu) {
+        if (property_id > 0xFFFu) {
             PrintAndLogEx(ERR, _RED_("ERROR:") " property_id out of range (%08x)\n", property_id);
             return false;
         }
@@ -261,7 +261,7 @@ static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
         return ((data->raw[12] >> 3) & 0x1Fu);
     }
     static inline bool _set_saflok_mfc_card_creation_day_impl(saflok_mfc_data_t *data, uint8_t day) {
-        data->raw[12] = (data->raw[12] & 0xE0u) | ((day & 0x1Fu) << 3);
+        data->raw[12] = (data->raw[12] & 0x07u) | ((day & 0x1Fu) << 3);
         return true;
     }
     static inline uint8_t _get_saflok_mfc_card_creation_hour_impl(const saflok_mfc_data_t *data) {
@@ -385,7 +385,7 @@ static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
             PrintAndLogEx(ERR, _RED_("ERROR:") " interval days out of range (%u)\n", days);
             return false;
         }
-        data->raw[9] = (data->raw[9] & 0xC7u) | ((days & 0x1Fu) << 3);
+        data->raw[9] = (data->raw[9] & 0x07u) | ((days & 0x1Fu) << 3);
         return true;
     }
     static inline uint8_t _get_saflok_mfc_interval_hours_impl(const saflok_mfc_data_t *data) {
@@ -459,8 +459,8 @@ static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
         // luckily, there's already a standard for this...
         struct tm tm = {
             .tm_year = base->year - 1900,
-            .tm_mon  = base->month - 1,
-            .tm_mday = base->day - 1,
+            .tm_mon  = base->month,
+            .tm_mday = base->day,
             .tm_hour = base->hour,
             .tm_min  = base->minute,
             .tm_sec  = 30, // selecting midpoint to avoid leapseconds changing minute
@@ -483,7 +483,7 @@ static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
         }
         // addition is easy...
         uint8_t days_in_month = get_days_in_month(tm.tm_year + 1900, tm.tm_mon + 1);
-        if (tm.tm_mday >= days_in_month) {
+        if (tm.tm_mday > days_in_month) {
             tm.tm_mon ++;
             tm.tm_mday -= days_in_month;
         }
@@ -494,8 +494,8 @@ static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
         // and finally convert back into saflok_mfc_datetime_t
         saflok_mfc_datetime_t result = {
             .year   = tm.tm_year + 1900,
-            .month  = tm.tm_mon + 1,
-            .day    = tm.tm_mday + 1,
+            .month  = tm.tm_mon,
+            .day    = tm.tm_mday,
             .hour   = tm.tm_hour,
             .minute = tm.tm_min
         };
@@ -804,7 +804,7 @@ static void set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     }
     if (num_bits > 32) {
         // Exceeds maximum supported bit extraction
-        PrintAndLogEx(ERR, "set_bitfield: num_bits exceeds 32\n", num_bits);
+        PrintAndLogEx(ERR, "set_bitfield: num_bits exceeds 32\n");
         return;
     }
     if (total_available_bits - start_bit < num_bits) {
@@ -949,18 +949,35 @@ static void saflok_encode(
     set_saflok_mfc_property_id(data, property_id);
 
     // Parsing date time string from "YYYY-MM-DDTHH:mm" into `saflok_mfc_datetime_t`
-    static const char * fmt = "%4" SCNu16 "-%2" SCNu8 "-%2" SCNu8 "T%2" SCNu8 ":%2" SCNu8;
+    static const char * fmt = "%4u-%2u-%2uT%2u:%2u";
 
-    saflok_mfc_datetime_t creation_dt = {0};
-    if (sscanf(dt, fmt, &creation_dt.year, &creation_dt.month, &creation_dt.day, &creation_dt.hour, &creation_dt.minute) == 5) {
-        // return value ignored ... function here is void(!)
-        set_saflok_mfc_card_creation_datetime(data, &creation_dt);
+    if (true) {
+        saflok_mfc_datetime_t creation_dt = {0};
+        unsigned int year, month, day, hour, minute;
+        if (sscanf(dt, fmt, &year, &month, &day, &hour, &minute) == 5) {
+            if (month >= 1 && month <= 12 && day >= 1 && day <= 31 && hour <= 23 && minute <= 59) {
+                creation_dt.year = year;
+                creation_dt.month = (uint8_t)month;
+                creation_dt.day = (uint8_t)day;
+                creation_dt.hour = (uint8_t)hour;
+                creation_dt.minute = (uint8_t)minute;
+                set_saflok_mfc_card_creation_datetime(data, &creation_dt);
+            }
+        }
     }
-
-    saflok_mfc_datetime_t expiration_dt = {0};
-    if (sscanf(dt_expiration, fmt, &expiration_dt.year, &expiration_dt.month, &expiration_dt.day, &expiration_dt.hour, &expiration_dt.minute) == 5) {
-        // return value ignored ... function here is void(!)
-        set_saflok_mfc_card_expiration_datetime(data, &expiration_dt);
+    if (true) {
+        saflok_mfc_datetime_t expiration_dt = {0};
+        unsigned int exp_year, exp_month, exp_day, exp_hour, exp_minute;
+        if (sscanf(dt_expiration, fmt, &exp_year, &exp_month, &exp_day, &exp_hour, &exp_minute) == 5) {
+            if (exp_month >= 1 && exp_month <= 12 && exp_day >= 1 && exp_day <= 31 && exp_hour <= 23 && exp_minute <= 59) {
+                expiration_dt.year = (uint16_t)exp_year;
+                expiration_dt.month = (uint8_t)exp_month;
+                expiration_dt.day = (uint8_t)exp_day;
+                expiration_dt.hour = (uint8_t)exp_hour;
+                expiration_dt.minute = (uint8_t)exp_minute;
+                set_saflok_mfc_card_expiration_datetime(data, &expiration_dt);
+            }
+        }
     }
 
     uint8_t checksum = calculated_saflok_checksum(data);
