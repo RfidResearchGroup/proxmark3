@@ -40,7 +40,7 @@
 static const uint8_t _days_in_month_lookup[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 static inline uint8_t get_days_in_month(uint16_t year, uint8_t month) {
-    assert(month >= 1 && month <= 12); // this uses 1-based indexing!
+    assert(month >= 1 && month <= 12); // programmer error ... this function uses 1-based indexing!  Must fault here to prevent wrong data from propagating ....
     uint8_t days = _days_in_month_lookup[month];
     // Adjust for leap years
     if ((month == 2u) &&
@@ -839,7 +839,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
 static char *bytes_to_hex(const uint8_t *data, size_t len) {
     static char buf[256]; // WARNING: caller must immediately use or copy the result, and it's still not thread-safe!
     // BUGBUG: previously had no bounds checking on len!
-    assert(len < (ARRAYLEN(buf)/2));
+    assert(len < (ARRAYLEN(buf)/2)); // calling with larger length is a programming error which previously caused silent data corruption.
     len = (len < (ARRAYLEN(buf)/2)) ? len : (ARRAYLEN(buf)/2) - 1; // prevent buffer overflow
     for (size_t i = 0; i < len; i++) {
         sprintf(buf + (i * 2), "%02X", data[i]);
