@@ -1343,43 +1343,241 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
     //       verify the resulting decoded data matches expectations,
     //       or investigate which one results in correct data.
 
+    // card_level               field is  4 bits
+    if (true) {
+        int result_card_level = PM3_SUCCESS;
+        saflok_mfc_data_t testdata = {0};
+        for (uint8_t i = 0; i < 16; ++i) {
+            bool success = set_saflok_mfc_card_level(&testdata, i);
+            if (!success) {
+                PrintAndLogEx(FAILED, "set_saflok_mfc_card_level failed for value %u", i);
+                result_card_level = PM3_EFAILED;
+            } else {
+                uint8_t x = get_saflok_mfc_card_level(&testdata);
+                if (x != i) {
+                    PrintAndLogEx(FAILED, "get_saflok_mfc_card_level returned %u, expected %u", x, i);
+                    result_card_level = PM3_EFAILED;
+                }
+            }
+        }
+        if (result_card_level == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_card_level passed");
+        } else {
+            result = PM3_EFAILED;
+        }
+
+    }
+    // card_type                field is  4 bits
+    if (true) {
+        int result_card_type = PM3_SUCCESS;
+        saflok_mfc_data_t testdata = {0};
+        for (uint8_t i = 0; i < 16; ++i) {
+            bool success = set_saflok_mfc_card_type(&testdata, i);
+            if (!success) {
+                PrintAndLogEx(FAILED, "set_saflok_mfc_card_type failed for value %u", i);
+                result_card_type = PM3_EFAILED;
+            } else {
+                uint8_t x = get_saflok_mfc_card_type(&testdata);
+                if (x != i) {
+                    PrintAndLogEx(FAILED, "get_saflok_mfc_card_type returned %u, expected %u", x, i);
+                    result_card_type = PM3_EFAILED;
+                }
+            }
+        }
+        if (result_card_type == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_card_type passed");
+        } else {
+            result = PM3_EFAILED;
+        }
+    }
+    // card_id                  field is  8 bits
+    if (true) {
+        int result_card_id = PM3_SUCCESS;
+        saflok_mfc_data_t testdata = {0};
+        for (uint16_t i = 0; i < 256; ++i) {
+            bool success = set_saflok_mfc_card_id(&testdata, i);
+            if (!success) {
+                PrintAndLogEx(FAILED, "set_saflok_mfc_card_type failed for value %u", i);
+                result_card_id = PM3_EFAILED;
+            } else {
+                uint8_t x = get_saflok_mfc_card_id(&testdata);
+                if (x != i) {
+                    PrintAndLogEx(FAILED, "get_saflok_mfc_card_id returned %u, expected %u", x, i);
+                    result_card_id = PM3_EFAILED;
+                }
+            }
+        }
+        if (result_card_id == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_card_id passed");
+        } else {
+            result = PM3_EFAILED;
+        }
+    }
+    // opening_key              field is  2 bits
+    if (true) {
+        int result_opening_key = PM3_SUCCESS;
+        saflok_mfc_data_t testdata = {0};
+        for (uint8_t i = 0; i < 4; ++i) {
+            bool success = set_saflok_mfc_opening_key(&testdata, i);
+            if (!success) {
+                PrintAndLogEx(FAILED, "set_saflok_mfc_opening_key failed for value %u", i);
+                result_opening_key = PM3_EFAILED;
+            } else {
+                uint8_t x = get_saflok_mfc_opening_key(&testdata);
+                if (x != i) {
+                    PrintAndLogEx(FAILED, "get_saflok_mfc_opening_key returned %u, expected %u", x, i);
+                    result_opening_key = PM3_EFAILED;
+                }
+            }
+        }
+        if (result_opening_key == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_opening_key passed");
+        } else {
+            result = PM3_EFAILED;
+        }
+    }
+    // lock_id                  field is 14 bits
+    if (true) {
+        int result_lock_id = PM3_SUCCESS;
+        saflok_mfc_data_t testdata = {0};
+        for (uint16_t i = 0; i < 16384; i += 11) { // step by prime to test various bits
+            bool success = set_saflok_mfc_lock_id(&testdata, i);
+            if (!success) {
+                PrintAndLogEx(FAILED, "set_saflok_mfc_lock_id failed for value %u", i);
+                result_lock_id = PM3_EFAILED;
+            } else {
+                uint16_t x = get_saflok_mfc_lock_id(&testdata);
+                if (x != i) {
+                    PrintAndLogEx(FAILED, "get_saflok_mfc_lock_id returned %u, expected %u", x, i);
+                    result_lock_id = PM3_EFAILED;
+                }
+            }
+        }
+        if (result_lock_id == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_lock_id passed");
+        } else {
+            result = PM3_EFAILED;
+        }
+    }
+    // pass_number              field is 12 bits
+    if (true) {
+        int result_pass_number = PM3_SUCCESS;
+        saflok_mfc_data_t testdata = {0};
+        for (uint16_t i = 0; i < 4096; i += 7) { // step by prime to test various bits
+            bool success = set_saflok_mfc_pass_number(&testdata, i);
+            if (!success) {
+                PrintAndLogEx(FAILED, "set_saflok_mfc_pass_number failed for value %u", i);
+                result_pass_number = PM3_EFAILED;
+            } else {
+                uint16_t x = get_saflok_mfc_pass_number(&testdata);
+                if (x != i) {
+                    PrintAndLogEx(FAILED, "get_saflok_mfc_pass_number returned %u, expected %u", x, i);
+                    result_pass_number = PM3_EFAILED;
+                }
+            }
+        }
+        if (result_pass_number == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_pass_number passed");
+        } else {
+            result = PM3_EFAILED;
+        }
+    }
+    // sequence_and_combination field is 12 bits
+    if (true) {
+        int result_seq_combo = PM3_SUCCESS;
+        saflok_mfc_data_t testdata = {0};
+        for (uint16_t i = 0; i < 4096; i += 5) { // step by prime to test various bits
+            bool success = set_saflok_mfc_sequence_and_combination(&testdata, i);
+            if (!success) {
+                PrintAndLogEx(FAILED, "set_saflok_mfc_sequence_and_combination failed for value %u", i);
+                result_seq_combo = PM3_EFAILED;
+            } else {
+                uint16_t x = get_saflok_mfc_sequence_and_combination(&testdata);
+                if (x != i) {
+                    PrintAndLogEx(FAILED, "get_saflok_mfc_sequence_and_combination returned %u, expected %u", x, i);
+                    result_seq_combo = PM3_EFAILED;
+                }
+            }
+        }
+        if (result_seq_combo == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_sequence_and_combination passed");
+        } else {
+            result = PM3_EFAILED;
+        }
+    }
+    // deadbolt_override        field is  1 bits
+    if (true) {
+        int result_deadbolt = PM3_SUCCESS;
+        saflok_mfc_data_t testdata = {0};
+        for (uint8_t i = 0; i < 2; ++i) {
+            bool success = set_saflok_mfc_deadbolt_override(&testdata, i);
+            if (!success) {
+                PrintAndLogEx(FAILED, "set_saflok_mfc_deadbolt_override failed for value %u", i);
+                result_deadbolt = PM3_EFAILED;
+            } else {
+                uint8_t x = get_saflok_mfc_deadbolt_override(&testdata);
+                if (x != i) {
+                    PrintAndLogEx(FAILED, "get_saflok_mfc_deadbolt_override returned %u, expected %u", x, i);
+                    result_deadbolt = PM3_EFAILED;
+                }
+            }
+        }
+        if (result_deadbolt == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_deadbolt_override passed");
+        } else {
+            result = PM3_EFAILED;
+        }
+    }
+    // restricted_days          field is  7 bits
+    if (true) {
+        int result_restricted_days = PM3_SUCCESS;
+        saflok_mfc_data_t testdata = {0};
+        for (uint8_t i = 0; i < 128; ++i) {
+            bool success = set_saflok_mfc_restricted_days(&testdata, i);
+            if (!success) {
+                PrintAndLogEx(FAILED, "set_saflok_mfc_restricted_days failed for value %u", i);
+                result_restricted_days = PM3_EFAILED;
+            } else {
+                uint8_t x = get_saflok_mfc_restricted_days(&testdata);
+                if (x != i) {
+                    PrintAndLogEx(FAILED, "get_saflok_mfc_restricted_days returned %u, expected %u", x, i);
+                    result_restricted_days = PM3_EFAILED;
+                }
+            }
+        }
+        if (result_restricted_days == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_restricted_days passed");
+        } else {
+            result = PM3_EFAILED;
+        }
+    }
+    // property_id              field is 12 bits
+    if (true) {
+        int result_property_id = PM3_SUCCESS;
+        saflok_mfc_data_t testdata = {0};
+        for (uint16_t i = 0; i < 4096; i += 13) { // step by prime to test various bits
+            bool success = set_saflok_mfc_property_id(&testdata, i);
+            if (!success) {
+                PrintAndLogEx(FAILED, "set_saflok_mfc_property_id failed for value %u", i);
+                result_property_id = PM3_EFAILED;
+            } else {
+                uint16_t x = get_saflok_mfc_property_id(&testdata);
+                if (x != i) {
+                    PrintAndLogEx(FAILED, "get_saflok_mfc_property_id returned %u, expected %u", x, i);
+                    result_property_id = PM3_EFAILED;
+                }
+            }
+        }
+        if (result_property_id == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_property_id passed");
+        } else {
+            result = PM3_EFAILED;
+        }
+    }
+    // raw_interval             field is 20 bits -- special set processing needed
+    // raw_expire_date          field is 24 bits -- special set processing needed
+    // raw_card_creation_date   field is 28 bits -- special set processing needed
     /*
-        if (true) {
-            [ ] get_saflok_mfc_card_level
-            [ ] set_saflok_mfc_card_level
-        }
-        if (true) {
-            [ ] get_saflok_mfc_card_type
-            [ ] set_saflok_mfc_card_type
-        }
-        if (true) {
-            [ ] get_saflok_mfc_card_id
-            [ ] set_saflok_mfc_card_id
-        }
-        if (true) {
-            [ ] get_saflok_mfc_opening_key
-            [ ] set_saflok_mfc_opening_key
-        }
-        if (true) {
-            [ ] get_saflok_mfc_lock_id
-            [ ] set_saflok_mfc_lock_id
-        }
-        if (true) {
-            [ ] get_saflok_mfc_pass_number
-            [ ] set_saflok_mfc_pass_number
-        }
-        if (true) {
-            [ ] get_saflok_mfc_sequence_and_combination
-            [ ] set_saflok_mfc_sequence_and_combination
-        }
-        if (true) {
-            [ ] get_saflok_mfc_deadbolt_override
-            [ ] set_saflok_mfc_deadbolt_override
-        }
-        if (true) {
-            [ ] get_saflok_mfc_restricted_days
-            [ ] set_saflok_mfc_restricted_days
-        }
         if (true) {
             [ ] get_saflok_mfc_raw_interval_date
             [ ] set_saflok_mfc_raw_interval_date
@@ -1387,10 +1585,6 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
         if (true) {
             [ ] get_saflok_mfc_raw_card_creation_date
             [ ] set_saflok_mfc_raw_card_creation_date
-        }
-        if (true) {
-            [ ] get_saflok_mfc_property_id
-            [ ] set_saflok_mfc_property_id
         }
         if (true) {
             [ ] _get_saflok_mfc_card_creation_year_impl
