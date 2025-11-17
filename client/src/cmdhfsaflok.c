@@ -40,7 +40,11 @@
 static const uint8_t _days_in_month_lookup[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 static inline uint8_t get_days_in_month(uint16_t year, uint8_t month) {
-    assert(month >= 1 && month <= 12); // programmer error ... this function uses 1-based indexing!  Must fault here to prevent wrong data from propagating ....
+    if (month < 1 || month > 12) { // programmer error ... this function uses 1-based indexing!
+        PrintAndLogEx(ERR, "Invalid month lookup: %d, expected range [1..12] ... returning 0 days!\n", month);
+        return 0;
+    }
+    
     uint8_t days = _days_in_month_lookup[month];
     // Adjust for leap years
     if ((month == 2u) &&
@@ -905,9 +909,11 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
 static char *bytes_to_hex(const uint8_t *data, size_t len) {
     static char buf[256]; // WARNING: caller must immediately use or copy the result, and it's still not thread-safe!
     static const size_t maximum_data_len = (ARRAYLEN(buf) / 2) - 1; // leave room for null terminator
-    // BUGBUG: previously had no bounds checking on len!
-    assert(len <= maximum_data_len); // calling with larger length is a programming error which previously caused silent data corruption.
-    len = (len < maximum_data_len) ? len : maximum_data_len;
+
+    if (len > maximum_data_len) {
+        PrintAndLogEx(ERR, "saflok bytes_to_hex: input length %zu exceeds maximum supported %zu, results will be truncated!\n", len, maximum_data_len);
+        len = maximum_data_len;
+    }
     memset(buf, 0, sizeof(buf)); // Clear the buffer before use
     for (size_t i = 0; i < len; i++) {
         sprintf(buf + (i * 2), "%02X", data[i]);
