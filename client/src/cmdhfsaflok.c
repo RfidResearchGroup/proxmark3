@@ -61,7 +61,7 @@ static inline uint8_t get_days_in_month(uint16_t year, uint8_t month) {
 typedef struct _saflok_mfc_data_t {
     uint8_t raw[17];
 } saflok_mfc_data_t;
-typedef struct _saflock_mfc_uid_t {
+typedef struct _saflok_mfc_uid_t {
     uint8_t uid[4];
 } saflok_mfc_uid_t;
 typedef struct _saflok_mfc_key_t {
