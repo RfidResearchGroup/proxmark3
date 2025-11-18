@@ -1767,6 +1767,30 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             result = PM3_EFAILED;
         }
     }
+    if (true) {
+        int result_checksum = PM3_SUCCESS;
+        saflok_mfc_data_t testdata = {0};
+        for (size_t i = 0; i < 0x100; ++i) {
+            uint8_t value = (uint8_t)i;
+            bool success = set_saflok_mfc_checksum(&testdata, value);
+            if (!success) {
+                PrintAndLogEx(FAILED, "set_saflok_mfc_checksum failed for value %02x", value);
+                result_checksum = PM3_EFAILED;
+            } else {
+                uint8_t x = get_saflok_mfc_checksum(&testdata);
+                if (x != value) {
+                    PrintAndLogEx(FAILED, "get_saflok_mfc_checksum returned %02x, expected %02x", x, value);
+                    result_checksum = PM3_EFAILED;
+                }
+            }
+        }
+        if (result_checksum == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "get/set_saflok_mfc_checksum passed");
+        } else {
+            result = PM3_EFAILED;
+        }
+    }
+
     /*
         // raw_interval             field is 20 bits -- special set processing needed
         // raw_expire_date          field is 24 bits -- special set processing needed
