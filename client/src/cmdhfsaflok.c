@@ -44,7 +44,7 @@ static inline uint8_t get_days_in_month(uint16_t year, uint8_t month) {
         PrintAndLogEx(ERR, "Invalid month lookup: %d, expected range [1..12] ... returning 0 days!", month);
         return 0;
     }
-    
+
     uint8_t days = _days_in_month_lookup[month];
     // Adjust for leap years
     if ((month == 2u) &&
@@ -81,6 +81,88 @@ typedef struct _saflok_mfc_datetime_offset_t {
     uint8_t hours;   // range [0..23]
     uint8_t minutes; // range [0..59]
 } saflok_mfc_datetime_offset_t;
+
+#if 1 // test cases for self-test
+typedef struct _saflok_test_case_t {
+    saflok_mfc_data_t encoded;
+    saflok_mfc_data_t decoded;
+    saflok_mfc_datetime_t card_creation_datetime;
+    saflok_mfc_datetime_offset_t card_interval;
+    saflok_mfc_datetime_t card_expiration_datetime;
+    uint16_t lock_id;
+    uint16_t pass_number;
+    uint16_t sequence_and_combination;
+    uint16_t property_id;
+    uint8_t  card_level;
+    uint8_t  card_type;
+    uint8_t  card_id;
+    uint8_t  opening_key;
+    uint8_t  restricted_days;
+    bool     deadbolt_override;
+    uint8_t  checksum;
+} saflok_test_case_t;
+
+static const saflok_test_case_t saflok_test_cases[] = {
+    {   // 5A4A845610B6B1DD8F4753872BC0E91095 / F7B08101FFF7FF9E10500072A00023E7C7
+        // Tests interval that crosses a leap year using days
+        .encoded = {.raw = {0x5A, 0x4A, 0x84, 0x56, 0x10, 0xB6, 0xB1, 0xDD, 0x8F, 0x47, 0x53, 0x87, 0x2B, 0xC0, 0xE9, 0x10, 0x95} },
+        .decoded = {.raw = {0xF7, 0xB0, 0x81, 0x01, 0xFF, 0xF7, 0xFF, 0x9E, 0x10, 0x50, 0x00, 0x72, 0xA0, 0x00, 0x23, 0xE7, 0xC7} },
+        .card_expiration_datetime = { .year  = 2020, .month  = 3, .day  =  1, .hour  = 0, .minute  = 0 },
+        .card_creation_datetime   = { .year  = 2019, .month  = 2, .day  = 20, .hour  = 0, .minute  = 0 },
+        .card_interval            = { .years =    1, .months = 0, .days = 10, .hours = 0, .minutes = 0 },
+        .lock_id = 257,
+        .pass_number = 4095,
+        .sequence_and_combination = 2047,
+        .property_id = 999,
+        .card_level = 15,
+        .card_type = 7,
+        .card_id = 176,
+        .opening_key = 2,
+        .restricted_days = 30, // 0b0011110
+        .deadbolt_override = true,
+        .checksum = 0xC7,
+    },
+    {   // 3FB01B9F0100B55A7D423B6166C0E980B9 / B5AD8101FF57EB9400000A82EDF723E7CC
+        // Tests interval overflow from minutes -> hours -> day -> leap year overflow (2/29 -> 3/1)
+        .encoded = {.raw = {0x3F, 0xB0, 0x1B, 0x9F, 0x01, 0x00, 0xB5, 0x5A, 0x7D, 0x42, 0x3B, 0x61, 0x66, 0xC0, 0xE9, 0x80, 0xB9} },
+        .decoded = {.raw = {0xB5, 0xAD, 0x81, 0x01, 0xFF, 0x57, 0xEB, 0x94, 0x00, 0x00, 0x0A, 0x82, 0xED, 0xF7, 0x23, 0xE7, 0xCC} },
+        .card_expiration_datetime = { .year  = 2020, .month  = 3, .day  =  1, .hour  =  0, .minute  =  5 },
+        .card_creation_datetime   = { .year  = 2020, .month  = 2, .day  = 29, .hour  = 23, .minute  = 55 },
+        .card_interval            = { .years =    0, .months = 0, .days =  0, .hours =  0, .minutes = 10 },
+        .lock_id = 257,
+        .pass_number = 4085,
+        .sequence_and_combination = 2027,
+        .property_id = 999,
+        .card_level = 11,
+        .card_type = 5,
+        .card_id = 173,
+        .opening_key = 2,
+        .restricted_days = 20, // 0b0010100
+        .deadbolt_override = true,
+        .checksum = 0xCC,
+    },
+    {   // C2FE64DFE4EBB1CC7D8F6FEBA6E59E5B4D / 338341A3C777557F00080082E000207B4E
+        // Tests interval overflow into a final leap-day expiration date
+        .encoded = {.raw = {0xC2, 0xFE, 0x64, 0xDF, 0xE4, 0xEB, 0xB1, 0xCC, 0x7D, 0x8F, 0x6F, 0xEB, 0xA6, 0xE5, 0x9E, 0x5B, 0x4D} },
+        .decoded = {.raw = {0x33, 0x83, 0x41, 0xA3, 0xC7, 0x77, 0x55, 0x7F, 0x00, 0x08, 0x00, 0x82, 0xE0, 0x00, 0x20, 0x7B, 0x4E} },
+        .card_expiration_datetime = { .year  = 2020, .month  = 2, .day  = 29, .hour  = 0, .minute  = 0 },
+        .card_creation_datetime   = { .year  = 2020, .month  = 2, .day  = 28, .hour  = 0, .minute  = 0 },
+        .card_interval            = { .years =    0, .months = 0, .days =  1, .hours = 0, .minutes = 0 },
+        .lock_id = 419,
+        .pass_number = 3191,
+        .sequence_and_combination = 1877,
+        .property_id = 123,
+        .card_level = 3,
+        .card_type = 3,
+        .card_id = 131,
+        .opening_key = 1,
+        .restricted_days = 127, // 0b1111111
+        .deadbolt_override = false,
+        .checksum = 0x4E,
+    },
+};
+
+#endif // test cases for self-test
 
 #define KEY_LENGTH sizeof(saflok_mfc_key_t)
 
@@ -226,7 +308,7 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     static inline bool set_saflok_mfc_checksum(saflok_mfc_data_t *data, uint8_t checksum) {
         data->raw[16] = checksum;
         return true;
-    }   
+    }
 #endif // getters and setters for each bitfield in saflok_mfc_data_t
 
 #if 1 // helpers for get/set_saflok_mfc_card_creation_date() ... do not call these directly as does not validate...
@@ -767,7 +849,7 @@ _Static_assert(ARRAYLEN(level_names) == 16, "level_names must have 16 elements")
 static int CmdHelp(const char *Cmd);
 
 static void saflok_decrypt(const saflok_mfc_data_t *encryptedCard, saflok_mfc_data_t *decryptedCard) {
-    
+
     static const size_t length = ARRAYLEN(encryptedCard->raw);
     for (int i = 0; i < length; i++) {
         int num = c_aDecode[encryptedCard->raw[i]] - (i + 1);
@@ -1114,6 +1196,7 @@ static int CmdHFSaflokRead(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Card Information"));
+    PrintAndLogEx(INFO,    "Plaintext Data: %s", bytes_to_hex(decrypted.raw, sizeof(saflok_mfc_data_t)));
     PrintAndLogEx(SUCCESS, "Encrypted Data: " _GREEN_("%s"), bytes_to_hex(encrypted->raw, sizeof(saflok_mfc_data_t)));
 
     saflok_decode(&decrypted);
@@ -1174,12 +1257,12 @@ static int CmdHFSaflokEncode(const char *Cmd) {
                   arg_get_u32_def(ctx, 12, 0), // property_id
                   dt_e,
                   dt);
-
     saflok_encrypt(&decrypted, &encrypted);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Encoded Card Data"));
-    PrintAndLogEx(SUCCESS, "Encrypted Data: " _GREEN_("%s"), bytes_to_hex(encrypted.raw, 17));
+    PrintAndLogEx(INFO,    "Plaintext Data: %s", bytes_to_hex(decrypted.raw, sizeof(saflok_mfc_data_t)));
+    PrintAndLogEx(SUCCESS, "Encrypted Data: " _GREEN_("%s"), bytes_to_hex(encrypted.raw, sizeof(saflok_mfc_data_t)));
 
 
     CLIParserFree(ctx);
@@ -1190,7 +1273,7 @@ static int CmdHFSaflokDecode(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf saflok decode",
                   "Decode saflok data",
-                  "hf saflok decode");
+                  "hf saflok decode -d <encrypted data>");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1212,6 +1295,10 @@ static int CmdHFSaflokDecode(const char *Cmd) {
     }
 
     saflok_decrypt(&encrypted, &decrypted);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Decoded Card Data"));
+    PrintAndLogEx(INFO,    "Plaintext Data: %s", bytes_to_hex(decrypted.raw, sizeof(saflok_mfc_data_t)));
+    PrintAndLogEx(INFO,    "Encrypted Data: %s", bytes_to_hex(encrypted.raw, sizeof(saflok_mfc_data_t)));
     saflok_decode(&decrypted);
 
     return PM3_SUCCESS;
@@ -1259,6 +1346,7 @@ static int CmdHFSaflokModify(const char *Cmd) {
     }
 
     saflok_decrypt(&encrypted, &decrypted);
+    PrintAndLogEx(INFO,    "Plaintext Data: %s", bytes_to_hex(decrypted.raw, sizeof(saflok_mfc_data_t)));
 
     uint32_t card_level = get_saflok_mfc_card_level(&decrypted);
     card_level = arg_get_u32_def(ctx, 1, card_level);
@@ -1319,13 +1407,12 @@ static int CmdHFSaflokModify(const char *Cmd) {
                   property_id,
                   dt_e,
                   dt);
-
-
     saflok_encrypt(&decrypted, &reencrypted);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Modified Card Data"));
-    PrintAndLogEx(SUCCESS, "Encrypted Data: " _GREEN_("%s"), bytes_to_hex(reencrypted.raw, 17));
+    PrintAndLogEx(INFO,    "Plaintext Data: %s", bytes_to_hex(decrypted.raw, sizeof(saflok_mfc_data_t)));
+    PrintAndLogEx(SUCCESS, "Encrypted Data: " _GREEN_("%s"), bytes_to_hex(reencrypted.raw, sizeof(saflok_mfc_data_t)));
 
 
     CLIParserFree(ctx);
@@ -1417,6 +1504,8 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
     //       verify the resulting decoded data matches expectations,
     //       or investigate which one results in correct data.
 
+
+
     // get/set bitfield tests
     if (true) {
         int result_bitfield = PM3_SUCCESS;
@@ -1445,7 +1534,7 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "get/set_bitfield passed");
         } else {
             result = PM3_EFAILED;
-        }   
+        }
     }
     // card_level               field is  4 bits
     if (true) {
@@ -1727,64 +1816,155 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             [ ] set_saflok_mfc_card_expiration_datetime
         }
     */
+    if (true) {
+        int result_test_cases = PM3_SUCCESS;
 
-    if (true) { // test encode+encrypt, including interval affected by leap-year
+        for (size_t i = 0; i < ARRAYLEN(saflok_test_cases); ++i) {
+            const saflok_test_case_t * tc = &saflok_test_cases[i];
 
-        // Equivalent to running the following commands manually:
-        //
-        // [usb] pm3 --> hf saflok encode
-        //     --level 15 --type 7 --id 176 --open 2 --lock_id 257 --pass_num 4095 --seq_combo 2047
-        //     --deadbolt 1 --days 30 --expire 2020-03-01T00:00 --created 2019-02-20T00:00 --prop_id 999
-        //
-        // [=] --- Encoded Card Data
-        // [+] Encrypted Data: 5A4A845610B6B1DD8F4753872BC0E91095
-        //
-        // [usb] pm3 --> hf saflok decode -d 5A4A845610B6B1DD8F4753872BC0E91095
-        // [+] Card Level: 15 (Primary Programming Key (PPK))
-        // [+] Card Type: 7
-        // [+] Card ID: 176
-        // [+] Opening Key: 2
-        // [+] Lock ID: 257
-        // [+] Pass Number: 4095
-        // [+] Sequence and Combination: 2047
-        // [+] Deadbolt Override: 1
-        // [+] Restricted Days: 30 == 0b0011110
-        // [+] Card Creation Date: 2019-02-20 00:00
-        // [+] Expire Date: 2020-03-01 00:00
-        // [+] Property ID: 999
-        // [+] Checksum: 0xC7 (ok)
-
-
-        saflok_mfc_data_t test_data = {0};
-        set_saflok_mfc_card_level(&test_data, 15);
-        set_saflok_mfc_card_type(&test_data, 7);
-        set_saflok_mfc_card_id(&test_data, 176);
-        set_saflok_mfc_opening_key(&test_data, 2);
-        set_saflok_mfc_lock_id(&test_data, 257);
-        set_saflok_mfc_pass_number(&test_data, 4095);
-        set_saflok_mfc_sequence_and_combination(&test_data, 2047);
-        set_saflok_mfc_deadbolt_override(&test_data, true);
-        set_saflok_mfc_restricted_days(&test_data, 30);
-        saflok_mfc_datetime_t creation_date = {.year = 2019, .month = 2, .day = 20, .hour = 0, .minute = 0};
-        saflok_mfc_datetime_t expiration_date = {.year = 2020, .month = 3, .day = 1, .hour = 0, .minute = 0};
-        set_saflok_mfc_card_creation_datetime(&test_data, &creation_date);
-        set_saflok_mfc_card_expiration_datetime(&test_data, &expiration_date);
-        set_saflok_mfc_property_id(&test_data, 999);
-        uint8_t checksum = calculated_saflok_checksum(&test_data);
-        set_saflok_mfc_checksum(&test_data, checksum);
-
-        saflok_mfc_data_t encrypted = {0};
-        saflok_encrypt(&test_data, &encrypted);
-
-        saflok_mfc_data_t expected = {
-            .raw = {0x5A, 0x4A, 0x84, 0x56, 0x10, 0xB6, 0xB1, 0xDD,
-                    0x8F, 0x47, 0x53, 0x87, 0x2B, 0xC0, 0xE9, 0x10,
-                    0x95},
-        };
-        if (memcmp(encrypted.raw, expected.raw, sizeof(saflok_mfc_data_t)) == 0) {
-            PrintAndLogEx(SUCCESS, "Self-test passed: encoded+encrypted data matches expected value.");
+            // encoded -> decoded -> encoded
+            saflok_mfc_data_t tmp = {0};
+            saflok_encrypt(&tc->decoded, &tmp);
+            if (memcmp(tmp.raw, tc->encoded.raw, sizeof(saflok_mfc_data_t)) != 0) {
+                PrintAndLogEx(FAILED, "Test case %zu: encryption did not match expected data.", i);
+                PrintAndLogEx(DEBUG,  "               raw result: %s", bytes_to_hex(tmp.raw, sizeof(saflok_mfc_data_t)));
+                PrintAndLogEx(DEBUG,  "          expected result: %s", bytes_to_hex(tc->encoded.raw, sizeof(saflok_mfc_data_t)));
+                result_test_cases = PM3_EFAILED;
+                continue;
+            }
+            saflok_decrypt(&tc->encoded, &tmp);
+            if (memcmp(tmp.raw, tc->decoded.raw, sizeof(saflok_mfc_data_t)) != 0) {
+                PrintAndLogEx(FAILED, "Test case %zu: decryption did not match expected data.", i);
+                PrintAndLogEx(DEBUG,  "               raw result: %s", bytes_to_hex(tmp.raw, sizeof(saflok_mfc_data_t)));
+                PrintAndLogEx(DEBUG,  "          expected result: %s", bytes_to_hex(tc->decoded.raw, sizeof(saflok_mfc_data_t)));
+                result_test_cases = PM3_EFAILED;
+                continue;
+            }
+            saflok_mfc_datetime_t tmp_dt = get_saflok_mfc_card_creation_datetime(&tc->decoded);
+            if (memcmp(&tmp_dt, &tc->card_creation_datetime, sizeof(saflok_mfc_datetime_t)) != 0) {
+                PrintAndLogEx(FAILED, "Test case %zu: card creation datetime did not match expected data.", i);
+                PrintAndLogEx(DEBUG,  "               api result: %4u-%02u-%02u %02u:%02u",
+                               tmp_dt.year, tmp_dt.month, tmp_dt.day,
+                               tmp_dt.hour, tmp_dt.minute);
+                PrintAndLogEx(DEBUG,  "          expected result: %4u-%02u-%02u %02u:%02u",
+                               tc->card_creation_datetime.year, tc->card_creation_datetime.month, tc->card_creation_datetime.day,
+                               tc->card_creation_datetime.hour, tc->card_creation_datetime.minute);
+                result_test_cases = PM3_EFAILED;
+                continue;
+            }
+            tmp_dt = get_saflok_mfc_card_expiration_datetime(&tc->decoded);
+            if (memcmp(&tmp_dt, &tc->card_expiration_datetime, sizeof(saflok_mfc_datetime_t)) != 0) {
+                PrintAndLogEx(FAILED, "Test case %zu: card expiration datetime did not match expected data.", i);
+                PrintAndLogEx(DEBUG,  "               api result: %4u-%02u-%02u %02u:%02u",
+                               tmp_dt.year, tmp_dt.month, tmp_dt.day,
+                               tmp_dt.hour, tmp_dt.minute);
+                PrintAndLogEx(DEBUG,  "          expected result: %4u-%02u-%02u %02u:%02u",
+                               tc->card_expiration_datetime.year, tc->card_expiration_datetime.month, tc->card_expiration_datetime.day,
+                               tc->card_expiration_datetime.hour, tc->card_expiration_datetime.minute);
+                result_test_cases = PM3_EFAILED;
+                continue;
+            }
+            saflok_mfc_datetime_offset_t tmp_offset = get_saflok_mfc_interval(&tc->decoded);
+            if (memcmp(&tmp_offset, &tc->card_interval, sizeof(saflok_mfc_datetime_offset_t)) != 0) {
+                PrintAndLogEx(FAILED, "Test case %zu: card interval did not match expected data.", i);
+                PrintAndLogEx(DEBUG,  "               api result: %u years, %u months, %u days, %u hours, %u minutes",
+                               tmp_offset.years, tmp_offset.months, tmp_offset.days,
+                               tmp_offset.hours, tmp_offset.minutes);
+                PrintAndLogEx(DEBUG,  "          expected result: %u years, %u months, %u days, %u hours, %u minutes",
+                               tc->card_interval.years, tc->card_interval.months, tc->card_interval.days,
+                               tc->card_interval.hours, tc->card_interval.minutes);
+                result_test_cases = PM3_EFAILED;
+                continue;
+            }
+            if (get_saflok_mfc_lock_id(&tc->decoded) != tc->lock_id) {
+                PrintAndLogEx(FAILED, "Test case %zu: lock_id did not match expected data.", i);
+                PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_lock_id(&tc->decoded));
+                PrintAndLogEx(DEBUG,  "          expected result: %u", tc->lock_id);
+                result_test_cases = PM3_EFAILED;
+                continue;
+            }
+            if (get_saflok_mfc_pass_number(&tc->decoded) != tc->pass_number) {
+                PrintAndLogEx(FAILED, "Test case %zu: pass_number did not match expected data.", i);
+                PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_pass_number(&tc->decoded));
+                PrintAndLogEx(DEBUG,  "          expected result: %u", tc->pass_number);
+                result_test_cases = PM3_EFAILED;
+                continue;
+            }
+            if (get_saflok_mfc_sequence_and_combination(&tc->decoded) != tc->sequence_and_combination) {
+                PrintAndLogEx(FAILED, "Test case %zu: sequence_and_combination did not match expected data.", i);
+                PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_sequence_and_combination(&tc->decoded));
+                PrintAndLogEx(DEBUG,  "          expected result: %u", tc->sequence_and_combination);
+                result_test_cases = PM3_EFAILED;
+                continue;
+            }
+            if (get_saflok_mfc_property_id(&tc->decoded) != tc->property_id) {
+                PrintAndLogEx(FAILED, "Test case %zu: property_id did not match expected data.", i);
+                PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_property_id(&tc->decoded));
+                PrintAndLogEx(DEBUG,  "          expected result: %u", tc->property_id);
+                result_test_cases = PM3_EFAILED;
+                continue;
+            }
+            if (get_saflok_mfc_card_level(&tc->decoded) != tc->card_level) {
+                PrintAndLogEx(FAILED, "Test case %zu: card_level did not match expected data.", i);
+                PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_card_level(&tc->decoded));
+                PrintAndLogEx(DEBUG,  "          expected result: %u", tc->card_level);
+                result_test_cases = PM3_EFAILED;
+                continue;
+            }
+            if (get_saflok_mfc_card_type(&tc->decoded) != tc->card_type) {
+                PrintAndLogEx(FAILED, "Test case %zu: card_type did not match expected data.", i);
+                PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_card_type(&tc->decoded));
+                PrintAndLogEx(DEBUG,  "          expected result: %u", tc->card_type);
+                result_test_cases = PM3_EFAILED;
+                continue;
+            }
+            if (get_saflok_mfc_card_id(&tc->decoded) != tc->card_id) {
+                PrintAndLogEx(FAILED, "Test case %zu: card_id did not match expected data.", i);
+                PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_card_id(&tc->decoded));
+                PrintAndLogEx(DEBUG,  "          expected result: %u", tc->card_id);
+                result_test_cases = PM3_EFAILED;
+                continue;
+            }
+            if (get_saflok_mfc_opening_key(&tc->decoded) != tc->opening_key) {
+                PrintAndLogEx(FAILED, "Test case %zu: opening_key did not match expected data.", i);
+                PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_opening_key(&tc->decoded));
+                PrintAndLogEx(DEBUG,  "          expected result: %u", tc->opening_key);
+                result_test_cases = PM3_EFAILED;
+                continue;
+            }
+            if (get_saflok_mfc_restricted_days(&tc->decoded) != tc->restricted_days) {
+                PrintAndLogEx(FAILED, "Test case %zu: restricted_days did not match expected data.", i);
+                PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_restricted_days(&tc->decoded));
+                PrintAndLogEx(DEBUG,  "          expected result: %u", tc->restricted_days);
+                result_test_cases = PM3_EFAILED;
+                continue;
+            }
+            if (get_saflok_mfc_deadbolt_override(&tc->decoded) != tc->deadbolt_override) {
+                PrintAndLogEx(FAILED, "Test case %zu: deadbolt_override did not match expected data.", i);
+                PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_deadbolt_override(&tc->decoded));
+                PrintAndLogEx(DEBUG,  "          expected result: %u", tc->deadbolt_override);
+                result_test_cases = PM3_EFAILED;
+                continue;
+            }
+            if (get_saflok_mfc_checksum(&tc->decoded) != tc->checksum) {
+                PrintAndLogEx(FAILED, "Test case %zu: stored checksum did not match expected data.", i);
+                PrintAndLogEx(DEBUG,  "               api result: %u", get_saflok_mfc_checksum(&tc->decoded));
+                PrintAndLogEx(DEBUG,  "          expected result: %u", tc->checksum);
+                result_test_cases = PM3_EFAILED;
+                continue;
+            }
+            uint8_t checksum = calculated_saflok_checksum(&tc->decoded);
+            if (checksum != tc->checksum) {
+                PrintAndLogEx(FAILED, "Test case %zu: calculated checksum did not match expected data.", i);
+                PrintAndLogEx(DEBUG,  "               api result: %u", checksum);
+                PrintAndLogEx(DEBUG,  "          expected result: %u", tc->checksum);
+                result_test_cases = PM3_EFAILED;
+                continue;
+            }
+        }
+        if (result_test_cases == PM3_SUCCESS) {
+            PrintAndLogEx(SUCCESS, "All predefined test cases passed.");
         } else {
-            PrintAndLogEx(FAILED, "Self-test failed: encoded+encrypted data did not match expected value.");
             result = PM3_EFAILED;
         }
     }
@@ -1862,7 +2042,7 @@ static int CmdHFSaflokProvision(const char *Cmd) {
     _Static_assert(ARRAYLEN(uid) >= sizeof(saflok_mfc_uid_t), "UID array too small");
     const saflok_mfc_uid_t * saflok_uid = (const saflok_mfc_uid_t *)uid;
     saflok_mfc_key_t keyA = {0};
-    
+
     saflok_kdf(saflok_uid, &keyA);
     PrintAndLogEx(INFO, "Generated UID-derived key: " _GREEN_("%s"), bytes_to_hex(keyA.key, ARRAYLEN(keyA.key)));
 
@@ -1954,7 +2134,7 @@ static int CmdHFSaflokInterrogate(const char *Cmd) {
     _Static_assert(ARRAYLEN(uid) >= sizeof(saflok_mfc_uid_t), "UID array too small");
     const saflok_mfc_uid_t * saflok_uid = (const saflok_mfc_uid_t *)uid;
 
-    saflok_mfc_key_t key;
+    saflok_mfc_key_t key = {0};
     saflok_kdf(saflok_uid, &key);
 
     uint8_t block2[16];
