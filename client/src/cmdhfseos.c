@@ -248,7 +248,7 @@ static void generate_command_wrapping(uint8_t *command_Header, int command_heade
     //return;
 }
 
-static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_enc_key, uint8_t *diversified_mac_key, uint8_t *sioOutput,  int *sio_size, int encryption_algorithm, uint8_t *get_data_tlv, int get_data_tlv_len) {
+static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_enc_key, uint8_t *diversified_mac_key, uint8_t *sioOutput,  int *sio_size, int encryption_algorithm, uint8_t *data_tag, int data_tag_len) {
     // Intergrating our command generation with the GetData request to make my life easier in the future
 
     // Command Header is for the Get Data Command using
@@ -276,15 +276,17 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
     // uint8_t unencrypted_command[4] = {0x5c,0x02,0xff,0x00};
     // Modification of the tags 2nd place from 00 can return other data
 
-    uint8_t unencrypted_command[get_data_tlv_len];
-    memcpy(unencrypted_command, get_data_tlv, get_data_tlv_len);
+    uint8_t unencrypted_command[data_tag_len+2];
+    unencrypted_command[0] = 0x5c;
+    unencrypted_command[1] = data_tag_len;
+    memcpy(unencrypted_command+2, data_tag, data_tag_len);
 
     int unencrypted_command_len = ARRAYLEN(unencrypted_command);
 
     uint8_t command_buffer[254];
     int command_len = 0;
 
-    // PrintAndLogEx(SUCCESS, "Raw Command...................... " _YELLOW_("%s"), sprint_hex_inrow(unencrypted_command, get_data_tlv_len));
+    // PrintAndLogEx(SUCCESS, "Raw Command...................... " _YELLOW_("%s"), sprint_hex_inrow(unencrypted_command, 2+data_tag_len));
     generate_command_wrapping(command_header, command_header_len, unencrypted_command, unencrypted_command_len, rndICC, rndIFD, diversified_enc_key, diversified_mac_key, encryption_algorithm, command_buffer, &command_len);
 
     // Convert command from buffer to stream
@@ -998,7 +1000,7 @@ static int seos_aid_select(void) {
     return res;
 };
 
-static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *get_data, int get_data_len, int key_index) {
+static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int data_tag_len, int key_index) {
     int resplen = 0;
     uint8_t response[PM3_CMD_DATA_SIZE];
     bool activate_field = false;
@@ -1102,7 +1104,7 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *get_data, int g
 
         uint8_t sio_buffer_out[PM3_CMD_DATA_SIZE];
         int sio_size = 0;
-        seos_get_data(RNDICC, RNDIFD, Diversified_New_EncryptionKey, Diversified_New_MACKey, sio_buffer_out, &sio_size, ALGORITHM_INFO_value1, get_data, get_data_len);
+        seos_get_data(RNDICC, RNDIFD, Diversified_New_EncryptionKey, Diversified_New_MACKey, sio_buffer_out, &sio_size, ALGORITHM_INFO_value1, data_tag, data_tag_len);
 
         if (sio_size == 0) {
             return PM3_ESOFT;
@@ -1253,14 +1255,14 @@ static int seos_select(void) {
     return res;
 }
 
-static int seos_pacs(char *oid, int oid_len, uint8_t *get_data, int get_data_len, int key_index) {
+static int seos_pacs(char *oid, int oid_len, uint8_t *data_tag, int data_tag_len, int key_index) {
     int res = seos_aid_select();
     if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
 
-    res = seos_pacs_adf_select(oid, oid_len, get_data, get_data_len, key_index);
+    res = seos_pacs_adf_select(oid, oid_len, data_tag, data_tag_len, key_index);
     DropField();
     return res;
 }
@@ -1400,8 +1402,8 @@ static int CmdHfSeosPACS(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    int get_data_len = 4;
-    uint8_t get_data[] = {0x5c, 0x02, 0xff, 0x00};
+    int data_tag_len = 2;
+    uint8_t data_tag[2] = {0xff, 0x00};
 
     int oid_len = 0;
     uint8_t oid_hex[256] = {0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02, 0x02};
@@ -1430,7 +1432,7 @@ static int CmdHfSeosPACS(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    return seos_pacs((char *)oid, oid_len, get_data, get_data_len, key_index);
+    return seos_pacs((char *)oid, oid_len, data_tag, data_tag_len, key_index);
 }
 
 static int CmdHfSeosADF(const char *Cmd) {
@@ -1442,25 +1444,25 @@ static int CmdHfSeosADF(const char *Cmd) {
                   "By default:\n"
                   "  - ADF OID  : 2B0601040181E438010102011801010202\n"
                   "  - Key Index: 0\n"
-                  "  - Tag List : 5c02ff00\n",
+                  "  - Data Tag : FF00\n",
                   "hf seos adf\n"
                   "hf seos adf -o 2B0601040181E438010102011801010202\n"
                   "hf seos adf -o 2B0601040181E438010102011801010202 --ki 0\n"
-                  "hf seos adf -o 2B0601040181E438010102011801010202 -c 5c02ff41\n"
+                  "hf seos adf -o 2B0601040181E438010102011801010202 -t FF41\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("c", "getdata", "<hex>", "<0-100> hex bytes for the tag list to Get Data request (Default: 5c02ff00)"),
+        arg_str0("t", "tag", "<hex>", "<0-100> hex bytes for tag to read (Default: FF00)"),
         arg_str0("o", "oid", "<hex>", "<0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)"),
         arg_int0(NULL, "ki", "<dec>", "Specify key index to set key in memory"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    int get_data_len = 0;
-    uint8_t get_data[256] = {0x5c, 0x02, 0xff, 0x00};
-    CLIGetHexWithReturn(ctx, 1, get_data, &get_data_len);
+    int data_tag_len = 0;
+    uint8_t data_tag[16] = {0xff, 0x00};
+    CLIGetHexWithReturn(ctx, 1, data_tag, &data_tag_len);
 
     int oid_len = 0;
     uint8_t oid_hex[256] = {0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02, 0x02};
@@ -1470,8 +1472,8 @@ static int CmdHfSeosADF(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    if (get_data_len == 0) {
-        get_data_len = 4;
+    if (data_tag_len == 0) {
+        data_tag_len = 2;
     }
 
     // Catching when the OID value is not supplied
@@ -1492,7 +1494,7 @@ static int CmdHfSeosADF(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    return seos_pacs((char *)oid, oid_len, get_data, get_data_len, key_index);
+    return seos_pacs((char *)oid, oid_len, data_tag, data_tag_len, key_index);
 }
 
 static int CmdHfSeosManageKeys(const char *Cmd) {
