@@ -29,6 +29,6 @@
 #define SEOS_HASHING_SHA256         0x07
 int infoSeos(bool verbose);
 int CmdHFSeos(const char *Cmd);
-int seos_kdf(bool encryption, uint8_t *masterKey, uint8_t keyslot,
+int seos_kdf(bool encryption, uint8_t *masterKey, int auth_key_index,
              uint8_t *adfOid, size_t adfoid_len, uint8_t *diversifier, uint8_t diversifier_len, uint8_t *out, int encryption_algorithm, int hash_algorithm);
 #endif
