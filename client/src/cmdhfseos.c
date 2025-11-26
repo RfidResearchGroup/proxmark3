@@ -547,6 +547,7 @@ int seos_kdf(bool encryption, uint8_t *masterKey, uint8_t keyslot,
 
 static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t *MAC_value, size_t MAC_value_len, int encryption_algorithm, int key_index) {
     uint8_t input[response_length - 10];
+    int input_len = 0;
     // Response is an ASN.1 encoded structure
     // Extract everything before the 8E tag
 
@@ -562,8 +563,9 @@ static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t 
             if (i+2+MAC_value_len > response_length) {
                 goto out;
             }
-            memcpy(input, response, i);
-            memcpy(MAC_value, response + (i + 2), MAC_value_len);
+            input_len = i;
+            memcpy(input, response, input_len);
+            memcpy(MAC_value, response + (input_len + 2), MAC_value_len);
             res = PM3_SUCCESS;
             break;
         }
@@ -578,11 +580,11 @@ static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t 
     uint8_t cmac[16];
     uint8_t MAC_key[24] = {0x00};
     memcpy(MAC_key, keys[key_index].privMacKey, 16);
-    create_cmac(MAC_key, input, cmac, sizeof(input), encryption_algorithm);
+    create_cmac(MAC_key, input, cmac, input_len, encryption_algorithm);
 
     // PrintAndLogEx(INFO, "--- " _CYAN_("MAC") " ---------------------------");
     // PrintAndLogEx(SUCCESS, "MAC Key: "_YELLOW_("%s"), sprint_hex_inrow(MAC_key,sizeof(MAC_key)));
-    // PrintAndLogEx(SUCCESS, "Message: " _YELLOW_("%s"), sprint_hex_inrow(input,sizeof(input)));
+    // PrintAndLogEx(SUCCESS, "Message: " _YELLOW_("%s"), sprint_hex_inrow(input,input_len));
 
     if (memcmp(cmac, MAC_value, MAC_value_len) == 0) {
         // PrintAndLogEx(SUCCESS, _GREEN_("MAC Verification successful"));
