@@ -776,13 +776,12 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
     return PM3_ESOFT;
 };
 
-static int seos_mutual_auth(uint8_t *adfOID, size_t adfoid_len, uint8_t *randomICC, uint8_t *CRYPTOGRAM_Diversifier, uint8_t diversifier_len, uint8_t *mutual_auth_randomIFD, uint8_t *mutual_auth_keyICC, uint8_t *randomIFD, uint8_t randomIFD_len, uint8_t *keyIFD, uint8_t keyIFD_len, int encryption_algorithm, int hash_algorithm, int key_index) {
+static int seos_mutual_auth(uint8_t *adfOID, size_t adfoid_len, uint8_t *randomICC, uint8_t *CRYPTOGRAM_Diversifier, uint8_t diversifier_len, uint8_t *mutual_auth_randomIFD, uint8_t *mutual_auth_keyICC, uint8_t *randomIFD, uint8_t randomIFD_len, uint8_t *keyIFD, uint8_t keyIFD_len, int encryption_algorithm, int hash_algorithm, int key_index, uint8_t keyslot) {
     uint8_t response[PM3_CMD_DATA_SIZE];
 
     // ---------------- Diversify Keys ----------------
     uint8_t mk[16] = { 0x00 };
     memcpy(mk, keys[key_index].readKey, 16);
-    uint8_t keyslot = 0x01; // up to 0x0F
     uint8_t AES_key[24] = {0x00};
     uint8_t MAC_key[24] = {0x00};
 
@@ -1082,7 +1081,8 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *get_data, int g
 
     resplen -= 2;
 
-    seos_challenge_get(RNDICC, sizeof(RNDICC), 0x01);
+    uint8_t keyslot = 0x01;
+    seos_challenge_get(RNDICC, sizeof(RNDICC), keyslot);
     select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
     res = select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
 
@@ -1099,7 +1099,7 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *get_data, int g
 
         int diversifier_length = sizeof(diversifier);
         select_ADF_decrypt(selectedADF, CRYPTOGRAM_encrypted_data, diversifier, &diversifier_length, ALGORITHM_INFO_value1, key_index);
-        seos_mutual_auth(adf_bytes, adf_bytes_len, RNDICC, diversifier, diversifier_length, RNDIFD, KeyICC, RNDIFD, sizeof(RNDIFD), KeyIFD, sizeof(KeyIFD), ALGORITHM_INFO_value1, ALGORITHM_INFO_value2, key_index);
+        seos_mutual_auth(adf_bytes, adf_bytes_len, RNDICC, diversifier, diversifier_length, RNDIFD, KeyICC, RNDIFD, sizeof(RNDIFD), KeyIFD, sizeof(KeyIFD), ALGORITHM_INFO_value1, ALGORITHM_INFO_value2, key_index, keyslot);
         create_mutual_auth_key(KeyIFD, KeyICC, RNDICC, RNDIFD, Diversified_New_EncryptionKey, Diversified_New_MACKey, ALGORITHM_INFO_value1, ALGORITHM_INFO_value2);
 
         uint8_t sio_buffer_out[PM3_CMD_DATA_SIZE];
