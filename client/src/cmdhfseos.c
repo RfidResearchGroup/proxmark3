@@ -163,11 +163,12 @@ static void increment_command_wrapper(uint8_t *input, int input_len) {
     input[input_len - 1]++; // Increment the last element of the header by 1
 }
 
-static void padToBlockSize(const uint8_t *input, int inputSize, int blockSize, uint8_t *output) {
-    int paddingSize = blockSize - (inputSize % blockSize);
-    memcpy(output, input, inputSize);
-    memset(output + inputSize, 0x80, 1);
-    memset(output + inputSize + 1, 0x00, paddingSize - 1);
+static void padToBlockSize(const uint8_t *input, int *inputSize, int blockSize, uint8_t *output) {
+    int paddingSize = blockSize - (*inputSize % blockSize);
+    memcpy(output, input, *inputSize);
+    memset(output + *inputSize, 0x80, 1);
+    memset(output + *inputSize + 1, 0x00, paddingSize - 1);
+    *inputSize += paddingSize;
 }
 
 static void generate_command_wrapping(uint8_t *command_Header, int command_header_len, uint8_t *unencrypted_Command, int unencrypted_command_len, uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_enc_key, uint8_t *diversified_mac_key, int encryption_algorithm, uint8_t *command, int *command_len) {
@@ -188,29 +189,32 @@ static void generate_command_wrapping(uint8_t *command_Header, int command_heade
     increment_command_wrapper(rndCounter, block_size);
 
     // Command Header is for the APDU Command to be sent
-    uint8_t padded_Command_Header[block_size];
-    padToBlockSize(command_Header, command_header_len, block_size, padded_Command_Header);
+    int padded_Command_Header_len = command_header_len;
+    uint8_t padded_Command_Header[padded_Command_Header_len+block_size];
+    padToBlockSize(command_Header, &padded_Command_Header_len, block_size, padded_Command_Header);
 
     // Unencrypted Command is our actual command data
-    uint8_t padded_unencrypted_Command[block_size];
-    padToBlockSize(unencrypted_Command, unencrypted_command_len, block_size, padded_unencrypted_Command);
+    int padded_unencrypted_Command_len = unencrypted_command_len;
+    uint8_t padded_unencrypted_Command[padded_unencrypted_Command_len+block_size];
+    padToBlockSize(unencrypted_Command, &padded_unencrypted_Command_len, block_size, padded_unencrypted_Command);
 
-    uint8_t padded_encrypted_Command[block_size];
-    create_cryptogram(diversified_enc_key, padded_unencrypted_Command, padded_encrypted_Command, sizeof(padded_unencrypted_Command), encryption_algorithm);
+    uint8_t padded_encrypted_Command[padded_unencrypted_Command_len];
+    create_cryptogram(diversified_enc_key, padded_unencrypted_Command, padded_encrypted_Command, padded_unencrypted_Command_len, encryption_algorithm);
 
     uint8_t asn1_tag_cryptograph[2] = {0x85, ARRAYLEN(padded_encrypted_Command)};
     uint8_t asn1_tag_mac[2] = {0x8e, 0x08};
     uint8_t command_trailer[2] = {0x97, 0x00};
-    uint8_t padded_command_trailer[block_size - ARRAYLEN(command_trailer)];
-    padToBlockSize(command_trailer, sizeof(command_trailer), sizeof(padded_command_trailer), padded_command_trailer);
+    int padded_command_trailer_len = ARRAYLEN(command_trailer);
+    uint8_t padded_command_trailer[padded_command_trailer_len+block_size];
+    padToBlockSize(command_trailer, &padded_command_trailer_len, block_size, padded_command_trailer);
 
-    uint8_t toEncrypt[ARRAYLEN(rndCounter) + ARRAYLEN(padded_Command_Header) + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command) + ARRAYLEN(padded_command_trailer)];
+    uint8_t toEncrypt[ARRAYLEN(rndCounter) + padded_Command_Header_len + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command) + padded_command_trailer_len];
 
     memcpy(toEncrypt, rndCounter, ARRAYLEN(rndCounter));
-    memcpy(toEncrypt + ARRAYLEN(rndCounter), padded_Command_Header, ARRAYLEN(padded_Command_Header));
-    memcpy(toEncrypt + ARRAYLEN(rndCounter) + ARRAYLEN(padded_Command_Header), asn1_tag_cryptograph, ARRAYLEN(asn1_tag_cryptograph));
-    memcpy(toEncrypt + ARRAYLEN(rndCounter) + ARRAYLEN(padded_Command_Header) + ARRAYLEN(asn1_tag_cryptograph), padded_encrypted_Command, ARRAYLEN(padded_encrypted_Command));
-    memcpy(toEncrypt + ARRAYLEN(rndCounter) + ARRAYLEN(padded_Command_Header) + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command), padded_command_trailer, ARRAYLEN(padded_command_trailer));
+    memcpy(toEncrypt + ARRAYLEN(rndCounter), padded_Command_Header, padded_Command_Header_len);
+    memcpy(toEncrypt + ARRAYLEN(rndCounter) + padded_Command_Header_len, asn1_tag_cryptograph, ARRAYLEN(asn1_tag_cryptograph));
+    memcpy(toEncrypt + ARRAYLEN(rndCounter) + padded_Command_Header_len + ARRAYLEN(asn1_tag_cryptograph), padded_encrypted_Command, ARRAYLEN(padded_encrypted_Command));
+    memcpy(toEncrypt + ARRAYLEN(rndCounter) + padded_Command_Header_len + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command), padded_command_trailer, padded_command_trailer_len);
 
     // Breakdown
     // 0181e43801010201 + 0000000000000001 + 0CCB3FFF800000000000000000000000 + 8510EB54DA90CB43AEE7FBFE816ECA25A10D + 9700 + 800000000000000000000000
