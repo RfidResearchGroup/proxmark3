@@ -88,7 +88,6 @@ typedef struct {
     felica_status_flags_t status_flags;
     uint8_t number_of_block[1];
     uint8_t block_data[16];
-    uint8_t block_element_number[1];
 } PACKED felica_read_without_encryption_response_t;
 
 typedef struct {

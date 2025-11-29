@@ -495,8 +495,11 @@ static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *dat
 /**
  * Prints read-without-encryption response.
  * @param rd_noCry_resp Response frame.
+ * @param block_index Optional explicit block index (UINT16_MAX to use tag value)
  */
-static void print_rd_plain_response(felica_read_without_encryption_response_t *rd_noCry_resp) {
+static void print_rd_plain_response(felica_read_without_encryption_response_t *rd_noCry_resp, uint16_t block_index) {
+
+    uint16_t display_block = block_index;
 
     if (rd_noCry_resp->status_flags.status_flag1[0] == 00 &&
             rd_noCry_resp->status_flags.status_flag2[0] == 00) {
@@ -506,15 +509,14 @@ static void print_rd_plain_response(felica_read_without_encryption_response_t *r
         char bl_data[256];
         strncpy(bl_data, temp, sizeof(bl_data) - 1);
 
-        char bl_element_number[4];
-        temp = sprint_hex(rd_noCry_resp->block_element_number, sizeof(rd_noCry_resp->block_element_number));
-        strncpy(bl_element_number, temp, sizeof(bl_element_number) - 1);
 
-        PrintAndLogEx(INFO, "  %s  | %s  ", bl_element_number, bl_data);
+        PrintAndLogEx(INFO, "  %04X | %s  ", display_block, bl_data);
     } else {
-        PrintAndLogEx(SUCCESS, "IDm... %s", sprint_hex_inrow(rd_noCry_resp->frame_response.IDm, sizeof(rd_noCry_resp->frame_response.IDm)));
-        PrintAndLogEx(SUCCESS, "  Status flag 1... %s", sprint_hex(rd_noCry_resp->status_flags.status_flag1, sizeof(rd_noCry_resp->status_flags.status_flag1)));
-        PrintAndLogEx(SUCCESS, "  Status flag 2... %s", sprint_hex(rd_noCry_resp->status_flags.status_flag1, sizeof(rd_noCry_resp->status_flags.status_flag1)));
+        char sf1[8];
+        char sf2[8];
+        snprintf(sf1, sizeof(sf1), "%02X", rd_noCry_resp->status_flags.status_flag1[0]);
+        snprintf(sf2, sizeof(sf2), "%02X", rd_noCry_resp->status_flags.status_flag2[0]);
+        PrintAndLogEx(INFO, "  %04X | Status flag 1... %s; Status flag 2... %s", display_block, sf1, sf2);
     }
 }
 
@@ -563,7 +565,12 @@ int send_rd_plain(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, 
         return PM3_ERFTRANS;
     } else {
         memcpy(rd_noCry_resp, (felica_read_without_encryption_response_t *)resp.data.asBytes, sizeof(felica_read_without_encryption_response_t));
-        rd_noCry_resp->block_element_number[0] = data[15];
+          if (rd_noCry_resp->frame_response.cmd_code[0] != 0x07) {
+            PrintAndLogEx(FAILED, "Bad response cmd 0x%02X @ 0x%04X.",
+                          rd_noCry_resp->frame_response.cmd_code[0], 0x00);
+            PrintAndLogEx(INFO, "This is either a normal signal issue, or an issue caused by wrong parameter. Please try again.");
+            return PM3_ERFTRANS;
+        }
         return PM3_SUCCESS;
     }
 }
@@ -1313,9 +1320,7 @@ static int CmdHFFelicaReadPlain(const char *Cmd) {
             data[15] = i;
             felica_read_without_encryption_response_t rd_noCry_resp;
             if ((send_rd_plain(flags, datalen, data, 0, &rd_noCry_resp) == PM3_SUCCESS)) {
-                if (rd_noCry_resp.status_flags.status_flag1[0] == 0 && rd_noCry_resp.status_flags.status_flag2[0] == 0) {
-                    print_rd_plain_response(&rd_noCry_resp);
-                }
+                print_rd_plain_response(&rd_noCry_resp, i);
             } else {
                 break;
             }
@@ -1323,7 +1328,7 @@ static int CmdHFFelicaReadPlain(const char *Cmd) {
     } else {
         felica_read_without_encryption_response_t rd_noCry_resp;
         if (send_rd_plain(flags, datalen, data, 1, &rd_noCry_resp) == PM3_SUCCESS) {
-            print_rd_plain_response(&rd_noCry_resp);
+            print_rd_plain_response(&rd_noCry_resp, bnlen ? bn[0] : 0);
         }
     }
     return PM3_SUCCESS;
@@ -1792,7 +1797,7 @@ static int CmdHFFelicaDump(const char *Cmd) {
                         felica_read_without_encryption_response_t rd_noCry_resp;
                         if ((send_rd_plain(flags, block_datalen, data_block_dump, 0, &rd_noCry_resp) == PM3_SUCCESS)) {
                             if (rd_noCry_resp.status_flags.status_flag1[0] == 0 && rd_noCry_resp.status_flags.status_flag2[0] == 0) {
-                                print_rd_plain_response(&rd_noCry_resp);
+                                print_rd_plain_response(&rd_noCry_resp, i);
                             } else {
                                 break; // no more blocks to read
                             }
