@@ -468,11 +468,30 @@ static int CmdHFFelicaInfo(const char *Cmd) {
  */
 static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose) {
     uint16_t numbits = 0;
+    uint16_t payload_len = 0;
+    uint8_t *payload = data;
+
+    // ARMSRC implementation adds FeliCa preamble and length automatically (felica_sendraw:575-576)
+    // A bunch of code in this module adds length byte at data[0] regardless of that, which is wrong
+    // This is a workaround to extract the actual payload correctly so that length byte isn't repeated
+    // It also strips CRC if present, as ARMSRC adds it too
+    if (data && datalen) {
+        if (datalen >= data[0] && data[0] > 0) {
+            payload_len = data[0] - 1;
+            if (payload_len > datalen - 1) {
+                payload_len = datalen - 1;
+            }
+            payload = data + 1;
+        } else {
+            payload_len = datalen;
+        }
+    }
+
     clearCommandBuffer();
     if (verbose) {
-        PrintAndLogEx(INFO, "Send raw command - Frame: %s", sprint_hex(data, datalen));
+        PrintAndLogEx(INFO, "Send raw command - Frame: %s", sprint_hex(payload, payload_len));
     }
-    SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
+    SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (payload_len & 0xFFFF) | (uint32_t)(numbits << 16), 0, payload, payload_len);
 }
 
 /**
