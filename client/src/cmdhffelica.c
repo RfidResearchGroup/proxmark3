@@ -51,8 +51,6 @@
 #define FELICA_SERVICE_ATTRIBUTE_PURSE_SUBFIELD (0b000110)
 
 
-#define AddCrc(data, len) compute_crc(CRC_FELICA, (data), (len), (data)+(len)+1, (data)+(len))
-
 static int CmdHelp(const char *Cmd);
 static felica_card_select_t last_known_card;
 
@@ -468,11 +466,30 @@ static int CmdHFFelicaInfo(const char *Cmd) {
  */
 static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose) {
     uint16_t numbits = 0;
+    uint16_t payload_len = 0;
+    uint8_t *payload = data;
+
+    // ARMSRC implementation adds FeliCa preamble and length automatically (felica_sendraw:575-576)
+    // A bunch of code in this module adds length byte at data[0] regardless of that, which is wrong
+    // This is a workaround to extract the actual payload correctly so that length byte isn't repeated
+    // It also strips CRC if present, as ARMSRC adds it too
+    if (data && datalen) {
+        if (datalen >= data[0] && data[0] > 0) {
+            payload_len = data[0] - 1;
+            if (payload_len > datalen - 1) {
+                payload_len = datalen - 1;
+            }
+            payload = data + 1;
+        } else {
+            payload_len = datalen;
+        }
+    }
+
     clearCommandBuffer();
     if (verbose) {
-        PrintAndLogEx(INFO, "Send raw command - Frame: %s", sprint_hex(data, datalen));
+        PrintAndLogEx(INFO, "Send raw command - Frame: %s", sprint_hex(payload, payload_len));
     }
-    SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
+    SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (payload_len & 0xFFFF) | (uint32_t)(numbits << 16), 0, payload, payload_len);
 }
 
 /**
@@ -785,8 +802,6 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     // Add M1c Challenge to frame
     memcpy(data + 16, output, sizeof(output));
 
-    AddCrc(data, datalen);
-    datalen += 2;
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
 
     PrintAndLogEx(INFO, "Client send AUTH1 frame: %s", sprint_hex(data, datalen));
@@ -974,8 +989,6 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
     // Add M4c Challenge to frame
     memcpy(data + 10, m4c, sizeof(m4c));
 
-    AddCrc(data, datalen);
-    datalen += 2;
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
 
     PrintAndLogEx(INFO, "Client Send AUTH2 Frame: %s", sprint_hex(data, datalen));
@@ -1147,8 +1160,6 @@ static int CmdHFFelicaWritePlain(const char *Cmd) {
     }
 
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
-    AddCrc(data, datalen);
-    datalen += 2;
 
     felica_status_response_t wr_noCry_resp;
     if (send_wr_plain(flags, datalen, data, 1, &wr_noCry_resp) == PM3_SUCCESS) {
@@ -1300,8 +1311,6 @@ static int CmdHFFelicaReadPlain(const char *Cmd) {
 
         for (uint16_t i = 0x00; i < last_blockno; i++) {
             data[15] = i;
-            AddCrc(data, datalen);
-            datalen += 2;
             felica_read_without_encryption_response_t rd_noCry_resp;
             if ((send_rd_plain(flags, datalen, data, 0, &rd_noCry_resp) == PM3_SUCCESS)) {
                 if (rd_noCry_resp.status_flags.status_flag1[0] == 0 && rd_noCry_resp.status_flags.status_flag2[0] == 0) {
@@ -1310,11 +1319,8 @@ static int CmdHFFelicaReadPlain(const char *Cmd) {
             } else {
                 break;
             }
-            datalen -= 2;
         }
     } else {
-        AddCrc(data, datalen);
-        datalen += 2;
         felica_read_without_encryption_response_t rd_noCry_resp;
         if (send_rd_plain(flags, datalen, data, 1, &rd_noCry_resp) == PM3_SUCCESS) {
             print_rd_plain_response(&rd_noCry_resp);
@@ -1368,9 +1374,6 @@ static int CmdHFFelicaRequestResponse(const char *Cmd) {
     if (!custom_IDm && !check_last_idm(data, datalen)) {
         return PM3_EINVARG;
     }
-
-    AddCrc(data, datalen);
-    datalen += 2;
 
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
     clear_and_send_command(flags, datalen, data, 0);
@@ -1472,8 +1475,6 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    AddCrc(data, datalen);
-    datalen += 2;
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
 
     clear_and_send_command(flags, datalen, data, 0);
@@ -1576,8 +1577,6 @@ static int CmdHFFelicaResetMode(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    AddCrc(data, datalen);
-    datalen += 2;
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
 
     clear_and_send_command(flags, datalen, data, 0);
@@ -1647,8 +1646,6 @@ static int CmdHFFelicaRequestSystemCode(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    AddCrc(data, datalen);
-    datalen += 2;
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
 
     clear_and_send_command(flags, datalen, data, 0);
@@ -1725,9 +1722,8 @@ static int CmdHFFelicaDump(const char *Cmd) {
 
         data_service_dump[10] = cursor & 0xFF;
         data_service_dump[11] = cursor >> 8;
-        AddCrc(data_service_dump, service_datalen);
 
-        if (send_dump_sv_plain(flags, service_datalen + 2, data_service_dump, 0,
+        if (send_dump_sv_plain(flags, service_datalen, data_service_dump, 0,
                                &resp, false) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "No response at cursor 0x%04X", cursor);
             return PM3_ERFTRANS;
@@ -1793,9 +1789,8 @@ static int CmdHFFelicaDump(const char *Cmd) {
                     uint16_t last_blockno = 0xFF;
                     for (uint16_t i = 0x00; i < last_blockno; i++) {
                         data_block_dump[15] = i;
-                        AddCrc(data_block_dump, block_datalen);
                         felica_read_without_encryption_response_t rd_noCry_resp;
-                        if ((send_rd_plain(flags, block_datalen + 2, data_block_dump, 0, &rd_noCry_resp) == PM3_SUCCESS)) {
+                        if ((send_rd_plain(flags, block_datalen, data_block_dump, 0, &rd_noCry_resp) == PM3_SUCCESS)) {
                             if (rd_noCry_resp.status_flags.status_flag1[0] == 0 && rd_noCry_resp.status_flags.status_flag2[0] == 0) {
                                 print_rd_plain_response(&rd_noCry_resp);
                             } else {
@@ -1919,13 +1914,11 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
         // send 32 calls
         for (uint8_t i = 1; i < 32; i++) {
             data[10] = i;
-            AddCrc(data, datalen);
-            send_request_service(flags, datalen + 2, data, 1);
+            send_request_service(flags, datalen, data, 1);
         }
 
     } else {
-        AddCrc(data, datalen);
-        send_request_service(flags, datalen + 2, data, 1);
+        send_request_service(flags, datalen, data, 1);
     }
 
     return PM3_SUCCESS;
@@ -1973,9 +1966,8 @@ static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
         /* insert cursor LE */
         data[10] = cursor & 0xFF;
         data[11] = cursor >> 8;
-        AddCrc(data, datalen);
 
-        if (send_dump_sv_plain(flags, datalen + 2, data, 0,
+        if (send_dump_sv_plain(flags, datalen, data, 0,
                                &resp, false) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "No response at cursor 0x%04X", cursor);
             return PM3_ERFTRANS;
@@ -2503,9 +2495,6 @@ static int felica_internal_authentication(
         return PM3_ERFTRANS;
     }
 
-    AddCrc(data, datalen);
-    datalen += 2;
-
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW | FELICA_NO_DISCONNECT);
 
     felica_status_response_t res;
@@ -2526,9 +2515,6 @@ static int felica_internal_authentication(
     if (ret) {
         return PM3_ERFTRANS;
     }
-
-    AddCrc(data, datalen);
-    datalen += 2;
 
     uint8_t pd[FELICA_BLK_SIZE * sizeof(blk_numbers2)];
     memset(pd, 0, sizeof(pd));
@@ -2593,9 +2579,6 @@ static int felica_external_authentication(
         return PM3_ERFTRANS;
     }
 
-    AddCrc(data, datalen);
-    datalen += 2;
-
     uint8_t wcnt_blk[FELICA_BLK_SIZE];
     ret = send_rd_multiple_plain(flags, datalen, data, wcnt_blk);
     if (ret) {
@@ -2620,9 +2603,6 @@ static int felica_external_authentication(
     if (ret) {
         return PM3_ERFTRANS;
     }
-
-    AddCrc(data, datalen);
-    datalen += 2;
 
     if (keep == false) {
         flags &= ~FELICA_NO_DISCONNECT;
@@ -3097,12 +3077,12 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 7, data, &datalen);
     CLIParserFree(ctx);
 
+    uint8_t flags = 0;
+
     if (crc) {
-        AddCrc(data, datalen);
-        datalen += 2;
+        flags |= FELICA_APPEND_CRC;
     }
 
-    uint8_t flags = 0;
     if (active || active_select) {
         flags |= FELICA_CONNECT;
         if (active) {
