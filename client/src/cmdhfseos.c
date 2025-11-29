@@ -204,29 +204,30 @@ static void generate_command_wrapping(uint8_t *command_Header, int command_heade
     uint8_t asn1_tag_cryptograph[2] = {0x85, ARRAYLEN(padded_encrypted_Command)};
     uint8_t asn1_tag_mac[2] = {0x8e, 0x08};
     uint8_t command_trailer[2] = {0x97, 0x00};
-    int padded_command_trailer_len = ARRAYLEN(command_trailer);
-    uint8_t padded_command_trailer[padded_command_trailer_len+block_size];
-    padToBlockSize(command_trailer, &padded_command_trailer_len, block_size, padded_command_trailer);
 
-    uint8_t toEncrypt[ARRAYLEN(rndCounter) + padded_Command_Header_len + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command) + padded_command_trailer_len];
+    uint8_t toEncrypt[ARRAYLEN(rndCounter) + padded_Command_Header_len + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command) + ARRAYLEN(command_trailer)];
 
     memcpy(toEncrypt, rndCounter, ARRAYLEN(rndCounter));
     memcpy(toEncrypt + ARRAYLEN(rndCounter), padded_Command_Header, padded_Command_Header_len);
     memcpy(toEncrypt + ARRAYLEN(rndCounter) + padded_Command_Header_len, asn1_tag_cryptograph, ARRAYLEN(asn1_tag_cryptograph));
     memcpy(toEncrypt + ARRAYLEN(rndCounter) + padded_Command_Header_len + ARRAYLEN(asn1_tag_cryptograph), padded_encrypted_Command, ARRAYLEN(padded_encrypted_Command));
-    memcpy(toEncrypt + ARRAYLEN(rndCounter) + padded_Command_Header_len + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command), padded_command_trailer, padded_command_trailer_len);
+    memcpy(toEncrypt + ARRAYLEN(rndCounter) + padded_Command_Header_len + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command), command_trailer, ARRAYLEN(command_trailer));
+
+    int padded_toEncrypt_len = ARRAYLEN(toEncrypt);
+    uint8_t padded_toEncrypt[padded_toEncrypt_len+block_size];
+    padToBlockSize(toEncrypt, &padded_toEncrypt_len, block_size, padded_toEncrypt);
 
     // Breakdown
     // 0181e43801010201 + 0000000000000001 + 0CCB3FFF800000000000000000000000 + 8510EB54DA90CB43AEE7FBFE816ECA25A10D + 9700 + 800000000000000000000000
 
     uint8_t mac[8];
-    create_cmac(diversified_mac_key, toEncrypt, mac, sizeof(toEncrypt), encryption_algorithm);
+    create_cmac(diversified_mac_key, padded_toEncrypt, mac, padded_toEncrypt_len, encryption_algorithm);
 
     // PrintAndLogEx(SUCCESS, "Encryption Key................... " _YELLOW_("%s"), sprint_hex_inrow(diversified_enc_key, 24));
     // PrintAndLogEx(SUCCESS, "MAC Key.......................... " _YELLOW_("%s"), sprint_hex_inrow(diversified_mac_key, 24));
     // PrintAndLogEx(SUCCESS, "rndCounter....................... " _YELLOW_("%s"), sprint_hex_inrow(rndCounter,sizeof(rndCounter)));
     // PrintAndLogEx(SUCCESS, "padded_encrypted_Command......... " _YELLOW_("%s"), sprint_hex_inrow(padded_encrypted_Command,sizeof(padded_encrypted_Command)));
-    // PrintAndLogEx(SUCCESS, "toEncrypt........................ " _YELLOW_("%s"), sprint_hex_inrow(toEncrypt,sizeof(toEncrypt)));
+    // PrintAndLogEx(SUCCESS, "padded_toEncrypt................. " _YELLOW_("%s"), sprint_hex_inrow(padded_toEncrypt,padded_toEncrypt_len));
     // PrintAndLogEx(SUCCESS, "MAC.............................. " _YELLOW_("%s"), sprint_hex_inrow(mac,sizeof(mac)));
 
     uint8_t sizeofcommand[1] = {ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command) + ARRAYLEN(command_trailer) + ARRAYLEN(asn1_tag_mac) + ARRAYLEN(mac)};
