@@ -1948,8 +1948,7 @@ static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
     if (!check_last_idm(data, datalen))
         return PM3_EINVARG;
 
-    PrintAndLogEx(HINT, "Area and service code are printed in big endian.");
-    PrintAndLogEx(HINT, "Don't forget to convert to little endian when using hf felica rdbl.");
+    PrintAndLogEx(HINT, "Area and service codes are printed in network order.");
     PrintAndLogEx(INFO, "┌───────────────────────────────────────────────");
 
     uint8_t flags = FELICA_APPEND_CRC | FELICA_RAW;
@@ -1981,7 +1980,9 @@ static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
         }
 
         uint8_t len = resp.frame_response.length[0];
-        uint16_t node_code = resp.payload[0] | (resp.payload[1] << 8);
+        uint16_t node_code = resp.payload[0] | (resp.payload[1] << 8);      /* LE for traversal */
+        uint16_t node_code_net = (resp.payload[0] << 8) | resp.payload[1];   /* BE for display */
+        uint16_t node_number = node_code >> 6;                               /* upper 10 bits in host order */
 
         if (node_code == 0xFFFF) break;          /* end-marker */
 
@@ -2002,13 +2003,16 @@ static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
         /* ----- print --------------------------------------------------- */
         if (len == 0x0E) {                          /* AREA node */
             uint16_t end_code = resp.payload[2] | (resp.payload[3] << 8);
-            PrintAndLogEx(INFO, "%sAREA_%04X", prefix, node_code >> 6);
+            uint16_t end_number = end_code >> 6;
+            PrintAndLogEx(INFO, "%sAREA_%02X%02X%02X%02X (%u-%u)", prefix,
+                          resp.payload[0], resp.payload[1], resp.payload[2], resp.payload[3],
+                          node_number, end_number);
 
             if (depth < 7) {
                 area_end_stack[++depth] = end_code;
             }
         } else if (len == 0x0C) {                                /* SERVICE */
-            PrintAndLogEx(INFO, "%ssvc_%04X", prefix, node_code);
+            PrintAndLogEx(INFO, "%sSVC_%04X (%u)", prefix, node_code_net, node_number);
         } else {
             PrintAndLogEx(FAILED, "Unexpected length 0x%02X @ 0x%04X",
                           len, cursor);
