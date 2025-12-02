@@ -35,6 +35,7 @@
 #include "fileutils.h"      // saveFile
 #include "cmdtrace.h"       // trace list
 #include "preferences.h"    // setDeviceDebugLevel
+#include "crc16.h"
 #include "crypto/originality.h"
 
 #define MAX_UL_BLOCKS       0x0F
@@ -1925,6 +1926,99 @@ int mfu_get_version_uid(uint8_t *version, uint8_t *uid) {
     return PM3_SUCCESS;
 }
 
+static int mfulc_fingerprint(void) {
+    iso14a_card_select_t card;
+    PacketResponseNG resp;
+
+    // Old LAB401 ULC DW
+    // To be checked before FJ8010
+    if (ul_select(&card) == false) {
+        PrintAndLogEx(ERR, "Unable to select tag");
+        DropField();
+        return PM3_ESOFT;
+    }
+    uint8_t cmd0[] = {0xAF};
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS, sizeof(cmd0), 0, cmd0, sizeof(cmd0));
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
+        if ((resp.oldarg[0] == 11) && (resp.data.asBytes[0] == 0x00)) {
+            PrintAndLogEx(SUCCESS, _GREEN_("Lab401 Ultralight-C compatible UID modifiable"));
+            DropField();
+            return PM3_SUCCESS;
+        }
+    }
+    DropField();
+
+    // Feiju FJ8010
+    if (ul_select(&card) == false) {
+        PrintAndLogEx(ERR, "Unable to select tag");
+        DropField();
+        return PM3_ESOFT;
+    }
+    uint8_t cmd1[] = {0x1A, 0x2F};
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_APPEND_CRC | ISO14A_NO_RATS, sizeof(cmd1), 0, cmd1, sizeof(cmd1));
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
+        if ((resp.oldarg[0] == 11) && (resp.data.asBytes[0] == 0xAF)) {
+            PrintAndLogEx(SUCCESS, _GREEN_("Feiju FJ8010"));
+            DropField();
+            return PM3_SUCCESS;
+        }
+    }
+    DropField();
+
+    // USCUID-UL with ULC authentication
+    if (ul_select(&card) == false) {
+        PrintAndLogEx(ERR, "Unable to select tag");
+        DropField();
+        return PM3_ESOFT;
+    }
+    uint8_t cmd2[] = {0x1A};
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_RATS, sizeof(cmd2), 0, cmd2, sizeof(cmd2));
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
+        if ((resp.oldarg[0] == 11) && (resp.data.asBytes[0] == 0xAF)) {
+            uint8_t response[11] = {0};
+            memcpy(response, resp.data.asBytes, 9);
+            compute_crc(CRC_14443_A, response, 9, response + 9, response + 10);
+            response[9] ^= resp.data.asBytes[9];
+            response[10] ^= resp.data.asBytes[10];
+            if ((response[9] == 0x6C) && (response[10] == 0xF3)) {
+                PrintAndLogEx(SUCCESS, _GREEN_("USCUID-UL with ULC authentication, variant 1"));
+            } else if ((response[9] == 0xB4) && (response[10] == 0xC5)) {
+                PrintAndLogEx(SUCCESS, _GREEN_("USCUID-UL with ULC authentication, variant 2"));
+            } else {
+                PrintAndLogEx(SUCCESS, _GREEN_("USCUID-UL with ULC authentication") _RED_(" unknown variant") ", please report!");
+            }
+            DropField();
+            return PM3_SUCCESS;
+        }
+    }
+    DropField();
+
+    // GT23SC4489
+    uint8_t cmd3a[] = {0x26};
+    uint8_t cmd3b[] = {0x30};
+    SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_CONNECT | ISO14A_NO_SELECT | ISO14A_NO_DISCONNECT, 7 << 16, 0, cmd3a, sizeof(cmd3a));
+    if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
+        if (resp.oldarg[0] == 2) {
+            SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_RAW | ISO14A_NO_SELECT, sizeof(cmd3b), 0, cmd3b, sizeof(cmd3b));
+            if (WaitForResponseTimeout(CMD_ACK, &resp, 500)) {
+                if (resp.oldarg[0] == 18) {
+                    if ((resp.data.asBytes[0] == 0x04) && (resp.data.asBytes[6] == 0x15) && (resp.data.asBytes[7] == 0x89)) {
+                        PrintAndLogEx(SUCCESS, _GREEN_("GT23SC4489"));
+                    } else {
+                        PrintAndLogEx(SUCCESS, _GREEN_("GT23SC4489") _RED_(" unknown variant") ", please report!");
+                    }
+                    DropField();
+                    return PM3_SUCCESS;
+                }
+            }
+        }
+    }
+    DropField();
+
+    PrintAndLogEx(INFO, "likely MF0ICU2");
+    return PM3_SUCCESS;
+}
+
 static int mfu_fingerprint(uint64_t tagtype, bool has_auth_key, const uint8_t *authkey, int ak_len, bool use_schann) {
 
     uint8_t dbg_curr = DBG_NONE;
@@ -1932,6 +2026,12 @@ static int mfu_fingerprint(uint64_t tagtype, bool has_auth_key, const uint8_t *a
     int res = PM3_ESOFT;
     PrintAndLogEx(INFO, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Fingerprint"));
+
+    // ULC fingerprinting
+    if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
+        res = mfulc_fingerprint();
+    }
+
     uint8_t maxbytes = mfu_max_len();
     if (maxbytes == 0) {
         PrintAndLogEx(ERR, "fingerprint table wrong");
@@ -2452,14 +2552,20 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         if ((tagtype & MFU_TT_MAGIC) == MFU_TT_MAGIC) {
             //just read key
             uint8_t ulc_deskey[16] = {0x00};
-            status = ul_read(0x2C, ulc_deskey, sizeof(ulc_deskey), false);
-            if (status <= 0) {
+            if (ul_select(&card) == false) {
                 DropField();
+                PrintAndLogEx(ERR, "Unable to select tag");
+                return PM3_ESOFT;
+            }
+            status = ul_read(0x2C, ulc_deskey, sizeof(ulc_deskey), false);
+            DropField();
+            if (status <= 0) {
                 PrintAndLogEx(ERR, "Error: tag didn't answer to READ magic");
                 return PM3_ESOFT;
             }
 
             if (status == 16) {
+                PrintAndLogEx(SUCCESS, "Reading 3des key from magic card: ");
                 ulc_print_3deskey(ulc_deskey);
             }
 
