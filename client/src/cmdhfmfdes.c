@@ -295,7 +295,11 @@ static char *getTypeStr(uint8_t type) {
         case 0x81:
             snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("Smartcard") " )", type);
             break;
+        case 0x91:
+            snprintf(retStr, sizeof(buf), "0x%02X ( " _YELLOW_("Applet") " )", type);
+            break;
         default:
+            snprintf(retStr, sizeof(buf), "0x%02X", type);
             break;
     }
     return buf;
@@ -347,7 +351,9 @@ nxp_cardtype_t getCardType(uint8_t type, uint8_t major, uint8_t minor) {
         return DESFIRE_EV2;
 
     // Apple Wallet DESFire Applet
-    if (type == 0x91 && major == 0x62 && minor == 0x01)
+    // - v62.1 encountered on iPhone
+    // - v62.0 encountered on Apple Watch
+    if (type == 0x91 && major == 0x62 && (minor == 0x01 || minor == 0x00))
         return DESFIRE_EV2;
 
     // Plus EV1
@@ -747,7 +753,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "   raw: %s", sprint_hex_inrow(info.versionHW, sizeof(info.versionHW)));
 
     PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(info.versionHW[0]));
-    PrintAndLogEx(INFO, "          Type: %s", getTypeStr(info.versionHW[1]));
+    PrintAndLogEx(INFO, "          Type: " _YELLOW_("%s"), getTypeStr(info.versionHW[1]));
     PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), info.versionHW[2]);
     PrintAndLogEx(INFO, "       Version: %s", getVersionStr(info.versionHW[1], info.versionHW[3], info.versionHW[4]));
     PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(info.versionHW[5]));
@@ -756,7 +762,7 @@ static int CmdHF14ADesInfo(const char *Cmd) {
     PrintAndLogEx(INFO, "--- " _CYAN_("Software Information"));
     PrintAndLogEx(INFO, "   raw: %s", sprint_hex_inrow(info.versionSW, sizeof(info.versionSW)));
     PrintAndLogEx(INFO, "     Vendor Id: " _YELLOW_("%s"), getTagInfo(info.versionSW[0]));
-    PrintAndLogEx(INFO, "          Type: %s", getTypeStr(info.versionSW[1]));
+    PrintAndLogEx(INFO, "          Type: " _YELLOW_("%s"), getTypeStr(info.versionSW[1]));
     PrintAndLogEx(INFO, "       Subtype: " _YELLOW_("0x%02X"), info.versionSW[2]);
     PrintAndLogEx(INFO, "       Version: " _YELLOW_("%d.%d"),  info.versionSW[3], info.versionSW[4]);
     PrintAndLogEx(INFO, "  Storage size: %s", getCardSizeStr(info.versionSW[5]));
