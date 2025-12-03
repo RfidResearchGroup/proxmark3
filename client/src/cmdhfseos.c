@@ -103,23 +103,26 @@ static const known_algo_t known_algorithm_map[] = {
     {9, "AES-128_CBC_MODE"},
 };
 
-static int create_cmac(uint8_t *key, uint8_t *input, uint8_t *out, int input_len, int encryption_algorithm) {
+static int create_cmac(uint8_t *key, uint8_t *input, uint8_t *out, int input_len, int output_len, int encryption_algorithm) {
     uint8_t iv[16] = {0x00};
+    uint8_t mac[16] = {0x00};
 
     if (encryption_algorithm == 0x09) {
         // Working as expected
-        aes_cmac(iv, key, input, out, input_len);
+        aes_cmac(iv, key, input, mac, input_len);
     } else if (encryption_algorithm == 0x02) {
         // CMAC Requires a 24 byte key, but the 2k3DES uses the 1st part for the 3rd part of the key
         memcpy(&key[16], &key[0], 8);
 
         const mbedtls_cipher_info_t *ctx;
         ctx = mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_DES_EDE3_ECB);
-        mbedtls_cipher_cmac(ctx, key, 192, input, input_len, out);
+        mbedtls_cipher_cmac(ctx, key, 192, input, input_len, mac);
     } else {
         PrintAndLogEx(ERR, _RED_("Unknown Encryption Algorithm"));
         return PM3_ESOFT;
     }
+    // Copy only requested number of bytes into output buffer
+    memcpy(out, mac, output_len);
     return PM3_SUCCESS;
 }
 
@@ -221,7 +224,7 @@ static void generate_command_wrapping(uint8_t *command_Header, int command_heade
     // 0181e43801010201 + 0000000000000001 + 0CCB3FFF800000000000000000000000 + 8510EB54DA90CB43AEE7FBFE816ECA25A10D + 9700 + 800000000000000000000000
 
     uint8_t mac[8];
-    create_cmac(diversified_mac_key, padded_toEncrypt, mac, padded_toEncrypt_len, encryption_algorithm);
+    create_cmac(diversified_mac_key, padded_toEncrypt, mac, padded_toEncrypt_len, sizeof(mac), encryption_algorithm);
 
     // PrintAndLogEx(SUCCESS, "Encryption Key................... " _YELLOW_("%s"), sprint_hex_inrow(diversified_enc_key, 24));
     // PrintAndLogEx(SUCCESS, "MAC Key.......................... " _YELLOW_("%s"), sprint_hex_inrow(diversified_mac_key, 24));
@@ -587,7 +590,7 @@ static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t 
     uint8_t cmac[16];
     uint8_t MAC_key[24] = {0x00};
     memcpy(MAC_key, keys[key_index].privMacKey, 16);
-    create_cmac(MAC_key, input, cmac, input_len, encryption_algorithm);
+    create_cmac(MAC_key, input, cmac, input_len, sizeof(cmac), encryption_algorithm);
 
     // PrintAndLogEx(INFO, "--- " _CYAN_("MAC") " ---------------------------");
     // PrintAndLogEx(SUCCESS, "MAC Key: "_YELLOW_("%s"), sprint_hex_inrow(MAC_key,sizeof(MAC_key)));
@@ -821,7 +824,7 @@ static int seos_mutual_auth(uint8_t *adfOID, size_t adfoid_len, uint8_t *randomI
     uint8_t mac[8];
     uint8_t mutual_auth_enc[32];
     create_cryptogram(AES_key, mutual_auth_plain, mutual_auth_enc, sizeof(mutual_auth_plain), encryption_algorithm);
-    create_cmac(MAC_key, mutual_auth_enc, mac, sizeof(mutual_auth_enc), encryption_algorithm);
+    create_cmac(MAC_key, mutual_auth_enc, mac, sizeof(mutual_auth_enc), sizeof(mac), encryption_algorithm);
 
     uint8_t message_authenticated[40];
     memcpy(message_authenticated, mutual_auth_enc, sizeof(mutual_auth_enc));
