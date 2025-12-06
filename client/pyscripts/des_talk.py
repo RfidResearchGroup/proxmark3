@@ -176,7 +176,6 @@ def authenticate_and_menu():
             aid_key_type = input(f"Enter AID encryption algorithm (DES, 2TDEA, 3TDEA, AES) (Default: {key_type.upper()}): ").strip() or key_type
             aid_key = input(f"Enter AID key (Default: {key}): ").strip() or key
 
-            # Show file menu
             aid_file_menu(selected_aid, key_type, key, com_mode, aid_key_type, aid_key)
 
         elif choice == "2":
@@ -241,7 +240,7 @@ def create_aid(key_type, key, com_mode):
     create_command = f"hf mfdes createapp -n 0 --aid {aid} --fid {iso_fid} --dstalgo {dstalgo} -t {key_type} -k {key} -m {com_mode} -a"
     response = send_proxmark_command(create_command)
     print(response)
-    print("\n.:: DESFire assigns all-zero keys to new applications by default. Keys can be modified via the main menu. ::.\n")
+    print("\n⚠️ DESFire assigns all-zero keys to new applications by default. Keys can be modified via the main menu.\n")
 
 def delete_aid(key_type, key, com_mode):
 
@@ -276,6 +275,7 @@ def free_memory(key_type, key, com_mode):
     print("❌ Unable to retrieve free memory information.")
 
 def change_key(key_type, key, com_mode):
+
     print("\nChange Key - Choose Target:")
     print("1. PICC (Card Master Key)")
     print("2. Application Key")
@@ -312,7 +312,7 @@ def change_key(key_type, key, com_mode):
 
         response = send_proxmark_command(changekey_command)
         print(response)
-        print("\nReauthenticate with the master key.")
+        print("\n⚠️ Reauthenticate with the master key.")
         sys.exit()
 
     elif confirm == "n":
@@ -321,6 +321,7 @@ def change_key(key_type, key, com_mode):
         print("Invalid input. Please enter 'y' or 'n'.")
 
 def list_files(aid, key_type, key, com_mode, aid_key_type, aid_key):
+
     print("\nFetching file list...")
     command = f"hf mfdes getfileids --aid {aid} -t {aid_key_type} -k {aid_key} -m {com_mode}"
     response = send_proxmark_command(command)
@@ -361,7 +362,7 @@ def read_file(aid, key_type, key, com_mode, aid_key_type, aid_key):
     response = send_proxmark_command(read_command)
 
     if "authenticate error" in response.lower():
-        print("\nAuthentication Error")
+        print("\n❌ Authentication Error")
         return None
 
     if text_only:
@@ -401,7 +402,6 @@ def read_file(aid, key_type, key, com_mode, aid_key_type, aid_key):
 
 def create_file(aid, key_type, key, com_mode, aid_key_type, aid_key):
 
-    # Prompt for file ID in hex format
     file_id = input("Enter file ID (2 hex characters, e.g., 01, 02): ").strip()
     # Prompt for file size in KB, allowing for decimal values like 0.2KB
     file_size_kb_input = input("Enter file size in KB (e.g., .2 for 0.2KB, 1 for 1KB, 4 for 4KB, 16 for 16KB): ").strip()
@@ -429,7 +429,7 @@ def create_file(aid, key_type, key, com_mode, aid_key_type, aid_key):
         print(f"File size in hex: {file_size_hex}")
 
     except ValueError as e:
-        print(f"Invalid file size: {e}")
+        print(f"⚠️Invalid file size: {e}")
         return
 
     create_command = f"hf mfdes createfile --aid {aid} --fid {file_id} --isofid {iso_file_id} " \
@@ -437,56 +437,135 @@ def create_file(aid, key_type, key, com_mode, aid_key_type, aid_key):
     response = send_proxmark_command(create_command)
     print(response)
 
+def read_long_input(prompt=""):
+
+    """
+    Read lengthy user input on POSIX systems.
+
+    Linux terminals normally run in canonical mode, where read() is buffered
+    and limited to ~4096 bytes. To support very long input (large hex strings for DESFire),
+    ICANON is temporarily disabled so input is passed through immediately without the
+    kernel line buffer limit.
+
+    Windows doesn't use termios, so this function transparently falls back to normal
+    input() on that platform.
+    """
+    if os.name == "posix":
+        try:
+            import termios
+        except Exception:
+            return input(prompt)
+
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)  # Save current terminal settings
+        new_settings = termios.tcgetattr(fd)
+        new_settings[3] &= ~termios.ICANON  # Disable canonical mode
+        try:
+            termios.tcsetattr(fd, termios.TCSANOW, new_settings)
+            return input(prompt)
+        finally:
+            # Restore original settings
+            termios.tcsetattr(fd, termios.TCSANOW, old_settings)
+    else:
+        return input(prompt)
+
 def write_to_file(aid, key_type, key, com_mode, aid_key_type, aid_key):
 
     file_id = input("Enter file ID to write to: ").strip()
 
-    # Get file size
-    file_size_command = f"hf mfdes getfilesettings --aid {aid} --fid {file_id} -t {aid_key_type} -k {aid_key} -m {com_mode}"
+    file_size_command = (
+        f"hf mfdes getfilesettings --aid {aid} --fid {file_id} "
+        f"-t {aid_key_type} -k {aid_key} -m {com_mode}"
+    )
     response = send_proxmark_command(file_size_command)
 
-    # Check for authentication error
     if "authenticate error" in response.lower():
-        print("\nAuthentication Error")
+        print("\n❌ Authentication Error")
         return None
 
-    # Extract the file size from the response
-    file_size_match = re.search(r"File size \(bytes\)... (\d+) / 0x([0-9A-Fa-f]+)", response)
+    file_size_match = re.search(
+        r"File size \(bytes\)... (\d+) / 0x([0-9A-Fa-f]+)", response
+    )
     if not file_size_match:
         print("❌ Unable to determine file size.")
         return
 
-    file_size = int(file_size_match.group(1))  # Decimal file size
-
+    file_size = int(file_size_match.group(1))
     print(f"✅ File size detected: {file_size} bytes")
 
-    # Prompt user for data format choice (plain text or hex)
     while True:
-        data_format = input("Enter data format (Type 1 for plain text, 2 for hex): ").strip()
+        data_format = input("Enter data format (1 = plain text, 2 = hex): ").strip()
 
         if data_format == "1":
-            # Text input (no hex)
-            write_data = input(f"Enter text to write (up to {file_size} bytes, no need for hex): ").strip()
-            write_data_hex = write_data.encode().hex().upper()  # Convert to hex
+            write_data = read_long_input(
+                f"Enter text to write (up to {file_size} bytes): "
+            ).strip()
+            write_data_hex = write_data.encode().hex().upper()
+            if len(write_data) > file_size:
+                print(f"❌ Data exceeds {file_size} bytes. Try again.")
+                continue
             break
 
         elif data_format == "2":
-            # Hex input
-            write_data_hex = input(f"Enter hex data to write (up to {file_size * 2} hex chars): ").strip()
-            if len(write_data_hex) % 2 != 0:  # Ensure it's a valid hex string
-                print("❌ Invalid hex input. Please enter an even number of characters.")
-            elif len(write_data_hex) // 2 > file_size:
-                print(f"❌ Data exceeds file size limit of {file_size} bytes. Try again.")
-            else:
-                break
-        else:
-            print("❌ Invalid choice. Please choose 1 for text or 2 for hex.")
+            write_data_hex = read_long_input(
+                f"Enter hex data to write (up to {file_size * 2} hex chars): "
+            ).strip()
 
-    write_command = f"hf mfdes write --aid {aid} --fid {file_id} -t {aid_key_type} -k {aid_key} -d {write_data_hex} -m {com_mode}"
-    response = send_proxmark_command(write_command)
-    print(response)
+            if len(write_data_hex) % 2 != 0:
+                print("❌ Hex must contain an even number of characters.")
+                continue
+
+            if (len(write_data_hex) // 2) > file_size:
+                print(f"❌ Data exceeds {file_size} bytes. Try again.")
+                continue
+            break
+
+        else:
+            print("❌ Invalid choice. Select 1 or 2.")
+
+    # Split data into chunks Proxmark3 reliably accepts (128 hex chars = 64 bytes)
+    chunk_size = 128
+    chunks = [write_data_hex[i:i+chunk_size] for i in range(0, len(write_data_hex), chunk_size)]
+
+    if len(chunks) > 1:
+        print(f"Splitting data into {len(chunks)} chunks (max {chunk_size} hex chars each)")
+
+    for i, chunk in enumerate(chunks):
+        offset_bytes = i * (chunk_size // 2)  # Convert hex char count to bytes
+
+        # Make sure card's file size is never exceeded on the last chunk
+        remaining_bytes = file_size - offset_bytes
+        if remaining_bytes <= 0:
+            break
+
+        chunk = chunk[:remaining_bytes * 2]  # Trim to remaining space
+
+        if i == 0:
+            # First write: no offset
+            write_command = (
+                f"hf mfdes write --aid {aid} --fid {file_id} "
+                f"-t {aid_key_type} -k {aid_key} -d {chunk} -m {com_mode}"
+            )
+            offset_desc = "000000"
+        else:
+            # Remaining writes require 3-byte offset (6 hex digits)
+            offset_hex = f"{offset_bytes:06X}"
+            offset_desc = offset_hex
+            write_command = (
+                f"hf mfdes write --aid {aid} --fid {file_id} "
+                f"-t {aid_key_type} -k {aid_key} -d {chunk} -m {com_mode} "
+                f"--offset {offset_hex}"
+            )
+
+        if len(chunks) > 1:
+            print(f"\nWriting chunk {i+1}/{len(chunks)} (offset {offset_desc})")
+
+        response = send_proxmark_command(write_command)
+        time.sleep(0.10)
+        print(response)
 
 def edit_file_restriction(aid, key_type, key, com_mode, aid_key_type, aid_key):
+
     while True:
         print("\nNOTE: This only works if you have changed the default keys.")
         print("The Proxmark3 and other tools will automatically attempt to read files using DESFire default keys.")
@@ -529,4 +608,4 @@ def delete_file(aid, key_type, key, com_mode, aid_key_type, aid_key):
     print(response)
 
 if __name__ == "__main__":
-    authenticate_and_menu()
+    authenticate_and_menu()     
