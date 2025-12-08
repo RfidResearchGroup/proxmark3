@@ -163,7 +163,10 @@ static int decrypt_cryptogram(uint8_t *key, uint8_t *input, uint8_t *out, int in
 }
 
 static void increment_command_wrapper(uint8_t *input, int input_len) {
-    input[input_len - 1]++; // Increment the last element of the header by 1
+    // Increment the end of the header by 1
+    uint32_t value = MemBeToUint4byte(&input[input_len - sizeof(uint32_t)]);
+    value++;
+    Uint4byteToMemBe(&input[input_len - sizeof(uint32_t)], value);
 }
 
 static void padToBlockSize(const uint8_t *input, int *inputSize, int blockSize, uint8_t *output) {
