@@ -2618,27 +2618,20 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             // read pages 0x29, 0x2A, 0x2B, 0x2C  (cfg1, cfg2, RFU, RFU)
             uint8_t ulaes_conf[16] = {0x00};
             status = ul_read(0x29, ulaes_conf, sizeof(ulaes_conf), use_schann);
-            if (status <= 0) {
-                PrintAndLogEx(ERR, "Error: tag didn't answer to READ block 0x29 UL-AES");
-                DropField();
-                return PM3_ESOFT;
-            }
-
             if (status == 16) {
                 ulaes_print_configuration(ulaes_conf, 0x29);
 
                 memset(ulaes_conf, 0, sizeof(ulaes_conf));
                 // read page 0x2D, (CMAC CFG)
                 status = ul_read(0x2D, ulaes_conf, sizeof(ulaes_conf), use_schann);
-                if (status <= 0) {
-                    PrintAndLogEx(ERR, "Error: tag didn't answer to READ block 0x2D UL-AES");
-                    DropField();
-                    return PM3_ESOFT;
+                if (status == 16) {
+                    ulaes_print_configuration(ulaes_conf, 0x2D);
+                } else {
+                    PrintAndLogEx(WARNING, "Warning: block 0x2D cannot be read");
+                    locked = true;
                 }
-
-                ulaes_print_configuration(ulaes_conf, 0x2D);
-
             } else {
+                PrintAndLogEx(WARNING, "Warning: block 0x29 cannot be read");
                 locked = true;
             }
 
