@@ -1411,6 +1411,10 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
             }
             AddCrc14A(rVERSION, sizeof(rVERSION) - 2);
 
+            // READ_SIG
+            memcpy(rSIGN, mfu_header->signature, 32);
+            AddCrc14A(rSIGN, sizeof(rSIGN) - 2);
+
             Simulate_read_ulaes_key0(ulc_key);
 
             /*
@@ -1969,7 +1973,7 @@ void SimulateIso14443aTag(uint8_t tagType, uint16_t flags, uint8_t *useruid, uin
                 EmSend4bit(CARD_NACK_PA);
             }
             p_response = NULL;
-        } else if (receivedCmd[0] == MIFARE_ULEV1_READSIG && len == 4 && tagType == 7) {    // Received a READ SIGNATURE --
+        } else if (receivedCmd[0] == MIFARE_ULEV1_READSIG && len == 4 && (tagType == 7 || tagType == 14)) {    // Received a READ SIGNATURE --
             p_response = &responses[RESP_INDEX_SIGNATURE];
         } else if (receivedCmd[0] == MIFARE_ULEV1_READ_CNT && len == 4 && tagType == 7) {    // Received a READ COUNTER --
             uint8_t index = receivedCmd[1];
