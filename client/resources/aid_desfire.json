@@ -1388,7 +1388,15 @@
         "Vendor": "Helsinki Region Transport (HRT)",
         "Country": "FI",
         "Name": "HSL Card (HEL/TLL/TAY)",
-        "Description": "HEL/TLL/TAY HSL Card",
+        "Description": "HEL/TLL/TAY HSL Card (Old green card before 2016)",
+        "Type": "transport"
+    },
+    {
+        "AID": "EF2014",
+        "Vendor": "Helsinki Region Transport (HRT)",
+        "Country": "FI",
+        "Name": "HSL Card (HEL/TLL/TAY)",
+        "Description": "HEL/TLL/TAY HSL Card (New blue card after 2016)",
         "Type": "transport"
     },
     {
