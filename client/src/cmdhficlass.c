@@ -1511,11 +1511,36 @@ static void iclass_decode_credentials(uint8_t *data) {
             char binstr[64 + 1];
             hextobinstring(binstr, hexstr);
             char *pbin = binstr;
+            // Strip leading zeros
             while (strlen(pbin) && *(++pbin) == '0');
+            
+            size_t binlen = strlen(pbin);
+            
+            // Check if we have a sentinel bit (leading '1' that makes length one more than common formats)
+            // Common formats: 26, 30, 33, 34, 35, 36, 37, 46, 48
+            // If we have 27, 31, 34, 35, 36, 37, 38, 47, 49 bits and it starts with '1',
+            // it's likely a sentinel bit that should be stripped
+            if (binlen > 0 && pbin[0] == '1' && 
+                (binlen == 27 || binlen == 31 || binlen == 34 || binlen == 35 || 
+                 binlen == 36 || binlen == 37 || binlen == 38 || binlen == 47 || binlen == 49)) {
+                // Strip the sentinel bit by recreating u96 from binary string without leading '1'
+                char *corrected_bin = pbin + 1; // Skip the leading '1'
+                size_t corrected_len = strlen(corrected_bin);
+                
+                // Recreate u96 values from corrected binary string
+                top = 0;
+                mid = 0;
+                bot = 0;
+                binstring_to_u96(&top, &mid, &bot, corrected_bin);
+                
+                pbin = corrected_bin;
+                binlen = corrected_len;
+            }
 
-            PrintAndLogEx(SUCCESS, "Binary... " _GREEN_("%s") " ( %zu )", pbin, strlen(pbin));
+            PrintAndLogEx(SUCCESS, "Binary... " _GREEN_("%s") " ( %zu )", pbin, binlen);
             PrintAndLogEx(NORMAL, "");
-            decode_wiegand(top, mid, bot, 0);
+            // Use the corrected length (without sentinel) for decoding
+            decode_wiegand(top, mid, bot, (int)binlen);
         }
     }
 }
@@ -2927,12 +2952,37 @@ static int CmdHFiClass_ReadBlock(const char *Cmd) {
                     char binstr[64 + 1];
                     hextobinstring(binstr, hexstr);
                     char *pbin = binstr;
+                    // Strip leading zeros
                     while (strlen(pbin) && *(++pbin) == '0');
+                    
+                    size_t binlen = strlen(pbin);
+                    
+                    // Check if we have a sentinel bit (leading '1' that makes length one more than common formats)
+                    // Common formats: 26, 30, 33, 34, 35, 36, 37, 46, 48
+                    // If we have 27, 31, 34, 35, 36, 37, 38, 47, 49 bits and it starts with '1',
+                    // it's likely a sentinel bit that should be stripped
+                    if (binlen > 0 && pbin[0] == '1' && 
+                        (binlen == 27 || binlen == 31 || binlen == 34 || binlen == 35 || 
+                         binlen == 36 || binlen == 37 || binlen == 38 || binlen == 47 || binlen == 49)) {
+                        // Strip the sentinel bit by recreating u96 from binary string without leading '1'
+                        char *corrected_bin = pbin + 1; // Skip the leading '1'
+                        size_t corrected_len = strlen(corrected_bin);
+                        
+                        // Recreate u96 values from corrected binary string
+                        top = 0;
+                        mid = 0;
+                        bot = 0;
+                        binstring_to_u96(&top, &mid, &bot, corrected_bin);
+                        
+                        pbin = corrected_bin;
+                        binlen = corrected_len;
+                    }
 
                     PrintAndLogEx(SUCCESS, "      bin : %s", pbin);
                     PrintAndLogEx(INFO, "");
                     PrintAndLogEx(INFO, "------------------------------ " _CYAN_("Wiegand") " -------------------------------");
-                    decode_wiegand(top, mid, bot, 0);
+                    // Use the corrected length (without sentinel) for decoding
+                    decode_wiegand(top, mid, bot, (int)binlen);
                 }
             } else {
                 PrintAndLogEx(INFO, "no credential found");
