@@ -2631,15 +2631,15 @@ int CmdHF14BNdefRead(const char *Cmd) {
     }
     // take offset from response
     uint8_t offset = response[1];
-    
+
     // Parse CC data
     uint8_t cc_data[resplen - 2];
     memcpy(cc_data, response, sizeof(cc_data));
     uint8_t file_id[2] = {cc_data[9], cc_data[10]};
-    
+
 
     uint16_t max_rapdu_size = (cc_data[3] << 8 | cc_data[4]) - 2;
-    
+
     max_rapdu_size = max_rapdu_size < sizeof(response) - 2 ? max_rapdu_size : sizeof(response) - 2;
     // ---------------  NDEF file reading ----------------
     uint8_t aSELECT_FILE_NDEF[30];
@@ -2739,7 +2739,7 @@ int CmdHF14BNdefRead(const char *Cmd) {
         PrintAndLogEx(HINT, "Hint: Try " _YELLOW_("`hf 14b ndefread -v`") " for more details"); // So far this prints absolutely nothing
     }
 
-    
+
     // get total NDEF length before save. If fails, we save it all
     size_t n = 0;
     if (NDEFGetTotalLength(response + 2, resplen - 4, &n) != PM3_SUCCESS)

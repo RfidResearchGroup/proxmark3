@@ -5008,7 +5008,7 @@ void printKeyTableEx(size_t sectorscnt, sector_t *e_sector, uint8_t start_sector
                       _YELLOW_("H") ":Hardnested / "
                       _YELLOW_("C") ":statiCnested / "
                       _YELLOW_("A") ":keyA "
-                            " )"
+                      " )"
                      );
         if (sectorscnt == 18) {
             PrintAndLogEx(INFO, "( " _MAGENTA_("*") " ) These sectors used for signature. Lays outside of user memory");
