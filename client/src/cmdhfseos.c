@@ -47,6 +47,7 @@ static uint8_t zeros[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 static int CmdHelp(const char *Cmd);
 
 typedef struct {
+    uint8_t keyslot;
     uint8_t nonce[8];
     uint8_t privEncKey[16];
     uint8_t privMacKey[16];
@@ -57,6 +58,7 @@ typedef struct {
 
 keyset_t keys[] = {
     {
+        0x01,                                                                                               // Keyslot
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },                                         // Nonce
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privEncKey
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privMacKey
@@ -65,6 +67,7 @@ keyset_t keys[] = {
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } // adminKey
     },
     {
+        0x01,                                                                                               // Keyslot
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },                                         // Nonce
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privEncKey
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privMacKey
@@ -73,6 +76,7 @@ keyset_t keys[] = {
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } // adminKey
     },
     {
+        0x02,                                                                                               // Keyslot
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },                                         // Nonce
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privEncKey
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privMacKey
@@ -81,6 +85,7 @@ keyset_t keys[] = {
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } // adminKey
     },
     {
+        0x09,                                                                                               // Keyslot
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },                                         // Nonce
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privEncKey
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privMacKey
@@ -473,7 +478,7 @@ static int seos_challenge_get(uint8_t *RNDICC, uint8_t RNDICC_len, uint8_t keysl
 
     // const char keyslot_str[3] = "01";
     //strcat(getChallengePre, keyslot_str);
-    snprintf(getChallengePre + strlen(getChallengePre), 3, "%02u", keyslot);
+    snprintf(getChallengePre + strlen(getChallengePre), 3, "%02X", keyslot);
     strcat(getChallengePre, "047c02810000");
 
     uint8_t aGET_CHALLENGE[12];
@@ -1095,7 +1100,7 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
 
     resplen -= 2;
 
-    uint8_t keyslot = 0x01;
+    uint8_t keyslot = keys[key_index].keyslot;
     seos_challenge_get(RNDICC, sizeof(RNDICC), keyslot);
     select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
     res = select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
@@ -1205,7 +1210,7 @@ static int seos_adf_select(char *oid, int oid_len, int key_index) {
 
     resplen -= 2;
 
-    seos_challenge_get(RNDICC, sizeof(RNDICC), 0x01);
+    seos_challenge_get(RNDICC, sizeof(RNDICC), keys[key_index].keyslot);
     select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
     select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
     return PM3_SUCCESS;
@@ -1248,7 +1253,7 @@ static int seos_gdf_select(int key_index) {
     uint8_t MAC_value[8] = {0};                  // MAC Value
     uint8_t RNDICC[8] = {0};
 
-    seos_challenge_get(RNDICC, sizeof(RNDICC), 0x09);
+    seos_challenge_get(RNDICC, sizeof(RNDICC), keys[key_index].keyslot);
     select_df_decode(response, (resplen - 2), &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
     select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
 
@@ -1295,6 +1300,7 @@ static int seos_print_keys(bool verbose) {
     if (verbose) {
         for (int i = 0; i < ARRAYLEN(keys); i++) {
             PrintAndLogEx(INFO, "Key Index........................ " _YELLOW_("%u"), i);
+            PrintAndLogEx(INFO, "Keyslot.......................... " _YELLOW_("%s"), sprint_hex(&keys[i].keyslot, 1));
             PrintAndLogEx(INFO, "Nonce............................ " _YELLOW_("%s"), sprint_hex(keys[i].nonce, 8));
             PrintAndLogEx(INFO, "Privacy Encryption Key........... " _YELLOW_("%s"), sprint_hex(keys[i].privEncKey, 16));
             PrintAndLogEx(INFO, "Privacy MAC Key.................. " _YELLOW_("%s"), sprint_hex(keys[i].privMacKey, 16));
@@ -1339,12 +1345,13 @@ static int seos_load_keys(char *filename) {
 
     size_t i = 0;
     for (; i < bytes_read / kn; i++) {
-        memcpy(keys[i].nonce, dump + (i * kn), 8);
-        memcpy(keys[i].privEncKey, dump + ((i * kn) + 8), 16);
-        memcpy(keys[i].privMacKey, dump + ((i * kn) + 24), 16);
-        memcpy(keys[i].readKey, dump + ((i * kn) + 40), 16);
-        memcpy(keys[i].writeKey, dump + ((i * kn) + 56), 16);
-        memcpy(keys[i].adminKey, dump + ((i * kn) + 72), 16);
+        memcpy(&keys[i].keyslot, dump + (i * kn), 1);
+        memcpy(keys[i].nonce, dump + ((i * kn) + 1), 8);
+        memcpy(keys[i].privEncKey, dump + ((i * kn) + 9), 16);
+        memcpy(keys[i].privMacKey, dump + ((i * kn) + 25), 16);
+        memcpy(keys[i].readKey, dump + ((i * kn) + 41), 16);
+        memcpy(keys[i].writeKey, dump + ((i * kn) + 57), 16);
+        memcpy(keys[i].adminKey, dump + ((i * kn) + 73), 16);
     }
 
     free(dump);
@@ -1379,9 +1386,9 @@ static int CmdHfSeosGDF(const char *Cmd) {
     CLIParserInit(&ctx, "hf seos gdf",
                   "Get Global Data File (GDF) from SEOS card\n\n"
                   "By default:\n"
-                  "  - Key Index: 0\n",
+                  "  - Key Index: 3\n",
                   "hf seos gdf"
-                  "hf seos gdf --ki 0"
+                  "hf seos gdf --ki 3"
                  );
     void *argtable[] = {
         arg_param_begin,
@@ -1390,7 +1397,7 @@ static int CmdHfSeosGDF(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    int key_index = arg_get_int_def(ctx, 1, 0);
+    int key_index = arg_get_int_def(ctx, 1, 3);
 
     CLIParserFree(ctx);
     return seos_global_df(key_index);
@@ -1518,6 +1525,7 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
                   "hf seos managekeys -p\n"
                   "hf seos managekeys -p -v\n"
                   "hf seos managekeys --ki 0 --nonce 0102030405060708  -> Set nonce value at key index 0\n"
+                  "hf seos managekeys --ki 1 --keyslot 1               -> Set keyslot value at key index 1\n"
                   "hf seos managekeys --load -f mykeys.bin -p          -> load from file and prints keys\n"
                   "hf seos managekeys --save -f mykeys.bin             -> saves keys to file\n"
                  );
@@ -1525,6 +1533,7 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_int0(NULL, "ki", "<dec>", "Specify key index to set key in memory"),
+        arg_str0(NULL, "keyslot", "<hex>", "Keyslot value as 1 hex byte"),
         arg_str0(NULL, "nonce", "<hex>", "Nonce value as 8 hex bytes"),
         arg_str0(NULL, "privenc", "<hex>", "Privacy Encryption key as 16 hex bytes"),
         arg_str0(NULL, "privmac", "<hex>", "Privacy MAC key as 16 hex bytes"),
@@ -1546,12 +1555,14 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
     char filename[FILE_PATH_SIZE] = {0};
     uint8_t operation = 0;
 
+    uint8_t keyslot[1] = {0};
     uint8_t nonce[8] = {0};
     uint8_t privenc[16] = {0};
     uint8_t privmac[16] = {0};
     uint8_t read[16] = {0};
     uint8_t write[16] = {0};
     uint8_t admin[16] = {0};
+    int keyslot_len = 0;
     int nonce_len = 0;
     int privenc_len = 0;
     int privmac_len = 0;
@@ -1561,18 +1572,22 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
 
     int key_index = arg_get_int_def(ctx, 1, -1);
 
-    CLIGetHexWithReturn(ctx, 2, nonce, &nonce_len);
-    CLIGetHexWithReturn(ctx, 3, privenc, &privenc_len);
-    CLIGetHexWithReturn(ctx, 4, privmac, &privmac_len);
-    CLIGetHexWithReturn(ctx, 5, read, &read_len);
-    CLIGetHexWithReturn(ctx, 6, write, &write_len);
-    CLIGetHexWithReturn(ctx, 7, admin, &admin_len);
+    CLIGetHexWithReturn(ctx, 2, keyslot, &keyslot_len);
+    CLIGetHexWithReturn(ctx, 3, nonce, &nonce_len);
+    CLIGetHexWithReturn(ctx, 4, privenc, &privenc_len);
+    CLIGetHexWithReturn(ctx, 5, privmac, &privmac_len);
+    CLIGetHexWithReturn(ctx, 6, read, &read_len);
+    CLIGetHexWithReturn(ctx, 7, write, &write_len);
+    CLIGetHexWithReturn(ctx, 8, admin, &admin_len);
 
-    CLIParamStrToBuf(arg_get_str(ctx, 8), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 9), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     if (key_index >= 0) {
         operation += 3;
         if (key_index < 4) {
+            if (keyslot_len != 0) {
+                PrintAndLogEx(SUCCESS, "Current value for keyslot[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(&keys[key_index].keyslot, 1));
+            }
             if (nonce_len != 0) {
                 PrintAndLogEx(SUCCESS, "Current value for nonce[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].nonce, 8));
             }
@@ -1598,17 +1613,17 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
         }
     }
 
-    if (arg_get_lit(ctx, 9)) {  //save
+    if (arg_get_lit(ctx, 10)) {  //save
         operation += 6;
     }
-    if (arg_get_lit(ctx, 10)) {  //load
+    if (arg_get_lit(ctx, 11)) {  //load
         operation += 5;
     }
-    if (arg_get_lit(ctx, 11)) {  //print
+    if (arg_get_lit(ctx, 12)) {  //print
         operation += 4;
     }
 
-    bool verbose = arg_get_lit(ctx, 12);
+    bool verbose = arg_get_lit(ctx, 13);
 
     CLIParserFree(ctx);
 
@@ -1624,13 +1639,17 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
         PrintAndLogEx(ERR, "You must enter a filename when loading or saving\n");
         return PM3_EINVARG;
     }
-    if (((nonce_len > 0) || (privenc_len > 0) || (privmac_len > 0) || (read_len > 0) || (write_len > 0) || (admin_len > 0)) && key_index == -1) {
+    if (((keyslot_len > 0) || (nonce_len > 0) || (privenc_len > 0) || (privmac_len > 0) || (read_len > 0) || (write_len > 0) || (admin_len > 0)) && key_index == -1) {
         PrintAndLogEx(ERR, "Please specify key index when specifying key");
         return PM3_EINVARG;
     }
 
     switch (operation) {
         case 3:
+            if (keyslot_len != 0) {
+                memcpy(&keys[key_index].keyslot, keyslot, 1);
+                PrintAndLogEx(SUCCESS, "New value for keyslot[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(&keys[key_index].keyslot, 1));
+            }
             if (nonce_len != 0) {
                 memcpy(keys[key_index].nonce, nonce, 8);
                 PrintAndLogEx(SUCCESS, "New value for nonce[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].nonce, 8));
