@@ -16,6 +16,8 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added support for Bruce dump files [.rfid] (@iceman1001)
 - Added script `read_t-union.py` (@klks)
 - Added better ECP configuration aliases (@kormax)
+- Added `hf 14b config` (@kormax);
+- Added polling loop annotation support to `hf 14b config` (@kormax);
 - Updated id48lib (adds unit tests, better build management) (@henrygab)
 - Added two trace files for Ultralight AES (@iceman1001)
 - Added support for Ultralight AES secure messaing in `hf 14a raw` (@iceman1001)
