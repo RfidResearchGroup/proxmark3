@@ -422,6 +422,9 @@ static void SendStatus(uint32_t wait) {
 #ifdef WITH_ISO14443a
     printHf14aConfig();   // HF 14a config
 #endif
+#ifdef WITH_ISO14443b
+    printHf14bConfig();   // HF 14b config
+#endif
     printConnSpeed(wait);
     DbpString(_CYAN_("Various"));
 
@@ -1638,6 +1641,21 @@ static void PacketReceived(PacketCommandNG *packet) {
         case CMD_HF_ISO14443B_COMMAND: {
             iso14b_raw_cmd_t *payload = (iso14b_raw_cmd_t *)packet->data.asBytes;
             SendRawCommand14443B(payload);
+            break;
+        }
+        case CMD_HF_ISO14443B_PRINT_CONFIG: {
+            printHf14bConfig();
+            break;
+        }
+        case CMD_HF_ISO14443B_GET_CONFIG: {
+            hf14b_config_t *c = getHf14bConfig();
+            reply_ng(CMD_HF_ISO14443B_GET_CONFIG, PM3_SUCCESS, (uint8_t *)c, sizeof(hf14b_config_t));
+            break;
+        }
+        case CMD_HF_ISO14443B_SET_CONFIG: {
+            hf14b_config_t c;
+            memcpy(&c, packet->data.asBytes, sizeof(hf14b_config_t));
+            setHf14bConfig(&c);
             break;
         }
         case CMD_HF_CRYPTORF_SIM : {

@@ -36,6 +36,7 @@
 #include "iclass_cmd.h"         // picopass defines
 #include "cmdhf.h"              // handle HF plot
 #include "atrs.h"               // atqbToEmulatedAtr
+#include "pla.h"                // ECP parsing
 
 #define MAX_14B_TIMEOUT_MS (4949U)
 
@@ -877,6 +878,120 @@ static void print_sr_blocks(uint8_t *data, size_t len, const uint8_t *uid, bool 
 // 0200a404000cd2760001354b414e4d30310000 (resp 02 6a 82 [4b 4c])
 // 0200a404000ca000000063504b43532d313500 (resp 02 6a 82 [4b 4c])
 // 0200a4040010a000000018300301000000000000000000 (resp 02 6a 82 [4b 4c])
+
+static int hf14b_setconfig(hf14b_config_t *config, bool verbose) {
+    if (!g_session.pm3_present) return PM3_ENOTTY;
+
+    clearCommandBuffer();
+    if (config != NULL) {
+        SendCommandNG(CMD_HF_ISO14443B_SET_CONFIG, (uint8_t *)config, sizeof(hf14b_config_t));
+        if (verbose) {
+            SendCommandNG(CMD_HF_ISO14443B_PRINT_CONFIG, NULL, 0);
+        }
+    } else {
+        SendCommandNG(CMD_HF_ISO14443B_PRINT_CONFIG, NULL, 0);
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int CmdHf14BConfig(const char *Cmd) {
+    if (!g_session.pm3_present) return PM3_ENOTTY;
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf 14b config",
+                  "Configure 14b settings (use with caution)\n",
+                  "hf 14b config                      -> Print current configuration\n"
+                  "hf 14b config --std                -> Reset default configuration\n"
+                  "hf 14b config --pla <hex>          -> Set polling loop annotation (max 22 bytes)\n"
+                  "hf 14b config --pla off            -> Disable polling loop annotation\n"
+                  "hf 14b config --pla ecp.access     -> Set ECP Access (default)\n"
+                  "hf 14b config --pla ecp.transit.emv -> Set ECP Transit for EMV\n");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0(NULL, "pla", "<hex|off>", "Configure polling loop annotation"),
+        arg_lit0(NULL, "std", "Reset default configuration"),
+        arg_lit0("v", "verbose", "verbose output"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool defaults = arg_get_lit(ctx, 2);
+    bool verbose = arg_get_lit(ctx, 3);
+
+    int vlen = 0;
+    char value[64];
+
+    // Handle polling loop annotation parameter
+    iso14b_polling_frame_t pla = {
+        // 0 signals that PLA has to be disabled, -1 signals that no change has to be made
+        .frame_length = defaults ? 0 : -1,
+        .last_byte_bits = 8,
+        .extra_delay = 30
+    };
+
+    // Get main --pla value
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)value, sizeof(value), &vlen);
+    str_lower((char *)value);
+
+    if (vlen > 0) {
+        if (strncmp((char *)value, "std", 3) == 0) pla.frame_length = 0;
+        else if (strncmp((char *)value, "skip", 4) == 0) pla.frame_length = 0;
+        else if (strncmp((char *)value, "disable", 3) == 0) pla.frame_length = 0;
+        else if (strncmp((char *)value, "off", 3) == 0) pla.frame_length = 0;
+        else if (strncmp((char *)value, "ecp", 3) == 0) {
+            // Parse ECP subcommand
+            int length = pla_parse_ecp_subcommand((char *)value, pla.frame, sizeof(pla.frame));
+            if (length < 0) {
+                CLIParserFree(ctx);
+                return PM3_EINVARG;
+            }
+            pla.frame_length = length;
+
+            // Add CRC
+            uint8_t first, second;
+            compute_crc(CRC_14443_B, pla.frame, pla.frame_length, &first, &second);
+            pla.frame[pla.frame_length++] = first;
+            pla.frame[pla.frame_length++] = second;
+            PrintAndLogEx(INFO, "Set polling loop annotation to ECP: %s", sprint_hex(pla.frame, pla.frame_length));
+        } else {
+            // Convert hex string to bytes
+            int length = 0;
+            if (param_gethex_to_eol((char *)value, 0, pla.frame, sizeof(pla.frame), &length) != 0) {
+                PrintAndLogEx(ERR, "Error parsing polling loop annotation bytes");
+                CLIParserFree(ctx);
+                return PM3_EINVARG;
+            }
+            pla.frame_length = length;
+
+            // Validate length before adding CRC
+            if (pla.frame_length < 1 || pla.frame_length > 22) {
+                PrintAndLogEx(ERR, "Polling loop annotation length invalid: min %d; max %d", 1, 22);
+                CLIParserFree(ctx);
+                return PM3_EINVARG;
+            }
+
+            uint8_t first, second;
+            compute_crc(CRC_14443_B, pla.frame, pla.frame_length, &first, &second);
+            pla.frame[pla.frame_length++] = first;
+            pla.frame[pla.frame_length++] = second;
+            PrintAndLogEx(INFO, "Set polling loop annotation to: %s", sprint_hex(pla.frame, pla.frame_length));
+        }
+    }
+
+    CLIParserFree(ctx);
+
+    // Handle empty command
+    if (strlen(Cmd) == 0) {
+        return hf14b_setconfig(NULL, verbose);
+    }
+
+    // Initialize config with all parameters
+    hf14b_config_t config = {
+        .polling_loop_annotation = pla
+    };
+
+    return hf14b_setconfig(&config, verbose);
+}
 
 static int CmdHF14BList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf 14b", "14b -c");
@@ -3161,6 +3276,7 @@ static int CmdHF14BSetUID(const char *Cmd) {
 static command_t CommandTable[] = {
     {"---------", CmdHelp,             AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
     {"help",      CmdHelp,             AlwaysAvailable, "This help"},
+    {"config",    CmdHf14BConfig,      IfPm3Iso14443b,  "Configure 14b settings (use with caution)"},
     {"list",      CmdHF14BList,        AlwaysAvailable, "List ISO-14443-B history"},
     {"---------", CmdHelp,             AlwaysAvailable, "----------------------- " _CYAN_("Operations") " -----------------------"},
     {"apdu",      CmdHF14BAPDU,        IfPm3Iso14443b,  "Send ISO 14443-4 APDU to tag"},

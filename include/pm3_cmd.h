@@ -163,6 +163,21 @@ typedef struct {
     iso14a_polling_frame_t polling_loop_annotation; // Polling loop annotation
 } PACKED hf14a_config_t;
 
+// Defines a frame that will be used in ISO14443B polling sequence
+// Polling loop annotations are up to 20 bytes long, 24 bytes should cover future and other cases
+typedef struct {
+    uint8_t frame[24];
+    // negative values can be used to carry special info
+    int8_t frame_length;
+    uint8_t last_byte_bits;
+    uint16_t extra_delay;
+} PACKED iso14b_polling_frame_t;
+
+// A struct used to send hf14b-configs over USB
+typedef struct {
+    iso14b_polling_frame_t polling_loop_annotation; // Polling loop annotation
+} PACKED hf14b_config_t;
+
 // Tracelog Header struct
 typedef struct {
     uint32_t timestamp;
@@ -725,6 +740,11 @@ typedef struct {
 #define CMD_HF_ISO14443A_SET_CONFIG                                       0x03B2
 
 #define CMD_HF_ISO14443A_SET_THRESHOLDS                                   0x03B8
+
+// For 14b config
+#define CMD_HF_ISO14443B_PRINT_CONFIG                                     0x03D0
+#define CMD_HF_ISO14443B_GET_CONFIG                                       0x03D1
+#define CMD_HF_ISO14443B_SET_CONFIG                                       0x03D2
 
 // For measurements of the antenna tuning
 #define CMD_MEASURE_ANTENNA_TUNING                                        0x0400

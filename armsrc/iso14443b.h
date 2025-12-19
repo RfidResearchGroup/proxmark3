@@ -51,6 +51,11 @@ void SniffIso14443b(void);
 void SendRawCommand14443B(iso14b_raw_cmd_t *p);
 void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t *start_time, uint32_t *eof_time, bool framing);
 
+// 14b config
+void printHf14bConfig(void);
+void setHf14bConfig(const hf14b_config_t *hc);
+hf14b_config_t *getHf14bConfig(void);
+
 // States for 14B SIM command
 #define SIM_POWER_OFF   0
 #define SIM_IDLE        1
