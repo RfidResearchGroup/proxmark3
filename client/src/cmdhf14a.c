@@ -884,12 +884,7 @@ static int CmdHF14ACUIDs(const char *Cmd) {
         if (resp.oldarg[0] == 0) {
             PrintAndLogEx(WARNING, "card select failed.");
         } else {
-            char uid_string[20];
-            for (uint16_t m = 0; m < card->uidlen; m++) {
-                int offset = 2 * m;
-                snprintf(uid_string + offset, sizeof(uid_string) - offset, "%02X", card->uid[m]);
-            }
-            PrintAndLogEx(SUCCESS, "%s", uid_string);
+            PrintAndLogEx(SUCCESS, "%s", sprint_hex_inrow(card->uid, card->uidlen));
         }
     }
     PrintAndLogEx(SUCCESS, "end: %" PRIu64 " seconds", (msclock() - t1) / 1000);

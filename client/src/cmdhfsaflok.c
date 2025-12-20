@@ -983,26 +983,6 @@ static bool set_bitfield(saflok_mfc_data_t *data, size_t start_bit, size_t num_b
     return true;
 }
 
-// Static analysis hint: reads all bytes of `data[len]`
-// * NOT THREAD SAFE ... uses a static buffer for result,
-//   so multiple calls will overwrite previous results.
-//   This style of design SPAWNS BUGS.
-// NOTE: apparently accepted for this legacy codebase.
-static char *bytes_to_hex(const uint8_t *data, size_t len) {
-    static char buf[256]; // WARNING: caller must immediately use or copy the result, and it's still not thread-safe!
-    static const size_t maximum_data_len = (ARRAYLEN(buf) / 2) - 1; // leave room for null terminator
-
-    if (len > maximum_data_len) {
-        PrintAndLogEx(ERR, "saflok bytes_to_hex: input length %zu exceeds maximum supported %zu, results will be truncated!", len, maximum_data_len);
-        len = maximum_data_len;
-    }
-    memset(buf, 0, sizeof(buf)); // Clear the buffer before use
-    for (size_t i = 0; i < len; i++) {
-        sprintf(buf + (i * 2), "%02X", data[i]);
-    }
-    return buf;
-}
-
 static uint8_t calculated_saflok_checksum(const saflok_mfc_data_t *data) {
     _Static_assert(ARRAYLEN(data->raw) == 17, "saflok_mfc_data_t raw size must be 17 bytes");
     int sum = 0;
@@ -1196,8 +1176,8 @@ static int CmdHFSaflokRead(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Card Information"));
-    PrintAndLogEx(INFO,    "Plaintext Data: %s", bytes_to_hex(decrypted.raw, sizeof(saflok_mfc_data_t)));
-    PrintAndLogEx(SUCCESS, "Encrypted Data: " _GREEN_("%s"), bytes_to_hex(encrypted->raw, sizeof(saflok_mfc_data_t)));
+    PrintAndLogEx(INFO,    "Plaintext Data: %s", sprint_hex_inrow(decrypted.raw, sizeof(saflok_mfc_data_t)));
+    PrintAndLogEx(SUCCESS, "Encrypted Data: " _GREEN_("%s"), sprint_hex_inrow(encrypted->raw, sizeof(saflok_mfc_data_t)));
 
     saflok_decode(&decrypted);
 
@@ -1261,8 +1241,8 @@ static int CmdHFSaflokEncode(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Encoded Card Data"));
-    PrintAndLogEx(INFO,    "Plaintext Data: %s", bytes_to_hex(decrypted.raw, sizeof(saflok_mfc_data_t)));
-    PrintAndLogEx(SUCCESS, "Encrypted Data: " _GREEN_("%s"), bytes_to_hex(encrypted.raw, sizeof(saflok_mfc_data_t)));
+    PrintAndLogEx(INFO,    "Plaintext Data: %s", sprint_hex_inrow(decrypted.raw, sizeof(saflok_mfc_data_t)));
+    PrintAndLogEx(SUCCESS, "Encrypted Data: " _GREEN_("%s"), sprint_hex_inrow(encrypted.raw, sizeof(saflok_mfc_data_t)));
 
 
     CLIParserFree(ctx);
@@ -1297,8 +1277,8 @@ static int CmdHFSaflokDecode(const char *Cmd) {
     saflok_decrypt(&encrypted, &decrypted);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Decoded Card Data"));
-    PrintAndLogEx(INFO,    "Plaintext Data: %s", bytes_to_hex(decrypted.raw, sizeof(saflok_mfc_data_t)));
-    PrintAndLogEx(INFO,    "Encrypted Data: %s", bytes_to_hex(encrypted.raw, sizeof(saflok_mfc_data_t)));
+    PrintAndLogEx(INFO,    "Plaintext Data: %s", sprint_hex_inrow(decrypted.raw, sizeof(saflok_mfc_data_t)));
+    PrintAndLogEx(INFO,    "Encrypted Data: %s", sprint_hex_inrow(encrypted.raw, sizeof(saflok_mfc_data_t)));
     saflok_decode(&decrypted);
 
     return PM3_SUCCESS;
@@ -1346,7 +1326,7 @@ static int CmdHFSaflokModify(const char *Cmd) {
     }
 
     saflok_decrypt(&encrypted, &decrypted);
-    PrintAndLogEx(INFO,    "Plaintext Data: %s", bytes_to_hex(decrypted.raw, sizeof(saflok_mfc_data_t)));
+    PrintAndLogEx(INFO,    "Plaintext Data: %s", sprint_hex_inrow(decrypted.raw, sizeof(saflok_mfc_data_t)));
 
     uint32_t card_level = get_saflok_mfc_card_level(&decrypted);
     card_level = arg_get_u32_def(ctx, 1, card_level);
@@ -1411,8 +1391,8 @@ static int CmdHFSaflokModify(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Modified Card Data"));
-    PrintAndLogEx(INFO,    "Plaintext Data: %s", bytes_to_hex(decrypted.raw, sizeof(saflok_mfc_data_t)));
-    PrintAndLogEx(SUCCESS, "Encrypted Data: " _GREEN_("%s"), bytes_to_hex(reencrypted.raw, sizeof(saflok_mfc_data_t)));
+    PrintAndLogEx(INFO,    "Plaintext Data: %s", sprint_hex_inrow(decrypted.raw, sizeof(saflok_mfc_data_t)));
+    PrintAndLogEx(SUCCESS, "Encrypted Data: " _GREEN_("%s"), sprint_hex_inrow(reencrypted.raw, sizeof(saflok_mfc_data_t)));
 
 
     CLIParserFree(ctx);
@@ -1446,7 +1426,7 @@ static int CmdHFSaflokEncrypt(const char *Cmd) {
     }
 
     saflok_encrypt(&raw, &encrypted);
-    PrintAndLogEx(SUCCESS, "Encrypted: " _GREEN_("%s"), bytes_to_hex(encrypted.raw, 17));
+    PrintAndLogEx(SUCCESS, "Encrypted: " _GREEN_("%s"), sprint_hex_inrow(encrypted.raw, 17));
 
     CLIParserFree(ctx);
     return PM3_SUCCESS;
@@ -1478,7 +1458,7 @@ static int CmdHFSaflokDecrypt(const char *Cmd) {
     }
 
     saflok_decrypt(&encrypted, &decrypted);
-    PrintAndLogEx(SUCCESS, "Decrypted: " _GREEN_("%s"), bytes_to_hex(decrypted.raw, 17));
+    PrintAndLogEx(SUCCESS, "Decrypted: " _GREEN_("%s"), sprint_hex_inrow(decrypted.raw, 17));
 
     CLIParserFree(ctx);
     return PM3_SUCCESS;
@@ -1851,16 +1831,16 @@ static int CmdHFSaflokSelfTest(const char *Cmd) {
             saflok_encrypt(&tc->decoded, &tmp);
             if (memcmp(tmp.raw, tc->encoded.raw, sizeof(saflok_mfc_data_t)) != 0) {
                 PrintAndLogEx(FAILED, "Test case %zu: encryption did not match expected data.", i);
-                PrintAndLogEx(DEBUG,  "               raw result: %s", bytes_to_hex(tmp.raw, sizeof(saflok_mfc_data_t)));
-                PrintAndLogEx(DEBUG,  "          expected result: %s", bytes_to_hex(tc->encoded.raw, sizeof(saflok_mfc_data_t)));
+                PrintAndLogEx(DEBUG,  "               raw result: %s", sprint_hex_inrow(tmp.raw, sizeof(saflok_mfc_data_t)));
+                PrintAndLogEx(DEBUG,  "          expected result: %s", sprint_hex_inrow(tc->encoded.raw, sizeof(saflok_mfc_data_t)));
                 result_test_cases = PM3_EFAILED;
                 continue;
             }
             saflok_decrypt(&tc->encoded, &tmp);
             if (memcmp(tmp.raw, tc->decoded.raw, sizeof(saflok_mfc_data_t)) != 0) {
                 PrintAndLogEx(FAILED, "Test case %zu: decryption did not match expected data.", i);
-                PrintAndLogEx(DEBUG,  "               raw result: %s", bytes_to_hex(tmp.raw, sizeof(saflok_mfc_data_t)));
-                PrintAndLogEx(DEBUG,  "          expected result: %s", bytes_to_hex(tc->decoded.raw, sizeof(saflok_mfc_data_t)));
+                PrintAndLogEx(DEBUG,  "               raw result: %s", sprint_hex_inrow(tmp.raw, sizeof(saflok_mfc_data_t)));
+                PrintAndLogEx(DEBUG,  "          expected result: %s", sprint_hex_inrow(tc->decoded.raw, sizeof(saflok_mfc_data_t)));
                 result_test_cases = PM3_EFAILED;
                 continue;
             }
@@ -2023,7 +2003,7 @@ static int CmdHFSaflokChecksum(const char *Cmd) {
 
     data.raw[16] = calculated_saflok_checksum(&data);
 
-    PrintAndLogEx(SUCCESS, "Block + checksum: " _GREEN_("%s"), bytes_to_hex(data.raw, 17));
+    PrintAndLogEx(SUCCESS, "Block + checksum: " _GREEN_("%s"), sprint_hex_inrow(data.raw, 17));
     PrintAndLogEx(SUCCESS, "Checksum byte: " _GREEN_("0x%02X"), data.raw[16]);
 
     CLIParserFree(ctx);
@@ -2068,7 +2048,7 @@ static int CmdHFSaflokProvision(const char *Cmd) {
     saflok_mfc_key_t keyA = {0};
 
     saflok_kdf(saflok_uid, &keyA);
-    PrintAndLogEx(INFO, "Generated UID-derived key: " _GREEN_("%s"), bytes_to_hex(keyA.key, ARRAYLEN(keyA.key)));
+    PrintAndLogEx(INFO, "Generated UID-derived key: " _GREEN_("%s"), sprint_hex_inrow(keyA.key, ARRAYLEN(keyA.key)));
 
     uint8_t all_F[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     uint8_t block1[16];
