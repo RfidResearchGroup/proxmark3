@@ -386,6 +386,91 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
     return PM3_SUCCESS;
 };
 
+static int seos_write_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_enc_key, uint8_t *diversified_mac_key, uint8_t *sio,  int sio_size, int encryption_algorithm, uint8_t *write_data_tag, int write_data_tag_len) {
+    // Command Header is for the Update Data Command using
+    // `0C` - Secure messaging – ISO/IEC 7816 standard, command header authenticated (C-MAC)
+    // `DB` - UPDATE DATA
+    //     uint8_t command_header[4] = {0x0c,0xdb,0x3f,0xff};
+    uint8_t cla[1] = {0x0c};    // Secure Messaging Command Header
+    uint8_t ins[1] = {0xdb};    // UPDATE DATA Instruction
+    uint8_t p1[1] = {0x3f};     // High order tag value (accoring to NIST.SP.800-73pt2-5.pdf, this is the hardcoded tag value)
+    uint8_t p2[1] = {0xff};     // Low order tag value
+
+    // command builder
+    uint8_t command_header[ARRAYLEN(cla) + ARRAYLEN(ins) + ARRAYLEN(p1) + ARRAYLEN(p2)];
+    memcpy(command_header, cla, ARRAYLEN(cla));
+    memcpy(command_header + ARRAYLEN(cla), ins, ARRAYLEN(ins));
+    memcpy(command_header + ARRAYLEN(cla) + ARRAYLEN(ins), p1, ARRAYLEN(p1));
+    memcpy(command_header + ARRAYLEN(cla) + ARRAYLEN(ins) + ARRAYLEN(p1), p2, ARRAYLEN(p2));
+
+    int command_header_len = ARRAYLEN(command_header);
+
+    // Command to be sent
+    // ff 00 [04] 12 34 56 78
+    // ff 00 = BER-TLV tag of the data object to be written
+
+    uint8_t unencrypted_command[write_data_tag_len+1+sio_size];
+    memcpy(unencrypted_command, write_data_tag, write_data_tag_len);
+
+    unencrypted_command[write_data_tag_len] = sio_size;
+    memcpy(unencrypted_command+write_data_tag_len+1, sio, sio_size);
+
+    int unencrypted_command_len = ARRAYLEN(unencrypted_command);
+
+    uint8_t command_buffer[254];
+    int command_len = 0;
+
+    // PrintAndLogEx(SUCCESS, "Raw Command...................... " _YELLOW_("%s"), sprint_hex_inrow(unencrypted_command, unencrypted_command_len));
+    generate_command_wrapping(command_header, command_header_len, unencrypted_command, unencrypted_command_len, rndICC, rndIFD, diversified_enc_key, diversified_mac_key, encryption_algorithm, command_buffer, &command_len);
+
+    // Convert command from buffer to stream
+    uint8_t command_convert[command_len];
+    memcpy(command_convert, command_buffer, command_len);
+    char completedCommandChar[command_len * 2 + 1];
+    for (int i = 0; i < command_len; i++) {
+        snprintf(&completedCommandChar[i * 2], 3, "%02X", command_convert[i]);
+    }
+    // PrintAndLogEx(SUCCESS, "Command.......................... " _YELLOW_("%s"), completedCommandChar);
+
+    // ------------------- Send Command -------------------
+    uint8_t response[PM3_CMD_DATA_SIZE];
+    int resplen = 0;
+
+    bool activate_field = false;
+    bool keep_field_on = true;
+
+    uint8_t aUPDATE_CHALLENGE[254];
+    int aUPDATE_CHALLENGE_n = command_len;
+    param_gethex_to_eol(completedCommandChar, 0, aUPDATE_CHALLENGE, sizeof(aUPDATE_CHALLENGE), &aUPDATE_CHALLENGE_n);
+    int res = ExchangeAPDU14a(aUPDATE_CHALLENGE, aUPDATE_CHALLENGE_n, activate_field, keep_field_on, response, sizeof(response), &resplen);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+    uint16_t sw = get_sw(response, resplen);
+    if (sw != ISO7816_OK) {
+        PrintAndLogEx(ERR, "Update Data Failed (%04x - %s).", sw, GetAPDUCodeDescription(sw >> 8, sw & 0xff));
+        DropField();
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "--- " _CYAN_("Update Data") " ---------------------------");
+    // Raw response contains a few values
+    // 99 is our status word response (2 bytes)
+    // 8E is our MAC response (8 bytes)
+    // PrintAndLogEx(SUCCESS, "Raw Response..................... " _YELLOW_("%s"), sprint_hex_inrow(response, (resplen - 2)));
+
+    uint8_t responseCode[2];
+
+    if (resplen >= 2 && response[0] == 0x99) {
+        memcpy(responseCode, response + 2, 2);
+        // PrintAndLogEx(SUCCESS, "Raw Response..................... " _YELLOW_("%s"), sprint_hex_inrow(response, (resplen - 2)));
+        PrintAndLogEx(SUCCESS, "Response Code.................... " _YELLOW_("%s"), sprint_hex_inrow(responseCode, (ARRAYLEN(responseCode))));
+    }
+
+    return PM3_SUCCESS;
+};
+
 static void set_counter_big_endian(uint8_t *buffer, uint32_t counter) {
     buffer[0] = (counter >> 24) & 0xFF;
     buffer[1] = (counter >> 16) & 0xFF;
@@ -1018,7 +1103,7 @@ static int seos_aid_select(void) {
     return res;
 };
 
-static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int data_tag_len, int key_index) {
+static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int data_tag_len, int key_index, uint8_t *write, int write_len) {
     int resplen = 0;
     uint8_t response[PM3_CMD_DATA_SIZE];
     bool activate_field = false;
@@ -1120,24 +1205,28 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
         select_ADF_decrypt(selectedADF, CRYPTOGRAM_encrypted_data, diversifier, &diversifier_length, ALGORITHM_INFO_value1, key_index);
         seos_mutual_auth(adf_bytes, adf_bytes_len, RNDICC, diversifier, diversifier_length, RNDIFD, KeyICC, RNDIFD, sizeof(RNDIFD), KeyIFD, sizeof(KeyIFD), ALGORITHM_INFO_value1, ALGORITHM_INFO_value2, key_index, keyslot);
         create_mutual_auth_key(KeyIFD, KeyICC, RNDICC, RNDIFD, Diversified_New_EncryptionKey, Diversified_New_MACKey, ALGORITHM_INFO_value1, ALGORITHM_INFO_value2);
+        
+        if (write == NULL) {
+            uint8_t sio_buffer_out[PM3_CMD_DATA_SIZE];
+            int sio_size = 0;
+            seos_get_data(RNDICC, RNDIFD, Diversified_New_EncryptionKey, Diversified_New_MACKey, sio_buffer_out, &sio_size, ALGORITHM_INFO_value1, data_tag, data_tag_len);
 
-        uint8_t sio_buffer_out[PM3_CMD_DATA_SIZE];
-        int sio_size = 0;
-        seos_get_data(RNDICC, RNDIFD, Diversified_New_EncryptionKey, Diversified_New_MACKey, sio_buffer_out, &sio_size, ALGORITHM_INFO_value1, data_tag, data_tag_len);
+            if (sio_size == 0) {
+                return PM3_ESOFT;
+            }
 
-        if (sio_size == 0) {
-            return PM3_ESOFT;
+            if (sio_buffer_out[0] == 0x30) {
+                uint8_t sioOutput[sio_size];
+                memcpy(sioOutput, sio_buffer_out, sio_size);
+
+                PrintAndLogEx(INFO, "--- " _CYAN_("Key Data") " ---------------------------");
+                PrintAndLogEx(SUCCESS, "SIO.............................. "_YELLOW_("%s"), sprint_hex_inrow(sioOutput, sizeof(sioOutput)));             // SIO
+                PrintAndLogEx(SUCCESS, "SIO Size......................... "_YELLOW_("%i"), sio_size);                                                   // SIO Size
+                PrintAndLogEx(SUCCESS, "Diversifier...................... "_YELLOW_("%s"), sprint_hex_inrow(diversifier, ARRAYLEN(diversifier)));       // Diversifier
+            };
+        } else {
+            seos_write_data(RNDICC, RNDIFD, Diversified_New_EncryptionKey, Diversified_New_MACKey, write, write_len, ALGORITHM_INFO_value1, data_tag, data_tag_len);
         }
-
-        if (sio_buffer_out[0] == 0x30) {
-            uint8_t sioOutput[sio_size];
-            memcpy(sioOutput, sio_buffer_out, sio_size);
-
-            PrintAndLogEx(INFO, "--- " _CYAN_("Key Data") " ---------------------------");
-            PrintAndLogEx(SUCCESS, "SIO.............................. "_YELLOW_("%s"), sprint_hex_inrow(sioOutput, sizeof(sioOutput)));             // SIO
-            PrintAndLogEx(SUCCESS, "SIO Size......................... "_YELLOW_("%i"), sio_size);                                                   // SIO Size
-            PrintAndLogEx(SUCCESS, "Diversifier...................... "_YELLOW_("%s"), sprint_hex_inrow(diversifier, ARRAYLEN(diversifier)));       // Diversifier
-        };
 
     } else {
         PrintAndLogEx(ERR, "Unknown encryption algorithm");
@@ -1281,7 +1370,19 @@ static int seos_pacs(char *oid, int oid_len, uint8_t *data_tag, int data_tag_len
         return res;
     }
 
-    res = seos_pacs_adf_select(oid, oid_len, data_tag, data_tag_len, key_index);
+    res = seos_pacs_adf_select(oid, oid_len, data_tag, data_tag_len, key_index, NULL, 0);
+    DropField();
+    return res;
+}
+
+static int seos_write(char *oid, int oid_len, uint8_t *data_tag, int data_tag_len, int key_index, uint8_t *write, int write_len) {
+    int res = seos_aid_select();
+    if (res != PM3_SUCCESS) {
+        DropField();
+        return res;
+    }
+
+    res = seos_pacs_adf_select(oid, oid_len, data_tag, data_tag_len, key_index, write, write_len);
     DropField();
     return res;
 }
@@ -1454,6 +1555,67 @@ static int CmdHfSeosPACS(const char *Cmd) {
     }
 
     return seos_pacs((char *)oid, oid_len, data_tag, data_tag_len, key_index);
+}
+
+static int CmdHfSeosWrite(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf seos write",
+                  "Make a PUT DATA request to an ADF of a SEOS card\n\n"
+                  "By default:\n"
+                  "  - ADF OID  : 2B0601040181E438010102011801010202\n"
+                  "  - Key Index: 2\n",
+                  "hf seos write -d 12345678\n"
+                  "hf seos write --ki 1\n"
+                  "hf seos write -o 2B0601040181E438010102011801010202 --ki 2 -d 12345678\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("o", "oid", "<hex>", "<0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)"),
+        arg_int0(NULL, "ki", "<dec>", "Specify key index to set key in memory"),
+        arg_str0("d", "data", "<hex>", "<0-128> hex bytes for data (Must be valid BER-TLV)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int data_tag_len = 2;
+    uint8_t data_tag[2] = {0xff, 0x00};
+
+    int oid_len = 0;
+    uint8_t oid_hex[256] = {0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02, 0x02};
+    CLIGetHexWithReturn(ctx, 1, oid_hex, &oid_len);
+
+    int key_index = arg_get_int_def(ctx, 2, 2);
+
+    int data_len = 0;
+    uint8_t data[256] = {};
+    CLIGetHexWithReturn(ctx, 3, data, &data_len);
+
+    CLIParserFree(ctx);
+
+    // Fall back to default OID
+    if (oid_len == 0) {
+        oid_len = 17;
+    }
+
+    // convert OID hex to literal string
+
+    unsigned char oid_buffer[256] = "";
+    hex_to_buffer(oid_buffer, oid_hex, oid_len, 256, 0, 0, 1);
+
+    const unsigned char *oid = oid_buffer;
+
+    if (oid_len == 0) {
+        PrintAndLogEx(ERR, "OID value must be supplied");
+        return PM3_ESOFT;
+    }
+
+    if (data_len == 0) {
+        PrintAndLogEx(ERR, "Data to write must be supplied");
+        return PM3_ESOFT;
+    }
+
+    return seos_write((char *)oid, oid_len, data_tag, data_tag_len, key_index, data, data_len);
 }
 
 static int CmdHfSeosADF(const char *Cmd) {
@@ -1827,6 +1989,7 @@ static command_t CommandTable[] = {
     {"-----------", CmdHelp,            IfPm3Iso14443a, "----------------------- " _CYAN_("Operations") " -----------------------"},
     {"info",    CmdHfSeosInfo,          IfPm3Iso14443a, "Tag information"},
     {"pacs",    CmdHfSeosPACS,          IfPm3Iso14443a, "Extract PACS Information from card"},
+    {"write",   CmdHfSeosWrite,         IfPm3Iso14443a, "Write an ADF to the card"},
     {"adf",     CmdHfSeosADF,           IfPm3Iso14443a, "Read an ADF from the card"},
     {"gdf",     CmdHfSeosGDF,           IfPm3Iso14443a, "Read an GDF from card"},
     {"-----------", CmdHelp,            AlwaysAvailable, "----------------------- " _CYAN_("Utils") " -----------------------"},
