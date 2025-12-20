@@ -1441,12 +1441,10 @@ static int CmdHfSeosPACS(const char *Cmd) {
 
     // convert OID hex to literal string
 
-    char oid_buffer[256] = "";
-    for (int i = 0; i < oid_len; i++) {
-        sprintf(oid_buffer + (i * 2), "%02X", oid_hex[i]);
-    }
+    unsigned char oid_buffer[256] = "";
+    hex_to_buffer(oid_buffer, oid_hex, oid_len, 256, 0, 0, 1);
 
-    const char *oid = oid_buffer;
+    const unsigned char *oid = oid_buffer;
 
     if (oid_len == 0) {
         PrintAndLogEx(ERR, "OID value must be supplied");
@@ -1503,12 +1501,10 @@ static int CmdHfSeosADF(const char *Cmd) {
     }
 
     // convert OID hex to literal string
-    char oid_buffer[256] = "";
-    for (int i = 0; i < oid_len; i++) {
-        sprintf(oid_buffer + (i * 2), "%02X", oid_hex[i]);
-    }
+    unsigned char oid_buffer[256] = "";
+    hex_to_buffer(oid_buffer, oid_hex, oid_len, 256, 0, 0, 1);
 
-    const char *oid = oid_buffer;
+    const unsigned char *oid = oid_buffer;
 
     if (oid_len == 0) {
         PrintAndLogEx(ERR, "OID value must be supplied");
