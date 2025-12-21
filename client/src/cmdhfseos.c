@@ -349,7 +349,7 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
     int getDataSize = 0;
 
     // ------------------- Cryptogram Response -------------------
-    if (resplen >= 2 && response[0] == 0x85 && response[1] >= 0x40) {
+    if (resplen >= 2 && response[0] == 0x85) {
         uint8_t cryptogram_length = response[1];
         uint8_t cryptogram[cryptogram_length];
         uint8_t decrypted[cryptogram_length];
