@@ -89,11 +89,9 @@ static void generate_subkeys(mbedtls_aes_context *ctx, uint8_t *K1, uint8_t *K2)
 
 // Pad the last block (adds 0x80 followed by zeros)
 static void padding(const uint8_t *lastb, uint8_t *pad, size_t len) {
+    memset(pad, 0x00, len);
     memcpy(pad, lastb, len);
     pad[len] = 0x80;
-    for (size_t i = len + 1; i < 16; i++) {
-        pad[i] = 0x00;
-    }
 }
 
 // CMAC implementation
