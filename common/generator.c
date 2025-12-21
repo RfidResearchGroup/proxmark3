@@ -143,7 +143,7 @@ uint32_t ul_ev1_pwdgenC(const uint8_t *uid) {
     memcpy(base, uid, 7);
 
     for (int i = 0; i < 8; i++) {
-        pwd = base[i] + ROTR(pwd, 25) + ROTR(pwd, 10) - pwd;
+        pwd = base[i] + PM3_ROTR(pwd, 25) + PM3_ROTR(pwd, 10) - pwd;
     }
     return BSWAP_32(pwd);
 }
