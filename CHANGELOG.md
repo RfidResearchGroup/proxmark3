@@ -30,6 +30,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added ATR fingerprinting to `hf 14a/14b info` (@doegox)
 - Added `Verkada 40-bit` format (@aaronmaxlevy)
 - Added `hf seos write` command (@aaronjamt)
+- Added `hf seos sim` command (@aaronjamt)
 
 ## [Phrack.4.20728][2025-09-11]
 - Added `unofficial desfire bible` document (@mistial-dev)
