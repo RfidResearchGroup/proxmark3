@@ -215,6 +215,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf 14b help            `|Y       |`This help`
+|`hf 14b config          `|N       |`Configure 14b settings (use with caution)`
 |`hf 14b list            `|Y       |`List ISO-14443-B history`
 |`hf 14b apdu            `|N       |`Send ISO 14443-4 APDU to tag`
 |`hf 14b dump            `|N       |`Read all memory pages of an ISO-14443-B tag, save to file`
@@ -735,9 +736,10 @@ Check column "offline" for their availability.
 |`hf seos list           `|Y       |`List SEOS history`
 |`hf seos sam            `|N       |`SAM tests`
 |`hf seos info           `|N       |`Tag information`
-|`hf seos pacs           `|Y       |`Extract PACS Information from card`
-|`hf seos adf            `|Y       |`Read an ADF from the card`
-|`hf seos gdf            `|Y       |`Read an GDF from card`
+|`hf seos pacs           `|N       |`Extract PACS Information from card`
+|`hf seos write          `|N       |`Write an ADF to the card`
+|`hf seos adf            `|N       |`Read an ADF from the card`
+|`hf seos gdf            `|N       |`Read an GDF from card`
 |`hf seos managekeys     `|Y       |`Manage keys to use with SEOS commands`
 
 
@@ -818,6 +820,16 @@ Check column "offline" for their availability.
 |`hf vas help            `|Y       |`This help`
 |`hf vas reader          `|N       |`Read and decrypt VAS message`
 |`hf vas decrypt         `|Y       |`Decrypt a previously captured VAS cryptogram`
+
+
+### hf waveshare
+
+ { Waveshare NFC ePaper...             }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf waveshare help      `|Y       |`This help`
+|`hf waveshare load      `|Y       |`Load image file to Waveshare NFC ePaper`
 
 
 ### hf xerox
