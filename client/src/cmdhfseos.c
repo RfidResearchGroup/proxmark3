@@ -1195,11 +1195,17 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
 
     uint8_t keyslot = keys[key_index].keyslot;
     res = seos_challenge_get(RNDICC, sizeof(RNDICC), keyslot);
-    if (res != PM3_SUCCESS) return res;
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
     res = select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
-    if (res != PM3_SUCCESS) return res;
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
     res = select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
-    if (res != PM3_SUCCESS) return res;
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     if (ALGORITHM_INFO_value1 == 0x09 || ALGORITHM_INFO_value1 == 0x02) {
         uint8_t adf_bytes[124];
@@ -1210,16 +1216,22 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
 
         int diversifier_length = sizeof(diversifier);
         res = select_ADF_decrypt(selectedADF, CRYPTOGRAM_encrypted_data, diversifier, &diversifier_length, ALGORITHM_INFO_value1, key_index);
-        if (res != PM3_SUCCESS) return res;
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
         res = seos_mutual_auth(adf_bytes, adf_bytes_len, RNDICC, diversifier, diversifier_length, RNDIFD, KeyICC, RNDIFD, sizeof(RNDIFD), KeyIFD, sizeof(KeyIFD), ALGORITHM_INFO_value1, ALGORITHM_INFO_value2, key_index, keyslot);
-        if (res != PM3_SUCCESS) return res;
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
         create_mutual_auth_key(KeyIFD, KeyICC, RNDICC, RNDIFD, Diversified_New_EncryptionKey, Diversified_New_MACKey, ALGORITHM_INFO_value1, ALGORITHM_INFO_value2);
         
         if (write == NULL) {
             uint8_t sio_buffer_out[PM3_CMD_DATA_SIZE];
             int sio_size = 0;
             res = seos_get_data(RNDICC, RNDIFD, Diversified_New_EncryptionKey, Diversified_New_MACKey, sio_buffer_out, &sio_size, ALGORITHM_INFO_value1, data_tag, data_tag_len);
-            if (res != PM3_SUCCESS) return res;
+            if (res != PM3_SUCCESS) {
+                return res;
+            }
 
             if (sio_size == 0) {
                 return PM3_ESOFT;
