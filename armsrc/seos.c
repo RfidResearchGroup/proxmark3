@@ -264,12 +264,8 @@ void SimulateSeos(seos_emulate_req_t *msg) {
     memcpy(data, msg->uid, msg->uid_len);
     FLAG_SET_UID_IN_DATA(flags, msg->uid_len);
 
-    // TODO: Is this required?
-    uint8_t ats[] = { 0x05, 0x78, 0x77, 0x80, 0x02 };
-    flags |= FLAG_ATS_IN_DATA;
-
     // 12 = HID Seos 4K card
-    if (SimulateIso14443aInit(12, flags, data, ats, sizeof(ats), &responses, &cuid, NULL, NULL) == false) {
+    if (SimulateIso14443aInit(12, flags, data, NULL, 0, &responses, &cuid, NULL, NULL) == false) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_SEOS_SIMULATE, PM3_EINIT, NULL, 0);
         return;
