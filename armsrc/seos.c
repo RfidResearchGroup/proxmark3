@@ -636,9 +636,9 @@ void SimulateSeos(seos_emulate_req_t *msg) {
 
                             uint8_t *cryptogram = NULL;
                             uint8_t *recvd_cmac = NULL;
-                            uint8_t cryptogram_length;
-                            uint8_t recvd_cmac_length;
-                            uint8_t recvd_cmac_offset;
+                            uint8_t cryptogram_length = 0;
+                            uint8_t recvd_cmac_length = 0;
+                            uint8_t recvd_cmac_offset = 0;
 
                             // Check all requested OIDs and see if we support any
                             uint8_t tlv_offset = 0;
