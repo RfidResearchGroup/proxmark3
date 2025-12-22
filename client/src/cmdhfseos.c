@@ -863,12 +863,7 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
             create_cmac(keys[key_index].privMacKey, CRYPTOGRAM_encrypted_data_raw, mac, iv_size, sizeof(mac), encryption_algorithm);
             mac[0]++;
             if (memcmp(CRYPTOGRAM_encrypted_data_raw+iv_size, mac, iv_size) != 0) {
-                PrintAndLogEx(ERR, "MAC Verification Failed");
-                
-                // PrintAndLogEx(ERR, "Synthesized IV................... "_YELLOW_("%s"), sprint_hex_inrow(CRYPTOGRAM_encrypted_data_raw,iv_size));
-                // PrintAndLogEx(ERR, "Synthesized IV MAC............... "_YELLOW_("%s"), sprint_hex_inrow(CRYPTOGRAM_encrypted_data_raw+iv_size,iv_size));
-                // PrintAndLogEx(ERR, "Synthesized IV Computed MAC...... "_YELLOW_("%s"), sprint_hex_inrow(mac,iv_size));
-                
+                PrintAndLogEx(ERR, "MAC Verification Failed");                
                 return PM3_ESOFT;
             }
 
