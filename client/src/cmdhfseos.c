@@ -1698,8 +1698,9 @@ static int CmdHfSeosSim(const char *Cmd) {
         arg_str0("t", "tag", "<hex>", "<0-100> hex bytes for tag to simulate (Default: FF00)"),
         arg_str0("o", "oid", "<hex>", "<0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)"),
         arg_int0(NULL, "ki", "<dec>", "Specify key index to set key in memory"),
-        arg_str0("u", "diversifier", "<hex>", "<0-16> hex bytes for diversifier (Equivalent of UID)"),
+        arg_str0(NULL, "div", "<hex>", "<0-16> hex bytes for diversifier (Equivalent of UID)"),
         arg_str0("d", "data", "<hex>", "<0-128> hex bytes for data (Must be valid BER-TLV)"),
+        arg_str0("u", "uid", "<hex>", "<0-10> hex bytes for UID (Must be a RID i.e. [0]=0x08)"),
         arg_lit0("l", "legacy", "Use legacy algorithms (3DES/SHA1)"),
         arg_param_end
     };
@@ -1723,9 +1724,13 @@ static int CmdHfSeosSim(const char *Cmd) {
     uint8_t data[256] = {};
     CLIGetHexWithReturn(ctx, 5, data, &data_len);
 
+    int uid_len = 0;
+    uint8_t uid[10] = {0x08, 0x01, 0x02, 0x03};
+    CLIGetHexWithReturn(ctx, 6, uid, &uid_len);
+
     uint8_t encryption_algorithm = SEOS_ENCRYPTION_AES;
     uint8_t hashing_algorithm = SEOS_HASHING_SHA256;
-    if (arg_get_lit(ctx, 6)) {  // legacy algorithms
+    if (arg_get_lit(ctx, 7)) {  // legacy algorithms
         encryption_algorithm = SEOS_ENCRYPTION_2K3DES,
         hashing_algorithm = SEOS_HASHING_SHA1;
     }
@@ -1742,19 +1747,20 @@ static int CmdHfSeosSim(const char *Cmd) {
     if (diversifier_len == 0) {
         diversifier_len = 7;
     }
+    if (uid_len == 0) {
+        uid_len = 4;
+    }
 
     if (data_len == 0) {
         PrintAndLogEx(ERR, "Data to simulate must be supplied");
         return PM3_ESOFT;
     }
 
-    srand(time(NULL));
     seos_emulate_req_t request = {
         .encr_alg = encryption_algorithm,
         .hash_alg = hashing_algorithm,
 
-        .uid = {0x08, rand()%255, rand()%255, rand()%255},
-        .uid_len = 4,
+        .uid_len = uid_len,
         .diversifier_len = diversifier_len,
         .data_tag_len = data_tag_len,
         .data_len = data_len,
@@ -1766,6 +1772,7 @@ static int CmdHfSeosSim(const char *Cmd) {
     memcpy(request.privmac, keys[key_index].privMacKey, 16);
     memcpy(request.authkey, keys[key_index].readKey, 16);
 
+    memcpy(request.uid, uid, uid_len);
     memcpy(request.diversifier, diversifier, diversifier_len);
     memcpy(request.data_tag, data_tag, data_tag_len);
     memcpy(request.data, data, data_len);
