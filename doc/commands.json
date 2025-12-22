@@ -1510,7 +1510,7 @@
         },
         "hf 14b help": {
             "command": "hf 14b help",
-            "description": "--------- ----------------------- General ----------------------- help This help list List ISO-14443-B history --------- ----------------------- Operations ----------------------- view Display content from tag dump file valid SRIX4 checksum test --------- ------------------ Calypso / Mobib ------------------ --------------------------------------------------------------------------------------- hf 14b list available offline: yes Alias of `trace list -t 14b -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "--------- ----------------------- General ----------------------- help This help list List ISO-14443-B history --------- ----------------------- Operations ----------------------- view Display content from tag dump file valid SRIX4 checksum test --------- ------------------ Calypso / Mobib ------------------ --------------------------------------------------------------------------------------- hf 14b config available offline: no --------------------------------------------------------------------------------------- hf 14b list available offline: yes Alias of `trace list -t 14b -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf 14b list --frame -> show frame delay times",
                 "hf 14b list -1 -> use trace buffer"
@@ -3256,7 +3256,7 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } saflok { Saflok MFC RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } saflok { Saflok MFC RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service... } waveshare { Waveshare NFC ePaper... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf list --frame -> show frame delay times",
                 "hf list -1 -> use trace buffer"
@@ -7754,7 +7754,7 @@
             "command": "hf saflok decode",
             "description": "Decode saflok data",
             "notes": [
-                "hf saflok decode"
+                "hf saflok decode -d <encrypted data>"
             ],
             "offline": true,
             "options": [
@@ -7902,29 +7902,29 @@
         },
         "hf seos adf": {
             "command": "hf seos adf",
-            "description": "Make a GET DATA request to an Application Data File (ADF) of a SEOS Tag The ADF is meant to be read by an application You still need the valid authentication keys to read a card By default: - ADF OID : 2B0601040181E438010102011801010202 - Key Index: 0 - Tag List : 5c02ff00",
+            "description": "Make a GET DATA request to an Application Data File (ADF) of a SEOS Tag The ADF is meant to be read by an application You still need the valid authentication keys to read a card By default: - ADF OID : 2B0601040181E438010102011801010202 - Key Index: 0 - Data Tag : FF00",
             "notes": [
                 "hf seos adf",
                 "hf seos adf -o 2B0601040181E438010102011801010202",
                 "hf seos adf -o 2B0601040181E438010102011801010202 --ki 0",
-                "hf seos adf -o 2B0601040181E438010102011801010202 -c 5c02ff41"
+                "hf seos adf -o 2B0601040181E438010102011801010202 -t FF41"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help This help",
-                "-c, --getdata <hex> <0-100> hex bytes for the tag list to Get Data request (Default: 5c02ff00)",
+                "-t, --tag <hex> <0-100> hex bytes for tag to read (Default: FF00)",
                 "-o, --oid <hex> <0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)",
                 "--ki <dec> Specify key index to set key in memory"
             ],
-            "usage": "hf seos adf [-h] [-c <hex>] [-o <hex>] [--ki <dec>]"
+            "usage": "hf seos adf [-h] [-t <hex>] [-o <hex>] [--ki <dec>]"
         },
         "hf seos gdf": {
             "command": "hf seos gdf",
-            "description": "Get Global Data File (GDF) from SEOS card By default: - Key Index: 0",
+            "description": "Get Global Data File (GDF) from SEOS card By default: - Key Index: 3",
             "notes": [
-                "hf seos gdfhf seos gdf --ki 0"
+                "hf seos gdfhf seos gdf --ki 3"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help This help",
                 "--ki <dec> Specify key index to set key in memory"
@@ -7933,7 +7933,7 @@
         },
         "hf seos help": {
             "command": "hf seos help",
-            "description": "----------- ----------------------- General ----------------------- help This help list List SEOS history ----------- ----------------------- Operations ----------------------- pacs Extract PACS Information from card adf Read an ADF from the card gdf Read an GDF from card ----------- ----------------------- Utils ----------------------- managekeys Manage keys to use with SEOS commands --------------------------------------------------------------------------------------- hf seos list available offline: yes Alias of `trace list -t seos -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "----------- ----------------------- General ----------------------- help This help list List SEOS history ----------- ------------------------ Utils ------------------------ managekeys Manage keys to use with SEOS commands --------------------------------------------------------------------------------------- hf seos list available offline: yes Alias of `trace list -t seos -c` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf seos list --frame -> show frame delay times",
                 "hf seos list -1 -> use trace buffer"
@@ -7971,6 +7971,7 @@
                 "hf seos managekeys -p",
                 "hf seos managekeys -p -v",
                 "hf seos managekeys --ki 0 --nonce 0102030405060708 -> Set nonce value at key index 0",
+                "hf seos managekeys --ki 1 --keyslot 1 -> Set keyslot value at key index 1",
                 "hf seos managekeys --load -f mykeys.bin -p -> load from file and prints keys",
                 "hf seos managekeys --save -f mykeys.bin -> saves keys to file"
             ],
@@ -7978,6 +7979,7 @@
             "options": [
                 "-h, --help This help",
                 "--ki <dec> Specify key index to set key in memory",
+                "--keyslot <hex> Keyslot value as 1 hex byte",
                 "--nonce <hex> Nonce value as 8 hex bytes",
                 "--privenc <hex> Privacy Encryption key as 16 hex bytes",
                 "--privmac <hex> Privacy MAC key as 16 hex bytes",
@@ -7990,7 +7992,7 @@
                 "-p, --print Print keys loaded into memory",
                 "-v, --verbose verbose (print all key info)"
             ],
-            "usage": "hf seos managekeys [-hpv] [--ki <dec>] [--nonce <hex>] [--privenc <hex>] [--privmac <hex>] [--read <hex>] [--write <hex>] [--admin <hex>] [-f <fn>] [--save] [--load]"
+            "usage": "hf seos managekeys [-hpv] [--ki <dec>] [--keyslot <hex>] [--nonce <hex>] [--privenc <hex>] [--privmac <hex>] [--read <hex>] [--write <hex>] [--admin <hex>] [-f <fn>] [--save] [--load]"
         },
         "hf seos pacs": {
             "command": "hf seos pacs",
@@ -8000,7 +8002,7 @@
                 "hf seos pacs --ki 1",
                 "hf seos pacs -o 2B0601040181E438010102011801010202 --ki 0"
             ],
-            "offline": true,
+            "offline": false,
             "options": [
                 "-h, --help This help",
                 "-o, --oid <hex> <0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)",
@@ -8025,6 +8027,23 @@
                 "-d, --data <hex> DER encoded command to send to SAM"
             ],
             "usage": "hf seos sam [-hvknt] [-d <hex>]..."
+        },
+        "hf seos write": {
+            "command": "hf seos write",
+            "description": "Make a PUT DATA request to an ADF of a SEOS card By default: - ADF OID : 2B0601040181E438010102011801010202 - Key Index: 2",
+            "notes": [
+                "hf seos write -d 12345678",
+                "hf seos write --ki 1",
+                "hf seos write -o 2B0601040181E438010102011801010202 --ki 2 -d 12345678"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-o, --oid <hex> <0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)",
+                "--ki <dec> Specify key index to set key in memory",
+                "-d, --data <hex> <0-128> hex bytes for data (Must be valid BER-TLV)"
+            ],
+            "usage": "hf seos write [-h] [-o <hex>] [--ki <dec>] [-d <hex>]"
         },
         "hf sniff": {
             "command": "hf sniff",
@@ -8449,6 +8468,28 @@
                 "-v, --verbose Verbose output"
             ],
             "usage": "hf vas reader [-h@v] [--pid <str>] [-f <fn>] [--url <str>]"
+        },
+        "hf waveshare help": {
+            "command": "hf waveshare help",
+            "description": "help This help load Load image file to Waveshare NFC ePaper --------------------------------------------------------------------------------------- hf waveshare load available offline: yes Load image file to Waveshare NFC ePaper",
+            "notes": [
+                "hf waveshare load -f myfile -m 0 -> 2.13 inch e-paper ( 122, 250 )",
+                "hf waveshare load -f myfile -m 1 -> 2.9 inch e-paper ( 296, 128 )",
+                "hf waveshare load -f myfile -m 2 -> 4.2 inch e-paper ( 400, 300 )",
+                "hf waveshare load -f myfile -m 3 -> 7.5 inch e-paper ( 800, 480 )",
+                "hf waveshare load -f myfile -m 4 -> 2.7 inch e-paper ( 176, 276 )",
+                "hf waveshare load -f myfile -m 5 -> 2.13 inch e-paper B (with red) ( 104, 212 )",
+                "hf waveshare load -f myfile -m 6 -> 1.54 inch e-paper B (with red) ( 200, 200 )",
+                "hf waveshare load -f myfile -m 7 -> 7.5 inch e-paper HD ( 880, 528 )"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-m <nr> model number [0 - 7] of your tag",
+                "-f, --file <fn> specify image to upload to tag",
+                "-s, --save <fn> save paletized version in file"
+            ],
+            "usage": "hf waveshare load [-h] -m <nr> -f <fn> [-s <fn>]"
         },
         "hf xerox dump": {
             "command": "hf xerox dump",
@@ -13689,8 +13730,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 785,
+        "commands_extracted": 787,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-11-15T03:41:46"
+        "extracted_on": "2025-12-22T03:54:40"
     }
 }
