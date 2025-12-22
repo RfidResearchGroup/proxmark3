@@ -406,8 +406,8 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                             if (selected_oid) {
                                 // Synthesized IV: half a block of random data followed by half of the CMAC of that data
                                 uint8_t synthesized_iv[max_bs];
-                                memset(synthesized_iv, 0, bs/2); // TODO: Maybe actually use random data?
-                                generate_cmac(msg->privmac, synthesized_iv, bs/2, synthesized_iv+(bs/2), bs/2, msg->encr_alg);
+                                memset(synthesized_iv, 0, bs>>1); // TODO: Maybe actually use random data?
+                                generate_cmac(msg->privmac, synthesized_iv, bs>>1, synthesized_iv+(bs>>1), bs>>1, msg->encr_alg);
 
                                 // Always exactly 0x30 bytes in length
                                 const uint8_t reply_len = 0x30;
