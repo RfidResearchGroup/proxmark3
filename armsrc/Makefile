@@ -45,6 +45,7 @@ SRC_FELICA = felica.c
 SRC_CRAPTO1 = crypto1.c des.c desfire_crypto.c mifaredesfire.c aes.c platform_util.c
 SRC_CRC = crc.c crc16.c crc32.c
 SRC_ICLASS = iclass.c optimized_cipherutils.c optimized_ikeys.c optimized_elite.c optimized_cipher.c sam_picopass.c
+SRC_SEOS = seos.c sha1.c sha256.c
 SRC_LEGIC = legicrf.c legicrfsim.c legic_prng.c
 SRC_NFCBARCODE = thinfilm.c
 
@@ -137,6 +138,7 @@ THUMBSRC = start.c \
     $(SRC_ISO14443b) \
     $(SRC_CRAPTO1) \
     $(SRC_ICLASS) \
+    $(SRC_SEOS) \
     $(SRC_EMV) \
     $(SRC_CRC) \
     $(SRC_FELICA) \

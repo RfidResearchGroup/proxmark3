@@ -238,6 +238,7 @@ typedef struct {
     bool compiled_with_felica          : 1;
     bool compiled_with_legicrf         : 1;
     bool compiled_with_iclass          : 1;
+    bool compiled_with_seos            : 1;
     bool compiled_with_nfcbarcode      : 1;
     // misc
     bool compiled_with_lcd             : 1;
@@ -247,7 +248,7 @@ typedef struct {
     bool hw_available_smartcard        : 1;
     bool is_rdv4                       : 1;
 } PACKED capabilities_t;
-#define CAPABILITIES_VERSION 6
+#define CAPABILITIES_VERSION 7
 extern capabilities_t g_pm3_capabilities;
 
 // For CMD_LF_T55XX_WRITEBL
@@ -856,6 +857,8 @@ typedef struct {
 #define CMD_HF_SAM_PICOPASS                                               0x0900
 #define CMD_HF_SAM_SEOS                                                   0x0901
 #define CMD_HF_SAM_MFC                                                    0x0902
+
+#define CMD_HF_SEOS_SIMULATE                                              0x0903
 
 #define CMD_UNKNOWN                                                       0xFFFF
 

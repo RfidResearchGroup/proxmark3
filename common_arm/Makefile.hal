@@ -232,6 +232,9 @@ endif
 ifneq ($(SKIP_ICLASS),1)
     PLATFORM_DEFS += -DWITH_ICLASS
 endif
+ifneq ($(SKIP_SEOS),1)
+    PLATFORM_DEFS += -DWITH_SEOS
+endif
 ifneq ($(SKIP_FELICA),1)
     PLATFORM_DEFS += -DWITH_FELICA
 endif

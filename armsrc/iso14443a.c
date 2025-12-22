@@ -1368,6 +1368,7 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
         }
         case 12: { // HID Seos 4K card
             rATQA[0] = 0x01;
+            rATS[1] = 0x78; // FSC=256 required
             sak = 0x20;
             break;
         }

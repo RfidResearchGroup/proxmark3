@@ -45,6 +45,7 @@
 #include "em4x50.h"
 #include "em4x70.h"
 #include "iclass.h"
+#include "seos.h"
 #include "legicrfsim.h"
 //#include "cryptorfsim.h"
 #include "epa.h"
@@ -629,6 +630,11 @@ static void SendCapabilities(void) {
     capabilities.compiled_with_iclass = true;
 #else
     capabilities.compiled_with_iclass = false;
+#endif
+#ifdef WITH_SEOS
+    capabilities.compiled_with_seos = true;
+#else
+    capabilities.compiled_with_seos = false;
 #endif
 #ifdef WITH_NFCBARCODE
     capabilities.compiled_with_nfcbarcode = true;
@@ -2278,6 +2284,12 @@ static void PacketReceived(PacketCommandNG *packet) {
         }
         case CMD_HF_ICLASS_TEARBL: {
             iClass_TearBlock((iclass_tearblock_req_t *)packet->data.asBytes);
+            break;
+        }
+#endif
+#ifdef WITH_SEOS
+        case CMD_HF_SEOS_SIMULATE: {
+            SimulateSeos((seos_emulate_req_t *)packet->data.asBytes);
             break;
         }
 #endif
