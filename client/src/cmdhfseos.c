@@ -858,6 +858,19 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
                 selectADFOID_UPPER[x] = toupper(selectADFOID_UPPER[x]);
             }
 
+            uint8_t mac[8];
+            uint8_t iv_size = i/2;
+            create_cmac(keys[key_index].privMacKey, CRYPTOGRAM_encrypted_data_raw, mac, iv_size, sizeof(mac), encryption_algorithm);
+            mac[0]++;
+            if (memcmp(CRYPTOGRAM_encrypted_data_raw+iv_size, mac, iv_size) != 0) {
+                PrintAndLogEx(ERR, "MAC Verification Failed");
+                
+                // PrintAndLogEx(ERR, "Synthesized IV................... "_YELLOW_("%s"), sprint_hex_inrow(CRYPTOGRAM_encrypted_data_raw,iv_size));
+                // PrintAndLogEx(ERR, "Synthesized IV MAC............... "_YELLOW_("%s"), sprint_hex_inrow(CRYPTOGRAM_encrypted_data_raw+iv_size,iv_size));
+                // PrintAndLogEx(ERR, "Synthesized IV Computed MAC...... "_YELLOW_("%s"), sprint_hex_inrow(mac,iv_size));
+                
+                return PM3_ESOFT;
+            }
 
             // Compare the 2 ADF responses, if they don't match then the decryption is wrong
             // We do the + 4 to remove the first 4 bytes of the ADF OID ASN.1 Tag (0611)
@@ -1186,13 +1199,12 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
     resplen -= 2;
 
     uint8_t keyslot = keys[key_index].keyslot;
-    seos_challenge_get(RNDICC, sizeof(RNDICC), keyslot);
-    select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
+    res = seos_challenge_get(RNDICC, sizeof(RNDICC), keyslot);
+    if (res != PM3_SUCCESS) return res;
+    res = select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
+    if (res != PM3_SUCCESS) return res;
     res = select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
-
-    if (res != PM3_SUCCESS) {
-        return res;
-    }
+    if (res != PM3_SUCCESS) return res;
 
     if (ALGORITHM_INFO_value1 == 0x09 || ALGORITHM_INFO_value1 == 0x02) {
         uint8_t adf_bytes[124];
@@ -1202,14 +1214,17 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
 
 
         int diversifier_length = sizeof(diversifier);
-        select_ADF_decrypt(selectedADF, CRYPTOGRAM_encrypted_data, diversifier, &diversifier_length, ALGORITHM_INFO_value1, key_index);
-        seos_mutual_auth(adf_bytes, adf_bytes_len, RNDICC, diversifier, diversifier_length, RNDIFD, KeyICC, RNDIFD, sizeof(RNDIFD), KeyIFD, sizeof(KeyIFD), ALGORITHM_INFO_value1, ALGORITHM_INFO_value2, key_index, keyslot);
+        res = select_ADF_decrypt(selectedADF, CRYPTOGRAM_encrypted_data, diversifier, &diversifier_length, ALGORITHM_INFO_value1, key_index);
+        if (res != PM3_SUCCESS) return res;
+        res = seos_mutual_auth(adf_bytes, adf_bytes_len, RNDICC, diversifier, diversifier_length, RNDIFD, KeyICC, RNDIFD, sizeof(RNDIFD), KeyIFD, sizeof(KeyIFD), ALGORITHM_INFO_value1, ALGORITHM_INFO_value2, key_index, keyslot);
+        if (res != PM3_SUCCESS) return res;
         create_mutual_auth_key(KeyIFD, KeyICC, RNDICC, RNDIFD, Diversified_New_EncryptionKey, Diversified_New_MACKey, ALGORITHM_INFO_value1, ALGORITHM_INFO_value2);
         
         if (write == NULL) {
             uint8_t sio_buffer_out[PM3_CMD_DATA_SIZE];
             int sio_size = 0;
-            seos_get_data(RNDICC, RNDIFD, Diversified_New_EncryptionKey, Diversified_New_MACKey, sio_buffer_out, &sio_size, ALGORITHM_INFO_value1, data_tag, data_tag_len);
+            res = seos_get_data(RNDICC, RNDIFD, Diversified_New_EncryptionKey, Diversified_New_MACKey, sio_buffer_out, &sio_size, ALGORITHM_INFO_value1, data_tag, data_tag_len);
+            if (res != PM3_SUCCESS) return res;
 
             if (sio_size == 0) {
                 return PM3_ESOFT;
