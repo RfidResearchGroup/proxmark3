@@ -210,6 +210,7 @@ void SimulateSeos(seos_emulate_req_t *msg) {
     // Calculated block size
     const uint8_t max_bs = 16;
     const uint8_t bs = block_size(msg->encr_alg);
+    const uint8_t half_bs = bs >> 1;
     if (bs == 0) {
         // Can't continue, invalid encryption algorithm
         reply_ng(CMD_HF_SEOS_SIMULATE, PM3_EINVARG, NULL, 0);
@@ -221,7 +222,7 @@ void SimulateSeos(seos_emulate_req_t *msg) {
 
     // Allocate 512 bytes for the dynamic modulation, created when the reader queries for it
     // Such a response is less time critical, so we can prepare them on the fly
-#define DYNAMIC_RESPONSE_BUFFER_SIZE 192
+#define DYNAMIC_RESPONSE_BUFFER_SIZE 64
 #define DYNAMIC_MODULATION_BUFFER_SIZE 1024
 
     uint8_t *dynamic_response_buffer = BigBuf_calloc(DYNAMIC_RESPONSE_BUFFER_SIZE);
@@ -242,6 +243,21 @@ void SimulateSeos(seos_emulate_req_t *msg) {
         .modulation = dynamic_modulation_buffer,
         .modulation_n = 0
     };
+
+    // General-purpose shared buffers
+#define WORK_BUFFER_SIZE 0x80
+    uint8_t *work_buffer_a = BigBuf_calloc(WORK_BUFFER_SIZE);
+    if (work_buffer_a == NULL) {
+        BigBuf_free_keep_EM();
+        reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
+        return;
+    }
+    uint8_t *work_buffer_b = BigBuf_calloc(WORK_BUFFER_SIZE);
+    if (work_buffer_b == NULL) {
+        BigBuf_free_keep_EM();
+        reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
+        return;
+    }
 
     uint16_t flags = 0;
     uint8_t data[PM3_CMD_DATA_SIZE] = { 0 };
@@ -356,7 +372,6 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                             uint8_t aid_len = receivedCmd[5 + offset];
                             uint8_t *aid = &receivedCmd[6 + offset];
 
-                            // TODO: See if this actually matches exactly (if possible)
                             if ((aid_len == sizeof(SEOS_AID)) && (memcmp(SEOS_AID, aid, sizeof(SEOS_AID)) == 0)) { // Evaluate the AID sent by the Reader to the AID supplied
                                 // Format as TLV and acknowledge
                                 /*
@@ -412,7 +427,7 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                 // Always exactly 0x30 bytes in length
                                 const uint8_t reply_len = 0x30;
                                 uint8_t reply_idx = 0;
-                                uint8_t reply[reply_len];
+                                uint8_t *reply = work_buffer_a;
                                 memset(reply, 0, reply_len);
 
                                 reply[reply_idx++] = 0x06; // Tag: selected OID
@@ -447,8 +462,8 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                 tlv_idx += reply_len;
 
                                 // Always an 8-byte CMAC
-                                uint8_t cmac[8];
-                                uint8_t cmac_size = generate_cmac(msg->privmac, dynamic_response_info.response+tlv_base, tlv_idx-tlv_base, cmac, sizeof(cmac), msg->encr_alg);
+                                uint8_t *cmac = work_buffer_a;
+                                uint8_t cmac_size = generate_cmac(msg->privmac, dynamic_response_info.response+tlv_base, tlv_idx-tlv_base, cmac, 8, msg->encr_alg);
 
                                 dynamic_response_info.response[tlv_idx++] = 0x8E; // Tag: CMAC
                                 dynamic_response_info.response[tlv_idx++] = cmac_size; // Length
@@ -497,6 +512,16 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                 uint8_t received_tlv_len = received_tlv[1];
                                 received_tlv += 2;
 
+                                if (received_tlv_len > WORK_BUFFER_SIZE) {
+                                    Dbprintf(_RED_("Mutual auth failed") ": Recieved cryptogram too long.");
+                                    break;
+                                }
+
+                                if (received_tlv_len < 32) {
+                                    Dbprintf(_RED_("Mutual auth failed") ": Recieved cryptogram too short.");
+                                    break;
+                                }
+
                                 uint8_t keyslot = receivedCmd[4 + offset]; // APDU P2 byte
 
                                 seos_kdf(true, msg->authkey, keyslot, msg->oid, msg->oid_len, msg->diversifier, msg->diversifier_len, diver_encr_key, msg->encr_alg, msg->hash_alg);
@@ -504,7 +529,7 @@ void SimulateSeos(seos_emulate_req_t *msg) {
 
                                 // Verify CMAC (last 8 bytes)
                                 uint8_t request_len = received_tlv_len - 8;
-                                uint8_t cmac[8];
+                                uint8_t *cmac = work_buffer_a;
                                 generate_cmac(diver_cmac_key, received_tlv, request_len, cmac, 8, msg->encr_alg);
                                 if (memcmp(cmac, received_tlv + request_len, 8) != 0) {
                                     Dbprintf(_RED_("Mutual auth failed") ": Invalid CMAC:");
@@ -514,7 +539,7 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                     break;
                                 }
 
-                                uint8_t request[received_tlv_len];
+                                uint8_t *request = work_buffer_a;
                                 if (!decrypt_cryptogram(diver_encr_key, received_tlv, request_len, request, msg->encr_alg)) {
                                     Dbprintf(_RED_("Mutual auth failed") ": Failed to decrypt cryptogram.");
                                     break;
@@ -529,24 +554,26 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                 memcpy(KEY_IFD, request + 16, 16);
 
                                 // reply = RND_ICC | RND_IFD | KEY_ICC
-                                uint8_t reply_plain[32];
+                                const uint8_t reply_plain_len = 32;
+                                uint8_t *reply_plain = work_buffer_a;
                                 memcpy(reply_plain + 0, RND_ICC, 8);
                                 memcpy(reply_plain + 8, RND_IFD, 8);
                                 memcpy(reply_plain + 16, KEY_ICC, 16);
 
-                                // Generate cryptogram + CMAC
-                                uint8_t reply[sizeof(reply_plain)+8];
-                                generate_cryptogram(diver_encr_key, NULL, reply_plain, sizeof(reply_plain), reply, msg->encr_alg);
-                                generate_cmac(diver_cmac_key, reply, sizeof(reply_plain), reply+sizeof(reply_plain), 8, msg->encr_alg);
+                                // Generate cryptogram + 8-byte CMAC
+                                const uint8_t reply_len = reply_plain_len + 8;
+                                uint8_t *reply = work_buffer_b;
+                                generate_cryptogram(diver_encr_key, NULL, reply_plain, reply_plain_len, reply, msg->encr_alg);
+                                generate_cmac(diver_cmac_key, reply, reply_plain_len, reply+reply_plain_len, 8, msg->encr_alg);
 
                                 uint8_t tlv_idx = 1 + offset;
 
                                 dynamic_response_info.response[tlv_idx++] = 0x7C; // Tag: mutual auth
-                                dynamic_response_info.response[tlv_idx++] = sizeof(reply)+2; // Length
+                                dynamic_response_info.response[tlv_idx++] = reply_len+2; // Length
                                 dynamic_response_info.response[tlv_idx++] = 0x82; // Tag: request for challenge
-                                dynamic_response_info.response[tlv_idx++] = sizeof(reply); // Length
-                                memcpy(dynamic_response_info.response+tlv_idx, reply, sizeof(reply));
-                                tlv_idx += sizeof(reply);
+                                dynamic_response_info.response[tlv_idx++] = reply_len; // Length
+                                memcpy(dynamic_response_info.response+tlv_idx, reply, reply_len);
+                                tlv_idx += reply_len;
 
                                 dynamic_response_info.response_n = tlv_idx;
 
@@ -556,7 +583,7 @@ void SimulateSeos(seos_emulate_req_t *msg) {
 
                                 // IMPORTANT: before sending reply, calculate final diversified keys
 
-                                uint8_t hash_input[38];
+                                uint8_t *hash_input = work_buffer_a;
                                 uint8_t hash_idx = 0;
                                 // Counter
                                 hash_input[hash_idx++] = 0x00;
@@ -577,16 +604,16 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                 memcpy(hash_input+hash_idx, RND_IFD, 8);
                                 hash_idx += 8;
 
-                                uint8_t hash_output[40];
+                                uint8_t *hash_output = work_buffer_b;
                                 if (msg->hash_alg == SEOS_HASHING_SHA1) {
-                                    mbedtls_sha1(hash_input, 38, hash_output);
+                                    mbedtls_sha1(hash_input, hash_idx, hash_output);
 
                                     // Increment LSB of counter for second hash
                                     hash_input[3]++;
 
-                                    mbedtls_sha1(hash_input, 38, hash_output + 20);
+                                    mbedtls_sha1(hash_input, hash_idx, hash_output + 20);
                                 } else if (msg->hash_alg == SEOS_HASHING_SHA256) {
-                                    mbedtls_sha256(hash_input, 38, hash_output, 0);
+                                    mbedtls_sha256(hash_input, hash_idx, hash_output, 0);
                                 } else {
                                     Dbprintf(_RED_("Unknown Hashing Algorithm"));
                                     break;
@@ -632,131 +659,150 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                             }
 
                             if (cryptogram != NULL && recvd_cmac != NULL) {
-                                    uint8_t rndCounter[bs];
-                                    memcpy(rndCounter, RND_ICC, bs / 2);
-                                    memcpy(rndCounter + bs / 2, RND_IFD, bs / 2);
-                                    for (int8_t i=bs-1; i>=0; i--) {
-                                        rndCounter[i]++;
-                                        if (rndCounter[i] != 0x00) break;
-                                    }
+                                if (cryptogram_length > WORK_BUFFER_SIZE) {
+                                    Dbprintf(_RED_("Get Data failed") ": Recieved cryptogram too long.");
+                                    break;
+                                }
 
-                                    uint8_t cryptogram_padding = recvd_cmac_offset % bs;
-                                    if (cryptogram_padding) cryptogram_padding = bs - cryptogram_padding;
+                                // Combine the first half_bs each of RND_ICC and RND_IFD,
+                                //  then increment as a single counter
+                                uint8_t rndCounter[bs];
+                                memcpy(rndCounter, RND_ICC, half_bs);
+                                memcpy(rndCounter + half_bs, RND_IFD, half_bs);
 
-                                    uint8_t padded_apdu_header[bs];
-                                    memset(padded_apdu_header, 0, bs);
-                                    memcpy(padded_apdu_header, &receivedCmd[1 + offset], 4);
-                                    padded_apdu_header[4] = 0x80;
+                                for (int8_t i=bs-1; i>=0; i--) {
+                                    rndCounter[i]++;
+                                    if (rndCounter[i] != 0x00) break;
+                                }
 
-                                    uint8_t mac_input[sizeof(rndCounter) + sizeof(padded_apdu_header) + recvd_cmac_offset + cryptogram_padding];
-                                    memset(mac_input, 0, sizeof(mac_input));
-                                    memcpy(mac_input, rndCounter, sizeof(rndCounter));
-                                    memcpy(mac_input+sizeof(rndCounter), padded_apdu_header, sizeof(padded_apdu_header));
-                                    memcpy(mac_input+sizeof(rndCounter)+sizeof(padded_apdu_header), received_tlv, recvd_cmac_offset);
-                                    if (cryptogram_padding) {
-                                        mac_input[sizeof(rndCounter)+sizeof(padded_apdu_header)+recvd_cmac_offset] = 0x80;
-                                    }
+                                uint8_t *mac_input = work_buffer_a;
+                                uint8_t mac_input_idx = 0;
 
-                                    uint8_t cmac[recvd_cmac_length];
-                                    generate_cmac(diver_cmac_key, mac_input, sizeof(mac_input), cmac, recvd_cmac_length, msg->encr_alg);
-                                    if (memcmp(cmac, recvd_cmac, recvd_cmac_length) != 0) {
-                                        Dbprintf( _RED_("Get Data failed") ": Invalid CMAC:");
-                                        Dbhexdump(recvd_cmac_length, cmac, false);
-                                        Dbprintf("for data:");
-                                        Dbhexdump(sizeof(mac_input), mac_input, false);
+                                // Add RND_* counter to mac_input
+                                memcpy(mac_input + mac_input_idx, rndCounter, bs);
+                                mac_input_idx += bs;
+
+                                // Add padded APDU header to mac_input
+                                uint8_t *padded_apdu_header = mac_input + mac_input_idx;
+                                memset(padded_apdu_header, 0, bs);
+                                memcpy(padded_apdu_header, &receivedCmd[1 + offset], 4);
+                                padded_apdu_header[4] = 0x80;
+                                mac_input_idx += bs;
+
+                                // Add received TLV data to mac_input
+                                memcpy(mac_input + mac_input_idx, received_tlv, recvd_cmac_offset);
+                                mac_input_idx += recvd_cmac_offset;
+
+                                // Add padding (if needed) to mac_input
+                                if (mac_input_idx % bs) {
+                                    memset(mac_input + mac_input_idx, 0, bs - (mac_input_idx % bs));
+                                    mac_input[mac_input_idx] = 0x80;
+                                    mac_input_idx += bs - (mac_input_idx % bs);
+                                }
+
+                                uint8_t *cmac = work_buffer_b;
+                                generate_cmac(diver_cmac_key, mac_input, mac_input_idx, cmac, recvd_cmac_length, msg->encr_alg);
+                                if (memcmp(cmac, recvd_cmac, recvd_cmac_length) != 0) {
+                                    Dbprintf( _RED_("Get Data failed") ": Invalid CMAC.");
+                                    break;
+                                }
+
+                                uint8_t *request = work_buffer_a;
+                                decrypt_cryptogram(diver_encr_key, cryptogram, cryptogram_length, request, msg->encr_alg);
+
+                                uint8_t tlv_base = 1 + offset;
+                                uint8_t tlv_idx = tlv_base;
+
+                                if (is_put) {
+                                    // TODO: Add write support
+                                    Dbprintf(_RED_("Put Data failed") ": Not implemented");
+                                    break;
+                                } else {
+                                    //5c 02 ff 00
+                                    if (request[0] != 0x5C) {
+                                        Dbprintf(_RED_("Get Data failed") ": Invalid request TLV. Expected tag 5C, but got %02X.", request[0]);
                                         break;
                                     }
 
-                                    uint8_t request[cryptogram_length];
-                                    decrypt_cryptogram(diver_encr_key, cryptogram, cryptogram_length, request, msg->encr_alg);
-
-                                    uint8_t tlv_base = 1 + offset;
-                                    uint8_t tlv_idx = tlv_base;
-
-                                    if (is_put) {
-
-                                    } else {
-                                        //5c 02 ff 00
-                                        if (request[0] != 0x5C) {
-                                            Dbprintf(_RED_("Get Data failed") ": Invalid request TLV. Expected tag 5C, but got %02X.", request[0]);
-                                            break;
-                                        }
-
-                                        if (request[1] != msg->data_tag_len || memcmp(request+2, msg->data_tag, msg->data_tag_len) != 0) {
-                                            Dbprintf(_RED_("Get Data failed") ": Requested invalid data tag.");
-                                            break;
-                                        }
-
-                                        uint8_t reply_len = msg->data_tag_len + 1 + msg->data_len;
-                                        reply_len = round_to_next(reply_len, bs);
-                                        uint8_t reply[reply_len];
-                                        memset(reply, 0, reply_len);
-
-                                        uint8_t reply_idx = 0;
-                                        memcpy(reply+reply_idx, msg->data_tag, msg->data_tag_len); // Tag
-                                        reply_idx += msg->data_tag_len;
-                                        reply[reply_idx++] = msg->data_len; // Length
-                                        memcpy(reply+reply_idx, msg->data, msg->data_len); // Value
-                                        reply_idx += msg->data_len;
-
-                                        if (reply_idx != reply_len) {
-                                            // Add 0x80 at first byte after data for start of padding
-                                            reply[reply_idx] = 0x80;
-                                        }
-
-                                        uint8_t reply_cryptogram[reply_len];
-                                        if (!generate_cryptogram(diver_encr_key, NULL, reply, reply_len, reply_cryptogram, msg->encr_alg)) {
-                                            Dbprintf(_RED_("Get Data failed") ": Failed to create reply cryptogram.");
-                                            break;
-                                        }
-
-                                        // Only include a cryptogram for GET DATA
-                                        dynamic_response_info.response[tlv_idx++] = 0x85; // Tag: cryptogram
-                                        dynamic_response_info.response[tlv_idx++] = reply_len; // Length
-                                        memcpy(dynamic_response_info.response+tlv_idx, reply_cryptogram, reply_len);
-                                        tlv_idx += reply_len;
+                                    if (request[1] != msg->data_tag_len || memcmp(request+2, msg->data_tag, msg->data_tag_len) != 0) {
+                                        Dbprintf(_RED_("Get Data failed") ": Requested invalid data tag.");
+                                        break;
                                     }
 
-                                    // Whether we GET DATA or PUT DATA, add the response status code and CMAC
-                                    dynamic_response_info.response[tlv_idx++] = 0x99; // Tag: status code
-                                    dynamic_response_info.response[tlv_idx++] = 0x02; // Length
-                                    dynamic_response_info.response[tlv_idx++] = 0x90;
-                                    dynamic_response_info.response[tlv_idx++] = 0x00;
-
-
-                                    // Unlike every other CMAC, this time we need to increment
-                                    //  the rndCounter from above again and CMAC with *that*
-                                    uint8_t mac_length = sizeof(rndCounter) + (tlv_idx - tlv_base);
-                                    mac_length = round_to_next(mac_length, bs);
-                                    uint8_t mac_input_2[mac_length];
-                                    for (int8_t i=bs-1; i>=0; i--) {
-                                        rndCounter[i]++;
-                                        if (rndCounter[i] != 0x00) break;
+                                    uint8_t reply_len = msg->data_tag_len + 1 + msg->data_len;
+                                    reply_len = round_to_next(reply_len, bs);
+                                    if (reply_len > WORK_BUFFER_SIZE) {
+                                        Dbprintf(_RED_("Get Data failed") ": Unable to generate reply: too long.");
+                                        break;
                                     }
-                                    memset(mac_input_2, 0, mac_length);
-                                    uint8_t mac_idx = 0;
-                                    memcpy(mac_input_2, rndCounter, sizeof(rndCounter));
-                                    mac_idx += sizeof(rndCounter);
-                                    memcpy(mac_input_2+sizeof(rndCounter), dynamic_response_info.response + tlv_base, tlv_idx - tlv_base);
-                                    mac_idx += tlv_idx - tlv_base;
 
-                                    if (mac_idx != mac_length) {
+                                    uint8_t *reply = work_buffer_a;
+
+                                    uint8_t reply_idx = 0;
+                                    memcpy(reply+reply_idx, msg->data_tag, msg->data_tag_len); // Tag
+                                    reply_idx += msg->data_tag_len;
+                                    reply[reply_idx++] = msg->data_len; // Length
+                                    memcpy(reply+reply_idx, msg->data, msg->data_len); // Value
+                                    reply_idx += msg->data_len;
+
+                                    if (reply_idx != reply_len) {
+                                        memset(reply + reply_idx, 0, reply_len - reply_idx);
                                         // Add 0x80 at first byte after data for start of padding
-                                        mac_input_2[mac_idx] = 0x80;
+                                        reply[reply_idx] = 0x80;
                                     }
 
-                                    uint8_t cmac_size = generate_cmac(diver_cmac_key, mac_input_2, mac_length, cmac, sizeof(cmac), msg->encr_alg);
+                                    uint8_t *reply_cryptogram = work_buffer_b;
+                                    if (!generate_cryptogram(diver_encr_key, NULL, reply, reply_len, reply_cryptogram, msg->encr_alg)) {
+                                        Dbprintf(_RED_("Get Data failed") ": Failed to create reply cryptogram.");
+                                        break;
+                                    }
 
-                                    dynamic_response_info.response[tlv_idx++] = 0x8E; // Tag: CMAC
-                                    dynamic_response_info.response[tlv_idx++] = cmac_size; // Length
-                                    memcpy(dynamic_response_info.response+tlv_idx, cmac, cmac_size);
-                                    tlv_idx += cmac_size;
+                                    // Only include a cryptogram for GET DATA
+                                    dynamic_response_info.response[tlv_idx++] = 0x85; // Tag: cryptogram
+                                    dynamic_response_info.response[tlv_idx++] = reply_len; // Length
+                                    memcpy(dynamic_response_info.response+tlv_idx, reply_cryptogram, reply_len);
+                                    tlv_idx += reply_len;
+                                }
 
-                                    dynamic_response_info.response_n = tlv_idx;
+                                // Whether we GET DATA or PUT DATA, add the response status code and CMAC
+                                dynamic_response_info.response[tlv_idx++] = 0x99; // Tag: status code
+                                dynamic_response_info.response[tlv_idx++] = 0x02; // Length
+                                dynamic_response_info.response[tlv_idx++] = 0x90;
+                                dynamic_response_info.response[tlv_idx++] = 0x00;
 
-                                    // Set status code to Success
-                                    apdu_status[0] = 0x90;
-                                    apdu_status[1] = 0x00;
+                                // Unlike every other CMAC, this time we need to prepend
+                                //  the same counter from above, but increment it again
+                                for (int8_t i=bs-1; i>=0; i--) {
+                                    rndCounter[i]++;
+                                    if (rndCounter[i] != 0x00) break;
+                                }
+
+                                mac_input_idx = 0;
+
+                                memcpy(mac_input + mac_input_idx, rndCounter, sizeof(rndCounter));
+                                mac_input_idx += sizeof(rndCounter);
+                                memcpy(mac_input + mac_input_idx, dynamic_response_info.response + tlv_base, tlv_idx - tlv_base);
+                                mac_input_idx += tlv_idx - tlv_base;
+
+                                // Add padding (if needed) to mac_input
+                                if (mac_input_idx % bs) {
+                                    memset(mac_input + mac_input_idx, 0, bs - (mac_input_idx % bs));
+                                    mac_input[mac_input_idx] = 0x80;
+                                    mac_input_idx += bs - (mac_input_idx % bs);
+                                }
+
+                                uint8_t cmac_size = generate_cmac(diver_cmac_key, mac_input, mac_input_idx, cmac, recvd_cmac_length, msg->encr_alg);
+
+                                dynamic_response_info.response[tlv_idx++] = 0x8E; // Tag: CMAC
+                                dynamic_response_info.response[tlv_idx++] = cmac_size; // Length
+                                memcpy(dynamic_response_info.response+tlv_idx, cmac, cmac_size);
+                                tlv_idx += cmac_size;
+
+                                dynamic_response_info.response_n = tlv_idx;
+
+                                // Set status code to Success
+                                apdu_status[0] = 0x90;
+                                apdu_status[1] = 0x00;
                             } else {
                                 Dbprintf( _RED_("Get Data failed") ": No cryptogram or CMAC found in request.");
                             }
