@@ -1698,6 +1698,125 @@ static int CmdHfSeosADF(const char *Cmd) {
     return seos_pacs((char *)oid, oid_len, data_tag, data_tag_len, key_index);
 }
 
+static int CmdHfSeosSim(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf seos sim",
+                  "Simulate a SEOS card with the provided keys and data\n\n"
+                  "By default:\n"
+                  "  - ADF OID    : 2B0601040181E438010102011801010202\n"
+                  "  - Diversifier: 01020304050607\n"
+                  "  - Key Index  : 2\n"
+                  "  - Data Tag   : FF00\n"
+                  "  - Encryption : AES128\n"
+                  "  - Hashing    : SHA256\n",
+                  "hf seos sim -d 12345678\n"
+                  "hf seos sim --ki 1\n"
+                  "hf seos sim -o 2B0601040181E438010102011801010202 -u 01020304050607 --ki 2 -d 12345678\n"
+                  "hf seos sim -o 2B0601040181E438010102011801010202 --legacy -t FF41 -d 12345678\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_str0("t", "tag", "<hex>", "<0-100> hex bytes for tag to simulate (Default: FF00)"),
+        arg_str0("o", "oid", "<hex>", "<0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)"),
+        arg_int0(NULL, "ki", "<dec>", "Specify key index to set key in memory"),
+        arg_str0(NULL, "div", "<hex>", "<0-16> hex bytes for diversifier (Equivalent of UID)"),
+        arg_str0("d", "data", "<hex>", "<0-128> hex bytes for data (Must be valid BER-TLV)"),
+        arg_str0("u", "uid", "<hex>", "<0-10> hex bytes for UID (Must be a RID i.e. [0]=0x08)"),
+        arg_lit0("l", "legacy", "Use legacy algorithms (3DES/SHA1)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    int data_tag_len = 0;
+    uint8_t data_tag[16] = {0xff, 0x00};
+    CLIGetHexWithReturn(ctx, 1, data_tag, &data_tag_len);
+
+    int oid_len = 0;
+    uint8_t oid[256] = {0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02, 0x02};
+    CLIGetHexWithReturn(ctx, 2, oid, &oid_len);
+
+    int key_index = arg_get_int_def(ctx, 3, 2);
+
+    int diversifier_len = 0;
+    uint8_t diversifier[256] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+    CLIGetHexWithReturn(ctx, 4, diversifier, &diversifier_len);
+
+    int data_len = 0;
+    uint8_t data[256] = {};
+    CLIGetHexWithReturn(ctx, 5, data, &data_len);
+
+    int uid_len = 0;
+    uint8_t uid[10] = {0x08, 0x01, 0x02, 0x03};
+    CLIGetHexWithReturn(ctx, 6, uid, &uid_len);
+
+    uint8_t encryption_algorithm = SEOS_ENCRYPTION_AES;
+    uint8_t hashing_algorithm = SEOS_HASHING_SHA256;
+    if (arg_get_lit(ctx, 7)) {  // legacy algorithms
+        encryption_algorithm = SEOS_ENCRYPTION_2K3DES,
+        hashing_algorithm = SEOS_HASHING_SHA1;
+    }
+
+    CLIParserFree(ctx);
+
+    // Fall back to default values
+    if (data_tag_len == 0) {
+        data_tag_len = 2;
+    }
+    if (oid_len == 0) {
+        oid_len = 17;
+    }
+    if (diversifier_len == 0) {
+        diversifier_len = 7;
+    }
+    if (uid_len == 0) {
+        uid_len = 4;
+    }
+
+    if (data_len == 0) {
+        PrintAndLogEx(ERR, "Data to simulate must be supplied");
+        return PM3_ESOFT;
+    }
+
+    seos_emulate_req_t request = {
+        .encr_alg = encryption_algorithm,
+        .hash_alg = hashing_algorithm,
+
+        .uid_len = uid_len,
+        .diversifier_len = diversifier_len,
+        .data_tag_len = data_tag_len,
+        .data_len = data_len,
+        .oid_len = oid_len,
+    };
+
+    // Copy all the provided values into the request object
+    memcpy(request.privenc, keys[key_index].privEncKey, 16);
+    memcpy(request.privmac, keys[key_index].privMacKey, 16);
+    memcpy(request.authkey, keys[key_index].readKey, 16);
+
+    memcpy(request.uid, uid, uid_len);
+    memcpy(request.diversifier, diversifier, diversifier_len);
+    memcpy(request.data_tag, data_tag, data_tag_len);
+    memcpy(request.data, data, data_len);
+    memcpy(request.oid, oid, oid_len);
+
+    PacketResponseNG resp;
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_SEOS_SIMULATE, (uint8_t*)&request, sizeof(request));
+
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
+    while (WaitForResponseTimeout(CMD_HF_SEOS_SIMULATE, &resp, 1000) == false) {
+        if (kbd_enter_pressed()) {
+            PrintAndLogEx(WARNING, "\naborted via keyboard.");
+            // inform device to break the sim loop since client has exited
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            return PM3_EOPABORTED;
+        }
+    }
+    
+    return PM3_SUCCESS;
+}
+
 static int CmdHfSeosManageKeys(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf seos managekeys",
@@ -2010,6 +2129,8 @@ static command_t CommandTable[] = {
     {"write",   CmdHfSeosWrite,         IfPm3Iso14443a,  "Write an ADF to the card"},
     {"adf",     CmdHfSeosADF,           IfPm3Iso14443a,  "Read an ADF from the card"},
     {"gdf",     CmdHfSeosGDF,           IfPm3Iso14443a,  "Read an GDF from card"},
+    {"-----------", CmdHelp,            IfPm3Seos,       "---------------------- " _CYAN_("Simulation") " ---------------------"},
+    {"sim",     CmdHfSeosSim,           IfPm3Seos,       "Simulate Seos tag"},
     {"-----------", CmdHelp,            AlwaysAvailable, "------------------------ " _CYAN_("Utils") " ------------------------"},
     {"managekeys", CmdHfSeosManageKeys, AlwaysAvailable, "Manage keys to use with SEOS commands"},
     {NULL, NULL, NULL, NULL}

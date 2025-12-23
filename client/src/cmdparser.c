@@ -182,6 +182,12 @@ bool IfPm3Iclass(void) {
     return g_pm3_capabilities.compiled_with_iclass;
 }
 
+bool IfPm3Seos(void) {
+    if (IfPm3Present() == false)
+        return false;
+    return g_pm3_capabilities.compiled_with_seos;
+}
+
 bool IfPm3NfcBarcode(void) {
     if (IfPm3Present() == false)
         return false;
