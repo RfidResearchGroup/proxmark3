@@ -511,8 +511,8 @@ static void create_mutual_auth_key(uint8_t *KEYIFD, uint8_t *KEYICC, uint8_t *RN
     // PrintAndLogEx(SUCCESS, "RandomIFD........................ " _YELLOW_("%s"), sprint_hex_inrow(RNDIFD, 8));
     // PrintAndLogEx(SUCCESS, "hash Input....................... " _YELLOW_("%s"), sprint_hex_inrow(hash_in,ARRAYLEN(hash_in)));
 
-    uint8_t output[128]; // Buffer to store the two 32-byte keys
-    uint8_t hashedOutput[128];
+    uint8_t output[32]; // Buffer to store the two 16-byte keys
+    uint8_t hashedOutput[32];
     uint32_t counter = 1;
 
     // Generate the first key
@@ -526,7 +526,7 @@ static void create_mutual_auth_key(uint8_t *KEYIFD, uint8_t *KEYICC, uint8_t *RN
         counter++;
         set_counter_big_endian(hash_in, counter);
         sha1hash(hash_in, sizeof(hash_in), hashedOutput);
-        memcpy(output + 20, hashedOutput, 20);
+        memcpy(output + 20, hashedOutput, 12);
         //PrintAndLogEx(SUCCESS, "key_out_temp..................... " _YELLOW_("%s"), sprint_hex_inrow(hash_in,ARRAYLEN(hash_in)));
     } else if (HashingAlgorithm == 0x07) {
         sha256hash(hash_in, sizeof(hash_in), hashedOutput);
