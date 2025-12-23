@@ -233,7 +233,11 @@ static void generate_command_wrapping(uint8_t *command_Header, int command_heade
     // 0181e43801010201 + 0000000000000001 + 0CCB3FFF800000000000000000000000 + 8510EB54DA90CB43AEE7FBFE816ECA25A10D + 9700 + 800000000000000000000000
 
     uint8_t mac[8];
-    create_cmac(diversified_mac_key, padded_toEncrypt, mac, padded_toEncrypt_len, sizeof(mac), encryption_algorithm);
+    memset(mac, 0x00, 8);
+    if (create_cmac(diversified_mac_key, padded_toEncrypt, mac, padded_toEncrypt_len, sizeof(mac), encryption_algorithm) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, _RED_("Failed to create MAC"));
+        return;
+    }
 
     // PrintAndLogEx(SUCCESS, "Encryption Key................... " _YELLOW_("%s"), sprint_hex_inrow(diversified_enc_key, 24));
     // PrintAndLogEx(SUCCESS, "MAC Key.......................... " _YELLOW_("%s"), sprint_hex_inrow(diversified_mac_key, 24));
