@@ -512,7 +512,6 @@ static void create_mutual_auth_key(uint8_t *KEYIFD, uint8_t *KEYICC, uint8_t *RN
     // PrintAndLogEx(SUCCESS, "hash Input....................... " _YELLOW_("%s"), sprint_hex_inrow(hash_in,ARRAYLEN(hash_in)));
 
     uint8_t output[32]; // Buffer to store the two 16-byte keys
-    uint8_t hashedOutput[32];
     uint32_t counter = 1;
 
     // Generate the first key
@@ -520,17 +519,16 @@ static void create_mutual_auth_key(uint8_t *KEYIFD, uint8_t *KEYICC, uint8_t *RN
     // PrintAndLogEx(SUCCESS, "key_out_temp..................... " _YELLOW_("%s"), sprint_hex_inrow(hash_in,ARRAYLEN(hash_in)));
 
     if (HashingAlgorithm == 0x06) {
-        sha1hash(hash_in, sizeof(hash_in), hashedOutput);
+        sha1hash(hash_in, sizeof(hash_in), output);
         //PrintAndLogEx(SUCCESS, "key_out_temp..................... " _YELLOW_("%s"), sprint_hex_inrow(hash_in,ARRAYLEN(hash_in)));
-        memcpy(output, hashedOutput, 20);
         counter++;
         set_counter_big_endian(hash_in, counter);
+        uint8_t hashedOutput[20];
         sha1hash(hash_in, sizeof(hash_in), hashedOutput);
         memcpy(output + 20, hashedOutput, 12);
         //PrintAndLogEx(SUCCESS, "key_out_temp..................... " _YELLOW_("%s"), sprint_hex_inrow(hash_in,ARRAYLEN(hash_in)));
     } else if (HashingAlgorithm == 0x07) {
-        sha256hash(hash_in, sizeof(hash_in), hashedOutput);
-        memcpy(output, hashedOutput, 32);
+        sha256hash(hash_in, sizeof(hash_in), output);
     } else {
         // Yes they generate their encryption keys and mac keys in a weird way for no fucking reason, the 2nd cycle isn't required.
         PrintAndLogEx(ERR, _RED_("Unknown Hashing Algorithm"));
