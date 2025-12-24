@@ -926,6 +926,7 @@ static int seos_mutual_auth(uint8_t *adfOID, size_t adfoid_len, uint8_t *randomI
 
     // ----------------- Encryption and MAC Generation -----------------
     uint8_t mac[8];
+    memset(mac, 0x00, 8);
     uint8_t mutual_auth_enc[32];
     create_cryptogram(AES_key, mutual_auth_plain, mutual_auth_enc, sizeof(mutual_auth_plain), encryption_algorithm);
     create_cmac(MAC_key, mutual_auth_enc, mac, sizeof(mutual_auth_enc), sizeof(mac), encryption_algorithm);
