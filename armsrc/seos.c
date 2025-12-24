@@ -63,97 +63,66 @@ static uint8_t round_to_next(uint8_t value, uint8_t step) {
     }
 }
 
-static bool generate_cryptogram(const uint8_t *key, const uint8_t *opt_iv, const uint8_t *input, size_t length, uint8_t *output, uint8_t algorithm) {
-    // IV is optional, only add if provided. Zeros by default.
-    uint8_t iv[16] = {0x00};
-    if (opt_iv != NULL) {
-        memcpy(iv, opt_iv, 16);
-    }
-
-    uint8_t bs = block_size(algorithm);
-    uint8_t padded_length = round_to_next(length, bs);
-
-    // Allocate enough room to store any additional padding
-    uint8_t cleartext[padded_length];
-    uint8_t cryptogram[padded_length];
-
-    memset(cleartext, 0, padded_length);
-    memcpy(cleartext, input, length);
-    // ISO7816 padding: add 0x80 after data, then follow with all zeros
-    if (padded_length != length) {
-        cleartext[length] = 0x80;
+static uint8_t cryptogram_iv[16] = {0x00};
+static bool generate_cryptogram(const uint8_t *key, bool use_iv, const uint8_t *input, size_t length, uint8_t *output, uint8_t algorithm) {
+    if (!use_iv) {
+        memset(cryptogram_iv, 0x00, 16);
     }
 
     if (algorithm == SEOS_ENCRYPTION_AES) {
         mbedtls_aes_context ctx;
         mbedtls_aes_setkey_enc(&ctx, key, 128);
-        mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, length, iv, input, cryptogram);
+        mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, length, cryptogram_iv, input, output);
         mbedtls_aes_free(&ctx);
     } else if (algorithm == SEOS_ENCRYPTION_2K3DES) {
         mbedtls_des3_context ctx;
         mbedtls_des3_set2key_enc(&ctx, key);
-        mbedtls_des3_crypt_cbc(&ctx, MBEDTLS_DES_ENCRYPT, length, iv, input, cryptogram);
+        mbedtls_des3_crypt_cbc(&ctx, MBEDTLS_DES_ENCRYPT, length, cryptogram_iv, input, output);
         mbedtls_des3_free(&ctx);
     }
-
-    // Add generated cryptogram to output buffer
-    memcpy(output, cryptogram, length);
 
     return true;
 }
 
 static bool decrypt_cryptogram(const uint8_t *key, const uint8_t *input, size_t length, uint8_t *output, uint8_t algorithm) {
-    uint8_t iv[16] = {0x00};
-
-    // Allocate enough room to store any additional padding
-    uint8_t cleartext[length + block_size(algorithm)];
+    memset(cryptogram_iv, 0x00, 16);
 
     if (algorithm == SEOS_ENCRYPTION_AES) {
         mbedtls_aes_context ctx;
         mbedtls_aes_init(&ctx);
         mbedtls_aes_setkey_dec(&ctx, key, 128);
-        mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, length, iv, input, cleartext);
+        mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, length, cryptogram_iv, input, output);
         mbedtls_aes_free(&ctx);
     } else if (algorithm == SEOS_ENCRYPTION_2K3DES) {
         mbedtls_des3_context ctx;
         mbedtls_des3_set2key_dec(&ctx, key);
-        mbedtls_des3_crypt_cbc(&ctx, MBEDTLS_DES_DECRYPT, length, iv, input, cleartext);
+        mbedtls_des3_crypt_cbc(&ctx, MBEDTLS_DES_DECRYPT, length, cryptogram_iv, input, output);
         mbedtls_des3_free(&ctx);
     } else {
         Dbprintf(_RED_("Unknown Encryption Algorithm"));
         return false;
     }
 
-    // Add decrypted cleartext to output buffer
-    memcpy(output, cleartext, length);
-
     return true;
 }
 
 // Returns length of generated CMAC
-static uint8_t generate_cmac(const uint8_t *key, const uint8_t *input, size_t length, uint8_t *output, uint8_t max_output_len, uint8_t encryption_algorithm) {
-    uint8_t size = block_size(encryption_algorithm);
-    uint8_t mac[size];
-
+static bool generate_cmac(const uint8_t *key, const uint8_t *input, size_t length, uint8_t *output, uint8_t encryption_algorithm) {
     if (encryption_algorithm == SEOS_ENCRYPTION_AES) {
-        ulaes_cmac(key, 16, input, length, mac);
+        ulaes_cmac(key, 16, input, length, output);
     } else if (encryption_algorithm == SEOS_ENCRYPTION_2K3DES || encryption_algorithm == SEOS_ENCRYPTION_3K3DES) {
         uint8_t keylen = 16;
         if (encryption_algorithm == SEOS_ENCRYPTION_3K3DES) keylen = 24;
-        des3_cmac(key, keylen, input, length, mac);
+        des3_cmac(key, keylen, input, length, output);
     } else {
         Dbprintf(_RED_("Unknown Encryption Algorithm"));
         return false;
     }
 
-    // Add generated CMAC to output buffer
-    size = MIN(size, max_output_len);
-    memcpy(output, mac, size);
-
-    return size;
+    return true;
 }
 
-static void seos_kdf(bool forEncryption, uint8_t *masterKey, uint8_t keyslot,
+static void seos_kdf(bool forEncryption, uint8_t *masterKey, uint8_t keyslot, uint8_t *work_buffer,
              uint8_t *adfOid, size_t adfoid_len, uint8_t *diversifier, uint8_t diversifier_len, uint8_t *out, int encryption_algorithm, int hash_algorithm) {
 
     // Encryption key      = 04
@@ -166,28 +135,18 @@ static void seos_kdf(bool forEncryption, uint8_t *masterKey, uint8_t keyslot,
         typeOfKey = 0x04;
     }
 
-    uint8_t inputPre[] = {
-        // Padding
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, typeOfKey, 0x00, 0x00, 0x80, 0x01,
-        encryption_algorithm, hash_algorithm, keyslot
-    };
-
-    // 00000000000000000000000600008001 09 07 00 06112B0601040181E438010102011801010202 EFB08A28B0529F
-    // 00000000000000000000000400008001 09 07 00 06112B0601040181E438010102011801010202 EFB08A28B0529F
-    // 06112B0601040181E438010102011801010202 CF 07 EFB08A28B0529F DBA240413B0969B7111F4B6133A3DEFAD934B6DC
-
-
-    uint8_t input[sizeof(inputPre) + adfoid_len + diversifier_len];
-
-    memset(input, 0, sizeof(input));
-
-    memcpy(input, inputPre, sizeof(inputPre));
-    memcpy(input + sizeof(inputPre), adfOid, adfoid_len);
-    memcpy(input + sizeof(inputPre) + adfoid_len, diversifier, diversifier_len);
+    memset(work_buffer, 0x00, 16);
+    work_buffer[11] = typeOfKey;
+    work_buffer[14] = 0x80;
+    work_buffer[15] = 0x01;
+    work_buffer[16] = encryption_algorithm;
+    work_buffer[17] = hash_algorithm;
+    work_buffer[18] = keyslot;
+    memcpy(work_buffer+19, adfOid, adfoid_len);
+    memcpy(work_buffer+19+adfoid_len, diversifier, diversifier_len);
 
     // This CMAC always uses AES, regardless of the main encryption algorithm in use.
-    generate_cmac(masterKey, input, sizeof(input), out, 16, SEOS_ENCRYPTION_AES);
+    generate_cmac(masterKey, work_buffer, 19 + adfoid_len + diversifier_len, out, SEOS_ENCRYPTION_AES);
 }
 
 // turn off afterwards
@@ -208,7 +167,6 @@ void SimulateSeos(seos_emulate_req_t *msg) {
     uint8_t diver_cmac_key[16];
 
     // Calculated block size
-    const uint8_t max_bs = 16;
     const uint8_t bs = block_size(msg->encr_alg);
     const uint8_t half_bs = bs >> 1;
     if (bs == 0) {
@@ -220,9 +178,9 @@ void SimulateSeos(seos_emulate_req_t *msg) {
     // free eventually allocated BigBuf memory but keep Emulator Memory
     BigBuf_free_keep_EM();
 
-    // Allocate 512 bytes for the dynamic modulation, created when the reader queries for it
+    // Allocate 1024 bytes for the dynamic modulation, created when the reader queries for it
     // Such a response is less time critical, so we can prepare them on the fly
-#define DYNAMIC_RESPONSE_BUFFER_SIZE 64
+#define DYNAMIC_RESPONSE_BUFFER_SIZE 192
 #define DYNAMIC_MODULATION_BUFFER_SIZE 1024
 
     uint8_t *dynamic_response_buffer = BigBuf_calloc(DYNAMIC_RESPONSE_BUFFER_SIZE);
@@ -254,6 +212,14 @@ void SimulateSeos(seos_emulate_req_t *msg) {
     }
     uint8_t *work_buffer_b = BigBuf_calloc(WORK_BUFFER_SIZE);
     if (work_buffer_b == NULL) {
+        BigBuf_free_keep_EM();
+        reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
+        return;
+    }
+
+    // The RND_* counter is exactly one block size
+    uint8_t *rndCounter = BigBuf_calloc(bs);
+    if (rndCounter == NULL) {
         BigBuf_free_keep_EM();
         reply_ng(CMD_HF_MIFARE_SIMULATE, PM3_EMALLOC, NULL, 0);
         return;
@@ -416,9 +382,11 @@ void SimulateSeos(seos_emulate_req_t *msg) {
 
                             if (selected_oid) {
                                 // Synthesized IV: half a block of random data followed by half of the CMAC of that data
-                                uint8_t synthesized_iv[max_bs];
-                                memset(synthesized_iv, 0, bs>>1); // TODO: Maybe actually use random data?
-                                generate_cmac(msg->privmac, synthesized_iv, bs>>1, synthesized_iv+(bs>>1), bs>>1, msg->encr_alg);
+                                memset(cryptogram_iv, 0, half_bs); // TODO: Maybe actually use random data?
+                                if (!generate_cmac(msg->privmac, cryptogram_iv, half_bs, cryptogram_iv+half_bs, msg->encr_alg)) {
+                                    Dbprintf(_RED_("Select ADF failed") ": Failed to create IV CMAC.");
+                                    break;
+                                }
 
                                 // Always exactly 0x30 bytes in length
                                 const uint8_t reply_len = 0x30;
@@ -436,12 +404,6 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                 memcpy(reply+reply_idx, msg->diversifier, msg->diversifier_len);
                                 reply_idx += msg->diversifier_len;
 
-                                uint8_t cryptogram[reply_len];
-                                if (!generate_cryptogram(msg->privenc, synthesized_iv, reply, reply_len, cryptogram, msg->encr_alg)) {
-                                    Dbprintf(_RED_("Select ADF failed") ": Failed to create reply cryptogram.");
-                                    break;
-                                }
-
                                 uint8_t tlv_base = 1 + offset;
                                 uint8_t tlv_idx = tlv_base;
 
@@ -452,14 +414,23 @@ void SimulateSeos(seos_emulate_req_t *msg) {
 
                                 dynamic_response_info.response[tlv_idx++] = 0x85; // Tag: cryptogram
                                 dynamic_response_info.response[tlv_idx++] = reply_len + bs; // Length
-                                memcpy(dynamic_response_info.response+tlv_idx, synthesized_iv, bs);
+                                memcpy(dynamic_response_info.response+tlv_idx, cryptogram_iv, bs);
                                 tlv_idx += bs;
-                                memcpy(dynamic_response_info.response+tlv_idx, cryptogram, reply_len);
+
+                                // Generate cryptogram directly into response buffer
+                                if (!generate_cryptogram(msg->privenc, true, reply, reply_len, dynamic_response_info.response+tlv_idx, msg->encr_alg)) {
+                                    Dbprintf(_RED_("Select ADF failed") ": Failed to create reply cryptogram.");
+                                    break;
+                                }
                                 tlv_idx += reply_len;
 
                                 // Always an 8-byte CMAC
+                                const uint8_t cmac_size = 8;
                                 uint8_t *cmac = work_buffer_a;
-                                uint8_t cmac_size = generate_cmac(msg->privmac, dynamic_response_info.response+tlv_base, tlv_idx-tlv_base, cmac, 8, msg->encr_alg);
+                                if (!generate_cmac(msg->privmac, dynamic_response_info.response+tlv_base, tlv_idx-tlv_base, cmac, msg->encr_alg)) {
+                                    Dbprintf(_RED_("Select ADF failed") ": Failed to create reply CMAC.");
+                                    break;
+                                }
 
                                 dynamic_response_info.response[tlv_idx++] = 0x8E; // Tag: CMAC
                                 dynamic_response_info.response[tlv_idx++] = cmac_size; // Length
@@ -520,13 +491,16 @@ void SimulateSeos(seos_emulate_req_t *msg) {
 
                                 uint8_t keyslot = receivedCmd[4 + offset]; // APDU P2 byte
 
-                                seos_kdf(true, msg->authkey, keyslot, msg->oid, msg->oid_len, msg->diversifier, msg->diversifier_len, diver_encr_key, msg->encr_alg, msg->hash_alg);
-                                seos_kdf(false, msg->authkey, keyslot, msg->oid, msg->oid_len, msg->diversifier, msg->diversifier_len, diver_cmac_key, msg->encr_alg, msg->hash_alg);
+                                seos_kdf(true, msg->authkey, keyslot, work_buffer_a, msg->oid, msg->oid_len, msg->diversifier, msg->diversifier_len, diver_encr_key, msg->encr_alg, msg->hash_alg);
+                                seos_kdf(false, msg->authkey, keyslot, work_buffer_a, msg->oid, msg->oid_len, msg->diversifier, msg->diversifier_len, diver_cmac_key, msg->encr_alg, msg->hash_alg);
 
                                 // Verify CMAC (last 8 bytes)
                                 uint8_t request_len = received_tlv_len - 8;
                                 uint8_t *cmac = work_buffer_a;
-                                generate_cmac(diver_cmac_key, received_tlv, request_len, cmac, 8, msg->encr_alg);
+                                if (!generate_cmac(diver_cmac_key, received_tlv, request_len, cmac, msg->encr_alg)) {
+                                    Dbprintf(_RED_("Mutual auth failed") ": Failed to create CMAC.");
+                                    break;
+                                }
                                 if (memcmp(cmac, received_tlv + request_len, 8) != 0) {
                                     Dbprintf(_RED_("Mutual auth failed") ": Invalid CMAC:");
                                     Dbhexdump(8, received_tlv + request_len, false);
@@ -559,8 +533,11 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                 // Generate cryptogram + 8-byte CMAC
                                 const uint8_t reply_len = reply_plain_len + 8;
                                 uint8_t *reply = work_buffer_b;
-                                generate_cryptogram(diver_encr_key, NULL, reply_plain, reply_plain_len, reply, msg->encr_alg);
-                                generate_cmac(diver_cmac_key, reply, reply_plain_len, reply+reply_plain_len, 8, msg->encr_alg);
+                                generate_cryptogram(diver_encr_key, false, reply_plain, reply_plain_len, reply, msg->encr_alg);
+                                if (!generate_cmac(diver_cmac_key, reply, reply_plain_len, reply+reply_plain_len, msg->encr_alg)) {
+                                    Dbprintf(_RED_("Mutual auth failed") ": Failed to create reply CMAC.");
+                                    break;
+                                }
 
                                 uint8_t tlv_idx = 1 + offset;
 
@@ -662,7 +639,6 @@ void SimulateSeos(seos_emulate_req_t *msg) {
 
                                 // Combine the first half_bs each of RND_ICC and RND_IFD,
                                 //  then increment as a single counter
-                                uint8_t rndCounter[bs];
                                 memcpy(rndCounter, RND_ICC, half_bs);
                                 memcpy(rndCounter + half_bs, RND_IFD, half_bs);
 
@@ -697,7 +673,10 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                 }
 
                                 uint8_t *cmac = work_buffer_b;
-                                generate_cmac(diver_cmac_key, mac_input, mac_input_idx, cmac, recvd_cmac_length, msg->encr_alg);
+                                if (!generate_cmac(diver_cmac_key, mac_input, mac_input_idx, cmac, msg->encr_alg)) {
+                                    Dbprintf(_RED_("Get Data failed") ": Failed to create CMAC.");
+                                    break;
+                                }
                                 if (memcmp(cmac, recvd_cmac, recvd_cmac_length) != 0) {
                                     Dbprintf( _RED_("Get Data failed") ": Invalid CMAC.");
                                     break;
@@ -748,7 +727,7 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                     }
 
                                     uint8_t *reply_cryptogram = work_buffer_b;
-                                    if (!generate_cryptogram(diver_encr_key, NULL, reply, reply_len, reply_cryptogram, msg->encr_alg)) {
+                                    if (!generate_cryptogram(diver_encr_key, false, reply, reply_len, reply_cryptogram, msg->encr_alg)) {
                                         Dbprintf(_RED_("Get Data failed") ": Failed to create reply cryptogram.");
                                         break;
                                     }
@@ -787,7 +766,11 @@ void SimulateSeos(seos_emulate_req_t *msg) {
                                     mac_input_idx += bs - (mac_input_idx % bs);
                                 }
 
-                                uint8_t cmac_size = generate_cmac(diver_cmac_key, mac_input, mac_input_idx, cmac, recvd_cmac_length, msg->encr_alg);
+                                uint8_t cmac_size = recvd_cmac_length;
+                                if (!generate_cmac(diver_cmac_key, mac_input, mac_input_idx, cmac, msg->encr_alg)) {
+                                    Dbprintf(_RED_("Get Data failed") ": Failed to create reply CMAC.");
+                                    break;
+                                }
 
                                 dynamic_response_info.response[tlv_idx++] = 0x8E; // Tag: CMAC
                                 dynamic_response_info.response[tlv_idx++] = cmac_size; // Length

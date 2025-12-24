@@ -30,6 +30,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 - Added ATR fingerprinting to `hf 14a/14b info` (@doegox)
 - Added `Verkada 40-bit` format (@aaronmaxlevy)
 - Added `hf seos write` command (@aaronjamt)
+- Added `hf seos sim` command (@aaronjamt)
 - Fix `hf mf staticnested` faild to find a KeyB (@xianglin1998)
 
 ## [Phrack.4.20728][2025-09-11]
