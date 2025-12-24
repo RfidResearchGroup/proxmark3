@@ -1945,10 +1945,11 @@ static void PacketReceived(PacketCommandNG *packet) {
                 uint8_t keytype;
                 uint8_t target_block;
                 uint8_t target_keytype;
+                uint8_t force_detect_dist;
                 uint8_t key[6];
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
-            MifareStaticNested(payload->block, payload->keytype, payload->target_block, payload->target_keytype, payload->key);
+            MifareStaticNested(payload->block, payload->keytype, payload->target_block, payload->target_keytype, payload->key, payload->force_detect_dist);
             break;
         }
         case CMD_HF_MIFARE_CHKKEYS: {

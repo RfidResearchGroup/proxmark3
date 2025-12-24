@@ -2495,15 +2495,20 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Time in check keys " _YELLOW_("%.0f") " seconds\n", (float)t2 / 1000.0);
     PrintAndLogEx(SUCCESS, "--- " _CYAN_("Enter static nested key recovery") " --------------");
 
+    // Decryption backup logic for special card 0x009080A2(keyB NT1 dist is 160 & 320, not 161 & 321).
+    bool forceDetectDist;
+
     // nested sectors
     for (trgKeyType = MF_KEY_A; trgKeyType <= MF_KEY_B; ++trgKeyType) {
         for (uint8_t sectorNo = 0; sectorNo < SectorsCnt; ++sectorNo) {
 
-            for (int i = 0; i < 1; i++) {
+            forceDetectDist = 0; // Fist decrypt, auto detect dist for NT2_1 & NT2_2.
+
+            for (int i = 0; i < 2; i++) {
 
                 if (e_sector[sectorNo].foundKey[trgKeyType]) continue;
-
-                int16_t isOK = mf_static_nested(blockNo, keyType, key, mfFirstBlockOfSector(sectorNo), trgKeyType, keyBlock);
+                
+                int16_t isOK = mf_static_nested(blockNo, keyType, key, mfFirstBlockOfSector(sectorNo), trgKeyType, keyBlock, forceDetectDist);
                 switch (isOK) {
                     case PM3_ETIMEOUT :
                         PrintAndLogEx(ERR, "command execution time out");
@@ -2512,11 +2517,15 @@ static int CmdHF14AMfNestedStatic(const char *Cmd) {
                         PrintAndLogEx(WARNING, "aborted via keyboard.");
                         break;
                     case PM3_ESOFT :
+                        // No any key found?
+                        // Try to force decryption using measured nonce instead of automatic detection (some card types may misjudge)
+                        forceDetectDist = 1;
+                        PrintAndLogEx(WARNING, "No key found, next try...");
                         continue;
                     case PM3_SUCCESS :
                         e_sector[sectorNo].foundKey[trgKeyType] = 1;
                         e_sector[sectorNo].Key[trgKeyType] = bytes_to_num(keyBlock, 6);
-
+                        i = 2; // Key found, no next retry.
                         // mf_check_keys_fast(SectorsCnt, true, true, 2, 1, keyBlock, e_sector, false, false);
                         continue;
                     default :
@@ -3017,6 +3026,10 @@ static int CmdHF14AMfAutoPWN(const char *Cmd) {
     // Nested and Hardnested parameter
     uint64_t key64 = 0;
     bool calibrate = true;
+
+    // staticNested parameter
+    bool force_detect_dist;
+    int static_nested_retry_i = 0;
 
     // Attack key storage variables
     uint8_t *keyBlock = NULL;
@@ -3694,28 +3707,37 @@ tryStaticnested:
                                           (current_key_type_i == MF_KEY_B) ? 'B' : 'A');
                         }
 
-                        isOK = mf_static_nested(mfFirstBlockOfSector(sectorno), keytype, key, mfFirstBlockOfSector(current_sector_i), current_key_type_i, tmp_key);
-                        DropField();
-                        switch (isOK) {
-                            case PM3_ETIMEOUT: {
-                                PrintAndLogEx(ERR, "\nError: No response from Proxmark3");
-                                free(e_sector);
-                                free(fptr);
-                                return isOK;
-                            }
-                            case PM3_EOPABORTED: {
-                                PrintAndLogEx(WARNING, "\nButton pressed, user aborted");
-                                free(e_sector);
-                                free(fptr);
-                                return isOK;
-                            }
-                            case PM3_SUCCESS: {
-                                e_sector[current_sector_i].Key[current_key_type_i] = bytes_to_num(tmp_key, MIFARE_KEY_SIZE);
-                                e_sector[current_sector_i].foundKey[current_key_type_i] = 'C';
-                                break;
-                            }
-                            default: {
-                                break;
+                        force_detect_dist = 0; // First time to decrypt staticnested tag, we can auto detect dist by tag type.
+                        for (static_nested_retry_i = 0; static_nested_retry_i < 2; static_nested_retry_i++) {
+                            isOK = mf_static_nested(mfFirstBlockOfSector(sectorno), keytype, key, mfFirstBlockOfSector(current_sector_i), current_key_type_i, tmp_key, force_detect_dist);
+                            DropField();
+                            switch (isOK) {
+                                case PM3_ETIMEOUT: {
+                                    PrintAndLogEx(ERR, "\nError: No response from Proxmark3");
+                                    free(e_sector);
+                                    free(fptr);
+                                    return isOK;
+                                }
+                                case PM3_EOPABORTED: {
+                                    PrintAndLogEx(WARNING, "\nButton pressed, user aborted");
+                                    free(e_sector);
+                                    free(fptr);
+                                    return isOK;
+                                }
+                                case PM3_ESOFT: {
+                                    PrintAndLogEx(WARNING, "No key found, next try...");
+                                    force_detect_dist = 1;
+                                    continue;
+                                }
+                                case PM3_SUCCESS: {
+                                    e_sector[current_sector_i].Key[current_key_type_i] = bytes_to_num(tmp_key, MIFARE_KEY_SIZE);
+                                    e_sector[current_sector_i].foundKey[current_key_type_i] = 'C';
+                                    static_nested_retry_i = 2; // Key found, no next retry.
+                                    break;
+                                }
+                                default: {
+                                    break;
+                                }
                             }
                         }
                     }

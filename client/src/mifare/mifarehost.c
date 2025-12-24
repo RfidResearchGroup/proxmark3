@@ -725,7 +725,7 @@ out:
     return PM3_ESOFT;
 }
 
-int mf_static_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKey) {
+int mf_static_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *resultKey, bool forceDetectDist) {
 
     uint32_t uid = 0;
     StateList_t statelists[2];
@@ -736,12 +736,14 @@ int mf_static_nested(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trg
         uint8_t keytype;
         uint8_t target_block;
         uint8_t target_keytype;
+        uint8_t force_detect_dist;
         uint8_t key[6];
     } PACKED payload;
     payload.block = blockNo;
     payload.keytype = keyType;
     payload.target_block = trgBlockNo;
     payload.target_keytype = trgKeyType;
+    payload.force_detect_dist = forceDetectDist;
     memcpy(payload.key, key, sizeof(payload.key));
 
     PacketResponseNG resp;

@@ -1586,7 +1586,7 @@ void MifareNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8
     set_tracing(false);
 }
 
-void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, uint8_t *key) {
+void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo, uint8_t targetKeyType, uint8_t *key, uint8_t forceDetectDist) {
 
     LEDsoff();
 
@@ -1653,8 +1653,24 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
             continue;
         };
 
-        // pre-generate nonces
-        if (targetKeyType == 1 && nt1 == 0x009080A2) {
+        // ST types:
+        //   ---
+        //   NT1 is 0x01200145:
+        //   NT2 case:
+        //   A type dist is 160, B type dist is 160, Can double NT2 to fast decrypt.
+        //   A type dist is 160, B type dist is 160, No double NT2 to fast decrypt.
+        //   ---
+        //   NT1 is 0x009080A2:
+        //   NT2 case:
+        //   A type dist is 160, B type dist is 160, Can double NT2 to fast decrypt.
+        //   A type dist is 160, B type dist is 161, Can double NT2 to fast decrypt.
+        //   ---
+        //   NT1 is any:
+        //   NT2 case: random, but is static(static encrypted nested).
+
+        // pre-generate nonces: the distance value is related to the key type, so if the key type is the same, 
+        // we can directly use the measured distance value. (Experience)
+        if (targetKeyType == 1 && nt1 == 0x009080A2 && forceDetectDist == 0) {
             target_nt[0] = prng_successor(nt1, 161);
             target_nt[1] = prng_successor(nt1, 321);
         } else {
