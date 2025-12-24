@@ -232,8 +232,7 @@ static void generate_command_wrapping(uint8_t *command_Header, int command_heade
     // Breakdown
     // 0181e43801010201 + 0000000000000001 + 0CCB3FFF800000000000000000000000 + 8510EB54DA90CB43AEE7FBFE816ECA25A10D + 9700 + 800000000000000000000000
 
-    uint8_t mac[8];
-    memset(mac, 0x00, 8);
+    uint8_t mac[8] = { 0x00 };
     if (create_cmac(diversified_mac_key, padded_toEncrypt, mac, padded_toEncrypt_len, sizeof(mac), encryption_algorithm) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, _RED_("Failed to create MAC"));
         return;
@@ -925,8 +924,7 @@ static int seos_mutual_auth(uint8_t *adfOID, size_t adfoid_len, uint8_t *randomI
     memcpy(mutual_auth_plain + 8 + 8, keyIFD, 16);
 
     // ----------------- Encryption and MAC Generation -----------------
-    uint8_t mac[8];
-    memset(mac, 0x00, 8);
+    uint8_t mac[8] = { 0x00 };
     uint8_t mutual_auth_enc[32];
     create_cryptogram(AES_key, mutual_auth_plain, mutual_auth_enc, sizeof(mutual_auth_plain), encryption_algorithm);
     create_cmac(MAC_key, mutual_auth_enc, mac, sizeof(mutual_auth_enc), sizeof(mac), encryption_algorithm);
