@@ -702,6 +702,7 @@ static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t 
 out:
     PrintAndLogEx(INFO, "--- " _CYAN_("MAC") " ---------------------------");
     PrintAndLogEx(ERR, _RED_("MAC Verification Failed"));
+    PrintAndLogEx(ERR, _YELLOW_("Likely wrong Priv Mac Key"));
     return PM3_ESOFT;
 }
 
@@ -831,7 +832,8 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
 
     int CRYPTOGRAM_decrypted_data_length = sizeof(CRYPTOGRAM_decrypted_data);
 
-    for (int i = 0; i < CRYPTOGRAM_decrypted_data_length; i++) {
+    // Skip synthesized IV
+    for (int i = 16; i < CRYPTOGRAM_decrypted_data_length; i++) {
         // ADF OID tag
         if (CRYPTOGRAM_decrypted_data[i] == 0x06 && CRYPTOGRAM_decrypted_data[i + 1] < 20) {
             adf_length = ((CRYPTOGRAM_decrypted_data[i + 1]));
@@ -862,9 +864,9 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
             uint8_t mac[8];
             uint8_t iv_size = i/2;
             create_cmac(keys[key_index].privMacKey, CRYPTOGRAM_encrypted_data_raw, mac, iv_size, sizeof(mac), encryption_algorithm);
-            mac[0]++;
             if (memcmp(CRYPTOGRAM_encrypted_data_raw+iv_size, mac, iv_size) != 0) {
-                PrintAndLogEx(ERR, "MAC Verification Failed");                
+                PrintAndLogEx(ERR, "Synthesized IV Verification Failed");                
+                PrintAndLogEx(ERR, _YELLOW_("Likely wrong Priv Mac Key"));
                 return PM3_ESOFT;
             }
 
@@ -872,7 +874,7 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
             // We do the + 4 to remove the first 4 bytes of the ADF OID ASN.1 Tag (0611)
             if (strcmp(CRYPTOGRAM_ADF_UPPER + 4, selectADFOID_UPPER + 4) != 0) {
                 PrintAndLogEx(ERR, "ADF does not match decrypted ADF");
-                PrintAndLogEx(ERR, "Likely wrong Key or IV");
+                PrintAndLogEx(ERR, "Likely wrong Auth Key");
                 // PrintAndLogEx(SUCCESS, "Decoded ADF....................... "_YELLOW_("%s"), CRYPTOGRAM_ADF_UPPER);                              // ADF Selected
                 // PrintAndLogEx(SUCCESS, "Supplied ADF...................... "_YELLOW_("%s"), selectADFOID_UPPER);                                // ADF Selected
                 return PM3_ESOFT;
@@ -886,6 +888,8 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
 
         }
     }
+    PrintAndLogEx(ERR, _RED_("ADF OID tag not found"));
+    PrintAndLogEx(ERR, _YELLOW_("Likely wrong Priv Enc Key"));
     return PM3_ESOFT;
 };
 
