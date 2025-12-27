@@ -1245,7 +1245,7 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
                 PrintAndLogEx(INFO, "--- " _CYAN_("Key Data") " ---------------------------");
                 PrintAndLogEx(SUCCESS, "SIO.............................. "_YELLOW_("%s"), sprint_hex_inrow(sioOutput, sizeof(sioOutput)));             // SIO
                 PrintAndLogEx(SUCCESS, "SIO Size......................... "_YELLOW_("%i"), sio_size);                                                   // SIO Size
-                PrintAndLogEx(SUCCESS, "Diversifier...................... "_YELLOW_("%s"), sprint_hex_inrow(diversifier, ARRAYLEN(diversifier)));       // Diversifier
+                PrintAndLogEx(SUCCESS, "Diversifier...................... "_YELLOW_("%s"), sprint_hex_inrow(diversifier, diversifier_length));          // Diversifier
             };
         } else {
             seos_write_data(RNDICC, RNDIFD, Diversified_New_EncryptionKey, Diversified_New_MACKey, write, write_len, ALGORITHM_INFO_value1, data_tag, data_tag_len);
