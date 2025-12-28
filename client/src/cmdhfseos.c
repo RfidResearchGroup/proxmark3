@@ -51,9 +51,7 @@ typedef struct {
     uint8_t nonce[8];
     uint8_t privEncKey[16];
     uint8_t privMacKey[16];
-    uint8_t readKey[16];
-    uint8_t writeKey[16];
-    uint8_t adminKey[16];
+    uint8_t authKey[16];
 } keyset_t;
 
 keyset_t keys[] = {
@@ -62,36 +60,28 @@ keyset_t keys[] = {
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },                                         // Nonce
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privEncKey
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privMacKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // readKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // writeKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } // adminKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // authKey
     },
     {
         0x01,                                                                                               // Keyslot
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },                                         // Nonce
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privEncKey
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privMacKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // readKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // writeKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } // adminKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // authKey
     },
     {
         0x02,                                                                                               // Keyslot
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },                                         // Nonce
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privEncKey
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privMacKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // readKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // writeKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } // adminKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // authKey
     },
     {
         0x09,                                                                                               // Keyslot
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },                                         // Nonce
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privEncKey
         { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privMacKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // readKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // writeKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } // adminKey
+        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // authKey
     },
 };
 
@@ -898,7 +888,7 @@ static int seos_mutual_auth(uint8_t *adfOID, size_t adfoid_len, uint8_t *randomI
 
     // ---------------- Diversify Keys ----------------
     uint8_t mk[16] = { 0x00 };
-    memcpy(mk, keys[key_index].readKey, 16);
+    memcpy(mk, keys[key_index].authKey, 16);
     uint8_t AES_key[24] = {0x00};
     uint8_t MAC_key[24] = {0x00};
 
@@ -1432,9 +1422,7 @@ static int seos_print_keys(bool verbose) {
             PrintAndLogEx(INFO, "Nonce............................ " _YELLOW_("%s"), sprint_hex(keys[i].nonce, 8));
             PrintAndLogEx(INFO, "Privacy Encryption Key........... " _YELLOW_("%s"), sprint_hex(keys[i].privEncKey, 16));
             PrintAndLogEx(INFO, "Privacy MAC Key.................. " _YELLOW_("%s"), sprint_hex(keys[i].privMacKey, 16));
-            PrintAndLogEx(INFO, "Read Key......................... " _YELLOW_("%s"), sprint_hex(keys[i].readKey, 16));
-            PrintAndLogEx(INFO, "Write Key........................ " _YELLOW_("%s"), sprint_hex(keys[i].writeKey, 16));
-            PrintAndLogEx(INFO, "Admin Key........................ " _YELLOW_("%s"), sprint_hex(keys[i].adminKey, 16));
+            PrintAndLogEx(INFO, "Auth Key......................... " _YELLOW_("%s"), sprint_hex(keys[i].authKey, 16));
             PrintAndLogEx(INFO, "----------------------------");
         }
     } else {
@@ -1477,9 +1465,7 @@ static int seos_load_keys(char *filename) {
         memcpy(keys[i].nonce, dump + ((i * kn) + 1), 8);
         memcpy(keys[i].privEncKey, dump + ((i * kn) + 9), 16);
         memcpy(keys[i].privMacKey, dump + ((i * kn) + 25), 16);
-        memcpy(keys[i].readKey, dump + ((i * kn) + 41), 16);
-        memcpy(keys[i].writeKey, dump + ((i * kn) + 57), 16);
-        memcpy(keys[i].adminKey, dump + ((i * kn) + 73), 16);
+        memcpy(keys[i].authKey, dump + ((i * kn) + 41), 16);
     }
 
     free(dump);
@@ -1797,7 +1783,7 @@ static int CmdHfSeosSim(const char *Cmd) {
     // Copy all the provided values into the request object
     memcpy(request.privenc, keys[key_index].privEncKey, 16);
     memcpy(request.privmac, keys[key_index].privMacKey, 16);
-    memcpy(request.authkey, keys[key_index].readKey, 16);
+    memcpy(request.authkey, keys[key_index].authKey, 16);
 
     memcpy(request.uid, uid, uid_len);
     memcpy(request.diversifier, diversifier, diversifier_len);
@@ -1841,9 +1827,7 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
         arg_str0(NULL, "nonce", "<hex>", "Nonce value as 8 hex bytes"),
         arg_str0(NULL, "privenc", "<hex>", "Privacy Encryption key as 16 hex bytes"),
         arg_str0(NULL, "privmac", "<hex>", "Privacy MAC key as 16 hex bytes"),
-        arg_str0(NULL, "read", "<hex>", "Undiversified Read key as 16 hex bytes"),
-        arg_str0(NULL, "write", "<hex>", "Undiversified Write key as 16 hex bytes"),
-        arg_str0(NULL, "admin", "<hex>", "Undiversified Admin key as 16 hex bytes"),
+        arg_str0(NULL, "auth", "<hex>", "Undiversified Auth key as 16 hex bytes"),
 
         arg_str0("f", "file", "<fn>", "Specify a filename for load / save operations"),
         arg_lit0(NULL, "save", "Save keys in memory to file specified by filename"),
@@ -1863,16 +1847,12 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
     uint8_t nonce[8] = {0};
     uint8_t privenc[16] = {0};
     uint8_t privmac[16] = {0};
-    uint8_t read[16] = {0};
-    uint8_t write[16] = {0};
-    uint8_t admin[16] = {0};
+    uint8_t auth[16] = {0};
     int keyslot_len = 0;
     int nonce_len = 0;
     int privenc_len = 0;
     int privmac_len = 0;
-    int read_len = 0;
-    int write_len = 0;
-    int admin_len = 0;
+    int auth_len = 0;
 
     int key_index = arg_get_int_def(ctx, 1, -1);
 
@@ -1880,11 +1860,9 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 3, nonce, &nonce_len);
     CLIGetHexWithReturn(ctx, 4, privenc, &privenc_len);
     CLIGetHexWithReturn(ctx, 5, privmac, &privmac_len);
-    CLIGetHexWithReturn(ctx, 6, read, &read_len);
-    CLIGetHexWithReturn(ctx, 7, write, &write_len);
-    CLIGetHexWithReturn(ctx, 8, admin, &admin_len);
+    CLIGetHexWithReturn(ctx, 6, auth, &auth_len);
 
-    CLIParamStrToBuf(arg_get_str(ctx, 9), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 7), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
     if (key_index >= 0) {
         operation += 3;
@@ -1901,14 +1879,8 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
             if (privmac_len != 0) {
                 PrintAndLogEx(SUCCESS, "Current value for Priv Mac[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].privMacKey, 16));
             }
-            if (read_len != 0) {
-                PrintAndLogEx(SUCCESS, "Current value for Read Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].readKey, 16));
-            }
-            if (write_len != 0) {
-                PrintAndLogEx(SUCCESS, "Current value for Write Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].writeKey, 16));
-            }
-            if (admin_len != 0) {
-                PrintAndLogEx(SUCCESS, "Current value for Admin Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].adminKey, 16));
+            if (auth_len != 0) {
+                PrintAndLogEx(SUCCESS, "Current value for Auth Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].authKey, 16));
             }
         } else {
             PrintAndLogEx(ERR, "Key index is out-of-range");
@@ -1917,17 +1889,17 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
         }
     }
 
-    if (arg_get_lit(ctx, 10)) {  //save
+    if (arg_get_lit(ctx, 8)) {  //save
         operation += 6;
     }
-    if (arg_get_lit(ctx, 11)) {  //load
+    if (arg_get_lit(ctx, 9)) {  //load
         operation += 5;
     }
-    if (arg_get_lit(ctx, 12)) {  //print
+    if (arg_get_lit(ctx, 10)) {  //print
         operation += 4;
     }
 
-    bool verbose = arg_get_lit(ctx, 13);
+    bool verbose = arg_get_lit(ctx, 11);
 
     CLIParserFree(ctx);
 
@@ -1943,7 +1915,7 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
         PrintAndLogEx(ERR, "You must enter a filename when loading or saving\n");
         return PM3_EINVARG;
     }
-    if (((keyslot_len > 0) || (nonce_len > 0) || (privenc_len > 0) || (privmac_len > 0) || (read_len > 0) || (write_len > 0) || (admin_len > 0)) && key_index == -1) {
+    if (((keyslot_len > 0) || (nonce_len > 0) || (privenc_len > 0) || (privmac_len > 0) || (auth_len > 0)) && key_index == -1) {
         PrintAndLogEx(ERR, "Please specify key index when specifying key");
         return PM3_EINVARG;
     }
@@ -1966,17 +1938,9 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
                 memcpy(keys[key_index].privMacKey, privmac, 16);
                 PrintAndLogEx(SUCCESS, "New value for Priv Mac[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].privMacKey, 16));
             }
-            if (read_len != 0) {
-                memcpy(keys[key_index].readKey, read, 16);
-                PrintAndLogEx(SUCCESS, "New value for Read Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].readKey, 16));
-            }
-            if (write_len != 0) {
-                memcpy(keys[key_index].writeKey, write, 16);
-                PrintAndLogEx(SUCCESS, "New value for Write Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].writeKey, 16));
-            }
-            if (admin_len != 0) {
-                memcpy(keys[key_index].adminKey, admin, 16);
-                PrintAndLogEx(SUCCESS, "New value for Admin Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].adminKey, 16));
+            if (auth_len != 0) {
+                memcpy(keys[key_index].authKey, auth, 16);
+                PrintAndLogEx(SUCCESS, "New value for Auth Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].authKey, 16));
             }
             return PM3_SUCCESS;
         case 4:
