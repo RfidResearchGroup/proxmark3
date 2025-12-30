@@ -285,10 +285,6 @@ static int ntag424_calc_file_settings_size(const ntag424_file_settings_t *settin
     return size;
 }
 
-static int ntag424_calc_file_write_settings_size(const ntag424_file_settings_t *settings) {
-    return ntag424_calc_file_settings_size(settings) - 4;
-}
-
 static void ntag424_calc_send_iv(ntag424_session_keys_t *session_keys, uint8_t *out_ivc) {
     uint8_t iv_clear[] = { 0xa5, 0x5a,
                            session_keys->ti[0], session_keys->ti[1], session_keys->ti[2], session_keys->ti[3],
@@ -480,21 +476,99 @@ static int ntag424_get_file_settings(uint8_t fileno, ntag424_file_settings_t *se
     return PM3_SUCCESS;
 }
 
+// Build the file settings command buffer dynamically.
+// This correctly handles conditional SDM offset fields per AN12196 specification.
+// Returns the number of bytes written to cmd_buffer (excluding fileno byte).
+static size_t ntag424_build_file_settings_cmd(const ntag424_file_settings_t *settings, uint8_t *cmd_buffer) {
+    size_t offset = 0;
+    int sdm_data_idx = 0;
+
+    // File options and access rights (always present)
+    cmd_buffer[offset++] = settings->options;
+    cmd_buffer[offset++] = settings->access[0];
+    cmd_buffer[offset++] = settings->access[1];
+
+    // SDM settings are only present if SDM is enabled
+    if (settings->options & FILE_SETTINGS_OPTIONS_SDM_AND_MIRRORING) {
+        // SDM options and access rights
+        cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_options;
+        cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_access[0];
+        cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_access[1];
+
+        uint8_t sdm_options = settings->optional_sdm_settings.sdm_options;
+        uint8_t sdm_meta_read = ntag424_file_settings_get_sdm_meta_read(settings);
+        uint8_t sdm_file_read = ntag424_file_settings_get_sdm_file_read(settings);
+
+        // UIDOffset: only in plain mode (sdmMetaRead == 0xE) with UID option set
+        if ((sdm_options & FILE_SETTINGS_SDM_OPTIONS_UID) && sdm_meta_read == 0x0e) {
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][0];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][1];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][2];
+            sdm_data_idx++;
+        }
+
+        // SDMReadCtrOffset: only in plain mode (sdmMetaRead == 0xE) with counter option set
+        if ((sdm_options & FILE_SETTINGS_SDM_OPTIONS_SDM_READ_COUNTER) && sdm_meta_read == 0x0e) {
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][0];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][1];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][2];
+            sdm_data_idx++;
+        }
+
+        // PICCDataOffset: only in encrypted mode (sdmMetaRead <= 0x04)
+        if (sdm_meta_read <= 0x04) {
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][0];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][1];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][2];
+            sdm_data_idx++;
+        }
+
+        // SDMMACInputOffset: when file read is enabled (sdmFileRead != 0x0F)
+        if (sdm_file_read != 0x0f) {
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][0];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][1];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][2];
+            sdm_data_idx++;
+
+            // SDMEncOffset and SDMEncLength: only when encrypted file data is enabled
+            if (sdm_options & FILE_SETTINGS_SDM_OPTIONS_SDM_ENC_FILE_DATA) {
+                // SDMEncOffset
+                cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][0];
+                cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][1];
+                cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][2];
+                sdm_data_idx++;
+                // SDMEncLength
+                cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][0];
+                cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][1];
+                cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][2];
+                sdm_data_idx++;
+            }
+
+            // SDMMACOffset: always included when file read is enabled
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][0];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][1];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][2];
+            sdm_data_idx++;
+        }
+
+        // SDMReadCtrLimit: when counter limit option is set
+        if (sdm_options & FILE_SETTINGS_SDM_OPTIONS_SDM_READ_COUNTER_LIMIT) {
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][0];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][1];
+            cmd_buffer[offset++] = settings->optional_sdm_settings.sdm_data[sdm_data_idx][2];
+            sdm_data_idx++;
+        }
+    }
+
+    return offset;
+}
+
 static int ntag424_write_file_settings(uint8_t fileno, const ntag424_file_settings_t *settings, ntag424_session_keys_t *session_keys) {
 
-    // ------- Convert file settings to the format for writing
-    file_settings_write_t write_settings = {
-        .options = settings->options,
-        .access[0] = settings->access[0],
-        .access[1] = settings->access[1],
-        .optional_sdm_settings = settings->optional_sdm_settings,
-    };
-
-    size_t settings_size = ntag424_calc_file_write_settings_size(settings);
-
+    // Build the command buffer dynamically based on which SDM fields are required
     uint8_t cmd_buffer[256];
     cmd_buffer[0] = fileno;
-    memcpy(&cmd_buffer[1], &write_settings, settings_size);
+    size_t settings_size = ntag424_build_file_settings_cmd(settings, &cmd_buffer[1]);
 
     APDU_t apdu = {
         .cla = 0x90,
@@ -502,7 +576,6 @@ static int ntag424_write_file_settings(uint8_t fileno, const ntag424_file_settin
         .lc = 1 + settings_size,
         .data = cmd_buffer
     };
-
 
     // ------- Actually send the APDU
     int response_length = 8 + 2;
