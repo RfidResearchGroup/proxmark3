@@ -809,6 +809,7 @@ SRCS =  mifare/aiddesfire.c \
         cmdmain.c \
         cmdmqtt.c \
         cmdnfc.c \
+        cmdparsehrt.c \
         cmdparser.c \
         cmdpiv.c \
         cmdscript.c \

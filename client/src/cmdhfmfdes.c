@@ -24,8 +24,11 @@
 #include <string.h>
 #include "jansson.h"
 #include "commonutil.h"             // ARRAYLEN
+#include "cmdparsehrt.h"
 #include "cmdparser.h"              // command_t
 #include "comms.h"
+#include "mifare/desfirecrypto.h"
+#include "pm3_cmd.h"
 #include "ui.h"
 #include "cmdhf14a.h"
 #include "aes.h"
@@ -415,6 +418,76 @@ static const char *getProductTypeStr(const uint8_t *versionhw) {
     }
 
     return "UNKNOWN PROD";
+}
+
+static bool hf_mfdes_try_parse_hrt(DesfireContext_t *dctx) {
+    DesfireSetCommMode(dctx, DCMPlain);
+    DesfireSetCommandSet(dctx, DCCNative);
+
+    // TODO: Add support for older travelcard (AID EF2011)
+
+    if (DesfireSelectAIDHex(dctx, 0xEF2014, false, 0) == PM3_SUCCESS) {
+        uint8_t buf[APDU_RES_LEN] = {0};
+        size_t len = 0;
+
+        hrt_travel_card_t card;
+        hrt_travelcard_init_empty(&card, 2);
+
+        // File 0x08: Application info (11 bytes)
+        len = 0;
+        if (DesfireReadFile(dctx, 0x08, 0, 11, buf, &len) == PM3_SUCCESS) {
+            hrt_travelcard_set_application_info(&card, buf, len);
+        }
+
+        // Check that application info parses before reading other files
+        const char *application_id = hrt_travelcard_get_application_instance_id(&card);
+        if (application_id == NULL && application_id[0] == '\0') {
+            hrt_travelcard_free(&card);
+            return false;
+        }
+        PrintAndLogEx(SUCCESS, "HRT travel card detected (AID EF2014)");
+
+        // File 0x00: Control info (10 bytes)
+        len = 0;
+        if (DesfireReadFile(dctx, 0x00, 0, 10, buf, &len) == PM3_SUCCESS) {
+            hrt_travelcard_set_control_info(&card, buf, len);
+        }
+
+        // File 0x01: Period pass (35 bytes)
+        len = 0;
+        if (DesfireReadFile(dctx, 0x01, 0, 35, buf, &len) == PM3_SUCCESS) {
+            hrt_travelcard_set_period_pass(&card, buf, len);
+        }
+
+        // File 0x02: Stored value (13 bytes)
+        len = 0;
+        if (DesfireReadFile(dctx, 0x02, 0, 13, buf, &len) == PM3_SUCCESS) {
+            hrt_travelcard_set_stored_value(&card, buf, len);
+
+            // Demo: Read card stored value
+            int stored_value = hrt_travelcard_get_stored_value_counter(&card);
+            char price_buf[32] = {0};
+            hrt_price_to_string(stored_value, price_buf, sizeof(price_buf));
+            PrintAndLogEx(SUCCESS, "HRT stored value: %s", price_buf);
+        }
+
+        // File 0x03: eTicket (45 bytes)
+        len = 0;
+        if (DesfireReadFile(dctx, 0x03, 0, 45, buf, &len) == PM3_SUCCESS) {
+            hrt_travelcard_set_eticket(&card, buf, len);
+        }
+
+        // File 0x04: History records (all)
+        len = 0;
+        if (DesfireReadRecords(dctx, 0x04, 0, 0, buf, &len) == PM3_SUCCESS) {
+            hrt_travelcard_set_history(&card, buf, len);
+        }
+
+        hrt_travelcard_free(&card);
+        return true;
+    }
+
+    return false;
 }
 
 int mfdes_get_info(mfdes_info_res_t *info) {
@@ -1128,6 +1201,8 @@ static int CmdHF14ADesInfo(const char *Cmd) {
         keys 12,13,14,15 R
 
     */
+
+    (void)hf_mfdes_try_parse_hrt(&dctx);
 
     DropField();
     return PM3_SUCCESS;
