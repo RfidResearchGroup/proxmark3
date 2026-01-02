@@ -246,8 +246,7 @@ void hrt_travelcard_init_from_buffers(
 }
 
 
-void hrt_travelcard_init_with_error(hrt_travel_card_t *card, int error_status)
-{
+void hrt_travelcard_init_with_error(hrt_travel_card_t *card, int error_status) {
     hrt_travelcard_init_empty(card, 0);
     card->error_status = error_status;
 }
@@ -319,15 +318,15 @@ void hrt_read_period_pass(hrt_travel_card_t *card, bytearray_t data) {
     // TODO: Better var name for s
     int16_t s =
         (int16_t)(((byte2 & 0x1F) << 9) |
-            ((uint16_t)bytes[3] << 1) |
-            (MSB(bytes[4]) >> 7));
+                  ((uint16_t)bytes[3] << 1) |
+                  (MSB(bytes[4]) >> 7));
 
     card->period_start_date1 = en5145_date_to_time(s);
 
     // TODO: Better var name for s2
     int16_t s2 =
         (int16_t)((LSB7(bytes[4]) << 7) |
-            ((bytes[5] & 0xFE) >> 1));
+                  ((bytes[5] & 0xFE) >> 1));
 
     card->period_end_date1 = en5145_date_to_time(s2);
     card->period_end_date1 += 86399;  // + 23:59:59
@@ -346,14 +345,14 @@ void hrt_read_period_pass(hrt_travel_card_t *card, bytearray_t data) {
 
     int16_t s3 =
         (int16_t)(((b4 & 0x1F) << 9) |
-            ((uint16_t)bytes[9] << 1) |
-            ((bytes[10] & 0x80) >> 7));
+                  ((uint16_t)bytes[9] << 1) |
+                  ((bytes[10] & 0x80) >> 7));
 
     card->period_start_date2 = en5145_date_to_time(s3);
 
     int16_t s4 =
         (int16_t)((LSB7(bytes[10]) << 7) |
-            ((bytes[11] & 0xFE) >> 1));
+                  ((bytes[11] & 0xFE) >> 1));
 
     card->period_end_date2 = en5145_date_to_time(s4);
     card->period_end_date2 += 86399;  // + 23:59:59
@@ -372,10 +371,10 @@ void hrt_read_period_pass(hrt_travel_card_t *card, bytearray_t data) {
     uint8_t b6 = bytes[15];
 
     card->period_loading_date = en5145_datetime_to_time(
-        (int16_t)(i5 | ((b6 & 0xF0) >> 4)),
-        (int16_t)(((bytes[16] & 0xFE) >> 1) |
-            ((b6 & 0x0F) << 7))
-    );
+                                    (int16_t)(i5 | ((b6 & 0xF0) >> 4)),
+                                    (int16_t)(((bytes[16] & 0xFE) >> 1) |
+                                              ((b6 & 0x0F) << 7))
+                                );
 
     card->loaded_period_length =
         (int16_t)(((bytes[16] & 0x01) << 8) | bytes[17]);
@@ -407,8 +406,8 @@ void hrt_read_period_pass(hrt_travel_card_t *card, bytearray_t data) {
         en5145_datetime_to_time(
             (int16_t)(i8 | ((b9 & 0xFC) >> 2)),
             (int16_t)(((b9 & 0x03) << 9) |
-                ((uint16_t)bytes[26] << 1) |
-                ((bytes[27] & 0x80) >> 7))
+                      ((uint16_t)bytes[26] << 1) |
+                      ((bytes[27] & 0x80) >> 7))
         );
 
     uint16_t i9 = LSB7(bytes[27]) << 7;

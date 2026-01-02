@@ -57,7 +57,7 @@ typedef struct {
     // ---- Application Information ----
     bytearray_t application_information_data;
     bytearray_t application_information_data_v2;
-    char*       application_instance_id;
+    char       *application_instance_id;
     int         application_key_version;
     int         application_version;
     int         version;
