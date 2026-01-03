@@ -24,9 +24,26 @@ arguments = [[
     -f             : filename for the datadump to read (bin)
 ]]
 
+local DEBUG = false -- the debug flag
+
 local bxor = bit32.bxor
 local sub = string.sub
+local format = string.format
 
+---
+-- A debug printout-function
+local function dbg(args)
+    if not DEBUG then return end
+    if type(args) == 'table' then
+        local i = 1
+        while result[i] do
+            dbg(result[i])
+            i = i+1
+        end
+    else
+        print('###', args)
+    end
+end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
@@ -48,55 +65,42 @@ local function help()
     print(ansicolors.cyan..'Example usage'..ansicolors.reset)
     print(example)
 end
-
-local function BlocksToBinary(blocks, last)
-    local out = {}
-    for i = 0, last, 1 do
-        local blk = blocks[i]
-        if not blk or #blk ~= 8 then
-            return nil, ('Invalid block %d (%s)'):format(i, tostring(blk))
-        end
-        for j = 1, 8, 2 do
-            out[#out+1] = string.char(tonumber(blk:sub(j, j + 1), 16))
-        end
-    end
-    return table.concat(out)
+--
+-- Exit message
+local function ExitMsg(msg)
+    print( string.rep('--',20) )
+    print( string.rep('--',20) )
+    print(msg)
+    print()
 end
 
-local function LoadViaEload(blocks)
+local function LoadEmulator(uid, blocks)
     io.write('Sending Amiibo to emulator memory')
-    local blob, err = BlocksToBinary(blocks, 148)
-    if not blob then return false, err end
-
-    -- Create temp file for eload command
-    -- Note: No direct MFU memory set command available (CMD_HF_MIFARE_EML_MEMSET only for MIFARE)
-    local tmp = '/tmp/amiibo_emul.bin'
-    local fh, ferr = io.open(tmp, 'wb')
-    if not fh then return false, ferr end
-    fh:write(blob)
-    fh:close()
-
-    core.clearCommandBuffer()
-    local ok, msg = core.console(('hf mfu eload -f %s'):format(tmp))
-    
-    -- Clean up temp file
-    os.remove(tmp)
-    
-    if ok == false then
-        return false, msg or 'eload command failed'
+    local cmd, blockdata
+    for i=0,148,1 do
+        blockdata = blocks[i]
+        io.write('.')
+        io.flush()
+        core.clearCommandBuffer()
+        -- Pack blockno (uint16_t LE) + blockcnt (uint8_t) + blockwidth (uint8_t) + data
+        local block_lo = bit32.band(i, 0xff)
+        local block_hi = bit32.rshift(i, 8)
+        local payload = ('%02x%02x%02x%02x'):format(block_lo, block_hi, 1, 4)..blockdata
+        cmd = Command:newNG{cmd = cmds.CMD_HF_MIFARE_EML_MEMSET, data = payload}
+        local err, msg = cmd:sendNG(true)
+        if err == nil then return err, msg end
     end
     io.write('\n')
-    return true
 end
 
 local function main(args)
     print( string.rep('--',20) )
     print( string.rep('--',20) )
 
-    local err, hex
+    local result, err, hex
     local inputTemplate = 'dumpdata.bin'
 
-    for o, a in getopt.getopt(args, 'hf:') do
+    for o, a in getopt.getopt(args, 'hf:u:') do
         if o == 'h' then return help() end
         if o == 'f' then inputTemplate = a end
     end
@@ -105,6 +109,7 @@ local function main(args)
     hex, err = utils.ReadDumpFile(inputTemplate)
     if not hex then return oops(err) end
 
+    -- only deal with missing PWD and PACK, or with 56 emu hdr
     if #hex ~= 1064 and #hex ~= 1080 and #hex ~= 1192 then return oops('Expecting either a plain binary or emulator dump') end
 
     local amiibo_offset = (#hex == 1064 or #hex == 1080) and 0 or 112
@@ -113,6 +118,7 @@ local function main(args)
     local amiibo_type = amiibo_info:sub(7, 8)
     local amiibo_series = amiibo_info:sub(13, 14)
 
+    dbg('raw: '..ansicolors.green..amiibo_info..ansicolors.reset)
     print('game: '..ansicolors.green..amiibo_tools.db.game_series[("0x%s"):format(amiibo_game)]..ansicolors.reset)
     print('character: '..ansicolors.green..amiibo_tools.db.amiibos[("0x%s"):format(amiibo_info)].name..ansicolors.reset)
     print('type: '..ansicolors.green..amiibo_tools.db.types[("0x%s"):format(amiibo_type)]..ansicolors.reset)
@@ -139,12 +145,11 @@ local function main(args)
 
     -- add PWD and PACK
     local uid = blocks[14]:sub(1, 6)..blocks[15]:sub(1, 8)
-    local pwd = ("%08x"):format(bxor(bxor(tonumber(sub(uid, 2, 10), 16), tonumber(sub(uid, 6, 14), 16)), 0xaa55aa55))
-    blocks[147] = pwd
+    blocks[147] = ("%08x"):format(bxor(bxor(tonumber(sub(uid, 2, 10), 16), tonumber(sub(uid, 6, 14), 16)), 0xaa55aa55))
     blocks[148] = "80800000"
 
-    local ok, loadErr = LoadViaEload(blocks)
-    if not ok then return oops(loadErr) end
+    err = LoadEmulator(uid, blocks)
+    if err then return oops(err) end
     core.clearCommandBuffer()
     core.console(("hf mfu sim -t 7 -u %s"):format(uid))
 end
