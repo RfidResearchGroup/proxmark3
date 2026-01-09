@@ -4447,19 +4447,23 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     }
 
     PrintAndLogEx(INFO, "Please ignore possible transient BCC warnings");
-
-    // read block 2
-    mful_readblock_t packet = {
-        .block_no = 2,
+    mful_readblock_t packetr = {
         .use_schann = false,
         .keytype = 0,
         .keylen = 0,
         .num_of_blocks = 1,
     };
+    mful_writeblock_t packetw = {
+        .keytype = 0,
+        .use_schann = false,
+        .keylen = 0,
+    };
 
+    // read block 2
+    packetr.block_no = 2;
     PacketResponseNG resp;
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_MIFAREU_READBL, (uint8_t *)&packet, sizeof(packet));
+    SendCommandNG(CMD_HF_MIFAREU_READBL, (uint8_t *)&packetr, sizeof(packetr));
     if (WaitForResponseTimeout(CMD_HF_MIFAREU_READBL, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
@@ -4485,38 +4489,33 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     }
 
     // block 0.
-    uint8_t data[4];
-    data[0] = uid[0];
-    data[1] = uid[1];
-    data[2] = uid[2];
-    data[3] =  0x88 ^ uid[0] ^ uid[1] ^ uid[2];
+    memcpy(packetw.data, uid, 3);
+    packetw.data[3] =  0x88 ^ uid[0] ^ uid[1] ^ uid[2];
+    packetw.block_no = 0;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 0, 0, 0, data, sizeof(data));
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
+    if (WaitForResponseTimeout(CMD_HF_MIFAREU_WRITEBL, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
 
     // block 1.
-    data[0] = uid[3];
-    data[1] = uid[4];
-    data[2] = uid[5];
-    data[3] = uid[6];
+    memcpy(packetw.data, uid+3, 4);
+    packetw.block_no = 1;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 1, 0, 0, data, sizeof(data));
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
+    if (WaitForResponseTimeout(CMD_HF_MIFAREU_WRITEBL, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
 
     // block 2.
-    data[0] = uid[3] ^ uid[4] ^ uid[5] ^ uid[6];
-    data[1] = oldblock2[1];
-    data[2] = oldblock2[2];
-    data[3] = oldblock2[3];
+    packetw.data[0] = uid[3] ^ uid[4] ^ uid[5] ^ uid[6];
+    memcpy(packetw.data+1, oldblock2+1, 3);
+    packetw.block_no = 2;
     clearCommandBuffer();
-    SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, 2, 0, 0, data, sizeof(data));
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500) == false) {
+    SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
+    if (WaitForResponseTimeout(CMD_HF_MIFAREU_WRITEBL, &resp, 1500) == false) {
         PrintAndLogEx(WARNING, "Command execute timeout");
         return PM3_ETIMEOUT;
     }
@@ -4886,12 +4885,20 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
     uint8_t error_retries = 0;
 
     // read block X
-    mful_readblock_t packet = {
+    mful_readblock_t packetr = {
         .use_schann = false,
         .keytype = 0,
         .keylen = 0,
         .num_of_blocks = 1,
     };
+
+    mful_writeblock_t packetw = {
+        .block_no = blockno,
+        .keytype = 0,
+        .use_schann = false,
+        .keylen = 0,
+    };
+    memcpy(packetw.data, data, sizeof(data));
 
     while ((current <= (end - steps)) && (error_retries < 10)) {
 
@@ -4906,39 +4913,25 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         PacketResponseNG resp;
 
         if (use_data) {
-            SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, blockno, 0, 0, data, d_len);
-            bool got_written = false;
-            if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-                uint8_t isOK  = resp.oldarg[0] & 0xff;
-                if (isOK) {
-                    got_written = true;
-                }
-            }
-
-            if (got_written == false) {
+            SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
+            if ((WaitForResponseTimeout(CMD_HF_MIFAREU_WRITEBL, &resp, 1500) == false) ||
+                (resp.status != PM3_SUCCESS)) {
                 PrintAndLogEx(FAILED, "Failed to write block BEFORE");
                 error_retries++;
                 continue; // try again
             }
         }
 
-
-        packet.block_no = blockno;
-        SendCommandNG(CMD_HF_MIFAREU_READBL, (uint8_t *)&packet, sizeof(packet));
-
-        bool got_pre = false;
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            if (resp.status == PM3_SUCCESS) {
-                memcpy(pre, resp.data.asBytes, sizeof(pre));
-                got_pre = true;
-            }
-        }
-
-        if (got_pre == false) {
+        packetr.block_no = blockno;
+        SendCommandNG(CMD_HF_MIFAREU_READBL, (uint8_t *)&packetr, sizeof(packetr));
+        if ((WaitForResponseTimeout(CMD_HF_MIFAREU_READBL, &resp, 1500) == false ) ||
+            (resp.status != PM3_SUCCESS)) {
             PrintAndLogEx(FAILED, "Failed to read block BEFORE");
             error_retries++;
             continue; // try again
         }
+        memcpy(post, resp.data.asBytes, sizeof(post));
+
         clearCommandBuffer();
         SendCommandMIX(CMD_HF_MFU_OTP_TEAROFF, blockno, current, 0, teardata, sizeof(teardata));
 
@@ -4955,21 +4948,15 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
             continue;
         }
 
-        bool got_post = false;
         clearCommandBuffer();
-        SendCommandNG(CMD_HF_MIFAREU_READBL, (uint8_t *)&packet, sizeof(packet));
-        if (WaitForResponseTimeout(CMD_HF_MIFAREU_READBL, &resp, 1500)) {
-            if (resp.status == PM3_SUCCESS) {
-                memcpy(post, resp.data.asBytes, sizeof(post));
-                got_post = true;
-            }
-        }
-
-        if (got_post == false) {
+        SendCommandNG(CMD_HF_MIFAREU_READBL, (uint8_t *)&packetr, sizeof(packetr));
+        if ((WaitForResponseTimeout(CMD_HF_MIFAREU_READBL, &resp, 1500) == false ) ||
+            (resp.status != PM3_SUCCESS)) {
             PrintAndLogEx(FAILED, "Failed to read block BEFORE");
             error_retries++;
             continue; // try again
         }
+        memcpy(post, resp.data.asBytes, sizeof(post));
 
         error_retries = 0;
         char prestr[20] = {0};

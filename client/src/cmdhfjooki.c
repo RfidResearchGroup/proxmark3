@@ -646,30 +646,34 @@ static int CmdHF14AJookiClone(const char *Cmd) {
         has_pwd = true;
     }
 
-    // 0 - no authentication
-    // 2 - pwd  (4 bytes)
-    uint8_t keytype = 0, blockno = 4, i = 0;
+    // keytype = 0 - no authentication
+    // keytype = 2 - pwd  (4 bytes)
+    uint8_t i = 0;
+    mful_writeblock_t packetw = {
+        .keytype = 0,   // no key
+        .block_no = 4,
+        .use_schann = false,
+        .keylen = 0,
+    };
 
     while ((i * 4) < dlen) {
 
-        uint8_t cmddata[8] = {0};
-        memcpy(cmddata, data + (i * 4), 4);
+        memcpy(packetw.data, data + (i * 4), 4);
         if (has_pwd) {
-            memcpy(cmddata + 4, pwd, 4);
-            keytype = 2;
+            packetw.keytype = 2;
+            memcpy(packetw.key, pwd, 4);
+            packetw.keylen = 4;
         }
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, blockno, keytype, 0, cmddata, sizeof(cmddata));
-
+        SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
         PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            uint8_t isOK  = resp.oldarg[0] & 0xff;
-            PrintAndLogEx(SUCCESS, "Write block %d ( %s )", blockno, isOK ? _GREEN_("ok") : _RED_("fail"));
-        } else {
-            PrintAndLogEx(WARNING, "command execution time out");
-        }
 
-        blockno++;
+        if (WaitForResponseTimeout(CMD_HF_MIFAREU_WRITEBL, &resp, 1500) == false) {
+            PrintAndLogEx(WARNING, "command execution time out");
+            return PM3_ETIMEOUT;
+        }
+        PrintAndLogEx(SUCCESS, "Write block %d ( %s )", packetw.block_no, resp.status == PM3_SUCCESS ? _GREEN_("ok") : _RED_("fail"));
+        packetw.block_no++;
         i++;
     }
 
