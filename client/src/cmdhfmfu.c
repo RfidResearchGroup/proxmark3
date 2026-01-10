@@ -3879,7 +3879,38 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
     uint64_t tagtype = GetHF14AMfU_Type();
     if (tagtype == MFU_TT_UL_ERROR) {
+        free(dump);
         return PM3_ESOFT;
+    }
+
+    if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
+        if ((has_key == true) && (ak_len != 16)) {
+            PrintAndLogEx(ERR, "UL-C key must be 16 bytes");
+            free(dump);
+            return PM3_EINVARG;
+        }
+        if (write_extra == true) {
+            PrintAndLogEx(ERR, "Option -e incompatible with your UL-C card");
+            free(dump);
+            return PM3_EINVARG;
+        }
+    } else if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
+        if ((has_key == true) && (ak_len != 16)) {
+            PrintAndLogEx(ERR, "UL-AES key must be 16 bytes");
+            free(dump);
+            return PM3_EINVARG;
+        }
+        if (write_extra == true) {
+            PrintAndLogEx(ERR, "Option -e incompatible with your UL-AEScard");
+            free(dump);
+            return PM3_EINVARG;
+        }
+    } else {
+        if ((has_key == true) && (ak_len == 16)) {
+            PrintAndLogEx(ERR, "UL PWD must be 4 bytes");
+            free(dump);
+            return PM3_EINVARG;
+        }
     }
 
     if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
@@ -3905,18 +3936,23 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         }
     }
 
-    uint8_t data[20] = {0};
-    uint8_t keytype = 0;
+    mful_writeblock_t packetw = {
+        .keytype = 0,
+        .keylen = 0,
+        .use_schann = use_schann,
+    };
     if (has_key) {
-
         if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
-            keytype = 1; // UL_C auth
+            packetw.keytype = 1; // UL_C auth
+            packetw.keylen = 16;
         } else if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
-            keytype = 3; // UL_AES auth
+            packetw.keytype = 3; // UL_AES auth
+            packetw.keylen = 16;
         } else {
-            keytype = 2; // UL_EV1/NTAG auth
+            packetw.keytype = 2; // UL_EV1/NTAG auth
+            packetw.keylen = 4;
         }
-        memcpy(data + 4, auth_key_ptr, ak_len);
+        memcpy(packetw.key, auth_key_ptr, ak_len);
     }
 
     // write version, signature, pack
@@ -3930,59 +3966,51 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         // pwd
         if (has_key || read_key) {
 
-            memcpy(data,  auth_key_ptr, 4);
+            memcpy(packetw.data,  auth_key_ptr, 4);
             if (read_key) {
                 // try reading key from dump and use.
-                memcpy(data, mem->data + (bytes_read - MFU_DUMP_PREFIX_LENGTH - 8), 4);
+                memcpy(packetw.data, mem->data + (bytes_read - MFU_DUMP_PREFIX_LENGTH - 8), 4);
             }
+            packetw.block_no = MFU_NTAG_SPECIAL_PWD;
 
-            PrintAndLogEx(INFO, "special PWD     block written 0x%X - %s", MFU_NTAG_SPECIAL_PWD, sprint_hex(data, 4));
-
-            mful_writeblock_t packet = {
-                .block_no = MFU_NTAG_SPECIAL_PWD,
-                .keytype = keytype,
-                .keylen = 4,
-                .use_schann = use_schann,
-            };
-            memcpy(packet.key, auth_key_ptr, 4); // password to authenticate
-
-            memcpy(packet.data, data, 4);  // new password
-
+            PrintAndLogEx(INFO, "special PWD     block written 0x%X - %s", MFU_NTAG_SPECIAL_PWD, sprint_hex(packetw.data, 4));
             clearCommandBuffer();
-            SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packet, sizeof(packet));
-            // SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PWD, keytype, 0, data, sizeof(data));
+            SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
             wait4response(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PWD);
 
             // copy the new key
-            keytype = 2;
-            memcpy(authenticationkey, data, 4);
-            memcpy(data + 4, authenticationkey, 4);
+            packetw.keytype = 2;
+            packetw.keylen = 4;
+            memcpy(packetw.key, packetw.data, 4);
         }
 
         // pack
-        memcpy(data, mem->data + (bytes_read - MFU_DUMP_PREFIX_LENGTH - 4), 2);
-        data[2] = 0;
-        data[3] = 0;
-        PrintAndLogEx(INFO, "special PACK    block written 0x%X - %s", MFU_NTAG_SPECIAL_PACK, sprint_hex(data, 4));
+        memcpy(packetw.data, mem->data + (bytes_read - MFU_DUMP_PREFIX_LENGTH - 4), 2);
+        packetw.data[2] = 0;
+        packetw.data[3] = 0;
+        packetw.block_no = MFU_NTAG_SPECIAL_PACK;
+        PrintAndLogEx(INFO, "special PACK    block written 0x%X - %s", MFU_NTAG_SPECIAL_PACK, sprint_hex(packetw.data, 4));
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PACK, keytype, 0, data, sizeof(data));
+        SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
         wait4response(CMD_HF_MIFAREU_WRITEBL, MFU_NTAG_SPECIAL_PACK);
 
         // Signature
         for (uint8_t s = MFU_NTAG_SPECIAL_SIGNATURE, i = 0; s < MFU_NTAG_SPECIAL_SIGNATURE + 8; s++, i += 4) {
-            memcpy(data, mem->signature + i, 4);
-            PrintAndLogEx(INFO, "special SIG     block written 0x%X - %s", s, sprint_hex(data, 4));
+            memcpy(packetw.data, mem->signature + i, 4);
+            packetw.block_no = s;
+            PrintAndLogEx(INFO, "special SIG     block written 0x%X - %s", s, sprint_hex(packetw.data, 4));
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, s, keytype, 0, data, sizeof(data));
+            SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
             wait4response(CMD_HF_MIFAREU_WRITEBL, s);
         }
 
         // Version
         for (uint8_t s = MFU_NTAG_SPECIAL_VERSION, i = 0; s < MFU_NTAG_SPECIAL_VERSION + 2; s++, i += 4) {
-            memcpy(data, mem->version + i, 4);
-            PrintAndLogEx(INFO, "special VERSION block written 0x%X - %s", s, sprint_hex(data, 4));
+            memcpy(packetw.data, mem->version + i, 4);
+            packetw.block_no = s;
+            PrintAndLogEx(INFO, "special VERSION block written 0x%X - %s", s, sprint_hex(packetw.data, 4));
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, s, keytype, 0, data, sizeof(data));
+            SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
             wait4response(CMD_HF_MIFAREU_WRITEBL, s);
         }
     }
@@ -3995,9 +4023,10 @@ static int CmdHF14AMfURestore(const char *Cmd) {
     for (uint8_t b = 4; b < pages - 5; b++) {
 
         //Send write Block
-        memcpy(data, mem->data + (b * 4), 4);
+        memcpy(packetw.data, mem->data + (b * 4), 4);
+        packetw.block_no = b;
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
+        SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
         wait4response(CMD_HF_MIFAREU_WRITEBL, b);
         PrintAndLogEx(NORMAL, "." NOLF);
         fflush(stdout);
@@ -4009,7 +4038,7 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 
         PrintAndLogEx(INFO, "Restoring configuration blocks");
 
-        PrintAndLogEx(INFO, "Authentication with keytype[%x]  %s\n", (uint8_t)(keytype & 0xff), sprint_hex(auth_key_ptr, 4));
+        PrintAndLogEx(INFO, "Authentication with keytype[%i] = %s\n", packetw.keytype, sprint_hex(packetw.key, packetw.keylen));
 
 #if defined ICOPYX
         // otp, uid, lock, dynlockbits, cfg0, cfg1, pwd, pack
@@ -4020,11 +4049,12 @@ static int CmdHF14AMfURestore(const char *Cmd) {
 #endif
         for (uint8_t i = 0; i < ARRAYLEN(blocks); i++) {
             uint8_t b = blocks[i];
-            memcpy(data, mem->data + (b * 4), 4);
+            memcpy(packetw.data, mem->data + (b * 4), 4);
+            packetw.block_no = b;
             clearCommandBuffer();
-            SendCommandMIX(CMD_HF_MIFAREU_WRITEBL, b, keytype, 0, data, sizeof(data));
+            SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
             wait4response(CMD_HF_MIFAREU_WRITEBL, b);
-            PrintAndLogEx(INFO, "special block written " _YELLOW_("%u") " - %s", b, sprint_hex(data, 4));
+            PrintAndLogEx(INFO, "special block written " _YELLOW_("%u") " - %s", b, sprint_hex(packetw.data, 4));
         }
     }
 
