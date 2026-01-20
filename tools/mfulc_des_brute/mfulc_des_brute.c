@@ -27,10 +27,19 @@ typedef struct {
     uint32_t start;               // starting candidate (inclusive)
     uint32_t end;                 // ending candidate (exclusive)
     int key_mode;                 // 0 to 3 (i.e. brute force segment 1-4 as 0-indexed)
-    unsigned char init_ciphertext[BLOCK_SIZE];
-    unsigned char prev_ciphertext[BLOCK_SIZE];  // "IV" of ciphertext for CBC mode in reader mode
-    unsigned char ciphertext[BLOCK_SIZE];
-    unsigned char base_key[KEY_SIZE];  // the 3DES base key provided by the user
+    union {
+        unsigned char init_ciphertext[BLOCK_SIZE];
+        uint64_t init_ciphertext_u64;
+    };
+    union {
+        unsigned char prev_ciphertext[BLOCK_SIZE];  // "IV" of ciphertext for CBC mode in reader mode
+        uint64_t prev_ciphertext_u64;
+    };
+    union {
+        unsigned char ciphertext[BLOCK_SIZE];
+        uint64_t ciphertext_u64;
+    };
+    unsigned char base_key[KEY_SIZE];         // the 3DES base key provided by the user
     int thread_id;
     lfsr_t lfsr_type;
     bool is_reader_mode;          // true for -r mode, false for -c mode
@@ -189,7 +198,7 @@ static void *worker(void *arg) {
                                  &fixed_schedule, &candidate_schedule, &fixed_schedule, DES_DECRYPT);
             }
             // Apply XOR block to the second decrypted block (for CBC mode)
-            out ^= *(uint64_t *)targs->prev_ciphertext;
+            out ^= targs->prev_ciphertext_u64;
 
             // Check if out is 8-bit (1-byte) left rotated version of init_out
             // Need to convert to big-endian for byte rotation, then back to little-endian
