@@ -803,6 +803,30 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
     // 4.1 Selected ADF
     // 4.2 Diversifier
     // 4.3 Nonce
+
+    // Synthesized IV works on half-blocks:
+    // Half of a block of random data, followed
+    // by half a block of the CMAC of that data
+    uint8_t iv_size;
+    if (encryption_algorithm == 0x02) {
+        iv_size = 4;
+    } else if (encryption_algorithm == 0x09) {
+        iv_size = 8;
+    } else {
+        PrintAndLogEx(ERR, _RED_("Unknown Encryption Algorithm"));
+        return PM3_ESOFT;
+    }
+
+    uint8_t mac[iv_size];
+    uint8_t MAC_key[24] = {0x00};
+    memcpy(MAC_key, keys[key_index].privMacKey, 16);
+    create_cmac(MAC_key, CRYPTOGRAM_encrypted_data_raw, mac, iv_size, sizeof(mac), encryption_algorithm);
+    if (memcmp(CRYPTOGRAM_encrypted_data_raw+iv_size, mac, iv_size) != 0) {
+        PrintAndLogEx(ERR, "Synthesized IV Verification Failed");
+        PrintAndLogEx(ERR, _YELLOW_("Likely wrong Priv Mac Key"));
+        return PM3_ESOFT;
+    }
+
     uint8_t privEncKey[16] = {};
     memcpy(privEncKey, keys[key_index].privEncKey, 16);
     uint8_t CRYPTOGRAM_decrypted_data[64];
@@ -823,7 +847,7 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
     int CRYPTOGRAM_decrypted_data_length = sizeof(CRYPTOGRAM_decrypted_data);
 
     // Skip synthesized IV
-    for (int i = 16; i < CRYPTOGRAM_decrypted_data_length; i++) {
+    for (int i = iv_size * 2; i < CRYPTOGRAM_decrypted_data_length; i++) {
         // ADF OID tag
         if (CRYPTOGRAM_decrypted_data[i] == 0x06 && CRYPTOGRAM_decrypted_data[i + 1] < 20) {
             adf_length = ((CRYPTOGRAM_decrypted_data[i + 1]));
@@ -849,15 +873,6 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
             }
             for (int x = 0; selectADFOID_UPPER[x]; x++) {
                 selectADFOID_UPPER[x] = toupper(selectADFOID_UPPER[x]);
-            }
-
-            uint8_t mac[8];
-            uint8_t iv_size = i/2;
-            create_cmac(keys[key_index].privMacKey, CRYPTOGRAM_encrypted_data_raw, mac, iv_size, sizeof(mac), encryption_algorithm);
-            if (memcmp(CRYPTOGRAM_encrypted_data_raw+iv_size, mac, iv_size) != 0) {
-                PrintAndLogEx(ERR, "Synthesized IV Verification Failed");                
-                PrintAndLogEx(ERR, _YELLOW_("Likely wrong Priv Mac Key"));
-                return PM3_ESOFT;
             }
 
             // Compare the 2 ADF responses, if they don't match then the decryption is wrong
