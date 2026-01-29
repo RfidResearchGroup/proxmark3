@@ -2019,7 +2019,23 @@ static int mfulc_fingerprint(void) {
     }
     DropField();
 
+    // Mimicking TagInfo to identify MIFARE Hospitality cards: blk2[2]=09 and blk3=E1101200
+    if (ul_select(&card)) {
+        uint8_t data[4] = { 0x00 };
+        uint8_t cmd[] = { ISO14443A_CMD_READBLOCK, 2 };
+        int status = ul_send_cmd_raw(cmd, sizeof(cmd), data, 4, false);
+        if ((status > 0) && (data[2] == 0x09)) {
+            cmd[1] = 3;
+            status = ul_send_cmd_raw(cmd, sizeof(cmd), data, 4, false);
+            if ((status > 0) && (data[0] == 0xE1) && (data[1] == 0x10) && (data[2] == 0x12) && (data[3] == 0x00) ) {
+                PrintAndLogEx(INFO, "MIFARE Hospitality (MF0ICU2(H))");
+                DropField();
+                return PM3_SUCCESS;
+            }
+        }
+    }
     PrintAndLogEx(INFO, "likely MF0ICU2");
+    DropField();
     return PM3_SUCCESS;
 }
 
