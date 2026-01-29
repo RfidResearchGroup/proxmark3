@@ -1766,6 +1766,12 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                 emlSetMem_xt(receivedCmd, wrblock + MFU_DUMP_PREFIX_LENGTH / 4, 1, 4);
                 // send ACK
                 EmSend4bit(CARD_ACK);
+                if (tagType == 13 && wrblock >= 0x2c && wrblock <= 0x2F) {
+                    ulc_reread_key = true;
+                }
+                if (tagType == 14 && wrblock >= 0x30 && wrblock <= 0x37) {
+                    ulaes_reread_key = true;
+                }
             } else {
                 // send NACK 0x1 == crc/parity error
                 EmSend4bit(CARD_NACK_PA);
@@ -1868,10 +1874,22 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                     // send NACK 0x0 == invalid argument
                     EmSend4bit(CARD_NACK_IV);
                 } else {
+                    // TODO: check if block >= AUTH0 and AUTH1=0 and unauth on ULC/ULAES -> NACK
                     // first blocks of emu are header
                     uint16_t start = (block * 4) + MFU_DUMP_PREFIX_LENGTH;
                     uint8_t emdata[MIFARE_BLOCK_SIZE + CRC16_SIZE] = {0};
                     emlGet(emdata, start, MIFARE_BLOCK_SIZE);
+                    // mask key pages if needed
+                    if ((tagType == 13) && (block >= 0x29) && (block <= 0x2F)) {
+                            uint8_t offset = block >= 0x2C ? 0 : 0x2C - block;
+                            uint8_t length = block >= 0x2C ? 0x30 - block : block - 0x28;
+                            memset(emdata + offset * 4, 0x00, length * 4);
+                    } else if ((tagType == 14) && (block >= 0x2D) && (block <= 0x37)) {
+                            uint8_t offset = block >= 0x30 ? 0 : 0x30 - block;
+                            uint8_t length = block >= 0x30 ? (0x37 - block > 4 ? 4 : 0x37 - block) : block - 0x2C;
+                            memset(emdata + offset * 4, 0x00, length * 4);
+                    }
+                    // TODO: implement cyclic memory if we reach AUTH0 and AUTH1=0 and unauth on ULC/ULAES, or if we reach end of memory
                     AddCrc14A(emdata, MIFARE_BLOCK_SIZE);
                     EmSendCmd(emdata, sizeof(emdata));
                     numReads++;  // Increment number of times reader requested a block
@@ -1927,6 +1945,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                     EmSend4bit(CARD_NACK_IV);
                     goto jump;
                 }
+                // TODO: check if block >= AUTH0 and unauth on ULC/ULAES -> NACK
 
                 // OTP sanity check
                 if (block == 0x03) {
@@ -1968,6 +1987,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                 if (wrblock > pages) {
                     // send NACK 0x0 == invalid argument
                     EmSend4bit(CARD_NACK_IV);
+                // TODO: check if wrblock >= AUTH0 and unauth on ULC/ULAES -> NACK
                 } else {
                     // send ACK
                     EmSend4bit(CARD_ACK);
