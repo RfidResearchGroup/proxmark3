@@ -312,6 +312,86 @@
         "Type": "pacs"
     },
     {
+        "AID": "F52100",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "Kaba evolo - Access",
+        "Description": "Kaba evolo - KabaApplication.Access",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F52130",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "Kaba evolo - Common",
+        "Description": "Kaba evolo - KabaApplication.Common",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F52140",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "Kaba evolo - Biometric",
+        "Description": "Kaba evolo - KabaApplication.Biometric",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F52160",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "Kaba evolo - MasterA",
+        "Description": "Kaba evolo - KabaApplication.MasterA",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F52161",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "Kaba evolo - MasterB",
+        "Description": "Kaba evolo - KabaApplication.MasterB",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F52162",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "Kaba evolo - DealerCode",
+        "Description": "Kaba evolo - KabaApplication.DealerCode",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F52163",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "Kaba evolo - Upgrade",
+        "Description": "Kaba evolo - KabaApplication.Upgrade",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F52164",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "Kaba evolo - MasterC",
+        "Description": "Kaba evolo - KabaApplication.MasterC",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F52165",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "Kaba evolo - MasterTPrimary",
+        "Description": "Kaba evolo - KabaApplication.MasterTPrimary",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F52166",
+        "Vendor": "dormakaba",
+        "Country": "CH",
+        "Name": "Kaba evolo - MasterTSecondary",
+        "Description": "Kaba evolo - KabaApplication.MasterTSecundary",
+        "Type": "pacs"
+    },
+    {
         "AID": "F53280",
         "Vendor": "dormakaba",
         "Country": "CH",
