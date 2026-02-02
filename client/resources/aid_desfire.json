@@ -313,10 +313,10 @@
     },
     {
         "AID": "F52100",
-        "Vendor": "dormakaba",
-        "Country": "CH",
-        "Name": "Kaba evolo - Access",
-        "Description": "Kaba evolo - KabaApplication.Access",
+        "Vendor": "Lucid Group / dormakaba",
+        "Country": "US",
+        "Name": "Lucid Motors Valet Card / Kaba evolo - Access",
+        "Description": "Used by both Lucid Motors valet card and Kaba evolo - KabaApplication.Access",
         "Type": "pacs"
     },
     {
@@ -861,14 +861,6 @@
         "Country": "DE",
         "Name": "car2go Defunct Membership Card",
         "Description": "car2go Defunct Membership Card // Defunct // Private Application #1",
-        "Type": "vehicle access"
-    },
-    {
-        "AID": "F52100",
-        "Vendor": "Lucid Motors via Lucid Group",
-        "Country": "US",
-        "Name": "Lucid Motors Valet Card",
-        "Description": "Lucid Motors Valet Card",
         "Type": "vehicle access"
     },
     {
