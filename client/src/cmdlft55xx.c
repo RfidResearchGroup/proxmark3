@@ -1112,7 +1112,7 @@ static int CmdT55xxWakeUp(const char *Cmd) {
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     uint32_t password = 0;
-    int res = arg_get_u32_hexstr_def_nlen(ctx, 2, 0, &password, 4, true);
+    int res = arg_get_u32_hexstr_def_nlen(ctx, 1, 0, &password, 4, true);
     if (res == 0 || res == 2) {
         PrintAndLogEx(ERR, "Password should be 4 hex bytes");
         CLIParserFree(ctx);

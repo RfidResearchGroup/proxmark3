@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Fixed `lf t55xx wakeup` options parsing (@suut)
 - Added `--` arg separator to client to pass following args to scripts (@doegox)
 - Fixed ISO14443-4 type B NDEF workflow + parsing (@team-orangeBlue)
 - Added Snapmaker U1 filament spool KDF in `hf mf keygen` (@Foxushka)
