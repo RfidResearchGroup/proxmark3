@@ -163,6 +163,10 @@ static int split(char *str, char **arr) {
 
         int len = end_index - begin_index;
         char *tmp = calloc(len + 1, sizeof(char));
+        if (tmp == NULL) {
+            PrintAndLogEx(ERR, "Memory allocation failed");
+            return -1;
+        }
         memcpy(tmp, &str[begin_index], len);
         arr[word_cnt++] = tmp;
         begin_index = end_index;
@@ -457,6 +461,11 @@ static int CmdScriptRun(const char *Cmd) {
         char *argv[FILE_PATH_SIZE];
         argv[0] = script_path;
         int argc = split(arguments, &argv[1]);
+        if (argc < 0) {
+            PrintAndLogEx(ERR, "Failed to parse script arguments");
+            free(script_path);
+            return PM3_ESOFT;
+        }
 #if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 10
         wchar_t *py_args[argc + 1];
         for (int i = 0; i <= argc; i++) {
