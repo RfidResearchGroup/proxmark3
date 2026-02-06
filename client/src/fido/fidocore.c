@@ -389,7 +389,7 @@ static int FIDO2CheckSignature(json_t *root, uint8_t *publickey, uint8_t *sign, 
         res = FillBuffer(xbuf, sizeof(xbuf), &xbuflen,
                          authData, authDataLen,  // rpIdHash[32] + flags[1] + signCount[4]
                          clientDataHash, 32,     // Hash of the serialized client data. "$.ClientDataHash" from json
-                         NULL, 0);
+                         (uint8_t *)NULL, 0);
         PrintAndLogEx(DEBUG, "--xbuf(%d)[%zu]: %s", res, xbuflen, sprint_hex(xbuf, xbuflen));
 
         res = ecdsa_signature_verify(MBEDTLS_ECP_DP_SECP256R1, publickey, xbuf, xbuflen, sign, signLen, true);
