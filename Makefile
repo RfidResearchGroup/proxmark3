@@ -32,6 +32,13 @@ endif
 all clean install uninstall check: %: client/% bootrom/% armsrc/% recovery/% mfc_card_only/% mfc_card_reader/% mfd_aes_brute/% mfulc_des_brute/% fpga_compress/% cryptorf/%
 # hitag2crack toolsuite is not yet integrated in "all", it must be called explicitly: "make hitag2crack"
 #all clean install uninstall check: %: hitag2crack/%
+HOST_TARGETS=client mfc_card_only mfc_card_reader mfd_aes_brute mfulc_des_brute fpga_compress cryptorf
+host: host/all
+host/all: $(addsuffix /all,$(HOST_TARGETS))
+host/clean: $(addsuffix /clean,$(HOST_TARGETS))
+host/install: $(addsuffix /install,$(HOST_TARGETS))
+host/uninstall: $(addsuffix /uninstall,$(HOST_TARGETS))
+host/check: $(addsuffix /check,$(HOST_TARGETS))
 clean: %: hitag2crack/%
 	find . -type d -name __pycache__ -exec rm -rfv \{\} +
 
@@ -188,13 +195,14 @@ hitag2crack/%: FORCE
 	$(Q)$(MAKE) --no-print-directory -C tools/hitag2crack $(patsubst hitag2crack/%,%,$@) DESTDIR=$(MYDESTDIR)
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
-.PHONY: all clean install uninstall help _test bootrom fullimage recovery client mfc_card_only mfc_card_reader mfulc_des_brute mfd_aes_brute hitag2crack style miscchecks release FORCE udev accessrights cleanifplatformchanged
+.PHONY: all host clean install uninstall help _test bootrom fullimage recovery client mfc_card_only mfc_card_reader mfulc_des_brute mfd_aes_brute hitag2crack style miscchecks release FORCE udev accessrights cleanifplatformchanged
 
 help:
 	@echo "Multi-OS Makefile"
 	@echo
 	@echo "Possible targets:"
 	@echo "+ all             - Make all targets: bootrom, fullimage and OS-specific host tools"
+	@echo "+ host            - Make all OS-specific host tools"
 	@echo "+ clean           - Clean in all targets"
 	@echo "+ .../clean       - Clean in specified target and its deps, e.g. bootrom/clean"
 	@echo "+ (un)install     - Install/uninstall Proxmark files in the system, default to /usr/local/share,"
