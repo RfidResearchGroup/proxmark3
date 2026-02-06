@@ -1731,7 +1731,11 @@ void pm3_version(bool verbose, bool oneliner) {
 #else
     PrintAndLogEx(NORMAL, "  Native BT support......... " _YELLOW_("absent"));
 #endif
+
 #ifdef HAVE_PYTHON
+#ifndef PY_VERSION
+#define PY_VERSION "unknown version"
+#endif
     PrintAndLogEx(NORMAL, "  Python script support..... " _GREEN_("present") " ( " _YELLOW_(PY_VERSION) " )");
 #else
     PrintAndLogEx(NORMAL, "  Python script support..... " _YELLOW_("absent"));
