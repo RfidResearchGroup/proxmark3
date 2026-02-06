@@ -754,8 +754,8 @@ void SimulateSeos(seos_emulate_req_t *msg) {
 
                                 mac_input_idx = 0;
 
-                                memcpy(mac_input + mac_input_idx, rndCounter, sizeof(rndCounter));
-                                mac_input_idx += sizeof(rndCounter);
+                                memcpy(mac_input + mac_input_idx, rndCounter, bs);
+                                mac_input_idx += bs;
                                 memcpy(mac_input + mac_input_idx, dynamic_response_info.response + tlv_base, tlv_idx - tlv_base);
                                 mac_input_idx += tlv_idx - tlv_base;
 
