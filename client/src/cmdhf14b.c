@@ -398,7 +398,7 @@ uint8_t *get_uid_from_filename(const char *filename) {
         return uid;
     }
 
-    char *found = strstr(filename, "hf-14b-");
+    const char *found = strstr(filename, "hf-14b-");
     if (found == NULL) {
         PrintAndLogEx(ERR, "can't get uid from filename `" _YELLOW_("%s") "` expected format is hf-14b-<uid>...", filename);
         return uid;

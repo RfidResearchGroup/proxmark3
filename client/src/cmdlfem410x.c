@@ -188,8 +188,7 @@ void printEM410x(uint32_t hi, uint64_t id, bool verbose, int type) {
 
         uint32_t p1id = (id & 0xFFFFFF);
         uint8_t arr[32] = {0x00};
-        int j = 23;
-        for (int k = 0 ; k < 24; ++k, --j) {
+        for (int k = 0 ; k < 24; ++k) {
             arr[k] = (p1id >> k) & 1;
         }
 

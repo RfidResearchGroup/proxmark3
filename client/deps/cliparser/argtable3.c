@@ -493,7 +493,7 @@ parse_long_options(char *const *nargv, const char *options,
 static int
 getopt_internal(int nargc, char *const *nargv, const char *options,
                 const struct option *long_options, int *idx, int flags) {
-    char *oli; /* option letter list index */
+    const char *oli; /* option letter list index */
     int optchar, short_too;
     static int posixly_correct = -1;
 #ifdef __STDC_WANT_SECURE_LIB__
@@ -3607,6 +3607,9 @@ TRex *trex_compile(const TRexChar *pattern, const TRexChar **error, int flags) {
 
     exp->_eol = exp->_bol = NULL;
     exp->_p = pattern;
+    exp->_jmpbuf = NULL;
+    exp->_nodes = NULL;
+    exp->_matches = NULL;
     exp->_nallocated = (int)scstrlen(pattern) * sizeof(TRexChar);
 
     exp->_nodes = (TRexNode *)malloc(exp->_nallocated * sizeof(TRexNode));

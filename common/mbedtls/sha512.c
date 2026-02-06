@@ -365,12 +365,15 @@ int mbedtls_sha512_update_ret(mbedtls_sha512_context *ctx,
         left = 0;
     }
 
-    while (ilen >= 128) {
-        if ((ret = mbedtls_internal_sha512_process(ctx, input)) != 0)
-            return (ret);
+    // extra guard here is just to satisfy GCC 16 static analysis
+    if (ilen >= 128) {
+        while (ilen >= 128) {
+            if ((ret = mbedtls_internal_sha512_process(ctx, input)) != 0)
+                return (ret);
 
-        input += 128;
-        ilen  -= 128;
+            input += 128;
+            ilen  -= 128;
+        }
     }
 
     if (ilen > 0)
