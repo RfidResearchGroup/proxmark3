@@ -1192,7 +1192,10 @@ bool prepare_allocated_tag_modulation(tag_response_info_t *response_info, uint8_
 static void Simulate_read_ulc_key(uint8_t *ulc_key) {
     // copy UL-C key from emulator memory
 
-    mfu_dump_t *mfu_header = (mfu_dump_t *) BigBuf_get_EM_addr();
+    if (ulc_key == NULL) {
+        return;
+    }
+    const mfu_dump_t *mfu_header = (const mfu_dump_t *) BigBuf_get_EM_addr();
     memcpy(ulc_key,      mfu_header->data + (0x2D * 4), 4);
     memcpy(ulc_key +  4, mfu_header->data + (0x2C * 4), 4);
     memcpy(ulc_key +  8, mfu_header->data + (0x2F * 4), 4);
@@ -1207,7 +1210,10 @@ static void Simulate_read_ulc_key(uint8_t *ulc_key) {
 static void Simulate_read_ulaes_key0(uint8_t *ulaes_key0) {
     // copy UL-AES DataProtKey from emulator memory
 
-    mfu_dump_t *mfu_header = (mfu_dump_t *) BigBuf_get_EM_addr();
+    if (ulaes_key0 == NULL) {
+        return;
+    }
+    const mfu_dump_t *mfu_header = (const mfu_dump_t *) BigBuf_get_EM_addr();
     memcpy(ulaes_key0, mfu_header->data + (0x33 * 4), 4);
     memcpy(ulaes_key0 + 4, mfu_header->data + (0x32 * 4), 4);
     memcpy(ulaes_key0 + 8, mfu_header->data + (0x31 * 4), 4);
