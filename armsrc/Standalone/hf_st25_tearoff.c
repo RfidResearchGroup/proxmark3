@@ -754,7 +754,7 @@ static int8_t st25tb_tear_off_consolidate_block(const uint8_t block_address, uin
     }
 
     // If value is not FE or target is not FD, try writing value - 2
-    if (*read_back_value != 0xFFFFFFFE || (*read_back_value == 0xFFFFFFFE && target_value == 0xFFFFFFFD)) {
+    if (*read_back_value != 0xFFFFFFFE || target_value == 0xFFFFFFFD) {
         result = st25tb_tear_off_retry_write_verify(block_address, consolidation_value - 2,
                                                     TEAR_OFF_WRITE_RETRY_COUNT, 0, read_back_value);
         if (result != 0) {
