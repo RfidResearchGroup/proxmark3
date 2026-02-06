@@ -601,12 +601,12 @@ static saflok_mfc_datetime_t add_offset(
                      );
     }
     // variable days per month ... loop is simplest option
-    for (uint8_t days_in_month = get_days_in_month(tm.tm_year + 1900, tm.tm_mon + 1);
-            tm.tm_mday > days_in_month;
-            days_in_month = get_days_in_month(tm.tm_year + 1900, tm.tm_mon + 1)
+    for (uint8_t current_days_in_month = get_days_in_month(tm.tm_year + 1900, tm.tm_mon + 1);
+            tm.tm_mday > current_days_in_month;
+            current_days_in_month = get_days_in_month(tm.tm_year + 1900, tm.tm_mon + 1)
         ) {
         tm.tm_mon  ++;
-        tm.tm_mday -= days_in_month;
+        tm.tm_mday -= current_days_in_month;
         if (tm.tm_mon >= 12) {
             tm.tm_year ++;
             tm.tm_mon -= 12;
