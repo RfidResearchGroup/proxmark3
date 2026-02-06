@@ -37,8 +37,8 @@ Run `tools/release_tests.sh` on:
   - [ ] OpenSuse Tumbleweed
   - [ ] ParrotOS
   - [ ] Ubuntu 24.04 (LTS)
-  - [ ] Ubuntu 24.10
   - [ ] Ubuntu 25.04
+  - [ ] Ubuntu 25.10
 - [ ] OSX (MacPorts)
 - [ ] OSX (Homebrew)
 - [ ] Termux
