@@ -5,8 +5,13 @@ MYCFLAGS = -O3 -ffast-math
 MYDEFS =
 MYLDLIBS = -lcrypto
 
-SUPPORT_MARCH := $(shell $(CC) -xc /dev/null -c -o /dev/null -march=native > /dev/null 2>/dev/null && echo y)
-SUPPORT_MCPU := $(shell $(CC) -xc /dev/null -c -o /dev/null -mcpu=native > /dev/null 2>/dev/null && echo y)
+SUPPORT_MARCH ?= $(shell $(CC) -xc /dev/null -c -o /dev/null -march=native > /dev/null 2>/dev/null && echo y)
+SUPPORT_MCPU ?= $(shell $(CC) -xc /dev/null -c -o /dev/null -mcpu=native > /dev/null 2>/dev/null && echo y)
+# Termux / Android safety
+ifneq ($(TERMUX_VERSION),)
+  SUPPORT_MARCH := n
+  SUPPORT_MCPU  := n
+endif
 
 ifeq ($(DONT_BUILD_NATIVE),y)
     # do nothing

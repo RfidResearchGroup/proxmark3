@@ -9,7 +9,6 @@
   - [Setup](#setup)
     - [Setting up Termux](#setting-up-termux)
     - [Install Proxmark3 package which follows tagged releases](#install-proxmark3-package-which-follows-tagged-releases)
-    - [Optional: Install Proxmark3 package which offers a more up to date version from git `master` branch](#optional-install-proxmark3-package-which-offers-a-more-up-to-date-version-from-git-master-branch)
     - [Optional: Building Proxmark3 client from source](#optional-building-proxmark3-client-from-source)
   - [PC-like method](#pc-like-method)
     - [Specific requirements](#specific-requirements)
@@ -68,10 +67,14 @@ pkg install proxmark3
 ```
 ### Optional: Building Proxmark3 client from source
 ```
-pkg install make clang readline libc++ git binutils
+pkg install make clang readline libc++ git binutils libgd
 git clone https://github.com/RfidResearchGroup/proxmark3.git
 cd proxmark3
-make clean && make client
+make clean && make host
+```
+Testing:
+```
+make host/check
 ```
 
 ## PC-like method
