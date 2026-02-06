@@ -327,11 +327,17 @@ style: commands
 		-exec perl -pi -e 's/[ \t]+$$//' {} \; \
 		-exec sh -c "tail -c1 {} | xxd -p | tail -1 | grep -q -v 0a$$" \; \
 		-exec sh -c "echo >> {}" \;
-	# Apply astyle on *.c, *.h, *.cpp
-	find . \( -not -path "./cov-int/*" -and -not -path "./venv*" -and \( \( -name "*.[ch]" -and -not -name "ui_overlays.h" \) -or \( -name "*.cpp" -and -not -name "*.moc.cpp" \) \) \) -exec astyle --formatted --mode=c --suffix=none \
+	# Apply astyle on *.c, *.h,
+	find . \( -not -path "./cov-int/*" -and -not -path "./venv*" -and -name "*.[ch]" -and -not -name "ui_overlays.h" \) -exec astyle --formatted --mode=c --suffix=none \
 		--indent=spaces=4 --indent-switches \
 		--keep-one-line-blocks --max-continuation-indent=60 \
 		--style=google --pad-oper --unpad-paren --pad-header \
+		--align-pointer=name {} \;
+	# Apply astyle on *.cpp, *.hpp: no pad-oper as it can cause issues with templates
+	find . \( -not -path "./cov-int/*" -and -not -path "./venv*" -and -name "*.cpp" -and -not -name "*.moc.cpp" \) -exec astyle --formatted --mode=c --suffix=none \
+		--indent=spaces=4 --indent-switches \
+		--keep-one-line-blocks --max-continuation-indent=60 \
+		--style=google --unpad-paren --pad-header \
 		--align-pointer=name {} \;
 
 commands: client
