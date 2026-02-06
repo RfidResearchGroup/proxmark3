@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # Recover the shared key mask specific to an Ultralight AES card
-# 
+#
 # Conditions:
 # * key blocks not locked by LOCK_KEYS
 #

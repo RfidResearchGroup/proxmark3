@@ -86,7 +86,7 @@ static int CmdHFEPACollectPACENonces(const char *Cmd) {
                 PrintAndLogEx(WARNING, "Failed to allocate memory");
                 return PM3_EMALLOC;
             }
-            
+
             // print nonce
             PrintAndLogEx(SUCCESS, "Length: %zu, Nonce: %s", nonce_length, sprint_hex_inrow(resp.data.asBytes, nonce_length));
             free(nonce);

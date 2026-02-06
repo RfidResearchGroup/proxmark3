@@ -56,36 +56,36 @@ static const TEST_VECTOR_T test_vectors[] = {
 };
 
 // Comment
-    /// <summary>
-    /// Initializes to allow iterative recovery
-    /// of multiple potential keys.  After calling
-    /// this init() function, can repeatedly call
-    /// the next() function until it returns false
-    /// to obtain all potential keys.
-    /// </summary>
-    /// <param name="input_partial_key">
-    /// Top 48 bits of the key, such as those discovered
-    /// using the proxmark3 command `lf em 4x70 brute`.
-    /// Only k[0..5] are used from this parameter,
-    /// corresponding to K₉₅..K₄₈.
-    /// </param>
-    /// <param name="input_nonce">
-    /// The nonce value.
-    /// Typically from a sniffed authentication.
-    /// </param>
-    /// <param name="input_frn">
-    /// The challenge sent from the reader (e.g., car)
-    /// to the tag (e.g., key).
-    /// Typically from a sniffed authentication.
-    /// </param>
-    /// <param name="input_grn">
-    /// The response sent from the tag (e.g., key)
-    /// to the car (e.g., car).
-    /// Typically from a sniffed authentication.
-    /// </param>
-    /// <remarks>
-    /// Note: In C++, each parameter would be a reference (not pointer).
-    /// </remarks>
+/// <summary>
+/// Initializes to allow iterative recovery
+/// of multiple potential keys.  After calling
+/// this init() function, can repeatedly call
+/// the next() function until it returns false
+/// to obtain all potential keys.
+/// </summary>
+/// <param name="input_partial_key">
+/// Top 48 bits of the key, such as those discovered
+/// using the proxmark3 command `lf em 4x70 brute`.
+/// Only k[0..5] are used from this parameter,
+/// corresponding to K₉₅..K₄₈.
+/// </param>
+/// <param name="input_nonce">
+/// The nonce value.
+/// Typically from a sniffed authentication.
+/// </param>
+/// <param name="input_frn">
+/// The challenge sent from the reader (e.g., car)
+/// to the tag (e.g., key).
+/// Typically from a sniffed authentication.
+/// </param>
+/// <param name="input_grn">
+/// The response sent from the tag (e.g., key)
+/// to the car (e.g., car).
+/// Typically from a sniffed authentication.
+/// </param>
+/// <remarks>
+/// Note: In C++, each parameter would be a reference (not pointer).
+/// </remarks>
 
 // void id48lib_key_recovery_init(
 //     const ID48LIB_KEY *input_partial_key,
@@ -95,30 +95,30 @@ static const TEST_VECTOR_T test_vectors[] = {
 // );
 
 // Comment
-    /// <summary>
-    /// This can be repeated called (after calling init())
-    /// to find the next potential key for the given
-    /// partial key + nonce + frn + grn values.
-    /// I've seen combinations that have up to six
-    /// potential keys available, although typically
-    /// there are 1-3 results.
-    /// Each call to this function will return a single
-    /// value.  Call repeatedly until the function returns
-    /// false to get all potential keys.
-    /// </summary>
-    /// <param name="potential_key_output">
-    /// When the function returns true, this caller-provided
-    /// value will be filled with the 96-bit key that, when
-    /// programmed to the tag, should authenticate against
-    /// the nonce+frn values, with tag returning the grn value.
-    /// </param>
-    /// <returns>
-    /// true when another potential key has been found.
-    /// false if no additional potential keys have been found.
-    /// </returns>
-    /// <remarks>
-    /// Note: In C++, each parameter would be a reference (not pointer).
-    /// </remarks>
+/// <summary>
+/// This can be repeated called (after calling init())
+/// to find the next potential key for the given
+/// partial key + nonce + frn + grn values.
+/// I've seen combinations that have up to six
+/// potential keys available, although typically
+/// there are 1-3 results.
+/// Each call to this function will return a single
+/// value.  Call repeatedly until the function returns
+/// false to get all potential keys.
+/// </summary>
+/// <param name="potential_key_output">
+/// When the function returns true, this caller-provided
+/// value will be filled with the 96-bit key that, when
+/// programmed to the tag, should authenticate against
+/// the nonce+frn values, with tag returning the grn value.
+/// </param>
+/// <returns>
+/// true when another potential key has been found.
+/// false if no additional potential keys have been found.
+/// </returns>
+/// <remarks>
+/// Note: In C++, each parameter would be a reference (not pointer).
+/// </remarks>
 // bool id48lib_key_recovery_next(
 //     ID48LIB_KEY *potential_key_output
 // );
@@ -144,7 +144,7 @@ bool recovery_succeeds(const TEST_VECTOR_T *test_vector, bool zero_partial_key) 
         // just verify that the potential key matches the test vector
         if (bytes_equal(potential_key.k, test_vector->key.k, sizeof(test_vector->key.k))) {
             key_found = true;
-        } 
+        }
     }
     return key_found;
 }

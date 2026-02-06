@@ -2027,7 +2027,7 @@ static int mfulc_fingerprint(void) {
         if ((status > 0) && (data[2] == 0x09)) {
             cmd[1] = 3;
             status = ul_send_cmd_raw(cmd, sizeof(cmd), data, 4, false);
-            if ((status > 0) && (data[0] == 0xE1) && (data[1] == 0x10) && (data[2] == 0x12) && (data[3] == 0x00) ) {
+            if ((status > 0) && (data[0] == 0xE1) && (data[1] == 0x10) && (data[2] == 0x12) && (data[3] == 0x00)) {
                 PrintAndLogEx(INFO, "MIFARE Hospitality (MF0ICU2(H))");
                 DropField();
                 return PM3_SUCCESS;
@@ -5054,7 +5054,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
     }
 
     // block 1.
-    memcpy(packetw.data, uid+3, 4);
+    memcpy(packetw.data, uid + 3, 4);
     packetw.block_no = 1;
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
@@ -5065,7 +5065,7 @@ static int CmdHF14AMfUCSetUid(const char *Cmd) {
 
     // block 2.
     packetw.data[0] = uid[3] ^ uid[4] ^ uid[5] ^ uid[6];
-    memcpy(packetw.data+1, oldblock2+1, 3);
+    memcpy(packetw.data + 1, oldblock2 + 1, 3);
     packetw.block_no = 2;
     clearCommandBuffer();
     SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
@@ -5469,7 +5469,7 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
         if (use_data) {
             SendCommandNG(CMD_HF_MIFAREU_WRITEBL, (uint8_t *)&packetw, sizeof(packetw));
             if ((WaitForResponseTimeout(CMD_HF_MIFAREU_WRITEBL, &resp, 1500) == false) ||
-                (resp.status != PM3_SUCCESS)) {
+                    (resp.status != PM3_SUCCESS)) {
                 PrintAndLogEx(FAILED, "Failed to write block BEFORE");
                 error_retries++;
                 continue; // try again
@@ -5478,8 +5478,8 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
 
         packetr.block_no = blockno;
         SendCommandNG(CMD_HF_MIFAREU_READBL, (uint8_t *)&packetr, sizeof(packetr));
-        if ((WaitForResponseTimeout(CMD_HF_MIFAREU_READBL, &resp, 1500) == false ) ||
-            (resp.status != PM3_SUCCESS)) {
+        if ((WaitForResponseTimeout(CMD_HF_MIFAREU_READBL, &resp, 1500) == false) ||
+                (resp.status != PM3_SUCCESS)) {
             PrintAndLogEx(FAILED, "Failed to read block BEFORE");
             error_retries++;
             continue; // try again
@@ -5504,8 +5504,8 @@ static int CmdHF14AMfuOtpTearoff(const char *Cmd) {
 
         clearCommandBuffer();
         SendCommandNG(CMD_HF_MIFAREU_READBL, (uint8_t *)&packetr, sizeof(packetr));
-        if ((WaitForResponseTimeout(CMD_HF_MIFAREU_READBL, &resp, 1500) == false ) ||
-            (resp.status != PM3_SUCCESS)) {
+        if ((WaitForResponseTimeout(CMD_HF_MIFAREU_READBL, &resp, 1500) == false) ||
+                (resp.status != PM3_SUCCESS)) {
             PrintAndLogEx(FAILED, "Failed to read block BEFORE");
             error_retries++;
             continue; // try again

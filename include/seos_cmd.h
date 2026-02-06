@@ -42,13 +42,13 @@ typedef struct {
 
     uint8_t diversifier_len;
     uint8_t diversifier[16];
-    
+
     uint8_t data_tag_len;
     uint8_t data_tag[8];
-    
+
     uint8_t data_len;
     uint8_t data[128];
-    
+
     uint8_t oid_len;
     uint8_t oid[32];
 } PACKED seos_emulate_req_t;

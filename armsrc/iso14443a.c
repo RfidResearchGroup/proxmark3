@@ -1881,13 +1881,13 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                     emlGet(emdata, start, MIFARE_BLOCK_SIZE);
                     // mask key pages if needed
                     if ((tagType == 13) && (block >= 0x29) && (block <= 0x2F)) {
-                            uint8_t offset = block >= 0x2C ? 0 : 0x2C - block;
-                            uint8_t length = block >= 0x2C ? 0x30 - block : block - 0x28;
-                            memset(emdata + offset * 4, 0x00, length * 4);
+                        uint8_t offset = block >= 0x2C ? 0 : 0x2C - block;
+                        uint8_t length = block >= 0x2C ? 0x30 - block : block - 0x28;
+                        memset(emdata + offset * 4, 0x00, length * 4);
                     } else if ((tagType == 14) && (block >= 0x2D) && (block <= 0x37)) {
-                            uint8_t offset = block >= 0x30 ? 0 : 0x30 - block;
-                            uint8_t length = block >= 0x30 ? (0x37 - block > 4 ? 4 : 0x37 - block) : block - 0x2C;
-                            memset(emdata + offset * 4, 0x00, length * 4);
+                        uint8_t offset = block >= 0x30 ? 0 : 0x30 - block;
+                        uint8_t length = block >= 0x30 ? (0x37 - block > 4 ? 4 : 0x37 - block) : block - 0x2C;
+                        memset(emdata + offset * 4, 0x00, length * 4);
                     }
                     // TODO: implement cyclic memory if we reach AUTH0 and AUTH1=0 and unauth on ULC/ULAES, or if we reach end of memory
                     AddCrc14A(emdata, MIFARE_BLOCK_SIZE);
@@ -1987,7 +1987,7 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
                 if (wrblock > pages) {
                     // send NACK 0x0 == invalid argument
                     EmSend4bit(CARD_NACK_IV);
-                // TODO: check if wrblock >= AUTH0 and unauth on ULC/ULAES -> NACK
+                    // TODO: check if wrblock >= AUTH0 and unauth on ULC/ULAES -> NACK
                 } else {
                     // send ACK
                     EmSend4bit(CARD_ACK);

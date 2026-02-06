@@ -2989,7 +2989,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 int16_t fsci = card.ats[1] & 0x0f;
 
                 PrintAndLogEx(INFO, "     ..." _YELLOW_("%02X") "............  T0    TA1 is%s present, TB1 is%s present, "
-                              "TC1 is%s present, FSCI is %d (FSC = %d)",
+                                    "TC1 is%s present, FSCI is %d (FSC = %d)",
                               card.ats[1],
                               (ta1 ? "" : _RED_(" NOT")),
                               (tb1 ? "" : _RED_(" NOT")),
@@ -3011,7 +3011,7 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
                 if (strlen(ds) != 0) ds[strlen(ds) - 2] = '\0';
                 if (strlen(dr) != 0) dr[strlen(dr) - 2] = '\0';
                 PrintAndLogEx(INFO, "     ......" _YELLOW_("%02X") ".........  TA1   different divisors are%s supported, "
-                              "DR: [%s], DS: [%s]",
+                                    "DR: [%s], DS: [%s]",
                               card.ats[pos],
                               ((card.ats[pos] & 0x80) ? _RED_(" NOT") : ""),
                               dr,

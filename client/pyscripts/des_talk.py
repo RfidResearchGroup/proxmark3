@@ -608,4 +608,4 @@ def delete_file(aid, key_type, key, com_mode, aid_key_type, aid_key):
     print(response)
 
 if __name__ == "__main__":
-    authenticate_and_menu()     
+    authenticate_and_menu()

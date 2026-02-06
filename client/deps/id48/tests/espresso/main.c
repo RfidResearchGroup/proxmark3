@@ -13,8 +13,8 @@ int main(void) {
         printf("Verifying Espresso Results...\n");
         result = verify_espresso_results();
         printf("Verifying Espresso Results:  %s\n",
-            result ? "SUCCESS" : "----> FAILURE <----"
-        );
+               result ? "SUCCESS" : "----> FAILURE <----"
+              );
     }
     // if (result) {
     //     printf("Hello2...\n");

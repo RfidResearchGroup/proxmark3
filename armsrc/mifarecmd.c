@@ -1797,7 +1797,7 @@ void MifareStaticNested(uint8_t blockNo, uint8_t keyType, uint8_t targetBlockNo,
         //   NT1 is any:
         //   NT2 case: random, but is static(static encrypted nested).
 
-        // pre-generate nonces: the distance value is related to the key type, so if the key type is the same, 
+        // pre-generate nonces: the distance value is related to the key type, so if the key type is the same,
         // we can directly use the measured distance value. (Experience)
         if (targetKeyType == 1 && nt1 == 0x009080A2 && forceDetectDist == 0) {
             target_nt[0] = prng_successor(nt1, 161);

@@ -1786,10 +1786,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             } PACKED;
             struct p *payload = (struct p *) packet->data.asBytes;
             SimulateIso14443aTagEx(payload->tagtype, payload->flags, payload->uid,
-                                 payload->exitAfter, payload->rats, sizeof(payload->rats),
-                                 payload->ulauth_1a1, payload->ulauth_1a1_len,
-                                 payload->ulauth_1a2, payload->ulauth_1a2_len
-                                );  // ## Simulate iso14443a tag - pass tag type & UID
+                                   payload->exitAfter, payload->rats, sizeof(payload->rats),
+                                   payload->ulauth_1a1, payload->ulauth_1a1_len,
+                                   payload->ulauth_1a2, payload->ulauth_1a2_len
+                                  );  // ## Simulate iso14443a tag - pass tag type & UID
             break;
         }
         case CMD_HF_ISO14443A_SIM_AID: {

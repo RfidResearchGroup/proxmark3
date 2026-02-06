@@ -159,7 +159,7 @@ static int decrypt_cryptogram(uint8_t *key, uint8_t *input, uint8_t *out, int in
 
 static void increment_command_wrapper(uint8_t *input, int input_len) {
     // Increment the end of the header by 1
-    uint8_t* offset = &input[input_len - sizeof(uint32_t)];
+    uint8_t *offset = &input[input_len - sizeof(uint32_t)];
     uint32_t value = MemBeToUint4byte(offset);
     value++;
     Uint4byteToMemBe(offset, value);
@@ -192,12 +192,12 @@ static void generate_command_wrapping(uint8_t *command_Header, int command_heade
 
     // Command Header is for the APDU Command to be sent
     int padded_Command_Header_len = command_header_len;
-    uint8_t padded_Command_Header[padded_Command_Header_len+block_size];
+    uint8_t padded_Command_Header[padded_Command_Header_len + block_size];
     padToBlockSize(command_Header, &padded_Command_Header_len, block_size, padded_Command_Header);
 
     // Unencrypted Command is our actual command data
     int padded_unencrypted_Command_len = unencrypted_command_len;
-    uint8_t padded_unencrypted_Command[padded_unencrypted_Command_len+block_size];
+    uint8_t padded_unencrypted_Command[padded_unencrypted_Command_len + block_size];
     padToBlockSize(unencrypted_Command, &padded_unencrypted_Command_len, block_size, padded_unencrypted_Command);
 
     uint8_t padded_encrypted_Command[padded_unencrypted_Command_len];
@@ -216,7 +216,7 @@ static void generate_command_wrapping(uint8_t *command_Header, int command_heade
     memcpy(toEncrypt + ARRAYLEN(rndCounter) + padded_Command_Header_len + ARRAYLEN(asn1_tag_cryptograph) + ARRAYLEN(padded_encrypted_Command), command_trailer, ARRAYLEN(command_trailer));
 
     int padded_toEncrypt_len = ARRAYLEN(toEncrypt);
-    uint8_t padded_toEncrypt[padded_toEncrypt_len+block_size];
+    uint8_t padded_toEncrypt[padded_toEncrypt_len + block_size];
     padToBlockSize(toEncrypt, &padded_toEncrypt_len, block_size, padded_toEncrypt);
 
     // Breakdown
@@ -286,10 +286,10 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
     // uint8_t unencrypted_command[4] = {0x5c,0x02,0xff,0x00};
     // Modification of the tags 2nd place from 00 can return other data
 
-    uint8_t unencrypted_command[data_tag_len+2];
+    uint8_t unencrypted_command[data_tag_len + 2];
     unencrypted_command[0] = 0x5c;
     unencrypted_command[1] = data_tag_len;
-    memcpy(unencrypted_command+2, data_tag, data_tag_len);
+    memcpy(unencrypted_command + 2, data_tag, data_tag_len);
 
     int unencrypted_command_len = ARRAYLEN(unencrypted_command);
 
@@ -402,11 +402,11 @@ static int seos_write_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversifie
     // ff 00 [04] 12 34 56 78
     // ff 00 = BER-TLV tag of the data object to be written
 
-    uint8_t unencrypted_command[write_data_tag_len+1+sio_size];
+    uint8_t unencrypted_command[write_data_tag_len + 1 + sio_size];
     memcpy(unencrypted_command, write_data_tag, write_data_tag_len);
 
     unencrypted_command[write_data_tag_len] = sio_size;
-    memcpy(unencrypted_command+write_data_tag_len+1, sio, sio_size);
+    memcpy(unencrypted_command + write_data_tag_len + 1, sio, sio_size);
 
     int unencrypted_command_len = ARRAYLEN(unencrypted_command);
 
@@ -650,12 +650,12 @@ static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t 
     for (int i = 0; i < response_length - 2;) {
         // extract MAC
         if (response[i] == 0x8E) {
-            if (response[i+1] != MAC_value_len) {
+            if (response[i + 1] != MAC_value_len) {
                 goto out;
             }
             // Ensure there's enough bytes remaining
             // in the response for the full MAC
-            if (i+2+MAC_value_len > response_length) {
+            if (i + 2 + MAC_value_len > response_length) {
                 goto out;
             }
             input_len = i;
@@ -665,7 +665,7 @@ static int select_DF_verify(uint8_t *response, uint8_t response_length, uint8_t 
             break;
         }
         // skip to next tag
-        i += 2 + response[i+1];
+        i += 2 + response[i + 1];
     }
     if (res != PM3_SUCCESS) {
         goto out;
@@ -821,7 +821,7 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
     uint8_t MAC_key[24] = {0x00};
     memcpy(MAC_key, keys[key_index].privMacKey, 16);
     create_cmac(MAC_key, CRYPTOGRAM_encrypted_data_raw, mac, iv_size, sizeof(mac), encryption_algorithm);
-    if (memcmp(CRYPTOGRAM_encrypted_data_raw+iv_size, mac, iv_size) != 0) {
+    if (memcmp(CRYPTOGRAM_encrypted_data_raw + iv_size, mac, iv_size) != 0) {
         PrintAndLogEx(ERR, "Synthesized IV Verification Failed");
         PrintAndLogEx(ERR, _YELLOW_("Likely wrong Priv Mac Key"));
         return PM3_ESOFT;
@@ -1234,7 +1234,7 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
             return res;
         }
         create_mutual_auth_key(KeyIFD, KeyICC, RNDICC, RNDIFD, Diversified_New_EncryptionKey, Diversified_New_MACKey, ALGORITHM_INFO_value1, ALGORITHM_INFO_value2);
-        
+
         if (write == NULL) {
             uint8_t sio_buffer_out[PM3_CMD_DATA_SIZE];
             int sio_size = 0;
@@ -1819,7 +1819,7 @@ static int CmdHfSeosSim(const char *Cmd) {
             return PM3_EOPABORTED;
         }
     }
-    
+
     return PM3_SUCCESS;
 }
 

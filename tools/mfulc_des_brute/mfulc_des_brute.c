@@ -234,13 +234,13 @@ static void *worker(void *arg) {
 
 static void print_help_and_exit(const char *cmd_name) {
     fprintf(stderr,
-        "Usage:\n"
-        "   * Counterfeit key recovery:\n"
-        "       %s -c <null key ERndB (8 hex digits)> <target key ERndB (8 hex digits)> <3DES base key hex (32 hex digits)> <key segment (1-4)> <num threads>\n"
-        "   * Reader nonce key recovery:\n"
-        "       %s -r <ERndB (8 hex digits)> <ERndARndB' (16 hex digits)> <3DES base key hex (32 hex digits)> <key segment (1-4)> <num threads>\n",
-        cmd_name,
-        cmd_name);
+            "Usage:\n"
+            "   * Counterfeit key recovery:\n"
+            "       %s -c <null key ERndB (8 hex digits)> <target key ERndB (8 hex digits)> <3DES base key hex (32 hex digits)> <key segment (1-4)> <num threads>\n"
+            "   * Reader nonce key recovery:\n"
+            "       %s -r <ERndB (8 hex digits)> <ERndARndB' (16 hex digits)> <3DES base key hex (32 hex digits)> <key segment (1-4)> <num threads>\n",
+            cmd_name,
+            cmd_name);
     exit(1);
 }
 
