@@ -1746,8 +1746,7 @@ typedef struct {
 } mfu_otp_identify_t;
 
 static mfu_otp_identify_t mfu_otp_ident_table[] = {
-    { "SALTO Systems card", 12, 4, "534C544F", ul_c_otpgenA, "report to iceman!" },
-    { NULL, 0, 0, NULL, NULL, NULL }
+    { "SALTO Systems card", 12, 4, "534C544F", ul_c_otpgenA, "report to iceman!" }
 };
 
 static mfu_otp_identify_t *mfu_match_otp_fingerprint(uint8_t *uid, uint8_t *data) {
@@ -1775,7 +1774,7 @@ static mfu_otp_identify_t *mfu_match_otp_fingerprint(uint8_t *uid, uint8_t *data
             PrintAndLogEx(DEBUG, "(fingerprint) found %s", mfu_otp_ident_table[i].desc);
             return &mfu_otp_ident_table[i];
         }
-    } while (mfu_otp_ident_table[++i].desc);
+    } while (++i < ARRAYLEN(mfu_otp_ident_table));
     return NULL;
 }
 
