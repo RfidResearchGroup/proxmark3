@@ -8024,16 +8024,14 @@
                 "--nonce <hex> Nonce value as 8 hex bytes",
                 "--privenc <hex> Privacy Encryption key as 16 hex bytes",
                 "--privmac <hex> Privacy MAC key as 16 hex bytes",
-                "--read <hex> Undiversified Read key as 16 hex bytes",
-                "--write <hex> Undiversified Write key as 16 hex bytes",
-                "--admin <hex> Undiversified Admin key as 16 hex bytes",
+                "--auth <hex> Undiversified Auth key as 16 hex bytes",
                 "-f, --file <fn> Specify a filename for load / save operations",
                 "--save Save keys in memory to file specified by filename",
                 "--load Load keys to memory from file specified by filename",
                 "-p, --print Print keys loaded into memory",
                 "-v, --verbose verbose (print all key info)"
             ],
-            "usage": "hf seos managekeys [-hpv] [--ki <dec>] [--keyslot <hex>] [--nonce <hex>] [--privenc <hex>] [--privmac <hex>] [--read <hex>] [--write <hex>] [--admin <hex>] [-f <fn>] [--save] [--load]"
+            "usage": "hf seos managekeys [-hpv] [--ki <dec>] [--keyslot <hex>] [--nonce <hex>] [--privenc <hex>] [--privmac <hex>] [--auth <hex>] [-f <fn>] [--save] [--load]"
         },
         "hf seos pacs": {
             "command": "hf seos pacs",
@@ -8068,6 +8066,28 @@
                 "-d, --data <hex> DER encoded command to send to SAM"
             ],
             "usage": "hf seos sam [-hvknt] [-d <hex>]..."
+        },
+        "hf seos sim": {
+            "command": "hf seos sim",
+            "description": "Simulate a SEOS card with the provided keys and data By default: - ADF OID : 2B0601040181E438010102011801010202 - Diversifier: 01020304050607 - Key Index : 2 - Data Tag : FF00 - Encryption : AES128 - Hashing : SHA256",
+            "notes": [
+                "hf seos sim -d 12345678",
+                "hf seos sim --ki 1",
+                "hf seos sim -o 2B0601040181E438010102011801010202 -u 01020304050607 --ki 2 -d 12345678",
+                "hf seos sim -o 2B0601040181E438010102011801010202 --legacy -t FF41 -d 12345678"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-t, --tag <hex> <0-100> hex bytes for tag to simulate (Default: FF00)",
+                "-o, --oid <hex> <0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)",
+                "--ki <dec> Specify key index to set key in memory",
+                "--div <hex> <0-16> hex bytes for diversifier (Equivalent of UID)",
+                "-d, --data <hex> <0-128> hex bytes for data (Must be valid BER-TLV)",
+                "-u, --uid <hex> <0-10> hex bytes for UID (Must be a RID i.e. [0]=0x08)",
+                "-l, --legacy Use legacy algorithms (3DES/SHA1)"
+            ],
+            "usage": "hf seos sim [-hl] [-t <hex>] [-o <hex>] [--ki <dec>] [--div <hex>] [-d <hex>] [-u <hex>]"
         },
         "hf seos write": {
             "command": "hf seos write",
@@ -13771,8 +13791,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 787,
+        "commands_extracted": 790,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2025-12-22T03:54:40"
+        "extracted_on": "2026-02-06T12:06:55"
     }
 }

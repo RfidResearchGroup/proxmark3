@@ -523,6 +523,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf seos write" },
     { 0, "hf seos adf" },
     { 0, "hf seos gdf" },
+    { 0, "hf seos sim" },
     { 1, "hf seos managekeys" },
     { 1, "hf st25ta help" },
     { 0, "hf st25ta info" },

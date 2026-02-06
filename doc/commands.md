@@ -742,6 +742,7 @@ Check column "offline" for their availability.
 |`hf seos write          `|N       |`Write an ADF to the card`
 |`hf seos adf            `|N       |`Read an ADF from the card`
 |`hf seos gdf            `|N       |`Read an GDF from card`
+|`hf seos sim            `|N       |`Simulate Seos tag`
 |`hf seos managekeys     `|Y       |`Manage keys to use with SEOS commands`
 
 
