@@ -2744,8 +2744,6 @@ int CmdHF14BNdefRead(const char *Cmd) {
         switch_off_field_14b();
         return res;
     }
-    // take offset from response
-    uint8_t offset = response[1];
 
     // Parse CC data
     uint8_t cc_data[resplen - 2];
@@ -2792,7 +2790,7 @@ int CmdHF14BNdefRead(const char *Cmd) {
     }
 
     uint16_t ndef_size = (response[0] << 8) + response[1];
-    offset = 2;
+    uint8_t offset = 2;
 
     uint8_t *ndef_file = calloc(ndef_size, sizeof(uint8_t));
     if (ndef_file == NULL) {
