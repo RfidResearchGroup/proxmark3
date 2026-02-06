@@ -401,7 +401,7 @@ typedef struct {
 } PACKED mful_readblock_t;
 
 typedef struct {
-    uint8_t bytelen;
+    uint16_t bytelen;
     uint16_t startidx;
 } PACKED mful_readblock_resp_t;
 
