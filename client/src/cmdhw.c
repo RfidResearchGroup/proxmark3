@@ -23,6 +23,9 @@
 #include <ctype.h>
 
 #ifdef HAVE_PYTHON
+#ifdef _POSIX_C_SOURCE
+#undef _POSIX_C_SOURCE
+#endif
 #include <Python.h>
 #endif
 

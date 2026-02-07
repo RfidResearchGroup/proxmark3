@@ -20,6 +20,9 @@
 #include <string.h>
 
 #ifdef HAVE_PYTHON
+#ifdef _POSIX_C_SOURCE
+#undef _POSIX_C_SOURCE
+#endif
 //#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <ctype.h>
