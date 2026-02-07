@@ -2,11 +2,11 @@ FROM opensuse/tumbleweed
 
 ENV LANG=C
 # libqt5-qtbase-devel skipped
-RUN zypper --non-interactive install --no-recommends shadow sudo git patterns-devel-base-devel_basis cmake gcc-c++ readline-devel libbz2-devel liblz4-devel bluez-devel python3-devel libopenssl-devel cross-arm-none-gcc14 cross-arm-none-newlib-devel gd-devel
+RUN zypper --non-interactive install --no-recommends shadow sudo git patterns-devel-base-devel_basis cmake gcc-c++ readline-devel libbz2-devel liblz4-devel bluez-devel python3-devel libopenssl-devel cross-arm-none-gcc15 cross-arm-none-newlib-devel gd-devel
 
 #RUN zypper addrepo https://download.opensuse.org/repositories/home:wkazubski/openSUSE_Tumbleweed/home:wkazubski.repo && \
 #    zypper --gpg-auto-import-keys refresh && \
-#    zypper --non-interactive install cross-arm-none-eabi-gcc12 cross-arm-none-eabi-newlib
+#    zypper --non-interactive install cross-arm-none-eabi-gcc15 cross-arm-none-eabi-newlib
 
 RUN zypper --non-interactive install ocl-icd-devel
 

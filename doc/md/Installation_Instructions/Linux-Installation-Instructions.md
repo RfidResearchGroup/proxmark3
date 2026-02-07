@@ -135,7 +135,7 @@ readline-devel libbz2-devel liblz4-devel \
 python3-devel libqt5-qtbase-devel libopenssl-devel gd-devel
 sudo zypper addrepo https://download.opensuse.org/repositories/home:wkazubski/15.6/home:wkazubski.repo && \
 sudo zypper --gpg-auto-import-keys refresh && \
-sudo zypper install cross-arm-none-eabi-gcc13 cross-arm-none-eabi-newlib
+sudo zypper install cross-arm-none-eabi-gcc15 cross-arm-none-eabi-newlib
 ```
 
 Note that Bluez is not available on openSUSE Leap so the native Bluetooth support won't be available in the client.
