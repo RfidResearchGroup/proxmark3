@@ -6649,14 +6649,20 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
 
         // UL_AES specific
         if ((tagtype & MFU_TT_UL_AES)) {
-            // default config? TODO:
+            // default config?
 
             switch (i) {
                 case 41:
                     memcpy(data, "\x00\x00\x00\x3C", 4);
                     break;
                 case 42:
+                    // schann disabled by previous write on block 41
+                    use_schann = false;
                     memcpy(data, "\x8C\x05\x00\x00", 4);
+                    break;
+                case 46:
+                    // RFU OTP, write will break if already set to non zero
+                    i = 47;
                     break;
                 case 48:
                     goto ulaes;
