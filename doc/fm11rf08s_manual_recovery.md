@@ -169,13 +169,10 @@ Common hotel MAD application IDs:
 
 ## Why Not Just Use the Recovery Script?
 
-The Iceman firmware includes `fm11rf08s_recovery.py` (by Doegox) which automates this entire process. In theory, you just run `script run fm11rf08s_recovery` and it handles everything. In practice, it breaks constantly:
+The Iceman firmware includes `fm11rf08s_recovery.py` (by Doegox) which automates this entire process. In theory, you just run `script run fm11rf08s_recovery` and it handles everything. In practice, it may break:
 
-- **Missing `_pm3` SWIG module** — The script imports a C extension that must be compiled during the PM3 build. Many installations (especially Homebrew on macOS) don't build it. You get `ModuleNotFoundError: No module named '_pm3'` or a `SIGTRAP` crash.
-- **Hardcoded tool paths** ([#2689](https://github.com/RfidResearchGroup/proxmark3/issues/2689)) — The script looks for `staticnested_1nt` at a relative path that doesn't exist if your package manager installs PM3 differently (Arch Linux, Homebrew, etc.).
-- **Backdoor auth failures** ([#2553](https://github.com/RfidResearchGroup/proxmark3/issues/2553)) — `--collect_fm11rf08s` uses the backdoor key for initial auth. On some FM11RF08S variants, the backdoor auth command fails silently, returning all zeros. The `--collect_fm11rf08s_without_backdoor` flag was added as a workaround.
-- **Unicode crashes** ([#2838](https://github.com/RfidResearchGroup/proxmark3/pull/2838)) — Non-ASCII data in card blocks causes `UnicodeEncodeError` during dump display. Fixed May 2025.
-- **Path parsing breakage** ([#2766](https://github.com/RfidResearchGroup/proxmark3/issues/2766)) — A console output formatting change broke the script's ability to find its own file paths.
+- **Python3 support** — The script requires a Proxmark3 installation built with Python3 support. Some installations (especially Homebrew on macOS) don't build it. You get `ModuleNotFoundError: No module named '_pm3'` or a `SIGTRAP` crash.
+- **Backdoor auth failures** — `--collect_fm11rf08s` uses the backdoor key for initial auth. On some FM11RF08S variants, the backdoor auth command fails silently, returning all zeros. The `--collect_fm11rf08s_without_backdoor` flag was added as a workaround.
 
 There's also an open feature request ([#2565](https://github.com/RfidResearchGroup/proxmark3/issues/2565)) asking `autopwn` to detect FM11RF08S cards and suggest the recovery script automatically, instead of just failing with contradictory error messages. As of this writing, `autopwn` still gives no guidance when it hits the static nonce wall.
 
