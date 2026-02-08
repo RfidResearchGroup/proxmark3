@@ -222,19 +222,3 @@ Common locations: `/usr/local/share/proxmark3/tools/` or `/usr/share/proxmark3/t
 | Full dump with all keys | 10-15 seconds |
 | **Total for 3 unknown keys** | **~15 minutes** |
 
-## Known Issues in the Iceman Repo
-
-| Issue | Description | Status |
-|-------|-------------|--------|
-| [#2553](https://github.com/RfidResearchGroup/proxmark3/issues/2553) | `isen --collect_fm11rf08s` Auth1 error — backdoor auth fails on some cards | Closed |
-| [#2565](https://github.com/RfidResearchGroup/proxmark3/issues/2565) | Feature request: autopwn should suggest fm11rf08s_recovery on static nonce | Open |
-| [#2689](https://github.com/RfidResearchGroup/proxmark3/issues/2689) | Scripts use hardcoded tool paths — breaks on non-standard installs | Closed |
-| [#2766](https://github.com/RfidResearchGroup/proxmark3/issues/2766) | fm11rf08_recovery.py broken by console output formatting change | Closed |
-| [#2838](https://github.com/RfidResearchGroup/proxmark3/pull/2838) | UnicodeDecodeError in fm11rf08s_full.py on non-ASCII card data | Merged |
-| [#2571](https://github.com/RfidResearchGroup/proxmark3/pull/2571) | QoL: save dumps to prefs path, option to keep generated dictionaries | Merged |
-
-## References
-
-- Doegox (2024) — [FM11RF08S backdoor and static nonce analysis](https://eprint.iacr.org/2024/1275)
-- Iceman Proxmark3 firmware — [GitHub](https://github.com/RfidResearchGroup/proxmark3)
-- MIFARE Application Directory (MAD) — NXP AN10787
