@@ -6844,12 +6844,14 @@ static int CmdHF14AMfUIncr(const char *Cmd) {
                   "Increment a MIFARE Ultralight Ev1 counter\n"
                   "Will read but not increment counter if NTAG is detected",
                   "hf mfu incr -c 0 -v 1337\n"
-                  "hf mfu incr -c 2 -v 0 -p FFFFFFFF");
+                  "hf mfu incr -c 2 -v 0 -k FFFFFFFF");
     void *argtable[] = {
         arg_param_begin,
         arg_int1("c", "cnt", "<dec>", "Counter index from 0"),
         arg_int1("v", "val", "<dec>", "Value to increment by (0-16777215)"),
-        arg_str0("p", "pwd", "<hex>", "PWD to authenticate with"),
+        arg_str0("k", "key", "<hex>", "Authentication key (UL-AES 16 bytes, EV1/NTAG 4 bytes)"),
+        arg_lit0("l", NULL, "Swap entered key's endianness"),
+        arg_lit0(NULL, "schann", "use secure channel. Must have key"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -6857,23 +6859,30 @@ static int CmdHF14AMfUIncr(const char *Cmd) {
     uint8_t counter = arg_get_int_def(ctx, 1, 3);
     uint32_t value = arg_get_u32_def(ctx, 2, 16777216);
 
-    int pwd_len;
-    uint8_t pwd[4] = { 0x00 };
-    CLIGetHexWithReturn(ctx, 3, pwd, &pwd_len);
+    int ak_len = 0;
+    uint8_t authenticationkey[16] = {0x00};
+    uint8_t pack[4] = {0, 0, 0, 0};
+    CLIGetHexWithReturn(ctx, 3, authenticationkey, &ak_len);
+    bool swap_endian = arg_get_lit(ctx, 4);
+    bool use_schann = arg_get_lit(ctx, 5);
+    CLIParserFree(ctx);
 
-    // this command should be adapted to handle UL-AES counter
-    bool schann = false;
-
-    bool has_key = false;
-    if (pwd_len) {
-        has_key = true;
-        if (pwd_len != 4) {
-            PrintAndLogEx(WARNING, "incorrect PWD length");
-            return PM3_EINVARG;
-        }
+    bool has_auth_key = false;
+    bool has_pwd = false;
+    if (ak_len == 16) {
+        has_auth_key = true;
+    } else if (ak_len == 4) {
+        has_pwd = true;
+    } else if (ak_len != 0) {
+        PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
+        return PM3_EINVARG;
     }
 
-    CLIParserFree(ctx);
+    if (use_schann && has_auth_key == false) {
+        PrintAndLogEx(WARNING, "Secure channel must be called with key");
+        return PM3_EINVARG;
+    }
+    uint8_t *auth_key_ptr = authenticationkey;
 
     if (counter > 2) {
         PrintAndLogEx(WARNING, "Counter index must be in range 0-2");
@@ -6891,7 +6900,7 @@ static int CmdHF14AMfUIncr(const char *Cmd) {
     }
 
     uint64_t tagtype = GetHF14AMfU_Type();
-    uint64_t tags_with_counter_ul = MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1;
+    uint64_t tags_with_counter_ul = MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1 | MFU_TT_UL_AES;
     uint64_t tags_with_counter_ntag = MFU_TT_NTAG_213 | MFU_TT_NTAG_213_F | MFU_TT_NTAG_213_C | MFU_TT_NTAG_213_TT | MFU_TT_NTAG_215 | MFU_TT_NTAG_216;
     if ((tagtype & (tags_with_counter_ul | tags_with_counter_ntag)) == 0) {
         PrintAndLogEx(WARNING, "tag type does not have counters");
@@ -6906,23 +6915,33 @@ static int CmdHF14AMfUIncr(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t pack[4] = { 0, 0, 0, 0 };
-    if (has_key) {
-        if (ulev1_requestAuthentication(pwd, pack, sizeof(pack)) == PM3_EWRONGANSWER) {
-            PrintAndLogEx(FAILED, "authentication failed UL-EV1/NTAG");
-            DropField();
-            return PM3_ESOFT;
+    // Swap endianness
+    if (swap_endian) {
+        if (ak_len == 16) {
+            if (((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
+                auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 16);
+            }
+        } else if (ak_len == 4) {
+            auth_key_ptr = SwapEndian64(authenticationkey, ak_len, 4);
         }
     }
 
+    if (has_auth_key) {
+        if (((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
+            PrintAndLogEx(INFO, "Using %s... " _GREEN_("%s"), "aes", sprint_hex_inrow(authenticationkey, ak_len));
+        }
+    } else if (has_pwd) {
+        PrintAndLogEx(INFO, "Using %s... " _GREEN_("%s"), "pwd", sprint_hex_inrow(authenticationkey, ak_len));
+    }
+
     iso14a_card_select_t card;
-    if (ul_select(&card) == false) {
+    if (ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, pack, sizeof(pack), use_schann) == PM3_ESOFT) {
         PrintAndLogEx(FAILED, "failed to select card, exiting...");
         return PM3_ESOFT;
     }
 
     uint8_t current_counter[3] = { 0, 0, 0 };
-    int len = ulev1_readCounter(counter, current_counter, sizeof(current_counter), schann);
+    int len = ulev1_readCounter(counter, current_counter, sizeof(current_counter), use_schann);
     if (len != sizeof(current_counter)) {
         PrintAndLogEx(FAILED, "failed to read old counter");
         if (is_ntag) {
@@ -6942,14 +6961,14 @@ static int CmdHF14AMfUIncr(const char *Cmd) {
     }
 
     uint8_t resp[1] = { 0x00 };
-    if (ul_send_cmd_raw(increment_cmd, sizeof(increment_cmd), resp, sizeof(resp), schann) < 0) {
+    if (ul_send_cmd_raw(increment_cmd, sizeof(increment_cmd), resp, sizeof(resp), use_schann) < 0) {
         PrintAndLogEx(FAILED, "failed to increment counter");
         DropField();
         return PM3_ESOFT;
     }
 
     uint8_t new_counter[3] = { 0, 0, 0 };
-    int new_len = ulev1_readCounter(counter, new_counter, sizeof(new_counter), schann);
+    int new_len = ulev1_readCounter(counter, new_counter, sizeof(new_counter), use_schann);
     if (new_len != sizeof(current_counter)) {
         PrintAndLogEx(FAILED, "failed to read new counter");
         DropField();
