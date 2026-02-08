@@ -46,6 +46,10 @@ void set_session_channel(bool use_schann) {
     g_secure_session.use_schann = use_schann;
 }
 
+bool get_session_channel(void) {
+    return g_secure_session.use_schann;
+}
+
 ulaes_key_t *get_secure_session_obj(void) {
     return &g_secure_session;
 }

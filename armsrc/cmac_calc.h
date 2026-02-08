@@ -36,6 +36,7 @@ ulaes_key_t *get_secure_session_obj(void);
 void init_secure_session(void);
 void increase_session_counter(void);
 void set_session_channel(bool use_schann);
+bool get_session_channel(void);
 
 void ulaes_cmac(const uint8_t *key, size_t key_len, const uint8_t *input, size_t ilen, uint8_t output[16]);
 void ulaes_cmac8(uint8_t *cmac, uint8_t *mac);

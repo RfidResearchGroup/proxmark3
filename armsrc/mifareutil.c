@@ -597,23 +597,11 @@ static int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData) {
     uint16_t len = 0;
     uint8_t offset = 0;
 
-    ulaes_key_t *sobj = get_secure_session_obj();
-
-    if (sobj->use_schann) {
+    if (get_session_channel()) {
         offset = 8;
-        uint8_t mac[16] = {0};
-        // counter 2b, cmd, arg,  8byte cmac, 2b crc
-        uint8_t cmd_mac[2 + 2 + 8] = {
-            sobj->counter & 0xFF,
-            (sobj->counter >> 8) & 0xFF,
-            ISO14443A_CMD_READBLOCK, blockNo
-        };
-        ulaes_cmac(sobj->sessionkey, sizeof(sobj->sessionkey), cmd_mac, 4, mac);
-        ulaes_cmac8(mac, cmd_mac + 4);
-
-        increase_session_counter();
-
-        len = mifare_sendcmd_schann(cmd_mac + 2, sizeof(cmd_mac) - 2, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
+        uint8_t cmd[2 + 8] = { ISO14443A_CMD_READBLOCK, blockNo };
+        append_cmac(cmd, 2);
+        len = mifare_sendcmd_schann(cmd, sizeof(cmd), receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
     } else {
         len = mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
     }
@@ -833,26 +821,11 @@ int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData) {
     uint8_t receivedAnswerPar[MAX_MIFARE_PARITY_SIZE] = {0x00};
     uint16_t len = 0;
 
-    ulaes_key_t *sobj = get_secure_session_obj();
-
-    if (sobj->use_schann) {
-
-        uint8_t mac[16] = {0};
-        uint8_t cmd_mac[2 + 1 + 1 + 4 + 8] = {
-            sobj->counter & 0xFF,
-            (sobj->counter >> 8) & 0xFF,
-            MIFARE_ULC_WRITE,
-            blockNo
-        };
-        memcpy(cmd_mac + 4, blockData, 4);
-
-        ulaes_cmac(sobj->sessionkey, sizeof(sobj->sessionkey), cmd_mac, 8, mac);
-        ulaes_cmac8(mac, cmd_mac + 8);
-
-        increase_session_counter();
-
-        len = mifare_sendcmd_schann(cmd_mac + 2, sizeof(cmd_mac) - 2, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
-
+    if (get_session_channel()) {
+        uint8_t cmd[2 + 4 + 8] = { MIFARE_ULC_WRITE, blockNo };
+        memcpy(cmd + 2, blockData, 4);
+        append_cmac(cmd, 2 + 4);
+        len = mifare_sendcmd_schann(cmd, sizeof(cmd), receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
         // we are skipping verifying the cmac,  since we don't care.
         // increase counter for the write response
         increase_session_counter();
