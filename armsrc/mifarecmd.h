@@ -67,7 +67,7 @@ void MifareG4WriteBlk(uint8_t blockno, uint8_t *pwd, uint8_t *data, uint8_t work
 void MifareSetMod(uint8_t *datain);
 void MifarePersonalizeUID(uint8_t keyType, uint8_t perso_option, uint64_t key);
 
-void MifareUSetKey(uint8_t arg0, uint8_t *datain);
+void MifareUSetKey(mful_setkey_t *packet);
 void OnSuccessMagic(void);
 void OnErrorMagic(uint8_t reason);
 

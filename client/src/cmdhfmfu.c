@@ -4927,6 +4927,8 @@ static int CmdHF14AMfUSetKey(const char *Cmd) {
         arg_str0("k", "key", "<hex>", "New key (16 hex bytes)"),
         arg_int0("i", "idx", "<0..1>", "New key index (def: 0), only for UL-AES"),
         arg_lit0("l", NULL, "Swap entered keys' endianness"),
+        arg_str0(NULL, "usekey", "<hex>", "Current UL-C 3DES or UL-AES DataProt key (16 hex bytes)"),
+        arg_lit0(NULL, "schann", "use secure channel. Must have usekey"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4937,6 +4939,11 @@ static int CmdHF14AMfUSetKey(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, authenticationkey, &ak_len);
     int key_index = arg_get_int_def(ctx, 2, 0);
     bool swap_endian = arg_get_lit(ctx, 3);
+    int use_ak_len = 0;
+    uint8_t use_authenticationkey[16] = {0x00};
+    uint8_t *use_auth_key_ptr = use_authenticationkey;
+    CLIGetHexWithReturn(ctx, 4, use_authenticationkey, &use_ak_len);
+    bool use_schann = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
     if (ak_len != 16) {
@@ -4945,6 +4952,19 @@ static int CmdHF14AMfUSetKey(const char *Cmd) {
     }
     if (key_index < 0 || key_index > 1) {
         PrintAndLogEx(WARNING, "Invalid key index");
+        return PM3_EINVARG;
+    }
+
+    bool has_auth_key = false;
+    if (use_ak_len == 16) {
+        has_auth_key = true;
+    } else if (use_ak_len != 0) {
+        PrintAndLogEx(WARNING, "usekey must be 16 hex bytes\n");
+        return PM3_EINVARG;
+    }
+
+    if (use_schann && has_auth_key == false) {
+        PrintAndLogEx(WARNING, "Secure channel must be called with usekey");
         return PM3_EINVARG;
     }
 
@@ -4968,24 +4988,48 @@ static int CmdHF14AMfUSetKey(const char *Cmd) {
         }
     }
 
-    clearCommandBuffer();
-    if ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) {
-        SendCommandMIX(CMD_HF_MIFAREU_SETKEY, 1, 0, 0, auth_key_ptr, sizeof(authenticationkey));
-    } else if ((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES) {
-        SendCommandMIX(CMD_HF_MIFAREU_SETKEY, key_index + 2, 0, 0, auth_key_ptr, sizeof(authenticationkey));
+    // Swap endianness of usekey
+    if (swap_endian) {
+        if (use_ak_len == 16) {
+            if (((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C)) {
+                use_auth_key_ptr = SwapEndian64(use_authenticationkey, use_ak_len, 8);
+            } else if (((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
+                use_auth_key_ptr = SwapEndian64(use_authenticationkey, use_ak_len, 16);
+            }
+        }
     }
 
-    PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-        if ((resp.oldarg[0] & 0xff) == 1) {
-            PrintAndLogEx(INFO, "New key... " _GREEN_("%s"), sprint_hex_inrow(authenticationkey, sizeof(authenticationkey)));
-        } else {
-            PrintAndLogEx(WARNING, "Failed writing at block %u", (uint8_t)(resp.oldarg[1] & 0xFF));
-            return PM3_ESOFT;
+    if (has_auth_key) {
+        if (((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C)) {
+            PrintAndLogEx(INFO, "Using 3des... " _GREEN_("%s"), sprint_hex_inrow(use_authenticationkey, use_ak_len));
+        } else if (((tagtype & MFU_TT_UL_AES) == MFU_TT_UL_AES)) {
+            PrintAndLogEx(INFO, "Using aes...  " _GREEN_("%s"), sprint_hex_inrow(use_authenticationkey, use_ak_len));
         }
-    } else {
-        PrintAndLogEx(WARNING, "command execution time out");
+    }
+
+    mful_setkey_t packet = {
+        .has_auth_key = has_auth_key,
+        .use_schann = use_schann,
+        .key_index = key_index,
+        .keytype = ((tagtype & MFU_TT_UL_C) == MFU_TT_UL_C) ? 1 : 3, // 1=ULC 3=ULAES
+    };
+    if (has_auth_key) {
+        memcpy(packet.auth_key, use_auth_key_ptr, 16);
+    }
+    memcpy(packet.key, auth_key_ptr, 16);
+
+    clearCommandBuffer();
+    PacketResponseNG resp;
+
+    SendCommandNG(CMD_HF_MIFAREU_SETKEY, (uint8_t *)&packet, sizeof(packet));
+    if (WaitForResponseTimeout(CMD_HF_MIFAREU_SETKEY, &resp, 1500) == false) {
         return PM3_ETIMEOUT;
+    }
+    if (resp.status == PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "New key...    " _GREEN_("%s"), sprint_hex_inrow(authenticationkey, sizeof(authenticationkey)));
+    } else {
+        PrintAndLogEx(WARNING, "Failed writing key");
+        return PM3_ESOFT;
     }
     return PM3_SUCCESS;
 }
@@ -6770,6 +6814,13 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
 
     PrintAndLogEx(INFO, "-----+-----------------------------");
 
+    mful_setkey_t packet = {
+        .has_auth_key = false,
+        .use_schann = false,
+        .key_index = 0,
+    };
+    PacketResponseNG resp;
+
 ulc:
 
     // UL-C - set 3-DES key
@@ -6780,20 +6831,20 @@ ulc:
             0x21, 0x4E, 0x41, 0x43, 0x55, 0x4F, 0x59, 0x46
         };
         uint8_t *def_key_ptr = SwapEndian64(defaultkey, 16, 8);
+        packet.keytype = 1; // UL-C
+        memcpy(packet.key, def_key_ptr, 16);
 
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFAREU_SETKEY, 1, 0, 0, def_key_ptr, sizeof(defaultkey));
-        PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            if ((resp.oldarg[0] & 0xff) == 1) {
-                PrintAndLogEx(INFO, "Ultralight C new key... " _GREEN_("%s"), sprint_hex_inrow(defaultkey, sizeof(defaultkey)));
-            } else {
-                PrintAndLogEx(WARNING, "Failed writing at block %u", (uint8_t)(resp.oldarg[1] & 0xFF));
-                return PM3_ESOFT;
-            }
-        } else {
+        SendCommandNG(CMD_HF_MIFAREU_SETKEY, (uint8_t *)&packet, sizeof(packet));
+        if (WaitForResponseTimeout(CMD_HF_MIFAREU_SETKEY, &resp, 1500) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
             return PM3_ETIMEOUT;
+        }
+        if (resp.status == PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Ultralight C new key... " _GREEN_("%s"), sprint_hex_inrow(defaultkey, sizeof(defaultkey)));
+        } else {
+            PrintAndLogEx(WARNING, "Failed writing key");
+            return PM3_ESOFT;
         }
     }
 
@@ -6803,29 +6854,35 @@ ulaes:
         // Set AES keys
         uint8_t defaultkey[16] = { 0 };
         uint8_t *def_key_ptr = SwapEndian64(defaultkey, 16, 16);
+        packet.keytype = 3; // UL-AES
+        packet.key_index = 0;
+        memcpy(packet.key, def_key_ptr, 16);
+
         clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFAREU_SETKEY, 2, 0, 0, def_key_ptr, sizeof(defaultkey));
-        PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            if ((resp.oldarg[0] & 0xff) != 1) {
-                PrintAndLogEx(WARNING, "Failed writing at block %u", (uint8_t)(resp.oldarg[1] & 0xFF));
-            }
-        } else {
+        SendCommandNG(CMD_HF_MIFAREU_SETKEY, (uint8_t *)&packet, sizeof(packet));
+        if (WaitForResponseTimeout(CMD_HF_MIFAREU_SETKEY, &resp, 1500) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
             return PM3_ETIMEOUT;
         }
-        clearCommandBuffer();
-        SendCommandMIX(CMD_HF_MIFAREU_SETKEY, 3, 0, 0, def_key_ptr, sizeof(defaultkey));
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
-            if ((resp.oldarg[0] & 0xff) == 1) {
-                PrintAndLogEx(INFO, "Ultralight AES new key... " _GREEN_("%s"), sprint_hex_inrow(defaultkey, sizeof(defaultkey)));
-            } else {
-                PrintAndLogEx(WARNING, "Failed writing at block %u", (uint8_t)(resp.oldarg[1] & 0xFF));
-                return PM3_ESOFT;
-            }
+        if (resp.status == PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Ultralight AES new DataProtKey... " _GREEN_("%s"), sprint_hex_inrow(defaultkey, sizeof(defaultkey)));
         } else {
+            PrintAndLogEx(WARNING, "Failed writing key");
+            return PM3_ESOFT;
+        }
+
+        packet.key_index = 1;
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_MIFAREU_SETKEY, (uint8_t *)&packet, sizeof(packet));
+        if (WaitForResponseTimeout(CMD_HF_MIFAREU_SETKEY, &resp, 1500) == false) {
             PrintAndLogEx(WARNING, "command execution time out");
             return PM3_ETIMEOUT;
+        }
+        if (resp.status == PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "Ultralight AES new UIDRetrKey...  " _GREEN_("%s"), sprint_hex_inrow(defaultkey, sizeof(defaultkey)));
+        } else {
+            PrintAndLogEx(WARNING, "Failed writing key");
+            return PM3_ESOFT;
         }
     }
 

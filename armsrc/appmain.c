@@ -1877,7 +1877,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_MIFAREU_SETKEY: {
-            MifareUSetKey(packet->oldarg[0], packet->data.asBytes);
+            MifareUSetKey((mful_setkey_t *)packet->data.asBytes);
             break;
         }
         case CMD_HF_MIFARE_READSC: {

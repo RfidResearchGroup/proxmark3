@@ -856,15 +856,7 @@ void MifareUWriteBlockCompat(mful_writeblock_t *packet) {
     set_tracing(false);
 }
 
-void MifareUSetKey(uint8_t arg0, uint8_t *datain) {
-
-    uint8_t key[16] = {0x00};
-    if (arg0 < 1 || arg0 > 3) {
-        OnError(0);
-        return;
-    }
-
-    memcpy(key, datain, 16);
+void MifareUSetKey(mful_setkey_t *packet) {
 
     LED_A_ON();
     LED_B_OFF();
@@ -880,34 +872,51 @@ void MifareUSetKey(uint8_t arg0, uint8_t *datain) {
         return;
     };
 
+    bool useCKey = (packet->keytype == 1);      // UL_C
+    bool useAESKey = (packet->keytype == 3);    // UL_AES
+
     uint8_t start_block = 4; // just to be safe
-    switch (arg0) {
-        case 1: // UL-C
-            start_block = 44;
-            break;
-        case 2: // UL-AES DataProtKey
+    if (useCKey) { // UL-C
+        start_block = 44;
+    } else if (useAESKey) { // UL-AES
+        if (packet->key_index == 0) {  // UL-AES DataProtKey
             start_block = 48;
-            break;
-        case 3: // UL-AES UIDRetrKey
+        } else if (packet->key_index == 1) { // UL-AES UIDRetrKey
             start_block = 52;
-            break;
+        }
+    }
+
+    // UL-C authentication
+    if (useCKey && packet->has_auth_key) {
+        if (mifare_ultra_3des_auth(packet->auth_key, true) == 0) {
+            OnErrorNG(CMD_HF_MIFAREU_SETKEY, PM3_ESOFT);
+            return;
+        }
+    }
+
+    // UL-AES authentication
+    if (useAESKey && packet->has_auth_key) {
+        if (mifare_ultra_aes_auth(0, packet->auth_key, packet->use_schann, true) == 0) {
+            OnErrorNG(CMD_HF_MIFAREU_SETKEY, PM3_ESOFT);
+            return;
+        }
     }
 
     for (int i = 0; i < 4; i++) {
-        if (mifare_ultra_writeblock(start_block + i, key + (i * 4)) != PM3_SUCCESS) {
+        if (mifare_ultra_writeblock(start_block + i, packet->key + (i * 4)) != PM3_SUCCESS) {
             if (g_dbglevel >= DBG_INFO) Dbprintf("Write block error");
-            OnError(start_block + i);
+            OnErrorNG(CMD_HF_MIFAREU_SETKEY, PM3_ESOFT);
             return;
         };
     }
 
     if (mifare_ultra_halt()) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Halt error");
-        OnError(0);
+        OnErrorNG(CMD_HF_MIFAREU_SETKEY, PM3_ESOFT);
         return;
     };
 
-    reply_mix(CMD_ACK, 1, 0, 0, 0, 0);
+    reply_ng(CMD_HF_MIFAREU_SETKEY, PM3_SUCCESS, NULL, 0);
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     LEDsoff();
     set_tracing(false);

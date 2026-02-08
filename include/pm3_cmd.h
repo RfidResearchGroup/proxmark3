@@ -415,6 +415,15 @@ typedef struct {
 } PACKED mful_writeblock_t;
 
 typedef struct {
+    bool has_auth_key;
+    bool use_schann;
+    uint8_t auth_key[16];
+    uint8_t keytype;
+    uint8_t key_index;
+    uint8_t key[16];
+} PACKED mful_setkey_t;
+
+typedef struct {
     uint8_t status;
     uint8_t CSN[8];
     uint8_t CONFIG[8];

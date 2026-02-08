@@ -3441,7 +3441,7 @@ int iso14443a_fast_select_card(const uint8_t *uid_ptr, uint8_t num_cascades) {
 }
 
 void iso14443a_setup(uint8_t fpga_minor_mode) {
-
+    set_session_channel(false);
     FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
     // Set up the synchronous serial port
     FpgaSetupSsc(FPGA_MAJOR_MODE_HF_ISO14443A);
