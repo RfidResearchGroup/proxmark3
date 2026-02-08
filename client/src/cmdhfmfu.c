@@ -2481,6 +2481,11 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         has_auth_key = true;
     }
 
+    if (use_schann && has_auth_key == false) {
+        PrintAndLogEx(WARNING, "Secure channel must be called with key");
+        return PM3_EINVARG;
+    }
+
     uint8_t authlim = 0xff;
     uint8_t data[16] = {0x00};
     iso14a_card_select_t card;
@@ -2938,6 +2943,11 @@ static int CmdHF14AMfUWrBl(const char *Cmd) {
         has_pwd = true;
     } else if (ak_len != 0) {
         PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
+        return PM3_EINVARG;
+    }
+
+    if (use_schann && has_auth_key == false) {
+        PrintAndLogEx(WARNING, "Secure channel must be called with key");
         return PM3_EINVARG;
     }
 
@@ -3465,6 +3475,11 @@ static int CmdHF14AMfUDump(const char *Cmd) {
         return PM3_EINVARG;
     }
 
+    if (use_schann && has_auth_key == false) {
+        PrintAndLogEx(WARNING, "Secure channel must be called with key");
+        return PM3_EINVARG;
+    }
+
     bool manual_pages = false;
     if (start_page > 0) {
         manual_pages = true;
@@ -3959,6 +3974,11 @@ static int CmdHF14AMfURestore(const char *Cmd) {
         } else {
             has_key = true;
         }
+    }
+
+    if (use_schann && has_key == false) {
+        PrintAndLogEx(WARNING, "Secure channel must be called with key");
+        return PM3_EINVARG;
     }
 
     if (fnlen == 0) {
@@ -6063,6 +6083,11 @@ int CmdHF14MfuNDEFRead(const char *Cmd) {
             return PM3_EINVARG;
     }
 
+    if (use_schann && has_auth_key == false) {
+        PrintAndLogEx(WARNING, "Secure channel must be called with key");
+        return PM3_EINVARG;
+    }
+
     // Get tag type
     uint64_t tagtype = GetHF14AMfU_Type();
     if (tagtype == MFU_TT_UL_ERROR) {
@@ -6548,6 +6573,11 @@ static int CmdHF14AMfuWipe(const char *Cmd) {
         has_pwd = true;
     } else if (ak_len != 0) {
         PrintAndLogEx(WARNING, "ERROR: Key is incorrect length\n");
+        return PM3_EINVARG;
+    }
+
+    if (use_schann && has_auth_key == false) {
+        PrintAndLogEx(WARNING, "Secure channel must be called with key");
         return PM3_EINVARG;
     }
 
