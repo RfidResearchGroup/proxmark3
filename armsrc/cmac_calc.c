@@ -165,7 +165,7 @@ void append_cmac(uint8_t *d, size_t n) {
     cmd_mac[1] = (g_secure_session.counter >> 8) & 0xFF;
     memcpy(cmd_mac + 2, d, n);
 
-    print_result("cmd mac", cmd_mac, (2 + n));
+    // print_result("cmd mac", cmd_mac, (2 + n));
 
     ulaes_cmac(g_secure_session.sessionkey, sizeof(g_secure_session.sessionkey), cmd_mac, (2 + n), mac);
     // append CMAC to end of the command we are trying to send

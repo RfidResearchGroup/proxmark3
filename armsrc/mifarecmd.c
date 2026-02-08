@@ -287,7 +287,7 @@ static int MifareUFastRead0(void) {
 //  1 = failed auth
 //  0 = correct
 
-static uint8_t chkKey3Pass(uint8_t keyno, uint8_t *keybytes, uint32_t *auths, bool check_answer) {
+static uint8_t chkKey3Pass(uint8_t keyno, uint8_t *keybytes, uint32_t *auths, bool use_schann, bool check_answer) {
 
     uint8_t i = 0, res = 2;
     bool selected = false;
@@ -301,7 +301,6 @@ static uint8_t chkKey3Pass(uint8_t keyno, uint8_t *keybytes, uint32_t *auths, bo
         if (keyno == MIFAREULC_KEY_INDEX) {
             res = mifare_ultra_3des_auth(keybytes, check_answer) == 1 ? 0 : 1; // 0 = correct, 1 = failed auth
         } else {
-            bool use_schann = false;
             res = mifare_ultra_aes_auth(keyno, keybytes, use_schann, check_answer) == 1 ? 0 : 1; // 0 = correct, 1 = failed auth
         }
         (*auths)++;
@@ -335,7 +334,7 @@ void MifareU3PassAuth(mful_3passauth_t *packet) {
 
     for (uint16_t r = 0; r < 1 + packet->retries; r++) {
         WDT_HIT();
-        if (chkKey3Pass(packet->keyno, packet->key, &auths, packet->check_answer) == 0) {
+        if (chkKey3Pass(packet->keyno, packet->key, &auths,  packet->use_schann, packet->check_answer) == 0) {
             res = PM3_SUCCESS;
             goto out;
         }
@@ -417,7 +416,7 @@ void MifareU3PassChkKeys(mful_3passchk_t *packet) {
                 memcpy(fullkeybytes + (packet->segment * keysize), packet->data + (i * keysize), keysize);
             }
         }
-        if (chkKey3Pass(packet->key_index, fullkeybytes, &auths, packet->check_answer) == 0) {
+        if (chkKey3Pass(packet->key_index, fullkeybytes, &auths, false, packet->check_answer) == 0) {
             foundkeys++;
             memcpy(rpayload.key, fullkeybytes, MIFAREU3P_KEY_SIZE);
             res = PM3_SUCCESS;
@@ -447,8 +446,6 @@ void MifareUReadBlock(mful_readblock_t *packet) {
     bool useCKey = (packet->keytype == 1);    // UL_C
     bool usePwd = (packet->keytype == 2);     // UL_EV1/NTAG
     bool useAESKey = (packet->keytype == 3);  // UL_AES
-
-    init_secure_session();
 
     LEDsoff();
     LED_A_ON();
@@ -511,8 +508,6 @@ void MifareUReadBlock(mful_readblock_t *packet) {
 // arg2 = useKey
 // datain = KEY bytes
 void MifareUReadCard(mful_readblock_t *packet) {
-
-    init_secure_session();
 
     LEDsoff();
     LED_A_ON();
@@ -720,8 +715,6 @@ static void MifareUWriteBlockEx(mful_writeblock_t *packet, bool reply) {
 
     memcpy(blockdata, packet->data, sizeof(blockdata));
 
-    init_secure_session();
-
     LEDsoff();
     LED_A_ON();
     iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
@@ -799,7 +792,7 @@ void MifareUWriteBlockCompat(mful_writeblock_t *packet) {
     uint8_t blockdata[16] = {0x00};
     memcpy(blockdata, packet->data, 16);
 
-    // UL-AES doesn't not support copmpability writes
+    // UL-AES doesn't not support compatibility writes
     if (useAESKey) {
         reply_ng(CMD_HF_MIFAREU_WRITEBL_COMPAT, PM3_EINVARG, NULL, 0);
         return ;
