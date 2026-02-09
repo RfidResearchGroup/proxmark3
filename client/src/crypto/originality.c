@@ -195,8 +195,6 @@ int originality_check_verify_ex(uint8_t *data, uint8_t data_len, uint8_t *signat
 
 int originality_check_print(uint8_t *signature, int signature_len, int index) {
 
-    PrintAndLogEx(NORMAL, "");
-
     if ((index < 0) || (index >= ARRAYLEN(manufacturer_public_keys))) {
 
         PrintAndLogEx(INFO, "             TAG IC Signature: %s", sprint_hex_inrow(signature, 16));

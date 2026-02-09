@@ -868,7 +868,7 @@ void MifareUSetKey(mful_setkey_t *packet) {
 
     if (iso14443a_select_card(NULL, NULL, NULL, true, 0, true) == 0) {
         if (g_dbglevel >= DBG_ERROR) Dbprintf("Can't select card");
-        OnError(0);
+        OnErrorNG(CMD_HF_MIFAREU_SETKEY, PM3_ESOFT);
         return;
     };
 

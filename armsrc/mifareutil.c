@@ -595,47 +595,53 @@ static int mifare_ultra_readblockEx(uint8_t blockNo, uint8_t *blockData) {
     uint8_t receivedAnswer[MAX_FRAME_SIZE] = {0x00};
     uint8_t receivedAnswerPar[MAX_PARITY_SIZE] = {0x00};
     uint16_t len = 0;
-    uint8_t offset = 0;
 
     if (get_session_channel()) {
-        offset = 8;
-        uint8_t cmd[2 + 8] = { ISO14443A_CMD_READBLOCK, blockNo };
+        uint8_t cmd[2 + ULAES_CMAC8_SIZE] = { ISO14443A_CMD_READBLOCK, blockNo };
         append_cmac(cmd, 2);
         len = mifare_sendcmd_schann(cmd, sizeof(cmd), receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
+        if (len != 16 + ULAES_CMAC8_SIZE + 2) {
+            if (len == 1) {
+                if (g_dbglevel >= DBG_ERROR) {
+                    Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+                }
+                return PM3_ECARDEXCHANGE;
+            } else {
+                if (g_dbglevel >= DBG_ERROR) {
+                    Dbprintf("Cmd Error: card timeout. len: %x", len);
+                }
+                return PM3_ETIMEOUT;
+            }
+        }
+        int ret = verify_cmac(receivedAnswer, 16, true);
+        if (ret != PM3_SUCCESS) {
+            return ret;
+        }
     } else {
         len = mifare_sendcmd_short(NULL, CRYPT_NONE, ISO14443A_CMD_READBLOCK, blockNo, receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
-    }
-
-    if (len == 1) {
-        if (g_dbglevel >= DBG_ERROR) {
-            Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+        if (len != 16 + 2) {
+            if (len == 1) {
+                if (g_dbglevel >= DBG_ERROR) {
+                    Dbprintf("Cmd Error: %02x", receivedAnswer[0]);
+                }
+                return PM3_ECARDEXCHANGE;
+            } else {
+                if (g_dbglevel >= DBG_ERROR) {
+                    Dbprintf("Cmd Error: card timeout. len: %x", len);
+                }
+                return PM3_ETIMEOUT;
+            }
         }
-        return PM3_ECARDEXCHANGE;
-    }
-
-    // Ev1 / Ul-C == 18 bytes response
-    // UL-Aes in secure messaging == 26
-    if (len != 18 + offset) {
-        if (g_dbglevel >= DBG_ERROR) {
-            Dbprintf("Cmd Error: card timeout. len: %x", len);
+        uint8_t bt[2] = {0x00, 0x00};
+        memcpy(bt, receivedAnswer + 16, 2);
+        AddCrc14A(receivedAnswer, 16);
+        if (bt[0] != receivedAnswer[16] || bt[1] != receivedAnswer[17]) {
+            if (g_dbglevel >= DBG_ERROR) {
+                Dbprintf("Cmd CRC response error.");
+                return PM3_ECRC;
+            }
         }
-        return PM3_ETIMEOUT;
     }
-
-    uint8_t bt[2] = {0x00, 0x00};
-    memcpy(bt, receivedAnswer + 16 + offset, 2);
-    AddCrc14A(receivedAnswer, 16 + offset);
-    if (bt[0] != receivedAnswer[16 + offset] || bt[1] != receivedAnswer[17 + offset]) {
-        if (g_dbglevel >= DBG_ERROR) {
-            Dbprintf("Cmd CRC response error.");
-        }
-        return PM3_ECRC;
-    }
-
-    // we are skipping verifying the cmac since we don't care.
-
-    // increase counter for the read response
-    increase_session_counter();
 
     memcpy(blockData, receivedAnswer, 16);
     return PM3_SUCCESS;
@@ -822,21 +828,20 @@ int mifare_ultra_writeblock(uint8_t blockNo, uint8_t *blockData) {
     uint16_t len = 0;
 
     if (get_session_channel()) {
-        uint8_t cmd[2 + 4 + 8] = { MIFARE_ULC_WRITE, blockNo };
+        uint8_t cmd[2 + 4 + ULAES_CMAC8_SIZE] = { MIFARE_ULC_WRITE, blockNo };
         memcpy(cmd + 2, blockData, 4);
         append_cmac(cmd, 2 + 4);
         len = mifare_sendcmd_schann(cmd, sizeof(cmd), receivedAnswer, sizeof(receivedAnswer), receivedAnswerPar, NULL);
-        // we are skipping verifying the cmac,  since we don't care.
-        // increase counter for the write response
-        increase_session_counter();
-
-        if (len != 10) {
+        if (len != ULAES_CMAC8_SIZE + 2) {
             if (g_dbglevel >= DBG_INFO) {
                 Dbprintf("Cmd Send Error: " _RED_("%d"), len);
             }
             return PM3_EFAILED;
         }
-
+        int ret = verify_cmac(receivedAnswer, 0, true);
+        if (ret != PM3_SUCCESS) {
+            return ret;
+        }
     } else {
 
         // command MIFARE_CLASSIC_WRITEBLOCK

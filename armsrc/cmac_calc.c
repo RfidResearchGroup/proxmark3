@@ -23,6 +23,8 @@
 #include "BigBuf.h"
 #include "dbprint.h"
 #include "mbedtls/aes.h"
+#include "pm3_cmd.h"
+#include "iso14443a.h"
 
 static ulaes_key_t g_secure_session = {
     .counter = 0,
@@ -172,4 +174,28 @@ void append_cmac(uint8_t *d, size_t n) {
     ulaes_cmac8(mac, d + n);
 
     increase_session_counter();
+}
+
+int verify_cmac(uint8_t *d, size_t n, bool verify_crc) {
+    // n = data size without cmac and without crc
+    uint8_t chk_d[n + ULAES_CMAC8_SIZE + 2];
+    memcpy(chk_d, d, n);
+    memset(chk_d + n, 0, sizeof(chk_d) - n);
+    append_cmac(chk_d, n);
+    if (memcmp(chk_d + n, d + n, ULAES_CMAC8_SIZE) != 0) {
+        if (g_dbglevel >= DBG_ERROR) {
+            Dbprintf("CMAC response error.");
+        }
+        return PM3_ECRC;
+    }
+    if (verify_crc) {
+        AddCrc14A(chk_d, n + ULAES_CMAC8_SIZE);
+        if (memcmp(chk_d + n + ULAES_CMAC8_SIZE, d + n + ULAES_CMAC8_SIZE, 2) != 0) {
+            if (g_dbglevel >= DBG_ERROR) {
+                Dbprintf("CRC response error.");
+            }
+            return PM3_ECRC;
+        }
+    }
+    return PM3_SUCCESS;
 }

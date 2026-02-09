@@ -1459,27 +1459,31 @@ static int ulev1_print_configuration(uint64_t tagtype, uint8_t *data, uint8_t st
     return PM3_SUCCESS;
 }
 
-static int ulev1_print_counters(void) {
+static int ulev1_print_counters(uint64_t tagtype, bool use_schann) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Counters"));
     uint8_t tear[1] = {0};
     uint8_t counter[3] = {0, 0, 0};
     int len = 0;
     for (uint8_t i = 0; i < 3; ++i) {
-        ulev1_readTearing(i, tear, sizeof(tear));
-        len = ulev1_readCounter(i, counter, sizeof(counter), false);
+        len = ulev1_readCounter(i, counter, sizeof(counter), use_schann);
         if (len == 3) {
             PrintAndLogEx(INFO, "       [%0d]: %s", i, sprint_hex(counter, 3));
-            PrintAndLogEx(SUCCESS, "            - %02X tearing ( %s )"
-                          , tear[0]
-                          , (tear[0] == 0xBD) ? _GREEN_("ok") : _RED_("fail")
-                         );
+            if ((tagtype & MFU_TT_UL_AES) != MFU_TT_UL_AES) {
+                ulev1_readTearing(i, tear, sizeof(tear));
+                PrintAndLogEx(SUCCESS, "            - %02X tearing ( %s )"
+                            , tear[0]
+                            , (tear[0] == 0xBD) ? _GREEN_("ok") : _RED_("fail")
+                            );
+            }
         }
     }
     return len;
 }
 
 static int ulev1_print_signature(uint64_t tagtype, uint8_t *uid, uint8_t *signature, size_t signature_len) {
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Signature"));
     int index = -1;
     if (signature_len == 32) {
         index = originality_check_verify(uid, 7, signature, signature_len, PK_MFUL);
@@ -2618,13 +2622,13 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
         }
     }
 
-    // do counters and signature first (don't neet auth)
+    // do counters and signature first (don't need auth)
 
     // ul counters are different than ntag counters
     if ((tagtype & (MFU_TT_UL_EV1_48 | MFU_TT_UL_EV1_128 | MFU_TT_UL_EV1 | MFU_TT_UL_AES))) {
-        if (ulev1_print_counters() != 3) {
+        if (ulev1_print_counters(tagtype, use_schann) != 3) {
             // failed - re-select
-            if (ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, pack, sizeof(pack), false) == PM3_ESOFT) {
+            if (ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, pack, sizeof(pack), use_schann) == PM3_ESOFT) {
                 return PM3_ESOFT;
             }
         }
@@ -3631,7 +3635,7 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
         if (has_auth_key) {
             uint8_t dummy_pack[] = {0, 0};
-            ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, dummy_pack, sizeof(dummy_pack), false);
+            ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, dummy_pack, sizeof(dummy_pack), use_schann);
         } else {
             ul_select(&card);
         }
@@ -3651,11 +3655,11 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
             if (has_auth_key) {
                 uint8_t dummy_pack[] = {0, 0};
-                ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, dummy_pack, sizeof(dummy_pack), false);
+                ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, dummy_pack, sizeof(dummy_pack), use_schann);
             } else {
                 ul_select(&card);
             }
-            ulev1_readCounter(n, &get_counter_tearing[n][0], 3, false);
+            ulev1_readCounter(n, &get_counter_tearing[n][0], 3, use_schann);
 
             if (has_auth_key) {
                 uint8_t dummy_pack[] = {0, 0};
@@ -3670,12 +3674,12 @@ static int CmdHF14AMfUDump(const char *Cmd) {
 
         if (has_auth_key) {
             uint8_t dummy_pack[] = {0, 0};
-            ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, dummy_pack, sizeof(dummy_pack), false);
+            ul_auth_select(&card, tagtype, has_auth_key, auth_key_ptr, dummy_pack, sizeof(dummy_pack), use_schann);
         } else {
             ul_select(&card);
         }
 
-        ulev1_readSignature(get_signature, sizeof(get_signature), false);
+        ulev1_readSignature(get_signature, sizeof(get_signature), use_schann);
         DropField();
     }
 
@@ -5023,6 +5027,7 @@ static int CmdHF14AMfUSetKey(const char *Cmd) {
 
     SendCommandNG(CMD_HF_MIFAREU_SETKEY, (uint8_t *)&packet, sizeof(packet));
     if (WaitForResponseTimeout(CMD_HF_MIFAREU_SETKEY, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
     if (resp.status == PM3_SUCCESS) {

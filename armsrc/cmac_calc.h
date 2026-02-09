@@ -23,6 +23,8 @@
 
 #include "common.h"
 
+#define ULAES_CMAC8_SIZE 8
+
 typedef struct {
     bool use_schann;
     uint8_t cmac_sk1[16];
@@ -41,5 +43,6 @@ bool get_session_channel(void);
 void ulaes_cmac(const uint8_t *key, size_t key_len, const uint8_t *input, size_t ilen, uint8_t output[16]);
 void ulaes_cmac8(uint8_t *cmac, uint8_t *mac);
 void append_cmac(uint8_t *d, size_t n);
+int verify_cmac(uint8_t *d, size_t n, bool verify_crc);
 
 #endif
