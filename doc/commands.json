@@ -7359,16 +7359,18 @@
             "description": "Increment a MIFARE Ultralight Ev1 counter Will read but not increment counter if NTAG is detected",
             "notes": [
                 "hf mfu incr -c 0 -v 1337",
-                "hf mfu incr -c 2 -v 0 -p FFFFFFFF"
+                "hf mfu incr -c 2 -v 0 -k FFFFFFFF"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-c, --cnt <dec> Counter index from 0",
                 "-v, --val <dec> Value to increment by (0-16777215)",
-                "-p, --pwd <hex> PWD to authenticate with"
+                "-k, --key <hex> Authentication key (UL-AES 16 bytes, EV1/NTAG 4 bytes)",
+                "-l Swap entered key's endianness",
+                "--schann use secure channel. Must have key"
             ],
-            "usage": "hf mfu incr [-h] -c <dec> -v <dec> [-p <hex>]"
+            "usage": "hf mfu incr [-hl] -c <dec> -v <dec> [-k <hex>] [--schann]"
         },
         "hf mfu info": {
             "command": "hf mfu info",
@@ -7517,9 +7519,11 @@
                 "-h, --help This help",
                 "-k, --key <hex> New key (16 hex bytes)",
                 "-i, --idx <0..1> New key index (def: 0), only for UL-AES",
-                "-l Swap entered keys' endianness"
+                "-l Swap entered keys' endianness",
+                "--usekey <hex> Current UL-C 3DES or UL-AES DataProt key (16 hex bytes)",
+                "--schann use secure channel. Must have usekey"
             ],
-            "usage": "hf mfu setkey [-hl] [-k <hex>] [-i <0..1>]"
+            "usage": "hf mfu setkey [-hl] [-k <hex>] [-i <0..1>] [--usekey <hex>] [--schann]"
         },
         "hf mfu setuid": {
             "command": "hf mfu setuid",
@@ -13793,6 +13797,6 @@
     "metadata": {
         "commands_extracted": 790,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-02-06T12:16:10"
+        "extracted_on": "2026-02-09T00:12:02"
     }
 }
