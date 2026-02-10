@@ -8,9 +8,9 @@
   - [Client](#client)
   - [Firmware](#firmware)
   - [PLATFORM](#platform)
-  - [PLATFORM_EXTRAS](#platform_extras)
+  - [PLATFORM\_EXTRAS](#platform_extras)
   - [STANDALONE](#standalone)
-  - [256KB versions](#256KB-versions)
+  - [256KB versions](#256kb-versions)
   - [Next step](#next-step)
 
 
@@ -134,6 +134,7 @@ Here are the supported values you can assign to `STANDALONE` in `Makefile.platfo
 | HF_CARDHOPPER   | Long distance (over IP) relay of 14a protocols - Sam Haskins
 | HF_COLIN        | Mifare ultra fast sniff/sim/clone - Colin Brigato
 | HF_CRAFTBYTE    | UID stealer - Emulates scanned 14a UID - Anze Jensterle
+| HF_DOEGOX_AUTH0 | UL-C / UL-AES unlocker - Philippe Teuwen (doegox)
 | HF_ICECLASS     | iCLASS 4-1 mode  sim/read & dump/loclass/glitch & config to flashmem - Iceman1001
 | HF_LEGIC        | HF Legic Prime Read/Store/Sim standalone - uhei
 | HF_LEGICSIM     | HF Legic Prime Simulate standalone - uhei
