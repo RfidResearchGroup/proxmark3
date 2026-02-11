@@ -695,7 +695,7 @@ RAMFUNC int ManchesterDecoding(uint8_t bit, uint16_t offset, uint32_t non_real_t
 
 
 // Thinfilm, Kovio mangles ISO14443A in the way that they don't use start bit nor parity bits.
-static RAMFUNC int ManchesterDecoding_Thinfilm(uint8_t bit) {
+static int ManchesterDecoding_Thinfilm(uint8_t bit) {
 
     if (Demod.len == Demod.output_len) {
         // Flush last parity bits
