@@ -47,6 +47,7 @@
 static uint32_t felica_timeout;
 static uint32_t felica_nexttransfertime;
 static uint32_t felica_lasttime_prox2air_start;
+static bool felica_field_active;
 
 static void iso18092_setup(uint8_t fpga_minor_mode);
 static uint8_t felica_select_card(felica_card_select_t *card);
@@ -62,16 +63,13 @@ static uint32_t iso18092_get_timeout(void) {
 }
 
 #ifndef FELICA_MAX_FRAME_SIZE
+// 255 base length (max 254 data + 1 len byte) + 2 sync + 2 crc + 1 extra for safety
 #define FELICA_MAX_FRAME_SIZE 260
 #endif
 
 
-
-
-
-
 //structure to hold outgoing NFC frame
-static uint8_t frameSpace[FELICA_MAX_FRAME_SIZE + 4];
+static uint8_t frameSpace[FELICA_MAX_FRAME_SIZE];
 
 //structure to hold incoming NFC frame, used for ISO/IEC 18092-compatible frames
 static struct {
@@ -494,10 +492,6 @@ static void iso18092_setup(uint8_t fpga_minor_mode) {
 #endif
     // allocate command receive buffer
     BigBuf_free();
-    BigBuf_Clear_ext(false);
-
-    // Initialize Demod and Uart structs
-    // DemodInit(BigBuf_calloc(MAX_FRAME_SIZE));
     FelicaFrameinit(BigBuf_calloc(FELICA_MAX_FRAME_SIZE));
 
     felica_nexttransfertime = 2 * DELAY_ARM2AIR_AS_READER;  // 418
@@ -525,10 +519,12 @@ static void iso18092_setup(uint8_t fpga_minor_mode) {
     StartCountSspClk();
 
     LED_D_ON();
+    felica_field_active = true;
 }
 
 static void felica_reset_frame_mode(void) {
     switch_off();
+    felica_field_active = false;
     //Resetting Frame mode (First set in fpgaloader.c)
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
 }
@@ -545,35 +541,47 @@ void felica_sendraw(const PacketCommandNG *c) {
     felica_command_t param = c->oldarg[0];
     size_t len = c->oldarg[1] & 0xffff;
     uint32_t arg0;
+    bool do_connect = ((param & FELICA_CONNECT) == FELICA_CONNECT);
+    bool no_disconnect = ((param & FELICA_NO_DISCONNECT) == FELICA_NO_DISCONNECT);
 
-    if ((param & FELICA_CONNECT) == FELICA_CONNECT) {
+    if (do_connect) {
         clear_trace();
     }
+
     set_tracing(true);
 
-    iso18092_setup(FPGA_HF_ISO18092_FLAG_READER | FPGA_HF_ISO18092_FLAG_NOMOD);
+    // Preserve compatibility with existing commands that do not send CONNECT:
+    // set up reader path when starting from field-off state.
+    if (do_connect || !felica_field_active) {
+        iso18092_setup(FPGA_HF_ISO18092_FLAG_READER | FPGA_HF_ISO18092_FLAG_NOMOD);
+    }
 
-    if ((param & FELICA_CONNECT) == FELICA_CONNECT) {
+    if (do_connect && ((param & FELICA_NO_SELECT) != FELICA_NO_SELECT)) {
 
         // notify client selecting status.
-        // if failed selecting, turn off antenna and quite.
-        if ((param & FELICA_NO_SELECT) != FELICA_NO_SELECT) {
-
-            felica_card_select_t card;
-            arg0 = felica_select_card(&card);
-            reply_mix(CMD_ACK, arg0, sizeof(card.uid), 0, &card, sizeof(felica_card_select_t));
-            if (arg0) {
-                felica_reset_frame_mode();
-                return;
-            }
+        // if failed selecting, turn off antenna and quit.
+        felica_card_select_t card;
+        arg0 = felica_select_card(&card);
+        reply_mix(CMD_ACK, arg0, sizeof(card.uid), 0, &card, sizeof(felica_card_select_t));
+        if (arg0) {
+            felica_reset_frame_mode();
+            return;
         }
-
     }
 
     if ((param & FELICA_RAW) == FELICA_RAW) {
+        if (len > FELICA_MAX_FRAME_SIZE) {
+            Dbprintf("FeliCa raw payload too long: %u (max %u)", len, FELICA_MAX_FRAME_SIZE);
+            reply_mix(CMD_ACK, 0, PM3_ELENGTH, 0, NULL, 0);
+            if (!no_disconnect) {
+                felica_reset_frame_mode();
+            }
+            return;
+        }
 
-        // 2 sync, 1 len, 2 crc == 5
-        uint8_t *buf = BigBuf_calloc(len + 5);
+        uint8_t buf[FELICA_MAX_FRAME_SIZE];
+        memset(buf, 0, sizeof(buf));
+
         // add sync bits
         buf[0] = 0xb2;
         buf[1] = 0x4d;
@@ -614,7 +622,7 @@ void felica_sendraw(const PacketCommandNG *c) {
         }
     }
 
-    if ((param & FELICA_NO_DISCONNECT) == FELICA_NO_DISCONNECT) {
+    if (no_disconnect) {
         return;
     }
 
@@ -695,6 +703,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
         }
     }
     switch_off();
+    felica_field_active = false;
     //reset framing
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
 
@@ -733,6 +742,7 @@ void felica_sim_lite(const uint8_t *uid) {
     AddCrc(&resp_poll1[2], resp_poll1[2]);
     AddCrc(&resp_readblk[2], resp_readblk[2]);
 
+    clear_trace();
     iso18092_setup(FPGA_HF_ISO18092_FLAG_NOMOD);
 
     int retval = PM3_SUCCESS;
@@ -840,6 +850,7 @@ void felica_sim_lite(const uint8_t *uid) {
     }
 
     switch_off();
+    felica_field_active = false;
 
     // reset framing
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
@@ -856,6 +867,7 @@ void felica_dump_lite_s(void) {
     uint16_t liteblks[28] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x90, 0x91, 0x92, 0xa0};
 
     // setup device.
+    clear_trace();
     iso18092_setup(FPGA_HF_ISO18092_FLAG_READER | FPGA_HF_ISO18092_FLAG_NOMOD);
 
     uint8_t blknum;
@@ -917,6 +929,7 @@ void felica_dump_lite_s(void) {
         }
     }
     switch_off();
+    felica_field_active = false;
 
     // Resetting Frame mode (First set in fpgaloader.c)
     AT91C_BASE_SSC->SSC_RFMR = SSC_FRAME_MODE_BITS_IN_WORD(8) | AT91C_SSC_MSBF | SSC_FRAME_MODE_WORDS_PER_TRANSFER(0);
