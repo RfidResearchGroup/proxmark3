@@ -342,7 +342,7 @@ local function displaySegments(bytes)
         wrp = ''
         pld = ''
         Seg = getSegmentData(bytes, start, index)
-        if Seg == nil then return OOps("segment is nil") end
+        if Seg == nil then return oops("segment is nil") end
 
         KGH = CheckKgh(bytes, start, (start + Seg[4]))
 
