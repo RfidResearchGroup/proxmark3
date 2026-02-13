@@ -132,26 +132,17 @@ local function dbg(args)
         print('###', args)
     end
 end
--- we need always 2 digits
-local function prepend_zero(s)
-    if s == nil then return '..' end
-
-    if (#s == 1) then
-        return '0' .. s
-    else
-        if (#s == 0) then
-            return '00'
-        else
-            return s
-        end
-    end
-end
 ---
 -- This is only meant to be used when errors occur
 local function oops(err)
     print('ERROR:', err)
     core.clearCommandBuffer()
     return nil, err
+end
+---
+-- Extract bits from a hex string
+local function str_bit_extract(str, field, width)
+  return bit32.extract(tonumber(str, 16), field, width)
 end
 ---
 -- Usage help
@@ -248,27 +239,28 @@ end
 local function getSegmentData(bytes, start, index)
     local raw, len, valid, last, wrp, wrc, rd, crc
     local segment = {}
+
     segment[0] = bytes[start]..' '..bytes[start + 1]..' '..bytes[start + 2]..' '..bytes[start + 3]
     -- flag = high nibble of byte 1
     segment[1] = string.sub(bytes[start + 1], 0, 1)
 
     -- valid = bit 6 of byte 1
-    segment[2] = tonumber(bit32.extract('0x'..bytes[start + 1], 6, 1), 16)
+    segment[2] = str_bit_extract(bytes[start + 1], 6, 1)
 
     -- last = bit 7 of byte 1
-    segment[3] = tonumber(bit32.extract('0x'..bytes[start + 1], 7, 1), 16)
+    segment[3] = str_bit_extract(bytes[start + 1], 7, 1)
 
     -- len = (byte 0)+(bit0-3 of byte 1)
-    segment[4] = tonumber(('%03x'):format(tonumber(bit32.extract('0x'..bytes[start + 1], 0, 3), 16)..tonumber(bytes[start], 16)), 16)
+    segment[4] = str_bit_extract(bytes[start + 1], 0, 3) << 8 + tonumber(bytes[start], 16)
 
     -- wrp (write proteted) = byte 2
     segment[5] = tonumber(bytes[start + 2])
 
     -- wrc (write control) - bit 4-6 of byte 3
-    segment[6] = tonumber(bit32.extract('0x'..bytes[start + 3], 4, 3), 16)
+    segment[6] = str_bit_extract(bytes[start + 3], 4, 3)
 
     -- rd (read disabled) - bit 7 of byte 3
-    segment[7] = tonumber(bit32.extract('0x'..bytes[start + 3], 7, 1), 16)
+    segment[7] = str_bit_extract(bytes[start + 3], 7, 1)
 
     -- crc byte 4
     segment[8] = bytes[start + 4]
@@ -288,13 +280,11 @@ local function CheckKgh(bytes, segStart, segEnd)
     if (bytes[8] == '9f' and bytes[9] == 'ff' and bytes[13] == '11') then
         local i
         local data = {}
-        segStart = tonumber(segStart, 10)
-        segEnd = tonumber(segEnd, 10)
         local dataLen = segEnd - segStart - 5
         --- gather creadentials for verify
         local WRP = bytes[(segStart + 2)]
-        local WRC = ("%02x"):format(tonumber(bit32.extract("0x"..bytes[segStart+3], 4, 3), 16))
-        local RD = ("%02x"):format(tonumber(bit32.extract("0x"..bytes[segStart+3], 7, 1), 16))
+        local WRC = ("%02x"):format(str_bit_extract(bytes[segStart+3], 4, 3))
+        local RD = ("%02x"):format(str_bit_extract(bytes[segStart+3], 7, 1))
         local XX = "00"
         cmd = bytes[1]..bytes[2]..bytes[3]..bytes[4]..WRP..WRC..RD..XX
         for i = (segStart + 5), (segStart + 5 + dataLen - 2) do
@@ -332,8 +322,8 @@ local function printSegment(SegmentData)
     res = res.. "raw header="..SegmentData[0]..", "
     res = res.. "flag="..SegmentData[1].." (valid="..SegmentData[2].." last="..SegmentData[3].."), "
     res = res.. "len="..("%04d"):format(SegmentData[4])..", "
-    res = res.. "WRP="..prepend_zero(SegmentData[5])..", "
-    res = res.. "WRC="..prepend_zero(SegmentData[6])..", "
+    res = res.. "WRP="..("%02x"):format(SegmentData[5])..", "
+    res = res.. "WRC="..("%02x"):format(SegmentData[6])..", "
     res = res.. "RD="..SegmentData[7]..", "
     res = res.. "crc="..SegmentData[8]
     print(res)
@@ -344,7 +334,7 @@ local function displaySegments(bytes)
 
     --display segment header(s)
     start = 23
-    index = '00'
+    index = 0
 
     --repeat until last-flag ist set to 1 or segment-index has reached 126
     repeat
@@ -354,7 +344,7 @@ local function displaySegments(bytes)
         Seg = getSegmentData(bytes, start, index)
         if Seg == nil then return OOps("segment is nil") end
 
-        KGH = CheckKgh(bytes, start, (start + tonumber(Seg[4], 10)))
+        KGH = CheckKgh(bytes, start, (start + Seg[4]))
 
         printSegment(Seg)
 
@@ -389,7 +379,7 @@ local function displaySegments(bytes)
             print(ansicolors.yellow.."'Kaba Group Header' detected"..ansicolors.reset)
         end
         start = start + Seg[4]
-        index = prepend_zero(tonumber(Seg[9]) + 1)
+        index = Seg[9] + 1
 
     until (Seg[3] == 1 or tonumber(Seg[9]) == 126 )
 end
@@ -426,7 +416,7 @@ local function writeToTag(plainBytes)
     SegCrcs = getSegmentCrcBytes(plainBytes)
     for i = 0, (#SegCrcs - 1) do
         -- SegCrcs[i]-4 = address of first byte of segmentHeader (low byte segment-length)
-        segLen = tonumber(("%1x"):format(tonumber(bit32.extract("0x"..plainBytes[(SegCrcs[i] - 3)], 0, 3), 16))..("%02x"):format(tonumber(plainBytes[SegCrcs[i] - 4], 16)), 16)
+        segLen = tonumber(("%1x"):format(bit32.extract("0x"..plainBytes[(SegCrcs[i] - 3)], 0, 3))..("%02x"):format(tonumber(plainBytes[SegCrcs[i] - 4], 16)), 16)
         segStart = (SegCrcs[i] - 4)
         segEnd = (SegCrcs[i] - 4 + segLen)
         KGH = CheckKgh(plainBytes, segStart, segEnd)
