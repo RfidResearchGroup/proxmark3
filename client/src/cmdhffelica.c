@@ -1717,8 +1717,11 @@ static int CmdHFFelicaDump(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t flags = FELICA_APPEND_CRC | FELICA_RAW;
+    // Set up field once and keep it up for the entire dump sequence.
+    // First command connects (with NO_SELECT since we already have IDm).
+    uint8_t flags = FELICA_CONNECT | FELICA_NO_SELECT | FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
 
+    int ret = PM3_SUCCESS;
     uint16_t cursor = 0x0000;
 
     felica_service_dump_response_t resp;
@@ -1731,14 +1734,20 @@ static int CmdHFFelicaDump(const char *Cmd) {
         if (send_dump_sv_plain(flags, service_datalen, data_service_dump, 0,
                                &resp, false) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "No response at cursor 0x%04X", cursor);
-            return PM3_ERFTRANS;
+            ret = PM3_ERFTRANS;
+            break;
         }
+
+        // After first command, drop CONNECT flag — field is already up
+        flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
+
         if (resp.frame_response.cmd_code[0] != 0x0B) {
             PrintAndLogEx(FAILED, "Bad response cmd 0x%02X @ 0x%04X.",
                           resp.frame_response.cmd_code[0], cursor);
             PrintAndLogEx(INFO, "This is a normal signal issue. Please try again.");
             PrintAndLogEx(INFO, "If the issue persists, move the card around and check signal strength. FeliCa can be hard to keep in field.");
-            return PM3_ERFTRANS;
+            ret = PM3_ERFTRANS;
+            break;
         }
         uint8_t len = resp.frame_response.length[0];
         uint16_t node_code = resp.payload[0] | (resp.payload[1] << 8);
@@ -1811,14 +1820,20 @@ static int CmdHFFelicaDump(const char *Cmd) {
             default:
                 PrintAndLogEx(FAILED, "Unexpected length 0x%02X @ 0x%04X",
                               len, cursor);
-                return PM3_ERFTRANS;
+                ret = PM3_ERFTRANS;
+                break;
         }
+        if (ret != PM3_SUCCESS) break;
         cursor++;
         if (cursor == 0) break;
     }
 
-    PrintAndLogEx(SUCCESS, "Unauth service dump complete.");
-    return PM3_SUCCESS;
+    DropField();
+
+    if (ret == PM3_SUCCESS)
+        PrintAndLogEx(SUCCESS, "Unauth service dump complete.");
+
+    return ret;
 }
 
 
@@ -1956,11 +1971,15 @@ static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
     PrintAndLogEx(HINT, "Area and service codes are printed in network order.");
     PrintAndLogEx(INFO, "┌───────────────────────────────────────────────");
 
-    uint8_t flags = FELICA_APPEND_CRC | FELICA_RAW;
+    // Set up field once and keep it up for the entire traversal.
+    // First command connects (with NO_SELECT since we already have IDm).
+    uint8_t flags = FELICA_CONNECT | FELICA_NO_SELECT | FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
+
+    int ret = PM3_SUCCESS;
 
     /* -- traversal state ------------------------------------------ */
     uint16_t cursor = 0x0000;
-    uint16_t area_end_stack[8] = {0xFFFF};   /* root “end” = 0xFFFF */
+    uint16_t area_end_stack[8] = {0xFFFF};   /* root "end" = 0xFFFF */
     int      depth = 0;                      /* current stack depth */
 
     felica_service_dump_response_t resp;
@@ -1974,14 +1993,20 @@ static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
         if (send_dump_sv_plain(flags, datalen, data, 0,
                                &resp, false) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "No response at cursor 0x%04X", cursor);
-            return PM3_ERFTRANS;
+            ret = PM3_ERFTRANS;
+            break;
         }
+
+        // After first command, drop CONNECT flag — field is already up
+        flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
+
         if (resp.frame_response.cmd_code[0] != 0x0B) {
             PrintAndLogEx(FAILED, "Bad response cmd 0x%02X @ 0x%04X.",
                           resp.frame_response.cmd_code[0], cursor);
             PrintAndLogEx(INFO, "This is a normal signal issue. Please try again.");
             PrintAndLogEx(INFO, "If the issue persists, move the card around and check signal strength. FeliCa can be hard to keep in field.");
-            return PM3_ERFTRANS;
+            ret = PM3_ERFTRANS;
+            break;
         }
 
         uint8_t len = resp.frame_response.length[0];
@@ -2021,11 +2046,14 @@ static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
         } else {
             PrintAndLogEx(FAILED, "Unexpected length 0x%02X @ 0x%04X",
                           len, cursor);
-            return PM3_ERFTRANS;
+            ret = PM3_ERFTRANS;
+            break;
         }
         cursor++;
         if (cursor == 0) break; /* overflow safety */
     }
+
+    DropField();
 
     /* draw closing bar └─┴─... based on final depth */
     char bar[128];                 /* large enough for depth ≤ 7 */
@@ -2043,9 +2071,10 @@ static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
 
     PrintAndLogEx(INFO, "%s", bar);
 
+    if (ret == PM3_SUCCESS)
+        PrintAndLogEx(SUCCESS, "Service code and area dump complete.");
 
-    PrintAndLogEx(SUCCESS, "Service code and area dump complete.");
-    return PM3_SUCCESS;
+    return ret;
 }
 
 static int CmdHFFelicaSniff(const char *Cmd) {
@@ -3107,7 +3136,13 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
         flags |= FELICA_RAW;
     }
 
-    // Max buffer is PM3_CMD_DATA_SIZE
+    // FeliCa length byte includes itself, so raw payload must be <= 254 bytes.
+    if (datalen > 254) {
+        PrintAndLogEx(FAILED, "FeliCa raw payload too long (%d). Max is 254 bytes.", datalen);
+        return PM3_EINVARG;
+    }
+
+    // Max transport buffer is PM3_CMD_DATA_SIZE
     datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
 
     clearCommandBuffer();
