@@ -52,6 +52,7 @@
 
 
 static int CmdHelp(const char *Cmd);
+static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose);
 static felica_card_select_t last_known_card;
 
 static void set_last_known_card(felica_card_select_t card) {
@@ -281,12 +282,19 @@ static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
  * @param verbose prints out the response received.
  */
 static bool waitCmdFelica(bool iSelect, PacketResponseNG *resp, bool verbose) {
-    if (WaitForResponseTimeout(CMD_ACK, resp, 2000) == false) {
+    if (WaitForResponseTimeout(CMD_HF_FELICA_COMMAND, resp, 2000) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return false;
     }
 
-    uint16_t len = (iSelect) ? (resp->oldarg[1] & 0xffff) : (resp->oldarg[0] & 0xffff);
+    if (resp->status != PM3_SUCCESS) {
+        if (verbose) {
+            PrintAndLogEx(WARNING, "FeliCa command failed (%d)", resp->status);
+        }
+        return false;
+    }
+
+    uint16_t len = resp->length;
 
     if (verbose) {
 
@@ -298,11 +306,15 @@ static bool waitCmdFelica(bool iSelect, PacketResponseNG *resp, bool verbose) {
         PrintAndLogEx(SUCCESS, "(%u) %s", len, sprint_hex(resp->data.asBytes, len));
 
         if (iSelect == false) {
+            if (len < 4) {
+                PrintAndLogEx(ERR, "received too short frame!");
+                return false;
+            }
             if (check_crc(CRC_FELICA, resp->data.asBytes + 2, len - 2) == false) {
                 PrintAndLogEx(WARNING, "CRC ( " _RED_("fail") " )");
             }
 
-            if (resp->data.asBytes[0] != 0xB2 && resp->data.asBytes[1] != 0x4D) {
+            if (resp->data.asBytes[0] != 0xB2 || resp->data.asBytes[1] != 0x4D) {
                 PrintAndLogEx(ERR, "received incorrect frame format!");
                 return false;
             }
@@ -335,24 +347,33 @@ int read_felica_uid(bool loop, bool verbose) {
     int res = PM3_ETIMEOUT;
 
     do {
-        clearCommandBuffer();
-        SendCommandMIX(CMD_HF_FELICA_COMMAND, FELICA_CONNECT, 0, 0, NULL, 0);
+        clear_and_send_command(FELICA_CONNECT, 0, NULL, false);
         PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_ACK, &resp, 2500)) {
+        if (WaitForResponseTimeout(CMD_HF_FELICA_COMMAND, &resp, 2500)) {
 
-            uint8_t status = resp.oldarg[0] & 0xFF;
+            int status = resp.status;
 
             if (loop) {
-                if (status != 0) {
+                if (status != PM3_SUCCESS) {
                     continue;
                 }
             } else {
                 // when not in continuous mode
-                if (status != 0) {
-                    if (verbose) PrintAndLogEx(WARNING, "FeliCa card select failed");
-                    res = PM3_EOPABORTED;
+                if (status != PM3_SUCCESS) {
+                    if (verbose) {
+                        PrintAndLogEx(WARNING, "FeliCa card select failed (%d)", status);
+                    }
+                    res = status;
                     break;
                 }
+            }
+
+            if (resp.length < sizeof(felica_card_select_t)) {
+                if (verbose) {
+                    PrintAndLogEx(WARNING, "FeliCa card select returned invalid payload");
+                }
+                res = PM3_ESOFT;
+                break;
             }
 
             felica_card_select_t card;
@@ -399,50 +420,60 @@ static int CmdHFFelicaReader(const char *Cmd) {
 
 static int info_felica(bool verbose) {
 
-    clearCommandBuffer();
-    SendCommandMIX(CMD_HF_FELICA_COMMAND, FELICA_CONNECT, 0, 0, NULL, 0);
+    clear_and_send_command(FELICA_CONNECT, 0, NULL, false);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
+    if (WaitForResponseTimeout(CMD_HF_FELICA_COMMAND, &resp, 2500) == false) {
         if (verbose) PrintAndLogEx(WARNING, "FeliCa card select failed");
+        return PM3_ESOFT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        switch (resp.status) {
+            case PM3_ETIMEOUT:
+                if (verbose) {
+                    PrintAndLogEx(WARNING, "card timeout");
+                }
+                break;
+            case PM3_EWRONGANSWER:
+                if (verbose) {
+                    PrintAndLogEx(WARNING, "card answered wrong");
+                }
+                break;
+            case PM3_ECRC:
+                if (verbose) {
+                    PrintAndLogEx(WARNING, "CRC check failed");
+                }
+                break;
+            default:
+                if (verbose) {
+                    PrintAndLogEx(WARNING, "FeliCa card select failed (%d)", resp.status);
+                }
+                break;
+        }
+        return resp.status;
+    }
+
+    if (resp.length < sizeof(felica_card_select_t)) {
+        if (verbose) {
+            PrintAndLogEx(WARNING, "FeliCa card select returned invalid payload");
+        }
         return PM3_ESOFT;
     }
 
     felica_card_select_t card;
     memcpy(&card, (felica_card_select_t *)resp.data.asBytes, sizeof(felica_card_select_t));
-    uint64_t status = resp.oldarg[0];
-
-    switch (status) {
-        case 1: {
-            if (verbose)
-                PrintAndLogEx(WARNING, "card timeout");
-            return PM3_ETIMEOUT;
-        }
-        case 2: {
-            if (verbose)
-                PrintAndLogEx(WARNING, "card answered wrong");
-            return PM3_ESOFT;
-        }
-        case 3: {
-            if (verbose)
-                PrintAndLogEx(WARNING, "CRC check failed");
-            return PM3_ESOFT;
-        }
-        case 0: {
-            PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
-            PrintAndLogEx(INFO, "IDm............ " _GREEN_("%s"), sprint_hex_inrow(card.IDm, sizeof(card.IDm)));
-            PrintAndLogEx(INFO, "Code........... %s ", sprint_hex_inrow(card.code, sizeof(card.code)));
-            PrintAndLogEx(INFO, "NFCID2......... %s", sprint_hex_inrow(card.uid, sizeof(card.uid)));
-            PrintAndLogEx(INFO, "Parameter");
-            PrintAndLogEx(INFO, "PAD............ " _YELLOW_("%s"), sprint_hex_inrow(card.PMm, sizeof(card.PMm)));
-            PrintAndLogEx(INFO, "IC code........ %s ( " _YELLOW_("%s") " )", sprint_hex_inrow(card.iccode, sizeof(card.iccode)), felica_model_name(card.iccode[0], card.iccode[1]));
-            PrintAndLogEx(INFO, "MRT............ %s", sprint_hex_inrow(card.mrt, sizeof(card.mrt)));
-            PrintAndLogEx(INFO, "Service code... " _YELLOW_("%s"), sprint_hex(card.servicecode, sizeof(card.servicecode)));
-            PrintAndLogEx(NORMAL, "");
-            set_last_known_card(card);
-            break;
-        }
-    }
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
+    PrintAndLogEx(INFO, "IDm............ " _GREEN_("%s"), sprint_hex_inrow(card.IDm, sizeof(card.IDm)));
+    PrintAndLogEx(INFO, "Code........... %s ", sprint_hex_inrow(card.code, sizeof(card.code)));
+    PrintAndLogEx(INFO, "NFCID2......... %s", sprint_hex_inrow(card.uid, sizeof(card.uid)));
+    PrintAndLogEx(INFO, "Parameter");
+    PrintAndLogEx(INFO, "PAD............ " _YELLOW_("%s"), sprint_hex_inrow(card.PMm, sizeof(card.PMm)));
+    PrintAndLogEx(INFO, "IC code........ %s ( " _YELLOW_("%s") " )", sprint_hex_inrow(card.iccode, sizeof(card.iccode)), felica_model_name(card.iccode[0], card.iccode[1]));
+    PrintAndLogEx(INFO, "MRT............ %s", sprint_hex_inrow(card.mrt, sizeof(card.mrt)));
+    PrintAndLogEx(INFO, "Service code... " _YELLOW_("%s"), sprint_hex(card.servicecode, sizeof(card.servicecode)));
+    PrintAndLogEx(NORMAL, "");
+    set_last_known_card(card);
     return PM3_SUCCESS;
 }
 
@@ -462,10 +493,9 @@ static int CmdHFFelicaInfo(const char *Cmd) {
 }
 
 /**
- * Clears command buffer and sends the given data to pm3 with mix mode.
+ * Clears command buffer and sends the given data to pm3 with NG mode.
  */
-static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose) {
-    uint16_t numbits = 0;
+static void clear_and_send_command_ex(uint8_t flags, uint16_t datalen, uint8_t *data, uint16_t numbits, bool verbose, bool normalize_frame) {
     uint16_t payload_len = 0;
     uint8_t *payload = data;
 
@@ -473,7 +503,7 @@ static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *dat
     // A bunch of code in this module adds length byte at data[0] regardless of that, which is wrong
     // This is a workaround to extract the actual payload correctly so that length byte isn't repeated
     // It also strips CRC if present, as ARMSRC adds it too
-    if (data && datalen) {
+    if (normalize_frame && data && datalen) {
         if (datalen >= data[0] && data[0] > 0) {
             payload_len = data[0] - 1;
             if (payload_len > datalen - 1) {
@@ -483,13 +513,29 @@ static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *dat
         } else {
             payload_len = datalen;
         }
+    } else {
+        payload_len = datalen;
     }
 
     clearCommandBuffer();
     if (verbose) {
         PrintAndLogEx(INFO, "Send raw command - Frame: %s", sprint_hex(payload, payload_len));
     }
-    SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (payload_len & 0xFFFF) | (uint32_t)(numbits << 16), 0, payload, payload_len);
+
+    uint8_t packet_buf[sizeof(felica_raw_cmd_t) + PM3_CMD_DATA_SIZE] = {0};
+    felica_raw_cmd_t *packet = (felica_raw_cmd_t *)packet_buf;
+    packet->flags = flags;
+    packet->numbits = numbits;
+    packet->rawlen = payload_len;
+    if (payload_len) {
+        memcpy(packet->raw, payload, payload_len);
+    }
+
+    SendCommandNG(CMD_HF_FELICA_COMMAND, packet_buf, FELICA_RAW_LEN(payload_len));
+}
+
+static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose) {
+    clear_and_send_command_ex(flags, datalen, data, 0, verbose, true);
 }
 
 /**
@@ -3015,7 +3061,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort dumping");
 
     uint8_t timeout = 0;
-    while (WaitForResponseTimeout(CMD_ACK, &resp, 2000) == false) {
+    while (WaitForResponseTimeout(CMD_HF_FELICALITE_DUMP, &resp, 2000) == false) {
 
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
@@ -3041,12 +3087,28 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
 
-    if (resp.oldarg[0] == 0) {
+    if (resp.status == PM3_EOPABORTED) {
         PrintAndLogEx(WARNING, "Button pressed, aborted");
         return PM3_EOPABORTED;
     }
 
-    uint16_t tracelen = resp.oldarg[1];
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "FeliCa lite dump failed (%d)", resp.status);
+        return resp.status;
+    }
+
+    if (resp.length < sizeof(felica_lite_dump_resp_t)) {
+        PrintAndLogEx(WARNING, "Unexpected dump response length");
+        return PM3_ESOFT;
+    }
+
+    felica_lite_dump_resp_t *dump_resp = (felica_lite_dump_resp_t *)resp.data.asBytes;
+    if (dump_resp->completed == 0) {
+        PrintAndLogEx(WARNING, "Button pressed, aborted");
+        return PM3_EOPABORTED;
+    }
+
+    uint16_t tracelen = dump_resp->tracelen;
     if (tracelen == 0) {
         PrintAndLogEx(WARNING, "No trace data! Maybe not a FeliCa Lite card?");
         return PM3_ESOFT;
@@ -3065,7 +3127,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
     }
 
 
-    PrintAndLogEx(SUCCESS, "Recorded Activity (trace len = %"PRIu32" bytes)", tracelen);
+    PrintAndLogEx(SUCCESS, "Recorded Activity (trace len = %"PRIu32" bytes)", (uint32_t)tracelen);
     print_hex_break(trace, tracelen, 32);
     printSep();
 
@@ -3145,10 +3207,9 @@ static int CmdHFFelicaCmdRaw(const char *Cmd) {
     // Max transport buffer is PM3_CMD_DATA_SIZE
     datalen = (datalen > PM3_CMD_DATA_SIZE) ? PM3_CMD_DATA_SIZE : datalen;
 
-    clearCommandBuffer();
     PrintAndLogEx(SUCCESS, "Data: %s", sprint_hex(data, datalen));
 
-    SendCommandMIX(CMD_HF_FELICA_COMMAND, flags, (datalen & 0xFFFF) | (uint32_t)(numbits << 16), 0, data, datalen);
+    clear_and_send_command_ex(flags, datalen, data, numbits, false, false);
 
     if (reply) {
 

@@ -28,6 +28,20 @@ typedef enum FELICA_COMMAND {
     FELICA_NO_SELECT = (1 << 6),
 } felica_command_t;
 
+typedef struct {
+    uint8_t flags;      // PM3 flags, see felica_command_t
+    uint16_t numbits;   // optional number of bits for raw exchange
+    uint16_t rawlen;    // bytes in raw[]
+    uint8_t raw[];
+} PACKED felica_raw_cmd_t;
+
+#define FELICA_RAW_LEN(x) (sizeof(felica_raw_cmd_t) + (x))
+
+typedef struct {
+    uint8_t completed;
+    uint16_t tracelen;
+} PACKED felica_lite_dump_resp_t;
+
 //-----------------------------------------------------------------------------
 // FeliCa
 //-----------------------------------------------------------------------------
