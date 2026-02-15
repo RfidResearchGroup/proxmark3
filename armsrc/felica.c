@@ -62,14 +62,19 @@ static uint32_t iso18092_get_timeout(void) {
     return felica_timeout - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / (16 * 8) - 2;
 }
 
-#ifndef FELICA_MAX_FRAME_SIZE
-// 255 base length (max 254 data + 1 len byte) + 2 sync + 2 crc + 1 extra for safety
-#define FELICA_MAX_FRAME_SIZE 260
+#ifndef FELICA_MAX_DATA_SIZE
+// FeliCa length byte includes itself, so application level payload max is 254 bytes.
+#define FELICA_MAX_DATA_SIZE 254
+#endif
+
+#ifndef FELICA_MAX_RF_FRAME_SIZE
+// 255 base length (max 254 data + 1 len byte) + 2 sync + 2 crc + 1 extra for safety.
+#define FELICA_MAX_RF_FRAME_SIZE 260
 #endif
 
 
 //structure to hold outgoing NFC frame
-static uint8_t frameSpace[FELICA_MAX_FRAME_SIZE];
+static uint8_t frameSpace[FELICA_MAX_RF_FRAME_SIZE];
 
 //structure to hold incoming NFC frame, used for ISO/IEC 18092-compatible frames
 static struct {
@@ -492,7 +497,7 @@ static void iso18092_setup(uint8_t fpga_minor_mode) {
 #endif
     // allocate command receive buffer
     BigBuf_free();
-    FelicaFrameinit(BigBuf_calloc(FELICA_MAX_FRAME_SIZE));
+    FelicaFrameinit(BigBuf_calloc(FELICA_MAX_RF_FRAME_SIZE));
 
     felica_nexttransfertime = 2 * DELAY_ARM2AIR_AS_READER;  // 418
     // iso18092_set_timeout(2120); // 106 * 20ms  maximum start-up time of card
@@ -533,14 +538,30 @@ static void felica_reset_frame_mode(void) {
 //-----------------------------------------------------------------------------
 // RAW FeliCa commands. Send out commands and store answers.
 //-----------------------------------------------------------------------------
-// arg0 FeliCa flags
-// arg1 len of commandbytes
-// d.asBytes command bytes to send
 void felica_sendraw(const PacketCommandNG *c) {
 
-    felica_command_t param = c->oldarg[0];
-    size_t len = c->oldarg[1] & 0xffff;
-    uint32_t arg0;
+    felica_command_t param = 0;
+    size_t len = 0;
+    const uint8_t *payload = NULL;
+
+    if (!c->ng) {
+        reply_ng(CMD_HF_FELICA_COMMAND, PM3_EINVARG, NULL, 0);
+        return;
+    }
+    if (c->length < sizeof(felica_raw_cmd_t)) {
+        reply_ng(CMD_HF_FELICA_COMMAND, PM3_EINVARG, NULL, 0);
+        return;
+    }
+    const felica_raw_cmd_t *request = (const felica_raw_cmd_t *)c->data.asBytes;
+    if ((size_t)request->rawlen > PM3_CMD_DATA_SIZE || FELICA_RAW_LEN(request->rawlen) > c->length) {
+        reply_ng(CMD_HF_FELICA_COMMAND, PM3_EINVARG, NULL, 0);
+        return;
+    }
+
+    param = request->flags;
+    len = request->rawlen;
+    payload = request->raw;
+    
     bool do_connect = ((param & FELICA_CONNECT) == FELICA_CONNECT);
     bool no_disconnect = ((param & FELICA_NO_DISCONNECT) == FELICA_NO_DISCONNECT);
 
@@ -560,26 +581,42 @@ void felica_sendraw(const PacketCommandNG *c) {
 
         // notify client selecting status.
         // if failed selecting, turn off antenna and quit.
-        felica_card_select_t card;
-        arg0 = felica_select_card(&card);
-        reply_mix(CMD_ACK, arg0, sizeof(card.uid), 0, &card, sizeof(felica_card_select_t));
-        if (arg0) {
+        felica_card_select_t card = {0};
+        uint8_t select_result = felica_select_card(&card);
+
+        int select_status = PM3_SUCCESS;
+        switch (select_result) {
+            case 1:
+                select_status = PM3_ETIMEOUT;
+                break;
+            case 2:
+                select_status = PM3_EWRONGANSWER;
+                break;
+            case 3:
+                select_status = PM3_ECRC;
+                break;
+            default:
+                break;
+        }
+
+        reply_ng(CMD_HF_FELICA_COMMAND, select_status, (uint8_t *)&card, sizeof(felica_card_select_t));
+        if (select_status != PM3_SUCCESS) {
             felica_reset_frame_mode();
             return;
         }
     }
 
     if ((param & FELICA_RAW) == FELICA_RAW) {
-        if (len > FELICA_MAX_FRAME_SIZE) {
-            Dbprintf("FeliCa raw payload too long: %u (max %u)", len, FELICA_MAX_FRAME_SIZE);
-            reply_mix(CMD_ACK, 0, PM3_ELENGTH, 0, NULL, 0);
+        if (len > FELICA_MAX_DATA_SIZE) {
+            Dbprintf("FeliCa raw payload too long: %u (max %u)", len, FELICA_MAX_DATA_SIZE);
+            reply_ng(CMD_HF_FELICA_COMMAND, PM3_ELENGTH, NULL, 0);
             if (!no_disconnect) {
                 felica_reset_frame_mode();
             }
             return;
         }
 
-        uint8_t buf[FELICA_MAX_FRAME_SIZE];
+        uint8_t buf[FELICA_MAX_RF_FRAME_SIZE];
         memset(buf, 0, sizeof(buf));
 
         // add sync bits
@@ -590,7 +627,7 @@ void felica_sendraw(const PacketCommandNG *c) {
         buf[2] = len + 1;
 
         // copy command
-        memcpy(buf + 3, c->data.asBytes, len);
+        memcpy(buf + 3, payload, len);
 
         if ((param & FELICA_APPEND_CRC) == FELICA_APPEND_CRC) {
             // Don't append crc on empty bytearray...
@@ -609,17 +646,16 @@ void felica_sendraw(const PacketCommandNG *c) {
         };
 
         TransmitFor18092_AsReader(buf, buf[2] + 4, NULL, 1, 0);
-        arg0 = WaitForFelicaReply(1024);
+        bool got_frame = WaitForFelicaReply(1024);
 
         if (g_dbglevel >= DBG_DEBUG) {
-            Dbprintf("Received Frame Code: %d", arg0);
+            Dbprintf("Received Frame Code: %d", got_frame);
             Dbhexdump(FelicaFrame.len, FelicaFrame.framebytes, 0);
         };
 
-        uint32_t result = reply_mix(CMD_ACK, FelicaFrame.len, arg0, 0, FelicaFrame.framebytes, FelicaFrame.len);
-        if (result) {
-            Dbprintf("Reply to Client Error Code: %i", result);
-        }
+        int status = got_frame ? PM3_SUCCESS : PM3_ERFTRANS;
+        uint16_t frame_len = got_frame ? FelicaFrame.len : 0;
+        reply_ng(CMD_HF_FELICA_COMMAND, status, got_frame ? FelicaFrame.framebytes : NULL, frame_len);
     }
 
     if (no_disconnect) {
@@ -937,5 +973,10 @@ void felica_dump_lite_s(void) {
     // setting tracelen - important!  it was set by buffer overflow before
     // iceman:  is this still needed?!?
     set_tracelen(cnt);
-    reply_mix(CMD_ACK, isOK, cnt, 0, 0, 0);
+
+    felica_lite_dump_resp_t payload = {
+        .completed = isOK,
+        .tracelen = cnt,
+    };
+    reply_ng(CMD_HF_FELICALITE_DUMP, isOK ? PM3_SUCCESS : PM3_EOPABORTED, (uint8_t *)&payload, sizeof(payload));
 }
