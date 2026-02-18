@@ -891,6 +891,143 @@ static int CmdStandalone(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int CmdDecay(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hw decay",
+                  "Measure HF antenna decay after field-off.\n"
+                  "Captures how quickly the peak-detect capacitor voltage drops\n"
+                  "after the 13.56 MHz field is turned off. Different antenna loading\n"
+                  "(unloaded, booster board, damaged) produces different decay profiles.",
+                  "hw decay\n"
+                  "hw decay --ms 100  --> stabilize for 100ms before measurement\n"
+                  "hw decay --us 5000 --> measure 5ms decay window\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_int0(NULL, "ms", "<dec>", "Field stabilization time in ms (default: 50)"),
+        arg_int0(NULL, "us", "<dec>", "Measurement window in us (default: 2000)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    uint16_t stabilize_ms = arg_get_int_def(ctx, 1, 50);
+    uint16_t measure_us = arg_get_int_def(ctx, 2, 2000);
+    CLIParserFree(ctx);
+
+    // Build parameter packet
+    struct {
+        uint16_t stabilize_ms;
+        uint16_t measure_us;
+        uint8_t num_pulses;
+        uint8_t padding[3];
+    } PACKED params = {
+        .stabilize_ms = stabilize_ms,
+        .measure_us = measure_us,
+        .num_pulses = 1,
+        .padding = {0}
+    };
+
+    PrintAndLogEx(INFO, "Measuring HF antenna decay...");
+    PrintAndLogEx(INFO, "  Field stabilization: " _YELLOW_("%d") " ms", stabilize_ms);
+    PrintAndLogEx(INFO, "  Measurement window:  " _YELLOW_("%d") " us", measure_us);
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_DECAY, (uint8_t *)&params, sizeof(params));
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_DECAY, &resp, 5000) == false) {
+        PrintAndLogEx(WARNING, "Timeout waiting for decay measurement");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Decay measurement failed");
+        return PM3_ESOFT;
+    }
+
+    // Parse response header
+    uint16_t baseline_mv = resp.data.asBytes[0] | (resp.data.asBytes[1] << 8);
+    uint16_t num_samples = resp.data.asBytes[2] | (resp.data.asBytes[3] << 8);
+    uint16_t sample_interval_us = resp.data.asBytes[4] | (resp.data.asBytes[5] << 8);
+    uint16_t measure_window_us = resp.data.asBytes[6] | (resp.data.asBytes[7] << 8);
+    uint16_t *samples = (uint16_t *)(resp.data.asBytes + 8);
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "-------- " _CYAN_("HF Decay Measurement") " ----------");
+    PrintAndLogEx(SUCCESS, "Baseline (field on).... " _YELLOW_("%d") " mV  (%.2f V)",
+                  baseline_mv, baseline_mv / 1000.0);
+    PrintAndLogEx(SUCCESS, "Samples captured....... %d", num_samples);
+    PrintAndLogEx(SUCCESS, "Sample interval........ ~%d us", sample_interval_us);
+    PrintAndLogEx(SUCCESS, "Total window........... %d us", measure_window_us);
+
+    if (num_samples == 0) {
+        PrintAndLogEx(WARNING, "No samples captured");
+        return PM3_ESOFT;
+    }
+
+    // Decay samples use fast ADC (reduced S&H) for ~5us/sample resolution.
+    // Absolute mV values are ~11% of truth due to RC charging limitation,
+    // but relative decay shape is accurate. Use first sample as 100% reference.
+    uint16_t ref_mv = samples[0];
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, " idx | time (us) |  raw  |  %% of peak");
+    PrintAndLogEx(INFO, "-----+-----------+-------+-------------");
+
+    for (uint16_t i = 0; i < num_samples; i++) {
+        uint32_t time_us = (num_samples > 1)
+            ? (uint32_t)i * measure_window_us / (num_samples - 1)
+            : 0;
+        double pct = (ref_mv > 0)
+            ? 100.0 * samples[i] / ref_mv
+            : 0;
+        PrintAndLogEx(INFO, " %3d | %7d   | %5d | %.1f%%",
+                      i, time_us, samples[i], pct);
+    }
+
+    // Find time to 50% decay (relative to first sample)
+    uint16_t half_ref = ref_mv / 2;
+    int t_half_idx = -1;
+    for (uint16_t i = 0; i < num_samples; i++) {
+        if (samples[i] <= half_ref) {
+            t_half_idx = i;
+            break;
+        }
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    if (t_half_idx >= 0) {
+        uint32_t t_half_us = (num_samples > 1)
+            ? (uint32_t)t_half_idx * measure_window_us / (num_samples - 1)
+            : 0;
+        PrintAndLogEx(SUCCESS, "Time to 50%% decay..... ~" _YELLOW_("%d") " us (sample %d)", t_half_us, t_half_idx);
+    } else {
+        PrintAndLogEx(INFO, "Voltage did not reach 50%% decay within measurement window");
+    }
+
+    uint16_t final_mv = samples[num_samples - 1];
+    double final_pct = (ref_mv > 0) ? 100.0 * final_mv / ref_mv : 0;
+    PrintAndLogEx(SUCCESS, "Final voltage.......... %d raw (%.1f%% of peak)", final_mv, final_pct);
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Note: decay samples use fast ADC (~5us/sample, relative values)");
+
+    // Load into graph window
+    for (uint16_t i = 0; i < num_samples; i++) {
+        g_GraphBuffer[i] = (int)samples[i];
+    }
+    g_GraphTraceLen = num_samples;
+    ShowGraphWindow();
+    RepaintGraphWindow();
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "Decay curve loaded into graph window (mV vs sample index)");
+    PrintAndLogEx(NORMAL, "");
+
+    return PM3_SUCCESS;
+}
+
 static int CmdTune(const char *Cmd) {
 
     CLIParserContext *ctx;
@@ -1058,23 +1195,117 @@ static int CmdTune(const char *Cmd) {
 
     memset(judgement, 0, sizeof(judgement));
 
-    PrintAndLogEx(SUCCESS, "");
-    PrintAndLogEx(SUCCESS, "Approx. Q factor measurement");
+    // If HF is unusable or marginal, run a quick decay measurement to check
+    // for booster board. With a booster, the first fast-ADC decay sample reads
+    // 50-500 (rapid discharge). Without a booster, it reads >1000.
+    bool hf_booster_detected = false;
+    if (!IfPm3Rdv4Fw() && package->v_hf < HF_MARGINAL_V) {
+        struct {
+            uint16_t stabilize_ms;
+            uint16_t measure_us;
+            uint8_t num_pulses;
+            uint8_t padding[3];
+        } PACKED decay_params = {
+            .stabilize_ms = 50,
+            .measure_us = 50,
+            .num_pulses = 1,
+            .padding = {0}
+        };
 
-    if (package->v_hf >= HF_UNUSABLE_V) {
-        // Q measure with Vlr=Q*(2*Vdd/pi)
-        double hfq = (double)package->v_hf * 3.14 / 2 / vdd;
-        PrintAndLogEx(SUCCESS, "Peak voltage.......... " _YELLOW_("%.1lf"), hfq);
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_DECAY, (uint8_t *)&decay_params, sizeof(decay_params));
+
+        PacketResponseNG decay_resp;
+        if (WaitForResponseTimeout(CMD_HF_DECAY, &decay_resp, 3000)
+                && decay_resp.status == PM3_SUCCESS) {
+
+            uint16_t decay_num = decay_resp.data.asBytes[2] | (decay_resp.data.asBytes[3] << 8);
+            uint16_t *decay_samples = (uint16_t *)(decay_resp.data.asBytes + 8);
+
+            if (decay_num > 0 && decay_samples[0] >= 50 && decay_samples[0] <= 500) {
+                hf_booster_detected = true;
+            }
+        }
     }
 
-    if (package->v_hf < HF_UNUSABLE_V)
-        snprintf(judgement, sizeof(judgement), _RED_("unusable"));
-    else if (package->v_hf < HF_MARGINAL_V)
-        snprintf(judgement, sizeof(judgement), _YELLOW_("marginal"));
-    else
-        snprintf(judgement, sizeof(judgement), _GREEN_("ok"));
+    if (hf_booster_detected) {
+        PrintAndLogEx(SUCCESS, "");
+        PrintAndLogEx(SUCCESS, "Your HF antenna measurement shows");
+        PrintAndLogEx(SUCCESS, "low voltage that is consistent");
+        PrintAndLogEx(SUCCESS, "with the installation of a booster");
+        PrintAndLogEx(SUCCESS, "board. If you do not have a");
+        PrintAndLogEx(SUCCESS, "booster board installed, either");
+        PrintAndLogEx(SUCCESS, "your antenna is malfunctioning or");
+        PrintAndLogEx(SUCCESS, "you have a tag on the HF antenna.");
+    } else {
+        PrintAndLogEx(SUCCESS, "");
+        PrintAndLogEx(SUCCESS, "Approx. Q factor measurement");
 
-    PrintAndLogEx((package->v_hf < HF_UNUSABLE_V) ? WARNING : SUCCESS, "HF antenna ( %s )", judgement);
+        if (package->v_hf >= HF_UNUSABLE_V) {
+            // Q measure with Vlr=Q*(2*Vdd/pi)
+            double hfq = (double)package->v_hf * 3.14 / 2 / vdd;
+            PrintAndLogEx(SUCCESS, "Peak voltage.......... " _YELLOW_("%.1lf"), hfq);
+        }
+
+        if (package->v_hf < HF_UNUSABLE_V)
+            snprintf(judgement, sizeof(judgement), _RED_("unusable"));
+        else if (package->v_hf < HF_MARGINAL_V)
+            snprintf(judgement, sizeof(judgement), _YELLOW_("marginal"));
+        else
+            snprintf(judgement, sizeof(judgement), _GREEN_("ok"));
+
+        PrintAndLogEx((package->v_hf < HF_UNUSABLE_V) ? WARNING : SUCCESS, "HF antenna ( %s )", judgement);
+
+        // If HF voltage is ok/marginal but below 13V, check for
+        // surface interference via decay measurement.
+        // Only on PM3 Easy — RDV4 has different voltage divider.
+        if (!IfPm3Rdv4Fw()
+                && package->v_hf >= HF_MARGINAL_V
+                && package->v_hf < 13000) {
+
+            struct {
+                uint16_t stabilize_ms;
+                uint16_t measure_us;
+                uint8_t num_pulses;
+                uint8_t padding[3];
+            } PACKED surface_params = {
+                .stabilize_ms = 50,
+                .measure_us = 50,
+                .num_pulses = 1,
+                .padding = {0}
+            };
+
+            clearCommandBuffer();
+            SendCommandNG(CMD_HF_DECAY,
+                          (uint8_t *)&surface_params,
+                          sizeof(surface_params));
+
+            PacketResponseNG surface_resp;
+            if (WaitForResponseTimeout(
+                        CMD_HF_DECAY,
+                        &surface_resp, 3000)
+                    && surface_resp.status == PM3_SUCCESS) {
+
+                uint16_t sn = surface_resp.data.asBytes[2]
+                    | (surface_resp.data.asBytes[3] << 8);
+                uint16_t *ss =
+                    (uint16_t *)(surface_resp.data.asBytes + 8);
+
+                if (sn > 0 && ss[0] >= 600 && ss[0] <= 900) {
+                    PrintAndLogEx(SUCCESS, "");
+                    PrintAndLogEx(SUCCESS,
+                        "The surface your proxmark"
+                        " may be on could");
+                    PrintAndLogEx(SUCCESS,
+                        "contain interfering"
+                        " materials. Try again");
+                    PrintAndLogEx(SUCCESS,
+                        "while holding the"
+                        " proxmark in free space.");
+                }
+            }
+        }
+    }
 
     // graph LF measurements
     // even here, these values has 3% error.
@@ -1532,6 +1763,7 @@ static command_t CommandTable[] = {
     {"standalone",    CmdStandalone,   IfPm3Present,     "Start installed standalone mode on device"},
     {"tia",           CmdTia,          IfPm3Present,     "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
     {"tune",          CmdTune,         IfPm3Lf,          "Measure tuning of device antenna"},
+    {"decay",         CmdDecay,        IfPm3Present,     "Measure HF antenna decay after field-off"},
     {NULL, NULL, NULL, NULL}
 };
 
