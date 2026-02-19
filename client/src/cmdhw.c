@@ -29,7 +29,7 @@
 #include <Python.h>
 #endif
 
-#include "cmdparser.h"      // command_t
+#include "cmdparser.h" // command_t
 #include "cliparser.h"
 #include "comms.h"
 #include "usart_defs.h"
@@ -40,382 +40,385 @@
 #include "commonutil.h"
 #include "preferences.h"
 #include "pm3_cmd.h"
-#include "pmflash.h"        // rdv40validation_t
-#include "cmdflashmem.h"    // get_signature..
-#include "uart/uart.h"      // configure timeout
+#include "pmflash.h"     // rdv40validation_t
+#include "cmdflashmem.h" // get_signature..
+#include "uart/uart.h"   // configure timeout
 #include "util_posix.h"
-#include "flash.h"          // reboot to bootloader mode
+#include "flash.h" // reboot to bootloader mode
 #include "proxgui.h"
-#include "graph.h"          // for graph data
+#include "graph.h" // for graph data
 
 #include "lua.h"
 
 static int CmdHelp(const char *Cmd);
 
-static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used) {
+static void lookup_chipid_short(uint32_t iChipID, uint32_t mem_used)
+{
     const char *asBuff;
-    switch (iChipID) {
-        case 0x270B0A40:
-            asBuff = "AT91SAM7S512 Rev A";
-            break;
-        case 0x270B0A4E:
-        case 0x270B0A4F:
-            asBuff = "AT91SAM7S512 Rev B";
-            break;
-        case 0x270D0940:
-            asBuff = "AT91SAM7S256 Rev A";
-            break;
-        case 0x270B0941:
-            asBuff = "AT91SAM7S256 Rev B";
-            break;
-        case 0x270B0942:
-            asBuff = "AT91SAM7S256 Rev C";
-            break;
-        case 0x270B0943:
-            asBuff = "AT91SAM7S256 Rev D";
-            break;
-        case 0x270C0740:
-            asBuff = "AT91SAM7S128 Rev A";
-            break;
-        case 0x270A0741:
-            asBuff = "AT91SAM7S128 Rev B";
-            break;
-        case 0x270A0742:
-            asBuff = "AT91SAM7S128 Rev C";
-            break;
-        case 0x270A0743:
-            asBuff = "AT91SAM7S128 Rev D";
-            break;
-        case 0x27090540:
-            asBuff = "AT91SAM7S64 Rev A";
-            break;
-        case 0x27090543:
-            asBuff = "AT91SAM7S64 Rev B";
-            break;
-        case 0x27090544:
-            asBuff = "AT91SAM7S64 Rev C";
-            break;
-        case 0x27080342:
-            asBuff = "AT91SAM7S321 Rev A";
-            break;
-        case 0x27080340:
-            asBuff = "AT91SAM7S32 Rev A";
-            break;
-        case 0x27080341:
-            asBuff = "AT91SAM7S32 Rev B";
-            break;
-        case 0x27050241:
-            asBuff = "AT9SAM7S161 Rev A";
-            break;
-        case 0x27050240:
-            asBuff = "AT91SAM7S16 Rev A";
-            break;
-        default:
-            asBuff = "Unknown";
-            break;
+    switch (iChipID)
+    {
+    case 0x270B0A40:
+        asBuff = "AT91SAM7S512 Rev A";
+        break;
+    case 0x270B0A4E:
+    case 0x270B0A4F:
+        asBuff = "AT91SAM7S512 Rev B";
+        break;
+    case 0x270D0940:
+        asBuff = "AT91SAM7S256 Rev A";
+        break;
+    case 0x270B0941:
+        asBuff = "AT91SAM7S256 Rev B";
+        break;
+    case 0x270B0942:
+        asBuff = "AT91SAM7S256 Rev C";
+        break;
+    case 0x270B0943:
+        asBuff = "AT91SAM7S256 Rev D";
+        break;
+    case 0x270C0740:
+        asBuff = "AT91SAM7S128 Rev A";
+        break;
+    case 0x270A0741:
+        asBuff = "AT91SAM7S128 Rev B";
+        break;
+    case 0x270A0742:
+        asBuff = "AT91SAM7S128 Rev C";
+        break;
+    case 0x270A0743:
+        asBuff = "AT91SAM7S128 Rev D";
+        break;
+    case 0x27090540:
+        asBuff = "AT91SAM7S64 Rev A";
+        break;
+    case 0x27090543:
+        asBuff = "AT91SAM7S64 Rev B";
+        break;
+    case 0x27090544:
+        asBuff = "AT91SAM7S64 Rev C";
+        break;
+    case 0x27080342:
+        asBuff = "AT91SAM7S321 Rev A";
+        break;
+    case 0x27080340:
+        asBuff = "AT91SAM7S32 Rev A";
+        break;
+    case 0x27080341:
+        asBuff = "AT91SAM7S32 Rev B";
+        break;
+    case 0x27050241:
+        asBuff = "AT9SAM7S161 Rev A";
+        break;
+    case 0x27050240:
+        asBuff = "AT91SAM7S16 Rev A";
+        break;
+    default:
+        asBuff = "Unknown";
+        break;
     }
     PrintAndLogEx(NORMAL, "    MCU....... " _YELLOW_("%s"), asBuff);
 
     uint32_t mem_avail = 0;
-    switch ((iChipID & 0xF00) >> 8) {
-        case 0:
-            mem_avail = 0;
-            break;
-        case 1:
-            mem_avail = 8;
-            break;
-        case 2:
-            mem_avail = 16;
-            break;
-        case 3:
-            mem_avail = 32;
-            break;
-        case 5:
-            mem_avail = 64;
-            break;
-        case 7:
-            mem_avail = 128;
-            break;
-        case 9:
-            mem_avail = 256;
-            break;
-        case 10:
-            mem_avail = 512;
-            break;
-        case 12:
-            mem_avail = 1024;
-            break;
-        case 14:
-            mem_avail = 2048;
-            break;
+    switch ((iChipID & 0xF00) >> 8)
+    {
+    case 0:
+        mem_avail = 0;
+        break;
+    case 1:
+        mem_avail = 8;
+        break;
+    case 2:
+        mem_avail = 16;
+        break;
+    case 3:
+        mem_avail = 32;
+        break;
+    case 5:
+        mem_avail = 64;
+        break;
+    case 7:
+        mem_avail = 128;
+        break;
+    case 9:
+        mem_avail = 256;
+        break;
+    case 10:
+        mem_avail = 512;
+        break;
+    case 12:
+        mem_avail = 1024;
+        break;
+    case 14:
+        mem_avail = 2048;
+        break;
     }
 
-    PrintAndLogEx(NORMAL, "    Memory.... " _YELLOW_("%u") " KB ( " _YELLOW_("%2.0f%%") " used )"
-                  , mem_avail
-                  , mem_avail == 0 ? 0.0f : (float)mem_used / (mem_avail * 1024) * 100
-                 );
+    PrintAndLogEx(NORMAL, "    Memory.... " _YELLOW_("%u") " KB ( " _YELLOW_("%2.0f%%") " used )", mem_avail, mem_avail == 0 ? 0.0f : (float)mem_used / (mem_avail * 1024) * 100);
 }
 
-static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
+static void lookupChipID(uint32_t iChipID, uint32_t mem_used)
+{
     const char *asBuff;
     uint32_t mem_avail = 0;
     PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Hardware") " ]");
 
-    switch (iChipID) {
-        case 0x270B0A40:
-            asBuff = "AT91SAM7S512 Rev A";
-            break;
-        case 0x270B0A4E:
-        case 0x270B0A4F:
-            asBuff = "AT91SAM7S512 Rev B";
-            break;
-        case 0x270D0940:
-            asBuff = "AT91SAM7S256 Rev A";
-            break;
-        case 0x270B0941:
-            asBuff = "AT91SAM7S256 Rev B";
-            break;
-        case 0x270B0942:
-            asBuff = "AT91SAM7S256 Rev C";
-            break;
-        case 0x270B0943:
-            asBuff = "AT91SAM7S256 Rev D";
-            break;
-        case 0x270C0740:
-            asBuff = "AT91SAM7S128 Rev A";
-            break;
-        case 0x270A0741:
-            asBuff = "AT91SAM7S128 Rev B";
-            break;
-        case 0x270A0742:
-            asBuff = "AT91SAM7S128 Rev C";
-            break;
-        case 0x270A0743:
-            asBuff = "AT91SAM7S128 Rev D";
-            break;
-        case 0x27090540:
-            asBuff = "AT91SAM7S64 Rev A";
-            break;
-        case 0x27090543:
-            asBuff = "AT91SAM7S64 Rev B";
-            break;
-        case 0x27090544:
-            asBuff = "AT91SAM7S64 Rev C";
-            break;
-        case 0x27080342:
-            asBuff = "AT91SAM7S321 Rev A";
-            break;
-        case 0x27080340:
-            asBuff = "AT91SAM7S32 Rev A";
-            break;
-        case 0x27080341:
-            asBuff = "AT91SAM7S32 Rev B";
-            break;
-        case 0x27050241:
-            asBuff = "AT9SAM7S161 Rev A";
-            break;
-        case 0x27050240:
-            asBuff = "AT91SAM7S16 Rev A";
-            break;
-        default:
-            asBuff = "Unknown";
-            break;
+    switch (iChipID)
+    {
+    case 0x270B0A40:
+        asBuff = "AT91SAM7S512 Rev A";
+        break;
+    case 0x270B0A4E:
+    case 0x270B0A4F:
+        asBuff = "AT91SAM7S512 Rev B";
+        break;
+    case 0x270D0940:
+        asBuff = "AT91SAM7S256 Rev A";
+        break;
+    case 0x270B0941:
+        asBuff = "AT91SAM7S256 Rev B";
+        break;
+    case 0x270B0942:
+        asBuff = "AT91SAM7S256 Rev C";
+        break;
+    case 0x270B0943:
+        asBuff = "AT91SAM7S256 Rev D";
+        break;
+    case 0x270C0740:
+        asBuff = "AT91SAM7S128 Rev A";
+        break;
+    case 0x270A0741:
+        asBuff = "AT91SAM7S128 Rev B";
+        break;
+    case 0x270A0742:
+        asBuff = "AT91SAM7S128 Rev C";
+        break;
+    case 0x270A0743:
+        asBuff = "AT91SAM7S128 Rev D";
+        break;
+    case 0x27090540:
+        asBuff = "AT91SAM7S64 Rev A";
+        break;
+    case 0x27090543:
+        asBuff = "AT91SAM7S64 Rev B";
+        break;
+    case 0x27090544:
+        asBuff = "AT91SAM7S64 Rev C";
+        break;
+    case 0x27080342:
+        asBuff = "AT91SAM7S321 Rev A";
+        break;
+    case 0x27080340:
+        asBuff = "AT91SAM7S32 Rev A";
+        break;
+    case 0x27080341:
+        asBuff = "AT91SAM7S32 Rev B";
+        break;
+    case 0x27050241:
+        asBuff = "AT9SAM7S161 Rev A";
+        break;
+    case 0x27050240:
+        asBuff = "AT91SAM7S16 Rev A";
+        break;
+    default:
+        asBuff = "Unknown";
+        break;
     }
     PrintAndLogEx(NORMAL, "  --= uC: " _YELLOW_("%s"), asBuff);
 
-    switch ((iChipID & 0xE0) >> 5) {
-        case 1:
-            asBuff = "ARM946ES";
-            break;
-        case 2:
-            asBuff = "ARM7TDMI";
-            break;
-        case 4:
-            asBuff = "ARM920T";
-            break;
-        case 5:
-            asBuff = "ARM926EJS";
-            break;
-        default:
-            asBuff = "Unknown";
-            break;
+    switch ((iChipID & 0xE0) >> 5)
+    {
+    case 1:
+        asBuff = "ARM946ES";
+        break;
+    case 2:
+        asBuff = "ARM7TDMI";
+        break;
+    case 4:
+        asBuff = "ARM920T";
+        break;
+    case 5:
+        asBuff = "ARM926EJS";
+        break;
+    default:
+        asBuff = "Unknown";
+        break;
     }
     PrintAndLogEx(NORMAL, "  --= Embedded Processor: %s", asBuff);
 
-    switch ((iChipID & 0xF0000) >> 16) {
-        case 1:
-            asBuff = "1K bytes";
-            break;
-        case 2:
-            asBuff = "2K bytes";
-            break;
-        case 3:
-            asBuff = "6K bytes";
-            break;
-        case 4:
-            asBuff = "112K bytes";
-            break;
-        case 5:
-            asBuff = "4K bytes";
-            break;
-        case 6:
-            asBuff = "80K bytes";
-            break;
-        case 7:
-            asBuff = "160K bytes";
-            break;
-        case 8:
-            asBuff = "8K bytes";
-            break;
-        case 9:
-            asBuff = "16K bytes";
-            break;
-        case 10:
-            asBuff = "32K bytes";
-            break;
-        case 11:
-            asBuff = "64K bytes";
-            break;
-        case 12:
-            asBuff = "128K bytes";
-            break;
-        case 13:
-            asBuff = "256K bytes";
-            break;
-        case 14:
-            asBuff = "96K bytes";
-            break;
-        case 15:
-            asBuff = "512K bytes";
-            break;
-        default:
-            asBuff = "Unknown";
-            break;
+    switch ((iChipID & 0xF0000) >> 16)
+    {
+    case 1:
+        asBuff = "1K bytes";
+        break;
+    case 2:
+        asBuff = "2K bytes";
+        break;
+    case 3:
+        asBuff = "6K bytes";
+        break;
+    case 4:
+        asBuff = "112K bytes";
+        break;
+    case 5:
+        asBuff = "4K bytes";
+        break;
+    case 6:
+        asBuff = "80K bytes";
+        break;
+    case 7:
+        asBuff = "160K bytes";
+        break;
+    case 8:
+        asBuff = "8K bytes";
+        break;
+    case 9:
+        asBuff = "16K bytes";
+        break;
+    case 10:
+        asBuff = "32K bytes";
+        break;
+    case 11:
+        asBuff = "64K bytes";
+        break;
+    case 12:
+        asBuff = "128K bytes";
+        break;
+    case 13:
+        asBuff = "256K bytes";
+        break;
+    case 14:
+        asBuff = "96K bytes";
+        break;
+    case 15:
+        asBuff = "512K bytes";
+        break;
+    default:
+        asBuff = "Unknown";
+        break;
     }
     PrintAndLogEx(NORMAL, "  --= Internal SRAM size: %s", asBuff);
 
-    switch ((iChipID & 0xFF00000) >> 20) {
-        case 0x19:
-            asBuff = "AT91SAM9xx Series";
-            break;
-        case 0x29:
-            asBuff = "AT91SAM9XExx Series";
-            break;
-        case 0x34:
-            asBuff = "AT91x34 Series";
-            break;
-        case 0x37:
-            asBuff = "CAP7 Series";
-            break;
-        case 0x39:
-            asBuff = "CAP9 Series";
-            break;
-        case 0x3B:
-            asBuff = "CAP11 Series";
-            break;
-        case 0x40:
-            asBuff = "AT91x40 Series";
-            break;
-        case 0x42:
-            asBuff = "AT91x42 Series";
-            break;
-        case 0x55:
-            asBuff = "AT91x55 Series";
-            break;
-        case 0x60:
-            asBuff = "AT91SAM7Axx Series";
-            break;
-        case 0x61:
-            asBuff = "AT91SAM7AQxx Series";
-            break;
-        case 0x63:
-            asBuff = "AT91x63 Series";
-            break;
-        case 0x70:
-            asBuff = "AT91SAM7Sxx Series";
-            break;
-        case 0x71:
-            asBuff = "AT91SAM7XCxx Series";
-            break;
-        case 0x72:
-            asBuff = "AT91SAM7SExx Series";
-            break;
-        case 0x73:
-            asBuff = "AT91SAM7Lxx Series";
-            break;
-        case 0x75:
-            asBuff = "AT91SAM7Xxx Series";
-            break;
-        case 0x92:
-            asBuff = "AT91x92 Series";
-            break;
-        case 0xF0:
-            asBuff = "AT75Cxx Series";
-            break;
-        default:
-            asBuff = "Unknown";
-            break;
+    switch ((iChipID & 0xFF00000) >> 20)
+    {
+    case 0x19:
+        asBuff = "AT91SAM9xx Series";
+        break;
+    case 0x29:
+        asBuff = "AT91SAM9XExx Series";
+        break;
+    case 0x34:
+        asBuff = "AT91x34 Series";
+        break;
+    case 0x37:
+        asBuff = "CAP7 Series";
+        break;
+    case 0x39:
+        asBuff = "CAP9 Series";
+        break;
+    case 0x3B:
+        asBuff = "CAP11 Series";
+        break;
+    case 0x40:
+        asBuff = "AT91x40 Series";
+        break;
+    case 0x42:
+        asBuff = "AT91x42 Series";
+        break;
+    case 0x55:
+        asBuff = "AT91x55 Series";
+        break;
+    case 0x60:
+        asBuff = "AT91SAM7Axx Series";
+        break;
+    case 0x61:
+        asBuff = "AT91SAM7AQxx Series";
+        break;
+    case 0x63:
+        asBuff = "AT91x63 Series";
+        break;
+    case 0x70:
+        asBuff = "AT91SAM7Sxx Series";
+        break;
+    case 0x71:
+        asBuff = "AT91SAM7XCxx Series";
+        break;
+    case 0x72:
+        asBuff = "AT91SAM7SExx Series";
+        break;
+    case 0x73:
+        asBuff = "AT91SAM7Lxx Series";
+        break;
+    case 0x75:
+        asBuff = "AT91SAM7Xxx Series";
+        break;
+    case 0x92:
+        asBuff = "AT91x92 Series";
+        break;
+    case 0xF0:
+        asBuff = "AT75Cxx Series";
+        break;
+    default:
+        asBuff = "Unknown";
+        break;
     }
     PrintAndLogEx(NORMAL, "  --= Architecture identifier: %s", asBuff);
 
-    switch ((iChipID & 0x70000000) >> 28) {
-        case 0:
-            asBuff = "ROM";
-            break;
-        case 1:
-            asBuff = "ROMless or on-chip Flash";
-            break;
-        case 2:
-            asBuff = "Embedded flash memory";
-            break;
-        case 3:
-            asBuff = "ROM and Embedded flash memory\nNVPSIZ is ROM size\nNVPSIZ2 is Flash size";
-            break;
-        case 4:
-            asBuff = "SRAM emulating ROM";
-            break;
-        default:
-            asBuff = "Unknown";
-            break;
+    switch ((iChipID & 0x70000000) >> 28)
+    {
+    case 0:
+        asBuff = "ROM";
+        break;
+    case 1:
+        asBuff = "ROMless or on-chip Flash";
+        break;
+    case 2:
+        asBuff = "Embedded flash memory";
+        break;
+    case 3:
+        asBuff = "ROM and Embedded flash memory\nNVPSIZ is ROM size\nNVPSIZ2 is Flash size";
+        break;
+    case 4:
+        asBuff = "SRAM emulating ROM";
+        break;
+    default:
+        asBuff = "Unknown";
+        break;
     }
-    switch ((iChipID & 0xF00) >> 8) {
-        case 0:
-            mem_avail = 0;
-            break;
-        case 1:
-            mem_avail = 8;
-            break;
-        case 2:
-            mem_avail = 16;
-            break;
-        case 3:
-            mem_avail = 32;
-            break;
-        case 5:
-            mem_avail = 64;
-            break;
-        case 7:
-            mem_avail = 128;
-            break;
-        case 9:
-            mem_avail = 256;
-            break;
-        case 10:
-            mem_avail = 512;
-            break;
-        case 12:
-            mem_avail = 1024;
-            break;
-        case 14:
-            mem_avail = 2048;
-            break;
+    switch ((iChipID & 0xF00) >> 8)
+    {
+    case 0:
+        mem_avail = 0;
+        break;
+    case 1:
+        mem_avail = 8;
+        break;
+    case 2:
+        mem_avail = 16;
+        break;
+    case 3:
+        mem_avail = 32;
+        break;
+    case 5:
+        mem_avail = 64;
+        break;
+    case 7:
+        mem_avail = 128;
+        break;
+    case 9:
+        mem_avail = 256;
+        break;
+    case 10:
+        mem_avail = 512;
+        break;
+    case 12:
+        mem_avail = 1024;
+        break;
+    case 14:
+        mem_avail = 2048;
+        break;
     }
 
-    PrintAndLogEx(NORMAL, "  --= %s " _YELLOW_("%uK") " bytes ( " _YELLOW_("%2.0f%%") " used )"
-                  , asBuff
-                  , mem_avail
-                  , mem_avail == 0 ? 0.0f : (float)mem_used / (mem_avail * 1024) * 100
-                 );
+    PrintAndLogEx(NORMAL, "  --= %s " _YELLOW_("%uK") " bytes ( " _YELLOW_("%2.0f%%") " used )", asBuff, mem_avail, mem_avail == 0 ? 0.0f : (float)mem_used / (mem_avail * 1024) * 100);
 
     /*
     switch ((iChipID & 0xF000) >> 12) {
@@ -454,7 +457,8 @@ static void lookupChipID(uint32_t iChipID, uint32_t mem_used) {
     */
 }
 
-static int CmdDbg(const char *Cmd) {
+static int CmdDbg(const char *Cmd)
+{
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw dbg",
@@ -462,8 +466,7 @@ static int CmdDbg(const char *Cmd) {
                   "Note: option `-4`, this option may cause malfunction itself by\n"
                   "introducing delays in time critical functions like simulation or sniffing",
                   "hw dbg    --> get current log level\n"
-                  "hw dbg -1 --> set log level to _error_\n"
-                 );
+                  "hw dbg -1 --> set log level to _error_\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -472,8 +475,7 @@ static int CmdDbg(const char *Cmd) {
         arg_lit0("2", NULL, "plus information messages"),
         arg_lit0("3", NULL, "plus debug messages"),
         arg_lit0("4", NULL, "print even debug messages in timing critical functions"),
-        arg_param_end
-    };
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool lv0 = arg_get_lit(ctx, 1);
     bool lv1 = arg_get_lit(ctx, 2);
@@ -482,7 +484,8 @@ static int CmdDbg(const char *Cmd) {
     bool lv4 = arg_get_lit(ctx, 5);
     CLIParserFree(ctx);
 
-    if ((lv0 + lv1 + lv2 + lv3 + lv4) > 1) {
+    if ((lv0 + lv1 + lv2 + lv3 + lv4) > 1)
+    {
         PrintAndLogEx(INFO, "Can only set one debug level");
         return PM3_EINVARG;
     }
@@ -492,30 +495,31 @@ static int CmdDbg(const char *Cmd) {
         return PM3_EFAILED;
 
     const char *dbglvlstr;
-    switch (curr) {
-        case DBG_NONE:
-            dbglvlstr = "none";
-            break;
-        case DBG_ERROR:
-            dbglvlstr = "error";
-            break;
-        case DBG_INFO:
-            dbglvlstr = "info";
-            break;
-        case DBG_DEBUG:
-            dbglvlstr = "debug";
-            break;
-        case DBG_EXTENDED:
-            dbglvlstr = "extended";
-            break;
-        default:
-            dbglvlstr = "unknown";
-            break;
+    switch (curr)
+    {
+    case DBG_NONE:
+        dbglvlstr = "none";
+        break;
+    case DBG_ERROR:
+        dbglvlstr = "error";
+        break;
+    case DBG_INFO:
+        dbglvlstr = "info";
+        break;
+    case DBG_DEBUG:
+        dbglvlstr = "debug";
+        break;
+    case DBG_EXTENDED:
+        dbglvlstr = "extended";
+        break;
+    default:
+        dbglvlstr = "unknown";
+        break;
     }
-    PrintAndLogEx(INFO, "  Current debug log level..... %d ( " _YELLOW_("%s")" )", curr, dbglvlstr);
+    PrintAndLogEx(INFO, "  Current debug log level..... %d ( " _YELLOW_("%s") " )", curr, dbglvlstr);
 
-
-    if ((lv0 + lv1 + lv2 + lv3 + lv4) == 1) {
+    if ((lv0 + lv1 + lv2 + lv3 + lv4) == 1)
+    {
         uint8_t dbg = 0;
         if (lv0)
             dbg = 0;
@@ -534,20 +538,19 @@ static int CmdDbg(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdDetectReader(const char *Cmd) {
+static int CmdDetectReader(const char *Cmd)
+{
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw detectreader",
                   "Start to detect presences of reader field",
                   "hw detectreader\n"
-                  "hw detectreader -L\n"
-                 );
+                  "hw detectreader -L\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("L", "LF", "only detect low frequency 125/134 kHz"),
         arg_lit0("H", "HF", "only detect high frequency 13.56 MHZ"),
-        arg_param_end
-    };
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool lf = arg_get_lit(ctx, 1);
     bool hf = arg_get_lit(ctx, 2);
@@ -557,9 +560,12 @@ static int CmdDetectReader(const char *Cmd) {
     // 1: LF_ONLY
     // 2: HF_ONLY
     uint8_t arg = 0;
-    if (lf == true && hf == false) {
+    if (lf == true && hf == false)
+    {
         arg = 1;
-    } else if (hf == true && lf == false) {
+    }
+    else if (hf == true && lf == false)
+    {
         arg = 2;
     }
 
@@ -567,15 +573,19 @@ static int CmdDetectReader(const char *Cmd) {
     SendCommandNG(CMD_LISTEN_READER_FIELD, (uint8_t *)&arg, sizeof(arg));
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to change modes and exit");
 
-    for (;;) {
-        if (kbd_enter_pressed()) {
+    for (;;)
+    {
+        if (kbd_enter_pressed())
+        {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
             PrintAndLogEx(DEBUG, _GREEN_("<Enter>") " pressed");
         }
 
         PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_LISTEN_READER_FIELD, &resp, 1000)) {
-            if (resp.status != PM3_EOPABORTED) {
+        if (WaitForResponseTimeout(CMD_LISTEN_READER_FIELD, &resp, 1000))
+        {
+            if (resp.status != PM3_EOPABORTED)
+            {
                 PrintAndLogEx(ERR, "Unexpected response: %d", resp.status);
             }
             break;
@@ -586,17 +596,16 @@ static int CmdDetectReader(const char *Cmd) {
 }
 
 // ## FPGA Control
-static int CmdFPGAOff(const char *Cmd) {
+static int CmdFPGAOff(const char *Cmd)
+{
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw fpgaoff",
                   "Turn of fpga and antenna field",
-                  "hw fpgaoff\n"
-                 );
+                  "hw fpgaoff\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_param_end
-    };
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
@@ -605,19 +614,18 @@ static int CmdFPGAOff(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdLCD(const char *Cmd) {
+static int CmdLCD(const char *Cmd)
+{
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw lcd",
                   "Send command/data to LCD",
-                  "hw lcd -r AA -c 03    -> sends 0xAA three times"
-                 );
+                  "hw lcd -r AA -c 03    -> sends 0xAA three times");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("r", "raw", "<hex>",  "data "),
-        arg_int1("c", "cnt", "<dec>",  "number of times to send"),
-        arg_param_end
-    };
+        arg_int1("r", "raw", "<hex>", "data "),
+        arg_int1("c", "cnt", "<dec>", "number of times to send"),
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     int r_len = 0;
@@ -625,29 +633,30 @@ static int CmdLCD(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, raw, &r_len);
     int j = arg_get_int_def(ctx, 2, 1);
     CLIParserFree(ctx);
-    if (j < 1) {
+    if (j < 1)
+    {
         PrintAndLogEx(WARNING, "Count must be larger than zero");
         return PM3_EINVARG;
     }
 
-    while (j--) {
+    while (j--)
+    {
         clearCommandBuffer();
         SendCommandMIX(CMD_LCD, raw[0], 0, 0, NULL, 0);
     }
     return PM3_SUCCESS;
 }
 
-static int CmdLCDReset(const char *Cmd) {
+static int CmdLCDReset(const char *Cmd)
+{
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw lcdreset",
                   "Hardware reset LCD",
-                  "hw lcdreset\n"
-                 );
+                  "hw lcdreset\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_param_end
-    };
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
     clearCommandBuffer();
@@ -655,13 +664,13 @@ static int CmdLCDReset(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdReadmem(const char *Cmd) {
+static int CmdReadmem(const char *Cmd)
+{
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw readmem",
                   "Reads processor flash memory into a file or views on console",
                   "hw readmem -f myfile                    -> save 512KB processor flash memory to file\n"
-                  "hw readmem -a 8192 -l 512               -> display 512 bytes from offset 8192\n"
-                 );
+                  "hw readmem -a 8192 -l 512               -> display 512 bytes from offset 8192\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -670,8 +679,7 @@ static int CmdReadmem(const char *Cmd) {
         arg_str0("f", "file", "<fn>", "save to file"),
         arg_u64_0("c", "cols", "<dec>", "column breaks"),
         arg_lit0("r", "raw", "use raw address mode: read from anywhere, not just flash"),
-        arg_param_end
-    };
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
     // check for -file option first to determine the output mode
@@ -690,25 +698,30 @@ static int CmdReadmem(const char *Cmd) {
     CLIParserFree(ctx);
 
     uint8_t *buffer = calloc(len, sizeof(uint8_t));
-    if (buffer == NULL) {
+    if (buffer == NULL)
+    {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
     const char *flash_str = raw ? "" : " flash";
-    PrintAndLogEx(INFO, "reading "_YELLOW_("%u")" bytes from processor%s memory",
+    PrintAndLogEx(INFO, "reading " _YELLOW_("%u") " bytes from processor%s memory",
                   len, flash_str);
 
     DeviceMemType_t type = raw ? MCU_MEM : MCU_FLASH;
-    if (!GetFromDevice(type, buffer, len, address, NULL, 0, NULL, -1, true)) {
+    if (!GetFromDevice(type, buffer, len, address, NULL, 0, NULL, -1, true))
+    {
         PrintAndLogEx(FAILED, "ERROR; reading from MCU flash memory");
         free(buffer);
         return PM3_EFLASH;
     }
 
-    if (save_to_file) {
+    if (save_to_file)
+    {
         saveFile(filename, ".bin", buffer, len);
-    } else {
+    }
+    else
+    {
         PrintAndLogEx(INFO, "---- " _CYAN_("processor%s memory") " ----", flash_str);
         print_hex_break(buffer, len, breaks);
     }
@@ -717,17 +730,16 @@ static int CmdReadmem(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdReset(const char *Cmd) {
+static int CmdReset(const char *Cmd)
+{
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw reset",
                   "Reset the Proxmark3 device.",
-                  "hw reset"
-                 );
+                  "hw reset");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_param_end
-    };
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
     clearCommandBuffer();
@@ -740,52 +752,52 @@ static int CmdReset(const char *Cmd) {
  * Sets the divisor for LF frequency clock: lets the user choose any LF frequency below
  * 600kHz.
  */
-static int CmdSetDivisor(const char *Cmd) {
+static int CmdSetDivisor(const char *Cmd)
+{
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw setlfdivisor",
                   "Drive LF antenna at 12 MHz / (divisor + 1).",
-                  "hw setlfdivisor -d 88"
-                 );
+                  "hw setlfdivisor -d 88");
 
     void *argtable[] = {
         arg_param_begin,
         arg_u64_1("d", "div", "<dec>", "19 - 255 divisor value (def 95)"),
-        arg_param_end
-    };
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     uint8_t arg = arg_get_u32_def(ctx, 1, 95);
     CLIParserFree(ctx);
 
-    if (arg < 19) {
+    if (arg < 19)
+    {
         PrintAndLogEx(ERR, "Divisor must be between " _YELLOW_("19") " and " _YELLOW_("255"));
         return PM3_EINVARG;
     }
     // 12 000 000 (12MHz)
     clearCommandBuffer();
     SendCommandNG(CMD_LF_SET_DIVISOR, (uint8_t *)&arg, sizeof(arg));
-    PrintAndLogEx(SUCCESS, "Divisor set, expected " _YELLOW_("%.1f")" kHz", ((double)12000 / (arg + 1)));
+    PrintAndLogEx(SUCCESS, "Divisor set, expected " _YELLOW_("%.1f") " kHz", ((double)12000 / (arg + 1)));
     return PM3_SUCCESS;
 }
 
-static int CmdSetHFThreshold(const char *Cmd) {
+static int CmdSetHFThreshold(const char *Cmd)
+{
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw sethfthresh",
                   "Set thresholds in HF/14a and Legic mode.",
-                  "hw sethfthresh -t 7 -i 20 -l 8"
-                 );
+                  "hw sethfthresh -t 7 -i 20 -l 8");
 
     void *argtable[] = {
         arg_param_begin,
         arg_int0("t", "thresh", "<dec>", "threshold, used in 14a reader mode (def 7)"),
         arg_int0("i", "high", "<dec>", "high threshold, used in 14a sniff mode (def 20)"),
         arg_int0("l", "legic", "<dec>", "threshold used in Legic mode (def 8)"),
-        arg_param_end
-    };
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    struct {
+    struct
+    {
         uint8_t threshold;
         uint8_t threshold_high;
         uint8_t legic_threshold;
@@ -796,7 +808,8 @@ static int CmdSetHFThreshold(const char *Cmd) {
     params.legic_threshold = arg_get_int_def(ctx, 3, 8);
     CLIParserFree(ctx);
 
-    if ((params.threshold < 1) || (params.threshold > 63) || (params.threshold_high < 1) || (params.threshold_high > 63)) {
+    if ((params.threshold < 1) || (params.threshold > 63) || (params.threshold_high < 1) || (params.threshold_high > 63))
+    {
         PrintAndLogEx(ERR, "Thresholds must be between " _YELLOW_("1") " and " _YELLOW_("63"));
         return PM3_EINVARG;
     }
@@ -807,13 +820,13 @@ static int CmdSetHFThreshold(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdSetMux(const char *Cmd) {
+static int CmdSetMux(const char *Cmd)
+{
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw setmux",
                   "Set the ADC mux to a specific value",
-                  "hw setmux --hipkd    -> set HIGH PEAK\n"
-                 );
+                  "hw setmux --hipkd    -> set HIGH PEAK\n");
 
     void *argtable[] = {
         arg_param_begin,
@@ -821,8 +834,7 @@ static int CmdSetMux(const char *Cmd) {
         arg_lit0(NULL, "loraw", "low raw"),
         arg_lit0(NULL, "hipkd", "high peak"),
         arg_lit0(NULL, "hiraw", "high raw"),
-        arg_param_end
-    };
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool lopkd = arg_get_lit(ctx, 1);
     bool loraw = arg_get_lit(ctx, 2);
@@ -830,13 +842,15 @@ static int CmdSetMux(const char *Cmd) {
     bool hiraw = arg_get_lit(ctx, 4);
     CLIParserFree(ctx);
 
-    if ((lopkd + loraw + hipkd + hiraw) > 1) {
+    if ((lopkd + loraw + hipkd + hiraw) > 1)
+    {
         PrintAndLogEx(INFO, "Can only set one mux");
         return PM3_EINVARG;
     }
 
 #ifdef WITH_FPC_USART
-    if (loraw || hiraw) {
+    if (loraw || hiraw)
+    {
         PrintAndLogEx(INFO, "this ADC mux option is unavailable on RDV4 compiled with FPC USART");
         return PM3_EINVARG;
     }
@@ -857,23 +871,23 @@ static int CmdSetMux(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdStandalone(const char *Cmd) {
+static int CmdStandalone(const char *Cmd)
+{
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw standalone",
                   "Start standalone mode",
                   "hw standalone       -> start \n"
-                  "hw standalone -a 1  -> start and send arg 1"
-                 );
+                  "hw standalone -a 1  -> start and send arg 1");
 
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0("a", "arg", "<dec>", "argument byte"),
         arg_str0("b", NULL, "<str>", "UniSniff arg: 14a, 14b, 15, iclass"),
-        arg_param_end
-    };
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    struct p {
+    struct p
+    {
         uint8_t arg;
         uint8_t mlen;
         uint8_t mode[10];
@@ -882,7 +896,8 @@ static int CmdStandalone(const char *Cmd) {
     packet.arg = arg_get_u32_def(ctx, 1, 1);
     int mlen = 0;
     CLIParamStrToBuf(arg_get_str(ctx, 2), packet.mode, sizeof(packet.mode), &mlen);
-    if (mlen) {
+    if (mlen)
+    {
         packet.mlen = mlen;
     }
     CLIParserFree(ctx);
@@ -891,7 +906,8 @@ static int CmdStandalone(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdDecay(const char *Cmd) {
+static int CmdDecay(const char *Cmd)
+{
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw decay",
@@ -901,15 +917,13 @@ static int CmdDecay(const char *Cmd) {
                   "(unloaded, booster board, damaged) produces different decay profiles.",
                   "hw decay\n"
                   "hw decay --ms 100  --> stabilize for 100ms before measurement\n"
-                  "hw decay --us 5000 --> measure 5ms decay window\n"
-                 );
+                  "hw decay --us 5000 --> measure 5ms decay window\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_int0(NULL, "ms", "<dec>", "Field stabilization time in ms (default: 50)"),
         arg_int0(NULL, "us", "<dec>", "Measurement window in us (default: 2000)"),
-        arg_param_end
-    };
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     uint16_t stabilize_ms = arg_get_int_def(ctx, 1, 50);
@@ -917,7 +931,8 @@ static int CmdDecay(const char *Cmd) {
     CLIParserFree(ctx);
 
     // Build parameter packet
-    struct {
+    struct
+    {
         uint16_t stabilize_ms;
         uint16_t measure_us;
         uint8_t num_pulses;
@@ -926,8 +941,7 @@ static int CmdDecay(const char *Cmd) {
         .stabilize_ms = stabilize_ms,
         .measure_us = measure_us,
         .num_pulses = 1,
-        .padding = {0}
-    };
+        .padding = {0}};
 
     PrintAndLogEx(INFO, "Measuring HF antenna decay...");
     PrintAndLogEx(INFO, "  Field stabilization: " _YELLOW_("%d") " ms", stabilize_ms);
@@ -937,12 +951,14 @@ static int CmdDecay(const char *Cmd) {
     SendCommandNG(CMD_HF_DECAY, (uint8_t *)&params, sizeof(params));
 
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_HF_DECAY, &resp, 5000) == false) {
+    if (WaitForResponseTimeout(CMD_HF_DECAY, &resp, 5000) == false)
+    {
         PrintAndLogEx(WARNING, "Timeout waiting for decay measurement");
         return PM3_ETIMEOUT;
     }
 
-    if (resp.status != PM3_SUCCESS) {
+    if (resp.status != PM3_SUCCESS)
+    {
         PrintAndLogEx(WARNING, "Decay measurement failed");
         return PM3_ESOFT;
     }
@@ -962,7 +978,8 @@ static int CmdDecay(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Sample interval........ ~%d us", sample_interval_us);
     PrintAndLogEx(SUCCESS, "Total window........... %d us", measure_window_us);
 
-    if (num_samples == 0) {
+    if (num_samples == 0)
+    {
         PrintAndLogEx(WARNING, "No samples captured");
         return PM3_ESOFT;
     }
@@ -976,13 +993,14 @@ static int CmdDecay(const char *Cmd) {
     PrintAndLogEx(INFO, " idx | time (us) |  raw  |  %% of peak");
     PrintAndLogEx(INFO, "-----+-----------+-------+-------------");
 
-    for (uint16_t i = 0; i < num_samples; i++) {
+    for (uint16_t i = 0; i < num_samples; i++)
+    {
         uint32_t time_us = (num_samples > 1)
-            ? (uint32_t)i * measure_window_us / (num_samples - 1)
-            : 0;
+                               ? (uint32_t)i * measure_window_us / (num_samples - 1)
+                               : 0;
         double pct = (ref_mv > 0)
-            ? 100.0 * samples[i] / ref_mv
-            : 0;
+                         ? 100.0 * samples[i] / ref_mv
+                         : 0;
         PrintAndLogEx(INFO, " %3d | %7d   | %5d | %.1f%%",
                       i, time_us, samples[i], pct);
     }
@@ -990,20 +1008,25 @@ static int CmdDecay(const char *Cmd) {
     // Find time to 50% decay (relative to first sample)
     uint16_t half_ref = ref_mv / 2;
     int t_half_idx = -1;
-    for (uint16_t i = 0; i < num_samples; i++) {
-        if (samples[i] <= half_ref) {
+    for (uint16_t i = 0; i < num_samples; i++)
+    {
+        if (samples[i] <= half_ref)
+        {
             t_half_idx = i;
             break;
         }
     }
 
     PrintAndLogEx(NORMAL, "");
-    if (t_half_idx >= 0) {
+    if (t_half_idx >= 0)
+    {
         uint32_t t_half_us = (num_samples > 1)
-            ? (uint32_t)t_half_idx * measure_window_us / (num_samples - 1)
-            : 0;
+                                 ? (uint32_t)t_half_idx * measure_window_us / (num_samples - 1)
+                                 : 0;
         PrintAndLogEx(SUCCESS, "Time to 50%% decay..... ~" _YELLOW_("%d") " us (sample %d)", t_half_us, t_half_idx);
-    } else {
+    }
+    else
+    {
         PrintAndLogEx(INFO, "Voltage did not reach 50%% decay within measurement window");
     }
 
@@ -1014,7 +1037,8 @@ static int CmdDecay(const char *Cmd) {
     PrintAndLogEx(INFO, "Note: decay samples use fast ADC (~5us/sample, relative values)");
 
     // Load into graph window
-    for (uint16_t i = 0; i < num_samples; i++) {
+    for (uint16_t i = 0; i < num_samples; i++)
+    {
         g_GraphBuffer[i] = (int)samples[i];
     }
     g_GraphTraceLen = num_samples;
@@ -1028,28 +1052,27 @@ static int CmdDecay(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdTune(const char *Cmd) {
+static int CmdTune(const char *Cmd)
+{
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw tune",
                   "Measure tuning of device antenna. Results shown in graph window.\n"
                   "This command doesn't actively tune your antennas, \n"
                   "it's only informative by measuring voltage that the antennas will generate",
-                  "hw tune"
-                 );
+                  "hw tune");
     void *argtable[] = {
         arg_param_begin,
-        arg_param_end
-    };
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
-#define NON_VOLTAGE     1000
-#define LF_UNUSABLE_V   2000
-#define LF_MARGINAL_V   10000
-#define HF_UNUSABLE_V   3000
-#define HF_MARGINAL_V   5000
-#define ANTENNA_ERROR   1.00 // current algo has 3% error margin.
+#define NON_VOLTAGE 1000
+#define LF_UNUSABLE_V 2000
+#define LF_MARGINAL_V 10000
+#define HF_UNUSABLE_V 3000
+#define HF_MARGINAL_V 5000
+#define ANTENNA_ERROR 1.00 // current algo has 3% error margin.
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-------- " _CYAN_("Reminder") " ----------------------------");
@@ -1069,10 +1092,12 @@ static int CmdTune(const char *Cmd) {
     PacketResponseNG resp;
     PrintAndLogEx(INPLACE, "% 3i", timeout_max - timeout);
 
-    while (WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING, &resp, 500) == false) {
+    while (WaitForResponseTimeout(CMD_MEASURE_ANTENNA_TUNING, &resp, 500) == false)
+    {
 
         fflush(stdout);
-        if (timeout >= timeout_max) {
+        if (timeout >= timeout_max)
+        {
             PrintAndLogEx(WARNING, "\nNo response from Proxmark3. Aborting...");
             return PM3_ETIMEOUT;
         }
@@ -1083,7 +1108,8 @@ static int CmdTune(const char *Cmd) {
 
     PrintAndLogEx(NORMAL, "");
 
-    if (resp.status != PM3_SUCCESS) {
+    if (resp.status != PM3_SUCCESS)
+    {
         PrintAndLogEx(WARNING, "Antenna tuning failed");
         return PM3_ESOFT;
     }
@@ -1091,7 +1117,8 @@ static int CmdTune(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-------- " _CYAN_("LF Antenna") " ----------");
     // in mVolt
-    struct p {
+    struct p
+    {
         uint32_t v_lf134;
         uint32_t v_lf125;
         uint32_t v_lfconf;
@@ -1121,16 +1148,20 @@ static int CmdTune(const char *Cmd) {
     const double vdd_other = 5400;
     double vdd = IfPm3Rdv4Fw() ? vdd_rdv4 : vdd_other;
 
-    if (package->peak_v > NON_VOLTAGE && package->peak_f > 0) {
+    if (package->peak_v > NON_VOLTAGE && package->peak_f > 0)
+    {
 
         // Q measure with Q=f/delta_f
         double v_3db_scaled = (double)(package->peak_v * 0.707) / 512; // /512 == >>9
         uint32_t s2 = 0, s4 = 0;
-        for (int i = 1; i < 256; i++) {
-            if ((s2 == 0) && (package->results[i] > v_3db_scaled)) {
+        for (int i = 1; i < 256; i++)
+        {
+            if ((s2 == 0) && (package->results[i] > v_3db_scaled))
+            {
                 s2 = i;
             }
-            if ((s2 != 0) && (package->results[i] < v_3db_scaled)) {
+            if ((s2 != 0) && (package->results[i] < v_3db_scaled))
+            {
                 s4 = i;
                 break;
             }
@@ -1139,7 +1170,8 @@ static int CmdTune(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "");
         PrintAndLogEx(SUCCESS, "Approx. Q factor measurement");
         double lfq1 = 0;
-        if (s4 != 0) { // we got all our points of interest
+        if (s4 != 0)
+        { // we got all our points of interest
             double a = package->results[s2 - 1];
             double b = package->results[s2];
             double f1 = LF_DIV2FREQ(s2 - 1 + (v_3db_scaled - a) / (b - a));
@@ -1154,19 +1186,22 @@ static int CmdTune(const char *Cmd) {
         double lfq2 = (double)package->peak_v * 3.14 / 2 / vdd;
         PrintAndLogEx(SUCCESS, "Peak voltage.......... " _YELLOW_("%.1lf"), lfq2);
         // cross-check results
-        if (lfq1 > 3) {
+        if (lfq1 > 3)
+        {
             double approx_vdd = (double)package->peak_v * 3.14 / 2 / lfq1;
             // Got 8858 on a RDV4 with large antenna 134/14
             // Got 8761 on a non-RDV4
             const double approx_vdd_other_max = 8840;
 
             // 1% over threshold and supposedly non-RDV4
-            if ((approx_vdd > approx_vdd_other_max * 1.01) && (!IfPm3Rdv4Fw())) {
+            if ((approx_vdd > approx_vdd_other_max * 1.01) && (!IfPm3Rdv4Fw()))
+            {
                 PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3GENERIC firmware on a RDV4"));
                 PrintAndLogEx(WARNING, "False positives is possible but please check your setup");
             }
             // 1% below threshold and supposedly RDV4
-            if ((approx_vdd < approx_vdd_other_max * 0.99) && (IfPm3Rdv4Fw())) {
+            if ((approx_vdd < approx_vdd_other_max * 0.99) && (IfPm3Rdv4Fw()))
+            {
                 PrintAndLogEx(WARNING, "Contradicting measures seem to indicate you're running a " _YELLOW_("PM3_RDV4 firmware on a generic device"));
                 PrintAndLogEx(WARNING, "False positives is possible but please check your setup");
             }
@@ -1183,13 +1218,14 @@ static int CmdTune(const char *Cmd) {
     else
         snprintf(judgement, sizeof(judgement), _GREEN_("ok"));
 
-    //PrintAndLogEx((package->peak_v < LF_UNUSABLE_V) ? WARNING : SUCCESS, "LF antenna ( %s )", judgement);
+    // PrintAndLogEx((package->peak_v < LF_UNUSABLE_V) ? WARNING : SUCCESS, "LF antenna ( %s )", judgement);
     PrintAndLogEx((package->peak_v < LF_UNUSABLE_V) ? WARNING : SUCCESS, "LF antenna............ %s", judgement);
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-------- " _CYAN_("HF Antenna") " ----------");
     // HF evaluation
-    if (package->v_hf > NON_VOLTAGE) {
+    if (package->v_hf > NON_VOLTAGE)
+    {
         PrintAndLogEx(SUCCESS, "13.56 MHz............. " _BACK_GREEN_("%5.2f") " V", (package->v_hf * ANTENNA_ERROR) / 1000.0);
     }
 
@@ -1199,8 +1235,10 @@ static int CmdTune(const char *Cmd) {
     // for booster board. With a booster, the first fast-ADC decay sample reads
     // 50-500 (rapid discharge). Without a booster, it reads >1000.
     bool hf_booster_detected = false;
-    if (!IfPm3Rdv4Fw() && package->v_hf < HF_MARGINAL_V) {
-        struct {
+    if (!IfPm3Rdv4Fw() && package->v_hf < HF_MARGINAL_V)
+    {
+        struct
+        {
             uint16_t stabilize_ms;
             uint16_t measure_us;
             uint8_t num_pulses;
@@ -1209,26 +1247,27 @@ static int CmdTune(const char *Cmd) {
             .stabilize_ms = 50,
             .measure_us = 50,
             .num_pulses = 1,
-            .padding = {0}
-        };
+            .padding = {0}};
 
         clearCommandBuffer();
         SendCommandNG(CMD_HF_DECAY, (uint8_t *)&decay_params, sizeof(decay_params));
 
         PacketResponseNG decay_resp;
-        if (WaitForResponseTimeout(CMD_HF_DECAY, &decay_resp, 3000)
-                && decay_resp.status == PM3_SUCCESS) {
+        if (WaitForResponseTimeout(CMD_HF_DECAY, &decay_resp, 3000) && decay_resp.status == PM3_SUCCESS)
+        {
 
             uint16_t decay_num = decay_resp.data.asBytes[2] | (decay_resp.data.asBytes[3] << 8);
             uint16_t *decay_samples = (uint16_t *)(decay_resp.data.asBytes + 8);
 
-            if (decay_num > 0 && decay_samples[0] >= 50 && decay_samples[0] <= 500) {
+            if (decay_num > 0 && decay_samples[0] >= 50 && decay_samples[0] <= 500)
+            {
                 hf_booster_detected = true;
             }
         }
     }
 
-    if (hf_booster_detected) {
+    if (hf_booster_detected)
+    {
         PrintAndLogEx(SUCCESS, "");
         PrintAndLogEx(SUCCESS, "Your HF antenna measurement shows");
         PrintAndLogEx(SUCCESS, "low voltage that is consistent");
@@ -1237,11 +1276,14 @@ static int CmdTune(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "booster board installed, either");
         PrintAndLogEx(SUCCESS, "your antenna is malfunctioning or");
         PrintAndLogEx(SUCCESS, "you have a tag on the HF antenna.");
-    } else {
+    }
+    else
+    {
         PrintAndLogEx(SUCCESS, "");
         PrintAndLogEx(SUCCESS, "Approx. Q factor measurement");
 
-        if (package->v_hf >= HF_UNUSABLE_V) {
+        if (package->v_hf >= HF_UNUSABLE_V)
+        {
             // Q measure with Vlr=Q*(2*Vdd/pi)
             double hfq = (double)package->v_hf * 3.14 / 2 / vdd;
             PrintAndLogEx(SUCCESS, "Peak voltage.......... " _YELLOW_("%.1lf"), hfq);
@@ -1259,11 +1301,11 @@ static int CmdTune(const char *Cmd) {
         // If HF voltage is ok/marginal but below 13V, check for
         // surface interference via decay measurement.
         // Only on PM3 Easy — RDV4 has different voltage divider.
-        if (!IfPm3Rdv4Fw()
-                && package->v_hf >= HF_MARGINAL_V
-                && package->v_hf < 13000) {
+        if (!IfPm3Rdv4Fw() && package->v_hf >= HF_MARGINAL_V && package->v_hf < 13000)
+        {
 
-            struct {
+            struct
+            {
                 uint16_t stabilize_ms;
                 uint16_t measure_us;
                 uint8_t num_pulses;
@@ -1272,8 +1314,7 @@ static int CmdTune(const char *Cmd) {
                 .stabilize_ms = 50,
                 .measure_us = 50,
                 .num_pulses = 1,
-                .padding = {0}
-            };
+                .padding = {0}};
 
             clearCommandBuffer();
             SendCommandNG(CMD_HF_DECAY,
@@ -1282,26 +1323,27 @@ static int CmdTune(const char *Cmd) {
 
             PacketResponseNG surface_resp;
             if (WaitForResponseTimeout(
-                        CMD_HF_DECAY,
-                        &surface_resp, 3000)
-                    && surface_resp.status == PM3_SUCCESS) {
+                    CMD_HF_DECAY,
+                    &surface_resp, 3000) &&
+                surface_resp.status == PM3_SUCCESS)
+            {
 
-                uint16_t sn = surface_resp.data.asBytes[2]
-                    | (surface_resp.data.asBytes[3] << 8);
+                uint16_t sn = surface_resp.data.asBytes[2] | (surface_resp.data.asBytes[3] << 8);
                 uint16_t *ss =
                     (uint16_t *)(surface_resp.data.asBytes + 8);
 
-                if (sn > 0 && ss[0] >= 600 && ss[0] <= 900) {
+                if (sn > 0 && ss[0] >= 600 && ss[0] <= 900)
+                {
                     PrintAndLogEx(SUCCESS, "");
                     PrintAndLogEx(SUCCESS,
-                        "The surface your proxmark"
-                        " may be on could");
+                                  "The surface your proxmark"
+                                  " is on could");
                     PrintAndLogEx(SUCCESS,
-                        "contain interfering"
-                        " materials. Try again");
+                                  "contain interfering"
+                                  " materials. Try again");
                     PrintAndLogEx(SUCCESS,
-                        "while holding the"
-                        " proxmark in free space.");
+                                  "while holding the"
+                                  " proxmark in free space.");
                 }
             }
         }
@@ -1310,28 +1352,26 @@ static int CmdTune(const char *Cmd) {
     // graph LF measurements
     // even here, these values has 3% error.
     uint16_t test1 = 0;
-    for (int i = 0; i < 256; i++) {
+    for (int i = 0; i < 256; i++)
+    {
         g_GraphBuffer[i] = package->results[i] - 128;
         test1 += package->results[i];
     }
 
-    if (test1 > 0) {
+    if (test1 > 0)
+    {
         PrintAndLogEx(NORMAL, "");
         PrintAndLogEx(INFO, "-------- " _CYAN_("LF tuning graph") " ------------");
-        PrintAndLogEx(SUCCESS, "Orange line - divisor %d / %.2f kHz"
-                      , LF_DIVISOR_125
-                      , LF_DIV2FREQ(LF_DIVISOR_125)
-                     );
-        PrintAndLogEx(SUCCESS, "Blue line - divisor   %d / %.2f kHz\n\n"
-                      , LF_DIVISOR_134
-                      , LF_DIV2FREQ(LF_DIVISOR_134)
-                     );
+        PrintAndLogEx(SUCCESS, "Orange line - divisor %d / %.2f kHz", LF_DIVISOR_125, LF_DIV2FREQ(LF_DIVISOR_125));
+        PrintAndLogEx(SUCCESS, "Blue line - divisor   %d / %.2f kHz\n\n", LF_DIVISOR_134, LF_DIV2FREQ(LF_DIVISOR_134));
         g_GraphTraceLen = 256;
         g_MarkerC.pos = LF_DIVISOR_125;
         g_MarkerD.pos = LF_DIVISOR_134;
         ShowGraphWindow();
         RepaintGraphWindow();
-    } else {
+    }
+    else
+    {
         PrintAndLogEx(FAILED, "\nAll values are zero. Not showing LF tuning graph\n\n");
     }
 
@@ -1341,57 +1381,60 @@ static int CmdTune(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdVersion(const char *Cmd) {
+static int CmdVersion(const char *Cmd)
+{
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw version",
                   "Show version information about the client and the connected Proxmark3",
-                  "hw version"
-                 );
+                  "hw version");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_param_end
-    };
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
     pm3_version(true, false);
     return PM3_SUCCESS;
 }
 
-static int CmdStatus(const char *Cmd) {
+static int CmdStatus(const char *Cmd)
+{
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw status",
                   "Show runtime status information about the connected Proxmark3",
                   "hw status\n"
-                  "hw status --ms 1000 -> Test connection speed with 1000ms timeout\n"
-                 );
+                  "hw status --ms 1000 -> Test connection speed with 1000ms timeout\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_int0("m", "ms", "<ms>", "speed test timeout in micro seconds"),
-        arg_param_end
-    };
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     int32_t speedTestTimeout = arg_get_int_def(ctx, 1, -1);
     CLIParserFree(ctx);
 
     clearCommandBuffer();
     PacketResponseNG resp;
-    if (speedTestTimeout < 0) {
+    if (speedTestTimeout < 0)
+    {
         speedTestTimeout = 0;
         SendCommandNG(CMD_STATUS, NULL, 0);
-    } else {
+    }
+    else
+    {
         SendCommandNG(CMD_STATUS, (uint8_t *)&speedTestTimeout, sizeof(speedTestTimeout));
     }
 
-    if (WaitForResponseTimeout(CMD_STATUS, &resp, 2000 + speedTestTimeout) == false) {
+    if (WaitForResponseTimeout(CMD_STATUS, &resp, 2000 + speedTestTimeout) == false)
+    {
         PrintAndLogEx(WARNING, "Status command timeout. Communication speed test timed out");
         return PM3_ETIMEOUT;
     }
     return PM3_SUCCESS;
 }
 
-int handle_tearoff(tearoff_params_t *params, bool verbose) {
+int handle_tearoff(tearoff_params_t *params, bool verbose)
+{
 
     if (params == NULL)
         return PM3_EINVARG;
@@ -1399,12 +1442,14 @@ int handle_tearoff(tearoff_params_t *params, bool verbose) {
     clearCommandBuffer();
     SendCommandNG(CMD_SET_TEAROFF, (uint8_t *)params, sizeof(tearoff_params_t));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_SET_TEAROFF, &resp, 500) == false) {
+    if (WaitForResponseTimeout(CMD_SET_TEAROFF, &resp, 500) == false)
+    {
         PrintAndLogEx(WARNING, "Tear-off command timeout.");
         return PM3_ETIMEOUT;
     }
 
-    if (resp.status == PM3_SUCCESS) {
+    if (resp.status == PM3_SUCCESS)
+    {
         if (params->delay_us > 0 && verbose)
             PrintAndLogEx(INFO, "Tear-off hook configured with delay of " _GREEN_("%i us"), params->delay_us);
 
@@ -1418,13 +1463,14 @@ int handle_tearoff(tearoff_params_t *params, bool verbose) {
 
         if (params->off && verbose)
             PrintAndLogEx(INFO, "Tear-off hook " _RED_("disabled"));
-    } else if (verbose)
+    }
+    else if (verbose)
         PrintAndLogEx(WARNING, "Tear-off command failed.");
     return resp.status;
 }
 
-
-static int CmdTearoff(const char *Cmd) {
+static int CmdTearoff(const char *Cmd)
+{
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw tearoff",
                   "Configure a tear-off hook for the next write command supporting tear-off\n"
@@ -1443,8 +1489,7 @@ static int CmdTearoff(const char *Cmd) {
         arg_int0(NULL, "skip", "<dec>", "Skip N triggers before activating the hook"),
         arg_lit0("s", "silent", "less verbose output"),
         arg_lit0(NULL, "list", "List commands implementing tear-off hooks"),
-        arg_param_end
-    };
+        arg_param_end};
 
     CLIExecWithReturn(ctx, Cmd, argtable, false);
     tearoff_params_t params;
@@ -1456,7 +1501,8 @@ static int CmdTearoff(const char *Cmd) {
     bool list = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
-    if (list) {
+    if (list)
+    {
         PrintAndLogEx(INFO, "Commands implementing tear-off hooks:");
         PrintAndLogEx(INFO, "  hf 14a raw");
         PrintAndLogEx(INFO, "  hf 14b apdu");
@@ -1482,19 +1528,25 @@ static int CmdTearoff(const char *Cmd) {
         return PM3_SUCCESS;
     }
 
-    if (delay != -1) {
-        if ((delay < 1) || (delay > 43000)) {
+    if (delay != -1)
+    {
+        if ((delay < 1) || (delay > 43000))
+        {
             PrintAndLogEx(WARNING, "You can't set delay out of 1..43000 range!");
             return PM3_EINVARG;
         }
-    } else {
+    }
+    else
+    {
         delay = 0; // will be ignored by ARM
     }
 
     params.delay_us = delay;
 
-    if (skip != -1) {
-        if ((skip < 0) || (skip > 127)) {
+    if (skip != -1)
+    {
+        if ((skip < 0) || (skip > 127))
+        {
             PrintAndLogEx(WARNING, "You can't set skip out of 0..127 range!");
             return PM3_EINVARG;
         }
@@ -1502,7 +1554,8 @@ static int CmdTearoff(const char *Cmd) {
 
     params.skip = skip;
 
-    if (params.on && params.off) {
+    if (params.on && params.off)
+    {
         PrintAndLogEx(WARNING, "You can't set both --on and --off!");
         return PM3_EINVARG;
     }
@@ -1510,17 +1563,16 @@ static int CmdTearoff(const char *Cmd) {
     return handle_tearoff(&params, !silent);
 }
 
-static int CmdTia(const char *Cmd) {
+static int CmdTia(const char *Cmd)
+{
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw tia",
                   "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider",
-                  "hw tia"
-                 );
+                  "hw tia");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_param_end
-    };
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
 
@@ -1528,7 +1580,8 @@ static int CmdTia(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_TIA, NULL, 0);
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_TIA, &resp, 2000) == false) {
+    if (WaitForResponseTimeout(CMD_TIA, &resp, 2000) == false)
+    {
         PrintAndLogEx(WARNING, "TIA command timeout. You probably need to unplug the Proxmark3.");
         return PM3_ETIMEOUT;
     }
@@ -1536,21 +1589,20 @@ static int CmdTia(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdTimeout(const char *Cmd) {
+static int CmdTimeout(const char *Cmd)
+{
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw timeout",
                   "Set the communication timeout on the client side",
                   "hw timeout            --> Show current timeout\n"
                   "hw timeout -m 20      --> Set the timeout to 20ms\n"
-                  "hw timeout --ms 500   --> Set the timeout to 500ms\n"
-                 );
+                  "hw timeout --ms 500   --> Set the timeout to 500ms\n");
 
     void *argtable[] = {
         arg_param_begin,
         arg_int0("m", "ms", "<ms>", "timeout in micro seconds"),
-        arg_param_end
-    };
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     int32_t arg = arg_get_int_def(ctx, 1, -1);
     CLIParserFree(ctx);
@@ -1558,16 +1610,20 @@ static int CmdTimeout(const char *Cmd) {
     uint32_t oldTimeout = uart_get_timeouts();
 
     // timeout is not given/invalid, just show the current timeout then return
-    if (arg < 0) {
+    if (arg < 0)
+    {
         PrintAndLogEx(INFO, "Current communication timeout... " _GREEN_("%u") " ms", oldTimeout);
         return PM3_SUCCESS;
     }
 
     uint32_t newTimeout = arg;
     // UART_USB_CLIENT_RX_TIMEOUT_MS is considered as the minimum required timeout.
-    if (newTimeout < UART_USB_CLIENT_RX_TIMEOUT_MS) {
+    if (newTimeout < UART_USB_CLIENT_RX_TIMEOUT_MS)
+    {
         PrintAndLogEx(WARNING, "Timeout less than %u ms might cause errors.", UART_USB_CLIENT_RX_TIMEOUT_MS);
-    } else if (newTimeout > 5000) {
+    }
+    else if (newTimeout > 5000)
+    {
         PrintAndLogEx(WARNING, "Timeout greater than 5000 ms makes the client unresponsive.");
     }
     uart_reconfigure_timeouts(newTimeout);
@@ -1576,19 +1632,18 @@ static int CmdTimeout(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdPing(const char *Cmd) {
+static int CmdPing(const char *Cmd)
+{
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw ping",
                   "Test if the Proxmark3 is responsive",
                   "hw ping\n"
-                  "hw ping --len 32"
-                 );
+                  "hw ping --len 32");
 
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0("l", "len", "<dec>", "length of payload to send"),
-        arg_param_end
-    };
+        arg_param_end};
 
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     uint32_t len = arg_get_u32_def(ctx, 1, 32);
@@ -1597,9 +1652,12 @@ static int CmdPing(const char *Cmd) {
     if (len > PM3_CMD_DATA_SIZE)
         len = PM3_CMD_DATA_SIZE;
 
-    if (len) {
+    if (len)
+    {
         PrintAndLogEx(INFO, "Ping sent with payload len... " _YELLOW_("%d"), len);
-    } else {
+    }
+    else
+    {
         PrintAndLogEx(INFO, "Ping sent");
     }
 
@@ -1607,44 +1665,47 @@ static int CmdPing(const char *Cmd) {
     PacketResponseNG resp;
     uint8_t data[PM3_CMD_DATA_SIZE] = {0};
 
-    for (uint16_t i = 0; i < len; i++) {
+    for (uint16_t i = 0; i < len; i++)
+    {
         data[i] = i & 0xFF;
     }
 
     uint64_t tms = msclock();
     SendCommandNG(CMD_PING, data, len);
-    if (WaitForResponseTimeout(CMD_PING, &resp, 1000)) {
+    if (WaitForResponseTimeout(CMD_PING, &resp, 1000))
+    {
         tms = msclock() - tms;
-        if (len) {
+        if (len)
+        {
             bool error = (memcmp(data, resp.data.asBytes, len) != 0);
-            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received")
-                          " in " _YELLOW_("%" PRIu64) " ms and content ( %s )",
+            PrintAndLogEx((error) ? ERR : SUCCESS, "Ping response " _GREEN_("received") " in " _YELLOW_("%" PRIu64) " ms and content ( %s )",
                           tms, error ? _RED_("fail") : _GREEN_("ok"));
-        } else {
-            PrintAndLogEx(SUCCESS, "Ping response " _GREEN_("received")
-                          " in " _YELLOW_("%" PRIu64) " ms", tms);
         }
-    } else
+        else
+        {
+            PrintAndLogEx(SUCCESS, "Ping response " _GREEN_("received") " in " _YELLOW_("%" PRIu64) " ms", tms);
+        }
+    }
+    else
         PrintAndLogEx(WARNING, "Ping response " _RED_("timeout"));
     return PM3_SUCCESS;
 }
 
-static int CmdConnect(const char *Cmd) {
+static int CmdConnect(const char *Cmd)
+{
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw connect",
                   "Connects to a Proxmark3 device via specified serial port.\n"
                   "Baudrate here is only for physical UART or UART-BT, NOT for USB-CDC or blue shark add-on",
-                  "hw connect -p "SERIAL_PORT_EXAMPLE_H"\n"
-                  "hw connect -p "SERIAL_PORT_EXAMPLE_H" -b 115200"
-                 );
+                  "hw connect -p " SERIAL_PORT_EXAMPLE_H "\n"
+                  "hw connect -p " SERIAL_PORT_EXAMPLE_H " -b 115200");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("p", "port", "<str>", "Serial port to connect to, else retry the last used one"),
         arg_u64_0("b", "baud", "<dec>", "Baudrate"),
-        arg_param_end
-    };
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     char port[FILE_PATH_SIZE] = {0};
@@ -1653,28 +1714,33 @@ static int CmdConnect(const char *Cmd) {
     uint32_t baudrate = arg_get_u32_def(ctx, 2, USART_BAUD_RATE);
     CLIParserFree(ctx);
 
-    if (baudrate == 0) {
+    if (baudrate == 0)
+    {
         PrintAndLogEx(WARNING, "Baudrate can't be zero");
         return PM3_EINVARG;
     }
 
     // default back to previous used serial port
-    if (strlen(port) == 0) {
-        if (strlen(g_conn.serial_port_name) == 0) {
+    if (strlen(port) == 0)
+    {
+        if (strlen(g_conn.serial_port_name) == 0)
+        {
             PrintAndLogEx(WARNING, "Must specify a serial port");
             return PM3_EINVARG;
         }
         memcpy(port, g_conn.serial_port_name, sizeof(port));
     }
 
-    if (g_session.pm3_present) {
+    if (g_session.pm3_present)
+    {
         CloseProxmark(g_session.current_device);
     }
 
     // 10 second timeout
     OpenProxmark(&g_session.current_device, port, false, 10, false, baudrate);
 
-    if (g_session.pm3_present && (TestProxmark(g_session.current_device) != PM3_SUCCESS)) {
+    if (g_session.pm3_present && (TestProxmark(g_session.current_device) != PM3_SUCCESS))
+    {
         PrintAndLogEx(ERR, _RED_("ERROR:") " cannot communicate with the Proxmark3\n");
         CloseProxmark(g_session.current_device);
         return PM3_ENOTTY;
@@ -1682,18 +1748,17 @@ static int CmdConnect(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdBreak(const char *Cmd) {
+static int CmdBreak(const char *Cmd)
+{
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw break",
                   "send break loop package",
-                  "hw break\n"
-                 );
+                  "hw break\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_param_end
-    };
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
     clearCommandBuffer();
@@ -1701,18 +1766,17 @@ static int CmdBreak(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int CmdBootloader(const char *Cmd) {
+static int CmdBootloader(const char *Cmd)
+{
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hw bootloader",
                   "Reboot Proxmark3 into bootloader mode",
-                  "hw bootloader\n"
-                 );
+                  "hw bootloader\n");
 
     void *argtable[] = {
         arg_param_begin,
-        arg_param_end
-    };
+        arg_param_end};
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     CLIParserFree(ctx);
     clearCommandBuffer();
@@ -1720,131 +1784,139 @@ static int CmdBootloader(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-int set_fpga_mode(uint8_t mode) {
-    if (mode < FPGA_BITSTREAM_MIN || mode > FPGA_BITSTREAM_MAX) {
+int set_fpga_mode(uint8_t mode)
+{
+    if (mode < FPGA_BITSTREAM_MIN || mode > FPGA_BITSTREAM_MAX)
+    {
         return PM3_EINVARG;
     }
     uint8_t d[] = {mode};
     clearCommandBuffer();
     SendCommandNG(CMD_SET_FPGAMODE, d, sizeof(d));
     PacketResponseNG resp;
-    if (WaitForResponseTimeout(CMD_SET_FPGAMODE, &resp, 1000) == false) {
+    if (WaitForResponseTimeout(CMD_SET_FPGAMODE, &resp, 1000) == false)
+    {
         PrintAndLogEx(WARNING, "command execution time out");
         return PM3_ETIMEOUT;
     }
-    if (resp.status != PM3_SUCCESS) {
+    if (resp.status != PM3_SUCCESS)
+    {
         PrintAndLogEx(ERR, "failed to set FPGA mode");
     }
     return resp.status;
 }
 
 static command_t CommandTable[] = {
-    {"help",          CmdHelp,         AlwaysAvailable,  "This help"},
-    {"-------------", CmdHelp,         AlwaysAvailable,  "----------------------- " _CYAN_("Operation") " -----------------------"},
-    {"detectreader",  CmdDetectReader, IfPm3Present,     "Detect external reader field"},
-    {"status",        CmdStatus,       IfPm3Present,     "Show runtime status information about the connected Proxmark3"},
-    {"tearoff",       CmdTearoff,      IfPm3Present,     "Program a tearoff hook for the next command supporting tearoff"},
-    {"timeout",       CmdTimeout,      AlwaysAvailable,  "Set the communication timeout on the client side"},
-    {"version",       CmdVersion,      AlwaysAvailable,  "Show version information about the client and Proxmark3"},
-    {"-------------", CmdHelp,         AlwaysAvailable,  "----------------------- " _CYAN_("Hardware") " -----------------------"},
-    {"break",         CmdBreak,        IfPm3Present,     "Send break loop usb command"},
-    {"bootloader",    CmdBootloader,   IfPm3Present,     "Reboot into bootloader mode"},
-    {"connect",       CmdConnect,      AlwaysAvailable,  "Connect to the device via serial port"},
-    {"dbg",           CmdDbg,          IfPm3Present,     "Set device side debug level"},
-    {"fpgaoff",       CmdFPGAOff,      IfPm3Present,     "Turn off FPGA on device"},
-    {"lcd",           CmdLCD,          IfPm3Lcd,         "Send command/data to LCD"},
-    {"lcdreset",      CmdLCDReset,     IfPm3Lcd,         "Hardware reset LCD"},
-    {"ping",          CmdPing,         IfPm3Present,     "Test if the Proxmark3 is responsive"},
-    {"readmem",       CmdReadmem,      IfPm3Present,     "Read from MCU flash"},
-    {"reset",         CmdReset,        IfPm3Present,     "Reset the device"},
-    {"setlfdivisor",  CmdSetDivisor,   IfPm3Lf,          "Drive LF antenna at 12MHz / (divisor + 1)"},
-    {"sethfthresh",   CmdSetHFThreshold, IfPm3Iso14443a, "Set thresholds in HF/14a mode"},
-    {"setmux",        CmdSetMux,       IfPm3Present,     "Set the ADC mux to a specific value"},
-    {"standalone",    CmdStandalone,   IfPm3Present,     "Start installed standalone mode on device"},
-    {"tia",           CmdTia,          IfPm3Present,     "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
-    {"tune",          CmdTune,         IfPm3Lf,          "Measure tuning of device antenna"},
-    {"decay",         CmdDecay,        IfPm3Present,     "Measure HF antenna decay after field-off"},
-    {NULL, NULL, NULL, NULL}
-};
+    {"help", CmdHelp, AlwaysAvailable, "This help"},
+    {"-------------", CmdHelp, AlwaysAvailable, "----------------------- " _CYAN_("Operation") " -----------------------"},
+    {"detectreader", CmdDetectReader, IfPm3Present, "Detect external reader field"},
+    {"status", CmdStatus, IfPm3Present, "Show runtime status information about the connected Proxmark3"},
+    {"tearoff", CmdTearoff, IfPm3Present, "Program a tearoff hook for the next command supporting tearoff"},
+    {"timeout", CmdTimeout, AlwaysAvailable, "Set the communication timeout on the client side"},
+    {"version", CmdVersion, AlwaysAvailable, "Show version information about the client and Proxmark3"},
+    {"-------------", CmdHelp, AlwaysAvailable, "----------------------- " _CYAN_("Hardware") " -----------------------"},
+    {"break", CmdBreak, IfPm3Present, "Send break loop usb command"},
+    {"bootloader", CmdBootloader, IfPm3Present, "Reboot into bootloader mode"},
+    {"connect", CmdConnect, AlwaysAvailable, "Connect to the device via serial port"},
+    {"dbg", CmdDbg, IfPm3Present, "Set device side debug level"},
+    {"fpgaoff", CmdFPGAOff, IfPm3Present, "Turn off FPGA on device"},
+    {"lcd", CmdLCD, IfPm3Lcd, "Send command/data to LCD"},
+    {"lcdreset", CmdLCDReset, IfPm3Lcd, "Hardware reset LCD"},
+    {"ping", CmdPing, IfPm3Present, "Test if the Proxmark3 is responsive"},
+    {"readmem", CmdReadmem, IfPm3Present, "Read from MCU flash"},
+    {"reset", CmdReset, IfPm3Present, "Reset the device"},
+    {"setlfdivisor", CmdSetDivisor, IfPm3Lf, "Drive LF antenna at 12MHz / (divisor + 1)"},
+    {"sethfthresh", CmdSetHFThreshold, IfPm3Iso14443a, "Set thresholds in HF/14a mode"},
+    {"setmux", CmdSetMux, IfPm3Present, "Set the ADC mux to a specific value"},
+    {"standalone", CmdStandalone, IfPm3Present, "Start installed standalone mode on device"},
+    {"tia", CmdTia, IfPm3Present, "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"},
+    {"tune", CmdTune, IfPm3Lf, "Measure tuning of device antenna"},
+    {"decay", CmdDecay, IfPm3Present, "Measure HF antenna decay after field-off"},
+    {NULL, NULL, NULL, NULL}};
 
-static int CmdHelp(const char *Cmd) {
+static int CmdHelp(const char *Cmd)
+{
     (void)Cmd; // Cmd is not used so far
     CmdsHelp(CommandTable);
     return PM3_SUCCESS;
 }
 
-int CmdHW(const char *Cmd) {
+int CmdHW(const char *Cmd)
+{
     clearCommandBuffer();
     return CmdsParse(CommandTable, Cmd);
 }
 
-
 #if defined(__MINGW64__)
-# define PM3CLIENTCOMPILER "MinGW-w64 "
+#define PM3CLIENTCOMPILER "MinGW-w64 "
 #elif defined(__MINGW32__)
-# define PM3CLIENTCOMPILER "MinGW "
+#define PM3CLIENTCOMPILER "MinGW "
 #elif defined(__clang__)
-# define PM3CLIENTCOMPILER "Clang/LLVM "
+#define PM3CLIENTCOMPILER "Clang/LLVM "
 #elif defined(__GNUC__) || defined(__GNUG__)
-# define PM3CLIENTCOMPILER "GCC "
+#define PM3CLIENTCOMPILER "GCC "
 #else
-# define PM3CLIENTCOMPILER "unknown compiler "
+#define PM3CLIENTCOMPILER "unknown compiler "
 #endif
 
 #if defined(__APPLE__) || defined(__MACH__)
-# define PM3HOSTOS "OSX"
+#define PM3HOSTOS "OSX"
 #elif defined(__ANDROID__) || defined(ANDROID)
 // must be tested before __linux__
-# define PM3HOSTOS "Android"
+#define PM3HOSTOS "Android"
 #elif defined(__linux__)
-# define PM3HOSTOS "Linux"
+#define PM3HOSTOS "Linux"
 #elif defined(__FreeBSD__)
-# define PM3HOSTOS "FreeBSD"
+#define PM3HOSTOS "FreeBSD"
 #elif defined(__NetBSD__)
-# define PM3HOSTOS "NetBSD"
+#define PM3HOSTOS "NetBSD"
 #elif defined(__OpenBSD__)
-# define PM3HOSTOS "OpenBSD"
+#define PM3HOSTOS "OpenBSD"
 #elif defined(__CYGWIN__)
-# define PM3HOSTOS "Cygwin"
+#define PM3HOSTOS "Cygwin"
 #elif defined(_WIN64) || defined(__WIN64__)
 // must be tested before _WIN32
-# define PM3HOSTOS "Windows (64b)"
+#define PM3HOSTOS "Windows (64b)"
 #elif defined(_WIN32) || defined(__WIN32__)
-# define PM3HOSTOS "Windows (32b)"
+#define PM3HOSTOS "Windows (32b)"
 #else
-# define PM3HOSTOS "unknown"
+#define PM3HOSTOS "unknown"
 #endif
 
 #if defined(__x86_64__)
-# define PM3HOSTARCH "x86_64"
+#define PM3HOSTARCH "x86_64"
 #elif defined(__i386__)
-# define PM3HOSTARCH "x86"
+#define PM3HOSTARCH "x86"
 #elif defined(__aarch64__)
-# define PM3HOSTARCH "aarch64"
+#define PM3HOSTARCH "aarch64"
 #elif defined(__arm__)
-# define PM3HOSTARCH "arm"
+#define PM3HOSTARCH "arm"
 #elif defined(__powerpc64__)
-# define PM3HOSTARCH "powerpc64"
+#define PM3HOSTARCH "powerpc64"
 #elif defined(__mips__)
-# define PM3HOSTARCH "mips"
+#define PM3HOSTARCH "mips"
 #else
-# define PM3HOSTARCH "unknown"
+#define PM3HOSTARCH "unknown"
 #endif
 
-void pm3_version_short(void) {
-//    PrintAndLogEx(NORMAL, "  [ " _CYAN_("Proxmark3 RFID instrument") " ]");
+void pm3_version_short(void)
+{
+    //    PrintAndLogEx(NORMAL, "  [ " _CYAN_("Proxmark3 RFID instrument") " ]");
     PrintAndLogEx(NORMAL, "  [ " _CYAN_("Proxmark3") " ]");
     PrintAndLogEx(NORMAL, "");
 
-    if (g_session.pm3_present) {
+    if (g_session.pm3_present)
+    {
 
         PacketResponseNG resp;
         clearCommandBuffer();
         SendCommandNG(CMD_VERSION, NULL, 0);
 
-        if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
+        if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000))
+        {
 
-            struct p {
+            struct p
+            {
                 uint32_t id;
                 uint32_t section_size;
                 uint32_t versionstr_len;
@@ -1855,28 +1927,35 @@ void pm3_version_short(void) {
 
             lookup_chipid_short(payload->id, payload->section_size);
 
-            if (IfPm3Rdv4Fw()) {
-
+            if (IfPm3Rdv4Fw())
+            {
 
                 // validate signature data
                 rdv40_validation_t mem;
                 signature_e type;
 
-                if (pm3_get_signature(&mem) == PM3_SUCCESS) {
-                    if (pm3_validate(&mem, &type) == PM3_SUCCESS) {
+                if (pm3_get_signature(&mem) == PM3_SUCCESS)
+                {
+                    if (pm3_validate(&mem, &type) == PM3_SUCCESS)
+                    {
 
-                        if (type == SIGN_RDV4) {
+                        if (type == SIGN_RDV4)
+                        {
                             PrintAndLogEx(NORMAL, "    Target.... %s", _YELLOW_("RDV4"));
-                        } else if (type == SIGN_GENERIC) {
+                        }
+                        else if (type == SIGN_GENERIC)
+                        {
                             PrintAndLogEx(NORMAL, "    Target.... %s", _YELLOW_("GENERIC"));
-                        } else {
+                        }
+                        else
+                        {
                             PrintAndLogEx(NORMAL, "    Target.... %s", _RED_("device / fw mismatch"));
                         }
                     }
                 }
-
-
-            } else {
+            }
+            else
+            {
                 PrintAndLogEx(NORMAL, "    Target.... %s", _YELLOW_("PM3 GENERIC"));
             }
             PrintAndLogEx(NORMAL, "");
@@ -1888,10 +1967,13 @@ void pm3_version_short(void) {
 
             bool armsrc_mismatch = false;
             char *ptr = strstr(payload->versionstr, "OS......... ");
-            if (ptr != NULL) {
+            if (ptr != NULL)
+            {
                 ptr = strstr(ptr, "\n");
-                if ((ptr != NULL) && (strlen(g_version_information.armsrc) == 9)) {
-                    if (strncmp(ptr - 9, g_version_information.armsrc, 9) != 0) {
+                if ((ptr != NULL) && (strlen(g_version_information.armsrc) == 9))
+                {
+                    if (strncmp(ptr - 9, g_version_information.armsrc, 9) != 0)
+                    {
                         armsrc_mismatch = true;
                     }
                 }
@@ -1899,9 +1981,11 @@ void pm3_version_short(void) {
 
             // bootrom
             ptr = strstr(payload->versionstr, "Bootrom.... ");
-            if (ptr != NULL) {
+            if (ptr != NULL)
+            {
                 char *ptr_end = strstr(ptr, "\n");
-                if (ptr_end != NULL) {
+                if (ptr_end != NULL)
+                {
                     uint8_t len = ptr_end - 12 - ptr;
                     PrintAndLogEx(NORMAL, "    Bootrom... %.*s", len, ptr + 12);
                 }
@@ -1909,16 +1993,19 @@ void pm3_version_short(void) {
 
             // os:
             ptr = strstr(payload->versionstr, "OS......... ");
-            if (ptr != NULL) {
+            if (ptr != NULL)
+            {
                 char *ptr_end = strstr(ptr, "\n");
-                if (ptr_end != NULL) {
+                if (ptr_end != NULL)
+                {
                     uint8_t len = ptr_end - 12 - ptr;
                     PrintAndLogEx(NORMAL, "    OS........ %.*s", len, ptr + 12);
                 }
             }
             PrintAndLogEx(NORMAL, "");
 
-            if (armsrc_mismatch) {
+            if (armsrc_mismatch)
+            {
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(WARNING, " --> " _RED_("ARM firmware does not match the source at the time the client was compiled"));
                 PrintAndLogEx(WARNING, " --> Make sure to flash a correct and up-to-date version");
@@ -1928,18 +2015,21 @@ void pm3_version_short(void) {
     PrintAndLogEx(NORMAL, "");
 }
 
-void pm3_version(bool verbose, bool oneliner) {
+void pm3_version(bool verbose, bool oneliner)
+{
 
     char temp[PM3_CMD_DATA_SIZE - 12]; // same limit as for ARM image
 
-    if (oneliner) {
+    if (oneliner)
+    {
         // For "proxmark3 -v", simple printf, avoid logging
         FormatVersionInformation(temp, sizeof(temp), "Client: ", &g_version_information);
         PrintAndLogEx(NORMAL, "%s compiler: " PM3CLIENTCOMPILER __VERSION__ " OS:" PM3HOSTOS " ARCH:" PM3HOSTARCH "\n", temp);
         return;
     }
 
-    if (!verbose) {
+    if (!verbose)
+    {
         return;
     }
 
@@ -1987,30 +2077,40 @@ void pm3_version(bool verbose, bool oneliner) {
     PrintAndLogEx(NORMAL, "  Lua SWIG support.......... " _YELLOW_("absent"));
 #endif
 
-    if (g_session.pm3_present) {
+    if (g_session.pm3_present)
+    {
         PrintAndLogEx(NORMAL, "\n [ " _YELLOW_("Model") " ]");
 
         PacketResponseNG resp;
         clearCommandBuffer();
         SendCommandNG(CMD_VERSION, NULL, 0);
 
-        if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000)) {
-            if (IfPm3Rdv4Fw()) {
+        if (WaitForResponseTimeout(CMD_VERSION, &resp, 1000))
+        {
+            if (IfPm3Rdv4Fw())
+            {
 
                 // validate signature data
                 rdv40_validation_t mem;
                 signature_e type;
 
-                if (pm3_get_signature(&mem) == PM3_SUCCESS) {
-                    if (pm3_validate(&mem, &type) == PM3_SUCCESS) {
+                if (pm3_get_signature(&mem) == PM3_SUCCESS)
+                {
+                    if (pm3_validate(&mem, &type) == PM3_SUCCESS)
+                    {
 
-                        if (type == SIGN_RDV4) {
+                        if (type == SIGN_RDV4)
+                        {
                             PrintAndLogEx(NORMAL, "  Device.................... " _GREEN_("RDV4"));
                             PrintAndLogEx(NORMAL, "  Firmware.................. " _GREEN_("RDV4"));
-                        } else if (type == SIGN_GENERIC) {
+                        }
+                        else if (type == SIGN_GENERIC)
+                        {
                             PrintAndLogEx(NORMAL, "  Device.................... ", _GREEN_("GENERIC"));
                             PrintAndLogEx(NORMAL, "  Firmware.................. ", _GREEN_("GENERIC"));
-                        } else {
+                        }
+                        else
+                        {
                             PrintAndLogEx(NORMAL, "  Device.................... " _RED_("Bad signature detected!"));
                             PrintAndLogEx(NORMAL, "  Firmware.................. " _YELLOW_("N/A"));
                         }
@@ -2020,24 +2120,30 @@ void pm3_version(bool verbose, bool oneliner) {
                 PrintAndLogEx(NORMAL, "  External flash............ %s", IfPm3Flash() ? _GREEN_("present") : _YELLOW_("absent"));
                 PrintAndLogEx(NORMAL, "  Smartcard reader.......... %s", IfPm3Smartcard() ? _GREEN_("present") : _YELLOW_("absent"));
                 PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", IfPm3FpcUsartHost() ? _GREEN_("present") : _YELLOW_("absent"));
-            } else {
+            }
+            else
+            {
                 PrintAndLogEx(NORMAL, "  Firmware.................. %s", _YELLOW_("PM3 GENERIC"));
-                if (IfPm3Flash()) {
+                if (IfPm3Flash())
+                {
                     PrintAndLogEx(NORMAL, "  External flash............ %s", _GREEN_("present"));
                 }
 
-                if (IfPm3FpcUsartHost()) {
+                if (IfPm3FpcUsartHost())
+                {
                     PrintAndLogEx(NORMAL, "  FPC USART for BT add-on... %s", _GREEN_("present"));
                 }
             }
 
-            if (IfPm3FpcUsartDevFromUsb()) {
+            if (IfPm3FpcUsartDevFromUsb())
+            {
                 PrintAndLogEx(NORMAL, "  FPC USART for developer... %s", _GREEN_("present"));
             }
 
             PrintAndLogEx(NORMAL, "");
 
-            struct p {
+            struct p
+            {
                 uint32_t id;
                 uint32_t section_size;
                 uint32_t versionstr_len;
@@ -2048,24 +2154,29 @@ void pm3_version(bool verbose, bool oneliner) {
 
             bool armsrc_mismatch = false;
             char *ptr = strstr(payload->versionstr, "OS......... ");
-            if (ptr != NULL) {
+            if (ptr != NULL)
+            {
                 ptr = strstr(ptr, "\n");
-                if ((ptr != NULL) && (strlen(g_version_information.armsrc) == 9)) {
-                    if (strncmp(ptr - 9, g_version_information.armsrc, 9) != 0) {
+                if ((ptr != NULL) && (strlen(g_version_information.armsrc) == 9))
+                {
+                    if (strncmp(ptr - 9, g_version_information.armsrc, 9) != 0)
+                    {
                         armsrc_mismatch = true;
                     }
                 }
             }
-            PrintAndLogEx(NORMAL,  payload->versionstr);
-            if (strstr(payload->versionstr, FPGA_TYPE) == NULL) {
+            PrintAndLogEx(NORMAL, payload->versionstr);
+            if (strstr(payload->versionstr, FPGA_TYPE) == NULL)
+            {
                 PrintAndLogEx(NORMAL, "  FPGA firmware... %s", _RED_("chip mismatch"));
             }
 
             lookupChipID(payload->id, payload->section_size);
-            if (armsrc_mismatch) {
+            if (armsrc_mismatch)
+            {
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(WARNING, _RED_("ARM firmware does not match the source at the time the client was compiled"));
-                PrintAndLogEx(WARNING,  "Make sure to flash a correct and up-to-date version");
+                PrintAndLogEx(WARNING, "Make sure to flash a correct and up-to-date version");
             }
         }
     }
