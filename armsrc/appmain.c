@@ -260,6 +260,96 @@ static uint32_t MeasureAntennaTuningLfData(void) {
     return (MAX_ADC_LF_VOLTAGE * (SumAdc(ADC_CHAN_LF, 32) >> 1)) >> 14;
 }
 
+// Measure HF antenna decay after field-off.
+// Captures peak-detect capacitor discharge curve via burst ADC sampling.
+static void MeasureAntennaTuningHfDecay(const uint8_t *params, uint16_t params_len) {
+
+    // Parse parameters with defaults
+    uint16_t stabilize_ms = 50;
+    uint16_t measure_us = 2000;
+
+    if (params_len >= 4) {
+        stabilize_ms = params[0] | (params[1] << 8);
+        measure_us = params[2] | (params[3] << 8);
+    }
+    if (stabilize_ms == 0) stabilize_ms = 50;
+    if (measure_us == 0) measure_us = 2000;
+
+    // Response: 8-byte header + up to 252 uint16_t samples = 512 bytes max
+    struct {
+        uint16_t baseline_mv;
+        uint16_t num_samples;
+        uint16_t sample_interval_us;
+        uint16_t measure_window_us;
+        uint16_t samples_mv[252];
+    } PACKED payload;
+    memset(&payload, 0, sizeof(payload));
+
+    LED_B_ON();
+
+    // Drive HF field and wait for stabilization
+    FpgaDownloadAndGo(FPGA_BITSTREAM_HF);
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER);
+    SpinDelay(stabilize_ms);
+
+    // Baseline measurement (averaged)
+    payload.baseline_mv = (MAX_ADC_HF_VOLTAGE * SumAdc(ADC_CHAN_HF, 32)) >> 15;
+
+    // Configure ADC for fast burst mode.
+    // Faster ADC clock + shorter S&H trades absolute accuracy for speed.
+    // Source impedance is ~0.91 MOhm (voltage divider), ADC input cap 12pF,
+    // RC = 10.9us. At SHTIM=3 / ADC_CLK=3MHz, S&H = 1.33us reads ~11.5%
+    // of true voltage. This is fine for relative decay shape measurement.
+    AT91C_BASE_ADC->ADC_CR = AT91C_ADC_SWRST;
+    AT91C_BASE_ADC->ADC_MR =
+        ADC_MODE_PRESCALE(7)               // ADC_CLK = MCK / 16 = 3 MHz
+        | ADC_MODE_STARTUP_TIME(8)          // (8+1)*8 / 3MHz = 24us (> 20us min)
+        | ADC_MODE_SAMPLE_HOLD_TIME(3);     // (3+1) / 3MHz = 1.33us S&H
+    AT91C_BASE_ADC->ADC_CHER = ADC_CHANNEL(ADC_CHAN_HF);
+
+    // Start precise timer (1 tick = MCK/32 = 0.667us)
+    StartTicks();
+
+    // Field OFF — start decay measurement
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+
+    uint32_t start_ticks = GetTicks();
+    uint16_t idx = 0;
+    // Convert us to ticks: 1us = 1.5 ticks
+    uint32_t measure_ticks = (measure_us * 3) / 2;
+
+    // Trigger first conversion
+    AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
+
+    while (idx < 252) {
+        if (AT91C_BASE_ADC->ADC_SR & ADC_END_OF_CONVERSION(ADC_CHAN_HF)) {
+            uint16_t raw = AT91C_BASE_ADC->ADC_CDR[ADC_CHAN_HF] & 0x3FF;
+            payload.samples_mv[idx] = (MAX_ADC_HF_VOLTAGE * raw) >> 10;
+            idx++;
+
+            if (GetTicksDelta(start_ticks) >= measure_ticks)
+                break;
+
+            // Trigger next conversion
+            AT91C_BASE_ADC->ADC_CR = AT91C_ADC_START;
+        }
+    }
+
+    uint32_t elapsed_ticks = GetTicksDelta(start_ticks);
+    payload.num_samples = idx;
+    payload.measure_window_us = (elapsed_ticks * 2) / 3;
+    payload.sample_interval_us = (idx > 1) ? payload.measure_window_us / (idx - 1) : 0;
+
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    StopTicks();
+
+    uint16_t response_size = 8 + (idx * sizeof(uint16_t));
+    reply_ng(CMD_HF_DECAY, PM3_SUCCESS,
+             (uint8_t *)&payload, response_size);
+
+    LEDsoff();
+}
+
 void print_stack_usage(void) {
     for (uint32_t *p = _stack_start; ; ++p) {
         if (*p != 0xdeadbeef) {
@@ -2551,6 +2641,10 @@ static void PacketReceived(PacketCommandNG *packet) {
                     reply_ng(CMD_MEASURE_ANTENNA_TUNING_HF, PM3_EINVARG, NULL, 0);
                     break;
             }
+            break;
+        }
+        case CMD_HF_DECAY: {
+            MeasureAntennaTuningHfDecay(packet->data.asBytes, packet->length);
             break;
         }
         case CMD_MEASURE_ANTENNA_TUNING_LF: {
