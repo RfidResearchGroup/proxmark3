@@ -29,6 +29,8 @@ Run `tools/release_tests.sh` on:
 - via Docker
   - [ ] Archlinux
   - [ ] Debian Stable
+  - [ ] Debian Stable arm64
+  - [ ] Debian Stable armhf
   - [ ] Debian Testing
   - [ ] Fedora 42 (till 2026-05-13)
   - [ ] Fedora 43 (till 2026-12-02)
