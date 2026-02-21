@@ -262,27 +262,17 @@ static uint32_t MeasureAntennaTuningLfData(void) {
 
 // Measure HF antenna decay after field-off.
 // Captures peak-detect capacitor discharge curve via burst ADC sampling.
-static void MeasureAntennaTuningHfDecay(const uint8_t *params, uint16_t params_len) {
+static void MeasureAntennaTuningHfDecay(const hf_decay_params_t *params) {
 
     // Parse parameters with defaults
-    uint16_t stabilize_ms = 50;
-    uint16_t measure_us = 2000;
+    uint16_t stabilize_ms = params->stabilize_ms;
+    uint16_t measure_us = params->measure_us;
 
-    if (params_len >= 4) {
-        stabilize_ms = params[0] | (params[1] << 8);
-        measure_us = params[2] | (params[3] << 8);
-    }
     if (stabilize_ms == 0) stabilize_ms = 50;
     if (measure_us == 0) measure_us = 2000;
 
     // Response: 8-byte header + up to 252 uint16_t samples = 512 bytes max
-    struct {
-        uint16_t baseline_mv;
-        uint16_t num_samples;
-        uint16_t sample_interval_us;
-        uint16_t measure_window_us;
-        uint16_t samples_mv[252];
-    } PACKED payload;
+    hf_decay_response_t payload;
     memset(&payload, 0, sizeof(payload));
 
     LED_B_ON();
@@ -2644,7 +2634,7 @@ static void PacketReceived(PacketCommandNG *packet) {
             break;
         }
         case CMD_HF_DECAY: {
-            MeasureAntennaTuningHfDecay(packet->data.asBytes, packet->length);
+            MeasureAntennaTuningHfDecay((const hf_decay_params_t *)packet->data.asBytes);
             break;
         }
         case CMD_MEASURE_ANTENNA_TUNING_LF: {

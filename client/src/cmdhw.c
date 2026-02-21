@@ -897,16 +897,9 @@ static int CmdDecay(const char *Cmd) {
     CLIParserFree(ctx);
 
     // Build parameter packet
-    struct {
-        uint16_t stabilize_ms;
-        uint16_t measure_us;
-        uint8_t num_pulses;
-        uint8_t padding[3];
-    } PACKED params = {
+    hf_decay_params_t decay_params = {
         .stabilize_ms = stabilize_ms,
         .measure_us = measure_us,
-        .num_pulses = 1,
-        .padding = {0}
     };
 
     PrintAndLogEx(INFO, "Measuring HF antenna decay...");
@@ -914,7 +907,7 @@ static int CmdDecay(const char *Cmd) {
     PrintAndLogEx(INFO, "  Measurement window:  " _YELLOW_("%d") " us", measure_us);
 
     clearCommandBuffer();
-    SendCommandNG(CMD_HF_DECAY, (uint8_t *)&params, sizeof(params));
+    SendCommandNG(CMD_HF_DECAY, (uint8_t *)&decay_params, sizeof(decay_params));
 
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_DECAY, &resp, 5000) == false) {
@@ -928,11 +921,13 @@ static int CmdDecay(const char *Cmd) {
     }
 
     // Parse response header
-    uint16_t baseline_mv = resp.data.asBytes[0] | (resp.data.asBytes[1] << 8);
-    uint16_t num_samples = resp.data.asBytes[2] | (resp.data.asBytes[3] << 8);
-    uint16_t sample_interval_us = resp.data.asBytes[4] | (resp.data.asBytes[5] << 8);
-    uint16_t measure_window_us = resp.data.asBytes[6] | (resp.data.asBytes[7] << 8);
-    uint16_t *samples = (uint16_t *)(resp.data.asBytes + 8);
+    hf_decay_response_t *decay_resp = (hf_decay_response_t *)resp.data.asBytes;
+    uint16_t baseline_mv = decay_resp->baseline_mv;
+    uint16_t num_samples = decay_resp->num_samples;
+    uint16_t sample_interval_us = decay_resp->sample_interval_us;
+    uint16_t measure_window_us = decay_resp->measure_window_us;
+    uint16_t samples[num_samples];
+    memcpy(samples, decay_resp->samples_mv, num_samples * sizeof(uint16_t));
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "-------- " _CYAN_("HF Decay Measurement") " ----------");
@@ -1180,29 +1175,22 @@ static int CmdTune(const char *Cmd) {
     // 50-500 (rapid discharge). Without a booster, it reads >1000.
     bool hf_booster_detected = false;
     if (!IfPm3Rdv4Fw() && package->v_hf < HF_MARGINAL_V) {
-        struct {
-            uint16_t stabilize_ms;
-            uint16_t measure_us;
-            uint8_t num_pulses;
-            uint8_t padding[3];
-        } PACKED decay_params = {
+        hf_decay_params_t decay_params = {
             .stabilize_ms = 50,
             .measure_us = 50,
-            .num_pulses = 1,
-            .padding = {0}
         };
 
         clearCommandBuffer();
         SendCommandNG(CMD_HF_DECAY, (uint8_t *)&decay_params, sizeof(decay_params));
 
-        PacketResponseNG decay_resp;
-        if (WaitForResponseTimeout(CMD_HF_DECAY, &decay_resp, 3000) && decay_resp.status == PM3_SUCCESS) {
-
-            uint16_t decay_num = decay_resp.data.asBytes[2] | (decay_resp.data.asBytes[3] << 8);
-            uint16_t *decay_samples = (uint16_t *)(decay_resp.data.asBytes + 8);
-
-            if (decay_num > 0 && decay_samples[0] >= 50 && decay_samples[0] <= 500) {
-                hf_booster_detected = true;
+        if (WaitForResponseTimeout(CMD_HF_DECAY, &resp, 3000) && resp.status == PM3_SUCCESS) {
+            hf_decay_response_t *decay_resp = (hf_decay_response_t *)resp.data.asBytes;
+            if (decay_resp->num_samples > 0) {
+                uint16_t samples[1];
+                memcpy(samples, decay_resp->samples_mv, sizeof(uint16_t));
+                if (samples[0] >= 50 && samples[0] <= 500) {
+                    hf_booster_detected = true;
+                }
             }
         }
     }
@@ -1240,45 +1228,25 @@ static int CmdTune(const char *Cmd) {
     // surface interference via decay measurement.
     // Only on PM3 Easy — RDV4 has different voltage divider.
     if (!IfPm3Rdv4Fw() && package->v_hf >= HF_MARGINAL_V && package->v_hf < 13000) {
-
-        struct {
-            uint16_t stabilize_ms;
-            uint16_t measure_us;
-            uint8_t num_pulses;
-            uint8_t padding[3];
-        } PACKED surface_params = {
+        hf_decay_params_t surface_params = {
             .stabilize_ms = 50,
             .measure_us = 50,
-            .num_pulses = 1,
-            .padding = {0}
         };
 
         clearCommandBuffer();
-        SendCommandNG(CMD_HF_DECAY,
-                      (uint8_t *)&surface_params,
-                      sizeof(surface_params));
+        SendCommandNG(CMD_HF_DECAY, (uint8_t *)&surface_params, sizeof(surface_params));
 
-        PacketResponseNG surface_resp;
-        if (WaitForResponseTimeout(
-                    CMD_HF_DECAY,
-                    &surface_resp, 3000) &&
-                surface_resp.status == PM3_SUCCESS) {
-
-            uint16_t sn = surface_resp.data.asBytes[2] | (surface_resp.data.asBytes[3] << 8);
-            uint16_t *ss =
-                (uint16_t *)(surface_resp.data.asBytes + 8);
-
-            if (sn > 0 && ss[0] >= 600 && ss[0] <= 900) {
-                PrintAndLogEx(SUCCESS, "");
-                PrintAndLogEx(SUCCESS,
-                              "The surface your proxmark"
-                              " is on could");
-                PrintAndLogEx(SUCCESS,
-                              "contain interfering"
-                              " materials. Try again");
-                PrintAndLogEx(SUCCESS,
-                              "while holding the"
-                              " proxmark in free space.");
+        if (WaitForResponseTimeout(CMD_HF_DECAY, &resp, 3000) && resp.status == PM3_SUCCESS) {
+            hf_decay_response_t *surface_resp = (hf_decay_response_t *)resp.data.asBytes;
+            if (surface_resp->num_samples > 0) {
+                uint16_t samples[1];
+                memcpy(samples, surface_resp->samples_mv, sizeof(uint16_t));
+                if (samples[0] >= 600 && samples[0] <= 900) {
+                    PrintAndLogEx(SUCCESS, "");
+                    PrintAndLogEx(SUCCESS, "The surface your proxmark is on could");
+                    PrintAndLogEx(SUCCESS, "contain interfering materials. Try again");
+                    PrintAndLogEx(SUCCESS, "while holding the proxmark in free space.");
+                }
             }
         }
     }

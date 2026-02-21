@@ -247,6 +247,20 @@ typedef struct {
 #define CAPABILITIES_VERSION 7
 extern capabilities_t g_pm3_capabilities;
 
+typedef struct {
+    uint16_t stabilize_ms;
+    uint16_t measure_us;
+//    uint8_t num_pulses;
+} PACKED hf_decay_params_t;
+
+typedef struct {
+    uint16_t baseline_mv;
+    uint16_t num_samples;
+    uint16_t sample_interval_us;
+    uint16_t measure_window_us;
+    uint16_t samples_mv[252];
+} PACKED hf_decay_response_t;
+
 // For CMD_LF_T55XX_WRITEBL
 typedef struct {
     uint32_t data;
