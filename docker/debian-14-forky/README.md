@@ -15,7 +15,7 @@ docker/debian-14-forky/run_tests.sh;
 Or if you want to run single test,
 
 ```
-sudo apt update
+sudo apt update && sudo apt upgrade -y
 make clean; make -j
 tools/pm3_tests.sh --long
 ```
