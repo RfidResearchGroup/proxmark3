@@ -4,7 +4,10 @@ Not Docker but part of the release tests...
 
 ## SSH
 
-`sshd` => runs on port 8022
+```
+sshd
+```
+=> runs on port 8022
 
 ## Setup
 
@@ -33,4 +36,10 @@ make -j hitag2crack/crack3/all
 make -j hitag2crack/crack4/all
 make -j hitag2crack/crack5/all
 tools/pm3_tests.sh --long hitag2crack
+```
+
+## End
+
+```
+killall sshd
 ```
