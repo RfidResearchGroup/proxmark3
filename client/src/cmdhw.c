@@ -1277,74 +1277,72 @@ static int CmdTune(const char *Cmd)
         PrintAndLogEx(SUCCESS, "your antenna is malfunctioning or");
         PrintAndLogEx(SUCCESS, "you have a tag on the HF antenna.");
     }
-    else
+
+    PrintAndLogEx(SUCCESS, "");
+    PrintAndLogEx(SUCCESS, "Approx. Q factor measurement");
+
+    if (package->v_hf >= HF_UNUSABLE_V)
     {
-        PrintAndLogEx(SUCCESS, "");
-        PrintAndLogEx(SUCCESS, "Approx. Q factor measurement");
+        // Q measure with Vlr=Q*(2*Vdd/pi)
+        double hfq = (double)package->v_hf * 3.14 / 2 / vdd;
+        PrintAndLogEx(SUCCESS, "Peak voltage.......... " _YELLOW_("%.1lf"), hfq);
+    }
 
-        if (package->v_hf >= HF_UNUSABLE_V)
+    if (package->v_hf < HF_UNUSABLE_V)
+        snprintf(judgement, sizeof(judgement), _RED_("unusable"));
+    else if (package->v_hf < HF_MARGINAL_V)
+        snprintf(judgement, sizeof(judgement), _YELLOW_("marginal"));
+    else
+        snprintf(judgement, sizeof(judgement), _GREEN_("ok"));
+
+    PrintAndLogEx((package->v_hf < HF_UNUSABLE_V) ? WARNING : SUCCESS, "HF antenna ( %s )", judgement);
+
+    // If HF voltage is ok/marginal but below 13V, check for
+    // surface interference via decay measurement.
+    // Only on PM3 Easy — RDV4 has different voltage divider.
+    if (!IfPm3Rdv4Fw() && package->v_hf >= HF_MARGINAL_V && package->v_hf < 13000)
+    {
+
+        struct
         {
-            // Q measure with Vlr=Q*(2*Vdd/pi)
-            double hfq = (double)package->v_hf * 3.14 / 2 / vdd;
-            PrintAndLogEx(SUCCESS, "Peak voltage.......... " _YELLOW_("%.1lf"), hfq);
-        }
+            uint16_t stabilize_ms;
+            uint16_t measure_us;
+            uint8_t num_pulses;
+            uint8_t padding[3];
+        } PACKED surface_params = {
+            .stabilize_ms = 50,
+            .measure_us = 50,
+            .num_pulses = 1,
+            .padding = {0}};
 
-        if (package->v_hf < HF_UNUSABLE_V)
-            snprintf(judgement, sizeof(judgement), _RED_("unusable"));
-        else if (package->v_hf < HF_MARGINAL_V)
-            snprintf(judgement, sizeof(judgement), _YELLOW_("marginal"));
-        else
-            snprintf(judgement, sizeof(judgement), _GREEN_("ok"));
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_DECAY,
+                      (uint8_t *)&surface_params,
+                      sizeof(surface_params));
 
-        PrintAndLogEx((package->v_hf < HF_UNUSABLE_V) ? WARNING : SUCCESS, "HF antenna ( %s )", judgement);
-
-        // If HF voltage is ok/marginal but below 13V, check for
-        // surface interference via decay measurement.
-        // Only on PM3 Easy — RDV4 has different voltage divider.
-        if (!IfPm3Rdv4Fw() && package->v_hf >= HF_MARGINAL_V && package->v_hf < 13000)
+        PacketResponseNG surface_resp;
+        if (WaitForResponseTimeout(
+                CMD_HF_DECAY,
+                &surface_resp, 3000) &&
+            surface_resp.status == PM3_SUCCESS)
         {
 
-            struct
+            uint16_t sn = surface_resp.data.asBytes[2] | (surface_resp.data.asBytes[3] << 8);
+            uint16_t *ss =
+                (uint16_t *)(surface_resp.data.asBytes + 8);
+
+            if (sn > 0 && ss[0] >= 600 && ss[0] <= 900)
             {
-                uint16_t stabilize_ms;
-                uint16_t measure_us;
-                uint8_t num_pulses;
-                uint8_t padding[3];
-            } PACKED surface_params = {
-                .stabilize_ms = 50,
-                .measure_us = 50,
-                .num_pulses = 1,
-                .padding = {0}};
-
-            clearCommandBuffer();
-            SendCommandNG(CMD_HF_DECAY,
-                          (uint8_t *)&surface_params,
-                          sizeof(surface_params));
-
-            PacketResponseNG surface_resp;
-            if (WaitForResponseTimeout(
-                    CMD_HF_DECAY,
-                    &surface_resp, 3000) &&
-                surface_resp.status == PM3_SUCCESS)
-            {
-
-                uint16_t sn = surface_resp.data.asBytes[2] | (surface_resp.data.asBytes[3] << 8);
-                uint16_t *ss =
-                    (uint16_t *)(surface_resp.data.asBytes + 8);
-
-                if (sn > 0 && ss[0] >= 600 && ss[0] <= 900)
-                {
-                    PrintAndLogEx(SUCCESS, "");
-                    PrintAndLogEx(SUCCESS,
-                                  "The surface your proxmark"
-                                  " is on could");
-                    PrintAndLogEx(SUCCESS,
-                                  "contain interfering"
-                                  " materials. Try again");
-                    PrintAndLogEx(SUCCESS,
-                                  "while holding the"
-                                  " proxmark in free space.");
-                }
+                PrintAndLogEx(SUCCESS, "");
+                PrintAndLogEx(SUCCESS,
+                              "The surface your proxmark"
+                              " is on could");
+                PrintAndLogEx(SUCCESS,
+                              "contain interfering"
+                              " materials. Try again");
+                PrintAndLogEx(SUCCESS,
+                              "while holding the"
+                              " proxmark in free space.");
             }
         }
     }
