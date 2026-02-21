@@ -133,7 +133,8 @@ static void *worker(void *arg) {
     int var_offset = candidate_in_K1 ? ((key_mode % 2) * 4) : (((key_mode - 2) % 2) * 4);
 
     // Precompute the fixed half's DES key schedule.
-    DES_cblock fixed_key;
+    DES_cblock fixed_key = {0};
+
     if (candidate_in_K1) {
         // Fixed half is K2: bytes 8..15 of base_key.
         memcpy(fixed_key, targs->base_key + 8, 8);
@@ -164,7 +165,7 @@ static void *worker(void *arg) {
         uint8_t b2 = ((idx >> 14) & 0x7F) << 1;
         uint8_t b3 = ((idx >> 21) & 0x7F) << 1;
         // Build the candidate half key by starting with the fixed base half and substituting candidate bytes.
-        DES_cblock candidate_half;
+        DES_cblock candidate_half = {0};
         memcpy(candidate_half, base_half, 8);
         candidate_half[var_offset    ] = b0;
         candidate_half[var_offset + 1] = b1;

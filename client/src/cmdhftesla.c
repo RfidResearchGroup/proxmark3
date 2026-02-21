@@ -225,6 +225,7 @@ static int info_hf_tesla(bool parse_certs) {
     } else {
 
         uint8_t auth[resplen - 2];
+        memset(auth, 0, sizeof(auth));
 
         sw = get_sw(response, resplen);
         if (sw == ISO7816_OK) {

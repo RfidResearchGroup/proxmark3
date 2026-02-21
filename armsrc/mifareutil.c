@@ -110,6 +110,8 @@ uint16_t mifare_sendcmd(uint8_t cmd, uint8_t *data, uint8_t data_size, uint8_t *
 uint16_t mifare_sendcmd_schann(uint8_t *data, uint8_t data_size, uint8_t *answer, uint16_t answer_len, uint8_t *answer_parity, uint32_t *timing) {
 
     uint8_t dcmd[data_size + 2];
+    memset(dcmd, 0, sizeof(dcmd));
+
     if (data_size > 0) {
         memcpy(dcmd, data, data_size);
     }
