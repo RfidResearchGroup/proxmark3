@@ -587,6 +587,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hw standalone" },
     { 0, "hw tia" },
     { 0, "hw tune" },
+    { 0, "hw decay" },
     { 1, "lf help" },
     { 0, "lf config" },
     { 0, "lf cmdread" },

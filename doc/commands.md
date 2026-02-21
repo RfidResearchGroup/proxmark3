@@ -878,6 +878,7 @@ Check column "offline" for their availability.
 |`hw standalone          `|N       |`Start installed standalone mode on device`
 |`hw tia                 `|N       |`Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider`
 |`hw tune                `|N       |`Measure tuning of device antenna`
+|`hw decay               `|N       |`Measure HF antenna decay after field-off`
 
 
 ### lf

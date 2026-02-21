@@ -1472,9 +1472,9 @@ static int ulev1_print_counters(uint64_t tagtype, bool use_schann) {
             if ((tagtype & MFU_TT_UL_AES) != MFU_TT_UL_AES) {
                 ulev1_readTearing(i, tear, sizeof(tear));
                 PrintAndLogEx(SUCCESS, "            - %02X tearing ( %s )"
-                            , tear[0]
-                            , (tear[0] == 0xBD) ? _GREEN_("ok") : _RED_("fail")
-                            );
+                              , tear[0]
+                              , (tear[0] == 0xBD) ? _GREEN_("ok") : _RED_("fail")
+                             );
             }
         }
     }

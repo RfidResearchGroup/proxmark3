@@ -8722,6 +8722,22 @@
             ],
             "usage": "hw dbg [-h01234]"
         },
+        "hw decay": {
+            "command": "hw decay",
+            "description": "Measure HF antenna decay after field-off. Captures how quickly the peak-detect capacitor voltage drops after the 13.56 MHz field is turned off. Different antenna loading (unloaded, booster board, damaged) produces different decay profiles.",
+            "notes": [
+                "hw decay",
+                "hw decay --ms 100 -> stabilize for 100ms before measurement",
+                "hw decay --us 5000 -> measure 5ms decay window"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "--ms <dec> Field stabilization time in ms (default: 50)",
+                "--us <dec> Measurement window in us (default: 2000)"
+            ],
+            "usage": "hw decay [-h] [--ms <dec>] [--us <dec>]"
+        },
         "hw fpgaoff": {
             "command": "hw fpgaoff",
             "description": "Turn of fpga and antenna field",
@@ -13795,8 +13811,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 790,
+        "commands_extracted": 791,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-02-09T00:12:02"
+        "extracted_on": "2026-02-21T11:42:25"
     }
 }

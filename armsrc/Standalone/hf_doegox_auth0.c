@@ -140,8 +140,8 @@ static bool find_tag(tag_t *tag_type) {
     switch (version_len) {
         case 0x0A: {
             if ((memcmp(version, "\x00\x04\x03\x01\x04\x00\x0F\x03", 8) == 0) ||
-                (memcmp(version, "\x00\x04\x03\x02\x04\x00\x0F\x03", 8) == 0) ||
-                (memcmp(version, "\x00\x04\x03\x03\x04\x00\x0F\x03", 8) == 0)) {
+                    (memcmp(version, "\x00\x04\x03\x02\x04\x00\x0F\x03", 8) == 0) ||
+                    (memcmp(version, "\x00\x04\x03\x03\x04\x00\x0F\x03", 8) == 0)) {
                 *tag_type = TAG_ULAES;
                 // DbpString("Found Ultralight AES");
             }
@@ -342,10 +342,16 @@ static bool write_auth0(tag_t type) {
     uint8_t cmd[8] = {MIFARE_ULC_WRITE};
     if (type == TAG_ULC) {
         cmd[1] = 0x2A;
-        cmd[2] = 0x30; cmd[3] = 0x00; cmd[4] = 0x00; cmd[5] = 0x00;
+        cmd[2] = 0x30;
+        cmd[3] = 0x00;
+        cmd[4] = 0x00;
+        cmd[5] = 0x00;
     } else if (type == TAG_ULAES) {
         cmd[1] = 0x29;
-        cmd[2] = 0x00; cmd[3] = 0x00; cmd[4] = 0x00; cmd[5] = 0x3C;
+        cmd[2] = 0x00;
+        cmd[3] = 0x00;
+        cmd[4] = 0x00;
+        cmd[5] = 0x3C;
     } else {
         goto out;
     }
@@ -387,92 +393,92 @@ void RunMod(void) {
         }
 
         switch (state) {
-        case ST_LOOK_FOR_CARD: {
-            if (welcome_state_look) {
-                Dbprintf("Place an Ultralight C or Ultralight AES tag on the Proxmark3.");
-                welcome_state_look = false;
-            }
-            blink_led_slow(LED_A);
-            if (find_tag(&tag_type)) {
-                if (tag_type == TAG_ULC) {
-                    DbpString("Found Ultralight C tag!");
-                    state = ST_SNIFF_AUTH;
-                    // SpinDelay(1000);
-                    break;
-                }else if (tag_type == TAG_ULAES) {
-                    DbpString("Found Ultralight AES tag!");
-                    state = ST_SNIFF_AUTH;
-                    // SpinDelay(1000);
-                    break;
-                } else {
-                    DbpString("Found other tag type, ignoring...");
-                    uint32_t t0 = GetTickCount();
-                    while (GetTickCount() - t0 < 2000) {
-                        blink_led_fast(LED_A);
+            case ST_LOOK_FOR_CARD: {
+                if (welcome_state_look) {
+                    Dbprintf("Place an Ultralight C or Ultralight AES tag on the Proxmark3.");
+                    welcome_state_look = false;
+                }
+                blink_led_slow(LED_A);
+                if (find_tag(&tag_type)) {
+                    if (tag_type == TAG_ULC) {
+                        DbpString("Found Ultralight C tag!");
+                        state = ST_SNIFF_AUTH;
+                        // SpinDelay(1000);
+                        break;
+                    } else if (tag_type == TAG_ULAES) {
+                        DbpString("Found Ultralight AES tag!");
+                        state = ST_SNIFF_AUTH;
+                        // SpinDelay(1000);
+                        break;
+                    } else {
+                        DbpString("Found other tag type, ignoring...");
+                        uint32_t t0 = GetTickCount();
+                        while (GetTickCount() - t0 < 2000) {
+                            blink_led_fast(LED_A);
+                        }
                     }
                 }
+                break;
             }
-            break;
-        }
-        case ST_SNIFF_AUTH: {
-            if (welcome_state_sniff) {
-                Dbprintf("Bring the tag and Proxmark3 together slowly towards the authenticating reader.");
-                welcome_state_sniff = false;
+            case ST_SNIFF_AUTH: {
+                if (welcome_state_sniff) {
+                    Dbprintf("Bring the tag and Proxmark3 together slowly towards the authenticating reader.");
+                    welcome_state_sniff = false;
+                }
+                LED_A_ON();
+                LED_B_ON();
+                if (sniff_wait_for_rnda_reply(tag_type)) {
+                    LED_B_ON();
+                    LED_C_ON();
+                    DbpString("Card is authenticated!");
+                    state = ST_WAIT_BUTTON;
+                }
+                break;
             }
-            LED_A_ON();
-            LED_B_ON();
-            if (sniff_wait_for_rnda_reply(tag_type)) {
+            case ST_WAIT_BUTTON: {
+                if (welcome_state_button) {
+                    Dbprintf("Pull the tag and Proxmark3 together away from the reader, then press the button.");
+                    welcome_state_button = false;
+                }
+                LED_A_ON();
+                LED_B_ON();
+                blink_led_slow(LED_C);
+                if (BUTTON_PRESS()) {
+                    state = ST_WAIT_BUTTON_RELEASE;
+                }
+                break;
+            }
+            case ST_WAIT_BUTTON_RELEASE: {
+                LED_A_ON();
+                LED_B_ON();
+                blink_led_slow(LED_C);
+                if (BUTTON_PRESS() == false) {
+                    state = ST_WRITE_AUTH0;
+                }
+                break;
+            }
+            case ST_WRITE_AUTH0: {
+                LED_A_ON();
                 LED_B_ON();
                 LED_C_ON();
-                DbpString("Card is authenticated!");
-                state = ST_WAIT_BUTTON;
-            }
-            break;
-        }
-        case ST_WAIT_BUTTON: {
-            if (welcome_state_button) {
-                Dbprintf("Pull the tag and Proxmark3 together away from the reader, then press the button.");
-                welcome_state_button = false;
-            }
-            LED_A_ON();
-            LED_B_ON();
-            blink_led_slow(LED_C);
-            if (BUTTON_PRESS()) {
-                state = ST_WAIT_BUTTON_RELEASE;
-            }
-            break;
-        }
-        case ST_WAIT_BUTTON_RELEASE: {
-            LED_A_ON();
-            LED_B_ON();
-            blink_led_slow(LED_C);
-            if (BUTTON_PRESS() == false) {
-                state = ST_WRITE_AUTH0;
-            }
-            break;
-        }
-        case ST_WRITE_AUTH0: {
-            LED_A_ON();
-            LED_B_ON();
-            LED_C_ON();
-            if (write_auth0(tag_type)) {
-                Dbprintf("AUTH0 written! Press the button to exit.");
-                LED_D_ON();
-                while (!BUTTON_PRESS()) {}
-            } else {
-                Dbprintf("AUTH0 write failed. Press the button to exit.");
-                while (!BUTTON_PRESS()) {
-                    blink_led_fast(LED_D);
+                if (write_auth0(tag_type)) {
+                    Dbprintf("AUTH0 written! Press the button to exit.");
+                    LED_D_ON();
+                    while (!BUTTON_PRESS()) {}
+                } else {
+                    Dbprintf("AUTH0 write failed. Press the button to exit.");
+                    while (!BUTTON_PRESS()) {
+                        blink_led_fast(LED_D);
+                    }
                 }
+                state = ST_EXIT;
+                break;
             }
-            state = ST_EXIT;
-            break;
-        }
-        case ST_EXIT:
-            break;
-        default:
-            state = ST_LOOK_FOR_CARD;
-            break;
+            case ST_EXIT:
+                break;
+            default:
+                state = ST_LOOK_FOR_CARD;
+                break;
         }
         WDT_HIT();
     }

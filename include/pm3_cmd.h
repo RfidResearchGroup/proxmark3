@@ -28,19 +28,16 @@
 #define PM3_CMD_DATA_SIZE 512
 #define PM3_CMD_DATA_SIZE_MIX (PM3_CMD_DATA_SIZE - 3 * sizeof(uint64_t))
 
-typedef struct
-{
+typedef struct {
     uint64_t cmd;
     uint64_t arg[3];
-    union
-    {
+    union {
         uint8_t asBytes[PM3_CMD_DATA_SIZE];
         uint32_t asDwords[PM3_CMD_DATA_SIZE / 4];
     } d;
 } PACKED PacketCommandOLD;
 
-typedef struct
-{
+typedef struct {
     uint32_t magic;
     uint16_t length : 15; // length of the variable part, 0 if none.
     bool ng : 1;
@@ -50,21 +47,18 @@ typedef struct
 #define COMMANDNG_PREAMBLE_MAGIC 0x61334d50 // PM3a
 #define COMMANDNG_POSTAMBLE_MAGIC 0x3361    // a3
 
-typedef struct
-{
+typedef struct {
     uint16_t crc;
 } PACKED PacketCommandNGPostamble;
 
 // For internal usage
-typedef struct
-{
+typedef struct {
     uint16_t cmd;
     uint16_t length;
     uint32_t magic;     //  NG
     uint16_t crc;       //  NG
     uint64_t oldarg[3]; //  OLD
-    union
-    {
+    union {
         uint8_t asBytes[PM3_CMD_DATA_SIZE];
         uint32_t asDwords[PM3_CMD_DATA_SIZE / 4];
     } data;
@@ -72,26 +66,22 @@ typedef struct
 } PacketCommandNG;
 
 // For reception and CRC check
-typedef struct
-{
+typedef struct {
     PacketCommandNGPreamble pre;
     uint8_t data[PM3_CMD_DATA_SIZE];
     PacketCommandNGPostamble foopost; // Probably not at that offset!
 } PACKED PacketCommandNGRaw;
 
-typedef struct
-{
+typedef struct {
     uint64_t cmd;
     uint64_t arg[3];
-    union
-    {
+    union {
         uint8_t asBytes[PM3_CMD_DATA_SIZE];
         uint32_t asDwords[PM3_CMD_DATA_SIZE / 4];
     } d;
 } PACKED PacketResponseOLD;
 
-typedef struct
-{
+typedef struct {
     uint32_t magic;
     uint16_t length : 15; // length of the variable part, 0 if none.
     bool ng : 1;
@@ -103,14 +93,12 @@ typedef struct
 #define RESPONSENG_PREAMBLE_MAGIC 0x62334d50 // PM3b
 #define RESPONSENG_POSTAMBLE_MAGIC 0x3362    // b3
 
-typedef struct
-{
+typedef struct {
     uint16_t crc;
 } PACKED PacketResponseNGPostamble;
 
 // For internal usage
-typedef struct
-{
+typedef struct {
     uint16_t cmd;
     uint16_t length;
     uint32_t magic;     //  NG
@@ -118,8 +106,7 @@ typedef struct
     int8_t reason;      //  NG
     uint16_t crc;       //  NG
     uint64_t oldarg[3]; //  OLD
-    union
-    {
+    union {
         uint8_t asBytes[PM3_CMD_DATA_SIZE];
         uint32_t asDwords[PM3_CMD_DATA_SIZE / 4];
     } data;
@@ -127,16 +114,14 @@ typedef struct
 } PacketResponseNG;
 
 // For reception and CRC check
-typedef struct
-{
+typedef struct {
     PacketResponseNGPreamble pre;
     uint8_t data[PM3_CMD_DATA_SIZE];
     PacketResponseNGPostamble foopost; // Probably not at that offset!
 } PACKED PacketResponseNGRaw;
 
 // A struct used to send sample-configs over USB
-typedef struct
-{
+typedef struct {
     int8_t decimation;
     int8_t bits_per_sample;
     int8_t averaging;
@@ -148,8 +133,7 @@ typedef struct
 
 // Defines a frame that will be used in a polling sequence
 // Polling loop annotations are up to 20 bytes long, 24 bytes should cover future and other cases
-typedef struct
-{
+typedef struct {
     uint8_t frame[24];
     // negative values can be used to carry special info
     int8_t frame_length;
@@ -158,8 +142,7 @@ typedef struct
 } PACKED iso14a_polling_frame_t;
 
 // Defines polling sequence configuration
-typedef struct
-{
+typedef struct {
     // 6 would be enough for 4 magsafe, 1 wupa, 1 pla,
     iso14a_polling_frame_t frames[6];
     int8_t frame_count;
@@ -167,8 +150,7 @@ typedef struct
 } PACKED iso14a_polling_parameters_t;
 
 // A struct used to send hf14a-configs over USB
-typedef struct
-{
+typedef struct {
     int8_t forceanticol;                            // 0:auto 1:force executing anticol 2:force skipping anticol
     int8_t forcebcc;                                // 0:expect valid BCC 1:force using computed BCC 2:force using card BCC
     int8_t forcecl2;                                // 0:auto 1:force executing CL2 2:force skipping CL2
@@ -180,8 +162,7 @@ typedef struct
 
 // Defines a frame that will be used in ISO14443B polling sequence
 // Polling loop annotations are up to 20 bytes long, 24 bytes should cover future and other cases
-typedef struct
-{
+typedef struct {
     uint8_t frame[24];
     // negative values can be used to carry special info
     int8_t frame_length;
@@ -190,14 +171,12 @@ typedef struct
 } PACKED iso14b_polling_frame_t;
 
 // A struct used to send hf14b-configs over USB
-typedef struct
-{
+typedef struct {
     iso14b_polling_frame_t polling_loop_annotation; // Polling loop annotation
 } PACKED hf14b_config_t;
 
 // Tracelog Header struct
-typedef struct
-{
+typedef struct {
     uint32_t timestamp;
     uint16_t duration;
     uint16_t data_len : 15;
@@ -211,8 +190,7 @@ typedef struct
 #define TRACELOG_PARITY_LEN(x) (((x)->data_len - 1) / 8 + 1)
 
 // T55XX - Extended to support 1 of 4 timing
-typedef struct
-{
+typedef struct {
     uint16_t start_gap;
     uint16_t write_gap;
     uint16_t write_0;
@@ -224,14 +202,12 @@ typedef struct
 
 // T55XX - This setup will allow for the 4 downlink modes "m" as well as other items if needed.
 // Given the one struct we can then read/write to flash/client in one go.
-typedef struct
-{
+typedef struct {
     t55xx_config_t m[4]; // mode
 } t55xx_configurations_t;
 
 // Capabilities struct to keep track of what functions was compiled in the device firmware
-typedef struct
-{
+typedef struct {
     uint8_t version;
     uint32_t baudrate;
     uint32_t bigbuf_size;
@@ -272,24 +248,21 @@ typedef struct
 extern capabilities_t g_pm3_capabilities;
 
 // For CMD_LF_T55XX_WRITEBL
-typedef struct
-{
+typedef struct {
     uint32_t data;
     uint32_t pwd;
     uint8_t blockno;
     uint8_t flags;
 } PACKED t55xx_write_block_t;
 
-typedef struct
-{
+typedef struct {
     uint8_t data[128];
     uint8_t bitlen;
     uint32_t time;
 } PACKED t55xx_test_block_t;
 
 // For CMD_LF_HID_SIMULATE (FSK)
-typedef struct
-{
+typedef struct {
     uint32_t hi2;
     uint32_t hi;
     uint32_t lo;
@@ -299,8 +272,7 @@ typedef struct
 } PACKED lf_hidsim_t;
 
 // For CMD_LF_FSK_SIMULATE (FSK)
-typedef struct
-{
+typedef struct {
     uint8_t fchigh;
     uint8_t fclow;
     uint8_t separator;
@@ -309,8 +281,7 @@ typedef struct
 } PACKED lf_fsksim_t;
 
 // For CMD_LF_ASK_SIMULATE (ASK)
-typedef struct
-{
+typedef struct {
     uint8_t encoding;
     uint8_t invert;
     uint8_t separator;
@@ -319,8 +290,7 @@ typedef struct
 } PACKED lf_asksim_t;
 
 // For CMD_LF_PSK_SIMULATE (PSK)
-typedef struct
-{
+typedef struct {
     uint8_t carrier;
     uint8_t invert;
     uint8_t clock;
@@ -328,16 +298,14 @@ typedef struct
 } PACKED lf_psksim_t;
 
 // For CMD_LF_NRZ_SIMULATE (NRZ)
-typedef struct
-{
+typedef struct {
     uint8_t invert;
     uint8_t separator;
     uint8_t clock;
     uint8_t data[];
 } PACKED lf_nrzsim_t;
 
-typedef struct
-{
+typedef struct {
     uint8_t type;
     uint16_t len;
     uint8_t data[];
@@ -347,23 +315,20 @@ typedef struct
 #define LF_SAMPLES_BITS 30
 #define MAX_LF_SAMPLES ((((uint32_t)1u) << LF_SAMPLES_BITS) - 1)
 
-typedef struct
-{
+typedef struct {
     // 64KB SRAM -> 524288 bits(max sample num) < 2^30
     uint32_t samples : LF_SAMPLES_BITS;
     bool realtime : 1;
     bool verbose : 1;
 } PACKED lf_sample_payload_t;
 
-typedef struct
-{
+typedef struct {
     uint8_t blockno;
     uint8_t keytype;
     uint8_t key[6];
 } PACKED mf_readblock_t;
 
-typedef enum
-{
+typedef enum {
     MF_WAKE_NONE,
     MF_WAKE_WUPA,    // 52(7) + anticoll
     MF_WAKE_REQA,    // 26(7) + anticoll
@@ -372,8 +337,7 @@ typedef enum
     MF_WAKE_GDM_ALT, // 20(7)/23
 } PACKED MifareWakeupType;
 
-typedef struct
-{
+typedef struct {
     MifareWakeupType wakeup;
     uint8_t auth_cmd;
     uint8_t key[6];
@@ -381,8 +345,7 @@ typedef struct
     uint8_t block_no;
 } PACKED mf_readblock_ex_t;
 
-typedef struct
-{
+typedef struct {
     MifareWakeupType wakeup;
     uint8_t auth_cmd;
     uint8_t key[6];
@@ -391,15 +354,13 @@ typedef struct
     uint8_t block_data[16];
 } PACKED mf_writeblock_ex_t;
 
-typedef struct
-{
+typedef struct {
     uint8_t sectorcnt;
     uint8_t keytype;
     uint8_t key[6];
 } PACKED mfc_eload_t;
 
-typedef struct
-{
+typedef struct {
     uint8_t turn_off_field : 1;
     uint8_t check_answer : 1;
     uint8_t keyno : 2;
@@ -409,13 +370,11 @@ typedef struct
     uint8_t key[16];
 } PACKED mful_3passauth_t;
 
-enum
-{
+enum {
     MIFAREU3P_KEY_SIZE = 16,
     MIFAREU3P_CHKKEY_HEADER = 2 + MIFAREU3P_KEY_SIZE
 };
-typedef struct
-{
+typedef struct {
     uint8_t key_index : 2;
     uint8_t firstchunk : 1;
     uint8_t lastchunk : 1;
@@ -427,8 +386,7 @@ typedef struct
     uint8_t data[PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER];
 } PACKED mful_3passchk_t;
 
-typedef struct
-{
+typedef struct {
     bool use_schann;
     uint8_t block_no;
     uint8_t num_of_blocks;
@@ -437,14 +395,12 @@ typedef struct
     uint8_t key[16];
 } PACKED mful_readblock_t;
 
-typedef struct
-{
+typedef struct {
     uint16_t bytelen;
     uint16_t startidx;
 } PACKED mful_readblock_resp_t;
 
-typedef struct
-{
+typedef struct {
     bool use_schann;
     uint8_t block_no;
     uint8_t keytype;
@@ -453,8 +409,7 @@ typedef struct
     uint8_t data[16];
 } PACKED mful_writeblock_t;
 
-typedef struct
-{
+typedef struct {
     bool has_auth_key;
     bool use_schann;
     uint8_t auth_key[16];
@@ -463,8 +418,7 @@ typedef struct
     uint8_t key[16];
 } PACKED mful_setkey_t;
 
-typedef struct
-{
+typedef struct {
     uint8_t status;
     uint8_t CSN[8];
     uint8_t CONFIG[8];
@@ -472,14 +426,12 @@ typedef struct
     uint8_t AIA[8];
 } PACKED iclass_reader_t;
 
-typedef struct
-{
+typedef struct {
     const char *desc;
     const char *value;
 } PACKED ecdsa_publickey_t;
 
-typedef struct
-{
+typedef struct {
     uint16_t delay_us;
     int8_t skip;
     bool on;
@@ -487,8 +439,7 @@ typedef struct
 } PACKED tearoff_params_t;
 
 // when writing to SPIFFS
-typedef struct
-{
+typedef struct {
     bool append : 1;
     uint16_t bytes_in_packet : 15;
     uint8_t fnlen;
@@ -497,8 +448,7 @@ typedef struct
 } PACKED flashmem_write_t;
 
 // when CMD_FLASHMEM_WRITE old flashmem commands
-typedef struct
-{
+typedef struct {
     uint32_t startidx;
     uint16_t len;
     uint8_t data[PM3_CMD_DATA_SIZE - sizeof(uint32_t) - sizeof(uint16_t)];
@@ -507,14 +457,12 @@ typedef struct
 //-----------------------------------------------------------------------------
 // ISO 7618  Smart Card
 //-----------------------------------------------------------------------------
-typedef struct
-{
+typedef struct {
     uint8_t atr_len;
     uint8_t atr[50];
 } PACKED smart_card_atr_t;
 
-typedef enum SMARTCARD_COMMAND
-{
+typedef enum SMARTCARD_COMMAND {
     SC_CONNECT = (1 << 0),
     SC_NO_DISCONNECT = (1 << 1),
     SC_RAW = (1 << 2),
@@ -525,8 +473,7 @@ typedef enum SMARTCARD_COMMAND
     SC_WAIT = (1 << 7),
 } smartcard_command_t;
 
-typedef struct
-{
+typedef struct {
     uint8_t flags;
     uint32_t wait_delay;
     uint16_t len;

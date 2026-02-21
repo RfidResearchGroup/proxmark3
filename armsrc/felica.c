@@ -561,7 +561,7 @@ void felica_sendraw(const PacketCommandNG *c) {
     param = request->flags;
     len = request->rawlen;
     payload = request->raw;
-    
+
     bool do_connect = ((param & FELICA_CONNECT) == FELICA_CONNECT);
     bool no_disconnect = ((param & FELICA_NO_DISCONNECT) == FELICA_NO_DISCONNECT);
 
