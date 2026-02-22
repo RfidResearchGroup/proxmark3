@@ -273,7 +273,7 @@ static void *crack(void *d) {
                     printf("\n\nSuccess - key = %012"PRIx64"\n", foundkey);
                     exit(0);
 
-                    return (void *)foundkey;
+                    return NULL;
                 }
 
             }
@@ -405,7 +405,7 @@ int main(int argc, char *argv[]) {
         }
         printf("thread %i finished\n", i);
         if (status) {
-            printf("Key = %012"PRIx64"\n", (uint64_t)status);
+            printf("Key = %012"PRIx64"\n", *(uint64_t *)status);
             exit(0);
         }
     }

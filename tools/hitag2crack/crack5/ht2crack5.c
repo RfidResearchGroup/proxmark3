@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <pthread.h>
+#include <stdint.h>
 #include "ht2crackutils.h"
 
 const uint8_t bits[9] = {20, 14, 4, 3, 1, 1, 1, 1, 1};
@@ -202,7 +203,7 @@ int main(int argc, char *argv[]) {
 }
 
 static void *find_state(void *thread_d) {
-    uint64_t thread = (uint64_t)thread_d;
+    uint64_t thread = (uintptr_t)thread_d;
 
     for (uint64_t index = thread; index < layer_0_found; index += thread_count) {
 

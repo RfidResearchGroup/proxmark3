@@ -276,7 +276,7 @@ static void jumpnsteps(Hitag_State *hstate, int table) {
 static void *buildtable(void *dd) {
     Hitag_State hstate;
     Hitag_State hstate2;
-    unsigned long maxentries = 1;
+    unsigned long long maxentries = 1ULL;
     int index = (int)(long)dd;
     int tnum = NUM_BUILD_THREADS;
 
@@ -303,7 +303,7 @@ static void *buildtable(void *dd) {
     }
 
     /* make the entries */
-    for (unsigned long i = 0; i < maxentries; i++) {
+    for (unsigned long long i = 0; i < maxentries; i++) {
 
         // copy the current state
         hstate2.shiftreg = hstate.shiftreg;
