@@ -308,9 +308,9 @@ int main(int argc, char *argv[]) {
 
     // read the UID into internal format
     if (!strncmp(argv[1], "0x", 2)) {
-        uid = rev32(hexreversetoulong(argv[1] + 2));
+        uid = rev32(hexreversetouint32(argv[1] + 2));
     } else {
-        uid = rev32(hexreversetoulong(argv[1]));
+        uid = rev32(hexreversetouint32(argv[1]));
     }
 
     // create table of nR aR pairs
@@ -353,11 +353,11 @@ int main(int argc, char *argv[]) {
         }
         *buft2 = 0x00;
         if (!strncmp(buf, "0x", 2)) {
-            TnRaR[numnrar].nR = rev32(hexreversetoulong(buf + 2));
-            TnRaR[numnrar].aR = rev32(hexreversetoulong(buft1 + 2));
+            TnRaR[numnrar].nR = rev32(hexreversetouint32(buf + 2));
+            TnRaR[numnrar].aR = rev32(hexreversetouint32(buft1 + 2));
         } else {
-            TnRaR[numnrar].nR = rev32(hexreversetoulong(buf));
-            TnRaR[numnrar].aR = rev32(hexreversetoulong(buft1));
+            TnRaR[numnrar].nR = rev32(hexreversetouint32(buf));
+            TnRaR[numnrar].aR = rev32(hexreversetouint32(buft1));
         }
         numnrar++;
     }

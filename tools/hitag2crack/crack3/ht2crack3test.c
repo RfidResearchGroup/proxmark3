@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
             } else {
                 nr = line;
             }
-            hitag2_init(&hstate, rev64(hexreversetoulonglong(key)), rev32(hexreversetoulong(uid)), rev32(hexreversetoulong(nr)));
+            hitag2_init(&hstate, rev64(hexreversetouint64(key)), rev32(hexreversetouint32(uid)), rev32(hexreversetouint32(nr)));
 
             arval = strtol(ar, NULL, 16);
             ks = hitag2_nstep(&hstate, 32);

@@ -138,23 +138,23 @@ int main(int argc, char *argv[]) {
     thread_count = num_CPUs();
 
     if (!strncmp(argv[1], "0x", 2) || !strncmp(argv[1], "0X", 2)) {
-        uid = rev32(hexreversetoulong(argv[1] + 2));
+        uid = rev32(hexreversetouint32(argv[1] + 2));
     } else {
-        uid = rev32(hexreversetoulong(argv[1]));
+        uid = rev32(hexreversetouint32(argv[1]));
     }
 
     if (!strncmp(argv[2], "0x", 2) || !strncmp(argv[2], "0X", 2)) {
-        nR1 = rev32(hexreversetoulong(argv[2] + 2));
+        nR1 = rev32(hexreversetouint32(argv[2] + 2));
     } else {
-        nR1 = rev32(hexreversetoulong(argv[2]));
+        nR1 = rev32(hexreversetouint32(argv[2]));
     }
 
     aR1 = strtol(argv[3], NULL, 16);
 
     if (!strncmp(argv[4], "0x", 2) || !strncmp(argv[4], "0X", 2)) {
-        nR2 = rev32(hexreversetoulong(argv[4] + 2));
+        nR2 = rev32(hexreversetouint32(argv[4] + 2));
     } else {
-        nR2 = rev32(hexreversetoulong(argv[4]));
+        nR2 = rev32(hexreversetouint32(argv[4]));
     }
 
     aR2 = strtol(argv[5], NULL, 16);

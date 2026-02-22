@@ -28,13 +28,13 @@
 #include <sys/time.h>
 #include <getopt.h>
 
+#include "ht2crackutils.h"
 #include "ht2crack5opencl.h"
 #include "queue.h"
 #include "threads.h"
 #include "opencl.h"
 #include "hitag2.h"
 #include "dolphin_macro.h"
-
 
 #define AEND  "\x1b[0m"
 #define _RED_(s) "\x1b[31m" s AEND
@@ -108,24 +108,6 @@ static void bitslice(const uint64_t value, bitslice_t *restrict bitsliced_value)
         const bool bit = get_bit(32 - 1 - bit_idx, value);
         bitsliced_value[bit_idx].value = (bit) ? bs_ones.value : bs_zeroes.value;
     }
-}
-
-// convert byte-reversed 8 digit hex to unsigned long
-static unsigned long hexreversetoulong(char *hex) {
-    unsigned long ret = 0L;
-    unsigned int x;
-    char i;
-
-    if (strlen(hex) != 8)
-        return 0L;
-
-    for (i = 0 ; i < 4 ; ++i) {
-        if (sscanf(hex, "%2X", &x) != 1)
-            return 0L;
-        ret += ((unsigned long) x) << i * 8;
-        hex += 2;
-    }
-    return ret;
 }
 
 #if ENABLE_EMOJ == 1
@@ -346,13 +328,13 @@ int main(int argc, char **argv) {
                             printf("Error: invalid UID length\n");
                             usage(argv[0]);
                         }
-                        uid = (uint32_t) rev32(hexreversetoulong(argv[optind] + 2));
+                        uid = (uint32_t) rev32(hexreversetouint32(argv[optind] + 2));
                     } else {
                         if (strlen(argv[optind]) != 8) {
                             printf("Error: invalid UID length\n");
                             usage(argv[0]);
                         }
-                        uid = (uint32_t) rev32(hexreversetoulong(argv[optind]));
+                        uid = (uint32_t) rev32(hexreversetouint32(argv[optind]));
                     }
                     break;
 
@@ -362,13 +344,13 @@ int main(int argc, char **argv) {
                             printf("Error: invalid nR1 length\n");
                             usage(argv[0]);
                         }
-                        nR1 = (uint32_t) rev32(hexreversetoulong(argv[optind] + 2));
+                        nR1 = (uint32_t) rev32(hexreversetouint32(argv[optind] + 2));
                     } else {
                         if (strlen(argv[optind]) != 8) {
                             printf("Error: invalid nR1 length\n");
                             usage(argv[0]);
                         }
-                        nR1 = (uint32_t) rev32(hexreversetoulong(argv[optind]));
+                        nR1 = (uint32_t) rev32(hexreversetouint32(argv[optind]));
                     }
                     break;
 
@@ -386,13 +368,13 @@ int main(int argc, char **argv) {
                             printf("Error: invalid nR2 length\n");
                             usage(argv[0]);
                         }
-                        nR2 = (uint32_t) rev32(hexreversetoulong(argv[optind] + 2));
+                        nR2 = (uint32_t) rev32(hexreversetouint32(argv[optind] + 2));
                     } else {
                         if (strlen(argv[optind]) != 8) {
                             printf("Error: invalid nR2 length\n");
                             usage(argv[0]);
                         }
-                        nR2 = (uint32_t) rev32(hexreversetoulong(argv[optind]));
+                        nR2 = (uint32_t) rev32(hexreversetouint32(argv[optind]));
                     }
                     break;
 

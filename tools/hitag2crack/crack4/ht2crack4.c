@@ -251,9 +251,9 @@ static void init_guess_table(char *filename, char *uidstr) {
 
     // read uid
     if (!strncmp(uidstr, "0x", 2)) {
-        uid = rev32(hexreversetoulong(uidstr + 2));
+        uid = rev32(hexreversetouint32(uidstr + 2));
     } else {
-        uid = rev32(hexreversetoulong(uidstr));
+        uid = rev32(hexreversetouint32(uidstr));
     }
 
 
@@ -286,11 +286,11 @@ static void init_guess_table(char *filename, char *uidstr) {
         }
         *buft2 = 0x00;
         if (!strncmp(buf, "0x", 2)) {
-            nonces[num_nRaR].enc_nR = rev32(hexreversetoulong(buf + 2));
-            nonces[num_nRaR].ks = rev32(hexreversetoulong(buft1 + 2)) ^ 0xffffffff;
+            nonces[num_nRaR].enc_nR = rev32(hexreversetouint32(buf + 2));
+            nonces[num_nRaR].ks = rev32(hexreversetouint32(buft1 + 2)) ^ 0xffffffff;
         } else {
-            nonces[num_nRaR].enc_nR = rev32(hexreversetoulong(buf));
-            nonces[num_nRaR].ks = rev32(hexreversetoulong(buft1)) ^ 0xffffffff;
+            nonces[num_nRaR].enc_nR = rev32(hexreversetouint32(buf));
+            nonces[num_nRaR].ks = rev32(hexreversetouint32(buft1)) ^ 0xffffffff;
         }
         num_nRaR++;
     }
@@ -797,7 +797,7 @@ int main(int argc, char *argv[]) {
                 maxtablesize = atoi(optarg);
                 break;
             case 'T':
-                supplied_testkey = rev64(hexreversetoulonglong(optarg));
+                supplied_testkey = rev64(hexreversetouint64(optarg));
                 break;
             case 'h':
                 usage();

@@ -27,25 +27,6 @@
 #define rev32(X)  (rev16(X) + (rev16(X >> 16) << 16))
 #define rev64(X)  (rev32(X) + (rev32(X >> 32) << 32))
 
-typedef struct {
-    uint64_t shiftreg; // naive shift register, required for nonlinear fn input
-    uint64_t lfsr;     // fast lfsr, used to make software faster
-} Hitag_State;
-
-// return a single bit from a value
-int bitn(uint64_t x, int bit);
-
-// the sub-function R that rollback depends upon
-int fnR(uint64_t x);
-
-// the three filter sub-functions that feed fnf
-int fa(unsigned int i);
-
-int fb(unsigned int i);
-
-// the filter function that generates a bit of output from the prng state
-int fnf(uint64_t s);
-
 // macros to pick out 4 bits in various patterns of 1s & 2s & make a new number
 #define pickbits2_2(S, A, B)       ( ((S >> A) & 3) | ((S >> (B - 2)) & 0xC) )
 #define pickbits1x4(S, A, B, C, D) ( ((S >> A) & 1) | ((S >> (B - 1)) & 2) | ((S >> (C - 2)) & 4) | ((S >> (D - 3)) & 8) )
@@ -54,28 +35,6 @@ int fnf(uint64_t s);
 #define pickbits1_2_1(S, A, B, C)  ( ((S >> A) & 1) | ((S >> (B - 1)) & 6) | ((S >> (C - 3)) & 8) )
 
 uint32_t hitag2_crypt(uint64_t x);
-
-/*
- * Return up to 32 crypto bits.
- * Last bit is in least significant bit, earlier bits are shifted left.
- * Note that the Hitag transmission protocol is least significant bit,
- * so we may want to change this, or add a function, that returns the
- * crypto output bits in the other order.
- *
- * Parameters:
- * Hitag_State* pstate - in/out, internal cipher state after initialisation
- * uint32_t steps      - number of bits requested, (capped at 32)
- */
-uint32_t hitag2_nstep(Hitag_State *pstate, uint32_t steps);
-
-/*
- * Parameters:
- * Hitag_State* pstate - output, internal state after initialisation
- * uint64_t sharedkey  - 48 bit key shared between reader & tag
- * uint32_t serialnum  - 32 bit tag serial number
- * uint32_t initvector - 32 bit random IV from reader, part of tag authentication
- */
-void hitag2_init(Hitag_State *pstate, uint64_t sharedkey, uint32_t serialnum, uint32_t initvector);
 
 // try_state
 bool try_state(uint64_t s, uint32_t uid, uint32_t aR2, uint32_t nR1, uint32_t nR2, uint64_t *key);
