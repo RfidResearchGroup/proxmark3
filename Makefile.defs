@@ -128,10 +128,7 @@ ifeq ($(SANITIZE),1)
   DEFLDFLAGS += -g -fsanitize=address
 endif
 # Some more warnings we want as errors:
-DEFCFLAGS += -Wbad-function-cast -Wredundant-decls -Wmissing-prototypes -Wchar-subscripts -Wshadow -Wundef -Wwrite-strings -Wunused -Wuninitialized -Wpointer-arith -Winline -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wmissing-declarations -Wempty-body -Wignored-qualifiers -Wmissing-field-initializers -Wtype-limits -Wold-style-definition
-# Some more warnings we need first to eliminate, so temporarely tolerated:
-DEFCFLAGS += -Wcast-align -Wno-error=cast-align
-DEFCFLAGS += -Wswitch-enum -Wno-error=switch-enum
+DEFCFLAGS += -Wbad-function-cast -Wredundant-decls -Wmissing-prototypes -Wchar-subscripts -Wshadow -Wundef -Wwrite-strings -Wunused -Wuninitialized -Wpointer-arith -Winline -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wmissing-declarations -Wempty-body -Wignored-qualifiers -Wmissing-field-initializers -Wtype-limits -Wold-style-definition -Wcast-align -Wswitch-enum
 # GCC 10 has issues with false positives on stringop-overflow, let's disable them for now (cf https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92955, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94335)
 # beware these flags didn't exist for GCC < 7
 ifeq ($(shell expr $(CC_VERSION) \>= 10), 1)
