@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
             }
             hitag2_init(&hstate, rev64(hexreversetouint64(key)), rev32(hexreversetouint32(uid)), rev32(hexreversetouint32(nr)));
 
-            arval = strtol(ar, NULL, 16);
+            arval = strtoul(ar, NULL, 16);
             ks = hitag2_nstep(&hstate, 32);
 
 

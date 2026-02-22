@@ -325,7 +325,7 @@ int main(int argc, char *argv[]) {
 
     // set klowerstart (for debugging)
     if (argc > 3) {
-        klowerstart = strtol(argv[3], NULL, 0);
+        klowerstart = strtoull(argv[3], NULL, 0);
     } else {
         klowerstart = 0;
     }

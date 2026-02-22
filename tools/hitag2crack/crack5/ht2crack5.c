@@ -149,7 +149,7 @@ int main(int argc, char *argv[]) {
         nR1 = rev32(hexreversetouint32(argv[2]));
     }
 
-    aR1 = strtol(argv[3], NULL, 16);
+    aR1 = strtoul(argv[3], NULL, 16);
 
     if (!strncmp(argv[4], "0x", 2) || !strncmp(argv[4], "0X", 2)) {
         nR2 = rev32(hexreversetouint32(argv[4] + 2));
@@ -157,7 +157,7 @@ int main(int argc, char *argv[]) {
         nR2 = rev32(hexreversetouint32(argv[4]));
     }
 
-    aR2 = strtol(argv[5], NULL, 16);
+    aR2 = strtoul(argv[5], NULL, 16);
 
     target = ~aR1;
     // bitslice inverse target bits
