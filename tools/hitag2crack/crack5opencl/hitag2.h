@@ -34,8 +34,6 @@
 #define pickbits2_1_1(S, A, B, C)  ( ((S >> A) & 3) | ((S >> (B - 2)) & 4) | ((S >> (C - 3)) & 8) )
 #define pickbits1_2_1(S, A, B, C)  ( ((S >> A) & 1) | ((S >> (B - 1)) & 6) | ((S >> (C - 3)) & 8) )
 
-uint32_t hitag2_crypt(uint64_t x);
-
 // try_state
 bool try_state(uint64_t s, uint32_t uid, uint32_t aR2, uint32_t nR1, uint32_t nR2, uint64_t *key);
 
