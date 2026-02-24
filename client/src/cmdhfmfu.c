@@ -521,13 +521,14 @@ Default AES key is 00-00h. Both the data and UID one.
 Data key is 00, UID is 01. Authenticity is 02h
 Auth is 1A[Key ID][CRC] - AF[RndB] - AF[RndA][RndB'] - 00[RndA']
 */
-static int ul3pass_authentication(const uint8_t *key, uint8_t keyno, bool switch_off_field, int retries, uint32_t *auths, uint32_t *ms, bool schann, bool check_answer) {
+static int ul3pass_authentication(const uint8_t *key, uint8_t keyno, bool switch_off_field, int retries, uint32_t *auths, uint32_t *ms, bool schann, bool check_answer, bool use_fastread0) {
     // keyno < 3: ULAES
     // keyno = 3: ULC
     mful_3passauth_t payload = {
         .turn_off_field = switch_off_field,
         .check_answer = check_answer,
         .use_schann = schann,
+        .use_fastread0 = use_fastread0,
         .keyno = keyno,
         .retries = retries,
     };
@@ -613,7 +614,7 @@ int trace_mfuc_try_default_3des_keys(uint8_t **correct_key, int state, uint8_t (
 }
 
 // param override,  means we override hw debug levels.
-static int try_default_3des_keys(bool override, uint8_t **correct_key) {
+static int try_default_3des_keys(bool override, uint8_t **correct_key, bool use_fastread0) {
 
     uint8_t dbg_curr = DBG_NONE;
     if (override) {
@@ -633,7 +634,7 @@ static int try_default_3des_keys(bool override, uint8_t **correct_key) {
 
     for (uint8_t i = 0; i < ARRAYLEN(default_3des_keys); ++i) {
         uint8_t *key = default_3des_keys[i];
-        if (ul3pass_authentication(key, MIFAREULC_KEY_INDEX, true, 0, NULL, NULL, false, true) == PM3_SUCCESS) {
+        if (ul3pass_authentication(key, MIFAREULC_KEY_INDEX, true, 0, NULL, NULL, false, true, use_fastread0) == PM3_SUCCESS) {
             *correct_key = key;
             res = PM3_SUCCESS;
             break;
@@ -647,7 +648,7 @@ static int try_default_3des_keys(bool override, uint8_t **correct_key) {
 }
 
 // param override,  means we override hw debug levels.
-static int try_default_aes_keys(bool override, bool use_schann) {
+static int try_default_aes_keys(bool override, bool use_schann, bool use_fastread0) {
 
     uint8_t dbg_curr = DBG_NONE;
     if (override) {
@@ -670,7 +671,7 @@ static int try_default_aes_keys(bool override, bool use_schann) {
 
         for (uint8_t keyno = 0; keyno < 3; keyno++) {
 
-            if (ul3pass_authentication(key, keyno, true, 0, NULL, NULL, use_schann, true) == PM3_SUCCESS) {
+            if (ul3pass_authentication(key, keyno, true, 0, NULL, NULL, use_schann, true, use_fastread0) == PM3_SUCCESS) {
 
                 char keystr[20] = {0};
                 switch (keyno) {
@@ -707,16 +708,16 @@ static int ul_auth_select(iso14a_card_select_t *card, uint64_t tagtype, bool has
     if (ul_select(card) == false) {
         return PM3_ESOFT;
     }
-
+    bool use_fastread0 = false;
     if (hasAuthKey && (tagtype & MFU_TT_UL_C)) {
         //will select card automatically and close connection on error
-        if (ul3pass_authentication(authkey, MIFAREULC_KEY_INDEX, false, 0, NULL, NULL, false, true) != PM3_SUCCESS) {
+        if (ul3pass_authentication(authkey, MIFAREULC_KEY_INDEX, false, 0, NULL, NULL, false, true, use_fastread0) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Authentication Failed UL-C");
             return PM3_ESOFT;
         }
     } else if (hasAuthKey && (tagtype & MFU_TT_UL_AES)) {
         //will select card automatically and close connection on error
-        if (ul3pass_authentication(authkey, 0, false, 0, NULL, NULL, use_schann, true) != PM3_SUCCESS) {
+        if (ul3pass_authentication(authkey, 0, false, 0, NULL, NULL, use_schann, true, use_fastread0) != PM3_SUCCESS) {
             PrintAndLogEx(WARNING, "Authentication Failed UL-AES");
             return PM3_ESOFT;
         }
@@ -2608,7 +2609,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
             }
 
             // also try to diversify default keys..  look into CmdHF14AMfGenDiverseKeys
-            if (try_default_3des_keys(override, &key) == PM3_SUCCESS) {
+            if (try_default_3des_keys(override, &key, false) == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "Found default 3des key: ");
                 uint8_t keySwap[16];
                 memcpy(keySwap, SwapEndian64(key, 16, 8), 16);
@@ -2773,7 +2774,7 @@ static int CmdHF14AMfUInfo(const char *Cmd) {
 
             if (ak_len != 16) {
                 // also try to diversify default keys..  look into CmdHF14AMfGenDiverseKeys
-                if (try_default_aes_keys(override, use_schann) != PM3_SUCCESS) {
+                if (try_default_aes_keys(override, use_schann, false) != PM3_SUCCESS) {
                     PrintAndLogEx(INFO, "n/a");
                 }
                 DropField();
@@ -4324,7 +4325,7 @@ static int mfu_3pass_load_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt, const cha
 
 static int mfu_3pass_check_keys(uint8_t key_index, uint8_t firstChunk, uint8_t lastChunk,
                                 uint32_t nkeys, int segment, uint8_t *ref_key, bool xor_ref_key, uint8_t *keyBlock,
-                                bool verbose, bool quiet, uint32_t *auths, uint32_t *ms, bool check_answer) {
+                                bool verbose, bool quiet, uint32_t *auths, uint32_t *ms, bool check_answer, bool use_fastread0) {
     // send keychunk
     clearCommandBuffer();
 
@@ -4335,6 +4336,7 @@ static int mfu_3pass_check_keys(uint8_t key_index, uint8_t firstChunk, uint8_t l
         .xor_ref_key = xor_ref_key,
         .segment = segment != -1 ? segment : 4,
         .check_answer = check_answer,
+        .use_fastread0 = use_fastread0,
         .nkeys = nkeys
     };
     struct rp {
@@ -4427,6 +4429,7 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
         arg_lit0("k", NULL, "Keep field on (only if a key is provided)"),
         arg_int0("r", "retries", "<n>", "Number of retries with provided key (def: 0)"),
         arg_lit0("n", "nocheck", "Skip checking tag answer correctness (only if a key is provided)"),
+        arg_lit0("0", "read0", "Use fast READ0 (skip anticol)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4439,6 +4442,7 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
     bool keep_field_on = arg_get_lit(ctx, 3);
     int retries = arg_get_int_def(ctx, 4, 0);
     bool check_answer = !arg_get_lit(ctx, 5);
+    bool use_fastread0 = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
     if (ak_len != 16 && ak_len != 0) {
@@ -4471,11 +4475,11 @@ static int CmdHF14AMfUCAuth(const char *Cmd) {
     if (ak_len == 0) {
 
         PrintAndLogEx(INFO, "Called with no key, checking default keys...");
-        isok = try_default_3des_keys(false, &auth_key_ptr);
+        isok = try_default_3des_keys(false, &auth_key_ptr, use_fastread0);
     } else {
         // try user-supplied
 
-        isok = ul3pass_authentication(auth_key_ptr, MIFAREULC_KEY_INDEX, !keep_field_on, retries, &auths, &ms, false, check_answer);
+        isok = ul3pass_authentication(auth_key_ptr, MIFAREULC_KEY_INDEX, !keep_field_on, retries, &auths, &ms, false, check_answer, use_fastread0);
     }
 
     if (isok == PM3_SUCCESS) {
@@ -4505,6 +4509,7 @@ static int CmdHF14AMfUCAuthChk(const char *Cmd) {
         arg_str0("k", "key", "<hex>", "Starting key, 16 hex bytes (def: zero key), for segment check"),
         arg_lit0("x", "xor", "XOR starting key with segment candidates (def: override)"),
         arg_lit0("n", "nocheck", "Skip checking tag answer correctness"),
+        arg_lit0("0", "read0", "Use fast READ0 (skip anticol)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4519,6 +4524,7 @@ static int CmdHF14AMfUCAuthChk(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 4, ref_key, &ref_keylen);
     bool xor_ref_key = arg_get_lit(ctx, 5);
     bool check_answer = !arg_get_lit(ctx, 6);
+    bool use_fastread0 = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
     if (fnlen == 0) {
@@ -4582,7 +4588,7 @@ static int CmdHF14AMfUCAuthChk(const char *Cmd) {
             if (nkeys == keycnt - i) {
                 lastChunk = true;
             }
-            int res = mfu_3pass_check_keys(MIFAREULC_KEY_INDEX, firstChunk, lastChunk, nkeys, segment, ref_key, xor_ref_key, keyBlock + (i * keysize), false, true, &auths, &ms, check_answer);
+            int res = mfu_3pass_check_keys(MIFAREULC_KEY_INDEX, firstChunk, lastChunk, nkeys, segment, ref_key, xor_ref_key, keyBlock + (i * keysize), false, true, &auths, &ms, check_answer, use_fastread0);
             if (firstChunk)
                 firstChunk = false;
 
@@ -4632,6 +4638,7 @@ static int CmdHF14AMfUAESAuth(const char *Cmd) {
         arg_lit0(NULL, "schann", "use secure channel. Must have key"),
         arg_int0("r", "retries", "<n>", "Number of retries (def: 0)"),
         arg_lit0("n", "nocheck", "Skip checking tag answer correctness"),
+        arg_lit0("0", "read0", "Use fast READ0 (skip anticol)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4646,6 +4653,7 @@ static int CmdHF14AMfUAESAuth(const char *Cmd) {
     bool use_schann = arg_get_lit(ctx, 5);
     int retries = arg_get_int_def(ctx, 6, 0);
     bool check_answer = !arg_get_lit(ctx, 7);
+    bool use_fastread0 = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
     if (ak_len == 0) {
@@ -4674,7 +4682,7 @@ static int CmdHF14AMfUAESAuth(const char *Cmd) {
     uint32_t auths = 0;
     uint32_t ms = 0;
 
-    int result = ul3pass_authentication(auth_key_ptr, key_index, !keep_field_on, retries, &auths, &ms, use_schann, check_answer);
+    int result = ul3pass_authentication(auth_key_ptr, key_index, !keep_field_on, retries, &auths, &ms, use_schann, check_answer, use_fastread0);
     if (result == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "Authentication with " _YELLOW_("%s") " " _GREEN_("%s") " ( " _GREEN_("ok")" )"
                       , key_type[key_index]
@@ -4709,6 +4717,7 @@ static int CmdHF14AMfUAESAuthChk(const char *Cmd) {
         arg_str0("k", "key", "<hex>", "Starting key, 16 hex bytes (def: zero key), for segment check"),
         arg_lit0("x", "xor", "XOR starting key with segment candidates (def: override)"),
         arg_lit0("n", "nocheck", "Skip checking tag answer correctness"),
+        arg_lit0("0", "read0", "Use fast READ0 (skip anticol)"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -4724,6 +4733,7 @@ static int CmdHF14AMfUAESAuthChk(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 5, ref_key, &ref_keylen);
     bool xor_ref_key = arg_get_lit(ctx, 6);
     bool check_answer = !arg_get_lit(ctx, 7);
+    bool use_fastread0 = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
     if (fnlen == 0) {
@@ -4791,7 +4801,7 @@ static int CmdHF14AMfUAESAuthChk(const char *Cmd) {
                 lastChunk = true;
             }
 
-            int res = mfu_3pass_check_keys(key_index, firstChunk, lastChunk, nkeys, segment, ref_key, xor_ref_key, keyBlock + (i * keysize), false, true, &auths, &ms, check_answer);
+            int res = mfu_3pass_check_keys(key_index, firstChunk, lastChunk, nkeys, segment, ref_key, xor_ref_key, keyBlock + (i * keysize), false, true, &auths, &ms, check_answer, use_fastread0);
             if (firstChunk)
                 firstChunk = false;
 

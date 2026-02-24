@@ -379,7 +379,8 @@ typedef struct {
     uint8_t check_answer : 1;
     uint8_t keyno : 2;
     uint8_t use_schann : 1;
-    uint8_t reserved : 3;
+    uint8_t use_fastread0 : 1;
+    uint8_t reserved : 2;
     uint16_t retries;
     uint8_t key[16];
 } PACKED mful_3passauth_t;
@@ -395,7 +396,9 @@ typedef struct {
     uint8_t xor_ref_key : 1;
     uint8_t segment : 3;
     uint8_t check_answer : 1;
-    uint8_t nkeys : 7;
+    uint8_t use_fastread0 : 1;
+    // max nkeys: (PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER) / MIFAREU3P_KEY_SIZE < 32
+    uint8_t nkeys : 6;
     uint8_t ref_key[MIFAREU3P_KEY_SIZE];
     uint8_t data[PM3_CMD_DATA_SIZE - MIFAREU3P_CHKKEY_HEADER];
 } PACKED mful_3passchk_t;

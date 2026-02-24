@@ -7185,9 +7185,10 @@
                 "-k Keep field on (only if a key is provided)",
                 "--schann use secure channel. Must have key",
                 "-r, --retries <n> Number of retries (def: 0)",
-                "-n, --nocheck Skip checking tag answer correctness"
+                "-n, --nocheck Skip checking tag answer correctness",
+                "-0, --read0 Use fast READ0 (skip anticol)"
             ],
-            "usage": "hf mfu aesauth [-hlkn] [--key <hex>] [-i <0..2>] [--schann] [-r <n>]"
+            "usage": "hf mfu aesauth [-hlkn0] [--key <hex>] [-i <0..2>] [--schann] [-r <n>]"
         },
         "hf mfu aeschk": {
             "command": "hf mfu aeschk",
@@ -7204,9 +7205,10 @@
                 "-r, --retries <0..255> Number of retries (def: 0)",
                 "-k, --key <hex> Starting key, 16 hex bytes (def: zero key), for segment check",
                 "-x, --xor XOR starting key with segment candidates (def: override)",
-                "-n, --nocheck Skip checking tag answer correctness"
+                "-n, --nocheck Skip checking tag answer correctness",
+                "-0, --read0 Use fast READ0 (skip anticol)"
             ],
-            "usage": "hf mfu aeschk [-hxn] [-f <fn>] [-i <0..2>] [-s <0..3>] [-r <0..255>] [-k <hex>]"
+            "usage": "hf mfu aeschk [-hxn0] [-f <fn>] [-i <0..2>] [-s <0..3>] [-r <0..255>] [-k <hex>]"
         },
         "hf mfu amiibo": {
             "command": "hf mfu amiibo",
@@ -7240,9 +7242,10 @@
                 "-l Swap entered key's endianness",
                 "-k Keep field on (only if a key is provided)",
                 "-r, --retries <n> Number of retries with provided key (def: 0)",
-                "-n, --nocheck Skip checking tag answer correctness (only if a key is provided)"
+                "-n, --nocheck Skip checking tag answer correctness (only if a key is provided)",
+                "-0, --read0 Use fast READ0 (skip anticol)"
             ],
-            "usage": "hf mfu cauth [-hlkn] [--key <hex>] [-r <n>]"
+            "usage": "hf mfu cauth [-hlkn0] [--key <hex>] [-r <n>]"
         },
         "hf mfu cchk": {
             "command": "hf mfu cchk",
@@ -7258,9 +7261,10 @@
                 "-r, --retries <0..255> Number of retries (def: 0)",
                 "-k, --key <hex> Starting key, 16 hex bytes (def: zero key), for segment check",
                 "-x, --xor XOR starting key with segment candidates (def: override)",
-                "-n, --nocheck Skip checking tag answer correctness"
+                "-n, --nocheck Skip checking tag answer correctness",
+                "-0, --read0 Use fast READ0 (skip anticol)"
             ],
-            "usage": "hf mfu cchk [-hxn] [-f <fn>] [-s <0..3>] [-r <0..255>] [-k <hex>]"
+            "usage": "hf mfu cchk [-hxn0] [-f <fn>] [-s <0..3>] [-r <0..255>] [-k <hex>]"
         },
         "hf mfu dump": {
             "command": "hf mfu dump",
@@ -13813,6 +13817,6 @@
     "metadata": {
         "commands_extracted": 791,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-02-21T11:42:25"
+        "extracted_on": "2026-02-24T15:41:26"
     }
 }

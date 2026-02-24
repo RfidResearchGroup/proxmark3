@@ -287,14 +287,21 @@ static int MifareUFastRead0(void) {
 //  1 = failed auth
 //  0 = correct
 
-static uint8_t chkKey3Pass(uint8_t keyno, uint8_t *keybytes, uint32_t *auths, bool use_schann, bool check_answer) {
+static uint8_t chkKey3Pass(uint8_t keyno, uint8_t *keybytes, uint32_t *auths, bool use_schann, bool check_answer, bool use_fastread0) {
 
     uint8_t i = 0, res = 2;
     bool selected = false;
     while (i < 5) {
-        if (MifareUFastRead0() == 0) {
-            ++i;
-            continue;
+        if (use_fastread0) {
+            if (MifareUFastRead0() == 0) {
+                ++i;
+                continue;
+            }
+        } else {
+            if (iso14443a_select_card(NULL, NULL, NULL, true, 0, true) == 0) {
+                ++i;
+                continue;
+            }
         }
         selected = true;
         if (g_dbglevel >= DBG_EXTENDED) Dbhexdump(MIFAREU3P_KEY_SIZE, keybytes, false);
@@ -334,7 +341,7 @@ void MifareU3PassAuth(mful_3passauth_t *packet) {
 
     for (uint16_t r = 0; r < 1 + packet->retries; r++) {
         WDT_HIT();
-        if (chkKey3Pass(packet->keyno, packet->key, &auths,  packet->use_schann, packet->check_answer) == 0) {
+        if (chkKey3Pass(packet->keyno, packet->key, &auths,  packet->use_schann, packet->check_answer, packet->use_fastread0) == 0) {
             res = PM3_SUCCESS;
             goto out;
         }
@@ -416,7 +423,7 @@ void MifareU3PassChkKeys(mful_3passchk_t *packet) {
                 memcpy(fullkeybytes + (packet->segment * keysize), packet->data + (i * keysize), keysize);
             }
         }
-        if (chkKey3Pass(packet->key_index, fullkeybytes, &auths, false, packet->check_answer) == 0) {
+        if (chkKey3Pass(packet->key_index, fullkeybytes, &auths, false, packet->check_answer, packet->use_fastread0) == 0) {
             foundkeys++;
             memcpy(rpayload.key, fullkeybytes, MIFAREU3P_KEY_SIZE);
             res = PM3_SUCCESS;
