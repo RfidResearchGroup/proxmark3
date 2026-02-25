@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+
+## [Permafrost][2026-02-25]
 - Added standalone mode `HF_DOEGOX_AUTH0`: UL-C / UL-AES unlocker (@doegox)
 - Fixed `lf t55xx wakeup` options parsing (@suut)
 - Added `--` arg separator to client to pass following args to scripts (@doegox)
