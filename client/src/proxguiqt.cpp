@@ -1282,7 +1282,11 @@ void Plot::wheelEvent(QWheelEvent *event) {
 }
 
 void Plot::mouseMoveEvent(QMouseEvent *event) {
+#if QT_VERSION >= 0x060000
+    int x = (int)event->position().x();
+#else
     int x = event->x();
+#endif
 
     //Only run the marker place code if a mouse button is pressed
     if ((event->buttons() & Qt::LeftButton) || (event->buttons() & Qt::RightButton)) {
