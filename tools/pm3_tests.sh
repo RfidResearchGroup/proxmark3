@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# For Python tests, uv will be used if present.
+# You can forcibly ignore it with
+# SKIPUV=1 ./pm3_tests.sh
+
 # This is used to make sure that the language for the functions is english instead of the system default language.
 LANG=C
 
@@ -7,8 +11,8 @@ PM3PATH="$(dirname "$0")/.."
 cd "$PM3PATH" || exit 1
 
 PYTHON=python3
-if command -v uv >/dev/null 2>&1; then
-    PYTHON="uv run --script"
+if [ "${SKIPUV:-0}" != "1" ] && command -v uv >/dev/null 2>&1; then
+  PYTHON="uv run --script"
 fi
 
 DICPATH="./client/dictionaries"
