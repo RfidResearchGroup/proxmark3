@@ -4,7 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 
-## [Permafrost][2026-02-25]
+## [Permafrost.4.21128][2026-02-25]
 - Added standalone mode `HF_DOEGOX_AUTH0`: UL-C / UL-AES unlocker (@doegox)
 - Fixed `lf t55xx wakeup` options parsing (@suut)
 - Added `--` arg separator to client to pass following args to scripts (@doegox)
