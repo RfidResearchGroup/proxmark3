@@ -1,10 +1,15 @@
 FROM fedora:rawhide
 
 ENV LANG=C.UTF-8
-# qt5-qtbase-devel skipped
+
 RUN dnf install -y passwd sudo git make cmake gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel bzip2-devel lz4-devel bluez-libs-devel python3-devel openssl-devel gd-devel libatomic findutils
 
 RUN yum -y update
+
+ARG SKIPQT=false
+RUN if [ "${SKIPQT}" = "false" ]; then \
+      dnf install -y qt6-qtbase-devel; \
+    fi
 
 RUN yum -y install mesa-libOpenCL ocl-icd-devel
 

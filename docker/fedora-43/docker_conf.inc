@@ -1,1 +1,2 @@
 DOCKER_IMAGE=pm3-fedora-43:1.0
+#SKIPQT=1

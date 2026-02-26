@@ -319,7 +319,7 @@ PM3INCLUDES += $(PYTHONLIBINC)
 ## QT6 (or QT5 fallback) (optional)
 ifneq ($(SKIPQT),1)
     # Check for correctly configured Qt6
-    QTINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags Qt6Core Qt6Widgets 2>/dev/null)
+    QTINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags Qt6Core Qt6Widgets Qt6Gui 2>/dev/null)
     QTLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs Qt6Core Qt6Widgets 2>/dev/null)
     MOC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=libexecdir Qt6Core)/moc
     UIC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=libexecdir Qt6Core)/uic

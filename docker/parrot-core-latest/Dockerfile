@@ -2,7 +2,7 @@ FROM parrotsec/core:latest
 
 ENV LANG=C.UTF-8
 ENV DEBIAN_FRONTEND=noninteractive
-# qtbase5-dev skipped
+
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get dist-upgrade -y && \
