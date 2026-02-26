@@ -1040,9 +1040,10 @@ int CmdHF14ASim(const char *Cmd) {
     sector_t *k_sector = NULL;
     size_t k_sectors_cnt = MIFARE_4K_MAXSECTOR;
 
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
     bool keypress = kbd_enter_pressed();
     while (keypress == false) {
+        keypress = kbd_enter_pressed();
 
         if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == false) {
             continue;
@@ -1058,15 +1059,11 @@ int CmdHF14ASim(const char *Cmd) {
 
         const nonces_t *data = (nonces_t *)resp.data.asBytes;
         readerAttack(k_sector, k_sectors_cnt, data[0], setEmulatorMem, verbose);
-
-        keypress = kbd_enter_pressed();
     }
 
     if (keypress) {
-        if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
-            // inform device to break the sim loop since client has exited
-            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-        }
+        // inform device to break the sim loop since client has exited
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
     }
 
     PrintAndLogEx(INFO, "Done!");
