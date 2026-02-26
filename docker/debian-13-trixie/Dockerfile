@@ -2,7 +2,6 @@ FROM debian:trixie-slim
 
 ENV LANG=C
 ENV DEBIAN_FRONTEND=noninteractive
-# qtbase5-dev skipped
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get dist-upgrade -y && \
@@ -11,6 +10,12 @@ RUN apt-get update && \
 
 RUN apt-get install -y opencl-dev && \
     apt-get clean
+
+ARG SKIPQT=false
+RUN if [ "${SKIPQT}" = "false" ]; then \
+    apt-get install -y qt6-base-dev qmake6-bin && \
+    apt-get clean; \
+  fi
 
 # uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/

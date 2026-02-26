@@ -14,6 +14,10 @@ else
     BUILDARG=""
 fi
 
+if [ -n "$SKIPQT" ]; then
+    BUILDARG="$BUILDARG --build-arg SKIPQT=$SKIPQT"
+fi
+
 # For cross-platform support:
 # cf https://github.com/multiarch/qemu-user-static
 #sudo apt install qemu-user-static
