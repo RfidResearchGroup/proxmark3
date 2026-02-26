@@ -852,10 +852,19 @@ void RAMFUNC SniffIso14443a(uint8_t param) {
 
     uint32_t rx_samples = 0;
 
+    uint16_t checker = 12000;
+
     // loop and listen
     while (BUTTON_PRESS() == false) {
         WDT_HIT();
         LED_A_ON();
+
+        if (checker-- == 0) {
+            if (data_available()) {
+                break;
+            }
+            checker = 12000;
+        }
 
         register int readBufDataP = data - dma->buf;
         register int dmaBufDataP = DMA_BUFFER_SIZE - AT91C_BASE_PDC_SSC->PDC_RCR;
