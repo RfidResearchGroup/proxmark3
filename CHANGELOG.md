@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added Qt6 support for the client. Step 1: Makefile (@doegox)
 
 ## [Permafrost.4.21128][2026-02-25]
 - Added standalone mode `HF_DOEGOX_AUTH0`: UL-C / UL-AES unlocker (@doegox)

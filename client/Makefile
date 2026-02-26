@@ -316,36 +316,37 @@ endif
 LDLIBS += $(PYTHONLIBLD)
 PM3INCLUDES += $(PYTHONLIBINC)
 
-## QT5 (or QT4 fallback) (optional)
+## QT6 (or QT5 fallback) (optional)
 ifneq ($(SKIPQT),1)
-    # Check for correctly configured Qt5
-    QTINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags Qt5Core Qt5Widgets 2>/dev/null)
-    QTLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs Qt5Core Qt5Widgets 2>/dev/null)
-    MOC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=host_bins Qt5Core)/moc
-    UIC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=host_bins Qt5Core)/uic
-    QMAKE = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=host_bins Qt5Core)/qmake
+    # Check for correctly configured Qt6
+    QTINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags Qt6Core Qt6Widgets 2>/dev/null)
+    QTLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs Qt6Core Qt6Widgets 2>/dev/null)
+    MOC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=libexecdir Qt6Core)/moc
+    UIC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=libexecdir Qt6Core)/uic
+    QMAKE = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=bindir Qt6Core)/qmake
     ifneq ($(QTLDLIBS),)
-        QT5_FOUND = 1
+        QT6_FOUND = 1
     else
-        # if Qt5 not found check for correctly configured Qt4
-        QTINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags QtCore QtGui 2>/dev/null)
-        QTLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs QtCore QtGui 2>/dev/null)
-        MOC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=moc_location QtCore)
-        UIC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=uic_location QtCore)
-        QMAKE = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=exec_prefix QtCore)/bin/qmake
+        # if Qt6 not found check for correctly configured Qt5
+        QTINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags Qt5Core Qt5Widgets 2>/dev/null)
+        QTLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs Qt5Core Qt5Widgets 2>/dev/null)
+        MOC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=host_bins Qt5Core)/moc
+        UIC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=host_bins Qt5Core)/uic
+        QMAKE = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=host_bins Qt5Core)/qmake
     endif
     ifeq ($(QTLDLIBS),)
         # if both pkg-config commands failed, search in common places
+        # TODO: to be checked on OSX...
         ifneq ($(QTDIR),)
-            ifneq ($(wildcard $(QTDIR)/include/QtWidgets),)
+            ifneq ($(wildcard $(QTDIR)/lib/libQt6Core),)
+                # QT6
+                QTINCLUDES = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui -I$(QTDIR)/include/QtWidgets
+                QTLDLIBS = -L$(QTDIR)/lib -lQt6Core -lQt6Gui -lQt6Widgets
+                QT6_FOUND = 1
+            else
                 # QT5
                 QTINCLUDES = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui -I$(QTDIR)/include/QtWidgets
                 QTLDLIBS = -L$(QTDIR)/lib -lQt5Core -lQt5Gui -lQt5Widgets
-                QT5_FOUND = 1
-            else
-                # QT4
-                QTINCLUDES = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui
-                QTLDLIBS = -L$(QTDIR)/lib -lQtCore4 -lQtGui4
             endif
             MOC = $(QTDIR)/bin/moc
             UIC = $(QTDIR)/bin/uic
@@ -471,8 +472,11 @@ PM3CXXFLAGS += -I../include -I./include
 ifeq ($(QT_FOUND),1)
     PM3CFLAGS += -DHAVE_GUI
     PM3CXXFLAGS += -DQT_NO_DEBUG
-    ifeq ($(QT5_FOUND),1)
-        # On OSX Qt5 is claiming for a C++11 compiler (gnu++14 works too, but if nothing it fails)
+    ifeq ($(QT6_FOUND),1)
+        # Qt6 is claiming for a C++17 compiler
+        PM3CXXFLAGS += -fPIC -std=c++17
+    else
+        # On OSX Qt6 is claiming for a C++11 compiler (gnu++14 works too, but if nothing it fails)
         PM3CXXFLAGS += -fPIC -std=c++11
     endif
 endif
@@ -505,10 +509,10 @@ ifeq ($(SKIPQT),1)
     $(info GUI support:       skipped)
 else
     ifeq ($(QT_FOUND),1)
-        ifeq ($(QT5_FOUND),1)
-            $(info GUI support:       QT5 found, enabled ($(shell QT_SELECT=5 $(QMAKE) -v 2>/dev/null|grep -o 'Qt version.*')))
+        ifeq ($(QT6_FOUND),1)
+            $(info GUI support:       QT6 found, enabled ($(shell QT_SELECT=6 $(QMAKE) -v 2>/dev/null|grep -o 'Qt version.*')))
         else
-            $(info GUI support:       QT4 found, enabled ($(shell QT_SELECT=4 $(QMAKE) -v 2>/dev/null|grep -o 'Qt version.*')))
+            $(info GUI support:       QT5 found, enabled ($(shell QT_SELECT=5 $(QMAKE) -v 2>/dev/null|grep -o 'Qt version.*')))
         endif
     else
         $(info GUI support:       QT not found, disabled)
