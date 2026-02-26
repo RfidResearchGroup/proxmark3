@@ -1105,14 +1105,31 @@ int CmdHF14ASniff(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443A_SNIFF, (uint8_t *)&param, sizeof(uint8_t));
 
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort sniffing");
-
     if (interactive) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort sniffing");
+
         PacketResponseNG resp;
-        WaitForResponse(CMD_HF_ISO14443A_SNIFF, &resp);
+
+        bool keypress = kbd_enter_pressed();
+        while (keypress == false) {
+            keypress = kbd_enter_pressed();
+
+            if (WaitForResponseTimeout(CMD_HF_ISO14443A_SNIFF, &resp, 500)) {
+                break;
+            }
+        }
+
+        if (keypress) {
+            // inform device to break the sim loop since client has exited
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            WaitForResponse(CMD_HF_ISO14443A_SNIFF, &resp);
+        }
+
         PrintAndLogEx(INFO, "Done!");
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14a list")"` to view captured tracelog");
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
+    } else {
+        PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort sniffing");
     }
     return PM3_SUCCESS;
 }
