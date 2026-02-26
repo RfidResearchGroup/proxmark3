@@ -5,13 +5,13 @@ if [ ! -e docker_conf.inc ]; then
     exit 1
 fi
 . docker_conf.inc
+BUILDARG="${BUILDARG:-""}"
+
 # Make sure to connect a Proxmark3 when building if you want to be able to access it from within the Docker instance
 UART_PORT="$(../../pm3 --list|grep /dev|head -n1|cut -d' ' -f2)"
 if [ -n "$UART_PORT" ]; then
     UART_GID="$(stat -c '%g' $UART_PORT)"
-    BUILDARG="--build-arg UART_GID=$UART_GID"
-else
-    BUILDARG=""
+    BUILDARG="$BUILDARG --build-arg UART_GID=$UART_GID"
 fi
 
 if [ -n "$SKIPQT" ]; then

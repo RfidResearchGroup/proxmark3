@@ -1,6 +1,6 @@
 FROM homebrew/brew
 
-ENV LANG=C
+ENV LANG=C.UTF-8
 
 ARG UART_GID
 # dialout group may already exist on another numeric ID than on host

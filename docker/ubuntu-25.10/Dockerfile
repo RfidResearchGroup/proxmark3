@@ -1,8 +1,8 @@
 FROM ubuntu:25.10
 
-ENV LANG=C
+ENV LANG=C.UTF-8
 ENV DEBIAN_FRONTEND=noninteractive
-# qtbase5-dev skipped
+
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get dist-upgrade -y && \
@@ -12,12 +12,18 @@ RUN apt-get update && \
 RUN apt-get install -y opencl-dev && \
     apt-get clean
 
+ARG SKIPQT=false
+RUN if [ "${SKIPQT}" = "false" ]; then \
+    apt-get install -y qt6-base-dev && \
+    apt-get clean; \
+  fi
+
 # uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Create rrg user => there is already a ubuntu user = 1000 that we need to move away
-RUN usermod -u 999 ubuntu
-RUN groupmod -g 999 ubuntu
+RUN usermod -u 900 ubuntu
+RUN groupmod -g 900 ubuntu
 RUN useradd -ms /bin/bash rrg
 RUN passwd -d rrg
 ARG UART_GID

@@ -1,6 +1,6 @@
 FROM parrotsec/core:latest
 
-ENV LANG=C
+ENV LANG=C.UTF-8
 ENV DEBIAN_FRONTEND=noninteractive
 # qtbase5-dev skipped
 RUN apt-get update && \
@@ -11,6 +11,12 @@ RUN apt-get update && \
 
 RUN apt-get install -y opencl-dev && \
     apt-get clean
+
+ARG SKIPQT=false
+RUN if [ "${SKIPQT}" = "false" ]; then \
+      apt-get install -y qt6-base-dev && \
+      apt-get clean; \
+    fi
 
 # uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/

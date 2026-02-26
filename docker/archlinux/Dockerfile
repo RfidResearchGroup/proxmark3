@@ -1,6 +1,6 @@
 FROM archlinux:base
 
-ENV LANG=C
+ENV LANG=C.UTF-8
 RUN pacman -Syu --noconfirm
 RUN pacman-db-upgrade
 # qt5-base skipped

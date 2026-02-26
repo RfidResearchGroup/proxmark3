@@ -2,7 +2,7 @@
 
 # Online tests that require actual PM3 device connection
 # This is used to make sure that the language for the functions is english instead of the system default language.
-LANG=C
+LANG=C.UTF-8
 
 PM3PATH="$(dirname "$0")/.."
 cd "$PM3PATH" || exit 1

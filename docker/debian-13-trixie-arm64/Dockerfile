@@ -1,6 +1,6 @@
 FROM arm64v8/debian:trixie-slim
 
-ENV LANG=C
+ENV LANG=C.UTF-8
 ENV DEBIAN_FRONTEND=noninteractive
 # qtbase5-dev skipped
 RUN apt-get update && \

@@ -1,6 +1,6 @@
 FROM opensuse/tumbleweed
 
-ENV LANG=C
+ENV LANG=C.UTF-8
 # libqt5-qtbase-devel skipped
 RUN zypper --non-interactive install --no-recommends shadow sudo git patterns-devel-base-devel_basis cmake gcc-c++ readline-devel libbz2-devel liblz4-devel bluez-devel python3-devel libopenssl-devel cross-arm-none-gcc15 cross-arm-none-newlib-devel gd-devel
 
