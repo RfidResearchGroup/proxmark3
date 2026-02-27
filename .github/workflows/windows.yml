@@ -46,7 +46,16 @@ jobs:
 
       - name: ProxSpace initial startup
         working-directory: C:\ProxSpace
-        run: ./runme64.bat -c "exit"
+        run: |
+            $maxAttempts = 3
+            $delay = 20
+            for ($i = 1; $i -le $maxAttempts; $i++) {
+                Write-Host "Attempt $i..."
+                ./runme64.bat -c "exit"
+                if ($LASTEXITCODE -eq 0) { exit 0 }
+                if ($i -lt $maxAttempts) { Start-Sleep -Seconds $delay }
+            }
+            exit 1
 
       - uses: actions/checkout@v4
 
