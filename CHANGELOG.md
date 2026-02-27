@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf aliro read` command (@kormax)
+- Added `hf aliro info` command (@kormax)
 - Added Qt6 support for the client. Step 1: Makefile (@doegox)
 
 ## [Permafrost.4.21128][2026-02-25]
