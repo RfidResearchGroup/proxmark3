@@ -29,7 +29,7 @@ Always use the latest repository commits from *master* branch. There are always 
   - [Qt Session management error](#qt-session-management-error)
   - [found architecture 'x86\_64' required architecture 'arm64' error](#found-architecture-x86_64-required-architecture-arm64-error)
   - [wrong permissions on runtime directory /run/user/1000](#wrong-permissions-on-runtime-directory-runuser1000)
-  - [proxspace `file not found or locked` on Windows 11](#proxspace-file-not-found-or-locked-on-windows-11)
+  - [proxspace 'file not found or locked' on Windows 11](#proxspace-file-not-found-or-locked-on-windows-11)
 
 ## `pm3` or `pm3-flash*` doesn't see my Proxmark
 
@@ -253,8 +253,8 @@ make: *** [Makefile:177: client/all] Error 2
 The following dependencies are currently needed to make the development environment compile:   
 ```
 sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
-libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev \
-libbz2-dev liblz4-dev libbluetooth-dev libpython3-dev libssl-dev
+libreadline-dev gcc-arm-none-eabi libnewlib-dev qt6-base-dev \
+libbz2-dev liblz4-dev libbluetooth-dev libpython3-dev libssl-dev libgd-dev
 ```
 
 ## target attribute is not supported on this machine

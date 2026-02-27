@@ -37,6 +37,13 @@ make clean
 make SKIPQT=1
 ```
 
+or to force a fallback to Qt5 even when Qt6 is installed
+
+```
+make clean
+make SKIPQT6=1
+```
+
 On Linux hosts, if the Bluez headers and library are present, the client will be compiled with native Bluetooth support. It's possible to explicitly skip Bluetooth support with:
 
 ```
