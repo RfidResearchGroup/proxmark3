@@ -131,7 +131,7 @@ WSL 1 requires to run on Windows 10 version 1709 or above. Previous windows vers
 ### More about WSL 1
 ^[Top](#top)
 
-Install WSL 1 with e.g. the standard Ubuntu. You can follow the guide on [Microsoft Docs](https://docs.microsoft.com/en-us/windows/wsl/install-win10) but be careful to follow WSL 1 specific instructions! When they recommend you to restart, you must restart.
+Install WSL 1 with e.g. the standard Ubuntu 24.04 or later. You can follow the guide on [Microsoft Docs](https://docs.microsoft.com/en-us/windows/wsl/install-win10) but be careful to follow WSL 1 specific instructions! When they recommend you to restart, you must restart.
 
 For WSL 1 configuration, see [Manage and configure Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/wsl-config).
 
@@ -169,12 +169,12 @@ Install dependencies:
 
 ```sh
 sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
-libreadline-dev gcc-arm-none-eabi libnewlib-dev \
-libbz2-dev liblz4-dev libpython3-dev qtbase5-dev libssl-dev libgd-dev
+libreadline-dev gcc-arm-none-eabi libnewlib-dev qt6-base-dev \
+libbz2-dev liblz4-dev libpython3-dev libssl-dev libgd-dev
 ```
 > [!NOTE]
 > * If you don't need the graphical components of the
->   Proxmark3 client, you can skip the installation of `qtbase5-dev`.  
+>   Proxmark3 client, you can skip the installation of `qtbase6-dev`.
 > * If you don't need support for Python3 scripts in the
 >   Proxmark3 client, you can skip the installation of `libpython3-dev`.
 > * If you don't need support for NFC ePaper devices in the
