@@ -318,15 +318,18 @@ PM3INCLUDES += $(PYTHONLIBINC)
 
 ## QT6 (or QT5 fallback) (optional)
 ifneq ($(SKIPQT),1)
-    # Check for correctly configured Qt6
-    QTINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags Qt6Core Qt6Widgets Qt6Gui 2>/dev/null)
-    QTLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs Qt6Core Qt6Widgets Qt6Gui 2>/dev/null)
-    MOC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=libexecdir Qt6Core)/moc
+    ifneq ($(SKIPQT6),1)
+        # Check for correctly configured Qt6
+        QTINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags Qt6Core Qt6Widgets Qt6Gui 2>/dev/null)
+        QTLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs Qt6Core Qt6Widgets Qt6Gui 2>/dev/null)
+        MOC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=libexecdir Qt6Core)/moc
     UIC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=libexecdir Qt6Core)/uic
-    QMAKE = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=bindir Qt6Core)/qmake
-    ifneq ($(QTLDLIBS),)
-        QT6_FOUND = 1
-    else
+        QMAKE = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=bindir Qt6Core)/qmake
+        ifneq ($(QTLDLIBS),)
+            QT6_FOUND = 1
+        endif
+    endif
+    ifneq ($(QT6_FOUND),1)
         # if Qt6 not found check for correctly configured Qt5
         QTINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags Qt5Core Qt5Widgets 2>/dev/null)
         QTLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs Qt5Core Qt5Widgets 2>/dev/null)
@@ -338,12 +341,15 @@ ifneq ($(SKIPQT),1)
         # if both pkg-config commands failed, search in common places
         # TODO: to be checked on OSX...
         ifneq ($(QTDIR),)
-            ifneq ($(wildcard $(QTDIR)/lib/libQt6Core),)
-                # QT6
-                QTINCLUDES = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui -I$(QTDIR)/include/QtWidgets
-                QTLDLIBS = -L$(QTDIR)/lib -lQt6Core -lQt6Gui -lQt6Widgets
-                QT6_FOUND = 1
-            else
+            ifneq ($(SKIPQT6),1)
+                ifneq ($(wildcard $(QTDIR)/lib/libQt6Core),)
+                    # QT6
+                    QTINCLUDES = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui -I$(QTDIR)/include/QtWidgets
+                    QTLDLIBS = -L$(QTDIR)/lib -lQt6Core -lQt6Gui -lQt6Widgets
+                    QT6_FOUND = 1
+                endif
+            endif
+            ifneq ($(QT6_FOUND),1)
                 # QT5
                 QTINCLUDES = -I$(QTDIR)/include -I$(QTDIR)/include/QtCore -I$(QTDIR)/include/QtGui -I$(QTDIR)/include/QtWidgets
                 QTLDLIBS = -L$(QTDIR)/lib -lQt5Core -lQt5Gui -lQt5Widgets
