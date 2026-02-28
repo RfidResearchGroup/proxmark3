@@ -209,7 +209,7 @@ If group ownership is `dialout` and your user is member of `dialout` group, all 
 sudo chmod 666 /dev/ttySX
 ```
 
-If you installed an X Server and compiled the Proxmark3 with QT5 support, you've to export the `DISPLAY` environment variable:
+If you installed an X Server and compiled the Proxmark3 with Qt6 support, you've to export the `DISPLAY` environment variable:
 
 ```sh
 export DISPLAY=:0
