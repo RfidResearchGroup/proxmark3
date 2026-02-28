@@ -47,44 +47,6 @@ find_package(PkgConfig)
 # Allow specifying a Python version via cmake option
 set(PYTHON3_PKGCONFIG "python3" CACHE STRING "Python3 package config version suffix")
 
-if (NOT SKIPQT EQUAL 1)
-
-    if(APPLE AND EXISTS /usr/local/opt/qt5)
-        # Homebrew installs Qt5 (up to at least 5.11.0) in
-        # /usr/local/opt/qt5. Ensure that it can be found by CMake
-        # since it is not in the default /usr/local prefix.
-        # Add it to PATHS so that it doesn't override the
-        # CMAKE_PREFIX_PATH environment variable.
-        # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
-        # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
-        list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /usr/local/opt/qt5)
-    endif(APPLE AND EXISTS /usr/local/opt/qt5)
-
-    if(APPLE AND EXISTS /opt/homebrew/opt/qt@5)
-        # Homebrew on Apple Silicon installs Qt5 in
-        # /opt/homebrew/opt/qt@5. Ensure that it can be found by CMake
-        # since it is not in the default /usr/local prefix.
-        # Add it to PATHS so that it doesn't override the
-        # CMAKE_PREFIX_PATH environment variable.
-        # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
-        # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
-        list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /opt/homebrew/opt/qt@5)
-    endif(APPLE AND EXISTS /opt/homebrew/opt/qt@5)
-    set(QT_PACKAGELIST
-        Qt5Core
-        Qt5Widgets
-        Qt5Gui
-    )
-    set(Qt5_FOUND ON)
-    foreach(_qt_package IN LISTS QT_PACKAGELIST)
-        find_package(${_qt_package} QUIET ${QT_FIND_PACKAGE_OPTIONS})
-        set(Qt5_LIBRARIES ${${_qt_package}_LIBRARIES} ${Qt5_LIBRARIES})
-        if(NOT ${_qt_package}_FOUND)
-            set(Qt5_FOUND OFF)
-        endif(NOT ${_qt_package}_FOUND)
-    endforeach()
-endif (NOT SKIPQT EQUAL 1)
-
 if (NOT SKIPBT EQUAL 1)
     pkg_search_module(BLUEZ QUIET bluez)
 endif (NOT SKIPBT EQUAL 1)
@@ -472,23 +434,6 @@ if (APPLE)
     endif()
 endif (APPLE)
 
-if ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
-    set(CMAKE_AUTOMOC ON)
-    set(CMAKE_AUTORCC ON)
-    set(CMAKE_AUTOUIC ON)
-    set (TARGET_SOURCES
-            ${PM3_ROOT}/client/src/proxgui.cpp
-            ${PM3_ROOT}/client/src/proxguiqt.cpp
-            ${TARGET_SOURCES})
-
-    add_definitions("-DHAVE_GUI")
-    set(ADDITIONAL_LNK ${Qt5_LIBRARIES} ${ADDITIONAL_LNK})
-else ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
-    set(TARGET_SOURCES
-            ${PM3_ROOT}/client/src/guidummy.cpp
-            ${TARGET_SOURCES})
-endif ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
-
 if (NOT SKIPBT EQUAL 1)
     if (BLUEZ_FOUND)
         add_definitions("-DHAVE_BLUEZ")
@@ -556,15 +501,6 @@ execute_process(
 )
 string(STRIP ${version_pm3} version_pm3)
 message(STATUS "Version info:      ${version_pm3}")
-if (SKIPQT EQUAL 1)
-    message(STATUS "GUI support:       skipped")
-else (SKIPQT EQUAL 1)
-    if (Qt5_FOUND)
-        message(STATUS "GUI support:       QT5 found, enabled")
-    else (Qt5_FOUND)
-        message(STATUS "GUI support:       QT5 not found, disabled")
-    endif (Qt5_FOUND)
-endif (SKIPQT EQUAL 1)
 
 if (SKIPBT EQUAL 1)
     message(STATUS "native BT support: skipped")
