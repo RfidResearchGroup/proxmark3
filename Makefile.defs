@@ -176,8 +176,8 @@ ifneq ($(NOHARDENING),1)
       ifeq ($(ARCH),x86_64)
         CFLAGS += -fcf-protection=full
       endif
-      DEFCFLAGS += -fPIE
-      DEFCXXFLAGS += -fPIE
+      DEFCFLAGS += -fPIC
+      DEFCXXFLAGS += -fPIC
       DEFLDFLAGS += -Wl,-z,now -Wl,-z,relro -Wl,-z,noexecstack -pie
     endif
   endif
