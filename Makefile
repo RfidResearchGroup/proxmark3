@@ -29,19 +29,19 @@ ifneq (,$(DESTDIR))
     endif
 endif
 
-all clean install uninstall check: %: client/% bootrom/% armsrc/% recovery/% mfc_card_only/% mfc_card_reader/% mfd_aes_brute/% mfulc_des_brute/% fpga_compress/% cryptorf/%
-# hitag2crack toolsuite is not yet integrated in "all", it must be called explicitly: "make hitag2crack"
-#all clean install uninstall check: %: hitag2crack/%
-HOST_TARGETS=client mfc_card_only mfc_card_reader mfd_aes_brute mfulc_des_brute fpga_compress cryptorf
-host: host/all
-host/all: $(addsuffix /all,$(HOST_TARGETS))
-host/clean: $(addsuffix /clean,$(HOST_TARGETS))
-host/install: $(addsuffix /install,$(HOST_TARGETS))
-host/uninstall: $(addsuffix /uninstall,$(HOST_TARGETS))
-host/check: $(addsuffix /check,$(HOST_TARGETS))
-clean: %: hitag2crack/%
-	find . -type d -name __pycache__ -exec rm -rfv \{\} +
+define submake
+    $(MAKE) $(1)/$(2) || exit 1;
+endef
 
+# hitag2crack toolsuite is not yet integrated in "all", it must be called explicitly: "make hitag2crack"
+HOST_TARGETS := client mfc_card_only mfc_card_reader mfd_aes_brute mfulc_des_brute fpga_compress cryptorf
+TARGETS := bootrom armsrc recovery $(HOST_TARGETS)
+all clean install uninstall check: %:
+	$(foreach target,$(TARGETS),$(call submake,$(target),$*))
+
+host: host/all
+host/all host/clean host/install host/uninstall host/check: %:
+	$(foreach target,$(HOST_TARGETS),$(call submake,$(target),$(notdir $*)))
 
 INSTALLTOOLS=mfc/pm3_eml2lower.sh mfc/pm3_eml2upper.sh mfc/pm3_mfdread.py mfc/pm3_mfd2eml.py mfc/pm3_eml2mfd.py pm3_amii_bin2eml.pl pm3_reblay-emulating.py pm3_reblay-reading.py
 INSTALLSIMFW=sim011.bin sim011.sha512.txt sim013.bin sim013.sha512.txt sim014.bin sim014.sha512.txt
@@ -155,8 +155,6 @@ hitag2crack/check: FORCE
 common/check: FORCE
 	$(info [*] CHECK $(patsubst %/check,%,$@))
 	$(Q)$(BASH) tools/pm3_tests.sh $(CHECKARGS) $(patsubst %/check,%,$@)
-check: common/check
-	$(info [*] ALL CHECKS DONE)
 
 cryptorf/%: FORCE
 	$(info [*] MAKE $@)
@@ -193,6 +191,10 @@ recovery/%: FORCE cleanifplatformchanged
 hitag2crack/%: FORCE
 	$(info [*] MAKE $@)
 	$(Q)$(MAKE) --no-print-directory -C tools/hitag2crack $(patsubst hitag2crack/%,%,$@) DESTDIR=$(MYDESTDIR)
+hitag2crack/clean: FORCE hitag2crack/_clean_pycache
+hitag2crack/_clean_pycache:
+	find . -type d -name __pycache__ -exec rm -rfv \{\} +
+
 FORCE: # Dummy target to force remake in the subdirectories, even if files exist (this Makefile doesn't know about the prerequisites)
 
 .PHONY: all host clean install uninstall help _test bootrom fullimage recovery client mfc_card_only mfc_card_reader mfulc_des_brute mfd_aes_brute hitag2crack style miscchecks release FORCE udev accessrights cleanifplatformchanged
