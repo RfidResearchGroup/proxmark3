@@ -4,10 +4,10 @@
 # macOS - MacPorts automatic installation
 
 # Table of Contents
-- [macOS - MacPorts automatic installation](#macOS---macports-automatic-installation)
+- [macOS - MacPorts automatic installation](#macos---macports-automatic-installation)
 - [Table of Contents](#table-of-contents)
   - [Main prerequisite](#main-prerequisite)
-  - [Installing latest releases](#installing-latest-releases)
+  - [Installing stable releases directly](#installing-stable-releases-directly)
   - [Build from source](#build-from-source)
 - [Clone the Iceman repository](#clone-the-iceman-repository)
   - [Compile the project](#compile-the-project)
@@ -69,7 +69,7 @@ These instructions will show how to setup the environment on OSX to the point wh
     sudo port install \
         gd2 \
         lz4 \
-        qt5 \
+        qt6 \
         bzip2 \
         lua54 \
         jansson \
@@ -78,7 +78,7 @@ These instructions will show how to setup the environment on OSX to the point wh
         openssl11 \
         pkgconfig \
         python312 \
-        qt5-qtbase \
+        qt6-qtbase \
         py312-pexpect \
         py312-bitstring \
         py312-sslcrypto \
