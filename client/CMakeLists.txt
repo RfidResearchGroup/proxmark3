@@ -49,40 +49,82 @@ set(PYTHON3_PKGCONFIG "python3" CACHE STRING "Python3 package config version suf
 
 if (NOT SKIPQT EQUAL 1)
 
-    if(APPLE AND EXISTS /usr/local/opt/qt5)
-        # Homebrew installs Qt5 (up to at least 5.11.0) in
-        # /usr/local/opt/qt5. Ensure that it can be found by CMake
-        # since it is not in the default /usr/local prefix.
-        # Add it to PATHS so that it doesn't override the
-        # CMAKE_PREFIX_PATH environment variable.
-        # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
-        # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
-        list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /usr/local/opt/qt5)
-    endif(APPLE AND EXISTS /usr/local/opt/qt5)
+    set(Qt5_FOUND FALSE)
+    set(Qt6_FOUND FALSE)
 
-    if(APPLE AND EXISTS /opt/homebrew/opt/qt@5)
-        # Homebrew on Apple Silicon installs Qt5 in
-        # /opt/homebrew/opt/qt@5. Ensure that it can be found by CMake
-        # since it is not in the default /usr/local prefix.
-        # Add it to PATHS so that it doesn't override the
-        # CMAKE_PREFIX_PATH environment variable.
-        # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
-        # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
-        list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /opt/homebrew/opt/qt@5)
-    endif(APPLE AND EXISTS /opt/homebrew/opt/qt@5)
-    set(QT_PACKAGELIST
-        Qt5Core
-        Qt5Widgets
-        Qt5Gui
-    )
-    set(Qt5_FOUND ON)
-    foreach(_qt_package IN LISTS QT_PACKAGELIST)
-        find_package(${_qt_package} QUIET ${QT_FIND_PACKAGE_OPTIONS})
-        set(Qt5_LIBRARIES ${${_qt_package}_LIBRARIES} ${Qt5_LIBRARIES})
-        if(NOT ${_qt_package}_FOUND)
-            set(Qt5_FOUND OFF)
-        endif(NOT ${_qt_package}_FOUND)
-    endforeach()
+    if (NOT SKIPQT6 EQUAL 1)
+       if(APPLE AND EXISTS /usr/local/opt/qt6)
+            # Homebrew installs Qt6 in /usr/local/opt/qt6 on Intel Macs.
+            # Ensure that it can be found by CMake since it is not in the
+            # default /usr/local prefix.
+            list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /usr/local/opt/qt6)
+        endif(APPLE AND EXISTS /usr/local/opt/qt6)
+
+        if(APPLE AND EXISTS /opt/homebrew/opt/qt6)
+            # Homebrew on Apple Silicon installs Qt6 in
+            # /opt/homebrew/opt/qt6. Ensure that it can be found by CMake
+            # since it is not in the default /opt/homebrew prefix.
+            list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /opt/homebrew/opt/qt6)
+        endif(APPLE AND EXISTS /opt/homebrew/opt/qt6)
+
+        if(APPLE AND EXISTS /opt/homebrew/opt/qt@6)
+            # Homebrew may also install Qt6 under the versioned name qt@6
+            # on Apple Silicon.
+            list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /opt/homebrew/opt/qt@6)
+        endif(APPLE AND EXISTS /opt/homebrew/opt/qt@6)
+
+        find_package(Qt6 QUIET COMPONENTS Core Widgets Gui ${QT_FIND_PACKAGE_OPTIONS})
+        if(Qt6_FOUND)
+            set(Qt6_LIBRARIES Qt6::Core Qt6::Widgets Qt6::Gui)
+            # tag Qt6 headers as system headers to avoid warnings in Qt headers
+            foreach(lib Core Gui Widgets)
+                if(TARGET Qt6::${lib})
+                    set_target_properties(Qt6::${lib} PROPERTIES
+                        INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                        $<TARGET_PROPERTY:Qt6::${lib},INTERFACE_INCLUDE_DIRECTORIES>
+                    )
+                endif()
+            endforeach()
+        endif (Qt6_FOUND)
+
+    endif (NOT SKIPQT6 EQUAL 1)
+    if (NOT Qt6_FOUND)
+
+        if(APPLE AND EXISTS /usr/local/opt/qt5)
+            # Homebrew installs Qt5 (up to at least 5.11.0) in
+            # /usr/local/opt/qt5. Ensure that it can be found by CMake
+            # since it is not in the default /usr/local prefix.
+            # Add it to PATHS so that it doesn't override the
+            # CMAKE_PREFIX_PATH environment variable.
+            # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
+            # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
+            list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /usr/local/opt/qt5)
+        endif(APPLE AND EXISTS /usr/local/opt/qt5)
+
+        if(APPLE AND EXISTS /opt/homebrew/opt/qt@5)
+            # Homebrew on Apple Silicon installs Qt5 in
+            # /opt/homebrew/opt/qt@5. Ensure that it can be found by CMake
+            # since it is not in the default /usr/local prefix.
+            # Add it to PATHS so that it doesn't override the
+            # CMAKE_PREFIX_PATH environment variable.
+            # QT_FIND_PACKAGE_OPTIONS should be passed to find_package,
+            # e.g. find_package(Qt5Core ${QT_FIND_PACKAGE_OPTIONS})
+            list(APPEND QT_FIND_PACKAGE_OPTIONS PATHS /opt/homebrew/opt/qt@5)
+        endif(APPLE AND EXISTS /opt/homebrew/opt/qt@5)
+        set(QT_PACKAGELIST
+            Qt5Core
+            Qt5Widgets
+            Qt5Gui
+        )
+        set(Qt5_FOUND TRUE)
+        foreach(_qt_package IN LISTS QT_PACKAGELIST)
+            find_package(${_qt_package} QUIET ${QT_FIND_PACKAGE_OPTIONS})
+            set(Qt5_LIBRARIES ${${_qt_package}_LIBRARIES} ${Qt5_LIBRARIES})
+            if(NOT ${_qt_package}_FOUND)
+                set(Qt5_FOUND FALSE)
+            endif(NOT ${_qt_package}_FOUND)
+        endforeach()
+    endif (NOT Qt6_FOUND)
 endif (NOT SKIPQT EQUAL 1)
 
 if (NOT SKIPBT EQUAL 1)
@@ -472,7 +514,7 @@ if (APPLE)
     endif()
 endif (APPLE)
 
-if ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
+if ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND OR Qt6_FOUND))
     set(CMAKE_AUTOMOC ON)
     set(CMAKE_AUTORCC ON)
     set(CMAKE_AUTOUIC ON)
@@ -482,12 +524,20 @@ if ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
             ${TARGET_SOURCES})
 
     add_definitions("-DHAVE_GUI")
-    set(ADDITIONAL_LNK ${Qt5_LIBRARIES} ${ADDITIONAL_LNK})
-else ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
+    if (Qt6_FOUND)
+        set(ADDITIONAL_DIRS ${Qt6_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+        set(ADDITIONAL_LNK ${Qt6_LIBRARIES} ${ADDITIONAL_LNK})
+    else (Qt6_FOUND)
+        if (Qt5_FOUND)
+            set(ADDITIONAL_DIRS ${Qt5_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+            set(ADDITIONAL_LNK ${Qt5_LIBRARIES} ${ADDITIONAL_LNK})
+        endif (Qt5_FOUND)
+    endif (Qt6_FOUND)
+else ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND OR Qt6_FOUND))
     set(TARGET_SOURCES
             ${PM3_ROOT}/client/src/guidummy.cpp
             ${TARGET_SOURCES})
-endif ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND))
+endif ((NOT SKIPQT EQUAL 1) AND (Qt5_FOUND OR Qt6_FOUND))
 
 if (NOT SKIPBT EQUAL 1)
     if (BLUEZ_FOUND)
@@ -559,11 +609,15 @@ message(STATUS "Version info:      ${version_pm3}")
 if (SKIPQT EQUAL 1)
     message(STATUS "GUI support:       skipped")
 else (SKIPQT EQUAL 1)
-    if (Qt5_FOUND)
-        message(STATUS "GUI support:       QT5 found, enabled")
-    else (Qt5_FOUND)
-        message(STATUS "GUI support:       QT5 not found, disabled")
-    endif (Qt5_FOUND)
+    if (Qt6_FOUND)
+        message(STATUS "GUI support:       QT6 found, enabled")
+    else (Qt6_FOUND)
+        if (Qt5_FOUND)
+            message(STATUS "GUI support:       QT5 found, enabled")
+        else (Qt5_FOUND)
+            message(STATUS "GUI support:       QT not found, disabled")
+        endif (Qt5_FOUND)
+    endif (Qt6_FOUND)
 endif (SKIPQT EQUAL 1)
 
 if (SKIPBT EQUAL 1)
