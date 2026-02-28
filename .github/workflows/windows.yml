@@ -121,7 +121,6 @@ jobs:
             libbz2-dev
             liblz4-dev
             qt6-base-dev
-            qtbase5-dev
             cmake
             libpython3-dev
             libssl-dev
