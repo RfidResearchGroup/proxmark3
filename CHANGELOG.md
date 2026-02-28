@@ -5,7 +5,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Added `hf aliro read` command (@kormax)
 - Added `hf aliro info` command (@kormax)
-- Added Qt6 support for the client. Step 1: Makefile (@doegox)
+- Added Qt6 support for the client (@doegox)
 
 ## [Permafrost.4.21128][2026-02-25]
 - Added standalone mode `HF_DOEGOX_AUTH0`: UL-C / UL-AES unlocker (@doegox)
