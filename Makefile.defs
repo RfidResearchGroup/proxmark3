@@ -68,22 +68,40 @@ export INSTALLSUDO
 platform = $(shell uname)
 DETECTED_OS=$(platform)
 
+ifneq ($(findstring MINGW,$(platform)),)
+    IS_WINDOWS := 1
+    IS_MINGW := 1
+endif
+ifneq ($(findstring MSYS,$(platform)),)
+    IS_WINDOWS := 1
+    IS_MSYS := 1
+endif
+ifeq ($(platform),Darwin)
+    IS_DARWIN := 1
+    ifeq ($(shell uname -p),arm64)
+      IS_IOS := 1
+    else
+      IS_MACOS := 1
+    endif
+endif
+
 ifeq ($(shell $(CC) -v 2>&1 | grep -c "clang version"), 1)
   DETECTED_COMPILER = clang
 else
   DETECTED_COMPILER = gcc
 endif
 
-ifeq ($(platform),Darwin)
-    ifeq ($(shell uname -p),arm64)
-        # The platform is iOS
-        USE_BREW ?= 0
-        # iOS refuses to compile unless this is set
-        export IPHONEOS_DEPLOYMENT_TARGET=11.0
-    else
-        # M* macOS devices return arm
-        USE_BREW ?= 1
-    endif
+ifdef IS_IOS
+    # The platform is iOS
+    USE_BREW ?= 0
+    # iOS refuses to compile unless this is set
+    export IPHONEOS_DEPLOYMENT_TARGET=11.0
+endif
+ifdef IS_MACOS
+    # M* macOS devices return arm
+    USE_BREW ?= 1
+endif
+ifdef IS_DARWIN
   USE_MACPORTS ?= 0
   AR= /usr/bin/ar rcs
   RANLIB= /usr/bin/ranlib
@@ -108,8 +126,8 @@ ifeq ($(USE_MACPORTS),1)
 endif
 
 ifeq ($(DEBUG),1)
-  DEFCXXFLAGS = -g -O0 -pipe
-  DEFCFLAGS = -g -O0 -fstrict-aliasing -pipe
+  DEFCXXFLAGS = -ggdb3 -O0 -pipe
+  DEFCFLAGS = -ggdb3 -O0 -fstrict-aliasing -pipe
   DEFLDFLAGS =
 else
   DEFCXXFLAGS = -Wall -Werror -O3 -pipe
@@ -129,24 +147,46 @@ ifeq ($(SANITIZE),1)
 endif
 # Some more warnings we want as errors:
 DEFCFLAGS += -Wbad-function-cast -Wredundant-decls -Wmissing-prototypes -Wchar-subscripts -Wshadow -Wundef -Wwrite-strings -Wunused -Wuninitialized -Wpointer-arith -Winline -Wformat -Wformat-security -Winit-self -Wmissing-include-dirs -Wnested-externs -Wmissing-declarations -Wempty-body -Wignored-qualifiers -Wmissing-field-initializers -Wtype-limits -Wold-style-definition -Wcast-align -Wswitch-enum
-# GCC 10 has issues with false positives on stringop-overflow, let's disable them for now (cf https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92955, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94335)
-# beware these flags didn't exist for GCC < 7
-ifeq ($(shell expr $(CC_VERSION) \>= 10), 1)
+# GCC 10 to 13 had issues with false positives on stringop-overflow (cf https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92955, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94335)
+ifeq ($(shell expr $(CC_VERSION) \>= 14), 1)
   ifneq ($(DETECTED_COMPILER), clang)
-    DEFCFLAGS += -Wno-stringop-overflow -Wno-error=stringop-overflow
+    DEFCFLAGS += -Wstringop-overread -Wstringop-overflow
   endif
 endif
-ifeq ($(platform),Darwin)
-  ifeq ($(shell uname -p),arm64)
-    # iOS will refuse to compile without the minimum target of iOS 11.0
-    DEFCFLAGS += -mios-version-min=11.0
-  endif
+
+ifdef IS_IOS
+  # iOS will refuse to compile without the minimum target of iOS 11.0
+  DEFCFLAGS += -mios-version-min=11.0
+endif
+ifdef IS_DARWIN
   # their readline has strict-prototype issues
   DEFCFLAGS += -Wno-strict-prototypes
   # some warnings about braced initializers on structs we want to ignore
   DEFCFLAGS += -Wno-missing-braces
 else
   DEFCFLAGS += -Wstrict-prototypes
+endif
+
+ifneq ($(NOHARDENING),1)
+  # Manual equivalents of -fhardened to avoid g++: warning: linker hardening options not enabled by ‘-fhardened’ because other link options were specified on the command line
+  DEFCFLAGS += \
+    -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -fstack-protector-strong -ftrivial-auto-var-init=zero
+  ifndef IS_WINDOWS
+    ifndef IS_DARWIN
+      ifeq ($(ARCH),x86_64)
+        CFLAGS += -fcf-protection=full
+      endif
+      DEFCFLAGS += -fPIE
+      DEFLDFLAGS += -Wl,-z,now -Wl,-z,relro -Wl,-z,noexecstack -pie
+    endif
+  endif
+  ifdef IS_DARWIN
+    DEFLDFLAGS += -Wl,-bind_at_load          # equivalent of -z,now
+    DEFLDFLAGS += -Wl,-pie                   # ASLR
+  endif
+  ifeq ($(DETECTED_COMPILER), gcc)
+    DEFCFLAGS += -fstack-clash-protection
+  endif
 endif
 
 # Next ones are activated only if GCCEXTRA=1 or CLANGEXTRA=1

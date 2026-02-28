@@ -239,10 +239,7 @@ static int execute_system_command(const char *command) {
 
 #if defined(_WIN32)
     char wrapped_command[255];
-    strncat(wrapped_command, "cmd /C \"", 9);
-    strncat(wrapped_command, command, strlen(command));
-    strncat(wrapped_command, "\"", 2);
-
+    snprintf(wrapped_command, sizeof(wrapped_command), "cmd /C \"%s\"", command);
     ret = system(wrapped_command);
 #else
     ret = system(command);
