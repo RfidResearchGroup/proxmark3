@@ -472,7 +472,7 @@ endif
 
 PM3CFLAGS += -DHAVE_SNPRINTF
 
-CXXFLAGS ?= -Wall -Werror
+CXXFLAGS ?= $(DEFCXXFLAGS)
 CXXFLAGS += $(MYDEFS) $(MYCXXFLAGS) $(MYINCLUDES)
 
 PM3CXXFLAGS = $(CXXFLAGS)
@@ -483,10 +483,10 @@ ifeq ($(QT_FOUND),1)
     PM3CXXFLAGS += -DQT_NO_DEBUG
     ifeq ($(QT6_FOUND),1)
         # Qt6 is claiming for a C++17 compiler
-        PM3CXXFLAGS += -fPIC -std=c++17
+        PM3CXXFLAGS += -std=c++17
     else
         # On OSX Qt6 is claiming for a C++11 compiler (gnu++14 works too, but if nothing it fails)
-        PM3CXXFLAGS += -fPIC -std=c++11
+        PM3CXXFLAGS += -std=c++11
     endif
 endif
 

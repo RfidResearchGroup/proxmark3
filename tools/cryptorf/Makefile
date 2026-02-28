@@ -21,7 +21,7 @@ endif
 
 # macOS needs c++14 standard when compiling c++
 ifeq ($(platform),Darwin)
-    MYCXXFLAGS = -std=c++14
+    MYCXXFLAGS += -std=c++14
 endif
 
 ifneq (,$(findstring MINGW,$(platform)))
