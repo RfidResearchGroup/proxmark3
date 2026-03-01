@@ -37,15 +37,15 @@ vpath %.dic dictionaries
 OBJDIR = obj
 
 ifeq ($(USE_BREW),1)
-	INCLUDES += -I$(BREW_PREFIX)/include
-	LDLIBS += -L$(BREW_PREFIX)/lib
-	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/lib/pkgconfig:$(BREW_PREFIX)/opt/qt@5/lib/pkgconfig:$(BREW_PREFIX)/opt/qt@5/lib/pkgconfig
+    INCLUDES += -I$(BREW_PREFIX)/include
+    LDLIBS += -L$(BREW_PREFIX)/lib
+    PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(BREW_PREFIX)/lib/pkgconfig:$(BREW_PREFIX)/opt/qt@5/lib/pkgconfig:$(BREW_PREFIX)/opt/qt@5/lib/pkgconfig
 endif
 
 ifeq ($(USE_MACPORTS),1)
-	INCLUDES += -I$(MACPORTS_PREFIX)/include
-	LDLIBS += -L$(MACPORTS_PREFIX)/lib
-	PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(MACPORTS_PREFIX)/lib/pkgconfig
+    INCLUDES += -I$(MACPORTS_PREFIX)/include
+    LDLIBS += -L$(MACPORTS_PREFIX)/lib
+    PKG_CONFIG_ENV := PKG_CONFIG_PATH=$(MACPORTS_PREFIX)/lib/pkgconfig
 endif
 
 
@@ -424,7 +424,7 @@ else
             LDLIBS += $(LINENOISELIBLD)
             PM3INCLUDES += $(LINENOISELIBINC)
             LINENOISE_LOCAL_FOUND = 1
-		endif
+        endif
     endif
 endif
 
@@ -654,194 +654,194 @@ POSTCOMPILE = $(MV) -f $(OBJDIR)/$*.Td $(OBJDIR)/$*.d && $(TOUCH) $@
 ################
 
 SRCS =  mifare/aiddesfire.c \
-		aidsearch.c \
-		atrs.c \
-		cmdanalyse.c \
-		cmdcrc.c \
-		cmddata.c \
-		cmdflashmem.c \
-		cmdflashmemspiffs.c \
-		cmdhf.c \
-		cmdhf14a.c \
-		pla.c \
-		cmdhf14b.c \
-		cmdhf15.c \
-		cmdhfaliro.c \
-		cmdhfcryptorf.c \
-		cmdhfepa.c \
-		cmdhfemrtd.c \
-		cmdhffelica.c \
-		cmdhffido.c \
-		cmdhffudan.c \
-		cmdhfgallagher.c \
-		cmdhfksx6924.c \
-		cmdhfcipurse.c \
-		cmdhficlass.c \
-		cmdhfict.c \
-		cmdhflegic.c \
-		cmdhfjooki.c \
-		cmdhflist.c \
-		cmdhflto.c \
-		cmdhfmf.c \
-		cmdhfmfdes.c \
-		cmdhfmfhard.c \
-		cmdhfmfu.c \
-		cmdhfmfp.c \
-		cmdhfntag424.c \
+        aidsearch.c \
+        atrs.c \
+        cmdanalyse.c \
+        cmdcrc.c \
+        cmddata.c \
+        cmdflashmem.c \
+        cmdflashmemspiffs.c \
+        cmdhf.c \
+        cmdhf14a.c \
+        pla.c \
+        cmdhf14b.c \
+        cmdhf15.c \
+        cmdhfaliro.c \
+        cmdhfcryptorf.c \
+        cmdhfepa.c \
+        cmdhfemrtd.c \
+        cmdhffelica.c \
+        cmdhffido.c \
+        cmdhffudan.c \
+        cmdhfgallagher.c \
+        cmdhfksx6924.c \
+        cmdhfcipurse.c \
+        cmdhficlass.c \
+        cmdhfict.c \
+        cmdhflegic.c \
+        cmdhfjooki.c \
+        cmdhflist.c \
+        cmdhflto.c \
+        cmdhfmf.c \
+        cmdhfmfdes.c \
+        cmdhfmfhard.c \
+        cmdhfmfu.c \
+        cmdhfmfp.c \
+        cmdhfntag424.c \
         cmdhfsaflok.c \
-		cmdhfseos.c \
-		cmdhfst.c \
-		cmdhfst25ta.c \
-		cmdhftesla.c \
-		cmdhfthinfilm.c \
-		cmdhftopaz.c \
-		cmdhftexkom.c \
-		cmdhfvas.c \
-		cmdhfxerox.c \
-		cmdhw.c \
-		cmdlf.c \
-		cmdlfawid.c \
-		cmdlfcotag.c \
-		cmdlfdestron.c \
-		cmdlfem.c \
-		cmdlfem410x.c \
-		cmdlfem4x05.c \
-		cmdlfem4x50.c \
-		cmdlfem4x70.c \
-		cmdlffdxb.c \
-		cmdlfguard.c \
-		cmdlfgallagher.c \
-		cmdlfhid.c \
-		cmdlfhitag.c \
-		cmdlfhitaghts.c \
-		cmdlfhitagu.c \
-		cmdlfidteck.c \
-		cmdlfindala.c \
-		cmdlfio.c \
-		cmdlfjablotron.c \
-		cmdlfkeri.c \
-		cmdlfmotorola.c \
-		cmdlfnedap.c \
-		cmdlfnexwatch.c \
-		cmdlfnoralsy.c \
-		cmdlfpac.c \
-		cmdlfparadox.c \
-		cmdlfpcf7931.c \
-		cmdlfpresco.c \
-		cmdlfpyramid.c \
-		cmdlfsecurakey.c \
-		cmdlft55xx.c \
-		cmdlfti.c \
-		cmdlfviking.c \
-		cmdlfvisa2000.c \
-		cmdlfzx8211.c \
-		cmdmain.c \
-		cmdmqtt.c \
-		cmdnfc.c \
-		cmdparser.c \
-		cmdpiv.c \
-		cmdscript.c \
-		cmdsmartcard.c \
-		cmdtrace.c \
-		cmdusart.c \
-		cmdwiegand.c \
-		comms.c \
-		crypto/asn1dump.c \
-		crypto/asn1utils.c\
-		crypto/libpcrypto.c\
-		crypto/originality.c\
-		emv/cmdemv.c \
-		emv/crypto.c\
-		emv/crypto_polarssl.c\
-		emv/dol.c \
-		emv/emv_pk.c\
-		emv/emv_pki.c\
-		emv/emv_pki_priv.c\
-		emv/emv_roca.c \
-		emv/emv_tags.c \
-		emv/emvcore.c \
-		emv/emvjson.c\
-		emv/tlv.c \
-		emv/test/crypto_test.c\
-		emv/test/cryptotest.c\
-		emv/test/cda_test.c\
-		emv/test/dda_test.c\
-		emv/test/sda_test.c\
-		fido/additional_ca.c \
-		fido/cose.c \
-		fido/cbortools.c \
-		fido/fidocore.c \
-		ksx6924/ksx6924core.c \
-		cipurse/cipursecore.c \
-		cipurse/cipursecrypto.c \
-		cipurse/cipursetest.c \
-		fileutils.c \
-		flash.c \
-		generator.c \
-		graph.c \
-		hidsio.c \
-		jansson_path.c \
-		iso4217.c \
-		iso7816/apduinfo.c \
-		iso7816/iso7816core.c \
-		loclass/cipher.c \
-		loclass/cipherutils.c \
-		loclass/elite_crack.c \
-		loclass/ikeys.c \
-		lua_bitlib.c \
-		mifare/lrpcrypto.c \
-		mifare/desfirecrypto.c \
-		mifare/desfirecore.c \
-		mifare/desfiresecurechan.c \
-		mifare/desfiretest.c \
-		mifare/gallaghercore.c \
-		mifare/mad.c \
-		mifare/mfkey.c \
-		mifare/mifare4.c \
-		mifare/mifaredefault.c \
-		mifare/mifarehost.c \
-		mifare/gen4.c \
-		nfc/ndef.c \
-		pm3.c \
-		pm3_binlib.c \
-		pm3_bitlib.c \
-		preferences.c \
-		pm3line.c \
-		proxmark3.c \
-		scandir.c \
-		uart/ringbuffer.c \
-		uart/uart_common.c \
-		uart/uart_posix.c \
-		uart/uart_win32.c \
-		scripting.c \
-		ui.c \
-		util.c \
-		qrcode/qrcode.c \
-		version_pm3.c \
-		wiegand_formats.c \
-		wiegand_formatutils.c
+        cmdhfseos.c \
+        cmdhfst.c \
+        cmdhfst25ta.c \
+        cmdhftesla.c \
+        cmdhfthinfilm.c \
+        cmdhftopaz.c \
+        cmdhftexkom.c \
+        cmdhfvas.c \
+        cmdhfxerox.c \
+        cmdhw.c \
+        cmdlf.c \
+        cmdlfawid.c \
+        cmdlfcotag.c \
+        cmdlfdestron.c \
+        cmdlfem.c \
+        cmdlfem410x.c \
+        cmdlfem4x05.c \
+        cmdlfem4x50.c \
+        cmdlfem4x70.c \
+        cmdlffdxb.c \
+        cmdlfguard.c \
+        cmdlfgallagher.c \
+        cmdlfhid.c \
+        cmdlfhitag.c \
+        cmdlfhitaghts.c \
+        cmdlfhitagu.c \
+        cmdlfidteck.c \
+        cmdlfindala.c \
+        cmdlfio.c \
+        cmdlfjablotron.c \
+        cmdlfkeri.c \
+        cmdlfmotorola.c \
+        cmdlfnedap.c \
+        cmdlfnexwatch.c \
+        cmdlfnoralsy.c \
+        cmdlfpac.c \
+        cmdlfparadox.c \
+        cmdlfpcf7931.c \
+        cmdlfpresco.c \
+        cmdlfpyramid.c \
+        cmdlfsecurakey.c \
+        cmdlft55xx.c \
+        cmdlfti.c \
+        cmdlfviking.c \
+        cmdlfvisa2000.c \
+        cmdlfzx8211.c \
+        cmdmain.c \
+        cmdmqtt.c \
+        cmdnfc.c \
+        cmdparser.c \
+        cmdpiv.c \
+        cmdscript.c \
+        cmdsmartcard.c \
+        cmdtrace.c \
+        cmdusart.c \
+        cmdwiegand.c \
+        comms.c \
+        crypto/asn1dump.c \
+        crypto/asn1utils.c\
+        crypto/libpcrypto.c\
+        crypto/originality.c\
+        emv/cmdemv.c \
+        emv/crypto.c\
+        emv/crypto_polarssl.c\
+        emv/dol.c \
+        emv/emv_pk.c\
+        emv/emv_pki.c\
+        emv/emv_pki_priv.c\
+        emv/emv_roca.c \
+        emv/emv_tags.c \
+        emv/emvcore.c \
+        emv/emvjson.c\
+        emv/tlv.c \
+        emv/test/crypto_test.c\
+        emv/test/cryptotest.c\
+        emv/test/cda_test.c\
+        emv/test/dda_test.c\
+        emv/test/sda_test.c\
+        fido/additional_ca.c \
+        fido/cose.c \
+        fido/cbortools.c \
+        fido/fidocore.c \
+        ksx6924/ksx6924core.c \
+        cipurse/cipursecore.c \
+        cipurse/cipursecrypto.c \
+        cipurse/cipursetest.c \
+        fileutils.c \
+        flash.c \
+        generator.c \
+        graph.c \
+        hidsio.c \
+        jansson_path.c \
+        iso4217.c \
+        iso7816/apduinfo.c \
+        iso7816/iso7816core.c \
+        loclass/cipher.c \
+        loclass/cipherutils.c \
+        loclass/elite_crack.c \
+        loclass/ikeys.c \
+        lua_bitlib.c \
+        mifare/lrpcrypto.c \
+        mifare/desfirecrypto.c \
+        mifare/desfirecore.c \
+        mifare/desfiresecurechan.c \
+        mifare/desfiretest.c \
+        mifare/gallaghercore.c \
+        mifare/mad.c \
+        mifare/mfkey.c \
+        mifare/mifare4.c \
+        mifare/mifaredefault.c \
+        mifare/mifarehost.c \
+        mifare/gen4.c \
+        nfc/ndef.c \
+        pm3.c \
+        pm3_binlib.c \
+        pm3_bitlib.c \
+        preferences.c \
+        pm3line.c \
+        proxmark3.c \
+        scandir.c \
+        uart/ringbuffer.c \
+        uart/uart_common.c \
+        uart/uart_posix.c \
+        uart/uart_win32.c \
+        scripting.c \
+        ui.c \
+        util.c \
+        qrcode/qrcode.c \
+        version_pm3.c \
+        wiegand_formats.c \
+        wiegand_formatutils.c
 
 # common
 SRCS += bucketsort.c \
-		bruteforce.c \
-		cardhelper.c \
-		crapto1/crapto1.c \
-		crapto1/crypto1.c \
-		crc.c \
-		crc16.c \
-		crc32.c \
-		crc64.c \
-		commonutil.c \
-		hitag2/hitag2_crypto.c \
-		iso15693tools.c \
-		legic_prng.c \
-		lfdemod.c \
-		util_posix.c
+        bruteforce.c \
+        cardhelper.c \
+        crapto1/crapto1.c \
+        crapto1/crypto1.c \
+        crc.c \
+        crc16.c \
+        crc32.c \
+        crc64.c \
+        commonutil.c \
+        hitag2/hitag2_crypto.c \
+        iso15693tools.c \
+        legic_prng.c \
+        lfdemod.c \
+        util_posix.c
 
 ifeq ($(GD_FOUND),1)
     # electronic shelf labels
     SRCS += imgutils.c \
-	cmdhfwaveshare.c
+            cmdhfwaveshare.c
 endif
 
 # swig
