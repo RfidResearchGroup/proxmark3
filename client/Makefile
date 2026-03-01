@@ -322,9 +322,30 @@ ifneq ($(SKIPQT),1)
         # Check for correctly configured Qt6
         QTINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags Qt6Core Qt6Widgets Qt6Gui 2>/dev/null)
         QTLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs Qt6Core Qt6Widgets Qt6Gui 2>/dev/null)
-        MOC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=libexecdir Qt6Core)/moc
-    UIC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=libexecdir Qt6Core)/uic
-        QMAKE = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=bindir Qt6Core)/qmake
+        MOC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=libexecdir Qt6Core 2>/dev/null)/moc
+        UIC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=libexecdir Qt6Core 2>/dev/null)/uic
+        QMAKE = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=bindir Qt6Core 2>/dev/null)/qmake
+        ifeq ($(QTINCLUDES),)
+            # pkg-config not available for Qt6.2.4 (e.g. Ubuntu 22.04), fall back to qmake6
+            QMAKE6 := $(shell command -v qmake6 2>/dev/null)
+            QT6_INCDIR := $(shell $(QMAKE6) -query QT_INSTALL_HEADERS 2>/dev/null)
+            ifneq ($(QT6_INCDIR),)
+                QTINCLUDES := -I$(QT6_INCDIR) -I$(QT6_INCDIR)/QtCore -I$(QT6_INCDIR)/QtWidgets -I$(QT6_INCDIR)/QtGui
+            endif
+            QT6_LIBDIR := $(shell $(QMAKE6) -query QT_INSTALL_LIBS 2>/dev/null)
+            ifneq ($(QT6_LIBDIR),)
+                QTLDLIBS := -L$(QT6_LIBDIR) -lQt6Core -lQt6Widgets -lQt6Gui
+            endif
+            QT6_LIBEXECDIR := $(shell $(QMAKE6) -query QT_INSTALL_LIBEXECS 2>/dev/null)
+            ifneq ($(QT6_LIBEXECDIR),)
+                MOC := $(QT6_LIBEXECDIR)/moc
+                UIC := $(QT6_LIBEXECDIR)/uic
+            endif
+            QT6_BINDIR := $(shell $(QMAKE6) -query QT_INSTALL_BINS 2>/dev/null)
+            ifneq ($(QT6_BINDIR),)
+                QMAKE := $(QMAKE6)
+            endif
+        endif
         ifneq ($(QTLDLIBS),)
             QT6_FOUND = 1
         endif
@@ -333,9 +354,9 @@ ifneq ($(SKIPQT),1)
         # if Qt6 not found check for correctly configured Qt5
         QTINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags Qt5Core Qt5Widgets 2>/dev/null)
         QTLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs Qt5Core Qt5Widgets 2>/dev/null)
-        MOC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=host_bins Qt5Core)/moc
-        UIC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=host_bins Qt5Core)/uic
-        QMAKE = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=host_bins Qt5Core)/qmake
+        MOC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=host_bins Qt5Core 2>/dev/null)/moc
+        UIC = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=host_bins Qt5Core 2>/dev/null)/uic
+        QMAKE = $(shell $(PKG_CONFIG_ENV) pkg-config --variable=host_bins Qt5Core 2>/dev/null)/qmake
     endif
     ifeq ($(QTLDLIBS),)
         # if both pkg-config commands failed, search in common places
