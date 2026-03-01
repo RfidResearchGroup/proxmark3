@@ -328,22 +328,24 @@ ifneq ($(SKIPQT),1)
         ifeq ($(QTINCLUDES),)
             # pkg-config not available for Qt6.2.4 (e.g. Ubuntu 22.04), fall back to qmake6
             QMAKE6 := $(shell command -v qmake6 2>/dev/null)
-            QT6_INCDIR := $(shell $(QMAKE6) -query QT_INSTALL_HEADERS 2>/dev/null)
-            ifneq ($(QT6_INCDIR),)
-                QTINCLUDES := -I$(QT6_INCDIR) -I$(QT6_INCDIR)/QtCore -I$(QT6_INCDIR)/QtWidgets -I$(QT6_INCDIR)/QtGui
-            endif
-            QT6_LIBDIR := $(shell $(QMAKE6) -query QT_INSTALL_LIBS 2>/dev/null)
-            ifneq ($(QT6_LIBDIR),)
-                QTLDLIBS := -L$(QT6_LIBDIR) -lQt6Core -lQt6Widgets -lQt6Gui
-            endif
-            QT6_LIBEXECDIR := $(shell $(QMAKE6) -query QT_INSTALL_LIBEXECS 2>/dev/null)
-            ifneq ($(QT6_LIBEXECDIR),)
-                MOC := $(QT6_LIBEXECDIR)/moc
-                UIC := $(QT6_LIBEXECDIR)/uic
-            endif
-            QT6_BINDIR := $(shell $(QMAKE6) -query QT_INSTALL_BINS 2>/dev/null)
-            ifneq ($(QT6_BINDIR),)
-                QMAKE := $(QMAKE6)
+            ifneq ($(QMAKE6),)
+                QT6_INCDIR := $(shell $(QMAKE6) -query QT_INSTALL_HEADERS 2>/dev/null)
+                ifneq ($(QT6_INCDIR),)
+                    QTINCLUDES := -I$(QT6_INCDIR) -I$(QT6_INCDIR)/QtCore -I$(QT6_INCDIR)/QtWidgets -I$(QT6_INCDIR)/QtGui
+                endif
+                QT6_LIBDIR := $(shell $(QMAKE6) -query QT_INSTALL_LIBS 2>/dev/null)
+                ifneq ($(QT6_LIBDIR),)
+                    QTLDLIBS := -L$(QT6_LIBDIR) -lQt6Core -lQt6Widgets -lQt6Gui
+                endif
+                QT6_LIBEXECDIR := $(shell $(QMAKE6) -query QT_INSTALL_LIBEXECS 2>/dev/null)
+                ifneq ($(QT6_LIBEXECDIR),)
+                    MOC := $(QT6_LIBEXECDIR)/moc
+                    UIC := $(QT6_LIBEXECDIR)/uic
+                endif
+                QT6_BINDIR := $(shell $(QMAKE6) -query QT_INSTALL_BINS 2>/dev/null)
+                ifneq ($(QT6_BINDIR),)
+                    QMAKE := $(QMAKE6)
+                endif
             endif
         endif
         ifneq ($(QTLDLIBS),)
