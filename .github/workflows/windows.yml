@@ -52,7 +52,10 @@ jobs:
             for ($i = 1; $i -le $maxAttempts; $i++) {
                 Write-Host "Attempt $i..."
                 ./runme64.bat -c "exit"
-                if ($LASTEXITCODE -eq 0) { exit 0 }
+                if ($LASTEXITCODE -eq 0) { 
+                    ./runme64.bat -c "pacman -Syu --noconfirm mingw-w64-x86_64-qt6-base"
+                    exit 0
+                }
                 if ($i -lt $maxAttempts) { Start-Sleep -Seconds $delay }
             }
             exit 1
