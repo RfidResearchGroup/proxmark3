@@ -98,6 +98,7 @@ endef
 PLTNAME = Unknown Platform
 PLATFORM_FPGA = fpga-undefined
 
+PLATFORM_DEFS =
 ifeq ($(PLATFORM),PM3RDV4)
     # FPGA bitstream files, the order doesn't matter anymore
     FPGA_BITSTREAMS = fpga_pm3_hf.bit
