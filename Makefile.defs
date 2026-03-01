@@ -170,7 +170,18 @@ endif
 ifneq ($(NOHARDENING),1)
   # Manual equivalents of -fhardened to avoid g++: warning: linker hardening options not enabled by ‘-fhardened’ because other link options were specified on the command line
   DEFCFLAGS += \
-    -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -fstack-protector-strong -ftrivial-auto-var-init=zero
+    -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -fstack-protector-strong
+
+  ifeq ($(DETECTED_COMPILER), clang)
+    ifeq ($(shell expr $(CC_VERSION) \>= 16), 1)
+      DEFCFLAGS += -ftrivial-auto-var-init=zero
+    endif
+  else
+    ifeq ($(shell expr $(CC_VERSION) \>= 12), 1)
+      DEFCFLAGS += -ftrivial-auto-var-init=zero
+    endif
+  endif
+
   ifndef IS_WINDOWS
     ifndef IS_DARWIN
       ifeq ($(ARCH),x86_64)
