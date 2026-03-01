@@ -7,13 +7,14 @@ on:
       - 'docker/**'
       - 'traces/**'
       - '.vscode/**'
+      - '**.md'
   pull_request:
     paths-ignore:
       - 'doc/**'
       - 'docker/**'
       - 'traces/**'
       - '.vscode/**'
-
+      - '**.md'
 
 jobs:
   ubuntu-make:

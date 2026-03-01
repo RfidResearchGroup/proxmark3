@@ -34,6 +34,7 @@ At the moment both are maintained because they don't perfectly overlap yet.
 | extra GCC warnings | `GCCEXTRA=1` | **no** |   |
 | extra Clang warnings | `CLANGEXTRA=1` | **no** | only on host |
 | AddressSanitize | `SANITIZE=1` | **no** | only on host |
+| Hardening | yes (1) | **no** | only on host; disable it with `NOHARDENING=1` |
 | compilation | in place | in build dir | |
 | user `CFLAGS`/`LDFLAGS` | envvars honored (1) | envvars honored (2) | (1) also `LDLIBS` and `INCLUDES_CLIENT` for more tuning (2) only at first cmake call |
 | Mingw gnu printf | `_ISOC99_SOURCE` | `_ISOC99_SOURCE` | and in cbor.h: `__attribute__((format (__MINGW_PRINTF_FORMAT, 2, 3)))`|

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added hardening for all host binaries. Exact level of hardening depends on the OS (@doegox)
 - Added `hf aliro read` command (@kormax)
 - Added `hf aliro info` command (@kormax)
 - Added Qt6 support for the client (@doegox)

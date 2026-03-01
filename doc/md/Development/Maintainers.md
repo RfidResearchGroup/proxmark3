@@ -89,6 +89,10 @@ Some unittests are available via `make check`, which is actually triggering indi
 
 * `SKIPUV=1 tools/pm3_tests.sh` to skip usage of `uv` even if `uv` is present, and force usage of `python3` (in which case you must take care of installing the script dependencies yourself)
 
+Host binaries are compiled with hardening flags (only with Makefile, not with cmake). Exact level of hardening depends on the OS.
+
+* `make host NOHARDENING=1` to disable hardening flags.
+
 `make install` is actually triggering the following individual targets which can be accessed individually:
 
 * `make client/install`
