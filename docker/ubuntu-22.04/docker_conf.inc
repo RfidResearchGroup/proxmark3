@@ -1,0 +1,2 @@
+DOCKER_IMAGE=pm3-ubuntu-22.04:1.0
+#SKIPQT=1
