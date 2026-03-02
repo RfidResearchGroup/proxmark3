@@ -562,12 +562,38 @@ void FpgaSendCommand(uint16_t cmd, uint16_t v) {
     AT91C_BASE_SPI->SPI_TDR = AT91C_SPI_LASTXFER | cmd | v;    // send the data
     while (!(AT91C_BASE_SPI->SPI_SR & AT91C_SPI_RDRF)) {};     // wait till transfer is complete
 }
+
 //-----------------------------------------------------------------------------
 // Write the FPGA setup word (that determines what mode the logic is in, read
 // vs. clone vs. etc.). This is now a special case of FpgaSendCommand() to
 // avoid changing this function's occurrence everywhere in the source code.
 //-----------------------------------------------------------------------------
 void FpgaWriteConfWord(uint16_t v) {
+    const int current = FpgaGetCurrent();
+
+    // Keep track of whether or not we should be monitoring the HF field timeout
+    if (current == FPGA_BITSTREAM_HF || current == FPGA_BITSTREAM_HF_15 || current == FPGA_BITSTREAM_HF_FELICA) {
+        const uint16_t major = v & FPGA_MAJOR_MODE_MASK;
+        const uint16_t minor = v & FPGA_MINOR_MODE_MASK;
+
+        switch (major) {
+            case FPGA_MAJOR_MODE_HF_READER:
+                g_hf_field_timeout_active = true;
+                break;
+            case FPGA_MAJOR_MODE_HF_ISO14443A:
+                g_hf_field_timeout_active = (minor == FPGA_HF_ISO14443A_READER_LISTEN || minor == FPGA_HF_ISO14443A_READER_MOD);
+                break;
+            case FPGA_MAJOR_MODE_HF_ISO18092:
+                g_hf_field_timeout_active = (minor & FPGA_HF_ISO18092_FLAG_READER) != 0;
+                break;
+            default:
+                g_hf_field_timeout_active = false;
+                break;
+        }
+    } else {
+        g_hf_field_timeout_active = false;
+    }
+
     FpgaSendCommand(FPGA_CMD_SET_CONFREG, v);
 }
 
