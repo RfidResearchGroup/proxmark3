@@ -1759,7 +1759,7 @@ int CmdHW(const char *Cmd) {
 
 void pm3_version_short(void) {
     //    PrintAndLogEx(NORMAL, "  [ " _CYAN_("Proxmark3 RFID instrument") " ]");
-    PrintAndLogEx(NORMAL, "  [ " _CYAN_("Proxmark3") " ]");
+    PrintAndLogEx(NORMAL, "  [ " _CYAN_(_URL_("https://github.com/RfidResearchGroup/proxmark3", "Proxmark3")) " ]");
     PrintAndLogEx(NORMAL, "");
 
     if (g_session.pm3_present) {
