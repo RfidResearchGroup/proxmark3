@@ -18,6 +18,8 @@
 
 #include "cmdhfaliro.h"
 
+#include <ctype.h>
+#include <cbor.h>
 #include <inttypes.h>
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/ecdh.h>
@@ -45,16 +47,30 @@ static const uint8_t ALIRO_EXPEDITED_AID[] = {
     0xA0, 0x00, 0x00, 0x09, 0x09, 0xAC, 0xCE, 0x55, 0x01
 };
 
+static const uint8_t ALIRO_STEP_UP_AID[] = {
+    0xA0, 0x00, 0x00, 0x09, 0x09, 0xAC, 0xCE, 0x55, 0x02
+};
+
 static const uint8_t ALIRO_READER_CONTEXT[] = {0x41, 0x5D, 0x95, 0x69};
 static const uint8_t ALIRO_DEVICE_CONTEXT[] = {0x4E, 0x88, 0x7B, 0x4C};
 static const uint8_t ALIRO_AUTH0_GCM_IV[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-static const uint8_t ALIRO_EXCHANGE_MODE[] = {0, 0, 0, 0, 0, 0, 0, 1};
+static const uint8_t ALIRO_SECURE_CHANNEL_READER_MODE[] = {0, 0, 0, 0, 0, 0, 0, 0};
+static const uint8_t ALIRO_SECURE_CHANNEL_DEVICE_MODE[] = {0, 0, 0, 0, 0, 0, 0, 1};
 static const uint8_t ALIRO_NFC_INTERFACE_BYTE = 0x5E;
 static const uint8_t ALIRO_AUTH0_DEFAULT_POLICY = 0x01;
 static const uint8_t ALIRO_AUTH1_REQUEST_PUBLIC_KEY = 0x01;
+static const char ALIRO_DEFAULT_STEP_UP_SCOPE[] = "matter1";
 
 #define ALIRO_MAX_BUFFER 2048
 #define ALIRO_MAX_TLV 512
+#define ALIRO_MAX_STEP_UP_SCOPES 16
+#define ALIRO_MAX_STEP_UP_SCOPE_LEN 128
+#define ALIRO_ACCESS_DOCUMENT_TYPE "aliro-a"
+#define ALIRO_REVOCATION_DOCUMENT_TYPE "aliro-r"
+
+#define ALIRO_SIGNALING_ACCESS_DOCUMENT_RETRIEVABLE (1U << 0)
+#define ALIRO_SIGNALING_REVOCATION_DOCUMENT_RETRIEVABLE (1U << 1)
+#define ALIRO_SIGNALING_STEP_UP_SELECT_REQUIRED_FOR_DOC_RETRIEVAL (1U << 2)
 
 typedef struct {
     mbedtls_entropy_context entropy;
@@ -74,7 +90,13 @@ static const aliro_application_type_t aliro_application_type_map[] = {
 typedef enum {
     ALIRO_FLOW_FAST = 0,
     ALIRO_FLOW_STANDARD = 1,
+    ALIRO_FLOW_STEP_UP = 2,
 } aliro_flow_t;
+
+typedef struct {
+    size_t count;
+    char values[ALIRO_MAX_STEP_UP_SCOPES][ALIRO_MAX_STEP_UP_SCOPE_LEN + 1];
+} aliro_step_up_scopes_t;
 
 typedef struct {
     bool have_fci_aid;
@@ -173,6 +195,8 @@ typedef struct {
 } aliro_read_state_t;
 
 static int CmdHelp(const char *Cmd);
+static const char *aliro_cbor_type_name(CborType type);
+static bool aliro_cbor_print_scalar(const char *label, const CborValue *value);
 
 static const char *get_aliro_application_type_name(uint16_t type) {
     for (size_t i = 0; i < ARRAYLEN(aliro_application_type_map); ++i) {
@@ -808,6 +832,55 @@ static int aliro_aes_gcm_decrypt(const uint8_t key[32], const uint8_t *iv, size_
 
     mbedtls_gcm_free(&gcm);
     return (ret == 0) ? PM3_SUCCESS : PM3_ESOFT;
+}
+
+static int aliro_aes_gcm_encrypt(const uint8_t key[32], const uint8_t *iv, size_t iv_len,
+                                 const uint8_t *plaintext, size_t plaintext_len,
+                                 uint8_t *ciphertext_and_tag, size_t ciphertext_and_tag_max,
+                                 size_t *ciphertext_and_tag_len) {
+    if (key == NULL || iv == NULL || plaintext == NULL || ciphertext_and_tag == NULL || ciphertext_and_tag_len == NULL) {
+        return PM3_EINVARG;
+    }
+    if ((plaintext_len + 16) > ciphertext_and_tag_max) {
+        return PM3_EOVFLOW;
+    }
+
+    mbedtls_gcm_context gcm;
+    mbedtls_gcm_init(&gcm);
+
+    int ret = mbedtls_gcm_setkey(&gcm, MBEDTLS_CIPHER_ID_AES, key, 256);
+    if (ret == 0) {
+        ret = mbedtls_gcm_crypt_and_tag(&gcm,
+                                        MBEDTLS_GCM_ENCRYPT,
+                                        plaintext_len,
+                                        iv,
+                                        iv_len,
+                                        NULL,
+                                        0,
+                                        plaintext,
+                                        ciphertext_and_tag,
+                                        16,
+                                        ciphertext_and_tag + plaintext_len);
+    }
+
+    mbedtls_gcm_free(&gcm);
+    if (ret != 0) {
+        return PM3_ESOFT;
+    }
+    *ciphertext_and_tag_len = plaintext_len + 16;
+    return PM3_SUCCESS;
+}
+
+static void aliro_build_secure_channel_iv(const uint8_t mode[8], uint32_t counter, uint8_t iv[12]) {
+    if (mode == NULL || iv == NULL) {
+        return;
+    }
+
+    memcpy(iv, mode, 8);
+    iv[8] = (uint8_t)(counter >> 24);
+    iv[9] = (uint8_t)(counter >> 16);
+    iv[10] = (uint8_t)(counter >> 8);
+    iv[11] = (uint8_t)(counter);
 }
 
 static int aliro_create_auth1_signature(const mbedtls_ecp_keypair *reader_private_key,
@@ -1743,11 +1816,7 @@ static int aliro_read_do_auth1(aliro_read_state_t *state,
     }
 
     uint8_t auth1_iv[12] = {0};
-    memcpy(auth1_iv, ALIRO_EXCHANGE_MODE, sizeof(ALIRO_EXCHANGE_MODE));
-    auth1_iv[8] = 0x00;
-    auth1_iv[9] = 0x00;
-    auth1_iv[10] = 0x00;
-    auth1_iv[11] = 0x01;
+    aliro_build_secure_channel_iv(ALIRO_SECURE_CHANNEL_DEVICE_MODE, 1, auth1_iv);
 
     uint8_t auth1_plain[ALIRO_MAX_BUFFER] = {0};
     res = aliro_aes_gcm_decrypt(state->standard_result.keys.exchange_sk_device, auth1_iv, sizeof(auth1_iv),
@@ -1807,12 +1876,8 @@ static int aliro_read_do_auth1(aliro_read_state_t *state,
     return PM3_SUCCESS;
 }
 
-static void aliro_read_print_auth1_report(const aliro_read_state_t *state,
-                                          const uint8_t reader_group_identifier[16],
-                                          const uint8_t reader_group_sub_identifier[16],
-                                          const uint8_t reader_private_key_raw[32]) {
-    if (state == NULL || reader_group_identifier == NULL ||
-            reader_group_sub_identifier == NULL || reader_private_key_raw == NULL) {
+static void aliro_read_print_auth1_report(const aliro_read_state_t *state) {
+    if (state == NULL) {
         return;
     }
 
@@ -1855,33 +1920,1558 @@ static void aliro_read_print_auth1_report(const aliro_read_state_t *state,
     PrintAndLogEx(INFO, "  URSK...................... %s", sprint_hex_inrow(state->standard_result.keys.ursk, 32));
     if (state->standard_result.keys.kpersistent_present) {
         PrintAndLogEx(INFO, "  Kpersistent (derived)..... " _YELLOW_("%s"), sprint_hex_inrow(state->standard_result.keys.kpersistent, 32));
+    }
+}
 
-        char reader_group_hex[33] = {0};
-        char reader_sub_group_hex[33] = {0};
-        char reader_priv_hex[65] = {0};
-        char kpersistent_hex[65] = {0};
-        char endpoint_pub_hex[131] = {0};
-        hex_to_buffer((uint8_t *)reader_group_hex, reader_group_identifier, 16, sizeof(reader_group_hex) - 1, 0, 0, true);
-        hex_to_buffer((uint8_t *)reader_sub_group_hex, reader_group_sub_identifier, 16, sizeof(reader_sub_group_hex) - 1, 0, 0, true);
-        hex_to_buffer((uint8_t *)reader_priv_hex, reader_private_key_raw, 32, sizeof(reader_priv_hex) - 1, 0, 0, true);
-        hex_to_buffer((uint8_t *)kpersistent_hex, state->standard_result.keys.kpersistent, 32, sizeof(kpersistent_hex) - 1, 0, 0, true);
-        hex_to_buffer((uint8_t *)endpoint_pub_hex, state->auth1_parsed.endpoint_public_key, 65, sizeof(endpoint_pub_hex) - 1, 0, 0, true);
+static bool aliro_read_build_fast_suggestion_command(const aliro_read_state_t *state,
+                                                     const uint8_t reader_group_identifier[16],
+                                                     const uint8_t reader_group_sub_identifier[16],
+                                                     const uint8_t reader_private_key_raw[32],
+                                                     char *out_cmd, size_t out_cmd_size) {
+    if (state == NULL || reader_group_identifier == NULL || reader_group_sub_identifier == NULL ||
+            reader_private_key_raw == NULL || out_cmd == NULL || out_cmd_size == 0) {
+        return false;
+    }
+    if (state->standard_result.keys.kpersistent_present == false || state->auth1_parsed.have_endpoint_public_key == false) {
+        return false;
+    }
 
-        char fast_cmd[768] = {0};
-        int fast_cmd_len = snprintf(fast_cmd, sizeof(fast_cmd),
-                                    "hf aliro read --reader-group-id %s --reader-sub-group-id %s "
-                                    "--reader-private-key %s --key-persistent %s "
-                                    "--endpoint-public-key %s --flow fast",
-                                    reader_group_hex, reader_sub_group_hex,
-                                    reader_priv_hex, kpersistent_hex, endpoint_pub_hex);
-        if (fast_cmd_len > 0) {
-            aliro_print_big_header("Note");
-            PrintAndLogEx(INFO, _GREEN_("use the following command to perform FAST authentication flow for this endpoint:"));
-            if ((size_t)fast_cmd_len < sizeof(fast_cmd)) {
-                PrintAndLogEx(INFO, _YELLOW_("%s"), fast_cmd);
+    char reader_group_hex[33] = {0};
+    char reader_sub_group_hex[33] = {0};
+    char reader_priv_hex[65] = {0};
+    char kpersistent_hex[65] = {0};
+    char endpoint_pub_hex[131] = {0};
+    hex_to_buffer((uint8_t *)reader_group_hex, reader_group_identifier, 16, sizeof(reader_group_hex) - 1, 0, 0, true);
+    hex_to_buffer((uint8_t *)reader_sub_group_hex, reader_group_sub_identifier, 16, sizeof(reader_sub_group_hex) - 1, 0, 0, true);
+    hex_to_buffer((uint8_t *)reader_priv_hex, reader_private_key_raw, 32, sizeof(reader_priv_hex) - 1, 0, 0, true);
+    hex_to_buffer((uint8_t *)kpersistent_hex, state->standard_result.keys.kpersistent, 32, sizeof(kpersistent_hex) - 1, 0, 0, true);
+    hex_to_buffer((uint8_t *)endpoint_pub_hex, state->auth1_parsed.endpoint_public_key, 65, sizeof(endpoint_pub_hex) - 1, 0, 0, true);
+
+    int fast_cmd_len = snprintf(out_cmd, out_cmd_size,
+                                "hf aliro read --reader-group-id %s --reader-sub-group-id %s "
+                                "--reader-private-key %s --key-persistent %s "
+                                "--endpoint-public-key %s --flow fast",
+                                reader_group_hex, reader_sub_group_hex,
+                                reader_priv_hex, kpersistent_hex, endpoint_pub_hex);
+    if (fast_cmd_len <= 0 || (size_t)fast_cmd_len >= out_cmd_size) {
+        return false;
+    }
+    return true;
+}
+
+static void aliro_read_print_fast_suggestion_note(const char *fast_cmd) {
+    if (fast_cmd == NULL || fast_cmd[0] == '\0') {
+        return;
+    }
+    aliro_print_big_header("Note");
+    PrintAndLogEx(INFO, _GREEN_("use the following command to perform FAST authentication flow for this endpoint:"));
+    PrintAndLogEx(INFO, _YELLOW_("%s"), fast_cmd);
+}
+
+static void aliro_print_bytes_or_ascii(const char *label, const uint8_t *data, size_t data_len) {
+    if (label == NULL || data == NULL) {
+        return;
+    }
+    if (data_len == 0) {
+        PrintAndLogEx(INFO, "%s (empty)", label);
+        return;
+    }
+
+    if (aliro_is_ascii(data, data_len)) {
+        PrintAndLogEx(INFO, "%s %s", label, sprint_ascii(data, data_len));
+    } else {
+        PrintAndLogEx(INFO, "%s %s", label, sprint_hex_inrow(data, data_len));
+    }
+}
+
+static bool aliro_scope_exists(const aliro_step_up_scopes_t *scopes, const char *scope) {
+    if (scopes == NULL || scope == NULL) {
+        return false;
+    }
+    for (size_t i = 0; i < scopes->count; i++) {
+        if (strcmp(scopes->values[i], scope) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static int aliro_add_scope(aliro_step_up_scopes_t *scopes, const char *scope) {
+    if (scopes == NULL || scope == NULL) {
+        return PM3_EINVARG;
+    }
+    if (scope[0] == '\0') {
+        return PM3_EINVARG;
+    }
+    if (strlen(scope) > ALIRO_MAX_STEP_UP_SCOPE_LEN) {
+        PrintAndLogEx(ERR, "step-up scope `%s` is too long (max %d chars)", scope, ALIRO_MAX_STEP_UP_SCOPE_LEN);
+        return PM3_EINVARG;
+    }
+    if (aliro_scope_exists(scopes, scope)) {
+        return PM3_SUCCESS;
+    }
+    if (scopes->count >= ALIRO_MAX_STEP_UP_SCOPES) {
+        PrintAndLogEx(ERR, "Too many step-up scopes (max %d)", ALIRO_MAX_STEP_UP_SCOPES);
+        return PM3_EOVFLOW;
+    }
+
+    strncat(scopes->values[scopes->count], scope, ALIRO_MAX_STEP_UP_SCOPE_LEN);
+    scopes->values[scopes->count][ALIRO_MAX_STEP_UP_SCOPE_LEN] = '\0';
+    scopes->count++;
+    return PM3_SUCCESS;
+}
+
+static int aliro_parse_step_up_scopes(struct arg_str *scope_arg, aliro_step_up_scopes_t *scopes) {
+    if (scopes == NULL) {
+        return PM3_EINVARG;
+    }
+    memset(scopes, 0, sizeof(*scopes));
+
+    int scope_str_len = 0;
+    char scope_str[MAX_INPUT_ARG_LENGTH + 1] = {0};
+    int res = CLIParamStrToBuf(scope_arg, (uint8_t *)scope_str, sizeof(scope_str), &scope_str_len);
+    if (res != PM3_SUCCESS) {
+        return PM3_ESOFT;
+    }
+
+    if (scope_str_len == 0) {
+        return aliro_add_scope(scopes, ALIRO_DEFAULT_STEP_UP_SCOPE);
+    }
+
+    char *saveptr = NULL;
+    char *token = strtok_r(scope_str, ",", &saveptr);
+    while (token != NULL) {
+        while (isspace((unsigned char)*token)) {
+            token++;
+        }
+
+        size_t token_len = strlen(token);
+        while (token_len > 0 && isspace((unsigned char)token[token_len - 1])) {
+            token[--token_len] = '\0';
+        }
+
+        if (token_len == 0) {
+            PrintAndLogEx(ERR, "step-up scope list contains an empty value");
+            return PM3_EINVARG;
+        }
+
+        res = aliro_add_scope(scopes, token);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+        token = strtok_r(NULL, ",", &saveptr);
+    }
+
+    if (scopes->count == 0) {
+        return aliro_add_scope(scopes, ALIRO_DEFAULT_STEP_UP_SCOPE);
+    }
+    return PM3_SUCCESS;
+}
+
+static void aliro_print_step_up_scopes(const aliro_step_up_scopes_t *scopes) {
+    if (scopes == NULL || scopes->count == 0) {
+        PrintAndLogEx(INFO, "Step-up scopes............ %s", ALIRO_DEFAULT_STEP_UP_SCOPE);
+        return;
+    }
+
+    char joined[ALIRO_MAX_BUFFER] = {0};
+    for (size_t i = 0; i < scopes->count; i++) {
+        if (i != 0 && (strlen(joined) + 1) < sizeof(joined)) {
+            strncat(joined, ",", sizeof(joined) - strlen(joined) - 1);
+        }
+        strncat(joined, scopes->values[i], sizeof(joined) - strlen(joined) - 1);
+    }
+    PrintAndLogEx(INFO, "Step-up scopes............ %s", joined);
+}
+
+static int aliro_secure_channel_encrypt_reader_payload(const uint8_t sk_reader[32], uint32_t *reader_counter,
+                                                       const uint8_t *plaintext, size_t plaintext_len,
+                                                       uint8_t *ciphertext, size_t ciphertext_max, size_t *ciphertext_len) {
+    if (sk_reader == NULL || reader_counter == NULL || plaintext == NULL ||
+            ciphertext == NULL || ciphertext_len == NULL) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t iv[12] = {0};
+    aliro_build_secure_channel_iv(ALIRO_SECURE_CHANNEL_READER_MODE, *reader_counter, iv);
+    int res = aliro_aes_gcm_encrypt(sk_reader, iv, sizeof(iv),
+                                    plaintext, plaintext_len,
+                                    ciphertext, ciphertext_max, ciphertext_len);
+    if (res == PM3_SUCCESS) {
+        (*reader_counter)++;
+    }
+    return res;
+}
+
+static int aliro_secure_channel_decrypt_device_payload(const uint8_t sk_device[32], uint32_t *device_counter,
+                                                       const uint8_t *ciphertext, size_t ciphertext_len,
+                                                       uint8_t *plaintext, size_t plaintext_max, size_t *plaintext_len) {
+    if (sk_device == NULL || device_counter == NULL || ciphertext == NULL ||
+            plaintext == NULL || plaintext_len == NULL) {
+        return PM3_EINVARG;
+    }
+    if (ciphertext_len < 16 || (ciphertext_len - 16) > plaintext_max) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t iv[12] = {0};
+    aliro_build_secure_channel_iv(ALIRO_SECURE_CHANNEL_DEVICE_MODE, *device_counter, iv);
+    int res = aliro_aes_gcm_decrypt(sk_device, iv, sizeof(iv), ciphertext, ciphertext_len, plaintext);
+    if (res == PM3_SUCCESS) {
+        (*device_counter)++;
+        *plaintext_len = ciphertext_len - 16;
+    }
+    return res;
+}
+
+static bool aliro_cbor_key_equals(const CborValue *key, int int_key, const char *text_key) {
+    if (key == NULL) {
+        return false;
+    }
+
+    if (cbor_value_is_integer(key)) {
+        int64_t v = 0;
+        if (cbor_value_get_int64(key, &v) == CborNoError && v == int_key) {
+            return true;
+        }
+    }
+
+    if (text_key != NULL && cbor_value_is_text_string(key)) {
+        bool matches = false;
+        if (cbor_value_text_string_equals(key, text_key, &matches) == CborNoError && matches) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool aliro_cbor_dup_text(const CborValue *value, char **out_text, size_t *out_len) {
+    if (value == NULL || out_text == NULL || out_len == NULL || cbor_value_is_text_string(value) == false) {
+        return false;
+    }
+
+    char *text = NULL;
+    size_t len = 0;
+    CborValue copy = *value;
+    if (cbor_value_dup_text_string(&copy, &text, &len, NULL) != CborNoError) {
+        return false;
+    }
+    *out_text = text;
+    *out_len = len;
+    return true;
+}
+
+static bool aliro_cbor_dup_bytes(const CborValue *value, uint8_t **out_data, size_t *out_len) {
+    if (value == NULL || out_data == NULL || out_len == NULL || cbor_value_is_byte_string(value) == false) {
+        return false;
+    }
+
+    uint8_t *data = NULL;
+    size_t len = 0;
+    CborValue copy = *value;
+    if (cbor_value_dup_byte_string(&copy, &data, &len, NULL) != CborNoError) {
+        return false;
+    }
+    *out_data = data;
+    *out_len = len;
+    return true;
+}
+
+#define ALIRO_CBOR_WALK_BREAK 1
+
+typedef int (*aliro_cbor_map_entry_cb_t)(const CborValue *key, const CborValue *value, void *ctx);
+
+typedef enum {
+    ALIRO_CBOR_PRINT_SCALAR = 0,
+    ALIRO_CBOR_PRINT_SCALAR_OR_TYPE = 1,
+    ALIRO_CBOR_PRINT_TYPE = 2,
+} aliro_cbor_print_mode_t;
+
+typedef struct {
+    size_t indent;
+} aliro_print_format_t;
+
+static const char ALIRO_PRINT_DOTS[] = "........................................................";
+static const size_t ALIRO_PRINT_KEY_WIDTH = 24;
+
+static int aliro_cbor_walk_map(const CborValue *map_value, aliro_cbor_map_entry_cb_t entry_cb, void *ctx) {
+    if (map_value == NULL || entry_cb == NULL || cbor_value_is_map(map_value) == false) {
+        return PM3_EINVARG;
+    }
+
+    CborValue it;
+    if (cbor_value_enter_container(map_value, &it) != CborNoError) {
+        return PM3_ESOFT;
+    }
+
+    while (!cbor_value_at_end(&it)) {
+        CborValue key = it;
+        if (cbor_value_advance(&it) != CborNoError || cbor_value_at_end(&it)) {
+            return PM3_ESOFT;
+        }
+
+        CborValue value = it;
+        int cb_res = entry_cb(&key, &value, ctx);
+        if (cb_res < PM3_SUCCESS) {
+            return cb_res;
+        }
+        if (cb_res == ALIRO_CBOR_WALK_BREAK) {
+            return PM3_SUCCESS;
+        }
+
+        CborValue next = it;
+        if (cbor_value_skip_tag(&next) != CborNoError) {
+            return PM3_ESOFT;
+        }
+        if (cbor_value_advance(&next) != CborNoError) {
+            return PM3_ESOFT;
+        }
+        it = next;
+    }
+
+    return PM3_SUCCESS;
+}
+
+static void aliro_print_make_label(const aliro_print_format_t *fmt, const char *key, char *out, size_t out_size) {
+    if (out == NULL || out_size == 0) {
+        return;
+    }
+
+    size_t indent = (fmt != NULL) ? fmt->indent : 0;
+    size_t key_len = (key != NULL) ? strlen(key) : 0;
+    size_t dots = (ALIRO_PRINT_KEY_WIDTH > key_len) ? (ALIRO_PRINT_KEY_WIDTH - key_len) : 1;
+    if (dots > (sizeof(ALIRO_PRINT_DOTS) - 1)) {
+        dots = sizeof(ALIRO_PRINT_DOTS) - 1;
+    }
+
+    snprintf(out, out_size, "%*s%s%.*s", (int)indent, "", key != NULL ? key : "", (int)dots, ALIRO_PRINT_DOTS);
+}
+
+static aliro_print_format_t aliro_print_fmt_child(const aliro_print_format_t *fmt, size_t indent_add) {
+    aliro_print_format_t child = {
+        .indent = (fmt != NULL) ? (fmt->indent + indent_add) : indent_add,
+    };
+    return child;
+}
+
+static void aliro_print_heading_fmt(const aliro_print_format_t *fmt, const char *text) {
+    size_t indent = (fmt != NULL) ? fmt->indent : 0;
+    PrintAndLogEx(INFO, "%*s%s", (int)indent, "", text != NULL ? text : "");
+}
+
+static bool aliro_cbor_print_scalar_fmt(const aliro_print_format_t *fmt, const char *key, const CborValue *value) {
+    char label[96] = {0};
+    aliro_print_make_label(fmt, key, label, sizeof(label));
+    return aliro_cbor_print_scalar(label, value);
+}
+
+static void aliro_cbor_print_type_fmt(const aliro_print_format_t *fmt, const char *key, const CborValue *value) {
+    if (value == NULL) {
+        return;
+    }
+    char label[96] = {0};
+    aliro_print_make_label(fmt, key, label, sizeof(label));
+    PrintAndLogEx(INFO, "%s <%s>", label, aliro_cbor_type_name(cbor_value_get_type(value)));
+}
+
+typedef struct {
+    int int_key;
+    const char *text_key;
+    const char *key;
+    aliro_cbor_print_mode_t mode;
+} aliro_cbor_fmt_dispatch_t;
+
+static int aliro_cbor_dispatch_print_fmt(const aliro_print_format_t *fmt,
+                                         const CborValue *key, const CborValue *value,
+                                         const aliro_cbor_fmt_dispatch_t *dispatch, size_t dispatch_count) {
+    if (key == NULL || value == NULL || dispatch == NULL) {
+        return PM3_EINVARG;
+    }
+
+    for (size_t i = 0; i < dispatch_count; i++) {
+        const aliro_cbor_fmt_dispatch_t *entry = &dispatch[i];
+        if (!aliro_cbor_key_equals(key, entry->int_key, entry->text_key)) {
+            continue;
+        }
+
+        if (entry->mode == ALIRO_CBOR_PRINT_SCALAR) {
+            (void)aliro_cbor_print_scalar_fmt(fmt, entry->key, value);
+            return PM3_SUCCESS;
+        }
+        if (entry->mode == ALIRO_CBOR_PRINT_SCALAR_OR_TYPE) {
+            if (!aliro_cbor_print_scalar_fmt(fmt, entry->key, value)) {
+                aliro_cbor_print_type_fmt(fmt, entry->key, value);
+            }
+            return PM3_SUCCESS;
+        }
+        if (entry->mode == ALIRO_CBOR_PRINT_TYPE) {
+            aliro_cbor_print_type_fmt(fmt, entry->key, value);
+            return PM3_SUCCESS;
+        }
+        return PM3_EINVARG;
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int aliro_step_up_build_device_request(const char *const *document_types, size_t document_type_count,
+                                              const aliro_step_up_scopes_t *scopes,
+                                              uint8_t *out, size_t out_size, size_t *out_len) {
+    if (document_types == NULL || document_type_count == 0 || scopes == NULL ||
+            out == NULL || out_len == NULL) {
+        return PM3_EINVARG;
+    }
+
+    CborEncoder root;
+    CborEncoder request_map;
+    CborEncoder request_array;
+    cbor_encoder_init(&root, out, out_size, 0);
+
+    CborError err = cbor_encoder_create_map(&root, &request_map, 2);
+    if (err != CborNoError) {
+        return PM3_ESOFT;
+    }
+
+    err = cbor_encode_text_stringz(&request_map, "1");
+    if (err == CborNoError) {
+        err = cbor_encode_text_stringz(&request_map, "1.0");
+    }
+    if (err == CborNoError) {
+        err = cbor_encode_text_stringz(&request_map, "2");
+    }
+    if (err == CborNoError) {
+        err = cbor_encoder_create_array(&request_map, &request_array, document_type_count);
+    }
+
+    for (size_t i = 0; err == CborNoError && i < document_type_count; i++) {
+        uint8_t inner_map_buf[ALIRO_MAX_BUFFER] = {0};
+        CborEncoder inner_root;
+        CborEncoder inner_map;
+        CborEncoder nested_doc_type_map;
+        CborEncoder scope_map;
+        cbor_encoder_init(&inner_root, inner_map_buf, sizeof(inner_map_buf), 0);
+
+        err = cbor_encoder_create_map(&inner_root, &inner_map, 2);
+        if (err == CborNoError) {
+            err = cbor_encode_text_stringz(&inner_map, "1");
+        }
+        if (err == CborNoError) {
+            err = cbor_encoder_create_map(&inner_map, &nested_doc_type_map, 1);
+        }
+        if (err == CborNoError) {
+            err = cbor_encode_text_stringz(&nested_doc_type_map, document_types[i]);
+        }
+        if (err == CborNoError) {
+            err = cbor_encoder_create_map(&nested_doc_type_map, &scope_map, scopes->count);
+        }
+        for (size_t scope_idx = 0; err == CborNoError && scope_idx < scopes->count; scope_idx++) {
+            err = cbor_encode_text_stringz(&scope_map, scopes->values[scope_idx]);
+            if (err == CborNoError) {
+                err = cbor_encode_boolean(&scope_map, true);
+            }
+        }
+        if (err == CborNoError) {
+            err = cbor_encoder_close_container(&nested_doc_type_map, &scope_map);
+        }
+        if (err == CborNoError) {
+            err = cbor_encoder_close_container(&inner_map, &nested_doc_type_map);
+        }
+        if (err == CborNoError) {
+            err = cbor_encode_text_stringz(&inner_map, "5");
+        }
+        if (err == CborNoError) {
+            err = cbor_encode_text_stringz(&inner_map, document_types[i]);
+        }
+        if (err == CborNoError) {
+            err = cbor_encoder_close_container(&inner_root, &inner_map);
+        }
+        if (err != CborNoError) {
+            break;
+        }
+
+        size_t inner_len = cbor_encoder_get_buffer_size(&inner_root, inner_map_buf);
+
+        CborEncoder document_request_map;
+        err = cbor_encoder_create_map(&request_array, &document_request_map, 1);
+        if (err == CborNoError) {
+            err = cbor_encode_text_stringz(&document_request_map, "1");
+        }
+        if (err == CborNoError) {
+            err = cbor_encode_tag(&document_request_map, 24);
+        }
+        if (err == CborNoError) {
+            err = cbor_encode_byte_string(&document_request_map, inner_map_buf, inner_len);
+        }
+        if (err == CborNoError) {
+            err = cbor_encoder_close_container(&request_array, &document_request_map);
+        }
+    }
+
+    if (err == CborNoError) {
+        err = cbor_encoder_close_container(&request_map, &request_array);
+    }
+    if (err == CborNoError) {
+        err = cbor_encoder_close_container(&root, &request_map);
+    }
+    if (err != CborNoError) {
+        PrintAndLogEx(ERR, "Failed to encode step-up DeviceRequest CBOR (%s)", cbor_error_string(err));
+        return PM3_ESOFT;
+    }
+
+    *out_len = cbor_encoder_get_buffer_size(&root, out);
+    return PM3_SUCCESS;
+}
+
+static int aliro_step_up_wrap_session_data(const uint8_t *ciphertext, size_t ciphertext_len,
+                                           uint8_t *out, size_t out_size, size_t *out_len) {
+    if (ciphertext == NULL || out == NULL || out_len == NULL) {
+        return PM3_EINVARG;
+    }
+
+    CborEncoder root;
+    CborEncoder map;
+    cbor_encoder_init(&root, out, out_size, 0);
+
+    CborError err = cbor_encoder_create_map(&root, &map, 1);
+    if (err == CborNoError) {
+        err = cbor_encode_text_stringz(&map, "data");
+    }
+    if (err == CborNoError) {
+        err = cbor_encode_byte_string(&map, ciphertext, ciphertext_len);
+    }
+    if (err == CborNoError) {
+        err = cbor_encoder_close_container(&root, &map);
+    }
+    if (err != CborNoError) {
+        PrintAndLogEx(ERR, "Failed to encode SessionData CBOR (%s)", cbor_error_string(err));
+        return PM3_ESOFT;
+    }
+
+    *out_len = cbor_encoder_get_buffer_size(&root, out);
+    return PM3_SUCCESS;
+}
+
+static int aliro_step_up_extract_envelope_message(const uint8_t *response, size_t response_len,
+                                                  const uint8_t **message, size_t *message_len) {
+    if (response == NULL || message == NULL || message_len == NULL) {
+        return PM3_EINVARG;
+    }
+
+    const uint8_t *cursor = response;
+    size_t left = response_len;
+    while (left > 0) {
+        struct tlv tlv = {0};
+        if (tlv_parse_tl(&cursor, &left, &tlv) == false || tlv.len > left) {
+            return PM3_ECARDEXCHANGE;
+        }
+
+        if (tlv.tag == 0x53) {
+            *message = cursor;
+            *message_len = tlv.len;
+            return PM3_SUCCESS;
+        }
+
+        cursor += tlv.len;
+        left -= tlv.len;
+    }
+
+    return PM3_ESOFT;
+}
+
+typedef struct {
+    uint8_t *ciphertext;
+    size_t ciphertext_max;
+    size_t *ciphertext_len;
+    bool found;
+} aliro_step_up_session_data_ctx_t;
+
+static int aliro_step_up_extract_session_data_ciphertext_entry(const CborValue *key, const CborValue *value, void *ctx_ptr) {
+    aliro_step_up_session_data_ctx_t *ctx = (aliro_step_up_session_data_ctx_t *)ctx_ptr;
+    if (ctx == NULL || key == NULL || value == NULL) {
+        return PM3_EINVARG;
+    }
+
+    if (!aliro_cbor_key_equals(key, -1, "data") || cbor_value_is_byte_string(value) == false) {
+        return PM3_SUCCESS;
+    }
+
+    uint8_t *tmp = NULL;
+    size_t tmp_len = 0;
+    if (aliro_cbor_dup_bytes(value, &tmp, &tmp_len) == false) {
+        return PM3_ESOFT;
+    }
+    if (tmp_len > ctx->ciphertext_max) {
+        free(tmp);
+        return PM3_EOVFLOW;
+    }
+
+    memcpy(ctx->ciphertext, tmp, tmp_len);
+    *ctx->ciphertext_len = tmp_len;
+    ctx->found = true;
+    free(tmp);
+    return ALIRO_CBOR_WALK_BREAK;
+}
+
+static int aliro_step_up_extract_session_data_ciphertext(const uint8_t *message, size_t message_len,
+                                                         uint8_t *ciphertext, size_t ciphertext_max,
+                                                         size_t *ciphertext_len) {
+    if (message == NULL || ciphertext == NULL || ciphertext_len == NULL) {
+        return PM3_EINVARG;
+    }
+
+    CborParser parser;
+    CborValue root;
+    CborError err = cbor_parser_init(message, message_len, 0, &parser, &root);
+    if (err != CborNoError || cbor_value_is_map(&root) == false) {
+        return PM3_ESOFT;
+    }
+
+    aliro_step_up_session_data_ctx_t ctx = {
+        .ciphertext = ciphertext,
+        .ciphertext_max = ciphertext_max,
+        .ciphertext_len = ciphertext_len,
+        .found = false,
+    };
+
+    int res = aliro_cbor_walk_map(&root, aliro_step_up_extract_session_data_ciphertext_entry, &ctx);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    return ctx.found ? PM3_SUCCESS : PM3_ESOFT;
+}
+
+static const char *aliro_cbor_type_name(CborType type) {
+    switch (type) {
+        case CborIntegerType:
+            return "integer";
+        case CborByteStringType:
+            return "bytes";
+        case CborTextStringType:
+            return "text";
+        case CborArrayType:
+            return "array";
+        case CborMapType:
+            return "map";
+        case CborTagType:
+            return "tag";
+        case CborSimpleType:
+            return "simple";
+        case CborBooleanType:
+            return "bool";
+        case CborNullType:
+            return "null";
+        case CborUndefinedType:
+            return "undefined";
+        case CborInvalidType:
+            return "invalid";
+        case CborDoubleType:
+        case CborFloatType:
+        case CborHalfFloatType:
+            return "float";
+        default:
+            return "unknown";
+    }
+}
+
+static const char *aliro_cose_algorithm_name(int64_t algorithm) {
+    if (algorithm == -7) {
+        return "ES256 (ECDSA w/ SHA-256)";
+    }
+    return "unsupported";
+}
+
+static bool aliro_cbor_print_scalar(const char *label, const CborValue *value) {
+    if (label == NULL || value == NULL) {
+        return false;
+    }
+
+    CborValue cursor = *value;
+    bool has_tag = false;
+    CborTag tag = 0;
+    if (cbor_value_get_type(&cursor) == CborTagType) {
+        has_tag = true;
+        if (cbor_value_get_tag(&cursor, &tag) != CborNoError) {
+            return false;
+        }
+        if (cbor_value_advance_fixed(&cursor) != CborNoError) {
+            return false;
+        }
+    }
+
+    if (has_tag && tag == 0 && cbor_value_is_text_string(&cursor)) {
+        char *text = NULL;
+        size_t text_len = 0;
+        if (aliro_cbor_dup_text(&cursor, &text, &text_len)) {
+            PrintAndLogEx(INFO, "%s %s", label, text);
+            free(text);
+            return true;
+        }
+        return false;
+    }
+
+    if (cbor_value_is_integer(&cursor)) {
+        int64_t iv = 0;
+        if (cbor_value_get_int64(&cursor, &iv) == CborNoError) {
+            PrintAndLogEx(INFO, "%s %" PRId64, label, iv);
+            return true;
+        }
+        return false;
+    }
+
+    if (cbor_value_is_text_string(&cursor)) {
+        char *text = NULL;
+        size_t text_len = 0;
+        if (aliro_cbor_dup_text(&cursor, &text, &text_len)) {
+            PrintAndLogEx(INFO, "%s %s", label, text);
+            free(text);
+            return true;
+        }
+        return false;
+    }
+
+    if (cbor_value_is_boolean(&cursor)) {
+        bool b = false;
+        if (cbor_value_get_boolean(&cursor, &b) == CborNoError) {
+            PrintAndLogEx(INFO, "%s %s", label, b ? "true" : "false");
+            return true;
+        }
+        return false;
+    }
+
+    if (cbor_value_is_byte_string(&cursor)) {
+        uint8_t *bytes = NULL;
+        size_t bytes_len = 0;
+        if (aliro_cbor_dup_bytes(&cursor, &bytes, &bytes_len)) {
+            aliro_print_bytes_or_ascii(label, bytes, bytes_len);
+            free(bytes);
+            return true;
+        }
+        return false;
+    }
+
+    if (cbor_value_is_null(&cursor)) {
+        PrintAndLogEx(INFO, "%s null", label);
+        return true;
+    }
+
+    if (cbor_value_is_undefined(&cursor)) {
+        PrintAndLogEx(INFO, "%s undefined", label);
+        return true;
+    }
+
+    return false;
+}
+
+static int aliro_cbor_extract_tag24_bytes(const CborValue *value, uint8_t **decoded, size_t *decoded_len) {
+    if (value == NULL || decoded == NULL || decoded_len == NULL) {
+        return PM3_EINVARG;
+    }
+
+    CborValue cursor = *value;
+    if (cbor_value_get_type(&cursor) == CborTagType) {
+        CborTag tag = 0;
+        if (cbor_value_get_tag(&cursor, &tag) != CborNoError || tag != 24) {
+            return PM3_ESOFT;
+        }
+        if (cbor_value_advance_fixed(&cursor) != CborNoError) {
+            return PM3_ESOFT;
+        }
+    }
+
+    if (cbor_value_is_byte_string(&cursor) == false) {
+        return PM3_ESOFT;
+    }
+
+    uint8_t *tmp = NULL;
+    size_t tmp_len = 0;
+    if (aliro_cbor_dup_bytes(&cursor, &tmp, &tmp_len) == false) {
+        return PM3_ESOFT;
+    }
+
+    *decoded = tmp;
+    *decoded_len = tmp_len;
+    return PM3_SUCCESS;
+}
+
+typedef enum {
+    ALIRO_CBOR_DECODE_DIRECT = 0,
+    ALIRO_CBOR_DECODE_TAG24 = 1,
+    ALIRO_CBOR_DECODE_TAG24_INVALID = 2,
+    ALIRO_CBOR_DECODE_NOT_TAG24 = 3,
+} aliro_cbor_decode_state_t;
+
+typedef struct {
+    aliro_cbor_decode_state_t state;
+    uint8_t *decoded_buf;
+    size_t decoded_len;
+    CborParser parser;
+    CborValue value;
+} aliro_cbor_decoded_value_t;
+
+static void aliro_cbor_decoded_value_free(aliro_cbor_decoded_value_t *decoded) {
+    if (decoded == NULL) {
+        return;
+    }
+    free(decoded->decoded_buf);
+    memset(decoded, 0, sizeof(*decoded));
+}
+
+static int aliro_cbor_decode_value_as_type(const CborValue *input, CborType expected_type,
+                                           aliro_cbor_decoded_value_t *decoded) {
+    if (input == NULL || decoded == NULL) {
+        return PM3_EINVARG;
+    }
+
+    memset(decoded, 0, sizeof(*decoded));
+    decoded->value = *input;
+    if (cbor_value_get_type(&decoded->value) == expected_type) {
+        decoded->state = ALIRO_CBOR_DECODE_DIRECT;
+        return PM3_SUCCESS;
+    }
+
+    int res = aliro_cbor_extract_tag24_bytes(input, &decoded->decoded_buf, &decoded->decoded_len);
+    if (res != PM3_SUCCESS) {
+        decoded->state = ALIRO_CBOR_DECODE_NOT_TAG24;
+        return res;
+    }
+
+    if (cbor_parser_init(decoded->decoded_buf, decoded->decoded_len, 0, &decoded->parser, &decoded->value) != CborNoError ||
+            cbor_value_get_type(&decoded->value) != expected_type) {
+        decoded->state = ALIRO_CBOR_DECODE_TAG24_INVALID;
+        return PM3_ESOFT;
+    }
+
+    decoded->state = ALIRO_CBOR_DECODE_TAG24;
+    return PM3_SUCCESS;
+}
+
+static int aliro_step_up_print_access_data_entry(const CborValue *key, const CborValue *value, void *ctx) {
+    const aliro_print_format_t *fmt = (const aliro_print_format_t *)ctx;
+    if (fmt == NULL) {
+        return PM3_EINVARG;
+    }
+
+    static const aliro_cbor_fmt_dispatch_t dispatch[] = {
+        {0, "0", "AccessData version", ALIRO_CBOR_PRINT_SCALAR_OR_TYPE},
+        {1, "1", "AccessData id", ALIRO_CBOR_PRINT_SCALAR_OR_TYPE},
+        {2, "2", "AccessData rules", ALIRO_CBOR_PRINT_TYPE},
+        {3, "3", "AccessData schedules", ALIRO_CBOR_PRINT_TYPE},
+        {4, "4", "AccessData rule IDs", ALIRO_CBOR_PRINT_TYPE},
+        {5, "5", "AccessData non-access", ALIRO_CBOR_PRINT_TYPE},
+        {6, "6", "AccessData extensions", ALIRO_CBOR_PRINT_TYPE},
+    };
+    return aliro_cbor_dispatch_print_fmt(fmt, key, value, dispatch, ARRAYLEN(dispatch));
+}
+
+static void aliro_step_up_print_access_data_map(const CborValue *access_data, const aliro_print_format_t *fmt) {
+    if (access_data == NULL || fmt == NULL || cbor_value_is_map(access_data) == false) {
+        return;
+    }
+
+    (void)aliro_cbor_walk_map(access_data, aliro_step_up_print_access_data_entry, (void *)fmt);
+}
+
+static int aliro_step_up_print_issuer_auth_protected_entry(const CborValue *key, const CborValue *value, void *ctx) {
+    const aliro_print_format_t *fmt = (const aliro_print_format_t *)ctx;
+    if (fmt == NULL) {
+        return PM3_EINVARG;
+    }
+    if (!aliro_cbor_key_equals(key, 1, "1")) {
+        return PM3_SUCCESS;
+    }
+
+    char label[96] = {0};
+    aliro_print_make_label(fmt, "signature algorithm", label, sizeof(label));
+
+    int64_t algorithm = 0;
+    if (cbor_value_is_integer(value) && cbor_value_get_int64(value, &algorithm) == CborNoError) {
+        PrintAndLogEx(INFO, "%s %" PRId64 " (%s)",
+                      label, algorithm, aliro_cose_algorithm_name(algorithm));
+    } else {
+        (void)aliro_cbor_print_scalar_fmt(fmt, "signature algorithm", value);
+    }
+    return PM3_SUCCESS;
+}
+
+static int aliro_step_up_print_issuer_auth_unprotected_entry(const CborValue *key, const CborValue *value, void *ctx) {
+    const aliro_print_format_t *fmt = (const aliro_print_format_t *)ctx;
+    if (fmt == NULL) {
+        return PM3_EINVARG;
+    }
+    if (aliro_cbor_key_equals(key, 4, "4")) {
+        (void)aliro_cbor_print_scalar_fmt(fmt, "issuer_id", value);
+    }
+    return PM3_SUCCESS;
+}
+
+static int aliro_step_up_print_mso_validity_entry(const CborValue *key, const CborValue *value, void *ctx) {
+    const aliro_print_format_t *fmt = (const aliro_print_format_t *)ctx;
+    if (fmt == NULL) {
+        return PM3_EINVARG;
+    }
+
+    static const aliro_cbor_fmt_dispatch_t dispatch[] = {
+        {1, "1", "signed", ALIRO_CBOR_PRINT_SCALAR},
+        {2, "2", "valid from", ALIRO_CBOR_PRINT_SCALAR},
+        {3, "3", "valid until", ALIRO_CBOR_PRINT_SCALAR},
+        {4, "4", "expected update", ALIRO_CBOR_PRINT_SCALAR},
+    };
+    return aliro_cbor_dispatch_print_fmt(fmt, key, value, dispatch, ARRAYLEN(dispatch));
+}
+
+typedef struct {
+    bool have_algorithm;
+    int64_t algorithm;
+    bool have_x;
+    uint8_t x[32];
+    bool have_y;
+    uint8_t y[32];
+} aliro_cose_ec2_key_info_t;
+
+static int aliro_step_up_collect_cose_key_entry(const CborValue *key, const CborValue *value, void *ctx_ptr) {
+    aliro_cose_ec2_key_info_t *info = (aliro_cose_ec2_key_info_t *)ctx_ptr;
+    if (info == NULL || key == NULL || value == NULL) {
+        return PM3_EINVARG;
+    }
+
+    if (aliro_cbor_key_equals(key, 3, "3")) {
+        int64_t algorithm = 0;
+        if (cbor_value_is_integer(value) && cbor_value_get_int64(value, &algorithm) == CborNoError) {
+            info->have_algorithm = true;
+            info->algorithm = algorithm;
+        }
+        return PM3_SUCCESS;
+    }
+
+    if (aliro_cbor_key_equals(key, -2, "-2")) {
+        uint8_t *x = NULL;
+        size_t x_len = 0;
+        if (cbor_value_is_byte_string(value) && aliro_cbor_dup_bytes(value, &x, &x_len) && x_len == sizeof(info->x)) {
+            memcpy(info->x, x, sizeof(info->x));
+            info->have_x = true;
+        }
+        free(x);
+        return PM3_SUCCESS;
+    }
+
+    if (aliro_cbor_key_equals(key, -3, "-3")) {
+        uint8_t *y = NULL;
+        size_t y_len = 0;
+        if (cbor_value_is_byte_string(value) && aliro_cbor_dup_bytes(value, &y, &y_len) && y_len == sizeof(info->y)) {
+            memcpy(info->y, y, sizeof(info->y));
+            info->have_y = true;
+        }
+        free(y);
+        return PM3_SUCCESS;
+    }
+
+    return PM3_SUCCESS;
+}
+
+typedef struct {
+    bool have_device_key;
+    CborValue device_key;
+} aliro_mso_device_key_info_ctx_t;
+
+static int aliro_step_up_collect_mso_device_key_info_entry(const CborValue *key, const CborValue *value, void *ctx_ptr) {
+    aliro_mso_device_key_info_ctx_t *ctx = (aliro_mso_device_key_info_ctx_t *)ctx_ptr;
+    if (ctx == NULL || key == NULL || value == NULL) {
+        return PM3_EINVARG;
+    }
+
+    if (aliro_cbor_key_equals(key, 1, "1") && cbor_value_is_map(value)) {
+        ctx->have_device_key = true;
+        ctx->device_key = *value;
+        return ALIRO_CBOR_WALK_BREAK;
+    }
+
+    return PM3_SUCCESS;
+}
+
+static void aliro_step_up_print_mso_device_key_info(const CborValue *device_key_info, const aliro_print_format_t *fmt) {
+    if (device_key_info == NULL || fmt == NULL || cbor_value_is_map(device_key_info) == false) {
+        return;
+    }
+
+    aliro_mso_device_key_info_ctx_t key_info_ctx = {0};
+    if (aliro_cbor_walk_map(device_key_info, aliro_step_up_collect_mso_device_key_info_entry, &key_info_ctx) != PM3_SUCCESS ||
+            !key_info_ctx.have_device_key || cbor_value_is_map(&key_info_ctx.device_key) == false) {
+        return;
+    }
+
+    aliro_cose_ec2_key_info_t cose_info = {0};
+    if (aliro_cbor_walk_map(&key_info_ctx.device_key, aliro_step_up_collect_cose_key_entry, &cose_info) != PM3_SUCCESS) {
+        return;
+    }
+
+    if (cose_info.have_algorithm) {
+        char label[96] = {0};
+        aliro_print_make_label(fmt, "device key alg", label, sizeof(label));
+        PrintAndLogEx(INFO, "%s %" PRId64 " (%s)",
+                      label, cose_info.algorithm, aliro_cose_algorithm_name(cose_info.algorithm));
+    }
+
+    if (cose_info.have_x && cose_info.have_y) {
+        uint8_t uncompressed_key[65] = {0};
+        uncompressed_key[0] = 0x04;
+        memcpy(uncompressed_key + 1, cose_info.x, sizeof(cose_info.x));
+        memcpy(uncompressed_key + 1 + sizeof(cose_info.x), cose_info.y, sizeof(cose_info.y));
+        char label[96] = {0};
+        aliro_print_make_label(fmt, "device pubkey", label, sizeof(label));
+        PrintAndLogEx(INFO, "%s %s", label, sprint_hex_inrow(uncompressed_key, sizeof(uncompressed_key)));
+    }
+}
+
+static int aliro_step_up_print_mso_entry(const CborValue *key, const CborValue *value, void *ctx) {
+    const aliro_print_format_t *fmt = (const aliro_print_format_t *)ctx;
+    if (fmt == NULL) {
+        return PM3_EINVARG;
+    }
+
+    static const aliro_cbor_fmt_dispatch_t dispatch[] = {
+        {1, "1", "version", ALIRO_CBOR_PRINT_SCALAR},
+        {2, "2", "digest algorithm", ALIRO_CBOR_PRINT_SCALAR},
+        {5, "5", "docType", ALIRO_CBOR_PRINT_SCALAR},
+        {7, "7", "time verify required", ALIRO_CBOR_PRINT_SCALAR},
+    };
+
+    if (aliro_cbor_key_equals(key, 6, "6") && cbor_value_is_map(value)) {
+        aliro_print_heading_fmt(fmt, "validity:");
+        aliro_print_format_t validity_fmt = aliro_print_fmt_child(fmt, 2);
+        (void)aliro_cbor_walk_map(value, aliro_step_up_print_mso_validity_entry, &validity_fmt);
+        return PM3_SUCCESS;
+    }
+    if (aliro_cbor_key_equals(key, 4, "4") && cbor_value_is_map(value)) {
+        aliro_print_heading_fmt(fmt, "device key:");
+        aliro_print_format_t device_key_fmt = aliro_print_fmt_child(fmt, 2);
+        aliro_step_up_print_mso_device_key_info(value, &device_key_fmt);
+        return PM3_SUCCESS;
+    }
+    return aliro_cbor_dispatch_print_fmt(fmt, key, value, dispatch, ARRAYLEN(dispatch));
+}
+
+static void aliro_step_up_print_issuer_auth_protected_headers(const CborValue *protected_headers, const aliro_print_format_t *fmt) {
+    if (protected_headers == NULL || fmt == NULL || cbor_value_is_byte_string(protected_headers) == false) {
+        return;
+    }
+
+    uint8_t *protected_buf = NULL;
+    size_t protected_len = 0;
+    if (!aliro_cbor_dup_bytes(protected_headers, &protected_buf, &protected_len)) {
+        return;
+    }
+
+    CborParser protected_parser;
+    CborValue protected_map;
+    if (cbor_parser_init(protected_buf, protected_len, 0, &protected_parser, &protected_map) == CborNoError &&
+            cbor_value_is_map(&protected_map)) {
+        (void)aliro_cbor_walk_map(&protected_map, aliro_step_up_print_issuer_auth_protected_entry, (void *)fmt);
+    }
+    free(protected_buf);
+}
+
+static void aliro_step_up_print_issuer_auth_unprotected_headers(const CborValue *unprotected_headers, const aliro_print_format_t *fmt) {
+    if (unprotected_headers == NULL || fmt == NULL || cbor_value_is_map(unprotected_headers) == false) {
+        return;
+    }
+    (void)aliro_cbor_walk_map(unprotected_headers, aliro_step_up_print_issuer_auth_unprotected_entry, (void *)fmt);
+}
+
+static void aliro_step_up_print_issuer_auth_payload(const CborValue *payload, const aliro_print_format_t *fmt) {
+    if (payload == NULL || fmt == NULL || cbor_value_is_byte_string(payload) == false) {
+        return;
+    }
+
+    uint8_t *payload_buf = NULL;
+    size_t payload_len = 0;
+    if (!aliro_cbor_dup_bytes(payload, &payload_buf, &payload_len)) {
+        return;
+    }
+
+    CborParser payload_parser;
+    CborValue payload_value;
+    if (cbor_parser_init(payload_buf, payload_len, 0, &payload_parser, &payload_value) == CborNoError) {
+        aliro_cbor_decoded_value_t mso_decoded;
+        if (aliro_cbor_decode_value_as_type(&payload_value, CborMapType, &mso_decoded) == PM3_SUCCESS) {
+            aliro_print_format_t mso_header_fmt = aliro_print_fmt_child(fmt, 2);
+            aliro_print_heading_fmt(&mso_header_fmt, "mso:");
+            aliro_print_format_t mso_fmt = aliro_print_fmt_child(fmt, 4);
+            (void)aliro_cbor_walk_map(&mso_decoded.value, aliro_step_up_print_mso_entry, &mso_fmt);
+        }
+        aliro_cbor_decoded_value_free(&mso_decoded);
+    }
+
+    free(payload_buf);
+}
+
+static void aliro_step_up_print_issuer_auth(const CborValue *issuer_auth_value, const aliro_print_format_t *fmt) {
+    if (issuer_auth_value == NULL || fmt == NULL) {
+        return;
+    }
+
+    aliro_print_heading_fmt(fmt, "issuerAuth:");
+
+    aliro_cbor_decoded_value_t issuer_auth_decoded;
+    if (aliro_cbor_decode_value_as_type(issuer_auth_value, CborArrayType, &issuer_auth_decoded) != PM3_SUCCESS) {
+        aliro_cbor_decoded_value_free(&issuer_auth_decoded);
+        return;
+    }
+    CborValue issuer_auth = issuer_auth_decoded.value;
+
+    CborValue array_it;
+    if (cbor_value_enter_container(&issuer_auth, &array_it) != CborNoError) {
+        aliro_cbor_decoded_value_free(&issuer_auth_decoded);
+        return;
+    }
+
+    CborValue protected_headers = {0};
+    CborValue unprotected_headers = {0};
+    CborValue payload = {0};
+    CborValue signature = {0};
+    bool have_protected_headers = false;
+    bool have_unprotected_headers = false;
+    bool have_payload = false;
+    bool have_signature = false;
+
+    size_t idx = 0;
+    while (!cbor_value_at_end(&array_it)) {
+        if (idx == 0) {
+            protected_headers = array_it;
+            have_protected_headers = true;
+        } else if (idx == 1) {
+            unprotected_headers = array_it;
+            have_unprotected_headers = true;
+        } else if (idx == 2) {
+            payload = array_it;
+            have_payload = true;
+        } else if (idx == 3) {
+            signature = array_it;
+            have_signature = true;
+        }
+        idx++;
+        if (cbor_value_advance(&array_it) != CborNoError) {
+            break;
+        }
+    }
+
+    if (have_signature && cbor_value_is_byte_string(&signature)) {
+        uint8_t *sig = NULL;
+        size_t sig_len = 0;
+        if (aliro_cbor_dup_bytes(&signature, &sig, &sig_len)) {
+            aliro_print_format_t signature_fmt = aliro_print_fmt_child(fmt, 2);
+            char label[96] = {0};
+            aliro_print_make_label(&signature_fmt, "signature", label, sizeof(label));
+            PrintAndLogEx(INFO, "%s %s", label, sprint_hex_inrow(sig, sig_len));
+            free(sig);
+        }
+    }
+
+    if (have_protected_headers || have_unprotected_headers) {
+        aliro_print_format_t headers_heading_fmt = aliro_print_fmt_child(fmt, 2);
+        aliro_print_heading_fmt(&headers_heading_fmt, "headers:");
+    }
+    aliro_print_format_t headers_fmt = aliro_print_fmt_child(fmt, 4);
+    if (have_protected_headers) {
+        aliro_step_up_print_issuer_auth_protected_headers(&protected_headers, &headers_fmt);
+    }
+
+    if (have_unprotected_headers) {
+        aliro_step_up_print_issuer_auth_unprotected_headers(&unprotected_headers, &headers_fmt);
+    }
+
+    if (have_payload) {
+        aliro_step_up_print_issuer_auth_payload(&payload, fmt);
+    }
+
+    aliro_cbor_decoded_value_free(&issuer_auth_decoded);
+}
+
+static int aliro_step_up_print_issuer_signed_item_entry(const CborValue *key, const CborValue *value, void *ctx) {
+    const aliro_print_format_t *fmt = (const aliro_print_format_t *)ctx;
+    if (fmt == NULL) {
+        return PM3_EINVARG;
+    }
+
+    static const aliro_cbor_fmt_dispatch_t dispatch[] = {
+        {1, "1", "digest_id", ALIRO_CBOR_PRINT_SCALAR},
+        {2, "2", "random", ALIRO_CBOR_PRINT_SCALAR},
+        {3, "3", "element_identifier", ALIRO_CBOR_PRINT_SCALAR},
+    };
+
+    if (aliro_cbor_key_equals(key, 4, "4")) {
+        if (!aliro_cbor_print_scalar_fmt(fmt, "element_value", value)) {
+            aliro_cbor_decoded_value_t value_decoded;
+            if (aliro_cbor_decode_value_as_type(value, CborMapType, &value_decoded) == PM3_SUCCESS) {
+                char label[96] = {0};
+                aliro_print_make_label(fmt, "element_value", label, sizeof(label));
+                PrintAndLogEx(INFO, "%s <access data>", label);
+                aliro_print_format_t access_data_fmt = aliro_print_fmt_child(fmt, 2);
+                aliro_step_up_print_access_data_map(&value_decoded.value, &access_data_fmt);
+            } else {
+                aliro_cbor_print_type_fmt(fmt, "element_value", value);
+            }
+            aliro_cbor_decoded_value_free(&value_decoded);
+        }
+        return PM3_SUCCESS;
+    }
+
+    return aliro_cbor_dispatch_print_fmt(fmt, key, value, dispatch, ARRAYLEN(dispatch));
+}
+
+static void aliro_step_up_print_issuer_signed_item(const CborValue *raw_item, size_t item_idx, const aliro_print_format_t *fmt) {
+    if (raw_item == NULL || fmt == NULL) {
+        return;
+    }
+
+    size_t indent = fmt->indent;
+    aliro_cbor_decoded_value_t item_decoded;
+    if (aliro_cbor_decode_value_as_type(raw_item, CborMapType, &item_decoded) != PM3_SUCCESS) {
+        if (item_decoded.state == ALIRO_CBOR_DECODE_NOT_TAG24) {
+            PrintAndLogEx(INFO, "%*sIssuerSignedItem[%zu]... <%s>",
+                          (int)indent, "", item_idx, aliro_cbor_type_name(cbor_value_get_type(raw_item)));
+        } else {
+            PrintAndLogEx(INFO, "%*sIssuerSignedItem[%zu]... <invalid>", (int)indent, "", item_idx);
+        }
+        aliro_cbor_decoded_value_free(&item_decoded);
+        return;
+    }
+    CborValue item = item_decoded.value;
+
+    PrintAndLogEx(INFO, "%*sIssuerSignedItem[%zu]", (int)indent, "", item_idx);
+
+    if (cbor_value_is_map(&item)) {
+        aliro_print_format_t item_entry_fmt = aliro_print_fmt_child(fmt, 2);
+        (void)aliro_cbor_walk_map(&item, aliro_step_up_print_issuer_signed_item_entry, &item_entry_fmt);
+    }
+
+    aliro_cbor_decoded_value_free(&item_decoded);
+}
+
+typedef struct {
+    size_t namespace_idx;
+    aliro_print_format_t fmt;
+} aliro_step_up_namespaces_ctx_t;
+
+static int aliro_step_up_print_namespace_entry(const CborValue *key, const CborValue *value, void *ctx_ptr) {
+    aliro_step_up_namespaces_ctx_t *ctx = (aliro_step_up_namespaces_ctx_t *)ctx_ptr;
+    if (ctx == NULL || key == NULL || value == NULL) {
+        return PM3_EINVARG;
+    }
+
+    char namespace_key[32] = {0};
+    snprintf(namespace_key, sizeof(namespace_key), "NameSpace[%zu]", ctx->namespace_idx);
+    char namespace_label[96] = {0};
+    aliro_print_make_label(&ctx->fmt, namespace_key, namespace_label, sizeof(namespace_label));
+
+    char *namespace_name = NULL;
+    size_t namespace_name_len = 0;
+    if (aliro_cbor_dup_text(key, &namespace_name, &namespace_name_len)) {
+        PrintAndLogEx(INFO, "%s %s", namespace_label, namespace_name);
+        free(namespace_name);
+    } else {
+        PrintAndLogEx(INFO, "%s <%s>", namespace_label, aliro_cbor_type_name(cbor_value_get_type(key)));
+    }
+
+    if (cbor_value_is_array(value)) {
+        CborValue items_it;
+        if (cbor_value_enter_container(value, &items_it) == CborNoError) {
+            size_t item_idx = 0;
+            aliro_print_format_t item_fmt = aliro_print_fmt_child(&ctx->fmt, 2);
+            while (!cbor_value_at_end(&items_it)) {
+                CborValue item_it = items_it;
+                if (cbor_value_skip_tag(&item_it) != CborNoError) {
+                    break;
+                }
+
+                aliro_step_up_print_issuer_signed_item(&item_it, item_idx, &item_fmt);
+                item_idx++;
+
+                if (cbor_value_advance(&item_it) != CborNoError) {
+                    break;
+                }
+                items_it = item_it;
             }
         }
     }
+
+    ctx->namespace_idx++;
+    return PM3_SUCCESS;
+}
+
+static int aliro_step_up_print_issuer_signed_entry(const CborValue *key, const CborValue *value, void *ctx) {
+    const aliro_print_format_t *fmt = (const aliro_print_format_t *)ctx;
+    if (fmt == NULL) {
+        return PM3_EINVARG;
+    }
+
+    if (aliro_cbor_key_equals(key, 1, "1") && cbor_value_is_map(value)) {
+        aliro_step_up_namespaces_ctx_t namespaces_ctx = {
+            .namespace_idx = 0,
+            .fmt = aliro_print_fmt_child(fmt, 2),
+        };
+        (void)aliro_cbor_walk_map(value, aliro_step_up_print_namespace_entry, &namespaces_ctx);
+    } else if (aliro_cbor_key_equals(key, 2, "2")) {
+        aliro_step_up_print_issuer_auth(value, fmt);
+    }
+    return PM3_SUCCESS;
+}
+
+static int aliro_step_up_print_document_entry(const CborValue *key, const CborValue *value, void *ctx) {
+    const aliro_print_format_t *fmt = (const aliro_print_format_t *)ctx;
+    if (fmt == NULL) {
+        return PM3_EINVARG;
+    }
+
+    if (aliro_cbor_key_equals(key, 5, "5")) {
+        aliro_print_format_t doc_type_fmt = aliro_print_fmt_child(fmt, 2);
+        (void)aliro_cbor_print_scalar_fmt(&doc_type_fmt, "docType", value);
+        return PM3_SUCCESS;
+    }
+    if (aliro_cbor_key_equals(key, 1, "1") && cbor_value_is_map(value)) {
+        aliro_print_format_t issuer_signed_fmt = aliro_print_fmt_child(fmt, 2);
+        aliro_print_heading_fmt(&issuer_signed_fmt, "issuerSigned:");
+        (void)aliro_cbor_walk_map(value, aliro_step_up_print_issuer_signed_entry, &issuer_signed_fmt);
+    }
+    return PM3_SUCCESS;
+}
+
+static void aliro_step_up_print_document(const CborValue *document, size_t doc_idx, const aliro_print_format_t *fmt) {
+    if (document == NULL || fmt == NULL || cbor_value_is_map(document) == false) {
+        return;
+    }
+
+    PrintAndLogEx(INFO, "%*sDocument[%zu]", (int)fmt->indent, "", doc_idx);
+    (void)aliro_cbor_walk_map(document, aliro_step_up_print_document_entry, (void *)fmt);
+}
+
+typedef struct {
+    size_t doc_idx;
+    bool documents_field_seen;
+    aliro_print_format_t fmt;
+} aliro_step_up_device_response_ctx_t;
+
+static int aliro_step_up_print_device_response_entry(const CborValue *key, const CborValue *value, void *ctx_ptr) {
+    aliro_step_up_device_response_ctx_t *ctx = (aliro_step_up_device_response_ctx_t *)ctx_ptr;
+    if (ctx == NULL || key == NULL || value == NULL) {
+        return PM3_EINVARG;
+    }
+
+    static const aliro_cbor_fmt_dispatch_t dispatch[] = {
+        {1, "1", "version", ALIRO_CBOR_PRINT_SCALAR_OR_TYPE},
+        {3, "3", "status", ALIRO_CBOR_PRINT_SCALAR_OR_TYPE},
+    };
+
+    if (aliro_cbor_key_equals(key, 2, "2") && cbor_value_is_array(value)) {
+        ctx->documents_field_seen = true;
+        aliro_print_heading_fmt(&ctx->fmt, "documents:");
+        CborValue docs_it;
+        if (cbor_value_enter_container(value, &docs_it) == CborNoError) {
+            aliro_print_format_t document_fmt = aliro_print_fmt_child(&ctx->fmt, 2);
+            while (!cbor_value_at_end(&docs_it)) {
+                aliro_step_up_print_document(&docs_it, ctx->doc_idx, &document_fmt);
+                ctx->doc_idx++;
+                if (cbor_value_advance(&docs_it) != CborNoError) {
+                    break;
+                }
+            }
+        }
+        return PM3_SUCCESS;
+    }
+
+    return aliro_cbor_dispatch_print_fmt(&ctx->fmt, key, value, dispatch, ARRAYLEN(dispatch));
+}
+
+static int aliro_step_up_print_device_response(const uint8_t *device_response, size_t device_response_len) {
+    if (device_response == NULL) {
+        return PM3_EINVARG;
+    }
+
+    CborParser parser;
+    CborValue root;
+    CborError err = cbor_parser_init(device_response, device_response_len, 0, &parser, &root);
+    if (err != CborNoError) {
+        PrintAndLogEx(ERR, "Failed to parse DeviceResponse CBOR (%s)", cbor_error_string(err));
+        return PM3_ESOFT;
+    }
+    if (!cbor_value_is_map(&root)) {
+        PrintAndLogEx(ERR, "DeviceResponse is not a CBOR map");
+        return PM3_ESOFT;
+    }
+
+    PrintAndLogEx(INFO, "DeviceResponse:");
+    aliro_step_up_device_response_ctx_t ctx = {
+        .doc_idx = 0,
+        .documents_field_seen = false,
+        .fmt = {.indent = 2},
+    };
+    int walk_res = aliro_cbor_walk_map(&root, aliro_step_up_print_device_response_entry, &ctx);
+    if (walk_res != PM3_SUCCESS) {
+        return walk_res;
+    }
+
+    if (ctx.documents_field_seen && ctx.doc_idx == 0) {
+        aliro_print_format_t no_documents_fmt = aliro_print_fmt_child(&ctx.fmt, 2);
+        aliro_print_heading_fmt(&no_documents_fmt, "(no documents)");
+    }
+    return PM3_SUCCESS;
+}
+
+static int aliro_read_do_step_up(const aliro_read_state_t *state,
+                                 const aliro_step_up_scopes_t *step_up_scopes) {
+    if (state == NULL || step_up_scopes == NULL) {
+        return PM3_EINVARG;
+    }
+    if (!state->standard_result.keys.step_up_keys_present) {
+        PrintAndLogEx(ERR, "Step-up keys are not available");
+        return PM3_ESOFT;
+    }
+
+    const char *document_types[2] = {0};
+    size_t document_type_count = 0;
+    if (state->auth1_parsed.signaling_bitmap & ALIRO_SIGNALING_ACCESS_DOCUMENT_RETRIEVABLE) {
+        document_types[document_type_count++] = ALIRO_ACCESS_DOCUMENT_TYPE;
+    }
+    if (state->auth1_parsed.signaling_bitmap & ALIRO_SIGNALING_REVOCATION_DOCUMENT_RETRIEVABLE) {
+        document_types[document_type_count++] = ALIRO_REVOCATION_DOCUMENT_TYPE;
+    }
+
+    aliro_print_big_header("Step-up");
+    if (document_type_count == 0) {
+        PrintAndLogEx(WARNING, "Signaling bitmap does not indicate retrievable step-up documents");
+        return PM3_SUCCESS;
+    }
+
+    if (state->auth1_parsed.signaling_bitmap & ALIRO_SIGNALING_ACCESS_DOCUMENT_RETRIEVABLE) {
+        PrintAndLogEx(INFO, "Signaling bit0............ set -> requesting `%s`", ALIRO_ACCESS_DOCUMENT_TYPE);
+    }
+    if (state->auth1_parsed.signaling_bitmap & ALIRO_SIGNALING_REVOCATION_DOCUMENT_RETRIEVABLE) {
+        PrintAndLogEx(INFO, "Signaling bit1............ set -> requesting `%s`", ALIRO_REVOCATION_DOCUMENT_TYPE);
+    }
+
+    if (document_type_count == 2) {
+        PrintAndLogEx(INFO, "Requested doc types....... %s, %s", document_types[0], document_types[1]);
+    } else {
+        PrintAndLogEx(INFO, "Requested doc type........ %s", document_types[0]);
+    }
+    aliro_print_step_up_scopes(step_up_scopes);
+
+    if (state->auth1_parsed.signaling_bitmap & ALIRO_SIGNALING_STEP_UP_SELECT_REQUIRED_FOR_DOC_RETRIEVAL) {
+        uint8_t stepup_select_response[ALIRO_MAX_BUFFER] = {0};
+        size_t stepup_select_response_len = 0;
+        uint16_t stepup_select_sw = 0;
+        int sel_res = aliro_exchange_chained(false, true,
+                                             0x00, ISO7816_SELECT_FILE, 0x04, 0x00,
+                                             ALIRO_STEP_UP_AID, sizeof(ALIRO_STEP_UP_AID),
+                                             stepup_select_response, sizeof(stepup_select_response),
+                                             &stepup_select_response_len, &stepup_select_sw);
+        if (sel_res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Step-up SELECT APDU exchange failed");
+            return sel_res;
+        }
+        if (stepup_select_sw != ISO7816_OK) {
+            PrintAndLogEx(ERR, "Step-up SELECT failed: %04x - %s",
+                          stepup_select_sw, GetAPDUCodeDescription(stepup_select_sw >> 8, stepup_select_sw & 0xff));
+            return PM3_ESOFT;
+        }
+        PrintAndLogEx(INFO, "Step-up SELECT............ ok");
+    }
+
+    uint8_t device_request[ALIRO_MAX_BUFFER] = {0};
+    size_t device_request_len = 0;
+    int res = aliro_step_up_build_device_request(document_types, document_type_count,
+                                                 step_up_scopes,
+                                                 device_request, sizeof(device_request), &device_request_len);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    PrintAndLogEx(INFO, "DeviceRequest CBOR........ %s", sprint_hex_inrow(device_request, device_request_len));
+
+    uint32_t step_up_reader_counter = 1;
+    uint32_t step_up_device_counter = 1;
+    uint8_t encrypted_device_request[ALIRO_MAX_BUFFER] = {0};
+    size_t encrypted_device_request_len = 0;
+    res = aliro_secure_channel_encrypt_reader_payload(state->standard_result.keys.step_up_sk_reader,
+                                                      &step_up_reader_counter,
+                                                      device_request, device_request_len,
+                                                      encrypted_device_request, sizeof(encrypted_device_request),
+                                                      &encrypted_device_request_len);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to encrypt step-up DeviceRequest");
+        return res;
+    }
+
+    uint8_t session_data[ALIRO_MAX_BUFFER] = {0};
+    size_t session_data_len = 0;
+    res = aliro_step_up_wrap_session_data(encrypted_device_request, encrypted_device_request_len,
+                                          session_data, sizeof(session_data), &session_data_len);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    uint8_t envelope_data[ALIRO_MAX_BUFFER] = {0};
+    size_t envelope_data_len = 0;
+    res = aliro_append_tlv(0x53, session_data, session_data_len,
+                           envelope_data, sizeof(envelope_data), &envelope_data_len);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to encode ENVELOPE command");
+        return res;
+    }
+
+    uint8_t envelope_response[ALIRO_MAX_BUFFER] = {0};
+    size_t envelope_response_len = 0;
+    uint16_t envelope_sw = 0;
+    res = aliro_exchange_chained(false, true, 0x00, 0xC3, 0x00, 0x00,
+                                 envelope_data, envelope_data_len,
+                                 envelope_response, sizeof(envelope_response),
+                                 &envelope_response_len, &envelope_sw);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "ENVELOPE APDU exchange failed");
+        return res;
+    }
+    if (envelope_sw != ISO7816_OK) {
+        PrintAndLogEx(ERR, "ENVELOPE failed: %04x - %s",
+                      envelope_sw, GetAPDUCodeDescription(envelope_sw >> 8, envelope_sw & 0xff));
+        return PM3_ESOFT;
+    }
+
+    const uint8_t *envelope_message = NULL;
+    size_t envelope_message_len = 0;
+    res = aliro_step_up_extract_envelope_message(envelope_response, envelope_response_len,
+                                                 &envelope_message, &envelope_message_len);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "ENVELOPE response does not contain tag 0x53");
+        return res;
+    }
+
+    uint8_t encrypted_device_response[ALIRO_MAX_BUFFER] = {0};
+    size_t encrypted_device_response_len = 0;
+    res = aliro_step_up_extract_session_data_ciphertext(envelope_message, envelope_message_len,
+                                                        encrypted_device_response, sizeof(encrypted_device_response),
+                                                        &encrypted_device_response_len);
+    if (res != PM3_SUCCESS) {
+        if (envelope_message_len > sizeof(encrypted_device_response)) {
+            return PM3_EOVFLOW;
+        }
+        memcpy(encrypted_device_response, envelope_message, envelope_message_len);
+        encrypted_device_response_len = envelope_message_len;
+    }
+
+    uint8_t device_response_plaintext[ALIRO_MAX_BUFFER] = {0};
+    size_t device_response_plaintext_len = 0;
+    res = aliro_secure_channel_decrypt_device_payload(state->standard_result.keys.step_up_sk_device,
+                                                      &step_up_device_counter,
+                                                      encrypted_device_response, encrypted_device_response_len,
+                                                      device_response_plaintext, sizeof(device_response_plaintext),
+                                                      &device_response_plaintext_len);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to decrypt ENVELOPE DeviceResponse");
+        return res;
+    }
+
+    PrintAndLogEx(INFO, "DeviceResponse CBOR....... %s",
+                  sprint_hex_inrow(device_response_plaintext, device_response_plaintext_len));
+    return aliro_step_up_print_device_response(device_response_plaintext, device_response_plaintext_len);
 }
 
 static int aliro_read_auth_flow(const uint8_t *kpersistent, size_t kpersistent_len,
@@ -1890,7 +3480,8 @@ static int aliro_read_auth_flow(const uint8_t *kpersistent, size_t kpersistent_l
                                 const uint8_t reader_private_key_raw[32],
                                 const uint8_t *transaction_identifier_in, size_t transaction_identifier_len,
                                 const uint8_t *endpoint_public_key_x_in,
-                                aliro_flow_t flow) {
+                                aliro_flow_t flow,
+                                const aliro_step_up_scopes_t *step_up_scopes) {
     int status = PM3_ESOFT;
     aliro_rng_t rng;
     int res = aliro_rng_init(&rng);
@@ -1905,6 +3496,8 @@ static int aliro_read_auth_flow(const uint8_t *kpersistent, size_t kpersistent_l
 
     aliro_read_state_t state;
     memset(&state, 0, sizeof(state));
+    char fast_suggestion_cmd[768] = {0};
+    bool have_fast_suggestion_cmd = false;
 
     do {
         res = aliro_read_prepare_session(&state,
@@ -1944,10 +3537,21 @@ static int aliro_read_auth_flow(const uint8_t *kpersistent, size_t kpersistent_l
             break;
         }
 
-        aliro_read_print_auth1_report(&state,
-                                      reader_group_identifier,
-                                      reader_group_sub_identifier,
-                                      reader_private_key_raw);
+        aliro_read_print_auth1_report(&state);
+        have_fast_suggestion_cmd = aliro_read_build_fast_suggestion_command(&state,
+                                                                            reader_group_identifier,
+                                                                            reader_group_sub_identifier,
+                                                                            reader_private_key_raw,
+                                                                            fast_suggestion_cmd,
+                                                                            sizeof(fast_suggestion_cmd));
+
+        if (flow == ALIRO_FLOW_STEP_UP) {
+            res = aliro_read_do_step_up(&state, step_up_scopes);
+            if (res != PM3_SUCCESS) {
+                break;
+            }
+        }
+
         status = PM3_SUCCESS;
     } while (0);
 
@@ -1955,6 +3559,11 @@ static int aliro_read_auth_flow(const uint8_t *kpersistent, size_t kpersistent_l
     mbedtls_ecp_keypair_free(&reader_ephemeral_key);
     mbedtls_ecp_keypair_free(&reader_private_key);
     aliro_rng_free(&rng);
+
+    if (status == PM3_SUCCESS && have_fast_suggestion_cmd) {
+        aliro_read_print_fast_suggestion_note(fast_suggestion_cmd);
+    }
+
     return status;
 }
 
@@ -1985,10 +3594,10 @@ static int CmdHFAliroInfo(const char *Cmd) {
 static int CmdHFAliroRead(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf aliro read",
-                  "Execute ALIRO expedited flow (SELECT-AUTH0-AUTH1).",
+                  "Execute ALIRO expedited flow and optional step-up document retrieval.",
                   "hf aliro read --reader-group-id 00112233445566778899AABBCCDDEEFF --reader-sub-group-id 00112233445566778899AABBCCDDEEFF --reader-private-key 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF\n"
                   "hf aliro read --reader-group-id 00112233445566778899AABBCCDDEEFF --reader-private-key 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF --transaction-id 00112233445566778899AABBCCDDEEFF --k-persistent 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF --endpoint-public-key 04AABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF --flow fast -a\n"
-                  "hf aliro read --reader-group-id 00112233445566778899AABBCCDDEEFF --reader-private-key 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF --ti 00112233445566778899AABBCCDDEEFF");
+                  "hf aliro read --reader-group-id 00112233445566778899AABBCCDDEEFF --reader-private-key 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF --step-up-scopes matter1,non_access_extensions");
 
     void *argtable[] = {
         arg_param_begin,
@@ -1998,7 +3607,8 @@ static int CmdHFAliroRead(const char *Cmd) {
         arg_str1("p", "reader-private-key,readerprivkey,rpk", "<hex>", "Reader private key (32 bytes, P-256)"),
         arg_str0("t", "transaction-id,ti", "<hex>", "Transaction identifier (16 bytes, optional; random if omitted)"),
         arg_str0("e", "endpoint-public-key,endpointpublickey,epk", "<hex>", "Endpoint public key for AUTH0 fast verification (32-byte X or 65-byte uncompressed)"),
-        arg_str0("f", "flow", "<fast|standard>", "AUTH0 flow request (default: standard)"),
+        arg_str0("f", "flow", "<step-up|standard|fast>", "Transaction flow (default: step-up)"),
+        arg_str0(NULL, "step-up-scopes", "<scope1,scope2>", "Comma-separated step-up scopes (default: matter1)"),
         arg_lit0("a", "apdu", "Show APDU requests and responses"),
         arg_param_end
     };
@@ -2028,10 +3638,11 @@ static int CmdHFAliroRead(const char *Cmd) {
     int endpoint_public_key_input_len = 0;
     CLIGetHexWithReturn(ctx, 6, endpoint_public_key_input, &endpoint_public_key_input_len);
 
-    aliro_flow_t flow = ALIRO_FLOW_STANDARD;
+    aliro_flow_t flow = ALIRO_FLOW_STEP_UP;
     CLIParserOption flow_options[] = {
         {ALIRO_FLOW_FAST, "fast"},
         {ALIRO_FLOW_STANDARD, "standard"},
+        {ALIRO_FLOW_STEP_UP, "step-up"},
         {0, NULL}
     };
     if (CLIGetOptionList(arg_get_str(ctx, 7), flow_options, (int *)&flow) != PM3_SUCCESS) {
@@ -2039,7 +3650,14 @@ static int CmdHFAliroRead(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    bool apdu_logging = arg_get_lit(ctx, 8);
+    aliro_step_up_scopes_t step_up_scopes;
+    int scope_res = aliro_parse_step_up_scopes(arg_get_str(ctx, 8), &step_up_scopes);
+    if (scope_res != PM3_SUCCESS) {
+        CLIParserFree(ctx);
+        return scope_res;
+    }
+
+    bool apdu_logging = arg_get_lit(ctx, 9);
     CLIParserFree(ctx);
 
     if (reader_group_identifier_len != 16) {
@@ -2095,7 +3713,8 @@ static int CmdHFAliroRead(const char *Cmd) {
                                    reader_private_key,
                                    transaction_identifier, (size_t)transaction_identifier_len,
                                    endpoint_public_key_x_ptr,
-                                   flow);
+                                   flow,
+                                   &step_up_scopes);
     SetAPDULogging(restore_apdu_logging);
     return res;
 }
@@ -2110,7 +3729,7 @@ static command_t CommandTable[] = {
     {"list",        CmdHFAliroList, AlwaysAvailable, "List ISO 14443A/7816 history"},
     {"-----------", CmdHelp,        IfPm3Iso14443a,  "--------------------- " _CYAN_("Operations") " ----------------------"},
     {"info",        CmdHFAliroInfo, IfPm3Iso14443a,  "Get Aliro applet information"},
-    {"read",        CmdHFAliroRead, IfPm3Iso14443a,  "Run SELECT-AUTH0-AUTH1 and print parsed data"},
+    {"read",        CmdHFAliroRead, IfPm3Iso14443a,  "Run SELECT-AUTH0-AUTH1 and optional step-up document retrieval"},
     {NULL, NULL, NULL, NULL}
 };
 
