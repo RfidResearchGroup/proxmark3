@@ -177,7 +177,7 @@ you can skip the installation of `gd-devel`.
 ## On NixOS
 ^[Top](#top)
 
-While in the cloned proxmox repo, run
+While in the cloned proxmark repo, run
 ```sh
 nix-shell
 ```
