@@ -179,7 +179,7 @@ you can skip the installation of `gd-devel`.
 
 While in the cloned proxmark repo, run
 ```sh
-nix-shell
+nix-shell tools/shell.nix
 ```
 This will bring in all required packages to build the client and firmware with all available features.
 
