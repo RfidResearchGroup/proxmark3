@@ -174,6 +174,28 @@ you can skip the installation of `python3-devel`.
 you can skip the installation of `gd-devel`.
 
 
+## On NixOS
+^[Top](#top)
+
+While in the cloned proxmox repo, run
+```sh
+nix-shell
+```
+This will bring in all required packages to build the client and firmware with all available features.
+
+Please note, the shell does not change device permissions, so your user must be a part of the dialout group. see [here](https://nixos.wiki/wiki/Serial_Console) for information on adding your user to that group.
+
+
+### If you don't need...
+👉 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`),  
+you can comment out `qt6Packages.qtbase` and  `qt6Packages.wrapQtAppsHook` in shell.nix.
+
+👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
+you can comment out `python3` in shell.nix.
+
+👉 If you don't need support for NFC ePaper devices,  
+you can comment out `gd` in shell.nix.
+
 # Clone the repository
 ^[Top](#top)
 
