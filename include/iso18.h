@@ -101,7 +101,7 @@ typedef struct {
     felica_frame_response_t frame_response;
     felica_status_flags_t status_flags;
     uint8_t number_of_block[1];
-    uint8_t block_data[16];
+    uint8_t block_data[16 * 15];
 } PACKED felica_read_without_encryption_response_t;
 
 typedef struct {
@@ -140,7 +140,7 @@ typedef struct {
 typedef struct {
     felica_frame_response_t frame_response;
     uint8_t payload[4];
-} PACKED felica_service_dump_response_t;
+} PACKED felica_search_service_code_response_t;
 
 typedef struct {
     uint8_t command_code[1];

@@ -43,6 +43,9 @@
 #define FELICA_BLK_NUMBER_MACA  0x91
 #define FELICA_BLK_NUMBER_STATE 0x92
 
+#define FELICA_DEFAULT_TIMEOUT_MS 2000U
+#define FELICA_DEFAULT_RETRY_COUNT 3U
+
 #define FELICA_SERVICE_ATTRIBUTE_UNAUTH_READ    (0b000001)
 #define FELICA_SERVICE_ATTRIBUTE_READ_ONLY      (0b000010)
 #define FELICA_SERVICE_ATTRIBUTE_RANDOM_ACCESS  (0b001000)
@@ -281,8 +284,8 @@ static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
  * Checks if receveid bytes have a valid CRC.
  * @param verbose prints out the response received.
  */
-static bool waitCmdFelica(bool iSelect, PacketResponseNG *resp, bool verbose) {
-    if (WaitForResponseTimeout(CMD_HF_FELICA_COMMAND, resp, 2000) == false) {
+static bool waitCmdFelicaEx(bool iSelect, PacketResponseNG *resp, bool verbose, uint32_t timeout_ms) {
+    if (WaitForResponseTimeout(CMD_HF_FELICA_COMMAND, resp, timeout_ms) == false) {
         PrintAndLogEx(WARNING, "timeout while waiting for reply");
         return false;
     }
@@ -321,6 +324,10 @@ static bool waitCmdFelica(bool iSelect, PacketResponseNG *resp, bool verbose) {
         }
     }
     return true;
+}
+
+static bool waitCmdFelica(bool iSelect, PacketResponseNG *resp, bool verbose) {
+    return waitCmdFelicaEx(iSelect, resp, verbose, FELICA_DEFAULT_TIMEOUT_MS);
 }
 
 
@@ -543,14 +550,14 @@ static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *dat
  * @param rd_noCry_resp Response frame.
  * @param block_index Optional explicit block index (UINT16_MAX to use tag value)
  */
-static void print_rd_plain_response(felica_read_without_encryption_response_t *rd_noCry_resp, uint16_t block_index) {
+static void print_read_without_encryption_response(felica_read_without_encryption_response_t *rd_noCry_resp, uint16_t block_index) {
 
     uint16_t display_block = block_index;
 
     if (rd_noCry_resp->status_flags.status_flag1[0] == 00 &&
             rd_noCry_resp->status_flags.status_flag2[0] == 00) {
 
-        char *temp = sprint_hex(rd_noCry_resp->block_data, sizeof(rd_noCry_resp->block_data));
+        char *temp = sprint_hex(rd_noCry_resp->block_data, FELICA_BLK_SIZE);
 
         char bl_data[256];
         strncpy(bl_data, temp, sizeof(bl_data) - 1);
@@ -567,80 +574,154 @@ static void print_rd_plain_response(felica_read_without_encryption_response_t *r
 }
 
 /**
- * Sends a request service frame to the pm3 and prints response.
+ * Shared retry log helper.
  */
-int send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose) {
+static void log_felica_retry_attempt(const char *request_name, uint32_t attempt, uint32_t retries) {
+    if (request_name) {
+        PrintAndLogEx(WARNING, "Retrying %s (%" PRIu32 "/%" PRIu32 ")",
+                      request_name, attempt + 1, retries);
+    } else {
+        PrintAndLogEx(WARNING, "Retrying request (%" PRIu32 "/%" PRIu32 ")",
+                      attempt + 1, retries);
+    }
+}
 
-    clear_and_send_command(flags, datalen, data, verbose);
-    if (datalen) {
-
-        PacketResponseNG resp;
-        if (waitCmdFelica(false, &resp, true) == false) {
-            PrintAndLogEx(ERR, "\nGot no response from card");
-            return PM3_ERFTRANS;
+/**
+ * Generic FeliCa command sender with timeout and retries.
+ * @param flags command flags
+ * @param datalen command payload length
+ * @param data command payload
+ * @param verbose verbose output
+ * @param expected_response_cmd expected command code in response, -1 to skip check
+ * @param timeout_ms timeout in milliseconds for each attempt
+ * @param retries retry count after the first attempt
+ * @param resp response output
+ * @param request_name request label used in retry logs
+ * @return PM3_SUCCESS on success
+ */
+static int send_felica_payload_with_retries(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
+        int expected_response_cmd, uint32_t timeout_ms, uint32_t retries, PacketResponseNG *resp, const char *request_name) {
+    for (uint32_t attempt = 0; attempt <= retries; attempt++) {
+        clear_and_send_command(flags, datalen, data, verbose);
+        if (waitCmdFelicaEx(false, resp, verbose, timeout_ms) == false) {
+            if (attempt < retries) {
+                log_felica_retry_attempt(request_name, attempt, retries);
+            }
+            continue;
         }
 
-        felica_request_service_response_t r;
-        memcpy(&r, (felica_request_service_response_t *)resp.data.asBytes, sizeof(felica_request_service_response_t));
+        if (expected_response_cmd >= 0) {
+            if (resp->length < sizeof(felica_frame_response_t)) {
+                if (attempt < retries) {
+                    log_felica_retry_attempt(request_name, attempt, retries);
+                }
+                continue;
+            }
 
-        if (r.frame_response.IDm[0] != 0) {
-            PrintAndLogEx(SUCCESS, "Service Response:");
-            PrintAndLogEx(SUCCESS, "IDm... %s", sprint_hex_inrow(r.frame_response.IDm, sizeof(r.frame_response.IDm)));
-            PrintAndLogEx(SUCCESS, "  Node number............. %s", sprint_hex(r.node_number, sizeof(r.node_number)));
-            PrintAndLogEx(SUCCESS, "  Node key version list... %s\n", sprint_hex(r.node_key_versions, sizeof(r.node_key_versions)));
+            const felica_frame_response_t *frame_response = (const felica_frame_response_t *)resp->data.asBytes;
+            if (frame_response->cmd_code[0] != (uint8_t)expected_response_cmd) {
+                if (attempt < retries) {
+                    log_felica_retry_attempt(request_name, attempt, retries);
+                } else {
+                    PrintAndLogEx(FAILED, "Bad response cmd 0x%02X (expected 0x%02X).",
+                                  frame_response->cmd_code[0], (uint8_t)expected_response_cmd);
+                }
+                continue;
+            }
         }
+
         return PM3_SUCCESS;
     }
+
     return PM3_ERFTRANS;
 }
 
 /**
- * Sends a read_without_encryption frame to the pm3 and prints response.
+ * Sends a request service frame to the pm3 and prints response.
+ */
+int send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose) {
+    if (!datalen) {
+        return PM3_ERFTRANS;
+    }
+    PacketResponseNG resp;
+    if (send_felica_payload_with_retries(flags, datalen, data, verbose,
+                                            0x03,
+                                            FELICA_DEFAULT_TIMEOUT_MS, 0,
+                                            &resp, "request service") != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "\nGot no response from card");
+        return PM3_ERFTRANS;
+    }
+
+    felica_request_service_response_t r;
+    memcpy(&r, (felica_request_service_response_t *)resp.data.asBytes, sizeof(felica_request_service_response_t));
+
+    if (r.frame_response.IDm[0] != 0) {
+        PrintAndLogEx(SUCCESS, "Service Response:");
+        PrintAndLogEx(SUCCESS, "IDm... %s", sprint_hex_inrow(r.frame_response.IDm, sizeof(r.frame_response.IDm)));
+        PrintAndLogEx(SUCCESS, "  Node number............. %s", sprint_hex(r.node_number, sizeof(r.node_number)));
+        PrintAndLogEx(SUCCESS, "  Node key version list... %s\n", sprint_hex(r.node_key_versions, sizeof(r.node_key_versions)));
+    }
+    return PM3_SUCCESS;
+}
+
+/**
+ * Sends a read_without_encryption frame to pm3 and stores the response.
  * @param flags to use for pm3 communication.
  * @param datalen frame length.
- * @param data frame to be send.
+ * @param data frame to be sent.
  * @param verbose display additional output.
  * @param rd_noCry_resp frame in which the response will be saved.
  * @return success if response was received.
  */
-int send_rd_plain(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, felica_read_without_encryption_response_t *rd_noCry_resp) {
-    clear_and_send_command(flags, datalen, data, verbose);
+static int send_read_without_encryption_ex(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
+                                           felica_read_without_encryption_response_t *rd_noCry_resp,
+                                           uint32_t timeout_ms, uint32_t retries) {
     PacketResponseNG resp;
-    if (waitCmdFelica(false, &resp, verbose) == false) {
+    if (send_felica_payload_with_retries(flags, datalen, data, verbose,
+                                         0x07, timeout_ms, retries,
+                                         &resp, "read without encryption") != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "No response from card");
         return PM3_ERFTRANS;
-    } else {
-        memcpy(rd_noCry_resp, (felica_read_without_encryption_response_t *)resp.data.asBytes, sizeof(felica_read_without_encryption_response_t));
-        if (rd_noCry_resp->frame_response.cmd_code[0] != 0x07) {
-            PrintAndLogEx(FAILED, "Bad response cmd 0x%02X @ 0x%04X.",
-                          rd_noCry_resp->frame_response.cmd_code[0], 0x00);
-            PrintAndLogEx(INFO, "This is either a normal signal issue, or an issue caused by wrong parameter. Please try again.");
-            return PM3_ERFTRANS;
-        }
-        return PM3_SUCCESS;
     }
+
+    memcpy(rd_noCry_resp, (felica_read_without_encryption_response_t *)resp.data.asBytes, sizeof(felica_read_without_encryption_response_t));
+    return PM3_SUCCESS;
 }
 
 /**
- * Sends a dump_service frame to the pm3 and prints response.
+ * Sends a read_without_encryption frame to pm3 and stores the response.
+ * Uses default timeout and no retries.
+ */
+static int send_read_without_encryption(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
+                                        felica_read_without_encryption_response_t *rd_noCry_resp) {
+    return send_read_without_encryption_ex(flags, datalen, data, verbose, rd_noCry_resp,
+                                           FELICA_DEFAULT_TIMEOUT_MS, 0);
+}
+
+/**
+ * Sends a Search Service Code frame to pm3 and stores the response.
  * @param flags to use for pm3 communication.
  * @param datalen frame length.
- * @param data frame to be send.
+ * @param data frame to be sent.
  * @param verbose display additional output.
- * @param dump_sv_resp frame in which the response will be saved.
- * @param is_area true if the service is an area, false if it is a service.
+ * @param timeout_ms timeout in milliseconds for each attempt.
+ * @param retries retry count after the first attempt.
+ * @param search_sv_resp frame in which the response will be saved.
  * @return success if response was received.
  */
-int send_dump_sv_plain(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, felica_service_dump_response_t *dump_sv_resp, bool is_area) {
-    clear_and_send_command(flags, datalen, data, verbose);
+static int send_search_service_code(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
+                                    uint32_t timeout_ms, uint32_t retries,
+                                    felica_search_service_code_response_t *search_sv_resp) {
     PacketResponseNG resp;
-    if (waitCmdFelica(false, &resp, verbose) == false) {
+    if (send_felica_payload_with_retries(flags, datalen, data, verbose,
+                                         0x0B, timeout_ms, retries,
+                                         &resp, "search service") != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "No response from card");
         return PM3_ERFTRANS;
-    } else {
-        memcpy(dump_sv_resp, (felica_service_dump_response_t *)resp.data.asBytes, sizeof(felica_service_dump_response_t));
-        return PM3_SUCCESS;
     }
+
+    memcpy(search_sv_resp, (felica_search_service_code_response_t *)resp.data.asBytes, sizeof(felica_search_service_code_response_t));
+    return PM3_SUCCESS;
 }
 
 /**
@@ -660,23 +741,25 @@ static bool check_last_idm(uint8_t *data, uint16_t datalen) {
 }
 
 /**
- * Sends a read_without_encryption frame to the pm3 and prints response.
+ * Sends a write_without_encryption frame to pm3 and stores the response.
  * @param flags to use for pm3 communication.
  * @param datalen frame length.
- * @param data frame to be send.
+ * @param data frame to be sent.
  * @param verbose display additional output.
- * @param wr_noCry_resp frame in which the response will be saved.
+ * @param wr_resp frame in which the response will be saved.
  * @return success if response was received.
  */
-static int send_wr_plain(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, felica_status_response_t *wr_noCry_resp) {
-    clear_and_send_command(flags, datalen, data, verbose);
+static int send_write_without_encryption(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose, felica_status_response_t *wr_resp) {
     PacketResponseNG resp;
-    if (waitCmdFelica(false, &resp, verbose) == false) {
+    if (send_felica_payload_with_retries(flags, datalen, data, verbose,
+                                         -1,
+                                         FELICA_DEFAULT_TIMEOUT_MS, 0,
+                                         &resp, "write block") != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "no response from card");
         return PM3_ERFTRANS;
     }
 
-    memcpy(wr_noCry_resp, (felica_status_response_t *)resp.data.asBytes, sizeof(felica_status_response_t));
+    memcpy(wr_resp, (felica_status_response_t *)resp.data.asBytes, sizeof(felica_status_response_t));
     return PM3_SUCCESS;
 }
 
@@ -1215,7 +1298,7 @@ static int CmdHFFelicaWritePlain(const char *Cmd) {
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
 
     felica_status_response_t wr_noCry_resp;
-    if (send_wr_plain(flags, datalen, data, 1, &wr_noCry_resp) == PM3_SUCCESS) {
+    if (send_write_without_encryption(flags, datalen, data, 1, &wr_noCry_resp) == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "IDm............ %s", sprint_hex(wr_noCry_resp.frame_response.IDm, sizeof(wr_noCry_resp.frame_response.IDm)));
         PrintAndLogEx(SUCCESS, "Status Flag1... %s", sprint_hex(wr_noCry_resp.status_flags.status_flag1, sizeof(wr_noCry_resp.status_flags.status_flag1)));
         PrintAndLogEx(SUCCESS, "Status Flag2... %s\n", sprint_hex(wr_noCry_resp.status_flags.status_flag2, sizeof(wr_noCry_resp.status_flags.status_flag2)));
@@ -1365,16 +1448,16 @@ static int CmdHFFelicaReadPlain(const char *Cmd) {
         for (uint16_t i = 0x00; i < last_blockno; i++) {
             data[15] = i;
             felica_read_without_encryption_response_t rd_noCry_resp;
-            if ((send_rd_plain(flags, datalen, data, 0, &rd_noCry_resp) == PM3_SUCCESS)) {
-                print_rd_plain_response(&rd_noCry_resp, i);
+            if ((send_read_without_encryption(flags, datalen, data, 0, &rd_noCry_resp) == PM3_SUCCESS)) {
+                print_read_without_encryption_response(&rd_noCry_resp, i);
             } else {
                 break;
             }
         }
     } else {
         felica_read_without_encryption_response_t rd_noCry_resp;
-        if (send_rd_plain(flags, datalen, data, 1, &rd_noCry_resp) == PM3_SUCCESS) {
-            print_rd_plain_response(&rd_noCry_resp, bnlen ? bn[0] : 0);
+        if (send_read_without_encryption(flags, datalen, data, 1, &rd_noCry_resp) == PM3_SUCCESS) {
+            print_read_without_encryption_response(&rd_noCry_resp, bnlen ? bn[0] : 0);
         }
     }
     return PM3_SUCCESS;
@@ -1734,13 +1817,16 @@ static int CmdHFFelicaDump(const char *Cmd) {
     CLIParserInit(&ctx, "hf felica dump",
                   "Dump all existing Area Code and Service Code.\n"
                   "Only works on services that do not require authentication yet.\n",
-                  "hf felica dump");
+                  "hf felica dump\n"
+                  "hf felica dump --retry 5");
     void *argtable[] = {
         arg_param_begin,
         arg_lit0(NULL, "no-auth", "read public services"),
+        arg_u64_0("r", "retry", "<dec>", "number of retries"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint32_t retry_count = arg_get_u32_def(ctx, 2, FELICA_DEFAULT_RETRY_COUNT);
     CLIParserFree(ctx);
 
     // bool no_auth = arg_get_lit(ctx, 1);
@@ -1770,15 +1856,16 @@ static int CmdHFFelicaDump(const char *Cmd) {
     int ret = PM3_SUCCESS;
     uint16_t cursor = 0x0000;
 
-    felica_service_dump_response_t resp;
+    felica_search_service_code_response_t resp;
 
     while (true) {
 
         data_service_dump[10] = cursor & 0xFF;
         data_service_dump[11] = cursor >> 8;
 
-        if (send_dump_sv_plain(flags, service_datalen, data_service_dump, 0,
-                               &resp, false) != PM3_SUCCESS) {
+        if (send_search_service_code(flags, service_datalen, data_service_dump, 0,
+                                     FELICA_DEFAULT_TIMEOUT_MS, retry_count,
+                                     &resp) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "No response at cursor 0x%04X", cursor);
             ret = PM3_ERFTRANS;
             break;
@@ -1786,15 +1873,6 @@ static int CmdHFFelicaDump(const char *Cmd) {
 
         // After first command, drop CONNECT flag — field is already up
         flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
-
-        if (resp.frame_response.cmd_code[0] != 0x0B) {
-            PrintAndLogEx(FAILED, "Bad response cmd 0x%02X @ 0x%04X.",
-                          resp.frame_response.cmd_code[0], cursor);
-            PrintAndLogEx(INFO, "This is a normal signal issue. Please try again.");
-            PrintAndLogEx(INFO, "If the issue persists, move the card around and check signal strength. FeliCa can be hard to keep in field.");
-            ret = PM3_ERFTRANS;
-            break;
-        }
         uint8_t len = resp.frame_response.length[0];
         uint16_t node_code = resp.payload[0] | (resp.payload[1] << 8);
         if (node_code == 0xFFFF) break;
@@ -1850,9 +1928,11 @@ static int CmdHFFelicaDump(const char *Cmd) {
                     for (uint16_t i = 0x00; i < last_blockno; i++) {
                         data_block_dump[15] = i;
                         felica_read_without_encryption_response_t rd_noCry_resp;
-                        if ((send_rd_plain(flags, block_datalen, data_block_dump, 0, &rd_noCry_resp) == PM3_SUCCESS)) {
+                        if ((send_read_without_encryption_ex(flags, block_datalen, data_block_dump, 0,
+                                                             &rd_noCry_resp,
+                                                             FELICA_DEFAULT_TIMEOUT_MS, retry_count) == PM3_SUCCESS)) {
                             if (rd_noCry_resp.status_flags.status_flag1[0] == 0 && rd_noCry_resp.status_flags.status_flag2[0] == 0) {
-                                print_rd_plain_response(&rd_noCry_resp, i);
+                                print_read_without_encryption_response(&rd_noCry_resp, i);
                             } else {
                                 break; // no more blocks to read
                             }
@@ -2000,9 +2080,15 @@ static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf felica scsvcode",
                   "Dump all existing Area Code and Service Code.\n",
-                  "hf felica scsvcode");
-    void *argtable[] = { arg_param_begin, arg_param_end };
+                  "hf felica scsvcode\n"
+                  "hf felica scsvcode --retry 5");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("r", "retry", "<dec>", "number of retries"),
+        arg_param_end
+    };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint32_t retry_count = arg_get_u32_def(ctx, 1, FELICA_DEFAULT_RETRY_COUNT);
     CLIParserFree(ctx);
 
     /* -- build static part of Search-Service frame ---------------- */
@@ -2028,7 +2114,7 @@ static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
     uint16_t area_end_stack[8] = {0xFFFF};   /* root "end" = 0xFFFF */
     int      depth = 0;                      /* current stack depth */
 
-    felica_service_dump_response_t resp;
+    felica_search_service_code_response_t resp;
 
     while (true) {
 
@@ -2036,8 +2122,9 @@ static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
         data[10] = cursor & 0xFF;
         data[11] = cursor >> 8;
 
-        if (send_dump_sv_plain(flags, datalen, data, 0,
-                               &resp, false) != PM3_SUCCESS) {
+        if (send_search_service_code(flags, datalen, data, 0,
+                                     FELICA_DEFAULT_TIMEOUT_MS, retry_count,
+                                     &resp) != PM3_SUCCESS) {
             PrintAndLogEx(FAILED, "No response at cursor 0x%04X", cursor);
             ret = PM3_ERFTRANS;
             break;
@@ -2045,15 +2132,6 @@ static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
 
         // After first command, drop CONNECT flag — field is already up
         flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
-
-        if (resp.frame_response.cmd_code[0] != 0x0B) {
-            PrintAndLogEx(FAILED, "Bad response cmd 0x%02X @ 0x%04X.",
-                          resp.frame_response.cmd_code[0], cursor);
-            PrintAndLogEx(INFO, "This is a normal signal issue. Please try again.");
-            PrintAndLogEx(INFO, "If the issue persists, move the card around and check signal strength. FeliCa can be hard to keep in field.");
-            ret = PM3_ERFTRANS;
-            break;
-        }
 
         uint8_t len = resp.frame_response.length[0];
         uint16_t node_code = resp.payload[0] | (resp.payload[1] << 8);      /* LE for traversal */
@@ -2379,29 +2457,6 @@ static int parse_multiple_block_data(const uint8_t *data, const size_t datalen, 
     return PM3_SUCCESS;
 }
 
-static int send_rd_multiple_plain(uint8_t flags, uint16_t datalen, uint8_t *data, uint8_t *out) {
-    clear_and_send_command(flags, datalen, data, false);
-    PacketResponseNG res;
-    if (waitCmdFelica(false, &res, false) == false) {
-        PrintAndLogEx(ERR, "\nGot no response from card");
-        return PM3_ERFTRANS;
-    }
-
-    uint8_t block_data[FELICA_BLK_SIZE * 4];
-    memset(block_data, 0, sizeof(block_data));
-
-    uint8_t outlen = 0;
-
-    int ret = parse_multiple_block_data(res.data.asBytes, sizeof(res.data.asBytes), block_data, &outlen);
-    if (ret) {
-        return PM3_ERFTRANS;
-    }
-
-    memcpy(out, block_data, outlen);
-
-    return PM3_SUCCESS;
-}
-
 static int felica_auth_context_init(
     mbedtls_des3_context *ctx,
     const uint8_t *rc,
@@ -2582,7 +2637,7 @@ static int felica_internal_authentication(
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW | FELICA_NO_DISCONNECT);
 
     felica_status_response_t res;
-    if (send_wr_plain(flags, datalen, data, false, &res) != PM3_SUCCESS) {
+    if (send_write_without_encryption(flags, datalen, data, false, &res) != PM3_SUCCESS) {
         return PM3_ERFTRANS;
     }
 
@@ -2600,11 +2655,20 @@ static int felica_internal_authentication(
         return PM3_ERFTRANS;
     }
 
+    felica_read_without_encryption_response_t rd_resp;
+    memset(&rd_resp, 0, sizeof(rd_resp));
+
+    ret = send_read_without_encryption(flags, datalen, data, false, &rd_resp);
+    if (ret) {
+        return PM3_ERFTRANS;
+    }
+
     uint8_t pd[FELICA_BLK_SIZE * sizeof(blk_numbers2)];
     memset(pd, 0, sizeof(pd));
 
-    ret = send_rd_multiple_plain(flags, datalen, data, pd);
-    if (ret) {
+    uint8_t pd_len = 0;
+    ret = parse_multiple_block_data((const uint8_t *)&rd_resp, sizeof(rd_resp), pd, &pd_len);
+    if (ret || pd_len != sizeof(pd)) {
         return PM3_ERFTRANS;
     }
 
@@ -2663,9 +2727,18 @@ static int felica_external_authentication(
         return PM3_ERFTRANS;
     }
 
-    uint8_t wcnt_blk[FELICA_BLK_SIZE];
-    ret = send_rd_multiple_plain(flags, datalen, data, wcnt_blk);
+    felica_read_without_encryption_response_t rd_resp;
+    memset(&rd_resp, 0, sizeof(rd_resp));
+
+    ret = send_read_without_encryption(flags, datalen, data, false, &rd_resp);
     if (ret) {
+        return PM3_ERFTRANS;
+    }
+
+    uint8_t wcnt_blk[FELICA_BLK_SIZE];
+    uint8_t wcnt_len = 0;
+    ret = parse_multiple_block_data((const uint8_t *)&rd_resp, sizeof(rd_resp), wcnt_blk, &wcnt_len);
+    if (ret || wcnt_len != sizeof(wcnt_blk)) {
         return PM3_ERFTRANS;
     }
 
@@ -2693,7 +2766,7 @@ static int felica_external_authentication(
     }
 
     felica_status_response_t res;
-    if (send_wr_plain(flags, datalen, data, false, &res) != PM3_SUCCESS) {
+    if (send_write_without_encryption(flags, datalen, data, false, &res) != PM3_SUCCESS) {
         return PM3_ERFTRANS;
     }
 
