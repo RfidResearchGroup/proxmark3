@@ -287,6 +287,66 @@ static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
     return "Unknown IC Type";
 }
 
+static const char *felica_specification_option_name(size_t option_index) {
+    switch (option_index) {
+        case 0:
+            return "DES.....................";
+        case 1:
+            return "Special.................";
+        case 2:
+            return "Extended Overlap........";
+        case 3:
+            return "Value-Limited Purse.....";
+        case 4:
+            return "Communication with MAC..";
+        default:
+            return "Unknown.................";
+    }
+}
+
+static void print_specification_versions(int level,
+        const felica_request_specification_version_info_t *specification_version_info,
+        bool include_hex) {
+    if (specification_version_info == NULL || specification_version_info->has_specification_version == false) {
+        return;
+    }
+
+    uint8_t basic_major = specification_version_info->basic_version[1] & 0x0F;
+    uint8_t basic_minor = (specification_version_info->basic_version[0] >> 4) & 0x0F;
+    uint8_t basic_patch = specification_version_info->basic_version[0] & 0x0F;
+    PrintAndLogEx(level, "Versions:");
+
+    PrintAndLogEx(level, "  Format version.......... " _GREEN_("%02X"), specification_version_info->format_version);
+
+    PrintAndLogEx(level, "  Option count............ " _GREEN_("%u"), specification_version_info->number_of_option);
+
+    if (include_hex) {
+        PrintAndLogEx(level, "  Specification........... " _GREEN_("%u.%u.%u") " (" _YELLOW_("0x%02X%02X") ")",
+                      basic_major, basic_minor, basic_patch,
+                      specification_version_info->basic_version[0],
+                      specification_version_info->basic_version[1]);
+    } else {
+        PrintAndLogEx(level, "  Specification........... " _GREEN_("%u.%u.%u"), basic_major, basic_minor, basic_patch);
+    }
+
+    for (size_t i = 0; i < specification_version_info->option_version_count; i++) {
+        const uint8_t *option = specification_version_info->option_version_list + (i * 2);
+        uint8_t option_major = option[1] & 0x0F;
+        uint8_t option_minor = (option[0] >> 4) & 0x0F;
+        uint8_t option_patch = option[0] & 0x0F;
+        const char *option_name = felica_specification_option_name(i);
+
+        if (include_hex) {
+            PrintAndLogEx(level, "  %s " _GREEN_("%u.%u.%u") " (" _YELLOW_("0x%02X%02X") ")",
+                          option_name, option_major, option_minor, option_patch,
+                          option[0], option[1]);
+        } else {
+            PrintAndLogEx(level, "  %s " _GREEN_("%u.%u.%u"),
+                          option_name, option_major, option_minor, option_patch);
+        }
+    }
+}
+
 /**
  * Wait for response from pm3 or timeout.
  * Checks if receveid bytes have a valid CRC.
@@ -582,6 +642,66 @@ static int send_get_platform_information(uint8_t flags, uint16_t datalen, uint8_
     return PM3_SUCCESS;
 }
 
+static int send_request_specification_version(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
+        bool logging, uint32_t timeout_ms, uint32_t retries,
+        felica_request_specification_version_info_t *specification_version_info) {
+    if (specification_version_info == NULL) {
+        return PM3_EINVARG;
+    }
+
+    memset(specification_version_info, 0, sizeof(*specification_version_info));
+
+    PacketResponseNG resp;
+    if (send_felica_payload_with_retries(flags, datalen, data, verbose,
+                                         FELICA_REQUEST_SPEC_VERSION_ACK,
+                                         timeout_ms, retries,
+                                         logging, &resp, "request specification version") != PM3_SUCCESS) {
+        return PM3_ERFTRANS;
+    }
+
+    if (resp.length < sizeof(felica_status_response_t)) {
+        return PM3_ESOFT;
+    }
+
+    const size_t status_offset = sizeof(felica_frame_response_t);
+    memcpy(&specification_version_info->status_flags,
+           resp.data.asBytes + status_offset,
+           sizeof(specification_version_info->status_flags));
+
+    if (specification_version_info->status_flags.status_flag1[0] != 0x00) {
+        return PM3_SUCCESS;
+    }
+
+    const size_t specification_offset = sizeof(felica_status_response_t);
+    if (resp.length < specification_offset + 4) {
+        return PM3_ESOFT;
+    }
+
+    specification_version_info->has_specification_version = true;
+    specification_version_info->format_version = resp.data.asBytes[specification_offset];
+    memcpy(specification_version_info->basic_version,
+           resp.data.asBytes + specification_offset + 1,
+           sizeof(specification_version_info->basic_version));
+    specification_version_info->number_of_option = resp.data.asBytes[specification_offset + 3];
+
+    const size_t option_bytes = (size_t)specification_version_info->number_of_option * 2U;
+    const size_t payload_bytes = resp.length - (specification_offset + 4);
+    if (payload_bytes < option_bytes) {
+        return PM3_ESOFT;
+    }
+
+    size_t copy_option_bytes = option_bytes;
+    if (copy_option_bytes > sizeof(specification_version_info->option_version_list)) {
+        copy_option_bytes = sizeof(specification_version_info->option_version_list);
+    }
+
+    memcpy(specification_version_info->option_version_list,
+           resp.data.asBytes + specification_offset + 4,
+           copy_option_bytes);
+    specification_version_info->option_version_count = copy_option_bytes / 2U;
+    return PM3_SUCCESS;
+}
+
 static int info_felica(bool verbose) {
 
     clear_and_send_command(FELICA_CONNECT | FELICA_NO_DISCONNECT, 0, NULL, false);
@@ -658,6 +778,21 @@ static int info_felica(bool verbose) {
                                       &platform_information_data_len) == PM3_SUCCESS &&
             platform_information_data_len > 0) {
         PrintAndLogEx(INFO, "Platform info.. %s", sprint_hex_inrow(platform_information_data, platform_information_data_len));
+    }
+
+    felica_request_specification_version_request_t request_specification_version_request;
+    memset(&request_specification_version_request, 0, sizeof(request_specification_version_request));
+    request_specification_version_request.length[0] = sizeof(request_specification_version_request);
+    request_specification_version_request.command_code[0] = FELICA_REQUEST_SPEC_VERSION_REQ;
+    memcpy(request_specification_version_request.IDm, card.IDm, sizeof(request_specification_version_request.IDm));
+
+    felica_request_specification_version_info_t specification_version_info;
+    if (send_request_specification_version(optional_flags, sizeof(request_specification_version_request),
+                                           (uint8_t *)&request_specification_version_request, false,
+                                           false, FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES,
+                                           &specification_version_info) == PM3_SUCCESS &&
+            specification_version_info.has_specification_version) {
+        print_specification_versions(INFO, &specification_version_info, true);
     }
 
     felica_get_container_id_request_t container_id_request;
@@ -1797,10 +1932,8 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
                   "Response:\n"
                   " - Format version: Fixed value 00h. Provided only if Status Flag1 = 00h\n"
                   " - Basic version: Each value of version is expressed in BCD notation. Provided only if Status Flag1 = 00h\n"
-                  " - Number of Option: value = 0: AES card, value = 1: AES/DES card. Provided only if Status Flag1 = 00h\n"
-                  " - Option version list: Provided only if Status Flag1 = 00h\n"
-                  "     - AES card: not added\n"
-                  "     - AES/DES card: DES option version is added - BCD notation",
+                  " - Number of Option: number of entries in Option Version List.\n"
+                  " - Option version list: BCD notation (major.minor.patch), little-endian, provided only if Status Flag1 = 00h",
 
                   "hf felica rqspecver\n"
                   "hf felica rqspecver -r 0001\n"
@@ -1838,63 +1971,58 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
     }
     CLIParserFree(ctx);
 
-    uint8_t data[PM3_CMD_DATA_SIZE];
-    memset(data, 0, sizeof(data));
-    data[0] = 0x0C; // Static length
-    data[1] = 0x3C; // Command ID
+    felica_request_specification_version_request_t request_specification_version_request;
+    memset(&request_specification_version_request, 0, sizeof(request_specification_version_request));
+    request_specification_version_request.length[0] = sizeof(request_specification_version_request);
+    request_specification_version_request.command_code[0] = FELICA_REQUEST_SPEC_VERSION_REQ;
 
     bool custom_IDm = false;
-
-    // add custom idm
     if (ilen) {
         custom_IDm = true;
-        memcpy(data + 2, idm, sizeof(idm));
+        memcpy(request_specification_version_request.IDm, idm, sizeof(idm));
     }
 
-    // add custom reserved
     if (rlen) {
-        memcpy(data + 10, reserved, sizeof(reserved));
-    } else {
-        data[10] = 0x00; // Reserved Value
-        data[11] = 0x00; // Reserved Value
+        memcpy(request_specification_version_request.reserved, reserved, sizeof(reserved));
     }
 
-    uint16_t datalen = 12; // Length (1), Command ID (1), IDm (8), Reserved (2)
-    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
+    if (custom_IDm == false &&
+            check_last_idm((uint8_t *)&request_specification_version_request,
+                           sizeof(request_specification_version_request)) == false) {
         return PM3_EINVARG;
     }
 
-    uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
-
-    clear_and_send_command(flags, datalen, data, 0);
-
-    PacketResponseNG resp;
-    if (waitCmdFelica(false, &resp, true) == false) {
+    felica_request_specification_version_info_t specification_version_info;
+    uint8_t flags = FELICA_APPEND_CRC | FELICA_RAW;
+    if (send_request_specification_version(flags, sizeof(request_specification_version_request),
+                                           (uint8_t *)&request_specification_version_request,
+                                           verbose,
+                                           true, FELICA_DEFAULT_TIMEOUT_MS, 0,
+                                           &specification_version_info) != PM3_SUCCESS) {
         PrintAndLogEx(FAILED, "Got no response from card");
         return PM3_ERFTRANS;
     }
 
-    felica_request_spec_response_t spec_response;
-    memcpy(&spec_response, (felica_request_spec_response_t *)resp.data.asBytes, sizeof(felica_request_spec_response_t));
+    PrintAndLogEx(SUCCESS, "Got Request Response");
+    PrintAndLogEx(SUCCESS, "IDm............ %s",
+                  sprint_hex(request_specification_version_request.IDm, sizeof(request_specification_version_request.IDm)));
+    PrintAndLogEx(SUCCESS, "Status Flag1... %s",
+                  sprint_hex(specification_version_info.status_flags.status_flag1,
+                            sizeof(specification_version_info.status_flags.status_flag1)));
+    PrintAndLogEx(SUCCESS, "Status Flag2... %s",
+                  sprint_hex(specification_version_info.status_flags.status_flag2,
+                            sizeof(specification_version_info.status_flags.status_flag2)));
 
-    if (spec_response.frame_response.IDm[0] != 0) {
-        PrintAndLogEx(SUCCESS, "Got Request Response");
-        PrintAndLogEx(SUCCESS, "IDm............ %s", sprint_hex(spec_response.frame_response.IDm, sizeof(spec_response.frame_response.IDm)));
-        PrintAndLogEx(SUCCESS, "Status Flag1... %s", sprint_hex(spec_response.status_flags.status_flag1, sizeof(spec_response.status_flags.status_flag1)));
-        PrintAndLogEx(SUCCESS, "Status Flag2... %s", sprint_hex(spec_response.status_flags.status_flag2, sizeof(spec_response.status_flags.status_flag2)));
+    if (specification_version_info.has_specification_version) {
+        print_specification_versions(SUCCESS, &specification_version_info, true);
 
-        if (spec_response.status_flags.status_flag1[0] == 0) {
-            PrintAndLogEx(SUCCESS, "Format Version..... %s", sprint_hex(spec_response.format_version, sizeof(spec_response.format_version)));
-            PrintAndLogEx(SUCCESS, "Basic Version...... %s", sprint_hex(spec_response.basic_version, sizeof(spec_response.basic_version)));
-            PrintAndLogEx(SUCCESS, "Number of Option... %s", sprint_hex(spec_response.number_of_option, sizeof(spec_response.number_of_option)));
-            if (spec_response.number_of_option[0] == 1) {
-                PrintAndLogEx(SUCCESS, "Option Version List...");
-                for (int i = 0; i < spec_response.number_of_option[0]; i++) {
-                    PrintAndLogEx(SUCCESS, "  - %s", sprint_hex(spec_response.option_version_list + i * 2, 2));
-                }
-            }
+        if (specification_version_info.option_version_count < specification_version_info.number_of_option) {
+            PrintAndLogEx(WARNING, "Truncated Option Version List: card returned %u entries, showing %zu",
+                          specification_version_info.number_of_option,
+                          specification_version_info.option_version_count);
         }
     }
+
     return PM3_SUCCESS;
 }
 

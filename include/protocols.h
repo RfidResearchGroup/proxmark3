@@ -864,8 +864,8 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FELICA_GETPLATFORMINFO_REQ      0x3a
 #define FELICA_GETPLATFORMINFO_ACK      0x3b
 
-#define FELICA_OSVER_REQ                0x3c
-#define FELICA_OSVER_ACK                0x3d
+#define FELICA_REQUEST_SPEC_VERSION_REQ 0x3c
+#define FELICA_REQUEST_SPEC_VERSION_ACK 0x3d
 
 #define FELICA_RESET_MODE_REQ           0x3e
 #define FELICA_RESET_MODE_ACK           0x3f

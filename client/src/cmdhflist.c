@@ -2049,11 +2049,11 @@ void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         case FELICA_GETSTATUS_ACK:
             snprintf(exp, size, "GET STATUS ACK");
             break;
-        case FELICA_OSVER_REQ:
-            snprintf(exp, size, "REQUEST SPECIFIC VERSION");
+        case FELICA_REQUEST_SPEC_VERSION_REQ:
+            snprintf(exp, size, "REQUEST SPEC VERSION");
             break;
-        case FELICA_OSVER_ACK:
-            snprintf(exp, size, "RSV ACK");
+        case FELICA_REQUEST_SPEC_VERSION_ACK:
+            snprintf(exp, size, "REQUEST SPEC ACK");
             break;
         case FELICA_RESET_MODE_REQ:
             snprintf(exp, size, "RESET MODE");
