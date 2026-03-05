@@ -47,6 +47,9 @@
 #define FELICA_DEFAULT_TIMEOUT_MS 2000U
 #define FELICA_DEFAULT_RETRY_COUNT 3U
 #define FELICA_PLATFORM_INFO_MAX_LEN 64U
+#define FELICA_PLATFORM_INFO_WITH_MAC_INFO_LEN 25U
+#define FELICA_PLATFORM_INFO_WITH_MAC_LEN 20U
+#define FELICA_PLATFORM_INFO_WITH_MAC_TOTAL_LEN (FELICA_PLATFORM_INFO_WITH_MAC_INFO_LEN + FELICA_PLATFORM_INFO_WITH_MAC_LEN)
 #define FELICA_CONTAINER_PROPERTY_MAX_LEN 64U
 #define FELICA_OPTIONAL_CMD_TIMEOUT_MS 250U
 #define FELICA_OPTIONAL_CMD_RETRIES 3U
@@ -345,6 +348,26 @@ static void print_specification_versions(int level,
                           option_name, option_major, option_minor, option_patch);
         }
     }
+}
+
+static void print_platform_information(const uint8_t *platform_information_data,
+                                       size_t platform_information_data_len) {
+    if (platform_information_data == NULL || platform_information_data_len == 0) {
+        return;
+    }
+
+    if (platform_information_data_len == FELICA_PLATFORM_INFO_WITH_MAC_TOTAL_LEN) {
+        PrintAndLogEx(INFO, "Platform info:");
+        PrintAndLogEx(INFO, "  Info.......... " _GREEN_("%s"),
+                      sprint_hex_inrow(platform_information_data, FELICA_PLATFORM_INFO_WITH_MAC_INFO_LEN));
+        PrintAndLogEx(INFO, "  MAC........... " _GREEN_("%s"),
+                      sprint_hex_inrow(platform_information_data + FELICA_PLATFORM_INFO_WITH_MAC_INFO_LEN,
+                                       FELICA_PLATFORM_INFO_WITH_MAC_LEN));
+        return;
+    }
+
+    PrintAndLogEx(INFO, "Platform info.. " _YELLOW_("%s"),
+                  sprint_hex_inrow(platform_information_data, platform_information_data_len));
 }
 
 /**
@@ -751,14 +774,14 @@ static int info_felica(bool verbose) {
     memcpy(&card, (felica_card_select_t *)resp.data.asBytes, sizeof(felica_card_select_t));
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--- " _CYAN_("Tag Information") " ---------------------------");
-    PrintAndLogEx(INFO, "IDm............ " _GREEN_("%s"), sprint_hex_inrow(card.IDm, sizeof(card.IDm)));
-    PrintAndLogEx(INFO, "Code........... %s ", sprint_hex_inrow(card.code, sizeof(card.code)));
-    PrintAndLogEx(INFO, "NFCID2......... %s", sprint_hex_inrow(card.uid, sizeof(card.uid)));
-    PrintAndLogEx(INFO, "Parameter");
-    PrintAndLogEx(INFO, "PAD............ " _YELLOW_("%s"), sprint_hex_inrow(card.PMm, sizeof(card.PMm)));
-    PrintAndLogEx(INFO, "IC code........ %s ( " _YELLOW_("%s") " )", sprint_hex_inrow(card.iccode, sizeof(card.iccode)), felica_model_name(card.iccode[0], card.iccode[1]));
-    PrintAndLogEx(INFO, "MRT............ %s", sprint_hex_inrow(card.mrt, sizeof(card.mrt)));
-    PrintAndLogEx(INFO, "Service code... " _YELLOW_("%s"), sprint_hex(card.servicecode, sizeof(card.servicecode)));
+    PrintAndLogEx(INFO, "IDm............ " _YELLOW_("%s"), sprint_hex_inrow(card.IDm, sizeof(card.IDm)));
+    PrintAndLogEx(INFO, "  Code......... " _GREEN_("%s"), sprint_hex_inrow(card.code, sizeof(card.code)));
+    PrintAndLogEx(INFO, "  NFCID2.......     " _GREEN_("%s"), sprint_hex_inrow(card.uid, sizeof(card.uid)));
+    PrintAndLogEx(INFO, "PMM............ " _YELLOW_("%s"), sprint_hex_inrow(card.PMm, sizeof(card.PMm)));
+    PrintAndLogEx(INFO, "  IC code...... " _GREEN_("%s") " ( %s )",
+                  sprint_hex_inrow(card.iccode, sizeof(card.iccode)),
+                  felica_model_name(card.iccode[0], card.iccode[1]));
+    PrintAndLogEx(INFO, "  MRT..........     " _GREEN_("%s"), sprint_hex_inrow(card.mrt, sizeof(card.mrt)));
     set_last_known_card(card);
     const uint8_t optional_flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
 
@@ -777,7 +800,7 @@ static int info_felica(bool verbose) {
                                       sizeof(platform_information_data),
                                       &platform_information_data_len) == PM3_SUCCESS &&
             platform_information_data_len > 0) {
-        PrintAndLogEx(INFO, "Platform info.. %s", sprint_hex_inrow(platform_information_data, platform_information_data_len));
+        print_platform_information(platform_information_data, platform_information_data_len);
     }
 
     felica_request_specification_version_request_t request_specification_version_request;
@@ -826,13 +849,13 @@ static int info_felica(bool verbose) {
                                   sizeof(model_ascii)
                               );
         PrintAndLogEx(INFO, "Container issue info:");
-        PrintAndLogEx(INFO, "  Format/Carrier... %s",
+        PrintAndLogEx(INFO, "  Format/Carrier... " _YELLOW_("%s"),
                       sprint_hex_inrow(container_issue_info_response.format_version_carrier_information,
                                        sizeof(container_issue_info_response.format_version_carrier_information)));
         if (model_is_ascii) {
-            PrintAndLogEx(INFO, "  Model............ %s (ASCII)", model_ascii);
+            PrintAndLogEx(INFO, "  Model............ " _GREEN_("%s") " (ASCII)", model_ascii);
         } else {
-            PrintAndLogEx(INFO, "  Model............ %s (HEX)",
+            PrintAndLogEx(INFO, "  Model............ " _YELLOW_("%s") " (HEX)",
                           sprint_hex_inrow(container_issue_info_response.mobile_phone_model_information,
                                            sizeof(container_issue_info_response.mobile_phone_model_information)));
         }
@@ -859,7 +882,7 @@ static int info_felica(bool verbose) {
                 PrintAndLogEx(INFO, "Container properties:");
                 has_container_properties = true;
             }
-            PrintAndLogEx(INFO, "  0x%04X........... %s", container_properties[i],
+            PrintAndLogEx(INFO, "  0x%04X........... " _YELLOW_("%s"), container_properties[i],
                           sprint_hex_inrow(container_property_data, container_property_data_len));
         }
     }
