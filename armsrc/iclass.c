@@ -2746,6 +2746,9 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     uint32_t start_time = 0;
     uint8_t read_check_cc[] = { 0x10 | ICLASS_CMD_READCHECK, 0x18 }; //block 24 with credit key
     uint8_t read_check_cc2[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 }; //block 2 -> to check Kd macs
+    if (msg->credit_recovery == true){
+        read_check_cc[0] = 0x80 | ICLASS_CMD_READCHECK; //still block 24 but with debit key
+    }
 
     /*  iclass_mac_table is a series of weak macs, those weak macs correspond to the different combinations of the last 3 bits of each key byte. */
 
@@ -2788,7 +2791,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
         }
         //Step0 Card Select Routine
         eof_time = 0; //reset eof time
-        res = select_iclass_tag(&hdr, false, &eof_time, shallow_mod);
+        res = select_iclass_tag(&hdr, msg->credit_recovery, &eof_time, shallow_mod);
         if (res) {
             status_message = 1; //card select successful
             card_select = true;
@@ -2796,14 +2799,16 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
         //Step 0A - The read_check_cc block has to be in AA2, set it by checking the card configuration
         read_check_cc[1] = hdr.conf.app_limit + 1; //first block of AA2
-
+        if (msg->credit_recovery == true){
+            read_check_cc[1] = hdr.conf.app_limit - 1; //last block of AA1
+        }
         //Step1 Authenticate with AA1 using trace
         if (card_select) {
             memcpy(original_mac, msg->req.key, 8);
             start_time = eof_time + DELAY_ICLASS_VICC_TO_VCD_READER;
             res = authenticate_iclass_tag(&msg->req, &hdr, &start_time, &eof_time, mac1);
             if (res) {
-                status_message = 2; //authentication with AA1 macs successful
+                status_message = 2; //authentication with AA1(AA2 if credit recovery) macs successful
                 card_auth = true;
             }
         }
@@ -2852,7 +2857,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
             set_tracing(false);   // disable tracing to prevent crashes - set to true for debugging
             // Step0 Card Select Routine
             eof_time = 0; // reset eof time
-            res = select_iclass_tag(&hdr, false, &eof_time, shallow_mod);
+            res = select_iclass_tag(&hdr, msg->credit_recovery, &eof_time, shallow_mod);
             if (res) {
                 status_message = 1; // card select successful
                 card_select = true;
@@ -2923,6 +2928,9 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
         uint8_t wb[9] = {0};
         uint8_t blockno = 3;
+        if (msg->credit_recovery == true){
+            blockno = 4;
+        }
         wb[0] = blockno;
         memcpy(wb + 1, genkeyblock, 8);
         doMAC_N(wb, sizeof(wb), div_key2, mac2);
@@ -3072,6 +3080,9 @@ fast_restore:
     uint8_t mac2[4] = {0};
     uint8_t wb[9] = {0};
     uint8_t blockno = 3;
+    if (msg->credit_recovery == true){
+            blockno = 4;
+    }
     wb[0] = blockno;
     bool reverted = false;
     uint8_t revert_retries = 0;

@@ -4610,7 +4610,7 @@ void picopass_elite_nextKey(uint8_t *key) {
     memcpy(key, key_state, PICOPASS_BLOCK_SIZE);
 }
 
-static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, uint8_t no_first_auth[8], bool debug, bool test, bool fast, bool short_delay, bool allnight) {
+static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, uint8_t no_first_auth[8], bool debug, bool test, bool fast, bool short_delay, bool allnight, bool credit) {
 
     int runs = 1;
     int cycle = 1;
@@ -4644,6 +4644,7 @@ static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, u
         payload->test = test;
         payload->fast = fast;
         payload->short_delay = short_delay;
+        payload->credit_recovery = credit;
         memcpy(payload->nfa, no_first_auth, PICOPASS_BLOCK_SIZE);
         memcpy(payload->req.key, key, PICOPASS_BLOCK_SIZE);
         memcpy(payload->req2.key, aa2_standard_key, PICOPASS_BLOCK_SIZE);
@@ -4925,7 +4926,7 @@ static void generate_single_key_block_inverted_opt(const uint8_t *startingKey, u
 
 }
 
-static int CmdHFiClassLegacyRecSim(void) {
+static int CmdHFiClassLegacyRecSim(bool credit) {
 
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, _YELLOW_("This simulation assumes the card is standard keyed."));
@@ -4940,7 +4941,11 @@ static int CmdHFiClassLegacyRecSim(void) {
     }
 
     uint8_t new_div_key[8] = {0};
-    HFiClassCalcDivKey(csn, iClass_Key_Table[0], new_div_key, false);
+    if (credit == true){
+        HFiClassCalcDivKey(csn, iClass_Key_Table[1], new_div_key, false);
+    }else{
+        HFiClassCalcDivKey(csn, iClass_Key_Table[0], new_div_key, false);
+    }
 
     uint8_t key[PICOPASS_BLOCK_SIZE] = {0};
     uint8_t original_key[PICOPASS_BLOCK_SIZE] = {0};
@@ -5016,7 +5021,8 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
         arg_lit0(NULL, "allnight", "Loops the loop for 10 times, recommended loop value of 5000"),
         arg_lit0(NULL, "fast", "Increases the speed (4.6->7.4 key updates/second), higher risk to brick the card"),
         arg_lit0(NULL, "sl", "Lower card comms delay times, further speeds increases, may cause more errors"),
-        arg_lit0(NULL, "est", "Estimates the key updates based on the card's CSN assuming standard key"),
+        arg_lit0(NULL, "est", "Estimates the key updates based on the card's CSN assuming standard key, can be used with --credit option"),
+        arg_lit0(NULL, "credit", "EXPERIMENTAL : Recover the credit key using KD 0"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -5034,9 +5040,10 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     bool fast = arg_get_lit(ctx, 7);
     bool short_delay = arg_get_lit(ctx, 8);
     bool sim = arg_get_lit(ctx, 9);
+    bool credit = arg_get_lit(ctx, 10);
 
     if (sim) {
-        CmdHFiClassLegacyRecSim();
+        CmdHFiClassLegacyRecSim(credit);
         return PM3_SUCCESS;
     }
 
@@ -5048,8 +5055,13 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
         PrintAndLogEx(ERR, "Too many loops, arm prone to crashes. For safety specify a number lower than 10000");
         CLIParserFree(ctx);
         return PM3_EINVARG;
-    } else if (debug || test) {
+    } else if (test) {
         loop = 1;
+        fast = false;
+    }else if (debug) {
+        if (loop > 10){
+            loop = 10;
+        }
         fast = false;
     }
 
@@ -5060,7 +5072,14 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
         DropField();
         return PM3_ESOFT;
     }
-    diversifyKey(csn, iClass_Key_Table[1], new_div_key);
+
+    if(credit == true){
+        diversifyKey(csn, iClass_Key_Table[0], new_div_key);
+        fast = false;
+    }else{
+        diversifyKey(csn, iClass_Key_Table[1], new_div_key);
+    }
+
     memcpy(no_first_auth, new_div_key, PICOPASS_BLOCK_SIZE);
 
     CLIParserFree(ctx);
@@ -5074,7 +5093,7 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     PrintAndLogEx(INFO, "---------------------------------------");
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort");
     PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------\n");
-    iclass_recover(macs, index, loop, no_first_auth, debug, test, fast, short_delay, allnight);
+    iclass_recover(macs, index, loop, no_first_auth, debug, test, fast, short_delay, allnight, credit);
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(WARNING, _YELLOW_("If the process completed successfully"));
     PrintAndLogEx(HINT, "Hint: run `" _YELLOW_("hf iclass legbrute -h") "` with the partial key found");
