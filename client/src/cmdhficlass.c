@@ -4631,13 +4631,6 @@ static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, u
         payload->req.send_reply = true;
         payload->req.do_auth = true;
         payload->req.shallow_mod = false;
-        payload->req2.use_raw = false;
-        payload->req2.use_elite = false;
-        payload->req2.use_credit_key = true;
-        payload->req2.use_replay = false;
-        payload->req2.send_reply = true;
-        payload->req2.do_auth = true;
-        payload->req2.shallow_mod = false;
         payload->index = index_start;
         payload->loop = loop;
         payload->debug = debug;
@@ -4647,7 +4640,6 @@ static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, u
         payload->credit_recovery = credit;
         memcpy(payload->nfa, no_first_auth, PICOPASS_BLOCK_SIZE);
         memcpy(payload->req.key, key, PICOPASS_BLOCK_SIZE);
-        memcpy(payload->req2.key, aa2_standard_key, PICOPASS_BLOCK_SIZE);
 
         PrintAndLogEx(INFO, "Recover started...");
 

@@ -120,7 +120,6 @@ typedef struct {
 
 typedef struct {
     iclass_auth_req_t req;
-    iclass_auth_req_t req2;
     uint32_t index;
     uint32_t loop;
     uint8_t nfa[8];
