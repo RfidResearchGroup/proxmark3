@@ -166,6 +166,7 @@ void strn_upper(char *s, size_t n);
 bool str_startswith(const char *s,  const char *pre);  // check for prefix in string
 bool str_endswith(const char *s,  const char *suffix);    // check for suffix in string
 void clean_ascii(unsigned char *buf, size_t len);
+bool decode_zero_padded_ascii(const uint8_t *data, size_t data_len, char *out, size_t out_len);
 void str_cleanrn(char *buf, size_t len);
 void str_creplace(char *buf, size_t len, char from, char to);
 void str_reverse(char *buf,  size_t len);

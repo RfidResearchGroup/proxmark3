@@ -28,6 +28,7 @@
 #include "util.h"
 #include "ui.h"
 #include "iso18.h"       // felica_card_select_t struct
+#include "protocols.h"
 #include "des.h"
 #include "platform_util.h"
 #include "cliparser.h"   // cliparser
@@ -45,6 +46,10 @@
 
 #define FELICA_DEFAULT_TIMEOUT_MS 2000U
 #define FELICA_DEFAULT_RETRY_COUNT 3U
+#define FELICA_PLATFORM_INFO_MAX_LEN 64U
+#define FELICA_CONTAINER_PROPERTY_MAX_LEN 64U
+#define FELICA_OPTIONAL_CMD_TIMEOUT_MS 250U
+#define FELICA_OPTIONAL_CMD_RETRIES 3U
 
 #define FELICA_SERVICE_ATTRIBUTE_UNAUTH_READ    (0b000001)
 #define FELICA_SERVICE_ATTRIBUTE_READ_ONLY      (0b000010)
@@ -56,6 +61,9 @@
 
 static int CmdHelp(const char *Cmd);
 static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose);
+static int send_felica_payload_with_retries(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
+        int expected_response_cmd, uint32_t timeout_ms, uint32_t retries, bool logging,
+        PacketResponseNG *resp, const char *request_name);
 static felica_card_select_t last_known_card;
 
 static void set_last_known_card(felica_card_select_t card) {
@@ -283,15 +291,18 @@ static const char *felica_model_name(uint8_t rom_type, uint8_t ic_type) {
  * Wait for response from pm3 or timeout.
  * Checks if receveid bytes have a valid CRC.
  * @param verbose prints out the response received.
+ * @param logging prints warning/error logs.
  */
-static bool waitCmdFelicaEx(bool iSelect, PacketResponseNG *resp, bool verbose, uint32_t timeout_ms) {
+static bool waitCmdFelicaEx(bool iSelect, PacketResponseNG *resp, bool verbose, bool logging, uint32_t timeout_ms) {
     if (WaitForResponseTimeout(CMD_HF_FELICA_COMMAND, resp, timeout_ms) == false) {
-        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        if (logging) {
+            PrintAndLogEx(WARNING, "timeout while waiting for reply");
+        }
         return false;
     }
 
     if (resp->status != PM3_SUCCESS) {
-        if (verbose) {
+        if (logging) {
             PrintAndLogEx(WARNING, "FeliCa command failed (%d)", resp->status);
         }
         return false;
@@ -299,35 +310,43 @@ static bool waitCmdFelicaEx(bool iSelect, PacketResponseNG *resp, bool verbose, 
 
     uint16_t len = resp->length;
 
-    if (verbose) {
-
-        if (len == 0 || len == 1) {
+    if (len == 0 || len == 1) {
+        if (logging) {
             PrintAndLogEx(ERR, "Could not receive data correctly!");
+        }
+        return false;
+    }
+
+    if (iSelect == false) {
+        if (len < 4) {
+            if (logging) {
+                PrintAndLogEx(ERR, "received too short frame!");
+            }
             return false;
         }
 
-        PrintAndLogEx(SUCCESS, "(%u) %s", len, sprint_hex(resp->data.asBytes, len));
-
-        if (iSelect == false) {
-            if (len < 4) {
-                PrintAndLogEx(ERR, "received too short frame!");
-                return false;
-            }
-            if (check_crc(CRC_FELICA, resp->data.asBytes + 2, len - 2) == false) {
+        if (check_crc(CRC_FELICA, resp->data.asBytes + 2, len - 2) == false) {
+            if (logging) {
                 PrintAndLogEx(WARNING, "CRC ( " _RED_("fail") " )");
             }
-
-            if (resp->data.asBytes[0] != 0xB2 || resp->data.asBytes[1] != 0x4D) {
-                PrintAndLogEx(ERR, "received incorrect frame format!");
-                return false;
-            }
         }
+
+        if (resp->data.asBytes[0] != 0xB2 || resp->data.asBytes[1] != 0x4D) {
+            if (logging) {
+                PrintAndLogEx(ERR, "received incorrect frame format!");
+            }
+            return false;
+        }
+    }
+
+    if (verbose && logging) {
+        PrintAndLogEx(SUCCESS, "(%u) %s", len, sprint_hex(resp->data.asBytes, len));
     }
     return true;
 }
 
 static bool waitCmdFelica(bool iSelect, PacketResponseNG *resp, bool verbose) {
-    return waitCmdFelicaEx(iSelect, resp, verbose, FELICA_DEFAULT_TIMEOUT_MS);
+    return waitCmdFelicaEx(iSelect, resp, verbose, true, FELICA_DEFAULT_TIMEOUT_MS);
 }
 
 
@@ -425,11 +444,150 @@ static int CmdHFFelicaReader(const char *Cmd) {
     return read_felica_uid(cm, verbose);
 }
 
+static int send_get_container_id(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
+                                 felica_get_container_id_response_t *container_id_response) {
+    (void)verbose;
+    PacketResponseNG resp;
+    if (send_felica_payload_with_retries(flags, datalen, data, false,
+                                         FELICA_GET_CONTAINER_ID_ACK,
+                                         FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES,
+                                         false, &resp, "get container id") != PM3_SUCCESS) {
+        return PM3_ERFTRANS;
+    }
+
+    if (resp.length < sizeof(*container_id_response)) {
+        return PM3_ESOFT;
+    }
+
+    memcpy(container_id_response, (felica_get_container_id_response_t *)resp.data.asBytes, sizeof(*container_id_response));
+    return PM3_SUCCESS;
+}
+
+static int send_get_container_property(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
+                                       uint8_t *container_property_data, size_t container_property_data_capacity,
+                                       size_t *container_property_data_len) {
+    (void)verbose;
+    if (container_property_data == NULL || container_property_data_len == NULL) {
+        return PM3_EINVARG;
+    }
+
+    *container_property_data_len = 0;
+
+    PacketResponseNG resp;
+    if (send_felica_payload_with_retries(flags, datalen, data, false,
+                                         FELICA_GET_CONTAINER_PROPERTY_ACK,
+                                         FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES,
+                                         false, &resp, "get container property") != PM3_SUCCESS) {
+        return PM3_ERFTRANS;
+    }
+
+    if (resp.length < sizeof(felica_get_container_property_response_t)) {
+        return PM3_ESOFT;
+    }
+
+    const size_t frame_len_offset = 2;
+    if (resp.data.asBytes[frame_len_offset] < 2) {
+        return PM3_ESOFT;
+    }
+
+    const size_t property_data_len = resp.data.asBytes[frame_len_offset] - 2;
+    if (property_data_len == 0 || property_data_len > FELICA_CONTAINER_PROPERTY_MAX_LEN) {
+        return PM3_ESOFT;
+    }
+
+    const size_t property_data_offset = sizeof(felica_frame_response_noidm_t);
+    if (resp.length < property_data_offset + property_data_len) {
+        return PM3_ESOFT;
+    }
+
+    size_t copy_len = property_data_len;
+    if (copy_len > container_property_data_capacity) {
+        copy_len = container_property_data_capacity;
+    }
+
+    memcpy(container_property_data, resp.data.asBytes + property_data_offset, copy_len);
+    *container_property_data_len = copy_len;
+    return PM3_SUCCESS;
+}
+
+static int send_get_container_issue_information(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
+        felica_get_container_issue_info_response_t *container_issue_info_response) {
+    (void)verbose;
+    PacketResponseNG resp;
+    if (send_felica_payload_with_retries(flags, datalen, data, false,
+                                         FELICA_GET_CONTAINER_ISSUE_INFO_ACK,
+                                         FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES,
+                                         false, &resp, "get container issue info") != PM3_SUCCESS) {
+        return PM3_ERFTRANS;
+    }
+
+    if (resp.length < sizeof(*container_issue_info_response)) {
+        return PM3_ESOFT;
+    }
+
+    memcpy(container_issue_info_response, (felica_get_container_issue_info_response_t *)resp.data.asBytes, sizeof(*container_issue_info_response));
+    return PM3_SUCCESS;
+}
+
+static int send_get_platform_information(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
+        felica_status_flags_t *status_flags, uint8_t *platform_information_data,
+        size_t platform_information_data_capacity, size_t *platform_information_data_len) {
+    (void)verbose;
+    if (status_flags == NULL || platform_information_data == NULL || platform_information_data_len == NULL) {
+        return PM3_EINVARG;
+    }
+
+    *platform_information_data_len = 0;
+
+    PacketResponseNG resp;
+    if (send_felica_payload_with_retries(flags, datalen, data, false,
+                                         FELICA_GETPLATFORMINFO_ACK,
+                                         FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES,
+                                         false, &resp, "get platform info") != PM3_SUCCESS) {
+        return PM3_ERFTRANS;
+    }
+
+    if (resp.length < (sizeof(felica_frame_response_t) + sizeof(felica_status_flags_t))) {
+        return PM3_ESOFT;
+    }
+
+    const size_t status_offset = sizeof(felica_frame_response_t);
+    memcpy(status_flags, resp.data.asBytes + status_offset, sizeof(*status_flags));
+
+    if (status_flags->status_flag1[0] != 0x00 || status_flags->status_flag2[0] != 0x00) {
+        return PM3_SUCCESS;
+    }
+
+    const size_t data_len_offset = sizeof(felica_frame_response_t) + sizeof(felica_status_flags_t);
+    if (resp.length < (data_len_offset + 1)) {
+        return PM3_ESOFT;
+    }
+
+    const size_t payload_len = resp.length - (data_len_offset + 1);
+    const size_t data_len = resp.data.asBytes[data_len_offset];
+    if (data_len > FELICA_PLATFORM_INFO_MAX_LEN) {
+        return PM3_ESOFT;
+    }
+    if (payload_len < data_len) {
+        return PM3_ESOFT;
+    }
+
+    size_t copy_len = data_len;
+    if (copy_len > platform_information_data_capacity) {
+        copy_len = platform_information_data_capacity;
+    }
+
+    memcpy(platform_information_data, resp.data.asBytes + data_len_offset + 1, copy_len);
+    *platform_information_data_len = copy_len;
+    return PM3_SUCCESS;
+}
+
 static int info_felica(bool verbose) {
 
-    clear_and_send_command(FELICA_CONNECT, 0, NULL, false);
+    clear_and_send_command(FELICA_CONNECT | FELICA_NO_DISCONNECT, 0, NULL, false);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_HF_FELICA_COMMAND, &resp, 2500) == false) {
+        DropField();
         if (verbose) PrintAndLogEx(WARNING, "FeliCa card select failed");
         return PM3_ESOFT;
     }
@@ -457,6 +615,7 @@ static int info_felica(bool verbose) {
                 }
                 break;
         }
+        DropField();
         return resp.status;
     }
 
@@ -464,6 +623,7 @@ static int info_felica(bool verbose) {
         if (verbose) {
             PrintAndLogEx(WARNING, "FeliCa card select returned invalid payload");
         }
+        DropField();
         return PM3_ESOFT;
     }
 
@@ -479,8 +639,98 @@ static int info_felica(bool verbose) {
     PrintAndLogEx(INFO, "IC code........ %s ( " _YELLOW_("%s") " )", sprint_hex_inrow(card.iccode, sizeof(card.iccode)), felica_model_name(card.iccode[0], card.iccode[1]));
     PrintAndLogEx(INFO, "MRT............ %s", sprint_hex_inrow(card.mrt, sizeof(card.mrt)));
     PrintAndLogEx(INFO, "Service code... " _YELLOW_("%s"), sprint_hex(card.servicecode, sizeof(card.servicecode)));
-    PrintAndLogEx(NORMAL, "");
     set_last_known_card(card);
+    const uint8_t optional_flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
+
+    felica_get_platform_info_request_t platform_info_request;
+    memset(&platform_info_request, 0, sizeof(platform_info_request));
+    platform_info_request.length[0] = sizeof(platform_info_request);
+    platform_info_request.command_code[0] = FELICA_GETPLATFORMINFO_REQ;
+    memcpy(platform_info_request.IDm, card.IDm, sizeof(platform_info_request.IDm));
+
+    felica_status_flags_t platform_status_flags;
+    uint8_t platform_information_data[FELICA_PLATFORM_INFO_MAX_LEN] = {0};
+    size_t platform_information_data_len = 0;
+    if (send_get_platform_information(optional_flags,
+                                      sizeof(platform_info_request), (uint8_t *)&platform_info_request,
+                                      false, &platform_status_flags, platform_information_data,
+                                      sizeof(platform_information_data),
+                                      &platform_information_data_len) == PM3_SUCCESS &&
+            platform_information_data_len > 0) {
+        PrintAndLogEx(INFO, "Platform info.. %s", sprint_hex_inrow(platform_information_data, platform_information_data_len));
+    }
+
+    felica_get_container_id_request_t container_id_request;
+    memset(&container_id_request, 0, sizeof(container_id_request));
+    container_id_request.length[0] = sizeof(container_id_request);
+    container_id_request.command_code[0] = FELICA_GET_CONTAINER_ID_REQ;
+
+    felica_get_container_id_response_t container_id_response;
+    if (send_get_container_id(optional_flags, sizeof(container_id_request),
+                              (uint8_t *)&container_id_request, false,
+                              &container_id_response) == PM3_SUCCESS) {
+        PrintAndLogEx(INFO, "Container IDm.. " _YELLOW_("%s"),
+                      sprint_hex_inrow(container_id_response.container_idm, sizeof(container_id_response.container_idm)));
+    }
+
+    felica_get_container_issue_info_request_t container_issue_info_request;
+    memset(&container_issue_info_request, 0, sizeof(container_issue_info_request));
+    container_issue_info_request.length[0] = sizeof(container_issue_info_request);
+    container_issue_info_request.command_code[0] = FELICA_GET_CONTAINER_ISSUE_INFO_REQ;
+    memcpy(container_issue_info_request.IDm, card.IDm, sizeof(container_issue_info_request.IDm));
+
+    felica_get_container_issue_info_response_t container_issue_info_response;
+    if (send_get_container_issue_information(optional_flags,
+            sizeof(container_issue_info_request), (uint8_t *)&container_issue_info_request, false,
+            &container_issue_info_response) == PM3_SUCCESS) {
+        char model_ascii[sizeof(container_issue_info_response.mobile_phone_model_information) + 1] = {0};
+        bool model_is_ascii = decode_zero_padded_ascii(
+                                  container_issue_info_response.mobile_phone_model_information,
+                                  sizeof(container_issue_info_response.mobile_phone_model_information),
+                                  model_ascii,
+                                  sizeof(model_ascii)
+                              );
+        PrintAndLogEx(INFO, "Container issue info:");
+        PrintAndLogEx(INFO, "  Format/Carrier... %s",
+                      sprint_hex_inrow(container_issue_info_response.format_version_carrier_information,
+                                       sizeof(container_issue_info_response.format_version_carrier_information)));
+        if (model_is_ascii) {
+            PrintAndLogEx(INFO, "  Model............ %s (ASCII)", model_ascii);
+        } else {
+            PrintAndLogEx(INFO, "  Model............ %s (HEX)",
+                          sprint_hex_inrow(container_issue_info_response.mobile_phone_model_information,
+                                           sizeof(container_issue_info_response.mobile_phone_model_information)));
+        }
+    }
+
+    const uint16_t container_properties[] = {0x0000, 0x0001};
+    uint8_t container_property_data[FELICA_CONTAINER_PROPERTY_MAX_LEN] = {0};
+    bool has_container_properties = false;
+    for (size_t i = 0; i < (sizeof(container_properties) / sizeof(container_properties[0])); i++) {
+        felica_get_container_property_request_t container_property_request;
+        memset(&container_property_request, 0, sizeof(container_property_request));
+        container_property_request.length[0] = sizeof(container_property_request);
+        container_property_request.command_code[0] = FELICA_GET_CONTAINER_PROPERTY_REQ;
+        container_property_request.property_index[0] = container_properties[i] & 0xFF;
+        container_property_request.property_index[1] = (container_properties[i] >> 8) & 0xFF;
+
+        size_t container_property_data_len = 0;
+        if (send_get_container_property(optional_flags, sizeof(container_property_request),
+                                        (uint8_t *)&container_property_request, false,
+                                        container_property_data, sizeof(container_property_data),
+                                        &container_property_data_len) == PM3_SUCCESS &&
+                container_property_data_len > 0) {
+            if (has_container_properties == false) {
+                PrintAndLogEx(INFO, "Container properties:");
+                has_container_properties = true;
+            }
+            PrintAndLogEx(INFO, "  0x%04X........... %s", container_properties[i],
+                          sprint_hex_inrow(container_property_data, container_property_data_len));
+        }
+    }
+
+    DropField();
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -600,29 +850,30 @@ static void log_felica_retry_attempt(const char *request_name, uint32_t attempt,
  * @return PM3_SUCCESS on success
  */
 static int send_felica_payload_with_retries(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
-        int expected_response_cmd, uint32_t timeout_ms, uint32_t retries, PacketResponseNG *resp, const char *request_name) {
+        int expected_response_cmd, uint32_t timeout_ms, uint32_t retries, bool logging,
+        PacketResponseNG *resp, const char *request_name) {
     for (uint32_t attempt = 0; attempt <= retries; attempt++) {
         clear_and_send_command(flags, datalen, data, verbose);
-        if (waitCmdFelicaEx(false, resp, verbose, timeout_ms) == false) {
-            if (attempt < retries) {
+        if (waitCmdFelicaEx(false, resp, verbose, logging, timeout_ms) == false) {
+            if (logging && attempt < retries) {
                 log_felica_retry_attempt(request_name, attempt, retries);
             }
             continue;
         }
 
         if (expected_response_cmd >= 0) {
-            if (resp->length < sizeof(felica_frame_response_t)) {
-                if (attempt < retries) {
+            if (resp->length < sizeof(felica_frame_response_noidm_t)) {
+                if (logging && attempt < retries) {
                     log_felica_retry_attempt(request_name, attempt, retries);
                 }
                 continue;
             }
 
-            const felica_frame_response_t *frame_response = (const felica_frame_response_t *)resp->data.asBytes;
+            const felica_frame_response_noidm_t *frame_response = (const felica_frame_response_noidm_t *)resp->data.asBytes;
             if (frame_response->cmd_code[0] != (uint8_t)expected_response_cmd) {
-                if (attempt < retries) {
+                if (logging && attempt < retries) {
                     log_felica_retry_attempt(request_name, attempt, retries);
-                } else {
+                } else if (logging) {
                     PrintAndLogEx(FAILED, "Bad response cmd 0x%02X (expected 0x%02X).",
                                   frame_response->cmd_code[0], (uint8_t)expected_response_cmd);
                 }
@@ -647,6 +898,7 @@ int send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data, bool ve
     if (send_felica_payload_with_retries(flags, datalen, data, verbose,
                                             0x03,
                                             FELICA_DEFAULT_TIMEOUT_MS, 0,
+                                            true,
                                             &resp, "request service") != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "\nGot no response from card");
         return PM3_ERFTRANS;
@@ -679,6 +931,7 @@ static int send_read_without_encryption_ex(uint8_t flags, uint16_t datalen, uint
     PacketResponseNG resp;
     if (send_felica_payload_with_retries(flags, datalen, data, verbose,
                                          0x07, timeout_ms, retries,
+                                         true,
                                          &resp, "read without encryption") != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "No response from card");
         return PM3_ERFTRANS;
@@ -715,6 +968,7 @@ static int send_search_service_code(uint8_t flags, uint16_t datalen, uint8_t *da
     PacketResponseNG resp;
     if (send_felica_payload_with_retries(flags, datalen, data, verbose,
                                          0x0B, timeout_ms, retries,
+                                         true,
                                          &resp, "search service") != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "No response from card");
         return PM3_ERFTRANS;
@@ -754,6 +1008,7 @@ static int send_write_without_encryption(uint8_t flags, uint16_t datalen, uint8_
     if (send_felica_payload_with_retries(flags, datalen, data, verbose,
                                          -1,
                                          FELICA_DEFAULT_TIMEOUT_MS, 0,
+                                         true,
                                          &resp, "write block") != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "no response from card");
         return PM3_ERFTRANS;
