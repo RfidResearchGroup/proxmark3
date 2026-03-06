@@ -120,7 +120,6 @@ typedef struct {
 
 typedef struct {
     iclass_auth_req_t req;
-    iclass_auth_req_t req2;
     uint32_t index;
     uint32_t loop;
     uint8_t nfa[8];
@@ -128,6 +127,7 @@ typedef struct {
     bool test;
     bool fast;
     bool short_delay;
+    bool credit_recovery;
 } PACKED iclass_recover_req_t;
 
 typedef struct iclass_premac {
