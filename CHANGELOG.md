@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added DESFire AID values related to LEAF (@kormax)
 - Added --credit option for `hf iclass legrec` command to perform a credit key recovery. This is experimental and unfinished as it only partially works.(@antiklesys)
 - Added hardening for all host binaries. Exact level of hardening depends on the OS (@doegox)
 - Added `hf aliro read` command (@kormax)
