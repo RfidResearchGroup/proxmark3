@@ -49,6 +49,8 @@
 
 #define MAX_KEY_LEN        24
 #define MAX_KEYS_LIST_LEN  1024
+#define MFDES_BRUTEAID_RESELECT_ATTEMPTS 5
+#define MFDES_BRUTEAID_RESELECT_WAIT_MS  200
 
 #define status(x) ( ((uint16_t)(0x91 << 8)) + (uint16_t)x )
 /*
@@ -2251,6 +2253,36 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
         PrintAndLogEx(INPLACE, "Brute DESFire AID Progress " _YELLOW_("%0.1f") " %%   current AID: %06X", progress, id);
 
         res = DesfireSelectAIDHexNoFieldOn(&dctx, id);
+        if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+            for (int attempt = 1; attempt <= MFDES_BRUTEAID_RESELECT_ATTEMPTS; attempt++) {
+                printf("\33[2K\r"); // clear current inplace progress line before logging
+                PrintAndLogEx(WARNING, "No card response while checking AID " _YELLOW_("%06X") ". Reselecting card (%d/%d)...",
+                              id, attempt, MFDES_BRUTEAID_RESELECT_ATTEMPTS);
+
+                msleep(MFDES_BRUTEAID_RESELECT_WAIT_MS);
+
+                res = DesfireSelectAIDHex(&dctx, 0x000000, false, 0);
+                if (res != PM3_SUCCESS) {
+                    if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                        continue;
+                    }
+                    break;
+                }
+
+                res = DesfireSelectAIDHexNoFieldOn(&dctx, id);
+                if (res == PM3_SUCCESS || res == PM3_EAPDU_FAIL ||
+                        (res != PM3_ECARDEXCHANGE && res != PM3_ETIMEOUT && res != PM3_ERFTRANS)) {
+                    break;
+                }
+            }
+
+            if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                PrintAndLogEx(FAILED, "Card is not responding after %d reselect attempts. Aborting at AID " _YELLOW_("%06X"),
+                              MFDES_BRUTEAID_RESELECT_ATTEMPTS, id);
+                DropField();
+                return res;
+            }
+        }
 
         if (res == PM3_SUCCESS) {
             printf("\33[2K\r"); // clear current line before printing
