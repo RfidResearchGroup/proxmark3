@@ -849,14 +849,23 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FELICA_WRTSEC_REQ               0x16
 #define FELICA_WRTSEC_ACK               0x17
 
+#define FELICA_GET_CONTAINER_ISSUE_INFO_REQ 0x22
+#define FELICA_GET_CONTAINER_ISSUE_INFO_ACK 0x23
+
+#define FELICA_GET_CONTAINER_PROPERTY_REQ   0x2e
+#define FELICA_GET_CONTAINER_PROPERTY_ACK   0x2f
+
 #define FELICA_REQSRV2_REQ              0x32
 #define FELICA_REQSRV2_ACK              0x33
 
 #define FELICA_GETSTATUS_REQ            0x38
 #define FELICA_GETSTATUS_ACK            0x39
 
-#define FELICA_OSVER_REQ                0x3c
-#define FELICA_OSVER_ACK                0x3d
+#define FELICA_GETPLATFORMINFO_REQ      0x3a
+#define FELICA_GETPLATFORMINFO_ACK      0x3b
+
+#define FELICA_REQUEST_SPEC_VERSION_REQ 0x3c
+#define FELICA_REQUEST_SPEC_VERSION_ACK 0x3d
 
 #define FELICA_RESET_MODE_REQ           0x3e
 #define FELICA_RESET_MODE_ACK           0x3f
@@ -874,6 +883,9 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 
 #define FELICA_UPDATE_RNDID_REQ         0x4C
 #define FELICA_UPDATE_RNDID_ACK         0x4D
+
+#define FELICA_GET_CONTAINER_ID_REQ     0x70
+#define FELICA_GET_CONTAINER_ID_ACK     0x71
 
 // FeliCa SYSTEM list
 #define SYSTEMCODE_ANY                  0xffff // ANY

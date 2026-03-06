@@ -1368,6 +1368,39 @@ void clean_ascii(unsigned char *buf, size_t len) {
     }
 }
 
+bool decode_zero_padded_ascii(const uint8_t *data, size_t data_len, char *out, size_t out_len) {
+    if (data == NULL || out == NULL || out_len == 0) {
+        return false;
+    }
+
+    size_t text_len = 0;
+    while (text_len < data_len && data[text_len] != 0x00) {
+        if (data[text_len] < 0x20 || data[text_len] > 0x7E) {
+            return false;
+        }
+        text_len++;
+    }
+
+    if (text_len == 0 || text_len == data_len) {
+        return false;
+    }
+
+    for (size_t i = text_len; i < data_len; i++) {
+        if (data[i] != 0x00) {
+            return false;
+        }
+    }
+
+    size_t copy_len = text_len;
+    if (copy_len > out_len - 1) {
+        copy_len = out_len - 1;
+    }
+
+    memcpy(out, data, copy_len);
+    out[copy_len] = '\0';
+    return true;
+}
+
 // replace \r \n to \0
 void str_cleanrn(char *buf, size_t len) {
     str_creplace(buf, len, '\n', '\0');
