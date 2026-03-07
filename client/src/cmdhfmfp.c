@@ -39,6 +39,7 @@
 #include "cmdtrace.h"
 #include "crypto/originality.h"
 #include "jansson.h"
+#include "preferences.h"  // getDeviceDebugLevel, setDeviceDebugLevel
 
 static const uint8_t mfp_default_key[16] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 static uint16_t mfp_card_adresses[] = {0x9000, 0x9001, 0x9002, 0x9003, 0x9004, 0x9006, 0x9007, 0xA000, 0xA001, 0xA080, 0xA081, 0xC000, 0xC001};
@@ -2002,6 +2003,10 @@ static int mfp_load_mfc_default_keys(uint8_t **pkeyBlock, uint32_t *pkeycnt) {
 // Uses mf_read_sector which has a proper timeout, unlike mf_check_keys
 // which can hang in firmware if the card doesn't respond to ISO 14443-3.
 // Returns true if a working key was found.
+// Try MFC (CRYPTO1) keys on a sector using mf_read_sector.
+// Returns true if a working key was found (stored in mfcFoundKeys).
+// Bails out early if the card doesn't respond to ISO 14443-3 select
+// (PM3_ETIMEOUT), which means the sector is SL3-only.
 static bool mfp_sl1_try_keys(uint8_t sectorNo, uint8_t *keys, uint32_t keycnt,
                               uint8_t mfcFoundKeys[2][64][MIFARE_KEY_SIZE + 1], bool verbose) {
 
@@ -2026,6 +2031,14 @@ static bool mfp_sl1_try_keys(uint8_t sectorNo, uint8_t *keys, uint32_t keycnt,
                     PrintAndLogEx(NORMAL, "+" NOLF);
                 }
                 return true;
+            }
+            // Timeout means card doesn't respond to ISO 14443-3 select at all.
+            // This sector is SL3-only; no point trying more CRYPTO1 keys.
+            if (res == PM3_ETIMEOUT) {
+                if (verbose) {
+                    PrintAndLogEx(DEBUG, "Sector %u not responding to ISO 14443-3, skipping MFC probe", sectorNo);
+                }
+                return false;
             }
         }
     }
@@ -2124,12 +2137,18 @@ static int CmdHFMFPDump(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
 
     // ========================================
-    // SL3 (AES) Key loading
+    // Phase 0: Key file loading (no card interaction yet)
     // ========================================
+
+    // AES keys: aesFoundKeys[keytype][sector][0]=found, [1..16]=key
     uint8_t aesFoundKeys[2][64][AES_KEY_LEN + 1];
     memset(aesFoundKeys, 0, sizeof(aesFoundKeys));
 
-    // 1a. Load AES keys from JSON key file (from hf mfp chk --dump)
+    // MFC keys: mfcFoundKeys[keytype][sector][0]=found, [1..6]=key
+    uint8_t mfcFoundKeys[2][64][MIFARE_KEY_SIZE + 1];
+    memset(mfcFoundKeys, 0, sizeof(mfcFoundKeys));
+
+    // 0a. Load AES keys from JSON key file (from hf mfp chk --dump)
     if (keyfnlen > 0) {
         res = mfp_load_keys_from_json(key_fn, aesFoundKeys);
         if (res != PM3_SUCCESS) {
@@ -2144,7 +2163,7 @@ static int CmdHFMFPDump(const char *Cmd) {
         }
     }
 
-    // 1b. Apply user-supplied AES key to all slots that don't have one yet
+    // 0b. Apply user-supplied AES key to all slots that don't have one yet
     if (userkeylen == AES_KEY_LEN) {
         int applied = 0;
         for (uint8_t s = 0; s < numSectors; s++) {
@@ -2159,41 +2178,7 @@ static int CmdHFMFPDump(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Applied user AES key to " _GREEN_("%d") " key slots", applied);
     }
 
-    // 1c. Probe AES dictionary + defaults for missing AES key slots
-    {
-        bool need_aes_probe = false;
-        for (uint8_t s = 0; s < numSectors; s++) {
-            if (aesFoundKeys[0][s][0] == 0 || aesFoundKeys[1][s][0] == 0) {
-                need_aes_probe = true;
-                break;
-            }
-        }
-
-        if (need_aes_probe && !no_default) {
-            uint8_t *key_block = NULL;
-            uint32_t keycnt = 0;
-            res = mfp_load_keys(&key_block, &keycnt, NULL, 0, dict_fn, dictfnlen, card.uid, true);
-            if (res == PM3_SUCCESS && keycnt > 0) {
-                PrintAndLogEx(INFO, "Probing " _YELLOW_("%u") " AES keys against %u sectors...", keycnt, numSectors);
-                uint8_t end_sector = numSectors - 1;
-                res = plus_key_check(0, end_sector, 0, 1, key_block, keycnt, aesFoundKeys, verbose, true);
-                if (res == PM3_EOPABORTED) {
-                    PrintAndLogEx(WARNING, "\nAborted");
-                }
-                PrintAndLogEx(NORMAL, "");
-            }
-            free(key_block);
-        }
-    }
-
-    // ========================================
-    // SL1 (CRYPTO1) Key loading
-    // ========================================
-    // mfcFoundKeys[keytype][sector][0]=found, [1..6]=key
-    uint8_t mfcFoundKeys[2][64][MIFARE_KEY_SIZE + 1];
-    memset(mfcFoundKeys, 0, sizeof(mfcFoundKeys));
-
-    // 2a. Load MFC keys from binary key file (from hf mf chk/autopwn)
+    // 0c. Load MFC keys from binary key file (from hf mf chk/autopwn)
     if (mfckeyfnlen > 0) {
         res = mfp_load_mfc_keys_from_bin(mfc_key_fn, mfcFoundKeys, numSectors);
         if (res != PM3_SUCCESS) {
@@ -2208,27 +2193,21 @@ static int CmdHFMFPDump(const char *Cmd) {
         }
     }
 
-    // 2b. Build combined MFC key list for SL1 probing during read phase.
-    // We don't probe upfront because mf_check_keys can hang in firmware
-    // if the card is in SL3 mode. Instead we try keys per-sector during
-    // the read phase, only for sectors where SL3 auth failed.
+    // 0d. Build combined MFC probe key list (dictionary + defaults)
     uint8_t *mfcProbeKeys = NULL;
     uint32_t mfcProbeKeyCnt = 0;
 
     if (!no_default) {
-        // load MFC dictionary file
         uint8_t *dict_keys = NULL;
         uint32_t dict_cnt = 0;
         if (mfcdictfnlen > 0) {
             loadFileDICTIONARY_safe(mfc_dict_fn, (void **)&dict_keys, MIFARE_KEY_SIZE, &dict_cnt);
         }
 
-        // load MFC defaults
         uint8_t *def_keys = NULL;
         uint32_t def_cnt = 0;
         mfp_load_mfc_default_keys(&def_keys, &def_cnt);
 
-        // merge into single list
         uint32_t total = dict_cnt + def_cnt;
         if (total > 0) {
             mfcProbeKeys = calloc(total, MIFARE_KEY_SIZE);
@@ -2240,7 +2219,6 @@ static int CmdHFMFPDump(const char *Cmd) {
                     memcpy(mfcProbeKeys + dict_cnt * MIFARE_KEY_SIZE, def_keys, def_cnt * MIFARE_KEY_SIZE);
                 }
                 mfcProbeKeyCnt = total;
-                PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%u") " MFC keys for SL1 sector probing", total);
             }
         }
         free(dict_keys);
@@ -2248,7 +2226,177 @@ static int CmdHFMFPDump(const char *Cmd) {
     }
 
     // ========================================
-    // Read phase - detect SL per sector and read
+    // Phase 1: Classify sectors as SL3 or SL1
+    // ========================================
+    // Try one MFC key (FFFFFFFFFFFF) on each sector to determine SL.
+    // mf_read_sector returns:
+    //   PM3_SUCCESS  -> SL1 confirmed, key found
+    //   PM3_EUNDEF   -> SL1 confirmed (card responded to ISO 14443-3 auth), wrong key
+    //   PM3_ETIMEOUT -> SL3 (card doesn't respond to ISO 14443-3)
+
+    // Suppress firmware debug messages during classification and key probing.
+    // The many auth attempts produce a flood of "Auth error" / "Can't select card"
+    // messages from the firmware that interfere with other tools reading stdout.
+    uint8_t dbg_curr = DBG_NONE;
+    if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
+        free(mfcProbeKeys);
+        return PM3_EFAILED;
+    }
+    setDeviceDebugLevel(DBG_NONE, false);
+
+    uint8_t sectorSL[64];
+    memset(sectorSL, MFP_SL_UNKNOWN, sizeof(sectorSL));
+
+    // Sectors with pre-loaded keys already have a known SL
+    for (uint8_t s = 0; s < numSectors; s++) {
+        if (aesFoundKeys[0][s][0] || aesFoundKeys[1][s][0]) {
+            sectorSL[s] = MFP_SL_3;
+        }
+        if (mfcFoundKeys[0][s][0] || mfcFoundKeys[1][s][0]) {
+            sectorSL[s] = MFP_SL_1;
+        }
+    }
+
+    // Probe unclassified sectors with FFFFFFFFFFFF (CRYPTO1)
+    {
+        uint8_t probe_key[MIFARE_KEY_SIZE];
+        memset(probe_key, 0xFF, MIFARE_KEY_SIZE);
+        uint8_t dummy[16 * 16] = {0};
+        PrintAndLogEx(INFO, "Classifying sector security levels...");
+
+        for (uint8_t s = 0; s < numSectors; s++) {
+            if (sectorSL[s] != MFP_SL_UNKNOWN) {
+                continue;
+            }
+
+            DropField();
+            res = mf_read_sector(s, 0, probe_key, dummy);
+            if (res == PM3_SUCCESS) {
+                // FFFFFFFFFFFF worked -> SL1 with default key
+                sectorSL[s] = MFP_SL_1;
+                mfcFoundKeys[0][s][0] = 1;
+                memcpy(&mfcFoundKeys[0][s][1], probe_key, MIFARE_KEY_SIZE);
+            } else if (res == PM3_EUNDEF) {
+                // Card responded to ISO 14443-3 but wrong key -> SL1
+                sectorSL[s] = MFP_SL_1;
+            } else {
+                // Timeout or other error -> SL3
+                sectorSL[s] = MFP_SL_3;
+            }
+        }
+        DropField();
+
+        int pre_sl3 = 0, pre_sl1 = 0;
+        for (uint8_t s = 0; s < numSectors; s++) {
+            if (sectorSL[s] == MFP_SL_3) pre_sl3++;
+            else if (sectorSL[s] == MFP_SL_1) pre_sl1++;
+        }
+        PrintAndLogEx(SUCCESS, "Sector classification: " _GREEN_("%d") " SL3, " _YELLOW_("%d") " SL1",
+                      pre_sl3, pre_sl1);
+    }
+
+    // ========================================
+    // Phase 2: AES key probing (SL3 sectors only)
+    // ========================================
+    // plus_key_check skips sectors where foundKeys[][sector][0] is set,
+    // so we mark SL1 sectors with a dummy key to exclude them.
+    {
+        // Save and temporarily mark SL1 sectors so plus_key_check skips them
+        uint8_t sl1_backup[2][64];
+        memset(sl1_backup, 0, sizeof(sl1_backup));
+
+        for (uint8_t s = 0; s < numSectors; s++) {
+            if (sectorSL[s] == MFP_SL_1) {
+                for (uint8_t kt = 0; kt < 2; kt++) {
+                    sl1_backup[kt][s] = aesFoundKeys[kt][s][0];
+                    if (aesFoundKeys[kt][s][0] == 0) {
+                        // Mark as "found" with dummy so plus_key_check skips it
+                        aesFoundKeys[kt][s][0] = 0xFF;
+                    }
+                }
+            }
+        }
+
+        bool need_aes_probe = false;
+        for (uint8_t s = 0; s < numSectors; s++) {
+            if (sectorSL[s] == MFP_SL_3 &&
+                (aesFoundKeys[0][s][0] == 0 || aesFoundKeys[1][s][0] == 0)) {
+                need_aes_probe = true;
+                break;
+            }
+        }
+
+        if (need_aes_probe && !no_default) {
+            uint8_t *key_block = NULL;
+            uint32_t keycnt = 0;
+            res = mfp_load_keys(&key_block, &keycnt, NULL, 0, dict_fn, dictfnlen, card.uid, true);
+            if (res == PM3_SUCCESS && keycnt > 0) {
+                int sl3_unknown = 0;
+                for (uint8_t s = 0; s < numSectors; s++) {
+                    if (sectorSL[s] == MFP_SL_3 &&
+                        (aesFoundKeys[0][s][0] == 0 || aesFoundKeys[1][s][0] == 0)) {
+                        sl3_unknown++;
+                    }
+                }
+                PrintAndLogEx(INFO, "Probing " _YELLOW_("%u") " AES keys against %d SL3 sectors...", keycnt, sl3_unknown);
+                uint8_t end_sector = numSectors - 1;
+                res = plus_key_check(0, end_sector, 0, 1, key_block, keycnt, aesFoundKeys, verbose, true);
+                if (res == PM3_EOPABORTED) {
+                    PrintAndLogEx(WARNING, "\nAborted");
+                }
+                PrintAndLogEx(NORMAL, "");
+            }
+            free(key_block);
+        }
+
+        // Restore SL1 sector dummy markers
+        for (uint8_t s = 0; s < numSectors; s++) {
+            if (sectorSL[s] == MFP_SL_1) {
+                for (uint8_t kt = 0; kt < 2; kt++) {
+                    if (aesFoundKeys[kt][s][0] == 0xFF) {
+                        aesFoundKeys[kt][s][0] = sl1_backup[kt][s];
+                    }
+                }
+            }
+        }
+    }
+
+    // ========================================
+    // Phase 3: MFC key probing (SL1 sectors only)
+    // ========================================
+    if (mfcProbeKeyCnt > 0 && mfcProbeKeys != NULL) {
+        int sl1_need_keys = 0;
+        for (uint8_t s = 0; s < numSectors; s++) {
+            if (sectorSL[s] == MFP_SL_1 &&
+                (mfcFoundKeys[0][s][0] == 0 || mfcFoundKeys[1][s][0] == 0)) {
+                sl1_need_keys++;
+            }
+        }
+
+        if (sl1_need_keys > 0) {
+            PrintAndLogEx(INFO, "Probing " _YELLOW_("%u") " MFC keys against %d SL1 sectors...", mfcProbeKeyCnt, sl1_need_keys);
+            for (uint8_t s = 0; s < numSectors; s++) {
+                if (kbd_enter_pressed()) {
+                    PrintAndLogEx(WARNING, "\naborted via keyboard");
+                    break;
+                }
+                if (sectorSL[s] != MFP_SL_1) {
+                    continue;
+                }
+                if (mfcFoundKeys[0][s][0] && mfcFoundKeys[1][s][0]) {
+                    continue;
+                }
+                mfp_sl1_try_keys(s, mfcProbeKeys, mfcProbeKeyCnt, mfcFoundKeys, verbose);
+            }
+            PrintAndLogEx(NORMAL, "");
+        }
+    }
+
+    // Restore firmware debug level before reading
+    setDeviceDebugLevel(dbg_curr, false);
+
+    // ========================================
+    // Phase 4: Read sectors with found keys
     // ========================================
     uint16_t totalBlocks = 0;
     for (uint8_t s = 0; s < numSectors; s++) {
@@ -2262,13 +2410,10 @@ static int CmdHFMFPDump(const char *Cmd) {
         return PM3_EMALLOC;
     }
 
-    uint8_t sectorSL[64];
-    memset(sectorSL, MFP_SL_UNKNOWN, sizeof(sectorSL));
-
     uint8_t sectorRead[64];
     memset(sectorRead, 0, sizeof(sectorRead));
 
-    PrintAndLogEx(INFO, "Reading card data (detecting SL per sector)...");
+    PrintAndLogEx(INFO, "Reading card data...");
 
     int sectorsRead = 0;
     int sl3Count = 0;
@@ -2285,65 +2430,43 @@ static int CmdHFMFPDump(const char *Cmd) {
         uint16_t blockOffset = mfFirstBlockOfSector(s);
         uint8_t blocksInSector = mfNumBlocksPerSector(s);
 
-        // --- Try SL3 (AES) first ---
-        for (uint8_t kt = 0; kt < 2 && !readOK; kt++) {
-            if (aesFoundKeys[kt][s][0] == 0) {
-                continue;
-            }
+        if (sectorSL[s] == MFP_SL_3) {
+            // --- Try SL3 (AES) ---
+            for (uint8_t kt = 0; kt < 2 && !readOK; kt++) {
+                if (aesFoundKeys[kt][s][0] == 0) {
+                    continue;
+                }
 
-            uint8_t sector_data[16 * 16] = {0};
-            res = mfpReadSector(s, kt, &aesFoundKeys[kt][s][1], sector_data, verbose);
-            if (res == PM3_SUCCESS) {
-                memcpy(carddata + (blockOffset * MFBLOCK_SIZE), sector_data, blocksInSector * MFBLOCK_SIZE);
-                sectorRead[s] = 1;
-                sectorSL[s] = MFP_SL_3;
-                readOK = true;
-                sectorsRead++;
-                sl3Count++;
-            } else if (verbose) {
-                PrintAndLogEx(DEBUG, "Sector %u SL3 key%s failed: %d", s, (kt == 0) ? "A" : "B", res);
+                uint8_t sector_data[16 * 16] = {0};
+                res = mfpReadSector(s, kt, &aesFoundKeys[kt][s][1], sector_data, verbose);
+                if (res == PM3_SUCCESS) {
+                    memcpy(carddata + (blockOffset * MFBLOCK_SIZE), sector_data, blocksInSector * MFBLOCK_SIZE);
+                    sectorRead[s] = 1;
+                    readOK = true;
+                    sectorsRead++;
+                    sl3Count++;
+                } else if (verbose) {
+                    PrintAndLogEx(DEBUG, "Sector %u SL3 key%s failed: %d", s, (kt == 0) ? "A" : "B", res);
+                }
             }
-        }
+        } else if (sectorSL[s] == MFP_SL_1) {
+            // --- Try SL1 (CRYPTO1) ---
+            DropField();
+            for (uint8_t kt = 0; kt < 2 && !readOK; kt++) {
+                if (mfcFoundKeys[kt][s][0] == 0) {
+                    continue;
+                }
 
-        // --- Try SL1 (CRYPTO1) if SL3 failed ---
-        // First try pre-loaded keys from MFC key file
-        for (uint8_t kt = 0; kt < 2 && !readOK; kt++) {
-            if (mfcFoundKeys[kt][s][0] == 0) {
-                continue;
-            }
-
-            uint8_t sector_data[16 * 16] = {0};
-            res = mfp_read_sector_sl1(s, kt, &mfcFoundKeys[kt][s][1], sector_data, verbose);
-            if (res == PM3_SUCCESS) {
-                memcpy(carddata + (blockOffset * MFBLOCK_SIZE), sector_data, blocksInSector * MFBLOCK_SIZE);
-                sectorRead[s] = 1;
-                sectorSL[s] = MFP_SL_1;
-                readOK = true;
-                sectorsRead++;
-                sl1Count++;
-            } else if (verbose) {
-                PrintAndLogEx(DEBUG, "Sector %u SL1 key%s failed: %d", s, (kt == 0) ? "A" : "B", res);
-            }
-        }
-
-        // If still not read, try probing MFC dictionary/default keys
-        if (!readOK && mfcProbeKeys != NULL && mfcProbeKeyCnt > 0) {
-            if (mfp_sl1_try_keys(s, mfcProbeKeys, mfcProbeKeyCnt, mfcFoundKeys, verbose)) {
-                // Key found and stored in mfcFoundKeys, now read sector
-                for (uint8_t kt = 0; kt < 2 && !readOK; kt++) {
-                    if (mfcFoundKeys[kt][s][0] == 0) {
-                        continue;
-                    }
-                    uint8_t sector_data[16 * 16] = {0};
-                    res = mfp_read_sector_sl1(s, kt, &mfcFoundKeys[kt][s][1], sector_data, verbose);
-                    if (res == PM3_SUCCESS) {
-                        memcpy(carddata + (blockOffset * MFBLOCK_SIZE), sector_data, blocksInSector * MFBLOCK_SIZE);
-                        sectorRead[s] = 1;
-                        sectorSL[s] = MFP_SL_1;
-                        readOK = true;
-                        sectorsRead++;
-                        sl1Count++;
-                    }
+                uint8_t sector_data[16 * 16] = {0};
+                res = mfp_read_sector_sl1(s, kt, &mfcFoundKeys[kt][s][1], sector_data, verbose);
+                if (res == PM3_SUCCESS) {
+                    memcpy(carddata + (blockOffset * MFBLOCK_SIZE), sector_data, blocksInSector * MFBLOCK_SIZE);
+                    sectorRead[s] = 1;
+                    readOK = true;
+                    sectorsRead++;
+                    sl1Count++;
+                } else if (verbose) {
+                    PrintAndLogEx(DEBUG, "Sector %u SL1 key%s failed: %d", s, (kt == 0) ? "A" : "B", res);
                 }
             }
         }
