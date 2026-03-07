@@ -55,6 +55,8 @@
 #define MFDES_BRUTEAID_RESELECT_WAIT_MS  200
 #define MFDES_BRUTEAID_MAD_START         0xF0000FU
 #define MFDES_BRUTEAID_MAD_STEP          0x10U
+#define MFDES_BRUTEFID_RESELECT_ATTEMPTS 3
+#define MFDES_BRUTEFID_RESELECT_WAIT_MS 500
 
 #define status(x) ( ((uint16_t)(0x91 << 8)) + (uint16_t)x )
 /*
@@ -2199,6 +2201,93 @@ static int CmdHF14ADesSelectApp(const char *Cmd) {
     return res;
 }
 
+static int CmdHF14ADesISOSelectISOFID(DesfireContext_t *dctx, uint16_t fileid, uint8_t *resp, size_t *resplen, bool fieldon) {
+    // ISO 7816 SELECT FILE command: CLA=00, INS=A4, P1=00, P2=00, Lc=2
+    uint8_t data[2] = {0};
+    Uint2byteToMemBe(data, fileid);
+
+    return DesfireISOSelectEx(dctx, fieldon, ISSMFDFEF, data, sizeof(data), resp, resplen);
+}
+
+static int CmdHF14ADesSelectISOFID(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes selectisofid",
+                  "Select file via ISO Select command by 2-byte ISO file identifier.\n"
+                  "Optionally preselect an application by AID or DF name before selecting the file.",
+                  "hf mfdes selectisofid --isofid e104 -> select file 0xE104\n"
+                  "hf mfdes selectisofid --aid 123456 --isofid 00ef -> select file 0x00EF in app 0x123456\n"
+                  "hf mfdes selectisofid --dfname D2760000850100 --isofid 00ef --apdu -> select file 0x00EF after DF name selection and show APDU logs");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "Verbose output"),
+        arg_str0(NULL, "aid",     "<hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "dfname",  "<hex>", "Application ISO DF Name (1-16 hex bytes, big endian)"),
+        arg_str0(NULL, "isofid",  "<hex>", "File ISO ID (ISO EF ID) (2 hex bytes, big endian)"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    DesfireContext_t dctx = {0};
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    DesfireISOSelectWay selectway = ISWDFName;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 4,
+                                         &securechann, DCMNone, &appid, &selectway);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    uint32_t isoid = 0x0000;
+    bool isoidpresent = false;
+    if (CLIGetUint32Hex(ctx, 5, 0x0000, &isoid, &isoidpresent, 2, "File ISO ID must have 2 hex bytes")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    if (!isoidpresent) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(WARNING, "File ISO ID is required");
+        return PM3_EINVARG;
+    }
+
+    bool aidpresent = (arg_get_str(ctx, 3)->count > 0);
+    bool preselect = aidpresent || (dctx.selectedDFNameLen > 0);
+    SetAPDULogging(APDULogging);
+    CLIParserFree(ctx);
+
+    uint8_t resp[250] = {0};
+    size_t resplen = 0;
+    if (preselect) {
+        res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, appid, false, 0, true, verbose);
+        if (res != PM3_SUCCESS) {
+            DropField();
+            PrintAndLogEx(FAILED, "Application preselect " _RED_("failed"));
+            return res;
+        }
+    }
+
+    res = CmdHF14ADesISOSelectISOFID(&dctx, isoid, resp, &resplen, !preselect);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(FAILED, "ISO Select file 0x%04x " _RED_("failed"), isoid);
+        return res;
+    }
+
+    if (resplen > 0 && verbose) {
+        PrintAndLogEx(INFO, "File select response [%zu] %s", resplen, sprint_hex(resp, resplen));
+    }
+
+    PrintAndLogEx(SUCCESS, "File 0x%04x selected " _GREEN_("succesfully"), isoid);
+    DropField();
+    return PM3_SUCCESS;
+}
+
+
 typedef struct {
     uint32_t current;
     uint32_t step;
@@ -2725,6 +2814,154 @@ static int CmdHF14ADesBruteApps(const char *Cmd) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(SUCCESS, _GREEN_("Done!"));
     mfdesBruteAIDGeneratorFree(&generator);
+    DropField();
+    return PM3_SUCCESS;
+}
+
+static int CmdHF14ADesBruteISOFIDs(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf mfdes bruteisofid",
+                  "Recover ISO file IDs by bruteforce.\n"
+                  "WARNING: This command takes a loooong time",
+                  "hf mfdes bruteisofid --aid 123456     -> bruteforce ISO file IDs for application 123456\n"
+                  "hf mfdes bruteisofid --start 0000 --end 0fff -> bruteforce specific file ISO ID range");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a",  "apdu",    "Show APDU requests and responses"),
+        arg_lit0("v",  "verbose", "Verbose output"),
+        arg_str0(NULL, "aid",     "<hex>", "Application ID (3 hex bytes, big endian)"),
+        arg_str0(NULL, "isoid",   "<hex>", "Application ISO ID (ISO DF ID) (2 hex bytes, big endian)"),
+        arg_str0(NULL, "dfname",  "<hex>", "Application ISO DF Name (5-16 hex bytes, big endian)"),
+        arg_str0(NULL, "start",   "<hex>", "Starting File ISO ID (2 hex bytes, big endian)"),
+        arg_str0(NULL, "end",     "<hex>", "Last File ISO ID (2 hex bytes, big endian)"),
+        arg_int0(NULL, "step",    "<dec>", "Increment step when bruteforcing"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool APDULogging = arg_get_lit(ctx, 1);
+    bool verbose = arg_get_lit(ctx, 2);
+
+    DesfireContext_t dctx = {0};
+    int securechann = defaultSecureChannel;
+    uint32_t appid = 0x000000;
+    DesfireISOSelectWay selectway = ISW6bAID;
+    int res = CmdDesGetSessionParameters(ctx, &dctx, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 5,
+                                         &securechann, DCMNone, &appid, &selectway);
+    if (res) {
+        CLIParserFree(ctx);
+        return res;
+    }
+
+    uint32_t isoidStart = 0x0000;
+    if (CLIGetUint32Hex(ctx, 6, 0x0000, &isoidStart, NULL, 2, "File ISO ID start must have 2 hex bytes")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    uint32_t isoidEnd = 0xFFFF;
+    if (CLIGetUint32Hex(ctx, 7, 0xFFFF, &isoidEnd, NULL, 2, "File ISO ID end must have 2 hex bytes")) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+
+    int stepArg = arg_get_int_def(ctx, 8, 1);
+    CLIParserFree(ctx);
+
+    if (stepArg <= 0) {
+        PrintAndLogEx(ERR, "Increment step should be greater than zero");
+        return PM3_EINVARG;
+    }
+    uint32_t step = (uint32_t)stepArg;
+
+    if (isoidStart > isoidEnd) {
+        PrintAndLogEx(ERR, "Start should be lower than or equal to end. start: %04x end: %04x", isoidStart, isoidEnd);
+        return PM3_EINVARG;
+    }
+
+    SetAPDULogging(APDULogging);
+
+    res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, appid, false, 0, true, verbose);
+    if (res != PM3_SUCCESS) {
+        DropField();
+        PrintAndLogEx(FAILED, "Select or authentication %s " _RED_("failed") ". Result [%d] %s", DesfireWayIDStr(selectway, appid), res, DesfireAuthErrorToStr(res));
+        return res;
+    }
+
+    uint64_t totalCount = ((isoidEnd - isoidStart) / step) + 1;
+    uint64_t tested = 0;
+    uint64_t found = 0;
+
+    PrintAndLogEx(INFO, "Bruteforcing file ISO IDs range " _YELLOW_("%04x") "-" _YELLOW_("%04x") " step " _YELLOW_("%u") " candidates " _YELLOW_("%llu"),
+                  isoidStart, isoidEnd, step, (unsigned long long)totalCount);
+
+    if (totalCount > 0x7fffffffULL) {
+        PrintAndLogEx(INFO, "Enumerating through all File IDs manually, this will take a while!");
+    }
+
+    for (uint32_t isofid = isoidStart;; isofid += step) {
+        if (kbd_enter_pressed()) {
+            break;
+        }
+
+        tested++;
+        float progress = (totalCount > 0) ? ((float)tested / (float)totalCount) * 100.0f : 100.0f;
+        PrintAndLogEx(INPLACE, "Brute DESFire ISO File ID Progress " _YELLOW_("%0.1f") " %%   current ID: %04X", progress, isofid);
+
+        uint8_t resp[250] = {0};
+        size_t resplen = 0;
+        uint8_t *resp_p = verbose ? resp : NULL;
+        size_t *resplen_p = verbose ? &resplen : NULL;
+        res = CmdHF14ADesISOSelectISOFID(&dctx, isofid, resp_p, resplen_p, false);
+
+        if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+            for (int attempt = 1; attempt <= MFDES_BRUTEFID_RESELECT_ATTEMPTS; attempt++) {
+                printf("\33[2K\r"); // clear current inplace progress line before logging
+                PrintAndLogEx(WARNING, "No card response while checking ISO ID " _YELLOW_("%04X") ". Reselecting card (%d/%d)...",
+                              isofid, attempt, MFDES_BRUTEFID_RESELECT_ATTEMPTS);
+
+                msleep(MFDES_BRUTEFID_RESELECT_WAIT_MS);
+
+                res = DesfireSelectAndAuthenticateW(&dctx, securechann, selectway, appid, false, 0, true, verbose);
+                if (res != PM3_SUCCESS) {
+                    continue;
+                }
+
+                res = CmdHF14ADesISOSelectISOFID(&dctx, isofid, resp_p, resplen_p, false);
+                if (res == PM3_SUCCESS || res == PM3_EAPDU_FAIL ||
+                        (res != PM3_ECARDEXCHANGE && res != PM3_ETIMEOUT && res != PM3_ERFTRANS)) {
+                    break;
+                }
+            }
+
+            if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                PrintAndLogEx(FAILED, "Card is not responding after %d reselect attempts. Aborting at ISO ID " _YELLOW_("%04X"),
+                              MFDES_BRUTEFID_RESELECT_ATTEMPTS, isofid);
+                DropField();
+                return res;
+            }
+        }
+
+        if (res == PM3_SUCCESS) {
+            found++;
+            printf("\33[2K\r"); // clear current line before printing
+            PrintAndLogEx(SUCCESS, "Found new ISO file ID " _GREEN_("0x%04X"), isofid);
+            if (verbose && resplen > 0) {
+                PrintAndLogEx(INFO, "Response [%zu] " _CYAN_("%s"), resplen, sprint_hex(resp, resplen));
+            }
+        } else {
+            // Non-success status means no file with this identifier
+        }
+
+        if (isoidEnd - isofid < step) {
+            break;
+        }
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(SUCCESS, "Done! Found " _GREEN_("%llu") " matching file ISO ID candidate(s)",
+                  (unsigned long long)found);
     DropField();
     return PM3_SUCCESS;
 }
@@ -6396,12 +6633,14 @@ static command_t CommandTable[] = {
     {"createapp",        CmdHF14ADesCreateApp,        IfPm3Iso14443a,  "Create Application"},
     {"deleteapp",        CmdHF14ADesDeleteApp,        IfPm3Iso14443a,  "Delete Application"},
     {"selectapp",        CmdHF14ADesSelectApp,        IfPm3Iso14443a,  "Select Application ID"},
+    {"selectisofid",     CmdHF14ADesSelectISOFID,     IfPm3Iso14443a,  "Select file by ISO ID"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "------------------------ " _CYAN_("Keys") " -----------------------"},
     {"changekey",        CmdHF14ADesChangeKey,        IfPm3Iso14443a,  "Change Key"},
     {"chkeysettings",    CmdHF14ADesChKeySettings,    IfPm3Iso14443a,  "Change Key Settings"},
     {"getkeysettings",   CmdHF14ADesGetKeySettings,   IfPm3Iso14443a,  "Get Key Settings"},
     {"getkeyversions",   CmdHF14ADesGetKeyVersions,   IfPm3Iso14443a,  "Get Key Versions"},
     {"-----------",      CmdHelp,                     IfPm3Iso14443a,  "----------------------- " _CYAN_("Files") " -----------------------"},
+    {"bruteisofid",      CmdHF14ADesBruteISOFIDs,     IfPm3Iso14443a,  "Recover file ISO IDs by bruteforce"},
     {"getfileids",       CmdHF14ADesGetFileIDs,       IfPm3Iso14443a,  "Get File IDs list"},
     {"getfileisoids",    CmdHF14ADesGetFileISOIDs,    IfPm3Iso14443a,  "Get File ISO IDs list"},
     {"lsfiles",          CmdHF14ADesLsFiles,          IfPm3Iso14443a,  "Show all files list"},

@@ -1146,6 +1146,9 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
         res = DesfireISOSelect(dctx, ISSDFName, dctx->selectedDFName, dctx->selectedDFNameLen, resp, &resplen);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire DF name select " _RED_("error"));
+            if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                return res;
+            }
             return 200;
         }
 
@@ -1164,6 +1167,9 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
                 res = DesfireSelectAIDHex(dctx, id, false, 0);
                 if (res != PM3_SUCCESS) {
                     PrintAndLogEx(ERR, "Desfire select " _RED_("error"));
+                    if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                        return res;
+                    }
                     return 200;
                 }
 
@@ -1177,6 +1183,9 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
                 res = DesfireSelectEx(dctx, false, way, id, NULL);
                 if (res != PM3_SUCCESS) {
                     PrintAndLogEx(ERR, "Desfire %s select " _RED_("error"), DesfireSelectWayToStr(way));
+                    if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                        return res;
+                    }
                     return 202;
                 }
                 if (verbose) {
@@ -1189,6 +1198,9 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
             res = DesfireSelectEx(dctx, false, way, id, NULL);
             if (res != PM3_SUCCESS) {
                 PrintAndLogEx(ERR, "Desfire %s select " _RED_("error"), DesfireSelectWayToStr(way));
+                if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                    return res;
+                }
                 return 202;
             }
 
@@ -1205,6 +1217,9 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
         res = DesfireSelectAIDHex(dctx, id, false, 0);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire select " _RED_("error"));
+            if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                return res;
+            }
             return 200;
         }
 
@@ -1218,6 +1233,9 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
         res = DesfireSelectEx(dctx, true, way, id, NULL);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire %s select " _RED_("error"), DesfireSelectWayToStr(way));
+            if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                return res;
+            }
             return 202;
         }
         if (verbose) {
@@ -1229,6 +1247,9 @@ int DesfireSelectAndAuthenticateW(DesfireContext_t *dctx, DesfireSecureChannel s
         res = DesfireSelectEx(dctx, false, ISWIsoID, isofileid, NULL);
         if (res != PM3_SUCCESS) {
             PrintAndLogEx(ERR, "Desfire iso file select " _RED_("error"));
+            if (res == PM3_ECARDEXCHANGE || res == PM3_ETIMEOUT || res == PM3_ERFTRANS) {
+                return res;
+            }
             return 203;
         }
 
@@ -3073,6 +3094,11 @@ int DesfireISOSelectEx(DesfireContext_t *dctx, bool fieldon, DesfireISOSelectCon
     size_t xresplen = 0;
     uint16_t sw = 0;
     int res = DesfireExchangeISO(fieldon, dctx, (sAPDU_t) {0x00, ISO7816_SELECT_FILE, cntr, ((resp == NULL) ? 0x0C : 0x00), datalen, data}, APDU_INCLUDE_LE_00, xresp, &xresplen, &sw);
+    // Distinguish no-response transport errors from valid APDU status errors
+    // (e.g. 6A82 for "file not found"), which also return PM3_EAPDU_FAIL.
+    if (res == PM3_EAPDU_FAIL && sw == 0 && xresplen == 0) {
+        return PM3_ECARDEXCHANGE;
+    }
     if (res == PM3_SUCCESS && sw != ISO7816_OK)
         return PM3_ESOFT;
 
