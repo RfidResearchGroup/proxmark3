@@ -517,8 +517,12 @@ static int DESFIRESendRaw(bool activate_field, uint8_t *data, size_t datalen, ui
         PrintAndLogEx(SUCCESS, "raw<< %s", sprint_hex(result, *result_len));
     }
 
-    if (*result_len < 1) {
-        return PM3_SUCCESS;
+    if (*result_len == 0) {
+        return PM3_ECARDEXCHANGE;
+    }
+
+    if (*result_len < (1 + 2)) {
+        return PM3_ECARDEXCHANGE;
     }
 
     *result_len -= (1 + 2);
@@ -538,6 +542,7 @@ static int DESFIRESendRaw(bool activate_field, uint8_t *data, size_t datalen, ui
         if (GetAPDULogging()) {
             PrintAndLogEx(ERR, "Command (%02x) ERROR: 0x%02x", data[0], rcode);
         }
+
         return PM3_EAPDU_FAIL;
     }
     return PM3_SUCCESS;
@@ -591,6 +596,9 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
 
         res = DESFIRESendRaw(activate_field, &cdata[sendindx], sendlen, buf, DESFIRE_BUFFER_SIZE, &buflen, &rcode);
         if (res != PM3_SUCCESS) {
+            if (respcode != NULL) {
+                *respcode = rcode;
+            }
             uint16_t ssw = DESFIRE_GET_ISO_STATUS(rcode);
             PrintAndLogEx(DEBUG, "error DESFIRESendRaw %s", DesfireGetErrorString(res, &ssw));
             free(buf);
@@ -638,8 +646,12 @@ static int DesfireExchangeNative(bool activate_field, DesfireContext_t *ctx, uin
 
         res = DESFIRESendRaw(false, cdata, 1, buf, DESFIRE_BUFFER_SIZE, &buflen, &rcode);
         if (res != PM3_SUCCESS) {
+            if (respcode != NULL) {
+                *respcode = rcode;
+            }
             uint16_t ssw = DESFIRE_GET_ISO_STATUS(rcode);
             PrintAndLogEx(DEBUG, "error DESFIRESendRaw %s", DesfireGetErrorString(res, &ssw));
+            free(buf);
             return res;
         }
 
@@ -716,6 +728,9 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
 
         res = DESFIRESendApdu(activate_field, apdu, buf, DESFIRE_BUFFER_SIZE, &buflen, &sw);
         if (res != PM3_SUCCESS) {
+            if (respcode != NULL && ((sw & 0xFF00) == 0x9100)) {
+                *respcode = sw & 0xFF;
+            }
             PrintAndLogEx(DEBUG, "error DESFIRESendApdu %s", DesfireGetErrorString(res, &sw));
             free(buf);
             return res;
@@ -768,6 +783,9 @@ static int DesfireExchangeISONative(bool activate_field, DesfireContext_t *ctx, 
 
         res = DESFIRESendApdu(false, apdu, buf, DESFIRE_BUFFER_SIZE, &buflen, &sw);
         if (res != PM3_SUCCESS) {
+            if (respcode != NULL && ((sw & 0xFF00) == 0x9100)) {
+                *respcode = sw & 0xFF;
+            }
             PrintAndLogEx(DEBUG, "error DESFIRESendApdu %s", DesfireGetErrorString(res, &sw));
             free(buf);
             return res;
@@ -926,28 +944,36 @@ int DesfireSelectAID(DesfireContext_t *ctx, uint8_t *aid1, uint8_t *aid2) {
 
     uint8_t resp[257] = {0};
     size_t resplen = 0;
-    uint8_t respcode = 0;
+    uint8_t respcode = 0xFF;
 
     ctx->secureChannel = DACNone;
     int res = DesfireExchangeEx(true, ctx, MFDES_SELECT_APPLICATION, data, (aid2 == NULL) ? 3 : 6, &respcode, resp, &resplen, true, 0);
-    if (res == PM3_SUCCESS) {
-        if (resplen != 0) {
+    if (res != PM3_SUCCESS) {
+        if (res == PM3_EAPDU_FAIL && respcode == 0xFF && resplen == 0) {
             return PM3_ECARDEXCHANGE;
         }
-
-        // select operation fail
-        if (respcode != MFDES_S_OPERATION_OK) {
-            return PM3_EAPDU_FAIL;
-        }
-
-        DesfireClearSession(ctx);
-        ctx->appSelected = (aid1[0] != 0x00 || aid1[1] != 0x00 || aid1[2] != 0x00);
-        ctx->selectedAID = DesfireAIDByteToUint(aid1);
-
-        return PM3_SUCCESS;
+        return res;
     }
 
-    return res;
+    if (resplen != 0) {
+        return PM3_ECARDEXCHANGE;
+    }
+
+    // no status byte received from card
+    if (respcode == 0xFF) {
+        return PM3_ECARDEXCHANGE;
+    }
+
+    // select operation fail
+    if (respcode != MFDES_S_OPERATION_OK) {
+        return PM3_EAPDU_FAIL;
+    }
+
+    DesfireClearSession(ctx);
+    ctx->appSelected = (aid1[0] != 0x00 || aid1[1] != 0x00 || aid1[2] != 0x00);
+    ctx->selectedAID = DesfireAIDByteToUint(aid1);
+
+    return PM3_SUCCESS;
 }
 
 int DesfireSelectAIDHex(DesfireContext_t *ctx, uint32_t aid1, bool select_two, uint32_t aid2) {
@@ -966,27 +992,36 @@ int DesfireSelectAIDHexNoFieldOn(DesfireContext_t *ctx, uint32_t aid) {
 
     uint8_t resp[257] = {0};
     size_t resplen = 0;
-    uint8_t respcode = 0;
+    uint8_t respcode = 0xFF;
 
     ctx->secureChannel = DACNone;
     int res = DesfireExchangeEx(false, ctx, MFDES_SELECT_APPLICATION, data, 3, &respcode, resp, &resplen, true, 0);
-    if (res == PM3_SUCCESS) {
-        if (resplen != 0) {
+    if (res != PM3_SUCCESS) {
+        if (res == PM3_EAPDU_FAIL && respcode == 0xFF && resplen == 0) {
             return PM3_ECARDEXCHANGE;
         }
-
-        // select operation fail
-        if (respcode != MFDES_S_OPERATION_OK) {
-            return PM3_EAPDU_FAIL;
-        }
-
-        DesfireClearSession(ctx);
-        ctx->appSelected = (aid != 0x000000);
-        ctx->selectedAID = aid;
-
-        return PM3_SUCCESS;
+        return res;
     }
-    return res;
+
+    if (resplen != 0) {
+        return PM3_ECARDEXCHANGE;
+    }
+
+    // no status byte received from card
+    if (respcode == 0xFF) {
+        return PM3_ECARDEXCHANGE;
+    }
+
+    // select operation fail
+    if (respcode != MFDES_S_OPERATION_OK) {
+        return PM3_EAPDU_FAIL;
+    }
+
+    DesfireClearSession(ctx);
+    ctx->appSelected = (aid != 0x000000);
+    ctx->selectedAID = aid;
+
+    return PM3_SUCCESS;
 }
 
 void DesfirePrintMADAID(uint32_t appid, bool verbose) {
