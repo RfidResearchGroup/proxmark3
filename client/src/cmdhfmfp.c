@@ -1901,16 +1901,16 @@ static int CmdHFMFPChk(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
-static int mfp_load_keys_from_json(const char *filename, uint8_t foundKeys[2][64][AES_KEY_LEN + 1]) {
+static int mfp_load_keys_from_json(const char *filename, uint8_t foundKeys[2][64][AES_KEY_LEN + 1], bool verbose) {
 
-    // loadFileJSON handles "mfpkeys" file type via loadFileJSONex.
+    // loadFileJSONex handles "mfpkeys" file type.
     // Buffer layout: UID(7) + pad(3) + SAK(1) + ATQA(2) + ATSlen(1) + ATS(atslen)
     //   then flat keys: KeyA0(16) KeyB0(16) KeyA1(16) KeyB1(16) ...
     uint8_t data[14 + 256 + (2 * 64 * AES_KEY_LEN)];
     memset(data, 0, sizeof(data));
     size_t datalen = 0;
 
-    int res = loadFileJSON(filename, data, sizeof(data), &datalen, NULL);
+    int res = loadFileJSONex(filename, data, sizeof(data), &datalen, verbose, NULL);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -1943,13 +1943,13 @@ static int mfp_load_keys_from_json(const char *filename, uint8_t foundKeys[2][64
 #define MFP_SL_3        3
 
 // Load MFC (CRYPTO1) keys from a binary key file (first half keyA, second half keyB)
-static int mfp_load_mfc_keys_from_bin(const char *filename, uint8_t mfcFoundKeys[2][64][MIFARE_KEY_SIZE + 1], uint8_t numSectors) {
+static int mfp_load_mfc_keys_from_bin(const char *filename, uint8_t mfcFoundKeys[2][64][MIFARE_KEY_SIZE + 1], uint8_t numSectors, bool verbose) {
 
     uint8_t *keyA = NULL;
     uint8_t *keyB = NULL;
     size_t alen = 0, blen = 0;
 
-    int res = loadFileBinaryKey(filename, "", (void **)&keyA, (void **)&keyB, &alen, &blen, true);
+    int res = loadFileBinaryKey(filename, "", (void **)&keyA, (void **)&keyB, &alen, &blen, verbose);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -1984,7 +1984,9 @@ static int CmdHFMFPDump(const char *Cmd) {
                   "Dump MIFARE Plus tag to file (bin/json)\n"
                   "Reads sectors using keys from `hf mfp chk --dump` (AES/SL3)\n"
                   "and/or `hf mf chk` key file (CRYPTO1/SL1) for mixed-mode cards.\n"
+                  "Key files are auto-detected by UID if not specified.\n"
                   "If no <name> given, UID will be used as filename",
+                  "hf mfp dump\n"
                   "hf mfp dump --keys hf-mfp-01020304-key.json\n"
                   "hf mfp dump --keys hf-mfp-01020304-key.json --mfc-keys hf-mf-01020304-key.bin\n"
                   "hf mfp dump -k ffffffffffffffffffffffffffffffff\n");
@@ -2066,11 +2068,25 @@ static int CmdHFMFPDump(const char *Cmd) {
     uint8_t mfcFoundKeys[2][64][MIFARE_KEY_SIZE + 1];
     memset(mfcFoundKeys, 0, sizeof(mfcFoundKeys));
 
+    // Auto-detect AES key file by UID if not specified
+    char *aes_fptr = NULL;
+    if (keyfnlen == 0) {
+        aes_fptr = calloc(sizeof(char) * (strlen("hf-mfp-") + strlen("-key")) + card.uidlen * 2 + 1, sizeof(uint8_t));
+        if (aes_fptr != NULL) {
+            strcpy(aes_fptr, "hf-mfp-");
+            FillFileNameByUID(aes_fptr, card.uid, "-key", card.uidlen);
+            strncpy(key_fn, aes_fptr, FILE_PATH_SIZE - 1);
+            keyfnlen = strlen(key_fn);
+        }
+    }
+
     // Load AES keys from JSON key file (from hf mfp chk --dump)
     if (keyfnlen > 0) {
-        res = mfp_load_keys_from_json(key_fn, aesFoundKeys);
+        res = mfp_load_keys_from_json(key_fn, aesFoundKeys, (aes_fptr == NULL));
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Failed to load AES key file, continuing without");
+            if (aes_fptr == NULL) {
+                PrintAndLogEx(WARNING, "Failed to load AES key file, continuing without");
+            }
         } else {
             int cnt = 0;
             for (uint8_t s = 0; s < numSectors; s++) {
@@ -2080,6 +2096,7 @@ static int CmdHFMFPDump(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%d") " AES keys from key file", cnt);
         }
     }
+    free(aes_fptr);
 
     // Apply user-supplied AES key to all slots that don't have one yet
     if (userkeylen == AES_KEY_LEN) {
@@ -2096,11 +2113,25 @@ static int CmdHFMFPDump(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "Applied user AES key to " _GREEN_("%d") " key slots", applied);
     }
 
+    // Auto-detect MFC key file by UID if not specified
+    char *mfc_fptr = NULL;
+    if (mfckeyfnlen == 0) {
+        mfc_fptr = calloc(sizeof(char) * (strlen("hf-mf-") + strlen("-key.bin")) + card.uidlen * 2 + 1, sizeof(uint8_t));
+        if (mfc_fptr != NULL) {
+            strcpy(mfc_fptr, "hf-mf-");
+            FillFileNameByUID(mfc_fptr, card.uid, "-key.bin", card.uidlen);
+            strncpy(mfc_key_fn, mfc_fptr, FILE_PATH_SIZE - 1);
+            mfckeyfnlen = strlen(mfc_key_fn);
+        }
+    }
+
     // Load MFC keys from binary key file (from hf mf chk)
     if (mfckeyfnlen > 0) {
-        res = mfp_load_mfc_keys_from_bin(mfc_key_fn, mfcFoundKeys, numSectors);
+        res = mfp_load_mfc_keys_from_bin(mfc_key_fn, mfcFoundKeys, numSectors, (mfc_fptr == NULL));
         if (res != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Failed to load MFC key file, continuing without");
+            if (mfc_fptr == NULL) {
+                PrintAndLogEx(WARNING, "Failed to load MFC key file, continuing without");
+            }
         } else {
             int cnt = 0;
             for (uint8_t s = 0; s < numSectors; s++) {
@@ -2109,6 +2140,23 @@ static int CmdHFMFPDump(const char *Cmd) {
             }
             PrintAndLogEx(SUCCESS, "Loaded " _GREEN_("%d") " MFC (CRYPTO1) keys from key file", cnt);
         }
+    }
+    free(mfc_fptr);
+
+    // Check that we have at least some keys to work with
+    bool have_keys = (userkeylen == AES_KEY_LEN);
+    if (!have_keys) {
+        for (uint8_t s = 0; s < numSectors; s++) {
+            if (aesFoundKeys[MF_KEY_A][s][0] || aesFoundKeys[MF_KEY_B][s][0] ||
+                    mfcFoundKeys[MF_KEY_A][s][0] || mfcFoundKeys[MF_KEY_B][s][0]) {
+                have_keys = true;
+                break;
+            }
+        }
+    }
+    if (!have_keys) {
+        PrintAndLogEx(ERR, "No keys available. Run " _YELLOW_("`hf mfp chk --dump`") " and/or " _YELLOW_("`hf mf chk --dump`") " first");
+        return PM3_ENODATA;
     }
 
     // ========================================
