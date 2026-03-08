@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Added `hf mfp dump` command (@apply-science)
+- Added `hf felica seacinfo` command (@kormax)
 - Added `hf mfdes bruteisofid` and `hf mfdes selectisofid` commands (@kormax)
 - Added DESFire AID values related to LEAF (@kormax)
 - Added `dict`, `ascii`, `mad` presets for `hf mfdes bruteaid` (@kormax)
