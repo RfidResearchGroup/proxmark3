@@ -2037,6 +2037,12 @@ void annotateFelica(char *exp, size_t size, uint8_t *cmd, uint8_t cmdsize) {
         case FELICA_WRTSEC_ACK:
             snprintf(exp, size, "WRITE ACK");
             break;
+        case FELICA_GET_NODE_LIST_REQ:
+            snprintf(exp, size, "REQUEST CODE LIST");
+            break;
+        case FELICA_GET_NODE_LIST_ACK:
+            snprintf(exp, size, "REQUEST CODE LIST ACK");
+            break;
         case FELICA_REQSRV2_REQ:
             snprintf(exp, size, "REQUEST SERVICE v2");
             break;
