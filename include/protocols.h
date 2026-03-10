@@ -849,6 +849,9 @@ ISO 7816-4 Basic interindustry commands. For command APDU's.
 #define FELICA_WRTSEC_REQ               0x16
 #define FELICA_WRTSEC_ACK               0x17
 
+#define FELICA_GET_NODE_LIST_REQ        0x1a
+#define FELICA_GET_NODE_LIST_ACK        0x1b
+
 #define FELICA_GET_CONTAINER_ISSUE_INFO_REQ 0x22
 #define FELICA_GET_CONTAINER_ISSUE_INFO_ACK 0x23
 
