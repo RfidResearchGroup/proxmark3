@@ -49,6 +49,7 @@
 #define FELICA_DEFAULT_RETRY_COUNT 3U
 #define FELICA_DISCOVER_DEFAULT_RETRY_COUNT 5U
 #define FELICA_DISCOVERY_RETRY_BACKOFF_MS 1000U
+#define FELICA_TARGET_PRESENCE_ATTEMPTS 3U
 #define FELICA_PLATFORM_INFO_MAX_LEN 64U
 #define FELICA_PLATFORM_INFO_WITH_MAC_INFO_LEN 25U
 #define FELICA_PLATFORM_INFO_WITH_MAC_LEN 20U
@@ -111,6 +112,7 @@
 
 #define FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE 16U
 #define FELICA_MAX_NODE_NUMBER 0x03FFU
+#define FELICA_PRESENCE_SERVICE_CODE_LE ((uint16_t)FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITHOUT_KEY)
 
 typedef struct {
     uint8_t attribute;
@@ -206,6 +208,11 @@ typedef struct {
     uint32_t public_service_count;
 } felica_dump_context_t;
 
+typedef enum {
+    FELICA_IDM_RESOLVE_STANDALONE = 0,
+    FELICA_IDM_RESOLVE_CHAINED,
+} felica_idm_resolution_mode_t;
+
 
 
 static int CmdHelp(const char *Cmd);
@@ -249,6 +256,19 @@ static felica_card_select_t last_known_card;
 
 static void set_last_known_card(felica_card_select_t card) {
     last_known_card = card;
+}
+
+static void felica_set_last_known_idm(const uint8_t *idm) {
+    if (idm == NULL) {
+        return;
+    }
+
+    if (memcmp(last_known_card.IDm, idm, sizeof(last_known_card.IDm)) == 0) {
+        return;
+    }
+
+    memset(&last_known_card, 0, sizeof(last_known_card));
+    memcpy(last_known_card.IDm, idm, sizeof(last_known_card.IDm));
 }
 
 static void print_status_flag1_interpretation(void) {
@@ -699,20 +719,6 @@ static int info_seac(void) {
     return PM3_ETIMEOUT;
 }
 
-
-/**
- * Adds the last known IDm (8-Byte) to the data frame.
- * @param position start of where the IDm is added within the frame.
- * @param data frame in where the IDM is added.
- * @return true if IDm was added;
- */
-static bool add_last_IDm(uint8_t position, uint8_t *data) {
-    if (last_known_card.IDm[0] != 0 && last_known_card.IDm[1] != 0) {
-        memcpy(data + position, last_known_card.IDm, sizeof(last_known_card.IDm));
-        return true;
-    }
-    return false;
-}
 
 static int CmdHFFelicaList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf felica", "felica");
@@ -1397,6 +1403,156 @@ static int send_read_without_encryption(uint8_t flags, uint16_t datalen, uint8_t
                                         felica_read_without_encryption_response_t *rd_noCry_resp) {
     return send_read_without_encryption_ex(flags, datalen, data, verbose, rd_noCry_resp,
                                            FELICA_DEFAULT_TIMEOUT_MS, 0, 0, true);
+}
+
+static int felica_discover_target(felica_card_select_t *card) {
+    if (card == NULL) {
+        return PM3_EINVARG;
+    }
+
+    int last_status = PM3_ETIMEOUT;
+    for (uint32_t attempt = 0; attempt < FELICA_TARGET_PRESENCE_ATTEMPTS; attempt++) {
+        clear_and_send_command(FELICA_CONNECT, 0, NULL, false);
+
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_HF_FELICA_COMMAND, &resp, 2500) == false) {
+            last_status = PM3_ETIMEOUT;
+            DropField();
+            continue;
+        }
+
+        if (resp.status != PM3_SUCCESS) {
+            last_status = resp.status;
+            DropField();
+            continue;
+        }
+
+        if (resp.length < sizeof(*card)) {
+            last_status = PM3_ESOFT;
+            DropField();
+            continue;
+        }
+
+        memcpy(card, resp.data.asBytes, sizeof(*card));
+        set_last_known_card(*card);
+        DropField();
+        return PM3_SUCCESS;
+    }
+
+    return last_status;
+}
+
+// Presence is checked by issuing ReadWithoutEncryption against service number 0
+// with the unauthenticated random-read attribute and verifying the response IDm.
+static int felica_presence_check_idm(const uint8_t *idm) {
+    if (idm == NULL) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t data[16] = {0};
+    data[0] = sizeof(data);
+    data[1] = FELICA_RDBLK_REQ;
+    memcpy(data + 2, idm, 8);
+    data[10] = 0x01;
+    data[11] = FELICA_PRESENCE_SERVICE_CODE_LE & 0xFF;
+    data[12] = (FELICA_PRESENCE_SERVICE_CODE_LE >> 8) & 0xFF;
+    data[13] = 0x01;
+    data[14] = 0x80;
+    data[15] = 0x00;
+
+    PacketResponseNG resp;
+    const uint8_t flags = FELICA_CONNECT | FELICA_NO_SELECT | FELICA_APPEND_CRC | FELICA_RAW;
+    const int ret = send_felica_payload_with_retries(flags, sizeof(data), data, false,
+                                                     FELICA_RDBLK_ACK,
+                                                     FELICA_DEFAULT_TIMEOUT_MS, FELICA_TARGET_PRESENCE_ATTEMPTS - 1U,
+                                                     0, false,
+                                                     &resp, "presence check");
+    DropField();
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+
+    if (resp.length < sizeof(felica_frame_response_t)) {
+        return PM3_ESOFT;
+    }
+
+    const felica_frame_response_t *frame_response = (const felica_frame_response_t *)resp.data.asBytes;
+    if (memcmp(frame_response->IDm, idm, sizeof(frame_response->IDm)) != 0) {
+        return PM3_ERFTRANS;
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int felica_ensure_target_present(const uint8_t *custom_idm,
+                                        size_t custom_idm_len,
+                                        felica_idm_resolution_mode_t mode,
+                                        uint8_t *idm_out) {
+    if (idm_out == NULL) {
+        return PM3_EINVARG;
+    }
+
+    if (custom_idm_len > 0 && custom_idm_len != sizeof(last_known_card.IDm)) {
+        return PM3_EINVARG;
+    }
+
+    if (custom_idm_len == sizeof(last_known_card.IDm)) {
+        memcpy(idm_out, custom_idm, sizeof(last_known_card.IDm));
+
+        if (mode == FELICA_IDM_RESOLVE_CHAINED) {
+            PrintAndLogEx(INFO, "Using explicit IDm... " _GREEN_("%s"),
+                          sprint_hex_inrow(idm_out, sizeof(last_known_card.IDm)));
+            return PM3_SUCCESS;
+        }
+
+        if (felica_presence_check_idm(idm_out) != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Tag with explicit IDm not detected: " _YELLOW_("%s"),
+                          sprint_hex_inrow(idm_out, sizeof(last_known_card.IDm)));
+            return PM3_ERFTRANS;
+        }
+
+        felica_set_last_known_idm(idm_out);
+        PrintAndLogEx(INFO, "Using explicit IDm... " _GREEN_("%s"),
+                      sprint_hex_inrow(idm_out, sizeof(last_known_card.IDm)));
+        return PM3_SUCCESS;
+    }
+
+    if (mode == FELICA_IDM_RESOLVE_CHAINED) {
+        if (last_known_card.IDm[0] == 0 || last_known_card.IDm[1] == 0) {
+            PrintAndLogEx(WARNING, "No last known card! Use `" _YELLOW_("hf felica reader") "` first or set a custom IDm");
+            return PM3_EINVARG;
+        }
+
+        memcpy(idm_out, last_known_card.IDm, sizeof(last_known_card.IDm));
+        PrintAndLogEx(INFO, "Using cached IDm.... " _GREEN_("%s"),
+                      sprint_hex_inrow(idm_out, sizeof(last_known_card.IDm)));
+        return PM3_SUCCESS;
+    }
+
+    if (last_known_card.IDm[0] != 0 && last_known_card.IDm[1] != 0) {
+        if (felica_presence_check_idm(last_known_card.IDm) == PM3_SUCCESS) {
+            memcpy(idm_out, last_known_card.IDm, sizeof(last_known_card.IDm));
+            PrintAndLogEx(INFO, "Using cached IDm.... " _GREEN_("%s"),
+                          sprint_hex_inrow(idm_out, sizeof(last_known_card.IDm)));
+            return PM3_SUCCESS;
+        }
+
+        PrintAndLogEx(WARNING, "Cached IDm is no longer present. Polling for a new tag...");
+    } else {
+        PrintAndLogEx(WARNING, "No cached IDm available. Polling for a new tag...");
+    }
+
+    felica_card_select_t card = {0};
+    const int ret = felica_discover_target(&card);
+    if (ret != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "No FeliCa tag detected while polling.");
+        return ret;
+    }
+
+    memcpy(idm_out, card.IDm, sizeof(card.IDm));
+    PrintAndLogEx(INFO, "Using polled IDm.... " _GREEN_("%s"),
+                  sprint_hex_inrow(idm_out, sizeof(card.IDm)));
+    return PM3_SUCCESS;
 }
 
 static int send_request_code_list(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
@@ -2251,22 +2407,6 @@ static int felica_dump_discovery_visitor(const felica_discovered_node_t *node, v
 }
 
 /**
- * Checks if last known card can be added to data and adds it if possible.
- * @param custom_IDm
- * @param data
- * @return
- */
-static bool check_last_idm(uint8_t *data, uint16_t datalen) {
-    if (add_last_IDm(2, data) == false) {
-        PrintAndLogEx(WARNING, "No last known card! Use `" _YELLOW_("hf felica reader") "` first or set a custom IDm");
-        return false;
-    }
-
-    PrintAndLogEx(INFO, "Using last known IDm... " _GREEN_("%s"), sprint_hex_inrow(data, datalen));
-    return true;
-}
-
-/**
  * Sends a write_without_encryption frame to pm3 and stores the response.
  * @param flags to use for pm3 communication.
  * @param datalen frame length.
@@ -2315,13 +2455,13 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
                   _RED_("INCOMPLETE / EXPERIMENTAL COMMAND!!!"),
                   "hf felica auth1 --an 01 --acl 0000 --sn 01 --scl 8B00 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
                   "hf felica auth1 --an 01 --acl 0000 --sn 01 --scl 8B00 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBAAAAAAAAAAAAAAAA\n"
-                  "hf felica auth1 -i 11100910C11BC407 --an 01 --acl 0000 --sn 01 ..scl 8B00 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
+                  "hf felica auth1 --idm 11100910C11BC407 --an 01 --acl 0000 --sn 01 ..scl 8B00 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "an",  "<hex>", "number of areas, 1 byte"),
         arg_str0(NULL, "acl", "<hex>", "area code list, 2 bytes"),
-        arg_str0("i", NULL, "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_str0(NULL, "sn",  "<hex>", "number of service, 1 byte"),
         arg_str0(NULL, "scl", "<hex>", "service code list, 2 bytes"),
         arg_str0("k", "key",  "<hex>", "3des key, 16 bytes"),
@@ -2390,13 +2530,6 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     data[0] = 0x0C; // Static length
     data[1] = 0x3E; // Command ID
 
-    bool custom_IDm = false;
-
-    if (ilen) {
-        custom_IDm = true;
-        memcpy(data + 2, idm, 8);
-    }
-
     // Length (1),
     // Command ID (1),
     // IDm (8),
@@ -2409,9 +2542,12 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     data[0] = (datalen & 0xFF);
     data[1] = 0x10; // Command ID
 
-    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
-        return PM3_EINVARG;
+    uint8_t resolved_idm[8] = {0};
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, resolved_idm);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
+    memcpy(data + 2, resolved_idm, sizeof(resolved_idm));
 
     if (anlen) {
         data[10] = an[0];
@@ -2529,11 +2665,11 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
                   _RED_("INCOMPLETE / EXPERIMENTAL COMMAND!!!\n")
                   _RED_("EXPERIMENTAL COMMAND - M2c/P2c will be not checked"),
                   "hf felica auth2 --cc 0102030405060708 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
-                  "hf felica auth2 -i 11100910C11BC407 --cc 0102030405060708 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
+                  "hf felica auth2 --idm 11100910C11BC407 --cc 0102030405060708 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("i", NULL, "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_str0("c", "cc", "<hex>", "M3c card challenge, 8 bytes"),
         arg_str0("k", "key",  "<hex>", "3des M3c decryption key, 16 bytes"),
         arg_lit0("v", "verbose", "verbose output"),
@@ -2575,20 +2711,16 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
     uint8_t data[PM3_CMD_DATA_SIZE];
     memset(data, 0, sizeof(data));
 
-    bool custom_IDm = false;
-
-    if (ilen) {
-        custom_IDm = true;
-        memcpy(data + 2, idm, 8);
-    }
-
     uint16_t datalen = 18; // Length (1), Command ID (1), IDm (8), M4c (8)
     data[0] = (datalen & 0xFF);
     data[1] = 0x12; // Command ID
 
-    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
-        return PM3_EINVARG;
+    uint8_t resolved_idm[8] = {0};
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_CHAINED, resolved_idm);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
+    memcpy(data + 2, resolved_idm, sizeof(resolved_idm));
 
     if (cclen) {
         memcpy(data + 16, cc, cclen);
@@ -2596,11 +2728,6 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
 
     if (keylen) {
         memcpy(data + 16, key, keylen);
-    }
-
-
-    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
-        return PM3_EINVARG;
     }
 
     // M3c (8) == cc
@@ -2690,12 +2817,12 @@ static int CmdHFFelicaWritePlain(const char *Cmd) {
                   " - Mode shall be Mode0.\n"
                   " - Un-/Ssuccessful == Status Flag1 and Flag2",
                   "hf felica wrbl --sn 01 --scl CB10 --bn 01 --ble 8001 -d 0102030405060708090A0B0C0D0E0F10\n"
-                  "hf felica wrbl -i 01100910c11bc407 --sn 01 --scl CB10 --bn 01 --ble 8001 -d 0102030405060708090A0B0C0D0E0F10\n"
+                  "hf felica wrbl --idm 01100910c11bc407 --sn 01 --scl CB10 --bn 01 --ble 8001 -d 0102030405060708090A0B0C0D0E0F10\n"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_str0("d", "data", "<hex>", "data, 16 hex bytes"),
-        arg_str0("i", NULL,   "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_str0(NULL, "sn",  "<hex>", "number of service"),
         arg_str0(NULL, "scl", "<hex>", "service code list"),
         arg_str0(NULL, "bn",  "<hex>", "number of block"),
@@ -2771,12 +2898,6 @@ static int CmdHFFelicaWritePlain(const char *Cmd) {
     data[0] = 0x20; // Static length
     data[1] = 0x08; // Command ID
 
-    bool custom_IDm = false;
-    if (ilen) {
-        custom_IDm = true;
-        memcpy(data + 2, idm, sizeof(idm));
-    }
-
     // Length (1)
     // Command ID (1)
     // IDm (8)
@@ -2787,8 +2908,9 @@ static int CmdHFFelicaWritePlain(const char *Cmd) {
     // Block Data(16)
 
     uint16_t datalen = 32; // Length (1), Command ID (1), IDm (8), Number of Service (1), Service Code List(2), Number of Block(1), Block List(3), Block Data(16)
-    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
-        return PM3_EINVARG;
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, data + 2);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     if (blelen == 3) {
@@ -2853,12 +2975,12 @@ static int CmdHFFelicaReadPlain(const char *Cmd) {
                   " - Unsuccessful == Status Flag1 and Flag2",
                   "hf felica rdbl --sn 01 --scl 8B00 --bn 01 --ble 8000\n"
                   "hf felica rdbl --sn 01 --scl 4B18 --bn 01 --ble 8000 -b\n"
-                  "hf felica rdbl -i 01100910c11bc407 --sn 01 --scl 8B00 --bn 01 --ble 8000\n"
+                  "hf felica rdbl --idm 01100910c11bc407 --sn 01 --scl 8B00 --bn 01 --ble 8000\n"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("b", NULL, "get all block list elements 00 -> FF"),
-        arg_str0("i", NULL, "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_lit0("l", "long", "use 3 byte block list element block number"),
         arg_str0(NULL, "sn",  "<hex>", "number of service"),
         arg_str0(NULL, "scl", "<hex>", "service code list"),
@@ -2930,15 +3052,10 @@ static int CmdHFFelicaReadPlain(const char *Cmd) {
     data[0] = 0x10; // Static length
     data[1] = 0x06; // Command ID
 
-    bool custom_IDm = false;
-    if (ilen) {
-        custom_IDm = true;
-        memcpy(data + 2, idm, sizeof(idm));
-    }
-
     uint16_t datalen = 16; // Length (1), Command ID (1), IDm (8), Number of Service (1), Service Code List(2), Number of Block(1), Block List(3)
-    if (custom_IDm  == false && check_last_idm(data, datalen) == false) {
-        return PM3_EINVARG;
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, data + 2);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     if (long_block_numbers) {
@@ -3001,11 +3118,11 @@ static int CmdHFFelicaRequestResponse(const char *Cmd) {
     CLIParserInit(&ctx, "hf felica rqresponse",
                   "Use this command to verify the existence of a card and its Mode.\n"
                   " - current mode of the card is returned",
-                  "hf felica rqresponse -i 11100910C11BC407\n"
+                  "hf felica rqresponse --idm 11100910C11BC407\n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("i", NULL, "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3025,15 +3142,10 @@ static int CmdHFFelicaRequestResponse(const char *Cmd) {
     data[0] = 0x0A; // Static length
     data[1] = 0x04; // Command ID
 
-    bool custom_IDm = false;
-    if (ilen) {
-        custom_IDm = true;
-        memcpy(data + 2, idm, sizeof(idm));
-    }
-
     uint8_t datalen = 10; // Length (1), Command ID (1), IDm (8)
-    if (!custom_IDm && !check_last_idm(data, datalen)) {
-        return PM3_EINVARG;
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, data + 2);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
@@ -3074,11 +3186,11 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
 
                   "hf felica rqspecver\n"
                   "hf felica rqspecver -r 0001\n"
-                  "hf felica rqspecver -i 11100910C11BC407 \n"
+                  "hf felica rqspecver --idm 11100910C11BC407 \n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("i", NULL, "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_str0("r", NULL, "<hex>", "set custom reserve"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
@@ -3113,20 +3225,14 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
     request_specification_version_request.length[0] = sizeof(request_specification_version_request);
     request_specification_version_request.command_code[0] = FELICA_REQUEST_SPEC_VERSION_REQ;
 
-    bool custom_IDm = false;
-    if (ilen) {
-        custom_IDm = true;
-        memcpy(request_specification_version_request.IDm, idm, sizeof(idm));
-    }
-
     if (rlen) {
         memcpy(request_specification_version_request.reserved, reserved, sizeof(reserved));
     }
 
-    if (custom_IDm == false &&
-            check_last_idm((uint8_t *)&request_specification_version_request,
-                           sizeof(request_specification_version_request)) == false) {
-        return PM3_EINVARG;
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE,
+                                       request_specification_version_request.IDm);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     felica_request_specification_version_info_t specification_version_info;
@@ -3174,11 +3280,11 @@ static int CmdHFFelicaResetMode(const char *Cmd) {
                   "Use this command to reset Mode to Mode 0.",
                   "hf felica resetmode\n"
                   "hf felica resetmode -r 0001\n"
-                  "hf felica resetmode -i 11100910C11BC407 \n"
+                  "hf felica resetmode --idm 11100910C11BC407 \n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("i", NULL, "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_str0("r", NULL, "<hex>", "set custom reserve"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
@@ -3213,12 +3319,6 @@ static int CmdHFFelicaResetMode(const char *Cmd) {
     data[0] = 0x0C; // Static length
     data[1] = 0x3E; // Command ID
 
-    bool custom_IDm = false;
-
-    if (ilen) {
-        custom_IDm = true;
-        memcpy(data + 2, idm, 8);
-    }
     if (rlen) {
         memcpy(data + 10, reserved, 2);
     } else {
@@ -3227,8 +3327,9 @@ static int CmdHFFelicaResetMode(const char *Cmd) {
     }
 
     uint16_t datalen = 12; // Length (1), Command ID (1), IDm (8), Reserved (2)
-    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
-        return PM3_EINVARG;
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, data + 2);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
@@ -3265,11 +3366,11 @@ static int CmdHFFelicaRequestSystemCode(const char *Cmd) {
                   "  - if a card is divided into more than one System, \n"
                   "    this command acquires System Code of each System existing in the card.",
                   "hf felica rqsyscode\n"
-                  "hf felica rqsyscode -i 11100910C11BC407 \n"
+                  "hf felica rqsyscode --idm 11100910C11BC407 \n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("i", NULL, "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3289,15 +3390,10 @@ static int CmdHFFelicaRequestSystemCode(const char *Cmd) {
     data[0] = 0x0A; // Static length
     data[1] = 0x0C; // Command ID
 
-    bool custom_IDm = false;
-    if (ilen) {
-        custom_IDm = true;
-        memcpy(data + 2, idm, sizeof(idm));
-    }
-
     uint16_t datalen = 10; // Length (1), Command ID (1), IDm (8)
-    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
-        return PM3_EINVARG;
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, data + 2);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
@@ -3338,28 +3434,31 @@ static int CmdHFFelicaDump(const char *Cmd) {
                   "Dump all existing Area Code and Service Code.\n"
                   "Only works on services that do not require authentication yet.\n",
                   "hf felica dump\n"
-                  "hf felica dump --retry 5");
+                  "hf felica dump --retry 5\n"
+                  "hf felica dump --idm 11100910C11BC407");
     void *argtable[] = {
         arg_param_begin,
         arg_lit0(NULL, "no-auth", "read public services"),
         arg_u64_0("r", "retry", "<dec>", "number of retries"),
+        arg_str0(NULL, "idm", "<hex>", "use custom IDm"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     uint32_t retry_count = arg_get_u32_def(ctx, 2, FELICA_DEFAULT_RETRY_COUNT);
+    uint8_t idm[8] = {0};
+    int ilen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 3), idm, sizeof(idm), &ilen);
     CLIParserFree(ctx);
-
-    // bool no_auth = arg_get_lit(ctx, 1);
-
-    uint8_t probe_data[12] = {0};
-    probe_data[0] = sizeof(probe_data);
-    probe_data[1] = FELICA_SRCHSYSCODE_REQ;
-    if (!check_last_idm(probe_data, (uint16_t)sizeof(probe_data))) {
+    if (res) {
         return PM3_EINVARG;
     }
 
-    uint8_t idm[8] = {0};
-    memcpy(idm, probe_data + 2, sizeof(idm));
+    // bool no_auth = arg_get_lit(ctx, 1);
+
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, idm);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort discovery or dumping");
 
@@ -3423,7 +3522,7 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
                   "in the command packet.",
                   "hf felcia rqservice --node 01 --code FFFF\n"
                   "hf felcia rqservice -a --code FFFF\n"
-                  "hf felica rqservice -i 011204126417E405 --node 01 --code FFFF"
+                  "hf felica rqservice --idm 011204126417E405 --node 01 --code FFFF"
                  );
 
     void *argtable[] = {
@@ -3431,7 +3530,7 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
         arg_lit0("a", "all", "auto node number mode, iterates through all nodes 1 < n < 32"),
         arg_str0("n", "node", "<hex>", "Number of Node"),
         arg_str0("c", "code", "<hex>", "Node Code List (little endian)"),
-        arg_str0("i", "idm", "<hex>", "use custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "use custom IDm"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3465,13 +3564,6 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     uint8_t data[PM3_CMD_DATA_SIZE];
     memset(data, 0, sizeof(data));
 
-    bool custom_IDm = false;
-
-    if (ilen) {
-        custom_IDm = true;
-        memcpy(data + 2, idm, 8);
-    }
-
     if (all_nodes == false) {
         // Node Number
         if (nlen == 1) {
@@ -3486,15 +3578,12 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
 
     uint8_t datalen = 13; // length (1) + CMD (1) + IDm(8) + Node Number (1) + Node Code List (2)
 
-    uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
-    if (custom_IDm) {
-        flags |= FELICA_NO_SELECT;
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, data + 2);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
-    // Todo activate once datalen isn't hardcoded anymore...
-    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
-        return PM3_EINVARG;
-    }
+    uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
 
     data[0] = (datalen & 0xFF);
     data[1] = 0x02; // Service Request Command ID
@@ -3526,11 +3615,13 @@ static int CmdHFFelicaDiscoverNodes(const char *Cmd) {
                   "Method: auto | request_code_list | search_service_code | request_service | read_without_encryption",
                   "hf felica discnodes\n"
                   "hf felica discnodes --retry 5\n"
-                  "hf felica discnodes --method request_service");
+                  "hf felica discnodes --method request_service\n"
+                  "hf felica discnodes --idm 11100910C11BC407");
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0("r", "retry", "<dec>", "number of retries"),
         arg_str0("m", "method", "<str>", "node discovery method"),
+        arg_str0(NULL, "idm", "<hex>", "use custom IDm"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -3538,6 +3629,9 @@ static int CmdHFFelicaDiscoverNodes(const char *Cmd) {
     char method_str[64] = {0};
     int method_len = 0;
     int method_str_status = CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)method_str, sizeof(method_str) - 1, &method_len);
+    uint8_t idm[8] = {0};
+    int ilen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 3), idm, sizeof(idm), &ilen);
     felica_node_discovery_method_t selected_method = FELICA_NODE_DISCOVERY_NONE;
     int method_parse_status = PM3_EINVARG;
     if (method_str_status == PM3_SUCCESS) {
@@ -3545,19 +3639,17 @@ static int CmdHFFelicaDiscoverNodes(const char *Cmd) {
         method_parse_status = felica_parse_node_discovery_method(method_str, &selected_method);
     }
     CLIParserFree(ctx);
+    if (res != PM3_SUCCESS) {
+        return PM3_EINVARG;
+    }
     if (method_str_status != PM3_SUCCESS || method_parse_status != PM3_SUCCESS) {
         return method_parse_status;
     }
 
-    uint8_t probe_data[12] = {0};
-    probe_data[0] = sizeof(probe_data);
-    probe_data[1] = FELICA_SRCHSYSCODE_REQ;
-    if (!check_last_idm(probe_data, (uint16_t)sizeof(probe_data))) {
-        return PM3_EINVARG;
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, idm);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
-
-    uint8_t idm[8] = {0};
-    memcpy(idm, probe_data + 2, sizeof(idm));
 
     PrintAndLogEx(HINT, "Area and service codes are printed in network order.");
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort discovery");
@@ -3612,25 +3704,28 @@ static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
     CLIParserInit(&ctx, "hf felica scsvcode",
                   "Dump all existing Area Code and Service Code.",
                   "hf felica scsvcode\n"
-                  "hf felica scsvcode --retry 5");
+                  "hf felica scsvcode --retry 5\n"
+                  "hf felica scsvcode --idm 11100910C11BC407");
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0("r", "retry", "<dec>", "number of retries"),
+        arg_str0(NULL, "idm", "<hex>", "use custom IDm"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     uint32_t retry_count = arg_get_u32_def(ctx, 1, FELICA_DEFAULT_RETRY_COUNT);
+    uint8_t idm[8] = {0};
+    int ilen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 2), idm, sizeof(idm), &ilen);
     CLIParserFree(ctx);
-
-    uint8_t probe_data[12] = {0};
-    probe_data[0] = sizeof(probe_data);
-    probe_data[1] = FELICA_SRCHSYSCODE_REQ;
-    if (!check_last_idm(probe_data, (uint16_t)sizeof(probe_data))) {
+    if (res) {
         return PM3_EINVARG;
     }
 
-    uint8_t idm[8] = {0};
-    memcpy(idm, probe_data + 2, sizeof(idm));
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, idm);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     PrintAndLogEx(HINT, "Area and service codes are printed in network order.");
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort discovery");
@@ -4296,7 +4391,7 @@ static int CmdHFFelicaAuthenticationLite(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf felica liteauth",
                   "Authenticate",
-                  "hf felica liteauth -i 11100910C11BC407\n"
+                  "hf felica liteauth --idm 11100910C11BC407\n"
                   "hf felica liteauth --key 46656c69436130313233343536616263\n"
                   "hf felica liteauth --key 46656c69436130313233343536616263 -k\n"
                   "hf felica liteauth -c 701185c59f8d30afeab8e4b3a61f5cc4 --key 46656c69436130313233343536616263"
@@ -4305,7 +4400,7 @@ static int CmdHFFelicaAuthenticationLite(const char *Cmd) {
         arg_param_begin,
         arg_str0(NULL, "key", "<hex>", "set card key, 16 bytes"),
         arg_str0("c", "", "<hex>", "set random challenge, 16 bytes"),
-        arg_str0("i", "", "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_lit0("k", "", "keep signal field ON after receive"),
         arg_param_end
     };
@@ -4342,13 +4437,9 @@ static int CmdHFFelicaAuthenticationLite(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    if (!ilen) {
-        if (last_known_card.IDm[0] != 0 && last_known_card.IDm[1] != 0) {
-            memcpy(idm, last_known_card.IDm, sizeof(idm));
-        } else {
-            PrintAndLogEx(WARNING, "No last known card! Use `" _YELLOW_("hf felica reader") "` first or set a custom IDm");
-            return PM3_EINVARG;
-        }
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, idm);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     int ret = PM3_SUCCESS;
@@ -4544,7 +4635,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("i", "", "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_str0(NULL, "key", "<hex>", "set card key, 16 bytes"),
         arg_param_end
     };
@@ -4571,13 +4662,9 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (keylen != 0) {
-        if (!ilen) {
-            if (last_known_card.IDm[0] != 0 && last_known_card.IDm[1] != 0) {
-                memcpy(idm, last_known_card.IDm, sizeof(idm));
-            } else {
-                PrintAndLogEx(WARNING, "No last known card! Use `" _YELLOW_("hf felica reader") "` first or set a custom IDm");
-                return PM3_EINVARG;
-            }
+        res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, idm);
+        if (res != PM3_SUCCESS) {
+            return res;
         }
 
         uint8_t rc[FELICA_BLK_SIZE] = {0};
