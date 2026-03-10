@@ -1379,10 +1379,23 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
     LED_D_ON();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_848_KHZ | FPGA_HF_READER_MODE_RECEIVE_IQ);
 
+    uint32_t wait_start_time = GetTickCount();
+
     for (;;) {
 
         volatile uint16_t behindBy = ((uint16_t *)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
         if (behindBy == 0) {
+            WDT_HIT();
+            if (BUTTON_PRESS()) {
+                ret = PM3_EOPABORTED;
+                break;
+            }
+            // Failsafe: if the FPGA SSC clock drops completely, DMA will freeze eternally.
+            // We use the ARM's main tick counter (1ms) instead of the SSP clock.
+            if (samples == 0 && GetTickCountDelta(wait_start_time) > 200) {
+                ret = PM3_ETIMEOUT;
+                break;
+            }
             continue;
         }
 
