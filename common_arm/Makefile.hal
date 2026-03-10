@@ -306,7 +306,7 @@ ifneq ($(PLATFORM), $(CACHED_PLATFORM))
     PLATFORM_CHANGED=true
 else ifneq ($(PLATFORM_EXTRAS), $(CACHED_PLATFORM_EXTRAS))
     PLATFORM_CHANGED=true
-else ifneq ($(PLATFORM_DEFS), $(CACHED_PLATFORM_DEFS))
+else ifneq ($(strip $(PLATFORM_DEFS)), $(strip $(CACHED_PLATFORM_DEFS)))
     PLATFORM_CHANGED=true
 endif
 
