@@ -1577,11 +1577,11 @@ static int aliro_read_do_auth0(aliro_read_state_t *state,
     uint8_t auth0_data[ALIRO_MAX_BUFFER] = {0};
     size_t auth0_data_len = 0;
     if (aliro_append_tlv(0x41, &state->auth0_command_parameters, 1, auth0_data, sizeof(auth0_data), &auth0_data_len) != PM3_SUCCESS ||
-            aliro_append_tlv(0x42, (const uint8_t[]){ALIRO_AUTH0_DEFAULT_POLICY}, 1, auth0_data, sizeof(auth0_data), &auth0_data_len) != PM3_SUCCESS ||
-            aliro_append_tlv(0x5C, state->protocol_version, 2, auth0_data, sizeof(auth0_data), &auth0_data_len) != PM3_SUCCESS ||
-            aliro_append_tlv(0x87, state->reader_ephemeral_public_key, 65, auth0_data, sizeof(auth0_data), &auth0_data_len) != PM3_SUCCESS ||
-            aliro_append_tlv(0x4C, state->transaction_identifier, 16, auth0_data, sizeof(auth0_data), &auth0_data_len) != PM3_SUCCESS ||
-            aliro_append_tlv(0x4D, state->reader_identifier, 32, auth0_data, sizeof(auth0_data), &auth0_data_len) != PM3_SUCCESS) {
+    aliro_append_tlv(0x42, (const uint8_t[]) {ALIRO_AUTH0_DEFAULT_POLICY}, 1, auth0_data, sizeof(auth0_data), &auth0_data_len) != PM3_SUCCESS ||
+aliro_append_tlv(0x5C, state->protocol_version, 2, auth0_data, sizeof(auth0_data), &auth0_data_len) != PM3_SUCCESS ||
+aliro_append_tlv(0x87, state->reader_ephemeral_public_key, 65, auth0_data, sizeof(auth0_data), &auth0_data_len) != PM3_SUCCESS ||
+aliro_append_tlv(0x4C, state->transaction_identifier, 16, auth0_data, sizeof(auth0_data), &auth0_data_len) != PM3_SUCCESS ||
+aliro_append_tlv(0x4D, state->reader_identifier, 32, auth0_data, sizeof(auth0_data), &auth0_data_len) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Failed to encode AUTH0 command");
         return PM3_ESOFT;
     }
@@ -1787,10 +1787,10 @@ static int aliro_read_do_auth1(aliro_read_state_t *state,
 
     uint8_t auth1_data[ALIRO_MAX_BUFFER] = {0};
     size_t auth1_data_len = 0;
-    if (aliro_append_tlv(0x41, (const uint8_t[]){ALIRO_AUTH1_REQUEST_PUBLIC_KEY}, 1,
-                         auth1_data, sizeof(auth1_data), &auth1_data_len) != PM3_SUCCESS ||
-            aliro_append_tlv(0x9E, auth1_signature, 64,
-                             auth1_data, sizeof(auth1_data), &auth1_data_len) != PM3_SUCCESS) {
+    if (aliro_append_tlv(0x41, (const uint8_t[]) {ALIRO_AUTH1_REQUEST_PUBLIC_KEY}, 1,
+auth1_data, sizeof(auth1_data), &auth1_data_len) != PM3_SUCCESS ||
+aliro_append_tlv(0x9E, auth1_signature, 64,
+                 auth1_data, sizeof(auth1_data), &auth1_data_len) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Failed to encode AUTH1 command");
         return PM3_ESOFT;
     }
@@ -2041,7 +2041,7 @@ static int aliro_parse_step_up_scopes(struct arg_str *scope_arg, aliro_step_up_s
     char *saveptr = NULL;
     char *token = strtok_r(scope_str, ",", &saveptr);
     while (token != NULL) {
-        while (isspace((unsigned char)*token)) {
+        while (isspace((unsigned char) * token)) {
             token++;
         }
 
@@ -3539,11 +3539,11 @@ static int aliro_read_auth_flow(const uint8_t *kpersistent, size_t kpersistent_l
 
         aliro_read_print_auth1_report(&state);
         have_fast_suggestion_cmd = aliro_read_build_fast_suggestion_command(&state,
-                                                                            reader_group_identifier,
-                                                                            reader_group_sub_identifier,
-                                                                            reader_private_key_raw,
-                                                                            fast_suggestion_cmd,
-                                                                            sizeof(fast_suggestion_cmd));
+                                   reader_group_identifier,
+                                   reader_group_sub_identifier,
+                                   reader_private_key_raw,
+                                   fast_suggestion_cmd,
+                                   sizeof(fast_suggestion_cmd));
 
         if (flow == ALIRO_FLOW_STEP_UP) {
             res = aliro_read_do_step_up(&state, step_up_scopes);

@@ -69,8 +69,8 @@
 static int CmdHelp(const char *Cmd);
 static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose);
 static int send_felica_payload_with_retries(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
-        int expected_response_cmd, uint32_t timeout_ms, uint32_t retries, bool logging,
-        PacketResponseNG *resp, const char *request_name);
+                                            int expected_response_cmd, uint32_t timeout_ms, uint32_t retries, bool logging,
+                                            PacketResponseNG *resp, const char *request_name);
 static felica_card_select_t last_known_card;
 
 static void set_last_known_card(felica_card_select_t card) {
@@ -312,8 +312,8 @@ static const char *felica_specification_option_name(size_t option_index) {
 }
 
 static void print_specification_versions(int level,
-        const felica_request_specification_version_info_t *specification_version_info,
-        bool include_hex) {
+                                         const felica_request_specification_version_info_t *specification_version_info,
+                                         bool include_hex) {
     if (specification_version_info == NULL || specification_version_info->has_specification_version == false) {
         return;
     }
@@ -687,7 +687,7 @@ static int send_get_container_property(uint8_t flags, uint16_t datalen, uint8_t 
 }
 
 static int send_get_container_issue_information(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
-        felica_get_container_issue_info_response_t *container_issue_info_response) {
+                                                felica_get_container_issue_info_response_t *container_issue_info_response) {
     (void)verbose;
     PacketResponseNG resp;
     if (send_felica_payload_with_retries(flags, datalen, data, false,
@@ -706,8 +706,8 @@ static int send_get_container_issue_information(uint8_t flags, uint16_t datalen,
 }
 
 static int send_get_platform_information(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
-        felica_status_flags_t *status_flags, uint8_t *platform_information_data,
-        size_t platform_information_data_capacity, size_t *platform_information_data_len) {
+                                         felica_status_flags_t *status_flags, uint8_t *platform_information_data,
+                                         size_t platform_information_data_capacity, size_t *platform_information_data_len) {
     (void)verbose;
     if (status_flags == NULL || platform_information_data == NULL || platform_information_data_len == NULL) {
         return PM3_EINVARG;
@@ -759,8 +759,8 @@ static int send_get_platform_information(uint8_t flags, uint16_t datalen, uint8_
 }
 
 static int send_request_specification_version(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
-        bool logging, uint32_t timeout_ms, uint32_t retries,
-        felica_request_specification_version_info_t *specification_version_info) {
+                                              bool logging, uint32_t timeout_ms, uint32_t retries,
+                                              felica_request_specification_version_info_t *specification_version_info) {
     if (specification_version_info == NULL) {
         return PM3_EINVARG;
     }
@@ -932,8 +932,8 @@ static int info_felica(bool verbose) {
 
     felica_get_container_issue_info_response_t container_issue_info_response;
     if (send_get_container_issue_information(optional_flags,
-            sizeof(container_issue_info_request), (uint8_t *)&container_issue_info_request, false,
-            &container_issue_info_response) == PM3_SUCCESS) {
+                                             sizeof(container_issue_info_request), (uint8_t *)&container_issue_info_request, false,
+                                             &container_issue_info_response) == PM3_SUCCESS) {
         char model_ascii[sizeof(container_issue_info_response.mobile_phone_model_information) + 1] = {0};
         bool model_is_ascii = decode_zero_padded_ascii(
                                   container_issue_info_response.mobile_phone_model_information,
@@ -1116,8 +1116,8 @@ static void log_felica_retry_attempt(const char *request_name, uint32_t attempt,
  * @return PM3_SUCCESS on success
  */
 static int send_felica_payload_with_retries(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
-        int expected_response_cmd, uint32_t timeout_ms, uint32_t retries, bool logging,
-        PacketResponseNG *resp, const char *request_name) {
+                                            int expected_response_cmd, uint32_t timeout_ms, uint32_t retries, bool logging,
+                                            PacketResponseNG *resp, const char *request_name) {
     for (uint32_t attempt = 0; attempt <= retries; attempt++) {
         clear_and_send_command(flags, datalen, data, verbose);
         if (waitCmdFelicaEx(false, resp, verbose, logging, timeout_ms) == false) {
@@ -1162,10 +1162,10 @@ int send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data, bool ve
     }
     PacketResponseNG resp;
     if (send_felica_payload_with_retries(flags, datalen, data, verbose,
-                                            0x03,
-                                            FELICA_DEFAULT_TIMEOUT_MS, 0,
-                                            true,
-                                            &resp, "request service") != PM3_SUCCESS) {
+                                         0x03,
+                                         FELICA_DEFAULT_TIMEOUT_MS, 0,
+                                         true,
+                                         &resp, "request service") != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "\nGot no response from card");
         return PM3_ERFTRANS;
     }
@@ -2139,10 +2139,10 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
                   sprint_hex(request_specification_version_request.IDm, sizeof(request_specification_version_request.IDm)));
     PrintAndLogEx(SUCCESS, "Status Flag1... %s",
                   sprint_hex(specification_version_info.status_flags.status_flag1,
-                            sizeof(specification_version_info.status_flags.status_flag1)));
+                             sizeof(specification_version_info.status_flags.status_flag1)));
     PrintAndLogEx(SUCCESS, "Status Flag2... %s",
                   sprint_hex(specification_version_info.status_flags.status_flag2,
-                            sizeof(specification_version_info.status_flags.status_flag2)));
+                             sizeof(specification_version_info.status_flags.status_flag2)));
 
     if (specification_version_info.has_specification_version) {
         print_specification_versions(SUCCESS, &specification_version_info, true);

@@ -2746,7 +2746,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
     uint32_t start_time = 0;
     uint8_t read_check_cc[] = { 0x10 | ICLASS_CMD_READCHECK, 0x18 }; //block 24 with credit key
     uint8_t read_check_cc2[] = { 0x80 | ICLASS_CMD_READCHECK, 0x02 }; //block 2 -> to check Kd macs
-    if (msg->credit_recovery == true){
+    if (msg->credit_recovery == true) {
         read_check_cc[0] = 0x80 | ICLASS_CMD_READCHECK; //still block 24 but with debit key
     }
 
@@ -2799,7 +2799,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
         //Step 0A - The read_check_cc block has to be in AA2, set it by checking the card configuration
         read_check_cc[1] = hdr.conf.app_limit + 1; //first block of AA2
-        if (msg->credit_recovery == true){
+        if (msg->credit_recovery == true) {
             read_check_cc[1] = hdr.conf.app_limit - 1; //last block of AA1
         }
         //Step1 Authenticate with AA1 using trace
@@ -2928,7 +2928,7 @@ void iClass_Recover(iclass_recover_req_t *msg) {
 
         uint8_t wb[9] = {0};
         uint8_t blockno = 3;
-        if (msg->credit_recovery == true){
+        if (msg->credit_recovery == true) {
             blockno = 4;
         }
         wb[0] = blockno;
@@ -3080,8 +3080,8 @@ fast_restore:
     uint8_t mac2[4] = {0};
     uint8_t wb[9] = {0};
     uint8_t blockno = 3;
-    if (msg->credit_recovery == true){
-            blockno = 4;
+    if (msg->credit_recovery == true) {
+        blockno = 4;
     }
     wb[0] = blockno;
     bool reverted = false;

@@ -275,6 +275,18 @@ Check column "offline" for their availability.
 |`hf 15 csetuid          `|N       |`Set UID for magic card`
 
 
+### hf aliro
+
+ { ALIRO digital access credentials... }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf aliro help          `|Y       |`This help`
+|`hf aliro list          `|Y       |`List ISO 14443A/7816 history`
+|`hf aliro info          `|N       |`Get Aliro applet information`
+|`hf aliro read          `|N       |`Run SELECT-AUTH0-AUTH1 and optional step-up document retrieval`
+
+
 ### hf cipurse
 
  { Cipurse transport Cards...          }
@@ -331,6 +343,7 @@ Check column "offline" for their availability.
 |`hf felica help         `|Y       |`This help`
 |`hf felica list         `|Y       |`List ISO 18092/FeliCa history`
 |`hf felica info         `|N       |`Tag information`
+|`hf felica seacinfo     `|N       |`FeliCa SEAC tag information`
 |`hf felica raw          `|N       |`Send raw hex data to tag`
 |`hf felica rdbl         `|N       |`read block data from authentication-not-required Service.`
 |`hf felica reader       `|N       |`Act like an ISO18092/FeliCa reader`
@@ -596,7 +609,7 @@ Check column "offline" for their availability.
 |`hf mfp list            `|Y       |`List MIFARE Plus history`
 |`hf mfp auth            `|N       |`Authentication`
 |`hf mfp chk             `|N       |`Check keys`
-|`hf mfp dump            `|N       |`Dump MIFARE Plus tag to binary file`
+|`hf mfp dump            `|N       |`Dump MIFARE Plus tag to file`
 |`hf mfp info            `|N       |`Tag information`
 |`hf mfp mad             `|N       |`Check and print MAD`
 |`hf mfp rdbl            `|N       |`Read blocks from card`
@@ -671,10 +684,12 @@ Check column "offline" for their availability.
 |`hf mfdes createapp     `|N       |`Create Application`
 |`hf mfdes deleteapp     `|N       |`Delete Application`
 |`hf mfdes selectapp     `|N       |`Select Application ID`
+|`hf mfdes selectisofid  `|N       |`Select file by ISO ID`
 |`hf mfdes changekey     `|N       |`Change Key`
 |`hf mfdes chkeysettings `|N       |`Change Key Settings`
 |`hf mfdes getkeysettings`|N       |`Get Key Settings`
 |`hf mfdes getkeyversions`|N       |`Get Key Versions`
+|`hf mfdes bruteisofid   `|N       |`Recover file ISO IDs by bruteforce`
 |`hf mfdes getfileids    `|N       |`Get File IDs list`
 |`hf mfdes getfileisoids `|N       |`Get File ISO IDs list`
 |`hf mfdes lsfiles       `|N       |`Show all files list`

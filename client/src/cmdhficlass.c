@@ -4933,9 +4933,9 @@ static int CmdHFiClassLegacyRecSim(bool credit) {
     }
 
     uint8_t new_div_key[8] = {0};
-    if (credit == true){
+    if (credit == true) {
         HFiClassCalcDivKey(csn, iClass_Key_Table[1], new_div_key, false);
-    }else{
+    } else {
         HFiClassCalcDivKey(csn, iClass_Key_Table[0], new_div_key, false);
     }
 
@@ -5050,8 +5050,8 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
     } else if (test) {
         loop = 1;
         fast = false;
-    }else if (debug) {
-        if (loop > 10){
+    } else if (debug) {
+        if (loop > 10) {
             loop = 10;
         }
         fast = false;
@@ -5065,10 +5065,10 @@ static int CmdHFiClassLegacyRecover(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    if(credit == true){
+    if (credit == true) {
         diversifyKey(csn, iClass_Key_Table[0], new_div_key);
         fast = false;
-    }else{
+    } else {
         diversifyKey(csn, iClass_Key_Table[1], new_div_key);
     }
 
