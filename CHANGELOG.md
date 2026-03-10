@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Changed `wiegand encode` / `wiegand decode` - added support for encoding and decoding the new 96-bit ASN.1 encoded format, `--bin` encoding, verbose PACS encoding output, and explicit rejection of raw/binary decodes above 96 bits (@cindersocket)
 - Added `hf felica discnodes` command (@kormax)
 - Added `hf mfp dump` command (@apply-science)
 - Added `hf felica seacinfo` command (@kormax)
