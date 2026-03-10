@@ -74,7 +74,7 @@ static void descramble(uint8_t *arr, uint8_t len) {
 int gallagher_diversify_classic_key(uint8_t *site_key, uint8_t *csn, size_t csn_len, uint8_t *key_output) {
     memcpy(key_output, site_key, 16);
     for (int i = 0; i < csn_len; i++) {
-        key_output[i] = site_key[i] ^ csn[i];
+        key_output[i] ^= csn[i];
     }
     return PM3_SUCCESS;
 }
@@ -90,7 +90,7 @@ int gallagher_construct_credential(GallagherCredentials_t *creds, uint8_t region
     return PM3_SUCCESS;
 }
 
-int gallagher_read_cad(uint8_t *cad, uint8_t region, uint16_t facility) {
+int gallagher_parse_cad(uint8_t *cad, uint8_t region, uint16_t facility) {
     // CAD entries are 3.5 bytes each (28 bits: 4-bit RC, 16-bit FC, 8-bit sector).
     // Packed in pairs of 7 bytes starting at byte 4, up to 6 pairs (12 entries).
     for (int pair = 0; pair < 6; pair++) {
@@ -155,6 +155,12 @@ void gallagher_encode_creds(uint8_t *eight_bytes, GallagherCredentials_t *creds)
 }
 
 int gallagher_encode_mes(uint8_t *sixteen_bytes, GallagherCredentials_t *creds) {
+
+    if (creds->csn_len > 4) {
+        PrintAndLogEx(ERR, "Credential could not be encoded into a Mifare Enhanced Encryption block. only 4 byte UUID's are supported");
+        return PM3_ENOTIMPL;
+    }
+
     // unknown parameters from the research these might be for UUID's longer than 4 bytes?
     uint8_t UB = 0x00;
     uint8_t UC = 0x00;
@@ -166,11 +172,6 @@ int gallagher_encode_mes(uint8_t *sixteen_bytes, GallagherCredentials_t *creds) 
 
     uint8_t mes[16];
     uint8_t diversified_site_key[16];
-
-    if (creds->csn_len > 4) {
-        PrintAndLogEx(ERR, "Credential could not be encoded into a Mifare Enhanced Encryption block. only 4 byte UUID's are supported");
-        return PM3_ENOTIMPL;
-    }
 
     mes[0] = 0x01;
     mes[1] = (creds->card_number & 0xFF0000) >> 16;
@@ -195,8 +196,13 @@ int gallagher_encode_mes(uint8_t *sixteen_bytes, GallagherCredentials_t *creds) 
 
     mbedtls_aes_context actx;
     mbedtls_aes_init(&actx);
-    if (mbedtls_aes_setkey_enc(&actx, diversified_site_key, 128) != 0) return PM3_ENOKEY;
-    if (mbedtls_aes_crypt_ecb(&actx, MBEDTLS_AES_ENCRYPT, mes, sixteen_bytes) != 0) return PM3_ENOKEY;;
+    if (mbedtls_aes_setkey_enc(&actx, diversified_site_key, 128) != 0) {
+        return PM3_ENOKEY;
+    }
+
+    if (mbedtls_aes_crypt_ecb(&actx, MBEDTLS_AES_ENCRYPT, mes, sixteen_bytes) != 0) {
+        return PM3_ENOKEY;
+    }
     mbedtls_aes_free(&actx);
 
     PrintAndLogEx(DEBUG, "MES after encryption %s", sprint_hex_ascii(sixteen_bytes, 16));
@@ -223,8 +229,12 @@ int gallagher_decode_mes(uint8_t *block, GallagherCredentials_t *creds) {
     // AES decrypt 16 bytes
     mbedtls_aes_context actx;
     mbedtls_aes_init(&actx);
-    if (mbedtls_aes_setkey_dec(&actx, diversified_site_key, 128) != 0) return PM3_ENOKEY;
-    if (mbedtls_aes_crypt_ecb(&actx, MBEDTLS_AES_DECRYPT, block, mes) != 0) return PM3_ENOKEY;;
+    if (mbedtls_aes_setkey_dec(&actx, diversified_site_key, 128) != 0) {
+        return PM3_ENOKEY;
+    }
+    if (mbedtls_aes_crypt_ecb(&actx, MBEDTLS_AES_DECRYPT, block, mes) != 0) {
+        return PM3_ENOKEY;
+    }
     mbedtls_aes_free(&actx);
 
     PrintAndLogEx(DEBUG, "MES after decryption %s", sprint_hex_ascii(mes, 16));

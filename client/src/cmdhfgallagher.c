@@ -39,9 +39,9 @@
 static int CmdHelp(const char *cmd);
 
 // Application ID for the Gallagher Card Application Directory
-static const uint32_t DESFIRE_CAD_AID = 0x2F81F4;
-static const uint32_t CLASSIC_CAD_AID = 0x4811;
-static const uint16_t CLASSIC_CRED_AID = 0x4812;
+#define DESFIRE_CAD_AID 0x2F81F4
+#define CLASSIC_CAD_AID 0x4811
+#define CLASSIC_CRED_AID 0x4812
 
 // Default MIFARE site key (16 bytes)
 static const uint8_t DEFAULT_SITE_KEY[] = {
@@ -887,14 +887,14 @@ static int hfgal_read_desfire_card(uint32_t aid, uint8_t *site_key, bool verbose
 
 
 // Gallagher MIFARE Classic fixed keys
-static const uint8_t GALLAGHER_MFC_KEY_A[MIFARE_KEY_SIZE] = {0x16, 0x0A, 0x91, 0xD2, 0x9A, 0x9C};
-static const uint8_t GALLAGHER_MFC_KEY_B[MIFARE_KEY_SIZE] = {0xB7, 0xBF, 0x0C, 0x13, 0x06, 0x6E};
+static const uint8_t GALLAGHER_MFC_KEY_A[] = {0x16, 0x0A, 0x91, 0xD2, 0x9A, 0x9C};
+static const uint8_t GALLAGHER_MFC_KEY_B[] = {0xB7, 0xBF, 0x0C, 0x13, 0x06, 0x6E};
 
 // Gallagher MIFARE Classic access bits: 0x787788
-static const uint8_t GALLAGHER_ACCESS_BITS[3] = {0x78, 0x77, 0x88};
+static const uint8_t GALLAGHER_ACCESS_BITS[] = {0x78, 0x77, 0x88};
 
 // "www.cardax.com  " string for block 1
-static const uint8_t CARDAX_STRING[MFBLOCK_SIZE] = {
+static const uint8_t CARDAX_STRING[] = {
     0x77, 0x77, 0x77, 0x2E, 0x63, 0x61, 0x72, 0x64,
     0x61, 0x78, 0x2E, 0x63, 0x6F, 0x6D, 0x20, 0x20
 };
@@ -1180,8 +1180,10 @@ static int hfgal_read_classic_card(uint8_t *site_key, bool verbose, bool quiet) 
     SendCommandMIX(CMD_HF_ISO14443A_READER, ISO14A_CONNECT, 0, 0, NULL, 0);
     PacketResponseNG resp;
     if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
-        PrintAndLogEx(DEBUG, "iso14443a card select timeout");
-        return 0;
+        if (!quiet) {
+            PrintAndLogEx(DEBUG, "iso14443a card select timeout");
+        }
+        return PM3_ETIMEOUT;
     }
 
     iso14a_card_select_t card;
@@ -1196,23 +1198,17 @@ static int hfgal_read_classic_card(uint8_t *site_key, bool verbose, bool quiet) 
     uint64_t select_status = resp.oldarg[0];
 
     if (select_status == 0) {
-        PrintAndLogEx(DEBUG, "iso14443a card select failed");
+        if (!quiet) {
+            PrintAndLogEx(DEBUG, "iso14443a card select failed");
+        }
         return select_status;
     }
 
-    // card.uid, card.uidlen
-
-    // Read MAD
-
-    // Read CAD
-
-    // Check credential count
-
-    // Read credentials
+    // Brute Force reading all blocks and printing credentials,
     for (uint8_t i = 0; i < MIFARE_1K_MAXSECTOR; i++) {
         hfgal_read_site_specific_sector(i, creds, card.uid, site_key, true);
     }
-    return PM3_ENOTIMPL;
+    return PM3_SUCCESS;
 }
 
 static int CmdGallagherReader(const char *cmd) {

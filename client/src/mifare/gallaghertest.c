@@ -23,21 +23,21 @@ static bool test_CAD(void) {
                     };
 
     // Entry 0: RC=0xC, FC=0x1337, Sector=0x0F
-    int result = gallagher_read_cad(cad, 0xC, 0x1337);
+    int result = gallagher_parse_cad(cad, 0xC, 0x1337);
     if (result != 0x0F) {
         PrintAndLogEx(INFO, "Gallagher CAD test 1 failed: expected sector 0x0F, got 0x%02X", result);
         return false;
     }
 
     // Entry 1: RC=0xD, FC=0x1338, Sector=0x0D
-    result = gallagher_read_cad(cad, 0xD, 0x1338);
+    result = gallagher_parse_cad(cad, 0xD, 0x1338);
     if (result != 0x0D) {
         PrintAndLogEx(INFO, "Gallagher CAD test 2 failed: expected sector 0x0D, got 0x%02X", result);
         return false;
     }
 
     // Non-existent entry should return -1
-    result = gallagher_read_cad(cad, 0xA, 0x1234);
+    result = gallagher_parse_cad(cad, 0xA, 0x1234);
     if (result != -1) {
         PrintAndLogEx(INFO, "Gallagher CAD test 3 failed: expected -1, got %d", result);
         return false;

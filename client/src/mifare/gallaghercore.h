@@ -33,7 +33,7 @@ typedef struct {
 
 int gallagher_diversify_classic_key(uint8_t *site_key, uint8_t *csn, size_t csn_len, uint8_t *key_output);
 
-int gallagher_read_cad(uint8_t *cad, uint8_t region, uint16_t facility);
+int gallagher_parse_cad(uint8_t *cad, uint8_t region, uint16_t facility);
 
 void gallagher_encode_creds(uint8_t *eight_bytes, GallagherCredentials_t *creds);
 
