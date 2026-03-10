@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf 14b tearoff` - interactive ST25TB/SRx monotonic counter tear-off attack (@xNovyz)
+- Fixed missing `WDT_HIT()` in `Get14443bAnswerFromTag()` DMA polling loop causing hardware watchdog reboot on SSC clock stall (@xNovyz)
 - Added `hf mfp dump` command (@apply-science)
 - Added `hf felica seacinfo` command (@kormax)
 - Added `hf mfdes bruteisofid` and `hf mfdes selectisofid` commands (@kormax)

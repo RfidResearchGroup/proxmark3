@@ -228,6 +228,7 @@ Check column "offline" for their availability.
 |`hf 14b sim             `|N       |`Fake ISO ISO-14443-B tag`
 |`hf 14b sniff           `|N       |`Eavesdrop ISO-14443-B`
 |`hf 14b wrbl            `|N       |`Write data to a SRI512/SRIX4 tag`
+|`hf 14b tearoff         `|N       |`Tear-off attack on ST25TB/SRx counter blocks`
 |`hf 14b view            `|Y       |`Display content from tag dump file`
 |`hf 14b valid           `|Y       |`SRIX4 checksum test`
 |`hf 14b calypso         `|N       |`Read contents of a Calypso card`

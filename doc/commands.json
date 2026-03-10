@@ -1680,6 +1680,26 @@
             ],
             "usage": "hf 14b sniff [-h]"
         },
+        "hf 14b tearoff": {
+            "command": "hf 14b tearoff",
+            "description": "Use tear-off technique to manipulate ST25TB/SRx monotonic counter blocks. This exploits EEPROM tearing to increment counters that normally can only be decremented. Based on the near-field-chaos project by SecLabz. The attack works by sending a write command and cutting the RF field at a precise moment, causing a partial write that can raise the counter value. The operation usually takes a few seconds to a few minutes. NOTE: 0xFFFFFFFE values may be unstable due to tag internals. Keep the tag positioned steadily on the antenna.",
+            "notes": [
+                "hf 14b tearoff -b 5 -d FFFFFFFE",
+                "hf 14b tearoff -b 6 -d FFFFFFFE",
+                "hf 14b tearoff -b 5 -d FFFFFFFE --start 5000 --adj 50",
+                "hf 14b tearoff -b 5 -d FFFFFFFE --safety 1000"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-b, --block <dec> block number (typically 5 or 6 for ST25TB counters)",
+                "-d, --data <hex> target counter value (4 hex bytes, e.g. FFFFFFFE)",
+                "--adj <dec> tear-off timing step in us (default: 25)",
+                "--safety <dec> safety threshold value (default: 0x1000)",
+                "--start <dec> initial tear-off delay in us (default: 150)"
+            ],
+            "usage": "hf 14b tearoff [-h] -b <dec> -d <hex> [--adj <dec>] [--safety <dec>] [--start <dec>]"
+        },
         "hf 14b valid": {
             "command": "hf 14b valid",
             "description": "SRIX checksum test",

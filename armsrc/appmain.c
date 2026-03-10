@@ -1744,6 +1744,10 @@ static void PacketReceived(PacketCommandNG *packet) {
             setHf14bConfig(&c);
             break;
         }
+        case CMD_HF_ISO14443B_ST25TB_TEAROFF: {
+            ST25TB_TearOff(packet->data.asBytes);
+            break;
+        }
         case CMD_HF_CRYPTORF_SIM : {
 //            simulate_crf_tag();
             break;

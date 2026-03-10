@@ -177,6 +177,7 @@ const static vocabulary_t vocabulary[] = {
     { 0, "hf 14b sim" },
     { 0, "hf 14b sniff" },
     { 0, "hf 14b wrbl" },
+    { 0, "hf 14b tearoff" },
     { 1, "hf 14b view" },
     { 1, "hf 14b valid" },
     { 0, "hf 14b calypso" },
