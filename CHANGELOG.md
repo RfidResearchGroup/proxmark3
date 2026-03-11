@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Changed `wiegand encode` / `wiegand decode` - added support for encoding and decoding the new 96-bit ASN.1 encoded format, `--bin` encoding, verbose PACS encoding output, and explicit rejection of raw/binary decodes above 96 bits (@cindersocket)
+- Added Mifare Classic support to `hf gallagher` command (@pingu2211)
 - Added `hf felica discnodes` command (@kormax)
 - Added `hf mfp dump` command (@apply-science)
 - Added `hf felica seacinfo` command (@kormax)
