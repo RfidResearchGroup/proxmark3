@@ -38,7 +38,7 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 | [Linux - Important notes on ModemManager](/doc/md/Installation_Instructions/ModemManager-Must-Be-Discarded.md) | [Validating Proxmark3 Client Functionality](/doc/md/Use_of_Proxmark/1_Validation.md)|
 | [macOS - Homebrew & Upgrading HomeBrew Tap Formula](/doc/md/Installation_Instructions/macOS-Homebrew-Installation-Instructions.md) | [First Use and Verification](/doc/md/Use_of_Proxmark/2_Configuration-and-Verification.md)|
 | [macOS - MacPorts](/doc/md/Installation_Instructions/macOS-MacPorts-Installation-Instructions.md) | [Commands & Features](/doc/md/Use_of_Proxmark/3_Commands-and-Features.md)|
-| [macOS - Setup and Build](/doc/md/Installation_Instructions/macOS-Compile-From-Source-Instructions.md) ||
+| [macOS - Setup and Build](/doc/md/Installation_Instructions/macOS-Compile-From-Source-Instructions.md) |[Standalone Modes](/doc/standalone/)|
 | [Windows - Setup and Build](/doc/md/Installation_Instructions/Windows-Installation-Instructions.md) ||
 | [Termux / Android - Setup and Build](/doc/termux_notes.md) ||
 | [iOS - Setup and Build](/doc/md/Installation_Instructions/iOS-Installation-Instructions.md)
@@ -46,6 +46,7 @@ The Proxmark3 is the swiss-army tool of RFID, allowing for interactions with the
 | [Advanced Compilation Parameters](/doc/md/Use_of_Proxmark/4_Advanced-compilation-parameters.md) | [More Cheat Sheets](https://github.com/RfidResearchGroup/proxmark3/wiki/More-cheat-sheets)|
 | [Troubleshooting](/doc/md/Installation_Instructions/Troubleshooting.md) | [Complete Client Command Set](/doc/commands.md) |
 | [JTAG](/doc/jtag_notes.md) | [T5577 Introduction Guide](/doc/T5577_Guide.md)|
+
 
 
 
