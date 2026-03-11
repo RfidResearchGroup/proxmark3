@@ -242,7 +242,7 @@ static const hintAIDList_t hintAIDList[] = {
     { "\x41\x44\x20\x46\x31", 5, "CIPURSE", "hf cipurse" },
     { "\xA0\x00\x00\x09\x09\xAC\xCE\x55\x01", 9, "Aliro", "hf aliro" },
     { "\xd2\x76\x00\x00\x85\x01\x00", 7, "desfire", "hf mfdes" },
-    { "\x4F\x53\x45\x2E\x56\x41\x53\x2E\x30\x31", 10, "Apple VAS", "hf vas"},
+    { "\x4F\x53\x45\x2E\x56\x41\x53\x2E\x30\x31", 10, "OSE.VAS", "hf vas"},
 };
 
 // iso14a apdu input frame length
