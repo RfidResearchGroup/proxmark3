@@ -3252,3 +3252,10 @@ E058DC0E2C34
 # Yerevan Transport
 26ABFC3C24FB
 #
+# Vanderbilt Industries, ACT Line
+# "ACTact" in ASCII -- appears to hold creds in Sector 1, Block 4
+# Note: "Acces"+N pattern keys (416363657300-4163636573FF) can be generated
+# dynamically using: hf mf keygen -k 6
+414354616374
+4D61071B7254
+34016FAC127D
