@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added Mifare Classic support to `hf gallagher` command (@pingu2211)
 - Added `hf felica discnodes` command (@kormax)
 - Added `hf mfp dump` command (@apply-science)
 - Added `hf felica seacinfo` command (@kormax)
