@@ -795,8 +795,7 @@ static int CmdHFFelicaReader(const char *Cmd) {
     if (cm) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     }
-
-    CLIParserFree(ctx);
+    
     return read_felica_uid(cm, verbose);
 }
 
