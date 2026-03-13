@@ -2927,7 +2927,7 @@ void ST25TB_TearOff(const uint8_t *data) {
     uint32_t last_consolidated_value = 0;
     uint32_t tear_off_value = 0;
 
-    // Start delay: user-specified or default 3000us (well within ~4ms EEPROM write window)
+    // Start delay: user-specified or default TEAROFF_INITIAL_DELAY_US (150 us)
     int tear_off_us = (start_time_us > 0) ? (int)start_time_us : TEAROFF_INITIAL_DELAY_US;
     if (tear_off_adjustment_us == 0) {
         tear_off_adjustment_us = TEAROFF_ADJUSTMENT_US_DEF;
