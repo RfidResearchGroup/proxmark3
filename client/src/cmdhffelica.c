@@ -610,6 +610,7 @@ static bool waitCmdFelicaEx(bool iSelect, PacketResponseNG *resp, bool verbose, 
             if (logging) {
                 PrintAndLogEx(WARNING, "CRC ( " _RED_("fail") " )");
             }
+            return false;
         }
 
         if (resp->data.asBytes[0] != 0xB2 || resp->data.asBytes[1] != 0x4D) {
