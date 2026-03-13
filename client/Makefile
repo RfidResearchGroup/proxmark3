@@ -795,6 +795,7 @@ SRCS =  mifare/aiddesfire.c \
         mifare/desfiresecurechan.c \
         mifare/desfiretest.c \
         mifare/gallaghercore.c \
+		mifare/gallaghertest.c \
         mifare/mad.c \
         mifare/mfkey.c \
         mifare/mifare4.c \

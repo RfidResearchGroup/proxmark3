@@ -111,7 +111,7 @@ You can also define multiple options like
 ^[Top](#top)
 
 The Iceman repository gives you to easily choose which standalone mode to embed in the firmware.
-
+Documentation for each standalone mode can be found in the [Standalone Modes Index](../../armsrc/Standalone/readme.md#individual-mode-documentation).
 Here are the supported values you can assign to `STANDALONE` in `Makefile.platform`:
 
 | STANDALONE      | DESCRIPTION                            |

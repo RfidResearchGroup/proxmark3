@@ -4621,8 +4621,6 @@ static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, u
 
     while (repeat == true) {
         uint32_t payload_size = sizeof(iclass_recover_req_t);
-        uint8_t aa2_standard_key[PICOPASS_BLOCK_SIZE] = {0};
-        memcpy(aa2_standard_key, iClass_Key_Table[1], PICOPASS_BLOCK_SIZE);
         iclass_recover_req_t *payload = calloc(1, payload_size);
         payload->req.use_raw = true;
         payload->req.use_elite = false;

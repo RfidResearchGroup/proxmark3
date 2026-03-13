@@ -1796,6 +1796,14 @@ bool decode_wiegand(uint32_t top, uint32_t mid, uint32_t bot, int n) {
 }
 
 int HIDDumpPACSBits(const uint8_t *const data, const uint8_t length, bool verbose) {
+    // PACS is encoded as a 1-byte pad count followed by at least 1 byte of payload.
+    // Reject malformed inputs here so trimming the pad bits below cannot index before
+    // the start of the binary buffer.
+    if (length < 2 || data[0] > 0x07) {
+        PrintAndLogEx(ERR, "Invalid PACS value");
+        return PM3_EINVARG;
+    }
+
     uint8_t n = length - 1;
     uint8_t pad = data[0];
     char *binstr = (char *)calloc((length * 8) + 1, sizeof(uint8_t));
@@ -1815,13 +1823,19 @@ int HIDDumpPACSBits(const uint8_t *const data, const uint8_t length, bool verbos
     PrintAndLogEx(DEBUG, "bin.............. " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
 
     size_t hexlen = 0;
-    uint8_t hex[16] = {0};
+    uint8_t *hex = calloc(n ? n : 1, sizeof(uint8_t));
+    if (hex == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(binstr);
+        return PM3_EMALLOC;
+    }
     binstr_2_bytes(hex, &hexlen, binstr);
     PrintAndLogEx(SUCCESS, "hex.............. " _GREEN_("%s"), sprint_hex_inrow(hex, hexlen));
 
     uint32_t top = 0, mid = 0, bot = 0;
     if (binstring_to_u96(&top, &mid, &bot, binstr) != strlen(binstr)) {
         PrintAndLogEx(ERR, "Binary string contains none <0|1> chars");
+        free(hex);
         free(binstr);
         return PM3_EINVARG;
     }
@@ -1850,25 +1864,36 @@ int HIDDumpPACSBits(const uint8_t *const data, const uint8_t length, bool verbos
         // MIFARE DESFire
 
         // MIFARE Classic
-        char mfcbin[28] = {0};
-        mfcbin[0] = '1';
-        memcpy(mfcbin + 1, binstr, strlen(binstr));
-        binstr_2_bytes(hex, &hexlen, mfcbin);
+        size_t binstrlen = strlen(binstr);
+        // Match hf mf encodehid: prepend the sentinel bit, pack to bytes, then right-align
+        // the result in the 15-byte payload area after the leading 0x02 marker in block 5.
+        // Fixed-size local buffers are enough for the current 96-bit Wiegand limit:
+        // 96 data bits + 1 sentinel + NUL = 98 chars, packed into at most 13 bytes.
+        if (binstrlen <= 96) {
+            char mfcbin[98] = {0};
+            uint8_t mfcpayload[15] = {0};
+            size_t mfchexlen = 0;
 
-        PrintAndLogEx(INFO, "Downgrade to " _YELLOW_("MIFARE Classic") " (Pm3 simulation)");
-        PrintAndLogEx(SUCCESS, "    hf mf eclr;");
-        PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 0 -d 049DBA42A23E80884400C82000000000;");
-        PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 1 -d 1B014D48000000000000000000000000;");
-        PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 3 -d A0A1A2A3A4A5787788C189ECA97F8C2A;");
-        PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 5 -d 020000000000000000000000%s;", sprint_hex_inrow(hex, hexlen));
-        PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 7 -d 484944204953787788AA204752454154;");
-        PrintAndLogEx(SUCCESS, "    hf mf sim --1k -i;");
-        PrintAndLogEx(NORMAL, "");
+            mfcbin[0] = '1';
+            memcpy(mfcbin + 1, binstr, binstrlen);
+            binstr_2_bytes(mfcpayload + (sizeof(mfcpayload) - ((binstrlen + 1 + 7) / 8)), &mfchexlen, mfcbin);
+
+            PrintAndLogEx(INFO, "Downgrade to " _YELLOW_("MIFARE Classic") " (Pm3 simulation)");
+            PrintAndLogEx(SUCCESS, "    hf mf eclr;");
+            PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 0 -d 049DBA42A23E80884400C82000000000;");
+            PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 1 -d 1B014D48000000000000000000000000;");
+            PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 3 -d A0A1A2A3A4A5787788C189ECA97F8C2A;");
+            PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 5 -d 02%s;", sprint_hex_inrow(mfcpayload, sizeof(mfcpayload)));
+            PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 7 -d 484944204953787788AA204752454154;");
+            PrintAndLogEx(SUCCESS, "    hf mf sim --1k -i;");
+            PrintAndLogEx(NORMAL, "");
+        }
 
         PrintAndLogEx(INFO, "Downgrade to " _YELLOW_("MIFARE Classic 1K"));
         PrintAndLogEx(SUCCESS, "    hf mf encodehid --bin %s", binstr);
         PrintAndLogEx(NORMAL, "");
     }
+    free(hex);
     free(binstr);
     return PM3_SUCCESS;
 }

@@ -47,6 +47,9 @@
 
 #define FELICA_DEFAULT_TIMEOUT_MS 2000U
 #define FELICA_DEFAULT_RETRY_COUNT 3U
+#define FELICA_DISCOVER_DEFAULT_RETRY_COUNT 5U
+#define FELICA_DISCOVERY_RETRY_BACKOFF_MS 1000U
+#define FELICA_TARGET_PRESENCE_ATTEMPTS 3U
 #define FELICA_PLATFORM_INFO_MAX_LEN 64U
 #define FELICA_PLATFORM_INFO_WITH_MAC_INFO_LEN 25U
 #define FELICA_PLATFORM_INFO_WITH_MAC_LEN 20U
@@ -63,18 +66,209 @@
 #define FELICA_SERVICE_ATTRIBUTE_RANDOM_ACCESS  (0b001000)
 #define FELICA_SERVICE_ATTRIBUTE_CYCLIC         (0b001100)
 #define FELICA_SERVICE_ATTRIBUTE_PURSE          (0b010000)
+#define FELICA_SERVICE_ATTRIBUTE_PIN_REQUIRED   (0b100000)
 #define FELICA_SERVICE_ATTRIBUTE_PURSE_SUBFIELD (0b000110)
+
+#define FELICA_AREA_ATTRIBUTE_CAN_CREATE_SUBAREA             0x00U
+#define FELICA_AREA_ATTRIBUTE_CANNOT_CREATE_SUBAREA          0x01U
+#define FELICA_AREA_ATTRIBUTE_CAN_CREATE_SUBAREA_WITH_PIN    0x20U
+#define FELICA_AREA_ATTRIBUTE_CANNOT_CREATE_SUBAREA_WITH_PIN 0x21U
+#define FELICA_AREA_ATTRIBUTE_END_ROOT_AREA                  0x3EU
+#define FELICA_AREA_ATTRIBUTE_END_SUB_AREA                   0x3FU
+
+#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RW_WITH_KEY            0x08U
+#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RW_WITHOUT_KEY         0x09U
+#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITH_KEY            0x0AU
+#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITHOUT_KEY         0x0BU
+#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RW_WITH_KEY            0x0CU
+#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RW_WITHOUT_KEY         0x0DU
+#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RO_WITH_KEY            0x0EU
+#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RO_WITHOUT_KEY         0x0FU
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_RW_WITH_KEY             0x10U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_RW_WITHOUT_KEY          0x11U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_CASHBACK_WITH_KEY       0x12U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_CASHBACK_WITHOUT_KEY    0x13U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_DECREMENT_WITH_KEY      0x14U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_DECREMENT_WITHOUT_KEY   0x15U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_RO_WITH_KEY             0x16U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_RO_WITHOUT_KEY          0x17U
+
+#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RW_WITH_KEY_WITH_PIN          0x28U
+#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RW_WITHOUT_KEY_WITH_PIN       0x29U
+#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITH_KEY_WITH_PIN          0x2AU
+#define FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITHOUT_KEY_WITH_PIN       0x2BU
+#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RW_WITH_KEY_WITH_PIN          0x2CU
+#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RW_WITHOUT_KEY_WITH_PIN       0x2DU
+#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RO_WITH_KEY_WITH_PIN          0x2EU
+#define FELICA_SERVICE_ATTRIBUTE_CYCLIC_RO_WITHOUT_KEY_WITH_PIN       0x2FU
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_RW_WITH_KEY_WITH_PIN           0x30U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_RW_WITHOUT_KEY_WITH_PIN        0x31U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_CASHBACK_WITH_KEY_WITH_PIN     0x32U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_CASHBACK_WITHOUT_KEY_WITH_PIN  0x33U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_DECREMENT_WITH_KEY_WITH_PIN    0x34U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_DECREMENT_WITHOUT_KEY_WITH_PIN 0x35U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_RO_WITH_KEY_WITH_PIN           0x36U
+#define FELICA_SERVICE_ATTRIBUTE_PURSE_RO_WITHOUT_KEY_WITH_PIN        0x37U
+
+#define FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE 16U
+#define FELICA_MAX_NODE_NUMBER 0x03FFU
+#define FELICA_PRESENCE_SERVICE_CODE_LE ((uint16_t)FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITHOUT_KEY)
+
+typedef struct {
+    uint8_t attribute;
+    bool is_area;
+    bool with_key;
+    bool with_pin;
+} felica_request_service_probe_attribute_t;
+
+static const felica_request_service_probe_attribute_t FELICA_REQUEST_SERVICE_PROBE_ATTRIBUTES[] = {
+    {FELICA_AREA_ATTRIBUTE_CAN_CREATE_SUBAREA, true, true, false},
+    {FELICA_AREA_ATTRIBUTE_CANNOT_CREATE_SUBAREA, true, true, false},
+    {FELICA_SERVICE_ATTRIBUTE_RANDOM_RW_WITH_KEY, false, true, false},
+    {FELICA_SERVICE_ATTRIBUTE_RANDOM_RW_WITHOUT_KEY, false, false, false},
+    {FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITH_KEY, false, true, false},
+    {FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITHOUT_KEY, false, false, false},
+    {FELICA_SERVICE_ATTRIBUTE_CYCLIC_RW_WITH_KEY, false, true, false},
+    {FELICA_SERVICE_ATTRIBUTE_CYCLIC_RW_WITHOUT_KEY, false, false, false},
+    {FELICA_SERVICE_ATTRIBUTE_CYCLIC_RO_WITH_KEY, false, true, false},
+    {FELICA_SERVICE_ATTRIBUTE_CYCLIC_RO_WITHOUT_KEY, false, false, false},
+    {FELICA_SERVICE_ATTRIBUTE_PURSE_RW_WITH_KEY, false, true, false},
+    {FELICA_SERVICE_ATTRIBUTE_PURSE_RW_WITHOUT_KEY, false, false, false},
+    {FELICA_SERVICE_ATTRIBUTE_PURSE_CASHBACK_WITH_KEY, false, true, false},
+    {FELICA_SERVICE_ATTRIBUTE_PURSE_CASHBACK_WITHOUT_KEY, false, false, false},
+    {FELICA_SERVICE_ATTRIBUTE_PURSE_DECREMENT_WITH_KEY, false, true, false},
+    {FELICA_SERVICE_ATTRIBUTE_PURSE_DECREMENT_WITHOUT_KEY, false, false, false},
+    {FELICA_SERVICE_ATTRIBUTE_PURSE_RO_WITH_KEY, false, true, false},
+    {FELICA_SERVICE_ATTRIBUTE_PURSE_RO_WITHOUT_KEY, false, false, false},
+    {FELICA_AREA_ATTRIBUTE_CAN_CREATE_SUBAREA_WITH_PIN, true, true, true},
+    {FELICA_AREA_ATTRIBUTE_CANNOT_CREATE_SUBAREA_WITH_PIN, true, true, true},
+    {FELICA_SERVICE_ATTRIBUTE_RANDOM_RW_WITH_KEY_WITH_PIN, false, true, true},
+    {FELICA_SERVICE_ATTRIBUTE_RANDOM_RW_WITHOUT_KEY_WITH_PIN, false, false, true},
+    {FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITH_KEY_WITH_PIN, false, true, true},
+    {FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITHOUT_KEY_WITH_PIN, false, false, true},
+    {FELICA_SERVICE_ATTRIBUTE_CYCLIC_RW_WITH_KEY_WITH_PIN, false, true, true},
+    {FELICA_SERVICE_ATTRIBUTE_CYCLIC_RW_WITHOUT_KEY_WITH_PIN, false, false, true},
+    {FELICA_SERVICE_ATTRIBUTE_CYCLIC_RO_WITH_KEY_WITH_PIN, false, true, true},
+    {FELICA_SERVICE_ATTRIBUTE_CYCLIC_RO_WITHOUT_KEY_WITH_PIN, false, false, true},
+    {FELICA_SERVICE_ATTRIBUTE_PURSE_RW_WITH_KEY_WITH_PIN, false, true, true},
+    {FELICA_SERVICE_ATTRIBUTE_PURSE_RW_WITHOUT_KEY_WITH_PIN, false, false, true},
+    {FELICA_SERVICE_ATTRIBUTE_PURSE_CASHBACK_WITH_KEY_WITH_PIN, false, true, true},
+    {FELICA_SERVICE_ATTRIBUTE_PURSE_CASHBACK_WITHOUT_KEY_WITH_PIN, false, false, true},
+    {FELICA_SERVICE_ATTRIBUTE_PURSE_DECREMENT_WITH_KEY_WITH_PIN, false, true, true},
+    {FELICA_SERVICE_ATTRIBUTE_PURSE_DECREMENT_WITHOUT_KEY_WITH_PIN, false, false, true},
+    {FELICA_SERVICE_ATTRIBUTE_PURSE_RO_WITH_KEY_WITH_PIN, false, true, true},
+    {FELICA_SERVICE_ATTRIBUTE_PURSE_RO_WITHOUT_KEY_WITH_PIN, false, false, true},
+};
+
+typedef enum {
+    FELICA_NODE_DISCOVERY_NONE = 0,
+    FELICA_NODE_DISCOVERY_REQUEST_CODE_LIST,
+    FELICA_NODE_DISCOVERY_SEARCH_SERVICE_CODE,
+    FELICA_NODE_DISCOVERY_REQUEST_SERVICE,
+    FELICA_NODE_DISCOVERY_READ_WITHOUT_ENCRYPTION,
+} felica_node_discovery_method_t;
+
+typedef struct {
+    bool is_area;
+    uint16_t node_code_le;
+    bool has_end_code;
+    uint16_t end_code_le;
+} felica_discovered_node_t;
+
+typedef int (*felica_node_discovery_visitor_t)(const felica_discovered_node_t *node, void *ctx);
+typedef bool (*felica_node_discovery_runner_t)(uint8_t *flags,
+        const uint8_t *idm,
+        uint32_t retry_count,
+        felica_node_discovery_visitor_t visitor,
+        void *ctx,
+        uint32_t *discovered_count,
+        int *stop_status);
+
+typedef struct {
+    felica_node_discovery_method_t method;
+    const char *cli_name;
+    const char *display_name;
+    felica_node_discovery_runner_t run;
+} felica_node_discovery_method_info_t;
+
+typedef struct {
+    uint32_t area_count;
+    uint32_t service_count;
+    uint16_t area_end_stack[8];
+    int depth;
+    bool header_printed;
+} felica_scsvcode_context_t;
+
+typedef struct {
+    uint8_t *flags;
+    uint8_t block_frame[PM3_CMD_DATA_SIZE];
+    uint16_t block_datalen;
+    uint32_t retry_count;
+    uint32_t service_count;
+    uint32_t public_service_count;
+} felica_dump_context_t;
+
+typedef enum {
+    FELICA_IDM_RESOLVE_STANDALONE = 0,
+    FELICA_IDM_RESOLVE_CHAINED,
+} felica_idm_resolution_mode_t;
+
 
 
 static int CmdHelp(const char *Cmd);
 static void clear_and_send_command(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose);
 static int send_felica_payload_with_retries(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
-                                            int expected_response_cmd, uint32_t timeout_ms, uint32_t retries, bool logging,
-                                            PacketResponseNG *resp, const char *request_name);
+        int expected_response_cmd, uint32_t timeout_ms, uint32_t retries, uint32_t backoff_ms, bool logging,
+        PacketResponseNG *resp, const char *request_name);
+static bool felica_discover_nodes_with_request_code_list(uint8_t *flags,
+        const uint8_t *idm,
+        uint32_t retry_count,
+        felica_node_discovery_visitor_t visitor,
+        void *ctx,
+        uint32_t *discovered_count,
+        int *stop_status);
+static bool felica_discover_nodes_with_search_service_code(uint8_t *flags,
+        const uint8_t *idm,
+        uint32_t retry_count,
+        felica_node_discovery_visitor_t visitor,
+        void *ctx,
+        uint32_t *discovered_count,
+        int *stop_status);
+static bool felica_discover_nodes_with_request_service(uint8_t *flags,
+        const uint8_t *idm,
+        uint32_t retry_count,
+        felica_node_discovery_visitor_t visitor,
+        void *ctx,
+        uint32_t *discovered_count,
+        int *stop_status);
+static bool felica_discover_nodes_with_read_without_encryption(uint8_t *flags,
+        const uint8_t *idm,
+        uint32_t retry_count,
+        felica_node_discovery_visitor_t visitor,
+        void *ctx,
+        uint32_t *discovered_count,
+        int *stop_status);
+static const felica_node_discovery_method_info_t *felica_get_node_discovery_method_info(felica_node_discovery_method_t method);
+static const char *felica_node_discovery_method_display_name(felica_node_discovery_method_t method);
+static void felica_print_node_discovery_method_used(felica_node_discovery_method_t method);
+static int felica_compare_discovered_nodes(const void *lhs, const void *rhs);
 static felica_card_select_t last_known_card;
 
 static void set_last_known_card(felica_card_select_t card) {
     last_known_card = card;
+}
+
+static void felica_set_last_known_idm(const uint8_t *idm) {
+    if (idm == NULL) {
+        return;
+    }
+
+    if (memcmp(last_known_card.IDm, idm, sizeof(last_known_card.IDm)) == 0) {
+        return;
+    }
+
+    memset(&last_known_card, 0, sizeof(last_known_card));
+    memcpy(last_known_card.IDm, idm, sizeof(last_known_card.IDm));
 }
 
 static void print_status_flag1_interpretation(void) {
@@ -502,7 +696,7 @@ static int info_seac(void) {
         if (send_felica_payload_with_retries(seac_flags, sizeof(seac_poll_frames[i]),
                                              (uint8_t *)seac_poll_frames[i], false,
                                              -1, FELICA_SEAC_POLL_TIMEOUT_MS, FELICA_SEAC_POLL_RETRY_COUNT,
-                                             false, &resp, NULL) != PM3_SUCCESS) {
+                                             0, false, &resp, NULL) != PM3_SUCCESS) {
             continue;
         }
 
@@ -525,20 +719,6 @@ static int info_seac(void) {
     return PM3_ETIMEOUT;
 }
 
-
-/**
- * Adds the last known IDm (8-Byte) to the data frame.
- * @param position start of where the IDm is added within the frame.
- * @param data frame in where the IDM is added.
- * @return true if IDm was added;
- */
-static bool add_last_IDm(uint8_t position, uint8_t *data) {
-    if (last_known_card.IDm[0] != 0 && last_known_card.IDm[1] != 0) {
-        memcpy(data + position, last_known_card.IDm, sizeof(last_known_card.IDm));
-        return true;
-    }
-    return false;
-}
 
 static int CmdHFFelicaList(const char *Cmd) {
     return CmdTraceListAlias(Cmd, "hf felica", "felica");
@@ -627,7 +807,7 @@ static int send_get_container_id(uint8_t flags, uint16_t datalen, uint8_t *data,
     if (send_felica_payload_with_retries(flags, datalen, data, false,
                                          FELICA_GET_CONTAINER_ID_ACK,
                                          FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES,
-                                         false, &resp, "get container id") != PM3_SUCCESS) {
+                                         0, false, &resp, "get container id") != PM3_SUCCESS) {
         return PM3_ERFTRANS;
     }
 
@@ -653,7 +833,7 @@ static int send_get_container_property(uint8_t flags, uint16_t datalen, uint8_t 
     if (send_felica_payload_with_retries(flags, datalen, data, false,
                                          FELICA_GET_CONTAINER_PROPERTY_ACK,
                                          FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES,
-                                         false, &resp, "get container property") != PM3_SUCCESS) {
+                                         0, false, &resp, "get container property") != PM3_SUCCESS) {
         return PM3_ERFTRANS;
     }
 
@@ -693,7 +873,7 @@ static int send_get_container_issue_information(uint8_t flags, uint16_t datalen,
     if (send_felica_payload_with_retries(flags, datalen, data, false,
                                          FELICA_GET_CONTAINER_ISSUE_INFO_ACK,
                                          FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES,
-                                         false, &resp, "get container issue info") != PM3_SUCCESS) {
+                                         0, false, &resp, "get container issue info") != PM3_SUCCESS) {
         return PM3_ERFTRANS;
     }
 
@@ -719,7 +899,7 @@ static int send_get_platform_information(uint8_t flags, uint16_t datalen, uint8_
     if (send_felica_payload_with_retries(flags, datalen, data, false,
                                          FELICA_GETPLATFORMINFO_ACK,
                                          FELICA_OPTIONAL_CMD_TIMEOUT_MS, FELICA_OPTIONAL_CMD_RETRIES,
-                                         false, &resp, "get platform info") != PM3_SUCCESS) {
+                                         0, false, &resp, "get platform info") != PM3_SUCCESS) {
         return PM3_ERFTRANS;
     }
 
@@ -771,7 +951,7 @@ static int send_request_specification_version(uint8_t flags, uint16_t datalen, u
     if (send_felica_payload_with_retries(flags, datalen, data, verbose,
                                          FELICA_REQUEST_SPEC_VERSION_ACK,
                                          timeout_ms, retries,
-                                         logging, &resp, "request specification version") != PM3_SUCCESS) {
+                                         0, logging, &resp, "request specification version") != PM3_SUCCESS) {
         return PM3_ERFTRANS;
     }
 
@@ -1090,19 +1270,6 @@ static void print_read_without_encryption_response(felica_read_without_encryptio
 }
 
 /**
- * Shared retry log helper.
- */
-static void log_felica_retry_attempt(const char *request_name, uint32_t attempt, uint32_t retries) {
-    if (request_name) {
-        PrintAndLogEx(WARNING, "Retrying %s (%" PRIu32 "/%" PRIu32 ")",
-                      request_name, attempt + 1, retries);
-    } else {
-        PrintAndLogEx(WARNING, "Retrying request (%" PRIu32 "/%" PRIu32 ")",
-                      attempt + 1, retries);
-    }
-}
-
-/**
  * Generic FeliCa command sender with timeout and retries.
  * @param flags command flags
  * @param datalen command payload length
@@ -1116,30 +1283,49 @@ static void log_felica_retry_attempt(const char *request_name, uint32_t attempt,
  * @return PM3_SUCCESS on success
  */
 static int send_felica_payload_with_retries(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
-                                            int expected_response_cmd, uint32_t timeout_ms, uint32_t retries, bool logging,
-                                            PacketResponseNG *resp, const char *request_name) {
+        int expected_response_cmd, uint32_t timeout_ms, uint32_t retries, uint32_t backoff_ms, bool logging,
+        PacketResponseNG *resp, const char *request_name) {
     for (uint32_t attempt = 0; attempt <= retries; attempt++) {
+        if (attempt > 0) {
+            if (logging) {
+                if (request_name) {
+                    PrintAndLogEx(WARNING, "Retrying %s (%" PRIu32 "/%" PRIu32 ")",
+                                  request_name, attempt, retries);
+                } else {
+                    PrintAndLogEx(WARNING, "Retrying request (%" PRIu32 "/%" PRIu32 ")",
+                                  attempt, retries);
+                }
+            }
+            uint32_t backoff_delay_ms = 0;
+            if (backoff_ms > 0) {
+                static const uint32_t schedule_ms[] = {0U, 100U, 200U, 500U, 1000U};
+                size_t index = (size_t)(attempt - 1U);
+                if (index >= ARRAYLEN(schedule_ms)) {
+                    index = ARRAYLEN(schedule_ms) - 1U;
+                }
+                backoff_delay_ms = schedule_ms[index];
+                if (backoff_delay_ms > backoff_ms) {
+                    backoff_delay_ms = backoff_ms;
+                }
+            }
+            if (backoff_delay_ms > 0) {
+                msleep(backoff_delay_ms);
+            }
+        }
+
         clear_and_send_command(flags, datalen, data, verbose);
         if (waitCmdFelicaEx(false, resp, verbose, logging, timeout_ms) == false) {
-            if (logging && attempt < retries) {
-                log_felica_retry_attempt(request_name, attempt, retries);
-            }
             continue;
         }
 
         if (expected_response_cmd >= 0) {
             if (resp->length < sizeof(felica_frame_response_noidm_t)) {
-                if (logging && attempt < retries) {
-                    log_felica_retry_attempt(request_name, attempt, retries);
-                }
                 continue;
             }
 
             const felica_frame_response_noidm_t *frame_response = (const felica_frame_response_noidm_t *)resp->data.asBytes;
             if (frame_response->cmd_code[0] != (uint8_t)expected_response_cmd) {
-                if (logging && attempt < retries) {
-                    log_felica_retry_attempt(request_name, attempt, retries);
-                } else if (logging) {
+                if (logging && attempt == retries) {
                     PrintAndLogEx(FAILED, "Bad response cmd 0x%02X (expected 0x%02X).",
                                   frame_response->cmd_code[0], (uint8_t)expected_response_cmd);
                 }
@@ -1162,10 +1348,10 @@ int send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data, bool ve
     }
     PacketResponseNG resp;
     if (send_felica_payload_with_retries(flags, datalen, data, verbose,
-                                         0x03,
-                                         FELICA_DEFAULT_TIMEOUT_MS, 0,
-                                         true,
-                                         &resp, "request service") != PM3_SUCCESS) {
+                                            0x03,
+                                            FELICA_DEFAULT_TIMEOUT_MS, 0,
+                                            0, true,
+                                            &resp, "request service") != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "\nGot no response from card");
         return PM3_ERFTRANS;
     }
@@ -1193,13 +1379,15 @@ int send_request_service(uint8_t flags, uint16_t datalen, uint8_t *data, bool ve
  */
 static int send_read_without_encryption_ex(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
                                            felica_read_without_encryption_response_t *rd_noCry_resp,
-                                           uint32_t timeout_ms, uint32_t retries) {
+                                           uint32_t timeout_ms, uint32_t retries, uint32_t backoff_ms, bool logging) {
     PacketResponseNG resp;
     if (send_felica_payload_with_retries(flags, datalen, data, verbose,
                                          0x07, timeout_ms, retries,
-                                         true,
+                                         backoff_ms, logging,
                                          &resp, "read without encryption") != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "No response from card");
+        if (logging) {
+            PrintAndLogEx(ERR, "No response from card");
+        }
         return PM3_ERFTRANS;
     }
 
@@ -1214,7 +1402,166 @@ static int send_read_without_encryption_ex(uint8_t flags, uint16_t datalen, uint
 static int send_read_without_encryption(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
                                         felica_read_without_encryption_response_t *rd_noCry_resp) {
     return send_read_without_encryption_ex(flags, datalen, data, verbose, rd_noCry_resp,
-                                           FELICA_DEFAULT_TIMEOUT_MS, 0);
+                                           FELICA_DEFAULT_TIMEOUT_MS, 0, 0, true);
+}
+
+static int felica_discover_target(felica_card_select_t *card) {
+    if (card == NULL) {
+        return PM3_EINVARG;
+    }
+
+    int last_status = PM3_ETIMEOUT;
+    for (uint32_t attempt = 0; attempt < FELICA_TARGET_PRESENCE_ATTEMPTS; attempt++) {
+        clear_and_send_command(FELICA_CONNECT, 0, NULL, false);
+
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(CMD_HF_FELICA_COMMAND, &resp, 2500) == false) {
+            last_status = PM3_ETIMEOUT;
+            DropField();
+            continue;
+        }
+
+        if (resp.status != PM3_SUCCESS) {
+            last_status = resp.status;
+            DropField();
+            continue;
+        }
+
+        if (resp.length < sizeof(*card)) {
+            last_status = PM3_ESOFT;
+            DropField();
+            continue;
+        }
+
+        memcpy(card, resp.data.asBytes, sizeof(*card));
+        set_last_known_card(*card);
+        DropField();
+        return PM3_SUCCESS;
+    }
+
+    return last_status;
+}
+
+// Presence is checked by issuing ReadWithoutEncryption against service number 0
+// with the unauthenticated random-read attribute and verifying the response IDm.
+static int felica_presence_check_idm(const uint8_t *idm) {
+    if (idm == NULL) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t data[16] = {0};
+    data[0] = sizeof(data);
+    data[1] = FELICA_RDBLK_REQ;
+    memcpy(data + 2, idm, 8);
+    data[10] = 0x01;
+    data[11] = FELICA_PRESENCE_SERVICE_CODE_LE & 0xFF;
+    data[12] = (FELICA_PRESENCE_SERVICE_CODE_LE >> 8) & 0xFF;
+    data[13] = 0x01;
+    data[14] = 0x80;
+    data[15] = 0x00;
+
+    PacketResponseNG resp;
+    const uint8_t flags = FELICA_CONNECT | FELICA_NO_SELECT | FELICA_APPEND_CRC | FELICA_RAW;
+    const int ret = send_felica_payload_with_retries(flags, sizeof(data), data, false,
+                                                     FELICA_RDBLK_ACK,
+                                                     FELICA_DEFAULT_TIMEOUT_MS, FELICA_TARGET_PRESENCE_ATTEMPTS - 1U,
+                                                     0, false,
+                                                     &resp, "presence check");
+    DropField();
+    if (ret != PM3_SUCCESS) {
+        return ret;
+    }
+
+    if (resp.length < sizeof(felica_frame_response_t)) {
+        return PM3_ESOFT;
+    }
+
+    const felica_frame_response_t *frame_response = (const felica_frame_response_t *)resp.data.asBytes;
+    if (memcmp(frame_response->IDm, idm, sizeof(frame_response->IDm)) != 0) {
+        return PM3_ERFTRANS;
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int felica_ensure_target_present(const uint8_t *custom_idm,
+                                        size_t custom_idm_len,
+                                        felica_idm_resolution_mode_t mode,
+                                        uint8_t *idm_out) {
+    if (idm_out == NULL) {
+        return PM3_EINVARG;
+    }
+
+    if (custom_idm_len > 0 && custom_idm_len != sizeof(last_known_card.IDm)) {
+        return PM3_EINVARG;
+    }
+
+    if (custom_idm_len == sizeof(last_known_card.IDm)) {
+        memcpy(idm_out, custom_idm, sizeof(last_known_card.IDm));
+
+        if (mode == FELICA_IDM_RESOLVE_CHAINED) {
+            PrintAndLogEx(INFO, "Using explicit IDm... " _GREEN_("%s"),
+                          sprint_hex_inrow(idm_out, sizeof(last_known_card.IDm)));
+            return PM3_SUCCESS;
+        }
+
+        if (felica_presence_check_idm(idm_out) != PM3_SUCCESS) {
+            PrintAndLogEx(FAILED, "Tag with explicit IDm not detected: " _YELLOW_("%s"),
+                          sprint_hex_inrow(idm_out, sizeof(last_known_card.IDm)));
+            return PM3_ERFTRANS;
+        }
+
+        felica_set_last_known_idm(idm_out);
+        PrintAndLogEx(INFO, "Using explicit IDm... " _GREEN_("%s"),
+                      sprint_hex_inrow(idm_out, sizeof(last_known_card.IDm)));
+        return PM3_SUCCESS;
+    }
+
+    if (mode == FELICA_IDM_RESOLVE_CHAINED) {
+        if (last_known_card.IDm[0] == 0 || last_known_card.IDm[1] == 0) {
+            PrintAndLogEx(WARNING, "No last known card! Use `" _YELLOW_("hf felica reader") "` first or set a custom IDm");
+            return PM3_EINVARG;
+        }
+
+        memcpy(idm_out, last_known_card.IDm, sizeof(last_known_card.IDm));
+        PrintAndLogEx(INFO, "Using cached IDm.... " _GREEN_("%s"),
+                      sprint_hex_inrow(idm_out, sizeof(last_known_card.IDm)));
+        return PM3_SUCCESS;
+    }
+
+    if (last_known_card.IDm[0] != 0 && last_known_card.IDm[1] != 0) {
+        if (felica_presence_check_idm(last_known_card.IDm) == PM3_SUCCESS) {
+            memcpy(idm_out, last_known_card.IDm, sizeof(last_known_card.IDm));
+            PrintAndLogEx(INFO, "Using cached IDm.... " _GREEN_("%s"),
+                          sprint_hex_inrow(idm_out, sizeof(last_known_card.IDm)));
+            return PM3_SUCCESS;
+        }
+
+        PrintAndLogEx(WARNING, "Cached IDm is no longer present. Polling for a new tag...");
+    } else {
+        PrintAndLogEx(WARNING, "No cached IDm available. Polling for a new tag...");
+    }
+
+    felica_card_select_t card = {0};
+    const int ret = felica_discover_target(&card);
+    if (ret != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "No FeliCa tag detected while polling.");
+        return ret;
+    }
+
+    memcpy(idm_out, card.IDm, sizeof(card.IDm));
+    PrintAndLogEx(INFO, "Using polled IDm.... " _GREEN_("%s"),
+                  sprint_hex_inrow(idm_out, sizeof(card.IDm)));
+    return PM3_SUCCESS;
+}
+
+static int send_request_code_list(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
+                                  uint32_t timeout_ms, uint32_t retries, uint32_t backoff_ms,
+                                  bool logging, PacketResponseNG *resp) {
+    return send_felica_payload_with_retries(flags, datalen, data, verbose,
+                                            FELICA_GET_NODE_LIST_ACK,
+                                            timeout_ms, retries, backoff_ms,
+                                            logging, resp, "request code list");
 }
 
 /**
@@ -1229,14 +1576,17 @@ static int send_read_without_encryption(uint8_t flags, uint16_t datalen, uint8_t
  * @return success if response was received.
  */
 static int send_search_service_code(uint8_t flags, uint16_t datalen, uint8_t *data, bool verbose,
-                                    uint32_t timeout_ms, uint32_t retries,
+                                    uint32_t timeout_ms, uint32_t retries, uint32_t backoff_ms,
+                                    bool logging,
                                     felica_search_service_code_response_t *search_sv_resp) {
     PacketResponseNG resp;
     if (send_felica_payload_with_retries(flags, datalen, data, verbose,
                                          0x0B, timeout_ms, retries,
-                                         true,
+                                         backoff_ms, logging,
                                          &resp, "search service") != PM3_SUCCESS) {
-        PrintAndLogEx(ERR, "No response from card");
+        if (logging) {
+            PrintAndLogEx(ERR, "No response from card");
+        }
         return PM3_ERFTRANS;
     }
 
@@ -1244,20 +1594,816 @@ static int send_search_service_code(uint8_t flags, uint16_t datalen, uint8_t *da
     return PM3_SUCCESS;
 }
 
-/**
- * Checks if last known card can be added to data and adds it if possible.
- * @param custom_IDm
- * @param data
- * @return
- */
-static bool check_last_idm(uint8_t *data, uint16_t datalen) {
-    if (add_last_IDm(2, data) == false) {
-        PrintAndLogEx(WARNING, "No last known card! Use `" _YELLOW_("hf felica reader") "` first or set a custom IDm");
+static uint16_t felica_to_network_order(uint16_t value) {
+    return (uint16_t)(((value & 0xFF00U) >> 8) | ((value & 0x00FFU) << 8));
+}
+
+static void felica_drop_connect_flag(uint8_t *flags) {
+    if (flags) {
+        *flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
+    }
+}
+
+static void felica_set_discovered_count(uint32_t *discovered_count, uint32_t count) {
+    if (discovered_count) {
+        *discovered_count = count;
+    }
+}
+
+static void felica_set_stop_status(int *stop_status, int status) {
+    if (stop_status) {
+        *stop_status = status;
+    }
+}
+
+static bool felica_discovery_aborted(int *stop_status) {
+    if (kbd_enter_pressed()) {
+        felica_set_stop_status(stop_status, PM3_EOPABORTED);
+        return true;
+    }
+    return false;
+}
+
+static int felica_emit_discovered_node(const felica_discovered_node_t *node,
+                                       felica_node_discovery_visitor_t visitor,
+                                       void *ctx,
+                                       uint32_t *discovered_count,
+                                       int *stop_status) {
+    int ret = visitor(node, ctx);
+    if (ret != PM3_SUCCESS) {
+        felica_set_stop_status(stop_status, ret);
+        return ret;
+    }
+
+    if (discovered_count) {
+        (*discovered_count)++;
+    }
+
+    return PM3_SUCCESS;
+}
+
+static const felica_node_discovery_method_info_t FELICA_NODE_DISCOVERY_METHODS[] = {
+    {
+        .method = FELICA_NODE_DISCOVERY_REQUEST_CODE_LIST,
+        .cli_name = "request_code_list",
+        .display_name = "RequestCodeList",
+        .run = felica_discover_nodes_with_request_code_list
+    },
+    {
+        .method = FELICA_NODE_DISCOVERY_SEARCH_SERVICE_CODE,
+        .cli_name = "search_service_code",
+        .display_name = "SearchServiceCode",
+        .run = felica_discover_nodes_with_search_service_code
+    },
+    {
+        .method = FELICA_NODE_DISCOVERY_REQUEST_SERVICE,
+        .cli_name = "request_service",
+        .display_name = "RequestService",
+        .run = felica_discover_nodes_with_request_service
+    },
+    {
+        .method = FELICA_NODE_DISCOVERY_READ_WITHOUT_ENCRYPTION,
+        .cli_name = "read_without_encryption",
+        .display_name = "ReadWithoutEncryption",
+        .run = felica_discover_nodes_with_read_without_encryption
+    },
+};
+
+static const felica_node_discovery_method_info_t *felica_get_node_discovery_method_info(felica_node_discovery_method_t method) {
+    for (size_t i = 0; i < ARRAYLEN(FELICA_NODE_DISCOVERY_METHODS); i++) {
+        if (FELICA_NODE_DISCOVERY_METHODS[i].method == method) {
+            return &FELICA_NODE_DISCOVERY_METHODS[i];
+        }
+    }
+    return NULL;
+}
+
+static const char *felica_node_discovery_method_display_name(felica_node_discovery_method_t method) {
+    if (method == FELICA_NODE_DISCOVERY_NONE) {
+        return "Auto";
+    }
+    const felica_node_discovery_method_info_t *info = felica_get_node_discovery_method_info(method);
+    return info ? info->display_name : "Auto";
+}
+
+static void felica_print_node_discovery_method_used(felica_node_discovery_method_t method) {
+    const char *name = felica_node_discovery_method_display_name(method);
+    if (method == FELICA_NODE_DISCOVERY_REQUEST_CODE_LIST) {
+        PrintAndLogEx(INFO, "Node discovery method used: " _GREEN_("%s"), name);
+        return;
+    }
+    if (method == FELICA_NODE_DISCOVERY_REQUEST_SERVICE) {
+        PrintAndLogEx(INFO, "Node discovery method used: " _YELLOW_("%s"), name);
+        return;
+    }
+    if (method == FELICA_NODE_DISCOVERY_READ_WITHOUT_ENCRYPTION) {
+        PrintAndLogEx(INFO, "Node discovery method used: " _RED_("%s"), name);
+        return;
+    }
+    PrintAndLogEx(INFO, "Node discovery method used: %s", name);
+}
+
+static bool felica_discover_nodes_with_request_code_list(uint8_t *flags,
+        const uint8_t *idm,
+        uint32_t retry_count,
+        felica_node_discovery_visitor_t visitor,
+        void *ctx,
+        uint32_t *discovered_count,
+        int *stop_status) {
+
+    uint8_t data[14] = {0};
+    data[0] = sizeof(data);
+    data[1] = FELICA_GET_NODE_LIST_REQ;
+    memcpy(data + 2, idm, 8);
+    data[10] = 0x00;
+    data[11] = 0x00;
+
+    bool supported = false;
+    uint32_t local_count = 0;
+
+    for (uint16_t index = 1; index != 0; index++) {
+        if (felica_discovery_aborted(stop_status)) {
+            felica_set_discovered_count(discovered_count, local_count);
+            return false;
+        }
+
+        data[12] = index & 0xFF;
+        data[13] = (index >> 8) & 0xFF;
+
+        PacketResponseNG resp;
+        if (send_request_code_list(*flags, sizeof(data), data, false,
+                                   FELICA_DEFAULT_TIMEOUT_MS, retry_count,
+                                   supported ? FELICA_DISCOVERY_RETRY_BACKOFF_MS : 0, supported, &resp) != PM3_SUCCESS) {
+            felica_set_discovered_count(discovered_count, local_count);
+            return false;
+        }
+
+        if (supported == false) {
+            supported = true;
+            felica_print_node_discovery_method_used(FELICA_NODE_DISCOVERY_REQUEST_CODE_LIST);
+        }
+        felica_drop_connect_flag(flags);
+
+        size_t offset = sizeof(felica_frame_response_t);
+        if (resp.length < offset + 4) {
+            felica_set_discovered_count(discovered_count, local_count);
+            return false;
+        }
+
+        const uint8_t status_flag1 = resp.data.asBytes[offset++];
+        const uint8_t status_flag2 = resp.data.asBytes[offset++];
+        if (status_flag1 != 0x00 || status_flag2 != 0x00) {
+            felica_set_discovered_count(discovered_count, local_count);
+            return false;
+        }
+
+        const bool continue_flag = resp.data.asBytes[offset++] != 0x00;
+        const uint8_t area_count = resp.data.asBytes[offset++];
+        const size_t area_bytes = (size_t)area_count * 4U;
+
+        if (resp.length < offset + area_bytes + 1U) {
+            felica_set_discovered_count(discovered_count, local_count);
+            return false;
+        }
+
+        felica_discovered_node_t batch_nodes[128];
+        size_t batch_count = 0;
+
+        for (uint8_t i = 0; i < area_count; i++) {
+            felica_discovered_node_t node = {0};
+            node.is_area = true;
+            node.node_code_le = (uint16_t)resp.data.asBytes[offset] |
+                                ((uint16_t)resp.data.asBytes[offset + 1] << 8);
+            node.has_end_code = true;
+            node.end_code_le = (uint16_t)resp.data.asBytes[offset + 2] |
+                               ((uint16_t)resp.data.asBytes[offset + 3] << 8);
+            offset += 4;
+            if (batch_count < (sizeof(batch_nodes) / sizeof(batch_nodes[0]))) {
+                batch_nodes[batch_count++] = node;
+            }
+        }
+
+        const uint8_t service_count = resp.data.asBytes[offset++];
+        const size_t service_bytes = (size_t)service_count * 2U;
+        if (resp.length < offset + service_bytes) {
+            felica_set_discovered_count(discovered_count, local_count);
+            return false;
+        }
+
+        for (uint8_t i = 0; i < service_count; i++) {
+            felica_discovered_node_t node = {0};
+            node.is_area = false;
+            node.node_code_le = (uint16_t)resp.data.asBytes[offset] |
+                                ((uint16_t)resp.data.asBytes[offset + 1] << 8);
+            node.has_end_code = false;
+            node.end_code_le = 0;
+            offset += 2;
+            if (batch_count < (sizeof(batch_nodes) / sizeof(batch_nodes[0]))) {
+                batch_nodes[batch_count++] = node;
+            }
+        }
+
+        qsort(batch_nodes, batch_count, sizeof(batch_nodes[0]), felica_compare_discovered_nodes);
+        for (size_t i = 0; i < batch_count; i++) {
+            if (felica_emit_discovered_node(&batch_nodes[i], visitor, ctx, &local_count, stop_status) != PM3_SUCCESS) {
+                felica_set_discovered_count(discovered_count, local_count);
+                return false;
+            }
+        }
+
+        if (continue_flag == false) {
+            break;
+        }
+    }
+
+    felica_set_discovered_count(discovered_count, local_count);
+
+    return supported;
+}
+
+static bool felica_discover_nodes_with_search_service_code(uint8_t *flags,
+        const uint8_t *idm,
+        uint32_t retry_count,
+        felica_node_discovery_visitor_t visitor,
+        void *ctx,
+        uint32_t *discovered_count,
+        int *stop_status) {
+
+    uint8_t data[12] = {0};
+    data[0] = sizeof(data);
+    data[1] = FELICA_SRCHSYSCODE_REQ;
+    memcpy(data + 2, idm, 8);
+
+    bool supported = false;
+    uint32_t local_count = 0;
+
+    for (uint32_t cursor = 0; cursor <= 0xFFFFU; cursor++) {
+        if (felica_discovery_aborted(stop_status)) {
+            felica_set_discovered_count(discovered_count, local_count);
+            return false;
+        }
+
+        data[10] = cursor & 0xFF;
+        data[11] = (cursor >> 8) & 0xFF;
+
+        felica_search_service_code_response_t resp;
+        if (send_search_service_code(*flags, sizeof(data), data, false,
+                                     FELICA_DEFAULT_TIMEOUT_MS, retry_count,
+                                     supported ? FELICA_DISCOVERY_RETRY_BACKOFF_MS : 0,
+                                     supported,
+                                     &resp) != PM3_SUCCESS) {
+            felica_set_discovered_count(discovered_count, local_count);
+            return false;
+        }
+
+        if (supported == false) {
+            supported = true;
+            felica_print_node_discovery_method_used(FELICA_NODE_DISCOVERY_SEARCH_SERVICE_CODE);
+        }
+        felica_drop_connect_flag(flags);
+
+        const uint8_t frame_len = resp.frame_response.length[0];
+        if (frame_len != 0x0C && frame_len != 0x0E) {
+            felica_set_discovered_count(discovered_count, local_count);
+            return false;
+        }
+
+        const uint16_t node_code_le = (uint16_t)resp.payload[0] | ((uint16_t)resp.payload[1] << 8);
+        if (node_code_le == 0xFFFF) {
+            break;
+        }
+
+        felica_discovered_node_t node = {0};
+        node.is_area = (frame_len == 0x0E);
+        node.node_code_le = node_code_le;
+        node.has_end_code = (frame_len == 0x0E);
+        node.end_code_le = node.has_end_code ? ((uint16_t)resp.payload[2] | ((uint16_t)resp.payload[3] << 8)) : 0;
+
+        if (felica_emit_discovered_node(&node, visitor, ctx, &local_count, stop_status) != PM3_SUCCESS) {
+            felica_set_discovered_count(discovered_count, local_count);
+            return false;
+        }
+    }
+
+    felica_set_discovered_count(discovered_count, local_count);
+
+    return supported;
+}
+
+static bool felica_request_service_send_probe_batch(uint8_t *flags,
+        const uint8_t *idm,
+        uint32_t retry_count,
+        const uint16_t *node_codes_le,
+        const bool *is_area_nodes,
+        size_t node_count,
+        felica_node_discovery_visitor_t visitor,
+        void *ctx,
+        bool *supported,
+        uint32_t *discovered_count,
+        int *stop_status) {
+    if (node_count == 0 || node_count > FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE) {
         return false;
     }
 
-    PrintAndLogEx(INFO, "Using last known IDm... " _GREEN_("%s"), sprint_hex_inrow(data, datalen));
+    uint8_t data[1 + 1 + 8 + 1 + (FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE * 2)] = {0};
+    const uint16_t datalen = (uint16_t)(1 + 1 + 8 + 1 + (node_count * 2));
+    data[0] = (uint8_t)datalen;
+    data[1] = FELICA_REQSRV_REQ;
+    memcpy(data + 2, idm, 8);
+    data[10] = (uint8_t)node_count;
+
+    for (size_t i = 0; i < node_count; i++) {
+        data[11 + i * 2] = node_codes_le[i] & 0xFF;
+        data[12 + i * 2] = (node_codes_le[i] >> 8) & 0xFF;
+    }
+
+    PacketResponseNG resp;
+    const bool logging = (supported != NULL) && (*supported);
+    const uint32_t backoff_ms = logging ? FELICA_DISCOVERY_RETRY_BACKOFF_MS : 0;
+    if (send_felica_payload_with_retries(*flags, datalen, data, false,
+                                         FELICA_REQSRV_ACK,
+                                         FELICA_DEFAULT_TIMEOUT_MS, retry_count,
+                                         backoff_ms, logging, &resp, "request service") != PM3_SUCCESS) {
+        return false;
+    }
+
+    if (supported) {
+        if (*supported == false) {
+            felica_print_node_discovery_method_used(FELICA_NODE_DISCOVERY_REQUEST_SERVICE);
+        }
+        *supported = true;
+    }
+    felica_drop_connect_flag(flags);
+
+    size_t offset = sizeof(felica_frame_response_t);
+    if (resp.length < offset + 1U) {
+        return false;
+    }
+
+    size_t returned_nodes = resp.data.asBytes[offset++];
+    size_t available_nodes = (resp.length > offset) ? ((resp.length - offset) / 2U) : 0;
+    if (returned_nodes > available_nodes) {
+        returned_nodes = available_nodes;
+    }
+    if (returned_nodes > node_count) {
+        returned_nodes = node_count;
+    }
+
+    for (size_t i = 0; i < returned_nodes; i++) {
+        const uint16_t key_version = (uint16_t)resp.data.asBytes[offset + i * 2] |
+                                     ((uint16_t)resp.data.asBytes[offset + i * 2 + 1] << 8);
+        if (key_version == 0xFFFF) {
+            continue;
+        }
+
+        felica_discovered_node_t node = {0};
+        node.is_area = is_area_nodes[i];
+        node.node_code_le = node_codes_le[i];
+        node.has_end_code = false;
+        node.end_code_le = 0;
+
+        if (felica_emit_discovered_node(&node, visitor, ctx, discovered_count, stop_status) != PM3_SUCCESS) {
+            return false;
+        }
+    }
+
     return true;
+}
+
+static bool felica_discover_nodes_with_request_service(uint8_t *flags,
+        const uint8_t *idm,
+        uint32_t retry_count,
+        felica_node_discovery_visitor_t visitor,
+        void *ctx,
+        uint32_t *discovered_count,
+        int *stop_status) {
+    bool supported = false;
+    uint32_t local_count = 0;
+
+    uint16_t batch_codes[FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE] = {0};
+    bool batch_is_area[FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE] = {0};
+    size_t batch_count = 0;
+
+    for (uint16_t number = 0; number <= FELICA_MAX_NODE_NUMBER; number++) {
+        for (size_t j = 0; j < (sizeof(FELICA_REQUEST_SERVICE_PROBE_ATTRIBUTES) / sizeof(FELICA_REQUEST_SERVICE_PROBE_ATTRIBUTES[0])); j++) {
+            if (felica_discovery_aborted(stop_status)) {
+                felica_set_discovered_count(discovered_count, local_count);
+                return false;
+            }
+
+            const felica_request_service_probe_attribute_t probe_attr = FELICA_REQUEST_SERVICE_PROBE_ATTRIBUTES[j];
+            const uint16_t node_code_le = (uint16_t)((number << 6) | probe_attr.attribute);
+
+            batch_codes[batch_count] = node_code_le;
+            batch_is_area[batch_count] = probe_attr.is_area;
+            batch_count++;
+
+            if (batch_count == FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE) {
+                if (felica_request_service_send_probe_batch(flags, idm, retry_count,
+                                                            batch_codes, batch_is_area, batch_count,
+                                                            visitor, ctx, &supported, &local_count, stop_status) == false) {
+                    felica_set_discovered_count(discovered_count, local_count);
+                    if (stop_status && *stop_status == PM3_EOPABORTED) {
+                        return false;
+                    }
+                    if (supported) {
+                        PrintAndLogEx(WARNING, "Node discovery interrupted due to communication loss.");
+                    }
+                    return false;
+                }
+                batch_count = 0;
+            }
+        }
+    }
+
+    if (batch_count > 0) {
+        if (felica_request_service_send_probe_batch(flags, idm, retry_count,
+                                                    batch_codes, batch_is_area, batch_count,
+                                                    visitor, ctx, &supported, &local_count, stop_status) == false) {
+            felica_set_discovered_count(discovered_count, local_count);
+            if (stop_status && *stop_status == PM3_EOPABORTED) {
+                return false;
+            }
+            if (supported) {
+                PrintAndLogEx(WARNING, "Node discovery interrupted due to communication loss.");
+            }
+            return false;
+        }
+    }
+
+    felica_set_discovered_count(discovered_count, local_count);
+
+    return supported;
+}
+
+static bool felica_discover_nodes_with_read_without_encryption(uint8_t *flags,
+        const uint8_t *idm,
+        uint32_t retry_count,
+        felica_node_discovery_visitor_t visitor,
+        void *ctx,
+        uint32_t *discovered_count,
+        int *stop_status) {
+    uint8_t data[16] = {0};
+    data[0] = sizeof(data);
+    data[1] = FELICA_RDBLK_REQ;
+    memcpy(data + 2, idm, 8);
+    data[10] = 0x01;
+    data[13] = 0x01;
+    data[14] = 0x80;
+    data[15] = 0x00;
+
+    bool supported = false;
+    uint32_t local_count = 0;
+
+    for (uint16_t node_number = 0; node_number <= FELICA_MAX_NODE_NUMBER; node_number++) {
+        for (size_t i = 0; i < ARRAYLEN(FELICA_REQUEST_SERVICE_PROBE_ATTRIBUTES); i++) {
+            if (felica_discovery_aborted(stop_status)) {
+                felica_set_discovered_count(discovered_count, local_count);
+                return false;
+            }
+
+            const felica_request_service_probe_attribute_t probe_attr = FELICA_REQUEST_SERVICE_PROBE_ATTRIBUTES[i];
+            if (probe_attr.is_area || probe_attr.with_key || probe_attr.with_pin) {
+                continue;
+            }
+
+            const uint16_t service_code_le = (uint16_t)((node_number << 6) | probe_attr.attribute);
+            data[11] = service_code_le & 0xFF;
+            data[12] = (service_code_le >> 8) & 0xFF;
+
+            felica_read_without_encryption_response_t resp;
+            if (send_read_without_encryption_ex(*flags, sizeof(data), data, false,
+                                                &resp,
+                                                FELICA_DEFAULT_TIMEOUT_MS, retry_count,
+                                                supported ? FELICA_DISCOVERY_RETRY_BACKOFF_MS : 0, supported) != PM3_SUCCESS) {
+                if (supported == false) {
+                    return false;
+                }
+                PrintAndLogEx(WARNING, "Stopping ReadWithoutEncryption discovery due to communication loss (possible card removed).");
+                if (discovered_count) {
+                    *discovered_count = local_count;
+                }
+                return true;
+            }
+
+            if (supported == false) {
+                supported = true;
+                felica_print_node_discovery_method_used(FELICA_NODE_DISCOVERY_READ_WITHOUT_ENCRYPTION);
+            }
+            felica_drop_connect_flag(flags);
+
+            /*
+             * For discovery via ReadWithoutEncryption:
+             * - A6 (Illegal Service Code List) is treated as "node does not exist".
+             * - Other status codes (for example A8, B1) still imply the node exists.
+             */
+            if (resp.status_flags.status_flag2[0] == 0xA6) {
+                continue;
+            }
+
+            felica_discovered_node_t node = {0};
+            node.is_area = false;
+            node.node_code_le = service_code_le;
+            node.has_end_code = false;
+            node.end_code_le = 0;
+
+            if (felica_emit_discovered_node(&node, visitor, ctx, &local_count, stop_status) != PM3_SUCCESS) {
+                if (discovered_count) {
+                    *discovered_count = local_count;
+                }
+                return false;
+            }
+        }
+    }
+
+    if (discovered_count) {
+        *discovered_count = local_count;
+    }
+
+    return supported;
+}
+
+static const char *felica_node_discovery_method_cli_name(felica_node_discovery_method_t method) {
+    if (method == FELICA_NODE_DISCOVERY_NONE) {
+        return "auto";
+    }
+    const felica_node_discovery_method_info_t *info = felica_get_node_discovery_method_info(method);
+    return info ? info->cli_name : "auto";
+}
+
+static int felica_parse_node_discovery_method(const char *method_str, felica_node_discovery_method_t *method_out) {
+    if (method_out == NULL) {
+        return PM3_EINVARG;
+    }
+
+    *method_out = FELICA_NODE_DISCOVERY_NONE;
+
+    if (method_str == NULL || method_str[0] == '\0' || strcmp(method_str, "auto") == 0) {
+        return PM3_SUCCESS;
+    }
+
+    for (size_t i = 0; i < ARRAYLEN(FELICA_NODE_DISCOVERY_METHODS); i++) {
+        if (strcmp(method_str, FELICA_NODE_DISCOVERY_METHODS[i].cli_name) == 0) {
+            *method_out = FELICA_NODE_DISCOVERY_METHODS[i].method;
+            return PM3_SUCCESS;
+        }
+    }
+
+    PrintAndLogEx(ERR, "Unknown --method `%s`.", method_str);
+    PrintAndLogEx(INFO, "Valid values: auto, request_code_list, search_service_code, request_service, read_without_encryption");
+    return PM3_EINVARG;
+}
+
+static int felica_discover_nodes(const uint8_t *idm,
+                                 uint8_t *flags,
+                                 uint32_t retry_count,
+                                 felica_node_discovery_method_t selected_method,
+                                 felica_node_discovery_visitor_t visitor,
+                                 void *ctx,
+                                 felica_node_discovery_method_t *method_out,
+                                 uint32_t *discovered_count_out) {
+    if (idm == NULL || flags == NULL || visitor == NULL) {
+        return PM3_EINVARG;
+    }
+
+    felica_node_discovery_method_t ignored_method = FELICA_NODE_DISCOVERY_NONE;
+    uint32_t ignored_count = 0;
+    felica_node_discovery_method_t *const out_method = method_out ? method_out : &ignored_method;
+    uint32_t *const out_count = discovered_count_out ? discovered_count_out : &ignored_count;
+
+    uint32_t discovered_count = 0;
+    const bool auto_mode = (selected_method == FELICA_NODE_DISCOVERY_NONE);
+    for (size_t i = 0; i < ARRAYLEN(FELICA_NODE_DISCOVERY_METHODS); i++) {
+        const felica_node_discovery_method_info_t *info = &FELICA_NODE_DISCOVERY_METHODS[i];
+        if (!auto_mode && selected_method != info->method) {
+            continue;
+        }
+
+        discovered_count = 0;
+        int stop_status = PM3_SUCCESS;
+        if (info->run(flags, idm, retry_count, visitor, ctx, &discovered_count, &stop_status)) {
+            *out_method = info->method;
+            *out_count = discovered_count;
+            return PM3_SUCCESS;
+        }
+
+        if (stop_status != PM3_SUCCESS) {
+            *out_method = info->method;
+            *out_count = discovered_count;
+            return stop_status;
+        }
+
+        if (discovered_count > 0) {
+            *out_method = info->method;
+            *out_count = discovered_count;
+            return PM3_ERFTRANS;
+        }
+
+        if (!auto_mode) {
+            *out_method = FELICA_NODE_DISCOVERY_NONE;
+            *out_count = discovered_count;
+            return PM3_ERFTRANS;
+        }
+    }
+
+    *out_method = FELICA_NODE_DISCOVERY_NONE;
+    *out_count = 0;
+    return PM3_ERFTRANS;
+}
+
+static bool felica_format_service_attribute(uint16_t service_code_le, char *attrib_str, size_t attrib_str_size) {
+    if (attrib_str == NULL || attrib_str_size == 0) {
+        return false;
+    }
+
+    const uint8_t attribute = service_code_le & 0x3F;
+    const bool is_public = (attribute & FELICA_SERVICE_ATTRIBUTE_UNAUTH_READ) != 0;
+    const bool is_purse = (attribute & FELICA_SERVICE_ATTRIBUTE_PURSE) != 0;
+    const char *visibility = is_public ? "Public " : "Private";
+    const char *group = NULL;
+    const char *mode = NULL;
+
+    if (is_purse) {
+        group = "Purse ";
+        switch ((attribute & FELICA_SERVICE_ATTRIBUTE_PURSE_SUBFIELD) >> 1) {
+            case 0:
+                mode = "Direct";
+                break;
+            case 1:
+                mode = "Cashback";
+                break;
+            case 2:
+                mode = "Decrement";
+                break;
+            case 3:
+                mode = "Read Only";
+                break;
+            default:
+                mode = "Unknown";
+                break;
+        }
+    } else {
+        const bool is_random = (attribute & FELICA_SERVICE_ATTRIBUTE_RANDOM_ACCESS) != 0;
+        const bool is_readonly = (attribute & FELICA_SERVICE_ATTRIBUTE_READ_ONLY) != 0;
+        group = is_random ? "Random" : "Cyclic";
+        mode = is_readonly ? "Read Only" : "Read/Write";
+    }
+
+    snprintf(attrib_str, attrib_str_size, "| %s | %s | %s |", visibility, group, mode);
+    return is_public;
+}
+
+static int felica_compare_discovered_nodes(const void *lhs, const void *rhs) {
+    const felica_discovered_node_t *a = (const felica_discovered_node_t *)lhs;
+    const felica_discovered_node_t *b = (const felica_discovered_node_t *)rhs;
+
+    if (a->node_code_le < b->node_code_le) {
+        return -1;
+    }
+    if (a->node_code_le > b->node_code_le) {
+        return 1;
+    }
+
+    if (a->is_area != b->is_area) {
+        return a->is_area ? -1 : 1;
+    }
+
+    if (a->has_end_code != b->has_end_code) {
+        return a->has_end_code ? -1 : 1;
+    }
+
+    if (a->end_code_le < b->end_code_le) {
+        return -1;
+    }
+    if (a->end_code_le > b->end_code_le) {
+        return 1;
+    }
+
+    return 0;
+}
+
+static int felica_scsvcode_discovery_visitor(const felica_discovered_node_t *node, void *ctx) {
+    if (node == NULL || ctx == NULL) {
+        return PM3_EINVARG;
+    }
+
+    felica_scsvcode_context_t *scsv_ctx = (felica_scsvcode_context_t *)ctx;
+    if (scsv_ctx->header_printed == false) {
+        PrintAndLogEx(INFO, "┌───────────────────────────────────────────────");
+        scsv_ctx->header_printed = true;
+    }
+
+    while (scsv_ctx->depth && node->node_code_le > scsv_ctx->area_end_stack[scsv_ctx->depth]) {
+        scsv_ctx->depth--;
+    }
+
+    char prefix[64] = "";
+    for (int level = 1; level < scsv_ctx->depth; level++) {
+        const bool more_siblings = node->node_code_le < scsv_ctx->area_end_stack[level];
+        strcat(prefix, more_siblings ? "│   " : "    ");
+    }
+    strcat(prefix, "├── ");
+
+    const uint16_t node_code_be = felica_to_network_order(node->node_code_le);
+    const uint16_t node_number = node->node_code_le >> 6;
+
+    if (node->is_area) {
+        scsv_ctx->area_count++;
+        if (node->has_end_code) {
+            const uint16_t end_code_be = felica_to_network_order(node->end_code_le);
+            const uint16_t end_number = node->end_code_le >> 6;
+            PrintAndLogEx(INFO, "%sAREA_%04X%04X (%u-%u)", prefix,
+                          node_code_be, end_code_be,
+                          node_number, end_number);
+
+            if (scsv_ctx->depth < 7) {
+                scsv_ctx->area_end_stack[++scsv_ctx->depth] = node->end_code_le;
+            }
+        } else {
+            PrintAndLogEx(INFO, "%sAREA_%04X (%u-?)", prefix, node_code_be, node_number);
+        }
+    } else {
+        scsv_ctx->service_count++;
+        PrintAndLogEx(INFO, "%sSVC_%04X (%u)", prefix, node_code_be, node_number);
+    }
+
+    return PM3_SUCCESS;
+}
+
+static void felica_scsvcode_print_footer(const felica_scsvcode_context_t *scsv_ctx) {
+    if (scsv_ctx == NULL || scsv_ctx->header_printed == false) {
+        return;
+    }
+
+    char bar[128];
+    size_t pos = 0;
+    pos += snprintf(bar + pos, sizeof(bar) - pos, "└");
+    for (int i = 0; i < scsv_ctx->depth - 1 && pos < sizeof(bar); i++) {
+        pos += snprintf(bar + pos, sizeof(bar) - pos, "───┴");
+    }
+    snprintf(bar + pos, sizeof(bar) - pos, "───────────────────────");
+    PrintAndLogEx(INFO, "%s", bar);
+}
+
+static int felica_dump_discovery_visitor(const felica_discovered_node_t *node, void *ctx) {
+    if (node == NULL || ctx == NULL) {
+        return PM3_EINVARG;
+    }
+
+    felica_dump_context_t *dump_ctx = (felica_dump_context_t *)ctx;
+    if (dump_ctx->flags == NULL) {
+        return PM3_EINVARG;
+    }
+
+    if (node->is_area) {
+        return PM3_SUCCESS;
+    }
+
+    dump_ctx->service_count++;
+
+    char attrib_str[64] = {0};
+    const bool is_public = felica_format_service_attribute(node->node_code_le, attrib_str, sizeof(attrib_str));
+    PrintAndLogEx(INFO, "Service %04X %s", felica_to_network_order(node->node_code_le), attrib_str);
+
+    if (is_public == false) {
+        return PM3_SUCCESS;
+    }
+
+    if ((node->node_code_le & FELICA_SERVICE_ATTRIBUTE_PIN_REQUIRED) != 0) {
+        PrintAndLogEx(INFO, " PIN protected; skipping unauthenticated read.");
+        return PM3_SUCCESS;
+    }
+
+    dump_ctx->public_service_count++;
+
+    PrintAndLogEx(INFO, " block | data  ");
+    PrintAndLogEx(INFO, "-------+----------------------------------------");
+
+    dump_ctx->block_frame[11] = node->node_code_le & 0xFF;
+    dump_ctx->block_frame[12] = (node->node_code_le >> 8) & 0xFF;
+
+    for (uint16_t block = 0x00; block < 0xFF; block++) {
+        if (kbd_enter_pressed()) {
+            return PM3_EOPABORTED;
+        }
+
+        dump_ctx->block_frame[15] = block;
+        felica_read_without_encryption_response_t rd_noCry_resp;
+        if (send_read_without_encryption_ex(*(dump_ctx->flags), dump_ctx->block_datalen,
+                                            dump_ctx->block_frame, false,
+                                            &rd_noCry_resp,
+                                            FELICA_DEFAULT_TIMEOUT_MS, dump_ctx->retry_count, 0, true) != PM3_SUCCESS) {
+            break;
+        }
+
+        if (rd_noCry_resp.status_flags.status_flag1[0] != 0x00 || rd_noCry_resp.status_flags.status_flag2[0] != 0x00) {
+            break;
+        }
+
+        print_read_without_encryption_response(&rd_noCry_resp, block);
+    }
+
+    return PM3_SUCCESS;
 }
 
 /**
@@ -1274,7 +2420,7 @@ static int send_write_without_encryption(uint8_t flags, uint16_t datalen, uint8_
     if (send_felica_payload_with_retries(flags, datalen, data, verbose,
                                          -1,
                                          FELICA_DEFAULT_TIMEOUT_MS, 0,
-                                         true,
+                                         0, true,
                                          &resp, "write block") != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "no response from card");
         return PM3_ERFTRANS;
@@ -1309,13 +2455,13 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
                   _RED_("INCOMPLETE / EXPERIMENTAL COMMAND!!!"),
                   "hf felica auth1 --an 01 --acl 0000 --sn 01 --scl 8B00 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
                   "hf felica auth1 --an 01 --acl 0000 --sn 01 --scl 8B00 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBAAAAAAAAAAAAAAAA\n"
-                  "hf felica auth1 -i 11100910C11BC407 --an 01 --acl 0000 --sn 01 ..scl 8B00 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
+                  "hf felica auth1 --idm 11100910C11BC407 --an 01 --acl 0000 --sn 01 ..scl 8B00 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "an",  "<hex>", "number of areas, 1 byte"),
         arg_str0(NULL, "acl", "<hex>", "area code list, 2 bytes"),
-        arg_str0("i", NULL, "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_str0(NULL, "sn",  "<hex>", "number of service, 1 byte"),
         arg_str0(NULL, "scl", "<hex>", "service code list, 2 bytes"),
         arg_str0("k", "key",  "<hex>", "3des key, 16 bytes"),
@@ -1384,13 +2530,6 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     data[0] = 0x0C; // Static length
     data[1] = 0x3E; // Command ID
 
-    bool custom_IDm = false;
-
-    if (ilen) {
-        custom_IDm = true;
-        memcpy(data + 2, idm, 8);
-    }
-
     // Length (1),
     // Command ID (1),
     // IDm (8),
@@ -1403,9 +2542,12 @@ static int CmdHFFelicaAuthentication1(const char *Cmd) {
     data[0] = (datalen & 0xFF);
     data[1] = 0x10; // Command ID
 
-    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
-        return PM3_EINVARG;
+    uint8_t resolved_idm[8] = {0};
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, resolved_idm);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
+    memcpy(data + 2, resolved_idm, sizeof(resolved_idm));
 
     if (anlen) {
         data[10] = an[0];
@@ -1523,11 +2665,11 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
                   _RED_("INCOMPLETE / EXPERIMENTAL COMMAND!!!\n")
                   _RED_("EXPERIMENTAL COMMAND - M2c/P2c will be not checked"),
                   "hf felica auth2 --cc 0102030405060708 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
-                  "hf felica auth2 -i 11100910C11BC407 --cc 0102030405060708 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
+                  "hf felica auth2 --idm 11100910C11BC407 --cc 0102030405060708 --key AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB\n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("i", NULL, "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_str0("c", "cc", "<hex>", "M3c card challenge, 8 bytes"),
         arg_str0("k", "key",  "<hex>", "3des M3c decryption key, 16 bytes"),
         arg_lit0("v", "verbose", "verbose output"),
@@ -1569,20 +2711,16 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
     uint8_t data[PM3_CMD_DATA_SIZE];
     memset(data, 0, sizeof(data));
 
-    bool custom_IDm = false;
-
-    if (ilen) {
-        custom_IDm = true;
-        memcpy(data + 2, idm, 8);
-    }
-
     uint16_t datalen = 18; // Length (1), Command ID (1), IDm (8), M4c (8)
     data[0] = (datalen & 0xFF);
     data[1] = 0x12; // Command ID
 
-    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
-        return PM3_EINVARG;
+    uint8_t resolved_idm[8] = {0};
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_CHAINED, resolved_idm);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
+    memcpy(data + 2, resolved_idm, sizeof(resolved_idm));
 
     if (cclen) {
         memcpy(data + 16, cc, cclen);
@@ -1590,11 +2728,6 @@ static int CmdHFFelicaAuthentication2(const char *Cmd) {
 
     if (keylen) {
         memcpy(data + 16, key, keylen);
-    }
-
-
-    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
-        return PM3_EINVARG;
     }
 
     // M3c (8) == cc
@@ -1684,12 +2817,12 @@ static int CmdHFFelicaWritePlain(const char *Cmd) {
                   " - Mode shall be Mode0.\n"
                   " - Un-/Ssuccessful == Status Flag1 and Flag2",
                   "hf felica wrbl --sn 01 --scl CB10 --bn 01 --ble 8001 -d 0102030405060708090A0B0C0D0E0F10\n"
-                  "hf felica wrbl -i 01100910c11bc407 --sn 01 --scl CB10 --bn 01 --ble 8001 -d 0102030405060708090A0B0C0D0E0F10\n"
+                  "hf felica wrbl --idm 01100910c11bc407 --sn 01 --scl CB10 --bn 01 --ble 8001 -d 0102030405060708090A0B0C0D0E0F10\n"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_str0("d", "data", "<hex>", "data, 16 hex bytes"),
-        arg_str0("i", NULL,   "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_str0(NULL, "sn",  "<hex>", "number of service"),
         arg_str0(NULL, "scl", "<hex>", "service code list"),
         arg_str0(NULL, "bn",  "<hex>", "number of block"),
@@ -1765,12 +2898,6 @@ static int CmdHFFelicaWritePlain(const char *Cmd) {
     data[0] = 0x20; // Static length
     data[1] = 0x08; // Command ID
 
-    bool custom_IDm = false;
-    if (ilen) {
-        custom_IDm = true;
-        memcpy(data + 2, idm, sizeof(idm));
-    }
-
     // Length (1)
     // Command ID (1)
     // IDm (8)
@@ -1781,8 +2908,9 @@ static int CmdHFFelicaWritePlain(const char *Cmd) {
     // Block Data(16)
 
     uint16_t datalen = 32; // Length (1), Command ID (1), IDm (8), Number of Service (1), Service Code List(2), Number of Block(1), Block List(3), Block Data(16)
-    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
-        return PM3_EINVARG;
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, data + 2);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     if (blelen == 3) {
@@ -1847,12 +2975,12 @@ static int CmdHFFelicaReadPlain(const char *Cmd) {
                   " - Unsuccessful == Status Flag1 and Flag2",
                   "hf felica rdbl --sn 01 --scl 8B00 --bn 01 --ble 8000\n"
                   "hf felica rdbl --sn 01 --scl 4B18 --bn 01 --ble 8000 -b\n"
-                  "hf felica rdbl -i 01100910c11bc407 --sn 01 --scl 8B00 --bn 01 --ble 8000\n"
+                  "hf felica rdbl --idm 01100910c11bc407 --sn 01 --scl 8B00 --bn 01 --ble 8000\n"
                  );
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("b", NULL, "get all block list elements 00 -> FF"),
-        arg_str0("i", NULL, "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_lit0("l", "long", "use 3 byte block list element block number"),
         arg_str0(NULL, "sn",  "<hex>", "number of service"),
         arg_str0(NULL, "scl", "<hex>", "service code list"),
@@ -1924,15 +3052,10 @@ static int CmdHFFelicaReadPlain(const char *Cmd) {
     data[0] = 0x10; // Static length
     data[1] = 0x06; // Command ID
 
-    bool custom_IDm = false;
-    if (ilen) {
-        custom_IDm = true;
-        memcpy(data + 2, idm, sizeof(idm));
-    }
-
     uint16_t datalen = 16; // Length (1), Command ID (1), IDm (8), Number of Service (1), Service Code List(2), Number of Block(1), Block List(3)
-    if (custom_IDm  == false && check_last_idm(data, datalen) == false) {
-        return PM3_EINVARG;
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, data + 2);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     if (long_block_numbers) {
@@ -1995,11 +3118,11 @@ static int CmdHFFelicaRequestResponse(const char *Cmd) {
     CLIParserInit(&ctx, "hf felica rqresponse",
                   "Use this command to verify the existence of a card and its Mode.\n"
                   " - current mode of the card is returned",
-                  "hf felica rqresponse -i 11100910C11BC407\n"
+                  "hf felica rqresponse --idm 11100910C11BC407\n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("i", NULL, "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2019,15 +3142,10 @@ static int CmdHFFelicaRequestResponse(const char *Cmd) {
     data[0] = 0x0A; // Static length
     data[1] = 0x04; // Command ID
 
-    bool custom_IDm = false;
-    if (ilen) {
-        custom_IDm = true;
-        memcpy(data + 2, idm, sizeof(idm));
-    }
-
     uint8_t datalen = 10; // Length (1), Command ID (1), IDm (8)
-    if (!custom_IDm && !check_last_idm(data, datalen)) {
-        return PM3_EINVARG;
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, data + 2);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
@@ -2068,11 +3186,11 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
 
                   "hf felica rqspecver\n"
                   "hf felica rqspecver -r 0001\n"
-                  "hf felica rqspecver -i 11100910C11BC407 \n"
+                  "hf felica rqspecver --idm 11100910C11BC407 \n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("i", NULL, "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_str0("r", NULL, "<hex>", "set custom reserve"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
@@ -2107,20 +3225,14 @@ static int CmdHFFelicaRequestSpecificationVersion(const char *Cmd) {
     request_specification_version_request.length[0] = sizeof(request_specification_version_request);
     request_specification_version_request.command_code[0] = FELICA_REQUEST_SPEC_VERSION_REQ;
 
-    bool custom_IDm = false;
-    if (ilen) {
-        custom_IDm = true;
-        memcpy(request_specification_version_request.IDm, idm, sizeof(idm));
-    }
-
     if (rlen) {
         memcpy(request_specification_version_request.reserved, reserved, sizeof(reserved));
     }
 
-    if (custom_IDm == false &&
-            check_last_idm((uint8_t *)&request_specification_version_request,
-                           sizeof(request_specification_version_request)) == false) {
-        return PM3_EINVARG;
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE,
+                                       request_specification_version_request.IDm);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     felica_request_specification_version_info_t specification_version_info;
@@ -2168,11 +3280,11 @@ static int CmdHFFelicaResetMode(const char *Cmd) {
                   "Use this command to reset Mode to Mode 0.",
                   "hf felica resetmode\n"
                   "hf felica resetmode -r 0001\n"
-                  "hf felica resetmode -i 11100910C11BC407 \n"
+                  "hf felica resetmode --idm 11100910C11BC407 \n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("i", NULL, "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_str0("r", NULL, "<hex>", "set custom reserve"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
@@ -2207,12 +3319,6 @@ static int CmdHFFelicaResetMode(const char *Cmd) {
     data[0] = 0x0C; // Static length
     data[1] = 0x3E; // Command ID
 
-    bool custom_IDm = false;
-
-    if (ilen) {
-        custom_IDm = true;
-        memcpy(data + 2, idm, 8);
-    }
     if (rlen) {
         memcpy(data + 10, reserved, 2);
     } else {
@@ -2221,8 +3327,9 @@ static int CmdHFFelicaResetMode(const char *Cmd) {
     }
 
     uint16_t datalen = 12; // Length (1), Command ID (1), IDm (8), Reserved (2)
-    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
-        return PM3_EINVARG;
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, data + 2);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
@@ -2259,11 +3366,11 @@ static int CmdHFFelicaRequestSystemCode(const char *Cmd) {
                   "  - if a card is divided into more than one System, \n"
                   "    this command acquires System Code of each System existing in the card.",
                   "hf felica rqsyscode\n"
-                  "hf felica rqsyscode -i 11100910C11BC407 \n"
+                  "hf felica rqsyscode --idm 11100910C11BC407 \n"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("i", NULL, "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2283,15 +3390,10 @@ static int CmdHFFelicaRequestSystemCode(const char *Cmd) {
     data[0] = 0x0A; // Static length
     data[1] = 0x0C; // Command ID
 
-    bool custom_IDm = false;
-    if (ilen) {
-        custom_IDm = true;
-        memcpy(data + 2, idm, sizeof(idm));
-    }
-
     uint16_t datalen = 10; // Length (1), Command ID (1), IDm (8)
-    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
-        return PM3_EINVARG;
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, data + 2);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
@@ -2332,148 +3434,74 @@ static int CmdHFFelicaDump(const char *Cmd) {
                   "Dump all existing Area Code and Service Code.\n"
                   "Only works on services that do not require authentication yet.\n",
                   "hf felica dump\n"
-                  "hf felica dump --retry 5");
+                  "hf felica dump --retry 5\n"
+                  "hf felica dump --idm 11100910C11BC407");
     void *argtable[] = {
         arg_param_begin,
         arg_lit0(NULL, "no-auth", "read public services"),
         arg_u64_0("r", "retry", "<dec>", "number of retries"),
+        arg_str0(NULL, "idm", "<hex>", "use custom IDm"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     uint32_t retry_count = arg_get_u32_def(ctx, 2, FELICA_DEFAULT_RETRY_COUNT);
+    uint8_t idm[8] = {0};
+    int ilen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 3), idm, sizeof(idm), &ilen);
     CLIParserFree(ctx);
+    if (res) {
+        return PM3_EINVARG;
+    }
 
     // bool no_auth = arg_get_lit(ctx, 1);
 
-    uint8_t data_service_dump[PM3_CMD_DATA_SIZE] = {0};
-    data_service_dump[0] = 0x0C;
-    data_service_dump[1] = 0x0A;
-    uint16_t service_datalen = 12;
-    if (!check_last_idm(data_service_dump, service_datalen))
-        return PM3_EINVARG;
-
-    uint8_t data_block_dump[PM3_CMD_DATA_SIZE] = {0};
-    data_block_dump[0] = 0x10; // Static length
-    data_block_dump[1] = 0x06; // unauth read block command
-    data_block_dump[10] = 0x01; // read one service at a time
-    data_block_dump[13] = 0x01; // read one block at a time
-    data_block_dump[14] = 0x80; // block list element first byte
-    uint16_t block_datalen = 16; // Length (1), Command ID (1), IDm (8), Number of Service (1), Service Code List(2), Number of Block(1), Block List(3)
-    if (!check_last_idm(data_block_dump, block_datalen)) {
-        return PM3_EINVARG;
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, idm);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
-    // Set up field once and keep it up for the entire dump sequence.
-    // First command connects (with NO_SELECT since we already have IDm).
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort discovery or dumping");
+
     uint8_t flags = FELICA_CONNECT | FELICA_NO_SELECT | FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
 
-    int ret = PM3_SUCCESS;
-    uint16_t cursor = 0x0000;
+    felica_dump_context_t dump_ctx;
+    memset(&dump_ctx, 0, sizeof(dump_ctx));
+    dump_ctx.flags = &flags;
+    dump_ctx.retry_count = retry_count;
+    dump_ctx.block_datalen = 16;
+    dump_ctx.block_frame[0] = dump_ctx.block_datalen;
+    dump_ctx.block_frame[1] = FELICA_RDBLK_REQ;
+    memcpy(dump_ctx.block_frame + 2, idm, sizeof(idm));
+    dump_ctx.block_frame[10] = 0x01;
+    dump_ctx.block_frame[13] = 0x01;
+    dump_ctx.block_frame[14] = 0x80;
 
-    felica_search_service_code_response_t resp;
-
-    while (true) {
-
-        data_service_dump[10] = cursor & 0xFF;
-        data_service_dump[11] = cursor >> 8;
-
-        if (send_search_service_code(flags, service_datalen, data_service_dump, 0,
-                                     FELICA_DEFAULT_TIMEOUT_MS, retry_count,
-                                     &resp) != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "No response at cursor 0x%04X", cursor);
-            ret = PM3_ERFTRANS;
-            break;
-        }
-
-        // After first command, drop CONNECT flag — field is already up
-        flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
-        uint8_t len = resp.frame_response.length[0];
-        uint16_t node_code = resp.payload[0] | (resp.payload[1] << 8);
-        if (node_code == 0xFFFF) break;
-        char attrib_str[64] = "";
-        switch (len) {
-            case 0x0E:
-                break;
-            case 0x0C: {
-                uint8_t attribute = node_code & 0x3F;
-                bool is_public = (attribute & FELICA_SERVICE_ATTRIBUTE_UNAUTH_READ) != 0;
-                strcat(attrib_str, is_public ? "| Public  " : "| Private ");
-
-                bool is_purse = (attribute & FELICA_SERVICE_ATTRIBUTE_PURSE) != 0;
-                // Subfield bitwise attributes are applicable depending on is PURSE or not
-
-                if (is_purse) {
-                    strcat(attrib_str, "| Purse  |");
-                    switch ((attribute & FELICA_SERVICE_ATTRIBUTE_PURSE_SUBFIELD) >> 1) {
-                        case 0:
-                            strcat(attrib_str, " Direct     |");
-                            break;
-                        case 1:
-                            strcat(attrib_str, " Cashback   |");
-                            break;
-                        case 2:
-                            strcat(attrib_str, " Decrement  |");
-                            break;
-                        case 3:
-                            strcat(attrib_str, " Read Only  |");
-                            break;
-                        default:
-                            strcat(attrib_str, " Unknown    |");
-                            break;
-                    }
-                } else {
-                    bool is_random = (attribute & FELICA_SERVICE_ATTRIBUTE_RANDOM_ACCESS) != 0;
-                    strcat(attrib_str, is_random ? "| Random |" : "| Cyclic |");
-                    bool is_readonly = (attribute & FELICA_SERVICE_ATTRIBUTE_READ_ONLY) != 0;
-                    strcat(attrib_str, is_readonly ? " Read Only  |" : " Read/Write |");
-                }
-
-                PrintAndLogEx(INFO, "Service %04X %s", node_code, attrib_str);
-
-                if (is_public) {
-                    // dump blocks here
-                    PrintAndLogEx(INFO, " block | data  ");
-                    PrintAndLogEx(INFO, "-------+----------------------------------------");
-
-                    data_block_dump[11] = resp.payload[0]; // convert service code to little endian
-                    data_block_dump[12] = resp.payload[1];
-
-                    uint16_t last_blockno = 0xFF;
-                    for (uint16_t i = 0x00; i < last_blockno; i++) {
-                        data_block_dump[15] = i;
-                        felica_read_without_encryption_response_t rd_noCry_resp;
-                        if ((send_read_without_encryption_ex(flags, block_datalen, data_block_dump, 0,
-                                                             &rd_noCry_resp,
-                                                             FELICA_DEFAULT_TIMEOUT_MS, retry_count) == PM3_SUCCESS)) {
-                            if (rd_noCry_resp.status_flags.status_flag1[0] == 0 && rd_noCry_resp.status_flags.status_flag2[0] == 0) {
-                                print_read_without_encryption_response(&rd_noCry_resp, i);
-                            } else {
-                                break; // no more blocks to read
-                            }
-                        } else {
-                            break;
-                        }
-                    }
-                }
-                break;
-            }
-            default:
-                PrintAndLogEx(FAILED, "Unexpected length 0x%02X @ 0x%04X",
-                              len, cursor);
-                ret = PM3_ERFTRANS;
-                break;
-        }
-        if (ret != PM3_SUCCESS) break;
-        cursor++;
-        if (cursor == 0) break;
-    }
-
+    uint32_t discovered_nodes = 0;
+    int ret = felica_discover_nodes(idm, &flags, retry_count,
+                                    FELICA_NODE_DISCOVERY_NONE,
+                                    felica_dump_discovery_visitor, &dump_ctx,
+                                    NULL, &discovered_nodes);
     DropField();
 
-    if (ret == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "Unauth service dump complete.");
+    if (ret == PM3_EOPABORTED) {
+        PrintAndLogEx(WARNING, "Unauth service dump aborted by user. Discovered %" PRIu32 " node(s), visited %" PRIu32 " service(s), dumped %" PRIu32 " public service(s).",
+                      discovered_nodes, dump_ctx.service_count, dump_ctx.public_service_count);
+        return ret;
+    }
 
-    return ret;
+    if (ret != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Unable to discover nodes using RequestCodeList/SearchServiceCode/RequestService/ReadWithoutEncryption.");
+        return ret;
+    }
+
+    if (dump_ctx.public_service_count == 0) {
+        PrintAndLogEx(WARNING, "No authentication-not-required services discovered.");
+    }
+
+    PrintAndLogEx(SUCCESS, "Unauth service dump complete. Discovered %" PRIu32 " node(s), visited %" PRIu32 " service(s), dumped %" PRIu32 " public service(s).",
+                  discovered_nodes, dump_ctx.service_count, dump_ctx.public_service_count);
+
+    return PM3_SUCCESS;
 }
 
 
@@ -2494,7 +3522,7 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
                   "in the command packet.",
                   "hf felcia rqservice --node 01 --code FFFF\n"
                   "hf felcia rqservice -a --code FFFF\n"
-                  "hf felica rqservice -i 011204126417E405 --node 01 --code FFFF"
+                  "hf felica rqservice --idm 011204126417E405 --node 01 --code FFFF"
                  );
 
     void *argtable[] = {
@@ -2502,7 +3530,7 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
         arg_lit0("a", "all", "auto node number mode, iterates through all nodes 1 < n < 32"),
         arg_str0("n", "node", "<hex>", "Number of Node"),
         arg_str0("c", "code", "<hex>", "Node Code List (little endian)"),
-        arg_str0("i", "idm", "<hex>", "use custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "use custom IDm"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2536,13 +3564,6 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
     uint8_t data[PM3_CMD_DATA_SIZE];
     memset(data, 0, sizeof(data));
 
-    bool custom_IDm = false;
-
-    if (ilen) {
-        custom_IDm = true;
-        memcpy(data + 2, idm, 8);
-    }
-
     if (all_nodes == false) {
         // Node Number
         if (nlen == 1) {
@@ -2557,15 +3578,12 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
 
     uint8_t datalen = 13; // length (1) + CMD (1) + IDm(8) + Node Number (1) + Node Code List (2)
 
-    uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
-    if (custom_IDm) {
-        flags |= FELICA_NO_SELECT;
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, data + 2);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
-    // Todo activate once datalen isn't hardcoded anymore...
-    if (custom_IDm == false && check_last_idm(data, datalen) == false) {
-        return PM3_EINVARG;
-    }
+    uint8_t flags = (FELICA_APPEND_CRC | FELICA_RAW);
 
     data[0] = (datalen & 0xFF);
     data[1] = 0x02; // Service Request Command ID
@@ -2589,130 +3607,158 @@ static int CmdHFFelicaRequestService(const char *Cmd) {
  * @param Cmd input data of the user.
  * @return client result code.
  */
-static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
-    /* -- CLI boilerplate (unchanged) ------------------------------- */
+static int CmdHFFelicaDiscoverNodes(const char *Cmd) {
+    /* -- CLI boilerplate (method-aware discovery) ------------------- */
     CLIParserContext *ctx;
-    CLIParserInit(&ctx, "hf felica scsvcode",
-                  "Dump all existing Area Code and Service Code.\n",
-                  "hf felica scsvcode\n"
-                  "hf felica scsvcode --retry 5");
+    CLIParserInit(&ctx, "hf felica discnodes",
+                  "Dump all existing Area Code and Service Code.\n"
+                  "Method: auto | request_code_list | search_service_code | request_service | read_without_encryption",
+                  "hf felica discnodes\n"
+                  "hf felica discnodes --retry 5\n"
+                  "hf felica discnodes --method request_service\n"
+                  "hf felica discnodes --idm 11100910C11BC407");
     void *argtable[] = {
         arg_param_begin,
         arg_u64_0("r", "retry", "<dec>", "number of retries"),
+        arg_str0("m", "method", "<str>", "node discovery method"),
+        arg_str0(NULL, "idm", "<hex>", "use custom IDm"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    uint32_t retry_count = arg_get_u32_def(ctx, 1, FELICA_DISCOVER_DEFAULT_RETRY_COUNT);
+    char method_str[64] = {0};
+    int method_len = 0;
+    int method_str_status = CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)method_str, sizeof(method_str) - 1, &method_len);
+    uint8_t idm[8] = {0};
+    int ilen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 3), idm, sizeof(idm), &ilen);
+    felica_node_discovery_method_t selected_method = FELICA_NODE_DISCOVERY_NONE;
+    int method_parse_status = PM3_EINVARG;
+    if (method_str_status == PM3_SUCCESS) {
+        method_str[method_len] = '\0';
+        method_parse_status = felica_parse_node_discovery_method(method_str, &selected_method);
+    }
+    CLIParserFree(ctx);
+    if (res != PM3_SUCCESS) {
+        return PM3_EINVARG;
+    }
+    if (method_str_status != PM3_SUCCESS || method_parse_status != PM3_SUCCESS) {
+        return method_parse_status;
+    }
+
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, idm);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    PrintAndLogEx(HINT, "Area and service codes are printed in network order.");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort discovery");
+
+    uint8_t flags = FELICA_CONNECT | FELICA_NO_SELECT | FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
+    felica_scsvcode_context_t scsv_ctx;
+    memset(&scsv_ctx, 0, sizeof(scsv_ctx));
+    scsv_ctx.area_end_stack[0] = 0xFFFF;
+
+    uint32_t discovered_nodes = 0;
+    felica_node_discovery_method_t used_method = FELICA_NODE_DISCOVERY_NONE;
+    uint64_t discovery_started = msclock();
+    int ret = felica_discover_nodes(idm, &flags, retry_count,
+                                    selected_method,
+                                    felica_scsvcode_discovery_visitor, &scsv_ctx,
+                                    &used_method, &discovered_nodes);
+    uint64_t discovery_duration_ms = msclock() - discovery_started;
+
+    DropField();
+
+    if (ret == PM3_EOPABORTED) {
+        felica_scsvcode_print_footer(&scsv_ctx);
+        PrintAndLogEx(WARNING, "Node discovery aborted by user after %" PRIu64 " ms. Discovered %" PRIu32 " node(s): %" PRIu32 " area(s), %" PRIu32 " service(s).",
+                      discovery_duration_ms, discovered_nodes, scsv_ctx.area_count, scsv_ctx.service_count);
+        return ret;
+    }
+
+    if (ret != PM3_SUCCESS) {
+        if (selected_method != FELICA_NODE_DISCOVERY_NONE) {
+            PrintAndLogEx(FAILED, "Node discovery failed with --method %s.", felica_node_discovery_method_cli_name(selected_method));
+        } else {
+            PrintAndLogEx(FAILED, "Unable to discover nodes using RequestCodeList/SearchServiceCode/RequestService/ReadWithoutEncryption.");
+        }
+        return ret;
+    }
+
+    felica_scsvcode_print_footer(&scsv_ctx);
+    PrintAndLogEx(INFO, "Node discovery duration: %" PRIu64 " ms", discovery_duration_ms);
+
+    PrintAndLogEx(SUCCESS, "Service code and area dump complete. Discovered %" PRIu32 " node(s): %" PRIu32 " area(s), %" PRIu32 " service(s).",
+                  discovered_nodes, scsv_ctx.area_count, scsv_ctx.service_count);
+    return PM3_SUCCESS;
+}
+
+/**
+ * Command parser for scsvcode.
+ * @param Cmd input data of the user.
+ * @return client result code.
+ */
+static int CmdHFFelicaDumpServiceArea(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf felica scsvcode",
+                  "Dump all existing Area Code and Service Code.",
+                  "hf felica scsvcode\n"
+                  "hf felica scsvcode --retry 5\n"
+                  "hf felica scsvcode --idm 11100910C11BC407");
+    void *argtable[] = {
+        arg_param_begin,
+        arg_u64_0("r", "retry", "<dec>", "number of retries"),
+        arg_str0(NULL, "idm", "<hex>", "use custom IDm"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     uint32_t retry_count = arg_get_u32_def(ctx, 1, FELICA_DEFAULT_RETRY_COUNT);
+    uint8_t idm[8] = {0};
+    int ilen = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 2), idm, sizeof(idm), &ilen);
     CLIParserFree(ctx);
-
-    /* -- build static part of Search-Service frame ---------------- */
-    uint8_t data[PM3_CMD_DATA_SIZE] = {0};
-    data[0] = 0x0C;                      /* LEN               */
-    data[1] = 0x0A;                      /* CMD = 0x0A         */
-    uint16_t datalen = 12;               /* LEN + CMD + IDm + cursor */
-
-    if (!check_last_idm(data, datalen))
+    if (res) {
         return PM3_EINVARG;
+    }
+
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, idm);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     PrintAndLogEx(HINT, "Area and service codes are printed in network order.");
-    PrintAndLogEx(INFO, "┌───────────────────────────────────────────────");
+    PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to abort discovery");
 
-    // Set up field once and keep it up for the entire traversal.
-    // First command connects (with NO_SELECT since we already have IDm).
     uint8_t flags = FELICA_CONNECT | FELICA_NO_SELECT | FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
+    felica_scsvcode_context_t scsv_ctx;
+    memset(&scsv_ctx, 0, sizeof(scsv_ctx));
+    scsv_ctx.area_end_stack[0] = 0xFFFF;
 
-    int ret = PM3_SUCCESS;
-
-    /* -- traversal state ------------------------------------------ */
-    uint16_t cursor = 0x0000;
-    uint16_t area_end_stack[8] = {0xFFFF};   /* root "end" = 0xFFFF */
-    int      depth = 0;                      /* current stack depth */
-
-    felica_search_service_code_response_t resp;
-
-    while (true) {
-
-        /* insert cursor LE */
-        data[10] = cursor & 0xFF;
-        data[11] = cursor >> 8;
-
-        if (send_search_service_code(flags, datalen, data, 0,
-                                     FELICA_DEFAULT_TIMEOUT_MS, retry_count,
-                                     &resp) != PM3_SUCCESS) {
-            PrintAndLogEx(FAILED, "No response at cursor 0x%04X", cursor);
-            ret = PM3_ERFTRANS;
-            break;
-        }
-
-        // After first command, drop CONNECT flag — field is already up
-        flags = FELICA_NO_DISCONNECT | FELICA_APPEND_CRC | FELICA_RAW;
-
-        uint8_t len = resp.frame_response.length[0];
-        uint16_t node_code = resp.payload[0] | (resp.payload[1] << 8);      /* LE for traversal */
-        uint16_t node_code_net = (resp.payload[0] << 8) | resp.payload[1];   /* BE for display */
-        uint16_t node_number = node_code >> 6;                               /* upper 10 bits in host order */
-
-        if (node_code == 0xFFFF) break;          /* end-marker */
-
-        /* pop finished areas */
-        while (depth && node_code > area_end_stack[depth]) depth--;
-
-
-        /* ----- compose nice prefix ------------------------------------ */
-        char prefix[64] = "";
-        for (int i = 1; i < depth; i++) {
-            bool more_siblings = (cursor < area_end_stack[i]);
-            strcat(prefix, more_siblings ? "│   " : "    ");
-        }
-        /* decide glyph for this line (areas always use └──) */
-        const char *line_glyph = "├── ";
-        strcat(prefix, line_glyph);
-
-        /* ----- print --------------------------------------------------- */
-        if (len == 0x0E) {                          /* AREA node */
-            uint16_t end_code = resp.payload[2] | (resp.payload[3] << 8);
-            uint16_t end_number = end_code >> 6;
-            PrintAndLogEx(INFO, "%sAREA_%02X%02X%02X%02X (%u-%u)", prefix,
-                          resp.payload[0], resp.payload[1], resp.payload[2], resp.payload[3],
-                          node_number, end_number);
-
-            if (depth < 7) {
-                area_end_stack[++depth] = end_code;
-            }
-        } else if (len == 0x0C) {                                /* SERVICE */
-            PrintAndLogEx(INFO, "%sSVC_%04X (%u)", prefix, node_code_net, node_number);
-        } else {
-            PrintAndLogEx(FAILED, "Unexpected length 0x%02X @ 0x%04X",
-                          len, cursor);
-            ret = PM3_ERFTRANS;
-            break;
-        }
-        cursor++;
-        if (cursor == 0) break; /* overflow safety */
-    }
+    uint32_t discovered_nodes = 0;
+    int ret = felica_discover_nodes(idm, &flags, retry_count,
+                                    FELICA_NODE_DISCOVERY_SEARCH_SERVICE_CODE,
+                                    felica_scsvcode_discovery_visitor, &scsv_ctx,
+                                    NULL, &discovered_nodes);
 
     DropField();
 
-    /* draw closing bar └─┴─... based on final depth */
-    char bar[128];                 /* large enough for depth ≤ 7 */
-    size_t pos = 0;
+    if (ret == PM3_EOPABORTED) {
+        felica_scsvcode_print_footer(&scsv_ctx);
+        PrintAndLogEx(WARNING, "Service code and area dump aborted by user. Discovered %" PRIu32 " node(s): %" PRIu32 " area(s), %" PRIu32 " service(s).",
+                      discovered_nodes, scsv_ctx.area_count, scsv_ctx.service_count);
+        return ret;
+    }
 
-    /* leading corner */
-    pos += snprintf(bar + pos, sizeof(bar) - pos, "└");
+    if (ret != PM3_SUCCESS) {
+        PrintAndLogEx(FAILED, "Unable to discover nodes using SearchServiceCode.");
+        return ret;
+    }
 
-    /* one segment per level-1 */
-    for (int i = 0; i < depth - 1 && pos < sizeof(bar); i++)
-        pos += snprintf(bar + pos, sizeof(bar) - pos, "───┴");
-
-    /* tail */
-    snprintf(bar + pos, sizeof(bar) - pos, "───────────────────────");
-
-    PrintAndLogEx(INFO, "%s", bar);
-
-    if (ret == PM3_SUCCESS)
-        PrintAndLogEx(SUCCESS, "Service code and area dump complete.");
-
-    return ret;
+    felica_scsvcode_print_footer(&scsv_ctx);
+    PrintAndLogEx(SUCCESS, "Service code and area dump complete. Discovered %" PRIu32 " node(s): %" PRIu32 " area(s), %" PRIu32 " service(s).",
+                  discovered_nodes, scsv_ctx.area_count, scsv_ctx.service_count);
+    return PM3_SUCCESS;
 }
 
 static int CmdHFFelicaSniff(const char *Cmd) {
@@ -3345,7 +4391,7 @@ static int CmdHFFelicaAuthenticationLite(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf felica liteauth",
                   "Authenticate",
-                  "hf felica liteauth -i 11100910C11BC407\n"
+                  "hf felica liteauth --idm 11100910C11BC407\n"
                   "hf felica liteauth --key 46656c69436130313233343536616263\n"
                   "hf felica liteauth --key 46656c69436130313233343536616263 -k\n"
                   "hf felica liteauth -c 701185c59f8d30afeab8e4b3a61f5cc4 --key 46656c69436130313233343536616263"
@@ -3354,7 +4400,7 @@ static int CmdHFFelicaAuthenticationLite(const char *Cmd) {
         arg_param_begin,
         arg_str0(NULL, "key", "<hex>", "set card key, 16 bytes"),
         arg_str0("c", "", "<hex>", "set random challenge, 16 bytes"),
-        arg_str0("i", "", "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_lit0("k", "", "keep signal field ON after receive"),
         arg_param_end
     };
@@ -3391,13 +4437,9 @@ static int CmdHFFelicaAuthenticationLite(const char *Cmd) {
 
     CLIParserFree(ctx);
 
-    if (!ilen) {
-        if (last_known_card.IDm[0] != 0 && last_known_card.IDm[1] != 0) {
-            memcpy(idm, last_known_card.IDm, sizeof(idm));
-        } else {
-            PrintAndLogEx(WARNING, "No last known card! Use `" _YELLOW_("hf felica reader") "` first or set a custom IDm");
-            return PM3_EINVARG;
-        }
+    res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, idm);
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     int ret = PM3_SUCCESS;
@@ -3593,7 +4635,7 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_str0("i", "", "<hex>", "set custom IDm"),
+        arg_str0(NULL, "idm", "<hex>", "set custom IDm"),
         arg_str0(NULL, "key", "<hex>", "set card key, 16 bytes"),
         arg_param_end
     };
@@ -3620,13 +4662,9 @@ static int CmdHFFelicaDumpLite(const char *Cmd) {
     CLIParserFree(ctx);
 
     if (keylen != 0) {
-        if (!ilen) {
-            if (last_known_card.IDm[0] != 0 && last_known_card.IDm[1] != 0) {
-                memcpy(idm, last_known_card.IDm, sizeof(idm));
-            } else {
-                PrintAndLogEx(WARNING, "No last known card! Use `" _YELLOW_("hf felica reader") "` first or set a custom IDm");
-                return PM3_EINVARG;
-            }
+        res = felica_ensure_target_present(idm, (size_t)ilen, FELICA_IDM_RESOLVE_STANDALONE, idm);
+        if (res != PM3_SUCCESS) {
+            return res;
         }
 
         uint8_t rc[FELICA_BLK_SIZE] = {0};
@@ -3832,6 +4870,7 @@ static command_t CommandTable[] = {
     {"wrbl",            CmdHFFelicaWritePlain,            IfPm3Felica,     "write block data to an authentication-not-required Service."},
     {"-----------",     CmdHelp,                          AlwaysAvailable, "----------------------- " _CYAN_("FeliCa Standard") " -----------------------"},
     {"dump",            CmdHFFelicaDump,                  IfPm3Felica,     "Wait for and try dumping FeliCa"},
+    {"discnodes",       CmdHFFelicaDiscoverNodes,         IfPm3Felica,     "discover Area Code and Service Code nodes."},
     {"rqservice",       CmdHFFelicaRequestService,        IfPm3Felica,     "verify the existence of Area and Service, and to acquire Key Version."},
     {"rqresponse",      CmdHFFelicaRequestResponse,       IfPm3Felica,     "verify the existence of a card and its Mode."},
     {"scsvcode",        CmdHFFelicaDumpServiceArea,       IfPm3Felica,     "acquire Area Code and Service Code."},
