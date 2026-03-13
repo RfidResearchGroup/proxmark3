@@ -27,6 +27,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h> // Mingw
@@ -670,6 +671,52 @@ int hex_to_bytes(const char *hexValue, uint8_t *bytesValue, size_t maxBytesValue
     }
 
     return bytesValueLen;
+}
+
+int parse_uint32_hex_or_dec(const char *text, uint32_t *out) {
+    if (text == NULL || out == NULL || text[0] == '\0') {
+        return PM3_EINVARG;
+    }
+
+    int base = 10;
+    if (text[0] == '0' && (text[1] == 'x' || text[1] == 'X')) {
+        base = 16;
+    } else {
+        for (const char *p = text; *p; p++) {
+            if (isalpha((unsigned char)*p)) {
+                base = 16;
+                break;
+            }
+        }
+    }
+
+    errno = 0;
+    char *end = NULL;
+    unsigned long value = strtoul(text, &end, base);
+    if (errno == ERANGE || end == text || end == NULL || *end != '\0' || value > UINT32_MAX) {
+        return PM3_EINVARG;
+    }
+
+    *out = (uint32_t)value;
+    return PM3_SUCCESS;
+}
+
+bool bytes_equal_not_null(const void *a, size_t a_len, const void *b, size_t b_len) {
+    return a_len == b_len && a != NULL && b != NULL && memcmp(a, b, a_len) == 0;
+}
+
+int buffer_append_bytes_with_offset(uint8_t *buf, size_t buf_len, size_t *offset, const void *data, size_t data_len) {
+    if (buf == NULL || offset == NULL || (data_len > 0 && data == NULL)) {
+        return PM3_EINVARG;
+    }
+    if (*offset > buf_len || data_len > (buf_len - *offset)) {
+        return PM3_EOVFLOW;
+    }
+    if (data_len > 0) {
+        memcpy(buf + *offset, data, data_len);
+        *offset += data_len;
+    }
+    return PM3_SUCCESS;
 }
 
 // takes a number (uint64_t) and creates a binarray in dest.
@@ -1366,6 +1413,19 @@ void clean_ascii(unsigned char *buf, size_t len) {
             buf[i] = '.';
         }
     }
+}
+
+bool is_printable_ascii(const uint8_t *data, size_t data_len) {
+    if (data == NULL || data_len == 0) {
+        return false;
+    }
+
+    for (size_t i = 0; i < data_len; i++) {
+        if (data[i] < 0x20 || data[i] > 0x7E) {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool decode_zero_padded_ascii(const uint8_t *data, size_t data_len, char *out, size_t out_len) {

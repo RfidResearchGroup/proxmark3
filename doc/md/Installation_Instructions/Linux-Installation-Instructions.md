@@ -60,7 +60,7 @@ Install the requirements
 ```sh
 sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
 libreadline-dev gcc-arm-none-eabi libnewlib-dev qt6-base-dev \
-libbz2-dev liblz4-dev libbluetooth-dev libpython3-dev libssl-dev libgd-dev
+libbz2-dev liblz4-dev zlib1g-dev libbluetooth-dev libpython3-dev libssl-dev libgd-dev
 ```
 
 ### If you don't need... 
@@ -72,6 +72,9 @@ you can skip the installation of `qt6-base-dev`.
 
 👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
 you can skip the installation of `libpython3-dev`.
+
+👉 If you don't need support for decompressing compressed Google Smart Tap payloads in the Proxmark3 client,
+you can skip the installation of `zlib1g-dev`.
 
 👉 If you don't need support for NFC ePaper devices,  
 you can skip the installation of `libgd-dev`.
