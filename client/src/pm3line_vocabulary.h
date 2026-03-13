@@ -556,6 +556,7 @@ const static vocabulary_t vocabulary[] = {
     { 1, "hf topaz view" },
     { 0, "hf topaz wrbl" },
     { 1, "hf vas help" },
+    { 0, "hf vas info" },
     { 0, "hf vas reader" },
     { 1, "hf vas decrypt" },
     { 1, "hf waveshare help" },

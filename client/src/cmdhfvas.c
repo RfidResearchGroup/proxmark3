@@ -59,6 +59,52 @@ uint8_t aid[] = { 0x4f, 0x53, 0x45, 0x2e, 0x56, 0x41, 0x53, 0x2e, 0x30, 0x31 };
 uint8_t getVasUrlOnlyP2 = 0x00;
 uint8_t getVasFullReqP2 = 0x01;
 
+static bool VASWalletTypeIsApplePay(const uint8_t *walletType, size_t walletTypeLen) {
+    static const uint8_t applePayWalletType[] = "ApplePay";
+    return walletType != NULL
+           && walletTypeLen == (sizeof(applePayWalletType) - 1)
+           && memcmp(walletType, applePayWalletType, sizeof(applePayWalletType) - 1) == 0;
+}
+
+static void PrintVASFeatureBit(const char *bits, uint8_t mask, uint8_t bit, const char *enabled, const char *disabled) {
+    const bool is_enabled = (mask & (1U << bit)) != 0;
+    const int pad = 7 - bit;
+    PrintAndLogEx(INFO, "   %s",
+                  sprint_breakdown_bin(is_enabled ? C_GREEN : C_NONE, bits, 8, pad, 1, is_enabled ? enabled : disabled));
+}
+
+static void PrintVASCapabilitiesMeaning(const struct tlv *capabilities) {
+    if (capabilities == NULL) {
+        return;
+    }
+
+    if (capabilities->len != 4) {
+        PrintAndLogEx(WARNING, "Capabilities: expected 4 bytes, got %zu", capabilities->len);
+        return;
+    }
+
+    const uint8_t leading0 = capabilities->value[0];
+    const uint8_t leading1 = capabilities->value[1];
+    const uint8_t leading2 = capabilities->value[2];
+    const uint8_t mask = capabilities->value[3];
+    const char *bits = sprint_bin(&mask, 1);
+
+    if (leading0 != 0x00 || leading1 != 0x00 || leading2 != 0x00) {
+        PrintAndLogEx(WARNING, "  Mobile caps.... leading bytes non-zero (%02X %02X %02X); only last byte is interpreted",
+                      leading0, leading1, leading2);
+    }
+
+    PrintAndLogEx(INFO, "  Capabilities.. " _YELLOW_("%s") " (" _YELLOW_("0x%02X") ")", bits, mask);
+    PrintVASFeatureBit(bits, mask, 7, "Reserved/unknown bit set", "Reserved/unknown bit clear");
+    PrintVASFeatureBit(bits, mask, 6, "Reserved/unknown bit set", "Reserved/unknown bit clear");
+    PrintVASFeatureBit(bits, mask, 5, "Payment may be performed", "Payment may not be performed");
+    PrintVASFeatureBit(bits, mask, 4, "Payment may be skipped", "Payment may not be skipped");
+    PrintVASFeatureBit(bits, mask, 3, "VAS may be performed", "VAS may not be performed");
+    PrintVASFeatureBit(bits, mask, 2, "VAS may be skipped", "VAS may not be skipped");
+    PrintVASFeatureBit(bits, mask, 1, "Encrypted VAS data supported", "Encrypted VAS data not supported");
+    PrintVASFeatureBit(bits, mask, 0, "Plaintext VAS data supported", "Plaintext VAS data not supported");
+}
+
 static int ParseSelectVASResponse(const uint8_t *response, size_t resLen, bool verbose) {
     struct tlvdb *tlvRoot = tlvdb_parse_multi(response, resLen);
 
@@ -96,6 +142,92 @@ static int ParseSelectVASResponse(const uint8_t *response, size_t resLen, bool v
     }
 
     tlvdb_free(tlvRoot);
+    return PM3_SUCCESS;
+}
+
+static int info_vas(void) {
+    clearCommandBuffer();
+
+    iso14a_polling_parameters_t polling_parameters = {
+        .frames = { WUPA_FRAME, ECP_VAS_ONLY_FRAME },
+        .frame_count = 2,
+        .extra_timeout = 250
+    };
+
+    if (SelectCard14443A_4_WithParameters(false, false, NULL, &polling_parameters) != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "No ISO14443-A Card in field");
+        return PM3_ECARDEXCHANGE;
+    }
+
+    uint16_t status = 0;
+    size_t responseLen = 0;
+    uint8_t selectResponse[APDU_RES_LEN] = {0};
+    Iso7816Select(CC_CONTACTLESS, false, true, aid, sizeof(aid), selectResponse, APDU_RES_LEN, &responseLen, &status);
+    DropField();
+
+    if (status != 0x9000) {
+        PrintAndLogEx(FAILED, "Card doesn't support VAS");
+        return PM3_ECARDEXCHANGE;
+    }
+
+    struct tlvdb *tlvRoot = tlvdb_parse_multi(selectResponse, responseLen);
+    if (tlvRoot == NULL) {
+        PrintAndLogEx(FAILED, "Unable to parse VAS select response");
+        return PM3_ECARDEXCHANGE;
+    }
+
+    PrintAndLogEx(NORMAL, "");
+    PrintAndLogEx(INFO, "--- " _CYAN_("VAS Applet Information") " ------------------------");
+
+    const struct tlvdb *walletTypeTlv = tlvdb_find_full(tlvRoot, 0x50);
+    bool skip_vas_details = false;
+    if (walletTypeTlv == NULL) {
+        PrintAndLogEx(WARNING, "Wallet type.......... " _YELLOW_("not present"));
+    } else {
+        const struct tlv *walletType = tlvdb_get_tlv(walletTypeTlv);
+        PrintAndLogEx(INFO, "Wallet type.......... " _YELLOW_("%s"), sprint_ascii(walletType->value, walletType->len));
+        if (VASWalletTypeIsApplePay(walletType->value, walletType->len) == false) {
+            PrintAndLogEx(WARNING, "Wallet type is not ApplePay. This likely isn't Apple VAS.");
+            skip_vas_details = true;
+        }
+    }
+
+    if (skip_vas_details == false) {
+        const struct tlvdb *versionTlv = tlvdb_find_full(tlvRoot, 0x9F21);
+        if (versionTlv == NULL) {
+            PrintAndLogEx(WARNING, "VAS version.......... " _YELLOW_("not present"));
+        } else {
+            const struct tlv *version = tlvdb_get_tlv(versionTlv);
+            if (version->len == 2) {
+                PrintAndLogEx(INFO, "VAS version.......... " _YELLOW_("%d.%d"), version->value[0], version->value[1]);
+            } else {
+                PrintAndLogEx(WARNING, "VAS version.......... " _YELLOW_("invalid length (%zu)"), version->len);
+            }
+        }
+
+        const struct tlvdb *nonceTlv = tlvdb_find_full(tlvRoot, 0x9F24);
+        if (nonceTlv == NULL) {
+            PrintAndLogEx(WARNING, "Device nonce......... " _YELLOW_("not present"));
+        } else {
+            const struct tlv *nonce = tlvdb_get_tlv(nonceTlv);
+            PrintAndLogEx(INFO, "Device nonce......... " _YELLOW_("%s"), sprint_hex_inrow(nonce->value, nonce->len));
+            if (nonce->len != 4) {
+                PrintAndLogEx(WARNING, "Device nonce......... " _YELLOW_("unexpected length (%zu)"), nonce->len);
+            }
+        }
+
+        const struct tlvdb *capabilitiesTlv = tlvdb_find_full(tlvRoot, 0x9F23);
+        if (capabilitiesTlv == NULL) {
+            PrintAndLogEx(WARNING, "Mobile capabilities.. " _YELLOW_("not present"));
+        } else {
+            const struct tlv *capabilities = tlvdb_get_tlv(capabilitiesTlv);
+            PrintAndLogEx(INFO, "Mobile capabilities.. " _YELLOW_("%s"), sprint_hex_inrow(capabilities->value, capabilities->len));
+            PrintVASCapabilitiesMeaning(capabilities);
+        }
+    }
+
+    tlvdb_free(tlvRoot);
+    PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
 }
 
@@ -507,6 +639,30 @@ static int CmdVASReader(const char *Cmd) {
     return res;
 }
 
+static int CmdVASInfo(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf vas info",
+                  "Select VAS applet and print capabilities.",
+                  "hf vas info\n"
+                  "hf vas info -a");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("a", "apdu", "Show APDU requests and responses"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+
+    bool apdu_logging = arg_get_lit(ctx, 1);
+    CLIParserFree(ctx);
+
+    bool restore_apdu_logging = GetAPDULogging();
+    SetAPDULogging(apdu_logging);
+    int res = info_vas();
+    SetAPDULogging(restore_apdu_logging);
+    return res;
+}
+
 static int CmdVASDecrypt(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf vas decrypt",
@@ -582,6 +738,7 @@ static command_t CommandTable[] = {
     {"--------",  CmdHelp,        AlwaysAvailable,  "----------- " _CYAN_("Value Added Service") " -----------"},
     {"help",      CmdHelp,        AlwaysAvailable,  "This help"},
     {"--------",  CmdHelp,        AlwaysAvailable,  "----------------- " _CYAN_("General") " -----------------"},
+    {"info",      CmdVASInfo,     IfPm3Iso14443a,   "Get VAS applet information"},
     {"reader",    CmdVASReader,   IfPm3Iso14443a,   "Read and decrypt VAS message"},
     {"decrypt",   CmdVASDecrypt,  AlwaysAvailable,  "Decrypt a previously captured VAS cryptogram"},
     {NULL, NULL, NULL, NULL}
