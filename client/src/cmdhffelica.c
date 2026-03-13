@@ -4200,7 +4200,7 @@ static int felica_internal_authentication(
         return PM3_ERFTRANS;
     }
 
-    if (res.status_flags.status_flag1[0] != 0x00 && res.status_flags.status_flag2[0] != 0x00) {
+    if (res.status_flags.status_flag1[0] != 0x00 || res.status_flags.status_flag2[0] != 0x00) {
         PrintAndLogEx(ERR, "\nError RC Write");
         return PM3_ERFTRANS;
     }
@@ -4329,7 +4329,7 @@ static int felica_external_authentication(
         return PM3_ERFTRANS;
     }
 
-    if (res.status_flags.status_flag1[0] != 0x00 && res.status_flags.status_flag2[0] != 0x00) {
+    if (res.status_flags.status_flag1[0] != 0x00 || res.status_flags.status_flag2[0] != 0x00) {
         PrintAndLogEx(ERR, "\nExternal Authenticate: " _RED_("Failed"));
         return PM3_ERFTRANS;
     }
