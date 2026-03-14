@@ -630,6 +630,10 @@ int FpgaGetCurrent(void) {
     return downloaded_bitstream;
 }
 
+void FpgaResetBitstream(void) {
+    downloaded_bitstream = FPGA_BITSTREAM_UNKNOWN;
+}
+
 // Turns off the antenna,
 // log message
 // if HF,  Disable SSC DMA

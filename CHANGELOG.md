@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added `hf 14b tearoff` - interactive ST25TB/SRx monotonic counter tear-off attack (@xNovyz)
+- Fixed missing `WDT_HIT()` in `Get14443bAnswerFromTag()` DMA polling loop causing hardware watchdog reboot on SSC clock stall (@xNovyz)
 - Added `hf vas info` command (@kormax)
 - Changed `wiegand encode` / `wiegand decode` - added support for encoding and decoding the new 96-bit ASN.1 encoded format, `--bin` encoding, verbose PACS encoding output, and explicit rejection of raw/binary decodes above 96 bits (@cindersocket)
 - Added Mifare Classic support to `hf gallagher` command (@pingu2211)

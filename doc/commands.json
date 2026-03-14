@@ -1680,6 +1680,26 @@
             ],
             "usage": "hf 14b sniff [-h]"
         },
+        "hf 14b tearoff": {
+            "command": "hf 14b tearoff",
+            "description": "Use tear-off technique to manipulate ST25TB/SRx monotonic counter blocks. This exploits EEPROM tearing to increment counters that normally can only be decremented. Based on the near-field-chaos project by SecLabz. The attack works by sending a write command and cutting the RF field at a precise moment, causing a partial write that can raise the counter value. The operation usually takes a few seconds to a few minutes. NOTE: 0xFFFFFFFE values may be unstable due to tag internals. Keep the tag positioned steadily on the antenna.",
+            "notes": [
+                "hf 14b tearoff -b 5 -d FFFFFFFE",
+                "hf 14b tearoff -b 6 -d FFFFFFFE",
+                "hf 14b tearoff -b 5 -d FFFFFFFE --start 5000 --adj 50",
+                "hf 14b tearoff -b 5 -d FFFFFFFE --safety 1000"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-b, --block <dec> block number (typically 5 or 6 for ST25TB counters)",
+                "-d, --data <hex> target counter value (4 hex bytes, e.g. FFFFFFFE)",
+                "--adj <dec> tear-off timing step in us (default: 25)",
+                "--safety <dec> safety threshold value (default: 0x1000)",
+                "--start <dec> initial tear-off delay in us (default: 150)"
+            ],
+            "usage": "hf 14b tearoff [-h] -b <dec> -d <hex> [--adj <dec>] [--safety <dec>] [--start <dec>]"
+        },
         "hf 14b valid": {
             "command": "hf 14b valid",
             "description": "SRIX checksum test",
@@ -2212,6 +2232,64 @@
             ],
             "usage": "hf 15 writedsfid [-h*2ov] [-u <hex>] [--ua] --dsfid <dec>"
         },
+        "hf aliro help": {
+            "command": "hf aliro help",
+            "description": "----------- ----------------------- General ----------------------- help This help list List ISO 14443A/7816 history --------------------------------------------------------------------------------------- hf aliro list available offline: yes Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "notes": [
+                "hf aliro list --frame -> show frame delay times",
+                "hf aliro list -1 -> use trace buffer"
+            ],
+            "offline": true,
+            "options": [
+                "-h, --help This help",
+                "-1, --buffer use data from trace buffer",
+                "--frame show frame delay times",
+                "-c mark CRC bytes",
+                "-r show relative times (gap and duration)",
+                "-u display times in microseconds instead of clock cycles",
+                "-x show hexdump to convert to pcap(ng)",
+                "or to import into Wireshark using encapsulation type \"ISO 14443\"",
+                "-f, --file <fn> filename of dictionary"
+            ],
+            "usage": "hf aliro list [-h1crux] [--frame] [-f <fn>]"
+        },
+        "hf aliro info": {
+            "command": "hf aliro info",
+            "description": "Select ALIRO applet and print capabilities.",
+            "notes": [
+                "hf aliro info",
+                "hf aliro info -a"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-a, --apdu Show APDU requests and responses"
+            ],
+            "usage": "hf aliro info [-ha]"
+        },
+        "hf aliro read": {
+            "command": "hf aliro read",
+            "description": "Execute ALIRO expedited flow and optional step-up document retrieval.",
+            "notes": [
+                "hf aliro read --reader-group-id 00112233445566778899AABBCCDDEEFF --reader-sub-group-id 00112233445566778899AABBCCDDEEFF --reader-private-key 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF",
+                "hf aliro read --reader-group-id 00112233445566778899AABBCCDDEEFF --reader-private-key 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF --transaction-id 00112233445566778899AABBCCDDEEFF --k-persistent 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF --endpoint-public-key 04AABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF --flow fast -a",
+                "hf aliro read --reader-group-id 00112233445566778899AABBCCDDEEFF --reader-private-key 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF --step-up-scopes matter1,non_access_extensions"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-k, --k-persistent, --key-persistent, --kpersistent, --keypersistent, --kp <hex> Kpersistent (32 bytes, optional; used for fast cryptogram verification)",
+                "-g, --reader-group-id, --readergroupid, --rgi <hex> Reader group identifier (16 bytes)",
+                "-s, --reader-sub-group-id, --readersubid, --rsi <hex> Reader subgroup identifier (16 bytes, default: all zeroes)",
+                "-p, --reader-private-key, --readerprivkey, --rpk <hex> Reader private key (32 bytes, P-256)",
+                "-t, --transaction-id, --ti <hex> Transaction identifier (16 bytes, optional; random if omitted)",
+                "-e, --endpoint-public-key, --endpointpublickey, --epk <hex> Endpoint public key for AUTH0 fast verification (32-byte X or 65-byte uncompressed)",
+                "-f, --flow <step-up|standard|fast> Transaction flow (default: step-up)",
+                "--step-up-scopes <scope1,scope2> Comma-separated step-up scopes (default: matter1)",
+                "-a, --apdu Show APDU requests and responses"
+            ],
+            "usage": "hf aliro read [-ha] [-k <hex>] -g <hex> [-s <hex>] -p <hex> [-t <hex>] [-e <hex>] [-f <step-up|standard|fast>] [--step-up-scopes <scope1,scope2>]"
+        },
         "hf cipurse aread": {
             "command": "hf cipurse aread",
             "description": "Read file attributes by file ID with key ID and key. If no key is supplied, default key of 737373...7373 will be used",
@@ -2682,14 +2760,16 @@
             "command": "hf felica dump",
             "description": "Dump all existing Area Code and Service Code. Only works on services that do not require authentication yet.",
             "notes": [
-                "hf felica dump"
+                "hf felica dump",
+                "hf felica dump --retry 5"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
-                "--no-auth read public services"
+                "--no-auth read public services",
+                "-r, --retry <dec> number of retries"
             ],
-            "usage": "hf felica dump [-h] [--no-auth]"
+            "usage": "hf felica dump [-h] [--no-auth] [-r <dec>]"
         },
         "hf felica help": {
             "command": "hf felica help",
@@ -2876,7 +2956,7 @@
         },
         "hf felica rqspecver": {
             "command": "hf felica rqspecver",
-            "description": "Use this command to acquire the version of card OS. Response: - Format version: Fixed value 00h. Provided only if Status Flag1 = 00h - Basic version: Each value of version is expressed in BCD notation. Provided only if Status Flag1 = 00h - Number of Option: value = 0: AES card, value = 1: AES/DES card. Provided only if Status Flag1 = 00h - Option version list: Provided only if Status Flag1 = 00h - AES card: not added - AES/DES card: DES option version is added - BCD notation",
+            "description": "Use this command to acquire the version of card OS. Response: - Format version: Fixed value 00h. Provided only if Status Flag1 = 00h - Basic version: Each value of version is expressed in BCD notation. Provided only if Status Flag1 = 00h - Number of Option: number of entries in Option Version List. - Option version list: BCD notation (major.minor.patch), little-endian, provided only if Status Flag1 = 00h",
             "notes": [
                 "hf felica rqspecver",
                 "hf felica rqspecver -r 0001",
@@ -2909,13 +2989,27 @@
             "command": "hf felica scsvcode",
             "description": "Dump all existing Area Code and Service Code.",
             "notes": [
-                "hf felica scsvcode"
+                "hf felica scsvcode",
+                "hf felica scsvcode --retry 5"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-r, --retry <dec> number of retries"
+            ],
+            "usage": "hf felica scsvcode [-h] [-r <dec>]"
+        },
+        "hf felica seacinfo": {
+            "command": "hf felica seacinfo",
+            "description": "Get info about FeliCa SEAC cards",
+            "notes": [
+                "hf felica seacinfo"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help"
             ],
-            "usage": "hf felica scsvcode [-h]"
+            "usage": "hf felica seacinfo [-h]"
         },
         "hf felica sniff": {
             "command": "hf felica sniff",
@@ -3256,7 +3350,7 @@
         },
         "hf help": {
             "command": "hf help",
-            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } saflok { Saflok MFC RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service... } waveshare { Waveshare NFC ePaper... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
+            "description": "-------- ----------------------- High Frequency ----------------------- 14a { ISO14443A RFIDs... } 14b { ISO14443B RFIDs... } 15 { ISO15693 RFIDs... } aliro { ALIRO digital access credentials... } cipurse { Cipurse transport Cards... } epa { German Identification Card... } emrtd { Machine Readable Travel Document... } felica { ISO18092 / FeliCa RFIDs... } fido { FIDO and FIDO2 authenticators... } fudan { Fudan RFIDs... } gallagher { Gallagher DESFire RFIDs... } iclass { ICLASS RFIDs... } ict { ICT MFC/DESfire RFIDs... } jooki { Jooki RFIDs... } ksx6924 { KS X 6924 (T-Money, Snapper+) RFIDs } legic { LEGIC RFIDs... } lto { LTO Cartridge Memory RFIDs... } mf { MIFARE RFIDs... } mfp { MIFARE Plus RFIDs... } mfu { MIFARE Ultralight RFIDs... } mfdes { MIFARE Desfire RFIDs... } ntag424 { NXP NTAG 4242 DNA RFIDs... } saflok { Saflok MFC RFIDs... } seos { SEOS RFIDs... } st25ta { ST25TA RFIDs... } tesla { TESLA Cards... } texkom { Texkom RFIDs... } thinfilm { Thinfilm RFIDs... } topaz { TOPAZ (NFC Type 1) RFIDs... } vas { Apple Value Added Service... } waveshare { Waveshare NFC ePaper... } xerox { Fuji/Xerox cartridge RFIDs... } ----------- --------------------- General --------------------- help This help list List protocol data in trace buffer search Search for known HF tags --------------------------------------------------------------------------------------- hf list available offline: yes Alias of `trace list -t raw` with selected protocol data to annotate trace buffer You can load a trace from file (see `trace load -h`) or it be downloaded from device by default It accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol",
             "notes": [
                 "hf list --frame -> show frame delay times",
                 "hf list -1 -> use trace buffer"
@@ -3581,9 +3675,10 @@
                 "--allnight Loops the loop for 10 times, recommended loop value of 5000",
                 "--fast Increases the speed (4.6->7.4 key updates/second), higher risk to brick the card",
                 "--sl Lower card comms delay times, further speeds increases, may cause more errors",
-                "--est Estimates the key updates based on the card's CSN assuming standard key"
+                "--est Estimates the key updates based on the card's CSN assuming standard key, can be used with --credit option",
+                "--credit EXPERIMENTAL : Recover the credit key using KD 0"
             ],
-            "usage": "hf iclass legrec [-h] --macs <hex> [--index <dec>] [--loop <dec>] [--debug] [--notest] [--allnight] [--fast] [--sl] [--est]"
+            "usage": "hf iclass legrec [-h] --macs <hex> [--index <dec>] [--loop <dec>] [--debug] [--notest] [--allnight] [--fast] [--sl] [--est] [--credit]"
         },
         "hf iclass loclass": {
             "command": "hf iclass loclass",
@@ -5730,7 +5825,11 @@
             "description": "Recover AIDs by bruteforce. WARNING: This command takes a loooong time",
             "notes": [
                 "hf mfdes bruteaid -> Search all apps",
-                "hf mfdes bruteaid --start F0000F -i 16 -> Search MAD range manually"
+                "hf mfdes bruteaid --preset mad -> Search MAD range preset (default start F0000F, step 16; can override start)",
+                "hf mfdes bruteaid --preset ascii -> Search with ASCII printable + whitespace bytes only",
+                "hf mfdes bruteaid --preset numbers -> Search with numeric bytes ('0'..'9') only",
+                "hf mfdes bruteaid --preset letters -> Search with letter bytes ('A'..'Z','a'..'z') only",
+                "hf mfdes bruteaid --preset dictionary -> Search AIDs from `aid_desfire` dictionary (direct + inverted byte order)"
             ],
             "offline": false,
             "options": [
@@ -5738,9 +5837,30 @@
                 "--start <hex> Starting App ID as hex bytes (3 bytes, big endian)",
                 "--end <hex> Last App ID as hex bytes (3 bytes, big endian)",
                 "-i, --step <dec> Increment step when bruteforcing",
-                "-m, --mad Only bruteforce the MAD range"
+                "--preset <full|ascii|numbers|letters|dictionary|mad> Bruteforce candidate preset (`full` default, `ascii` printable + whitespace, `numbers` = '0'..'9', `letters` = 'A'..'Z'+'a'..'z', `dictionary` = aid_desfire list with direct + inverted byte order, `mad` = step 16 with default start F0000F unless --start is provided)"
             ],
-            "usage": "hf mfdes bruteaid [-hm] [--start <hex>] [--end <hex>] [-i <dec>]"
+            "usage": "hf mfdes bruteaid [-h] [--start <hex>] [--end <hex>] [-i <dec>] [--preset <full|ascii|numbers|letters|dictionary|mad>]"
+        },
+        "hf mfdes bruteisofid": {
+            "command": "hf mfdes bruteisofid",
+            "description": "Recover ISO file IDs by bruteforce. WARNING: This command takes a loooong time",
+            "notes": [
+                "hf mfdes bruteisofid --aid 123456 -> bruteforce ISO file IDs for application 123456",
+                "hf mfdes bruteisofid --start 0000 --end 0fff -> bruteforce specific file ISO ID range"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-a, --apdu Show APDU requests and responses",
+                "-v, --verbose Verbose output",
+                "--aid <hex> Application ID (3 hex bytes, big endian)",
+                "--isoid <hex> Application ISO ID (ISO DF ID) (2 hex bytes, big endian)",
+                "--dfname <hex> Application ISO DF Name (5-16 hex bytes, big endian)",
+                "--start <hex> Starting File ISO ID (2 hex bytes, big endian)",
+                "--end <hex> Last File ISO ID (2 hex bytes, big endian)",
+                "--step <dec> Increment step when bruteforcing"
+            ],
+            "usage": "hf mfdes bruteisofid [-hav] [--aid <hex>] [--isoid <hex>] [--dfname <hex>] [--start <hex>] [--end <hex>] [--step <dec>]"
         },
         "hf mfdes changekey": {
             "command": "hf mfdes changekey",
@@ -6706,6 +6826,25 @@
             ],
             "usage": "hf mfdes selectapp [-hav] [-n <dec>] [-t <DES|2TDEA|3TDEA|AES>] [-k <hex>] [--kdf <none|AN10922|gallagher>] [-i <hex>] [-m <plain|mac|encrypt>] [-c <native|niso|iso>] [--schann <d40|ev1|ev2|lrp>] [--aid <hex>] [--dfname <str>] [--mf] [--isoid <hex>] [--fileisoid <hex>]"
         },
+        "hf mfdes selectisofid": {
+            "command": "hf mfdes selectisofid",
+            "description": "Select file via ISO Select command by 2-byte ISO file identifier. Optionally preselect an application by AID or DF name before selecting the file.",
+            "notes": [
+                "hf mfdes selectisofid --isofid e104 -> select file 0xE104",
+                "hf mfdes selectisofid --aid 123456 --isofid 00ef -> select file 0x00EF in app 0x123456",
+                "hf mfdes selectisofid --dfname D2760000850100 --isofid 00ef --apdu -> select file 0x00EF after DF name selection and show APDU logs"
+            ],
+            "offline": false,
+            "options": [
+                "-h, --help This help",
+                "-a, --apdu Show APDU requests and responses",
+                "-v, --verbose Verbose output",
+                "--aid <hex> Application ID (3 hex bytes, big endian)",
+                "--dfname <hex> Application ISO DF Name (1-16 hex bytes, big endian)",
+                "--isofid <hex> File ISO ID (ISO EF ID) (2 hex bytes, big endian)"
+            ],
+            "usage": "hf mfdes selectisofid [-hav] [--aid <hex>] [--dfname <hex>] [--isofid <hex>]"
+        },
         "hf mfdes setconfig": {
             "command": "hf mfdes setconfig",
             "description": "Set card configuration. WARNING! Danger zone! Needs to provide card's master key and works if not blocked by config.",
@@ -6947,18 +7086,24 @@
         },
         "hf mfp dump": {
             "command": "hf mfp dump",
-            "description": "Dump MIFARE Plus tag to file (bin/json) If no <name> given, UID will be used as filename",
+            "description": "Dump MIFARE Plus tag to file (bin/json) Reads sectors using keys from `hf mfp chk --dump` (AES/SL3) and/or `hf mf chk` key file (CRYPTO1/SL1) for mixed-mode cards. Key files are auto-detected by UID if not specified. If no <name> given, UID will be used as filename",
             "notes": [
                 "hf mfp dump",
-                "hf mfp dump --keys hf-mf-066C8B78-key.bin -> MIFARE Plus with keys from specified file"
+                "hf mfp dump --keys hf-mfp-01020304-key.json",
+                "hf mfp dump --keys hf-mfp-01020304-key.json --mfc-keys hf-mf-01020304-key.bin",
+                "hf mfp dump -k ffffffffffffffffffffffffffffffff"
             ],
             "offline": false,
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> Specify a filename for dump file",
-                "-k, --keys <fn> Specify a filename for keys file"
+                "--keys <fn> AES key file from `hf mfp chk --dump` (JSON)",
+                "-k, --key <hex> AES key for all sectors (16 hex bytes)",
+                "--mfc-keys <fn> MFC key file for SL1 sectors (.bin from `hf mf chk`)",
+                "--ns No save to file",
+                "-v, --verbose Verbose output"
             ],
-            "usage": "hf mfp dump [-h] [-f <fn>] [-k <fn>]"
+            "usage": "hf mfp dump [-hv] [-f <fn>] [--keys <fn>] [-k <hex>] [--mfc-keys <fn>] [--ns]"
         },
         "hf mfp help": {
             "command": "hf mfp help",
@@ -13815,8 +13960,8 @@
         }
     },
     "metadata": {
-        "commands_extracted": 791,
+        "commands_extracted": 798,
         "extracted_by": "PM3Help2JSON v1.00",
-        "extracted_on": "2026-02-24T15:41:26"
+        "extracted_on": "2026-03-11T21:39:07"
     }
 }
