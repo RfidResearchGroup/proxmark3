@@ -1560,6 +1560,116 @@ static int gst_decompress_payload_zlib(const uint8_t *compressed_payload, size_t
 }
 #endif
 
+static int gst_selftest_zlib(void) {
+#ifdef HAVE_ZLIB
+    // Captured from a compressed RECORD_BUNDLE payload produced by Google's demo pass.
+    static const uint8_t compressed_payload[] = {
+        0x78, 0xDA, 0x5D, 0xD4, 0xBD, 0x4A, 0x03, 0x41, 0x18, 0x85, 0xE1, 0xDD,
+        0xEC, 0x22, 0x58, 0x6A, 0x67, 0x99, 0xD4, 0x0A, 0xF9, 0x7E, 0xA2, 0xC6,
+        0xDA, 0x26, 0x76, 0xE2, 0x56, 0x82, 0x4A, 0x48, 0x02, 0x46, 0x82, 0x1A,
+        0x93, 0x08, 0x41, 0xEC, 0x2C, 0x2D, 0x2C, 0x82, 0x8D, 0xE0, 0x05, 0x88,
+        0xB5, 0xD7, 0xA0, 0x77, 0x21, 0xDE, 0x87, 0xE0, 0xA2, 0xCC, 0xD9, 0x39,
+        0x4E, 0xB5, 0xF3, 0xEE, 0x34, 0x0F, 0xF3, 0x73, 0x97, 0x25, 0x49, 0xFE,
+        0xDE, 0x9D, 0x5C, 0x2F, 0xD2, 0xA5, 0x61, 0x9E, 0x26, 0xE5, 0xD8, 0xAD,
+        0x95, 0xE9, 0x6D, 0x34, 0x5F, 0x64, 0xCB, 0x17, 0xC3, 0x7E, 0x5E, 0xFF,
+        0xD8, 0xDB, 0x4F, 0xBF, 0x8E, 0x5F, 0x3A, 0xE5, 0xCF, 0xFC, 0x39, 0x2D,
+        0xCE, 0x93, 0x9B, 0x46, 0xBF, 0x3B, 0xED, 0x6E, 0x34, 0x1B, 0x3B, 0xBF,
+        0x1F, 0x27, 0xA7, 0x83, 0xAB, 0x41, 0xB3, 0xB1, 0xFE, 0x57, 0x25, 0xAE,
+        0x12, 0xAA, 0xC6, 0x55, 0x43, 0xB5, 0xB8, 0x5A, 0xA8, 0x1E, 0x57, 0x0F,
+        0xB5, 0x15, 0xD7, 0x56, 0xA8, 0x9B, 0x71, 0xDD, 0x0C, 0x75, 0x2B, 0xAE,
+        0x5B, 0xA1, 0x6E, 0xC7, 0x75, 0x3B, 0xD4, 0x76, 0x5C, 0xDB, 0x50, 0x10,
+        0x4E, 0x2A, 0x1D, 0xF3, 0xE0, 0x13, 0x02, 0x0A, 0x84, 0x42, 0x44, 0x81,
+        0x51, 0x08, 0x29, 0x50, 0x0A, 0x31, 0x05, 0x4E, 0x21, 0xA8, 0x40, 0x2A,
+        0x44, 0x15, 0x58, 0x85, 0xB0, 0x02, 0xAD, 0x10, 0x57, 0xE0, 0x55, 0xF2,
+        0x2A, 0xBC, 0x4A, 0x5E, 0xAD, 0xF6, 0x93, 0x37, 0x14, 0x5E, 0x25, 0xAF,
+        0xC2, 0xAB, 0xE4, 0x55, 0x78, 0x95, 0xBC, 0x0A, 0xAF, 0x92, 0x57, 0xE1,
+        0x55, 0xF2, 0x2A, 0xBC, 0x4A, 0x5E, 0x85, 0x57, 0xC9, 0xAB, 0xF0, 0x1A,
+        0x79, 0x0D, 0x5E, 0x23, 0xAF, 0xC1, 0x6B, 0xE4, 0xB5, 0xEA, 0x04, 0xF3,
+        0x11, 0x86, 0xD7, 0xC8, 0x6B, 0xF0, 0x1A, 0x79, 0x0D, 0x5E, 0x23, 0xAF,
+        0xC1, 0x6B, 0xE4, 0x35, 0x78, 0x8D, 0xBC, 0x06, 0xAF, 0x91, 0xD7, 0xE0,
+        0x75, 0xF2, 0x3A, 0xBC, 0x4E, 0x5E, 0x87, 0xD7, 0xC9, 0xEB, 0xF0, 0x3A,
+        0x79, 0xBD, 0xBA, 0xB3, 0x7C, 0x69, 0xE1, 0x75, 0xF2, 0x3A, 0xBC, 0x4E,
+        0x5E, 0x87, 0xD7, 0xC9, 0xEB, 0xF0, 0x3A, 0x79, 0x1D, 0x5E, 0x27, 0x6F,
+        0x39, 0xBB, 0x2D, 0xB2, 0x4E, 0x78, 0xCD, 0x6A, 0xE3, 0xF9, 0x7C, 0x5C,
+        0x64, 0xED, 0xDE, 0x6C, 0xB2, 0xC8, 0x56, 0x7A, 0xE5, 0x5B, 0x96, 0xFC,
+        0x1B, 0x6B, 0x69, 0x96, 0x15, 0xBD, 0xCB, 0x51, 0x32, 0x38, 0x2F, 0xCA,
+        0x15, 0xB3, 0x69, 0x7E, 0x7F, 0x74, 0xF8, 0x50, 0x7F, 0x3C, 0x58, 0xFD,
+        0x1E, 0x7C, 0x8E, 0xC6, 0x67, 0x4F, 0xAF, 0x3F, 0xF7, 0x6A, 0x82, 0x30,
+    };
+    static const uint8_t loyalty_object_id[] = {0x04, 0x21, 0xC9, 0x4A, 0x51, 0x01, 0xE2, 0x5E, 0xAA};
+    static const uint8_t customer_id[] = {0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    static const size_t sample_decompressed_len = 1312;
+    static const size_t service_value_record_1_len = 1224;
+    static const size_t loyalty_record_len = 1206;
+    static const size_t service_value_record_2_len = 73;
+    static const size_t customer_record_len = 57;
+
+    uint8_t *decompressed_payload = NULL;
+    size_t decompressed_payload_len = 0;
+    int res = gst_decompress_payload_zlib(compressed_payload, sizeof(compressed_payload),
+                                          &decompressed_payload, &decompressed_payload_len);
+    bool inflate_ok = (res == PM3_SUCCESS) && (decompressed_payload_len == sample_decompressed_len);
+    PrintAndLogEx(INFO, "zlib sample inflate... ( %s )", inflate_ok ? _GREEN_("ok") : _RED_("fail"));
+
+    bool parse_ok = false;
+    // Check that inflation worked properly by validating inner data
+    if (inflate_ok) {
+        size_t offset = 0;
+        gst_ndef_record_view_t first_record;
+        gst_ndef_record_view_t second_record;
+        gst_ndef_record_view_t loyalty_record;
+        gst_ndef_record_view_t object_id_record;
+        gst_ndef_record_view_t customer_record;
+        gst_ndef_record_view_t customer_id_record;
+
+        res = gst_ndef_parse_record(decompressed_payload, decompressed_payload_len, &offset, &first_record);
+        if (res == PM3_SUCCESS &&
+                bytes_equal_not_null(first_record.type, first_record.type_len,
+                                     GST_TYPE_SERVICE_VALUE, sizeof(GST_TYPE_SERVICE_VALUE)) &&
+                first_record.payload_len == service_value_record_1_len) {
+            res = gst_ndef_find_by_type_or_id(first_record.payload, first_record.payload_len,
+                                              GST_OBJECT_TYPE_LOYALTY, sizeof(GST_OBJECT_TYPE_LOYALTY),
+                                              &loyalty_record);
+        }
+        if (res == PM3_SUCCESS && loyalty_record.payload_len == loyalty_record_len) {
+            res = gst_ndef_find_by_type_or_id(loyalty_record.payload, loyalty_record.payload_len,
+                                              GST_TYPE_OBJECT_ID, sizeof(GST_TYPE_OBJECT_ID),
+                                              &object_id_record);
+        }
+        if (res == PM3_SUCCESS &&
+                bytes_equal_not_null(object_id_record.payload, object_id_record.payload_len,
+                                     loyalty_object_id, sizeof(loyalty_object_id))) {
+            res = gst_ndef_parse_record(decompressed_payload, decompressed_payload_len, &offset, &second_record);
+        }
+        if (res == PM3_SUCCESS &&
+                bytes_equal_not_null(second_record.type, second_record.type_len,
+                                     GST_TYPE_SERVICE_VALUE, sizeof(GST_TYPE_SERVICE_VALUE)) &&
+                second_record.payload_len == service_value_record_2_len) {
+            res = gst_ndef_find_by_type_or_id(second_record.payload, second_record.payload_len,
+                                              GST_TYPE_CUSTOMER, sizeof(GST_TYPE_CUSTOMER),
+                                              &customer_record);
+        }
+        if (res == PM3_SUCCESS && customer_record.payload_len == customer_record_len) {
+            res = gst_ndef_find_by_type_or_id(customer_record.payload, customer_record.payload_len,
+                                              GST_TYPE_CUSTOMER_ID, sizeof(GST_TYPE_CUSTOMER_ID),
+                                              &customer_id_record);
+        }
+        parse_ok = (res == PM3_SUCCESS) &&
+                   bytes_equal_not_null(customer_id_record.payload, customer_id_record.payload_len,
+                                        customer_id, sizeof(customer_id));
+    }
+    PrintAndLogEx(INFO, "zlib sample parse.... ( %s )", parse_ok ? _GREEN_("ok") : _RED_("fail"));
+
+    free(decompressed_payload);
+
+    return (inflate_ok && parse_ok) ? PM3_SUCCESS : PM3_ESOFT;
+#else
+    PrintAndLogEx(INFO, "zlib support......... ( %s )", _YELLOW_("unsupported"));
+    return PM3_ENOTIMPL;
+#endif
+}
+
 static void gst_print_formatted_payload(const char *label, const uint8_t *payload, size_t payload_len) {
     if (payload == NULL || payload_len == 0) {
         PrintAndLogEx(INFO, "%s <empty>", label);
@@ -2115,6 +2225,29 @@ out:
     return status;
 }
 
+static int CmdHFGSTTest(const char *Cmd) {
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "hf gst test",
+                  "Perform self tests",
+                  "hf gst test");
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    CLIParserFree(ctx);
+
+    PrintAndLogEx(INFO, "------ " _CYAN_("Google Smart Tap tests") " ------");
+    int res = gst_selftest_zlib();
+    if (res == PM3_ENOTIMPL) {
+        PrintAndLogEx(INFO, "Tests ( %s )", _YELLOW_("skipped"));
+    } else {
+        PrintAndLogEx(SUCCESS, "Tests ( %s )", (res == PM3_SUCCESS) ? _GREEN_("ok") : _RED_("fail"));
+    }
+    return res;
+}
+
 static int CmdHFGSTInfo(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf gst info",
@@ -2296,6 +2429,7 @@ static command_t CommandTable[] = {
     {"-----------", CmdHelp,       AlwaysAvailable, "----------------------- " _CYAN_("General") " -----------------------"},
     {"help",        CmdHelp,       AlwaysAvailable, "This help"},
     {"list",        CmdHFGSTList,  AlwaysAvailable, "List ISO 14443A/7816 history"},
+    {"test",        CmdHFGSTTest,  AlwaysAvailable, "Perform self tests"},
     {"-----------", CmdHelp,       IfPm3Iso14443a,  "--------------------- " _CYAN_("Operations") " ----------------------"},
     {"info",        CmdHFGSTInfo,  IfPm3Iso14443a,  "Get Google Smart Tap applet information"},
     {"read",        CmdHFGSTRead,  IfPm3Iso14443a,  "Read and decode Google Smart Tap pass objects"},

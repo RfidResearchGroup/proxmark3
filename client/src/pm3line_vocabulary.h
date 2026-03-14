@@ -284,6 +284,7 @@ const static vocabulary_t vocabulary[] = {
     { 1, "hf gallagher encode" },
     { 1, "hf gst help" },
     { 1, "hf gst list" },
+    { 1, "hf gst test" },
     { 0, "hf gst info" },
     { 0, "hf gst read" },
     { 1, "hf iclass help" },
