@@ -8654,34 +8654,36 @@
             "command": "hf vas decrypt",
             "description": "Decrypt a previously captured cryptogram",
             "notes": [
-                "hf vas decrypt --pid pass.com.passkit.pksamples.nfcdemo -f vas_privkey.der -d c0b77375eae416b79449347f9fe838c05cdb57dc7470b97b93b806cb348771d9bfbe29d58538c7c7d7c3d015fa205b68bfccd726058a62f7f44085ac98dbf877120fd9059f1507b956e0a6d56d0a"
+                "hf vas decrypt --pid pass.com.passkit.pksamples.nfcdemo -k vas.passkit.der -d c0b77375eae416b79449347f9fe838c05cdb57dc7470b97b93b806cb348771d9bfbe29d58538c7c7d7c3d015fa205b68bfccd726058a62f7f44085ac98dbf877120fd9059f1507b956e0a6d56d0a"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "--pid <str> PID, pass type id",
-                "-f, --file <fn> path to terminal private key file",
+                "-k, --key <fn> path to terminal private key file",
                 "-d, --data <hex> cryptogram to decrypt"
             ],
-            "usage": "hf vas decrypt [-h] [--pid <str>] [-f <fn>] [-d <hex>]"
+            "usage": "hf vas decrypt [-h] [--pid <str>] [-k <fn>] [-d <hex>]"
         },
         "hf vas help": {
             "command": "hf vas help",
             "description": "-------- ----------- Value Added Service ----------- help This help -------- ----------------- General ----------------- decrypt Decrypt a previously captured VAS cryptogram --------------------------------------------------------------------------------------- hf vas reader available offline: no Read and decrypt Value Added Services (VAS) message",
             "notes": [
                 "hf vas reader --url https://example.com -> URL Only mode",
-                "hf vas reader --pid pass.com.passkit.pksamples.nfcdemo -f vas_privkey.der -@"
+                "hf vas reader --pid pass.com.passkit.pksamples.nfcdemo -k vas.passkit.der -@",
+                "hf vas reader --pid pass.com.pronto.zebra-wallet-pass.demo -k vas.zebra.der -@",
+                "hf vas reader --pid pass.com.springcard.springblue.generic -k vas.springcard.der -@"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
                 "--pid <str> PID, pass type id",
-                "-f, --file <fn> path to terminal private key file",
+                "-k, --key <fn> path to terminal private key file",
                 "--url <str> a URL to provide to the mobile device",
                 "-@ continuous mode",
                 "-v, --verbose Verbose output"
             ],
-            "usage": "hf vas reader [-h@v] [--pid <str>] [-f <fn>] [--url <str>]"
+            "usage": "hf vas reader [-h@v] [--pid <str>] [-k <fn>] [--url <str>]"
         },
         "hf waveshare help": {
             "command": "hf waveshare help",

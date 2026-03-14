@@ -65,18 +65,14 @@ static const char ALIRO_DEFAULT_STEP_UP_SCOPE[] = "matter1";
 #define ALIRO_MAX_TLV 512
 #define ALIRO_MAX_STEP_UP_SCOPES 16
 #define ALIRO_MAX_STEP_UP_SCOPE_LEN 128
+#define ALIRO_MAX_KEY_INPUT 8192
 #define ALIRO_ACCESS_DOCUMENT_TYPE "aliro-a"
 #define ALIRO_REVOCATION_DOCUMENT_TYPE "aliro-r"
 
 #define ALIRO_SIGNALING_ACCESS_DOCUMENT_RETRIEVABLE (1U << 0)
 #define ALIRO_SIGNALING_REVOCATION_DOCUMENT_RETRIEVABLE (1U << 1)
 #define ALIRO_SIGNALING_STEP_UP_SELECT_REQUIRED_FOR_DOC_RETRIEVAL (1U << 2)
-
-typedef struct {
-    mbedtls_entropy_context entropy;
-    mbedtls_ctr_drbg_context ctr_drbg;
-    bool seeded;
-} aliro_rng_t;
+static const uint8_t ALIRO_RNG_PERSONALIZATION[] = "pm3-aliro";
 
 typedef struct {
     uint16_t type;
@@ -205,63 +201,6 @@ static const char *get_aliro_application_type_name(uint16_t type) {
         }
     }
     return NULL;
-}
-
-static void aliro_print_big_header(const char *title) {
-    static const char dashes[] = "----------------------------------------------------------------------------------------------------";
-    const size_t width = 82;
-    const size_t title_len = strlen(title);
-
-    if (title_len + 2 >= width) {
-        PrintAndLogEx(INFO, _CYAN_("%s"), title);
-        return;
-    }
-
-    size_t dash_count = width - (title_len + 2);
-    size_t left = dash_count / 2;
-    size_t right = dash_count - left;
-    if (left > (sizeof(dashes) - 1)) {
-        left = sizeof(dashes) - 1;
-    }
-    if (right > (sizeof(dashes) - 1)) {
-        right = sizeof(dashes) - 1;
-    }
-
-    PrintAndLogEx(INFO, "%.*s " _CYAN_("%s") " %.*s",
-                  (int)left, dashes, title, (int)right, dashes);
-}
-
-static int aliro_rng_init(aliro_rng_t *rng) {
-    if (rng == NULL) {
-        return PM3_EINVARG;
-    }
-
-    memset(rng, 0, sizeof(*rng));
-    mbedtls_entropy_init(&rng->entropy);
-    mbedtls_ctr_drbg_init(&rng->ctr_drbg);
-
-    static const uint8_t personalization[] = "pm3-aliro";
-    int ret = mbedtls_ctr_drbg_seed(&rng->ctr_drbg, mbedtls_entropy_func, &rng->entropy,
-                                    personalization, sizeof(personalization) - 1);
-    if (ret != 0) {
-        PrintAndLogEx(ERR, "Failed to initialize random generator (mbedtls: %d)", ret);
-        mbedtls_ctr_drbg_free(&rng->ctr_drbg);
-        mbedtls_entropy_free(&rng->entropy);
-        return PM3_ESOFT;
-    }
-
-    rng->seeded = true;
-    return PM3_SUCCESS;
-}
-
-static void aliro_rng_free(aliro_rng_t *rng) {
-    if (rng == NULL) {
-        return;
-    }
-
-    mbedtls_ctr_drbg_free(&rng->ctr_drbg);
-    mbedtls_entropy_free(&rng->entropy);
-    rng->seeded = false;
 }
 
 static int aliro_ber_encode_length(size_t len, uint8_t *out, size_t out_max, size_t *out_len) {
@@ -644,7 +583,7 @@ static bool aliro_choose_protocol_version(const aliro_select_info_t *select_info
     return true;
 }
 
-static int aliro_load_private_key(const uint8_t private_key_bytes[32], mbedtls_ecp_keypair *keypair, aliro_rng_t *rng) {
+static int aliro_load_private_key(const uint8_t private_key_bytes[32], mbedtls_ecp_keypair *keypair, pcrypto_rng_t *rng) {
     if (private_key_bytes == NULL || keypair == NULL || rng == NULL || rng->seeded == false) {
         return PM3_EINVARG;
     }
@@ -677,7 +616,7 @@ static int aliro_load_private_key(const uint8_t private_key_bytes[32], mbedtls_e
     return PM3_SUCCESS;
 }
 
-static int aliro_generate_ephemeral_keypair(mbedtls_ecp_keypair *keypair, aliro_rng_t *rng) {
+static int aliro_generate_ephemeral_keypair(mbedtls_ecp_keypair *keypair, pcrypto_rng_t *rng) {
     if (keypair == NULL || rng == NULL || rng->seeded == false) {
         return PM3_EINVARG;
     }
@@ -740,7 +679,7 @@ static int aliro_compute_kdh(const mbedtls_ecp_keypair *reader_ephemeral_private
                              const uint8_t endpoint_ephemeral_public_key[65],
                              const uint8_t transaction_identifier[16],
                              uint8_t kdh[32],
-                             aliro_rng_t *rng) {
+                             pcrypto_rng_t *rng) {
     if (reader_ephemeral_private_key == NULL || endpoint_ephemeral_public_key == NULL ||
             transaction_identifier == NULL || kdh == NULL || rng == NULL || rng->seeded == false) {
         return PM3_EINVARG;
@@ -1117,18 +1056,6 @@ static bool aliro_is_zeroed(const uint8_t *buf, size_t len) {
     return true;
 }
 
-static bool aliro_is_ascii(const uint8_t *buf, size_t len) {
-    if (buf == NULL) {
-        return false;
-    }
-    for (size_t i = 0; i < len; i++) {
-        if (buf[i] < 0x20 || buf[i] > 0x7E) {
-            return false;
-        }
-    }
-    return true;
-}
-
 static void aliro_print_timestamp(const char *label, const uint8_t *timestamp, bool have) {
     if (have == false) {
         PrintAndLogEx(INFO, "%s not present", label);
@@ -1138,25 +1065,11 @@ static void aliro_print_timestamp(const char *label, const uint8_t *timestamp, b
         PrintAndLogEx(INFO, "%s all-zero", label);
         return;
     }
-    if (aliro_is_ascii(timestamp, 20)) {
+    if (is_printable_ascii(timestamp, 20)) {
         PrintAndLogEx(INFO, "%s %s", label, sprint_ascii(timestamp, 20));
     } else {
         PrintAndLogEx(INFO, "%s %s", label, sprint_hex_inrow(timestamp, 20));
     }
-}
-
-static int aliro_buf_append(uint8_t *buf, size_t buf_len, size_t *offset, const uint8_t *data, size_t data_len) {
-    if (buf == NULL || offset == NULL || (data_len > 0 && data == NULL)) {
-        return PM3_EINVARG;
-    }
-    if (*offset > buf_len || data_len > (buf_len - *offset)) {
-        return PM3_EOVFLOW;
-    }
-    if (data_len > 0) {
-        memcpy(buf + *offset, data, data_len);
-        *offset += data_len;
-    }
-    return PM3_SUCCESS;
 }
 
 static int aliro_build_kdf_info(uint8_t *info, size_t info_len, size_t *written_len,
@@ -1168,11 +1081,11 @@ static int aliro_build_kdf_info(uint8_t *info, size_t info_len, size_t *written_
     }
 
     *written_len = 0;
-    int res = aliro_buf_append(info, info_len, written_len, endpoint_ephemeral_public_key_x, 32);
+    int res = buffer_append_bytes_with_offset(info, info_len, written_len, endpoint_ephemeral_public_key_x, 32);
     if (res != PM3_SUCCESS) {
         return res;
     }
-    return aliro_buf_append(info, info_len, written_len, auth0_suffix, auth0_suffix_len);
+    return buffer_append_bytes_with_offset(info, info_len, written_len, auth0_suffix, auth0_suffix_len);
 }
 
 static int aliro_build_kdf_salt(uint8_t *salt, size_t salt_len, size_t *written_len,
@@ -1197,44 +1110,44 @@ static int aliro_build_kdf_salt(uint8_t *salt, size_t salt_len, size_t *written_
     uint8_t flag[2] = {command_parameters, authentication_policy};
 
     *written_len = 0;
-    int res = aliro_buf_append(salt, salt_len, written_len, reader_public_key_x, 32);
+    int res = buffer_append_bytes_with_offset(salt, salt_len, written_len, reader_public_key_x, 32);
     if (res != PM3_SUCCESS) {
         return res;
     }
-    res = aliro_buf_append(salt, salt_len, written_len, mode, mode_len);
+    res = buffer_append_bytes_with_offset(salt, salt_len, written_len, mode, mode_len);
     if (res != PM3_SUCCESS) {
         return res;
     }
-    res = aliro_buf_append(salt, salt_len, written_len, reader_identifier, 32);
+    res = buffer_append_bytes_with_offset(salt, salt_len, written_len, reader_identifier, 32);
     if (res != PM3_SUCCESS) {
         return res;
     }
-    res = aliro_buf_append(salt, salt_len, written_len, protocol_marker, sizeof(protocol_marker));
+    res = buffer_append_bytes_with_offset(salt, salt_len, written_len, protocol_marker, sizeof(protocol_marker));
     if (res != PM3_SUCCESS) {
         return res;
     }
-    res = aliro_buf_append(salt, salt_len, written_len, protocol_version, 2);
+    res = buffer_append_bytes_with_offset(salt, salt_len, written_len, protocol_version, 2);
     if (res != PM3_SUCCESS) {
         return res;
     }
-    res = aliro_buf_append(salt, salt_len, written_len, reader_ephemeral_public_key_x, 32);
+    res = buffer_append_bytes_with_offset(salt, salt_len, written_len, reader_ephemeral_public_key_x, 32);
     if (res != PM3_SUCCESS) {
         return res;
     }
-    res = aliro_buf_append(salt, salt_len, written_len, transaction_identifier, 16);
+    res = buffer_append_bytes_with_offset(salt, salt_len, written_len, transaction_identifier, 16);
     if (res != PM3_SUCCESS) {
         return res;
     }
-    res = aliro_buf_append(salt, salt_len, written_len, flag, sizeof(flag));
+    res = buffer_append_bytes_with_offset(salt, salt_len, written_len, flag, sizeof(flag));
     if (res != PM3_SUCCESS) {
         return res;
     }
-    res = aliro_buf_append(salt, salt_len, written_len, fci_proprietary_tlv, fci_proprietary_tlv_len);
+    res = buffer_append_bytes_with_offset(salt, salt_len, written_len, fci_proprietary_tlv, fci_proprietary_tlv_len);
     if (res != PM3_SUCCESS) {
         return res;
     }
     if (endpoint_public_key_x != NULL) {
-        res = aliro_buf_append(salt, salt_len, written_len, endpoint_public_key_x, 32);
+        res = buffer_append_bytes_with_offset(salt, salt_len, written_len, endpoint_public_key_x, 32);
         if (res != PM3_SUCCESS) {
             return res;
         }
@@ -1494,7 +1407,7 @@ static int aliro_read_prepare_session(aliro_read_state_t *state,
                                       const uint8_t reader_group_sub_identifier[16],
                                       const uint8_t reader_private_key_raw[32],
                                       const uint8_t *transaction_identifier_in, size_t transaction_identifier_len,
-                                      aliro_rng_t *rng) {
+                                      pcrypto_rng_t *rng) {
     if (state == NULL || reader_private_key == NULL || reader_ephemeral_key == NULL ||
             reader_group_identifier == NULL || reader_group_sub_identifier == NULL ||
             reader_private_key_raw == NULL || rng == NULL) {
@@ -1518,7 +1431,7 @@ static int aliro_read_prepare_session(aliro_read_state_t *state,
         return res;
     }
 
-    aliro_print_big_header("Applet information");
+    PrintAndLogInfoHeader("Applet information");
     print_aliro_select_info(&state->select_info);
 
     if (state->select_info.have_proprietary_tlv == false) {
@@ -1586,7 +1499,7 @@ aliro_append_tlv(0x4D, state->reader_identifier, 32, auth0_data, sizeof(auth0_da
         return PM3_ESOFT;
     }
 
-    aliro_print_big_header("AUTH0");
+    PrintAndLogInfoHeader("AUTH0");
     PrintAndLogEx(INFO, "Reader group id........... %s", sprint_hex_inrow(reader_group_identifier, 16));
     PrintAndLogEx(INFO, "Reader sub id............. %s", sprint_hex_inrow(reader_group_sub_identifier, 16));
     PrintAndLogEx(INFO, "Reader id................. %s", sprint_hex_inrow(state->reader_identifier, 32));
@@ -1703,7 +1616,7 @@ aliro_append_tlv(0x4D, state->reader_identifier, 32, auth0_data, sizeof(auth0_da
 
 static int aliro_read_prepare_auth1_keys(aliro_read_state_t *state,
                                          mbedtls_ecp_keypair *reader_ephemeral_key,
-                                         aliro_rng_t *rng) {
+                                         pcrypto_rng_t *rng) {
     if (state == NULL || reader_ephemeral_key == NULL || rng == NULL) {
         return PM3_EINVARG;
     }
@@ -1881,7 +1794,7 @@ static void aliro_read_print_auth1_report(const aliro_read_state_t *state) {
         return;
     }
 
-    aliro_print_big_header("AUTH1");
+    PrintAndLogInfoHeader("AUTH1");
     PrintAndLogEx(INFO, "AUTH1 signature........... %s", sprint_hex_inrow(state->auth1_parsed.signature, 64));
     if (state->auth1_parsed.have_key_slot) {
         PrintAndLogEx(INFO, "AUTH1 key slot............ %s", sprint_hex_inrow(state->auth1_parsed.key_slot, 8));
@@ -1963,7 +1876,7 @@ static void aliro_read_print_fast_suggestion_note(const char *fast_cmd) {
     if (fast_cmd == NULL || fast_cmd[0] == '\0') {
         return;
     }
-    aliro_print_big_header("Note");
+    PrintAndLogInfoHeader("Note");
     PrintAndLogEx(INFO, _GREEN_("use the following command to perform FAST authentication flow for this endpoint:"));
     PrintAndLogEx(INFO, _YELLOW_("%s"), fast_cmd);
 }
@@ -1977,7 +1890,7 @@ static void aliro_print_bytes_or_ascii(const char *label, const uint8_t *data, s
         return;
     }
 
-    if (aliro_is_ascii(data, data_len)) {
+    if (is_printable_ascii(data, data_len)) {
         PrintAndLogEx(INFO, "%s %s", label, sprint_ascii(data, data_len));
     } else {
         PrintAndLogEx(INFO, "%s %s", label, sprint_hex_inrow(data, data_len));
@@ -3336,7 +3249,7 @@ static int aliro_read_do_step_up(const aliro_read_state_t *state,
         document_types[document_type_count++] = ALIRO_REVOCATION_DOCUMENT_TYPE;
     }
 
-    aliro_print_big_header("Step-up");
+    PrintAndLogInfoHeader("Step-up");
     if (document_type_count == 0) {
         PrintAndLogEx(WARNING, "Signaling bitmap does not indicate retrievable step-up documents");
         return PM3_SUCCESS;
@@ -3483,8 +3396,8 @@ static int aliro_read_auth_flow(const uint8_t *kpersistent, size_t kpersistent_l
                                 aliro_flow_t flow,
                                 const aliro_step_up_scopes_t *step_up_scopes) {
     int status = PM3_ESOFT;
-    aliro_rng_t rng;
-    int res = aliro_rng_init(&rng);
+    pcrypto_rng_t rng;
+    int res = pcrypto_rng_init(&rng, ALIRO_RNG_PERSONALIZATION, sizeof(ALIRO_RNG_PERSONALIZATION) - 1);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -3558,7 +3471,7 @@ static int aliro_read_auth_flow(const uint8_t *kpersistent, size_t kpersistent_l
     DropField();
     mbedtls_ecp_keypair_free(&reader_ephemeral_key);
     mbedtls_ecp_keypair_free(&reader_private_key);
-    aliro_rng_free(&rng);
+    pcrypto_rng_free(&rng);
 
     if (status == PM3_SUCCESS && have_fast_suggestion_cmd) {
         aliro_read_print_fast_suggestion_note(fast_suggestion_cmd);
@@ -3597,14 +3510,14 @@ static int CmdHFAliroRead(const char *Cmd) {
                   "Execute ALIRO expedited flow and optional step-up document retrieval.",
                   "hf aliro read --reader-group-id 00112233445566778899AABBCCDDEEFF --reader-sub-group-id 00112233445566778899AABBCCDDEEFF --reader-private-key 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF\n"
                   "hf aliro read --reader-group-id 00112233445566778899AABBCCDDEEFF --reader-private-key 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF --transaction-id 00112233445566778899AABBCCDDEEFF --k-persistent 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF --endpoint-public-key 04AABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF --flow fast -a\n"
-                  "hf aliro read --reader-group-id 00112233445566778899AABBCCDDEEFF --reader-private-key 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF --step-up-scopes matter1,non_access_extensions");
+                  "hf aliro read --reader-group-id 00112233445566778899AABBCCDDEEFF --reader-private-key ./reader-private-key.pem --step-up-scopes matter1,non_access_extensions");
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("k", "k-persistent,key-persistent,kpersistent,keypersistent,kp", "<hex>", "Kpersistent (32 bytes, optional; used for fast cryptogram verification)"),
         arg_str1("g", "reader-group-id,readergroupid,rgi", "<hex>", "Reader group identifier (16 bytes)"),
         arg_str0("s", "reader-sub-group-id,readersubid,rsi", "<hex>", "Reader subgroup identifier (16 bytes, default: all zeroes)"),
-        arg_str1("p", "reader-private-key,readerprivkey,rpk", "<hex>", "Reader private key (32 bytes, P-256)"),
+        arg_str1("p", "reader-private-key,readerprivkey,rpk", "<pem|der-b64|der-hex|scalar-b64|scalar-hex|path>", "Reader private key (P-256): PEM, DER hex, scalar hex/base64, or file path"),
         arg_str0("t", "transaction-id,ti", "<hex>", "Transaction identifier (16 bytes, optional; random if omitted)"),
         arg_str0("e", "endpoint-public-key,endpointpublickey,epk", "<hex>", "Endpoint public key for AUTH0 fast verification (32-byte X or 65-byte uncompressed)"),
         arg_str0("f", "flow", "<step-up|standard|fast>", "Transaction flow (default: step-up)"),
@@ -3627,8 +3540,20 @@ static int CmdHFAliroRead(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 3, reader_group_sub_identifier, &reader_group_sub_identifier_len);
 
     uint8_t reader_private_key[32] = {0};
-    int reader_private_key_len = 0;
-    CLIGetHexWithReturn(ctx, 4, reader_private_key, &reader_private_key_len);
+    char reader_private_key_text[ALIRO_MAX_KEY_INPUT] = {0};
+    int reader_private_key_text_len = 0;
+    if (CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)reader_private_key_text, sizeof(reader_private_key_text), &reader_private_key_text_len) != 0) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    if (reader_private_key_text_len < 0) {
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
+    }
+    if ((size_t)reader_private_key_text_len >= sizeof(reader_private_key_text)) {
+        reader_private_key_text_len = (int)sizeof(reader_private_key_text) - 1;
+    }
+    reader_private_key_text[reader_private_key_text_len] = '\0';
 
     uint8_t transaction_identifier[16] = {0};
     int transaction_identifier_len = 0;
@@ -3668,8 +3593,14 @@ static int CmdHFAliroRead(const char *Cmd) {
         PrintAndLogEx(ERR, "readersubid must be 16 bytes (got %d)", reader_group_sub_identifier_len);
         return PM3_EINVARG;
     }
-    if (reader_private_key_len != 32) {
-        PrintAndLogEx(ERR, "readerprivkey must be 32 bytes (got %d)", reader_private_key_len);
+    if (ensure_ec_private_key(reader_private_key_text, MBEDTLS_ECP_DP_SECP256R1,
+                              reader_private_key, sizeof(reader_private_key)) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "readerprivkey has invalid format");
+        PrintAndLogEx(INFO, "Accepted formats:");
+        PrintAndLogEx(INFO, "  1) PEM string with headers (BEGIN PRIVATE KEY)");
+        PrintAndLogEx(INFO, "  2) DER bytes as hex or base64");
+        PrintAndLogEx(INFO, "  3) Scalar as hex or base64");
+        PrintAndLogEx(INFO, "  4) File path to a key in any of the formats above");
         return PM3_EINVARG;
     }
     if (kpersistent_len != 0 && kpersistent_len != 32) {

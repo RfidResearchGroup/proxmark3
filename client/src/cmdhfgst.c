@@ -2299,7 +2299,7 @@ static int CmdHFGSTRead(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str1("c", "collector-id,collectorid,cid", "<hex|dec>", "Collector identifier (32-bit value)"),
-        arg_str1("p", "reader-private-key,readerprivkey,rpk", "<pem|pem-base64|der-hex|scalar-hex|path>", "Reader private key in PEM, PEM base64 body, DER hex, 32-byte scalar hex, or file path"),
+        arg_str1("p", "reader-private-key,readerprivkey,rpk", "<pem|der-b64|der-hex|scalar-b64|scalar-hex|path>", "Reader private key: PEM, DER hex, scalar hex/base64, or file path"),
         arg_str0(NULL, "key-version,keyversion,kv", "<hex|dec>", "Long-term key version (default: 1)"),
         arg_str0(NULL, "session-id,sid", "<hex>", "Session id (8 bytes, random if omitted)"),
         arg_str0(NULL, "reader-nonce,nonce", "<hex>", "Reader nonce (32 bytes, random if omitted)"),
@@ -2336,11 +2336,10 @@ static int CmdHFGSTRead(const char *Cmd) {
             ensure_ec_private_key(reader_key_text, MBEDTLS_ECP_DP_SECP256R1, cfg.reader_private_key, sizeof(cfg.reader_private_key)) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Invalid reader-private-key format");
         PrintAndLogEx(INFO, "Accepted formats:");
-        PrintAndLogEx(INFO, "  1) PEM string (BEGIN/END EC PRIVATE KEY or PRIVATE KEY)");
-        PrintAndLogEx(INFO, "  2) PEM base64 body only");
-        PrintAndLogEx(INFO, "  3) DER key bytes as hex");
-        PrintAndLogEx(INFO, "  4) Raw 32-byte private scalar as hex");
-        PrintAndLogEx(INFO, "  5) File path to a key in one of the formats above");
+        PrintAndLogEx(INFO, "  1) PEM string with headers (BEGIN PRIVATE KEY)");
+        PrintAndLogEx(INFO, "  2) DER bytes as hex or base64");
+        PrintAndLogEx(INFO, "  3) Scalar as hex or base64");
+        PrintAndLogEx(INFO, "  4) File path to a key in any of the formats above");
         CLIParserFree(ctx);
         return PM3_EINVARG;
     }
