@@ -189,6 +189,8 @@ static int pcrypto_extract_priv_scalar_from_pk(const mbedtls_pk_context *pkctx,
     return PM3_SUCCESS;
 }
 
+static int pcrypto_validate_raw_scalar(const uint8_t *scalar, size_t scalar_len, mbedtls_ecp_group_id curveid);
+
 static int pcrypto_parse_ec_private_blob(const uint8_t *blob, size_t blob_len,
                                          mbedtls_ecp_group_id curveid,
                                          uint8_t *out_priv, size_t out_priv_len) {
@@ -221,6 +223,22 @@ static int pcrypto_parse_ec_private_blob(const uint8_t *blob, size_t blob_len,
     return res;
 }
 
+static int pcrypto_parse_ec_private_scalar_or_blob(const uint8_t *blob, size_t blob_len,
+                                                   mbedtls_ecp_group_id curveid,
+                                                   uint8_t *out_priv, size_t out_priv_len) {
+    if (blob == NULL || out_priv == NULL || blob_len == 0 || out_priv_len == 0) {
+        return PM3_EINVARG;
+    }
+
+    if (blob_len == out_priv_len &&
+            pcrypto_validate_raw_scalar(blob, blob_len, curveid) == PM3_SUCCESS) {
+        memcpy(out_priv, blob, out_priv_len);
+        return PM3_SUCCESS;
+    }
+
+    return pcrypto_parse_ec_private_blob(blob, blob_len, curveid, out_priv, out_priv_len);
+}
+
 static int pcrypto_parse_ec_private_base64(const char *input,
                                            mbedtls_ecp_group_id curveid,
                                            uint8_t *out_priv, size_t out_priv_len) {
@@ -249,7 +267,7 @@ static int pcrypto_parse_ec_private_base64(const char *input,
         return PM3_EINVARG;
     }
 
-    res = pcrypto_parse_ec_private_blob(decoded, decoded_len, curveid, out_priv, out_priv_len);
+    res = pcrypto_parse_ec_private_scalar_or_blob(decoded, decoded_len, curveid, out_priv, out_priv_len);
     free(decoded);
     return res;
 }
@@ -331,7 +349,7 @@ static int pcrypto_parse_ec_private_file(const char *path,
         return PM3_EFILE;
     }
 
-    int res = pcrypto_parse_ec_private_blob(data, file_len, curveid, out_priv, out_priv_len);
+    int res = pcrypto_parse_ec_private_scalar_or_blob(data, file_len, curveid, out_priv, out_priv_len);
     if (res == PM3_SUCCESS) {
         free(data);
         return PM3_SUCCESS;
@@ -392,12 +410,7 @@ static int pcrypto_parse_ec_private_text(const char *input, bool allow_file_path
         decoded_len = hex_to_bytes(compact, decoded, sizeof(decoded));
     }
     if (decoded_len > 0) {
-        if ((size_t)decoded_len == out_priv_len &&
-                pcrypto_validate_raw_scalar(decoded, out_priv_len, curveid) == PM3_SUCCESS) {
-            memcpy(out_priv, decoded, out_priv_len);
-            return PM3_SUCCESS;
-        }
-        int res = pcrypto_parse_ec_private_blob(decoded, (size_t)decoded_len, curveid, out_priv, out_priv_len);
+        int res = pcrypto_parse_ec_private_scalar_or_blob(decoded, (size_t)decoded_len, curveid, out_priv, out_priv_len);
         if (res == PM3_SUCCESS) {
             return PM3_SUCCESS;
         }
