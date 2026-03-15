@@ -1019,29 +1019,39 @@ static int aliro_parse_auth1_plaintext(const uint8_t *buf, size_t len, aliro_aut
     return PM3_SUCCESS;
 }
 
-static void aliro_print_signaling_bitmap(uint16_t bitmap) {
-    static const char *bit_names[] = {
-        "Access document can be retrieved",
-        "Revocation document can be retrieved",
-        "Step-up SELECT required for doc retrieval",
-        "Mailbox has non-zero data",
-        "Mailbox read supported",
-        "Mailbox write/set supported",
-        "Notify backend supported",
-        "Notify bound app supported",
-        "RFU (bit8)",
-        "update_doc supported in expedited phase",
-        "Mailbox in step-up available",
-        "Notify in step-up supported",
-        "update_doc in step-up supported",
-    };
+static void aliro_print_signaling_bit(const char *bits, uint16_t mask, uint8_t bit,
+                                      const char *enabled, const char *disabled) {
+    const bool is_enabled = (mask & (1U << bit)) != 0;
+    const int pad = 15 - bit;
+    PrintAndLogEx(INFO, "   %s",
+                  sprint_breakdown_bin(is_enabled ? C_GREEN : C_NONE, bits, 16, pad, 1,
+                                       is_enabled ? enabled : disabled));
+}
 
-    PrintAndLogEx(INFO, "Signaling bitmap......... " _YELLOW_("0x%04X"), bitmap);
-    for (size_t i = 0; i < ARRAYLEN(bit_names); i++) {
-        if ((bitmap & (1U << i)) != 0) {
-            PrintAndLogEx(INFO, "  " _YELLOW_("bit%-2zu") " set.............. %s", i, bit_names[i]);
-        }
-    }
+static void aliro_print_signaling_bitmap(uint16_t bitmap) {
+    const uint8_t bitmap_bytes[2] = {
+        (uint8_t)((bitmap >> 8) & 0xFF),
+        (uint8_t)(bitmap & 0xFF),
+    };
+    const char *bits = sprint_bin(bitmap_bytes, sizeof(bitmap_bytes));
+
+    PrintAndLogEx(INFO, "Signaling bitmap......... " _YELLOW_("%s") " (" _YELLOW_("0x%04X") ")", bits, bitmap);
+    aliro_print_signaling_bit(bits, bitmap, 15, "Reserved/unknown bit set", "Reserved/unknown bit clear");
+    aliro_print_signaling_bit(bits, bitmap, 14, "Reserved/unknown bit set", "Reserved/unknown bit clear");
+    aliro_print_signaling_bit(bits, bitmap, 13, "Reserved/unknown bit set", "Reserved/unknown bit clear");
+    aliro_print_signaling_bit(bits, bitmap, 12, "Update document in step-up supported", "Update document in step-up not supported");
+    aliro_print_signaling_bit(bits, bitmap, 11, "Notify in step-up supported", "Notify in step-up not supported");
+    aliro_print_signaling_bit(bits, bitmap, 10, "Mailbox in step-up available", "Mailbox in step-up unavailable");
+    aliro_print_signaling_bit(bits, bitmap, 9, "Update document in expedited phase supported", "Update document in expedited phase not supported");
+    aliro_print_signaling_bit(bits, bitmap, 8, "Reserved/unknown bit set", "Reserved/unknown bit clear");
+    aliro_print_signaling_bit(bits, bitmap, 7, "Notify bound app supported", "Notify bound app not supported");
+    aliro_print_signaling_bit(bits, bitmap, 6, "Notify backend supported", "Notify backend not supported");
+    aliro_print_signaling_bit(bits, bitmap, 5, "Mailbox write/set supported", "Mailbox write/set not supported");
+    aliro_print_signaling_bit(bits, bitmap, 4, "Mailbox read supported", "Mailbox read not supported");
+    aliro_print_signaling_bit(bits, bitmap, 3, "Mailbox has non-zero data", "Mailbox has zero data");
+    aliro_print_signaling_bit(bits, bitmap, 2, "Step-up SELECT required for doc retrieval", "Step-up SELECT not required for doc retrieval");
+    aliro_print_signaling_bit(bits, bitmap, 1, "Revocation document retrievable", "Revocation document not retrievable");
+    aliro_print_signaling_bit(bits, bitmap, 0, "Access document retrievable", "Access document not retrievable");
 }
 
 static bool aliro_is_zeroed(const uint8_t *buf, size_t len) {
@@ -1499,6 +1509,7 @@ aliro_append_tlv(0x4D, state->reader_identifier, 32, auth0_data, sizeof(auth0_da
         return PM3_ESOFT;
     }
 
+    PrintAndLogEx(INFO, "");
     PrintAndLogInfoHeader("AUTH0");
     PrintAndLogEx(INFO, "Reader group id........... %s", sprint_hex_inrow(reader_group_identifier, 16));
     PrintAndLogEx(INFO, "Reader sub id............. %s", sprint_hex_inrow(reader_group_sub_identifier, 16));
@@ -1794,6 +1805,7 @@ static void aliro_read_print_auth1_report(const aliro_read_state_t *state) {
         return;
     }
 
+    PrintAndLogEx(INFO, "");
     PrintAndLogInfoHeader("AUTH1");
     PrintAndLogEx(INFO, "AUTH1 signature........... %s", sprint_hex_inrow(state->auth1_parsed.signature, 64));
     if (state->auth1_parsed.have_key_slot) {
@@ -1876,6 +1888,7 @@ static void aliro_read_print_fast_suggestion_note(const char *fast_cmd) {
     if (fast_cmd == NULL || fast_cmd[0] == '\0') {
         return;
     }
+    PrintAndLogEx(INFO, "");
     PrintAndLogInfoHeader("Note");
     PrintAndLogEx(INFO, _GREEN_("use the following command to perform FAST authentication flow for this endpoint:"));
     PrintAndLogEx(INFO, _YELLOW_("%s"), fast_cmd);
@@ -3249,6 +3262,7 @@ static int aliro_read_do_step_up(const aliro_read_state_t *state,
         document_types[document_type_count++] = ALIRO_REVOCATION_DOCUMENT_TYPE;
     }
 
+    PrintAndLogEx(INFO, "");
     PrintAndLogInfoHeader("Step-up");
     if (document_type_count == 0) {
         PrintAndLogEx(WARNING, "Signaling bitmap does not indicate retrievable step-up documents");
