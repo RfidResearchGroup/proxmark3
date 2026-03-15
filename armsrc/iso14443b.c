@@ -2653,32 +2653,34 @@ static int tearoff_rand(void) {
 //  - BigBuf_free + BigBuf_calloc (demod buffers persist)
 //  - 100ms field stabilization (tag only needs ~20ms to power up)
 static void tearoff_field_on(void) {
-    // Re-enable reader mode
+    // Reset the AT91 SSC PDC (DMA) receive buffer before each field-on
+    // by mirroring iso14443b_setup() memory allocations for Demod14b/Uart14b.
+    BigBuf_free();
+    Demod14bInit(BigBuf_calloc(MAX_FRAME_SIZE), MAX_FRAME_SIZE);
+    Uart14bInit(BigBuf_calloc(MAX_FRAME_SIZE));
+
     SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
-    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER);
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER); // programs PDC with fresh BigBuf address
 #ifdef RDV4
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4);
 #else
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD);
 #endif
-    // Brief field stabilization — tag needs ~5-15ms to power on from RF
-    SpinDelay(20);
-    Demod14bReset();
-    Uart14bReset();
+    // Field stabilization: tag needs time to power up from RF.
+    SpinDelayUs(250);
     StartCountSspClk();
     iso14b_set_fwt(8);
     s_field_on = true;
 }
 
-static void tearoff_field_off(void) {
+// Cut the RF field.
+// drain_capacitor: pass true after a tear-off write to drain the tag's charge pump
+static void tearoff_field_off(bool drain_capacitor) {
     FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
     s_field_on = false;
-    // CRITICAL: When interrupting an active EEPROM write, the tag's charge pump
-    // is active. We MUST wait several milliseconds with the field fully OFF to
-    // drain the tag's capacitor. If we turn the field back on too quickly, the
-    // tag's Power-On Reset (POR) circuit won't trigger and the tag becomes
-    // digitally latched-up/unresponsive until physically removed.
-    SpinDelay(10);
+    if (drain_capacitor) {
+        SpinDelayUs(500); // ST25TB tRST minimum drain
+    }
 }
 
 static void tearoff_exit(void) {
@@ -2705,7 +2707,7 @@ static int tearoff_read_block(uint8_t block_address, uint32_t *block_value) {
 
     res = iso14443b_select_srx_card(&card);
     if (res != PM3_SUCCESS) {
-        tearoff_field_off();
+        tearoff_field_off(false); // select failed, no write in progress
         return res;
     }
 
@@ -2718,7 +2720,7 @@ static int tearoff_read_block(uint8_t block_address, uint32_t *block_value) {
                        ((uint32_t)block[3] << 24);
     }
 
-    tearoff_field_off();
+    tearoff_field_off(false); // plain read, no write in progress
     return res;
 }
 
@@ -2747,7 +2749,7 @@ static void tearoff_write_block(uint8_t block_address, uint32_t data, uint16_t t
     iso14b_card_select_t card;
     int res = iso14443b_select_srx_card(&card);
     if (res != PM3_SUCCESS) {
-        tearoff_field_off();
+        tearoff_field_off(false); // select failed pre-write, no EEPROM activity
         return;
     }
 
@@ -2758,15 +2760,10 @@ static void tearoff_write_block(uint8_t block_address, uint32_t data, uint16_t t
 
     if (tearoff_hook() == PM3_ETEAROFF) {
         s_field_on = false;
-        // CRITICAL: When interrupting an active EEPROM write, the tag's charge pump
-        // is active. We MUST wait several milliseconds with the field fully OFF to
-        // drain the tag's capacitor. If we turn the field back on too quickly, the
-        // tag's Power-On Reset (POR) circuit won't trigger and the tag becomes
-        // digitally latched-up/unresponsive until physically removed.
-        SpinDelay(10);
+        // Drain the tag's charge pump capacitor so POR triggers cleanly on next field-on.
+        SpinDelayUs(500);
     } else {
-        // Fallback if hook didn't trigger for some reason
-        tearoff_field_off();
+        tearoff_field_off(false);
     }
 }
 
@@ -2938,7 +2935,7 @@ void ST25TB_TearOff(const uint8_t *data) {
     // lightweight tearoff_field_on/off which skip the heavy initialization.
     iso14443b_setup();
     set_tracing(true);
-    tearoff_field_off(); // Start with field off, tearoff_read_block will turn it on
+    tearoff_field_off(false); // Start with field off, tearoff_read_block will turn it on
 
     // Initial read
     result = tearoff_read_block(block_address, &current_value);
@@ -3014,7 +3011,7 @@ void ST25TB_TearOff(const uint8_t *data) {
         result = tearoff_read_block(block_address, &read_value);
         if (result != 0) {
             consecutive_read_fails++;
-            if (consecutive_read_fails > 10) {
+            if (consecutive_read_fails > 30) {
                 Dbprintf("Read failed %d times consecutively. Is the tag present?", consecutive_read_fails);
                 reply_ng(CMD_HF_ISO14443B_ST25TB_TEAROFF, PM3_ESOFT, (uint8_t *)&current_value, sizeof(current_value));
                 tearoff_exit();
