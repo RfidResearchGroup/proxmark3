@@ -272,6 +272,15 @@ LDLIBS += -lbz2
 ## LZ4
 LDLIBS += -llz4
 
+## ZLIB
+ZLIBINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags zlib 2>/dev/null)
+ZLIBLDLIBS = $(shell $(PKG_CONFIG_ENV) pkg-config --libs zlib 2>/dev/null)
+ifneq ($(ZLIBLDLIBS),)
+    LDLIBS += $(ZLIBLDLIBS)
+    PM3INCLUDES += $(ZLIBINCLUDES)
+    ZLIB_FOUND = 1
+endif
+
 ## Bluez (optional)
 ifneq ($(SKIPBT),1)
     BTINCLUDES = $(shell $(PKG_CONFIG_ENV) pkg-config --cflags bluez 2>/dev/null)
@@ -485,6 +494,10 @@ ifeq ($(GD_FOUND),1)
     PM3CFLAGS += -DHAVE_GD
 endif
 
+ifeq ($(ZLIB_FOUND),1)
+    PM3CFLAGS += -DHAVE_ZLIB
+endif
+
 ifeq ($(SWIG_LUA_FOUND),1)
     PM3CFLAGS += -DHAVE_LUA_SWIG
 endif
@@ -597,6 +610,12 @@ else
     endif
 endif
 
+ifeq ($(ZLIB_FOUND),1)
+    $(info Zlib library:      system library found, enabled)
+else
+    $(info Zlib library:      not found, disabled)
+endif
+
 ifeq ($(SKIPREADLINE),1)
     $(info Readline library:  skipped)
 else
@@ -674,6 +693,7 @@ SRCS =  mifare/aiddesfire.c \
         cmdhffido.c \
         cmdhffudan.c \
         cmdhfgallagher.c \
+        cmdhfgst.c \
         cmdhfksx6924.c \
         cmdhfcipurse.c \
         cmdhficlass.c \

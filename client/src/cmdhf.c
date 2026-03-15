@@ -34,6 +34,7 @@
 #include "cmdhffido.h"      // FIDO authenticators
 #include "cmdhffudan.h"     // Fudan cards
 #include "cmdhfgallagher.h" // Gallagher DESFire cards
+#include "cmdhfgst.h"       // Google Smart Tap
 #include "cmdhficlass.h"    // ICLASS
 #include "cmdhfict.h"       // ICT MFC / DESfire cards
 #include "cmdhfjooki.h"     // MFU based Jooki
@@ -586,6 +587,7 @@ static command_t CommandTable[] = {
     {"fido",        CmdHFFido,        AlwaysAvailable, "{ FIDO and FIDO2 authenticators...    }"},
     {"fudan",       CmdHFFudan,       AlwaysAvailable, "{ Fudan RFIDs...                      }"},
     {"gallagher",   CmdHFGallagher,   AlwaysAvailable, "{ Gallagher DESFire RFIDs...          }"},
+    {"gst",         CmdHFGST,         AlwaysAvailable, "{ Google Smart Tap passes...          }"},
     {"iclass",      CmdHFiClass,      AlwaysAvailable, "{ ICLASS RFIDs...                     }"},
     {"ict",         CmdHFICT,         AlwaysAvailable, "{ ICT MFC/DESfire RFIDs...            }"},
     {"jooki",       CmdHF_Jooki,      AlwaysAvailable, "{ Jooki RFIDs...                      }"},

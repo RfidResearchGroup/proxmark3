@@ -22,10 +22,22 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/entropy.h>
 #include <mbedtls/pk.h>
 
 #define CRYPTO_AES_BLOCK_SIZE 16
 #define CRYPTO_AES128_KEY_SIZE 16
+
+typedef struct {
+    mbedtls_entropy_context entropy;
+    mbedtls_ctr_drbg_context ctr_drbg;
+    bool seeded;
+} pcrypto_rng_t;
+
+int pcrypto_rng_init(pcrypto_rng_t *rng, const uint8_t *personalization, size_t personalization_len);
+void pcrypto_rng_free(pcrypto_rng_t *rng);
+int pcrypto_rng_fill(pcrypto_rng_t *rng, uint8_t *out, size_t out_len);
 
 void des_encrypt(void *out, const void *in, const void *key);
 void des_decrypt(void *out, const void *in, const void *key);
@@ -54,6 +66,7 @@ int ecdsa_public_key_from_pk(mbedtls_pk_context *pk, mbedtls_ecp_group_id curvei
 int ecdsa_signature_create(mbedtls_ecp_group_id curveid, uint8_t *key_d, uint8_t *key_xy, uint8_t *input, int length, uint8_t *signature, size_t *signaturelen, bool hash);
 int ecdsa_signature_verify(mbedtls_ecp_group_id curveid, uint8_t *key_xy, uint8_t *input, int length, uint8_t *signature, size_t signaturelen, bool hash);
 int ecdsa_signature_r_s_verify(mbedtls_ecp_group_id curveid, uint8_t *key_xy, uint8_t *input, int length, uint8_t *r_s, size_t r_s_len, bool hash);
+int ensure_ec_private_key(const char *input_or_path, mbedtls_ecp_group_id curveid, uint8_t *out_priv, size_t out_priv_len);
 
 char *ecdsa_get_error(int ret);
 

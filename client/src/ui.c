@@ -232,6 +232,42 @@ void PrintAndLogOptions(const char *str[][2], size_t size, size_t space) {
     PrintAndLogEx(NORMAL, "%s", buff);
 }
 
+void PrintAndLogInfoHeaderWithWidth(const char *title, size_t width) {
+    if (title == NULL) {
+        return;
+    }
+
+    const size_t title_len = strlen(title);
+    if (width > (MAX_PRINT_BUFFER - 1)) {
+        width = MAX_PRINT_BUFFER - 1;
+    }
+
+    char dashes[MAX_PRINT_BUFFER] = {0};
+    memset(dashes, '-', sizeof(dashes) - 1);
+
+    if (title_len + 2 >= width) {
+        PrintAndLogEx(INFO, _CYAN_("%s"), title);
+        return;
+    }
+
+    size_t dash_count = width - (title_len + 2);
+    size_t left = dash_count / 2;
+    size_t right = dash_count - left;
+    if (left > (sizeof(dashes) - 1)) {
+        left = sizeof(dashes) - 1;
+    }
+    if (right > (sizeof(dashes) - 1)) {
+        right = sizeof(dashes) - 1;
+    }
+
+    PrintAndLogEx(INFO, "%.*s " _CYAN_("%s") " %.*s",
+                  (int)left, dashes, title, (int)right, dashes);
+}
+
+void PrintAndLogInfoHeader(const char *title) {
+    PrintAndLogInfoHeaderWithWidth(title, 82);
+}
+
 static uint8_t PrintAndLogEx_spinidx = 0;
 
 void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {

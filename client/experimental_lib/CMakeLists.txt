@@ -181,6 +181,8 @@ if (LZ4_INCLUDE_DIRS AND LZ4_LIBRARIES)
     set(LZ4_FOUND ON)
 endif (LZ4_INCLUDE_DIRS AND LZ4_LIBRARIES)
 
+find_package(ZLIB QUIET)
+
 if (NOT SKIPGD EQUAL 1)
     if (EMBED_GD)
         cmake_policy(SET CMP0114 NEW)
@@ -305,6 +307,7 @@ set (TARGET_SOURCES
         ${PM3_ROOT}/client/src/cmdhffido.c
         ${PM3_ROOT}/client/src/cmdhffudan.c
         ${PM3_ROOT}/client/src/cmdhfgallagher.c
+        ${PM3_ROOT}/client/src/cmdhfgst.c
         ${PM3_ROOT}/client/src/cmdhfcipurse.c
         ${PM3_ROOT}/client/src/cmdhficlass.c
         ${PM3_ROOT}/client/src/cmdhfict.c
@@ -479,6 +482,12 @@ if (LZ4_FOUND)
     set(ADDITIONAL_LNK ${LZ4_LIBRARIES} ${ADDITIONAL_LNK})
 endif (LZ4_FOUND)
 
+if (ZLIB_FOUND)
+    add_definitions("-DHAVE_ZLIB")
+    set(ADDITIONAL_DIRS ${ZLIB_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
+    set(ADDITIONAL_LNK ${ZLIB_LIBRARIES} ${ADDITIONAL_LNK})
+endif (ZLIB_FOUND)
+
 if (NOT SKIPGD EQUAL 1 AND GD_FOUND)
     set(ADDITIONAL_DIRS ${GD_INCLUDE_DIRS} ${ADDITIONAL_DIRS})
     set(ADDITIONAL_LNK ${GD_LIBRARIES} ${ADDITIONAL_LNK})
@@ -532,6 +541,12 @@ if (LZ4_FOUND)
 else (LZ4_FOUND)
     message(SEND_ERROR "LZ4 library:       LZ4 not found")
 endif (LZ4_FOUND)
+
+if (ZLIB_FOUND)
+    message(STATUS "Zlib library:      system library found (enabled)")
+else (ZLIB_FOUND)
+    message(STATUS "Zlib library:      not found, disabled")
+endif (ZLIB_FOUND)
 
 if (SKIPGD EQUAL 1)
     message(STATUS "GD library:        skipped")
