@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "wiegand_formatutils.h"
+#include "util.h"
 #include "ui.h"
 
 uint8_t get_bit_by_position(const wiegand_message_t *data, uint8_t pos) {
@@ -213,5 +214,65 @@ bool add_HID_header(wiegand_message_t *data) {
         data->Mid |= 0x20; // Bit 37; standard header
         data->Bot |= 1U << data->Length; // leading 1: start bit
     }
+    return true;
+}
+
+bool wiegand_message_to_binstr(const wiegand_message_t *packed, char *binstr, size_t binstr_size) {
+    if (packed == NULL || binstr == NULL || binstr_size <= packed->Length) {
+        return false;
+    }
+
+    for (uint8_t i = 0; i < packed->Length; i++) {
+        binstr[i] = get_bit_by_position(packed, i) ? '1' : '0';
+    }
+    binstr[packed->Length] = '\0';
+    return true;
+}
+
+bool wiegand_raw_to_binstr(const uint8_t *raw, size_t raw_len, char *binstr, size_t binstr_size) {
+    if (raw == NULL || binstr == NULL || raw_len == 0 || binstr_size == 0) {
+        return false;
+    }
+
+    size_t raw_bit_len = raw_len * 8;
+    if (binstr_size <= raw_bit_len) {
+        return false;
+    }
+
+    bytes_2_binstr(binstr, raw, raw_len);
+
+    char *sentinel = strchr(binstr, '1');
+    if (sentinel == NULL || sentinel[1] == '\0') {
+        return false;
+    }
+
+    size_t payload_len = strlen(sentinel + 1);
+    if (binstr_size <= payload_len) {
+        return false;
+    }
+
+    memmove(binstr, sentinel + 1, payload_len + 1);
+    return true;
+}
+
+bool wiegand_new_pacs_to_binstr(const uint8_t *pacs, size_t pacs_len, char *binstr, size_t binstr_size) {
+    if (pacs == NULL || binstr == NULL || pacs_len < 2 || pacs[0] > 0x07) {
+        return false;
+    }
+
+    size_t payload_len = pacs_len - 1;
+    size_t padded_bits = payload_len * 8;
+    if (binstr_size <= padded_bits) {
+        return false;
+    }
+
+    bytes_2_binstr(binstr, pacs + 1, payload_len);
+
+    size_t trimmed_len = strlen(binstr);
+    if (pacs[0] > trimmed_len) {
+        return false;
+    }
+
+    binstr[trimmed_len - pacs[0]] = '\0';
     return true;
 }

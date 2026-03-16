@@ -10045,13 +10045,43 @@ static int CmdHF14AMfValue(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+static int hfmf_encodehid_pack_block5(const char *binstr, uint8_t *block) {
+    char bits_with_sentinel[121] = {0};
+    size_t binlen = strlen(binstr);
+
+    if (binlen == 0 || (binlen + 1) > 120) {
+        return PM3_EINVARG;
+    }
+
+    bits_with_sentinel[0] = '1';
+    memcpy(bits_with_sentinel + 1, binstr, binlen + 1);
+
+    size_t bitlen = strlen(bits_with_sentinel);
+    if (bitlen == 0 || bitlen > 120) {
+        return PM3_EINVARG;
+    }
+
+    size_t hexlen = 0;
+    uint8_t hex[15] = {0};
+    binstr_2_bytes(hex, &hexlen, bits_with_sentinel);
+    if (hexlen == 0 || hexlen > (MFBLOCK_SIZE - 1)) {
+        return PM3_EINVARG;
+    }
+
+    memset(block + 1, 0x00, MFBLOCK_SIZE - 1);
+    memcpy(block + 1 + ((MFBLOCK_SIZE - 1) - hexlen), hex, hexlen);
+    return PM3_SUCCESS;
+}
+
 static int CmdHFMFHidEncode(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf encodehid",
-                  "Encode binary wiegand to a MIFARE Classic card or the emulator\n"
-                  "Use either --bin or --wiegand/--fc/--cn\n"
+                  "Encode HID/Wiegand data to a MIFARE Classic card or the emulator\n"
+                  "Use one of --bin, --raw, --new, or --wiegand/--fc/--cn\n"
                   "Use --emu to avoid requiring a card in the field and write to emulator memory instead",
                   "hf mf encodehid --bin 10001111100000001010100011            -> FC 31 CN 337 (H10301)\n"
+                  "hf mf encodehid --raw 063E02A3\n"
+                  "hf mf encodehid --new 068F80A8C0\n"
                   "hf mf encodehid -w H10301 --fc 31 --cn 337\n"
                   "hf mf encodehid -w H10301 --fc 31 --cn 337 --emu"
                  );
@@ -10059,6 +10089,8 @@ static int CmdHFMFHidEncode(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_str0(NULL, "bin", "<bin>", "Binary string i.e 0001001001"),
+        arg_str0(NULL, "raw", "<hex>", "HID raw hex with sentinel bit already present"),
+        arg_str0(NULL, "new", "<hex>", "new ASN.1 PACS hex from `wiegand encode --new`"),
         arg_u64_0(NULL, "fc", "<dec>", "facility code"),
         arg_u64_0(NULL, "cn", "<dec>", "card number"),
         arg_str0("w",   "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
@@ -10071,28 +10103,56 @@ static int CmdHFMFHidEncode(const char *Cmd) {
     uint8_t bin[121] = {0};
     int bin_len = sizeof(bin) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 1, bin, &bin_len);
+    bin[bin_len] = '\0';
+
+    uint8_t raw[15] = {0};
+    int raw_len = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 2), raw, sizeof(raw), &raw_len);
+
+    uint8_t new_pacs[13] = {0};
+    int new_pacs_len = 0;
+    res |= CLIParamHexToBuf(arg_get_str(ctx, 3), new_pacs, sizeof(new_pacs), &new_pacs_len);
 
     wiegand_card_t card;
     memset(&card, 0, sizeof(wiegand_card_t));
-    card.FacilityCode = arg_get_u32_def(ctx, 2, 0);
-    card.CardNumber = arg_get_u32_def(ctx, 3, 0);
+    card.FacilityCode = arg_get_u32_def(ctx, 4, 0);
+    card.CardNumber = arg_get_u32_def(ctx, 5, 0);
 
     char format[16] = {0};
     int format_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)format, sizeof(format), &format_len);
+    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)format, sizeof(format), &format_len);
 
-    bool use_emulator = arg_get_lit(ctx, 5);
-    bool verbose = arg_get_lit(ctx, 6);
+    bool use_emulator = arg_get_lit(ctx, 7);
+    bool verbose = arg_get_lit(ctx, 8);
     CLIParserFree(ctx);
 
-    // santity checks
-    if (bin_len > 120) {
+    if (res) {
+        PrintAndLogEx(ERR, "Error parsing hex input");
+        return PM3_EINVARG;
+    }
+
+    if (bin_len > 119) {
         PrintAndLogEx(ERR, "Binary wiegand string must be less than 120 bits");
         return PM3_EINVARG;
     }
 
-    if (bin_len == 0 && card.FacilityCode == 0 && card.CardNumber == 0) {
-        PrintAndLogEx(ERR, "Must provide either --cn/--fc or --bin");
+    int input_modes = 0;
+    input_modes += (bin_len > 0);
+    input_modes += (raw_len > 0);
+    input_modes += (new_pacs_len > 0);
+    input_modes += (format_len > 0 || card.FacilityCode != 0 || card.CardNumber != 0);
+    if (input_modes != 1) {
+        PrintAndLogEx(ERR, "Use exactly one of `--bin`, `--raw`, `--new`, or `--wiegand/--fc/--cn`");
+        return PM3_EINVARG;
+    }
+
+    if (format_len > 0 && card.FacilityCode == 0 && card.CardNumber == 0) {
+        PrintAndLogEx(ERR, "`--wiegand` requires `--fc` or `--cn`");
+        return PM3_EINVARG;
+    }
+
+    if (format_len == 0 && (card.FacilityCode != 0 || card.CardNumber != 0)) {
+        PrintAndLogEx(ERR, "`--fc` and `--cn` require `--wiegand`");
         return PM3_EINVARG;
     }
 
@@ -10111,18 +10171,38 @@ static int CmdHFMFHidEncode(const char *Cmd) {
     };
 
     if (bin_len) {
-        char mfcbin[121] = {0};
-        mfcbin[0] = '1';
-        memcpy(mfcbin + 1, bin, bin_len);
+        if (hfmf_encodehid_pack_block5((char *)bin, card_blocks + (MFBLOCK_SIZE * 4)) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Binary wiegand string must be less than 120 bits");
+            return PM3_EINVARG;
+        }
+    } else if (raw_len) {
+        char raw_bin[120 + 1] = {0};
 
-        size_t hexlen = 0;
-        uint8_t hex[15] = {0};
-        binstr_2_bytes(hex, &hexlen, mfcbin);
+        if (wiegand_raw_to_binstr(raw, raw_len, raw_bin, sizeof(raw_bin)) == false) {
+            PrintAndLogEx(ERR, "Raw HID hex must contain a sentinel bit and payload");
+            return PM3_EINVARG;
+        }
 
-        memcpy(card_blocks + (MFBLOCK_SIZE * 4) + 1 + (15 - hexlen), hex, hexlen);
+        if (hfmf_encodehid_pack_block5(raw_bin, card_blocks + (MFBLOCK_SIZE * 4)) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Raw HID hex is too large to fit in the MIFARE payload");
+            return PM3_EINVARG;
+        }
+    } else if (new_pacs_len) {
+        char new_bin[96 + 1] = {0};
+
+        if (wiegand_new_pacs_to_binstr(new_pacs, new_pacs_len, new_bin, sizeof(new_bin)) == false) {
+            PrintAndLogEx(ERR, "Invalid PACS value");
+            return PM3_EINVARG;
+        }
+
+        if (hfmf_encodehid_pack_block5(new_bin, card_blocks + (MFBLOCK_SIZE * 4)) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "PACS payload is too large to fit in the MIFARE payload");
+            return PM3_EINVARG;
+        }
     } else {
         wiegand_message_t packed;
         memset(&packed, 0, sizeof(wiegand_message_t));
+        char packed_bin[96 + 1] = {0};
 
         int format_idx = HIDFindCardFormat(format);
         if (format_idx == -1) {
@@ -10135,21 +10215,15 @@ static int CmdHFMFHidEncode(const char *Cmd) {
             return PM3_ESOFT;
         }
 
-        // iceman: only for formats w length smaller than 37.
-        // Needs a check.
+        if (wiegand_message_to_binstr(&packed, packed_bin, sizeof(packed_bin)) == false) {
+            PrintAndLogEx(ERR, "Failed to render Wiegand payload");
+            return PM3_EFAILED;
+        }
 
-        // increase length to allow setting bit just above real data
-        packed.Length++;
-        // Set sentinel bit
-        set_bit_by_position(&packed, true, 0);
-
-#ifdef HOST_LITTLE_ENDIAN
-        packed.Mid = BSWAP_32(packed.Mid);
-        packed.Bot = BSWAP_32(packed.Bot);
-#endif
-
-        memcpy(card_blocks + (MFBLOCK_SIZE * 4) + 8, &packed.Mid, sizeof(packed.Mid));
-        memcpy(card_blocks + (MFBLOCK_SIZE * 4) + 12, &packed.Bot, sizeof(packed.Bot));
+        if (hfmf_encodehid_pack_block5(packed_bin, card_blocks + (MFBLOCK_SIZE * 4)) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Encoded Wiegand payload is too large to fit in the MIFARE payload");
+            return PM3_EINVARG;
+        }
     }
 
     if (use_emulator) {
@@ -10181,7 +10255,7 @@ static int CmdHFMFHidEncode(const char *Cmd) {
     }
 
     uint8_t empty[MIFARE_KEY_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    bool res = true;
+    bool write_ok = true;
     for (uint8_t i = 0; i < (sizeof(card_blocks) / MFBLOCK_SIZE); i++) {
 
         if (verbose) {
@@ -10191,12 +10265,12 @@ static int CmdHFMFHidEncode(const char *Cmd) {
         if (mf_write_block((i + 1), MF_KEY_A, empty, card_blocks + (i * MFBLOCK_SIZE)) == PM3_EFAILED) {
             if (mf_write_block((i + 1), MF_KEY_B, empty, card_blocks + (i * MFBLOCK_SIZE)) == PM3_EFAILED) {
                 PrintAndLogEx(WARNING, "failed writing block %d using default empty key", (i + 1));
-                res = false;
+                write_ok = false;
                 break;
             }
         }
     }
-    if (res == false) {
+    if (write_ok == false) {
         PrintAndLogEx(WARNING, "Make sure card is wiped before running this command");
     }
     PrintAndLogEx(NORMAL, "");

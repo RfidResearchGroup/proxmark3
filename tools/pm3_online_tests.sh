@@ -10,6 +10,7 @@ cd "$PM3PATH" || exit 1
 TESTALL=false
 TESTDESFIREVALUE=false
 TESTHFMFEMUMEM=false
+TESTHFMFENCODEHIDEMU=false
 TESTHFMFENCODEHIDCARD=false
 TESTHFEMUSMOKE=false
 
@@ -19,13 +20,15 @@ while (( "$#" )); do
   case "$1" in
     -h|--help)
       echo """
-Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hf_mf_emu_mem|hf_mf_encodehid_card|hf_emu_smoke]
+Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hf_mf_emu_mem|hf_mf_encodehid_emu|hf_mf_encodehid_card|hf_emu_smoke]
     --pm3bin ...:    Specify path to pm3 binary to test
     desfire_value:   Test DESFire value operations with card
     hf_mf_emu_mem:   Test MIFARE Classic emulator memory write/read
+    hf_mf_encodehid_emu:
+                     Test hf mf encodehid --bin/--raw/--new equivalence in emulator memory
     hf_mf_encodehid_card:
                      Test HID encoding write/read against a blank MIFARE Classic card
-    hf_emu_smoke:    Run both HF emulator/card smoke tests
+    hf_emu_smoke:    Run HF emulator/card smoke tests
     You must specify a test target - no default 'all' for online tests
 """
       exit 0
@@ -47,6 +50,11 @@ Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hf_mf_emu_mem|hf_mf_encodehid_c
     hf_mf_emu_mem)
       TESTALL=false
       TESTHFMFEMUMEM=true
+      shift
+      ;;
+    hf_mf_encodehid_emu)
+      TESTALL=false
+      TESTHFMFENCODEHIDEMU=true
       shift
       ;;
     hf_mf_encodehid_card)
@@ -136,6 +144,17 @@ function CheckHexOutputContains() {
   CheckOutputContains "$1" "$2" "$EXPECTED_SPACED"
 }
 
+function LoadEncodeHidFixtures() {
+  local RES
+
+  RES=$($PM3BIN -c 'wiegand encode -w H10301 --fc 31 --cn 337 --new -v')
+  ENCODEHID_FIXTURE_BIN=$(printf '%s\n' "$RES" | sed -n 's/.*Without Sentinel\. .*0b \([01][01]*\).*/\1/p' | tail -n 1)
+  ENCODEHID_FIXTURE_RAW=$(printf '%s\n' "$RES" | sed -n 's/.*Wiegand --raw.... .*0x \([0-9A-Fa-f][0-9A-Fa-f]*\).*/\1/p' | tail -n 1)
+  ENCODEHID_FIXTURE_NEW=$(printf '%s\n' "$RES" | sed -n 's/.*New PACS......... .*0x \([0-9A-Fa-f][0-9A-Fa-f]*\).*/\1/p' | tail -n 1)
+
+  [ -n "$ENCODEHID_FIXTURE_BIN" ] && [ -n "$ENCODEHID_FIXTURE_RAW" ] && [ -n "$ENCODEHID_FIXTURE_NEW" ]
+}
+
 function CleanupEncodeHidCard() {
   local DEFAULT_TRAILER="FFFFFFFFFFFFFF078069FFFFFFFFFFFF"
 
@@ -165,10 +184,11 @@ fi
 # Check that user specified a test
 if [ "$TESTHFEMUSMOKE" = true ]; then
   TESTHFMFEMUMEM=true
+  TESTHFMFENCODEHIDEMU=true
   TESTHFMFENCODEHIDCARD=true
 fi
 
-if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHFMFEMUMEM" = false ] && [ "$TESTHFMFENCODEHIDCARD" = false ]; then
+if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHFMFEMUMEM" = false ] && [ "$TESTHFMFENCODEHIDEMU" = false ] && [ "$TESTHFMFENCODEHIDCARD" = false ]; then
   echo "Error: You must specify a test target. Use -h for help."
   exit 1
 fi
@@ -184,6 +204,28 @@ while true; do
       if ! CheckHexOutputContains "read emulator block 1" "$PM3BIN -c 'hf mf egetblk --blk 1'" "11223344556677889900AABBCCDDEEFF"; then break; fi
       if ! CheckHexOutputContains "read emulator block 2" "$PM3BIN -c 'hf mf egetblk --blk 2'" "0102030405060708090A0B0C0D0E0F10"; then break; fi
       echo "  emulator memory tests completed successfully!"
+    fi
+
+    if $TESTHFMFENCODEHIDEMU; then
+      echo -e "\n${C_BLUE}Testing hf mf encodehid emulator fixtures${C_NC} ${PM3BIN:=./pm3}"
+      if ! CheckFileExist "pm3 exists" "$PM3BIN"; then break; fi
+      if ! LoadEncodeHidFixtures; then
+        echo "Failed to derive encodehid fixtures from wiegand encode output"
+        break
+      fi
+
+      EXPECTED_BLOCK5="020000000000000000000000063E02A3"
+
+      if ! CheckExecute "encode HID --bin to emulator" "$PM3BIN -c 'hf mf encodehid --bin $ENCODEHID_FIXTURE_BIN --emu'" "Credential written to emulator memory"; then break; fi
+      if ! CheckHexOutputContains "read emulator block 5 from --bin" "$PM3BIN -c 'hf mf egetblk --blk 5'" "$EXPECTED_BLOCK5"; then break; fi
+
+      if ! CheckExecute "encode HID --raw to emulator" "$PM3BIN -c 'hf mf encodehid --raw $ENCODEHID_FIXTURE_RAW --emu'" "Credential written to emulator memory"; then break; fi
+      if ! CheckHexOutputContains "read emulator block 5 from --raw" "$PM3BIN -c 'hf mf egetblk --blk 5'" "$EXPECTED_BLOCK5"; then break; fi
+
+      if ! CheckExecute "encode HID --new to emulator" "$PM3BIN -c 'hf mf encodehid --new $ENCODEHID_FIXTURE_NEW --emu'" "Credential written to emulator memory"; then break; fi
+      if ! CheckHexOutputContains "read emulator block 5 from --new" "$PM3BIN -c 'hf mf egetblk --blk 5'" "$EXPECTED_BLOCK5"; then break; fi
+
+      echo "  encodehid emulator fixture tests completed successfully!"
     fi
 
     if $TESTHFMFENCODEHIDCARD; then

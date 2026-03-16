@@ -1805,21 +1805,21 @@ int HIDDumpPACSBits(const uint8_t *const data, const uint8_t length, bool verbos
     }
 
     uint8_t n = length - 1;
-    uint8_t pad = data[0];
     char *binstr = (char *)calloc((length * 8) + 1, sizeof(uint8_t));
     if (binstr == NULL) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
 
-    bytes_2_binstr(binstr, data + 1, n);
+    if (wiegand_new_pacs_to_binstr(data, length, binstr, (length * 8) + 1) == false) {
+        PrintAndLogEx(ERR, "Invalid PACS value");
+        free(binstr);
+        return PM3_EINVARG;
+    }
 
 //    PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "------------------------- " _CYAN_("Wiegand") " ---------------------------");
     PrintAndLogEx(SUCCESS, "PACS............. " _GREEN_("%s"), sprint_hex_inrow(data, length));
-    PrintAndLogEx(DEBUG, "padded bin....... " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
-
-    binstr[strlen(binstr) - pad] = '\0';
     PrintAndLogEx(DEBUG, "bin.............. " _GREEN_("%s") " ( %zu )", binstr, strlen(binstr));
 
     size_t hexlen = 0;

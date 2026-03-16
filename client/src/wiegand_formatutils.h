@@ -22,6 +22,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 // Structure for packed wiegand messages
 // Always align lowest value (last transmitted) bit to ordinal position 0 (lowest valued bit bottom)
@@ -54,5 +55,8 @@ wiegand_message_t initialize_message_object(uint32_t top, uint32_t mid, uint32_t
 
 uint8_t get_length_from_header(const wiegand_message_t *data);
 bool add_HID_header(wiegand_message_t *data);
+bool wiegand_message_to_binstr(const wiegand_message_t *packed, char *binstr, size_t binstr_size);
+bool wiegand_raw_to_binstr(const uint8_t *raw, size_t raw_len, char *binstr, size_t binstr_size);
+bool wiegand_new_pacs_to_binstr(const uint8_t *pacs, size_t pacs_len, char *binstr, size_t binstr_size);
 
 #endif
