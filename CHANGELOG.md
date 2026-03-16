@@ -5,6 +5,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 ## [unreleased][unreleased]
 - Changed `hf mf encodehid` - added `--emu`, `--raw`, and `--new` support, plus added PM3 online tests for emulator memory, encodehid emulator fixtures, and HID encode/write/read verification with card cleanup (@cindersocket)
 - Changed `lf hid sim` - added `--bin` and `--new` support, reject credentials longer than 37 bits, and added PM3 online tests for the new LF simulation paths (@cindersocket)
+- Fixed `lf t55xx detect` to use configured direct-read timing for active block reads, and added representative PM3 online tests for T55x7 detect coverage and wakeup recovery (@cindersocket)
 - Added `hf gst read` command (@kormax)
 - Added `hf gst info` command (@kormax)
 - Added `hf 14b tearoff` - interactive ST25TB/SRx monotonic counter tear-off attack (@xNovyz)

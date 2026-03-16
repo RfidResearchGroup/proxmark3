@@ -17,6 +17,9 @@ TESTHFEMUSMOKE=false
 TESTLFHIDSIM=false
 TESTWIEGANDEMUSMOKE=false
 TESTLFHIDCLONE=false
+TESTLFT55XXDETECT=false
+TESTLFT55XXDETECTWAKEUP=false
+TESTLFT55XXSMOKE=false
 
 # https://medium.com/@Drew_Stokes/bash-argument-parsing-54f3b81a6a8f
 PARAMS=""
@@ -24,7 +27,7 @@ while (( "$#" )); do
   case "$1" in
     -h|--help)
       echo """
-Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hf_mf_emu_mem|hf_mf_encodehid_emu|hf_iclass_encode_emu|hf_mf_encodehid_card|hf_emu_smoke|wiegand_emu_smoke|lf_hid_sim|lf_hid_clone]
+Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hf_mf_emu_mem|hf_mf_encodehid_emu|hf_iclass_encode_emu|hf_mf_encodehid_card|hf_emu_smoke|wiegand_emu_smoke|lf_hid_sim|lf_hid_clone|lf_t55xx_detect|lf_t55xx_detect_wakeup|lf_t55xx_smoke]
     --pm3bin ...:    Specify path to pm3 binary to test
     desfire_value:   Test DESFire value operations with card
     hf_mf_emu_mem:   Test MIFARE Classic emulator memory write/read
@@ -39,6 +42,11 @@ Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hf_mf_emu_mem|hf_mf_encodehid_e
                      Run non-card Wiegand emulator tests
     lf_hid_sim:      Test lf hid sim across 26/35-bit fixtures and reject >37-bit simulation
     lf_hid_clone:    Test lf hid clone on a writable T55x7 tag
+    lf_t55xx_detect:
+                     Test lf t55xx detect across representative T55x7 configs
+    lf_t55xx_detect_wakeup:
+                     Test lf t55xx detect wakeup/init-delay recovery on T55x7
+    lf_t55xx_smoke:  Run T55x7 detect and wakeup tests
     You must specify a test target - no default 'all' for online tests
 """
       exit 0
@@ -95,6 +103,21 @@ Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hf_mf_emu_mem|hf_mf_encodehid_e
     lf_hid_clone)
       TESTALL=false
       TESTLFHIDCLONE=true
+      shift
+      ;;
+    lf_t55xx_detect)
+      TESTALL=false
+      TESTLFT55XXDETECT=true
+      shift
+      ;;
+    lf_t55xx_detect_wakeup)
+      TESTALL=false
+      TESTLFT55XXDETECTWAKEUP=true
+      shift
+      ;;
+    lf_t55xx_smoke)
+      TESTALL=false
+      TESTLFT55XXSMOKE=true
       shift
       ;;
     -*|--*=) # unsupported flags
@@ -168,6 +191,25 @@ function CheckOutputContains() {
   return 1
 }
 
+function CheckOutputContainsAll() {
+  local LABEL="$1"
+  local CMD="$2"
+  shift 2
+  printf "%-40s" "$LABEL "
+  RES=$(eval "$CMD")
+  while [ "$#" -gt 0 ]; do
+    if ! printf '%s' "$RES" | grep -F -q "$1"; then
+      echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+      echo "Execution trace:"
+      echo "$RES"
+      return 1
+    fi
+    shift
+  done
+  echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
+  return 0
+}
+
 function CheckHexOutputContains() {
   local EXPECTED_SPACED
   EXPECTED_SPACED=$(printf '%s' "$3" | sed 's/../& /g; s/ $//')
@@ -187,6 +229,79 @@ function WaitForUserCard() {
   if [ -t 0 ]; then
     read -r -p "  Press Enter when ready..." _
   fi
+}
+
+function WaitForUserLFTag() {
+  echo "  $1"
+  if [ -t 0 ]; then
+    read -r -p "  Press Enter when ready..." _
+  fi
+}
+
+function BackupT55xxTag() {
+  T55XX_DUMP_BASE=$(mktemp /tmp/pm3-t55xx-online-XXXXXX)
+  rm -f "$T55XX_DUMP_BASE"
+  local RES
+  RES=$($PM3BIN -c "lf t55xx detect; lf t55xx dump -f $T55XX_DUMP_BASE")
+  if [ ! -f "${T55XX_DUMP_BASE}.bin" ]; then
+    echo "Failed to save T55xx dump"
+    echo "$RES"
+    return 1
+  fi
+  T55XX_BACKUP_ACTIVE=true
+  return 0
+}
+
+function RestoreT55xxTag() {
+  if [ "$T55XX_BACKUP_ACTIVE" != true ] || [ ! -f "${T55XX_DUMP_BASE}.bin" ]; then
+    return 0
+  fi
+  CheckExecute "restore T55xx tag" "$PM3BIN -c 'lf t55xx restore -f ${T55XX_DUMP_BASE}.bin'" "Done|Restoring" || return 1
+  return 0
+}
+
+function CleanupT55xxBackupFiles() {
+  if [ -n "$T55XX_DUMP_BASE" ]; then
+    rm -f "${T55XX_DUMP_BASE}.bin" "${T55XX_DUMP_BASE}.json"
+  fi
+  T55XX_BACKUP_ACTIVE=false
+}
+
+function CheckT55xxDetectResult() {
+  local LABEL="$1"
+  local MOD="$2"
+  local RATE="$3"
+  local BLOCK0="$4"
+  CheckOutputContainsAll "$LABEL" "$PM3BIN -c 'lf t55xx detect'" \
+    "Chip type......... T55x7" \
+    "Modulation........ $MOD" \
+    "Bit rate.......... $RATE" \
+    "Block0............ $BLOCK0"
+}
+
+function CheckT55xxDetectFixture() {
+  local LABEL="$1"
+  local CLONE_CMD="$2"
+  local MOD="$3"
+  local RATE="$4"
+  local BLOCK0="$5"
+
+  if ! CheckExecute "clone $LABEL" "$CLONE_CMD" "Done!|Tag T55x7 written"; then return 1; fi
+  if ! CheckT55xxDetectResult "detect $LABEL" "$MOD" "$RATE" "$BLOCK0"; then return 1; fi
+  return 0
+}
+
+function CheckT55xxDetectWakeupFixture() {
+  local AOR_POR_BLOCK0="$2"
+
+  if ! CheckExecute "clone wakeup fixture" "$PM3BIN -c 'lf hid clone -w H10301 --fc 31 --cn 337'" "Done!"; then return 1; fi
+  if ! CheckExecute "enable AOR/POR" "$PM3BIN -c 'lf t55xx write -b 0 -d $AOR_POR_BLOCK0'" "Writing page 0  block: 00"; then return 1; fi
+  if ! CheckOutputContainsAll "detect wakeup fixture" "$PM3BIN -c 'lf t55xx detect'" \
+    "Chip type......... T55x7" \
+    "Modulation........ FSK2a" \
+    "Bit rate.......... 4 - RF/50" \
+    "Block0............ $AOR_POR_BLOCK0"; then return 1; fi
+  return 0
 }
 
 function LoadWiegandFixtures() {
@@ -471,7 +586,12 @@ if [ "$TESTWIEGANDEMUSMOKE" = true ]; then
   TESTLFHIDSIM=true
 fi
 
-if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHFMFEMUMEM" = false ] && [ "$TESTHFMFENCODEHIDEMU" = false ] && [ "$TESTHFICLASSENCODEEMU" = false ] && [ "$TESTHFMFENCODEHIDCARD" = false ] && [ "$TESTLFHIDSIM" = false ] && [ "$TESTWIEGANDEMUSMOKE" = false ] && [ "$TESTLFHIDCLONE" = false ]; then
+if [ "$TESTLFT55XXSMOKE" = true ]; then
+  TESTLFT55XXDETECT=true
+  TESTLFT55XXDETECTWAKEUP=true
+fi
+
+if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHFMFEMUMEM" = false ] && [ "$TESTHFMFENCODEHIDEMU" = false ] && [ "$TESTHFICLASSENCODEEMU" = false ] && [ "$TESTHFMFENCODEHIDCARD" = false ] && [ "$TESTLFHIDSIM" = false ] && [ "$TESTWIEGANDEMUSMOKE" = false ] && [ "$TESTLFHIDCLONE" = false ] && [ "$TESTLFT55XXDETECT" = false ] && [ "$TESTLFT55XXDETECTWAKEUP" = false ] && [ "$TESTLFT55XXSMOKE" = false ]; then
   echo "Error: You must specify a test target. Use -h for help."
   exit 1
 fi
@@ -575,6 +695,39 @@ while true; do
       if ! CheckLFCloneFixture "C1k35s" "C1k35s" "222" "12345" "" "C1k35s" "222" "12345"; then break; fi
 
       echo "  lf hid clone tests completed successfully!"
+    fi
+
+    if $TESTLFT55XXDETECT; then
+      T55XX_BACKUP_ACTIVE=false
+      echo -e "\n${C_BLUE}Testing lf t55xx detect across representative configs${C_NC} ${PM3BIN:=./pm3}"
+      if ! CheckFileExist "pm3 exists" "$PM3BIN"; then break; fi
+      WaitForUserLFTag "PLACE A WRITABLE T55x7 TAG ON THE LF ANTENNA NOW"
+      if ! BackupT55xxTag; then break; fi
+
+      if ! CheckT55xxDetectFixture "EM410x" "$PM3BIN -c 'lf em 410x clone --id 1122334455'" "ASK" "5 - RF/64" "00148040"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
+      if ! CheckT55xxDetectFixture "HID H10301" "$PM3BIN -c 'lf hid clone -w H10301 --fc 31 --cn 337'" "FSK2a" "4 - RF/50" "00107060"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
+      if ! CheckT55xxDetectFixture "Destron" "$PM3BIN -c 'lf destron clone --uid 1A2B3C4D5E'" "FSK2" "4 - RF/50" "00105060"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
+      if ! CheckT55xxDetectFixture "Jablotron" "$PM3BIN -c 'lf jablotron clone --cn 01B669'" "BIPHASE" "5 - RF/64" "00158040"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
+      if ! CheckT55xxDetectFixture "Indala 64" "$PM3BIN -c 'lf indala clone --fc 123 --cn 1337'" "PSK1" "2 - RF/32" "00081040"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
+      if ! CheckT55xxDetectFixture "PAC" "$PM3BIN -c 'lf pac clone --cn CD4F5552'" "DIRECT/NRZ" "2 - RF/32" "00080080"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
+
+      if ! RestoreT55xxTag; then CleanupT55xxBackupFiles; break; fi
+      CleanupT55xxBackupFiles
+      echo "  T55xx detect fixture tests completed successfully!"
+    fi
+
+    if $TESTLFT55XXDETECTWAKEUP; then
+      T55XX_BACKUP_ACTIVE=false
+      echo -e "\n${C_BLUE}Testing lf t55xx detect wakeup recovery${C_NC} ${PM3BIN:=./pm3}"
+      if ! CheckFileExist "pm3 exists" "$PM3BIN"; then break; fi
+      WaitForUserLFTag "PLACE A WRITABLE T55x7 TAG ON THE LF ANTENNA NOW"
+      if ! BackupT55xxTag; then break; fi
+
+      if ! CheckT55xxDetectWakeupFixture "00107060" "00107261"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
+
+      if ! RestoreT55xxTag; then CleanupT55xxBackupFiles; break; fi
+      CleanupT55xxBackupFiles
+      echo "  T55xx wakeup detect test completed successfully!"
     fi
 
     # DESFire value tests

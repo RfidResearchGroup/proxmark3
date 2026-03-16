@@ -2081,12 +2081,14 @@ void T55xxReadBlock(uint8_t page, bool pwd_mode, bool brute_mem, uint8_t block, 
 
     T55xx_SendCMD(0,  pwd, flags | (block << 9));  //, true);
 
-    // Turn field on to read the response
-    // 137*8 seems to get to the start of data pretty well...
-    //  but we want to go past the start and let the repeating data settle in...
+    // Turn field on to read the response. Use the configured read gap here;
+    // the client exposes this timing via deviceconfig, and hardcoding a
+    // separate value bypasses that tuning entirely.
+    uint32_t read_gap = T55xx_Timing.m[downlink_mode].read_gap;
+    if (read_gap == 0)
+        read_gap = 15 * 8;
 
-    // turn_read_lf_on(210*8); // issues with block 1 reads so dropping down seemed to help
-    turn_read_lf_on(137 * 8);
+    turn_read_lf_on(read_gap);
 
     // Acquisition
     // Now do the acquisition
