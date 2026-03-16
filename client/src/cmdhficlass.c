@@ -202,6 +202,35 @@ static inline uint32_t leadingzeros(uint64_t a) {
 #endif
 }
 
+static int hficlass_encode_wiegand_binstr(const char *binstr, uint8_t *credential) {
+    size_t bin_len = strlen(binstr);
+    if (bin_len == 0 || bin_len >= 64) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t data[8] = {0};
+    BitstreamOut_t bout = {data, 0, 0};
+
+    for (size_t i = 0; i < (64 - bin_len - 1); i++) {
+        pushBit(&bout, 0);
+    }
+
+    pushBit(&bout, 1);
+
+    for (size_t i = 0; i < bin_len; i++) {
+        if (binstr[i] == '1') {
+            pushBit(&bout, 1);
+        } else if (binstr[i] == '0') {
+            pushBit(&bout, 0);
+        } else {
+            return PM3_EINVARG;
+        }
+    }
+
+    memcpy(credential + 8, data, sizeof(data));
+    return PM3_SUCCESS;
+}
+
 static void iclass_upload_emul(uint8_t *d, uint16_t n, uint16_t offset, uint16_t *bytes_sent) {
 
     struct p {
@@ -5704,7 +5733,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
         have_enc_key = true;
     }
 
-    if (bin_len > 64) {
+    if (bin_len >= 64) {
         PrintAndLogEx(ERR, "Binary wiegand string must be less than 64 bits");
         return PM3_EINVARG;
     }
@@ -5745,60 +5774,32 @@ static int CmdHFiClassEncode(const char *Cmd) {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     };
 
-    uint8_t data[8];
-    memset(data, 0, sizeof(data));
-    BitstreamOut_t bout = {data, 0, 0 };
-
-    for (int i = 0; i < 64 - bin_len - 1; i++) {
-        pushBit(&bout, 0);
-    }
-    // add binary sentinel bit.
-    pushBit(&bout, 1);
-
-    // convert binary string to hex bytes
-    for (int i = 0; i < bin_len; i++) {
-        char c = bin[i];
-        if (c == '1')
-            pushBit(&bout, 1);
-        else if (c == '0')
-            pushBit(&bout, 0);
-        else {
-            PrintAndLogEx(WARNING, "Ignoring '%c'", c);
-        }
-    }
+    wiegand_input_t input;
+    memset(&input, 0, sizeof(input));
 
     if (bin_len) {
-        memcpy(credential + 8, data, sizeof(data));
+        int res = wiegand_set_plain_binstr((char *)bin, &input);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to encode HID input");
+            return res;
+        }
     } else {
-        wiegand_message_t packed;
-        memset(&packed, 0, sizeof(wiegand_message_t));
 
         int format_idx = HIDFindCardFormat(format);
         if (format_idx == -1) {
             PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
             return PM3_EINVARG;
         }
-
-        if (HIDPack(format_idx, &card, &packed, false) == false) {
-            PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
-            return PM3_ESOFT;
+        int res = wiegand_pack_from_formatted(format_idx, &card, false, &input);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Failed to encode HID input");
+            return res;
         }
+    }
 
-        // iceman: only for formats w length smaller than 37.
-        // Needs a check.
-
-        // increase length to allow setting bit just above real data
-        packed.Length++;
-        // Set sentinel bit
-        set_bit_by_position(&packed, true, 0);
-
-#ifdef HOST_LITTLE_ENDIAN
-        packed.Mid = BSWAP_32(packed.Mid);
-        packed.Bot = BSWAP_32(packed.Bot);
-#endif
-
-        memcpy(credential + 8, &packed.Mid, sizeof(packed.Mid));
-        memcpy(credential + 12, &packed.Bot, sizeof(packed.Bot));
+    if (hficlass_encode_wiegand_binstr(input.binstr, credential) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Encoded Wiegand payload is too large to fit in the iCLASS credential");
+        return PM3_EINVARG;
     }
 
     // encrypt with transport key

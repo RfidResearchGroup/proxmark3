@@ -20,7 +20,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "commonutil.h"
 #include "wiegand_formatutils.h"
+#include "loclass/cipherutils.h"
+#include "wiegand_formats.h"
 #include "util.h"
 #include "ui.h"
 
@@ -275,4 +278,135 @@ bool wiegand_new_pacs_to_binstr(const uint8_t *pacs, size_t pacs_len, char *bins
 
     binstr[trimmed_len - pacs[0]] = '\0';
     return true;
+}
+
+int wiegand_pack_bin_with_hid_header(const char *binstr, wiegand_message_t *packed) {
+    size_t bin_len = strlen(binstr);
+    if (packed == NULL || bin_len == 0 || bin_len > 84) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t hex[12] = {0};
+    BitstreamOut_t bout = {hex, 0, 0};
+
+    for (size_t i = 0; i < (96 - bin_len - 1); i++) {
+        pushBit(&bout, 0);
+    }
+
+    pushBit(&bout, 1);
+
+    for (size_t i = 0; i < bin_len; i++) {
+        char c = binstr[i];
+        if (c == '1') {
+            pushBit(&bout, 1);
+        } else if (c == '0') {
+            pushBit(&bout, 0);
+        } else {
+            return PM3_EINVARG;
+        }
+    }
+
+    packed->Length = (uint8_t)bin_len;
+    packed->Top = bytes_to_num(hex, 4);
+    packed->Mid = bytes_to_num(hex + 4, 4);
+    packed->Bot = bytes_to_num(hex + 8, 4);
+
+    return add_HID_header(packed) ? PM3_SUCCESS : PM3_EINVARG;
+}
+
+int wiegand_set_plain_binstr(const char *binstr, wiegand_input_t *input) {
+    size_t bin_len = strlen(binstr);
+    if (input == NULL || bin_len == 0 || bin_len >= sizeof(input->binstr)) {
+        return PM3_EINVARG;
+    }
+
+    memset(input, 0, sizeof(*input));
+    for (size_t i = 0; i < bin_len; i++) {
+        if (binstr[i] != '0' && binstr[i] != '1') {
+            return PM3_EINVARG;
+        }
+    }
+
+    memcpy(input->binstr, binstr, bin_len + 1);
+    input->bin_len = bin_len;
+    return PM3_SUCCESS;
+}
+
+int wiegand_set_new_pacs_binstr(const uint8_t *pacs, size_t pacs_len, wiegand_input_t *input) {
+    if (input == NULL) {
+        return PM3_EINVARG;
+    }
+
+    memset(input, 0, sizeof(*input));
+    if (wiegand_new_pacs_to_binstr(pacs, pacs_len, input->binstr, sizeof(input->binstr)) == false) {
+        return PM3_EINVARG;
+    }
+
+    input->bin_len = strlen(input->binstr);
+    return PM3_SUCCESS;
+}
+
+int wiegand_pack_formatted(int format_idx, wiegand_card_t *card, bool preamble, wiegand_message_t *packed) {
+    if (HIDPack(format_idx, card, packed, preamble) == false) {
+        return PM3_ESOFT;
+    }
+    return PM3_SUCCESS;
+}
+
+int wiegand_pack_from_plain_bin(const char *binstr, wiegand_input_t *input) {
+    int res = wiegand_set_plain_binstr(binstr, input);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    res = wiegand_pack_bin_with_hid_header(input->binstr, &input->packed);
+    input->packed_valid = (res == PM3_SUCCESS);
+    return res;
+}
+
+int wiegand_pack_from_new_pacs(const uint8_t *pacs, size_t pacs_len, wiegand_input_t *input) {
+    int res = wiegand_set_new_pacs_binstr(pacs, pacs_len, input);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    res = wiegand_pack_bin_with_hid_header(input->binstr, &input->packed);
+    input->packed_valid = (res == PM3_SUCCESS);
+    return res;
+}
+
+int wiegand_pack_from_formatted(int format_idx, wiegand_card_t *card, bool preamble, wiegand_input_t *input) {
+    memset(input, 0, sizeof(*input));
+    int res = wiegand_pack_formatted(format_idx, card, preamble, &input->packed);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    input->packed_valid = true;
+    if (wiegand_message_to_binstr(&input->packed, input->binstr, sizeof(input->binstr)) == false) {
+        return PM3_EINVARG;
+    }
+    input->bin_len = strlen(input->binstr);
+    return PM3_SUCCESS;
+}
+
+int wiegand_pack_from_raw_hid(const uint8_t *raw, size_t raw_len, wiegand_input_t *input) {
+    uint32_t top = 0, mid = 0, bot = 0;
+    memset(input, 0, sizeof(*input));
+
+    char hexstr[40] = {0};
+    if ((raw_len * 2) >= sizeof(hexstr)) {
+        return PM3_EINVARG;
+    }
+    memcpy(hexstr, sprint_hex_inrow(raw, raw_len), raw_len * 2);
+
+    if (hexstring_to_u96(&top, &mid, &bot, hexstr) != (int)(raw_len * 2)) {
+        return PM3_EINVARG;
+    }
+
+    input->packed = initialize_message_object(top, mid, bot, 0);
+    input->packed_valid = true;
+    if (wiegand_raw_to_binstr(raw, raw_len, input->binstr, sizeof(input->binstr))) {
+        input->bin_len = strlen(input->binstr);
+    }
+    return PM3_SUCCESS;
 }

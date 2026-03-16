@@ -10170,60 +10170,32 @@ static int CmdHFMFHidEncode(const char *Cmd) {
         0x04, 0x9D, 0xBA, 0x42, 0xA2, 0x3E, 0x80, 0x88, 0x44, 0x00, 0xC8, 0x20, 0x00, 0x00, 0x00, 0x00,
     };
 
+    wiegand_input_t input;
+    memset(&input, 0, sizeof(input));
+
     if (bin_len) {
-        if (hfmf_encodehid_pack_block5((char *)bin, card_blocks + (MFBLOCK_SIZE * 4)) != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Binary wiegand string must be less than 120 bits");
-            return PM3_EINVARG;
-        }
+        res = wiegand_set_plain_binstr((char *)bin, &input);
     } else if (raw_len) {
-        char raw_bin[120 + 1] = {0};
-
-        if (wiegand_raw_to_binstr(raw, raw_len, raw_bin, sizeof(raw_bin)) == false) {
-            PrintAndLogEx(ERR, "Raw HID hex must contain a sentinel bit and payload");
-            return PM3_EINVARG;
-        }
-
-        if (hfmf_encodehid_pack_block5(raw_bin, card_blocks + (MFBLOCK_SIZE * 4)) != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Raw HID hex is too large to fit in the MIFARE payload");
-            return PM3_EINVARG;
-        }
+        res = wiegand_pack_from_raw_hid(raw, raw_len, &input);
     } else if (new_pacs_len) {
-        char new_bin[96 + 1] = {0};
-
-        if (wiegand_new_pacs_to_binstr(new_pacs, new_pacs_len, new_bin, sizeof(new_bin)) == false) {
-            PrintAndLogEx(ERR, "Invalid PACS value");
-            return PM3_EINVARG;
-        }
-
-        if (hfmf_encodehid_pack_block5(new_bin, card_blocks + (MFBLOCK_SIZE * 4)) != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "PACS payload is too large to fit in the MIFARE payload");
-            return PM3_EINVARG;
-        }
+        res = wiegand_set_new_pacs_binstr(new_pacs, new_pacs_len, &input);
     } else {
-        wiegand_message_t packed;
-        memset(&packed, 0, sizeof(wiegand_message_t));
-        char packed_bin[96 + 1] = {0};
-
         int format_idx = HIDFindCardFormat(format);
         if (format_idx == -1) {
             PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
             return PM3_EINVARG;
         }
+        res = wiegand_pack_from_formatted(format_idx, &card, false, &input);
+    }
 
-        if (HIDPack(format_idx, &card, &packed, false) == false) {
-            PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
-            return PM3_ESOFT;
-        }
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to encode HID input");
+        return res;
+    }
 
-        if (wiegand_message_to_binstr(&packed, packed_bin, sizeof(packed_bin)) == false) {
-            PrintAndLogEx(ERR, "Failed to render Wiegand payload");
-            return PM3_EFAILED;
-        }
-
-        if (hfmf_encodehid_pack_block5(packed_bin, card_blocks + (MFBLOCK_SIZE * 4)) != PM3_SUCCESS) {
-            PrintAndLogEx(ERR, "Encoded Wiegand payload is too large to fit in the MIFARE payload");
-            return PM3_EINVARG;
-        }
+    if (hfmf_encodehid_pack_block5(input.binstr, card_blocks + (MFBLOCK_SIZE * 4)) != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Encoded Wiegand payload is too large to fit in the MIFARE payload");
+        return PM3_EINVARG;
     }
 
     if (use_emulator) {

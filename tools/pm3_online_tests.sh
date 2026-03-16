@@ -11,9 +11,12 @@ TESTALL=false
 TESTDESFIREVALUE=false
 TESTHFMFEMUMEM=false
 TESTHFMFENCODEHIDEMU=false
+TESTHFICLASSENCODEEMU=false
 TESTHFMFENCODEHIDCARD=false
 TESTHFEMUSMOKE=false
 TESTLFHIDSIM=false
+TESTWIEGANDEMUSMOKE=false
+TESTLFHIDCLONE=false
 
 # https://medium.com/@Drew_Stokes/bash-argument-parsing-54f3b81a6a8f
 PARAMS=""
@@ -21,16 +24,21 @@ while (( "$#" )); do
   case "$1" in
     -h|--help)
       echo """
-Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hf_mf_emu_mem|hf_mf_encodehid_emu|hf_mf_encodehid_card|hf_emu_smoke|lf_hid_sim]
+Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hf_mf_emu_mem|hf_mf_encodehid_emu|hf_iclass_encode_emu|hf_mf_encodehid_card|hf_emu_smoke|wiegand_emu_smoke|lf_hid_sim|lf_hid_clone]
     --pm3bin ...:    Specify path to pm3 binary to test
     desfire_value:   Test DESFire value operations with card
     hf_mf_emu_mem:   Test MIFARE Classic emulator memory write/read
     hf_mf_encodehid_emu:
                      Test hf mf encodehid --bin/--raw/--new equivalence in emulator memory
+    hf_iclass_encode_emu:
+                     Test hf iclass encode --bin/--wiegand equivalence in emulator memory
     hf_mf_encodehid_card:
                      Test HID encoding write/read against a blank MIFARE Classic card
-    hf_emu_smoke:    Run HF emulator/card smoke tests
-    lf_hid_sim:      Test lf hid sim --bin/--new and reject >37-bit simulation
+    hf_emu_smoke:    Run HF emulator smoke tests without cards
+    wiegand_emu_smoke:
+                     Run non-card Wiegand emulator tests
+    lf_hid_sim:      Test lf hid sim across 26/35-bit fixtures and reject >37-bit simulation
+    lf_hid_clone:    Test lf hid clone on a writable T55x7 tag
     You must specify a test target - no default 'all' for online tests
 """
       exit 0
@@ -59,6 +67,11 @@ Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hf_mf_emu_mem|hf_mf_encodehid_e
       TESTHFMFENCODEHIDEMU=true
       shift
       ;;
+    hf_iclass_encode_emu)
+      TESTALL=false
+      TESTHFICLASSENCODEEMU=true
+      shift
+      ;;
     hf_mf_encodehid_card)
       TESTALL=false
       TESTHFMFENCODEHIDCARD=true
@@ -69,9 +82,19 @@ Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hf_mf_emu_mem|hf_mf_encodehid_e
       TESTHFEMUSMOKE=true
       shift
       ;;
+    wiegand_emu_smoke)
+      TESTALL=false
+      TESTWIEGANDEMUSMOKE=true
+      shift
+      ;;
     lf_hid_sim)
       TESTALL=false
       TESTLFHIDSIM=true
+      shift
+      ;;
+    lf_hid_clone)
+      TESTALL=false
+      TESTLFHIDCLONE=true
       shift
       ;;
     -*|--*=) # unsupported flags
@@ -151,15 +174,253 @@ function CheckHexOutputContains() {
   CheckOutputContains "$1" "$2" "$EXPECTED_SPACED"
 }
 
-function LoadEncodeHidFixtures() {
+function GetMifareEGetBlkLine() {
+  eval "$PM3BIN -c 'hf mf egetblk --blk $1'" | sed -n 's/.*| \(.*\) | .*/\1/p' | tail -n 1
+}
+
+function GetMifareRdBlkLine() {
+  eval "$PM3BIN -c 'hf mf rdbl --blk $1 -k $2'" | sed -n 's/.*| \(.*\) | .*/\1/p' | tail -n 1
+}
+
+function WaitForUserCard() {
+  echo "  $1"
+  if [ -t 0 ]; then
+    read -r -p "  Press Enter when ready..." _
+  fi
+}
+
+function LoadWiegandFixtures() {
+  local FORMAT="$1"
+  local FC="$2"
+  local CN="$3"
+  local ISSUE="$4"
   local RES
+  local CMD="wiegand encode -w $FORMAT --fc $FC --cn $CN --new -v"
 
-  RES=$($PM3BIN -c 'wiegand encode -w H10301 --fc 31 --cn 337 --new -v')
-  ENCODEHID_FIXTURE_BIN=$(printf '%s\n' "$RES" | sed -n 's/.*Without Sentinel\. .*0b \([01][01]*\).*/\1/p' | tail -n 1)
-  ENCODEHID_FIXTURE_RAW=$(printf '%s\n' "$RES" | sed -n 's/.*Wiegand --raw.... .*0x \([0-9A-Fa-f][0-9A-Fa-f]*\).*/\1/p' | tail -n 1)
-  ENCODEHID_FIXTURE_NEW=$(printf '%s\n' "$RES" | sed -n 's/.*New PACS......... .*0x \([0-9A-Fa-f][0-9A-Fa-f]*\).*/\1/p' | tail -n 1)
+  if [ -n "$ISSUE" ]; then
+    CMD="$CMD --issue $ISSUE"
+  fi
 
-  [ -n "$ENCODEHID_FIXTURE_BIN" ] && [ -n "$ENCODEHID_FIXTURE_RAW" ] && [ -n "$ENCODEHID_FIXTURE_NEW" ]
+  RES=$($PM3BIN -c "$CMD")
+  WIEGAND_FIXTURE_BIN=$(printf '%s\n' "$RES" | sed -n 's/.*Without Sentinel\. .*0b \([01][01]*\).*/\1/p' | tail -n 1)
+  WIEGAND_FIXTURE_RAW=$(printf '%s\n' "$RES" | sed -n 's/.*Wiegand --raw.... .*0x \([0-9A-Fa-f][0-9A-Fa-f]*\).*/\1/p' | tail -n 1)
+  WIEGAND_FIXTURE_NEW=$(printf '%s\n' "$RES" | sed -n 's/.*New PACS......... .*0x \([0-9A-Fa-f][0-9A-Fa-f]*\).*/\1/p' | tail -n 1)
+  [ -n "$WIEGAND_FIXTURE_BIN" ] && [ -n "$WIEGAND_FIXTURE_RAW" ] && [ -n "$WIEGAND_FIXTURE_NEW" ]
+}
+
+function CheckMifareEncodeHidFixture() {
+  local LABEL="$1"
+  local FORMAT="$2"
+  local FC="$3"
+  local CN="$4"
+  local ISSUE="$5"
+  local EXPECTED_BLOCK5="$6"
+
+  if ! LoadWiegandFixtures "$FORMAT" "$FC" "$CN" "$ISSUE"; then
+    echo "Failed to derive $LABEL fixtures from wiegand encode output"
+    return 1
+  fi
+
+  if ! CheckExecute "encode $LABEL --bin to emulator" "$PM3BIN -c 'hf mf encodehid --bin $WIEGAND_FIXTURE_BIN --emu'" "Credential written to emulator memory"; then return 1; fi
+  MIFARE_BLOCK5_BIN=$(GetMifareEGetBlkLine 5)
+  if [ -z "$MIFARE_BLOCK5_BIN" ]; then
+    echo "Failed to read MIFARE block 5 for $LABEL --bin"
+    return 1
+  fi
+  printf "%-40s" "read $LABEL block 5 from --bin "
+  echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
+  if [ -n "$EXPECTED_BLOCK5" ] && ! printf '%s' "$MIFARE_BLOCK5_BIN" | grep -F -q "$(printf '%s' "$EXPECTED_BLOCK5" | sed 's/../& /g; s/ $//')"; then
+    echo "Expected block 5 not found for $LABEL --bin"
+    echo "$MIFARE_BLOCK5_BIN"
+    return 1
+  fi
+
+  if ! CheckExecute "encode $LABEL --raw to emulator" "$PM3BIN -c 'hf mf encodehid --raw $WIEGAND_FIXTURE_RAW --emu'" "Credential written to emulator memory"; then return 1; fi
+  MIFARE_BLOCK5_RAW=$(GetMifareEGetBlkLine 5)
+  if [ "$MIFARE_BLOCK5_RAW" != "$MIFARE_BLOCK5_BIN" ]; then
+    echo "MIFARE block 5 mismatch for $LABEL --raw"
+    echo "$MIFARE_BLOCK5_RAW"
+    return 1
+  fi
+  printf "%-40s" "compare $LABEL block 5 --raw "
+  echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
+
+  if ! CheckExecute "encode $LABEL --new to emulator" "$PM3BIN -c 'hf mf encodehid --new $WIEGAND_FIXTURE_NEW --emu'" "Credential written to emulator memory"; then return 1; fi
+  MIFARE_BLOCK5_NEW=$(GetMifareEGetBlkLine 5)
+  if [ "$MIFARE_BLOCK5_NEW" != "$MIFARE_BLOCK5_BIN" ]; then
+    echo "MIFARE block 5 mismatch for $LABEL --new"
+    echo "$MIFARE_BLOCK5_NEW"
+    return 1
+  fi
+  printf "%-40s" "compare $LABEL block 5 --new "
+  echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
+  return 0
+}
+
+function CheckMifareEncodeHidLongNewFixture() {
+  local LABEL="$1"
+  local BIN="$2"
+  local EXPECTED_BLOCK5="$3"
+  local RES
+  local LONG_NEW
+
+  RES=$($PM3BIN -c "wiegand encode --bin $BIN --new -v")
+  LONG_NEW=$(printf '%s\n' "$RES" | sed -n 's/.*New PACS......... .*0x \([0-9A-Fa-f][0-9A-Fa-f]*\).*/\1/p' | tail -n 1)
+  if [ -z "$LONG_NEW" ]; then
+    echo "Failed to derive $LABEL long new PACS fixture"
+    echo "$RES"
+    return 1
+  fi
+
+  if ! CheckExecute "encode $LABEL --bin to emulator" "$PM3BIN -c 'hf mf encodehid --bin $BIN --emu'" "Credential written to emulator memory"; then return 1; fi
+  MIFARE_BLOCK5_BIN=$(GetMifareEGetBlkLine 5)
+  if [ -z "$MIFARE_BLOCK5_BIN" ]; then
+    echo "Failed to read MIFARE block 5 for $LABEL --bin"
+    return 1
+  fi
+  printf "%-40s" "read $LABEL block 5 from --bin "
+  echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
+  if [ -n "$EXPECTED_BLOCK5" ] && ! printf '%s' "$MIFARE_BLOCK5_BIN" | grep -F -q "$(printf '%s' "$EXPECTED_BLOCK5" | sed 's/../& /g; s/ $//')"; then
+    echo "Expected block 5 not found for $LABEL --bin"
+    echo "$MIFARE_BLOCK5_BIN"
+    return 1
+  fi
+
+  if ! CheckExecute "encode $LABEL --new to emulator" "$PM3BIN -c 'hf mf encodehid --new $LONG_NEW --emu'" "Credential written to emulator memory"; then return 1; fi
+  MIFARE_BLOCK5_NEW=$(GetMifareEGetBlkLine 5)
+  if [ "$MIFARE_BLOCK5_NEW" != "$MIFARE_BLOCK5_BIN" ]; then
+    echo "MIFARE block 5 mismatch for $LABEL --new"
+    echo "$MIFARE_BLOCK5_NEW"
+    return 1
+  fi
+  printf "%-40s" "compare $LABEL block 5 --new "
+  echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
+  return 0
+}
+
+function GetIClassEView() {
+  eval "$PM3BIN -c 'hf iclass eview'" | sed -n 's/.*\(  [6-9]\/0x0[6-9] | .*User AA2\)/\1/p'
+}
+
+function CheckIClassEncodeFixture() {
+  local LABEL="$1"
+  local FORMAT="$2"
+  local FC="$3"
+  local CN="$4"
+  local ISSUE="$5"
+  local EXPECT6="$6"
+  local EXPECT7="$7"
+  local EXPECT8="$8"
+  local EXPECT9="$9"
+  local ICLASS_ENCODE_KEY="000102030405060708090A0B0C0D0E0F"
+
+  if ! LoadWiegandFixtures "$FORMAT" "$FC" "$CN" "$ISSUE"; then
+    echo "Failed to derive $LABEL fixtures from wiegand encode output"
+    return 1
+  fi
+
+  if ! CheckExecute "encode $LABEL iClass --bin" "$PM3BIN -c 'hf iclass encode --bin $WIEGAND_FIXTURE_BIN --emu --enckey $ICLASS_ENCODE_KEY'" "uploaded 32 bytes to emulator memory"; then return 1; fi
+  ICLASS_EVIEW_BIN=$(GetIClassEView)
+  if [ -n "$EXPECT6" ] && ! printf '%s' "$ICLASS_EVIEW_BIN" | grep -F -q "$EXPECT6"; then echo "$ICLASS_EVIEW_BIN"; return 1; fi
+  if [ -n "$EXPECT7" ] && ! printf '%s' "$ICLASS_EVIEW_BIN" | grep -F -q "$EXPECT7"; then echo "$ICLASS_EVIEW_BIN"; return 1; fi
+  if [ -n "$EXPECT8" ] && ! printf '%s' "$ICLASS_EVIEW_BIN" | grep -F -q "$EXPECT8"; then echo "$ICLASS_EVIEW_BIN"; return 1; fi
+  if [ -n "$EXPECT9" ] && ! printf '%s' "$ICLASS_EVIEW_BIN" | grep -F -q "$EXPECT9"; then echo "$ICLASS_EVIEW_BIN"; return 1; fi
+  printf "%-40s" "read $LABEL iClass blocks from --bin "
+  echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
+
+  local WIEGAND_CMD="$PM3BIN -c 'hf iclass encode -w $FORMAT --fc $FC --cn $CN --emu --enckey $ICLASS_ENCODE_KEY'"
+  if [ -n "$ISSUE" ]; then
+    WIEGAND_CMD="$PM3BIN -c 'hf iclass encode -w $FORMAT --fc $FC --cn $CN --issue $ISSUE --emu --enckey $ICLASS_ENCODE_KEY'"
+  fi
+  if ! CheckExecute "encode $LABEL iClass --wiegand" "$WIEGAND_CMD" "uploaded 32 bytes to emulator memory"; then return 1; fi
+  ICLASS_EVIEW_WIEGAND=$(GetIClassEView)
+  if [ "$ICLASS_EVIEW_WIEGAND" != "$ICLASS_EVIEW_BIN" ]; then
+    echo "iClass emulator mismatch for $LABEL --wiegand"
+    echo "$ICLASS_EVIEW_WIEGAND"
+    return 1
+  fi
+  printf "%-40s" "compare $LABEL iClass --wiegand "
+  echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
+  return 0
+}
+
+function CheckLFCloneFixture() {
+  local LABEL="$1"
+  local FORMAT="$2"
+  local FC="$3"
+  local CN="$4"
+  local ISSUE="$5"
+  local EXPECT_FORMAT="$6"
+  local EXPECT_FC="$7"
+  local EXPECT_CN="$8"
+
+  if ! LoadWiegandFixtures "$FORMAT" "$FC" "$CN" "$ISSUE"; then
+    echo "Failed to derive $LABEL fixtures from wiegand encode output"
+    return 1
+  fi
+
+  if ! CheckExecute "clone $LABEL --bin" "$PM3BIN -c 'lf hid clone --bin $WIEGAND_FIXTURE_BIN'" "Done!"; then return 1; fi
+  if ! CheckExecute "read $LABEL after --bin" "$PM3BIN -c 'lf hid reader'" "$EXPECT_FORMAT.*FC: $EXPECT_FC.*CN: $EXPECT_CN"; then return 1; fi
+
+  if ! CheckExecute "clone $LABEL --raw" "$PM3BIN -c 'lf hid clone --raw $WIEGAND_FIXTURE_RAW'" "Done!"; then return 1; fi
+  if ! CheckExecute "read $LABEL after --raw" "$PM3BIN -c 'lf hid reader'" "$EXPECT_FORMAT.*FC: $EXPECT_FC.*CN: $EXPECT_CN"; then return 1; fi
+
+  if ! CheckExecute "clone $LABEL --new" "$PM3BIN -c 'lf hid clone --new $WIEGAND_FIXTURE_NEW'" "Done!"; then return 1; fi
+  if ! CheckExecute "read $LABEL after --new" "$PM3BIN -c 'lf hid reader'" "$EXPECT_FORMAT.*FC: $EXPECT_FC.*CN: $EXPECT_CN"; then return 1; fi
+
+  local CLONE_CMD="$PM3BIN -c 'lf hid clone -w $FORMAT --fc $FC --cn $CN'"
+  if [ -n "$ISSUE" ]; then
+    CLONE_CMD="$PM3BIN -c 'lf hid clone -w $FORMAT --fc $FC --cn $CN -i $ISSUE'"
+  fi
+  if ! CheckExecute "clone $LABEL --wiegand" "$CLONE_CMD" "Done!"; then return 1; fi
+  if ! CheckExecute "read $LABEL after --wiegand" "$PM3BIN -c 'lf hid reader'" "$EXPECT_FORMAT.*FC: $EXPECT_FC.*CN: $EXPECT_CN"; then return 1; fi
+  return 0
+}
+
+function GetMifareCardExpectedBlock5() {
+  local CMD="$1"
+  local PREP_RES
+  PREP_RES=$(eval "$CMD")
+  if ! printf '%s' "$PREP_RES" | grep -F -q "Credential written to emulator memory"; then
+    echo "Failed to prepare expected MIFARE emulator block 5" >&2
+    echo "$PREP_RES" >&2
+    return 1
+  fi
+  GetMifareEGetBlkLine 5
+}
+
+function CheckMifareEncodeHidCardFixture() {
+  local LABEL="$1"
+  local WRITE_CMD="$2"
+  local EXPECTED_BLOCK5="$3"
+  local EXPECTED_BLOCK5_HEX
+  local BLOCK5_HEX
+
+  if ! CheckExecute "encode $LABEL to card" "$WRITE_CMD" "pm3 -->"; then return 1; fi
+  CARD_TEST_RESTORE_NEEDED=true
+
+  local BLOCK1
+  local BLOCK3
+  local BLOCK5
+  local BLOCK7
+  BLOCK1=$(GetMifareRdBlkLine 1 A0A1A2A3A4A5)
+  BLOCK3=$(GetMifareRdBlkLine 3 A0A1A2A3A4A5)
+  BLOCK5=$(GetMifareRdBlkLine 5 484944204953)
+  BLOCK7=$(GetMifareRdBlkLine 7 484944204953)
+  EXPECTED_BLOCK5_HEX=$(printf '%s' "$EXPECTED_BLOCK5" | tr -d '[:space:]')
+  BLOCK5_HEX=$(printf '%s' "$BLOCK5" | tr -d '[:space:]')
+
+  if ! printf '%s' "$BLOCK1" | grep -F -q "1B 01 4D 48"; then echo "$BLOCK1"; return 1; fi
+  if ! printf '%s' "$BLOCK3" | grep -F -q "78 77 88 C1"; then echo "$BLOCK3"; return 1; fi
+  if [ "$BLOCK5_HEX" != "$EXPECTED_BLOCK5_HEX" ]; then echo "$BLOCK5"; return 1; fi
+  if ! printf '%s' "$BLOCK7" | grep -F -q "78 77 88 AA"; then echo "$BLOCK7"; return 1; fi
+
+  printf "%-40s" "verify $LABEL card blocks "
+  echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
+
+  if ! CleanupEncodeHidCard; then return 1; fi
+  CARD_TEST_RESTORE_NEEDED=false
+  return 0
 }
 
 function CleanupEncodeHidCard() {
@@ -192,10 +453,17 @@ fi
 if [ "$TESTHFEMUSMOKE" = true ]; then
   TESTHFMFEMUMEM=true
   TESTHFMFENCODEHIDEMU=true
-  TESTHFMFENCODEHIDCARD=true
+  TESTHFICLASSENCODEEMU=true
 fi
 
-if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHFMFEMUMEM" = false ] && [ "$TESTHFMFENCODEHIDEMU" = false ] && [ "$TESTHFMFENCODEHIDCARD" = false ] && [ "$TESTLFHIDSIM" = false ]; then
+if [ "$TESTWIEGANDEMUSMOKE" = true ]; then
+  TESTHFMFEMUMEM=true
+  TESTHFMFENCODEHIDEMU=true
+  TESTHFICLASSENCODEEMU=true
+  TESTLFHIDSIM=true
+fi
+
+if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHFMFEMUMEM" = false ] && [ "$TESTHFMFENCODEHIDEMU" = false ] && [ "$TESTHFICLASSENCODEEMU" = false ] && [ "$TESTHFMFENCODEHIDCARD" = false ] && [ "$TESTLFHIDSIM" = false ] && [ "$TESTWIEGANDEMUSMOKE" = false ] && [ "$TESTLFHIDCLONE" = false ]; then
   echo "Error: You must specify a test target. Use -h for help."
   exit 1
 fi
@@ -216,39 +484,47 @@ while true; do
     if $TESTHFMFENCODEHIDEMU; then
       echo -e "\n${C_BLUE}Testing hf mf encodehid emulator fixtures${C_NC} ${PM3BIN:=./pm3}"
       if ! CheckFileExist "pm3 exists" "$PM3BIN"; then break; fi
-      if ! LoadEncodeHidFixtures; then
-        echo "Failed to derive encodehid fixtures from wiegand encode output"
-        break
-      fi
 
-      EXPECTED_BLOCK5="020000000000000000000000063E02A3"
-
-      if ! CheckExecute "encode HID --bin to emulator" "$PM3BIN -c 'hf mf encodehid --bin $ENCODEHID_FIXTURE_BIN --emu'" "Credential written to emulator memory"; then break; fi
-      if ! CheckHexOutputContains "read emulator block 5 from --bin" "$PM3BIN -c 'hf mf egetblk --blk 5'" "$EXPECTED_BLOCK5"; then break; fi
-
-      if ! CheckExecute "encode HID --raw to emulator" "$PM3BIN -c 'hf mf encodehid --raw $ENCODEHID_FIXTURE_RAW --emu'" "Credential written to emulator memory"; then break; fi
-      if ! CheckHexOutputContains "read emulator block 5 from --raw" "$PM3BIN -c 'hf mf egetblk --blk 5'" "$EXPECTED_BLOCK5"; then break; fi
-
-      if ! CheckExecute "encode HID --new to emulator" "$PM3BIN -c 'hf mf encodehid --new $ENCODEHID_FIXTURE_NEW --emu'" "Credential written to emulator memory"; then break; fi
-      if ! CheckHexOutputContains "read emulator block 5 from --new" "$PM3BIN -c 'hf mf egetblk --blk 5'" "$EXPECTED_BLOCK5"; then break; fi
+      if ! CheckMifareEncodeHidFixture "H10301" "H10301" "31" "337" "" "020000000000000000000000063E02A3"; then break; fi
+      if ! CheckMifareEncodeHidFixture "C1k35s" "C1k35s" "222" "12345" "" ""; then break; fi
+      if ! CheckMifareEncodeHidFixture "P10001" "P10001" "12" "3456" "" ""; then break; fi
+      if ! CheckMifareEncodeHidLongNewFixture "96-bit direct PACS" "101010101100110011110000000011110101010110101010110011001111000000001111010101011010101011001100" "020000D5667807AAD5667807AAD56600"; then break; fi
 
       echo "  encodehid emulator fixture tests completed successfully!"
+    fi
+
+    if $TESTHFICLASSENCODEEMU; then
+      echo -e "\n${C_BLUE}Testing hf iclass encode emulator fixtures${C_NC} ${PM3BIN:=./pm3}"
+      if ! CheckFileExist "pm3 exists" "$PM3BIN"; then break; fi
+
+      if ! CheckIClassEncodeFixture "H10301" "H10301" "31" "337" "" "03 03 03 03 00 03 E0 17" "1D 21 B3 16 EE D4 A5 E2" "DD AD A1 61 E8 D7 96 73" "DD AD A1 61 E8 D7 96 73"; then break; fi
+      if ! CheckIClassEncodeFixture "C1k35s" "C1k35s" "222" "12345" "" "" "" "" ""; then break; fi
+      if ! CheckIClassEncodeFixture "P10001" "P10001" "12" "3456" "" "" "" "" ""; then break; fi
+
+      echo "  iClass encode emulator fixture tests completed successfully!"
     fi
 
     if $TESTHFMFENCODEHIDCARD; then
       CARD_TEST_RESTORE_NEEDED=false
       echo -e "\n${C_BLUE}Testing hf mf encodehid against card${C_NC} ${PM3BIN:=./pm3}"
-      echo "  PLACE A BLANK DEFAULT-KEY MIFARE CLASSIC CARD ON THE READER NOW"
       if ! CheckFileExist "pm3 exists"               "$PM3BIN"; then break; fi
 
-      if ! CheckExecute "encode HID to card"         "$PM3BIN -c 'hf mf encodehid -w H10301 --fc 31 --cn 337'" "pm3 -->"; then break; fi
-      CARD_TEST_RESTORE_NEEDED=true
-      if ! CheckHexOutputContains "read card block 1"   "$PM3BIN -c 'hf mf rdbl --blk 1 -k A0A1A2A3A4A5'" "1B014D48000000000000000000000000"; then CleanupEncodeHidCard; break; fi
-      if ! CheckHexOutputContains "read card block 3 acl"   "$PM3BIN -c 'hf mf rdbl --blk 3 -k A0A1A2A3A4A5'" "000000000000787788C1000000000000"; then CleanupEncodeHidCard; break; fi
-      if ! CheckHexOutputContains "read card block 5"   "$PM3BIN -c 'hf mf rdbl --blk 5 -k 484944204953'" "020000000000000000000000063E02A3"; then CleanupEncodeHidCard; break; fi
-      if ! CheckHexOutputContains "read card block 7 acl"   "$PM3BIN -c 'hf mf rdbl --blk 7 -k 484944204953'" "000000000000787788AA000000000000"; then CleanupEncodeHidCard; break; fi
-      if ! CleanupEncodeHidCard; then break; fi
-      CARD_TEST_RESTORE_NEEDED=false
+      WaitForUserCard "PLACE A BLANK DEFAULT-KEY MIFARE CLASSIC CARD ON THE READER NOW"
+
+      EXPECTED_CARD_BLOCK5=$(GetMifareCardExpectedBlock5 "$PM3BIN -c 'hf mf encodehid -w H10301 --fc 31 --cn 337 --emu'")
+      if [ -z "$EXPECTED_CARD_BLOCK5" ]; then break; fi
+      if ! CheckMifareEncodeHidCardFixture "H10301 --wiegand" "$PM3BIN -c 'hf mf encodehid -w H10301 --fc 31 --cn 337'" "$EXPECTED_CARD_BLOCK5"; then CleanupEncodeHidCard; break; fi
+
+      if ! LoadWiegandFixtures "C1k35s" "222" "12345" ""; then break; fi
+      EXPECTED_CARD_BLOCK5=$(GetMifareCardExpectedBlock5 "$PM3BIN -c 'hf mf encodehid --new $WIEGAND_FIXTURE_NEW --emu'")
+      if [ -z "$EXPECTED_CARD_BLOCK5" ]; then break; fi
+      if ! CheckMifareEncodeHidCardFixture "C1k35s --new" "$PM3BIN -c 'hf mf encodehid --new $WIEGAND_FIXTURE_NEW'" "$EXPECTED_CARD_BLOCK5"; then CleanupEncodeHidCard; break; fi
+
+      if ! LoadWiegandFixtures "P10001" "12" "3456" ""; then break; fi
+      EXPECTED_CARD_BLOCK5=$(GetMifareCardExpectedBlock5 "$PM3BIN -c 'hf mf encodehid --bin $WIEGAND_FIXTURE_BIN --emu'")
+      if [ -z "$EXPECTED_CARD_BLOCK5" ]; then break; fi
+      if ! CheckMifareEncodeHidCardFixture "P10001 --bin" "$PM3BIN -c 'hf mf encodehid --bin $WIEGAND_FIXTURE_BIN'" "$EXPECTED_CARD_BLOCK5"; then CleanupEncodeHidCard; break; fi
+
       echo "  encodehid card write/read tests completed successfully!"
     fi
 
@@ -256,18 +532,41 @@ while true; do
       echo -e "\n${C_BLUE}Testing lf hid sim input modes${C_NC} ${PM3BIN:=./pm3}"
       if ! CheckFileExist "pm3 exists" "$PM3BIN"; then break; fi
 
-      LFHIDSIM_REJECT_BIN=$(printf '01%.0s' {1..19})
-      LFHIDSIM_REJECT_NEW="025555555554"
+      if ! LoadWiegandFixtures "H10301" "31" "337" ""; then break; fi
+      if ! CheckExecute "lf hid sim H10301 --bin" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim --bin $WIEGAND_FIXTURE_BIN'" "Simulating HID tag"; then break; fi
+      if ! CheckExecute "lf hid sim H10301 --new" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim --new $WIEGAND_FIXTURE_NEW'" "Simulating HID tag"; then break; fi
+      if ! CheckExecute "lf hid sim H10301 --raw" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim -r $WIEGAND_FIXTURE_RAW'" "Simulating HID tag using raw"; then break; fi
+      if ! CheckExecute "lf hid sim H10301 --wiegand" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim -w H10301 --fc 31 --cn 337'" "Simulating HID tag"; then break; fi
 
-      if ! CheckExecute "lf hid sim --bin" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim --bin 10001111100000001010100011'" "Simulating HID tag"; then break; fi
-      if ! CheckExecute "lf hid sim --new" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim --new 068F80A8C0'" "Simulating HID tag"; then break; fi
-      if ! CheckExecute "lf hid sim 35-bit raw" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim -r 2e0ec00c87'" "Simulating HID tag using raw"; then break; fi
-      if ! CheckExecute "lf hid sim 38-bit --bin reject" "$PM3BIN -c 'lf hid sim --bin $LFHIDSIM_REJECT_BIN' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
-      if ! CheckExecute "lf hid sim 38-bit --new reject" "$PM3BIN -c 'lf hid sim --new $LFHIDSIM_REJECT_NEW' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
-      if ! CheckExecute "lf hid sim 40-bit raw reject" "$PM3BIN -c 'lf hid sim -r 01f0760643c3' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
+      if ! LoadWiegandFixtures "C1k35s" "222" "12345" ""; then break; fi
+      if ! CheckExecute "lf hid sim C1k35s --bin" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim --bin $WIEGAND_FIXTURE_BIN'" "Simulating HID tag"; then break; fi
+      if ! CheckExecute "lf hid sim C1k35s --new" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim --new $WIEGAND_FIXTURE_NEW'" "Simulating HID tag"; then break; fi
+      if ! CheckExecute "lf hid sim C1k35s --raw" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim -r $WIEGAND_FIXTURE_RAW'" "Simulating HID tag using raw"; then break; fi
+      if ! CheckExecute "lf hid sim C1k35s --wiegand" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim -w C1k35s --fc 222 --cn 12345'" "Simulating HID tag"; then break; fi
+
+      if ! LoadWiegandFixtures "BQT38" "1" "1" "1"; then break; fi
+      if ! CheckExecute "lf hid sim 38-bit --bin reject" "$PM3BIN -c 'lf hid sim --bin $WIEGAND_FIXTURE_BIN' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
+      if ! CheckExecute "lf hid sim 38-bit --new reject" "$PM3BIN -c 'lf hid sim --new $WIEGAND_FIXTURE_NEW' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
+      if ! CheckExecute "lf hid sim 38-bit --raw reject" "$PM3BIN -c 'lf hid sim -r $WIEGAND_FIXTURE_RAW' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
+      if ! LoadWiegandFixtures "P10001" "12" "3456" ""; then break; fi
+      if ! CheckExecute "lf hid sim 40-bit --bin reject" "$PM3BIN -c 'lf hid sim --bin $WIEGAND_FIXTURE_BIN' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
+      if ! CheckExecute "lf hid sim 40-bit --new reject" "$PM3BIN -c 'lf hid sim --new $WIEGAND_FIXTURE_NEW' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
+      if ! CheckExecute "lf hid sim 40-bit raw reject" "$PM3BIN -c 'lf hid sim -r $WIEGAND_FIXTURE_RAW' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
+      if ! CheckExecute "lf hid sim 40-bit format reject" "$PM3BIN -c 'lf hid sim -w P10001 --fc 12 --cn 3456' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
       if ! CheckExecute "lf hid sim 38-bit format reject" "$PM3BIN -c 'lf hid sim -w BQT38 --fc 1 --cn 1 -i 1' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
 
       echo "  lf hid sim tests completed successfully!"
+    fi
+
+    if $TESTLFHIDCLONE; then
+      echo -e "\n${C_BLUE}Testing lf hid clone against T55x7${C_NC} ${PM3BIN:=./pm3}"
+      echo "  PLACE A WRITABLE T55x7 TAG ON THE LF ANTENNA NOW"
+      if ! CheckFileExist "pm3 exists" "$PM3BIN"; then break; fi
+
+      if ! CheckLFCloneFixture "H10301" "H10301" "31" "337" "" "H10301" "31" "337"; then break; fi
+      if ! CheckLFCloneFixture "C1k35s" "C1k35s" "222" "12345" "" "C1k35s" "222" "12345"; then break; fi
+
+      echo "  lf hid clone tests completed successfully!"
     fi
 
     # DESFire value tests
