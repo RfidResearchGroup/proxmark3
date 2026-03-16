@@ -110,7 +110,7 @@
 #define FELICA_SERVICE_ATTRIBUTE_PURSE_RO_WITH_KEY_WITH_PIN           0x36U
 #define FELICA_SERVICE_ATTRIBUTE_PURSE_RO_WITHOUT_KEY_WITH_PIN        0x37U
 
-#define FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE 16U
+#define FELICA_REQUEST_SERVICE_DISCOVERY_BATCH_SIZE 32U
 #define FELICA_MAX_NODE_NUMBER 0x03FFU
 #define FELICA_PRESENCE_SERVICE_CODE_LE ((uint16_t)FELICA_SERVICE_ATTRIBUTE_RANDOM_RO_WITHOUT_KEY)
 
@@ -1992,6 +1992,12 @@ static bool felica_discover_nodes_with_request_service(uint8_t *flags,
             }
 
             const felica_request_service_probe_attribute_t probe_attr = FELICA_REQUEST_SERVICE_PROBE_ATTRIBUTES[j];
+            if (probe_attr.with_pin) {
+                // Some cards do not react well to RequestService probes that include
+                // unsupported node attributes, so PIN-related nodes supported only on mobile are skipped here.
+                continue;
+            }
+
             const uint16_t node_code_le = (uint16_t)((number << 6) | probe_attr.attribute);
 
             batch_codes[batch_count] = node_code_le;
