@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
-- Changed `hf mf encodehid` - added `--emu` support to write directly to emulator memory and start simulation, plus added PM3 online tests for emulator memory and HID encode/write/read verification with card cleanup (@cindersocket)
+- Changed `hf mf encodehid` - added `--emu` support to write directly to emulator memory, plus added PM3 online tests for emulator memory and HID encode/write/read verification with card cleanup (@cindersocket)
 - Added `hf gst read` command (@kormax)
 - Added `hf gst info` command (@kormax)
 - Added `hf 14b tearoff` - interactive ST25TB/SRx monotonic counter tear-off attack (@xNovyz)

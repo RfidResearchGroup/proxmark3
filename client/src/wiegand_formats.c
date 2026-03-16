@@ -1872,6 +1872,7 @@ int HIDDumpPACSBits(const uint8_t *const data, const uint8_t length, bool verbos
         if (binstrlen <= 96) {
             PrintAndLogEx(INFO, "Downgrade to " _YELLOW_("MIFARE Classic") " (Pm3 simulation)");
             PrintAndLogEx(SUCCESS, "    hf mf encodehid --bin %s --emu;", binstr);
+            PrintAndLogEx(SUCCESS, "    hf mf sim --1k -i;");
             PrintAndLogEx(NORMAL, "");
         }
 

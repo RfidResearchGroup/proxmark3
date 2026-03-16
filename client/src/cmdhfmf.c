@@ -10050,7 +10050,7 @@ static int CmdHFMFHidEncode(const char *Cmd) {
     CLIParserInit(&ctx, "hf mf encodehid",
                   "Encode binary wiegand to a MIFARE Classic card or the emulator\n"
                   "Use either --bin or --wiegand/--fc/--cn\n"
-                  "Use --emu to avoid requiring a card in the field, write to emulator memory, and start simulation",
+                  "Use --emu to avoid requiring a card in the field and write to emulator memory instead",
                   "hf mf encodehid --bin 10001111100000001010100011            -> FC 31 CN 337 (H10301)\n"
                   "hf mf encodehid -w H10301 --fc 31 --cn 337\n"
                   "hf mf encodehid -w H10301 --fc 31 --cn 337 --emu"
@@ -10062,7 +10062,7 @@ static int CmdHFMFHidEncode(const char *Cmd) {
         arg_u64_0(NULL, "fc", "<dec>", "facility code"),
         arg_u64_0(NULL, "cn", "<dec>", "card number"),
         arg_str0("w",   "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
-        arg_lit0(NULL, "emu", "Write the encoded credential to MIFARE Classic emulator memory and start simulation"),
+        arg_lit0(NULL, "emu", "Write the encoded credential to MIFARE Classic emulator memory instead of a card"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
@@ -10175,9 +10175,9 @@ static int CmdHFMFHidEncode(const char *Cmd) {
             }
         }
 
-        PrintAndLogEx(SUCCESS, "Credential written to emulator memory. Starting simulation...");
+        PrintAndLogEx(SUCCESS, "Credential written to emulator memory. Run " _YELLOW_("`hf mf sim --1k -i`") " to simulate it.");
         PrintAndLogEx(NORMAL, "");
-        return CmdHF14AMfSim("--1k -i");
+        return PM3_SUCCESS;
     }
 
     uint8_t empty[MIFARE_KEY_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
