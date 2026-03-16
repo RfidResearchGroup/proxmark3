@@ -196,16 +196,24 @@ function LoadWiegandFixtures() {
   local ISSUE="$4"
   local RES
   local CMD="wiegand encode -w $FORMAT --fc $FC --cn $CN --new -v"
+  local PRE_RES
+  local PRE_CMD="wiegand encode -w $FORMAT --fc $FC --cn $CN --pre -v"
 
   if [ -n "$ISSUE" ]; then
     CMD="$CMD --issue $ISSUE"
+    PRE_CMD="$PRE_CMD --issue $ISSUE"
   fi
 
   RES=$($PM3BIN -c "$CMD")
+  PRE_RES=$($PM3BIN -c "$PRE_CMD")
   WIEGAND_FIXTURE_BIN=$(printf '%s\n' "$RES" | sed -n 's/.*Without Sentinel\. .*0b \([01][01]*\).*/\1/p' | tail -n 1)
   WIEGAND_FIXTURE_RAW=$(printf '%s\n' "$RES" | sed -n 's/.*Wiegand --raw.... .*0x \([0-9A-Fa-f][0-9A-Fa-f]*\).*/\1/p' | tail -n 1)
   WIEGAND_FIXTURE_NEW=$(printf '%s\n' "$RES" | sed -n 's/.*New PACS......... .*0x \([0-9A-Fa-f][0-9A-Fa-f]*\).*/\1/p' | tail -n 1)
-  [ -n "$WIEGAND_FIXTURE_BIN" ] && [ -n "$WIEGAND_FIXTURE_RAW" ] && [ -n "$WIEGAND_FIXTURE_NEW" ]
+  WIEGAND_FIXTURE_LF_RAW=$(printf '%s\n' "$PRE_RES" | sed -n 's/.*Wiegand: \([0-9A-Fa-f][0-9A-Fa-f]*\).*/\1/p' | tail -n 1)
+  if [ $(( ${#WIEGAND_FIXTURE_LF_RAW} % 2 )) -ne 0 ]; then
+    WIEGAND_FIXTURE_LF_RAW="0${WIEGAND_FIXTURE_LF_RAW}"
+  fi
+  [ -n "$WIEGAND_FIXTURE_BIN" ] && [ -n "$WIEGAND_FIXTURE_RAW" ] && [ -n "$WIEGAND_FIXTURE_NEW" ] && [ -n "$WIEGAND_FIXTURE_LF_RAW" ]
 }
 
 function CheckMifareEncodeHidFixture() {
@@ -362,7 +370,7 @@ function CheckLFCloneFixture() {
   if ! CheckExecute "clone $LABEL --bin" "$PM3BIN -c 'lf hid clone --bin $WIEGAND_FIXTURE_BIN'" "Done!"; then return 1; fi
   if ! CheckExecute "read $LABEL after --bin" "$PM3BIN -c 'lf hid reader'" "$EXPECT_FORMAT.*FC: $EXPECT_FC.*CN: $EXPECT_CN"; then return 1; fi
 
-  if ! CheckExecute "clone $LABEL --raw" "$PM3BIN -c 'lf hid clone --raw $WIEGAND_FIXTURE_RAW'" "Done!"; then return 1; fi
+  if ! CheckExecute "clone $LABEL --raw" "$PM3BIN -c 'lf hid clone --raw $WIEGAND_FIXTURE_LF_RAW'" "Done!"; then return 1; fi
   if ! CheckExecute "read $LABEL after --raw" "$PM3BIN -c 'lf hid reader'" "$EXPECT_FORMAT.*FC: $EXPECT_FC.*CN: $EXPECT_CN"; then return 1; fi
 
   if ! CheckExecute "clone $LABEL --new" "$PM3BIN -c 'lf hid clone --new $WIEGAND_FIXTURE_NEW'" "Done!"; then return 1; fi
@@ -535,23 +543,23 @@ while true; do
       if ! LoadWiegandFixtures "H10301" "31" "337" ""; then break; fi
       if ! CheckExecute "lf hid sim H10301 --bin" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim --bin $WIEGAND_FIXTURE_BIN'" "Simulating HID tag"; then break; fi
       if ! CheckExecute "lf hid sim H10301 --new" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim --new $WIEGAND_FIXTURE_NEW'" "Simulating HID tag"; then break; fi
-      if ! CheckExecute "lf hid sim H10301 --raw" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim -r $WIEGAND_FIXTURE_RAW'" "Simulating HID tag using raw"; then break; fi
+      if ! CheckExecute "lf hid sim H10301 --raw" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim -r $WIEGAND_FIXTURE_LF_RAW'" "Simulating HID tag using raw"; then break; fi
       if ! CheckExecute "lf hid sim H10301 --wiegand" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim -w H10301 --fc 31 --cn 337'" "Simulating HID tag"; then break; fi
 
       if ! LoadWiegandFixtures "C1k35s" "222" "12345" ""; then break; fi
       if ! CheckExecute "lf hid sim C1k35s --bin" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim --bin $WIEGAND_FIXTURE_BIN'" "Simulating HID tag"; then break; fi
       if ! CheckExecute "lf hid sim C1k35s --new" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim --new $WIEGAND_FIXTURE_NEW'" "Simulating HID tag"; then break; fi
-      if ! CheckExecute "lf hid sim C1k35s --raw" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim -r $WIEGAND_FIXTURE_RAW'" "Simulating HID tag using raw"; then break; fi
+      if ! CheckExecute "lf hid sim C1k35s --raw" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim -r $WIEGAND_FIXTURE_LF_RAW'" "Simulating HID tag using raw"; then break; fi
       if ! CheckExecute "lf hid sim C1k35s --wiegand" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim -w C1k35s --fc 222 --cn 12345'" "Simulating HID tag"; then break; fi
 
       if ! LoadWiegandFixtures "BQT38" "1" "1" "1"; then break; fi
       if ! CheckExecute "lf hid sim 38-bit --bin reject" "$PM3BIN -c 'lf hid sim --bin $WIEGAND_FIXTURE_BIN' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
       if ! CheckExecute "lf hid sim 38-bit --new reject" "$PM3BIN -c 'lf hid sim --new $WIEGAND_FIXTURE_NEW' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
-      if ! CheckExecute "lf hid sim 38-bit --raw reject" "$PM3BIN -c 'lf hid sim -r $WIEGAND_FIXTURE_RAW' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
+      if ! CheckExecute "lf hid sim 38-bit --raw reject" "$PM3BIN -c 'lf hid sim -r $WIEGAND_FIXTURE_LF_RAW' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
       if ! LoadWiegandFixtures "P10001" "12" "3456" ""; then break; fi
       if ! CheckExecute "lf hid sim 40-bit --bin reject" "$PM3BIN -c 'lf hid sim --bin $WIEGAND_FIXTURE_BIN' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
       if ! CheckExecute "lf hid sim 40-bit --new reject" "$PM3BIN -c 'lf hid sim --new $WIEGAND_FIXTURE_NEW' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
-      if ! CheckExecute "lf hid sim 40-bit raw reject" "$PM3BIN -c 'lf hid sim -r $WIEGAND_FIXTURE_RAW' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
+      if ! CheckExecute "lf hid sim 40-bit raw reject" "$PM3BIN -c 'lf hid sim -r $WIEGAND_FIXTURE_LF_RAW' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
       if ! CheckExecute "lf hid sim 40-bit format reject" "$PM3BIN -c 'lf hid sim -w P10001 --fc 12 --cn 3456' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
       if ! CheckExecute "lf hid sim 38-bit format reject" "$PM3BIN -c 'lf hid sim -w BQT38 --fc 1 --cn 1 -i 1' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
 
