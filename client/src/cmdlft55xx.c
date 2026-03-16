@@ -66,6 +66,7 @@ static t55xx_conf_block_t config = {
 };
 
 static t55xx_memory_item_t cardmem[T55x7_BLOCK_COUNT] = {{0}};
+static bool test_with_start(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5, uint8_t start_idx);
 /*
 #define DC(x)  ((x) + 128)
 
@@ -1448,11 +1449,22 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 tests[hits].downlink_mode = downlink_mode;
                 ++hits;
             }
-            //ICEMAN: are these PSKDemod calls needed?
-            // PSK2 - needs a call to psk1TOpsk2.
-            if (PSKDemod(0, 0, 6, false) == PM3_SUCCESS) {
+            // PSK2/3 block reads do not share the trimmed PSK1 alignment, so
+            // retry them from the original capture.
+            restore_bufferS32(saveState, g_GraphBuffer);
+            g_GridOffset = saveState.offset;
+            // PSK2/3 clock auto-detect can lock to the phase-transition cadence
+            // instead of the encoded bit rate, so retry with clk/2 as a fallback.
+            uint8_t psk_clks[] = {clk, ((clk > 8) && ((clk & 1) == 0)) ? (uint8_t)(clk / 2) : 0};
+            for (size_t i = 0; i < ARRAYLEN(psk_clks); i++) {
+                if (psk_clks[i] == 0) {
+                    continue;
+                }
+                if (PSKDemod(psk_clks[i], 0, 6, false) != PM3_SUCCESS) {
+                    continue;
+                }
                 psk1TOpsk2(g_DemodBuffer, g_DemodBufferLen);
-                if (test(DEMOD_PSK2, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+                if (test_with_start(DEMOD_PSK2, &tests[hits].offset, &bitRate, psk_clks[i], &tests[hits].Q5, 0)) {
                     tests[hits].modulation = DEMOD_PSK2;
                     tests[hits].bitrate = bitRate;
                     tests[hits].inverted = false;
@@ -1460,12 +1472,18 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                     tests[hits].ST = false;
                     tests[hits].downlink_mode = downlink_mode;
                     ++hits;
+                    break;
                 }
             } // inverse waves does not affect this demod
-            // PSK3 - needs a call to psk1TOpsk2.
-            if (PSKDemod(0, 0, 6, false) == PM3_SUCCESS) {
+            for (size_t i = 0; i < ARRAYLEN(psk_clks); i++) {
+                if (psk_clks[i] == 0) {
+                    continue;
+                }
+                if (PSKDemod(psk_clks[i], 0, 6, false) != PM3_SUCCESS) {
+                    continue;
+                }
                 psk1TOpsk2(g_DemodBuffer, g_DemodBufferLen);
-                if (test(DEMOD_PSK3, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
+                if (test_with_start(DEMOD_PSK3, &tests[hits].offset, &bitRate, psk_clks[i], &tests[hits].Q5, 0)) {
                     tests[hits].modulation = DEMOD_PSK3;
                     tests[hits].bitrate = bitRate;
                     tests[hits].inverted = false;
@@ -1473,11 +1491,9 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                     tests[hits].ST = false;
                     tests[hits].downlink_mode = downlink_mode;
                     ++hits;
+                    break;
                 }
             } // inverse waves does not affect this demod
-            //undo trim samples
-            restore_bufferS32(saveState, g_GraphBuffer);
-            g_GridOffset = saveState.offset;
             // t55xx_search_config_psk(g_GraphBuffer, 1);
             // t55xx_search_config_psk(g_GraphBuffer, 2);
         }
@@ -1729,15 +1745,22 @@ static bool testBitRate(uint8_t readRate, uint8_t clk) {
     return false;
 }
 
-bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5) {
+static bool test_with_start(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5, uint8_t start_idx) {
 
-    if (g_DemodBufferLen < 64) {
+    if (g_DemodBufferLen < 32) {
         return false;
     }
 
-    for (uint8_t idx = 28; idx < 64; idx++) {
+    // PSK demods can return shorter buffers and earlier block starts than the
+    // classic 64-bit / offset-28 layout used by the other modulations.
+    size_t max_idx = g_DemodBufferLen - 32;
+    if (start_idx > max_idx) {
+        return false;
+    }
 
-        uint8_t si = idx;
+    for (size_t idx = start_idx; idx <= max_idx; idx++) {
+
+        size_t si = idx;
 
         if (PackBits(si, 28, g_DemodBuffer) == 0x00) {
             continue;
@@ -1789,7 +1812,7 @@ bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5)
         }
 
         *fndBitRate = bitRate;
-        *offset = idx;
+        *offset = (uint8_t)idx;
         *Q5 = false;
         return true;
     }
@@ -1799,6 +1822,10 @@ bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5)
         return true;
     }
     return false;
+}
+
+bool test(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5) {
+    return test_with_start(mode, offset, fndBitRate, clk, Q5, 28);
 }
 
 int CmdT55xxSpecial(const char *Cmd) {

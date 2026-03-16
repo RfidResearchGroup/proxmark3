@@ -252,6 +252,10 @@ function BackupT55xxTag() {
   return 0
 }
 
+function GetT55xxConfigBlock0() {
+  eval "$PM3BIN -c 'lf t55xx config $1'" | sed -n 's/.*Block0............ \([0-9A-F]*\).*/\1/p' | tail -n 1
+}
+
 function RestoreT55xxTag() {
   if [ "$T55XX_BACKUP_ACTIVE" != true ] || [ ! -f "${T55XX_DUMP_BASE}.bin" ]; then
     return 0
@@ -288,6 +292,33 @@ function CheckT55xxDetectFixture() {
 
   if ! CheckExecute "clone $LABEL" "$CLONE_CMD" "Done!|Tag T55x7 written"; then return 1; fi
   if ! CheckT55xxDetectResult "detect $LABEL" "$MOD" "$RATE" "$BLOCK0"; then return 1; fi
+  return 0
+}
+
+function CheckT55xxDetectConfigFixture() {
+  local LABEL="$1"
+  local CONFIG_ARGS="$2"
+  local EXPECT_MOD="$3"
+  local EXPECT_RATE="$4"
+  local EXPECT_ST="$5"
+  local BLOCK0
+
+  BLOCK0=$(GetT55xxConfigBlock0 "$CONFIG_ARGS")
+  if [ -z "$BLOCK0" ]; then
+    echo "Failed to derive block0 for $LABEL using: $CONFIG_ARGS"
+    return 1
+  fi
+
+  if ! CheckExecute "write $LABEL block0" "$PM3BIN -c 'lf t55xx write -b 0 -d $BLOCK0'" "Writing page 0  block: 00|Done"; then
+    return 1
+  fi
+
+  CheckOutputContainsAll "detect $LABEL" "$PM3BIN -c 'lf t55xx detect'" \
+    "Modulation........ $EXPECT_MOD" \
+    "Bit rate.......... $EXPECT_RATE" \
+    "Seq. terminator... $EXPECT_ST" \
+    "Block0............ $BLOCK0" || return 1
+
   return 0
 }
 
@@ -688,8 +719,8 @@ while true; do
 
     if $TESTLFHIDCLONE; then
       echo -e "\n${C_BLUE}Testing lf hid clone against T55x7${C_NC} ${PM3BIN:=./pm3}"
-      echo "  PLACE A WRITABLE T55x7 TAG ON THE LF ANTENNA NOW"
       if ! CheckFileExist "pm3 exists" "$PM3BIN"; then break; fi
+      WaitForUserLFTag "PLACE A WRITABLE T55x7 TAG ON THE LF ANTENNA NOW"
 
       if ! CheckLFCloneFixture "H10301" "H10301" "31" "337" "" "H10301" "31" "337"; then break; fi
       if ! CheckLFCloneFixture "C1k35s" "C1k35s" "222" "12345" "" "C1k35s" "222" "12345"; then break; fi
@@ -710,6 +741,12 @@ while true; do
       if ! CheckT55xxDetectFixture "Jablotron" "$PM3BIN -c 'lf jablotron clone --cn 01B669'" "BIPHASE" "5 - RF/64" "00158040"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
       if ! CheckT55xxDetectFixture "Indala 64" "$PM3BIN -c 'lf indala clone --fc 123 --cn 1337'" "PSK1" "2 - RF/32" "00081040"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
       if ! CheckT55xxDetectFixture "PAC" "$PM3BIN -c 'lf pac clone --cn CD4F5552'" "DIRECT/NRZ" "2 - RF/32" "00080080"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
+      if ! CheckT55xxDetectConfigFixture "ASK + ST" "--ASK --rate 64 --st" "ASK" "5 - RF/64" "Yes"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
+      if ! CheckT55xxDetectConfigFixture "FSK1" "--FSK1 --rate 50" "FSK1" "4 - RF/50" "No"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
+      if ! CheckT55xxDetectConfigFixture "FSK1A" "--FSK1A --rate 50" "FSK1a" "4 - RF/50" "No"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
+      if ! CheckT55xxDetectConfigFixture "PSK2" "--PSK2 --rate 32" "PSK2" "2 - RF/32" "No"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
+      if ! CheckT55xxDetectConfigFixture "PSK3" "--PSK3 --rate 32" "PSK3" "2 - RF/32" "No"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
+      if ! CheckT55xxDetectConfigFixture "BIA" "--BIA --rate 64" "BIPHASEa - (CDP)" "5 - RF/64" "No"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
 
       if ! RestoreT55xxTag; then CleanupT55xxBackupFiles; break; fi
       CleanupT55xxBackupFiles
