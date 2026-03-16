@@ -13,6 +13,7 @@ TESTHFMFEMUMEM=false
 TESTHFMFENCODEHIDEMU=false
 TESTHFMFENCODEHIDCARD=false
 TESTHFEMUSMOKE=false
+TESTLFHIDSIM=false
 
 # https://medium.com/@Drew_Stokes/bash-argument-parsing-54f3b81a6a8f
 PARAMS=""
@@ -20,7 +21,7 @@ while (( "$#" )); do
   case "$1" in
     -h|--help)
       echo """
-Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hf_mf_emu_mem|hf_mf_encodehid_emu|hf_mf_encodehid_card|hf_emu_smoke]
+Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hf_mf_emu_mem|hf_mf_encodehid_emu|hf_mf_encodehid_card|hf_emu_smoke|lf_hid_sim]
     --pm3bin ...:    Specify path to pm3 binary to test
     desfire_value:   Test DESFire value operations with card
     hf_mf_emu_mem:   Test MIFARE Classic emulator memory write/read
@@ -29,6 +30,7 @@ Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hf_mf_emu_mem|hf_mf_encodehid_e
     hf_mf_encodehid_card:
                      Test HID encoding write/read against a blank MIFARE Classic card
     hf_emu_smoke:    Run HF emulator/card smoke tests
+    lf_hid_sim:      Test lf hid sim --bin/--new and reject >37-bit simulation
     You must specify a test target - no default 'all' for online tests
 """
       exit 0
@@ -65,6 +67,11 @@ Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hf_mf_emu_mem|hf_mf_encodehid_e
     hf_emu_smoke)
       TESTALL=false
       TESTHFEMUSMOKE=true
+      shift
+      ;;
+    lf_hid_sim)
+      TESTALL=false
+      TESTLFHIDSIM=true
       shift
       ;;
     -*|--*=) # unsupported flags
@@ -188,7 +195,7 @@ if [ "$TESTHFEMUSMOKE" = true ]; then
   TESTHFMFENCODEHIDCARD=true
 fi
 
-if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHFMFEMUMEM" = false ] && [ "$TESTHFMFENCODEHIDEMU" = false ] && [ "$TESTHFMFENCODEHIDCARD" = false ]; then
+if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHFMFEMUMEM" = false ] && [ "$TESTHFMFENCODEHIDEMU" = false ] && [ "$TESTHFMFENCODEHIDCARD" = false ] && [ "$TESTLFHIDSIM" = false ]; then
   echo "Error: You must specify a test target. Use -h for help."
   exit 1
 fi
@@ -243,6 +250,24 @@ while true; do
       if ! CleanupEncodeHidCard; then break; fi
       CARD_TEST_RESTORE_NEEDED=false
       echo "  encodehid card write/read tests completed successfully!"
+    fi
+
+    if $TESTLFHIDSIM; then
+      echo -e "\n${C_BLUE}Testing lf hid sim input modes${C_NC} ${PM3BIN:=./pm3}"
+      if ! CheckFileExist "pm3 exists" "$PM3BIN"; then break; fi
+
+      LFHIDSIM_REJECT_BIN=$(printf '01%.0s' {1..19})
+      LFHIDSIM_REJECT_NEW="025555555554"
+
+      if ! CheckExecute "lf hid sim --bin" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim --bin 10001111100000001010100011'" "Simulating HID tag"; then break; fi
+      if ! CheckExecute "lf hid sim --new" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim --new 068F80A8C0'" "Simulating HID tag"; then break; fi
+      if ! CheckExecute "lf hid sim 35-bit raw" "timeout -s KILL 5 $PM3BIN -c 'lf hid sim -r 2e0ec00c87'" "Simulating HID tag using raw"; then break; fi
+      if ! CheckExecute "lf hid sim 38-bit --bin reject" "$PM3BIN -c 'lf hid sim --bin $LFHIDSIM_REJECT_BIN' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
+      if ! CheckExecute "lf hid sim 38-bit --new reject" "$PM3BIN -c 'lf hid sim --new $LFHIDSIM_REJECT_NEW' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
+      if ! CheckExecute "lf hid sim 40-bit raw reject" "$PM3BIN -c 'lf hid sim -r 01f0760643c3' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
+      if ! CheckExecute "lf hid sim 38-bit format reject" "$PM3BIN -c 'lf hid sim -w BQT38 --fc 1 --cn 1 -i 1' 2>&1" "LF HID simulation supports up to 37-bit credentials"; then break; fi
+
+      echo "  lf hid sim tests completed successfully!"
     fi
 
     # DESFire value tests

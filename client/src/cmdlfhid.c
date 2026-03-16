@@ -52,6 +52,44 @@
 
 static int CmdHelp(const char *Cmd);
 
+static int lf_hid_pack_bin_with_header(const uint8_t *bin, int bin_len, wiegand_message_t *packed) {
+    if (bin_len <= 0 || bin_len > 84) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t hex[12] = {0};
+    BitstreamOut_t bout = {hex, 0, 0};
+
+    for (int i = 0; i < 96 - bin_len - 1; i++) {
+        pushBit(&bout, 0);
+    }
+
+    // Add binary sentinel bit before the plain Wiegand payload.
+    pushBit(&bout, 1);
+
+    for (int i = 0; i < bin_len; i++) {
+        char c = bin[i];
+        if (c == '1') {
+            pushBit(&bout, 1);
+        } else if (c == '0') {
+            pushBit(&bout, 0);
+        } else {
+            return PM3_EINVARG;
+        }
+    }
+
+    packed->Length = bin_len;
+    packed->Top = bytes_to_num(hex, 4);
+    packed->Mid = bytes_to_num(hex + 4, 4);
+    packed->Bot = bytes_to_num(hex + 8, 4);
+
+    if (add_HID_header(packed) == false) {
+        return PM3_EINVARG;
+    }
+
+    return PM3_SUCCESS;
+}
+
 // sending three times.  Didn't seem to break the previous sim?
 static int sendPing(void) {
     SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
@@ -252,9 +290,9 @@ static int CmdHIDSim(const char *Cmd) {
                   "Enables simulation of HID card with card number.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.",
                   "lf hid sim -r 2006ec0c86                -> HID 10301 26 bit\n"
+                  "lf hid sim --bin 10001111100000001010100011\n"
+                  "lf hid sim --new 068F80A8C0\n"
                   "lf hid sim -r 2e0ec00c87                -> HID Corporate 35 bit\n"
-                  "lf hid sim -r 01f0760643c3              -> HID P10001 40 bit\n"
-                  "lf hid sim -r 01400076000c86            -> HID Corporate 48 bit\n"
                   "lf hid sim -w H10301 --fc 118 --cn 1603 -> HID 10301 26 bit\n"
                  );
 
@@ -266,6 +304,8 @@ static int CmdHIDSim(const char *Cmd) {
         arg_u64_0("i",    NULL,     "<dec>", "issue level"),
         arg_u64_0("o",   "oem",     "<dec>", "OEM code"),
         arg_str0("r",  "raw",     "<hex>", "raw bytes"),
+        arg_str0(NULL, "bin", "<bin>", "Binary string i.e 0001001001"),
+        arg_str0(NULL, "new", "<hex>", "new ASN.1 PACS hex from `wiegand encode --new`"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
@@ -284,14 +324,43 @@ static int CmdHIDSim(const char *Cmd) {
     int raw_len = 0;
     char raw[40] = {0};
     CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)raw, sizeof(raw), &raw_len);
+
+    uint8_t bin[97] = {0};
+    int bin_len = sizeof(bin) - 1;
+    CLIGetStrWithReturn(ctx, 7, bin, &bin_len);
+    bin[bin_len] = '\0';
+
+    uint8_t new_pacs[13] = {0};
+    int new_pacs_len = 0;
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 8), new_pacs, sizeof(new_pacs), &new_pacs_len);
     CLIParserFree(ctx);
+
+    if (res) {
+        PrintAndLogEx(ERR, "Error parsing hex input");
+        return PM3_EINVARG;
+    }
+
+    if (bin_len > 96) {
+        PrintAndLogEx(ERR, "Binary wiegand string must be less than 97 bits");
+        return PM3_EINVARG;
+    }
+
+    int input_modes = 0;
+    input_modes += (raw_len > 0);
+    input_modes += (bin_len > 0);
+    input_modes += (new_pacs_len > 0);
+    input_modes += (format_len > 0 || card.FacilityCode != 0 || card.CardNumber != 0 || card.IssueLevel != 0 || card.OEM != 0);
+    if (input_modes != 1) {
+        PrintAndLogEx(ERR, "Use exactly one of `--raw`, `--bin`, `--new`, or `--wiegand/--fc/--cn`");
+        return PM3_EINVARG;
+    }
 
     wiegand_message_t packed;
     memset(&packed, 0, sizeof(wiegand_message_t));
 
     // format validation
     int format_idx = HIDFindCardFormat(format);
-    if (format_idx == -1 && raw_len == 0) {
+    if (format_idx == -1 && raw_len == 0 && bin_len == 0 && new_pacs_len == 0) {
         PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
         return PM3_EINVARG;
     }
@@ -299,14 +368,32 @@ static int CmdHIDSim(const char *Cmd) {
     if (raw_len) {
         uint32_t top = 0, mid = 0, bot = 0;
         hexstring_to_u96(&top, &mid, &bot, raw);
-        packed.Top = top;
-        packed.Mid = mid;
-        packed.Bot = bot;
+        packed = initialize_message_object(top, mid, bot, 0);
+    } else if (bin_len) {
+        if (lf_hid_pack_bin_with_header(bin, bin_len, &packed) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Binary wiegand string must be less than or equal to 96 bits");
+            return PM3_EINVARG;
+        }
+    } else if (new_pacs_len) {
+        char new_bin[96 + 1] = {0};
+        if (wiegand_new_pacs_to_binstr(new_pacs, new_pacs_len, new_bin, sizeof(new_bin)) == false) {
+            PrintAndLogEx(ERR, "Invalid PACS value");
+            return PM3_EINVARG;
+        }
+        if (lf_hid_pack_bin_with_header((uint8_t *)new_bin, strlen(new_bin), &packed) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "PACS payload must be less than or equal to 96 bits");
+            return PM3_EINVARG;
+        }
     } else {
         if (HIDPack(format_idx, &card, &packed, true) == false) {
             PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
             return PM3_ESOFT;
         }
+    }
+
+    if (packed.Length > 37) {
+        PrintAndLogEx(ERR, "LF HID simulation supports up to 37-bit credentials");
+        return PM3_EINVARG;
     }
 
     if (raw_len == 0) {
@@ -409,32 +496,10 @@ static int CmdHIDClone(const char *Cmd) {
         packed.Mid = mid;
         packed.Bot = bot;
     } else if (bin_len) {
-
-        uint8_t hex[12];
-        memset(hex, 0, sizeof(hex));
-        BitstreamOut_t bout = {hex, 0, 0 };
-
-        for (int i = 0; i < 96 - bin_len - 1; i++) {
-            pushBit(&bout, 0);
+        if (lf_hid_pack_bin_with_header(bin, bin_len, &packed) != PM3_SUCCESS) {
+            PrintAndLogEx(ERR, "Binary wiegand string must be less than or equal to 96 bits");
+            return PM3_EINVARG;
         }
-        // add binary sentinel bit.
-        pushBit(&bout, 1);
-
-        // convert binary string to hex bytes
-        for (int i = 0; i < bin_len; i++) {
-            char c = bin[i];
-            if (c == '1')
-                pushBit(&bout, 1);
-            else if (c == '0')
-                pushBit(&bout, 0);
-        }
-
-        packed.Length = bin_len;
-        packed.Top = bytes_to_num(hex, 4);
-        packed.Mid = bytes_to_num(hex + 4, 4);
-        packed.Bot = bytes_to_num(hex + 8, 4);
-        add_HID_header(&packed);
-
     } else {
         if (HIDPack(format_idx, &card, &packed, true) == false) {
             PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
