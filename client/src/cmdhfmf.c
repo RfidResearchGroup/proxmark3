@@ -10048,10 +10048,12 @@ static int CmdHF14AMfValue(const char *Cmd) {
 static int CmdHFMFHidEncode(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf mf encodehid",
-                  "Encode binary wiegand to card\n"
-                  "Use either --bin or --wiegand/--fc/--cn",
+                  "Encode binary wiegand to a MIFARE Classic card or the emulator\n"
+                  "Use either --bin or --wiegand/--fc/--cn\n"
+                  "Use --emu to avoid requiring a card in the field, write to emulator memory, and start simulation",
                   "hf mf encodehid --bin 10001111100000001010100011            -> FC 31 CN 337 (H10301)\n"
                   "hf mf encodehid -w H10301 --fc 31 --cn 337\n"
+                  "hf mf encodehid -w H10301 --fc 31 --cn 337 --emu"
                  );
 
     void *argtable[] = {
@@ -10060,6 +10062,7 @@ static int CmdHFMFHidEncode(const char *Cmd) {
         arg_u64_0(NULL, "fc", "<dec>", "facility code"),
         arg_u64_0(NULL, "cn", "<dec>", "card number"),
         arg_str0("w",   "wiegand", "<format>", "see " _YELLOW_("`wiegand list`") " for available formats"),
+        arg_lit0(NULL, "emu", "Write the encoded credential to MIFARE Classic emulator memory and start simulation"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_param_end
     };
@@ -10078,7 +10081,8 @@ static int CmdHFMFHidEncode(const char *Cmd) {
     int format_len = 0;
     CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)format, sizeof(format), &format_len);
 
-    bool verbose = arg_get_lit(ctx, 5);
+    bool use_emulator = arg_get_lit(ctx, 5);
+    bool verbose = arg_get_lit(ctx, 6);
     CLIParserFree(ctx);
 
     // santity checks
@@ -10092,7 +10096,7 @@ static int CmdHFMFHidEncode(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    uint8_t blocks[] = {
+    uint8_t card_blocks[] = {
         0x1B, 0x01, 0x4D, 0x48, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0x78, 0x77, 0x88, 0xC1, 0x89, 0xEC, 0xA9, 0x7F, 0x8C, 0x2A,
@@ -10100,6 +10104,10 @@ static int CmdHFMFHidEncode(const char *Cmd) {
         0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x48, 0x49, 0x44, 0x20, 0x49, 0x53, 0x78, 0x77, 0x88, 0xAA, 0x20, 0x47, 0x52, 0x45, 0x41, 0x54,
+    };
+
+    uint8_t emu_block0[MFBLOCK_SIZE] = {
+        0x04, 0x9D, 0xBA, 0x42, 0xA2, 0x3E, 0x80, 0x88, 0x44, 0x00, 0xC8, 0x20, 0x00, 0x00, 0x00, 0x00,
     };
 
     if (bin_len) {
@@ -10111,7 +10119,7 @@ static int CmdHFMFHidEncode(const char *Cmd) {
         uint8_t hex[15] = {0};
         binstr_2_bytes(hex, &hexlen, mfcbin);
 
-        memcpy(blocks + (MFBLOCK_SIZE * 4) + 1 + (15 - hexlen), hex, hexlen);
+        memcpy(card_blocks + (MFBLOCK_SIZE * 4) + 1 + (15 - hexlen), hex, hexlen);
     } else {
         wiegand_message_t packed;
         memset(&packed, 0, sizeof(wiegand_message_t));
@@ -10140,20 +10148,48 @@ static int CmdHFMFHidEncode(const char *Cmd) {
         packed.Bot = BSWAP_32(packed.Bot);
 #endif
 
-        memcpy(blocks + (MFBLOCK_SIZE * 4) + 8, &packed.Mid, sizeof(packed.Mid));
-        memcpy(blocks + (MFBLOCK_SIZE * 4) + 12, &packed.Bot, sizeof(packed.Bot));
+        memcpy(card_blocks + (MFBLOCK_SIZE * 4) + 8, &packed.Mid, sizeof(packed.Mid));
+        memcpy(card_blocks + (MFBLOCK_SIZE * 4) + 12, &packed.Bot, sizeof(packed.Bot));
+    }
+
+    if (use_emulator) {
+        clearCommandBuffer();
+        SendCommandNG(CMD_HF_MIFARE_EML_MEMCLR, NULL, 0);
+
+        if (mf_elm_set_mem(emu_block0, 0, 1) != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "failed writing block 0 to emulator memory");
+            return PM3_EFAILED;
+        }
+
+        for (uint8_t i = 0; i < (sizeof(card_blocks) / MFBLOCK_SIZE); i++) {
+            uint8_t blockno = i + 1;
+            uint8_t *block = card_blocks + (i * MFBLOCK_SIZE);
+
+            if (verbose) {
+                PrintAndLogEx(INFO, "Writing emu block %u - %s", blockno, sprint_hex_inrow(block, MFBLOCK_SIZE));
+            }
+
+            if (mf_elm_set_mem(block, blockno, 1) != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "failed writing block %u to emulator memory", blockno);
+                return PM3_EFAILED;
+            }
+        }
+
+        PrintAndLogEx(SUCCESS, "Credential written to emulator memory. Starting simulation...");
+        PrintAndLogEx(NORMAL, "");
+        return CmdHF14AMfSim("--1k -i");
     }
 
     uint8_t empty[MIFARE_KEY_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     bool res = true;
-    for (uint8_t i = 0; i < (sizeof(blocks) / MFBLOCK_SIZE); i++) {
+    for (uint8_t i = 0; i < (sizeof(card_blocks) / MFBLOCK_SIZE); i++) {
 
         if (verbose) {
-            PrintAndLogEx(INFO, "Writing %u - %s", (i + 1), sprint_hex_inrow(blocks + (i * MFBLOCK_SIZE), MFBLOCK_SIZE));
+            PrintAndLogEx(INFO, "Writing %u - %s", (i + 1), sprint_hex_inrow(card_blocks + (i * MFBLOCK_SIZE), MFBLOCK_SIZE));
         }
 
-        if (mf_write_block((i + 1), MF_KEY_A, empty, blocks + (i * MFBLOCK_SIZE)) == PM3_EFAILED) {
-            if (mf_write_block((i + 1), MF_KEY_B, empty, blocks + (i * MFBLOCK_SIZE)) == PM3_EFAILED) {
+        if (mf_write_block((i + 1), MF_KEY_A, empty, card_blocks + (i * MFBLOCK_SIZE)) == PM3_EFAILED) {
+            if (mf_write_block((i + 1), MF_KEY_B, empty, card_blocks + (i * MFBLOCK_SIZE)) == PM3_EFAILED) {
                 PrintAndLogEx(WARNING, "failed writing block %d using default empty key", (i + 1));
                 res = false;
                 break;
@@ -11084,7 +11120,7 @@ static command_t CommandTable[] = {
     {"ndefformat",  CmdHFMFNDEFFormat,      IfPm3Iso14443a,  "Format MIFARE Classic Tag as NFC Tag"},
     {"ndefread",    CmdHFMFNDEFRead,        IfPm3Iso14443a,  "Read and print NDEF records from card"},
     {"ndefwrite",   CmdHFMFNDEFWrite,       IfPm3Iso14443a,  "Write NDEF records to card"},
-    {"encodehid",   CmdHFMFHidEncode,       IfPm3Iso14443a,  "Encode a HID Credential / NDEF record to card"},
+    {"encodehid",   CmdHFMFHidEncode,       IfPm3Iso14443a,  "Encode a HID credential to a card or emulator"},
     {NULL, NULL, NULL, NULL}
 
 };

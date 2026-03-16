@@ -9,6 +9,9 @@ cd "$PM3PATH" || exit 1
 
 TESTALL=false
 TESTDESFIREVALUE=false
+TESTHFMFEMUMEM=false
+TESTHFMFENCODEHIDCARD=false
+TESTHFEMUSMOKE=false
 
 # https://medium.com/@Drew_Stokes/bash-argument-parsing-54f3b81a6a8f
 PARAMS=""
@@ -16,9 +19,13 @@ while (( "$#" )); do
   case "$1" in
     -h|--help)
       echo """
-Usage: $0 [--pm3bin /path/to/pm3] [desfire_value]
+Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hf_mf_emu_mem|hf_mf_encodehid_card|hf_emu_smoke]
     --pm3bin ...:    Specify path to pm3 binary to test
     desfire_value:   Test DESFire value operations with card
+    hf_mf_emu_mem:   Test MIFARE Classic emulator memory write/read
+    hf_mf_encodehid_card:
+                     Test HID encoding write/read against a blank MIFARE Classic card
+    hf_emu_smoke:    Run both HF emulator/card smoke tests
     You must specify a test target - no default 'all' for online tests
 """
       exit 0
@@ -35,6 +42,21 @@ Usage: $0 [--pm3bin /path/to/pm3] [desfire_value]
     desfire_value)
       TESTALL=false
       TESTDESFIREVALUE=true
+      shift
+      ;;
+    hf_mf_emu_mem)
+      TESTALL=false
+      TESTHFMFEMUMEM=true
+      shift
+      ;;
+    hf_mf_encodehid_card)
+      TESTALL=false
+      TESTHFMFENCODEHIDCARD=true
+      shift
+      ;;
+    hf_emu_smoke)
+      TESTALL=false
+      TESTHFEMUSMOKE=true
       shift
       ;;
     -*|--*=) # unsupported flags
@@ -95,6 +117,39 @@ function CheckExecute() {
   return 1
 }
 
+function CheckOutputContains() {
+  printf "%-40s" "$1 "
+  RES=$(eval "$2")
+  if printf '%s' "$RES" | grep -F -q "$3"; then
+    echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
+    return 0
+  fi
+  echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+  echo "Execution trace:"
+  echo "$RES"
+  return 1
+}
+
+function CheckHexOutputContains() {
+  local EXPECTED_SPACED
+  EXPECTED_SPACED=$(printf '%s' "$3" | sed 's/../& /g; s/ $//')
+  CheckOutputContains "$1" "$2" "$EXPECTED_SPACED"
+}
+
+function CleanupEncodeHidCard() {
+  local DEFAULT_TRAILER="FFFFFFFFFFFFFF078069FFFFFFFFFFFF"
+
+  echo "  Restoring test card blocks 1-7 to default blank state..."
+  if ! CheckExecute "wipe card block 1" "$PM3BIN -c 'hf mf wrbl --blk 1 -b -k 89ECA97F8C2A -d 00000000000000000000000000000000'" "Write.*ok"; then return 1; fi
+  if ! CheckExecute "wipe card block 2" "$PM3BIN -c 'hf mf wrbl --blk 2 -b -k 89ECA97F8C2A -d 00000000000000000000000000000000'" "Write.*ok"; then return 1; fi
+  if ! CheckExecute "restore trailer 3" "$PM3BIN -c 'hf mf wrbl --blk 3 -b -k 89ECA97F8C2A -d $DEFAULT_TRAILER'" "Write.*ok"; then return 1; fi
+  if ! CheckExecute "wipe card block 4" "$PM3BIN -c 'hf mf wrbl --blk 4 -b -k 204752454154 -d 00000000000000000000000000000000'" "Write.*ok"; then return 1; fi
+  if ! CheckExecute "wipe card block 5" "$PM3BIN -c 'hf mf wrbl --blk 5 -b -k 204752454154 -d 00000000000000000000000000000000'" "Write.*ok"; then return 1; fi
+  if ! CheckExecute "wipe card block 6" "$PM3BIN -c 'hf mf wrbl --blk 6 -b -k 204752454154 -d 00000000000000000000000000000000'" "Write.*ok"; then return 1; fi
+  if ! CheckExecute "restore trailer 7" "$PM3BIN -c 'hf mf wrbl --blk 7 -b -k 204752454154 -d $DEFAULT_TRAILER'" "Write.*ok"; then return 1; fi
+  return 0
+}
+
 echo -e "${C_BLUE}Iceman Proxmark3 online test tool${C_NC}"
 echo ""
 echo "work directory: $(pwd)"
@@ -108,12 +163,46 @@ if command -v git >/dev/null && git rev-parse --is-inside-work-tree >/dev/null 2
 fi
 
 # Check that user specified a test
-if [ "$TESTDESFIREVALUE" = false ]; then
+if [ "$TESTHFEMUSMOKE" = true ]; then
+  TESTHFMFEMUMEM=true
+  TESTHFMFENCODEHIDCARD=true
+fi
+
+if [ "$TESTDESFIREVALUE" = false ] && [ "$TESTHFMFEMUMEM" = false ] && [ "$TESTHFMFENCODEHIDCARD" = false ]; then
   echo "Error: You must specify a test target. Use -h for help."
   exit 1
 fi
 
 while true; do
+    if $TESTHFMFEMUMEM; then
+      echo -e "\n${C_BLUE}Testing MIFARE Classic emulator memory${C_NC} ${PM3BIN:=./pm3}"
+      if ! CheckFileExist "pm3 exists"               "$PM3BIN"; then break; fi
+
+      if ! CheckExecute "clear emulator memory"      "$PM3BIN -c 'hf mf eclr'" "pm3 -->"; then break; fi
+      if ! CheckExecute "write emulator block 1"     "$PM3BIN -c 'hf mf esetblk --blk 1 -d 11223344556677889900AABBCCDDEEFF'" "pm3 -->"; then break; fi
+      if ! CheckExecute "write emulator block 2"     "$PM3BIN -c 'hf mf esetblk --blk 2 -d 0102030405060708090A0B0C0D0E0F10'" "pm3 -->"; then break; fi
+      if ! CheckHexOutputContains "read emulator block 1" "$PM3BIN -c 'hf mf egetblk --blk 1'" "11223344556677889900AABBCCDDEEFF"; then break; fi
+      if ! CheckHexOutputContains "read emulator block 2" "$PM3BIN -c 'hf mf egetblk --blk 2'" "0102030405060708090A0B0C0D0E0F10"; then break; fi
+      echo "  emulator memory tests completed successfully!"
+    fi
+
+    if $TESTHFMFENCODEHIDCARD; then
+      CARD_TEST_RESTORE_NEEDED=false
+      echo -e "\n${C_BLUE}Testing hf mf encodehid against card${C_NC} ${PM3BIN:=./pm3}"
+      echo "  PLACE A BLANK DEFAULT-KEY MIFARE CLASSIC CARD ON THE READER NOW"
+      if ! CheckFileExist "pm3 exists"               "$PM3BIN"; then break; fi
+
+      if ! CheckExecute "encode HID to card"         "$PM3BIN -c 'hf mf encodehid -w H10301 --fc 31 --cn 337'" "pm3 -->"; then break; fi
+      CARD_TEST_RESTORE_NEEDED=true
+      if ! CheckHexOutputContains "read card block 1"   "$PM3BIN -c 'hf mf rdbl --blk 1 -k A0A1A2A3A4A5'" "1B014D48000000000000000000000000"; then CleanupEncodeHidCard; break; fi
+      if ! CheckHexOutputContains "read card block 3 acl"   "$PM3BIN -c 'hf mf rdbl --blk 3 -k A0A1A2A3A4A5'" "000000000000787788C1000000000000"; then CleanupEncodeHidCard; break; fi
+      if ! CheckHexOutputContains "read card block 5"   "$PM3BIN -c 'hf mf rdbl --blk 5 -k 484944204953'" "020000000000000000000000063E02A3"; then CleanupEncodeHidCard; break; fi
+      if ! CheckHexOutputContains "read card block 7 acl"   "$PM3BIN -c 'hf mf rdbl --blk 7 -k 484944204953'" "000000000000787788AA000000000000"; then CleanupEncodeHidCard; break; fi
+      if ! CleanupEncodeHidCard; then break; fi
+      CARD_TEST_RESTORE_NEEDED=false
+      echo "  encodehid card write/read tests completed successfully!"
+    fi
+
     # DESFire value tests
     if $TESTDESFIREVALUE; then
       echo -e "\n${C_BLUE}Testing DESFire card value operations${C_NC} ${PM3BIN:=./pm3}"

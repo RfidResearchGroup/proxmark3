@@ -1870,22 +1870,8 @@ int HIDDumpPACSBits(const uint8_t *const data, const uint8_t length, bool verbos
         // Fixed-size local buffers are enough for the current 96-bit Wiegand limit:
         // 96 data bits + 1 sentinel + NUL = 98 chars, packed into at most 13 bytes.
         if (binstrlen <= 96) {
-            char mfcbin[98] = {0};
-            uint8_t mfcpayload[15] = {0};
-            size_t mfchexlen = 0;
-
-            mfcbin[0] = '1';
-            memcpy(mfcbin + 1, binstr, binstrlen);
-            binstr_2_bytes(mfcpayload + (sizeof(mfcpayload) - ((binstrlen + 1 + 7) / 8)), &mfchexlen, mfcbin);
-
             PrintAndLogEx(INFO, "Downgrade to " _YELLOW_("MIFARE Classic") " (Pm3 simulation)");
-            PrintAndLogEx(SUCCESS, "    hf mf eclr;");
-            PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 0 -d 049DBA42A23E80884400C82000000000;");
-            PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 1 -d 1B014D48000000000000000000000000;");
-            PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 3 -d A0A1A2A3A4A5787788C189ECA97F8C2A;");
-            PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 5 -d 02%s;", sprint_hex_inrow(mfcpayload, sizeof(mfcpayload)));
-            PrintAndLogEx(SUCCESS, "    hf mf esetblk --blk 7 -d 484944204953787788AA204752454154;");
-            PrintAndLogEx(SUCCESS, "    hf mf sim --1k -i;");
+            PrintAndLogEx(SUCCESS, "    hf mf encodehid --bin %s --emu;", binstr);
             PrintAndLogEx(NORMAL, "");
         }
 
