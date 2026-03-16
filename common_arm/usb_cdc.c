@@ -722,6 +722,35 @@ bool usb_read_ng_has_buffered_data(void) {
     return usb_read_ng_buflen > 0;
 }
 
+void usb_read_ng_reset(void) {
+
+    usb_read_ng_buflen = 0;
+    usb_read_ng_bufoffset = 0;
+
+    if (usb_check() == false) {
+        return;
+    }
+
+    uint8_t bank = btReceiveBank;
+    for (uint8_t i = 0; i < 2; i++) {
+        if (pUdp->UDP_CSR[AT91C_EP_OUT] & bank) {
+            uint16_t available = (((pUdp->UDP_CSR[AT91C_EP_OUT] & AT91C_UDP_RXBYTECNT) >> 16) & 0x7FF);
+            while (available--) {
+                (void)pUdp->UDP_FDR[AT91C_EP_OUT];
+            }
+            UDP_CLEAR_EP_FLAGS(AT91C_EP_OUT, bank)
+        }
+
+        if (bank == AT91C_UDP_RX_DATA_BK0) {
+            bank = AT91C_UDP_RX_DATA_BK1;
+        } else {
+            bank = AT91C_UDP_RX_DATA_BK0;
+        }
+    }
+
+    btReceiveBank = bank;
+}
+
 uint32_t usb_read_ng(uint8_t *data, size_t len) {
 
     if (len == 0) {

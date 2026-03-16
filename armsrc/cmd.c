@@ -19,7 +19,6 @@
 #include "crc16.h"
 #include "string.h"
 #include "BigBuf.h"
-
 // Flags to tell where to add CRC on sent replies
 bool g_reply_with_crc_on_usb = false;
 bool g_reply_with_crc_on_fpc = true;
@@ -165,7 +164,6 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
 
     PacketCommandNGRaw rx_raw;
     size_t bytes = read_ng((uint8_t *)&rx_raw.pre, sizeof(PacketCommandNGPreamble));
-
     if (bytes == 0) {
         return PM3_ENODATA;
     }
@@ -253,7 +251,7 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
 int receive_ng(PacketCommandNG *rx) {
 
     // Check if there is a packet available
-    if (usb_poll_validate_length()) {
+    if (usb_poll_validate_length() || usb_read_ng_has_buffered_data()) {
         return receive_ng_internal(rx, usb_read_ng, true, false);
     }
 

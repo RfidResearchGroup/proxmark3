@@ -2343,6 +2343,34 @@ static void PacketReceived(PacketCommandNG *packet) {
             emlSet(payload->data, payload->offset, payload->len);
             break;
         }
+        case CMD_HF_ICLASS_EML_MEMGET: {
+            FpgaDownloadAndGo(FPGA_BITSTREAM_HF_15);
+            struct p {
+                uint16_t blockno;
+                uint8_t blockcnt;
+            } PACKED;
+            struct p *payload = (struct p *)packet->data.asBytes;
+
+            size_t size = payload->blockcnt * PICOPASS_BLOCK_SIZE;
+            if (size > PM3_CMD_DATA_SIZE) {
+                reply_ng(CMD_HF_ICLASS_EML_MEMGET, PM3_EMALLOC, NULL, 0);
+                break;
+            }
+
+            uint8_t *buf = BigBuf_calloc(size);
+            if (buf == NULL) {
+                reply_ng(CMD_HF_ICLASS_EML_MEMGET, PM3_EMALLOC, NULL, 0);
+                break;
+            }
+
+            emlGet(buf, payload->blockno * PICOPASS_BLOCK_SIZE, size);
+
+            LED_B_ON();
+            reply_ng(CMD_HF_ICLASS_EML_MEMGET, PM3_SUCCESS, buf, size);
+            LED_B_OFF();
+            BigBuf_free_keep_EM();
+            break;
+        }
         case CMD_HF_ICLASS_WRITEBL: {
             iClass_WriteBlock(packet->data.asBytes);
             break;
@@ -3362,7 +3390,7 @@ void  __attribute__((noreturn)) AppMain(void) {
         } else if (ret != PM3_ENODATA) {
 
             Dbprintf("Error in frame reception: %d %s", ret, (ret == PM3_EIO) ? "PM3_EIO" : "");
-            // TODO if error, shall we resync ?
+            usb_read_ng_reset();
         }
 
         // Press button for one second to enter a possible standalone mode

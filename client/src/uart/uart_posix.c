@@ -72,6 +72,14 @@ static uint32_t newtimeout_value = 0;
 static bool newtimeout_pending = false;
 static uint8_t rx_empty_counter = 0;
 
+static bool uart_retryable_open_errno(int err) {
+    return (err == EACCES || err == ENOENT || err == ENODEV || err == EIO);
+}
+
+static bool uart_retryable_tty_errno(int err) {
+    return (err == ENODEV || err == EIO);
+}
+
 int uart_reconfigure_timeouts(uint32_t value) {
     newtimeout_value = value;
     newtimeout_pending = true;
@@ -359,10 +367,11 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
 
     free(prefix);
 
-    // Freshly available port can take a while before getting permission to access it. Up to 600ms on my machine...
+    // Freshly available CDC ports can take a short while before they are fully usable
+    // after a client disconnects or the kernel recreates the tty node.
     for (uint8_t i = 0; i < 10; i++) {
         sp->fd = open(pcPortName, O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK);
-        if (sp->fd != -1 || errno != EACCES) {
+        if (sp->fd != -1 || uart_retryable_open_errno(errno) == false) {
             break;
         }
         msleep(100);
@@ -388,11 +397,17 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
         return CLAIMED_SERIAL_PORT;
     }
 
-    // Try to retrieve the old (current) terminal info struct
-    if (tcgetattr(sp->fd, &sp->tiOld) == -1) {
-        PrintAndLogEx(ERR, "error: UART get terminal info attribute");
-        uart_close(sp);
-        return INVALID_SERIAL_PORT;
+    // Some CDC ACM stacks briefly accept open() before termios is ready.
+    for (uint8_t i = 0; i < 10; i++) {
+        if (tcgetattr(sp->fd, &sp->tiOld) != -1) {
+            break;
+        }
+        if (uart_retryable_tty_errno(errno) == false || i == 9) {
+            PrintAndLogEx(ERR, "error: UART get terminal info attribute");
+            uart_close(sp);
+            return INVALID_SERIAL_PORT;
+        }
+        msleep(100);
     }
 
     // Flush all lingering data that may exist

@@ -79,6 +79,7 @@ static uint64_t timeout_start_time;
 static uint64_t last_packet_time;
 
 static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd);
+static bool GetFromDeviceEx(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, uint8_t *data, uint32_t datalen, PacketResponseNG *response, size_t ms_timeout, bool show_warning, bool clear_buffer);
 
 // Simple alias to track usages linked to the Bootloader, these commands must not be migrated.
 // - commands sent to enter bootloader mode as we might have to talk to old firmwares
@@ -1130,7 +1131,7 @@ bool WaitForResponse(uint32_t cmd, PacketResponseNG *response) {
 * @param show_warning display message after 2 seconds
 * @return true if command was returned, otherwise false
 */
-bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, uint8_t *data, uint32_t datalen, PacketResponseNG *response, size_t ms_timeout, bool show_warning) {
+static bool GetFromDeviceEx(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, uint8_t *data, uint32_t datalen, PacketResponseNG *response, size_t ms_timeout, bool show_warning, bool clear_buffer) {
 
     if (dest == NULL) {
         return false;
@@ -1147,8 +1148,9 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
     if (bytes == 0) return true;
 
 
-    // clear
-    clearCommandBuffer();
+    if (clear_buffer) {
+        clearCommandBuffer();
+    }
 
     switch (memtype) {
         case BIG_BUF: {
@@ -1186,9 +1188,18 @@ bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint3
     return false;
 }
 
+bool GetFromDevice(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, uint8_t *data, uint32_t datalen, PacketResponseNG *response, size_t ms_timeout, bool show_warning) {
+    return GetFromDeviceEx(memtype, dest, bytes, start_index, data, datalen, response, ms_timeout, show_warning, true);
+}
+
+bool GetFromDeviceNoClear(DeviceMemType_t memtype, uint8_t *dest, uint32_t bytes, uint32_t start_index, uint8_t *data, uint32_t datalen, PacketResponseNG *response, size_t ms_timeout, bool show_warning) {
+    return GetFromDeviceEx(memtype, dest, bytes, start_index, data, datalen, response, ms_timeout, show_warning, false);
+}
+
 static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, size_t ms_timeout, bool show_warning, uint32_t rec_cmd) {
 
     uint32_t bytes_completed = 0;
+    bool got_ack = false;
     __atomic_store_n(&timeout_start_time,  msclock(), __ATOMIC_SEQ_CST);
 
     // Add delay depending on the communication channel & speed
@@ -1199,8 +1210,13 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
 
         if (getReply(response)) {
 
-            if (response->cmd == CMD_ACK)
-                return true;
+            if (response->cmd == CMD_ACK) {
+                got_ack = true;
+                if (bytes_completed == bytes) {
+                    return true;
+                }
+                continue;
+            }
             if (response->cmd == CMD_SPIFFS_DOWNLOAD && response->status == PM3_EMALLOC)
                 return false;
             // Spiffs // fpgamem-plot download is converted to NG,
@@ -1214,7 +1230,7 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
             if (response->cmd == rec_cmd) {
 
                 uint32_t offset = response->oldarg[0];
-                uint32_t copy_bytes = MIN(bytes - bytes_completed, response->oldarg[1]);
+                uint32_t copy_bytes = response->oldarg[1];
                 //uint32_t tracelen = response->oldarg[2];
 
                 // extended bounds check1.  upper limit is PM3_CMD_DATA_SIZE
@@ -1228,7 +1244,10 @@ static bool dl_it(uint8_t *dest, uint32_t bytes, PacketResponseNG *response, siz
                 }
 
                 memcpy(dest + offset, response->data.asBytes, copy_bytes);
-                bytes_completed += copy_bytes;
+                bytes_completed = MAX(bytes_completed, offset + copy_bytes);
+                if (got_ack && bytes_completed == bytes) {
+                    return true;
+                }
             } else if (response->cmd == CMD_WTX && response->length == sizeof(uint16_t)) {
                 uint16_t wtx = response->data.asDwords[0] & 0xFFFF;
                 PrintAndLogEx(DEBUG, "Got Waiting Time eXtension request %i ms", wtx);

@@ -164,13 +164,31 @@ function CheckFileExist() {
   return 1
 }
 
+function CaptureCommandOutput() {
+  local CMD="$1"
+  local ATTEMPT
+  local RES=""
+
+  for ATTEMPT in 1 2 3 4 5; do
+    RES=$(eval "$CMD")
+    if ! printf '%s' "$RES" | grep -E -q 'serial port .* is claimed by another process|invalid serial port'; then
+      printf '%s' "$RES"
+      return 0
+    fi
+    sleep 0.2
+  done
+
+  printf '%s' "$RES"
+  return 0
+}
+
 # Execute command and check result
 function CheckExecute() {
   printf "%-40s" "$1 "
   
   start=$(date +%s)
   TIMEINFO=""
-  RES=$(eval "$2")
+  RES=$(CaptureCommandOutput "$2")
   end=$(date +%s)
   delta=$(expr $end - $start)
   if [ $delta -gt 2 ]; then
@@ -188,7 +206,7 @@ function CheckExecute() {
 
 function CheckOutputContains() {
   printf "%-40s" "$1 "
-  RES=$(eval "$2")
+  RES=$(CaptureCommandOutput "$2")
   if printf '%s' "$RES" | grep -F -q "$3"; then
     echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
     return 0
@@ -204,7 +222,7 @@ function CheckOutputContainsAll() {
   local CMD="$2"
   shift 2
   printf "%-40s" "$LABEL "
-  RES=$(eval "$CMD")
+  RES=$(CaptureCommandOutput "$CMD")
   while [ "$#" -gt 0 ]; do
     if ! printf '%s' "$RES" | grep -F -q "$1"; then
       echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
@@ -225,11 +243,11 @@ function CheckHexOutputContains() {
 }
 
 function GetMifareEGetBlkLine() {
-  eval "$PM3BIN -c 'hf mf egetblk --blk $1'" | sed -n 's/.*| \(.*\) | .*/\1/p' | tail -n 1
+  CaptureCommandOutput "$PM3BIN -c 'hf mf egetblk --blk $1'" | sed -n 's/.*| \(.*\) | .*/\1/p' | tail -n 1
 }
 
 function GetMifareRdBlkLine() {
-  eval "$PM3BIN -c 'hf mf rdbl --blk $1 -k $2'" | sed -n 's/.*| \(.*\) | .*/\1/p' | tail -n 1
+  CaptureCommandOutput "$PM3BIN -c 'hf mf rdbl --blk $1 -k $2'" | sed -n 's/.*| \(.*\) | .*/\1/p' | tail -n 1
 }
 
 function WaitForUserCard() {
@@ -250,7 +268,7 @@ function BackupT55xxTag() {
   T55XX_DUMP_BASE=$(mktemp /tmp/pm3-t55xx-online-XXXXXX)
   rm -f "$T55XX_DUMP_BASE"
   local RES
-  RES=$($PM3BIN -c "lf t55xx detect; lf t55xx dump -f $T55XX_DUMP_BASE")
+  RES=$(CaptureCommandOutput "$PM3BIN -c \"lf t55xx detect; lf t55xx dump -f $T55XX_DUMP_BASE\"")
   if [ ! -f "${T55XX_DUMP_BASE}.bin" ]; then
     echo "Failed to save T55xx dump"
     echo "$RES"
@@ -261,7 +279,7 @@ function BackupT55xxTag() {
 }
 
 function GetT55xxConfigBlock0() {
-  eval "$PM3BIN -c 'lf t55xx config $1'" | sed -n 's/.*Block0............ \([0-9A-F]*\).*/\1/p' | tail -n 1
+  CaptureCommandOutput "$PM3BIN -c 'lf t55xx config $1'" | sed -n 's/.*Block0............ \([0-9A-F]*\).*/\1/p' | tail -n 1
 }
 
 function RestoreT55xxTag() {
@@ -460,10 +478,6 @@ function CheckMifareEncodeHidLongNewFixture() {
   return 0
 }
 
-function GetIClassEView() {
-  eval "$PM3BIN -c 'hf iclass eview'" | sed -n 's/.*\(  [6-9]\/0x0[6-9] | .*User AA2\)/\1/p'
-}
-
 function CheckIClassEncodeFixture() {
   local LABEL="$1"
   local FORMAT="$2"
@@ -474,35 +488,116 @@ function CheckIClassEncodeFixture() {
   local EXPECT7="$7"
   local EXPECT8="$8"
   local EXPECT9="$9"
+  local ENC_MODE="${10}"
+  local EXPECT_VIEW_INFO="${11}"
+  local EXPECT_DECODE_RE="${12}"
   local ICLASS_ENCODE_KEY="000102030405060708090A0B0C0D0E0F"
+  local ENC_ARGS=""
+  local KEY_ARGS=" --enckey $ICLASS_ENCODE_KEY"
+  local DECODE_CMD="hf iclass decrypt --emu -k $ICLASS_ENCODE_KEY --ns"
+  local EXPECT_INFO="${EXPECT_VIEW_INFO:-User / Enc Cred}"
+  local CHAIN_CMD
+  local RES
+  local CLEAN_RES
+  local ICLASS_EVIEW_BIN
+  local CHAIN_DECODE_CMD="hf iclass decrypt --emu -k $ICLASS_ENCODE_KEY --ns; hf iclass decrypt --emu -k $ICLASS_ENCODE_KEY --ns"
+
+  if [ -n "$ENC_MODE" ]; then
+    ENC_ARGS=" --enc $ENC_MODE"
+  fi
+  if [ "$ENC_MODE" = "none" ]; then
+    KEY_ARGS=""
+    DECODE_CMD="hf iclass decrypt --emu --ns"
+    CHAIN_DECODE_CMD="hf iclass decrypt --emu --ns; hf iclass decrypt --emu --ns"
+  fi
 
   if ! LoadWiegandFixtures "$FORMAT" "$FC" "$CN" "$ISSUE"; then
     echo "Failed to derive $LABEL fixtures from wiegand encode output"
     return 1
   fi
 
-  if ! CheckExecute "encode $LABEL iClass --bin" "$PM3BIN -c 'hf iclass encode --bin $WIEGAND_FIXTURE_BIN --emu --enckey $ICLASS_ENCODE_KEY'" "uploaded 32 bytes to emulator memory"; then return 1; fi
-  ICLASS_EVIEW_BIN=$(GetIClassEView)
+  CHAIN_CMD="$PM3BIN -c 'hf iclass encode --bin $WIEGAND_FIXTURE_BIN --emu$ENC_ARGS$KEY_ARGS; hf iclass eview'"
+  printf "%-40s" "encode $LABEL iClass --bin "
+  RES=$(eval "$CHAIN_CMD")
+  CLEAN_RES=$(printf '%s' "$RES" | sed -E 's/\x1B\[[0-9;?]*[[:alpha:]]//g')
+  if ! printf '%s' "$CLEAN_RES" | grep -F -q "uploaded 256 bytes to emulator memory"; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+    echo "Execution trace:"
+    echo "$RES"
+    return 1
+  fi
+  if ! printf '%s' "$CLEAN_RES" | grep -F -q "26 6E F1 00 FB FF 12 E0"; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+    echo "Execution trace:"
+    echo "$RES"
+    return 1
+  fi
+  if ! printf '%s' "$CLEAN_RES" | grep -F -q "12 FF FF FF 7F 1F FF 3C"; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+    echo "Execution trace:"
+    echo "$RES"
+    return 1
+  fi
+  ICLASS_EVIEW_BIN=$(printf '%s\n' "$CLEAN_RES" | grep -E '[[:space:]][6-9]/0x0[6-9][[:space:]]+\|')
   if [ -n "$EXPECT6" ] && ! printf '%s' "$ICLASS_EVIEW_BIN" | grep -F -q "$EXPECT6"; then echo "$ICLASS_EVIEW_BIN"; return 1; fi
   if [ -n "$EXPECT7" ] && ! printf '%s' "$ICLASS_EVIEW_BIN" | grep -F -q "$EXPECT7"; then echo "$ICLASS_EVIEW_BIN"; return 1; fi
   if [ -n "$EXPECT8" ] && ! printf '%s' "$ICLASS_EVIEW_BIN" | grep -F -q "$EXPECT8"; then echo "$ICLASS_EVIEW_BIN"; return 1; fi
   if [ -n "$EXPECT9" ] && ! printf '%s' "$ICLASS_EVIEW_BIN" | grep -F -q "$EXPECT9"; then echo "$ICLASS_EVIEW_BIN"; return 1; fi
-  printf "%-40s" "read $LABEL iClass blocks from --bin "
   echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
 
-  local WIEGAND_CMD="$PM3BIN -c 'hf iclass encode -w $FORMAT --fc $FC --cn $CN --emu --enckey $ICLASS_ENCODE_KEY'"
-  if [ -n "$ISSUE" ]; then
-    WIEGAND_CMD="$PM3BIN -c 'hf iclass encode -w $FORMAT --fc $FC --cn $CN --issue $ISSUE --emu --enckey $ICLASS_ENCODE_KEY'"
+  CHAIN_CMD="$PM3BIN -c 'hf iclass encode --raw $WIEGAND_FIXTURE_RAW --emu$ENC_ARGS$KEY_ARGS; hf iclass eview'"
+  RES=$(eval "$CHAIN_CMD")
+  CLEAN_RES=$(printf '%s' "$RES" | sed -E 's/\x1B\[[0-9;?]*[[:alpha:]]//g')
+  ICLASS_EVIEW_RAW=$(printf '%s\n' "$CLEAN_RES" | grep -E '[[:space:]][6-9]/0x0[6-9][[:space:]]+\|')
+  if [ "$ICLASS_EVIEW_RAW" != "$ICLASS_EVIEW_BIN" ]; then
+    echo "iClass emulator mismatch for $LABEL --raw"
+    echo "$RES"
+    return 1
   fi
-  if ! CheckExecute "encode $LABEL iClass --wiegand" "$WIEGAND_CMD" "uploaded 32 bytes to emulator memory"; then return 1; fi
-  ICLASS_EVIEW_WIEGAND=$(GetIClassEView)
+  printf "%-40s" "compare $LABEL iClass --raw "
+  echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
+
+  CHAIN_CMD="$PM3BIN -c 'hf iclass encode --new $WIEGAND_FIXTURE_NEW --emu$ENC_ARGS$KEY_ARGS; hf iclass eview'"
+  RES=$(eval "$CHAIN_CMD")
+  CLEAN_RES=$(printf '%s' "$RES" | sed -E 's/\x1B\[[0-9;?]*[[:alpha:]]//g')
+  ICLASS_EVIEW_NEW=$(printf '%s\n' "$CLEAN_RES" | grep -E '[[:space:]][6-9]/0x0[6-9][[:space:]]+\|')
+  if [ "$ICLASS_EVIEW_NEW" != "$ICLASS_EVIEW_BIN" ]; then
+    echo "iClass emulator mismatch for $LABEL --new"
+    echo "$RES"
+    return 1
+  fi
+  printf "%-40s" "compare $LABEL iClass --new "
+  echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
+
+  local WIEGAND_ENCODE_CMD="hf iclass encode -w $FORMAT --fc $FC --cn $CN --emu$ENC_ARGS$KEY_ARGS"
+  if [ -n "$ISSUE" ]; then
+    WIEGAND_ENCODE_CMD="hf iclass encode -w $FORMAT --fc $FC --cn $CN --issue $ISSUE --emu$ENC_ARGS$KEY_ARGS"
+  fi
+  CHAIN_CMD="$PM3BIN -c '$WIEGAND_ENCODE_CMD; hf iclass eview'"
+  RES=$(eval "$CHAIN_CMD")
+  CLEAN_RES=$(printf '%s' "$RES" | sed -E 's/\x1B\[[0-9;?]*[[:alpha:]]//g')
+  ICLASS_EVIEW_WIEGAND=$(printf '%s\n' "$CLEAN_RES" | grep -E '[[:space:]][6-9]/0x0[6-9][[:space:]]+\|')
   if [ "$ICLASS_EVIEW_WIEGAND" != "$ICLASS_EVIEW_BIN" ]; then
     echo "iClass emulator mismatch for $LABEL --wiegand"
-    echo "$ICLASS_EVIEW_WIEGAND"
+    echo "$RES"
     return 1
   fi
   printf "%-40s" "compare $LABEL iClass --wiegand "
   echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
+
+  if ! CheckOutputContainsAll "view $LABEL iClass --emu" "$PM3BIN -c 'hf iclass view --emu'" \
+    "${EXPECT6:-03 03 03 03}" \
+    "$EXPECT_INFO"; then return 1; fi
+
+  if [ -n "$EXPECT_DECODE_RE" ]; then
+    if [ "$ENC_MODE" = "none" ]; then
+      if ! CheckExecute "view $LABEL iClass --emu decode" "$PM3BIN -c 'hf iclass view --emu'" "$EXPECT_DECODE_RE"; then return 1; fi
+      if ! CheckExecute "view $LABEL iClass --emu decode repeat" "$PM3BIN -c 'hf iclass view --emu'" "$EXPECT_DECODE_RE"; then return 1; fi
+      if ! CheckExecute "decrypt $LABEL iClass --emu" "$PM3BIN -c '$CHAIN_DECODE_CMD'" "$EXPECT_DECODE_RE"; then return 1; fi
+    else
+      if ! CheckExecute "decrypt $LABEL iClass --emu" "$PM3BIN -c '$CHAIN_DECODE_CMD'" "$EXPECT_DECODE_RE"; then return 1; fi
+    fi
+  fi
   return 0
 }
 
@@ -722,9 +817,18 @@ while true; do
       echo -e "\n${C_BLUE}Testing hf iclass encode emulator fixtures${C_NC} ${PM3BIN:=./pm3}"
       if ! CheckFileExist "pm3 exists" "$PM3BIN"; then break; fi
 
-      if ! CheckIClassEncodeFixture "H10301" "H10301" "31" "337" "" "03 03 03 03 00 03 E0 17" "1D 21 B3 16 EE D4 A5 E2" "DD AD A1 61 E8 D7 96 73" "DD AD A1 61 E8 D7 96 73"; then break; fi
-      if ! CheckIClassEncodeFixture "C1k35s" "C1k35s" "222" "12345" "" "" "" "" ""; then break; fi
-      if ! CheckIClassEncodeFixture "P10001" "P10001" "12" "3456" "" "" "" "" ""; then break; fi
+      if ! CheckIClassEncodeFixture "H10301 2k3des" "H10301" "31" "337" "" "03 03 03 03 00 03 E0 17" "1D 21 B3 16 EE D4 A5 E2" "DD AD A1 61 E8 D7 96 73" "DD AD A1 61 E8 D7 96 73" "" "User / Enc Cred" "H10301.*FC: 31.*CN: 337"; then break; fi
+      if ! CheckIClassEncodeFixture "H10301 des" "H10301" "31" "337" "" "03 03 03 03 00 03 E0 15" "" "" "" "des" "User / Enc Cred" "H10301.*FC: 31.*CN: 337"; then break; fi
+      if ! CheckIClassEncodeFixture "H10301 none" "H10301" "31" "337" "" "03 03 03 03 00 03 E0 14" "" "" "" "none" "User / Cred" "H10301.*FC: 31.*CN: 337"; then break; fi
+      if ! CheckIClassEncodeFixture "C1k35s 2k3des" "C1k35s" "222" "12345" "" "" "" "" "" "" "User / Enc Cred" "C1k35s.*FC: 222.*CN: 12345"; then break; fi
+      if ! CheckIClassEncodeFixture "C1k35s des" "C1k35s" "222" "12345" "" "" "" "" "" "des" "User / Enc Cred" "C1k35s.*FC: 222.*CN: 12345"; then break; fi
+      if ! CheckIClassEncodeFixture "C1k35s none" "C1k35s" "222" "12345" "" "" "" "" "" "none" "User / Cred" "C1k35s.*FC: 222.*CN: 12345"; then break; fi
+      if ! CheckIClassEncodeFixture "P10001 2k3des" "P10001" "12" "3456" "" "" "" "" "" "" "User / Enc Cred" "P10001.*FC: 12.*CN: 3456"; then break; fi
+      if ! CheckIClassEncodeFixture "P10001 des" "P10001" "12" "3456" "" "" "" "" "" "des" "User / Enc Cred" "P10001.*FC: 12.*CN: 3456"; then break; fi
+      if ! CheckIClassEncodeFixture "P10001 none" "P10001" "12" "3456" "" "" "" "" "" "none" "User / Cred" "P10001.*FC: 12.*CN: 3456"; then break; fi
+      if ! CheckIClassEncodeFixture "BQT38 issue 2k3des" "BQT38" "1" "1" "1" "" "" "" "" "" "User / Enc Cred" ""; then break; fi
+      if ! CheckIClassEncodeFixture "BQT38 issue des" "BQT38" "1" "1" "1" "" "" "" "" "des" "User / Enc Cred" ""; then break; fi
+      if ! CheckIClassEncodeFixture "BQT38 issue none" "BQT38" "1" "1" "1" "" "" "" "" "none" "User / Cred" ""; then break; fi
 
       echo "  iClass encode emulator fixture tests completed successfully!"
     fi
