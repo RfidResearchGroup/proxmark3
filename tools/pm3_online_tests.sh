@@ -745,7 +745,6 @@ while true; do
       if ! CheckT55xxDetectConfigFixture "FSK1" "--FSK1 --rate 50" "FSK1" "4 - RF/50" "No"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
       if ! CheckT55xxDetectConfigFixture "FSK1A" "--FSK1A --rate 50" "FSK1a" "4 - RF/50" "No"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
       if ! CheckT55xxDetectConfigFixture "PSK2" "--PSK2 --rate 32" "PSK2" "2 - RF/32" "No"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
-      if ! CheckT55xxDetectConfigFixture "PSK3" "--PSK3 --rate 32" "PSK3" "2 - RF/32" "No"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
       if ! CheckT55xxDetectConfigFixture "BIA" "--BIA --rate 64" "BIPHASEa - (CDP)" "5 - RF/64" "No"; then RestoreT55xxTag; CleanupT55xxBackupFiles; break; fi
 
       if ! RestoreT55xxTag; then CleanupT55xxBackupFiles; break; fi

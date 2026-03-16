@@ -67,6 +67,7 @@ static t55xx_conf_block_t config = {
 
 static t55xx_memory_item_t cardmem[T55x7_BLOCK_COUNT] = {{0}};
 static bool test_with_start(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5, uint8_t start_idx);
+static bool t55xx_try_fsk_detect_candidate(t55xx_conf_block_t *candidate, int *bitRate, uint8_t clk, uint8_t fc_high, uint8_t fc_low, bool invert, uint8_t downlink_mode);
 /*
 #define DC(x)  ((x) + 128)
 
@@ -805,6 +806,10 @@ static int CmdT55xxSetConfig(const char *Cmd) {
         PrintAndLogEx(FAILED, "Error multiple demodulations, select one");
         return PM3_EINVARG;
     }
+    if (mods[8]) {
+        PrintAndLogEx(FAILED, "Error: PSK3 is not supported for T55xx config/read operations");
+        return PM3_EINVARG;
+    }
 
     // validate user specified bitrate
 
@@ -879,8 +884,6 @@ static int CmdT55xxSetConfig(const char *Cmd) {
         config.modulation = DEMOD_PSK1;
     } else if (mods[7]) {
         config.modulation = DEMOD_PSK2;
-    } else if (mods[8]) {
-        config.modulation = DEMOD_PSK3;
     } else if (mods[9]) {
         config.modulation = DEMOD_NRZ;
     } else if (mods[10]) {
@@ -1039,10 +1042,12 @@ bool DecodeT55xxBlock(void) {
             ans = PSKDemod(bitRate[config.bitrate], config.inverted, 6, false);
             break;
         case DEMOD_PSK2: //inverted won't affect this
-        case DEMOD_PSK3: //not fully implemented
             ans = PSKDemod(bitRate[config.bitrate], 0, 6, false);
             psk1TOpsk2(g_DemodBuffer, g_DemodBufferLen);
             break;
+        case DEMOD_PSK3:
+            PrintAndLogEx(WARNING, "PSK3 is not supported for T55xx reads");
+            return false;
         case DEMOD_NRZ:
             ans = NRZrawDemod(bitRate[config.bitrate], config.inverted, 1, false);
             break;
@@ -1325,33 +1330,37 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
     ans = fskClocks(&fc1, &fc2, (uint8_t *)&clk, &firstClockEdge);
 
     if (ans && ((fc1 == 10 && fc2 == 8) || (fc1 == 8 && fc2 == 5))) {
-        if ((FSKrawDemod(0, 0, 0, 0, false) == PM3_SUCCESS) && test(DEMOD_FSK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
-            tests[hits].modulation = DEMOD_FSK;
-            if (fc1 == 8 && fc2 == 5)
-                tests[hits].modulation = DEMOD_FSK1a;
-            else if (fc1 == 10 && fc2 == 8)
-                tests[hits].modulation = DEMOD_FSK2;
-            tests[hits].bitrate = bitRate;
-            tests[hits].inverted = false;
-            tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
-            tests[hits].ST = false;
-            tests[hits].downlink_mode = downlink_mode;
+        if (t55xx_try_fsk_detect_candidate(&tests[hits], &bitRate, clk, fc1, fc2, false, downlink_mode)) {
             ++hits;
         }
-        if ((FSKrawDemod(0, 1, 0, 0, false) == PM3_SUCCESS) && test(DEMOD_FSK, &tests[hits].offset, &bitRate, clk, &tests[hits].Q5)) {
-            tests[hits].modulation = DEMOD_FSK;
-            if (fc1 == 8 && fc2 == 5)
-                tests[hits].modulation = DEMOD_FSK1;
-            else if (fc1 == 10 && fc2 == 8)
-                tests[hits].modulation = DEMOD_FSK2a;
-            tests[hits].bitrate = bitRate;
-            tests[hits].inverted = true;
-            tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
-            tests[hits].ST = false;
-            tests[hits].downlink_mode = downlink_mode;
+        if (t55xx_try_fsk_detect_candidate(&tests[hits], &bitRate, clk, fc1, fc2, true, downlink_mode)) {
             ++hits;
         }
     } else {
+        // T55xx direct block reads sometimes produce enough FSK structure to
+        // demodulate a valid block0 even when the generic fc/clock auto-detect
+        // path does not resolve a supported pair. Keep this fallback local to
+        // T55xx config-block detection so broader LF autodetect behavior stays
+        // unchanged.
+        static const uint8_t candidate_clocks[] = {50, 64};
+        static const struct {
+            uint8_t fc_high;
+            uint8_t fc_low;
+        } candidate_tones[] = {
+            {8, 5},
+            {10, 8},
+        };
+
+        for (size_t c = 0; c < ARRAYLEN(candidate_clocks); c++) {
+            for (size_t t = 0; t < ARRAYLEN(candidate_tones); t++) {
+                if (t55xx_try_fsk_detect_candidate(&tests[hits], &bitRate, candidate_clocks[c], candidate_tones[t].fc_high, candidate_tones[t].fc_low, false, downlink_mode)) {
+                    ++hits;
+                }
+                if (t55xx_try_fsk_detect_candidate(&tests[hits], &bitRate, candidate_clocks[c], candidate_tones[t].fc_high, candidate_tones[t].fc_low, true, downlink_mode)) {
+                    ++hits;
+                }
+            }
+        }
         clk = GetAskClock("", false);
         if (clk > 0) {
             tests[hits].ST = true;
@@ -1466,25 +1475,6 @@ bool t55xxTryDetectModulationEx(uint8_t downlink_mode, bool print_config, uint32
                 psk1TOpsk2(g_DemodBuffer, g_DemodBufferLen);
                 if (test_with_start(DEMOD_PSK2, &tests[hits].offset, &bitRate, psk_clks[i], &tests[hits].Q5, 0)) {
                     tests[hits].modulation = DEMOD_PSK2;
-                    tests[hits].bitrate = bitRate;
-                    tests[hits].inverted = false;
-                    tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
-                    tests[hits].ST = false;
-                    tests[hits].downlink_mode = downlink_mode;
-                    ++hits;
-                    break;
-                }
-            } // inverse waves does not affect this demod
-            for (size_t i = 0; i < ARRAYLEN(psk_clks); i++) {
-                if (psk_clks[i] == 0) {
-                    continue;
-                }
-                if (PSKDemod(psk_clks[i], 0, 6, false) != PM3_SUCCESS) {
-                    continue;
-                }
-                psk1TOpsk2(g_DemodBuffer, g_DemodBufferLen);
-                if (test_with_start(DEMOD_PSK3, &tests[hits].offset, &bitRate, psk_clks[i], &tests[hits].Q5, 0)) {
-                    tests[hits].modulation = DEMOD_PSK3;
                     tests[hits].bitrate = bitRate;
                     tests[hits].inverted = false;
                     tests[hits].block0 = PackBits(tests[hits].offset, 32, g_DemodBuffer);
@@ -1743,6 +1733,35 @@ static bool testBitRate(uint8_t readRate, uint8_t clk) {
         return true;
 
     return false;
+}
+
+// T55xx config detection can safely try a small explicit FSK candidate set,
+// because we only accept results that decode into a structurally valid block0.
+static bool t55xx_try_fsk_detect_candidate(t55xx_conf_block_t *candidate, int *bitRate, uint8_t clk, uint8_t fc_high, uint8_t fc_low, bool invert, uint8_t downlink_mode) {
+    uint8_t offset = 0;
+    bool q5 = false;
+
+    if (FSKrawDemod(clk, invert, fc_high, fc_low, false) != PM3_SUCCESS) {
+        return false;
+    }
+    if (test(DEMOD_FSK, &offset, bitRate, clk, &q5) == false) {
+        return false;
+    }
+
+    candidate->modulation = DEMOD_FSK;
+    if (fc_high == 8 && fc_low == 5) {
+        candidate->modulation = invert ? DEMOD_FSK1 : DEMOD_FSK1a;
+    } else if (fc_high == 10 && fc_low == 8) {
+        candidate->modulation = invert ? DEMOD_FSK2a : DEMOD_FSK2;
+    }
+    candidate->bitrate = *bitRate;
+    candidate->inverted = invert;
+    candidate->offset = offset;
+    candidate->block0 = PackBits(offset, 32, g_DemodBuffer);
+    candidate->Q5 = q5;
+    candidate->ST = false;
+    candidate->downlink_mode = downlink_mode;
+    return true;
 }
 
 static bool test_with_start(uint8_t mode, uint8_t *offset, int *fndBitRate, uint8_t clk, bool *Q5, uint8_t start_idx) {
