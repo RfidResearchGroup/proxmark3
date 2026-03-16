@@ -613,27 +613,36 @@ bool t55xxAcquireAndDetect(bool usepwd, uint32_t password, uint32_t known_block0
 bool t55xxVerifyWrite(uint8_t block, bool page1, bool usepwd, uint8_t override, uint32_t password, uint8_t downlink_mode, uint32_t data) {
 
     uint32_t read_data = 0;
+    bool tried_block0_detect = false;
 
     if (downlink_mode == 0xFF)
         downlink_mode = config.downlink_mode;
 
-    int res = T55xxReadBlockEx(block, page1, usepwd, override, password, downlink_mode, false);
-    if (res == PM3_SUCCESS) {
+    while (true) {
+        int res = T55xxReadBlockEx(block, page1, usepwd, override, password, downlink_mode, false);
+        if (res == PM3_SUCCESS) {
 
-        if (GetT55xxBlockData(&read_data) == false)
-            return false;
-
-    } else if (res == PM3_EWRONGANSWER) {
-
-        // couldn't decode.  Lets see if this was a block 0 write and try read/detect it auto.
-        // this messes up with ppl config..
-        if (block == 0 && page1 == false) {
-
-            if (t55xxAcquireAndDetect(usepwd, password, data, true) == false)
+            if (GetT55xxBlockData(&read_data) == false)
                 return false;
 
-            return t55xxVerifyWrite(block, page1, usepwd, 2, password, config.downlink_mode, data);
+            break;
+        } else if (res == PM3_EWRONGANSWER) {
+
+            // Block 0 writes may need one detect-assisted retry after the tag
+            // switches modulation, but looping on that path can recurse forever
+            // on configs that never become directly readable.
+            if (block == 0 && page1 == false && tried_block0_detect == false) {
+
+                if (t55xxAcquireAndDetect(usepwd, password, data, true) == false)
+                    return false;
+
+                tried_block0_detect = true;
+                override = 2;
+                downlink_mode = config.downlink_mode;
+                continue;
+            }
         }
+        return false;
     }
 
     return (read_data == data);
