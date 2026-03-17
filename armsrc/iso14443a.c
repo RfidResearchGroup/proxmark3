@@ -2624,7 +2624,7 @@ int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_
         if (flip == 3) {
             if (data_available()) {
                 Dbprintf("----------- " _GREEN_("Breaking / Data") " ----------");
-                return false;
+                return 1;
             }
             flip = 0;
         }
@@ -2633,7 +2633,7 @@ int EmGetCmd(uint8_t *received, uint16_t received_max_len, uint16_t *len, uint8_
         if (checker-- == 0) {
             if (BUTTON_PRESS()) {
                 Dbprintf("----------- " _GREEN_("Button pressed, user aborted") " ----------");
-                return false;
+                return 1;
             }
 
             flip++;
