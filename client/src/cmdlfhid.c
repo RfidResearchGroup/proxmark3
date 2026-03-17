@@ -44,13 +44,74 @@
 #include "wiegand_formats.h"
 #include "wiegand_formatutils.h"
 #include "cmdlfem4x05.h"  // EM defines
-#include "loclass/cipherutils.h"  // bitstreamout
-
-#ifndef BITS
-# define BITS 96
-#endif
 
 static int CmdHelp(const char *Cmd);
+
+typedef struct {
+    char format[16];
+    int format_len;
+    wiegand_card_t card;
+    uint8_t raw[12];
+    int raw_len;
+    uint8_t bin[97];
+    int bin_len;
+    uint8_t new_pacs[13];
+    int new_pacs_len;
+} lf_hid_cli_input_t;
+
+static int lf_hid_validate_packed_transport(const wiegand_input_t *input, const char *command_name) {
+    if (input->packed_valid == false) {
+        PrintAndLogEx(ERR, "Credential encoded successfully, but %" PRIuMAX "-bit Wiegand data cannot be represented as a packed HID credential", (uintmax_t)input->bin_len);
+        PrintAndLogEx(ERR, "Packed HID encoding supports up to 84 Wiegand bits");
+        return PM3_EINVARG;
+    }
+
+    // Raw HID input already arrives in transport form and intentionally bypasses the
+    // packed Wiegand length check that applies to bin/new/formatted inputs.
+    if (input->packed.Length == 0) {
+        return PM3_SUCCESS;
+    }
+
+    if (input->packed.Length > 37) {
+        PrintAndLogEx(ERR, "%s supports only packed credentials up to 37 bits", command_name);
+        return PM3_EINVARG;
+    }
+
+    return PM3_SUCCESS;
+}
+
+static int lf_hid_resolve_input(const lf_hid_cli_input_t *cli, wiegand_input_t *input, int *format_idx) {
+    int input_modes = 0;
+    input_modes += (cli->raw_len > 0);
+    input_modes += (cli->bin_len > 0);
+    input_modes += (cli->new_pacs_len > 0);
+    input_modes += (cli->format_len > 0 || cli->card.FacilityCode != 0 || cli->card.CardNumber != 0 || cli->card.IssueLevel != 0 || cli->card.OEM != 0);
+    if (input_modes != 1) {
+        PrintAndLogEx(ERR, "Use exactly one of `--raw`, `--bin`, `--new`, or `--wiegand/--fc/--cn`");
+        return PM3_EINVARG;
+    }
+
+    *format_idx = -1;
+    if (cli->raw_len == 0 && cli->bin_len == 0 && cli->new_pacs_len == 0) {
+        *format_idx = HIDFindCardFormat(cli->format);
+    }
+
+    if (*format_idx == -1 && cli->raw_len == 0 && cli->bin_len == 0 && cli->new_pacs_len == 0) {
+        PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), cli->format);
+        return PM3_EINVARG;
+    }
+
+    if (cli->raw_len) {
+        return wiegand_pack_from_raw_hid(cli->raw, cli->raw_len, input);
+    }
+    if (cli->bin_len) {
+        return wiegand_pack_from_plain_bin((char *)cli->bin, input);
+    }
+    if (cli->new_pacs_len) {
+        return wiegand_pack_from_new_pacs(cli->new_pacs, cli->new_pacs_len, input);
+    }
+    return wiegand_pack_from_formatted(*format_idx, (wiegand_card_t *)&cli->card, true, input);
+}
 
 // sending three times.  Didn't seem to break the previous sim?
 static int sendPing(void) {
@@ -252,9 +313,9 @@ static int CmdHIDSim(const char *Cmd) {
                   "Enables simulation of HID card with card number.\n"
                   "Simulation runs until the button is pressed or another USB command is issued.",
                   "lf hid sim -r 2006ec0c86                -> HID 10301 26 bit\n"
+                  "lf hid sim --bin 10001111100000001010100011\n"
+                  "lf hid sim --new 068F80A8C0\n"
                   "lf hid sim -r 2e0ec00c87                -> HID Corporate 35 bit\n"
-                  "lf hid sim -r 01f0760643c3              -> HID P10001 40 bit\n"
-                  "lf hid sim -r 01400076000c86            -> HID Corporate 48 bit\n"
                   "lf hid sim -w H10301 --fc 118 --cn 1603 -> HID 10301 26 bit\n"
                  );
 
@@ -266,61 +327,62 @@ static int CmdHIDSim(const char *Cmd) {
         arg_u64_0("i",    NULL,     "<dec>", "issue level"),
         arg_u64_0("o",   "oem",     "<dec>", "OEM code"),
         arg_str0("r",  "raw",     "<hex>", "raw bytes"),
+        arg_str0(NULL, "bin", "<bin>", "Binary string i.e 0001001001"),
+        arg_str0(NULL, "new", "<hex>", "new ASN.1 PACS hex from `wiegand encode --new`"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    char format[16] = {0};
-    int format_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)format, sizeof(format), &format_len);
-
-    wiegand_card_t card;
-    memset(&card, 0, sizeof(wiegand_card_t));
-    card.FacilityCode = arg_get_u32_def(ctx, 2, 0);
-    card.CardNumber = arg_get_u32_def(ctx, 3, 0);
-    card.IssueLevel = arg_get_u32_def(ctx, 4, 0);
-    card.OEM = arg_get_u32_def(ctx, 5, 0);
-
-    int raw_len = 0;
-    char raw[40] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)raw, sizeof(raw), &raw_len);
+    lf_hid_cli_input_t cli;
+    memset(&cli, 0, sizeof(cli));
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)cli.format, sizeof(cli.format), &cli.format_len);
+    cli.card.FacilityCode = arg_get_u32_def(ctx, 2, 0);
+    cli.card.CardNumber = arg_get_u32_def(ctx, 3, 0);
+    cli.card.IssueLevel = arg_get_u32_def(ctx, 4, 0);
+    cli.card.OEM = arg_get_u32_def(ctx, 5, 0);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 6), cli.raw, sizeof(cli.raw), &cli.raw_len);
+    cli.bin_len = sizeof(cli.bin) - 1;
+    CLIGetStrWithReturn(ctx, 7, cli.bin, &cli.bin_len);
+    cli.bin[cli.bin_len] = '\0';
+    res |= CLIParamHexToBuf(arg_get_str(ctx, 8), cli.new_pacs, sizeof(cli.new_pacs), &cli.new_pacs_len);
     CLIParserFree(ctx);
 
-    wiegand_message_t packed;
-    memset(&packed, 0, sizeof(wiegand_message_t));
-
-    // format validation
-    int format_idx = HIDFindCardFormat(format);
-    if (format_idx == -1 && raw_len == 0) {
-        PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
+    if (res) {
+        PrintAndLogEx(ERR, "Error parsing hex input");
         return PM3_EINVARG;
     }
 
-    if (raw_len) {
-        uint32_t top = 0, mid = 0, bot = 0;
-        hexstring_to_u96(&top, &mid, &bot, raw);
-        packed.Top = top;
-        packed.Mid = mid;
-        packed.Bot = bot;
-    } else {
-        if (HIDPack(format_idx, &card, &packed, true) == false) {
-            PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
-            return PM3_ESOFT;
-        }
+    if (cli.bin_len > 96) {
+        PrintAndLogEx(ERR, "Binary wiegand string must be less than 97 bits");
+        return PM3_EINVARG;
     }
 
-    if (raw_len == 0) {
+    wiegand_input_t input;
+    memset(&input, 0, sizeof(input));
+    int format_idx = -1;
+    res = lf_hid_resolve_input(&cli, &input, &format_idx);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to encode HID input");
+        return res;
+    }
+
+    res = lf_hid_validate_packed_transport(&input, "LF HID simulation");
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (cli.raw_len == 0) {
         PrintAndLogEx(INFO, "Simulating HID tag");
-        HIDTryUnpack(&packed);
+        HIDTryUnpack(&input.packed);
     } else {
-        PrintAndLogEx(INFO, "Simulating HID tag using raw " _GREEN_("%s"),  raw);
+        PrintAndLogEx(INFO, "Simulating HID tag using raw " _GREEN_("%s"), sprint_hex_inrow(cli.raw, cli.raw_len));
     }
 
     lf_hidsim_t payload;
-    payload.hi2 = packed.Top;
-    payload.hi = packed.Mid;
-    payload.lo = packed.Bot;
-    payload.longFMT = (packed.Mid > 0xFFF);
+    payload.hi2 = input.packed.Top;
+    payload.hi = input.packed.Mid;
+    payload.lo = input.packed.Bot;
+    payload.longFMT = (input.packed.Mid > 0xFFF);
 
     clearCommandBuffer();
     SendCommandNG(CMD_LF_HID_SIMULATE, (uint8_t *)&payload,  sizeof(payload));
@@ -334,6 +396,8 @@ static int CmdHIDClone(const char *Cmd) {
                   "clone a HID Prox tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\n"
                   "Tag must be on the antenna when issuing this command.",
                   "lf hid clone -r 2006ec0c86                      -> write raw value for T55x7 tag (HID 10301 26 bit)\n"
+                  "lf hid clone --bin 10001111100000001010100011  -> write binary HID payload for T55x7 tag\n"
+                  "lf hid clone --new 068F80A8C0                  -> write PACS-encoded HID payload for T55x7 tag\n"
                   "lf hid clone -r 2e0ec00c87                      -> write raw value for T55x7 tag (HID Corporate 35 bit)\n"
                   "lf hid clone -r 01f0760643c3                    -> write raw value for T55x7 tag (HID P10001 40 bit)\n"
                   "lf hid clone -r 01400076000c86                  -> write raw value for T55x7 tag (HID Corporate 48 bit)\n"
@@ -353,33 +417,27 @@ static int CmdHIDClone(const char *Cmd) {
         arg_lit0(NULL, "q5", "optional - specify writing to Q5/T5555 tag"),
         arg_lit0(NULL, "em", "optional - specify writing to EM4305/4469 tag"),
         arg_str0(NULL, "bin", "<bin>", "Binary string i.e 0001001001"),
+        arg_str0(NULL, "new", "<hex>", "new ASN.1 PACS hex from `wiegand encode --new`"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    char format[16] = {0};
-    int format_len = 0;
-    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)format, sizeof(format), &format_len);
-
-    wiegand_card_t card;
-    memset(&card, 0, sizeof(wiegand_card_t));
-    card.FacilityCode = arg_get_u32_def(ctx, 2, 0);
-    card.CardNumber = arg_get_u32_def(ctx, 3, 0);
-    card.IssueLevel = arg_get_u32_def(ctx, 4, 0);
-    card.OEM = arg_get_u32_def(ctx, 5, 0);
-
-    int raw_len = 0;
-    char raw[40] = {0};
-    CLIParamStrToBuf(arg_get_str(ctx, 6), (uint8_t *)raw, sizeof(raw), &raw_len);
+    lf_hid_cli_input_t cli;
+    memset(&cli, 0, sizeof(cli));
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)cli.format, sizeof(cli.format), &cli.format_len);
+    cli.card.FacilityCode = arg_get_u32_def(ctx, 2, 0);
+    cli.card.CardNumber = arg_get_u32_def(ctx, 3, 0);
+    cli.card.IssueLevel = arg_get_u32_def(ctx, 4, 0);
+    cli.card.OEM = arg_get_u32_def(ctx, 5, 0);
+    int res = CLIParamHexToBuf(arg_get_str(ctx, 6), cli.raw, sizeof(cli.raw), &cli.raw_len);
 
     bool q5 = arg_get_lit(ctx, 7);
     bool em = arg_get_lit(ctx, 8);
 
-    // t5577 can do 6 blocks with 32bits == 192 bits, HID is manchester encoded and doubles in length.
-    // With parity, manchester and preamble we have about 3 blocks to play with.  Ie:  96 bits
-    uint8_t bin[97] = {0};
-    int bin_len = sizeof(bin) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
-    CLIGetStrWithReturn(ctx, 9, bin, &bin_len);
+    cli.bin_len = sizeof(cli.bin) - 1;
+    CLIGetStrWithReturn(ctx, 9, cli.bin, &cli.bin_len);
+    cli.bin[cli.bin_len] = '\0';
+    res |= CLIParamHexToBuf(arg_get_str(ctx, 10), cli.new_pacs, sizeof(cli.new_pacs), &cli.new_pacs_len);
     CLIParserFree(ctx);
 
     if (q5 && em) {
@@ -387,59 +445,23 @@ static int CmdHIDClone(const char *Cmd) {
         return PM3_EINVARG;
     }
 
-    if (bin_len > 96) {
-        PrintAndLogEx(ERR, "Binary wiegand string must be less than 96 bits");
+    if (res) {
+        PrintAndLogEx(ERR, "Error parsing hex input");
         return PM3_EINVARG;
     }
 
-    wiegand_message_t packed;
-    memset(&packed, 0, sizeof(wiegand_message_t));
-
-    // format validation
-    int format_idx = HIDFindCardFormat(format);
-    if (format_idx == -1 && raw_len == 0) {
-        PrintAndLogEx(WARNING, "Unknown format: " _YELLOW_("%s"), format);
-        return PM3_EINVARG;
+    wiegand_input_t input;
+    memset(&input, 0, sizeof(input));
+    int format_idx = -1;
+    res = lf_hid_resolve_input(&cli, &input, &format_idx);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to encode HID input");
+        return res;
     }
 
-    uint32_t top = 0, mid = 0, bot = 0;
-    if (raw_len) {
-        hexstring_to_u96(&top, &mid, &bot, raw);
-        packed.Top = top;
-        packed.Mid = mid;
-        packed.Bot = bot;
-    } else if (bin_len) {
-
-        uint8_t hex[12];
-        memset(hex, 0, sizeof(hex));
-        BitstreamOut_t bout = {hex, 0, 0 };
-
-        for (int i = 0; i < 96 - bin_len - 1; i++) {
-            pushBit(&bout, 0);
-        }
-        // add binary sentinel bit.
-        pushBit(&bout, 1);
-
-        // convert binary string to hex bytes
-        for (int i = 0; i < bin_len; i++) {
-            char c = bin[i];
-            if (c == '1')
-                pushBit(&bout, 1);
-            else if (c == '0')
-                pushBit(&bout, 0);
-        }
-
-        packed.Length = bin_len;
-        packed.Top = bytes_to_num(hex, 4);
-        packed.Mid = bytes_to_num(hex + 4, 4);
-        packed.Bot = bytes_to_num(hex + 8, 4);
-        add_HID_header(&packed);
-
-    } else {
-        if (HIDPack(format_idx, &card, &packed, true) == false) {
-            PrintAndLogEx(WARNING, "The card data could not be encoded in the selected format.");
-            return PM3_ESOFT;
-        }
+    res = lf_hid_validate_packed_transport(&input, "LF HID clone");
+    if (res != PM3_SUCCESS) {
+        return res;
     }
 
     char cardtype[16] = {"T55x7"};
@@ -454,18 +476,22 @@ static int CmdHIDClone(const char *Cmd) {
         snprintf(cardtype, sizeof(cardtype), "EM4305/4469");
     }
 
-    if (raw_len == 0) {
+    if (cli.raw_len == 0) {
         PrintAndLogEx(INFO, "Preparing to clone HID tag");
-        HIDUnpack(format_idx, &packed);
+        if (format_idx >= 0) {
+            HIDUnpack(format_idx, &input.packed);
+        } else {
+            HIDTryUnpack(&input.packed);
+        }
     } else {
-        PrintAndLogEx(INFO, "Preparing to clone HID tag using raw " _YELLOW_("%s"),  raw);
+        PrintAndLogEx(INFO, "Preparing to clone HID tag using raw " _YELLOW_("%s"), sprint_hex_inrow(cli.raw, cli.raw_len));
     }
 
     lf_hidsim_t payload;
-    payload.hi2 = packed.Top;
-    payload.hi = packed.Mid;
-    payload.lo = packed.Bot;
-    payload.longFMT = (packed.Mid > 0xFFF);
+    payload.hi2 = input.packed.Top;
+    payload.hi = input.packed.Mid;
+    payload.lo = input.packed.Bot;
+    payload.longFMT = (input.packed.Mid > 0xFFF);
     payload.Q5 = q5;
     payload.EM = em;
 

@@ -22,6 +22,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 // Structure for packed wiegand messages
 // Always align lowest value (last transmitted) bit to ordinal position 0 (lowest valued bit bottom)
@@ -41,6 +42,13 @@ typedef struct {
     bool ParityValid; // Only valid for responses
 } wiegand_card_t;
 
+typedef struct {
+    size_t bin_len;
+    char binstr[145];
+    bool packed_valid;
+    wiegand_message_t packed;
+} wiegand_input_t;
+
 uint8_t get_bit_by_position(const wiegand_message_t *data, uint8_t pos);
 bool set_bit_by_position(wiegand_message_t *data, bool value, uint8_t pos);
 
@@ -54,5 +62,16 @@ wiegand_message_t initialize_message_object(uint32_t top, uint32_t mid, uint32_t
 
 uint8_t get_length_from_header(const wiegand_message_t *data);
 bool add_HID_header(wiegand_message_t *data);
+bool wiegand_message_to_binstr(const wiegand_message_t *packed, char *binstr, size_t binstr_size);
+bool wiegand_raw_to_binstr(const uint8_t *raw, size_t raw_len, char *binstr, size_t binstr_size);
+bool wiegand_new_pacs_to_binstr(const uint8_t *pacs, size_t pacs_len, char *binstr, size_t binstr_size);
+int wiegand_set_plain_binstr(const char *binstr, wiegand_input_t *input);
+int wiegand_set_new_pacs_binstr(const uint8_t *pacs, size_t pacs_len, wiegand_input_t *input);
+int wiegand_pack_bin_with_hid_header(const char *binstr, wiegand_message_t *packed);
+int wiegand_pack_formatted(int format_idx, wiegand_card_t *card, bool preamble, wiegand_message_t *packed);
+int wiegand_pack_from_new_pacs(const uint8_t *pacs, size_t pacs_len, wiegand_input_t *input);
+int wiegand_pack_from_plain_bin(const char *binstr, wiegand_input_t *input);
+int wiegand_pack_from_formatted(int format_idx, wiegand_card_t *card, bool preamble, wiegand_input_t *input);
+int wiegand_pack_from_raw_hid(const uint8_t *raw, size_t raw_len, wiegand_input_t *input);
 
 #endif

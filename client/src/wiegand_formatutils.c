@@ -20,7 +20,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "commonutil.h"
+#include "loclass/cipherutils.h"
+#include "wiegand_formats.h"
 #include "wiegand_formatutils.h"
+#include "util.h"
 #include "ui.h"
 
 uint8_t get_bit_by_position(const wiegand_message_t *data, uint8_t pos) {
@@ -214,4 +218,212 @@ bool add_HID_header(wiegand_message_t *data) {
         data->Bot |= 1U << data->Length; // leading 1: start bit
     }
     return true;
+}
+
+bool wiegand_message_to_binstr(const wiegand_message_t *packed, char *binstr, size_t binstr_size) {
+    if (packed == NULL || binstr == NULL || binstr_size <= packed->Length) {
+        return false;
+    }
+
+    for (uint8_t i = 0; i < packed->Length; i++) {
+        binstr[i] = get_bit_by_position(packed, i) ? '1' : '0';
+    }
+    binstr[packed->Length] = '\0';
+    return true;
+}
+
+bool wiegand_raw_to_binstr(const uint8_t *raw, size_t raw_len, char *binstr, size_t binstr_size) {
+    if (raw == NULL || binstr == NULL || raw_len == 0 || binstr_size == 0) {
+        return false;
+    }
+
+    size_t raw_bit_len = raw_len * 8;
+    if (binstr_size <= raw_bit_len) {
+        return false;
+    }
+
+    bytes_2_binstr(binstr, raw, raw_len);
+
+    char *sentinel = strchr(binstr, '1');
+    if (sentinel == NULL || sentinel[1] == '\0') {
+        return false;
+    }
+
+    size_t payload_len = strlen(sentinel + 1);
+    if (binstr_size <= payload_len) {
+        return false;
+    }
+
+    memmove(binstr, sentinel + 1, payload_len + 1);
+    return true;
+}
+
+bool wiegand_new_pacs_to_binstr(const uint8_t *pacs, size_t pacs_len, char *binstr, size_t binstr_size) {
+    if (pacs == NULL || binstr == NULL || pacs_len < 2 || pacs[0] > 0x07) {
+        return false;
+    }
+
+    size_t payload_len = pacs_len - 1;
+    size_t padded_bits = payload_len * 8;
+    if (binstr_size <= padded_bits) {
+        return false;
+    }
+
+    bytes_2_binstr(binstr, pacs + 1, payload_len);
+
+    size_t trimmed_len = strlen(binstr);
+    if (pacs[0] >= trimmed_len) {
+        return false;
+    }
+
+    binstr[trimmed_len - pacs[0]] = '\0';
+    return true;
+}
+
+int wiegand_pack_bin_with_hid_header(const char *binstr, wiegand_message_t *packed) {
+    size_t bin_len = strlen(binstr);
+    if (packed == NULL || bin_len == 0 || bin_len > 84) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t hex[12] = {0};
+    BitstreamOut_t bout = {hex, 0, 0};
+
+    for (size_t i = 0; i < (96 - bin_len - 1); i++) {
+        pushBit(&bout, 0);
+    }
+
+    pushBit(&bout, 1);
+
+    for (size_t i = 0; i < bin_len; i++) {
+        char c = binstr[i];
+        if (c == '1') {
+            pushBit(&bout, 1);
+        } else if (c == '0') {
+            pushBit(&bout, 0);
+        } else {
+            return PM3_EINVARG;
+        }
+    }
+
+    packed->Length = (uint8_t)bin_len;
+    packed->Top = bytes_to_num(hex, 4);
+    packed->Mid = bytes_to_num(hex + 4, 4);
+    packed->Bot = bytes_to_num(hex + 8, 4);
+
+    return add_HID_header(packed) ? PM3_SUCCESS : PM3_EINVARG;
+}
+
+int wiegand_set_plain_binstr(const char *binstr, wiegand_input_t *input) {
+    size_t bin_len = strlen(binstr);
+    if (input == NULL || bin_len == 0 || bin_len >= sizeof(input->binstr)) {
+        return PM3_EINVARG;
+    }
+
+    memset(input, 0, sizeof(*input));
+    for (size_t i = 0; i < bin_len; i++) {
+        if (binstr[i] != '0' && binstr[i] != '1') {
+            return PM3_EINVARG;
+        }
+    }
+
+    memcpy(input->binstr, binstr, bin_len + 1);
+    input->bin_len = bin_len;
+    return PM3_SUCCESS;
+}
+
+int wiegand_set_new_pacs_binstr(const uint8_t *pacs, size_t pacs_len, wiegand_input_t *input) {
+    if (input == NULL) {
+        return PM3_EINVARG;
+    }
+
+    memset(input, 0, sizeof(*input));
+    if (wiegand_new_pacs_to_binstr(pacs, pacs_len, input->binstr, sizeof(input->binstr)) == false) {
+        return PM3_EINVARG;
+    }
+
+    input->bin_len = strlen(input->binstr);
+    return PM3_SUCCESS;
+}
+
+int wiegand_pack_formatted(int format_idx, wiegand_card_t *card, bool preamble, wiegand_message_t *packed) {
+    if (HIDPack(format_idx, card, packed, preamble) == false) {
+        return PM3_ESOFT;
+    }
+    return PM3_SUCCESS;
+}
+
+int wiegand_pack_from_plain_bin(const char *binstr, wiegand_input_t *input) {
+    int res = wiegand_set_plain_binstr(binstr, input);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (input->bin_len > 84) {
+        input->packed_valid = false;
+        return PM3_SUCCESS;
+    }
+
+    res = wiegand_pack_bin_with_hid_header(input->binstr, &input->packed);
+    input->packed_valid = (res == PM3_SUCCESS);
+    return res;
+}
+
+int wiegand_pack_from_new_pacs(const uint8_t *pacs, size_t pacs_len, wiegand_input_t *input) {
+    int res = wiegand_set_new_pacs_binstr(pacs, pacs_len, input);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    if (input->bin_len > 84) {
+        input->packed_valid = false;
+        return PM3_SUCCESS;
+    }
+
+    res = wiegand_pack_bin_with_hid_header(input->binstr, &input->packed);
+    input->packed_valid = (res == PM3_SUCCESS);
+    return res;
+}
+
+int wiegand_pack_from_formatted(int format_idx, wiegand_card_t *card, bool preamble, wiegand_input_t *input) {
+    memset(input, 0, sizeof(*input));
+    int res = wiegand_pack_formatted(format_idx, card, preamble, &input->packed);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+    input->packed_valid = true;
+    if (wiegand_message_to_binstr(&input->packed, input->binstr, sizeof(input->binstr)) == false) {
+        return PM3_EINVARG;
+    }
+    input->bin_len = strlen(input->binstr);
+    return PM3_SUCCESS;
+}
+
+int wiegand_pack_from_raw_hid(const uint8_t *raw, size_t raw_len, wiegand_input_t *input) {
+    if (raw == NULL || input == NULL || raw_len == 0) {
+        return PM3_EINVARG;
+    }
+
+    uint8_t aligned[12] = {0};
+    memset(input, 0, sizeof(*input));
+
+    if (wiegand_raw_to_binstr(raw, raw_len, input->binstr, sizeof(input->binstr)) == false) {
+        return PM3_EINVARG;
+    }
+    input->bin_len = strlen(input->binstr);
+    if (input->bin_len > 96) {
+        input->packed_valid = false;
+        return PM3_SUCCESS;
+    }
+
+    if (raw_len > sizeof(aligned)) {
+        return PM3_EINVARG;
+    }
+
+    memcpy(aligned + (sizeof(aligned) - raw_len), raw, raw_len);
+    input->packed = initialize_message_object(bytes_to_num(aligned, 4), bytes_to_num(aligned + 4, 4), bytes_to_num(aligned + 8, 4), 0);
+    // Raw HID input preserves legacy behavior: transport words are populated, but
+    // packed Wiegand length is left unset because this path does not repack data.
+    input->packed_valid = true;
+    return PM3_SUCCESS;
 }
