@@ -3451,11 +3451,12 @@
         },
         "hf iclass decrypt": {
             "command": "hf iclass decrypt",
-            "description": "3DES decrypt data This is a naive implementation, it tries to decrypt every block after block 6. Correct behaviour would be to decrypt only the application areas where the key is valid, which is defined by the configuration block. OBS! In order to use this function, the file `iclass_decryptionkey.bin` must reside in the resources directory. The file must be 16 bytes binary data or... make sure your cardhelper is placed in the sim module",
+            "description": "Decrypt iCLASS credential data from a block, dump file, or emulator memory. The default transport key is loaded from `iclass_decryptionkey.bin` in the resources directory when `-k` is omitted.",
             "notes": [
                 "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin",
                 "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin -k 000102030405060708090a0b0c0d0e0f",
-                "hf iclass decrypt -d 1122334455667788 -k 000102030405060708090a0b0c0d0e0f"
+                "hf iclass decrypt -d 1122334455667788 -k 000102030405060708090a0b0c0d0e0f",
+                "hf iclass decrypt --emu --ns"
             ],
             "offline": true,
             "options": [
@@ -3463,12 +3464,13 @@
                 "-f, --file <fn> Specify a filename for dump file",
                 "-d, --data <hex> 3DES encrypted data",
                 "-k, --key <hex> 3DES transport key",
+                "--emu decrypt from emulator memory",
                 "-v, --verbose verbose output",
                 "--d6 decode as block 6",
                 "-z, --dense dense dump output style",
                 "--ns no save to file"
             ],
-            "usage": "hf iclass decrypt [-hvz] [-f <fn>] [-d <hex>] [-k <hex>] [--d6] [--ns]"
+            "usage": "hf iclass decrypt [-hvz] [-f <fn>] [-d <hex>] [-k <hex>] [--emu] [--d6] [--ns]"
         },
         "hf iclass dump": {
             "command": "hf iclass dump",
@@ -3516,31 +3518,41 @@
         },
         "hf iclass encode": {
             "command": "hf iclass encode",
-            "description": "Encode binary wiegand to block 7,8,9 Use either --bin or --wiegand/--fc/--cn When using emulator you have to first load a credential into emulator memory",
+            "description": "Encode Wiegand/PACS payloads into iCLASS credential blocks 7-9 or a full emulator image. Supports `--bin`, `--raw`, `--new`, or formatted `-w/--fc/--cn` input, and writes DES/2K3DES/plain transport modes to block 6.",
             "notes": [
                 "hf iclass encode --bin 10001111100000001010100011 --ki 0 -> FC 31 CN 337 (H10301)",
+                "hf iclass encode --raw 063E02A3 --emu",
+                "hf iclass encode --new 068F80A8C0 --emu",
+                "hf iclass encode --bin 10001111100000001010100011 --enc des --emu --enckey 000102030405060708090A0B0C0D0E0F",
                 "hf iclass encode -w H10301 --fc 31 --cn 337 --ki 0 -> FC 31 CN 337 (H10301)",
                 "hf iclass encode --bin 10001111100000001010100011 --ki 0 --elite -> FC 31 CN 337 (H10301), writing w elite key",
-                "hf iclass encode -w H10301 --fc 31 --cn 337 --emu -> Writes the ecoded data to emulator memory"
+                "hf iclass encode -w H10301 --fc 31 --cn 337 --emu -> Writes a full emulator image ready for `hf iclass sim -t 3`"
             ],
             "offline": true,
             "options": [
                 "-h, --help This help",
-                "--bin <bin> Binary string i.e 0001001001",
+                "--bin <bin> Binary PACS payload bits (up to 143 payload bits in iCLASS legacy mode)",
                 "--ki <dec> Key index to select key from memory 'hf iclass managekeys'",
                 "--credit key is assumed to be the credit key",
                 "--elite elite computations applied to key",
-                "--raw no computations applied to key",
-                "--enckey <hex> 3DES transport key, 16 hex bytes",
+                "--raw <hex> raw HID/Wiegand input",
+                "--new <hex> new PACS input",
+                "--enc <none|des|2k3des> transport mode for blocks 7-9",
+                "--enckey <hex> transport key, 16 hex bytes",
                 "--fc <dec> facility code",
                 "--cn <dec> card number",
                 "--issue <dec> issue level",
                 "-w, --wiegand <format> see `wiegand list` for available formats",
                 "--emu Write to emulation memory instead of card",
+                "--uid <hex> override emulator CSN/UID (8 bytes, --emu only)",
+                "--app-limit <dec> override emulator application limit (--emu only)",
+                "--book-size <2k|16k> override emulator memory layout (--emu only)",
+                "--books <1|2> override emulator book count (--emu only)",
+                "--not-fused mark emulator config as not fused (--emu only)",
                 "--shallow use shallow (ASK) reader modulation instead of OOK",
                 "-v verbose (print encoded blocks)"
             ],
-            "usage": "hf iclass encode [-hv] [--bin <bin>] [--ki <dec>] [--credit] [--elite] [--raw] [--enckey <hex>] [--fc <dec>] [--cn <dec>] [--issue <dec>] [-w <format>] [--emu] [--shallow]"
+            "usage": "hf iclass encode [-hv] [--bin <bin>] [--raw <hex>] [--new <hex>] [--ki <dec>] [--credit] [--elite] [--enckey <hex>] [--enc <none|des|2k3des>] [--fc <dec>] [--cn <dec>] [--issue <dec>] [-w <format>] [--emu] [--uid <hex>] [--app-limit <dec>] [--book-size <2k|16k>] [--books <1|2>] [--not-fused] [--shallow]"
         },
         "hf iclass encrypt": {
             "command": "hf iclass encrypt",
@@ -3849,7 +3861,8 @@
                 "hf iclass sim -t 3 -> simulate full iCLASS 2k tag",
                 "hf iclass sim -t 4 -> Reader-attack, adapted for KeyRoll mode, gather reader responses to extract elite key",
                 "hf iclass sim -t 6 -> simulate full iCLASS 2k tag that doesn't respond to r/w requests to the last SIO block",
-                "hf iclass sim -t 7 -> simulate full iCLASS 2k tag that doesn't XOR or respond to r/w requests on block 3"
+                "hf iclass sim -t 7 -> simulate full iCLASS 2k tag that doesn't XOR or respond to r/w requests on block 3",
+                "Press pm3 button or <Enter> to abort simulation"
             ],
             "offline": false,
             "options": [
@@ -3919,10 +3932,11 @@
         },
         "hf iclass view": {
             "command": "hf iclass view",
-            "description": "Print a iCLASS tag dump file (bin/eml/json)",
+            "description": "Print a iCLASS tag dump file (bin/eml/json) or emulator memory",
             "notes": [
                 "hf iclass view -f hf-iclass-AA162D30F8FF12F1-dump.bin",
                 "hf iclass view --first 1 -f hf-iclass-AA162D30F8FF12F1-dump.bin",
+                "hf iclass view --emu",
                 "",
                 "If --first is not specified it will default to the first user block",
                 "which is block 6 for secured chips or block 3 for non-secured chips"
@@ -3931,12 +3945,13 @@
             "options": [
                 "-h, --help This help",
                 "-f, --file <fn> Specify a filename for dump file",
+                "--emu read from emulator memory",
                 "--first <dec> Begin printing from this block (default first user block)",
                 "--last <dec> End printing at this block (default 0, ALL)",
                 "-v, --verbose verbose output",
                 "-z, --dense dense dump output style"
             ],
-            "usage": "hf iclass view [-hvz] -f <fn> [--first <dec>] [--last <dec>]"
+            "usage": "hf iclass view [-hvz] [-f <fn>] [--emu] [--first <dec>] [--last <dec>]"
         },
         "hf iclass wrbl": {
             "command": "hf iclass wrbl",

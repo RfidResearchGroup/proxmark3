@@ -400,8 +400,21 @@ int wiegand_pack_from_formatted(int format_idx, wiegand_card_t *card, bool pream
 }
 
 int wiegand_pack_from_raw_hid(const uint8_t *raw, size_t raw_len, wiegand_input_t *input) {
+    if (raw == NULL || input == NULL || raw_len == 0) {
+        return PM3_EINVARG;
+    }
+
     uint32_t top = 0, mid = 0, bot = 0;
     memset(input, 0, sizeof(*input));
+
+    if (wiegand_raw_to_binstr(raw, raw_len, input->binstr, sizeof(input->binstr)) == false) {
+        return PM3_EINVARG;
+    }
+    input->bin_len = strlen(input->binstr);
+    if (input->bin_len > 96) {
+        input->packed_valid = false;
+        return PM3_SUCCESS;
+    }
 
     char hexstr[40] = {0};
     if ((raw_len * 2) >= sizeof(hexstr)) {
@@ -415,8 +428,5 @@ int wiegand_pack_from_raw_hid(const uint8_t *raw, size_t raw_len, wiegand_input_
 
     input->packed = initialize_message_object(top, mid, bot, 0);
     input->packed_valid = true;
-    if (wiegand_raw_to_binstr(raw, raw_len, input->binstr, sizeof(input->binstr))) {
-        input->bin_len = strlen(input->binstr);
-    }
     return PM3_SUCCESS;
 }

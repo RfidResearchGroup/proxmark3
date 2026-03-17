@@ -172,6 +172,12 @@ hf iclass eload -f hf-iclass-dump.json
 hf iclass sim -t 3
 ```
 
+For direct credential testing without a prior dump, you can encode straight to emulator memory and then simulate:
+```
+hf iclass encode -w H10301 --fc 31 --cn 337 --emu
+hf iclass sim -t 3
+```
+
 F0 
 `qflipper > SD card > apps data > picopass` 
 drop iclass-flipper.picopass file here and simulate on Flipper
@@ -275,4 +281,3 @@ Below is example syntax, you will use your specific card information gathered in
 1. After reading your credential with [NARD / Seader](#using-flipper-zero-with-nard)
 2. select the ``save RFID`` option 
 3. Use the 125kHz RFID app and write the data to a T5577
-

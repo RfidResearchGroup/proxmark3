@@ -251,7 +251,7 @@ static int receive_ng_internal(PacketCommandNG *rx, uint32_t read_ng(uint8_t *da
 int receive_ng(PacketCommandNG *rx) {
 
     // Check if there is a packet available
-    if (usb_poll_validate_length() || usb_read_ng_has_buffered_data()) {
+    if (usb_poll_validate_length()) {
         return receive_ng_internal(rx, usb_read_ng, true, false);
     }
 

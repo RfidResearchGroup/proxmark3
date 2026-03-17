@@ -438,9 +438,9 @@ Check column "offline" for their availability.
 |`hf iclass eview        `|N       |`View emulator memory`
 |`hf iclass configcard   `|N       |`Reader configuration card generator`
 |`hf iclass calcnewkey   `|Y       |`Calc diversified keys (blocks 3 & 4) to write new keys`
-|`hf iclass encode       `|Y       |`Encode binary wiegand to block 7`
+|`hf iclass encode       `|Y       |`Encode Wiegand/PACS data to iCLASS blocks 7-9 or emulator memory`
 |`hf iclass encrypt      `|Y       |`Encrypt given block data`
-|`hf iclass decrypt      `|Y       |`Decrypt given block data or tag dump file`
+|`hf iclass decrypt      `|Y       |`Decrypt given block data, tag dump file, or emulator memory`
 |`hf iclass managekeys   `|Y       |`Manage keys to use with iclass commands`
 |`hf iclass permutekey   `|Y       |`Permute function from 'heart of darkness' paper`
 |`hf iclass sam          `|N       |`SAM tests`

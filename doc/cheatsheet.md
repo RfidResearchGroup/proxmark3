@@ -160,6 +160,19 @@ Options
 pm3 --> hf iclass eload -f hf-iclass-db883702f8ff12e0.bin
 ```
 
+Encode iCLASS credential to emulator
+```
+pm3 --> hf iclass encode -w H10301 --fc 31 --cn 337 --emu
+pm3 --> hf iclass encode --bin 10101010 --enc none --emu
+pm3 --> hf iclass encode --new 068F80A8C0 --enc des --emu
+```
+
+Decode iCLASS emulator contents
+```
+pm3 --> hf iclass view --emu
+pm3 --> hf iclass decrypt --emu --ns
+```
+
 Clone iCLASS Legacy Sequence
 ```
 pm3 --> hf iclass rdbl -b 7 --ki 0
@@ -178,14 +191,15 @@ Types:
     2    runs online part of LOCLASS attack
     3    full simulation using emulator memory (see 'hf iclass eload')
     4    runs online part of LOCLASS attack against reader in keyroll mode
+Exit:
+    press pm3 button or <Enter> to abort simulation
 
 pm3 --> hf iclass sim -t 3
 ```
 
 Simulate iCLASS Sequence
 ```
-pm3 --> hf iclass dump --ki 0
-pm3 --> hf iclass eload -f hf-iclass-db883702f8ff12e0.bin
+pm3 --> hf iclass encode -w H10301 --fc 31 --cn 337 --emu
 pm3 --> hf iclass sim -t 3
 ```
 

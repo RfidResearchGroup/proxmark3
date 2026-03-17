@@ -21,6 +21,7 @@
 #include "cliparser.h"
 #include "cmdparser.h"              // command_t
 #include "commonutil.h"             // ARRAYLEN
+#include "cardhelper.h"
 #include "cmdtrace.h"
 #include "util_posix.h"
 #include "comms.h"
@@ -31,7 +32,6 @@
 #include "loclass/elite_crack.h"
 #include "fileutils.h"
 #include "protocols.h"
-#include "cardhelper.h"
 #include "wiegand_formats.h"
 #include "wiegand_formatutils.h"
 #include "proxendian.h"
@@ -61,7 +61,7 @@ static void print_picopass_info(const picopass_hdr_t *hdr);
 void print_picopass_header(const picopass_hdr_t *hdr);
 
 static picopass_hdr_t iclass_last_known_card;
-static size_t iclass_last_emulator_size = 256;
+static size_t iclass_last_emulator_size = 0;
 static void iclass_set_last_known_card(picopass_hdr_t *card) {
     memcpy(&iclass_last_known_card, card, sizeof(picopass_hdr_t));
 }
@@ -74,8 +74,8 @@ static void iclass_set_last_emulator_size(size_t bytes) {
 
 static size_t iclass_get_last_emulator_size(size_t max_bytes) {
     size_t bytes = iclass_last_emulator_size;
-    if (bytes == 0) {
-        bytes = 256;
+    if (bytes < (32 * PICOPASS_BLOCK_SIZE) || bytes > PICOPASS_MAX_BYTES || (bytes % PICOPASS_BLOCK_SIZE) != 0) {
+        return 0;
     }
     return MIN(bytes, max_bytes);
 }
@@ -388,51 +388,87 @@ static size_t iclass_legacy_pacs_payload_binstr_from_container(const uint8_t *co
     return payload_len;
 }
 
+static int hficlass_emulator_memget(uint16_t blockno, uint8_t blockcnt, uint8_t *dest) {
+    if (dest == NULL || blockcnt == 0) {
+        return PM3_EINVARG;
+    }
+
+    struct {
+        uint16_t blockno;
+        uint8_t blockcnt;
+    } PACKED payload;
+    payload.blockno = blockno;
+    payload.blockcnt = blockcnt;
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ICLASS_EML_MEMGET, (uint8_t *)&payload, sizeof(payload));
+
+    PacketResponseNG resp;
+    if (WaitForResponseTimeout(CMD_HF_ICLASS_EML_MEMGET, &resp, 1500) == false) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(WARNING, "Fail, transfer from device failed");
+        return resp.status;
+    }
+
+    memcpy(dest, resp.data.asBytes, (size_t)blockcnt * PICOPASS_BLOCK_SIZE);
+    return PM3_SUCCESS;
+}
+
 static int hficlass_load_emulator_dump(uint8_t **dump, size_t *bytes_read, size_t max_bytes) {
     if (dump == NULL || bytes_read == NULL || max_bytes == 0) {
         return PM3_EINVARG;
     }
 
-    *bytes_read = iclass_get_last_emulator_size(max_bytes);
-    *dump = calloc(*bytes_read, sizeof(uint8_t));
-    if (*dump == NULL) {
-        PrintAndLogEx(WARNING, "Failed to allocate memory");
-        return PM3_EMALLOC;
-    }
-
     PrintAndLogEx(INFO, "downloading from emulator memory");
 
-    size_t remaining = *bytes_read;
+    *dump = NULL;
+    *bytes_read = iclass_get_last_emulator_size(max_bytes);
     size_t offset = 0;
-    while (remaining > 0) {
-        uint8_t blockcnt = MIN(remaining / PICOPASS_BLOCK_SIZE, (size_t)(PM3_CMD_DATA_SIZE / PICOPASS_BLOCK_SIZE));
-        struct {
-            uint16_t blockno;
-            uint8_t blockcnt;
-        } PACKED payload;
-        payload.blockno = offset / PICOPASS_BLOCK_SIZE;
-        payload.blockcnt = blockcnt;
 
-        clearCommandBuffer();
-        SendCommandNG(CMD_HF_ICLASS_EML_MEMGET, (uint8_t *)&payload, sizeof(payload));
-
-        PacketResponseNG resp;
-        if (WaitForResponseTimeout(CMD_HF_ICLASS_EML_MEMGET, &resp, 1500) == false) {
-            PrintAndLogEx(WARNING, "command execution time out");
-            free(*dump);
-            *dump = NULL;
-            return PM3_ETIMEOUT;
+    if (*bytes_read == 0) {
+        uint8_t hdrbuf[6 * PICOPASS_BLOCK_SIZE] = {0};
+        int res = hficlass_emulator_memget(0, 6, hdrbuf);
+        if (res != PM3_SUCCESS) {
+            return res;
         }
 
-        if (resp.status != PM3_SUCCESS) {
-            PrintAndLogEx(WARNING, "Fail, transfer from device failed");
+        *bytes_read = hficlass_full_card_dump_len((const picopass_hdr_t *)hdrbuf, max_bytes);
+        if (*bytes_read < sizeof(hdrbuf)) {
+            *bytes_read = sizeof(hdrbuf);
+        }
+        iclass_set_last_emulator_size(*bytes_read);
+
+        *dump = calloc(*bytes_read, sizeof(uint8_t));
+        if (*dump == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            return PM3_EMALLOC;
+        }
+
+        memcpy(*dump, hdrbuf, sizeof(hdrbuf));
+        offset = sizeof(hdrbuf);
+    } else {
+        *dump = calloc(*bytes_read, sizeof(uint8_t));
+        if (*dump == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            return PM3_EMALLOC;
+        }
+    }
+
+    size_t remaining = *bytes_read - offset;
+    while (remaining > 0) {
+        uint8_t blockcnt = MIN(remaining / PICOPASS_BLOCK_SIZE, (size_t)(PM3_CMD_DATA_SIZE / PICOPASS_BLOCK_SIZE));
+        int res = hficlass_emulator_memget(offset / PICOPASS_BLOCK_SIZE, blockcnt, *dump + offset);
+        if (res != PM3_SUCCESS) {
             free(*dump);
             *dump = NULL;
-            return resp.status;
+            return res;
         }
 
         size_t chunk = (size_t)blockcnt * PICOPASS_BLOCK_SIZE;
-        memcpy(*dump + offset, resp.data.asBytes, chunk);
         offset += chunk;
         remaining -= chunk;
     }
@@ -1142,7 +1178,8 @@ static int CmdHFiClassSniff(const char *Cmd) {
 static int CmdHFiClassSim(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass sim",
-                  "Simulate a iCLASS legacy/standard tag",
+                  "Simulate a iCLASS legacy/standard tag\n"
+                  "Press pm3 button or <Enter> to abort simulation",
                   "hf iclass sim -t 0 --csn 031FEC8AF7FF12E0   --> simulate with specified CSN\n"
                   "hf iclass sim -t 1                          --> simulate with default CSN\n"
                   "hf iclass sim -t 2                          --> execute loclass attack online part\n"
@@ -1153,7 +1190,7 @@ static int CmdHFiClassSim(const char *Cmd) {
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("t", "type", "<0-4> ", "Simulation type to use"),
+        arg_int1("t", "type", "<0-7> ", "Simulation type to use"),
         arg_str0(NULL, "csn", "<hex>", "Specify CSN as 8 hex bytes to use with sim type 0"),
         arg_param_end
     };
@@ -1350,10 +1387,9 @@ static int CmdHFiClassSim(const char *Cmd) {
                 if (kbd_enter_pressed()) {
                     SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
                     PrintAndLogEx(DEBUG, "Aborted via keyboard!");
-                    break;
                 }
 
-                if (WaitForResponseTimeout(CMD_HF_ICLASS_SIMULATE, &resp, 1500)) {
+                if (WaitForResponseTimeout(CMD_ACK, &resp, 1500)) {
                     break;
                 }
             }
@@ -1820,13 +1856,9 @@ static void iclass_decode_credentials(uint8_t *data) {
 static int CmdHFiClassDecrypt(const char *Cmd) {
     CLIParserContext *clictx;
     CLIParserInit(&clictx, "hf iclass decrypt",
-                  "3DES decrypt data\n"
-                  "This is a naive implementation, it tries to decrypt every block after block 6.\n"
-                  "Correct behaviour would be to decrypt only the application areas where the key is valid,\n"
-                  "which is defined by the configuration block.\n"
-                  "\nOBS!\n"
-                  "In order to use this function, the file `iclass_decryptionkey.bin` must reside\n"
-                  "in the resources directory. The file must be 16 bytes binary data",
+                  "Decrypt iCLASS credential data from a block, dump file, or emulator memory.\n"
+                  "If -k is omitted, the default transport key is loaded from `iclass_decryptionkey.bin`\n"
+                  "in the client resources directory.",
                   "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin\n"
                   "hf iclass decrypt --emu\n"
                   "hf iclass decrypt -f hf-iclass-AA162D30F8FF12F1-dump.bin -k 000102030405060708090a0b0c0d0e0f\n"
@@ -1951,7 +1983,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         PrintAndLogEx(SUCCESS, "plain....... " _YELLOW_("%s"), sprint_hex_inrow(dec_data, sizeof(dec_data)));
 
         if (use_decode6) {
-            PrintAndLogEx(INFO, "Skipping Cardhelper-specific block 6 decode");
+            PrintAndLogEx(INFO, "Skipping block 6 decode");
         }
     }
 
@@ -5816,7 +5848,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
     CLIGetStrWithReturn(ctx, 1, bin, &bin_len);
     bin[bin_len] = '\0';
 
-    uint8_t raw_input[15] = {0};
+    uint8_t raw_input[(sizeof(((wiegand_input_t *)0)->binstr) - 1) / 8] = {0};
     int raw_input_len = 0;
     int res = CLIParamHexToBuf(arg_get_str(ctx, 2), raw_input, sizeof(raw_input), &raw_input_len);
 
@@ -6085,7 +6117,9 @@ static int CmdHFiClassEncode(const char *Cmd) {
         iclass_upload_emul(emu_dump, emu_dump_len, 0, &byte_sent);
         free(emu_dump);
         PrintAndLogEx(SUCCESS, "uploaded " _YELLOW_("%d") " bytes to emulator memory", byte_sent);
-        PrintAndLogEx(HINT, "Hint: You are now ready to simulate. See `" _YELLOW_("hf iclass sim -h") "`");
+        PrintAndLogEx(HINT, "Hint: Run `" _YELLOW_("hf iclass sim -t 3") "` to start simulating this credential");
+        PrintAndLogEx(HINT, "Hint: Run `" _YELLOW_("hf iclass eview") "` to inspect emulator memory");
+        PrintAndLogEx(HINT, "Hint: Run `" _YELLOW_("hf iclass decrypt --emu --ns") "` to decode the emulator credential");
     } else {
         for (uint8_t i = 0; i < 4; i++) {
             isok = iclass_write_block(6 + i, credential + (i * 8), NULL, key, use_credit_key, elite, rawkey, false, false, auth, shallow_mod);
