@@ -908,10 +908,9 @@ static int CmdVASReader(const char *Cmd) {
     char mode_text[32] = {0};
     int mode_len = 0;
     CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)mode_text, sizeof(mode_text), &mode_len);
-    (void)mode_len;
     str_lower(mode_text);
-    uint8_t vas_mode = VAS_MODE_VAS_ONLY;
-    if (vas_parse_mode(mode_text, &vas_mode) != PM3_SUCCESS) {
+    uint8_t vas_mode = (pid_count > 1) ? VAS_MODE_VAS_AND_PAY : VAS_MODE_VAS_ONLY;
+    if (mode_len > 0 && vas_parse_mode(mode_text, &vas_mode) != PM3_SUCCESS) {
         VasReaderCleanup(NULL, 0, key_values, key_count, pid_values, pid_count);
         CLIParserFree(ctx);
         return PM3_EINVARG;
