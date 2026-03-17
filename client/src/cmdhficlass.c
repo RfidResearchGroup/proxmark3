@@ -3683,8 +3683,12 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     int isok = PM3_SUCCESS;
     bool read_ok = false;
     uint8_t keyType = ICLASS_DEBIT_KEYTYPE;
-    PrintAndLogEx(SUCCESS, "Using " _YELLOW_("credit") " key");
-    keyType = ICLASS_CREDIT_KEYTYPE;
+    if(use_credit_key == true){
+        PrintAndLogEx(SUCCESS, "Using " _YELLOW_("credit") " key");
+        keyType = ICLASS_CREDIT_KEYTYPE;
+    }else{
+        PrintAndLogEx(SUCCESS, "Using " _YELLOW_("debit") " key");
+    }    
 
     if (tearoff_loop > 1) {
         PrintAndLogEx(SUCCESS, _YELLOW_("%u") " attempts / tearoff", tearoff_loop);
