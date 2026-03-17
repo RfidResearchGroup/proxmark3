@@ -259,28 +259,34 @@ static int ParseSelectVASResponse(const uint8_t *response, size_t resLen, uint8_
     return PM3_SUCCESS;
 }
 
-static int PrintVASSelectInfo(const uint8_t *response, size_t responseLen) {
+static int PrintVASSelectInfo(const uint8_t *response, size_t responseLen, bool verbose) {
     struct tlvdb *tlvRoot = tlvdb_parse_multi(response, responseLen);
     if (tlvRoot == NULL) {
         return PM3_ECARDEXCHANGE;
     }
 
-    PrintAndLogEx(INFO, "");
-    PrintAndLogInfoHeader("OSE Information");
     bool skip_vas_details = false;
     const struct tlvdb *walletTypeTlv = tlvdb_find_full(tlvRoot, 0x50);
-    if (walletTypeTlv == NULL) {
-        PrintAndLogEx(WARNING, "Wallet type.......... " _YELLOW_("not present"));
-    } else {
+    if (walletTypeTlv != NULL) {
         const struct tlv *walletType = tlvdb_get_tlv(walletTypeTlv);
-        PrintAndLogEx(INFO, "Wallet type.......... " _YELLOW_("%s"), sprint_ascii(walletType->value, walletType->len));
         if (VASWalletTypeIsApplePay(walletType->value, walletType->len) == false) {
             PrintAndLogEx(WARNING, "Wallet type is not ApplePay. This likely isn't Apple VAS.");
             skip_vas_details = true;
         }
     }
 
-    if (skip_vas_details == false) {
+    if (verbose) {
+        PrintAndLogEx(INFO, "");
+        PrintAndLogInfoHeader("OSE Information");
+        if (walletTypeTlv == NULL) {
+            PrintAndLogEx(WARNING, "Wallet type.......... " _YELLOW_("not present"));
+        } else {
+            const struct tlv *walletType = tlvdb_get_tlv(walletTypeTlv);
+            PrintAndLogEx(INFO, "Wallet type.......... " _YELLOW_("%s"), sprint_ascii(walletType->value, walletType->len));
+        }
+    }
+
+    if (verbose && skip_vas_details == false) {
         const struct tlvdb *versionTlv = tlvdb_find_full(tlvRoot, 0x9F21);
         if (versionTlv == NULL) {
             PrintAndLogEx(WARNING, "VAS version.......... " _YELLOW_("not present"));
@@ -651,7 +657,7 @@ static void PrintVasCryptogramInfo(const char *label, const uint8_t *cryptogram,
 }
 
 
-static int VASSelectOse(uint16_t *select_status_out) {
+static int VASSelectOse(uint16_t *select_status_out, bool verbose) {
     if (select_status_out != NULL) {
         *select_status_out = VAS_STATUS_NOT_AVAILABLE;
     }
@@ -669,7 +675,7 @@ static int VASSelectOse(uint16_t *select_status_out) {
         return PM3_ECARDEXCHANGE;
     }
 
-    PrintVASSelectInfo(selectResponse, resLen);
+    PrintVASSelectInfo(selectResponse, resLen, verbose);
     if (ParseSelectVASResponse(selectResponse, resLen, NULL) != PM3_SUCCESS) {
         return PM3_ECARDEXCHANGE;
     }
@@ -692,7 +698,9 @@ static int VASGetData(const char *passIdentifier, const uint8_t *pidHash, bool h
     const char *displayedPassIdentifier = passIdentifier != NULL ? passIdentifier : "unknown-pass-identifier";
     snprintf(pass_header, sizeof(pass_header), "VAS Get Data %s", displayedPassIdentifier);
     PrintAndLogInfoHeader(pass_header);
-    PrintAndLogEx(INFO, "Pass type id hash...... " _YELLOW_("%s"), hasPid ? sprint_hex_inrow(pidHash, 32) : "n/a");
+    if (verbose) {
+        PrintAndLogEx(INFO, "Pass type id hash...... " _YELLOW_("%s"), hasPid ? sprint_hex_inrow(pidHash, 32) : "n/a");
+    }
 
     uint8_t getVasApdu[PM3_CMD_DATA_SIZE];
     int getVasApduLen = 0;
@@ -754,7 +762,7 @@ static int VASRead(bool has_pid, size_t request_count,
                           uint8_t vas_mode, bool verbose,
                           vas_reader_key_t *keys, int key_count) {
     uint16_t select_status = VAS_STATUS_NOT_AVAILABLE;
-    if (VASSelectOse(&select_status) != PM3_SUCCESS) {
+    if (VASSelectOse(&select_status, verbose) != PM3_SUCCESS) {
         PrintVASFailureReason(select_status, VAS_STATUS_NOT_AVAILABLE);
         return PM3_ECARDEXCHANGE;
     }
@@ -1018,7 +1026,7 @@ static int CmdVASInfo(const char *Cmd) {
 
     int res = PM3_ECARDEXCHANGE;
     if (SelectCard14443A_4_WithParameters(false, false, NULL, &polling_parameters) == PM3_SUCCESS) {
-        res = VASSelectOse(NULL);
+        res = VASSelectOse(NULL, true);
     }
 
     SetAPDULogging(restore_apdu_logging);
