@@ -10045,6 +10045,8 @@ static int CmdHF14AMfValue(const char *Cmd) {
     return PM3_SUCCESS;
 }
 
+// Encode the normalized Wiegand payload into the sentinel-prefixed byte layout stored in
+// the HID-specific MIFARE payload block.
 static int hfmf_encodehid_pack_block5(const char *binstr, uint8_t *block) {
     if (binstr == NULL || block == NULL) {
         return PM3_EINVARG;
@@ -10057,6 +10059,8 @@ static int hfmf_encodehid_pack_block5(const char *binstr, uint8_t *block) {
         return PM3_EINVARG;
     }
 
+    // MIFARE block 5 stores the Wiegand payload with the same sentinel-prefixed layout
+    // expected by existing HID cards: one leading 1 followed by the logical payload bits.
     bits_with_sentinel[0] = '1';
     memcpy(bits_with_sentinel + 1, binstr, binlen + 1);
 
@@ -10182,6 +10186,8 @@ static int CmdHFMFHidEncode(const char *Cmd) {
         return res;
     }
 
+    // Unlike LF HID transport, block 5 only needs the normalized bitstring. Raw/new/formatted
+    // inputs all converge here after the shared Wiegand layer has stripped transport framing.
     if (hfmf_encodehid_pack_block5(input.binstr, card_blocks + (MFBLOCK_SIZE * 4)) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Encoded Wiegand payload is too large to fit in the MIFARE payload");
         return PM3_EINVARG;

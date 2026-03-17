@@ -244,6 +244,8 @@ bool wiegand_raw_to_binstr(const uint8_t *raw, size_t raw_len, char *binstr, siz
 
     bytes_2_binstr(binstr, raw, raw_len);
 
+    // Raw HID transport embeds a leading sentinel/start bit before the actual Wiegand payload.
+    // Strip that prefix so every caller downstream sees only the logical payload bits.
     char *sentinel = strchr(binstr, '1');
     if (sentinel == NULL || sentinel[1] == '\0') {
         return false;
@@ -271,6 +273,7 @@ bool wiegand_new_pacs_to_binstr(const uint8_t *pacs, size_t pacs_len, char *bins
 
     bytes_2_binstr(binstr, pacs + 1, payload_len);
 
+    // The first PACS byte stores how many zero padding bits were added to the final octet.
     size_t trimmed_len = strlen(binstr);
     if (pacs[0] >= trimmed_len) {
         return false;
@@ -289,6 +292,7 @@ int wiegand_pack_bin_with_hid_header(const char *binstr, wiegand_message_t *pack
     uint8_t hex[12] = {0};
     BitstreamOut_t bout = {hex, 0, 0};
 
+    // HID transport stores the payload right-aligned behind a sentinel bit inside a 96-bit frame.
     for (size_t i = 0; i < (96 - bin_len - 1); i++) {
         pushBit(&bout, 0);
     }
@@ -359,6 +363,8 @@ int wiegand_pack_from_plain_bin(const char *binstr, wiegand_input_t *input) {
         return res;
     }
 
+    // Plain binary input is still useful to non-HID callers above 84 bits, even though it
+    // can no longer be repacked into the legacy HID transport words.
     if (input->bin_len > 84) {
         input->packed_valid = false;
         return PM3_SUCCESS;
@@ -375,6 +381,7 @@ int wiegand_pack_from_new_pacs(const uint8_t *pacs, size_t pacs_len, wiegand_inp
         return res;
     }
 
+    // New PACS can represent longer credentials than packed HID transport can carry.
     if (input->bin_len > 84) {
         input->packed_valid = false;
         return PM3_SUCCESS;
@@ -422,8 +429,9 @@ int wiegand_pack_from_raw_hid(const uint8_t *raw, size_t raw_len, wiegand_input_
 
     memcpy(aligned + (sizeof(aligned) - raw_len), raw, raw_len);
     input->packed = initialize_message_object(bytes_to_num(aligned, 4), bytes_to_num(aligned + 4, 4), bytes_to_num(aligned + 8, 4), 0);
-    // Raw HID input preserves legacy behavior: transport words are populated, but
-    // packed Wiegand length is left unset because this path does not repack data.
+    // Raw HID input preserves legacy behavior by keeping the transport words exactly as
+    // provided. The packed length is then derived from the embedded HID header bits
+    // instead of being recomputed by repacking the normalized payload bitstring.
     input->packed_valid = true;
     return PM3_SUCCESS;
 }

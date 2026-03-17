@@ -11,6 +11,8 @@ TESTALL=false
 TESTDESFIREVALUE=false
 TESTHIDWIEGAND=false
 TESTMFHIDENCODE=false
+NEED_MF_HID_ENCODE_WIPE=false
+TESTMANUAL=false
 
 # https://medium.com/@Drew_Stokes/bash-argument-parsing-54f3b81a6a8f
 PARAMS=""
@@ -20,8 +22,9 @@ while (( "$#" )); do
       echo """
 Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hid_wiegand|mf_hid_encode]
     --pm3bin ...:    Specify path to pm3 binary to test
+    --manual ...:    Pause after successful online LF HID clone/read checks for external reader verification
     desfire_value:   Test DESFire value operations with card
-    hid_wiegand:     Test LF HID simulate/clone Wiegand flows
+    hid_wiegand:     Test LF HID T55xx clone and PM3 readback flows
     mf_hid_encode:   Test MIFARE Classic HID encoding flows
     You must specify a test target - no default 'all' for online tests
 """
@@ -35,6 +38,10 @@ Usage: $0 [--pm3bin /path/to/pm3] [desfire_value|hid_wiegand|mf_hid_encode]
         echo "Error: Argument for $1 is missing" >&2
         exit 1
       fi
+      ;;
+    --manual)
+      TESTMANUAL=true
+      shift
       ;;
     desfire_value)
       TESTALL=false
@@ -109,12 +116,217 @@ function CheckExecute() {
   return 1
 }
 
+function CheckLfHidCloneReadback() {
+  printf "%-40s" "$1 "
+
+  start=$(date +%s)
+  TIMEINFO=""
+  RES=$($PM3BIN -c "lf hid clone $2; lf hid reader" 2>&1)
+  end=$(date +%s)
+  delta=$(expr $end - $start)
+  if [ $delta -gt 2 ]; then
+    TIMEINFO="  ($delta s)"
+  fi
+
+  if echo "$RES" | grep -E -q "$3"; then
+    echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK} $TIMEINFO"
+    if $TESTMANUAL; then
+      echo "  Manual check: $4"
+      WaitForEnter "PRESENT THE T55xx TAG TO ANOTHER READER AND CONFIRM: $4"
+    fi
+    return 0
+  fi
+
+  echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL} $TIMEINFO"
+  echo "Execution trace:"
+  echo "$RES"
+  return 1
+}
+
+function HexToBin() {
+  local hex="${1^^}"
+  local bin=""
+  local i ch
+  for ((i=0; i<${#hex}; i++)); do
+    ch="${hex:i:1}"
+    case "$ch" in
+      0) bin+="0000" ;;
+      1) bin+="0001" ;;
+      2) bin+="0010" ;;
+      3) bin+="0011" ;;
+      4) bin+="0100" ;;
+      5) bin+="0101" ;;
+      6) bin+="0110" ;;
+      7) bin+="0111" ;;
+      8) bin+="1000" ;;
+      9) bin+="1001" ;;
+      A) bin+="1010" ;;
+      B) bin+="1011" ;;
+      C) bin+="1100" ;;
+      D) bin+="1101" ;;
+      E) bin+="1110" ;;
+      F) bin+="1111" ;;
+      *) return 1 ;;
+    esac
+  done
+  printf "%s" "$bin"
+}
+
+function RestoreMfHidEncodeSector0() {
+  $PM3BIN -c "hf mf wrbl --blk 3 -b -k 89ECA97F8C2A -d FFFFFFFFFFFFFF078069FFFFFFFFFFFF" >/dev/null 2>&1 || true
+  $PM3BIN -c "hf mf wrbl --blk 3 -k FFFFFFFFFFFF -d FFFFFFFFFFFFFF078069FFFFFFFFFFFF" >/dev/null 2>&1 || true
+  $PM3BIN -c "hf mf wrbl --blk 3 -k A0A1A2A3A4A5 -d FFFFFFFFFFFFFF078069FFFFFFFFFFFF" >/dev/null 2>&1 || true
+  $PM3BIN -c "hf mf wrbl --blk 2 -k FFFFFFFFFFFF -d 00000000000000000000000000000000; \
+hf mf wrbl --blk 1 -k FFFFFFFFFFFF -d 00000000000000000000000000000000" >/dev/null 2>&1 || return 1
+}
+
+function RestoreMfHidEncodeSector1() {
+  $PM3BIN -c "hf mf wrbl --blk 7 -b -k 204752454154 -d FFFFFFFFFFFFFF078069FFFFFFFFFFFF" >/dev/null 2>&1 || true
+  $PM3BIN -c "hf mf wrbl --blk 7 -k FFFFFFFFFFFF -d FFFFFFFFFFFFFF078069FFFFFFFFFFFF" >/dev/null 2>&1 || true
+  $PM3BIN -c "hf mf wrbl --blk 7 -k 484944204953 -d FFFFFFFFFFFFFF078069FFFFFFFFFFFF" >/dev/null 2>&1 || true
+  $PM3BIN -c "hf mf wrbl --blk 6 -k FFFFFFFFFFFF -d 00000000000000000000000000000000; \
+hf mf wrbl --blk 5 -k FFFFFFFFFFFF -d 00000000000000000000000000000000; \
+hf mf wrbl --blk 4 -k FFFFFFFFFFFF -d 00000000000000000000000000000000" >/dev/null 2>&1 || return 1
+}
+
+function RestoreMfHidEncodeCard() {
+  RestoreMfHidEncodeSector0 || return 1
+  RestoreMfHidEncodeSector1 || return 1
+
+  local verify
+  verify=$($PM3BIN -c 'hf mf rdbl --blk 1 -k FFFFFFFFFFFF; hf mf rdbl --blk 2 -k FFFFFFFFFFFF; hf mf rdbl --blk 4 -k FFFFFFFFFFFF; hf mf rdbl --blk 5 -k FFFFFFFFFFFF; hf mf rdbl --blk 6 -k FFFFFFFFFFFF' 2>&1) || return 1
+  echo "$verify" | grep -E -q "  1 \| 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00" \
+    && echo "$verify" | grep -E -q "  2 \| 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00" \
+    && echo "$verify" | grep -E -q "  4 \| 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00" \
+    && echo "$verify" | grep -E -q "  5 \| 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00" \
+    && echo "$verify" | grep -E -q "  6 \| 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
+}
+
+function CleanupMfHidEncodeCard() {
+  if [ "$NEED_MF_HID_ENCODE_WIPE" != true ]; then
+    return 0
+  fi
+
+  echo ""
+  printf "%-40s" "hf mf encodehid cleanup "
+  if RestoreMfHidEncodeCard; then
+    echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
+  else
+    echo -e "[ ${C_YELLOW}WARN${C_NC} ]"
+    echo "Cleanup could not restore sectors 0 and 1 to the default usable state."
+  fi
+}
+
+function CheckMfHidEncodeRoundTrip() {
+  printf "%-40s" "$1 "
+
+  start=$(date +%s)
+  TIMEINFO=""
+  if ! RestoreMfHidEncodeCard >/dev/null 2>&1; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+    echo "Execution trace:"
+    echo "Failed to restore sectors 0 and 1 to the default usable state before running the test."
+    return 1
+  fi
+
+  RES=$($PM3BIN -c "hf mf encodehid $2; hf mf rdbl --blk 5 -k 484944204953" 2>&1)
+  end=$(date +%s)
+  delta=$(expr $end - $start)
+  if [ $delta -gt 2 ]; then
+    TIMEINFO="  ($delta s)"
+  fi
+
+  BLOCKHEX=$(printf "%s\n" "$RES" | LC_ALL=C grep -aoE '02( [0-9A-F]{2}){15}' | tail -n1 | tr -d ' ')
+  if [ -z "$BLOCKHEX" ]; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL} $TIMEINFO"
+    echo "Execution trace:"
+    echo "$RES"
+    return 1
+  fi
+
+  if [[ "$BLOCKHEX" != 02* ]]; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL} $TIMEINFO"
+    echo "Expected block 5 to start with the 0x02 HID marker."
+    echo "Actual block 5 data: $BLOCKHEX"
+    echo "Execution trace:"
+    echo "$RES"
+    return 1
+  fi
+
+  RAWPAYLOAD=${BLOCKHEX#02}
+  PAYLOADBIN=$(HexToBin "$RAWPAYLOAD") || {
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL} $TIMEINFO"
+    echo "Execution trace:"
+    echo "$RES"
+    return 1
+  }
+
+  while [[ "$PAYLOADBIN" == 0* ]]; do
+    PAYLOADBIN=${PAYLOADBIN#0}
+  done
+
+  if [[ "$PAYLOADBIN" != 1* ]]; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL} $TIMEINFO"
+    echo "Expected a sentinel-prefixed Wiegand payload in block 5."
+    echo "Actual payload bits: $PAYLOADBIN"
+    echo "Execution trace:"
+    echo "$RES"
+    return 1
+  fi
+
+  RECOVERED_BIN=${PAYLOADBIN#1}
+  if [ "$RECOVERED_BIN" != "$3" ]; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL} $TIMEINFO"
+    echo "Expected Wiegand bits: $3"
+    echo "Actual Wiegand bits:   $RECOVERED_BIN"
+    echo "Execution trace:"
+    echo "$RES"
+    return 1
+  fi
+
+  DECODE_RES=$($PM3BIN -c "wiegand decode --bin $RECOVERED_BIN" 2>&1)
+  if echo "$DECODE_RES" | grep -E -q "$4"; then
+    echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK} $TIMEINFO"
+    return 0
+  fi
+
+  echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL} $TIMEINFO"
+  echo "Decode trace:"
+  echo "$DECODE_RES"
+  return 1
+}
+
+function CheckMfHidEncodeCleanup() {
+  printf "%-40s" "$1 "
+  RES=$($PM3BIN -c 'hf mf rdbl --blk 1 -k FFFFFFFFFFFF; hf mf rdbl --blk 2 -k FFFFFFFFFFFF; hf mf rdbl --blk 4 -k FFFFFFFFFFFF; hf mf rdbl --blk 5 -k FFFFFFFFFFFF; hf mf rdbl --blk 6 -k FFFFFFFFFFFF' 2>&1)
+  if echo "$RES" | grep -E -q "  1 \| 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00" \
+    && echo "$RES" | grep -E -q "  2 \| 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00" \
+    && echo "$RES" | grep -E -q "  4 \| 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00" \
+    && echo "$RES" | grep -E -q "  5 \| 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00" \
+    && echo "$RES" | grep -E -q "  6 \| 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"; then
+    echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
+    return 0
+  fi
+
+  echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+  echo "Execution trace:"
+  echo "$RES"
+  return 1
+}
+
 function WaitForEnter() {
   echo ""
   echo "$1"
   echo "Press Enter when ready, or Ctrl-C to abort."
-  read -r
+  if [ -r /dev/tty ]; then
+    stty sane < /dev/tty 2>/dev/null || true
+    IFS= read -r < /dev/tty
+  else
+    read -r
+  fi
 }
+
+trap CleanupMfHidEncodeCard EXIT
 
 echo -e "${C_BLUE}Iceman Proxmark3 online test tool${C_NC}"
 echo ""
@@ -161,19 +373,17 @@ while true; do
     fi
 
     if $TESTHIDWIEGAND; then
-      echo -e "\n${C_BLUE}Testing LF HID Wiegand flows${C_NC} ${PM3BIN:=./pm3}"
+      echo -e "\n${C_BLUE}Testing LF HID T55xx clone flows${C_NC} ${PM3BIN:=./pm3}"
       if ! CheckFileExist "pm3 exists"               "$PM3BIN"; then break; fi
 
-      if ! CheckExecute "lf hid sim 26-bit bin"       "$PM3BIN -c 'lf hid sim --bin 10001111100000001010100011'" "Simulating HID tag"; then break; fi
-      if ! CheckExecute "lf hid sim raw oversize"     "$PM3BIN -c 'lf hid sim -r 01400076000c86' 2>&1" "LF HID simulation supports only packed credentials up to 37 bits"; then break; fi
-      if ! CheckExecute "lf hid sim bin oversize"     "PAT=\$(printf '01%.0s' {1..48}); $PM3BIN -c \"lf hid sim --bin \$PAT\" 2>&1" "LF HID simulation supports only packed credentials up to 37 bits"; then break; fi
-      if ! CheckExecute "lf hid sim new oversize"     "$PM3BIN -c 'lf hid sim --new 0000A4550148AB' 2>&1" "LF HID simulation supports only packed credentials up to 37 bits"; then break; fi
+      if ! CheckExecute "lf hid clone raw oversize"    "$PM3BIN -c 'lf hid clone -r 01400076000c86' 2>&1" "LF HID clone supports only packed credentials up to 37 bits"; then break; fi
+      if ! CheckExecute "lf hid clone bin oversize"    "PAT=\$(printf '01%.0s' {1..48}); $PM3BIN -c \"lf hid clone --bin \$PAT\" 2>&1" "Packed HID encoding supports up to 84 Wiegand bits"; then break; fi
+      if ! CheckExecute "lf hid clone new oversize"    "$PM3BIN -c 'lf hid clone --new 0000A4550148AB' 2>&1" "LF HID clone supports only packed credentials up to 37 bits"; then break; fi
 
       WaitForEnter "PLACE A REWRITABLE T55xx TAG ON THE PM3 NOW"
-      if ! CheckExecute "lf hid clone 26-bit bin"     "$PM3BIN -c 'lf hid clone --bin 10001111100000001010100011'" "Done!"; then break; fi
-      if ! CheckExecute "lf hid clone raw oversize"   "$PM3BIN -c 'lf hid clone -r 01400076000c86' 2>&1" "LF HID clone supports only packed credentials up to 37 bits"; then break; fi
-      if ! CheckExecute "lf hid clone bin oversize"   "PAT=\$(printf '01%.0s' {1..48}); $PM3BIN -c \"lf hid clone --bin \$PAT\" 2>&1" "LF HID clone supports only packed credentials up to 37 bits"; then break; fi
-      if ! CheckExecute "lf hid clone new oversize"   "$PM3BIN -c 'lf hid clone --new 0000A4550148AB' 2>&1" "LF HID clone supports only packed credentials up to 37 bits"; then break; fi
+      if ! CheckLfHidCloneReadback "lf hid clone H10301 26-bit" "-w H10301 --fc 118 --cn 1603" "H10301.*FC: 118.*CN: 1603" "H10301 26-bit, FC 118, CN 1603"; then break; fi
+      if ! CheckLfHidCloneReadback "lf hid clone C1k35s 35-bit" "-w C1k35s --fc 118 --cn 1603" "C1k35s.*FC: 118.*CN: 1603" "C1k35s 35-bit, FC 118, CN 1603"; then break; fi
+      if ! CheckLfHidCloneReadback "lf hid clone H10304 37-bit" "-w H10304 --fc 118 --cn 1603" "H10304.*FC: 118.*CN: 1603" "H10304 37-bit, FC 118, CN 1603"; then break; fi
     fi
 
     if $TESTMFHIDENCODE; then
@@ -181,9 +391,13 @@ while true; do
       if ! CheckFileExist "pm3 exists"               "$PM3BIN"; then break; fi
 
       WaitForEnter "PLACE A BLANK MIFARE CLASSIC 1K CARD ON THE PM3 NOW"
-      if ! CheckExecute "hf mf encodehid bin"        "$PM3BIN -c 'hf mf encodehid --bin 10001111100000001010100011; hf mf rdbl --blk 5 -k FFFFFFFFFFFF'" "023E02A3"; then break; fi
-      if ! CheckExecute "hf mf encodehid raw"        "$PM3BIN -c 'hf mf encodehid --raw 023E02A3; hf mf rdbl --blk 5 -k FFFFFFFFFFFF'" "023E02A3"; then break; fi
-      if ! CheckExecute "hf mf encodehid new"        "$PM3BIN -c 'hf mf encodehid --new 068F80A8C0; hf mf rdbl --blk 5 -k FFFFFFFFFFFF'" "023E02A3"; then break; fi
+      NEED_MF_HID_ENCODE_WIPE=true
+      if ! CheckMfHidEncodeRoundTrip "hf mf encodehid bin roundtrip"      "--bin 10001111100000001010100011" "10001111100000001010100011" "H10301.*FC: 31.*CN: 337"; then break; fi
+      if ! CheckMfHidEncodeRoundTrip "hf mf encodehid raw roundtrip"      "--raw 063E02A3" "10001111100000001010100011" "H10301.*FC: 31.*CN: 337"; then break; fi
+      if ! CheckMfHidEncodeRoundTrip "hf mf encodehid new roundtrip"      "--new 068F80A8C0" "10001111100000001010100011" "H10301.*FC: 31.*CN: 337"; then break; fi
+      if ! CheckMfHidEncodeRoundTrip "hf mf encodehid format roundtrip"   "-w H10301 --fc 31 --cn 337" "10001111100000001010100011" "H10301.*FC: 31.*CN: 337"; then break; fi
+      if ! RestoreMfHidEncodeCard; then break; fi
+      if ! CheckMfHidEncodeCleanup "hf mf encodehid cleanup verify"; then break; fi
     fi
   
   echo -e "\n------------------------------------------------------------"

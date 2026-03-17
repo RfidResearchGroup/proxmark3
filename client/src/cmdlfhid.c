@@ -59,7 +59,11 @@ typedef struct {
     int new_pacs_len;
 } lf_hid_cli_input_t;
 
+// Enforce the narrower LF HID transport limits after the shared Wiegand layer has
+// normalized whichever user-facing input mode was selected.
 static int lf_hid_validate_packed_transport(const wiegand_input_t *input, const char *command_name) {
+    // The shared Wiegand layer can normalize credentials that are wider than the LF HID
+    // transport. Reject only when this specific command needs a packed HID frame.
     if (input->packed_valid == false) {
         PrintAndLogEx(ERR, "Credential encoded successfully, but %" PRIuMAX "-bit Wiegand data cannot be represented as a packed HID credential", (uintmax_t)input->bin_len);
         PrintAndLogEx(ERR, "Packed HID encoding supports up to 84 Wiegand bits");
@@ -80,6 +84,8 @@ static int lf_hid_validate_packed_transport(const wiegand_input_t *input, const 
     return PM3_SUCCESS;
 }
 
+// Resolve the CLI's mutually exclusive HID input modes into one normalized representation
+// that downstream sim/clone code can consume without caring about the original encoding.
 static int lf_hid_resolve_input(const lf_hid_cli_input_t *cli, wiegand_input_t *input, int *format_idx) {
     int input_modes = 0;
     input_modes += (cli->raw_len > 0);
@@ -101,6 +107,8 @@ static int lf_hid_resolve_input(const lf_hid_cli_input_t *cli, wiegand_input_t *
         return PM3_EINVARG;
     }
 
+    // Normalize every accepted CLI form into the same wiegand_input_t so sim/clone can
+    // share validation and transport handling regardless of where the credential came from.
     if (cli->raw_len) {
         return wiegand_pack_from_raw_hid(cli->raw, cli->raw_len, input);
     }
