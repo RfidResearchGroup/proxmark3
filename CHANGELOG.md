@@ -4,6 +4,7 @@ This project uses the changelog in accordance with [keepchangelog](http://keepac
 
 ## [unreleased][unreleased]
 - Added `hf iclass blacktears` command to perform an automated tearoff of block 1 to set non-secure page mode(@antiklesys)
+- Changed wiegand encoding to use shared helpers and have unified parameters (--raw, --bin, --new, --wiegand, etc.) (@cindersocket)
 - Added `hf gst read` command (@kormax)
 - Added `hf gst info` command (@kormax)
 - Added `hf 14b tearoff` - interactive ST25TB/SRx monotonic counter tear-off attack (@xNovyz)
