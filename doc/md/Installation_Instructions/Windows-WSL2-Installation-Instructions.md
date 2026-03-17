@@ -31,9 +31,11 @@ on Windows 11, using WSL2 (and Ubuntu Linux).
       - [Install the udev rules](#install-the-udev-rules-1)
         - [77-pm3-usb-device-blacklist.rules](#77-pm3-usb-device-blacklistrules)
       - [WORKAROUND - Kick udev into action](#workaround---kick-udev-into-action)
+      - [USB device access in WSL2 (tty permissions)](#usb-device-access-in-wsl2-tty-permissions)
   - [Verify Device Exists](#verify-device-exists)
   - [Using the client...](#using-the-client)
   - [Summary of repeated commands](#summary-of-repeated-commands)
+  - [Script to automate environment setup](#script-to-automate-environment-setup)
   - [Done!](#done)
 
 ## Requirements
@@ -188,19 +190,19 @@ sudo apt-get auto-remove -y
 ### Install stuff needed to build proxmark3 binaries
 ^[Top](#top)
 
-For example, on Ubuntu:
+For example, on Ubuntu 24.04 or later:
 
 ```sh
 sudo apt-get install --no-install-recommends \
   git ca-certificates build-essential pkg-config \
   libreadline-dev gcc-arm-none-eabi libnewlib-dev \
-  libbz2-dev liblz4-dev libpython3-dev qtbase5-dev \
+  libbz2-dev liblz4-dev libpython3-dev qtbase6-dev \
   libssl-dev libgd-dev
 ```
 
 > [!NOTE]
 > * If you don't need the graphical components of the
->   Proxmark3 client, you can skip the installation of `qtbase5-dev`.  
+>   Proxmark3 client, you can skip the installation of `qtbase6-dev`.
 > * If you don't need support for Python3 scripts in the
 >   Proxmark3 client, you can skip the installation of `libpython3-dev`.
 > * If you don't need support for NFC ePaper devices in the

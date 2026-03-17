@@ -79,4 +79,6 @@
 #define _RL_BOLD_RED_(s) RL_ESC("\x1b[1;31m") s RL_ESC(AEND)
 #define _RL_BOLD_GREEN_(s) RL_ESC("\x1b[1;32m") s RL_ESC(AEND)
 
+#define _URL_(url, text)  "\x1b]8;;" url "\x1b\\" text "\x1b]8;;\x1b\\"
+
 #endif

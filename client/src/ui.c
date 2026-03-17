@@ -232,6 +232,42 @@ void PrintAndLogOptions(const char *str[][2], size_t size, size_t space) {
     PrintAndLogEx(NORMAL, "%s", buff);
 }
 
+void PrintAndLogInfoHeaderWithWidth(const char *title, size_t width) {
+    if (title == NULL) {
+        return;
+    }
+
+    const size_t title_len = strlen(title);
+    if (width > (MAX_PRINT_BUFFER - 1)) {
+        width = MAX_PRINT_BUFFER - 1;
+    }
+
+    char dashes[MAX_PRINT_BUFFER] = {0};
+    memset(dashes, '-', sizeof(dashes) - 1);
+
+    if (title_len + 2 >= width) {
+        PrintAndLogEx(INFO, _CYAN_("%s"), title);
+        return;
+    }
+
+    size_t dash_count = width - (title_len + 2);
+    size_t left = dash_count / 2;
+    size_t right = dash_count - left;
+    if (left > (sizeof(dashes) - 1)) {
+        left = sizeof(dashes) - 1;
+    }
+    if (right > (sizeof(dashes) - 1)) {
+        right = sizeof(dashes) - 1;
+    }
+
+    PrintAndLogEx(INFO, "%.*s " _CYAN_("%s") " %.*s",
+                  (int)left, dashes, title, (int)right, dashes);
+}
+
+void PrintAndLogInfoHeader(const char *title) {
+    PrintAndLogInfoHeaderWithWidth(title, 82);
+}
+
 static uint8_t PrintAndLogEx_spinidx = 0;
 
 void PrintAndLogEx(logLevel_t level, const char *fmt, ...) {
@@ -527,40 +563,42 @@ void memcpy_filter_rlmarkers(void *dest, const void *src, size_t n) {
 }
 
 void memcpy_filter_ansi(void *dest, const void *src, size_t n, bool filter) {
-    if (filter) {
-        // Filter out ANSI sequences on these OS
-        uint8_t *rdest = (uint8_t *)dest;
-        uint8_t *rsrc = (uint8_t *)src;
-        uint16_t si = 0;
-        for (size_t i = 0; i < n; i++) {
-            if ((i < n - 1)
-                    && (rsrc[i] == '\x1b')
-                    && (rsrc[i + 1] >= 0x40)
-                    && (rsrc[i + 1] <= 0x5F)) {  // entering ANSI sequence
-
-                i++;
-                if ((i < n - 1) && (rsrc[i] == '[')) { // entering CSI sequence
-                    i++;
-
-                    while ((i < n - 1) && (rsrc[i] >= 0x30) && (rsrc[i] <= 0x3F)) { // parameter bytes
-                        i++;
-                    }
-
-                    while ((i < n - 1) && (rsrc[i] >= 0x20) && (rsrc[i] <= 0x2F)) { // intermediate bytes
-                        i++;
-                    }
-
-                    if ((rsrc[i] >= 0x40) && (rsrc[i] <= 0x7F)) { // final byte
-                        continue;
-                    }
-                } else {
+    if (!filter) {
+        memcpy(dest, src, n);
+        return;
+    }
+    uint8_t *rdest = (uint8_t *)dest;
+    const uint8_t *rsrc = (const uint8_t *)src;
+    size_t si = 0;
+    for (size_t i = 0; i < n; i++) {
+        if (rsrc[i] == '\x1b' && i < n - 1) {
+            /* ----- CSI sequence ----- */
+            if (rsrc[i + 1] == '[') {
+                i += 2;
+                while (i < n && rsrc[i] >= 0x30 && rsrc[i] <= 0x3F) i++;
+                while (i < n && rsrc[i] >= 0x20 && rsrc[i] <= 0x2F) i++;
+                if (i < n && rsrc[i] >= 0x40 && rsrc[i] <= 0x7F) {
                     continue;
                 }
             }
-            rdest[si++] = rsrc[i];
+
+            /* ----- OSC sequence (used for hyperlinks) ----- */
+            else if (rsrc[i + 1] == ']') {
+                i += 2;
+                /* OSC terminates with BEL or ESC \ */
+                while (i < n) {
+                    if (rsrc[i] == '\x07')  // BEL
+                        break;
+                    if (rsrc[i] == '\x1b' && i + 1 < n && rsrc[i + 1] == '\\') {
+                        i++;                // consume '\'
+                        break;
+                    }
+                    i++;
+                }
+                continue;
+            }
         }
-    } else {
-        memcpy(dest, src, n);
+        rdest[si++] = rsrc[i];
     }
 }
 

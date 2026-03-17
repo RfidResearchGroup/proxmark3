@@ -233,15 +233,17 @@ const char *getTagInfo(uint8_t uid) {
 }
 
 static const hintAIDList_t hintAIDList[] = {
-    // AID, AID len, name, hint - how to use
-    { "\xA0\x00\x00\x06\x47\x2F\x00\x01", 8, "FIDO", "hf fido" },
-    { "\xA0\x00\x00\x03\x08\x00\x00\x10\x00\x01\x00", 11, "PIV", "" },
-    { "\xD2\x76\x00\x01\x24\x01", 8, "OpenPGP", "" },
-    { "\x31\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "EMV (pse)", "emv" },
-    { "\x32\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "EMV (ppse)", "emv" },
-    { "\x41\x44\x20\x46\x31", 5, "CIPURSE", "hf cipurse" },
-    { "\xd2\x76\x00\x00\x85\x01\x00", 7, "desfire", "hf mfdes" },
-    { "\x4F\x53\x45\x2E\x56\x41\x53\x2E\x30\x31", 10, "Apple VAS", "hf vas"},
+    { "\xA0\x00\x00\x06\x47\x2F\x00\x01", 8, "", 0, "FIDO", "hf fido" },
+    { "\xA0\x00\x00\x03\x08\x00\x00\x10\x00\x01\x00", 11, "", 0, "PIV", "" },
+    { "\xD2\x76\x00\x01\x24\x01", 8, "", 0, "OpenPGP", "" },
+    { "\x31\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "", 0, "EMV (pse)", "emv" },
+    { "\x32\x50\x41\x59\x2E\x53\x59\x53\x2E\x44\x44\x46\x30\x31", 14, "", 0, "EMV (ppse)", "emv" },
+    { "\x41\x44\x20\x46\x31", 5, "", 0, "CIPURSE", "hf cipurse" },
+    { "\xA0\x00\x00\x09\x09\xAC\xCE\x55\x01", 9, "", 0, "Aliro", "hf aliro" },
+    { "\xd2\x76\x00\x00\x85\x01\x00", 7, "", 0, "desfire", "hf mfdes" },
+    { "\x4F\x53\x45\x2E\x56\x41\x53\x2E\x30\x31", 10, "ApplePay", 8, "OSE.VAS (Apple Wallet)", "hf vas" },
+    { "\x4F\x53\x45\x2E\x56\x41\x53\x2E\x30\x31", 10, "AndroidPay", 10, "OSE.VAS (Google Wallet)", "hf gst" },
+    { "\xA0\x00\x00\x04\x76\xD0\x00\x01\x11", 9, "", 0, "Google Smart Tap v2", "hf gst" },
 };
 
 // iso14a apdu input frame length
@@ -1040,9 +1042,10 @@ int CmdHF14ASim(const char *Cmd) {
     sector_t *k_sector = NULL;
     size_t k_sectors_cnt = MIFARE_4K_MAXSECTOR;
 
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort simulation");
+    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
     bool keypress = kbd_enter_pressed();
     while (keypress == false) {
+        keypress = kbd_enter_pressed();
 
         if (WaitForResponseTimeout(CMD_HF_MIFARE_SIMULATE, &resp, 1500) == false) {
             continue;
@@ -1058,15 +1061,11 @@ int CmdHF14ASim(const char *Cmd) {
 
         const nonces_t *data = (nonces_t *)resp.data.asBytes;
         readerAttack(k_sector, k_sectors_cnt, data[0], setEmulatorMem, verbose);
-
-        keypress = kbd_enter_pressed();
     }
 
     if (keypress) {
-        if ((flags & FLAG_NR_AR_ATTACK) == FLAG_NR_AR_ATTACK) {
-            // inform device to break the sim loop since client has exited
-            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
-        }
+        // inform device to break the sim loop since client has exited
+        SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
     }
 
     PrintAndLogEx(INFO, "Done!");
@@ -1105,14 +1104,31 @@ int CmdHF14ASniff(const char *Cmd) {
     clearCommandBuffer();
     SendCommandNG(CMD_HF_ISO14443A_SNIFF, (uint8_t *)&param, sizeof(uint8_t));
 
-    PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort sniffing");
-
     if (interactive) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort sniffing");
+
         PacketResponseNG resp;
-        WaitForResponse(CMD_HF_ISO14443A_SNIFF, &resp);
+
+        bool keypress = kbd_enter_pressed();
+        while (keypress == false) {
+            keypress = kbd_enter_pressed();
+
+            if (WaitForResponseTimeout(CMD_HF_ISO14443A_SNIFF, &resp, 500)) {
+                break;
+            }
+        }
+
+        if (keypress) {
+            // inform device to break the sim loop since client has exited
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            WaitForResponse(CMD_HF_ISO14443A_SNIFF, &resp);
+        }
+
         PrintAndLogEx(INFO, "Done!");
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf 14a list")"` to view captured tracelog");
         PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("trace save -h") "` to save tracelog for later analysing");
+    } else {
+        PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " to abort sniffing");
     }
     return PM3_SUCCESS;
 }
@@ -3391,6 +3407,18 @@ int infoHF14A(bool verbose, bool do_nack_test, bool do_aid_search) {
     return select_status;
 }
 
+static bool hint_aid_match_select_response(const hintAIDList_t *entry, const uint8_t *select_response, size_t select_response_len) {
+    if (entry->select_response_match_length == 0) {
+        return true;
+    }
+
+    if ((entry->select_response_match == NULL) || (select_response == NULL) || (select_response_len < entry->select_response_match_length)) {
+        return false;
+    }
+
+    return byte_strstr(select_response, select_response_len, (const uint8_t *)entry->select_response_match, entry->select_response_match_length) != -1;
+}
+
 int infoHF14A4Applications(bool verbose) {
     bool cardFound[ARRAYLEN(hintAIDList)] = {0};
     bool ActivateField = true;
@@ -3405,6 +3433,10 @@ int infoHF14A4Applications(bool verbose) {
             break;
 
         if (sw == ISO7816_OK || sw == ISO7816_INVALID_DF || sw == ISO7816_FILE_TERMINATED) {
+            if (!hint_aid_match_select_response(&hintAIDList[i], result, resultlen)) {
+                continue;
+            }
+
             if (!found) {
                 if (verbose)
                     PrintAndLogEx(INFO, "----------------- " _CYAN_("Short AID search") " -----------------");
@@ -3415,9 +3447,8 @@ int infoHF14A4Applications(bool verbose) {
                 if (verbose)
                     PrintAndLogEx(SUCCESS, "Application " _CYAN_("%s") " ( " _GREEN_("ok") " )", hintAIDList[i].desc);
                 cardFound[i] = true;
-            } else {
-                if (verbose)
-                    PrintAndLogEx(WARNING, "Application " _CYAN_("%s") " ( " _RED_("blocked") " )", hintAIDList[i].desc);
+            } else if (verbose) {
+                PrintAndLogEx(WARNING, "Application " _CYAN_("%s") " ( " _RED_("blocked") " )", hintAIDList[i].desc);
             }
         }
     }

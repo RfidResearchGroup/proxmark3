@@ -77,7 +77,7 @@ static uint32_t iso18092_get_timeout(void) {
 static uint8_t frameSpace[FELICA_MAX_RF_FRAME_SIZE];
 
 //structure to hold incoming NFC frame, used for ISO/IEC 18092-compatible frames
-static struct {
+typedef struct {
     enum {
         STATE_UNSYNCD,
         STATE_TRYING_SYNC,
@@ -88,15 +88,25 @@ static struct {
     } state;
 
     uint16_t  shiftReg; //for synchronization and offset calculation
+    uint16_t  shiftRegInv; // sync search helper while polarity is unknown
     int       posCnt;
     bool      crc_ok;
     int       rem_len;
     uint16_t  len;
     uint8_t   byte_offset;
+    uint8_t   polarity;
     uint8_t   *framebytes;
 //should be enough. maxlen is 255, 254 for data, 2 for sync, 2 for crc
 // 0,1 -> SYNC, 2 - len,  3-(len+1)->data, then crc
-} FelicaFrame;
+} felica_frame_t;
+
+enum {
+    FELICA_POLARITY_UNKNOWN = 0,
+    FELICA_POLARITY_NORMAL = 1,
+    FELICA_POLARITY_INVERTED = 2
+};
+
+static felica_frame_t FelicaFrame;
 
 //b2 4d is SYNC, 45645 in 16-bit notation, 10110010 01001101 binary. Frame will not start filling until this is shifted in
 //bit order in byte -reverse, I guess?  [((bt>>0)&1),((bt>>1)&1),((bt>>2)&1),((bt>>3)&1),((bt>>4)&1),((bt>>5)&1),((bt>>6)&1),((bt>>7)&1)] -at least in the mode that I read those in
@@ -104,111 +114,139 @@ static struct {
 # define SYNC_16BIT 0xB24D
 #endif
 
-static void FelicaFrameReset(void) {
-    FelicaFrame.state = STATE_UNSYNCD;
-    FelicaFrame.posCnt = 0;
-    FelicaFrame.crc_ok = false;
-    FelicaFrame.byte_offset = 0;
+static void FelicaFrameReset(felica_frame_t *f) {
+    f->state = STATE_UNSYNCD;
+    f->posCnt = 0;
+    f->shiftReg = 0;
+    f->shiftRegInv = 0;
+    f->crc_ok = false;
+    f->rem_len = 0;
+    f->len = 0;
+    f->byte_offset = 0;
+    f->polarity = FELICA_POLARITY_UNKNOWN;
 }
-static void FelicaFrameinit(uint8_t *data) {
-    FelicaFrame.framebytes = data;
-    FelicaFrameReset();
+static void FelicaFrameinit(felica_frame_t *f, uint8_t *data) {
+    f->framebytes = data;
+    FelicaFrameReset(f);
 }
 
 //shift byte into frame, reversing it at the same time
-static void shiftInByte(uint8_t bt) {
+static void shiftInByte(felica_frame_t *f, uint8_t bt) {
     uint8_t j;
-    for (j = 0; j < FelicaFrame.byte_offset; j++) {
-        FelicaFrame.framebytes[FelicaFrame.posCnt] = (FelicaFrame.framebytes[FelicaFrame.posCnt] << 1) + (bt & 1);
+    for (j = 0; j < f->byte_offset; j++) {
+        f->framebytes[f->posCnt] = (f->framebytes[f->posCnt] << 1) + (bt & 1);
         bt >>= 1;
     }
-    FelicaFrame.posCnt++;
-    FelicaFrame.rem_len--;
-    for (j = FelicaFrame.byte_offset; j < 8; j++) {
-        FelicaFrame.framebytes[FelicaFrame.posCnt] = (FelicaFrame.framebytes[FelicaFrame.posCnt] << 1) + (bt & 1);
+    f->posCnt++;
+    f->rem_len--;
+    for (j = f->byte_offset; j < 8; j++) {
+        f->framebytes[f->posCnt] = (f->framebytes[f->posCnt] << 1) + (bt & 1);
         bt >>= 1;
     }
 }
 
-static void Process18092Byte(uint8_t bt) {
+static void Process18092Byte(felica_frame_t *f, uint8_t bt) {
 
-    switch (FelicaFrame.state) {
+    switch (f->state) {
 
         case STATE_UNSYNCD: {
             // almost any nonzero byte can be start of SYNC. SYNC should be preceded by zeros, but that is not always the case
             if (bt > 0) {
-                FelicaFrame.shiftReg = reflect8(bt);
-                FelicaFrame.state = STATE_TRYING_SYNC;
+                uint8_t btr = reflect8(bt);
+                f->shiftReg = btr;
+                f->shiftRegInv = (uint8_t)~btr;
+                f->polarity = FELICA_POLARITY_UNKNOWN;
+                f->state = STATE_TRYING_SYNC;
             }
             break;
         }
 
         case STATE_TRYING_SYNC: {
+            uint8_t bt_norm = bt;
+            uint8_t bt_inv = (uint8_t)~bt;
 
-            if (bt == 0) {
-                // desync
-                FelicaFrame.shiftReg = bt;
-                FelicaFrame.state = STATE_UNSYNCD;
-            } else {
+            for (uint8_t i = 0; i < 8; i++) {
+                bool sync_normal = (f->shiftReg == SYNC_16BIT);
+                bool sync_inverted = (f->shiftRegInv == SYNC_16BIT);
 
-                for (uint8_t i = 0; i < 8; i++) {
+                if (sync_normal || sync_inverted) {
+                    bool use_inverted = sync_inverted;
+                    uint8_t shift_bt = use_inverted ? bt_inv : bt_norm;
 
-                    if (FelicaFrame.shiftReg == SYNC_16BIT) {
-                        // SYNC done!
-                        FelicaFrame.state = STATE_GET_LENGTH;
-                        FelicaFrame.framebytes[0] = 0xb2;
-                        FelicaFrame.framebytes[1] = 0x4d;
-                        FelicaFrame.byte_offset = i;
+                    // SYNC done!
+                    f->state = STATE_GET_LENGTH;
+                    f->framebytes[0] = 0xb2;
+                    f->framebytes[1] = 0x4d;
+                    f->framebytes[2] = 0x00;
+                    f->byte_offset = i;
+                    f->polarity = use_inverted ? FELICA_POLARITY_INVERTED : FELICA_POLARITY_NORMAL;
 
-                        // shift in remaining byte, slowly...
-                        for (uint8_t j = i; j < 8; j++) {
-                            FelicaFrame.framebytes[2] = (FelicaFrame.framebytes[2] << 1) + (bt & 1);
-                            bt >>= 1;
-                        }
-
-                        FelicaFrame.posCnt = 2;
-                        if (i == 0) {
-                            break;
-                        }
+                    // shift in remaining byte, slowly...
+                    for (uint8_t j = i; j < 8; j++) {
+                        f->framebytes[2] = (f->framebytes[2] << 1) + (shift_bt & 1);
+                        shift_bt >>= 1;
                     }
-                    FelicaFrame.shiftReg = (FelicaFrame.shiftReg << 1) + (bt & 1);
-                    bt >>= 1;
+
+                    f->posCnt = 2;
+                    return;
                 }
 
-                //that byte was last byte of sync
-                if (FelicaFrame.shiftReg == SYNC_16BIT) {
-                    //Force SYNC on next byte
-                    FelicaFrame.state = STATE_GET_LENGTH;
-                    FelicaFrame.framebytes[0] = 0xb2;
-                    FelicaFrame.framebytes[1] = 0x4d;
-                    FelicaFrame.byte_offset = 0;
-                    FelicaFrame.posCnt = 1;
-                }
+                f->shiftReg = (f->shiftReg << 1) + (bt_norm & 1);
+                f->shiftRegInv = (f->shiftRegInv << 1) + (bt_inv & 1);
+                bt_norm >>= 1;
+                bt_inv >>= 1;
+            }
+
+            // that byte was last byte of sync
+            if (f->shiftReg == SYNC_16BIT || f->shiftRegInv == SYNC_16BIT) {
+                bool use_inverted = (f->shiftRegInv == SYNC_16BIT);
+                // Force SYNC on next byte
+                f->state = STATE_GET_LENGTH;
+                f->framebytes[0] = 0xb2;
+                f->framebytes[1] = 0x4d;
+                f->framebytes[2] = 0x00;
+                f->byte_offset = 0;
+                f->posCnt = 1;
+                f->polarity = use_inverted ? FELICA_POLARITY_INVERTED : FELICA_POLARITY_NORMAL;
             }
             break;
         }
         case STATE_GET_LENGTH: {
-            shiftInByte(bt);
-            FelicaFrame.rem_len = FelicaFrame.framebytes[2] - 1;
-            FelicaFrame.len = FelicaFrame.framebytes[2] + 4; //with crc and sync
-            FelicaFrame.state = STATE_GET_DATA;
+            if (f->polarity == FELICA_POLARITY_INVERTED) {
+                bt = (uint8_t)~bt;
+            }
+            shiftInByte(f, bt);
+            if (f->framebytes[2] == 0 || (f->framebytes[2] + 4 > FELICA_MAX_RF_FRAME_SIZE)) {
+                // invalid frame length, drop frame and start over.
+                FelicaFrameReset(f);
+                break;
+            }
+            f->rem_len = f->framebytes[2] - 1;
+            f->len = f->framebytes[2] + 4; //with crc and sync
+            f->state = STATE_GET_DATA;
             break;
         }
         case STATE_GET_DATA: {
-            shiftInByte(bt);
-            if (FelicaFrame.rem_len <= 0) {
-                FelicaFrame.state = STATE_GET_CRC;
-                FelicaFrame.rem_len = 2;
+            if (f->polarity == FELICA_POLARITY_INVERTED) {
+                bt = (uint8_t)~bt;
+            }
+            shiftInByte(f, bt);
+            if (f->rem_len <= 0) {
+                f->state = STATE_GET_CRC;
+                f->rem_len = 2;
             }
             break;
         }
         case STATE_GET_CRC: {
-            shiftInByte(bt);
-            if (FelicaFrame.rem_len <= 0) {
-                FelicaFrame.rem_len = 0;
+            if (f->polarity == FELICA_POLARITY_INVERTED) {
+                bt = (uint8_t)~bt;
+            }
+            shiftInByte(f, bt);
+            if (f->rem_len <= 0) {
+                f->rem_len = 0;
                 // skip sync 2bytes. IF ok, residue should be 0x0000
-                FelicaFrame.crc_ok = check_crc(CRC_FELICA, FelicaFrame.framebytes + 2, FelicaFrame.len - 2);
-                FelicaFrame.state = STATE_FULL;
+                f->crc_ok = check_crc(CRC_FELICA, f->framebytes + 2, f->len - 2);
+                f->state = STATE_FULL;
             }
             break;
         }
@@ -438,10 +476,12 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
 //    if (g_dbglevel >= DBG_DEBUG) { Dbprintf("WaitForFelicaReply Start"); }
 
     uint32_t c = 0;
+    uint16_t crc_fail_normal = 0;
+    uint16_t crc_fail_inverted = 0;
 
     // power, no modulation
     FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO18092 | FPGA_HF_ISO18092_FLAG_READER | FPGA_HF_ISO18092_FLAG_NOMOD);
-    FelicaFrameReset();
+    FelicaFrameReset(&FelicaFrame);
 
     // clear RXRDY:
     uint8_t b = (uint8_t)AT91C_BASE_SSC->SSC_RHR;
@@ -457,17 +497,42 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
 
             b = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
 
-            Process18092Byte(b);
+            Process18092Byte(&FelicaFrame, b);
+            felica_frame_t *received = NULL;
 
             if (FelicaFrame.state == STATE_FULL) {
+                if (FelicaFrame.crc_ok) {
+                    received = &FelicaFrame;
+                } else {
+                    if (FelicaFrame.polarity == FELICA_POLARITY_INVERTED) {
+                        crc_fail_inverted++;
+                    } else {
+                        crc_fail_normal++;
+                    }
+                    FelicaFrameReset(&FelicaFrame);
+                }
+            }
+
+            if (received != NULL) {
+                if (maxbytes && received->len > maxbytes) {
+                    if (g_dbglevel >= DBG_DEBUG) {
+                        Dbprintf("FeliCa RX frame dropped (len %u > max %u)", received->len, maxbytes);
+                    }
+                    FelicaFrameReset(&FelicaFrame);
+                    continue;
+                }
+
+                if (g_dbglevel >= DBG_DEBUG && received->polarity == FELICA_POLARITY_INVERTED) {
+                    DbpString("FeliCa RX decoded using inverted polarity fallback");
+                }
 
                 felica_nexttransfertime = MAX(
                                               felica_nexttransfertime,
                                               (GetCountSspClk() & 0xfffffff8) - (DELAY_AIR2ARM_AS_READER + DELAY_ARM2AIR_AS_READER) / 16 + FELICA_FRAME_DELAY_TIME);
 
                 LogTrace(
-                    FelicaFrame.framebytes,
-                    FelicaFrame.len,
+                    received->framebytes,
+                    received->len,
                     ((GetCountSspClk() & 0xfffffff8) << 4) - DELAY_AIR2ARM_AS_READER - timeout,
                     ((GetCountSspClk() & 0xfffffff8) << 4) - DELAY_AIR2ARM_AS_READER,
                     NULL,
@@ -475,9 +540,15 @@ bool WaitForFelicaReply(uint16_t maxbytes) {
                 );
                 return true;
 
-            } else if (c++ > timeout && (FelicaFrame.state == STATE_UNSYNCD || FelicaFrame.state == STATE_TRYING_SYNC)) {
+            } else if (
+                c++ > timeout
+                && (FelicaFrame.state == STATE_UNSYNCD || FelicaFrame.state == STATE_TRYING_SYNC)
+            ) {
 
 //                if (g_dbglevel >= DBG_DEBUG) Dbprintf("Error: Timeout! STATE_UNSYNCD");
+                if (g_dbglevel >= DBG_DEBUG && (crc_fail_normal || crc_fail_inverted)) {
+                    Dbprintf("FeliCa RX timeout, CRC fails normal=%u inverted=%u", crc_fail_normal, crc_fail_inverted);
+                }
 
                 return false;
             }
@@ -497,7 +568,7 @@ static void iso18092_setup(uint8_t fpga_minor_mode) {
 #endif
     // allocate command receive buffer
     BigBuf_free();
-    FelicaFrameinit(BigBuf_calloc(FELICA_MAX_RF_FRAME_SIZE));
+    FelicaFrameinit(&FelicaFrame, BigBuf_calloc(FELICA_MAX_RF_FRAME_SIZE));
 
     felica_nexttransfertime = 2 * DELAY_ARM2AIR_AS_READER;  // 418
     // iso18092_set_timeout(2120); // 106 * 20ms  maximum start-up time of card
@@ -710,7 +781,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
         if (AT91C_BASE_SSC->SSC_SR & AT91C_SSC_RXRDY) {
 
             uint8_t dist = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
-            Process18092Byte(dist);
+            Process18092Byte(&FelicaFrame, dist);
 
             if ((dist >= 178) && (++trigger_cnt > triggersToSkip)) {
                 Dbprintf("triggers To skip kicked %d", dist);
@@ -734,7 +805,7 @@ void felica_sniff(uint32_t samplesToSkip, uint32_t triggersToSkip) {
                          NULL,
                          isReaderFrame
                         );
-                FelicaFrameReset();
+                FelicaFrameReset(&FelicaFrame);
             }
         }
     }
@@ -822,7 +893,7 @@ void felica_sim_lite(const uint8_t *uid) {
 
                 uint8_t dist = (uint8_t)(AT91C_BASE_SSC->SSC_RHR);
                 // frtm = GetCountSspClk();
-                Process18092Byte(dist);
+                Process18092Byte(&FelicaFrame, dist);
 
                 if (FelicaFrame.state == STATE_FULL) {
 
@@ -859,10 +930,10 @@ void felica_sim_lite(const uint8_t *uid) {
                             listenmode = false;
                         }
                         // clear frame
-                        FelicaFrameReset();
+                        FelicaFrameReset(&FelicaFrame);
                     } else {
                         // frame invalid, clear it out to allow for the next one
-                        FelicaFrameReset();
+                        FelicaFrameReset(&FelicaFrame);
                     }
                 }
             }
@@ -878,7 +949,7 @@ void felica_sim_lite(const uint8_t *uid) {
             // switch back
             FpgaWriteConfWord(FPGA_MAJOR_MODE_HF_ISO18092 | FPGA_HF_ISO18092_FLAG_NOMOD);
 
-            FelicaFrameReset();
+            FelicaFrameReset(&FelicaFrame);
             listenmode = true;
             curlen = 0;
             curresp = NULL;

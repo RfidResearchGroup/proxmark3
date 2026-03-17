@@ -37,6 +37,13 @@ make clean
 make SKIPQT=1
 ```
 
+or to force a fallback to Qt5 even when Qt6 is installed
+
+```
+make clean
+make SKIPQT6=1
+```
+
 On Linux hosts, if the Bluez headers and library are present, the client will be compiled with native Bluetooth support. It's possible to explicitly skip Bluetooth support with:
 
 ```
@@ -104,7 +111,7 @@ You can also define multiple options like
 ^[Top](#top)
 
 The Iceman repository gives you to easily choose which standalone mode to embed in the firmware.
-
+Documentation for each standalone mode can be found in the [Standalone Modes Index](../../armsrc/Standalone/readme.md#individual-mode-documentation).
 Here are the supported values you can assign to `STANDALONE` in `Makefile.platform`:
 
 | STANDALONE      | DESCRIPTION                            |

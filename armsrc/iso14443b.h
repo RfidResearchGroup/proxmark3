@@ -49,6 +49,7 @@ int read_14b_srx_block(uint8_t blocknr, uint8_t *block);
 int iso14443b_select_srx_card(iso14b_card_select_t *card);
 void SniffIso14443b(void);
 void SendRawCommand14443B(iso14b_raw_cmd_t *p);
+void ST25TB_TearOff(const uint8_t *data);
 void CodeAndTransmit14443bAsReader(const uint8_t *cmd, int len, uint32_t *start_time, uint32_t *eof_time, bool framing);
 
 // 14b config

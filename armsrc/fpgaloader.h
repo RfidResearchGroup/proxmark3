@@ -172,6 +172,7 @@ void SetupSpi(int mode);
 bool FpgaSetupSscDma(uint8_t *buf, uint16_t len);
 void Fpga_print_status(void);
 int FpgaGetCurrent(void);
+void FpgaResetBitstream(void);
 void SetAdcMuxFor(uint32_t whichGpio);
 
 // extern and generel turn off the antenna method

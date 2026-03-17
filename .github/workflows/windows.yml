@@ -7,13 +7,14 @@ on:
       - 'docker/**'
       - 'traces/**'
       - '.vscode/**'
+      - '**.md'
   pull_request:
     paths-ignore:
       - 'doc/**'
       - 'docker/**'
       - 'traces/**'
       - '.vscode/**'
-
+      - '**.md'
 
 jobs:
   proxspace:
@@ -46,7 +47,19 @@ jobs:
 
       - name: ProxSpace initial startup
         working-directory: C:\ProxSpace
-        run: ./runme64.bat -c "exit"
+        run: |
+            $maxAttempts = 3
+            $delay = 20
+            for ($i = 1; $i -le $maxAttempts; $i++) {
+                Write-Host "Attempt $i..."
+                ./runme64.bat -c "exit"
+                if ($LASTEXITCODE -eq 0) { 
+                    ./runme64.bat -c "pacman -Syu --noconfirm mingw-w64-x86_64-qt6-base"
+                    exit 0
+                }
+                if ($i -lt $maxAttempts) { Start-Sleep -Seconds $delay }
+            }
+            exit 1
 
       - uses: actions/checkout@v4
 
@@ -98,9 +111,9 @@ jobs:
 
     steps:
       - name: WSL setup
-        uses: Vampire/setup-wsl@v3
+        uses: Vampire/setup-wsl@v5
         with:
-          distribution: Ubuntu-22.04
+          distribution: Ubuntu-24.04
           update: "true"
           additional-packages: git
             ca-certificates
@@ -111,25 +124,17 @@ jobs:
             libnewlib-dev
             libbz2-dev
             liblz4-dev
-            qtbase5-dev
+            qt6-base-dev
             cmake
             libpython3-dev
-            python3
-            python3-pip
-            python3-dev
-            libpython3-all-dev
             libssl-dev
             libgd-dev
 
-      - name: Install Python dependencies
+      - name: Install uv
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install setuptools
-          python3 -m pip install ansicolors sslcrypto
-
-      - name: WSL QT fix
-        run: sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5
-
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          install -m 0755 /root/.local/bin/uv /usr/local/bin/
+          install -m 0755 /root/.local/bin/uvx /usr/local/bin/
       - name: Set git to use LF
         shell: bash
         run: |

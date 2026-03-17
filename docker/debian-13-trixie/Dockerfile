@@ -1,8 +1,7 @@
 FROM debian:trixie-slim
 
-ENV LANG=C
+ENV LANG=C.UTF-8
 ENV DEBIAN_FRONTEND=noninteractive
-# qtbase5-dev skipped
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get dist-upgrade -y && \
@@ -11,6 +10,12 @@ RUN apt-get update && \
 
 RUN apt-get install -y opencl-dev && \
     apt-get clean
+
+ARG SKIPQT=false
+RUN if [ "${SKIPQT}" = "false" ]; then \
+      apt-get install -y qt6-base-dev && \
+      apt-get clean; \
+    fi
 
 # uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -21,9 +26,9 @@ RUN passwd -d rrg
 ARG UART_GID
 # dialout group may already exist on another numeric ID than on host
 RUN if [ -n "${UART_GID}" ]; then \
-    groupadd -g ${UART_GID} mydialout || true; \
-    usermod -aG ${UART_GID} rrg; \
-  fi
+      groupadd -g ${UART_GID} mydialout || true; \
+      usermod -aG ${UART_GID} rrg; \
+    fi
 RUN printf 'rrg ALL=(ALL) ALL\n' | tee -a /etc/sudoers
 
 USER rrg

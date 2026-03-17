@@ -408,6 +408,78 @@
         "Type": "pacs"
     },
     {
+        "AID": "F51CD8",
+        "Vendor": "LEAF",
+        "Country": "N/A",
+        "Name": "LEAF Si Universal",
+        "Description": "LEAF Si Universal",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F51CD9",
+        "Vendor": "LEAF",
+        "Country": "N/A",
+        "Name": "LEAF Si Universal",
+        "Description": "LEAF Si Universal",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F51CDB",
+        "Vendor": "LEAF",
+        "Country": "N/A",
+        "Name": "LEAF Cc Enterprise",
+        "Description": "LEAF Cc Enterprise",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F51CDE",
+        "Vendor": "LEAF",
+        "Country": "N/A",
+        "Name": "LEAF Cc Enterprise (Old)",
+        "Description": "LEAF Cc Enterprise (Old)",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F51CDF",
+        "Vendor": "LEAF",
+        "Country": "N/A",
+        "Name": "LEAF Cc Enterprise (Apple Wallet)",
+        "Description": "LEAF Cc Enterprise app found on Apple Wallet credentials",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F532F0",
+        "Vendor": "LEAF",
+        "Country": "N/A",
+        "Name": "LEAF Backwards Compat",
+        "Description": "LEAF Backwards Compat",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F51CDC",
+        "Vendor": "LEAF",
+        "Country": "N/A",
+        "Name": "LEAF Campus",
+        "Description": "LEAF Campus",
+        "Type": "pacs"
+    },
+    {
+        "AID": "42494F",
+        "Vendor": "LEAF",
+        "Country": "N/A",
+        "Name": "LEAF Biometrics",
+        "Description": "LEAF Biometrics",
+        "Type": "pacs"
+    },
+    {
+        "AID": "F532F1",
+        "Vendor": "LEAF",
+        "Country": "N/A",
+        "Name": "LEAF User Privileges",
+        "Description": "LEAF User Privileges",
+        "Type": "pacs"
+    },
+    {
         "AID": "F534F1",
         "Vendor": "MOBOTIX AG",
         "Country": "DE",

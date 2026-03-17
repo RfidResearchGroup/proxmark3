@@ -78,6 +78,8 @@ extern session_arg_t g_session;
 #define PROMPT_CLEARLINE PrintAndLogEx(INPLACE, "                                          \r")
 void PrintAndLogOptions(const char *str[][2], size_t size, size_t space);
 void PrintAndLogEx(logLevel_t level, const char *fmt, ...);
+void PrintAndLogInfoHeaderWithWidth(const char *title, size_t width);
+void PrintAndLogInfoHeader(const char *title);
 void SetFlushAfterWrite(bool value);
 bool GetFlushAfterWrite(void);
 void memcpy_filter_ansi(void *dest, const void *src, size_t n, bool filter);

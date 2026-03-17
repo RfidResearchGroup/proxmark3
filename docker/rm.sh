@@ -10,3 +10,4 @@ if [ -n "$CONTAINER" ]; then
     docker rm $CONTAINER
 fi
 docker image rm "$DOCKER_IMAGE"
+docker builder prune --force

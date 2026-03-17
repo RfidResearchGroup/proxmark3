@@ -59,8 +59,8 @@ Install the requirements
 
 ```sh
 sudo apt-get install --no-install-recommends git ca-certificates build-essential pkg-config \
-libreadline-dev gcc-arm-none-eabi libnewlib-dev qtbase5-dev \
-libbz2-dev liblz4-dev libbluetooth-dev libpython3-dev libssl-dev libgd-dev
+libreadline-dev gcc-arm-none-eabi libnewlib-dev qt6-base-dev \
+libbz2-dev liblz4-dev zlib1g-dev libbluetooth-dev libpython3-dev libssl-dev libgd-dev
 ```
 
 ### If you don't need... 
@@ -68,10 +68,13 @@ libbz2-dev liblz4-dev libbluetooth-dev libpython3-dev libssl-dev libgd-dev
 you can skip the installation of `libbluetooth-dev`.
 
 👉 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`),  
-you can skip the installation of `qtbase5-dev`.
+you can skip the installation of `qt6-base-dev`.
 
 👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
 you can skip the installation of `libpython3-dev`.
+
+👉 If you don't need support for decompressing compressed Google Smart Tap payloads in the Proxmark3 client,
+you can skip the installation of `zlib1g-dev`.
 
 👉 If you don't need support for NFC ePaper devices,  
 you can skip the installation of `libgd-dev`.
@@ -86,7 +89,7 @@ you may have to install `libcanberra-gtk-module`.
 
 ```sh
 sudo pacman -Syu git base-devel readline bzip2 lz4 arm-none-eabi-gcc \
-arm-none-eabi-newlib qt5-base bluez python gd --needed
+arm-none-eabi-newlib qt6-base bluez python gd --needed
 ```
 
 ### If you don't need... 
@@ -94,7 +97,7 @@ arm-none-eabi-newlib qt5-base bluez python gd --needed
 you can skip the installation of `bluez`.
 
 👉 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`),  
-you can skip the installation of `qt5-base`.
+you can skip the installation of `qt6-base`.
 
 👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
 you can skip the installation of `python`.
@@ -108,7 +111,7 @@ you can skip the installation of `gd`.
 
 ```sh
 sudo dnf install git make gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib \
-readline-devel bzip2-devel lz4-devel qt5-qtbase-devel bluez-libs-devel \
+readline-devel bzip2-devel lz4-devel qt6-qtbase-devel bluez-libs-devel \
 python3-devel libatomic openssl-devel gd-devel
 ```
 
@@ -117,7 +120,7 @@ python3-devel libatomic openssl-devel gd-devel
 you can skip the installation of `bluez-libs-devel`.
 
 👉 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`),  
-you can skip the installation of `qt5-qtbase-devel`.
+you can skip the installation of `qt6-qtbase-devel`.
 
 👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
 you can skip the installation of `python3-devel`.
@@ -140,19 +143,32 @@ sudo zypper install cross-arm-none-eabi-gcc15 cross-arm-none-eabi-newlib
 
 Note that Bluez is not available on openSUSE Leap so the native Bluetooth support won't be available in the client.
 
+Note that the instructions above are for an usage with Qt5. In case of conflict with the presence of development files of Qt6, you can force Qt5 with `make SKIPQT6=1`.
+
+It is possible to compile the proxmark3 client with Qt6 but with some caveats because the default compiler is GCC 7 and Qt6 requires at least GCC 8:
+- install `gcc15 gcc15-c++` instead of `gcc-c++`
+- install `qt6-core-devel qt6-widgets-devel` instead of `libqt5-qtbase-devel`
+- set default compiler to GCC 15 instead of GCC 7
+```
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-15 100 && \
+sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-15 100 && \
+sudo update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-15 100 && \
+sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-15 100
+```
+
 ## On openSUSE Tumbleweed
 ^[Top](#top)
 
 ```sh
 sudo zypper install git patterns-devel-base-devel_basis gcc-c++ \
 readline-devel libbz2-devel liblz4-devel bluez-devel \
-python3-devel libqt5-qtbase-devel libopenssl-devel gd-devel \
+python3-devel qt6-core-devel qt6-widgets-devel libopenssl-devel gd-devel \
 cross-arm-none-gcc12 cross-arm-none-newlib-devel
 ```
 
 ### If you don't need... 
 👉 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`),  
-you can skip the installation of `libqt5-qtbase-devel`.
+you can skip the installation of `qt6-core-devel qt6-widgets-devel`.
 
 👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
 you can skip the installation of `python3-devel`.
@@ -160,6 +176,28 @@ you can skip the installation of `python3-devel`.
 👉 If you don't need support for NFC ePaper devices,  
 you can skip the installation of `gd-devel`.
 
+
+## On NixOS
+^[Top](#top)
+
+While in the cloned proxmark repo, run
+```sh
+nix-shell tools/shell.nix
+```
+This will bring in all required packages to build the client and firmware with all available features.
+
+Please note, the shell does not change device permissions, so your user must be a part of the dialout group. see [here](https://nixos.wiki/wiki/Serial_Console) for information on adding your user to that group.
+
+
+### If you don't need...
+👉 If you don't need the graphical components of the Proxmark3 client (such as in `hw tune`),  
+you can comment out `qt6Packages.qtbase` and  `qt6Packages.wrapQtAppsHook` in shell.nix.
+
+👉 If you don't need support for Python3 scripts in the Proxmark3 client,  
+you can comment out `python3` in shell.nix.
+
+👉 If you don't need support for NFC ePaper devices,  
+you can comment out `gd` in shell.nix.
 
 # Clone the repository
 ^[Top](#top)
