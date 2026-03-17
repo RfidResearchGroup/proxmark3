@@ -151,7 +151,7 @@ C_FAIL='\xe2\x9d\x8c'
 
 # Check if file exists
 function CheckFileExist() {
-  printf "%-40s" "$1 "
+  printf "%-47s" "$1 "
   if [ -f "$2" ]; then
     echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
     return 0
@@ -184,7 +184,7 @@ function CaptureCommandOutput() {
 
 # Execute command and check result
 function CheckExecute() {
-  printf "%-40s" "$1 "
+  printf "%-47s" "$1 "
   
   start=$(date +%s)
   TIMEINFO=""
@@ -205,7 +205,7 @@ function CheckExecute() {
 }
 
 function CheckOutputContains() {
-  printf "%-40s" "$1 "
+  printf "%-47s" "$1 "
   RES=$(CaptureCommandOutput "$2")
   if printf '%s' "$RES" | grep -F -q "$3"; then
     echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
@@ -221,7 +221,7 @@ function CheckOutputContainsAll() {
   local LABEL="$1"
   local CMD="$2"
   shift 2
-  printf "%-40s" "$LABEL "
+  printf "%-47s" "$LABEL "
   RES=$(CaptureCommandOutput "$CMD")
   while [ "$#" -gt 0 ]; do
     if ! printf '%s' "$RES" | grep -F -q "$1"; then
@@ -407,7 +407,7 @@ function CheckMifareEncodeHidFixture() {
     echo "Failed to read MIFARE block 5 for $LABEL --bin"
     return 1
   fi
-  printf "%-40s" "read $LABEL block 5 from --bin "
+  printf "%-47s" "read $LABEL block 5 from --bin "
   echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
   if [ -n "$EXPECTED_BLOCK5" ] && ! printf '%s' "$MIFARE_BLOCK5_BIN" | grep -F -q "$(printf '%s' "$EXPECTED_BLOCK5" | sed 's/../& /g; s/ $//')"; then
     echo "Expected block 5 not found for $LABEL --bin"
@@ -422,7 +422,7 @@ function CheckMifareEncodeHidFixture() {
     echo "$MIFARE_BLOCK5_RAW"
     return 1
   fi
-  printf "%-40s" "compare $LABEL block 5 --raw "
+  printf "%-47s" "compare $LABEL block 5 --raw "
   echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
 
   if ! CheckExecute "encode $LABEL --new to emulator" "$PM3BIN -c 'hf mf encodehid --new $WIEGAND_FIXTURE_NEW --emu'" "Credential written to emulator memory"; then return 1; fi
@@ -432,23 +432,46 @@ function CheckMifareEncodeHidFixture() {
     echo "$MIFARE_BLOCK5_NEW"
     return 1
   fi
-  printf "%-40s" "compare $LABEL block 5 --new "
+  printf "%-47s" "compare $LABEL block 5 --new "
   echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
   return 0
+}
+
+function BinToNewPacs() {
+  local BIN="$1"
+  local BIN_LEN=${#BIN}
+  local PAD=$(( (8 - (BIN_LEN % 8)) % 8 ))
+  local PADDED_BIN="$BIN"
+  local HEX
+  local CHUNK
+  local I
+
+  if [[ -z "$BIN" || "$BIN" =~ [^01] ]]; then
+    return 1
+  fi
+
+  for ((I = 0; I < PAD; I++)); do
+    PADDED_BIN="${PADDED_BIN}0"
+  done
+
+  HEX=$(printf "%02X" "$PAD")
+  for ((I = 0; I < ${#PADDED_BIN}; I += 8)); do
+    CHUNK=${PADDED_BIN:I:8}
+    HEX="${HEX}$(printf "%02X" "$((2#$CHUNK))")"
+  done
+
+  printf "%s\n" "$HEX"
 }
 
 function CheckMifareEncodeHidLongNewFixture() {
   local LABEL="$1"
   local BIN="$2"
   local EXPECTED_BLOCK5="$3"
-  local RES
   local LONG_NEW
 
-  RES=$($PM3BIN -c "wiegand encode --bin $BIN --new -v")
-  LONG_NEW=$(printf '%s\n' "$RES" | sed -n 's/.*New PACS......... .*0x \([0-9A-Fa-f][0-9A-Fa-f]*\).*/\1/p' | tail -n 1)
+  LONG_NEW=$(BinToNewPacs "$BIN")
   if [ -z "$LONG_NEW" ]; then
     echo "Failed to derive $LABEL long new PACS fixture"
-    echo "$RES"
     return 1
   fi
 
@@ -458,7 +481,7 @@ function CheckMifareEncodeHidLongNewFixture() {
     echo "Failed to read MIFARE block 5 for $LABEL --bin"
     return 1
   fi
-  printf "%-40s" "read $LABEL block 5 from --bin "
+  printf "%-47s" "read $LABEL block 5 from --bin "
   echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
   if [ -n "$EXPECTED_BLOCK5" ] && ! printf '%s' "$MIFARE_BLOCK5_BIN" | grep -F -q "$(printf '%s' "$EXPECTED_BLOCK5" | sed 's/../& /g; s/ $//')"; then
     echo "Expected block 5 not found for $LABEL --bin"
@@ -473,7 +496,7 @@ function CheckMifareEncodeHidLongNewFixture() {
     echo "$MIFARE_BLOCK5_NEW"
     return 1
   fi
-  printf "%-40s" "compare $LABEL block 5 --new "
+  printf "%-47s" "compare $LABEL block 5 --new "
   echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
   return 0
 }
@@ -517,7 +540,7 @@ function CheckIClassEncodeFixture() {
   fi
 
   CHAIN_CMD="$PM3BIN -c 'hf iclass encode --bin $WIEGAND_FIXTURE_BIN --emu$ENC_ARGS$KEY_ARGS; hf iclass eview'"
-  printf "%-40s" "encode $LABEL iClass --bin "
+  printf "%-47s" "encode $LABEL iClass --bin "
   RES=$(eval "$CHAIN_CMD")
   CLEAN_RES=$(printf '%s' "$RES" | sed -E 's/\x1B\[[0-9;?]*[[:alpha:]]//g')
   if ! printf '%s' "$CLEAN_RES" | grep -F -q "uploaded 256 bytes to emulator memory"; then
@@ -554,7 +577,7 @@ function CheckIClassEncodeFixture() {
     echo "$RES"
     return 1
   fi
-  printf "%-40s" "compare $LABEL iClass --raw "
+  printf "%-47s" "compare $LABEL iClass --raw "
   echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
 
   CHAIN_CMD="$PM3BIN -c 'hf iclass encode --new $WIEGAND_FIXTURE_NEW --emu$ENC_ARGS$KEY_ARGS; hf iclass eview'"
@@ -566,7 +589,7 @@ function CheckIClassEncodeFixture() {
     echo "$RES"
     return 1
   fi
-  printf "%-40s" "compare $LABEL iClass --new "
+  printf "%-47s" "compare $LABEL iClass --new "
   echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
 
   local WIEGAND_ENCODE_CMD="hf iclass encode -w $FORMAT --fc $FC --cn $CN --emu$ENC_ARGS$KEY_ARGS"
@@ -582,7 +605,7 @@ function CheckIClassEncodeFixture() {
     echo "$RES"
     return 1
   fi
-  printf "%-40s" "compare $LABEL iClass --wiegand "
+  printf "%-47s" "compare $LABEL iClass --wiegand "
   echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
 
   if ! CheckOutputContainsAll "view $LABEL iClass --emu" "$PM3BIN -c 'hf iclass view --emu'" \
@@ -631,17 +654,15 @@ function CheckIClassEncodeLongNewFixture() {
 
   LONG_NEW="$NEW"
   if [ -z "$LONG_NEW" ]; then
-    RES=$($PM3BIN -c "wiegand encode --bin $BIN --new -v")
-    LONG_NEW=$(printf '%s\n' "$RES" | sed -n 's/.*New PACS......... .*0x \([0-9A-Fa-f][0-9A-Fa-f]*\).*/\1/p' | tail -n 1)
+    LONG_NEW=$(BinToNewPacs "$BIN")
   fi
   if [ -z "$LONG_NEW" ]; then
     echo "Failed to derive $LABEL long new PACS fixture"
-    echo "$RES"
     return 1
   fi
 
   CHAIN_CMD="$PM3BIN -c 'hf iclass encode --bin $BIN --emu$ENC_ARGS$KEY_ARGS; hf iclass eview'"
-  printf "%-40s" "encode $LABEL iClass --bin "
+  printf "%-47s" "encode $LABEL iClass --bin "
   RES=$(eval "$CHAIN_CMD")
   CLEAN_RES=$(printf '%s' "$RES" | sed -E 's/\x1B\[[0-9;?]*[[:alpha:]]//g')
   if ! printf '%s' "$CLEAN_RES" | grep -F -q "uploaded 256 bytes to emulator memory"; then
@@ -666,7 +687,7 @@ function CheckIClassEncodeLongNewFixture() {
     echo "$RES"
     return 1
   fi
-  printf "%-40s" "compare $LABEL iClass --new "
+  printf "%-47s" "compare $LABEL iClass --new "
   echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
 
   if [ -n "$EXPECT_DECODE_RE" ]; then
@@ -689,7 +710,7 @@ function CheckIClassEncodeRewriteFixture() {
   local ICLASS_EVIEW
 
   CHAIN_CMD="$PM3BIN -c 'hf iclass encode --bin $FIRST_BIN --enc none --emu; hf iclass encode --bin $SECOND_BIN --enc none --emu; hf iclass eview'"
-  printf "%-40s" "rewrite $LABEL iClass --emu "
+  printf "%-47s" "rewrite $LABEL iClass --emu "
   RES=$(eval "$CHAIN_CMD")
   CLEAN_RES=$(printf '%s' "$RES" | sed -E 's/\x1B\[[0-9;?]*[[:alpha:]]//g')
   ICLASS_EVIEW=$(printf '%s\n' "$CLEAN_RES" | grep -E '[[:space:]][6-9]/0x0[6-9][[:space:]]+\|')
@@ -836,7 +857,7 @@ function CheckMifareEncodeHidCardFixture() {
   if [ "$BLOCK5_HEX" != "$EXPECTED_BLOCK5_HEX" ]; then echo "$BLOCK5"; return 1; fi
   if ! printf '%s' "$BLOCK7" | grep -F -q "78 77 88 AA"; then echo "$BLOCK7"; return 1; fi
 
-  printf "%-40s" "verify $LABEL card blocks "
+  printf "%-47s" "verify $LABEL card blocks "
   echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
 
   if ! CleanupEncodeHidCard; then return 1; fi
@@ -915,7 +936,7 @@ while true; do
       if ! CheckMifareEncodeHidFixture "H10301" "H10301" "31" "337" "" "020000000000000000000000063E02A3"; then break; fi
       if ! CheckMifareEncodeHidFixture "C1k35s" "C1k35s" "222" "12345" "" ""; then break; fi
       if ! CheckMifareEncodeHidFixture "P10001" "P10001" "12" "3456" "" ""; then break; fi
-      if ! CheckMifareEncodeHidLongNewFixture "96-bit direct PACS" "101010101100110011110000000011110101010110101010110011001111000000001111010101011010101011001100" "020000D5667807AAD5667807AAD56600"; then break; fi
+      if ! CheckMifareEncodeHidLongNewFixture "96-bit direct PACS" "101010101100110011110000000011110101010110101010110011001111000000001111010101011010101011001100" "02000001AACCF00F55AACCF00F55AACC"; then break; fi
 
       echo "  encodehid emulator fixture tests completed successfully!"
     fi
@@ -932,9 +953,9 @@ while true; do
       if ! CheckIClassEncodeFixture "C1k35s none" "C1k35s" "222" "12345" "" "" "" "" "" "none" "User / Cred" "C1k35s.*FC: 222.*CN: 12345"; then break; fi
       if ! CheckIClassEncodeLongNewFixture "96-bit direct PACS 2k3des" "101010101100110011110000000011110101010110101010110011001111000000001111010101011010101011001100" "" "" "" "" "" "" "Binary.*101010101100110011110000000011110101010110101010110011001111000000001111010101011010101011001100.*96"; then break; fi
       if ! CheckIClassEncodeLongNewFixture "96-bit direct PACS des" "101010101100110011110000000011110101010110101010110011001111000000001111010101011010101011001100" "" "" "" "" "" "des" "Binary.*101010101100110011110000000011110101010110101010110011001111000000001111010101011010101011001100.*96"; then break; fi
-      if ! CheckIClassEncodeLongNewFixture "96-bit direct PACS none" "101010101100110011110000000011110101010110101010110011001111000000001111010101011010101011001100" "" "03 03 03 03 00 03 E0 14" "AA CC F0 0F 55 AA CC F0" "00 00 00 01 AA CC F0 0F" "00 00 00 00 00 00 00 00" "none" "Binary.*101010101100110011110000000011110101010110101010110011001111000000001111010101011010101011001100.*96"; then break; fi
+      if ! CheckIClassEncodeLongNewFixture "96-bit direct PACS none" "101010101100110011110000000011110101010110101010110011001111000000001111010101011010101011001100" "" "03 03 03 03 00 03 E0 14" "55 AA CC F0 0F 55 AA CC" "00 00 00 01 AA CC F0 0F" "00 00 00 00 00 00 00 00" "none" "Binary.*101010101100110011110000000011110101010110101010110011001111000000001111010101011010101011001100.*96"; then break; fi
       if ! CheckIClassEncodeLongNewFixture "120-bit direct PACS none" "101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010" "00AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" "03 03 03 03 00 03 E0 14" "AA AA AA AA AA AA AA AA" "01 AA AA AA AA AA AA AA" "00 00 00 00 00 00 00 00" "none" "Recovered legacy PACS payload exceeds 96 bits|Binary.*101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010.*120"; then break; fi
-      if ! CheckIClassEncodeLongNewFixture "128-bit direct PACS none" "10101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010" "" "03 03 03 03 00 03 E0 14" "AA AA AA AA AA AA AA AA" "AA AA AA AA AA AA AA AA" "00 00 00 00 00 00 00 01" "none" "Recovered legacy PACS payload exceeds 96 bits|Binary.*10101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010.*128"; then break; fi
+      if ! CheckIClassEncodeLongNewFixture "128-bit direct PACS none" "10101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010" "00AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" "03 03 03 03 00 03 E0 14" "AA AA AA AA AA AA AA AA" "AA AA AA AA AA AA AA AA" "00 00 00 00 00 00 00 01" "none" "Recovered legacy PACS payload exceeds 96 bits|Binary.*10101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010.*128"; then break; fi
       if ! CheckIClassEncodeLongNewFixture "143-bit direct PACS none" "$(printf '10%.0s' {1..71}; printf '1')" "00AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" "03 03 03 03 00 03 E0 14" "55 55 55 55 55 55 55 55" "55 55 55 55 55 55 55 55" "00 00 00 00 00 00 D5 55" "none" "Recovered legacy PACS payload exceeds 96 bits|Binary.*143"; then break; fi
       if ! CheckExecute "144-bit iClass payload reject" "$PM3BIN -c 'hf iclass encode --bin $(printf '10%.0s' {1..72}) --enc none --emu' 2>&1" "Encoded Wiegand payload is too large to fit in the iCLASS credential"; then break; fi
       if ! CheckIClassEncodeRewriteFixture "128-bit then 32-bit plaintext" "10101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010" "01010101010101010101010101010101" "03 03 03 03 00 03 E0 14" "00 00 00 01 55 55 55 55" "00 00 00 00 00 00 00 00" "00 00 00 00 00 00 00 00"; then break; fi

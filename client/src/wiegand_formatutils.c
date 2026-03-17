@@ -359,7 +359,7 @@ int wiegand_pack_from_plain_bin(const char *binstr, wiegand_input_t *input) {
         return res;
     }
 
-    if (input->bin_len > 96) {
+    if (input->bin_len > 84) {
         input->packed_valid = false;
         return PM3_SUCCESS;
     }
@@ -375,7 +375,7 @@ int wiegand_pack_from_new_pacs(const uint8_t *pacs, size_t pacs_len, wiegand_inp
         return res;
     }
 
-    if (input->bin_len > 96) {
+    if (input->bin_len > 84) {
         input->packed_valid = false;
         return PM3_SUCCESS;
     }
