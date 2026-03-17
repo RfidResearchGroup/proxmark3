@@ -32,6 +32,8 @@ typedef struct {
 typedef struct {
     const char *aid;
     const uint8_t aid_length;
+    const char *select_response_match;
+    const uint8_t select_response_match_length;
     const char *desc;
     const char *hint;
 } hintAIDList_t;
