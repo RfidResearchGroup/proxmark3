@@ -3597,6 +3597,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
         arg_param_begin,
         arg_str0("k", "key", "<hex>", "Access key as 8 hex bytes"),
         arg_int0(NULL, "ki", "<dec>", "Key index to select key from memory 'hf iclass managekeys'"),
+        arg_lit0(NULL, "credit", "key is assumed to be the credit key"),
         arg_int0("s", NULL, "<dec>", "tearoff delay start (in us) must be between 1 and 43000 (43ms). Precision is about 1/3 us"),
         arg_int0("i", NULL, "<dec>", "tearoff delay increment (in us) - default 10"),
         arg_int0("e", NULL, "<dec>", "tearoff delay end (in us) must be a higher value than the start delay"),
@@ -3618,22 +3619,22 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     uint8_t mac[4] = {0};
 
 
-    int tearoff_start = arg_get_int_def(ctx, 3, 1700);
+    int tearoff_start = arg_get_int_def(ctx, 4, 1700);
     int tearoff_original_start = tearoff_start; // save original start value for later use
-    int tearoff_increment = arg_get_int_def(ctx, 4, 5);
-    int tearoff_end = arg_get_int_def(ctx, 5, tearoff_start + 200); //1900 default
+    int tearoff_increment = arg_get_int_def(ctx, 5, 5);
+    int tearoff_end = arg_get_int_def(ctx, 6, tearoff_start + 200); //1900 default
 
     int otp_len = 0;
     uint8_t otp[2] = {0};
-    CLIGetHexWithReturn(ctx, 6, otp, &otp_len);
+    CLIGetHexWithReturn(ctx, 7, otp, &otp_len);
 
-    bool verbose = arg_get_lit(ctx, 7);
-    bool shallow_mod = arg_get_lit(ctx, 8);
+    bool verbose = arg_get_lit(ctx, 8);
+    bool shallow_mod = arg_get_lit(ctx, 9);
     bool elite = false;
     bool rawkey = false;
     bool use_replay = false; //not implemented in this mode
     bool read_auth = false;
-    bool use_credit_key = true;
+    bool use_credit_key = arg_get_lit(ctx, 3);
     int tearoff_loop = 1;
     int tearoff_sleep = 0;
 
@@ -6656,7 +6657,7 @@ static command_t CommandTable[] = {
     {"legrec",      CmdHFiClassLegacyRecover,   IfPm3Iclass,     "Recovers 24 bits of the diversified key of a legacy card provided a valid nr-mac combination"},
     {"legbrute",    CmdHFiClassLegBrute,        AlwaysAvailable, "Bruteforces 40 bits of a partial diversified key, provided 24 bits of the key and two valid nr-macs"},
     {"unhash",      CmdHFiClassUnhash,          AlwaysAvailable, "Reverses a diversified key to retrieve hash0 pre-images after DES encryption"},
-    {"blacktears",  CmdHFiClass_BlackTears,     IfPm3Iclass,     "Performs tearoff attack on iCLASS for key recovery"},
+    {"blacktears",  CmdHFiClass_BlackTears,     IfPm3Iclass,     "Automated tearoff attack on new silicon cards to enable non-secure page mode"},
     {"-----------", CmdHelp,                    IfPm3Iclass,     "-------------------- " _CYAN_("Simulation") " -------------------"},
     {"sim",         CmdHFiClassSim,             IfPm3Iclass,     "Simulate iCLASS tag"},
     {"eload",       CmdHFiClassELoad,           IfPm3Iclass,     "Upload file into emulator memory"},
