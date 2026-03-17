@@ -44,7 +44,7 @@ typedef struct {
 
 typedef struct {
     size_t bin_len;
-    char binstr[121];
+    char binstr[145];
     bool packed_valid;
     wiegand_message_t packed;
 } wiegand_input_t;

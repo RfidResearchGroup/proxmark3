@@ -359,6 +359,11 @@ int wiegand_pack_from_plain_bin(const char *binstr, wiegand_input_t *input) {
         return res;
     }
 
+    if (input->bin_len > 96) {
+        input->packed_valid = false;
+        return PM3_SUCCESS;
+    }
+
     res = wiegand_pack_bin_with_hid_header(input->binstr, &input->packed);
     input->packed_valid = (res == PM3_SUCCESS);
     return res;
@@ -368,6 +373,11 @@ int wiegand_pack_from_new_pacs(const uint8_t *pacs, size_t pacs_len, wiegand_inp
     int res = wiegand_set_new_pacs_binstr(pacs, pacs_len, input);
     if (res != PM3_SUCCESS) {
         return res;
+    }
+
+    if (input->bin_len > 96) {
+        input->packed_valid = false;
+        return PM3_SUCCESS;
     }
 
     res = wiegand_pack_bin_with_hid_header(input->binstr, &input->packed);

@@ -601,6 +601,80 @@ function CheckIClassEncodeFixture() {
   return 0
 }
 
+function CheckIClassEncodeLongNewFixture() {
+  local LABEL="$1"
+  local BIN="$2"
+  local NEW="$3"
+  local EXPECT6="$4"
+  local EXPECT7="$5"
+  local EXPECT8="$6"
+  local EXPECT9="$7"
+  local ENC_MODE="$8"
+  local EXPECT_DECODE_RE="$9"
+  local ICLASS_ENCODE_KEY="000102030405060708090A0B0C0D0E0F"
+  local ENC_ARGS=""
+  local KEY_ARGS=" --enckey $ICLASS_ENCODE_KEY"
+  local CHAIN_DECODE_CMD="hf iclass decrypt --emu -k $ICLASS_ENCODE_KEY --ns; hf iclass decrypt --emu -k $ICLASS_ENCODE_KEY --ns"
+  local LONG_NEW
+  local RES
+  local CLEAN_RES
+  local ICLASS_EVIEW_BIN
+  local CHAIN_CMD
+
+  if [ -n "$ENC_MODE" ]; then
+    ENC_ARGS=" --enc $ENC_MODE"
+  fi
+  if [ "$ENC_MODE" = "none" ]; then
+    KEY_ARGS=""
+    CHAIN_DECODE_CMD="hf iclass decrypt --emu --ns; hf iclass decrypt --emu --ns"
+  fi
+
+  LONG_NEW="$NEW"
+  if [ -z "$LONG_NEW" ]; then
+    RES=$($PM3BIN -c "wiegand encode --bin $BIN --new -v")
+    LONG_NEW=$(printf '%s\n' "$RES" | sed -n 's/.*New PACS......... .*0x \([0-9A-Fa-f][0-9A-Fa-f]*\).*/\1/p' | tail -n 1)
+  fi
+  if [ -z "$LONG_NEW" ]; then
+    echo "Failed to derive $LABEL long new PACS fixture"
+    echo "$RES"
+    return 1
+  fi
+
+  CHAIN_CMD="$PM3BIN -c 'hf iclass encode --bin $BIN --emu$ENC_ARGS$KEY_ARGS; hf iclass eview'"
+  printf "%-40s" "encode $LABEL iClass --bin "
+  RES=$(eval "$CHAIN_CMD")
+  CLEAN_RES=$(printf '%s' "$RES" | sed -E 's/\x1B\[[0-9;?]*[[:alpha:]]//g')
+  if ! printf '%s' "$CLEAN_RES" | grep -F -q "uploaded 256 bytes to emulator memory"; then
+    echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+    echo "Execution trace:"
+    echo "$RES"
+    return 1
+  fi
+  ICLASS_EVIEW_BIN=$(printf '%s\n' "$CLEAN_RES" | grep -E '[[:space:]][6-9]/0x0[6-9][[:space:]]+\|')
+  if [ -n "$EXPECT6" ] && ! printf '%s' "$ICLASS_EVIEW_BIN" | grep -F -q "$EXPECT6"; then echo "$ICLASS_EVIEW_BIN"; return 1; fi
+  if [ -n "$EXPECT7" ] && ! printf '%s' "$ICLASS_EVIEW_BIN" | grep -F -q "$EXPECT7"; then echo "$ICLASS_EVIEW_BIN"; return 1; fi
+  if [ -n "$EXPECT8" ] && ! printf '%s' "$ICLASS_EVIEW_BIN" | grep -F -q "$EXPECT8"; then echo "$ICLASS_EVIEW_BIN"; return 1; fi
+  if [ -n "$EXPECT9" ] && ! printf '%s' "$ICLASS_EVIEW_BIN" | grep -F -q "$EXPECT9"; then echo "$ICLASS_EVIEW_BIN"; return 1; fi
+  echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
+
+  CHAIN_CMD="$PM3BIN -c 'hf iclass encode --new $LONG_NEW --emu$ENC_ARGS$KEY_ARGS; hf iclass eview'"
+  RES=$(eval "$CHAIN_CMD")
+  CLEAN_RES=$(printf '%s' "$RES" | sed -E 's/\x1B\[[0-9;?]*[[:alpha:]]//g')
+  ICLASS_EVIEW_NEW=$(printf '%s\n' "$CLEAN_RES" | grep -E '[[:space:]][6-9]/0x0[6-9][[:space:]]+\|')
+  if [ "$ICLASS_EVIEW_NEW" != "$ICLASS_EVIEW_BIN" ]; then
+    echo "iClass emulator mismatch for $LABEL --new"
+    echo "$RES"
+    return 1
+  fi
+  printf "%-40s" "compare $LABEL iClass --new "
+  echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK}"
+
+  if [ -n "$EXPECT_DECODE_RE" ]; then
+    if ! CheckExecute "decrypt $LABEL iClass --emu" "$PM3BIN -c '$CHAIN_DECODE_CMD'" "$EXPECT_DECODE_RE"; then return 1; fi
+  fi
+  return 0
+}
+
 function CheckLFCloneFixture() {
   local LABEL="$1"
   local FORMAT="$2"
@@ -823,6 +897,13 @@ while true; do
       if ! CheckIClassEncodeFixture "C1k35s 2k3des" "C1k35s" "222" "12345" "" "" "" "" "" "" "User / Enc Cred" "C1k35s.*FC: 222.*CN: 12345"; then break; fi
       if ! CheckIClassEncodeFixture "C1k35s des" "C1k35s" "222" "12345" "" "" "" "" "" "des" "User / Enc Cred" "C1k35s.*FC: 222.*CN: 12345"; then break; fi
       if ! CheckIClassEncodeFixture "C1k35s none" "C1k35s" "222" "12345" "" "" "" "" "" "none" "User / Cred" "C1k35s.*FC: 222.*CN: 12345"; then break; fi
+      if ! CheckIClassEncodeLongNewFixture "96-bit direct PACS 2k3des" "101010101100110011110000000011110101010110101010110011001111000000001111010101011010101011001100" "" "" "" "" "" "" "Binary.*101010101100110011110000000011110101010110101010110011001111000000001111010101011010101011001100.*96"; then break; fi
+      if ! CheckIClassEncodeLongNewFixture "96-bit direct PACS des" "101010101100110011110000000011110101010110101010110011001111000000001111010101011010101011001100" "" "" "" "" "" "des" "Binary.*101010101100110011110000000011110101010110101010110011001111000000001111010101011010101011001100.*96"; then break; fi
+      if ! CheckIClassEncodeLongNewFixture "96-bit direct PACS none" "101010101100110011110000000011110101010110101010110011001111000000001111010101011010101011001100" "" "03 03 03 03 00 03 E0 14" "AA CC F0 0F 55 AA CC F0" "00 00 00 01 AA CC F0 0F" "00 00 00 00 00 00 00 00" "none" "Binary.*101010101100110011110000000011110101010110101010110011001111000000001111010101011010101011001100.*96"; then break; fi
+      if ! CheckIClassEncodeLongNewFixture "120-bit direct PACS none" "101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010" "00AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" "03 03 03 03 00 03 E0 14" "AA AA AA AA AA AA AA AA" "01 AA AA AA AA AA AA AA" "00 00 00 00 00 00 00 00" "none" "Recovered legacy PACS payload exceeds 96 bits|Binary.*101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010.*120"; then break; fi
+      if ! CheckIClassEncodeLongNewFixture "128-bit direct PACS none" "10101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010" "" "03 03 03 03 00 03 E0 14" "AA AA AA AA AA AA AA AA" "AA AA AA AA AA AA AA AA" "00 00 00 00 00 00 00 01" "none" "Recovered legacy PACS payload exceeds 96 bits|Binary.*10101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010.*128"; then break; fi
+      if ! CheckIClassEncodeLongNewFixture "143-bit direct PACS none" "$(printf '10%.0s' {1..71}; printf '1')" "00AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" "03 03 03 03 00 03 E0 14" "55 55 55 55 55 55 55 55" "55 55 55 55 55 55 55 55" "00 00 00 00 00 00 D5 55" "none" "Recovered legacy PACS payload exceeds 96 bits|Binary.*143"; then break; fi
+      if ! CheckExecute "144-bit iClass payload reject" "$PM3BIN -c 'hf iclass encode --bin $(printf '10%.0s' {1..72}) --enc none --emu' 2>&1" "Encoded Wiegand payload is too large to fit in the iCLASS credential"; then break; fi
       if ! CheckIClassEncodeFixture "P10001 2k3des" "P10001" "12" "3456" "" "" "" "" "" "" "User / Enc Cred" "P10001.*FC: 12.*CN: 3456"; then break; fi
       if ! CheckIClassEncodeFixture "P10001 des" "P10001" "12" "3456" "" "" "" "" "" "des" "User / Enc Cred" "P10001.*FC: 12.*CN: 3456"; then break; fi
       if ! CheckIClassEncodeFixture "P10001 none" "P10001" "12" "3456" "" "" "" "" "" "none" "User / Cred" "P10001.*FC: 12.*CN: 3456"; then break; fi

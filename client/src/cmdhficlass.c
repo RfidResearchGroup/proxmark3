@@ -284,33 +284,108 @@ static inline uint32_t leadingzeros(uint64_t a) {
 #endif
 }
 
-static int hficlass_encode_wiegand_binstr(const char *binstr, uint8_t *credential) {
+enum {
+    ICLASS_LEGACY_PACS_CONTAINER_BYTES = 18,
+    ICLASS_LEGACY_PACS_CONTAINER_BITS = ICLASS_LEGACY_PACS_CONTAINER_BYTES * 8,
+    ICLASS_LEGACY_PACS_FORMAT_DECODE_MAX_BITS = 96,
+    ICLASS_LEGACY_PACS_SENTINEL_BITS = 1,
+    ICLASS_LEGACY_PACS_MAX_BITS = ICLASS_LEGACY_PACS_CONTAINER_BITS - ICLASS_LEGACY_PACS_SENTINEL_BITS,
+};
+
+static inline uint8_t iclass_legacy_pacs_get_bit(const uint8_t *container, size_t bitpos) {
+    return (container[bitpos / 8] >> (7 - (bitpos % 8))) & 0x01;
+}
+
+static inline void iclass_legacy_pacs_set_bit(uint8_t *container, size_t bitpos, uint8_t value) {
+    uint8_t mask = 1U << (7 - (bitpos % 8));
+    if (value) {
+        container[bitpos / 8] |= mask;
+    } else {
+        container[bitpos / 8] &= ~mask;
+    }
+}
+
+static void iclass_legacy_pacs_container_from_blocks(const uint8_t *blocks, uint8_t *container) {
+    memset(container, 0, ICLASS_LEGACY_PACS_CONTAINER_BYTES);
+    memcpy(container, blocks + 22, 2);
+    memcpy(container + 2, blocks + 8, PICOPASS_BLOCK_SIZE);
+    memcpy(container + 10, blocks, PICOPASS_BLOCK_SIZE);
+}
+
+static void iclass_legacy_pacs_blocks_from_container(const uint8_t *container, uint8_t *blocks) {
+    memset(blocks, 0, PICOPASS_BLOCK_SIZE * 3);
+    memcpy(blocks, container + 10, PICOPASS_BLOCK_SIZE);
+    memcpy(blocks + 8, container + 2, PICOPASS_BLOCK_SIZE);
+    memcpy(blocks + 22, container, 2);
+}
+
+static bool iclass_all_bytes_are(const uint8_t *data, size_t data_len, uint8_t value) {
+    if (data == NULL) {
+        return false;
+    }
+
+    for (size_t i = 0; i < data_len; i++) {
+        if (data[i] != value) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static int iclass_legacy_pacs_binstr_to_blocks(const char *binstr, uint8_t *blocks) {
     size_t bin_len = strlen(binstr);
-    if (bin_len == 0 || bin_len >= 64) {
+    if (blocks == NULL || bin_len == 0 || bin_len > ICLASS_LEGACY_PACS_MAX_BITS) {
         return PM3_EINVARG;
     }
 
-    uint8_t data[8] = {0};
-    BitstreamOut_t bout = {data, 0, 0};
+    uint8_t container[ICLASS_LEGACY_PACS_CONTAINER_BYTES] = {0};
+    size_t start_bit = ICLASS_LEGACY_PACS_CONTAINER_BITS - (bin_len + ICLASS_LEGACY_PACS_SENTINEL_BITS);
 
-    for (size_t i = 0; i < (64 - bin_len - 1); i++) {
-        pushBit(&bout, 0);
-    }
-
-    pushBit(&bout, 1);
+    iclass_legacy_pacs_set_bit(container, start_bit, 1);
 
     for (size_t i = 0; i < bin_len; i++) {
         if (binstr[i] == '1') {
-            pushBit(&bout, 1);
+            iclass_legacy_pacs_set_bit(container, start_bit + 1 + i, 1);
         } else if (binstr[i] == '0') {
-            pushBit(&bout, 0);
+            iclass_legacy_pacs_set_bit(container, start_bit + 1 + i, 0);
         } else {
             return PM3_EINVARG;
         }
     }
 
-    memcpy(credential + 8, data, sizeof(data));
+    iclass_legacy_pacs_blocks_from_container(container, blocks);
     return PM3_SUCCESS;
+}
+
+static size_t iclass_legacy_pacs_payload_binstr_from_container(const uint8_t *container, char *binstr, size_t binstr_size) {
+    if (container == NULL || binstr == NULL || binstr_size <= ICLASS_LEGACY_PACS_MAX_BITS) {
+        return 0;
+    }
+
+    size_t first_one = ICLASS_LEGACY_PACS_CONTAINER_BITS;
+    for (size_t i = 0; i < ICLASS_LEGACY_PACS_CONTAINER_BITS; i++) {
+        if (iclass_legacy_pacs_get_bit(container, i)) {
+            first_one = i;
+            break;
+        }
+    }
+
+    if (first_one == ICLASS_LEGACY_PACS_CONTAINER_BITS) {
+        binstr[0] = '\0';
+        return 0;
+    }
+
+    size_t payload_len = ICLASS_LEGACY_PACS_CONTAINER_BITS - first_one - ICLASS_LEGACY_PACS_SENTINEL_BITS;
+    if (payload_len == 0 || payload_len > ICLASS_LEGACY_PACS_MAX_BITS) {
+        binstr[0] = '\0';
+        return 0;
+    }
+
+    for (size_t i = 0; i < payload_len; i++) {
+        binstr[i] = iclass_legacy_pacs_get_bit(container, first_one + 1 + i) ? '1' : '0';
+    }
+    binstr[payload_len] = '\0';
+    return payload_len;
 }
 
 static int hficlass_load_emulator_dump(uint8_t **dump, size_t *bytes_read, size_t max_bytes) {
@@ -424,6 +499,7 @@ static int hficlass_build_emulator_dump(uint8_t **dump, size_t *dump_len, const 
     }
 
     hficlass_encode_emu_header(settings, (picopass_hdr_t *)*dump);
+    memset(*dump + (6 * PICOPASS_BLOCK_SIZE), 0x00, *dump_len - (6 * PICOPASS_BLOCK_SIZE));
     memcpy(*dump + (6 * PICOPASS_BLOCK_SIZE), credential, 4 * PICOPASS_BLOCK_SIZE);
     return PM3_SUCCESS;
 }
@@ -1261,13 +1337,28 @@ static int CmdHFiClassSim(const char *Cmd) {
         case ICLASS_SIM_MODE_FULL_GLITCH_KEY:
         default: {
             PrintAndLogEx(INFO, "Starting iCLASS simulation");
-            PrintAndLogEx(INFO, "Press " _GREEN_("`pm3 button`") " to abort");
+            PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
             uint8_t numberOfCSNs = 0;
+            PacketResponseNG resp;
             clearCommandBuffer();
             SendCommandMIX(CMD_HF_ICLASS_SIMULATE, sim_type, numberOfCSNs, 1, csn, 8);
 
             if (sim_type == ICLASS_SIM_MODE_FULL || sim_type ==  ICLASS_SIM_MODE_FULL_GLITCH || sim_type ==  ICLASS_SIM_MODE_FULL_GLITCH_KEY)
                 PrintAndLogEx(HINT, "Hint: Try `" _YELLOW_("hf iclass esave -h") "` to save the emulator memory to file");
+
+            for (;;) {
+                if (kbd_enter_pressed()) {
+                    SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+                    PrintAndLogEx(DEBUG, "Aborted via keyboard!");
+                    break;
+                }
+
+                if (WaitForResponseTimeout(CMD_HF_ICLASS_SIMULATE, &resp, 1500)) {
+                    break;
+                }
+            }
+
+            PrintAndLogEx(INFO, "Done!");
             break;
         }
     }
@@ -1679,41 +1770,49 @@ static void iclass_decode_credentials(uint8_t *data) {
     BLOCK79ENCRYPTION encryption = (data[(6 * PICOPASS_BLOCK_SIZE) + 7] & 0x03);
 
     uint8_t *b7 = data + (PICOPASS_BLOCK_SIZE * 7);
+    uint8_t *blocks789 = b7;
+    uint8_t container[ICLASS_LEGACY_PACS_CONTAINER_BYTES] = {0};
+    char pbin[ICLASS_LEGACY_PACS_MAX_BITS + 1] = {0};
+    char recovered_bin[ICLASS_LEGACY_PACS_MAX_BITS + 1] = {0};
 
-    bool has_new_pacs = iclass_detect_new_pacs(b7);
-    bool has_values = (memcmp(b7, empty, PICOPASS_BLOCK_SIZE) != 0) && (memcmp(b7, zeros, PICOPASS_BLOCK_SIZE) != 0);
+    bool has_new_pacs = iclass_detect_new_pacs(b7)
+                        && iclass_all_bytes_are(blocks789 + 8, PICOPASS_BLOCK_SIZE * 2, 0x00);
+    bool has_values = (iclass_all_bytes_are(blocks789, PICOPASS_BLOCK_SIZE * 3, 0xFF) == false)
+                      && (iclass_all_bytes_are(blocks789, PICOPASS_BLOCK_SIZE * 3, 0x00) == false);
     if (has_values && (encryption == None || encryption == RFU)) {
 
-        PrintAndLogEx(INFO, "------------------------ " _CYAN_("Block 7 decoder") " --------------------------");
+        PrintAndLogEx(INFO, "--------------------- " _CYAN_("Legacy PACS decoder") " -----------------------");
 
-        // todo:  remove preamble/sentinel
         if (has_new_pacs) {
             iclass_decode_credentials_new_pacs(b7);
         } else {
             uint32_t top = 0, mid = 0, bot = 0;
-            char pbin[(PICOPASS_BLOCK_SIZE * 8) + 1] = {0};
+            size_t recovered_len = 0;
 
-            if (wiegand_raw_to_binstr(b7, PICOPASS_BLOCK_SIZE, pbin, sizeof(pbin)) == false) {
-                char hexstr[16 + 1] = {0};
-                hex_to_buffer((uint8_t *)hexstr, b7, PICOPASS_BLOCK_SIZE, sizeof(hexstr) - 1, 0, 0, true);
-                hextobinstring(pbin, hexstr);
+            iclass_legacy_pacs_container_from_blocks(blocks789, container);
+            recovered_len = iclass_legacy_pacs_payload_binstr_from_container(container, recovered_bin, sizeof(recovered_bin));
 
-                char *trimmed = pbin;
-                while (*trimmed == '0' && trimmed[1] != '\0') {
-                    trimmed++;
-                }
-                memmove(pbin, trimmed, strlen(trimmed) + 1);
-            }
-
-            size_t binlen = strlen(pbin);
-            if (binstring_to_u96(&top, &mid, &bot, pbin) != (int)binlen) {
-                PrintAndLogEx(ERR, "Binary string contains none <0|1> chars");
+            if (recovered_len == 0) {
+                PrintAndLogEx(ERR, "Invalid legacy PACS payload: missing sentinel bit");
                 return;
             }
 
-            PrintAndLogEx(SUCCESS, "Binary... " _GREEN_("%s") " ( %zu )", pbin, binlen);
-            PrintAndLogEx(NORMAL, "");
-            decode_wiegand(top, mid, bot, (int)binlen);
+            if (recovered_len > ICLASS_LEGACY_PACS_FORMAT_DECODE_MAX_BITS) {
+                PrintAndLogEx(SUCCESS, "Binary... " _GREEN_("%s") " ( %zu )", recovered_bin, recovered_len);
+                PrintAndLogEx(INFO, "Recovered legacy PACS payload exceeds 96 bits; format decode is not supported above 96 bits.");
+            } else {
+                memcpy(pbin, recovered_bin, recovered_len + 1);
+                if (binstring_to_u96(&top, &mid, &bot, pbin) != (int)recovered_len) {
+                    PrintAndLogEx(ERR, "Binary string contains none <0|1> chars");
+                    return;
+                }
+
+                PrintAndLogEx(SUCCESS, "Binary... " _GREEN_("%s") " ( %zu )", recovered_bin, recovered_len);
+                PrintAndLogEx(NORMAL, "");
+                if (decode_wiegand(top, mid, bot, (int)recovered_len) == false) {
+                    PrintAndLogEx(INFO, "No matching Wiegand formats found in the right-aligned legacy PACS payload.");
+                }
+            }
         }
     }
 }
@@ -5712,7 +5811,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
     };
     CLIExecWithReturn(ctx, Cmd, argtable, false);
 
-    uint8_t bin[65] = {0};
+    uint8_t bin[sizeof(((wiegand_input_t *)0)->binstr)] = {0};
     int bin_len = sizeof(bin) - 1; // CLIGetStrWithReturn does not guarantee string to be null-terminated
     CLIGetStrWithReturn(ctx, 1, bin, &bin_len);
     bin[bin_len] = '\0';
@@ -5721,7 +5820,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
     int raw_input_len = 0;
     int res = CLIParamHexToBuf(arg_get_str(ctx, 2), raw_input, sizeof(raw_input), &raw_input_len);
 
-    uint8_t new_pacs[13] = {0};
+    uint8_t new_pacs[19] = {0};
     int new_pacs_len = 0;
     res |= CLIParamHexToBuf(arg_get_str(ctx, 3), new_pacs, sizeof(new_pacs), &new_pacs_len);
 
@@ -5821,7 +5920,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
     }
 
     if (bin_len >= (int)sizeof(bin)) {
-        PrintAndLogEx(ERR, "Binary wiegand string must be less than 64 bits");
+        PrintAndLogEx(ERR, "Binary wiegand string must be %zu bits or less", sizeof(bin) - 2U);
         return PM3_EINVARG;
     }
 
@@ -5926,7 +6025,7 @@ static int CmdHFiClassEncode(const char *Cmd) {
         return res;
     }
 
-    if (hficlass_encode_wiegand_binstr(input.binstr, credential) != PM3_SUCCESS) {
+    if (iclass_legacy_pacs_binstr_to_blocks(input.binstr, credential + 8) != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Encoded Wiegand payload is too large to fit in the iCLASS credential");
         return PM3_EINVARG;
     }
