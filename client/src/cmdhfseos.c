@@ -849,7 +849,7 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
     // Skip synthesized IV
     for (int i = iv_size * 2; i < CRYPTOGRAM_decrypted_data_length; i++) {
         // ADF OID tag
-        if (CRYPTOGRAM_decrypted_data[i] == 0x06 && CRYPTOGRAM_decrypted_data[i + 1] < 20) {
+        if (CRYPTOGRAM_decrypted_data[i] == 0x06 && CRYPTOGRAM_decrypted_data[i + 1] <= 32) {
             adf_length = ((CRYPTOGRAM_decrypted_data[i + 1]));
             diversifier_length = CRYPTOGRAM_decrypted_data[i + adf_length + 3];
             if (*diversifier_length_out < diversifier_length) {
