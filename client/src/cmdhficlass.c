@@ -3891,6 +3891,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     #define TEAR_INITAL         0x3C
     #define TEAR_PERSO_ENABLED  0xBC
     #define TEAR_PERSO_STABLE   0xBE
+    #define TEAR_PERSO_STABLE2  0x9C
     #define TEAR_UNLOCKED       0xAC
 
 
@@ -4200,19 +4201,24 @@ out:
                 data[7] = TEAR_UNLOCKED;
             
                 iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
+
+                iclass_read_interesting_data(key, keyType, elite, rawkey, use_replay, verbose, shallow_mod);
             } else {
                 PrintAndLogEx(FAILED, " ( %s )", _RED_("fail"));
             }
             break;
 
         }
-        case TEAR_PERSO_STABLE: { // unlock tag with write operation to 0xAC
+        case TEAR_PERSO_STABLE:
+        case TEAR_PERSO_STABLE2: { // unlock tag with write operation to 0xAC
             PrintAndLogEx(SUCCESS, "Detected fuse: "_GREEN_("0x%02X") " set non-secure memory: "_YELLOW_("0xAC"), data_read[7]);
 
             memcpy(data, data_read, PICOPASS_BLOCK_SIZE);
             data[7] = TEAR_UNLOCKED;
 
             iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
+
+            iclass_read_interesting_data(key, keyType, elite, rawkey, use_replay, verbose, shallow_mod);
             
             break;
         }
@@ -4230,7 +4236,7 @@ out:
             break;
         }
         default: {
-            PrintAndLogEx(INFO, _YELLOW_("Did not detect " _YELLOW_("0xBC") " or " _YELLOW_("0xBE") " fuse, might need manual intervention!"));
+            PrintAndLogEx(INFO, _YELLOW_("Did not detect " _YELLOW_("0xBC") " or " _YELLOW_("0xBE") " or " _YELLOW_("0x9C") " fuse, might need manual intervention!"));
             break;
         }
     }
