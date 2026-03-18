@@ -4236,7 +4236,7 @@ out:
             break;
         }
         default: {
-            PrintAndLogEx(INFO, _YELLOW_("Did not detect " _YELLOW_("0xBC") " or " _YELLOW_("0xBE") " fuse, might need manual intervention!"));
+            PrintAndLogEx(INFO, _YELLOW_("Did not detect " _YELLOW_("0xBC") " or " _YELLOW_("0xBE") " or " _YELLOW_("0x9C") " fuse, might need manual intervention!"));
             break;
         }
     }
