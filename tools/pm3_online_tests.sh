@@ -612,6 +612,7 @@ while true; do
       if ! CheckIClassEncodeRoundTrip "hf iclass encode bin roundtrip 3des"  "--bin 10001111100000001010100011 --ki 0 --enc 2k3des" 26; then break; fi
       if ! CheckIClassEncodeRoundTrip "hf iclass encode bin 143-bit roundtrip" "--bin $ICLASS_143_BIN --ki 0 --enc none" 143; then break; fi
       if ! CheckIClassEncodeRoundTrip "hf iclass encode raw roundtrip"     "--raw 063E02A3 --ki 0 --enc none" 26; then break; fi
+      if ! CheckIClassEncodeRoundTrip "hf iclass encode raw 127-bit roundtrip" "--raw 85473b1bcfc4a5def377870aec812d4c --ki 0 --enc none" 127; then break; fi
       if ! CheckIClassEncodeRoundTrip "hf iclass encode new roundtrip"     "--new 068F80A8C0 --ki 0 --enc none" 26; then break; fi
       if ! CheckIClassEncodeRoundTrip "hf iclass encode format roundtrip"  "-w H10301 --fc 31 --cn 337 --ki 0 --enc none" 26; then break; fi
     fi
