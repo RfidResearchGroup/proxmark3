@@ -328,6 +328,44 @@ function CreateIClassLegacyDumpFromFullOnes() {
   CreateIClassLegacyDump "$OUTFILE" "1200000000000000" "FFFFFFFFFFFFFFFF" "$BLOCK6" "$BLOCK7" "$BLOCK8" "$BLOCK9"
 }
 
+function NormalizeClientPath() {
+  local FILEPATH="$1"
+  local UNAME_S
+  UNAME_S=$(uname -s 2>/dev/null)
+  echo "DEBUG NormalizeClientPath uname=${UNAME_S:-unknown} filepath=$FILEPATH" >&2
+  case "$UNAME_S" in
+    CYGWIN*|MINGW*|MSYS*)
+      if command -v cygpath >/dev/null 2>&1; then
+        local WINPATH
+        WINPATH=$(cygpath -w "$FILEPATH")
+        echo "DEBUG NormalizeClientPath cygpath=$(command -v cygpath) winpath=$WINPATH" >&2
+        printf "%s" "$WINPATH"
+        return
+      fi
+      echo "DEBUG NormalizeClientPath cygpath missing, trying pwd -W fallback" >&2
+      local FILEDIR FILEBASE WINFILEDIR
+      FILEDIR=$(dirname "$FILEPATH")
+      FILEBASE=$(basename "$FILEPATH")
+      WINFILEDIR=$(cd "$FILEDIR" 2>/dev/null && pwd -W 2>/dev/null)
+      if [ -n "$WINFILEDIR" ]; then
+        echo "DEBUG NormalizeClientPath pwdW=$WINFILEDIR" >&2
+        printf "%s\\%s" "$WINFILEDIR" "$FILEBASE"
+        return
+      fi
+      echo "DEBUG NormalizeClientPath pwd -W fallback unavailable for $FILEDIR" >&2
+      ;;
+  esac
+  if [[ "$CLIENTBIN" == *.exe* ]] && command -v cygpath >/dev/null 2>&1; then
+    local WINPATH
+    WINPATH=$(cygpath -w "$FILEPATH")
+    echo "DEBUG NormalizeClientPath clientbin-exe cygpath=$(command -v cygpath) winpath=$WINPATH" >&2
+    printf "%s" "$WINPATH"
+    return
+  fi
+  echo "DEBUG NormalizeClientPath leaving path unchanged" >&2
+  printf "%s" "$FILEPATH"
+}
+
 echo -e "\n${C_BLUE}Iceman Proxmark3 test tool ${C_NC}\n"
 
 echo -n "work directory: "
@@ -565,9 +603,9 @@ while true; do
       if ! CheckExecuteAll "hf iclass encode des verbose"  "$CLIENTBIN -c 'hf iclass encode --bin 10001111100000001010100011 --ki 0 --enc des --enckey 000102030405060708090A0B0C0D0E0F -v' 2>&1" "Input length: 26" "Mode: des" "Block 6/0x06 -> 030303030003E015" "Block 7/0x07 -> 8EDF3A7032746E26" "Block 8/0x08 -> A5173AD5957B4370" "Block 9/0x09 -> A5173AD5957B4370" "Device offline"; then break; fi
       if ! CheckExecuteAll "hf iclass encode 2k3des verbose"  "$CLIENTBIN -c 'hf iclass encode --bin 10001111100000001010100011 --ki 0 --enc 2k3des --enckey 000102030405060708090A0B0C0D0E0F -v' 2>&1" "Input length: 26" "Mode: 2k3des" "Block 6/0x06 -> 030303030003E017" "Block 7/0x07 -> 1D21B316EED4A5E2" "Block 8/0x08 -> DDADA161E8D79673" "Block 9/0x09 -> DDADA161E8D79673" "Device offline"; then break; fi
       if ! CheckExecuteAll "hf iclass encode raw 127-bit verbose"  "$CLIENTBIN -c 'hf iclass encode --raw 85473b1bcfc4a5def377870aec812d4c --ki 0 --enc none -v' 2>&1" "Input length: 127" "Mode: none" "Block 6/0x06 -> 030303030003E014" "Block 7/0x07 -> F377870AEC812D4C" "Block 8/0x08 -> 85473B1BCFC4A5DE" "Block 9/0x09 -> 0000000000000000" "Device offline"; then break; fi
-      if ! CheckExecuteAll "hf iclass view raw 127-bit dump"  "DUMP_BASE=\$(mktemp /tmp/pm3_iclass_127.XXXXXX) && rm -f \"\$DUMP_BASE\" && DUMP=\"\$DUMP_BASE.bin\" && CreateIClassLegacyDump \"\$DUMP\" 1200000000000000 FFFFFFFFFFFFFFFF 030303030003E014 F377870AEC812D4C 85473B1BCFC4A5DE 0000000000000000 && $CLIENTBIN -c \"hf iclass view -f \$DUMP\" 2>&1; STATUS=\$?; rm -f \"\$DUMP\"; exit \$STATUS" "Legacy PACS decoder" "Binary\\.\\.\\. 0000101010001110011101100011011110011111100010010100101110111101111001101110111100001110000101011101100100000010010110101001100 \\( 127 \\)" "Recovered legacy PACS payload exceeds 96 bits"; then break; fi
-      if ! CheckExecuteAll "hf iclass view bin 143-bit dump"  "DUMP_BASE=\$(mktemp /tmp/pm3_iclass_143.XXXXXX) && rm -f \"\$DUMP_BASE\" && DUMP=\"\$DUMP_BASE.bin\" && CreateIClassLegacyDumpFromFullOnes \"\$DUMP\" && $CLIENTBIN -c \"hf iclass view -f \$DUMP\" 2>&1; STATUS=\$?; rm -f \"\$DUMP\"; exit \$STATUS" "Legacy PACS decoder" "Binary\\.\\.\\. 11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111 \\( 143 \\)" "Recovered legacy PACS payload exceeds 96 bits"; then break; fi
-      if ! CheckExecuteAll "hf iclass decrypt des dump"  "DUMP_BASE=\$(mktemp /tmp/pm3_iclass_des.XXXXXX) && rm -f \"\$DUMP_BASE\" && DUMP=\"\$DUMP_BASE.bin\" && CreateIClassLegacyDump \"\$DUMP\" 1200000000000000 FFFFFFFFFFFFFFFF 030303030003E015 8EDF3A7032746E26 A5173AD5957B4370 A5173AD5957B4370 && $CLIENTBIN -c \"hf iclass decrypt -f \$DUMP -k 000102030405060708090A0B0C0D0E0F --ns\" 2>&1; STATUS=\$?; rm -f \"\$DUMP\"; exit \$STATUS" "Called with no save option" "6/0x06 \\| 03 03 03 03 00 03 E0 14" "7/0x07 \\| 00 00 00 00 06 3E 02 A3" "Legacy PACS decoder" "Binary\\.\\.\\. 10001111100000001010100011 \\( 26 \\)" "H10301.*FC: 31  CN: 337  parity \\( ok \\)"; then break; fi
+      if ! CheckExecuteAll "hf iclass view raw 127-bit dump"  "DUMP_BASE=\$(mktemp /tmp/pm3_iclass_127.XXXXXX) && rm -f \"\$DUMP_BASE\" && DUMP=\"\$DUMP_BASE.bin\" && CreateIClassLegacyDump \"\$DUMP\" 1200000000000000 FFFFFFFFFFFFFFFF 030303030003E014 F377870AEC812D4C 85473B1BCFC4A5DE 0000000000000000 && DUMP_ARG=\$(NormalizeClientPath \"\$DUMP\") && $CLIENTBIN -c \"hf iclass view -f \$DUMP_ARG\" 2>&1; STATUS=\$?; rm -f \"\$DUMP\"; exit \$STATUS" "Legacy PACS decoder" "Binary\\.\\.\\. 0000101010001110011101100011011110011111100010010100101110111101111001101110111100001110000101011101100100000010010110101001100 \\( 127 \\)" "Recovered legacy PACS payload exceeds 96 bits"; then break; fi
+      if ! CheckExecuteAll "hf iclass view bin 143-bit dump"  "DUMP_BASE=\$(mktemp /tmp/pm3_iclass_143.XXXXXX) && rm -f \"\$DUMP_BASE\" && DUMP=\"\$DUMP_BASE.bin\" && CreateIClassLegacyDumpFromFullOnes \"\$DUMP\" && DUMP_ARG=\$(NormalizeClientPath \"\$DUMP\") && $CLIENTBIN -c \"hf iclass view -f \$DUMP_ARG\" 2>&1; STATUS=\$?; rm -f \"\$DUMP\"; exit \$STATUS" "Legacy PACS decoder" "Binary\\.\\.\\. 11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111 \\( 143 \\)" "Recovered legacy PACS payload exceeds 96 bits"; then break; fi
+      if ! CheckExecuteAll "hf iclass decrypt des dump"  "DUMP_BASE=\$(mktemp /tmp/pm3_iclass_des.XXXXXX) && rm -f \"\$DUMP_BASE\" && DUMP=\"\$DUMP_BASE.bin\" && CreateIClassLegacyDump \"\$DUMP\" 1200000000000000 FFFFFFFFFFFFFFFF 030303030003E015 8EDF3A7032746E26 A5173AD5957B4370 A5173AD5957B4370 && DUMP_ARG=\$(NormalizeClientPath \"\$DUMP\") && $CLIENTBIN -c \"hf iclass decrypt -f \$DUMP_ARG -k 000102030405060708090A0B0C0D0E0F --ns\" 2>&1; STATUS=\$?; rm -f \"\$DUMP\"; exit \$STATUS" "Called with no save option" "6/0x06 \\| 03 03 03 03 00 03 E0 14" "7/0x07 \\| 00 00 00 00 06 3E 02 A3" "Legacy PACS decoder" "Binary\\.\\.\\. 10001111100000001010100011 \\( 26 \\)" "H10301.*FC: 31  CN: 337  parity \\( ok \\)"; then break; fi
       if ! CheckExecute "wiegand decode test - bin over 96-bit"  "PAT=\$(printf '01%.0s' {1..49}); $CLIENTBIN -c \"wiegand decode --bin \$PAT\" 2>&1" "Binary decode supports up to 96 Wiegand bits"; then break; fi
       if ! CheckExecute "wiegand decode test - new"  "$CLIENTBIN -c 'wiegand decode --new 06BD88EB80'" "FC: 123  CN: 4567  parity \( ok \)"; then break; fi
       if ! CheckExecute "wiegand decode test - new no padded bin"  "if ! $CLIENTBIN -c 'wiegand decode --new 06BD88EB80' 2>&1 | grep -q 'padded bin'; then echo OK; fi" "OK"; then break; fi
