@@ -4200,6 +4200,8 @@ out:
                 data[7] = TEAR_UNLOCKED;
             
                 iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
+
+                iclass_read_interesting_data(key, keyType, elite, rawkey, use_replay, verbose, shallow_mod);
             } else {
                 PrintAndLogEx(FAILED, " ( %s )", _RED_("fail"));
             }
@@ -4213,6 +4215,8 @@ out:
             data[7] = TEAR_UNLOCKED;
 
             iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
+
+            iclass_read_interesting_data(key, keyType, elite, rawkey, use_replay, verbose, shallow_mod);
             
             break;
         }
