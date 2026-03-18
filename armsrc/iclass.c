@@ -272,9 +272,12 @@ void iclass_simulate(uint8_t sim_type, uint8_t num_csns, bool send_reply, uint8_
     }
 
 out:
-    if (dataout && dataoutlen)
+    if (dataout && dataoutlen) {
         memcpy(dataout, mac_responses, *dataoutlen);
+    }
 
+
+    FpgaResetBitstream();
     switch_off();
     BigBuf_free_keep_EM();
 }
@@ -815,15 +818,15 @@ int do_iclass_simulation(int simulationMode, uint8_t *reader_mac_buf) {
             }
 
             if (simulationMode == ICLASS_SIM_MODE_FULL_GLITCH) {
-                //Jam the read based on the last SIO block
+                // jam the read based on the last SIO block
                 uint8_t *sr_or_sio = emulator + (current_page * page_size) + (6 * 8);
-                if (memcmp(emulator + (current_page * page_size) + (5 * 8), ff_data, PICOPASS_BLOCK_SIZE) == 0) { //SR card
-                    if (block == 16) { //SR cards use a standard legth SIO
-                        //update block 6 byte 1 from 03 to A3
+                if (memcmp(emulator + (current_page * page_size) + (5 * 8), ff_data, PICOPASS_BLOCK_SIZE) == 0) { // SR card
+                    if (block == 16) { // SR cards use a standard legth SIO
+                        // update block 6 byte 1 from 03 to A3
                         sr_or_sio[0] |= 0xA0;
                         goto send;
                     }
-                } else { //For SE cards we have to account for different SIO lengths depending if a standard or custom key is used
+                } else { // for SE cards we have to account for different SIO lengths depending if a standard or custom key is used
                     if (block == (5 + ((sr_or_sio[1] + 12) / 8))) {
                         goto send;
                     }
@@ -920,6 +923,7 @@ send:
     if (button_pressed) {
         DbpString("button pressed");
     }
+
 
     return button_pressed;
 }
