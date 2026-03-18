@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file.
 This project uses the changelog in accordance with [keepchangelog](http://keepachangelog.com/). Please use this to write notable changes, which is not the same as git commit log...
 
 ## [unreleased][unreleased]
+- Added support for multi-block/max-size (143-bit) iCLASS. (@cindersocket)
+- Added support for unencrypted and DES-encrypted iCLASS (@cindersocket)
 - Added `hf iclass blacktears` command to perform an automated tearoff of block 1 to set non-secure page mode(@antiklesys)
 - Changed wiegand encoding to use shared helpers and have unified parameters (--raw, --bin, --new, --wiegand, etc.) (@cindersocket)
 - Added `hf gst read` command (@kormax)
