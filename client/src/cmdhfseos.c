@@ -259,7 +259,7 @@ static void generate_command_wrapping(uint8_t *command_Header, int command_heade
     //return;
 }
 
-static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_enc_key, uint8_t *diversified_mac_key, uint8_t *sioOutput,  int *sio_size, int encryption_algorithm, uint8_t *data_tag, int data_tag_len) {
+static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_enc_key, uint8_t *diversified_mac_key, uint8_t *sioOutput,  int *tag_size, int encryption_algorithm, uint8_t *data_tag, int data_tag_len) {
     // Intergrating our command generation with the GetData request to make my life easier in the future
 
     // Command Header is for the Get Data Command using
@@ -307,7 +307,7 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
     for (int i = 0; i < command_len; i++) {
         snprintf(&completedCommandChar[i * 2], 3, "%02X", command_convert[i]);
     }
-    // PrintAndLogEx(SUCCESS, "Command.......................... " _YELLOW_("%s"), completedCommandChar);
+    //PrintAndLogEx(SUCCESS, "Command.......................... " _YELLOW_("%s"), completedCommandChar);
 
     // ------------------- Send Command -------------------
     uint8_t response[PM3_CMD_DATA_SIZE];
@@ -337,46 +337,82 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
     // 99 is our status word response (2 bytes)
     // 8E is our MAC response (8 bytes)
     // PrintAndLogEx(SUCCESS, "Raw Response..................... " _YELLOW_("%s"), sprint_hex_inrow(response, (resplen - 2)));
-
-    uint8_t responseCode[2];
-    uint8_t tag[2] = {0x00, 0x00};
-    int getDataSize = 0;
-
+    uint8_t cryptogram[256] = {0};
+    uint8_t responseCode[2] = {0};
+    uint8_t mac[8] = {0};
+    size_t cryptogram_length = 0;
+    
+    // Parse the response to extract the three tags
+    for (int i = 0; i < resplen - 2; ) {
+        if (response[i] == 0x85) {
+            // Cryptogram tag
+            size_t offset = i + 1;
+            asn1_get_tag_length(response, &cryptogram_length, &offset, resplen);
+            memcpy(cryptogram, response + offset, cryptogram_length);
+            i += offset + cryptogram_length;
+        } else if (response[i] == 0x99) {
+            // Response code tag
+            size_t len = response[i + 1];
+            memcpy(responseCode, response + i + 2, len);
+            i += 2 + len;
+        } else if (response[i] == 0x8E) {
+            // MAC tag
+            size_t len = response[i + 1];
+            memcpy(mac, response + i + 2, len);
+            i += 2 + len;
+        } else {
+            i += 2 + response[i + 1];
+        }
+    }
+    
     // ------------------- Cryptogram Response -------------------
-    if (resplen >= 2 && response[0] == 0x85) {
-        uint8_t cryptogram_length = response[1];
-        uint8_t cryptogram[cryptogram_length];
+    if (cryptogram_length > 0) {
         uint8_t decrypted[cryptogram_length];
-        memcpy(cryptogram, response + 2, cryptogram_length);
-        memcpy(responseCode, response + cryptogram_length + 4, 2);
+        int getDataSize = 0;
 
         // Decrypt the response
-        decrypt_cryptogram(diversified_enc_key, cryptogram, decrypted, sizeof(cryptogram), encryption_algorithm);
-
-        // Response Format
-        // FF0038302F8102578CA5020500A6088101010403030008A7178515D65ED945996AB9107CD6D3E6011F56FFDD9CFFC780A9020500050000000000008000000000
-
-        // FF00 is our inputed tag value
-        // 38 is our len
-
-        // PrintAndLogEx(SUCCESS, "Cryptogram....................... " _YELLOW_("%s"), sprint_hex_inrow(cryptogram, sizeof(cryptogram)));
-        // PrintAndLogEx(SUCCESS, "Decrypted........................ " _YELLOW_("%s"), sprint_hex_inrow(decrypted, sizeof(decrypted)));
-
-        getDataSize = decrypted[2];
-        memcpy(tag, decrypted, ARRAYLEN(tag));
-        memmove(decrypted, decrypted + 1, sizeof(decrypted) - 1);
-        memmove(sioOutput, decrypted + 2, getDataSize);
-        *sio_size = getDataSize;
-        memcpy(responseCode, response + cryptogram_length + 4, 2);
-
-        PrintAndLogEx(SUCCESS, "Response Code.................... " _YELLOW_("%s"), sprint_hex_inrow(responseCode, (ARRAYLEN(responseCode))));
-        PrintAndLogEx(SUCCESS, "Output........................... " _YELLOW_("%s"), sprint_hex_inrow(sioOutput, getDataSize));
-    } else if (resplen >= 2 && response[0] == 0x99) {
-        memcpy(responseCode, response + 2, 2);
-        // PrintAndLogEx(SUCCESS, "Raw Response..................... " _YELLOW_("%s"), sprint_hex_inrow(response, (resplen - 2)));
-        PrintAndLogEx(SUCCESS, "Response Code.................... " _YELLOW_("%s"), sprint_hex_inrow(responseCode, (ARRAYLEN(responseCode))));
+        decrypt_cryptogram(diversified_enc_key, cryptogram, decrypted, cryptogram_length, encryption_algorithm);
+        
+        //PrintAndLogEx(SUCCESS, "Cryptogram....................... " _YELLOW_("%s"), sprint_hex_inrow(cryptogram, cryptogram_length));
+        //PrintAndLogEx(SUCCESS, "Decrypted........................ " _YELLOW_("%s"), sprint_hex_inrow(decrypted, cryptogram_length));
+        
+        // Parse TLV: tag can be 1 or 2 bytes
+        int offset = 0;
+        uint8_t tag[2] = {0x00, 0x00};
+        int tag_len = 1;
+        
+        // Check if it's a 2-byte tag (first byte has bits 5-1 all set to 1)
+        if ((decrypted[offset] & 0x1F) == 0x1F) {
+            tag[0] = decrypted[offset];
+            tag[1] = decrypted[offset + 1];
+            tag_len = 2;
+            offset += 2;
+        } else {
+            tag[0] = decrypted[offset];
+            offset += 1;
+        }
+        
+        // Get length byte
+        uint8_t length_byte = decrypted[offset];
+        offset += 1;
+        
+        // Extract the value
+        getDataSize = length_byte;
+        memcpy(sioOutput, decrypted + offset, getDataSize);
+        *tag_size = getDataSize;
+        
+        PrintAndLogEx(SUCCESS, "Tag.............................. " _YELLOW_("%s"), sprint_hex_inrow(tag, tag_len));
+        PrintAndLogEx(SUCCESS, "Value............................ " _YELLOW_("%s"), sprint_hex_inrow(sioOutput, getDataSize));
     }
-
+    
+    if (responseCode[0] != 0x00 || responseCode[1] != 0x00) {
+        PrintAndLogEx(SUCCESS, "Response Code.................... " _YELLOW_("%s"), sprint_hex_inrow(responseCode, ARRAYLEN(responseCode)));
+    }
+    
+    // if (mac[0] != 0x00) {
+    //     PrintAndLogEx(SUCCESS, "MAC.............................. " _YELLOW_("%s"), sprint_hex_inrow(mac, sizeof(mac)));
+    // }
+    
     return PM3_SUCCESS;
 };
 
