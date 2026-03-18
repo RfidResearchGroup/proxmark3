@@ -2270,6 +2270,49 @@ void SimulateIso14443aTagEx(uint8_t tagType, uint16_t flags, uint8_t *useruid, u
             EmSendCmd(cmd, sizeof(cmd));
             p_response = NULL;
 
+        } else if (receivedCmd[0] == MFP_WRITEPERSO && len == 21 && (tagType == 15)) {
+            // cmd + 2 bytes block + value + 2 bytes crc
+            if (CheckCrc14A(receivedCmd, len)) {
+                uint16_t page = receivedCmd[1] | (receivedCmd[2] << 8);
+                if (page > 0x9005 || page < 0x9000) {
+                    // send NACK 0x0 == invalid argument
+                    EmSend4bit(CARD_NACK_IV);
+                } else {
+                    // send ACK
+                    EmSend4bit(CARD_ACK);
+
+                    Dbprintf("MFP Perso Key | %04X | %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+                        page,
+                        receivedCmd[3],
+                        receivedCmd[4],
+                        receivedCmd[5],
+                        receivedCmd[6],
+                        receivedCmd[7],
+                        receivedCmd[8],
+                        receivedCmd[9],
+                        receivedCmd[10],
+                        receivedCmd[11],
+                        receivedCmd[12],
+                        receivedCmd[13],
+                        receivedCmd[14],
+                        receivedCmd[15],
+                        receivedCmd[16],
+                        receivedCmd[17],
+                        receivedCmd[18]
+                    );
+
+                    numReads++;  // Increment number of times reader requested a block
+
+                    if (exitAfterNReads > 0 && numReads == exitAfterNReads) {
+                        finished = true;
+                    }
+                }
+            } else {
+                // send NACK 0x1 == crc/parity error
+                EmSend4bit(CARD_NACK_PA);
+            }
+            p_response = NULL;
+
         } else {
 
             // clear old dynamic responses
