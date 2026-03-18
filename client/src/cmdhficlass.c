@@ -3737,6 +3737,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
         arg_int0("i", NULL, "<dec>", "tearoff delay increment (in us) - default 10"),
         arg_int0("e", NULL, "<dec>", "tearoff delay end (in us) must be a higher value than the start delay"),
         arg_str0("o", "otp", "<hex>", "Custom OTP value as 2 hex bytes"),
+        arg_lit0(NULL, "raw", "no computations applied to key"),
         arg_lit0("v", "verbose", "verbose output"),
         arg_lit0(NULL, "shallow", "use shallow (ASK) reader modulation instead of OOK"),
         arg_param_end
@@ -3765,10 +3766,10 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     uint8_t otp[2] = {0};
     CLIGetHexWithReturn(ctx, 7, otp, &otp_len);
 
-    bool verbose = arg_get_lit(ctx, 8);
-    bool shallow_mod = arg_get_lit(ctx, 9);
+    bool verbose = arg_get_lit(ctx, 9);
+    bool shallow_mod = arg_get_lit(ctx, 10);
     bool elite = false;
-    bool rawkey = false;
+    bool rawkey = arg_get_lit(ctx, 8);
     bool use_replay = false; //not implemented in this mode
     bool read_auth = false;
     bool use_credit_key = arg_get_lit(ctx, 3);
