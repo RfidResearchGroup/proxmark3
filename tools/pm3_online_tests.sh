@@ -180,7 +180,7 @@ function HexToBin() {
 }
 
 function StripAnsiCodes() {
-  printf '%s' "$1" | sed -E 's/\x1B\[[0-9;?]*[[:alpha:]]//g'
+  LC_ALL=C printf '%s' "$1" | LC_ALL=C sed -E 's/\x1B\[[0-9;?]*[[:alpha:]]//g'
 }
 
 function ExtractIClassBlockHex() {
@@ -442,9 +442,14 @@ function CheckIClassEncodeRoundTrip() {
     return 1
   fi
 
-  # Run the client decode path used by normal inspection (`view`) and fail fast on decode errors.
+  # Run the client decode path used by normal inspection. Encrypted transport modes need
+  # `decrypt`, plain mode can use `view` directly.
   local DECODE_RES
-  DECODE_RES=$($PM3BIN -c "hf iclass view -f $DUMP_FILE" 2>&1)
+  local DECODE_CMD="hf iclass view -f $DUMP_FILE"
+  if [[ "$ENCODE_ARGS" =~ --enc[[:space:]]+(des|2k3des) ]]; then
+    DECODE_CMD="hf iclass decrypt -f $DUMP_FILE --ns"
+  fi
+  DECODE_RES=$($PM3BIN -c "$DECODE_CMD" 2>&1)
   if echo "$DECODE_RES" | grep -E -q "Invalid legacy PACS payload|missing sentinel bit"; then
     echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
     echo "Client-side decode reported invalid PACS payload."
@@ -453,8 +458,11 @@ function CheckIClassEncodeRoundTrip() {
   fi
 
   # Extract the decoded legacy PACS binary line so we can confirm we got back the same payload size.
+  local DECODE_CLEAN
+  DECODE_CLEAN="$(StripAnsiCodes "$DECODE_RES")"
+
   local DECODE_LINE
-  DECODE_LINE="$(printf '%s\n' "$DECODE_RES" | LANG=C grep -a -m1 -E 'Binary\.\.\.')"
+  DECODE_LINE="$(printf '%s\n' "$DECODE_CLEAN" | LANG=C grep -a -m1 -E 'Binary\.\.\.')"
   local DECODE_BINARY=""
   local DECODE_LEN=0
   if [ -n "$DECODE_LINE" ]; then
@@ -466,7 +474,7 @@ function CheckIClassEncodeRoundTrip() {
   if [ -z "$DECODE_BINARY" ] || [ "$DECODE_LEN" -eq 0 ]; then
     echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
     echo "Failed to extract legacy PACS payload from client decode output."
-    echo "$DECODE_RES"
+    echo "$DECODE_CLEAN"
     return 1
   fi
 
@@ -475,7 +483,7 @@ function CheckIClassEncodeRoundTrip() {
     echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
     echo "Expected client decode payload length: $EXPECTED_BITS_LEN"
     echo "Actual payload length:           $DECODE_LEN"
-    echo "$DECODE_RES"
+    echo "$DECODE_CLEAN"
     return 1
   fi
 
@@ -487,7 +495,11 @@ function CheckIClassEncodeRoundTrip() {
 
   if $TESTMANUAL; then
     echo -e "[ ${C_GREEN}OK${C_NC} ] ${C_OK} $TIMEINFO"
-    WaitForEnter "PRESENT THE CARD TO ANOTHER READER AND CONFIRM: iCLASS H10301 FC 31 CN 337"
+    local MANUAL_PROMPT="PRESENT THE CARD TO ANOTHER READER AND CONFIRM: iCLASS H10301 FC 31 CN 337"
+    if [ "$EXPECTED_BITS_LEN" -eq 143 ]; then
+      MANUAL_PROMPT="PRESENT THE CARD TO ANOTHER READER AND CONFIRM: iCLASS 143-bit CREDENTIAL"
+    fi
+    WaitForEnter "$MANUAL_PROMPT"
     return 0
   fi
 
@@ -561,7 +573,9 @@ while true; do
       if ! CheckExecute "lf hid clone bin oversize"    "PAT=\$(printf '01%.0s' {1..48}); $PM3BIN -c \"lf hid clone --bin \$PAT\" 2>&1" "Packed HID encoding supports up to 84 Wiegand bits"; then break; fi
       if ! CheckExecute "lf hid clone new oversize"    "$PM3BIN -c 'lf hid clone --new 0000A4550148AB' 2>&1" "LF HID clone supports only packed credentials up to 37 bits"; then break; fi
 
-      WaitForEnter "PLACE A REWRITABLE T55xx TAG ON THE PM3 NOW"
+      if $TESTMANUAL; then
+        WaitForEnter "PLACE A REWRITABLE T55xx TAG ON THE PM3 NOW"
+      fi
       if ! CheckLfHidCloneReadback "lf hid clone H10301 26-bit" "-w H10301 --fc 118 --cn 1603" "H10301.*FC: 118.*CN: 1603" "H10301 26-bit, FC 118, CN 1603"; then break; fi
       if ! CheckLfHidCloneReadback "lf hid clone C1k35s 35-bit" "-w C1k35s --fc 118 --cn 1603" "C1k35s.*FC: 118.*CN: 1603" "C1k35s 35-bit, FC 118, CN 1603"; then break; fi
       if ! CheckLfHidCloneReadback "lf hid clone H10304 37-bit" "-w H10304 --fc 118 --cn 1603" "H10304.*FC: 118.*CN: 1603" "H10304 37-bit, FC 118, CN 1603"; then break; fi
@@ -571,7 +585,9 @@ while true; do
       echo -e "\n${C_BLUE}Testing MIFARE Classic HID encoding${C_NC} ${PM3BIN:=./pm3}"
       if ! CheckFileExist "pm3 exists"               "$PM3BIN"; then break; fi
 
-      WaitForEnter "PLACE A BLANK MIFARE CLASSIC 1K CARD ON THE PM3 NOW"
+      if $TESTMANUAL; then
+        WaitForEnter "PLACE A BLANK MIFARE CLASSIC 1K CARD ON THE PM3 NOW"
+      fi
       NEED_MF_HID_ENCODE_WIPE=true
       if ! CheckMfHidEncodeRoundTrip "hf mf encodehid bin roundtrip"      "--bin 10001111100000001010100011" "10001111100000001010100011" "H10301.*FC: 31.*CN: 337"; then break; fi
       if ! CheckMfHidEncodeRoundTrip "hf mf encodehid raw roundtrip"      "--raw 063E02A3" "10001111100000001010100011" "H10301.*FC: 31.*CN: 337"; then break; fi
@@ -585,11 +601,15 @@ while true; do
       echo -e "\n${C_BLUE}Testing physical iCLASS HID encoding${C_NC} ${PM3BIN:=./pm3}"
       if ! CheckFileExist "pm3 exists"               "$PM3BIN"; then break; fi
 
-      WaitForEnter "PLACE A BLANK iCLASS TAG ON THE PM3 NOW"
+      if $TESTMANUAL; then
+        WaitForEnter "PLACE A BLANK iCLASS TAG ON THE PM3 NOW"
+      fi
       # Build a deterministic 143-bit "all-ones" payload to exercise the legacy max-width path.
       ICLASS_143_BIN=
       ICLASS_143_BIN=$(awk 'BEGIN { for (i = 0; i < 143; i++ ) { printf "1" } }')
-      if ! CheckIClassEncodeRoundTrip "hf iclass encode bin roundtrip"     "--bin 10001111100000001010100011 --ki 0 --enc none" 26; then break; fi
+      if ! CheckIClassEncodeRoundTrip "hf iclass encode bin roundtrip plain" "--bin 10001111100000001010100011 --ki 0 --enc none" 26; then break; fi
+      if ! CheckIClassEncodeRoundTrip "hf iclass encode bin roundtrip des"   "--bin 10001111100000001010100011 --ki 0 --enc des" 26; then break; fi
+      if ! CheckIClassEncodeRoundTrip "hf iclass encode bin roundtrip 3des"  "--bin 10001111100000001010100011 --ki 0 --enc 2k3des" 26; then break; fi
       if ! CheckIClassEncodeRoundTrip "hf iclass encode bin 143-bit roundtrip" "--bin $ICLASS_143_BIN --ki 0 --enc none" 143; then break; fi
       if ! CheckIClassEncodeRoundTrip "hf iclass encode raw roundtrip"     "--raw 063E02A3 --ki 0 --enc none" 26; then break; fi
       if ! CheckIClassEncodeRoundTrip "hf iclass encode new roundtrip"     "--new 068F80A8C0 --ki 0 --enc none" 26; then break; fi
