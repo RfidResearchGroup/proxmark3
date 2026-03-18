@@ -236,7 +236,7 @@ static int iclass_apply_transport_mode_to_block(uint8_t *blk_data, const uint8_t
 }
 
 static int iclass_apply_transport_mode_to_credential(uint8_t *credential, const uint8_t *key, BLOCK79ENCRYPTION mode, bool encrypt) {
-    for (uint8_t blockno = 1; blockno <= 3; blockno++) {
+    for (uint8_t blockno = 0; blockno < 3; blockno++) {
         uint8_t *blk = credential + (blockno * PICOPASS_BLOCK_SIZE);
         int res = iclass_apply_transport_mode_to_block(blk, key, mode, encrypt);
         if (res != PM3_SUCCESS) {
@@ -1844,38 +1844,25 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
         }
 
         //uint8_t numblocks4userid = GetNumberBlocksForUserId(decrypted + (6 * 8));
+        if (use_sc && aa1_encryption == TRIPLEDES) {
+            bool decrypted_block789 = false;
+            for (uint8_t blocknum = 0; blocknum < limit; ++blocknum) {
 
-        bool decrypted_block789 = false;
-        for (uint8_t blocknum = 0; blocknum < limit; ++blocknum) {
+                uint16_t idx = blocknum * PICOPASS_BLOCK_SIZE;
+                memcpy(enc_data, decrypted + idx, PICOPASS_BLOCK_SIZE);
 
-            uint16_t idx = blocknum * PICOPASS_BLOCK_SIZE;
-            memcpy(enc_data, decrypted + idx, PICOPASS_BLOCK_SIZE);
-
-            switch (aa1_encryption) {
-                // Right now, only 3DES is supported
-                case TRIPLEDES:
-                    // Decrypt block 7,8,9 if configured.
-                    if (blocknum > 6 && blocknum <= 9 && memcmp(enc_data, empty, PICOPASS_BLOCK_SIZE) != 0) {
-                        if (use_sc) {
-                            Decrypt(enc_data, decrypted + idx);
-                        } else {
-                            mbedtls_des3_crypt_ecb(&ctx, enc_data, decrypted + idx);
-                        }
-                        decrypted_block789 = true;
-                    }
-                    break;
-                case DES:
-                case RFU:
-                case None:
-                // Nothing to do for None anyway...
-                default:
-                    continue;
+                if (blocknum > 6 && blocknum <= 9 && memcmp(enc_data, empty, PICOPASS_BLOCK_SIZE) != 0) {
+                    Decrypt(enc_data, decrypted + idx);
+                    decrypted_block789 = true;
+                }
             }
 
             if (decrypted_block789) {
                 // Set the 2 last bits of block6 to 0 to mark the data as decrypted
                 decrypted[(6 * PICOPASS_BLOCK_SIZE) + 7] &= 0xFC;
             }
+        } else {
+            iclass_decrypt_transport(key, limit, decrypted, decrypted, aa1_encryption);
         }
 
         if (nosave) {
