@@ -259,7 +259,7 @@ static void generate_command_wrapping(uint8_t *command_Header, int command_heade
     //return;
 }
 
-static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_enc_key, uint8_t *diversified_mac_key, uint8_t *sioOutput,  int *tag_size, int encryption_algorithm, uint8_t *data_tag, int data_tag_len) {
+static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_enc_key, uint8_t *diversified_mac_key, uint8_t *sioOutput,  int *sio_size, int encryption_algorithm, uint8_t *data_tag, int data_tag_len) {
     // Intergrating our command generation with the GetData request to make my life easier in the future
 
     // Command Header is for the Get Data Command using
@@ -399,7 +399,7 @@ static int seos_get_data(uint8_t *rndICC, uint8_t *rndIFD, uint8_t *diversified_
         // Extract the value
         getDataSize = length_byte;
         memcpy(sioOutput, decrypted + offset, getDataSize);
-        *tag_size = getDataSize;
+        *sio_size = getDataSize;
         
         PrintAndLogEx(SUCCESS, "Tag.............................. " _YELLOW_("%s"), sprint_hex_inrow(tag, tag_len));
         PrintAndLogEx(SUCCESS, "Value............................ " _YELLOW_("%s"), sprint_hex_inrow(sioOutput, getDataSize));
