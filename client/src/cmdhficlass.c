@@ -4183,23 +4183,28 @@ out:
 
     switch(b7) {
 
-        case TEAR_PERSO_ENABLED: { // stabilize 0xBC with write operation to 0xBE
-            PrintAndLogEx(SUCCESS, "Detected fuse: "_GREEN_("0x%02X") " stabilizing to: "_YELLOW_("0xBE") NOLF, data_read[7]);
+        case TEAR_PERSO_ENABLED: { 
+            
+            // stabilize 0xBC with write operation to 0xBE
+            PrintAndLogEx(SUCCESS, "Detected fuse: " _GREEN_("0x%02X") " stabilizing to: " _YELLOW_("0xBE") NOLF, data_read[7]);
 
             memcpy(data, data_read, PICOPASS_BLOCK_SIZE);
             data[7] = TEAR_PERSO_STABLE;
 
             iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
+
+            // verify if it was a succesful write
             res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_verify, false);
             
             if (data_verify[7] == TEAR_PERSO_STABLE) {
 
                 PrintAndLogEx(SUCCESS, " ( %s )", _GREEN_("ok"));
-                PrintAndLogEx(SUCCESS, "Detected fuse: "_GREEN_("0x%02X") " set non-secure memory: "_YELLOW_("0xAC"), data_read[7]);
+                PrintAndLogEx(SUCCESS, "Detected fuse: " _GREEN_("0x%02X") " set non-secure memory: " _YELLOW_("0xAC"), data_read[7]);
                 
                 memcpy(data, data_verify, PICOPASS_BLOCK_SIZE);
                 data[7] = TEAR_UNLOCKED;
             
+                // set non-secure memory with 0xAC,  in this state it will always succeed
                 iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
 
                 iclass_read_interesting_data(key, keyType, elite, rawkey, use_replay, verbose, shallow_mod);
@@ -4210,24 +4215,25 @@ out:
 
         }
         case TEAR_PERSO_STABLE:
-        case TEAR_PERSO_STABLE2: { // unlock tag with write operation to 0xAC
-            PrintAndLogEx(SUCCESS, "Detected fuse: "_GREEN_("0x%02X") " set non-secure memory: "_YELLOW_("0xAC"), data_read[7]);
+        case TEAR_PERSO_STABLE2: { 
+
+            PrintAndLogEx(SUCCESS, "Detected fuse: " _GREEN_("0x%02X") " set non-secure memory: " _YELLOW_("0xAC"), data_read[7]);
 
             memcpy(data, data_read, PICOPASS_BLOCK_SIZE);
             data[7] = TEAR_UNLOCKED;
 
+            // set non-secure memory with 0xAC,  in this state it will always succeed
             iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
 
             iclass_read_interesting_data(key, keyType, elite, rawkey, use_replay, verbose, shallow_mod);
-            
             break;
         }
-        case TEAR_UNLOCKED: { // don't do anything as this is ok
-            PrintAndLogEx(SUCCESS, "Detected fuse: "_GREEN_("0x%02X")" _non secure memory_ ( %s )", data_read[7], _GREEN_("ok"));
+        case TEAR_UNLOCKED: { 
+            
+            // don't do anything as this is ok
+            PrintAndLogEx(SUCCESS, "Detected fuse: " _GREEN_("0x%02X")" _non secure memory_ ( %s )", data_read[7], _GREEN_("ok"));
 
-            // if tag is now UNLOCKED,  read block 3 and 4 and print the content
             iclass_read_interesting_data(key, keyType, elite, rawkey, use_replay, verbose, shallow_mod);
-
             break;
         } 
         case TEAR_INITAL: {
