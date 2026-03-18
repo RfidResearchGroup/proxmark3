@@ -40,20 +40,16 @@ static int CmdHelp(const char *Cmd);
 #define PACS_MAX_WIEGAND_BITS   96
 #define WIEGAND_MAX_ENCODED_BITS (PACS_MAX_WIEGAND_BITS + 8)
 
-static void wiegand_packed_to_binstr(const wiegand_message_t *packed, char *binstr) {
-    for (uint8_t i = 0; i < packed->Length; i++) {
-        binstr[i] = get_bit_by_position((wiegand_message_t *)packed, i) ? '1' : '0';
-    }
-    binstr[packed->Length] = '\0';
-}
-
 static int wiegand_print_new_pacs_verbose(const wiegand_message_t *packed, const uint8_t *pacs, size_t pacs_len) {
     char binstr[PACS_MAX_WIEGAND_BITS + 1] = {0};
     char rawbin[WIEGAND_MAX_ENCODED_BITS + 1] = {0};
     uint8_t raw[(WIEGAND_MAX_ENCODED_BITS + 7) / 8] = {0};
     size_t raw_len = 0;
 
-    wiegand_packed_to_binstr(packed, binstr);
+    if (wiegand_message_to_binstr(packed, binstr, sizeof(binstr)) == false) {
+        PrintAndLogEx(ERR, "Failed to render Wiegand payload");
+        return PM3_EINVARG;
+    }
     rawbin[0] = '1';
     memcpy(rawbin + 1, binstr, packed->Length);
     binstr_2_bytes(raw, &raw_len, rawbin);
@@ -83,7 +79,10 @@ static int wiegand_encode_new_pacs(const wiegand_message_t *packed, bool verbose
     uint8_t pad = padded_bits - packed->Length;
 
     char binstr[PACS_MAX_WIEGAND_BITS + 1] = {0};
-    wiegand_packed_to_binstr(packed, binstr);
+    if (wiegand_message_to_binstr(packed, binstr, sizeof(binstr)) == false) {
+        PrintAndLogEx(ERR, "Failed to render Wiegand payload");
+        return PM3_EINVARG;
+    }
     memset(binstr + packed->Length, '0', pad);
     binstr[padded_bits] = '\0';
 

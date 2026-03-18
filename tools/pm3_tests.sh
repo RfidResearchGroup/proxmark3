@@ -490,6 +490,7 @@ while true; do
       if ! CheckExecute "wiegand decode test - raw"  "$CLIENTBIN -c 'wiegand decode --raw 2006F623AE'" "FC: 123  CN: 4567  parity \( ok \)"; then break; fi
       if ! CheckExecute "wiegand decode test - bin over 96-bit"  "PAT=\$(printf '01%.0s' {1..49}); $CLIENTBIN -c \"wiegand decode --bin \$PAT\" 2>&1" "Binary decode supports up to 96 Wiegand bits"; then break; fi
       if ! CheckExecute "wiegand decode test - new"  "$CLIENTBIN -c 'wiegand decode --new 06BD88EB80'" "FC: 123  CN: 4567  parity \( ok \)"; then break; fi
+      if ! CheckExecute "wiegand decode test - new no padded bin"  "if ! $CLIENTBIN -c 'wiegand decode --new 06BD88EB80' 2>&1 | grep -q 'padded bin'; then echo OK; fi" "OK"; then break; fi
       if ! CheckExecute "wiegand decode test - new 96-bit"  "$CLIENTBIN -c 'wiegand decode --new 00555555555555555555555555'" "hex\\.{14} 555555555555555555555555"; then break; fi
       if ! CheckExecute "wiegand decode test - new 48-bit"  "$CLIENTBIN -c 'wiegand decode --new 0000A4550148AB'" "C1k48s.*FC: 42069  CN: 42069  parity \( ok \)"; then break; fi
       if ! CheckExecute "wiegand Verkada40 encode test 1" "$CLIENTBIN -c 'wiegand encode -w Verkada40 --fc 50 --cn 1001'" "86400007D3"; then break; fi
