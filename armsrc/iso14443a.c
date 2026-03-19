@@ -1445,6 +1445,11 @@ bool SimulateIso14443aInit(uint8_t tagType, uint16_t flags, uint8_t *data,
             }
             break;
         }
+        case 15: { // MIFARE Plus
+            rATQA[0] = 0x44;
+            sak = 0x20;
+            break;
+        }
         default: {
             if (g_dbglevel >= DBG_ERROR) Dbprintf("Error: unknown tagtype (%d)", tagType);
             return false;

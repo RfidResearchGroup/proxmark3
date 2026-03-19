@@ -912,12 +912,13 @@ int CmdHF14ASim(const char *Cmd) {
                   "hf 14a sim -t 11                -> Javacard (JCOP)\n"
                   "hf 14a sim -t 12                -> 4K Seos card\n"
                   "hf 14a sim -t 13                -> MIFARE Ultralight C\n"
-                  "hf 14a sim -t 14                -> MIFARE Ultralight AES"
+                  "hf 14a sim -t 14                -> MIFARE Ultralight AES\n"
+                  "hf 14a sim -t 15                -> MIFARE Plus"
                  );
 
     void *argtable[] = {
         arg_param_begin,
-        arg_int1("t", "type", "<1-14> ", "Simulation type to use"),
+        arg_int1("t", "type", "<1-15> ", "Simulation type to use"),
         arg_str0("u", "uid", "<hex>", "<4|7|10> hex bytes UID"),
         arg_int0("n", "num", "<dec>", "Exit simulation after <numreads> blocks have been read by reader. 0 = infinite"),
         arg_lit0("x",  NULL, "Performs the 'reader attack', nr/ar attack against a reader"),
@@ -1005,7 +1006,7 @@ int CmdHF14ASim(const char *Cmd) {
         }
     }
 
-    if (tagtype > 14) {
+    if (tagtype > 15) {
         PrintAndLogEx(ERR, "Undefined tag %d", tagtype);
         return PM3_EINVARG;
     }
