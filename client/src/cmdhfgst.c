@@ -178,6 +178,7 @@ typedef struct {
     gst_select_behavior_t select_behavior;
     bool live_authentication;
     bool apdu_logging;
+    bool verbose;
 } gst_read_config_t;
 
 typedef struct {
@@ -205,6 +206,19 @@ static bool gst_wallet_type_is_android_pay(const uint8_t *wallet_type, size_t wa
     return wallet_type != NULL
            && wallet_type_len == (sizeof(android_pay_wallet_type) - 1)
            && memcmp(wallet_type, android_pay_wallet_type, sizeof(android_pay_wallet_type) - 1) == 0;
+}
+
+static bool gst_wallet_type_is_apple_pay(const uint8_t *wallet_type, size_t wallet_type_len) {
+    static const uint8_t apple_pay_wallet_type[] = "ApplePay";
+    return wallet_type != NULL
+           && wallet_type_len == (sizeof(apple_pay_wallet_type) - 1)
+           && memcmp(wallet_type, apple_pay_wallet_type, sizeof(apple_pay_wallet_type) - 1) == 0;
+}
+
+static void gst_print_wallet_type_hint(const uint8_t *wallet_type, size_t wallet_type_len) {
+    if (gst_wallet_type_is_apple_pay(wallet_type, wallet_type_len)) {
+        PrintAndLogEx(INFO, "Hint: detected Apple VAS flavor of OSE.VAS.01. Try " _YELLOW_("hf vas") " commands.");
+    }
 }
 
 static uint32_t gst_version_value(const uint8_t version[2]) {
@@ -796,6 +810,7 @@ static void gst_print_ose_info(const gst_ose_info_t *info) {
                       sprint_ascii(info->wallet_type, info->wallet_type_len));
         if (gst_wallet_type_is_android_pay(info->wallet_type, info->wallet_type_len) == false) {
             PrintAndLogEx(WARNING, "Wallet type is not AndroidPay. This likely isn't Google Smart Tap.");
+            gst_print_wallet_type_hint(info->wallet_type, info->wallet_type_len);
             skip_gst_details = true;
         }
     } else {
@@ -1749,7 +1764,9 @@ static void gst_print_service_objects(const uint8_t *message, size_t message_len
             }
 
             object_count++;
-            PrintAndLogEx(INFO, "");
+            if (object_count > 1) {
+                PrintAndLogEx(INFO, "");
+            }
             PrintAndLogEx(INFO, _CYAN_("Object #%" PRIuPTR), (uintptr_t)object_count);
             PrintAndLogEx(INFO, "  kind.................... %s", is_customer ? "customer" : object_name);
             PrintAndLogEx(INFO, "  issuer_type............. %s (0x%02X)", gst_issuer_type_name(issuer_type), issuer_type);
@@ -2008,8 +2025,21 @@ static int gst_read(const gst_read_config_t *cfg) {
         goto out;
     }
 
-    PrintAndLogEx(INFO, "");
-    gst_print_ose_info(&ose_info);
+    const bool wallet_type_is_android_pay = ose_info.have_wallet_type &&
+                                            gst_wallet_type_is_android_pay(ose_info.wallet_type, ose_info.wallet_type_len);
+    const bool wallet_type_is_known_non_android = ose_info.have_wallet_type && !wallet_type_is_android_pay;
+
+    if (cfg->verbose) {
+        PrintAndLogEx(INFO, "");
+        gst_print_ose_info(&ose_info);
+    } else if (!wallet_type_is_android_pay) {
+        const char *wallet_type = ose_info.have_wallet_type
+                                  ? sprint_ascii(ose_info.wallet_type, ose_info.wallet_type_len)
+                                  : "not present";
+        PrintAndLogEx(WARNING, "Wallet type............... " _YELLOW_("%s"), wallet_type);
+        PrintAndLogEx(ERR, "Wallet type is not AndroidPay. This likely isn't Google Smart Tap.");
+        gst_print_wallet_type_hint(ose_info.wallet_type, ose_info.wallet_type_len);
+    }
 
     bool should_select = gst_should_select_smart_tap(cfg->select_behavior, &ose_info);
     if (should_select) {
@@ -2036,6 +2066,10 @@ static int gst_read(const gst_read_config_t *cfg) {
         }
     }
     if (device_nonce_len == 0) {
+        if (wallet_type_is_known_non_android) {
+            status = PM3_ESOFT;
+            goto out;
+        }
         PrintAndLogEx(ERR, "Could not obtain handset/device nonce");
         status = PM3_ESOFT;
         goto out;
@@ -2066,16 +2100,18 @@ static int gst_read(const gst_read_config_t *cfg) {
         goto out;
     }
 
-    PrintAndLogEx(INFO, "");
-    PrintAndLogInfoHeader("Negotiate secure channel");
-    PrintAndLogEx(INFO, "Collector ID.............. %" PRIu32 " (0x%08" PRIX32 ")", cfg->collector_id, cfg->collector_id);
-    PrintAndLogEx(INFO, "Long-term key version..... %" PRIu32 " (0x%08" PRIX32 ")", cfg->key_version, cfg->key_version);
-    PrintAndLogEx(INFO, "Session ID................ " _YELLOW_("%s"), sprint_hex_inrow(session_id_be, sizeof(session_id_be)));
-    PrintAndLogEx(INFO, "Reader nonce.............. " _YELLOW_("%s"), sprint_hex_inrow(reader_nonce, sizeof(reader_nonce)));
-    PrintAndLogEx(INFO, "Device nonce.............. " _YELLOW_("%s"), sprint_hex_inrow(device_nonce, device_nonce_len));
-    PrintAndLogEx(INFO, "Reader ephemeral pubkey... " _YELLOW_("%s"), sprint_hex_inrow(reader_ephemeral_public_key, sizeof(reader_ephemeral_public_key)));
-    PrintAndLogEx(INFO, "Reader signature.......... " _YELLOW_("%s"), sprint_hex_inrow(reader_signature, reader_signature_len));
-    PrintAndLogEx(INFO, "Live authentication....... %s", cfg->live_authentication ? _GREEN_("yes") : "no");
+    if (cfg->verbose) {
+        PrintAndLogEx(INFO, "");
+        PrintAndLogInfoHeader("Negotiate secure channel");
+        PrintAndLogEx(INFO, "Collector ID.............. %" PRIu32 " (0x%08" PRIX32 ")", cfg->collector_id, cfg->collector_id);
+        PrintAndLogEx(INFO, "Long-term key version..... %" PRIu32 " (0x%08" PRIX32 ")", cfg->key_version, cfg->key_version);
+        PrintAndLogEx(INFO, "Session ID................ " _YELLOW_("%s"), sprint_hex_inrow(session_id_be, sizeof(session_id_be)));
+        PrintAndLogEx(INFO, "Reader nonce.............. " _YELLOW_("%s"), sprint_hex_inrow(reader_nonce, sizeof(reader_nonce)));
+        PrintAndLogEx(INFO, "Device nonce.............. " _YELLOW_("%s"), sprint_hex_inrow(device_nonce, device_nonce_len));
+        PrintAndLogEx(INFO, "Reader ephemeral pubkey... " _YELLOW_("%s"), sprint_hex_inrow(reader_ephemeral_public_key, sizeof(reader_ephemeral_public_key)));
+        PrintAndLogEx(INFO, "Reader signature.......... " _YELLOW_("%s"), sprint_hex_inrow(reader_signature, reader_signature_len));
+        PrintAndLogEx(INFO, "Live authentication....... %s", cfg->live_authentication ? _GREEN_("yes") : "no");
+    }
 
     status = gst_build_negotiate_message(reader_nonce, reader_ephemeral_public_key,
                                          reader_signature, reader_signature_len,
@@ -2111,7 +2147,12 @@ static int gst_read(const gst_read_config_t *cfg) {
         }
     }
 
-    gst_print_status_line("NEGOTIATE status..........", negotiate_sw);
+    if (cfg->verbose || negotiate_sw != 0x9000) {
+        if (!cfg->verbose) {
+            PrintAndLogEx(INFO, "");
+        }
+        gst_print_status_line("NEGOTIATE status..........", negotiate_sw);
+    }
     if (!(negotiate_sw == 0x9000 || negotiate_sw == 0x9002)) {
         status = PM3_ESOFT;
         goto out;
@@ -2143,9 +2184,16 @@ static int gst_read(const gst_read_config_t *cfg) {
         }
     }
 
-    PrintAndLogEx(INFO, "");
-    PrintAndLogInfoHeader("Get data");
-    gst_print_status_line("GET DATA status...........", get_data_sw);
+    if (cfg->verbose) {
+        PrintAndLogEx(INFO, "");
+        PrintAndLogInfoHeader("Get data");
+    }
+    if (cfg->verbose || get_data_sw != 0x9000) {
+        if (!cfg->verbose) {
+            PrintAndLogEx(INFO, "");
+        }
+        gst_print_status_line("GET DATA status...........", get_data_sw);
+    }
     if (!gst_status_is_success(get_data_sw)) {
         status = PM3_ESOFT;
         goto out;
@@ -2167,7 +2215,9 @@ static int gst_read(const gst_read_config_t *cfg) {
         goto out;
     }
 
-    gst_print_bundle_flags(bundle_flags);
+    if (cfg->verbose) {
+        gst_print_bundle_flags(bundle_flags);
+    }
 
     const uint8_t *payload_to_parse = bundle_payload;
     size_t payload_to_parse_len = bundle_payload_len;
@@ -2308,6 +2358,7 @@ static int CmdHFGSTRead(const char *Cmd) {
         arg_str0(NULL, "select-smarttap2", "<auto|yes|no>", "Whether to perform Smart Tap applet select (default: auto)"),
         arg_lit0(NULL, "no-live-auth", "Use zeroed handset nonce for reader signature"),
         arg_lit0("a", "apdu", "Show APDU requests and responses"),
+        arg_lit0("v", "verbose", "Verbose output"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
@@ -2410,6 +2461,7 @@ static int CmdHFGSTRead(const char *Cmd) {
 
     cfg.live_authentication = !arg_get_lit(ctx, 9);
     cfg.apdu_logging = arg_get_lit(ctx, 10);
+    cfg.verbose = arg_get_lit(ctx, 11);
 
     CLIParserFree(ctx);
 
