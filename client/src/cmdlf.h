@@ -47,5 +47,6 @@ int lf_getconfig(sample_config *config);
 int lf_resetconfig(sample_config *config);
 int lfsim_upload_gb(void);
 int lfsim_wait_check(uint32_t cmd);
+int lfsim_wait_check_timeout(uint32_t cmd, uint32_t timeout_ms);
 
 #endif

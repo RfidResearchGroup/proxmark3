@@ -22,6 +22,7 @@
 #include <limits.h>
 #include <ctype.h>
 #include <math.h>
+#include "util_posix.h"     // msclock
 #include "cmdparser.h"      // command_t
 #include "comms.h"
 #include "commonutil.h"     // ARRAYLEN
@@ -77,13 +78,27 @@ static int CmdHelp(const char *Cmd);
 // loop and wait for either keyboard press or pm3 button to exit
 // if key event, send break loop cmd to Pm3
 int lfsim_wait_check(uint32_t cmd) {
+    return lfsim_wait_check_timeout(cmd, 0);
+}
+
+int lfsim_wait_check_timeout(uint32_t cmd, uint32_t timeout_ms) {
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Press " _GREEN_("pm3 button") " or " _GREEN_("<Enter>") " to abort simulation");
+
+    uint64_t start_time = msclock();
+    bool timeout_triggered = false;
 
     for (;;) {
         if (kbd_enter_pressed()) {
             SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
             PrintAndLogEx(DEBUG, "\naborted via keyboard!");
+            break;
+        }
+
+        if ((timeout_ms > 0) && ((msclock() - start_time) >= timeout_ms)) {
+            SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
+            PrintAndLogEx(DEBUG, "Simulation timed out after %" PRIu32 " ms", timeout_ms);
+            timeout_triggered = true;
             break;
         }
 
@@ -93,6 +108,13 @@ int lfsim_wait_check(uint32_t cmd) {
                 PrintAndLogEx(DEBUG, "Button pressed, user aborted");
                 break;
             }
+        }
+    }
+
+    if (timeout_triggered) {
+        PacketResponseNG resp;
+        if (WaitForResponseTimeout(cmd, &resp, 1000) && (resp.status == PM3_EOPABORTED)) {
+            PrintAndLogEx(DEBUG, "Simulation stopped after timeout");
         }
     }
     PrintAndLogEx(INFO, "Done!");
