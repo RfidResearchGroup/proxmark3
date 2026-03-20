@@ -1226,7 +1226,7 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
     char adflenHex[3];
     snprintf(adflenHex, sizeof(adflenHex), "%02X", (selectedADFLen >> 1) & 0xFF);
 
-    char selectADF[strlen(prefix) + strlen(adflenHex) + selectedADFLen + strlen(suffix) + 1];
+    char selectADF[strlen(prefix) + strlen(keyReference) + strlen(adflenHex) + selectedADFLen + strlen(suffix) + 1];
 
     // 80 A5 04 00 13 06 11 2B 06 01 04 01 81 E4 38 01 01 02 01 18 01 01 02 02 00
     snprintf(selectADF, sizeof(selectADF), "%s%s%s%s%s", prefix, keyReference, adflenHex, selectedADF, suffix);
@@ -1367,7 +1367,7 @@ static int seos_adf_select(char *oid, int oid_len, int key_index) {
     uint16_t selectedADFLen = strlen(selectedADF);
     char adflenHex[3];
     snprintf(adflenHex, sizeof(adflenHex), "%02X", (selectedADFLen >> 1) & 0xFF);
-    char selectADF[strlen(prefix) + strlen(adflenHex) + selectedADFLen + strlen(suffix) + 1];
+    char selectADF[strlen(prefix) + strlen(keyReference) + strlen(adflenHex) + selectedADFLen + strlen(suffix) + 1];
 
     // 80 A5 04 00 13 06 11 2B 06 01 04 01 81 E4 38 01 01 02 01 18 01 01 02 02 00
     snprintf(selectADF, sizeof(selectADF), "%s%s%s%s%s", prefix, keyReference, adflenHex, selectedADF, suffix);
