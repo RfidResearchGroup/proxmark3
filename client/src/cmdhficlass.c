@@ -3911,12 +3911,13 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
         goto out;
     }
 
-    #define TEAR_WRITE_BYTE     0x2C
-    #define TEAR_INITAL         0x3C
-    #define TEAR_UNLOCKED       0xAC
+    #define TEAR_NON_SECURE_MODE    0x2C
+    #define TEAR_INITAL             0x3C
+    #define TEAR_PERSO              0xAC
 
-    #define TEAR_IS_PERSO_SET(x)    (((x) & 0x80) == 0x80)
-    #define TEAR_BAD(x)             (((x) & 0x01) == 0)  
+    #define TEAR_IS_PERSO_SET(x)        (((x) & 0x80) == 0x80)
+    #define TEAR_IS_NONSECURE_SET(x)    (((x) % 0x18) == 0x18)
+    #define TEAR_BAD(x)                 (((x) & 0x01) == 0)  
 
     // perform initial read here, repeat if failed or 00s
 
@@ -3948,7 +3949,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
 
     uint8_t data[8] = { 0 }; // tearoff payload
     memcpy(data, data_read_orig, sizeof(data));
-    data[7] = TEAR_WRITE_BYTE;
+    data[7] = TEAR_NON_SECURE_MODE;
 
     // add the modified OTP if needed
     if (otp_len) {
@@ -4221,7 +4222,7 @@ out:
     if ( b7 == TEAR_INITAL) {
            PrintAndLogEx(INFO, _YELLOW_("Fuses unchanged. Try again if the OTP is unchanged"));
             // check for OTP change?
-    } else if ( b7 == TEAR_UNLOCKED) {
+    } else if (TEAR_IS_NONSECURE_SET(b7)) {
             // don't do anything as this is ok
             PrintAndLogEx(SUCCESS, "Detected fuse: " _GREEN_("0x%02X")" _non secure memory_ ( %s )", data_read[7], _GREEN_("ok"));
 
@@ -4231,7 +4232,7 @@ out:
             PrintAndLogEx(SUCCESS, "Detected fuse: " _GREEN_("0x%02X") " set non-secure memory: " _YELLOW_("0xAC"), data_read[7]);
 
             memcpy(data, data_read, PICOPASS_BLOCK_SIZE);
-            data[7] = TEAR_UNLOCKED;
+            data[7] = TEAR_NON_SECURE_MODE;
 
             // set non-secure memory with 0xAC,  in this state it will always succeed
             iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
