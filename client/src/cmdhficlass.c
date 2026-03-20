@@ -3916,7 +3916,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     #define TEAR_PERSO              0xAC
 
     #define TEAR_IS_PERSO_SET(x)        (((x) & 0x80) == 0x80)
-    #define TEAR_IS_NONSECURE_SET(x)    (((x) % 0x18) == 0x18)
+    #define TEAR_IS_NONSECURE_SET(x)    ((((x) & 0x18) >> 3) == PICOPASS_NON_SECURE_PAGEMODE)
     #define TEAR_BAD(x)                 (((x) & 0x01) == 0)  
 
     // perform initial read here, repeat if failed or 00s
