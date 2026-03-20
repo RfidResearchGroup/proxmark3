@@ -3770,10 +3770,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     CLIGetHexWithReturn(ctx, 1, key, &key_len);
 
     int key_nr = arg_get_int_def(ctx, 2, -1);
-    int blockno = 1;
-
-    uint8_t data[8] = {0x12, 0xFF, 0xFE, 0xFF, 0x7F, 0x1F, 0xFF, 0x2C}; // tearoff payload
-    uint8_t mac[4] = {0};
+    bool use_credit_key = arg_get_lit(ctx, 3);
 
     // Start at 1700,  end at 1900.
     // 5 steps increments
@@ -3787,17 +3784,17 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     uint8_t otp[2] = {0};
     CLIGetHexWithReturn(ctx, 7, otp, &otp_len);
 
+    bool rawkey = arg_get_lit(ctx, 8);
     bool verbose = arg_get_lit(ctx, 9);
     bool shallow_mod = arg_get_lit(ctx, 10);
+    CLIParserFree(ctx);
+
     bool elite = false;
-    bool rawkey = arg_get_lit(ctx, 8);
-    bool use_replay = false; //not implemented in this mode
+    bool use_replay = false; // not implemented in this mode
     bool read_auth = false;
-    bool use_credit_key = arg_get_lit(ctx, 3);
+
     int tearoff_loop = 1;
     int tearoff_sleep = 0;
-
-    CLIParserFree(ctx);
 
     // Sanity checks
     if (key_len > 0 && key_nr >= 0) {
@@ -3807,7 +3804,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
 
     bool auth = false;
 
-    if (key_len > 0) {
+    if (key_len) {
 
         auth = true;
         if (key_len != 8) {
@@ -3825,19 +3822,17 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
             PrintAndLogEx(SUCCESS, "Using key[%d] " _GREEN_("%s"), key_nr, sprint_hex_inrow(iClass_Key_Table[key_nr], 8));
         } else {
             PrintAndLogEx(ERR, "Key number is invalid");
+            PrintAndLogEx(NORMAL, "");
             return PM3_EINVARG;
         }
     } else {
         PrintAndLogEx(SUCCESS, "Using Key... " _GREEN_("%s"), sprint_hex_inrow(key, sizeof(key)));
     }
 
-    if (otp_len > 0) {
-        if (otp_len != 2) {
-            PrintAndLogEx(ERR, "OTP is incorrect length");
-            return PM3_EINVARG;
-        }
-        memcpy(&data[1], otp, 2); //update the otp in the tearoff data value
+    if (otp_len && otp_len != 2) {
+        PrintAndLogEx(ERR, "OTP is incorrect length");
         PrintAndLogEx(NORMAL, "");
+        return PM3_EINVARG;
     }
 
     int loop_count = 0;
@@ -3892,8 +3887,8 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     int fail_tolerance = 1;
     if (memcmp(r->header.hdr.csn + 4, "\xFE\xFF\x12\xE0", 4) == 0) {
         PrintAndLogEx(SUCCESS, "New silicon detected ( %s )",  _GREEN_("ok"));
-        PrintAndLogEx(INFO, "----------------------------------------");
-        PrintAndLogEx(SUCCESS, "CSN.................... %s", sprint_hex_inrow(r->header.hdr.csn, PICOPASS_BLOCK_SIZE));
+        PrintAndLogEx(INFO, "---------------------------------------");
+        PrintAndLogEx(SUCCESS, "CSN................... %s", sprint_hex_inrow(r->header.hdr.csn, PICOPASS_BLOCK_SIZE));
     } else {
         PrintAndLogEx(ERR, "Old silicon detected ( %s )",  _RED_("fail"));
         PrintAndLogEx(INFO, "Unsupported for this operation");
@@ -3916,14 +3911,12 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
         goto out;
     }
 
+    #define TEAR_WRITE_BYTE     0x2C
     #define TEAR_INITAL         0x3C
-    #define TEAR_PERSO_ENABLED  0xBC
-    #define TEAR_PERSO_STABLE   0xBE
-    #define TEAR_PERSO_STABLE2  0x9C
     #define TEAR_UNLOCKED       0xAC
 
-    #define TEAR_IS_PERSO_SET(x)    ((x) & 0x80 == 1)
-    #define TEAR_BAD(x)             ((x) & 0x1  == 0)  
+    #define TEAR_IS_PERSO_SET(x)    (((x) & 0x80) == 0x80)
+    #define TEAR_BAD(x)             (((x) & 0x01) == 0)  
 
     // perform initial read here, repeat if failed or 00s
 
@@ -3934,6 +3927,8 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     bool erase_phase = false;
 
     read_auth = false;
+
+    int blockno = 1;
     
     int res_orig = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read_orig, false);
     while (reread) {
@@ -3951,12 +3946,18 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
         }
     }
 
+    uint8_t data[8] = { 0 }; // tearoff payload
     memcpy(data, data_read_orig, sizeof(data));
-    data[7] = 0x2C;
+    data[7] = TEAR_WRITE_BYTE;
 
-    PrintAndLogEx(SUCCESS, "Original block data.... " _CYAN_("%s"), sprint_hex_inrow(data_read_orig, sizeof(data_read_orig)));
-    PrintAndLogEx(SUCCESS, "New data to write...... " _YELLOW_("%s"), sprint_hex_inrow(data, sizeof(data)));
-    PrintAndLogEx(SUCCESS, "Target block........... " _YELLOW_("%u") " / " _YELLOW_("0x%02x"), blockno, blockno);
+    // add the modified OTP if needed
+    if (otp_len) {
+        memcpy(data + 1, otp, sizeof(otp)); // update the otp in the tearoff data value
+    }
+
+    PrintAndLogEx(SUCCESS, "Original block data... " _CYAN_("%s"), sprint_hex_inrow(data_read_orig, sizeof(data_read_orig)));
+    PrintAndLogEx(SUCCESS, "New data to write..... " _YELLOW_("%s"), sprint_hex_inrow(data, sizeof(data)));
+    PrintAndLogEx(SUCCESS, "Target block.......... " _YELLOW_("%u") " / " _YELLOW_("0x%02x"), blockno, blockno);
 
     // turn off Device side debug messages
     uint8_t dbg_curr = DBG_NONE;
@@ -3971,13 +3972,15 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     // clear trace log
     SendCommandNG(CMD_BUFF_CLEAR, NULL, 0);
 
-    PrintAndLogEx(INFO, "----------------------------------------");
+    PrintAndLogEx(INFO, "---------------------------------------");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " ------------------\n");
+    PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------\n");
 
     // Main loop
+    uint8_t mac[4] = {0};
+
     while ((tearoff_start <= tearoff_end) && (read_ok == false)) {
 
         if (kbd_enter_pressed()) {
@@ -4097,7 +4100,9 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
 
             bool goto_out = false;
 
-            if (data_read[0] != data_read_orig[0]) {
+            // App limit became SMALLER :(
+            if (data_read[0] > data_read_orig[0]) {
+
                 PrintAndLogEx(NORMAL, "");
                 PrintAndLogEx(SUCCESS, "Application limit changed, from "_YELLOW_("%u")" to "_YELLOW_("%u"), data_read_orig[0], data_read[0]);
                 isok = PM3_SUCCESS;
@@ -4205,7 +4210,6 @@ out:
 
     read_auth = false; 
     uint8_t data_read[8]= {0};   
-    uint8_t data_verify[8] = {0}; 
     
     int res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_read, false);
     if (res != PM3_SUCCESS) {
@@ -4214,41 +4218,15 @@ out:
 
     uint8_t b7 = data_read[7];
 
-    switch(b7) {
+    if ( b7 == TEAR_INITAL) {
+           PrintAndLogEx(INFO, _YELLOW_("Fuses unchanged. Try again if the OTP is unchanged"));
+            // check for OTP change?
+    } else if ( b7 == TEAR_UNLOCKED) {
+            // don't do anything as this is ok
+            PrintAndLogEx(SUCCESS, "Detected fuse: " _GREEN_("0x%02X")" _non secure memory_ ( %s )", data_read[7], _GREEN_("ok"));
 
-        case TEAR_PERSO_ENABLED: { 
-            
-            // stabilize 0xBC with write operation to 0xBE
-            PrintAndLogEx(SUCCESS, "Detected fuse: " _GREEN_("0x%02X") " stabilizing to: " _YELLOW_("0xBE") NOLF, data_read[7]);
-
-            memcpy(data, data_read, PICOPASS_BLOCK_SIZE);
-            data[7] = TEAR_PERSO_STABLE;
-
-            iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
-
-            // verify if it was a succesful write
-            res = iclass_read_block_ex(key, blockno, keyType, elite, rawkey, use_replay, verbose, read_auth, shallow_mod, data_verify, false);
-            
-            if (data_verify[7] == TEAR_PERSO_STABLE) {
-
-                PrintAndLogEx(SUCCESS, " ( %s )", _GREEN_("ok"));
-                PrintAndLogEx(SUCCESS, "Detected fuse: " _GREEN_("0x%02X") " set non-secure memory: " _YELLOW_("0xAC"), data_read[7]);
-                
-                memcpy(data, data_verify, PICOPASS_BLOCK_SIZE);
-                data[7] = TEAR_UNLOCKED;
-            
-                // set non-secure memory with 0xAC,  in this state it will always succeed
-                iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
-
-                iclass_read_interesting_data(key, keyType, elite, rawkey, use_replay, verbose, shallow_mod);
-            } else {
-                PrintAndLogEx(FAILED, " ( %s )", _RED_("fail"));
-            }
-            break;
-
-        }
-        case TEAR_PERSO_STABLE:
-        case TEAR_PERSO_STABLE2: { 
+            iclass_read_interesting_data(key, keyType, elite, rawkey, use_replay, verbose, shallow_mod);
+    } else if (TEAR_IS_PERSO_SET(b7)) {
 
             PrintAndLogEx(SUCCESS, "Detected fuse: " _GREEN_("0x%02X") " set non-secure memory: " _YELLOW_("0xAC"), data_read[7]);
 
@@ -4259,27 +4237,12 @@ out:
             iclass_write_block(blockno, data, mac, key, use_credit_key, elite, rawkey, use_replay, false, auth, shallow_mod);
 
             iclass_read_interesting_data(key, keyType, elite, rawkey, use_replay, verbose, shallow_mod);
-            break;
-        }
-        case TEAR_UNLOCKED: { 
-            
-            // don't do anything as this is ok
-            PrintAndLogEx(SUCCESS, "Detected fuse: " _GREEN_("0x%02X")" _non secure memory_ ( %s )", data_read[7], _GREEN_("ok"));
-
-            iclass_read_interesting_data(key, keyType, elite, rawkey, use_replay, verbose, shallow_mod);
-            break;
-        } 
-        case TEAR_INITAL: {
-            PrintAndLogEx(INFO, _YELLOW_("Fuses unchanged. Try again if the OTP is unchanged"));
-            // check for OTP change?
-            break;
-        }
-        default: {
-            PrintAndLogEx(INFO, _YELLOW_("Did not detect " _YELLOW_("0xBC") " or " _YELLOW_("0xBE") " or " _YELLOW_("0x9C") " fuse, might need manual intervention!"));
-            break;
-        }
+    } else if (TEAR_BAD(b7)) {
+        PrintAndLogEx(WARNING, "Bad fuse state detected: " _RED_("0x%02X") ", cannot proceed", b7);
+        return PM3_EFAILED;
+    } else {
+        PrintAndLogEx(INFO, _YELLOW_("Did not detect " _YELLOW_("0xBC") " or " _YELLOW_("0xBE") " or " _YELLOW_("0x9C") " fuse, might need manual intervention!"));       
     }
-    
 
     return isok;
 }
