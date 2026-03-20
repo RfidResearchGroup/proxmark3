@@ -98,6 +98,7 @@ bool check_known_default(uint8_t *csn, uint8_t *epurse, uint8_t *rmac, uint8_t *
 
     iclass_prekey_t *prekey = calloc(ICLASS_KEYS_MAX * 2, sizeof(iclass_prekey_t));
     if (prekey == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         return false;
     }
 
@@ -228,6 +229,11 @@ static void iclass_upload_emul(uint8_t *d, uint16_t n, uint16_t offset, uint16_t
         }
 
         struct p *payload = calloc(4 + bytes_in_packet, sizeof(uint8_t));
+        if (payload == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            break;
+        }
+
         payload->offset = offset + *bytes_sent;
         payload->len = bytes_in_packet;
         memcpy(payload->data, d + *bytes_sent, bytes_in_packet);
@@ -1121,7 +1127,11 @@ int read_iclass_csn(bool loop, bool verbose, bool shallow_mod) {
             }
 
             picopass_hdr_t *card = calloc(1, sizeof(picopass_hdr_t));
-            if (card) {
+            if (card == NULL) {
+                PrintAndLogEx(WARNING, "Failed to allocate memory");
+                DropField();
+                return PM3_EMALLOC;
+            } else {
                 memcpy(card, &r->header.hdr, sizeof(picopass_hdr_t));
                 if (loop == false) {
                     PrintAndLogEx(NORMAL, "");
@@ -1130,9 +1140,6 @@ int read_iclass_csn(bool loop, bool verbose, bool shallow_mod) {
                 iclass_set_last_known_card(card);
                 free(card);
                 res = PM3_SUCCESS;
-            } else {
-                PrintAndLogEx(WARNING, "Failed to allocate memory");
-                res = PM3_EMALLOC;
             }
         }
     } while (loop && (kbd_enter_pressed() == false));
@@ -1238,6 +1245,7 @@ static int CmdHFiClassELoad(const char *Cmd) {
 
     uint8_t *newdump = realloc(dump, bytes_read);
     if (newdump == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
         free(dump);
         return PM3_EMALLOC;
     } else {
@@ -1358,7 +1366,6 @@ static int CmdHFiClassEView(const char *Cmd) {
         PrintAndLogEx(WARNING, "Failed to allocate memory");
         return PM3_EMALLOC;
     }
-    memset(dump, 0, bytes);
 
     PrintAndLogEx(INFO, "downloading from emulator memory");
     if (!GetFromDevice(BIG_BUF_EML, dump, bytes, 0, NULL, 0, NULL, 2500, false)) {
@@ -1742,7 +1749,7 @@ static int CmdHFiClassDecrypt(const char *Cmd) {
 
             // use the first block (CSN) for filename
             char *fptr = calloc(50, sizeof(uint8_t));
-            if (fptr == false) {
+            if (fptr == NULL) {
                 PrintAndLogEx(WARNING, "Failed to allocate memory");
                 free(decrypted);
                 return PM3_EMALLOC;
@@ -2798,6 +2805,12 @@ static int CmdHFiClassRestore(const char *Cmd) {
     }
 
     iclass_restore_req_t *payload = calloc(1, payload_size);
+    if (payload == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        free(dump);
+        return PM3_EMALLOC;
+    }
+
     payload->req.use_raw = rawkey;
     payload->req.use_elite = elite;
     payload->req.use_credit_key = use_credit_key;
@@ -5307,8 +5320,15 @@ static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, u
     }
 
     while (repeat == true) {
+
         uint32_t payload_size = sizeof(iclass_recover_req_t);
+        
         iclass_recover_req_t *payload = calloc(1, payload_size);
+        if (payload == NULL) {
+            PrintAndLogEx(WARNING, "Failed to allocate memory");
+            break;
+        }
+
         payload->req.use_raw = true;
         payload->req.use_elite = false;
         payload->req.use_credit_key = false;
@@ -5357,8 +5377,10 @@ static int iclass_recover(uint8_t key[8], uint32_t index_start, uint32_t loop, u
                 repeat = false;
             }
         }
+
         free(payload);
-        if (!repeat) {
+
+        if (repeat == false) {
             return resp.status;
         }
     }
@@ -6225,6 +6247,11 @@ static void shave(uint8_t *data, uint8_t len) {
 }
 static void generate_rev(uint8_t *data, uint8_t len) {
     uint8_t *key = calloc(len, sizeof(uint8_t));
+    if (key == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return;
+    }
+
     PrintAndLogEx(SUCCESS, "permuted key..... %s", sprint_hex_inrow(data, len));
     permute_rev(data, len, key);
     PrintAndLogEx(SUCCESS, "unpermuted key... %s", sprint_hex_inrow(key, len));
@@ -6234,7 +6261,17 @@ static void generate_rev(uint8_t *data, uint8_t len) {
 }
 static void generate(uint8_t *data, uint8_t len) {
     uint8_t *key = calloc(len, sizeof(uint8_t));
+    if (key == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return;
+    }
+    
     uint8_t *pkey = calloc(len, sizeof(uint8_t));
+    if (pkey == NULL) {
+        PrintAndLogEx(WARNING, "Failed to allocate memory");
+        return;
+    }
+    
     PrintAndLogEx(SUCCESS, "input key...... %s", sprint_hex_inrow(data, len));
     permute(data, len, pkey);
     PrintAndLogEx(SUCCESS, "permuted key... %s", sprint_hex_inrow(pkey, len));
