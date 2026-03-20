@@ -775,37 +775,67 @@ static int select_df_decode(uint8_t *response, uint8_t response_length, int *ALG
     [=]  -- 8E [08] 'elem'
     [=]     00: 81 49 C8 6A 53 5E F8 6A                         | .I.jS^.j
     */
-    int ALGORITHM_INFO_value1_n = 0;
-    int ALGORITHM_INFO_value2_n = 0;
-    int bufferPoint = 0;
-
-    for (int i = 0; i < response_length; i++) {
-        // ALGORITHM_INFO
-        if (response[i] == 0xCD) {
-            *ALGORITHM_INFO_value1 = (int)response[i + 2];
-            ALGORITHM_INFO_value1_n = response[i + 2];
-            *ALGORITHM_INFO_value2 = (int)response[i + 3];
-            ALGORITHM_INFO_value2_n = response[i + 3];
-            bufferPoint = i + (i + 1);
-            break;
-        }
+    if (response == NULL || ALGORITHM_INFO_value1 == NULL || ALGORITHM_INFO_value2 == NULL || CRYPTOGRAM_encrypted_data == NULL || MAC_value == NULL) {
+        PrintAndLogEx(ERR, "Invalid input to ADF response decoder");
+        return PM3_ESOFT;
     }
 
-    for (int i = bufferPoint ; i < response_length; i++) {
-        // CRYPTOGRAM
-        if (response[i] == 0x85) {
-            memcpy(CRYPTOGRAM_encrypted_data, &response[i + 2], 64);
-            bufferPoint = i + (i + 1);
-            break;
+    bool has_algorithm_info = false;
+    bool has_cryptogram = false;
+    bool has_mac = false;
+
+    for (size_t i = 0; i + 1 < response_length;) {
+        uint8_t tag = response[i];
+        uint8_t tag_len = response[i + 1];
+
+        if (i + 2 + tag_len > response_length) {
+            PrintAndLogEx(ERR, "Malformed ADF response: tag 0x%02X length %u exceeds payload size %u", tag, tag_len, response_length);
+            return PM3_ESOFT;
         }
+
+        if (tag == 0xCD) {
+            if (tag_len < 2) {
+                PrintAndLogEx(ERR, "Malformed ADF response: ALGORITHM_INFO (CD) length %u is too short", tag_len);
+                return PM3_ESOFT;
+            }
+            *ALGORITHM_INFO_value1 = response[i + 2];
+            *ALGORITHM_INFO_value2 = response[i + 3];
+            has_algorithm_info = true;
+        } else if (tag == 0x85) {
+            if (tag_len == 0 || tag_len > 64) {
+                PrintAndLogEx(ERR, "Malformed ADF response: CRYPTOGRAM (85) length %u, expected 64", tag_len);
+                return PM3_ESOFT;
+            }
+            memcpy(CRYPTOGRAM_encrypted_data, &response[i + 2], tag_len);
+            has_cryptogram = true;
+        } else if (tag == 0x8E) {
+            if (tag_len != 8) {
+                PrintAndLogEx(ERR, "Malformed ADF response: MAC (8E) length %u, expected 8", tag_len);
+                return PM3_ESOFT;
+            }
+            memcpy(MAC_value, &response[i + 2], tag_len);
+            has_mac = true;
+        }
+
+        i += 2 + tag_len;
     }
 
-    for (int i = bufferPoint; i < response_length; i++) {
-        // MAC
-        if (response[i] == 0x8E) {
-            memcpy(MAC_value, &response[i + 2], 8);
+    if (has_algorithm_info == false || has_cryptogram == false || has_mac == false) {
+        if (has_algorithm_info == false) {
+            PrintAndLogEx(ERR, "ADF response missing ALGORITHM_INFO tag (CD)");
         }
+        if (has_cryptogram == false) {
+            PrintAndLogEx(ERR, "ADF response missing CRYPTOGRAM tag (85)");
+        }
+        if (has_mac == false) {
+            PrintAndLogEx(ERR, "ADF response missing MAC tag (8E)");
+        }
+        PrintAndLogEx(ERR, "Raw ADF response.................. %s", sprint_hex_inrow(response, response_length));
+        return PM3_ESOFT;
     }
+
+    int ALGORITHM_INFO_value1_n = *ALGORITHM_INFO_value1;
+    int ALGORITHM_INFO_value2_n = *ALGORITHM_INFO_value2;
 
     const char *algorithm_name1 = NULL;
     for (int i = 0; i < ARRAYLEN(known_algorithm_map); i++) {
@@ -1240,6 +1270,10 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
     uint8_t Diversified_New_EncryptionKey[24] = {0};
     uint8_t Diversified_New_MACKey[24] = {0};
 
+    if (resplen <= 2) {
+        PrintAndLogEx(ERR, "Selecting ADF file failed (short response).");
+        return PM3_EWRONGANSWER;
+    }
     resplen -= 2;
 
     uint8_t keyslot = keys[key_index].keyslot;
@@ -1368,11 +1402,27 @@ static int seos_adf_select(char *oid, int oid_len, int key_index) {
     uint8_t MAC_value[8] = {0};                  // MAC Value
     uint8_t RNDICC[8] = {0};
 
+    if (resplen <= 2) {
+        PrintAndLogEx(ERR, "Selecting ADF file failed (short response).");
+        return PM3_EWRONGANSWER;
+    }
     resplen -= 2;
 
-    seos_challenge_get(RNDICC, sizeof(RNDICC), keys[key_index].keyslot);
-    select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
-    select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
+    res = seos_challenge_get(RNDICC, sizeof(RNDICC), keys[key_index].keyslot);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    res = select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    res = select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
     return PM3_SUCCESS;
 };
 
@@ -1413,9 +1463,26 @@ static int seos_gdf_select(int key_index) {
     uint8_t MAC_value[8] = {0};                  // MAC Value
     uint8_t RNDICC[8] = {0};
 
-    seos_challenge_get(RNDICC, sizeof(RNDICC), keys[key_index].keyslot);
-    select_df_decode(response, (resplen - 2), &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
-    select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
+    if (resplen <= 2) {
+        PrintAndLogEx(ERR, "Get Global_df failed (short response).");
+        return PM3_EWRONGANSWER;
+    }
+    resplen -= 2;
+
+    res = seos_challenge_get(RNDICC, sizeof(RNDICC), keys[key_index].keyslot);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    res = select_df_decode(response, resplen, &ALGORITHM_INFO_value1, &ALGORITHM_INFO_value2, CRYPTOGRAM_encrypted_data, MAC_value);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
+
+    res = select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
+    if (res != PM3_SUCCESS) {
+        return res;
+    }
 
     return PM3_SUCCESS;
 };
