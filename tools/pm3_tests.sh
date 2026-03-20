@@ -462,6 +462,11 @@ while true; do
       if ! CheckExecute "reveng readline test"    "$CLIENTBIN -c 'reveng -h;reveng -D'" "CRC-64/GO-ISO"; then break; fi
       if ! CheckExecute "reveng -g test"          "$CLIENTBIN -c 'reveng -g abda202c'" "CRC-16/ISO-IEC-14443-3-A"; then break; fi
       if ! CheckExecute "reveng -w test"          "$CLIENTBIN -c 'reveng -w 8 -s 01020304e3 010204039d'" "CRC-8/SMBUS"; then break; fi
+      if ! CheckExecute "data qrcode ascii test"  "$CLIENTBIN -c 'data qrcode -d aa --ascii'" "##"; then break; fi
+      if ! CheckExecute "data qrcode repeated -d" "$CLIENTBIN -c 'data qrcode -d aa -d bb' 2>&1" "excess option -d\\|--data"; then break; fi
+      if ! CheckExecute "data qrcode invalid hex" "$CLIENTBIN -c 'data qrcode -d zz' 2>&1" "QR data must contain only hex characters"; then break; fi
+      if ! CheckExecute "data qrcode odd hex"     "$CLIENTBIN -c 'data qrcode -d a' 2>&1" "QR data must contain an even number of hex digits"; then break; fi
+      if ! CheckExecute "data qrcode spaced hex"  "$CLIENTBIN -c 'data qrcode -d \"aa bb\"' 2>&1" "Spaces are not supported; encode a space byte as 20"; then break; fi
       if ! CheckExecute "mfu pwdgen test"         "$CLIENTBIN -c 'hf mfu pwdgen --test'" "Selftest ok"; then break; fi
       if ! CheckExecute "mfu keygen test"         "$CLIENTBIN -c 'hf mfu keygen --uid 11223344556677'" "80 B1 C2 71 D8 A0"; then break; fi
       if ! CheckExecute "jooki encode test"       "$CLIENTBIN -c 'hf jooki encode --test'" "04 28 F4 DA F0 4A 81  \( ok \)"; then break; fi
