@@ -789,6 +789,7 @@ static int select_df_decode(uint8_t *response, uint8_t response_length, int *ALG
     bool has_algorithm_info = false;
     bool has_cryptogram = false;
     bool has_mac = false;
+    bool plaintext_adf = (response_length > 4 && response[0] == 0xCD && response[1] == 0x02 && response[4] == 0x06);
 
     for (size_t i = 0; i + 1 < response_length;) {
         uint8_t tag = response[i];
@@ -826,14 +827,14 @@ static int select_df_decode(uint8_t *response, uint8_t response_length, int *ALG
         i += 2 + tag_len;
     }
 
-    if (has_algorithm_info == false || has_cryptogram == false || has_mac == false) {
+    if (has_algorithm_info == false || (plaintext_adf == false && (has_cryptogram == false || has_mac == false))) {
         if (has_algorithm_info == false) {
             PrintAndLogEx(ERR, "ADF response missing ALGORITHM_INFO tag (CD)");
         }
-        if (has_cryptogram == false) {
+        if (plaintext_adf == false && has_cryptogram == false) {
             PrintAndLogEx(ERR, "ADF response missing CRYPTOGRAM tag (85)");
         }
-        if (has_mac == false) {
+        if (plaintext_adf == false && has_mac == false) {
             PrintAndLogEx(ERR, "ADF response missing MAC tag (8E)");
         }
         PrintAndLogEx(ERR, "Raw ADF response.................. %s", sprint_hex_inrow(response, response_length));
@@ -859,8 +860,6 @@ static int select_df_decode(uint8_t *response, uint8_t response_length, int *ALG
         }
     }
 
-    bool plaintext_adf = (response_length > 4 && response[0] == 0xCD && response[1] == 0x02 && response[4] == 0x06);
-
     PrintAndLogEx(INFO, "--- " _CYAN_("Raw ADF Information") " ---------------------------");
     if (algorithm_name1 != NULL) {
         PrintAndLogEx(SUCCESS, "algoIdCipher (Encryption)........ "_YELLOW_("%i (%s)"), ALGORITHM_INFO_value1_n, algorithm_name1);
@@ -875,7 +874,9 @@ static int select_df_decode(uint8_t *response, uint8_t response_length, int *ALG
     }
 
     if (plaintext_adf == false) {
+    if (plaintext_adf == false) {
         PrintAndLogEx(SUCCESS, "CRYPTOGRAM Encrypted Data........ " _YELLOW_("%s"), sprint_hex_inrow(CRYPTOGRAM_encrypted_data, 64));
+    }
     }
     // PrintAndLogEx(SUCCESS, "MAC.............................. " _YELLOW_("%s"), sprint_hex_inrow(MAC_value, 8));
 
