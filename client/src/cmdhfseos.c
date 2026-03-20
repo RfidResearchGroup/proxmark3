@@ -17,6 +17,7 @@
 //-----------------------------------------------------------------------------
 #include "cmdhfseos.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>              // tolower
 #include "cliparser.h"
@@ -45,47 +46,37 @@ static uint8_t zeros[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 #define MAX_DIVERSIFIER_LEN 16
 #define MAX_OID_LEN 32
 #define MAX_SEOS_AID_LEN 16
+#define SEOS_MAX_KEYS 16
 
 static int CmdHelp(const char *Cmd);
 
 typedef struct {
-    uint8_t keyslot;
-    uint8_t nonce[8];
     uint8_t privEncKey[16];
     uint8_t privMacKey[16];
     uint8_t authKey[16];
 } keyset_t;
 
-keyset_t keys[] = {
-    {
-        0x01,                                                                                               // Keyslot
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },                                         // Nonce
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privEncKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privMacKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // authKey
-    },
-    {
-        0x01,                                                                                               // Keyslot
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },                                         // Nonce
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privEncKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privMacKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // authKey
-    },
-    {
-        0x02,                                                                                               // Keyslot
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },                                         // Nonce
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privEncKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privMacKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // authKey
-    },
-    {
-        0x09,                                                                                               // Keyslot
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },                                         // Nonce
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privEncKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // privMacKey
-        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, // authKey
-    },
+#define SEOS_EMPTY_KEYSET { \
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, \
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, \
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } \
+}
+
+keyset_t keys[SEOS_MAX_KEYS] = {
+    SEOS_EMPTY_KEYSET,
+    SEOS_EMPTY_KEYSET,
+    SEOS_EMPTY_KEYSET,
+    SEOS_EMPTY_KEYSET,
+    SEOS_EMPTY_KEYSET,
+    SEOS_EMPTY_KEYSET,
+    SEOS_EMPTY_KEYSET,
+    SEOS_EMPTY_KEYSET,
+    SEOS_EMPTY_KEYSET,
+    SEOS_EMPTY_KEYSET,
+    SEOS_EMPTY_KEYSET,
 };
+
+#undef SEOS_EMPTY_KEYSET
 
 typedef struct {
     const int value;
@@ -111,6 +102,21 @@ static int seos_get_custom_aid(CLIParserContext *ctx, int arg_index, uint8_t *ai
         return PM3_ESOFT;
     }
     return res;
+}
+
+static bool seos_parse_key_index(const char *input, int *value) {
+    if (input == NULL || *input == '\0') {
+        return false;
+    }
+
+    char *end = NULL;
+    long parsed = strtol(input, &end, 10);
+    if (*end != '\0' || parsed < 0 || parsed >= (long)ARRAYLEN(keys)) {
+        return false;
+    }
+
+    *value = (int)parsed;
+    return true;
 }
 
 static int create_cmac(uint8_t *key, uint8_t *input, uint8_t *out, int input_len, int output_len, int encryption_algorithm) {
@@ -853,6 +859,8 @@ static int select_df_decode(uint8_t *response, uint8_t response_length, int *ALG
         }
     }
 
+    bool plaintext_adf = (response_length > 4 && response[0] == 0xCD && response[1] == 0x02 && response[4] == 0x06);
+
     PrintAndLogEx(INFO, "--- " _CYAN_("Raw ADF Information") " ---------------------------");
     if (algorithm_name1 != NULL) {
         PrintAndLogEx(SUCCESS, "algoIdCipher (Encryption)........ "_YELLOW_("%i (%s)"), ALGORITHM_INFO_value1_n, algorithm_name1);
@@ -866,14 +874,38 @@ static int select_df_decode(uint8_t *response, uint8_t response_length, int *ALG
         PrintAndLogEx(ERR, "algoIdHash (MAC)............... %d (Unknown)", ALGORITHM_INFO_value2_n);
     }
 
-    // PrintAndLogEx(SUCCESS, "Raw Data......................... " _YELLOW_("%s"), sprint_hex_inrow(response, 80));
-    PrintAndLogEx(SUCCESS, "CRYPTOGRAM Encrypted Data........ " _YELLOW_("%s"), sprint_hex_inrow(CRYPTOGRAM_encrypted_data, 64));
+    if (plaintext_adf == false) {
+        PrintAndLogEx(SUCCESS, "CRYPTOGRAM Encrypted Data........ " _YELLOW_("%s"), sprint_hex_inrow(CRYPTOGRAM_encrypted_data, 64));
+    }
     // PrintAndLogEx(SUCCESS, "MAC.............................. " _YELLOW_("%s"), sprint_hex_inrow(MAC_value, 8));
 
     return PM3_SUCCESS;
 }
 
-static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encrypted_data_raw, uint8_t *CRYPTOGRAM_Diversifier, int *diversifier_length_out, int encryption_algorithm, int key_index) {
+static bool select_df_is_plaintext(const uint8_t *response, uint8_t response_length) {
+    return (response_length > 4 && response[0] == 0xCD && response[1] == 0x02 && response[4] == 0x06);
+}
+
+static int select_df_extract_plaintext_diversifier(const uint8_t *response, uint8_t response_length, uint8_t *diversifier, int *diversifier_length) {
+    int adf_length = response[5];
+    int cf_index = 6 + adf_length;
+    if (adf_length > MAX_OID_LEN || cf_index + 2 > response_length || response[4] != 0x06 || response[cf_index] != 0xCF) {
+        PrintAndLogEx(ERR, "Plaintext ADF response format is invalid");
+        return PM3_ESOFT;
+    }
+
+    int plaintext_diversifier_length = response[cf_index + 1];
+    if (plaintext_diversifier_length > *diversifier_length || cf_index + 2 + plaintext_diversifier_length > response_length) {
+        PrintAndLogEx(ERR, "Plaintext ADF diversifier too long");
+        return PM3_ESOFT;
+    }
+
+    memcpy(diversifier, &response[cf_index + 2], plaintext_diversifier_length);
+    *diversifier_length = plaintext_diversifier_length;
+    return PM3_SUCCESS;
+}
+
+static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encrypted_data_raw, uint8_t *CRYPTOGRAM_Diversifier, int *diversifier_length_out, int encryption_algorithm, int privacy_key_index) {
     // --------------- Decrypt ----------------
 
     // 1. MAC Verify - AES/CBC-decrypt (IV || cryptogram || 16 bytes after 8e 08) with the MAC key & keep the last block
@@ -900,7 +932,7 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
 
     uint8_t mac[iv_size];
     uint8_t MAC_key[24] = {0x00};
-    memcpy(MAC_key, keys[key_index].privMacKey, 16);
+    memcpy(MAC_key, keys[privacy_key_index].privMacKey, 16);
     create_cmac(MAC_key, CRYPTOGRAM_encrypted_data_raw, mac, iv_size, sizeof(mac), encryption_algorithm);
     if (memcmp(CRYPTOGRAM_encrypted_data_raw + iv_size, mac, iv_size) != 0) {
         PrintAndLogEx(ERR, "Synthesized IV Verification Failed");
@@ -909,7 +941,7 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
     }
 
     uint8_t privEncKey[16] = {};
-    memcpy(privEncKey, keys[key_index].privEncKey, 16);
+    memcpy(privEncKey, keys[privacy_key_index].privEncKey, 16);
     uint8_t CRYPTOGRAM_decrypted_data[64];
 
     decrypt_cryptogram(privEncKey, CRYPTOGRAM_encrypted_data_raw, CRYPTOGRAM_decrypted_data, ARRAYLEN(CRYPTOGRAM_decrypted_data), encryption_algorithm);
@@ -979,12 +1011,12 @@ static int select_ADF_decrypt(const char *selectADFOID, uint8_t *CRYPTOGRAM_encr
     return PM3_ESOFT;
 };
 
-static int seos_mutual_auth(uint8_t *adfOID, size_t adfoid_len, uint8_t *randomICC, uint8_t *CRYPTOGRAM_Diversifier, uint8_t diversifier_len, uint8_t *mutual_auth_randomIFD, uint8_t *mutual_auth_keyICC, uint8_t *randomIFD, uint8_t randomIFD_len, uint8_t *keyIFD, uint8_t keyIFD_len, int encryption_algorithm, int hash_algorithm, int key_index, uint8_t keyslot) {
+static int seos_mutual_auth(uint8_t *adfOID, size_t adfoid_len, uint8_t *randomICC, uint8_t *CRYPTOGRAM_Diversifier, uint8_t diversifier_len, uint8_t *mutual_auth_randomIFD, uint8_t *mutual_auth_keyICC, uint8_t *randomIFD, uint8_t randomIFD_len, uint8_t *keyIFD, uint8_t keyIFD_len, int encryption_algorithm, int hash_algorithm, int auth_key_index, uint8_t auth_key_slot) {
     uint8_t response[PM3_CMD_DATA_SIZE];
 
     // ---------------- Diversify Keys ----------------
     uint8_t mk[16] = { 0x00 };
-    memcpy(mk, keys[key_index].authKey, 16);
+    memcpy(mk, keys[auth_key_index].authKey, 16);
     uint8_t AES_key[24] = {0x00};
     uint8_t MAC_key[24] = {0x00};
 
@@ -996,8 +1028,8 @@ static int seos_mutual_auth(uint8_t *adfOID, size_t adfoid_len, uint8_t *randomI
         return PM3_ESOFT;
     }
 
-    seos_kdf(true, mk, keyslot, adfOID, adfoid_len, CRYPTOGRAM_Diversifier, diversifier_len, AES_key, encryption_algorithm, hash_algorithm);
-    seos_kdf(false, mk, keyslot, adfOID, adfoid_len, CRYPTOGRAM_Diversifier, diversifier_len, MAC_key, encryption_algorithm, hash_algorithm);
+    seos_kdf(true, mk, auth_key_slot, adfOID, adfoid_len, CRYPTOGRAM_Diversifier, diversifier_len, AES_key, encryption_algorithm, hash_algorithm);
+    seos_kdf(false, mk, auth_key_slot, adfOID, adfoid_len, CRYPTOGRAM_Diversifier, diversifier_len, MAC_key, encryption_algorithm, hash_algorithm);
 
     memcpy(&MAC_key[16], &MAC_key[0], 8);
     memcpy(&AES_key[16], &AES_key[0], 8);
@@ -1044,7 +1076,7 @@ static int seos_mutual_auth(uint8_t *adfOID, size_t adfoid_len, uint8_t *randomI
     const char *mutual_auth_message = sprint_hex_inrow(message_authenticated, sizeof(message_authenticated));
 
     char keyslot_str[3];
-    snprintf(keyslot_str, sizeof(keyslot_str), "%02X", keyslot);
+    snprintf(keyslot_str, sizeof(keyslot_str), "%02X", auth_key_slot);
 
     const char *prefix = "008700";
     const char *ASN1_tagAbove = "7c";
@@ -1190,7 +1222,7 @@ static int seos_aid_select(const uint8_t *custom_aid, int custom_aid_len) {
     return res;
 };
 
-static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int data_tag_len, int key_index, uint8_t *write, int write_len) {
+static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int data_tag_len, int privacy_key_index, int auth_key_index, uint8_t *write, int write_len) {
     int resplen = 0;
     uint8_t response[PM3_CMD_DATA_SIZE];
     bool activate_field = false;
@@ -1276,8 +1308,8 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
     }
     resplen -= 2;
 
-    uint8_t keyslot = keys[key_index].keyslot;
-    res = seos_challenge_get(RNDICC, sizeof(RNDICC), keyslot);
+    uint8_t auth_slot = auth_key_index;
+    res = seos_challenge_get(RNDICC, sizeof(RNDICC), auth_slot);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -1285,9 +1317,13 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
     if (res != PM3_SUCCESS) {
         return res;
     }
-    res = select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
-    if (res != PM3_SUCCESS) {
-        return res;
+
+    bool plaintext_adf = select_df_is_plaintext(response, resplen);
+    if (plaintext_adf == false) {
+        res = select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, privacy_key_index);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
     }
 
     if (ALGORITHM_INFO_value1 == 0x09 || ALGORITHM_INFO_value1 == 0x02) {
@@ -1298,11 +1334,20 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
 
 
         int diversifier_length = sizeof(diversifier);
-        res = select_ADF_decrypt(selectedADF, CRYPTOGRAM_encrypted_data, diversifier, &diversifier_length, ALGORITHM_INFO_value1, key_index);
-        if (res != PM3_SUCCESS) {
-            return res;
+        if (plaintext_adf) {
+            res = select_df_extract_plaintext_diversifier(response, resplen, diversifier, &diversifier_length);
+            if (res != PM3_SUCCESS) {
+                return res;
+            }
+            PrintAndLogEx(INFO, "--- " _CYAN_("Plaintext ADF") " ---------------------------");
+            PrintAndLogEx(SUCCESS, "Diversifier...................... " _YELLOW_("%s"), sprint_hex_inrow(diversifier, diversifier_length));
+        } else {
+            res = select_ADF_decrypt(selectedADF, CRYPTOGRAM_encrypted_data, diversifier, &diversifier_length, ALGORITHM_INFO_value1, privacy_key_index);
+            if (res != PM3_SUCCESS) {
+                return res;
+            }
         }
-        res = seos_mutual_auth(adf_bytes, adf_bytes_len, RNDICC, diversifier, diversifier_length, RNDIFD, KeyICC, RNDIFD, sizeof(RNDIFD), KeyIFD, sizeof(KeyIFD), ALGORITHM_INFO_value1, ALGORITHM_INFO_value2, key_index, keyslot);
+        res = seos_mutual_auth(adf_bytes, adf_bytes_len, RNDICC, diversifier, diversifier_length, RNDIFD, KeyICC, RNDIFD, sizeof(RNDIFD), KeyIFD, sizeof(KeyIFD), ALGORITHM_INFO_value1, ALGORITHM_INFO_value2, auth_key_index, auth_key_index);
         if (res != PM3_SUCCESS) {
             return res;
         }
@@ -1341,7 +1386,7 @@ static int seos_pacs_adf_select(char *oid, int oid_len, uint8_t *data_tag, int d
     return PM3_SUCCESS;
 };
 
-static int seos_adf_select(char *oid, int oid_len, int key_index) {
+static int seos_adf_select(char *oid, int oid_len, int privacy_key_index, int auth_key_index) {
     int resplen = 0;
     uint8_t response[PM3_CMD_DATA_SIZE];
     bool activate_field = false;
@@ -1408,7 +1453,7 @@ static int seos_adf_select(char *oid, int oid_len, int key_index) {
     }
     resplen -= 2;
 
-    res = seos_challenge_get(RNDICC, sizeof(RNDICC), keys[key_index].keyslot);
+    res = seos_challenge_get(RNDICC, sizeof(RNDICC), auth_key_index);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -1418,11 +1463,20 @@ static int seos_adf_select(char *oid, int oid_len, int key_index) {
         return res;
     }
 
-    res = select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
-    if (res != PM3_SUCCESS) {
-        return res;
+    if (select_df_is_plaintext(response, resplen) == false) {
+        res = select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, privacy_key_index);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
+    } else {
+        int diversifier_length = MAX_DIVERSIFIER_LEN;
+        uint8_t diversifier[MAX_DIVERSIFIER_LEN] = {0};
+        res = select_df_extract_plaintext_diversifier(response, resplen, diversifier, &diversifier_length);
+        if (res == PM3_SUCCESS) {
+            PrintAndLogEx(INFO, "--- " _CYAN_("Plaintext ADF") " ---------------------------");
+            PrintAndLogEx(SUCCESS, "Diversifier...................... " _YELLOW_("%s"), sprint_hex_inrow(diversifier, diversifier_length));
+        }
     }
-
     return PM3_SUCCESS;
 };
 
@@ -1469,7 +1523,7 @@ static int seos_gdf_select(int key_index) {
     }
     resplen -= 2;
 
-    res = seos_challenge_get(RNDICC, sizeof(RNDICC), keys[key_index].keyslot);
+    res = seos_challenge_get(RNDICC, sizeof(RNDICC), key_index);
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -1479,15 +1533,17 @@ static int seos_gdf_select(int key_index) {
         return res;
     }
 
-    res = select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
-    if (res != PM3_SUCCESS) {
-        return res;
+    if (select_df_is_plaintext(response, resplen) == false) {
+        res = select_DF_verify(response, resplen, MAC_value, sizeof(MAC_value), ALGORITHM_INFO_value1, key_index);
+        if (res != PM3_SUCCESS) {
+            return res;
+        }
     }
 
     return PM3_SUCCESS;
 };
 
-static int seos_select(const uint8_t *aid, int aid_len) {
+static int seos_select(const uint8_t *aid, int aid_len, int privacy_key_index, int auth_key_index) {
     int res = seos_aid_select(aid, aid_len);
     if (res != PM3_SUCCESS) {
         DropField();
@@ -1496,31 +1552,31 @@ static int seos_select(const uint8_t *aid, int aid_len) {
 
     const char *oid = "2B0601040181E438010102011801010202";
     int oid_len = strlen(oid);
-    res = seos_adf_select((char *)oid, oid_len, 0);
+    res = seos_adf_select((char *)oid, oid_len, privacy_key_index, auth_key_index);
     DropField();
     return res;
 }
 
-static int seos_pacs(char *oid, int oid_len, uint8_t *data_tag, int data_tag_len, int key_index, const uint8_t *aid, int aid_len) {
+static int seos_pacs(char *oid, int oid_len, uint8_t *data_tag, int data_tag_len, int privacy_key_index, int auth_key_index, const uint8_t *aid, int aid_len) {
     int res = seos_aid_select(aid, aid_len);
     if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
 
-    res = seos_pacs_adf_select(oid, oid_len, data_tag, data_tag_len, key_index, NULL, 0);
+    res = seos_pacs_adf_select(oid, oid_len, data_tag, data_tag_len, privacy_key_index, auth_key_index, NULL, 0);
     DropField();
     return res;
 }
 
-static int seos_write(char *oid, int oid_len, uint8_t *data_tag, int data_tag_len, int key_index, uint8_t *write, int write_len, const uint8_t *aid, int aid_len) {
+static int seos_write(char *oid, int oid_len, uint8_t *data_tag, int data_tag_len, int privacy_key_index, int auth_key_index, uint8_t *write, int write_len, const uint8_t *aid, int aid_len) {
     int res = seos_aid_select(aid, aid_len);
     if (res != PM3_SUCCESS) {
         DropField();
         return res;
     }
 
-    res = seos_pacs_adf_select(oid, oid_len, data_tag, data_tag_len, key_index, write, write_len);
+    res = seos_pacs_adf_select(oid, oid_len, data_tag, data_tag_len, privacy_key_index, auth_key_index, write, write_len);
     DropField();
     return res;
 }
@@ -1538,24 +1594,23 @@ static int seos_print_keys(bool verbose) {
     PrintAndLogEx(NORMAL, "");
     if (verbose) {
         for (int i = 0; i < ARRAYLEN(keys); i++) {
+            uint8_t privacy_key[32] = {0};
+            memcpy(privacy_key, keys[i].privEncKey, sizeof(keys[i].privEncKey));
+            memcpy(privacy_key + sizeof(keys[i].privEncKey), keys[i].privMacKey, sizeof(keys[i].privMacKey));
             PrintAndLogEx(INFO, "Key Index........................ " _YELLOW_("%u"), i);
-            PrintAndLogEx(INFO, "Keyslot.......................... " _YELLOW_("%s"), sprint_hex(&keys[i].keyslot, 1));
-            PrintAndLogEx(INFO, "Nonce............................ " _YELLOW_("%s"), sprint_hex(keys[i].nonce, 8));
-            PrintAndLogEx(INFO, "Privacy Encryption Key........... " _YELLOW_("%s"), sprint_hex(keys[i].privEncKey, 16));
-            PrintAndLogEx(INFO, "Privacy MAC Key.................. " _YELLOW_("%s"), sprint_hex(keys[i].privMacKey, 16));
+            PrintAndLogEx(INFO, "Privacy Key...................... " _YELLOW_("%s"), sprint_hex(privacy_key, sizeof(privacy_key)));
             PrintAndLogEx(INFO, "Auth Key......................... " _YELLOW_("%s"), sprint_hex(keys[i].authKey, 16));
             PrintAndLogEx(INFO, "----------------------------");
         }
     } else {
-        PrintAndLogEx(INFO, "idx| key");
-        PrintAndLogEx(INFO, "---+------------------------");
+        PrintAndLogEx(INFO, "idx| privacy | auth");
+        PrintAndLogEx(INFO, "---+---------+-----");
         for (uint8_t i = 0; i < ARRAYLEN(keys); i++) {
-            if (memcmp(keys[i].privEncKey, zeros, sizeof(zeros)) == 0)
-                PrintAndLogEx(INFO, " %u |", i);
-            else
-                PrintAndLogEx(INFO, " %u | " _YELLOW_("%s"), i, sprint_hex(keys[i].nonce, 8));
+            bool has_privacy = (memcmp(keys[i].privEncKey, zeros, sizeof(zeros)) != 0) || (memcmp(keys[i].privMacKey, zeros, sizeof(zeros)) != 0);
+            bool has_auth = (memcmp(keys[i].authKey, zeros, sizeof(zeros)) != 0);
+            PrintAndLogEx(INFO, " %u |    %c    |  %c", i, has_privacy ? 'Y' : ' ', has_auth ? 'Y' : ' ');
         }
-        PrintAndLogEx(INFO, "---+------------------------");
+        PrintAndLogEx(INFO, "---+---------+-----");
     };
     PrintAndLogEx(NORMAL, "");
     return PM3_SUCCESS;
@@ -1569,24 +1624,25 @@ static int seos_load_keys(char *filename) {
         return PM3_EFILE;
     }
 
-    // 16 = max line size
-    // 8 = 8 items per keyset
-    // 4 = 4 keysets
-    if (bytes_read > 382) {
+    if (bytes_read > sizeof(keys)) {
         PrintAndLogEx(WARNING, "File is too long to load - exp: %zu got: %zu", sizeof(keys), bytes_read);
         free(dump);
         return PM3_EFILE;
     }
 
     size_t kn = sizeof(keyset_t);
+    memset(keys, 0, sizeof(keys));
 
     size_t i = 0;
+    if ((bytes_read % kn) != 0) {
+        PrintAndLogEx(ERR, "Key file size is invalid for current SEOS key layout");
+        free(dump);
+        return PM3_EFILE;
+    }
     for (; i < bytes_read / kn; i++) {
-        memcpy(&keys[i].keyslot, dump + (i * kn), 1);
-        memcpy(keys[i].nonce, dump + ((i * kn) + 1), 8);
-        memcpy(keys[i].privEncKey, dump + ((i * kn) + 9), 16);
-        memcpy(keys[i].privMacKey, dump + ((i * kn) + 25), 16);
-        memcpy(keys[i].authKey, dump + ((i * kn) + 41), 16);
+        memcpy(keys[i].privEncKey, dump + (i * kn), 16);
+        memcpy(keys[i].privMacKey, dump + ((i * kn) + 16), 16);
+        memcpy(keys[i].authKey, dump + ((i * kn) + 32), 16);
     }
 
     free(dump);
@@ -1594,8 +1650,9 @@ static int seos_load_keys(char *filename) {
     return PM3_SUCCESS;
 }
 
-int infoSeos(bool verbose) {
-    return seos_select(NULL, 0);
+int infoSeos(bool verbose, int privacy_key_index, int auth_key_index) {
+    (void)verbose;
+    return seos_select(NULL, 0, privacy_key_index, auth_key_index);
 }
 
 static int CmdHfSeosInfo(const char *Cmd) {
@@ -1604,25 +1661,52 @@ static int CmdHfSeosInfo(const char *Cmd) {
                   "Requests the unauthenticated information from the default ADF of a SEOS card\n"
                   "- If the card is a SEOS card\n"
                   "- Are static RND.ICC keys used (can detect SEOS default keyset)\n"
-                  "- What encryption and hashing algorithm is use\n",
+                  "- What encryption and hashing algorithm is use\n\n"
+                  "By default:\n"
+                  "  - Privacy Key: 0\n"
+                  "    The selected privacy slot provides both encryption and MAC subkeys for ADF handling.\n"
+                  "  - Auth Key   : 0\n"
+                  "    The selected auth slot is sent to the card for challenge/authentication.\n",
                   "hf seos info\n"
-                  "hf seos info --aid A0000004400001010001"
+                  "hf seos info --privacy-key 8 --auth-key 9\n"
+                  "hf seos info --privacy-key 8 --auth-key 9 --aid A0000004400001010001"
                  );
     void *argtable[] = {
         arg_param_begin,
+        arg_str0(NULL, "privacy-key", "<idx>", "Privacy key slot index. The selected slot provides both privacy encryption and MAC subkeys for ADF handling"),
+        arg_str0(NULL, "auth-key", "<idx>", "Auth key slot index. The selected slot is sent to the card for challenge/authentication"),
         arg_str0(NULL, "aid", "<hex>", "Use a custom SEOS AID"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
+    int privacy_key_index = 0;
+    int auth_key_index = 0;
+    int privacy_key_len = 0;
+    int auth_key_len = 0;
     uint8_t aid[MAX_SEOS_AID_LEN] = {0};
     int aid_len = 0;
-    int res = seos_get_custom_aid(ctx, 1, aid, &aid_len);
+    char privacy_key_str[12] = {0};
+    char auth_key_str[12] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)privacy_key_str, sizeof(privacy_key_str), &privacy_key_len);
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)auth_key_str, sizeof(auth_key_str), &auth_key_len);
+    if (privacy_key_len != 0 && seos_parse_key_index(privacy_key_str, &privacy_key_index) == false) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(ERR, "Invalid privacy key. Expected --privacy-key N with index in range 0-%zu", ARRAYLEN(keys) - 1);
+        return PM3_EINVARG;
+    }
+    if (auth_key_len != 0 && seos_parse_key_index(auth_key_str, &auth_key_index) == false) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(ERR, "Invalid auth key. Expected --auth-key N with index in range 0-%zu", ARRAYLEN(keys) - 1);
+        return PM3_EINVARG;
+    }
+    int res = seos_get_custom_aid(ctx, 3, aid, &aid_len);
+
     CLIParserFree(ctx);
     if (res != PM3_SUCCESS) {
         return res;
     }
-    return seos_select(aid, aid_len);
+    return seos_select(aid, aid_len, privacy_key_index, auth_key_index);
 }
 
 static int CmdHfSeosGDF(const char *Cmd) {
@@ -1630,29 +1714,37 @@ static int CmdHfSeosGDF(const char *Cmd) {
     CLIParserInit(&ctx, "hf seos gdf",
                   "Get Global Data File (GDF) from SEOS card\n\n"
                   "By default:\n"
-                  "  - Key Index: 3\n",
+                  "  - Privacy Key: 3\n",
                   "hf seos gdf\n"
-                  "hf seos gdf --ki 3\n"
-                  "hf seos gdf --aid A0000004400001010001"
+                  "hf seos gdf --privacy-key 3\n"
+                  "hf seos gdf --privacy-key 3 --aid A0000004400001010001"
                  );
     void *argtable[] = {
         arg_param_begin,
-        arg_int0(NULL, "ki", "<dec>", "Specify key index to set key in memory"),
+        arg_str0(NULL, "privacy-key", "<idx>", "Privacy key slot index. The selected slot provides both privacy encryption and MAC subkeys and is sent as the privacy slot identifier"),
         arg_str0(NULL, "aid", "<hex>", "Use a custom SEOS AID"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
-    int key_index = arg_get_int_def(ctx, 1, 3);
+    int privacy_key_index = 3;
+    int privacy_key_len = 0;
     uint8_t aid[MAX_SEOS_AID_LEN] = {0};
     int aid_len = 0;
+    char privacy_key_str[12] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 1), (uint8_t *)privacy_key_str, sizeof(privacy_key_str), &privacy_key_len);
+    if (privacy_key_len != 0 && seos_parse_key_index(privacy_key_str, &privacy_key_index) == false) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(ERR, "Invalid privacy key. Expected --privacy-key N with index in range 0-%zu", ARRAYLEN(keys) - 1);
+        return PM3_EINVARG;
+    }
     int res = seos_get_custom_aid(ctx, 2, aid, &aid_len);
 
     CLIParserFree(ctx);
     if (res != PM3_SUCCESS) {
         return res;
     }
-    return seos_global_df(key_index, aid, aid_len);
+    return seos_global_df(privacy_key_index, aid, aid_len);
 }
 
 static int CmdHfSeosPACS(const char *Cmd) {
@@ -1660,17 +1752,21 @@ static int CmdHfSeosPACS(const char *Cmd) {
     CLIParserInit(&ctx, "hf seos pacs",
                   "Make a GET DATA request to an ADF of a SEOS card\n\n"
                   "By default:\n"
-                  "  - ADF OID  : 2B0601040181E438010102011801010202\n"
-                  "  - Key Index: 0\n",
+                  "  - ADF OID      : 2B0601040181E438010102011801010202\n"
+                  "  - Privacy Key  : 0\n"
+                  "    The selected privacy slot provides both encryption and MAC subkeys and is sent as the privacy slot identifier.\n"
+                  "  - Auth Key     : 0\n"
+                  "    The selected auth slot provides the auth key and is sent as the auth slot identifier.\n",
                   "hf seos pacs\n"
-                  "hf seos pacs --ki 1\n"
-                  "hf seos pacs -o 2B0601040181E438010102011801010202 --ki 0\n"
+                  "hf seos pacs --privacy-key 8 --auth-key 9\n"
+                  "hf seos pacs -o 2B0601040181E438010102011801010202 --privacy-key 8 --auth-key 9\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("o", "oid", "<hex>", "<0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)"),
-        arg_int0(NULL, "ki", "<dec>", "Specify key index to set key in memory"),
+        arg_str0(NULL, "privacy-key", "<idx>", "Privacy key slot index. The selected slot provides both privacy encryption and MAC subkeys and is sent as the privacy slot identifier"),
+        arg_str0(NULL, "auth-key", "<idx>", "Auth key slot index. The selected slot provides the auth key and is sent as the auth slot identifier"),
         arg_str0(NULL, "aid", "<hex>", "Use a custom SEOS AID"),
         arg_param_end
     };
@@ -1683,10 +1779,27 @@ static int CmdHfSeosPACS(const char *Cmd) {
     uint8_t oid_hex[256] = {0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02, 0x02};
     CLIGetHexWithReturn(ctx, 1, oid_hex, &oid_len);
 
-    int key_index = arg_get_int_def(ctx, 2, 0);
+    int privacy_key_index = 0;
+    int auth_key_index = 0;
+    int privacy_key_len = 0;
+    int auth_key_index_len = 0;
     uint8_t aid[MAX_SEOS_AID_LEN] = {0};
     int aid_len = 0;
-    int res = seos_get_custom_aid(ctx, 3, aid, &aid_len);
+    char privacy_key_str[12] = {0};
+    char auth_key_index_str[12] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)privacy_key_str, sizeof(privacy_key_str), &privacy_key_len);
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)auth_key_index_str, sizeof(auth_key_index_str), &auth_key_index_len);
+    if (privacy_key_len != 0 && seos_parse_key_index(privacy_key_str, &privacy_key_index) == false) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(ERR, "Invalid privacy key. Expected --privacy-key N with index in range 0-%zu", ARRAYLEN(keys) - 1);
+        return PM3_EINVARG;
+    }
+    if (auth_key_index_len != 0 && seos_parse_key_index(auth_key_index_str, &auth_key_index) == false) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(ERR, "Invalid auth key. Expected --auth-key N with index in range 0-%zu", ARRAYLEN(keys) - 1);
+        return PM3_EINVARG;
+    }
+    int res = seos_get_custom_aid(ctx, 4, aid, &aid_len);
 
     CLIParserFree(ctx);
     if (res != PM3_SUCCESS) {
@@ -1710,7 +1823,7 @@ static int CmdHfSeosPACS(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    return seos_pacs((char *)oid, oid_len, data_tag, data_tag_len, key_index, aid, aid_len);
+    return seos_pacs((char *)oid, oid_len, data_tag, data_tag_len, privacy_key_index, auth_key_index, aid, aid_len);
 }
 
 static int CmdHfSeosWrite(const char *Cmd) {
@@ -1718,17 +1831,19 @@ static int CmdHfSeosWrite(const char *Cmd) {
     CLIParserInit(&ctx, "hf seos write",
                   "Make a PUT DATA request to an ADF of a SEOS card\n\n"
                   "By default:\n"
-                  "  - ADF OID  : 2B0601040181E438010102011801010202\n"
-                  "  - Key Index: 2\n",
+                  "  - ADF OID      : 2B0601040181E438010102011801010202\n"
+                  "  - Privacy Key  : 2\n"
+                  "  - Auth Key     : 2\n",
                   "hf seos write -d 12345678\n"
-                  "hf seos write --ki 1\n"
-                  "hf seos write -o 2B0601040181E438010102011801010202 --ki 2 -d 12345678\n"
+                  "hf seos write --privacy-key 8 --auth-key 9 -d 12345678\n"
+                  "hf seos write -o 2B0601040181E438010102011801010202 --privacy-key 8 --auth-key 9 -d 12345678\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("o", "oid", "<hex>", "<0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)"),
-        arg_int0(NULL, "ki", "<dec>", "Specify key index to set key in memory"),
+        arg_str0(NULL, "privacy-key", "<idx>", "Privacy key slot index. The selected slot provides both privacy encryption and MAC subkeys and is sent as the privacy slot identifier"),
+        arg_str0(NULL, "auth-key", "<idx>", "Auth key slot index. The selected slot provides the auth key and is sent as the auth slot identifier"),
         arg_str0(NULL, "aid", "<hex>", "Use a custom SEOS AID"),
         arg_str0("d", "data", "<hex>", "<0-128> hex bytes for data (Must be valid BER-TLV)"),
         arg_param_end
@@ -1742,14 +1857,31 @@ static int CmdHfSeosWrite(const char *Cmd) {
     uint8_t oid_hex[256] = {0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02, 0x02};
     CLIGetHexWithReturn(ctx, 1, oid_hex, &oid_len);
 
-    int key_index = arg_get_int_def(ctx, 2, 2);
+    int privacy_key_index = 2;
+    int auth_key_index = 2;
+    int privacy_key_len = 0;
+    int auth_key_len = 0;
     uint8_t aid[MAX_SEOS_AID_LEN] = {0};
     int aid_len = 0;
-    int res = seos_get_custom_aid(ctx, 3, aid, &aid_len);
+    char privacy_key_str[12] = {0};
+    char auth_key_str[12] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 2), (uint8_t *)privacy_key_str, sizeof(privacy_key_str), &privacy_key_len);
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)auth_key_str, sizeof(auth_key_str), &auth_key_len);
+    if (privacy_key_len != 0 && seos_parse_key_index(privacy_key_str, &privacy_key_index) == false) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(ERR, "Invalid privacy key. Expected --privacy-key N with index in range 0-%zu", ARRAYLEN(keys) - 1);
+        return PM3_EINVARG;
+    }
+    if (auth_key_len != 0 && seos_parse_key_index(auth_key_str, &auth_key_index) == false) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(ERR, "Invalid auth key. Expected --auth-key N with index in range 0-%zu", ARRAYLEN(keys) - 1);
+        return PM3_EINVARG;
+    }
+    int res = seos_get_custom_aid(ctx, 4, aid, &aid_len);
 
     int data_len = 0;
     uint8_t data[256] = {};
-    CLIGetHexWithReturn(ctx, 4, data, &data_len);
+    CLIGetHexWithReturn(ctx, 5, data, &data_len);
 
     CLIParserFree(ctx);
     if (res != PM3_SUCCESS) {
@@ -1778,7 +1910,7 @@ static int CmdHfSeosWrite(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    return seos_write((char *)oid, oid_len, data_tag, data_tag_len, key_index, data, data_len, aid, aid_len);
+    return seos_write((char *)oid, oid_len, data_tag, data_tag_len, privacy_key_index, auth_key_index, data, data_len, aid, aid_len);
 }
 
 static int CmdHfSeosADF(const char *Cmd) {
@@ -1788,20 +1920,24 @@ static int CmdHfSeosADF(const char *Cmd) {
                   "The ADF is meant to be read by an application\n"
                   "You still need the valid authentication keys to read a card\n\n"
                   "By default:\n"
-                  "  - ADF OID  : 2B0601040181E438010102011801010202\n"
-                  "  - Key Index: 0\n"
-                  "  - Data Tag : FF00\n",
+                  "  - ADF OID      : 2B0601040181E438010102011801010202\n"
+                  "  - Privacy Key  : 0\n"
+                  "    The selected privacy slot provides both encryption and MAC subkeys and is sent as the privacy slot identifier.\n"
+                  "  - Auth Key     : 0\n"
+                  "    The selected auth slot provides the auth key and is sent as the auth slot identifier.\n"
+                  "  - Data Tag     : FF00\n",
                   "hf seos adf\n"
                   "hf seos adf -o 2B0601040181E438010102011801010202\n"
-                  "hf seos adf -o 2B0601040181E438010102011801010202 --ki 0\n"
-                  "hf seos adf -o 2B0601040181E438010102011801010202 -t FF41\n"
+                  "hf seos adf -o 2B0601040181E438010102011801010202 --privacy-key 8 --auth-key 9\n"
+                  "hf seos adf -o 2B0601040181E438010102011801010202 -t FF41 --privacy-key 8 --auth-key 9\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_str0("t", "tag", "<hex>", "<0-100> hex bytes for tag to read (Default: FF00)"),
         arg_str0("o", "oid", "<hex>", "<0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)"),
-        arg_int0(NULL, "ki", "<dec>", "Specify key index to set key in memory"),
+        arg_str0(NULL, "privacy-key", "<idx>", "Privacy key slot index. The selected slot provides both privacy encryption and MAC subkeys and is sent as the privacy slot identifier"),
+        arg_str0(NULL, "auth-key", "<idx>", "Auth key slot index. The selected slot provides the auth key and is sent as the auth slot identifier"),
         arg_str0(NULL, "aid", "<hex>", "Use a custom SEOS AID"),
         arg_param_end
     };
@@ -1815,10 +1951,27 @@ static int CmdHfSeosADF(const char *Cmd) {
     uint8_t oid_hex[256] = {0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02, 0x02};
     CLIGetHexWithReturn(ctx, 2, oid_hex, &oid_len);
 
-    int key_index = arg_get_int_def(ctx, 3, 0);
+    int privacy_key_index = 0;
+    int auth_key_index = 0;
+    int privacy_key_len = 0;
+    int auth_key_index_len = 0;
     uint8_t aid[MAX_SEOS_AID_LEN] = {0};
     int aid_len = 0;
-    int res = seos_get_custom_aid(ctx, 4, aid, &aid_len);
+    char privacy_key_str[12] = {0};
+    char auth_key_index_str[12] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)privacy_key_str, sizeof(privacy_key_str), &privacy_key_len);
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)auth_key_index_str, sizeof(auth_key_index_str), &auth_key_index_len);
+    if (privacy_key_len != 0 && seos_parse_key_index(privacy_key_str, &privacy_key_index) == false) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(ERR, "Invalid privacy key. Expected --privacy-key N with index in range 0-%zu", ARRAYLEN(keys) - 1);
+        return PM3_EINVARG;
+    }
+    if (auth_key_index_len != 0 && seos_parse_key_index(auth_key_index_str, &auth_key_index) == false) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(ERR, "Invalid auth key. Expected --auth-key N with index in range 0-%zu", ARRAYLEN(keys) - 1);
+        return PM3_EINVARG;
+    }
+    int res = seos_get_custom_aid(ctx, 5, aid, &aid_len);
 
     CLIParserFree(ctx);
     if (res != PM3_SUCCESS) {
@@ -1845,7 +1998,7 @@ static int CmdHfSeosADF(const char *Cmd) {
         return PM3_ESOFT;
     }
 
-    return seos_pacs((char *)oid, oid_len, data_tag, data_tag_len, key_index, aid, aid_len);
+    return seos_pacs((char *)oid, oid_len, data_tag, data_tag_len, privacy_key_index, auth_key_index, aid, aid_len);
 }
 
 static int CmdHfSeosSim(const char *Cmd) {
@@ -1855,13 +2008,14 @@ static int CmdHfSeosSim(const char *Cmd) {
                   "By default:\n"
                   "  - ADF OID    : 2B0601040181E438010102011801010202\n"
                   "  - Diversifier: 01020304050607\n"
-                  "  - Key Index  : 2\n"
+                  "  - Privacy Key: 2\n"
+                  "  - Auth Key   : 2\n"
                   "  - Data Tag   : FF00\n"
                   "  - Encryption : AES128\n"
                   "  - Hashing    : SHA256\n",
                   "hf seos sim -d 12345678\n"
-                  "hf seos sim --ki 1\n"
-                  "hf seos sim -o 2B0601040181E438010102011801010202 -u 01020304050607 --ki 2 -d 12345678\n"
+                  "hf seos sim --privacy-key 8 --auth-key 9 -d 12345678\n"
+                  "hf seos sim -o 2B0601040181E438010102011801010202 -u 01020304050607 --privacy-key 8 --auth-key 9 -d 12345678\n"
                   "hf seos sim -o 2B0601040181E438010102011801010202 --legacy -t FF41 -d 12345678\n"
                  );
 
@@ -1869,7 +2023,8 @@ static int CmdHfSeosSim(const char *Cmd) {
         arg_param_begin,
         arg_str0("t", "tag", "<hex>", "<0-100> hex bytes for tag to simulate (Default: FF00)"),
         arg_str0("o", "oid", "<hex>", "<0-100> hex bytes for OID (Default: 2B0601040181E438010102011801010202)"),
-        arg_int0(NULL, "ki", "<dec>", "Specify key index to set key in memory"),
+        arg_str0(NULL, "privacy-key", "<idx>", "Privacy key slot index. The selected slot provides both privacy encryption and MAC subkeys"),
+        arg_str0(NULL, "auth-key", "<idx>", "Auth key slot index. The selected slot provides the auth key"),
         arg_str0(NULL, "div", "<hex>", "<0-16> hex bytes for diversifier (Equivalent of UID)"),
         arg_str0("d", "data", "<hex>", "<0-128> hex bytes for data (Must be valid BER-TLV)"),
         arg_str0("u", "uid", "<hex>", "<0-10> hex bytes for UID (Must be a RID i.e. [0]=0x08)"),
@@ -1886,23 +2041,40 @@ static int CmdHfSeosSim(const char *Cmd) {
     uint8_t oid[256] = {0x2B, 0x06, 0x01, 0x04, 0x01, 0x81, 0xE4, 0x38, 0x01, 0x01, 0x02, 0x01, 0x18, 0x01, 0x01, 0x02, 0x02};
     CLIGetHexWithReturn(ctx, 2, oid, &oid_len);
 
-    int key_index = arg_get_int_def(ctx, 3, 2);
+    int privacy_key_index = 2;
+    int auth_key_index = 2;
+    int privacy_key_len = 0;
+    int auth_key_len = 0;
+    char privacy_key_str[12] = {0};
+    char auth_key_str[12] = {0};
+    CLIParamStrToBuf(arg_get_str(ctx, 3), (uint8_t *)privacy_key_str, sizeof(privacy_key_str), &privacy_key_len);
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)auth_key_str, sizeof(auth_key_str), &auth_key_len);
+    if (privacy_key_len != 0 && seos_parse_key_index(privacy_key_str, &privacy_key_index) == false) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(ERR, "Invalid privacy key. Expected --privacy-key N with index in range 0-%zu", ARRAYLEN(keys) - 1);
+        return PM3_EINVARG;
+    }
+    if (auth_key_len != 0 && seos_parse_key_index(auth_key_str, &auth_key_index) == false) {
+        CLIParserFree(ctx);
+        PrintAndLogEx(ERR, "Invalid auth key. Expected --auth-key N with index in range 0-%zu", ARRAYLEN(keys) - 1);
+        return PM3_EINVARG;
+    }
 
     int diversifier_len = 0;
     uint8_t diversifier[256] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
-    CLIGetHexWithReturn(ctx, 4, diversifier, &diversifier_len);
+    CLIGetHexWithReturn(ctx, 5, diversifier, &diversifier_len);
 
     int data_len = 0;
     uint8_t data[256] = {};
-    CLIGetHexWithReturn(ctx, 5, data, &data_len);
+    CLIGetHexWithReturn(ctx, 6, data, &data_len);
 
     int uid_len = 0;
     uint8_t uid[10] = {0x08, 0x01, 0x02, 0x03};
-    CLIGetHexWithReturn(ctx, 6, uid, &uid_len);
+    CLIGetHexWithReturn(ctx, 7, uid, &uid_len);
 
     uint8_t encryption_algorithm = SEOS_ENCRYPTION_AES;
     uint8_t hashing_algorithm = SEOS_HASHING_SHA256;
-    if (arg_get_lit(ctx, 7)) {  // legacy algorithms
+    if (arg_get_lit(ctx, 8)) {  // legacy algorithms
         encryption_algorithm = SEOS_ENCRYPTION_2K3DES,
         hashing_algorithm = SEOS_HASHING_SHA1;
     }
@@ -1940,9 +2112,9 @@ static int CmdHfSeosSim(const char *Cmd) {
     };
 
     // Copy all the provided values into the request object
-    memcpy(request.privenc, keys[key_index].privEncKey, 16);
-    memcpy(request.privmac, keys[key_index].privMacKey, 16);
-    memcpy(request.authkey, keys[key_index].authKey, 16);
+    memcpy(request.privenc, keys[privacy_key_index].privEncKey, 16);
+    memcpy(request.privmac, keys[privacy_key_index].privMacKey, 16);
+    memcpy(request.authkey, keys[auth_key_index].authKey, 16);
 
     memcpy(request.uid, uid, uid_len);
     memcpy(request.diversifier, diversifier, diversifier_len);
@@ -1973,8 +2145,8 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
                   "Manage SEOS Keys in client memory, keys are required to authenticate with SEOS cards\n",
                   "hf seos managekeys -p\n"
                   "hf seos managekeys -p -v\n"
-                  "hf seos managekeys --ki 0 --nonce 0102030405060708  -> Set nonce value at key index 0\n"
-                  "hf seos managekeys --ki 1 --keyslot 1               -> Set keyslot value at key index 1\n"
+                  "hf seos managekeys --ki 8 --privacy 0000000000000000000000000000000000000000000000000000000000000000\n"
+                  "hf seos managekeys --ki 9 --auth 00000000000000000000000000000000\n"
                   "hf seos managekeys --load -f mykeys.bin -p          -> load from file and prints keys\n"
                   "hf seos managekeys --save -f mykeys.bin             -> saves keys to file\n"
                  );
@@ -1982,11 +2154,8 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
     void *argtable[] = {
         arg_param_begin,
         arg_int0(NULL, "ki", "<dec>", "Specify key index to set key in memory"),
-        arg_str0(NULL, "keyslot", "<hex>", "Keyslot value as 1 hex byte"),
-        arg_str0(NULL, "nonce", "<hex>", "Nonce value as 8 hex bytes"),
-        arg_str0(NULL, "privenc", "<hex>", "Privacy Encryption key as 16 hex bytes"),
-        arg_str0(NULL, "privmac", "<hex>", "Privacy MAC key as 16 hex bytes"),
-        arg_str0(NULL, "auth", "<hex>", "Undiversified Auth key as 16 hex bytes"),
+        arg_str0(NULL, "privacy", "<hex>", "Privacy key as 32 hex bytes (enc || mac)"),
+        arg_str0(NULL, "auth", "<hex>", "Auth key as 16 hex bytes"),
 
         arg_str0("f", "file", "<fn>", "Specify a filename for load / save operations"),
         arg_lit0(NULL, "save", "Save keys in memory to file specified by filename"),
@@ -2000,119 +2169,88 @@ static int CmdHfSeosManageKeys(const char *Cmd) {
 
     int fnlen = 0;
     char filename[FILE_PATH_SIZE] = {0};
-    uint8_t operation = 0;
-
-    uint8_t keyslot[1] = {0};
-    uint8_t nonce[8] = {0};
-    uint8_t privenc[16] = {0};
-    uint8_t privmac[16] = {0};
+    uint8_t privacy[32] = {0};
     uint8_t auth[16] = {0};
-    int keyslot_len = 0;
-    int nonce_len = 0;
-    int privenc_len = 0;
-    int privmac_len = 0;
+    int privacy_len = 0;
     int auth_len = 0;
 
     int key_index = arg_get_int_def(ctx, 1, -1);
 
-    CLIGetHexWithReturn(ctx, 2, keyslot, &keyslot_len);
-    CLIGetHexWithReturn(ctx, 3, nonce, &nonce_len);
-    CLIGetHexWithReturn(ctx, 4, privenc, &privenc_len);
-    CLIGetHexWithReturn(ctx, 5, privmac, &privmac_len);
-    CLIGetHexWithReturn(ctx, 6, auth, &auth_len);
+    CLIGetHexWithReturn(ctx, 2, privacy, &privacy_len);
+    CLIGetHexWithReturn(ctx, 3, auth, &auth_len);
 
-    CLIParamStrToBuf(arg_get_str(ctx, 7), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
+    CLIParamStrToBuf(arg_get_str(ctx, 4), (uint8_t *)filename, FILE_PATH_SIZE, &fnlen);
 
-    if (key_index >= 0) {
-        operation += 3;
-        if (key_index < 4) {
-            if (keyslot_len != 0) {
-                PrintAndLogEx(SUCCESS, "Current value for keyslot[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(&keys[key_index].keyslot, 1));
-            }
-            if (nonce_len != 0) {
-                PrintAndLogEx(SUCCESS, "Current value for nonce[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].nonce, 8));
-            }
-            if (privenc_len != 0) {
-                PrintAndLogEx(SUCCESS, "Current value for Priv Enc[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].privEncKey, 16));
-            }
-            if (privmac_len != 0) {
-                PrintAndLogEx(SUCCESS, "Current value for Priv Mac[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].privMacKey, 16));
-            }
-            if (auth_len != 0) {
-                PrintAndLogEx(SUCCESS, "Current value for Auth Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].authKey, 16));
-            }
-        } else {
-            PrintAndLogEx(ERR, "Key index is out-of-range");
-            CLIParserFree(ctx);
-            return PM3_EINVARG;
-        }
+    if (key_index >= (int)ARRAYLEN(keys)) {
+        PrintAndLogEx(ERR, "Key index is out-of-range");
+        CLIParserFree(ctx);
+        return PM3_EINVARG;
     }
 
-    if (arg_get_lit(ctx, 8)) {  //save
-        operation += 6;
-    }
-    if (arg_get_lit(ctx, 9)) {  //load
-        operation += 5;
-    }
-    if (arg_get_lit(ctx, 10)) {  //print
-        operation += 4;
-    }
-
-    bool verbose = arg_get_lit(ctx, 11);
+    bool do_save = arg_get_lit(ctx, 5);
+    bool do_load = arg_get_lit(ctx, 6);
+    bool do_print = arg_get_lit(ctx, 7);
+    bool verbose = arg_get_lit(ctx, 8);
+    bool do_update = (privacy_len > 0) || (auth_len > 0);
 
     CLIParserFree(ctx);
 
-    if (operation == 0) {
+    if (do_update == false && do_save == false && do_load == false && do_print == false) {
         PrintAndLogEx(ERR, "No operation specified (load, save, or print)\n");
         return PM3_EINVARG;
     }
-    if (operation > 6) {
+    if ((do_save + do_load + do_update) > 1) {
         PrintAndLogEx(ERR, "Too many operations specified\n");
         return PM3_EINVARG;
     }
-    if (operation > 4 && fnlen == 0) {
+    if ((do_save || do_load) && fnlen == 0) {
         PrintAndLogEx(ERR, "You must enter a filename when loading or saving\n");
         return PM3_EINVARG;
     }
-    if (((keyslot_len > 0) || (nonce_len > 0) || (privenc_len > 0) || (privmac_len > 0) || (auth_len > 0)) && key_index == -1) {
+    if (do_update && key_index == -1) {
         PrintAndLogEx(ERR, "Please specify key index when specifying key");
         return PM3_EINVARG;
     }
+    if (privacy_len != 0 && privacy_len != 32) {
+        PrintAndLogEx(ERR, "Privacy key must be exactly 32 bytes");
+        return PM3_EINVARG;
+    }
+    if (auth_len != 0 && auth_len != 16) {
+        PrintAndLogEx(ERR, "Auth key must be exactly 16 bytes");
+        return PM3_EINVARG;
+    }
 
-    switch (operation) {
-        case 3:
-            if (keyslot_len != 0) {
-                memcpy(&keys[key_index].keyslot, keyslot, 1);
-                PrintAndLogEx(SUCCESS, "New value for keyslot[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(&keys[key_index].keyslot, 1));
-            }
-            if (nonce_len != 0) {
-                memcpy(keys[key_index].nonce, nonce, 8);
-                PrintAndLogEx(SUCCESS, "New value for nonce[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].nonce, 8));
-            }
-            if (privenc_len != 0) {
-                memcpy(keys[key_index].privEncKey, privenc, 16);
-                PrintAndLogEx(SUCCESS, "New value for Priv Enc[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].privEncKey, 16));
-            }
-            if (privmac_len != 0) {
-                memcpy(keys[key_index].privMacKey, privmac, 16);
-                PrintAndLogEx(SUCCESS, "New value for Priv Mac[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].privMacKey, 16));
-            }
-            if (auth_len != 0) {
-                memcpy(keys[key_index].authKey, auth, 16);
-                PrintAndLogEx(SUCCESS, "New value for Auth Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].authKey, 16));
-            }
-            return PM3_SUCCESS;
-        case 4:
-            return seos_print_keys(verbose);
-        case 5:
-            return seos_load_keys(filename);
-        case 6: {
-            bool isOK = saveFile(filename, ".bin", keys, sizeof(keys));
-            if (isOK == false) {
-                return PM3_EFILE;
-            }
-            return PM3_SUCCESS;
+    if (do_update) {
+        if (privacy_len != 0) {
+            memcpy(keys[key_index].privEncKey, privacy, 16);
+            memcpy(keys[key_index].privMacKey, privacy + 16, 16);
+            PrintAndLogEx(SUCCESS, "New value for Privacy Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(privacy, 32));
         }
+        if (auth_len != 0) {
+            memcpy(keys[key_index].authKey, auth, 16);
+            PrintAndLogEx(SUCCESS, "New value for Auth Key[%d] " _GREEN_("%s"), key_index, sprint_hex_inrow(keys[key_index].authKey, 16));
+        }
+        return PM3_SUCCESS;
+    }
+
+    if (do_load) {
+        int res = seos_load_keys(filename);
+        if (res != PM3_SUCCESS || do_print == false) {
+            return res;
+        }
+        return seos_print_keys(verbose);
+    }
+
+    if (do_save) {
+        bool isOK = saveFile(filename, ".bin", keys, sizeof(keys));
+        if (isOK == false) {
+            return PM3_EFILE;
+        }
+        return PM3_SUCCESS;
+    }
+
+    if (do_print) {
+        return seos_print_keys(verbose);
     }
 
     return PM3_SUCCESS;
