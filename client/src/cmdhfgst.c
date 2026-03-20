@@ -35,6 +35,7 @@
 #include <zlib.h>
 #endif
 #include "cliparser.h"
+#include "cmdhf14a.h"
 #include "cmdparser.h"
 #include "cmdtrace.h"
 #include "commonutil.h"
@@ -46,6 +47,7 @@
 #include "protocols.h"
 #include "ui.h"
 #include "util.h"
+#include "util_posix.h"
 
 #define GST_MAX_BUFFER 4096
 #define GST_MAX_NDEF_BUFFER 2048
@@ -886,12 +888,12 @@ static bool gst_should_select_smart_tap(gst_select_behavior_t behavior, const gs
     return (!allow_skip || !have_device_nonce);
 }
 
-static int gst_select_ose(gst_ose_info_t *info, bool keep_field_on) {
+static int gst_select_ose(gst_ose_info_t *info, bool activate_field, bool keep_field_on) {
     uint8_t response[GST_MAX_BUFFER] = {0};
     size_t response_len = 0;
     uint16_t sw = 0;
 
-    int res = gst_exchange_chained(true, keep_field_on, 0x00, ISO7816_SELECT_FILE, 0x04, 0x00,
+    int res = gst_exchange_chained(activate_field, keep_field_on, 0x00, ISO7816_SELECT_FILE, 0x04, 0x00,
                                    GST_OSE_AID, sizeof(GST_OSE_AID),
                                    response, sizeof(response), &response_len, &sw);
     if (res != PM3_SUCCESS) {
@@ -1896,7 +1898,7 @@ static int gst_extract_record_bundle(const uint8_t *response_data, size_t respon
 
 static int gst_info(gst_select_behavior_t select_behavior) {
     gst_ose_info_t ose_info;
-    int res = gst_select_ose(&ose_info, true);
+    int res = gst_select_ose(&ose_info, true, true);
     if (res != PM3_SUCCESS) {
         DropField();
         return res;
@@ -2020,7 +2022,7 @@ static int gst_read(const gst_read_config_t *cfg) {
     session_id = MemBeToUint8byte(session_id_be);
 
     gst_ose_info_t ose_info;
-    status = gst_select_ose(&ose_info, true);
+    status = gst_select_ose(&ose_info, false, true);
     if (status != PM3_SUCCESS) {
         goto out;
     }
@@ -2344,7 +2346,8 @@ static int CmdHFGSTRead(const char *Cmd) {
                   "hf gst read --cid 20180608 --rpk \"-----BEGIN EC PRIVATE KEY-----\\nMHcCAQEEIIJtF+UHZ7FlsOTZ4zL40dHiAiQoT7Ta8eUKAyRucHl9oAoGCCqGSM49\\nAwEHoUQDQgAEchyXj869zfmKhRi9xP7f2AK07kEo4lE7ZlWTN14jh4YBTny+hRGR\\nXcUzevV9zSSPJlPHpqqu5pEwlv1xyFvE1w==\\n-----END EC PRIVATE KEY-----\"\n"
                   "hf gst read --cid 20180608 --rpk MHcCAQEEIIJtF+UHZ7FlsOTZ4zL40dHiAiQoT7Ta8eUKAyRucHl9oAoGCCqGSM49AwEHoUQDQgAEchyXj869zfmKhRi9xP7f2AK07kEo4lE7ZlWTN14jh4YBTny+hRGRXcUzevV9zSSPJlPHpqqu5pEwlv1xyFvE1w==\n"
                   "hf gst read --collector-id 20180608 --reader-private-key gst.google.der\n"
-                  "hf gst read --collector-id 20180608 --reader-private-key 826d17e50767b165b0e4d9e332f8d1d1e20224284fb4daf1e50a03246e70797d");
+                  "hf gst read --collector-id 20180608 --reader-private-key 826d17e50767b165b0e4d9e332f8d1d1e20224284fb4daf1e50a03246e70797d\n"
+                  "hf gst read --cid 20180608 --rpk gst.google.der -@");
 
     void *argtable[] = {
         arg_param_begin,
@@ -2357,6 +2360,7 @@ static int CmdHFGSTRead(const char *Cmd) {
         arg_str0(NULL, "mode", "<pass-only|payment-only|pass-and-payment|pass-over-payment>", "Reader mode (default: pass-over-payment)"),
         arg_str0(NULL, "select-smarttap2", "<auto|yes|no>", "Whether to perform Smart Tap applet select (default: auto)"),
         arg_lit0(NULL, "no-live-auth", "Use zeroed handset nonce for reader signature"),
+        arg_lit0("@", NULL, "continuous mode"),
         arg_lit0("a", "apdu", "Show APDU requests and responses"),
         arg_lit0("v", "verbose", "Verbose output"),
         arg_param_end
@@ -2460,14 +2464,50 @@ static int CmdHFGSTRead(const char *Cmd) {
     }
 
     cfg.live_authentication = !arg_get_lit(ctx, 9);
-    cfg.apdu_logging = arg_get_lit(ctx, 10);
-    cfg.verbose = arg_get_lit(ctx, 11);
+    bool continuous = arg_get_lit(ctx, 10);
+    cfg.apdu_logging = arg_get_lit(ctx, 11);
+    cfg.verbose = arg_get_lit(ctx, 12);
 
     CLIParserFree(ctx);
 
+    if (continuous) {
+        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+    }
+
     bool restore_apdu_logging = GetAPDULogging();
     SetAPDULogging(cfg.apdu_logging);
-    int res = gst_read(&cfg);
+
+    int res = PM3_SUCCESS;
+    do {
+        if (continuous && kbd_enter_pressed()) {
+            break;
+        }
+        clearCommandBuffer();
+
+        int discovery_res = SelectCard14443A_4(false, false, NULL);
+        if (discovery_res != PM3_SUCCESS) {
+            if (!continuous) {
+                PrintAndLogEx(WARNING, "No ISO14443-A card in field");
+            }
+            if (res == PM3_SUCCESS) {
+                res = discovery_res;
+            }
+            msleep(300);
+            continue;
+        }
+
+        int iter_res = gst_read(&cfg);
+        if (iter_res != PM3_SUCCESS && res == PM3_SUCCESS) {
+            res = iter_res;
+        }
+
+        if (continuous) {
+            msleep(3000);
+        }
+        PrintAndLogEx(NORMAL, "");
+        msleep(300);
+    } while (continuous);
+
     SetAPDULogging(restore_apdu_logging);
     return res;
 }
