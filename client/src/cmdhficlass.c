@@ -3242,6 +3242,8 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
             PrintAndLogEx(ERR, "Key number is invalid");
             return PM3_EINVARG;
         }
+    } else {
+            PrintAndLogEx(SUCCESS, "Using Key... " _GREEN_("%s"), sprint_hex_inrow(key, sizeof(key)));
     }
 
     if (data_len && data_len != 8) {
@@ -3281,6 +3283,8 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     if (use_credit_key) {
         PrintAndLogEx(SUCCESS, "Using " _YELLOW_("credit") " key");
         keyType = ICLASS_CREDIT_KEYTYPE;
+    } else {
+        PrintAndLogEx(SUCCESS, "Using " _YELLOW_("debit") " key");
     }
 
     if (data_len && auth == false) {
@@ -3303,6 +3307,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     if (shallow_mod) {
         payload_rdr.flags |= FLAG_ICLASS_READER_SHALLOW_MOD;
     }
+    
     clearCommandBuffer();
     PacketResponseNG resp;
     SendCommandNG(CMD_HF_ICLASS_READER, (uint8_t *)&payload_rdr, sizeof(iclass_card_select_t));
@@ -3328,9 +3333,12 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
 
     int fail_tolerance = 1;
     if (memcmp(r->header.hdr.csn + 4, "\xFE\xFF\x12\xE0", 4) == 0) {
-        PrintAndLogEx(SUCCESS, "CSN................... %s ( new silicon )", sprint_hex_inrow(r->header.hdr.csn, PICOPASS_BLOCK_SIZE));
+        PrintAndLogEx(SUCCESS, "New silicon detected ( %s )",  _GREEN_("ok"));
+        PrintAndLogEx(INFO, "----------------------------------------");
+        PrintAndLogEx(SUCCESS, "CSN................... %s", sprint_hex_inrow(r->header.hdr.csn, PICOPASS_BLOCK_SIZE));
     } else {
-        PrintAndLogEx(SUCCESS, "CSN................... %s ( old silicon )", sprint_hex_inrow(r->header.hdr.csn, PICOPASS_BLOCK_SIZE));
+        PrintAndLogEx(ERR, "Old silicon detected ( %s )",  _GREEN_("ok"));
+        PrintAndLogEx(INFO, "CSN... %s", sprint_hex_inrow(r->header.hdr.csn, PICOPASS_BLOCK_SIZE));
         fail_tolerance = 5;
     }
 
@@ -3396,7 +3404,7 @@ static int CmdHFiClass_TearBlock(const char *Cmd) {
     PrintAndLogEx(SUCCESS, "Original block data... " _CYAN_("%s"), sprint_hex_inrow(data_read_orig, sizeof(data_read_orig)));
     PrintAndLogEx(SUCCESS, "New data to write..... " _YELLOW_("%s"), sprint_hex_inrow(data, sizeof(data)));
     PrintAndLogEx(SUCCESS, "Target block.......... " _YELLOW_("%u") " / " _YELLOW_("0x%02x"), blockno, blockno);
-    PrintAndLogEx(SUCCESS, "Using Key............. " _YELLOW_("%s"), sprint_hex_inrow(key, sizeof(key)));;
+
     // turn off Device side debug messages
     uint8_t dbg_curr = DBG_NONE;
     if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
@@ -3724,8 +3732,8 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     CLIParserInit(&ctx, "hf iclass blacktears",
                   "Tear off the iCLASS (new-silicon only) configuration block to set non-secure page mode.\n"
                   "Make sure you know the target card credit key. Typical  `--ki 1` or `--ki 3`\n",
-                  "hf iclass blacktears -k 001122334455667B\n"
-                  "hf iclass blacktears --ki 1"
+                  "hf iclass blacktears -k 001122334455667B    <--  debit custom key\n"
+                  "hf iclass blacktears --credit --ki 1        <-- credit key at index 1"
                  );
 
     void *argtable[] = {
@@ -3806,6 +3814,8 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
             PrintAndLogEx(ERR, "Key number is invalid");
             return PM3_EINVARG;
         }
+    } else {
+        PrintAndLogEx(SUCCESS, "Using Key... " _GREEN_("%s"), sprint_hex_inrow(key, sizeof(key)));
     }
 
     if (otp_len > 0) {
@@ -3820,8 +3830,10 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     int loop_count = 0;
     int isok = PM3_SUCCESS;
     bool read_ok = false;
+
     uint8_t keyType = ICLASS_DEBIT_KEYTYPE;
-    if (use_credit_key == true) {
+
+    if (use_credit_key) {
         PrintAndLogEx(SUCCESS, "Using " _YELLOW_("credit") " key");
         keyType = ICLASS_CREDIT_KEYTYPE;
     } else {
@@ -3866,10 +3878,13 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
 
     int fail_tolerance = 1;
     if (memcmp(r->header.hdr.csn + 4, "\xFE\xFF\x12\xE0", 4) == 0) {
-        PrintAndLogEx(SUCCESS, "CSN................... %s ( new silicon )", sprint_hex_inrow(r->header.hdr.csn, PICOPASS_BLOCK_SIZE));
+        PrintAndLogEx(SUCCESS, "New silicon detected ( %s )",  _GREEN_("ok"));
+        PrintAndLogEx(INFO, "----------------------------------------");
+        PrintAndLogEx(SUCCESS, "CSN.................... %s", sprint_hex_inrow(r->header.hdr.csn, PICOPASS_BLOCK_SIZE));
     } else {
-        PrintAndLogEx(FAILED, "CSN................... %s ( old silicon )", sprint_hex_inrow(r->header.hdr.csn, PICOPASS_BLOCK_SIZE));
-        PrintAndLogEx(FAILED, "Old Silicon is not Supported for this operation.");
+        PrintAndLogEx(ERR, "Old silicon detected ( %s )",  _RED_("fail"));
+        PrintAndLogEx(INFO, "Unsupported for this operation");
+        PrintAndLogEx(INFO, "CSN... %s", sprint_hex_inrow(r->header.hdr.csn, PICOPASS_BLOCK_SIZE));
         DropField();
         return PM3_ESOFT;
     }
@@ -3884,7 +3899,7 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     }
 
     if (pagemap == 0x0) {
-        PrintAndLogEx(WARNING, _RED_("No auth possible. Read only if RA is enabled"));
+        PrintAndLogEx(WARNING, _RED_("No auth possible. Read only if " _YELLOW_("RA") " is enabled"));
         goto out;
     }
 
@@ -3894,6 +3909,8 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     #define TEAR_PERSO_STABLE2  0x9C
     #define TEAR_UNLOCKED       0xAC
 
+    #define TEAR_IS_PERSO_SET(x)    ((x) & 0x80 == 1)
+    #define TEAR_BAD(x)             ((x) & 0x1  == 0)  
 
     // perform initial read here, repeat if failed or 00s
 
@@ -3921,10 +3938,13 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
         }
     }
 
-    PrintAndLogEx(SUCCESS, "Original block data... " _CYAN_("%s"), sprint_hex_inrow(data_read_orig, sizeof(data_read_orig)));
-    PrintAndLogEx(SUCCESS, "New data to write..... " _YELLOW_("%s"), sprint_hex_inrow(data, sizeof(data)));
-    PrintAndLogEx(SUCCESS, "Target block.......... " _YELLOW_("%u") " / " _YELLOW_("0x%02x"), blockno, blockno);
-    PrintAndLogEx(SUCCESS, "Using Key............. " _YELLOW_("%s"), sprint_hex_inrow(key, sizeof(key)));;
+    memcpy(data, data_read_orig, sizeof(data));
+    data[7] = 0x2C;
+
+    PrintAndLogEx(SUCCESS, "Original block data.... " _CYAN_("%s"), sprint_hex_inrow(data_read_orig, sizeof(data_read_orig)));
+    PrintAndLogEx(SUCCESS, "New data to write...... " _YELLOW_("%s"), sprint_hex_inrow(data, sizeof(data)));
+    PrintAndLogEx(SUCCESS, "Target block........... " _YELLOW_("%u") " / " _YELLOW_("0x%02x"), blockno, blockno);
+
     // turn off Device side debug messages
     uint8_t dbg_curr = DBG_NONE;
     if (getDeviceDebugLevel(&dbg_curr) != PM3_SUCCESS) {
@@ -3938,11 +3958,11 @@ static int CmdHFiClass_BlackTears(const char *Cmd) {
     // clear trace log
     SendCommandNG(CMD_BUFF_CLEAR, NULL, 0);
 
-    PrintAndLogEx(INFO, "---------------------------------------");
+    PrintAndLogEx(INFO, "----------------------------------------");
     PrintAndLogEx(NORMAL, "");
     PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
     PrintAndLogEx(NORMAL, "");
-    PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " -----------------\n");
+    PrintAndLogEx(INFO, "--------------- " _CYAN_("start") " ------------------\n");
 
     // Main loop
     while ((tearoff_start <= tearoff_end) && (read_ok == false)) {
