@@ -1544,7 +1544,7 @@ static void iclass_decode_credentials(uint8_t *data) {
                 binlen = corrected_len;
             }
 
-            PrintAndLogEx(SUCCESS, "Binary... " _GREEN_("%s") " ( %zu )", pbin, binlen);
+            PrintAndLogEx(SUCCESS, "Bin... " _GREEN_("%s") " ( %zu )", pbin, binlen);
             PrintAndLogEx(NORMAL, "");
             // Use the corrected length (without sentinel) for decoding
             decode_wiegand(top, mid, bot, (int)binlen);
@@ -7062,20 +7062,23 @@ int info_iclass(bool shallow_mod) {
 
         bool found_aa1 = false;
         bool found_aa2 = false;
-        uint8_t key[8] = {0};
+        uint8_t aa1_idx = 0;
+        uint8_t key[PICOPASS_KEY_SIZE] = {0};
+        
         for (uint8_t i = 0; i < ARRAYLEN(iClass_Key_Table); i++) {
 
             memcpy(key, iClass_Key_Table[i], sizeof(key));
 
             if (found_aa1 == false) {
-                res = iclass_read_block_ex(key, 6, ICLASS_DEBIT_KEYTYPE, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 6), false);
+                res = iclass_read_block_ex(key, 6, ICLASS_DEBIT_KEYTYPE, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 6), false, false);
                 if (res == PM3_SUCCESS) {
                     PrintAndLogEx(SUCCESS, "    AA1 Key...... " _GREEN_("%s"), sprint_hex_inrow(key, sizeof(key)));
                     found_aa1 = true;
+                    aa1_idx = i;
                 }
             }
 
-            res = iclass_read_block_ex(key, 6, ICLASS_CREDIT_KEYTYPE, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 7), false);
+            res = iclass_read_block_ex(key, 6, ICLASS_CREDIT_KEYTYPE, false, false, false, false, true, false, dump + (PICOPASS_BLOCK_SIZE * 7), false, false);
             if (res == PM3_SUCCESS) {
                 PrintAndLogEx(SUCCESS, "    AA2 Key...... " _GREEN_("%s"), sprint_hex_inrow(key, sizeof(key)));
                 found_aa2 = true;
