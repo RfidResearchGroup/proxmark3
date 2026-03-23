@@ -163,12 +163,27 @@ function CheckLfHidManualSim() {
   eval "$PM3BIN -c \"lf hid sim $2\"" >"$logfile" 2>&1 &
   local sim_pid=$!
 
-  sleep 2
-  if ! kill -0 "$sim_pid" 2>/dev/null; then
+  local waited=0
+  while [ "$waited" -lt 10 ]; do
+    if grep -q "Simulating HID tag" "$logfile" 2>/dev/null; then
+      break
+    fi
+    if ! kill -0 "$sim_pid" 2>/dev/null; then
+      echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
+      echo "Execution trace:"
+      cat "$logfile"
+      rm -f "$logfile"
+      return 1
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+  if [ "$waited" -ge 10 ]; then
     echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
-    echo "Execution trace:"
+    echo "Simulator did not emit 'Simulating HID tag' within 10 seconds"
     cat "$logfile"
     rm -f "$logfile"
+    kill "$sim_pid" 2>/dev/null
     return 1
   fi
 
@@ -184,12 +199,12 @@ function CheckLfHidManualSim() {
   sim_output=$(cat "$logfile")
   rm -f "$logfile"
   end=$(date +%s)
-  delta=$(expr $end - $start)
-  if [ $delta -gt 2 ]; then
+  delta=$((end - start))
+  if [ "$delta" -gt 2 ]; then
     TIMEINFO="  ($delta s)"
   fi
 
-  if [ $sim_status -ne 0 ] && [ $sim_status -ne 143 ]; then
+  if [ "$sim_status" -ne 0 ] && [ "$sim_status" -ne 143 ]; then
     echo -e "[ ${C_RED}FAIL${C_NC} ] ${C_FAIL}"
     echo "Execution trace:"
     echo "$sim_output"

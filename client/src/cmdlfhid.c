@@ -59,23 +59,13 @@ typedef struct {
     int new_pacs_len;
 } lf_hid_cli_input_t;
 
-// Enforce the narrower LF HID transport limits after the shared Wiegand layer has
-// normalized whichever user-facing input mode was selected.
+// Reject credentials that exceed the absolute 84-bit packed HID transport limit.
+// The shared Wiegand layer can normalize credentials that are wider than the LF HID
+// transport, so check packed_valid here rather than relying on the caller.
 static int lf_hid_validate_packed_transport(const wiegand_input_t *input, const char *command_name) {
-    (void)command_name;
-
-    // The shared Wiegand layer can normalize credentials that are wider than the LF HID
-    // transport. Reject only when this specific command needs a packed HID frame.
     if (input->packed_valid == false) {
-        PrintAndLogEx(ERR, "Credential encoded successfully, but %" PRIuMAX "-bit Wiegand data cannot be represented as a packed HID credential", (uintmax_t)input->bin_len);
-        PrintAndLogEx(ERR, "Packed HID transport supports up to 84 bits total");
+        PrintAndLogEx(ERR, "%s: %" PRIuMAX "-bit credential exceeds the 84-bit packed HID transport limit", command_name, (uintmax_t)input->bin_len);
         return PM3_EINVARG;
-    }
-
-    // Raw HID input already arrives in transport form and intentionally bypasses the
-    // packed Wiegand length check that applies to bin/new/formatted inputs.
-    if (input->packed.Length == 0) {
-        return PM3_SUCCESS;
     }
 
     return PM3_SUCCESS;
@@ -419,7 +409,7 @@ static int CmdHIDSim(const char *Cmd) {
         return res;
     }
 
-    res = lf_hid_validate_packed_transport(&input, "LF HID simulation");
+    res = lf_hid_validate_packed_transport(&input, "lf hid sim");
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -513,7 +503,7 @@ static int CmdHIDClone(const char *Cmd) {
         return res;
     }
 
-    res = lf_hid_validate_packed_transport(&input, "LF HID clone");
+    res = lf_hid_validate_packed_transport(&input, "lf hid clone");
     if (res != PM3_SUCCESS) {
         return res;
     }
@@ -767,8 +757,8 @@ static command_t CommandTable[] = {
     {"help",    CmdHelp,        AlwaysAvailable, "this help"},
     {"demod",   CmdHIDDemod,    AlwaysAvailable, "demodulate HID Prox tag from the GraphBuffer"},
     {"reader",  CmdHIDReader,   IfPm3Lf,         "attempt to read and extract tag data"},
-    {"clone",   CmdHIDClone,    IfPm3Lf, "clone HID tag to T55x7, Q5/T5555 or EM4305/4469"},
-    {"sim",     CmdHIDSim,      IfPm3Lf, "simulate HID tag"},
+    {"clone",   CmdHIDClone,    IfPm3Lf,         "clone HID tag to T55x7, Q5/T5555 or EM4305/4469"},
+    {"sim",     CmdHIDSim,      IfPm3Lf,         "simulate HID tag"},
     {"brute",   CmdHIDBrute,    IfPm3Lf,         "bruteforce facility code or card number against reader"},
     {"watch",   CmdHIDWatch,    IfPm3Lf,         "continuously watch for cards.  Reader mode"},
     {NULL, NULL, NULL, NULL}
