@@ -1572,6 +1572,8 @@ static bool check_chiptype(bool getDeviceData) {
     saveState_db.clock = g_DemodClock;
     saveState_db.offset = g_DemodStartIdx;
 
+    PrintAndLogEx(INFO, "Searching for auth LF and special cases...");
+
     // check for em4x05/em4x69 chips first
     uint32_t word = 0;
     if (IfPm3EM4x50() && em4x05_isblock0(&word)) {
@@ -1786,14 +1788,19 @@ int CmdLFfind(const char *Cmd) {
             }
 
             PrintAndLogEx(NORMAL, "");
-            PrintAndLogEx(FAILED, _RED_("No data found!"));
 
             // identify chipset
-            if (check_chiptype(is_online) == false) {
+            bool lf_special_search = check_chiptype(is_online);
+            if ( lf_special_search ) {
+                found++;
+            } else {
                 PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed"));
             }
 
-            PrintAndLogEx(HINT, "Hint: Maybe not an LF tag?");
+            if ( found == 0) {
+                PrintAndLogEx(HINT, "Hint: try `" _YELLOW_("hf search") "` - since tag might not be LF");
+            }
+
             PrintAndLogEx(NORMAL, "");
             if (search_cont == 0) {
                 return PM3_ESOFT;
