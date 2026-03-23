@@ -92,8 +92,8 @@ static const known_algo_t known_algorithm_map[] = {
 };
 
 static const char *known_seos_aids[] = {
-    "A0000004400001010001",
-    "A000000382002D000101",
+    "A0000004400001010001",   // STANDARD_SEOS
+    "A000000382002D000101",   // MOBILE_SEOS_ADMIN_CARD
 };
 
 static int seos_get_custom_aid(CLIParserContext *ctx, int arg_index, uint8_t *aid, int *aid_len) {
@@ -1649,11 +1649,6 @@ static int seos_load_keys(char *filename) {
     free(dump);
     PrintAndLogEx(SUCCESS, "Loaded" _GREEN_("%2zd") " keys from %s", i, filename);
     return PM3_SUCCESS;
-}
-
-int infoSeos(bool verbose, int privacy_key_index, int auth_key_index) {
-    (void)verbose;
-    return seos_select(NULL, 0, privacy_key_index, auth_key_index);
 }
 
 static int CmdHfSeosInfo(const char *Cmd) {

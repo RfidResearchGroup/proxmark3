@@ -350,6 +350,7 @@ Check column "offline" for their availability.
 |`hf felica sniff        `|N       |`Sniff ISO 18092/FeliCa traffic`
 |`hf felica wrbl         `|N       |`write block data to an authentication-not-required Service.`
 |`hf felica dump         `|N       |`Wait for and try dumping FeliCa`
+|`hf felica discnodes    `|N       |`discover Area Code and Service Code nodes.`
 |`hf felica rqservice    `|N       |`verify the existence of Area and Service, and to acquire Key Version.`
 |`hf felica rqresponse   `|N       |`verify the existence of a card and its Mode.`
 |`hf felica scsvcode     `|N       |`acquire Area Code and Service Code.`
@@ -399,12 +400,26 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf gallagher help      `|Y       |`This help`
-|`hf gallagher reader    `|N       |`Read & decode all Gallagher credentials on a DESFire card`
-|`hf gallagher clone     `|N       |`Add Gallagher credentials to a DESFire card`
+|`hf gallagher reader    `|N       |`Read & decode all Gallagher credentials on a DESFire or Classic card`
+|`hf gallagher clone     `|N       |`Clone Gallagher credentials to a DESFire or Classic card`
 |`hf gallagher delete    `|N       |`Delete Gallagher credentials from a DESFire card`
 |`hf gallagher diversifykey`|Y       |`Diversify Gallagher key`
 |`hf gallagher decode    `|Y       |`Decode Gallagher credential block`
 |`hf gallagher encode    `|Y       |`Encode Gallagher credential block`
+|`hf gallagher test      `|Y       |`Test the function of Gallagher Mifare Core`
+
+
+### hf gst
+
+ { Google Smart Tap passes...          }
+
+|command                  |offline |description
+|-------                  |------- |-----------
+|`hf gst help            `|Y       |`This help`
+|`hf gst list            `|Y       |`List ISO 14443A/7816 history`
+|`hf gst test            `|Y       |`Perform self tests`
+|`hf gst info            `|N       |`Get Google Smart Tap applet information`
+|`hf gst read            `|N       |`Read and decode Google Smart Tap pass objects`
 
 
 ### hf iclass
@@ -431,6 +446,7 @@ Check column "offline" for their availability.
 |`hf iclass legrec       `|N       |`Recovers 24 bits of the diversified key of a legacy card provided a valid nr-mac combination`
 |`hf iclass legbrute     `|Y       |`Bruteforces 40 bits of a partial diversified key, provided 24 bits of the key and two valid nr-macs`
 |`hf iclass unhash       `|Y       |`Reverses a diversified key to retrieve hash0 pre-images after DES encryption`
+|`hf iclass blacktears   `|N       |`Automated tearoff attack on new silicon cards to enable non-secure page mode`
 |`hf iclass sim          `|N       |`Simulate iCLASS tag`
 |`hf iclass eload        `|N       |`Upload file into emulator memory`
 |`hf iclass esave        `|N       |`Save emulator memory to file`
@@ -837,6 +853,7 @@ Check column "offline" for their availability.
 |command                  |offline |description
 |-------                  |------- |-----------
 |`hf vas help            `|Y       |`This help`
+|`hf vas info            `|N       |`Get VAS applet information`
 |`hf vas reader          `|N       |`Read and decrypt VAS message`
 |`hf vas decrypt         `|Y       |`Decrypt a previously captured VAS cryptogram`
 

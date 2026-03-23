@@ -59,6 +59,8 @@ static const uint8_t ALIRO_SECURE_CHANNEL_DEVICE_MODE[] = {0, 0, 0, 0, 0, 0, 0, 
 static const uint8_t ALIRO_NFC_INTERFACE_BYTE = 0x5E;
 static const uint8_t ALIRO_AUTH0_DEFAULT_POLICY = 0x01;
 static const uint8_t ALIRO_AUTH1_REQUEST_PUBLIC_KEY = 0x01;
+static const uint8_t ALIRO_EXCHANGE_INS = 0xC9;
+static const uint8_t ALIRO_READER_STATUS_STATE_UNSECURE[] = {0x01, 0x01}; // UNSECURE means "opened"
 static const char ALIRO_DEFAULT_STEP_UP_SCOPE[] = "matter1";
 
 #define ALIRO_MAX_BUFFER 2048
@@ -173,6 +175,13 @@ typedef struct {
 } aliro_standard_result_t;
 
 typedef struct {
+    const uint8_t (*sk_reader)[32];
+    uint32_t reader_counter;
+    const uint8_t (*sk_device)[32];
+    uint32_t device_counter;
+} aliro_secure_channel_state_t;
+
+typedef struct {
     aliro_select_info_t select_info;
     uint8_t protocol_version[2];
     uint8_t reader_identifier[32];
@@ -188,11 +197,19 @@ typedef struct {
     aliro_fast_result_t fast_result;
     aliro_auth1_response_t auth1_parsed;
     aliro_standard_result_t standard_result;
+    aliro_secure_channel_state_t expedited_secure_channel;
+    aliro_secure_channel_state_t step_up_secure_channel;
 } aliro_read_state_t;
 
 static int CmdHelp(const char *Cmd);
 static const char *aliro_cbor_type_name(CborType type);
 static bool aliro_cbor_print_scalar(const char *label, const CborValue *value);
+static int aliro_secure_channel_encrypt_reader_payload(aliro_secure_channel_state_t *channel,
+                                                       const uint8_t *plaintext, size_t plaintext_len,
+                                                       uint8_t *ciphertext, size_t ciphertext_max, size_t *ciphertext_len);
+static int aliro_secure_channel_decrypt_device_payload(aliro_secure_channel_state_t *channel,
+                                                       const uint8_t *ciphertext, size_t ciphertext_len,
+                                                       uint8_t *plaintext, size_t plaintext_max, size_t *plaintext_len);
 
 static const char *get_aliro_application_type_name(uint16_t type) {
     for (size_t i = 0; i < ARRAYLEN(aliro_application_type_map); ++i) {
@@ -1609,6 +1626,10 @@ aliro_append_tlv(0x4D, state->reader_identifier, 32, auth0_data, sizeof(auth0_da
                 PrintAndLogEx(INFO, "  Fast BleSKReader.......... %s", sprint_hex_inrow(state->fast_result.keys.ble_sk_reader, 32));
                 PrintAndLogEx(INFO, "  Fast BleSKDevice.......... %s", sprint_hex_inrow(state->fast_result.keys.ble_sk_device, 32));
                 PrintAndLogEx(INFO, "  Fast URSK................. %s", sprint_hex_inrow(state->fast_result.keys.ursk, 32));
+                state->expedited_secure_channel.sk_reader = &state->fast_result.keys.exchange_sk_reader;
+                state->expedited_secure_channel.reader_counter = 1;
+                state->expedited_secure_channel.sk_device = &state->fast_result.keys.exchange_sk_device;
+                state->expedited_secure_channel.device_counter = 1;
                 if (flow == ALIRO_FLOW_FAST) {
                     *fast_flow_complete = true;
                     return PM3_SUCCESS;
@@ -1664,6 +1685,15 @@ static int aliro_read_prepare_auth1_keys(aliro_read_state_t *state,
     // Placeholder endpoint key was used above; do not expose kpersistent until real endpoint key is known.
     state->standard_result.keys.kpersistent_present = false;
     memset(state->standard_result.keys.kpersistent, 0, sizeof(state->standard_result.keys.kpersistent));
+
+    state->expedited_secure_channel.sk_reader = &state->standard_result.keys.exchange_sk_reader;
+    state->expedited_secure_channel.reader_counter = 1;
+    state->expedited_secure_channel.sk_device = &state->standard_result.keys.exchange_sk_device;
+    state->expedited_secure_channel.device_counter = 1;
+    state->step_up_secure_channel.sk_reader = &state->standard_result.keys.step_up_sk_reader;
+    state->step_up_secure_channel.reader_counter = 1;
+    state->step_up_secure_channel.sk_device = &state->standard_result.keys.step_up_sk_device;
+    state->step_up_secure_channel.device_counter = 1;
 
     return PM3_SUCCESS;
 }
@@ -1739,18 +1769,17 @@ aliro_append_tlv(0x9E, auth1_signature, 64,
         return PM3_ESOFT;
     }
 
-    uint8_t auth1_iv[12] = {0};
-    aliro_build_secure_channel_iv(ALIRO_SECURE_CHANNEL_DEVICE_MODE, 1, auth1_iv);
-
     uint8_t auth1_plain[ALIRO_MAX_BUFFER] = {0};
-    res = aliro_aes_gcm_decrypt(state->standard_result.keys.exchange_sk_device, auth1_iv, sizeof(auth1_iv),
-                                auth1_response_enc, auth1_response_enc_len, auth1_plain);
+    size_t auth1_plain_len = 0;
+    res = aliro_secure_channel_decrypt_device_payload(&state->expedited_secure_channel,
+                                                      auth1_response_enc, auth1_response_enc_len,
+                                                      auth1_plain, sizeof(auth1_plain),
+                                                      &auth1_plain_len);
     if (res != PM3_SUCCESS) {
         PrintAndLogEx(ERR, "Failed to decrypt AUTH1 response");
         return res;
     }
 
-    size_t auth1_plain_len = auth1_response_enc_len - 16;
     res = aliro_parse_auth1_plaintext(auth1_plain, auth1_plain_len, &state->auth1_parsed);
     if (res != PM3_SUCCESS) {
         return res;
@@ -2010,29 +2039,29 @@ static void aliro_print_step_up_scopes(const aliro_step_up_scopes_t *scopes) {
     PrintAndLogEx(INFO, "Step-up scopes............ %s", joined);
 }
 
-static int aliro_secure_channel_encrypt_reader_payload(const uint8_t sk_reader[32], uint32_t *reader_counter,
+static int aliro_secure_channel_encrypt_reader_payload(aliro_secure_channel_state_t *channel,
                                                        const uint8_t *plaintext, size_t plaintext_len,
                                                        uint8_t *ciphertext, size_t ciphertext_max, size_t *ciphertext_len) {
-    if (sk_reader == NULL || reader_counter == NULL || plaintext == NULL ||
+    if (channel == NULL || channel->sk_reader == NULL || plaintext == NULL ||
             ciphertext == NULL || ciphertext_len == NULL) {
         return PM3_EINVARG;
     }
 
     uint8_t iv[12] = {0};
-    aliro_build_secure_channel_iv(ALIRO_SECURE_CHANNEL_READER_MODE, *reader_counter, iv);
-    int res = aliro_aes_gcm_encrypt(sk_reader, iv, sizeof(iv),
+    aliro_build_secure_channel_iv(ALIRO_SECURE_CHANNEL_READER_MODE, channel->reader_counter, iv);
+    int res = aliro_aes_gcm_encrypt(*channel->sk_reader, iv, sizeof(iv),
                                     plaintext, plaintext_len,
                                     ciphertext, ciphertext_max, ciphertext_len);
     if (res == PM3_SUCCESS) {
-        (*reader_counter)++;
+        channel->reader_counter++;
     }
     return res;
 }
 
-static int aliro_secure_channel_decrypt_device_payload(const uint8_t sk_device[32], uint32_t *device_counter,
+static int aliro_secure_channel_decrypt_device_payload(aliro_secure_channel_state_t *channel,
                                                        const uint8_t *ciphertext, size_t ciphertext_len,
                                                        uint8_t *plaintext, size_t plaintext_max, size_t *plaintext_len) {
-    if (sk_device == NULL || device_counter == NULL || ciphertext == NULL ||
+    if (channel == NULL || channel->sk_device == NULL || ciphertext == NULL ||
             plaintext == NULL || plaintext_len == NULL) {
         return PM3_EINVARG;
     }
@@ -2041,13 +2070,82 @@ static int aliro_secure_channel_decrypt_device_payload(const uint8_t sk_device[3
     }
 
     uint8_t iv[12] = {0};
-    aliro_build_secure_channel_iv(ALIRO_SECURE_CHANNEL_DEVICE_MODE, *device_counter, iv);
-    int res = aliro_aes_gcm_decrypt(sk_device, iv, sizeof(iv), ciphertext, ciphertext_len, plaintext);
+    aliro_build_secure_channel_iv(ALIRO_SECURE_CHANNEL_DEVICE_MODE, channel->device_counter, iv);
+    int res = aliro_aes_gcm_decrypt(*channel->sk_device, iv, sizeof(iv), ciphertext, ciphertext_len, plaintext);
     if (res == PM3_SUCCESS) {
-        (*device_counter)++;
+        channel->device_counter++;
         *plaintext_len = ciphertext_len - 16;
     }
     return res;
+}
+
+static int aliro_send_reader_status_exchange(aliro_secure_channel_state_t *channel,
+                                             const uint8_t reader_status[2]) {
+    if (channel == NULL || channel->sk_reader == NULL ||
+            channel->sk_device == NULL || reader_status == NULL) {
+        return PM3_EINVARG;
+    }
+    PrintAndLogEx(INFO, "");
+    PrintAndLogInfoHeader("EXCHANGE");
+
+    uint8_t status_plaintext[8] = {0};
+    size_t status_plaintext_len = 0;
+    int res = aliro_append_tlv(0x97, reader_status, 2,
+                               status_plaintext, sizeof(status_plaintext), &status_plaintext_len);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to encode EXCHANGE reader status payload");
+        return res;
+    }
+
+    uint8_t status_ciphertext[ALIRO_MAX_BUFFER] = {0};
+    size_t status_ciphertext_len = 0;
+    res = aliro_secure_channel_encrypt_reader_payload(channel,
+                                                      status_plaintext, status_plaintext_len,
+                                                      status_ciphertext, sizeof(status_ciphertext),
+                                                      &status_ciphertext_len);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to encrypt EXCHANGE reader status payload");
+        return res;
+    }
+
+    uint8_t exchange_response[ALIRO_MAX_BUFFER] = {0};
+    size_t exchange_response_len = 0;
+    uint16_t exchange_sw = 0;
+    res = aliro_exchange_chained(false, true, 0x80, ALIRO_EXCHANGE_INS, 0x00, 0x00,
+                                 status_ciphertext, status_ciphertext_len,
+                                 exchange_response, sizeof(exchange_response),
+                                 &exchange_response_len, &exchange_sw);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Reader status EXCHANGE APDU exchange failed");
+        return res;
+    }
+
+    if (exchange_sw != ISO7816_OK) {
+        PrintAndLogEx(ERR, "Reader status EXCHANGE failed: %04x - %s",
+                      exchange_sw, GetAPDUCodeDescription(exchange_sw >> 8, exchange_sw & 0xff));
+        return PM3_ESOFT;
+    }
+    PrintAndLogEx(INFO, "Reader status EXCHANGE.... %04x", exchange_sw);
+    if (exchange_response_len == 0) {
+        return PM3_SUCCESS;
+    }
+
+    uint8_t response_plaintext[ALIRO_MAX_BUFFER] = {0};
+    size_t response_plaintext_len = 0;
+    res = aliro_secure_channel_decrypt_device_payload(channel,
+                                                      exchange_response, exchange_response_len,
+                                                      response_plaintext, sizeof(response_plaintext),
+                                                      &response_plaintext_len);
+    if (res != PM3_SUCCESS) {
+        PrintAndLogEx(ERR, "Failed to decrypt reader status EXCHANGE response");
+        return res;
+    }
+    if (response_plaintext_len > 0) {
+        PrintAndLogEx(INFO, "Reader status response.... %s",
+                      sprint_hex_inrow(response_plaintext, response_plaintext_len));
+    }
+
+    return PM3_SUCCESS;
 }
 
 static bool aliro_cbor_key_equals(const CborValue *key, int int_key, const char *text_key) {
@@ -3243,11 +3341,15 @@ static int aliro_step_up_print_device_response(const uint8_t *device_response, s
     return PM3_SUCCESS;
 }
 
-static int aliro_read_do_step_up(const aliro_read_state_t *state,
+static int aliro_read_do_step_up(aliro_read_state_t *state,
                                  const aliro_step_up_scopes_t *step_up_scopes) {
-    if (state == NULL || step_up_scopes == NULL) {
+    if (state == NULL || step_up_scopes == NULL ||
+            state->step_up_secure_channel.sk_reader == NULL ||
+            state->step_up_secure_channel.sk_device == NULL) {
         return PM3_EINVARG;
     }
+    aliro_secure_channel_state_t *step_up_channel = &state->step_up_secure_channel;
+
     if (!state->standard_result.keys.step_up_keys_present) {
         PrintAndLogEx(ERR, "Step-up keys are not available");
         return PM3_ESOFT;
@@ -3314,12 +3416,9 @@ static int aliro_read_do_step_up(const aliro_read_state_t *state,
     }
     PrintAndLogEx(INFO, "DeviceRequest CBOR........ %s", sprint_hex_inrow(device_request, device_request_len));
 
-    uint32_t step_up_reader_counter = 1;
-    uint32_t step_up_device_counter = 1;
     uint8_t encrypted_device_request[ALIRO_MAX_BUFFER] = {0};
     size_t encrypted_device_request_len = 0;
-    res = aliro_secure_channel_encrypt_reader_payload(state->standard_result.keys.step_up_sk_reader,
-                                                      &step_up_reader_counter,
+    res = aliro_secure_channel_encrypt_reader_payload(step_up_channel,
                                                       device_request, device_request_len,
                                                       encrypted_device_request, sizeof(encrypted_device_request),
                                                       &encrypted_device_request_len);
@@ -3386,8 +3485,7 @@ static int aliro_read_do_step_up(const aliro_read_state_t *state,
 
     uint8_t device_response_plaintext[ALIRO_MAX_BUFFER] = {0};
     size_t device_response_plaintext_len = 0;
-    res = aliro_secure_channel_decrypt_device_payload(state->standard_result.keys.step_up_sk_device,
-                                                      &step_up_device_counter,
+    res = aliro_secure_channel_decrypt_device_payload(step_up_channel,
                                                       encrypted_device_response, encrypted_device_response_len,
                                                       device_response_plaintext, sizeof(device_response_plaintext),
                                                       &device_response_plaintext_len);
@@ -3450,6 +3548,11 @@ static int aliro_read_auth_flow(const uint8_t *kpersistent, size_t kpersistent_l
             break;
         }
         if (fast_flow_complete) {
+            res = aliro_send_reader_status_exchange(&state.expedited_secure_channel,
+                                                    ALIRO_READER_STATUS_STATE_UNSECURE);
+            if (res != PM3_SUCCESS) {
+                PrintAndLogEx(WARNING, "Completion EXCHANGE failed after fast auth; continuing");
+            }
             status = PM3_SUCCESS;
             break;
         }
@@ -3477,6 +3580,15 @@ static int aliro_read_auth_flow(const uint8_t *kpersistent, size_t kpersistent_l
             if (res != PM3_SUCCESS) {
                 break;
             }
+        }
+        aliro_secure_channel_state_t *completion_channel = (flow == ALIRO_FLOW_STEP_UP)
+                                                           ? &state.step_up_secure_channel
+                                                           : &state.expedited_secure_channel;
+        const char *completion_flow_name = (flow == ALIRO_FLOW_STEP_UP) ? "step-up" : "expedited";
+        res = aliro_send_reader_status_exchange(completion_channel,
+                                                ALIRO_READER_STATUS_STATE_UNSECURE);
+        if (res != PM3_SUCCESS) {
+            PrintAndLogEx(WARNING, "Completion EXCHANGE failed after %s auth; continuing", completion_flow_name);
         }
 
         status = PM3_SUCCESS;

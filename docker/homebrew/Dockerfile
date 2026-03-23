@@ -11,6 +11,6 @@ RUN if [ -n "${UART_GID}" ]; then \
 
 USER linuxbrew
 WORKDIR "/home/linuxbrew"
-RUN brew install cmake pkg-config bzip2 lz4 && rm -rf ~/.cache/Homebrew
+RUN brew install cmake pkg-config bzip2 lz4 zlib && rm -rf ~/.cache/Homebrew
 
 CMD ["/bin/bash"]

@@ -11,6 +11,7 @@ mkShell {
     jansson
     gd
     lz4
+    zlib
     whereami
     lua
     bluez5

@@ -2,7 +2,7 @@ FROM fedora:41
 
 ENV LANG=C.UTF-8
 
-RUN dnf install -y passwd sudo git make cmake gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel bzip2-devel lz4-devel bluez-libs-devel python3-devel openssl-devel gd-devel libatomic findutils
+RUN dnf install -y passwd sudo git make cmake gcc gcc-c++ arm-none-eabi-gcc-cs arm-none-eabi-newlib readline-devel bzip2-devel lz4-devel zlib-ng-compat-devel bluez-libs-devel python3-devel openssl-devel gd-devel libatomic findutils
 
 RUN yum -y update
 
